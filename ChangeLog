@@ -9,8 +9,12 @@
 	
 	* (Backwards incompatible) Restored the Crypto.Protocol package,
 	  and modernized and tidied up the two modules in it,
-	  AllOrNothing.py and Chaffing.py.
+	  AllOrNothing.py and Chaffing.py, renaming various methods
+	  and changing the interface.
 	  
+	* (Backwards incompatible) Changed the function names in
+	  Crypto.Util.RFC1751.
+	
 	* Restored the Crypto.PublicKey package at user request.  I
 	  think I'll leave it in the package and warn about it in the
 	  documentation.  I hope that eventually I can point to
@@ -24,10 +28,14 @@
 
 	* Fix endianness bugs that caused test case failures on Sparc,
 	  PPC, and doubtless other platforms.
-	  
+
 	* Added a test suite (requires Sancho, from 
 	  http://www.mems-exchange.org/software/sancho/)
 
+        * Added lots of docstrings, so 'pydoc Crypto' now produces 
+	  helpful output.  (Open question: maybe *all* of the documentation
+	  should be moved into docstrings?)
+	  
 	* Make test.py automatically add the build/* directory to sys.path.
 
 	* Removed 'inline' declaration from C functions.  Some compilers

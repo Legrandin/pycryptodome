@@ -1,28 +1,19 @@
 
-For 1.9alpha2:
+For 1.9alpha3:
 
-* Add test for random pool code, which seems the most buggy 
-  module in the package.
-  
+* Add more tests for random pool code?
+
 * Update documentation
+
+* Clean up markup in pycrypt.tex
+
+* Reformat all the code to MEMS Exchange style
 
 * Document the functions and macros for adding a new algorithm
     Hash functions:
   hash_init(), hash_copy(), DIGEST_SIZE, hash_update(), hash_digest()
     Block functions: 
   ...
-
-* Break backward compatibility.  The interfaces were invented around
-1995, back when I was younger and dumber.  I'd like to clean them up,
-cruelly breaking backward compatibility where necessary, and release
-the new code as version 2.0 to signal the magnitude of the changes.
-While we have the chance, we can also drop useless code, rename
-packages and classes, or whatever.
- 
-* Modernize the code to current standards (Distutils installation,
-docstrings, naming conventions, test suites).  
- 
-* Possibly add SHA256, SHA512.
 
 * Provide drop-in support for extensions/drivers like
 amkCrypto/mxCrypto. There should be some way to register these
