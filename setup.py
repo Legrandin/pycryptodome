@@ -24,6 +24,9 @@ setup(name="amkCrypto",
                                sources=["hash/RIPEMD.c"]),
 
                      # Block encryption algorithms
+                     Extension("Crypto.Cipher.AES",
+                               include_dirs=['src/'],
+                               sources=["block/AES.c"]),
                      Extension("Crypto.Cipher.ARC2",
                                include_dirs=['src/'],
                                sources=["block/ARC2.c"]),
