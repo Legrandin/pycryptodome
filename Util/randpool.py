@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 #
 
-__revision__ = "$Id: randpool.py,v 1.7 2002-07-11 14:26:26 akuchling Exp $"
+__revision__ = "$Id: randpool.py,v 1.8 2002-09-05 13:19:42 akuchling Exp $"
 
 import time, array, types, warnings
 from Crypto.Util.number import long_to_bytes
@@ -200,11 +200,11 @@ class RandomPool:
 
         # Compute 100 differences
         t=time.time()
-        for i in range(0,100):
+        for i in range(100):
             t2=time.time()
-            delta=int((t2-t)*1e6)
+            delta=(t2-t)*1e6
             t=t2
-	    if delta: interval[i] = delta
+            interval[i] = delta
 
         # Take the median of the array of intervals
         interval.sort()
@@ -296,4 +296,5 @@ class KeyboardRandomPool (PersistentRandomPool):
 
 if __name__ == '__main__':
     pool = RandomPool()
+    pool.add_event('something')
     print `pool.get_bytes(100)`
