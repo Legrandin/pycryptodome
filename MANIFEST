@@ -14,6 +14,15 @@ Hash/MD5.py
 Hash/SHA.py
 Hash/__init__.py
 MANIFEST
+Protocol/AllOrNothing.py
+Protocol/Chaffing.py
+Protocol/__init__.py
+PublicKey/DSA.py
+PublicKey/ElGamal.py
+PublicKey/RSA.py
+PublicKey/__init__.py
+PublicKey/pubkey.py
+PublicKey/qNEW.py
 README
 TODO
 Util/RFC1751.py
@@ -21,7 +30,6 @@ Util/__init__.py
 Util/number.py
 Util/randpool.py
 Util/test.py
-Util/testdata.py
 __init__.py
 setup.py
 src/AES.c
@@ -42,3 +50,10 @@ src/cast5.c
 src/hash_template.c
 src/stream_template.c
 test.py
+test/test_chaffing.py
+test/test_hashes.py
+test/test_number.py
+test/test_publickey.py
+test/test_randpool.py
+test/test_rfc1751.py
+test/testdata.py
