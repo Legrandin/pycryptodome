@@ -329,7 +329,7 @@ A similar anonymous posting was made for Alleged RC2 in January, 1996.
 An example usage of the DES module:
 \begin{verbatim}
 >>> from Crypto.Cipher import DES
->>> obj=DES.new('abcdefgh', DES.ECB)
+>>> obj=DES.new('abcdefgh', DES.MODE_ECB)
 >>> plain="Guido van Rossum is a space alien."
 >>> len(plain)
 34
@@ -350,7 +350,7 @@ available.
 
 \begin{funcdesc}{new}{key, mode\optional{, IV}}
 Returns a ciphering object, using \var{key} and feedback mode
-\var{mode}.  If \var{mode} is CBC or CFB, \var{IV} must be provided,
+\var{mode}.  If \var{mode} is \constant{MODE_CBC} or \constant{MODE_CFB}, \var{IV} must be provided,
 and must be a string of the same length as the block size.  Some
 algorithms support additional keyword arguments to this function; see
 the "Algorithm-specific Notes for Encryption Algorithms" section below for the details.
