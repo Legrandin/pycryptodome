@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: pubkey.py,v 1.9 2003-04-03 20:27:13 akuchling Exp $"
+__revision__ = "$Id: pubkey.py,v 1.10 2003-04-03 20:30:00 akuchling Exp $"
 
 import types, warnings
 from Crypto.Util.number import *
@@ -134,8 +134,8 @@ integers, MPZ objects, or whatever."""
         """
         return 1
 
-    def canblind (self):
-        """canblind() : bool
+    def can_blind (self):
+        """can_blind() : bool
         Return a Boolean value recording whether this algorithm can
         blind data.  (This does not imply that this
         particular key object has the private information required to

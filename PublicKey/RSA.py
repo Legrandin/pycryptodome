@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.13 2003-04-03 20:27:13 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.14 2003-04-03 20:30:00 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 
@@ -91,8 +91,8 @@ class RSAobj(pubkey.pubkey):
         tmp = pubkey.inverse(B, self.n)
         return  (M * tmp) % self.n
 
-    def canblind (self):
-        """canblind() : bool
+    def can_blind (self):
+        """can_blind() : bool
         Return a Boolean value recording whether this algorithm can
         blind data.  (This does not imply that this
         particular key object has the private information required to
@@ -174,7 +174,7 @@ class RSAobj_c(pubkey.pubkey):
     def _unblind(self, M, B):
         return self.key._unblind(M, B)
 
-    def canblind (self):
+    def can_blind (self):
         return 1
 
     def size(self):
