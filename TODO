@@ -1,15 +1,9 @@
 
 For 1.9alpha2:
-* Proofread all the error messages and improve them
 
-* Replace Hash/HMAC.py with the hmac module in the standard library
-
-* Look at the C code and modernize it to the current memory APIs,
-  class-based exceptions, etc.
-
-* MD5.py, SHA.py: ensure the module contents match the documented API, 
-  even on old versions of Python.
-
+* Add test for random pool code, which seems the most buggy 
+  module in the package.
+  
 * Update documentation
 
 * Document the functions and macros for adding a new algorithm

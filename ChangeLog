@@ -2,13 +2,32 @@
 1.9alpha2
 =========
 
+	* (Backwards incompatible) The old Crypto.Hash.HMAC module is
+	  gone, replaced by a copy of hmac.py from Python 2.2's standard
+	  library.  It will display a warning on interpreter versions
+	  older than 2.2.
+	
+	* (Backwards incompatible) Restored the Crypto.Protocol package,
+	  and modernized and tidied up the two modules in it,
+	  AllOrNothing.py and Chaffing.py.
+	  
+	* Restored the Crypto.PublicKey package at user request.  I
+	  think I'll leave it in the package and warn about it in the
+	  documentation.  I hope that eventually I can point to
+	  someone else's better public-key code, and at that point I
+	  may insert warnings and begin the process of deprecating
+	  this code.
+
 	* Fix use of a Python 2.2 C function, replacing it with a 
 	  2.1-compatible equivalent.  (Bug report and patch by Andrew
-	  Eland.)
+	  Eland.)  
 
 	* Fix endianness bugs that caused test case failures on Sparc,
 	  PPC, and doubtless other platforms.
 	  
+	* Added a test suite (requires Sancho, from 
+	  http://www.mems-exchange.org/software/sancho/)
+
 	* Make test.py automatically add the build/* directory to sys.path.
 
 	* Removed 'inline' declaration from C functions.  Some compilers
@@ -22,22 +41,12 @@
 	  and others became faster.  Probably this is due to my compiler
 	  optimizing slightly worse or better as a result.
 
-	* Restored the Crypto.PublicKey package at user request.  I
-	  think I'll leave it in the package and warn about it in the
-	  documentation.  I hope that eventually I can point to
-	  someone else's better public-key code, and at that point I
-	  may insert warnings and begin the process of deprecating
-	  this code.
-
         * Moved C source implementations into src/ from block/, hash/, 
 	  and stream/.  Having Hash/ and hash/ directories causes problems
 	  on case-insensitive filesystems such as Mac OS.
 
 	* Cleaned up the C code for the extensions.
-	
-	* Added a test suite, written using Sancho
-	  (http://www.mems-exchange.org/software/sancho/)
-	
+		
 	
 1.9alpha1
 =========
