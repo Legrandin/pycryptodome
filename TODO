@@ -1,10 +1,4 @@
 
-* Add segment_size to CFB mode
-
-* Add test cases for general CFB mode
-
-* Restore RC5, which needs additional keyword arguments
-
 * Proofread all the error messages and improve them
 
 * Replace Hash/HMAC.py with the hmac module in the standard library
@@ -49,28 +43,12 @@ time.
 
 * Add a secure PRNG (Yarrow, maybe?)
 
-
-The old TODO list follows:
-
-Core algorithms:
-	Elliptic-curve algs should be added; they're not a priority for now. 
-	A secret sharing module should be added to Util or Protocols.
+* A secret sharing module should be added to Util or Protocols.
 	
-Protocols:
-	Implement ssh
-	Add PGP modules to the package, rearranging them to fit.
-
-Generic cryptographic stuff: 
-	Optimize the feedback modes a bit
-
 Demo programs:
 	Shadowing of files into X parts
-	Secure talk or telnet
 
 Documentation:
 	Document chaff/winnow better
 	Add docstrings everywhere.
 
-Config stuff:
-	Smarter distribution building 
-	
