@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: number.py,v 1.7 2003-02-28 15:26:01 akuchling Exp $"
+__revision__ = "$Id: number.py,v 1.8 2003-03-21 14:16:35 akuchling Exp $"
 
 bignum = long
 try:
@@ -41,8 +41,12 @@ def getRandomNumber(N, randfunc):
     Return an N-bit random number."""
 
     S = randfunc(N/8)
-    char = ord(randfunc(1)) >> (8-(N%8))
-    return bytes_to_long(chr(char) + S)
+    odd_bits = N % 8
+    if odd_bits != 0:
+        char = ord(randfunc(1)) >> (8-odd_bits)
+        char |= (1<<odd_bits)
+        S = chr(char) + S
+    return bytes_to_long(S)
 
 def GCD(x,y):
     """GCD(x:long, y:long): long
