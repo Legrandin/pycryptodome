@@ -279,7 +279,7 @@ def compareHashResult(hash, strg, result):
     
 import Crypto.Util.testdata
 
-def TestHashModules(args=['ripemd', 'md2', 'md4'], 
+def TestHashModules(args=['ripemd', 'md2', 'md4', 'md5', 'sha'], 
 		    verbose=1):
     import string
     args=map(string.lower, args)
@@ -470,7 +470,7 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 
 
 def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
-			   'idea', ],#'rc5'],
+			   'idea', 'rc5'],
 		     verbose=1):
     import string
     args=map(string.lower, args)
@@ -732,7 +732,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    cipher=hex2str(cipher)
 		    obj=ciph.new(key[4:], ciph.MODE_ECB, 
 				 version =ord(key[0]),
-				 wordsize=ord(key[1]),
+				 word_size=ord(key[1]),
 				 rounds  =ord(key[2]) )
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
