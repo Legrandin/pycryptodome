@@ -1,4 +1,61 @@
 
+* Remove the export/not-for-export cruft.
+
+* Resync with mxCrypto/amkCrypto
+
+* Break backward compatibility.  The interfaces were invented around
+1995, back when I was younger and dumber.  I'd like to clean them up,
+cruelly breaking backward compatibility where necessary, and release
+the new code as version 2.0 to signal the magnitude of the changes.
+While we have the chance, we can also drop useless code, rename
+packages and classes, or whatever.
+ 
+* Is there any point in keeping the implementations of MD5 and SHA if
+Python comes with them?  We could just change Crypto/Hash/MD5.py to
+just 'from md5 import *', and ditto for Crypto/Hash/SHA.py.
+ 
+* Get rid of the clumsily generated source files and just keep
+everything simple.  For hash modules, this would be
+straightforward.  However, I don't know how to fix block encryption
+modules properly.  The original purpose of autogenerating everything
+was to re-use the tricky and error-prone code for the various feedback
+modes, while hopefully avoiding the overhead of doing a C function
+call on every block.
+
+Maybe the C function overhead isn't worth saving.  If so, then perhaps
+we could write a single C file that implemented the feedback modes as
+a library.  Individual encryption modules would then define a function
+to encrypt a single block, another for decrypting a single block, and
+then pass these functions to the code in the library.  (We'd have to
+finalize a block encryption API to do that, hopefully defining it in
+the Block Encryption PEP at the same time.)
+ 
+* Modernize the code to current standards (Distutils installation,
+docstrings, naming conventions, test suites).  We might rename the
+package from 'Crypto' to 'crypto', or some other name.
+ 
+* Discard some of the more obscure algorithms (HAVAL, Diamond,
+Skipjack, maybe CAST, too).
+
+* Add AES, and possibly SHA256, SHA512.
+
+* Public-key stuff: should it remain in this package, or should it be
+scrapped and the scope restricted to hashing and block encryption?
+Public-key is much harder to define and implement, so I think
+splitting it out into a separate distribution is the right thing to
+do.
+
+* Provide drop-in support for extensions/drivers like
+amkCrypto/mxCrypto. There should be some way to register these
+drivers in your package, e.g. by defining a certain subdirectory
+to be a place where pycrypto looks for these drivers at startup
+time.
+
+* Add a secure PRNG (Yarrow, maybe?)
+
+
+The old TODO list follows:
+
 Core algorithms:
 	Elliptic-curve algs should be added; they're not a priority for now. 
 	A secret sharing module should be added to Util or Protocols.
