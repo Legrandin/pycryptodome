@@ -42,46 +42,14 @@ http://theory.lcs.mit.edu/~rivest/chaffing.txt
 
 """
 
-from Crypto.Util.number import longtobytes, bytestolong
+from Crypto.Util.number import bytes_to_long
 
 class Chaff:
     """Class implementing the chaff adding algorithm.
 
-    Public Methods:
+    Methods for subclasses:
 
-        __init__(factor=1.0, blocksper=1):
-            Constructor for the class.  factor is the number of message blocks 
-            to add chaff to, expressed as a percentage between 0.0 and 1.0.
-            blocksper is the number of chaff blocks to include for each block
-            being chaffed.  Thus the defaults add one chaff block to every
-            message block.  By changing the defaults, you can adjust how
-            computationally difficult it could be for an adversary to
-            brute-force crack the message.  The difficulty is expressed as:
-
-                pow(blocksper, int(factor * number-of-blocks))
-
-            For ease of implementation, when factor < 1.0, only the first
-            int(factor*number-of-blocks) message blocks are chaffed.
-
-        chaff(blocks):
-            Add chaff to message blocks.  blocks is a list of 3-tuples of the
-            form:
-
-                (serial-number, data, MAC)
-
-            Chaff is created by choosing a random number of the same
-            byte-length as data, and another random number of the same
-            byte-length as MAC.  The message block's serial number is placed
-            on the chaff block and all the packet's chaff blocks are randomly
-            interspersed with the single wheat block.  This method then
-            returns a list of 3-tuples of the same form.  Chaffed blocks will
-            contain multiple instances of 3-tuples with the same serial
-            number, but the only way to figure out which blocks are wheat and
-            which are chaff is to perform the MAC hash and compare values.
-
-        Subclass methods:
-
-            __randnum(size):
+            _randnum(size):
                 Returns a randomly generated number with a byte-length equal
                 to size.  Subclasses can use this to implement better random
                 data and MAC generating algorithms.  The default algorithm is
@@ -91,7 +59,25 @@ class Chaff:
                 the MAC.
 
     """
+    
     def __init__(self, factor=1.0, blocksper=1):
+        """Chaff(factor:float, blocksper:int)
+
+        factor is the number of message blocks to add chaff to,
+        expressed as a percentage between 0.0 and 1.0.  blocksper is
+        the number of chaff blocks to include for each block being
+        chaffed.  Thus the defaults add one chaff block to every
+        message block.  By changing the defaults, you can adjust how
+        computationally difficult it could be for an adversary to
+        brute-force crack the message.  The difficulty is expressed
+        as:
+
+            pow(blocksper, int(factor * number-of-blocks))
+
+        For ease of implementation, when factor < 1.0, only the first
+        int(factor*number-of-blocks) message blocks are chaffed.
+        """
+        
 	if not (0.0<=factor<=1.0):
 	    raise ValueError, "'factor' must be between 0.0 and 1.0"
 	if blocksper < 0:
@@ -100,15 +86,35 @@ class Chaff:
         self.__factor = factor
         self.__blocksper = blocksper
 
+
     def chaff(self, blocks):
+        """chaff( [(serial-number:int, data:string, MAC:string)] )
+        : [(int, string, string)]
+
+        Add chaff to message blocks.  blocks is a list of 3-tuples of the
+        form (serial-number, data, MAC).
+
+        Chaff is created by choosing a random number of the same
+        byte-length as data, and another random number of the same
+        byte-length as MAC.  The message block's serial number is
+        placed on the chaff block and all the packet's chaff blocks
+        are randomly interspersed with the single wheat block.  This
+        method then returns a list of 3-tuples of the same form.
+        Chaffed blocks will contain multiple instances of 3-tuples
+        with the same serial number, but the only way to figure out
+        which blocks are wheat and which are chaff is to perform the
+        MAC hash and compare values.
+        """
+        
         chaffedblocks = []
+        
         # count is the number of blocks to add chaff to.  blocksper is the
         # number of chaff blocks to add per message block that is being
         # chaffed.
         count = len(blocks) * self.__factor
         blocksper = range(self.__blocksper)
         for i, wheat in map(None, range(len(blocks)), blocks):
-            # it shouldn't matter which of the n blocks we add chaff to so for
+            # it shouldn't matter which of the n blocks we add chaff to, so for
             # ease of implementation, we'll just add them to the first count
             # blocks
             if i < count:
@@ -124,7 +130,7 @@ class Chaff:
                     chaff = (serial, chaffdata, chaffmac)
                     # mix up the order, if the 5th bit is on then put the
                     # wheat on the list
-                    if addwheat and bytestolong(self._randnum(16)) & 0x40:
+                    if addwheat and bytes_to_long(self._randnum(16)) & 0x40:
                         chaffedblocks.append(wheat)
                         addwheat = 0
                     chaffedblocks.append(chaff)
@@ -143,9 +149,10 @@ class Chaff:
         pool = randpool.RandomPool(size * 2)
         while size > pool.addEvent(time.time()) / 8:
             pass
+
         # we now have enough entropy in the pool to get size bytes of random
         # data... well, probably
-        return pool.getBytes(size)
+        return pool.get_bytes(size)
 
 
 
