@@ -67,9 +67,10 @@ cipher; this makes it work with only the export-controlled subset
 available.
 
 	* Various renamings and reorganizations, mostly internal.
+
 	
-Changes since 1.0.2
-===================
+1.0.2
+=====
 
 	* Changed files to work with Python 1.5; everything has been
 re-arranged into a hierarchical package.  (Not backward compatible.)
@@ -115,8 +116,9 @@ the build process simplified.
 
 	* Updated the documentation accordingly.
 
-Changes since 1.0.1:
-====================
+	
+1.0.1
+=====
 	
 	* Changed files to work with Python 1.4 .
 
@@ -125,7 +127,9 @@ parity of their keys.
 	
 	* Added R. Rivest's DES test (see http://theory.lcs.mit.edu/~rivest/destest.txt)
 
-	Changes since 1.0.0:
+
+1.0.0
+=====
 
 	* REDOC III succumbed to differential cryptanalysis, and has
 been removed. 
@@ -134,6 +138,6 @@ been removed.
 available in the standard Python distribution. 
 
 	* The Ultra-Fast crypt() module has been placed in a separate
-distribution; see <http://starship.skyport.net/crew/amk/maintained/crypto.html>.  
+distribution.
 
 	* Various bugs fixed.
