@@ -29,11 +29,16 @@
 	  may insert warnings and begin the process of deprecating
 	  this code.
 
-        * Move C source implementations into src/ from block/, hash/, 
+        * Moved C source implementations into src/ from block/, hash/, 
 	  and stream/.  Having Hash/ and hash/ directories causes problems
 	  on case-insensitive filesystems such as Mac OS.
-	  
 
+	* Cleaned up the C code for the extensions.
+	
+	* Added a test suite, written using Sancho
+	  (http://www.mems-exchange.org/software/sancho/)
+	
+	
 1.9alpha1
 =========
 
