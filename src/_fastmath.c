@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.9 2003-04-03 21:23:02 akuchling Exp $
+ * $Id: _fastmath.c,v 1.10 2003-04-04 14:28:39 akuchling Exp $
  */
 
 #include <stdio.h>
@@ -351,7 +351,7 @@ dsaKey_getattr (dsaKey * key, char *attr)
 		if (mpz_size (key->x) == 0)
 		{
 			PyErr_SetString (PyExc_AttributeError,
-					 "rsaKey instance has no attribute 'x'");
+					 "dsaKey instance has no attribute 'x'");
 			return NULL;
 		}
 		return mpzToLongObj (key->x);
