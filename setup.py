@@ -1,9 +1,13 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.15 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.16 2002-07-18 13:05:37 akuchling Exp $"
 
 from distutils.core import setup, Extension
 import sys
+
+if sys.version[0:1] == '1':
+    raise RuntimeError, ("The Python Cryptography Toolkit requires "
+                         "Python 2.x to build.")
 
 if sys.platform == 'win32':
     HTONS_LIBS = ['ws2_32']
