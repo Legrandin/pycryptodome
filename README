@@ -49,7 +49,7 @@ Installation
 The modules are packaged using the Distutils.  Simply run "python
 setup.py build" to build the package.
 	
-To verify that everything is in order, run "python test".  It will
+To verify that everything is in order, run "python test.py".  It will
 test all the cryptographic modules, skipping ones that aren't
 available.  If the test script reports an error on your machine,
 please inform me immediately, because that means there's a serious bug
