@@ -16,6 +16,7 @@
 \********************************************************************/
 
 #include <string.h>
+#include <netinet/in.h>
 #include "Python.h"
 
 #define MODULE_NAME RIPEMD
@@ -141,17 +142,17 @@ static void hash_update(hash_state *shsInfo,char *buffer, int count)
     dataCount = ( int ) ( tmp >> 3 ) & 0x3F;
 
     /* Handle any leading odd-sized chunks */
-    if( dataCount )
+    if(dataCount)
         {
         p = ( BYTE * ) shsInfo->data + dataCount;
 
         dataCount = RMD_DATASIZE - dataCount;
         if( count < dataCount )
             {
-            memcpy( p, buffer, count );
+            memcpy(p, buffer, count);
             return;
             }
-        memcpy( p, buffer, dataCount );
+        memcpy(p, buffer, dataCount);
         MDcompress(shsInfo->digest,shsInfo->data);
         buffer += dataCount;
         count -= dataCount;
@@ -167,7 +168,7 @@ static void hash_update(hash_state *shsInfo,char *buffer, int count)
         }
 
     /* Handle any remaining bytes of data. */
-    memcpy( shsInfo->data, buffer, count );
+    memcpy(shsInfo->data, buffer, count);
 }
 
 static PyObject *hash_digest(hash_state *self)
@@ -226,8 +227,7 @@ static void MDcompress(word *MDbuf, word *X)
    /* make two copies of the old state */
    word aa = MDbuf[0],  bb = MDbuf[1],  cc = MDbuf[2],
         dd = MDbuf[3],  ee = MDbuf[4];
-   word aaa = MDbuf[0], bbb = MDbuf[1], ccc = MDbuf[2],
-        ddd = MDbuf[3], eee = MDbuf[4];
+   word aaa = aa, bbb = bb, ccc = cc, ddd = dd, eee = ee;
 
 /*   {int i;
    printf("\nWords: ");
