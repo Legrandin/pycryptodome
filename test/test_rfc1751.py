@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_rfc1751.py,v 1.1 2002-05-17 13:31:48 akuchling Exp $"
+__revision__ = "$Id: test_rfc1751.py,v 1.2 2002-05-24 14:18:56 akuchling Exp $"
 
 import binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -29,13 +29,13 @@ class RFC1751Test (TestScenario):
         "Check converting keys to English"
         for key, words in test_data:
             key=binascii.a2b_hex(key)
-            self.test_val('RFC1751.Key2English(key)', words)
+            self.test_val('RFC1751.key_to_english(key)', words)
 
     def check_e2k (self):
         "Check converting English strings to keys"
         for key, words in test_data:
             key=binascii.a2b_hex(key)
-            self.test_val('RFC1751.English2Key(words)', key)
+            self.test_val('RFC1751.english_to_key(words)', key)
 
 # class RFC1751Test
 
