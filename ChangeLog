@@ -8,6 +8,9 @@
 	* Fixed AES.c compilation problems with Borland C.  
 	  (Contributed by Jeethu Rao.)
 
+	* Fix ZeroDivisionErrors on Windows, caused by the system clock
+	  not having enough resolution.
+	
         * Fix 2.1/2.2-incompatible use of (key not in dict),
 	  pointed out by Ian Bicking.
 
