@@ -13,6 +13,12 @@
 	  it's supported or not.  After this change, some ciphers got slower,
 	  but others got faster.
 	  
+	* The C-level API has been changed to reduce the amount of
+   	  memory-to-memory copying.   This makes the code neater, but 
+	  had ambiguous performance effects; again, some ciphers got slower
+	  and others became faster.  Probably this is due to my compiler
+	  optimizing slightly worse or better as a result.
+
 
 1.9alpha1
 =========

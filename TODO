@@ -9,8 +9,6 @@
 For 1.9alpha2:
 * Update documentation
 
-* Change API to reduce amount of memory-to-memory copying
-
 * Document the functions and macros for adding a new algorithm
     Hash functions:
   hash_init(), hash_copy(), DIGEST_SIZE, hash_update(), hash_digest()
