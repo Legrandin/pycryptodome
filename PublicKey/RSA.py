@@ -10,14 +10,14 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.11 2003-02-28 15:25:09 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.12 2003-04-03 18:19:05 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 
 try:
-    from Crypto.PublicKey import _rsa
-except:
-    _rsa = None
+    from Crypto.PublicKey import _fastmath
+except ImportError:
+    _fastmath = None
 
 class error (Exception):
     pass
@@ -130,14 +130,14 @@ class RSAobj_c(pubkey.pubkey):
     def __setstate__(self, state):
         n,e = state['n'], state['e']
         if 'd' not in state:
-            self.key = _rsa.construct(n,e)
+            self.key = _fastmath.rsa_construct(n,e)
         else:
             d = state['d']
             if 'q' not in state:
-                self.key = _rsa.construct(n,e,d)
+                self.key = _fastmath.rsa_construct(n,e,d)
             else:
                 p, q = state['p'], state['q']
-                self.key = _rsa.construct(n,e,d,p,q)
+                self.key = _fastmath.rsa_construct(n,e,d,p,q)
 
     def _encrypt(self, plain, K):
         return (self.key._encrypt(plain),)
@@ -175,11 +175,11 @@ def generate_c(bits, randfunc, progress_func = None):
     e=pubkey.getPrime(17, randfunc)
     if progress_func: progress_func('d\n')
     d=pubkey.inverse(e, (p-1)*(q-1))
-    key = _rsa.construct(n,e,d,p,q)
+    key = _fastmath.rsa_construct(n,e,d,p,q)
     return RSAobj_c(key)
 
 def construct_c(tuple):
-    key = apply(_rsa.construct, tuple)
+    key = apply(_fastmath.rsa_construct, tuple)
     return RSAobj_c(key)
 
 object = RSAobj
@@ -187,8 +187,8 @@ object = RSAobj
 generate_py = generate
 construct_py = construct
 
-if _rsa:
+if _fastmath:
     #print "using C version of RSA"
     generate = generate_c
     construct = construct_c
-    error = _rsa.error
+    error = _fastmath.error

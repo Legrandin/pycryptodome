@@ -11,16 +11,16 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: DSA.py,v 1.11 2003-02-28 15:25:06 akuchling Exp $"
+__revision__ = "$Id: DSA.py,v 1.12 2003-04-03 18:19:03 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Hash import SHA
 
 try:
-    from Crypto.PublicKey import _dsa
-except:
-    _dsa = None
+    from Crypto.PublicKey import _fastmath
+except ImportError:
+    _fastmath = None
 
 class error (Exception):
     pass
@@ -178,10 +178,10 @@ class DSAobj_c(pubkey):
     def __setstate__(self, state):
         y,g,p,q = state['y'], state['g'], state['p'], state['q']
         if 'x' not in state:
-            self.key = _dsa.construct(y,g,p,q)
+            self.key = _fastmath.dsa_construct(y,g,p,q)
         else:
             x = state['x']
-            self.key = _dsa.construct(y,g,p,q,x)
+            self.key = _fastmath.dsa_construct(y,g,p,q,x)
 
     def _sign(self, M, K):
         return self.key._sign(M, K)
@@ -210,11 +210,11 @@ def generate_c(bits, randfunc, progress_func=None):
     return construct_c((y,g,p,q,x))
 
 def construct_c(tuple):
-    key = apply(_dsa.construct, tuple)
+    key = apply(_fastmath.dsa_construct, tuple)
     return DSAobj_c(key)
 
-if _dsa:
+if _fastmath:
     #print "using C version of DSA"
     generate = generate_c
     construct = construct_c
-    error = _dsa.error
+    error = _fastmath.error
