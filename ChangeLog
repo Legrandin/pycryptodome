@@ -4,7 +4,8 @@
 
 	* Added Crypto.Cipher.AES.
 
-	* Added the CTR mode from the NIST standard on feedback modes.
+	* Added the CTR mode and the variable-sized CFB mode from the
+          NIST standard on feedback modes. 
 	
 	* Removed Diamond, HAVAL, MD5, Sapphire, SHA, and Skipjack.  MD5
 	  and SHA are included with Python; the others are all of marginal
@@ -12,7 +13,8 @@
 
 	* Renamed the module-level constants ECB, CFB, &c., to MODE_ECB,
 	  MODE_CFB, as part of making the block encryption modules 
-	  compliant with PEP 272.
+	  compliant with PEP 272.  (I'm not sure about this change;
+	  if enough users complain about it, I might back it out.)
 	
 	* Made the hashing modules compliant with PEP 247 (not backward
    	  compatible -- the major changes are that the constructor is now 
