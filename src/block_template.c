@@ -56,7 +56,7 @@ static ALGobject *
 newALGobject(void)
 {
 	ALGobject * new;
-	new = PyObject_NEW(ALGobject, &ALGtype);
+	new = PyObject_New(ALGobject, &ALGtype);
 	new->mode = MODE_ECB;
 	return new;
 }
@@ -66,7 +66,7 @@ ALGdealloc(PyObject *ptr)
 {		
 	/* Overwrite the contents of the object */
 	memset((char *)ptr, 0, sizeof(ALGobject));
-	PyObject_DEL(ptr);
+	PyObject_Free(ptr);
 }
 
 
