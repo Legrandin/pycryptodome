@@ -7,7 +7,12 @@
 
 	* Fixed AES.c compilation problems with Borland C.  
 	  (Contributed by Jeethu Rao.)
-	
+
+        * Fix 2.1/2.2-incompatible use of (key not in dict),
+	  pointed out by Ian Bicking.
+
+	* Fix FutureWarning in Crypto.Util.randpool, noted by James P Rutledge.
+
 	
 1.9alpha6
 =========
