@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: randpool.py,v 1.13 2003-02-28 15:26:01 akuchling Exp $"
+__revision__ = "$Id: randpool.py,v 1.14 2004-05-06 12:56:54 akuchling Exp $"
 
 import time, array, types, warnings, os.path
 from Crypto.Util.number import long_to_bytes
@@ -158,7 +158,7 @@ class RandomPool:
             h = self._hash.new(self._randpool)
             h.update(str(self.__counter) + str(i) + str(self._addPos) + s)
             self._addBytes( h.digest() )
-            self.__counter = (self.__counter + 1) & 0xFFFFffff
+            self.__counter = (self.__counter + 1) & 0xFFFFffffL
 
         self._addPos, self._getPos = 0, self._hash.digest_size
         self.add_event()
