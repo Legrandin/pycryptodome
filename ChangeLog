@@ -6,6 +6,9 @@
 	  2.1-compatible equivalent.  (Bug report and patch by Andrew
 	  Eland.)
 
+	* Fix endianness bugs that caused test case failures on Sparc,
+	  PPC, and doubtless other platforms.
+	  
 	* Make test.py automatically add the build/* directory to sys.path.
 
 	* Removed 'inline' declaration from C functions.  Some compilers
@@ -25,7 +28,11 @@
 	  someone else's better public-key code, and at that point I
 	  may insert warnings and begin the process of deprecating
 	  this code.
- 
+
+        * Move C source implementations into src/ from block/, hash/, 
+	  and stream/.  Having Hash/ and hash/ directories causes problems
+	  on case-insensitive filesystems such as Mac OS.
+	  
 
 1.9alpha1
 =========
