@@ -50,11 +50,15 @@ src/block_template.c
 src/cast5.c
 src/hash_template.c
 src/stream_template.c
+src/winrand.c
 src/_dsa.c
 src/_rsa.c
 test.py
+test/template
+test/test_allornothing.py
 test/test_chaffing.py
 test/test_hashes.py
+test/test_hmac.py
 test/test_number.py
 test/test_publickey.py
 test/test_randpool.py
