@@ -48,6 +48,7 @@ src/MD2.c
 src/MD4.c
 src/RC5.c
 src/RIPEMD.c
+src/SHA256.c
 src/XOR.c
 src/block_template.c
 src/cast5.c
