@@ -537,7 +537,7 @@ static inline void block_decrypt(block_state *state,
 {
   des_cblock output;
 
-  des_ecb_encrypt(block, output, state, 0);
+  des_ecb_encrypt((des_cblock *)block, &output, *state, 0);
   memcpy(block, output, 8);
 }
 
@@ -545,7 +545,7 @@ static inline void block_encrypt(block_state *state, unsigned char *block)
 {
   des_cblock output;
 
-  des_ecb_encrypt(block, output, state, 1);
+  des_ecb_encrypt((des_cblock *)block, &output, *state, 1);
   memcpy(block, output, 8);
 }
 
@@ -662,7 +662,7 @@ static inline void block_init(block_state *state, unsigned char *key,
     {
       oddkey[i]=odd_parity[ key[i] ];
     }
-  des_set_key(oddkey, *state);
+  des_set_key((des_cblock *)oddkey, *state);
 }
 
 #include "block_template.c"

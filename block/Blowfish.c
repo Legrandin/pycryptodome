@@ -339,10 +339,7 @@ whatever endian form the machine uses.  On little endian machines
 use crypt_8bytes() on user data.  make_bfkey should call crypt_block
 on either endian machine.  Pass direction 0 to encrypt, 1 to decrypt.
 */
-static void crypt_block(block, bfkey, direction) 
-     IntU32 block[2];
-     BFkey_type *bfkey;
-     short direction; 
+static void crypt_block(IntU32 block[2], BFkey_type *bfkey, int direction) 
 {
   register IntU32 left, right, 
                   (*S)[256], 
@@ -374,10 +371,8 @@ static void crypt_block(block, bfkey, direction)
    in dest.  They can be the same.  It takes the same direction
    parameter as crypt_block().
 */
-static void crypt_8bytes(source, dest, bfkey, direction)
-     IntU8 *source, *dest;
-     BFkey_type *bfkey;
-     short direction;
+static void crypt_8bytes(IntU8 *source, IntU8 *dest, BFkey_type *bfkey, 
+			 int direction)
 {
    IntU32  block[2] ;
 
@@ -402,10 +397,8 @@ static void crypt_8bytes(source, dest, bfkey, direction)
    to the crypt functions.  It does some simple testing of the
    init data and crypt routine, and returns 0 on error.
 */
-static void make_bfkey(key_string, keylength, bfkey)
-     unsigned char *key_string;
-     int keylength;
-     BFkey_type *bfkey;
+static void make_bfkey(unsigned char *key_string, int keylength, 
+		       BFkey_type *bfkey)
 {
    int       i, j, k ;
    IntU32      dspace[2],
@@ -485,27 +478,20 @@ static void make_bfkey(key_string, keylength, bfkey)
 
 
 static inline void
-block_encrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+block_encrypt(block_state *self, unsigned char *block)
 {
   crypt_8bytes(block, block, &(self->bfkey), 0);
 }
 
 
 static inline void
-block_decrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+block_decrypt(block_state *self, unsigned char *block)
 {
   crypt_8bytes(block, block, &(self->bfkey), 1);
 }
 
 static inline void 
-block_init(self, key, keylength)
-     block_state *self;
-     unsigned char *key;
-     int keylength;
+block_init(block_state *self, unsigned char *key, int keylength)
 {
  make_bfkey(key, keylength, &(self->bfkey));
 }

@@ -52,10 +52,7 @@ typedef struct {
 #define fetch(ptr, base)   (((((( ptr[base]<< 8 ) | ptr[base+1] )<< 8 ) | ptr[base+2] )<< 8 ) | ptr[base+3])
 
 /* this is the round function f(D, Km, Kr) */
-static inline uint32 castfunc(D, Kmi, Kri, type)
-     uint32 D, Kmi;
-     uint8 Kri;
-     int type;
+static inline uint32 castfunc(uint32 D, uint32 Kmi, uint8 Kri, int type)
 {
     uint32 I, f;
     short Ia, Ib, Ic, Id;
@@ -98,10 +95,7 @@ static inline uint32 castfunc(D, Kmi, Kri, type)
 
 /* encrypts/decrypts one block of data according to the key schedule
    pointed to by `key'. Encrypts if decrypt=0, otherwise decrypts. */
-static void castcrypt(key, block, decrypt)
-     block_state *key;
-     uint8 *block;
-     int decrypt;
+static void castcrypt(block_state *key, uint8 *block, int decrypt)
 {
     uint32 L, R, tmp, f;
     uint32 Kmi;
@@ -179,9 +173,7 @@ static void castcrypt(key, block, decrypt)
 
 /* generates sixteen 32-bit subkeys based on a 4x32-bit input key;
    modifies the input key *in as well. */
-static void schedulekeys_half(in, keys)
-     uint32 *in;
-     uint32 *keys;
+static void schedulekeys_half(uint32 *in, uint32 *keys)
 {
     uint32 x[4], z[4];
     
@@ -222,10 +214,7 @@ static void schedulekeys_half(in, keys)
 }
 
 /* generates a key schedule from an input key */
-static void castschedulekeys(schedule, key, keybytes)
-     block_state *schedule;
-     uint8 *key;
-     int keybytes;
+static void castschedulekeys(block_state *schedule, uint8 *key, int keybytes)
 {
     uint32 x[4];
     uint8  paddedkey[16];
@@ -409,10 +398,7 @@ main()
 #endif
 
 static void
-block_init(self, key, keylength)
-     block_state *self;
-     unsigned char *key;
-     int keylength;
+block_init(block_state *self, unsigned char *key, int keylength)
 {
     /* presumably this will optimize out */
     if (sizeof(uint32) < 4 || sizeof(uint8) != 1) {
@@ -432,16 +418,12 @@ block_init(self, key, keylength)
 }
 
 static void
-block_encrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+block_encrypt(block_state *self, unsigned char *block)
 {
     castcrypt(self, block, 0);
 }
 
-static void block_decrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+static void block_decrypt(block_state *self, unsigned char *block)
 {
     castcrypt(self, block, 1);
 }

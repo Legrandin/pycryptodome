@@ -40,8 +40,7 @@ typedef struct
 } block_state;
 
 CONST static uint16
-mulInv(x)
-     uint16 x;
+mulInv(uint16 x)
 {
     uint16 t0, t1;
     uint16 q, y;
@@ -67,10 +66,7 @@ mulInv(x)
 }				/* mukInv */
 
 static inline void
-block_init(self, key, dummy)
-     block_state *self;
-     unsigned char *key;
-     int dummy;
+block_init(block_state *self, unsigned char *key, int dummy)
 {
     int i, j;
     uint16 t1, t2, t3;
@@ -125,10 +121,7 @@ block_init(self, key, dummy)
 
 /*      IDEA encryption/decryption algorithm */
 /* Note that in and out can be the same buffer */
-static void ideaCipher(self, block, key)
-     block_state *self;
-     byte *block;
-     word16 const *key;
+static void ideaCipher(block_state *self, byte *block, word16 const *key)
 {
     register uint16 x1, x2, x3, x4, s2, s3;
     word16 *in, *out;
@@ -194,16 +187,12 @@ static void ideaCipher(self, block, key)
 }				/* ideaCipher */
 
 
-static inline void block_encrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+static inline void block_encrypt(block_state *self, unsigned char *block)
 {
   ideaCipher(self, block, self->EK);
 }
 
-static inline void block_decrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+static inline void block_decrypt(block_state *self, unsigned char *block)
 {
   ideaCipher(self, block, self->DK);
 }

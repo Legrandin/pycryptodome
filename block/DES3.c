@@ -439,11 +439,8 @@ typedef struct
   des_key_schedule KeySched1, KeySched2, KeySched3;
 } block_state;
 
-static int des_encrypt(input,output,ks,encrypt)
-     unsigned long *input;
-     unsigned long *output;
-     des_key_schedule ks;
-     int encrypt;
+static int des_encrypt(unsigned long *input, unsigned long *output,
+		       des_key_schedule ks, int encrypt)
 	{
 	register unsigned long l,r,t,u;
 	register int i;
@@ -517,11 +514,8 @@ static int des_encrypt(input,output,ks,encrypt)
 	return(0);
 	}
 
-static int des_ecb_encrypt(input,output,ks,encrypt)
-     des_cblock *input;
-     des_cblock *output;
-     des_key_schedule ks;
-     int encrypt;
+static int des_ecb_encrypt(des_cblock *input, des_cblock *output,
+			   des_key_schedule ks, int encrypt)
 	{
 	register unsigned long l0,l1;
 	register unsigned char *in,*out;
@@ -544,26 +538,22 @@ static int des_ecb_encrypt(input,output,ks,encrypt)
 
 
      
-static inline void block_decrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+static inline void block_decrypt(block_state *self, unsigned char *block)
 {
   des_cblock output, output2;
   
-  des_ecb_encrypt(block, output, self->KeySched3, 0);
-  des_ecb_encrypt(output, output2, self->KeySched2, 1);
-  des_ecb_encrypt(output2, block, self->KeySched1, 0);
+  des_ecb_encrypt((des_cblock *)block, &output, self->KeySched3, 0);
+  des_ecb_encrypt(&output, &output2, self->KeySched2, 1);
+  des_ecb_encrypt(&output2, (des_cblock *)block, self->KeySched1, 0);
 }
 
-static inline void block_encrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+static inline void block_encrypt(block_state *self, unsigned char *block)
 {
   des_cblock output, output2;
   
-  des_ecb_encrypt(block, output, self->KeySched1, 1);
-  des_ecb_encrypt(output, output2, self->KeySched2, 0);
-  des_ecb_encrypt(output2, block, self->KeySched3, 1);
+  des_ecb_encrypt((des_cblock *)block, &output, self->KeySched1, 1);
+  des_ecb_encrypt(&output, &output2, self->KeySched2, 0);
+  des_ecb_encrypt(&output2, (des_cblock *)block, self->KeySched3, 1);
 }
 
 /* NOW DEFINED IN des_local.h
@@ -578,9 +568,7 @@ static inline void block_encrypt(self, block)
 
 static char shifts2[16]={0,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0};
 
-static int des_set_key(key,schedule)
-des_cblock *key;
-des_key_schedule schedule;
+static int des_set_key(des_cblock *key, des_key_schedule schedule)
 	{
 	  register unsigned long c,d,t,s;
 	  register unsigned char *in;
@@ -667,10 +655,8 @@ static const unsigned char odd_parity[256]={
 224,224,227,227,229,229,230,230,233,233,234,234,236,236,239,239,
 241,241,242,242,244,244,247,247,248,248,251,251,253,253,254,254};
 
-static inline void block_init(self, key, keylength)
-     block_state *self;
-     unsigned char *key;
-     int keylength;
+static inline void block_init(block_state *self, unsigned char *key, 
+			      int keylength)
 {
   char oddkey[16];
   int i;
@@ -685,8 +671,8 @@ static inline void block_init(self, key, keylength)
     {
       oddkey[i]=odd_parity[ key[i] ];
     }
-  des_set_key(oddkey+0, self->KeySched1);
-  des_set_key(oddkey+8, self->KeySched2);
+  des_set_key((des_cblock *)(oddkey+0), self->KeySched1);
+  des_set_key((des_cblock *)(oddkey+8), self->KeySched2);
   if (keylength == 24) {
     des_set_key(key+16, self->KeySched3);
   } else {
