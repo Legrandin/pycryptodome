@@ -16,6 +16,7 @@
 \********************************************************************/
 
 #include <string.h>
+#include <sys/param.h>
 #include <netinet/in.h>
 #include "Python.h"
 

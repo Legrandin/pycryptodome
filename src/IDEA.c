@@ -11,6 +11,7 @@
  */
   
 
+#include <sys/param.h>
 #include <netinet/in.h>
 
 #define MODULE_NAME IDEA
