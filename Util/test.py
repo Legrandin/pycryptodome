@@ -10,6 +10,9 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
+from Crypto.Hash import *
+from Crypto.Cipher import *
+
 def die(string):
     import sys
     print '***ERROR: ', string
@@ -24,31 +27,31 @@ def hex2str(str):
 def exerciseBlockCipher(cipher, verbose):
     import string, time
     try:
-        from Crypto.Cipher import * ; ciph = eval(cipher, locals() )
-    except ImportError:
+        ciph = eval(cipher)
+    except NameError:
         print cipher, 'module not available'
         return None
     print cipher+ ':'
     str='1'				# Build 128K of test data
     for i in xrange(0, 17):
         str=str+str
-    if ciph.keysize==0: ciph.keysize=16
-    password = 'password12345678Extra text for password'[0:ciph.keysize]
-    IV = 'Test IV Test IV Test IV Test'[0:ciph.blocksize]
+    if ciph.key_size==0: ciph.key_size=16
+    password = 'password12345678Extra text for password'[0:ciph.key_size]
+    IV = 'Test IV Test IV Test IV Test'[0:ciph.block_size]
 
     if verbose: print '  Testing ECB mode with key '+ `password`
     obj=ciph.new(password, ciph.ECB)
     if verbose: print '    Sanity check'
-    if obj.blocksize != ciph.blocksize:
-        die("Module and cipher object blocksize don't match")
+    if obj.block_size != ciph.block_size:
+        die("Module and cipher object block_size don't match")
         
-    text='1234567812345678'[0:ciph.blocksize]
+    text='1234567812345678'[0:ciph.block_size]
     c=obj.encrypt(text)
     if (obj.decrypt(c)!=text): die('Error encrypting "'+text+'"')
-    text='KuchlingKuchling'[0:ciph.blocksize]
+    text='KuchlingKuchling'[0:ciph.block_size]
     c=obj.encrypt(text)
     if (obj.decrypt(c)!=text): die('Error encrypting "'+text+'"')
-    text='NotTodayNotEver!'[0:ciph.blocksize]
+    text='NotTodayNotEver!'[0:ciph.block_size]
     c=obj.encrypt(text)
     if (obj.decrypt(c)!=text): die('Error encrypting "'+text+'"')
 
@@ -100,7 +103,7 @@ def exerciseBlockCipher(cipher, verbose):
     # Test the IV handling
     if verbose: print '  Testing IV handling'
     obj1=ciph.new(password, ciph.CBC, IV)
-    plaintext='Test'*(ciph.blocksize/4)*3
+    plaintext='Test'*(ciph.block_size/4)*3
     ciphertext1=obj1.encrypt(plaintext)
     obj1.IV=IV
     ciphertext2=obj1.encrypt(plaintext)
@@ -118,24 +121,24 @@ def exerciseBlockCipher(cipher, verbose):
 def exerciseStreamCipher(cipher, verbose):
     import string, time
     try:
-        from Crypto.Cipher import * ; ciph = eval(cipher, locals() )
-    except (ImportError):
+        ciph = eval(cipher)
+    except (NameError):
         print cipher, 'module not available'
         return None
     print cipher + ':'
     str='1'				# Build 128K of test data
     for i in xrange(0, 17):
         str=str+str
-    if ciph.keysize==0: ciph.keysize=16
-    password = 'password12345678Extra text for password'[0:ciph.keysize]
+    if ciph.key_size==0: ciph.key_size=16
+    password = 'password12345678Extra text for password'[0:ciph.key_size]
     
     obj1=ciph.new(password)
     obj2=ciph.new(password)
     if verbose: print '  Sanity check'
-    if obj1.blocksize != ciph.blocksize:
-        die("Module and cipher object blocksize don't match")
-    if obj1.keysize != ciph.keysize:
-        die("Module and cipher object keysize don't match")
+    if obj1.block_size != ciph.block_size:
+        die("Module and cipher object block_size don't match")
+    if obj1.key_size != ciph.key_size:
+        die("Module and cipher object key_size don't match")
 
     text='1234567812345678Python'
     c=obj1.encrypt(text)
@@ -249,7 +252,7 @@ def compareHashResult(hash, strg, result):
     
 import Crypto.Util.testdata
 
-def TestHashModules(args=['ripemd', 'md2', 'md4', 'md5', 'sha', 'haval'], 
+def TestHashModules(args=['ripemd', 'md2', 'md4'], 
 		    verbose=1):
     import string
     args=map(string.lower, args)
@@ -427,7 +430,7 @@ def TestHashModules(args=['ripemd', 'md2', 'md4', 'md5', 'sha', 'haval'],
 	    if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
 	    del obj, astring
 
-def TestStreamModules(args=['arc4', 'sapphire', 'XOR'], verbose=1):
+def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
     import sys, string
     args=map(string.lower, args)
 
@@ -492,11 +495,32 @@ def TestStreamModules(args=['arc4', 'sapphire', 'XOR'], verbose=1):
 		if verbose: print '  XOR test suite completed'
 
 
-def TestBlockModules(args=['arc2', 'blowfish', 'cast', 'des', 'des3',
-			   'diamond', 'idea', 'rc5', 'skipjack'],
+def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
+			   'idea', ],#'rc5'],
 		     verbose=1):
     import string
     args=map(string.lower, args)
+    if 'aes' in args:
+        ciph=exerciseBlockCipher('AES', verbose)        # AES
+	if (ciph!=None):
+	    try:
+		import Crypto.Util.testdata
+	    except ImportError:
+		if verbose: print '  Test suite data not available'
+	    else:
+		if verbose: print '  Verifying against test suite...'
+		for entry in Crypto.Util.testdata.aes:
+		    key,plain,cipher=entry
+		    key=hex2str(key)
+		    plain=hex2str(plain)
+		    cipher=hex2str(cipher)
+		    obj=ciph.new(key, ciph.ECB)
+		    ciphertext=obj.encrypt(plain)
+		    if (ciphertext!=cipher):
+			die('AES failed on entry '+`entry`)
+			for i in ciphertext: 
+			    if verbose: print hex(ord(i)),
+			if verbose: print
 
     if 'arc2' in args:
         ciph=exerciseBlockCipher('ARC2', verbose)	    # Alleged RC2
