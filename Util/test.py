@@ -181,7 +181,7 @@ def exerciseStreamCipher(cipher, verbose):
 
 import string
     
-import Crypto.Util.testdata
+import testdata
 def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
     import sys, string
     args=map(string.lower, args)
