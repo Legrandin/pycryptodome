@@ -1,0 +1,343 @@
+File Formats Used by PGP 2.6 (22 May 94)
+========================================
+
+***Note: packets that contain a version byte of 2 will contain a version
+         byte of 3 when using versions of PGP >= 2.6 after 9/1/94.
+
+This appendix describes the file formats used externally by Pretty
+Good Privacy (PGP), the RSA public key cryptography application.  The
+intended audience includes software engineers trying to port PGP to
+other hardware environments or trying to implement other PGP-
+compatible cryptography products, or anyone else who is curious.
+
+[To be included: a description of ASCII armor.  An ASCII armored
+file is just like a binary file described here, but with an extra
+layer of encoding added, framing lines, and a 24-bit CRC at the end.]
+
+
+Byte Order
+----------
+
+All integer data used by PGP is externally stored most significant byte
+(MSB) first, regardless of the byte order used internally by the host
+CPU architecture.  This is for portability of messages and keys between
+hosts.  This covers multiprecision RSA integers, bit count prefix
+fields, byte count prefix fields, checksums, key IDs, and timestamps.
+
+The MSB-first byte order for external packet representation was
+chosen only because many other crypto standards use it.
+
+
+Multiprecision Integers
+-----------------------
+
+RSA arithmetic involves a lot of multiprecision integers, often
+having hundreds of bits of precision.  PGP externally stores a
+multiprecision integer (MPI) with a 16-bit prefix that gives the
+number of significant bits in the integer that follows.  The integer
+that follows this bitcount field is stored in the usual byte order, 
+with the MSB padded with zero bits if the bitcount is not a multiple
+of 8.  The bitcount always specifies the exact number of significant
+bits.  For example, the integer value 5 would be stored as these
+three bytes:
+
+    00 03 05
+
+An MPI with a value of zero is simply stored with the 16-bit bitcount 
+prefix field containing a 0, with no value bytes following it.
+
+
+
+Key ID
+------
+
+Some packets use a "key ID" field.  The key ID is the least
+significant 64 bits of the RSA public modulus that was involved in
+creating the packet.  For all practical purposes it unique to each 
+RSA public key.
+
+
+User ID
+-------
+
+Some packets contain a "user ID", which is an ASCII string that
+contains the user's name.  Unlike a C string, the user ID has a
+length byte at the beginning that has a byte count of the rest of the
+string.  This length byte does not include itself in the count.
+
+
+Timestamp
+---------
+
+Some packets contain a timestamp, which is a 32-bit unsigned integer
+of the number of seconds elapsed since 1970 Jan 1 00:00:00 GMT.  This
+is the standard format used by Unix timestamps.  It spans 136 years. 
+
+
+
+Cipher Type Byte (CTB)
+----------------------
+
+Many of these data structures begin with a Cipher Type Byte (CTB),
+which specifies the type of data structure that follows it.  The CTB 
+bit fields have the following meaning (bit 0 is the LSB, bit 7 is the
+MSB):
+
+Bit 7:     Always 1, which designates this as a CTB
+Bit 6:     Reserved.
+Bits 5-2:  CTB type field, specifies type of packet that follows
+           0001 - public-key-encrypted packet
+           0010 - secret-key-encrypted (signature) packet
+           0101 - Secret key certificate
+           0110 - Public key certificate
+           1000 - Compressed data packet
+           1001 - Conventional-Key-Encrypted data
+           1011 - Raw literal plaintext data, with filename and mode
+           1100 - Keyring trust packet
+           1101 - User ID packet, associated with public or secret key
+           1110 - Comment packet
+           Other CTB packet types are unimplemented.
+Bits 1-0:  Length-of-length field:
+           00 - 1 byte packet length field follows CTB
+           01 - 2 byte packet length field follows CTB
+           10 - 4 byte packet length field follows CTB
+           11 - no length field follows CTB, unknown packet length.
+           The 8-, 16-, or 32-bit packet length field after the CTB 
+           gives the length in bytes of the rest of the packet, not
+           counting the CTB and the packet length field.
+
+
+
+RSA public-key-encrypted packet
+-------------------------------
+
+Offset  Length  Meaning
+0       1       CTB for RSA public-key-encrypted packet
+1       2       16-bit (or maybe 8-bit) length of packet
+3	1	Version byte (=2).  May affect rest of fields that follow.
+4       8       64-bit Key ID
+12	1	Algorithm byte for RSA (=1 for RSA).  
+		--Algorithm byte affects field definitions that follow.
+13      ?       RSA-encrypted integer, encrypted conventional key
+                packet.  (MPI with bitcount prefix)
+
+The conventionally-encrypted ciphertext packet begins right after the 
+RSA public-key-encrypted packet that contains the conventional key.
+
+
+
+Signature packet
+----------------
+
+Offset  Length  Meaning
+0       1       CTB for secret-key-encrypted (signed) packet
+1       2       16-bit (or maybe 8-bit) length of packet
+3	1	Version byte (=2).  May affect rest of fields that follow.
+                Version byte (=3) for >= PGP2.6 after 9/1/94
+4	1	Length of following material that is implicitly included 
+		in MD calculation (=5).
+5	1	Signature classification field (see below). 
+		Implicitly append this to message for MD calculation.
+6	4	32-bit timestamp of when signature was made.  
+		Implicitly append this to message for MD calculation.
+10      8       64-bit Key ID
+18	1	Algorithm byte for public key scheme (RSA=0x01).  
+		--Algorithm byte affects field definitions that follow.
+19	1	Algorithm byte for message digest (MD5=0x01).
+20	2	First 2 bytes of the Message Digest inside the 
+		RSA-encrypted integer, to help us figure out if we 
+		used the right RSA key to check the signature.
+22      ?       RSA-encrypted integer, encrypted message digest
+                (MPI with bitcount prefix).
+
+If the plaintext that was signed is included in the same file as the
+signature packet, it begins right after the RSA secret-key-signed 
+packet that contains the message digest.  The plaintext has a
+"literal" CTB prefix.
+
+The original idea had a variable length field following the length
+of following material byte, before the Key ID.  In particular, the
+possibility of a 2-byte validity period was defined, although no
+previous version of PGP ever generated those bytes.
+
+Owing to the way the MD5 is computed for the signature, if that field
+is variable length, it is possible to generate two different messages
+with the same MD5 hash.  One would be a file of length N, with a 7-byte
+following section consisting of a signature type byte, 4 bytes of
+timestamp, and 2 of validity period, while the other would be a file of
+length N+2, whose last two bytes would be the siganture type byte and
+the first byte of timestamp, and the last three bytes of timestamp and
+the validity period would instead be interpreted as a signature type
+byte and a timestmap.
+
+It should be emphasized that the messages are barely different and
+special circumstances must arise for this to be possible, so it is
+extremely unlilely that this would be exploitable, but it is a
+potential weakness.  It has been plugged by allowing only the currently
+implemented 5-byte option.  Validity periods will be added later with
+a different format.
+
+The signature classification field describes what kind of 
+signature certificate this is.  There are various hex values:
+	00 -	Signature of a message or document, binary image.  
+	01 -	Signature of a message or document, canonical text.  
+	10 -	Key certification, generic.  Only version of key
+		certification supported by PGP 2.5.
+		Material signed is public key pkt and User ID pkt.
+	11 -	Key certification, persona.  No attempt made at all 
+		to identify the user with a real name.
+		Material signed is public key pkt and User ID pkt.
+	12 -	Key certification, casual identification.  Some
+		casual attempt made to identify user with his name.
+		Material signed is public key pkt and User ID pkt.
+	13 -	Key certification, positive ID.  Heavy-duty
+		identification efforts, photo ID, direct contact 
+		with personal friend, etc.
+		Material signed is public key pkt and User ID pkt.
+	20 - 	Key compromise.  User signs his own compromise
+		certificate.  Independent of user ID associations.
+		Material signed is public key pkt ONLY.
+	30 - 	Key/userid revocation.  User can sign his own 
+		revocation to dissolve an association between a key
+		and a user ID, or certifier may revoke his previous 
+		certification of this key/userid pair. 
+		Material signed is public key pkt and User ID pkt.
+	40 -	Timestamping a signature certificate made by someone
+		else.  Can be used to apply trusted timestamp, and
+		log it in notary's log.  Signature of a signature.
+		(Planned, not implemented.)
+
+When a signature is made to certify a key/UserID pair, it is computed
+across two packets-- the public key packet, and the separate User ID
+packet.  See below.  
+
+The packet headers (CTB and length fields) for the public key packet
+and the user ID packet are both omitted from the signature
+calculation for a key certification.  
+
+A key compromise certificate may be issued by someone to revoke his
+own key when his secret key is known to be compromised.  If that
+happens, a user would sign his own key compromise certificate with
+the very key that is being revoked.  A key revoked by its own
+signature means that this key should never be used or trusted again,
+in any form, associated with any user ID.  A key compromise
+certificate issued by the keyholder shall take precedence over any
+other key certifications made by anyone else for that key.  A key
+compromise signed by someone other than the key holder is invalid.  
+
+Note that a key compromise certificate just includes the key packet
+in its signature calculation, because it kills the whole key without
+regard to any userid associations.  It isn't tied to any particular
+userid association.  It should be inserted after the key packet,
+before the first userid packet.  
+
+When a key compromise certificate is submitted to PGP, PGP will place
+it on the public keyring.  A key compromise certificate is always
+accompanied in its travels by the public key and userIDs it affects.
+If the affected key is NOT already on the keyring, the compromise
+certificate (and its key and user ID) is merely added to the keyring
+anywhere.  If the affected key IS already on the keyring, the
+compromise certificate is inserted after the affected key packet. 
+This assumes that the actual key packet is identical to the one
+already on the key ring, so no duplicate key packet is needed.
+If a key has been revoked, PGP will not allow its use to encipher any
+messages, and if an incoming signature uses it, PGP will display a
+stern warning that this key has been revoked.
+
+NOTE:  Key/userid revocation certificates ARE NOT SUPPORTED in
+this version of PGP.  But if we ever get around to supporting them,
+here are some ideas on how they should work...
+
+A key/userid revocation certificate may be issued by someone to
+dissolve the association between his own key and a user ID.  He would
+sign it with the very key that is being revoked.  A key/userid
+revocation certificate issued by the keyholder shall take precedence
+over any other key certifications made by anyone else for that
+key/userid pair.  Also, a third party certifier may revoke his own
+previous certification of this key/userid pair by issuing a
+key/userid revocation certificate.  Such a revocation should not
+affect the certifications by other third parties for this same
+key/userid pair. 
+
+When a key/userid revocation certificate is submitted to PGP, PGP
+will place it on the public keyring.  A key/userid revocation
+certificate is always accompanied in its travels by the public key it
+affects (the key packet and user ID packet precedes the revocation
+certificate).  If the affected key is NOT already on the keyring, the
+revocation certificate (and its key and user ID) is merely added to
+the keyring anywhere.  If the affected key IS already on the keyring,
+the revocation certificate is integrated in with the key's other
+certificates as though it were just another key certification.  This
+assumes that the actual key packet is identical to the one already on
+the key ring, so no duplicate key packet is needed.
+
+
+
+Message digest "packet"
+-----------------------
+
+The Message digest has no CTB packet framing.  It is stored
+packetless and naked, with padding, encrypted inside the MPI in the
+Signature packet.  
+
+PGP versions 2.3 and later use a new format for encoding the message
+digest into the MPI in the signature packet, a format which is
+compatible with RFC1425 (formerly RFC1115).  This format is accepted
+but not written by version 2.2.  The older format used by versions 2.2
+is acepted by versions up to 2.4, but the RSAREF code in 2.5 is
+not capable of parsing it.
+
+PGP versions 2.2 and earlier encode the MD into the MPI as follows:
+
+        MSB             .   .   .                LSB
+
+         0   1   MD(16 bytes)   0   FF(n bytes)   1
+
+Enough bytes of FF padding are added to make the length of this
+whole string equal to the number of bytes in the modulus.
+
+PGP versions 2.3 and later encode the MD into the MPI as follows:
+
+        MSB               .   .   .                  LSB
+
+         0   1   FF(n bytes)   0   ASN(18 bytes)   MD(16 bytes)
+
+See RFC1423 for an explanation of the meaning of the ASN string.
+It is the following 18 byte long hex value:
+
+        3020300c06082a864886f70d020505000410
+
+Enough bytes of FF padding are added to make the length of this
+whole string equal to the number of bytes in the modulus.
+
+All this mainly affects the rsa_private_encrypt() and rsa_public_decrypt()
+functions in rsaglue.c.
+
+There is no checksum included.  The padding serves to verify that the
+correct RSA key was used.
+
+
+Conventional Data Encryption Key (DEK) "packet"
+-----------------------------------------------
+
+The DEK has no CTB packet framing.  The DEK is stored packetless and
+naked, with padding, encrypted inside the MPI in the RSA
+public-key-encrypted packet.
+
+PGP versions 2.3 and later use a new format for encoding the message
+digest into the MPI in the signature packet.  (This format is not
+presently based on any RFCs due to the use of the IDEA encryption
+system.)  This format is accepted but not written by version 2.2.  The
+older format used by versions 2.2 and earlier is also accepted by
+versions up to 2.4, but the RSAREF code in 2.5 is unable to cope
+with it.
+
+PGP versions 2.2 and earlier encode the MD into the MPI as follows:
+
+        MSB                     .   .   .                          LSB
+
+         0   1   DEK(16 bytes)   CSUM(2 bytes)   0   RND(n bytes)   2
+
+CSUM refers to a 16-bit checksum appended to the high end of the DEK.
+RND is a string of NONZERO pseudorandom bytes, enough to make the length
+of t

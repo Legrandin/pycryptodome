@@ -1,0 +1,23 @@
+
+Core algorithms:
+	Elliptic-curve algs should be added; they're not a priority for now. 
+	A secret sharing module should be added to Util or Protocols.
+	
+Protocols:
+	Implement ssh
+	Add PGP modules to the package, rearranging them to fit.
+
+Generic cryptographic stuff: 
+	Optimize the feedback modes a bit
+
+Demo programs:
+	Shadowing of files into X parts
+	Secure talk or telnet
+
+Documentation:
+	Document chaff/winnow better
+	Add docstrings everywhere.
+
+Config stuff:
+	Smarter distribution building 
+	

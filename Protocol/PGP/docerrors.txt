@@ -1,0 +1,5 @@
+
+* Signature packets can only have a 16-bit length.  The documentation
+  claims it can be either 8 or 16-bit.
+
+

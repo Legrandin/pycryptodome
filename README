@@ -1,0 +1,86 @@
+
+	This is version 1.1 of the Python cryptography modules, a
+collection of cryptographic code for the Python programming language.
+
+	This is a collection of both secure hash functions (such as MD5
+and SHA), and various encryption algorithms (IDEA, DES, RSA, ElGamal,
+etc.).  The package is structured to make adding new modules easy.  I
+consider this section to be essentially complete, and the software
+interface will almost certainly not change in an incompatible way in
+the future; all that remains to be done is to fix any bugs that show
+up.  If you encounter a bug, please inform me immediately.  If you
+implement a new algorithm, please send me a copy.
+
+	A sample usage of the MD5 module is:
+>>> from Crypto.Hash import MD5
+>>> hash=MD5.new()
+>>> hash.update(message)
+>>> hash.digest()
+'\235\361\034\357\217MX\2246\226\367\366Ebx\326'
+
+	A sample use of an encryption algorithm (IDEA, in this case) is:
+>>> from Crypto.Cipher import IDEA
+>>> obj=IDEA.new('This is a key456', IDEA.ECB)
+>>> message="The answer is no"
+>>> ciphertext=obj.encrypt(message)
+>>> ciphertext
+'\2325$\343=)d\341^\025<\344\013\204 T'
+>>> obj.decrypt(ciphertext)
+'The answer is no'
+
+	One possible application of the modules is writing secure
+administration tools.  Another application is in writing daemons and
+servers.  Clients and servers can encrypt the data being exchanged and
+mutually authenticate themselves; daemons can encrypt private data for
+added security.  Python also provides a pleasant framework for
+prototyping and experimentation with cryptographic algorithms; thanks
+to its arbitrary-length integers, public key algorithms are easily
+implemented.
+
+	For discussion about using Python for cryptography-related
+tasks, join the python-crypto mailing list.  Point your Web browser to
+<URL:http://www.findmail.com/list/python-crypto/> and fill out the
+form, or send a message with "subscribe" in the Subject: line to
+python-crypto-request@makelist.com .
+
+TO INSTALL:
+
+	You must already have Python installed to build the
+cryptography modules since the buildkit script (which the Makefile
+uses) is written in Python.  Be sure you ran the "libainstall" and
+"inclinstall" targets when you built Python, which install various
+libraries and *.h files needed to compile modified versions of the
+Python interpreter.
+	
+	Once Python has been built and installed, this package can be
+compiled.  Simply run "make" in the same directory as this file.  The
+default setup is to compile the modules so they can be dynamically
+linked into the Python interpreter when they're imported; edit
+Setup.in and/or Makefile.pre.in if desired.  If you installed Python
+in a non-standard location, you might want to call make like so:
+
+    make -k installdir=/path/to/exec/prefix/when/i/installed/Python
+	
+	To verify that everything is in order, run "make test".  It
+will test all the cryptographic modules, skipping ones that aren't
+available.  If the test script reports an error on your machine,
+please inform me immediately, because that means there's a serious bug
+somewhere in the cryptographic routines.  (Alternatively, track down
+the bug and send me a patch.)
+
+	Running test.py without the --quiet argument will let you see
+what it's doing, and will also run a crude benchmark to give you an
+impression of the comparative speeds of the algorithms and feedback
+modes.  
+
+	To install the package under the site-packages directory of
+your Python installation, run "make install" once you've run "make
+test" successfully.
+
+	If you have any comments, corrections, or improvements for
+this package, please e-mail me at the address below, or send it to the
+python-crypto mailing list at python-crypto@makelist.com .  Good luck!
+
+	
+	Andrew Kuchling
+	akuchling@acm.org

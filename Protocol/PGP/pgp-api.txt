@@ -1,0 +1,74 @@
+Over a year ago, I started work on a PGP library for the Python
+programming language, but it never really got finished.  All of the
+pieces are present--cryptographic modules for MD5, IDEA and RSA, a
+zlib module for data compression, and Python code to read the packets
+that make up PGP keyrings and messages--but the pieces were never
+assembled into a coherent high-level interface.  Recently a few people
+have expressed interest in the project, so I've revived it.
+
+So... here's a proposal for an interface:
+
+ASCII armoring:
+===============
+
+	ArmorFile( <file1 object> [ , output=<file2 object> ]) 
+
+Read from file1 and ASCII-armor its contents.  If file2 is provided,
+the output will be written to file2; otherwise it will return a string
+containing the data instead.)
+
+	UnarmorFile( <file1 object> [ , output=<file2 object> ])   
+Read from file1 and remove ASCII armor from its contents.  If file2 is
+provided, the output will be written to file2; otherwise it will be
+written to sys.stdout.  An exception will be raised if the CRC check
+is failed or the file is incomplete.
+
+(XXX Do we need versions of the above that operate on strings?  One
+ could simply do ArmorFile( StringIO.StringIO(s) ), at the cost of 
+ some speed.)
+
+Keyring operations:
+===================
+
+class PGPKey(RSA.key):
+    def __init__(self, file=None, string=""):
+	Create a PGPKey object; the key data will either be 
+	taken from the given string or read from the given file
+	object.
+	
+	Only zero or one of file, string can be given--not both.
+
+XXX Annoyingly, if the data is being read from a file, 
+we have to read PGP packets until we either hit EOF or another key.
+If it's another key, then we've read one packet too far, and have to
+seek back to reset the file pointer.  Maybe instead we should have a 
+
+
+PGPKey objects have the following methods:
+
+	unlock(password) 
+Decrypt the RSA private key (if present), using the provided password.
+
+	lock()
+Discard the decoded RSA key data, if present. 
+
+	relock(password)
+Re-encrypt the RSA private key data using the provided password.
+
+	encrypt(string)
+	RSA-encrypt the given string with the key; if string is too
+big, raise an exception.
+
+	decrypt(packet)
+	RSA-decrypt the given packet with the key.
+	
+Messages:
+=========
+
+EncryptMessage(recipients= <list of keys>,  # Who the message will be encrypted for
+	       signer=<unlocked key>,       # Key used to sign the message
+	       compress=<Boolean>           # Compression on/off
+              )                      
+
+
+

@@ -1,0 +1,3 @@
+armor=off
+PubRing="./pubring.pgp"
+SecRing="./secring.pgp"

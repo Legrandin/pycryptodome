@@ -1,0 +1,35 @@
+#!/usr/local/bin/python
+# Hey Emacs, this is -*-Python-*- code!
+
+# Places PGP keys into a shelved file, where they can be instantly
+# retrieved with the KeyID.
+
+# Usage: shelvepgp <keyring file>
+
+import pgp, sys
+if len(sys.argv)!=2:
+    print 'Usage: shelvepgp keyring'
+    sys.exit(1)
+
+input=pgp.KeyRing()
+input.parseKeyRing(open(sys.argv[1], 'r'))
+
+output=pgp.ShelfKeyRing('keyring.shelve')
+for i in input.keys():
+    output[i]=input[i]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,144 @@
+#!/usr/bin/env python --
+# -*-Python-*-
+#  buildkit : Builds the object files
+#
+# Part of the Python Cryptography Toolkit, version 1.1
+# 
+
+import sys, re, string
+import os
+
+modules = [
+# Format: "hash" algorithm digestsize
+('hash', 'MD2', 16),
+('hash', 'MD4', 16),
+('hash', 'MD5', 16),
+('hash', 'SHA', 20),
+('hash', 'RIPEMD', 20),
+('hash', 'HAVAL', 32, [('rounds', 5), ('digestsize', 256)] ),
+
+# "block" algorithm blocksize keylength
+('block', 'ARC2', 8, 0),
+('block', 'Blowfish', 8, 0),
+('block', 'CAST',  8, 0),
+('block', 'DES',   8, 8),
+('block', 'DES3',  8, 0),
+('block', 'Diamond', 16, 0, [('rounds', 8)] ),
+('block', 'IDEA',  8, 16),
+('block', 'RC5',  8,  0, [('version', 0x10), 
+			  ('wordsize', 32), 
+			  ('rounds', 12)
+			  ]),
+('block', 'Skipjack', 8, 10),
+ 
+# Stream ciphers
+('stream', 'ARC4', 1, 0),
+('stream', 'Sapphire', 1, 0),
+('stream', 'XOR', 1, 0),
+
+# "simple" filenamebase
+#('simple', 'HAVAL')
+]
+
+# This class neatly encapsulates files; comparisions examine the time of
+# creation of the two files.
+
+class File:
+    def __init__(self, filename):
+        self.filename=filename
+    def __cmp__(self, other):
+        try:
+            t1=os.stat(self.filename)[8]
+        except os.error, (error, message):
+            if error==2: return(-1)
+	    print error, message
+            raise os.error, (error,message)
+        try:
+            t2=os.stat(other.filename)[8]
+        except os.error, (error, message):
+            if error==2: return(+1)
+	    print error, message
+            raise os.error, (error,message)
+        if (t1<t2): return(-1)
+        if (t1>t2): return(+1)
+        return 0
+
+def execute(command):
+    print command
+    status=os.system(command)
+    if (status!=0): raise KeyboardInterrupt 
+
+def BuildSourceFile(algorithm, moduletype, substlist):    
+    sys.stderr.write(' Building C source code for '+algorithm+'\n')
+    input=open('framewks/'+moduletype+'.in', 'r')
+    output=open('src/'+algorithm+'module.c', 'w')
+    substlist.append( ('@@ALGORITHM@@', algorithm) )
+    substlist.append( ('@@MODNAME@@', algorithm) )
+    output.write('\n\n/* Do not modify this file; '
+                 +'it is automatically generated\n')
+    output.write('   from '+moduletype+'.in and '+algorithm+'.c\n */\n\n')
+    while (1):
+        l=input.readline()
+        if (l==''): break
+        for entry in substlist:
+            keyword, value=entry
+            l=re.sub(keyword, str(value), l)
+
+        temp=l
+        l=re.sub('@@IMPLEMENTATION@@', '', l)
+
+        # Check if the @@IMPLEMENTATION@@ keyword has been encountered
+        if (l!=temp):
+            newfile=open(moduletype+'/'+algorithm+'.c', 'r')      
+            while (1):  # Copy the implementation into the output file
+                l1=newfile.readline()
+                if (l1==''): break
+                output.write(l1)
+        output.write(l)
+    output.close()
+    input.close()
+
+for f in modules:
+    moduletype=f[0]
+    kw1=kw2=kw3=kw4=""
+    if type(f[-1]) == type([]): 
+        # Handle any keyword arguments
+        for (kwarg, default) in f[-1]: 	    
+	    kw1 = kw1 + '"%s", ' % (kwarg);
+	    kw2 = kw2 + 'new->%s = %s; ' % (kwarg, default)    
+	    kw3 = kw3 + ', &(new->%s)' % (kwarg)
+	    kw4 = kw4 + 'i'
+        kw4 = '"' + kw4 + '"'
+    if (moduletype=='block' or moduletype=='stream'):
+        substlist = [('@@BLOCKSIZE@@', f[2]),
+                     ('@@KEYSIZE@@', f[3]),
+	             ('@@KEYWORDLIST@@', kw1),
+	             ('@@KEYWORDDEFAULTS@@', kw2),
+	             ('@@KEYWORDPTRS@@', kw3),
+	             ('@@KEYWORDFMT@@', kw4)]
+    elif (moduletype=='hash'):
+        substlist=[('@@DIGESTSIZE@@', f[2]),
+	             ('@@KEYWORDLIST@@', kw1),
+	             ('@@KEYWORDDEFAULTS@@', kw2),
+	             ('@@KEYWORDPTRS@@', kw3),
+	             ('@@KEYWORDFMT@@', kw4)]
+    elif (moduletype=='simple'):
+        substlist=[]
+    else:
+        sys.stderr.write('Unknown keyword '+moduletype+'\n')
+    algorithm=f[1]
+
+    framework=File('framewks/'+moduletype+'.in')
+    base=File(moduletype+'/'+algorithm+'.c')
+    source=File('src/'+algorithm+'module.c')
+
+    if not os.path.exists(base.filename):
+        print algorithm, 'not present -- skipping'
+    else:
+        try:
+            if (source<base or source<framework):
+                BuildSourceFile(algorithm, moduletype, substlist)
+        except KeyboardInterrupt:
+            print 'Error occurred; deleting', source.filename
+            os.unlink(source.filename)
+            sys.exit(1)

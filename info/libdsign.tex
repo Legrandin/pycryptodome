@@ -1,0 +1,146 @@
+\section{Standard Module \sectcode{digisign}}
+\label{module-digisign}
+
+This module provides a simple class to create keys for generating and
+verifying \dfn{digital signatures}.  These digital signatures act like
+handwritten signatures in the real world; only one key can sign a
+message, but anyone can use the key to verify that the signature
+corresponds to the message.  If even a single bit of the message is
+changed, verifying the signature will fail.
+
+The algorithm used is Nyberg and Ruppel's q-NEW.  The \code{Key} class
+contains a single q-NEW key.  A newly generated key is a \dfn{private
+key}.  It includes private information, and can both sign messages, or
+verify a previously generated signature for a given message.  It's
+possible to create a copy of the key without the private information,
+using the \code{publickey} method; this public key can only verify
+signatures produced with the private key, and thus doesn't have to be
+kept secret.
+
+For example, you could generate a private key, create the matching
+public key, and send the public key to all your correspondents.  Then,
+when you wish to send a message, you can sign it using the private
+key, and send the signature along with the message; your
+correspondents can then verify the signature using the public key,
+assuring them that the message wasn't changed while being transmitted.
+
+
+\stmodindex{digisign}
+\renewcommand{\indexsubitem}{(in module digisign)}
+
+\subsection{The {\tt Key} class}
+
+The \code{Key} class encapsulates a single key.  To create a new key
+object, call either \code{digisign.new()} or \code{digisign.Key()},
+which will return an empty \code{Key} instance, and then call the
+\code{generate()} method of the empty instance to create a random 
+private key.  To obtain a \code{Key} instance containing only the
+public key, call the \code{publickey} method.  Both private and public
+\code{Key} instances can be pickled.
+
+The \code{generate} and \code{sign} methods require random data.  Both
+those functions have a keyword parameter named \code{randfunc}; this
+parameter must be a function (or a bound method) which will take a
+single integer parameter N and return N bytes of random data.
+
+It is critical that the random number generator be
+\dfn{cryptographically strong}; consult Schneier's book for the
+details.  You may wish to use the \code{RandomPool} class described
+below, which is such a generator.  Be sure you know what you're doing
+before writing your own generator, since keys produced with a poor
+generator will offer little or no security.  Simple linear generators,
+like the one in the
+\code{whrandom} module, are not strong, and should never be used with
+this module.
+
+\begin{funcdesc}{cansign}{}
+Return true if this key contains the private information required to
+generate new signatures.  Return false if the key can only be used to
+verify signatures.
+\end{funcdesc}
+
+\begin{funcdesc}{publickey}{}
+Return a new \code{Key} instance containing only the public key
+information.  This new instance cannot generate signatures, though it
+can verify them.
+\end{funcdesc}
+
+\begin{funcdesc}{generate}{bits\, randfunc\, progress_func}
+Generate a new private key that can sign messages and verify its own
+signatures.  \var{bits} is the size of the key in bits, and has a
+minimum value of 384; as this value increases, the key becomes harder
+to break, and signing and verifying gets slower.  A value of 768 or
+1024 is recommended for security; key sizes of 384 or 512 bits may be
+used in testing for the sake of speed, but they're easily breakable in
+1996.
+
+\var{randfunc} is a function that generates random strings, as described above.
+The function \var{progress_func} will be called at various points
+during key generation, and passed a string explaining the algorithm's
+progress.  Key generation is a lengthy process, so this can be used
+to keep the user informed while it's going on.
+\end{funcdesc}
+
+\begin{funcdesc}{sign}{M \optional{\, randfunc\, K} }
+Generate and return a string containing a signature for the short
+message string \var{M}.  \var{M} is limited in size to 20 bytes or
+less.  If you wish to sign a larger piece of data, like a 1K email
+message, the usual procedure is to take the hash of the message and
+use that as \var{M}.  This can be done using the \code{md5} module.
+
+The optional parameter \var{K} is a random
+value required to produce a signature; it can be a string of no more
+than 20 bytes in length.  Alternatively (and more easily), the
+\var{randfunc} parameter can be provided, and a value of \var{K} will
+be automatically generated.
+
+{\bf Important:} The same value of \var{K} must \emph{never} be used
+twice, because that would allow a third party to determine the private
+key data.  An attacker can save every message and signature produced
+by a key, and try all possible pairings in case a value of \var{K} was
+reused.  Once an attacker has the private key data, they can sign
+messages as they like.  (If automatically generated, \var{K} is a
+159-bit number, so the odds of the same number being used twice are
+infinitesimal as long as a good random number generator is used.)
+\end{funcdesc}
+
+\begin{funcdesc}{verify}{M\, signature}
+Return true if \var{signature} matches the message \var{M}.  If they
+don't match, return false; this may happen because \var{M} or
+\var{signature} was modified, or because the signature was generated
+with a different key.
+\end{funcdesc}
+
+\subsection{The {\tt RandomPool} class}
+
+The \code{RandomPool} class provides cryptographically strong
+generation of random data.  
+
+\begin{funcdesc}{RandomPool}{\optional{seed}}
+Return a \code{RandomPool} instance, initialized using the string
+\var{seed}.  The instance can then be used to get random data.  
+The more randomness that can be in the \var{seed} string, the more
+secure the resulting random data will be.
+
+If \var{seed} is omitted, the class will try to get random data on its
+own, reading from \file{/dev/urandom} on those systems that support
+it, and otherwise using the current system time.  The system time
+isn't a very good source of randomness, so a warning will be printed
+to \code{sys.stdout}.
+\end{funcdesc}
+
+\begin{funcdesc}{random}{N}
+Return an \var{N}-byte string containing random data.  
+
+When bound to an instance, this method can be passed as the
+\var{randfunc} parameters to \code{Key}'s \code{generate} and
+\code{sign} methods.  Simply create a \code{RandomPool} object
+\var{R}, and pass \code{\var{R}.random} as the parameter.
+\end{funcdesc} 
+
+
+\begin{seealso}
+\seetext{XXX Nyberg and Ruppel's paper},
+\seetext{Schneier's book}
+\end{seealso}
+

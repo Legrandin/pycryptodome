@@ -1,0 +1,61 @@
+#!/usr/local/bin/python
+# Hey Emacs, this is -*-Python-*- code!
+
+import pgp, sys, md5
+
+if len(sys.argv)==1:
+    print 'Usage: filepgp <filename>'
+    print "If <filename> ends in '.pgp', it will be decrypted."
+    print "Otherwise, it will be encrypted."
+    sys.exit(0)
+
+def raw_input(): return 'test'
+
+filename=sys.argv[1]
+if filename[-4:]=='.pgp':
+    # Decrypt the file
+    f=open(filename, 'r')
+    print 'Enter passphrase:',
+    passphrase=raw_input()
+    idea_key=md5.new(passphrase).digest()
+    p1=pgp.Cipher(f, pgp.UNPACK, DEK=idea_key)
+    p2=pgp.ReadPacket(p1, pgp.UNPACK)
+    if p2.Type==pgp.COMPRESSED:
+	input=pgp.Plaintext(p2, pgp.UNPACK)
+    elif p2.Type==pgp.PLAINTEXT:
+	input=p2
+    else:
+	print 'Unexpected packet type', p2.Type
+	sys.exit(1)
+
+    # Copy the contents to stdout
+    while (1):
+	s=input.read(50)  
+	sys.stdout.write(s)
+	if s=="": break
+    f.close()
+    
+else:
+
+    def getbytes(N):
+	"""Returns N bytes of random data. 
+	Here it'll just return a string full of the letter 'a'. """
+	return 'a'*N
+	
+    # Encrypt the file
+    f=open(filename, 'r')
+    print 'Enter passphrase:',
+    passphrase=raw_input()
+    idea_key=md5.new(passphrase).digest()
+    
+    p3=pgp.Plaintext(f, pgp.PACK) # Create a Plaintext filter...
+#    p2=pgp.Compress(p3, pgp.PACK) # ...which feeds a Compress filter...
+    # ... which goes into a Cipher filter. 
+    p1=pgp.Cipher(p3, pgp.PACK, DEK=idea_key, randfunc=getbytes)
+    # Copy the contents to an output file
+    output=open(filename+'.pgp', 'w')
+    while (1):
+	s=p1.read(50)
+	output.write(s)
+	if s=="": break
+    f.close()

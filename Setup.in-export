@@ -1,0 +1,15 @@
+
+*shared*
+
+# Hash algorithms
+
+MD2 MD2module.c		# MD2
+MD4 MD4module.c		# MD4
+MD5 MD5module.c		# MD5
+RIPEMD RIPEMDmodule.c 	# RIPEMD
+SHA SHAmodule.c 	# SHA
+HAVAL HAVALmodule.c     # HAVAL
+
+
+
+

@@ -1,0 +1,191 @@
+<HTML>
+<HEAD><TITLE>A Proposed PGP API for Python</TITLE></HEAD>
+<BODY>
+
+<H1>A Proposed PGP API for Python</H1>
+
+<P>This document resides at <A
+HREF="http://www.magnet.com/%7Eamk/python/pgpapi.html">http://www.magnet.com/%7Eamk/python/pgpapi.html</A>.
+
+<P>Comments on this proposed API are welcomed; please write me at <A
+HREF="mailto:amk@magnet.com"><CODE>amk@magnet.com</CODE></A>.
+
+<P>I would like to write a collection of modules and classes for the
+Python programming language to perform PGP en/decryption.  The code
+would not execute a PGP subprocess, but would be a complete
+re-implementation of PGP's format. Currently all the low-level pieces
+are in place; there are interfaces to a compression library, IDEA,
+MD5, and other crypto algorithms that might be in PGP 3.0 (SHA, 3DES,
+Blowfish); reading of PGP packets is implemented; the Key objects are
+implemented to a significant degree, etc.  However, the high-level
+interface is the tricky part.  Suggestions are welcomed at <A
+HREF="mailto:amk@magnet.com"><CODE>amk@magnet.com</CODE></A>.
+
+<P>The following tasks must be supported:
+<OL>
+<LI> Reading keys from keyrings, and writing them out.
+<LI> Verifying signatures on keys
+<LI> Encrypting messages for recipients, optionally signing them.
+<LI> Decrypting messages, and finding out whether the signature was valid or not.
+<LI> Encoding and decoding ASCII armor.  Should this be integrated with
+encryption and decryption, or will the caller have to do that ahead of
+time when decoding, and afterwards when encoding?
+</OL>
+
+<H2>PGP Keys</H2>
+
+<P>Keys are produced by <CODE>pgp.KeyRing</CODE> objects, which are
+passed a file object.  <CODE>KeyRing</CODE> objects support a
+dictionary-style interface, where the key is a 64-bit or 32-bit long
+integer corresponding to the key's ID.  (PGP uses the 64-bit form
+internally, though the 32-bit form is what's printed in the output of
+pgp -kv.)
+
+<P>Keys have various methods:
+
+<DL>
+<DT><CODE>isPrivate()</CODE>
+<DD>Returns a Boolean (true if it's a secret key).
+<DT><CODE>isUnlocked()</CODE>
+<DD>Returns a Boolean (true if the secret key data is available).
+<dt><CODE>Unlock(<EM>passphrase</EM>)</CODE>
+<dd>Decrypt the private key info, using the given passphrase.
+<dt><CODE>Lock(<EM>passphrase</EM>=None)</CODE>
+<dd>Encrypt the private key info, using the given passphrase; if the
+passphrase is <CODE>None</CODE>, the secret key info is simply
+deleted, without reencrypting the key data.  
+</DL>
+
+<P>There will also be various private methods to perform RSA
+operations; I can't think of a reason to expose these operations to
+the caller.  Keys also have various attributes: <CODE>PKalgorithm, Version, KeyID,
+IDList (a list of User ID packets), Trust, ...</CODE>
+
+<H2>Encrypting/decrypting messages</H2>
+<P>Encrypting messages is fairly simple; there's one function call,
+<CODE>pgp.Encrypt()</CODE>:
+<PRE>
+Encrypt(input,          # File object
+        output,         # File object
+	recipients=[],  # List of recipients
+        cipher_alg={one of pgp.IDEA, pgp.DES3, ...},
+	hash_alg={one of pgp.MD5, pgp.SHA, ...},
+	compression= true/false,
+	signer=&lt;key to sign message with&gt;,
+	passphrase=&lt;conventional passphrase&gt;
+       ) </PRE> 
+
+<P>That's a lot of options!  However, usually callers will only be
+guaranteed to include the first two, and then the other options would
+be set using keyword arguments; otherwise, sensible defaults would be
+assumed.  It doesn't make sense to specify all the above arguments, so
+you wouldn't have to include them all, or remember their order.
+
+<P>(Note that the above interface doesn't provide for clearsigning
+files.  Should that be an extra parameter, or a separate function?)
+
+<PRE>
+Decrypt(input, output,
+        recipient  # The recipient's key 
+       )       
+</PRE>
+
+If it succeeds, <CODE>Decrypt()</CODE> returns a
+<CODE>Signature</CODE> object, whose methods are:
+
+<DL>
+<DT><CODE>isEncrypted(), isSigned()</CODE>
+<DD>Both these methods return Booleans.
+<DT><CODE>signerID()</CODE>
+<DD>The 64-bit Key ID of the signer's key; <CODE>None</CODE> if the
+message isn't signed.  It would be the caller's responsibility to retrieve
+the ID, somehow retrieve a <CODE>pgp.Key</CODE> object corresponding
+to that ID, and pass it to the next function.
+<DT><CODE>verifySignature(<EM>K</EM>)</CODE>
+<DD>Verify the signature on the message with the key K; an exception
+is raised if the message wasn't signed with K, or if the signature
+verification failed.
+</DL>
+
+<H3>Sample usages</H3> 
+
+<P>In all the following examples, <CODE>input</CODE> and
+<CODE>output</CODE> are two file objects, or two objects that imitate
+file objects; should the API require that these objects be seekable?
+(That would rule out using sockets as the input or the output.
+Strings can be used by passing them to the <CODE>StringIO</CODE>
+module first, which simulates a file on a string.  The functions could
+check the type of their parameters and perform this conversion
+automatically, if desired.)  <P><CODE>RK</CODE> is a
+<CODE>pgp.Key</CODE> instance for the recipient's keys, and
+<CODE>SK</CODE> is the sender's key, a <CODE>pgp.PrivateKey</CODE>
+instance.
+
+<P>To conventionally encrypt a message with just IDEA, using the
+password "TomServo":
+
+<PRE>pgp.Encrypt(input, output, passphrase="TomServo")
+</PRE>
+<P>To encrypt (but not sign) a message, with IDEA, MD5, and compression:
+<PRE>pgp.Encrypt(input, output, recipient=RK)
+   or
+pgp.Encrypt(input, output, recipient=[RK])
+</PRE>
+
+<P>To encrypt and sign a message, with IDEA, MD5, and no compression: 
+(SK must be a private key instance, and must be unlocked.
+
+<PRE>pgp.Encrypt(input, output, recipient=[RK], signer=SK, compression=0)
+</PRE>
+
+<P>To decrypt a message:
+<PRE>pgp.Decrypt(input, output, recipient=RK)
+</PRE>
+
+<H2>ASCII armoring and dearmoring</H2>
+I'm not sure what the interface to this should look like; assuming
+that it's a separate function (and not part of <CODE>Encrypt()</CODE> and <CODE>Decrypt()</CODE>, how about the following?
+
+<PRE>
+pgp.Enarmor(input, output)       # These functions assume one single file
+pgp.Dearmor(input, output)       # and return nothing
+</PRE> 
+
+<P>Multipart encoding and decoding will be the caller's problem with
+this interface.  The "PART 01/05" notation in the armor headers means
+that you have to know how large the file will be before you can write
+the headers.  Perhaps the input file will simply have to be seekable, to allow
+measuring the file's size before processing.  
+
+<H2>Unanswered Questions</H2>
+
+<UL>
+<LI>Should the API require that the input and output objects be
+seekable?
+<LI>Should ASCII armoring and dearmoring be integrated into encryption
+and decryption, or should that be the responsibility of the caller?
+(In the latter case, the API would then always expect binary data.)
+<LI>Should everything be done in memory, or in temporary files?  (Possible
+clever idea: generate a random IDEA key, and encrypt all the temp
+files with it in ECB or OFB mode.)
+<LI>Should the caller be able to select a random number generation
+function to be used? 
+<LI>Clear-signed messages could be generated by an additional option
+to <CODE>Encrypt()</CODE>; how should clearsigned messages be read?
+(Probably a utility function that calls <CODE>Decrypt()</CODE> for
+you, after assembling the clearsigned text.)
+<LI>Is the above API useful for various applications?  Applications I
+can think of: 
+<UL><LI>A PGP clone<LI>A GUI PGP clone<LI>Remailer software
+<LI>Writing an app that run under Grail or the Python plug-in for
+Netscape.
+</UL>
+</UL>
+
+<P>This document resides at <A
+HREF="http://www.magnet.com/%7Eamk/python/pgpapi.html">http://www.magnet.com/%7Eamk/python/pgpapi.html</A>.
+
+<P>Comments on this proposed API are welcomed; please write me at <A
+HREF="mailto:amk@magnet.com"><CODE>amk@magnet.com</CODE></A>.
+
+</BODY></HTML>
