@@ -1,7 +1,5 @@
 
 import sys
-#sys.path = ['../../..', sys.path]
-
 import Crypto.PublicKey.DSA
 
 key = Crypto.PublicKey.DSA.construct((
@@ -23,9 +21,16 @@ if __name__ == '__main__':
     from Crypto.Util.randpool import KeyboardRandomPool
     
     pool = KeyboardRandomPool(numbytes = 64)
-    pool.Randomize()
+    pool.randomize()
 
-    key = DSA.generate(512, pool.get_bytes, sys.stdout.write)
+    if len(sys.argv) == 2:
+        keylen = int(sys.argv[1])
+    elif len(sys.argv) == 1:
+        keylen = 512
+    else:
+        print >>sys.stderr, 'Usage: '+sys.argv[0]+' [keylen]'
+        sys.exit(1)
+    key = DSA.generate(keylen, pool.get_bytes, sys.stdout.write)
     print "key = Crypto.PublicKey.DSA.construct(("
     for field in key.keydata:
 	print " #", field
