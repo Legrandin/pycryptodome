@@ -57,8 +57,10 @@ newALGobject(void)
 static void
 ALGdealloc(PyObject *ptr)
 {
+	ALGobject *self = (ALGobject *)ptr;
+
 	/* Overwrite the contents of the object */
-	memset((char *)ptr, 0, sizeof(ALGobject));
+	memset((char*)&(self->st), 0, sizeof(stream_state));
 	PyObject_Del(ptr);
 }
 
