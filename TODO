@@ -1,12 +1,16 @@
 
-Document the functions and macros for adding a new algorithm
-Hash functions:
-  hash_init(), hash_copy(), DIGEST_SIZE, hash_update(), hash_digest()
-
 * Restore RC5, which needs additional keyword arguments
 
 * Look at the C code and modernize it to the current memory APIs,
   class-based exceptions, etc
+
+* Change API to reduce amount of memory copying
+
+* Document the functions and macros for adding a new algorithm
+    Hash functions:
+  hash_init(), hash_copy(), DIGEST_SIZE, hash_update(), hash_digest()
+    Block functions: 
+  ...
 
 * Break backward compatibility.  The interfaces were invented around
 1995, back when I was younger and dumber.  I'd like to clean them up,
@@ -15,14 +19,14 @@ the new code as version 2.0 to signal the magnitude of the changes.
 While we have the chance, we can also drop useless code, rename
 packages and classes, or whatever.
  
-* Is there any point in keeping the implementations of MD5 and SHA if
-Python comes with them?  We could just change Crypto/Hash/MD5.py to
-just 'from md5 import *', and ditto for Crypto/Hash/SHA.py.
+* Should there be a backword-compatibility wrapper for
+  Crypto/Hash/MD5.py, containing just 'from md5 import *' and a
+  warning message?  (Ditto for Crypto/Hash/SHA.py.)
  
 * Modernize the code to current standards (Distutils installation,
 docstrings, naming conventions, test suites).  
  
-* Add AES, and possibly SHA256, SHA512.
+* Possibly add SHA256, SHA512.
 
 * Public-key stuff: should it remain in this package, or should it be
 scrapped and the scope restricted to hashing and block encryption?
