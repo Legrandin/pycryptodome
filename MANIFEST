@@ -13,6 +13,7 @@ Hash/HMAC.py
 Hash/MD5.py
 Hash/SHA.py
 Hash/__init__.py
+LICENSE
 MANIFEST
 Protocol/AllOrNothing.py
 Protocol/Chaffing.py
