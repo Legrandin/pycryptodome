@@ -42,6 +42,28 @@ md4= [
       0xe33b4ddc9c38f2199c3e7b164fcc0536L),
      ]
 
+# MD5 validation data
+
+md5= [
+    ('',  0xd41d8cd98f00b204e9800998ecf8427eL),
+    ('a', 0x0cc175b9c0f1b6a831c399e269772661L),
+    ('abc', 0x900150983cd24fb0d6963f7d28e17f72L),
+    ('message digest', 0xf96b697d7cb7938d525a2f31aaf161d0L),
+    ('abcdefghijklmnopqrstuvwxyz', 0xc3fcd3d76192e4007dfb496cca67e13bL),
+    ('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+	       0xd174ab98d277d9f5a5611c2c9f419d9fL),
+    ('12345678901234567890123456789012345678901234567890123456789'
+     '012345678901234567890', 0x57edf4a22be3c955ac49da2e2107b67aL)
+     ]
+
+# Test data for SHA, the Secure Hash Algorithm.
+
+sha = [
+       ('abc', 0xA9993E364706816ABA3E25717850C26C9CD0D89DL),
+       ('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq',
+        0x84983E441C3BD26EBAAE4AA1F95129E5E54670F1L)
+      ]
+
 ripemd = [ ("", 0x9c1185a5c5e9fc54612808977ee8f548b2258d31L),
 	   ("a", 0x0bdc9d2d256b3ee9daae347be6f4dc835a467ffeL),
 	   ("abc", 0x8eb208f7e05d987a9b044a8e98c6b087f15a0bfcL),
