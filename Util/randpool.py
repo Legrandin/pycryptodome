@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 #
 
-__revision__ = "$Id: randpool.py,v 1.8 2002-09-05 13:19:42 akuchling Exp $"
+__revision__ = "$Id: randpool.py,v 1.9 2002-09-05 18:50:18 akuchling Exp $"
 
 import time, array, types, warnings
 from Crypto.Util.number import long_to_bytes
@@ -200,11 +200,14 @@ class RandomPool:
 
         # Compute 100 differences
         t=time.time()
-        for i in range(100):
+        i = 0
+        while i < 100:
             t2=time.time()
-            delta=(t2-t)*1e6
-            t=t2
-            interval[i] = delta
+            delta=int((t2-t)*1e6)
+            if delta:
+                interval[i] = delta
+                i += 1
+                t=t2
 
         # Take the median of the array of intervals
         interval.sort()
