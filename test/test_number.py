@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.number.
 #
 
-__revision__ = "$Id: test_number.py,v 1.3 2003-02-28 15:24:01 akuchling Exp $"
+__revision__ = "$Id: test_number.py,v 1.4 2003-04-04 18:21:35 akuchling Exp $"
 
 from sancho.unittest import TestScenario, parse_args, run_scenarios
 from Crypto.Util import number
@@ -68,6 +68,14 @@ class NumberTest (TestScenario):
         self.test_val('number.bytes_to_long("\x01")', 1)
         self.test_val('number.bytes_to_long("\xff\x01")', 0xff01)
         self.test_val('number.bytes_to_long("\x12\x34\x01")', 0x123401)
+
+    def check_size (self):
+        "Check measurement of number sizes"
+        self.test_val('number.size(1)', 1)
+        self.test_val('number.size(15)', 4)
+        self.test_val('number.size(255)', 8)
+        self.test_val('number.size(256)', 9)
+
 
 # class NumberTest
 
