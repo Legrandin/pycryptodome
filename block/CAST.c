@@ -418,14 +418,19 @@ block_init(block_state *self, unsigned char *key, int keylength)
 }
 
 static void
-block_encrypt(block_state *self, unsigned char *block)
+block_encrypt(block_state *self, unsigned char *in,
+	      unsigned char *out)
 {
-    castcrypt(self, block, 0);
+  memcpy(out, in, 8);
+  castcrypt(self, out, 0);
 }
 
-static void block_decrypt(block_state *self, unsigned char *block)
+static void block_decrypt(block_state *self, 
+			  unsigned char *in,
+			  unsigned char *out)
 {
-    castcrypt(self, block, 1);
+  memcpy(out, in, 8);
+  castcrypt(self, out, 1);
 }
 
 #include "block_template.c"

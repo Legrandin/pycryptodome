@@ -137,72 +137,74 @@ static void RC5Decipher(block_state *self, unsigned int *Aptr,
     }
 }
 
-static void block_encrypt(block_state *self, unsigned char *block)
+static void block_encrypt(block_state *self, unsigned char *in,
+			                     unsigned char *out)
 {
   U32 A,B;
   
   switch(self->word_size)
     {
     case (32):
-      A=block[0] | block[1]<<8 | block[2]<<16 | block[3]<<24;
-      B=block[4] | block[5]<<8 | block[6]<<16 | block[7]<<24;
+      A=in[0] | in[1]<<8 | in[2]<<16 | in[3]<<24;
+      B=in[4] | in[5]<<8 | in[6]<<16 | in[7]<<24;
       RC5Encipher(self, &A, &B);
-      block[0]=A & 255; A>>=8;      
-      block[1]=A & 255; A>>=8;      
-      block[2]=A & 255; A>>=8;      
-      block[3]=A; 
-      block[4]=B & 255; B>>=8;      
-      block[5]=B & 255; B>>=8;      
-      block[6]=B & 255; B>>=8;      
-      block[7]=B; 
+      out[0]=A & 255; A>>=8;      
+      out[1]=A & 255; A>>=8;      
+      out[2]=A & 255; A>>=8;      
+      out[3]=A; 
+      out[4]=B & 255; B>>=8;      
+      out[5]=B & 255; B>>=8;      
+      out[6]=B & 255; B>>=8;      
+      out[7]=B; 
       break;
     case (16):
-      A=block[0] + block[1]*256;
-      B=block[2] + block[3]*256;
+      A=in[0] + in[1]*256;
+      B=in[2] + in[3]*256;
       RC5Encipher(self, &A, &B);
-      block[0] = A & 255; block[1] = A>>8;
-      block[2] = B & 255; block[3] = B>>8;
+      out[0] = A & 255; out[1] = A>>8;
+      out[2] = B & 255; out[3] = B>>8;
       
-      A=block[4] + block[5]*256;
-      B=block[6] + block[7]*256;
+      A=in[4] + in[5]*256;
+      B=in[6] + in[7]*256;
       RC5Encipher(self, &A, &B);
-      block[4] = A & 255; block[5] = A>>8; 
-      block[6] = B & 255; block[7] = B>>8;
+      out[4] = A & 255; out[5] = A>>8; 
+      out[6] = B & 255; out[7] = B>>8;
       break;
     }
 }
 
-static void block_decrypt(block_state *self, unsigned char *block)
+static void block_decrypt(block_state *self, unsigned char *in,
+			  unsigned char *out)
 {
   U32 A,B;
   
   switch(self->word_size)
     {
     case (32):
-      A=block[0] | block[1]<<8 | block[2]<<16 | block[3]<<24;
-      B=block[4] | block[5]<<8 | block[6]<<16 | block[7]<<24;
+      A=in[0] | in[1]<<8 | in[2]<<16 | in[3]<<24;
+      B=in[4] | in[5]<<8 | in[6]<<16 | in[7]<<24;
       RC5Decipher(self, &A, &B);
-      block[0]=A & 255; A>>=8;      
-      block[1]=A & 255; A>>=8;      
-      block[2]=A & 255; A>>=8;      
-      block[3]=A; 
-      block[4]=B & 255; B>>=8;      
-      block[5]=B & 255; B>>=8;      
-      block[6]=B & 255; B>>=8;      
-      block[7]=B; 
+      out[0]=A & 255; A>>=8;      
+      out[1]=A & 255; A>>=8;      
+      out[2]=A & 255; A>>=8;      
+      out[3]=A; 
+      out[4]=B & 255; B>>=8;      
+      out[5]=B & 255; B>>=8;      
+      out[6]=B & 255; B>>=8;      
+      out[7]=B; 
       break;
     case (16):
-      A=block[0] + block[1]*256;
-      B=block[2] + block[3]*256;
+      A=in[0] + in[1]*256;
+      B=in[2] + in[3]*256;
       RC5Decipher(self, &A, &B);
-      block[0] = A & 255; block[1] = A>>8;
-      block[2] = B & 255; block[3] = B>>8;
+      out[0] = A & 255; out[1] = A>>8;
+      out[2] = B & 255; out[3] = B>>8;
       
-      A=block[4] + block[5]*256;
-      B=block[6] + block[7]*256;
+      A=in[4] + in[5]*256;
+      B=in[6] + in[7]*256;
       RC5Decipher(self, &A, &B);
-      block[4] = A & 255; block[5] = A>>8;
-      block[6] = B & 255; block[7] = B>>8;
+      out[4] = A & 255; out[5] = A>>8;
+      out[6] = B & 255; out[7] = B>>8;
       break;
     }
 }

@@ -533,20 +533,17 @@ static int des_ecb_encrypt(des_cblock *input, des_cblock *output,
 
      
 static void block_decrypt(block_state *state, 
-				 unsigned char *block)
+			  unsigned char *in, 
+			  unsigned char *out)
 {
-  des_cblock output;
-
-  des_ecb_encrypt((des_cblock *)block, &output, *state, 0);
-  memcpy(block, output, 8);
+  des_ecb_encrypt((des_cblock *)in, (des_cblock *)out, *state, 0);
 }
 
-static void block_encrypt(block_state *state, unsigned char *block)
+static void block_encrypt(block_state *state, 
+			  unsigned char *in, 
+			  unsigned char *out)
 {
-  des_cblock output;
-
-  des_ecb_encrypt((des_cblock *)block, &output, *state, 1);
-  memcpy(block, output, 8);
+  des_ecb_encrypt((des_cblock *)in, (des_cblock *)out, *state, 1);
 }
 
 /* NOW DEFINED IN des_local.h

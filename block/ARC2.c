@@ -25,15 +25,15 @@ typedef struct
 } block_state;
 
 static void
-block_encrypt(block_state *self, U8 *block)
+block_encrypt(block_state *self, U8 *in, U8 *out)
 {
   U16 x76, x54, x32, x10;
   int i;
   
-  x76 = (block[7] << 8) + block[6];
-  x54 = (block[5] << 8) + block[4];
-  x32 = (block[3] << 8) + block[2];
-  x10 = (block[1] << 8) + block[0];
+  x76 = (in[7] << 8) + in[6];
+  x54 = (in[5] << 8) + in[4];
+  x32 = (in[3] << 8) + in[2];
+  x10 = (in[1] << 8) + in[0];
   
   for (i = 0; i < 16; i++)
     {
@@ -57,27 +57,27 @@ block_encrypt(block_state *self, U8 *block)
       }
     }
   
-  block[0] = (U8)x10;
-  block[1] = (U8)(x10 >> 8);
-  block[2] = (U8)x32;
-  block[3] = (U8)(x32 >> 8);
-  block[4] = (U8)x54;
-  block[5] = (U8)(x54 >> 8);
-  block[6] = (U8)x76;
-  block[7] = (U8)(x76 >> 8);
+  out[0] = (U8)x10;
+  out[1] = (U8)(x10 >> 8);
+  out[2] = (U8)x32;
+  out[3] = (U8)(x32 >> 8);
+  out[4] = (U8)x54;
+  out[5] = (U8)(x54 >> 8);
+  out[6] = (U8)x76;
+  out[7] = (U8)(x76 >> 8);
 }
 
 
 static void
-block_decrypt(block_state *self, U8 *block)
+block_decrypt(block_state *self, U8 *in, U8 *out)
 {
   U16 x76, x54, x32, x10;
   int i;
   
-  x76 = (block[7] << 8) + block[6];
-  x54 = (block[5] << 8) + block[4];
-  x32 = (block[3] << 8) + block[2];
-  x10 = (block[1] << 8) + block[0];
+  x76 = (in[7] << 8) + in[6];
+  x54 = (in[5] << 8) + in[4];
+  x32 = (in[3] << 8) + in[2];
+  x10 = (in[1] << 8) + in[0];
   
   i = 15;
   do {
@@ -105,14 +105,14 @@ block_decrypt(block_state *self, U8 *block)
     }
   } while (i--);
   
-  block[0] = (U8)x10;
-  block[1] = (U8)(x10 >> 8);
-  block[2] = (U8)x32;
-  block[3] = (U8)(x32 >> 8);
-  block[4] = (U8)x54;
-  block[5] = (U8)(x54 >> 8);
-  block[6] = (U8)x76;
-  block[7] = (U8)(x76 >> 8);
+  out[0] = (U8)x10;
+  out[1] = (U8)(x10 >> 8);
+  out[2] = (U8)x32;
+  out[3] = (U8)(x32 >> 8);
+  out[4] = (U8)x54;
+  out[5] = (U8)(x54 >> 8);
+  out[6] = (U8)x76;
+  out[7] = (U8)(x76 >> 8);
 }
 
 

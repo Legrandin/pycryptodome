@@ -478,16 +478,16 @@ static void make_bfkey(unsigned char *key_string, int keylength,
 
 
 static void
-block_encrypt(block_state *self, unsigned char *block)
+block_encrypt(block_state *self, unsigned char *in, unsigned char *out)
 {
-  crypt_8bytes(block, block, &(self->bfkey), 0);
+  crypt_8bytes(in, out, &(self->bfkey), 0);
 }
 
 
 static void
-block_decrypt(block_state *self, unsigned char *block)
+block_decrypt(block_state *self, unsigned char *in, unsigned char *out)
 {
-  crypt_8bytes(block, block, &(self->bfkey), 1);
+  crypt_8bytes(in, out, &(self->bfkey), 1);
 }
 
 static void 

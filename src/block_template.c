@@ -245,8 +245,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
     case(MODE_ECB):      
       for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-	  memcpy(buffer+i, str+i, BLOCK_SIZE);
-	  block_encrypt(&(self->st), buffer+i);
+	  block_encrypt(&(self->st), str+i, buffer+i);
 	}
       break;
     case(MODE_CBC):      
@@ -256,18 +255,16 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	    {
 	      temp[j]=str[i+j]^self->IV[j];
 	    }
-	  block_encrypt(&(self->st), temp);
-	  memcpy(buffer+i, temp, BLOCK_SIZE);
-	  memcpy(self->IV, temp, BLOCK_SIZE);
+	  block_encrypt(&(self->st), temp, buffer+i);
+	  memcpy(self->IV, buffer+i, BLOCK_SIZE);
 	}
       break;
     case(MODE_CFB):      
       for(i=0; i<len; i+=self->segment_size/8) 
 	{
-	  memcpy(temp, self->IV, BLOCK_SIZE);
-	  block_encrypt(&(self->st), temp);
+	  block_encrypt(&(self->st), self->IV, temp);
 	  for (j=0; j<self->segment_size/8; j++) {
-		 buffer[i+j] = str[i+j]^temp[j];
+	        buffer[i+j] = str[i+j]^temp[j];
 	  }
 	  if (self->segment_size == BLOCK_SIZE * 8) {
 	    /* s == b: segment size is the algorithm block size */
@@ -298,14 +295,12 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	  self->count=0;
 	  for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
 	    {
-	      memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	      block_encrypt(&(self->st), self->IV);
+	      block_encrypt(&(self->st), self->oldCipher, self->IV);
 	      for(j=0; j<BLOCK_SIZE; j++)
 		buffer[i+j] = self->IV[j] ^= str[i+j];
 	    }
 	  /* Do the remaining 1 to BLOCK_SIZE bytes */
-          memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	  block_encrypt(&(self->st), self->IV);
+	  block_encrypt(&(self->st), self->oldCipher, self->IV);
 	  self->count=len-i;
 	  for(j=0; j<len-i; j++) 
 	    {
@@ -316,10 +311,11 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
     case(MODE_OFB):
       for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-	  block_encrypt(&(self->st), self->IV);
+	  block_encrypt(&(self->st), self->IV, temp);
+	  memcpy(self->IV, temp, BLOCK_SIZE);
 	  for(j=0; j<BLOCK_SIZE; j++)
 	    {
-	      buffer[i+j] = str[i+j] ^ self->IV[j];
+	      buffer[i+j] = str[i+j] ^ temp[j];
 	    }
 	}      
       break;
@@ -341,9 +337,8 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	      Py_DECREF(ctr);
 	      return NULL;
 	  }
-	  memcpy(temp, PyString_AsString(ctr), BLOCK_SIZE);
+	  block_encrypt(&(self->st), PyString_AsString(ctr), temp);
 	  Py_DECREF(ctr);
-	  block_encrypt(&(self->st), temp);
 	  for(j=0; j<BLOCK_SIZE; j++)
 	    {
 	      buffer[i+j] = str[i+j]^temp[j];
@@ -402,16 +397,14 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
     case(MODE_ECB):      
       for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-	  memcpy(buffer+i, str+i, BLOCK_SIZE);
-	  block_decrypt(&(self->st), buffer+i);
+	  block_decrypt(&(self->st), str+i, buffer+i);
 	}
       break;
     case(MODE_CBC):      
       for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
           memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	  memcpy(temp, str+i, BLOCK_SIZE);
-	  block_decrypt(&(self->st), temp);
+	  block_decrypt(&(self->st), str+i, temp);
 	  for(j=0; j<BLOCK_SIZE; j++) 
 	    {
 	      buffer[i+j]=temp[j]^self->IV[j];
@@ -422,8 +415,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
     case(MODE_CFB):      
       for(i=0; i<len; i+=self->segment_size/8) 
 	{
-	  memcpy(temp, self->IV, BLOCK_SIZE);
-	  block_encrypt(&(self->st), temp);
+	  block_encrypt(&(self->st), self->IV, temp);
 	  for (j=0; j<self->segment_size/8; j++) {
 		 buffer[i+j] = str[i+j]^temp[j];
 	  }
@@ -464,8 +456,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	  self->count=0;
 	  for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
 	    {
-	      memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	      block_encrypt(&(self->st), self->IV);
+	      block_encrypt(&(self->st), self->oldCipher, self->IV);
 	      for(j=0; j<BLOCK_SIZE; j++)
 		{
 		  t=self->IV[j];
@@ -473,8 +464,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 		}
 	    }
 	  /* Do the remaining 1 to BLOCK_SIZE bytes */
-          memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	  block_encrypt(&(self->st), self->IV);
+	  block_encrypt(&(self->st), self->oldCipher, self->IV);
 	  self->count=len-i;
 	  for(j=0; j<len-i; j++) 
 	    {
@@ -486,7 +476,8 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
     case (MODE_OFB):
       for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-	  block_encrypt(&(self->st), self->IV);
+	  block_encrypt(&(self->st), self->IV, temp);
+	  memcpy(self->IV, temp, BLOCK_SIZE);
 	  for(j=0; j<BLOCK_SIZE; j++)
 	    {
 	      buffer[i+j] = str[i+j] ^ self->IV[j];
@@ -511,9 +502,8 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	      Py_DECREF(ctr);
 	      return NULL;
 	  }
-	  memcpy(temp, PyString_AsString(ctr), BLOCK_SIZE);
+	  block_encrypt(&(self->st), PyString_AsString(ctr), temp);
 	  Py_DECREF(ctr);
-	  block_encrypt(&(self->st), temp);
 	  for(j=0; j<BLOCK_SIZE; j++)
 	    {
 	      buffer[i+j] = str[i+j]^temp[j];

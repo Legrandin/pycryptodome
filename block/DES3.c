@@ -538,22 +538,26 @@ static int des_ecb_encrypt(des_cblock *input, des_cblock *output,
 
 
      
-static void block_decrypt(block_state *self, unsigned char *block)
+static void block_decrypt(block_state *self, 
+			  unsigned char *in,
+			  unsigned char *out)
 {
   des_cblock output, output2;
   
-  des_ecb_encrypt((des_cblock *)block, &output, self->KeySched3, 0);
+  des_ecb_encrypt((des_cblock *)in, &output, self->KeySched3, 0);
   des_ecb_encrypt(&output, &output2, self->KeySched2, 1);
-  des_ecb_encrypt(&output2, (des_cblock *)block, self->KeySched1, 0);
+  des_ecb_encrypt(&output2, (des_cblock *)out, self->KeySched1, 0);
 }
 
-static void block_encrypt(block_state *self, unsigned char *block)
+static void block_encrypt(block_state *self, 
+			  unsigned char *in,
+			  unsigned char *out)
 {
   des_cblock output, output2;
   
-  des_ecb_encrypt((des_cblock *)block, &output, self->KeySched1, 1);
+  des_ecb_encrypt((des_cblock *)in, &output, self->KeySched1, 1);
   des_ecb_encrypt(&output, &output2, self->KeySched2, 0);
-  des_ecb_encrypt(&output2, (des_cblock *)block, self->KeySched3, 1);
+  des_ecb_encrypt(&output2, (des_cblock *)out, self->KeySched3, 1);
 }
 
 /* NOW DEFINED IN des_local.h

@@ -121,7 +121,8 @@ block_init(block_state *self, unsigned char *key, int dummy)
 
 /*      IDEA encryption/decryption algorithm */
 /* Note that in and out can be the same buffer */
-static void ideaCipher(block_state *self, byte *block, word16 const *key)
+static void ideaCipher(block_state *self, byte *block_in, 
+		       byte *block_out, word16 const *key)
 {
     register uint16 x1, x2, x3, x4, s2, s3;
     word16 *in, *out;
@@ -129,7 +130,7 @@ static void ideaCipher(block_state *self, byte *block, word16 const *key)
     register word32 t32;
     int r = 8;
 
-    in = (word16 *) block;
+    in = (word16 *) block_in;
     x1 = *in++;
     x2 = *in++;
     x3 = *in++;
@@ -166,7 +167,7 @@ static void ideaCipher(block_state *self, byte *block, word16 const *key)
     x2 += *key++;
     MUL(x4, *key);
 
-    out = (word16 *) block;
+    out = (word16 *) block_out;
    
 #ifdef WORDS_BIGENDIAN
 	*out++ = x1;
@@ -187,14 +188,18 @@ static void ideaCipher(block_state *self, byte *block, word16 const *key)
 }				/* ideaCipher */
 
 
-static void block_encrypt(block_state *self, unsigned char *block)
+static void block_encrypt(block_state *self, 
+			  unsigned char *in, 
+			  unsigned char *out)
 {
-  ideaCipher(self, block, self->EK);
+  ideaCipher(self, in, out, self->EK);
 }
 
-static void block_decrypt(block_state *self, unsigned char *block)
+static void block_decrypt(block_state *self,
+			  unsigned char *in, 
+			  unsigned char *out)
 {
-  ideaCipher(self, block, self->DK);
+  ideaCipher(self, in, out, self->DK);
 }
    
 #include "block_template.c"

@@ -1446,20 +1446,14 @@ static void block_init(block_state *state, unsigned char *key,
   rijndaelKeySetupDec(state->dk, key, keylen*8);
 }
 
-static void block_encrypt(block_state *self, u8 *block)
+static void block_encrypt(block_state *self, u8 *in, u8 *out)
 {
-	u8 temp[16];
-
-	rijndaelEncrypt(self->ek, self->rounds, block, temp);
-	memcpy(block, temp, 16);			     
+	rijndaelEncrypt(self->ek, self->rounds, in, out);
 }
 
-static void block_decrypt(block_state *self, u8 *block)
+static void block_decrypt(block_state *self, u8 *in, u8 *out)
 {
-	u8 temp[16];
-
-	rijndaelDecrypt(self->dk, self->rounds, block, temp);
-	memcpy(block, temp, 16);			     
+	rijndaelDecrypt(self->dk, self->rounds, in, out);
 }
 
 #include "block_template.c"
