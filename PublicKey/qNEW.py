@@ -10,11 +10,11 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: qNEW.py,v 1.4 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: qNEW.py,v 1.5 2002-07-11 14:32:46 akuchling Exp $"
 
-import pubkey
+from Crypto.PublicKey import pubkey
 from Crypto.Util.number import *
-import Crypto.Hash.SHA
+from Crypto.Hash import SHA
 
 class error (Exception):
     pass
@@ -55,7 +55,7 @@ def generate(bits, randfunc, progress_func=None):
 	    # data, that are assembled to produce a candidate
 	    # value for p.
 	    for k in range(0, n+1):
-		V[k]=bytes_to_long(Crypto.Hash.SHA.new(S+str(N)+str(k)).digest())
+		V[k]=bytes_to_long(SHA.new(S+str(N)+str(k)).digest())
 	    p = V[n] % powb
 	    for k in range(n-1, -1, -1): 
 		p= (p << long(HASHBITS) )+V[k]
