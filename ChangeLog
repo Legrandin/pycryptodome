@@ -1,4 +1,10 @@
 
+1.9alpha5
+=========
+
+	* Fix randpool.py crash on machines with poor timer resolution.
+	  (Reported by Mark Moraes.)
+
 1.9alpha4
 =========
 
