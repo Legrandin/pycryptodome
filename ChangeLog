@@ -16,6 +16,9 @@
 	  generate a 1024-bit prime by a factor of 10.  (Contributed by
 	  Joris Bontje.)
 
+	* Added support to RSA key objects for blinding and unblinding 
+	  data. (Contributed by Joris Bontje.)
+
 
 1.9alpha5
 =========
