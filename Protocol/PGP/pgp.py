@@ -149,7 +149,7 @@ class Packet:
 	    bits=8
 	elif length<65536 and (bits==0 or bits==16): 
 	    bits=16 ; CTB = CTB|1
-	elif length<4294967296 and (bits==0 or bits==32): 
+	elif length<4294967296L and (bits==0 or bits==32): 
 	    bits=32 ; CTB = CTB|2
 	else: raise Error, 'Packet too long.'
 	return chr(CTB)+Int2Str(length, bits)
