@@ -147,7 +147,7 @@ class Chaff:
         from Crypto.Util import randpool
         import time
         pool = randpool.RandomPool(size * 2)
-        while size > pool.addEvent(time.time()) / 8:
+        while size > pool.entropy:
             pass
 
         # we now have enough entropy in the pool to get size bytes of random

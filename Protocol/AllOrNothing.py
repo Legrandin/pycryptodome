@@ -201,8 +201,9 @@ class AllOrNothing:
         from Crypto.Util import randpool
         # TBD: key_size * 2 to work around possible bug in RandomPool?
         pool = randpool.RandomPool(key_size * 2)
-        while key_size > pool.addEvent(time.time()) / 8:
-            pass
+        while key_size > pool.entropy
+            pool.add_event()
+
         # we now have enough entropy in the pool to get a key_size'd key
         return pool.get_bytes(key_size)
 
