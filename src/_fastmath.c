@@ -74,12 +74,6 @@ dsaKey;
 PyObject *rsaKey_new (PyObject *, PyObject *);
 PyObject *dsaKey_new (PyObject *, PyObject *);
 
-static PyMethodDef _fastmath__methods__[] = {
-	{"dsa_construct", dsaKey_new, METH_VARARGS},
-	{"rsa_construct", rsaKey_new, METH_VARARGS},
-	{NULL, NULL}
-};
-
 typedef struct
 {
 	PyObject_HEAD mpz_t n;
@@ -224,9 +218,9 @@ static PyTypeObject rsaKeyType = {
 	sizeof (rsaKey),
 	0,
 	(destructor) rsaKey_dealloc,	/* dealloc */
-	0,														/* print */
+	0,				/* print */
 	(getattrfunc) rsaKey_getattr,	/* getattr */
-	0,														/* setattr */
+	0,                              /* setattr */
 	0,														/* compare */
 	0,														/* repr */
 	0,														/* as_number */
@@ -578,6 +572,41 @@ rsaKey_hasprivate (rsaKey * key, PyObject * args)
 		return Py_BuildValue ("i", 1);
 }
 
+
+PyObject *
+isPrime (PyObject * self, PyObject * args)
+{
+	PyObject *l;
+	mpz_t n;
+	int result;
+
+	if (!(PyArg_ParseTuple (args, "O!", &PyLong_Type, &l)))
+	{
+		return NULL;
+	}
+	mpz_init (n);
+	longObjToMPZ (n, (PyLongObject *) l);
+
+	result = mpz_probab_prime_p(n, 5);
+
+	mpz_clear (n);
+
+	if (result == 0) {
+		Py_INCREF(Py_False);
+		return Py_False;
+        } else {
+		Py_INCREF(Py_True);
+		return Py_True;
+	}
+}
+
+
+static PyMethodDef _fastmath__methods__[] = {
+	{"dsa_construct", dsaKey_new, METH_VARARGS},
+	{"rsa_construct", rsaKey_new, METH_VARARGS},
+        {"isPrime", isPrime, METH_VARARGS},
+	{NULL, NULL}
+};
 
 void
 init_fastmath (void)
