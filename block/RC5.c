@@ -14,7 +14,8 @@
 #define MODULE_NAME RC5
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0
-
+#define PCT_RC5_MODULE          /* Define this to get RC5's additional 
+				   keywords */ 
 #define MAXTABLE 100		/* Maximum size of S-box table; changing this
 				   affects the maximum number of rounds
 				   possible. */
@@ -33,7 +34,7 @@ typedef unsigned int U32;
 typedef struct 
 {
   int version;			/* Version number of algorithm */
-  int wordsize;			/* Word size */
+  int word_size;			/* Word size */
   int rounds;			/* Number of rounds */
   U32 S[MAXTABLE];
   U32 mask;
@@ -45,25 +46,7 @@ block_init(block_state *self, unsigned char *key, int keylen)
   unsigned int P = 0, Q = 0;
   int i;
   
-  if (self->version!=0x10) 
-    {
-      PyErr_SetString(PyExc_ValueError,
-		      "RC5: Bad RC5 algorithm version");
-      return;
-    }
-  if (self->wordsize!=16 && self->wordsize!=32) 
-    {
-      PyErr_SetString(PyExc_ValueError,
-		      "RC5: Unsupported word size");
-      return;
-    }
-  if (self->rounds<0 || 255<self->rounds) 
-    {
-      PyErr_SetString(PyExc_ValueError,
-		      "RC5: rounds must be between 0 and 255");
-      return;
-    }
-  switch(self->wordsize)
+  switch(self->word_size)
     {
     case(16):
       P=0xb7e1; Q=0x9e37; self->mask=0xffff;
@@ -75,7 +58,7 @@ block_init(block_state *self, unsigned char *key, int keylen)
   for(i=0; i<2*self->rounds+2; i++) self->S[i]=0;
   {
     unsigned int *L, A, B;
-    int u=self->wordsize/8, num;
+    int u=self->word_size/8, num;
     int j, t=2*(self->rounds+1), c=(keylen-1)/u;
     if ((keylen-1) % u) c++;
     L=malloc(sizeof(unsigned int)*c);
@@ -92,9 +75,9 @@ block_init(block_state *self, unsigned char *key, int keylen)
     A=B=0;
     for(num = (t>c) ? 3*t : 3*c; 0<num; num--) 
       {
-	LEFT(A, self->S[i]+A+B, 3, self->wordsize, self->mask);
+	LEFT(A, self->S[i]+A+B, 3, self->word_size, self->mask);
 	self->S[i]=A;
-	LEFT(B, L[j]+A+B, A+B, self->wordsize, self->mask);
+	LEFT(B, L[j]+A+B, A+B, self->word_size, self->mask);
 	L[j]=B;
 	i=(i+1)%t;
 	j=(j+1)%c;
@@ -103,9 +86,7 @@ block_init(block_state *self, unsigned char *key, int keylen)
   }
 }
 
-static void RC5Encipher(self, Aptr, Bptr)
-     block_state *self;
-     U32 *Aptr, *Bptr;
+static void RC5Encipher(block_state *self, U32 *Aptr, U32 *Bptr)
 {
   int i;
   register U32 A, B;
@@ -116,18 +97,17 @@ static void RC5Encipher(self, Aptr, Bptr)
   if (self->rounds)
   for (i=2; i<=2*self->rounds; i+=2) 
     {
-      LEFT(A,A^B,B,self->wordsize,self->mask);
+      LEFT(A,A^B,B,self->word_size,self->mask);
       A += self->S[i];
-      LEFT(B,A^B,A,self->wordsize,self->mask);
+      LEFT(B,A^B,A,self->word_size,self->mask);
       B += self->S[i+1];
     }
   *Aptr=A;
   *Bptr=B;
 }
 
-static void RC5Decipher(self, Aptr, Bptr)
-     block_state *self;
-     unsigned int *Aptr, *Bptr;
+static void RC5Decipher(block_state *self, unsigned int *Aptr, 
+			unsigned int *Bptr)
 {
   int i;
   U32 A, B;
@@ -138,32 +118,30 @@ static void RC5Decipher(self, Aptr, Bptr)
   if (self->rounds)
   for (i=2*self->rounds; 2<=i; i-=2) 
     {
-      RIGHT(B,B-self->S[i+1],A,self->wordsize,self->mask);
+      RIGHT(B,B-self->S[i+1],A,self->word_size,self->mask);
       B ^= A;
-      RIGHT(A,A-self->S[i],B,self->wordsize,self->mask);
+      RIGHT(A,A-self->S[i],B,self->word_size,self->mask);
       A ^= B;
     }
   A = (A-self->S[0]) & self->mask;
   B = (B-self->S[1]) & self->mask;
-  if (self->wordsize==32) 
+  if (self->word_size==32) 
     {
       *Aptr=A;
       *Bptr=B;
     }
-  else /* self->wordsize==16 */
+  else /* self->word_size==16 */
     {
       *Aptr=A;
       *Bptr=B;
     }
 }
 
-static inline void block_encrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+static inline void block_encrypt(block_state *self, unsigned char *block)
 {
   U32 A,B;
   
-  switch(self->wordsize)
+  switch(self->word_size)
     {
     case (32):
       A=block[0] | block[1]<<8 | block[2]<<16 | block[3]<<24;
@@ -194,13 +172,11 @@ static inline void block_encrypt(self, block)
     }
 }
 
-static inline void block_decrypt(self, block)
-     block_state *self;
-     unsigned char *block;
+static inline void block_decrypt(block_state *self, unsigned char *block)
 {
   U32 A,B;
   
-  switch(self->wordsize)
+  switch(self->word_size)
     {
     case (32):
       A=block[0] | block[1]<<8 | block[2]<<16 | block[3]<<24;
@@ -231,4 +207,4 @@ static inline void block_decrypt(self, block)
     }
 }
 
-
+#include "block_template.c"

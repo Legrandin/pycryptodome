@@ -84,26 +84,34 @@ static char ALGnew__doc__[] =
 "Return a new ALG encryption object.";
 
 static char *kwlist[] = {"key", "mode", "IV", "counter", "segment_size",
+#ifdef PCT_RC5_MODULE
+			 "version", "word_size", "rounds",
+#endif
 			 NULL};
 
 static ALGobject *
 ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 {
  unsigned char *key, *IV;
-
- ALGobject * new;
+ ALGobject * new=NULL;
  int i, keylen, IVlen=0, mode=MODE_ECB, segment_size=0;
- 
  PyObject *counter = NULL;
-
- new = newALGobject();
+#ifdef PCT_RC5_MODULE
+ int version = 0x10, word_size = 32, rounds = 16; /*XXX default rounds? */
+#endif 
  /* Set default values */
- if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#Oi", kwlist,
+ if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#Oi"
+#ifdef PCT_RC5_MODULE
+				  "iii"
+#endif 
+				  , kwlist,
 				  &key, &keylen, &mode, &IV, &IVlen,
 				  &counter, &segment_size
-				  ))
+#ifdef PCT_RC5_MODULE
+				  , &version, &word_size, &rounds
+#endif
+				  )) 
    {
-     Py_XDECREF(new);
      return NULL;
    }
 
@@ -138,7 +146,6 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
      PyErr_SetString(PyExc_ValueError, "segment_size must be between "
 		     "1 and 8*block_size");
    }
-   new->segment_size = segment_size;
  }
 
  if (mode == MODE_CTR) {
@@ -146,15 +153,41 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
      PyErr_SetString(PyExc_ValueError, 
 		     "'counter' parameter must be a callable object");
    }
-   else {
-     new->counter = counter;
-   }
  } else {
    if (counter != NULL) {
      PyErr_SetString(PyExc_ValueError, 
 		     "'counter' parameter only useful with CTR mode");
    }
  }
+
+ /* Cipher-specific checks */
+#ifdef PCT_RC5_MODULE
+ if (version!=0x10) {
+     PyErr_SetString(PyExc_ValueError,
+		     "RC5: Bad RC5 algorithm version");
+     return NULL;
+ }
+  if (word_size!=16 && word_size!=32) {
+      PyErr_SetString(PyExc_ValueError,
+		      "RC5: Unsupported word size");
+      return NULL;
+    }
+  if (rounds<0 || 255<rounds) {
+      PyErr_SetString(PyExc_ValueError,
+		      "RC5: rounds must be between 0 and 255");
+      return NULL;
+  }
+#endif
+
+  /* Copy parameters into object */
+  new = newALGobject();
+  new->segment_size = segment_size;
+  new->counter = counter;
+#ifdef PCT_RC5_MODULE
+  new->st.version = version;
+  new->st.word_size = word_size;
+  new->st.rounds = rounds;
+#endif
 
  block_init(&(new->st), key, keylen);
  if (PyErr_Occurred())
