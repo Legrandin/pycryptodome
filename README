@@ -1,5 +1,5 @@
-Python Cryptography Toolkit (pycrypto) 1.9alpha6
-================================================
+Python Cryptography Toolkit (pycrypto) 2.0	
+==========================================
 
 This is a collection of both secure hash functions (such as MD5 and
 SHA), and various encryption algorithms (AES, DES, IDEA, RSA, ElGamal,

@@ -1,6 +1,6 @@
 
-1.9alpha7
-=========
+2.0
+===
 
 	* Added SHA256 module contributed by Jeethu Rao, with test data
 	  from Taylor Boon.

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.27 2003-12-19 14:24:25 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.28 2004-08-13 23:44:47 akuchling Exp $"
 
 from distutils import core
 from distutils.core import Extension
@@ -127,7 +127,7 @@ class PCTBuildExt (build_ext):
         self.extensions += exts
 
 kw = {'name':"pycrypto",
-      'version':"1.9a6",
+      'version':"2.0",
       'description':"Cryptographic modules for Python.",
       'author':"A.M. Kuchling",
       'author_email':"amk@amk.ca",
