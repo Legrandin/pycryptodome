@@ -24,9 +24,27 @@ setup(name="amkCrypto",
                                sources=["hash/RIPEMD.c"]),
 
                      # Block encryption algorithms
+                     Extension("Crypto.Cipher.ARC2",
+                               include_dirs=['src/'],
+                               sources=["block/ARC2.c"]),
+                     Extension("Crypto.Cipher.Blowfish",
+                               include_dirs=['src/'],
+                               sources=["block/Blowfish.c"]),
+                     Extension("Crypto.Cipher.CAST",
+                               include_dirs=['src/'],
+                               sources=["block/CAST.c"]),
                      Extension("Crypto.Cipher.DES",
                                include_dirs=['src/'],
                                sources=["block/DES.c"]),
+                     Extension("Crypto.Cipher.DES3",
+                               include_dirs=['src/'],
+                               sources=["block/DES3.c"]),
+                     Extension("Crypto.Cipher.IDEA",
+                               include_dirs=['src/'],
+                               sources=["block/IDEA.c"]),
+#                     Extension("Crypto.Cipher.RC5",
+#                               include_dirs=['src/'],
+#                               sources=["block/RC5.c"]),
                     ]
      )
 
