@@ -17,9 +17,9 @@ Crypto.Util               Various useful modules and functions (long-to-string
                           theoretic functions)
 """
 
-__all__ = ['Cipher', 'Hash', 'Protocol', 'Util']
+__all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util']
 
 __version__ = '2.0'
-__revision__ = "$Id: __init__.py,v 1.10 2004-08-13 23:44:47 akuchling Exp $"
+__revision__ = "$Id: __init__.py,v 1.11 2004-10-20 16:49:42 akuchling Exp $"
 
 
