@@ -36,20 +36,26 @@ except ImportError:
 ##     return reduce(lambda x,y : x*256+ord(y), s, 0L)
     
 def getRandomNumber(N, randfunc):
-    "Return an N-bit random number."
+    """getRandomNumber(N:int, randfunc:callable):long
+    Return an N-bit random number."""
+    
     S = randfunc(N/8)
     char = ord(randfunc(1)) >> (8-(N%8))
-    return bytestolong(chr(char) + S)
+    return bytes_to_long(chr(char) + S)
     
 def GCD(x,y):
-    "Return the GCD of x and y."
+    """GCD(x:long, y:long): long
+    Return the GCD of x and y.
+    """
     x = abs(x) ; y = abs(y)
     while x > 0:
         x, y = y % x, x
     return y
 
 def inverse(u, v):
-    "Return the inverse of u mod v."
+    """inverse(u:long, u:long):long
+    Return the inverse of u mod v.
+    """
     u3, v3 = long(u), long(v)
     u1, v1 = 1L, 0L
     while v3 > 0:
@@ -64,14 +70,19 @@ def inverse(u, v):
 # find a prime number of the appropriate size.
 
 def getPrime(N, randfunc):
-    "Return a random N-bit prime number."
+    """getPrime(N:int, randfunc:callable):long
+    Return a random N-bit prime number.
+    """
+    
     number=getRandomNumber(N, randfunc) | 1
     while (not isPrime(number)):
         number=number+2
     return number
 
 def isPrime(N):
-    "Return true if N is prime."
+    """isPrime(N:long):bool
+    Return true if N is prime.
+    """
     if N == 1: return 0
     if N in sieve: return 1
     for i in sieve:
@@ -108,8 +119,9 @@ sieve=[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59,
 
 import struct
 
-def longtobytes(n, blocksize=0):
-    """Convert a long integer to a byte string
+def long_to_bytes(n, blocksize=0):
+    """long_to_bytes(n:long, blocksize:int) : string
+    Convert a long integer to a byte string.
 
     If optional blocksize is given and greater than zero, pad the front of the
     byte string with binary zeros so that the length is a multiple of
@@ -117,6 +129,7 @@ def longtobytes(n, blocksize=0):
     """
     # after much testing, this algorithm was deemed to be the fastest
     s = ''
+    n = long(n)
     pack = struct.pack
     while n > 0:
         s = pack('>I', n & 0xffffffffL) + s
@@ -136,10 +149,11 @@ def longtobytes(n, blocksize=0):
         s = (blocksize - len(s) % blocksize) * '\000' + s
     return s
 
-def bytestolong(s):
-    """Convert a byte string to a long integer.
+def bytes_to_long(s):
+    """bytes_to_long(string) : long
+    Convert a byte string to a long integer.
 
-    This is (essentially) the inverse of longtobytes().
+    This is (essentially) the inverse of long_to_bytes().
     """
     acc = 0L
     unpack = struct.unpack
@@ -154,8 +168,8 @@ def bytestolong(s):
 
 # For backwards compatibility...
 def long2str(n, blocksize=0):
-    warnings.warn("long2str() has been replaced by longtobytes()")
-    return longtobytes(n, blocksize)
+    warnings.warn("long2str() has been replaced by long_to_bytes()")
+    return long_to_bytes(n, blocksize)
 def str2long(s):
-    warnings.warn("str2long() has been replaced by bytestolong()")
-    return bytestolong(s)
+    warnings.warn("str2long() has been replaced by bytes_to_long()")
+    return bytes_to_long(s)
