@@ -7,11 +7,11 @@ be used to sign messages, and some can *only* be used for signatures.
 
 Crypto.PublicKey.DSA      Digital Signature Algorithm. (Signature only)
 Crypto.PublicKey.ElGamal  (Signing and encryption)
-Crypto.PublicKey.RSA      (Signing and encryption)
+Crypto.PublicKey.RSA      (Signing, encryption, and blinding)
 Crypto.PublicKey.qNEW     (Signature only)
 
 """
 
 __all__ = ['RSA', 'DSA', 'ElGamal', 'qNEW']
-__revision__ = "$Id: __init__.py,v 1.3 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: __init__.py,v 1.4 2003-04-03 20:27:13 akuchling Exp $"
 

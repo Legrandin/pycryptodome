@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: pubkey.py,v 1.8 2003-02-28 15:25:11 akuchling Exp $"
+__revision__ = "$Id: pubkey.py,v 1.9 2003-04-03 20:27:13 akuchling Exp $"
 
 import types, warnings
 from Crypto.Util.number import *
@@ -88,6 +88,31 @@ integers, MPZ objects, or whatever."""
         warnings.warn("validate() method name is obsolete; use verify()",
                       DeprecationWarning)
 
+    def blind(self, M, B):
+        """blind(M : string|long, B : string|long) : string|long
+        Blind message M using blinding factor B.
+        """
+        wasString=0
+        if isinstance(M, types.StringType):
+            M=bytes_to_long(M) ; wasString=1
+        if isinstance(B, types.StringType): B=bytes_to_long(B)
+        blindedmessage=self._blind(M, B)
+        if wasString: return long_to_bytes(blindedmessage)
+        else: return blindedmessage
+
+    def unblind(self, M, B):
+        """unblind(M : string|long, B : string|long) : string|long
+        Unblind message M using blinding factor B.
+        """
+        wasString=0
+        if isinstance(M, types.StringType):
+            M=bytes_to_long(M) ; wasString=1
+        if isinstance(B, types.StringType): B=bytes_to_long(B)
+        unblindedmessage=self._unblind(M, B)
+        if wasString: return long_to_bytes(unblindedmessage)
+        else: return unblindedmessage
+
+
     # The following methods will usually be left alone, except for
     # signature-only algorithms.  They both return Boolean values
     # recording whether this key's algorithm can sign and encrypt.
@@ -108,6 +133,15 @@ integers, MPZ objects, or whatever."""
         to decrypt a message.)
         """
         return 1
+
+    def canblind (self):
+        """canblind() : bool
+        Return a Boolean value recording whether this algorithm can
+        blind data.  (This does not imply that this
+        particular key object has the private information required to
+        to blind a message.)
+        """
+        return 0
 
     # The following methods will certainly be overridden by
     # subclasses.
