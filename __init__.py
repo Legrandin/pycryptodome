@@ -19,7 +19,7 @@ Crypto.Util               Various useful modules and functions (long-to-string
 
 __all__ = ['Cipher', 'Hash', 'Protocol', 'Util']
 
-__version__ = '1.9a5'
-__revision__ = "$Id: __init__.py,v 1.8 2002-09-05 11:27:11 akuchling Exp $"
+__version__ = '1.9a6'
+__revision__ = "$Id: __init__.py,v 1.9 2004-03-05 19:02:10 akuchling Exp $"
 
 
