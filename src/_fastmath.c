@@ -252,15 +252,17 @@ dsaKey_new (PyObject * self, PyObject * args)
 {
 	PyLongObject *y = NULL, *g = NULL, *p = NULL, *q = NULL, *x = NULL;
 	dsaKey *key;
+	if (!PyArg_ParseTuple(args, "O!O!O!O!|O!", &PyLong_Type, &y,
+			      &PyLong_Type, &g, &PyLong_Type, &p, 
+			      &PyLong_Type, &q, &PyLong_Type, &x))
+		return NULL;
+
 	key = PyObject_New (dsaKey, &dsaKeyType);
 	mpz_init (key->y);
 	mpz_init (key->g);
 	mpz_init (key->p);
 	mpz_init (key->q);
 	mpz_init (key->x);
-	PyArg_ParseTuple(args, "O!O!O!O!|O!", &PyLong_Type, &y,
-			 &PyLong_Type, &g,
-			 &PyLong_Type, &p, &PyLong_Type, &q, &PyLong_Type, &x);
 	longObjToMPZ (key->y, y);
 	longObjToMPZ (key->g, g);
 	longObjToMPZ (key->p, p);
@@ -321,8 +323,8 @@ dsaKey__sign (dsaKey * key, PyObject * args)
 	PyObject *lm, *lk, *lr, *ls;
 	mpz_t m, k, r, s;
 	int result;
-	if (!(PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &lm,
-				&PyLong_Type, &lk)))
+	if (!PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &lm,
+			       &PyLong_Type, &lk))
 	{
 		return NULL;
 	}
@@ -353,8 +355,8 @@ dsaKey__verify (dsaKey * key, PyObject * args)
 	PyObject *lm, *lr, *ls;
 	mpz_t m, r, s;
 	int result;
-	if (!(PyArg_ParseTuple (args, "O!O!O!", &PyLong_Type, &lm,
-				&PyLong_Type, &lr, &PyLong_Type, &ls)))
+	if (!PyArg_ParseTuple (args, "O!O!O!", &PyLong_Type, &lm,
+			       &PyLong_Type, &lr, &PyLong_Type, &ls))
 	{
 		return NULL;
 	}
@@ -395,15 +397,18 @@ rsaKey_new (PyObject * self, PyObject * args)
 {
 	PyLongObject *n = NULL, *e = NULL, *d = NULL, *p = NULL, *q = NULL;
 	rsaKey *key;
+
+	if (!PyArg_ParseTuple(args, "O!O!|O!O!O!", &PyLong_Type, &n,
+			      &PyLong_Type, &e, &PyLong_Type, &d, 
+			      &PyLong_Type, &p, &PyLong_Type, &q))
+		return NULL;
+
 	key = PyObject_New (rsaKey, &rsaKeyType);
 	mpz_init (key->n);
 	mpz_init (key->e);
 	mpz_init (key->d);
 	mpz_init (key->p);
 	mpz_init (key->q);
-	PyArg_ParseTuple (args, "O!O!|O!O!O!", &PyLong_Type, &n,
-			  &PyLong_Type, &e,
-			  &PyLong_Type, &d, &PyLong_Type, &p, &PyLong_Type, &q);
 	longObjToMPZ (key->n, n);
 	longObjToMPZ (key->e, e);
 	if (!d)
