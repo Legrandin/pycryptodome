@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: pubkey.py,v 1.6 2002-12-22 20:13:05 z3p Exp $"
+__revision__ = "$Id: pubkey.py,v 1.7 2002-12-23 04:52:18 z3p Exp $"
 
 import types, warnings
 from Crypto.Util.number import *
@@ -132,7 +132,7 @@ integers, MPZ objects, or whatever."""
 	return self
 	
     def __eq__ (self, other):
-    """__eq__(other): 0, 1
+	"""__eq__(other): 0, 1
         Compare us to other for equality.
-    """
-    return self.__getstate__() == other.__getstate__()
+        """
+	return self.__getstate__() == other.__getstate__()
