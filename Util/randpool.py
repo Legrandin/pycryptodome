@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 #
 
-__revision__ = "$Id: randpool.py,v 1.11 2002-10-31 17:34:22 moraes Exp $"
+__revision__ = "$Id: randpool.py,v 1.12 2003-02-01 00:46:43 moraes Exp $"
 
 import time, array, types, warnings, os.path
 from Crypto.Util.number import long_to_bytes
@@ -109,7 +109,7 @@ class RandomPool:
             nbytes = int(N/8+0.5)
         if winrandom:
             # Windows CryptGenRandom provides random data.
-            data = winrandom.winrandom(nbytes)
+            data = winrandom.new().get_bytes(nbytes)
         elif os.path.exists(devname):
             # Many OSes support a /dev/urandom device
             try:
