@@ -1,4 +1,14 @@
 
+1.9alpha2
+=========
+
+	* Fix use of a Python 2.2 C function, replacing it with a 
+	  2.1-compatible equivalent.  (Bug report and patch by Andrew
+	  Eland.)
+
+	* Make test.py automatically add the build/* directory to sys.path.
+	
+
 1.9alpha1
 =========
 

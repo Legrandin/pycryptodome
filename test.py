@@ -1,13 +1,22 @@
 #
-# Test script for the Python Cryptography package.
+# Test script for the Python Cryptography Toolkit.
 #
 
-import sys
+import os, sys
+
+
+# Add the build directory to the front of sys.path
+from distutils.util import get_platform
+s = "build/lib.%s-%.3s" % (get_platform(), sys.version)
+s = os.path.join(os.getcwd(), s)
+sys.path.insert(0, s)
+
+from Crypto.Util import test
+
 args = sys.argv[1:]
 quiet = "--quiet" in args
 if quiet: args.remove('--quiet')
 
-from Crypto.Util import test
 
 if 0:
     if not quiet:
