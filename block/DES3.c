@@ -15,6 +15,12 @@
 /* Integrated into the PCT by A.M. Kuchling, November 1994 */
 /* Fully independent key mode added by Wim Lewis, July 1997 */
 
+#include "Python.h"
+
+#define MODULE_NAME DES3
+#define BLOCK_SIZE 8
+#define KEY_SIZE 0
+
 typedef unsigned char des_cblock[8];
 
 /* ecb_enc.c */
@@ -430,9 +436,8 @@ typedef struct des_ks_struct
 
 typedef struct 
 {
-  PCTObject_HEAD
   des_key_schedule KeySched1, KeySched2, KeySched3;
-} DES3object;
+} block_state;
 
 static int des_encrypt(input,output,ks,encrypt)
      unsigned long *input;
@@ -539,8 +544,8 @@ static int des_ecb_encrypt(input,output,ks,encrypt)
 
 
      
-static inline void DES3decrypt(self, block)
-     DES3object *self;
+static inline void block_decrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   des_cblock output, output2;
@@ -550,8 +555,8 @@ static inline void DES3decrypt(self, block)
   des_ecb_encrypt(output2, block, self->KeySched1, 0);
 }
 
-static inline void DES3encrypt(self, block)
-     DES3object *self;
+static inline void block_encrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   des_cblock output, output2;
@@ -662,8 +667,8 @@ static const unsigned char odd_parity[256]={
 224,224,227,227,229,229,230,230,233,233,234,234,236,236,239,239,
 241,241,242,242,244,244,247,247,248,248,251,251,253,253,254,254};
 
-static inline void DES3init(self, key, keylength)
-     DES3object *self;
+static inline void block_init(self, key, keylength)
+     block_state *self;
      unsigned char *key;
      int keylength;
 {
@@ -688,3 +693,5 @@ static inline void DES3init(self, key, keylength)
     memcpy(self->KeySched3, self->KeySched1, sizeof(self->KeySched3));
   }
 }
+
+#include "block_template.c"

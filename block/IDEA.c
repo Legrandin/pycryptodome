@@ -11,6 +11,10 @@
  */
   
 
+#define MODULE_NAME IDEA
+#define BLOCK_SIZE 8
+#define KEY_SIZE 16
+
 #define low16(x) ((x)/* & 0xFFFF*/)
 typedef unsigned short uint16;	/* at LEAST 16 bits, maybe more */
 typedef unsigned short word16;
@@ -32,10 +36,8 @@ typedef unsigned char byte;
 
 typedef struct 
 {
- PCTObject_HEAD
  word16 EK[6*8+4], DK[6*8+4];
- char Endianness;
-} IDEAobject;
+} block_state;
 
 CONST static uint16
 mulInv(x)
@@ -65,8 +67,8 @@ mulInv(x)
 }				/* mukInv */
 
 static inline void
-IDEAinit(self, key, dummy)
-     IDEAobject *self;
+block_init(self, key, dummy)
+     block_state *self;
      unsigned char *key;
      int dummy;
 {
@@ -75,7 +77,6 @@ IDEAinit(self, key, dummy)
     word16 *DK, *EK;    
 
     EK = self->EK;
-    TestEndianness(self->Endianness);
     for (j = 0; j < 8; j++) {
 	EK[j] = (key[0] << 8) + key[1];
 	key += 2;
@@ -125,7 +126,7 @@ IDEAinit(self, key, dummy)
 /*      IDEA encryption/decryption algorithm */
 /* Note that in and out can be the same buffer */
 static void ideaCipher(self, block, key)
-     IDEAobject *self;
+     block_state *self;
      byte *block;
      word16 const *key;
 {
@@ -140,13 +141,12 @@ static void ideaCipher(self, block, key)
     x2 = *in++;
     x3 = *in++;
     x4 = *in;
-    if (self->Endianness==PCT_LITTLE_ENDIAN) 
-      {
+#ifndef WORDS_BIGENDIAN
 	x1 = (x1 >> 8) | (x1 << 8);
 	x2 = (x2 >> 8) | (x2 << 8);
 	x3 = (x3 >> 8) | (x3 << 8);
 	x4 = (x4 >> 8) | (x4 << 8);
-      }
+#endif
     do {
 	MUL(x1, *key++);
 	x2 += *key++;
@@ -175,15 +175,12 @@ static void ideaCipher(self, block, key)
 
     out = (word16 *) block;
    
-    if (self->Endianness==PCT_BIG_ENDIAN) 
-      {
+#ifdef WORDS_BIGENDIAN
 	*out++ = x1;
 	*out++ = x3;
 	*out++ = x2;
 	*out = x4;
-      }				/* !HIGHFIRST */
-    else 
-      {
+#else
 	x1 = low16(x1);
 	x2 = low16(x2);
 	x3 = low16(x3);
@@ -193,22 +190,22 @@ static void ideaCipher(self, block, key)
 	*out++ = (x3 >> 8) | (x3 << 8);
 	*out++ = (x2 >> 8) | (x2 << 8);
 	*out = (x4 >> 8) | (x4 << 8);
-      }
+#endif
 }				/* ideaCipher */
 
 
-static inline void IDEAencrypt(self, block)
-     IDEAobject *self;
+static inline void block_encrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   ideaCipher(self, block, self->EK);
 }
 
-static inline void IDEAdecrypt(self, block)
-     IDEAobject *self;
+static inline void block_decrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   ideaCipher(self, block, self->DK);
 }
    
-     
+#include "block_template.c"

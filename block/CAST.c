@@ -1,8 +1,6 @@
 /*
    cast.c -- implementation of CAST-128 (aka CAST5) as described in RFC2144
    
-   compile -DPCT for use in the Python Cryptography Toolkit
-       (this should work automatically)
    compile -DTEST to include main() which performs the tests
        specified in RFC2144
 
@@ -27,21 +25,16 @@
      21 Jul 1997: wiml     : first working version & Python module
 */
 
+#include "Python.h"
+
+#define MODULE_NAME CAST
+#define BLOCK_SIZE 8
+#define KEY_SIZE 0
 
 /* adjust these according to your compiler/platform. On some machines
    uint32 will have to be a long. It's OK if uint32 is more than 32 bits. */
 typedef unsigned int uint32;
 typedef unsigned char uint8;
-
-#ifdef PCTObject_HEAD
-#define PCT
-#endif
-
-#ifdef PCT
-#define PCTstatic static
-#else
-#define PCTstatic
-#endif
 
 /* this struct probably belongs in cast.h */
 typedef struct {
@@ -50,7 +43,7 @@ typedef struct {
     uint8 Kr[16];
     /* number of rounds (depends on original unpadded keylength) */
     int rounds;
-} cast_keyschedule;
+} block_state;
 
 /* these are the eight 32*256 S-boxes */
 #include "../block/cast5.c"
@@ -105,8 +98,8 @@ static inline uint32 castfunc(D, Kmi, Kri, type)
 
 /* encrypts/decrypts one block of data according to the key schedule
    pointed to by `key'. Encrypts if decrypt=0, otherwise decrypts. */
-PCTstatic void castcrypt(key, block, decrypt)
-     cast_keyschedule *key;
+static void castcrypt(key, block, decrypt)
+     block_state *key;
      uint8 *block;
      int decrypt;
 {
@@ -229,8 +222,8 @@ static void schedulekeys_half(in, keys)
 }
 
 /* generates a key schedule from an input key */
-PCTstatic void castschedulekeys(schedule, key, keybytes)
-     cast_keyschedule *schedule;
+static void castschedulekeys(schedule, key, keybytes)
+     block_state *schedule;
      uint8 *key;
      int keybytes;
 {
@@ -272,7 +265,7 @@ PCTstatic void castschedulekeys(schedule, key, keybytes)
 
 #include <stdio.h>
 
-static cast_keyschedule sched;
+static block_state sched;
 
 void encrypt(key, keylen, in, out)
      uint8 *key;
@@ -415,19 +408,9 @@ main()
 
 #endif
 
-#ifdef PCT
-
-/* code to interface with the Python Cryptography Toolkit */
-
-typedef struct 
-{
-    PCTObject_HEAD
-    cast_keyschedule schedule;
-} CASTobject;
-
 static void
-CASTinit(self, key, keylength)
-     CASTobject *self;
+block_init(self, key, keylength)
+     block_state *self;
      unsigned char *key;
      int keylength;
 {
@@ -445,22 +428,22 @@ CASTinit(self, key, keylength)
     }
 
     /* do the actual key schedule setup */
-    castschedulekeys(&(self->schedule), key, keylength);
+    castschedulekeys(self, key, keylength);
 }
 
 static void
-CASTencrypt(self, block)
-     CASTobject *self;
+block_encrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
-    castcrypt(&(self->schedule), block, 0);
+    castcrypt(self, block, 0);
 }
 
-static void CASTdecrypt(self, block)
-     CASTobject *self;
+static void block_decrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
-    castcrypt(&(self->schedule), block, 1);
+    castcrypt(self, block, 1);
 }
 
-#endif
+#include "block_template.c"

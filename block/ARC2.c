@@ -11,20 +11,21 @@
  */
   
 
+#define MODULE_NAME ARC2
+#define BLOCK_SIZE 8
+#define KEY_SIZE 0
+
 typedef unsigned int U32;
 typedef unsigned short U16;
 typedef unsigned char U8;
 
 typedef struct 
 {
- PCTObject_HEAD
  U16 xkey[64];
-} ARC2object;
+} block_state;
 
 static inline void
-ARC2encrypt(self, block)
-     ARC2object *self;
-     U8 *block;
+block_encrypt(block_state *self, U8 *block)
 {
   U16 x76, x54, x32, x10;
   int i;
@@ -68,9 +69,7 @@ ARC2encrypt(self, block)
 
 
 static inline void
-ARC2decrypt(self, block)
-     ARC2object *self;
-     U8 *block;
+block_decrypt(block_state *self, U8 *block)
 {
   U16 x76, x54, x32, x10;
   int i;
@@ -118,10 +117,7 @@ ARC2decrypt(self, block)
 
 
 static inline void 
-ARC2init(self, key, keylength)
-     ARC2object *self;
-     U8 *key;
-     int keylength;
+block_init(block_state *self, U8 *key, int keylength)
 {
   U8 x;
   U16 i;
@@ -184,3 +180,5 @@ ARC2init(self, key, keylength)
 }
 
 #undef bits
+
+#include "block_template.c"

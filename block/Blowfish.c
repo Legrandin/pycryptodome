@@ -9,13 +9,19 @@
  * country of residence.
  *
  */
-  
+
 /*************************************************************************/
 /* File: bf.c
    Blowfish cipher by Bruce Schneier,
    Code by Bryan Olson, based partly on Schneier's.
 */
 
+#include "Python.h"
+
+#define MODULE_NAME Blowfish
+#define BLOCK_SIZE 8
+#define KEY_SIZE 0
+  
 /* Define IntU32 to be an unsigned in 32 bits long */
 typedef unsigned int IntU32 ;
 typedef unsigned char IntU8 ;
@@ -36,9 +42,8 @@ typedef struct
 
 typedef struct 
 {
- PCTObject_HEAD
  BFkey_type bfkey;
-} Blowfishobject;
+} block_state;
 
 /*  File bfinit.h
     Data to initialize P and S in BlowFish.
@@ -322,7 +327,7 @@ static IntU32  s_init[4][256] = {
 
 /* Below is one BlowFish round including the F function 
 */
-#define round(l,r,n) \
+#define bf_round(l,r,n) \
        l ^= P[n]; \
        r ^= ( (sub(S[0],l>>22 & 0x3fc) + sub(S[1],l>>14 & 0x3fc)) \
 	      ^ sub(S[2],l>>6 & 0x3fc) ) +S[3][l & 0xff] 
@@ -348,14 +353,14 @@ static void crypt_block(block, bfkey, direction)
   S = bfkey->sbox ; 
   P = bfkey->p[direction] ;
 
-  round( left, right,  0 ) ;   round( right, left,  1 ) ;  
-  round( left, right,  2 ) ;   round( right, left,  3 ) ;
-  round( left, right,  4 ) ;   round( right, left,  5 ) ;
-  round( left, right,  6 ) ;   round( right, left,  7 ) ;
-  round( left, right,  8 ) ;   round( right, left,  9 ) ;
-  round( left, right, 10 ) ;   round( right, left, 11 ) ;
-  round( left, right, 12 ) ;   round( right, left, 13 ) ;
-  round( left, right, 14 ) ;   round( right, left, 15 ) ;
+  bf_round( left, right,  0 ) ;   bf_round( right, left,  1 ) ;  
+  bf_round( left, right,  2 ) ;   bf_round( right, left,  3 ) ;
+  bf_round( left, right,  4 ) ;   bf_round( right, left,  5 ) ;
+  bf_round( left, right,  6 ) ;   bf_round( right, left,  7 ) ;
+  bf_round( left, right,  8 ) ;   bf_round( right, left,  9 ) ;
+  bf_round( left, right, 10 ) ;   bf_round( right, left, 11 ) ;
+  bf_round( left, right, 12 ) ;   bf_round( right, left, 13 ) ;
+  bf_round( left, right, 14 ) ;   bf_round( right, left, 15 ) ;
 
   left = left ^ P[NROUNDS] ;
   right = right ^ P[NROUNDS+1] ;
@@ -480,8 +485,8 @@ static void make_bfkey(key_string, keylength, bfkey)
 
 
 static inline void
-Blowfishencrypt(self, block)
-     Blowfishobject *self;
+block_encrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   crypt_8bytes(block, block, &(self->bfkey), 0);
@@ -489,18 +494,20 @@ Blowfishencrypt(self, block)
 
 
 static inline void
-Blowfishdecrypt(self, block)
-     Blowfishobject *self;
+block_decrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   crypt_8bytes(block, block, &(self->bfkey), 1);
 }
 
 static inline void 
-Blowfishinit(self, key, keylength)
-     Blowfishobject *self;
+block_init(self, key, keylength)
+     block_state *self;
      unsigned char *key;
      int keylength;
 {
  make_bfkey(key, keylength, &(self->bfkey));
 }
+
+#include "block_template.c"

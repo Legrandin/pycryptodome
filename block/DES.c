@@ -17,7 +17,7 @@
 
 #define MODULE_NAME DES
 #define BLOCK_SIZE 8
-#define KEY_SIZE 0
+#define KEY_SIZE 8
 
 
 typedef unsigned char des_cblock[8];
