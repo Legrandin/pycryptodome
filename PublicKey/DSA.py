@@ -11,7 +11,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: DSA.py,v 1.15 2003-04-04 19:44:25 akuchling Exp $"
+__revision__ = "$Id: DSA.py,v 1.16 2004-05-06 12:52:54 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util import number
@@ -195,7 +195,7 @@ class DSAobj_c(pubkey):
 
     def __setstate__(self, state):
         y,g,p,q = state['y'], state['g'], state['p'], state['q']
-        if 'x' not in state:
+        if not state.has_key('x'):
             self.key = _fastmath.dsa_construct(y,g,p,q)
         else:
             x = state['x']

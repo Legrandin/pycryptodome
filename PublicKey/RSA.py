@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.19 2003-04-04 19:42:07 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.20 2004-05-06 12:52:54 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 from Crypto.Util import number
@@ -167,11 +167,11 @@ class RSAobj_c(pubkey.pubkey):
 
     def __setstate__(self, state):
         n,e = state['n'], state['e']
-        if 'd' not in state:
+        if not state.has_key('d'):
             self.key = _fastmath.rsa_construct(n,e)
         else:
             d = state['d']
-            if 'q' not in state:
+            if not state.has_key('q'):
                 self.key = _fastmath.rsa_construct(n,e,d)
             else:
                 p, q, u = state['p'], state['q'], state['u']
