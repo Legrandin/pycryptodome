@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.15 2003-04-03 20:36:13 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.16 2003-04-04 14:59:19 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 
@@ -38,6 +38,11 @@ def generate(bits, randfunc, progress_func=None):
     obj.p=pubkey.getPrime(bits/2, randfunc)
     if progress_func: progress_func('q\n')
     obj.q=pubkey.getPrime((bits/2)+difference, randfunc)
+    # p shall be smaller than q (for calc of u)
+    if obj.p>obj.q:
+        (obj.p, obj.q)=(obj.q, obj.p)
+    if progress_func: progress_func('u\n')
+    obj.u=pubkey.inverse(obj.p, obj.q)
     obj.n=obj.p*obj.q
 
     # Generate encryption exponent
@@ -48,21 +53,29 @@ def generate(bits, randfunc, progress_func=None):
     return obj
 
 def construct(tuple):
-    """construct(tuple:(long,long)|(long,long,long)|(long,long,long,long,long))
-             : RSAobj
-    Construct an RSA object from a 2-, 3-, or 5-tuple of numbers.
+    """construct(tuple:(long,) : RSAobj
+    Construct an RSA object from a 2-, 3-, 5-, or 6-tuple of numbers.
     """
 
     obj=RSAobj()
-    if len(tuple) not in [2,3,5]:
+    if len(tuple) not in [2,3,5,6]:
         raise error, 'argument for construct() wrong length'
     for i in range(len(tuple)):
         field = obj.keydata[i]
         setattr(obj, field, tuple[i])
+    if len(tuple) >= 5:
+        # Ensure p is smaller than q 
+        if obj.p>obj.q:
+            (obj.p, obj.q)=(obj.q, obj.p)
+
+    if len(tuple) == 5:
+        # u not supplied, so we're going to have to compute it.
+        obj.u=pubkey.inverse(obj.p, obj.q)
+
     return obj
 
 class RSAobj(pubkey.pubkey):
-    keydata=['n', 'e', 'd', 'p','q']
+    keydata = ['n', 'e', 'd', 'p', 'q', 'u']
     def _encrypt(self, plaintext, K=''):
         if self.n<=plaintext:
             raise error, 'Plaintext too large'
@@ -123,7 +136,7 @@ class RSAobj(pubkey.pubkey):
         return construct((self.n, self.e))
 
 class RSAobj_c(pubkey.pubkey):
-    keydata = ['n', 'e', 'd', 'p', 'q']
+    keydata = ['n', 'e', 'd', 'p', 'q', 'u']
 
     def __init__(self, key):
         self.key = key
@@ -153,8 +166,8 @@ class RSAobj_c(pubkey.pubkey):
             if 'q' not in state:
                 self.key = _fastmath.rsa_construct(n,e,d)
             else:
-                p, q = state['p'], state['q']
-                self.key = _fastmath.rsa_construct(n,e,d,p,q)
+                p, q, u = state['p'], state['q'], state['u']
+                self.key = _fastmath.rsa_construct(n,e,d,p,q,u)
 
     def _encrypt(self, plain, K):
         return (self.key._encrypt(plain),)
@@ -194,6 +207,11 @@ def generate_c(bits, randfunc, progress_func = None):
     p=pubkey.getPrime(bits/2, randfunc)
     if progress_func: progress_func('q\n')
     q=pubkey.getPrime((bits/2)+difference, randfunc)
+    # p shall be smaller than q (for calc of u)
+    if p>q:
+        (p, q)=(q, p)
+    if progress_func: progress_func('u\n')
+    u=pubkey.inverse(p, q)
     n=p*q
 
     # Generate encryption exponent
@@ -201,7 +219,7 @@ def generate_c(bits, randfunc, progress_func = None):
     e=pubkey.getPrime(17, randfunc)
     if progress_func: progress_func('d\n')
     d=pubkey.inverse(e, (p-1)*(q-1))
-    key = _fastmath.rsa_construct(n,e,d,p,q)
+    key = _fastmath.rsa_construct(n,e,d,p,q,u)
     return RSAobj_c(key)
 
 def construct_c(tuple):

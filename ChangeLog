@@ -12,9 +12,11 @@
 	* Merged the _rsa.c and _dsa.c files into a single accelerator
 	  module, _fastmath.c.  
 
-	* Added fast isPrime() function to _fastmath, cutting the time to
-	  generate a 1024-bit prime by a factor of 10.  (Contributed by
-	  Joris Bontje.)
+	* Speed improvements: Added fast isPrime() function to _fastmath,
+	  cutting the time to generate a 1024-bit prime by a factor of 10.
+	  Optimized the C version of RSA decryption to use a longer series
+	  of operations that's roughly 3x faster than a single
+	  exponentiation.  (Contributed by Joris Bontje.)
 
 	* Added support to RSA key objects for blinding and unblinding 
 	  data. (Contributed by Joris Bontje.)

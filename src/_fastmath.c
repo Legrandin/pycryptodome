@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.10 2003-04-04 14:28:39 akuchling Exp $
+ * $Id: _fastmath.c,v 1.11 2003-04-04 14:59:19 akuchling Exp $
  */
 
 #include <stdio.h>
@@ -79,6 +79,7 @@ typedef struct
 	mpz_t d;
 	mpz_t p;
 	mpz_t q;
+	mpz_t u;
 }
 rsaKey;
 
@@ -172,6 +173,7 @@ rsaEncrypt (rsaKey * key, mpz_t v)
 static int
 rsaDecrypt (rsaKey * key, mpz_t v)
 {
+    mpz_t m1, m2, h;
 	if (mpz_cmp (v, key->n) >= 0)
 	{
 		return 1;
@@ -180,6 +182,41 @@ rsaDecrypt (rsaKey * key, mpz_t v)
 	{
 		return 2;
 	}
+
+    if ((mpz_size (key->p) != 0) && (mpz_size (key->q) != 0) && 
+        (mpz_size (key->u) != 0))
+    {
+        /* fast path */
+        mpz_init(m1);
+        mpz_init(m2);
+        mpz_init(h);
+
+        /* m1 = c ^ (d mod (p-1)) mod p */
+        mpz_sub_ui(h, key->p, 1);
+        mpz_fdiv_r(h, key->d, h);
+        mpz_powm(m1, v, h, key->p);
+        /* m2 = c ^ (d mod (q-1)) mod q */
+        mpz_sub_ui(h, key->q, 1);
+        mpz_fdiv_r(h, key->d, h);
+        mpz_powm(m2, v, h, key->q);
+        /* h = u * ( m2 - m1 ) mod q */
+        mpz_sub(h, m2, m1);
+        if (mpz_sgn(h)==-1)
+            mpz_add(h, h, key->q);
+        mpz_mul(h, key->u, h);
+        mpz_mod(h, h, key->q);
+        /* m = m2 + h * p */
+        mpz_mul(h, h, key->p);
+        mpz_add(v, m1, h);
+        /* ready */
+
+        mpz_clear(m1);
+        mpz_clear(m2);
+        mpz_clear(h);
+        return 0;
+    }
+
+    /* slow */
 	mpz_powm (v, v, key->d, key->n);
 	return 0;
 }
@@ -449,12 +486,14 @@ dsaKey_has_private (dsaKey * key, PyObject * args)
 PyObject *
 rsaKey_new (PyObject * self, PyObject * args)
 {
-	PyLongObject *n = NULL, *e = NULL, *d = NULL, *p = NULL, *q = NULL;
+	PyLongObject *n = NULL, *e = NULL, *d = NULL, *p = NULL, *q = NULL, 
+                     *u = NULL;
 	rsaKey *key;
 
-	if (!PyArg_ParseTuple(args, "O!O!|O!O!O!", &PyLong_Type, &n,
+	if (!PyArg_ParseTuple(args, "O!O!|O!O!O!O!", &PyLong_Type, &n,
 			      &PyLong_Type, &e, &PyLong_Type, &d, 
-			      &PyLong_Type, &p, &PyLong_Type, &q))
+			      &PyLong_Type, &p, &PyLong_Type, &q,
+                              &PyLong_Type, &u))
 		return NULL;
 
 	key = PyObject_New (rsaKey, &rsaKeyType);
@@ -463,6 +502,7 @@ rsaKey_new (PyObject * self, PyObject * args)
 	mpz_init (key->d);
 	mpz_init (key->p);
 	mpz_init (key->q);
+	mpz_init (key->u);
 	longObjToMPZ (key->n, n);
 	longObjToMPZ (key->e, e);
 	if (!d)
@@ -470,19 +510,18 @@ rsaKey_new (PyObject * self, PyObject * args)
 		return (PyObject *) key;
 	}
 	longObjToMPZ (key->d, d);
-	if (p)
+	if (p && q && u)
 	{
-		if (q)
-		{
-			longObjToMPZ (key->p, p);
-			longObjToMPZ (key->q, q);
-		}
+        longObjToMPZ (key->p, p);
+        longObjToMPZ (key->q, q);
+        longObjToMPZ (key->u, u);
 	}
 	/*Py_XDECREF(n);
 	  Py_XDECREF(e);
 	  Py_XDECREF(d);
 	  Py_XDECREF(p);
-	  Py_XDECREF(q); */
+	  Py_XDECREF(q);
+	  Py_XDECREF(u); */
 	return (PyObject *) key;
 }
 
@@ -494,6 +533,7 @@ rsaKey_dealloc (rsaKey * key)
 	mpz_clear (key->d);
 	mpz_clear (key->p);
 	mpz_clear (key->q);
+	mpz_clear (key->u);
 	PyObject_Del (key);
 }
 
@@ -533,6 +573,16 @@ rsaKey_getattr (rsaKey * key, char *attr)
 			return NULL;
 		}
 		return mpzToLongObj (key->q);
+	}
+	else if (strcmp (attr, "u") == 0)
+	{
+		if (mpz_size (key->u) == 0)
+		{
+			PyErr_SetString(PyExc_AttributeError,
+					"rsaKey instance has no attribute 'u'");
+			return NULL;
+		}
+		return mpzToLongObj (key->u);
 	}
 	else
 	{
