@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.25 2003-04-03 21:23:52 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.26 2003-04-07 16:09:41 akuchling Exp $"
 
 from distutils import core
 from distutils.core import Extension
@@ -154,7 +154,7 @@ if hasattr(core, 'setup_keywords'):
           'Topic :: Security :: Cryptography',
           ]
     if 'download_url' in core.setup_keywords:
-        kw['download_url'] = ('http://www.amk.ca/files/python/'
+        kw['download_url'] = ('http://www.amk.ca/files/python/crypto/'
                               '%s-%s.tar.gz' % (kw['name'], kw['version']) )
 
 core.setup(**kw)
