@@ -17,23 +17,6 @@ args = sys.argv[1:]
 quiet = "--quiet" in args
 if quiet: args.remove('--quiet')
 
-
-if 0:
-    if not quiet:
-        print 'Public-key Functions:'
-        print '====================='
-
-    if args: test.TestPKModules(args, verbose= not quiet)
-    else:    test.TestPKModules(verbose= not quiet)
-
-
-if not quiet:
-    print '\nHash Functions:'
-    print '==============='
-
-if args: test.TestHashModules(args, verbose= not quiet)
-else:    test.TestHashModules(verbose= not quiet)
-
 if not quiet:
     print '\nStream Ciphers:'
     print '==============='
