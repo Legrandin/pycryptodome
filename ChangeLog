@@ -6,10 +6,17 @@
 	  size; if you asked for a 129-bit prime or 135-bit prime, you
 	  got a 128-bit prime.
 
-	* Added Util/number/test/prime_speed.py to test the speed of prime
+	* Added Util/test/prime_speed.py to test the speed of prime
  	  generation.
-	
-	
+
+	* Merged the _rsa.c and _dsa.c files into a single accelerator
+	  module, _fastmath.c.  
+
+	* Added fast isPrime() function to _fastmath, cutting the time to
+	  generate a 1024-bit prime by a factor of 10.  (Contributed by
+	  Joris Bontje.)
+
+
 1.9alpha5
 =========
 

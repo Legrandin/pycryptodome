@@ -52,6 +52,7 @@ src/hash_template.c
 src/stream_template.c
 src/winrand.c
 src/_dsa.c
+src/_fastmath.c
 src/_rsa.c
 test.py
 test/template
