@@ -2,7 +2,7 @@
 
 \title{Python Cryptography Toolkit}
 
-\release{1.9alpha1}
+\release{1.9alpha2}
 
 \author{A.M. Kuchling}
 \authoraddress{\url{www.amk.ca}}
@@ -117,8 +117,7 @@ difficult to find two messages with the same hash value, or to find a
 message with a given hash value.  The simple additive hash function
 fails this criterion miserably and the hash functions described below
 meet this criterion (as far as we know).  Examples of
-cryptographically secure hash functions include MD2, MD5, SHA, and
-HAVAL.
+cryptographically secure hash functions include MD2, MD5, and SHA.
 
 Hash functions can be used simply as a checksum, or, in association with a
 public-key algorithm, can be used to implement digital signatures.
@@ -153,28 +152,28 @@ it returns, but using \member{digest_size} is faster.
 
 The methods for hashing objects are always the following:
 
-\begin{funcdesc}{copy}{}
+\begin{methoddesc}{copy}{}
 Return a separate copy of this hashing object.  An \code{update} to this
   copy won't affect the original object.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{digest}{}
+\begin{methoddesc}{digest}{}
 Return the hash value of this hashing object, as a string containing 8-bit data.  The object is not
 altered in any way by this function; you can continue updating the
 object after calling this function.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{hexdigest}{}
+\begin{methoddesc}{hexdigest}{}
 Return the hash value of this hashing object, as a string containing the
 digest data as hexadecimal digits.  The resulting string will be twice
 as long as that returned by \code{digest()}.  The object is not altered
 in any way by this function; you can continue updating the object after
 calling this function.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{update}{arg}
+\begin{methoddesc}{update}{arg}
 Update this hashing object with the string \var{arg}.
-\end{funcdesc}
+\end{methoddesc}
 
 Here's an example, using the MD5 algorithm:
 
@@ -392,20 +391,20 @@ Identical to the module variable of the same name.
 
 All ciphering objects have the following methods:
 
-\begin{funcdesc}{decrypt}{string}
+\begin{methoddesc}{decrypt}{string}
 Decrypts \var{string}, using the key-dependent data in the object, and
 with the appropriate feedback mode.  The string's length must be an exact
 multiple of the algorithm's block size.  Returns a string containing
 the plaintext.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{encrypt}{string}
+\begin{methoddesc}{encrypt}{string}
 Encrypts a non-null \var{string}, using the key-dependent data in the
 object, and with the appropriate feedback mode.  The string's length
 must be an exact multiple of the algorithm's block size; for stream
 ciphers, the string can be of any length.  Returns a string containing
 the ciphertext.
-\end{funcdesc}
+\end{methoddesc}
 
 \subsection{Algorithm-specific Notes for Encryption Algorithms}
 
@@ -739,26 +738,26 @@ Public key objects always support the following methods.  Some of them
 may raise exceptions if their functionality is not supported by the
 algorithm.
 
-\begin{funcdesc}{canencrypt}{}
+\begin{methoddesc}{canencrypt}{}
 Returns true if the algorithm is capable of encrypting and decrypting
 data; returns false otherwise.  To test if a given key object can sign
 data, use \code{key.canencrypt() and key.hasprivate()}.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{cansign}{}
+\begin{methoddesc}{cansign}{}
 Returns true if the algorithm is capable of signing data; returns false
 otherwise.  To test if a given key object can sign data, use
 \code{key.cansign() and key.hasprivate()}.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{decrypt}{tuple}
+\begin{methoddesc}{decrypt}{tuple}
 Decrypts \var{tuple} with the private key, returning another string.
 This requires the private key to be present, and will raise an exception
 if it isn't present.  It will also raise an exception if \var{string} is
 too long.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{encrypt}{string, K}
+\begin{methoddesc}{encrypt}{string, K}
 Encrypts \var{string} with the private key, returning a tuple of
 strings; the length of the tuple varies from algorithm to algorithm.  
 \var{K} should be a string of random data that is as long as
@@ -767,20 +766,20 @@ inside the key object.  It will raise an exception if \var{string} is
 too long.  For ElGamal objects, the value of \var{K} expressed as a
 big-endian integer must be relatively prime to \code{self.p-1}; an
 exception is raised if it is not.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{hasprivate}{}
+\begin{methoddesc}{hasprivate}{}
 Returns true if the key object contains the private key data, which
 will allow decrypting data and generating signatures.
 Otherwise this returns false.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{publickey}{}
+\begin{methoddesc}{publickey}{}
 Returns a new public key object that doesn't contain the private key
 data. 
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{sign}{string, K}
+\begin{methoddesc}{sign}{string, K}
 Sign \var{string}, returning a signature, which is just a tuple; in
 theory the signature may be made up of any Python objects at all; in
 practice they'll be either strings or numbers.  \var{K} should be a
@@ -789,22 +788,22 @@ will return tuples of different sizes.  \code{sign()} raises an
 exception if \var{string} is too long.  For ElGamal objects, the value
 of \var{K} expressed as a big-endian integer must be relatively prime to
 \code{self.p-1}; an exception is raised if it is not.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{size}{}
+\begin{methoddesc}{size}{}
 Returns the maximum size of a string that can be encrypted or signed,
 measured in bits.  String data is treated in big-endian format; the most
 significant byte comes first.  (This seems to be a \emph{de facto} standard
 for cryptographical software.)  If the size is not a multiple of 8, then
 some of the high order bits of the first byte must be zero.  Usually
 it's simplest to just divide the size by 8 and round down.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{verify}{string, signature}
+\begin{methoddesc}{verify}{string, signature}
 Returns true if the signature is valid, and false otherwise.
 \var{string} is not processed in any way; \code{verify} does
 not run a hash function over the data, but you can easily do that yourself.
-\end{funcdesc}
+\end{methoddesc}
 
 \subsection{The ElGamal and DSA algorithms}
 For RSA, the \var{K} parameters are unused; if you like, you can just
@@ -872,7 +871,7 @@ other chapters.
 
 \subsection{Crypto.Util.number}
 
-This module contains various functions of number-theoretic functions.  
+This module contains various number-theoretic functions.  
 
 \begin{funcdesc}{GCD}{x,y}
 Return the greatest common divisor of \var{x} and \var{y}.
@@ -882,7 +881,7 @@ Return the greatest common divisor of \var{x} and \var{y}.
 Return an \var{N}-bit random prime number, using random data obtained
 from the function \var{randfunc}.  \var{randfunc} must take a single
 integer argument, and return a string of random data of the
-corresponding length; the \code{getBytes()} method of a
+corresponding length; the \code{get_bytes()} method of a
 \code{RandomPool} object will serve the purpose nicely, as will the
 \code{read()} method of an opened file such as \file{/dev/random}.
 \end{funcdesc}
@@ -969,7 +968,7 @@ the code.  It can have any value at all, since it's no longer used.
 
 \code{RandomPool} objects define the following variables and methods:
 
-\begin{funcdesc}{addEvent}{time\optional{, string}}
+\begin{methoddesc}{add_event}{time\optional{, string}}
 Adds an event to the random pool.  \var{time} should be set to the
 current system time, measured at the highest resolution available.
 \var{string} can be a string of data that will be XORed into the pool,
@@ -978,16 +977,16 @@ you're encrypting a document, you might use the hash value of the
 document; an adversary presumably won't have the plaintext of the
 document, and thus won't be able to use this information to break the
 generator.
-\end{funcdesc}
+\end{methoddesc}
 
 The return value is the value of \code{self.entropy} after the data has
 been added.  The function works in the following manner: the time
-between successive calls to the \code{addEvent} method is determined,
+between successive calls to the \code{add_event} method is determined,
 and the entropy of the data is guessed; the larger the time between
 calls, the better.  The system time is then read and added to the pool,
 along with the \var{string} parameter, if present.  The hope is that the
 low-order bits of the time are effectively random.  In an application,
-it is recommended that \code{addEvent()} be called as frequently as
+it is recommended that \code{add_event()} be called as frequently as
 possible, with whatever random data can be found.
 
 \begin{datadesc}{bits}
@@ -1002,11 +1001,11 @@ the pool.
 
 \begin{datadesc}{entropy}
 An integer value containing the number of bits of entropy currently in
-the pool.  The value is incremented by the \code{addEvent()} method,
-and decreased by the \code{getBytes} method.
+the pool.  The value is incremented by the \code{add_event()} method,
+and decreased by the \code{get_bytes} method.
 \end{datadesc}
 
-\begin{funcdesc}{getBytes}{num}
+\begin{methoddesc}{get_bytes}{num}
 Returns a string containing \var{num} bytes of random data, and
 decrements the amount of entropy available.  It is not an error to
 reduce the entropy to zero, or to call this function when the entropy
@@ -1014,42 +1013,45 @@ is zero.  This simply means that, in theory, enough random information has been
 extracted to derive the state of the generator.  It is the caller's
 responsibility to monitor the amount of entropy remaining and decide
 whether it is sufficent for secure operation.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{stir}{}
+\begin{methoddesc}{stir}{}
 Scrambles the random pool using the previously chosen encryption and
 hash function.  An adversary may attempt to learn or alter the state
 of the pool in order to affect its future output; this function
 destroys the existing state of the pool in a non-reversible way.  It
 is recommended that \code{stir()} be called before and after using
 the \code{RandomPool} object.  Even better, several calls to
-\code{stir()} can be interleaved with calls to \code{addEvent()}.
-\end{funcdesc}
+\code{stir()} can be interleaved with calls to \code{add_event()}.
+\end{methoddesc}
 
-The \code{KeyboardRandomPool} class is a subclass of \code{RandomPool} 
-that adds the capability to save and load the pool from a disk file, and
-provides a method to obtain random data from the keyboard.
+The \class{PersistentRandomPool} class is a subclass of \code{RandomPool} 
+that adds the capability to save and load the pool from a disk file.
 
-\begin{funcdesc}{KeyboardRandomPool}{\optional{filename, numbytes, cipher, hash}}
+\begin{methoddesc}{KeyboardRandomPool}{\optional{filename, numbytes, cipher, hash}}
 The path given in \var{filename} will be automatically opened, and an
 existing random pool read; if no such file exists, the pool will be
 initialized as usual.  If omitted, the filename defaults to the empty
 string, which will prevent it from being saved to a file.  The other
 arguments are identical to those for the \code{RandomPool} constructor.
-\end{funcdesc}
+\end{methoddesc}
 
-\begin{funcdesc}{randomize}{}
+\begin{methoddesc}{save}{}
+Opens the file named by the \code{filename} attribute, and saves the
+random data into the file using the \code{pickle} module.
+\end{methoddesc}
+
+The \class{KeyboardRandomPool} class is a subclass of
+\class{PersistentRandomPool} that provides a method to obtain random
+data from the keyboard:
+
+\begin{methoddesc}{randomize}{}
 (Unix systems only)  Obtain random data from the keyboard.  This works
 by prompting the
 user to hit keys at random, and then using the keystroke timings (and
 also the actual keys pressed) to add entropy to the pool.  This works
 similarly to PGP's random pool mechanism.
-\end{funcdesc}
-
-\begin{funcdesc}{save}{}
-Opens the file named by the \code{filename} attribute, and saves the
-random data into the file using the \code{pickle} module.
-\end{funcdesc}
+\end{methoddesc}
 
 
 \subsection{Crypto.Util.RFC1751}
@@ -1068,13 +1070,13 @@ by Daniel L. McDonald.  Binary keys are transformed into a list of short
 English words that should be easier to remember.  For example, the hex
 key EB33F77EE73D4053 is transformed to "TIDE ITCH SLOW REIN RULE MOT".
 
-\begin{funcdesc}{Key2English}{key}
+\begin{funcdesc}{key_to_english}{key}
 Accepts a string of arbitrary data \var{key}, and returns a string
 containing uppercase English words separated by spaces.  \var{key}'s
 length must be a multiple of 8.
 \end{funcdesc}
 
-\begin{funcdesc}{English2Key}{string}
+\begin{funcdesc}{english_to_key}{string}
 Accepts \var{string} containing English words, and returns a string of
 binary data representing the key.  Words must be separated by
 whitespace, and can be any mixture of uppercase and lowercase
@@ -1176,6 +1178,8 @@ execution environment using \file{rexec.py}, you could place
 default import function.
 
 \section{Extending the Toolkit}
+XXX this section is obsolete and needs to be updated.
+
 Preserving the a common interface for cryptographic routines is a
 good idea.  This chapter
 explains how to interface your own routines to the Toolkit.
@@ -1307,31 +1311,6 @@ ciphering modes.
 \begin{funcdesc}{void ALGdecrypt}{\rm ALGobject *\var{self}, unsigned char *\var{block}}
 This function should decrypt the data pointed to by \var{block}, using
 the key-dependent data contained in \var{self}.
-\end{funcdesc}
-
-\subsection{Portability macros}
-
-Implementation code must be carefully written to produce the same
-results with any machine or compiler, without having to set any
-compile-time definitions.  Code that is simply portable by nature is
-preferable, but it is possible to detect features of the host machine
-when new objects are created, and then execute special code to convert
-data to a preferred form.
-
-While portability macros are written for speed, there's no need to
-execute them on every encryption or updating operation.  Instead, add
-variables to your object to hold the values of the portability macros,
-and execute the macros only once per object, in your
-\code{ALGinit} function.  Then the code can simply check the
-results of the macros and act appropriately.
-
-Currently there is only one portability macro defined:
-
-\begin{funcdesc}{void TestEndianness}{variable}
-Determines the endianness of the current machine, and sets
-\var{variable} to a constant representing the value for this machine.
-Possible constants are \code{PCT_BIG_ENDIAN} and \code{PCT_LITTLE_ENDIAN};
-they are defined along with the \code{TestEndianness} macro.
 \end{funcdesc}
 
 
