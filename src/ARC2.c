@@ -9,7 +9,8 @@
  * country of residence.
  *
  */
-  
+
+#include <string.h>  
 
 #define MODULE_NAME ARC2
 #define BLOCK_SIZE 8
