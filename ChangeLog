@@ -1,165 +1,169 @@
-
-	Many randpool changes.  RandomPool now has a
-	randomize(N:int) method that can be called to get N
-	bytes of entropy for the pool (N defaults to 0,
-	which 'fills up' the pool's entropy) KeyboardRandom
-	overloads this method.
-
-	Added src/winrand.c for Crypto.Util.winrandom and
-	now use winrandom for _randomize if possible.
-	(Calls Windows CryptoAPI CryptGenRandom)
-
-	Several additional places for stirring the pool,
-	capturing inter-event entropy when reading/writing,
-	stirring before and after saves.
-
-	RandomPool.add_event now returns the number of
-	estimated bits of added entropy, rather than the
-	pool entropy itself (since the pool entropy is
-	capped at the number of bits in the pool)
-
-	Moved termios code from KeyboardRandomPool into a
-	KeyboardEntry class, provided a version for Windows
-	using msvcrt.
-
 1.9alpha5
 =========
 
-	* Fix randpool.py crash on machines with poor timer resolution.
-	  (Reported by Mark Moraes.)
+        * Many randpool changes.  RandomPool now has a
+          randomize(N:int) method that can be called to get N
+          bytes of entropy for the pool (N defaults to 0,
+          which 'fills up' the pool's entropy) KeyboardRandom
+          overloads this method.
+
+        * Added src/winrand.c for Crypto.Util.winrandom and
+          now use winrandom for _randomize if possible.
+          (Calls Windows CryptoAPI CryptGenRandom)
+
+        * Several additional places for stirring the pool,
+          capturing inter-event entropy when reading/writing,
+          stirring before and after saves.
+
+        * RandomPool.add_event now returns the number of
+          estimated bits of added entropy, rather than the
+          pool entropy itself (since the pool entropy is
+          capped at the number of bits in the pool)
+
+        * Moved termios code from KeyboardRandomPool into a
+          KeyboardEntry class, provided a version for Windows
+          using msvcrt.
+
+        * Fix randpool.py crash on machines with poor timer resolution.
+          (Reported by Mark Moraes.)
+
+        * If the GNU GMP library is available, two C extensions will be 
+          compiled to speed up RSA and DSA operations.  (Contributed by 
+          Paul Swartz.)
+        
 
 1.9alpha4
 =========
 
-	* Fix compilation problem on Windows.
+        * Fix compilation problem on Windows.
 
-	* HMAC.py fixed to work with pre-2.2 Pythons
-	
-	* setup.py now dies if built with Python 1.x
-	
+        * HMAC.py fixed to work with pre-2.2 Pythons
+        
+        * setup.py now dies if built with Python 1.x
+        
 
 1.9alpha3
 =========
 
         * Fix a ref-counting bug that caused core dumps.  
-	  (Reported by Piers Lauder and an anonymous SF poster.)
-	
+          (Reported by Piers Lauder and an anonymous SF poster.)
+        
 
 1.9alpha2
 =========
 
-	* (Backwards incompatible) The old Crypto.Hash.HMAC module is
-	  gone, replaced by a copy of hmac.py from Python 2.2's standard
-	  library.  It will display a warning on interpreter versions
-	  older than 2.2.
-	
-	* (Backwards incompatible) Restored the Crypto.Protocol package,
-	  and modernized and tidied up the two modules in it,
-	  AllOrNothing.py and Chaffing.py, renaming various methods
-	  and changing the interface.
-	  
-	* (Backwards incompatible) Changed the function names in
-	  Crypto.Util.RFC1751.
-	
-	* Restored the Crypto.PublicKey package at user request.  I
-	  think I'll leave it in the package and warn about it in the
-	  documentation.  I hope that eventually I can point to
-	  someone else's better public-key code, and at that point I
-	  may insert warnings and begin the process of deprecating
-	  this code.
+        * (Backwards incompatible) The old Crypto.Hash.HMAC module is
+          gone, replaced by a copy of hmac.py from Python 2.2's standard
+          library.  It will display a warning on interpreter versions
+          older than 2.2.
+        
+        * (Backwards incompatible) Restored the Crypto.Protocol package,
+          and modernized and tidied up the two modules in it,
+          AllOrNothing.py and Chaffing.py, renaming various methods
+          and changing the interface.
+          
+        * (Backwards incompatible) Changed the function names in
+          Crypto.Util.RFC1751.
+        
+        * Restored the Crypto.PublicKey package at user request.  I
+          think I'll leave it in the package and warn about it in the
+          documentation.  I hope that eventually I can point to
+          someone else's better public-key code, and at that point I
+          may insert warnings and begin the process of deprecating
+          this code.
 
-	* Fix use of a Python 2.2 C function, replacing it with a 
-	  2.1-compatible equivalent.  (Bug report and patch by Andrew
-	  Eland.)  
+        * Fix use of a Python 2.2 C function, replacing it with a 
+          2.1-compatible equivalent.  (Bug report and patch by Andrew
+          Eland.)  
 
-	* Fix endianness bugs that caused test case failures on Sparc,
-	  PPC, and doubtless other platforms.
+        * Fix endianness bugs that caused test case failures on Sparc,
+          PPC, and doubtless other platforms.
 
         * Fixed compilation problem on FreeBSD and MacOS X.
-	
-	* Expanded the test suite (requires Sancho, from 
-	  http://www.mems-exchange.org/software/sancho/)
+        
+        * Expanded the test suite (requires Sancho, from 
+          http://www.mems-exchange.org/software/sancho/)
 
         * Added lots of docstrings, so 'pydoc Crypto' now produces 
-	  helpful output.  (Open question: maybe *all* of the documentation
-	  should be moved into docstrings?)
-	  
-	* Make test.py automatically add the build/* directory to sys.path.
+          helpful output.  (Open question: maybe *all* of the documentation
+          should be moved into docstrings?)
+          
+        * Make test.py automatically add the build/* directory to sys.path.
 
-	* Removed 'inline' declaration from C functions.  Some compilers
-	  don't support it, and Python's pyconfig.h no longer tells you whether
-	  it's supported or not.  After this change, some ciphers got slower,
-	  but others got faster.
-	  
-	* The C-level API has been changed to reduce the amount of
-   	  memory-to-memory copying.   This makes the code neater, but 
-	  had ambiguous performance effects; again, some ciphers got slower
-	  and others became faster.  Probably this is due to my compiler
-	  optimizing slightly worse or better as a result.
+        * Removed 'inline' declaration from C functions.  Some compilers
+          don't support it, and Python's pyconfig.h no longer tells you whether
+          it's supported or not.  After this change, some ciphers got slower,
+          but others got faster.
+          
+        * The C-level API has been changed to reduce the amount of
+          memory-to-memory copying.   This makes the code neater, but 
+          had ambiguous performance effects; again, some ciphers got slower
+          and others became faster.  Probably this is due to my compiler
+          optimizing slightly worse or better as a result.
 
         * Moved C source implementations into src/ from block/, hash/, 
-	  and stream/.  Having Hash/ and hash/ directories causes problems
-	  on case-insensitive filesystems such as Mac OS.
+          and stream/.  Having Hash/ and hash/ directories causes problems
+          on case-insensitive filesystems such as Mac OS.
 
-	* Cleaned up the C code for the extensions.
-		
-	
+        * Cleaned up the C code for the extensions.
+                
+        
 1.9alpha1
 =========
 
-	* Added Crypto.Cipher.AES.
+        * Added Crypto.Cipher.AES.
 
-	* Added the CTR mode and the variable-sized CFB mode from the
+        * Added the CTR mode and the variable-sized CFB mode from the
           NIST standard on feedback modes. 
-	
-	* Removed Diamond, HAVAL, MD5, Sapphire, SHA, and Skipjack.  MD5
-	  and SHA are included with Python; the others are all of marginal
-	  usefulness in the real world.
+        
+        * Removed Diamond, HAVAL, MD5, Sapphire, SHA, and Skipjack.  MD5
+          and SHA are included with Python; the others are all of marginal
+          usefulness in the real world.
 
-	* Renamed the module-level constants ECB, CFB, &c., to MODE_ECB,
-	  MODE_CFB, as part of making the block encryption modules 
-	  compliant with PEP 272.  (I'm not sure about this change;
-	  if enough users complain about it, I might back it out.)
-	
-	* Made the hashing modules compliant with PEP 247 (not backward
-   	  compatible -- the major changes are that the constructor is now 
-	  MD2.new and not MD2.MD2, and the size of the digest is now 
-	  given as 'digest_size', not 'digestsize'.
+        * Renamed the module-level constants ECB, CFB, &c., to MODE_ECB,
+          MODE_CFB, as part of making the block encryption modules 
+          compliant with PEP 272.  (I'm not sure about this change;
+          if enough users complain about it, I might back it out.)
+        
+        * Made the hashing modules compliant with PEP 247 (not backward
+          compatible -- the major changes are that the constructor is now 
+          MD2.new and not MD2.MD2, and the size of the digest is now 
+          given as 'digest_size', not 'digestsize'.
 
-	* The Crypto.PublicKey package is no longer installed; the
-	  interfaces are all wrong, and I have no idea what the right
-	  interfaces should be.  
+        * The Crypto.PublicKey package is no longer installed; the
+          interfaces are all wrong, and I have no idea what the right
+          interfaces should be.  
 
 
 1.1alpha2
 =========
-	* Most importantly, the distribution has been broken into two
+        * Most importantly, the distribution has been broken into two
 parts: exportable, and export-controlled.  The exportable part
 contains all the hashing algorithms, signature-only public key
 algorithms, chaffing & winnowing, random number generation, various
 utility modules, and the documentation.
 
-	The export-controlled part contains public-key encryption
+        The export-controlled part contains public-key encryption
 algorithms such as RSA and ElGamal, and bulk encryption algorithms
 like DES, IDEA, or Skipjack.  Getting this code still requires that
 you go through an access control CGI script, and denies you access if
 you're outside the US or Canada.
 
-	* Added the RIPEMD hashing algorithm.  (Contributed by
+        * Added the RIPEMD hashing algorithm.  (Contributed by
 Hirendra Hindocha.)
 
-	* Implemented the recently declassified Skipjack block
+        * Implemented the recently declassified Skipjack block
 encryption algorithm.  My implementation runs at 864 K/sec on a
 PII/266, which isn't particularly fast, but you're probably better off
 using another algorithm anyway.  :)
 
-	* A simple XOR cipher has been added, mostly for use by the
+        * A simple XOR cipher has been added, mostly for use by the
 chaffing/winnowing code.  (Contributed by Barry Warsaw.)
 
-	* Added Protocol.Chaffing and Hash.HMAC.py.  (Contributed by
+        * Added Protocol.Chaffing and Hash.HMAC.py.  (Contributed by
 Barry Warsaw.)  
 
-	Protocol.Chaffing implements chaffing and winnowing, recently
+        Protocol.Chaffing implements chaffing and winnowing, recently
 proposed by R. Rivest, which hides a message (the wheat) by adding
 many noise messages to it (the chaff).  The chaff can be discarded by
 the receiver through a message authentication code.  The neat thing
@@ -167,42 +171,42 @@ about this is that it allows secret communication without actually
 having an encryption algorithm, and therefore this falls within the
 exportable subset.  
 
-	* Tidied up randpool.py, and removed its use of a block
+        * Tidied up randpool.py, and removed its use of a block
 cipher; this makes it work with only the export-controlled subset
 available.
 
-	* Various renamings and reorganizations, mostly internal.
+        * Various renamings and reorganizations, mostly internal.
 
-	
+        
 1.0.2
 =====
 
-	* Changed files to work with Python 1.5; everything has been
+        * Changed files to work with Python 1.5; everything has been
 re-arranged into a hierarchical package.  (Not backward compatible.)
 The package organization is:
 Crypto.
-	Hash.
-		MD2, MD4, MD5, SHA, HAVAL
-	Cipher.
-		ARC2, ARC4, Blowfish, CAST, DES, DES3, Diamond, 
-		IDEA, RC5, Sapphire
-	PublicKey.
-		DSA, ElGamal, qNEW, RSA
-	Util.
-		number, randpool, RFC1751
+        Hash.
+                MD2, MD4, MD5, SHA, HAVAL
+        Cipher.
+                ARC2, ARC4, Blowfish, CAST, DES, DES3, Diamond, 
+                IDEA, RC5, Sapphire
+        PublicKey.
+                DSA, ElGamal, qNEW, RSA
+        Util.
+                number, randpool, RFC1751
 
         Since this is backward-incompatible anyway, I also changed
 module names from all lower-case to mixed-case: diamond -> Diamond,
 rc5 -> RC5, etc.  That had been an annoying inconsistency for a while.
-	
-	* Added CAST5 module contributed by <wiml@hhhh.org>.
+        
+        * Added CAST5 module contributed by <wiml@hhhh.org>.
 
         * Added qNEW digital signature algorithm (from the digisign.py
 I advertised a while back).  (If anyone would like to suggest new
 algorithms that should be implemented, please do; I think I've got
 everything that's really useful at the moment, but...)
 
-	* Support for keyword arguments has been added.  This allowed
+        * Support for keyword arguments has been added.  This allowed
 removing the obnoxious key handling for Diamond and RC5, where the
 first few bytes of the key indicated the number of rounds to use, and
 various other parameters.  Now you need only do something like:
@@ -212,37 +216,37 @@ obj = RC5.new(key, RC5.ECB, rounds=8)
 
 (Not backward compatible.) 
 
-	* Various function names have been changed, and parameter
+        * Various function names have been changed, and parameter
 names altered.  None of these were part of the public interface, so it
 shouldn't really matter much.
 
-	* Various bugs fixed, the test suite has been expanded, and
+        * Various bugs fixed, the test suite has been expanded, and
 the build process simplified.
 
-	* Updated the documentation accordingly.
+        * Updated the documentation accordingly.
 
-	
+        
 1.0.1
 =====
-	
-	* Changed files to work with Python 1.4 .
+        
+        * Changed files to work with Python 1.4 .
 
-	* The DES and DES3 modules now automatically correct the
+        * The DES and DES3 modules now automatically correct the
 parity of their keys.
-	
-	* Added R. Rivest's DES test (see http://theory.lcs.mit.edu/~rivest/destest.txt)
+        
+        * Added R. Rivest's DES test (see http://theory.lcs.mit.edu/~rivest/destest.txt)
 
 
 1.0.0
 =====
 
-	* REDOC III succumbed to differential cryptanalysis, and has
+        * REDOC III succumbed to differential cryptanalysis, and has
 been removed. 
 
-	* The crypt and rotor modules have been dropped; they're still
+        * The crypt and rotor modules have been dropped; they're still
 available in the standard Python distribution. 
 
-	* The Ultra-Fast crypt() module has been placed in a separate
+        * The Ultra-Fast crypt() module has been placed in a separate
 distribution.
 
-	* Various bugs fixed.
+        * Various bugs fixed.
