@@ -30,15 +30,7 @@
 #define _MODULE_NAME _PASTE2(init,MODULE_NAME)
 #define _MODULE_STRING _XSTR(MODULE_NAME)
 
-/* Endianness testing and definitions */
-#define TestEndianness(variable) {int i=1; variable=PCT_BIG_ENDIAN;\
-                                  if (*((char*)&i)==1) variable=PCT_LITTLE_ENDIAN;}
-
-#define PCT_LITTLE_ENDIAN 1
-#define PCT_BIG_ENDIAN 0
-
-
-/*
+        /*
 	 *
 	 * Python interface
 	 *
@@ -64,9 +56,10 @@ newALGobject(void)
 
 static void
 ALGdealloc(PyObject *self)
-{	      	/* Overwrite the contents of the object, just in case... */
+{
 	int i;
-
+	
+	/* Overwrite the contents of the object, just in case... */	
 	for (i = 0; i < sizeof(ALGobject); i++)
 		*((char *) self + i) = '\0';
 	PyObject_DEL(self);
@@ -94,13 +87,15 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 
 	if (KEY_SIZE!=0 && keylen != KEY_SIZE)
 	{
-		PyErr_SetString(PyExc_ValueError, "ALG key must be "
+		PyErr_SetString(PyExc_ValueError, 
+				_MODULE_STRING " key must be "
 				"KEY_SIZE bytes long");
 		return NULL;
 	}
 	if (KEY_SIZE== 0 && keylen == 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "ALG key cannot be "
+		PyErr_SetString(PyExc_ValueError, 
+				_MODULE_STRING " key cannot be "
 				"the null string (0 bytes long)");
 		return NULL;
 	}
@@ -133,7 +128,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	if (buffer == NULL)
 	{
 		PyErr_SetString(PyExc_MemoryError, "No memory available in "
-				"ALG encrypt");
+				_MODULE_STRING " encrypt");
 		return NULL;
 	}
 	memcpy(buffer, str, len);
@@ -163,7 +158,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	if (buffer == NULL)
 	{
 		PyErr_SetString(PyExc_MemoryError, "No memory available in "
-				"ALG decrypt");
+				_MODULE_STRING " decrypt");
 		return NULL;
 	}
 	memcpy(buffer, str, len);
@@ -201,7 +196,8 @@ ALGgetattr(PyObject *self, char *name)
 
 static struct PyMethodDef modulemethods[] =
 {
-	{"new", (PyCFunction) ALGnew, METH_VARARGS|METH_KEYWORDS, ALGnew__doc__},
+	{"new", (PyCFunction) ALGnew, 
+	 METH_VARARGS|METH_KEYWORDS, ALGnew__doc__},
 	{NULL, NULL}			/* sentinel */
 };
 
