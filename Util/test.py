@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: test.py,v 1.15 2003-02-28 15:26:01 akuchling Exp $"
+__revision__ = "$Id: test.py,v 1.16 2004-08-13 22:24:18 akuchling Exp $"
 
 import binascii
 import string
@@ -23,6 +23,13 @@ def die(string):
     print '***ERROR: ', string
 #    sys.exit(0)   # Will default to continuing onward...
 
+def print_timing (size, delta, verbose):
+    if verbose:
+        if delta == 0:
+            print 'Unable to measure time -- elapsed time too small'
+        else:
+            print '%.2f K/sec' % (size/delta)
+            
 def exerciseBlockCipher(cipher, verbose):
     import string, time
     try:
@@ -59,7 +66,7 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (str!=s2):
         die('Error in resulting plaintext from ECB mode')
-    if verbose: print 256/(end-start), 'K/sec'
+    print_timing(256, end-start, verbose)
     del obj
 
     if verbose: print '  CFB mode:',
@@ -71,7 +78,7 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str[0:65536]):
         die('Error in resulting plaintext from CFB mode')
-    if verbose: print 64/(end-start), 'K/sec'
+    print_timing(64, end-start, verbose)
     del obj1, obj2
 
     if verbose: print '  CBC mode:',
@@ -83,7 +90,7 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
         die('Error in resulting plaintext from CBC mode')
-    if verbose: print 256/(end-start), 'K/sec'
+    print_timing(256, end-start, verbose)
     del obj1, obj2
 
     if verbose: print '  PGP mode:',
@@ -95,7 +102,7 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
         die('Error in resulting plaintext from PGP mode')
-    if verbose: print 256/(end-start), 'K/sec'
+    print_timing(256, end-start, verbose)
     del obj1, obj2
 
     if verbose: print '  OFB mode:',
@@ -107,7 +114,7 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
         die('Error in resulting plaintext from OFB mode')
-    if verbose: print 256/(end-start), 'K/sec'
+    print_timing(256, end-start, verbose)
     del obj1, obj2
 
     def counter(length=ciph.block_size):
@@ -122,7 +129,7 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
         die('Error in resulting plaintext from CTR mode')
-    if verbose: print 256/(end-start), 'K/sec'
+    print_timing(256, end-start, verbose)
     del obj1, obj2
 
     # Test the IV handling
@@ -178,7 +185,7 @@ def exerciseStreamCipher(cipher, verbose):
     s=obj1.encrypt(str)
     str=obj2.decrypt(s)
     end=time.time()
-    if verbose: print 256/(end-start), 'K/sec'
+    print_timing(256, end-start, verbose)
     del obj1, obj2
 
     return ciph

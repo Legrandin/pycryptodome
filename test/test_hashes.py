@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_hashes.py,v 1.3 2003-12-19 14:24:25 akuchling Exp $"
+__revision__ = "$Id: test_hashes.py,v 1.4 2004-08-13 22:23:12 akuchling Exp $"
 
 import time, string, binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -49,7 +49,12 @@ class HashTest (TestScenario):
         start=time.time()
         s=obj.update(self.str_128k)
         end=time.time()
-        print hash_mod.__name__, ':', 128/(end-start), 'K/sec'
+        delta = end-start
+        print hash_mod.__name__, ':', 
+        if delta == 0:
+            print 'Unable to measure time -- elapsed time too small'
+        else:
+            print '%.2f K/sec' % (128/(end-start))
 
     def check_md2 (self):
         "MD2 module"
