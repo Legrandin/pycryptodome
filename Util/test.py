@@ -11,6 +11,8 @@
 # 
 
 import binascii
+import string
+import testdata
 
 from Crypto.Cipher import *
 
@@ -179,9 +181,6 @@ def exerciseStreamCipher(cipher, verbose):
 
     return ciph
 
-import string
-    
-import testdata
 def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
     import sys, string
     args=map(string.lower, args)
@@ -190,12 +189,7 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 	# Test ARC4 stream cipher
 	arc4=exerciseStreamCipher('ARC4', verbose)
 	if (arc4!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		for entry in Crypto.Util.testdata.arc4:
+		for entry in testdata.arc4:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -209,12 +203,7 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 	# Test XOR stream cipher
 	XOR=exerciseStreamCipher('XOR', verbose)
 	if (XOR!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		for entry in Crypto.Util.testdata.xor:
+		for entry in testdata.xor:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -233,13 +222,8 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
     if 'aes' in args:
         ciph=exerciseBlockCipher('AES', verbose)        # AES
 	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
 		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.aes:
+		for entry in testdata.aes:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -252,7 +236,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			    if verbose: print hex(ord(i)),
 			if verbose: print
 
-                for entry in Crypto.Util.testdata.aes_modes:
+                for entry in testdata.aes_modes:
                     mode, key, plain, cipher, kw = entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -277,13 +261,8 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
     if 'arc2' in args:
         ciph=exerciseBlockCipher('ARC2', verbose)	    # Alleged RC2
 	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
 		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.arc2:
+		for entry in testdata.arc2:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -299,13 +278,8 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
     if 'blowfish' in args:
         ciph=exerciseBlockCipher('Blowfish',verbose)# Bruce Schneier's Blowfish cipher
 	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
 		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.blowfish:
+		for entry in testdata.blowfish:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -321,13 +295,8 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
     if 'cast' in args:
         ciph=exerciseBlockCipher('CAST', verbose)        # CAST-128
 	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
 		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.cast:
+		for entry in testdata.cast:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -392,40 +361,30 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 	    if x!=binascii.a2b_hex('1B1A2DDB4C642438'):
 		die("DES fails Rivest's test")
 
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.des:
-		    key,plain,cipher=entry
-		    key=binascii.a2b_hex(key)
-		    plain=binascii.a2b_hex(plain)
-		    cipher=binascii.a2b_hex(cipher)
-		    obj=des.new(key, des.MODE_ECB)
-		    ciphertext=obj.encrypt(plain)
-		    if (ciphertext!=cipher):
-			die('DES failed on entry '+`entry`)
-		for entry in Crypto.Util.testdata.des_cbc:
-		    key, iv, plain, cipher=entry
-		    key, iv, cipher=binascii.a2b_hex(key),binascii.a2b_hex(iv),binascii.a2b_hex(cipher)
-		    obj1=des.new(key, des.MODE_CBC, iv) 
-		    obj2=des.new(key, des.MODE_CBC, iv) 
-		    ciphertext=obj1.encrypt(plain)
-		    if (ciphertext!=cipher):
-			die('DES CBC mode failed on entry '+`entry`)
+	    if verbose: print '  Verifying against test suite...'
+	    for entry in testdata.des:
+		key,plain,cipher=entry
+		key=binascii.a2b_hex(key)
+		plain=binascii.a2b_hex(plain)
+		cipher=binascii.a2b_hex(cipher)
+		obj=des.new(key, des.MODE_ECB)
+		ciphertext=obj.encrypt(plain)
+		if (ciphertext!=cipher):
+		    die('DES failed on entry '+`entry`)
+	    for entry in testdata.des_cbc:
+		key, iv, plain, cipher=entry
+		key, iv, cipher=binascii.a2b_hex(key),binascii.a2b_hex(iv),binascii.a2b_hex(cipher)
+		obj1=des.new(key, des.MODE_CBC, iv) 
+		obj2=des.new(key, des.MODE_CBC, iv) 
+		ciphertext=obj1.encrypt(plain)
+		if (ciphertext!=cipher):
+		    die('DES CBC mode failed on entry '+`entry`)
 
     if 'des3' in args:
 	ciph=exerciseBlockCipher('DES3', verbose)        # Triple DES
 	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
 		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.des3:
+		for entry in testdata.des3:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -437,7 +396,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			for i in ciphertext: 
 			    if verbose: print hex(ord(i)),
 			if verbose: print
-		for entry in Crypto.Util.testdata.des3_cbc:
+		for entry in testdata.des3_cbc:
 		    key, iv, plain, cipher=entry
 		    key, iv, cipher=binascii.a2b_hex(key),binascii.a2b_hex(iv),binascii.a2b_hex(cipher)
 		    obj1=ciph.new(key, ciph.MODE_CBC, iv) 
@@ -449,13 +408,8 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
     if 'idea' in args:
         ciph=exerciseBlockCipher('IDEA', verbose)       # IDEA block cipher
 	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
 		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.idea:
+		for entry in testdata.idea:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
@@ -469,13 +423,8 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 	# Ronald Rivest's RC5 algorithm
 	ciph=exerciseBlockCipher('RC5', verbose)
 	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
 		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.rc5:
+		for entry in testdata.rc5:
 		    key,plain,cipher=entry
 		    key=binascii.a2b_hex(key)
 		    plain=binascii.a2b_hex(plain)
