@@ -2,6 +2,7 @@ ACKS
 ChangeLog
 Cipher/__init__.py
 Demo/README
+Demo/chaum.py
 Demo/cipher
 Demo/enc.py
 Demo/secimp/README
@@ -24,6 +25,7 @@ PublicKey/RSA.py
 PublicKey/__init__.py
 PublicKey/pubkey.py
 PublicKey/qNEW.py
+PublicKey/test/rsa_speed.py
 README
 TODO
 Util/RFC1751.py
@@ -31,6 +33,7 @@ Util/__init__.py
 Util/number.py
 Util/randpool.py
 Util/test.py
+Util/test/prime_speed.py
 __init__.py
 setup.py
 src/AES.c
