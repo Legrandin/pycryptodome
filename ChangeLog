@@ -1,3 +1,15 @@
+
+1.9alpha6
+=========
+
+	* Util.number.getPrime() would inadvertently round off the bit
+	  size; if you asked for a 129-bit prime or 135-bit prime, you
+	  got a 128-bit prime.
+
+	* Added Util/number/test/prime_speed.py to test the speed of prime
+ 	  generation.
+	
+	
 1.9alpha5
 =========
 
