@@ -1,6 +1,4 @@
 
-/* Rename cipherMode -> mode */
-
 /* -*- C -*- */
 /*
  *  block_template.c : Generic framework for block encryption algorithms
@@ -44,7 +42,7 @@
 typedef struct 
 {
 	PyObject_HEAD 
-	int cipherMode, count, segment_size;
+	int mode, count, segment_size;
 	unsigned char IV[BLOCK_SIZE], oldCipher[BLOCK_SIZE];
 	PyObject *counter;
 	block_state st;
@@ -59,7 +57,7 @@ newALGobject(void)
 {
 	ALGobject * new;
 	new = PyObject_NEW(ALGobject, &ALGtype);
-	new->cipherMode = MODE_ECB;
+	new->mode = MODE_ECB;
 	return new;
 }
 
@@ -201,7 +199,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	memset(new->IV, 0, BLOCK_SIZE);
 	memset(new->oldCipher, 0, BLOCK_SIZE);
 	memcpy(new->IV, IV, IVlen);
-	new->cipherMode = mode;
+	new->mode = mode;
 	new->count=8;
 	return new;
 }
@@ -224,7 +222,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 		return PyString_FromStringAndSize(NULL, 0);
 	}
 	if ( (len % BLOCK_SIZE) !=0 && 
-	     (self->cipherMode!=MODE_CFB) && (self->cipherMode!=MODE_PGP))
+	     (self->mode!=MODE_CFB) && (self->mode!=MODE_PGP))
 	{
 		PyErr_Format(PyExc_ValueError, 
 			     "Input strings must be "
@@ -232,7 +230,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			     BLOCK_SIZE);
 		return NULL;
 	}
-	if (self->cipherMode == MODE_CFB && 
+	if (self->mode == MODE_CFB && 
 	    (len % (self->segment_size/8) !=0)) {
 		PyErr_Format(PyExc_ValueError, 
 			     "Input strings must be a multiple of "
@@ -249,7 +247,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				_MODULE_STRING " encrypt");
 		return NULL;
 	}
-	switch(self->cipherMode)
+	switch(self->mode)
 	{
 	case(MODE_ECB):      
 		for(i=0; i<len; i+=BLOCK_SIZE) 
@@ -378,7 +376,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 		PyErr_Format(PyExc_SystemError, 
 			     "Unknown ciphertext feedback mode %i; "
 			     "this shouldn't happen",
-			     self->cipherMode);
+			     self->mode);
 		free(buffer);
 		return NULL;
 	}
@@ -406,7 +404,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 		return PyString_FromStringAndSize(NULL, 0);
 	}
 	if ( (len % BLOCK_SIZE) !=0 && 
-	     (self->cipherMode!=MODE_CFB && self->cipherMode!=MODE_PGP))
+	     (self->mode!=MODE_CFB && self->mode!=MODE_PGP))
 	{
 		PyErr_Format(PyExc_ValueError, 
 			     "Input strings must be "
@@ -414,7 +412,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 			     BLOCK_SIZE);
 		return NULL;
 	}
-	if (self->cipherMode == MODE_CFB && 
+	if (self->mode == MODE_CFB && 
 	    (len % (self->segment_size/8) !=0)) {
 		PyErr_Format(PyExc_ValueError, 
 			     "Input strings must be a multiple of "
@@ -430,7 +428,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 				" decrypt");
 		return NULL;
 	}
-	switch(self->cipherMode)
+	switch(self->mode)
 	{
 	case(MODE_ECB):      
 		for(i=0; i<len; i+=BLOCK_SIZE) 
@@ -568,7 +566,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 		PyErr_Format(PyExc_SystemError, 
 			     "Unknown ciphertext feedback mode %i; "
 			     "this shouldn't happen",
-			     self->cipherMode);
+			     self->mode);
 		free(buffer);
 		return NULL;
 	}
@@ -588,7 +586,7 @@ ALG_Sync(ALGobject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (self->cipherMode!=MODE_PGP) 
+	if (self->mode!=MODE_PGP) 
 	{
 		PyErr_SetString(PyExc_SystemError, "sync() operation not defined for "
 				"this feedback mode");
@@ -678,7 +676,7 @@ ALGgetattr(PyObject *s, char *name)
     }
   if (strcmp(name, "mode") == 0)
      {
-       return(PyInt_FromLong((long)(self->cipherMode)));
+       return(PyInt_FromLong((long)(self->mode)));
      }
   if (strcmp(name, "block_size") == 0)
      {
