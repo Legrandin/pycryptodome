@@ -1,6 +1,21 @@
 
-Changes since 1.1a1
-===================
+1.9alpha1
+=========
+
+	* Added Crypto.Cipher.AES.
+	
+	* Removed Diamond, HAVAL, MD5, Sapphire, SHA, and Skipjack.  MD5
+	  and SHA are included with Python; the others are all of marginal
+	  usefulness in the real world.
+
+	* Made the hashing modules compliant with PEP 247 (not backward
+   	  compatible -- the major changes are that the constructor is now 
+	  MD2.new and not MD2.MD2, and the size of the digest is now 
+	  given as 'digest_size', not 'digestsize'.
+	  
+	
+1.1alpha2
+=========
 	* Most importantly, the distribution has been broken into two
 parts: exportable, and export-controlled.  The exportable part
 contains all the hashing algorithms, signature-only public key
