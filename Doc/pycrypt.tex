@@ -2,7 +2,7 @@
 
 \title{Python Cryptography Toolkit}
 
-\release{1.9alpha5}
+\release{1.9alpha6}
 
 \author{A.M. Kuchling}
 \authoraddress{\url{www.amk.ca}}
@@ -696,6 +696,11 @@ and it's simple to use.
 Public-key objects always support the following methods.  Some of them
 may raise exceptions if their functionality is not supported by the
 algorithm.
+
+\begin{methoddesc}{can_blind}{}
+Returns true if the algorithm is capable of blinding data; 
+returns false otherwise.  
+\end{methoddesc}
 
 \begin{methoddesc}{canencrypt}{}
 Returns true if the algorithm is capable of encrypting and decrypting
