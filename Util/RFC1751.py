@@ -3,7 +3,7 @@
 # sequence of words, as defined in RFC1751: "A Convention for
 # Human-Readable 128-bit Keys", by Daniel L. McDonald.
 
-__revision__ = "$Id: RFC1751.py,v 1.5 2003-02-28 15:26:00 akuchling Exp $"
+__revision__ = "$Id: RFC1751.py,v 1.6 2003-04-04 15:15:10 akuchling Exp $"
 
 
 import string, binascii
@@ -53,9 +53,9 @@ def english_to_key (str):
     for index in range(0, len(L), 6):
         sublist=L[index:index+6] ; char=9*[0] ; bits=0
         for i in sublist:
-            index=wordlist.index(i)
-            shift=(8-(bits+11)%8) %8
-            y=index<<shift
+            index = wordlist.index(i)
+            shift = (8-(bits+11)%8) %8
+            y = index << shift
             cl, cc, cr = (y>>16), (y>>8)&0xff, y & 0xff
             if (shift>5):
                 char[bits/8] = char[bits/8] | cl

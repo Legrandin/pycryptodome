@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: qNEW.py,v 1.7 2003-04-03 20:36:14 akuchling Exp $"
+__revision__ = "$Id: qNEW.py,v 1.8 2003-04-04 15:13:35 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 from Crypto.Util.number import *
@@ -40,7 +40,8 @@ def generate(bits, randfunc, progress_func=None):
     # use the seed to duplicate the key generation.  This can
     # protect you from someone generating values of p,q that have
     # some special form that's easy to break.
-    if progress_func: progress_func('p,q\n')
+    if progress_func:
+        progress_func('p,q\n')
     while (1):
         obj.q = getPrime(160, randfunc)
         #           assert pow(2, 159L)<obj.q<pow(2, 160L)
@@ -65,32 +66,39 @@ def generate(bits, randfunc, progress_func=None):
             p = p - (p % (2*obj.q)-1)
 
             # If p is still the right size, and it's prime, we're done!
-            if powL1<=p and isPrime(p): break
+            if powL1<=p and isPrime(p):
+                break
 
             # Otherwise, increment the counter and try again
             C, N = C+1, N+n+1
-        if C<4096: break   # Ended early, so exit the while loop
-        if progress_func: progress_func('4096 values of p tried\n')
+        if C<4096:
+            break   # Ended early, so exit the while loop
+        if progress_func:
+            progress_func('4096 values of p tried\n')
 
     obj.p = p
     power=(p-1)/obj.q
 
     # Next parameter: g = h**((p-1)/q) mod p, such that h is any
     # number <p-1, and g>1.  g is kept; h can be discarded.
-    if progress_func: progress_func('h,g\n')
+    if progress_func:
+        progress_func('h,g\n')
     while (1):
         h=bytes_to_long(randfunc(bits)) % (p-1)
         g=pow(h, power, p)
-        if 1<h<p-1 and g>1: break
+        if 1<h<p-1 and g>1:
+            break
     obj.g=g
 
     # x is the private key information, and is
     # just a random number between 0 and q.
     # y=g**x mod p, and is part of the public information.
-    if progress_func: progress_func('x,y\n')
+    if progress_func:
+        progress_func('x,y\n')
     while (1):
         x=bytes_to_long(randfunc(20))
-        if 0<x<obj.q: break
+        if 0 < x < obj.q:
+            break
     obj.x, obj.y=x, pow(g, x, p)
 
     return obj
@@ -123,15 +131,18 @@ class qNEWobj(pubkey.pubkey):
         return (r,s)
     def _verify(self, M, sig):
         r, s = sig
-        if r<=0 or r>=self.q or s<=0 or s>=self.q: return 0
+        if r<=0 or r>=self.q or s<=0 or s>=self.q:
+            return 0
         if M<0:
             raise error, 'Illegal value of M (<0)'
-        if M<=0 or M>=pow(2,161L): return 0
-        v1=pow(self.g, s, self.p)
-        v2=pow(self.y, M*r, self.p)
-        v=((v1*v2) % self.p)
-        v=v % self.q
-        if v==r: return 1
+        if M<=0 or M>=pow(2,161L):
+            return 0
+        v1 = pow(self.g, s, self.p)
+        v2 = pow(self.y, M*r, self.p)
+        v = ((v1*v2) % self.p)
+        v = v % self.q
+        if v==r:
+            return 1
         return 0
 
     def size(self):
@@ -146,6 +157,7 @@ class qNEWobj(pubkey.pubkey):
     def can_sign(self):
         """Return a Boolean value recording whether this algorithm can generate signatures."""
         return 1
+
     def can_encrypt(self):
         """Return a Boolean value recording whether this algorithm can encrypt data."""
         return 0

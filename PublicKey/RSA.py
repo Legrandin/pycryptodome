@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.16 2003-04-04 14:59:19 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.17 2003-04-04 15:13:35 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 
@@ -34,21 +34,26 @@ def generate(bits, randfunc, progress_func=None):
     difference=ord(randfunc(1)) & 7
 
     # Generate the prime factors of n
-    if progress_func: progress_func('p\n')
+    if progress_func:
+        progress_func('p\n')
     obj.p=pubkey.getPrime(bits/2, randfunc)
-    if progress_func: progress_func('q\n')
+    if progress_func:
+        progress_func('q\n')
     obj.q=pubkey.getPrime((bits/2)+difference, randfunc)
     # p shall be smaller than q (for calc of u)
     if obj.p>obj.q:
         (obj.p, obj.q)=(obj.q, obj.p)
-    if progress_func: progress_func('u\n')
+    if progress_func:
+        progress_func('u\n')
     obj.u=pubkey.inverse(obj.p, obj.q)
     obj.n=obj.p*obj.q
 
     # Generate encryption exponent
-    if progress_func: progress_func('e\n')
+    if progress_func:
+        progress_func('e\n')
     obj.e=pubkey.getPrime(17, randfunc)
-    if progress_func: progress_func('d\n')
+    if progress_func:
+        progress_func('d\n')
     obj.d=pubkey.inverse(obj.e, (obj.p-1)*(obj.q-1))
     return obj
 
@@ -93,7 +98,8 @@ class RSAobj(pubkey.pubkey):
 
     def _verify(self, M, sig):
         m2=self._encrypt(sig[0])
-        if m2[0]==M: return 1
+        if m2[0]==M:
+            return 1
         else: return 0
 
     def _blind(self, M, B):
@@ -118,7 +124,8 @@ class RSAobj(pubkey.pubkey):
         Return the maximum number of bits that can be handled by this key.
         """
         bits, power = 0,1L
-        while (power<self.n): bits, power = bits+1, power<<1
+        while (power<self.n):
+            bits, power = bits+1, power<<1
         return bits-1
 
     def has_private(self):
@@ -126,7 +133,8 @@ class RSAobj(pubkey.pubkey):
         Return a Boolean denoting whether the object contains
         private components.
         """
-        if hasattr(self, 'd'): return 1
+        if hasattr(self, 'd'):
+            return 1
         else: return 0
 
     def publickey(self):
@@ -203,21 +211,26 @@ def generate_c(bits, randfunc, progress_func = None):
     difference=ord(randfunc(1)) & 7
 
     # Generate the prime factors of n
-    if progress_func: progress_func('p\n')
+    if progress_func:
+        progress_func('p\n')
     p=pubkey.getPrime(bits/2, randfunc)
-    if progress_func: progress_func('q\n')
+    if progress_func:
+        progress_func('q\n')
     q=pubkey.getPrime((bits/2)+difference, randfunc)
     # p shall be smaller than q (for calc of u)
     if p>q:
         (p, q)=(q, p)
-    if progress_func: progress_func('u\n')
+    if progress_func:
+        progress_func('u\n')
     u=pubkey.inverse(p, q)
     n=p*q
 
     # Generate encryption exponent
-    if progress_func: progress_func('e\n')
+    if progress_func:
+        progress_func('e\n')
     e=pubkey.getPrime(17, randfunc)
-    if progress_func: progress_func('d\n')
+    if progress_func:
+        progress_func('d\n')
     d=pubkey.inverse(e, (p-1)*(q-1))
     key = _fastmath.rsa_construct(n,e,d,p,q,u)
     return RSAobj_c(key)

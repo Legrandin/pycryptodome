@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: ElGamal.py,v 1.7 2003-04-03 20:36:12 akuchling Exp $"
+__revision__ = "$Id: ElGamal.py,v 1.8 2003-04-04 15:13:35 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
 
@@ -27,29 +27,39 @@ def generate(bits, randfunc, progress_func=None):
     """
     obj=ElGamalobj()
     # Generate prime p
-    if progress_func: progress_func('p\n')
+    if progress_func:
+        progress_func('p\n')
     obj.p=bignum(getPrime(bits, randfunc))
     # Generate random number g
-    if progress_func: progress_func('g\n')
+    if progress_func:
+        progress_func('g\n')
     size=bits-1-(ord(randfunc(1)) & 63) # g will be from 1--64 bits smaller than p
-    if size<1: size=bits-1
+    if size<1:
+        size=bits-1
     while (1):
         obj.g=bignum(getPrime(size, randfunc))
-        if obj.g<obj.p: break
+        if obj.g < obj.p:
+            break
         size=(size+1) % bits
-        if size==0: size=4
+        if size==0:
+            size=4
     # Generate random number x
-    if progress_func: progress_func('x\n')
+    if progress_func:
+        progress_func('x\n')
     while (1):
         size=bits-1-ord(randfunc(1)) # x will be from 1 to 256 bits smaller than p
-        if size>2: break
+        if size>2:
+            break
     while (1):
         obj.x=bignum(getPrime(size, randfunc))
-        if obj.x<obj.p: break
-        size=(size+1) % bits
-        if size==0: size=4
-    if progress_func: progress_func('y\n')
-    obj.y=pow(obj.g, obj.x, obj.p)
+        if obj.x < obj.p:
+            break
+        size = (size+1) % bits
+        if size==0:
+            size=4
+    if progress_func:
+        progress_func('y\n')
+    obj.y = pow(obj.g, obj.x, obj.p)
     return obj
 
 def construct(tuple):
@@ -97,7 +107,8 @@ class ElGamalobj(pubkey):
         v1=pow(self.y, sig[0], self.p)
         v1=(v1*pow(sig[0], sig[1], self.p)) % self.p
         v2=pow(self.g, M, self.p)
-        if v1==v2: return 1
+        if v1==v2:
+            return 1
         return 0
 
     def size(self):
@@ -109,8 +120,10 @@ class ElGamalobj(pubkey):
     def has_private(self):
         """Return a Boolean denoting whether the object contains
         private components."""
-        if hasattr(self, 'x'): return 1
-        else: return 0
+        if hasattr(self, 'x'):
+            return 1
+        else:
+            return 0
 
     def publickey(self):
         """Return a new key object containing only the public information."""

@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: number.py,v 1.10 2003-04-03 18:41:06 akuchling Exp $"
+__revision__ = "$Id: number.py,v 1.11 2003-04-04 15:15:13 akuchling Exp $"
 
 bignum = long
 try:
@@ -83,18 +83,23 @@ def isPrime(N):
     """isPrime(N:long):bool
     Return true if N is prime.
     """
-    if N == 1: return 0
-    if N in sieve: return 1
+    if N == 1:
+        return 0
+    if N in sieve:
+        return 1
     for i in sieve:
-        if (N % i)==0: return 0
+        if (N % i)==0:
+            return 0
 
     # Use the accelerator if available
     if _fastmath is not None:
         return _fastmath.isPrime(N)
 
     # Compute the highest bit that's set in N
-    N1=N - 1L ; n=1L
-    while (n<N): n=n<<1L
+    N1 = N - 1L
+    n = 1L
+    while (n<N):
+        n=n<<1L
     n = n >> 1L
 
     # Rabin-Miller test
