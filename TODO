@@ -1,4 +1,5 @@
 
+For 1.9alpha2:
 * Proofread all the error messages and improve them
 
 * Replace Hash/HMAC.py with the hmac module in the standard library
@@ -6,7 +7,9 @@
 * Look at the C code and modernize it to the current memory APIs,
   class-based exceptions, etc.
 
-For 1.9alpha2:
+* MD5.py, SHA.py: ensure the module contents match the documented API, 
+  even on old versions of Python.
+
 * Update documentation
 
 * Document the functions and macros for adding a new algorithm
@@ -26,12 +29,6 @@ packages and classes, or whatever.
 docstrings, naming conventions, test suites).  
  
 * Possibly add SHA256, SHA512.
-
-* Public-key stuff: should it remain in this package, or should it be
-scrapped and the scope restricted to hashing and block encryption?
-Public-key is much harder to define and implement, so I think
-splitting it out into a separate distribution is the right thing to
-do.
 
 * Provide drop-in support for extensions/drivers like
 amkCrypto/mxCrypto. There should be some way to register these
