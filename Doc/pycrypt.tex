@@ -120,7 +120,7 @@ difficult to find two messages with the same hash value, or to find a
 message with a given hash value.  The simple additive hash function
 fails this criterion miserably and the hash functions described below
 meet this criterion (as far as we know).  Examples of
-cryptographically secure hash functions include MD2, MD5, and SHA.
+cryptographically secure hash functions include MD2, MD5, and SHA1.
 
 Hash functions can be used simply as a checksum, or, in association with a
 public-key algorithm, can be used to implement digital signatures.
@@ -132,7 +132,8 @@ The hashing algorithms currently implemented are:
 \lineii{MD4}{128 bits}
 \lineii{MD5}{128 bits}
 \lineii{RIPEMD}{160 bits}
-\lineii{SHA}{160 bits}
+\lineii{SHA1}{160 bits}
+\lineii{SHA256}{256 bits}
 \end{tableii}
 
 All hashing modules share the same interface.  After importing a given
@@ -222,24 +223,28 @@ the three rounds have been cryptanalyzed, but the attack can't be
 extended to the full algorithm.  MD5 is a strengthened version of MD4
 with four rounds; an attack against one round has been found XXX
 update this.  MD5 is still believed secure at the moment, but people
-are gravitating toward using SHA in new software because there are no
-known attacks against SHA.  The MD5 implementation is moderately
+are gravitating toward using SHA1 in new software because there are no
+known attacks against SHA1.  The MD5 implementation is moderately
 well-optimized and thus faster on x86 processors, running at 35,500
 K/sec.  MD5 may even be faster than MD4, depending on the processor
 and compiler you use.
 
-All the MD\var{n} algorithms produce 128-bit hashes; SHA produces a
+All the MD\var{n} algorithms produce 128-bit hashes; SHA1 produces a
 larger 160-bit hash, and there are no known attacks against it.  The
 first version of SHA had a weakness which was later corrected; the
 code used here implements the second, corrected, version.  It operates
-at 21,000 K/sec.  RIPEMD also has a 160-bit output, and operates at
-17,600 K/sec.
+at 21,000 K/sec.  SHA256 is about as half as fast as SHA1.  RIPEMD has
+a 160-bit output, the same output size as SHA1, and operates at 17,600
+K/sec.
 
 \subsection{Credits}
-The MD2 and  MD4 implementations were written by A.M. Kuchling,
-and the MD5 code was implemented by Colin Plumb.  The SHA code was
-originally written by Peter Gutmann.  The RIPEMD code was written by
-Antoon Bosselaers, and adapted for the toolkit by Hirendra Hindocha.
+The MD2 and MD4 implementations were written by A.M. Kuchling, and the
+MD5 code was implemented by Colin Plumb.  The SHA1 code was originally
+written by Peter Gutmann.  The RIPEMD code was written by Antoon
+Bosselaers, and adapted for the toolkit by Hirendra Hindocha.  The
+SHA256 code was written by Tom St.~Denis and is part of the
+LibTomCrypt library (\url{http://www.libtomcrypt.org/}); it was
+adapted for the toolkit by Jeethu Rao and Taylor Boon.
 
 
 %======================================================================
