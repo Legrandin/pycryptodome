@@ -1,4 +1,11 @@
 
+1.9alpha3
+=========
+
+        * Fix a ref-counting bug that caused core dumps.  
+	  (Reported by Piers Lauder and an anonymous SF poster.)
+
+
 1.9alpha2
 =========
 
@@ -29,7 +36,7 @@
 	* Fix endianness bugs that caused test case failures on Sparc,
 	  PPC, and doubtless other platforms.
 
-        * Fixed compilation problem on FreeBSD.
+        * Fixed compilation problem on FreeBSD and MacOS X.
 	
 	* Expanded the test suite (requires Sancho, from 
 	  http://www.mems-exchange.org/software/sancho/)
