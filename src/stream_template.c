@@ -23,6 +23,13 @@
 #include "Python.h"
 #include "modsupport.h"
 
+#define _STR(x) #x
+#define _XSTR(x) _STR(x)
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+#define _MODULE_NAME _PASTE2(init,MODULE_NAME)
+#define _MODULE_STRING _XSTR(MODULE_NAME)
+
 /* Endianness testing and definitions */
 #define TestEndianness(variable) {int i=1; variable=PCT_BIG_ENDIAN;\
                                   if (*((char*)&i)==1) variable=PCT_LITTLE_ENDIAN;}
@@ -62,11 +69,11 @@ ALGdealloc(PyObject *self)
 
 	for (i = 0; i < sizeof(ALGobject); i++)
 		*((char *) self + i) = '\0';
-	PyMem_DEL(self);
+	PyObject_DEL(self);
 }
 
 static char ALGnew__doc__[] = 
-"Return a new ALG encryption object.";
+"Return a new " _MODULE_STRING " encryption object.";
 
 static char *kwlist[] = {"key", NULL};
 
@@ -82,26 +89,26 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 					 &key, &keylen))
 	{
 		Py_DECREF(new);
-		return (NULL);
+		return NULL;
 	}
 
 	if (KEY_SIZE!=0 && keylen != KEY_SIZE)
 	{
 		PyErr_SetString(PyExc_ValueError, "ALG key must be "
 				"KEY_SIZE bytes long");
-		return (NULL);
+		return NULL;
 	}
 	if (KEY_SIZE== 0 && keylen == 0)
 	{
 		PyErr_SetString(PyExc_ValueError, "ALG key cannot be "
 				"the null string (0 bytes long)");
-		return (NULL);
+		return NULL;
 	}
 	stream_init(&(new->st), key, keylen);
 	if (PyErr_Occurred())
 	{
 		Py_DECREF(new);
-		return (NULL);
+		return NULL;
 	}
 	return new;
 }
@@ -117,7 +124,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	PyObject *result;
 
 	if (!PyArg_Parse(args, "s#", &str, &len))
-		return (NULL);
+		return NULL;
 	if (len == 0)			/* Handle empty string */
 	{
 		return PyString_FromStringAndSize(NULL, 0);
@@ -127,7 +134,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	{
 		PyErr_SetString(PyExc_MemoryError, "No memory available in "
 				"ALG encrypt");
-		return (NULL);
+		return NULL;
 	}
 	memcpy(buffer, str, len);
 	stream_encrypt(&(self->st), buffer, len);
@@ -137,7 +144,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 }
 
 static char ALG_Decrypt__doc__[] =
-"Decrypt the provided string of binary data.";
+"decrypt(string): Decrypt the provided string of binary data.";
 
 static PyObject *
 ALG_Decrypt(ALGobject *self, PyObject *args)
@@ -147,7 +154,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	PyObject *result;
 
 	if (!PyArg_Parse(args, "s#", &str, &len))
-		return (NULL);
+		return NULL;
 	if (len == 0)			/* Handle empty string */
 	{
 		return PyString_FromStringAndSize(NULL, 0);
@@ -157,7 +164,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	{
 		PyErr_SetString(PyExc_MemoryError, "No memory available in "
 				"ALG decrypt");
-		return (NULL);
+		return NULL;
 	}
 	memcpy(buffer, str, len);
 	stream_decrypt(&(self->st), buffer, len);
@@ -202,7 +209,7 @@ static PyTypeObject ALGtype =
 {
 	PyObject_HEAD_INIT(NULL)
 	0,				/*ob_size*/
-	"ALG",		/*tp_name*/
+	_MODULE_STRING,		/*tp_name*/
 	sizeof(ALGobject),	/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -215,16 +222,13 @@ static PyTypeObject ALGtype =
 	0,				/*tp_as_number*/
 };
 
-/* Initialization function for the module (*must* be called initxx) */
+/* Initialization function for the module */
 
-#define insint(n,v) {PyObject *o=PyInt_FromLong(v); if (o!=NULL) {PyDict_SetItemString(d,n,o); Py_DECREF(o);}}
-
-#define _STR(x) #x
-#define _XSTR(x) _STR(x)
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
-#define _MODULE_NAME _PASTE2(init,MODULE_NAME)
-#define _MODULE_STRING _XSTR(MODULE_NAME)
+#if PYTHON_API_VERSION < 1011
+#define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
+           if (o!=NULL) \
+             {PyDict_SetItemString(PyModule_GetDict(m),n,o); Py_DECREF(o);}}
+#endif
 
 void
 _MODULE_NAME (void)
@@ -240,12 +244,10 @@ _MODULE_NAME (void)
 	x = PyString_FromString(_MODULE_STRING ".error");
 	PyDict_SetItemString(d, "error", x);
 
-	insint("block_size", BLOCK_SIZE);
-	insint("key_size", KEY_SIZE);
+	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
+	PyModule_AddIntConstant(m, "key_size", KEY_SIZE);
 
 	/* Check for errors */
 	if (PyErr_Occurred())
 		Py_FatalError("can't initialize module " _MODULE_STRING);
 }
-
-

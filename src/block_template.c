@@ -1,5 +1,5 @@
 
-/*Rename cipherMode -> mode*/
+/* Rename cipherMode -> mode */
 
 /* -*- C -*- */
 /*
@@ -34,11 +34,12 @@
 #define MODE_OFB 5
 #define MODE_CTR 6
 
-/*
-	 *
-	 * Python interface
-	 *
-	 */
+#define _STR(x) #x
+#define _XSTR(x) _STR(x)
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+#define _MODULE_NAME _PASTE2(init,MODULE_NAME)
+#define _MODULE_STRING _XSTR(MODULE_NAME)
 
 typedef struct 
 {
@@ -70,12 +71,12 @@ ALGdealloc(PyObject *ptr)
 
 	for (i = 0; i < sizeof(ALGobject); i++)
 		*((char *) self + i) = '\0';
-	PyMem_DEL(self);
+	PyObject_DEL(self);
 }
 
 
 static char ALGnew__doc__[] = 
-"Return a new ALG encryption object.";
+"new(key, [mode], [IV]): Return a new " _MODULE_STRING " encryption object.";
 
 static char *kwlist[] = {"key", "mode", "IV", "counter", "segment_size",
 #ifdef PCT_RC5_MODULE
@@ -88,7 +89,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 {
 	unsigned char *key, *IV;
 	ALGobject * new=NULL;
-	int i, keylen, IVlen=0, mode=MODE_ECB, segment_size=0;
+	int keylen, IVlen=0, mode=MODE_ECB, segment_size=0;
 	PyObject *counter = NULL;
 #ifdef PCT_RC5_MODULE
 	int version = 0x10, word_size = 32, rounds = 16; /*XXX default rounds? */
@@ -111,34 +112,38 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 
 	if (KEY_SIZE!=0 && keylen!=KEY_SIZE)
 	{
-		PyErr_SetString(PyExc_ValueError, "Key must be "
-				"key_size bytes long");
-		return (NULL);
+		PyErr_Format(PyExc_ValueError, 
+			     "Key must be %i bytes long, not %i",
+			     KEY_SIZE, keylen);
+		return NULL;
 	}
 	if (KEY_SIZE==0 && keylen==0)
 	{
-		PyErr_SetString(PyExc_ValueError, "Key cannot be "
-				"the null string (0 bytes long)");
-		return (NULL);
+		PyErr_SetString(PyExc_ValueError, 
+				"Key cannot be the null string");
+		return NULL;
 	}
 	if (IVlen != BLOCK_SIZE && IVlen != 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "IV must be "
-				"BLOCK_SIZE bytes long");
-		return (NULL);
+		PyErr_Format(PyExc_ValueError, 
+			     "IV must be %i bytes long", BLOCK_SIZE);
+		return NULL;
 	}
 	if (mode<MODE_ECB || mode>MODE_CTR) 
 	{
-		PyErr_SetString(PyExc_ValueError, "Unknown cipher feedback mode");
-		return (NULL);
+		PyErr_Format(PyExc_ValueError, 
+			     "Unknown cipher feedback mode %i",
+			     mode);
+		return NULL;
 	}
 
 	/* Mode-specific checks */
 	if (mode == MODE_CFB) {
 		if (segment_size == 0) segment_size = 8;
 		if (segment_size < 1 || segment_size > BLOCK_SIZE*8) {
-			PyErr_SetString(PyExc_ValueError, "segment_size must be between "
-					"1 and 8*block_size");
+			PyErr_Format(PyExc_ValueError, 
+				     "segment_size must be multiple of 8 "
+				     "between 1 and %i", BLOCK_SIZE);
 		}
 	}
 
@@ -157,18 +162,21 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	/* Cipher-specific checks */
 #ifdef PCT_RC5_MODULE
 	if (version!=0x10) {
-		PyErr_SetString(PyExc_ValueError,
-				"RC5: Bad RC5 algorithm version");
+		PyErr_Format(PyExc_ValueError,
+			     "RC5: Bad RC5 algorithm version: %i",
+			     version);
 		return NULL;
 	}
 	if (word_size!=16 && word_size!=32) {
-		PyErr_SetString(PyExc_ValueError,
-				"RC5: Unsupported word size");
+		PyErr_Format(PyExc_ValueError,
+			     "RC5: Unsupported word size: %i",
+			     word_size);
 		return NULL;
 	}
 	if (rounds<0 || 255<rounds) {
-		PyErr_SetString(PyExc_ValueError,
-				"RC5: rounds must be between 0 and 255");
+		PyErr_Format(PyExc_ValueError,
+			     "RC5: rounds must be between 0 and 255, not %i",
+			     rounds);
 		return NULL;
 	}
 #endif
@@ -187,17 +195,11 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	if (PyErr_Occurred())
 	{
 		Py_DECREF(new);
-		return(NULL);
+		return NULL;
 	}
-	for (i = 0; i < BLOCK_SIZE; i++)
-	{
-		new->IV[i] = 0;
-		new->oldCipher[i]=0;
-	}
-	for (i = 0; i < IVlen; i++)
-	{
-		new->IV[i] = IV[i];
-	}
+	memset(new->IV, 0, BLOCK_SIZE);
+	memset(new->oldCipher, 0, BLOCK_SIZE);
+	memcpy(new->IV, IV, IVlen);
 	new->cipherMode = mode;
 	new->count=8;
 	return new;
@@ -215,30 +217,36 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	PyObject *result;
   
 	if (!PyArg_Parse(args, "s#", &str, &len))
-		return (NULL);
+		return NULL;
 	if (len==0)			/* Handle empty string */
 	{
 		return PyString_FromStringAndSize(NULL, 0);
 	}
-	if ( (len % BLOCK_SIZE) !=0 && (self->cipherMode!=MODE_CFB)
-	     && (self->cipherMode!=MODE_PGP))
+	if ( (len % BLOCK_SIZE) !=0 && 
+	     (self->cipherMode!=MODE_CFB) && (self->cipherMode!=MODE_PGP))
 	{
-		PyErr_SetString(PyExc_ValueError, "Input strings "
-				"must be a multiple of BLOCK_SIZE in length");
-		return(NULL);
+		PyErr_Format(PyExc_ValueError, 
+			     "Input strings must be "
+			     "a multiple of %i in length",
+			     BLOCK_SIZE);
+		return NULL;
 	}
-	if (self->cipherMode == MODE_CFB && (len % (self->segment_size/8) !=0)) {
-		PyErr_SetString(PyExc_ValueError, "Input strings "
-				"must be a multiple of the segment size in length");
-		return(NULL);
+	if (self->cipherMode == MODE_CFB && 
+	    (len % (self->segment_size/8) !=0)) {
+		PyErr_Format(PyExc_ValueError, 
+			     "Input strings must be a multiple of "
+			     "the segment size %i in length",
+			     self->segment_size/8);
+		return NULL;
 	}
 
 	buffer=malloc(len);
 	if (buffer==NULL) 
 	{
-		PyErr_SetString(PyExc_MemoryError, "No memory available in "
-				"ALG encrypt");
-		return(NULL);
+		PyErr_SetString(PyExc_MemoryError, 
+				"No memory available in "
+				_MODULE_STRING " encrypt");
+		return NULL;
 	}
 	switch(self->cipherMode)
 	{
@@ -248,6 +256,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			block_encrypt(&(self->st), str+i, buffer+i);
 		}
 		break;
+
 	case(MODE_CBC):      
 		for(i=0; i<len; i+=BLOCK_SIZE) 
 		{
@@ -259,30 +268,37 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			memcpy(self->IV, buffer+i, BLOCK_SIZE);
 		}
 		break;
+
 	case(MODE_CFB):      
 		for(i=0; i<len; i+=self->segment_size/8) 
 		{
 			block_encrypt(&(self->st), self->IV, temp);
 			for (j=0; j<self->segment_size/8; j++) {
-				buffer[i+j] = str[i+j]^temp[j];
+				buffer[i+j] = str[i+j] ^ temp[j];
 			}
 			if (self->segment_size == BLOCK_SIZE * 8) {
-				/* s == b: segment size is the algorithm block size */
+				/* s == b: segment size is identical to 
+				   the algorithm block size */
 				memcpy(self->IV, buffer + i, BLOCK_SIZE);
 			}
 			else if ((self->segment_size % 8) == 0) {
 				int sz = self->segment_size/8;
-				memmove(self->IV, self->IV + sz, BLOCK_SIZE-sz);
-				memcpy(self->IV + BLOCK_SIZE - sz, buffer + i, sz);
+				memmove(self->IV, self->IV + sz, 
+					BLOCK_SIZE-sz);
+				memcpy(self->IV + BLOCK_SIZE - sz, buffer + i,
+				       sz);
 			}
 			else {
-				/* segment_size is not a multiple of 8; currently can't happen */
+				/* segment_size is not a multiple of 8; 
+				   currently this can't happen */
 			}
 		}
 		break;
+
 	case(MODE_PGP):
 		if (len<=BLOCK_SIZE-self->count) 
-		{			/* If less than one block, XOR it in */
+		{			
+			/* If less than one block, XOR it in */
 			for(i=0; i<len; i++) 
 				buffer[i] = self->IV[self->count+i] ^= str[i];
 			self->count += len;
@@ -295,7 +311,8 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			self->count=0;
 			for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
 			{
-				block_encrypt(&(self->st), self->oldCipher, self->IV);
+				block_encrypt(&(self->st), self->oldCipher, 
+					      self->IV);
 				for(j=0; j<BLOCK_SIZE; j++)
 					buffer[i+j] = self->IV[j] ^= str[i+j];
 			}
@@ -308,6 +325,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			}
 		}
 		break;
+
 	case(MODE_OFB):
 		for(i=0; i<len; i+=BLOCK_SIZE) 
 		{
@@ -319,22 +337,221 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			}
 		}      
 		break;
+
 	case(MODE_CTR):
 		for(i=0; i<len; i+=BLOCK_SIZE) 
 		{
 			PyObject *ctr = PyObject_CallObject(self->counter, NULL);
-			if (ctr == NULL) return NULL;
+			if (ctr == NULL) {
+				free(buffer);
+				return NULL;
+			}
 			if (!PyString_Check(ctr))
 			{
 				PyErr_SetString(PyExc_TypeError, 
 						"CTR counter function didn't return a string");
 				Py_DECREF(ctr);
+				free(buffer);
+				return NULL;
+			}
+			if (PyString_Size(ctr) != BLOCK_SIZE) {
+				PyErr_Format(PyExc_TypeError, 
+					     "CTR counter function returned "
+					     "string not of length %i",
+					     BLOCK_SIZE);
+				Py_DECREF(ctr);
+				free(buffer);
+				return NULL;
+			}
+			block_encrypt(&(self->st), PyString_AsString(ctr), 
+				      temp);
+			Py_DECREF(ctr);
+			for(j=0; j<BLOCK_SIZE; j++)
+			{
+				buffer[i+j] = str[i+j]^temp[j];
+			}
+		}
+		break;
+
+	default:
+		PyErr_Format(PyExc_SystemError, 
+			     "Unknown ciphertext feedback mode %i; "
+			     "this shouldn't happen",
+			     self->cipherMode);
+		free(buffer);
+		return NULL;
+	}
+	result=PyString_FromStringAndSize(buffer, len);
+	free(buffer);
+	return(result);
+}
+
+static char ALG_Decrypt__doc__[] =
+"decrypt(string): Decrypt the provided string of binary data.";
+
+
+static PyObject *
+ALG_Decrypt(ALGobject *self, PyObject *args)
+{
+	unsigned char *buffer, *str;
+	unsigned char temp[BLOCK_SIZE];
+	int i, j, len;
+	PyObject *result;
+  
+	if (!PyArg_Parse(args, "s#", &str, &len))
+		return NULL;
+	if (len==0)			/* Handle empty string */
+	{
+		return PyString_FromStringAndSize(NULL, 0);
+	}
+	if ( (len % BLOCK_SIZE) !=0 && 
+	     (self->cipherMode!=MODE_CFB && self->cipherMode!=MODE_PGP))
+	{
+		PyErr_Format(PyExc_ValueError, 
+			     "Input strings must be "
+			     "a multiple of %i in length",
+			     BLOCK_SIZE);
+		return NULL;
+	}
+	if (self->cipherMode == MODE_CFB && 
+	    (len % (self->segment_size/8) !=0)) {
+		PyErr_Format(PyExc_ValueError, 
+			     "Input strings must be a multiple of "
+			     "the segment size %i in length",
+			     self->segment_size/8);
+		return NULL;
+	}
+	buffer=malloc(len);
+	if (buffer==NULL) 
+	{
+		PyErr_SetString(PyExc_MemoryError, 
+				"No memory available in " _MODULE_STRING
+				" decrypt");
+		return NULL;
+	}
+	switch(self->cipherMode)
+	{
+	case(MODE_ECB):      
+		for(i=0; i<len; i+=BLOCK_SIZE) 
+		{
+			block_decrypt(&(self->st), str+i, buffer+i);
+		}
+		break;
+
+	case(MODE_CBC):      
+		for(i=0; i<len; i+=BLOCK_SIZE) 
+		{
+			memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
+			block_decrypt(&(self->st), str+i, temp);
+			for(j=0; j<BLOCK_SIZE; j++) 
+			{
+				buffer[i+j]=temp[j]^self->IV[j];
+				self->IV[j]=str[i+j];
+			}
+		}
+		break;
+
+	case(MODE_CFB):      
+		for(i=0; i<len; i+=self->segment_size/8) 
+		{
+			block_encrypt(&(self->st), self->IV, temp);
+			for (j=0; j<self->segment_size/8; j++) {
+				buffer[i+j] = str[i+j]^temp[j];
+			}
+			if (self->segment_size == BLOCK_SIZE * 8) {
+				/* s == b: segment size is identical to 
+				   the algorithm block size */
+				memcpy(self->IV, str + i, BLOCK_SIZE);
+			}
+			else if ((self->segment_size % 8) == 0) {
+				int sz = self->segment_size/8;
+				memmove(self->IV, self->IV + sz, 
+					BLOCK_SIZE-sz);
+				memcpy(self->IV + BLOCK_SIZE - sz, str + i, 
+				       sz);
+			}
+			else {
+				/* segment_size is not a multiple of 8; 
+				   currently this can't happen */
+			}
+		}
+		break;
+
+	case(MODE_PGP):
+		if (len<=BLOCK_SIZE-self->count) 
+		{			
+                        /* If less than one block, XOR it in */
+			unsigned char t;
+			for(i=0; i<len; i++)
+			{
+				t=self->IV[self->count+i];
+				buffer[i] = t ^ (self->IV[self->count+i] = str[i]);
+			}
+			self->count += len;
+		}
+		else 
+		{
+			int j;
+			unsigned char t;
+			for(i=0; i<BLOCK_SIZE-self->count; i++) 
+			{
+				t=self->IV[self->count+i];
+				buffer[i] = t ^ (self->IV[self->count+i] = str[i]);
+			}
+			self->count=0;
+			for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
+			{
+				block_encrypt(&(self->st), self->oldCipher, self->IV);
+				for(j=0; j<BLOCK_SIZE; j++)
+				{
+					t=self->IV[j];
+					buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
+				}
+			}
+			/* Do the remaining 1 to BLOCK_SIZE bytes */
+			block_encrypt(&(self->st), self->oldCipher, self->IV);
+			self->count=len-i;
+			for(j=0; j<len-i; j++) 
+			{
+				t=self->IV[j];
+				buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
+			}
+		}
+		break;
+
+	case (MODE_OFB):
+		for(i=0; i<len; i+=BLOCK_SIZE) 
+		{
+			block_encrypt(&(self->st), self->IV, temp);
+			memcpy(self->IV, temp, BLOCK_SIZE);
+			for(j=0; j<BLOCK_SIZE; j++)
+			{
+				buffer[i+j] = str[i+j] ^ self->IV[j];
+			}
+		}      
+		break;
+
+	case (MODE_CTR):
+		for(i=0; i<len; i+=BLOCK_SIZE) 
+		{
+			PyObject *ctr = PyObject_CallObject(self->counter, NULL);
+			if (ctr == NULL) {
+				free(buffer);
+				return NULL;
+			}
+			if (!PyString_Check(ctr))
+			{
+				PyErr_SetString(PyExc_TypeError, 
+						"CTR counter function didn't return a string");
+				Py_DECREF(ctr);
+				free(buffer);
 				return NULL;
 			}
 			if (PyString_Size(ctr) != BLOCK_SIZE) {
 				PyErr_SetString(PyExc_TypeError, 
 						"CTR counter function returned string of incorrect length");
 				Py_DECREF(ctr);
+				free(buffer);
 				return NULL;
 			}
 			block_encrypt(&(self->st), PyString_AsString(ctr), temp);
@@ -345,203 +562,48 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			}
 		}
 		break;
+
 	default:
-		PyErr_SetString(PyExc_SystemError, "Unknown ciphertext feedback mode; "
-				"this shouldn't happen");
-		return(NULL);
+		PyErr_Format(PyExc_SystemError, 
+			     "Unknown ciphertext feedback mode %i; "
+			     "this shouldn't happen",
+			     self->cipherMode);
+		free(buffer);
+		return NULL;
 	}
 	result=PyString_FromStringAndSize(buffer, len);
 	free(buffer);
 	return(result);
 }
 
-static char ALG_Decrypt__doc__[] =
-"Decrypt the provided string of binary data.";
-
-
-static PyObject *
-ALG_Decrypt(ALGobject *self, PyObject *args)
-{
-	unsigned char *buffer, *str;
- unsigned char temp[BLOCK_SIZE];
-  int i, j, len;
-  PyObject *result;
-  
-  if (!PyArg_Parse(args, "s#", &str, &len))
-    return (NULL);
-  if (len==0)			/* Handle empty string */
-    {
-      return PyString_FromStringAndSize(NULL, 0);
-    }
-  if ( (len % BLOCK_SIZE) !=0 && self->cipherMode!=MODE_CFB
-      && self->cipherMode!=MODE_PGP) 
-    {
-      PyErr_SetString(PyExc_ValueError, "Input strings "
-		      "must be a multiple of BLOCK_SIZE in length");
-      return(NULL);
-    }
-  if (self->cipherMode == MODE_CFB && (len % (self->segment_size/8) !=0)) {
-      PyErr_SetString(PyExc_ValueError, "Input strings "
-		      "must be a multiple of the segment size in length");
-      return(NULL);
-  }
-  buffer=malloc(len);
-  if (buffer==NULL) 
-    {
-      PyErr_SetString(PyExc_MemoryError, "No memory available in "
-		      "ALG decrypt");
-      return(NULL);
-    }
-  switch(self->cipherMode)
-    {
-    case(MODE_ECB):      
-      for(i=0; i<len; i+=BLOCK_SIZE) 
-	{
-	  block_decrypt(&(self->st), str+i, buffer+i);
-	}
-      break;
-    case(MODE_CBC):      
-      for(i=0; i<len; i+=BLOCK_SIZE) 
-	{
-          memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	  block_decrypt(&(self->st), str+i, temp);
-	  for(j=0; j<BLOCK_SIZE; j++) 
-	    {
-	      buffer[i+j]=temp[j]^self->IV[j];
-	      self->IV[j]=str[i+j];
-	    }
-	}
-      break;
-    case(MODE_CFB):      
-      for(i=0; i<len; i+=self->segment_size/8) 
-	{
-	  block_encrypt(&(self->st), self->IV, temp);
-	  for (j=0; j<self->segment_size/8; j++) {
-		 buffer[i+j] = str[i+j]^temp[j];
-	  }
-	  if (self->segment_size == BLOCK_SIZE * 8) {
-	    /* s == b: segment size is the algorithm block size */
-	    memcpy(self->IV, str + i, BLOCK_SIZE);
-	  }
-	  else if ((self->segment_size % 8) == 0) {
-	    int sz = self->segment_size/8;
-	    memmove(self->IV, self->IV + sz, BLOCK_SIZE-sz);
-	    memcpy(self->IV + BLOCK_SIZE - sz, str + i, sz);
-	  }
-	  else {
-	    /* segment_size is not a multiple of 8; currently can't happen */
-	  }
-	}
-      break;
-    case(MODE_PGP):
-      if (len<=BLOCK_SIZE-self->count) 
-	{			/* If less than one block, XOR it in */
-	  unsigned char t;
-	  for(i=0; i<len; i++)
-	    {
-	      t=self->IV[self->count+i];
-	      buffer[i] = t ^ (self->IV[self->count+i] = str[i]);
-	    }
-	  self->count += len;
-	}
-      else 
-	{
-	  int j;
-	  unsigned char t;
-	  for(i=0; i<BLOCK_SIZE-self->count; i++) 
-	    {
-	      t=self->IV[self->count+i];
-	      buffer[i] = t ^ (self->IV[self->count+i] = str[i]);
-	    }
-	  self->count=0;
-	  for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
-	    {
-	      block_encrypt(&(self->st), self->oldCipher, self->IV);
-	      for(j=0; j<BLOCK_SIZE; j++)
-		{
-		  t=self->IV[j];
-		  buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
-		}
-	    }
-	  /* Do the remaining 1 to BLOCK_SIZE bytes */
-	  block_encrypt(&(self->st), self->oldCipher, self->IV);
-	  self->count=len-i;
-	  for(j=0; j<len-i; j++) 
-	    {
-	      t=self->IV[j];
-	      buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
-	    }
-	}
-      break;
-    case (MODE_OFB):
-      for(i=0; i<len; i+=BLOCK_SIZE) 
-	{
-	  block_encrypt(&(self->st), self->IV, temp);
-	  memcpy(self->IV, temp, BLOCK_SIZE);
-	  for(j=0; j<BLOCK_SIZE; j++)
-	    {
-	      buffer[i+j] = str[i+j] ^ self->IV[j];
-	    }
-	}      
-      break;
-    case (MODE_CTR):
-      for(i=0; i<len; i+=BLOCK_SIZE) 
-	{
-          PyObject *ctr = PyObject_CallObject(self->counter, NULL);
-	  if (ctr == NULL) return NULL;
-	  if (!PyString_Check(ctr))
-	    {
-	      PyErr_SetString(PyExc_TypeError, 
-			      "CTR counter function didn't return a string");
-	      Py_DECREF(ctr);
-	      return NULL;
-	    }
-	  if (PyString_Size(ctr) != BLOCK_SIZE) {
-	      PyErr_SetString(PyExc_TypeError, 
-			      "CTR counter function returned string of incorrect length");
-	      Py_DECREF(ctr);
-	      return NULL;
-	  }
-	  block_encrypt(&(self->st), PyString_AsString(ctr), temp);
-	  Py_DECREF(ctr);
-	  for(j=0; j<BLOCK_SIZE; j++)
-	    {
-	      buffer[i+j] = str[i+j]^temp[j];
-	    }
-	}
-      break;
-    default:
-      PyErr_SetString(PyExc_SystemError, "Unknown ciphertext feedback mode; "
-		      "this shouldn't happen");
-      return(NULL);
-    }
-  result=PyString_FromStringAndSize(buffer, len);
-  free(buffer);
-  return(result);
-}
-
 static char ALG_Sync__doc__[] =
-"For objects using the PGP feedback mode, this method modifies the IV, "
-"synchronizing it with the preceding ciphertext.";
+"sync(): For objects using the PGP feedback mode, this method modifies "
+"the IV, synchronizing it with the preceding ciphertext.";
 
 static PyObject *
 ALG_Sync(ALGobject *self, PyObject *args)
 {
-  if (self->cipherMode!=MODE_PGP) 
-    {
-      PyErr_SetString(PyExc_SystemError, "sync() operation not defined for "
-   	         "this feedback mode");
-      return(NULL);
-    }
+	if (!PyArg_ParseTuple(args, "")) {
+		return NULL;
+	}
 
-  if (self->count!=8) 
-    {
-      memmove(self->IV+BLOCK_SIZE-self->count, self->IV, self->count);
-      memcpy(self->IV, self->oldCipher+self->count, BLOCK_SIZE-self->count);
-      self->count=8;
-    }
-  Py_INCREF(Py_None);
-  return Py_None;
+	if (self->cipherMode!=MODE_PGP) 
+	{
+		PyErr_SetString(PyExc_SystemError, "sync() operation not defined for "
+				"this feedback mode");
+		return NULL;
+	}
+	
+	if (self->count!=8) 
+	{
+		memmove(self->IV+BLOCK_SIZE-self->count, self->IV, 
+			self->count);
+		memcpy(self->IV, self->oldCipher+self->count, 
+		       BLOCK_SIZE-self->count);
+		self->count=8;
+	}
+	Py_INCREF(Py_None);
+	return Py_None;
 }
 
 #if 0
@@ -566,7 +628,7 @@ static PyMethodDef ALGmethods[] =
 {
  {"encrypt", (PyCFunction) ALG_Encrypt, 0, ALG_Encrypt__doc__},
  {"decrypt", (PyCFunction) ALG_Decrypt, 0, ALG_Decrypt__doc__},
- {"sync", (PyCFunction) ALG_Sync, 0, ALG_Sync__doc__},
+ {"sync", (PyCFunction) ALG_Sync, METH_VARARGS, ALG_Sync__doc__},
  {NULL, NULL}			/* sentinel */
 };
 
@@ -577,8 +639,9 @@ ALGsetattr(PyObject *ptr, char *name, PyObject *v)
   ALGobject *self=(ALGobject *)ptr;
   if (strcmp(name, "IV") != 0) 
     {
-      PyErr_SetString(PyExc_AttributeError,
-		      "non-existent block cipher object attribute");
+      PyErr_Format(PyExc_AttributeError,
+		   "non-existent block cipher object attribute '%s'",
+		   name);
       return -1;
     }
   if (v==NULL)
@@ -595,12 +658,13 @@ ALGsetattr(PyObject *ptr, char *name, PyObject *v)
     }
   if (PyString_Size(v)!=BLOCK_SIZE) 
     {
-      PyErr_SetString(PyExc_ValueError, "ALG IV must be "
-		      "BLOCK_SIZE bytes long");
+      PyErr_Format(PyExc_ValueError, 
+		   _MODULE_STRING " IV must be %i bytes long",
+		   BLOCK_SIZE);
       return -1;
     }
   memcpy(self->IV, PyString_AsString(v), BLOCK_SIZE);
-  return (0);
+  return 0;
 }
 
 static PyObject *
@@ -638,7 +702,7 @@ static PyTypeObject ALGtype =
 {
 	PyObject_HEAD_INIT(NULL)
 	0,				/*ob_size*/
-	"ALG",		/*tp_name*/
+	_MODULE_STRING,		/*tp_name*/
 	sizeof(ALGobject),	/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */
@@ -651,39 +715,32 @@ static PyTypeObject ALGtype =
 	0,				/*tp_as_number*/
 };
 
-/* Initialization function for the module (*must* be called initxx) */
+/* Initialization function for the module */
 
-#define insint(n,v) {PyObject *o=PyInt_FromLong(v); if (o!=NULL) {PyDict_SetItemString(d,n,o); Py_DECREF(o);}}
-
-
-#define _STR(x) #x
-#define _XSTR(x) _STR(x)
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
-#define _MODULE_NAME _PASTE2(init,MODULE_NAME)
-#define _MODULE_STRING _XSTR(MODULE_NAME)
+#if PYTHON_API_VERSION < 1011
+#define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
+           if (o!=NULL) \
+             {PyDict_SetItemString(PyModule_GetDict(m),n,o); Py_DECREF(o);}}
+#endif
 
 void
 _MODULE_NAME (void)
 {
-	PyObject *m, *d;
+	PyObject *m;
 
 	ALGtype.ob_type = &PyType_Type;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("Crypto.Cipher." _MODULE_STRING, modulemethods);
 
-	/* Add some symbolic constants to the module */
-	d = PyModule_GetDict(m);
-
-	insint("MODE_ECB", MODE_ECB);
-	insint("MODE_CBC", MODE_CBC);
-	insint("MODE_CFB", MODE_CFB);
-	insint("MODE_PGP", MODE_PGP);
-	insint("MODE_OFB", MODE_OFB);
-	insint("MODE_CTR", MODE_CTR);
-	insint("block_size", BLOCK_SIZE);
-	insint("key_size", KEY_SIZE);
+	PyModule_AddIntConstant(m, "MODE_ECB", MODE_ECB);
+	PyModule_AddIntConstant(m, "MODE_CBC", MODE_CBC);
+	PyModule_AddIntConstant(m, "MODE_CFB", MODE_CFB);
+	PyModule_AddIntConstant(m, "MODE_PGP", MODE_PGP);
+	PyModule_AddIntConstant(m, "MODE_OFB", MODE_OFB);
+	PyModule_AddIntConstant(m, "MODE_CTR", MODE_CTR);
+	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
+	PyModule_AddIntConstant(m, "key_size", KEY_SIZE);
 
 	/* Check for errors */
 	if (PyErr_Occurred())
