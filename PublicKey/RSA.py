@@ -10,9 +10,10 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.17 2003-04-04 15:13:35 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.18 2003-04-04 19:03:13 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
+from Crypto.Util import number
 
 try:
     from Crypto.PublicKey import _fastmath
@@ -30,31 +31,29 @@ def generate(bits, randfunc, progress_func=None):
     the progress of the key generation.
     """
     obj=RSAobj()
-    # Generate random number from 0 to 7
-    difference=ord(randfunc(1)) & 7
-
     # Generate the prime factors of n
     if progress_func:
         progress_func('p\n')
-    obj.p=pubkey.getPrime(bits/2, randfunc)
+    obj.p = pubkey.getPrime(bits/2+1, randfunc)
     if progress_func:
         progress_func('q\n')
-    obj.q=pubkey.getPrime((bits/2)+difference, randfunc)
+    obj.q = pubkey.getPrime(bits/2+1, randfunc)
+
     # p shall be smaller than q (for calc of u)
-    if obj.p>obj.q:
+    if obj.p > obj.q:
         (obj.p, obj.q)=(obj.q, obj.p)
     if progress_func:
         progress_func('u\n')
-    obj.u=pubkey.inverse(obj.p, obj.q)
-    obj.n=obj.p*obj.q
+    obj.u = pubkey.inverse(obj.p, obj.q)
+    obj.n = obj.p*obj.q
 
-    # Generate encryption exponent
-    if progress_func:
-        progress_func('e\n')
-    obj.e=pubkey.getPrime(17, randfunc)
+    obj.e = 65537L
     if progress_func:
         progress_func('d\n')
     obj.d=pubkey.inverse(obj.e, (obj.p-1)*(obj.q-1))
+
+    assert obj.size() >= bits, "Generated key is too small"
+
     return obj
 
 def construct(tuple):
@@ -123,10 +122,7 @@ class RSAobj(pubkey.pubkey):
         """size() : int
         Return the maximum number of bits that can be handled by this key.
         """
-        bits, power = 0,1L
-        while (power<self.n):
-            bits, power = bits+1, power<<1
-        return bits-1
+        return number.size(self.n) - 1
 
     def has_private(self):
         """has_private() : bool
@@ -208,32 +204,35 @@ class RSAobj_c(pubkey.pubkey):
         return construct_c((self.key.n, self.key.e))
 
 def generate_c(bits, randfunc, progress_func = None):
-    difference=ord(randfunc(1)) & 7
-
     # Generate the prime factors of n
     if progress_func:
         progress_func('p\n')
-    p=pubkey.getPrime(bits/2, randfunc)
+    p=pubkey.getPrime(bits/2 + 1, randfunc)
     if progress_func:
         progress_func('q\n')
-    q=pubkey.getPrime((bits/2)+difference, randfunc)
+    q=pubkey.getPrime(bits/2 + 1, randfunc)
     # p shall be smaller than q (for calc of u)
-    if p>q:
+    if p > q:
         (p, q)=(q, p)
     if progress_func:
         progress_func('u\n')
     u=pubkey.inverse(p, q)
     n=p*q
 
-    # Generate encryption exponent
-    if progress_func:
-        progress_func('e\n')
-    e=pubkey.getPrime(17, randfunc)
+    e = 65537L
     if progress_func:
         progress_func('d\n')
     d=pubkey.inverse(e, (p-1)*(q-1))
     key = _fastmath.rsa_construct(n,e,d,p,q,u)
-    return RSAobj_c(key)
+    obj = RSAobj_c(key)
+
+##    print p
+##    print q
+##    print number.size(p), number.size(q), number.size(q*p),
+##    print obj.size(), bits
+    assert obj.size() >= bits, "Generated key is too small"
+    return obj
+
 
 def construct_c(tuple):
     key = apply(_fastmath.rsa_construct, tuple)
