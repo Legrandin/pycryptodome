@@ -3,6 +3,10 @@
 =========
 
 	* Fix compilation problem on Windows.
+
+	* HMAC.py fixed to work with pre-2.2 Pythons
+	
+	* setup.py now dies if built with Python 1.x
 	
 
 1.9alpha3
