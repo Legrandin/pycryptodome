@@ -332,7 +332,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
     case(MODE_CTR):
       for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-          PyObject *ctr = PyObject_Call(self->counter, PyTuple_New(0), NULL);
+          PyObject *ctr = PyObject_CallObject(self->counter, NULL);
 	  if (ctr == NULL) return NULL;
 	  if (!PyString_Check(ctr))
 	    {
@@ -502,7 +502,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
     case (MODE_CTR):
       for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-          PyObject *ctr = PyObject_Call(self->counter, PyTuple_New(0), NULL);
+          PyObject *ctr = PyObject_CallObject(self->counter, NULL);
 	  if (ctr == NULL) return NULL;
 	  if (!PyString_Check(ctr))
 	    {
