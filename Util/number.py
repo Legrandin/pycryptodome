@@ -167,6 +167,7 @@ def bytes_to_long(s):
     return acc
 
 # For backwards compatibility...
+import warnings
 def long2str(n, blocksize=0):
     warnings.warn("long2str() has been replaced by long_to_bytes()")
     return long_to_bytes(n, blocksize)
