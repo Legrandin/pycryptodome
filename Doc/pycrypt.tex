@@ -21,6 +21,8 @@ language, but not necessarily about cryptography.
 
 \tableofcontents
 
+
+%======================================================================
 \section{Introduction}
 
 \subsection{Design Goals}
@@ -38,15 +40,14 @@ Enhancement Proposal documents, as \pep{247}, ``API for Cryptographic
 Hash Functions'', and \pep{272}, ``API for Block Encryption
 Algorithms''.  
 
-This is intended to make it easy to replace old
-algorithms with newer, more secure ones.  If you're given a bit of
-portably-written Python code that uses the DES encryption algorithm,
-you should be able to use AES instead by simply changing \code{from
-Crypto.Cipher import DES} to \code{from Crypto.Cipher import AES}, and
-changing all references to \code{DES.new()} to \code{AES.new()}.  It's
-also fairly simple to write your own modules that mimic this
-interface, thus letting you use combinations or permutations of
-algorithms.
+This is intended to make it easy to replace old algorithms with newer,
+more secure ones.  If you're given a bit of portably-written Python
+code that uses the DES encryption algorithm, you should be able to use
+AES instead by simply changing \code{from Crypto.Cipher import DES} to
+\code{from Crypto.Cipher import AES}, and changing all references to
+\code{DES.new()} to \code{AES.new()}.  It's also fairly simple to
+write your own modules that mimic this interface, thus letting you use
+combinations or permutations of algorithms.
 
 Some modules are implemented in C for performance; others are written
 in Python for ease of modification.  Generally, low-level functions
@@ -105,6 +106,8 @@ Washington DC, USA
 
 April 2002
 
+
+%======================================================================
 \section{Crypto.Hash: Hash Functions}
 
 Hash functions take arbitrary strings as input, and produce an output
@@ -138,7 +141,7 @@ hashing object. You can now feed arbitrary strings into the object
 with the \method{update()} method, and can ask for the hash value at
 any time by calling the \method{digest()} or \method{hexdigest()}
 methods.  The \function{new()} function can also be passed an optional
-string parameter, which will be immediately hashed into the object's
+string parameter that will be immediately hashed into the object's
 state.
 
 Hash function modules define one variable:
@@ -153,22 +156,22 @@ it returns, but using \member{digest_size} is faster.
 The methods for hashing objects are always the following:
 
 \begin{methoddesc}{copy}{}
-Return a separate copy of this hashing object.  An \code{update} to this
-  copy won't affect the original object.
+Return a separate copy of this hashing object.  An \code{update} to
+this copy won't affect the original object.
 \end{methoddesc}
 
 \begin{methoddesc}{digest}{}
-Return the hash value of this hashing object, as a string containing 8-bit data.  The object is not
-altered in any way by this function; you can continue updating the
-object after calling this function.
+Return the hash value of this hashing object, as a string containing
+8-bit data.  The object is not altered in any way by this function;
+you can continue updating the object after calling this function.
 \end{methoddesc}
 
 \begin{methoddesc}{hexdigest}{}
-Return the hash value of this hashing object, as a string containing the
-digest data as hexadecimal digits.  The resulting string will be twice
-as long as that returned by \code{digest()}.  The object is not altered
-in any way by this function; you can continue updating the object after
-calling this function.
+Return the hash value of this hashing object, as a string containing
+the digest data as hexadecimal digits.  The resulting string will be
+twice as long as that returned by \method{digest()}.  The object is not
+altered in any way by this function; you can continue updating the
+object after calling this function.
 \end{methoddesc}
 
 \begin{methoddesc}{update}{arg}
@@ -186,6 +189,7 @@ Here's an example, using the MD5 algorithm:
 >>> m.hexdigest()
 '900150983cd24fb0d6963f7d28e17f72'
 \end{verbatim}
+
 
 \subsection{Security Notes}
 
@@ -213,15 +217,16 @@ the random string can then be kept with the signature.
 None of the algorithms implemented here have been completely broken.
 There are no attacks on MD2, but it's rather slow at 1250 K/sec.  MD4
 is faster at 44,500 K/sec but there have been some partial attacks on
-it.  MD4 operates in three iterations of a basic mixing operation; two
-of the three rounds have been cryptanalyzed, but the attack can't be
+it.  MD4 makes three iterations of a basic mixing operation; two of
+the three rounds have been cryptanalyzed, but the attack can't be
 extended to the full algorithm.  MD5 is a strengthened version of MD4
-with four rounds; an attack against one round has been found.  MD5 is
-still believed secure at the moment, but people are gravitating toward
-using SHA in new software because there are no known attacks against
-SHA.  The MD5 implementation is moderately well-optimized and thus
-faster on x86 processors, running at 35,500 K/sec.  MD5 may even be
-faster than MD4, depending on the processor and compiler you use.
+with four rounds; an attack against one round has been found XXX
+update this.  MD5 is still believed secure at the moment, but people
+are gravitating toward using SHA in new software because there are no
+known attacks against SHA.  The MD5 implementation is moderately
+well-optimized and thus faster on x86 processors, running at 35,500
+K/sec.  MD5 may even be faster than MD4, depending on the processor
+and compiler you use.
 
 All the MD\var{n} algorithms produce 128-bit hashes; SHA produces a
 larger 160-bit hash, and there are no known attacks against it.  The
@@ -236,6 +241,8 @@ and the MD5 code was implemented by Colin Plumb.  The SHA code was
 originally written by Peter Gutmann.  The RIPEMD code was written by
 Antoon Bosselaers, and adapted for the toolkit by Hirendra Hindocha.
 
+
+%======================================================================
 \section{Crypto.Cipher: Encryption Algorithms}
 
 Encryption algorithms transform their input data, or \dfn{plaintext},
@@ -277,17 +284,15 @@ byte-by-byte basis, and is much slower than either of the other two
 modes.  The chaining feedback modes require an initialization value to
 start off the encryption; this is a string of the same length as the
 ciphering algorithm's block size, and is passed to the \code{new()}
-function.
-
-There is also a special PGP mode, which is a variant
-of CFB used by the PGP program.  While you can use it in non-PGP
-programs, it's quite non-standard.
+function.  There is also a special PGP mode, which is an oddball
+variant of CFB used by the PGP program.  While you can use it in
+non-PGP programs, it's quite non-standard.
 
 The currently available block ciphers are listed in the following table,
-and are available in the \code{Crypto.Cipher} package:
-
+and are in the \code{Crypto.Cipher} package:
 
 \begin{tableii}{c|l}{}{Cipher}{Key Size/Block Size}
+\lineii{AES}{16, 24, or 32 bytes/16 bytes}
 \lineii{ARC2}{Variable/8 bytes}
 \lineii{Blowfish}{Variable/8 bytes}
 \lineii{CAST}{Variable/8 bytes}
@@ -308,20 +313,18 @@ The currently available stream ciphers are listed in the following table:
 
 \begin{tableii}{c|l}{}{Cipher}{Key Size}
 \lineii{Cipher}{Key Size}
-\lineii{ARC4}{Variable}
+  \lineii{ARC4}{Variable}
+  \lineii{XOR}{Variable}
 \end{tableii}
 
-ARC4 is short for `Alleged RC4'.  The real RC4 algorithm is proprietary
-to RSA Data Security Inc.  In September of 1994, someone posted C code
-to both the Cypherpunks mailing list and to the Usenet newsgroup
-\code{sci.crypt}, claiming that it implemented the RC4 algorithm.  This
-posted code is what I'm calling Alleged RC4, or ARC4 for short.  I don't
-know if ARC4 is in fact RC4, but ARC4 has been subjected to scrutiny on
-the Cypherpunks mailing list and elsewhere, and does not seem to be
-easily breakable.  The legal issues surrounding the use of ARC4 are
-unclear, but be aware that it hasn't been subject to much scrutiny, and
-may have some critical flaw that hasn't yet been discovered.  The same
-is true of ARC2, which was posted in January, 1996.
+ARC4 is short for `Alleged RC4'.  In September of 1994, someone posted
+C code to both the Cypherpunks mailing list and to the Usenet
+newsgroup \code{sci.crypt}, claiming that it implemented the RC4
+algorithm.  This claim turned out to be correct.  Note that there's a
+damaging class of weak RC4 keys; this module won't warn you about such keys.
+% XXX other analyses of RC4?
+
+A similar anonymous posting was made for Alleged RC2 in January, 1996.
 
 An example usage of the DES module:
 \begin{verbatim}
@@ -340,7 +343,6 @@ ValueError: Strings for DES must be a multiple of 8 in length
 >>> obj.decrypt(ciph)
 'Guido van Rossum is a space alien.XXXXXX'
 \end{verbatim}
-
 
 All cipher algorithms share a common interface.  After importing a
 given module, there is exactly one function and two variables
@@ -370,24 +372,24 @@ keys.  You cannot pass a key of length 0 (that is, the null string
 
 All cipher objects have at least three attributes:
 
-\begin{datadesc}{block_size}
+\begin{memberdesc}{block_size}
 An integer value equal to the size of the blocks encrypted by this object.
 Identical to the module variable of the same name.
-\end{datadesc}
+\end{memberdesc}
 
-\begin{datadesc}{IV}
+\begin{memberdesc}{IV}
 Contains the initial value which will be used to start a cipher
 feedback mode.  After encrypting or decrypting a string, this value
 will reflect the modified feedback text; it will always be one block
 in length.  It is read-only, and cannot be assigned a new value.
-\end{datadesc}
+\end{memberdesc}
 
-\begin{datadesc}{key_size}
+\begin{memberdesc}{key_size}
 An integer value equal to the size of the keys used by this object.  If
 \code{key_size} is zero, then the algorithm accepts arbitrary-length
 keys.  For algorithms that support variable length keys, this will be 0.
 Identical to the module variable of the same name.  
-\end{datadesc}
+\end{memberdesc}
 
 All ciphering objects have the following methods:
 
@@ -405,6 +407,7 @@ must be an exact multiple of the algorithm's block size; for stream
 ciphers, the string can be of any length.  Returns a string containing
 the ciphertext.
 \end{methoddesc}
+
 
 \subsection{Algorithm-specific Notes for Encryption Algorithms}
 
@@ -427,6 +430,7 @@ The number of rounds to apply, the larger the more secure: this
 can be any value from 0 to 255, so you will have to choose a value
 balanced between speed and security. 
 \end{itemize}
+
 
 \subsection{Security Notes}
 Encryption algorithms can be broken in several ways.  If you have some
@@ -452,16 +456,16 @@ correspondingly slower.
 There are no publicly known attacks against IDEA (3050 K/sec), and
 it's been around long enough to have been examined.  There are no
 known attacks against ARC2 (2160 K/sec), ARC4 (8830 K/sec), Blowfish
-(9250 K/sec), CAST (2960 K/sec), or RC5 (2060
-K/sec), but they're all relatively new
-algorithms and there hasn't been time for much analysis to be
-performed; use them for serious applications only after careful
-research.  
+(9250 K/sec), CAST (2960 K/sec), or RC5 (2060 K/sec), but they're all
+relatively new algorithms and there hasn't been time for much analysis
+to be performed; use them for serious applications only after careful
+research.
 
 AES, the Advanced Encryption Standard, was chosen by the US National
 Institute of Standards and Technology from among 6 competitors, and is
 probably your best choice.  It runs at 7060 K/sec, so it's among the
 faster algorithms around.
+
 
 \subsection{Credits}
 The code for Blowfish was written by Bryan Olson, partially based on a
@@ -476,6 +480,8 @@ was written by A.M. Kuchling.
 The Alleged RC4 code was posted to the \code{sci.crypt} newsgroup by an
 unknown party, and re-implemented by A.M. Kuchling.  
 
+
+%======================================================================
 \section{Crypto.Protocol: Various Protocols}
 
 \subsection{Crypto.Protocol.AllOrNothing}
@@ -490,12 +496,6 @@ An all-or-nothing package transformation is not encryption, although a block
 cipher algorithm is used.  The encryption key is randomly generated and is
 extractable from the message blocks.
 
-This class implements the All-Or-Nothing package transformation
-algorithm described in Rivest: ``All-Or-Nothing Encryption and The
-Package Transform.''  To appear in the Proceedings of the 1997 Fast
-Software Encryption Conference.
-http://theory.lcs.mit.edu/~rivest/fusion.ps
-
 \begin{classdesc}{AllOrNothing}{ciphermodule, mode=None, IV=None}
 Class implementing the All-or-Nothing package transform.
 
@@ -506,41 +506,18 @@ feedback mode and initialization vector to use.  All three arguments
 must be the same for the object used to create the digest, and to
 undigest'ify the message blocks.
 
-The module passed as \var{ciphermodule} must provide the
-following interface:
-
-\var{ciphermodule}.\code{key_size}: 
-Attribute containing the cipher algorithm's key size in
-bytes.  If the cipher supports variable length keys, then
-typically \code{ciphermodule.key_size} will be zero.  In that case a
-key size of 16 bytes will be used.
-
-\var{ciphermodule}.\code{block_size}: 
-Attribute containing the cipher algorithm's input block size
-in bytes.
-
-\var{ciphermodule}.\code{new}(\var{key}, \var{mode}, \var{IV}):
-                Function which returns a new instance of a cipher object,
-                initialized to \var{key}.  The returned object must have an
-                \method{encrypt()} method that accepts a string of
-                \var{ciphermodule}.\code{block_size} bytes and returns a string containing
-                the encrypted text.
-
-Note that the encryption key is randomly generated automatically
-when needed.  
+The module passed as \var{ciphermodule} must provide the \pep{272}
+interface.  An encryption key is randomly generated automatically when
+needed.
 \end{classdesc}
 
-The methods of the \class{AllorNothing} class are:
+The methods of the \class{AllOrNothing} class are:
 
-\begin{methoddesc}{digest}{}
-Perform the All-or-Nothing package transform on the current
-string.  Output is a list of message blocks describing the
+\begin{methoddesc}{digest}{text}
+Perform the All-or-Nothing package transform on the 
+string \var{text}.  Output is a list of message blocks describing the
 transformed text, where each block is a string of bit length equal
 to the cipher module's block_size.
-\end{methoddesc}
-
-\begin{methoddesc}{reset}{text = ""}
-Reset the current string to be transformed to \var{text}.
 \end{methoddesc}
 
 \begin{methoddesc}{undigest}{mblocks}
@@ -550,9 +527,6 @@ must be the same.  \var{mblocks} is a list of strings of bit length
 equal to \var{ciphermodule}'s block_size.  The output is a string object.
 \end{methoddesc}
 
-\begin{methoddesc}{update}{text}
-Concatenate \var{text} to the string that will be transformed.
-\end{methoddesc}
 
 \subsection{Crypto.Protocol.Chaffing}
 
@@ -591,10 +565,6 @@ Alice need not even be the party adding the chaff!  She could be completely
 unaware that a third party, say Charles, is adding chaff packets to her
 messages as they are transmitted.
 
-For more information on winnowing and chaffing see this paper:
-
-XXX Rivest.
-
 \begin{classdesc}{Chaff}{factor=1.0, blocksper=1}
 Class implementing the chaff adding algorithm. 
 \var{factor} is the number of message blocks 
@@ -631,29 +601,19 @@ number, but the only way to figure out which blocks are wheat and
 which are chaff is to perform the MAC hash and compare values.
 \end{methoddesc}
 
-        Subclass methods:
 
-\begin{methoddesc}{__randnum}{size}
-Returns a randomly generated number with a byte-length equal
-to \var{size}.  Subclasses can use this to implement better random
-data and MAC generating algorithms.  The default algorithm is
-probably not very cryptographically secure.  It is most
-important that the chaff data does not contain any patterns
-that can be used to discern it from wheat data without running 
-the MAC.
-\end{methoddesc}
-
-\section{Crypto.PublicKey: Public Key Algorithms}
+%======================================================================
+\section{Crypto.PublicKey: Public-Key Algorithms}
 So far, the encryption algorithms described have all been \dfn{private
-key} ciphers.  That is, the same key is used for both encryption and
-decryption, so all correspondents must know it.  This poses a problem:
-you may want encryption to communicate sensitive data over an insecure
+key} ciphers.  The same key is used for both encryption and decryption
+so all correspondents must know it.  This poses a problem: you may
+want encryption to communicate sensitive data over an insecure
 channel, but how can you tell your correspondent what the key is?  You
 can't just e-mail it to her because the channel is insecure.  One
 solution is to arrange the key via some other way: over the phone or
 by meeting in person.
 
-Another solution is to use \dfn{public key} cryptography.  In a public
+Another solution is to use \dfn{public-key} cryptography.  In a public
 key system, there are two different keys: one for encryption and one for
 decryption.  The encryption key can be made public by listing it in a
 directory or mailing it to your correspondent, while you keep the
@@ -665,13 +625,13 @@ possible given enough time and computing power.  This makes it very
 important to pick keys of the right size: large enough to be secure, but
 small enough to be applied fairly quickly.
 
-Many public key algorithms can also be used to sign messages; simply
+Many public-key algorithms can also be used to sign messages; simply
 run the message to be signed through a decryption with your private
 key key.  Anyone receiving the message can encrypt it with your
 publicly available key and read the message.  Some algorithms do only
 one thing, others can both encrypt and authenticate.
 
-The currently available public key algorithms are listed in the
+The currently available public-key algorithms are listed in the
 following table:
 
 \begin{tableii}{c|l}{}{Algorithm}{Capabilities}
@@ -689,9 +649,9 @@ An example of using the RSA module to sign a message:
 \begin{verbatim}
 >>> from Crypto.Hash import MD5
 >>> from Crypto.PublicKey import RSA
->>> RSAkey=RSA.generate(384, randfunc)   # This will take a while...
->>> hash=MD5.new(plaintext).digest()
->>> signature=RSAkey.sign(hash, "")
+>>> RSAkey = RSA.generate(384, randfunc)   # This will take a while...
+>>> hash = MD5.new(plaintext).digest()
+>>> signature = RSAkey.sign(hash, "")
 >>> signature   # Print what an RSA sig looks like--you don't really care.
 ('\021\317\313\336\264\315' ...,)
 >>> RSAkey.verify(hash, signature)     # This sig will check out
@@ -700,8 +660,7 @@ An example of using the RSA module to sign a message:
 0
 \end{verbatim}
 
-       
-Public key modules make the following functions available:
+Public-key modules make the following functions available:
 
 \begin{funcdesc}{construct}{tuple}
 Constructs a key object from a tuple of data.  This is
@@ -714,12 +673,12 @@ Generate a fresh public/private key pair.  \var{size} is a
 algorithm-dependent size parameter; the larger it is, the more
 difficult it will be to break the key.  Safe key sizes vary from
 algorithm to algorithm; you'll have to research the question and
-decide on a suitable key size for your application.  \code{randfunc}
-is a random number generation function; it should accept a single
-integer \var{N} and return a string of random data \var{N} bytes long.
-You should always use a cryptographically secure random number
-generator, such as the one defined in the \code{randpool} module;
-\emph{don't} just use the current time and the \code{whrandom} module.
+decide on a suitable key size for your application.  \var{randfunc} is
+a random number generation function; it should accept a single integer
+\var{N} and return a string of random data \var{N} bytes long.  You
+should always use a cryptographically secure random number generator,
+such as the one defined in the \module{Crypto.Util.randpool} module;
+\emph{don't} just use the current time and the \module{random} module.
 
 \var{progress_func} is an optional function that will be called with a short
 string containing the key parameter currently being generated; it's
@@ -730,11 +689,11 @@ be generated.
 If you want to interface with some other program, you will have to know
 the details of the algorithm being used; this isn't a big loss.  If you
 don't care about working with non-Python software, simply use the
-\code{pickle} module when you need to write a key or a signature to a
+\module{pickle} module when you need to write a key or a signature to a
 file.  It's portable across all the architectures that Python supports,
 and it's simple to use.
 
-Public key objects always support the following methods.  Some of them
+Public-key objects always support the following methods.  Some of them
 may raise exceptions if their functionality is not supported by the
 algorithm.
 
@@ -828,16 +787,17 @@ One can randomly generate \var{K} values of a suitable length such as
 128 or 144 bits, and then trust that the random number generator
 probably won't produce a duplicate anytime soon.  This is an
 implementation decision that depends on the desired level of security
-and the expected usage lifetime of a private key.  I cannot choose and
+and the expected usage lifetime of a private key.  I can't choose and
 enforce one policy for this, so I've added the \var{K} parameter to the
-\code{encrypt} and \code{sign} functions.  You must choose \var{K} by
+\method{encrypt} and \method{sign} methods.  You must choose \var{K} by
 generating a string of random data; for ElGamal, when interpreted as a
 big-endian number (with the most significant byte being the first byte
 of the string), \var{K} must be relatively prime to \code{self.p-1}; any
 size will do, but brute force searches would probably start with small
 primes, so it's probably good to choose fairly large numbers.  It might be
 simplest to generate a prime number of a suitable length using the
-\code{Crypto.Util.number} module.
+\module{Crypto.Util.number} module.
+
 
 \subsection{Security Notes for Public-key Algorithms}
 Any of these algorithms can be trivially broken; for example, RSA can be
@@ -865,6 +825,8 @@ military-grade.  For RSA, these three levels correspond roughly to 512,
 somewhat larger for the same level of security, around 768, 1024, and
 1536 bits.
 
+
+%======================================================================
 \section{Crypto.Util: Odds and Ends}
 This chapter contains all the modules that don't fit into any of the
 other chapters.  
@@ -881,15 +843,15 @@ Return the greatest common divisor of \var{x} and \var{y}.
 Return an \var{N}-bit random prime number, using random data obtained
 from the function \var{randfunc}.  \var{randfunc} must take a single
 integer argument, and return a string of random data of the
-corresponding length; the \code{get_bytes()} method of a
-\code{RandomPool} object will serve the purpose nicely, as will the
-\code{read()} method of an opened file such as \file{/dev/random}.
+corresponding length; the \method{get_bytes()} method of a
+\class{RandomPool} object will serve the purpose nicely, as will the
+\method{read()} method of an opened file such as \file{/dev/random}.
 \end{funcdesc}
 
 \begin{funcdesc}{getRandomNumber}{N, randfunc}
 Return an \var{N}-bit random number, using random data obtained from the
 function \var{randfunc}.  As usual, \var{randfunc} must take a single
-integer argument, and return a string of random data of the
+integer argument and return a string of random data of the
 corresponding length.
 \end{funcdesc}
 
@@ -902,15 +864,17 @@ Returns true if the number \var{N} is prime, as determined by a
 Rabin-Miller test.
 \end{funcdesc}
 
+
 \subsection{Crypto.Util.randpool}
+
 For cryptographic purposes, ordinary random number generators are
-frequently insufficient, because if some of their output is known, it is
-frequently possible to derive the generator's future (or past) output.
-This is obviously a Bad Thing; given the generator's state at some point
-in time, someone could try to derive any keys generated using it.  The
-solution is to use strong encryption or hashing algorithms to generate
-successive data; this makes breaking the generator as difficult as
-breaking the algorithms used.
+frequently insufficient, because if some of their output is known, it
+is frequently possible to derive the generator's future (or past)
+output.  Given the generator's state at some point in time, someone
+could try to derive any keys generated using it.  The solution is to
+use strong encryption or hashing algorithms to generate successive
+data; this makes breaking the generator as difficult as breaking the
+algorithms used.
 
 Understanding the concept of \dfn{entropy} is important for using the
 random number generator properly.  In the sense we'll be using it,
@@ -937,22 +901,22 @@ passwords for its users.  This is a good idea, since it would prevent
 people from choosing their own name or some other easily guessed string.
 Unfortunately, the random number generator used only had 65536 states,
 which meant only 65536 different passwords would ever be generated, and
-it was easily to compute all the possible passwords and try them.  The
+it was easy to compute all the possible passwords and try them.  The
 entropy of the random passwords was far too low.  By the same token, if
 you generate an RSA key with only 32 bits of entropy available, there
 are only about 4.2 billion keys you could have generated, and an
-adversary could compute them all to find your private key.  See RFC 1750:
-"Randomness Recommendations for Security" for an interesting discussion
+adversary could compute them all to find your private key.  See \rfc{1750},
+"Randomness Recommendations for Security", for an interesting discussion
 of the issues related to random number generation.
 
-The \code{randpool} module implements a strong random number generator
-in the \code{RandomPool} class.  The internal state consists of a string
+The \module{randpool} module implements a strong random number generator
+in the \class{RandomPool} class.  The internal state consists of a string
 of random data, which is returned as callers request it.  The class
 keeps track of the number of bits of entropy left, and provides a function to
 add new random data; this data can be obtained in various ways, such as
 by using the variance in a user's keystroke timings.  
 
-\begin{funcdesc}{RandomPool}{\optional{numbytes, cipher, hash} }
+\begin{classdesc}{RandomPool}{\optional{numbytes, cipher, hash} }
 An object of the \code{RandomPool} class can be created without
 parameters if desired.  \var{numbytes} sets the number of bytes of
 random data in the pool, and defaults to 160 (1280 bits). \var{hash}
@@ -962,11 +926,12 @@ interface.  The default action is to use SHA.
 
 The \var{cipher} argument is vestigial; it was removed from version
 1.1 so RandomPool would work even in the limited exportable subset of
-the code.  It can have any value at all, since it's no longer used.
+the code.  I recommend passing \var{hash} using a keyword argument so
+that someday I can safely delete the \var{cipher} argument
 
-\end{funcdesc}
+\end{classdesc}
 
-\code{RandomPool} objects define the following variables and methods:
+\class{RandomPool} objects define the following variables and methods:
 
 \begin{methoddesc}{add_event}{time\optional{, string}}
 Adds an event to the random pool.  \var{time} should be set to the
@@ -979,31 +944,31 @@ document, and thus won't be able to use this information to break the
 generator.
 \end{methoddesc}
 
-The return value is the value of \code{self.entropy} after the data has
+The return value is the value of \member{self.entropy} after the data has
 been added.  The function works in the following manner: the time
-between successive calls to the \code{add_event} method is determined,
+between successive calls to the \method{add_event()} method is determined,
 and the entropy of the data is guessed; the larger the time between
 calls, the better.  The system time is then read and added to the pool,
 along with the \var{string} parameter, if present.  The hope is that the
 low-order bits of the time are effectively random.  In an application,
-it is recommended that \code{add_event()} be called as frequently as
+it is recommended that \method{add_event()} be called as frequently as
 possible, with whatever random data can be found.
 
-\begin{datadesc}{bits}
+\begin{memberdesc}{bits}
 A constant integer value containing the number of bits of data in
-the pool, equal to the \code{bytes} variable multiplied by 8.
-\end{datadesc}
+the pool, equal to the \member{bytes} attribute multiplied by 8.
+\end{memberdesc}
 
-\begin{datadesc}{bytes}
+\begin{memberdesc}{bytes}
 A constant integer value containing the number of bytes of data in
 the pool.
-\end{datadesc}
+\end{memberdesc}
 
-\begin{datadesc}{entropy}
+\begin{memberdesc}{entropy}
 An integer value containing the number of bits of entropy currently in
-the pool.  The value is incremented by the \code{add_event()} method,
-and decreased by the \code{get_bytes} method.
-\end{datadesc}
+the pool.  The value is incremented by the \method{add_event()} method,
+and decreased by the \method{get_bytes()} method.
+\end{memberdesc}
 
 \begin{methoddesc}{get_bytes}{num}
 Returns a string containing \var{num} bytes of random data, and
@@ -1020,25 +985,26 @@ Scrambles the random pool using the previously chosen encryption and
 hash function.  An adversary may attempt to learn or alter the state
 of the pool in order to affect its future output; this function
 destroys the existing state of the pool in a non-reversible way.  It
-is recommended that \code{stir()} be called before and after using
-the \code{RandomPool} object.  Even better, several calls to
-\code{stir()} can be interleaved with calls to \code{add_event()}.
+is recommended that \method{stir()} be called before and after using
+the \class{RandomPool} object.  Even better, several calls to
+\method{stir()} can be interleaved with calls to \method{add_event()}.
 \end{methoddesc}
 
-The \class{PersistentRandomPool} class is a subclass of \code{RandomPool} 
+The \class{PersistentRandomPool} class is a subclass of \class{RandomPool} 
 that adds the capability to save and load the pool from a disk file.
 
-\begin{methoddesc}{KeyboardRandomPool}{\optional{filename, numbytes, cipher, hash}}
+\begin{classdesc}{PersistentRandomPool}{filename, \optional{numbytes, cipher, hash}}
 The path given in \var{filename} will be automatically opened, and an
 existing random pool read; if no such file exists, the pool will be
 initialized as usual.  If omitted, the filename defaults to the empty
-string, which will prevent it from being saved to a file.  The other
-arguments are identical to those for the \code{RandomPool} constructor.
-\end{methoddesc}
+string, which will prevent it from being saved to a file.  These
+arguments are identical to those for the \class{RandomPool}
+constructor.
+\end{classdesc}
 
 \begin{methoddesc}{save}{}
-Opens the file named by the \code{filename} attribute, and saves the
-random data into the file using the \code{pickle} module.
+Opens the file named by the \member{filename} attribute, and saves the
+random data into the file using the \module{pickle} module.
 \end{methoddesc}
 
 The \class{KeyboardRandomPool} class is a subclass of
@@ -1056,19 +1022,20 @@ similarly to PGP's random pool mechanism.
 
 \subsection{Crypto.Util.RFC1751}
 The keys for private-key algorithms should be arbitrary binary data.
-Many systems err by asking the user to enter a password, and then using
-the password as the key.  This limits the space of possible keys, as
-each key byte is constrained within the range of possible ASCII
-characters, 32-127, instead of the whole 0-255 range possible with ASCII.
-Unfortunately, it's difficult for humans to remember 16 or 32 hex
-digits.  
+Many systems err by asking the user to enter a password, and then
+using the password as the key.  This limits the space of possible
+keys, as each key byte is constrained within the range of possible
+ASCII characters, 32-127, instead of the whole 0-255 range possible
+with ASCII.  Unfortunately, it's difficult for humans to remember 16
+or 32 hex digits.
 
-One solution is to request a lengthy passphrase from the user, and then
-run it through a hash function such as SHA or MD5.  Another solution is
-discussed in RFC 1751, "A Convention for Human-Readable 128-bit Keys",
-by Daniel L. McDonald.  Binary keys are transformed into a list of short
-English words that should be easier to remember.  For example, the hex
-key EB33F77EE73D4053 is transformed to "TIDE ITCH SLOW REIN RULE MOT".
+One solution is to request a lengthy passphrase from the user, and
+then run it through a hash function such as SHA or MD5.  Another
+solution is discussed in RFC 1751, "A Convention for Human-Readable
+128-bit Keys", by Daniel L. McDonald.  Binary keys are transformed
+into a list of short English words that should be easier to remember.
+For example, the hex key EB33F77EE73D4053 is transformed to "TIDE ITCH
+SLOW REIN RULE MOT".
 
 \begin{funcdesc}{key_to_english}{key}
 Accepts a string of arbitrary data \var{key}, and returns a string
@@ -1084,11 +1051,13 @@ characters.  6 words are required for 8 bytes of key data, so
 the number of words in \var{string} must be a multiple of 6.
 \end{funcdesc}
 
+
+%======================================================================
 \section{The Demonstration Programs}
 
 The Python Cryptography Toolkit comes with various demonstration
 programs, located in the \file{Demo/} directory.  None of them is
-particularly well-finished, or suitable for serious use.  Rather,
+particularly well-finished or suitable for serious use.  Rather,
 they're intended to illustrate how the toolkit is used, and to provide
 some interesting possible uses.  Feel free to incorporate the code (or
 modifications of it) into your own programs.
@@ -1110,20 +1079,21 @@ ciphertext of a file is placed in a file of the same name with
 not sure that all errors during operation are caught, and I don't want
 people to accidentally erase important files.
 
-There are two command-line options: \code{-c} and \code{-k}.  Both of
-them require an argument.  \code{-c \var{ciphername}} uses the
-given encryption algorithm \var{ciphername}; for example,
-\code{-c des} will use the DES algorithm.  The name should be the same
-as an available module name; thus it should be in lowercase letters.
-The default cipher is IDEA.
+There are two command-line options: \programopt{-c} and
+\programopt{-k}.  Both of them require an argument.  \code{-c
+\var{ciphername}} uses the given encryption algorithm
+\var{ciphername}; for example, \code{-c des} will use the DES
+algorithm.  The name should be the same as an available module name;
+thus it should be in lowercase letters.  The default cipher is IDEA.
 
-\code{-k \var{key}} can be used to set the encryption key to be
-used.  Note that on a multiuser Unix system, the \code{ps} command can
-be used to view the arguments of commands executed by other users, so
+\code{-k \var{key}} can be used to set the encryption key to be used.
+Note that on a multiuser Unix system, the \code{ps} command can be
+used to view the arguments of commands executed by other users, so
 this is insecure; if you're the only user (say, on your home computer
 running Linux) you don't have to worry about this.  If no key is set
 on the command line, \file{cipher} will prompt the user to input a key
 on standard input.
+
 
 \subsubsection{Technical Details}
 
@@ -1150,9 +1120,9 @@ buffering is done.  Therefore, don't encrypt 20-megabyte files unless
 you're willing to face the consequences of a 20-megabyte process.
 
 Areas for improvements to \file{cipher} are: cryptographically secure
-generation of random data
-for padding, key entry, and buffering of file
-input.
+generation of random data for padding, key entry, and buffering of
+file input.
+
 
 \subsection{Demo 2: \file{secimp} and \file{sign}}
 
@@ -1177,141 +1147,126 @@ execution environment using \file{rexec.py}, you could place
 \code{secimport()} in the restricted environment's namespace as the
 default import function.
 
-\section{Extending the Toolkit}
-XXX this section is obsolete and needs to be updated.
 
-Preserving the a common interface for cryptographic routines is a
-good idea.  This chapter
-explains how to interface your own routines to the Toolkit.
+%======================================================================
+\section{Extending the Toolkit}
+
+Preserving the a common interface for cryptographic routines is a good
+idea.  This chapter explains how to write new modules for the Toolkit.
 
 The basic process is as follows:
 \begin{enumerate}
-\item  Modify the default definition of a C structure to include
-whatever instance data your algorithm requires.
-\item  Write 3 or 4 standard routines.  Their names and parameters are
-specified in the following subsections.
-\item  Modify \file{buildkit} to contain an entry for your new
-algorithm.  Then run \file{buildkit} to rebuild all the source files. 
+
+\item Add a new \file{.c} file containing an implementation of the new
+algorithm.  
+This file must define 3 or 4 standard functions,
+a few constants, and a C \code{struct} encapsulating the state variables required by the algorithm.
+
+\item  Add the new algorithm to \file{setup.py}.
+
 \item  Send a copy of the code to me, if you like; code for new
 algorithms will be gratefully accepted.
 \end{enumerate}
 
-\subsection{Creating a Custom Object}
-In the C code for the interpreter, Python objects are defined as a
-structure.  The default structure is the following:
+
+\subsection{Adding Hash Algorithms}
+
+The required constant definitions are as follows:
+
 \begin{verbatim}
-typedef struct 
-{
- PCTObject_HEAD
-} ALGobject;
+#define MODULE_NAME MD2		/* Name of algorithm */
+#define DIGEST_SIZE 16          /* Size of resulting digest in bytes */
 \end{verbatim}
 
+The C structure must be named \ctype{hash_state}:
 
-\code{PCTObject_HEAD} is a preprocessor macro which will contain various
-internal variables used by the interpreter; it must always be the
-first item in the structure definition, and must not be followed by a
-semicolon.  Following it, you can put whatever instance variables you
-require.  Data that does not depend on the instance or key, such as a
-static lookup table, need not be encapsulated inside objects; instead,
-it can be defined as a variable interior to the module.
-
-As an example, for IDEA encryption, a schedule of encryption and
-decryption data has to be maintained, resulting in the following
-definition:
 \begin{verbatim}
-typedef struct 
-{
- PCTObject_HEAD
- int EK[6][9], DK[6][9];
-} IDEAobject;
+typedef struct {
+     ... whatever state variables you need ...
+} hash_state;
 \end{verbatim}
 
-
-\subsection{Standard Routines}
-
-The interface to Python is implemented in the files ending in
-\samp{.in}, so \file{hash.in} contains the basic code for modules
-containing hash functions, for example.  \file{buildkit}, a Python
-script, reads the configuration file and generates source code by
-interweaving the interface files and the implementation file.
-
-If your algorithm is called ALG, the implementation should be in the
-file \file{ALG.c}. This is case-sensitive, as are the following function
-names.  
-
-\subsubsection{Hash functions}
+There are four functions that need to be written: to initialize the
+algorithm's state, to hash a string into the algorithm's state, to get
+a digest from the current state, and to copy a state.
 
 \begin{itemize}
-\item \code{void \var{ALG}init(\var{ALG}object *self);}
-\item \code{void \var{ALG}update(\var{ALG}object *self, char *buffer, int length);}
-\item \code{PyObject *\var{ALG}digest(\var{ALG}object *self);}
-\item \code{void \var{ALG}copy(\var{ALG}object *source, \var{ALG}object *dest);}
+  \item \code{void hash_init(hash_state *self);}
+  \item \code{void hash_update(hash_state *self, unsigned char *buffer, int length);}
+  \item \code{PyObject *hash_digest(hash_state *self);}
+  \item \code{void hash_copy(hash_state *source, hash_state *dest);}
 \end{itemize}
 
-\begin{funcdesc}{void ALGinit}{\rm ALGobject *\var{self}}
-This function should initialize the hashing object, setting 
-state variables to their expected initial state.
-\end{funcdesc}
+Put \code{\#include "hash_template.c"} at the end of the file to
+include the actual implementation of the module.
 
-\begin{funcdesc}{void ALGupdate}{\rm ALGobject *\var{self}, 
-char *\var{buffer}, int \var{length}}
-This function should perform a hash on the region pointed to by
-\var{buffer}, which will contain \var{length} bytes.  The contents of
-the object pointed to by \var{self} should be updated appropriately. 
-\end{funcdesc}
 
-\begin{funcdesc}{void ALGdigest}{\rm ALGobject *\var{self}}
-This function returns a string containing the value of the hash
-function.  The object should not be changed in any way by this
-function.  Some hash functions require some computation to be
-performed before returning a value; for example, the number of bytes
-may be hashed into the final value.  If this is the case for your hash
-function, you must make a copy of the object's data, perform the final
-computation on that copy, and return the result.
-\end{funcdesc}
+\subsection{Adding Block Encryption Algorithms}
 
-Results are returned by calling a Python function,
-\code{PyString_FromStringAndSize(char *\var{string}, int \var{length})}.  This
-function returns a string object which should be returned to the
-caller.  So, the last line of the \code{ALGdigest}
-function might be:
+The required constant definitions are as follows:
+
 \begin{verbatim}
-  return PyString_FromStringAndSize(digest, 16);
+#define MODULE_NAME AES	       /* Name of algorithm */
+#define BLOCK_SIZE 16          /* Size of encryption block */
+#define KEY_SIZE 0             /* Size of key in bytes (0 if not fixed size) */
 \end{verbatim}
 
-\begin{funcdesc}{void ALGcopy}{\rm ALGobject *\var{source}, ALGobject *\var{dest}}
-Given the source and destination objects, the state variables of the
-\var{source} object should be copied to the \var{dest} object; the
-source object should not be altered in any way by the operation.
-\end{funcdesc}
+The C structure must be named \ctype{block_state}:
 
-\subsubsection{Block ciphers}
+\begin{verbatim}
+typedef struct {
+     ... whatever state variables you need ...
+} block_state;
+\end{verbatim}
+
+There are three functions that need to be written: to initialize the
+algorithm's state, and to encrypt and decrypt a single block.
+
 \begin{itemize}
-\item \code{void ALGinit(ALGobject *\var{self}, unsigned char *\var{key}, int \var{length});}
-\item \code{PyObject *ALGencrypt(ALGobject *\var{self}, unsigned char *\var{block});}
-\item \code{PyObject *ALGdecrypt(ALGobject *\var{self}, unsigned char *\var{block});}
+  \item \code{void block_init(block_state *self, unsigned char *key,
+                int keylen);}
+  \item \code{void block_encrypt(block_state *self, unsigned char *in, 
+               unsigned char *out);}
+  \item \code{void block_decrypt(block_state *self, unsigned char *in, 
+               unsigned char *out);}
 \end{itemize}
 
-\begin{funcdesc}{void ALGinit}{\rm ALGobject *\var{self}, unsigned char *\var{key}, int \var{length}}
-This function initializes a block cipher object to encrypt and decrypt
-with \var{key}.  If the cipher requires a fixed-length key, then the
-buffer pointed to by \var{key} will always of that length, and the
-value of \var{length} will be a random value that should be ignored.
-If the algorithm accepts a variable-length key, then \var{length} will
-be nonzero, and will contain the size of the key.
-\end{funcdesc}
+Put \code{\#include "block_template.c"} at the end of the file to
+include the actual implementation of the module.
 
-\begin{funcdesc}{void ALGencrypt}{\rm ALGobject *\var{self}, unsigned char *\var{block}}
-This function should encrypt the data pointed to by \var{block}, using
-the key-dependent data contained in \var{self}.  Only ECB mode needs
-to be implemented; \code{block.in} takes care of the other
-ciphering modes.
-\end{funcdesc}
 
-\begin{funcdesc}{void ALGdecrypt}{\rm ALGobject *\var{self}, unsigned char *\var{block}}
-This function should decrypt the data pointed to by \var{block}, using
-the key-dependent data contained in \var{self}.
-\end{funcdesc}
+\subsection{Adding Stream Encryption Algorithms}
+
+The required constant definitions are as follows:
+
+\begin{verbatim}
+#define MODULE_NAME ARC4       /* Name of algorithm */
+#define BLOCK_SIZE 1           /* Will always be 1 for a stream cipher */
+#define KEY_SIZE 0             /* Size of key in bytes (0 if not fixed size) */
+\end{verbatim}
+
+The C structure must be named \ctype{stream_state}:
+
+\begin{verbatim}
+typedef struct {
+     ... whatever state variables you need ...
+} stream_state;
+\end{verbatim}
+
+There are three functions that need to be written: to initialize the
+algorithm's state, and to encrypt and decrypt a single block.
+
+\begin{itemize}
+  \item \code{void stream_init(stream_state *self, unsigned char *key,
+                int keylen);}
+  \item \code{void stream_encrypt(stream_state *self, unsigned char *block, 
+               int length);}
+  \item \code{void stream_decrypt(stream_state *self, unsigned char *block, 
+               int length);}
+\end{itemize}
+
+Put \code{\#include "stream_template.c"} at the end of the file to
+include the actual implementation of the module.
 
 
 \end{document}
