@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_hashes.py,v 1.2 2003-02-28 15:23:59 akuchling Exp $"
+__revision__ = "$Id: test_hashes.py,v 1.3 2003-12-19 14:24:25 akuchling Exp $"
 
 import time, string, binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -11,7 +11,7 @@ from Crypto.Hash import *
 import testdata
 
 tested_modules = [ "Crypto.Hash.MD2", "Crypto.Hash.MD4", "Crypto.Hash.MD5",
-                   "Crypto.Hash.RIPEMD", "Crypto.Hash.SHA"]
+                   "Crypto.Hash.RIPEMD", "Crypto.Hash.SHA", "Crypto.Hash.SHA256"]
 
 class HashTest (TestScenario):
 
@@ -75,6 +75,11 @@ class HashTest (TestScenario):
         "SHA module"
         self.run_test_suite(SHA, testdata.sha)
         self.benchmark(SHA)
+
+    def check_sha256 (self):
+        "SHA256 module"
+        self.run_test_suite(SHA256,testdata.sha256)
+        self.benchmark(SHA256)
 
 # class HashTest
 

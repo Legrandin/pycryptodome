@@ -1,4 +1,14 @@
 
+1.9alpha7
+=========
+
+	* Added SHA256 module contributed by Jeethu Rao, with test data
+	  from Taylor Boon.
+
+	* Fixed AES.c compilation problems with Borland C.  
+	  (Contributed by Jeethu Rao.)
+	
+	
 1.9alpha6
 =========
 

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.26 2003-04-07 16:09:41 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.27 2003-12-19 14:24:25 akuchling Exp $"
 
 from distutils import core
 from distutils.core import Extension
@@ -71,6 +71,9 @@ class PCTBuildExt (build_ext):
                       include_dirs=['src/'],
                       sources=["src/RIPEMD.c"],
                       libraries=HTONS_LIBS),
+            Extension("Crypto.Hash.SHA256",
+                      include_dirs=['src/'],
+                      sources=["src/SHA256.c"]),
 
             # Block encryption algorithms
             Extension("Crypto.Cipher.AES",
