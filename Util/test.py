@@ -496,6 +496,28 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			    if verbose: print hex(ord(i)),
 			if verbose: print
 
+                for entry in Crypto.Util.testdata.aes_modes:
+                    mode, key, plain, cipher, kw = entry
+		    key=hex2str(key)
+		    plain=hex2str(plain)
+		    cipher=hex2str(cipher)
+		    obj=ciph.new(key, mode, **kw)
+		    obj2=ciph.new(key, mode, **kw)
+		    ciphertext=obj.encrypt(plain)
+		    if (ciphertext!=cipher):
+			die('AES encrypt failed on entry '+`entry`)
+			for i in ciphertext: 
+			    if verbose: print hex(ord(i)),
+			if verbose: print
+                    
+                    plain2=obj2.decrypt(ciphertext)
+                    if plain2!=plain:
+			die('AES decrypt failed on entry '+`entry`)
+			for i in plain2: 
+			    if verbose: print hex(ord(i)),
+			if verbose: print
+                        
+
     if 'arc2' in args:
         ciph=exerciseBlockCipher('ARC2', verbose)	    # Alleged RC2
 	if (ciph!=None):

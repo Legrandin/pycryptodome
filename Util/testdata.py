@@ -372,3 +372,155 @@ aes = [# 128-bit key
         '00112233445566778899AABBCCDDEEFF',
         '8EA2B7CA516745BFEAFC49904B496089'),
       ]
+
+# Test data for AES modes, from NIST SP800-38A
+from Crypto.Cipher import AES
+
+counter_blocks = ['\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff',
+                  '\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xff\x00',
+                  '\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xff\x01',
+                  '\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xff\x02'
+                  ]
+
+
+class ctr:
+    def __init__ (self):
+        self.index = 0
+        
+    def __call__ (self):
+        block = counter_blocks[self.index]
+        self.index = (self.index+1) % len(counter_blocks)
+        return block
+    
+aes_modes = [
+    (AES.MODE_CBC,
+     '2b7e151628aed2a6abf7158809cf4f3c',
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('7649abac8119b246cee98e9b12e9197d'
+      '5086cb9b507219ee95db113a917678b2'
+      '73bed6b8e3c1743b7116e69e22229516'
+      '3ff1caa1681fac09120eca307586e1a7'
+      ),
+     {'IV':'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'} ),
+    (AES.MODE_CBC,
+     '8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b',
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('4f021db243bc633d7178183a9fa071e8'
+      'b4d9ada9ad7dedf4e5e738763f69145a'
+      '571b242012fb7ae07fa9baac3df102e0'
+      '08b0e27988598881d920a9e64f5615cd'
+      ),
+     {'IV':'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'} ),
+    (AES.MODE_CBC,
+     ('603deb1015ca71be2b73aef0857d7781'
+      '1f352c073b6108d72d9810a30914dff4'
+      ),
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('f58c4c04d6e5f1ba779eabfb5f7bfbd6'
+      '9cfc4e967edb808d679f777bc6702c7d'
+      '39f23369a9d9bacfa530e26304231461'
+      'b2eb05e2c39be9fcda6c19078c6a9d1b'
+      ),
+     {'IV':'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'} ),
+
+    (AES.MODE_OFB,
+     ('2b7e151628aed2a6abf7158809cf4f3c'
+      ),
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('3b3fd92eb72dad20333449f8e83cfb4a'
+      '7789508d16918f03f53c52dac54ed825'
+      '9740051e9c5fecf64344f7a82260edcc'
+      '304c6528f659c77866a510d9c1d6ae5e'
+      ),
+     {'IV':'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'} ),
+    (AES.MODE_OFB,
+     ('8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b'
+      ),
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('cdc80d6fddf18cab34c25909c99a4174'
+      'fcc28b8d4c63837c09e81700c1100401'
+      '8d9a9aeac0f6596f559c6d4daf59a5f2'
+      '6d9f200857ca6c3e9cac524bd9acc92a'
+      ),
+     {'IV':'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'} ),
+    (AES.MODE_OFB,
+     ('603deb1015ca71be2b73aef0857d7781'
+      '1f352c073b6108d72d9810a30914dff4'
+      ),
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('dc7e84bfda79164b7ecd8486985d3860'
+      '4febdc6740d20b3ac88f6ad82a4fb08d'
+      '71ab47a086e86eedf39d1c5bba97c408'
+      '0126141d67f37be8538f5a8be740e484'
+      ),
+     {'IV':'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'} ),
+
+    (AES.MODE_CTR,
+     ('2b7e151628aed2a6abf7158809cf4f3c'
+      ),
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('874d6191b620e3261bef6864990db6ce'
+      '9806f66b7970fdff8617187bb9fffdff'
+      '5ae4df3edbd5d35e5b4f09020db03eab'
+      '1e031dda2fbe03d1792170a0f3009cee'
+      ),
+     {'counter':ctr()} ),
+    (AES.MODE_CTR,
+     ('8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b'
+      ),
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('1abc932417521ca24f2b0459fe7e6e0b'
+      '090339ec0aa6faefd5ccc2c6f4ce8e94'
+      '1e36b26bd1ebc670d1bd1d665620abf7'
+      '4f78a7f6d29809585a97daec58c6b050'
+      ),
+     {'counter':ctr()} ),
+    (AES.MODE_CTR,
+     ('603deb1015ca71be2b73aef0857d7781'
+      '1f352c073b6108d72d9810a30914dff4'
+      ),
+     ('6bc1bee22e409f96e93d7e117393172a'
+      'ae2d8a571e03ac9c9eb76fac45af8e51'
+      '30c81c46a35ce411e5fbc1191a0a52ef'
+      'f69f2445df4f9b17ad2b417be66c3710'
+      ),
+     ('601ec313775789a5b7a7f504bbf3d228'
+      'f443e3ca4d62b59aca84e990cacaf5c5'
+      '2b0930daa23de94ce87017ba2d84988d'
+      'dfc9c58db67aada613c2dd08457941a6'
+      ),
+     {'counter':ctr()} ),
+
+    ]
