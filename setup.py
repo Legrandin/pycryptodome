@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.20 2003-02-28 16:38:29 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.21 2003-02-28 16:40:46 akuchling Exp $"
 
 from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
@@ -119,12 +119,10 @@ class PCTBuildExt (build_ext):
             exts.append(Extension("Crypto.PublicKey._rsa",
                                   include_dirs=['src/'],
                                   libraries=['gmp'],
-                                  extra_compile_args=['-pedantic'],
                                   sources=["src/_rsa.c"]))
             exts.append(Extension("Crypto.PublicKey._dsa",
                                   include_dirs=['src/'],
                                   libraries=['gmp'],
-                                  extra_compile_args=['-pedantic'],
                                   sources=["src/_dsa.c"]))
         self.extensions += exts
 
