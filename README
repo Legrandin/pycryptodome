@@ -20,7 +20,7 @@ An example usage of the MD5 module is:
 An example use of an encryption algorithm (AES, in this case) is:
 
 >>> from Crypto.Cipher import AES
->>> obj=AES.new('This is a key456', AES.ECB)
+>>> obj=AES.new('This is a key456', AES.MODE_ECB)
 >>> message="The answer is no"
 >>> ciphertext=obj.encrypt(message)
 >>> ciphertext

@@ -1,12 +1,21 @@
 
+* Add segment_size to CFB mode
+
+* Add test cases for general CFB mode
+
 * Restore RC5, which needs additional keyword arguments
+
+* Proofread all the error messages and improve them
 
 * Replace Hash/HMAC.py with the hmac module in the standard library
 
 * Look at the C code and modernize it to the current memory APIs,
-  class-based exceptions, etc
+  class-based exceptions, etc.
 
-* Change API to reduce amount of memory copying
+For 1.9alpha2:
+* Update documentation
+
+* Change API to reduce amount of memory-to-memory copying
 
 * Document the functions and macros for adding a new algorithm
     Hash functions:
