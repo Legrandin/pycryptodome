@@ -9,7 +9,7 @@ setup(name="pycrypto",
       url="http://pycrypto.sourceforge.net",
       
       packages = ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
-                  "Crypto.PublicKey"],
+                  "Crypto.Protocol", "Crypto.PublicKey"],
       package_dir = { "Crypto":"." },
       ext_modules = [
                      # Hash functions
