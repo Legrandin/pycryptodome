@@ -38,11 +38,11 @@ typedef unsigned char uint8;
 
 /* this struct probably belongs in cast.h */
 typedef struct {
-    /* masking and rotate keys */
-    uint32 Km[16];
-    uint8 Kr[16];
-    /* number of rounds (depends on original unpadded keylength) */
-    int rounds;
+	/* masking and rotate keys */
+	uint32 Km[16];
+	uint8 Kr[16];
+	/* number of rounds (depends on original unpadded keylength) */
+	int rounds;
 } block_state;
 
 /* these are the eight 32*256 S-boxes */
@@ -54,88 +54,88 @@ typedef struct {
 /* this is the round function f(D, Km, Kr) */
 static uint32 castfunc(uint32 D, uint32 Kmi, uint8 Kri, int type)
 {
-    uint32 I, f;
-    short Ia, Ib, Ic, Id;
+	uint32 I, f;
+	short Ia, Ib, Ic, Id;
     
-    switch(type) {
-      case 0:
-	I = (Kmi + D) ;
-	break;
-      case 1:
-	I = (Kmi ^ D) ;
-	break;
-      default:
-      case 2:
-	I = (Kmi - D) ;
-	break;
-    }
+	switch(type) {
+	case 0:
+		I = (Kmi + D) ;
+		break;
+	case 1:
+		I = (Kmi ^ D) ;
+		break;
+	default:
+	case 2:
+		I = (Kmi - D) ;
+		break;
+	}
     
-    I &= 0xFFFFFFFF;
-    I = ( I << Kri ) | ( I >> ( 32-Kri ) );
-    Ia = ( I >> 24 ) & 0xFF;
-    Ib = ( I >> 16 ) & 0xFF;
-    Ic = ( I >>  8 ) & 0xFF;
-    Id = ( I       ) & 0xFF;
+	I &= 0xFFFFFFFF;
+	I = ( I << Kri ) | ( I >> ( 32-Kri ) );
+	Ia = ( I >> 24 ) & 0xFF;
+	Ib = ( I >> 16 ) & 0xFF;
+	Ic = ( I >>  8 ) & 0xFF;
+	Id = ( I       ) & 0xFF;
     
-    switch(type) {
-      case 0:
-	f = ((S1[Ia] ^ S2[Ib]) - S3[Ic]) + S4[Id];
-	break;
-      case 1:
-	f = ((S1[Ia] - S2[Ib]) + S3[Ic]) ^ S4[Id];
-	break;
-      default:
-      case 2:
-	f = ((S1[Ia] + S2[Ib]) ^ S3[Ic]) - S4[Id];
-	break;
-    }
+	switch(type) {
+	case 0:
+		f = ((S1[Ia] ^ S2[Ib]) - S3[Ic]) + S4[Id];
+		break;
+	case 1:
+		f = ((S1[Ia] - S2[Ib]) + S3[Ic]) ^ S4[Id];
+		break;
+	default:
+	case 2:
+		f = ((S1[Ia] + S2[Ib]) ^ S3[Ic]) - S4[Id];
+		break;
+	}
 
-    return f;
+	return f;
 }
 
 /* encrypts/decrypts one block of data according to the key schedule
    pointed to by `key'. Encrypts if decrypt=0, otherwise decrypts. */
 static void castcrypt(block_state *key, uint8 *block, int decrypt)
 {
-    uint32 L, R, tmp, f;
-    uint32 Kmi;
-    uint8  Kri;
-    short functype, round;
+	uint32 L, R, tmp, f;
+	uint32 Kmi;
+	uint8  Kri;
+	short functype, round;
     
-    L = fetch(block, 0);
-    R = fetch(block, 4);
+	L = fetch(block, 0);
+	R = fetch(block, 4);
     
 /*  printf("L0 = %08x R0 = %08x\n", L, R); */
 
-    for(round = 0; round < key->rounds; round ++) {
+	for(round = 0; round < key->rounds; round ++) {
 	
-	if (!decrypt) {
-	    Kmi = key->Km[round];
-	    Kri = key->Kr[round];
-	    functype = round % 3;
-	} else {
-	    Kmi = key->Km[(key->rounds) - round - 1];
-	    Kri = key->Kr[(key->rounds) - round - 1];
-	    functype = (((key->rounds) - round - 1) % 3);
-	}
+		if (!decrypt) {
+			Kmi = key->Km[round];
+			Kri = key->Kr[round];
+			functype = round % 3;
+		} else {
+			Kmi = key->Km[(key->rounds) - round - 1];
+			Kri = key->Kr[(key->rounds) - round - 1];
+			functype = (((key->rounds) - round - 1) % 3);
+		}
 	
-	f = castfunc(R, Kmi, Kri, functype);
+		f = castfunc(R, Kmi, Kri, functype);
 	
-	tmp = L;
-	L = R;
-	R = tmp ^ f;
+		tmp = L;
+		L = R;
+		R = tmp ^ f;
 
 /*	printf("L%d = %08x R%d = %08x\n", round+1, L, round+1, R); */
-    }
+	}
     
-    block[0] = ( R & 0xFF000000 ) >> 24;
-    block[1] = ( R & 0x00FF0000 ) >> 16;
-    block[2] = ( R & 0x0000FF00 ) >> 8;
-    block[3] = ( R & 0x000000FF );
-    block[4] = ( L & 0xFF000000 ) >> 24;
-    block[5] = ( L & 0x00FF0000 ) >> 16;
-    block[6] = ( L & 0x0000FF00 ) >> 8;
-    block[7] = ( L & 0x000000FF );
+	block[0] = ( R & 0xFF000000 ) >> 24;
+	block[1] = ( R & 0x00FF0000 ) >> 16;
+	block[2] = ( R & 0x0000FF00 ) >> 8;
+	block[3] = ( R & 0x000000FF );
+	block[4] = ( L & 0xFF000000 ) >> 24;
+	block[5] = ( L & 0x00FF0000 ) >> 16;
+	block[6] = ( L & 0x0000FF00 ) >> 8;
+	block[7] = ( L & 0x000000FF );
 }
 
 /* fetch a uint8 from an array of uint32s */
@@ -175,75 +175,75 @@ static void castcrypt(block_state *key, uint8 *block, int decrypt)
    modifies the input key *in as well. */
 static void schedulekeys_half(uint32 *in, uint32 *keys)
 {
-    uint32 x[4], z[4];
+	uint32 x[4], z[4];
     
-    x[0] = in[0];
-    x[1] = in[1];
-    x[2] = in[2];
-    x[3] = in[3];
+	x[0] = in[0];
+	x[1] = in[1];
+	x[2] = in[2];
+	x[3] = in[3];
     
-    zxround();
-    Kround(keys, 0, z,
-	    8,  9, 7, 6,  2,
-	   10, 11, 5, 4,  6,
-	   12, 13, 3, 2,  9,
-	   14, 15, 1, 0, 12);
-    xzround();
-    Kround(keys, 4, x,
-	    3,  2, 12, 13,  8,
-	    1,  0, 14, 15, 13,
-	    7,  6,  8,  9,  3,
-	    5,  4, 10, 11,  7);
-    zxround();
-    Kround(keys, 8, z,
-	    3,  2, 12, 13,  9,
-	    1,  0, 14, 15, 12,
-	    7,  6,  8,  9,  2,
-	    5,  4, 10, 11,  6);
-    xzround();
-    Kround(keys, 12, x,
-	    8,  9, 7, 6,  3,
-	   10, 11, 5, 4,  7,
-	   12, 13, 3, 2,  8,
-	   14, 15, 1, 0, 13);
+	zxround();
+	Kround(keys, 0, z,
+	       8,  9, 7, 6,  2,
+	       10, 11, 5, 4,  6,
+	       12, 13, 3, 2,  9,
+	       14, 15, 1, 0, 12);
+	xzround();
+	Kround(keys, 4, x,
+	       3,  2, 12, 13,  8,
+	       1,  0, 14, 15, 13,
+	       7,  6,  8,  9,  3,
+	       5,  4, 10, 11,  7);
+	zxround();
+	Kround(keys, 8, z,
+	       3,  2, 12, 13,  9,
+	       1,  0, 14, 15, 12,
+	       7,  6,  8,  9,  2,
+	       5,  4, 10, 11,  6);
+	xzround();
+	Kround(keys, 12, x,
+	       8,  9, 7, 6,  3,
+	       10, 11, 5, 4,  7,
+	       12, 13, 3, 2,  8,
+	       14, 15, 1, 0, 13);
 	   
-    in[0] = x[0];
-    in[1] = x[1];
-    in[2] = x[2];
-    in[3] = x[3];
+	in[0] = x[0];
+	in[1] = x[1];
+	in[2] = x[2];
+	in[3] = x[3];
 }
 
 /* generates a key schedule from an input key */
 static void castschedulekeys(block_state *schedule, uint8 *key, int keybytes)
 {
-    uint32 x[4];
-    uint8  paddedkey[16];
-    uint32 Kr_wide[16];
-    int i;
+	uint32 x[4];
+	uint8  paddedkey[16];
+	uint32 Kr_wide[16];
+	int i;
     
-    for(i = 0; i < keybytes; i++)
-	paddedkey[i] = key[i];
-    for(     ; i < 16      ; i++)
-	paddedkey[i] = 0;
+	for(i = 0; i < keybytes; i++)
+		paddedkey[i] = key[i];
+	for(     ; i < 16      ; i++)
+		paddedkey[i] = 0;
     
-    if (keybytes <= 10)
-	schedule->rounds = 12;
-    else
-	schedule->rounds = 16;
+	if (keybytes <= 10)
+		schedule->rounds = 12;
+	else
+		schedule->rounds = 16;
     
-    x[0] = fetch(paddedkey, 0);
-    x[1] = fetch(paddedkey, 4);
-    x[2] = fetch(paddedkey, 8);
-    x[3] = fetch(paddedkey, 12);
+	x[0] = fetch(paddedkey, 0);
+	x[1] = fetch(paddedkey, 4);
+	x[2] = fetch(paddedkey, 8);
+	x[3] = fetch(paddedkey, 12);
     
-    schedulekeys_half(x, schedule->Km);
-    schedulekeys_half(x, Kr_wide);
+	schedulekeys_half(x, schedule->Km);
+	schedulekeys_half(x, Kr_wide);
     
-    for(i = 0; i < 16; i ++) {
-	/* The Kr[] subkeys are used for 32-bit circular shifts,
-	   so we only need to keep them modulo 32 */
-	schedule->Kr[i] = (uint8)(Kr_wide[i] & 0x1F);
-    }
+	for(i = 0; i < 16; i ++) {
+		/* The Kr[] subkeys are used for 32-bit circular shifts,
+		   so we only need to keep them modulo 32 */
+		schedule->Kr[i] = (uint8)(Kr_wide[i] & 0x1F);
+	}
 }
 
 #ifdef TEST
@@ -257,51 +257,51 @@ static void castschedulekeys(block_state *schedule, uint8 *key, int keybytes)
 static block_state sched;
 
 void encrypt(key, keylen, in, out)
-     uint8 *key;
-     int keylen;
-     uint8 *in, *out;
+	uint8 *key;
+	int keylen;
+	uint8 *in, *out;
 {
-    int i;
-    uint8 k[16];
+	int i;
+	uint8 k[16];
     
-    castschedulekeys(&sched, key, keylen);
+	castschedulekeys(&sched, key, keylen);
     
-    for(i = 0; i < 8; i++)
-	out[i] = in[i];
-    castcrypt(&sched, out, 0);
+	for(i = 0; i < 8; i++)
+		out[i] = in[i];
+	castcrypt(&sched, out, 0);
 }
 
 void tst(key, keylen, data, result)
-     uint8 *key;
-     int keylen;
-     uint8 *data, *result;
+	uint8 *key;
+	int keylen;
+	uint8 *data, *result;
 {
-    uint8 d[8];
-    int i;
+	uint8 d[8];
+	int i;
     
-    encrypt(key, keylen, data, d);
+	encrypt(key, keylen, data, d);
     
-    for(i = 0; i < 8; i++)
-	if (d[i] != result[i])
-	    break;
-    
-    if (i == 8) {
-	printf("-- test ok (encrypt)\n");
-    } else {
 	for(i = 0; i < 8; i++)
-	    printf(" %02x", d[i]);
-	printf("   (computed)\n");
-	for(i = 0; i < 8; i++)
-	    printf(" %02x", result[i]);
-	printf("   (expected)\n");
-    }
+		if (d[i] != result[i])
+			break;
     
-    /* uses key schedule already set up */
-    castcrypt(&sched, d, 1);
-    if (bcmp(d, data, 8))
-	printf("   test FAILED (decrypt)\n");
-    else
-	printf("   test ok (decrypt)\n");
+	if (i == 8) {
+		printf("-- test ok (encrypt)\n");
+	} else {
+		for(i = 0; i < 8; i++)
+			printf(" %02x", d[i]);
+		printf("   (computed)\n");
+		for(i = 0; i < 8; i++)
+			printf(" %02x", result[i]);
+		printf("   (expected)\n");
+	}
+    
+	/* uses key schedule already set up */
+	castcrypt(&sched, d, 1);
+	if (bcmp(d, data, 8))
+		printf("   test FAILED (decrypt)\n");
+	else
+		printf("   test ok (decrypt)\n");
     
 }
 
@@ -323,76 +323,76 @@ uint8 bfinal[16] = { 0xB2, 0xC9, 0x5E, 0xB0, 0x0C, 0x31, 0xAD, 0x71,
 
 main()
 {
-    /* Appendix B.1 : Single Plaintext-Key-Ciphertext Sets */
-    tst(key, 16, data, out1);
-    tst(key, 10, data, out2);
-    tst(key,  5, data, out3);
+	/* Appendix B.1 : Single Plaintext-Key-Ciphertext Sets */
+	tst(key, 16, data, out1);
+	tst(key, 10, data, out2);
+	tst(key,  5, data, out3);
 
     /* Appendix B.2 : Full Maintenance Test */
-    {
-	uint8 abuf[16];
-	uint8 bbuf[16];
-	int i;
+	{
+		uint8 abuf[16];
+		uint8 bbuf[16];
+		int i;
 
-	bcopy(key, abuf, 16);
-	bcopy(key, bbuf, 16);
+		bcopy(key, abuf, 16);
+		bcopy(key, bbuf, 16);
 
-	printf("\nrunning full maintenance test...\n");
+		printf("\nrunning full maintenance test...\n");
 
-	for(i = 0; i < 1000000; i++) {
-	    castschedulekeys(&sched, bbuf, 16);
-	    castcrypt(&sched, abuf, 0);
-	    castcrypt(&sched, abuf+8, 0);
+		for(i = 0; i < 1000000; i++) {
+			castschedulekeys(&sched, bbuf, 16);
+			castcrypt(&sched, abuf, 0);
+			castcrypt(&sched, abuf+8, 0);
 
-	    castschedulekeys(&sched, abuf, 16);
-	    castcrypt(&sched, bbuf, 0);
-	    castcrypt(&sched, bbuf+8, 0);
+			castschedulekeys(&sched, abuf, 16);
+			castcrypt(&sched, bbuf, 0);
+			castcrypt(&sched, bbuf+8, 0);
 
-	    if (!(i % 10000)) {
-		fprintf(stdout, "\r%d%%   ", i / 10000);
-		fflush(stdout);
-	    }
+			if (!(i % 10000)) {
+				fprintf(stdout, "\r%d%%   ", i / 10000);
+				fflush(stdout);
+			}
+		}
+
+		printf("\r        \r");
+
+		for(i = 0; i < 16; i ++)
+			if (abuf[i] != afinal[i] || bbuf[i] != bfinal[i])
+				break;
+
+		if(i == 16) {
+			printf("-- full maintenance test ok\n");
+		} else {
+			for(i = 0; i < 16; i++)
+				printf(" %02x", abuf[i]);
+			printf("\n");
+			for(i = 0; i < 16; i++)
+				printf(" %02x", bbuf[i]);
+			printf("\n");
+		}
+
+		printf("running maintenance test in reverse...\n");
+		for(i = 0; i < 1000000; i++) {
+			castschedulekeys(&sched, abuf, 16);
+			castcrypt(&sched, bbuf+8, 1);
+			castcrypt(&sched, bbuf, 1);
+
+			castschedulekeys(&sched, bbuf, 16);
+			castcrypt(&sched, abuf+8, 1);
+			castcrypt(&sched, abuf, 1);
+
+			if (!(i % 10000)) {
+				fprintf(stdout, "\r%d%%   ", i / 10000);
+				fflush(stdout);
+			}
+		}
+
+		printf("\r       \r");
+		if (bcmp(abuf, key, 16) || bcmp(bbuf, key, 16)) 
+			printf("-- reverse maintenance test FAILED\n");
+		else
+			printf("-- reverse maintenance test ok\n");
 	}
-
-	printf("\r        \r");
-
-	for(i = 0; i < 16; i ++)
-	    if (abuf[i] != afinal[i] || bbuf[i] != bfinal[i])
-		break;
-
-	if(i == 16) {
-	    printf("-- full maintenance test ok\n");
-	} else {
-	    for(i = 0; i < 16; i++)
-		printf(" %02x", abuf[i]);
-	    printf("\n");
-	    for(i = 0; i < 16; i++)
-		printf(" %02x", bbuf[i]);
-	    printf("\n");
-	}
-
-	printf("running maintenance test in reverse...\n");
-	for(i = 0; i < 1000000; i++) {
-	    castschedulekeys(&sched, abuf, 16);
-	    castcrypt(&sched, bbuf+8, 1);
-	    castcrypt(&sched, bbuf, 1);
-
-	    castschedulekeys(&sched, bbuf, 16);
-	    castcrypt(&sched, abuf+8, 1);
-	    castcrypt(&sched, abuf, 1);
-
-	    if (!(i % 10000)) {
-		fprintf(stdout, "\r%d%%   ", i / 10000);
-		fflush(stdout);
-	    }
-	}
-
-	printf("\r       \r");
-	if (bcmp(abuf, key, 16) || bcmp(bbuf, key, 16)) 
-	    printf("-- reverse maintenance test FAILED\n");
-	else
-	    printf("-- reverse maintenance test ok\n");
-    }
 }
 
 #endif
@@ -400,37 +400,37 @@ main()
 static void
 block_init(block_state *self, unsigned char *key, int keylength)
 {
-    /* presumably this will optimize out */
-    if (sizeof(uint32) < 4 || sizeof(uint8) != 1) {
-	PyErr_SetString(PyExc_SystemError,
-			"CAST module compiled with bad typedefs!");
-    }
+	/* presumably this will optimize out */
+	if (sizeof(uint32) < 4 || sizeof(uint8) != 1) {
+		PyErr_SetString(PyExc_SystemError,
+				"CAST module compiled with bad typedefs!");
+	}
 
-    /* make sure the key length is within bounds */
-    if (keylength < 5 || keylength > 16) {
-	PyErr_SetString(PyExc_ValueError, "CAST key must be "
-			"at least 5 bytes and no more than 16 bytes long");
-	return;
-    }
+	/* make sure the key length is within bounds */
+	if (keylength < 5 || keylength > 16) {
+		PyErr_SetString(PyExc_ValueError, "CAST key must be "
+				"at least 5 bytes and no more than 16 bytes long");
+		return;
+	}
 
-    /* do the actual key schedule setup */
-    castschedulekeys(self, key, keylength);
+	/* do the actual key schedule setup */
+	castschedulekeys(self, key, keylength);
 }
 
 static void
 block_encrypt(block_state *self, unsigned char *in,
 	      unsigned char *out)
 {
-  memcpy(out, in, 8);
-  castcrypt(self, out, 0);
+	memcpy(out, in, 8);
+	castcrypt(self, out, 0);
 }
 
 static void block_decrypt(block_state *self, 
 			  unsigned char *in,
 			  unsigned char *out)
 {
-  memcpy(out, in, 8);
-  castcrypt(self, out, 1);
+	memcpy(out, in, 8);
+	castcrypt(self, out, 1);
 }
 
 #include "block_template.c"

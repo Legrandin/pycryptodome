@@ -16,37 +16,37 @@
 
 typedef struct 
 {
- unsigned char key[32];
- int keylen, last_pos;
+	unsigned char key[32];
+	int keylen, last_pos;
 } stream_state;
 
 static void
 stream_init(stream_state *self, unsigned char *key, int len)
 {
-  int i;
+	int i;
   
-  if (32 <= len) len=32;
-  self->keylen = len;
-  self->last_pos = 0;
+	if (32 <= len) len=32;
+	self->keylen = len;
+	self->last_pos = 0;
 
-  for(i=0; i<len; i++)
-    {
-      self->key[i] = key[i];
-    }
+	for(i=0; i<len; i++)
+	{
+		self->key[i] = key[i];
+	}
 }
 
 /* Encryption and decryption are symmetric */
 #define stream_decrypt stream_encrypt	
 
 static void stream_encrypt(stream_state *self, unsigned char *block, 
-				  int len)
+			   int len)
 {
-  int i, j = self->last_pos;
-  for(i=0; i<len; i++, j=(j+1) % self->keylen)
-    {
-      block[i] ^= self->key[j];
-    }
-  self->last_pos = j;
+	int i, j = self->last_pos;
+	for(i=0; i<len; i++, j=(j+1) % self->keylen)
+	{
+		block[i] ^= self->key[j];
+	}
+	self->last_pos = j;
 }
 
 #include "stream_template.c"
