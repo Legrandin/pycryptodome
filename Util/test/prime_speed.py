@@ -13,7 +13,7 @@ def randfunc (N):
     return s[:N]
 
 def main ():
-    for i in range(2048, 2049, 128):
+    for i in range(128, 2049, 128):
         s = time.time()
         N = number.getPrime(i, randfunc)
         e = time.time()
