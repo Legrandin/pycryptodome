@@ -25,12 +25,6 @@
 #include "Python.h"
 #include "modsupport.h" 
 
-#ifdef __GNUC__
-#define inline __inline__
-#else
-#define inline
-#endif
-
  /* Cipher operation modes */
 
 #define MODE_ECB 1

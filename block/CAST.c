@@ -52,7 +52,7 @@ typedef struct {
 #define fetch(ptr, base)   (((((( ptr[base]<< 8 ) | ptr[base+1] )<< 8 ) | ptr[base+2] )<< 8 ) | ptr[base+3])
 
 /* this is the round function f(D, Km, Kr) */
-static inline uint32 castfunc(uint32 D, uint32 Kmi, uint8 Kri, int type)
+static uint32 castfunc(uint32 D, uint32 Kmi, uint8 Kri, int type)
 {
     uint32 I, f;
     short Ia, Ib, Ic, Id;

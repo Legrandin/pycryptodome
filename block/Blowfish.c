@@ -477,20 +477,20 @@ static void make_bfkey(unsigned char *key_string, int keylength,
 }
 
 
-static inline void
+static void
 block_encrypt(block_state *self, unsigned char *block)
 {
   crypt_8bytes(block, block, &(self->bfkey), 0);
 }
 
 
-static inline void
+static void
 block_decrypt(block_state *self, unsigned char *block)
 {
   crypt_8bytes(block, block, &(self->bfkey), 1);
 }
 
-static inline void 
+static void 
 block_init(block_state *self, unsigned char *key, int keylength)
 {
  make_bfkey(key, keylength, &(self->bfkey));

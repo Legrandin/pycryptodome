@@ -7,7 +7,12 @@
 	  Eland.)
 
 	* Make test.py automatically add the build/* directory to sys.path.
-	
+
+	* Removed 'inline' declaration from C functions.  Some compilers
+	  don't support it, and Python's pyconfig.h no longer tells you whether
+	  it's supported or not.  After this change, some ciphers got slower,
+	  but others got faster.
+	  
 
 1.9alpha1
 =========

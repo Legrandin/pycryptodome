@@ -24,7 +24,7 @@ typedef struct
  U16 xkey[64];
 } block_state;
 
-static inline void
+static void
 block_encrypt(block_state *self, U8 *block)
 {
   U16 x76, x54, x32, x10;
@@ -68,7 +68,7 @@ block_encrypt(block_state *self, U8 *block)
 }
 
 
-static inline void
+static void
 block_decrypt(block_state *self, U8 *block)
 {
   U16 x76, x54, x32, x10;
@@ -116,7 +116,7 @@ block_decrypt(block_state *self, U8 *block)
 }
 
 
-static inline void 
+static void 
 block_init(block_state *self, U8 *key, int keylength)
 {
   U8 x;

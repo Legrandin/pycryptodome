@@ -65,7 +65,7 @@ mulInv(uint16 x)
     return low16(1 - t1);
 }				/* mukInv */
 
-static inline void
+static void
 block_init(block_state *self, unsigned char *key, int dummy)
 {
     int i, j;
@@ -187,12 +187,12 @@ static void ideaCipher(block_state *self, byte *block, word16 const *key)
 }				/* ideaCipher */
 
 
-static inline void block_encrypt(block_state *self, unsigned char *block)
+static void block_encrypt(block_state *self, unsigned char *block)
 {
   ideaCipher(self, block, self->EK);
 }
 
-static inline void block_decrypt(block_state *self, unsigned char *block)
+static void block_decrypt(block_state *self, unsigned char *block)
 {
   ideaCipher(self, block, self->DK);
 }

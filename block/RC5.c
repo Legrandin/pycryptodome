@@ -40,7 +40,7 @@ typedef struct
   U32 mask;
 } block_state;
 
-static inline void
+static void
 block_init(block_state *self, unsigned char *key, int keylen)
 {
   unsigned int P = 0, Q = 0;
@@ -137,7 +137,7 @@ static void RC5Decipher(block_state *self, unsigned int *Aptr,
     }
 }
 
-static inline void block_encrypt(block_state *self, unsigned char *block)
+static void block_encrypt(block_state *self, unsigned char *block)
 {
   U32 A,B;
   
@@ -172,7 +172,7 @@ static inline void block_encrypt(block_state *self, unsigned char *block)
     }
 }
 
-static inline void block_decrypt(block_state *self, unsigned char *block)
+static void block_decrypt(block_state *self, unsigned char *block)
 {
   U32 A,B;
   

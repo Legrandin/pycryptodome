@@ -20,7 +20,7 @@ typedef struct
  int keylen, last_pos;
 } stream_state;
 
-static inline void
+static void
 stream_init(stream_state *self, unsigned char *key, int len)
 {
   int i;
@@ -38,7 +38,7 @@ stream_init(stream_state *self, unsigned char *key, int len)
 /* Encryption and decryption are symmetric */
 #define stream_decrypt stream_encrypt	
 
-static inline void stream_encrypt(stream_state *self, unsigned char *block, 
+static void stream_encrypt(stream_state *self, unsigned char *block, 
 				  int len)
 {
   int i, j = self->last_pos;

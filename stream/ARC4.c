@@ -23,8 +23,8 @@ typedef struct
 /* Encryption and decryption are symmetric */
 #define stream_decrypt stream_encrypt	
 
-static inline void stream_encrypt(stream_state *self, unsigned char *block, 
-				  int len)
+static void stream_encrypt(stream_state *self, unsigned char *block, 
+			   int len)
 {
   register int i, x=self->x, y=self->y;
 

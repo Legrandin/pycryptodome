@@ -1426,7 +1426,7 @@ void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], in
 
 #endif /* INTERMEDIATE_VALUE_KAT */
 
-static inline void block_init(block_state *state, unsigned char *key,
+static void block_init(block_state *state, unsigned char *key,
 			      int keylen)
 {
   int Nr = 0;
@@ -1446,7 +1446,7 @@ static inline void block_init(block_state *state, unsigned char *key,
   rijndaelKeySetupDec(state->dk, key, keylen*8);
 }
 
-static inline void block_encrypt(block_state *self, u8 *block)
+static void block_encrypt(block_state *self, u8 *block)
 {
 	u8 temp[16];
 
@@ -1454,7 +1454,7 @@ static inline void block_encrypt(block_state *self, u8 *block)
 	memcpy(block, temp, 16);			     
 }
 
-static inline void block_decrypt(block_state *self, u8 *block)
+static void block_decrypt(block_state *self, u8 *block)
 {
 	u8 temp[16];
 

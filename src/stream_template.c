@@ -23,13 +23,6 @@
 #include "Python.h"
 #include "modsupport.h"
 
-#ifdef __GNUC__
-#define inline __inline__
-#else
-#define inline
-#endif
-
-
  /* Endianness testing and definitions */
 #define TestEndianness(variable) {int i=1; variable=PCT_BIG_ENDIAN;\
                                   if (*((char*)&i)==1) variable=PCT_LITTLE_ENDIAN;}

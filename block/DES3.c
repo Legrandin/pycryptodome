@@ -538,7 +538,7 @@ static int des_ecb_encrypt(des_cblock *input, des_cblock *output,
 
 
      
-static inline void block_decrypt(block_state *self, unsigned char *block)
+static void block_decrypt(block_state *self, unsigned char *block)
 {
   des_cblock output, output2;
   
@@ -547,7 +547,7 @@ static inline void block_decrypt(block_state *self, unsigned char *block)
   des_ecb_encrypt(&output2, (des_cblock *)block, self->KeySched1, 0);
 }
 
-static inline void block_encrypt(block_state *self, unsigned char *block)
+static void block_encrypt(block_state *self, unsigned char *block)
 {
   des_cblock output, output2;
   
@@ -655,7 +655,7 @@ static const unsigned char odd_parity[256]={
 224,224,227,227,229,229,230,230,233,233,234,234,236,236,239,239,
 241,241,242,242,244,244,247,247,248,248,251,251,253,253,254,254};
 
-static inline void block_init(block_state *self, unsigned char *key, 
+static void block_init(block_state *self, unsigned char *key, 
 			      int keylength)
 {
   char oddkey[16];
