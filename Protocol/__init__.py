@@ -14,3 +14,4 @@ Crypto.Protocol.Chaffing       Takes a set of authenticated message blocks
 """
 
 __all__ = ['AllOrNothing', 'Chaffing']
+__revision__ = "$Id: __init__.py,v 1.3 2002-07-11 14:31:19 akuchling Exp $"

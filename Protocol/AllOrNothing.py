@@ -17,6 +17,8 @@ http://theory.lcs.mit.edu/~rivest/fusion.pdf
 
 """
 
+__revision__ = "$Id: AllOrNothing.py,v 1.7 2002-07-11 14:31:19 akuchling Exp $"
+
 import operator
 import string
 from Crypto.Util.number import bytes_to_long, long_to_bytes

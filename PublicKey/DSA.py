@@ -11,6 +11,8 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
+__revision__ = "$Id: DSA.py,v 1.4 2002-07-11 14:31:19 akuchling Exp $"
+
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Hash import SHA

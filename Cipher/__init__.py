@@ -28,4 +28,6 @@ __all__ = ['AES', 'ARC2', 'ARC4',
            'XOR'
            ]	
 
+__revision__ = "$Id: __init__.py,v 1.6 2002-07-11 14:31:19 akuchling Exp $"
+
 

@@ -42,6 +42,8 @@ http://theory.lcs.mit.edu/~rivest/chaffing.txt
 
 """
 
+__revision__ = "$Id: Chaffing.py,v 1.6 2002-07-11 14:31:19 akuchling Exp $"
+
 from Crypto.Util.number import bytes_to_long
 
 class Chaff:

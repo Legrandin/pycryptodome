@@ -6,6 +6,8 @@ This is just a copy of the Python 2.2 HMAC module, modified to display
 a warning when it's used on pre-2.2 interpreters.
 """
 
+__revision__ = "$Id: HMAC.py,v 1.4 2002-07-11 14:31:19 akuchling Exp $"
+
 import string, sys, warnings
 if sys.version_info[0:2] < (2,2):
     warnings.warn("No 'hmac' module in standard library with "

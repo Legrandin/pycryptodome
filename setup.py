@@ -1,4 +1,7 @@
 #! /usr/bin/env python
+
+__revision__ = "$Id: setup.py,v 1.15 2002-07-11 14:31:19 akuchling Exp $"
+
 from distutils.core import setup, Extension
 import sys
 

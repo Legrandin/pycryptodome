@@ -13,4 +13,5 @@ Crypto.PublicKey.qNEW     (Signature only)
 """
 
 __all__ = ['RSA', 'DSA', 'ElGamal', 'qNEW']
+__revision__ = "$Id: __init__.py,v 1.3 2002-07-11 14:31:19 akuchling Exp $"
 
