@@ -11,38 +11,56 @@
 #
   
 
-"""randpool.py : Cryptographically strong random number generation.
-
-The implementation here is similar to the one in PGP.  To be
-cryptographically strong, it must be difficult to determine the RNG's
-output, whether in the future or the past.  This is done by using
-encryption algorithms to "stir" the random data.
-
-Entropy is gathered in the same fashion as PGP; the highest-resolution
-clock around is read and the data is added to the random number pool.
-A conservative estimate of the entropy is then kept.
-"""
-
-import time, array
+import time, array, warnings
 
 from Crypto.Util.number import longtobytes
 
 class RandomPool:
+    """randpool.py : Cryptographically strong random number generation.
+
+    The implementation here is similar to the one in PGP.  To be
+    cryptographically strong, it must be difficult to determine the RNG's
+    output, whether in the future or the past.  This is done by using
+    encryption algorithms to "stir" the random data.
+
+    Entropy is gathered in the same fashion as PGP; the highest-resolution
+    clock around is read and the data is added to the random number pool.
+    A conservative estimate of the entropy is then kept.
+
+    Instance Attributes:
+    bits : int
+      Maximum size of pool in bits
+    bytes : int
+      Maximum size of pool in bytes
+    entropy : int
+      Number of bits of entropy in this pool.
+      
+    Methods:
+    addEvent(int) : add an integer and a bit of entropy to the pool
+    getBytes(int) : get N bytes of random data
+    """
+
+    
     def __init__(self, numbytes = 160, cipher=None, hash='SHA'):
         # The cipher argument is vestigial; it was removed from
         # version 1.1 so RandomPool would work even in the limited
         # exportable subset of the code
-
-        if type(hash) == type(''):
+        if cipher is not None:
+            warnings.warn("'cipher' parameter is no longer used")
+            
+        if isinstance(hash, str):
             # ugly hack to force __import__ to give us the end-path module
             hash = __import__('Crypto.Hash.'+hash,
                               None, None, ['new'])
             
-        self.entropy, self._addPos = 0,0
-        self._event1, self._event2 = 0,0
-        self._addPos, self._getPos = 0,hash.digestsize
-        self.bytes, self.hash=numbytes, hash
-        self.bits=self.bytes*8
+        self.entropy = 0
+        self._addPos = 0,0
+        self._event1 = self._event2 = 0
+        self._addPos = 0
+        self._getPos = hash.digest_size
+        self.bytes = numbytes
+        self.hash = hash
+        self.bits = self.bytes*8
         self.__counter = 0
 
         # Construct an array to hold the random pool
@@ -69,13 +87,13 @@ class RandomPool:
         entropy=self.entropy
         self.addEvent(time.time())
 
-        for i in range( self.bytes / self.hash.digestsize):
+        for i in range( self.bytes / self.hash.digest_size):
             h = self.hash.new(self._randpool)
             h.update(str(self.__counter) + str(i) + str(self._addPos) )
             self._addBytes( h.digest() )
             self.__counter = (self.__counter + 1) & 0xFFFFffff
 
-        self._addPos, self._getPos = 0, self.hash.digestsize
+        self._addPos, self._getPos = 0, self.hash.digest_size
         self.addEvent(time.time())
 
         # Paranoia is a Good Thing in cryptographic applications.
@@ -84,11 +102,14 @@ class RandomPool:
         self.entropy=entropy
 
     def getBytes(self, N):
-        "Return num bytes of random data"
+        """getBytes(N:int) : string
+        Return N bytes of random data.
+        """
+        
         s=''
         i, pool = self._getPos, self._randpool
         h=self.hash.new()
-        dsize = self.hash.digestsize
+        dsize = self.hash.digest_size
         num = N
         while num>0:
             h.update( self._randpool[i:i+dsize] )
