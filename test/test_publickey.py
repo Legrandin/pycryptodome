@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.PublicKey.
 #
 
-__revision__ = "$Id: test_publickey.py,v 1.6 2003-04-03 20:36:15 akuchling Exp $"
+__revision__ = "$Id: test_publickey.py,v 1.7 2003-04-04 19:38:28 akuchling Exp $"
 
 import sys, cPickle
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -26,12 +26,16 @@ class PublicKeyTest (TestScenario):
 
     def testkey (self, key, randfunc, verbose=0):
         plaintext="Hello"
+        # Generate maximum-size plaintext
+        maxplain = (key.size() // 8) * '\377'
 
         if key.can_encrypt():
             if verbose: print '  Encryption/decryption test'
             K=number.getPrime(10, randfunc)
             ciphertext=key.encrypt(plaintext, K)
             self.test_val('key.decrypt(ciphertext)', plaintext)
+            ciphertext=key.encrypt(maxplain, K)
+            self.test_val('key.decrypt(ciphertext)', maxplain)
 
         if key.can_sign():
             if verbose: print '  Signature test'
