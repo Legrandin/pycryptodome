@@ -10,9 +10,10 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: ElGamal.py,v 1.8 2003-04-04 15:13:35 akuchling Exp $"
+__revision__ = "$Id: ElGamal.py,v 1.9 2003-04-04 19:44:26 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
+from Crypto.Util import number
 
 class error (Exception):
     pass
@@ -113,9 +114,7 @@ class ElGamalobj(pubkey):
 
     def size(self):
         "Return the maximum number of bits that can be handled by this key."
-        bits, power = 0,1L
-        while (power<self.p): bits, power = bits+1, power<<1
-        return bits-1
+        return number.size(self.p) - 1
 
     def has_private(self):
         """Return a Boolean denoting whether the object contains

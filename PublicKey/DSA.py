@@ -11,9 +11,10 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: DSA.py,v 1.14 2003-04-04 15:13:34 akuchling Exp $"
+__revision__ = "$Id: DSA.py,v 1.15 2003-04-04 19:44:25 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
+from Crypto.Util import number
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Hash import SHA
 
@@ -143,10 +144,7 @@ class DSAobj(pubkey):
 
     def size(self):
         "Return the maximum number of bits that can be handled by this key."
-        bits, power = 0,1L
-        while (power<self.p):
-            bits, power = bits+1, power<<1
-        return bits-1
+        return number.size(self.p) - 1
 
     def has_private(self):
         """Return a Boolean denoting whether the object contains
