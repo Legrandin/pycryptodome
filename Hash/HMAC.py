@@ -2,17 +2,13 @@
 
 Implements the HMAC algorithm as described by RFC 2104.
 
-This is just a copy of the Python 2.2 HMAC module, modified to display
-a warning when it's used on pre-2.2 interpreters.
+This is just a copy of the Python 2.2 HMAC module, modified to work when
+used on versions of Python before 2.2.
 """
 
-__revision__ = "$Id: HMAC.py,v 1.4 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: HMAC.py,v 1.5 2002-07-25 17:19:02 z3p Exp $"
 
-import string, sys, warnings
-if sys.version_info[0:2] < (2,2):
-    warnings.warn("No 'hmac' module in standard library with "
-                  "Python versions before 2.2")
-                  
+import string
 
 def _strxor(s1, s2):
     """Utility method. XOR the two strings s1 and s2 (must have same length).
@@ -43,7 +39,10 @@ class HMAC:
         self.digestmod = digestmod
         self.outer = digestmod.new()
         self.inner = digestmod.new()
-        self.digest_size = digestmod.digest_size
+        try:
+            self.digest_size = digestmod.digest_size
+        except AttributeError:
+            self.digest_size = len(self.outer.digest())
 
         blocksize = 64
         ipad = "\x36" * blocksize
