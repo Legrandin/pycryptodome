@@ -47,10 +47,19 @@ Installation
 ============
 
 The toolkit is written and tested using Python 2.2, though it should
-also work with Python 2.1.  Python 1.5.2 is not supported.  
+also work with Python 2.1.  Python 1.5.2 is not supported, and the
+setup.py script will abort if you run it with 1.5.2.
 
-The modules are packaged using the Distutils.  Simply run "python
-setup.py build" to build the package.
+The modules are packaged using the Distutils, so you can simply run
+"python setup.py build" to build the package, and "python setup.py
+install" to install it.
+
+If the setup.py script crashes with a DistutilsPlatformError
+complaining that the file /usr/lib/python2.2/config/Makefile doesn't
+exist, this means that the files needed for compiling new Python
+modules aren't installed on your system.  Red Hat users often run into
+this because they don't have the python2-devel RPM installed.  The fix
+is to simply install the requisite RPM.
 
 To verify that everything is in order, run "python test.py".  It will
 test all the cryptographic modules, skipping ones that aren't
