@@ -105,5 +105,3 @@ def new(key, msg = None, digestmod = None):
     """
     return HMAC(key, msg, digestmod)
 
-# Import the Python 2.2 standard library module
-from hmac import *
