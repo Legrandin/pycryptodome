@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.22 2003-02-28 16:55:21 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.23 2003-03-07 20:32:47 akuchling Exp $"
 
 from distutils import core
 from distutils.core import Extension
@@ -131,7 +131,7 @@ kw = {'name':"pycrypto",
       'version':"1.9a5",
       'description':"Cryptographic modules for Python.",
       'author':"A.M. Kuchling",
-      'author_email':"akuchlin@mems-exchange.org",
+      'author_email':"amk@amk.ca",
       'url':"http://pycrypto.sourceforge.net",
 
       'cmdclass' : {'build_ext':PCTBuildExt},
