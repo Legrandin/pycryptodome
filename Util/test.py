@@ -129,8 +129,8 @@ def exerciseStreamCipher(cipher, verbose):
     str='1'				# Build 128K of test data
     for i in xrange(0, 17):
         str=str+str
-    if ciph.key_size==0: ciph.key_size=16
-    password = 'password12345678Extra text for password'[0:ciph.key_size]
+    key_size = ciph.key_size or 16
+    password = 'password12345678Extra text for password'[0:key_size]
     
     obj1=ciph.new(password)
     obj2=ciph.new(password)
@@ -483,7 +483,7 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 	    except ImportError:
 		if verbose: print '  Test suite data not available'
 	    else:
-		for entry in Crypto.Util.testdata.XOR:
+		for entry in Crypto.Util.testdata.xor:
 		    key,plain,cipher=entry
 		    key=hex2str(key)
 		    plain=hex2str(plain)
