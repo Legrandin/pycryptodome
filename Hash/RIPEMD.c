@@ -121,7 +121,6 @@ static void hash_init(hash_state *rmdInfo)
    initialization constants
  */
 {  
-  int i=1; 
   MDinit(rmdInfo->digest);
   rmdInfo->countLo = rmdInfo->countHi =rmdInfo->nbytes =  0;
 }
