@@ -19,8 +19,8 @@
 #endif
 
 typedef struct {
-  PyObject_HEAD
-  hash_state st;
+	PyObject_HEAD
+	hash_state st;
 } ALGobject;
 
 staticforward PyTypeObject ALGtype;
@@ -169,9 +169,9 @@ static PyTypeObject ALGtype = {
 /* The single module-level function: new() */
 
 static char ALG_new__doc__[] =
- "Return a new ALG hashing object.  An optional string "
- "argument may be provided; if present, this string will be "
- " automatically hashed."; 
+"Return a new ALG hashing object.  An optional string "
+"argument may be provided; if present, this string will be "
+" automatically hashed."; 
 
 static PyObject *
 ALG_new(PyObject *self, PyObject *args)
@@ -236,5 +236,3 @@ _MODULE_NAME (void)
 		Py_FatalError("can't initialize module " 
                               _MODULE_STRING);
 }
-
-
