@@ -10,7 +10,8 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-from Crypto.Hash import *
+import binascii
+
 from Crypto.Cipher import *
 
 def die(string):
@@ -18,12 +19,6 @@ def die(string):
     print '***ERROR: ', string
 #    sys.exit(0)   # Will default to continuing onward...
 
-def hex2str(str):
-    s=''
-    for i in range(0,len(str),2):
-	s=s+chr(string.atoi(str[i:i+2], 16))
-    return s
-    
 def exerciseBlockCipher(cipher, verbose):
     import string, time
     try:
@@ -39,9 +34,8 @@ def exerciseBlockCipher(cipher, verbose):
     password = 'password12345678Extra text for password'[0:ciph.key_size]
     IV = 'Test IV Test IV Test IV Test'[0:ciph.block_size]
 
-    if verbose: print '  Testing ECB mode with key '+ `password`
+    if verbose: print '  ECB mode:',
     obj=ciph.new(password, ciph.MODE_ECB)
-    if verbose: print '    Sanity check'
     if obj.block_size != ciph.block_size:
         die("Module and cipher object block_size don't match")
         
@@ -61,10 +55,10 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (str!=s2):
 	die('Error in resulting plaintext from ECB mode')
-    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    if verbose: print 256/(end-start), 'K/sec'
     del obj
     
-    if verbose: print '  Testing CFB mode with key ' + `password`+ ' IV "Test IV@"'
+    if verbose: print '  CFB mode:',
     obj1=ciph.new(password, ciph.MODE_CFB, IV)
     obj2=ciph.new(password, ciph.MODE_CFB, IV)
     start=time.time()
@@ -73,10 +67,10 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str[0:65536]):
 	die('Error in resulting plaintext from CFB mode')
-    if verbose: print '    Benchmark for  64K: ', 64/(end-start), 'K/sec'
+    if verbose: print 64/(end-start), 'K/sec'
     del obj1, obj2
     
-    if verbose: print '  Testing CBC mode with key ' + `password`+ ' IV "Test IV@"'
+    if verbose: print '  CBC mode:',
     obj1=ciph.new(password, ciph.MODE_CBC, IV)
     obj2=ciph.new(password, ciph.MODE_CBC, IV)
     start=time.time()
@@ -85,10 +79,10 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
 	die('Error in resulting plaintext from CBC mode')
-    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    if verbose: print 256/(end-start), 'K/sec'
     del obj1, obj2
 
-    if verbose: print '  Testing PGP mode with key ' + `password`+ ' IV "Test IV@"'
+    if verbose: print '  PGP mode:',
     obj1=ciph.new(password, ciph.MODE_PGP, IV)
     obj2=ciph.new(password, ciph.MODE_PGP, IV)
     start=time.time()
@@ -97,10 +91,10 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
 	die('Error in resulting plaintext from PGP mode')
-    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    if verbose: print 256/(end-start), 'K/sec'
     del obj1, obj2
 
-    if verbose: print '  Testing OFB mode with key ' + `password`+ ' IV "Test IV@"'
+    if verbose: print '  OFB mode:', 
     obj1=ciph.new(password, ciph.MODE_OFB, IV)
     obj2=ciph.new(password, ciph.MODE_OFB, IV)
     start=time.time()
@@ -109,13 +103,13 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
 	die('Error in resulting plaintext from OFB mode')
-    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    if verbose: print 256/(end-start), 'K/sec'
     del obj1, obj2
 
     def counter(length=ciph.block_size):
         return length * 'a'
     
-    if verbose: print '  Testing CTR mode with key ' + `password`
+    if verbose: print '  CTR mode:',
     obj1=ciph.new(password, ciph.MODE_CTR, counter=counter)
     obj2=ciph.new(password, ciph.MODE_CTR, counter=counter)
     start=time.time()
@@ -124,7 +118,7 @@ def exerciseBlockCipher(cipher, verbose):
     end=time.time()
     if (plaintext!=str):
 	die('Error in resulting plaintext from CTR mode')
-    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    if verbose: print 256/(end-start), 'K/sec'
     del obj1, obj2
 
     # Test the IV handling
@@ -152,7 +146,7 @@ def exerciseStreamCipher(cipher, verbose):
     except (NameError):
         print cipher, 'module not available'
         return None
-    print cipher + ':'
+    print cipher + ':',
     str='1'				# Build 128K of test data
     for i in xrange(0, 17):
         str=str+str
@@ -161,7 +155,6 @@ def exerciseStreamCipher(cipher, verbose):
     
     obj1=ciph.new(password)
     obj2=ciph.new(password)
-    if verbose: print '  Sanity check'
     if obj1.block_size != ciph.block_size:
         die("Module and cipher object block_size don't match")
     if obj1.key_size != ciph.key_size:
@@ -181,249 +174,14 @@ def exerciseStreamCipher(cipher, verbose):
     s=obj1.encrypt(str)
     str=obj2.decrypt(s)
     end=time.time()
-    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    if verbose: print 256/(end-start), 'K/sec'
     del obj1, obj2
 
     return ciph
 
-def exercisePublicKey(randfunc, module, verbose):
-    N=256				# Key size, measured in bits
-
-    if verbose: print ' Generating', N, 'bit key'
-    import sys
-    import Crypto.Util.number
-    def write(s):
-	import sys ; sys.stdout.write('  '+s)
-    if verbose: key=module.generate(N, randfunc, write)
-    else: key=module.generate(N, randfunc)
-
-    if verbose: 
-        print ' Key data:'
-        for field in key.keydata:
-            print "  ", field, ':', hex(getattr(key,field))
-
-    def testkey(key, randfunc, verbose):
-	plaintext="Hello"
-
-	if key.canencrypt():
-	    if verbose: print '  Encryption/decryption test'
-	    K=Crypto.Util.number.getPrime(10, randfunc)
-	    ciphertext=key.encrypt(plaintext, K)
-	    if key.decrypt(ciphertext)!=plaintext:
-		print '***ERROR: Mismatch decrypting plaintext'
-
-	if key.cansign():
-	    if verbose: print '  Signature test'
-	    K=Crypto.Util.number.getPrime(30, randfunc)
-	    signature=key.sign(plaintext, K)
-	    result=key.verify(plaintext, signature)
-	    if not result:
-		print "***ERROR 1: Sig. verification failed when it should have succeeded"
-	    result=key.verify(plaintext[:-1], signature)
-	    if result:
-		print "***ERROR 2: Sig. verification succeeded when it should have failed"
-	    # Change a single bit in the plaintext
-	    badtext=plaintext[:-3]+chr( 1 ^ ord(plaintext[-3]) )+plaintext[-3:]
-	    result=key.verify(badtext, signature)
-	    if result:
-		print "***ERROR 3: Sig. verification succeeded when it should have failed"
-	    if verbose: print '  Removing private key data'
-	    pubonly=key.publickey()
-	    result=pubonly.verify(plaintext, signature)
-	    if not result:
-		print "***ERROR 4: Sig. verification failed when it should have succeeded"
-
-    if verbose: print " Testing newly generated key"
-    testkey(key, randfunc, verbose)
-    if verbose: print " Testing pickled/unpickled key"
-    import pickle
-    s = pickle.dumps(key) ; key2 = pickle.loads(s)
-    testkey(key2, randfunc, verbose)
-
-    if verbose: print " Testing cPickled key"
-    import cPickle
-    s = cPickle.dumps(key) ; key2 = cPickle.loads(s)
-    testkey(key2, randfunc, verbose)
-    if verbose: print
-
 import string
-def compareHashResult(hash, strg, result):
-    obj=hash.new(strg)
-    s=obj.digest()
-    s1=s
-    temp=0L
-    while (s!=''):
-	temp=temp*256+ord(s[0])
-	s=s[1:]
-
-    # Check that the right hash result is produced
-    if (result!=temp):
-	die(`hash`+' produces incorrect result on string "'+strg+'"')
-	return
-
-    # Check that .hexdigest() produces the same output
-    hex_result = string.lower( hex(result)[2:-1] )
-    if len(hex_result) % 2: hex_result = '0'+hex_result 
-    if hex_result != obj.hexdigest():
-	die(`hash`+' produces incorrect result on string "'+strg+'" using hexdigest()')
-	return 
-
-    # Test second hashing, and copying of a hashing object
-    s2=obj.digest()
-    if s2!=s1: die(`hash`+' produces incorrect result on second hashing')
-    s3=obj.copy().digest()
-    if s3!=s1: die(`hash`+' produces incorrect result after copying')
-
-    del temp, s
-
     
 import Crypto.Util.testdata
-
-def TestHashModules(args=['ripemd', 'md2', 'md4', 'md5', 'sha'], 
-		    verbose=1):
-    import string
-    args=map(string.lower, args)
-
-    teststr='1'				# Build 128K of test data
-    for i in xrange(0, 17):
-	teststr=teststr+teststr
-
-    if 'ripemd' in args:
-	# Test/benchmark RIPEMD hash algorithm ; the test data is taken from
-	# the README in rmd.zip
-	try:
-	    from Crypto.Hash import RIPEMD
-	except ImportError:
-	    print 'RIPEMD module not available'
-	else:
-	    print 'RIPEMD:'
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		if verbose: print '  Verifying against test suite...'
-		for text, hash in Crypto.Util.testdata.ripemd:
-		    compareHashResult(RIPEMD, text, hash)
-		# Compute value for 1 megabyte of a's...
-		obj, astring=RIPEMD.new(), 1000*'a'
-		for i in range(0,1000): obj.update(astring)
-		result=obj.digest()
-		if result!=hex2str("52783243c1697bdbe16d37f97f68f08325dc1528"):
-		    die('RIPEMD produces incorrect result on 1E6*"a"')
-
-		if verbose: print '  Completed'
-		import time
-		obj=RIPEMD.new()
-		start=time.time()
-		s=obj.update(teststr)
-		end=time.time()
-		if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
-		del obj
-		
-    if 'md2' in args:
-	# Test/benchmark MD2 hash algorithm ; the test data is taken from
-	# RFC1319, "The MD2 Message-Digest Algorithm"
-	try:
-	    from Crypto.Hash import MD2
-	except ImportError:
-	    print 'MD2 module not available'
-	else:
-	    print 'MD2:'
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		if verbose: print '  Verifying against test suite...'
-		for text, hash in Crypto.Util.testdata.md2:
-		    compareHashResult(MD2, text, hash)
-		if verbose: print '  Completed'
-		import time
-		obj=MD2.new()
-		start=time.time()
-		s=obj.update(teststr)
-		end=time.time()
-		if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
-		del obj
-
-    if 'md4' in args:
-	# Test/benchmark MD4 hash algorithm ; the test data is taken from
-	# RFC1186B, "The MD4 Message-Digest Algorithm"
-	try:
-	    from Crypto.Hash import MD4
-	except ImportError:
-	    print 'MD4 module not available'
-	else:
-	    print 'MD4:'
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		if verbose: print '  Verifying against test suite...'
-		for text, hash in Crypto.Util.testdata.md4:
-		    compareHashResult(MD4, text, hash)
-		if verbose: print '  Completed'
-		import time
-		obj=MD4.new()
-		start=time.time()
-		s=obj.update(teststr)
-		end=time.time()
-		if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
-		del obj
-
-    if 'md5' in args:
-	# Test/benchmark MD5 hash algorithm ; the test data is taken from
-	# RFC1321, "The MD5 Message-Digest Algorithm"
-	try:
-	    from Crypto.Hash import MD5
-	except ImportError:
-	    print 'MD5 module not available'
-	else:
-	    print 'MD5:'
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		if verbose: print '  Verifying against test suite...'
-		for text, hash in Crypto.Util.testdata.md5:
-		    compareHashResult(MD5, text, hash)
-		if verbose: print '  Completed'
-		import time
-		obj=MD5.new()
-		start=time.time()
-		s=obj.update(teststr)
-		end=time.time()
-		if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
-		del obj
-
-    if 'sha' in args:
-	# Test/benchmark SHA hash algorithm
-	try:
-	    from Crypto.Hash import SHA
-	except ImportError:
-	    print 'SHA module not available'
-	else:
-	    print 'SHA:'
-	    if verbose: print '  Verifying against test suite...'
-	    for text, hash in Crypto.Util.testdata.sha:
-		compareHashResult(SHA, text, hash)
-	    # Compute value for 1 megabyte of a's...
-	    obj, astring=SHA.new(), 1000*'a'
-	    for i in range(0,1000): obj.update(astring)
-	    result=obj.digest()
-	    if result!=hex2str('34AA973CD4C4DAA4F61EEB2BDBAD27316534016F'):
-		die('SHA produces incorrect result on 1E6*"a"')
-	    if verbose: print '  Completed'
-	    obj=SHA.new()
-	    start=time.time()
-	    s=obj.update(teststr)
-	    end=time.time()
-	    if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
-	    del obj, astring
-
 def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
     import sys, string
     args=map(string.lower, args)
@@ -439,14 +197,13 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 	    else:
 		for entry in Crypto.Util.testdata.arc4:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=arc4.new(key)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('ARC4 failed on entry '+`entry`)
-		if verbose: print '  ARC4 test suite completed'
 
     if 'xor' in args:
 	# Test XOR stream cipher
@@ -459,14 +216,13 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 	    else:
 		for entry in Crypto.Util.testdata.xor:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=XOR.new(key)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('XOR failed on entry '+`entry`)
-		if verbose: print '  XOR test suite completed'
 
 
 def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
@@ -485,9 +241,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.aes:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
@@ -498,9 +254,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 
                 for entry in Crypto.Util.testdata.aes_modes:
                     mode, key, plain, cipher, kw = entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key, mode, **kw)
 		    obj2=ciph.new(key, mode, **kw)
 		    ciphertext=obj.encrypt(plain)
@@ -529,9 +285,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.arc2:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
@@ -539,7 +295,6 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			for i in ciphertext: 
 			    if verbose: print hex(ord(i)),
 			print 
-		if verbose: print '  Completed'
 
     if 'blowfish' in args:
         ciph=exerciseBlockCipher('Blowfish',verbose)# Bruce Schneier's Blowfish cipher
@@ -552,9 +307,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.blowfish:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
@@ -562,7 +317,6 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			for i in ciphertext: 
 			    if verbose: print hex(ord(i)),
 			if verbose: print
-		if verbose: print '  Completed'
 
     if 'cast' in args:
         ciph=exerciseBlockCipher('CAST', verbose)        # CAST-128
@@ -575,9 +329,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.cast:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
@@ -603,40 +357,39 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			if verbose: print 'CAST test failed: value of "a" doesn\'t match'
 		    if b!="\xB2\xC9\x5E\xB0\x0C\x31\xAD\x71\x80\xAC\x05\xB8\xE8\x3D\x69\x6E": 
 			if verbose: print 'CAST test failed: value of "b" doesn\'t match'
-		if verbose: print '  Completed'
 
     if 'des' in args:
 	# Test/benchmark DES block cipher
 	des=exerciseBlockCipher('DES', verbose)
 	if (des!=None):
 	    # Various tests taken from the DES library packaged with Kerberos V4
-	    obj=des.new(hex2str('0123456789abcdef'), des.MODE_ECB)
+	    obj=des.new(binascii.a2b_hex('0123456789abcdef'), des.MODE_ECB)
 	    s=obj.encrypt('Now is t')
-	    if (s!=hex2str('3fa40e8a984d4815')):
+	    if (s!=binascii.a2b_hex('3fa40e8a984d4815')):
 		die('DES fails test 1')
-	    obj=des.new(hex2str('08192a3b4c5d6e7f'), des.MODE_ECB)
+	    obj=des.new(binascii.a2b_hex('08192a3b4c5d6e7f'), des.MODE_ECB)
 	    s=obj.encrypt('\000\000\000\000\000\000\000\000')
-	    if (s!=hex2str('25ddac3e96176467')):
+	    if (s!=binascii.a2b_hex('25ddac3e96176467')):
 		die('DES fails test 2')
-	    obj=des.new(hex2str('0123456789abcdef'), des.MODE_CBC,
-			hex2str('1234567890abcdef'))
+	    obj=des.new(binascii.a2b_hex('0123456789abcdef'), des.MODE_CBC,
+			binascii.a2b_hex('1234567890abcdef'))
 	    s=obj.encrypt("Now is the time for all ")
-	    if (s!=hex2str('e5c7cdde872bf27c43e934008c389c0f683788499a7c05f6')):
+	    if (s!=binascii.a2b_hex('e5c7cdde872bf27c43e934008c389c0f683788499a7c05f6')):
 		die('DES fails test 3')
-	    obj=des.new(hex2str('0123456789abcdef'), des.MODE_CBC,
-			hex2str('fedcba9876543210'))
+	    obj=des.new(binascii.a2b_hex('0123456789abcdef'), des.MODE_CBC,
+			binascii.a2b_hex('fedcba9876543210'))
 	    s=obj.encrypt("7654321 Now is the time for \000\000\000\000")
-	    if (s!=hex2str("ccd173ffab2039f4acd8aefddfd8a1eb468e91157888ba681d269397f7fe62b4")):
+	    if (s!=binascii.a2b_hex("ccd173ffab2039f4acd8aefddfd8a1eb468e91157888ba681d269397f7fe62b4")):
 		die('DES fails test 4')
 	    del obj,s
 
 	    # R. Rivest's test: see http://theory.lcs.mit.edu/~rivest/destest.txt
-	    x=hex2str('9474B8E8C73BCA7D')
+	    x=binascii.a2b_hex('9474B8E8C73BCA7D')
 	    for i in range(0, 16):
 		obj=des.new(x, des.MODE_ECB)
 		if (i & 1): x=obj.decrypt(x)
 		else: x=obj.encrypt(x)
-	    if x!=hex2str('1B1A2DDB4C642438'):
+	    if x!=binascii.a2b_hex('1B1A2DDB4C642438'):
 		die("DES fails Rivest's test")
 
 	    try:
@@ -647,22 +400,21 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.des:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=des.new(key, des.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('DES failed on entry '+`entry`)
 		for entry in Crypto.Util.testdata.des_cbc:
 		    key, iv, plain, cipher=entry
-		    key, iv, cipher=hex2str(key),hex2str(iv),hex2str(cipher)
+		    key, iv, cipher=binascii.a2b_hex(key),binascii.a2b_hex(iv),binascii.a2b_hex(cipher)
 		    obj1=des.new(key, des.MODE_CBC, iv) 
 		    obj2=des.new(key, des.MODE_CBC, iv) 
 		    ciphertext=obj1.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('DES CBC mode failed on entry '+`entry`)
-		if verbose: print '  Completed'
 
     if 'des3' in args:
 	ciph=exerciseBlockCipher('DES3', verbose)        # Triple DES
@@ -675,9 +427,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.des3:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
@@ -687,13 +439,12 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			if verbose: print
 		for entry in Crypto.Util.testdata.des3_cbc:
 		    key, iv, plain, cipher=entry
-		    key, iv, cipher=hex2str(key),hex2str(iv),hex2str(cipher)
+		    key, iv, cipher=binascii.a2b_hex(key),binascii.a2b_hex(iv),binascii.a2b_hex(cipher)
 		    obj1=ciph.new(key, ciph.MODE_CBC, iv) 
 		    obj2=ciph.new(key, ciph.MODE_CBC, iv) 
 		    ciphertext=obj1.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('DES3 CBC mode failed on entry '+`entry`)
-		if verbose: print '  Completed'
 
     if 'idea' in args:
         ciph=exerciseBlockCipher('IDEA', verbose)       # IDEA block cipher
@@ -706,14 +457,13 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.idea:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('IDEA failed on entry '+`entry`)
-		if verbose: print '  Completed'
 
     if 'rc5' in args:
 	# Ronald Rivest's RC5 algorithm
@@ -727,9 +477,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		if verbose: print '  Verifying against test suite...'
 		for entry in Crypto.Util.testdata.rc5:
 		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
+		    key=binascii.a2b_hex(key)
+		    plain=binascii.a2b_hex(plain)
+		    cipher=binascii.a2b_hex(cipher)
 		    obj=ciph.new(key[4:], ciph.MODE_ECB, 
 				 version =ord(key[0]),
 				 word_size=ord(key[1]),
@@ -740,41 +490,6 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			for i in ciphertext: 
 			    if verbose: print hex(ord(i)),
 			if verbose: print
-		if verbose: print '  Completed'
 
-
-
-def TestPKModules(args=['rsa', 'dsa', 'elgamal', 'qnew'], verbose=1):
-    # Set up a random pool; we won't bother to actually fill it with
-    # entropy from the keyboard 
-    if verbose: print ' Initializing random pool'
-    from Crypto.Util.randpool import RandomPool
-    r=RandomPool(384)
-    r.stir()
-    randfunc=r.getBytes
-
-    if 'rsa' in args:
-	print 'RSA:'
-	from Crypto.PublicKey import RSA
-	exercisePublicKey(randfunc, RSA, verbose)
-	r.stir()
-
-    if 'dsa' in args:
-	print 'DSA:'
-	from Crypto.PublicKey import DSA
-	exercisePublicKey(randfunc, DSA, verbose)
-	r.stir()
-
-    if 'elgamal' in args:
-	print 'ElGamal'
-	from Crypto.PublicKey import ElGamal
-	exercisePublicKey(randfunc, ElGamal, verbose)
-	r.stir()
-
-    if 'qnew' in args:
-	print 'qNEW'
-	from Crypto.PublicKey import qNEW
-	exercisePublicKey(randfunc, qNEW, verbose)
-	r.stir()
 
 
