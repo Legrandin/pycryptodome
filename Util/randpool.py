@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 #
 
-__revision__ = "$Id: randpool.py,v 1.9 2002-09-05 18:50:18 akuchling Exp $"
+__revision__ = "$Id: randpool.py,v 1.10 2002-10-02 17:02:55 akuchling Exp $"
 
 import time, array, types, warnings
 from Crypto.Util.number import long_to_bytes
@@ -234,7 +234,7 @@ class RandomPool:
         return self.add_event(s + str(event))
 
 class PersistentRandomPool (RandomPool):
-    def __init__ (self, filename, *args, **kwargs):
+    def __init__ (self, filename=None, *args, **kwargs):
         RandomPool.__init__(self, *args, **kwargs)
         self.filename = filename
 	if filename:
