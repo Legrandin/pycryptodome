@@ -146,9 +146,7 @@ static char ALG_update__doc__[] =
 "Update this hashing object's state with the provided string.";
 
 static PyObject *
-ALG_update(self, args)
-	ALGobject *self;
-	PyObject *args;
+ALG_update(ALGobject *self, PyObject *args)
 {
 	unsigned char *cp;
 	int len;
@@ -171,14 +169,12 @@ static PyMethodDef ALG_methods[] = {
 };
 
 static PyObject *
-ALG_getattr(self, name)
-	ALGobject *self;
-	char *name;
+ALG_getattr(PyObject *self, char *name)
 {
 	if (strcmp(name, "digest_size")==0)
 		return PyInt_FromLong(DIGEST_SIZE);
 	
-	return Py_FindMethod(ALG_methods, (PyObject *)self, name);
+	return Py_FindMethod(ALG_methods, self, name);
 }
 
 static PyTypeObject ALGtype = {
@@ -206,9 +202,7 @@ static char ALG_new__doc__[] =
  " automatically hashed."; 
 
 static PyObject *
-ALG_new(self, args)
-	PyObject *self;
-	PyObject *args;
+ALG_new(PyObject *self, PyObject *args)
 {
         ALGobject *new;
 	unsigned char *cp = NULL;
@@ -247,18 +241,19 @@ static struct PyMethodDef ALG_functions[] = {
 #define insint(n,v) {PyObject *o=PyInt_FromLong(v); if (o!=NULL) {PyDict_SetItemString(d,n,o); Py_DECREF(o);}}
 
 #define _STR(x) #x
+#define _XSTR(x) _STR(x)
 #define _PASTE(x,y) x##y
 #define _PASTE2(x,y) _PASTE(x,y)
 #define _MODULE_NAME _PASTE2(init,MODULE_NAME)
-#define _MODULE_STRING _STR(MODULE_NAME)
+#define _MODULE_STRING _XSTR(MODULE_NAME)
 
 void
-_MODULE_NAME ()
+_MODULE_NAME (void)
 {
 	PyObject *d, *m;
 
 	ALGtype.ob_type = &PyType_Type;
-	m = Py_InitModule("Crypto.Hash.MD4", ALG_functions);
+	m = Py_InitModule("Crypto.Hash." _MODULE_STRING, ALG_functions);
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
