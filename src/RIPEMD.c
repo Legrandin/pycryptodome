@@ -129,7 +129,7 @@ static void hash_init(hash_state *rmdInfo)
 static void hash_update(hash_state *shsInfo,char *buffer, int count)
 {
     LONG tmp;
-    int dataCount;
+    int dataCount, i;
     BYTE *p;
 
     /* Update bitcount */
@@ -153,6 +153,15 @@ static void hash_update(hash_state *shsInfo,char *buffer, int count)
             return;
             }
         memcpy(p, buffer, dataCount);
+	for(i=0; i<16; i++)
+	  {
+	    long t = htonl(shsInfo->data[i]);
+	    t = ( ((t>>24) & 0xff)  + 
+		  (((t>>16) & 0xff)<<8) + 
+		  (((t>> 8) & 0xff)<<16) + 
+		  (((t    ) & 0xff)<<24) );
+	    shsInfo->data[i] = t;
+	  }
         MDcompress(shsInfo->digest,shsInfo->data);
         buffer += dataCount;
         count -= dataCount;
@@ -162,6 +171,15 @@ static void hash_update(hash_state *shsInfo,char *buffer, int count)
     while( count >= RMD_DATASIZE )
         {
         memcpy( shsInfo->data, buffer, RMD_DATASIZE );
+	for(i=0; i<16; i++)
+	  {
+	    long t = htonl(shsInfo->data[i]);
+	    t = ( ((t>>24) & 0xff)  + 
+		  (((t>>16) & 0xff)<<8) + 
+		  (((t>> 8) & 0xff)<<16) + 
+		  (((t    ) & 0xff)<<24) );
+	    shsInfo->data[i] = t;
+	  }
         MDcompress(shsInfo->digest,shsInfo->data);
         buffer += RMD_DATASIZE;
         count -= RMD_DATASIZE;
@@ -229,13 +247,11 @@ static void MDcompress(word *MDbuf, word *X)
         dd = MDbuf[3],  ee = MDbuf[4];
    word aaa = aa, bbb = bb, ccc = cc, ddd = dd, eee = ee;
 
-/*   {int i;
-   printf("\nWords: ");
+   /*{printf("\nWords: ");
    for(i=0; i<16; i++) printf("%x ", X[i]);
    printf("\n");}
    printf("before compress: %x %x %x %x %x\n",
-   MDbuf[0], MDbuf[1], MDbuf[2], MDbuf[3], MDbuf[4]); 
-   for(i=0;i<16;i++){printf("%08x ", X[i]);}printf("\n");*/
+   aa, bb, cc, dd, ee);*/
 
    /* round 1 */
    FF1(aa, bb, cc, dd, ee, X[ 0], 11);
@@ -424,8 +440,8 @@ static void MDcompress(word *MDbuf, word *X)
    MDbuf[3] = MDbuf[4] + aa + bbb;
    MDbuf[4] = MDbuf[0] + bb + ccc;
    MDbuf[0] = ddd;
-/*       printf("after compress: %x %x %x %x %x\n",
-                MDbuf[0], MDbuf[1], MDbuf[2], MDbuf[3], MDbuf[4]); */
+   /*printf("after compress: %x %x %x %x %x\n",
+            MDbuf[0], MDbuf[1], MDbuf[2], MDbuf[3], MDbuf[4]);*/
 }
 
 /********************************************************************/
