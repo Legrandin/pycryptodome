@@ -182,8 +182,8 @@ static char ALG_Encrypt__doc__[] =
 static PyObject *
 ALG_Encrypt(ALGobject *self, PyObject *args)
 {
-  char *buffer, *str;
-  char temp[BLOCK_SIZE];
+  unsigned char *buffer, *str;
+  unsigned char temp[BLOCK_SIZE];
   int i, j, len;
   PyObject *result;
   
@@ -295,7 +295,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	      Py_DECREF(ctr);
 	      return NULL;
 	  }
-	  memcpy(temp, PyString_AsString, BLOCK_SIZE);
+	  memcpy(temp, PyString_AsString(ctr), BLOCK_SIZE);
 	  Py_DECREF(ctr);
 	  block_encrypt(&(self->st), temp);
 	  for(j=0; j<BLOCK_SIZE; j++)
@@ -321,8 +321,8 @@ static char ALG_Decrypt__doc__[] =
 static PyObject *
 ALG_Decrypt(ALGobject *self, PyObject *args)
 {
-  char *buffer, *str;
-  char temp[BLOCK_SIZE];
+  unsigned char *buffer, *str;
+  unsigned char temp[BLOCK_SIZE];
   int i, j, len;
   PyObject *result;
   
@@ -447,7 +447,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	      Py_DECREF(ctr);
 	      return NULL;
 	  }
-	  memcpy(temp, PyString_AsString, BLOCK_SIZE);
+	  memcpy(temp, PyString_AsString(ctr), BLOCK_SIZE);
 	  Py_DECREF(ctr);
 	  block_encrypt(&(self->st), temp);
 	  for(j=0; j<BLOCK_SIZE; j++)
