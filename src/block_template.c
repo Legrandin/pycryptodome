@@ -188,6 +188,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	new = newALGobject();
 	new->segment_size = segment_size;
 	new->counter = counter;
+	Py_XINCREF(counter);
 #ifdef PCT_RC5_MODULE
 	new->st.version = version;
 	new->st.word_size = word_size;
