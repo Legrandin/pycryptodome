@@ -16,6 +16,7 @@
 \********************************************************************/
 
 #include <string.h>
+#include "Python.h"
 
 #ifdef MS_WIN32
 #include <winsock2.h>
