@@ -22,8 +22,10 @@
 	* Added support to RSA key objects for blinding and unblinding 
 	  data. (Contributed by Joris Bontje.)
 
-	* Simplified RSA key generation, and hard-wired the encryption
-	  exponent to 65537 instead of generating a random prime.
+	* Simplified RSA key generation: hard-wired the encryption
+	  exponent to 65537 instead of generating a random prime;
+	  generate prime factors in a loop until the product 
+	  is large enough.
 	
 	* Renamed cansign(), canencrypt(), hasprivate(), to 
 	  can_sign, can_encrypt, has_private.  If people shriek about
