@@ -1,7 +1,7 @@
 #
 #  testdata.py : Test data for the various algorithms
 #
-# Part of the Python Cryptography Toolkit, version 1.1
+# Part of the Python Cryptography Toolkit
 #
 # Distribute and use freely; there are no restrictions on further 
 # dissemination and usage except those imposed by the laws of your 

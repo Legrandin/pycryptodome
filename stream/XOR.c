@@ -2,7 +2,7 @@
  *  xor.c : Source for the trivial cipher which XORs the message with the key.
  *          The key can be up to 32 bytes long.
  *
- * Part of the Python Cryptography Toolkit, version 1.1
+ * Part of the Python Cryptography Toolkit
  *
  * Distribute and use freely; there are no restrictions on further 
  * dissemination and usage except those imposed by the laws of your 
