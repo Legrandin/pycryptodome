@@ -175,8 +175,6 @@ ALG_getattr(self, name)
 	ALGobject *self;
 	char *name;
 {
-	if (strcmp(name, "block_size")==0)
-		return PyInt_FromLong(1);
 	if (strcmp(name, "digest_size")==0)
 		return PyInt_FromLong(DIGEST_SIZE);
 	
@@ -264,9 +262,6 @@ _MODULE_NAME ()
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
-	insint("block_size", 1);  /* For future use, in case some hash
-				    functions require an integral number of
-				    blocks */ 
 	insint("digest_size", DIGEST_SIZE);
 
 	/* Check for errors */
