@@ -19,5 +19,5 @@ Crypto.Util               Various useful modules and functions (long-to-string
 
 __all__ = ['Cipher', 'Hash', 'Protocol', 'Util']
 
-__version__ = '1.9a3'
+__version__ = '1.9a4'
 

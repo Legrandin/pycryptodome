@@ -1,9 +1,13 @@
 
-For 1.9alpha3:
+For 1.9alpha4:
 
 * Add more tests for random pool code?
 
-* Update documentation
+* Manual and Web page: point to SF project for bug reports
+
+* Update the demos
+
+* Update documentation (mention dodgy status of PublicKey code)
 
 * Clean up markup in pycrypt.tex
 
