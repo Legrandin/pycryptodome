@@ -11,6 +11,8 @@
  */
   
 
+#include <netinet/in.h>
+
 #define MODULE_NAME IDEA
 #define BLOCK_SIZE 8
 #define KEY_SIZE 16
@@ -131,16 +133,10 @@ static void ideaCipher(block_state *self, byte *block_in,
     int r = 8;
 
     in = (word16 *) block_in;
-    x1 = *in++;
-    x2 = *in++;
-    x3 = *in++;
-    x4 = *in;
-#ifndef WORDS_BIGENDIAN
-	x1 = (x1 >> 8) | (x1 << 8);
-	x2 = (x2 >> 8) | (x2 << 8);
-	x3 = (x3 >> 8) | (x3 << 8);
-	x4 = (x4 >> 8) | (x4 << 8);
-#endif
+    x1 = ntohs(*in++);
+    x2 = ntohs(*in++);
+    x3 = ntohs(*in++);
+    x4 = ntohs(*in);
     do {
 	MUL(x1, *key++);
 	x2 += *key++;
@@ -168,23 +164,12 @@ static void ideaCipher(block_state *self, byte *block_in,
     MUL(x4, *key);
 
     out = (word16 *) block_out;
-   
-#ifdef WORDS_BIGENDIAN
-	*out++ = x1;
-	*out++ = x3;
-	*out++ = x2;
-	*out = x4;
-#else
-	x1 = low16(x1);
-	x2 = low16(x2);
-	x3 = low16(x3);
-	x4 = low16(x4);
-	
-	*out++ = (x1 >> 8) | (x1 << 8);
-	*out++ = (x3 >> 8) | (x3 << 8);
-	*out++ = (x2 >> 8) | (x2 << 8);
-	*out = (x4 >> 8) | (x4 << 8);
-#endif
+
+    *out++ = htons(x1);
+    *out++ = htons(x3);
+    *out++ = htons(x2);
+    *out = htons(x4);
+
 }				/* ideaCipher */
 
 
