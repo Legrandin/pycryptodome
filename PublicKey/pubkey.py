@@ -10,10 +10,10 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
+import types, warnings
 from Crypto.Util.number import *
 
 # Basic public key class
-import types
 class pubkey:
     def __init__(self):
 	pass
@@ -72,8 +72,11 @@ integers, MPZ objects, or whatever."""
 	if type(M)==types.StringType: M=bytestolong(M)
 	return self._verify(M, signature)
 
-    validate = verify   # alias to compensate for the old validate() name
-
+    # alias to compensate for the old validate() name
+    def validate (self, M, signature):
+        warnings.warn("validate() method name is obsolete; use verify()",
+	              DeprecationWarning)
+    
     # The following methods will usually be left alone, except for
     # signature-only algorithms.  They both return Boolean values
     # recording whether this key's algorithm can sign and encrypt.
