@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.PublicKey.
 #
 
-__revision__ = "$Id: test_publickey.py,v 1.3 2003-02-28 15:24:01 akuchling Exp $"
+__revision__ = "$Id: test_publickey.py,v 1.4 2003-04-03 20:27:41 akuchling Exp $"
 
 import sys, cPickle
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -48,6 +48,27 @@ class PublicKeyTest (TestScenario):
             if verbose: print '  Removing private key data'
             pubonly=key.publickey()
             self.test_bool('pubonly.verify(plaintext, signature)')
+
+        # Test blinding
+        if key.canblind():
+            if verbose: print '  Blinding test'
+            K=number.getPrime(30, randfunc)
+            B="garbage"
+            blindedtext=key.blind(plaintext, B)
+            signature=key.sign(blindedtext, K)
+            unblindedsignature=(key.unblind(signature[0], B),)
+            self.test_bool('key.verify(plaintext, unblindedsignature)')
+            self.test_val('key.sign(plaintext, K)', unblindedsignature)
+
+            # Change a single bit in the blinding factor
+            badB=B[:-3]+chr( 1 ^ ord(B[-3]) )+B[-3:]
+            badunblindedsignature=(key.unblind(signature[0], badB),)
+            self.test_false('key.verify(badtext, badunblindedsignature)')
+
+            badblindedtext=key.blind(plaintext, badB)
+            badsignature=key.sign(blindedtext, K)
+            badunblindedsignature2=(key.unblind(signature[0], B),)
+            self.test_false('key.verify(badtext, badunblindedsignature2)')
 
 
     def exercise (self, randfunc, pk_mod, verbose=0):
