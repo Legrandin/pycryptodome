@@ -15,8 +15,12 @@
  * in any copies of any part of this documentation and/or software.
 \********************************************************************/
 
-#include <stdio.h>
 #include <string.h>
+#include "Python.h"
+
+#define MODULE_NAME RIPEMD
+#define DIGEST_SIZE 20
+
 /********************************************************************/
 /* Macro definitions */
 
@@ -99,42 +103,30 @@ typedef unsigned int    WORD;
 #define RMD_DATASIZE    64
 #define RMD_DIGESTSIZE  20
 #define RMDsize 160
-/* collect four bytes into one word using a Little-endian convention */
-#define BYTES_TO_DWORD(strptr)                    \
-            (((word) *((strptr)+3) << 24) | \
-             ((word) *((strptr)+2) << 16) | \
-             ((word) *((strptr)+1) <<  8) | \
-             ((word) *(strptr)))
 typedef struct {
-               PCTObject_HEAD
                word digest[ 5 ];            /* Message digest */
                word countLo, countHi;       /* 64-bit bit count */
                word data[ 16 ];         /* data buffer*/
                int nbytes;
-			   int Endianness;
-               } RIPEMDobject;
+               } hash_state;
 
-/* Function Prototype */
-
-static void RIPEMDinit(RIPEMDobject *rmdInfo);
-static PyObject *RIPEMDdigest(RIPEMDobject *self);
-static void RIPEMDcopy(RIPEMDobject *src,RIPEMDobject *dest);
-static void RIPEMDupdate(RIPEMDobject *self,char *buffer, int length);
 static void MDinit(word *MDbuf);
 static void MDcompress(word *MDbuf, word *X);
-static void MDfinish(RIPEMDobject *self);
+static void MDfinish(hash_state *self);
+
 /********************************************************************/
-static void RIPEMDinit(RIPEMDobject *rmdInfo)
+
+static void hash_init(hash_state *rmdInfo)
 /* Initialization of the 5-word MDbuf array to the magic
    initialization constants
  */
 {  
-   TestEndianness(rmdInfo->Endianness)
-   MDinit(rmdInfo->digest);
-   rmdInfo->countLo = rmdInfo->countHi =rmdInfo->nbytes =  0;
+  int i=1; 
+  MDinit(rmdInfo->digest);
+  rmdInfo->countLo = rmdInfo->countHi =rmdInfo->nbytes =  0;
 }
 
-static void RIPEMDupdate(RIPEMDobject *shsInfo,char *buffer, int count)
+static void hash_update(hash_state *shsInfo,char *buffer, int count)
 {
     LONG tmp;
     int dataCount;
@@ -161,7 +153,6 @@ static void RIPEMDupdate(RIPEMDobject *shsInfo,char *buffer, int count)
             return;
             }
         memcpy( p, buffer, dataCount );
-	/*longReverse( shsInfo->data, RMD_DATASIZE, shsInfo->Endianness);*/
         MDcompress(shsInfo->digest,shsInfo->data);
         buffer += dataCount;
         count -= dataCount;
@@ -171,7 +162,6 @@ static void RIPEMDupdate(RIPEMDobject *shsInfo,char *buffer, int count)
     while( count >= RMD_DATASIZE )
         {
         memcpy( shsInfo->data, buffer, RMD_DATASIZE );
-/*        longReverse( shsInfo->data, RMD_DATASIZE, shsInfo->Endianness );*/
         MDcompress(shsInfo->digest,shsInfo->data);
         buffer += RMD_DATASIZE;
         count -= RMD_DATASIZE;
@@ -181,20 +171,19 @@ static void RIPEMDupdate(RIPEMDobject *shsInfo,char *buffer, int count)
     memcpy( shsInfo->data, buffer, count );
 }
 
-static PyObject *RIPEMDdigest(RIPEMDobject *self)
+static PyObject *hash_digest(hash_state *self)
 {
-  RIPEMDobject temp;
+  hash_state temp;
   int i;
   byte   hashcode[RMDsize/8]; /* final hash-value             */
   
-  temp.Endianness=self->Endianness;
   temp.countLo=self->countLo;
   temp.countHi=self->countHi;
   for(i=0; i<5; i++) temp.digest[i]=self->digest[i];
   for(i=0; i<16; i++) temp.data[i]=self->data[i];
 
   MDfinish(&temp);
-	/* Convert word to a string of bytes using a Little-endian convention */
+  /* Convert word to a string of bytes using a Little-endian convention */
    for (i=0; i<RMDsize/8; i+=4) {
       hashcode[i]   =  temp.digest[i>>2];
       hashcode[i+1] = (temp.digest[i>>2] >>  8);
@@ -204,11 +193,10 @@ static PyObject *RIPEMDdigest(RIPEMDobject *self)
   return PyString_FromStringAndSize(hashcode, RMD_DIGESTSIZE);
 }
 
-static void RIPEMDcopy(RIPEMDobject *src,RIPEMDobject *dest)
+static void hash_copy(hash_state *src,hash_state *dest)
 {
   int i;
 
-  dest->Endianness=src->Endianness;
   dest->countLo=src->countLo;
   dest->countHi=src->countHi;
   for(i=0; i<5; i++) dest->digest[i]=src->digest[i];
@@ -442,7 +430,7 @@ static void MDcompress(word *MDbuf, word *X)
 }
 
 /********************************************************************/
-static void MDfinish( RIPEMDobject *shsInfo)
+static void MDfinish( hash_state *shsInfo)
 /* The final value of the 5-word MDbuf array is calculated. 
    lswlen and mswlen contain, respectively, the least and most significant
    32 bits of the message bit length mod 2^64, and string is an incomplete
@@ -484,7 +472,6 @@ static void MDfinish( RIPEMDobject *shsInfo)
    if ((lswlen & 511) > 447) {
       /* length doesn't fit in this block anymore.
          Compress, and put length in the next block */
-     /*      longReverse( X, RMD_DATASIZE, shsInfo->Endianness);*/
       MDcompress(MDbuf, X);
       memset(X, 0, 16*sizeof(word));
    }
@@ -495,3 +482,4 @@ static void MDfinish( RIPEMDobject *shsInfo)
 }
  	
 
+#include "hash_template.c"
