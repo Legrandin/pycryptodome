@@ -44,9 +44,9 @@ setup(name="amkCrypto",
                      Extension("Crypto.Cipher.IDEA",
                                include_dirs=['src/'],
                                sources=["block/IDEA.c"]),
-#                     Extension("Crypto.Cipher.RC5",
-#                               include_dirs=['src/'],
-#                               sources=["block/RC5.c"]),
+                     Extension("Crypto.Cipher.RC5",
+                               include_dirs=['src/'],
+                               sources=["block/RC5.c"]),
 
                      # Stream ciphers
                      Extension("Crypto.Cipher.ARC4",
