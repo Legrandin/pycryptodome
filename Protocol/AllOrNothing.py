@@ -31,25 +31,7 @@ class AllOrNothing:
 
         __init__(ciphermodule, mode=None, IV=None):
             Constructor for the class.  ciphermodule is a module implementing
-            the cipher algorithm to use.  In essence it must provide the
-            following interface:
-
-            ciphermodule.keysize
-                Attribute containing the cipher algorithm's key size in
-                bytes.  If the cipher supports variable length keys, then
-                typically ciphermodule.keysize will be zero.  In that case a
-                key size of 16 bytes will be used.
-
-            ciphermodule.blocksize
-                Attribute containing the cipher algorithm's input block size
-                in bytes
-
-            ciphermodule.new(key, mode, IV)
-                Function which returns a new instance of a cipher object,
-                initialized to key.  The returned object must have an
-                encrypt() method that accepts a string of
-                ciphermodule.blocksize bytes and returns a string containing
-                the encrypted text.
+            the cipher algorithm to use.  It must provide the PEP272 interface.
 
             Note that the encryption key is randomly generated automatically
             when needed.  Optional arguments mode and IV are passed directly
@@ -58,27 +40,21 @@ class AllOrNothing:
             be the same for the object used to create the digest, and to
             undigest'ify the message blocks.
 
-        update(text):
-            Concatenate text to the string that will be transformed.
-
-        reset(text=''):
-            Reset the current string to be transformed to text.
-
-        digest():
+        digest(text):
             Perform the All-or-Nothing package transform on the current
             string.  Output is a list of message blocks describing the
             transformed text, where each block is a string of bit length equal
-            to the ciphermodule's blocksize.
+            to the ciphermodule's block_size.
 
         undigest(mblocks):
             Perform the reverse package transformation on a list of message
             blocks.  Note that the ciphermodule used for both transformations
             must be the same.  mblocks is a list of strings of bit length
-            equal to the ciphermodule's blocksize.  Output is a string object.
+            equal to the ciphermodule's block_size.  Output is a string object.
 
     Subclass methods:
 
-        _inventkey(keysize):
+        _inventkey(key_size):
             Returns a randomly generated key.  Subclasses can use this to
             implement better random key generating algorithms.  The default
             algorithm is probably not very cryptographically secure.
@@ -88,41 +64,36 @@ class AllOrNothing:
         self.__ciphermodule = ciphermodule
         self.__mode = mode
         self.__IV = IV
-        self.__text = ''
-        self.__keysize = ciphermodule.keysize
-        if self.__keysize == 0:
-            self.__keysize = 16
-
-    def update(self, text):
-        self.__text = self.__text + text
-
-    def reset(self, text=''):
-        self.__text = text
+        self.__key_size = ciphermodule.key_size
+        if self.__key_size == 0:
+            self.__key_size = 16
 
     __K0digit = chr(0x69)
 
-    def digest(self):
-        text = self.__text
+    def digest(self, text):
         # generate a random session key and K0, the key used to encrypt the
         # hash blocks.  Rivest calls this a fixed, publically-known encryption
         # key, but says nothing about the security implications of this key or 
         # how to choose it.
-        key = self._inventkey(self.__keysize)
-        K0 = self.__K0digit * self.__keysize
-        # we need to cipher objects here, one that is used to encrypt the
+        key = self._inventkey(self.__key_size)
+        K0 = self.__K0digit * self.__key_size
+        
+        # we need two cipher objects here, one that is used to encrypt the
         # message blocks and one that is used to encrypt the hashes.  The
         # former uses the randomly generated key, while the latter uses the
         # well-known key.
         mcipher = self.__newcipher(key)
         hcipher = self.__newcipher(K0)
-        # Pad the text so that it's length is a multiple of the cipher's
-        # blocksize.  Pad with trailing spaces, which will be eliminated in
+        
+        # Pad the text so that its length is a multiple of the cipher's
+        # block_size.  Pad with trailing spaces, which will be eliminated in
         # the undigest() step.
-        blocksize = self.__ciphermodule.blocksize
-        padbytes = blocksize - (len(text) % blocksize)
+        block_size = self.__ciphermodule.block_size
+        padbytes = block_size - (len(text) % block_size)
         text = text + ' ' * padbytes
+
         # Run through the algorithm:
-        # s: number of message blocks (size of text / blocksize)
+        # s: number of message blocks (size of text / block_size)
         # input sequence: m1, m2, ... ms
         # random key K' (`key' in the code)
         # Compute output sequence: m'1, m'2, ... m's' for s' = s + 1
@@ -133,28 +104,31 @@ class AllOrNothing:
         # The one complication I add is that the last message block is hard
         # coded to the number of padbytes added, so that these can be stripped 
         # during the undigest() step
-        s = len(text) / blocksize
+        s = len(text) / block_size
         blocks = []
         hashes = []
         for i in range(1, s+1):
-            start = (i-1) * blocksize
-            end = start + blocksize
+            start = (i-1) * block_size
+            end = start + block_size
             mi = text[start:end]
-            assert len(mi) == blocksize
-            cipherblock = mcipher.encrypt(longtobytes(i, blocksize))
+            assert len(mi) == block_size
+            cipherblock = mcipher.encrypt(longtobytes(i, block_size))
             mticki = bytestolong(mi) ^ bytestolong(cipherblock)
             blocks.append(mticki)
             # calculate the hash block for this block
-            hi = hcipher.encrypt(longtobytes(mticki ^ i, blocksize))
+            hi = hcipher.encrypt(longtobytes(mticki ^ i, block_size))
             hashes.append(bytestolong(hi))
+
         # Add the padbytes length as a message block
         i = i + 1
-        cipherblock = mcipher.encrypt(longtobytes(i, blocksize))
+        cipherblock = mcipher.encrypt(longtobytes(i, block_size))
         mticki = padbytes ^ bytestolong(cipherblock)
         blocks.append(mticki)
+
         # calculate this block's hash
-        hi = hcipher.encrypt(longtobytes(mticki ^ i, blocksize))
+        hi = hcipher.encrypt(longtobytes(mticki ^ i, block_size))
         hashes.append(bytestolong(hi))
+
         # Now calculate the last message block of the sequence 1..s'.  This
         # will contain the random session key XOR'd with all the hash blocks,
         # so that for undigest(), once all the hash blocks are calculated, the 
@@ -163,23 +137,28 @@ class AllOrNothing:
         # All-or-Nothing algorithm succeeds.
         mtick_stick = bytestolong(key) ^ reduce(operator.xor, hashes)
         blocks.append(mtick_stick)
+
         # we convert the blocks to strings since in Python, byte sequences are
         # always represented as strings.  This is more consistent with the
-        # model that encryption and hash algorithm always operates on strings.
+        # model that encryption and hash algorithms always operate on strings.
         return map(longtobytes, blocks)
+
 
     def undigest(self, blocks):
         # better have at least 2 blocks, for the padbytes package and the hash 
         # block accumulator
         if len(blocks) < 2:
             raise ValueError, "List must be at least length 2."
+
         # blocks is a list of strings.  We need to deal with them as long
         # integers
         blocks = map(bytestolong, blocks)
+
         # Calculate the well-known key, to which the hash blocks are
         # encrypted, and create the hash cipher.
-        K0 = self.__K0digit * self.__keysize
+        K0 = self.__K0digit * self.__key_size
         hcipher = self.__newcipher(K0)
+
         # Since we have all the blocks (or this method would have been called
         # prematurely), we can calcualte all the hash blocks.
         hashes = []
@@ -187,37 +166,41 @@ class AllOrNothing:
             mticki = blocks[i-1] ^ i
             hi = hcipher.encrypt(longtobytes(mticki))
             hashes.append(bytestolong(hi))
+
         # now we can calculate K' (key).  remember the last block contains
         # m's' which we don't include here
         key = blocks[-1] ^ reduce(operator.xor, hashes)
+
         # and now we can create the cipher object
         mcipher = self.__newcipher(longtobytes(key))
-        blocksize = self.__ciphermodule.blocksize
+        block_size = self.__ciphermodule.block_size
+
         # And we can now decode the original message blocks
         parts = []
         for i in range(1, len(blocks)):
-            cipherblock = mcipher.encrypt(longtobytes(i, blocksize))
+            cipherblock = mcipher.encrypt(longtobytes(i, block_size))
             mi = blocks[i-1] ^ bytestolong(cipherblock)
             parts.append(mi)
+
         # The last message block contains the number of pad bytes appended to
         # the original text string, such that its length was an even multiple
-        # of the cipher's blocksize.  This number should be small enough that
+        # of the cipher's block_size.  This number should be small enough that
         # the conversion from long integer to integer should never overflow
         padbytes = int(parts[-1])
         text = string.join(map(longtobytes, parts[:-1]), '')
         return text[:-padbytes]
 
-    def _inventkey(self, keysize):
+    def _inventkey(self, key_size):
         # TBD: Not a very secure algorithm.  Eventually, I'd like to use JHy's 
         # kernelrand module
         import time
         from Crypto.Util import randpool
-        # TBD: keysize * 2 to work around possible bug in RandomPool?
-        pool = randpool.RandomPool(keysize * 2)
-        while keysize > pool.addEvent(time.time()) / 8:
+        # TBD: key_size * 2 to work around possible bug in RandomPool?
+        pool = randpool.RandomPool(key_size * 2)
+        while key_size > pool.addEvent(time.time()) / 8:
             pass
-        # we now have enough entropy in the pool to get a keysize'd key
-        return pool.getBytes(keysize)
+        # we now have enough entropy in the pool to get a key_size'd key
+        return pool.getBytes(key_size)
 
     def __newcipher(self, key):
         if self.__mode is None and self.__IV is None:
@@ -286,8 +269,7 @@ Where:
     print 'Original text:\n=========='
     print __doc__
     print '=========='
-    a.update(__doc__)
-    msgblocks = a.digest()
+    msgblocks = a.digest(__doc__)
     print 'message blocks:'
     for i, blk in map(None, range(len(msgblocks)), msgblocks):
         # base64 adds a trailing newline
