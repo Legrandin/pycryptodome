@@ -12,9 +12,8 @@ extractable from the message blocks.
 This class implements the All-Or-Nothing package transformation algorithm
 described in:
 
-Rivest.  All-Or-Nothing Encryption and The Package Transform.  To appear in
-the Proceedings of the 1997 Fast Software Encryption Conference.
-http://theory.lcs.mit.edu/~rivest/fusion.ps
+Ronald L. Rivest.  "All-Or-Nothing Encryption and The Package Transform"
+http://theory.lcs.mit.edu/~rivest/fusion.pdf
 
 """
 
@@ -235,7 +234,7 @@ Where:
         Print this help message
 '''        
 
-    ciphermodule = 'XOR'
+    ciphermodule = 'AES'
     aslong = 0
 
     def usage(code, msg=None):
