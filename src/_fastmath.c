@@ -28,11 +28,11 @@ longObjToMPZ (mpz_t m, PyLongObject * p)
 	else
 		size = -p->ob_size;
 	for (i = 0; i < size; i++)
-		{
-			mpz_set_ui (temp, p->ob_digit[i]);
-			mpz_mul_2exp (temp2, temp, SHIFT * i);
-			mpz_add (m, m, temp2);
-		}
+	{
+		mpz_set_ui (temp, p->ob_digit[i]);
+		mpz_mul_2exp (temp2, temp, SHIFT * i);
+		mpz_add (m, m, temp2);
+	}
 	mpz_clear (temp);
 	mpz_clear (temp2);
 }
@@ -49,10 +49,10 @@ mpzToLongObj (mpz_t m)
 		return NULL;
 	mpz_init_set (temp, m);
 	for (i = 0; i < size; i++)
-		{
-			l->ob_digit[i] = (digit) (mpz_get_ui (temp) & MASK);
-			mpz_fdiv_q_2exp (temp, temp, SHIFT);
-		}
+	{
+		l->ob_digit[i] = (digit) (mpz_get_ui (temp) & MASK);
+		mpz_fdiv_q_2exp (temp, temp, SHIFT);
+	}
 	i = size;
 	while ((i > 0) && (l->ob_digit[i - 1] == 0))
 		i--;
@@ -71,9 +71,6 @@ typedef struct
 }
 dsaKey;
 
-PyObject *rsaKey_new (PyObject *, PyObject *);
-PyObject *dsaKey_new (PyObject *, PyObject *);
-
 typedef struct
 {
 	PyObject_HEAD mpz_t n;
@@ -84,14 +81,32 @@ typedef struct
 }
 rsaKey;
 
+PyObject *rsaKey_new (PyObject *, PyObject *);
+PyObject *dsaKey_new (PyObject *, PyObject *);
+
+static void dsaKey_dealloc (dsaKey *);
+static PyObject *dsaKey_getattr (dsaKey *, char *);
+static PyObject *dsaKey__sign (dsaKey *, PyObject *);
+static PyObject *dsaKey__verify (dsaKey *, PyObject *);
+static PyObject *dsaKey_size (dsaKey *, PyObject *);
+static PyObject *dsaKey_hasprivate (dsaKey *, PyObject *);
+
+static void rsaKey_dealloc (rsaKey *);
+static PyObject *rsaKey_getattr (rsaKey *, char *);
+static PyObject *rsaKey__encrypt (rsaKey *, PyObject *);
+static PyObject *rsaKey__decrypt (rsaKey *, PyObject *);
+static PyObject *rsaKey__verify (rsaKey *, PyObject *);
+static PyObject *rsaKey_size (rsaKey *, PyObject *);
+static PyObject *rsaKey_hasprivate (rsaKey *, PyObject *);
+
 static int
 dsaSign (dsaKey * key, mpz_t m, mpz_t k, mpz_t r, mpz_t s)
 {
 	mpz_t temp;
 	if (mpz_cmp_ui (k, 2) < 0 || mpz_cmp (k, key->q) >= 0)
-		{
-			return 1;
-		}
+	{
+		return 1;
+	}
 	mpz_init (temp);
 	mpz_powm (r, key->g, k, key->p);
 	mpz_mod (r, r, key->q);
@@ -110,7 +125,7 @@ dsaVerify (dsaKey * key, mpz_t m, mpz_t r, mpz_t s)
 	int result;
 	mpz_t u1, u2, v1, v2, w;
 	if (mpz_cmp_ui (r, 0) <= 0 || mpz_cmp (r, key->q) >= 0 ||
-			mpz_cmp_ui (s, 0) <= 0 || mpz_cmp (s, key->q) >= 0)
+	    mpz_cmp_ui (s, 0) <= 0 || mpz_cmp (s, key->q) >= 0)
 		return 0;
 	mpz_init (u1);
 	mpz_init (u2);
@@ -144,9 +159,9 @@ static int
 rsaEncrypt (rsaKey * key, mpz_t v)
 {
 	if (mpz_cmp (v, key->n) >= 0)
-		{
-			return 1;
-		}
+	{
+		return 1;
+	}
 	mpz_powm (v, v, key->e, key->n);
 	return 0;
 }
@@ -155,31 +170,16 @@ static int
 rsaDecrypt (rsaKey * key, mpz_t v)
 {
 	if (mpz_cmp (v, key->n) >= 0)
-		{
-			return 1;
-		}
+	{
+		return 1;
+	}
 	if (mpz_size (key->d) == 0)
-		{
-			return 2;
-		}
+	{
+		return 2;
+	}
 	mpz_powm (v, v, key->d, key->n);
 	return 0;
 }
-
-static void dsaKey_dealloc (dsaKey *);
-static PyObject *dsaKey_getattr (dsaKey *, char *);
-static PyObject *dsaKey__sign (dsaKey *, PyObject *);
-static PyObject *dsaKey__verify (dsaKey *, PyObject *);
-static PyObject *dsaKey_size (dsaKey *, PyObject *);
-static PyObject *dsaKey_hasprivate (dsaKey *, PyObject *);
-
-static void rsaKey_dealloc (rsaKey *);
-static PyObject *rsaKey_getattr (rsaKey *, char *);
-static PyObject *rsaKey__encrypt (rsaKey *, PyObject *);
-static PyObject *rsaKey__decrypt (rsaKey *, PyObject *);
-static PyObject *rsaKey__verify (rsaKey *, PyObject *);
-static PyObject *rsaKey_size (rsaKey *, PyObject *);
-static PyObject *rsaKey_hasprivate (rsaKey *, PyObject *);
 
 static PyTypeObject dsaKeyType = {
 	PyObject_HEAD_INIT (NULL) 0,
@@ -187,20 +187,21 @@ static PyTypeObject dsaKeyType = {
 	sizeof (dsaKey),
 	0,
 	(destructor) dsaKey_dealloc,	/* dealloc */
-	0,														/* print */
+	0,				/* print */
 	(getattrfunc) dsaKey_getattr,	/* getattr */
-	0,														/* setattr */
-	0,														/* compare */
-	0,														/* repr */
-	0,														/* as_number */
-	0,														/* as_sequence */
-	0,														/* as_mapping */
-	0,														/* hash */
-	0,														/* call */
+	0,				/* setattr */
+	0,				/* compare */
+	0,				/* repr */
+	0,				/* as_number */
+	0,				/* as_sequence */
+	0,				/* as_mapping */
+	0,				/* hash */
+	0,				/* call */
 };
 
 static PyMethodDef dsaKey__methods__[] = {
-	{"_sign", (PyCFunction) dsaKey__sign, METH_VARARGS, "Sign the given long."},
+	{"_sign", (PyCFunction) dsaKey__sign, METH_VARARGS, 
+	 "Sign the given long."},
 	{"_verify", (PyCFunction) dsaKey__verify, METH_VARARGS,
 	 "Verify that the signature is valid."},
 	{"size", (PyCFunction) dsaKey_size, METH_VARARGS,
@@ -221,13 +222,13 @@ static PyTypeObject rsaKeyType = {
 	0,				/* print */
 	(getattrfunc) rsaKey_getattr,	/* getattr */
 	0,                              /* setattr */
-	0,														/* compare */
-	0,														/* repr */
-	0,														/* as_number */
-	0,														/* as_sequence */
-	0,														/* as_mapping */
-	0,														/* hash */
-	0,														/* call */
+	0,				/* compare */
+	0,				/* repr */
+	0,				/* as_number */
+	0,				/* as_sequence */
+	0,				/* as_mapping */
+	0,				/* hash */
+	0,				/* call */
 };
 
 static PyMethodDef rsaKey__methods__[] = {
@@ -257,22 +258,22 @@ dsaKey_new (PyObject * self, PyObject * args)
 	mpz_init (key->p);
 	mpz_init (key->q);
 	mpz_init (key->x);
-	PyArg_ParseTuple (args, "O!O!O!O!|O!", &PyLong_Type, &y,
-										&PyLong_Type, &g,
-										&PyLong_Type, &p, &PyLong_Type, &q, &PyLong_Type, &x);
+	PyArg_ParseTuple(args, "O!O!O!O!|O!", &PyLong_Type, &y,
+			 &PyLong_Type, &g,
+			 &PyLong_Type, &p, &PyLong_Type, &q, &PyLong_Type, &x);
 	longObjToMPZ (key->y, y);
 	longObjToMPZ (key->g, g);
 	longObjToMPZ (key->p, p);
 	longObjToMPZ (key->q, q);
 	if (x)
-		{
-			longObjToMPZ (key->x, x);
-		}
+	{
+		longObjToMPZ (key->x, x);
+	}
 	/*Py_XDECREF(n);
-	   Py_XDECREF(e);
-	   Py_XDECREF(d);
-	   Py_XDECREF(p);
-	   Py_XDECREF(q); */
+	  Py_XDECREF(e);
+	  Py_XDECREF(d);
+	  Py_XDECREF(p);
+	  Py_XDECREF(q); */
 	return (PyObject *) key;
 }
 
@@ -299,19 +300,19 @@ dsaKey_getattr (dsaKey * key, char *attr)
 	else if (strcmp (attr, "q") == 0)
 		return mpzToLongObj (key->q);
 	else if (strcmp (attr, "x") == 0)
+	{
+		if (mpz_size (key->x) == 0)
 		{
-			if (mpz_size (key->x) == 0)
-				{
-					PyErr_SetString (PyExc_AttributeError,
-													 "rsaKey instance has no attribute 'x'");
-					return NULL;
-				}
-			return mpzToLongObj (key->x);
+			PyErr_SetString (PyExc_AttributeError,
+					 "rsaKey instance has no attribute 'x'");
+			return NULL;
 		}
+		return mpzToLongObj (key->x);
+	}
 	else
-		{
-			return Py_FindMethod (dsaKey__methods__, (PyObject *) key, attr);
-		}
+	{
+		return Py_FindMethod (dsaKey__methods__, (PyObject *) key, attr);
+	}
 }
 
 PyObject *
@@ -321,10 +322,10 @@ dsaKey__sign (dsaKey * key, PyObject * args)
 	mpz_t m, k, r, s;
 	int result;
 	if (!(PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &lm,
-													&PyLong_Type, &lk)))
-		{
-			return NULL;
-		}
+				&PyLong_Type, &lk)))
+	{
+		return NULL;
+	}
 	mpz_init (m);
 	mpz_init (k);
 	mpz_init (r);
@@ -333,10 +334,10 @@ dsaKey__sign (dsaKey * key, PyObject * args)
 	longObjToMPZ (k, (PyLongObject *) lk);
 	result = dsaSign (key, m, k, r, s);
 	if (result == 1)
-		{
-			PyErr_SetString (fastmathError, "K not between 2 and q");
-			return NULL;
-		}
+	{
+		PyErr_SetString (fastmathError, "K not between 2 and q");
+		return NULL;
+	}
 	lr = mpzToLongObj (r);
 	ls = mpzToLongObj (s);
 	mpz_clear (m);
@@ -353,10 +354,10 @@ dsaKey__verify (dsaKey * key, PyObject * args)
 	mpz_t m, r, s;
 	int result;
 	if (!(PyArg_ParseTuple (args, "O!O!O!", &PyLong_Type, &lm,
-													&PyLong_Type, &lr, &PyLong_Type, &ls)))
-		{
-			return NULL;
-		}
+				&PyLong_Type, &lr, &PyLong_Type, &ls)))
+	{
+		return NULL;
+	}
 	mpz_init (m);
 	mpz_init (r);
 	mpz_init (s);
@@ -401,28 +402,28 @@ rsaKey_new (PyObject * self, PyObject * args)
 	mpz_init (key->p);
 	mpz_init (key->q);
 	PyArg_ParseTuple (args, "O!O!|O!O!O!", &PyLong_Type, &n,
-										&PyLong_Type, &e,
-										&PyLong_Type, &d, &PyLong_Type, &p, &PyLong_Type, &q);
+			  &PyLong_Type, &e,
+			  &PyLong_Type, &d, &PyLong_Type, &p, &PyLong_Type, &q);
 	longObjToMPZ (key->n, n);
 	longObjToMPZ (key->e, e);
 	if (!d)
-		{
-			return (PyObject *) key;
-		}
+	{
+		return (PyObject *) key;
+	}
 	longObjToMPZ (key->d, d);
 	if (p)
+	{
+		if (q)
 		{
-			if (q)
-				{
-					longObjToMPZ (key->p, p);
-					longObjToMPZ (key->q, q);
-				}
+			longObjToMPZ (key->p, p);
+			longObjToMPZ (key->q, q);
 		}
+	}
 	/*Py_XDECREF(n);
-	   Py_XDECREF(e);
-	   Py_XDECREF(d);
-	   Py_XDECREF(p);
-	   Py_XDECREF(q); */
+	  Py_XDECREF(e);
+	  Py_XDECREF(d);
+	  Py_XDECREF(p);
+	  Py_XDECREF(q); */
 	return (PyObject *) key;
 }
 
@@ -445,39 +446,40 @@ rsaKey_getattr (rsaKey * key, char *attr)
 	else if (strcmp (attr, "e") == 0)
 		return mpzToLongObj (key->e);
 	else if (strcmp (attr, "d") == 0)
+	{
+		if (mpz_size (key->d) == 0)
 		{
-			if (mpz_size (key->d) == 0)
-				{
-					PyErr_SetString (PyExc_AttributeError,
-													 "rsaKey instance has no attribute 'd'");
-					return NULL;
-				}
-			return mpzToLongObj (key->d);
+			PyErr_SetString(PyExc_AttributeError,
+					"rsaKey instance has no attribute 'd'");
+			return NULL;
 		}
+		return mpzToLongObj (key->d);
+	}
 	else if (strcmp (attr, "p") == 0)
+	{
+		if (mpz_size (key->p) == 0)
 		{
-			if (mpz_size (key->p) == 0)
-				{
-					PyErr_SetString (PyExc_AttributeError,
-													 "rsaKey instance has no attribute 'p'");
-					return NULL;
-				}
-			return mpzToLongObj (key->p);
+			PyErr_SetString(PyExc_AttributeError,
+					"rsaKey instance has no attribute 'p'");
+			return NULL;
 		}
+		return mpzToLongObj (key->p);
+	}
 	else if (strcmp (attr, "q") == 0)
+	{
+		if (mpz_size (key->q) == 0)
 		{
-			if (mpz_size (key->q) == 0)
-				{
-					PyErr_SetString (PyExc_AttributeError,
-													 "rsaKey instance has no attribute 'q'");
-					return NULL;
-				}
-			return mpzToLongObj (key->q);
+			PyErr_SetString(PyExc_AttributeError,
+					"rsaKey instance has no attribute 'q'");
+			return NULL;
 		}
+		return mpzToLongObj (key->q);
+	}
 	else
-		{
-			return Py_FindMethod (rsaKey__methods__, (PyObject *) key, attr);
-		}
+	{
+		return Py_FindMethod (rsaKey__methods__, 
+				      (PyObject *) key, attr);
+	}
 }
 
 PyObject *
@@ -487,17 +489,17 @@ rsaKey__encrypt (rsaKey * key, PyObject * args)
 	mpz_t v;
 	int result;
 	if (!(PyArg_ParseTuple (args, "O!", &PyLong_Type, &l)))
-		{
-			return NULL;
-		}
+	{
+		return NULL;
+	}
 	mpz_init (v);
 	longObjToMPZ (v, (PyLongObject *) l);
 	result = rsaEncrypt (key, v);
 	if (result == 1)
-		{
-			PyErr_SetString (fastmathError, "Plaintext too large");
-			return NULL;
-		}
+	{
+		PyErr_SetString (fastmathError, "Plaintext too large");
+		return NULL;
+	}
 	r = (PyObject *) mpzToLongObj (v);
 	mpz_clear (v);
 	return Py_BuildValue ("N", r);
@@ -510,22 +512,24 @@ rsaKey__decrypt (rsaKey * key, PyObject * args)
 	mpz_t v;
 	int result;
 	if (!(PyArg_ParseTuple (args, "O!", &PyLong_Type, &l)))
-		{
-			return NULL;
-		}
+	{
+		return NULL;
+	}
 	mpz_init (v);
 	longObjToMPZ (v, (PyLongObject *) l);
 	result = rsaDecrypt (key, v);
 	if (result == 1)
-		{
-			PyErr_SetString (fastmathError, "Ciphertext too large");
-			return NULL;
-		}
+	{
+		PyErr_SetString (fastmathError, 
+				 "Ciphertext too large");
+		return NULL;
+	}
 	else if (result == 2)
-		{
-			PyErr_SetString (fastmathError, "Private key not available in this object");
-			return NULL;
-		}
+	{
+		PyErr_SetString (fastmathError, 
+				 "Private key not available in this object");
+		return NULL;
+	}
 	r = mpzToLongObj (v);
 	mpz_clear (v);
 	return Py_BuildValue ("N", r);
@@ -536,12 +540,11 @@ rsaKey__verify (rsaKey * key, PyObject * args)
 {
 	PyObject *l, *lsig;
 	mpz_t v, vsig;
-	if (!
-			(PyArg_ParseTuple
-			 (args, "O!O!", &PyLong_Type, &l, &PyLong_Type, &lsig)))
-		{
-			return NULL;
-		}
+	if (!PyArg_ParseTuple(args, "O!O!", 
+			      &PyLong_Type, &l, &PyLong_Type, &lsig))
+	{
+		return NULL;
+	}
 	mpz_init (v);
 	mpz_init (vsig);
 	longObjToMPZ (v, (PyLongObject *) l);
