@@ -670,20 +670,23 @@ documented later.)
 
 \begin{funcdesc}{generate}{size, randfunc, progress_func=\code{None}}
 Generate a fresh public/private key pair.  \var{size} is a
-algorithm-dependent size parameter; the larger it is, the more
-difficult it will be to break the key.  Safe key sizes vary from
-algorithm to algorithm; you'll have to research the question and
-decide on a suitable key size for your application.  \var{randfunc} is
-a random number generation function; it should accept a single integer
-\var{N} and return a string of random data \var{N} bytes long.  You
-should always use a cryptographically secure random number generator,
-such as the one defined in the \module{Crypto.Util.randpool} module;
-\emph{don't} just use the current time and the \module{random} module.
+algorithm-dependent size parameter, usually measured in bits; the
+larger it is, the more difficult it will be to break the key.  Safe
+key sizes vary from algorithm to algorithm; you'll have to research
+the question and decide on a suitable key size for your application.
+An N-bit keys can encrypt messages up to N-1 bits long.
+
+\var{randfunc} is a random number generation function; it should
+accept a single integer \var{N} and return a string of random data
+\var{N} bytes long.  You should always use a cryptographically secure
+random number generator, such as the one defined in the
+\module{Crypto.Util.randpool} module; \emph{don't} just use the
+current time and the \module{random} module. 
 
 \var{progress_func} is an optional function that will be called with a short
 string containing the key parameter currently being generated; it's
-useful for interactive applications where a user is waiting for a key to
-be generated.
+useful for interactive applications where a user is waiting for a key
+to be generated.
 \end{funcdesc}
 
 If you want to interface with some other program, you will have to know
