@@ -811,9 +811,10 @@ This is easily done by the following code:
 
 \begin{verbatim}
 for i in range(2, n): 
-    if (n%i)==0: print i, 'is a factor' ; break
+    if (n%i)==0: 
+        print i, 'is a factor' 
+        break
 \end{verbatim}
-
 
 However, \emph{n} is usually a few hundred bits long, so this simple
 program wouldn't find a solution before the universe comes to an end.
@@ -822,13 +823,11 @@ possible to choose keys so large that they can't be broken in a
 reasonable amount of time.  For ElGamal and DSA, discrete logarithms are
 used instead of factoring, but the principle is the same.
 
-Safe key sizes depend on the current state of computer science and
-technology.  At the moment, one can roughly define three levels of
-security: low-security commercial, high-security commercial, and
-military-grade.  For RSA, these three levels correspond roughly to 512,
-768, and 1024 bit-keys.  For ElGamal and DSA, the key sizes should be
-somewhat larger for the same level of security, around 768, 1024, and
-1536 bits.
+Safe key sizes depend on the current state of number theory and
+computer technology.  At the moment, one can roughly define three
+levels of security: low-security commercial, high-security commercial,
+and military-grade.  For RSA, these three levels correspond roughly to
+768, 1024, and 2048-bit keys.
 
 
 %======================================================================
