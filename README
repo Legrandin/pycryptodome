@@ -1,4 +1,4 @@
-Python Cryptography Toolkit (pycrypto) 1.9alpha5
+Python Cryptography Toolkit (pycrypto) 1.9alpha6
 ================================================
 
 This is a collection of both secure hash functions (such as MD5 and
@@ -37,9 +37,13 @@ prototyping and experimentation with cryptographic algorithms; thanks
 to its arbitrary-length integers, public key algorithms are easily
 implemented.
 
-For discussion about using Python for cryptography-related tasks, join
-the python-crypto mailing list.  Archives and instructions for
-subscribing are at
+Development of the toolkit can be discussed on the pct mailing list;
+archives and instructions for subscribing at at 
+<URL:http://www.amk.ca/mailman/listinfo/pct>.
+
+For general discussion about using Python for cryptography-related
+tasks, join the python-crypto mailing list.  Archives and instructions
+for subscribing are at
 <URL:http://listserv.surfnet.nl/archives/python-crypto.html>.
 
 
@@ -75,4 +79,4 @@ If you have any comments, corrections, or improvements for
 this package, please e-mail me at the address below, or send it to the
 python-crypto mailing list.  Good luck!
 
---amk                                                             (www.amk.ca)
+--amk                                                       (www.amk.ca)
