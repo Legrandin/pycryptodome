@@ -48,8 +48,13 @@ newALGobject(void)
 static void
 ALG_dealloc(PyObject *ptr)
 {
-	ALGobject *ALGptr=(ALGobject *)ptr;
-	PyObject_DEL(ALGptr);
+	int i;
+	char *obj=(char *)ptr;
+
+	/* Overwrite the contents of the object, just in case... */
+	for (i = 0; i < sizeof(ALGobject); i++)
+		*(obj + i) = '\0';
+	PyObject_DEL(ptr);
 }
 
 

@@ -55,14 +55,15 @@ newALGobject(void)
 }
 
 static void
-ALGdealloc(PyObject *self)
+ALGdealloc(PyObject *ptr)
 {
 	int i;
+	char *obj=(char *)ptr;
 	
-	/* Overwrite the contents of the object, just in case... */	
+	/* Overwrite the contents of the object, just in case... */
 	for (i = 0; i < sizeof(ALGobject); i++)
-		*((char *) self + i) = '\0';
-	PyObject_DEL(self);
+		*(obj + i) = '\0';
+	PyObject_DEL(ptr);
 }
 
 static char ALGnew__doc__[] = 
