@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.18 2003-04-04 19:03:13 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.19 2003-04-04 19:42:07 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 from Crypto.Util import number
@@ -31,17 +31,21 @@ def generate(bits, randfunc, progress_func=None):
     the progress of the key generation.
     """
     obj=RSAobj()
+
     # Generate the prime factors of n
     if progress_func:
-        progress_func('p\n')
-    obj.p = pubkey.getPrime(bits/2+1, randfunc)
-    if progress_func:
-        progress_func('q\n')
-    obj.q = pubkey.getPrime(bits/2+1, randfunc)
+        progress_func('p,q\n')
+    p = q = 1L
+    while number.size(p*q) < bits:
+        p = pubkey.getPrime(bits/2, randfunc)
+        q = pubkey.getPrime(bits/2, randfunc)
 
     # p shall be smaller than q (for calc of u)
-    if obj.p > obj.q:
-        (obj.p, obj.q)=(obj.q, obj.p)
+    if p > q:
+        (p, q)=(q, p)
+    obj.p = p
+    obj.q = q
+
     if progress_func:
         progress_func('u\n')
     obj.u = pubkey.inverse(obj.p, obj.q)
@@ -52,7 +56,7 @@ def generate(bits, randfunc, progress_func=None):
         progress_func('d\n')
     obj.d=pubkey.inverse(obj.e, (obj.p-1)*(obj.q-1))
 
-    assert obj.size() >= bits, "Generated key is too small"
+    assert bits <= 1+obj.size(), "Generated key is too small"
 
     return obj
 
@@ -206,11 +210,13 @@ class RSAobj_c(pubkey.pubkey):
 def generate_c(bits, randfunc, progress_func = None):
     # Generate the prime factors of n
     if progress_func:
-        progress_func('p\n')
-    p=pubkey.getPrime(bits/2 + 1, randfunc)
-    if progress_func:
-        progress_func('q\n')
-    q=pubkey.getPrime(bits/2 + 1, randfunc)
+        progress_func('p,q\n')
+
+    p = q = 1L
+    while number.size(p*q) < bits:
+        p = pubkey.getPrime(bits/2, randfunc)
+        q = pubkey.getPrime(bits/2, randfunc)
+
     # p shall be smaller than q (for calc of u)
     if p > q:
         (p, q)=(q, p)
@@ -230,7 +236,7 @@ def generate_c(bits, randfunc, progress_func = None):
 ##    print q
 ##    print number.size(p), number.size(q), number.size(q*p),
 ##    print obj.size(), bits
-    assert obj.size() >= bits, "Generated key is too small"
+    assert bits <= 1+obj.size(), "Generated key is too small"
     return obj
 
 
