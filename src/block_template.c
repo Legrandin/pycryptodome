@@ -1,8 +1,9 @@
+
+/*Rename cipherMode -> mode*/
+
 /* -*- C -*- */
 /*
- *  block.in : Generic framework for block encryption algorithms
- *
- * Part of the Python Cryptography Toolkit, version 1.1
+ *  block_template.c : Generic framework for block encryption algorithms
  *
  * Distribute and use freely; there are no restrictions on further 
  * dissemination and usage except those imposed by the laws of your 
@@ -32,11 +33,12 @@
 
  /* Cipher operation modes */
 
-#define MODE_ECB 0
-#define MODE_CFB 1
+#define MODE_ECB 1
 #define MODE_CBC 2
-#define MODE_OFB 3
+#define MODE_CFB 3
 #define MODE_PGP 4
+#define MODE_OFB 5
+#define MODE_CTR 6
 
         /*
 	 *
@@ -47,8 +49,9 @@
 typedef struct 
 {
   PyObject_HEAD 
-  int cipherMode, count;
+  int cipherMode, count, segment_size;
   unsigned char IV[BLOCK_SIZE], oldCipher[BLOCK_SIZE];
+  PyObject *counter;
   block_state st;
 } ALGobject;
 
@@ -80,7 +83,7 @@ ALGdealloc(PyObject *ptr)
 static char ALGnew__doc__[] = 
 "Return a new ALG encryption object.";
 
-static char *kwlist[] = {"key", "mode", "IV", 
+static char *kwlist[] = {"key", "mode", "IV", "counter", "segment_size",
 			 NULL};
 
 static ALGobject *
@@ -89,12 +92,16 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
  unsigned char *key, *IV;
 
  ALGobject * new;
- int i, keylen, IVlen=0, mode=MODE_ECB;
+ int i, keylen, IVlen=0, mode=MODE_ECB, segment_size=0;
+ 
+ PyObject *counter = NULL;
 
  new = newALGobject();
  /* Set default values */
- if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#", kwlist,
-				  &key, &keylen, &mode, &IV, &IVlen))
+ if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#Oi", kwlist,
+				  &key, &keylen, &mode, &IV, &IVlen,
+				  &counter, &segment_size
+				  ))
    {
      Py_XDECREF(new);
      return NULL;
@@ -102,27 +109,53 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 
  if (KEY_SIZE!=0 && keylen!=KEY_SIZE)
    {
-    PyErr_SetString(PyExc_ValueError, "ALG key must be "
-		    "KEY_SIZE bytes long");
+    PyErr_SetString(PyExc_ValueError, "Key must be "
+		    "key_size bytes long");
     return (NULL);
    }
  if (KEY_SIZE==0 && keylen==0)
    {
-    PyErr_SetString(PyExc_ValueError, "ALG key cannot be "
+    PyErr_SetString(PyExc_ValueError, "Key cannot be "
 		    "the null string (0 bytes long)");
     return (NULL);
    }
  if (IVlen != BLOCK_SIZE && IVlen != 0)
    {
-    PyErr_SetString(PyExc_ValueError, "ALG IV must be "
+    PyErr_SetString(PyExc_ValueError, "IV must be "
 		    "BLOCK_SIZE bytes long");
     return (NULL);
    }
- if (mode<MODE_ECB || mode>MODE_PGP) 
+ if (mode<MODE_ECB || mode>MODE_CTR) 
    {
      PyErr_SetString(PyExc_ValueError, "Unknown cipher feedback mode");
-    return (NULL);
+     return (NULL);
    }
+
+ /* Mode-specific checks */
+ if (mode == MODE_CFB) {
+   if (segment_size == 0) segment_size = BLOCK_SIZE*8;
+   if (segment_size < 1 || segment_size > BLOCK_SIZE*8) {
+     PyErr_SetString(PyExc_ValueError, "segment_size must be between "
+		     "1 and 8*block_size");
+   }
+   new->segment_size = segment_size;
+ }
+
+ if (mode == MODE_CTR) {
+   if (!PyCallable_Check(counter)) {
+     PyErr_SetString(PyExc_ValueError, 
+		     "'counter' parameter must be a callable object");
+   }
+   else {
+     new->counter = counter;
+   }
+ } else {
+   if (counter != NULL) {
+     PyErr_SetString(PyExc_ValueError, 
+		     "'counter' parameter only useful with CTR mode");
+   }
+ }
+
  block_init(&(new->st), key, keylen);
  if (PyErr_Occurred())
    {
@@ -231,6 +264,35 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	  for(j=0; j<len-i; j++) 
 	    {
 	      buffer[i+j] = self->IV[j] ^= str[i+j];
+	    }
+	}
+      break;
+    case(MODE_OFB):
+      break;
+    case(MODE_CTR):
+      for(i=0; i<len; i+=BLOCK_SIZE) 
+	{
+          PyObject *ctr = PyObject_Call(self->counter, PyTuple_New(0), NULL);
+	  if (ctr == NULL) return NULL;
+	  if (!PyString_Check(ctr))
+	    {
+	      PyErr_SetString(PyExc_TypeError, 
+			      "CTR counter function didn't return a string");
+	      Py_DECREF(ctr);
+	      return NULL;
+	    }
+	  if (PyString_Size(ctr) != BLOCK_SIZE) {
+	      PyErr_SetString(PyExc_TypeError, 
+			      "CTR counter function returned string of incorrect length");
+	      Py_DECREF(ctr);
+	      return NULL;
+	  }
+	  memcpy(temp, PyString_AsString, BLOCK_SIZE);
+	  Py_DECREF(ctr);
+	  block_encrypt(&(self->st), temp);
+	  for(j=0; j<BLOCK_SIZE; j++)
+	    {
+	      buffer[i+j] = str[i+j]^temp[j];
 	    }
 	}
       break;
@@ -346,6 +408,35 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	    {
 	      t=self->IV[j];
 	      buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
+	    }
+	}
+      break;
+    case (MODE_OFB):
+      break;
+    case (MODE_CTR):
+      for(i=0; i<len; i+=BLOCK_SIZE) 
+	{
+          PyObject *ctr = PyObject_Call(self->counter, PyTuple_New(0), NULL);
+	  if (ctr == NULL) return NULL;
+	  if (!PyString_Check(ctr))
+	    {
+	      PyErr_SetString(PyExc_TypeError, 
+			      "CTR counter function didn't return a string");
+	      Py_DECREF(ctr);
+	      return NULL;
+	    }
+	  if (PyString_Size(ctr) != BLOCK_SIZE) {
+	      PyErr_SetString(PyExc_TypeError, 
+			      "CTR counter function returned string of incorrect length");
+	      Py_DECREF(ctr);
+	      return NULL;
+	  }
+	  memcpy(temp, PyString_AsString, BLOCK_SIZE);
+	  Py_DECREF(ctr);
+	  block_encrypt(&(self->st), temp);
+	  for(j=0; j<BLOCK_SIZE; j++)
+	    {
+	      buffer[i+j] = str[i+j]^temp[j];
 	    }
 	}
       break;
@@ -505,7 +596,7 @@ static PyTypeObject ALGtype =
 void
 _MODULE_NAME (void)
 {
- PyObject *m, *d, *x;
+ PyObject *m, *d;
 
  ALGtype.ob_type = &PyType_Type;
 
@@ -514,13 +605,13 @@ _MODULE_NAME (void)
 
  /* Add some symbolic constants to the module */
  d = PyModule_GetDict(m);
- x = PyString_FromString(_MODULE_STRING ".error");
- PyDict_SetItemString(d, "error", x);
 
- insint("ECB", MODE_ECB);
- insint("CFB", MODE_CFB);
- insint("CBC", MODE_CBC);
- insint("PGP", MODE_PGP);
+ insint("MODE_ECB", MODE_ECB);
+ insint("MODE_CBC", MODE_CBC);
+ insint("MODE_CFB", MODE_CFB);
+ insint("MODE_PGP", MODE_PGP);
+ insint("MODE_OFB", MODE_OFB);
+ insint("MODE_CTR", MODE_CTR);
  insint("block_size", BLOCK_SIZE);
  insint("key_size", KEY_SIZE);
 
