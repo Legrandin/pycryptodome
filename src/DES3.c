@@ -662,7 +662,7 @@ static const unsigned char odd_parity[256]={
 static void block_init(block_state *self, unsigned char *key, 
 		       int keylength)
 {
-	char oddkey[16];
+	char oddkey[24];
 	int i;
   
 	if (keylength != 16 && keylength != 24) {
@@ -671,16 +671,17 @@ static void block_init(block_state *self, unsigned char *key,
 		return;
 	}
 
-	for (i=0; i<16; i++)
+	for (i=0; i<keylength; i++)
 	{
 		oddkey[i]=odd_parity[ key[i] ];
 	}
 	des_set_key((des_cblock *)(oddkey+0), self->KeySched1);
 	des_set_key((des_cblock *)(oddkey+8), self->KeySched2);
 	if (keylength == 24) {
-		des_set_key((des_cblock *)key+16, self->KeySched3);
+		des_set_key((des_cblock *)(oddkey+16), self->KeySched3);
 	} else {
-		memcpy(self->KeySched3, self->KeySched1, sizeof(self->KeySched3));
+                memcpy(self->KeySched3, self->KeySched1, 
+                       sizeof(self->KeySched3));
 	}
 }
 

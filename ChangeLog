@@ -30,7 +30,10 @@
         * If the GNU GMP library is available, two C extensions will be 
           compiled to speed up RSA and DSA operations.  (Contributed by 
           Paul Swartz.)
-        
+
+        * DES3 with a 24-byte key was broken; now fixed.  
+	  (Patch by Philippe Frycia.)
+
 
 1.9alpha4
 =========
