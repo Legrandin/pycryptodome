@@ -372,39 +372,6 @@ def TestHashModules(args=['ripemd', 'md2', 'md4'],
 		if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
 		del obj
 
-    if 'haval' in args:
-	# Test/benchmark HAVAL
-	try:
-	    from Crypto.Hash import HAVAL
-	except ImportError:
-	    print 'HAVAL module not available'
-	else:
-	    print 'HAVAL:'
-	    try:
-		import Crypto.Util.testdata
-		if verbose: print '  Verifying against test suite...'
-		for (passes, length, text, hash) in Crypto.Util.testdata.haval:
-		    ID=str(passes)+'-pass, '+str(length)+'-bit HAVAL '
-		    obj=HAVAL.new('', rounds=passes, digestsize=length)
-		    obj.update(text)
-		    s1=obj.digest()
-		    if (s1!=hex2str(hash)):
-			die(ID+'produces incorrect result on string "'+text+'"')
-		    s2=obj.digest()
-		    if s2!=s1: die(ID+'produces incorrect result on second hashing')
-		    s3=obj.copy().digest()
-		    if s3!=s1: die(ID+'produces incorrect result after copying')
-		if verbose: print '  Completed'
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    obj=HAVAL.new()
-	    import time
-	    start=time.time()
-	    s=obj.update(teststr)
-	    end=time.time()
-	    if verbose: print '  Benchmark for 128K: ', 128/(end-start), 'K/sec'
-	    del obj
-
     if 'sha' in args:
 	# Test/benchmark SHA hash algorithm
 	try:
@@ -453,25 +420,6 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 		    if (ciphertext!=cipher):
 			die('ARC4 failed on entry '+`entry`)
 		if verbose: print '  ARC4 test suite completed'
-
-    if 'sapphire' in args:
-	# Test Sapphire stream cipher
-	sapphire=exerciseStreamCipher('Sapphire', verbose)
-	if (sapphire!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		result=hex2str(Crypto.Util.testdata.sapphire)
-		obj=sapphire.new('testSapphirekey')
-		s=''
-		for i in range(0,256):
-		    s=s+chr(i)
-		s=obj.encrypt(s)
-		if (s!=result):
-		    die('Sapphire fails verification test')
-		if verbose: print '  Sapphire test suite completed'
 
     if 'xor' in args:
 	# Test XOR stream cipher
@@ -698,27 +646,6 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			die('DES3 CBC mode failed on entry '+`entry`)
 		if verbose: print '  Completed'
 
-    if 'diamond' in args:
-        ciph=exerciseBlockCipher('Diamond', verbose) # M.P. Johnson's Diamond
-	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.diamond:
-		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
-		    obj=ciph.new(key[1:], ciph.MODE_ECB, rounds = ord(key[0]) )
-		    ciphertext=obj.encrypt(plain)
-		    if (ciphertext!=cipher):
-			die('Diamond failed on entry '+`entry`)
-		if verbose: print '  Completed'
-
-
     if 'idea' in args:
         ciph=exerciseBlockCipher('IDEA', verbose)       # IDEA block cipher
 	if (ciph!=None):
@@ -766,28 +693,6 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 			if verbose: print
 		if verbose: print '  Completed'
 
-    if 'skipjack' in args:
-        ciph=exerciseBlockCipher('Skipjack', verbose)	    # Skipjack
-	if (ciph!=None):
-	    try:
-		import Crypto.Util.testdata
-	    except ImportError:
-		if verbose: print '  Test suite data not available'
-	    else:
-		if verbose: print '  Verifying against test suite...'
-		for entry in Crypto.Util.testdata.skipjack:
-		    key,plain,cipher=entry
-		    key=hex2str(key)
-		    plain=hex2str(plain)
-		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.MODE_ECB)
-		    ciphertext=obj.encrypt(plain)
-		    if (ciphertext!=cipher):
-			die('Skipjack failed on entry '+`entry`)
-			for i in ciphertext: 
-			    if verbose: print hex(ord(i)),
-			print 
-		if verbose: print '  Completed'
 
 
 def TestPKModules(args=['rsa', 'dsa', 'elgamal', 'qnew'], verbose=1):
