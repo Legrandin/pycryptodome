@@ -1,4 +1,27 @@
 
+	Many randpool changes.  RandomPool now has a
+	randomize(N:int) method that can be called to get N
+	bytes of entropy for the pool (N defaults to 0,
+	which 'fills up' the pool's entropy) KeyboardRandom
+	overloads this method.
+
+	Added src/winrand.c for Crypto.Util.winrandom and
+	now use winrandom for _randomize if possible.
+	(Calls Windows CryptoAPI CryptGenRandom)
+
+	Several additional places for stirring the pool,
+	capturing inter-event entropy when reading/writing,
+	stirring before and after saves.
+
+	RandomPool.add_event now returns the number of
+	estimated bits of added entropy, rather than the
+	pool entropy itself (since the pool entropy is
+	capped at the number of bits in the pool)
+
+	Moved termios code from KeyboardRandomPool into a
+	KeyboardEntry class, provided a version for Windows
+	using msvcrt.
+
 1.9alpha5
 =========
 

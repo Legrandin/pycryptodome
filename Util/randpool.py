@@ -10,10 +10,16 @@
 # or implied. Use at your own risk or not at all. 
 #
 
-__revision__ = "$Id: randpool.py,v 1.10 2002-10-02 17:02:55 akuchling Exp $"
+__revision__ = "$Id: randpool.py,v 1.11 2002-10-31 17:34:22 moraes Exp $"
 
-import time, array, types, warnings
+import time, array, types, warnings, os.path
 from Crypto.Util.number import long_to_bytes
+try:
+    import Crypto.Util.winrandom as winrandom
+except:
+    winrandom = None
+
+STIRNUM = 3
 
 class RandomPool:
     """randpool.py : Cryptographically strong random number generation.
@@ -21,11 +27,15 @@ class RandomPool:
     The implementation here is similar to the one in PGP.  To be
     cryptographically strong, it must be difficult to determine the RNG's
     output, whether in the future or the past.  This is done by using
-    encryption algorithms to "stir" the random data.
+    a cryptographic hash function to "stir" the random data.
 
     Entropy is gathered in the same fashion as PGP; the highest-resolution
     clock around is read and the data is added to the random number pool.
     A conservative estimate of the entropy is then kept.
+
+    If a cryptographically secure random source is available (/dev/urandom
+    on many Unixes, Windows CryptGenRandom on most Windows), then use
+    it.
 
     Instance Attributes:
     bits : int
@@ -38,6 +48,7 @@ class RandomPool:
     Methods:
     add_event([s]) : add some entropy to the pool
     get_bytes(int) : get N bytes of random data
+    randomize([N]) : get N bytes of randomness from external source
     """
 
     
@@ -73,27 +84,68 @@ class RandomPool:
         self.__counter = 0
 
         self._measureTickSize()        # Estimate timer resolution
+        self._randomize()
 
-	# Linux supports a /dev/urandom device; soon other OSes will, too.
-	# We'll grab some randomness from it.
-	try:
-	    f=open('/dev/urandom')
-	    data=f.read(self.bytes)
-	    f.close()
-	    self._addBytes(data)
+    def _updateEntropyEstimate(self, nbits):
+        self.entropy += nbits
+        if self.entropy < 0:
+            self.entropy = 0
+        elif self.entropy > self.bits:
+            self.entropy = self.bits
 
-	    # Entropy estimate: The number of bits of
-	    # data obtained from /dev/urandom.
-	    self.entropy += 8*len(data)
-	except IOError, (num, msg):
-	    if num!=2: raise IOError, (num, msg)
-	    # If the file wasn't found, ignore the error
+    def _randomize(self, N = 0, devname = '/dev/urandom'):
+        """_randomize(N, DEVNAME:device-filepath)
+        collects N bits of randomness from some entropy source (e.g.,
+        /dev/urandom on Unixes that have it, Windows CryptoAPI
+        CryptGenRandom, etc)
+        DEVNAME is optional, defaults to /dev/urandom.  You can change it
+        to /dev/random if you want to block till you get enough
+        entropy.
+        """
+        data = ''
+        if N <= 0:
+            nbytes = int((self.bits - self.entropy)/8+0.5)
+        else:
+            nbytes = int(N/8+0.5)
+        if winrandom:
+            # Windows CryptGenRandom provides random data.
+            data = winrandom.winrandom(nbytes)
+        elif os.path.exists(devname):
+            # Many OSes support a /dev/urandom device
+            try:
+                f=open(devname)
+                data=f.read(nbytes)
+                f.close()
+            except IOError, (num, msg):
+                if num!=2: raise IOError, (num, msg)
+                # If the file wasn't found, ignore the error
+        if data:
+            self._addBytes(data)
+            # Entropy estimate: The number of bits of
+            # data obtained from the random source.
+            self._updateEntropyEstimate(8*len(data))
+        self.stir_n()                   # Wash the random pool
 
-    def stir (self):
-        """stir() 
+    def randomize(self, N=0):
+        """randomize(N:int)
+        use the class entropy source to get some entropy data.
+        This is overridden by KeyboardRandomize().
+        """
+        return self._randomize(N)
+
+    def stir_n(self, N = STIRNUM):
+        """stir_n(N)
+        stirs the random pool N times
+        """
+        for i in xrange(N):
+            self.stir()
+
+    def stir (self, s = ''):
+        """stir(s:string) 
         Mix up the randomness pool.  This will call add_event() twice,
         but out of paranoia the entropy attribute will not be
-        increased.        
+        increased.  The optional 's' parameter is a string that will
+        be hashed with the randomness pool.
         """
         
         entropy=self.entropy            # Save inital entropy value
@@ -104,7 +156,7 @@ class RandomPool:
         # back into the pool.
         for i in range(self.bytes / self._hash.digest_size):
             h = self._hash.new(self._randpool)
-            h.update(str(self.__counter) + str(i) + str(self._addPos) )
+            h.update(str(self.__counter) + str(i) + str(self._addPos) + s)
             self._addBytes( h.digest() )
             self.__counter = (self.__counter + 1) & 0xFFFFffff
 
@@ -135,9 +187,7 @@ class RandomPool:
                 i=self._getPos
                 
         self._getPos = i
-        self.entropy = self.entropy - 8*N
-        if self.entropy < 0:
-            self.entropy=0
+        self._updateEntropyEstimate(- 8*N)
         return s[:N]
 
 
@@ -146,6 +196,7 @@ class RandomPool:
         Add an event to the random pool.  The current time is stored
         between calls and used to estimate the entropy.  The optional
         's' parameter is a string that will also be XORed into the pool.
+        Returns the estimated number of additional bits of entropy gain.
         """
         event = time.time()*1000
         delta = self._noise()
@@ -165,10 +216,8 @@ class RandomPool:
 
         self._event1, self._event2 = event, self._event1
 
-        self.entropy = self.entropy+bits
-        if self.entropy > self.bits:
-            self.entropy = self.bits
-        return self.entropy
+        self._updateEntropyEstimate(bits)
+        return bits
 
     # Private functions
     def _noise(self):
@@ -186,7 +235,7 @@ class RandomPool:
 
         # Reduce delta to a maximum of 8 bits so we don't add too much
         # entropy as a result of this call.
-	delta=delta % 0xff
+        delta=delta % 0xff
         return int(delta)
 
 
@@ -195,14 +244,19 @@ class RandomPool:
         # resolution of time that you can see from Python.  It does
         # this by measuring the time 100 times, computing the delay
         # between measurements, and taking the median of the resulting
-        # list.
+        # list.  (We also hash all the times and add them to the pool)
         interval = [None] * 100
+        h = self._hash.new(`(id(self),id(interval))`)
 
         # Compute 100 differences
         t=time.time()
+        h.update(`t`)
         i = 0
+        j = 0
         while i < 100:
             t2=time.time()
+            h.update(`(i,j,t2)`)
+            j += 1
             delta=int((t2-t)*1e6)
             if delta:
                 interval[i] = delta
@@ -212,7 +266,9 @@ class RandomPool:
         # Take the median of the array of intervals
         interval.sort()
         self._ticksize=interval[len(interval)/2]
-        
+        h.update(`(interval,self._ticksize)`)
+        # mix in the measurement times and wash the random pool
+        self.stir(h.digest())
 
     def _addBytes(self, s):
         "XOR the contents of the string S into the random pool"
@@ -237,67 +293,129 @@ class PersistentRandomPool (RandomPool):
     def __init__ (self, filename=None, *args, **kwargs):
         RandomPool.__init__(self, *args, **kwargs)
         self.filename = filename
-	if filename:
-	    try:
-		f=open(filename, 'rb')
-		data = f.read()
-                self._addBytes(data)
-		f.close()
-	    except IOError:
+        if filename:
+            try:
+                # the time taken to open and read the file might have
+                # a little disk variability, modulo disk/kernel caching...
+                f=open(filename, 'rb')
+                self.add_event()
+                data = f.read()
+                self.add_event()
+                # mix in the data from the file and wash the random pool
+                self.stir(data)
+                f.close()
+            except IOError:
                 # Oh, well; the file doesn't exist or is unreadable, so
                 # we'll just ignore it.
                 pass
 
-        self.stir()     # Wash the random pool
-        self.stir()
-        self.stir()
-
     def save(self):
-	if self.filename == "":
+        if self.filename == "":
             raise ValueError, "No filename set for this object"
-        self.stir()     # Wash the random pool
-        self.stir()
-        self.stir()
+        # wash the random pool before save, provides some forward secrecy for
+        # old values of the pool.
+        self.stir_n()
         f=open(self.filename, 'wb')
+        self.add_event()
         f.write(self._randpool.tostring())
         f.close()
-        
+        self.add_event()
+        # wash the pool again, provide some protection for future values
+        self.stir()
+
+# non-echoing Windows keyboard entry
+_kb = 0
+if not _kb:
+    try:
+        import msvcrt
+        class KeyboardEntry:
+            def getch(self):
+                c = msvcrt.getch()
+                if c in ('\000', '\xe0'):
+                    # function key
+                    c += msvcrt.getch()
+                return c
+            def close(self, delay = 0):
+                if delay:
+                    time.sleep(delay)
+                    while msvcrt.kbhit():
+                        msvcrt.getch()
+        _kb = 1
+    except:
+        pass
+
+# non-echoing Posix keyboard entry
+if not _kb:
+    try:
+        import termios
+        class KeyboardEntry:
+            def __init__(self, fd = 0):
+                self._fd = fd
+                self._old = termios.tcgetattr(fd)
+                new = termios.tcgetattr(fd)
+                new[3]=new[3] & ~termios.ICANON & ~termios.ECHO
+                termios.tcsetattr(fd, termios.TCSANOW, new)
+            def getch(self):
+                termios.tcflush(0, termios.TCIFLUSH) # XXX Leave this in?
+                return os.read(self._fd, 1)
+            def close(self, delay = 0):
+                if delay:
+                    time.sleep(delay)
+                    termios.tcflush(self._fd, termios.TCIFLUSH)
+                termios.tcsetattr(self._fd, termios.TCSAFLUSH, self._old)
+        _kb = 1
+    except:
+        pass
 
 class KeyboardRandomPool (PersistentRandomPool):
     def __init__(self, *args, **kwargs):
         PersistentRandomPool.__init__(self, *args, **kwargs)
 
-    def randomize(self):
-        import os, string, termios, time
-        bits = self.bits - self.entropy
-        if bits==0:
-            return              # No entropy required, so we exit.
+    def randomize(self, N = 0):
+        "Adds N bits of entropy to random pool.  If N is 0, fill up pool."
+        import os, string, time
+        if N <= 0:
+            bits = self.bits - self.entropy
+        else:
+            bits = N*8
+        if bits == 0:
+            return
         print bits,'bits of entropy are now required.  Please type on the keyboard'
         print 'until enough randomness has been accumulated.'
-        fd=0
-        old=termios.tcgetattr(fd)
-        new=termios.tcgetattr(fd)
-        new[3]=new[3] & ~termios.ICANON & ~termios.ECHO
-        termios.tcsetattr(fd, termios.TCSANOW, new)
+        kb = KeyboardEntry()
         s=''    # We'll save the characters typed and add them to the pool.
         hash = self._hash
+        e = 0
         try:
-            while (self.entropy<self.bits):
-                temp=string.rjust(str(self.bits-self.entropy), 6)
+            while e < bits:
+                temp=str(bits-e).rjust(6)
                 os.write(1, temp)
-                termios.tcflush(0, termios.TCIFLUSH) # XXX Leave this in?
-                s=s+os.read(0, 1)
-                self.add_event(s)
+                s=s+kb.getch()
+                e += self.add_event(s)
                 os.write(1, 6*chr(8))
             self.add_event(s+hash.new(s).digest() )
         finally:
-            termios.tcsetattr(fd, termios.TCSAFLUSH, old)
-        print '\n\007 Enough.\n'
-        time.sleep(4)
-        termios.tcflush(0, termios.TCIFLUSH)
-
+            kb.close()
+        print '\n\007 Enough.  Please wait a moment.\n'
+        self.stir_n()   # wash the random pool.
+        kb.close(4)
 
 if __name__ == '__main__':
     pool = RandomPool()
+    print 'random pool entropy', pool.entropy, 'bits'
     pool.add_event('something')
     print `pool.get_bytes(100)`
+    import tempfile, os
+    fname = tempfile.mktemp()
+    pool = KeyboardRandomPool(filename=fname)
+    print 'keyboard random pool entropy', pool.entropy, 'bits'
+    pool.randomize()
+    print 'keyboard random pool entropy', pool.entropy, 'bits'
+    pool.randomize(128)
+    pool.save()
+    saved = open(fname, 'rb').read()
+    print 'saved', `saved`
+    print 'pool ', `pool._randpool.tostring()`
+    newpool = PersistentRandomPool(fname)
+    print 'persistent random pool entropy', pool.entropy, 'bits'
+    os.remove(fname)
