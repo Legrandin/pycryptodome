@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: number.py,v 1.8 2003-03-21 14:16:35 akuchling Exp $"
+__revision__ = "$Id: number.py,v 1.9 2003-03-21 15:12:54 akuchling Exp $"
 
 bignum = long
 try:
@@ -93,6 +93,7 @@ def isPrime(N):
     for i in sieve:
         if (N % i)==0: return 0
 
+
     # Compute the highest bit that's set in N
     N1=N - 1L ; n=1L
     while (n<N): n=n<<1L
@@ -116,8 +117,8 @@ def isPrime(N):
 
 sieve=[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59,
        61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127,
-       131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191]
-
+       131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193,
+       197, 199, 211, 223, 227, 229, 233, 239, 241, 251]
 
 # Improved conversion functions contributed by Barry Warsaw, after
 # careful benchmarking
