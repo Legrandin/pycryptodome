@@ -107,7 +107,6 @@ typedef    unsigned long        word;   /* unsigned 32-bit integer */
 typedef unsigned long   LONG;
 #endif
 typedef unsigned char   BYTE;
-typedef unsigned int    WORD;
 #define RMD_DATASIZE    64
 #define RMD_DIGESTSIZE  20
 #define RMDsize 160
