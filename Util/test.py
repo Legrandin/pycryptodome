@@ -473,7 +473,6 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
 		    die('Sapphire fails verification test')
 		if verbose: print '  Sapphire test suite completed'
 
-    print args
     if 'xor' in args:
 	# Test XOR stream cipher
 	XOR=exerciseStreamCipher('XOR', verbose)
