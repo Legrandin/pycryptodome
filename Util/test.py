@@ -40,7 +40,7 @@ def exerciseBlockCipher(cipher, verbose):
     IV = 'Test IV Test IV Test IV Test'[0:ciph.block_size]
 
     if verbose: print '  Testing ECB mode with key '+ `password`
-    obj=ciph.new(password, ciph.ECB)
+    obj=ciph.new(password, ciph.MODE_ECB)
     if verbose: print '    Sanity check'
     if obj.block_size != ciph.block_size:
         die("Module and cipher object block_size don't match")
@@ -65,8 +65,8 @@ def exerciseBlockCipher(cipher, verbose):
     del obj
     
     if verbose: print '  Testing CFB mode with key ' + `password`+ ' IV "Test IV@"'
-    obj1=ciph.new(password, ciph.CFB, IV)
-    obj2=ciph.new(password, ciph.CFB, IV)
+    obj1=ciph.new(password, ciph.MODE_CFB, IV)
+    obj2=ciph.new(password, ciph.MODE_CFB, IV)
     start=time.time()
     ciphertext=obj1.encrypt(str[0:65536])
     plaintext=obj2.decrypt(ciphertext)
@@ -77,8 +77,8 @@ def exerciseBlockCipher(cipher, verbose):
     del obj1, obj2
     
     if verbose: print '  Testing CBC mode with key ' + `password`+ ' IV "Test IV@"'
-    obj1=ciph.new(password, ciph.CBC, IV)
-    obj2=ciph.new(password, ciph.CBC, IV)
+    obj1=ciph.new(password, ciph.MODE_CBC, IV)
+    obj2=ciph.new(password, ciph.MODE_CBC, IV)
     start=time.time()
     ciphertext=obj1.encrypt(str)
     plaintext=obj2.decrypt(ciphertext)
@@ -89,8 +89,8 @@ def exerciseBlockCipher(cipher, verbose):
     del obj1, obj2
 
     if verbose: print '  Testing PGP mode with key ' + `password`+ ' IV "Test IV@"'
-    obj1=ciph.new(password, ciph.PGP, IV)
-    obj2=ciph.new(password, ciph.PGP, IV)
+    obj1=ciph.new(password, ciph.MODE_PGP, IV)
+    obj2=ciph.new(password, ciph.MODE_PGP, IV)
     start=time.time()
     ciphertext=obj1.encrypt(str)
     plaintext=obj2.decrypt(ciphertext)
@@ -102,7 +102,7 @@ def exerciseBlockCipher(cipher, verbose):
 
     # Test the IV handling
     if verbose: print '  Testing IV handling'
-    obj1=ciph.new(password, ciph.CBC, IV)
+    obj1=ciph.new(password, ciph.MODE_CBC, IV)
     plaintext='Test'*(ciph.block_size/4)*3
     ciphertext1=obj1.encrypt(plaintext)
     obj1.IV=IV
@@ -112,9 +112,9 @@ def exerciseBlockCipher(cipher, verbose):
 
     # Test keyword arguments
     obj1=ciph.new(key=password)
-    obj1=ciph.new(password, mode=ciph.CBC)
-    obj1=ciph.new(mode=ciph.CBC, key=password)
-    obj1=ciph.new(IV=IV, mode=ciph.CBC, key=password)
+    obj1=ciph.new(password, mode=ciph.MODE_CBC)
+    obj1=ciph.new(mode=ciph.MODE_CBC, key=password)
+    obj1=ciph.new(IV=IV, mode=ciph.MODE_CBC, key=password)
 
     return ciph
 
@@ -513,7 +513,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.ECB)
+		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('AES failed on entry '+`entry`)
@@ -535,7 +535,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.ECB)
+		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('ARC2 failed on entry '+`entry`)
@@ -558,7 +558,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.ECB)
+		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('Blowfish failed on entry '+`entry`)
@@ -581,7 +581,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.ECB)
+		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('CAST failed on entry '+`entry`)
@@ -597,9 +597,9 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    a = b = '\x01\x23\x45\x67\x12\x34\x56\x78\x23\x45\x67\x89\x34\x56\x78\x9A'
 
 		    for i in range(0, 1000000):
-			obj = cast.new(b, cast.ECB)
+			obj = cast.new(b, cast.MODE_ECB)
 			a = obj.encrypt(a[:8]) + obj.encrypt(a[-8:])		
-			obj = cast.new(a, cast.ECB)
+			obj = cast.new(a, cast.MODE_ECB)
 			b = obj.encrypt(b[:8]) + obj.encrypt(b[-8:])		
 
 		    if a!="\xEE\xA9\xD0\xA2\x49\xFD\x3B\xA6\xB3\x43\x6F\xB8\x9D\x6D\xCA\x92":
@@ -613,20 +613,20 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 	des=exerciseBlockCipher('DES', verbose)
 	if (des!=None):
 	    # Various tests taken from the DES library packaged with Kerberos V4
-	    obj=des.new(hex2str('0123456789abcdef'), des.ECB)
+	    obj=des.new(hex2str('0123456789abcdef'), des.MODE_ECB)
 	    s=obj.encrypt('Now is t')
 	    if (s!=hex2str('3fa40e8a984d4815')):
 		die('DES fails test 1')
-	    obj=des.new(hex2str('08192a3b4c5d6e7f'), des.ECB)
+	    obj=des.new(hex2str('08192a3b4c5d6e7f'), des.MODE_ECB)
 	    s=obj.encrypt('\000\000\000\000\000\000\000\000')
 	    if (s!=hex2str('25ddac3e96176467')):
 		die('DES fails test 2')
-	    obj=des.new(hex2str('0123456789abcdef'), des.CBC,
+	    obj=des.new(hex2str('0123456789abcdef'), des.MODE_CBC,
 			hex2str('1234567890abcdef'))
 	    s=obj.encrypt("Now is the time for all ")
 	    if (s!=hex2str('e5c7cdde872bf27c43e934008c389c0f683788499a7c05f6')):
 		die('DES fails test 3')
-	    obj=des.new(hex2str('0123456789abcdef'), des.CBC,
+	    obj=des.new(hex2str('0123456789abcdef'), des.MODE_CBC,
 			hex2str('fedcba9876543210'))
 	    s=obj.encrypt("7654321 Now is the time for \000\000\000\000")
 	    if (s!=hex2str("ccd173ffab2039f4acd8aefddfd8a1eb468e91157888ba681d269397f7fe62b4")):
@@ -636,7 +636,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 	    # R. Rivest's test: see http://theory.lcs.mit.edu/~rivest/destest.txt
 	    x=hex2str('9474B8E8C73BCA7D')
 	    for i in range(0, 16):
-		obj=des.new(x, des.ECB)
+		obj=des.new(x, des.MODE_ECB)
 		if (i & 1): x=obj.decrypt(x)
 		else: x=obj.encrypt(x)
 	    if x!=hex2str('1B1A2DDB4C642438'):
@@ -653,15 +653,15 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=des.new(key, des.ECB)
+		    obj=des.new(key, des.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('DES failed on entry '+`entry`)
 		for entry in Crypto.Util.testdata.des_cbc:
 		    key, iv, plain, cipher=entry
 		    key, iv, cipher=hex2str(key),hex2str(iv),hex2str(cipher)
-		    obj1=des.new(key, des.CBC, iv) 
-		    obj2=des.new(key, des.CBC, iv) 
+		    obj1=des.new(key, des.MODE_CBC, iv) 
+		    obj2=des.new(key, des.MODE_CBC, iv) 
 		    ciphertext=obj1.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('DES CBC mode failed on entry '+`entry`)
@@ -681,7 +681,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.ECB)
+		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('DES3 failed on entry '+`entry`)
@@ -691,8 +691,8 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		for entry in Crypto.Util.testdata.des3_cbc:
 		    key, iv, plain, cipher=entry
 		    key, iv, cipher=hex2str(key),hex2str(iv),hex2str(cipher)
-		    obj1=ciph.new(key, ciph.CBC, iv) 
-		    obj2=ciph.new(key, ciph.CBC, iv) 
+		    obj1=ciph.new(key, ciph.MODE_CBC, iv) 
+		    obj2=ciph.new(key, ciph.MODE_CBC, iv) 
 		    ciphertext=obj1.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('DES3 CBC mode failed on entry '+`entry`)
@@ -712,7 +712,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key[1:], ciph.ECB, rounds = ord(key[0]) )
+		    obj=ciph.new(key[1:], ciph.MODE_ECB, rounds = ord(key[0]) )
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('Diamond failed on entry '+`entry`)
@@ -733,7 +733,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.ECB)
+		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('IDEA failed on entry '+`entry`)
@@ -754,7 +754,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key[4:], ciph.ECB, 
+		    obj=ciph.new(key[4:], ciph.MODE_ECB, 
 				 version =ord(key[0]),
 				 wordsize=ord(key[1]),
 				 rounds  =ord(key[2]) )
@@ -780,7 +780,7 @@ def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
 		    key=hex2str(key)
 		    plain=hex2str(plain)
 		    cipher=hex2str(cipher)
-		    obj=ciph.new(key, ciph.ECB)
+		    obj=ciph.new(key, ciph.MODE_ECB)
 		    ciphertext=obj.encrypt(plain)
 		    if (ciphertext!=cipher):
 			die('Skipjack failed on entry '+`entry`)
