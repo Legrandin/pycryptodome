@@ -18,7 +18,7 @@ except ImportError:
     try:
         import mpz
         #bignum=mpz.mpz       # Temporarily disabled; the 'outrageous exponent'
-                             # error messes things up.
+                              # error messes things up.
     except ImportError: 
 	pass
 
@@ -37,27 +37,27 @@ except ImportError:
     
 def getRandomNumber(N, randfunc):
     "Return an N-bit random number."
-    str=randfunc(N/8)
-    char=ord(randfunc(1))>>(8-(N%8))
-    return str2long(chr(char)+str)
+    S = randfunc(N/8)
+    char = ord(randfunc(1)) >> (8-(N%8))
+    return bytestolong(chr(char) + S)
     
 def GCD(x,y):
     "Return the GCD of x and y."
-    if x<0: x=-x
-    if y<0: y=-y
-    while x>0: x,y = y%x, x
+    x = abs(x) ; y = abs(y)
+    while x > 0:
+        x, y = y % x, x
     return y
 
 def inverse(u, v):
     "Return the inverse of u mod v."
     u3, v3 = long(u), long(v)
     u1, v1 = 1L, 0L
-    while v3>0:
-	q=u3/v3
-	u1, v1 = v1, u1-v1*q
-	u3, v3 = v3, u3-v3*q
-        print u1,u3,v1,v3
-    while u1<0: u1=u1+v
+    while v3 > 0:
+	q=u3 / v3
+	u1, v1 = v1, u1 - v1*q
+	u3, v3 = v3, u3 - v3*q
+    while u1<0:
+        u1 = u1 + v
     return u1
     
 # Given a number of bits to generate and a random generation function,
@@ -72,6 +72,7 @@ def getPrime(N, randfunc):
 
 def isPrime(N):
     "Return true if N is prime."
+    if N == 1: return 0
     if N in sieve: return 1
     for i in sieve:
         if (N % i)==0: return 0
@@ -122,7 +123,7 @@ def longtobytes(n, blocksize=0):
         n = n >> 32
     # strip off leading zeros
     for i in range(len(s)):
-        if s[i] <> '\000':
+        if s[i] != '\000':
             break
     else:
         # only happens when n == 0
@@ -152,5 +153,9 @@ def bytestolong(s):
     return acc
 
 # For backwards compatibility...
-long2str = longtobytes
-str2long = bytestolong
+def long2str(n, blocksize=0):
+    warnings.warn("long2str() has been replaced by longtobytes()")
+    return longtobytes(n, blocksize)
+def str2long(s):
+    warnings.warn("str2long() has been replaced by bytestolong()")
+    return bytestolong(s)
