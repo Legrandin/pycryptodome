@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-#ifdef MS_WINDOWS
+#ifdef MS_WIN32
 #include <winsock2.h>
 #else
 #include <sys/param.h>
