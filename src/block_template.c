@@ -196,7 +196,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
   if ( (len % BLOCK_SIZE) !=0 && self->cipherMode!=MODE_CFB
       && self->cipherMode!=MODE_PGP)
     {
-      PyErr_SetString(PyExc_ValueError, "Strings for ALG "
+      PyErr_SetString(PyExc_ValueError, "Input strings "
 		      "must be a multiple of BLOCK_SIZE in length");
       return(NULL);
     }
@@ -268,6 +268,14 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	}
       break;
     case(MODE_OFB):
+      for(i=0; i<len; i+=BLOCK_SIZE) 
+	{
+	  block_encrypt(&(self->st), self->IV);
+	  for(j=0; j<BLOCK_SIZE; j++)
+	    {
+	      buffer[i+j] = str[i+j] ^ self->IV[j];
+	    }
+	}      
       break;
     case(MODE_CTR):
       for(i=0; i<len; i+=BLOCK_SIZE) 
@@ -327,7 +335,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
   if ( (len % BLOCK_SIZE) !=0 && self->cipherMode!=MODE_CFB
       && self->cipherMode!=MODE_PGP) 
     {
-      PyErr_SetString(PyExc_ValueError, "Strings for ALG "
+      PyErr_SetString(PyExc_ValueError, "Input strings "
 		      "must be a multiple of BLOCK_SIZE in length");
       return(NULL);
     }
@@ -412,6 +420,14 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	}
       break;
     case (MODE_OFB):
+      for(i=0; i<len; i+=BLOCK_SIZE) 
+	{
+	  block_encrypt(&(self->st), self->IV);
+	  for(j=0; j<BLOCK_SIZE; j++)
+	    {
+	      buffer[i+j] = str[i+j] ^ self->IV[j];
+	    }
+	}      
       break;
     case (MODE_CTR):
       for(i=0; i<len; i+=BLOCK_SIZE) 
