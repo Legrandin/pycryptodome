@@ -1,10 +1,16 @@
 
+1.9alpha4
+=========
+
+	* Fix compilation problem on Windows.
+	
+
 1.9alpha3
 =========
 
         * Fix a ref-counting bug that caused core dumps.  
 	  (Reported by Piers Lauder and an anonymous SF poster.)
-
+	
 
 1.9alpha2
 =========

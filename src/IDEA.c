@@ -10,9 +10,12 @@
  *
  */
   
-
+#ifdef MS_WINDOWS
+#include <winsock2.h>
+#else
 #include <sys/param.h>
 #include <netinet/in.h>
+#endif
 
 #define MODULE_NAME IDEA
 #define BLOCK_SIZE 8

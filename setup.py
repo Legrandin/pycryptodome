@@ -1,8 +1,14 @@
 #! /usr/bin/env python
 from distutils.core import setup, Extension
+import sys
 
+if sys.platform == 'win32':
+    HTONS_LIBS = ['ws2_32']
+else:
+    HTONS_LIBS = []
+    
 setup(name="pycrypto",
-      version="1.9a3",
+      version="1.9a4",
       description="Cryptographic modules for Python.",
       author="A.M. Kuchling",
       author_email="akuchlin@mems-exchange.org",
@@ -21,7 +27,8 @@ setup(name="pycrypto",
                                sources=["src/MD4.c"]),
                      Extension("Crypto.Hash.RIPEMD",
                                include_dirs=['src/'],
-                               sources=["src/RIPEMD.c"]),
+                               sources=["src/RIPEMD.c"],
+                               libraries=HTONS_LIBS),
 
                      # Block encryption algorithms
                      Extension("Crypto.Cipher.AES",
@@ -44,7 +51,8 @@ setup(name="pycrypto",
                                sources=["src/DES3.c"]),
                      Extension("Crypto.Cipher.IDEA",
                                include_dirs=['src/'],
-                               sources=["src/IDEA.c"]),
+                               sources=["src/IDEA.c"],
+                               libraries=HTONS_LIBS),
                      Extension("Crypto.Cipher.RC5",
                                include_dirs=['src/'],
                                sources=["src/RC5.c"]),

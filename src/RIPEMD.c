@@ -16,8 +16,14 @@
 \********************************************************************/
 
 #include <string.h>
+
+#ifdef MS_WINDOWS
+#include <winsock2.h>
+#else
 #include <sys/param.h>
 #include <netinet/in.h>
+#endif
+
 #include "Python.h"
 
 #define MODULE_NAME RIPEMD
