@@ -100,6 +100,33 @@ def exerciseBlockCipher(cipher, verbose):
     if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
     del obj1, obj2
 
+    if verbose: print '  Testing OFB mode with key ' + `password`+ ' IV "Test IV@"'
+    obj1=ciph.new(password, ciph.MODE_OFB, IV)
+    obj2=ciph.new(password, ciph.MODE_OFB, IV)
+    start=time.time()
+    ciphertext=obj1.encrypt(str)
+    plaintext=obj2.decrypt(ciphertext)
+    end=time.time()
+    if (plaintext!=str):
+	die('Error in resulting plaintext from OFB mode')
+    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    del obj1, obj2
+
+    def counter(length=ciph.block_size):
+        return length * 'a'
+    
+    if verbose: print '  Testing CTR mode with key ' + `password`
+    obj1=ciph.new(password, ciph.MODE_CTR, counter=counter)
+    obj2=ciph.new(password, ciph.MODE_CTR, counter=counter)
+    start=time.time()
+    ciphertext=obj1.encrypt(str)
+    plaintext=obj2.decrypt(ciphertext)
+    end=time.time()
+    if (plaintext!=str):
+	die('Error in resulting plaintext from CTR mode')
+    if verbose: print '    Benchmark for 256K: ', 256/(end-start), 'K/sec'
+    del obj1, obj2
+
     # Test the IV handling
     if verbose: print '  Testing IV handling'
     obj1=ciph.new(password, ciph.MODE_CBC, IV)
