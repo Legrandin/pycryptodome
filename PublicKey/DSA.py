@@ -11,7 +11,7 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: DSA.py,v 1.9 2002-12-22 20:13:05 z3p Exp $"
+__revision__ = "$Id: DSA.py,v 1.10 2002-12-23 21:42:03 z3p Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -163,7 +163,10 @@ class DSAobj_c(pubkey):
         if attr in self.keydata:
             return getattr(self.key, attr)
         else:
-            return self.__dict__[attr]
+            if self.__dict__.has_key(attr):
+                self.__dict__[attr]
+            else:
+                raise AttributeError, '%s instance has no attribute %s' % (self.__class__, attr)
 
     def __getstate__(self):
         d = {}
