@@ -46,9 +46,12 @@ subscribing are at
 Installation
 ============
 
+The toolkit is written and tested using Python 2.2, though it should
+also work with Python 2.1.  Python 1.5.2 is not supported.  
+
 The modules are packaged using the Distutils.  Simply run "python
 setup.py build" to build the package.
-	
+
 To verify that everything is in order, run "python test.py".  It will
 test all the cryptographic modules, skipping ones that aren't
 available.  If the test script reports an error on your machine,
