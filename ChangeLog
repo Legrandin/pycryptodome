@@ -29,7 +29,9 @@
 	* Fix endianness bugs that caused test case failures on Sparc,
 	  PPC, and doubtless other platforms.
 
-	* Added a test suite (requires Sancho, from 
+        * Fixed compilation problem on FreeBSD.
+	
+	* Expanded the test suite (requires Sancho, from 
 	  http://www.mems-exchange.org/software/sancho/)
 
         * Added lots of docstrings, so 'pydoc Crypto' now produces 
