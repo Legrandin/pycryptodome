@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: RSA.py,v 1.8 2002-12-21 23:58:35 z3p Exp $"
+__revision__ = "$Id: RSA.py,v 1.9 2002-12-22 20:13:05 z3p Exp $"
 
 from Crypto.PublicKey import pubkey
 
@@ -156,10 +156,7 @@ class RSAobj_c(pubkey.pubkey):
     
     def publickey(self):
         return construct_c((self.key.n, self.key.e))
-    
-    def __eq__(self, other):
-        return self.__getstate__() == other.__getstate__()
-        
+ 
 def generate_c(bits, randfunc, progress_func = None):
     difference=ord(randfunc(1)) & 7
  
