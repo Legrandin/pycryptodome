@@ -1,4 +1,3 @@
-
 /*
  *  RC5.c : Implementation code for the RC5 block cipher
  *
@@ -9,6 +8,12 @@
  * country of residence.
  *
  */
+
+#include "Python.h"
+
+#define MODULE_NAME RC5
+#define BLOCK_SIZE 8
+#define KEY_SIZE 0
 
 #define MAXTABLE 100		/* Maximum size of S-box table; changing this
 				   affects the maximum number of rounds
@@ -27,19 +32,15 @@ typedef unsigned int U32;
 
 typedef struct 
 {
-  PCTObject_HEAD
   int version;			/* Version number of algorithm */
   int wordsize;			/* Word size */
   int rounds;			/* Number of rounds */
   U32 S[MAXTABLE];
   U32 mask;
-} RC5object;
+} block_state;
 
 static inline void
-RC5init(self, key, keylen)
-     RC5object *self;
-     unsigned char *key;
-     int keylen;
+block_init(block_state *self, unsigned char *key, int keylen)
 {
   unsigned int P = 0, Q = 0;
   int i;
@@ -103,7 +104,7 @@ RC5init(self, key, keylen)
 }
 
 static void RC5Encipher(self, Aptr, Bptr)
-     RC5object *self;
+     block_state *self;
      U32 *Aptr, *Bptr;
 {
   int i;
@@ -125,7 +126,7 @@ static void RC5Encipher(self, Aptr, Bptr)
 }
 
 static void RC5Decipher(self, Aptr, Bptr)
-     RC5object *self;
+     block_state *self;
      unsigned int *Aptr, *Bptr;
 {
   int i;
@@ -156,8 +157,8 @@ static void RC5Decipher(self, Aptr, Bptr)
     }
 }
 
-static inline void RC5encrypt(self, block)
-     RC5object *self;
+static inline void block_encrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   U32 A,B;
@@ -193,8 +194,8 @@ static inline void RC5encrypt(self, block)
     }
 }
 
-static inline void RC5decrypt(self, block)
-     RC5object *self;
+static inline void block_decrypt(self, block)
+     block_state *self;
      unsigned char *block;
 {
   U32 A,B;
