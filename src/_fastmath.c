@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.6 2003-04-03 20:26:52 akuchling Exp $
+ * $Id: _fastmath.c,v 1.7 2003-04-03 20:39:41 akuchling Exp $
  */
 
 #include <stdio.h>
@@ -90,7 +90,7 @@ static PyObject *dsaKey_getattr (dsaKey *, char *);
 static PyObject *dsaKey__sign (dsaKey *, PyObject *);
 static PyObject *dsaKey__verify (dsaKey *, PyObject *);
 static PyObject *dsaKey_size (dsaKey *, PyObject *);
-static PyObject *dsaKey_hasprivate (dsaKey *, PyObject *);
+static PyObject *dsaKey_has_private (dsaKey *, PyObject *);
 
 static void rsaKey_dealloc (rsaKey *);
 static PyObject *rsaKey_getattr (rsaKey *, char *);
@@ -100,7 +100,7 @@ static PyObject *rsaKey__verify (rsaKey *, PyObject *);
 static PyObject *rsaKey__blind (rsaKey *, PyObject *);
 static PyObject *rsaKey__unblind (rsaKey *, PyObject *);
 static PyObject *rsaKey_size (rsaKey *, PyObject *);
-static PyObject *rsaKey_hasprivate (rsaKey *, PyObject *);
+static PyObject *rsaKey_has_private (rsaKey *, PyObject *);
 
 static int
 dsaSign (dsaKey * key, mpz_t m, mpz_t k, mpz_t r, mpz_t s)
@@ -247,7 +247,7 @@ static PyMethodDef dsaKey__methods__[] = {
 	 "Verify that the signature is valid."},
 	{"size", (PyCFunction) dsaKey_size, METH_VARARGS,
 	 "Return the number of bits that this key can handle."},
-	{"hasprivate", (PyCFunction) dsaKey_hasprivate, METH_VARARGS,
+	{"has_private", (PyCFunction) dsaKey_has_private, METH_VARARGS,
 	 "Return 1 or 0 if this key does/doesn't have a private key."},
 	{NULL, NULL, 0, NULL}
 };
@@ -287,7 +287,7 @@ static PyMethodDef rsaKey__methods__[] = {
  	 "Unblind the given long."},
 	{"size", (PyCFunction) rsaKey_size, METH_VARARGS,
 	 "Return the number of bits that this key can handle."},
-	{"hasprivate", (PyCFunction) rsaKey_hasprivate, METH_VARARGS,
+	{"has_private", (PyCFunction) rsaKey_has_private, METH_VARARGS,
 	 "Return 1 or 0 if this key does/doesn't have a private key."},
 	{NULL, NULL, 0, NULL}
 };
@@ -427,7 +427,7 @@ dsaKey_size (dsaKey * key, PyObject * args)
 }
 
 PyObject *
-dsaKey_hasprivate (dsaKey * key, PyObject * args)
+dsaKey_has_private (dsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
 		return NULL;
@@ -682,7 +682,7 @@ rsaKey_size (rsaKey * key, PyObject * args)
 }
 
 PyObject *
-rsaKey_hasprivate (rsaKey * key, PyObject * args)
+rsaKey_has_private (rsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
 		return NULL;
