@@ -19,6 +19,13 @@
 	  and others became faster.  Probably this is due to my compiler
 	  optimizing slightly worse or better as a result.
 
+	* Restored the Crypto.PublicKey package at user request.  I
+	  think I'll leave it in the package and warn about it in the
+	  documentation.  I hope that eventually I can point to
+	  someone else's better public-key code, and at that point I
+	  may insert warnings and begin the process of deprecating
+	  this code.
+ 
 
 1.9alpha1
 =========
