@@ -25,7 +25,7 @@ if __name__ == '__main__':
     pool = KeyboardRandomPool(numbytes = 64)
     pool.Randomize()
 
-    key = DSA.generate(512, pool.getBytes, sys.stdout.write)
+    key = DSA.generate(512, pool.get_bytes, sys.stdout.write)
     print "key = Crypto.PublicKey.DSA.construct(("
     for field in key.keydata:
 	print " #", field

@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.PublicKey.
 #
 
-__revision__ = "$Id: test_publickey.py,v 1.1 2002-05-17 13:31:48 akuchling Exp $"
+__revision__ = "$Id: test_publickey.py,v 1.2 2002-05-24 14:20:38 akuchling Exp $"
 
 import sys, cPickle
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -75,19 +75,19 @@ class PublicKeyTest (TestScenario):
         
     def check_rsa(self):
         "Check RSA algorithm"
-	self.exercise(self.pool.getBytes, RSA)
+	self.exercise(self.pool.get_bytes, RSA)
 
     def check_dsa(self):
         "Check DSA algorithm"
-	self.exercise(self.pool.getBytes, DSA)
+	self.exercise(self.pool.get_bytes, DSA)
 
     def check_elgamal(self):
         "Check ElGamal algorithm"
-	self.exercise(self.pool.getBytes, ElGamal)
+	self.exercise(self.pool.get_bytes, ElGamal)
 
     def check_qnew(self):
         "Check qNEW algorithm"
-	self.exercise(self.pool.getBytes, qNEW)
+	self.exercise(self.pool.get_bytes, qNEW)
 
 # class PublicKeyTest
 
