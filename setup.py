@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.16 2002-07-18 13:05:37 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.17 2002-09-05 11:27:11 akuchling Exp $"
 
 from distutils.core import setup, Extension
 import sys
@@ -15,7 +15,7 @@ else:
     HTONS_LIBS = []
     
 setup(name="pycrypto",
-      version="1.9a4",
+      version="1.9a5",
       description="Cryptographic modules for Python.",
       author="A.M. Kuchling",
       author_email="akuchlin@mems-exchange.org",
