@@ -46,87 +46,67 @@
 	 *
 	 */
 
-#define PCTObject_HEAD PyObject_HEAD int dummy /* dummy is never used */
-#define PCT_Str(x) #x
-/* GetKeywordArg has been abandoned for PyArg_ParseTupleAndKeywords */
-#define GetKeywordArg(name, default) {\
-		   PyObject *arg; \
-                   if (kwdict==NULL || \
-                       (( arg=PyDict_GetItemString(kwdict, PCT_Str(name)))==NULL )) {new->name = default;} else { \
-		     if (!PyInt_Check(arg)) \
-		       { \
-			 PyErr_SetString(PyExc_TypeError, "Keyword argument must have integer value"); \
-			 Py_DECREF(new); \
-			 return NULL; \
-		       } \
-		     new->name = PyInt_AsLong(arg); \
-		   } \
-		 }
-
-@@IMPLEMENTATION@@
-
-
-staticforward PyTypeObject @@ALGORITHM@@type;
-
-#define is_@@ALGORITHM@@object(v)		((v)->ob_type == &@@ALGORITHM@@type)
-
-static @@ALGORITHM@@object *
- new@@ALGORITHM@@object()
+typedef struct 
 {
- @@ALGORITHM@@object * new;
- new = PyObject_NEW(@@ALGORITHM@@object, &@@ALGORITHM@@type);
+  PyObject_HEAD 
+  stream_state st;
+} ALGobject;
+
+staticforward PyTypeObject ALGtype;
+
+#define is_ALGobject(v)		((v)->ob_type == &ALGtype)
+
+static ALGobject *
+newALGobject(void)
+{
+ ALGobject * new;
+ new = PyObject_NEW(ALGobject, &ALGtype);
  return new;
 }
 
 static void
-@@ALGORITHM@@dealloc(self)
-@@ALGORITHM@@object * self;
+ALGdealloc(PyObject *self)
 {	      	/* Overwrite the contents of the object, just in case... */
  int i;
 
- for (i = 0; i < sizeof(@@ALGORITHM@@object); i++)
-  *((char *) self + i) = '\0';
+ for (i = 0; i < sizeof(ALGobject); i++)
+   *((char *) self + i) = '\0';
  PyMem_DEL(self);
 }
 
-static char @@ALGORITHM@@new__doc__[] = 
-"Return a new @@ALGORITHM@@ encryption object.";
+static char ALGnew__doc__[] = 
+"Return a new ALG encryption object.";
 
-static char *kwlist[] = {"key", @@KEYWORDLIST@@ 
-			 NULL};
+static char *kwlist[] = {"key", NULL};
 
-static @@ALGORITHM@@object *
-@@ALGORITHM@@new(self, args, kwdict)
-     PyObject *self;		/* Not used */
-     PyObject *args;
-     PyObject *kwdict;
+static ALGobject *
+ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 {
  unsigned char *key;
- @@ALGORITHM@@object * new;
+ ALGobject * new;
  int keylen;
 
- new = new@@ALGORITHM@@object();
- @@KEYWORDDEFAULTS@@
- if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#" @@KEYWORDFMT@@, kwlist, 
-				  &key, &keylen @@KEYWORDPTRS@@))
+ new = newALGobject();
+ if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#", kwlist, 
+				  &key, &keylen))
    {
      Py_DECREF(new);
      return (NULL);
    }
 
- if (@@KEYSIZE@@!=0 && keylen != @@KEYSIZE@@)
+ if (KEY_SIZE!=0 && keylen != KEY_SIZE)
    {
-    PyErr_SetString(PyExc_ValueError, "@@ALGORITHM@@ key must be "
-		    "@@KEYSIZE@@ bytes long");
+    PyErr_SetString(PyExc_ValueError, "ALG key must be "
+		    "KEY_SIZE bytes long");
     return (NULL);
    }
- if (@@KEYSIZE@@== 0 && keylen == 0)
+ if (KEY_SIZE== 0 && keylen == 0)
    {
-    PyErr_SetString(PyExc_ValueError, "@@ALGORITHM@@ key cannot be "
+    PyErr_SetString(PyExc_ValueError, "ALG key cannot be "
 		    "the null string (0 bytes long)");
     return (NULL);
    }
- @@ALGORITHM@@init(new, key, keylen);
+ stream_init(&(new->st), key, keylen);
  if (PyErr_Occurred())
    {
     Py_DECREF(new);
@@ -135,13 +115,11 @@ static @@ALGORITHM@@object *
  return new;
 }
 
-static char @@ALGORITHM@@_Encrypt__doc__[] =
+static char ALG_Encrypt__doc__[] =
 "Decrypt the provided string of binary data.";
 
 static PyObject *
-@@ALGORITHM@@_Encrypt(self, args)
-@@ALGORITHM@@object * self;
-     PyObject *args;
+ALG_Encrypt(ALGobject *self, PyObject *args)
 {
  unsigned char *buffer, *str;
  int len;
@@ -157,23 +135,21 @@ static PyObject *
  if (buffer == NULL)
    {
     PyErr_SetString(PyExc_MemoryError, "No memory available in "
-		    "@@ALGORITHM@@ encrypt");
+		    "ALG encrypt");
     return (NULL);
    }
  memcpy(buffer, str, len);
- @@ALGORITHM@@encrypt(self, buffer, len);
+ stream_encrypt(&(self->st), buffer, len);
  result = PyString_FromStringAndSize(buffer, len);
  free(buffer);
  return (result);
 }
 
-static char @@ALGORITHM@@_Decrypt__doc__[] =
+static char ALG_Decrypt__doc__[] =
 "Decrypt the provided string of binary data.";
 
 static PyObject *
-@@ALGORITHM@@_Decrypt(self, args)
-@@ALGORITHM@@object * self;
-     PyObject *args;
+ALG_Decrypt(ALGobject *self, PyObject *args)
 {
  char *buffer, *str;
  int len;
@@ -189,39 +165,37 @@ static PyObject *
  if (buffer == NULL)
    {
     PyErr_SetString(PyExc_MemoryError, "No memory available in "
-		    "@@ALGORITHM@@ decrypt");
+		    "ALG decrypt");
     return (NULL);
    }
  memcpy(buffer, str, len);
- @@ALGORITHM@@decrypt(self, buffer, len);
+ stream_decrypt(&(self->st), buffer, len);
  result = PyString_FromStringAndSize(buffer, len);
  free(buffer);
  return (result);
 }
 
-/* @@ALGORITHM@@object methods */
+/* ALGobject methods */
 
-static PyMethodDef @@ALGORITHM@@methods[] =
+static PyMethodDef ALGmethods[] =
 {
- {"encrypt", (PyCFunction) @@ALGORITHM@@_Encrypt, 0, @@ALGORITHM@@_Encrypt__doc__},
- {"decrypt", (PyCFunction) @@ALGORITHM@@_Decrypt, 0, @@ALGORITHM@@_Decrypt__doc__},
+ {"encrypt", (PyCFunction) ALG_Encrypt, 0, ALG_Encrypt__doc__},
+ {"decrypt", (PyCFunction) ALG_Decrypt, 0, ALG_Decrypt__doc__},
  {NULL, NULL}			/* sentinel */
 };
 
 static PyObject *
-@@ALGORITHM@@getattr(self, name)
-@@ALGORITHM@@object * self;
-     char *name;
+ALGgetattr(PyObject *self, char *name)
 {
-  if (strcmp(name, "blocksize") == 0)
+  if (strcmp(name, "block_size") == 0)
      {
-       return PyInt_FromLong(@@BLOCKSIZE@@);
+       return PyInt_FromLong(BLOCK_SIZE);
      }
-  if (strcmp(name, "keysize") == 0)
+  if (strcmp(name, "key_size") == 0)
      {
-       return PyInt_FromLong(@@KEYSIZE@@);
+       return PyInt_FromLong(KEY_SIZE);
      }
- return Py_FindMethod(@@ALGORITHM@@methods, (PyObject *) self, name);
+ return Py_FindMethod(ALGmethods, self, name);
 }
 
 
@@ -229,21 +203,21 @@ static PyObject *
 
 static struct PyMethodDef modulemethods[] =
 {
- {"new", (PyCFunction) @@ALGORITHM@@new, METH_VARARGS|METH_KEYWORDS, @@ALGORITHM@@new__doc__},
+ {"new", (PyCFunction) ALGnew, METH_VARARGS|METH_KEYWORDS, ALGnew__doc__},
  {NULL, NULL}			/* sentinel */
 };
 
-static PyTypeObject @@ALGORITHM@@type =
+static PyTypeObject ALGtype =
 {
  PyObject_HEAD_INIT(NULL)
  0,				/*ob_size*/
- "@@ALGORITHM@@",		/*tp_name*/
- sizeof(@@ALGORITHM@@object),	/*tp_size*/
+ "ALG",		/*tp_name*/
+ sizeof(ALGobject),	/*tp_size*/
  0,				/*tp_itemsize*/
  /* methods */
- @@ALGORITHM@@dealloc,	/*tp_dealloc*/
+ ALGdealloc,	/*tp_dealloc*/
  0,				/*tp_print*/
- @@ALGORITHM@@getattr,	/*tp_getattr*/
+ ALGgetattr,	/*tp_getattr*/
  0,		/*tp_setattr*/
  0,			/*tp_compare*/
  0,			/*tp_repr*/
@@ -254,26 +228,33 @@ static PyTypeObject @@ALGORITHM@@type =
 
 #define insint(n,v) {PyObject *o=PyInt_FromLong(v); if (o!=NULL) {PyDict_SetItemString(d,n,o); Py_DECREF(o);}}
 
+#define _STR(x) #x
+#define _XSTR(x) _STR(x)
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+#define _MODULE_NAME _PASTE2(init,MODULE_NAME)
+#define _MODULE_STRING _XSTR(MODULE_NAME)
+
 void
- init@@MODNAME@@()
+_MODULE_NAME (void)
 {
  PyObject *m, *d, *x;
 
- @@ALGORITHM@@type.ob_type = &PyType_Type;
+ ALGtype.ob_type = &PyType_Type;
  /* Create the module and add the functions */
- m = Py_InitModule("@@MODNAME@@", modulemethods);
+ m = Py_InitModule("Crypto.Cipher." _MODULE_STRING, modulemethods);
 
  /* Add some symbolic constants to the module */
  d = PyModule_GetDict(m);
- x = PyString_FromString("@@MODNAME@@.error");
+ x = PyString_FromString(_MODULE_STRING ".error");
  PyDict_SetItemString(d, "error", x);
 
- insint("blocksize", @@BLOCKSIZE@@);
- insint("keysize", @@KEYSIZE@@);
+ insint("block_size", BLOCK_SIZE);
+ insint("key_size", KEY_SIZE);
 
  /* Check for errors */
  if (PyErr_Occurred())
-  Py_FatalError("can't initialize module @@MODNAME@@");
+  Py_FatalError("can't initialize module " _MODULE_STRING);
 }
 
 

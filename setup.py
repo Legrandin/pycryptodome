@@ -48,6 +48,15 @@ setup(name="amkCrypto",
 #                     Extension("Crypto.Cipher.RC5",
 #                               include_dirs=['src/'],
 #                               sources=["block/RC5.c"]),
+
+                     # Stream ciphers
+                     Extension("Crypto.Cipher.ARC4",
+                               include_dirs=['src/'],
+                               sources=["stream/ARC4.c"]),
+                     Extension("Crypto.Cipher.XOR",
+                               include_dirs=['src/'],
+                               sources=["stream/XOR.c"]),
+                     
                     ]
      )
 

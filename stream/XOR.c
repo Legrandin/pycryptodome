@@ -10,18 +10,18 @@
  *
  */
 
+#define MODULE_NAME XOR
+#define BLOCK_SIZE 1
+#define KEY_SIZE 0
+
 typedef struct 
 {
- PCTObject_HEAD;
  unsigned char key[32];
  int keylen, last_pos;
-} XORobject;
+} stream_state;
 
 static inline void
-XORinit(self, key, len)
-     XORobject *self;
-     unsigned char *key;
-     int len;
+stream_init(stream_state *self, unsigned char *key, int len)
 {
   int i;
   
@@ -35,10 +35,11 @@ XORinit(self, key, len)
     }
 }
 
-static inline void XORencrypt(self, block, len)
-     XORobject *self;
-     unsigned char *block;
-     int len;
+/* Encryption and decryption are symmetric */
+#define stream_decrypt stream_encrypt	
+
+static inline void stream_encrypt(stream_state *self, unsigned char *block, 
+				  int len)
 {
   int i, j = self->last_pos;
   for(i=0; i<len; i++, j=(j+1) % self->keylen)
@@ -48,4 +49,4 @@ static inline void XORencrypt(self, block, len)
   self->last_pos = j;
 }
 
-#define XORdecrypt XORencrypt
+#include "stream_template.c"

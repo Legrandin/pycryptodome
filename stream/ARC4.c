@@ -11,6 +11,8 @@
  */
 
 #define MODULE_NAME ARC4
+#define BLOCK_SIZE 1
+#define KEY_SIZE 0
 
 typedef struct 
 {
@@ -18,12 +20,11 @@ typedef struct
   unsigned char x,y;
 } stream_state;
 
-#define stream_decrypt stream_encrypt	/* Encryption and decryption are symmetric */
+/* Encryption and decryption are symmetric */
+#define stream_decrypt stream_encrypt	
 
-static inline void stream_encrypt(self, block, len)
-     stream_state *self;
-     unsigned char *block;
-     int len;
+static inline void stream_encrypt(stream_state *self, unsigned char *block, 
+				  int len)
 {
   register int i, x=self->x, y=self->y;
 
@@ -48,10 +49,7 @@ static inline void stream_encrypt(self, block, len)
 }
 
 
-static void stream_init(self, key, keylen)
-     stream_state *self;
-     unsigned char *key;
-     int keylen;
+static void stream_init(stream_state *self, unsigned char *key, int keylen)
 {
   register int i, index1, index2;
 
