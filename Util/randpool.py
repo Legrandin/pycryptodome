@@ -100,7 +100,7 @@ class RandomPool:
                 i=self._getPos
                 
         self._getPos = i
-        self.entropy=self.entropy-8*num
+        self.entropy=self.entropy-8*N
         if self.entropy<0: self.entropy=0
         return s[:N]
 
