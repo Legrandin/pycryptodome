@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.17 2002-09-05 11:27:11 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.18 2002-10-23 04:52:20 moraes Exp $"
 
 from distutils.core import setup, Extension
 import sys
@@ -11,8 +11,15 @@ if sys.version[0:1] == '1':
 
 if sys.platform == 'win32':
     HTONS_LIBS = ['ws2_32']
+    plat_ext = [
+                Extension("Crypto.Util.winrandom",
+                          libraries = HTONS_LIBS + ['advapi32'],
+                          include_dirs=['src/'],
+                          sources=["src/winrand.c"])
+               ]
 else:
     HTONS_LIBS = []
+    plat_ext = []
     
 setup(name="pycrypto",
       version="1.9a5",
@@ -72,7 +79,7 @@ setup(name="pycrypto",
                                include_dirs=['src/'],
                                sources=["src/XOR.c"]),
                      
-                    ]
+                    ] + plat_ext
      )
 
       
