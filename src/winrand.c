@@ -23,18 +23,27 @@
 #include <wincrypt.h>
 
 static char winrandom__doc__[] =
-"winrandom(nbytes): Returns nbytes of random data from Windows CryptGenRandom,"
-"a cryptographically strong pseudo-random generator using system entropy";
+"winrandom(nbytes, [provider], [provtype]): Returns nbytes of random data\n\
+from Windows CryptGenRandom, a cryptographically strong pseudo-random\n\
+generator using OS-gathered entropy.\n\
+Provider is a string that specifies the Cryptographic Service Provider\n\
+to use, default is the default OS CSP.\n\
+provtype is an integer specifying the provider type to use, default\n\
+is 1 (PROV_RSA_FULL)";
 
 static PyObject *
-winrandom(PyObject *self, PyObject *args)
+winrandom(PyObject *self, PyObject *args, PyObject *kwdict)
 {
 	HCRYPTPROV hcp = 0;
 	int n, nbytes;
 	PyObject *res;
 	char *buf;
+	char *provname = NULL;
+	int provtype = PROV_RSA_FULL;
+	static char *kwlist[] = { "nbytes", "provider", "provtype", NULL};
 	
-	if (!PyArg_ParseTuple(args, "i", &n)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwdict, "i|si", kwlist,
+					 &n, &provname, &provtype)) {
 		return NULL;
 	}
 	/* Just in case char != BYTE */
@@ -46,9 +55,11 @@ winrandom(PyObject *self, PyObject *args)
 	if ((buf = (char *) PyMem_Malloc(nbytes)) == NULL)
 	    return PyErr_NoMemory();
 
-	if (! CryptAcquireContext(&hcp, NULL, NULL, PROV_RSA_FULL, 0)) {
+	if (! CryptAcquireContext(&hcp, NULL, (LPCTSTR) provname,
+				  (DWORD) provtype, 0)) {
 		PyErr_Format(PyExc_SystemError,
-			     "CryptAcquireContext failed, error %i",
+			     "CryptAcquireContext for provider \"%s\" type %i failed, error 0x%x",
+			     provname? provname : "(null)", provtype,
 			     GetLastError());
 		PyMem_Free(buf);
 		return NULL;
@@ -72,7 +83,8 @@ winrandom(PyObject *self, PyObject *args)
 }
 
 static PyMethodDef WRMethods[] = {
-        {"winrandom", (PyCFunction) winrandom, METH_VARARGS, winrandom__doc__},
+        {"winrandom", (PyCFunction) winrandom, METH_VARARGS|METH_KEYWORDS,
+	 winrandom__doc__},
 	{NULL,      NULL}        /* Sentinel */
 };
 
