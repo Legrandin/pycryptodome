@@ -91,6 +91,11 @@ class Chaff:
 
     """
     def __init__(self, factor=1.0, blocksper=1):
+	if not (0.0<=factor<=1.0):
+	    raise ValueError, "'factor' must be between 0.0 and 1.0"
+	if blocksper < 0:
+	    raise ValueError, "'blocksper' must be zero or more"
+	
         self.__factor = factor
         self.__blocksper = blocksper
 
@@ -145,13 +150,6 @@ class Chaff:
 
 if __name__ == '__main__':
     text = """\
-When in the Course of human events, it becomes necessary for one people to
-dissolve the political bands which have connected them with another, and to
-assume among the powers of the earth, the separate and equal station to which
-the Laws of Nature and of Nature's God entitle them, a decent respect to the
-opinions of mankind requires that they should declare the causes which impel
-them to the separation.
-
 We hold these truths to be self-evident, that all men are created equal, that
 they are endowed by their Creator with certain unalienable Rights, that among
 these are Life, Liberty, and the pursuit of Happiness. That to secure these
@@ -173,16 +171,17 @@ likely to effect their Safety and Happiness.
     
     # now get MACs for all the text blocks.  The key is obvious...
     print 'Calculating MACs...'
-    from Crypto.Hash import SHA
-    from Crypto.Hash.HMAC import HMAC
-    h = HMAC(SHA)
-    macs = h.hash('Jefferson', blocks)
+    from Crypto.Hash import HMAC, SHA
+    key = 'Jefferson'
+    macs = [HMAC.new(key, block, digestmod=SHA).digest()
+            for block in blocks]
 
     assert len(blocks) == len(macs)
 
     # put these into a form acceptable as input to the chaffing procedure
     source = []
     m = map(None, range(len(blocks)), blocks, macs)
+    print m
     for i, data, mac in m:
         source.append((i, data, mac))
 
@@ -200,7 +199,8 @@ likely to effect their Safety and Happiness.
     print 'chaffed message blocks:'
     for i, data, mac in chaffed:
         # do the authentication
-        pmac = h.hash('Jefferson', [data])[0]
+	h = HMAC.new(key, data, digestmod=SHA)
+        pmac = h.digest()
         if pmac == mac:
             tag = '-->'
             wheat.append(data)
@@ -212,8 +212,7 @@ likely to effect their Safety and Happiness.
 
     # now decode the message packets and check it against the original text
     print 'Undigesting wheat...'
-    import string
-    newtext = string.join(wheat, "")
+    newtext = "".join(wheat)
     if newtext == text:
         print 'They match!'
     else:
