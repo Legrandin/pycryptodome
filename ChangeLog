@@ -12,8 +12,12 @@
    	  compatible -- the major changes are that the constructor is now 
 	  MD2.new and not MD2.MD2, and the size of the digest is now 
 	  given as 'digest_size', not 'digestsize'.
-	  
-	
+
+	* The Crypto.PublicKey package is no longer installed; the
+	  interfaces are all wrong, and I have no idea what the right
+	  interfaces should be.
+
+
 1.1alpha2
 =========
 	* Most importantly, the distribution has been broken into two

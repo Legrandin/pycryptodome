@@ -8,8 +8,7 @@ setup(name="amkCrypto",
       author_email="akuchlin@mems-exchange.org",
       url="http://pycrypto.sourceforge.net",
       
-      packages = ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
-                  "Crypto.PublicKey"],
+      packages = ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util"],
       package_dir = { "Crypto":"." },
       ext_modules = [
                      # Hash functions
