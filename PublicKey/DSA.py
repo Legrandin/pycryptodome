@@ -11,7 +11,7 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: DSA.py,v 1.6 2002-12-07 01:04:33 z3p Exp $"
+__revision__ = "$Id: DSA.py,v 1.7 2002-12-18 23:50:05 z3p Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -155,14 +155,15 @@ construct_py = construct
 
 class DSAobj_c(pubkey):
     keydata = ['y', 'g', 'p', 'q', 'x']
-    y = property(lambda s:s.key.y)
-    g = property(lambda s:s.key.g)
-    p = property(lambda s:s.key.p)
-    q = property(lambda s:s.key.q)
-    x = property(lambda s:s.key.x)
 
     def __init__(self, key):
         self.key = key
+
+    def __getattr__(self, attr):
+        if attr in self.keydata:
+            return getattr(self.key, attr)
+        else:
+            return self.__dict__[attr]
 
     def __getstate__(self):
         d = {}

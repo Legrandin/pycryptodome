@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: RSA.py,v 1.6 2002-11-21 01:23:15 z3p Exp $"
+__revision__ = "$Id: RSA.py,v 1.7 2002-12-18 23:50:05 z3p Exp $"
 
 from Crypto.PublicKey import pubkey
 
@@ -107,15 +107,16 @@ class RSAobj(pubkey.pubkey):
 	
 class RSAobj_c(pubkey.pubkey):
     keydata = ['n', 'e', 'd', 'p', 'q']
-    n = property(lambda s:s.key.n)
-    e = property(lambda s:s.key.e)
-    d = property(lambda s:s.key.d)
-    p = property(lambda s:s.key.p)
-    q = property(lambda s:s.key.q)
 
     def __init__(self, key):
         self.key = key
         
+    def __getattr__(self, attr):
+        if attr in self.keydata:
+            return getattr(self.key, attr)
+        else:
+            return self.__dict__[attr]
+
     def __getstate__(self):
         d = {}
         for k in self.keydata:
