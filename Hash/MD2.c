@@ -12,19 +12,21 @@
   
 
 #include <string.h>
+#include "Python.h"
+
+#define MODULE_NAME MD2
+#define DIGEST_SIZE 16
 
 typedef unsigned char U8;
 typedef unsigned int U32;
 
 typedef struct {
-  PCTObject_HEAD
   U8 C[16], X[48];
   int count;
   U8 buf[16];
-} MD2object;
+} hash_state;
 
-static void MD2init (ptr)
-     MD2object *ptr;
+static void hash_init (hash_state *ptr)
 {
   memset(ptr->X, 0, 48);
   memset(ptr->C, 0, 16);
@@ -53,8 +55,7 @@ static U8 S[256] = {
 };
 
 static void
-MD2copy(src, dest)
-     MD2object *src, *dest;
+hash_copy(hash_state *src, hash_state *dest)
 {
   dest->count=src->count;  
   memcpy(dest->buf, src->buf, dest->count);
@@ -63,10 +64,7 @@ MD2copy(src, dest)
 }
 
 
-static void MD2update (self, buf, len)
-MD2object *self;
-const U8 *buf;
-U32 len;
+static void hash_update (hash_state *self, const U8 *buf, U32 len)
 {
   U32 L;
   while (len) 
@@ -102,19 +100,19 @@ U32 len;
 }
 
 static PyObject *
-MD2digest (self)
-     const MD2object *self;
+hash_digest (const hash_state *self)
 {
   U8 padding[16];
   U32 padlen;
-  MD2object temp;
+  hash_state temp;
   int i;
   
-  memcpy(&temp, self, sizeof(MD2object));
+  memcpy(&temp, self, sizeof(hash_state));
   padlen= 16-self->count;
   for(i=0; i<padlen; i++) padding[i]=padlen;
-  MD2update(&temp, padding, padlen);
-  MD2update(&temp, temp.C, 16);
+  hash_update(&temp, padding, padlen);
+  hash_update(&temp, temp.C, 16);
   return PyString_FromStringAndSize(temp.X, 16);
 }
 
+#include "hash_template.c"
