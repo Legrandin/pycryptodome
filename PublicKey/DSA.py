@@ -11,15 +11,17 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-from pubkey import *
+from Crypto.PublicKey.pubkey import *
+from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Hash import SHA
 
-error = 'DSA module'
+class error (Exception):
+    pass
 
 def generateQ(randfunc):
     S=randfunc(20)
     hash1=SHA.new(S).digest()
-    hash2=SHA.new(longtobytes(bytestolong(S)+1)).digest()
+    hash2=SHA.new(long_to_bytes(bytes_to_long(S)+1)).digest()
     q = bignum(0)
     for i in range(0,20):
         c=ord(hash1[i])^ord(hash2[i])
@@ -31,12 +33,18 @@ def generateQ(randfunc):
     if pow(2,159L)<q<pow(2,160L): return S, q
     raise error, 'Bad q value generated'
     
-# Generate a DSA modulus with L bits
 def generate(bits, randfunc, progress_func=None):
+    """generate(bits:int, randfunc:callable, progress_func:callable)
+
+    Generate a DSA key of length 'bits', using 'randfunc' to get
+    random data and 'progress_func', if present, to display
+    the progress of the key generation.
+    """
+    
     if bits<160: raise error, 'Key length <160 bits'
     obj=DSAobj()
     # Generate string S and prime q
-    if progress_func: apply(progress_func, ('p,q\n',))
+    if progress_func: progress_func('p,q\n')
     while (1):
         S, obj.q = generateQ(randfunc)
         n=(bits-1)/160
@@ -46,7 +54,7 @@ def generate(bits, randfunc, progress_func=None):
 	powL1=pow(bignum(2), bits-1)
         while C<4096:
             for k in range(0, n+1):
-		V[k]=bytestolong(SHA.new(S+str(N)+str(k)).digest())
+		V[k]=bytes_to_long(SHA.new(S+str(N)+str(k)).digest())
             W=V[n] % powb
             for k in range(n-1, -1, -1): W=(W<<160L)+V[k]
             X=W+powL1
@@ -54,23 +62,26 @@ def generate(bits, randfunc, progress_func=None):
             if powL1<=p and isPrime(p): break
             C, N = C+1, N+n+1
         if C<4096: break
-	if progress_func: apply(progress_func, ('4096 multiples failed\n',) )
+	if progress_func: progress_func('4096 multiples failed\n')
     obj.p = p
     power=(p-1)/obj.q
-    if progress_func: apply(progress_func, ('h,g\n',))
+    if progress_func: progress_func('h,g\n')
     while (1):
-        h=bytestolong(randfunc(bits)) % (p-1)
+        h=bytes_to_long(randfunc(bits)) % (p-1)
         g=pow(h, power, p)
         if 1<h<p-1 and g>1: break
     obj.g=g
-    if progress_func: apply(progress_func, ('x,y\n',))
+    if progress_func: progress_func('x,y\n')
     while (1):
-        x=bytestolong(randfunc(20))
+        x=bytes_to_long(randfunc(20))
         if 0<x<obj.q: break
     obj.x, obj.y=x, pow(g, x, p)
     return obj
     
 def construct(tuple):
+    """construct(tuple:(long,long,long,long)|(long,long,long,long,long)):DSAobj
+    Construct a DSA object from a 4- or 5-tuple of numbers.
+    """
     obj=DSAobj()
     if len(tuple) not in [4,5]:
         raise error, 'argument for construct() wrong length' 
@@ -83,9 +94,11 @@ class DSAobj(pubkey):
     keydata=['y', 'g', 'p', 'q', 'x']
 
     def _encrypt(self, s, Kstr):
-        raise error, 'Algorithm cannot en/decrypt data'
+        raise error, 'DSA algorithm cannot encrypt data'
+
     def _decrypt(self, s):
-        raise error, 'Algorithm cannot en/decrypt data'
+        raise error, 'DSA algorithm cannot decrypt data'
+
     def _sign(self, M, K):
 	if (K<2 or self.q<=K): raise error, 'K is not between 2 and q'
         r=pow(self.g, K, self.p) % self.q
@@ -119,6 +132,7 @@ class DSAobj(pubkey):
     def cansign(self):
 	"""Return a Boolean value recording whether this algorithm can generate signatures."""
 	return 1
+
     def canencrypt(self):
 	"""Return a Boolean value recording whether this algorithm can encrypt data."""
 	return 0

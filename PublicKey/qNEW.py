@@ -14,11 +14,18 @@ import pubkey
 from Crypto.Util.number import *
 import Crypto.Hash.SHA
 
-error = 'qNEW module'
+class error (Exception):
+    pass
+
 HASHBITS = 160   # Size of SHA digests
 
-# Generate an qNEW key with N bits
 def generate(bits, randfunc, progress_func=None):
+    """generate(bits:int, randfunc:callable, progress_func:callable)
+
+    Generate a qNEW key of length 'bits', using 'randfunc' to get
+    random data and 'progress_func', if present, to display
+    the progress of the key generation.
+    """
     obj=qNEWobj()
 
     # Generate prime numbers p and q.  q is a 160-bit prime
@@ -35,18 +42,18 @@ def generate(bits, randfunc, progress_func=None):
     while (1):
 	obj.q = getPrime(160, randfunc)
 	#	    assert pow(2, 159L)<obj.q<pow(2, 160L)
-	obj.seed = S = longtobytes(obj.q)
+	obj.seed = S = long_to_bytes(obj.q)
 	C, N, V = 0, 2, {}
 	# Compute b and n such that bits-1 = b + n*HASHBITS
 	n= (bits-1) / HASHBITS
-	b= (bits-1) % HASHBITS ; powb=pow(long(2), b)
+	b= (bits-1) % HASHBITS ; powb=2L << b
 	powL1=pow(long(2), bits-1)
 	while C<4096:
 	    # The V array will contain (bits-1) bits of random
 	    # data, that are assembled to produce a candidate
 	    # value for p.
 	    for k in range(0, n+1):
-		V[k]=bytestolong(Crypto.Hash.SHA.new(S+str(N)+str(k)).digest())
+		V[k]=bytes_to_long(Crypto.Hash.SHA.new(S+str(N)+str(k)).digest())
 	    p = V[n] % powb
 	    for k in range(n-1, -1, -1): 
 		p= (p << long(HASHBITS) )+V[k]
@@ -70,7 +77,7 @@ def generate(bits, randfunc, progress_func=None):
     # number <p-1, and g>1.  g is kept; h can be discarded.
     if progress_func: progress_func('h,g\n')
     while (1):
-	h=bytestolong(randfunc(bits)) % (p-1)
+	h=bytes_to_long(randfunc(bits)) % (p-1)
 	g=pow(h, power, p)
 	if 1<h<p-1 and g>1: break
     obj.g=g
@@ -80,14 +87,17 @@ def generate(bits, randfunc, progress_func=None):
     # y=g**x mod p, and is part of the public information.
     if progress_func: progress_func('x,y\n')
     while (1):
-	x=bytestolong(randfunc(20))
+	x=bytes_to_long(randfunc(20))
 	if 0<x<obj.q: break
     obj.x, obj.y=x, pow(g, x, p)
 
     return obj
 
-# Construct an qNEW object
+# Construct a qNEW object
 def construct(tuple):
+    """construct(tuple:(long,long,long,long)|(long,long,long,long,long)
+    Construct a qNEW object from a 4- or 5-tuple of numbers.
+    """
     obj=qNEWobj()
     if len(tuple) not in [4,5]:
         raise error, 'argument for construct() wrong length' 
