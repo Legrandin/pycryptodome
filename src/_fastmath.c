@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.12 2003-04-04 15:02:13 akuchling Exp $
+ * $Id: _fastmath.c,v 1.13 2003-04-04 19:20:29 jbontje Exp $
  */
 
 #include <stdio.h>
@@ -505,11 +505,15 @@ rsaKey_new (PyObject * self, PyObject * args)
 		return (PyObject *) key;
 	}
 	longObjToMPZ (key->d, d);
-	if (p && q && u)
+	if (p && q)
 	{
-        longObjToMPZ (key->p, p);
-        longObjToMPZ (key->q, q);
-        longObjToMPZ (key->u, u);
+		longObjToMPZ (key->p, p);
+		longObjToMPZ (key->q, q);
+		if (u) {
+			longObjToMPZ (key->u, u);
+		} else {
+			mpz_invert (key->u, key->p, key->q);
+		}
 	}
 	return (PyObject *) key;
 }
