@@ -102,10 +102,8 @@
 typedef    unsigned char        byte;   /* unsigned 8-bit integer */
 #ifdef __alpha__
 typedef    unsigned int        word;   /* unsigned 32-bit integer */
-typedef unsigned int   LONG;
 #else
 typedef    unsigned long        word;   /* unsigned 32-bit integer */
-typedef unsigned long   LONG;
 #endif
 typedef unsigned char   BYTE;
 #define RMD_DATASIZE    64
@@ -135,13 +133,13 @@ static void hash_init(hash_state *rmdInfo)
 
 static void hash_update(hash_state *shsInfo,char *buffer, int count)
 {
-	LONG tmp;
+	word tmp;
 	int dataCount, i;
 	BYTE *p;
 
 	/* Update bitcount */
 	tmp = shsInfo->countLo;
-	if ( ( shsInfo->countLo = tmp + ( ( LONG ) count << 3 ) ) < tmp )
+	if ( ( shsInfo->countLo = tmp + ( ( word ) count << 3 ) ) < tmp )
 		shsInfo->countHi++;             /* Carry from low to high */
 	shsInfo->countHi += count >> 29;
 
