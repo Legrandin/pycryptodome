@@ -59,7 +59,7 @@ def secimport(name, globals=None, locals=None, fromlist=None):
             import marshal
             from Crypto.Hash import MD5
             fp.close()                  # Close the original *.pyc file
-            from testkey import *       # Get the key for verification
+            from testkey import key     # Get the key for verification
             signature=marshal.load(secfile) # Read signature
             position=secfile.tell()     # Save position
             data=secfile.read()         # Read code object
