@@ -11,11 +11,16 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: DSA.py,v 1.4 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: DSA.py,v 1.5 2002-11-21 01:23:15 z3p Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Hash import SHA
+
+try:
+    from Crypto.PublicKey import _dsa
+except:
+    _dsa = None
 
 class error (Exception):
     pass
@@ -145,4 +150,54 @@ class DSAobj(pubkey):
 
 object=DSAobj
 
+generate_py = generate
+construct_py = construct
 
+class DSAobj_c(DSAobj):
+    def __init__(self, key):
+        self.key = key
+
+    def __getstate__(self):
+        d = {}
+        for k in self.keydata:
+            if hasattr(self.key, k):
+                d[k]=getattr(self.key, k)
+        return d
+
+    def __setstate__(self, state):
+        y,g,p,q = state['y'], state['g'], state['p'], state['q']
+        if 'x' not in state:
+            self.key = _dsa.construct(y,g,p,q)
+        else:
+            x = state['x']
+            self.key = _dsa.construct(y,g,p,q,x)
+
+    def _sign(self, M, K):
+        return self.key._sign(M, K)
+
+    def _verify(self, M, (r, s)):
+        return self.key._verify(M, r, s)
+
+    def size(self):
+        return self.key.size()
+
+    def hasprivate(self):
+        return self.key.hasprivate()
+
+    def publickey(self):
+        return construct_c((self.key.y, self.key.g, self.key.p, self.key.q))
+
+def generate_c(bits, randfunc, progress_func=None):
+    obj = generate_py(bits, randfunc, progress_func)
+    y,g,p,q,x = obj.y, obj.g, obj.p, obj.q, obj.x
+    return construct_c((y,g,p,q,x))
+
+def construct_c(tuple):
+    key = apply(_dsa.construct, tuple)
+    return DSAobj_c(key)
+
+if _dsa:
+    #print "using C version of DSA"
+    generate = generate_c
+    construct = construct_c
+    error = _dsa.error

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.18 2002-10-23 04:52:20 moraes Exp $"
+__revision__ = "$Id: setup.py,v 1.19 2002-11-21 01:23:15 z3p Exp $"
 
 from distutils.core import setup, Extension
 import sys
@@ -78,6 +78,18 @@ setup(name="pycrypto",
                      Extension("Crypto.Cipher.XOR",
                                include_dirs=['src/'],
                                sources=["src/XOR.c"]),
+                    
+                     # Public Key crypto
+                     Extension("Crypto.PublicKey._rsa",
+                               include_dirs=['src/'],
+                               libraries=['gmp'],
+                               extra_compile_args=['-pedantic'],
+                               sources=["src/_rsa.c"]),
+                     Extension("Crypto.PublicKey._dsa",
+                               include_dirs=['src/'],
+                               libraries=['gmp'],
+                               extra_compile_args=['-pedantic'],
+                               sources=["src/_dsa.c"]),
                      
                     ] + plat_ext
      )
