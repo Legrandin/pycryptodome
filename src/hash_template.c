@@ -50,7 +50,7 @@ ALG_dealloc(PyObject *ptr)
 {
 	/* Overwrite the contents of the object */
 	memset((char *)ptr, 0, sizeof(ALGobject));
-	PyObject_Free(ptr);
+	PyObject_Del(ptr);
 }
 
 
