@@ -9,12 +9,13 @@ if quiet: args.remove('--quiet')
 
 from Crypto.Util import test
 
-if not quiet:
-    print 'Public-key Functions:'
-    print '====================='
+if 0:
+    if not quiet:
+        print 'Public-key Functions:'
+        print '====================='
 
-if args: test.TestPKModules(args, verbose= not quiet)
-else:    test.TestPKModules(verbose= not quiet)
+    if args: test.TestPKModules(args, verbose= not quiet)
+    else:    test.TestPKModules(verbose= not quiet)
 
 
 if not quiet:
