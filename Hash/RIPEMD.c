@@ -134,28 +134,6 @@ static void RIPEMDinit(RIPEMDobject *rmdInfo)
    rmdInfo->countLo = rmdInfo->countHi =rmdInfo->nbytes =  0;
 }
 
-#if 0
-/* When run on a little-endian CPU we need to perform byte reversal on an
-   array of longwords. */
-
-static void longReverse( buffer, byteCount, Endianness )
-     LONG *buffer; 
-     int byteCount, Endianness;
-    {
-    LONG value;
-
-    if (Endianness==BIG_ENDIAN) return;
-    byteCount /= sizeof( LONG );
-    while( byteCount-- )
-        {
-        value = *buffer;
-        value = ( ( value & 0xFF00FF00L ) >> 8  ) | \
-                ( ( value & 0x00FF00FFL ) << 8 );
-        *buffer++ = ( value << 16 ) | ( value >> 16 );
-        }
-    }
-#endif
-
 static void RIPEMDupdate(RIPEMDobject *shsInfo,char *buffer, int count)
 {
     LONG tmp;
