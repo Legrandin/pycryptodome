@@ -22,10 +22,11 @@ setup(name="amkCrypto",
                      Extension("Crypto.Hash.RIPEMD",
                                include_dirs=['src/'],
                                sources=["hash/RIPEMD.c"]),
-                     
-                     #Extension("Crypto.Cipher.DES",
-                     #include_dirs=['src/'],
-                     #sources=["block/DES.c"])
+
+                     # Block encryption algorithms
+                     Extension("Crypto.Cipher.DES",
+                               include_dirs=['src/'],
+                               sources=["block/DES.c"]),
                     ]
      )
 

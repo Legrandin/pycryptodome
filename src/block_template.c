@@ -30,7 +30,6 @@
 #define inline
 #endif
 
-
  /* Cipher operation modes */
 
 #define MODE_ECB 0
@@ -39,110 +38,84 @@
 #define MODE_OFB 3
 #define MODE_PGP 4
 
-       /* Endianness testing and definitions */
-#define TestEndianness(variable) {int i=1; variable=PCT_BIG_ENDIAN;\
-                                  if (*((char*)&i)==1) variable=PCT_LITTLE_ENDIAN;}
-
-#define PCT_LITTLE_ENDIAN 1
-#define PCT_BIG_ENDIAN 0
-
         /*
 	 *
 	 * Python interface
 	 *
 	 */
 
-#define PCTObject_HEAD PyObject_HEAD int cipherMode, count; \
-                 unsigned char IV[@@BLOCKSIZE@@], oldCipher[@@BLOCKSIZE@@];
-
-#define PCT_Str(x) #x
-/* GetKeywordArg has been abandoned for PyArg_ParseTupleAndKeywords */
-#define GetKeywordArg(name, default) {\
-		   PyObject *arg; \
-                   if (kwdict==NULL || \
-                       (( arg=PyDict_GetItemString(kwdict, PCT_Str(name)))==NULL )) {new->name = default;} else { \
-		     if (!PyInt_Check(arg)) \
-		       { \
-			 PyErr_SetString(PyExc_TypeError, "Keyword argument must have integer value"); \
-			 Py_DECREF(new); \
-			 return NULL; \
-		       } \
-		     new->name = PyInt_AsLong(arg); \
-		   } \
-		 }
-
-@@IMPLEMENTATION@@
-
-
-staticforward PyTypeObject @@ALGORITHM@@type;
-
-#define is_@@ALGORITHM@@object(v)		((v)->ob_type == &@@ALGORITHM@@type)
-
-static @@ALGORITHM@@object *
- new@@ALGORITHM@@object()
+typedef struct 
 {
- @@ALGORITHM@@object * new;
- new = PyObject_NEW(@@ALGORITHM@@object, &@@ALGORITHM@@type);
+  PyObject_HEAD 
+  int cipherMode, count;
+  unsigned char IV[BLOCK_SIZE], oldCipher[BLOCK_SIZE];
+  block_state st;
+} ALGobject;
+
+staticforward PyTypeObject ALGtype;
+
+#define is_ALGobject(v)		((v)->ob_type == &ALGtype)
+
+static ALGobject *
+newALGobject(void)
+{
+ ALGobject * new;
+ new = PyObject_NEW(ALGobject, &ALGtype);
  new->cipherMode = MODE_ECB;
  return new;
 }
 
 static void
-@@ALGORITHM@@dealloc(ptr)
-PyObject *ptr;
+ALGdealloc(PyObject *ptr)
 {		/* Overwrite the contents of the object, just in case... */
  int i;
- @@ALGORITHM@@object *self=(@@ALGORITHM@@object *)ptr;
+ ALGobject *self=(ALGobject *)ptr;
 
- for (i = 0; i < sizeof(@@ALGORITHM@@object); i++)
-  *((char *) self + i) = '\0';
+ for (i = 0; i < sizeof(ALGobject); i++)
+   *((char *) self + i) = '\0';
  PyMem_DEL(self);
 }
 
 
-static char @@ALGORITHM@@new__doc__[] = 
-"Return a new @@ALGORITHM@@ encryption object.";
+static char ALGnew__doc__[] = 
+"Return a new ALG encryption object.";
 
-static char *kwlist[] = {"key", "mode", "IV", @@KEYWORDLIST@@ 
+static char *kwlist[] = {"key", "mode", "IV", 
 			 NULL};
 
-static @@ALGORITHM@@object *
-@@ALGORITHM@@new(self, args, kwdict)
-     PyObject *self;		/* Not used */
-     PyObject *args;
-     PyObject *kwdict;
+static ALGobject *
+ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 {
  unsigned char *key, *IV;
 
- @@ALGORITHM@@object * new;
+ ALGobject * new;
  int i, keylen, IVlen=0, mode=MODE_ECB;
 
- new = new@@ALGORITHM@@object();
+ new = newALGobject();
  /* Set default values */
- @@KEYWORDDEFAULTS@@
- if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#" @@KEYWORDFMT@@, kwlist,
-		       &key, &keylen, &mode, &IV, &IVlen @@KEYWORDPTRS@@))
+ if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#", kwlist,
+				  &key, &keylen, &mode, &IV, &IVlen))
    {
      Py_XDECREF(new);
      return NULL;
    }
 
- if (@@KEYSIZE@@!=0 && keylen!=@@KEYSIZE@@)
+ if (KEY_SIZE!=0 && keylen!=KEY_SIZE)
    {
-    PyErr_SetString(PyExc_ValueError, "@@ALGORITHM@@ key must be "
-		    "@@KEYSIZE@@ bytes long");
+    PyErr_SetString(PyExc_ValueError, "ALG key must be "
+		    "KEY_SIZE bytes long");
     return (NULL);
    }
- if (@@KEYSIZE@@==0 && keylen==0)
+ if (KEY_SIZE==0 && keylen==0)
    {
-    PyErr_SetString(PyExc_ValueError, "@@ALGORITHM@@ key cannot be "
+    PyErr_SetString(PyExc_ValueError, "ALG key cannot be "
 		    "the null string (0 bytes long)");
     return (NULL);
    }
- if (IVlen != @@BLOCKSIZE@@ && IVlen != 0)
+ if (IVlen != BLOCK_SIZE && IVlen != 0)
    {
-    PyErr_SetString(PyExc_ValueError, "@@ALGORITHM@@ IV must be "
-		    "@@BLOCKSIZE@@ bytes long");
+    PyErr_SetString(PyExc_ValueError, "ALG IV must be "
+		    "BLOCK_SIZE bytes long");
     return (NULL);
    }
  if (mode<MODE_ECB || mode>MODE_PGP) 
@@ -150,13 +123,13 @@ static @@ALGORITHM@@object *
      PyErr_SetString(PyExc_ValueError, "Unknown cipher feedback mode");
     return (NULL);
    }
- @@ALGORITHM@@init(new, key, keylen);
+ block_init(&(new->st), key, keylen);
  if (PyErr_Occurred())
    {
      Py_DECREF(new);
      return(NULL);
    }
- for (i = 0; i < @@BLOCKSIZE@@; i++)
+ for (i = 0; i < BLOCK_SIZE; i++)
    {
     new->IV[i] = 0;
     new->oldCipher[i]=0;
@@ -170,16 +143,16 @@ static @@ALGORITHM@@object *
  return new;
 }
 
-static char @@ALGORITHM@@_Encrypt__doc__[] =
+static char ALG_Encrypt__doc__[] =
 "Decrypt the provided string of binary data.";
 
 static PyObject *
-@@ALGORITHM@@_Encrypt(self, args)
-@@ALGORITHM@@object * self;
+ALG_Encrypt(self, args)
+ALGobject * self;
      PyObject *args;
 {
   char *buffer, *str;
-  char temp[@@BLOCKSIZE@@];
+  char temp[BLOCK_SIZE];
   int i, j, len;
   PyObject *result;
   
@@ -189,52 +162,52 @@ static PyObject *
     {
       return PyString_FromStringAndSize(NULL, 0);
     }
-  if ( (len % @@BLOCKSIZE@@) !=0 && self->cipherMode!=MODE_CFB
+  if ( (len % BLOCK_SIZE) !=0 && self->cipherMode!=MODE_CFB
       && self->cipherMode!=MODE_PGP)
     {
-      PyErr_SetString(PyExc_ValueError, "Strings for @@ALGORITHM@@ "
-		      "must be a multiple of @@BLOCKSIZE@@ in length");
+      PyErr_SetString(PyExc_ValueError, "Strings for ALG "
+		      "must be a multiple of BLOCK_SIZE in length");
       return(NULL);
     }
   buffer=malloc(len);
   if (buffer==NULL) 
     {
       PyErr_SetString(PyExc_MemoryError, "No memory available in "
-		      "@@ALGORITHM@@ encrypt");
+		      "ALG encrypt");
       return(NULL);
     }
   switch(self->cipherMode)
     {
     case(MODE_ECB):      
-      for(i=0; i<len; i+=@@BLOCKSIZE@@) 
+      for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-	  memcpy(buffer+i, str+i, @@BLOCKSIZE@@);
-	  @@ALGORITHM@@encrypt(self, buffer+i);
+	  memcpy(buffer+i, str+i, BLOCK_SIZE);
+	  block_encrypt(&(self->st), buffer+i);
 	}
       break;
     case(MODE_CBC):      
-      for(i=0; i<len; i+=@@BLOCKSIZE@@) 
+      for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-	  for(j=0; j<@@BLOCKSIZE@@; j++)
+	  for(j=0; j<BLOCK_SIZE; j++)
 	    {
 	      temp[j]=str[i+j]^self->IV[j];
 	    }
-	  @@ALGORITHM@@encrypt(self, temp);
-	  memcpy(buffer+i, temp, @@BLOCKSIZE@@);
-	  memcpy(self->IV, temp, @@BLOCKSIZE@@);
+	  block_encrypt(&(self->st), temp);
+	  memcpy(buffer+i, temp, BLOCK_SIZE);
+	  memcpy(self->IV, temp, BLOCK_SIZE);
 	}
       break;
     case(MODE_CFB):      
       for(i=0; i<len; i++) 
 	{
-	  @@ALGORITHM@@encrypt(self, self->IV);
+	  block_encrypt(&(self->st), self->IV);
 	  buffer[i]=str[i]^self->IV[0];
-	  memmove(self->IV, self->IV+1, @@BLOCKSIZE@@-1);
-	  self->IV[@@BLOCKSIZE@@-1]=buffer[i];
+	  memmove(self->IV, self->IV+1, BLOCK_SIZE-1);
+	  self->IV[BLOCK_SIZE-1]=buffer[i];
 	}
       break;
     case(MODE_PGP):
-      if (len<=@@BLOCKSIZE@@-self->count) 
+      if (len<=BLOCK_SIZE-self->count) 
 	{			/* If less than one block, XOR it in */
 	  for(i=0; i<len; i++) 
 	      buffer[i] = self->IV[self->count+i] ^= str[i];
@@ -243,19 +216,19 @@ static PyObject *
       else 
 	{
 	  int j;
-	  for(i=0; i<@@BLOCKSIZE@@-self->count; i++) 
+	  for(i=0; i<BLOCK_SIZE-self->count; i++) 
 	      buffer[i] = self->IV[self->count+i] ^= str[i];
 	  self->count=0;
-	  for(; i<len-@@BLOCKSIZE@@; i+=@@BLOCKSIZE@@) 
+	  for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
 	    {
-	      memcpy(self->oldCipher, self->IV, @@BLOCKSIZE@@);
-	      @@ALGORITHM@@encrypt(self, self->IV);
-	      for(j=0; j<@@BLOCKSIZE@@; j++)
+	      memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
+	      block_encrypt(&(self->st), self->IV);
+	      for(j=0; j<BLOCK_SIZE; j++)
 		buffer[i+j] = self->IV[j] ^= str[i+j];
 	    }
-	  /* Do the remaining 1 to BLOCKSIZE bytes */
-          memcpy(self->oldCipher, self->IV, @@BLOCKSIZE@@);
-	  @@ALGORITHM@@encrypt(self, self->IV);
+	  /* Do the remaining 1 to BLOCK_SIZE bytes */
+          memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
+	  block_encrypt(&(self->st), self->IV);
 	  self->count=len-i;
 	  for(j=0; j<len-i; j++) 
 	    {
@@ -273,17 +246,17 @@ static PyObject *
   return(result);
 }
 
-static char @@ALGORITHM@@_Decrypt__doc__[] =
+static char ALG_Decrypt__doc__[] =
 "Decrypt the provided string of binary data.";
 
 
 static PyObject *
-@@ALGORITHM@@_Decrypt(self, args)
-@@ALGORITHM@@object * self;
+ALG_Decrypt(self, args)
+ALGobject * self;
      PyObject *args;
 {
   char *buffer, *str;
-  char temp[@@BLOCKSIZE@@];
+  char temp[BLOCK_SIZE];
   int i, j, len;
   PyObject *result;
   
@@ -293,36 +266,36 @@ static PyObject *
     {
       return PyString_FromStringAndSize(NULL, 0);
     }
-  if ( (len % @@BLOCKSIZE@@) !=0 && self->cipherMode!=MODE_CFB
+  if ( (len % BLOCK_SIZE) !=0 && self->cipherMode!=MODE_CFB
       && self->cipherMode!=MODE_PGP) 
     {
-      PyErr_SetString(PyExc_ValueError, "Strings for @@ALGORITHM@@ "
-		      "must be a multiple of @@BLOCKSIZE@@ in length");
+      PyErr_SetString(PyExc_ValueError, "Strings for ALG "
+		      "must be a multiple of BLOCK_SIZE in length");
       return(NULL);
     }
   buffer=malloc(len);
   if (buffer==NULL) 
     {
       PyErr_SetString(PyExc_MemoryError, "No memory available in "
-		      "@@ALGORITHM@@ decrypt");
+		      "ALG decrypt");
       return(NULL);
     }
   switch(self->cipherMode)
     {
     case(MODE_ECB):      
-      for(i=0; i<len; i+=@@BLOCKSIZE@@) 
+      for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-	  memcpy(buffer+i, str+i, @@BLOCKSIZE@@);
-	  @@ALGORITHM@@decrypt(self, buffer+i);
+	  memcpy(buffer+i, str+i, BLOCK_SIZE);
+	  block_decrypt(&(self->st), buffer+i);
 	}
       break;
     case(MODE_CBC):      
-      for(i=0; i<len; i+=@@BLOCKSIZE@@) 
+      for(i=0; i<len; i+=BLOCK_SIZE) 
 	{
-          memcpy(self->oldCipher, self->IV, @@BLOCKSIZE@@);
-	  memcpy(temp, str+i, @@BLOCKSIZE@@);
-	  @@ALGORITHM@@decrypt(self, temp);
-	  for(j=0; j<@@BLOCKSIZE@@; j++) 
+          memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
+	  memcpy(temp, str+i, BLOCK_SIZE);
+	  block_decrypt(&(self->st), temp);
+	  for(j=0; j<BLOCK_SIZE; j++) 
 	    {
 	      buffer[i+j]=temp[j]^self->IV[j];
 	      self->IV[j]=str[i+j];
@@ -332,14 +305,14 @@ static PyObject *
     case(MODE_CFB):      
       for(i=0; i<len; i++) 
 	{
-	  @@ALGORITHM@@encrypt(self, self->IV);
+	  block_encrypt(&(self->st), self->IV);
 	  buffer[i]=str[i]^self->IV[0];
-	  memmove(self->IV, self->IV+1, @@BLOCKSIZE@@-1);
-	  self->IV[@@BLOCKSIZE@@-1]=str[i];
+	  memmove(self->IV, self->IV+1, BLOCK_SIZE-1);
+	  self->IV[BLOCK_SIZE-1]=str[i];
 	}
       break;
     case(MODE_PGP):
-      if (len<=@@BLOCKSIZE@@-self->count) 
+      if (len<=BLOCK_SIZE-self->count) 
 	{			/* If less than one block, XOR it in */
 	  unsigned char t;
 	  for(i=0; i<len; i++)
@@ -353,25 +326,25 @@ static PyObject *
 	{
 	  int j;
 	  unsigned char t;
-	  for(i=0; i<@@BLOCKSIZE@@-self->count; i++) 
+	  for(i=0; i<BLOCK_SIZE-self->count; i++) 
 	    {
 	      t=self->IV[self->count+i];
 	      buffer[i] = t ^ (self->IV[self->count+i] = str[i]);
 	    }
 	  self->count=0;
-	  for(; i<len-@@BLOCKSIZE@@; i+=@@BLOCKSIZE@@) 
+	  for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
 	    {
-	      memcpy(self->oldCipher, self->IV, @@BLOCKSIZE@@);
-	      @@ALGORITHM@@encrypt(self, self->IV);
-	      for(j=0; j<@@BLOCKSIZE@@; j++)
+	      memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
+	      block_encrypt(self, self->IV);
+	      for(j=0; j<BLOCK_SIZE; j++)
 		{
 		  t=self->IV[j];
 		  buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
 		}
 	    }
-	  /* Do the remaining 1 to BLOCKSIZE bytes */
-          memcpy(self->oldCipher, self->IV, @@BLOCKSIZE@@);
-	  @@ALGORITHM@@encrypt(self, self->IV);
+	  /* Do the remaining 1 to BLOCK_SIZE bytes */
+          memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
+	  block_encrypt(self, self->IV);
 	  self->count=len-i;
 	  for(j=0; j<len-i; j++) 
 	    {
@@ -390,13 +363,13 @@ static PyObject *
   return(result);
 }
 
-static char @@ALGORITHM@@_Sync__doc__[] =
+static char ALG_Sync__doc__[] =
 "For objects using the PGP feedback mode, this method modifies the IV, "
 "synchronizing it with the preceding ciphertext.";
 
 static PyObject *
-@@ALGORITHM@@_Sync(self, args)
-@@ALGORITHM@@object * self;
+ALG_Sync(self, args)
+ALGobject * self;
      PyObject *args;
 {
   if (self->cipherMode!=MODE_PGP) 
@@ -408,8 +381,8 @@ static PyObject *
 
   if (self->count!=8) 
     {
-      memmove(self->IV+@@BLOCKSIZE@@-self->count, self->IV, self->count);
-      memcpy(self->IV, self->oldCipher+self->count, @@BLOCKSIZE@@-self->count);
+      memmove(self->IV+BLOCK_SIZE-self->count, self->IV, self->count);
+      memcpy(self->IV, self->oldCipher+self->count, BLOCK_SIZE-self->count);
       self->count=8;
     }
   Py_INCREF(Py_None);
@@ -418,7 +391,7 @@ static PyObject *
 
 #if 0
 void PrintState(self, msg)
-     @@ALGORITHM@@object *self;
+     ALGobject *self;
      char * msg;
 {
   int count;
@@ -432,24 +405,24 @@ void PrintState(self, msg)
 #endif
 
 
-/* @@ALGORITHM@@ object methods */
+/* ALG object methods */
 
-static PyMethodDef @@ALGORITHM@@methods[] =
+static PyMethodDef ALGmethods[] =
 {
- {"encrypt", (PyCFunction) @@ALGORITHM@@_Encrypt, 0, @@ALGORITHM@@_Encrypt__doc__},
- {"decrypt", (PyCFunction) @@ALGORITHM@@_Decrypt, 0, @@ALGORITHM@@_Decrypt__doc__},
- {"sync", (PyCFunction) @@ALGORITHM@@_Sync, 0, @@ALGORITHM@@_Sync__doc__},
+ {"encrypt", (PyCFunction) ALG_Encrypt, 0, ALG_Encrypt__doc__},
+ {"decrypt", (PyCFunction) ALG_Decrypt, 0, ALG_Decrypt__doc__},
+ {"sync", (PyCFunction) ALG_Sync, 0, ALG_Sync__doc__},
  {NULL, NULL}			/* sentinel */
 };
 
 
 static int
-@@ALGORITHM@@setattr(ptr, name, v)
+ALGsetattr(ptr, name, v)
      PyObject *ptr;
      char *name;
      PyObject *v;
 {
-  @@ALGORITHM@@object *self=(@@ALGORITHM@@object *)ptr;
+  ALGobject *self=(ALGobject *)ptr;
   if (strcmp(name, "IV") != 0) 
     {
       PyErr_SetString(PyExc_AttributeError,
@@ -468,61 +441,61 @@ static int
 		      "IV attribute of block cipher object must be string");
       return -1;
     }
-  if (PyString_Size(v)!=@@BLOCKSIZE@@) 
+  if (PyString_Size(v)!=BLOCK_SIZE) 
     {
-      PyErr_SetString(PyExc_ValueError, "@@ALGORITHM@@ IV must be "
-		      "@@BLOCKSIZE@@ bytes long");
+      PyErr_SetString(PyExc_ValueError, "ALG IV must be "
+		      "BLOCK_SIZE bytes long");
       return -1;
     }
-  memcpy(self->IV, PyString_AsString(v), @@BLOCKSIZE@@);
+  memcpy(self->IV, PyString_AsString(v), BLOCK_SIZE);
   return (0);
 }
 
 static PyObject *
-@@ALGORITHM@@getattr(s, name)
+ALGgetattr(s, name)
      PyObject *s;
      char *name;
 {
-  @@ALGORITHM@@object *self = (@@ALGORITHM@@object*)s;
+  ALGobject *self = (ALGobject*)s;
   if (strcmp(name, "IV") == 0) 
     {
-      return(PyString_FromStringAndSize(self->IV, @@BLOCKSIZE@@));
+      return(PyString_FromStringAndSize(self->IV, BLOCK_SIZE));
     }
   if (strcmp(name, "mode") == 0)
      {
        return(PyInt_FromLong((long)(self->cipherMode)));
      }
-  if (strcmp(name, "blocksize") == 0)
+  if (strcmp(name, "block_size") == 0)
      {
-       return PyInt_FromLong(@@BLOCKSIZE@@);
+       return PyInt_FromLong(BLOCK_SIZE);
      }
-  if (strcmp(name, "keysize") == 0)
+  if (strcmp(name, "key_size") == 0)
      {
-       return PyInt_FromLong(@@KEYSIZE@@);
+       return PyInt_FromLong(KEY_SIZE);
      }
- return Py_FindMethod(@@ALGORITHM@@methods, (PyObject *) self, name);
+ return Py_FindMethod(ALGmethods, (PyObject *) self, name);
 }
 
 /* List of functions defined in the module */
 
 static struct PyMethodDef modulemethods[] =
 {
- {"new", (PyCFunction) @@ALGORITHM@@new, METH_VARARGS|METH_KEYWORDS, @@ALGORITHM@@new__doc__},
+ {"new", (PyCFunction) ALGnew, METH_VARARGS|METH_KEYWORDS, ALGnew__doc__},
  {NULL, NULL}			/* sentinel */
 };
 
-static PyTypeObject @@ALGORITHM@@type =
+static PyTypeObject ALGtype =
 {
  PyObject_HEAD_INIT(NULL)
  0,				/*ob_size*/
- "@@ALGORITHM@@",		/*tp_name*/
- sizeof(@@ALGORITHM@@object),	/*tp_size*/
+ "ALG",		/*tp_name*/
+ sizeof(ALGobject),	/*tp_size*/
  0,				/*tp_itemsize*/
  /* methods */
- @@ALGORITHM@@dealloc,	/*tp_dealloc*/
+ ALGdealloc,	/*tp_dealloc*/
  0,				/*tp_print*/
- @@ALGORITHM@@getattr,	/*tp_getattr*/
- @@ALGORITHM@@setattr,    /*tp_setattr*/
+ ALGgetattr,	/*tp_getattr*/
+ ALGsetattr,    /*tp_setattr*/
  0,			/*tp_compare*/
  (reprfunc) 0,			/*tp_repr*/
  0,				/*tp_as_number*/
@@ -532,30 +505,38 @@ static PyTypeObject @@ALGORITHM@@type =
 
 #define insint(n,v) {PyObject *o=PyInt_FromLong(v); if (o!=NULL) {PyDict_SetItemString(d,n,o); Py_DECREF(o);}}
 
+
+#define _STR(x) #x
+#define _XSTR(x) _STR(x)
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+#define _MODULE_NAME _PASTE2(init,MODULE_NAME)
+#define _MODULE_STRING _XSTR(MODULE_NAME)
+
 void
-init@@MODNAME@@()
+_MODULE_NAME ()
 {
  PyObject *m, *d, *x;
 
- @@ALGORITHM@@type.ob_type = &PyType_Type;
+ ALGtype.ob_type = &PyType_Type;
 
  /* Create the module and add the functions */
- m = Py_InitModule("@@MODNAME@@", modulemethods);
+ m = Py_InitModule("Crypto.Cipher."_MODULE_STRING, modulemethods);
 
  /* Add some symbolic constants to the module */
  d = PyModule_GetDict(m);
- x = PyString_FromString("@@MODNAME@@.error");
+ x = PyString_FromString(_MODULE_STRING ".error");
  PyDict_SetItemString(d, "error", x);
 
  insint("ECB", MODE_ECB);
  insint("CFB", MODE_CFB);
  insint("CBC", MODE_CBC);
  insint("PGP", MODE_PGP);
- insint("blocksize", @@BLOCKSIZE@@);
- insint("keysize", @@KEYSIZE@@);
+ insint("block_size", BLOCK_SIZE);
+ insint("key_size", KEY_SIZE);
 
  /* Check for errors */
  if (PyErr_Occurred())
-  Py_FatalError("can't initialize module @@MODNAME@@");
+   Py_FatalError("can't initialize module " _MODULE_STRING);
 }
 

@@ -1,4 +1,3 @@
-
 /*
  *  des.c : Source code for the DES block cipher
  *
@@ -9,10 +8,17 @@
  * country of residence.
  *
  */
+
+#include "Python.h"
   
 /* des.c */
 /* Copyright (C) 1993 Eric Young */
 /* Integrated into the PCT by A.M. Kuchling, November 1994 */
+
+#define MODULE_NAME DES
+#define BLOCK_SIZE 8
+#define KEY_SIZE 0
+
 
 typedef unsigned char des_cblock[8];
 
@@ -425,23 +431,14 @@ typedef struct des_ks_struct
 		unsigned long pad[2];
 		} ks;
 #define _	ks._
-	} des_key_schedule[16];
+	} block_state[16];
 
-typedef struct 
-{
-  PCTObject_HEAD
-  des_key_schedule KeySched;
-} DESobject;
-
-static int des_encrypt(input,output,ks,encrypt)
-     unsigned long *input;
-     unsigned long *output;
-     des_key_schedule ks;
-     int encrypt;
+static int des_encrypt(unsigned long *input, unsigned long *output,
+                       block_state ks, int encrypt)
 	{
-	register unsigned long l,r,t,u;
-	register int i;
-	register unsigned long *s;
+	unsigned long l,r,t,u;
+	int i;
+	unsigned long *s;
 
 	l=input[0];
 	r=input[1];
@@ -511,11 +508,8 @@ static int des_encrypt(input,output,ks,encrypt)
 	return(0);
 	}
 
-static int des_ecb_encrypt(input,output,ks,encrypt)
-     des_cblock *input;
-     des_cblock *output;
-     des_key_schedule ks;
-     int encrypt;
+static int des_ecb_encrypt(des_cblock *input, des_cblock *output,
+                           block_state ks, int encrypt)
 	{
 	register unsigned long l0,l1;
 	register unsigned char *in,*out;
@@ -538,23 +532,20 @@ static int des_ecb_encrypt(input,output,ks,encrypt)
 
 
      
-static inline void DESdecrypt(self, block)
-     DESobject *self;
-     unsigned char *block;
+static inline void block_decrypt(block_state *state, 
+				 unsigned char *block)
 {
   des_cblock output;
 
-  des_ecb_encrypt(block, output, self->KeySched, 0);
+  des_ecb_encrypt(block, output, state, 0);
   memcpy(block, output, 8);
 }
 
-static inline void DESencrypt(self, block)
-     DESobject *self;
-     unsigned char *block;
+static inline void block_encrypt(block_state *state, unsigned char *block)
 {
   des_cblock output;
 
-  des_ecb_encrypt(block, output, self->KeySched, 1);
+  des_ecb_encrypt(block, output, state, 1);
   memcpy(block, output, 8);
 }
 
@@ -574,9 +565,7 @@ static char shifts2[16]={0,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0};
  * return -1 if key parity error,
  * return -2 if illegal weak key.
  */
-static int des_set_key(key,schedule)
-des_cblock *key;
-des_key_schedule schedule;
+static int des_set_key(des_cblock *key, block_state schedule)
 	{
 	register unsigned long c,d,t,s;
 	register unsigned char *in;
@@ -663,9 +652,8 @@ static const unsigned char odd_parity[256]={
 224,224,227,227,229,229,230,230,233,233,234,234,236,236,239,239,
 241,241,242,242,244,244,247,247,248,248,251,251,253,253,254,254};
 
-static inline void DESinit(self, key)
-     DESobject *self;
-     unsigned char *key;
+static inline void block_init(block_state *state, unsigned char *key,
+			      int keylen)
 {
   char oddkey[8];
   int i;
@@ -674,5 +662,7 @@ static inline void DESinit(self, key)
     {
       oddkey[i]=odd_parity[ key[i] ];
     }
-  des_set_key(oddkey, self->KeySched);
+  des_set_key(oddkey, *state);
 }
+
+#include "block_template.c"
