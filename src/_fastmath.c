@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.8 2003-04-03 21:00:12 akuchling Exp $
+ * $Id: _fastmath.c,v 1.9 2003-04-03 21:23:02 akuchling Exp $
  */
 
 #include <stdio.h>
@@ -547,7 +547,7 @@ rsaKey__encrypt (rsaKey * key, PyObject * args)
 	PyObject *l, *r;
 	mpz_t v;
 	int result;
-	if (!(PyArg_ParseTuple (args, "O!", &PyLong_Type, &l)))
+	if (!PyArg_ParseTuple (args, "O!", &PyLong_Type, &l))
 	{
 		return NULL;
 	}
@@ -570,7 +570,7 @@ rsaKey__decrypt (rsaKey * key, PyObject * args)
 	PyObject *l, *r;
 	mpz_t v;
 	int result;
-	if (!(PyArg_ParseTuple (args, "O!", &PyLong_Type, &l)))
+	if (!PyArg_ParseTuple (args, "O!", &PyLong_Type, &l))
 	{
 		return NULL;
 	}
@@ -625,7 +625,8 @@ rsaKey__blind (rsaKey * key, PyObject * args)
 	PyObject *l, *lblind, *r;
 	mpz_t v, vblind;
 	int result;
-	if (!(PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, &PyLong_Type, &lblind)))
+	if (!PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, 
+                               &PyLong_Type, &lblind))
 		{
 			return NULL;
 		}
@@ -656,7 +657,8 @@ rsaKey__unblind (rsaKey * key, PyObject * args)
 	PyObject *l, *lblind, *r;
 	mpz_t v, vblind;
 	int result;
-	if (!(PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, &PyLong_Type, &lblind)))
+	if (!PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, 
+                               &PyLong_Type, &lblind))
 		{
 			return NULL;
 		}
@@ -716,7 +718,7 @@ isPrime (PyObject * self, PyObject * args)
 	mpz_t n;
 	int result;
 
-	if (!(PyArg_ParseTuple (args, "O!", &PyLong_Type, &l)))
+	if (!PyArg_ParseTuple (args, "O!", &PyLong_Type, &l))
 	{
 		return NULL;
 	}
