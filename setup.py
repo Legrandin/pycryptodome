@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 from distutils.core import setup, Extension
 
-setup(name="amkCrypto",
+setup(name="pycrypto",
       version="1.9a1",
       description="Cryptographic modules for Python.",
       author="A.M. Kuchling",
