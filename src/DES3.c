@@ -678,7 +678,7 @@ static void block_init(block_state *self, unsigned char *key,
 	des_set_key((des_cblock *)(oddkey+0), self->KeySched1);
 	des_set_key((des_cblock *)(oddkey+8), self->KeySched2);
 	if (keylength == 24) {
-		des_set_key(key+16, self->KeySched3);
+		des_set_key((des_cblock *)key+16, self->KeySched3);
 	} else {
 		memcpy(self->KeySched3, self->KeySched1, sizeof(self->KeySched3));
 	}
