@@ -11,7 +11,7 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: DSA.py,v 1.7 2002-12-18 23:50:05 z3p Exp $"
+__revision__ = "$Id: DSA.py,v 1.8 2002-12-21 23:58:35 z3p Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -200,6 +200,9 @@ class DSAobj_c(pubkey):
 
     def canencrypt(self):
         return 0
+
+    def __eq__(self, other):
+        return self.__getstate__() == other.__getstate__()
 
 def generate_c(bits, randfunc, progress_func=None):
     obj = generate_py(bits, randfunc, progress_func)
