@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.number.
 #
 
-__revision__ = "$Id: test_number.py,v 1.1 2002-05-17 13:31:48 akuchling Exp $"
+__revision__ = "$Id: test_number.py,v 1.2 2002-05-24 14:17:39 akuchling Exp $"
 
 from sancho.unittest import TestScenario, parse_args, run_scenarios
 from Crypto.Util import number
@@ -61,13 +61,13 @@ class NumberTest (TestScenario):
 
     def check_longbytes (self):
         "Check conversion between bytes and integers"
-        self.test_val('number.longtobytes(1)', '\x01')
-        self.test_val('number.longtobytes(1, 2)', '\x00\x01')
-        self.test_val('number.longtobytes(511)', '\x01\xff')
+        self.test_val('number.long_to_bytes(1)', '\x01')
+        self.test_val('number.long_to_bytes(1, 2)', '\x00\x01')
+        self.test_val('number.long_to_bytes(511)', '\x01\xff')
 
-        self.test_val('number.bytestolong("\x01")', 1)
-        self.test_val('number.bytestolong("\xff\x01")', 0xff01)
-        self.test_val('number.bytestolong("\x12\x34\x01")', 0x123401)
+        self.test_val('number.bytes_to_long("\x01")', 1)
+        self.test_val('number.bytes_to_long("\xff\x01")', 0xff01)
+        self.test_val('number.bytes_to_long("\x12\x34\x01")', 0x123401)
         
 # class NumberTest
 
