@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: ElGamal.py,v 1.6 2003-02-28 15:25:09 akuchling Exp $"
+__revision__ = "$Id: ElGamal.py,v 1.7 2003-04-03 20:36:12 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
 
@@ -106,7 +106,7 @@ class ElGamalobj(pubkey):
         while (power<self.p): bits, power = bits+1, power<<1
         return bits-1
 
-    def hasprivate(self):
+    def has_private(self):
         """Return a Boolean denoting whether the object contains
         private components."""
         if hasattr(self, 'x'): return 1

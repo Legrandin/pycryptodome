@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: qNEW.py,v 1.6 2003-02-28 15:25:13 akuchling Exp $"
+__revision__ = "$Id: qNEW.py,v 1.7 2003-04-03 20:36:14 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 from Crypto.Util.number import *
@@ -138,15 +138,15 @@ class qNEWobj(pubkey.pubkey):
         "Return the maximum number of bits that can be handled by this key."
         return 160
 
-    def hasprivate(self):
+    def has_private(self):
         """Return a Boolean denoting whether the object contains
         private components."""
         return hasattr(self, 'x')
 
-    def cansign(self):
+    def can_sign(self):
         """Return a Boolean value recording whether this algorithm can generate signatures."""
         return 1
-    def canencrypt(self):
+    def can_encrypt(self):
         """Return a Boolean value recording whether this algorithm can encrypt data."""
         return 0
 

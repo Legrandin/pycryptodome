@@ -19,6 +19,11 @@
 	* Added support to RSA key objects for blinding and unblinding 
 	  data. (Contributed by Joris Bontje.)
 
+	* Renamed cansign(), canencrypt(), hasprivate(), to 
+	  can_sign, can_encrypt, has_private.  If people shriek about
+	  this change very loudly, I'll add aliases for the old method
+	  names that log a warning and call the new method.
+	
 
 1.9alpha5
 =========

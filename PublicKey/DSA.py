@@ -11,7 +11,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: DSA.py,v 1.12 2003-04-03 18:19:03 akuchling Exp $"
+__revision__ = "$Id: DSA.py,v 1.13 2003-04-03 20:36:09 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -130,17 +130,17 @@ class DSAobj(pubkey):
         while (power<self.p): bits, power = bits+1, power<<1
         return bits-1
 
-    def hasprivate(self):
+    def has_private(self):
         """Return a Boolean denoting whether the object contains
         private components."""
         if hasattr(self, 'x'): return 1
         else: return 0
 
-    def cansign(self):
+    def can_sign(self):
         """Return a Boolean value recording whether this algorithm can generate signatures."""
         return 1
 
-    def canencrypt(self):
+    def can_encrypt(self):
         """Return a Boolean value recording whether this algorithm can encrypt data."""
         return 0
 
@@ -192,16 +192,16 @@ class DSAobj_c(pubkey):
     def size(self):
         return self.key.size()
 
-    def hasprivate(self):
-        return self.key.hasprivate()
+    def has_private(self):
+        return self.key.has_private()
 
     def publickey(self):
         return construct_c((self.key.y, self.key.g, self.key.p, self.key.q))
 
-    def cansign(self):
+    def can_sign(self):
         return 1
 
-    def canencrypt(self):
+    def can_encrypt(self):
         return 0
 
 def generate_c(bits, randfunc, progress_func=None):

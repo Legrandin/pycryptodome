@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: pubkey.py,v 1.10 2003-04-03 20:30:00 akuchling Exp $"
+__revision__ = "$Id: pubkey.py,v 1.11 2003-04-03 20:36:14 akuchling Exp $"
 
 import types, warnings
 from Crypto.Util.number import *
@@ -69,7 +69,7 @@ integers, MPZ objects, or whatever."""
         Return a tuple containing the signature for the message M.
         K is a random parameter required by some algorithms.
         """
-        if (not self.hasprivate()):
+        if (not self.has_private()):
             raise error, 'Private key not available in this object'
         if isinstance(M, types.StringType): M=bytes_to_long(M)
         if isinstance(K, types.StringType): K=bytes_to_long(K)
@@ -116,8 +116,8 @@ integers, MPZ objects, or whatever."""
     # The following methods will usually be left alone, except for
     # signature-only algorithms.  They both return Boolean values
     # recording whether this key's algorithm can sign and encrypt.
-    def cansign (self):
-        """cansign() : bool
+    def can_sign (self):
+        """can_sign() : bool
         Return a Boolean value recording whether this algorithm can
         generate signatures.  (This does not imply that this
         particular key object has the private information required to
@@ -125,8 +125,8 @@ integers, MPZ objects, or whatever."""
         """
         return 1
 
-    def canencrypt (self):
-        """canencrypt() : bool
+    def can_encrypt (self):
+        """can_encrypt() : bool
         Return a Boolean value recording whether this algorithm can
         encrypt data.  (This does not imply that this
         particular key object has the private information required to
@@ -152,8 +152,8 @@ integers, MPZ objects, or whatever."""
         """
         return 0
 
-    def hasprivate (self):
-        """hasprivate() : bool
+    def has_private (self):
+        """has_private() : bool
         Return a Boolean denoting whether the object contains
         private components.
         """

@@ -702,16 +702,16 @@ Returns true if the algorithm is capable of blinding data;
 returns false otherwise.  
 \end{methoddesc}
 
-\begin{methoddesc}{canencrypt}{}
+\begin{methoddesc}{can_encrypt}{}
 Returns true if the algorithm is capable of encrypting and decrypting
 data; returns false otherwise.  To test if a given key object can sign
-data, use \code{key.canencrypt() and key.hasprivate()}.
+data, use \code{key.can_encrypt() and key.has_private()}.
 \end{methoddesc}
 
-\begin{methoddesc}{cansign}{}
+\begin{methoddesc}{can_sign}{}
 Returns true if the algorithm is capable of signing data; returns false
 otherwise.  To test if a given key object can sign data, use
-\code{key.cansign() and key.hasprivate()}.
+\code{key.can_sign() and key.has_private()}.
 \end{methoddesc}
 
 \begin{methoddesc}{decrypt}{tuple}
@@ -732,7 +732,7 @@ big-endian integer must be relatively prime to \code{self.p-1}; an
 exception is raised if it is not.
 \end{methoddesc}
 
-\begin{methoddesc}{hasprivate}{}
+\begin{methoddesc}{has_private}{}
 Returns true if the key object contains the private key data, which
 will allow decrypting data and generating signatures.
 Otherwise this returns false.

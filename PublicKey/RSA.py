@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.14 2003-04-03 20:30:00 akuchling Exp $"
+__revision__ = "$Id: RSA.py,v 1.15 2003-04-03 20:36:13 akuchling Exp $"
 
 from Crypto.PublicKey import pubkey
 
@@ -108,8 +108,8 @@ class RSAobj(pubkey.pubkey):
         while (power<self.n): bits, power = bits+1, power<<1
         return bits-1
 
-    def hasprivate(self):
-        """hasprivate() : bool
+    def has_private(self):
+        """has_private() : bool
         Return a Boolean denoting whether the object contains
         private components.
         """
@@ -180,8 +180,8 @@ class RSAobj_c(pubkey.pubkey):
     def size(self):
         return self.key.size()
 
-    def hasprivate(self):
-        return self.key.hasprivate()
+    def has_private(self):
+        return self.key.has_private()
 
     def publickey(self):
         return construct_c((self.key.n, self.key.e))
