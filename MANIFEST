@@ -35,6 +35,9 @@ hash/MD2.c
 hash/MD4.c
 hash/RIPEMD.c
 setup.py
+src/block_template.c
+src/hash_template.c
+src/stream_template.c
 stream/ARC4.c
 stream/XOR.c
 test.py
