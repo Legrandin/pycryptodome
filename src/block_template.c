@@ -147,9 +147,7 @@ static char ALG_Encrypt__doc__[] =
 "Decrypt the provided string of binary data.";
 
 static PyObject *
-ALG_Encrypt(self, args)
-ALGobject * self;
-     PyObject *args;
+ALG_Encrypt(ALGobject *self, PyObject *args)
 {
   char *buffer, *str;
   char temp[BLOCK_SIZE];
@@ -251,9 +249,7 @@ static char ALG_Decrypt__doc__[] =
 
 
 static PyObject *
-ALG_Decrypt(self, args)
-ALGobject * self;
-     PyObject *args;
+ALG_Decrypt(ALGobject *self, PyObject *args)
 {
   char *buffer, *str;
   char temp[BLOCK_SIZE];
@@ -335,7 +331,7 @@ ALGobject * self;
 	  for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
 	    {
 	      memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	      block_encrypt(self, self->IV);
+	      block_encrypt(&(self->st), self->IV);
 	      for(j=0; j<BLOCK_SIZE; j++)
 		{
 		  t=self->IV[j];
@@ -344,7 +340,7 @@ ALGobject * self;
 	    }
 	  /* Do the remaining 1 to BLOCK_SIZE bytes */
           memcpy(self->oldCipher, self->IV, BLOCK_SIZE);
-	  block_encrypt(self, self->IV);
+	  block_encrypt(&(self->st), self->IV);
 	  self->count=len-i;
 	  for(j=0; j<len-i; j++) 
 	    {
@@ -368,9 +364,7 @@ static char ALG_Sync__doc__[] =
 "synchronizing it with the preceding ciphertext.";
 
 static PyObject *
-ALG_Sync(self, args)
-ALGobject * self;
-     PyObject *args;
+ALG_Sync(ALGobject *self, PyObject *args)
 {
   if (self->cipherMode!=MODE_PGP) 
     {
@@ -417,10 +411,7 @@ static PyMethodDef ALGmethods[] =
 
 
 static int
-ALGsetattr(ptr, name, v)
-     PyObject *ptr;
-     char *name;
-     PyObject *v;
+ALGsetattr(PyObject *ptr, char *name, PyObject *v)
 {
   ALGobject *self=(ALGobject *)ptr;
   if (strcmp(name, "IV") != 0) 
@@ -452,9 +443,7 @@ ALGsetattr(ptr, name, v)
 }
 
 static PyObject *
-ALGgetattr(s, name)
-     PyObject *s;
-     char *name;
+ALGgetattr(PyObject *s, char *name)
 {
   ALGobject *self = (ALGobject*)s;
   if (strcmp(name, "IV") == 0) 
@@ -514,14 +503,14 @@ static PyTypeObject ALGtype =
 #define _MODULE_STRING _XSTR(MODULE_NAME)
 
 void
-_MODULE_NAME ()
+_MODULE_NAME (void)
 {
  PyObject *m, *d, *x;
 
  ALGtype.ob_type = &PyType_Type;
 
  /* Create the module and add the functions */
- m = Py_InitModule("Crypto.Cipher."_MODULE_STRING, modulemethods);
+ m = Py_InitModule("Crypto.Cipher." _MODULE_STRING, modulemethods);
 
  /* Add some symbolic constants to the module */
  d = PyModule_GetDict(m);
