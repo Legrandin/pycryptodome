@@ -10,6 +10,7 @@ from distutils.util import get_platform
 s = "build/lib.%s-%.3s" % (get_platform(), sys.version)
 s = os.path.join(os.getcwd(), s)
 sys.path.insert(0, s)
+sys.path.append(os.path.join(os.getcwd(), 'test'))
 
 from Crypto.Util import test
 
