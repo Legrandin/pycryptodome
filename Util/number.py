@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: number.py,v 1.12 2003-04-04 18:04:40 akuchling Exp $"
+__revision__ = "$Id: number.py,v 1.13 2003-04-04 18:21:07 akuchling Exp $"
 
 bignum = long
 try:
@@ -31,6 +31,16 @@ except ImportError:
 ##     if type(s)!=types.StringType: return s   # Integers will be left alone
 ##     return reduce(lambda x,y : x*256+ord(y), s, 0L)
 
+def size (N):
+    """size(N:long) : int
+    Returns the size of the number N in bits.
+    """
+    bits, power = 0,1L
+    while N >= power:
+        bits += 1
+        power = power << 1
+    return bits
+
 def getRandomNumber(N, randfunc):
     """getRandomNumber(N:int, randfunc:callable):long
     Return an N-bit random number."""
@@ -42,7 +52,7 @@ def getRandomNumber(N, randfunc):
         S = chr(char) + S
     value = bytes_to_long(S)
     value |= 2L ** (N-1)                # Ensure high bit is set
-    assert value >= 2L ** (N-1)
+    assert size(value) >= N
     return value
 
 def GCD(x,y):
