@@ -10,9 +10,9 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: ElGamal.py,v 1.4 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: ElGamal.py,v 1.5 2002-07-11 14:33:05 akuchling Exp $"
 
-from pubkey import *
+from Crypto.PublicKey.pubkey import *
 
 class error (Exception):
     pass
