@@ -10,18 +10,13 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: number.py,v 1.9 2003-03-21 15:12:54 akuchling Exp $"
+__revision__ = "$Id: number.py,v 1.10 2003-04-03 18:41:06 akuchling Exp $"
 
 bignum = long
 try:
-    import gmp
+    from Crypto.PublicKey import _fastmath
 except ImportError:
-    try:
-        import mpz
-        #bignum=mpz.mpz       # Temporarily disabled; the 'outrageous exponent'
-                              # error messes things up.
-    except ImportError:
-        pass
+    _fastmath = None
 
 # Commented out and replaced with faster versions below
 ## def long2str(n):
@@ -93,6 +88,9 @@ def isPrime(N):
     for i in sieve:
         if (N % i)==0: return 0
 
+    # Use the accelerator if available
+    if _fastmath is not None:
+        return _fastmath.isPrime(N)
 
     # Compute the highest bit that's set in N
     N1=N - 1L ; n=1L
@@ -104,11 +102,15 @@ def isPrime(N):
         a=long(c) ; d=1L ; t=n
         while (t):  # Iterate over the bits in N1
             x=(d*d) % N
-            if x==1L and d!=1L and d!=N1: return 0  # Square root of 1 found
-            if N1 & t: d=(x*a) % N
-            else: d=x
+            if x==1L and d!=1L and d!=N1:
+                return 0  # Square root of 1 found
+            if N1 & t:
+                d=(x*a) % N
+            else:
+                d=x
             t = t >> 1L
-        if d!=1L: return 0
+        if d!=1L:
+            return 0
     return 1
 
 # Small primes used for checking primality; these are all the primes
