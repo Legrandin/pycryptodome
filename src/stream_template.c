@@ -1,9 +1,7 @@
 /* -*- C -*- */
 
 /*
- *  stream.in : Generic framework for stream ciphers
- *
- * Part of the Python Cryptography Toolkit, version 1.1
+ *  stream_template.c : Generic framework for stream ciphers
  *
  * Distribute and use freely; there are no restrictions on further 
  * dissemination and usage except those imposed by the laws of your 
