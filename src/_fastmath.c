@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.11 2003-04-04 14:59:19 akuchling Exp $
+ * $Id: _fastmath.c,v 1.12 2003-04-04 15:02:13 akuchling Exp $
  */
 
 #include <stdio.h>
@@ -353,11 +353,6 @@ dsaKey_new (PyObject * self, PyObject * args)
 	{
 		longObjToMPZ (key->x, x);
 	}
-	/*Py_XDECREF(n);
-	  Py_XDECREF(e);
-	  Py_XDECREF(d);
-	  Py_XDECREF(p);
-	  Py_XDECREF(q); */
 	return (PyObject *) key;
 }
 
@@ -516,12 +511,6 @@ rsaKey_new (PyObject * self, PyObject * args)
         longObjToMPZ (key->q, q);
         longObjToMPZ (key->u, u);
 	}
-	/*Py_XDECREF(n);
-	  Py_XDECREF(e);
-	  Py_XDECREF(d);
-	  Py_XDECREF(p);
-	  Py_XDECREF(q);
-	  Py_XDECREF(u); */
 	return (PyObject *) key;
 }
 
