@@ -362,8 +362,14 @@ blowfish = [('6162636465666768696a6b6c6d6e6f707172737475767778797a',
 des3_cbc=[]
 
 des3= [('0123456789abcdeffedcba9876543210', '0123456789abcde7',
-        '7f1d0a77826b8aff')
+        '7f1d0a77826b8aff'),
       ]
+
+# The DES test data can also be used to construct DES3 test data.
+for key, iv, plain, cipher in des_cbc:
+    des3_cbc.append((key*3, iv, plain, cipher))
+for key, plain, cipher in des:
+    des3.append((key*3, plain, cipher))
 
 # Test data for CAST
 
