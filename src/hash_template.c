@@ -18,34 +18,6 @@
 #include <string.h>
 #endif
 
-/*#include "modsupport.h"*/
-
-/* Endianness testing and definitions */
-#define TestEndianness(variable) {int i=1; variable=PCT_BIG_ENDIAN;\
-	if (*((char*)&i)==1) variable=PCT_LITTLE_ENDIAN;}
-
-#define PCT_LITTLE_ENDIAN 1
-#define PCT_BIG_ENDIAN 0
-
-/* This is where the actual code for the hash function will go */
-
-#define PCTObject_HEAD PyObject_HEAD
-#define PCT_Str(x) #x
-/* GetKeywordArg has been abandoned for PyArg_ParseTupleAndKeywords */
-#define GetKeywordArg(name, default) {\
-	PyObject *arg; \
-			       if (kwdict==NULL || \
-				   (( arg=PyDict_GetItemString(kwdict, PCT_Str(name)))==NULL )) {new->name = default;} else { \
-																      if (!PyInt_Check(arg)) \
-					   { \
-						     PyErr_SetString(PyExc_TypeError, "Keyword argument must have integer value"); \
-																	   Py_DECREF(new); \
-																				   return NULL; \
-																							} \
-																								  new->name = PyInt_AsLong(arg); \
-																													 } \
-																														   }
-
 typedef struct {
   PyObject_HEAD
   hash_state st;
