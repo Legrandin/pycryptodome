@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.7 2003-04-03 20:39:41 akuchling Exp $
+ * $Id: _fastmath.c,v 1.8 2003-04-03 21:00:12 akuchling Exp $
  */
 
 #include <stdio.h>
@@ -415,7 +415,13 @@ dsaKey__verify (dsaKey * key, PyObject * args)
 	mpz_clear (m);
 	mpz_clear (r);
 	mpz_clear (s);
-	return Py_BuildValue ("i", result);
+	if (result) {
+		Py_INCREF(Py_True);
+		return Py_True;
+        } else {
+		Py_INCREF(Py_False);
+		return Py_False;
+	}
 }
 
 PyObject *
@@ -431,10 +437,13 @@ dsaKey_has_private (dsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
 		return NULL;
-	if (mpz_size (key->x) == 0)
-		return Py_BuildValue ("i", 0);
-	else
-		return Py_BuildValue ("i", 1);
+	if (mpz_size (key->x) == 0) {
+		Py_INCREF(Py_False);
+		return Py_False;
+        } else {
+		Py_INCREF(Py_True);
+		return Py_True;
+        }
 }
 
 PyObject *
@@ -600,10 +609,14 @@ rsaKey__verify (rsaKey * key, PyObject * args)
 	longObjToMPZ (v, (PyLongObject *) l);
 	longObjToMPZ (vsig, (PyLongObject *) lsig);
 	rsaEncrypt (key, vsig);
-	if (mpz_cmp (v, vsig) == 0)
-		return Py_BuildValue ("i", 1);
-	else
-		return Py_BuildValue ("i", 0);
+	if (mpz_cmp (v, vsig) == 0) {
+		Py_INCREF(Py_True);
+		return Py_True;
+	}
+	else {
+		Py_INCREF(Py_False);
+		return Py_False;
+        }
 }
 
 PyObject *
@@ -686,10 +699,13 @@ rsaKey_has_private (rsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
 		return NULL;
-	if (mpz_size (key->d) == 0)
-		return Py_BuildValue ("i", 0);
-	else
-		return Py_BuildValue ("i", 1);
+	if (mpz_size (key->d) == 0) {
+		Py_INCREF(Py_False);
+		return Py_False;
+        } else {
+		Py_INCREF(Py_True);
+		return Py_True;
+	}
 }
 
 
