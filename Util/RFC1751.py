@@ -3,8 +3,10 @@
 # sequence of words, as defined in RFC1751: "A Convention for
 # Human-Readable 128-bit Keys", by Daniel L. McDonald.
 
-error = 'rfc1751 error'
-import string
+import string, binascii
+class error(Exception):
+    pass
+
 
 binary={0:'0000', 1:'0001', 2:'0010', 3:'0011', 4:'0100', 5:'0101',
 	6:'0110', 7:'0111', 8:'1000', 9:'1001', 10:'1010', 11:'1011',
@@ -314,12 +316,6 @@ wordlist=[ "A", "ABE", "ACE", "ACT", "AD", "ADA", "ADD",
    "YELL", "YOGA", "YOKE" ]
 
 if __name__=='__main__':
-    def hex2str(s):
-	s2=''
-	for i in range(0, len(s), 2):
-	    s2=s2+chr(string.atoi(s[i:i+2], 16))
-	return s2
-
     data = [('EB33F77EE73D4053', 'TIDE ITCH SLOW REIN RULE MOT'),
 	    ('CCAC2AED591056BE4F90FD441C534766',
 	     'RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE'),
@@ -329,7 +325,7 @@ if __name__=='__main__':
 
     for key, words in data:
 	print 'Trying key', key
-	key=hex2str(key)
+	key=binascii.a2b_hex(key)
 	w2=Key2English(key)
 	if w2!=words:
 	    print 'Key2English fails on key', repr(key), ', producing', str(w2)
