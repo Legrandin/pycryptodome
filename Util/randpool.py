@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all. 
 #
 
-import time, array, warnings
+import time, array, types, warnings
 from Crypto.Util.number import long_to_bytes
 
 class RandomPool:
@@ -49,7 +49,7 @@ class RandomPool:
         if cipher is not None:
             warnings.warn("'cipher' parameter is no longer used")
             
-        if isinstance(hash, str):
+        if isinstance(hash, types.StringType):
             # ugly hack to force __import__ to give us the end-path module
             hash = __import__('Crypto.Hash.'+hash,
                               None, None, ['new'])
