@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.23 2003-03-07 20:32:47 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.24 2003-04-03 18:17:40 akuchling Exp $"
 
 from distutils import core
 from distutils.core import Extension
@@ -117,14 +117,10 @@ class PCTBuildExt (build_ext):
         inc_dirs = self.compiler.include_dirs + ['/usr/include']
         exts = []
         if (self.compiler.find_library_file(lib_dirs, 'gmp')):
-            exts.append(Extension("Crypto.PublicKey._rsa",
+            exts.append(Extension("Crypto.PublicKey._fastmath",
                                   include_dirs=['src/'],
                                   libraries=['gmp'],
-                                  sources=["src/_rsa.c"]))
-            exts.append(Extension("Crypto.PublicKey._dsa",
-                                  include_dirs=['src/'],
-                                  libraries=['gmp'],
-                                  sources=["src/_dsa.c"]))
+                                  sources=["src/_fastmath.c"]))
         self.extensions += exts
 
 kw = {'name':"pycrypto",
