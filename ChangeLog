@@ -25,7 +25,7 @@
           using msvcrt.
 
         * Fix randpool.py crash on machines with poor timer resolution.
-          (Reported by Mark Moraes.)
+          (Reported by Mark Moraes and others.)
 
         * If the GNU GMP library is available, two C extensions will be 
           compiled to speed up RSA and DSA operations.  (Contributed by 
