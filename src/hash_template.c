@@ -1,7 +1,5 @@
 /*
- *  hash.in : Generic framework for hash function extension modules
- *
- * Part of the Python Cryptography Toolkit, version 1.1
+ *  hash_template.c : Generic framework for hash function extension modules
  *
  * Distribute and use freely; there are no restrictions on further 
  * dissemination and usage except those imposed by the laws of your 
@@ -20,9 +18,7 @@
 #include <string.h>
 #endif
 
-#define Py_USE_NEW_NAMES
-#include "Python.h"
-#include "modsupport.h"
+/*#include "modsupport.h"*/
 
 /* Endianness testing and definitions */
 #define TestEndianness(variable) {int i=1; variable=PCT_BIG_ENDIAN;\
@@ -50,76 +46,72 @@
 																													 } \
 																														   }
 
-@@IMPLEMENTATION@@ 	
+typedef struct {
+  PyObject_HEAD
+  hash_state st;
+} ALGobject;
 
-staticforward PyTypeObject @@ALGORITHM@@type;
+staticforward PyTypeObject ALGtype;
 
-#define is_@@ALGORITHM@@object(v) ((v)->ob_type == &@@ALGORITHM@@type)
+#define is_ALGobject(v) ((v)->ob_type == &ALGtype)
 
-static @@ALGORITHM@@object *
-new@@ALGORITHM@@object()
+static ALGobject *
+newALGobject(void)
 {
-	@@ALGORITHM@@object *new;
+	ALGobject *new;
 
-	new = PyObject_NEW(@@ALGORITHM@@object, &@@ALGORITHM@@type);
+	new = PyObject_NEW(ALGobject, &ALGtype);
 	return new;
 }
 
 /* Internal methods for a hashing object */
 
 static void
-@@ALGORITHM@@_dealloc(ptr)
-	PyObject *ptr;
+ALG_dealloc(PyObject *ptr)
 {
-	@@ALGORITHM@@object *@@ALGORITHM@@ptr=(@@ALGORITHM@@object *)ptr;
-	PyMem_DEL(@@ALGORITHM@@ptr);
+	ALGobject *ALGptr=(ALGobject *)ptr;
+	PyMem_DEL(ALGptr);
 }
 
 
 /* External methods for a hashing object */
 
-static char @@ALGORITHM@@_copy__doc__[] = 
+static char ALG_copy__doc__[] = 
 "Return a copy of the hashing object.";
 
 static PyObject *
-@@ALGORITHM@@_copy(self, args)
-	@@ALGORITHM@@object *self;
-	PyObject *args;
+ALG_copy(ALGobject *self, PyObject *args)
 {
-	@@ALGORITHM@@object *newobj;
+	ALGobject *newobj;
 
-	if ( (newobj = new@@ALGORITHM@@object())==NULL)
+	if ( (newobj = newALGobject())==NULL)
 		return(NULL);
 
 	if (!PyArg_NoArgs(args))
 	{Py_DECREF(newobj); return(NULL);}
 	
-	@@ALGORITHM@@copy(self, newobj);
+	hash_copy(&(self->st), &(newobj->st));
 	return((PyObject *)newobj); 
 }
 
-static char @@ALGORITHM@@_digest__doc__[] = 
+static char ALG_digest__doc__[] = 
 "Return the digest value as a string of binary data.";
 
 static PyObject *
-@@ALGORITHM@@_digest(self, args)
-	@@ALGORITHM@@object *self;
-	PyObject *args;
+ALG_digest(ALGobject *self, PyObject *args)
 {
 
 	if (!PyArg_NoArgs(args))
 		return NULL;
 
-	return (PyObject *)@@ALGORITHM@@digest(self);
+	return (PyObject *)hash_digest(&(self->st));
 }
 
-static char @@ALGORITHM@@_hexdigest__doc__[] = 
+static char ALG_hexdigest__doc__[] = 
 "Return the digest value as a string of hexadecimal digits.";
 
 static PyObject *
-@@ALGORITHM@@_hexdigest(self, args)
-	@@ALGORITHM@@object *self;
-	PyObject *args;
+ALG_hexdigest(ALGobject *self, PyObject *args)
 {
 	PyObject *value, *retval;
 	unsigned char *raw_digest, *hex_digest;
@@ -129,7 +121,7 @@ static PyObject *
 		return NULL;
 
 	/* Get the raw (binary) digest value */
-	value = (PyObject *)@@ALGORITHM@@digest(self);
+	value = (PyObject *)hash_digest(&(self->st));
 	size = PyString_Size(value);
 	raw_digest = PyString_AsString(value);
 
@@ -150,12 +142,12 @@ static PyObject *
 	return retval;
 }
 
-static char @@ALGORITHM@@_update__doc__[] = 
+static char ALG_update__doc__[] = 
 "Update this hashing object's state with the provided string.";
 
 static PyObject *
-@@ALGORITHM@@_update(self, args)
-	@@ALGORITHM@@object *self;
+ALG_update(self, args)
+	ALGobject *self;
 	PyObject *args;
 {
 	unsigned char *cp;
@@ -164,43 +156,43 @@ static PyObject *
 	if (!PyArg_Parse(args, "s#", &cp, &len))
 		return NULL;
 
-	@@ALGORITHM@@update(self, cp, len);
+	hash_update(&(self->st), cp, len);
 
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
-static PyMethodDef @@ALGORITHM@@_methods[] = {
-	{"copy",		(PyCFunction)@@ALGORITHM@@_copy, 0, @@ALGORITHM@@_copy__doc__},
-	{"digest",		(PyCFunction)@@ALGORITHM@@_digest, 0, @@ALGORITHM@@_digest__doc__},
-	{"hexdigest",		(PyCFunction)@@ALGORITHM@@_hexdigest, 0, @@ALGORITHM@@_hexdigest__doc__},
-	{"update",		(PyCFunction)@@ALGORITHM@@_update, 0, @@ALGORITHM@@_update__doc__},
+static PyMethodDef ALG_methods[] = {
+	{"copy",		(PyCFunction)ALG_copy, 0, ALG_copy__doc__},
+	{"digest",		(PyCFunction)ALG_digest, 0, ALG_digest__doc__},
+	{"hexdigest",		(PyCFunction)ALG_hexdigest, 0, ALG_hexdigest__doc__},
+	{"update",		(PyCFunction)ALG_update, 0, ALG_update__doc__},
 	{NULL,			NULL}		/* sentinel */
 };
 
 static PyObject *
-@@ALGORITHM@@_getattr(self, name)
-	@@ALGORITHM@@object *self;
+ALG_getattr(self, name)
+	ALGobject *self;
 	char *name;
 {
-	if (strcmp(name, "blocksize")==0)
+	if (strcmp(name, "block_size")==0)
 		return PyInt_FromLong(1);
-	if (strcmp(name, "digestsize")==0)
-		return PyInt_FromLong(@@DIGESTSIZE@@);
+	if (strcmp(name, "digest_size")==0)
+		return PyInt_FromLong(DIGEST_SIZE);
 	
-	return Py_FindMethod(@@ALGORITHM@@_methods, (PyObject *)self, name);
+	return Py_FindMethod(ALG_methods, (PyObject *)self, name);
 }
 
-static PyTypeObject @@ALGORITHM@@type = {
+static PyTypeObject ALGtype = {
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"@@ALGORITHM@@",			/*tp_name*/
-	sizeof(@@ALGORITHM@@object),	/*tp_size*/
+	"ALG",			/*tp_name*/
+	sizeof(ALGobject),	/*tp_size*/
 	0,			/*tp_itemsize*/
 	/* methods */
-	@@ALGORITHM@@_dealloc, /*tp_dealloc*/
+	ALG_dealloc, /*tp_dealloc*/
 	0,			/*tp_print*/
-	@@ALGORITHM@@_getattr, /*tp_getattr*/
+	ALG_getattr, /*tp_getattr*/
 	0,			/*tp_setattr*/
 	0,			/*tp_compare*/
 	0,			/*tp_repr*/
@@ -210,40 +202,34 @@ static PyTypeObject @@ALGORITHM@@type = {
 
 /* The single module-level function: new() */
 
-static char @@ALGORITHM@@_new__doc__[] =
- "Return a new @@ALGORITHM@@ hashing object.  An optional string "
+static char ALG_new__doc__[] =
+ "Return a new ALG hashing object.  An optional string "
  "argument may be provided; if present, this string will be "
  " automatically hashed."; 
 
-static char *kwlist[] = {"string", @@KEYWORDLIST@@ 
-			 NULL};
-
 static PyObject *
-@@ALGORITHM@@_new(self, args, kwdict)
+ALG_new(self, args)
 	PyObject *self;
 	PyObject *args;
-	PyObject *kwdict;
 {
-	@@ALGORITHM@@object *new;
+        ALGobject *new;
 	unsigned char *cp = NULL;
 	int len;
 	
-	if ((new = new@@ALGORITHM@@object()) == NULL)
+	if ((new = newALGobject()) == NULL)
 		return NULL;
 
-	@@KEYWORDDEFAULTS@@
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwdict, "|s#"  @@KEYWORDFMT@@, kwlist,
-					 &cp, &len @@KEYWORDPTRS@@)) {
+	if (!PyArg_ParseTuple(args, "|s#",
+			      &cp, &len)) {
 	        Py_DECREF(new);
 		return NULL;
 	}
 
-        @@ALGORITHM@@init(new);
+        hash_init(&(new->st));
 
 	if (PyErr_Occurred()) {Py_DECREF(new); return NULL;}
 	if (cp)
-		@@ALGORITHM@@update(new, cp, len);
+		hash_update(&(new->st), cp, len);
 
 	return (PyObject *)new;
 }
@@ -251,9 +237,9 @@ static PyObject *
 
 /* List of functions exported by this module */
 
-static struct PyMethodDef @@ALGORITHM@@_functions[] = {
-	{"new",			(PyCFunction)@@ALGORITHM@@_new, METH_VARARGS|METH_KEYWORDS, @@ALGORITHM@@_new__doc__},
-	{"@@MODNAME@@",		(PyCFunction)@@ALGORITHM@@_new, METH_VARARGS|METH_KEYWORDS, @@ALGORITHM@@_new__doc__},
+static struct PyMethodDef ALG_functions[] = {
+	{"new",			(PyCFunction)ALG_new, METH_VARARGS, 
+	 ALG_new__doc__},
 	{NULL,			NULL}		 /* Sentinel */
 };
 
@@ -262,24 +248,31 @@ static struct PyMethodDef @@ALGORITHM@@_functions[] = {
 
 #define insint(n,v) {PyObject *o=PyInt_FromLong(v); if (o!=NULL) {PyDict_SetItemString(d,n,o); Py_DECREF(o);}}
 
+#define _STR(x) #x
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+#define _MODULE_NAME _PASTE2(init,MODULE_NAME)
+#define _MODULE_STRING _STR(MODULE_NAME)
+
 void
-init@@MODNAME@@()
+_MODULE_NAME ()
 {
 	PyObject *d, *m;
 
-	@@ALGORITHM@@type.ob_type = &PyType_Type;
-	m = Py_InitModule("@@MODNAME@@", @@ALGORITHM@@_functions);
+	ALGtype.ob_type = &PyType_Type;
+	m = Py_InitModule("Crypto.Hash.MD4", ALG_functions);
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
-	insint("blocksize", 1);  /* For future use, in case some hash
+	insint("block_size", 1);  /* For future use, in case some hash
 				    functions require an integral number of
 				    blocks */ 
-	insint("digestsize", @@DIGESTSIZE@@);
+	insint("digest_size", DIGEST_SIZE);
 
 	/* Check for errors */
 	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module @@MODNAME@@");
+		Py_FatalError("can't initialize module " 
+                              _MODULE_STRING);
 }
 
 

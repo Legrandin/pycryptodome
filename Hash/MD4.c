@@ -12,17 +12,20 @@
   
 
 #include <string.h>
+#include <Python.h>
+
+#define MODULE_NAME MD4
+#define DIGEST_SIZE 16
 
 typedef unsigned int U32;
 typedef unsigned char U8;
 #define U32_MAX (U32)4294967295
 
 typedef struct {
-  PCTObject_HEAD
   U32 A,B,C,D, count;
   U32 len1, len2;
   U8 buf[64];
-} MD4object;
+} hash_state;
 
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
 #define G(x, y, z) (((x) & (y)) | ((x) & (z)) | ((y) & (z)))
@@ -31,8 +34,8 @@ typedef struct {
 /* ROTATE_LEFT rotates x left n bits */
 #define ROL(x, n) (((x) << n) | ((x) >> (32-n) ))
 
-static void MD4init (ptr)
-     MD4object *ptr;
+static void 
+hash_init (hash_state *ptr)
 {
   ptr->A=(U32)0x67452301;
   ptr->B=(U32)0xefcdab89;
@@ -42,8 +45,7 @@ static void MD4init (ptr)
 }
 
 static void
-MD4copy(src, dest)
-     MD4object *src, *dest;
+hash_copy(hash_state *src, hash_state *dest)
 {
   dest->len1=src->len1;
   dest->len2=src->len2;
@@ -55,10 +57,8 @@ MD4copy(src, dest)
   memcpy(dest->buf, src->buf, dest->count);
 }
 
-static void MD4update (self, buf, len)
-MD4object *self;
-const U8 *buf;
-U32 len;
+static void 
+hash_update (hash_state *self, const U8 *buf, U32 len)
 {
   U32 L;
 
@@ -149,13 +149,12 @@ U32 len;
 }
 
 static PyObject *
-MD4digest (self)
-     const MD4object *self;
+hash_digest (const hash_state *self)
 {
   U8 digest[16];
   static U8 s[8];
   U32 padlen, oldlen1, oldlen2;
-  MD4object temp;
+  hash_state temp;
   static U8 padding[64] = {
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -167,10 +166,10 @@ MD4digest (self)
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
   };
 
-  memcpy(&temp, self, sizeof(MD4object));
+  memcpy(&temp, self, sizeof(hash_state));
   oldlen1=temp.len1; oldlen2=temp.len2;  /* Save current length */
   padlen= (56<=self->count) ? 56-self->count+64: 56-self->count;
-  MD4update(&temp, padding, padlen);
+  hash_update(&temp, padding, padlen);
   s[0]= oldlen1       & 255;
   s[1]=(oldlen1 >>  8) & 255;
   s[2]=(oldlen1 >> 16) & 255;
@@ -179,7 +178,7 @@ MD4digest (self)
   s[5]=(oldlen2 >>  8) & 255;
   s[6]=(oldlen2 >> 16) & 255;
   s[7]=(oldlen2 >> 24) & 255;
-  MD4update(&temp, s, 8);
+  hash_update(&temp, s, 8);
   
   digest[ 0]= temp.A        & 255;
   digest[ 1]=(temp.A >>  8) & 255;
@@ -201,3 +200,4 @@ MD4digest (self)
   return PyString_FromStringAndSize(digest, 16);
 }
 
+#include "hash_template.c"
