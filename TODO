@@ -1,6 +1,8 @@
 
 * Restore RC5, which needs additional keyword arguments
 
+* Replace Hash/HMAC.py with the hmac module in the standard library
+
 * Look at the C code and modernize it to the current memory APIs,
   class-based exceptions, etc
 
@@ -18,10 +20,6 @@ cruelly breaking backward compatibility where necessary, and release
 the new code as version 2.0 to signal the magnitude of the changes.
 While we have the chance, we can also drop useless code, rename
 packages and classes, or whatever.
- 
-* Should there be a backword-compatibility wrapper for
-  Crypto/Hash/MD5.py, containing just 'from md5 import *' and a
-  warning message?  (Ditto for Crypto/Hash/SHA.py.)
  
 * Modernize the code to current standards (Distutils installation,
 docstrings, naming conventions, test suites).  
