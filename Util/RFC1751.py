@@ -3,6 +3,9 @@
 # sequence of words, as defined in RFC1751: "A Convention for
 # Human-Readable 128-bit Keys", by Daniel L. McDonald.
 
+__revision__ = "$Id: RFC1751.py,v 1.4 2002-07-11 14:26:26 akuchling Exp $"
+
+
 import string, binascii
 
 binary={0:'0000', 1:'0001', 2:'0010', 3:'0011', 4:'0100', 5:'0101',

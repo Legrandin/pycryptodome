@@ -12,3 +12,5 @@ Crypto.Util.RFC1751       Converts between 128-bit keys and human-readable
 
 __all__ = ['randpool', 'RFC1751', 'number']
 
+__revision__ = "$Id: __init__.py,v 1.3 2002-07-11 14:26:26 akuchling Exp $"
+
