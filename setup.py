@@ -1,8 +1,9 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.21 2003-02-28 16:40:46 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.22 2003-02-28 16:55:21 akuchling Exp $"
 
-from distutils.core import setup, Extension
+from distutils import core
+from distutils.core import Extension
 from distutils.command.build_ext import build_ext
 import os, sys
 
@@ -126,23 +127,39 @@ class PCTBuildExt (build_ext):
                                   sources=["src/_dsa.c"]))
         self.extensions += exts
 
-setup(name="pycrypto",
-      version="1.9a5",
-      description="Cryptographic modules for Python.",
-      author="A.M. Kuchling",
-      author_email="akuchlin@mems-exchange.org",
-      url="http://pycrypto.sourceforge.net",
+kw = {'name':"pycrypto",
+      'version':"1.9a5",
+      'description':"Cryptographic modules for Python.",
+      'author':"A.M. Kuchling",
+      'author_email':"akuchlin@mems-exchange.org",
+      'url':"http://pycrypto.sourceforge.net",
 
-      cmdclass = {'build_ext':PCTBuildExt},
-      packages = ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
+      'cmdclass' : {'build_ext':PCTBuildExt},
+      'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
                   "Crypto.Protocol", "Crypto.PublicKey"],
-      package_dir = { "Crypto":"." },
+      'package_dir' : { "Crypto":"." },
       # One module is defined here, because build_ext won't be
       # called unless there's at least one extension module defined.
-      ext_modules=[Extension("Crypto.Hash.MD2",
+      'ext_modules':[Extension("Crypto.Hash.MD2",
                              include_dirs=['src/'],
                              sources=["src/MD2.c"])],
-     )
+     }
 
+# If we're running Python 2.3, add extra information
+if hasattr(core, 'setup_keywords'):
+    if 'classifiers' in core.setup_keywords:
+        kw['classifiers'] = [
+          'Development Status :: 4 - Beta',
+          'License :: Public Domain',
+          'Intended Audience :: Developers',
+          'Operating System :: Unix',
+          'Operating System :: Microsoft :: Windows',
+          'Operating System :: MacOS :: MacOS X',
+          'Topic :: Security :: Cryptography',
+          ]
+    if 'download_url' in core.setup_keywords:
+        kw['download_url'] = ('http://www.amk.ca/files/python/'
+                              '%s-%s.tar.gz' % (kw['name'], kw['version']) )
 
+core.setup(**kw)
 
