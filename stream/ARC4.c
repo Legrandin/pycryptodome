@@ -10,17 +10,18 @@
  *
  */
 
+#define MODULE_NAME ARC4
+
 typedef struct 
 {
-  PCTObject_HEAD;
   unsigned char state[256];
   unsigned char x,y;
-} ARC4object;
+} stream_state;
 
-#define ARC4decrypt ARC4encrypt	/* Encryption and decryption are symmetric */
+#define stream_decrypt stream_encrypt	/* Encryption and decryption are symmetric */
 
-static inline void ARC4encrypt(self, block, len)
-     ARC4object *self;
+static inline void stream_encrypt(self, block, len)
+     stream_state *self;
      unsigned char *block;
      int len;
 {
@@ -47,8 +48,8 @@ static inline void ARC4encrypt(self, block, len)
 }
 
 
-static void ARC4init(self, key, keylen)
-     ARC4object *self;
+static void stream_init(self, key, keylen)
+     stream_state *self;
      unsigned char *key;
      int keylen;
 {
@@ -68,5 +69,6 @@ static void ARC4init(self, key, keylen)
     }
 }
      
+#include "stream_template.c"
 
   
