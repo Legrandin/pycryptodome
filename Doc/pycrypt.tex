@@ -1,7 +1,5 @@
 \documentclass{howto}
 
-% XXX update the speed figures; add AES
-
 \title{Python Cryptography Toolkit}
 
 \release{1.9alpha1}
@@ -55,12 +53,12 @@ in Python for ease of modification.  Generally, low-level functions
 like ciphers and hash functions are written in C, while less
 speed-critical functions have been written in Python.  This division
 may change in future releases.  When speeds are quoted in this
-document, they were measured on a 266 MHz Pentium II running Linux.
-The exact speeds will obviously vary with different machines and
-different compilers, but they provide a basis for comparing
-algorithms.  Currently the cryptographic implementations are
-acceptably fast, but not spectacularly good.  I welcome any
-suggestions or patches for faster code.
+document, they were measured on a 500 MHz Pentium II running Linux.
+The exact speeds will obviously vary with different machines,
+different compilers, and the phase of the moon, but they provide a
+crude basis for comparison.  Currently the cryptographic
+implementations are acceptably fast, but not spectacularly good.  I
+welcome any suggestions or patches for faster code.
 
 I have placed the code under no restrictions; you can redistribute the
 code freely or commercially, in its original form or with any
@@ -214,24 +212,24 @@ append a random string to the contract before hashing and signing it;
 the random string can then be kept with the signature.
 
 None of the algorithms implemented here have been completely broken.
-There are no attacks on MD2, but it's rather slow at 376 K/sec.  MD4
-is faster at 11946 K/sec but there have been some partial attacks on
+There are no attacks on MD2, but it's rather slow at 1250 K/sec.  MD4
+is faster at 44,500 K/sec but there have been some partial attacks on
 it.  MD4 operates in three iterations of a basic mixing operation; two
 of the three rounds have been cryptanalyzed, but the attack can't be
 extended to the full algorithm.  MD5 is a strengthened version of MD4
-with four rounds; an attack against one round has been found.  XXX MD5
-is still believed secure at the moment, but people are gravitating
-toward using SHA in new software and standards because there are no
-known attacks against it.  Because MD5 is quite commonly used, the
-implementation is better optimized and thus faster on x86 processors
-(27193 K/sec).  MD4 may be faster than MD5 when other processors and
-compilers are used.
+with four rounds; an attack against one round has been found.  MD5 is
+still believed secure at the moment, but people are gravitating toward
+using SHA in new software because there are no known attacks against
+SHA.  The MD5 implementation is moderately well-optimized and thus
+faster on x86 processors, running at 35,500 K/sec.  MD5 may even be
+faster than MD4, depending on the processor and compiler you use.
 
-All the MD algorithms produce 128-bit hashes; SHA produces a larger 160-bit
-hash, and there are no known attacks against it.  The first version of
-SHA had a weakness which was later corrected; the code used here
-implements the second, corrected, version.  It operates at 13157 K/sec.
-RIPEMD also has a 160-bit output, and operates at 5869 K/sec.
+All the MD\var{n} algorithms produce 128-bit hashes; SHA produces a
+larger 160-bit hash, and there are no known attacks against it.  The
+first version of SHA had a weakness which was later corrected; the
+code used here implements the second, corrected, version.  It operates
+at 21,000 K/sec.  RIPEMD also has a 160-bit output, and operates at
+17,600 K/sec.
 
 \subsection{Credits}
 The MD2 and  MD4 implementations were written by A.M. Kuchling,
@@ -442,25 +440,29 @@ encrypted and forwarded to someone else.  This is a
 possible to choose plaintexts that reveal something about the key when
 encrypted.
 
-DES (2458 K/sec) has a 56-bit key; this is starting to become too small
+DES (5100 K/sec) has a 56-bit key; this is starting to become too small
 for safety.  It has been estimated that it would only cost \$1,000,000 to
 build a custom DES-cracking machine that could find a key in 3 hours.  A
 chosen-ciphertext attack using the technique of \dfn{linear
 cryptanalysis} can break DES in \code{pow(2, 43)} steps.  However,
 unless you're encrypting data that you want to be safe from major
-governments, DES will be fine. DES3 (509 K/sec) uses three DES
+governments, DES will be fine. DES3 (1830 K/sec) uses three DES
 encryptions for greater security and a 112-bit or 168-bit key, but is
 correspondingly slower.
 
-There are no publicly known attacks against IDEA (2005 K/sec), and
+There are no publicly known attacks against IDEA (3050 K/sec), and
 it's been around long enough to have been examined.  There are no
-known attacks against ARC2 (1644 K/sec), ARC4 (4630 K/sec), Blowfish
-(5323 K/sec), CAST (1314 K/sec), or RC5 (1370
+known attacks against ARC2 (2160 K/sec), ARC4 (8830 K/sec), Blowfish
+(9250 K/sec), CAST (2960 K/sec), or RC5 (2060
 K/sec), but they're all relatively new
 algorithms and there hasn't been time for much analysis to be
 performed; use them for serious applications only after careful
 research.  
 
+AES, the Advanced Encryption Standard, was chosen by the US National
+Institute of Standards and Technology from among 6 competitors, and is
+probably your best choice.  It runs at 7060 K/sec, so it's among the
+faster algorithms around.
 
 \subsection{Credits}
 The code for Blowfish was written by Bryan Olson, partially based on a
