@@ -11,7 +11,7 @@
 # or implied. Use at your own risk or not at all. 
 # 
 
-__revision__ = "$Id: DSA.py,v 1.5 2002-11-21 01:23:15 z3p Exp $"
+__revision__ = "$Id: DSA.py,v 1.6 2002-12-07 01:04:33 z3p Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -153,7 +153,14 @@ object=DSAobj
 generate_py = generate
 construct_py = construct
 
-class DSAobj_c(DSAobj):
+class DSAobj_c(pubkey):
+    keydata = ['y', 'g', 'p', 'q', 'x']
+    y = property(lambda s:s.key.y)
+    g = property(lambda s:s.key.g)
+    p = property(lambda s:s.key.p)
+    q = property(lambda s:s.key.q)
+    x = property(lambda s:s.key.x)
+
     def __init__(self, key):
         self.key = key
 
@@ -186,6 +193,12 @@ class DSAobj_c(DSAobj):
 
     def publickey(self):
         return construct_c((self.key.y, self.key.g, self.key.p, self.key.q))
+
+    def cansign(self):
+        return 1
+
+    def canencrypt(self):
+        return 0
 
 def generate_c(bits, randfunc, progress_func=None):
     obj = generate_py(bits, randfunc, progress_func)
