@@ -2,7 +2,7 @@
 # Test script for Crypto.XXX
 #
 
-__revision__ = "$Id: test_chaffing.py,v 1.1 2002-05-23 13:44:44 akuchling Exp $"
+__revision__ = "$Id: test_chaffing.py,v 1.2 2003-02-28 15:23:59 akuchling Exp $"
 
 from sancho.unittest import TestScenario, parse_args, run_scenarios
 from Crypto.Protocol import Chaffing
@@ -31,27 +31,27 @@ likely to effect their Safety and Happiness.
 class ChaffingTest (TestScenario):
 
     def setup (self):
-	pass
+        pass
 
     def shutdown (self):
-	pass
+        pass
 
     def check_chaffing (self):
-	"Simple tests of chaffing and winnowing"
-	self.test_stmt('Chaffing.Chaff()')
-	self.test_stmt('Chaffing.Chaff(0.5, 1)')
-	self.test_exc('Chaffing.Chaff(factor=-1)', ValueError)
-	self.test_exc('Chaffing.Chaff(blocksper=-1)', ValueError)
-	
-	data = [(1, 'data1', 'data1'), (2, 'data2', 'data2')]
-	c = Chaffing.Chaff(1.0, 1)
-	self.test_stmt('c.chaff(data)')
-	chaff = c.chaff(data)
-	self.test_val('len(chaff)', 4)
+        "Simple tests of chaffing and winnowing"
+        self.test_stmt('Chaffing.Chaff()')
+        self.test_stmt('Chaffing.Chaff(0.5, 1)')
+        self.test_exc('Chaffing.Chaff(factor=-1)', ValueError)
+        self.test_exc('Chaffing.Chaff(blocksper=-1)', ValueError)
 
-	c = Chaffing.Chaff(0.0, 1)
-	chaff = c.chaff(data)
-	self.test_val('len(chaff)', 2)
+        data = [(1, 'data1', 'data1'), (2, 'data2', 'data2')]
+        c = Chaffing.Chaff(1.0, 1)
+        self.test_stmt('c.chaff(data)')
+        chaff = c.chaff(data)
+        self.test_val('len(chaff)', 4)
+
+        c = Chaffing.Chaff(0.0, 1)
+        chaff = c.chaff(data)
+        self.test_val('len(chaff)', 2)
 
 if __name__ == "__main__":
     (scenarios, options) = parse_args()

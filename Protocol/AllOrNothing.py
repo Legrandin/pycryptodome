@@ -17,14 +17,14 @@ http://theory.lcs.mit.edu/~rivest/fusion.pdf
 
 """
 
-__revision__ = "$Id: AllOrNothing.py,v 1.7 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: AllOrNothing.py,v 1.8 2003-02-28 15:23:20 akuchling Exp $"
 
 import operator
 import string
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
-
+
 class AllOrNothing:
     """Class implementing the All-or-Nothing package transform.
 
@@ -50,7 +50,7 @@ class AllOrNothing:
         three arguments must be the same for the object used to create
         the digest, and to undigest'ify the message blocks.
         """
-        
+
         self.__ciphermodule = ciphermodule
         self.__mode = mode
         self.__IV = IV
@@ -63,7 +63,7 @@ class AllOrNothing:
     def digest(self, text):
         """digest(text:string) : [string]
 
-        Perform the All-or-Nothing package transform on the given 
+        Perform the All-or-Nothing package transform on the given
         string.  Output is a list of message blocks describing the
         transformed text, where each block is a string of bit length equal
         to the ciphermodule's block_size.
@@ -71,18 +71,18 @@ class AllOrNothing:
 
         # generate a random session key and K0, the key used to encrypt the
         # hash blocks.  Rivest calls this a fixed, publically-known encryption
-        # key, but says nothing about the security implications of this key or 
+        # key, but says nothing about the security implications of this key or
         # how to choose it.
         key = self._inventkey(self.__key_size)
         K0 = self.__K0digit * self.__key_size
-        
+
         # we need two cipher objects here, one that is used to encrypt the
         # message blocks and one that is used to encrypt the hashes.  The
         # former uses the randomly generated key, while the latter uses the
         # well-known key.
         mcipher = self.__newcipher(key)
         hcipher = self.__newcipher(K0)
-        
+
         # Pad the text so that its length is a multiple of the cipher's
         # block_size.  Pad with trailing spaces, which will be eliminated in
         # the undigest() step.
@@ -100,7 +100,7 @@ class AllOrNothing:
         # where hi = E(K0, m'i ^ i) for i = 1, 2, ... s
         #
         # The one complication I add is that the last message block is hard
-        # coded to the number of padbytes added, so that these can be stripped 
+        # coded to the number of padbytes added, so that these can be stripped
         # during the undigest() step
         s = len(text) / block_size
         blocks = []
@@ -129,7 +129,7 @@ class AllOrNothing:
 
         # Now calculate the last message block of the sequence 1..s'.  This
         # will contain the random session key XOR'd with all the hash blocks,
-        # so that for undigest(), once all the hash blocks are calculated, the 
+        # so that for undigest(), once all the hash blocks are calculated, the
         # session key can be trivially extracted.  Calculating all the hash
         # blocks requires that all the message blocks be received, thus the
         # All-or-Nothing algorithm succeeds.
@@ -150,8 +150,8 @@ class AllOrNothing:
         must be the same.  blocks is a list of strings of bit length
         equal to the ciphermodule's block_size.
         """
-        
-        # better have at least 2 blocks, for the padbytes package and the hash 
+
+        # better have at least 2 blocks, for the padbytes package and the hash
         # block accumulator
         if len(blocks) < 2:
             raise ValueError, "List must be at least length 2."
@@ -197,7 +197,7 @@ class AllOrNothing:
         return text[:-padbytes]
 
     def _inventkey(self, key_size):
-        # TBD: Not a very secure algorithm.  Eventually, I'd like to use JHy's 
+        # TBD: Not a very secure algorithm.  Eventually, I'd like to use JHy's
         # kernelrand module
         import time
         from Crypto.Util import randpool
@@ -218,7 +218,7 @@ class AllOrNothing:
             return self.__ciphermodule.new(key, self.__mode, self.__IV)
 
 
-
+
 if __name__ == '__main__':
     import sys
     import getopt
@@ -240,7 +240,7 @@ Where:
     --help
     -h
         Print this help message
-'''        
+'''
 
     ciphermodule = 'AES'
     aslong = 0

@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_hashes.py,v 1.1 2002-05-17 13:31:48 akuchling Exp $"
+__revision__ = "$Id: test_hashes.py,v 1.2 2003-02-28 15:23:59 akuchling Exp $"
 
 import time, string, binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -16,22 +16,22 @@ tested_modules = [ "Crypto.Hash.MD2", "Crypto.Hash.MD4", "Crypto.Hash.MD5",
 class HashTest (TestScenario):
 
     def setup (self):
-        teststr='1'				# Build 128K of test data
+        teststr='1'                             # Build 128K of test data
         for i in xrange(0, 17):
             teststr=teststr+teststr
         self.str_128k = teststr
 
     def shutdown (self):
         del self.str_128k
-        
+
     def compare(self, hash_mod, strg, hex_result):
         result = binascii.a2b_hex(hex_result)
         obj = hash_mod.new(strg)
         s1 = obj.digest()
-    
+
         # Check that the right hash result is produced
         self.test_val('s1', result)
-    
+
         # Check that .hexdigest() produces the same output
         self.test_val('obj.hexdigest()', hex_result)
 

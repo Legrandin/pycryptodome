@@ -1,16 +1,16 @@
 #
-#   number.py : Number-theoretic functions 
-# 
+#   number.py : Number-theoretic functions
+#
 #  Part of the Python Cryptography Toolkit
-# 
-# Distribute and use freely; there are no restrictions on further 
-# dissemination and usage except those imposed by the laws of your 
+#
+# Distribute and use freely; there are no restrictions on further
+# dissemination and usage except those imposed by the laws of your
 # country of residence.  This software is provided "as is" without
 # warranty of fitness for use or suitability for any purpose, express
-# or implied. Use at your own risk or not at all. 
-# 
+# or implied. Use at your own risk or not at all.
+#
 
-__revision__ = "$Id: number.py,v 1.6 2002-07-11 14:26:26 akuchling Exp $"
+__revision__ = "$Id: number.py,v 1.7 2003-02-28 15:26:01 akuchling Exp $"
 
 bignum = long
 try:
@@ -20,8 +20,8 @@ except ImportError:
         import mpz
         #bignum=mpz.mpz       # Temporarily disabled; the 'outrageous exponent'
                               # error messes things up.
-    except ImportError: 
-	pass
+    except ImportError:
+        pass
 
 # Commented out and replaced with faster versions below
 ## def long2str(n):
@@ -35,15 +35,15 @@ except ImportError:
 ## def str2long(s):
 ##     if type(s)!=types.StringType: return s   # Integers will be left alone
 ##     return reduce(lambda x,y : x*256+ord(y), s, 0L)
-    
+
 def getRandomNumber(N, randfunc):
     """getRandomNumber(N:int, randfunc:callable):long
     Return an N-bit random number."""
-    
+
     S = randfunc(N/8)
     char = ord(randfunc(1)) >> (8-(N%8))
     return bytes_to_long(chr(char) + S)
-    
+
 def GCD(x,y):
     """GCD(x:long, y:long): long
     Return the GCD of x and y.
@@ -60,13 +60,13 @@ def inverse(u, v):
     u3, v3 = long(u), long(v)
     u1, v1 = 1L, 0L
     while v3 > 0:
-	q=u3 / v3
-	u1, v1 = v1, u1 - v1*q
-	u3, v3 = v3, u3 - v3*q
+        q=u3 / v3
+        u1, v1 = v1, u1 - v1*q
+        u3, v3 = v3, u3 - v3*q
     while u1<0:
         u1 = u1 + v
     return u1
-    
+
 # Given a number of bits to generate and a random generation function,
 # find a prime number of the appropriate size.
 
@@ -74,7 +74,7 @@ def getPrime(N, randfunc):
     """getPrime(N:int, randfunc:callable):long
     Return a random N-bit prime number.
     """
-    
+
     number=getRandomNumber(N, randfunc) | 1
     while (not isPrime(number)):
         number=number+2
@@ -91,7 +91,7 @@ def isPrime(N):
 
     # Compute the highest bit that's set in N
     N1=N - 1L ; n=1L
-    while (n<N): n=n<<1L 
+    while (n<N): n=n<<1L
     n = n >> 1L
 
     # Rabin-Miller test
@@ -116,7 +116,7 @@ sieve=[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59,
 
 
 # Improved conversion functions contributed by Barry Warsaw, after
-# careful benchmarking  
+# careful benchmarking
 
 import struct
 

@@ -72,7 +72,7 @@ _key = ''
 def get_cipher(name,check=0):
 
     global _key
-    
+
     cc = getattr(Ciphers,name)
     keysize = cc.keysize
     if not _key:
@@ -300,7 +300,7 @@ data ! There is NO way to recover a forgotten pass phrase !
                SwitchOption('-O', 'allow overwrites (use with care)'),
                ArgumentOption('-c', 'cipher to use', 'RC5'),
                ]
-    
+
     def main(self):
 
         overwrite = self.values['-O']

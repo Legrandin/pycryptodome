@@ -3,14 +3,14 @@
 #
 # Part of the Python Cryptography Toolkit
 #
-# Distribute and use freely; there are no restrictions on further 
-# dissemination and usage except those imposed by the laws of your 
+# Distribute and use freely; there are no restrictions on further
+# dissemination and usage except those imposed by the laws of your
 # country of residence.  This software is provided "as is" without
 # warranty of fitness for use or suitability for any purpose, express
-# or implied. Use at your own risk or not at all. 
+# or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: randpool.py,v 1.12 2003-02-01 00:46:43 moraes Exp $"
+__revision__ = "$Id: randpool.py,v 1.13 2003-02-28 15:26:01 akuchling Exp $"
 
 import time, array, types, warnings, os.path
 from Crypto.Util.number import long_to_bytes
@@ -44,39 +44,39 @@ class RandomPool:
       Maximum size of pool in bytes
     entropy : int
       Number of bits of entropy in this pool.
-      
+
     Methods:
     add_event([s]) : add some entropy to the pool
     get_bytes(int) : get N bytes of random data
     randomize([N]) : get N bytes of randomness from external source
     """
 
-    
+
     def __init__(self, numbytes = 160, cipher=None, hash=None):
         if hash is None:
             from Crypto.Hash import SHA as hash
-            
+
         # The cipher argument is vestigial; it was removed from
         # version 1.1 so RandomPool would work even in the limited
         # exportable subset of the code
         if cipher is not None:
             warnings.warn("'cipher' parameter is no longer used")
-            
+
         if isinstance(hash, types.StringType):
             # ugly hack to force __import__ to give us the end-path module
             hash = __import__('Crypto.Hash.'+hash,
                               None, None, ['new'])
             warnings.warn("'hash' parameter should now be a hashing module")
-            
+
         self.bytes = numbytes
         self.bits = self.bytes*8
         self.entropy = 0
         self._hash = hash
-        
+
         # Construct an array to hold the random pool,
         # initializing it to 0.
         self._randpool = array.array('B', [0]*self.bytes)
-            
+
         self._event1 = self._event2 = 0
         self._addPos = 0
         self._getPos = hash.digest_size
@@ -141,13 +141,13 @@ class RandomPool:
             self.stir()
 
     def stir (self, s = ''):
-        """stir(s:string) 
+        """stir(s:string)
         Mix up the randomness pool.  This will call add_event() twice,
         but out of paranoia the entropy attribute will not be
         increased.  The optional 's' parameter is a string that will
         be hashed with the randomness pool.
         """
-        
+
         entropy=self.entropy            # Save inital entropy value
         self.add_event()
 
@@ -171,7 +171,7 @@ class RandomPool:
         """get_bytes(N:int) : string
         Return N bytes of random data.
         """
-        
+
         s=''
         i, pool = self._getPos, self._randpool
         h=self._hash.new()
@@ -185,7 +185,7 @@ class RandomPool:
             if i<dsize:
                 self.stir()
                 i=self._getPos
-                
+
         self._getPos = i
         self._updateEntropyEstimate(- 8*N)
         return s[:N]
@@ -283,7 +283,7 @@ class RandomPool:
         warnings.warn("getBytes() method replaced by get_bytes()",
                       DeprecationWarning)
         return self.get_bytes(N)
-    
+
     def addEvent (self, event, s=""):
         warnings.warn("addEvent() method replaced by add_event()",
                       DeprecationWarning)

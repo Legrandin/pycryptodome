@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.PublicKey.
 #
 
-__revision__ = "$Id: test_publickey.py,v 1.2 2002-05-24 14:20:38 akuchling Exp $"
+__revision__ = "$Id: test_publickey.py,v 1.3 2003-02-28 15:24:01 akuchling Exp $"
 
 import sys, cPickle
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -17,7 +17,7 @@ class PublicKeyTest (TestScenario):
 
     def setup (self):
         # Set up a random pool; we won't bother to actually fill it with
-        # entropy from the keyboard 
+        # entropy from the keyboard
         self.pool = RandomPool(384)
         self.pool.stir()
 
@@ -51,11 +51,11 @@ class PublicKeyTest (TestScenario):
 
 
     def exercise (self, randfunc, pk_mod, verbose=0):
-        N=256				# Key size, measured in bits
+        N=256                           # Key size, measured in bits
 
         key=pk_mod.generate(N, randfunc)
 
-        if verbose: 
+        if verbose:
             print ' Key data:'
             for field in key.keydata:
                 print "  ", field, ':', hex(getattr(key,field))
@@ -72,22 +72,22 @@ class PublicKeyTest (TestScenario):
         self.testkey(key2, randfunc, verbose)
         if verbose: print
 
-        
+
     def check_rsa(self):
         "Check RSA algorithm"
-	self.exercise(self.pool.get_bytes, RSA)
+        self.exercise(self.pool.get_bytes, RSA)
 
     def check_dsa(self):
         "Check DSA algorithm"
-	self.exercise(self.pool.get_bytes, DSA)
+        self.exercise(self.pool.get_bytes, DSA)
 
     def check_elgamal(self):
         "Check ElGamal algorithm"
-	self.exercise(self.pool.get_bytes, ElGamal)
+        self.exercise(self.pool.get_bytes, ElGamal)
 
     def check_qnew(self):
         "Check qNEW algorithm"
-	self.exercise(self.pool.get_bytes, qNEW)
+        self.exercise(self.pool.get_bytes, qNEW)
 
 # class PublicKeyTest
 

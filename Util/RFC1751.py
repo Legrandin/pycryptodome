@@ -3,44 +3,44 @@
 # sequence of words, as defined in RFC1751: "A Convention for
 # Human-Readable 128-bit Keys", by Daniel L. McDonald.
 
-__revision__ = "$Id: RFC1751.py,v 1.4 2002-07-11 14:26:26 akuchling Exp $"
+__revision__ = "$Id: RFC1751.py,v 1.5 2003-02-28 15:26:00 akuchling Exp $"
 
 
 import string, binascii
 
 binary={0:'0000', 1:'0001', 2:'0010', 3:'0011', 4:'0100', 5:'0101',
-	6:'0110', 7:'0111', 8:'1000', 9:'1001', 10:'1010', 11:'1011',
-	12:'1100', 13:'1101', 14:'1110', 15:'1111'}
+        6:'0110', 7:'0111', 8:'1000', 9:'1001', 10:'1010', 11:'1011',
+        12:'1100', 13:'1101', 14:'1110', 15:'1111'}
 
 def _key2bin(s):
     "Convert a key into a string of binary digits"
     kl=map(lambda x: ord(x), s)
     kl=map(lambda x: binary[x/16]+binary[x&15], kl)
     return ''.join(kl)
-    
+
 def _extract(key, start, length):
     """Extract a bitstring from a string of binary digits, and return its
     numeric value."""
     k=key[start:start+length]
     return reduce(lambda x,y: x*2+ord(y)-48, k, 0)
-    
+
 def key_to_english (key):
     """key_to_english(key:string) : string
     Transform an arbitrary key into a string containing English words.
     The key length must be a multiple of 8.
     """
     english=''
-    for index in range(0, len(key), 8):	# Loop over 8-byte subkeys
-	subkey=key[index:index+8]
-	# Compute the parity of the key
-	skbin=_key2bin(subkey) ; p=0
-	for i in range(0, 64, 2): p=p+_extract(skbin, i, 2)
-	# Append parity bits to the subkey
-	skbin=_key2bin(subkey+chr((p<<6) & 255))
-	for i in range(0, 64, 11):
-	    english=english+wordlist[_extract(skbin, i, 11)]+' '
+    for index in range(0, len(key), 8): # Loop over 8-byte subkeys
+        subkey=key[index:index+8]
+        # Compute the parity of the key
+        skbin=_key2bin(subkey) ; p=0
+        for i in range(0, 64, 2): p=p+_extract(skbin, i, 2)
+        # Append parity bits to the subkey
+        skbin=_key2bin(subkey+chr((p<<6) & 255))
+        for i in range(0, 64, 11):
+            english=english+wordlist[_extract(skbin, i, 11)]+' '
 
-    return english[:-1]			# Remove the trailing space
+    return english[:-1]                 # Remove the trailing space
 
 def english_to_key (str):
     """english_to_key(string):string
@@ -48,35 +48,35 @@ def english_to_key (str):
     The string must contain words separated by whitespace; the number
     of words must be a multiple of 6.
     """
-    
+
     L=string.split(string.upper(str)) ; key=''
     for index in range(0, len(L), 6):
-	sublist=L[index:index+6] ; char=9*[0] ; bits=0
-	for i in sublist:
-	    index=wordlist.index(i)
-	    shift=(8-(bits+11)%8) %8
-	    y=index<<shift
-	    cl, cc, cr = (y>>16), (y>>8)&0xff, y & 0xff
-	    if (shift>5):
-		char[bits/8] = char[bits/8] | cl
-		char[bits/8+1] = char[bits/8+1] | cc
-		char[bits/8+2] = char[bits/8+2] | cr
-	    elif shift>-3:
-		char[bits/8] = char[bits/8] | cc
-		char[bits/8+1] = char[bits/8+1] | cr
-	    else: char[bits/8] = char[bits/8] | cr
-	    bits=bits+11
-	subkey=reduce(lambda x,y:x+chr(y), char, '')
-	
-	# Check the parity of the resulting key
-	skbin=_key2bin(subkey)
-	p=0
-	for i in range(0, 64, 2): p=p+_extract(skbin, i, 2)
-	if (p&3) != _extract(skbin, 64, 2):
-	    raise ValueError, "Parity error in resulting key"
-	key=key+subkey[0:8]
+        sublist=L[index:index+6] ; char=9*[0] ; bits=0
+        for i in sublist:
+            index=wordlist.index(i)
+            shift=(8-(bits+11)%8) %8
+            y=index<<shift
+            cl, cc, cr = (y>>16), (y>>8)&0xff, y & 0xff
+            if (shift>5):
+                char[bits/8] = char[bits/8] | cl
+                char[bits/8+1] = char[bits/8+1] | cc
+                char[bits/8+2] = char[bits/8+2] | cr
+            elif shift>-3:
+                char[bits/8] = char[bits/8] | cc
+                char[bits/8+1] = char[bits/8+1] | cr
+            else: char[bits/8] = char[bits/8] | cr
+            bits=bits+11
+        subkey=reduce(lambda x,y:x+chr(y), char, '')
+
+        # Check the parity of the resulting key
+        skbin=_key2bin(subkey)
+        p=0
+        for i in range(0, 64, 2): p=p+_extract(skbin, i, 2)
+        if (p&3) != _extract(skbin, 64, 2):
+            raise ValueError, "Parity error in resulting key"
+        key=key+subkey[0:8]
     return key
-	
+
 wordlist=[ "A", "ABE", "ACE", "ACT", "AD", "ADA", "ADD",
    "AGO", "AID", "AIM", "AIR", "ALL", "ALP", "AM", "AMY", "AN", "ANA",
    "AND", "ANN", "ANT", "ANY", "APE", "APS", "APT", "ARC", "ARE", "ARK",
@@ -323,20 +323,20 @@ wordlist=[ "A", "ABE", "ACE", "ACT", "AD", "ADA", "ADD",
 
 if __name__=='__main__':
     data = [('EB33F77EE73D4053', 'TIDE ITCH SLOW REIN RULE MOT'),
-	    ('CCAC2AED591056BE4F90FD441C534766',
-	     'RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE'),
-	    ('EFF81F9BFBC65350920CDD7416DE8009',
-	     'TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL')
-	   ]
+            ('CCAC2AED591056BE4F90FD441C534766',
+             'RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE'),
+            ('EFF81F9BFBC65350920CDD7416DE8009',
+             'TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL')
+           ]
 
     for key, words in data:
-	print 'Trying key', key
-	key=binascii.a2b_hex(key)
-	w2=key_to_english(key)
-	if w2!=words:
-	    print 'key_to_english fails on key', repr(key), ', producing', str(w2)
-	k2=english_to_key(words)
-	if k2!=key:
-	    print 'english_to_key fails on key', repr(key), ', producing', repr(k2)
+        print 'Trying key', key
+        key=binascii.a2b_hex(key)
+        w2=key_to_english(key)
+        if w2!=words:
+            print 'key_to_english fails on key', repr(key), ', producing', str(w2)
+        k2=english_to_key(words)
+        if k2!=key:
+            print 'english_to_key fails on key', repr(key), ', producing', repr(k2)
 
 

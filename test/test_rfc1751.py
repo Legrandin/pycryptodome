@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_rfc1751.py,v 1.2 2002-05-24 14:18:56 akuchling Exp $"
+__revision__ = "$Id: test_rfc1751.py,v 1.3 2003-02-28 15:24:01 akuchling Exp $"
 
 import binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -20,10 +20,10 @@ test_data = [('EB33F77EE73D4053', 'TIDE ITCH SLOW REIN RULE MOT'),
 class RFC1751Test (TestScenario):
 
     def setup (self):
-	pass
+        pass
 
     def shutdown (self):
-	pass
+        pass
 
     def check_k2e (self):
         "Check converting keys to English"

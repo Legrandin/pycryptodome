@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.number.
 #
 
-__revision__ = "$Id: test_number.py,v 1.2 2002-05-24 14:17:39 akuchling Exp $"
+__revision__ = "$Id: test_number.py,v 1.3 2003-02-28 15:24:01 akuchling Exp $"
 
 from sancho.unittest import TestScenario, parse_args, run_scenarios
 from Crypto.Util import number
@@ -12,16 +12,16 @@ tested_modules = [ "Crypto.Util.number" ]
 class NumberTest (TestScenario):
 
     def setup (self):
-	pass
+        pass
 
     def shutdown (self):
-	pass
+        pass
 
     def check_getRandomNumber (self):
         "Check generation of N-bit random numbers"
         def f(N):
             return '\xff' * N
-        
+
         self.test_val('number.getRandomNumber(1, f)', 1)
         self.test_val('number.getRandomNumber(4, f)', 15)
         self.test_val('number.getRandomNumber(8, f)', 255)
@@ -68,7 +68,7 @@ class NumberTest (TestScenario):
         self.test_val('number.bytes_to_long("\x01")', 1)
         self.test_val('number.bytes_to_long("\xff\x01")', 0xff01)
         self.test_val('number.bytes_to_long("\x12\x34\x01")', 0x123401)
-        
+
 # class NumberTest
 
 

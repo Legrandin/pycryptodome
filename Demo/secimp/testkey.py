@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # Running this script directly will generate a new key and print it out
     from Crypto.PublicKey import DSA
     from Crypto.Util.randpool import KeyboardRandomPool
-    
+
     pool = KeyboardRandomPool(numbytes = 64)
     pool.randomize()
 
@@ -33,9 +33,9 @@ if __name__ == '__main__':
     key = DSA.generate(keylen, pool.get_bytes, sys.stdout.write)
     print "key = Crypto.PublicKey.DSA.construct(("
     for field in key.keydata:
-	print " #", field
-	print " " + hex(getattr(key, field)) + ","
+        print " #", field
+        print " " + hex(getattr(key, field)) + ","
     print '))'
 
 
-    
+

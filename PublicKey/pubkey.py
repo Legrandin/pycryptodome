@@ -1,16 +1,16 @@
 #
 #   pubkey.py : Internal functions for public key operations
-# 
+#
 #  Part of the Python Cryptography Toolkit
-# 
-# Distribute and use freely; there are no restrictions on further 
-# dissemination and usage except those imposed by the laws of your 
+#
+# Distribute and use freely; there are no restrictions on further
+# dissemination and usage except those imposed by the laws of your
 # country of residence.  This software is provided "as is" without
 # warranty of fitness for use or suitability for any purpose, express
-# or implied. Use at your own risk or not at all. 
-# 
+# or implied. Use at your own risk or not at all.
+#
 
-__revision__ = "$Id: pubkey.py,v 1.7 2002-12-23 04:52:18 z3p Exp $"
+__revision__ = "$Id: pubkey.py,v 1.8 2003-02-28 15:25:11 akuchling Exp $"
 
 import types, warnings
 from Crypto.Util.number import *
@@ -18,9 +18,9 @@ from Crypto.Util.number import *
 # Basic public key class
 class pubkey:
     def __init__(self):
-	pass
+        pass
 
-    def __getstate__(self): 
+    def __getstate__(self):
         """To keep key objects platform-independent, the key data is
         converted to standard Python long integers before being
         written out.  It will then be reconverted as necessary on
@@ -30,7 +30,7 @@ class pubkey:
             if d.has_key(key): d[key]=long(d[key])
         return d
 
-    def __setstate__(self, d): 
+    def __setstate__(self, d):
         """On unpickling a key object, the key data is converted to the big
 number representation being used, whether that is Python long
 integers, MPZ objects, or whatever."""
@@ -38,101 +38,101 @@ integers, MPZ objects, or whatever."""
             if d.has_key(key): self.__dict__[key]=bignum(d[key])
 
     def encrypt(self, plaintext, K):
-	"""encrypt(plaintext:string|long, K:string|long) : tuple
+        """encrypt(plaintext:string|long, K:string|long) : tuple
         Encrypt the string or integer plaintext.  K is a random
-	parameter required by some algorithms.
+        parameter required by some algorithms.
         """
-	wasString=0
-	if isinstance(plaintext, types.StringType):
-	    plaintext=bytes_to_long(plaintext) ; wasString=1
-	if isinstance(K, types.StringType):
-	    K=bytes_to_long(K)
-	ciphertext=self._encrypt(plaintext, K)
-	if wasString: return tuple(map(long_to_bytes, ciphertext))
-	else: return ciphertext
-	
+        wasString=0
+        if isinstance(plaintext, types.StringType):
+            plaintext=bytes_to_long(plaintext) ; wasString=1
+        if isinstance(K, types.StringType):
+            K=bytes_to_long(K)
+        ciphertext=self._encrypt(plaintext, K)
+        if wasString: return tuple(map(long_to_bytes, ciphertext))
+        else: return ciphertext
+
     def decrypt(self, ciphertext):
-	"""decrypt(ciphertext:tuple|string|long): string
+        """decrypt(ciphertext:tuple|string|long): string
         Decrypt 'ciphertext' using this key.
         """
-	wasString=0
-	if not isinstance(ciphertext, types.TupleType):
-	    ciphertext=(ciphertext,)
-	if isinstance(ciphertext[0], types.StringType):
-	    ciphertext=tuple(map(bytes_to_long, ciphertext)) ; wasString=1
-	plaintext=self._decrypt(ciphertext)
-	if wasString: return long_to_bytes(plaintext)
-	else: return plaintext
+        wasString=0
+        if not isinstance(ciphertext, types.TupleType):
+            ciphertext=(ciphertext,)
+        if isinstance(ciphertext[0], types.StringType):
+            ciphertext=tuple(map(bytes_to_long, ciphertext)) ; wasString=1
+        plaintext=self._decrypt(ciphertext)
+        if wasString: return long_to_bytes(plaintext)
+        else: return plaintext
 
     def sign(self, M, K):
-	"""sign(M : string|long, K:string|long) : tuple
+        """sign(M : string|long, K:string|long) : tuple
         Return a tuple containing the signature for the message M.
         K is a random parameter required by some algorithms.
         """
-	if (not self.hasprivate()):
-	    raise error, 'Private key not available in this object'
-	if isinstance(M, types.StringType): M=bytes_to_long(M)
-	if isinstance(K, types.StringType): K=bytes_to_long(K)
-	return self._sign(M, K)
+        if (not self.hasprivate()):
+            raise error, 'Private key not available in this object'
+        if isinstance(M, types.StringType): M=bytes_to_long(M)
+        if isinstance(K, types.StringType): K=bytes_to_long(K)
+        return self._sign(M, K)
 
     def verify (self, M, signature):
-	"""verify(M:string|long, signature:tuple) : bool
+        """verify(M:string|long, signature:tuple) : bool
         Verify that the signature is valid for the message M;
-	returns true if the signature checks out.
+        returns true if the signature checks out.
         """
-	if isinstance(M, types.StringType): M=bytes_to_long(M)
-	return self._verify(M, signature)
+        if isinstance(M, types.StringType): M=bytes_to_long(M)
+        return self._verify(M, signature)
 
     # alias to compensate for the old validate() name
     def validate (self, M, signature):
         warnings.warn("validate() method name is obsolete; use verify()",
-	              DeprecationWarning)
-    
+                      DeprecationWarning)
+
     # The following methods will usually be left alone, except for
     # signature-only algorithms.  They both return Boolean values
     # recording whether this key's algorithm can sign and encrypt.
-    def cansign (self): 
-	"""cansign() : bool
+    def cansign (self):
+        """cansign() : bool
         Return a Boolean value recording whether this algorithm can
         generate signatures.  (This does not imply that this
         particular key object has the private information required to
         to generate a signature.)
         """
-	return 1
+        return 1
 
-    def canencrypt (self): 
-	"""canencrypt() : bool
+    def canencrypt (self):
+        """canencrypt() : bool
         Return a Boolean value recording whether this algorithm can
-	encrypt data.  (This does not imply that this
+        encrypt data.  (This does not imply that this
         particular key object has the private information required to
         to decrypt a message.)
         """
-	return 1
+        return 1
 
     # The following methods will certainly be overridden by
     # subclasses.
-    
-    def size (self): 
-	"""size() : int
+
+    def size (self):
+        """size() : int
         Return the maximum number of bits that can be handled by this key.
         """
-	return 0
+        return 0
 
-    def hasprivate (self): 
-	"""hasprivate() : bool
+    def hasprivate (self):
+        """hasprivate() : bool
         Return a Boolean denoting whether the object contains
-	private components.
+        private components.
         """
-	return 0
+        return 0
 
-    def publickey (self): 
-	"""publickey(): object
+    def publickey (self):
+        """publickey(): object
         Return a new key object containing only the public information.
         """
-	return self
-	
+        return self
+
     def __eq__ (self, other):
-	"""__eq__(other): 0, 1
+        """__eq__(other): 0, 1
         Compare us to other for equality.
         """
-	return self.__getstate__() == other.__getstate__()
+        return self.__getstate__() == other.__getstate__()

@@ -42,7 +42,7 @@ http://theory.lcs.mit.edu/~rivest/chaffing.txt
 
 """
 
-__revision__ = "$Id: Chaffing.py,v 1.6 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id: Chaffing.py,v 1.7 2003-02-28 15:23:21 akuchling Exp $"
 
 from Crypto.Util.number import bytes_to_long
 
@@ -57,11 +57,11 @@ class Chaff:
                 data and MAC generating algorithms.  The default algorithm is
                 probably not very cryptographically secure.  It is most
                 important that the chaff data does not contain any patterns
-                that can be used to discern it from wheat data without running 
+                that can be used to discern it from wheat data without running
                 the MAC.
 
     """
-    
+
     def __init__(self, factor=1.0, blocksper=1):
         """Chaff(factor:float, blocksper:int)
 
@@ -79,12 +79,12 @@ class Chaff:
         For ease of implementation, when factor < 1.0, only the first
         int(factor*number-of-blocks) message blocks are chaffed.
         """
-        
-	if not (0.0<=factor<=1.0):
-	    raise ValueError, "'factor' must be between 0.0 and 1.0"
-	if blocksper < 0:
-	    raise ValueError, "'blocksper' must be zero or more"
-	
+
+        if not (0.0<=factor<=1.0):
+            raise ValueError, "'factor' must be between 0.0 and 1.0"
+        if blocksper < 0:
+            raise ValueError, "'blocksper' must be zero or more"
+
         self.__factor = factor
         self.__blocksper = blocksper
 
@@ -107,9 +107,9 @@ class Chaff:
         which blocks are wheat and which are chaff is to perform the
         MAC hash and compare values.
         """
-        
+
         chaffedblocks = []
-        
+
         # count is the number of blocks to add chaff to.  blocksper is the
         # number of chaff blocks to add per message block that is being
         # chaffed.
@@ -157,7 +157,7 @@ class Chaff:
         return pool.get_bytes(size)
 
 
-
+
 if __name__ == '__main__':
     text = """\
 We hold these truths to be self-evident, that all men are created equal, that
@@ -178,7 +178,7 @@ likely to effect their Safety and Happiness.
     blocks = [] ; size = 40
     for i in range(0, len(text), size):
         blocks.append( text[i:i+size] )
-    
+
     # now get MACs for all the text blocks.  The key is obvious...
     print 'Calculating MACs...'
     from Crypto.Hash import HMAC, SHA
@@ -209,7 +209,7 @@ likely to effect their Safety and Happiness.
     print 'chaffed message blocks:'
     for i, data, mac in chaffed:
         # do the authentication
-	h = HMAC.new(key, data, digestmod=SHA)
+        h = HMAC.new(key, data, digestmod=SHA)
         pmac = h.digest()
         if pmac == mac:
             tag = '-->'

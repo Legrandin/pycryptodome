@@ -3,11 +3,11 @@
 #
 # Part of the Python Cryptography Toolkit
 #
-# Distribute and use freely; there are no restrictions on further 
-# dissemination and usage except those imposed by the laws of your 
+# Distribute and use freely; there are no restrictions on further
+# dissemination and usage except those imposed by the laws of your
 # country of residence.  This software is provided "as is" without
 # warranty of fitness for use or suitability for any purpose, express
-# or implied. Use at your own risk or not at all. 
+# or implied. Use at your own risk or not at all.
 #
 
 #  Data for encryption algorithms is saved as (key, plaintext,
@@ -37,7 +37,7 @@ md4= [
       ("message digest",   "d9130a8164549fe818874806e1c7014b"),
       ("abcdefghijklmnopqrstuvwxyz",   "d79e1c308aa5bbcdeea8ed63df412da9"),
       ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
-       "043f8582f241db351ce627e153e7f0e4"), 
+       "043f8582f241db351ce627e153e7f0e4"),
       ("12345678901234567890123456789012345678901234567890123456789012345678901234567890",
       "e33b4ddc9c38f2199c3e7b164fcc0536"),
      ]
@@ -51,7 +51,7 @@ md5= [
     ('message digest', "f96b697d7cb7938d525a2f31aaf161d0"),
     ('abcdefghijklmnopqrstuvwxyz', "c3fcd3d76192e4007dfb496cca67e13b"),
     ('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
-	       "d174ab98d277d9f5a5611c2c9f419d9f"),
+               "d174ab98d277d9f5a5611c2c9f419d9f"),
     ('12345678901234567890123456789012345678901234567890123456789'
      '012345678901234567890', "57edf4a22be3c955ac49da2e2107b67a")
      ]
@@ -66,25 +66,25 @@ sha = [
       ]
 
 ripemd = [ ("", "9c1185a5c5e9fc54612808977ee8f548b2258d31"),
-	   ("a", "0bdc9d2d256b3ee9daae347be6f4dc835a467ffe"),
-	   ("abc", "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc"),
-	   ("message digest", "5d0689ef49d2fae572b881b123a85ffa21595f36"),
-	   ("abcdefghijklmnopqrstuvwxyz", 
-	    "f71c27109c692c1b56bbdceb5b9d2865b3708dbc"),
-	   ("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
-	    "12a053384a9c0c88e405a06c27dcf49ada62eb2b"),
-	   ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
-	   "b0e20b6e3116640286ed3a87a5713079b21f5189"),	   
-	   (8 *"1234567890", "9b752e45573d4b39f4dbd3323cab82bf63326bfb"),
+           ("a", "0bdc9d2d256b3ee9daae347be6f4dc835a467ffe"),
+           ("abc", "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc"),
+           ("message digest", "5d0689ef49d2fae572b881b123a85ffa21595f36"),
+           ("abcdefghijklmnopqrstuvwxyz",
+            "f71c27109c692c1b56bbdceb5b9d2865b3708dbc"),
+           ("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
+            "12a053384a9c0c88e405a06c27dcf49ada62eb2b"),
+           ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+           "b0e20b6e3116640286ed3a87a5713079b21f5189"),
+           (8 *"1234567890", "9b752e45573d4b39f4dbd3323cab82bf63326bfb"),
            (1000000 * 'a', "52783243c1697bdbe16d37f97f68f08325dc1528"),
 ]
-	   
+
 
 # DES validation data
 
 # Key, IV, plaintext, ciphertext
-des_cbc= [('0123456789abcdef', 'fedcba9876543210', 
-	   "7654321 Now is the time for \000\000\000\000", 'ccd173ffab2039f4acd8aefddfd8a1eb468e91157888ba681d269397f7fe62b4')]
+des_cbc= [('0123456789abcdef', 'fedcba9876543210',
+           "7654321 Now is the time for \000\000\000\000", 'ccd173ffab2039f4acd8aefddfd8a1eb468e91157888ba681d269397f7fe62b4')]
 
 des = [ ('0000000000000000', '0000000000000000', '8CA64DE9C1B123A7'),
     ('FFFFFFFFFFFFFFFF', 'FFFFFFFFFFFFFFFF', '7359B2163E4EDC58'),
@@ -352,17 +352,17 @@ arc2 = [
 # Test data for Blowfish
 
 blowfish = [('6162636465666768696a6b6c6d6e6f707172737475767778797a',
-	     '424c4f5746495348', '324ed0fef413a203'),
-	    ('57686f206973204a6f686e2047616c743f', 'fedcba9876543210', 
-	     'cc91732b8022f684')
-	   ]
+             '424c4f5746495348', '324ed0fef413a203'),
+            ('57686f206973204a6f686e2047616c743f', 'fedcba9876543210',
+             'cc91732b8022f684')
+           ]
 
 # Test data for DES3
 
 des3_cbc=[]
 
 des3= [('0123456789abcdeffedcba9876543210', '0123456789abcde7',
-	'7f1d0a77826b8aff')
+        '7f1d0a77826b8aff')
       ]
 
 # Test data for CAST
@@ -371,9 +371,9 @@ _castkey = '0123456712345678234567893456789A'
 _castdata = '0123456789ABCDEF'
 
 cast = [(_castkey,      _castdata, '238B4FE5847E44B2'),
-	(_castkey[:10*2], _castdata, 'EB6A711A2C02271B'),
-	(_castkey[: 5*2], _castdata, '7AC816D16E9B302E'),
-	]
+        (_castkey[:10*2], _castdata, 'EB6A711A2C02271B'),
+        (_castkey[: 5*2], _castdata, '7AC816D16E9B302E'),
+        ]
 
 # Test data for XOR
 
@@ -410,12 +410,12 @@ counter_blocks = ['\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\
 class ctr:
     def __init__ (self):
         self.index = 0
-        
+
     def __call__ (self):
         block = counter_blocks[self.index]
         self.index = (self.index+1) % len(counter_blocks)
         return block
-    
+
 aes_modes = [
     (AES.MODE_CBC,
      '2b7e151628aed2a6abf7158809cf4f3c',
