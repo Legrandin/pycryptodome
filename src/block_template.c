@@ -64,12 +64,8 @@ newALGobject(void)
 static void
 ALGdealloc(PyObject *ptr)
 {		
-	int i;
-	char *obj=(char *)ptr;
-
-	/* Overwrite the contents of the object, just in case... */
-	for (i = 0; i < sizeof(ALGobject); i++)
-		*(obj + i) = '\0';
+	/* Overwrite the contents of the object */
+	memset((char *)ptr, 0, sizeof(ALGobject));
 	PyObject_DEL(ptr);
 }
 
