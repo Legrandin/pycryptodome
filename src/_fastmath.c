@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.5 2003-04-03 20:22:33 akuchling Exp $
+ * $Id: _fastmath.c,v 1.6 2003-04-03 20:26:52 akuchling Exp $
  */
 
 #include <stdio.h>
@@ -97,6 +97,8 @@ static PyObject *rsaKey_getattr (rsaKey *, char *);
 static PyObject *rsaKey__encrypt (rsaKey *, PyObject *);
 static PyObject *rsaKey__decrypt (rsaKey *, PyObject *);
 static PyObject *rsaKey__verify (rsaKey *, PyObject *);
+static PyObject *rsaKey__blind (rsaKey *, PyObject *);
+static PyObject *rsaKey__unblind (rsaKey *, PyObject *);
 static PyObject *rsaKey_size (rsaKey *, PyObject *);
 static PyObject *rsaKey_hasprivate (rsaKey *, PyObject *);
 
@@ -182,6 +184,44 @@ rsaDecrypt (rsaKey * key, mpz_t v)
 	return 0;
 }
 
+static int
+rsaBlind (rsaKey * key, mpz_t v, mpz_t b)
+{
+    if (mpz_cmp (v, key->n) >= 0)
+        {
+            return 1;
+        }
+    if (mpz_cmp (b, key->n) >= 0)
+        {
+            return 2;
+        }
+    mpz_powm (b, b, key->e, key->n);
+    mpz_mul (v, v, b);
+    mpz_mod (v, v, key->n);
+    return 0;
+}
+
+static int
+rsaUnBlind (rsaKey * key, mpz_t v, mpz_t b)
+{
+    if (mpz_cmp (v, key->n) >= 0)
+        {
+            return 1;
+        }
+    if (mpz_cmp (b, key->n) >= 0)
+        {
+            return 2;
+        }
+    if (!mpz_invert (b, b, key->n))
+        {
+            return 3;
+        }
+    mpz_mul (v, v, b);
+    mpz_mod (v, v, key->n);
+    return 0;
+}
+ 
+
 static PyTypeObject dsaKeyType = {
 	PyObject_HEAD_INIT (NULL) 0,
 	"dsaKey",
@@ -241,6 +281,10 @@ static PyMethodDef rsaKey__methods__[] = {
 	 "Sign the given long."},
 	{"_verify", (PyCFunction) rsaKey__verify, METH_VARARGS,
 	 "Verify that the signature is valid."},
+ 	{"_blind", (PyCFunction) rsaKey__blind, METH_VARARGS,
+ 	 "Blind the given long."},
+ 	{"_unblind", (PyCFunction) rsaKey__unblind, METH_VARARGS,
+ 	 "Unblind the given long."},
 	{"size", (PyCFunction) rsaKey_size, METH_VARARGS,
 	 "Return the number of bits that this key can handle."},
 	{"hasprivate", (PyCFunction) rsaKey_hasprivate, METH_VARARGS,
@@ -562,6 +606,73 @@ rsaKey__verify (rsaKey * key, PyObject * args)
 		return Py_BuildValue ("i", 0);
 }
 
+PyObject *
+rsaKey__blind (rsaKey * key, PyObject * args)
+{
+	PyObject *l, *lblind, *r;
+	mpz_t v, vblind;
+	int result;
+	if (!(PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, &PyLong_Type, &lblind)))
+		{
+			return NULL;
+		}
+	mpz_init (v);
+	mpz_init (vblind);
+	longObjToMPZ (v, (PyLongObject *) l);
+	longObjToMPZ (vblind, (PyLongObject *) lblind);
+	result = rsaBlind (key, v, vblind);
+	if (result == 1)
+		{
+			PyErr_SetString (fastmathError, "Message too large");
+			return NULL;
+		}
+	else if (result == 2)
+		{
+			PyErr_SetString (fastmathError, "Blinding factor too large");
+			return NULL;
+		}
+	r = (PyObject *) mpzToLongObj (v);
+	mpz_clear (v);
+	mpz_clear (vblind);
+	return Py_BuildValue ("N", r);
+}
+
+PyObject *
+rsaKey__unblind (rsaKey * key, PyObject * args)
+{
+	PyObject *l, *lblind, *r;
+	mpz_t v, vblind;
+	int result;
+	if (!(PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, &PyLong_Type, &lblind)))
+		{
+			return NULL;
+		}
+	mpz_init (v);
+	mpz_init (vblind);
+	longObjToMPZ (v, (PyLongObject *) l);
+	longObjToMPZ (vblind, (PyLongObject *) lblind);
+	result = rsaUnBlind (key, v, vblind);
+	if (result == 1)
+		{
+			PyErr_SetString (fastmathError, "Message too large");
+			return NULL;
+		}
+	else if (result == 2)
+		{
+			PyErr_SetString (fastmathError, "Blinding factor too large");
+			return NULL;
+		}
+	else if (result == 3)
+		{
+			PyErr_SetString (fastmathError, "Inverse doesn't exist");
+			return NULL;
+		}
+	r = (PyObject *) mpzToLongObj (v);
+	mpz_clear (v);
+	mpz_clear (vblind);
+	return Py_BuildValue ("N", r);
+}
+  
 PyObject *
 rsaKey_size (rsaKey * key, PyObject * args)
 {
