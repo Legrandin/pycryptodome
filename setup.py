@@ -2,7 +2,7 @@
 from distutils.core import setup, Extension
 
 setup(name="pycrypto",
-      version="1.9a2",
+      version="1.9a3",
       description="Cryptographic modules for Python.",
       author="A.M. Kuchling",
       author_email="akuchlin@mems-exchange.org",
