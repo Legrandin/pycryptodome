@@ -37,7 +37,8 @@ messages as they are transmitted.
 
 For more information on winnowing and chaffing see this paper:
 
-XXX Rivest.
+Ronald L. Rivest, "Chaffing and Winnowing: Confidentiality without Encryption"
+http://theory.lcs.mit.edu/~rivest/chaffing.txt
 
 """
 
