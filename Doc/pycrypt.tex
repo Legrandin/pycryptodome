@@ -1,21 +1,23 @@
 \documentclass{howto}
 
-\title{amkCrypto}
+% XXX update the speed figures; add AES
+
+\title{Python Cryptography Toolkit}
 
 \release{1.9alpha1}
 
 \author{A.M. Kuchling}
-\authoraddress{\email{akuchlin@mems-exchange.org}}
+\authoraddress{\url{www.amk.ca}}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
 \noindent
-This document describes a package containing various cryptographic
-modules available for the Python programming language.  It assumes you
-have some basic knowledge about the Python language and about
-cryptography in general.
+The Python Cryptography Toolkit describes a package containing various
+cryptographic modules for the Python programming language.  This
+documentation assumes you have some basic knowledge about the Python
+language, but not necessarily about cryptography.
 
 \end{abstract}
 
@@ -24,63 +26,42 @@ cryptography in general.
 \section{Introduction}
 
 \subsection{Design Goals}
-The Python cryptography modules are intended to provide a reliable and
-stable base for writing Python programs that require
-cryptographic functions.  
+The Python cryptography toolkit is intended to provide a reliable and
+stable base for writing Python programs that require cryptographic
+functions.
 
-A central goal of the author's has been to provide a
-simple, consistent interface for similar classes of algorithms.  For
-example, all block cipher objects have the same methods and return
-values, and support the same feedback modes; hash functions have a
-different interface, but it too is consistent over all the
-hash functions available.  Individual modules also define variables to
-help you write Python code that doesn't depend on the algorithms used;
-for example, each block cipher module defines a variable that gives
-the algorithm's block size.  This is intended to make it easy to
-replace old algorithms with newer, more secure ones.  If you're given
-a bit of portably-written Python code that uses the DES encryption
-algorithm, you should be able to use IDEA instead by simply changing
-\code{from Crypto.Cipher import DES} to \code{from Crypto.Cipher import
-idea}, and changing all references to  
-\code{DES.new()} to \code{IDEA.new()}.  It's also fairly simple to write
-your own modules that mimic this interface, thus letting you use
-combinations or permutations of algorithms.
+A central goal of the author's has been to provide a simple,
+consistent interface for similar classes of algorithms.  For example,
+all block cipher objects have the same methods and return values, and
+support the same feedback modes.  Hash functions have a different
+interface, but it too is consistent over all the hash functions
+available.  Some of these interfaces have been codified as Python
+Enhancement Proposal documents, as \pep{247}, ``API for Cryptographic
+Hash Functions'', and \pep{272}, ``API for Block Encryption
+Algorithms''.  
 
-\index{C language}
-\index{language, C}
-\index{Intel}
-Some modules are implemented in C for performance; others are written in
-Python for ease of modification.  Generally, low-level functions like
-ciphers and hash functions are written in C, while less speed-critical
-functions have been written in Python.  This division may change in
-future releases.  When speeds are quoted in this document, they were
-measured on a 266 MHz Pentium II running Linux.  The exact speeds will obviously
-vary with different machines and different compilers, but they provide a
-basis for comparing algorithms.  Currently the cryptographic
-implementations are acceptably fast, but not spectacularly good.  I
-welcome any suggestions or patches for faster code.  
+This is intended to make it easy to replace old
+algorithms with newer, more secure ones.  If you're given a bit of
+portably-written Python code that uses the DES encryption algorithm,
+you should be able to use AES instead by simply changing \code{from
+Crypto.Cipher import DES} to \code{from Crypto.Cipher import AES}, and
+changing all references to \code{DES.new()} to \code{AES.new()}.  It's
+also fairly simple to write your own modules that mimic this
+interface, thus letting you use combinations or permutations of
+algorithms.
 
-% You may be surprised that I'm distributing the code worldwide.  Aren't
-% North Americans prohibited from exporting cryptographic software?  Well,
-% yes and no.  American citizens have to get permission from the US
-% government before exporting \emph{any} such software, even if it's
-% publicly available or originated outside the US; there are no exceptions
-% whatsoever.
+Some modules are implemented in C for performance; others are written
+in Python for ease of modification.  Generally, low-level functions
+like ciphers and hash functions are written in C, while less
+speed-critical functions have been written in Python.  This division
+may change in future releases.  When speeds are quoted in this
+document, they were measured on a 266 MHz Pentium II running Linux.
+The exact speeds will obviously vary with different machines and
+different compilers, but they provide a basis for comparing
+algorithms.  Currently the cryptographic implementations are
+acceptably fast, but not spectacularly good.  I welcome any
+suggestions or patches for faster code.
 
-% The laws in Canada are slightly less restrictive, though, and I'm a
-% Canadian citizen.  In particular, free software is specifically exempted
-% from export restrictions, so I'm acting within the law.  However, if
-% you're a US citizen, you \emph{still} can't export these programs
-% without government permission.
-
-\index{ITAR, regulations}
-\index{regulations, ITAR}
-If you live outside of Canada or the US, please do not attempt to
-download it from a North American FTP site; you may get the site's
-maintainer in trouble.  Documentation is not covered by the ITAR
-regulations, and can be freely sent anywhere in the world.
-
-\index{licensing terms}
 I have placed the code under no restrictions; you can redistribute the
 code freely or commercially, in its original form or with any
 modifications you make, subject to whatever local laws may apply in your
@@ -105,36 +86,29 @@ just interested in keeping your co-workers or your relatives out of your
 files, any of the components here could be used.
 
 This document is very much a work in progress.  If you have any
-questions, comments, complaints, or suggestions, please send them to me
-at \email{akuchling@acm.org}.
+questions, comments, complaints, or suggestions, please send them to me.
 
 \subsection{Acknowledgements}
-\index{Schneier, Bruce}
 Much of the code that actually implements the various cryptographic
 algorithms was not written by me.  I'd like to thank all the people who
 implemented them, and released their work under terms which allowed me
-to use their code.  The individuals are credited in the relevant
+to use their code.  These individuals are credited in the relevant
 chapters of this documentation.  Bruce Schneier's book \emph{Applied
 Cryptography} was also very useful in writing this toolkit; I highly
 recommend it if you're interested in learning more about cryptography.
-Mr. Schneier also has a Web site at \url{http://www.counterpane.com}.
 
 Good luck with your cryptography hacking!
 
 A.M.K.
 
-\email{akuchling@acm.org}
+\email{akuchlin@mems-exchange.org}
 
-Washington, DC, USA
+Washington DC, USA
 
-January 1998
+April 2002
 
 \section{Crypto.Hash: Hash Functions}
 
-\index{MD2 (hash function)}
-\index{MD5 (hash function)}
-\index{SHA (hash function)}
-\index{HAVAL (hash function)}
 Hash functions take arbitrary strings as input, and produce an output
 of fixed size that is dependent on the input; it should never be
 possible to derive the input data given only the hash function's
@@ -143,17 +117,17 @@ all the bytes of the input, and taking the result modulo 256.  For a
 hash function to be cryptographically secure, it must be very
 difficult to find two messages with the same hash value, or to find a
 message with a given hash value.  The simple additive hash function
-fails this criterion miserably; the hash functions described below do
-not.  Examples of cryptographically secure hash functions include MD2,
-MD5, SHA, and HAVAL.
+fails this criterion miserably and the hash functions described below
+meet this criterion (as far as we know).  Examples of
+cryptographically secure hash functions include MD2, MD5, SHA, and
+HAVAL.
 
 Hash functions can be used simply as a checksum, or, in association with a
 public-key algorithm, can be used to implement digital signatures.
  
-The hashing algorithms currently implemented are listed in the following table:
+The hashing algorithms currently implemented are:
 
 \begin{tableii}{c|l}{}{Hash function}{Digest length}
-\lineii{HAVAL}{Variable size: 128, 160, 192, 224, or 256 bits}
 \lineii{MD2}{128 bits}
 \lineii{MD4}{128 bits}
 \lineii{MD5}{128 bits}
@@ -162,21 +136,21 @@ The hashing algorithms currently implemented are listed in the following table:
 \end{tableii}
 
 All hashing modules share the same interface.  After importing a given
-hashing module, call the \code{new()} function to create a new hashing
-object. (In older versions of the Python interpreter, the \code{md5()}
-function was used to perform this task.  If you're modifying an old script, you
-should change any calls to \code{md5()} to use \code{new()} instead.)  You
-can now feed arbitrary strings into the object, and can ask for the
-hash value at any time.  The \code{new()} function can also be passed an
-optional string parameter, which will be hashed immediately.
+hashing module, call the \function{new()} function to create a new
+hashing object. You can now feed arbitrary strings into the object
+with the \method{update()} method, and can ask for the hash value at
+any time by calling the \method{digest()} or \method{hexdigest()}
+methods.  The \function{new()} function can also be passed an optional
+string parameter, which will be immediately hashed into the object's
+state.
 
 Hash function modules define one variable:
 
-\begin{datadesc}{digestsize}
+\begin{datadesc}{digest_size}
 An integer value; the size of the digest
 produced by the hashing objects.  You could also obtain this value by
 creating a sample object, and taking the length of the digest string
-it returns, but using \code{digestsize} is faster.
+it returns, but using \member{digest_size} is faster.
 \end{datadesc}
 
 The methods for hashing objects are always the following:
@@ -192,7 +166,7 @@ altered in any way by this function; you can continue updating the
 object after calling this function.
 \end{funcdesc}
 
-\begin{funcdesc}{digest}{}
+\begin{funcdesc}{hexdigest}{}
 Return the hash value of this hashing object, as a string containing the
 digest data as hexadecimal digits.  The resulting string will be twice
 as long as that returned by \code{digest()}.  The object is not altered
@@ -204,46 +178,30 @@ calling this function.
 Update this hashing object with the string \var{arg}.
 \end{funcdesc}
 
-\index{RSA Data Security, Inc.}
-\index{MD5 (hash function)}
-Here's an example, using RSA Data Security's MD5 algorithm:
+Here's an example, using the MD5 algorithm:
 
 \begin{verbatim}
 >>> from Crypto.Hash import MD5
 >>> m = MD5.new()
 >>> m.update('abc')
 >>> m.digest()
-'\220\001P\230<\322O\260\326\226?@}(\341\177r'
+'\x90\x01P\x98<\xd2O\xb0\xd6\x96?}(\xe1\x7fr'
+>>> m.hexdigest()
+'900150983cd24fb0d6963f7d28e17f72'
 \end{verbatim}
-
-
-Or, more compactly:
-\begin{verbatim}
->>> MD5.new('abc').digest()
-'\220\001P\230<\322O\260\326\226?@}(\341\177r'
-\end{verbatim}
-
-\subsection{Algorithm-specific Notes for Hash Functions}
-
-HAVAL provides a variable-size digest, and allows for a variable number
-of rounds.  It's believed that increasing the number of rounds increases
-the security; at least, I don't know of any results to the contrary.
-The \code{HAVAL.new()} accordingly has two keyword arguments,
-\code{rounds} and \code{digestsize}.  \code{rounds} can be 3, 4, or 5,
-and has a default value of 5.  \code{digestsize} can be 128, 160, 192,
-224, or 256 bits, and has a default value of 256. 
 
 \subsection{Security Notes}
-Hashing algorithms are broken when it's easy to compute a
-string that produces a given hash value, or to find two
-messages that produce the same hash value. Consider an example where
-Alice and Bob are using digital signatures to sign a contract.  Alice
-computes the hash value of the text of the contract and signs it.  Bob
-could then compute a different contract that has the same hash value,
-and it would appear that Alice has signed that bogus contract; she'd
-have no way to prove otherwise.  Finding such a message by brute force
-takes \code{pow(2, b-1)} operations, where the hash function produces
-\emph{b}-bit hashes.
+
+Hashing algorithms are broken by developing an algorithm to compute a
+string that produces a given hash value, or to find two messages that
+produce the same hash value. Consider an example where Alice and Bob
+are using digital signatures to sign a contract.  Alice computes the
+hash value of the text of the contract and signs the hash value with
+her private key.  Bob could then compute a different contract that has
+the same hash value, and it would appear that Alice signed that bogus
+contract; she'd have no way to prove otherwise.  Finding such a
+message by brute force takes \code{pow(2, b-1)} operations, where the
+hash function produces \emph{b}-bit hashes.
 
 If Bob can only find two messages with the same hash value but can't
 choose the resulting hash value, he can look for two messages with
@@ -256,42 +214,39 @@ append a random string to the contract before hashing and signing it;
 the random string can then be kept with the signature.
 
 None of the algorithms implemented here have been completely broken.
-There are no attacks on MD2, but it's rather slow at 376 K/sec.  MD4 is
-faster at 11946 K/sec but there have been some partial attacks on it.  MD4
-operates in three iterations of a basic mixing operation; two of the
-three rounds have been cryptanalyzed, but the attack can't be extended
-to the full algorithm.  MD5 is a strengthened version of MD4 with four
-rounds; an attack against one round has been found.  XXX Dobbertin's
-attack.  Because MD5 is more
-commonly used, the implementation is better optimized and thus faster on
-x86 processors (27193 K/sec).  MD4 may be faster than MD5 when other
-processors and compilers are used.
+There are no attacks on MD2, but it's rather slow at 376 K/sec.  MD4
+is faster at 11946 K/sec but there have been some partial attacks on
+it.  MD4 operates in three iterations of a basic mixing operation; two
+of the three rounds have been cryptanalyzed, but the attack can't be
+extended to the full algorithm.  MD5 is a strengthened version of MD4
+with four rounds; an attack against one round has been found.  XXX MD5
+is still believed secure at the moment, but people are gravitating
+toward using SHA in new software and standards because there are no
+known attacks against it.  Because MD5 is quite commonly used, the
+implementation is better optimized and thus faster on x86 processors
+(27193 K/sec).  MD4 may be faster than MD5 when other processors and
+compilers are used.
 
 All the MD algorithms produce 128-bit hashes; SHA produces a larger 160-bit
 hash, and there are no known attacks against it.  The first version of
 SHA had a weakness which was later corrected; the code used here
 implements the second, corrected, version.  It operates at 13157 K/sec.
 RIPEMD also has a 160-bit output, and operates at 5869 K/sec.
-HAVAL is a variable-size hash function; it can generate hash values that
-are 128, 160, 192, 224, or 256 bits in size, and can use 3, 4, or 5
-rounds.  5-round HAVAL runs at 5371 K/sec.
 
 \subsection{Credits}
-\index{Plumb, Colin}
-\index{Kuchling, Andrew}
-\index{Gutmann, Peter}
-The MD2, MD4, and HAVAL implementations were written by A.M. Kuchling,
+The MD2 and  MD4 implementations were written by A.M. Kuchling,
 and the MD5 code was implemented by Colin Plumb.  The SHA code was
 originally written by Peter Gutmann.  The RIPEMD code was written by
 Antoon Bosselaers, and adapted for the toolkit by Hirendra Hindocha.
 
 \section{Crypto.Cipher: Encryption Algorithms}
-Encryption algorithms transform their input data (called
-\dfn{plaintext}) in some way that is
-dependent on a variable \dfn{key}, producing \dfn{ciphertext};
-this transformation can easily be reversed, if (and, hopefully, only
-if) one knows the key.  The key can be varied by the user or
-application, chosen from some very large space of possible keys. 
+
+Encryption algorithms transform their input data, or \dfn{plaintext},
+in some way that is dependent on a variable \dfn{key}, producing
+\dfn{ciphertext}. This transformation can easily be reversed, if (and,
+hopefully, only if) one knows the key.  The key can be varied by the
+user or application and chosen from some very large space of possible
+keys.
 
 For a secure encryption algorithm, it should be very difficult to
 determine the original plaintext without knowing the key; usually, no
@@ -302,7 +257,6 @@ a serious threat, although 2 to the power of 56 is now considered
 insecure in the face of custom-built parallel computers and distributed
 key guessing efforts.
 
-\index{feedback mode, ECB}
 \dfn{Block ciphers} take multibyte inputs of a fixed size
 (frequently 8 or 16 bytes long) and encrypt them.  Block ciphers can
 be operated in various modes.  The simplest is Electronic Code Book
@@ -314,18 +268,19 @@ asterisks intended to form a box.  All these identical blocks will
 encrypt to identical ciphertext; an adversary may be able to use this
 structure to obtain some information about the text.
 
-\index{feedback mode, CBC}
-\index{feedback mode, CFB}
-To eliminate this weakness, there are various feedback modes, where
+To eliminate this weakness, there are various feedback modes in which
 the plaintext is combined with the previous ciphertext before
-encrypting; this eliminates any such structure.  One mode is Cipher
-Block Chaining (CBC mode); another is Cipher FeedBack (CFB
-mode).   CBC mode still encrypts in blocks, and thus is only
-slightly slower than ECB mode.  CFB mode encrypts on a byte-by-byte
-basis, and is much slower than either of the other two modes.  The
-chaining feedback modes require an initialization value to start off
-the encryption; this is a string of the same length as the ciphering
-algorithm's block size, and is passed to the \code{new()} function.
+encrypting; this eliminates any repetitive structure in the
+ciphertext.   
+
+One mode is Cipher Block Chaining (CBC mode); another is Cipher
+FeedBack (CFB mode).  CBC mode still encrypts in blocks, and thus is
+only slightly slower than ECB mode.  CFB mode encrypts on a
+byte-by-byte basis, and is much slower than either of the other two
+modes.  The chaining feedback modes require an initialization value to
+start off the encryption; this is a string of the same length as the
+ciphering algorithm's block size, and is passed to the \code{new()}
+function.
 
 There is also a special PGP mode, which is a variant
 of CFB used by the PGP program.  While you can use it in non-PGP
@@ -334,15 +289,6 @@ programs, it's quite non-standard.
 The currently available block ciphers are listed in the following table,
 and are available in the \code{Crypto.Cipher} package:
 
-\index{DES (block cipher)}
-\index{DES3 (block cipher)}
-\index{Triple DES (block cipher)}
-\index{Diamond (block cipher)}
-\index{RC5 (block cipher)}
-\index{IDEA (block cipher)}
-\index{Blowfish (block cipher)}
-\index{ARC2 (block cipher)}
-\index{CAST (block cipher)}
 
 \begin{tableii}{c|l}{}{Cipher}{Key Size/Block Size}
 \lineii{ARC2}{Variable/8 bytes}
@@ -350,12 +296,10 @@ and are available in the \code{Crypto.Cipher} package:
 \lineii{CAST}{Variable/8 bytes}
 \lineii{DES}{8 bytes/8 bytes}
 \lineii{DES3 (Triple DES)}{16 bytes/8 bytes}
-\lineii{Diamond}{Variable/16 bytes}
 \lineii{IDEA}{16 bytes/8 bytes}
 \lineii{RC5}{Variable/8 bytes}
 \end{tableii}
 
-\index{stream cipher}
 In a strict formal sense, \dfn{stream ciphers} encrypt data bit-by-bit;
 practically, stream ciphers work on a character-by-character basis.
 Stream ciphers use exactly the
@@ -365,18 +309,11 @@ The only feedback mode available for stream ciphers is ECB mode.
 
 The currently available stream ciphers are listed in the following table:
 
-\index{Sapphire (stream cipher)}
-\index{ARC4 (stream cipher)}
 \begin{tableii}{c|l}{}{Cipher}{Key Size}
 \lineii{Cipher}{Key Size}
 \lineii{ARC4}{Variable}
-\lineii{Sapphire}{Variable}
 \end{tableii}
 
-\index{RSA Data Security, Inc.}
-\index{sci.crypt}
-\index{RC4 (stream cipher)}
-\index{ARC4 (stream cipher)}
 ARC4 is short for `Alleged RC4'.  The real RC4 algorithm is proprietary
 to RSA Data Security Inc.  In September of 1994, someone posted C code
 to both the Cypherpunks mailing list and to the Usenet newsgroup
@@ -420,23 +357,23 @@ algorithms support additional keyword arguments to this function; see
 the "Algorithm-specific Notes for Encryption Algorithms" section below for the details.
 \end{funcdesc}
 
-\begin{datadesc}{blocksize}
+\begin{datadesc}{block_size}
 An integer value; the size of the blocks encrypted by this module.
 Strings passed to the \code{encrypt} and \code{decrypt} functions
 must be a multiple of this length.  For stream ciphers,
-\code{blocksize} will be 1. 
+\code{block_size} will be 1. 
 \end{datadesc}
 
-\begin{datadesc}{keysize}
+\begin{datadesc}{key_size}
 An integer value; the size of the keys required by this module.  If
-\code{keysize} is zero, then the algorithm accepts arbitrary-length
+\code{key_size} is zero, then the algorithm accepts arbitrary-length
 keys.  You cannot pass a key of length 0 (that is, the null string
 \code{''} as such a variable-length key.  
 \end{datadesc}
 
 All cipher objects have at least three attributes:
 
-\begin{datadesc}{blocksize}
+\begin{datadesc}{block_size}
 An integer value equal to the size of the blocks encrypted by this object.
 Identical to the module variable of the same name.
 \end{datadesc}
@@ -448,9 +385,9 @@ will reflect the modified feedback text; it will always be one block
 in length.  It is read-only, and cannot be assigned a new value.
 \end{datadesc}
 
-\begin{datadesc}{keysize}
+\begin{datadesc}{key_size}
 An integer value equal to the size of the keys used by this object.  If
-\code{keysize} is zero, then the algorithm accepts arbitrary-length
+\code{key_size} is zero, then the algorithm accepts arbitrary-length
 keys.  For algorithms that support variable length keys, this will be 0.
 Identical to the module variable of the same name.  
 \end{datadesc}
@@ -474,13 +411,9 @@ the ciphertext.
 
 \subsection{Algorithm-specific Notes for Encryption Algorithms}
 
-The Diamond block cipher allows you to select the number of rounds to
-apply, ranging from 5 to 15 (inclusive.)  This is set via the
-\code{rounds} keyword argument to the \code{new()} function; the default
-value is 8 rounds.
-
-RC5 has even more parameters; see Ronald Rivest's paper at \url{http://theory.lcs.mit.edu/~rivest/rc5rev.ps}
-for the implementation details.  The keyword parameters are:
+RC5 has a bunch of parameters; see Ronald Rivest's paper at
+\url{http://theory.lcs.mit.edu/~rivest/rc5rev.ps} for the
+implementation details.  The keyword parameters are:
 
 \begin{itemize}
 \item \code{version}:
@@ -522,27 +455,14 @@ correspondingly slower.
 There are no publicly known attacks against IDEA (2005 K/sec), and
 it's been around long enough to have been examined.  There are no
 known attacks against ARC2 (1644 K/sec), ARC4 (4630 K/sec), Blowfish
-(5323 K/sec), CAST (1314 K/sec), Diamond (1670 K/sec), RC5 (1370
-K/sec), or Sapphire (3568 K/sec), but they're all relatively new
+(5323 K/sec), CAST (1314 K/sec), or RC5 (1370
+K/sec), but they're all relatively new
 algorithms and there hasn't been time for much analysis to be
 performed; use them for serious applications only after careful
-research.  Skipjack (864 K/sec) is relatively slow, and its 80-bit key size
-is secure at the moment, but doesn't leave much of a margin of safety;
-only use it if you believe that the NSA has mystical cipher design
-abilities.
+research.  
 
 
 \subsection{Credits}
-\index{Olson, Bryan}
-\index{Schneier, Bruce}
-\index{Young, Eric}
-\index{Cyphers, Graven}
-\index{Outerbridge, Richard}
-\index{Brown, Lawrence}
-\index{Kwan, Matthew}
-\index{DES (block cipher)}
-\index{IDEA (block cipher)}
-\index{Blowfish (block cipher)}
 The code for Blowfish was written by Bryan Olson, partially based on a
 previous implementation by Bruce Schneier, who also invented the
 algorithm; the Blowfish algorithm has been placed in the public domain
@@ -552,15 +472,8 @@ Wim Lewis.  The DES implementation was written by Eric Young, and the
 IDEA implementation by Colin Plumb. The RC5 implementation
 was written by A.M. Kuchling.
 
-\index{sci.crypt}
-\index{Johnson, Michael Paul}
-\index{ARC4 (stream cipher)}
-\index{Sapphire (stream cipher)}
 The Alleged RC4 code was posted to the \code{sci.crypt} newsgroup by an
-unknown party, and re-implemented by A.M. Kuchling.  The Sapphire stream
-cipher was developed by Michael P. Johnson, and is in the public domain;
-the implementation used here was written by A.M. Kuchling and is based
-on Johnson's code.
+unknown party, and re-implemented by A.M. Kuchling.  
 
 \section{Crypto.Protocol: Various Protocols}
 
@@ -595,13 +508,13 @@ undigest'ify the message blocks.
 The module passed as \var{ciphermodule} must provide the
 following interface:
 
-\var{ciphermodule}.\code{keysize}: 
+\var{ciphermodule}.\code{key_size}: 
 Attribute containing the cipher algorithm's key size in
 bytes.  If the cipher supports variable length keys, then
-typically \code{ciphermodule.keysize} will be zero.  In that case a
+typically \code{ciphermodule.key_size} will be zero.  In that case a
 key size of 16 bytes will be used.
 
-\var{ciphermodule}.\code{blocksize}: 
+\var{ciphermodule}.\code{block_size}: 
 Attribute containing the cipher algorithm's input block size
 in bytes.
 
@@ -609,7 +522,7 @@ in bytes.
                 Function which returns a new instance of a cipher object,
                 initialized to \var{key}.  The returned object must have an
                 \method{encrypt()} method that accepts a string of
-                \var{ciphermodule}.\code{blocksize} bytes and returns a string containing
+                \var{ciphermodule}.\code{block_size} bytes and returns a string containing
                 the encrypted text.
 
 Note that the encryption key is randomly generated automatically
@@ -622,7 +535,7 @@ The methods of the \class{AllorNothing} class are:
 Perform the All-or-Nothing package transform on the current
 string.  Output is a list of message blocks describing the
 transformed text, where each block is a string of bit length equal
-to the cipher module's blocksize.
+to the cipher module's block_size.
 \end{methoddesc}
 
 \begin{methoddesc}{reset}{text = ""}
@@ -633,7 +546,7 @@ Reset the current string to be transformed to \var{text}.
 Perform the reverse package transformation on a list of message
 blocks.  Note that the cipher module used for both transformations
 must be the same.  \var{mblocks} is a list of strings of bit length
-equal to \var{ciphermodule}'s blocksize.  The output is a string object.
+equal to \var{ciphermodule}'s block_size.  The output is a string object.
 \end{methoddesc}
 
 \begin{methoddesc}{update}{text}
@@ -988,7 +901,6 @@ Returns true if the number \var{N} is prime, as determined by a
 Rabin-Miller test.
 \end{funcdesc}
 
-\index{random numbers}
 \subsection{Crypto.Util.randpool}
 For cryptographic purposes, ordinary random number generators are
 frequently insufficient, because if some of their output is known, it is
@@ -999,7 +911,6 @@ solution is to use strong encryption or hashing algorithms to generate
 successive data; this makes breaking the generator as difficult as
 breaking the algorithms used.
 
-\index{entropy}
 Understanding the concept of \dfn{entropy} is important for using the
 random number generator properly.  In the sense we'll be using it,
 entropy measures the amount of randomness; the usual unit is in bits.
@@ -1180,10 +1091,6 @@ modifications of it) into your own programs.
 
 \subsection{Demo 1: \file{cipher}}
 
-\index{crypt}
-\index{cipher (demo program)}
-\index{Enigma}
-\index{Crypt Breaker's Workbench}
 \file{cipher} encrypts and decrypts files.  On most Unix systems, the
 \file{crypt} program uses a variant of the Enigma cipher.  This is not
 secure, and there exists a freely available program called ``Crypt
@@ -1206,8 +1113,6 @@ given encryption algorithm \var{ciphername}; for example,
 as an available module name; thus it should be in lowercase letters.
 The default cipher is IDEA.
 
-\index{Linux}
-\index{cipher}
 \code{-k \var{key}} can be used to set the encryption key to be
 used.  Note that on a multiuser Unix system, the \code{ps} command can
 be used to view the arguments of commands executed by other users, so
@@ -1224,7 +1129,6 @@ containing 1 (the version number of \file{cipher}).
 This is followed by the null-terminated name of the encryption
 algorithm, and the rest of the file contains the ciphertext.  
 
-\index{feedback mode, CBC}
 The plaintext is encrypted in CBC mode.  The initial value for the
 feedback is always set to a block filled with the letter 'A', and then
 a block of random data is encrypted.  This garbage block will be
@@ -1319,14 +1223,12 @@ typedef struct
 
 \subsection{Standard Routines}
 
-\index{buildkit}
 The interface to Python is implemented in the files ending in
 \samp{.in}, so \file{hash.in} contains the basic code for modules
 containing hash functions, for example.  \file{buildkit}, a Python
 script, reads the configuration file and generates source code by
 interweaving the interface files and the implementation file.
 
-\index{buildkit}
 If your algorithm is called ALG, the implementation should be in the
 file \file{ALG.c}. This is case-sensitive, as are the following function
 names.  
@@ -1341,14 +1243,12 @@ names.
 \end{itemize}
 
 \begin{funcdesc}{void ALGinit}{\rm ALGobject *\var{self}}
-\index{ALGinit}
 This function should initialize the hashing object, setting 
 state variables to their expected initial state.
 \end{funcdesc}
 
 \begin{funcdesc}{void ALGupdate}{\rm ALGobject *\var{self}, 
 char *\var{buffer}, int \var{length}}
-\index{ALGupdate}
 This function should perform a hash on the region pointed to by
 \var{buffer}, which will contain \var{length} bytes.  The contents of
 the object pointed to by \var{self} should be updated appropriately. 
@@ -1373,13 +1273,10 @@ function might be:
   return PyString_FromStringAndSize(digest, 16);
 \end{verbatim}
 
-\index{ALGdigest}
-
 \begin{funcdesc}{void ALGcopy}{\rm ALGobject *\var{source}, ALGobject *\var{dest}}
 Given the source and destination objects, the state variables of the
 \var{source} object should be copied to the \var{dest} object; the
 source object should not be altered in any way by the operation.
-\index{ALGcopy}
 \end{funcdesc}
 
 \subsubsection{Block ciphers}
@@ -1396,7 +1293,6 @@ buffer pointed to by \var{key} will always of that length, and the
 value of \var{length} will be a random value that should be ignored.
 If the algorithm accepts a variable-length key, then \var{length} will
 be nonzero, and will contain the size of the key.
-\index{ALGinit}
 \end{funcdesc}
 
 \begin{funcdesc}{void ALGencrypt}{\rm ALGobject *\var{self}, unsigned char *\var{block}}
@@ -1404,13 +1300,11 @@ This function should encrypt the data pointed to by \var{block}, using
 the key-dependent data contained in \var{self}.  Only ECB mode needs
 to be implemented; \code{block.in} takes care of the other
 ciphering modes.
-\index{ALGencrypt}
 \end{funcdesc}
 
 \begin{funcdesc}{void ALGdecrypt}{\rm ALGobject *\var{self}, unsigned char *\var{block}}
 This function should decrypt the data pointed to by \var{block}, using
 the key-dependent data contained in \var{self}.
-\index{ALGdecrypt}
 \end{funcdesc}
 
 \subsection{Portability macros}
@@ -1438,22 +1332,5 @@ Possible constants are \code{PCT_BIG_ENDIAN} and \code{PCT_LITTLE_ENDIAN};
 they are defined along with the \code{TestEndianness} macro.
 \end{funcdesc}
 
-\subsection{Informing the author}
-Code for additional cryptographic algorithms can be mailed to me at
-\email{akuchling@acm.org}.  You can make things much easier for me by doing the
-following:
-\begin{itemize}
-\item  If you wrote the code, please release it into the public domain
-or under the MIT X11 license.  If you didn't write it, please tell me where
-to find the original author or source code, so that I can check the
-licensing conditions.
-\item  Include some test data.  It is not sufficient to check that
-encryption and decryption cancel out properly.  An implementation
-might work fine on a single platform, but two machines with
-different endianness might produce different results.  This would be
-fatal for portability and interoperating programs.  So, please include
-test data; you can either send me patches to \file{test.py}, or simply
-send me documents describing the data.
-\end{itemize}
 
 \end{document}
