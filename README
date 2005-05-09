@@ -1,15 +1,15 @@
 Python Cryptography Toolkit (pycrypto) 2.0	
 ==========================================
 
-This is a collection of both secure hash functions (such as MD5 and
-SHA), and various encryption algorithms (AES, DES, IDEA, RSA, ElGamal,
-etc.).  The package is structured to make adding new modules easy.  I
-consider this section to be essentially complete, and the software
-interface will almost certainly not change in an incompatible way in
-the future; all that remains to be done is to fix any bugs that show
-up.  If you encounter a bug, please inform me immediately.  If you
-implement a new algorithm, please send me a copy.
-
+This is a collection of both secure hash functions (such as MD5 and SHA),
+and various encryption algorithms (AES, DES, IDEA, RSA, ElGamal, etc.).  The
+package is structured to make adding new modules easy.  I consider this
+section to be essentially complete, and the software interface will almost
+certainly not change in an incompatible way in the future; all that remains
+to be done is to fix any bugs that show up.  If you encounter a bug, please
+report it in the SourceForge bug tracker at
+       https://sourceforge.net/tracker/?group_id=20937&atid=120937
+  
 An example usage of the MD5 module is:
 >>> from Crypto.Hash import MD5
 >>> hash=MD5.new()
@@ -17,7 +17,7 @@ An example usage of the MD5 module is:
 >>> hash.digest()
 'x\xe71\x02}\x8f\xd5\x0e\xd6B4\x0b|\x9ac\xb3'
 
-An example use of an encryption algorithm (AES, in this case) is:
+An example usage of an encryption algorithm (AES, in this case) is:
 
 >>> from Crypto.Cipher import AES
 >>> obj=AES.new('This is a key456', AES.MODE_ECB)
@@ -25,7 +25,8 @@ An example use of an encryption algorithm (AES, in this case) is:
 >>> ciphertext=obj.encrypt(message)
 >>> ciphertext
 'o\x1aq_{P+\xd0\x07\xce\x89\xd1=M\x989'
->>> obj.decrypt(ciphertext)
+>>> obj2 = AES.new('This is a key456', AES.MODE_ECB)
+>>> obj2.decrypt(ciphertext)
 'The answer is no'
 
 One possible application of the modules is writing secure
@@ -40,11 +41,6 @@ implemented.
 Development of the toolkit can be discussed on the pct mailing list;
 archives and instructions for subscribing at at 
 <URL:http://www.amk.ca/mailman/listinfo/pct>.
-
-For general discussion about using Python for cryptography-related
-tasks, join the python-crypto mailing list.  Archives and instructions
-for subscribing are at
-<URL:http://listserv.surfnet.nl/archives/python-crypto.html>.
 
 
 Installation
@@ -65,18 +61,16 @@ modules aren't installed on your system.  Red Hat users often run into
 this because they don't have the python2-devel RPM installed.  The fix
 is to simply install the requisite RPM.
 
-To verify that everything is in order, run "python test.py".  It will
-test all the cryptographic modules, skipping ones that aren't
-available.  If the test script reports an error on your machine,
-please inform me immediately, because that means there's a serious bug
-somewhere in the cryptographic routines.  (Alternatively, track down
-the bug and send me a patch.)
+To verify that everything is in order, run "python test.py".  It will test
+all the cryptographic modules, skipping ones that aren't available.  If the
+test script reports an error on your machine, please report the bug using
+the bug tracker (URL given above).  If possible, track down the bug and
+include a patch that fixes it.
 
 To install the package under the site-packages directory of
 your Python installation, run "python setup.py install".
 
-If you have any comments, corrections, or improvements for
-this package, please e-mail me at the address below, or send it to the
-python-crypto mailing list.  Good luck!
+If you have any comments, corrections, or improvements for this package,
+please send it to the 'pct' mailing list.  Good luck!
 
 --amk                                                       (www.amk.ca)
