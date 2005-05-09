@@ -1,14 +1,6 @@
 ACKS
 ChangeLog
 Cipher/__init__.py
-Demo/README
-Demo/chaum.py
-Demo/cipher
-Demo/enc.py
-Demo/secimp/README
-Demo/secimp/secimp.py
-Demo/secimp/sign.py
-Demo/secimp/testkey.py
 Doc/pycrypt.tex
 Hash/HMAC.py
 Hash/MD5.py
