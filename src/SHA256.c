@@ -15,16 +15,21 @@
 #define DIGEST_SIZE 32
 
 typedef unsigned char U8;
+#if defined(__amd64__)
+#include <inttypes.h>
+typedef uint32_t U32;
+#else
 typedef unsigned int U32;
+#endif
 
 typedef struct {
-    unsigned long state[8], length, curlen;
+    U32 state[8], length, curlen;
     unsigned char buf[64];
 }
 hash_state;
 
 /* the K array */
-static const unsigned long K[64] = {
+static const U32 K[64] = {
     0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL, 0x3956c25bUL,
     0x59f111f1UL, 0x923f82a4UL, 0xab1c5ed5UL, 0xd807aa98UL, 0x12835b01UL,
     0x243185beUL, 0x550c7dc3UL, 0x72be5d74UL, 0x80deb1feUL, 0x9bdc06a7UL,
@@ -53,7 +58,7 @@ static const unsigned long K[64] = {
 /* compress 512-bits */
 static void sha_compress(hash_state * md)
 {
-    unsigned long S[8], W[64], t0, t1;
+    U32 S[8], W[64], t0, t1;
     int i;
 
     /* copy state into S */
@@ -62,10 +67,10 @@ static void sha_compress(hash_state * md)
 
     /* copy the state into 512-bits into W[0..15] */
     for (i = 0; i < 16; i++)
-        W[i] = (((unsigned long) md->buf[(4 * i) + 0]) << 24) |
-            (((unsigned long) md->buf[(4 * i) + 1]) << 16) |
-            (((unsigned long) md->buf[(4 * i) + 2]) << 8) |
-            (((unsigned long) md->buf[(4 * i) + 3]));
+        W[i] = (((U32) md->buf[(4 * i) + 0]) << 24) |
+            (((U32) md->buf[(4 * i) + 1]) << 16) |
+            (((U32) md->buf[(4 * i) + 2]) << 8) |
+            (((U32) md->buf[(4 * i) + 3]));
 
     /* fill W[16..63] */
     for (i = 16; i < 64; i++)
