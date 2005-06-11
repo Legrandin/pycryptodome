@@ -15,7 +15,9 @@
 #define DIGEST_SIZE 32
 
 typedef unsigned char U8;
-#if defined(__amd64__)
+#ifdef __alpha__
+typedef    unsigned int        U32;
+#elif defined(__amd64__)
 #include <inttypes.h>
 typedef uint32_t U32;
 #else
