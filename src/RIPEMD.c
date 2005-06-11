@@ -102,6 +102,8 @@
 typedef    unsigned char        byte;   /* unsigned 8-bit integer */
 #ifdef __alpha__
 typedef    unsigned int        word;   /* unsigned 32-bit integer */
+#elif defined(__amd64__)
+typedef    uint32_t            word;   /* unsigned 32-bit integer */
 #else
 typedef    unsigned long        word;   /* unsigned 32-bit integer */
 #endif
