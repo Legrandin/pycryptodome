@@ -2,7 +2,9 @@
 2.0.1
 =====
 
+	* Fix SHA256 and RIPEMD on AMD64 platform.
         * Deleted Demo/ directory.
+	* Add PublicKey to Crypto.__all__
 
 
 2.0
