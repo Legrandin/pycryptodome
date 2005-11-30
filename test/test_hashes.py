@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_hashes.py,v 1.4 2004-08-13 22:23:12 akuchling Exp $"
+__revision__ = "$Id: test_hashes.py,v 1.5 2005-11-29 18:12:11 akuchling Exp $"
 
 import time, string, binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios
@@ -39,7 +39,20 @@ class HashTest (TestScenario):
         self.test_val('obj.digest()', result)
         self.test_val('obj.copy().digest()', result)
 
+    def hash_large_file (self, hash_mod, size, hex_result):
+        obj = hash_mod.new()
+        zeros = 1024*1024*10*'\0'        
+        count = 0
 
+        while count < size:
+            diff = size-count
+            block_size = min(diff, len(zeros))
+            obj.update(zeros[:block_size])
+            count += block_size
+
+        self.test_val('obj.hexdigest()', hex_result)
+        
+        
     def run_test_suite (self, hash_mod, test_vectors):
         for text, digest in test_vectors:
             self.compare(hash_mod, text, digest)
@@ -84,8 +97,12 @@ class HashTest (TestScenario):
     def check_sha256 (self):
         "SHA256 module"
         self.run_test_suite(SHA256,testdata.sha256)
+        self.hash_large_file(SHA256, 512 * 1024 * 1024,
+                             '9acca8e8c22201155389f65abbf6bc9723edc7384ead80503839f49dcc56d767')
+        self.hash_large_file(SHA256, 520 * 1024 * 1024,
+                             'abf51ad954b246009dfe5a50ecd582fd5b8f1b8b27f30393853c3ef721e7fa6e')
         self.benchmark(SHA256)
-
+        
 # class HashTest
 
 
