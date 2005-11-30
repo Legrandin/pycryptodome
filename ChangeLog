@@ -1,4 +1,10 @@
 
+2.0.2
+=====
+
+	* Fix padding bug in SHA256; this resulted in bad digests whenever
+	  (the number of bytes hashed) mod 64 == 55.
+
 2.0.1
 =====
 
