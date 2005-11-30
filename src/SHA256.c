@@ -25,7 +25,8 @@ typedef unsigned int U32;
 #endif
 
 typedef struct {
-    U32 state[8], length, curlen;
+    U32 state[8], curlen;
+    U32 length_upper, length_lower;
     unsigned char buf[64];
 }
 hash_state;
@@ -100,7 +101,7 @@ static void sha_compress(hash_state * md)
 /* init the SHA state */
 void sha_init(hash_state * md)
 {
-    md->curlen = md->length = 0;
+    md->curlen = md->length_upper = md->length_lower = 0;
     md->state[0] = 0x6A09E667UL;
     md->state[1] = 0xBB67AE85UL;
     md->state[2] = 0x3C6EF372UL;
@@ -119,8 +120,13 @@ void sha_process(hash_state * md, unsigned char *buf, int len)
 
         /* is 64 bytes full? */
         if (md->curlen == 64) {
+	    U32 orig_length;
             sha_compress(md);
-            md->length += 512;
+	    orig_length = md->length_lower;
+            md->length_lower += 512;
+	    if (orig_length > md->length_lower) {
+	      md->length_upper++;
+	    }
             md->curlen = 0;
         }
     }
@@ -129,17 +135,22 @@ void sha_process(hash_state * md, unsigned char *buf, int len)
 void sha_done(hash_state * md, unsigned char *hash)
 {
     int i;
+    U32 orig_length;
 
     /* increase the length of the message */
-    md->length += md->curlen * 8;
+    orig_length = md->length_lower;
+    md->length_lower += md->curlen * 8;
+    if (orig_length > md->length_lower) {
+        md->length_upper++;
+    }
 
     /* append the '1' bit */
     md->buf[md->curlen++] = 0x80;
 
     /* if the length is currently above 56 bytes we append zeros
-                               * then compress.  Then we can fall back to padding zeros and length
-                               * encoding like normal.
-                             */
+     * then compress.  Then we can fall back to padding zeros and length
+     * encoding like normal.
+     */
     if (md->curlen > 56) {
         for (; md->curlen < 64;)
             md->buf[md->curlen++] = 0;
@@ -151,13 +162,11 @@ void sha_done(hash_state * md, unsigned char *hash)
     for (; md->curlen < 56;)
         md->buf[md->curlen++] = 0;
 
-    /* since all messages are under 2^32 bits we mark the top bits zero */
-    for (i = 56; i < 60; i++)
-        md->buf[i] = 0;
-
     /* append length */
+    for (i = 56; i < 60; i++)
+        md->buf[i] = (md->length_upper >> ((59 - i) * 8)) & 255;
     for (i = 60; i < 64; i++)
-        md->buf[i] = (md->length >> ((63 - i) * 8)) & 255;
+        md->buf[i] = (md->length_lower >> ((63 - i) * 8)) & 255;
     sha_compress(md);
 
     /* copy output */

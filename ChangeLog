@@ -4,6 +4,9 @@
 
 	* Fix padding bug in SHA256; this resulted in bad digests whenever
 	  (the number of bytes hashed) mod 64 == 55.
+	* Fix a 32-bit limitation on the length of messages the SHA256 module 
+	  could hash.
+
 
 2.0.1
 =====
