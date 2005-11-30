@@ -121,7 +121,6 @@ sha256 = [("abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f2001
 		   ("Rijndael is AES" * 1024, 
   	 	    "80fced5a97176a5009207cd119551b42c5b51ceb445230d02ecc2663bbfb483a"),
 ]
-sha256 = sha256[:1]
 
 # DES validation data
 
