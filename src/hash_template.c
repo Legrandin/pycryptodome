@@ -105,11 +105,11 @@ ALG_hexdigest(ALGobject *self, PyObject *args)
 	/* Get the raw (binary) digest value */
 	value = (PyObject *)hash_digest(&(self->st));
 	size = PyString_Size(value);
-	raw_digest = PyString_AsString(value);
+	raw_digest = (unsigned char *) PyString_AsString(value);
 
 	/* Create a new string */
 	retval = PyString_FromStringAndSize(NULL, size * 2 );
-	hex_digest = PyString_AsString(retval);
+	hex_digest = (unsigned char *) PyString_AsString(retval);
 
 	/* Make hex version of the digest */
 	for(i=j=0; i<size; i++)	

@@ -367,7 +367,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				free(buffer);
 				return NULL;
 			}
-			block_encrypt(&(self->st), PyString_AsString(ctr), 
+			block_encrypt(&(self->st), (unsigned char *)PyString_AsString(ctr), 
 				      temp);
 			Py_DECREF(ctr);
 			for(j=0; j<BLOCK_SIZE; j++)
@@ -385,7 +385,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 		free(buffer);
 		return NULL;
 	}
-	result=PyString_FromStringAndSize(buffer, len);
+	result=PyString_FromStringAndSize((char *) buffer, len);
 	free(buffer);
 	return(result);
 }
@@ -558,7 +558,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 				free(buffer);
 				return NULL;
 			}
-			block_encrypt(&(self->st), PyString_AsString(ctr), temp);
+			block_encrypt(&(self->st), (unsigned char *) PyString_AsString(ctr), temp);
 			Py_DECREF(ctr);
 			for(j=0; j<BLOCK_SIZE; j++)
 			{
@@ -575,7 +575,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 		free(buffer);
 		return NULL;
 	}
-	result=PyString_FromStringAndSize(buffer, len);
+	result=PyString_FromStringAndSize((char *) buffer, len);
 	free(buffer);
 	return(result);
 }
@@ -677,7 +677,7 @@ ALGgetattr(PyObject *s, char *name)
   ALGobject *self = (ALGobject*)s;
   if (strcmp(name, "IV") == 0) 
     {
-      return(PyString_FromStringAndSize(self->IV, BLOCK_SIZE));
+      return(PyString_FromStringAndSize((char *) self->IV, BLOCK_SIZE));
     }
   if (strcmp(name, "mode") == 0)
      {

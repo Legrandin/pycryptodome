@@ -48,51 +48,61 @@
 
 /* The ten basic RIPEMD-160 transformations FF1() through FFF5()
 */
+#undef FF1
 #define FF1(a, b, c, d, e, x, s)        {\
       (a) += F1((b), (c), (d)) + (x);\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FF2
 #define FF2(a, b, c, d, e, x, s)        {\
       (a) += F2((b), (c), (d)) + (x) + 0x5a827999UL;\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FF3
 #define FF3(a, b, c, d, e, x, s)        {\
       (a) += F3((b), (c), (d)) + (x) + 0x6ed9eba1UL;\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FF4
 #define FF4(a, b, c, d, e, x, s)        {\
       (a) += F4((b), (c), (d)) + (x) + 0x8f1bbcdcUL;\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FF5
 #define FF5(a, b, c, d, e, x, s)        {\
       (a) += F5((b), (c), (d)) + (x) + 0xa953fd4eUL;\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FFF1
 #define FFF1(a, b, c, d, e, x, s)        {\
       (a) += F1((b), (c), (d)) + (x);\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FFF2
 #define FFF2(a, b, c, d, e, x, s)        {\
       (a) += F2((b), (c), (d)) + (x) + 0x7a6d76e9UL;\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FFF3
 #define FFF3(a, b, c, d, e, x, s)        {\
       (a) += F3((b), (c), (d)) + (x) + 0x6d703ef3UL;\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FFF4
 #define FFF4(a, b, c, d, e, x, s)        {\
       (a) += F4((b), (c), (d)) + (x) + 0x5c4dd124UL;\
       (a) = ROL((a), (s)) + (e);\
       (c) = ROL((c), 10);\
    }
+#undef FFF5
 #define FFF5(a, b, c, d, e, x, s)        {\
       (a) += F5((b), (c), (d)) + (x) + 0x50a28be6UL;\
       (a) = ROL((a), (s)) + (e);\
@@ -133,7 +143,7 @@ static void hash_init(hash_state *rmdInfo)
 	rmdInfo->countLo = rmdInfo->countHi =rmdInfo->nbytes =  0;
 }
 
-static void hash_update(hash_state *shsInfo,char *buffer, int count)
+static void hash_update(hash_state *shsInfo, unsigned char *buffer, int count)
 {
 	word tmp;
 	int dataCount, i;
@@ -215,7 +225,7 @@ static PyObject *hash_digest(hash_state *self)
 		hashcode[i+2] = (temp.digest[i>>2] >> 16);
 		hashcode[i+3] = (temp.digest[i>>2] >> 24);
 	}
-	return PyString_FromStringAndSize(hashcode, RMD_DIGESTSIZE);
+	return PyString_FromStringAndSize((char *) hashcode, RMD_DIGESTSIZE);
 }
 
 static void hash_copy(hash_state *src,hash_state *dest)
