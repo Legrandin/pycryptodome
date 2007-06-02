@@ -1,31 +1,22 @@
-\documentclass{howto}
+====================================
+Python Cryptography Toolkit
+====================================
 
-\title{Python Cryptography Toolkit}
+**Version 2.0.2**
 
-\release{2.0.2}
-
-\author{A.M. Kuchling}
-\authoraddress{\url{www.amk.ca}}
-
-\begin{document}
-\maketitle
-
-\begin{abstract}
-\noindent
 The Python Cryptography Toolkit describes a package containing various
 cryptographic modules for the Python programming language.  This
 documentation assumes you have some basic knowledge about the Python
 language, but not necessarily about cryptography.
 
-\end{abstract}
+.. contents::
 
-\tableofcontents
+Introduction
+-------------------
 
+Design Goals
+===================
 
-%======================================================================
-\section{Introduction}
-
-\subsection{Design Goals}
 The Python cryptography toolkit is intended to provide a reliable and
 stable base for writing Python programs that require cryptographic
 functions.
@@ -36,16 +27,16 @@ all block cipher objects have the same methods and return values, and
 support the same feedback modes.  Hash functions have a different
 interface, but it too is consistent over all the hash functions
 available.  Some of these interfaces have been codified as Python
-Enhancement Proposal documents, as \pep{247}, ``API for Cryptographic
-Hash Functions'', and \pep{272}, ``API for Block Encryption
+Enhancement Proposal documents, as PEP 247, ``API for Cryptographic
+Hash Functions'', and PEP 272, ``API for Block Encryption
 Algorithms''.  
 
 This is intended to make it easy to replace old algorithms with newer,
 more secure ones.  If you're given a bit of portably-written Python
 code that uses the DES encryption algorithm, you should be able to use
-AES instead by simply changing \code{from Crypto.Cipher import DES} to
-\code{from Crypto.Cipher import AES}, and changing all references to
-\code{DES.new()} to \code{AES.new()}.  It's also fairly simple to
+AES instead by simply changing ``from Crypto.Cipher import DES} to
+``from Crypto.Cipher import AES}, and changing all references to
+``DES.new()} to ``AES.new()}.  It's also fairly simple to
 write your own modules that mimic this interface, thus letting you use
 combinations or permutations of algorithms.
 
@@ -87,28 +78,22 @@ files, any of the components here could be used.
 This document is very much a work in progress.  If you have any
 questions, comments, complaints, or suggestions, please send them to me.
 
-\subsection{Acknowledgements}
+Acknowledgements
+==================================================
+
 Much of the code that actually implements the various cryptographic
 algorithms was not written by me.  I'd like to thank all the people who
 implemented them, and released their work under terms which allowed me
 to use their code.  These individuals are credited in the relevant
-chapters of this documentation.  Bruce Schneier's book \emph{Applied
-Cryptography} was also very useful in writing this toolkit; I highly
+chapters of this documentation.  Bruce Schneier's book 
+:title-reference:`Applied Cryptography` was also very useful in writing this toolkit; I highly
 recommend it if you're interested in learning more about cryptography.
 
 Good luck with your cryptography hacking!
 
-A.M.K.
 
-\email{comments@amk.ca}
-
-Washington DC, USA
-
-June 2005
-
-
-%======================================================================
-\section{Crypto.Hash: Hash Functions}
+Crypto.Hash: Hash Functions
+--------------------------------------------------
 
 Hash functions take arbitrary strings as input, and produce an output
 of fixed size that is dependent on the input; it should never be
@@ -157,15 +142,15 @@ it returns, but using \member{digest_size} is faster.
 The methods for hashing objects are always the following:
 
 \begin{methoddesc}{copy}{}
-Return a separate copy of this hashing object.  An \code{update} to
+Return a separate copy of this hashing object.  An ``update} to
 this copy won't affect the original object.
-\end{methoddesc}
+
 
 \begin{methoddesc}{digest}{}
 Return the hash value of this hashing object, as a string containing
 8-bit data.  The object is not altered in any way by this function;
 you can continue updating the object after calling this function.
-\end{methoddesc}
+
 
 \begin{methoddesc}{hexdigest}{}
 Return the hash value of this hashing object, as a string containing
@@ -173,26 +158,25 @@ the digest data as hexadecimal digits.  The resulting string will be
 twice as long as that returned by \method{digest()}.  The object is not
 altered in any way by this function; you can continue updating the
 object after calling this function.
-\end{methoddesc}
+
 
 \begin{methoddesc}{update}{arg}
 Update this hashing object with the string \var{arg}.
-\end{methoddesc}
-
-Here's an example, using the MD5 algorithm:
-
-\begin{verbatim}
->>> from Crypto.Hash import MD5
->>> m = MD5.new()
->>> m.update('abc')
->>> m.digest()
-'\x90\x01P\x98<\xd2O\xb0\xd6\x96?}(\xe1\x7fr'
->>> m.hexdigest()
-'900150983cd24fb0d6963f7d28e17f72'
-\end{verbatim}
 
 
-\subsection{Security Notes}
+Here's an example, using the MD5 algorithm::
+
+    >>> from Crypto.Hash import MD5
+    >>> m = MD5.new()
+    >>> m.update('abc')
+    >>> m.digest()
+    '\x90\x01P\x98<\xd2O\xb0\xd6\x96?}(\xe1\x7fr'
+    >>> m.hexdigest()
+    '900150983cd24fb0d6963f7d28e17f72'
+
+
+Security Notes
+==========================
 
 Hashing algorithms are broken by developing an algorithm to compute a
 string that produces a given hash value, or to find two messages that
@@ -202,7 +186,7 @@ hash value of the text of the contract and signs the hash value with
 her private key.  Bob could then compute a different contract that has
 the same hash value, and it would appear that Alice signed that bogus
 contract; she'd have no way to prove otherwise.  Finding such a
-message by brute force takes \code{pow(2, b-1)} operations, where the
+message by brute force takes ``pow(2, b-1)} operations, where the
 hash function produces \emph{b}-bit hashes.
 
 If Bob can only find two messages with the same hash value but can't
@@ -210,7 +194,7 @@ choose the resulting hash value, he can look for two messages with
 different meanings, such as "I will mow Bob's lawn for $10" and "I owe
 Bob $1,000,000", and ask Alice to sign the first, innocuous contract.
 This attack is easier for Bob, since finding two such messages by brute
-force will take \code{pow(2, b/2)} operations on average.  However,
+force will take ``pow(2, b/2)} operations on average.  However,
 Alice can protect herself by changing the protocol; she can simply
 append a random string to the contract before hashing and signing it;
 the random string can then be kept with the signature.
@@ -237,7 +221,9 @@ at 21,000 K/sec.  SHA256 is about as half as fast as SHA1.  RIPEMD has
 a 160-bit output, the same output size as SHA1, and operates at 17,600
 K/sec.
 
-\subsection{Credits}
+Credits
+===============
+
 The MD2 and MD4 implementations were written by A.M. Kuchling, and the
 MD5 code was implemented by Colin Plumb.  The SHA1 code was originally
 written by Peter Gutmann.  The RIPEMD code was written by Antoon
@@ -247,12 +233,13 @@ LibTomCrypt library (\url{http://www.libtomcrypt.org/}); it was
 adapted for the toolkit by Jeethu Rao and Taylor Boon.
 
 
-%======================================================================
-\section{Crypto.Cipher: Encryption Algorithms}
 
-Encryption algorithms transform their input data, or \dfn{plaintext},
+Crypto.Cipher: Encryption Algorithms
+--------------------------------------------------
+
+Encryption algorithms transform their input data, or **plaintext**,
 in some way that is dependent on a variable \dfn{key}, producing
-\dfn{ciphertext}. This transformation can easily be reversed, if (and,
+**ciphertext**. This transformation can easily be reversed, if (and,
 hopefully, only if) one knows the key.  The key can be varied by the
 user or application and chosen from some very large space of possible
 keys.
@@ -266,7 +253,7 @@ a serious threat, although 2 to the power of 56 is now considered
 insecure in the face of custom-built parallel computers and distributed
 key guessing efforts.
 
-\dfn{Block ciphers} take multibyte inputs of a fixed size
+**Block ciphers** take multibyte inputs of a fixed size
 (frequently 8 or 16 bytes long) and encrypt them.  Block ciphers can
 be operated in various modes.  The simplest is Electronic Code Book
 (or ECB) mode.  In this mode, each block of plaintext is simply
@@ -288,13 +275,13 @@ only slightly slower than ECB mode.  CFB mode encrypts on a
 byte-by-byte basis, and is much slower than either of the other two
 modes.  The chaining feedback modes require an initialization value to
 start off the encryption; this is a string of the same length as the
-ciphering algorithm's block size, and is passed to the \code{new()}
+ciphering algorithm's block size, and is passed to the ``new()}
 function.  There is also a special PGP mode, which is an oddball
 variant of CFB used by the PGP program.  While you can use it in
 non-PGP programs, it's quite non-standard.
 
 The currently available block ciphers are listed in the following table,
-and are in the \code{Crypto.Cipher} package:
+and are in the ``Crypto.Cipher} package:
 
 \begin{tableii}{c|l}{}{Cipher}{Key Size/Block Size}
 \lineii{AES}{16, 24, or 32 bytes/16 bytes}
@@ -307,7 +294,7 @@ and are in the \code{Crypto.Cipher} package:
 \lineii{RC5}{Variable/8 bytes}
 \end{tableii}
 
-In a strict formal sense, \dfn{stream ciphers} encrypt data bit-by-bit;
+In a strict formal sense, **stream ciphers** encrypt data bit-by-bit;
 practically, stream ciphers work on a character-by-character basis.
 Stream ciphers use exactly the
 same interface as block ciphers, with a block length that will always
@@ -324,7 +311,7 @@ The currently available stream ciphers are listed in the following table:
 
 ARC4 is short for `Alleged RC4'.  In September of 1994, someone posted
 C code to both the Cypherpunks mailing list and to the Usenet
-newsgroup \code{sci.crypt}, claiming that it implemented the RC4
+newsgroup ``sci.crypt}, claiming that it implemented the RC4
 algorithm.  This claim turned out to be correct.  Note that there's a
 damaging class of weak RC4 keys; this module won't warn you about such keys.
 % XXX other analyses of RC4?
@@ -363,16 +350,16 @@ the "Algorithm-specific Notes for Encryption Algorithms" section below for the d
 
 \begin{datadesc}{block_size}
 An integer value; the size of the blocks encrypted by this module.
-Strings passed to the \code{encrypt} and \code{decrypt} functions
+Strings passed to the ``encrypt} and ``decrypt} functions
 must be a multiple of this length.  For stream ciphers,
-\code{block_size} will be 1. 
+``block_size} will be 1. 
 \end{datadesc}
 
 \begin{datadesc}{key_size}
 An integer value; the size of the keys required by this module.  If
-\code{key_size} is zero, then the algorithm accepts arbitrary-length
+``key_size} is zero, then the algorithm accepts arbitrary-length
 keys.  You cannot pass a key of length 0 (that is, the null string
-\code{''} as such a variable-length key.  
+``''} as such a variable-length key.  
 \end{datadesc}
 
 All cipher objects have at least three attributes:
@@ -391,7 +378,7 @@ in length.  It is read-only, and cannot be assigned a new value.
 
 \begin{memberdesc}{key_size}
 An integer value equal to the size of the keys used by this object.  If
-\code{key_size} is zero, then the algorithm accepts arbitrary-length
+``key_size} is zero, then the algorithm accepts arbitrary-length
 keys.  For algorithms that support variable length keys, this will be 0.
 Identical to the module variable of the same name.  
 \end{memberdesc}
@@ -403,7 +390,7 @@ Decrypts \var{string}, using the key-dependent data in the object, and
 with the appropriate feedback mode.  The string's length must be an exact
 multiple of the algorithm's block size.  Returns a string containing
 the plaintext.
-\end{methoddesc}
+
 
 \begin{methoddesc}{encrypt}{string}
 Encrypts a non-null \var{string}, using the key-dependent data in the
@@ -411,48 +398,51 @@ object, and with the appropriate feedback mode.  The string's length
 must be an exact multiple of the algorithm's block size; for stream
 ciphers, the string can be of any length.  Returns a string containing
 the ciphertext.
-\end{methoddesc}
 
 
-\subsection{Algorithm-specific Notes for Encryption Algorithms}
+
+Algorithm-specific Notes for Encryption Algorithms
+=======================================================
 
 RC5 has a bunch of parameters; see Ronald Rivest's paper at
 \url{http://theory.lcs.mit.edu/~rivest/rc5rev.ps} for the
 implementation details.  The keyword parameters are:
 
 \begin{itemize}
-\item \code{version}:
+\item ``version}:
 The version
 of the RC5 algorithm to use; currently the only legal value is
-\code{0x10} for RC5 1.0.  
-\item \code{wordsize}:
+``0x10} for RC5 1.0.  
+\item ``wordsize}:
 The word size to use;
 16 or 32 are the only legal values.  (A larger word size is better, so
 usually 32 will be used.  16-bit RC5 is probably only of academic
 interest.)  
-\item \code{rounds}:
+\item ``rounds}:
 The number of rounds to apply, the larger the more secure: this
 can be any value from 0 to 255, so you will have to choose a value
 balanced between speed and security. 
 \end{itemize}
 
 
-\subsection{Security Notes}
+Security Notes
+=======================
+
 Encryption algorithms can be broken in several ways.  If you have some
 ciphertext and know (or can guess) the corresponding plaintext, you can
-simply try every possible key in a \dfn{known-plaintext} attack.  Or, it
+simply try every possible key in a **known-plaintext** attack.  Or, it
 might be possible to encrypt text of your choice using an unknown key;
 for example, you might mail someone a message intending it to be
 encrypted and forwarded to someone else.  This is a
-\dfn{chosen-plaintext} attack, which is particularly effective if it's
+**chosen-plaintext** attack, which is particularly effective if it's
 possible to choose plaintexts that reveal something about the key when
 encrypted.
 
 DES (5100 K/sec) has a 56-bit key; this is starting to become too small
 for safety.  It has been estimated that it would only cost \$1,000,000 to
 build a custom DES-cracking machine that could find a key in 3 hours.  A
-chosen-ciphertext attack using the technique of \dfn{linear
-cryptanalysis} can break DES in \code{pow(2, 43)} steps.  However,
+chosen-ciphertext attack using the technique of 
+**linear cryptanalysis** can break DES in ``pow(2, 43)} steps.  However,
 unless you're encrypting data that you want to be safe from major
 governments, DES will be fine. DES3 (1830 K/sec) uses three DES
 encryptions for greater security and a 112-bit or 168-bit key, but is
@@ -472,7 +462,9 @@ probably your best choice.  It runs at 7060 K/sec, so it's among the
 faster algorithms around.
 
 
-\subsection{Credits}
+Credits
+=============
+
 The code for Blowfish was written by Bryan Olson, partially based on a
 previous implementation by Bruce Schneier, who also invented the
 algorithm; the Blowfish algorithm has been placed in the public domain
@@ -482,14 +474,15 @@ Wim Lewis.  The DES implementation was written by Eric Young, and the
 IDEA implementation by Colin Plumb. The RC5 implementation
 was written by A.M. Kuchling.
 
-The Alleged RC4 code was posted to the \code{sci.crypt} newsgroup by an
+The Alleged RC4 code was posted to the ``sci.crypt} newsgroup by an
 unknown party, and re-implemented by A.M. Kuchling.  
 
 
-%======================================================================
-\section{Crypto.Protocol: Various Protocols}
+Crypto.Protocol: Various Protocols
+--------------------------------------------------
 
-\subsection{Crypto.Protocol.AllOrNothing}
+Crypto.Protocol.AllOrNothing
+==========================================
 
 This module implements all-or-nothing package transformations.
 An all-or-nothing package transformation is one in which some text is
@@ -506,7 +499,7 @@ Class implementing the All-or-Nothing package transform.
 
 \var{ciphermodule} is a module implementing the cipher algorithm to
 use.  Optional arguments \var{mode} and \var{IV} are passed directly
-through to the \var{ciphermodule}.\code{new()} method; they are the
+through to the \var{ciphermodule}.``new()} method; they are the
 feedback mode and initialization vector to use.  All three arguments
 must be the same for the object used to create the digest, and to
 undigest'ify the message blocks.
@@ -514,7 +507,7 @@ undigest'ify the message blocks.
 The module passed as \var{ciphermodule} must provide the \pep{272}
 interface.  An encryption key is randomly generated automatically when
 needed.
-\end{classdesc}
+
 
 The methods of the \class{AllOrNothing} class are:
 
@@ -523,17 +516,18 @@ Perform the All-or-Nothing package transform on the
 string \var{text}.  Output is a list of message blocks describing the
 transformed text, where each block is a string of bit length equal
 to the cipher module's block_size.
-\end{methoddesc}
+
 
 \begin{methoddesc}{undigest}{mblocks}
 Perform the reverse package transformation on a list of message
 blocks.  Note that the cipher module used for both transformations
 must be the same.  \var{mblocks} is a list of strings of bit length
 equal to \var{ciphermodule}'s block_size.  The output is a string object.
-\end{methoddesc}
 
 
-\subsection{Crypto.Protocol.Chaffing}
+
+Crypto.Protocol.Chaffing
+==================================================
 
 Winnowing and chaffing is a technique for enhancing privacy without requiring
 strong encryption.  In short, the technique takes a set of authenticated
@@ -586,8 +580,8 @@ pow(blocksper, int(factor * number-of-blocks))
 \end{verbatim}
 
 For ease of implementation, when \var{factor} < 1.0, only the first
-\code{int(\var{factor}*number-of-blocks)} message blocks are chaffed.
-\end{classdesc}
+``int(\var{factor}*number-of-blocks)} message blocks are chaffed.
+
 
 \class{Chaff} instances have the following methods:
 
@@ -604,11 +598,12 @@ returns a list of 3-tuples of the same form.  Chaffed blocks will
 contain multiple instances of 3-tuples with the same serial
 number, but the only way to figure out which blocks are wheat and
 which are chaff is to perform the MAC hash and compare values.
-\end{methoddesc}
 
 
-%======================================================================
-\section{Crypto.PublicKey: Public-Key Algorithms}
+
+Crypto.PublicKey: Public-Key Algorithms
+--------------------------------------------------
+
 So far, the encryption algorithms described have all been \dfn{private
 key} ciphers.  The same key is used for both encryption and decryption
 so all correspondents must know it.  This poses a problem: you may
@@ -673,7 +668,7 @@ algorithm-specific; look at the source code for the details.  (To be
 documented later.)
 \end{funcdesc}
 
-\begin{funcdesc}{generate}{size, randfunc, progress_func=\code{None}}
+\begin{funcdesc}{generate}{size, randfunc, progress_func=``None}}
 Generate a fresh public/private key pair.  \var{size} is a
 algorithm-dependent size parameter, usually measured in bits; the
 larger it is, the more difficult it will be to break the key.  Safe
@@ -708,26 +703,26 @@ algorithm.
 \begin{methoddesc}{can_blind}{}
 Returns true if the algorithm is capable of blinding data; 
 returns false otherwise.  
-\end{methoddesc}
+
 
 \begin{methoddesc}{can_encrypt}{}
 Returns true if the algorithm is capable of encrypting and decrypting
 data; returns false otherwise.  To test if a given key object can encrypt
-data, use \code{key.can_encrypt() and key.has_private()}.
-\end{methoddesc}
+data, use ``key.can_encrypt() and key.has_private()}.
+
 
 \begin{methoddesc}{can_sign}{}
 Returns true if the algorithm is capable of signing data; returns false
 otherwise.  To test if a given key object can sign data, use
-\code{key.can_sign() and key.has_private()}.
-\end{methoddesc}
+``key.can_sign() and key.has_private()}.
+
 
 \begin{methoddesc}{decrypt}{tuple}
 Decrypts \var{tuple} with the private key, returning another string.
 This requires the private key to be present, and will raise an exception
 if it isn't present.  It will also raise an exception if \var{string} is
 too long.
-\end{methoddesc}
+
 
 \begin{methoddesc}{encrypt}{string, K}
 Encrypts \var{string} with the private key, returning a tuple of
@@ -736,31 +731,31 @@ strings; the length of the tuple varies from algorithm to algorithm.
 possible.  Encryption does not require the private key to be present
 inside the key object.  It will raise an exception if \var{string} is
 too long.  For ElGamal objects, the value of \var{K} expressed as a
-big-endian integer must be relatively prime to \code{self.p-1}; an
+big-endian integer must be relatively prime to ``self.p-1}; an
 exception is raised if it is not.
-\end{methoddesc}
+
 
 \begin{methoddesc}{has_private}{}
 Returns true if the key object contains the private key data, which
 will allow decrypting data and generating signatures.
 Otherwise this returns false.
-\end{methoddesc}
+
 
 \begin{methoddesc}{publickey}{}
 Returns a new public key object that doesn't contain the private key
 data. 
-\end{methoddesc}
+
 
 \begin{methoddesc}{sign}{string, K}
 Sign \var{string}, returning a signature, which is just a tuple; in
 theory the signature may be made up of any Python objects at all; in
 practice they'll be either strings or numbers.  \var{K} should be a
 string of random data that is as long as possible.  Different algorithms
-will return tuples of different sizes.  \code{sign()} raises an
+will return tuples of different sizes.  ``sign()} raises an
 exception if \var{string} is too long.  For ElGamal objects, the value
 of \var{K} expressed as a big-endian integer must be relatively prime to
-\code{self.p-1}; an exception is raised if it is not.
-\end{methoddesc}
+``self.p-1}; an exception is raised if it is not.
+
 
 \begin{methoddesc}{size}{}
 Returns the maximum size of a string that can be encrypted or signed,
@@ -769,15 +764,17 @@ significant byte comes first.  (This seems to be a \emph{de facto} standard
 for cryptographical software.)  If the size is not a multiple of 8, then
 some of the high order bits of the first byte must be zero.  Usually
 it's simplest to just divide the size by 8 and round down.
-\end{methoddesc}
+
 
 \begin{methoddesc}{verify}{string, signature}
 Returns true if the signature is valid, and false otherwise.
-\var{string} is not processed in any way; \code{verify} does
+\var{string} is not processed in any way; ``verify} does
 not run a hash function over the data, but you can easily do that yourself.
-\end{methoddesc}
 
-\subsection{The ElGamal and DSA algorithms}
+
+The ElGamal and DSA algorithms
+==================================================
+
 For RSA, the \var{K} parameters are unused; if you like, you can just
 pass empty strings.  The ElGamal and DSA algorithms require a real
 \var{K} value for technical reasons; see Schneier's book for a detailed
@@ -805,14 +802,16 @@ enforce one policy for this, so I've added the \var{K} parameter to the
 \method{encrypt} and \method{sign} methods.  You must choose \var{K} by
 generating a string of random data; for ElGamal, when interpreted as a
 big-endian number (with the most significant byte being the first byte
-of the string), \var{K} must be relatively prime to \code{self.p-1}; any
+of the string), \var{K} must be relatively prime to ``self.p-1}; any
 size will do, but brute force searches would probably start with small
 primes, so it's probably good to choose fairly large numbers.  It might be
 simplest to generate a prime number of a suitable length using the
 \module{Crypto.Util.number} module.
 
 
-\subsection{Security Notes for Public-key Algorithms}
+Security Notes for Public-key Algorithms
+==================================================
+
 Any of these algorithms can be trivially broken; for example, RSA can be
 broken by factoring the modulus \emph{n} into its two prime factors.
 This is easily done by the following code:
@@ -843,7 +842,9 @@ and military-grade.  For RSA, these three levels correspond roughly to
 This chapter contains all the modules that don't fit into any of the
 other chapters.  
 
-\subsection{Crypto.Util.number}
+
+Crypto.Util.number
+==========================
 
 This module contains various number-theoretic functions.  
 
@@ -877,7 +878,8 @@ Rabin-Miller test.
 \end{funcdesc}
 
 
-\subsection{Crypto.Util.randpool}
+Crypto.Util.randpool
+==================================================
 
 For cryptographic purposes, ordinary random number generators are
 frequently insufficient, because if some of their output is known, it
@@ -929,7 +931,7 @@ add new random data; this data can be obtained in various ways, such as
 by using the variance in a user's keystroke timings.  
 
 \begin{classdesc}{RandomPool}{\optional{numbytes, cipher, hash} }
-An object of the \code{RandomPool} class can be created without
+An object of the ``RandomPool} class can be created without
 parameters if desired.  \var{numbytes} sets the number of bytes of
 random data in the pool, and defaults to 160 (1280 bits). \var{hash}
 can be a string containing the module name of the hash function to use
@@ -941,7 +943,7 @@ The \var{cipher} argument is vestigial; it was removed from version
 the code.  I recommend passing \var{hash} using a keyword argument so
 that someday I can safely delete the \var{cipher} argument
 
-\end{classdesc}
+
 
 \class{RandomPool} objects define the following variables and methods:
 
@@ -954,7 +956,7 @@ you're encrypting a document, you might use the hash value of the
 document; an adversary presumably won't have the plaintext of the
 document, and thus won't be able to use this information to break the
 generator.
-\end{methoddesc}
+
 
 The return value is the value of \member{self.entropy} after the data has
 been added.  The function works in the following manner: the time
@@ -990,7 +992,7 @@ is zero.  This simply means that, in theory, enough random information has been
 extracted to derive the state of the generator.  It is the caller's
 responsibility to monitor the amount of entropy remaining and decide
 whether it is sufficent for secure operation.
-\end{methoddesc}
+
 
 \begin{methoddesc}{stir}{}
 Scrambles the random pool using the previously chosen encryption and
@@ -1000,7 +1002,7 @@ destroys the existing state of the pool in a non-reversible way.  It
 is recommended that \method{stir()} be called before and after using
 the \class{RandomPool} object.  Even better, several calls to
 \method{stir()} can be interleaved with calls to \method{add_event()}.
-\end{methoddesc}
+
 
 The \class{PersistentRandomPool} class is a subclass of \class{RandomPool} 
 that adds the capability to save and load the pool from a disk file.
@@ -1012,12 +1014,12 @@ initialized as usual.  If omitted, the filename defaults to the empty
 string, which will prevent it from being saved to a file.  These
 arguments are identical to those for the \class{RandomPool}
 constructor.
-\end{classdesc}
+
 
 \begin{methoddesc}{save}{}
 Opens the file named by the \member{filename} attribute, and saves the
 random data into the file using the \module{pickle} module.
-\end{methoddesc}
+
 
 The \class{KeyboardRandomPool} class is a subclass of
 \class{PersistentRandomPool} that provides a method to obtain random
@@ -1029,7 +1031,7 @@ by prompting the
 user to hit keys at random, and then using the keystroke timings (and
 also the actual keys pressed) to add entropy to the pool.  This works
 similarly to PGP's random pool mechanism.
-\end{methoddesc}
+
 
 
 \subsection{Crypto.Util.RFC1751}
@@ -1076,7 +1078,7 @@ The basic process is as follows:
 \item Add a new \file{.c} file containing an implementation of the new
 algorithm.  
 This file must define 3 or 4 standard functions,
-a few constants, and a C \code{struct} encapsulating the state variables required by the algorithm.
+a few constants, and a C ``struct} encapsulating the state variables required by the algorithm.
 
 \item  Add the new algorithm to \file{setup.py}.
 
@@ -1107,13 +1109,13 @@ algorithm's state, to hash a string into the algorithm's state, to get
 a digest from the current state, and to copy a state.
 
 \begin{itemize}
-  \item \code{void hash_init(hash_state *self);}
-  \item \code{void hash_update(hash_state *self, unsigned char *buffer, int length);}
-  \item \code{PyObject *hash_digest(hash_state *self);}
-  \item \code{void hash_copy(hash_state *source, hash_state *dest);}
+  \item ``void hash_init(hash_state *self);}
+  \item ``void hash_update(hash_state *self, unsigned char *buffer, int length);}
+  \item ``PyObject *hash_digest(hash_state *self);}
+  \item ``void hash_copy(hash_state *source, hash_state *dest);}
 \end{itemize}
 
-Put \code{\#include "hash_template.c"} at the end of the file to
+Put ``\#include "hash_template.c"} at the end of the file to
 include the actual implementation of the module.
 
 
@@ -1139,15 +1141,15 @@ There are three functions that need to be written: to initialize the
 algorithm's state, and to encrypt and decrypt a single block.
 
 \begin{itemize}
-  \item \code{void block_init(block_state *self, unsigned char *key,
+  \item ``void block_init(block_state *self, unsigned char *key,
                 int keylen);}
-  \item \code{void block_encrypt(block_state *self, unsigned char *in, 
+  \item ``void block_encrypt(block_state *self, unsigned char *in, 
                unsigned char *out);}
-  \item \code{void block_decrypt(block_state *self, unsigned char *in, 
+  \item ``void block_decrypt(block_state *self, unsigned char *in, 
                unsigned char *out);}
 \end{itemize}
 
-Put \code{\#include "block_template.c"} at the end of the file to
+Put ``\#include "block_template.c"} at the end of the file to
 include the actual implementation of the module.
 
 
@@ -1173,16 +1175,13 @@ There are three functions that need to be written: to initialize the
 algorithm's state, and to encrypt and decrypt a single block.
 
 \begin{itemize}
-  \item \code{void stream_init(stream_state *self, unsigned char *key,
+  \item ``void stream_init(stream_state *self, unsigned char *key,
                 int keylen);}
-  \item \code{void stream_encrypt(stream_state *self, unsigned char *block, 
+  \item ``void stream_encrypt(stream_state *self, unsigned char *block, 
                int length);}
-  \item \code{void stream_decrypt(stream_state *self, unsigned char *block, 
+  \item ``void stream_decrypt(stream_state *self, unsigned char *block, 
                int length);}
 \end{itemize}
 
-Put \code{\#include "stream_template.c"} at the end of the file to
+Put ``\#include "stream_template.c"} at the end of the file to
 include the actual implementation of the module.
-
-
-\end{document}
