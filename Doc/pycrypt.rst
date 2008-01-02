@@ -133,26 +133,26 @@ state.
 
 Hash function modules define one variable:
 
-\begin{datadesc}{digest_size}
+**digest_size**:
 An integer value; the size of the digest
 produced by the hashing objects.  You could also obtain this value by
 creating a sample object, and taking the length of the digest string
-it returns, but using \member{digest_size} is faster.
+it returns, but using ``digest_size`` is faster.
 
 The methods for hashing objects are always the following:
 
-\begin{methoddesc}{copy}{}
+**copy()**: 
 Return a separate copy of this hashing object.  An ``update`` to
 this copy won't affect the original object.
 
 
-\begin{methoddesc}{digest}{}
+**digest()**:
 Return the hash value of this hashing object, as a string containing
 8-bit data.  The object is not altered in any way by this function;
 you can continue updating the object after calling this function.
 
 
-\begin{methoddesc}{hexdigest}{}
+**hexdigest()**:
 Return the hash value of this hashing object, as a string containing
 the digest data as hexadecimal digits.  The resulting string will be
 twice as long as that returned by ``digest()``.  The object is not
@@ -160,7 +160,7 @@ altered in any way by this function; you can continue updating the
 object after calling this function.
 
 
-\begin{methoddesc}{update}{arg}
+**update(arg)**:
 Update this hashing object with the string ``arg``.
 
 
@@ -205,13 +205,14 @@ is faster at 44,500 K/sec but there have been some partial attacks on
 it.  MD4 makes three iterations of a basic mixing operation; two of
 the three rounds have been cryptanalyzed, but the attack can't be
 extended to the full algorithm.  MD5 is a strengthened version of MD4
-with four rounds; an attack against one round has been found XXX
-update this.  MD5 is still believed secure at the moment, but people
-are gravitating toward using SHA1 in new software because there are no
-known attacks against SHA1.  The MD5 implementation is moderately
-well-optimized and thus faster on x86 processors, running at 35,500
-K/sec.  MD5 may even be faster than MD4, depending on the processor
-and compiler you use.
+with four rounds; beginning in 2004, a series of attacks were
+discovered and it's now possible to create pairs of files that result
+in the same MD5 hash.  It's still supported for compatibility with
+existing protocols, but implementors should use SHA1 in new software
+because there are no known attacks against SHA1.  The MD5
+implementation is moderately well-optimized and thus faster on x86
+processors, running at 35,500 K/sec.  MD5 may even be faster than MD4,
+depending on the processor and compiler you use.
 
 All the MD* algorithms produce 128-bit hashes; SHA1 produces a
 larger 160-bit hash, and there are no known attacks against it.  The
@@ -238,7 +239,7 @@ Crypto.Cipher: Encryption Algorithms
 --------------------------------------------------
 
 Encryption algorithms transform their input data, or **plaintext**,
-in some way that is dependent on a variable \dfn{key}, producing
+in some way that is dependent on a variable **key**, producing
 **ciphertext**. This transformation can easily be reversed, if (and,
 hopefully, only if) one knows the key.  The key can be varied by the
 user or application and chosen from some very large space of possible
@@ -318,7 +319,8 @@ C code to both the Cypherpunks mailing list and to the Usenet
 newsgroup ``sci.crypt``, claiming that it implemented the RC4
 algorithm.  This claim turned out to be correct.  Note that there's a
 damaging class of weak RC4 keys; this module won't warn you about such keys.
-% XXX other analyses of RC4?
+
+.. % XXX are there other analyses of RC4?
 
 A similar anonymous posting was made for Alleged RC2 in January, 1996.
 
@@ -343,20 +345,20 @@ All cipher algorithms share a common interface.  After importing a
 given module, there is exactly one function and two variables
 available.
 
-\begin{funcdesc}{new}{key, mode\optional{, IV}}
+**new(key, mode[, IV])**:
 Returns a ciphering object, using ``key`` and feedback mode
-``mode``.  If ``mode`` is \constant{MODE_CBC`` or \constant{MODE_CFB}, ``IV`` must be provided,
+``mode``.  If ``mode`` is ``MODE_CBC`` or ``MODE_CFB``, ``IV`` must be provided,
 and must be a string of the same length as the block size.  Some
 algorithms support additional keyword arguments to this function; see
 the "Algorithm-specific Notes for Encryption Algorithms" section below for the details.
 
-\begin{datadesc}{block_size}
+**block_size**:
 An integer value; the size of the blocks encrypted by this module.
 Strings passed to the ``encrypt`` and ``decrypt`` functions
 must be a multiple of this length.  For stream ciphers,
 ``block_size`` will be 1. 
 
-\begin{datadesc}{key_size}
+**key_size**:
 An integer value; the size of the keys required by this module.  If
 ``key_size`` is zero, then the algorithm accepts arbitrary-length
 keys.  You cannot pass a key of length 0 (that is, the null string
@@ -364,19 +366,19 @@ keys.  You cannot pass a key of length 0 (that is, the null string
 
 All cipher objects have at least three attributes:
 
-\begin{memberdesc}{block_size}
+**block_size**:
 An integer value equal to the size of the blocks encrypted by this object.
 Identical to the module variable of the same name.
 
 
-\begin{memberdesc}{IV}
+**IV**:
 Contains the initial value which will be used to start a cipher
 feedback mode.  After encrypting or decrypting a string, this value
 will reflect the modified feedback text; it will always be one block
 in length.  It is read-only, and cannot be assigned a new value.
 
 
-\begin{memberdesc}{key_size}
+**key_size**:
 An integer value equal to the size of the keys used by this object.  If
 ``key_size`` is zero, then the algorithm accepts arbitrary-length
 keys.  For algorithms that support variable length keys, this will be 0.
@@ -385,14 +387,14 @@ Identical to the module variable of the same name.
 
 All ciphering objects have the following methods:
 
-\begin{methoddesc}{decrypt}{string}
+**decrypt(string)**:
 Decrypts ``string``, using the key-dependent data in the object, and
 with the appropriate feedback mode.  The string's length must be an exact
 multiple of the algorithm's block size.  Returns a string containing
 the plaintext.
 
 
-\begin{methoddesc}{encrypt}{string}
+**encrypt(string)**:
 Encrypts a non-null ``string``, using the key-dependent data in the
 object, and with the appropriate feedback mode.  The string's length
 must be an exact multiple of the algorithm's block size; for stream
@@ -434,7 +436,7 @@ possible to choose plaintexts that reveal something about the key when
 encrypted.
 
 DES (5100 K/sec) has a 56-bit key; this is starting to become too small
-for safety.  It has been estimated that it would only cost \$1,000,000 to
+for safety.  It has been estimated that it would only cost $1,000,000 to
 build a custom DES-cracking machine that could find a key in 3 hours.  A
 chosen-ciphertext attack using the technique of 
 **linear cryptanalysis** can break DES in ``pow(2, 43)`` steps.  However,
@@ -489,35 +491,35 @@ An all-or-nothing package transformation is not encryption, although a block
 cipher algorithm is used.  The encryption key is randomly generated and is
 extractable from the message blocks.
 
-\begin{classdesc}{AllOrNothing}{ciphermodule, mode=None, IV=None}
+**AllOrNothing(ciphermodule, mode=None, IV=None)**:
 Class implementing the All-or-Nothing package transform.
 
 ``ciphermodule`` is a module implementing the cipher algorithm to
 use.  Optional arguments ``mode`` and ``IV`` are passed directly
-through to the ``ciphermodule}.``new()`` method; they are the
+through to the ``ciphermodule.new()`` method; they are the
 feedback mode and initialization vector to use.  All three arguments
 must be the same for the object used to create the digest, and to
 undigest'ify the message blocks.
 
-The module passed as ``ciphermodule`` must provide the \pep{272}
+The module passed as ``ciphermodule`` must provide the PEP 272
 interface.  An encryption key is randomly generated automatically when
 needed.
 
 
 The methods of the ``AllOrNothing`` class are:
 
-\begin{methoddesc}{digest}{text}
+**digest(text)**:
 Perform the All-or-Nothing package transform on the 
 string ``text``.  Output is a list of message blocks describing the
 transformed text, where each block is a string of bit length equal
 to the cipher module's block_size.
 
 
-\begin{methoddesc}{undigest}{mblocks}
+**undigest(mblocks)**:
 Perform the reverse package transformation on a list of message
 blocks.  Note that the cipher module used for both transformations
 must be the same.  ``mblocks`` is a list of strings of bit length
-equal to ``ciphermodule}'s block_size.  The output is a string object.
+equal to ``ciphermodule``'s block_size.  The output is a string object.
 
 
 
@@ -559,7 +561,7 @@ Alice need not even be the party adding the chaff!  She could be completely
 unaware that a third party, say Charles, is adding chaff packets to her
 messages as they are transmitted.
 
-\begin{classdesc}{Chaff}{factor=1.0, blocksper=1}
+**Chaff(factor=1.0, blocksper=1)**:
 Class implementing the chaff adding algorithm. 
 ``factor`` is the number of message blocks 
 to add chaff to, expressed as a percentage between 0.0 and 1.0; the default value is 1.0.
@@ -573,11 +575,11 @@ brute-force crack the message.  The difficulty is expressed as::
 	pow(blocksper, int(factor * number-of-blocks))
 
 For ease of implementation, when ``factor`` < 1.0, only the first
-``int(``factor}*number-of-blocks)`` message blocks are chaffed.
+``int(factor*number-of-blocks)`` message blocks are chaffed.
 
 ``Chaff`` instances have the following methods:
 
-\begin{methoddesc}{chaff}{blocks}
+**chaff(blocks)**:
 Add chaff to message blocks.  ``blocks`` is a list of 3-tuples of the
 form ``(serial-number, data, MAC)``.
 
@@ -596,8 +598,8 @@ which are chaff is to perform the MAC hash and compare values.
 Crypto.PublicKey: Public-Key Algorithms
 --------------------------------------------------
 
-So far, the encryption algorithms described have all been \dfn{private
-key} ciphers.  The same key is used for both encryption and decryption
+So far, the encryption algorithms described have all been *private key* 
+ciphers.  The same key is used for both encryption and decryption
 so all correspondents must know it.  This poses a problem: you may
 want encryption to communicate sensitive data over an insecure
 channel, but how can you tell your correspondent what the key is?  You
@@ -655,12 +657,12 @@ An example of using the RSA module to sign a message::
 
 Public-key modules make the following functions available:
 
-\begin{funcdesc}{construct}{tuple}
+**construct(tuple)**:
 Constructs a key object from a tuple of data.  This is
 algorithm-specific; look at the source code for the details.  (To be
 documented later.)
 
-\begin{funcdesc}{generate}{size, randfunc, progress_func=``None}}
+**generate(size, randfunc, progress_func=None)**:
 Generate a fresh public/private key pair.  ``size`` is a
 algorithm-dependent size parameter, usually measured in bits; the
 larger it is, the more difficult it will be to break the key.  Safe
@@ -691,64 +693,64 @@ Public-key objects always support the following methods.  Some of them
 may raise exceptions if their functionality is not supported by the
 algorithm.
 
-\begin{methoddesc}{can_blind}{}
+**can_blind()**:
 Returns true if the algorithm is capable of blinding data; 
 returns false otherwise.  
 
 
-\begin{methoddesc}{can_encrypt}{}
+**can_encrypt()**:
 Returns true if the algorithm is capable of encrypting and decrypting
 data; returns false otherwise.  To test if a given key object can encrypt
 data, use ``key.can_encrypt() and key.has_private()``.
 
 
-\begin{methoddesc}{can_sign}{}
+**can_sign()**:
 Returns true if the algorithm is capable of signing data; returns false
 otherwise.  To test if a given key object can sign data, use
 ``key.can_sign() and key.has_private()``.
 
 
-\begin{methoddesc}{decrypt}{tuple}
+**decrypt(tuple)**:
 Decrypts ``tuple`` with the private key, returning another string.
 This requires the private key to be present, and will raise an exception
 if it isn't present.  It will also raise an exception if ``string`` is
 too long.
 
 
-\begin{methoddesc}{encrypt}{string, K}
+**encrypt(string, K)**:
 Encrypts ``string`` with the private key, returning a tuple of
 strings; the length of the tuple varies from algorithm to algorithm.  
 ``K`` should be a string of random data that is as long as
 possible.  Encryption does not require the private key to be present
 inside the key object.  It will raise an exception if ``string`` is
 too long.  For ElGamal objects, the value of ``K`` expressed as a
-big-endian integer must be relatively prime to ``self.p-1}; an
+big-endian integer must be relatively prime to ``self.p-1``; an
 exception is raised if it is not.
 
 
-\begin{methoddesc}{has_private}{}
+**has_private()**:
 Returns true if the key object contains the private key data, which
 will allow decrypting data and generating signatures.
 Otherwise this returns false.
 
 
-\begin{methoddesc}{publickey}{}
+**publickey()**:
 Returns a new public key object that doesn't contain the private key
 data. 
 
 
-\begin{methoddesc}{sign}{string, K}
-Sign ``string}, returning a signature, which is just a tuple; in
+**sign(string, K)**:
+Sign ``string``, returning a signature, which is just a tuple; in
 theory the signature may be made up of any Python objects at all; in
 practice they'll be either strings or numbers.  ``K`` should be a
 string of random data that is as long as possible.  Different algorithms
 will return tuples of different sizes.  ``sign()`` raises an
 exception if ``string`` is too long.  For ElGamal objects, the value
 of ``K`` expressed as a big-endian integer must be relatively prime to
-``self.p-1}; an exception is raised if it is not.
+``self.p-1``; an exception is raised if it is not.
 
 
-\begin{methoddesc}{size}{}
+**size()**:
 Returns the maximum size of a string that can be encrypted or signed,
 measured in bits.  String data is treated in big-endian format; the most
 significant byte comes first.  (This seems to be a **de facto** standard
@@ -757,7 +759,7 @@ some of the high order bits of the first byte must be zero.  Usually
 it's simplest to just divide the size by 8 and round down.
 
 
-\begin{methoddesc}{verify}{string, signature}
+**verify(string, signature)**:
 Returns true if the signature is valid, and false otherwise.
 ``string`` is not processed in any way; ``verify`` does
 not run a hash function over the data, but you can easily do that yourself.
@@ -838,10 +840,10 @@ Crypto.Util.number
 
 This module contains various number-theoretic functions.  
 
-\begin{funcdesc}{GCD}{x,y}
+**GCD(x,y)**:
 Return the greatest common divisor of ``x`` and ``y``.
 
-\begin{funcdesc}{getPrime}{N, randfunc}
+**getPrime(N, randfunc)**:
 Return an ``N``-bit random prime number, using random data obtained
 from the function ``randfunc``.  ``randfunc`` must take a single
 integer argument, and return a string of random data of the
@@ -849,16 +851,16 @@ corresponding length; the ``get_bytes()`` method of a
 ``RandomPool`` object will serve the purpose nicely, as will the
 ``read()`` method of an opened file such as ``/dev/random``.
 
-\begin{funcdesc}{getRandomNumber}{N, randfunc}
+**getRandomNumber(N, randfunc)**:
 Return an ``N``-bit random number, using random data obtained from the
 function ``randfunc``.  As usual, ``randfunc`` must take a single
 integer argument and return a string of random data of the
 corresponding length.
 
-\begin{funcdesc}{inverse}{u, v}
+**inverse(u, v)**:
 Return the inverse of ``u`` modulo ``v``.
 
-\begin{funcdesc}{isPrime}{N}
+**isPrime(N)**:
 Returns true if the number ``N`` is prime, as determined by a
 Rabin-Miller test.
 
@@ -875,7 +877,7 @@ use strong encryption or hashing algorithms to generate successive
 data; this makes breaking the generator as difficult as breaking the
 algorithms used.
 
-Understanding the concept of \dfn{entropy} is important for using the
+Understanding the concept of **entropy** is important for using the
 random number generator properly.  In the sense we'll be using it,
 entropy measures the amount of randomness; the usual unit is in bits.
 So, a single random bit has an entropy of 1 bit; a random byte has an
@@ -904,7 +906,8 @@ it was easy to compute all the possible passwords and try them.  The
 entropy of the random passwords was far too low.  By the same token, if
 you generate an RSA key with only 32 bits of entropy available, there
 are only about 4.2 billion keys you could have generated, and an
-adversary could compute them all to find your private key.  See \rfc{1750},
+adversary could compute them all to find your private key.  See 
+RFC 1750,
 "Randomness Recommendations for Security", for an interesting discussion
 of the issues related to random number generation.
 
@@ -915,7 +918,7 @@ keeps track of the number of bits of entropy left, and provides a function to
 add new random data; this data can be obtained in various ways, such as
 by using the variance in a user's keystroke timings.  
 
-\begin{classdesc}{RandomPool}{\optional{numbytes, cipher, hash} }
+**RandomPool([numbytes, cipher, hash])**:
 An object of the ``RandomPool`` class can be created without
 parameters if desired.  ``numbytes`` sets the number of bytes of
 random data in the pool, and defaults to 160 (1280 bits). ``hash``
@@ -932,7 +935,7 @@ that someday I can safely delete the ``cipher`` argument
 
 ``RandomPool`` objects define the following variables and methods:
 
-\begin{methoddesc}{add_event}{time\optional{, string}}
+**add_event(time [, string])**:
 Adds an event to the random pool.  ``time`` should be set to the
 current system time, measured at the highest resolution available.
 ``string`` can be a string of data that will be XORed into the pool,
@@ -942,7 +945,7 @@ document; an adversary presumably won't have the plaintext of the
 document, and thus won't be able to use this information to break the
 generator.
 
-The return value is the value of \member{self.entropy} after the data has
+The return value is the value of ``self.entropy`` after the data has
 been added.  The function works in the following manner: the time
 between successive calls to the ``add_event()`` method is determined,
 and the entropy of the data is guessed; the larger the time between
@@ -952,22 +955,22 @@ low-order bits of the time are effectively random.  In an application,
 it is recommended that ``add_event()`` be called as frequently as
 possible, with whatever random data can be found.
 
-\begin{memberdesc}{bits}
+**bits**:
 A constant integer value containing the number of bits of data in
-the pool, equal to the \member{bytes} attribute multiplied by 8.
+the pool, equal to the ``bytes`` attribute multiplied by 8.
 
-\begin{memberdesc}{bytes}
+**bytes**:
 A constant integer value containing the number of bytes of data in
 the pool.
 
 
-\begin{memberdesc}{entropy}
+**entropy**:
 An integer value containing the number of bits of entropy currently in
 the pool.  The value is incremented by the ``add_event()`` method,
 and decreased by the ``get_bytes()`` method.
 
 
-\begin{methoddesc}{get_bytes}{num}
+**get_bytes(num)**:
 Returns a string containing ``num`` bytes of random data, and
 decrements the amount of entropy available.  It is not an error to
 reduce the entropy to zero, or to call this function when the entropy
@@ -977,7 +980,7 @@ responsibility to monitor the amount of entropy remaining and decide
 whether it is sufficent for secure operation.
 
 
-\begin{methoddesc}{stir}{}
+**stir()**:
 Scrambles the random pool using the previously chosen encryption and
 hash function.  An adversary may attempt to learn or alter the state
 of the pool in order to affect its future output; this function
@@ -990,17 +993,17 @@ the ``RandomPool`` object.  Even better, several calls to
 The ``PersistentRandomPool`` class is a subclass of ``RandomPool`` 
 that adds the capability to save and load the pool from a disk file.
 
-\begin{classdesc}{PersistentRandomPool}{filename, \optional{numbytes, cipher, hash}}
+**PersistentRandomPool(filename [, numbytes, cipher, hash])**:
 The path given in ``filename`` will be automatically opened, and an
 existing random pool read; if no such file exists, the pool will be
 initialized as usual.  If omitted, the filename defaults to the empty
 string, which will prevent it from being saved to a file.  These
-arguments are identical to those for the ``RandomPool}
+arguments are identical to those for the ``RandomPool``
 constructor.
 
 
-\begin{methoddesc}{save}{}
-Opens the file named by the \member{filename} attribute, and saves the
+**save()**:
+Opens the file named by the ``filename`` attribute, and saves the
 random data into the file using the ``pickle`` module.
 
 
@@ -1008,7 +1011,7 @@ The ``KeyboardRandomPool`` class is a subclass of
 ``PersistentRandomPool`` that provides a method to obtain random
 data from the keyboard:
 
-\begin{methoddesc}{randomize}{}
+**randomize()**:
 (Unix systems only)  Obtain random data from the keyboard.  This works
 by prompting the
 user to hit keys at random, and then using the keystroke timings (and
@@ -1036,12 +1039,12 @@ into a list of short English words that should be easier to remember.
 For example, the hex key EB33F77EE73D4053 is transformed to "TIDE ITCH
 SLOW REIN RULE MOT".
 
-\begin{funcdesc}{key_to_english}{key}
-Accepts a string of arbitrary data ``key}, and returns a string
+**key_to_english(key)**:
+Accepts a string of arbitrary data ``key``, and returns a string
 containing uppercase English words separated by spaces.  ``key``'s
 length must be a multiple of 8.
 
-\begin{funcdesc}{english_to_key}{string}
+**english_to_key(string)**:
 Accepts ``string`` containing English words, and returns a string of
 binary data representing the key.  Words must be separated by
 whitespace, and can be any mixture of uppercase and lowercase
@@ -1077,7 +1080,7 @@ The required constant definitions are as follows::
     #define MODULE_NAME MD2		/* Name of algorithm */
     #define DIGEST_SIZE 16          /* Size of resulting digest in bytes */
 
-The C structure must be named \ctype{hash_state}::
+The C structure must be named ``hash_state``::
 
     typedef struct {
 	 ... whatever state variables you need ...
@@ -1092,7 +1095,7 @@ a digest from the current state, and to copy a state.
 * ``PyObject *hash_digest(hash_state *self);``
 * ``void hash_copy(hash_state *source, hash_state *dest);``
 
-Put ``\#include "hash_template.c"`` at the end of the file to
+Put ``#include "hash_template.c"`` at the end of the file to
 include the actual implementation of the module.
 
 
@@ -1105,7 +1108,7 @@ The required constant definitions are as follows::
 #define BLOCK_SIZE 16          /* Size of encryption block */
 #define KEY_SIZE 0             /* Size of key in bytes (0 if not fixed size) */
 
-The C structure must be named \ctype{block_state}::
+The C structure must be named ``block_state``::
 
     typedef struct {
 	 ... whatever state variables you need ...
@@ -1118,7 +1121,7 @@ algorithm's state, and to encrypt and decrypt a single block.
 * ``void block_encrypt(block_state *self, unsigned char *in, unsigned char *out);``
 * ``void block_decrypt(block_state *self, unsigned char *in, unsigned char *out);``
 
-Put ``\#include "block_template.c"`` at the end of the file to
+Put ``#include "block_template.c"`` at the end of the file to
 include the actual implementation of the module.
 
 
@@ -1131,7 +1134,7 @@ The required constant definitions are as follows::
     #define BLOCK_SIZE 1           /* Will always be 1 for a stream cipher */
     #define KEY_SIZE 0             /* Size of key in bytes (0 if not fixed size) */
 
-The C structure must be named \ctype{stream_state}::
+The C structure must be named ``stream_state``::
 
     typedef struct {
 	 ... whatever state variables you need ...
@@ -1144,5 +1147,5 @@ algorithm's state, and to encrypt and decrypt a single block.
 * ``void stream_encrypt(stream_state *self, unsigned char *block, int length);``
 * ``void stream_decrypt(stream_state *self, unsigned char *block, int length);``
 
-Put ``\#include "stream_template.c"`` at the end of the file to
+Put ``#include "stream_template.c"`` at the end of the file to
 include the actual implementation of the module.
