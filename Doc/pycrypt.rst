@@ -882,18 +882,18 @@ random number generator properly.  In the sense we'll be using it,
 entropy measures the amount of randomness; the usual unit is in bits.
 So, a single random bit has an entropy of 1 bit; a random byte has an
 entropy of 8 bits.  Now consider a one-byte field in a database containing a
-person's sex, represented as a single character \samp{M} or \samp{F}.
+person's sex, represented as a single character ``'M'`` or ``'F'``.
 What's the entropy of this field?  Since there are only two possible
 values, it's not 8 bits, but one; if you were trying to guess the value,
-you wouldn't have to bother trying \samp{Q} or \samp{@}.  
+you wouldn't have to bother trying ``'Q'`` or ``'@'``.  
 
 Now imagine running that single byte field through a hash function that
 produces 128 bits of output.  Is the entropy of the resulting hash value
 128 bits?  No, it's still just 1 bit.  The entropy is a measure of how many
 possible states of the data exist.  For English
 text, the entropy of a five-character string is not 40 bits; it's
-somewhat less, because not all combinations would be seen.  \samp{Guido}
-is a possible string, as is \samp{In th}; \samp{zJwvb} is not.
+somewhat less, because not all combinations would be seen.  ``'Guido'``
+is a possible string, as is ``'In th'``; ``'zJwvb'`` is not.
 
 The relevance to random number generation?  We want enough bits of
 entropy to avoid making an attack on our generator possible.  An
@@ -1055,7 +1055,7 @@ the number of words in ``string`` must be a multiple of 6.
 Extending the Toolkit
 --------------------------------------------------
 
-Preserving the a common interface for cryptographic routines is a good
+Preserving a common interface for cryptographic routines is a good
 idea.  This chapter explains how to write new modules for the Toolkit.
 
 The basic process is as follows:
