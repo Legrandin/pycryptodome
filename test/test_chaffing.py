@@ -1,13 +1,11 @@
 #
-# Test script for Crypto.XXX
+# Test script for Crypto.Protocol.Chaffing
 #
 
 __revision__ = "$Id: test_chaffing.py,v 1.2 2003-02-28 15:23:59 akuchling Exp $"
 
-from sancho.unittest import TestScenario, parse_args, run_scenarios
+import unittest
 from Crypto.Protocol import Chaffing
-
-tested_modules = [ "Crypto.Protocol.Chaffing" ]
 
 text = """\
 When in the Course of human events, it becomes necessary for one people to
@@ -28,7 +26,7 @@ principles and organizing its powers in such form, as to them shall seem most
 likely to effect their Safety and Happiness.
 """
 
-class ChaffingTest (TestScenario):
+class ChaffingTest (unittest.TestCase):
 
     def setup (self):
         pass
@@ -36,23 +34,23 @@ class ChaffingTest (TestScenario):
     def shutdown (self):
         pass
 
-    def check_chaffing (self):
+    def test_chaffing (self):
         "Simple tests of chaffing and winnowing"
-        self.test_stmt('Chaffing.Chaff()')
-        self.test_stmt('Chaffing.Chaff(0.5, 1)')
-        self.test_exc('Chaffing.Chaff(factor=-1)', ValueError)
-        self.test_exc('Chaffing.Chaff(blocksper=-1)', ValueError)
+	# Test constructors
+        Chaffing.Chaff()
+        Chaffing.Chaff(0.5, 1)
+        self.assertRaises(ValueError, Chaffing.Chaff, factor=-1)
+        self.assertRaises(ValueError, Chaffing.Chaff, blocksper=-1)
 
         data = [(1, 'data1', 'data1'), (2, 'data2', 'data2')]
         c = Chaffing.Chaff(1.0, 1)
-        self.test_stmt('c.chaff(data)')
+        c.chaff(data)
         chaff = c.chaff(data)
-        self.test_val('len(chaff)', 4)
+        self.assertEquals(len(chaff), 4)
 
         c = Chaffing.Chaff(0.0, 1)
         chaff = c.chaff(data)
-        self.test_val('len(chaff)', 2)
+        self.assertEquals(len(chaff), 2)
 
 if __name__ == "__main__":
-    (scenarios, options) = parse_args()
-    run_scenarios(scenarios, options)
+    unittest.main()
