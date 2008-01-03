@@ -6,7 +6,7 @@
 	  (the number of bytes hashed) mod 64 == 55.
 	* Fix a 32-bit limitation on the length of messages the SHA256 module 
 	  could hash.
-
+	* Converted documentation to reStructured Text.
 
 2.0.1
 =====
