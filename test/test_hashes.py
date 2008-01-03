@@ -5,23 +5,20 @@
 __revision__ = "$Id: test_hashes.py,v 1.5 2005-11-29 18:12:11 akuchling Exp $"
 
 import time, string, binascii
-from sancho.unittest import TestScenario, parse_args, run_scenarios
+import unittest
 
 from Crypto.Hash import *
 import testdata
 
-tested_modules = [ "Crypto.Hash.MD2", "Crypto.Hash.MD4", "Crypto.Hash.MD5",
-                   "Crypto.Hash.RIPEMD", "Crypto.Hash.SHA", "Crypto.Hash.SHA256"]
+class HashTest (unittest.TestCase):
 
-class HashTest (TestScenario):
-
-    def setup (self):
+    def setUp (self):
         teststr='1'                             # Build 128K of test data
         for i in xrange(0, 17):
             teststr=teststr+teststr
         self.str_128k = teststr
 
-    def shutdown (self):
+    def tearDown (self):
         del self.str_128k
 
     def compare(self, hash_mod, strg, hex_result):
@@ -30,14 +27,14 @@ class HashTest (TestScenario):
         s1 = obj.digest()
 
         # Check that the right hash result is produced
-        self.test_val('s1', result)
+        self.assertEquals(s1, result)
 
         # Check that .hexdigest() produces the same output
-        self.test_val('obj.hexdigest()', hex_result)
+        self.assertEquals(obj.hexdigest(), hex_result)
 
         # Test second hashing, and copying of a hashing object
-        self.test_val('obj.digest()', result)
-        self.test_val('obj.copy().digest()', result)
+        self.assertEquals(obj.digest(), result)
+        self.assertEquals(obj.copy().digest(), result)
 
     def hash_large_file (self, hash_mod, size, hex_result):
         obj = hash_mod.new()
@@ -50,7 +47,7 @@ class HashTest (TestScenario):
             obj.update(zeros[:block_size])
             count += block_size
 
-        self.test_val('obj.hexdigest()', hex_result)
+        self.assertEquals(obj.hexdigest(), hex_result)
         
         
     def run_test_suite (self, hash_mod, test_vectors):
@@ -69,32 +66,32 @@ class HashTest (TestScenario):
         else:
             print '%.2f K/sec' % (128/(end-start))
 
-    def check_md2 (self):
+    def test_md2 (self):
         "MD2 module"
         self.run_test_suite(MD2, testdata.md2)
         self.benchmark(MD2)
 
-    def check_md4 (self):
+    def test_md4 (self):
         "MD4 module"
         self.run_test_suite(MD4, testdata.md4)
         self.benchmark(MD4)
 
-    def check_md5 (self):
+    def test_md5 (self):
         "MD5 module"
         self.run_test_suite(MD5, testdata.md5)
         self.benchmark(MD5)
 
-    def check_ripemd (self):
+    def test_ripemd (self):
         "RIPEMD module"
         self.run_test_suite(RIPEMD, testdata.ripemd)
         self.benchmark(RIPEMD)
 
-    def check_sha (self):
+    def test_sha (self):
         "SHA module"
         self.run_test_suite(SHA, testdata.sha)
         self.benchmark(SHA)
 
-    def check_sha256 (self):
+    def test_sha256 (self):
         "SHA256 module"
         self.run_test_suite(SHA256,testdata.sha256)
         self.hash_large_file(SHA256, 512 * 1024 * 1024,
@@ -107,5 +104,4 @@ class HashTest (TestScenario):
 
 
 if __name__ == "__main__":
-    (scenarios, options) = parse_args()
-    run_scenarios(scenarios, options)
+    unittest.main()
