@@ -1,13 +1,9 @@
 
-* Rewrite tests to use doctest instead of an obsolete version of Sancho.
-
 * Add more tests for random pool code?
 
 * Manual and Web page: point to Launchpad project for bug reports
 
 * Update documentation (mention dodgy status of PublicKey code)
-
-* Clean up markup in pycrypt.tex.  Switch to reST, maybe?
 
 * Document the functions and macros for adding a new algorithm
     Hash functions:
@@ -28,4 +24,3 @@ time.
 Documentation:
 	Document chaff/winnow better
 	Add docstrings everywhere.
-
