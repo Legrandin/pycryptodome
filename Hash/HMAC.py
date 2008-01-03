@@ -9,7 +9,11 @@ used on versions of Python before 2.2.
 __revision__ = "$Id: HMAC.py,v 1.5 2002-07-25 17:19:02 z3p Exp $"
 
 import string
-from Crypto.Hash._strxor import strxor
+
+def _strxor(s1, s2):
+    """Utility method. XOR the two strings s1 and s2 (must have same length).
+    """
+    return "".join(map(lambda x, y: chr(ord(x) ^ ord(y)), s1, s2))
 
 # The size of the digests returned by HMAC depends on the underlying
 # hashing module used.
@@ -20,9 +24,6 @@ class HMAC:
 
     This supports the API for Cryptographic Hash Functions (PEP 247).
     """
-
-    blocksize = 64
-    blank = chr(0) * blocksize
 
     def __init__(self, key, msg = None, digestmod = None):
         """Create a new HMAC object.
@@ -43,14 +44,16 @@ class HMAC:
         except AttributeError:
             self.digest_size = len(self.outer.digest())
 
-        blocksize = HMAC.blocksize
+        blocksize = 64
+        ipad = "\x36" * blocksize
+        opad = "\x5C" * blocksize
 
         if len(key) > blocksize:
             key = digestmod.new(key).digest()
 
-        key = key + self.blank[:blocksize - len(key)]
-        self.outer.update(strxor(key, 0x5c))
-        self.inner.update(strxor(key, 0x36))
+        key = key + chr(0) * (blocksize - len(key))
+        self.outer.update(_strxor(key, opad))
+        self.inner.update(_strxor(key, ipad))
         if (msg):
             self.update(msg)
 

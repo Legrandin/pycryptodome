@@ -109,11 +109,6 @@ class PCTBuildExt (build_ext):
             Extension("Crypto.Cipher.XOR",
                       include_dirs=['src/'],
                       sources=["src/XOR.c"]),
-
-            # optimization for HMAC
-            Extension("Crypto.Hash._strxor",
-                      include_dirs=['src/'],
-                      sources=["src/strxor.c"]),
             ]
 
         # Detect which modules should be compiled
