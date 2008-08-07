@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.PublicKey.
 #
 
-__revision__ = "$Id: test_publickey.py,v 1.7 2003-04-04 19:38:28 akuchling Exp $"
+__revision__ = "$Id$"
 
 import sys, cPickle
 import unittest

@@ -2,7 +2,7 @@
 # Test script for the Python Cryptography Toolkit.
 #
 
-__revision__ = "$Id: test.py,v 1.7 2002-07-11 14:31:19 akuchling Exp $"
+__revision__ = "$Id$"
 
 import os, sys
 

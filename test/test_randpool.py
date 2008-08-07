@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_randpool.py,v 1.3 2003-02-28 15:24:01 akuchling Exp $"
+__revision__ = "$Id$"
 
 import unittest
 from Crypto.Hash import SHA

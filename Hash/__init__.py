@@ -20,5 +20,5 @@ Crypto.Hash.SHA
 """
 
 __all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD', 'SHA', 'SHA256']
-__revision__ = "$Id: __init__.py,v 1.6 2003-12-19 14:24:25 akuchling Exp $"
+__revision__ = "$Id$"
 

@@ -42,7 +42,7 @@ http://theory.lcs.mit.edu/~rivest/chaffing.txt
 
 """
 
-__revision__ = "$Id: Chaffing.py,v 1.7 2003-02-28 15:23:21 akuchling Exp $"
+__revision__ = "$Id$"
 
 from Crypto.Util.number import bytes_to_long
 

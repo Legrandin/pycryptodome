@@ -8,7 +8,7 @@
  * dissemination and usage except those imposed by the laws of your 
  * country of residence.
  *
- * $Id: _fastmath.c,v 1.13 2003-04-04 19:20:29 jbontje Exp $
+ * $Id$
  */
 
 #include <stdio.h>

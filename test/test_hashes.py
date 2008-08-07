@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_hashes.py,v 1.5 2005-11-29 18:12:11 akuchling Exp $"
+__revision__ = "$Id$"
 
 import time, string, binascii
 import unittest

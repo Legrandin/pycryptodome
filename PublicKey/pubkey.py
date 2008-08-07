@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: pubkey.py,v 1.11 2003-04-03 20:36:14 akuchling Exp $"
+__revision__ = "$Id$"
 
 import types, warnings
 from Crypto.Util.number import *

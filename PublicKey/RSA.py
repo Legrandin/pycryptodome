@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: RSA.py,v 1.20 2004-05-06 12:52:54 akuchling Exp $"
+__revision__ = "$Id$"
 
 from Crypto.PublicKey import pubkey
 from Crypto.Util import number
