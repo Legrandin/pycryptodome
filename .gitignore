@@ -1,0 +1,4 @@
+# setup.py can generate these directories:
+/dist/
+/build/
+*.py[co]
