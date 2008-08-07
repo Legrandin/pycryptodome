@@ -1,0 +1,150 @@
+#!/usr/bin/env python 
+# -*-Python-*-
+# Cipher 1.00
+#
+# Part of the Python Cryptography Toolkit
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+#
+
+import sys, getopt, os
+
+# Determine the name of this executable
+executable = os.path.basename(sys.argv[0])
+if executable=='': executable='cipher'
+cipher = ''                             # Unknown ciphering algorithm
+key = (0, '')                           # Empty key
+magic = 'ctx\001'                       # Magic string prefixed to the data
+NoInputFile = ''                        # Exceptions raised on file errors
+NoOutputFile = ''
+
+def PrintUsage():
+    print 'Usage: cipher [OPTIONS] file1 file2 ...'
+    print '\n -c ciphername             Force use of ciphername to encrypt/decrypt'
+    print   ' -k key                    Key to use for encryption/decryption'
+    print '\nThe default cipher algorithm is IDEA; if no key is set on the command'
+    print 'line, you will be prompted to enter a key.'
+    print 'Files are read completely into memory, so do not try to encrypt'
+    print 'very large files.'
+
+def GenerateIV(length):
+    import whrandom
+    IV=''
+    for i in range(0, length):
+        IV=IV + chr(int(256*whrandom.random()))
+    return IV
+    
+def Encipher(filename, cipher, key):
+    if (cipher==''): cipher='IDEA'
+    try:
+        exec ('from Crypto.Cipher import '+cipher)
+        module=eval(cipher)
+    except ImportError:
+        print executable+ ':', cipher, ': Cipher does not exist.'
+        sys.exit(1)
+    import Crypto.Hash.MD5
+    try:
+        input=open(filename, 'r')
+    except IOError:
+        raise NoInputFile
+    try:
+        output=open(filename+'.cip', 'w')
+    except IOError:
+        raise NoOutputFile, filename+'.cip'
+
+    if (key[0]==0):
+        key=raw_input('Enter encryption key for '+ filename+ ':')
+    else: key=key[1]
+    key=Crypto.Hash.MD5.new(key).digest()
+    IV=''
+    for i in range(0, module.blocksize): IV=IV+'A'
+    if (module.keysize==0):
+        cipherobj=module.new(key, module.CBC, IV)
+    else:
+        cipherobj=module.new(key[0:module.keysize], module.CBC, IV)
+    output.write(magic+cipher+'\0')
+    data = GenerateIV(module.blocksize)
+    filedata=input.read()
+    data = data + magic + str(len(filedata))+'\0'+filename+'\0'
+    data = data + filedata
+    input.close()
+    padding=module.blocksize - (len(data) % module.blocksize)
+    for i in range(0, padding):
+        data = data + chr(i)
+    ciphertext=cipherobj.encrypt(data)
+    output.write(ciphertext)
+    output.close()
+    
+def Decipher(filename, cipher, key):
+    import Crypto.Hash.MD5, string
+    try:
+        input=open(filename, 'r')
+    except IOError:
+        raise NoInputFile
+    if (input.read(len(magic))!=magic):
+        print executable+':', filename+': Does not seem to be a ciphered file'
+        return
+    t=''
+    while (1):
+        c=input.read(1)
+        if (ord(c)==0): break
+        t=t+c
+    if (cipher==''): cipher=t
+    try:
+        from Crypto.Cipher import *
+        module=eval(cipher)
+    except ImportError:
+        print executable+ ':', cipher, ': Cipher does not exist.'
+        sys.exit(1)
+    if (key[0]==0):
+        key=raw_input('Enter encryption key for '+ filename+ ':')
+    else: key=key[1]
+    key=Crypto.Hash.MD5.new(key).digest()
+    IV = ''
+    for i in range(0, module.blocksize): IV=IV+'A'
+    data=input.read()
+    if (module.keysize==0):
+        cipherobj=module.new(key, module.CBC, IV)
+    else:
+        cipherobj=module.new(key[0:module.keysize], module.CBC, IV)
+    plain=cipherobj.decrypt(data)       # Decrypt the data
+    plain=plain[module.blocksize:]      # Discard first block of random data
+    if (plain[0:len(magic)]!=magic):
+        print executable+':', filename+': Incorrect key or cipher algorithm'
+        return
+    else: plain=plain[len(magic):]
+    i=string.find(plain, '\0')
+    length=string.atoi(plain[0:i])
+    j=string.find(plain, '\0', i+1)
+    newfilename=plain[i+1:j]
+    try:
+        output=open(newfilename, 'w')
+    except IOError:
+        raise NoOutputFile, newfilename
+    output.write(plain[j+1:j+1+length])
+    output.close()
+
+if len(sys.argv)==1: PrintUsage() ; sys.exit(0)
+     
+options, args=getopt.getopt(sys.argv[1:], 'c:k:hH')
+for opt in options:
+    letter, param = opt
+    if (letter=='-c'): cipher = param
+    if (letter=='-k'): key = (1, param)
+    if (letter=='-h' or letter=='-H'):
+        PrintUsage()
+        sys.exit(0)
+
+for file in args:
+    try:
+        if (file[-4:]=='.cip'):
+            Decipher(file, cipher, key)
+        else:
+            Encipher(file, cipher, key)
+    except NoInputFile:
+        print executable+ ':', file+ ': No such file.'
+    except NoOutputFile, filename:
+        print executable+ ':', filename+ ': Cannot open file'
+    

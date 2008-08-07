@@ -140,7 +140,7 @@ void sha_done(hash_state * md, unsigned char *hash)
                                * then compress.  Then we can fall back to padding zeros and length
                                * encoding like normal.
                              */
-    if (md->curlen >= 56) {
+    if (md->curlen > 56) {
         for (; md->curlen < 64;)
             md->buf[md->curlen++] = 0;
         sha_compress(md);

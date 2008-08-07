@@ -24,7 +24,7 @@ Crypto.Cipher.XOR         The simple XOR cipher.
 """
 
 __all__ = ['AES', 'ARC2', 'ARC4',
-           'Blowfish', 'CAST', 'DES', 'DES3', 'IDEA', 'RC5',
+           'Blowfish', 'CAST', 'DES', 'DES3', 
            'XOR'
            ]
 

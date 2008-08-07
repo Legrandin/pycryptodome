@@ -1,0 +1,61 @@
+python-crypto (2.0.1+dfsg1-2.3) unstable; urgency=low
+
+  * NMU.
+  * Fix build failure introduced in previous upload; add build dependency
+    on texlive-fonts-recommended.
+
+ -- Matthias Klose <doko@debian.org>  Tue, 15 Jul 2008 18:10:57 +0200
+
+python-crypto (2.0.1+dfsg1-2.2) unstable; urgency=low
+
+  * NMU.
+  * Fix padding bug in SHA256; this resulted in bad digests whenever 	
+    (the number of bytes hashed) mod 64 == 55. Closes: #474177. LP: #191683.
+  * Build-depend on texlive-latex-recommended instead of tetex.
+
+ -- Matthias Klose <doko@debian.org>  Sat, 12 Jul 2008 12:44:34 +0200
+
+python-crypto (2.0.1+dfsg1-2.1) unstable; urgency=low
+
+  * Non-Maintainer upload.
+  * Build the python-crypto-dbg binary package (patch from Matthias Klose).
+    (Closes: #437808)
+
+ -- Fabio Tranchitella <kobold@debian.org>  Tue, 04 Sep 2007 20:42:37 +0200
+
+python-crypto (2.0.1+dfsg1-2ubuntu1) gutsy; urgency=low
+
+  * Merge from Debian unstable.
+  * Remaining Ubuntu changes:
+    - Add -dbg package.
+    - Bump debhelper compat level to 5.
+    - Set Ubuntu maintainer address.
+
+ -- Steve Kowalik <stevenk@ubuntu.com>  Tue, 29 May 2007 19:41:45 +1000
+
+python-crypto (2.0.1+dfsg1-2) unstable; urgency=low
+
+  * Acknowledge NMUs (closes: #374807, #373524, #313349).
+
+ -- Andreas Rottmann <rotty@debian.org>  Wed, 23 May 2007 14:43:13 +0200
+
+python-crypto (2.0.1+dfsg1-1.2ubuntu1) feisty; urgency=low
+
+  * Build the extension for the python debug interpreter.
+  * Bump debhelper to v5.
+  * Set Ubuntu maintainer address.
+
+ -- Matthias Klose <doko@ubuntu.com>  Sat, 17 Feb 2007 02:58:24 +0100
+
+python-crypto (2.0.1+dfsg1-1.2build1) edgy; urgency=low
+
+  * Rebuild to add support for python2.5.
+
+ -- Matthias Klose <doko@ubuntu.com>  Fri,  8 Sep 2006 13:33:18 +0000
+
+python-crypto (2.0.1+dfsg1-1.2) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Add missing Provides: ${python:Provides} to debian/control, completing
+    fix for #373524 from the previous NMU.
+

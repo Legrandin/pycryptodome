@@ -120,6 +120,8 @@ sha256 = [("abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f2001
     		    "5e3dfe0cc98fd1c2de2a9d2fd893446da43d290f2512200c515416313cdf3192"),
 		   ("Rijndael is AES" * 1024, 
   	 	    "80fced5a97176a5009207cd119551b42c5b51ceb445230d02ecc2663bbfb483a"),
+		   ('This message is precisely 55 bytes long, to test a bug.',
+		    'f7fd017a3c721ce7ff03f3552c0813adcc48b7f33f07e5e2ba71e23ea393d103'),
 ]
 sha256 = sha256[:1]
 

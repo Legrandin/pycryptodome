@@ -223,8 +223,7 @@ def TestStreamModules(args=['arc4', 'XOR'], verbose=1):
                         die('XOR failed on entry '+`entry`)
 
 
-def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3',
-                           'idea', 'rc5'],
+def TestBlockModules(args=['aes', 'arc2', 'des', 'blowfish', 'cast', 'des3'],
                      verbose=1):
     import string
     args=map(string.lower, args)

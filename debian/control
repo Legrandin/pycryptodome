@@ -1,0 +1,37 @@
+Source: python-crypto
+Section: python
+Priority: optional
+Maintainer: Andreas Rottmann <rotty@debian.org>
+Build-Depends: cdbs (>= 0.4.41), debhelper (>= 5.0.37.1), python-central (>= 0.4.17), python-all-dev (>= 2.3.5-9), python-all-dbg, ed, texlive-latex-recommended, texlive-fonts-recommended, libgmp3-dev (>= 4.1.4-10)
+XS-Python-Version: all
+Standards-Version: 3.7.2
+
+Package: python-crypto
+Architecture: any
+Depends: ${python:Depends}
+Conflicts: python2.3-crypto, python2.4-crypto
+Replaces: python2.3-crypto, python2.4-crypto
+Provides: ${python:Provides}
+Suggests: python-crypto-dbg
+XB-Python-Version: ${python:Versions}
+Description: cryptographic algorithms and protocols for Python
+ A collection of cryptographic algorithms and protocols, implemented
+ for use from Python. Among the contents of the package:
+ .
+  * Hash functions: MD2, MD4.
+  * Block encryption algorithms: AES, ARC2, Blowfish, CAST, DES, Triple-DES.
+  * Stream encryption algorithms: ARC4, simple XOR.
+  * Public-key algorithms: RSA, DSA, ElGamal, qNEW.
+  * Protocols: All-or-nothing transforms, chaffing/winnowing.
+  * Miscellaneous: RFC1751 module for converting 128-key keys 
+    into a set of English words, primality testing.
+
+Package: python-crypto-dbg
+Priority: extra
+Architecture: any
+Depends: python-crypto (= ${Source-Version}), python-dbg, ${shlibs:Depends}
+Description: cryptographic algorithms and protocols for Python (debug extension)
+ A collection of cryptographic algorithms and protocols, implemented
+ for use from Python.
+ .
+ This package contains the extensions built for the python debug interpreter.

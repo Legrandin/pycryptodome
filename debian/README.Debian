@@ -1,0 +1,12 @@
+pycrypto for Debian
+-------------------
+
+The debian pythonX.Y-crypto packages contain the Python cryptographic
+toolkit compiled for Python X.Y. I have removed the following
+algorithms from the upstream source code due to patent/copyright
+issues:
+
+  * IDEA - patent issues
+  * RC5 - patent issues
+  * RIPEMD  - unclarified copyright
+

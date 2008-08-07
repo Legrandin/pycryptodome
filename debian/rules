@@ -1,0 +1,38 @@
+#!/usr/bin/make -f
+
+DEB_PYTHON_SYSTEM=pycentral
+
+include /usr/share/cdbs/1/rules/buildcore.mk
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/python-distutils.mk
+
+pyver := $(shell pyversions -vd)
+MKHOWTO = /usr/lib/python$(pyver)/doc/tools/mkhowto
+
+common-build-arch::
+	cd Doc && $(MKHOWTO) --ps
+
+$(patsubst %,binary-post-install/%,$(DEB_PYTHON_REAL_LIB_PACKAGES)):: 
+	sh -e debian/pathmangle.sh /usr/bin/$(shell echo $(cdbs_curpkg) | sed 's,-crypto$$,,') debian/$(cdbs_curpkg)
+
+build/python-crypto-dbg::
+	set -e; \
+	for i in $(cdbs_python_build_versions); do \
+	  python$$i-dbg ./setup.py build; \
+	done
+
+install/python-crypto-dbg::
+	for i in $(cdbs_python_build_versions); do \
+	  python$$i-dbg ./setup.py install --root $(CURDIR)/debian/python-crypto-dbg; \
+	done
+	find debian/python-crypto-dbg \
+		! -type d ! -name '*_d.so' | xargs rm -f
+	find debian/python-crypto-dbg -depth -empty -exec rmdir {} \;
+
+binary-predeb/python-crypto-dbg::
+	rm -rf debian/python-crypto-dbg/usr/share/doc/python-crypto-dbg
+	ln -s python-crypto debian/python-crypto-dbg/usr/share/doc/python-crypto-dbg
+
+clean::
+	rm -rf build
+	rm -f Doc/*.ps
