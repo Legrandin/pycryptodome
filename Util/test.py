@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: test.py,v 1.16 2004-08-13 22:24:18 akuchling Exp $"
+__revision__ = "$Id: test.py,v 1.16 2004/08/13 22:24:18 akuchling Exp $"
 
 import binascii
 import string

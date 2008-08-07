@@ -2,7 +2,7 @@
 # Test script for Crypto.XXX
 #
 
-__revision__ = "$Id: template,v 1.1 2002-05-17 13:31:48 akuchling Exp $"
+__revision__ = "$Id: template,v 1.1 2002/05/17 13:31:48 akuchling Exp $"
 
 from sancho.unittest import TestScenario, parse_args, run_scenarios
 

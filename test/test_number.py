@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.number.
 #
 
-__revision__ = "$Id: test_number.py,v 1.4 2003-04-04 18:21:35 akuchling Exp $"
+__revision__ = "$Id: test_number.py,v 1.4 2003/04/04 18:21:35 akuchling Exp $"
 
 from sancho.unittest import TestScenario, parse_args, run_scenarios
 from Crypto.Util import number

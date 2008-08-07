@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_hashes.py,v 1.4 2004-08-13 22:23:12 akuchling Exp $"
+__revision__ = "$Id: test_hashes.py,v 1.4 2004/08/13 22:23:12 akuchling Exp $"
 
 import time, string, binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios

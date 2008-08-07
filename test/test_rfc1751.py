@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.randpool.
 #
 
-__revision__ = "$Id: test_rfc1751.py,v 1.3 2003-02-28 15:24:01 akuchling Exp $"
+__revision__ = "$Id: test_rfc1751.py,v 1.3 2003/02/28 15:24:01 akuchling Exp $"
 
 import binascii
 from sancho.unittest import TestScenario, parse_args, run_scenarios

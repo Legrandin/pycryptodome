@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-__revision__ = "$Id: setup.py,v 1.30 2005-06-14 01:20:22 akuchling Exp $"
+__revision__ = "$Id: setup.py,v 1.30 2005/06/14 01:20:22 akuchling Exp $"
 
 from distutils import core
 from distutils.core import Extension

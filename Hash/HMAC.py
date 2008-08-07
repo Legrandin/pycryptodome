@@ -6,7 +6,7 @@ This is just a copy of the Python 2.2 HMAC module, modified to work when
 used on versions of Python before 2.2.
 """
 
-__revision__ = "$Id: HMAC.py,v 1.5 2002-07-25 17:19:02 z3p Exp $"
+__revision__ = "$Id: HMAC.py,v 1.5 2002/07/25 17:19:02 z3p Exp $"
 
 import string
 

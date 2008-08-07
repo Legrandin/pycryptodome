@@ -3,7 +3,7 @@
 # sequence of words, as defined in RFC1751: "A Convention for
 # Human-Readable 128-bit Keys", by Daniel L. McDonald.
 
-__revision__ = "$Id: RFC1751.py,v 1.6 2003-04-04 15:15:10 akuchling Exp $"
+__revision__ = "$Id: RFC1751.py,v 1.6 2003/04/04 15:15:10 akuchling Exp $"
 
 
 import string, binascii

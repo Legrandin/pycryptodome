@@ -2,7 +2,7 @@
 # Test script for Crypto.Util.PublicKey.
 #
 
-__revision__ = "$Id: test_publickey.py,v 1.7 2003-04-04 19:38:28 akuchling Exp $"
+__revision__ = "$Id: test_publickey.py,v 1.7 2003/04/04 19:38:28 akuchling Exp $"
 
 import sys, cPickle
 from sancho.unittest import TestScenario, parse_args, run_scenarios

@@ -17,7 +17,7 @@ http://theory.lcs.mit.edu/~rivest/fusion.pdf
 
 """
 
-__revision__ = "$Id: AllOrNothing.py,v 1.8 2003-02-28 15:23:20 akuchling Exp $"
+__revision__ = "$Id: AllOrNothing.py,v 1.8 2003/02/28 15:23:20 akuchling Exp $"
 
 import operator
 import string

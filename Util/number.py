@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: number.py,v 1.13 2003-04-04 18:21:07 akuchling Exp $"
+__revision__ = "$Id: number.py,v 1.13 2003/04/04 18:21:07 akuchling Exp $"
 
 bignum = long
 try:

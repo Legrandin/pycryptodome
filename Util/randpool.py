@@ -10,7 +10,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: randpool.py,v 1.14 2004-05-06 12:56:54 akuchling Exp $"
+__revision__ = "$Id: randpool.py,v 1.14 2004/05/06 12:56:54 akuchling Exp $"
 
 import time, array, types, warnings, os.path
 from Crypto.Util.number import long_to_bytes

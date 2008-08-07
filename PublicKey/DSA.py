@@ -11,7 +11,7 @@
 # or implied. Use at your own risk or not at all.
 #
 
-__revision__ = "$Id: DSA.py,v 1.16 2004-05-06 12:52:54 akuchling Exp $"
+__revision__ = "$Id: DSA.py,v 1.16 2004/05/06 12:52:54 akuchling Exp $"
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util import number
