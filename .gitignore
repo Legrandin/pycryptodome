@@ -1,4 +1,5 @@
 # setup.py can generate these directories:
 /dist/
 /build/
+/Doc/apidoc/
 *.py[co]
