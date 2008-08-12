@@ -105,7 +105,7 @@ class FortunaAccumulator(object):
         if self.last_reseed > current_time:
             warnings.warn("Clock rewind detected. Resetting last_reseed.", ClockRewindWarning)
             self.last_reseed = None
-        if (self.pools[0].length > self.min_pool_size and
+        if (self.pools[0].length >= self.min_pool_size and
             (self.last_reseed is None or
              current_time > self.last_reseed + self.reseed_interval)):
             self._reseed(current_time)
