@@ -27,8 +27,8 @@ else:
 # The list consists of (package, module_name) tuples
 from distutils.command.build_py import build_py
 EXCLUDE_PY = [
-    # Top-level test module (it doesn't work outside the source tree anyway)
-    ('Crypto', 'test'),
+    ('Crypto', 'test'),     # Top-level test module (it doesn't work outside the source tree anyway)
+    ('Crypto.Hash', 'RIPEMD160'),  # Included for your amusement, but the C version is much faster.
 ]
 
 # Functions for finding libraries and files, copied from Python's setup.py.
@@ -78,6 +78,9 @@ class PCTBuildExt (build_ext):
             Extension("Crypto.Hash.SHA256",
                       include_dirs=['src/'],
                       sources=["src/SHA256.c"]),
+            Extension("Crypto.Hash.RIPEMD160",
+                      include_dirs=['src/'],
+                      sources=["src/RIPEMD160.c"]),
 
             # Block encryption algorithms
             Extension("Crypto.Cipher.AES",
