@@ -15,9 +15,10 @@ Crypto.Hash.HMAC          RFC 2104: Keyed-Hashing for Message Authentication
 Crypto.Hash.MD2
 Crypto.Hash.MD4
 Crypto.Hash.MD5
+Crypto.Hash.RIPEMD160
 Crypto.Hash.SHA
 """
 
-__all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'SHA', 'SHA256']
+__all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD', 'RIPEMD160', 'SHA', 'SHA256']
 __revision__ = "$Id$"
 
