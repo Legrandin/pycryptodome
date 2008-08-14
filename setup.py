@@ -23,6 +23,14 @@ else:
     HTONS_LIBS = []
     plat_ext = []
 
+# List of pure Python modules that will be excluded from the binary packages.
+# The list consists of (package, module_name) tuples
+from distutils.command.build_py import build_py
+EXCLUDE_PY = [
+    # Top-level test module (it doesn't work outside the source tree anyway)
+    ('Crypto', 'test'),
+]
+
 # Functions for finding libraries and files, copied from Python's setup.py.
 
 def find_file(filename, std_dirs, paths):
@@ -126,6 +134,20 @@ class PCTBuildExt (build_ext):
                                   sources=["src/_fastmath.c"]))
         self.extensions += exts
 
+class PCTBuildPy(build_py):
+    def find_package_modules(self, package, package_dir, *args, **kwargs):
+        modules = build_py.find_package_modules(self, package, package_dir, *args, **kwargs)
+
+        # Exclude certain modules
+        i = len(modules)-1
+        while i >= 0:
+            pkg, module = modules[i][:2]
+            if (pkg, module) in EXCLUDE_PY:
+                del modules[i]
+                continue
+            i -= 1
+        return modules
+
 kw = {'name':"pycrypto",
       'version':"2.0.2",
       'description':"Cryptographic modules for Python.",
@@ -133,7 +155,7 @@ kw = {'name':"pycrypto",
       'author_email':"amk@amk.ca",
       'url':"http://www.amk.ca/python/code/crypto",
 
-      'cmdclass' : {'build_ext':PCTBuildExt},
+      'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy},
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
                   "Crypto.Protocol", "Crypto.PublicKey"],
       'package_dir' : { "Crypto":"." },
