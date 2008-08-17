@@ -28,6 +28,19 @@
 #define PYCRYPTO_COMPAT_H
 
 /*
+ * Py_CLEAR for Python < 2.4
+ * See http://docs.python.org/api/countingRefs.html
+ */
+#if PY_VERSION_HEX < 0x02040000 && !defined(Py_CLEAR)
+#define Py_CLEAR(obj) \
+    do {\
+        PyObject *tmp = (PyObject *)(obj);\
+        (obj) = NULL;\
+        Py_XDECREF(tmp);\
+    } while(0)
+#endif
+
+/*
  * Compatibility code for Python < 2.5 (see PEP 353)
  * PEP 353 has been placed into the public domain, so we can use this code
  * without restriction.
