@@ -131,6 +131,11 @@ class PCTBuildExt (build_ext):
             Extension("Crypto.Util.strxor",
                       include_dirs=['src/'],
                       sources=['src/strxor.c']),
+
+            # Counter modules
+            Extension("Crypto.Util._counter",
+                      include_dirs=['src/'],
+                      sources=['src/_counter.c']),
             ]
 
         # Platform-specific modules
