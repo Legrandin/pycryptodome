@@ -157,6 +157,8 @@ kw = {'name':"pycrypto",
 
       'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy},
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
+                  "Crypto.SelfTest",
+                  "Crypto.SelfTest.Hash",
                   "Crypto.Protocol", "Crypto.PublicKey"],
       'package_dir' : { "Crypto":"." },
       # One module is defined here, because build_ext won't be
