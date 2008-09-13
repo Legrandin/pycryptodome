@@ -31,49 +31,68 @@
 __revision__ = "$Id$"
 
 import unittest
-import binascii
+from binascii import a2b_hex, b2a_hex
 
-class BlockCipherSelfTest(unittest.TestCase):
+class _NoDefault: pass        # sentinel object
+def _extract(d, k, default=_NoDefault):
+    """Get an item from a dictionary, and remove it from the dictionary."""
+    try:
+        retval = d[k]
+    except KeyError:
+        if default is _NoDefault:
+            raise
+        return default
+    del d[k]
+    return retval
 
-    def __init__(self, module, description, plaintext, ciphertext, key, extra_params=None):
+# Generic cipher test case
+class CipherSelfTest(unittest.TestCase):
+
+    def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.description = description
-        self.key = key
-        self.plaintext = plaintext
-        self.ciphertext = ciphertext
-        if extra_params is None:
-            self.extra_params = {}
-            self.iv = None
-            self.mode = 'ECB'
-        elif extra_params.has_key('mode'):
-            self.extra_params = extra_params.copy()
-            self.mode = self.extra_params['mode']
-            self.iv = self.extra_params['iv']
-            del self.extra_params['iv']
-            del self.extra_params['mode']
+
+        # Extract the parameters
+        params = params.copy()
+        self.description = _extract(params, 'description')
+        self.key = _extract(params, 'key')
+        self.plaintext = _extract(params, 'plaintext')
+        self.ciphertext = _extract(params, 'ciphertext')
+
+        mode = _extract(params, 'mode', None)
+        if mode is not None:
+            # Block cipher
+            self.mode = getattr(self.module, "MODE_" + mode)
+            self.iv = _extract(params, 'iv', None)
         else:
-            self.extra_params = extra_params
+            # Stream cipher
+            self.mode = None
             self.iv = None
-            self.mode = 'ECB'
+
+        self.extra_params = params
 
     def shortDescription(self):
         return self.description
 
-    def runTest(self):
-        key = binascii.a2b_hex(self.key)
-        plaintext = binascii.a2b_hex(self.plaintext)
-        ciphertext = binascii.a2b_hex(self.ciphertext)
-        mode = getattr(self.module, "MODE_" + self.mode)
-        if self.iv is None:
-            c = lambda self=self, key=key, mode=mode: self.module.new(key, mode, **self.extra_params)
+    def _new(self):
+        if self.mode is None:
+            # Stream cipher
+            return self.module.new(a2b_hex(self.key), **self.extra_params)
+        elif self.iv is None:
+            # Block cipher without iv
+            return self.module.new(a2b_hex(self.key), self.mode, **self.extra_params)
         else:
-            c = lambda self=self, key=key, mode=mode: self.module.new(key, mode, binascii.a2b_hex(self.iv), **self.extra_params)
+            # Block cipher with iv
+            return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **self.extra_params)
 
-        ct1 = binascii.b2a_hex(c().encrypt(plaintext))
-        pt1 = binascii.b2a_hex(c().decrypt(ciphertext))
-        ct2 = binascii.b2a_hex(c().encrypt(plaintext))
-        pt2 = binascii.b2a_hex(c().decrypt(ciphertext))
+    def runTest(self):
+        plaintext = a2b_hex(self.plaintext)
+        ciphertext = a2b_hex(self.ciphertext)
+
+        ct1 = b2a_hex(self._new().encrypt(plaintext))
+        pt1 = b2a_hex(self._new().decrypt(ciphertext))
+        ct2 = b2a_hex(self._new().encrypt(plaintext))
+        pt2 = b2a_hex(self._new().decrypt(ciphertext))
 
         self.assertEqual(self.ciphertext, ct1)
         self.assertEqual(self.ciphertext, ct2)
@@ -84,22 +103,77 @@ def make_block_testsuite(module, module_name, test_data):
     ts = unittest.TestSuite()
     for i in range(len(test_data)):
         row = test_data[i]
+
+        # Build the "params" dictionary
+        params = {'mode': 'ECB'}
         if len(row) == 3:
-            (plaintext, ciphertext, key) = row
-            description = extra_params = None
+            (params['plaintext'], params['ciphertext'], params['key']) = row
         elif len(row) == 4:
-            (plaintext, ciphertext, key, description) = row
-            extra_params = None
+            (params['plaintext'], params['ciphertext'], params['key'], params['description']) = row
         elif len(row) == 5:
-            (plaintext, ciphertext, key, description, extra_params) = row
+            (params['plaintext'], params['ciphertext'], params['key'], params['description'], extra_params) = row
+            params.update(extra_params)
         else:
             raise AssertionError("Unsupported tuple size %d" % (len(row),))
-        if description is None and not extra_params:
-            description = "p=%s, k=%s" % (plaintext, key)
-        elif description is None:
-            description = "p=%s, k=%s, %r" % (plaintext, key, extra_params)
+
+        # Build the display-name for the test
+        p2 = params.copy()
+        p_key = _extract(p2, 'key')
+        p_plaintext = _extract(p2, 'plaintext')
+        p_ciphertext = _extract(p2, 'ciphertext')
+        p_description = _extract(p2, 'description', None)
+        p_mode = p2.get('mode', 'ECB')
+        if p_mode == 'ECB':
+            _extract(p2, 'mode', 'ECB')
+
+        if p_description is not None:
+            description = p_description
+        elif p_mode == 'ECB' and not p2:
+            description = "p=%s, k=%s" % (p_plaintext, p_key)
+        else:
+            description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
         name = "%s #%d: %s" % (module_name, i+1, description)
-        ts.addTest(BlockCipherSelfTest(module, name, plaintext, ciphertext, key, extra_params))
+        params['description'] = name
+
+        # Add the test to the test suite
+        ts.addTest(CipherSelfTest(module, params))
+    return ts
+
+def make_stream_testsuite(module, module_name, test_data):
+    ts = unittest.TestSuite()
+    for i in range(len(test_data)):
+        row = test_data[i]
+
+        # Build the "params" dictionary
+        params = {}
+        if len(row) == 3:
+            (params['plaintext'], params['ciphertext'], params['key']) = row
+        elif len(row) == 4:
+            (params['plaintext'], params['ciphertext'], params['key'], params['description']) = row
+        elif len(row) == 5:
+            (params['plaintext'], params['ciphertext'], params['key'], params['description'], extra_params) = row
+            params.update(extra_params)
+        else:
+            raise AssertionError("Unsupported tuple size %d" % (len(row),))
+
+        # Build the display-name for the test
+        p2 = params.copy()
+        p_key = _extract(p2, 'key')
+        p_plaintext = _extract(p2, 'plaintext')
+        p_ciphertext = _extract(p2, 'ciphertext')
+        p_description = _extract(p2, 'description', None)
+
+        if p_description is not None:
+            description = p_description
+        elif not p2:
+            description = "p=%s, k=%s" % (p_plaintext, p_key)
+        else:
+            description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
+        name = "%s #%d: %s" % (module_name, i+1, description)
+        params['description'] = name
+
+        # Add the test to the test suite
+        ts.addTest(CipherSelfTest(module, params))
     return ts
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
