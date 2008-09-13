@@ -35,6 +35,7 @@ import unittest
 def make_testsuite():
     ts = unittest.TestSuite()
     import test_ARC2;     ts.addTest(test_ARC2.make_testsuite())
+    import test_ARC4;     ts.addTest(test_ARC4.make_testsuite())
     import test_Blowfish; ts.addTest(test_Blowfish.make_testsuite())
     import test_CAST;     ts.addTest(test_CAST.make_testsuite())
     import test_IDEA;     ts.addTest(test_IDEA.make_testsuite())
