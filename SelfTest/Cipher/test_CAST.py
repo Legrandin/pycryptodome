@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/__init__.py: Self-test for PyCrypto
+#  SelfTest/Cipher/CAST.py: Self-test for the CAST-128 (CAST5) cipher
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -26,23 +26,33 @@
 # =======================================================================
 #
 
-"""Self tests
-
-These tests should perform quickly and can ideally be used every time an
-application runs.
-"""
+"""Self-test suite for Crypto.Cipher.CAST"""
 
 __revision__ = "$Id$"
 
-import unittest
+# This is a list of (plaintext, ciphertext, key) tuples.
+test_data = [
+    # Test vectors from RFC 2144, B.1
+    ('0123456789abcdef', '238b4fe5847e44b2',
+        '0123456712345678234567893456789a',
+        '128-bit key'),
+
+    ('0123456789abcdef', 'eb6a711a2c02271b',
+        '01234567123456782345',
+        '80-bit key'),
+
+    ('0123456789abcdef', '7ac816d16e9b302e',
+        '0123456712',
+        '40-bit key'),
+]
 
 def make_testsuite():
-    ts = unittest.TestSuite()
-    import Hash ; ts.addTest(Hash.make_testsuite())
-    import Cipher ; ts.addTest(Cipher.make_testsuite())
-    return ts
+    from Crypto.Cipher import CAST
+    from common import make_block_testsuite
+    return make_block_testsuite(CAST, "CAST", test_data)
 
 if __name__ == '__main__':
+    import unittest
     unittest.main(defaultTest='make_testsuite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
