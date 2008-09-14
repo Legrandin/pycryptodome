@@ -30,12 +30,7 @@
 
 __revision__ = "$Id$"
 
-try:
-    dict()
-except NameError:
-    # For compatibility with Python 2.1
-    def dict(**kwargs):
-        return kwargs.copy()
+from common import dict     # For compatibility with Python 2.1 and 2.2
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
 SP800_17_B1_KEY = "01" * 8

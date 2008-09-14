@@ -30,8 +30,18 @@
 
 __revision__ = "$Id$"
 
+import sys
 import unittest
 from binascii import a2b_hex, b2a_hex
+
+# For compatibility with Python 2.1 and Python 2.2
+if sys.hexversion < 0x02030000:
+    # Python 2.1 doesn't have a dict() function
+    # Python 2.2 dict() function raises TypeError if you do dict(MD5='blah')
+    def dict(**kwargs):
+        return kwargs.copy()
+else:
+    dict = __builtins__['dict']
 
 class _NoDefault: pass        # sentinel object
 def _extract(d, k, default=_NoDefault):

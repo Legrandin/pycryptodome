@@ -30,12 +30,7 @@
 
 __revision__ = "$Id$"
 
-try:
-    dict()
-except NameError:
-    # For compatibility with Python 2.1
-    def dict(**kwargs):
-        return kwargs.copy()
+from common import dict     # For compatibility with Python 2.1 and 2.2
 
 # This is a list of (key, data, results, description) tuples.
 test_data = [

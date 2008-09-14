@@ -30,9 +30,20 @@
 
 __revision__ = "$Id$"
 
+import sys
 import unittest
 import binascii
 import string
+
+# For compatibility with Python 2.1 and Python 2.2
+if sys.hexversion < 0x02030000:
+    # Python 2.1 doesn't have a dict() function
+    # Python 2.2 dict() function raises TypeError if you do dict(MD5='blah')
+    def dict(**kwargs):
+        return kwargs.copy()
+else:
+    dict = __builtins__['dict']
+
 
 class HashSelfTest(unittest.TestCase):
 
