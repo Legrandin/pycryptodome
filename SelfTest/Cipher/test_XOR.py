@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Cipher/__init__.py: Self-test for cipher modules
+#  SelfTest/Cipher/XOR.py: Self-test for the XOR "cipher"
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -26,27 +26,42 @@
 # =======================================================================
 #
 
-"""Self-test for cipher modules"""
+"""Self-test suite for Crypto.Cipher.XOR"""
 
 __revision__ = "$Id$"
 
-import unittest
+# This is a list of (plaintext, ciphertext, key) tuples.
+test_data = [
+    # Test vectors written from scratch.  (Nobody posts XOR test vectors on the web?  How disappointing.)
+    ('01', '01',
+        '00',
+        'zero key'),
+
+    ('0102040810204080', '0003050911214181',
+        '01',
+        '1-byte key'),
+
+    ('0102040810204080', 'cda8c8a2dc8a8c2a',
+        'ccaa',
+        '2-byte key'),
+
+    ('ff'*64, 'fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0'*2,
+        '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+        '32-byte key'),
+
+    # XOR truncates at 32 bytes.
+    ('ff'*64, 'fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0'*2,
+        '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f55',
+        '33-byte key (truncated to 32 bytes)'),
+]
 
 def make_testsuite():
-    ts = unittest.TestSuite()
-    import test_AES;      ts.addTest(test_AES.make_testsuite())
-    import test_ARC2;     ts.addTest(test_ARC2.make_testsuite())
-    import test_ARC4;     ts.addTest(test_ARC4.make_testsuite())
-    import test_Blowfish; ts.addTest(test_Blowfish.make_testsuite())
-    import test_CAST;     ts.addTest(test_CAST.make_testsuite())
-    import test_DES3;     ts.addTest(test_DES3.make_testsuite())
-    import test_DES;      ts.addTest(test_DES.make_testsuite())
-    import test_IDEA;     ts.addTest(test_IDEA.make_testsuite())
-    import test_RC5;      ts.addTest(test_RC5.make_testsuite())
-    import test_XOR;      ts.addTest(test_XOR.make_testsuite())
-    return ts
+    from Crypto.Cipher import XOR
+    from common import make_stream_testsuite
+    return make_stream_testsuite(XOR, "XOR", test_data)
 
 if __name__ == '__main__':
+    import unittest
     unittest.main(defaultTest='make_testsuite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
