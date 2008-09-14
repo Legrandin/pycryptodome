@@ -35,6 +35,12 @@ from common import dict     # For compatibility with Python 2.1 and 2.2
 # This is a list of (key, data, results, description) tuples.
 test_data = [
     ## Test vectors from RFC 2202 ##
+    # Test that the default hashmod is MD5
+    ('0b' * 16,
+        '4869205468657265',
+        dict(default='9294727a3638bb1c13f48ef8158bfc9d'),
+        'default-is-MD5'),
+
     # Test case 1 (MD5)
     ('0b' * 16,
         '4869205468657265',
@@ -178,7 +184,7 @@ test_data = [
 def make_testsuite():
     from Crypto.Hash import HMAC, MD5, SHA as SHA1, SHA256
     from common import make_mac_testsuite
-    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256)
+    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256, default=None)
     return make_mac_testsuite(HMAC, "HMAC", test_data, hashmods)
 
 if __name__ == '__main__':
