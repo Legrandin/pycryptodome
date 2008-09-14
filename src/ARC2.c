@@ -15,6 +15,7 @@
 #define MODULE_NAME ARC2
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0
+#define PCT_ARC2_MODULE  /* Defined to get ARC2's additional keyword arguments */
 
 typedef unsigned int U32;
 typedef unsigned short U16;
@@ -23,6 +24,7 @@ typedef unsigned char U8;
 typedef struct 
 {
 	U16 xkey[64];
+        int effective_keylen;
 } block_state;
 
 static void
@@ -142,10 +144,6 @@ block_init(block_state *self, U8 *key, int keylength)
 		197,243,219, 71,229,165,156,119, 10,166, 32,104,254,127,193,173
         };
 
-	/* The "bits" value may be some sort of export control weakening.
-	   We'll hardwire it to 1024. */
-#define bits 1024
-
 	memcpy(self->xkey, key, keylength);
   
 	/* Phase 1: Expand input key to 128 bytes */
@@ -158,12 +156,12 @@ block_init(block_state *self, U8 *key, int keylength)
                 } while (keylength < 128);
 	}
   
-	/* Phase 2 - reduce effective key size to "bits" */
-	keylength = (bits+7) >> 3;
+	/* Phase 2 - reduce effective key size to "effective_keylen" */
+        keylength = (self->effective_keylen+7) >> 3;
 	i = 128-keylength;
 	x = permute[((U8 *)self->xkey)[i] & (255 >>
 					     (7 &
-					      ((bits %8 ) ? 8-(bits%8): 0))
+					      ((self->effective_keylen %8 ) ? 8-(self->effective_keylen%8): 0))
 		)];
 	((U8 *)self->xkey)[i] = x;
   
@@ -180,6 +178,5 @@ block_init(block_state *self, U8 *key, int keylength)
 	} while (i--);
 }
 
-#undef bits
 
 #include "block_template.c"

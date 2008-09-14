@@ -85,6 +85,9 @@ static char *kwlist[] = {"key", "mode", "IV", "counter", "segment_size",
 #ifdef PCT_RC5_MODULE
 			 "version", "word_size", "rounds",
 #endif
+#ifdef PCT_ARC2_MODULE
+                         "effective_keylen",
+#endif
 			 NULL};
 
 static ALGobject *
@@ -97,16 +100,25 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 #ifdef PCT_RC5_MODULE
 	int version = 0x10, word_size = 32, rounds = 16; /*XXX default rounds? */
 #endif 
+#ifdef PCT_ARC2_MODULE
+        int effective_keylen = 1024;    /* this is a weird default, but it's compatible with old versions of PyCrypto */
+#endif
 	/* Set default values */
 	if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#Oi"
 #ifdef PCT_RC5_MODULE
 					 "iii"
 #endif 
+#ifdef PCT_ARC2_MODULE
+					 "i"
+#endif
 					 , kwlist,
 					 &key, &keylen, &mode, &IV, &IVlen,
 					 &counter, &segment_size
 #ifdef PCT_RC5_MODULE
 					 , &version, &word_size, &rounds
+#endif
+#ifdef PCT_ARC2_MODULE
+					 , &effective_keylen
 #endif
 		)) 
 	{
@@ -183,6 +195,14 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 		return NULL;
 	}
 #endif
+#ifdef PCT_ARC2_MODULE
+        if (effective_keylen<0 || effective_keylen>1024) {
+		PyErr_Format(PyExc_ValueError,
+			     "RC2: effective_keylen must be between 0 and 1024, not %i",
+			     effective_keylen);
+		return NULL;
+        }
+#endif
 
 	/* Copy parameters into object */
 	new = newALGobject();
@@ -193,6 +213,9 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	new->st.version = version;
 	new->st.word_size = word_size;
 	new->st.rounds = rounds;
+#endif
+#ifdef PCT_ARC2_MODULE
+        new->st.effective_keylen = effective_keylen;
 #endif
 
 	block_init(&(new->st), key, keylen);
