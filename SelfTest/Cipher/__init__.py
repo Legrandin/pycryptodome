@@ -39,6 +39,8 @@ def make_testsuite():
     import test_ARC4;     ts.addTest(test_ARC4.make_testsuite())
     import test_Blowfish; ts.addTest(test_Blowfish.make_testsuite())
     import test_CAST;     ts.addTest(test_CAST.make_testsuite())
+    import test_DES3;     ts.addTest(test_DES3.make_testsuite())
+    import test_DES;      ts.addTest(test_DES.make_testsuite())
     import test_IDEA;     ts.addTest(test_IDEA.make_testsuite())
     import test_RC5;      ts.addTest(test_RC5.make_testsuite())
     return ts
