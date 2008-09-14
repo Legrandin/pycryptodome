@@ -10,7 +10,7 @@ Crypto.Util.RFC1751       Converts between 128-bit keys and human-readable
 
 """
 
-__all__ = ['randpool', 'RFC1751', 'number']
+__all__ = ['randpool', 'RFC1751', 'number', 'strxor']
 
 __revision__ = "$Id$"
 
