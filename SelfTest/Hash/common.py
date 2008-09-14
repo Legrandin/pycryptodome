@@ -32,6 +32,7 @@ __revision__ = "$Id$"
 
 import unittest
 import binascii
+import string
 
 class HashSelfTest(unittest.TestCase):
 
@@ -62,6 +63,46 @@ class HashSelfTest(unittest.TestCase):
         self.assertEqual(self.expected, out3)
         self.assertEqual(self.expected, out4)
 
+class MACSelfTest(unittest.TestCase):
+
+    def __init__(self, hashmod, description, expected_dict, input, key, hashmods):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+        self.expected_dict = expected_dict
+        self.input = input
+        self.key = key
+        self.hashmods = hashmods
+        self.description = description
+
+    def shortDescription(self):
+        return self.description
+
+    def runTest(self):
+        for hashname in self.expected_dict.keys():
+            hashmod = self.hashmods[hashname]
+            key = binascii.a2b_hex(self.key)
+            data = binascii.a2b_hex(self.input)
+
+            # Strip whitespace from the expected string (which should be in lowercase-hex)
+            expected = self.expected_dict[hashname]
+            for ch in string.whitespace:
+                expected = expected.replace(ch, "")
+
+            h = self.hashmod.new(key, digestmod=hashmod)
+            h.update(data)
+            out1 = binascii.b2a_hex(h.digest())
+            out2 = h.hexdigest()
+
+            h = self.hashmod.new(key, data, hashmod)
+
+            out3 = h.hexdigest()
+            out4 = binascii.b2a_hex(h.digest())
+
+            self.assertEqual(expected, out1)
+            self.assertEqual(expected, out2)
+            self.assertEqual(expected, out3)
+            self.assertEqual(expected, out4)
+
 def make_hash_testsuite(module, module_name, test_data):
     ts = unittest.TestSuite()
     for i in range(len(test_data)):
@@ -73,6 +114,15 @@ def make_hash_testsuite(module, module_name, test_data):
             (expected, input, description) = row
         name = "%s #%d: %s" % (module_name, i+1, description)
         ts.addTest(HashSelfTest(module, name, expected, input))
+    return ts
+
+def make_mac_testsuite(module, module_name, test_data, hashmods):
+    ts = unittest.TestSuite()
+    for i in range(len(test_data)):
+        row = test_data[i]
+        (key, data, results, description) = row
+        name = "%s #%d: %s" % (module_name, i+1, description)
+        ts.addTest(MACSelfTest(module, name, results, data, key, hashmods))
     return ts
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

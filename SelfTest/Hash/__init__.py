@@ -34,6 +34,7 @@ import unittest
 
 def make_testsuite():
     ts = unittest.TestSuite()
+    import test_HMAC;   ts.addTest(test_HMAC.make_testsuite())
     import test_MD2;    ts.addTest(test_MD2.make_testsuite())
     import test_MD4;    ts.addTest(test_MD4.make_testsuite())
     import test_MD5;    ts.addTest(test_MD5.make_testsuite())
