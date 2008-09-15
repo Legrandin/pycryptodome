@@ -164,6 +164,7 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest",
                   "Crypto.SelfTest.Cipher",
                   "Crypto.SelfTest.Hash",
+                  "Crypto.SelfTest.Util",
                   "Crypto.Protocol", "Crypto.PublicKey"],
       'package_dir' : { "Crypto":"." },
       # One module is defined here, because build_ext won't be

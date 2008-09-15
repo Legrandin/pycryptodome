@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/__init__.py: Self-test for PyCrypto
+#  SelfTest/Util/test_winrandom.py: Self-test for the winrandom module
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -26,24 +26,27 @@
 # =======================================================================
 #
 
-"""Self tests
-
-These tests should perform quickly and can ideally be used every time an
-application runs.
-"""
+"""Self-test suite for Crypto.Util.winrandom"""
 
 __revision__ = "$Id$"
 
 import unittest
 
+class WinRandomImportTest(unittest.TestCase):
+    def runTest(self):
+        """winrandom: simple test"""
+        # Import the winrandom module and try to use it
+        from Crypto.Util import winrandom
+        randobj = winrandom.new()
+        x = randobj.get_bytes(16)
+        y = randobj.get_bytes(16)
+        self.assertNotEqual(x, y)
+
 def make_testsuite():
-    ts = unittest.TestSuite()
-    import Hash ; ts.addTest(Hash.make_testsuite())
-    import Cipher ; ts.addTest(Cipher.make_testsuite())
-    import Util ; ts.addTest(Util.make_testsuite())
-    return ts
+    return unittest.TestSuite([WinRandomImportTest()])
 
 if __name__ == '__main__':
+    import unittest
     unittest.main(defaultTest='make_testsuite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/__init__.py: Self-test for PyCrypto
+#  SelfTest/Util/__init__.py: Self-test for utility modules
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -26,21 +26,17 @@
 # =======================================================================
 #
 
-"""Self tests
-
-These tests should perform quickly and can ideally be used every time an
-application runs.
-"""
+"""Self-test for utility modules"""
 
 __revision__ = "$Id$"
 
 import unittest
+import os
 
 def make_testsuite():
     ts = unittest.TestSuite()
-    import Hash ; ts.addTest(Hash.make_testsuite())
-    import Cipher ; ts.addTest(Cipher.make_testsuite())
-    import Util ; ts.addTest(Util.make_testsuite())
+    if os.name == 'nt':
+        import test_winrandom;   ts.addTest(test_winrandom.make_testsuite())
     return ts
 
 if __name__ == '__main__':
