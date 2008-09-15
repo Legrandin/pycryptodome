@@ -181,7 +181,7 @@ static void hash_init (hash_state *ptr)
 }
 
 // Done
-static void 
+static void
 hash_update (hash_state *self, const U8 *buf, U32 len)
 {
 	sha_process(self,(unsigned char *)buf,len);
