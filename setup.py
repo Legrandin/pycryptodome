@@ -124,6 +124,9 @@ class PCTBuildExt (build_ext):
                       sources=['src/strxor.c']),
             ]
 
+        # Platform-specific modules
+        self.extensions += plat_ext
+
         # Detect which modules should be compiled
         self.detect_modules()
         build_ext.build_extensions(self)

@@ -97,7 +97,8 @@ winrandom_new(PyObject *self, PyObject *args, PyObject *kwdict)
 		return NULL;
 	}
 	if (! CryptAcquireContext(&hcp, NULL, (LPCTSTR) provname,
-				  (DWORD) provtype, 0)) {
+				  (DWORD) provtype,
+				  CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
 		PyErr_Format(PyExc_SystemError,
 			     "CryptAcquireContext for provider \"%s\" type %i failed, error 0x%x",
 			     provname? provname : "(null)", provtype,
@@ -361,6 +362,14 @@ Windows 95, Windows 98, Windows Me, Windows 2000, and Windows XP are
 FIPS-approved. Obviously FIPS-140 compliance is necessary but not 
 sufficient to provide a properly secure source of random data. 
  
+*/
+/*
+[Update: 2007-11-13]
+CryptGenRandom does not necessarily provide forward secrecy or reverse
+secrecy.  See the paper by Leo Dorrendorf and Zvi Gutterman and Benny
+Pinkas, _Cryptanalysis of the Random Number Generator of the Windows
+Operating System_, Cryptology ePrint Archive, Report 2007/419,
+http://eprint.iacr.org/2007/419
 */
 
 #endif /* MS_WIN32 */
