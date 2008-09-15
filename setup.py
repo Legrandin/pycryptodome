@@ -144,14 +144,13 @@ class PCTBuildPy(build_py):
         modules = build_py.find_package_modules(self, package, package_dir, *args, **kwargs)
 
         # Exclude certain modules
-        i = len(modules)-1
-        while i >= 0:
-            pkg, module = modules[i][:2]
+        retval = []
+        for item in modules:
+            pkg, module = item[:2]
             if (pkg, module) in EXCLUDE_PY:
-                del modules[i]
                 continue
-            i -= 1
-        return modules
+            retval.append(item)
+        return retval
 
 kw = {'name':"pycrypto",
       'version':"2.0.2",
