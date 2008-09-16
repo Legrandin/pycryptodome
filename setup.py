@@ -70,7 +70,7 @@ def find_library_file(compiler, libname, std_dirs, paths):
     return result
 
 def endianness_macro():
-    s = struct.pack("@L", 0x33221100)
+    s = struct.pack("@I", 0x33221100)
     if s == "\x00\x11\x22\x33":     # little endian
         return ('PCT_LITTLE_ENDIAN', 1)
     elif s == "\x33\x22\x11\x00":   # big endian
