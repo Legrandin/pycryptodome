@@ -65,7 +65,6 @@ typedef struct {
         uint8_t b[64];
     } buf;
     uint8_t bufpos;     /* number of bytes currently in the buffer */
-    int little_endian;  /* set to 1 on little-endian machines */
 } ripemd160_state;
 
 
@@ -156,16 +155,6 @@ static const uint32_t KR[5] = {
     0x00000000u     /* Round 5: 0 */
 };
 
-/* Return 1 if the machine is little-endian.  Return 0 if the machine is big-endian */
-static int is_little_endian(void)
-{
-    union { uint32_t w; uint8_t b[4]; } e;
-    e.w = 0x00ABCD01;
-    assert((e.b[0] == 0x00 && e.b[1] == 0xAB && e.b[2] == 0xCD && e.b[3] == 0x01) ||
-           (e.b[0] == 0x01 && e.b[1] == 0xCD && e.b[2] == 0xAB && e.b[3] == 0x00));
-    return e.b[0];
-}
-
 static void ripemd160_init(ripemd160_state *self)
 {
 
@@ -174,7 +163,6 @@ static void ripemd160_init(ripemd160_state *self)
     self->length = 0;
     self->bufpos = 0;
     self->magic = RIPEMD160_MAGIC;
-    self->little_endian = is_little_endian();
 }
 
 /* NB: This is not currently called in the hash object's destructor. */
@@ -228,9 +216,9 @@ static void ripemd160_compress(ripemd160_state *self)
     }
 
     /* Byte-swap the buffer if we're on a big-endian machine */
-    if (!self->little_endian) {
-        byteswap_digest(self->buf.w);
-    }
+#ifdef PCT_BIG_ENDIAN
+    byteswap_digest(self->buf.w);
+#endif
 
     /* Load the left and right lines with the initial state */
     AL = AR = self->h[0];
@@ -379,17 +367,17 @@ static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
     /* Append the length */
     tmp.buf.w[14] = tmp.length & 0xFFFFffffu;
     tmp.buf.w[15] = (tmp.length >> 32) & 0xFFFFffffu;
-    if (!tmp.little_endian) {
-        byteswap32(&tmp.buf.w[14]);
-        byteswap32(&tmp.buf.w[15]);
-    }
+#ifdef PCT_BIG_ENDIAN
+    byteswap32(&tmp.buf.w[14]);
+    byteswap32(&tmp.buf.w[15]);
+#endif
     tmp.bufpos = 64;
     ripemd160_compress(&tmp);
 
     /* Copy the final state into the output buffer */
-    if (!tmp.little_endian) {
-        byteswap_digest(tmp.h);
-    }
+#ifdef PCT_BIG_ENDIAN
+    byteswap_digest(tmp.h);
+#endif
     memcpy(out, &tmp.h, RIPEMD160_DIGEST_SIZE);
 
     if (tmp.magic == RIPEMD160_MAGIC) {

@@ -6,6 +6,7 @@ from distutils import core
 from distutils.core import Extension
 from distutils.command.build_ext import build_ext
 import os, sys
+import struct
 
 if sys.version[0:1] == '1':
     raise RuntimeError, ("The Python Cryptography Toolkit requires "
@@ -68,6 +69,14 @@ def find_library_file(compiler, libname, std_dirs, paths):
     result = find_file(filename, std_dirs, paths)
     return result
 
+def endianness_macro():
+    s = struct.pack("@L", 0x33221100)
+    if s == "\x00\x11\x22\x33":     # little endian
+        return ('PCT_LITTLE_ENDIAN', 1)
+    elif s == "\x33\x22\x11\x00":   # big endian
+        return ('PCT_BIG_ENDIAN', 1)
+    raise AssertionError("Machine is neither little-endian nor big-endian")
+
 class PCTBuildExt (build_ext):
     def build_extensions(self):
         self.extensions += [
@@ -80,7 +89,8 @@ class PCTBuildExt (build_ext):
                       sources=["src/SHA256.c"]),
             Extension("Crypto.Hash.RIPEMD160",
                       include_dirs=['src/'],
-                      sources=["src/RIPEMD160.c"]),
+                      sources=["src/RIPEMD160.c"],
+                      define_macros=[endianness_macro()]),
 
             # Block encryption algorithms
             Extension("Crypto.Cipher.AES",
