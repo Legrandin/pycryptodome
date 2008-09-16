@@ -188,10 +188,10 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 			     word_size);
 		return NULL;
 	}
-	if (rounds<0 || 255<rounds) {
+	if (rounds<0 || MAX_RC5_ROUNDS<rounds) {
 		PyErr_Format(PyExc_ValueError,
-			     "RC5: rounds must be between 0 and 255, not %i",
-			     rounds);
+			     "RC5: rounds must be between 0 and %u, not %i",
+			     MAX_RC5_ROUNDS, rounds);
 		return NULL;
 	}
 #endif

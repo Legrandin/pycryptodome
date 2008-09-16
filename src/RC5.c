@@ -16,9 +16,11 @@
 #define KEY_SIZE 0
 #define PCT_RC5_MODULE          /* Define this to get RC5's additional 
 				   keywords */ 
-#define MAXTABLE 100		/* Maximum size of S-box table; changing this
+#define MAX_RC5_ROUNDS 255
+#define MAXTABLE 512		/* Maximum size of S-box table; changing this
 				   affects the maximum number of rounds
-				   possible. */
+				   possible.
+				   SECURITY: Must be >= 2*MAX_RC5_ROUNDS+2. */
 typedef unsigned int U32;
 #define LEFT(v,x,y,w,MASK)  {U32 t1=(y) % (w), t2,t3=x;\
 		        t2=(w)-t1;\
@@ -56,11 +58,11 @@ block_init(block_state *self, unsigned char *key, int keylen)
 		break;
 	}
 	for(i=0; i<2*self->rounds+2; i++) self->S[i]=0;
-	{
+	{   /* NB: This is not a loop; Notice the semicolon on the previous line. */
 		unsigned int *L, A, B;
 		int u=self->word_size/8, num;
-		int j, t=2*(self->rounds+1), c=(keylen-1)/u;
-		if ((keylen-1) % u) c++;
+		int j, t=2*(self->rounds+1), c=keylen/u;
+		if (keylen % u) c++;
 		L=malloc(sizeof(unsigned int)*c);
 		if (L==NULL) 
 		{
@@ -68,7 +70,18 @@ block_init(block_state *self, unsigned char *key, int keylen)
 					"RC5: Can't allocate memory");
 		}
 		for(i=0; i<c; i++) L[i]=0;
-		for(i=keylen-1; 0<=i; i--) L[i/u]=(L[i/u]<<8)+key[i];
+		for(i=0; (i+3)<keylen; i += 4) {
+			L[i/u] |= key[i+3] << 24;
+			L[i/u] |= key[i+2] << 16;
+			L[i/u] |= key[i+1] << 8;
+			L[i/u] |= key[i];
+		}
+		switch(keylen & 3) {
+			case 3: L[i/u] |= key[i+2] << 16;
+			case 2: L[i/u] |= key[i+1] << 8;
+			case 1: L[i/u] |= key[i];
+			default: ;
+		}
 		self->S[0]=P;
 		for(i=1; i<t; i++) self->S[i]=(self->S[i-1]+Q) & self->mask;
 		i=j=0;
