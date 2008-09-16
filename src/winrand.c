@@ -60,7 +60,7 @@ WRdealloc(PyObject *ptr)
 	if (! CryptReleaseContext(o->hcp, 0)) {
 		PyErr_Format(PyExc_SystemError,
 			     "CryptReleaseContext failed, error 0x%x",
-			     GetLastError());
+			     (unsigned int) GetLastError());
 		return;
 	}
 	/* Overwrite the contents of the object */
@@ -102,7 +102,7 @@ winrandom_new(PyObject *self, PyObject *args, PyObject *kwdict)
 		PyErr_Format(PyExc_SystemError,
 			     "CryptAcquireContext for provider \"%s\" type %i failed, error 0x%x",
 			     provname? provname : "(null)", provtype,
-			     GetLastError());
+			     (unsigned int) GetLastError());
 		return NULL;
 	}
 	res = PyObject_New(WRobject, &WRtype);
@@ -113,7 +113,6 @@ winrandom_new(PyObject *self, PyObject *args, PyObject *kwdict)
 static PyObject *
 WR_get_bytes(WRobject *self, PyObject *args)
 {
-	HCRYPTPROV hcp = 0;
 	int n, nbytes, len = 0;
 	PyObject *res;
 	char *buf, *str = NULL;
@@ -149,7 +148,7 @@ WR_get_bytes(WRobject *self, PyObject *args)
 	if (! CryptGenRandom(self->hcp, (DWORD) nbytes, (BYTE *) buf)) {
 		PyErr_Format(PyExc_SystemError,
 			     "CryptGenRandom failed, error 0x%x",
-			     GetLastError());
+			     (unsigned int) GetLastError());
 		PyMem_Free(buf);
 		return NULL;
 	}

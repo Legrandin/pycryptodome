@@ -37,9 +37,9 @@ typedef unsigned char byte;
 /* __const__ simply means there are no side effects for this function,
  * which is useful info for the gcc optimizer
  */
-#define CONST __const__
+#define PCT_CONST __const__
 #else
-#define CONST
+#define PCT_CONST
 #endif
 
 typedef struct 
@@ -47,7 +47,7 @@ typedef struct
 	word16 EK[6*8+4], DK[6*8+4];
 } block_state;
 
-CONST static uint16
+PCT_CONST static uint16
 mulInv(uint16 x)
 {
 	uint16 t0, t1;
