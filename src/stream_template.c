@@ -132,7 +132,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	}
 	memcpy(buffer, str, len);
 	stream_encrypt(&(self->st), buffer, len);
-	result = PyString_FromStringAndSize(buffer, len);
+	result = PyString_FromStringAndSize((char *)buffer, len);
 	free(buffer);
 	return (result);
 }
@@ -143,7 +143,7 @@ static char ALG_Decrypt__doc__[] =
 static PyObject *
 ALG_Decrypt(ALGobject *self, PyObject *args)
 {
-	char *buffer, *str;
+	unsigned char *buffer, *str;
 	int len;
 	PyObject *result;
 
@@ -162,7 +162,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	}
 	memcpy(buffer, str, len);
 	stream_decrypt(&(self->st), buffer, len);
-	result = PyString_FromStringAndSize(buffer, len);
+	result = PyString_FromStringAndSize((char *)buffer, len);
 	free(buffer);
 	return (result);
 }

@@ -203,7 +203,7 @@ hash_digest (const hash_state *self)
 
 	hash_copy((hash_state*)self,&temp);
 	sha_done(&temp,digest);
-	return PyString_FromStringAndSize(digest, 32);
+	return PyString_FromStringAndSize((char *)digest, 32);
 }
 
 #include "hash_template.c"
