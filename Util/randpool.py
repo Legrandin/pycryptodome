@@ -12,10 +12,13 @@
 
 __revision__ = "$Id$"
 
+from Crypto.pct_warnings import RandomPool_DeprecationWarning
+import warnings
+
 import time, array, types, warnings, os.path
 from Crypto.Util.number import long_to_bytes
 try:
-    import Crypto.Util.winrandom as winrandom
+    from Random.OSRNG import winrandom
 except:
     winrandom = None
 
@@ -51,8 +54,9 @@ class RandomPool:
     randomize([N]) : get N bytes of randomness from external source
     """
 
-
     def __init__(self, numbytes = 160, cipher=None, hash=None):
+        warnings.warn("RandomPool is deprecated.  Use Random.new() or Random.RandomPoolCompat instead.", RandomPool_DeprecationWarning)
+
         if hash is None:
             from Crypto.Hash import SHA as hash
 
