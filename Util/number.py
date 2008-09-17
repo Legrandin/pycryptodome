@@ -18,6 +18,9 @@ try:
 except ImportError:
     _fastmath = None
 
+# New functions
+from _number_new import *
+
 # Commented out and replaced with faster versions below
 ## def long2str(n):
 ##     s=''
