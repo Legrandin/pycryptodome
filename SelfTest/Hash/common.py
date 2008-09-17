@@ -114,8 +114,8 @@ class MACSelfTest(unittest.TestCase):
             self.assertEqual(expected, out3)
             self.assertEqual(expected, out4)
 
-def make_hash_testsuite(module, module_name, test_data):
-    ts = unittest.TestSuite()
+def make_hash_tests(module, module_name, test_data):
+    tests = []
     for i in range(len(test_data)):
         row = test_data[i]
         if len(row) < 3:
@@ -124,16 +124,16 @@ def make_hash_testsuite(module, module_name, test_data):
         else:
             (expected, input, description) = row
         name = "%s #%d: %s" % (module_name, i+1, description)
-        ts.addTest(HashSelfTest(module, name, expected, input))
-    return ts
+        tests.append(HashSelfTest(module, name, expected, input))
+    return tests
 
-def make_mac_testsuite(module, module_name, test_data, hashmods):
-    ts = unittest.TestSuite()
+def make_mac_tests(module, module_name, test_data, hashmods):
+    tests = []
     for i in range(len(test_data)):
         row = test_data[i]
         (key, data, results, description) = row
         name = "%s #%d: %s" % (module_name, i+1, description)
-        ts.addTest(MACSelfTest(module, name, results, data, key, hashmods))
-    return ts
+        tests.append(MACSelfTest(module, name, results, data, key, hashmods))
+    return tests
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

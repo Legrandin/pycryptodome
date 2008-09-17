@@ -30,20 +30,20 @@
 
 __revision__ = "$Id$"
 
-import unittest
-
-def make_testsuite():
-    ts = unittest.TestSuite()
-    import test_HMAC;   ts.addTest(test_HMAC.make_testsuite())
-    import test_MD2;    ts.addTest(test_MD2.make_testsuite())
-    import test_MD4;    ts.addTest(test_MD4.make_testsuite())
-    import test_MD5;    ts.addTest(test_MD5.make_testsuite())
-    import test_RIPEMD; ts.addTest(test_RIPEMD.make_testsuite())
-    import test_SHA;    ts.addTest(test_SHA.make_testsuite())
-    import test_SHA256; ts.addTest(test_SHA256.make_testsuite())
-    return ts
+def get_tests():
+    tests = []
+    import test_HMAC;   tests += test_HMAC.get_tests()
+    import test_MD2;    tests += test_MD2.get_tests()
+    import test_MD4;    tests += test_MD4.get_tests()
+    import test_MD5;    tests += test_MD5.get_tests()
+    import test_RIPEMD; tests += test_RIPEMD.get_tests()
+    import test_SHA;    tests += test_SHA.get_tests()
+    import test_SHA256; tests += test_SHA256.get_tests()
+    return tests
 
 if __name__ == '__main__':
-    unittest.main(defaultTest='make_testsuite')
+    import unittest
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

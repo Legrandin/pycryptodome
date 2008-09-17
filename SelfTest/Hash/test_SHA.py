@@ -51,13 +51,14 @@ test_data = [
         '"01234567" * 80'),
 ]
 
-def make_testsuite():
+def get_tests():
     from Crypto.Hash import SHA
-    from common import make_hash_testsuite
-    return make_hash_testsuite(SHA, "SHA", test_data)
+    from common import make_hash_tests
+    return make_hash_tests(SHA, "SHA", test_data)
 
 if __name__ == '__main__':
     import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

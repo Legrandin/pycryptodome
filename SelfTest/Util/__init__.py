@@ -30,16 +30,17 @@
 
 __revision__ = "$Id$"
 
-import unittest
 import os
 
-def make_testsuite():
-    ts = unittest.TestSuite()
+def get_tests():
+    tests = []
     if os.name == 'nt':
-        import test_winrandom;   ts.addTest(test_winrandom.make_testsuite())
-    return ts
+        import test_winrandom; tests += test_winrandom.get_tests()
+    return tests
 
 if __name__ == '__main__':
-    unittest.main(defaultTest='make_testsuite')
+    import unittest
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

@@ -55,13 +55,14 @@ test_data = [
         '33-byte key (truncated to 32 bytes)'),
 ]
 
-def make_testsuite():
+def get_tests():
     from Crypto.Cipher import XOR
-    from common import make_stream_testsuite
-    return make_stream_testsuite(XOR, "XOR", test_data)
+    from common import make_stream_tests
+    return make_stream_tests(XOR, "XOR", test_data)
 
 if __name__ == '__main__':
     import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

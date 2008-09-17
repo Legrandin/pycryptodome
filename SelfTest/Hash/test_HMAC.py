@@ -180,15 +180,15 @@ test_data = [
         'RFC 4231 #7 (HMAC-SHA256)'),
 ]
 
-
-def make_testsuite():
+def get_tests():
     from Crypto.Hash import HMAC, MD5, SHA as SHA1, SHA256
-    from common import make_mac_testsuite
+    from common import make_mac_tests
     hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256, default=None)
-    return make_mac_testsuite(HMAC, "HMAC", test_data, hashmods)
+    return make_mac_tests(HMAC, "HMAC", test_data, hashmods)
 
 if __name__ == '__main__':
     import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

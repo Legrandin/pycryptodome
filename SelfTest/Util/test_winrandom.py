@@ -42,11 +42,11 @@ class WinRandomImportTest(unittest.TestCase):
         y = randobj.get_bytes(16)
         self.assertNotEqual(x, y)
 
-def make_testsuite():
-    return unittest.TestSuite([WinRandomImportTest()])
+def get_tests():
+    return [WinRandomImportTest()]
 
 if __name__ == '__main__':
-    import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

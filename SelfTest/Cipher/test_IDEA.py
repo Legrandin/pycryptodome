@@ -74,13 +74,14 @@ test_data = [
     ('6c2e3617da2bac35', 'b2229067630f7045', '000027ed8f5c3e8baf16560d14c90b43'),
 ]
 
-def make_testsuite():
+def get_tests():
     from Crypto.Cipher import IDEA
-    from common import make_block_testsuite
-    return make_block_testsuite(IDEA, "IDEA", test_data)
+    from common import make_block_tests
+    return make_block_tests(IDEA, "IDEA", test_data)
 
 if __name__ == '__main__':
     import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

@@ -70,13 +70,14 @@ test_data = [
         "Test vector 4"),
 ]
 
-def make_testsuite():
+def get_tests():
     from Crypto.Cipher import ARC4
-    from common import make_stream_testsuite
-    return make_stream_testsuite(ARC4, "ARC4", test_data)
+    from common import make_stream_tests
+    return make_stream_tests(ARC4, "ARC4", test_data)
 
 if __name__ == '__main__':
     import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

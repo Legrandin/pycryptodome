@@ -109,8 +109,8 @@ class CipherSelfTest(unittest.TestCase):
         self.assertEqual(self.plaintext, pt1)
         self.assertEqual(self.plaintext, pt2)
 
-def make_block_testsuite(module, module_name, test_data):
-    ts = unittest.TestSuite()
+def make_block_tests(module, module_name, test_data):
+    tests = []
     for i in range(len(test_data)):
         row = test_data[i]
 
@@ -146,11 +146,11 @@ def make_block_testsuite(module, module_name, test_data):
         params['description'] = name
 
         # Add the test to the test suite
-        ts.addTest(CipherSelfTest(module, params))
-    return ts
+        tests.append(CipherSelfTest(module, params))
+    return tests
 
-def make_stream_testsuite(module, module_name, test_data):
-    ts = unittest.TestSuite()
+def make_stream_tests(module, module_name, test_data):
+    tests = []
     for i in range(len(test_data)):
         row = test_data[i]
 
@@ -183,7 +183,7 @@ def make_stream_testsuite(module, module_name, test_data):
         params['description'] = name
 
         # Add the test to the test suite
-        ts.addTest(CipherSelfTest(module, params))
-    return ts
+        tests.append(CipherSelfTest(module, params))
+    return tests
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

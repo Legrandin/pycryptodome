@@ -91,13 +91,14 @@ test_data = [
     ('0011223344556677', '584644c34503122c', '53e5ffe553', 'PCTv201-15'),
 ]
 
-def make_testsuite():
+def get_tests():
     from Crypto.Cipher import ARC2
-    from common import make_block_testsuite
-    return make_block_testsuite(ARC2, "ARC2", test_data)
+    from common import make_block_tests
+    return make_block_tests(ARC2, "ARC2", test_data)
 
 if __name__ == '__main__':
     import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

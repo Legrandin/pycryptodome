@@ -1081,14 +1081,14 @@ test_data = [
         'ecb-tbl-256: I=128'),
 ]
 
-
-def make_testsuite():
+def get_tests():
     from Crypto.Cipher import AES
-    from common import make_block_testsuite
-    return make_block_testsuite(AES, "AES", test_data)
+    from common import make_block_tests
+    return make_block_tests(AES, "AES", test_data)
 
 if __name__ == '__main__':
     import unittest
-    unittest.main(defaultTest='make_testsuite')
+    suite = lambda: unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
