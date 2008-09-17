@@ -26,16 +26,7 @@
 
 __revision__ = "$Id$"
 
-# Python 2.1 compatibility
-try:
-    True, False
-except NameError:
-    True = 1
-    False = 0
-try:
-    object
-except NameError:
-    class object: pass
+from Crypto.Util.python_compat import *
 
 class BaseRNG(object):
 
