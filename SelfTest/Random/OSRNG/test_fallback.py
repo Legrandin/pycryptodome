@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/__init__.py: Self-test for PyCrypto
+#  SelfTest/Util/test_fallback.py: Self-test for the OSRNG.fallback.new() function
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -26,58 +26,24 @@
 # =======================================================================
 #
 
-"""Self tests
-
-These tests should perform quickly and can ideally be used every time an
-application runs.
-"""
+"""Self-test suite for Crypto.Random.OSRNG.fallback"""
 
 __revision__ = "$Id$"
 
-import sys
 import unittest
-import StringIO
 
-class SelfTestError(Exception):
-    def __init__(self, message, result):
-        Exception.__init__(self, message, result)
-        self.message = message
-        self.result = result
-
-def run(module=None, verbosity=0, stream=None, **kwargs):
-    """Execute self-tests.
-
-    This raises SelfTestError if any test is unsuccessful.
-
-    You may optionally pass in a sub-module of SelfTest if you only want to
-    perform some of the tests.  For example, the following would test only the
-    hash modules:
-
-        Crypto.SelfTest.run(Crypto.SelfTest.Hash)
-
-    """
-    suite = unittest.TestSuite()
-    if module is None:
-        suite.addTests(get_tests())
-    else:
-        suite.addTests(module.get_tests())
-    if stream is None:
-        kwargs['stream'] = StringIO.StringIO()
-    runner = unittest.TextTestRunner(verbosity=verbosity, **kwargs)
-    result = runner.run(suite)
-    if not result.wasSuccessful():
-        if stream is None:
-            sys.stderr.write(stream.getvalue())
-        raise SelfTestError("Self-test failed", result)
-    return result
+class SimpleTest(unittest.TestCase):
+    def runTest(self):
+        """Crypto.Random.OSRNG.fallback.new()"""
+        # Import the OSRNG.nt module and try to use it
+        import Crypto.Random.OSRNG.fallback
+        randobj = Crypto.Random.OSRNG.fallback.new()
+        x = randobj.read(16)
+        y = randobj.read(16)
+        self.assertNotEqual(x, y)
 
 def get_tests():
-    tests = []
-    import Cipher; tests += Cipher.get_tests()
-    import Hash;   tests += Hash.get_tests()
-    import Random; tests += Random.get_tests()
-    import Util;   tests += Util.get_tests()
-    return tests
+    return [SimpleTest()]
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
