@@ -37,8 +37,11 @@ def generate(bits, randfunc, progress_func=None):
         progress_func('p,q\n')
     p = q = 1L
     while number.size(p*q) < bits:
+        # Note that q might be one bit longer than p if somebody specifies an odd
+        # number of bits for the key. (Why would anyone do that?  You don't get
+        # more security.)
         p = pubkey.getPrime(bits/2, randfunc)
-        q = pubkey.getPrime(bits/2, randfunc)
+        q = pubkey.getPrime(bits - (bits/2), randfunc)
 
     # p shall be smaller than q (for calc of u)
     if p > q:
@@ -214,8 +217,11 @@ def generate_c(bits, randfunc, progress_func = None):
 
     p = q = 1L
     while number.size(p*q) < bits:
+        # Note that q might be one bit longer than p if somebody specifies an odd
+        # number of bits for the key. (Why would anyone do that?  You don't get
+        # more security.)
         p = pubkey.getPrime(bits/2, randfunc)
-        q = pubkey.getPrime(bits/2, randfunc)
+        q = pubkey.getPrime(bits - (bits/2), randfunc)
 
     # p shall be smaller than q (for calc of u)
     if p > q:
