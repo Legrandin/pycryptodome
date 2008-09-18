@@ -80,7 +80,7 @@ except TypeError:
         else:
             # t is a tuple
             for typ in t:
-                if not __builtin__.isinstance(obj, _builtin_type_map.get(typ, typ)):
+                if __builtin__.isinstance(obj, _builtin_type_map.get(typ, typ)):
                     return True
             return False
 
