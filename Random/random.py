@@ -31,7 +31,6 @@ __revision__ = "$Id$"
 __all__ = ['StrongRandom', 'getrandbits', 'randrange', 'randint', 'choice', 'shuffle', 'sample']
 
 from Crypto import Random
-from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes, size
 
 from Crypto.Util.python_compat import *
 
@@ -140,5 +139,8 @@ randint = _r.randint
 choice = _r.choice
 shuffle = _r.shuffle
 sample = _r.sample
+
+# These are at the bottom to avoid problems with recursive imports
+from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes, size
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

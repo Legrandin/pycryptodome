@@ -44,9 +44,14 @@ def size (N):
         power = power << 1
     return bits
 
-def getRandomNumber(N, randfunc):
+def getRandomNumber(N, randfunc=None):
     """getRandomNumber(N:int, randfunc:callable):long
-    Return an N-bit random number."""
+    Return an N-bit random number.
+
+    If randfunc is omitted, then Random.new().read is used.
+    """
+    if randfunc is None:
+        randfunc = Random.new().read
 
     S = randfunc(N/8)
     odd_bits = N % 8
@@ -84,20 +89,31 @@ def inverse(u, v):
 # Given a number of bits to generate and a random generation function,
 # find a prime number of the appropriate size.
 
-def getPrime(N, randfunc):
+def getPrime(N, randfunc=None):
     """getPrime(N:int, randfunc:callable):long
     Return a random N-bit prime number.
+
+    If randfunc is omitted, then Random.new().read is used.
     """
+    if randfunc is None:
+        randfunc = Random.new().read
 
     number=getRandomNumber(N, randfunc) | 1
-    while (not isPrime(number)):
+    while (not isPrime(number, randfunc=randfunc)):
         number=number+2
     return number
 
-def isPrime(N):
-    """isPrime(N:long):bool
+def isPrime(N, randfunc=None):
+    """isPrime(N:long, randfunc:callable):bool
     Return true if N is prime.
+
+    If randfunc is omitted, then Random.new().read is used.
     """
+    if randfunc is None:
+        randfunc = Random.new().read
+
+    randint = StrongRandom(randfunc=randfunc).randint
+
     if N == 1:
         return 0
     if N in sieve:
@@ -106,9 +122,13 @@ def isPrime(N):
         if (N % i)==0:
             return 0
 
+    # We want probability 2**-k that the number is composite but we still
+    # return True.
+    k = 192
+
     # Use the accelerator if available
     if _fastmath is not None:
-        return _fastmath.isPrime(N)
+        return _fastmath.isPrime(N)     # FIXME: This still uses the old non-random algorithm
 
     # Compute the highest bit that's set in N
     N1 = N - 1L
@@ -118,8 +138,8 @@ def isPrime(N):
     n = n >> 1L
 
     # Rabin-Miller test
-    for c in sieve[:7]:
-        a=long(c) ; d=1L ; t=n
+    for c in xrange(ceil_div(k, 2)):
+        a = long(randint(2, N-1)) ; d=1L ; t=n
         while (t):  # Iterate over the bits in N1
             x=(d*d) % N
             if x==1L and d!=1L and d!=N1:
@@ -202,3 +222,8 @@ def long2str(n, blocksize=0):
 def str2long(s):
     warnings.warn("str2long() has been replaced by bytes_to_long()")
     return bytes_to_long(s)
+
+# These are at the bottom to avoid problems with recursive imports
+from Crypto import Random
+from Crypto.Random.random import StrongRandom
+
