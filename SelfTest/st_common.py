@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Util/__init__.py: Self-test for utility modules
+#  SelfTest/st_common.py: Common functions for SelfTest modules
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -26,22 +26,37 @@
 # =======================================================================
 #
 
-"""Self-test for utility modules"""
+"""Common functions for SelfTest modules"""
 
 __revision__ = "$Id$"
 
-import os
+import unittest
+import string
+import binascii
 
-def get_tests():
-    tests = []
-    if os.name == 'nt':
-        import test_winrandom; tests += test_winrandom.get_tests()
-    import test_number; tests += test_number.get_tests()
-    return tests
+class _list_testloader(unittest.TestLoader):
+    suiteClass = list
 
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+def list_test_cases(class_):
+    """Return a list of TestCase instances given a TestCase class
+
+    This is useful when you have defined test* methods on your TestCase class.
+    """
+    return _list_testloader().loadTestsFromTestCase(class_)
+
+def strip_whitespace(s):
+    """Remove whitespace from a string"""
+    table = string.maketrans(string.whitespace, " " * len(string.whitespace))
+    s = s.translate(table).replace(" ", "")
+    return s
+
+def a2b_hex(s):
+    """Convert hexadecimal to binary, ignoring whitespace"""
+    return binascii.a2b_hex(strip_whitespace(s))
+
+def b2a_hex(s):
+    """Convert binary to hexadecimal"""
+    # For completeness
+    return binascii.b2a_hex(s)
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
