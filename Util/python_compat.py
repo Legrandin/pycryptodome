@@ -76,7 +76,7 @@ except TypeError:
     def isinstance(obj, t):
         if not __builtin__.isinstance(t, type(())):
             # t is not a tuple
-            return isinstance(obj, _builtin_type_map.get(t, t))
+            return __builtin__.isinstance(obj, _builtin_type_map.get(t, t))
         else:
             # t is a tuple
             for typ in t:
