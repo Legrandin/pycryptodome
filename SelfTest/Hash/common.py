@@ -109,10 +109,16 @@ class MACSelfTest(unittest.TestCase):
             out3 = h.hexdigest()
             out4 = binascii.b2a_hex(h.digest())
 
+            # Test .copy()
+            h2 = h.copy()
+            h.update("blah blah blah")  # Corrupt the original hash object
+            out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
+
             self.assertEqual(expected, out1)
             self.assertEqual(expected, out2)
             self.assertEqual(expected, out3)
             self.assertEqual(expected, out4)
+            self.assertEqual(expected, out5)
 
 def make_hash_tests(module, module_name, test_data):
     tests = []
