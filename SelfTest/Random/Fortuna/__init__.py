@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Random/__init__.py: Self-test for random number generation modules
+#  SelfTest/Random/Fortuna/__init__.py: Self-test for Fortuna modules
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -26,21 +26,21 @@
 # =======================================================================
 #
 
-"""Self-test for random number generators"""
+"""Self-test for the Crypto.Random.Fortuna package"""
 
 __revision__ = "$Id$"
 
+import os
+
 def get_tests():
     tests = []
-    import Fortuna;             tests += Fortuna.get_tests()
-    import OSRNG;               tests += OSRNG.get_tests()
-    import test_random;         tests += test_random.get_tests()
-    import test_rpoolcompat;    tests += test_rpoolcompat.get_tests()
+    import test_SHAd256;     tests += test_SHAd256.get_tests()
     return tests
 
 if __name__ == '__main__':
     import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
+
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
