@@ -49,4 +49,12 @@ class RandomPool_DeprecationWarning(CryptoDeprecationWarning):
 class PublicKey_KParam_DeprecationWarning(CryptoDeprecationWarning):
     """Issued when RSA.encrypt and other similar functions are passed an unnecessary second parameter"""
 
+class ClockRewindWarning(CryptoRuntimeWarning):
+    """Warning for when the system clock is found to be non-monotonic."""
+
+# By default, we want this warning to be shown every time we compensate for
+# clock rewinding.
+import warnings as _warnings
+_warnings.filterwarnings('always', category=ClockRewindWarning, append=1)
+
 # vim:set ts=4 sw=4 sts=4 expandtab:
