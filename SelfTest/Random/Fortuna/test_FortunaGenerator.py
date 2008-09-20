@@ -81,6 +81,39 @@ class FortunaGeneratorTests(unittest.TestCase):
         self.assertEqual('0663c68fac53f2a308af47374aa4ccd4a703c0e803b7714ed78f583a039905bb',
             b2a_hex(FortunaGenerator.encode_counter(0xbb0599033a588fd74e71b703e8c003a7d4cca44a3747af08a3f253ac8fc66306L, 32)))
 
+    def test_generator(self):
+        """FortunaGenerator.AESGenerator"""
+        fg = FortunaGenerator.AESGenerator()
+
+        # We shouldn't be able to read data until we've seeded the generator
+        self.assertRaises(Exception, fg.pseudo_random_data, 1)
+        self.assertEqual(0, fg.counter)
+
+        # Seed the generator, which should set the key and increment the counter.
+        fg.reseed("Hello")
+        self.assertEqual("0ea6919d4361551364242a4ba890f8f073676e82cf1a52bb880f7e496648b565", b2a_hex(fg.key))
+        self.assertEqual(1, fg.counter)
+
+        # Read 2 full blocks from the generator
+        self.assertEqual("7cbe2c17684ac223d08969ee8b565616" +       # counter=1
+                         "717661c0d2f4758bd6ba140bf3791abd",        # counter=2
+            b2a_hex(fg.pseudo_random_data(32)))
+
+        # Meanwhile, the generator will have re-keyed itself and incremented its counter
+        self.assertEqual("33a1bb21987859caf2bbfc5615bef56d" +       # counter=3
+                         "e6b71ff9f37112d0c193a135160862b7",        # counter=4
+            b2a_hex(fg.key))
+        self.assertEqual(5, fg.counter)
+
+        # Read another 2 blocks from the generator
+        self.assertEqual("fd6648ba3086e919cee34904ef09a7ff" +       # counter=5
+                         "021f77580558b8c3e9248275f23042bf",        # counter=6
+            b2a_hex(fg.pseudo_random_data(32)))
+
+
+        # Try to read more than 2**20 bytes using the internal function.  This should fail.
+        self.assertRaises(AssertionError, fg._pseudo_random_data, 2**20+1)
+
 def get_tests():
     from Crypto.SelfTest.st_common import list_test_cases
     return list_test_cases(FortunaGeneratorTests)
