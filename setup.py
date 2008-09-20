@@ -149,6 +149,8 @@ class PCTBuildExt (build_ext):
                                   include_dirs=['src/'],
                                   libraries=['gmp'],
                                   sources=["src/_fastmath.c"]))
+        else:
+            print >>sys.stderr, "warning: GMP library not found; Not building Crypto.PublicKey._fastmath."
         self.extensions += exts
 
 class PCTBuildPy(build_py):
