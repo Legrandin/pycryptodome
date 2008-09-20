@@ -34,6 +34,7 @@ import os
 
 def get_tests():
     tests = []
+    import test_FortunaAccumulator; tests += test_FortunaAccumulator.get_tests()
     import test_FortunaGenerator;   tests += test_FortunaGenerator.get_tests()
     import test_SHAd256;            tests += test_SHAd256.get_tests()
     return tests
