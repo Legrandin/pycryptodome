@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/PublicKey/test_RSA.py: Self-test for the RSA primitive
+#  SelfTest/PublicKey/test_self.rsa.py: Self-test for the RSA primitive
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -29,6 +29,8 @@
 """Self-test suite for Crypto.PublicKey.RSA"""
 
 __revision__ = "$Id$"
+
+from Crypto.Util.python_compat import *
 
 import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
@@ -100,51 +102,53 @@ class RSATest(unittest.TestCase):
         self.d = inverse(self.e, (self.p-1)*(self.q-1))
         self.u = inverse(self.p, self.q)    # u = e**-1 (mod q)
 
-    def test_default_0_generate_1arg(self):
+        self.rsa = RSA
+
+    def test_generate_1arg(self):
         """RSA (default implementation) generated key (1 argument)"""
-        rsaObj = RSA.generate(1024)
+        rsaObj = self.rsa.generate(1024)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
         pub = rsaObj.publickey()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
-    def test_default_0_generate_2arg(self):
+    def test_generate_2arg(self):
         """RSA (default implementation) generated key (2 arguments)"""
-        rsaObj = RSA.generate(1024, Random.new().read)
+        rsaObj = self.rsa.generate(1024, Random.new().read)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
         pub = rsaObj.publickey()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
-    def test_default_1_construct_2tuple(self):
+    def test_construct_2tuple(self):
         """RSA (default implementation) constructed key (2-tuple)"""
-        pub = RSA.construct((self.n, self.e))
+        pub = self.rsa.construct((self.n, self.e))
         self._check_public_key(pub)
         self._check_encryption(pub)
 
-    def test_default_1_construct_3tuple(self):
+    def test_construct_3tuple(self):
         """RSA (default implementation) constructed key (3-tuple)"""
-        rsaObj = RSA.construct((self.n, self.e, self.d))
+        rsaObj = self.rsa.construct((self.n, self.e, self.d))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
 
-    def test_default_1_construct_4tuple(self):
+    def test_construct_4tuple(self):
         """RSA (default implementation) constructed key (4-tuple)"""
-        rsaObj = RSA.construct((self.n, self.e, self.d, self.p))
+        rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
 
-    def test_default_1_construct_5tuple(self):
+    def test_construct_5tuple(self):
         """RSA (default implementation) constructed key (5-tuple)"""
-        rsaObj = RSA.construct((self.n, self.e, self.d, self.p, self.q))
+        rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
 
-    def test_default_1_construct_6tuple(self):
+    def test_construct_6tuple(self):
         """RSA (default implementation) constructed key (6-tuple)"""
-        rsaObj = RSA.construct((self.n, self.e, self.d, self.p, self.q, self.u))
+        rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p, self.q, self.u))
         self._check_private_key(rsaObj)
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
@@ -262,8 +266,83 @@ class RSATest(unittest.TestCase):
         unblinded_plaintext = rsaObj.unblind(blinded_ptext, blinding_factor)
         self.assertEqual(b2a_hex(plaintext), b2a_hex(unblinded_plaintext))
 
+class RSAFastMathTest(RSATest):
+    def setUp(self):
+        RSATest.setUp(self)
+        self.rsa = RSA.RSAImplementation(use_fast_math=True)
+
+    def test_generate_1arg(self):
+        """RSA (_fastmath implementation) generated key (1 argument)"""
+        RSATest.test_generate_1arg(self)
+
+    def test_generate_2arg(self):
+        """RSA (_fastmath implementation) generated key (2 arguments)"""
+        RSATest.test_generate_2arg(self)
+
+    def test_construct_2tuple(self):
+        """RSA (_fastmath implementation) constructed key (2-tuple)"""
+        RSATest.test_construct_2tuple(self)
+
+    def test_construct_3tuple(self):
+        """RSA (_fastmath implementation) constructed key (3-tuple)"""
+        RSATest.test_construct_3tuple(self)
+
+    def test_construct_4tuple(self):
+        """RSA (_fastmath implementation) constructed key (4-tuple)"""
+        RSATest.test_construct_4tuple(self)
+
+    def test_construct_5tuple(self):
+        """RSA (_fastmath implementation) constructed key (5-tuple)"""
+        RSATest.test_construct_5tuple(self)
+
+    def test_construct_6tuple(self):
+        """RSA (_fastmath implementation) constructed key (6-tuple)"""
+        RSATest.test_construct_6tuple(self)
+
+class RSASlowMathTest(RSATest):
+    def setUp(self):
+        RSATest.setUp(self)
+        self.rsa = RSA.RSAImplementation(use_fast_math=False)
+
+    def test_generate_1arg(self):
+        """RSA (_slowmath implementation) generated key (1 argument)"""
+        RSATest.test_generate_1arg(self)
+
+    def test_generate_2arg(self):
+        """RSA (_slowmath implementation) generated key (2 arguments)"""
+        RSATest.test_generate_2arg(self)
+
+    def test_construct_2tuple(self):
+        """RSA (_slowmath implementation) constructed key (2-tuple)"""
+        RSATest.test_construct_2tuple(self)
+
+    def test_construct_3tuple(self):
+        """RSA (_slowmath implementation) constructed key (3-tuple)"""
+        RSATest.test_construct_3tuple(self)
+
+    def test_construct_4tuple(self):
+        """RSA (_slowmath implementation) constructed key (4-tuple)"""
+        RSATest.test_construct_4tuple(self)
+
+    def test_construct_5tuple(self):
+        """RSA (_slowmath implementation) constructed key (5-tuple)"""
+        RSATest.test_construct_5tuple(self)
+
+    def test_construct_6tuple(self):
+        """RSA (_slowmath implementation) constructed key (6-tuple)"""
+        RSATest.test_construct_6tuple(self)
+
+
 def get_tests():
-    return list_test_cases(RSATest)
+    tests = []
+    tests += list_test_cases(RSATest)
+    try:
+        from Crypto.PublicKey import _fastmath
+        tests += list_test_cases(RSAFastMathTest)
+    except ImportError:
+        pass
+    tests += list_test_cases(RSASlowMathTest)
+    return tests
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
