@@ -154,6 +154,31 @@ class FortunaAccumulatorTests(unittest.TestCase):
         self.assertEqual("f23ad749f33066ff53d307914fbf5b21da9667c7e86ba247655c9490e9d94a7c", b2a_hex(fa.generator.key))
         self.assertEqual(5, fa.generator.counter)
 
+    def test_accumulator_pool_length(self):
+        """FortunaAccumulator.FortunaAccumulator minimum pool length"""
+        fa = FortunaAccumulator.FortunaAccumulator()
+
+        # This test case is hard-coded to assume that FortunaAccumulator.min_pool_size is 64.
+        self.assertEqual(fa.min_pool_size, 64)
+
+        # The PRNG should not allow us to get random data from it yet
+        self.assertRaises(AssertionError, fa.random_data, 1)
+
+        # Add 60 bytes, 4 at a time (2 header + 2 payload) to each of the 32 pools
+        for i in range(15):
+            for p in range(32):
+                # Add the bytes to the pool
+                fa.add_random_event(2, p, "XX")
+
+                # The PRNG should not allow us to get random data from it yet
+                self.assertRaises(AssertionError, fa.random_data, 1)
+
+        # Add 4 more bytes to pool 0
+        fa.add_random_event(2, 0, "XX")
+
+        # We should now be able to get data from the accumulator
+        fa.random_data(1)
+
 def get_tests():
     from Crypto.SelfTest.st_common import list_test_cases
     return list_test_cases(FortunaAccumulatorTests)
