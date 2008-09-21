@@ -33,6 +33,7 @@ import os
 import threading
 import struct
 import time
+from zlib import crc32
 from math import floor
 
 from Crypto.Random import OSRNG
@@ -48,13 +49,30 @@ class _EntropySource(object):
         self._fortuna.add_random_event(self._src_num, self._pool_num, data)
         self._pool_num = (self._pool_num + 1) & 31
 
+    def feed_crc32(self, data):
+        self.feed(struct.pack("@i", crc32(data)))
+
+    def optional_feed_file(self, filename):
+        try:
+            data = open(filename, "rb").read()
+        except Exception:
+            return
+        self.feed_crc32(data)
+
 class _EntropyCollector(object):
 
     def __init__(self, accumulator):
         self._osrng = OSRNG.new()
-        self._osrng_es = _EntropySource(accumulator, 255)
-        self._time_es = _EntropySource(accumulator, 254)
-        self._clock_es = _EntropySource(accumulator, 253)
+        self._osrng_es              = _EntropySource(accumulator, 255)
+        self._time_es               = _EntropySource(accumulator, 254)
+        self._clock_es              = _EntropySource(accumulator, 253)
+        self._proc_list_es          = _EntropySource(accumulator, 252)
+        self._proc_diskstats_es     = _EntropySource(accumulator, 251)
+        self._proc_interrupts_es    = _EntropySource(accumulator, 250)
+        self._proc_meminfo_es       = _EntropySource(accumulator, 249)
+        self._proc_pagetypeinfo_es  = _EntropySource(accumulator, 248)
+        self._proc_slabinfo_es      = _EntropySource(accumulator, 247)
+        self._proc_timerlist_es     = _EntropySource(accumulator, 246)
 
     def reinit(self):
         # Add 256 bits to each of the 32 pools, twice.  (For a total of 16384
@@ -78,6 +96,26 @@ class _EntropyCollector(object):
         t = time.clock()
         self._clock_es.feed(struct.pack("@I", int(2**30 * (t - floor(t)))))
 
+        # Collect information from /proc
+        self._collect_from_proc()
+
+    def _collect_from_proc(self):
+        if os.name != "posix":
+            return
+
+        # Collect entropy by listing /proc
+        try:
+            self._proc_list_es.feed_crc32(repr(os.listdir("/proc/")))
+        except Exception:
+            pass
+
+        # Collect entropy from files in /proc
+        self._proc_diskstats_es.optional_feed_file("/proc/diskstats")
+        self._proc_interrupts_es.optional_feed_file("/proc/interrupts")
+        self._proc_meminfo_es.optional_feed_file("/proc/meminfo")
+        self._proc_pagetypeinfo_es.optional_feed_file("/proc/pagetypeinfo")
+        self._proc_slabinfo_es.optional_feed_file("/proc/slabinfo")
+        self._proc_timerlist_es.optional_feed_file("/proc/timer_list")
 
 class _UserFriendlyRNG(object):
 
