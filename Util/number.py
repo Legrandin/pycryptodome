@@ -51,6 +51,7 @@ def getRandomNumber(N, randfunc=None):
     If randfunc is omitted, then Random.new().read is used.
     """
     if randfunc is None:
+        _import_Random()
         randfunc = Random.new().read
 
     S = randfunc(N/8)
@@ -96,6 +97,7 @@ def getPrime(N, randfunc=None):
     If randfunc is omitted, then Random.new().read is used.
     """
     if randfunc is None:
+        _import_Random()
         randfunc = Random.new().read
 
     number=getRandomNumber(N, randfunc) | 1
@@ -109,6 +111,7 @@ def isPrime(N, randfunc=None):
 
     If randfunc is omitted, then Random.new().read is used.
     """
+    _import_Random()
     if randfunc is None:
         randfunc = Random.new().read
 
@@ -219,7 +222,9 @@ def str2long(s):
     warnings.warn("str2long() has been replaced by bytes_to_long()")
     return bytes_to_long(s)
 
-# These are at the bottom to avoid problems with recursive imports
-from Crypto import Random
-from Crypto.Random.random import StrongRandom
+def _import_Random():
+    # This is called in a function instead of at the module level in order to avoid problems with recursive imports
+    global Random, StrongRandom
+    from Crypto import Random
+    from Crypto.Random.random import StrongRandom
 
