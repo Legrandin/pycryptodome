@@ -45,6 +45,11 @@ test_data = [
 #    ('cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0',
 #        'a' * 10**6,
 #         '"a" * 10**6'),
+
+    # Test for an old PyCrypto bug.
+    ('f7fd017a3c721ce7ff03f3552c0813adcc48b7f33f07e5e2ba71e23ea393d103',
+        'This message is precisely 55 bytes long, to test a bug.',
+        'Length = 55 (mod 64)'),
 ]
 
 def get_tests():
