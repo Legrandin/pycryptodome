@@ -34,6 +34,10 @@ def new(*args, **kwargs):
     """Return a file-like object that outputs cryptographically random bytes."""
     return OSRNG.new(*args, **kwargs)
 
+def atfork():
+    """Call this whenever you call os.fork()"""
+    _UserFriendlyRNG.reinit()
+
 class RandomPoolCompat:
     """RandomPool-like interface for Crypto.Random.
 

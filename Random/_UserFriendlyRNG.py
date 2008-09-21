@@ -128,7 +128,7 @@ class _UserFriendlyRNG(object):
     def _check_pid(self):
         # Lame fork detection to remind the user not to use the same PRNG between forked processes.
         if os.getpid() != self._pid:
-            raise AssertionError("PID check failed. RNG must be re-initialized after fork()")
+            raise AssertionError("PID check failed. RNG must be re-initialized after fork(). Hint: Try Random.atfork()")
 
 
 class _LockingUserFriendlyRNG(_UserFriendlyRNG):
