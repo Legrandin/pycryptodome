@@ -122,13 +122,9 @@ def isPrime(N, randfunc=None):
         if (N % i)==0:
             return 0
 
-    # We want probability 2**-k that the number is composite but we still
-    # return True.
-    k = 192
-
     # Use the accelerator if available
     if _fastmath is not None:
-        return _fastmath.isPrime(N)     # FIXME: This still uses the old non-random algorithm
+        return _fastmath.isPrime(N)
 
     # Compute the highest bit that's set in N
     N1 = N - 1L
@@ -138,8 +134,8 @@ def isPrime(N, randfunc=None):
     n = n >> 1L
 
     # Rabin-Miller test
-    for c in xrange(ceil_div(k, 2)):
-        a = long(randint(2, N-1)) ; d=1L ; t=n
+    for c in sieve[:7]:
+        a=long(c) ; d=1L ; t=n
         while (t):  # Iterate over the bits in N1
             x=(d*d) % N
             if x==1L and d!=1L and d!=N1:
