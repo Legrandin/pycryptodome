@@ -32,6 +32,7 @@ from Crypto.Util.python_compat import *
 import struct
 
 from Crypto.Util.number import ceil_shift, exact_log2, exact_div
+from Crypto.Util import Counter
 from Crypto.Cipher import AES
 
 import SHAd256
@@ -59,9 +60,11 @@ class AESGenerator(object):
     # without rekeying.
     max_blocks_per_request = 2**16  # Allow no more than this number of blocks per _pseudo_random_data request
 
+    _four_kiblocks_of_zeros = "\0" * block_size * 4096
+
     def __init__(self):
-        self.counter = 0
-        self.key = "\0" * self.key_size
+        self.counter = Counter.new(nbits=self.block_size*8, initial_value=0, little_endian=True)
+        self.key = None
 
         # Set some helper constants
         self.block_size_shift = exact_log2(self.block_size)
@@ -73,8 +76,10 @@ class AESGenerator(object):
         self.max_bytes_per_request = self.max_blocks_per_request * self.block_size
 
     def reseed(self, seed):
-        self.key = SHAd256.new(self.key + seed).digest()
-        self.counter += 1
+        if self.key is None:
+            self.key = "\0" * self.key_size
+        self._set_key(SHAd256.new(self.key + seed).digest())
+        self.counter.next()
         assert len(self.key) == self.key_size
 
     def pseudo_random_data(self, bytes):
@@ -90,6 +95,10 @@ class AESGenerator(object):
 
         return "".join(retval)
 
+    def _set_key(self, key):
+        self.key = key
+        self._cipher = AES.new(key, AES.MODE_CTR, counter=self.counter.next)
+
     def _pseudo_random_data(self, bytes):
         if not (0 <= bytes <= self.max_bytes_per_request):
             raise AssertionError("You cannot ask for more than 1 MiB of data per request")
@@ -101,7 +110,7 @@ class AESGenerator(object):
 
         # Switch to a new key to avoid later compromises of this output (i.e.
         # state compromise extension attacks)
-        self.key = self._generate_blocks(self.blocks_per_key)
+        self._set_key(self._generate_blocks(self.blocks_per_key))
 
         assert len(retval) == bytes
         assert len(self.key) == self.key_size
@@ -109,49 +118,14 @@ class AESGenerator(object):
         return retval
 
     def _generate_blocks(self, num_blocks):
-        if self.counter == 0:
+        if self.key is None:
             raise AssertionError("generator must be seeded before use")
         assert 0 <= num_blocks <= self.max_blocks_per_request
         retval = []
-        for i in xrange(num_blocks):
-            retval.append(self._generate_single_block(self.counter))
-            self.counter += 1
+        for i in xrange(num_blocks >> 12):      # xrange(num_blocks / 4096)
+            retval.append(self._cipher.encrypt(self._four_kiblocks_of_zeros))
+        remaining_bytes = (num_blocks & 4095) << self.block_size_shift  # (num_blocks % 4095) * self.block_size
+        retval.append(self._cipher.encrypt(self._four_kiblocks_of_zeros[:remaining_bytes]))
         return "".join(retval)
-
-    def _generate_single_block(self, counter):
-        assert counter != 0
-        return AES.new(self.key, AES.MODE_ECB).encrypt(encode_counter(counter, AES.block_size))
-
-
-def encode_counter(n, size):
-    if not isinstance(n, (int, long)) or not isinstance(size, (int, long)):
-        raise TypeError("unsupported operand type(s): %r and %r" % (type(n).__name__, type(size).__name__))
-
-    # We support Python 2.2, so make sure we're working with long integer semantics.
-    n = long(n)
-
-    # Fortuna uses a counter >= 128 bits that theoretically could roll over
-    # to zero, but would only do so after outputting 2**128 blocks.  In
-    # practice, a roll-over would only happen after outputting 2**128
-    # blocks.  If a computer were ever build that could do 2**128
-    # operations in its lifetime, it would be very awesome, but also unwise
-    # to trust this implementation as-is.  It's much more likely that a
-    # zero-valued counter means that something is broken.
-    if n <= 0:
-        raise AssertionError("invalid Fortuna counter value: %r" % (n,))
-
-    retval = []
-    (q, r) = (size >> 2, size & 3)  # (q, r) = divmod(size, 4)
-    pack = struct.pack
-    for i in range(q):
-        retval.append(pack("<I", n & 0xFFFFffffL))
-        n >>= 32
-    for i in range(r):
-        retval.append(chr(n & 0xff))
-        n >>= 8
-    if n != 0:
-        raise OverflowError("%d does not fit in %d bytes" % (n, size))
-    return "".join(retval)
-
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

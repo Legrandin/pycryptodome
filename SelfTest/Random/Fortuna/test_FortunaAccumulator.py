@@ -145,14 +145,14 @@ class FortunaAccumulatorTests(unittest.TestCase):
         # The final counter value is 5.
         self.assertEqual("aef42a5dcbddab67e8efa118e1b47fde5d697f89beb971b99e6e8e5e89fbf064",
             fa.pools[0].hexdigest())
-        self.assertEqual("\x00" * 32, fa.generator.key)
-        self.assertEqual(0, fa.generator.counter)
+        self.assertEqual(None, fa.generator.key)
+        self.assertEqual(0, fa.generator.counter.get_value())
 
         result = fa.random_data(32)
 
         self.assertEqual("b7b86bd9a27d96d7bb4add1b6b10d157" "2350b1c61253db2f8da233be726dc15f", b2a_hex(result))
         self.assertEqual("f23ad749f33066ff53d307914fbf5b21da9667c7e86ba247655c9490e9d94a7c", b2a_hex(fa.generator.key))
-        self.assertEqual(5, fa.generator.counter)
+        self.assertEqual(5, fa.generator.counter.get_value())
 
     def test_accumulator_pool_length(self):
         """FortunaAccumulator.FortunaAccumulator minimum pool length"""

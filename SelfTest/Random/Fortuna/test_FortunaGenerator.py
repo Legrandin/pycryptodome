@@ -40,59 +40,18 @@ class FortunaGeneratorTests(unittest.TestCase):
         global FortunaGenerator
         from Crypto.Random.Fortuna import FortunaGenerator
 
-    def test_encode_counter(self):
-        """FortunaGenerator.encode_counter"""
-        # should raise TypeError when passed non-integer types
-        self.assertRaises(TypeError, FortunaGenerator.encode_counter, "1", 16)
-        self.assertRaises(TypeError, FortunaGenerator.encode_counter, "1", "16")
-        self.assertRaises(TypeError, FortunaGenerator.encode_counter, 1, "16")
-
-        # Fortuna's counter must be positive, or else encode_counter should return some error
-        self.assertRaises((ValueError, AssertionError), FortunaGenerator.encode_counter, -1, 16)
-        self.assertRaises((ValueError, AssertionError), FortunaGenerator.encode_counter, 0, 16)
-
-        # size == 0 should return some error
-        self.assertRaises((OverflowError, AssertionError, ValueError), FortunaGenerator.encode_counter, 1, 0)
-        self.assertRaises((OverflowError, AssertionError, ValueError), FortunaGenerator.encode_counter, 0, 0)
-
-        # should raise OverflowError if we try to represent a number that is too big
-        self.assertRaises(OverflowError, FortunaGenerator.encode_counter, 256, 1)
-        self.assertRaises(OverflowError, FortunaGenerator.encode_counter, 2L**128, 16)
-
-        # Fortuna uses a little-endian counter
-        self.assertEqual("\x01", FortunaGenerator.encode_counter(1, 1))
-        self.assertEqual("\x01" + "\x00" * 15, FortunaGenerator.encode_counter(1, 16))
-        self.assertEqual("\x02" + "\x00" * 15, FortunaGenerator.encode_counter(2, 16))
-        self.assertEqual("\xff\xff\xff\xff", FortunaGenerator.encode_counter(0xFFFFffffL, 4))
-        self.assertEqual("\xfe\xff\xff\xff", FortunaGenerator.encode_counter(0xFFFFfffeL, 4))
-        self.assertEqual("\xef\xbe\xad\xde", FortunaGenerator.encode_counter(0xDEADBEEFL, 4))
-
-        # Big numbers: 128 bits
-        self.assertEqual("c477a2b1db6678b7eac97f08a9723e3c",
-            b2a_hex(FortunaGenerator.encode_counter(0x3c3e72a9087fc9eab77866dbb1a277c4L, 16)))
-        self.assertEqual("ad2808ef90e2f716dd935eeb4f42008b",
-            b2a_hex(FortunaGenerator.encode_counter(0x8b00424feb5e93dd16f7e290ef0828adL, 16)))
-        self.assertEqual("4049081397803a90df767c2b25f34059",
-            b2a_hex(FortunaGenerator.encode_counter(0x5940f3252b7c76df903a809713084940L, 16)))
-
-        # Big number: 256 bits
-        self.assertEqual('98014eb6d8e53710e8c1cc0217b56db450912d6e063e44cede54aa5f4cc6fd5c',
-            b2a_hex(FortunaGenerator.encode_counter(0x5cfdc64c5faa54dece443e066e2d9150b46db51702ccc1e81037e5d8b64e0198L, 32)))
-        self.assertEqual('0663c68fac53f2a308af47374aa4ccd4a703c0e803b7714ed78f583a039905bb',
-            b2a_hex(FortunaGenerator.encode_counter(0xbb0599033a588fd74e71b703e8c003a7d4cca44a3747af08a3f253ac8fc66306L, 32)))
-
     def test_generator(self):
         """FortunaGenerator.AESGenerator"""
         fg = FortunaGenerator.AESGenerator()
 
         # We shouldn't be able to read data until we've seeded the generator
         self.assertRaises(Exception, fg.pseudo_random_data, 1)
-        self.assertEqual(0, fg.counter)
+        self.assertEqual(0, fg.counter.get_value())
 
         # Seed the generator, which should set the key and increment the counter.
         fg.reseed("Hello")
         self.assertEqual("0ea6919d4361551364242a4ba890f8f073676e82cf1a52bb880f7e496648b565", b2a_hex(fg.key))
-        self.assertEqual(1, fg.counter)
+        self.assertEqual(1, fg.counter.get_value())
 
         # Read 2 full blocks from the generator
         self.assertEqual("7cbe2c17684ac223d08969ee8b565616" +       # counter=1
@@ -103,7 +62,7 @@ class FortunaGeneratorTests(unittest.TestCase):
         self.assertEqual("33a1bb21987859caf2bbfc5615bef56d" +       # counter=3
                          "e6b71ff9f37112d0c193a135160862b7",        # counter=4
             b2a_hex(fg.key))
-        self.assertEqual(5, fg.counter)
+        self.assertEqual(5, fg.counter.get_value())
 
         # Read another 2 blocks from the generator
         self.assertEqual("fd6648ba3086e919cee34904ef09a7ff" +       # counter=5
