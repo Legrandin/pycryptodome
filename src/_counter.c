@@ -27,6 +27,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <string.h>
 #include "Python.h"
 
@@ -130,7 +131,7 @@ CounterObject_dealloc(my_CounterObject *self)
     Py_CLEAR(self->suffix);
 
     /* Free this object */
-    self->ob_type->tp_free((PyObject*)self);
+    PyObject_Del(self);
 }
 
 static inline PyObject *
@@ -193,19 +194,19 @@ err_out:
 }
 
 static PyObject *
-CounterLEObject_get_value(my_CounterObject *self)
+CounterLEObject_get_value(my_CounterObject *self, PyObject *args)
 {
     return _CounterObject_get_value(self, 1);
 }
 
 static PyObject *
-CounterBEObject_get_value(my_CounterObject *self)
+CounterBEObject_get_value(my_CounterObject *self, PyObject *args)
 {
     return _CounterObject_get_value(self, 0);
 }
 
 static PyObject *
-CounterLEObject_next(my_CounterObject *self)
+CounterLEObject_next(my_CounterObject *self, PyObject *args)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
@@ -227,7 +228,7 @@ CounterLEObject_next(my_CounterObject *self)
 }
 
 static PyObject *
-CounterBEObject_next(my_CounterObject *self)
+CounterBEObject_next(my_CounterObject *self, PyObject *args)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
@@ -249,22 +250,36 @@ CounterBEObject_next(my_CounterObject *self)
 }
 
 static PyMethodDef CounterLEObject_methods[] = {
-    {"next", (PyCFunction)CounterLEObject_next, METH_NOARGS,
+    {"next", (PyCFunction)CounterLEObject_next, METH_VARARGS,
         "Return the current counter value, then increment it."},
-    {"get_value", (PyCFunction)CounterLEObject_get_value, METH_NOARGS,
+    {"get_value", (PyCFunction)CounterLEObject_get_value, METH_VARARGS,
         "Get the numerical value of the counter.\n\nThis is a slow operation.\n"},
 
     {NULL} /* sentinel */
 };
 
 static PyMethodDef CounterBEObject_methods[] = {
-    {"next", (PyCFunction)CounterBEObject_next, METH_NOARGS,
+    {"next", (PyCFunction)CounterBEObject_next, METH_VARARGS,
         "Return the current counter value, then increment it."},
-    {"get_value", (PyCFunction)CounterBEObject_get_value, METH_NOARGS,
+    {"get_value", (PyCFunction)CounterBEObject_get_value, METH_VARARGS,
         "Get the numerical value of the counter.\n\nThis is a slow operation.\n"},
 
     {NULL} /* sentinel */
 };
+
+/* Python 2.1 doesn't allow us to assign methods or attributes to an object,
+ * so we hack it here. */
+static PyObject *
+CounterLEObject_getattr(PyObject *self, char *name)
+{
+    return Py_FindMethod(CounterLEObject_methods, self, name);
+}
+
+static PyObject *
+CounterBEObject_getattr(PyObject *self, char *name)
+{
+    return Py_FindMethod(CounterBEObject_methods, self, name);
+}
 
 static PyTypeObject
 my_CounterLEType = {
@@ -275,7 +290,7 @@ my_CounterLEType = {
     0,                              /* tp_itemsize */
     (destructor)CounterObject_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
-    0,                              /* tp_getattr */
+    CounterLEObject_getattr,        /* tp_getattr */
     0,                              /* tp_setattr */
     0,                              /* tp_compare */
     0,                              /* tp_repr */
@@ -290,23 +305,6 @@ my_CounterLEType = {
     0,                              /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,             /* tp_flags */
     "Counter (little endian)",      /* tp_doc */
-    0,                              /* tp_traverse */
-    0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
-    0,                              /* tp_weaklistoffset */
-    0,                              /* tp_iter */
-    0,                              /* tp_iternext */
-    CounterLEObject_methods,        /* tp_methods */
-    0,                              /* tp_members */
-    0,                              /* tp_getset */
-    0,                              /* tp_base */
-    0,                              /* tp_dict */
-    0,                              /* tp_descr_get */
-    0,                              /* tp_descr_set */
-    0,                              /* tp_dictoffset */
-    (initproc)CounterObject_init,   /* tp_init */
-    0,                              /* tp_alloc */
-    0                               /* tp_new */
 };
 
 static PyTypeObject
@@ -318,7 +316,7 @@ my_CounterBEType = {
     0,                              /* tp_itemsize */
     (destructor)CounterObject_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
-    0,                              /* tp_getattr */
+    CounterBEObject_getattr,        /* tp_getattr */
     0,                              /* tp_setattr */
     0,                              /* tp_compare */
     0,                              /* tp_repr */
@@ -333,30 +331,65 @@ my_CounterBEType = {
     0,                              /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,             /* tp_flags */
     "Counter (big endian)",         /* tp_doc */
-    0,                              /* tp_traverse */
-    0,                              /* tp_clear */
-    0,                              /* tp_richcompare */
-    0,                              /* tp_weaklistoffset */
-    0,                              /* tp_iter */
-    0,                              /* tp_iternext */
-    CounterBEObject_methods,        /* tp_methods */
-    0,                              /* tp_members */
-    0,                              /* tp_getset */
-    0,                              /* tp_base */
-    0,                              /* tp_dict */
-    0,                              /* tp_descr_get */
-    0,                              /* tp_descr_set */
-    0,                              /* tp_dictoffset */
-    (initproc)CounterObject_init,   /* tp_init */
-    0,                              /* tp_alloc */
-    0                               /* tp_new */
 };
+
+/*
+ * Python 2.1 doesn't seem to allow a C equivalent of the __init__ method, so
+ * we use the module-level functions newLE and newBE here.
+ */
+static PyObject *
+CounterLE_new(PyObject *self, PyObject *args)
+{
+    my_CounterObject *obj = NULL;
+
+    /* Create the new object */
+    obj = PyObject_New(my_CounterObject, &my_CounterLEType);
+    if (obj == NULL) {
+        return NULL;
+    }
+
+    /* Zero the custom portion of the structure */
+    memset(&obj->prefix, 0, sizeof(my_CounterObject) - offsetof(my_CounterObject, prefix));
+
+    /* Call the object's initializer.  Delete the object if this fails. */
+    if (CounterObject_init(obj, args, NULL) != 0) {
+        return NULL;
+    }
+
+    /* Return the object */
+    return (PyObject *)obj;
+}
+
+static PyObject *
+CounterBE_new(PyObject *self, PyObject *args)
+{
+    my_CounterObject *obj = NULL;
+
+    /* Create the new object */
+    obj = PyObject_New(my_CounterObject, &my_CounterBEType);
+    if (obj == NULL) {
+        return NULL;
+    }
+
+    /* Zero the custom portion of the structure */
+    memset(&obj->prefix, 0, sizeof(my_CounterObject) - offsetof(my_CounterObject, prefix));
+
+    /* Call the object's initializer.  Delete the object if this fails. */
+    if (CounterObject_init(obj, args, NULL) != 0) {
+        return NULL;
+    }
+
+    /* Return the object */
+    return (PyObject *)obj;
+}
 
 /*
  * Module-level method table and module initialization function
  */
 
 static PyMethodDef module_methods[] = {
+    {"_newLE", &CounterLE_new, METH_VARARGS, NULL},
+    {"_newBE", &CounterBE_new, METH_VARARGS, NULL},
     {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
 };
 
@@ -373,19 +406,8 @@ init_counter(void)
     if (m == NULL)
         return;
 
-    /* Create the CounterLE type */
-    my_CounterLEType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&my_CounterLEType) < 0)
-        return;
-    Py_INCREF(&my_CounterLEType);
-    PyModule_AddObject(m, "CounterLE", (PyObject *)&my_CounterLEType);
-
-    /* Create the CounterBE type */
-    my_CounterBEType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&my_CounterBEType) < 0)
-        return;
-    Py_INCREF(&my_CounterBEType);
-    PyModule_AddObject(m, "CounterBE", (PyObject *)&my_CounterBEType);
+    my_CounterLEType.ob_type = &PyType_Type;
+    my_CounterBEType.ob_type = &PyType_Type;
 }
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */

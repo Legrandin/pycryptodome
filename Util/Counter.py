@@ -46,9 +46,9 @@ def new(nbits, prefix="", suffix="", initial_value=1, overflow=0, little_endian=
 
     initval = _encode(initial_value, nbytes, little_endian)
     if little_endian:
-        return _counter.CounterLE(str(prefix), str(suffix), initval)
+        return _counter._newLE(str(prefix), str(suffix), initval)
     else:
-        return _counter.CounterBE(str(prefix), str(suffix), initval)
+        return _counter._newBE(str(prefix), str(suffix), initval)
 
 def _encode(n, nbytes, little_endian=False):
     retval = []
