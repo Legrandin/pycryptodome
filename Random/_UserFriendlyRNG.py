@@ -31,16 +31,60 @@ from Crypto.Util.python_compat import *
 
 import os
 import threading
+import struct
+import time
+from math import floor
 
 from Crypto.Random import OSRNG
 from Crypto.Random.Fortuna import FortunaAccumulator
+
+class _EntropySource(object):
+    def __init__(self, accumulator, src_num):
+        self._fortuna = accumulator
+        self._src_num = src_num
+        self._pool_num = 0
+
+    def feed(self, data):
+        self._fortuna.add_random_event(self._src_num, self._pool_num, data)
+        self._pool_num = (self._pool_num + 1) & 31
+
+class _EntropyCollector(object):
+
+    def __init__(self, accumulator):
+        self._osrng = OSRNG.new()
+        self._osrng_es = _EntropySource(accumulator, 255)
+        self._time_es = _EntropySource(accumulator, 254)
+        self._clock_es = _EntropySource(accumulator, 253)
+
+    def reinit(self):
+        # Add 256 bits to each of the 32 pools, twice.  (For a total of 16384
+        # bits collected from the operating system.)
+        for i in range(2):
+            block = self._osrng.read(32*32)
+            for p in range(32):
+                self._osrng_es.feed(block[p*32:(p+1)*32])
+            block = None
+        self._osrng.flush()
+
+    def collect(self):
+        # Collect 64 bits of entropy from the operating system and feed it to Fortuna.
+        self._osrng_es.feed(self._osrng.read(8))
+
+        # Add the fractional part of time.time()
+        t = time.time()
+        self._time_es.feed(struct.pack("@I", int(2**30 * (t - floor(t)))))
+
+        # Add the fractional part of time.clock()
+        t = time.clock()
+        self._clock_es.feed(struct.pack("@I", int(2**30 * (t - floor(t)))))
+
 
 class _UserFriendlyRNG(object):
 
     def __init__(self):
         self.closed = False
-        self._poolnum = 0
         self._fa = FortunaAccumulator.FortunaAccumulator()
+        self._ec = _EntropyCollector(self._fa)
         self.reinit()
 
     def reinit(self):
@@ -48,16 +92,7 @@ class _UserFriendlyRNG(object):
         the operating system.
         """
         self._pid = os.getpid()
-        self._osrng = OSRNG.new()
-
-        # Add 256 bits to each of the 32 pools, twice.  (For a total of 16384
-        # bits collected from the operating system.)
-        for i in range(2):
-            block = self._osrng.read(32*32)
-            for p in range(32):
-                self._fa.add_random_event(255, p, block[p*32:(p+1)*32])
-            block = None
-        self._osrng.flush()
+        self._ec.reinit()
 
     def close(self):
         self.closed = True
@@ -76,9 +111,8 @@ class _UserFriendlyRNG(object):
         if N < 0:
             raise ValueError("cannot read to end of infinite stream")
 
-        # Collect 64 bits of entropy from the operating system and feed it to Fortuna.
-        self._fa.add_random_event(255, self._poolnum, self._osrng.read(8))
-        self._poolnum = (self._poolnum + 1) & 31
+        # Collect some entropy and feed it to Fortuna
+        self._ec.collect()
 
         # Ask Fortuna to generate some bytes
         retval = self._fa.random_data(N)
@@ -95,6 +129,7 @@ class _UserFriendlyRNG(object):
         # Lame fork detection to remind the user not to use the same PRNG between forked processes.
         if os.getpid() != self._pid:
             raise AssertionError("PID check failed. RNG must be re-initialized after fork()")
+
 
 class _LockingUserFriendlyRNG(_UserFriendlyRNG):
     def __init__(self):
