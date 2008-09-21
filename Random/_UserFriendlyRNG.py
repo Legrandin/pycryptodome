@@ -148,11 +148,22 @@ class RNGFile(object):
         if self.closed:
             raise ValueError("I/O operation on closed file")
 
-_singleton = _LockingUserFriendlyRNG()
+_singleton_lock = threading.Lock()
+_singleton = None
+def _get_singleton():
+    global _singleton
+    _singleton_lock.acquire()
+    try:
+        if _singleton is None:
+            _singleton = _LockingUserFriendlyRNG()
+        return _singleton
+    finally:
+        _singleton_lock.release()
+
 def new():
-    return RNGFile(_singleton)
+    return RNGFile(_get_singleton())
 
 def reinit():
-    _singleton.reinit()
+    _get_singleton().reinit()
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
