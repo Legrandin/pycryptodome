@@ -95,10 +95,16 @@ class FortunaAccumulator(object):
     reseed_interval = 0.100   # 100 ms    TODO: explain why
 
     def __init__(self):
-        self.pools = [FortunaPool() for i in range(32)]     # 32 pools
         self.reseed_count = 0
         self.generator = FortunaGenerator.AESGenerator()
         self.last_reseed = None
+
+        # Initialize 32 FortunaPool instances.
+        # NB: This is _not_ equivalent to [FortunaPool()]*32, which would give
+        # us 32 references to the _same_ FortunaPool instance (and cause the
+        # assertion below to fail).
+        self.pools = [FortunaPool() for i in range(32)]     # 32 pools
+        assert(self.pools[0] is not self.pools[1])
 
     def random_data(self, bytes):
         current_time = time.time()
