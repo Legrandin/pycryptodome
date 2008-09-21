@@ -29,10 +29,11 @@ __revision__ = "$Id$"
 __all__ = ['new', 'RandomPoolCompat']
 
 import OSRNG
+import _UserFriendlyRNG
 
 def new(*args, **kwargs):
     """Return a file-like object that outputs cryptographically random bytes."""
-    return OSRNG.new(*args, **kwargs)
+    return _UserFriendlyRNG.new(*args, **kwargs)
 
 def atfork():
     """Call this whenever you call os.fork()"""
