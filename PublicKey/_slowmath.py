@@ -89,5 +89,49 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
     if u is not None: obj.u = u
     return obj
 
+class _DSAKey(object):
+    def size(self):
+        """Return the maximum number of bits that can be encrypted"""
+        return size(self.p) - 1
+
+    def has_private(self):
+        return hasattr(self, 'x')
+
+    def _sign(self, m, k):   # alias for _decrypt
+        # SECURITY TODO - We _should_ be computing SHA1(m), but we don't because that's the API.
+        if not self.has_private():
+            raise error("No private key")
+        if not (1L < k < self.q):
+            raise error("k is not between 2 and q-1")
+        inv_k = inverse(k, self.q)   # Compute k**-1 mod q
+        r = pow(self.g, k, self.p) % self.q  # r = (g**k mod p) mod q
+        s = (inv_k * (m + self.x * r)) % self.q
+        return (r, s)
+
+    def _verify(self, m, r, s):
+        # SECURITY TODO - We _should_ be computing SHA1(m), but we don't because that's the API.
+        if not (0 < r < self.q) or not (0 < s < self.q):
+            return False
+        w = inverse(s, self.q)
+        u1 = (m*w) % self.q
+        u2 = (r*w) % self.q
+        v = (pow(self.g, u1, self.p) * pow(self.y, u2, self.p) % self.p) % self.q
+        return v == r
+
+def dsa_construct(y, g, p, q, x=None):
+    assert isinstance(y, long)
+    assert isinstance(g, long)
+    assert isinstance(p, long)
+    assert isinstance(q, long)
+    assert isinstance(x, (long, type(None)))
+    obj = _DSAKey()
+    obj.y = y
+    obj.g = g
+    obj.p = p
+    obj.q = q
+    if x is not None: obj.x = x
+    return obj
+
+
 # vim:set ts=4 sw=4 sts=4 expandtab:
 
