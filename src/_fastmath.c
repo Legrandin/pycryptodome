@@ -28,6 +28,7 @@ longObjToMPZ (mpz_t m, PyLongObject * p)
 		size = p->ob_size;
 	else
 		size = -p->ob_size;
+	mpz_set_ui (m, 0);
 	for (i = 0; i < size; i++)
 	{
 		mpz_set_ui (temp, p->ob_digit[i]);
