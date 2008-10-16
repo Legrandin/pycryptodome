@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/PublicKey/test_self.rsa.py: Self-test for the RSA primitive
+#  SelfTest/PublicKey/test_RSA.py: Self-test for the RSA primitive
 #
 # =======================================================================
 # Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
