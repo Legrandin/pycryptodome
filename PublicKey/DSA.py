@@ -161,6 +161,19 @@ class DSAImplementation(object):
         return self._current_randfunc
 
     def generate(self, bits, randfunc=None, progress_func=None):
+        # Check against FIPS 186-2, which says that the size of the prime p
+        # must be a multiple of 64 bits between 512 and 1024
+        for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
+            if bits == 512 + 64*i:
+                return self._generate(bits, randfunc, progress_func)
+
+        # The March 2006 draft of FIPS 186-3 also allows 2048 and 3072-bit
+        # primes, but only with longer q values.  Since the current DSA
+        # implementation only supports a 160-bit q, we don't support larger
+        # values.
+        raise ValueError("Number of bits in p must be a multiple of 64 between 512 and 1024, not %d bits" % (bits,))
+
+    def _generate(self, bits, randfunc=None, progress_func=None):
         rf = self._get_randfunc(randfunc)
         obj = _DSA.generate_py(bits, rf, progress_func)    # TODO: Don't use legacy _DSA module
         key = self._math.dsa_construct(obj.y, obj.g, obj.p, obj.q, obj.x)
