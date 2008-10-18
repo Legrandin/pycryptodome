@@ -80,12 +80,12 @@ class DSATest(unittest.TestCase):
 
         self.dsa = DSA
 
-#    def test_generate_1arg(self):
-#        """DSA (default implementation) generated key (1 argument)"""
-#        dsaObj = self.dsa.generate(1024)
-#        self._check_private_key(dsaObj)
-#        pub = dsaObj.publickey()
-#        self._check_public_key(pub)
+    def test_generate_1arg(self):
+        """DSA (default implementation) generated key (1 argument)"""
+        dsaObj = self.dsa.generate(1024)
+        self._check_private_key(dsaObj)
+        pub = dsaObj.publickey()
+        self._check_public_key(pub)
 
     def test_generate_2arg(self):
         """DSA (default implementation) generated key (2 arguments)"""
@@ -211,12 +211,12 @@ class DSASlowMathTest(DSATest):
 def get_tests():
     tests = []
     tests += list_test_cases(DSATest)
-#    try:
-#        from Crypto.PublicKey import _fastmath
-#        tests += list_test_cases(DSAFastMathTest)
-#    except ImportError:
-#        pass
-#    tests += list_test_cases(DSASlowMathTest)
+    try:
+        from Crypto.PublicKey import _fastmath
+        tests += list_test_cases(DSAFastMathTest)
+    except ImportError:
+        pass
+    tests += list_test_cases(DSASlowMathTest)
     return tests
 
 if __name__ == '__main__':
