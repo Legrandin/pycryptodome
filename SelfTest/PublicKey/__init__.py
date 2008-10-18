@@ -34,6 +34,7 @@ import os
 
 def get_tests():
     tests = []
+    import test_DSA;       tests += test_DSA.get_tests()
     import test_RSA;       tests += test_RSA.get_tests()
     return tests
 
