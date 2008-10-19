@@ -127,24 +127,31 @@ class RSATest(unittest.TestCase):
         pub = self.rsa.construct((self.n, self.e))
         self._check_public_key(pub)
         self._check_encryption(pub)
+        self._check_verification(pub)
 
     def test_construct_3tuple(self):
         """RSA (default implementation) constructed key (3-tuple)"""
         rsaObj = self.rsa.construct((self.n, self.e, self.d))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
+        self._check_signing(rsaObj)
+        self._check_verification(rsaObj)
 
     def test_construct_4tuple(self):
         """RSA (default implementation) constructed key (4-tuple)"""
         rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
+        self._check_signing(rsaObj)
+        self._check_verification(rsaObj)
 
     def test_construct_5tuple(self):
         """RSA (default implementation) constructed key (5-tuple)"""
         rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
+        self._check_signing(rsaObj)
+        self._check_verification(rsaObj)
 
     def test_construct_6tuple(self):
         """RSA (default implementation) constructed key (6-tuple)"""
@@ -152,6 +159,8 @@ class RSATest(unittest.TestCase):
         self._check_private_key(rsaObj)
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
+        self._check_signing(rsaObj)
+        self._check_verification(rsaObj)
 
     def _check_private_key(self, rsaObj):
         # Check capabilities
@@ -227,6 +236,18 @@ class RSATest(unittest.TestCase):
         unblinded_plaintext = rsaObj.unblind(blinded_ptext, blinding_factor)
         self.assertEqual(b2a_hex(plaintext), b2a_hex(unblinded_plaintext))
 
+        # Test signing (2 arguments)
+        signature2 = rsaObj.sign(ciphertext, "")
+        self.assertEqual((bytes_to_long(plaintext),), signature2)
+
+        # Test signing (1 argument)
+        if not self.legacy_interface_only:
+            signature1 = rsaObj.sign(ciphertext)
+            self.assertEqual((bytes_to_long(plaintext),), signature1)
+
+        # Test verification
+        self.assertEqual(1, rsaObj.verify(ciphertext, (bytes_to_long(plaintext),)))
+
     def _exercise_public_primitive(self, rsaObj):
         plaintext = a2b_hex(self.plaintext)
 
@@ -237,6 +258,9 @@ class RSATest(unittest.TestCase):
         if not self.legacy_interface_only:
             (new_ciphertext1,) = rsaObj.encrypt(plaintext)
             self.assertEqual(new_ciphertext2, new_ciphertext1)
+
+        # Exercise verification
+        rsaObj.verify(new_ciphertext2, (bytes_to_long(plaintext),))
 
     def _check_encryption(self, rsaObj):
         plaintext = a2b_hex(self.plaintext)
@@ -265,6 +289,25 @@ class RSATest(unittest.TestCase):
         blinded_ptext = rsaObj.decrypt((blinded_ctext,))
         unblinded_plaintext = rsaObj.unblind(blinded_ptext, blinding_factor)
         self.assertEqual(b2a_hex(plaintext), b2a_hex(unblinded_plaintext))
+
+    def _check_verification(self, rsaObj):
+        signature = bytes_to_long(a2b_hex(self.plaintext))
+        message = a2b_hex(self.ciphertext)
+
+        # Test verification
+        t = (signature,)     # rsaObj.verify expects a tuple
+        self.assertEqual(1, rsaObj.verify(message, t))
+
+    def _check_signing(self, rsaObj):
+        signature = bytes_to_long(a2b_hex(self.plaintext))
+        message = a2b_hex(self.ciphertext)
+
+        # Test signing (2 argument)
+        self.assertEqual((signature,), rsaObj.sign(message, ""))
+
+        # Test signing (1 argument)
+        if not self.legacy_interface_only:
+            self.assertEqual((signature,), rsaObj.sign(message))
 
 class RSAFastMathTest(RSATest):
     def setUp(self):
