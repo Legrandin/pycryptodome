@@ -41,11 +41,11 @@ typedef struct {
     uint32_t buf_size;  /* Size of the buffer */
     uint8_t *p;         /* Pointer to the part of the buffer that we're allowed to update */
     uint16_t nbytes;    /* The number of bytes that from .p that are part of the counter */
-} my_CounterObject;
+} PCT_CounterObject;
 
 /* NB: This can be called multiple times for a given object, via the __init__ method.  Be careful. */
 static int
-CounterObject_init(my_CounterObject *self, PyObject *args, PyObject *kwargs)
+CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
     PyStringObject *prefix=NULL, *suffix=NULL, *initval=NULL;
     Py_ssize_t size;
@@ -116,7 +116,7 @@ CounterObject_init(my_CounterObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static void
-CounterObject_dealloc(my_CounterObject *self)
+CounterObject_dealloc(PCT_CounterObject *self)
 {
     /* Free the buffer */
     if (self->val) {
@@ -135,7 +135,7 @@ CounterObject_dealloc(my_CounterObject *self)
 }
 
 static inline PyObject *
-_CounterObject_get_value(my_CounterObject *self, int little_endian)
+_CounterObject_get_value(PCT_CounterObject *self, int little_endian)
 {
     unsigned int i, increment;
     uint8_t *p;
@@ -194,19 +194,19 @@ err_out:
 }
 
 static PyObject *
-CounterLEObject_get_value(my_CounterObject *self, PyObject *args)
+CounterLEObject_get_value(PCT_CounterObject *self, PyObject *args)
 {
     return _CounterObject_get_value(self, 1);
 }
 
 static PyObject *
-CounterBEObject_get_value(my_CounterObject *self, PyObject *args)
+CounterBEObject_get_value(PCT_CounterObject *self, PyObject *args)
 {
     return _CounterObject_get_value(self, 0);
 }
 
 static PyObject *
-CounterLEObject_next(my_CounterObject *self, PyObject *args)
+CounterLEObject_next(PCT_CounterObject *self, PyObject *args)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
@@ -228,7 +228,7 @@ CounterLEObject_next(my_CounterObject *self, PyObject *args)
 }
 
 static PyObject *
-CounterBEObject_next(my_CounterObject *self, PyObject *args)
+CounterBEObject_next(PCT_CounterObject *self, PyObject *args)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
@@ -286,7 +286,7 @@ my_CounterLEType = {
     PyObject_HEAD_INIT(NULL)
     0,                              /* ob_size */
 	"_counter.CounterLE",           /* tp_name */
-	sizeof(my_CounterObject),       /* tp_basicsize */
+	sizeof(PCT_CounterObject),       /* tp_basicsize */
     0,                              /* tp_itemsize */
     (destructor)CounterObject_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
@@ -312,7 +312,7 @@ my_CounterBEType = {
     PyObject_HEAD_INIT(NULL)
     0,                              /* ob_size */
 	"_counter.CounterBE",           /* tp_name */
-	sizeof(my_CounterObject),       /* tp_basicsize */
+	sizeof(PCT_CounterObject),       /* tp_basicsize */
     0,                              /* tp_itemsize */
     (destructor)CounterObject_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
@@ -340,16 +340,16 @@ my_CounterBEType = {
 static PyObject *
 CounterLE_new(PyObject *self, PyObject *args)
 {
-    my_CounterObject *obj = NULL;
+    PCT_CounterObject *obj = NULL;
 
     /* Create the new object */
-    obj = PyObject_New(my_CounterObject, &my_CounterLEType);
+    obj = PyObject_New(PCT_CounterObject, &my_CounterLEType);
     if (obj == NULL) {
         return NULL;
     }
 
     /* Zero the custom portion of the structure */
-    memset(&obj->prefix, 0, sizeof(my_CounterObject) - offsetof(my_CounterObject, prefix));
+    memset(&obj->prefix, 0, sizeof(PCT_CounterObject) - offsetof(PCT_CounterObject, prefix));
 
     /* Call the object's initializer.  Delete the object if this fails. */
     if (CounterObject_init(obj, args, NULL) != 0) {
@@ -363,16 +363,16 @@ CounterLE_new(PyObject *self, PyObject *args)
 static PyObject *
 CounterBE_new(PyObject *self, PyObject *args)
 {
-    my_CounterObject *obj = NULL;
+    PCT_CounterObject *obj = NULL;
 
     /* Create the new object */
-    obj = PyObject_New(my_CounterObject, &my_CounterBEType);
+    obj = PyObject_New(PCT_CounterObject, &my_CounterBEType);
     if (obj == NULL) {
         return NULL;
     }
 
     /* Zero the custom portion of the structure */
-    memset(&obj->prefix, 0, sizeof(my_CounterObject) - offsetof(my_CounterObject, prefix));
+    memset(&obj->prefix, 0, sizeof(PCT_CounterObject) - offsetof(PCT_CounterObject, prefix));
 
     /* Call the object's initializer.  Delete the object if this fails. */
     if (CounterObject_init(obj, args, NULL) != 0) {
