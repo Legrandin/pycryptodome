@@ -135,7 +135,7 @@ CounterObject_dealloc(PCT_CounterObject *self)
 }
 
 static inline PyObject *
-_CounterObject_get_value(PCT_CounterObject *self, int little_endian)
+_CounterObject_next_value(PCT_CounterObject *self, int little_endian)
 {
     unsigned int i, increment;
     uint8_t *p;
@@ -194,19 +194,19 @@ err_out:
 }
 
 static PyObject *
-CounterLEObject_get_value(PCT_CounterObject *self, PyObject *args)
+CounterLEObject_next_value(PCT_CounterObject *self, PyObject *args)
 {
-    return _CounterObject_get_value(self, 1);
+    return _CounterObject_next_value(self, 1);
 }
 
 static PyObject *
-CounterBEObject_get_value(PCT_CounterObject *self, PyObject *args)
+CounterBEObject_next_value(PCT_CounterObject *self, PyObject *args)
 {
-    return _CounterObject_get_value(self, 0);
+    return _CounterObject_next_value(self, 0);
 }
 
 static PyObject *
-CounterLEObject_next(PCT_CounterObject *self, PyObject *args)
+CounterLEObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
@@ -228,7 +228,7 @@ CounterLEObject_next(PCT_CounterObject *self, PyObject *args)
 }
 
 static PyObject *
-CounterBEObject_next(PCT_CounterObject *self, PyObject *args)
+CounterBEObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
@@ -250,19 +250,15 @@ CounterBEObject_next(PCT_CounterObject *self, PyObject *args)
 }
 
 static PyMethodDef CounterLEObject_methods[] = {
-    {"next", (PyCFunction)CounterLEObject_next, METH_VARARGS,
-        "Return the current counter value, then increment it."},
-    {"get_value", (PyCFunction)CounterLEObject_get_value, METH_VARARGS,
-        "Get the numerical value of the counter.\n\nThis is a slow operation.\n"},
+    {"next_value", (PyCFunction)CounterLEObject_next_value, METH_VARARGS,
+        "Get the numerical value of next value of the counter."},
 
     {NULL} /* sentinel */
 };
 
 static PyMethodDef CounterBEObject_methods[] = {
-    {"next", (PyCFunction)CounterBEObject_next, METH_VARARGS,
-        "Return the current counter value, then increment it."},
-    {"get_value", (PyCFunction)CounterBEObject_get_value, METH_VARARGS,
-        "Get the numerical value of the counter.\n\nThis is a slow operation.\n"},
+    {"next_value", (PyCFunction)CounterBEObject_next_value, METH_VARARGS,
+        "Get the numerical value of next value of the counter."},
 
     {NULL} /* sentinel */
 };
@@ -298,7 +294,7 @@ my_CounterLEType = {
     0,                              /* tp_as_sequence */
     0,                              /* tp_as_mapping */
     0,                              /* tp_hash */
-    0,                              /* tp_call */
+    (ternaryfunc)CounterLEObject_call, /* tp_call */
     0,                              /* tp_str */
     0,                              /* tp_getattro */
     0,                              /* tp_setattro */
@@ -324,7 +320,7 @@ my_CounterBEType = {
     0,                              /* tp_as_sequence */
     0,                              /* tp_as_mapping */
     0,                              /* tp_hash */
-    0,                              /* tp_call */
+    (ternaryfunc)CounterBEObject_call, /* tp_call */
     0,                              /* tp_str */
     0,                              /* tp_getattro */
     0,                              /* tp_setattro */
