@@ -46,9 +46,6 @@ class CryptoRuntimeWarning(RuntimeWarning, CryptoWarning):
 class RandomPool_DeprecationWarning(CryptoDeprecationWarning):
     """Issued when Crypto.Util.randpool.RandomPool is instantiated."""
 
-class PublicKey_KParam_DeprecationWarning(CryptoDeprecationWarning):
-    """Issued when RSA.encrypt and other similar functions are passed an unnecessary second parameter"""
-
 class ClockRewindWarning(CryptoRuntimeWarning):
     """Warning for when the system clock is found to be non-monotonic."""
 

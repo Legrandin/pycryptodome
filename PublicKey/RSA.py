@@ -35,7 +35,6 @@ from Crypto.Util.python_compat import *
 
 from Crypto.PublicKey import _RSA, _slowmath, pubkey
 from Crypto import Random
-from Crypto.pct_warnings import PublicKey_KParam_DeprecationWarning
 
 try:
     from Crypto.PublicKey import _fastmath
@@ -57,19 +56,7 @@ class _RSAobj(pubkey.pubkey):
         else:
             raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
 
-    def encrypt(self, plaintext, K=None):
-        if K:
-            # New code should specify only one parameter to .encrypt
-            warnings.warn("rsaObj.encrypt: unnecessray second parameter specified", PublicKey_KParam_DeprecationWarning)
-        return pubkey.pubkey.encrypt(self, plaintext, "")
-
-    def sign(self, message, K=None):
-        if K:
-            # New code should specify only one parameter to .encrypt
-            warnings.warn("rsaObj.sign: unnecessray second parameter specified", PublicKey_KParam_DeprecationWarning)
-        return pubkey.pubkey.sign(self, message, "")
-
-    def _encrypt(self, c, K=None):
+    def _encrypt(self, c, K):
         return (self.key._encrypt(c),)
 
     def _decrypt(self, c):

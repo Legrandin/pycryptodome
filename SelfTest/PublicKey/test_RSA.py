@@ -87,8 +87,6 @@ class RSATest(unittest.TestCase):
         ce 33 52 52 4d 04 16 a5 a4 41 e7 00 af 46 15 03
     """
 
-    legacy_interface_only = 0   # Set to 1 to test the original RSA module
-
     def setUp(self):
         global RSA, Random, bytes_to_long
         from Crypto.PublicKey import RSA
@@ -224,11 +222,6 @@ class RSATest(unittest.TestCase):
         (new_ciphertext2,) = rsaObj.encrypt(plaintext, "")
         self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext2))
 
-        # Test encryption (1 argument)
-        if not self.legacy_interface_only:
-            (new_ciphertext1,) = rsaObj.encrypt(plaintext)
-            self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext1))
-
         # Test blinded decryption
         blinding_factor = Random.new().read(len(ciphertext)-1)
         blinded_ctext = rsaObj.blind(ciphertext, blinding_factor)
@@ -240,11 +233,6 @@ class RSATest(unittest.TestCase):
         signature2 = rsaObj.sign(ciphertext, "")
         self.assertEqual((bytes_to_long(plaintext),), signature2)
 
-        # Test signing (1 argument)
-        if not self.legacy_interface_only:
-            signature1 = rsaObj.sign(ciphertext)
-            self.assertEqual((bytes_to_long(plaintext),), signature1)
-
         # Test verification
         self.assertEqual(1, rsaObj.verify(ciphertext, (bytes_to_long(plaintext),)))
 
@@ -253,11 +241,6 @@ class RSATest(unittest.TestCase):
 
         # Test encryption (2 arguments)
         (new_ciphertext2,) = rsaObj.encrypt(plaintext, "")
-
-        # Test encryption (1 argument)
-        if not self.legacy_interface_only:
-            (new_ciphertext1,) = rsaObj.encrypt(plaintext)
-            self.assertEqual(new_ciphertext2, new_ciphertext1)
 
         # Exercise verification
         rsaObj.verify(new_ciphertext2, (bytes_to_long(plaintext),))
@@ -269,11 +252,6 @@ class RSATest(unittest.TestCase):
         # Test encryption (2 arguments)
         (new_ciphertext2,) = rsaObj.encrypt(plaintext, "")
         self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext2))
-
-        # Test encryption (1 argument)
-        if not self.legacy_interface_only:
-            (new_ciphertext1,) = rsaObj.encrypt(plaintext)
-            self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext1))
 
     def _check_decryption(self, rsaObj):
         plaintext = a2b_hex(self.plaintext)
@@ -304,10 +282,6 @@ class RSATest(unittest.TestCase):
 
         # Test signing (2 argument)
         self.assertEqual((signature,), rsaObj.sign(message, ""))
-
-        # Test signing (1 argument)
-        if not self.legacy_interface_only:
-            self.assertEqual((signature,), rsaObj.sign(message))
 
 class RSAFastMathTest(RSATest):
     def setUp(self):
