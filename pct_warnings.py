@@ -44,7 +44,7 @@ class CryptoRuntimeWarning(RuntimeWarning, CryptoWarning):
 #
 
 class RandomPool_DeprecationWarning(CryptoDeprecationWarning):
-    """Issued when Crypto.Util.randpool is imported."""
+    """Issued when Crypto.Util.randpool.RandomPool is instantiated."""
 
 class PublicKey_KParam_DeprecationWarning(CryptoDeprecationWarning):
     """Issued when RSA.encrypt and other similar functions are passed an unnecessary second parameter"""
