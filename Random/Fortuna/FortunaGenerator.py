@@ -79,7 +79,7 @@ class AESGenerator(object):
         if self.key is None:
             self.key = "\0" * self.key_size
         self._set_key(SHAd256.new(self.key + seed).digest())
-        self.counter.next()
+        self.counter()  # increment counter
         assert len(self.key) == self.key_size
 
     def pseudo_random_data(self, bytes):
@@ -97,7 +97,7 @@ class AESGenerator(object):
 
     def _set_key(self, key):
         self.key = key
-        self._cipher = AES.new(key, AES.MODE_CTR, counter=self.counter.next)
+        self._cipher = AES.new(key, AES.MODE_CTR, counter=self.counter)
 
     def _pseudo_random_data(self, bytes):
         if not (0 <= bytes <= self.max_bytes_per_request):

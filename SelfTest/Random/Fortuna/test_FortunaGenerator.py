@@ -46,12 +46,12 @@ class FortunaGeneratorTests(unittest.TestCase):
 
         # We shouldn't be able to read data until we've seeded the generator
         self.assertRaises(Exception, fg.pseudo_random_data, 1)
-        self.assertEqual(0, fg.counter.get_value())
+        self.assertEqual(0, fg.counter.next_value())
 
         # Seed the generator, which should set the key and increment the counter.
         fg.reseed("Hello")
         self.assertEqual("0ea6919d4361551364242a4ba890f8f073676e82cf1a52bb880f7e496648b565", b2a_hex(fg.key))
-        self.assertEqual(1, fg.counter.get_value())
+        self.assertEqual(1, fg.counter.next_value())
 
         # Read 2 full blocks from the generator
         self.assertEqual("7cbe2c17684ac223d08969ee8b565616" +       # counter=1
@@ -62,7 +62,7 @@ class FortunaGeneratorTests(unittest.TestCase):
         self.assertEqual("33a1bb21987859caf2bbfc5615bef56d" +       # counter=3
                          "e6b71ff9f37112d0c193a135160862b7",        # counter=4
             b2a_hex(fg.key))
-        self.assertEqual(5, fg.counter.get_value())
+        self.assertEqual(5, fg.counter.next_value())
 
         # Read another 2 blocks from the generator
         self.assertEqual("fd6648ba3086e919cee34904ef09a7ff" +       # counter=5
