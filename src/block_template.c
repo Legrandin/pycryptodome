@@ -23,6 +23,8 @@
 #include "Python.h"
 #include "modsupport.h" 
 
+#include "_counter.h"
+
 /* Cipher operation modes */
 
 #define MODE_ECB 1
@@ -45,6 +47,7 @@ typedef struct
 	int mode, count, segment_size;
 	unsigned char IV[BLOCK_SIZE], oldCipher[BLOCK_SIZE];
 	PyObject *counter;
+	int counter_shortcut;
 	block_state st;
 } ALGobject;
 
@@ -59,6 +62,7 @@ newALGobject(void)
 	new = PyObject_New(ALGobject, &ALGtype);
 	new->mode = MODE_ECB;
 	new->counter = NULL;
+	new->counter_shortcut = 0;
 	return new;
 }
 
@@ -97,6 +101,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	ALGobject * new=NULL;
 	int keylen, IVlen=0, mode=MODE_ECB, segment_size=0;
 	PyObject *counter = NULL;
+	int counter_shortcut = 0;
 #ifdef PCT_RC5_MODULE
 	int version = 0x10, word_size = 32, rounds = 16; /*XXX default rounds? */
 #endif 
@@ -163,7 +168,9 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	}
 
 	if (mode == MODE_CTR) {
-		if (!PyCallable_Check(counter)) {
+		if (PyObject_HasAttrString(counter, "__PCT_CTR_SHORTCUT__")) {
+			counter_shortcut = 1;
+		} else if (!PyCallable_Check(counter)) {
 			PyErr_SetString(PyExc_ValueError, 
 					"'counter' parameter must be a callable object");
 		}
@@ -209,6 +216,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	new->segment_size = segment_size;
 	new->counter = counter;
 	Py_XINCREF(counter);
+	new->counter_shortcut = counter_shortcut;
 #ifdef PCT_RC5_MODULE
 	new->st.version = version;
 	new->st.word_size = word_size;
@@ -368,31 +376,52 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 	case(MODE_CTR):
 		for(i=0; i<len; i+=BLOCK_SIZE) 
 		{
-			PyObject *ctr = PyObject_CallObject(self->counter, NULL);
-			if (ctr == NULL) {
-				free(buffer);
-				return NULL;
-			}
-			if (!PyString_Check(ctr))
-			{
-				PyErr_SetString(PyExc_TypeError, 
-						"CTR counter function didn't return a string");
+			if (self->counter_shortcut) {
+				/* CTR mode shortcut: If we're using Util.Counter,
+				 * bypass the normal Python function call mechanism
+				 * and manipulate the counter directly. */
+
+				PCT_CounterObject *ctr = (PCT_CounterObject *)(self->counter);
+				if (ctr->buf_size != BLOCK_SIZE) {
+					PyErr_Format(PyExc_TypeError,
+						     "CTR counter function returned "
+						     "string not of length %i",
+						     BLOCK_SIZE);
+					free(buffer);
+					return NULL;
+				}
+				block_encrypt(&(self->st),
+					      (unsigned char *)ctr->val,
+					      temp);
+				ctr->inc_func(ctr);
+
+			} else {
+				PyObject *ctr = PyObject_CallObject(self->counter, NULL);
+				if (ctr == NULL) {
+					free(buffer);
+					return NULL;
+				}
+				if (!PyString_Check(ctr))
+				{
+					PyErr_SetString(PyExc_TypeError,
+							"CTR counter function didn't return a string");
+					Py_DECREF(ctr);
+					free(buffer);
+					return NULL;
+				}
+				if (PyString_Size(ctr) != BLOCK_SIZE) {
+					PyErr_Format(PyExc_TypeError,
+						 "CTR counter function returned "
+						 "string not of length %i",
+						 BLOCK_SIZE);
+					Py_DECREF(ctr);
+					free(buffer);
+					return NULL;
+				}
+				block_encrypt(&(self->st), (unsigned char *)PyString_AsString(ctr),
+					  temp);
 				Py_DECREF(ctr);
-				free(buffer);
-				return NULL;
 			}
-			if (PyString_Size(ctr) != BLOCK_SIZE) {
-				PyErr_Format(PyExc_TypeError, 
-					     "CTR counter function returned "
-					     "string not of length %i",
-					     BLOCK_SIZE);
-				Py_DECREF(ctr);
-				free(buffer);
-				return NULL;
-			}
-			block_encrypt(&(self->st), (unsigned char *)PyString_AsString(ctr), 
-				      temp);
-			Py_DECREF(ctr);
 			for(j=0; j<BLOCK_SIZE; j++)
 			{
 				buffer[i+j] = str[i+j]^temp[j];
@@ -561,28 +590,52 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	case (MODE_CTR):
 		for(i=0; i<len; i+=BLOCK_SIZE) 
 		{
-			PyObject *ctr = PyObject_CallObject(self->counter, NULL);
-			if (ctr == NULL) {
-				free(buffer);
-				return NULL;
-			}
-			if (!PyString_Check(ctr))
-			{
-				PyErr_SetString(PyExc_TypeError, 
-						"CTR counter function didn't return a string");
+			if (self->counter_shortcut) {
+				/* CTR mode shortcut: If we're using Util.Counter,
+				 * bypass the normal Python function call mechanism
+				 * and manipulate the counter directly. */
+
+				PCT_CounterObject *ctr = (PCT_CounterObject *)(self->counter);
+				if (ctr->buf_size != BLOCK_SIZE) {
+					PyErr_Format(PyExc_TypeError,
+						     "CTR counter function returned "
+						     "string not of length %i",
+						     BLOCK_SIZE);
+					free(buffer);
+					return NULL;
+				}
+				block_encrypt(&(self->st),
+					      (unsigned char *)ctr->val,
+					      temp);
+				ctr->inc_func(ctr);
+
+			} else {
+				PyObject *ctr = PyObject_CallObject(self->counter, NULL);
+				if (ctr == NULL) {
+					free(buffer);
+					return NULL;
+				}
+				if (!PyString_Check(ctr))
+				{
+					PyErr_SetString(PyExc_TypeError,
+							"CTR counter function didn't return a string");
+					Py_DECREF(ctr);
+					free(buffer);
+					return NULL;
+				}
+				if (PyString_Size(ctr) != BLOCK_SIZE) {
+					PyErr_Format(PyExc_TypeError,
+						 "CTR counter function returned "
+						 "string not of length %i",
+						 BLOCK_SIZE);
+					Py_DECREF(ctr);
+					free(buffer);
+					return NULL;
+				}
+				block_encrypt(&(self->st), (unsigned char *)PyString_AsString(ctr),
+					  temp);
 				Py_DECREF(ctr);
-				free(buffer);
-				return NULL;
 			}
-			if (PyString_Size(ctr) != BLOCK_SIZE) {
-				PyErr_SetString(PyExc_TypeError, 
-						"CTR counter function returned string of incorrect length");
-				Py_DECREF(ctr);
-				free(buffer);
-				return NULL;
-			}
-			block_encrypt(&(self->st), (unsigned char *) PyString_AsString(ctr), temp);
-			Py_DECREF(ctr);
 			for(j=0; j<BLOCK_SIZE; j++)
 			{
 				buffer[i+j] = str[i+j]^temp[j];

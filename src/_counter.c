@@ -26,22 +26,12 @@
  */
 
 #include <assert.h>
-#include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include "Python.h"
+
+#include "_counter.h"
 
 #include "pycrypto_compat.h"
-
-typedef struct {
-    PyObject_HEAD;
-    PyStringObject *prefix;     /* Prefix (useful for a nonce) */
-    PyStringObject *suffix;     /* Suffix (useful for a nonce) */
-    uint8_t *val;       /* Buffer for our output string */
-    uint32_t buf_size;  /* Size of the buffer */
-    uint8_t *p;         /* Pointer to the part of the buffer that we're allowed to update */
-    uint16_t nbytes;    /* The number of bytes that from .p that are part of the counter */
-} PCT_CounterObject;
 
 /* NB: This can be called multiple times for a given object, via the __init__ method.  Be careful. */
 static int
@@ -205,16 +195,13 @@ CounterBEObject_next_value(PCT_CounterObject *self, PyObject *args)
     return _CounterObject_next_value(self, 0);
 }
 
-static PyObject *
-CounterLEObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
+static void
+CounterLEObject_increment(PCT_CounterObject *self)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
-    PyObject *retval;
 
     assert(sizeof(i) >= sizeof(self->nbytes));
-
-    retval = (PyObject *)PyString_FromStringAndSize((const char *)self->val, self->buf_size);
 
     carry = 1;
     p = self->p;
@@ -223,20 +210,15 @@ CounterLEObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
         carry = tmp >> 8;   /* This will only ever be 0 or 1 */
         *p = tmp & 0xff;
     }
-
-    return retval;
 }
 
-static PyObject *
-CounterBEObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
+static void
+CounterBEObject_increment(PCT_CounterObject *self)
 {
     unsigned int i, tmp, carry;
     uint8_t *p;
-    PyObject *retval;
 
     assert(sizeof(i) >= sizeof(self->nbytes));
-
-    retval = (PyObject *)PyString_FromStringAndSize((const char *)self->val, self->buf_size);
 
     carry = 1;
     p = self->p + self->nbytes-1;
@@ -245,6 +227,16 @@ CounterBEObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
         carry = tmp >> 8;   /* This will only ever be 0 or 1 */
         *p = tmp & 0xff;
     }
+}
+
+static PyObject *
+CounterObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject *retval;
+
+    retval = (PyObject *)PyString_FromStringAndSize((const char *)self->val, self->buf_size);
+
+    self->inc_func(self);
 
     return retval;
 }
@@ -268,12 +260,23 @@ static PyMethodDef CounterBEObject_methods[] = {
 static PyObject *
 CounterLEObject_getattr(PyObject *self, char *name)
 {
+    if (strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
+        /* Shortcut hack - See block_template.c */
+        Py_INCREF(Py_True);
+        return Py_True;
+    }
     return Py_FindMethod(CounterLEObject_methods, self, name);
 }
 
 static PyObject *
 CounterBEObject_getattr(PyObject *self, char *name)
 {
+    if (strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
+        /* Shortcut hack - See block_template.c */
+        Py_INCREF(Py_True);
+        return Py_True;
+    }
+
     return Py_FindMethod(CounterBEObject_methods, self, name);
 }
 
@@ -294,7 +297,7 @@ my_CounterLEType = {
     0,                              /* tp_as_sequence */
     0,                              /* tp_as_mapping */
     0,                              /* tp_hash */
-    (ternaryfunc)CounterLEObject_call, /* tp_call */
+    (ternaryfunc)CounterObject_call, /* tp_call */
     0,                              /* tp_str */
     0,                              /* tp_getattro */
     0,                              /* tp_setattro */
@@ -320,7 +323,7 @@ my_CounterBEType = {
     0,                              /* tp_as_sequence */
     0,                              /* tp_as_mapping */
     0,                              /* tp_hash */
-    (ternaryfunc)CounterBEObject_call, /* tp_call */
+    (ternaryfunc)CounterObject_call, /* tp_call */
     0,                              /* tp_str */
     0,                              /* tp_getattro */
     0,                              /* tp_setattro */
@@ -352,6 +355,9 @@ CounterLE_new(PyObject *self, PyObject *args)
         return NULL;
     }
 
+    /* Set the inc_func pointer */
+    obj->inc_func = (void (*)(void *))CounterLEObject_increment;
+
     /* Return the object */
     return (PyObject *)obj;
 }
@@ -374,6 +380,9 @@ CounterBE_new(PyObject *self, PyObject *args)
     if (CounterObject_init(obj, args, NULL) != 0) {
         return NULL;
     }
+
+    /* Set the inc_func pointer */
+    obj->inc_func = (void (*)(void *))CounterBEObject_increment;
 
     /* Return the object */
     return (PyObject *)obj;
