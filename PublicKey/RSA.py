@@ -63,6 +63,12 @@ class _RSAobj(pubkey.pubkey):
             warnings.warn("rsaObj.encrypt: unnecessray second parameter specified", PublicKey_KParam_DeprecationWarning)
         return pubkey.pubkey.encrypt(self, plaintext, "")
 
+    def sign(self, message, K=None):
+        if K:
+            # New code should specify only one parameter to .encrypt
+            warnings.warn("rsaObj.sign: unnecessray second parameter specified", PublicKey_KParam_DeprecationWarning)
+        return pubkey.pubkey.sign(self, message, "")
+
     def _encrypt(self, c, K=None):
         return (self.key._encrypt(c),)
 
@@ -76,11 +82,12 @@ class _RSAobj(pubkey.pubkey):
     def _unblind(self, m, r):
         return self.key._unblind(m, r)
 
-    def _sign(self, m):
-        return self.key._sign(m)
+    def _sign(self, m, K=None):
+        return (self.key._sign(m),)
 
     def _verify(self, m, sig):
-        return self.key._verify(m, sig)
+        (s,) = sig
+        return self.key._verify(m, s)
 
     def has_private(self):
         return self.key.has_private()
