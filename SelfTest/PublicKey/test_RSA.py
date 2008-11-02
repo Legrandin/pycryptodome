@@ -276,6 +276,12 @@ class RSATest(unittest.TestCase):
         t = (signature,)     # rsaObj.verify expects a tuple
         self.assertEqual(1, rsaObj.verify(message, t))
 
+        # Test verification with overlong tuple (this is a
+        # backward-compatibility hack to support some harmless misuse of the
+        # API)
+        t2 = (signature, '')
+        self.assertEqual(1, rsaObj.verify(message, t2)) # extra garbage at end of tuple
+
     def _check_signing(self, rsaObj):
         signature = bytes_to_long(a2b_hex(self.plaintext))
         message = a2b_hex(self.ciphertext)

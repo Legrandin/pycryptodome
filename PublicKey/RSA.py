@@ -60,7 +60,11 @@ class _RSAobj(pubkey.pubkey):
         return (self.key._encrypt(c),)
 
     def _decrypt(self, c):
-        (ciphertext,) = c
+        #(ciphertext,) = c
+        (ciphertext,) = c[:1]  # HACK - We should use the previous line
+                               # instead, but this is more compatible and we're
+                               # going to replace the Crypto.PublicKey API soon
+                               # anyway.
         return self.key._decrypt(ciphertext)
 
     def _blind(self, m, r):
@@ -73,7 +77,10 @@ class _RSAobj(pubkey.pubkey):
         return (self.key._sign(m),)
 
     def _verify(self, m, sig):
-        (s,) = sig
+        #(s,) = sig
+        (s,) = sig[:1]  # HACK - We should use the previous line instead, but
+                        # this is more compatible and we're going to replace
+                        # the Crypto.PublicKey API soon anyway.
         return self.key._verify(m, s)
 
     def has_private(self):
