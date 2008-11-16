@@ -365,8 +365,8 @@ static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
     }
 
     /* Append the length */
-    tmp.buf.w[14] = tmp.length & 0xFFFFffffu;
-    tmp.buf.w[15] = (tmp.length >> 32) & 0xFFFFffffu;
+    tmp.buf.w[14] = (uint32_t) (tmp.length & 0xFFFFffffu);
+    tmp.buf.w[15] = (uint32_t) ((tmp.length >> 32) & 0xFFFFffffu);
 #ifdef PCT_BIG_ENDIAN
     byteswap32(&tmp.buf.w[14]);
     byteswap32(&tmp.buf.w[15]);

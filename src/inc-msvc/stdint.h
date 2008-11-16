@@ -1,5 +1,5 @@
 /*
- *  _counter.h: Fast counter for use with CTR-mode ciphers
+ *  inc-msvc/stdint.h: Partial stdint.h for MSVC compiler
  *
  * =======================================================================
  * Copyright (C) 2008  Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -24,21 +24,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * =======================================================================
  */
-#ifndef PCT__COUNTER_H
-#define PCT__COUNTER_H
+#ifndef PYCRYPTO_MSVC_STDINT_H
+#define PYCRYPTO_MSVC_STDINT_H
 
-#include <stdint.h>
-#include "Python.h"
+typedef __int8  int8_t;
+typedef __int16 int16_t;
+typedef __int32 int32_t;
+typedef __int64 int64_t;
 
-typedef struct {
-    PyObject_HEAD
-    PyStringObject *prefix;     /* Prefix (useful for a nonce) */
-    PyStringObject *suffix;     /* Suffix (useful for a nonce) */
-    uint8_t *val;       /* Buffer for our output string */
-    uint32_t buf_size;  /* Size of the buffer */
-    uint8_t *p;         /* Pointer to the part of the buffer that we're allowed to update */
-    uint16_t nbytes;    /* The number of bytes that from .p that are part of the counter */
-    void (*inc_func)(void *);   /* Pointer to the counter increment function */
-} PCT_CounterObject;
+typedef unsigned __int8  uint8_t;
+typedef unsigned __int16 uint16_t;
+typedef unsigned __int32 uint32_t;
+typedef unsigned __int64 uint64_t;
 
-#endif /* PCT__COUNTER_H */
+/* Define the "inline" keyword */
+#ifndef inline
+# define inline __inline
+#endif /* inline */
+
+
+#endif /* PYCRYPTO_MSVC_STDINT_H */
+/* vim:set ts=4 sw=4 sts=4 expandtab: */

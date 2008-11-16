@@ -146,6 +146,8 @@ class PCTBuildExt (build_ext):
         build_ext.build_extensions(self)
 
     def detect_modules (self):
+        if self.compiler.compiler_type == 'msvc':
+            self.compiler.include_dirs.insert(0, "src/inc-msvc/")
         lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib']
         inc_dirs = self.compiler.include_dirs + ['/usr/include']
         exts = []
