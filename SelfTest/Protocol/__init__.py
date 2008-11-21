@@ -33,6 +33,7 @@ __revision__ = "$Id$"
 def get_tests(config={}):
     tests = []
     import test_chaffing;       tests += test_chaffing.get_tests(config=config)
+    import test_rfc1751;        tests += test_rfc1751.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':
