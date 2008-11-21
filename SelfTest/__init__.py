@@ -44,7 +44,7 @@ class SelfTestError(Exception):
         self.message = message
         self.result = result
 
-def run(module=None, verbosity=0, stream=None, **kwargs):
+def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs):
     """Execute self-tests.
 
     This raises SelfTestError if any test is unsuccessful.
@@ -56,11 +56,18 @@ def run(module=None, verbosity=0, stream=None, **kwargs):
         Crypto.SelfTest.run(Crypto.SelfTest.Hash)
 
     """
+    if config is None:
+        config = {}
     suite = unittest.TestSuite()
     if module is None:
-        suite.addTests(get_tests())
+        if tests is None:
+            tests = get_tests(config=config)
+        suite.addTests(tests)
     else:
-        suite.addTests(module.get_tests())
+        if tests is None:
+            suite.addTests(module.get_tests(config=config))
+        else:
+            raise ValueError("'module' and 'tests' arguments are mutually exclusive")
     if stream is None:
         kwargs['stream'] = StringIO.StringIO()
     runner = unittest.TextTestRunner(verbosity=verbosity, **kwargs)

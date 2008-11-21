@@ -3,7 +3,7 @@
 __revision__ = "$Id$"
 
 from distutils import core
-from distutils.core import Extension
+from distutils.core import Extension, Command
 from distutils.command.build_ext import build_ext
 import os, sys
 import struct
@@ -173,6 +173,41 @@ class PCTBuildPy(build_py):
             retval.append(item)
         return retval
 
+class TestCommand(Command):
+
+    description = "Run self-test"
+
+    user_options = [
+        ('skip-slow-tests', None,
+            'Skip slow tests')
+    ]
+
+    def initialize_options(self):
+        self.build_dir = None
+        self.skip_slow_tests = None
+
+    def finalize_options(self):
+        self.set_undefined_options('install', ('build_lib', 'build_dir'))
+        self.config = {'slow_tests': not self.skip_slow_tests}
+
+    def run(self):
+        # Make sure everything is built first
+        self.run_command('build')
+
+        # Run SelfTest
+        self.announce("running self-tests")
+        old_path = sys.path[:]
+        try:
+            sys.path.insert(0, self.build_dir)
+            from Crypto import SelfTest
+            SelfTest.run(verbosity=self.verbose, stream=sys.stdout, config=self.config)
+        finally:
+            # Restore sys.path
+            sys.path[:] = old_path
+
+        # Run slower self-tests
+        self.announce("running extended self-tests")
+
 kw = {'name':"pycrypto",
       'version':"2.0.2",
       'description':"Cryptographic modules for Python.",
@@ -180,7 +215,7 @@ kw = {'name':"pycrypto",
       'author_email':"amk@amk.ca",
       'url':"http://www.amk.ca/python/code/crypto",
 
-      'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy},
+      'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
                   "Crypto.Random",
                   "Crypto.Random.Fortuna",
