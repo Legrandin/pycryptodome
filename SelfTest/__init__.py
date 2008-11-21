@@ -82,6 +82,7 @@ def get_tests(config={}):
     tests = []
     import Cipher; tests += Cipher.get_tests(config=config)
     import Hash;   tests += Hash.get_tests(config=config)
+    import Protocol; tests += Protocol.get_tests(config=config)
     import PublicKey; tests += PublicKey.get_tests(config=config)
     import Random; tests += Random.get_tests(config=config)
     import Util;   tests += Util.get_tests(config=config)

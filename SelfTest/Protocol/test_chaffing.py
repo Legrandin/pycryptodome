@@ -1,6 +1,7 @@
 #
 # Test script for Crypto.Protocol.Chaffing
 #
+# Part of PyCrypto 2.0.1; Presumably written by A. M. Kuchling.
 
 __revision__ = "$Id$"
 
@@ -28,13 +29,7 @@ likely to effect their Safety and Happiness.
 
 class ChaffingTest (unittest.TestCase):
 
-    def setup (self):
-        pass
-
-    def shutdown (self):
-        pass
-
-    def test_chaffing (self):
+    def runTest(self):
         "Simple tests of chaffing and winnowing"
 	# Test constructors
         Chaffing.Chaff()
@@ -51,6 +46,9 @@ class ChaffingTest (unittest.TestCase):
         c = Chaffing.Chaff(0.0, 1)
         chaff = c.chaff(data)
         self.assertEquals(len(chaff), 2)
+
+def get_tests(config={}):
+    return [ChaffingTest()]
 
 if __name__ == "__main__":
     unittest.main()
