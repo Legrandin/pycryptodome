@@ -55,7 +55,7 @@ test_data = [
         '33-byte key (truncated to 32 bytes)'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import XOR
     from common import make_stream_tests
     return make_stream_tests(XOR, "XOR", test_data)

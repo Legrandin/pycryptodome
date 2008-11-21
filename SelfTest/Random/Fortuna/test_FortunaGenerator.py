@@ -73,7 +73,7 @@ class FortunaGeneratorTests(unittest.TestCase):
         # Try to read more than 2**20 bytes using the internal function.  This should fail.
         self.assertRaises(AssertionError, fg._pseudo_random_data, 2**20+1)
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
     return list_test_cases(FortunaGeneratorTests)
 

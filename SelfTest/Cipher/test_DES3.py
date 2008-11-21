@@ -306,7 +306,7 @@ test_data = [
 
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import DES3
     from common import make_block_tests
     return make_block_tests(DES3, "DES3", test_data)

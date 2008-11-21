@@ -42,7 +42,7 @@ class WinRandomImportTest(unittest.TestCase):
         y = randobj.get_bytes(16)
         self.assertNotEqual(x, y)
 
-def get_tests():
+def get_tests(config={}):
     return [WinRandomImportTest()]
 
 if __name__ == '__main__':

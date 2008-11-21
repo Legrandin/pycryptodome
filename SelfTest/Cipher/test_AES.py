@@ -1081,7 +1081,7 @@ test_data = [
         'ecb-tbl-256: I=128'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import AES
     from common import make_block_tests
     return make_block_tests(AES, "AES", test_data)

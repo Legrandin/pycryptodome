@@ -91,7 +91,7 @@ test_data = [
     ('0011223344556677', '584644c34503122c', '53e5ffe553', 'PCTv201-15'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import ARC2
     from common import make_block_tests
     return make_block_tests(ARC2, "ARC2", test_data)

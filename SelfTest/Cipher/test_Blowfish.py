@@ -103,7 +103,7 @@ test_data = [
         'f0e1d2c3b4a5968778695a4b3c2d1e0f0011223344556677'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import Blowfish
     from common import make_block_tests
     return make_block_tests(Blowfish, "Blowfish", test_data)

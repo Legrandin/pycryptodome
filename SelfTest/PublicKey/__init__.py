@@ -32,10 +32,10 @@ __revision__ = "$Id$"
 
 import os
 
-def get_tests():
+def get_tests(config={}):
     tests = []
-    import test_DSA;       tests += test_DSA.get_tests()
-    import test_RSA;       tests += test_RSA.get_tests()
+    import test_DSA;       tests += test_DSA.get_tests(config=config)
+    import test_RSA;       tests += test_RSA.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

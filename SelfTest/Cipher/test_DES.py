@@ -289,7 +289,7 @@ test_data = [
         'NIST SP800-17 B.2 #55'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import DES
     from common import make_block_tests
     return make_block_tests(DES, "DES", test_data)

@@ -60,7 +60,7 @@ test_data = [
         '"a" * 10**6'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Hash import RIPEMD
     from common import make_hash_tests
     return make_hash_tests(RIPEMD, "RIPEMD", test_data)

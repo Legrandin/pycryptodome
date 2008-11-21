@@ -47,7 +47,7 @@ class SimpleTest(unittest.TestCase):
         rpool.stir('foo')
         rpool.add_event('foo')
 
-def get_tests():
+def get_tests(config={}):
     return [SimpleTest()]
 
 if __name__ == '__main__':

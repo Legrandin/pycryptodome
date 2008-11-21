@@ -42,7 +42,7 @@ class SimpleTest(unittest.TestCase):
         y = randobj.read(16)
         self.assertNotEqual(x, y)
 
-def get_tests():
+def get_tests(config={}):
     return [SimpleTest()]
 
 if __name__ == '__main__':

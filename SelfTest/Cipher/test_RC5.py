@@ -81,7 +81,7 @@ test_data = [
 #    ('ffffffffffffffff7875dbf6738c647811223344556677', '7875dbf6738c64787cb3f1df34f948117fd1a023a5bba217', '0102030405', 'RFC2040-29', dict(rounds=8, mode='CBC-Pad', iv='0000000000000000')),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import RC5
     from common import make_block_tests
     return make_block_tests(RC5, "RC5", test_data)

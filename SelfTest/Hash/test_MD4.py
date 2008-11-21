@@ -51,7 +51,7 @@ test_data = [
         "'1234567890' * 8"),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Hash import MD4
     from common import make_hash_tests
     return make_hash_tests(MD4, "MD4", test_data)

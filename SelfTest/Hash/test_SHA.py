@@ -51,7 +51,7 @@ test_data = [
         '"01234567" * 80'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Hash import SHA
     from common import make_hash_tests
     return make_hash_tests(SHA, "SHA", test_data)

@@ -70,7 +70,7 @@ test_data = [
         "Test vector 4"),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import ARC4
     from common import make_stream_tests
     return make_stream_tests(ARC4, "ARC4", test_data)

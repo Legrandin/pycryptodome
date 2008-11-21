@@ -52,7 +52,7 @@ test_data = [
         'Length = 55 (mod 64)'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Hash import SHA256
     from common import make_hash_tests
     return make_hash_tests(SHA256, "SHA256", test_data)

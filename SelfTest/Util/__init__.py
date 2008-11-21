@@ -32,11 +32,11 @@ __revision__ = "$Id$"
 
 import os
 
-def get_tests():
+def get_tests(config={}):
     tests = []
     if os.name == 'nt':
-        import test_winrandom; tests += test_winrandom.get_tests()
-    import test_number; tests += test_number.get_tests()
+        import test_winrandom; tests += test_winrandom.get_tests(config=config)
+    import test_number; tests += test_number.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

@@ -45,7 +45,7 @@ test_data = [
         'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq')
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Random.Fortuna import SHAd256
     from Crypto.SelfTest.Hash.common import make_hash_tests
     return make_hash_tests(SHAd256, "SHAd256", test_data)

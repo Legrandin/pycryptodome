@@ -179,7 +179,7 @@ class FortunaAccumulatorTests(unittest.TestCase):
         # We should now be able to get data from the accumulator
         fa.random_data(1)
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
     return list_test_cases(FortunaAccumulatorTests)
 

@@ -208,7 +208,7 @@ class DSASlowMathTest(DSATest):
         DSATest.test_construct_5tuple(self)
 
 
-def get_tests():
+def get_tests(config={}):
     tests = []
     tests += list_test_cases(DSATest)
     try:

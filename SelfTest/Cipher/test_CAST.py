@@ -46,7 +46,7 @@ test_data = [
         '40-bit key'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import CAST
     from common import make_block_tests
     return make_block_tests(CAST, "CAST", test_data)

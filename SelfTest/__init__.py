@@ -71,13 +71,13 @@ def run(module=None, verbosity=0, stream=None, **kwargs):
         raise SelfTestError("Self-test failed", result)
     return result
 
-def get_tests():
+def get_tests(config={}):
     tests = []
-    import Cipher; tests += Cipher.get_tests()
-    import Hash;   tests += Hash.get_tests()
-    import PublicKey; tests += PublicKey.get_tests()
-    import Random; tests += Random.get_tests()
-    import Util;   tests += Util.get_tests()
+    import Cipher; tests += Cipher.get_tests(config=config)
+    import Hash;   tests += Hash.get_tests(config=config)
+    import PublicKey; tests += PublicKey.get_tests(config=config)
+    import Random; tests += Random.get_tests(config=config)
+    import Util;   tests += Util.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

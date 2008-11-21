@@ -74,7 +74,7 @@ test_data = [
     ('6c2e3617da2bac35', 'b2229067630f7045', '000027ed8f5c3e8baf16560d14c90b43'),
 ]
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.Cipher import IDEA
     from common import make_block_tests
     return make_block_tests(IDEA, "IDEA", test_data)

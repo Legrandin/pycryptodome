@@ -230,7 +230,7 @@ class MiscTests(unittest.TestCase):
                     self.assertEqual((a, b, int(math.floor(float(a) / b))),
                                      (a, b, number.floor_div(a, b)))
 
-def get_tests():
+def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
     return list_test_cases(MiscTests)
 

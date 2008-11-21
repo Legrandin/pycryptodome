@@ -356,7 +356,7 @@ class RSASlowMathTest(RSATest):
         RSATest.test_construct_6tuple(self)
 
 
-def get_tests():
+def get_tests(config={}):
     tests = []
     tests += list_test_cases(RSATest)
     try:
