@@ -104,10 +104,10 @@ class CipherSelfTest(unittest.TestCase):
         ct2 = b2a_hex(self._new().encrypt(plaintext))
         pt2 = b2a_hex(self._new().decrypt(ciphertext))
 
-        self.assertEqual(self.ciphertext, ct1)
-        self.assertEqual(self.ciphertext, ct2)
-        self.assertEqual(self.plaintext, pt1)
-        self.assertEqual(self.plaintext, pt2)
+        self.assertEqual(self.ciphertext, ct1)  # encrypt
+        self.assertEqual(self.ciphertext, ct2)  # encrypt (second time)
+        self.assertEqual(self.plaintext, pt1)   # decrypt
+        self.assertEqual(self.plaintext, pt2)   # decrypt (second time)
 
 def make_block_tests(module, module_name, test_data):
     tests = []

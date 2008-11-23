@@ -69,10 +69,10 @@ class HashSelfTest(unittest.TestCase):
         out3 = h.hexdigest()
         out4 = binascii.b2a_hex(h.digest())
 
-        self.assertEqual(self.expected, out1)
-        self.assertEqual(self.expected, out2)
-        self.assertEqual(self.expected, out3)
-        self.assertEqual(self.expected, out4)
+        self.assertEqual(self.expected, out1)   # h = .new(); h.update(data); h.digest()
+        self.assertEqual(self.expected, out2)   # h = .new(); h.update(data); h.hexdigest()
+        self.assertEqual(self.expected, out3)   # h = .new(data); h.hexdigest()
+        self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
 
 class MACSelfTest(unittest.TestCase):
 
