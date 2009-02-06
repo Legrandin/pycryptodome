@@ -11,6 +11,7 @@
  */
 
 #include <string.h>  
+#include "Python.h"
 
 #define MODULE_NAME ARC2
 #define BLOCK_SIZE 8
@@ -143,6 +144,12 @@ block_init(block_state *self, U8 *key, int keylength)
 		13, 56, 52, 27,171, 51,255,176,187, 72, 12, 95,185,177,205, 46,
 		197,243,219, 71,229,165,156,119, 10,166, 32,104,254,127,193,173
         };
+
+	if ((U32)keylength > sizeof(self->xkey)) {
+		PyErr_SetString(PyExc_ValueError,
+				"ARC2 key length must be less than 128 bytes");
+		return;
+	}
 
 	memcpy(self->xkey, key, keylength);
   
