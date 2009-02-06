@@ -32,6 +32,8 @@ __revision__ = "$Id$"
 
 from common import dict     # For compatibility with Python 2.1 and 2.2
 
+import unittest
+
 # This is a list of (plaintext, ciphertext, key[, description[, extra_params]]) tuples.
 test_data = [
     # Test vectors from RFC 2268
@@ -91,10 +93,27 @@ test_data = [
     ('0011223344556677', '584644c34503122c', '53e5ffe553', 'PCTv201-15'),
 ]
 
+class BufferOverflowTest(unittest.TestCase):
+    # Test a buffer overflow found in older versions of PyCrypto
+
+    def setUp(self):
+        global ARC2
+        from Crypto.Cipher import ARC2
+
+    def runTest(self):
+        """ARC2 with keylength > 128"""
+        key = "x" * 16384
+        mode = ARC2.MODE_ECB
+        self.assertRaises(ValueError, ARC2.new, key, mode)
+
 def get_tests(config={}):
     from Crypto.Cipher import ARC2
     from common import make_block_tests
-    return make_block_tests(ARC2, "ARC2", test_data)
+
+    tests = make_block_tests(ARC2, "ARC2", test_data)
+    tests.append(BufferOverflowTest())
+
+    return tests
 
 if __name__ == '__main__':
     import unittest
