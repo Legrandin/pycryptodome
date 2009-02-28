@@ -197,17 +197,9 @@ class AllOrNothing:
         return text[:-padbytes]
 
     def _inventkey(self, key_size):
-        # TBD: Not a very secure algorithm.  Eventually, I'd like to use JHy's
-        # kernelrand module
-        import time
-        from Crypto.Util import randpool
-        # TBD: key_size * 2 to work around possible bug in RandomPool?
-        pool = randpool.RandomPool(key_size * 2)
-        while key_size > pool.entropy:
-            pool.add_event()
-
-        # we now have enough entropy in the pool to get a key_size'd key
-        return pool.get_bytes(key_size)
+        # Return key_size random bytes
+        from Crypto import Random
+        return Random.new().read(key_size)
 
     def __newcipher(self, key):
         if self.__mode is None and self.__IV is None:
