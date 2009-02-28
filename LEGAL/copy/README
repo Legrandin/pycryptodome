@@ -1,0 +1,29 @@
+Historically, the copyright licensing status of the Python Cryptography
+Toolkit ("PyCrypto") has been somewhat ambiguous.  The original intention of
+Andrew M. Kuchling and other contributors has been to dedicate PyCrypto to the
+public domain, but the original license may not have allowed distributing
+modified versions, depending on one's interpretation of the word "use" (see
+LICENSE.orig).
+
+Additionally, some files within PyCrypto have specified their own licenses,
+which differed from the PyCrypto license itself.  For example, the original
+RIPEMD.c module simply had a copyright statement and warranty disclaimer,
+without clearly licensing anything.
+
+Recently, there has been an effort to clarify the situation.  A multi-faceted
+approach has been taken with regard to ambiguously or incompatibly licensed
+code, including:
+
+- Asking contributors to clarify their original intentions or to clearly and
+  explicitly dedicate their contributions to the public domain;
+
+- Writing new code from scratch as a replacement;
+
+- Using clearly-licensed code from other sources; and
+
+- Removing the code without replacing it.
+
+Where contributors have responded to a request to clarify their intentions,
+their statements have been recorded in this directory.
+
+The "stmts" directory contains contributors' statements.
