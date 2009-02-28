@@ -230,7 +230,7 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest.Random.OSRNG",
                   "Crypto.SelfTest.Util",
                   "Crypto.Protocol", "Crypto.PublicKey"],
-      'package_dir' : { "Crypto":"." },
+      'package_dir' : { "Crypto": "lib/Crypto" },
       # One module is defined here, because build_ext won't be
       # called unless there's at least one extension module defined.
       'ext_modules':[Extension("Crypto.Hash.MD2",
