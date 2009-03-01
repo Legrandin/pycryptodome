@@ -65,7 +65,7 @@
 #define ARGTYPE 4
 
 /* Include the actial DES implementation */
-#include "libtom/des.c"
+#include "libtom/tomcrypt_des.c"
 
 #undef DES  /* this is needed because tomcrypt_custom.h defines DES to an empty string */
 
