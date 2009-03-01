@@ -1,14 +1,30 @@
 /*
    cast.c -- implementation of CAST-128 (aka CAST5) as described in RFC2144
-   
-   compile -DTEST to include main() which performs the tests
-       specified in RFC2144
 
-   Written by Wim Lewis <wiml@hhhh.org> based entirely on RFC2144. This code
-   is in the public domain. Consult your local laws for possible restrictions
-   on use, distribution, and import/export. RFC2144 states that this
-   algorithm "is available worldwide on a royalty-free basis for commercial
-   and non-commercial uses".
+   Written in 1997 by Wim Lewis <wiml@hhhh.org> based entirely on RFC2144.
+   Minor modifications made in 2002 by Andrew M. Kuchling <amk@amk.ca>.
+
+   ===================================================================
+   The contents of this file are dedicated to the public domain.  To
+   the extent that dedication to the public domain is not available,
+   everyone is granted a worldwide, perpetual, royalty-free,
+   non-exclusive license to exercise all rights associated with the
+   contents of this file for any purpose whatsoever.
+   No rights are reserved.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+   ===================================================================
+
+   Consult your local laws for possible restrictions on use, distribution, and
+   import/export. RFC2144 states that this algorithm "is available worldwide
+   on a royalty-free basis for commercial and non-commercial uses".
 
    This code is a pretty straightforward transliteration of the RFC into C.
    It has not been optimized much at all: byte-order-independent arithmetic
@@ -18,11 +34,12 @@
 
    This code requires a vaguely ANSI-ish compiler.
 
+   compile -DTEST to include main() which performs the tests
+       specified in RFC2144
+
    Tested with gcc 2.5.8 on i486, i586, i686, hp pa-risc, mc68040, sparc;
    also with gcc 2.7.2 and (with minor changes) native Sun compiler on sparc
 
-   History:
-     21 Jul 1997: wiml     : first working version & Python module
 */
 
 #include "Python.h"
