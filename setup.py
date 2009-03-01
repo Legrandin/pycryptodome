@@ -105,12 +105,12 @@ class PCTBuildExt (build_ext):
             Extension("Crypto.Cipher.CAST",
                       include_dirs=['src/'],
                       sources=["src/CAST.c"]),
-#            Extension("Crypto.Cipher.DES",
-#                      include_dirs=['src/'],
-#                      sources=["src/DES.c"]),
-#            Extension("Crypto.Cipher.DES3",
-#                      include_dirs=['src/'],
-#                      sources=["src/DES3.c"]),
+            Extension("Crypto.Cipher.DES",
+                      include_dirs=['src/', 'src/libtom/'],
+                      sources=["src/DES.c"]),
+            Extension("Crypto.Cipher.DES3",
+                      include_dirs=['src/', 'src/libtom/'],
+                      sources=["src/DES3.c"]),
 
             # Stream ciphers
             Extension("Crypto.Cipher.ARC4",
