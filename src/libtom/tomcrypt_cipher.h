@@ -647,19 +647,19 @@ extern const struct ltc_cipher_descriptor twofish_desc;
 #endif
 
 #ifdef DES
-int des_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey);
-int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey);
-int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey);
-int des_test(void);
-void des_done(symmetric_key *skey);
-int des_keysize(int *keysize);
-int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey);
-int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey);
-int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey);
-int des3_test(void);
-void des3_done(symmetric_key *skey);
-int des3_keysize(int *keysize);
-extern const struct ltc_cipher_descriptor des_desc, des3_desc;
+static int des_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey);
+static int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey);
+static int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey);
+static int des_test(void);
+static void des_done(symmetric_key *skey);
+static int des_keysize(int *keysize);
+static int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey);
+static int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey);
+static int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey);
+static int des3_test(void);
+static void des3_done(symmetric_key *skey);
+static int des3_keysize(int *keysize);
+/* extern const struct ltc_cipher_descriptor des_desc, des3_desc; */
 #endif
 
 #ifdef CAST5

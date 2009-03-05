@@ -24,42 +24,6 @@
  * Country of origin: Canada
  */
 
-/* Redefine symbols exported by LibTomCrypt, so they won't accidentally
- * conflict other libraries. */
-#ifdef PCT_DES3_MODULE
-# define des_desc         PCT_DES3_tom_des_desc
-# define des3_desc        PCT_DES3_tom_des3_desc
-# define des_setup        PCT_DES3_tom_des_setup
-# define des3_setup       PCT_DES3_tom_des3_setup
-# define des_ecb_encrypt  PCT_DES3_tom_des_ecb_encrypt
-# define des_ecb_decrypt  PCT_DES3_tom_des_ecb_decrypt
-# define des3_ecb_encrypt PCT_DES3_tom_des3_ecb_encrypt
-# define des3_ecb_decrypt PCT_DES3_tom_des3_ecb_decrypt
-# define des_test         PCT_DES3_tom_des_test
-# define des3_test        PCT_DES3_tom_des3_test
-# define des_done         PCT_DES3_tom_des_done
-# define des3_done        PCT_DES3_tom_des3_done
-# define des_keysize      PCT_DES3_tom_des_keysize
-# define des3_keysize     PCT_DES3_tom_des3_keysize
-# define crypt_argchk     PCT_DES3_tom_crypt_argchk
-#else
-# define des_desc         PCT_DES_tom_des_desc
-# define des3_desc        PCT_DES_tom_des3_desc
-# define des_setup        PCT_DES_tom_des_setup
-# define des3_setup       PCT_DES_tom_des3_setup
-# define des_ecb_encrypt  PCT_DES_tom_des_ecb_encrypt
-# define des_ecb_decrypt  PCT_DES_tom_des_ecb_decrypt
-# define des3_ecb_encrypt PCT_DES_tom_des3_ecb_encrypt
-# define des3_ecb_decrypt PCT_DES_tom_des3_ecb_decrypt
-# define des_test         PCT_DES_tom_des_test
-# define des3_test        PCT_DES_tom_des3_test
-# define des_done         PCT_DES_tom_des_done
-# define des3_done        PCT_DES_tom_des3_done
-# define des_keysize      PCT_DES_tom_des_keysize
-# define des3_keysize     PCT_DES_tom_des3_keysize
-# define crypt_argchk     PCT_DES_tom_crypt_argchk
-#endif
-
 /* Setting this will cause LibTomCrypt to return CRYPT_INVALID_ARG when its
  * assert-like LTC_ARGCHK macro fails. */
 #define ARGTYPE 4
