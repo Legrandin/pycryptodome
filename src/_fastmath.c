@@ -17,7 +17,7 @@
 #include <longintrepr.h>				/* for conversions */
 #include <gmp.h>
 
-void
+static void
 longObjToMPZ (mpz_t m, PyLongObject * p)
 {
 	int size, i;
@@ -39,7 +39,7 @@ longObjToMPZ (mpz_t m, PyLongObject * p)
 	mpz_clear (temp2);
 }
 
-PyObject *
+static PyObject *
 mpzToLongObj (mpz_t m)
 {
 	/* borrowed from gmpy */
@@ -84,8 +84,8 @@ typedef struct
 }
 rsaKey;
 
-PyObject *rsaKey_new (PyObject *, PyObject *);
-PyObject *dsaKey_new (PyObject *, PyObject *);
+static PyObject *rsaKey_new (PyObject *, PyObject *);
+static PyObject *dsaKey_new (PyObject *, PyObject *);
 
 static void dsaKey_dealloc (dsaKey *);
 static PyObject *dsaKey_getattr (dsaKey *, char *);
@@ -290,7 +290,7 @@ static PyMethodDef dsaKey__methods__[] = {
 	{NULL, NULL, 0, NULL}
 };
 
-PyObject *fastmathError;							/* raised on errors */
+static PyObject *fastmathError;							/* raised on errors */
 
 static PyTypeObject rsaKeyType = {
 	PyObject_HEAD_INIT (NULL) 0,
@@ -330,7 +330,7 @@ static PyMethodDef rsaKey__methods__[] = {
 	{NULL, NULL, 0, NULL}
 };
 
-PyObject *
+static PyObject *
 dsaKey_new (PyObject * self, PyObject * args)
 {
 	PyLongObject *y = NULL, *g = NULL, *p = NULL, *q = NULL, *x = NULL;
@@ -395,7 +395,7 @@ dsaKey_getattr (dsaKey * key, char *attr)
 	}
 }
 
-PyObject *
+static PyObject *
 dsaKey__sign (dsaKey * key, PyObject * args)
 {
 	PyObject *lm, *lk, *lr, *ls;
@@ -427,7 +427,7 @@ dsaKey__sign (dsaKey * key, PyObject * args)
 	return Py_BuildValue ("(NN)", lr, ls);
 }
 
-PyObject *
+static PyObject *
 dsaKey__verify (dsaKey * key, PyObject * args)
 {
 	PyObject *lm, *lr, *ls;
@@ -457,7 +457,7 @@ dsaKey__verify (dsaKey * key, PyObject * args)
 	}
 }
 
-PyObject *
+static PyObject *
 dsaKey_size (dsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
@@ -465,7 +465,7 @@ dsaKey_size (dsaKey * key, PyObject * args)
 	return Py_BuildValue ("i", mpz_sizeinbase (key->p, 2) - 1);
 }
 
-PyObject *
+static PyObject *
 dsaKey_has_private (dsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
@@ -479,7 +479,7 @@ dsaKey_has_private (dsaKey * key, PyObject * args)
         }
 }
 
-PyObject *
+static PyObject *
 rsaKey_new (PyObject * self, PyObject * args)
 {
 	PyLongObject *n = NULL, *e = NULL, *d = NULL, *p = NULL, *q = NULL, 
@@ -585,7 +585,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 	}
 }
 
-PyObject *
+static PyObject *
 rsaKey__encrypt (rsaKey * key, PyObject * args)
 {
 	PyObject *l, *r;
@@ -608,7 +608,7 @@ rsaKey__encrypt (rsaKey * key, PyObject * args)
 	return Py_BuildValue ("N", r);
 }
 
-PyObject *
+static PyObject *
 rsaKey__decrypt (rsaKey * key, PyObject * args)
 {
 	PyObject *l, *r;
@@ -638,7 +638,7 @@ rsaKey__decrypt (rsaKey * key, PyObject * args)
 	return Py_BuildValue ("N", r);
 }
 
-PyObject *
+static PyObject *
 rsaKey__verify (rsaKey * key, PyObject * args)
 {
 	PyObject *l, *lsig;
@@ -663,7 +663,7 @@ rsaKey__verify (rsaKey * key, PyObject * args)
         }
 }
 
-PyObject *
+static PyObject *
 rsaKey__blind (rsaKey * key, PyObject * args)
 {
 	PyObject *l, *lblind, *r;
@@ -695,7 +695,7 @@ rsaKey__blind (rsaKey * key, PyObject * args)
 	return Py_BuildValue ("N", r);
 }
 
-PyObject *
+static PyObject *
 rsaKey__unblind (rsaKey * key, PyObject * args)
 {
 	PyObject *l, *lblind, *r;
@@ -731,8 +731,8 @@ rsaKey__unblind (rsaKey * key, PyObject * args)
 	mpz_clear (vblind);
 	return Py_BuildValue ("N", r);
 }
-  
-PyObject *
+
+static PyObject *
 rsaKey_size (rsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
@@ -740,7 +740,7 @@ rsaKey_size (rsaKey * key, PyObject * args)
 	return Py_BuildValue ("i", mpz_sizeinbase (key->n, 2) - 1);
 }
 
-PyObject *
+static PyObject *
 rsaKey_has_private (rsaKey * key, PyObject * args)
 {
 	if (!PyArg_ParseTuple (args, ""))
@@ -755,7 +755,7 @@ rsaKey_has_private (rsaKey * key, PyObject * args)
 }
 
 
-PyObject *
+static PyObject *
 isPrime (PyObject * self, PyObject * args)
 {
 	PyObject *l;

@@ -128,7 +128,7 @@ static inline void decrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
     *pxR = xR;
 }
 
-void Blowfish_encrypt(Blowfish_state *self, const unsigned char *in, unsigned char *out)
+static void Blowfish_encrypt(Blowfish_state *self, const unsigned char *in, unsigned char *out)
 {
     uint32_t xL, xR;
 
@@ -149,7 +149,7 @@ void Blowfish_encrypt(Blowfish_state *self, const unsigned char *in, unsigned ch
     word_to_bytes(xR, out+4);
 }
 
-void Blowfish_decrypt(Blowfish_state *self, const unsigned char *in, unsigned char *out)
+static void Blowfish_decrypt(Blowfish_state *self, const unsigned char *in, unsigned char *out)
 {
     uint32_t xL, xR;
 
@@ -170,7 +170,7 @@ void Blowfish_decrypt(Blowfish_state *self, const unsigned char *in, unsigned ch
     word_to_bytes(xR, out+4);
 }
 
-void Blowfish_init(Blowfish_state *self, const unsigned char *key, int keylen)
+static void Blowfish_init(Blowfish_state *self, const unsigned char *key, int keylen)
 {
     uint32_t word;
     int i;

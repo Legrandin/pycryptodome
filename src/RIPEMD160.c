@@ -396,7 +396,7 @@ static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
 #define hash_init ripemd160_init
 #define hash_update ripemd160_update
 #define hash_copy ripemd160_copy
-PyObject *hash_digest(hash_state *self)
+static PyObject *hash_digest(hash_state *self)
 {
     char buf[DIGEST_SIZE];
     PyObject *retval;

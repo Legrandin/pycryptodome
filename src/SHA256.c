@@ -99,7 +99,7 @@ static void sha_compress(hash_state * md)
 }
 
 /* init the SHA state */
-void sha_init(hash_state * md)
+static void sha_init(hash_state * md)
 {
     md->curlen = md->length_upper = md->length_lower = 0;
     md->state[0] = 0x6A09E667UL;
@@ -112,7 +112,7 @@ void sha_init(hash_state * md)
     md->state[7] = 0x5BE0CD19UL;
 }
 
-void sha_process(hash_state * md, unsigned char *buf, int len)
+static void sha_process(hash_state * md, unsigned char *buf, int len)
 {
     while (len--) {
         /* copy byte */
@@ -132,7 +132,7 @@ void sha_process(hash_state * md, unsigned char *buf, int len)
     }
 }
 
-void sha_done(hash_state * md, unsigned char *hash)
+static void sha_done(hash_state * md, unsigned char *hash)
 {
     int i;
     U32 orig_length;
