@@ -212,9 +212,6 @@ class TestCommand(Command):
         self.config = {'slow_tests': not self.skip_slow_tests}
 
     def run(self):
-        # Make sure everything is built first
-        self.run_command('build')
-
         # Run SelfTest
         self.announce("running self-tests")
         old_path = sys.path[:]
