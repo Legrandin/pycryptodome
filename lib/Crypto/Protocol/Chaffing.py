@@ -144,18 +144,8 @@ class Chaff:
         return chaffedblocks
 
     def _randnum(self, size):
-        # TBD: Not a very secure algorithm.
-        # TBD: size * 2 to work around possible bug in RandomPool
-        from Crypto.Util import randpool
-        import time
-        pool = randpool.RandomPool(size * 2)
-        while size > pool.entropy:
-            pass
-
-        # we now have enough entropy in the pool to get size bytes of random
-        # data... well, probably
-        return pool.get_bytes(size)
-
+        from Crypto import Random
+        return Random.new().read(size)
 
 
 if __name__ == '__main__':
