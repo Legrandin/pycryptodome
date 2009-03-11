@@ -28,7 +28,6 @@ else:
 # The list consists of (package, module_name) tuples
 from distutils.command.build_py import build_py
 EXCLUDE_PY = [
-    ('Crypto', 'test'),     # Top-level test module (it doesn't work outside the source tree anyway)
     ('Crypto.Hash', 'RIPEMD160'),  # Included for your amusement, but the C version is much faster.
 ]
 
