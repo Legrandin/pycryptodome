@@ -133,6 +133,17 @@ class PCTBuildExt (build_ext):
 
         # Detect which modules should be compiled
         self.detect_modules()
+
+        # Speed up execution by tweaking compiler options.  This especially
+        # helps the DES modules.
+        if not self.debug and self.compiler.compiler_type in ('unix', 'cygwin', 'mingw32'):
+            self.__remove_compiler_option("-g")
+            self.__remove_compiler_option("-O")
+            self.__remove_compiler_option("-O2")
+            self.__add_compiler_option("-O3")
+            self.__add_compiler_option("-fomit-frame-pointer")
+
+        # Call the superclass's build_extensions method
         build_ext.build_extensions(self)
 
     def detect_modules (self):
@@ -149,6 +160,26 @@ class PCTBuildExt (build_ext):
         else:
             print >>sys.stderr, "warning: GMP library not found; Not building Crypto.PublicKey._fastmath."
         self.extensions += exts
+
+    def __remove_compiler_option(self, option):
+        """Remove the specified compiler option.
+
+        Return true if the option was found.  Return false otherwise.
+        """
+        found = 0
+        for attrname in ('compiler', 'compiler_so'):
+            compiler = getattr(self.compiler, attrname, None)
+            if compiler is not None:
+                while option in compiler:
+                    compiler.remove(option)
+                    found += 1
+        return found
+
+    def __add_compiler_option(self, option):
+        for attrname in ('compiler', 'compiler_so'):
+            compiler = getattr(self.compiler, attrname, None)
+            if compiler is not None:
+                compiler.append(option)
 
 class PCTBuildPy(build_py):
     def find_package_modules(self, package, package_dir, *args, **kwargs):
