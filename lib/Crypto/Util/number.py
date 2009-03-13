@@ -46,9 +46,15 @@ def size (N):
 
 def getRandomNumber(N, randfunc=None):
     """getRandomNumber(N:int, randfunc:callable):long
-    Return an N-bit random number.
+    Return a random N-bit number.
 
     If randfunc is omitted, then Random.new().read is used.
+
+    NOTE: Confusingly, this function does NOT return N random bits; It returns
+    a random N-bit number, i.e. a random number between 2**(N-1) and (2**N)-1.
+
+    This function is for internal use only and may be renamed or removed in
+    the future.
     """
     if randfunc is None:
         _import_Random()
