@@ -4,3 +4,4 @@
 /Doc/apidoc/
 *.py[co]
 *~
+.DS_Store
