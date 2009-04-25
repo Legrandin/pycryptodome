@@ -415,7 +415,7 @@ dsaKey__sign (dsaKey * key, PyObject * args)
 	result = dsaSign (key, m, k, r, s);
 	if (result == 1)
 	{
-		PyErr_SetString (fastmathError, "K not between 2 and q");
+		PyErr_SetString (PyExc_ValueError, "K not between 2 and q");
 		return NULL;
 	}
 	lr = mpzToLongObj (r);
@@ -600,7 +600,7 @@ rsaKey__encrypt (rsaKey * key, PyObject * args)
 	result = rsaEncrypt (key, v);
 	if (result == 1)
 	{
-		PyErr_SetString (fastmathError, "Plaintext too large");
+		PyErr_SetString (PyExc_ValueError, "Plaintext too large");
 		return NULL;
 	}
 	r = (PyObject *) mpzToLongObj (v);
@@ -623,13 +623,13 @@ rsaKey__decrypt (rsaKey * key, PyObject * args)
 	result = rsaDecrypt (key, v);
 	if (result == 1)
 	{
-		PyErr_SetString (fastmathError, 
+		PyErr_SetString (PyExc_ValueError,
 				 "Ciphertext too large");
 		return NULL;
 	}
 	else if (result == 2)
 	{
-		PyErr_SetString (fastmathError, 
+		PyErr_SetString (PyExc_TypeError,
 				 "Private key not available in this object");
 		return NULL;
 	}
@@ -681,12 +681,12 @@ rsaKey__blind (rsaKey * key, PyObject * args)
 	result = rsaBlind (key, v, vblind);
 	if (result == 1)
 		{
-			PyErr_SetString (fastmathError, "Message too large");
+			PyErr_SetString (PyExc_ValueError, "Message too large");
 			return NULL;
 		}
 	else if (result == 2)
 		{
-			PyErr_SetString (fastmathError, "Blinding factor too large");
+			PyErr_SetString (PyExc_ValueError, "Blinding factor too large");
 			return NULL;
 		}
 	r = (PyObject *) mpzToLongObj (v);
@@ -713,17 +713,17 @@ rsaKey__unblind (rsaKey * key, PyObject * args)
 	result = rsaUnBlind (key, v, vblind);
 	if (result == 1)
 		{
-			PyErr_SetString (fastmathError, "Message too large");
+			PyErr_SetString (PyExc_ValueError, "Message too large");
 			return NULL;
 		}
 	else if (result == 2)
 		{
-			PyErr_SetString (fastmathError, "Blinding factor too large");
+			PyErr_SetString (PyExc_ValueError, "Blinding factor too large");
 			return NULL;
 		}
 	else if (result == 3)
 		{
-			PyErr_SetString (fastmathError, "Inverse doesn't exist");
+			PyErr_SetString (PyExc_ValueError, "Inverse doesn't exist");
 			return NULL;
 		}
 	r = (PyObject *) mpzToLongObj (v);

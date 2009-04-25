@@ -70,7 +70,7 @@ integers, MPZ objects, or whatever."""
         K is a random parameter required by some algorithms.
         """
         if (not self.has_private()):
-            raise error, 'Private key not available in this object'
+            raise TypeError('Private key not available in this object')
         if isinstance(M, types.StringType): M=bytes_to_long(M)
         if isinstance(K, types.StringType): K=bytes_to_long(K)
         return self._sign(M, K)

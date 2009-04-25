@@ -37,7 +37,7 @@ def generateQ(randfunc):
         q=q+2
     if pow(2,159L) < q < pow(2,160L):
         return S, q
-    raise error, 'Bad q value generated'
+    raise RuntimeError('Bad q value generated')
 
 def generate_py(bits, randfunc, progress_func=None):
     """generate(bits:int, randfunc:callable, progress_func:callable)
@@ -48,7 +48,7 @@ def generate_py(bits, randfunc, progress_func=None):
     """
 
     if bits<160:
-        raise error, 'Key length <160 bits'
+        raise ValueError('Key length < 160 bits')
     obj=DSAobj()
     # Generate string S and prime q
     if progress_func:

@@ -47,7 +47,7 @@ class _RSAKey(object):
     def _decrypt(self, c):
         # compute c**d (mod n)
         if not self.has_private():
-            raise error("No private key")
+            raise TypeError("No private key")
         return pow(c, self.d, self.n) # TODO: CRT exponentiation
 
     def _encrypt(self, m):
@@ -56,7 +56,7 @@ class _RSAKey(object):
 
     def _sign(self, m):   # alias for _decrypt
         if not self.has_private():
-            raise error("No private key")
+            raise TypeError("No private key")
         return self._decrypt(m)
 
     def _verify(self, m, sig):
@@ -97,9 +97,9 @@ class _DSAKey(object):
     def _sign(self, m, k):   # alias for _decrypt
         # SECURITY TODO - We _should_ be computing SHA1(m), but we don't because that's the API.
         if not self.has_private():
-            raise error("No private key")
+            raise TypeError("No private key")
         if not (1L < k < self.q):
-            raise error("k is not between 2 and q-1")
+            raise ValueError("k is not between 2 and q-1")
         inv_k = inverse(k, self.q)   # Compute k**-1 mod q
         r = pow(self.g, k, self.p) % self.q  # r = (g**k mod p) mod q
         s = (inv_k * (m + self.x * r)) % self.q

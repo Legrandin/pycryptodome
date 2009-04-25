@@ -54,16 +54,16 @@ class _DSAobj(pubkey.pubkey):
             raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
 
     def _encrypt(self, c, K):
-        raise error("DSA cannot encrypt")
+        raise TypeError("DSA cannot encrypt")
 
     def _decrypt(self, c):
-        raise error("DSA cannot decrypt")
+        raise TypeError("DSA cannot decrypt")
 
     def _blind(self, m, r):
-        raise error("DSA cannot blind")
+        raise TypeError("DSA cannot blind")
 
     def _unblind(self, m, r):
-        raise error("DSA cannot unblind")
+        raise TypeError("DSA cannot unblind")
 
     def _sign(self, m, k):
         return self.key._sign(m, k)
