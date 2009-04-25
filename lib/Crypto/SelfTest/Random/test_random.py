@@ -31,7 +31,7 @@ import unittest
 class SimpleTest(unittest.TestCase):
     def runTest(self):
         """Crypto.Random.new()"""
-        # Import the OSRNG module and try to use it
+        # Import the Random module and try to use it
         from Crypto import Random
         randobj = Random.new()
         x = randobj.read(16)
