@@ -182,6 +182,8 @@ class RSATest(unittest.TestCase):
         self.assertEqual(1, rsaObj.d > 1)   # d > 1
 
     def _check_public_key(self, rsaObj):
+        ciphertext = a2b_hex(self.ciphertext)
+
         # Check capabilities
         self.assertEqual(0, rsaObj.has_private())
         self.assertEqual(1, rsaObj.can_sign())
@@ -204,6 +206,10 @@ class RSATest(unittest.TestCase):
 
         # Sanity check key data
         self.assertEqual(1, rsaObj.e > 1)   # e > 1
+
+        # Public keys should not be able to sign or decrypt
+        self.assertRaises(TypeError, rsaObj.sign, ciphertext, "")
+        self.assertRaises(TypeError, rsaObj.decrypt, ciphertext)
 
     def _exercise_primitive(self, rsaObj):
         # Since we're using a randomly-generated key, we can't check the test

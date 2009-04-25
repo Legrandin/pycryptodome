@@ -125,6 +125,9 @@ class DSATest(unittest.TestCase):
         self.assertEqual(1, 0 < dsaObj.x < dsaObj.q)       # 0 < x < q
 
     def _check_public_key(self, dsaObj):
+        k = a2b_hex(self.k)
+        m_hash = a2b_hex(self.m_hash)
+
         # Check capabilities
         self.assertEqual(0, dsaObj.has_private())
         self.assertEqual(1, dsaObj.can_sign())
@@ -145,6 +148,9 @@ class DSATest(unittest.TestCase):
         self.assertEqual(1, dsaObj.p > dsaObj.q)            # p > q
         self.assertEqual(160, size(dsaObj.q))               # size(q) == 160 bits
         self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)      # q is a divisor of p-1
+
+        # Public-only key objects should raise an error when .sign() is called
+        self.assertRaises(TypeError, dsaObj.sign, m_hash, k)
 
     def _test_signing(self, dsaObj):
         k = a2b_hex(self.k)
