@@ -68,7 +68,7 @@ static inline void word_to_bytes(uint32_t w, unsigned char *out)
     out[3] = w & 0xff;
 }
 
-static inline void encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
+static inline void inline_encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;
@@ -142,7 +142,7 @@ static void Blowfish_encrypt(Blowfish_state *self, const unsigned char *in, unsi
     xL = bytes_to_word(in);
     xR = bytes_to_word(in+4);
 
-    encrypt(self, &xL, &xR);
+    inline_encrypt(self, &xL, &xR);
 
     /* big endian */
     word_to_bytes(xL, out);
@@ -205,27 +205,27 @@ static void Blowfish_init(Blowfish_state *self, const unsigned char *key, int ke
     /* Stir the subkeys */
     xL = xR = 0;
     for (i = 0; i < 18; i += 2) {
-        encrypt(self, &xL, &xR);
+        inline_encrypt(self, &xL, &xR);
         self->P[i] = xL;
         self->P[i+1] = xR;
     }
     for (i = 0; i < 256; i += 2) {
-        encrypt(self, &xL, &xR);
+        inline_encrypt(self, &xL, &xR);
         self->S1[i] = xL;
         self->S1[i+1] = xR;
     }
     for (i = 0; i < 256; i += 2) {
-        encrypt(self, &xL, &xR);
+        inline_encrypt(self, &xL, &xR);
         self->S2[i] = xL;
         self->S2[i+1] = xR;
     }
     for (i = 0; i < 256; i += 2) {
-        encrypt(self, &xL, &xR);
+        inline_encrypt(self, &xL, &xR);
         self->S3[i] = xL;
         self->S3[i+1] = xR;
     }
     for (i = 0; i < 256; i += 2) {
-        encrypt(self, &xL, &xR);
+        inline_encrypt(self, &xL, &xR);
         self->S4[i] = xL;
         self->S4[i+1] = xR;
     }
