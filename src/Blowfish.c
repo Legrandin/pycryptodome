@@ -98,7 +98,7 @@ static inline void inline_encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t 
     *pxR = xR;
 }
 
-static inline void decrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
+static inline void inline_decrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;
@@ -163,7 +163,7 @@ static void Blowfish_decrypt(Blowfish_state *self, const unsigned char *in, unsi
     xL = bytes_to_word(in);
     xR = bytes_to_word(in+4);
 
-    decrypt(self, &xL, &xR);
+    inline_decrypt(self, &xL, &xR);
 
     /* big endian */
     word_to_bytes(xL, out);
