@@ -5,7 +5,13 @@ This list is sorted in alphabetical order, and is probably incomplete.
 I'd like to thank everybody who contributed in any way, with code, bug
 reports, and comments.
 
---amk
+This list should not be interpreted as an endorsement of PyCrypto by the
+people on it.
+
+Please let me know if your name isn't here and should be!
+
+- Dwayne C. Litzenberger
+
 
 Tim Berners-Lee
 Ian Bicking
@@ -17,6 +23,7 @@ Philippe Frycia
 Peter Gutmann
 Hirendra Hindocha
 Nikhil Jhingan
+Andrew M. Kuchling
 Piers Lauder
 M.-A. Lemburg
 Wim Lewis
@@ -25,10 +32,12 @@ Lim Chee Siang
 Bryan Olson
 Wallace Owen
 Colin Plumb
+Robey Pointer
+Jeethu Rao
 James P. Rutledge
 Matt Schreiner
 Peter Simmons
 Paul Swartz
 Kevin M. Turner
+Barry A. Warsaw
 Eric Young
-
