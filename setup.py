@@ -115,6 +115,9 @@ class PCTBuildExt (build_ext):
             Extension("Crypto.Cipher.ARC4",
                       include_dirs=['src/'],
                       sources=["src/ARC4.c"]),
+            Extension("Crypto.Cipher.XOR",
+                      include_dirs=['src/'],
+                      sources=["src/XOR.c"]),
 
             # Utility modules
             Extension("Crypto.Util.strxor",
