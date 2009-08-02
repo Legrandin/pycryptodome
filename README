@@ -57,9 +57,9 @@ modules aren't installed on your system.  Red Hat users often run into
 this because they don't have the python2-devel RPM installed.  The fix
 is to simply install the requisite RPM.
 
-To verify that everything is in order, run "python test.py".  It will test
-all the cryptographic modules, skipping ones that aren't available.  If the
-test script reports an error on your machine, please report the bug using
+To verify that everything is in order, run "python setup.py test".  It will
+test all the cryptographic modules, skipping ones that aren't available.  If
+the test script reports an error on your machine, please report the bug using
 the bug tracker (URL given above).  If possible, track down the bug and
 include a patch that fixes it.
 
