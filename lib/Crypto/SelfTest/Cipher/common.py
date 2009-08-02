@@ -105,8 +105,20 @@ class CipherSelfTest(unittest.TestCase):
         self.assertEqual(self.plaintext, pt1)   # decrypt
         self.assertEqual(self.plaintext, pt2)   # decrypt (second time)
 
+class CTRSegfaultTest(unittest.TestCase):
+
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.key = params['key']
+
+    def runTest(self):
+        """Regression test: m.new(key, m.MODE_CTR) should raise TypeError, not segfault"""
+        self.assertRaises(TypeError, self.module.new, a2b_hex(self.key), self.module.MODE_CTR)
+
 def make_block_tests(module, module_name, test_data):
     tests = []
+    ctrsegfault_test_added = 0
     for i in range(len(test_data)):
         row = test_data[i]
 
@@ -143,6 +155,9 @@ def make_block_tests(module, module_name, test_data):
 
         # Add the test to the test suite
         tests.append(CipherSelfTest(module, params))
+        if not ctrsegfault_test_added:
+            tests.append(CTRSegfaultTest(module, params))
+            ctrsegfault_test_added = 1
     return tests
 
 def make_stream_tests(module, module_name, test_data):
