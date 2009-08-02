@@ -1562,17 +1562,27 @@ static int des3_setup(const unsigned char *key, int keylen, int num_rounds, symm
         return CRYPT_INVALID_ROUNDS;
     }
 
-    if (keylen != 24) {
+    if (keylen != 24 && keylen != 16) {
         return CRYPT_INVALID_KEYSIZE;
     }
 
     deskey(key,    EN0, skey->des3.ek[0]);
     deskey(key+8,  DE1, skey->des3.ek[1]);
-    deskey(key+16, EN0, skey->des3.ek[2]);
+    if (keylen == 24) {
+        deskey(key+16, EN0, skey->des3.ek[2]);
+    } else {
+        /* two-key 3DES: K3=K1 */
+        deskey(key, EN0, skey->des3.ek[2]);
+    }
 
     deskey(key,    DE1, skey->des3.dk[2]);
     deskey(key+8,  EN0, skey->des3.dk[1]);
-    deskey(key+16, DE1, skey->des3.dk[0]);
+    if (keylen == 24) {
+        deskey(key+16, DE1, skey->des3.dk[0]);
+    } else {
+        /* two-key 3DES: K3=K1 */
+        deskey(key, DE1, skey->des3.dk[0]);
+    }
 
     return CRYPT_OK;
 }
