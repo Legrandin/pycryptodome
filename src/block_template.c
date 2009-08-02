@@ -168,7 +168,11 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	}
 
 	if (mode == MODE_CTR) {
-		if (PyObject_HasAttrString(counter, "__PCT_CTR_SHORTCUT__")) {
+		if (counter == NULL) {
+			PyErr_SetString(PyExc_TypeError,
+					"'counter' keyword parameter is required with CTR mode");
+			return NULL;
+		} else if (PyObject_HasAttrString(counter, "__PCT_CTR_SHORTCUT__")) {
 			counter_shortcut = 1;
 		} else if (!PyCallable_Check(counter)) {
 			PyErr_SetString(PyExc_ValueError, 
