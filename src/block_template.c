@@ -164,6 +164,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 			PyErr_Format(PyExc_ValueError, 
 				     "segment_size must be multiple of 8 "
 				     "between 1 and %i", BLOCK_SIZE);
+			return NULL;
 		}
 	}
 
@@ -177,11 +178,13 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 		} else if (!PyCallable_Check(counter)) {
 			PyErr_SetString(PyExc_ValueError, 
 					"'counter' parameter must be a callable object");
+			return NULL;
 		}
 	} else {
 		if (counter != NULL) {
 			PyErr_SetString(PyExc_ValueError, 
 					"'counter' parameter only useful with CTR mode");
+			return NULL;
 		}
 	}
 
@@ -233,6 +236,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	block_init(&(new->st), key, keylen);
 	if (PyErr_Occurred())
 	{
+		Py_XDECREF(counter);
 		Py_DECREF(new);
 		return NULL;
 	}
