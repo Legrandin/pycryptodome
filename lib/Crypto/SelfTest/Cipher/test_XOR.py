@@ -24,6 +24,8 @@
 
 """Self-test suite for Crypto.Cipher.XOR"""
 
+import unittest
+
 __revision__ = "$Id$"
 
 # This is a list of (plaintext, ciphertext, key) tuples.
@@ -44,12 +46,15 @@ test_data = [
     ('ff'*64, 'fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0'*2,
         '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
         '32-byte key'),
-
-    # XOR truncates at 32 bytes.
-    ('ff'*64, 'fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0'*2,
-        '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f55',
-        '33-byte key (truncated to 32 bytes)'),
 ]
+
+class TruncationSelfTest(unittest.TestCase):
+
+    def test_33_bytes(self):
+        """33-byte key (should raise ValueError under current implementation)"""
+        # Crypto.Cipher.XOR previously truncated its inputs at 32 bytes.  Now
+        # it should raise a ValueError if the length is too long.
+        self.assertRaises(ValueError, XOR.new, "x"*33)
 
 def get_tests(config={}):
     from Crypto.Cipher import XOR
