@@ -27,7 +27,7 @@ import time
 import os
 import sys
 
-from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES
+from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
 from Crypto.Hash import MD2, MD4, MD5, SHA256, SHA
 try:
     from Crypto.Hash import RIPEMD
@@ -166,6 +166,8 @@ class Benchmark:
         stream_specs = [
             ("ARC2(128)", ARC2, 16),
             ("ARC4(128)", ARC4, 16),
+            ("XOR(24)", XOR, 3),
+            ("XOR(256)", XOR, 32),
         ]
         hash_specs = [
             ("MD2", MD2),
