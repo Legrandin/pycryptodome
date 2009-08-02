@@ -10,13 +10,17 @@
  *
  */
 
+#include "Python.h"
+
 #define MODULE_NAME XOR
 #define BLOCK_SIZE 1
 #define KEY_SIZE 0
 
+#define MAX_KEY_SIZE 32
+
 typedef struct 
 {
-	unsigned char key[32];
+	unsigned char key[MAX_KEY_SIZE];
 	int keylen, last_pos;
 } stream_state;
 
@@ -24,8 +28,14 @@ static void
 stream_init(stream_state *self, unsigned char *key, int len)
 {
 	int i;
-  
-	if (32 <= len) len=32;
+
+        if (len > MAX_KEY_SIZE)
+        {
+		PyErr_Format(PyExc_ValueError,
+				"XOR key must be no longer than %d bytes",
+                                MAX_KEY_SIZE);
+		return;
+        }
 	self->keylen = len;
 	self->last_pos = 0;
 
