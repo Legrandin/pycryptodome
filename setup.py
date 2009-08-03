@@ -1,4 +1,38 @@
 #! /usr/bin/env python
+#
+#  setup.py : Distutils setup script
+#
+#  Part of the Python Cryptography Toolkit
+#
+# ===================================================================
+# Portions Copyright (c) 2001, 2002, 2003 Python Software Foundation;
+# All Rights Reserved
+#
+# This file contains code from the Python 2.2 setup.py module (the
+# "Original Code"), with modifications made after it was incorporated
+# into PyCrypto (the "Modifications").
+#
+# To the best of our knowledge, the Python Software Foundation is the
+# copyright holder of the Original Code, and has licensed it under the
+# Python 2.2 license.  See the file LEGAL/copy/LICENSE.python-2.2 for
+# details.
+#
+# The Modifications to this file are dedicated to the public domain.
+# To the extent that dedication to the public domain is not available,
+# everyone is granted a worldwide, perpetual, royalty-free,
+# non-exclusive license to exercise all rights associated with the
+# contents of this file for any purpose whatsoever.  No rights are
+# reserved.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+# BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+# ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# ===================================================================
 
 __revision__ = "$Id$"
 
