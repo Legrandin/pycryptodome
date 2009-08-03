@@ -1,5 +1,5 @@
 #
-# Test script for Crypto.Util.randpool.
+# Test script for Crypto.Util.RFC1751.
 #
 # Part of PyCrypto 2.0.1; Presumably written by A. M. Kuchling.
 
