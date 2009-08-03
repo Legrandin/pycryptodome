@@ -7,7 +7,11 @@
 	* Added Crypto.version_info, which from now on will contain version
 	  information in a format similar to Python's sys.version_info.
 
-	* Fixed a DeprecationWarning when using the HMAC module under Python 2.6.
+	* Fixed a DeprecationWarning when using the HMAC module under
+	  Python 2.6.
+
+	* Crypto.PublicKey: Raise ValueError/TypeError/RuntimeError
+	  instead of the various custom "error" exceptions
 
 	* Added a new random numbers API (Crypto.Random), and deprecated the
 	  old one (Crypto.Util.randpool.RandomPool), which was misused more
@@ -37,8 +41,8 @@
 
 	* Clarified copyright status of much of the existing code by tracking
 	  down Andrew M. Kuchling, Barry A. Warsaw, Jeethu Rao, Joris Bontje,
-	  Mark Moraes, Robey Pointer, and Wim Lewis and getting their
-	  permission to clarify the license/public-domain status of their
+	  Mark Moraes, Paul Swartz, Robey Pointer, and Wim Lewis and getting
+	  their permission to clarify the license/public-domain status of their
 	  contributions.  Many thanks to all involved!
 
 	* Replaced RIPEMD.c with a new implementation (RIPEMD160.c) to
