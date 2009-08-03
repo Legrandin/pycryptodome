@@ -1,12 +1,43 @@
-
 /*
  *  rc2.c : Source code for the RC2 block cipher
  *
  * Part of the Python Cryptography Toolkit
  *
- * Distribute and use freely; there are no restrictions on further 
- * dissemination and usage except those imposed by the laws of your 
- * country of residence.
+ * ===================================================================
+ * This file appears to contain code from the ARC2 implementation
+ * "rc2.c" implementation (the "Original Code"), with modifications made
+ * after it was incorporated into PyCrypto (the "Modifications").
+ *
+ * To the best of our knowledge, the Original Code was placed into the
+ * public domain by its (anonymous) author:
+ *
+ *  **********************************************************************
+ * * To commemorate the 1996 RSA Data Security Conference, the following  *
+ * * code is released into the public domain by its author.  Prost!       *
+ * *                                                                      *
+ * * This cipher uses 16-bit words and little-endian byte ordering.       *
+ * * I wonder which processor it was optimized for?                       *
+ * *                                                                      *
+ * * Thanks to CodeView, SoftIce, and D86 for helping bring this code to  *
+ * * the public.                                                          *
+ *  **********************************************************************
+ *
+ * The Modifications to this file are dedicated to the public domain.
+ * To the extent that dedication to the public domain is not available,
+ * everyone is granted a worldwide, perpetual, royalty-free,
+ * non-exclusive license to exercise all rights associated with the
+ * contents of this file for any purpose whatsoever.  No rights are
+ * reserved.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ * ===================================================================
  *
  */
 
