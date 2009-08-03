@@ -1,26 +1,33 @@
+- Clean up and stabilize the Crypto.PublicKey API.  The previous attempt to
+  unify fundamentally different algorithms, such as RSA and DSA, should be
+  avoided, since it simply adds confusion.
 
-* Add more tests for random pool code?
+- Add algorithms:
+    - Camellia
+    - SHA512
+    - Diffie-Hellmen key agreement
+    - Authenticated Diffie-Hellmen key agreement
+    - RSA PKCS#1 v1.5
+    - RSA PKCS#1 v2 (OAEP)
 
-* Manual and Web page: point to Launchpad project for bug reports
+- Add a *complete* DSA implementation. (The current implementation doesn't do
+  the necessary hashing, for example.)
 
-* Update documentation (mention dodgy status of PublicKey code)
+- Coverage testing
 
-* Document the functions and macros for adding a new algorithm
+- Separate the exported API from the internal implementation details.
+
+- Provide drop-in support for extensions/drivers like amkCrypto/mxCrypto.
+  There should be some way to register these drivers in your package, e.g. by
+  defining a certain subdirectory to be a place where pycrypto looks for these
+  drivers at startup time.
+
+Documentation:
+- Document chaff/winnow better
+- Add more docstrings.
+- Document the functions and macros for adding a new algorithm
     Hash functions:
   hash_init(), hash_copy(), DIGEST_SIZE, hash_update(), hash_digest()
-    Block functions: 
+    Block functions:
   ...
 
-* Provide drop-in support for extensions/drivers like
-amkCrypto/mxCrypto. There should be some way to register these
-drivers in your package, e.g. by defining a certain subdirectory
-to be a place where pycrypto looks for these drivers at startup
-time.
-
-* Add a secure PRNG (Yarrow, maybe?)
-
-* A secret sharing module should be added to Util or Protocols.
-	
-Documentation:
-	Document chaff/winnow better
-	Add docstrings everywhere.
