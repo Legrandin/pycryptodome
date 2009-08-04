@@ -265,9 +265,9 @@ class TestCommand(Command):
 kw = {'name':"pycrypto",
       'version':"2.1.0a2",  # See also: lib/Crypto/__init__.py
       'description':"Cryptographic modules for Python.",
-      'author':"A.M. Kuchling",
-      'author_email':"amk@amk.ca",
-      'url':"http://www.amk.ca/python/code/crypto",
+      'author':"Dwayne C. Litzenberger",
+      'author_email':"dlitz@dlitz.net",
+      'url':"http://www.pycrypto.org/",
 
       'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
