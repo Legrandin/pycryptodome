@@ -4,46 +4,82 @@
 
 	* This version supports Python versions 2.1 through 2.6.
 
-	* Added Crypto.version_info, which from now on will contain version
-	  information in a format similar to Python's sys.version_info.
-
-	* Fixed a DeprecationWarning when using the HMAC module under
-	  Python 2.6.
-
-	* Crypto.PublicKey: Raise ValueError/TypeError/RuntimeError
-	  instead of the various custom "error" exceptions
-
-	* Added a new random numbers API (Crypto.Random), and deprecated the
-	  old one (Crypto.Util.randpool.RandomPool), which was misused more
-	  often than not.
-
-	  The new API is used by invoking Crypto.Random.new() and then just
-	  reading from the file-like object that is returned.
-
-	  Note: To maintain the security of the PRNG, you MUST call
-	  Crypto.Random.atfork() in both the parent and the child processes
-	  whenever you use os.fork().  Otherwise, the parent and child will
-	  share copies of the same entropy pool, causing them to return the
-	  same results!  This is a limitation of Python, which does not
-	  provide readily-accessible hooks to os.fork().  It's also a
-	  limitation caused by the failure of operating systems to provide
-	  sufficiently fast, trustworthy sources of cryptographically-strong
-	  random numbers.
-
-	* Replaced the test suite with a new, comprehensive package
-	  (Crypto.SelfTest) that includes documentation about where its test
-	  vectors came from, or how they were derived.
-
-	* Added Crypto.Random.random, a strong version of the standard Python
-	  'random' module.
-
-	* Removed the IDEA and RC5 modules due to software patents.
-
 	* Clarified copyright status of much of the existing code by tracking
 	  down Andrew M. Kuchling, Barry A. Warsaw, Jeethu Rao, Joris Bontje,
 	  Mark Moraes, Paul Swartz, Robey Pointer, and Wim Lewis and getting
 	  their permission to clarify the license/public-domain status of their
 	  contributions.  Many thanks to all involved!
+
+	* Replaced the test suite with a new, comprehensive package
+	  (Crypto.SelfTest) that includes documentation about where its test
+	  vectors came from, or how they were derived.
+
+	  Use "python setup.py test" to run the tests after building.
+
+	* API changes:
+
+	  - Added Crypto.version_info, which from now on will contain version
+	    information in a format similar to Python's sys.version_info.
+
+	  - Added a new random numbers API (Crypto.Random), and deprecated the
+	    old one (Crypto.Util.randpool.RandomPool), which was misused more
+	    often than not.
+
+	    The new API is used by invoking Crypto.Random.new() and then just
+	    reading from the file-like object that is returned.
+
+	    CAVEAT: To maintain the security of the PRNG, you must call
+	    Crypto.Random.atfork() in both the parent and the child processes
+	    whenever you use os.fork().  Otherwise, the parent and child will
+	    share copies of the same entropy pool, causing them to return the
+	    same results!  This is a limitation of Python, which does not
+	    provide readily-accessible hooks to os.fork().  It's also a
+	    limitation caused by the failure of operating systems to provide
+	    sufficiently fast, trustworthy sources of cryptographically-strong
+	    random numbers.
+
+	  - Crypto.PublicKey now raises ValueError/TypeError/RuntimeError
+	    instead of the various custom "error" exceptions
+
+	  - Removed the IDEA and RC5 modules due to software patents.  Debian
+	    has been doing this for a while
+
+	  - Added Crypto.Random.random, a strong version of the standard Python
+	   'random' module.
+
+	  - Added Crypto.Util.Counter, providing fast counter implementations
+	    for use with CTR-mode ciphers.
+
+	* Bug fixes:
+
+	  - Fixed padding bug in SHA256; this resulted in bad digests whenever
+	    (the number of bytes hashed) mod 64 == 55.
+
+	  - Fixed a 32-bit limitation on the length of messages the SHA256 module
+	    could hash.
+
+	  - AllOrNothing: Fixed padding bug in digest()
+
+	  - Fixed a bad behaviour of the XOR cipher module: It would silently
+	    truncate all keys to 32 bytes.  Now it raises ValueError when the
+	    key is too long.
+
+	  - DSA: Added code to enforce FIPS 186-2 requirements on the size of
+	    the prime p
+
+	  - Fixed the winrandom module, which had been omitted from the build
+	    process, causing security problems for programs that misuse RandomPool.
+
+	  - Fixed infinite loop when attempting to generate RSA keys with an
+	    odd number of bits in the modulus.  (Not that you should do that.)
+
+	* Clarified the documentation for Crypto.Util.number.getRandomNumber.
+
+	  Confusingly, this function does NOT return N random bits; It returns
+	  a random N-bit number, i.e. a random number between 2**(N-1) and (2**N)-1.
+
+	  Note that getRandomNumber is for internal use only and may be
+	  renamed or removed in future releases.
 
 	* Replaced RIPEMD.c with a new implementation (RIPEMD160.c) to
 	  alleviate copyright concerns.
@@ -54,55 +90,20 @@
 	* Replaced Blowfish.c with a new implementation to alleviate copyright
 	  concerns.
 
-	* Fix padding bug in SHA256; this resulted in bad digests whenever
-	  (the number of bytes hashed) mod 64 == 55.
-
-	* Fix a 32-bit limitation on the length of messages the SHA256 module 
-	  could hash.
+	* Added a string-XOR implementation written in C (Crypto.Util.strxor)
+	  and used it to speed up Crypto.Hash.HMAC
 
 	* Converted documentation to reStructured Text.
 
 	* Added epydoc configuration Doc/epydoc-config
 
-	* Added a string-XOR implementation written in C (Crypto.Util.strxor)
-	  and used it to speed up Crypto.Hash.HMAC
-
-	* Fixed the winrandom module, which had previously been omitted from
-	  the build process, causing security problems for programs that misuse
-	  RandomPool.
-
-	* Fixed infinite loop when attempting to generate RSA keys with an odd
-	  number of bits in the modulus. (But why would anyone do that?)
-
-	* setup.py now warns when not building _fastmath.
-
-	* Cleaned up the code in several places.
-
-	* Added Crypto.Util.Counter, providing fast counter implementations for
-	  use with CTR-mode ciphers.
-
-	* AllOrNothing: Fixed padding bug in digest()
-
-	* DSA: Added code to enforce FIPS 186-2 requirements on the size of the
-	  prime p
-
-	* Reduced symbol table pollution in native modules by declaring most
-	  things "static".
+	* setup.py now emits a warning when building without GMP.
 
 	* Added pct-speedtest.py to the source tree for doing performance
 	  testing on the new code.
 
-	* Clarified the documentation for Crypto.Util.number.getRandomNumber.
+	* Cleaned up the code in several places.
 
-	  Confusingly, this function does NOT return N random bits; It returns
-	  a random N-bit number, i.e. a random number between 2**(N-1) and (2**N)-1.
-
-	  Note that getRandomNumber is for internal use only and may be
-	  renamed or removed in future releases.
-
-	* Fixed a bad behaviour of the XOR cipher module: It would silently
-	  truncate all keys to 32 bytes.  Now it raises ValueError when the
-	  key is too long.
 
 2.0.1
 =====

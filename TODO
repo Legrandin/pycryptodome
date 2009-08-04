@@ -22,12 +22,7 @@
   defining a certain subdirectory to be a place where pycrypto looks for these
   drivers at startup time.
 
-Documentation:
-- Document chaff/winnow better
-- Add more docstrings.
-- Document the functions and macros for adding a new algorithm
-    Hash functions:
-  hash_init(), hash_copy(), DIGEST_SIZE, hash_update(), hash_digest()
-    Block functions:
-  ...
+- Merge Crypto.Cipher.XOR and Crypto.Util.strxor somehow
+
+- Document our experiences with RandomPool and why it was bad.
 
