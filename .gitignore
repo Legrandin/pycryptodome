@@ -2,6 +2,8 @@
 /dist/
 /build/
 /Doc/apidoc/
+
+# Ignore these files:
 *.py[co]
-*~
 .DS_Store
+MANIFEST

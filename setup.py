@@ -112,61 +112,6 @@ def endianness_macro():
 
 class PCTBuildExt (build_ext):
     def build_extensions(self):
-        self.extensions += [
-            # Hash functions
-            Extension("Crypto.Hash.MD4",
-                      include_dirs=['src/'],
-                      sources=["src/MD4.c"]),
-            Extension("Crypto.Hash.SHA256",
-                      include_dirs=['src/'],
-                      sources=["src/SHA256.c"]),
-            Extension("Crypto.Hash.RIPEMD160",
-                      include_dirs=['src/'],
-                      sources=["src/RIPEMD160.c"],
-                      define_macros=[endianness_macro()]),
-
-            # Block encryption algorithms
-            Extension("Crypto.Cipher.AES",
-                      include_dirs=['src/'],
-                      sources=["src/AES.c"]),
-            Extension("Crypto.Cipher.ARC2",
-                      include_dirs=['src/'],
-                      sources=["src/ARC2.c"]),
-            Extension("Crypto.Cipher.Blowfish",
-                      include_dirs=['src/'],
-                      sources=["src/Blowfish.c"]),
-            Extension("Crypto.Cipher.CAST",
-                      include_dirs=['src/'],
-                      sources=["src/CAST.c"]),
-            Extension("Crypto.Cipher.DES",
-                      include_dirs=['src/', 'src/libtom/'],
-                      sources=["src/DES.c"]),
-            Extension("Crypto.Cipher.DES3",
-                      include_dirs=['src/', 'src/libtom/'],
-                      sources=["src/DES3.c"]),
-
-            # Stream ciphers
-            Extension("Crypto.Cipher.ARC4",
-                      include_dirs=['src/'],
-                      sources=["src/ARC4.c"]),
-            Extension("Crypto.Cipher.XOR",
-                      include_dirs=['src/'],
-                      sources=["src/XOR.c"]),
-
-            # Utility modules
-            Extension("Crypto.Util.strxor",
-                      include_dirs=['src/'],
-                      sources=['src/strxor.c']),
-
-            # Counter modules
-            Extension("Crypto.Util._counter",
-                      include_dirs=['src/'],
-                      sources=['src/_counter.c']),
-            ]
-
-        # Platform-specific modules
-        self.extensions += plat_ext
-
         # Detect which modules should be compiled
         self.detect_modules()
 
@@ -183,19 +128,24 @@ class PCTBuildExt (build_ext):
         build_ext.build_extensions(self)
 
     def detect_modules (self):
+        # Add special include directory for MSVC (because MSVC is special)
         if self.compiler.compiler_type == 'msvc':
             self.compiler.include_dirs.insert(0, "src/inc-msvc/")
+
+        # Detect libgmp and don't build _fastmath if it is missing.
         lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib']
-        inc_dirs = self.compiler.include_dirs + ['/usr/include']
-        exts = []
-        if (self.compiler.find_library_file(lib_dirs, 'gmp')):
-            exts.append(Extension("Crypto.PublicKey._fastmath",
-                                  include_dirs=['src/'],
-                                  libraries=['gmp'],
-                                  sources=["src/_fastmath.c"]))
-        else:
+        if not (self.compiler.find_library_file(lib_dirs, 'gmp')):
             print >>sys.stderr, "warning: GMP library not found; Not building Crypto.PublicKey._fastmath."
-        self.extensions += exts
+            self.__remove_extensions(["Crypto.PublicKey._fastmath"])
+
+    def __remove_extensions(self, names):
+        """Remove the specified extension from the list of extensions to build"""
+        i = 0
+        while i < len(self.extensions):
+            if self.extensions[i].name in names:
+                del self.extensions[i]
+                continue
+            i += 1
 
     def __remove_compiler_option(self, option):
         """Remove the specified compiler option.
@@ -285,12 +235,67 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest.Util",
                   "Crypto.Protocol", "Crypto.PublicKey"],
       'package_dir' : { "Crypto": "lib/Crypto" },
-      # One module is defined here, because build_ext won't be
-      # called unless there's at least one extension module defined.
-      'ext_modules':[Extension("Crypto.Hash.MD2",
-                             include_dirs=['src/'],
-                             sources=["src/MD2.c"])],
-     }
+      'ext_modules': plat_ext + [
+            # _fastmath (uses GNU mp library)
+            Extension("Crypto.PublicKey._fastmath",
+                      include_dirs=['src/'],
+                      libraries=['gmp'],
+                      sources=["src/_fastmath.c"]),
+
+            # Hash functions
+            Extension("Crypto.Hash.MD2",
+                      include_dirs=['src/'],
+                      sources=["src/MD2.c"]),
+            Extension("Crypto.Hash.MD4",
+                      include_dirs=['src/'],
+                      sources=["src/MD4.c"]),
+            Extension("Crypto.Hash.SHA256",
+                      include_dirs=['src/'],
+                      sources=["src/SHA256.c"]),
+            Extension("Crypto.Hash.RIPEMD160",
+                      include_dirs=['src/'],
+                      sources=["src/RIPEMD160.c"],
+                      define_macros=[endianness_macro()]),
+
+            # Block encryption algorithms
+            Extension("Crypto.Cipher.AES",
+                      include_dirs=['src/'],
+                      sources=["src/AES.c"]),
+            Extension("Crypto.Cipher.ARC2",
+                      include_dirs=['src/'],
+                      sources=["src/ARC2.c"]),
+            Extension("Crypto.Cipher.Blowfish",
+                      include_dirs=['src/'],
+                      sources=["src/Blowfish.c"]),
+            Extension("Crypto.Cipher.CAST",
+                      include_dirs=['src/'],
+                      sources=["src/CAST.c"]),
+            Extension("Crypto.Cipher.DES",
+                      include_dirs=['src/', 'src/libtom/'],
+                      sources=["src/DES.c"]),
+            Extension("Crypto.Cipher.DES3",
+                      include_dirs=['src/', 'src/libtom/'],
+                      sources=["src/DES3.c"]),
+
+            # Stream ciphers
+            Extension("Crypto.Cipher.ARC4",
+                      include_dirs=['src/'],
+                      sources=["src/ARC4.c"]),
+            Extension("Crypto.Cipher.XOR",
+                      include_dirs=['src/'],
+                      sources=["src/XOR.c"]),
+
+            # Utility modules
+            Extension("Crypto.Util.strxor",
+                      include_dirs=['src/'],
+                      sources=['src/strxor.c']),
+
+            # Counter modules
+            Extension("Crypto.Util._counter",
+                      include_dirs=['src/'],
+                      sources=['src/_counter.c']),
+    ]
+}
 
 # If we're running Python 2.3, add extra information
 if hasattr(core, 'setup_keywords'):
