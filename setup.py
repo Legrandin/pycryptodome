@@ -310,7 +310,7 @@ if hasattr(core, 'setup_keywords'):
           'Topic :: Security :: Cryptography',
           ]
     if 'download_url' in core.setup_keywords:
-        kw['download_url'] = ('http://www.amk.ca/files/python/crypto/'
+        kw['download_url'] = ('http://www.pycrypto.org/files/'
                               '%s-%s.tar.gz' % (kw['name'], kw['version']) )
 
 core.setup(**kw)
