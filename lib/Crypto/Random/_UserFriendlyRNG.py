@@ -123,7 +123,15 @@ class _UserFriendlyRNG(object):
         return retval
 
     def _check_pid(self):
-        # Lame fork detection to remind the user not to use the same PRNG between forked processes.
+        # Lame fork detection to remind developers to invoke Random.atfork()
+        # after every call to os.fork().  Note that this check is not reliable,
+        # since process IDs can be reused on most operating systems.
+        #
+        # You need to do Random.atfork() in the child process after every call
+        # to os.fork() to avoid reusing PRNG state.  If you want to avoid
+        # leaking PRNG state to child processes (for example, if you are using
+        # os.setuid()) then you should also invoke Random.atfork() in the
+        # *parent* process.
         if os.getpid() != self._pid:
             raise AssertionError("PID check failed. RNG must be re-initialized after fork(). Hint: Try Random.atfork()")
 
