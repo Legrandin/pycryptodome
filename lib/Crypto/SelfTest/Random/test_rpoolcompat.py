@@ -26,6 +26,7 @@
 
 __revision__ = "$Id$"
 
+import sys
 import unittest
 
 class SimpleTest(unittest.TestCase):
@@ -33,6 +34,7 @@ class SimpleTest(unittest.TestCase):
         """Crypto.Util.randpool.RandomPool"""
         # Import the winrandom module and try to use it
         from Crypto.Util.randpool import RandomPool
+        sys.stderr.write("SelfTest: You can ignore the RandomPool_DeprecationWarning that follows.\n")
         rpool = RandomPool()
         x = rpool.get_bytes(16)
         y = rpool.get_bytes(16)
