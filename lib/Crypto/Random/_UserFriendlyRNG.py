@@ -198,4 +198,8 @@ def new():
 def reinit():
     _get_singleton().reinit()
 
+def get_random_bytes(n):
+    """Return the specified number of cryptographically-strong random bytes."""
+    return _get_singleton().read(n)
+
 # vim:set ts=4 sw=4 sts=4 expandtab:

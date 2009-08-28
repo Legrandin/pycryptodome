@@ -37,6 +37,9 @@ class SimpleTest(unittest.TestCase):
         x = randobj.read(16)
         y = randobj.read(16)
         self.assertNotEqual(x, y)
+        z = Random.get_random_bytes(16)
+        self.assertNotEqual(x, z)
+        self.assertNotEqual(y, z)
 
 def get_tests(config={}):
     return [SimpleTest()]
