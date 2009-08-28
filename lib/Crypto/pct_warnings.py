@@ -44,7 +44,7 @@ class RandomPool_DeprecationWarning(CryptoDeprecationWarning):
     """Issued when Crypto.Util.randpool.RandomPool is instantiated."""
 
 class ClockRewindWarning(CryptoRuntimeWarning):
-    """Warning for when the system clock is found to be non-monotonic."""
+    """Warning for when the system clock moves backwards."""
 
 # By default, we want this warning to be shown every time we compensate for
 # clock rewinding.
