@@ -22,7 +22,7 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test for the Crypto.Random.RandomPoolCompat class"""
+"""Self-test for the Crypto.Util.randpool.RandomPool wrapper class"""
 
 __revision__ = "$Id$"
 
@@ -30,10 +30,10 @@ import unittest
 
 class SimpleTest(unittest.TestCase):
     def runTest(self):
-        """Crypto.Random.RandomPoolCompat"""
+        """Crypto.Util.randpool.RandomPool"""
         # Import the winrandom module and try to use it
-        from Crypto.Random import RandomPoolCompat
-        rpool = RandomPoolCompat()
+        from Crypto.Util.randpool import RandomPool
+        rpool = RandomPool()
         x = rpool.get_bytes(16)
         y = rpool.get_bytes(16)
         self.assertNotEqual(x, y)
