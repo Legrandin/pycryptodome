@@ -184,3 +184,9 @@ integers, MPZ objects, or whatever."""
         Compare us to other for equality.
         """
         return self.__getstate__() == other.__getstate__()
+
+    def __ne__ (self, other):
+        """__ne__(other): 0, 1
+        Compare us to other for inequality.
+        """
+        return not self.__eq__(other)
