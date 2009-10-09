@@ -116,9 +116,22 @@ class CTRSegfaultTest(unittest.TestCase):
         """Regression test: m.new(key, m.MODE_CTR) should raise TypeError, not segfault"""
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key), self.module.MODE_CTR)
 
+class CFBSegmentSizeTest(unittest.TestCase):
+
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.key = params['key']
+
+    def runTest(self):
+        """Regression test: m.new(key, m.MODE_CFB, segment_size=N) should require segment_size to be a multiple of 8 bits"""
+        for i in range(1, 8):
+            self.assertRaises(ValueError, self.module.new, a2b_hex(self.key), self.module.MODE_CFB, segment_size=i)
+        self.module.new(a2b_hex(self.key), self.module.MODE_CFB, segment_size=8) # should succeed
+
 def make_block_tests(module, module_name, test_data):
     tests = []
-    ctrsegfault_test_added = 0
+    extra_tests_added = 0
     for i in range(len(test_data)):
         row = test_data[i]
 
@@ -155,9 +168,12 @@ def make_block_tests(module, module_name, test_data):
 
         # Add the test to the test suite
         tests.append(CipherSelfTest(module, params))
-        if not ctrsegfault_test_added:
-            tests.append(CTRSegfaultTest(module, params))
-            ctrsegfault_test_added = 1
+        if not extra_tests_added:
+            tests += [
+                CTRSegfaultTest(module, params),
+                CFBSegmentSizeTest(module, params),
+            ]
+            extra_tests_added = 1
     return tests
 
 def make_stream_tests(module, module_name, test_data):
