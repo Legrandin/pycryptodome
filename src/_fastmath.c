@@ -785,7 +785,9 @@ isPrime (PyObject * self, PyObject * args)
 	mpz_init (n);
 	longObjToMPZ (n, (PyLongObject *) l);
 
+	Py_BEGIN_ALLOW_THREADS;
 	result = mpz_probab_prime_p(n, 5);
+	Py_END_ALLOW_THREADS;
 
 	mpz_clear (n);
 
