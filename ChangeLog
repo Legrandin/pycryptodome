@@ -1,3 +1,35 @@
+2.1.0alpha2
+===========
+
+	* Modified isPrime() to release the global interpreter lock while
+	  performing computations. (patch from Lorenz Quack)
+
+	* API changes:
+
+	  - Removed RandomPoolCompat and made Crypto.Util.randpool.RandomPool
+	    a wrapper around Crypto.Random that emits a DeprecationWarning.
+	    This is to discourage developers from attempting to provide
+	    backwards compatibility for systems where there are NO strong
+	    entropy sources available.
+
+	  - Added Crypto.Random.get_random_bytes().  This should allow people
+	    to use something like this if they want backwards-compatibility:
+
+	        try:
+	             from Crypto.Random import get_random_bytes
+	        except ImportError:
+	             try:
+	                 from os import urandom as get_random_bytes
+	             except ImportError:
+	                 get_random_bytes = open("/dev/urandom", "rb").read
+
+	  - Implemented __ne__() on pubkey, which fixes the following broken
+	    behaviour:
+	        >>> pk.publickey() == pk.publickey()
+	        True
+	        >>> pk.publickey() != pk.publickey()
+	        True
+	    (patch from Lorenz Quack)
 
 2.1.0alpha1
 ===========
