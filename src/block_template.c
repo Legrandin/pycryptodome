@@ -99,9 +99,6 @@ static char ALGnew__doc__[] =
 "new(key, [mode], [IV]): Return a new " _MODULE_STRING " encryption object.";
 
 static char *kwlist[] = {"key", "mode", "IV", "counter", "segment_size",
-#ifdef PCT_RC5_MODULE
-			 "version", "word_size", "rounds",
-#endif
 #ifdef PCT_ARC2_MODULE
                          "effective_keylen",
 #endif
@@ -115,26 +112,17 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	int keylen, IVlen=0, mode=MODE_ECB, segment_size=0;
 	PyObject *counter = NULL;
 	int counter_shortcut = 0;
-#ifdef PCT_RC5_MODULE
-	int version = 0x10, word_size = 32, rounds = 16; /*XXX default rounds? */
-#endif 
 #ifdef PCT_ARC2_MODULE
         int effective_keylen = 1024;    /* this is a weird default, but it's compatible with old versions of PyCrypto */
 #endif
 	/* Set default values */
 	if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#Oi"
-#ifdef PCT_RC5_MODULE
-					 "iii"
-#endif 
 #ifdef PCT_ARC2_MODULE
 					 "i"
 #endif
 					 , kwlist,
 					 &key, &keylen, &mode, &IV, &IVlen,
 					 &counter, &segment_size
-#ifdef PCT_RC5_MODULE
-					 , &version, &word_size, &rounds
-#endif
 #ifdef PCT_ARC2_MODULE
 					 , &effective_keylen
 #endif
@@ -202,26 +190,6 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	}
 
 	/* Cipher-specific checks */
-#ifdef PCT_RC5_MODULE
-	if (version!=0x10) {
-		PyErr_Format(PyExc_ValueError,
-			     "RC5: Bad RC5 algorithm version: %i",
-			     version);
-		return NULL;
-	}
-	if (word_size!=16 && word_size!=32) {
-		PyErr_Format(PyExc_ValueError,
-			     "RC5: Unsupported word size: %i",
-			     word_size);
-		return NULL;
-	}
-	if (rounds<0 || MAX_RC5_ROUNDS<rounds) {
-		PyErr_Format(PyExc_ValueError,
-			     "RC5: rounds must be between 0 and %u, not %i",
-			     MAX_RC5_ROUNDS, rounds);
-		return NULL;
-	}
-#endif
 #ifdef PCT_ARC2_MODULE
         if (effective_keylen<0 || effective_keylen>1024) {
 		PyErr_Format(PyExc_ValueError,
@@ -237,11 +205,6 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	new->counter = counter;
 	Py_XINCREF(counter);
 	new->counter_shortcut = counter_shortcut;
-#ifdef PCT_RC5_MODULE
-	new->st.version = version;
-	new->st.word_size = word_size;
-	new->st.rounds = rounds;
-#endif
 #ifdef PCT_ARC2_MODULE
         new->st.effective_keylen = effective_keylen;
 #endif

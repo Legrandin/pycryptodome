@@ -38,13 +38,11 @@ Crypto.Cipher.CAST
 Crypto.Cipher.DES         The Data Encryption Standard.  Very commonly used
                           in the past, but today its 56-bit keys are too small.
 Crypto.Cipher.DES3        Triple DES.
-Crypto.Cipher.IDEA
-Crypto.Cipher.RC5
 Crypto.Cipher.XOR         The simple XOR cipher.
 """
 
 __all__ = ['AES', 'ARC2', 'ARC4',
-           'Blowfish', 'CAST', 'DES', 'DES3', 'IDEA', 'RC5',
+           'Blowfish', 'CAST', 'DES', 'DES3',
            'XOR'
            ]
 
