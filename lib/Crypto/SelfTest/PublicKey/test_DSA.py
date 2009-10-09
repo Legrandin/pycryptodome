@@ -152,6 +152,10 @@ class DSATest(unittest.TestCase):
         # Public-only key objects should raise an error when .sign() is called
         self.assertRaises(TypeError, dsaObj.sign, m_hash, k)
 
+        # Check __eq__ and __ne__
+        self.assert_(dsaObj.publickey() == dsaObj.publickey())
+        self.assert_(not (dsaObj.publickey() != dsaObj.publickey()))
+
     def _test_signing(self, dsaObj):
         k = a2b_hex(self.k)
         m_hash = a2b_hex(self.m_hash)
