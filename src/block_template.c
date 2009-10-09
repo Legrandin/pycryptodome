@@ -161,10 +161,10 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	/* Mode-specific checks */
 	if (mode == MODE_CFB) {
 		if (segment_size == 0) segment_size = 8;
-		if (segment_size < 1 || segment_size > BLOCK_SIZE*8) {
+		if (segment_size < 1 || segment_size > BLOCK_SIZE*8 || ((segment_size & 7) != 0)) {
 			PyErr_Format(PyExc_ValueError, 
-				     "segment_size must be multiple of 8 "
-				     "between 1 and %i", BLOCK_SIZE);
+				     "segment_size must be multiple of 8 (bits) "
+				     "between 1 and %i", BLOCK_SIZE*8);
 			return NULL;
 		}
 	}
