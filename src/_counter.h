@@ -38,6 +38,7 @@ typedef struct {
     void (*inc_func)(void *);   /* Pointer to the counter increment function */
     int shortcut_disabled;  /* This gets set to a non-zero value when the shortcut mechanism is disabled */
     int carry;         /* This gets set by Counter*Object_increment when the counter wraps around */
+    int allow_wraparound;   /* When this is false, we raise OverflowError on next_value() or __call__() when the counter wraps around */
 } PCT_CounterObject;
 
 #endif /* PCT__COUNTER_H */

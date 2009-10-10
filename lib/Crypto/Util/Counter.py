@@ -28,7 +28,7 @@ from Crypto.Util import _counter
 import struct
 
 # Factory function
-def new(nbits, prefix="", suffix="", initial_value=1, overflow=0, little_endian=False, disable_shortcut=False):
+def new(nbits, prefix="", suffix="", initial_value=1, overflow=0, little_endian=False, allow_wraparound=False, disable_shortcut=False):
     # TODO: Document this
 
     # Sanity-check the message size
@@ -43,9 +43,9 @@ def new(nbits, prefix="", suffix="", initial_value=1, overflow=0, little_endian=
 
     initval = _encode(initial_value, nbytes, little_endian)
     if little_endian:
-        return _counter._newLE(str(prefix), str(suffix), initval, disable_shortcut=disable_shortcut)
+        return _counter._newLE(str(prefix), str(suffix), initval, allow_wraparound=allow_wraparound, disable_shortcut=disable_shortcut)
     else:
-        return _counter._newBE(str(prefix), str(suffix), initval, disable_shortcut=disable_shortcut)
+        return _counter._newBE(str(prefix), str(suffix), initval, allow_wraparound=allow_wraparound, disable_shortcut=disable_shortcut)
 
 def _encode(n, nbytes, little_endian=False):
     retval = []

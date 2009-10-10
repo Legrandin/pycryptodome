@@ -35,11 +35,12 @@ static int
 CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
     PyStringObject *prefix=NULL, *suffix=NULL, *initval=NULL;
+    int allow_wraparound = 0;
     int disable_shortcut = 0;
     Py_ssize_t size;
 
-    static char *kwlist[] = {"prefix", "suffix", "initval", "disable_shortcut", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "SSS|i", kwlist, &prefix, &suffix, &initval, &disable_shortcut))
+    static char *kwlist[] = {"prefix", "suffix", "initval", "allow_wraparound", "disable_shortcut", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "SSS|ii", kwlist, &prefix, &suffix, &initval, &allow_wraparound, &disable_shortcut))
         return -1;
 
     /* Check string size and set nbytes */
@@ -101,8 +102,9 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
     memcpy(self->p, PyString_AS_STRING(initval), self->nbytes);
     memcpy(self->p + self->nbytes, PyString_AS_STRING(suffix), PyString_GET_SIZE(suffix));
 
-    /* Set shortcut_disabled */
+    /* Set shortcut_disabled and allow_wraparound */
     self->shortcut_disabled = disable_shortcut;
+    self->allow_wraparound = allow_wraparound;
 
     /* Clear the carry flag */
     self->carry = 0;
@@ -139,6 +141,12 @@ _CounterObject_next_value(PCT_CounterObject *self, int little_endian)
     PyObject *ch = NULL;
     PyObject *y = NULL;
     PyObject *x = NULL;
+
+    if (self->carry && !self->allow_wraparound) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "counter wrapped without allow_wraparound");
+        goto err_out;
+    }
 
     eight = PyInt_FromLong(8);
     if (!eight)
@@ -241,6 +249,12 @@ static PyObject *
 CounterObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *retval;
+
+    if (self->carry && !self->allow_wraparound) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "counter wrapped without allow_wraparound");
+        return NULL;
+    }
 
     retval = (PyObject *)PyString_FromStringAndSize((const char *)self->val, self->buf_size);
 
