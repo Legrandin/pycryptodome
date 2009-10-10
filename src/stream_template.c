@@ -259,3 +259,5 @@ _MODULE_NAME (void)
 	if (PyErr_Occurred())
 		Py_FatalError("can't initialize module " _MODULE_STRING);
 }
+
+/* vim:set ts=8 sw=8 sts=0 noexpandtab: */

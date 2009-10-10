@@ -811,3 +811,4 @@ _MODULE_NAME (void)
 		Py_FatalError("can't initialize module " _MODULE_STRING);
 }
 
+/* vim:set ts=8 sw=8 sts=0 noexpandtab: */
