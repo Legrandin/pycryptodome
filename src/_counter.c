@@ -104,6 +104,9 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
     /* Set shortcut_disabled */
     self->shortcut_disabled = disable_shortcut;
 
+    /* Clear the carry flag */
+    self->carry = 0;
+
     return 0;
 }
 
@@ -213,6 +216,7 @@ CounterLEObject_increment(PCT_CounterObject *self)
         carry = tmp >> 8;   /* This will only ever be 0 or 1 */
         *p = tmp & 0xff;
     }
+    self->carry = carry;
 }
 
 static void
@@ -230,6 +234,7 @@ CounterBEObject_increment(PCT_CounterObject *self)
         carry = tmp >> 8;   /* This will only ever be 0 or 1 */
         *p = tmp & 0xff;
     }
+    self->carry = carry;
 }
 
 static PyObject *
@@ -264,7 +269,9 @@ static PyObject *
 CounterLEObject_getattr(PyObject *s, char *name)
 {
     PCT_CounterObject *self = (PCT_CounterObject *)s;
-    if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
+    if (strcmp(name, "carry") == 0) {
+        return PyInt_FromLong((long)self->carry);
+    } else if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
         /* Shortcut hack - See block_template.c */
         Py_INCREF(Py_True);
         return Py_True;
@@ -276,7 +283,9 @@ static PyObject *
 CounterBEObject_getattr(PyObject *s, char *name)
 {
     PCT_CounterObject *self = (PCT_CounterObject *)s;
-    if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
+    if (strcmp(name, "carry") == 0) {
+        return PyInt_FromLong((long)self->carry);
+    } else if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
         /* Shortcut hack - See block_template.c */
         Py_INCREF(Py_True);
         return Py_True;
