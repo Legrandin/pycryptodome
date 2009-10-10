@@ -437,7 +437,11 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	unsigned char temp[BLOCK_SIZE];
 	int i, j, len;
 	PyObject *result;
-  
+
+	/* CTR mode decryption is identical to encryption */
+	if (self->mode == MODE_CTR)
+		return ALG_Encrypt(self, args);
+
 	if (!PyArg_Parse(args, "s#", &str, &len))
 		return NULL;
 	if (len==0)			/* Handle empty string */
@@ -569,62 +573,6 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 				buffer[i+j] = str[i+j] ^ self->IV[j];
 			}
 		}      
-		break;
-
-	case (MODE_CTR):
-		for(i=0; i<len; i+=BLOCK_SIZE) 
-		{
-			if (self->counter_shortcut) {
-				/* CTR mode shortcut: If we're using Util.Counter,
-				 * bypass the normal Python function call mechanism
-				 * and manipulate the counter directly. */
-
-				PCT_CounterObject *ctr = (PCT_CounterObject *)(self->counter);
-				if (ctr->buf_size != BLOCK_SIZE) {
-					PyErr_Format(PyExc_TypeError,
-						     "CTR counter function returned "
-						     "string not of length %i",
-						     BLOCK_SIZE);
-					free(buffer);
-					return NULL;
-				}
-				block_encrypt(&(self->st),
-					      (unsigned char *)ctr->val,
-					      temp);
-				ctr->inc_func(ctr);
-
-			} else {
-				PyObject *ctr = PyObject_CallObject(self->counter, NULL);
-				if (ctr == NULL) {
-					free(buffer);
-					return NULL;
-				}
-				if (!PyString_Check(ctr))
-				{
-					PyErr_SetString(PyExc_TypeError,
-							"CTR counter function didn't return a string");
-					Py_DECREF(ctr);
-					free(buffer);
-					return NULL;
-				}
-				if (PyString_Size(ctr) != BLOCK_SIZE) {
-					PyErr_Format(PyExc_TypeError,
-						 "CTR counter function returned "
-						 "string not of length %i",
-						 BLOCK_SIZE);
-					Py_DECREF(ctr);
-					free(buffer);
-					return NULL;
-				}
-				block_encrypt(&(self->st), (unsigned char *)PyString_AsString(ctr),
-					  temp);
-				Py_DECREF(ctr);
-			}
-			for(j=0; j<BLOCK_SIZE; j++)
-			{
-				buffer[i+j] = str[i+j]^temp[j];
-			}
-		}
 		break;
 
 	default:
