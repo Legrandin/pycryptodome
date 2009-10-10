@@ -35,9 +35,11 @@ static int
 CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
     PyStringObject *prefix=NULL, *suffix=NULL, *initval=NULL;
+    int disable_shortcut = 0;
     Py_ssize_t size;
 
-    if (!PyArg_ParseTuple(args, "SSS", &prefix, &suffix, &initval))
+    static char *kwlist[] = {"prefix", "suffix", "initval", "disable_shortcut", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "SSS|i", kwlist, &prefix, &suffix, &initval, &disable_shortcut))
         return -1;
 
     /* Check string size and set nbytes */
@@ -98,6 +100,9 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
     memcpy(self->val, PyString_AS_STRING(prefix), PyString_GET_SIZE(prefix));
     memcpy(self->p, PyString_AS_STRING(initval), self->nbytes);
     memcpy(self->p + self->nbytes, PyString_AS_STRING(suffix), PyString_GET_SIZE(suffix));
+
+    /* Set shortcut_disabled */
+    self->shortcut_disabled = disable_shortcut;
 
     return 0;
 }
@@ -256,26 +261,28 @@ static PyMethodDef CounterBEObject_methods[] = {
 /* Python 2.1 doesn't allow us to assign methods or attributes to an object,
  * so we hack it here. */
 static PyObject *
-CounterLEObject_getattr(PyObject *self, char *name)
+CounterLEObject_getattr(PyObject *s, char *name)
 {
-    if (strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
+    PCT_CounterObject *self = (PCT_CounterObject *)s;
+    if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
         /* Shortcut hack - See block_template.c */
         Py_INCREF(Py_True);
         return Py_True;
     }
-    return Py_FindMethod(CounterLEObject_methods, self, name);
+    return Py_FindMethod(CounterLEObject_methods, (PyObject *)self, name);
 }
 
 static PyObject *
-CounterBEObject_getattr(PyObject *self, char *name)
+CounterBEObject_getattr(PyObject *s, char *name)
 {
-    if (strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
+    PCT_CounterObject *self = (PCT_CounterObject *)s;
+    if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
         /* Shortcut hack - See block_template.c */
         Py_INCREF(Py_True);
         return Py_True;
     }
 
-    return Py_FindMethod(CounterBEObject_methods, self, name);
+    return Py_FindMethod(CounterBEObject_methods, (PyObject *)self, name);
 }
 
 static PyTypeObject
@@ -335,7 +342,7 @@ my_CounterBEType = {
  * we use the module-level functions newLE and newBE here.
  */
 static PyObject *
-CounterLE_new(PyObject *self, PyObject *args)
+CounterLE_new(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PCT_CounterObject *obj = NULL;
 
@@ -349,7 +356,7 @@ CounterLE_new(PyObject *self, PyObject *args)
     memset(&obj->prefix, 0, sizeof(PCT_CounterObject) - offsetof(PCT_CounterObject, prefix));
 
     /* Call the object's initializer.  Delete the object if this fails. */
-    if (CounterObject_init(obj, args, NULL) != 0) {
+    if (CounterObject_init(obj, args, kwargs) != 0) {
         return NULL;
     }
 
@@ -361,7 +368,7 @@ CounterLE_new(PyObject *self, PyObject *args)
 }
 
 static PyObject *
-CounterBE_new(PyObject *self, PyObject *args)
+CounterBE_new(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PCT_CounterObject *obj = NULL;
 
@@ -375,7 +382,7 @@ CounterBE_new(PyObject *self, PyObject *args)
     memset(&obj->prefix, 0, sizeof(PCT_CounterObject) - offsetof(PCT_CounterObject, prefix));
 
     /* Call the object's initializer.  Delete the object if this fails. */
-    if (CounterObject_init(obj, args, NULL) != 0) {
+    if (CounterObject_init(obj, args, kwargs) != 0) {
         return NULL;
     }
 
@@ -391,8 +398,8 @@ CounterBE_new(PyObject *self, PyObject *args)
  */
 
 static PyMethodDef module_methods[] = {
-    {"_newLE", (PyCFunction) CounterLE_new, METH_VARARGS, NULL},
-    {"_newBE", (PyCFunction) CounterBE_new, METH_VARARGS, NULL},
+    {"_newLE", (PyCFunction) CounterLE_new, METH_VARARGS|METH_KEYWORDS, NULL},
+    {"_newBE", (PyCFunction) CounterBE_new, METH_VARARGS|METH_KEYWORDS, NULL},
     {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
 };
 

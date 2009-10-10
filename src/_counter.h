@@ -36,6 +36,7 @@ typedef struct {
     uint8_t *p;         /* Pointer to the part of the buffer that we're allowed to update */
     uint16_t nbytes;    /* The number of bytes that from .p that are part of the counter */
     void (*inc_func)(void *);   /* Pointer to the counter increment function */
+    int shortcut_disabled;  /* This gets set to a non-zero value when the shortcut mechanism is disabled */
 } PCT_CounterObject;
 
 #endif /* PCT__COUNTER_H */
