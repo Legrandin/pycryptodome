@@ -153,6 +153,25 @@ class CTRSegfaultTest(unittest.TestCase):
         """Regression test: m.new(key, m.MODE_CTR) should raise TypeError, not segfault"""
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key), self.module.MODE_CTR)
 
+class CTRWraparoundTest(unittest.TestCase):
+
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.key = params['key']
+
+    def runTest(self):
+        """Regression test: Ciphers with MODE_CTR should raise OverflowError on wraparound when shortcut used"""
+        from Crypto.Util import Counter
+
+        for disable_shortcut in (0, 1): # (False, True) Test CTR-mode shortcut and PyObject_CallObject code paths
+            for little_endian in (0, 1): # (False, True) Test both endiannesses
+                ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian, disable_shortcut=disable_shortcut)
+                cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=ctr)
+                block = "\x00" * self.module.block_size
+                cipher.encrypt(block)
+                self.assertRaises(OverflowError, cipher.encrypt, block)
+
 class CFBSegmentSizeTest(unittest.TestCase):
 
     def __init__(self, module, params):
@@ -208,6 +227,7 @@ def make_block_tests(module, module_name, test_data):
         if not extra_tests_added:
             tests += [
                 CTRSegfaultTest(module, params),
+                CTRWraparoundTest(module, params),
                 CFBSegmentSizeTest(module, params),
             ]
             extra_tests_added = 1
