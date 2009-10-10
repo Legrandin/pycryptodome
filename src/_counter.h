@@ -39,6 +39,7 @@ typedef struct {
     int shortcut_disabled;  /* This gets set to a non-zero value when the shortcut mechanism is disabled */
     int carry;         /* This gets set by Counter*Object_increment when the counter wraps around */
     int allow_wraparound;   /* When this is false, we raise OverflowError on next_value() or __call__() when the counter wraps around */
+    int (*check_wraparound_func)(void *);    /* Pointer to the functon that checks for overflow. Returns zero and sets OverflowError if the check fails. */
 } PCT_CounterObject;
 
 #endif /* PCT__COUNTER_H */

@@ -142,11 +142,8 @@ _CounterObject_next_value(PCT_CounterObject *self, int little_endian)
     PyObject *y = NULL;
     PyObject *x = NULL;
 
-    if (self->carry && !self->allow_wraparound) {
-        PyErr_SetString(PyExc_OverflowError,
-                        "counter wrapped without allow_wraparound");
+    if (!self->check_wraparound_func(self))
         goto err_out;
-    }
 
     eight = PyInt_FromLong(8);
     if (!eight)
@@ -250,17 +247,25 @@ CounterObject_call(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *retval;
 
-    if (self->carry && !self->allow_wraparound) {
-        PyErr_SetString(PyExc_OverflowError,
-                        "counter wrapped without allow_wraparound");
+    if (!self->check_wraparound_func(self))
         return NULL;
-    }
 
     retval = (PyObject *)PyString_FromStringAndSize((const char *)self->val, self->buf_size);
 
     self->inc_func(self);
 
     return retval;
+}
+
+static int
+CounterObject_check_wraparound(PCT_CounterObject *self)
+{
+    if (self->carry && !self->allow_wraparound) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "counter wrapped without allow_wraparound");
+        return 0;
+    }
+    return 1;
 }
 
 static PyMethodDef CounterLEObject_methods[] = {
@@ -386,6 +391,9 @@ CounterLE_new(PyObject *self, PyObject *args, PyObject *kwargs)
     /* Set the inc_func pointer */
     obj->inc_func = (void (*)(void *))CounterLEObject_increment;
 
+    /* Set the check_wraparound_func pointer */
+    obj->check_wraparound_func = (int (*)(void *))CounterObject_check_wraparound;
+
     /* Return the object */
     return (PyObject *)obj;
 }
@@ -411,6 +419,9 @@ CounterBE_new(PyObject *self, PyObject *args, PyObject *kwargs)
 
     /* Set the inc_func pointer */
     obj->inc_func = (void (*)(void *))CounterBEObject_increment;
+
+    /* Set the check_wraparound_func pointer */
+    obj->check_wraparound_func = (int (*)(void *))CounterObject_check_wraparound;
 
     /* Return the object */
     return (PyObject *)obj;

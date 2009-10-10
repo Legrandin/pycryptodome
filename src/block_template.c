@@ -409,6 +409,10 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				 * and manipulate the counter directly. */
 
 				PCT_CounterObject *ctr = (PCT_CounterObject *)(self->counter);
+				if (!ctr->check_wraparound_func(ctr)) {
+					free(buffer);
+					return NULL;
+				}
 				if (ctr->buf_size != BLOCK_SIZE) {
 					PyErr_Format(PyExc_TypeError,
 						     "CTR counter function returned "
