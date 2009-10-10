@@ -91,6 +91,51 @@ class CounterTests(unittest.TestCase):
         self.assertEqual(256, c.next_value())
         self.assertEqual("\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", c())
 
+    def test_BE8_wraparound(self):
+        """8-bit, Big endian, wraparound"""
+        c = Counter.new(8)
+        for i in xrange(1, 256):
+            self.assertEqual(i, c.next_value())
+            self.assertEqual(chr(i), c())
+        self.assertEqual(0, c.next_value())
+        self.assertEqual("\x00", c())
+        self.assertEqual(1, c.next_value())
+
+    def test_LE8_wraparound(self):
+        """8-bit, Little endian, wraparound"""
+        c = Counter.new(8, little_endian=True)
+        for i in xrange(1, 256):
+            self.assertEqual(i, c.next_value())
+            self.assertEqual(chr(i), c())
+        self.assertEqual(0, c.next_value())
+        self.assertEqual("\x00", c())
+        self.assertEqual(1, c.next_value())
+
+    def test_BE8_carry(self):
+        """8-bit, Big endian, carry attribute"""
+        c = Counter.new(8)
+        for i in xrange(1, 256):
+            self.assertEqual(0, c.carry)
+            self.assertEqual(i, c.next_value())
+            self.assertEqual(chr(i), c())
+        self.assertEqual(0, c.next_value())
+        self.assertEqual(1, c.carry)
+        self.assertEqual("\x00", c())
+        self.assertEqual(1, c.next_value())
+        self.assertEqual(0, c.carry)
+
+    def test_LE8_carry(self):
+        """8-bit, Little endian, carry attribute"""
+        c = Counter.new(8, little_endian=True)
+        for i in xrange(1, 256):
+            self.assertEqual(0, c.carry)
+            self.assertEqual(i, c.next_value())
+            self.assertEqual(chr(i), c())
+        self.assertEqual(0, c.next_value())
+        self.assertEqual(1, c.carry)
+        self.assertEqual("\x00", c())
+        self.assertEqual(1, c.next_value())
+        self.assertEqual(0, c.carry)
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
