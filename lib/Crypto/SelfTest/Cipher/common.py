@@ -81,15 +81,28 @@ class CipherSelfTest(unittest.TestCase):
         return self.description
 
     def _new(self):
+        params = self.extra_params.copy()
+
+        # Handle CTR mode parameters.  By default, we use Counter.new(self.module.block_size)
+        if hasattr(self.module, "MODE_CTR") and self.mode == self.module.MODE_CTR:
+            from Crypto.Util import Counter
+            ctr_class = _extract(params, 'ctr_class', Counter.new)
+            ctr_params = _extract(params, 'ctr_params', {}).copy()
+            if ctr_params.has_key('prefix'): ctr_params['prefix'] = a2b_hex(ctr_params['prefix'])
+            if ctr_params.has_key('suffix'): ctr_params['suffix'] = a2b_hex(ctr_params['suffix'])
+            if not ctr_params.has_key('nbits'):
+                ctr_params['nbits'] = 8*(self.module.block_size - len(ctr_params.get('prefix', '')) - len(ctr_params.get('suffix', '')))
+            params['counter'] = ctr_class(**ctr_params)
+
         if self.mode is None:
             # Stream cipher
-            return self.module.new(a2b_hex(self.key), **self.extra_params)
+            return self.module.new(a2b_hex(self.key), **params)
         elif self.iv is None:
             # Block cipher without iv
-            return self.module.new(a2b_hex(self.key), self.mode, **self.extra_params)
+            return self.module.new(a2b_hex(self.key), self.mode, **params)
         else:
             # Block cipher with iv
-            return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **self.extra_params)
+            return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **params)
 
     def runTest(self):
         plaintext = a2b_hex(self.plaintext)
