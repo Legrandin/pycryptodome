@@ -225,13 +225,12 @@ K/sec.
 Credits
 ===============
 
-The MD2 and MD4 implementations were written by A.M. Kuchling, and the
-MD5 code was implemented by Colin Plumb.  The SHA1 code was originally
-written by Peter Gutmann.  The RIPEMD code was written by Antoon
-Bosselaers, and adapted for the toolkit by Hirendra Hindocha.  The
-SHA256 code was written by Tom St.~Denis and is part of the
-LibTomCrypt library (http://www.libtomcrypt.org/); it was
-adapted for the toolkit by Jeethu Rao and Taylor Boon.
+The MD2 and MD4 implementations were written by A.M. Kuchling, and the MD5
+code was implemented by Colin Plumb.  The SHA1 code was originally written by
+Peter Gutmann.  The RIPEMD160 code as of version 2.1.0 was written by Dwayne
+Litzenberger.  The SHA256 code was written by Tom St. Denis and is part of the
+LibTomCrypt library (http://www.libtomcrypt.org/); it was adapted for the
+toolkit by Jeethu Rao and Taylor Boon.
 
 
 
