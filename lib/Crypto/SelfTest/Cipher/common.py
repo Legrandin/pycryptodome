@@ -118,6 +118,30 @@ class CipherSelfTest(unittest.TestCase):
         self.assertEqual(self.plaintext, pt1)   # decrypt
         self.assertEqual(self.plaintext, pt2)   # decrypt (second time)
 
+class CipherStreamingSelfTest(CipherSelfTest):
+
+    def runTest(self):
+        plaintext = a2b_hex(self.plaintext)
+        ciphertext = a2b_hex(self.ciphertext)
+
+        # The cipher should work like a stream cipher
+
+        # Test counter mode encryption, 3 bytes at a time
+        ct3 = []
+        cipher = self._new()
+        for i in range(0, len(plaintext), 3):
+            ct3.append(cipher.encrypt(plaintext[i:i+3]))
+        ct3 = b2a_hex("".join(ct3))
+        self.assertEqual(self.ciphertext, ct3)  # encryption (3 bytes at a time)
+
+        # Test counter mode decryption, 3 bytes at a time
+        pt3 = []
+        cipher = self._new()
+        for i in range(0, len(ciphertext), 3):
+            pt3.append(cipher.encrypt(ciphertext[i:i+3]))
+        pt3 = b2a_hex("".join(pt3))
+        self.assertEqual(self.plaintext, pt3)  # decryption (3 bytes at a time)
+
 class CTRSegfaultTest(unittest.TestCase):
 
     def __init__(self, module, params):
@@ -187,6 +211,8 @@ def make_block_tests(module, module_name, test_data):
                 CFBSegmentSizeTest(module, params),
             ]
             extra_tests_added = 1
+        if p_mode == 'CTR':
+            tests.append(CipherStreamingSelfTest(module, params))
     return tests
 
 def make_stream_tests(module, module_name, test_data):
@@ -224,6 +250,7 @@ def make_stream_tests(module, module_name, test_data):
 
         # Add the test to the test suite
         tests.append(CipherSelfTest(module, params))
+        tests.append(CipherStreamingSelfTest(module, params))
     return tests
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
