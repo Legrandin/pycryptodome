@@ -391,8 +391,8 @@ CounterBE_new(PyObject *self, PyObject *args)
  */
 
 static PyMethodDef module_methods[] = {
-    {"_newLE", &CounterLE_new, METH_VARARGS, NULL},
-    {"_newBE", &CounterBE_new, METH_VARARGS, NULL},
+    {"_newLE", (PyCFunction) CounterLE_new, METH_VARARGS, NULL},
+    {"_newBE", (PyCFunction) CounterBE_new, METH_VARARGS, NULL},
     {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
 };
 
