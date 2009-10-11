@@ -64,8 +64,10 @@ class CipherSelfTest(unittest.TestCase):
         self.key = _extract(params, 'key')
         self.plaintext = _extract(params, 'plaintext')
         self.ciphertext = _extract(params, 'ciphertext')
+        self.module_name = _extract(params, 'module_name', None)
 
         mode = _extract(params, 'mode', None)
+        self.mode_name = str(mode)
         if mode is not None:
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
@@ -120,6 +122,12 @@ class CipherSelfTest(unittest.TestCase):
 
 class CipherStreamingSelfTest(CipherSelfTest):
 
+    def shortDescription(self):
+        desc = self.module_name
+        if self.mode is not None:
+            desc += " in %s mode" % (self.mode_name,)
+        return "%s should behave like a stream cipher" % (desc,)
+
     def runTest(self):
         plaintext = a2b_hex(self.plaintext)
         ciphertext = a2b_hex(self.ciphertext)
@@ -148,9 +156,12 @@ class CTRSegfaultTest(unittest.TestCase):
         unittest.TestCase.__init__(self)
         self.module = module
         self.key = params['key']
+        self.module_name = params.get('module_name', None)
+
+    def shortDescription(self):
+        return """Regression test: %s.new(key, %s.MODE_CTR) should raise TypeError, not segfault""" % (self.module_name, self.module_name)
 
     def runTest(self):
-        """Regression test: m.new(key, m.MODE_CTR) should raise TypeError, not segfault"""
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key), self.module.MODE_CTR)
 
 class CTRWraparoundTest(unittest.TestCase):
@@ -159,9 +170,12 @@ class CTRWraparoundTest(unittest.TestCase):
         unittest.TestCase.__init__(self)
         self.module = module
         self.key = params['key']
+        self.module_name = params.get('module_name', None)
+
+    def shortDescription(self):
+        return """Regression test: %s with MODE_CTR should raise OverflowError on wraparound when shortcut used""" % (self.module_name,)
 
     def runTest(self):
-        """Regression test: Ciphers with MODE_CTR should raise OverflowError on wraparound when shortcut used"""
         from Crypto.Util import Counter
 
         for disable_shortcut in (0, 1): # (False, True) Test CTR-mode shortcut and PyObject_CallObject code paths
@@ -178,6 +192,10 @@ class CFBSegmentSizeTest(unittest.TestCase):
         unittest.TestCase.__init__(self)
         self.module = module
         self.key = params['key']
+        self.description = params['description']
+
+    def shortDescription(self):
+        return self.description
 
     def runTest(self):
         """Regression test: m.new(key, m.MODE_CFB, segment_size=N) should require segment_size to be a multiple of 8 bits"""
@@ -221,9 +239,9 @@ def make_block_tests(module, module_name, test_data):
             description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
         name = "%s #%d: %s" % (module_name, i+1, description)
         params['description'] = name
+        params['module_name'] = module_name
 
-        # Add the test to the test suite
-        tests.append(CipherSelfTest(module, params))
+        # Add extra test(s) to the test suite before the current test
         if not extra_tests_added:
             tests += [
                 CTRSegfaultTest(module, params),
@@ -231,6 +249,11 @@ def make_block_tests(module, module_name, test_data):
                 CFBSegmentSizeTest(module, params),
             ]
             extra_tests_added = 1
+
+        # Add the current test to the test suite
+        tests.append(CipherSelfTest(module, params))
+
+        # When using CTR mode, test that the interface behaves like a stream cipher
         if p_mode == 'CTR':
             tests.append(CipherStreamingSelfTest(module, params))
 
@@ -277,6 +300,7 @@ def make_stream_tests(module, module_name, test_data):
             description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
         name = "%s #%d: %s" % (module_name, i+1, description)
         params['description'] = name
+        params['module_name'] = module_name
 
         # Add the test to the test suite
         tests.append(CipherSelfTest(module, params))
