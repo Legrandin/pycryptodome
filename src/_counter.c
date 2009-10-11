@@ -97,6 +97,12 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
     }
     self->p = self->val + PyString_GET_SIZE(prefix);
 
+    /* Sanity-check pointers */
+    assert(self->val <= self->p);
+    assert(self->p + self->nbytes <= self->val + self->buf_size);
+    assert(self->val + PyString_GET_SIZE(self->prefix) == self->p);
+    assert(PyString_GET_SIZE(self->prefix) + self->nbytes + PyString_GET_SIZE(self->suffix) == self->buf_size);
+
     /* Copy the prefix, suffix, and initial value into the buffer. */
     memcpy(self->val, PyString_AS_STRING(prefix), PyString_GET_SIZE(prefix));
     memcpy(self->p, PyString_AS_STRING(initval), self->nbytes);
@@ -164,6 +170,10 @@ _CounterObject_next_value(PCT_CounterObject *self, int little_endian)
         increment = 1;
     }
     for (i = 0; i < self->nbytes; i++, p += increment) {
+        /* Sanity check pointer */
+        assert(self->p <= p);
+        assert(p < self->p + self->nbytes);
+
         /* ch = ord(p) */
         Py_CLEAR(ch);   /* delete old ch */
         ch = PyInt_FromLong((long) *p);
@@ -217,6 +227,10 @@ CounterLEObject_increment(PCT_CounterObject *self)
     carry = 1;
     p = self->p;
     for (i = 0; i < self->nbytes; i++, p++) {
+        /* Sanity check pointer */
+        assert(self->p <= p);
+        assert(p < self->p + self->nbytes);
+
         tmp = *p + carry;
         carry = tmp >> 8;   /* This will only ever be 0 or 1 */
         *p = tmp & 0xff;
@@ -235,6 +249,10 @@ CounterBEObject_increment(PCT_CounterObject *self)
     carry = 1;
     p = self->p + self->nbytes-1;
     for (i = 0; i < self->nbytes; i++, p--) {
+        /* Sanity check pointer */
+        assert(self->p <= p);
+        assert(p < self->p + self->nbytes);
+
         tmp = *p + carry;
         carry = tmp >> 8;   /* This will only ever be 0 or 1 */
         *p = tmp & 0xff;
