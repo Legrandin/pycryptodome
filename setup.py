@@ -58,6 +58,10 @@ else:
     HTONS_LIBS = []
     plat_ext = []
 
+# For test development: Set this to 1 to build with gcov support.
+# Use "gcov -p -o build/temp.*/src build/temp.*/src/*.gcda" to build the .gcov files
+USE_GCOV = 0
+
 # List of pure Python modules that will be excluded from the binary packages.
 # The list consists of (package, module_name) tuples
 from distutils.command.build_py import build_py
@@ -134,6 +138,10 @@ class PCTBuildExt (build_ext):
                 self.__add_compiler_option("-fomit-frame-pointer")
                 # Don't include debug symbols unless debugging
                 self.__remove_compiler_option("-g")
+            if USE_GCOV:
+                self.__add_compiler_option("-fprofile-arcs")
+                self.__add_compiler_option("-ftest-coverage")
+                self.compiler.libraries += ['gcov']
 
         # Call the superclass's build_extensions method
         build_ext.build_extensions(self)
