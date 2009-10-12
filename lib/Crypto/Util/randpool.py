@@ -36,7 +36,7 @@ class RandomPool:
     See http://www.pycrypto.org/randpool-broken
     """
     def __init__(self, numbytes = 160, cipher=None, hash=None, file=None):
-        warnings.warn("This application uses RandomPool, which is BROKEN.  See http://www.pycrypto.org/randpool-broken",
+        warnings.warn("This application uses RandomPool, which is BROKEN in older releases.  See http://www.pycrypto.org/randpool-broken",
             RandomPool_DeprecationWarning)
         self.__rng = Crypto.Random.new()
         self.bytes = numbytes
