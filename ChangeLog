@@ -4,6 +4,9 @@
 	* Modified isPrime() to release the global interpreter lock while
 	  performing computations. (patch from Lorenz Quack)
 
+	* Release the GIL while encrypting, decrypting, and hashing (but not
+	  during initialization or finalization).
+
 	* API changes:
 
 	  - Removed RandomPoolCompat and made Crypto.Util.randpool.RandomPool
@@ -30,6 +33,15 @@
 	        >>> pk.publickey() != pk.publickey()
 	        True
 	    (patch from Lorenz Quack)
+
+	  - Block ciphers created with MODE_CTR can now operate on strings of
+	    any size, rather than just multiples of the underlying cipher's
+	    block size.
+
+	  - Crypto.Util.Counter objects now raise OverflowError when they wrap
+	    around to zero.  You can override this new behaviour by passing
+	    allow_wraparound=True to Counter.new()
+
 
 2.1.0alpha1
 ===========
