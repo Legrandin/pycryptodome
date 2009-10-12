@@ -149,7 +149,9 @@ ALG_update(ALGobject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s#", &cp, &len))
 		return NULL;
 
+	Py_BEGIN_ALLOW_THREADS;
 	hash_update(&(self->st), cp, len);
+	Py_END_ALLOW_THREADS;
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -220,8 +222,11 @@ ALG_new(PyObject *self, PyObject *args)
 		Py_DECREF(new); 
 		return NULL;
 	}
-	if (cp)
+	if (cp) {
+		Py_BEGIN_ALLOW_THREADS;
 		hash_update(&(new->st), cp, len);
+		Py_END_ALLOW_THREADS;
+	}
 
 	return (PyObject *)new;
 }

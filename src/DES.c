@@ -33,6 +33,7 @@
 
 #undef DES  /* this is needed because tomcrypt_custom.h defines DES to an empty string */
 
+#include <assert.h>
 #include "Python.h"
 
 typedef struct {
@@ -82,9 +83,7 @@ static void block_encrypt(block_state *self, unsigned char *in, unsigned char *o
 #else
     rc = des_ecb_encrypt(in, out, &self->sk);
 #endif
-    if (rc != CRYPT_OK) {
-        ltcseterr(rc);
-    }
+    assert(rc == CRYPT_OK);
 }
 
 static void block_decrypt(block_state *self, unsigned char *in, unsigned char *out)
@@ -95,9 +94,7 @@ static void block_decrypt(block_state *self, unsigned char *in, unsigned char *o
 #else
     rc = des_ecb_decrypt(in, out, &self->sk);
 #endif
-    if (rc != CRYPT_OK) {
-        ltcseterr(rc);
-    }
+    assert(rc == CRYPT_OK);
 }
 
 #ifdef PCT_DES3_MODULE

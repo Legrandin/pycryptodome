@@ -275,6 +275,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				_MODULE_STRING " encrypt");
 		return NULL;
 	}
+	Py_BEGIN_ALLOW_THREADS;
 	switch(self->mode)
 	{
 	case(MODE_ECB):      
@@ -409,11 +410,15 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				 * and manipulate the counter directly. */
 
 				PCT_CounterObject *ctr = (PCT_CounterObject *)(self->counter);
-				if (!ctr->check_wraparound_func(ctr)) {
+				if (ctr->carry && !ctr->allow_wraparound) {
+					Py_BLOCK_THREADS;
+					PyErr_SetString(PyExc_OverflowError,
+							"counter wrapped without allow_wraparound");
 					free(buffer);
 					return NULL;
 				}
 				if (ctr->buf_size != BLOCK_SIZE) {
+					Py_BLOCK_THREADS;
 					PyErr_Format(PyExc_TypeError,
 						     "CTR counter function returned "
 						     "string not of length %i",
@@ -426,6 +431,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 					      self->IV);
 				ctr->inc_func(ctr);
 			} else {
+				Py_BLOCK_THREADS;
 				PyObject *ctr = PyObject_CallObject(self->counter, NULL);
 				if (ctr == NULL) {
 					free(buffer);
@@ -448,9 +454,12 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 					free(buffer);
 					return NULL;
 				}
+				Py_UNBLOCK_THREADS;
 				block_encrypt(&(self->st), (unsigned char *)PyString_AsString(ctr),
 					      self->IV);
+				Py_BLOCK_THREADS;
 				Py_DECREF(ctr);
+				Py_UNBLOCK_THREADS;
 			}
 
 			/* Move the pointer to the start of the keystream block */
@@ -466,6 +475,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 		free(buffer);
 		return NULL;
 	}
+	Py_END_ALLOW_THREADS;
 	result=PyString_FromStringAndSize((char *) buffer, len);
 	free(buffer);
 	return(result);
@@ -518,6 +528,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 				" decrypt");
 		return NULL;
 	}
+	Py_BEGIN_ALLOW_THREADS;
 	switch(self->mode)
 	{
 	case(MODE_ECB):      
@@ -628,6 +639,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 		free(buffer);
 		return NULL;
 	}
+	Py_END_ALLOW_THREADS;
 	result=PyString_FromStringAndSize((char *) buffer, len);
 	free(buffer);
 	return(result);

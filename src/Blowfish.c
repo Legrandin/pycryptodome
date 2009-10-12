@@ -26,6 +26,7 @@
  * http://www.schneier.com/paper-blowfish-fse.html
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 #include "Python.h"
@@ -133,10 +134,7 @@ static void Blowfish_encrypt(Blowfish_state *self, const unsigned char *in, unsi
     uint32_t xL, xR;
 
     /* Make sure the object is initialized */
-    if (self->magic != BLOWFISH_MAGIC) {
-        PyErr_SetString(PyExc_AssertionError, "state not initialized");
-        return;
-    }
+    assert(self->magic == BLOWFISH_MAGIC);
 
     /* big endian */
     xL = bytes_to_word(in);
@@ -154,10 +152,7 @@ static void Blowfish_decrypt(Blowfish_state *self, const unsigned char *in, unsi
     uint32_t xL, xR;
 
     /* Make sure the object is initialized */
-    if (self->magic != BLOWFISH_MAGIC) {
-        PyErr_SetString(PyExc_AssertionError, "state not initialized");
-        return;
-    }
+    assert(self->magic == BLOWFISH_MAGIC);
 
     /* big endian */
     xL = bytes_to_word(in);

@@ -143,8 +143,10 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				_MODULE_STRING " encrypt");
 		return NULL;
 	}
+	Py_BEGIN_ALLOW_THREADS;
 	memcpy(buffer, str, len);
 	stream_encrypt(&(self->st), buffer, len);
+	Py_END_ALLOW_THREADS;
 	result = PyString_FromStringAndSize((char *)buffer, len);
 	free(buffer);
 	return (result);
@@ -173,8 +175,10 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 				_MODULE_STRING " decrypt");
 		return NULL;
 	}
+	Py_BEGIN_ALLOW_THREADS;
 	memcpy(buffer, str, len);
 	stream_decrypt(&(self->st), buffer, len);
+	Py_END_ALLOW_THREADS;
 	result = PyString_FromStringAndSize((char *)buffer, len);
 	free(buffer);
 	return (result);
