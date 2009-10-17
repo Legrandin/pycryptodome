@@ -468,6 +468,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 		break;
 
 	default:
+		Py_BLOCK_THREADS;
 		PyErr_Format(PyExc_SystemError, 
 			     "Unknown ciphertext feedback mode %i; "
 			     "this shouldn't happen",
@@ -632,6 +633,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 		break;
 
 	default:
+		Py_BLOCK_THREADS;
 		PyErr_Format(PyExc_SystemError, 
 			     "Unknown ciphertext feedback mode %i; "
 			     "this shouldn't happen",
