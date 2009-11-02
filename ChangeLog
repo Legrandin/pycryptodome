@@ -1,3 +1,10 @@
+2.1.0beta1
+==========
+
+	* Modified RSA.generate() to ensure that e is coprime to p-1 and q-1.
+	  Apparently, RSA.generate was capable of generating unusable keys.
+
+
 2.1.0alpha2
 ===========
 
