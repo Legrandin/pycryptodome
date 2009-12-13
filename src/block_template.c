@@ -431,8 +431,9 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 					      self->IV);
 				ctr->inc_func(ctr);
 			} else {
+				PyObject *ctr;
 				Py_BLOCK_THREADS;
-				PyObject *ctr = PyObject_CallObject(self->counter, NULL);
+				ctr = PyObject_CallObject(self->counter, NULL);
 				if (ctr == NULL) {
 					free(buffer);
 					return NULL;
