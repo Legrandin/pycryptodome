@@ -1,5 +1,5 @@
-2.1.0beta2
-==========
+2.1.0
+=====
 
 	* Fix building PyCrypto on Win64 using MS Visual Studio 9.
 	  (Thanks: Nevins Bartolomeo.)
