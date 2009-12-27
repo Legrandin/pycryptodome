@@ -26,12 +26,16 @@
 
 __revision__ = "$Id$"
 
-__all__ = ['generate', 'construct', 'error']
+__all__ = ['generate', 'construct', 'error', 'importKey' ]
 
 from Crypto.Util.python_compat import *
 
 from Crypto.PublicKey import _RSA, _slowmath, pubkey
 from Crypto import Random
+
+from Crypto.Util.asn1 import DerObject, DerSequence
+from textwrap import fill
+import base64
 
 try:
     from Crypto.PublicKey import _fastmath
@@ -128,6 +132,36 @@ class _RSAobj(pubkey.pubkey):
             attrs.append("private")
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
+    def exportKey(self, format='PEM'):
+	"""Export the RSA key. A string is returned
+	with the encoded public or the private half
+	under the selected format.
+
+	format:		'DER' (PKCS#1) or 'PEM' (RFC1421)
+	"""
+	der = DerSequence()
+	if self.has_private():
+		keyType = "RSA PRIVATE"
+		der[:] = [ 0, self.n, self.e, self.d, self.p, self.q,
+			   self.d % (self.p-1), self.d % (self.q-1),
+			   self.u ]
+	else:
+		keyType = "PUBLIC"
+		der.append('\x30\x0D\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01\x05\x00')
+		bitmap = DerObject('BIT STRING')
+		derPK = DerSequence()
+		derPK[:] = [ self.n, self.e ]
+		bitmap.payload = '\x00' + derPK.encode()
+		der.append(bitmap.encode())
+	if format=='DER':
+		return der.encode()
+	if format=='PEM':
+		pem = "-----BEGIN %s KEY-----\n" % keyType
+		pem += fill(base64.b64encode(der.encode()),64)
+		pem += "\n-----END %s KEY-----" % keyType
+		return pem
+	return ValueError("")
+
 class RSAImplementation(object):
     def __init__(self, **kwargs):
         # 'use_fast_math' parameter:
@@ -175,9 +209,46 @@ class RSAImplementation(object):
         key = self._math.rsa_construct(*tup)
         return _RSAobj(self, key)
 
+    def _importKeyDER(self, externKey):
+	der = DerSequence()
+	der.decode(externKey, True)
+	if len(der)==9 and der.hasOnlyInts() and der[0]==0:
+		# ASN.1 RSAPrivateKey element
+		del der[6:8]	# Remove d mod (p-1) and d mod (q-1)
+		del der[0]	# Remove version
+		return self.construct(der[:])
+	if len(der)==2:
+		# ASN.1 SubjectPublicKeyInfo element
+		if der[0]=='\x30\x0D\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01\x05\x00':
+			bitmap = DerObject()
+			bitmap.decode(der[1], True)
+			if bitmap.typeTag=='\x03' and bitmap.payload[0]=='\x00':
+				der.decode(bitmap.payload[1:], True)
+				if len(der)==2 and der.hasOnlyInts():
+					return self.construct(der[:])
+	raise ValueError("RSA key format is not supported")
+
+    def importKey(self, externKey):
+	"""Import an RSA key (public or private half).
+
+	externKey:	the RSA key to import, encoded as a string.
+			The key can be in DER (PKCS#1) or in unencrypted
+			PEM format (RFC1421).
+	"""
+	if externKey.startswith('-----'):
+		# This is probably a PEM encoded key
+		lines = externKey.replace(" ",'').split()
+		der = base64.b64decode(''.join(lines[1:-1]))
+		return self._importKeyDER(der)
+	if externKey[0]=='\x30':
+		# This is probably a DER encoded key
+		return self._importKeyDER(externKey)
+	raise ValueError("RSA key format is not supported")
+
 _impl = RSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
+importKey = _impl.importKey
 error = _impl.error
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

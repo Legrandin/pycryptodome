@@ -27,10 +27,11 @@ Crypto.Util.number        Number-theoretic functions (primality testing, etc.)
 Crypto.Util.randpool      Random number generation
 Crypto.Util.RFC1751       Converts between 128-bit keys and human-readable
                           strings of words.
+Crypto.Util.asn1          Minimal support for ASN.1 DER encoding
 
 """
 
-__all__ = ['randpool', 'RFC1751', 'number', 'strxor']
+__all__ = ['randpool', 'RFC1751', 'number', 'strxor', 'asn1' ]
 
 __revision__ = "$Id$"
 
