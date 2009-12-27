@@ -644,9 +644,11 @@ An example of using the RSA module to sign a message::
 
     >>> from Crypto.Hash import MD5
     >>> from Crypto.PublicKey import RSA
-    >>> RSAkey = RSA.generate(384, randfunc)   # This will take a while...
+    >>> from Crypto import Random
+    >>> rng = Random.new().read
+    >>> RSAkey = RSA.generate(384, rng)   # This will take a while...
     >>> hash = MD5.new(plaintext).digest()
-    >>> signature = RSAkey.sign(hash, "")
+    >>> signature = RSAkey.sign(hash, rng)
     >>> signature   # Print what an RSA sig looks like--you don't really care.
     ('\021\317\313\336\264\315' ...,)
     >>> RSAkey.verify(hash, signature)     # This sig will check out
@@ -673,7 +675,7 @@ An N-bit keys can encrypt messages up to N-1 bits long.
 accept a single integer ``N`` and return a string of random data
 ``N`` bytes long.  You should always use a cryptographically secure
 random number generator, such as the one defined in the
-``Crypto.Util.randpool`` module; **don't** just use the
+``Crypto.Random`` module; **don't** just use the
 current time and the ``random`` module. 
 
 ``progress_func`` is an optional function that will be called with a short
@@ -864,7 +866,7 @@ Returns true if the number ``N`` is prime, as determined by a
 Rabin-Miller test.
 
 
-Crypto.Util.randpool
+Crypto.Random
 ==================================================
 
 For cryptographic purposes, ordinary random number generators are
@@ -910,114 +912,34 @@ RFC 1750,
 "Randomness Recommendations for Security", for an interesting discussion
 of the issues related to random number generation.
 
-The ``randpool`` module implements a strong random number generator
-in the ``RandomPool`` class.  The internal state consists of a string
-of random data, which is returned as callers request it.  The class
-keeps track of the number of bits of entropy left, and provides a function to
-add new random data; this data can be obtained in various ways, such as
-by using the variance in a user's keystroke timings.  
+The ``Random`` module builds strong random number generators that look
+like generic files a user can read data from. The internal state consists
+of entropy accumulators based on the best randomness sources the underlying 
+operating is capable to provide.
 
-**RandomPool([numbytes, cipher, hash])**:
-An object of the ``RandomPool`` class can be created without
-parameters if desired.  ``numbytes`` sets the number of bytes of
-random data in the pool, and defaults to 160 (1280 bits). ``hash``
-can be a string containing the module name of the hash function to use
-in stirring the random data, or a module object supporting the hashing
-interface.  The default action is to use SHA.
+The ``Random`` module defines the following methods:
 
-The ``cipher`` argument is vestigial; it was removed from version
-1.1 so RandomPool would work even in the limited exportable subset of
-the code.  I recommend passing ``hash`` using a keyword argument so
-that someday I can safely delete the ``cipher`` argument
+**new()**:
+Builds a file-like object that outputs cryptographically random bytes.
 
+**atfork()**:
+This methods has to be called whenever os.fork() is invoked. Forking
+undermines the security of any random generator based on the operating
+system, as it duplicates all structures a program has. In order to
+thwart possible attacks, this method shoud be called soon after forking,
+and before any cryptographic operation.
 
+**get_random_bytes(num)**:
+Returns a string containing ``num`` bytes of random data.
 
-``RandomPool`` objects define the following variables and methods:
+Objects created by the ``Random`` module define the following variables and methods:
 
-**add_event(time [, string])**:
-Adds an event to the random pool.  ``time`` should be set to the
-current system time, measured at the highest resolution available.
-``string`` can be a string of data that will be XORed into the pool,
-and can be used to increase the entropy of the pool.  For example, if
-you're encrypting a document, you might use the hash value of the
-document; an adversary presumably won't have the plaintext of the
-document, and thus won't be able to use this information to break the
-generator.
+**read(num)**:
+Returns a string containing ``num`` bytes of random data.
 
-The return value is the value of ``self.entropy`` after the data has
-been added.  The function works in the following manner: the time
-between successive calls to the ``add_event()`` method is determined,
-and the entropy of the data is guessed; the larger the time between
-calls, the better.  The system time is then read and added to the pool,
-along with the ``string`` parameter, if present.  The hope is that the
-low-order bits of the time are effectively random.  In an application,
-it is recommended that ``add_event()`` be called as frequently as
-possible, with whatever random data can be found.
-
-**bits**:
-A constant integer value containing the number of bits of data in
-the pool, equal to the ``bytes`` attribute multiplied by 8.
-
-**bytes**:
-A constant integer value containing the number of bytes of data in
-the pool.
-
-
-**entropy**:
-An integer value containing the number of bits of entropy currently in
-the pool.  The value is incremented by the ``add_event()`` method,
-and decreased by the ``get_bytes()`` method.
-
-
-**get_bytes(num)**:
-Returns a string containing ``num`` bytes of random data, and
-decrements the amount of entropy available.  It is not an error to
-reduce the entropy to zero, or to call this function when the entropy
-is zero.  This simply means that, in theory, enough random information has been
-extracted to derive the state of the generator.  It is the caller's
-responsibility to monitor the amount of entropy remaining and decide
-whether it is sufficent for secure operation.
-
-
-**stir()**:
-Scrambles the random pool using the previously chosen encryption and
-hash function.  An adversary may attempt to learn or alter the state
-of the pool in order to affect its future output; this function
-destroys the existing state of the pool in a non-reversible way.  It
-is recommended that ``stir()`` be called before and after using
-the ``RandomPool`` object.  Even better, several calls to
-``stir()`` can be interleaved with calls to ``add_event()``.
-
-
-The ``PersistentRandomPool`` class is a subclass of ``RandomPool`` 
-that adds the capability to save and load the pool from a disk file.
-
-**PersistentRandomPool(filename [, numbytes, cipher, hash])**:
-The path given in ``filename`` will be automatically opened, and an
-existing random pool read; if no such file exists, the pool will be
-initialized as usual.  If omitted, the filename defaults to the empty
-string, which will prevent it from being saved to a file.  These
-arguments are identical to those for the ``RandomPool``
-constructor.
-
-
-**save()**:
-Opens the file named by the ``filename`` attribute, and saves the
-random data into the file using the ``pickle`` module.
-
-
-The ``KeyboardRandomPool`` class is a subclass of
-``PersistentRandomPool`` that provides a method to obtain random
-data from the keyboard:
-
-**randomize()**:
-(Unix systems only)  Obtain random data from the keyboard.  This works
-by prompting the
-user to hit keys at random, and then using the keystroke timings (and
-also the actual keys pressed) to add entropy to the pool.  This works
-similarly to PGP's random pool mechanism.
-
-
+**close()**:
+**flush()**:
+Do nothing. Provided for consistency.
 
 Crypto.Util.RFC1751
 ==================================================
