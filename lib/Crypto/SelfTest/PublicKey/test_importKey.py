@@ -76,7 +76,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 
 	def testImportKey1(self):
 		key = RSA.importKey(self.rsaKeyDER)
-		self.assertTrue(key.has_private())
+		self.failUnless(key.has_private())
 		self.assertEqual(key.n, self.n)
 		self.assertEqual(key.e, self.e)
 		self.assertEqual(key.d, self.d)
@@ -86,13 +86,13 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 
 	def testImportKey2(self):
 		key = RSA.importKey(self.rsaPublicKeyDER)
-		self.assertFalse(key.has_private())
+		self.failIf(key.has_private())
 		self.assertEqual(key.n, self.n)
 		self.assertEqual(key.e, self.e)
 
 	def testImportKey3(self):
 		key = RSA.importKey(self.rsaKeyPEM)
-		self.assertTrue(key.has_private())
+		self.failUnless(key.has_private())
 		self.assertEqual(key.n, self.n)
 		self.assertEqual(key.e, self.e)
 		self.assertEqual(key.d, self.d)
@@ -102,7 +102,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 
 	def testImportKey4(self):
 		key = RSA.importKey(self.rsaPublicKeyPEM)
-		self.assertFalse(key.has_private())
+		self.failIf(key.has_private())
 		self.assertEqual(key.n, self.n)
 		self.assertEqual(key.e, self.e)
 

@@ -74,11 +74,11 @@ class DerSequenceTests(unittest.TestCase):
 		# Empty sequence
 		der = DerSequence()
 		self.assertEquals(der.encode(), '0\x00')
-		self.assertFalse(der.hasOnlyInts())
+		self.failIf(der.hasOnlyInts())
 		# One single-byte integer (zero)
 		der.append(0)
 		self.assertEquals(der.encode(), '0\x03\x02\x01\x00')
-		self.assertTrue(der.hasOnlyInts())
+		self.failUnless(der.hasOnlyInts())
 		# Invariant
 		self.assertEquals(der.encode(), '0\x03\x02\x01\x00')
 
@@ -142,7 +142,7 @@ class DerSequenceTests(unittest.TestCase):
 		der.append(0x180L)
 		der.append(0xFFL)
 		self.assertEquals(der.encode(), '0\x08\x02\x02\x01\x80\x02\x02\x00\xff')
-		self.assertTrue(der.hasOnlyInts())
+		self.failUnless(der.hasOnlyInts())
 		#
 		der.append(0x01)
 		der[1:] = [9,8]
@@ -157,7 +157,7 @@ class DerSequenceTests(unittest.TestCase):
 		der.append(0x180L)
 		der.append('\x00\x02\x00\x00')
 		self.assertEquals(der.encode(), '0\x08\x02\x02\x01\x80\x00\x02\x00\x00')
-		self.assertFalse(der.hasOnlyInts())
+		self.failIf(der.hasOnlyInts())
 
 	####
 
@@ -276,7 +276,10 @@ class DerSequenceTests(unittest.TestCase):
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
-    return list_test_cases(CounterTests)
+    listTests = []
+    listTests += list_test_cases(DerObjectTests)
+    listTests += list_test_cases(DerSequenceTests)
+    return listTests
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())

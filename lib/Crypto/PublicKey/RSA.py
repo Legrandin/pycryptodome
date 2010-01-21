@@ -34,8 +34,7 @@ from Crypto.PublicKey import _RSA, _slowmath, pubkey
 from Crypto import Random
 
 from Crypto.Util.asn1 import DerObject, DerSequence
-from textwrap import fill
-import base64
+import binascii
 
 try:
     from Crypto.PublicKey import _fastmath
@@ -157,8 +156,11 @@ class _RSAobj(pubkey.pubkey):
 		return der.encode()
 	if format=='PEM':
 		pem = "-----BEGIN %s KEY-----\n" % keyType
-		pem += fill(base64.b64encode(der.encode()),64)
-		pem += "\n-----END %s KEY-----" % keyType
+		binaryKey = der.encode()
+		# Each BASE64 line can take up to 64 characters (=48 bytes of data)
+		chunks = [ binascii.b2a_base64(binaryKey[i:i+48]) for i in range(0, len(binaryKey), 48) ]
+		pem += ''.join(chunks)
+		pem += "-----END %s KEY-----" % keyType
 		return pem
 	return ValueError("")
 
@@ -238,7 +240,7 @@ class RSAImplementation(object):
 	if externKey.startswith('-----'):
 		# This is probably a PEM encoded key
 		lines = externKey.replace(" ",'').split()
-		der = base64.b64decode(''.join(lines[1:-1]))
+		der = binascii.a2b_base64(''.join(lines[1:-1]))
 		return self._importKeyDER(der)
 	if externKey[0]=='\x30':
 		# This is probably a DER encoded key

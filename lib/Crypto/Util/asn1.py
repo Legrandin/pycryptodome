@@ -24,7 +24,7 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 __all__ = [ 'DerObject', 'DerInteger', 'DerSequence' ]
 
-class DerObject(object):
+class DerObject:
 	typeTags = { 'SEQUENCE':'\x30', 'BIT STRING':'\x03', 'INTEGER':'\x02' }
 
 	def __init__(self, ASN1Type=None):
@@ -60,7 +60,7 @@ class DerObject(object):
 				raise ValueError("Not a DER length tag.")
 			return (payloadLength, idx+1+(length & 0x7F))
 
-	def decode(self, input, noLeftOvers=False):
+	def decode(self, input, noLeftOvers=0):
 		try:
 			self.typeTag = input[0]
 			if (ord(self.typeTag) & 0x1F)==0x1F:
@@ -84,7 +84,7 @@ class DerInteger(DerObject):
 			self.payload = '\x00' + self.payload
 		return DerObject.encode(self)
 
-	def decode(self, input, noLeftOvers=False):
+	def decode(self, input, noLeftOvers=0):
 		tlvLength = DerObject.decode(self, input,noLeftOvers)
 		if ord(self.payload[0])>127:
 			raise ValueError ("Negative INTEGER.")
@@ -105,17 +105,22 @@ class DerSequence(DerObject):
 		self._seq[i:j] = sequence
 	def __delslice__(self,i,j):
 		del self._seq[i:j]
+	def __getslice__(self, i, j):
+		return self._seq[max(0, i):max(0, j)]
 	def __len__(self):
 		return len(self._seq)
 	def append(self, item):
 		return self._seq.append(item)
 
 	def hasOnlyInts(self):
-		if not self._seq: return False
+		if not self._seq: return 0
+		test = 0
 		for item in self._seq:
-			if not isinstance(item,(int, long)):
-				return False
-		return True
+			try:
+				test += item
+			except TypeError:
+				return 0
+		return 1
 
 	def encode(self):
 		'''
@@ -124,15 +129,16 @@ class DerSequence(DerObject):
 		'''
 		self.payload = ''
 		for item in self._seq:
-			if isinstance(item,(long, int)):
-				self.payload += DerInteger(item).encode()
-			elif isinstance(item,basestring):
+			try:
 				self.payload += item
-			else:
-				raise ValueError("Trying to DER encode an unknown object")
+			except:
+				try:
+					self.payload += DerInteger(item).encode()
+				except:
+					raise ValueError("Trying to DER encode an unknown object")
 		return DerObject.encode(self)
 
-	def decode(self, input,noLeftOvers=False):
+	def decode(self, input,noLeftOvers=0):
 		'''
 		This function decodes the given string into a sequence of
 		ASN.1 objects. Yet, we only know about unsigned INTEGERs.
