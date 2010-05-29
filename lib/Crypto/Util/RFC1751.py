@@ -37,7 +37,7 @@ binary={0:'0000', 1:'0001', 2:'0010', 3:'0011', 4:'0100', 5:'0101',
 def _key2bin(s):
     "Convert a key into a string of binary digits"
     kl=map(lambda x: ord(x), s)
-    kl=map(lambda x: binary[x/16]+binary[x&15], kl)
+    kl=map(lambda x: binary[x>>4]+binary[x&15], kl)
     return ''.join(kl)
 
 def _extract(key, start, length):
@@ -80,13 +80,13 @@ def english_to_key (str):
             y = index << shift
             cl, cc, cr = (y>>16), (y>>8)&0xff, y & 0xff
             if (shift>5):
-                char[bits/8] = char[bits/8] | cl
-                char[bits/8+1] = char[bits/8+1] | cc
-                char[bits/8+2] = char[bits/8+2] | cr
+                char[bits>>3] = char[bits>>3] | cl
+                char[(bits>>3)+1] = char[(bits>>3)+1] | cc
+                char[(bits>>3)+2] = char[(bits>>3)+2] | cr
             elif shift>-3:
-                char[bits/8] = char[bits/8] | cc
-                char[bits/8+1] = char[bits/8+1] | cr
-            else: char[bits/8] = char[bits/8] | cr
+                char[bits>>3] = char[bits>>3] | cc
+                char[(bits>>3)+1] = char[(bits>>3)+1] | cr
+            else: char[bits>>3] = char[bits>>3] | cr
             bits=bits+11
         subkey=reduce(lambda x,y:x+chr(y), char, '')
 

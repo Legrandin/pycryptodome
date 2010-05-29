@@ -92,7 +92,7 @@ class RSATest(unittest.TestCase):
         self.p = bytes_to_long(a2b_hex(self.prime_factor))
 
         # Compute q, d, and u from n, e, and p
-        self.q = self.n / self.p
+        self.q = divmod(self.n, self.p)[0]
         self.d = inverse(self.e, (self.p-1)*(self.q-1))
         self.u = inverse(self.p, self.q)    # u = e**-1 (mod q)
 

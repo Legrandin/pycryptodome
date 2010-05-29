@@ -74,7 +74,7 @@ def getRandomNumber(N, randfunc=None):
         _import_Random()
         randfunc = Random.new().read
 
-    S = randfunc(N/8)
+    S = randfunc(N>>3)
     odd_bits = N % 8
     if odd_bits != 0:
         char = ord(randfunc(1)) >> (8-odd_bits)
@@ -100,7 +100,7 @@ def inverse(u, v):
     u3, v3 = long(u), long(v)
     u1, v1 = 1L, 0L
     while v3 > 0:
-        q=u3 / v3
+        q=divmod(u3, v3)[0]
         u1, v1 = v1, u1 - v1*q
         u3, v3 = v3, u3 - v3*q
     while u1<0:

@@ -69,7 +69,7 @@ def generate_py(bits, randfunc, progress_func=None):
         progress_func('p,q\n')
     while (1):
         S, obj.q = generateQ(randfunc)
-        n=(bits-1)/160
+        n=divmod(bits-1, 160)[0]
         C, N, V = 0, 2, {}
         b=(obj.q >> 5) & 15
         powb=pow(bignum(2), b)
@@ -91,7 +91,7 @@ def generate_py(bits, randfunc, progress_func=None):
             progress_func('4096 multiples failed\n')
 
     obj.p = p
-    power=(p-1)/obj.q
+    power=divmod(p-1, obj.q)[0]
     if progress_func:
         progress_func('h,g\n')
     while (1):

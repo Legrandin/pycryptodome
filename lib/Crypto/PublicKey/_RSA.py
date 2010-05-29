@@ -59,12 +59,12 @@ def generate_py(bits, randfunc, progress_func=None):
         while (p - 1) % obj.e == 0:
             if progress_func:
                 progress_func('p\n')
-            p = pubkey.getPrime(bits/2, randfunc)
+            p = pubkey.getPrime(bits>>1, randfunc)
         q = 1L
         while (q - 1) % obj.e == 0:
             if progress_func:
                 progress_func('q\n')
-            q = pubkey.getPrime(bits - (bits/2), randfunc)
+            q = pubkey.getPrime(bits - (bits>>1), randfunc)
 
     # p shall be smaller than q (for calc of u)
     if p > q:
