@@ -121,6 +121,9 @@ class PCTBuildExt (build_ext):
 
         # Tweak compiler options
         if self.compiler.compiler_type in ('unix', 'cygwin', 'mingw32'):
+            # Tell GCC to compile using the C99 standard.
+            self.__add_compiler_option("-std=c99")
+
             # Make assert() statements always work
             self.__remove_compiler_option("-DNDEBUG")
 
