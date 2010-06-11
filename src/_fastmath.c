@@ -859,14 +859,14 @@ void bytes_to_mpz (mpz_t result, const unsigned char *bytes, size_t size)
 
 /* Returns a new reference to a rng from the Crypto.Random module. */
 static PyObject *
-getRNG ()
+getRNG (void)
 {
 	/* PyModule_GetDict, PyDict_GetItemString return a borrowed ref */
 	PyObject *module, *module_dict, *new_func, *rng;
 
 	module = PyImport_ImportModule ("Crypto.Random");
 	if (!module)
-		return 0;
+		return NULL;
 	module_dict = PyModule_GetDict (module);
 	Py_DECREF (module);
 	new_func = PyDict_GetItemString (module_dict, "new");
@@ -874,7 +874,7 @@ getRNG ()
 	{
 		PyErr_SetString (PyExc_RuntimeError,
 						 "Cryptor.Random.new is not callable.");
-		return 0;
+		return NULL;
 	}
 	rng = PyObject_CallObject (new_func, NULL);
 	return rng;
@@ -934,7 +934,7 @@ getRandomNumber (mpz_t n, unsigned long int bits, PyObject *randfunc_)
 		goto cleanup;
 	}
 
-	bytes_to_mpz (n, PyString_AsString(rand_bytes), bytes);
+	bytes_to_mpz (n, (unsigned char *)PyString_AsString(rand_bytes), bytes);
 	/* remove superflous bits by right-shifting */
 	mpz_fdiv_q_2exp (n, n, 8 - odd_bits);
 
@@ -1051,10 +1051,14 @@ rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 
 	if (rounds > MAX_RABIN_MILLER_ROUNDS)
 	{
-		PyErr_WarnEx (PyExc_RuntimeWarning,
+                /* PyErr_Warn is deprecated, but we use it for backward
+                 * compatibility with Python < 2.5.  Eventually, it will need
+                 * to be replaced with PyErr_WarnEx with the stacklevel
+                 * argument set to 1 */
+		PyErr_Warn(PyExc_RuntimeWarning,
 					  "rounds to Rabin-Miller-Test exceeds maximum. "
 					  "rounds will be set to the maximum.\n"
-					  "Go complain to the devs about it if you like.", 1);
+					  "Go complain to the devs about it if you like.");
 		rounds = MAX_RABIN_MILLER_ROUNDS;
 	}
 
