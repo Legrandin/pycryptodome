@@ -47,24 +47,8 @@ def generate_py(bits, randfunc, progress_func=None):
         # Note that q might be one bit longer than p if somebody specifies an odd
         # number of bits for the key. (Why would anyone do that?  You don't get
         # more security.)
-        #
-        # Note also that we ensure that e is coprime to (p-1) and (q-1).
-        # This is needed for encryption to work properly, according to the 1997
-        # paper by Robert D. Silverman of RSA Labs, "Fast generation of random,
-        # strong RSA primes", available at
-        #   http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.17.2713&rep=rep1&type=pdf
-        # Since e=65537 is prime, it is sufficient to check that e divides
-        # neither (p-1) nor (q-1).
-        p = 1L
-        while (p - 1) % obj.e == 0:
-            if progress_func:
-                progress_func('p\n')
-            p = pubkey.getPrime(bits>>1, randfunc)
-        q = 1L
-        while (q - 1) % obj.e == 0:
-            if progress_func:
-                progress_func('q\n')
-            q = pubkey.getPrime(bits - (bits>>1), randfunc)
+        p = pubkey.getStrongPrime(bits>>1, obj.e, 1e-12, randfunc)
+        q = pubkey.getStrongPrime(bits - (bits>>1), obj.e, 1e-12, randfunc)
 
     # p shall be smaller than q (for calc of u)
     if p > q:

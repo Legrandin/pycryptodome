@@ -27,6 +27,7 @@ import time
 import os
 import sys
 
+from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
 from Crypto.Hash import MD2, MD4, MD5, SHA256, SHA
 try:
@@ -78,6 +79,17 @@ class Benchmark:
     def announce_result(self, value, units):
         sys.stdout.write("%.2f %s\n" % (value, units))
         sys.stdout.flush()
+
+    def test_pubkey_setup(self, pubkey_name, module, key_bytes):
+        self.announce_start("%s pubkey setup" % (pubkey_name,))
+        keys = self.random_keys(key_bytes)[:5]
+
+        t0 = time.time()
+        for k in keys:
+            module.generate(key_bytes*8)
+        t = time.time()
+        pubkey_setups_per_second = len(keys) / (t - t0)
+        self.announce_result(pubkey_setups_per_second, "Keys/sec")
 
     def test_key_setup(self, cipher_name, module, key_bytes, mode):
         self.announce_start("%s key setup" % (cipher_name,))
@@ -152,6 +164,11 @@ class Benchmark:
         self.announce_result(hash_speed / 10**6, "MBps")
 
     def run(self):
+        pubkey_specs = [
+            ("RSA(1024)", RSA, 1024/8),
+            ("RSA(2048)", RSA, 2048/8),
+            ("RSA(4096)", RSA, 4096/8),
+            ]
         block_specs = [
             ("DES", DES, 8),
             ("DES3", DES3, 24),
@@ -178,6 +195,9 @@ class Benchmark:
         ]
         if RIPEMD is not None:
             hash_specs += [("RIPEMD", RIPEMD)]
+
+        for pubkey_name, module, key_bytes in pubkey_specs:
+            self.test_pubkey_setup(pubkey_name, module, key_bytes)
 
         for cipher_name, module, key_bytes in block_specs:
             self.test_key_setup(cipher_name, module, key_bytes, module.MODE_CBC)
