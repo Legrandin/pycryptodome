@@ -893,7 +893,7 @@ getRNG (void)
 static int
 getRandomNumber (mpz_t n, unsigned long int bits, PyObject *randfunc_)
 {
-	PyObject *arglist, *randfunc, *rng=NULL, *rand_bytes=NULL;
+	PyObject *arglist, *randfunc=NULL, *rng=NULL, *rand_bytes=NULL;
 	int return_val = 1;
 	unsigned long int bytes = bits / 8;
 	unsigned long int odd_bits = bits % 8;
