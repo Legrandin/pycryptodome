@@ -233,34 +233,34 @@ class MiscTests(unittest.TestCase):
         bits = 512
         x = number.getStrongPrime(bits)
         self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1 << bits-1)-1, 1)
-        self.assertEqual(x < (1 << bits), 1)
+        self.assertEqual(x > (1L << bits-1)-1, 1)
+        self.assertEqual(x < (1L << bits), 1)
         e = 2**16+1
         x = number.getStrongPrime(bits, e)
         self.assertEqual(number.GCD(x-1, e), 1)
         self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1 << bits-1)-1, 1)
-        self.assertEqual(x < (1 << bits), 1)
+        self.assertEqual(x > (1L << bits-1)-1, 1)
+        self.assertEqual(x < (1L << bits), 1)
         e = 2**16+2
         x = number.getStrongPrime(bits, e)
-        self.assertEqual(number.GCD((x-1)/2, e), 1)
+        self.assertEqual(number.GCD((x-1)>>1, e), 1)
         self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1 << bits-1)-1, 1)
-        self.assertEqual(x < (1 << bits), 1)
+        self.assertEqual(x > (1L << bits-1)-1, 1)
+        self.assertEqual(x < (1L << bits), 1)
 
     def test_isPrime(self):
         """Util.number.isPrime"""
         self.assertEqual(number.isPrime(2), True)
         self.assertEqual(number.isPrime(3), True)
         self.assertEqual(number.isPrime(4), False)
-        self.assertEqual(number.isPrime(2**1279-1), True)
+        self.assertEqual(number.isPrime(2L**1279-1), True)
         # test some known gmp pseudo-primes taken from
         # http://www.trnicely.net/misc/mpzspsp.html
         for composite in (43 * 127 * 211, 61 * 151 * 211, 15259 * 30517,
-                          346141 * 692281, 1007119 * 2014237, 3589477 * 7178953,
-                          4859419 * 9718837, 2730439 * 5460877,
-                          245127919 * 490255837, 963939391 * 1927878781,
-                          4186358431 * 8372716861, 1576820467 * 3153640933):
+                          346141L * 692281L, 1007119L * 2014237L, 3589477L * 7178953L,
+                          4859419L * 9718837L, 2730439L * 5460877L,
+                          245127919L * 490255837L, 963939391L * 1927878781L,
+                          4186358431L * 8372716861L, 1576820467L * 3153640933L):
             self.assertEqual(number.isPrime(long(composite)), False)
 
 

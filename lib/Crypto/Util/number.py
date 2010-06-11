@@ -176,7 +176,7 @@ def _rabinMillerTest(n, rounds, randfunc=None):
     m = n_1
     while (m & 1) == 0:
         b += 1
-        m //= 2
+        m >>= 1
 
     tested = []
     # we need to do at most n-2 rounds.
@@ -238,17 +238,17 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     if (N < 512) or ((N % 128) != 0):
         raise ValueError ("bits must be multiple of 128 and > 512")
 
-    rabin_miller_rounds = int(math.ceil(-math.log(false_positive_prob, 4)))
+    rabin_miller_rounds = int(math.ceil(-math.log(false_positive_prob)/math.log(4)))
 
     # calculate range for X
     #   lower_bound = sqrt(2) * 2^{511 + 128*x}
     #   upper_bound = 2^{512 + 128*x} - 1
-    x = (N - 512) // 128;
+    x = (N - 512) >> 7;
     # We need to approximate the sqrt(2) in the lower_bound by an integer
     # expression because floating point math overflows with these numbers
-    lower_bound = (14142135623730950489 * (2 ** (511 + 128*x)) /
-                   10000000000000000000)
-    upper_bound = (1 << (512 + 128*x)) - 1
+    lower_bound = divmod(14142135623730950489L * (2L ** (511 + 128*x)),
+                         10000000000000000000L)[0]
+    upper_bound = (1L << (512 + 128*x)) - 1
     # Randomly choose X in calculated range
     X = getRandomRange (lower_bound, upper_bound, randfunc)
 
@@ -268,7 +268,8 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
 
         # look for suitable p[i] starting at y
         result = 0
-        for j, composite in enumerate (field):
+        for j in range(len(field)):
+            composite = field[j]
             # look for next canidate
             if composite:
                 continue
@@ -317,7 +318,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
         X += increment
 		# abort when X has more bits than requested
 		# TODO: maybe we shouldn't abort but rather start over.
-        if X >= 1 << N:
+        if X >= 1L << N:
             raise RuntimeError ("Couln't find prime in field. "
                                 "Developer: Increase field_size")
     return X
@@ -345,7 +346,7 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
         if N % p == 0:
             return 0
 
-    rounds = int(math.ceil(-math.log(false_positive_prob, 4)))
+    rounds = int(math.ceil(-math.log(false_positive_prob)/math.log(4)))
     return _rabinMillerTest(N, rounds, randfunc)
 
 
