@@ -59,9 +59,14 @@ def size (N):
         bits += 1
     return bits
 
-
 def getRandomNumber(N, randfunc=None):
-    """getRandomNumber(N:int, randfunc:callable):long
+    """Deprecated.  Use getRandomInteger or getRandomNBitInteger instead."""
+    warnings.warn("Crypto.Util.number.getRandomNumber has confusing semantics and has been deprecated.  Use getRandomInteger or getRandomNBitInteger instead.",
+        GetRandomNumber_DeprecationWarning)
+    return getRandomNBitInteger(N, randfunc)
+
+def getRandomInteger(N, randfunc=None):
+    """getRandomInteger(N:int, randfunc:callable):long
     Return a random number with at most N bits.
 
     If randfunc is omitted, then Random.new().read is used.
@@ -92,13 +97,13 @@ def getRandomRange(a, b, randfunc=None):
     """
     range_ = b - a - 1
     bits = size(range_)
-    value = getRandomNumber(bits, randfunc)
+    value = getRandomInteger(bits, randfunc)
     while value > range_:
-        value = getRandomNumber(bits, randfunc)
+        value = getRandomInteger(bits, randfunc)
     return a + value
 
-def getRandomNBitNumber(N, randfunc=None):
-    """getRandomNumber(N:int, randfunc:callable):long
+def getRandomNBitInteger(N, randfunc=None):
+    """getRandomInteger(N:int, randfunc:callable):long
     Return a random number with exactly N-bits, i.e. a random number
     between 2**(N-1) and (2**N)-1.
 
@@ -107,7 +112,7 @@ def getRandomNBitNumber(N, randfunc=None):
     This function is for internal use only and may be renamed or removed in
     the future.
     """
-    value = getRandomNumber (N-1, randfunc)
+    value = getRandomInteger (N-1, randfunc)
     value |= 2L ** (N-1)                # Ensure high bit is set
     assert size(value) >= N
     return value
@@ -148,7 +153,7 @@ def getPrime(N, randfunc=None):
         _import_Random()
         randfunc = Random.new().read
 
-    number=getRandomNBitNumber(N, randfunc) | 1
+    number=getRandomNBitInteger(N, randfunc) | 1
     while (not isPrime(number, randfunc=randfunc)):
         number=number+2
     return number
@@ -256,7 +261,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     p = [0, 0]
     for i in (0, 1):
         # randomly choose 101-bit y
-        y = getRandomNBitNumber (101, randfunc)
+        y = getRandomNBitInteger (101, randfunc)
 
         # initialize the field for sieving
         field = [0] * 5 * len (sieve_base)

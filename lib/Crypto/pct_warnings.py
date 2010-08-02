@@ -46,6 +46,9 @@ class RandomPool_DeprecationWarning(CryptoDeprecationWarning):
 class ClockRewindWarning(CryptoRuntimeWarning):
     """Warning for when the system clock moves backwards."""
 
+class GetRandomNumber_DeprecationWarning(CryptoDeprecationWarning):
+    """Issued when Crypto.Util.number.getRandomNumber is invoked."""
+
 # By default, we want this warning to be shown every time we compensate for
 # clock rewinding.
 import warnings as _warnings

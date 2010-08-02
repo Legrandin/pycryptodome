@@ -852,7 +852,32 @@ corresponding length; the ``get_bytes()`` method of a
 ``RandomPool`` object will serve the purpose nicely, as will the
 ``read()`` method of an opened file such as ``/dev/random``.
 
-**getRandomNumber(N, randfunc)**:
+**getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None)**:
+Return a random strong ``N``-bit prime number.
+In this context p is a strong prime if p-1 and p+1 have at
+least one large prime factor.
+``N`` should be a multiple of 128 and > 512.
+
+If ``e`` is provided the returned prime p-1 will be coprime to ``e``
+and thus suitable for RSA where e is the public exponent.
+
+The optional ``false_positive_prob`` is the statistical probability
+that true is returned even though it is not (pseudo-prime).
+It defaults to 1e-6 (less than 1:1000000).
+Note that the real probability of a false-positive is far less. This is
+just the mathematically provable limit.
+
+``randfunc`` should take a single int parameter and return that
+many random bytes as a string.
+If randfunc is omitted, then ``Random.new().read`` is used.
+
+**getRandomNBitInteger(N, randfunc)**:
+Return an ``N``-bit random number, using random data obtained from the
+function ``randfunc``.  As usual, ``randfunc`` must take a single
+integer argument and return a string of random data of the
+corresponding length.
+
+**getRandomNBitInteger(N, randfunc)**:
 Return an ``N``-bit random number, using random data obtained from the
 function ``randfunc``.  As usual, ``randfunc`` must take a single
 integer argument and return a string of random data of the

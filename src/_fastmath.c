@@ -891,7 +891,7 @@ getRNG (void)
  * support 2.1)
  */
 static int
-getRandomNumber (mpz_t n, unsigned long int bits, PyObject *randfunc_)
+getRandomInteger (mpz_t n, unsigned long int bits, PyObject *randfunc_)
 {
 	PyObject *arglist, *randfunc=NULL, *rng=NULL, *rand_bytes=NULL;
 	int return_val = 1;
@@ -959,9 +959,9 @@ cleanup:
  * support 2.1)
  */
 static int
-getRandomNBitNumber (mpz_t n, unsigned long int bits, PyObject *randfunc)
+getRandomNBitInteger (mpz_t n, unsigned long int bits, PyObject *randfunc)
 {
-	if (!getRandomNumber (n, bits, randfunc))
+	if (!getRandomInteger (n, bits, randfunc))
 		return 0;
 	/* set the MSB to ensure n really has the correct number of bits. */
 	mpz_setbit (n, bits);
@@ -991,7 +991,7 @@ getRandomRange (mpz_t n, mpz_t lower_bound, mpz_t upper_bound,
 
 	do
 	{
-		if (!getRandomNumber (n, bits, randfunc))
+		if (!getRandomInteger (n, bits, randfunc))
 		{
 			mpz_clear (range);
 			return 0;
@@ -1218,8 +1218,8 @@ getStrongPrime (PyObject *self, PyObject *args, PyObject *kwargs)
 	Py_BLOCK_THREADS;
 	int res = 1;
 	res &= getRandomRange (X, lower_bound, upper_bound, randfunc);
-	res &= getRandomNBitNumber (y[0], 101, randfunc);
-	res &= getRandomNBitNumber (y[1], 101, randfunc);
+	res &= getRandomNBitInteger (y[0], 101, randfunc);
+	res &= getRandomNBitInteger (y[1], 101, randfunc);
 	Py_UNBLOCK_THREADS;
 	if (!res)
 	{
