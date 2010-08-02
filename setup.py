@@ -141,6 +141,8 @@ class PCTBuildExt (build_ext):
                 self.__add_compiler_option("-fomit-frame-pointer")
                 # Don't include debug symbols unless debugging
                 self.__remove_compiler_option("-g")
+                # Don't include profiling information (incompatible with -fomit-frame-pointer)
+                self.__remove_compiler_option("-pg")
             if USE_GCOV:
                 self.__add_compiler_option("-fprofile-arcs")
                 self.__add_compiler_option("-ftest-coverage")
