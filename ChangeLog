@@ -1,3 +1,26 @@
+2.2
+===
+
+	* Deprecated Crypto.Util.number.getRandomNumber(), which had confusing
+	  semantics.  It's been replaced by getRandomNBitInteger and
+	  getRandomInteger.  (Thanks: Lorenz Quack)
+
+	* Better isPrime() and getPrime() implementations that do a real
+	  Rabin-Miller probabilistic primality test (not the phony test we did
+	  before with fixed bases).  (Thanks: Lorenz Quack)
+
+	* getStrongPrime() implementation for generating RSA primes.
+	  (Thanks: Lorenz Quack)
+
+	* Support for importing and exporting RSA keys in DER and PEM format.
+	  (Thanks: Legrandin)
+
+	* Fix PyCrypto when floor division (python -Qnew) is enabled.
+
+	* When building using gcc, use -std=c99 for compilation.  This should
+	  fix building on FreeBSD and NetBSD.
+
+
 2.1.0
 =====
 
