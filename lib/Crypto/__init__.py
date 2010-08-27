@@ -38,7 +38,7 @@ Crypto.Util               Various useful modules and functions (long-to-string
 
 __all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util']
 
-__version__ = '2.2'     # See also below and setup.py
+__version__ = '2.3'     # See also below and setup.py
 __revision__ = "$Id$"
 
 # New software should look at this instead of at __version__ above.
