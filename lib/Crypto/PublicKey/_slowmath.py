@@ -83,7 +83,10 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
     if d is not None: obj.d = d
     if p is not None: obj.p = p
     if q is not None: obj.q = q
-    if u is not None: obj.u = u
+    if u is not None:
+        obj.u = u
+    elif p is not None and q is not None:
+        obj.u = inverse(p, q)
     return obj
 
 class _DSAKey(object):

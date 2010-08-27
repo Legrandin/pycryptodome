@@ -142,6 +142,7 @@ class RSATest(unittest.TestCase):
     def test_construct_5tuple(self):
         """RSA (default implementation) constructed key (5-tuple)"""
         rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
+        self._check_private_key(rsaObj)
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
         self._check_signing(rsaObj)
