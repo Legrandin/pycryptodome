@@ -202,6 +202,9 @@ class RSAImplementation(object):
         return self._current_randfunc
 
     def generate(self, bits, randfunc=None, progress_func=None):
+        if bits < 1024 or (bits & 0xff) != 0:
+            # pubkey.getStrongPrime doesn't like anything that's not a multiple of 128 and > 512
+            raise ValueError("RSA modulus length must be a multiple of 256 and > 1024")
         rf = self._get_randfunc(randfunc)
         obj = _RSA.generate_py(bits, rf, progress_func)    # TODO: Don't use legacy _RSA module
         key = self._math.rsa_construct(obj.n, obj.e, obj.d, obj.p, obj.q, obj.u)
