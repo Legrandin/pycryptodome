@@ -1,3 +1,16 @@
+2.3
+===
+	* Fix NameError when attempting to use deprecated getRandomNumber()
+	  function.
+
+	* _slowmath: Compute RSA u parameter when it's not given to
+	  RSA.construct. This makes _slowmath behave the same as _fastmath in
+	  this regard.
+
+	* Make RSA.generate raise a more user-friendly exception message when
+	  the user tries to generate a bogus-length key.
+
+
 2.2
 ===
 
