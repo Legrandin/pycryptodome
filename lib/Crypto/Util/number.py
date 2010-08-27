@@ -26,6 +26,7 @@
 
 __revision__ = "$Id$"
 
+from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning
 import math
 
 bignum = long
