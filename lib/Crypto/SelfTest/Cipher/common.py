@@ -203,6 +203,28 @@ class CFBSegmentSizeTest(unittest.TestCase):
             self.assertRaises(ValueError, self.module.new, a2b_hex(self.key), self.module.MODE_CFB, segment_size=i)
         self.module.new(a2b_hex(self.key), self.module.MODE_CFB, segment_size=8) # should succeed
 
+class RoundtripTest(unittest.TestCase):
+
+    def __init__(self, module, params):
+        from Crypto import Random
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.iv = Random.get_random_bytes(module.block_size)
+        self.key = params['key']
+        self.plaintext = 100 * params['plaintext']
+        self.module_name = params.get('module_name', None)
+
+    def shortDescription(self):
+        return """%s .decrypt() output of .encrypt() should not be garbled""" % (self.module_name,)
+
+    def runTest(self):
+        for mode in (self.module.MODE_ECB, self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_PGP, self.module.MODE_OFB):
+            encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
+            decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
+            ciphertext = encryption_cipher.encrypt(self.plaintext)
+            decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
+            self.assertEqual(self.plaintext, decrypted_plaintext)
+
 def make_block_tests(module, module_name, test_data):
     tests = []
     extra_tests_added = 0
@@ -247,6 +269,7 @@ def make_block_tests(module, module_name, test_data):
                 CTRSegfaultTest(module, params),
                 CTRWraparoundTest(module, params),
                 CFBSegmentSizeTest(module, params),
+                RoundtripTest(module, params),
             ]
             extra_tests_added = 1
 
