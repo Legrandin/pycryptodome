@@ -158,7 +158,6 @@ class PCTBuildExt (build_ext):
 
         # Detect libgmp or libmpir and don't build _fastmath if both are missing.
         lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib']
-        print self.compiler.library_dirs
         if not (self.compiler.find_library_file(lib_dirs, 'gmp') or self.compiler.find_library_file(lib_dirs, 'mpir')):
             print >>sys.stderr, "warning: GMP or MPIR library not found; Not building Crypto.PublicKey._fastmath."
             self.__remove_extensions(["Crypto.PublicKey._fastmath"])
