@@ -156,14 +156,26 @@ class PCTBuildExt (build_ext):
         if self.compiler.compiler_type == 'msvc':
             self.compiler.include_dirs.insert(0, "src/inc-msvc/")
 
-        # Detect libgmp and don't build _fastmath if it is missing.
+        # Detect libgmp or libmpir and don't build _fastmath if both are missing.
         lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib']
-        if not (self.compiler.find_library_file(lib_dirs, 'gmp')):
-            print >>sys.stderr, "warning: GMP library not found; Not building Crypto.PublicKey._fastmath."
+        print self.compiler.library_dirs
+        if not (self.compiler.find_library_file(lib_dirs, 'gmp') or self.compiler.find_library_file(lib_dirs, 'mpir')):
+            print >>sys.stderr, "warning: GMP or MPIR library not found; Not building Crypto.PublicKey._fastmath."
             self.__remove_extensions(["Crypto.PublicKey._fastmath"])
+		# Change library to libmpir if libgmp is missing
+        elif not (self.compiler.find_library_file(lib_dirs, 'gmp')):
+            self.__change_extension_lib(["Crypto.PublicKey._fastmath"],['mpir'])
+
+    def __change_extension_lib(self, names, libs):
+        """Change the libraries to be used for the specified extension(s)"""
+        i = 0
+        while i < len(self.extensions):
+           if self.extensions[i].name in names:
+                self.extensions[i].libraries = libs
+           i += 1
 
     def __remove_extensions(self, names):
-        """Remove the specified extension from the list of extensions to build"""
+        """Remove the specified extension(s) from the list of extensions to build"""
         i = 0
         while i < len(self.extensions):
             if self.extensions[i].name in names:
@@ -203,6 +215,7 @@ class PCTBuildPy(build_py):
                 continue
             retval.append(item)
         return retval
+
 
 class TestCommand(Command):
 

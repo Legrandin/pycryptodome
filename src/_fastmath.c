@@ -35,6 +35,12 @@
 
 #define SIEVE_BASE_SIZE (sizeof (sieve_base) / sizeof (sieve_base[0]))
 
+#ifdef _MSC_VER
+#define INLINE __inline
+#else
+#define INLINE inline
+#endif
+
 static unsigned int sieve_base[10000];
 static int rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc);
 
@@ -832,7 +838,7 @@ cleanup:
 
 
 
-inline size_t size (mpz_t n)
+INLINE size_t size (mpz_t n)
 {
 	return mpz_sizeinbase (n, 2);
 }
@@ -1166,6 +1172,7 @@ getStrongPrime (PyObject *self, PyObject *args, PyObject *kwargs)
 	static char *kwlist[] = {"N", "e", "false_positive_prob", "randfunc", NULL};
 	unsigned long int base_size = SIEVE_BASE_SIZE;
 	unsigned long int field_size = 5 * base_size;
+	int res;
 
 	if (!PyArg_ParseTupleAndKeywords (args, kwargs, "l|ldO:getStrongPrime",
 									  kwlist, &bits, &e, &false_positive_prob,
@@ -1216,7 +1223,7 @@ getStrongPrime (PyObject *self, PyObject *args, PyObject *kwargs)
 
 	/* Randomly choose X, y[0] and y[1] */
 	Py_BLOCK_THREADS;
-	int res = 1;
+	res = 1;
 	res &= getRandomRange (X, lower_bound, upper_bound, randfunc);
 	res &= getRandomNBitInteger (y[0], 101, randfunc);
 	res &= getRandomNBitInteger (y[1], 101, randfunc);
