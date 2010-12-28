@@ -23,6 +23,26 @@
  */
 #ifndef PYCRYPTO_COMPAT_H
 #define PYCRYPTO_COMPAT_H
+#include "Python.h"
+
+/*
+ * Python 3.x defines, for conditional compiles
+ */
+ 
+#if PY_MAJOR_VERSION >= 3
+#define IS_PY3K
+#else
+#define PyBytes_GET_SIZE PyString_GET_SIZE
+#define PyBytes_FromStringAndSize PyString_FromStringAndSize
+#define PyBytes_AS_STRING PyString_AS_STRING
+#define PyBytes_Check PyString_Check
+#define PyBytes_Size PyString_Size
+#define PyBytes_AsString PyString_AsString
+#define PyBytesObject PyStringObject
+#if PY_MINOR_VERSION <= 5 /* PyUnicode_FromString exists from Python 2.6 on up */
+#define PyUnicode_FromString PyString_FromString
+#endif
+#endif
 
 /*
  * Py_CLEAR for Python < 2.4

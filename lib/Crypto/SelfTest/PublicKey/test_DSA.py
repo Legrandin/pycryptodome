@@ -26,17 +26,19 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
 import unittest
-import string
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 
 def _sws(s):
     """Strip whitespace"""
-    s = s.translate(string.maketrans(string.whitespace, " "*len(string.whitespace)))
-    s = s.replace(" ", "")
-    return s
+    # The original solution would not work at all in Python 3.x, as string.maketrans
+    # now wants a bytes object. Let's do this another way, then.
+    return "".join(s.split())
 
 class DSATest(unittest.TestCase):
     # Test vector from "Appendix 5. Example of the DSA" of
@@ -63,7 +65,7 @@ class DSATest(unittest.TestCase):
 
     k = _sws("""358dad57 1462710f 50e254cf 1a376b2b deaadfbf""")
     k_inverse = _sws("""0d516729 8202e49b 4116ac10 4fc3f415 ae52f917""")
-    m = b2a_hex("abc")
+    m = b2a_hex(b("abc"))
     m_hash = _sws("""a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d""")
     r = _sws("""8bac1ab6 6410435c b7181f95 b16ab97c 92b341c0""")
     s = _sws("""41e2345f 1f56df24 58f426d1 55b4ba2d b6dcd8c8""")
@@ -169,7 +171,7 @@ class DSATest(unittest.TestCase):
         r = bytes_to_long(a2b_hex(self.r))
         s = bytes_to_long(a2b_hex(self.s))
         self.assertEqual(1, dsaObj.verify(m_hash, (r, s)))
-        self.assertEqual(0, dsaObj.verify(m_hash + "\0", (r, s)))
+        self.assertEqual(0, dsaObj.verify(m_hash + b("\0"), (r, s)))
 
 class DSAFastMathTest(DSATest):
     def setUp(self):

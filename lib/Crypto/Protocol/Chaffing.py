@@ -140,7 +140,7 @@ class Chaff:
         # chaffed.
         count = len(blocks) * self.__factor
         blocksper = range(self.__blocksper)
-        for i, wheat in map(None, range(len(blocks)), blocks):
+        for i, wheat in zip(range(len(blocks)), blocks):
             # it shouldn't matter which of the n blocks we add chaff to, so for
             # ease of implementation, we'll just add them to the first count
             # blocks
@@ -205,7 +205,7 @@ likely to effect their Safety and Happiness.
 
     # put these into a form acceptable as input to the chaffing procedure
     source = []
-    m = map(None, range(len(blocks)), blocks, macs)
+    m = zip(range(len(blocks)), blocks, macs)
     print m
     for i, data, mac in m:
         source.append((i, data, mac))
@@ -237,6 +237,7 @@ likely to effect their Safety and Happiness.
 
     # now decode the message packets and check it against the original text
     print 'Undigesting wheat...'
+    # PY3K: This is meant to be text, do not change to bytes (data)
     newtext = "".join(wheat)
     if newtext == text:
         print 'They match!'

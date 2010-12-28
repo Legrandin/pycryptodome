@@ -28,6 +28,13 @@ __revision__ = "$Id$"
 
 from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning
 import math
+import sys
+if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+    from Crypto.Util.py21floordiv import *
+else:
+    from Crypto.Util.floordiv import *
+
+from Crypto.Util.py3compat import *
 
 bignum = long
 try:
@@ -83,7 +90,7 @@ def getRandomInteger(N, randfunc=None):
     odd_bits = N % 8
     if odd_bits != 0:
         char = ord(randfunc(1)) >> (8-odd_bits)
-        S = chr(char) + S
+        S = bchr(char) + S
     value = bytes_to_long(S)
     return value
 
@@ -221,7 +228,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     The optional false_positive_prob is the statistical probability
     that true is returned even though it is not (pseudo-prime).
     It defaults to 1e-6 (less than 1:1000000).
-    Note that the real probability of a false-positiv is far less. This is
+    Note that the real probability of a false-positive is far less. This is
     just the mathematically provable limit.
 
     randfunc should take a single int parameter and return that
@@ -263,7 +270,6 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     for i in (0, 1):
         # randomly choose 101-bit y
         y = getRandomNBitInteger (101, randfunc)
-
         # initialize the field for sieving
         field = [0] * 5 * len (sieve_base)
         # sieve the field
@@ -300,13 +306,13 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     X = X + (R - (X % increment))
     while 1:
         is_possible_prime = 1
-        # first check canidate against sieve_base
+        # first check candidate against sieve_base
         for prime in sieve_base:
             if (X % prime) == 0:
                 is_possible_prime = 0
                 break
         # if e is given make sure that e and X-1 are coprime
-        # this is not necessarily a strong prime criterion but usefull when
+        # this is not necessarily a strong prime criterion but useful when
         # creating them for RSA where the p-1 and q-1 should be coprime to
         # the public exponent e
         if e and is_possible_prime:
@@ -314,8 +320,9 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
                 if GCD (e, X-1) != 1:
                     is_possible_prime = 0
             else:
-                if GCD (e, (X-1)/2) != 1:
+                if GCD (e, floordiv((X-1),2)) != 1:
                     is_possible_prime = 0
+
         # do some Rabin-Miller-Tests
         if is_possible_prime:
             result = _rabinMillerTest (X, rabin_miller_rounds)
@@ -370,7 +377,7 @@ def long_to_bytes(n, blocksize=0):
     blocksize.
     """
     # after much testing, this algorithm was deemed to be the fastest
-    s = ''
+    s = b('')
     n = long(n)
     pack = struct.pack
     while n > 0:
@@ -378,17 +385,17 @@ def long_to_bytes(n, blocksize=0):
         n = n >> 32
     # strip off leading zeros
     for i in range(len(s)):
-        if s[i] != '\000':
+        if s[i] != b('\000')[0]:
             break
     else:
         # only happens when n == 0
-        s = '\000'
+        s = b('\000')
         i = 0
     s = s[i:]
     # add back some pad bytes.  this could be done more efficiently w.r.t. the
     # de-padding being done above, but sigh...
     if blocksize > 0 and len(s) % blocksize:
-        s = (blocksize - len(s) % blocksize) * '\000' + s
+        s = (blocksize - len(s) % blocksize) * b('\000') + s
     return s
 
 def bytes_to_long(s):
@@ -402,7 +409,7 @@ def bytes_to_long(s):
     length = len(s)
     if length % 4:
         extra = (4 - length % 4)
-        s = '\000' * extra + s
+        s = b('\000') * extra + s
         length = length + extra
     for i in range(0, length, 4):
         acc = (acc << 32) + unpack('>I', s[i:i+4])[0]

@@ -26,24 +26,26 @@
 
 __revision__ = "$Id$"
 
+from Crypto.Util.py3compat import *
+
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
     # Test vectors from RFC 1319
-    ('8350e5a3e24c153df2275c9f80692773', '', "'' (empty string)"),
-    ('32ec01ec4a6dac72c0ab96fb34c0b5d1', 'a'),
-    ('da853b0d3f88d99b30283a69e6ded6bb', 'abc'),
-    ('ab4f496bfb2a530b219ff33031fe06b0', 'message digest'),
+    (b('8350e5a3e24c153df2275c9f80692773'), b(''), "'' (empty string)"),
+    (b('32ec01ec4a6dac72c0ab96fb34c0b5d1'), b('a')),
+    (b('da853b0d3f88d99b30283a69e6ded6bb'), b('abc')),
+    (b('ab4f496bfb2a530b219ff33031fe06b0'), b('message digest')),
 
-    ('4e8ddff3650292ab5a4108c3aa47940b', 'abcdefghijklmnopqrstuvwxyz',
+    (b('4e8ddff3650292ab5a4108c3aa47940b'), b('abcdefghijklmnopqrstuvwxyz'),
         'a-z'),
 
-    ('da33def2a42df13975352846c30338cd',
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+    (b('da33def2a42df13975352846c30338cd'),
+        b('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'),
         'A-Z, a-z, 0-9'),
 
-    ('d5976f79d83d3a0dc9806c3c66f3efd8',
-        '1234567890123456789012345678901234567890123456'
-        + '7890123456789012345678901234567890',
+    (b('d5976f79d83d3a0dc9806c3c66f3efd8'),
+        b('1234567890123456789012345678901234567890123456')
+        + b('7890123456789012345678901234567890'),
         "'1234567890' * 8"),
 ]
 

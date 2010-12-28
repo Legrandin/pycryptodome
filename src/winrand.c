@@ -31,6 +31,7 @@
 /* Author: Mark Moraes */
 
 #include "Python.h"
+#include "pycrypto_compat.h"
 
 #ifdef MS_WIN32
 
@@ -48,15 +49,24 @@
 #endif
 
 /* To-Do: store provider name and type for print/repr? */
+
 typedef struct
 {
     PyObject_HEAD
     HCRYPTPROV hcp;
 } WRobject;
 
+/* Please see PEP3123 for a discussion of PyObject_HEAD and changes made in 3.x to make it conform to Standard C.
+ * These changes also dictate using Py_TYPE to check type, and PyVarObject_HEAD_INIT(NULL, 0) to initialize
+ */
+#ifdef IS_PY3K
+static PyTypeObject WRtype;
+#define is_WRobject(v) (Py_TYPE(v) == &WRtype)
+#else
 staticforward PyTypeObject WRtype;
-
 #define is_WRobject(v) ((v)->ob_type == &WRtype)
+#define PyLong_FromLong PyInt_FromLong /* for Python 2.x */
+#endif
 
 static void
 WRdealloc(PyObject *ptr)
@@ -156,6 +166,7 @@ WR_get_bytes(WRobject *self, PyObject *args)
 	 * from an RC4 stream, they should be relatively
 	 * cheap.
 	 */
+
 	if (! CryptGenRandom(self->hcp, (DWORD) nbytes, (BYTE *) buf)) {
 		PyErr_Format(PyExc_SystemError,
 			     "CryptGenRandom failed, error 0x%x",
@@ -163,7 +174,8 @@ WR_get_bytes(WRobject *self, PyObject *args)
 		PyMem_Free(buf);
 		return NULL;
 	}
-	res = PyString_FromStringAndSize(buf, n);
+
+	res = PyBytes_FromStringAndSize(buf, n);
 	PyMem_Free(buf);
 	return res;
 }
@@ -185,9 +197,12 @@ static PyMethodDef WR_mod_methods[] = {
 	{NULL,      NULL}        /* Sentinel */
 };
 
-
 static PyObject *
+#ifdef IS_PY3K
+WRgetattro(PyObject *s, PyObject *attr)
+#else
 WRgetattr(PyObject *s, char *name)
+#endif
 {
 	WRobject *self = (WRobject*)s;
 	if (! is_WRobject(self)) {
@@ -195,30 +210,99 @@ WRgetattr(PyObject *s, char *name)
 		    "WinRandom trying to getattr with non-WinRandom object");
 		return NULL;
 	}
+#ifdef IS_PY3K
+	if (!PyUnicode_Check(attr))
+		goto generic;
+	if (PyUnicode_CompareWithASCIIString(attr, "hcp") == 0)
+#else
 	if (strcmp(name, "hcp") == 0)
-		return PyInt_FromLong((long) self->hcp);
+#endif
+		return PyLong_FromLong((long) self->hcp);
+#ifdef IS_PY3K
+  generic:
+	return PyObject_GenericGetAttr(s, attr);
+#else
 	return Py_FindMethod(WRmethods, (PyObject *) self, name);
+#endif
 }
 
 static PyTypeObject WRtype =
-{
+ {
+ #ifdef IS_PY3K
+	PyVarObject_HEAD_INIT(NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
+#else
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"winrandom.WinRandom",	/*tp_name*/
-	sizeof(WRobject),	/*tp_size*/
-	0,			/*tp_itemsize*/
-	/* methods */
-	WRdealloc,		/*tp_dealloc*/
-	0,			/*tp_print*/
+#endif
+ 	"winrandom.WinRandom",	/*tp_name*/
+ 	sizeof(WRobject),	/*tp_size*/
+ 	0,			/*tp_itemsize*/
+ 	/* methods */
+	(destructor) WRdealloc,		/*tp_dealloc*/
+	0,				/*tp_print*/
+#ifndef IS_PY3K
 	WRgetattr,		/*tp_getattr*/
+#else
+	0,				/*tp_getattr*/
+	0,				/*tp_setattr*/
+	0,				/*tp_compare*/
+	0,				/*tp_repr*/
+	0,				/*tp_as_number */
+	0,				/*tp_as_sequence */
+	0,				/*tp_as_mapping */
+	0,				/*tp_hash*/
+	0,				/*tp_call*/
+	0,				/*tp_str*/
+	WRgetattro,		/*tp_getattro*/
+	0,				/*tp_setattro*/
+	0,				/*tp_as_buffer*/
+	Py_TPFLAGS_DEFAULT,		/*tp_flags*/
+	0,				/*tp_doc*/
+	0,				/*tp_traverse*/
+	0,				/*tp_clear*/
+	0,				/*tp_richcompare*/
+	0,				/*tp_weaklistoffset*/
+	0,				/*tp_iter*/
+	0,				/*tp_iternext*/
+	WRmethods,		/*tp_methods*/
+#endif
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef moduledef = {
+	PyModuleDef_HEAD_INIT,
+	"winrandom",
+	NULL,
+	-1,
+	WR_mod_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+ };
+#endif
+
+#ifdef IS_PY3K
+PyMODINIT_FUNC
+PyInit_winrandom()
+#else
 void
 initwinrandom()
+#endif
 {
 	PyObject *m;
+#ifdef IS_PY3K
+	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
+	if (PyType_Ready(&WRtype) < 0)
+		return NULL;
+    /* Initialize the module */
+    m = PyModule_Create(&moduledef);
+    if (m == NULL)
+        return NULL;
+#else
 	WRtype.ob_type = &PyType_Type;
 	m = Py_InitModule("winrandom", WR_mod_methods);
+#endif
 
 	/* define Windows CSP Provider Types */
 #ifdef PROV_RSA_FULL
@@ -296,8 +380,11 @@ initwinrandom()
 
 	if (PyErr_Occurred())
 		Py_FatalError("can't initialize module winrandom");
-}
 
+#ifdef IS_PY3K
+	return m;
+#endif
+}
 /*
 
 CryptGenRandom usage is described in

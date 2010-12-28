@@ -26,7 +26,10 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
 import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
@@ -41,7 +44,7 @@ class RSATest(unittest.TestCase):
 
     # TODO: PyCrypto treats the message as starting *after* the leading "00"
     # TODO: That behaviour should probably be changed in the future.
-    plaintext = """
+    plaintext = b("""
            eb 7a 19 ac e9 e3 00 63 50 e3 29 50 4b 45 e2
         ca 82 31 0b 26 dc d8 7d 5c 68 f1 ee a8 f5 52 67
         c3 1b 2e 8b b4 25 1f 84 d7 e0 b2 c0 46 26 f5 af
@@ -50,9 +53,9 @@ class RSATest(unittest.TestCase):
         b4 8d 28 69 d5 02 41 21 43 58 11 59 1b e3 92 f9
         82 fb 3e 87 d0 95 ae b4 04 48 db 97 2f 3a c1 4f
         7b c2 75 19 52 81 ce 32 d2 f1 b7 6d 4d 35 3e 2d
-    """
+    """)
 
-    ciphertext = """
+    ciphertext = b("""
         12 53 e0 4d c0 a5 39 7b b4 4a 7a b8 7e 9b f2 a0
         39 a3 3d 1e 99 6f c8 2a 94 cc d3 00 74 c9 5d f7
         63 72 20 17 06 9e 52 68 da 5d 1c 0b 4f 87 2c f6
@@ -61,9 +64,9 @@ class RSATest(unittest.TestCase):
         24 c2 ca 2f 4a 90 fe 9f 2e f5 c9 c1 40 e5 bb 48
         da 95 36 ad 87 00 c8 4f c9 13 0a de a7 4e 55 8d
         51 a7 4d df 85 d8 b5 0d e9 68 38 d6 06 3e 09 55
-    """
+    """)
 
-    modulus = """
+    modulus = b("""
         bb f8 2f 09 06 82 ce 9c 23 38 ac 2b 9d a8 71 f7
         36 8d 07 ee d4 10 43 a4 40 d6 b6 f0 74 54 f5 1f
         b8 df ba af 03 5c 02 ab 61 ea 48 ce eb 6f cd 48
@@ -72,16 +75,16 @@ class RSATest(unittest.TestCase):
         ee 6a 64 9d 06 09 53 74 88 34 b2 45 45 98 39 4e
         e0 aa b1 2d 7b 61 a5 1f 52 7a 9a 41 f6 c1 68 7f
         e2 53 72 98 ca 2a 8f 59 46 f8 e5 fd 09 1d bd cb
-    """
+    """)
 
     e = 0x11L    # public exponent
 
-    prime_factor = """
+    prime_factor = b("""
         c9 7f b1 f0 27 f4 53 f6 34 12 33 ea aa d1 d9 35
         3f 6c 42 d0 88 66 b1 d0 5a 0f 20 35 02 8b 9d 86
         98 40 b4 16 66 b4 2e 92 ea 0d a3 b4 32 04 b5 cf
         ce 33 52 52 4d 04 16 a5 a4 41 e7 00 af 46 15 03
-    """
+    """)
 
     def setUp(self):
         global RSA, Random, bytes_to_long
@@ -209,7 +212,7 @@ class RSATest(unittest.TestCase):
         self.assertEqual(1, rsaObj.e > 1)   # e > 1
 
         # Public keys should not be able to sign or decrypt
-        self.assertRaises(TypeError, rsaObj.sign, ciphertext, "")
+        self.assertRaises(TypeError, rsaObj.sign, ciphertext, b(""))
         self.assertRaises(TypeError, rsaObj.decrypt, ciphertext)
 
         # Check __eq__ and __ne__
@@ -226,7 +229,7 @@ class RSATest(unittest.TestCase):
         plaintext = rsaObj.decrypt((ciphertext,))
 
         # Test encryption (2 arguments)
-        (new_ciphertext2,) = rsaObj.encrypt(plaintext, "")
+        (new_ciphertext2,) = rsaObj.encrypt(plaintext, b(""))
         self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext2))
 
         # Test blinded decryption
@@ -237,7 +240,7 @@ class RSATest(unittest.TestCase):
         self.assertEqual(b2a_hex(plaintext), b2a_hex(unblinded_plaintext))
 
         # Test signing (2 arguments)
-        signature2 = rsaObj.sign(ciphertext, "")
+        signature2 = rsaObj.sign(ciphertext, b(""))
         self.assertEqual((bytes_to_long(plaintext),), signature2)
 
         # Test verification
@@ -247,7 +250,7 @@ class RSATest(unittest.TestCase):
         plaintext = a2b_hex(self.plaintext)
 
         # Test encryption (2 arguments)
-        (new_ciphertext2,) = rsaObj.encrypt(plaintext, "")
+        (new_ciphertext2,) = rsaObj.encrypt(plaintext, b(""))
 
         # Exercise verification
         rsaObj.verify(new_ciphertext2, (bytes_to_long(plaintext),))
@@ -257,7 +260,7 @@ class RSATest(unittest.TestCase):
         ciphertext = a2b_hex(self.ciphertext)
 
         # Test encryption (2 arguments)
-        (new_ciphertext2,) = rsaObj.encrypt(plaintext, "")
+        (new_ciphertext2,) = rsaObj.encrypt(plaintext, b(""))
         self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext2))
 
     def _check_decryption(self, rsaObj):
@@ -294,7 +297,7 @@ class RSATest(unittest.TestCase):
         message = a2b_hex(self.ciphertext)
 
         # Test signing (2 argument)
-        self.assertEqual((signature,), rsaObj.sign(message, ""))
+        self.assertEqual((signature,), rsaObj.sign(message, b("")))
 
 class RSAFastMathTest(RSATest):
     def setUp(self):

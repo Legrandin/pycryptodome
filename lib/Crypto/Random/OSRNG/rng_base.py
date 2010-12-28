@@ -23,7 +23,9 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+    from Crypto.Util.py21compat import *
 
 class BaseRNG(object):
 

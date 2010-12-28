@@ -24,10 +24,12 @@ __revision__ = "$Id$"
 
 __all__ = ['new', 'digest_size']
 
+from Crypto.Util.py3compat import *
+
 try:
     # The md5 module is deprecated in Python 2.6, so use hashlib when possible.
     import hashlib
-    def new(data=""):
+    def new(data=b("")):
         return hashlib.sha1(data)
     digest_size = new().digest_size
 

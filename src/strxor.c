@@ -139,8 +139,8 @@ strxor_function(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "SS", &a, &b))
         return NULL;
 
-    len_a = PyString_GET_SIZE(a);
-    len_b = PyString_GET_SIZE(b);
+    len_a = PyBytes_GET_SIZE(a);
+    len_b = PyBytes_GET_SIZE(b);
 
     assert(len_a >= 0);
     assert(len_b >= 0);
@@ -151,13 +151,13 @@ strxor_function(PyObject *self, PyObject *args)
     }
 
     /* Create return string */
-    retval = PyString_FromStringAndSize(NULL, len_a);
+    retval = PyBytes_FromStringAndSize(NULL, len_a);
     if (!retval) {
         return NULL;
     }
 
     /* retval := a ^ b */
-    xor_strings(PyString_AS_STRING(retval), PyString_AS_STRING(a), PyString_AS_STRING(b), len_a);
+    xor_strings(PyBytes_AS_STRING(retval), PyBytes_AS_STRING(a), PyBytes_AS_STRING(b), len_a);
 
     return retval;
 }
@@ -186,17 +186,17 @@ strxor_c_function(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    length = PyString_GET_SIZE(s);
+    length = PyBytes_GET_SIZE(s);
     assert(length >= 0);
 
     /* Create return string */
-    retval = PyString_FromStringAndSize(NULL, length);
+    retval = PyBytes_FromStringAndSize(NULL, length);
     if (!retval) {
         return NULL;
     }
 
     /* retval := a ^ chr(c)*length */
-    xor_string_with_char(PyString_AS_STRING(retval), PyString_AS_STRING(s), (char) c, length);
+    xor_string_with_char(PyBytes_AS_STRING(retval), PyBytes_AS_STRING(s), (char) c, length);
 
     return retval;
 }
@@ -212,18 +212,46 @@ static PyMethodDef strxor_methods[] = {
     {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef moduledef = {
+	PyModuleDef_HEAD_INIT,
+	"strxor",
+	NULL,
+	-1,
+	strxor_methods,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+};
+#endif
+
 PyMODINIT_FUNC
+#ifdef IS_PY3K
+PyInit_strxor(void)
+#else
 initstrxor(void)
+#endif
 {
-    PyObject *m;
+	PyObject *m;
 
     /* Initialize the module */
+#ifdef IS_PY3K
+    m = PyModule_Create(&moduledef);
+    if (m == NULL)
+       return NULL;
+#else
     m = Py_InitModule("strxor", strxor_methods);
     if (m == NULL)
         return;
-
+#endif
+ 
     /* Perform runtime tests */
     runtime_test();
+
+#ifdef IS_PY3K
+	return m;
+#endif
 }
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */

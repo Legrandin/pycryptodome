@@ -24,7 +24,10 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] is 2 and  sys.version_info[1] is 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
 import struct
 
@@ -57,7 +60,7 @@ class AESGenerator(object):
     # without rekeying.
     max_blocks_per_request = 2**16  # Allow no more than this number of blocks per _pseudo_random_data request
 
-    _four_kiblocks_of_zeros = "\0" * block_size * 4096
+    _four_kiblocks_of_zeros = b("\0") * block_size * 4096
 
     def __init__(self):
         self.counter = Counter.new(nbits=self.block_size*8, initial_value=0, little_endian=True)
@@ -74,7 +77,8 @@ class AESGenerator(object):
 
     def reseed(self, seed):
         if self.key is None:
-            self.key = "\0" * self.key_size
+            self.key = b("\0") * self.key_size
+
         self._set_key(SHAd256.new(self.key + seed).digest())
         self.counter()  # increment counter
         assert len(self.key) == self.key_size
@@ -89,8 +93,8 @@ class AESGenerator(object):
         for i in xrange(num_full_blocks):
             retval.append(self._pseudo_random_data(1<<20))
         retval.append(self._pseudo_random_data(remainder))
-
-        return "".join(retval)
+        
+        return b("").join(retval)  
 
     def _set_key(self, key):
         self.key = key
@@ -123,6 +127,6 @@ class AESGenerator(object):
             retval.append(self._cipher.encrypt(self._four_kiblocks_of_zeros))
         remaining_bytes = (num_blocks & 4095) << self.block_size_shift  # (num_blocks % 4095) * self.block_size
         retval.append(self._cipher.encrypt(self._four_kiblocks_of_zeros[:remaining_bytes]))
-        return "".join(retval)
+        return b("").join(retval)
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

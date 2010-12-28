@@ -25,12 +25,11 @@
 #define PCT__COUNTER_H
 
 #include <stdint.h>
-#include "Python.h"
 
 typedef struct {
     PyObject_HEAD
-    PyStringObject *prefix;     /* Prefix (useful for a nonce) */
-    PyStringObject *suffix;     /* Suffix (useful for a nonce) */
+    PyBytesObject *prefix;     /* Prefix (useful for a nonce) */
+    PyBytesObject *suffix;     /* Suffix (useful for a nonce) */
     uint8_t *val;       /* Buffer for our output string */
     uint32_t buf_size;  /* Size of the buffer */
     uint8_t *p;         /* Pointer to the part of the buffer that we're allowed to update */

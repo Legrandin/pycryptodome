@@ -32,6 +32,7 @@
  *
  */
 #include "Python.h"
+#include "pycrypto_compat.h"
 #define MODULE_NAME SHA256
 #define DIGEST_SIZE 32
 
@@ -224,7 +225,7 @@ hash_digest (const hash_state *self)
 
 	hash_copy((hash_state*)self,&temp);
 	sha_done(&temp,digest);
-	return PyString_FromStringAndSize((char *)digest, 32);
+	return PyBytes_FromStringAndSize((char *)digest, 32);
 }
 
 #include "hash_template.c"

@@ -26,15 +26,17 @@
 
 __revision__ = "$Id$"
 
+from Crypto.Util.py3compat import *
+
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
     # FIPS PUB 180-2, A.1 - "One-Block Message"
-    ('a9993e364706816aba3e25717850c26c9cd0d89d', 'abc'),
+    (b('a9993e364706816aba3e25717850c26c9cd0d89d'), b('abc')),
 
     # FIPS PUB 180-2, A.2 - "Multi-Block Message"
-    ('84983e441c3bd26ebaae4aa1f95129e5e54670f1',
-        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'),
+    (b('84983e441c3bd26ebaae4aa1f95129e5e54670f1'),
+        b('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq')),
 
     # FIPS PUB 180-2, A.3 - "Long Message"
 #    ('34aa973cd4c4daa4f61eeb2bdbad27316534016f',
@@ -42,8 +44,8 @@ test_data = [
 #         '"a" * 10**6'),
 
     # RFC 3174: Section 7.3, "TEST4" (multiple of 512 bits)
-    ('dea356a2cddd90c7a7ecedc5ebb563934f460452',
-        "01234567" * 80,
+    (b('dea356a2cddd90c7a7ecedc5ebb563934f460452'),
+        b("01234567") * 80,
         '"01234567" * 80'),
 ]
 

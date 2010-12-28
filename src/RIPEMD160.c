@@ -47,6 +47,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "Python.h"
+#include "pycrypto_compat.h"
 
 #define RIPEMD160_DIGEST_SIZE 20
 
@@ -402,7 +403,7 @@ static PyObject *hash_digest(hash_state *self)
     PyObject *retval;
 
     if (ripemd160_digest(self, (unsigned char *) buf)) {
-        retval = PyString_FromStringAndSize(buf, DIGEST_SIZE);
+        retval = PyBytes_FromStringAndSize(buf, DIGEST_SIZE);
     } else {
         PyErr_SetString(PyExc_RuntimeError, "Internal error occurred while executing ripemd160_digest");
         retval = NULL;

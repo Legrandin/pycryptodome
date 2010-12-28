@@ -45,8 +45,9 @@ http://theory.lcs.mit.edu/~rivest/fusion.pdf
 __revision__ = "$Id$"
 
 import operator
-import string
+import sys
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Util.py3compat import *
 
 
 
@@ -83,7 +84,7 @@ class AllOrNothing:
         if self.__key_size == 0:
             self.__key_size = 16
 
-    __K0digit = chr(0x69)
+    __K0digit = bchr(0x69)
 
     def digest(self, text):
         """digest(text:string) : [string]
@@ -218,7 +219,8 @@ class AllOrNothing:
         # of the cipher's block_size.  This number should be small enough that
         # the conversion from long integer to integer should never overflow
         padbytes = int(parts[-1])
-        text = string.join(map(long_to_bytes, parts[:-1]), '')
+        # PY3K: This is meant to be text, do not change to bytes (data)
+        text = ''.join(map(long_to_bytes, parts[:-1]))
         return text[:-padbytes]
 
     def _inventkey(self, key_size):

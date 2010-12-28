@@ -26,7 +26,10 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
 import unittest
 from binascii import b2a_hex
@@ -42,24 +45,24 @@ class FortunaAccumulatorTests(unittest.TestCase):
         self.assertEqual(0, pool.length)
         self.assertEqual("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456", pool.hexdigest())
 
-        pool.append("abc")
+        pool.append(b("abc"))
 
         self.assertEqual(3, pool.length)
         self.assertEqual("4f8b42c22dd3729b519ba6f68d2da7cc5b2d606d05daed5ad5128cc03e6c6358", pool.hexdigest())
 
-        pool.append("dbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
+        pool.append(b("dbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"))
 
         self.assertEqual(56, pool.length)
-        self.assertEqual("0cffe17f68954dac3a84fb1458bd5ec99209449749b2b308b7cb55812f9563af", b2a_hex(pool.digest()))
+        self.assertEqual(b("0cffe17f68954dac3a84fb1458bd5ec99209449749b2b308b7cb55812f9563af"), b2a_hex(pool.digest()))
 
         pool.reset()
 
         self.assertEqual(0, pool.length)
 
-        pool.append("a" * 10**6)
+        pool.append(b("a") * 10**6)
 
         self.assertEqual(10**6, pool.length)
-        self.assertEqual("80d1189477563e1b5206b2749f1afe4807e5705e8bd77887a60187a712156688", b2a_hex(pool.digest()))
+        self.assertEqual(b("80d1189477563e1b5206b2749f1afe4807e5705e8bd77887a60187a712156688"), b2a_hex(pool.digest()))
 
     def test_which_pools(self):
         """FortunaAccumulator.which_pools"""
@@ -98,7 +101,7 @@ class FortunaAccumulatorTests(unittest.TestCase):
         # Spread some test data across the pools (source number 42)
         # This would be horribly insecure in a real system.
         for p in range(32):
-            fa.add_random_event(42, p, "X" * 32)
+            fa.add_random_event(42, p, b("X") * 32)
             self.assertEqual(32+2, fa.pools[p].length)
 
         # This should still fail, because we haven't seeded the PRNG with 64 bytes yet
@@ -106,7 +109,7 @@ class FortunaAccumulatorTests(unittest.TestCase):
 
         # Add more data
         for p in range(32):
-            fa.add_random_event(42, p, "X" * 32)
+            fa.add_random_event(42, p, b("X") * 32)
             self.assertEqual((32+2)*2, fa.pools[p].length)
 
         # The underlying RandomGenerator should get seeded with Pool 0
@@ -146,8 +149,8 @@ class FortunaAccumulatorTests(unittest.TestCase):
 
         result = fa.random_data(32)
 
-        self.assertEqual("b7b86bd9a27d96d7bb4add1b6b10d157" "2350b1c61253db2f8da233be726dc15f", b2a_hex(result))
-        self.assertEqual("f23ad749f33066ff53d307914fbf5b21da9667c7e86ba247655c9490e9d94a7c", b2a_hex(fa.generator.key))
+        self.assertEqual(b("b7b86bd9a27d96d7bb4add1b6b10d157" "2350b1c61253db2f8da233be726dc15f"), b2a_hex(result))
+        self.assertEqual(b("f23ad749f33066ff53d307914fbf5b21da9667c7e86ba247655c9490e9d94a7c"), b2a_hex(fa.generator.key))
         self.assertEqual(5, fa.generator.counter.next_value())
 
     def test_accumulator_pool_length(self):
@@ -164,13 +167,13 @@ class FortunaAccumulatorTests(unittest.TestCase):
         for i in range(15):
             for p in range(32):
                 # Add the bytes to the pool
-                fa.add_random_event(2, p, "XX")
+                fa.add_random_event(2, p, b("XX"))
 
                 # The PRNG should not allow us to get random data from it yet
                 self.assertRaises(AssertionError, fa.random_data, 1)
 
         # Add 4 more bytes to pool 0
-        fa.add_random_event(2, 0, "XX")
+        fa.add_random_event(2, 0, b("XX"))
 
         # We should now be able to get data from the accumulator
         fa.random_data(1)

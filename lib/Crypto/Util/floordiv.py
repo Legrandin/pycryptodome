@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Cipher/CAST.py: Self-test for the CAST-128 (CAST5) cipher
+#  Util/py21floordiv.py : Compatibility code for handling // operator missing in 2.1
 #
-# Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
+# Written in 2010 by Thorsten Behrens
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -22,36 +22,12 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test suite for Crypto.Cipher.CAST"""
+"""Compatibility code for handling // operator missing in 2.1
+"""
 
 __revision__ = "$Id$"
 
-from Crypto.Util.py3compat import *
-
-# This is a list of (plaintext, ciphertext, key) tuples.
-test_data = [
-    # Test vectors from RFC 2144, B.1
-    (b('0123456789abcdef'), b('238b4fe5847e44b2'),
-        b('0123456712345678234567893456789a'),
-        '128-bit key'),
-
-    (b('0123456789abcdef'), b('eb6a711a2c02271b'),
-        b('01234567123456782345'),
-        '80-bit key'),
-
-    (b('0123456789abcdef'), b('7ac816d16e9b302e'),
-        b('0123456712'),
-        '40-bit key'),
-]
-
-def get_tests(config={}):
-    from Crypto.Cipher import CAST
-    from common import make_block_tests
-    return make_block_tests(CAST, "CAST", test_data)
-
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+def floordiv(a,b):
+    return a//b
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

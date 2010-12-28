@@ -29,6 +29,7 @@ __revision__ = "$Id$"
 import sys
 import unittest
 from binascii import a2b_hex, b2a_hex
+from Crypto.Util.py3compat import *
 
 # For compatibility with Python 2.1 and Python 2.2
 if sys.hexversion < 0x02030000:
@@ -139,7 +140,7 @@ class CipherStreamingSelfTest(CipherSelfTest):
         cipher = self._new()
         for i in range(0, len(plaintext), 3):
             ct3.append(cipher.encrypt(plaintext[i:i+3]))
-        ct3 = b2a_hex("".join(ct3))
+        ct3 = b2a_hex(b("").join(ct3))
         self.assertEqual(self.ciphertext, ct3)  # encryption (3 bytes at a time)
 
         # Test counter mode decryption, 3 bytes at a time
@@ -147,7 +148,8 @@ class CipherStreamingSelfTest(CipherSelfTest):
         cipher = self._new()
         for i in range(0, len(ciphertext), 3):
             pt3.append(cipher.encrypt(ciphertext[i:i+3]))
-        pt3 = b2a_hex("".join(pt3))
+        # PY3K: This is meant to be text, do not change to bytes (data)
+        pt3 = b2a_hex(b("").join(pt3))
         self.assertEqual(self.plaintext, pt3)  # decryption (3 bytes at a time)
 
 class CTRSegfaultTest(unittest.TestCase):
@@ -182,7 +184,7 @@ class CTRWraparoundTest(unittest.TestCase):
             for little_endian in (0, 1): # (False, True) Test both endiannesses
                 ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian, disable_shortcut=disable_shortcut)
                 cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=ctr)
-                block = "\x00" * self.module.block_size
+                block = b("\x00") * self.module.block_size
                 cipher.encrypt(block)
                 self.assertRaises(OverflowError, cipher.encrypt, block)
 
@@ -204,7 +206,6 @@ class CFBSegmentSizeTest(unittest.TestCase):
         self.module.new(a2b_hex(self.key), self.module.MODE_CFB, segment_size=8) # should succeed
 
 class RoundtripTest(unittest.TestCase):
-
     def __init__(self, module, params):
         from Crypto import Random
         unittest.TestCase.__init__(self)

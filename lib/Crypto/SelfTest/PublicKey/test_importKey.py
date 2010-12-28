@@ -27,11 +27,12 @@ import unittest
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import *
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
+from Crypto.Util.py3compat import *
 
 class ImportKeyTests(unittest.TestCase):
 
 	# 512-bit RSA key generated with openssl
-	rsaKeyPEM = '''-----BEGIN RSA PRIVATE KEY-----
+	rsaKeyPEM = b('''-----BEGIN RSA PRIVATE KEY-----
 MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
 q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
 Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
@@ -39,12 +40,12 @@ OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
 +rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
 JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
 n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
------END RSA PRIVATE KEY-----'''
+-----END RSA PRIVATE KEY-----''')
 
-	rsaPublicKeyPEM = '''-----BEGIN PUBLIC KEY-----
+	rsaPublicKeyPEM = b('''-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
------END PUBLIC KEY-----'''
+-----END PUBLIC KEY-----''')
 
 	rsaKeyDER = a2b_hex(
 	'''3082013b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe

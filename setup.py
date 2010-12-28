@@ -36,15 +36,15 @@
 
 __revision__ = "$Id$"
 
-from distutils import core
+from distutils import core, fancy_getopt
 from distutils.core import Extension, Command
 from distutils.command.build_ext import build_ext
 import os, sys
 import struct
 
 if sys.version[0:1] == '1':
-    raise RuntimeError, ("The Python Cryptography Toolkit requires "
-                         "Python 2.x to build.")
+    raise RuntimeError ("The Python Cryptography Toolkit requires "
+                         "Python 2.x or 3.x to build.")
 
 if sys.platform == 'win32':
     HTONS_LIBS = ['ws2_32']
@@ -62,12 +62,36 @@ else:
 # Use "gcov -p -o build/temp.*/src build/temp.*/src/*.gcda" to build the .gcov files
 USE_GCOV = 0
 
+
+try:
+    # Python 3
+    from distutils.command.build_py import build_py_2to3 as build_py
+except ImportError:
+    # Python 2
+    from distutils.command.build_py import build_py
 # List of pure Python modules that will be excluded from the binary packages.
 # The list consists of (package, module_name) tuples
-from distutils.command.build_py import build_py
-EXCLUDE_PY = [
-    ('Crypto.Hash', 'RIPEMD160'),  # Included for your amusement, but the C version is much faster.
-]
+if sys.version_info[0] is 2:
+    EXCLUDE_PY = [
+        ('Crypto.Hash'),  # Included for your amusement, but the C version is much faster.
+    ]
+else:
+    EXCLUDE_PY = [
+        ('Crypto.Hash', 'Crypto.Util.python_compat'),  # Included for your amusement, but the C version is much faster. Also, we don't want Py3k to choke on the 2.x compat code
+    ]
+
+# Work around the print / print() issue with Python 2.x and 3.x. We only need to print at one point of the code, which makes this easy
+
+def PrintErr(*args, **kwd):
+    fout = kwd.get("file", sys.stderr)
+    w = fout.write
+    if args:
+        w(str(args[0]))
+        sep = kwd.get("sep", " ")
+        for a in args[1:]:
+            w(sep)
+            w(str(a))
+        w(kwd.get("end", "\n"))
 
 # Functions for finding libraries and files, copied from Python's setup.py.
 
@@ -108,9 +132,9 @@ def find_library_file(compiler, libname, std_dirs, paths):
 
 def endianness_macro():
     s = struct.pack("@I", 0x33221100)
-    if s == "\x00\x11\x22\x33":     # little endian
+    if s == "\x00\x11\x22\x33".encode():     # little endian
         return ('PCT_LITTLE_ENDIAN', 1)
-    elif s == "\x33\x22\x11\x00":   # big endian
+    elif s == "\x33\x22\x11\x00".encode():   # big endian
         return ('PCT_BIG_ENDIAN', 1)
     raise AssertionError("Machine is neither little-endian nor big-endian")
 
@@ -159,7 +183,7 @@ class PCTBuildExt (build_ext):
         # Detect libgmp or libmpir and don't build _fastmath if both are missing.
         lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib']
         if not (self.compiler.find_library_file(lib_dirs, 'gmp') or self.compiler.find_library_file(lib_dirs, 'mpir')):
-            print >>sys.stderr, "warning: GMP or MPIR library not found; Not building Crypto.PublicKey._fastmath."
+            PrintErr ("warning: GMP or MPIR library not found; Not building Crypto.PublicKey._fastmath.")
             self.__remove_extensions(["Crypto.PublicKey._fastmath"])
 		# Change library to libmpir if libgmp is missing
         elif not (self.compiler.find_library_file(lib_dirs, 'gmp')):
@@ -256,7 +280,7 @@ kw = {'name':"pycrypto",
       'url':"http://www.pycrypto.org/",
 
       'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
-      'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
+      'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util", 
                   "Crypto.Random",
                   "Crypto.Random.Fortuna",
                   "Crypto.Random.OSRNG",
@@ -332,6 +356,14 @@ kw = {'name':"pycrypto",
                       sources=['src/_counter.c']),
     ]
 }
+def touch(path):
+    import os, time
+    now = time.time()
+    try:
+        # assume it's there
+        os.utime(path, (now, now))
+    except os.error:
+        PrintErr("Failed to update timestamp of "+path)
 
 # If we're running Python 2.3, add extra information
 if hasattr(core, 'setup_keywords'):
@@ -350,4 +382,9 @@ if hasattr(core, 'setup_keywords'):
                               '%s-%s.tar.gz' % (kw['name'], kw['version']) )
 
 core.setup(**kw)
-
+#PY3K: Workaround for winrandom.pyd not existing during the first pass.
+# It needs to be there for 2to3 to fix the import in nt.py
+if sys.platform == 'win32' and sys.version_info[0] is 3 and 'build' in sys.argv[1:]:
+    PrintErr("Second pass to allow 2to3 to fix nt.py. No cause for alarm.")
+    touch("./lib/Crypto/Random/OSRNG/nt.py")
+    core.setup(**kw)
