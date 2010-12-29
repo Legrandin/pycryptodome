@@ -103,7 +103,7 @@ class DerSequence(DerObject):
         return self._seq[n]
     def __setitem__(self, key, value):
         self._seq[key] = value
-    if sys.version_info[0] is 2:
+    if sys.version_info[0] == 2:
         def __setslice__(self,i,j,sequence):
             self._seq[i:j] = sequence
         def __delslice__(self,i,j):

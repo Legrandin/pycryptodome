@@ -29,7 +29,7 @@ __revision__ = "$Id$"
 __all__ = ['generate', 'construct', 'error']
 
 import sys
-if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 
 from Crypto.PublicKey import _DSA, _slowmath, pubkey

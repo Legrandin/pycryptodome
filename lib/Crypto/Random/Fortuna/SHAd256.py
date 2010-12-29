@@ -32,7 +32,7 @@ __revision__ = "$Id$"
 __all__ = ['new', 'digest_size']
 
 import sys
-if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
@@ -74,7 +74,7 @@ class _SHAd256(object):
         """Return the hash value of this object as a (lowercase) hexadecimal string"""
         retval = b2a_hex(self.digest())
         assert len(retval) == 64
-        if sys.version_info[0] is 2:
+        if sys.version_info[0] == 2:
             return retval
         else:
             return retval.decode()
@@ -89,7 +89,7 @@ digest_size = _SHAd256.digest_size
 # PEP 247 module-level "new" function
 def new(data=None):
     """Return a new SHAd256 hashing object"""
-    if data == None:
+    if data is None:
         data=b("")
 
     return _SHAd256(_SHAd256._internal, SHA256.new(data))

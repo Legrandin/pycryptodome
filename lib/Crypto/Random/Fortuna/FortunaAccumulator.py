@@ -25,7 +25,7 @@
 __revision__ = "$Id$"
 
 import sys
-if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
     
@@ -62,7 +62,7 @@ class FortunaPool(object):
         return self._h.digest()
 
     def hexdigest(self):
-        if sys.version_info[0] is 2:
+        if sys.version_info[0] == 2:
             return b2a_hex(self.digest())
         else:
             return b2a_hex(self.digest()).decode()

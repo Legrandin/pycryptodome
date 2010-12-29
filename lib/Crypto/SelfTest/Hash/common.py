@@ -67,7 +67,7 @@ class HashSelfTest(unittest.TestCase):
 
         # PY3K: hexdigest() should return str(), and digest() bytes 
         self.assertEqual(self.expected, out1)   # h = .new(); h.update(data); h.digest()
-        if sys.version_info[0] is 2:
+        if sys.version_info[0] == 2:
             self.assertEqual(self.expected, out2)   # h = .new(); h.update(data); h.hexdigest()
             self.assertEqual(self.expected, out3)   # h = .new(data); h.hexdigest()
         else:
@@ -115,7 +115,7 @@ class MACSelfTest(unittest.TestCase):
 
             # PY3K: hexdigest() should return str(), and digest() bytes 
             self.assertEqual(expected, out1)
-            if sys.version_info[0] is 2:
+            if sys.version_info[0] == 2:
                 self.assertEqual(expected, out2)
                 self.assertEqual(expected, out3)
             else:

@@ -36,9 +36,10 @@
 
 __revision__ = "$Id$"
 
-from distutils import core, fancy_getopt
+from distutils import core
 from distutils.core import Extension, Command
 from distutils.command.build_ext import build_ext
+
 import os, sys
 import struct
 
@@ -59,7 +60,8 @@ else:
     plat_ext = []
 
 # For test development: Set this to 1 to build with gcov support.
-# Use "gcov -p -o build/temp.*/src build/temp.*/src/*.gcda" to build the .gcov files
+# Use "gcov -p -o build/temp.*/src build/temp.*/src/*.gcda" to build the
+# .gcov files
 USE_GCOV = 0
 
 
@@ -71,16 +73,16 @@ except ImportError:
     from distutils.command.build_py import build_py
 # List of pure Python modules that will be excluded from the binary packages.
 # The list consists of (package, module_name) tuples
-if sys.version_info[0] is 2:
-    EXCLUDE_PY = [
-        ('Crypto.Hash'),  # Included for your amusement, but the C version is much faster.
-    ]
+if sys.version_info[0] == 2:
+    EXCLUDE_PY = []
 else:
     EXCLUDE_PY = [
-        ('Crypto.Hash', 'Crypto.Util.python_compat'),  # Included for your amusement, but the C version is much faster. Also, we don't want Py3k to choke on the 2.x compat code
+# We don't want Py3k to choke on the 2.x compat code
+        ('Crypto.Util', 'py21compat'), 
     ]
 
-# Work around the print / print() issue with Python 2.x and 3.x. We only need to print at one point of the code, which makes this easy
+# Work around the print / print() issue with Python 2.x and 3.x. We only need
+# to print at one point of the code, which makes this easy
 
 def PrintErr(*args, **kwd):
     fout = kwd.get("file", sys.stderr)
@@ -165,7 +167,8 @@ class PCTBuildExt (build_ext):
                 self.__add_compiler_option("-fomit-frame-pointer")
                 # Don't include debug symbols unless debugging
                 self.__remove_compiler_option("-g")
-                # Don't include profiling information (incompatible with -fomit-frame-pointer)
+                # Don't include profiling information (incompatible with
+                # -fomit-frame-pointer)
                 self.__remove_compiler_option("-pg")
             if USE_GCOV:
                 self.__add_compiler_option("-fprofile-arcs")
@@ -182,12 +185,28 @@ class PCTBuildExt (build_ext):
 
         # Detect libgmp or libmpir and don't build _fastmath if both are missing.
         lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib']
-        if not (self.compiler.find_library_file(lib_dirs, 'gmp') or self.compiler.find_library_file(lib_dirs, 'mpir')):
-            PrintErr ("warning: GMP or MPIR library not found; Not building Crypto.PublicKey._fastmath.")
+        if not (self.compiler.find_library_file(lib_dirs, 'gmp') or
+            self.compiler.find_library_file(lib_dirs, 'mpir')):
+            PrintErr ("warning: GMP or MPIR library not found; Not building "+
+                "Crypto.PublicKey._fastmath.")
             self.__remove_extensions(["Crypto.PublicKey._fastmath"])
 		# Change library to libmpir if libgmp is missing
         elif not (self.compiler.find_library_file(lib_dirs, 'gmp')):
-            self.__change_extension_lib(["Crypto.PublicKey._fastmath"],['mpir'])
+            self.__change_extension_lib(["Crypto.PublicKey._fastmath"],
+                ['mpir'])
+            # And if this is Windows, we need to add a linker option
+            # to make a static libmpir link well into a dynamic _fastmath
+            if sys.platform == 'win32':
+                self.__add_extension_link_option(["Crypto.PublicKey._fastmath"],
+                    ["/NODEFAULTLIB:LIBCMT"])
+
+    def __add_extension_link_option(self, names, options):
+        """Add linker options for the specified extension(s)"""
+        i = 0
+        while i < len(self.extensions):
+            if self.extensions[i].name in names:
+                self.extensions[i].extra_link_args = options
+            i += 1
 
     def __change_extension_lib(self, names, libs):
         """Change the libraries to be used for the specified extension(s)"""
@@ -198,7 +217,8 @@ class PCTBuildExt (build_ext):
            i += 1
 
     def __remove_extensions(self, names):
-        """Remove the specified extension(s) from the list of extensions to build"""
+        """Remove the specified extension(s) from the list of extensions
+       to build"""
         i = 0
         while i < len(self.extensions):
             if self.extensions[i].name in names:
@@ -228,7 +248,8 @@ class PCTBuildExt (build_ext):
 
 class PCTBuildPy(build_py):
     def find_package_modules(self, package, package_dir, *args, **kwargs):
-        modules = build_py.find_package_modules(self, package, package_dir, *args, **kwargs)
+        modules = build_py.find_package_modules(self, package, package_dir,
+            *args, **kwargs)
 
         # Exclude certain modules
         retval = []
@@ -264,7 +285,8 @@ class TestCommand(Command):
         try:
             sys.path.insert(0, self.build_dir)
             from Crypto import SelfTest
-            SelfTest.run(verbosity=self.verbose, stream=sys.stdout, config=self.config)
+            SelfTest.run(verbosity=self.verbose, stream=sys.stdout, 
+            config=self.config)
         finally:
             # Restore sys.path
             sys.path[:] = old_path
@@ -279,7 +301,8 @@ kw = {'name':"pycrypto",
       'author_email':"dlitz@dlitz.net",
       'url':"http://www.pycrypto.org/",
 
-      'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
+      'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy,
+                    'test': TestCommand },
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util", 
                   "Crypto.Random",
                   "Crypto.Random.Fortuna",
@@ -298,7 +321,7 @@ kw = {'name':"pycrypto",
       'ext_modules': plat_ext + [
             # _fastmath (uses GNU mp library)
             Extension("Crypto.PublicKey._fastmath",
-                      include_dirs=['src/'],
+                      include_dirs=['src/','/usr/include/'],
                       libraries=['gmp'],
                       sources=["src/_fastmath.c"]),
 
@@ -384,7 +407,8 @@ if hasattr(core, 'setup_keywords'):
 core.setup(**kw)
 #PY3K: Workaround for winrandom.pyd not existing during the first pass.
 # It needs to be there for 2to3 to fix the import in nt.py
-if sys.platform == 'win32' and sys.version_info[0] is 3 and 'build' in sys.argv[1:]:
+if (sys.platform == 'win32' and sys.version_info[0] == 3 and
+    'build' in sys.argv[1:]):
     PrintErr("\nSecond pass to allow 2to3 to fix nt.py. No cause for alarm.\n")
     touch("./lib/Crypto/Random/OSRNG/nt.py")
     core.setup(**kw)

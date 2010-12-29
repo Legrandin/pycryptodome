@@ -27,7 +27,7 @@
 __revision__ = "$Id$"
 
 import sys
-if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
@@ -373,7 +373,15 @@ def get_tests(config={}):
         from Crypto.PublicKey import _fastmath
         tests += list_test_cases(RSAFastMathTest)
     except ImportError:
-        pass
+        from distutils.sysconfig import get_config_var
+        import inspect
+        _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
+            inspect.getfile(inspect.currentframe())))
+            +"/../../PublicKey/_fastmath"+get_config_var("SO"))
+        if os.path.exists(_fm_path):
+            raise ImportError("While the _fastmath module exists, importing "+
+                "it failed. This may point to the gmp or mpir shared library "+
+                "not being in the path. _fastmath was found at "+_fm_path)
     tests += list_test_cases(RSASlowMathTest)
     return tests
 

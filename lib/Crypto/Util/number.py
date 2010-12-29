@@ -35,6 +35,20 @@ bignum = long
 try:
     from Crypto.PublicKey import _fastmath
 except ImportError:
+    # For production, we are going to let import issues due to gmp/mpir shared
+    # libraries not loading slide silently and use slowmath. If you'd rather
+    # see an exception raised if _fastmath exists but cannot be imported,
+    # uncomment the below
+    #
+    # from distutils.sysconfig import get_config_var
+    # import inspect, os
+    # _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
+        # inspect.getfile(inspect.currentframe())))
+        # +"/../../PublicKey/_fastmath"+get_config_var("SO"))
+    # if os.path.exists(_fm_path):
+        # raise ImportError("While the _fastmath module exists, importing "+
+            # "it failed. This may point to the gmp or mpir shared library "+
+            # "not being in the path. _fastmath was found at "+_fm_path)
     _fastmath = None
 
 # New functions
@@ -64,7 +78,8 @@ def size (N):
 
 def getRandomNumber(N, randfunc=None):
     """Deprecated.  Use getRandomInteger or getRandomNBitInteger instead."""
-    warnings.warn("Crypto.Util.number.getRandomNumber has confusing semantics and has been deprecated.  Use getRandomInteger or getRandomNBitInteger instead.",
+    warnings.warn("Crypto.Util.number.getRandomNumber has confusing semantics"+
+    "and has been deprecated.  Use getRandomInteger or getRandomNBitInteger instead.",
         GetRandomNumber_DeprecationWarning)
     return getRandomNBitInteger(N, randfunc)
 
@@ -241,7 +256,8 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
 
     # Use the accelerator if available
     if _fastmath is not None:
-        return _fastmath.getStrongPrime(long(N), long(e), false_positive_prob, randfunc)
+        return _fastmath.getStrongPrime(long(N), long(e), false_positive_prob,
+            randfunc)
 
     if (N < 512) or ((N % 128) != 0):
         raise ValueError ("bits must be multiple of 128 and > 512")
@@ -420,7 +436,8 @@ def str2long(s):
     return bytes_to_long(s)
 
 def _import_Random():
-    # This is called in a function instead of at the module level in order to avoid problems with recursive imports
+    # This is called in a function instead of at the module level in order to
+    # avoid problems with recursive imports
     global Random, StrongRandom
     from Crypto import Random
     from Crypto.Random.random import StrongRandom

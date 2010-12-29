@@ -1,4 +1,3 @@
-
 /*
  *  _fastmath.c: Accelerator module that uses GMP for faster numerics.
  *

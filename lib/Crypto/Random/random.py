@@ -29,7 +29,7 @@ __all__ = ['StrongRandom', 'getrandbits', 'randrange', 'randint', 'choice', 'shu
 
 from Crypto import Random
 import sys
-if sys.version_info[0] is 2 and sys.version_info[1] is 1:
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 
 class StrongRandom(object):

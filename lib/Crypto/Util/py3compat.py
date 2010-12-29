@@ -29,7 +29,7 @@ __revision__ = "$Id$"
 
 import sys
 
-if sys.version_info[0] is 2:
+if sys.version_info[0] == 2:
     def b(s):
         return s
     def bchr(s):
