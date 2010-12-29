@@ -41,20 +41,20 @@ class CounterTests(unittest.TestCase):
     def test_BE_shortcut(self):
         """Big endian, shortcut enabled"""
         c = Counter.new(128)
-        self.assert_(c.__PCT_CTR_SHORTCUT__)
+        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
         c = Counter.new(128, little_endian=False)
-        self.assert_(c.__PCT_CTR_SHORTCUT__)
+        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
         c = Counter.new(128, disable_shortcut=False)
-        self.assert_(c.__PCT_CTR_SHORTCUT__)
+        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
         c = Counter.new(128, little_endian=False, disable_shortcut=False)
-        self.assert_(c.__PCT_CTR_SHORTCUT__)
+        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
 
     def test_LE_shortcut(self):
         """Little endian, shortcut enabled"""
         c = Counter.new(128, little_endian=True)
-        self.assert_(c.__PCT_CTR_SHORTCUT__)
+        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
         c = Counter.new(128, little_endian=True, disable_shortcut=False)
-        self.assert_(c.__PCT_CTR_SHORTCUT__)
+        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
 
     def test_BE_no_shortcut(self):
         """Big endian, shortcut disabled"""

@@ -216,8 +216,8 @@ class RSATest(unittest.TestCase):
         self.assertRaises(TypeError, rsaObj.decrypt, ciphertext)
 
         # Check __eq__ and __ne__
-        self.assert_(rsaObj.publickey() == rsaObj.publickey())
-        self.assert_(not (rsaObj.publickey() != rsaObj.publickey()))
+        self.assertEqual(rsaObj.publickey() == rsaObj.publickey(),True) # assert_
+        self.assertEqual(rsaObj.publickey() != rsaObj.publickey(),False) # failIf
 
     def _exercise_primitive(self, rsaObj):
         # Since we're using a randomly-generated key, we can't check the test

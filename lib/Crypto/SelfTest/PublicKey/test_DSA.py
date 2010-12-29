@@ -156,8 +156,8 @@ class DSATest(unittest.TestCase):
         self.assertRaises(TypeError, dsaObj.sign, m_hash, k)
 
         # Check __eq__ and __ne__
-        self.assert_(dsaObj.publickey() == dsaObj.publickey())
-        self.assert_(not (dsaObj.publickey() != dsaObj.publickey()))
+        self.assertEqual(dsaObj.publickey() == dsaObj.publickey(),True) # assert_
+        self.assertEqual(dsaObj.publickey() != dsaObj.publickey(),False) # failIf
 
     def _test_signing(self, dsaObj):
         k = a2b_hex(self.k)

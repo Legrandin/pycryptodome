@@ -380,7 +380,7 @@ static PyTypeObject dsaKeyType = {
 	0,				/* call */
 #ifdef IS_PY3K
 	0,				/*tp_str*/
-	dsaKey_getattro,	/*tp_getattro*/
+	(getattrofunc) dsaKey_getattro,	/*tp_getattro*/
 	0,				/*tp_setattro*/
 	0,				/*tp_as_buffer*/
 	Py_TPFLAGS_DEFAULT,		/*tp_flags*/
@@ -402,12 +402,13 @@ static PyTypeObject rsaKeyType = {
 	PyObject_HEAD_INIT (NULL) 
 	0,				/*ob_size*/
 #endif
-	"rsaKey",
-	sizeof (rsaKey),
-	0,
+	"rsaKey",		/*tp_name*/
+	sizeof (rsaKey),	/*tp_size*/
+	0,				/*tp_itemsize*/
+	/* methods */
 	(destructor) rsaKey_dealloc,	/* dealloc */
 	0,				/* print */
-#ifdef IS_PY3k
+#ifdef IS_PY3K
 	0,				/* getattr */
 #else
 	(getattrfunc) rsaKey_getattr,	/* getattr */
@@ -422,7 +423,7 @@ static PyTypeObject rsaKeyType = {
 	0,				/* call */
 #ifdef IS_PY3K
 	0,				/*tp_str*/
-	rsaKey_getattro,	/*tp_getattro*/
+	(getattrofunc) rsaKey_getattro,	/*tp_getattro*/
 	0,				/*tp_setattro*/
 	0,				/*tp_as_buffer*/
 	Py_TPFLAGS_DEFAULT,		/*tp_flags*/
@@ -477,7 +478,7 @@ dsaKey_dealloc (dsaKey * key)
 
 static PyObject *
 #ifdef IS_PY3K
-dsaKey_getattr (dsaKey * key, PyObject *attr)
+dsaKey_getattro (dsaKey * key, PyObject *attr)
 #else
 dsaKey_getattr (dsaKey * key, char *attr)
 #endif

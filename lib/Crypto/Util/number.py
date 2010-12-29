@@ -29,11 +29,6 @@ __revision__ = "$Id$"
 from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning
 import math
 import sys
-if sys.version_info[0] is 2 and sys.version_info[1] is 1:
-    from Crypto.Util.py21floordiv import *
-else:
-    from Crypto.Util.floordiv import *
-
 from Crypto.Util.py3compat import *
 
 bignum = long
@@ -320,7 +315,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
                 if GCD (e, X-1) != 1:
                     is_possible_prime = 0
             else:
-                if GCD (e, floordiv((X-1),2)) != 1:
+                if GCD (e, divmod((X-1),2)[0]) != 1:
                     is_possible_prime = 0
 
         # do some Rabin-Miller-Tests
@@ -343,7 +338,7 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
     The optional false_positive_prob is the statistical probability
     that true is returned even though it is not (pseudo-prime).
     It defaults to 1e-6 (less than 1:1000000).
-    Note that the real probability of a false-positiv is far less. This is
+    Note that the real probability of a false-positive is far less. This is
     just the mathematically provable limit.
 
     If randfunc is omitted, then Random.new().read is used.

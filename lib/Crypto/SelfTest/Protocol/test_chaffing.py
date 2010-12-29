@@ -61,11 +61,11 @@ class ChaffingTest (unittest.TestCase):
         c = Chaffing.Chaff(1.0, 1)
         c.chaff(data)
         chaff = c.chaff(data)
-        self.assertEquals(len(chaff), 4)
+        self.assertEqual(len(chaff), 4)
 
         c = Chaffing.Chaff(0.0, 1)
         chaff = c.chaff(data)
-        self.assertEquals(len(chaff), 2)
+        self.assertEqual(len(chaff), 2)
 
 def get_tests(config={}):
     return [ChaffingTest()]

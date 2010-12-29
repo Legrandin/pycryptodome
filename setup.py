@@ -385,6 +385,6 @@ core.setup(**kw)
 #PY3K: Workaround for winrandom.pyd not existing during the first pass.
 # It needs to be there for 2to3 to fix the import in nt.py
 if sys.platform == 'win32' and sys.version_info[0] is 3 and 'build' in sys.argv[1:]:
-    PrintErr("Second pass to allow 2to3 to fix nt.py. No cause for alarm.")
+    PrintErr("\nSecond pass to allow 2to3 to fix nt.py. No cause for alarm.\n")
     touch("./lib/Crypto/Random/OSRNG/nt.py")
     core.setup(**kw)

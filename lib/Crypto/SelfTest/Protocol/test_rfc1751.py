@@ -43,7 +43,7 @@ class RFC1751Test_k2e (unittest.TestCase):
         "Check converting keys to English"
         for key, words in test_data:
             key=binascii.a2b_hex(key)
-            self.assertEquals(RFC1751.key_to_english(key), words)
+            self.assertEqual(RFC1751.key_to_english(key), words)
 
 class RFC1751Test_e2k (unittest.TestCase):
 
@@ -51,7 +51,7 @@ class RFC1751Test_e2k (unittest.TestCase):
         "Check converting English strings to keys"
         for key, words in test_data:
             key=binascii.a2b_hex(key)
-            self.assertEquals(RFC1751.english_to_key(words), key)
+            self.assertEqual(RFC1751.english_to_key(words), key)
 
 # class RFC1751Test
 

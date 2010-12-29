@@ -31,8 +31,10 @@ Replace string.split(a) with a.split().
 Replace body of white-space-stripping functions with 'return "".join(s.split())'
 
 Integer division via the "/" operator can return a float in 3.x. This causes issues in Util.number.getStrongPrime. As 2.1 does not support
-the "//" operator, a helper function "floordiv()" is brought in via 'if sys.version_info' from floordiv.py or py21floordiv.py.
+the "//" operator, divmod(a,b)[0] is used instead, to conform with an existing practice throughout the rest of the pycrypto code base.
 
+Do not use assert_/failUnless or failIf. These are deprecated and are scheduled to be removed in Python 3.3 and 3.4. 
+Use instead assertEqual(expr,True) for assert_ and assertEqual(expr,False) for failIf
 
 C code:
 
@@ -68,6 +70,6 @@ TODO:
   This is friendlier than just relying on Python's errors.
 - Document the expected types for functions. The cipher, the key and the input texts are byte-strings. Plaintext decodes are byte-strings currently, this needs review. 
   In keeping with how Python 3.x's hash functions work, the input MODE is a text string. hexdigest() returns a text string, and digest() returns a byte-string.
-- Compile and test _fastmath.c
+- Look into LIBPATH/%LIB% and /NODEFAULTLIB:LIBCMT in setup.py for libgmp/libmpir
 - Go through test cases and see which modules are not covered
 - Look into exclusions in setup.py
