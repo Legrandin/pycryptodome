@@ -35,10 +35,11 @@ import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 
 def _sws(s):
-    """Strip whitespace"""
-    # The original solution would not work at all in Python 3.x, as string.maketrans
-    # now wants a bytes object. Let's do this another way, then.
-    return "".join(s.split())
+    """Remove whitespace from a text or byte string"""
+    if isinstance(s,str):
+        return "".join(s.split())
+    else:
+        return b("").join(s.split())
 
 class DSATest(unittest.TestCase):
     # Test vector from "Appendix 5. Example of the DSA" of
@@ -47,28 +48,28 @@ class DSATest(unittest.TestCase):
     # FIPS 186-2 (+Change Notice), 2000 January 27.
     # http://csrc.nist.gov/publications/fips/fips186-2/fips186-2-change1.pdf
 
-    y = _sws("""19131871 d75b1612 a819f29d 78d1b0d7 346f7aa7 7bb62a85
+    y = _sws(b("""19131871 d75b1612 a819f29d 78d1b0d7 346f7aa7 7bb62a85
                 9bfd6c56 75da9d21 2d3a36ef 1672ef66 0b8c7c25 5cc0ec74
-                858fba33 f44c0669 9630a76b 030ee333""")
+                858fba33 f44c0669 9630a76b 030ee333"""))
 
-    g = _sws("""626d0278 39ea0a13 413163a5 5b4cb500 299d5522 956cefcb
+    g = _sws(b("""626d0278 39ea0a13 413163a5 5b4cb500 299d5522 956cefcb
                 3bff10f3 99ce2c2e 71cb9de5 fa24babf 58e5b795 21925c9c
-                c42e9f6f 464b088c c572af53 e6d78802""")
+                c42e9f6f 464b088c c572af53 e6d78802"""))
 
-    p = _sws("""8df2a494 492276aa 3d25759b b06869cb eac0d83a fb8d0cf7
+    p = _sws(b("""8df2a494 492276aa 3d25759b b06869cb eac0d83a fb8d0cf7
                 cbb8324f 0d7882e5 d0762fc5 b7210eaf c2e9adac 32ab7aac
-                49693dfb f83724c2 ec0736ee 31c80291""")
+                49693dfb f83724c2 ec0736ee 31c80291"""))
 
-    q = _sws("""c773218c 737ec8ee 993b4f2d ed30f48e dace915f""")
+    q = _sws(b("""c773218c 737ec8ee 993b4f2d ed30f48e dace915f"""))
 
-    x = _sws("""2070b322 3dba372f de1c0ffc 7b2e3b49 8b260614""")
+    x = _sws(b("""2070b322 3dba372f de1c0ffc 7b2e3b49 8b260614"""))
 
-    k = _sws("""358dad57 1462710f 50e254cf 1a376b2b deaadfbf""")
-    k_inverse = _sws("""0d516729 8202e49b 4116ac10 4fc3f415 ae52f917""")
+    k = _sws(b("""358dad57 1462710f 50e254cf 1a376b2b deaadfbf"""))
+    k_inverse = _sws(b("""0d516729 8202e49b 4116ac10 4fc3f415 ae52f917"""))
     m = b2a_hex(b("abc"))
-    m_hash = _sws("""a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d""")
-    r = _sws("""8bac1ab6 6410435c b7181f95 b16ab97c 92b341c0""")
-    s = _sws("""41e2345f 1f56df24 58f426d1 55b4ba2d b6dcd8c8""")
+    m_hash = _sws(b("""a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d"""))
+    r = _sws(b("""8bac1ab6 6410435c b7181f95 b16ab97c 92b341c0"""))
+    s = _sws(b("""41e2345f 1f56df24 58f426d1 55b4ba2d b6dcd8c8"""))
 
     def setUp(self):
         global DSA, Random, bytes_to_long, size

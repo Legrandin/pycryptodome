@@ -28,11 +28,12 @@ __revision__ = "$Id$"
 import binascii
 import unittest
 from Crypto.Util import RFC1751
+from Crypto.Util.py3compat import *
 
-test_data = [('EB33F77EE73D4053', 'TIDE ITCH SLOW REIN RULE MOT'),
-             ('CCAC2AED591056BE4F90FD441C534766',
+test_data = [(b('EB33F77EE73D4053'), 'TIDE ITCH SLOW REIN RULE MOT'),
+             (b('CCAC2AED591056BE4F90FD441C534766'),
               'RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE'),
-             ('EFF81F9BFBC65350920CDD7416DE8009',
+             (b('EFF81F9BFBC65350920CDD7416DE8009'),
               'TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL')
              ]
 
