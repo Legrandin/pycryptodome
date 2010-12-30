@@ -77,9 +77,11 @@ if sys.version_info[0] == 2:
     EXCLUDE_PY = []
 else:
     EXCLUDE_PY = [
-# We don't want Py3k to choke on the 2.x compat code
+        # We don't want Py3k to choke on the 2.x compat code
         ('Crypto.Util', 'py21compat'), 
     ]
+    if sys.platform != "win32": # Avoid nt.py, as 2to3 can't fix it w/o winrandom
+        EXCLUDE_PY += [('Crypto.Random.OSRNG','nt')]
 
 # Work around the print / print() issue with Python 2.x and 3.x. We only need
 # to print at one point of the code, which makes this easy
@@ -184,7 +186,7 @@ class PCTBuildExt (build_ext):
             self.compiler.include_dirs.insert(0, "src/inc-msvc/")
 
         # Detect libgmp or libmpir and don't build _fastmath if both are missing.
-        lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib']
+        lib_dirs = self.compiler.library_dirs + ['/lib', '/usr/lib', '/usr/local/lib']
         if not (self.compiler.find_library_file(lib_dirs, 'gmp') or
             self.compiler.find_library_file(lib_dirs, 'mpir')):
             PrintErr ("warning: GMP or MPIR library not found; Not building "+
@@ -379,14 +381,6 @@ kw = {'name':"pycrypto",
                       sources=['src/_counter.c']),
     ]
 }
-def touch(path):
-    import os, time
-    now = time.time()
-    try:
-        # assume it's there
-        os.utime(path, (now, now))
-    except os.error:
-        PrintErr("Failed to update timestamp of "+path)
 
 # If we're running Python 2.3, add extra information
 if hasattr(core, 'setup_keywords'):
@@ -405,7 +399,17 @@ if hasattr(core, 'setup_keywords'):
                               '%s-%s.tar.gz' % (kw['name'], kw['version']) )
 
 core.setup(**kw)
-#PY3K: Workaround for winrandom.pyd not existing during the first pass.
+
+def touch(path):
+    import os, time
+    now = time.time()
+    try:
+        # assume it's there
+        os.utime(path, (now, now))
+    except os.error:
+        PrintErr("Failed to update timestamp of "+path)
+
+# PY3K: Workaround for winrandom.pyd not existing during the first pass.
 # It needs to be there for 2to3 to fix the import in nt.py
 if (sys.platform == 'win32' and sys.version_info[0] == 3 and
     'build' in sys.argv[1:]):

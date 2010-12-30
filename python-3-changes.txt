@@ -105,8 +105,9 @@ TODO:
   text string.
   hexdigest() returns a text string
   digest() returns a byte-string.
-- Look into LIBPATH/%LIB% and /NODEFAULTLIB:LIBCMT in setup.py for libgmp/libmpir
-- Go through test cases and see which modules are not covered
-- Make sure DerSequence slicing is tested, since I took the explicit slice functions
-  away in 3.x
+- Need additional unit tests for Protocol/AllOrNothing, PublicKey/ElGamal,
+  random/random
+- Make sure DerSequence slicing is tested, since I took the explicit slice
+  functions away in 3.x
+- PublicKey/qNEW will not be unit-tested. Is it time to do away with it?
 - Test install on all tested Python versions

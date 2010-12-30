@@ -27,10 +27,10 @@
 __revision__ = "$Id$"
 
 import sys
+import os
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
-import os
 
 import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex

@@ -346,10 +346,13 @@ available.
 
 **new(key, mode[, IV])**:
 Returns a ciphering object, using ``key`` and feedback mode
-``mode``.  If ``mode`` is ``MODE_CBC`` or ``MODE_CFB``, ``IV`` must be provided,
-and must be a string of the same length as the block size.  Some
-algorithms support additional keyword arguments to this function; see
+``mode``. 
+If ``mode`` is ``MODE_CBC`` or ``MODE_CFB``, ``IV`` must be provided,
+ and must be a string of the same length as the block size.
+Some algorithms support additional keyword arguments to this function; see
 the "Algorithm-specific Notes for Encryption Algorithms" section below for the details.
+Python 3.x: ```mode`` is a string object; ```key``` and ```IV``` must be
+objects interpretable as a buffer of bytes.
 
 **block_size**:
 An integer value; the size of the blocks encrypted by this module.
@@ -375,7 +378,7 @@ Contains the initial value which will be used to start a cipher
 feedback mode.  After encrypting or decrypting a string, this value
 will reflect the modified feedback text; it will always be one block
 in length.  It is read-only, and cannot be assigned a new value.
-
+Python 3.x: ```IV``` is a bytes object.
 
 **key_size**:
 An integer value equal to the size of the keys used by this object.  If
@@ -391,6 +394,7 @@ Decrypts ``string``, using the key-dependent data in the object, and
 with the appropriate feedback mode.  The string's length must be an exact
 multiple of the algorithm's block size.  Returns a string containing
 the plaintext.
+Python 3.x: decrypt() will return a bytes object.
 
 
 **encrypt(string)**:
@@ -399,7 +403,8 @@ object, and with the appropriate feedback mode.  The string's length
 must be an exact multiple of the algorithm's block size; for stream
 ciphers, the string can be of any length.  Returns a string containing
 the ciphertext.
-
+Python 3.x: ```string``` must be an object interpretable as a buffer of bytes.
+encrypt() will return a bytes object.
 
 
 Algorithm-specific Notes for Encryption Algorithms
@@ -630,10 +635,10 @@ following table:
 =============  ==========================================
 Algorithm		Capabilities
 =============  ==========================================
-RSA		Encryption, authentication/signatures
-ElGamal		Encryption, authentication/signatures
-DSA		Authentication/signatures
-qNEW		Authentication/signatures
+RSA				Encryption, authentication/signatures
+ElGamal			Encryption, authentication/signatures
+DSA				Authentication/signatures
+qNEW			Authentication/signatures
 =============  ==========================================
 
 Many of these algorithms are patented.  Before using any of them in a
