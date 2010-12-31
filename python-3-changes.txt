@@ -57,6 +57,8 @@ Do not use assert_/failUnless or failIf. These are deprecated and are scheduled
 Use instead assertEqual(expr,True) for assert_ and assertEqual(expr,False) for
  failIf
 
+Added unit tests for Crypto.Random.random. Fixed random.shuffle().
+
 C code:
 
 Extended "pycrypto_compat.h". It handles #define's for Python 3.x forward

@@ -287,8 +287,8 @@ test_data = [
         'NIST SP800-17 B.2 #55'),
 ]
 
-class RonRivetTest(unittest.TestCase):
-    """ Ronald L. Rivet's DES test, see 
+class RonRivestTest(unittest.TestCase):
+    """ Ronald L. Rivest's DES test, see 
         http://people.csail.mit.edu/rivest/Destest.txt
     ABSTRACT
     --------
@@ -329,7 +329,7 @@ class RonRivetTest(unittest.TestCase):
 def get_tests(config={}):
     from Crypto.Cipher import DES
     from common import make_block_tests
-    return make_block_tests(DES, "DES", test_data) + [RonRivetTest()]
+    return make_block_tests(DES, "DES", test_data) + [RonRivestTest()]
 
 if __name__ == '__main__':
     import unittest
