@@ -100,16 +100,7 @@ TODO:
   correct. While at it, ensure that functions observe the guidelines below
   re type. 
   This is friendlier than just relying on Python's errors.
-- Document the expected types for functions.
-  The cipher, the key and the input texts are byte-strings.
-  Plaintext decodes are byte-strings. (?? Not true for all functions ??)
-  In keeping with how Python 3.x's hash functions work, the input MODE is a
-  text string.
-  hexdigest() returns a text string
-  digest() returns a byte-string.
-- Need additional unit tests for Protocol/AllOrNothing, PublicKey/ElGamal,
-  random/random
+- Need additional unit tests for Protocol/AllOrNothing
 - Make sure DerSequence slicing is tested, since I took the explicit slice
   functions away in 3.x
-- PublicKey/qNEW will not be unit-tested. Is it time to do away with it?
 - Test install on all tested Python versions
