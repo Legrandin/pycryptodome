@@ -114,7 +114,7 @@ class AllOrNothing:
         # the undigest() step.
         block_size = self.__ciphermodule.block_size
         padbytes = block_size - (len(text) % block_size)
-        text = text + ' ' * padbytes
+        text = text + b(' ') * padbytes
 
         # Run through the algorithm:
         # s: number of message blocks (size of text / block_size)
@@ -128,7 +128,7 @@ class AllOrNothing:
         # The one complication I add is that the last message block is hard
         # coded to the number of padbytes added, so that these can be stripped
         # during the undigest() step
-        s = len(text) / block_size
+        s = divmod(len(text), block_size)[0]
         blocks = []
         hashes = []
         for i in range(1, s+1):
@@ -219,8 +219,7 @@ class AllOrNothing:
         # of the cipher's block_size.  This number should be small enough that
         # the conversion from long integer to integer should never overflow
         padbytes = int(parts[-1])
-        # PY3K: This is meant to be text, do not change to bytes (data)
-        text = ''.join(map(long_to_bytes, parts[:-1]))
+        text = b('').join(map(long_to_bytes, parts[:-1]))
         return text[:-padbytes]
 
     def _inventkey(self, key_size):
@@ -291,13 +290,13 @@ Where:
     # ugly hack to force __import__ to give us the end-path module
     module = __import__('Crypto.Cipher.'+ciphermodule, None, None, ['new'])
 
-    a = AllOrNothing(module)
+    x = AllOrNothing(module)
     print 'Original text:\n=========='
     print __doc__
     print '=========='
-    msgblocks = a.digest(__doc__)
+    msgblocks = x.digest(b(__doc__))
     print 'message blocks:'
-    for i, blk in map(None, range(len(msgblocks)), msgblocks):
+    for i, blk in zip(range(len(msgblocks)), msgblocks):
         # base64 adds a trailing newline
         print '    %3d' % i,
         if aslong:
@@ -306,9 +305,9 @@ Where:
             print base64.encodestring(blk)[:-1]
     #
     # get a new undigest-only object so there's no leakage
-    b = AllOrNothing(module)
-    text = b.undigest(msgblocks)
-    if text == __doc__:
+    y = AllOrNothing(module)
+    text = y.undigest(msgblocks)
+    if text == b(__doc__):
         print 'They match!'
     else:
         print 'They differ!'

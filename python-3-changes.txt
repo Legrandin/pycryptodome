@@ -58,6 +58,12 @@ Use instead assertEqual(expr,True) for assert_ and assertEqual(expr,False) for
  failIf
 
 Added unit tests for Crypto.Random.random. Fixed random.shuffle().
+Not changed: random.sample() fails on Python 2.1. This is now exposed through
+ the unit test.
+
+Added unit test for Crypto.Protocol.AllOrNothing.
+Not changed: AllOrNothing fails when called a few times (<10, usually). This
+ is now exposed through the unit test.
 
 C code:
 
@@ -95,12 +101,11 @@ getattr cannot be used to check against custom attributes in 3.x. For 3.x,
 hexdigest() needed to be changed to return a Unicode object with 3.x
 
 
-TODO:
+TODO for extra credit:
 - Check for type of string in functions and throw an error when it's not
   correct. While at it, ensure that functions observe the guidelines below
   re type. 
   This is friendlier than just relying on Python's errors.
-- Need additional unit tests for Protocol/AllOrNothing
 - Make sure DerSequence slicing is tested, since I took the explicit slice
   functions away in 3.x
-- Test install on all tested Python versions
+
