@@ -188,7 +188,7 @@ Here's an example, using the SHA-256 algorithm::
     >>> m = SHA256.new()
     >>> m.update('abc')
     >>> m.digest()
-    ''\xbax\x16\xbf\x8f\x01\xcf\xeaAA@\xde]\xae"#\xb0\x03a\xa3\x96\x17z\x9c\xb4\x10\xffa\xf2\x00\x15\xad'
+    '\xbax\x16\xbf\x8f\x01\xcf\xeaAA@\xde]\xae"#\xb0\x03a\xa3\x96\x17z\x9c\xb4\x10\xffa\xf2\x00\x15\xad'
     >>> m.hexdigest()
     'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
 
