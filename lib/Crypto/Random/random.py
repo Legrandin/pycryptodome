@@ -109,9 +109,7 @@ class StrongRandom(object):
         # Choose a random item (without replacement) until all the items have been
         # chosen.
         for i in xrange(len(x)):
-            p = self.randint(1,len(items))
-            x[i] = items[p-1]
-            del items[p-1]
+            x[i] = items.pop(self.randrange(len(items)))
 
     def sample(self, population, k):
         """Return a k-length list of unique elements chosen from the population sequence."""

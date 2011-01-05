@@ -95,9 +95,7 @@ class SimpleTest(unittest.TestCase):
         self.assertRaises(TypeError, random.randint, "1", stop)
         self.assertRaises(TypeError, random.randint, 1, "2")
         # Test choice
-        seq = []
-        for i in range(500): # seed the sequence
-            seq[i:] = [random.getrandbits(32)]
+        seq = range(10000)
         x = random.choice(seq)
         y = random.choice(seq)
         self.assertNotEqual(x, y)
@@ -105,7 +103,7 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(y in seq, True)
         for i in range(10):
             self.assertEqual(random.choice((1,2,3)) in (1,2,3), True)
-        self.assertEqual(random.choice(range(3)) in range(3), True)
+        self.assertEqual(random.choice([1,2,3]) in [1,2,3], True)
         if sys.version_info[0] is 3:
             self.assertEqual(random.choice(bytearray(b('123'))) in bytearray(b('123')), True)
         self.assertEqual(1, random.choice([1]))
@@ -113,6 +111,7 @@ class SimpleTest(unittest.TestCase):
         self.assertRaises(TypeError, random.choice, 1)
         # Test shuffle. Lacks random parameter to specify function.
         # Make copies of seq
+        seq = range(500)
         x = list(seq)
         y = list(seq)
         random.shuffle(x)
