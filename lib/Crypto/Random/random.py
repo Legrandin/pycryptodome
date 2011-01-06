@@ -122,7 +122,7 @@ class StrongRandom(object):
         selected = {}  # we emulate a set using a dict here
         for i in xrange(k):
             r = None
-            while r is None or r in selected:
+            while r is None or selected.has_key(r):
                 r = self.randrange(num_choices)
             retval.append(population[r])
             selected[r] = 1

@@ -58,12 +58,10 @@ Use instead assertEqual(expr,True) for assert_ and assertEqual(expr,False) for
  failIf
 
 Added unit tests for Crypto.Random.random. Fixed random.shuffle().
-Not changed: random.sample() fails on Python 2.1. This is now exposed through
- the unit test.
+random.sample() changed to no longer fail on Python 2.1.
 
 Added unit test for Crypto.Protocol.AllOrNothing.
-Not changed: AllOrNothing fails when called a few times (<10, usually). This
- is now exposed through the unit test.
+AllOrNothing changed to no longer fail occasionally.
 
 C code:
 

@@ -190,13 +190,14 @@ class AllOrNothing:
         # encrypted, and create the hash cipher.
         K0 = self.__K0digit * self.__key_size
         hcipher = self.__newcipher(K0)
+        block_size = self.__ciphermodule.block_size
 
         # Since we have all the blocks (or this method would have been called
-        # prematurely), we can calcualte all the hash blocks.
+        # prematurely), we can calculate all the hash blocks.
         hashes = []
         for i in range(1, len(blocks)):
             mticki = blocks[i-1] ^ i
-            hi = hcipher.encrypt(long_to_bytes(mticki))
+            hi = hcipher.encrypt(long_to_bytes(mticki, block_size))
             hashes.append(bytes_to_long(hi))
 
         # now we can calculate K' (key).  remember the last block contains
@@ -204,8 +205,7 @@ class AllOrNothing:
         key = blocks[-1] ^ reduce(operator.xor, hashes)
 
         # and now we can create the cipher object
-        mcipher = self.__newcipher(long_to_bytes(key))
-        block_size = self.__ciphermodule.block_size
+        mcipher = self.__newcipher(long_to_bytes(key, self.__key_size))
 
         # And we can now decode the original message blocks
         parts = []
