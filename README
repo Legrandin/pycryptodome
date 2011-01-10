@@ -86,6 +86,13 @@ possible, track down the bug and include a patch that fixes it,
 provided that you are able to meet the eligibility requirements at
 http://www.pycrypto.org/submission-requirements/.
 
+It is possible to test a single sub-package or a single module only, for instance
+when you investigate why certain tests fail and don't want to run the whole
+suite each time. Use "python setup.py test --module=name", where 'name'
+is either a sub-package (Cipher, PublicKey, etc) or a module (Cipher.DES,
+PublicKey.RSA, etc).
+To further cut test coverage, pass also the option "--skip-slow-tests".
+
 To install the package under the site-packages directory of
 your Python installation, run "python setup.py install".
 

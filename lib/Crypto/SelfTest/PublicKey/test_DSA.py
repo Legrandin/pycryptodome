@@ -222,7 +222,8 @@ def get_tests(config={}):
         tests += list_test_cases(DSAFastMathTest)
     except ImportError:
         pass
-    tests += list_test_cases(DSASlowMathTest)
+    if config.get('slow_tests',1): 
+        tests += list_test_cases(DSASlowMathTest)
     return tests
 
 if __name__ == '__main__':

@@ -371,7 +371,8 @@ def get_tests(config={}):
         tests += list_test_cases(RSAFastMathTest)
     except ImportError:
         pass
-    tests += list_test_cases(RSASlowMathTest)
+    if config.get('slow_tests',1): 
+        tests += list_test_cases(RSASlowMathTest)
     return tests
 
 if __name__ == '__main__':
