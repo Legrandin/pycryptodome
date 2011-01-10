@@ -192,7 +192,7 @@ class PCTBuildExt (build_ext):
             PrintErr ("warning: GMP or MPIR library not found; Not building "+
                 "Crypto.PublicKey._fastmath.")
             self.__remove_extensions(["Crypto.PublicKey._fastmath"])
-		# Change library to libmpir if libgmp is missing
+        # Change library to libmpir if libgmp is missing
         elif not (self.compiler.find_library_file(lib_dirs, 'gmp')):
             self.__change_extension_lib(["Crypto.PublicKey._fastmath"],
                 ['mpir'])
