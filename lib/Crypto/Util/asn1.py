@@ -25,76 +25,134 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 __all__ = [ 'DerObject', 'DerInteger', 'DerSequence' ]
 
 class DerObject:
+        """Base class for defining a single DER object.
+        
+        Instantiate this class ONLY when you have to decode a DER element.
+        """
+
+        # Known TAG types
 	typeTags = { 'SEQUENCE':'\x30', 'BIT STRING':'\x03', 'INTEGER':'\x02' }
 
 	def __init__(self, ASN1Type=None):
-		self.typeTag = self.typeTags.get(ASN1Type, ASN1Type)
+		"""Initialize the DER object according to a specific type.
+
+                The ASN.1 type is either specified as the ASN.1 string (e.g.
+                'SEQUENCE'), directly with its numerical tag or with no tag
+                atl all (None)."""
+                self.typeTag = self.typeTags.get(ASN1Type, ASN1Type)
 		self.payload = ''
 
 	def _lengthOctets(self, payloadLen):
-		'''
-		Return an octet string that is suitable for the BER/DER
-		length element if the relevant payload is of the given
-		size (in bytes).
-		'''
+                """Return a string that encodes the given payload length (in
+                bytes) in a format suitable for a DER length tag (L).
+                """
 		if payloadLen>127:
 			encoding = long_to_bytes(payloadLen)
 			return chr(len(encoding)+128) + encoding
 		return chr(payloadLen)
 
 	def encode(self):
+                """Return a complete DER element, fully encoded as a TLV."""
 		return self.typeTag + self._lengthOctets(len(self.payload)) + self.payload	
 
 	def _decodeLen(self, idx, str):
-		'''
-		Given a string and an index to a DER LV,
-		this function returns a tuple with the length of V
-		and an index to the first byte of it.
-		'''
-		length = ord(str[idx])
+                """Given a (part of a) DER element, and an index to the first byte of
+                a DER length tag (L), return a tuple with the payload size,
+                and the index of the first byte of the such payload (V).
+                
+                Raises a ValueError exception if the DER length is invalid.
+                Raises an IndexError exception if the DER element is too short.
+                """
+         	length = ord(str[idx])
 		if length<=127:
 			return (length,idx+1)
-		else:
-			payloadLength = bytes_to_long(str[idx+1:idx+1+(length & 0x7F)])
-			if payloadLength<=127:
-				raise ValueError("Not a DER length tag.")
-			return (payloadLength, idx+1+(length & 0x7F))
+		payloadLength = bytes_to_long(str[idx+1:idx+1+(length & 0x7F)])
+		if payloadLength<=127:
+		        raise ValueError("Not a DER length tag.")
+		return (payloadLength, idx+1+(length & 0x7F))
 
-	def decode(self, input, noLeftOvers=0):
-		try:
-			self.typeTag = input[0]
+	def decode(self, derEle, noLeftOvers=0):
+                """Decode a complete DER element, and re-initializes this
+                object with it.
+                
+                @param derEle       A complete DER element. It must start with a DER T
+                                    tag.
+                @param noLeftOvers  Indicate whether it is acceptable to complete the
+                                    parsing of the DER element and find that not all
+                                    bytes in derEle have been used.
+                @return             Index of the first unused byte in the given DER element.
+
+                Raises a ValueError exception in case of parsing errors.
+                Raises an IndexError exception if the DER element is too short.
+                """
+         	try:
+			self.typeTag = derEle[0]
 			if (ord(self.typeTag) & 0x1F)==0x1F:
 				raise ValueError("Unsupported DER tag")
-			(length,idx) = self._decodeLen(1,input)
-			if noLeftOvers and len(input) != (idx+length):
+			(length,idx) = self._decodeLen(1, derEle)
+			if noLeftOvers and len(derEle) != (idx+length):
 				raise ValueError("Not a DER structure")
-			self.payload = input[idx:idx+length]
+			self.payload = derEle[idx:idx+length]
 		except IndexError:
 			raise ValueError("Not a valid DER SEQUENCE.")
 		return idx+length
 
 class DerInteger(DerObject):
 	def __init__(self, value = 0):
+                """Class to model an INTEGER DER element.
+            
+                Limitation: only non-negative values are supported.
+                """
 		DerObject.__init__(self, 'INTEGER')
 		self.value = value
 
 	def encode(self):
+                """Return a complete INTEGER DER element, fully encoded as a TLV."""
 		self.payload = long_to_bytes(self.value)
 		if ord(self.payload[0])>127:
 			self.payload = '\x00' + self.payload
 		return DerObject.encode(self)
 
-	def decode(self, input, noLeftOvers=0):
-		tlvLength = DerObject.decode(self, input,noLeftOvers)
+	def decode(self, derEle, noLeftOvers=0):
+                """Decode a complete INTEGER DER element, and re-initializes this
+                object with it.
+            
+                @param derEle       A complete INTEGER DER element. It must start with a DER
+                                    INTEGER tag.
+                @param noLeftOvers  Indicate whether it is acceptable to complete the
+                                    parsing of the DER element and find that not all
+                                    bytes in derEle have been used.
+                @return             Index of the first unused byte in the given DER element.
+                
+                Raises a ValueError exception if the DER element is not a
+                valid non-negative INTEGER.
+                Raises an IndexError exception if the DER element is too short.
+                """
+ 	        tlvLength = DerObject.decode(self, derEle, noLeftOvers)
+		if self.typeTag!=self.typeTags['INTEGER']:
+                        raise ValueError ("Not a DER INTEGER.")
 		if ord(self.payload[0])>127:
 			raise ValueError ("Negative INTEGER.")
 		self.value = bytes_to_long(self.payload)
 		return tlvLength
 				
 class DerSequence(DerObject):
+        """Class to model a SEQUENCE DER element.
+        
+        This object behave like a dynamic Python sequence.
+        Sub-elements that are INTEGERs, look like Python integers.
+        Any other sub-element is a binary string encoded as the complete DER
+        sub-element (TLV).
+        """
+
 	def __init__(self):
+                """Initialize the SEQUENCE DER object. Always empty
+                initially."""
 		DerObject.__init__(self, 'SEQUENCE')
 		self._seq = []
+
+        ## A few methods to make it behave like a python sequence
+
 	def __delitem__(self, n):
 		del self._seq[n]
 	def __getitem__(self, n):
@@ -113,6 +171,7 @@ class DerSequence(DerObject):
 		return self._seq.append(item)
 
 	def hasOnlyInts(self):
+                """Return 1/True is all items in this sequence are numbers."""
 		if not self._seq: return 0
 		test = 0
 		for item in self._seq:
@@ -123,11 +182,13 @@ class DerSequence(DerObject):
 		return 1
 
 	def encode(self):
-		'''
-		Return the DER encoding for the ASN.1 SEQUENCE containing
-		the non-negative integers and longs added to this object.
-		'''
-		self.payload = ''
+                """Return the DER encoding for the ASN.1 SEQUENCE, containing
+                the non-negative integers and longs added to this object.
+
+                Limitation: Raises a ValueError exception if it some elements
+                in the sequence are neither Python integers nor complete DER INTEGERs.
+                """
+ 	        self.payload = ''
 		for item in self._seq:
 			try:
 				self.payload += item
@@ -138,16 +199,28 @@ class DerSequence(DerObject):
 					raise ValueError("Trying to DER encode an unknown object")
 		return DerObject.encode(self)
 
-	def decode(self, input,noLeftOvers=0):
-		'''
-		This function decodes the given string into a sequence of
-		ASN.1 objects. Yet, we only know about unsigned INTEGERs.
-		Any other type is stored as its rough TLV. In the latter
-		case, the correctectness of the TLV is not checked.
-		'''
+	def decode(self, derEle, noLeftOvers=0):
+                """Decode a complete SEQUENCE DER element, and re-initializes this
+                object with it.
+             
+                @param derEle       A complete SEQUENCE DER element. It must start with a DER
+                                    SEQUENCE tag.
+                @param noLeftOvers  Indicate whether it is acceptable to complete the
+                                    parsing of the DER element and find that not all
+                                    bytes in derEle have been used.
+                @return             Index of the first unused byte in the given DER element.
+        
+                DER INTEGERs are decoded into Python integers. Any other DER
+                element is not decoded. Its validity is not checked.
+            
+                Raises a ValueError exception if the DER element is not a
+                valid DER SEQUENCE.
+                Raises an IndexError exception if the DER element is too short.
+                """
+
 		self._seq = []
 		try:
-			tlvLength = DerObject.decode(self, input,noLeftOvers)
+			tlvLength = DerObject.decode(self, derEle, noLeftOvers)
 			if self.typeTag!=self.typeTags['SEQUENCE']:
 				raise ValueError("Not a DER SEQUENCE.")
 			# Scan one TLV at once
