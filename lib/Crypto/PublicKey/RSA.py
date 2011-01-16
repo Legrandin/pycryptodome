@@ -42,6 +42,8 @@ from Crypto import Random
 from Crypto.Util.asn1 import DerObject, DerSequence
 import binascii
 
+from Crypto.Util.number import inverse
+
 try:
     from Crypto.PublicKey import _fastmath
 except ImportError:
@@ -162,7 +164,7 @@ class _RSAobj(pubkey.pubkey):
             keyType = "RSA PRIVATE"
             der[:] = [ 0, self.n, self.e, self.d, self.p, self.q,
                    self.d % (self.p-1), self.d % (self.q-1),
-                   self.u ]
+                   inverse(self.q, self.p) ]
         else:
             keyType = "PUBLIC"
             der.append(b('\x30\x0D\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01\x05\x00'))
@@ -181,7 +183,7 @@ class _RSAobj(pubkey.pubkey):
             pem += b('').join(chunks)
             pem += b("-----END %s KEY-----" % keyType)
             return pem
-        return ValueError("")
+        return ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
 
 class RSAImplementation(object):
     def __init__(self, **kwargs):
@@ -238,11 +240,22 @@ class RSAImplementation(object):
         der.decode(externKey, True)
         if len(der)==9 and der.hasOnlyInts() and der[0]==0:
             # ASN.1 RSAPrivateKey element
-            del der[6:8]	# Remove d mod (p-1) and d mod (q-1)
+            del der[6:]	# Remove d mod (p-1), d mod (q-1), and q^{-1} mod p
+            der.append(inverse(der[4],der[5])) # Add p^{-1} mod q
             del der[0]	# Remove version
             return self.construct(der[:])
         if len(der)==2:
-            # ASN.1 SubjectPublicKeyInfo element
+            # The DER object is a SEQUENCE with two elements:
+            # a SubjectPublicKeyInfo SEQUENCE and an opaque BIT STRING.
+            #
+            # The first element is always the same:
+            # 0x30 0x0D     SEQUENCE, 12 bytes of payload
+            #   0x06 0x09   OBJECT IDENTIFIER, 9 bytes of payload
+            #     0x2A 0x86 0x48 0x86 0xF7 0x0D 0x01 0x01 0x01
+            #               rsaEncryption (1 2 840 113549 1 1 1) (PKCS #1)
+            #   0x05 0x00   NULL
+            #
+            # The second encapsulates the actual ASN.1 RSAPublicKey element.
             if der[0]==b('\x30\x0D\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01\x05\x00'):
                 bitmap = DerObject()
                 bitmap.decode(der[1], True)
@@ -258,6 +271,8 @@ class RSAImplementation(object):
         externKey:	the RSA key to import, encoded as a string.
                 The key can be in DER (PKCS#1) or in unencrypted
                 PEM format (RFC1421).
+
+        Raises a ValueError/IndexError if the given key cannot be parsed.
         """
         if externKey.startswith(b('-----')):
             # This is probably a PEM encoded key
