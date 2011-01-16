@@ -646,7 +646,7 @@ An example of using the RSA module to sign a message::
     >>> from Crypto.PublicKey import RSA
     >>> from Crypto import Random
     >>> rng = Random.new().read
-    >>> RSAkey = RSA.generate(384, rng)   # This will take a while...
+    >>> RSAkey = RSA.generate(1024, rng)   # This will take a while...
     >>> hash = MD5.new(plaintext).digest()
     >>> signature = RSAkey.sign(hash, rng)
     >>> signature   # Print what an RSA sig looks like--you don't really care.
@@ -690,9 +690,47 @@ don't care about working with non-Python software, simply use the
 file.  It's portable across all the architectures that Python supports,
 and it's simple to use.
 
+In case interoperability were important, RSA key objects can be exported
+and imported in two standard formats: the DER binary encoding specified in
+PKCS#1 (see RFC3447) or the ASCII textual encoding specified by the
+old Privacy Enhanced Mail services (PEM, see RFC1421).
+
+
+The RSA module makes the following function available for importing keys:
+
+**importKey(externKey)**:
+Import an RSA key (pubic or private) encoded as a string ``externKey``.
+The key can follow either the PKCS#1/DER format (binary) or the PEM format
+(7-bit ASCII).
+
+For instance:
+    >>> from Crypto.PublicKey import RSA
+    >>> f = open("mykey.pem")
+    >>> RSAkey = RSA.importKey(f.read())
+    >>> if RSAkey.has_private(): print "Private key"
+
+Every RSA object supports the following method to export itself:
+
+**exportKey(format='PEM')**:
+Return the key encoded as a string, according to the specified ``format``:
+``'PEM'`` (default) or ``'DER'`` (also known as PKCS#1).
+
+For instance:
+    >>> from Crypto.PublicKey import RSA
+    >>> from Crypto import Random
+    >>> rng = Random.new().read
+    >>> RSAkey = RSA.generate(1024, rng)
+    >>> f = open("keyPrivate.der","w+")
+    >>> f.write(RSAkey.exportKey("DER"))
+    >>> f.close()
+    >>> f = open("keyPublic.pem","w+")
+    >>> f.write(RSAkey.publickey().exportKey("PEM"))
+    >>> f.close()
+
 Public-key objects always support the following methods.  Some of them
 may raise exceptions if their functionality is not supported by the
 algorithm.
+
 
 **can_blind()**:
 Returns true if the algorithm is capable of blinding data; 
@@ -828,6 +866,8 @@ levels of security: low-security commercial, high-security commercial,
 and military-grade.  For RSA, these three levels correspond roughly to
 768, 1024, and 2048-bit keys.
 
+When exporting private keys you should always carefully ensure that the
+chosen storage location cannot be accessed by adversaries.
 
 Crypto.Util: Odds and Ends
 --------------------------------------------------
