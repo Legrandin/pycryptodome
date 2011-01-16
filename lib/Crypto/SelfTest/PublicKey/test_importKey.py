@@ -27,6 +27,7 @@ import unittest
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import *
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
+from Crypto.Util.number import inverse
 
 class ImportKeyTests(unittest.TestCase):
 
@@ -72,7 +73,11 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 	d = long('09 44 83 12 9F 11 4D ED F6 7E DA BC 23 01 BC 5A 88 E5 E6 60 1D D7 01 62 20 EA D9 FD 4B FC 6F DE B7 58 93 89 8A E4 1C 54 DD BD BF 15 39 F8 CC BD 18 F6 7B 44 0D E1 AC 30 44 02 81 D4 0C FA C8 39'.replace(" ",""),16)
 	p = long('00 F2 0F 2F 3E 1D A6 18 83 F6 29 80 92 2B D8 DF 54 5C E4 07 C7 26 24 11 03 B5 E2 C5 37 23 12 4A 23'.replace(" ",""),16)
 	q = long('00 CA 1F E9 24 79 2C FC C9 6B FA B7 4F 34 4A 68 B4 18 DF 57 83 38 06 48 06 00 0F E2 A5 C9 9A 02 37'.replace(" ",""),16)
-	coeff = long('00 BD 9F 40 A7 64 22 7A 21 96 2A 4A DD 07 E4 DE FE 43 ED 91 A3 AE 27 BB 05 7F 39 24 1F 33 AB 01 C1'.replace(" ",""),16)
+
+        # This is q^{-1} mod p). fastmath and slowmath use pInv (p^{-1}
+        # mod q) instead!
+	qInv = long('00 BD 9F 40 A7 64 22 7A 21 96 2A 4A DD 07 E4 DE FE 43 ED 91 A3 AE 27 BB 05 7F 39 24 1F 33 AB 01 C1'.replace(" ",""),16)
+        pInv = inverse(p,q)
 
 	def testImportKey1(self):
 		key = RSA.importKey(self.rsaKeyDER)
@@ -82,7 +87,6 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 		self.assertEqual(key.d, self.d)
 		self.assertEqual(key.p, self.p)
 		self.assertEqual(key.q, self.q)
-		self.assertEqual(key.u, self.coeff)
 
 	def testImportKey2(self):
 		key = RSA.importKey(self.rsaPublicKeyDER)
@@ -98,7 +102,6 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 		self.assertEqual(key.d, self.d)
 		self.assertEqual(key.p, self.p)
 		self.assertEqual(key.q, self.q)
-		self.assertEqual(key.u, self.coeff)
 
 	def testImportKey4(self):
 		key = RSA.importKey(self.rsaPublicKeyPEM)
@@ -106,9 +109,21 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 		self.assertEqual(key.n, self.n)
 		self.assertEqual(key.e, self.e)
 
+        def testImportKey5(self):
+                """Verifies that the imported key is still a valid RSA pair"""
+                key = RSA.importKey(self.rsaKeyPEM)
+                idem = key.encrypt(key.decrypt("Test"),0)
+                self.assertEqual(idem[0],"Test")
+
+        def testImportKey6(self):
+                """Verifies that the imported key is still a valid RSA pair"""
+                key = RSA.importKey(self.rsaKeyDER)
+                idem = key.encrypt(key.decrypt("Test"),0)
+                self.assertEqual(idem[0],"Test")
+
 	###
 	def testExportKey1(self):
-		key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.coeff])
+		key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
 		derKey = key.exportKey("DER")
 		self.assertEqual(derKey, self.rsaKeyDER)
 
@@ -118,7 +133,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 		self.assertEqual(derKey, self.rsaPublicKeyDER)
 
 	def testExportKey3(self):
-		key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.coeff])
+		key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
 		pemKey = key.exportKey("PEM")
 		self.assertEqual(pemKey, self.rsaKeyPEM)
 
