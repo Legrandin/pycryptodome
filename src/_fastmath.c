@@ -221,13 +221,13 @@ rsaDecrypt (rsaKey * key, mpz_t v)
         mpz_sub_ui(h, key->q, 1);
         mpz_fdiv_r(h, key->d, h);
         mpz_powm(m2, v, h, key->q);
-        /* h = u * ( m2 - m1 ) mod q */
+        /* h = u * ( m2 - m1 + q) mod q */
         mpz_sub(h, m2, m1);
         if (mpz_sgn(h)==-1)
             mpz_add(h, h, key->q);
         mpz_mul(h, key->u, h);
         mpz_mod(h, h, key->q);
-        /* m = m2 + h * p */
+        /* m = m1 + h * p */
         mpz_mul(h, h, key->p);
         mpz_add(v, m1, h);
         /* ready */
