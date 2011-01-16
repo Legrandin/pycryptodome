@@ -48,7 +48,15 @@ class _RSAKey(object):
         # compute c**d (mod n)
         if not self.has_private():
             raise TypeError("No private key")
-        return pow(c, self.d, self.n) # TODO: CRT exponentiation
+        if (hasattr(self,'p') and hasattr(self,'q') and hasattr(self,'u')):
+            m1 = pow(c, self.d % (self.p-1), self.p) 
+            m2 = pow(c, self.d % (self.q-1), self.q)
+            h = m2 - m1
+            if (h<0):
+                h = h + self.q
+            h = h*self.u % self.q
+            return h*self.p+m1
+        return pow(c, self.d, self.n)
 
     def _encrypt(self, m):
         # compute m**d (mod n)
