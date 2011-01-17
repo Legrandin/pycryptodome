@@ -29,15 +29,15 @@ __revision__ = "$Id$"
 from Crypto.PublicKey import pubkey
 from Crypto.Util import number
 
-def generate_py(bits, randfunc, progress_func=None):
-    """generate(bits:int, randfunc:callable, progress_func:callable)
+def generate_py(bits, randfunc, progress_func=None, e=65537):
+    """generate(bits:int, randfunc:callable, progress_func:callable, e:int)
 
-    Generate an RSA key of length 'bits', using 'randfunc' to get
-    random data and 'progress_func', if present, to display
-    the progress of the key generation.
+    Generate an RSA key of length 'bits', public exponent 'e'(which must be
+    odd), using 'randfunc' to get random data and 'progress_func',
+    if present, to display the progress of the key generation.
     """
     obj=RSAobj()
-    obj.e = 65537L
+    obj.e = long(e)
 
     # Generate the prime factors of n
     if progress_func:

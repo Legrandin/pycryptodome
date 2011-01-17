@@ -203,12 +203,14 @@ class RSAImplementation(object):
             self._current_randfunc = Random.new().read
         return self._current_randfunc
 
-    def generate(self, bits, randfunc=None, progress_func=None):
+    def generate(self, bits, randfunc=None, progress_func=None, e=65537):
         if bits < 1024 or (bits & 0xff) != 0:
             # pubkey.getStrongPrime doesn't like anything that's not a multiple of 128 and > 512
             raise ValueError("RSA modulus length must be a multiple of 256 and >= 1024")
+        if e%2==0:
+            raise ValueError("RSA public exponent must be odd.")
         rf = self._get_randfunc(randfunc)
-        obj = _RSA.generate_py(bits, rf, progress_func)    # TODO: Don't use legacy _RSA module
+        obj = _RSA.generate_py(bits, rf, progress_func, e)    # TODO: Don't use legacy _RSA module
         key = self._math.rsa_construct(obj.n, obj.e, obj.d, obj.p, obj.q, obj.u)
         return _RSAobj(self, key)
 
@@ -226,17 +228,18 @@ class RSAImplementation(object):
                 del der[0]      # Remove version
                 return self.construct(der[:])
         if len(der)==2:
-                # The DER object is a SEQUENCE with two elements:
-                # a SubjectPublicKeyInfo SEQUENCE and an opaque BIT STRING.
+                # The DER object is a SubjectPublicKeyInfo SEQUENCE with two elements:
+                # an algorithm SEQUENCE (or algorithmIdentifier) and a subjectPublicKey BIT STRING.
                 #
-                # The first element is always the same:
+                # The first element is always the same. It contains the oid of
+                # the RSA algorithm and its parameters (none).
                 # 0x30 0x0D     SEQUENCE, 12 bytes of payload
                 #   0x06 0x09   OBJECT IDENTIFIER, 9 bytes of payload
                 #     0x2A 0x86 0x48 0x86 0xF7 0x0D 0x01 0x01 0x01
                 #               rsaEncryption (1 2 840 113549 1 1 1) (PKCS #1)
                 #   0x05 0x00   NULL
                 #
-                # The second encapsulates the actual ASN.1 RSAPublicKey element.
+                # subjectPublicKey encapsulates the actual ASN.1 RSAPublicKey element.
                 if der[0]=='\x30\x0D\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01\x05\x00':
                         bitmap = DerObject()
                         bitmap.decode(der[1], True)

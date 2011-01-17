@@ -30,7 +30,7 @@ __all__ = ['rsa_construct']
 
 from Crypto.Util.python_compat import *
 
-from Crypto.Util.number import size, inverse
+from Crypto.Util.number import size, inverse, GCD
 
 class error(Exception):
     pass
@@ -88,13 +88,51 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
     obj = _RSAKey()
     obj.n = n
     obj.e = e
-    if d is not None: obj.d = d
-    if p is not None: obj.p = p
-    if q is not None: obj.q = q
+    if d is None:
+        return obj
+    obj.d = d
+    if p is not None and q is not None:
+        obj.p = p
+        obj.q = q
+    else:
+        # Compute factors p and q from the private exponent d.
+        # We assume that n has no more than two factors.
+        # See 8.2.2(i) in Handbook of Applied Cryptography.
+        ktot = d*e-1
+        # The quantity d*e-1 is a multiple of phi(n), even,
+        # and can be represented as t*2^s.
+        t = ktot
+        while t%2==0:
+            t=t/2
+        # Cycle through all multiplicative inverses in Zn.
+        # The algorithm is non-deterministic, but there is a 50% chance
+        # any candidate a leads to successful factoring.
+        spotted = 0
+        a = 2
+        while not spotted and a<n:
+            k = t
+            # Cycle through all values a^{t*2^i}=a^k
+            while k<ktot:
+                cand = pow(a,k,n)
+                # Check if a^k is a non-trivial root of unity (mod n)
+                if cand!=1 and cand!=(n-1) and pow(cand,2,n)==1:
+                    # We have found a number such that (cand-1)(cand+1)=0 (mod n).
+                    # Either of the terms divides n.
+                    obj.p = GCD(cand+1,n)
+                    spotted = 1
+                    break
+                k = k*2
+            # This value was not any good... let's try another!
+            a = a+2
+        # Found !
+        assert ((n % obj.p)==0)
+        obj.q = n/obj.p
+    if obj.p>obj.q:
+        obj.p, obj.q = obj.q, obj.p
     if u is not None:
         obj.u = u
-    elif p is not None and q is not None:
-        obj.u = inverse(p, q)
+    else:
+        obj.u = inverse(obj.p, obj.q)
     return obj
 
 class _DSAKey(object):

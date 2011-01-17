@@ -116,6 +116,15 @@ class RSATest(unittest.TestCase):
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
+    def test_generate_3args(self):
+        rsaObj = self.rsa.generate(1024, Random.new().read,e=65537)
+        self._check_private_key(rsaObj)
+        self._exercise_primitive(rsaObj)
+        pub = rsaObj.publickey()
+        self._check_public_key(pub)
+        self._exercise_public_primitive(rsaObj)
+        self.assertEqual(65537,rsaObj.e)
+
     def test_construct_2tuple(self):
         """RSA (default implementation) constructed key (2-tuple)"""
         pub = self.rsa.construct((self.n, self.e))

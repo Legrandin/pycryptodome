@@ -500,6 +500,61 @@ dsaKey_has_private (dsaKey * key, PyObject * args)
         }
 }
 
+/**
+ * Compute key->p and key->q from the key with private exponent only.
+ */
+static void factorize_N_from_D(rsaKey *key)
+{
+	mpz_t ktot, t, a, k, cand, nminus1, cand2;
+	unsigned long cnt;
+	int spotted;
+
+	mpz_init(ktot);
+	mpz_init(t);
+	mpz_init(a);
+	mpz_init(k);
+	mpz_init(cand);
+	mpz_init(nminus1);
+	mpz_init(cand2);
+
+	mpz_sub_ui(nminus1, key->n, 1);
+
+	/** See _slowmath.py **/
+	mpz_mul(ktot, key->e, key->d);
+	mpz_sub_ui(ktot, ktot, 1);
+	mpz_set(t, ktot);
+	cnt = mpz_scan1(t, 0);
+	mpz_fdiv_q_2exp(t,t,cnt);
+	mpz_set_ui(a, 2);
+	for (spotted=0; !spotted; mpz_add_ui(a,a,2)) {
+		mpz_set(k, t);
+		for (; (mpz_cmp(k,ktot)<0); mpz_mul_ui(k,k,2)) {
+			mpz_powm(cand,a,k,key->n);
+			if ((mpz_cmp_ui(cand,1)==0) || (mpz_cmp(cand,nminus1)==0))
+				continue;
+			mpz_powm_ui(cand2,cand,2,key->n);
+			if (mpz_cmp_ui(cand2,1)==0) {
+				mpz_add_ui(cand,cand,1);
+				mpz_gcd(key->p, cand, key->n);
+				spotted=1;
+				break;
+			}
+		}
+	}
+	mpz_divexact(key->q, key->n, key->p);
+	if (mpz_cmp(key->p,key->q)>0) {
+		mpz_swap(key->p, key->q);
+	}
+
+	mpz_clear(ktot);
+	mpz_clear(t);
+	mpz_clear(a);
+	mpz_clear(k);
+	mpz_clear(cand);
+	mpz_clear(nminus1);
+	mpz_clear(cand2);
+}
+
 static PyObject *
 rsaKey_new (PyObject * self, PyObject * args)
 {
@@ -531,11 +586,13 @@ rsaKey_new (PyObject * self, PyObject * args)
 	{
 		longObjToMPZ (key->p, p);
 		longObjToMPZ (key->q, q);
-		if (u) {
-			longObjToMPZ (key->u, u);
-		} else {
-			mpz_invert (key->u, key->p, key->q);
-		}
+	} else {
+		factorize_N_from_D(key);
+	}
+	if (u) {
+		longObjToMPZ (key->u, u);
+	} else {
+		mpz_invert (key->u, key->p, key->q);
 	}
 	return (PyObject *) key;
 }

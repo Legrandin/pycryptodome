@@ -663,7 +663,7 @@ Constructs a key object from a tuple of data.  This is
 algorithm-specific; look at the source code for the details.  (To be
 documented later.)
 
-**generate(size, randfunc, progress_func=None)**:
+**generate(size, randfunc, progress_func=None, e=65537)**:
 Generate a fresh public/private key pair.  ``size`` is a
 algorithm-dependent size parameter, usually measured in bits; the
 larger it is, the more difficult it will be to break the key.  Safe
@@ -682,6 +682,12 @@ current time and the ``random`` module.
 string containing the key parameter currently being generated; it's
 useful for interactive applications where a user is waiting for a key
 to be generated.
+
+``e`` is the public RSA exponent, and must be an odd positive integer.
+It is typically a small number with very few ones in its binary representation.
+The default value 65537 (=0b10000000000000001) is a safe choice: other
+common values are 5, 7, 17, and 257. Exponent 3 is also widely used,
+but it requires very special care when padding the message.
 
 If you want to interface with some other program, you will have to know
 the details of the algorithm being used; this isn't a big loss.  If you
