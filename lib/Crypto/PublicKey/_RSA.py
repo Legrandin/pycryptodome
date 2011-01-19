@@ -50,7 +50,9 @@ def generate_py(bits, randfunc, progress_func=None, e=65537):
         p = pubkey.getStrongPrime(bits>>1, obj.e, 1e-12, randfunc)
         q = pubkey.getStrongPrime(bits - (bits>>1), obj.e, 1e-12, randfunc)
 
-    # p shall be smaller than q (for calc of u)
+    # It's OK for p to be larger than q, but let's be
+    # kind to the function that will invert it for
+    # th calculation of u.
     if p > q:
         (p, q)=(q, p)
     obj.p = p

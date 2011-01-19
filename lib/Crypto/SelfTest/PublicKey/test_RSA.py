@@ -182,7 +182,6 @@ class RSATest(unittest.TestCase):
         self.assertEqual(rsaObj.u, rsaObj.key.u)
 
         # Sanity check key data
-        self.assertEqual(1, rsaObj.p < rsaObj.q)            # p < q
         self.assertEqual(rsaObj.n, rsaObj.p * rsaObj.q)     # n = pq
         self.assertEqual(1, rsaObj.d * rsaObj.e % ((rsaObj.p-1) * (rsaObj.q-1))) # ed = 1 (mod (p-1)(q-1))
         self.assertEqual(1, rsaObj.p * rsaObj.u % rsaObj.q) # pu = 1 (mod q)

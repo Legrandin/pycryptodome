@@ -542,9 +542,6 @@ static void factorize_N_from_D(rsaKey *key)
 		}
 	}
 	mpz_divexact(key->q, key->n, key->p);
-	if (mpz_cmp(key->p,key->q)>0) {
-		mpz_swap(key->p, key->q);
-	}
 
 	mpz_clear(ktot);
 	mpz_clear(t);

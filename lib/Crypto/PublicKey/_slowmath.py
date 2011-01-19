@@ -107,6 +107,8 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
         # Cycle through all multiplicative inverses in Zn.
         # The algorithm is non-deterministic, but there is a 50% chance
         # any candidate a leads to successful factoring.
+        # See "Digitalized Signatures and Public Key Functions as Intractable
+        # as Factorization", M. Rabin, 1979
         spotted = 0
         a = 2
         while not spotted and a<n:
@@ -127,8 +129,6 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
         # Found !
         assert ((n % obj.p)==0)
         obj.q = n/obj.p
-    if obj.p>obj.q:
-        obj.p, obj.q = obj.q, obj.p
     if u is not None:
         obj.u = u
     else:
