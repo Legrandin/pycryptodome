@@ -22,7 +22,11 @@
 # SOFTWARE.
 # ===================================================================
 
-"""RSA public-key cryptography algorithm."""
+"""RSA public-key cryptography algorithm.
+
+:sort: generate,construct,importKey,error
+:undocumented: _fastmath, __revision__, _impl
+"""
 
 __revision__ = "$Id$"
 
@@ -44,6 +48,21 @@ except ImportError:
     _fastmath = None
 
 class _RSAobj(pubkey.pubkey):
+    """Class defining an actual RSA key."""
+
+    #: Dictionary of RSA parameters.
+    #:
+    #: A public key will only have the following entries:
+    #:
+    #:  - **n**, the modulus.
+    #:  - **e**, the public exponent.
+    #:
+    #: A private key will also have:
+    #:
+    #:  - **d**, the private exponent.
+    #:  - **p**, the first factor of n.
+    #:  - **q**, the second factor of n.
+    #:  - **u**, the CRT coefficient (1/p) mod q.
     keydata = ['n', 'e', 'd', 'p', 'q', 'u']
 
     def __init__(self, implementation, key):
@@ -134,11 +153,17 @@ class _RSAobj(pubkey.pubkey):
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
     def exportKey(self, format='PEM'):
-        """Export the RSA key. A string is returned
-        with the encoded public or the private half
-        under the selected format.
+        """Export this RSA key.
 
-        format:         'DER' (PKCS#1) or 'PEM' (RFC1421)
+        :Parameter format: The encoding to use to wrap the key.
+
+            - *'DER'* for PKCS#1
+            - *'PEM'* for RFC1421
+        :Type format: string
+
+        :Return: A string with the encoded public or private half.
+        :Raise ValueError:
+            When the format is unknown.
         """
         der = DerSequence()
         if self.has_private():
@@ -167,11 +192,33 @@ class _RSAobj(pubkey.pubkey):
         return ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
 
 class RSAImplementation(object):
+    """
+    An RSA key factory.
+
+    This class is only internally used to implement the methods of the `Crypto.PublicKey.RSA` modulule.
+
+    :sort: __init__,generate,construct,importKey
+    :undocumented: _g*, _i*
+    """
+
     def __init__(self, **kwargs):
-        # 'use_fast_math' parameter:
-        #   None (default) - Use fast math if available; Use slow math if not.
-        #   True - Use fast math, and raise RuntimeError if it's not available.
-        #   False - Use slow math.
+        """Create a new RSA key factory.
+
+        :Keywords:
+         use_fast_math : bool
+                                Specify which mathematic library to use:
+
+                                - *None* (default). Use fastest math available.
+                                - *True* . Use fast math.
+                                - *False* . Use slow math.
+         default_randfunc : callable
+                                Specify how to collect random data:
+
+                                - *None* (default). Use Random.new().read().
+                                - not *Note* . Use the specified function directly.
+        :Raise RuntimeError:
+            When **use_fast_math** =True but fast math is not available.
+        """
         use_fast_math = kwargs.get('use_fast_math', None)
         if use_fast_math is None:   # Automatic
             if _fastmath is not None:
@@ -190,9 +237,6 @@ class RSAImplementation(object):
 
         self.error = self._math.error
 
-        # 'default_randfunc' parameter:
-        #   None (default) - use Random.new().read
-        #   not None       - use the specified function
         self._default_randfunc = kwargs.get('default_randfunc', None)
         self._current_randfunc = None
 
@@ -204,21 +248,82 @@ class RSAImplementation(object):
         return self._current_randfunc
 
     def generate(self, bits, randfunc=None, progress_func=None, e=65537):
+        """Randomly generate a fresh, new RSA key object.
+
+        :Parameters:
+         bits : int
+                            Key length, or size (in bits) of the RSA modulus.
+
+                            It must be a multiple of 256, and no smaller than 1024.
+         randfunc : callable
+                            Random number generation function; it should accept
+                            a single integer N and return a string of random data
+                            N bytes long.
+         progress_func : callable
+                            Optional function that will be called with a short string
+                            containing the key parameter currently being generated;
+                            it's useful for interactive applications where a user is
+                            waiting for a key to be generated.
+         e : int
+                            Public RSA exponent. It must be an odd positive integer.
+
+                            It is typically a small number with very few ones in its
+                            binary representation.
+
+                            The default value 65537 (= ``0b10000000000000001`` ) is a safe
+                            choice: other common values are 5, 7, 17, and 257.
+
+        :attention: You should always use a cryptographically secure random number generator,
+            such as the one defined in the ``Crypto.Random`` module; **don't** just use the
+            current time and the ``random`` module.
+
+        :attention: Exponent 3 is also widely used, but it requires very special care when padding
+            the message.
+
+        :Raise ValueError:
+            When **bits** is too little or not a multiple of 256, or when
+            **e** is not odd or smaller than 2.
+        """
         if bits < 1024 or (bits & 0xff) != 0:
             # pubkey.getStrongPrime doesn't like anything that's not a multiple of 128 and > 512
             raise ValueError("RSA modulus length must be a multiple of 256 and >= 1024")
-        if e%2==0:
-            raise ValueError("RSA public exponent must be odd.")
+        if e%2==0 or e<3:
+            raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
         rf = self._get_randfunc(randfunc)
         obj = _RSA.generate_py(bits, rf, progress_func, e)    # TODO: Don't use legacy _RSA module
         key = self._math.rsa_construct(obj.n, obj.e, obj.d, obj.p, obj.q, obj.u)
         return _RSAobj(self, key)
 
     def construct(self, tup):
+        """Construct an RSA key object from a tuple of valid RSA components.
+
+        The modulus **n** must be the product of two primes.
+        The public exponent **e** must be odd and larger than 1.
+
+        In case of a private key, the following equations must apply:
+
+        - e != 1
+        - p*q = n
+        - e*d = 1 mod (p-1)(q-1)
+        - p*u = 1 mod q
+
+        :Parameters:
+         tup : tuple
+                    A tuple of long integers, with at least 2 and no
+                    more than 6 items. The items come in the following order:
+
+                    1. RSA modulus (n).
+                    2. Public exponent (e).
+                    3. Private exponent (d). Only required if the key is private.
+                    4. First factor of n (p). Optional.
+                    5. Second factor of n (q). Optional.
+                    6. CRT coefficient, (1/p) mod q (u). Optional.
+        """
         key = self._math.rsa_construct(*tup)
         return _RSAobj(self, key)
 
     def _importKeyDER(self, externKey):
+        """Import an RSA key (public or private half), encoded in DER form."""
         der = DerSequence()
         der.decode(externKey, True)
         if len(der)==9 and der.hasOnlyInts() and der[0]==0:
@@ -250,13 +355,16 @@ class RSAImplementation(object):
         raise ValueError("RSA key format is not supported")
 
     def importKey(self, externKey):
-        """Import an RSA key (public or private half).
+        """Import an RSA key (public or private half), encoded in standard form.
 
-        externKey:      the RSA key to import, encoded as a string.
-                        The key can be in DER (PKCS#1) or in unencrypted
-                        PEM format (RFC1421).
+        :Parameter externKey:
+            The RSA key to import, encoded as a string.
 
-        Raises a ValueError/IndexError if the given key cannot be parsed.
+            The key can be in DER (PKCS#1) or in unencrypted PEM format (RFC1421).
+        :Type externKey: string
+
+        :Raise ValueError/IndexError:
+            When the given key cannot be parsed.
         """
         if externKey.startswith('-----'):
                 # This is probably a PEM encoded key
@@ -269,8 +377,23 @@ class RSAImplementation(object):
         raise ValueError("RSA key format is not supported")
 
 _impl = RSAImplementation()
+#:
+#: Randomly generate a fresh, new RSA key object.
+#:
+#: See `RSAImplementation.generate`.
+#:
 generate = _impl.generate
+#:
+#: Construct an RSA key object from a tuple of valid RSA components.
+#:
+#: See `RSAImplementation.construct`.
+#:
 construct = _impl.construct
+#:
+#: Import an RSA key (public or private half), encoded in standard form.
+#:
+#: See `RSAImplementation.importKey`.
+#:
 importKey = _impl.importKey
 error = _impl.error
 
