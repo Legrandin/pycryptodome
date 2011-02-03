@@ -23,7 +23,7 @@
 A collection of standardized protocols to carry out digital signature.
 """
 
-__all__ = [ 'PKCS1_v1_5', 'PKCS1-PSS' ]
+__all__ = [ 'PKCS1_v1_5' ]
 __revision__ = "$Id$"
 
 

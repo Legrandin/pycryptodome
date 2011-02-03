@@ -36,7 +36,7 @@ Crypto.Util               Various useful modules and functions (long-to-string
                           theoretic functions)
 """
 
-__all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util']
+__all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util', 'Signature']
 
 __version__ = '2.3'     # See also below and setup.py
 __revision__ = "$Id$"
