@@ -22,16 +22,17 @@
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
-__all__ = [ 'DerObject', 'DerInteger', 'DerSequence' ]
+__all__ = [ 'DerObject', 'DerInteger', 'DerOctetStrin', 'DerNull', 'DerSequence' ]
 
 class DerObject:
         """Base class for defining a single DER object.
-        
+
         Instantiate this class ONLY when you have to decode a DER element.
         """
 
         # Known TAG types
-        typeTags = { 'SEQUENCE':'\x30', 'BIT STRING':'\x03', 'INTEGER':'\x02' }
+        typeTags = { 'SEQUENCE':'\x30', 'BIT STRING':'\x03', 'INTEGER':'\x02',
+                'OCTET STRING':'\x04', 'NULL':'\x05' }
 
         def __init__(self, ASN1Type=None):
                 """Initialize the DER object according to a specific type.
@@ -53,13 +54,13 @@ class DerObject:
 
         def encode(self):
                 """Return a complete DER element, fully encoded as a TLV."""
-                return self.typeTag + self._lengthOctets(len(self.payload)) + self.payload      
+                return self.typeTag + self._lengthOctets(len(self.payload)) + self.payload
 
         def _decodeLen(self, idx, str):
                 """Given a (part of a) DER element, and an index to the first byte of
                 a DER length tag (L), return a tuple with the payload size,
                 and the index of the first byte of the such payload (V).
-                
+
                 Raises a ValueError exception if the DER length is invalid.
                 Raises an IndexError exception if the DER element is too short.
                 """
@@ -74,7 +75,7 @@ class DerObject:
         def decode(self, derEle, noLeftOvers=0):
                 """Decode a complete DER element, and re-initializes this
                 object with it.
-                
+
                 @param derEle       A complete DER element. It must start with a DER T
                                     tag.
                 @param noLeftOvers  Indicate whether it is acceptable to complete the
@@ -100,7 +101,7 @@ class DerObject:
 class DerInteger(DerObject):
         def __init__(self, value = 0):
                 """Class to model an INTEGER DER element.
-            
+
                 Limitation: only non-negative values are supported.
                 """
                 DerObject.__init__(self, 'INTEGER')
@@ -116,14 +117,14 @@ class DerInteger(DerObject):
         def decode(self, derEle, noLeftOvers=0):
                 """Decode a complete INTEGER DER element, and re-initializes this
                 object with it.
-            
+
                 @param derEle       A complete INTEGER DER element. It must start with a DER
                                     INTEGER tag.
                 @param noLeftOvers  Indicate whether it is acceptable to complete the
                                     parsing of the DER element and find that not all
                                     bytes in derEle have been used.
                 @return             Index of the first unused byte in the given DER element.
-                
+
                 Raises a ValueError exception if the DER element is not a
                 valid non-negative INTEGER.
                 Raises an IndexError exception if the DER element is too short.
@@ -135,21 +136,24 @@ class DerInteger(DerObject):
                         raise ValueError ("Negative INTEGER.")
                 self.value = bytes_to_long(self.payload)
                 return tlvLength
-                                
+
 class DerSequence(DerObject):
         """Class to model a SEQUENCE DER element.
-        
+
         This object behave like a dynamic Python sequence.
         Sub-elements that are INTEGERs, look like Python integers.
         Any other sub-element is a binary string encoded as the complete DER
         sub-element (TLV).
         """
 
-        def __init__(self):
+        def __init__(self, startSeq=None):
                 """Initialize the SEQUENCE DER object. Always empty
                 initially."""
                 DerObject.__init__(self, 'SEQUENCE')
-                self._seq = []
+                if startSeq==None:
+                    self._seq = []
+                else:
+                    self._seq = startSeq
 
         ## A few methods to make it behave like a python sequence
 
@@ -158,7 +162,7 @@ class DerSequence(DerObject):
         def __getitem__(self, n):
                 return self._seq[n]
         def __setitem__(self, key, value):
-                self._seq[key] = value  
+                self._seq[key] = value
         def __setslice__(self,i,j,sequence):
                 self._seq[i:j] = sequence
         def __delslice__(self,i,j):
@@ -202,17 +206,17 @@ class DerSequence(DerObject):
         def decode(self, derEle, noLeftOvers=0):
                 """Decode a complete SEQUENCE DER element, and re-initializes this
                 object with it.
-             
+
                 @param derEle       A complete SEQUENCE DER element. It must start with a DER
                                     SEQUENCE tag.
                 @param noLeftOvers  Indicate whether it is acceptable to complete the
                                     parsing of the DER element and find that not all
                                     bytes in derEle have been used.
                 @return             Index of the first unused byte in the given DER element.
-        
+
                 DER INTEGERs are decoded into Python integers. Any other DER
                 element is not decoded. Its validity is not checked.
-            
+
                 Raises a ValueError exception if the DER element is not a
                 valid DER SEQUENCE.
                 Raises an IndexError exception if the DER element is too short.
@@ -238,4 +242,13 @@ class DerSequence(DerObject):
                 except IndexError:
                         raise ValueError("Not a valid DER SEQUENCE.")
                 return tlvLength
+
+class DerOctetString(DerObject):
+    def __init__(self, value = ''):
+        DerObject.__init__(self, 'OCTET STRING')
+        self.payload = value
+
+class DerNull(DerObject):
+    def __init__(self):
+        DerObject.__init__(self, 'NULL')
 
