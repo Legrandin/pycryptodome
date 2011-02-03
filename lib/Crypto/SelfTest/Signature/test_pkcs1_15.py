@@ -30,6 +30,8 @@ from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto.Hash import MD2,SHA
 from Crypto.Signature import PKCS1_v1_5 as PKCS
 
+from string import maketrans
+
 def isStr(s):
 	t = ''
 	try:
@@ -40,7 +42,7 @@ def isStr(s):
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
-    return t.translate(None,'\n\t ')
+    return t.translate(maketrans("",""),'\n\t ')
 
 def t2b(t):
     """Convert a text string with bytes in hex form to a byte string"""

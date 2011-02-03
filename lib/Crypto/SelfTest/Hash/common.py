@@ -79,7 +79,12 @@ class HashTestOID(unittest.TestCase):
     def runTest(self):
         h = self.hashmod.new()
         if self.oid==None:
-            self.assertRaises(AttributeError, lambda: h.oid)
+            try:
+                raised = 0
+                a = h.oid
+            except AttributeError:
+                raised = 1
+            self.assertEqual(raised,1)
         else:
             self.assertEqual(h.oid, self.oid)
 
