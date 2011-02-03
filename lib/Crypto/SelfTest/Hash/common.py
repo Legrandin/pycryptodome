@@ -70,6 +70,19 @@ class HashSelfTest(unittest.TestCase):
         self.assertEqual(self.expected, out3)   # h = .new(data); h.hexdigest()
         self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
 
+class HashTestOID(unittest.TestCase):
+    def __init__(self, hashmod, oid):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+        self.oid = oid
+
+    def runTest(self):
+        h = self.hashmod.new()
+        if self.oid==None:
+            self.assertRaises(AttributeError, lambda: h.oid)
+        else:
+            self.assertEqual(h.oid, self.oid)
+
 class MACSelfTest(unittest.TestCase):
 
     def __init__(self, hashmod, description, expected_dict, input, key, hashmods):
@@ -116,7 +129,7 @@ class MACSelfTest(unittest.TestCase):
             self.assertEqual(expected, out4)
             self.assertEqual(expected, out5)
 
-def make_hash_tests(module, module_name, test_data):
+def make_hash_tests(module, module_name, test_data, oid=None):
     tests = []
     for i in range(len(test_data)):
         row = test_data[i]
@@ -127,6 +140,7 @@ def make_hash_tests(module, module_name, test_data):
             (expected, input, description) = row
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input))
+    tests.append(HashTestOID(module, oid))
     return tests
 
 def make_mac_tests(module, module_name, test_data, hashmods):

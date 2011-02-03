@@ -72,7 +72,7 @@ def get_tests(config={}):
 
     from Crypto.Hash import SHA256
     from common import make_hash_tests
-    tests = make_hash_tests(SHA256, "SHA256", test_data)
+    tests = make_hash_tests(SHA256, "SHA256", test_data, "\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01")
 
     if config.get('slow_tests'):
         tests += [LargeSHA256Test()]

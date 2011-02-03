@@ -50,7 +50,7 @@ test_data = [
 def get_tests(config={}):
     from Crypto.Hash import MD2
     from common import make_hash_tests
-    return make_hash_tests(MD2, "MD2", test_data)
+    return make_hash_tests(MD2, "MD2", test_data, "\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x02")
 
 if __name__ == '__main__':
     import unittest

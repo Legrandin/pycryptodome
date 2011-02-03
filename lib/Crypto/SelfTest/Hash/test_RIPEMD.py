@@ -59,7 +59,7 @@ test_data = [
 def get_tests(config={}):
     from Crypto.Hash import RIPEMD
     from common import make_hash_tests
-    return make_hash_tests(RIPEMD, "RIPEMD", test_data)
+    return make_hash_tests(RIPEMD, "RIPEMD", test_data, "\x06\x05\x2b\x24\x03\02\x01")
 
 if __name__ == '__main__':
     import unittest
