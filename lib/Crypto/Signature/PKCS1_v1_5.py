@@ -61,6 +61,8 @@ def sign(mhash, key):
     :Raise ValueError:
         If the RSA key length is not sufficiently long to deal with the given
         hash algorithm.
+    :Raise TypeError:
+        If the RSA key has no private half.
     """
     # TODO: Verify the key is RSA
 
@@ -111,6 +113,9 @@ def verify(mhash, key, S):
 
     # See 8.2.2 in RFC3447
     k = ceil_shift(key.size(),3) # Convert from bits to bytes
+    # Step 1
+    if len(S) != k:
+        return 0
     # Step 2a (O2SIP) and 2b (RSAVP1)
     # Note that signature must be smaller than the module
     # but RSA.py won't complain about it.
