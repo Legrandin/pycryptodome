@@ -24,19 +24,30 @@ __revision__ = "$Id$"
 
 __all__ = ['new', 'digest_size']
 
+from Crypto.Util.wrapper import Wrapper
+
+# The OID for MD5 is:
+#
+# id-md5      OBJECT IDENTIFIER ::= {
+#       iso(1) member-body(2) us(840) rsadsi(113549)
+#       digestAlgorithm(2) 5
+#         }
+oid = '\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05'
+
+def new(data=""):
+    obj = Wrapper(hashFactory, data)
+    obj.oid = oid
+    return obj
+
 try:
     # The md5 module is deprecated in Python 2.6, so use hashlib when possible.
     import hashlib
-    def new(data=""):
-        return hashlib.md5(data)
+    hashFactory = hashlib.md5
     digest_size = new().digest_size
 
 except ImportError:
-    from md5 import *
-
     import md5
+    hashFactory = md5
     if hasattr(md5, 'digestsize'):
-        digest_size = digestsize
-        del digestsize
-    del md5
+        digest_size = md5.digestsize
 

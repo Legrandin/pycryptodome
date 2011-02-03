@@ -35,6 +35,19 @@
 #define MODULE_NAME SHA256
 #define DIGEST_SIZE 32
 
+/**
+ * id-sha256    OBJECT IDENTIFIER ::= {
+ * 			joint-iso-itu-t(2) country(16) us(840) organization(1)
+ * 			gov(101) csor(3) nistalgorithm(4) hashalgs(2) 1
+ * 			}
+ */
+static const char sha256_oid[] = {
+	0x06, 0x09, 0x60, 0x86, 0x48,
+	0x01, 0x65, 0x03, 0x04, 0x02, 0x01 };
+
+#define DER_OID 		((void*)&sha256_oid)
+#define DER_OID_SIZE		(sizeof sha256_oid)
+
 typedef unsigned char U8;
 #ifdef __alpha__
 typedef    unsigned int        U32;

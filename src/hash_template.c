@@ -166,12 +166,18 @@ static PyMethodDef ALG_methods[] = {
 	{NULL,			NULL}		/* sentinel */
 };
 
+#ifndef DER_OID
+#define DER_OID 	""
+#define DER_OID_SIZE 	0
+#endif
+
 static PyObject *
 ALG_getattr(PyObject *self, char *name)
 {
 	if (strcmp(name, "digest_size")==0)
 		return PyInt_FromLong(DIGEST_SIZE);
-	
+	if (strcmp(name, "oid")==0)
+		return PyString_FromStringAndSize(DER_OID, DER_OID_SIZE);
 	return Py_FindMethod(ALG_methods, self, name);
 }
 
