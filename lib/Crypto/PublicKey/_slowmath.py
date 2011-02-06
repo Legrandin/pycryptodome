@@ -49,7 +49,7 @@ class _RSAKey(object):
         if not self.has_private():
             raise TypeError("No private key")
         if (hasattr(self,'p') and hasattr(self,'q') and hasattr(self,'u')):
-            m1 = pow(c, self.d % (self.p-1), self.p) 
+            m1 = pow(c, self.d % (self.p-1), self.p)
             m2 = pow(c, self.d % (self.q-1), self.q)
             h = m2 - m1
             if (h<0):
@@ -111,7 +111,7 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
         # as Factorization", M. Rabin, 1979
         spotted = 0
         a = 2
-        while not spotted and a<n:
+        while not spotted and a<100:
             k = t
             # Cycle through all values a^{t*2^i}=a^k
             while k<ktot:
@@ -126,6 +126,8 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
                 k = k*2
             # This value was not any good... let's try another!
             a = a+2
+        if not spotted:
+            raise ValueError("Unable to compute factors p and q from exponent d.")
         # Found !
         assert ((n % obj.p)==0)
         obj.q = n/obj.p

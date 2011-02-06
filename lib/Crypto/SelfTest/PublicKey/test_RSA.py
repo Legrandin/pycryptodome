@@ -166,6 +166,14 @@ class RSATest(unittest.TestCase):
         self._check_signing(rsaObj)
         self._check_verification(rsaObj)
 
+    def test_factoring(self):
+        rsaObj = self.rsa.construct([self.n, self.e, self.d])
+        self.failUnless(rsaObj.p==self.p or rsaObj.p==self.q)
+        self.failUnless(rsaObj.q==self.p or rsaObj.q==self.q)
+        self.failUnless(rsaObj.q*rsaObj.p == self.n)
+
+        self.assertRaises(ValueError, self.rsa.construct, [self.n, self.e, self.n-1])
+
     def _check_private_key(self, rsaObj):
         # Check capabilities
         self.assertEqual(1, rsaObj.has_private())
@@ -337,6 +345,9 @@ class RSAFastMathTest(RSATest):
         """RSA (_fastmath implementation) constructed key (6-tuple)"""
         RSATest.test_construct_6tuple(self)
 
+    def test_factoring(self):
+        RSATest.test_factoring(self)
+
 class RSASlowMathTest(RSATest):
     def setUp(self):
         RSATest.setUp(self)
@@ -370,6 +381,8 @@ class RSASlowMathTest(RSATest):
         """RSA (_slowmath implementation) constructed key (6-tuple)"""
         RSATest.test_construct_6tuple(self)
 
+    def test_factoring(self):
+        RSATest.test_factoring(self)
 
 def get_tests(config={}):
     tests = []
@@ -379,7 +392,7 @@ def get_tests(config={}):
         tests += list_test_cases(RSAFastMathTest)
     except ImportError:
         pass
-    if config.get('slow_tests',1): 
+    if config.get('slow_tests',1):
         tests += list_test_cases(RSASlowMathTest)
     return tests
 

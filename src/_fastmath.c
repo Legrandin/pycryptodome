@@ -502,8 +502,9 @@ dsaKey_has_private (dsaKey * key, PyObject * args)
 
 /**
  * Compute key->p and key->q from the key with private exponent only.
+ * Return 0 if factoring was succesful, 1 otherwise.
  */
-static void factorize_N_from_D(rsaKey *key)
+static int factorize_N_from_D(rsaKey *key)
 {
 	mpz_t ktot, t, a, k, cand, nminus1, cand2;
 	unsigned long cnt;
@@ -526,7 +527,7 @@ static void factorize_N_from_D(rsaKey *key)
 	cnt = mpz_scan1(t, 0);
 	mpz_fdiv_q_2exp(t,t,cnt);
 	mpz_set_ui(a, 2);
-	for (spotted=0; !spotted; mpz_add_ui(a,a,2)) {
+	for (spotted=0; (!spotted) && (mpz_cmp_ui(a,100)<0); mpz_add_ui(a,a,2)) {
 		mpz_set(k, t);
 		for (; (mpz_cmp(k,ktot)<0); mpz_mul_ui(k,k,2)) {
 			mpz_powm(cand,a,k,key->n);
@@ -541,7 +542,8 @@ static void factorize_N_from_D(rsaKey *key)
 			}
 		}
 	}
-	mpz_divexact(key->q, key->n, key->p);
+	if (spotted)
+		mpz_divexact(key->q, key->n, key->p);
 
 	mpz_clear(ktot);
 	mpz_clear(t);
@@ -550,6 +552,8 @@ static void factorize_N_from_D(rsaKey *key)
 	mpz_clear(cand);
 	mpz_clear(nminus1);
 	mpz_clear(cand2);
+
+	return (spotted?0:1);
 }
 
 static PyObject *
@@ -584,7 +588,12 @@ rsaKey_new (PyObject * self, PyObject * args)
 		longObjToMPZ (key->p, p);
 		longObjToMPZ (key->q, q);
 	} else {
-		factorize_N_from_D(key);
+		if (factorize_N_from_D(key))
+		{
+			PyErr_SetString(PyExc_ValueError,
+			  "Unable to compute factors p and q from exponent d.");
+			return NULL;
+		}
 	}
 	if (u) {
 		longObjToMPZ (key->u, u);
