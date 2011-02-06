@@ -33,12 +33,12 @@ from Crypto.Signature import PKCS1_v1_5 as PKCS
 from string import maketrans
 
 def isStr(s):
-	t = ''
-	try:
-		t += s
-	except TypeError:
-		return 0
-	return 1
+        t = ''
+        try:
+                t += s
+        except TypeError:
+                return 0
+        return 1
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
@@ -53,24 +53,24 @@ def t2b(t):
 
 class PKCS1_15_Tests(unittest.TestCase):
 
-	# List of tuples with test data for PKCS#1 v1.5.
-	# Each tuple is made up by:
-	# 	Item #0: dictionary with RSA key component, or key to import
-	# 	Item #1: data to hash and sign
-	# 	Item #2: signature of the data #1, done with the key #0, after
-        # 	         hashing it with #3
-	# 	Item #3: hash object generator
+        # List of tuples with test data for PKCS#1 v1.5.
+        # Each tuple is made up by:
+        #       Item #0: dictionary with RSA key component, or key to import
+        #       Item #1: data to hash and sign
+        #       Item #2: signature of the data #1, done with the key #0, after
+        #                hashing it with #3
+        #       Item #3: hash object generator
 
-	_testData = (
+        _testData = (
 
-		#
-		# Taken from ftp://ftp.rsa.com/pub/pkcs/ascii/examples.asc
-		# "Some Examples of the PKCS Standards", 1999
-    		#
-		(
+                #
+                # Taken from ftp://ftp.rsa.com/pub/pkcs/ascii/examples.asc
+                # "Some Examples of the PKCS Standards", 1999
+                #
+                (
 
                 # Private key, from 2.1
-		{
+                {
                 'n':'''0a 66 79 1d c6 98 81 68 de 7a b7 74 19 bb 7f b0 c0 01 c6
                     27 10 27 00 75 14 29 42 e1 9a 8d 8c 51 d0 53 b3 e3 78 2a 1d
                     e5 dc 5a f4 eb e9 94 68 17 01 14 a1 df e6 7c dc 9a 9a f5 5d
@@ -81,49 +81,49 @@ class PKCS1_15_Tests(unittest.TestCase):
                     b9 12 2e 14 00 c0 9a dc f7 78 46 76 d0 1d 23 35 6a 7d 44 d6
                     bd 8b d5 0e 94 bf c7 23 fa 87 d8 86 2b 75 17 76 91 c1 1d 75
                     76 92 df 88 81'''
-		},
+                },
                 # Data to sign, from 3.1
-		'''30 81 a4 02 01 00 30 42 31 0b 30 09 06
-		03 55 04 06 13 02 55 53 31 1d 30 1b 06 03 55 04 0a 13 14
-		45 78 61 6d 70 6c 65 20 4f 72 67 61 6e 69 7a 61 74 69 6f
-		6e 31 14 30 12 06 03 55 04 03 13 0b 54 65 73 74 20 55 73
-		65 72 20 31 30 5b 30 0d 06 09 2a 86 48 86 f7 0d 01 01 01
-		05 00 03 4a 00 30 47 02 40
-		0a 66 79 1d c6 98 81 68 de 7a b7 74 19 bb 7f b0
-		c0 01 c6 27 10 27 00 75 14 29 42 e1 9a 8d 8c 51
-		d0 53 b3 e3 78 2a 1d e5 dc 5a f4 eb e9 94 68 17
-		01 14 a1 df e6 7c dc 9a 9a f5 5d 65 56 20 bb ab
-		02 03 01 00 01''',
+                '''30 81 a4 02 01 00 30 42 31 0b 30 09 06
+                03 55 04 06 13 02 55 53 31 1d 30 1b 06 03 55 04 0a 13 14
+                45 78 61 6d 70 6c 65 20 4f 72 67 61 6e 69 7a 61 74 69 6f
+                6e 31 14 30 12 06 03 55 04 03 13 0b 54 65 73 74 20 55 73
+                65 72 20 31 30 5b 30 0d 06 09 2a 86 48 86 f7 0d 01 01 01
+                05 00 03 4a 00 30 47 02 40
+                0a 66 79 1d c6 98 81 68 de 7a b7 74 19 bb 7f b0
+                c0 01 c6 27 10 27 00 75 14 29 42 e1 9a 8d 8c 51
+                d0 53 b3 e3 78 2a 1d e5 dc 5a f4 eb e9 94 68 17
+                01 14 a1 df e6 7c dc 9a 9a f5 5d 65 56 20 bb ab
+                02 03 01 00 01''',
                 # Signature, from 3.2 (at the very end)
-		'''06 db 36 cb 18 d3 47 5b 9c 01 db 3c 78 95 28 08
-		02 79 bb ae ff 2b 7d 55 8e d6 61 59 87 c8 51 86
-		3f 8a 6c 2c ff bc 89 c3 f7 5a 18 d9 6b 12 7c 71
-		7d 54 d0 d8 04 8d a8 a0 54 46 26 d1 7a 2a 8f be''',
-		MD2
-		),
+                '''06 db 36 cb 18 d3 47 5b 9c 01 db 3c 78 95 28 08
+                02 79 bb ae ff 2b 7d 55 8e d6 61 59 87 c8 51 86
+                3f 8a 6c 2c ff bc 89 c3 f7 5a 18 d9 6b 12 7c 71
+                7d 54 d0 d8 04 8d a8 a0 54 46 26 d1 7a 2a 8f be''',
+                MD2
+                ),
 
-		#
-		# RSA keypair generated with openssl
-		#
-    		(
-    		"""-----BEGIN RSA PRIVATE KEY-----
-		MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
-		q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
-		Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
-		OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
-		+rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
-		JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
-		n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
-		-----END RSA PRIVATE KEY-----""",
-    		"This is a test\x0a",
+                #
+                # RSA keypair generated with openssl
+                #
+                (
+                """-----BEGIN RSA PRIVATE KEY-----
+                MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
+                q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
+                Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
+                OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
+                +rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
+                JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
+                n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
+                -----END RSA PRIVATE KEY-----""",
+                "This is a test\x0a",
                 #
                 # PKCS#1 signature computed with openssl
                 #
                 '''4a700a16432a291a3194646952687d5316458b8b86fb0a25aa30e0dcecdb
-		442676759ac63d56ec1499c3ae4c0013c2053cabd5b5804848994541ac16
-		fa243a4d''',
-    		SHA
-    		),
+                442676759ac63d56ec1499c3ae4c0013c2053cabd5b5804848994541ac16
+                fa243a4d''',
+                SHA
+                ),
 
                 #
                 # Test vector from http://www.di-mgt.com.au/rsa_alg.html#signpkcs1
@@ -150,33 +150,33 @@ class PKCS1_15_Tests(unittest.TestCase):
 
         )
 
-	def testSign1(self):
-		for i in range(len(self._testData)):
+        def testSign1(self):
+                for i in range(len(self._testData)):
                         # Build the key
-            		if isStr(self._testData[i][0]):
-				key = RSA.importKey(self._testData[i][0])
-            		else:
+                        if isStr(self._testData[i][0]):
+                                key = RSA.importKey(self._testData[i][0])
+                        else:
                                 comps = [ long(rws(self._testData[i][0][x]),16) for x in ('n','e','d') ]
-				key = RSA.construct(comps)
-			h = self._testData[i][3].new()
+                                key = RSA.construct(comps)
+                        h = self._testData[i][3].new()
                         # Data to sign can either be in hex form or not
                         try:
-			    h.update(t2b(self._testData[i][1]))
+                            h.update(t2b(self._testData[i][1]))
                         except:
                             h.update(self._testData[i][1])
                         # The real test
                         s = PKCS.sign(h, key)
-			self.assertEqual(s, t2b(self._testData[i][2]))
+                        self.assertEqual(s, t2b(self._testData[i][2]))
 
-	def testVerify1(self):
-		for i in range(len(self._testData)):
+        def testVerify1(self):
+                for i in range(len(self._testData)):
                         # Build the key
-            		if isStr(self._testData[i][0]):
-                		key = RSA.importKey(self._testData[i][0])
-            		else:
+                        if isStr(self._testData[i][0]):
+                                key = RSA.importKey(self._testData[i][0])
+                        else:
                                 comps = [ long(rws(self._testData[i][0][x]),16) for x in ('n','e') ]
                                 key = RSA.construct(comps)
-			h = self._testData[i][3].new()
+                        h = self._testData[i][3].new()
                         # Data to sign can either be in hex form or not
                         try:
                             h.update(t2b(self._testData[i][1]))
