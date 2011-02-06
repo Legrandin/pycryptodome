@@ -37,6 +37,7 @@ oid = '\x06\x05\x2b\x0e\x03\x02\x1a'
 def new(data=""):
     obj = Wrapper(hashFactory, data)
     obj.oid = oid
+    obj.new = globals()['new']
     return obj
 
 try:
