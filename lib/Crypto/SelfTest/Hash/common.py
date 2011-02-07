@@ -70,6 +70,12 @@ class HashSelfTest(unittest.TestCase):
         self.assertEqual(self.expected, out3)   # h = .new(data); h.hexdigest()
         self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
 
+        # Verify that new() object method produces a fresh hash object
+        h2 = h.new()
+        h2.update(self.input)
+        out5 = binascii.b2a_hex(h2.digest())
+        self.assertEqual(self.expected, out5)
+
 class HashTestOID(unittest.TestCase):
     def __init__(self, hashmod, oid):
         unittest.TestCase.__init__(self)

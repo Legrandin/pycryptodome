@@ -157,12 +157,17 @@ ALG_update(ALGobject *self, PyObject *args)
 	return Py_None;
 }
 
+/** Forward declaration for this module's new() method **/
+static char ALG_new__doc__[];
+static PyObject *ALG_new(PyObject*, PyObject*);
+
 static PyMethodDef ALG_methods[] = {
 	{"copy", (PyCFunction)ALG_copy, METH_VARARGS, ALG_copy__doc__},
 	{"digest", (PyCFunction)ALG_digest, METH_VARARGS, ALG_digest__doc__},
 	{"hexdigest", (PyCFunction)ALG_hexdigest, METH_VARARGS, 
 	 ALG_hexdigest__doc__},
 	{"update", (PyCFunction)ALG_update, METH_VARARGS, ALG_update__doc__},
+	{"new", (PyCFunction)ALG_new, METH_VARARGS, ALG_new__doc__},
 	{NULL,			NULL}		/* sentinel */
 };
 
@@ -206,6 +211,7 @@ static char ALG_new__doc__[] =
 "argument may be provided; if present, this string will be "
 "automatically hashed into the initial state of the object."; 
 
+/** This method belong to both the module and the hash object **/
 static PyObject *
 ALG_new(PyObject *self, PyObject *args)
 {
