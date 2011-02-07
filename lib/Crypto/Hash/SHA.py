@@ -38,17 +38,17 @@ def new(data=""):
     obj = Wrapper(hashFactory, data)
     obj.oid = oid
     obj.new = globals()['new']
+    if not hasattr(obj, 'digest_size'):
+        obj.digest_size = digest_size
     return obj
 
 try:
     # The sha module is deprecated in Python 2.6, so use hashlib when possible.
     import hashlib
     hashFactory = hashlib.sha1
-    digest_size = new().digest_size
 
 except ImportError:
     import sha
     hashFactory = sha
-    if hasattr(sha, 'digestsize'):
-        digest_size = sha.digestsize
 
+digest_size = 20

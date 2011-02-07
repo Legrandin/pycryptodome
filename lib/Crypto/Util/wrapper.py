@@ -40,5 +40,7 @@ class Wrapper:
                 try:
                         return getattr(getattr(self,'_wrapped'),name)
                 except AttributeError:
-                        return getattr(self,name)
+                        if hasattr(self, name):
+                            return getattr(self,name)
+                        raise
 

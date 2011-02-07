@@ -38,17 +38,17 @@ def new(data=""):
     obj = Wrapper(hashFactory, data)
     obj.oid = oid
     obj.new = globals()['new']
+    if not hasattr(obj, 'digest_size'):
+        obj.digest_size = digest_size
     return obj
 
 try:
     # The md5 module is deprecated in Python 2.6, so use hashlib when possible.
     import hashlib
     hashFactory = hashlib.md5
-    digest_size = new().digest_size
 
 except ImportError:
     import md5
     hashFactory = md5
-    if hasattr(md5, 'digestsize'):
-        digest_size = md5.digestsize
 
+digest_size = 16
