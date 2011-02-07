@@ -25,9 +25,9 @@ __revision__ = "$Id$"
 import unittest
 
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.st_common import *
+from Crypto import Random
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
-from Crypto.Hash import SHA as SHA1
+from Crypto.Hash import MD2,MD5,SHA as SHA1,SHA256,RIPEMD
 from Crypto.Signature import PKCS1_PSS as PKCS
 
 from string import maketrans
@@ -349,6 +349,62 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         # The real test
                         result = PKCS.verify(h, key, t2b(self._testData[i][2]))
                         self.failUnless(result)
+
+        def testSignVerify(self):
+                        rng = Random.new().read
+                        key = RSA.generate(1024, rng)
+
+                        h = SHA1.new()
+                        h.update('blah blah blah')
+
+                        # Helper function to monitor what's request from RNG
+                        global asked, mgfcalls
+                        def localRng(N):
+                            global asked
+                            asked += N
+                            return rng(N)
+                        # Helper function to monitor what's request from MGF
+                        def newMGF(seed,maskLen):
+                            global mgfcalls
+                            mgfcalls += 1
+                            return '\x00'*maskLen
+
+                        # Verify that PSS is friendly to all ciphers
+                        for hashmod in (MD2,MD5,SHA1,SHA256,RIPEMD):
+                            h = hashmod.new()
+                            h.update('blah blah blah')
+
+                            # Verify that sign() asks for as many random bytes
+                            # as the hash output size
+                            asked = 0
+                            s = PKCS.sign(h, key, localRng)
+                            self.failUnless(PKCS.verify(h, key, s))
+                            self.assertEqual(asked, h.digest_size)
+
+                        h = SHA1.new()
+                        h.update('blah blah blah')
+
+                        # Verify that sign() uses a different salt length
+                        for sLen in (0,3,21):
+                            asked = 0
+                            s = PKCS.sign(h, key, localRng, saltLen=sLen)
+                            self.assertEqual(asked, sLen)
+                            self.failUnless(PKCS.verify(h, key, s, saltLen=sLen))
+
+                        # Verify that sign() uses the custom MGF
+                        mgfcalls = 0
+                        s = PKCS.sign(h, key, rng, newMGF)
+                        self.assertEqual(mgfcalls, 1)
+                        self.failUnless(PKCS.verify(h, key, s, newMGF))
+
+                        # Verify that sign() does not call the RNG
+                        # when salt length is 0, even when a new MGF is provided
+                        asked = 0
+                        mgfcalls = 0
+                        s = PKCS.sign(h, key, localRng, newMGF, 0)
+                        self.assertEqual(asked,0)
+                        self.assertEqual(mgfcalls, 1)
+                        self.failUnless(PKCS.verify(h, key, s, newMGF, 0))
 
 def get_tests(config={}):
     tests = []

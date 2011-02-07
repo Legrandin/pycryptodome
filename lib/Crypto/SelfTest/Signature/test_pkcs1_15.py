@@ -25,9 +25,9 @@ __revision__ = "$Id$"
 import unittest
 
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.st_common import *
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
-from Crypto.Hash import MD2,SHA
+from Crypto.Hash import MD2,MD5,SHA,SHA256,RIPEMD
+from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5 as PKCS
 
 from string import maketrans
@@ -185,6 +185,19 @@ class PKCS1_15_Tests(unittest.TestCase):
                         # The real test
                         result = PKCS.verify(h, key, t2b(self._testData[i][2]))
                         self.failUnless(result)
+
+        def testSignVerify(self):
+                        rng = Random.new().read
+                        key = RSA.generate(1024, rng)
+
+                        for hashmod in (MD2,MD5,SHA,SHA256,RIPEMD):
+                            h = hashmod.new()
+                            h.update('blah blah blah')
+
+                            s = PKCS.sign(h, key)
+                            result = PKCS.verify(h, key, s)
+                            self.failUnless(result)
+
 
 def get_tests(config={}):
     tests = []
