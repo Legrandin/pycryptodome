@@ -20,36 +20,38 @@
 # SOFTWARE.
 # ===================================================================
 
-"""RSA digital signature protocol with appendix according to PKCS#1 PSS
+"""RSA digital signature protocol with appendix according to PKCS#1 PSS.
 
 See RFC3447 or the original RSA Labs specification at
 http://www.rsa.com/rsalabs/node.asp?id=2125.
 
 This scheme is more properly called ``RSASSA-PSS``.
 
-Example for signing and verifying a certain message:
-.. python::
-    import Crypto.Signature.PKCS1_PSS as PKCS
-    import Crypto.Hash.SHA as SHA1
-    import Crypto.PublicKey.RSA as RSA
-    from Crypto import Random
+For example, a sender may authenticate a message using SHA-1 and PSS like
+this:
 
-    message = 'To be signed'
-    rng = Random.new().read
-    key = RSA.importKey('privkey.der')
-    h = SHA1.new()
-    h.update(message)
-    signature = PKCS.sign(h, key, rng)
+    >>> from Crypto.Signature import PKCS1_PSS
+    >>> from Crypto.Hash import SHA
+    >>> from Crypto.PublicKey import RSA
+    >>> from Crypto import Random
+    >>>
+    >>> message = 'To be signed'
+    >>> rng = Random.new().read
+    >>> key = RSA.importKey('privkey.der')
+    >>> h = SHA.new()
+    >>> h.update(message)
+    >>> signature = PKCS1_PSS.sign(h, key, rng)
 
-    [ ... ]
+At the receiver side, verification can be done like using the public part of
+the RSA key:
 
-    key = RSA.importKey('pubkey.der')
-    h = SHA1.new()
-    h.update(message)
-    if PKCS.verify(h, key, signature):
-        print "The signature is authentic."
-    else:
-        print "The signature is not authentic."
+    >>> key = RSA.importKey('pubkey.der')
+    >>> h = SHA.new()
+    >>> h.update(message)
+    >>> if PKCS1_PSS.verify(h, key, signature):
+    >>>     print "The signature is authentic."
+    >>> else:
+    >>>     print "The signature is not authentic."
 
 """
 
@@ -58,12 +60,13 @@ __all__ = [ 'sign', 'verify' ]
 
 import Crypto.Util.number
 from Crypto.Util.number import ceil_shift, ceil_div, long_to_bytes
+from Crypto.Util.strxor import strxor
 
 def sign(mhash, key, randfunc, mgfunc=None, saltLen=None):
     """Produce the PKCS#1 PSS signature of a message.
 
-    This function is called RSASSA-PSS-SIGN, and is described at
-    8.1.1 of RFC3447.
+    This function is named ``RSASSA-PSS-SIGN``, and is specified in
+    section 8.1.1 of RFC3447.
 
     :Parameters:
      mhash : hash object
@@ -74,19 +77,17 @@ def sign(mhash, key, randfunc, mgfunc=None, saltLen=None):
             object and must have its private half.
      randfunc : callable
             An RNG function that accepts as only parameter an int, and returns
-            a string of random bytes, to be used as salt. By default, the salt
-            is as large as the output of the hash. This parameter is ignored
-            if salt length is zero.
+            a string of random bytes, to be used as salt.
+            This parameter is ignored if salt length is zero.
      mgfunc : callable
             A mask generation function that accepts two parameters: a string to
             use as seed, and the lenth of the mask to generate, in bytes.
-            By default, MGF1 is used. This parameter is ignored if salt length
-            is zero.
+            If not specified, the standard MGF1 is used.
      saltLen : int
-            Length of the salt, in bytes. By default, it matches the output
+            Length of the salt, in bytes. If not specified, it matches the output
             size of `mhash`.
 
-    :Return: The signature encodeds as a string.
+    :Return: The PSS signature encoded as a string.
     :Raise ValueError:
         If the RSA key length is not sufficiently long to deal with the given
         hash algorithm.
@@ -94,7 +95,8 @@ def sign(mhash, key, randfunc, mgfunc=None, saltLen=None):
         If the RSA key has no private half.
 
     :attention: Modify the salt length and the mask generation function only
-    if you know what you are doing. The receiver must use the same parameters too.
+                if you know what you are doing.
+                The receiver must use the same parameters too.
     """
     # TODO: Verify the key is RSA
 
@@ -121,12 +123,12 @@ def sign(mhash, key, randfunc, mgfunc=None, saltLen=None):
     return S
 
 def verify(mhash, key, S, mgfunc=None, saltLen=None):
-    """Verify that a PKCS#1 signature is authentic.
+    """Verify that a certain PKCS#1 PSS signature is authentic.
 
-    This function verifies if the party holding the private half of the key
-    really signed the message with the given hash.
+    This function checks if the party holding the private half of the given
+    RSA key has really signed the message.
 
-    This function is called RSASSA-PSS-VERIFY, and is described at
+    This function is called ``RSASSA-PSS-VERIFY``, and is specified in section
     8.1.2 of RFC3447.
 
     :Parameters:
@@ -138,6 +140,14 @@ def verify(mhash, key, S, mgfunc=None, saltLen=None):
             object.
      S : string
             The signature that needs to be validated.
+     mgfunc : callable
+            A mask generation function that accepts two parameters: a string to
+            use as seed, and the lenth of the mask to generate, in bytes.
+            If not specified, the standard MGF1 is used. The sender must have
+            used the same function.
+     saltLen : int
+            Length of the salt, in bytes. If not specified, it matches the output
+            size of `mhash`.
 
     :Return: True if verification is correct. False otherwise.
     """
@@ -176,9 +186,6 @@ def verify(mhash, key, S, mgfunc=None, saltLen=None):
     # Step 4
     return result
 
-def strxor(s1,s2):
-    return ''.join([chr(ord(a) ^ ord(b)) for a,b in zip(s1,s2)])
-
 def MGF1(mgfSeed, maskLen, hash):
     """Mask Generation Function, described in B.2.1"""
     T = ""
@@ -190,10 +197,10 @@ def MGF1(mgfSeed, maskLen, hash):
 
 def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
     """
-    Implement the EMSA-PSS-ENCODE function, as defined
+    Implement the ``EMSA-PSS-ENCODE`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.1.1).
 
-    The original EMSA-PSS-ENCODE actually accepts the message M as input,
+    The original ``EMSA-PSS-ENCODE`` actually accepts the message ``M`` as input,
     and hash it internally. Here, we expect that the message has already
     been hashed instead.
 
@@ -211,8 +218,8 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
      sLen : int
             Length of the salt, in bytes.
 
-    :Return: An emLen byte long string that encodes the hash
-    (with emLen = \ceil(emBits/8)).
+    :Return: An ``emLen`` byte long string that encodes the hash
+            (with ``emLen = \ceil(emBits/8)``).
 
     :Raise ValueError:
         When digest or salt length are too big.
@@ -249,10 +256,10 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
 
 def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     """
-    Implement the EMSA-PSS-VERIFY function, as defined
+    Implement the ``EMSA-PSS-VERIFY`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.1.2).
 
-    EMSA-PSS-VERIFY actually accepts the message M as input,
+    ``EMSA-PSS-VERIFY`` actually accepts the message ``M`` as input,
     and hash it internally. Here, we expect that the message has already
     been hashed instead.
 

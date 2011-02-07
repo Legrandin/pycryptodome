@@ -25,6 +25,31 @@
 See RFC3447 or the original RSA Labs specification at
 http://www.rsa.com/rsalabs/node.asp?id=2125.
 
+This scheme is more properly called ``RSASSA-PKCS1-v1_5``.
+
+For example, a sender may authenticate a message using SHA-1 like
+this:
+
+        >>> from Crypto.Signature import PKCS1_v1_5
+        >>> from Crypto.Hash import SHA
+        >>> from Crypto.PublicKey import RSA
+        >>>
+        >>> message = 'To be signed'
+        >>> key = RSA.importKey('key.der')
+        >>> h = SHA.new()
+        >>> h.update(message)
+        >>>> signature = PKCS1_v1_5.sign(h, key)
+
+At the receiver side, verification can be done using the public part of
+the RSA key:
+
+        >>> key = RSA.importKey('pubkey.der')
+        >>> h = SHA.new()
+        >>> h.update(message)
+        >>> if PKCS.verify(h, key, signature):
+        >>>    print "The signature is authentic."
+        >>> else:
+        >>>    print "The signature is not authentic."
 """
 
 __revision__ = "$Id$"
@@ -36,18 +61,8 @@ from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString
 def sign(mhash, key):
     """Produce the PKCS#1 v1.5 signature of a message.
 
-    A typical usage is the following:
-
-    .. python::
-        import Crypto.Signature.PKCS1_v1_5 as PKCS
-        import Crypto.Hash.SHA as SHA1
-        import Crypto.PublicKey.RSA as RSA
-
-        message = 'To be signed'
-        key = RSA.importKey('key.der')
-        h = SHA1.new()
-        h.update(message)
-        signature = PKCS.sign(h, key)
+    This function is named ``RSASSA-PKCS1-V1_5-SIGN``, and is specified in
+    section 8.2.1 of RFC3447.
 
     :Parameters:
      mhash : hash object
@@ -57,7 +72,7 @@ def sign(mhash, key):
             The key to use to sign the message. This is a `Crypto.PublicKey.RSA`
             object and must have its private half.
 
-    :Return: The signature encodeds as a string.
+    :Return: The signature encoded as a string.
     :Raise ValueError:
         If the RSA key length is not sufficiently long to deal with the given
         hash algorithm.
@@ -77,25 +92,13 @@ def sign(mhash, key):
     return S
 
 def verify(mhash, key, S):
-    """Verify that a PKCS#1 signature is authentic.
+    """Verify that a certain PKCS#1 v1.5 signature is authentic.
 
-    This function verifies if the party holding the private half of the key
-    really signed the message with the given hash.
+    This function checks if the party holding the private half of the key
+    really signed the message.
 
-    Typical usage is the following:
-
-    .. python::
-        import Crypto.Signature.PKCS1_v1_5 as PKCS
-        import Crypto.Hash.SHA as SHA1
-        import Crypto.PublicKey.RSA as RSA
-
-        key = RSA.importKey('pubkey.der')
-        h = SHA1.new()
-        h.update(message)
-        if PKCS.verify(h, key, signature):
-            print "The signature is authentic."
-        else:
-            print "The signature is not authentic."
+    This function is named ``RSASSA-PKCS1-V1_5-VERIFY``, and is specified in
+    section 8.2.2 of RFC3447.
 
     :Parameters:
      mhash : hash object
@@ -133,10 +136,10 @@ def verify(mhash, key, S):
 
 def EMSA_PKCS1_V1_5_ENCODE(hash, emLen):
     """
-    Implement the EMSA-PKCS1-V1_5-ENCODE function, as defined
+    Implement the ``EMSA-PKCS1-V1_5-ENCODE`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.2).
 
-    EMSA-PKCS1-V1_5-ENCODE actually accepts the message M as input,
+    ``EMSA-PKCS1-V1_5-ENCODE`` actually accepts the message ``M`` as input,
     and hash it internally. Here, we expect that the message has already
     been hashed instead.
 
@@ -146,18 +149,18 @@ def EMSA_PKCS1_V1_5_ENCODE(hash, emLen):
      emLen : int
             The length the final encoding must have, in bytes.
 
-    :attention: the early standard (RFC2313) stated that DigestInfo
+    :attention: the early standard (RFC2313) stated that ``DigestInfo``
         had to be BER-encoded. This means that old signatures
         might have length tags in indefinite form, which
         is not supported in DER. Such encoding cannot be
         reproduced by this function.
 
-    :attention: the same standard defined DigestAlgorithm to be
-        of AlgorithmIdentifier type, where the PARAMETERS
-        item is optional. Encodings for MD2/4/5 without
-        PARAMETERS cannot be reproduced by this function.
+    :attention: the same standard defined ``DigestAlgorithm`` to be
+        of ``AlgorithmIdentifier`` type, where the PARAMETERS
+        item is optional. Encodings for ``MD2/4/5`` without
+        ``PARAMETERS`` cannot be reproduced by this function.
 
-    :Return: An emLen byte long string that encodes the hash.
+    :Return: An ``emLen`` byte long string that encodes the hash.
     """
 
     # First, build the ASN.1 DER object DigestInfo:
