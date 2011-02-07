@@ -55,6 +55,10 @@ the RSA key:
 
 """
 
+# Allow nested scopes in Python 2.1
+# See http://oreilly.com/pub/a/python/2001/04/19/pythonnews.html
+from __future__ import nested_scopes
+
 __revision__ = "$Id$"
 __all__ = [ 'sign', 'verify' ]
 
