@@ -43,7 +43,8 @@ Crypto.Cipher.XOR         The simple XOR cipher.
 
 __all__ = ['AES', 'ARC2', 'ARC4',
            'Blowfish', 'CAST', 'DES', 'DES3',
-           'XOR'
+           'XOR',
+           'PKCS1_v1_5'
            ]
 
 __revision__ = "$Id$"

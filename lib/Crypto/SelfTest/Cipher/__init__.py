@@ -36,6 +36,7 @@ def get_tests(config={}):
     import test_DES3;     tests += test_DES3.get_tests(config=config)
     import test_DES;      tests += test_DES.get_tests(config=config)
     import test_XOR;      tests += test_XOR.get_tests(config=config)
+    import test_pkcs_15;  tests += test_pkcs1_15.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':
