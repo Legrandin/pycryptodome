@@ -55,7 +55,8 @@ the RSA key:
 __revision__ = "$Id$"
 __all__ = [ 'sign', 'verify' ]
 
-from Crypto.Util.number import ceil_shift
+import Crypto.Util.number
+from Crypto.Util.number import ceil_div
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString
 
 def sign(mhash, key):
@@ -82,7 +83,9 @@ def sign(mhash, key):
     # TODO: Verify the key is RSA
 
     # See 8.2.1 in RFC3447
-    k = ceil_shift(key.size(),3) # Convert from bits to bytes
+    modBits = Crypto.Util.number.size(key.n)
+    k = ceil_div(modBits,8) # Convert from bits to bytes
+
     # Step 1
     em = EMSA_PKCS1_V1_5_ENCODE(mhash, k)
     # Step 2a (OS2IP) and 2b (RSASP1)
@@ -115,7 +118,9 @@ def verify(mhash, key, S):
     # TODO: Verify the key is RSA
 
     # See 8.2.2 in RFC3447
-    k = ceil_shift(key.size(),3) # Convert from bits to bytes
+    modBits = Crypto.Util.number.size(key.n)
+    k = ceil_div(modBits,8) # Convert from bits to bytes
+
     # Step 1
     if len(S) != k:
         return 0
