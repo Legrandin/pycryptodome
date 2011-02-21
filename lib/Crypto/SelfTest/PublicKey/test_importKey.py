@@ -80,7 +80,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         pInv = inverse(p,q)
 
         def testImportKey1(self):
-                key = RSA.importKey(self.rsaKeyDER)
+                key = self.rsa.importKey(self.rsaKeyDER)
                 self.failUnless(key.has_private())
                 self.assertEqual(key.n, self.n)
                 self.assertEqual(key.e, self.e)
@@ -89,13 +89,13 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                 self.assertEqual(key.q, self.q)
 
         def testImportKey2(self):
-                key = RSA.importKey(self.rsaPublicKeyDER)
+                key = self.rsa.importKey(self.rsaPublicKeyDER)
                 self.failIf(key.has_private())
                 self.assertEqual(key.n, self.n)
                 self.assertEqual(key.e, self.e)
 
         def testImportKey3(self):
-                key = RSA.importKey(self.rsaKeyPEM)
+                key = self.rsa.importKey(self.rsaKeyPEM)
                 self.failUnless(key.has_private())
                 self.assertEqual(key.n, self.n)
                 self.assertEqual(key.e, self.e)
@@ -104,50 +104,63 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                 self.assertEqual(key.q, self.q)
 
         def testImportKey4(self):
-                key = RSA.importKey(self.rsaPublicKeyPEM)
+                key = self.rsa.importKey(self.rsaPublicKeyPEM)
                 self.failIf(key.has_private())
                 self.assertEqual(key.n, self.n)
                 self.assertEqual(key.e, self.e)
 
         def testImportKey5(self):
                 """Verifies that the imported key is still a valid RSA pair"""
-                key = RSA.importKey(self.rsaKeyPEM)
+                key = self.rsa.importKey(self.rsaKeyPEM)
                 idem = key.encrypt(key.decrypt("Test"),0)
                 self.assertEqual(idem[0],"Test")
 
         def testImportKey6(self):
                 """Verifies that the imported key is still a valid RSA pair"""
-                key = RSA.importKey(self.rsaKeyDER)
+                key = self.rsa.importKey(self.rsaKeyDER)
                 idem = key.encrypt(key.decrypt("Test"),0)
                 self.assertEqual(idem[0],"Test")
 
         ###
         def testExportKey1(self):
-                key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+                key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
                 derKey = key.exportKey("DER")
                 self.assertEqual(derKey, self.rsaKeyDER)
 
         def testExportKey2(self):
-                key = RSA.construct([self.n, self.e])
+                key = self.rsa.construct([self.n, self.e])
                 derKey = key.exportKey("DER")
                 self.assertEqual(derKey, self.rsaPublicKeyDER)
 
         def testExportKey3(self):
-                key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+                key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
                 pemKey = key.exportKey("PEM")
                 self.assertEqual(pemKey, self.rsaKeyPEM)
 
         def testExportKey4(self):
-                key = RSA.construct([self.n, self.e])
+                key = self.rsa.construct([self.n, self.e])
                 pemKey = key.exportKey("PEM")
                 self.assertEqual(pemKey, self.rsaPublicKeyPEM)
+
+class ImportKeyTestsSlow(ImportKeyTests):
+    def setUp(self):
+        self.rsa = RSA.RSAImplementation(use_fast_math=0)
+
+class ImportKeyTestsFast(ImportKeyTests):
+    def setUp(self):
+        self.rsa = RSA.RSAImplementation(use_fast_math=1)
 
 if __name__ == '__main__':
     unittest.main()
 
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(ImportKeyTests)
+    try:
+        from Crypto.PublicKey import _fastmath
+        tests += list_test_cases(ImportKeyTestsFast)
+    except ImportError:
+        false
+    tests += list_test_cases(ImportKeyTestsSlow)
     return tests
 
 if __name__ == '__main__':
