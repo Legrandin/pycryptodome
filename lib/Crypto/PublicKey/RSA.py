@@ -29,6 +29,7 @@ __revision__ = "$Id$"
 __all__ = ['generate', 'construct', 'error', 'importKey' ]
 
 from Crypto.Util.python_compat import *
+from Crypto.Util.number import getRandomRange
 
 from Crypto.PublicKey import _RSA, _slowmath, pubkey
 from Crypto import Random
@@ -44,9 +45,12 @@ except ImportError:
 class _RSAobj(pubkey.pubkey):
     keydata = ['n', 'e', 'd', 'p', 'q', 'u']
 
-    def __init__(self, implementation, key):
+    def __init__(self, implementation, key, randfunc=None):
         self.implementation = implementation
         self.key = key
+        if randfunc is None:
+            randfunc = Random.new().read
+        self._randfunc = randfunc
 
     def __getattr__(self, attrname):
         if attrname in self.keydata:
@@ -65,7 +69,16 @@ class _RSAobj(pubkey.pubkey):
                                # instead, but this is more compatible and we're
                                # going to replace the Crypto.PublicKey API soon
                                # anyway.
-        return self.key._decrypt(ciphertext)
+
+        # Blinded RSA decryption (to prevent timing attacks):
+        # Step 1: Generate random secret blinding factor r, such that 0 < r < n-1
+        r = getRandomRange(1, self.key.n-1, randfunc=self._randfunc)
+        # Step 2: Compute c' = c * r**e mod n
+        cp = self.key._blind(ciphertext, r)
+        # Step 3: Compute m' = c'**d mod n       (ordinary RSA decryption)
+        mp = self.key._decrypt(cp)
+        # Step 4: Compute m = m**(r-1) mod n
+        return self.key._unblind(mp, r)
 
     def _blind(self, m, r):
         return self.key._blind(m, r)
