@@ -212,7 +212,6 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	block_init(&(new->st), key, keylen);
 	if (PyErr_Occurred())
 	{
-		Py_XDECREF(counter);
 		Py_DECREF(new);
 		return NULL;
 	}
