@@ -38,3 +38,4 @@ except ImportError:
         digest_size = digestsize
         del digestsize
     del sha
+block_size = 64

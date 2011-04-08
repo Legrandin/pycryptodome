@@ -76,7 +76,13 @@ class HMAC:
         except AttributeError:
             self.digest_size = len(self.outer.digest())
 
-        blocksize = 64
+        try:
+            # The block size is 128 bytes for SHA384 and SHA512 and 64 bytes
+            # for the others hash function
+            blocksize = digestmod.block_size
+        except AttributeError:
+            blocksize = 64
+
         ipad = 0x36
         opad = 0x5C
 

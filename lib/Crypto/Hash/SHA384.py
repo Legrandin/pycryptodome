@@ -28,4 +28,4 @@ import hashlib
 def new(data=""):
     return hashlib.sha384(data)
 digest_size = new().digest_size
-
+block_size = 128

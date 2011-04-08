@@ -34,6 +34,7 @@
 #include "Python.h"
 #define MODULE_NAME SHA256
 #define DIGEST_SIZE 32
+#define BLOCK_SIZE 64
 
 typedef unsigned char U8;
 #ifdef __alpha__
