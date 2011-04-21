@@ -34,12 +34,12 @@ test_data = [
     # (including OpenSSL, the "sha256sum" tool, and this implementation).
     # This is a subset of the resulting test vectors.  The complete list can be
     # found at: http://www.dlitz.net/crypto/shad256-test-vectors/
-    (b('5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456'),
-        b(''), "'' (empty string)"),
-    (b('4f8b42c22dd3729b519ba6f68d2da7cc5b2d606d05daed5ad5128cc03e6c6358'),
-        b('abc')),
-    (b('0cffe17f68954dac3a84fb1458bd5ec99209449749b2b308b7cb55812f9563af'),
-        b('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'))
+    ('5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456',
+        '', "'' (empty string)"),
+    ('4f8b42c22dd3729b519ba6f68d2da7cc5b2d606d05daed5ad5128cc03e6c6358',
+        'abc'),
+    ('0cffe17f68954dac3a84fb1458bd5ec99209449749b2b308b7cb55812f9563af',
+        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq')
 ]
 
 def get_tests(config={}):

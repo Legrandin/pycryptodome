@@ -46,8 +46,8 @@ class HashSelfTest(unittest.TestCase):
     def __init__(self, hashmod, description, expected, input):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
-        self.expected = expected
-        self.input = input
+        self.expected = b(expected)
+        self.input = b(input)
         self.description = description
 
     def shortDescription(self):
@@ -96,7 +96,7 @@ class MACSelfTest(unittest.TestCase):
             data = binascii.a2b_hex(self.input)
 
             # Strip whitespace from the expected string (which should be in lowercase-hex)
-            expected = b("").join(self.expected_dict[hashname].split())
+            expected = b("".join(self.expected_dict[hashname].split()))
 
             h = self.hashmod.new(key, digestmod=hashmod)
             h.update(data)

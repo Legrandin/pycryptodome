@@ -33,7 +33,7 @@ class LargeSHA256Test(unittest.TestCase):
     def runTest(self):
         """SHA256: 512/520 MiB test"""
         from Crypto.Hash import SHA256
-        zeros = b('\0') * (1024*1024)
+        zeros = '\0' * (1024*1024)
 
         h = SHA256.new(zeros)
         for i in xrange(511):
@@ -53,21 +53,21 @@ def get_tests(config={}):
     # This is a list of (expected_result, input[, description]) tuples.
     test_data = [
         # FIPS PUB 180-2, B.1 - "One-Block Message"
-        (b('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
-            b('abc')),
+        ('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+            'abc'),
 
         # FIPS PUB 180-2, B.2 - "Multi-Block Message"
-        (b('248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1'),
-            b('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq')),
+        ('248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1',
+            'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'),
 
         # FIPS PUB 180-2, B.3 - "Long Message"
-        (b('cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0'),
-            b('a') * 10**6,
+        ('cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0',
+            'a' * 10**6,
              '"a" * 10**6'),
 
         # Test for an old PyCrypto bug.
-        (b('f7fd017a3c721ce7ff03f3552c0813adcc48b7f33f07e5e2ba71e23ea393d103'),
-            b('This message is precisely 55 bytes long, to test a bug.'),
+        ('f7fd017a3c721ce7ff03f3552c0813adcc48b7f33f07e5e2ba71e23ea393d103',
+            'This message is precisely 55 bytes long, to test a bug.',
             'Length = 55 (mod 64)'),
     ]
 

@@ -32,7 +32,7 @@ from Crypto.Util.py3compat import *
 class ImportKeyTests(unittest.TestCase):
 
     # 512-bit RSA key generated with openssl
-    rsaKeyPEM = b('''-----BEGIN RSA PRIVATE KEY-----
+    rsaKeyPEM = '''-----BEGIN RSA PRIVATE KEY-----
 MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
 q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
 Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
@@ -40,15 +40,15 @@ OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
 +rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
 JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
 n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
------END RSA PRIVATE KEY-----''')
+-----END RSA PRIVATE KEY-----'''
 
-    rsaPublicKeyPEM = b('''-----BEGIN PUBLIC KEY-----
+    rsaPublicKeyPEM = '''-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
------END PUBLIC KEY-----''')
+-----END PUBLIC KEY-----'''
 
     rsaKeyDER = a2b_hex(
-    b('''3082013b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe
+    '''3082013b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe
     913f932ebed492f12d16b4610c328cb6e208ab5f45acbe2950833298f312
     2c19f78492dedf40f0e3c190338502030100010240094483129f114dedf6
     7edabc2301bc5a88e5e6601dd7016220ead9fd4bfc6fdeb75893898ae41c
@@ -59,14 +59,14 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     240080af7b094091b12102206ab469fa6d5648a57531c8b031a4ce9db53b
     c3116cf433f5a6f6bbea5601ce05022100bd9f40a764227a21962a4add07
     e4defe43ed91a3ae27bb057f39241f33ab01c1
-    '''.replace(" ","")))
+    '''.replace(" ",""))
 
     rsaPublicKeyDER = a2b_hex(
-    b('''305c300d06092a864886f70d0101010500034b003048024100bf1e27900a
+    '''305c300d06092a864886f70d0101010500034b003048024100bf1e27900a
     a08b23511a5c1281ae6d93312c3efe913f932ebed492f12d16b4610c328c
     b6e208ab5f45acbe2950833298f3122c19f78492dedf40f0e3c190338502
     03010001
-    '''.replace(" ","")))
+    '''.replace(" ",""))
 
     n = long('BF 1E 27 90 0A A0 8B 23 51 1A 5C 12 81 AE 6D 93 31 2C 3E FE 91 3F 93 2E BE D4 92 F1 2D 16 B4 61 0C 32 8C B6 E2 08 AB 5F 45 AC BE 29 50 83 32 98 F3 12 2C 19 F7 84 92 DE DF 40 F0 E3 C1 90 33 85'.replace(" ",""),16)
     e = 65537L
@@ -92,7 +92,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.e, self.e)
 
     def testImportKey3(self):
-        key = RSA.importKey(self.rsaKeyPEM)
+        key = RSA.importKey(b(self.rsaKeyPEM))
         self.assertEqual(key.has_private(),True) # assert_
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
@@ -102,7 +102,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.u, self.coeff)
 
     def testImportKey4(self):
-        key = RSA.importKey(self.rsaPublicKeyPEM)
+        key = RSA.importKey(b(self.rsaPublicKeyPEM))
         self.assertEqual(key.has_private(),False) # failIf
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
@@ -121,12 +121,12 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testExportKey3(self):
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.coeff])
         pemKey = key.exportKey("PEM")
-        self.assertEqual(pemKey, self.rsaKeyPEM)
+        self.assertEqual(pemKey, b(self.rsaKeyPEM))
 
     def testExportKey4(self):
         key = RSA.construct([self.n, self.e])
         pemKey = key.exportKey("PEM")
-        self.assertEqual(pemKey, self.rsaPublicKeyPEM)
+        self.assertEqual(pemKey, b(self.rsaPublicKeyPEM))
 
 if __name__ == '__main__':
     unittest.main()

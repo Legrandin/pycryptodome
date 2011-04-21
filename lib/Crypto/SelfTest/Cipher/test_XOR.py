@@ -33,20 +33,20 @@ from Crypto.Util.py3compat import *
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
     # Test vectors written from scratch.  (Nobody posts XOR test vectors on the web?  How disappointing.)
-    (b('01'), b('01'),
-        b('00'),
+    ('01', '01',
+        '00',
         'zero key'),
 
-    (b('0102040810204080'), b('0003050911214181'),
-        b('01'),
+    ('0102040810204080', '0003050911214181',
+        '01',
         '1-byte key'),
 
-    (b('0102040810204080'), b('cda8c8a2dc8a8c2a'),
-        b('ccaa'),
+    ('0102040810204080', 'cda8c8a2dc8a8c2a',
+        'ccaa',
         '2-byte key'),
 
-    (b('ff')*64, b('fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0')*2,
-        b('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'),
+    ('ff'*64, 'fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0'*2,
+        '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
         '32-byte key'),
 ]
 

@@ -32,29 +32,29 @@ from Crypto.Util.py3compat import *
 test_data = [
     # Test vectors downloaded 2008-09-12 from
     #   http://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-    (b('9c1185a5c5e9fc54612808977ee8f548b2258d31'), b(''), "'' (empty string)"),
-    (b('0bdc9d2d256b3ee9daae347be6f4dc835a467ffe'), b('a')),
-    (b('8eb208f7e05d987a9b044a8e98c6b087f15a0bfc'), b('abc')),
-    (b('5d0689ef49d2fae572b881b123a85ffa21595f36'), b('message digest')),
+    ('9c1185a5c5e9fc54612808977ee8f548b2258d31', '', "'' (empty string)"),
+    ('0bdc9d2d256b3ee9daae347be6f4dc835a467ffe', 'a'),
+    ('8eb208f7e05d987a9b044a8e98c6b087f15a0bfc', 'abc'),
+    ('5d0689ef49d2fae572b881b123a85ffa21595f36', 'message digest'),
 
-    (b('f71c27109c692c1b56bbdceb5b9d2865b3708dbc'),
-        b('abcdefghijklmnopqrstuvwxyz'),
+    ('f71c27109c692c1b56bbdceb5b9d2865b3708dbc',
+        'abcdefghijklmnopqrstuvwxyz',
         'a-z'),
 
-    (b('12a053384a9c0c88e405a06c27dcf49ada62eb2b'),
-        b('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'),
+    ('12a053384a9c0c88e405a06c27dcf49ada62eb2b',
+        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq',
         'abcdbcd...pnopq'),
 
-    (b('b0e20b6e3116640286ed3a87a5713079b21f5189'),
-        b('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'),
+    ('b0e20b6e3116640286ed3a87a5713079b21f5189',
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
         'A-Z, a-z, 0-9'),
 
-    (b('9b752e45573d4b39f4dbd3323cab82bf63326bfb'),
-        b('1234567890') * 8,
+    ('9b752e45573d4b39f4dbd3323cab82bf63326bfb',
+        '1234567890' * 8,
         "'1234567890' * 8"),
 
-    (b('52783243c1697bdbe16d37f97f68f08325dc1528'),
-        b('a') * 10**6,
+    ('52783243c1697bdbe16d37f97f68f08325dc1528',
+        'a' * 10**6,
         '"a" * 10**6'),
 ]
 

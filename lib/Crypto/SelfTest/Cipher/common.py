@@ -62,9 +62,9 @@ class CipherSelfTest(unittest.TestCase):
         # Extract the parameters
         params = params.copy()
         self.description = _extract(params, 'description')
-        self.key = _extract(params, 'key')
-        self.plaintext = _extract(params, 'plaintext')
-        self.ciphertext = _extract(params, 'ciphertext')
+        self.key = b(_extract(params, 'key'))
+        self.plaintext = b(_extract(params, 'plaintext'))
+        self.ciphertext = b(_extract(params, 'ciphertext'))
         self.module_name = _extract(params, 'module_name', None)
 
         mode = _extract(params, 'mode', None)
@@ -157,7 +157,7 @@ class CTRSegfaultTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key']
+        self.key = b(params['key'])
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):
@@ -171,7 +171,7 @@ class CTRWraparoundTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key']
+        self.key = b(params['key'])
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):
@@ -193,7 +193,7 @@ class CFBSegmentSizeTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key']
+        self.key = b(params['key'])
         self.description = params['description']
 
     def shortDescription(self):
@@ -211,8 +211,8 @@ class RoundtripTest(unittest.TestCase):
         unittest.TestCase.__init__(self)
         self.module = module
         self.iv = Random.get_random_bytes(module.block_size)
-        self.key = params['key']
-        self.plaintext = 100 * params['plaintext']
+        self.key = b(params['key'])
+        self.plaintext = 100 * b(params['plaintext'])
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):

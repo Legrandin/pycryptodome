@@ -46,7 +46,7 @@ def list_test_cases(class_):
 def strip_whitespace(s):
     """Remove whitespace from a text or byte string"""
     if isinstance(s,str):
-        return "".join(s.split())
+        return b("".join(s.split()))
     else:
         return b("").join(s.split())
 
