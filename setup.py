@@ -267,14 +267,17 @@ class TestCommand(Command):
 
     description = "Run self-test"
 
+    # Long option name, short option name, description
     user_options = [
         ('skip-slow-tests', None,
-            'Skip slow tests')
+            'Skip slow tests'),
+        ('module=', 'm', 'Test a single module (e.g. Cipher, PublicKey)')
     ]
 
     def initialize_options(self):
         self.build_dir = None
         self.skip_slow_tests = None
+        self.module = None
 
     def finalize_options(self):
         self.set_undefined_options('install', ('build_lib', 'build_dir'))
@@ -287,8 +290,21 @@ class TestCommand(Command):
         try:
             sys.path.insert(0, self.build_dir)
             from Crypto import SelfTest
-            SelfTest.run(verbosity=self.verbose, stream=sys.stdout, 
-            config=self.config)
+            moduleObj = None
+            if self.module:
+                if self.module.count('.')==0:
+                    # Test a whole a sub-package
+                    full_module = "Crypto.SelfTest." + self.module
+                    module_name = self.module
+                else:
+                    # Test only a module
+                    # Assume only one dot is present
+                    comps = self.module.split('.')
+                    module_name = "test_" + comps[1]
+                    full_module = "Crypto.SelfTest." + comps[0] + "." + module_name
+                # Import sub-package or module
+                moduleObj = __import__( full_module, globals(), locals(), module_name )
+            SelfTest.run(module=moduleObj, verbosity=self.verbose, stream=sys.stdout, config=self.config)
         finally:
             # Restore sys.path
             sys.path[:] = old_path
