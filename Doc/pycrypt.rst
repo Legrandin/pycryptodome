@@ -320,8 +320,6 @@ Blowfish          Variable/8 bytes
 CAST              Variable/8 bytes
 DES               8 bytes/8 bytes
 DES3 (Triple DES) 16 bytes/8 bytes
-IDEA              16 bytes/8 bytes
-[RC5               Variable/8 bytes]
 ================= ============================
 
 
@@ -435,33 +433,6 @@ Python 3.x: ```string``` must be an object interpretable as a buffer of bytes.
 encrypt() will return a bytes object.
 
 
-Algorithm-specific Notes for Encryption Algorithms
-=======================================================
-
-[RC5 is not currently implemented in pycrypto]
-
-RC5 has a bunch of parameters; see Ronald Rivest's paper at
-<http://theory.lcs.mit.edu/~rivest/rc5rev.ps> for the
-implementation details.  RC5 is patented by RSA Laboratories.
-RC5 supports 32-bit, 64-bit and 128-bit block sizes. RSA suggests a block size
-of 64-bit, a 128-bit key and 18-20 rounds.
-
-The keyword parameters are:
-
-* ``version``: The version of the RC5 algorithm to use; currently
-  the only legal value is ``0x10`` for RC5 1.0.
-
-* ``wordsize``: The word size to use; 16 or 32 are the only legal
-  values.  (A larger word size is better, so usually 32 will be used.
-  16-bit RC5 is probably only of academic interest.)
-
-* ``rounds``: The number of rounds to apply, the larger the more
-  secure: this can be any value from 0 to 255, so you will have to
-  choose a value balanced between speed and security. 12-round RC5
-  is susceptible to a differential attack. 18-20 rounds are suggested
-  as sufficient protection.
-
-
 Security Notes
 =======================
 
@@ -488,16 +459,10 @@ not currently feasible, and it has been estimated to be useful until 2030.
 Bruce Schneier endorses DES3 for its security because of the decades of
 study applied against it. It is, however, slow.
 
-There are no publicly known attacks against the full-round IDEA (3050 K/sec),
-and it's been around long enough to have been examined. IDEA is patented but
-free for non-commercial use. Patents are expected to expire in 2011/2012.
-IDEA is one of the strongest symmetric ciphers available to the public, alongside
-AES and AES candidates.
-
-There are no known attacks against Blowfish (9250 K/sec), CAST (2960 K/sec),
-or RC5 (2060 K/sec), but they're all relatively new algorithms and there hasn't
-been time for much analysis to be performed; use them for serious applications
-only after careful research.
+There are no known attacks against Blowfish (9250 K/sec) or CAST (2960 K/sec),
+but they're all relatively new algorithms and there hasn't been time for much
+analysis to be performed; use them for serious applications only after careful
+research.
 
 pycrypto implements CAST with up to 128 bits key length (CAST-128). This
 algorithm is considered obsoleted by CAST-256. CAST is patented by Entrust
@@ -526,7 +491,6 @@ A further possible defense is to discard the initial portion of the keystream.
 This altered algorithm is called RC4-drop(n).
 While ARC4 is in wide-spread use in several protocols, its use in new protocols
 or applications is discouraged.
-RC4 is patented by RSA Laboratories. 
 
 ARC2 ("Alleged" RC2) is vulnerable to a related-key attack, 2^34 chosen
 plaintexts are needed.
@@ -537,14 +501,12 @@ bits, such as the output of a hash function.
 Credits
 =============
 
-The code for Blowfish was written by Bryan Olson, partially based on a
-previous implementation by Bruce Schneier, who also invented the
-algorithm; the Blowfish algorithm has been placed in the public domain
-and can be used freely.  (See http://www.counterpane.com for more
-information about Blowfish.)  The CAST implementation was written by 
-Wim Lewis.  The DES implementation was written by Eric Young, and the
-IDEA implementation by Colin Plumb. The RC5 implementation
-was written by A.M. Kuchling.
+The code for Blowfish was written from scratch by Dwayne Litzenberger, based
+on a specification by Bruce Schneier, who also invented the algorithm; the
+Blowfish algorithm has been placed in the public domain and can be used
+freely.  (See http://www.schneier.com/paper-blowfish-fse.html for more
+information about Blowfish.) The CAST implementation was written by Wim Lewis.
+The DES implementation uses libtomcrypt, which was written by Tom St Denis.
 
 The Alleged RC4 code was posted to the ``sci.crypt`` newsgroup by an
 unknown party, and re-implemented by A.M. Kuchling.  
