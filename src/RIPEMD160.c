@@ -49,6 +49,7 @@
 #include "Python.h"
 
 #define RIPEMD160_DIGEST_SIZE 20
+#define BLOCK_SIZE 64
 
 #define RIPEMD160_MAGIC 0x9f19dd68u
 typedef struct {

@@ -32,6 +32,7 @@
 
 #define MODULE_NAME MD4
 #define DIGEST_SIZE 16
+#define BLOCK_SIZE 64
 
 typedef unsigned int U32;
 typedef unsigned char U8;

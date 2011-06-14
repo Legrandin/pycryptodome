@@ -258,6 +258,7 @@ _MODULE_NAME (void)
 
 	/* Add some symbolic constants to the module */
 	PyModule_AddIntConstant(m, "digest_size", DIGEST_SIZE);
+	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 
 	/* Check for errors */
 	if (PyErr_Occurred())
