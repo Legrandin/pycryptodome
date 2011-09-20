@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Hash/SHA256.py: Self-test for the SHA-256 hash function
+#  SelfTest/Hash/test_SHA256.py: Self-test for the SHA-256 hash function
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #

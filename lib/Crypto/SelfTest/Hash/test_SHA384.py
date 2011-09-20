@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Hash/__init__.py: Self-test for hash modules
+#  SelfTest/Hash/test_SHA.py: Self-test for the SHA-384 hash function
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #
@@ -22,23 +22,29 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test for hash modules"""
+"""Self-test suite for Crypto.Hash.SHA384"""
 
 __revision__ = "$Id$"
 
+# Test vectors from various sources
+# This is a list of (expected_result, input[, description]) tuples.
+test_data = [
+
+    # RFC 4634: Section Page 8.4, "Test 1"
+    ('cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7', 'abc'),
+
+    # RFC 4634: Section Page 8.4, "Test 2.2"
+    ('09330c33f71147e83d192fc782cd1b4753111b173b3b05d22fa08086e3b0f712fcc7c71a557e2db966c3e9fa91746039', 'abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu'),
+
+    # RFC 4634: Section Page 8.4, "Test 3"
+    ('9d0e1809716474cb086e834e310a4a1ced149e9c00f248527972cec5704c2a5b07b8b3dc38ecc4ebae97ddd87f3d8985', 'a' * 10**6),
+
+]
+
 def get_tests(config={}):
-    tests = []
-    import test_HMAC;   tests += test_HMAC.get_tests(config=config)
-    import test_MD2;    tests += test_MD2.get_tests(config=config)
-    import test_MD4;    tests += test_MD4.get_tests(config=config)
-    import test_MD5;    tests += test_MD5.get_tests(config=config)
-    import test_RIPEMD; tests += test_RIPEMD.get_tests(config=config)
-    import test_SHA;    tests += test_SHA.get_tests(config=config)
-    import test_SHA224; tests += test_SHA224.get_tests(config=config)
-    import test_SHA256; tests += test_SHA256.get_tests(config=config)
-    import test_SHA384; tests += test_SHA384.get_tests(config=config)
-    import test_SHA512; tests += test_SHA512.get_tests(config=config)
-    return tests
+    from Crypto.Hash import SHA384
+    from common import make_hash_tests
+    return make_hash_tests(SHA384, "SHA384", test_data, '\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02')
 
 if __name__ == '__main__':
     import unittest

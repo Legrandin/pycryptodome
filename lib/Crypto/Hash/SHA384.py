@@ -26,13 +26,14 @@ __all__ = ['new', 'digest_size']
 
 from Crypto.Util.wrapper import Wrapper
 
-# The OID for SHA-1 is:
+# The OID for SHA-384 is:
 #
-# id-sha1    OBJECT IDENTIFIER ::= {
-#          iso(1) identified-organization(3) oiw(14) secsig(3)
-#          algorithms(2) 26
-#      }
-oid = '\x06\x05\x2b\x0e\x03\x02\x1a'
+# id-sha384    OBJECT IDENTIFIER ::= {
+#			joint-iso-itu-t(2)
+#			country(16) us(840) organization(1) gov(101) csor(3)
+#			nistalgorithm(4) hashalgs(2) 2
+#		}
+oid = '\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02'
 
 def new(data=""):
     obj = Wrapper(hashFactory, data)
@@ -42,14 +43,10 @@ def new(data=""):
         obj.digest_size = digest_size
     return obj
 
-try:
-    # The sha module is deprecated in Python 2.6, so use hashlib when possible.
-    import hashlib
-    hashFactory = hashlib.sha1
+# TOFIX: This code will not work for python<2.5
+import hashlib
+hashFactory = hashlib.sha384
 
-except ImportError:
-    import sha
-    hashFactory = sha
+digest_size = 48 
+block_size = 128
 
-digest_size = 20
-block_size = 64

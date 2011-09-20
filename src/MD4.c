@@ -32,6 +32,7 @@
 
 #define MODULE_NAME MD4
 #define DIGEST_SIZE 16
+#define BLOCK_SIZE 64
 
 /**
  * id-md4      OBJECT IDENTIFIER ::= {

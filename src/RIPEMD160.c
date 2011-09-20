@@ -49,6 +49,7 @@
 #include "Python.h"
 
 #define RIPEMD160_DIGEST_SIZE 20
+#define BLOCK_SIZE 64
 
 /**
  * See http://homes.esat.kuleuven.be/~bosselae/ripemd160.html#More
