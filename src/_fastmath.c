@@ -38,6 +38,15 @@
 static unsigned int sieve_base[10000];
 static int rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc);
 
+/**
+ * Starting from version 5.0.0, libgmp sports a constant-time modular exponentiation.
+ */
+#if (__GNU_MP_VERSION>=5)
+#define MPZ_POWM	mpz_powm_sec
+#else
+#define MPZ_POWM	mpz_powm
+#endif
+
 static void
 longObjToMPZ (mpz_t m, PyLongObject * p)
 {
@@ -134,7 +143,7 @@ dsaSign (dsaKey * key, mpz_t m, mpz_t k, mpz_t r, mpz_t s)
 		return 1;
 	}
 	mpz_init (temp);
-	mpz_powm_sec (r, key->g, k, key->p);
+	MPZ_POWM (r, key->g, k, key->p);
 	mpz_mod (r, r, key->q);
 	mpz_invert (s, k, key->q);
 	mpz_mul (temp, key->x, r);
@@ -163,8 +172,8 @@ dsaVerify (dsaKey * key, mpz_t m, mpz_t r, mpz_t s)
 	mpz_mod (u1, u1, key->q);
 	mpz_mul (u2, r, w);
 	mpz_mod (u2, u2, key->q);
-	mpz_powm_sec (v1, key->g, u1, key->p);
-	mpz_powm_sec (v2, key->y, u2, key->p);
+	MPZ_POWM (v1, key->g, u1, key->p);
+	MPZ_POWM (v2, key->y, u2, key->p);
 	mpz_mul (w, v1, v2);
 	mpz_mod (w, w, key->p);
 	mpz_mod (w, w, key->q);
@@ -188,7 +197,7 @@ rsaEncrypt (rsaKey * key, mpz_t v)
 	{
 		return 1;
 	}
-	mpz_powm_sec (v, v, key->e, key->n);
+	MPZ_POWM (v, v, key->e, key->n);
 	return 0;
 }
 
@@ -216,11 +225,11 @@ rsaDecrypt (rsaKey * key, mpz_t v)
         /* m1 = c ^ (d mod (p-1)) mod p */
         mpz_sub_ui(h, key->p, 1);
         mpz_fdiv_r(h, key->d, h);
-        mpz_powm_sec(m1, v, h, key->p);
+        MPZ_POWM(m1, v, h, key->p);
         /* m2 = c ^ (d mod (q-1)) mod q */
         mpz_sub_ui(h, key->q, 1);
         mpz_fdiv_r(h, key->d, h);
-        mpz_powm_sec(m2, v, h, key->q);
+        MPZ_POWM(m2, v, h, key->q);
         /* h = u * ( m2 - m1 + q) mod q */
         mpz_sub(h, m2, m1);
         if (mpz_sgn(h)==-1)
@@ -239,7 +248,7 @@ rsaDecrypt (rsaKey * key, mpz_t v)
     }
 
     /* slow */
-	mpz_powm_sec (v, v, key->d, key->n);
+	MPZ_POWM (v, v, key->d, key->n);
 	return 0;
 }
 
@@ -254,7 +263,7 @@ rsaBlind (rsaKey * key, mpz_t v, mpz_t b)
         {
             return 2;
         }
-    mpz_powm_sec (b, b, key->e, key->n);
+    MPZ_POWM (b, b, key->e, key->n);
     mpz_mul (v, v, b);
     mpz_mod (v, v, key->n);
     return 0;
@@ -1164,7 +1173,7 @@ rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 			}
 		} while (base_was_tested);
 		mpz_init_set (tested[i], a);
-		mpz_powm_sec (z, a, m, n);
+		MPZ_POWM (z, a, m, n);
 		if ((mpz_cmp_ui (z, 1) == 0) || (mpz_cmp (z, n_1) == 0))
 			continue;
 		composite = 1;
