@@ -391,7 +391,7 @@ def get_tests(config={}):
         from Crypto.PublicKey import _fastmath
         tests += list_test_cases(RSAFastMathTest)
     except ImportError:
-        pass
+        print "Failed to import fastmath module."
     if config.get('slow_tests',1):
         tests += list_test_cases(RSASlowMathTest)
     return tests
