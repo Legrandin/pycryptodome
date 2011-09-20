@@ -47,6 +47,9 @@ MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 -----END PUBLIC KEY-----'''
 
+        # Obtained using 'ssh-keygen -i -m PKCS8 -f rsaPublicKeyPEM'
+        rsaPublicKeyOpenSSH = '''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n'''
+
         rsaKeyDER = a2b_hex(
         '''3082013b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe
         913f932ebed492f12d16b4610c328cb6e208ab5f45acbe2950833298f312
@@ -120,6 +123,11 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                 key = self.rsa.importKey(self.rsaKeyDER)
                 idem = key.encrypt(key.decrypt("Test"),0)
                 self.assertEqual(idem[0],"Test")
+
+        def testImportKey7(self):
+                key = self.rsa.importKey(self.rsaPublicKeyOpenSSH)
+                self.assertEqual(key.n, self.n)
+                self.assertEqual(key.e, self.e)
 
         ###
         def testExportKey1(self):

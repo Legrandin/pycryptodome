@@ -33,13 +33,14 @@ __revision__ = "$Id$"
 __all__ = ['generate', 'construct', 'error', 'importKey' ]
 
 from Crypto.Util.python_compat import *
-from Crypto.Util.number import getRandomRange
+from Crypto.Util.number import getRandomRange, bytes_to_long
 
 from Crypto.PublicKey import _RSA, _slowmath, pubkey
 from Crypto import Random
 
 from Crypto.Util.asn1 import DerObject, DerSequence
 import binascii
+import struct
 
 from Crypto.Util.number import inverse
 
@@ -373,7 +374,7 @@ class RSAImplementation(object):
         :Parameter externKey:
             The RSA key to import, encoded as a string.
 
-            The key can be in DER (PKCS#1) or in unencrypted PEM format (RFC1421).
+            The key can be in DER (PKCS#1), OpenSSH or in unencrypted PEM format (RFC1421).
         :Type externKey: string
 
         :Raise ValueError/IndexError:
@@ -384,6 +385,17 @@ class RSAImplementation(object):
                 lines = externKey.replace(" ",'').split()
                 der = binascii.a2b_base64(''.join(lines[1:-1]))
                 return self._importKeyDER(der)
+        if externKey.startswith('ssh-rsa '):
+                # This is probably an OpenSSH key
+                keystring = binascii.a2b_base64(externKey.split(' ')[1])
+                keyparts = []
+                while keystring:
+                    len = struct.unpack(">I",keystring[:4])[0]
+                    keyparts.append(keystring[4:4+len])
+                    keystring = keystring[4+len:]
+                e = bytes_to_long(keyparts[1])
+                n = bytes_to_long(keyparts[2])
+                return self.construct([n, e])
         if externKey[0]=='\x30':
                 # This is probably a DER encoded key
                 return self._importKeyDER(externKey)
