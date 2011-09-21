@@ -150,6 +150,13 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                 pemKey = key.exportKey("PEM")
                 self.assertEqual(pemKey, self.rsaPublicKeyPEM)
 
+        def testExportKey5(self):
+                key = self.rsa.construct([self.n, self.e])
+                openssh_1 = key.exportKey("OpenSSH").split()
+                openssh_2 = self.rsaPublicKeyOpenSSH.split()
+                self.assertEqual(openssh_1[0], openssh_2[0])
+                self.assertEqual(openssh_1[1], openssh_2[1])
+
 class ImportKeyTestsSlow(ImportKeyTests):
     def setUp(self):
         self.rsa = RSA.RSAImplementation(use_fast_math=0)

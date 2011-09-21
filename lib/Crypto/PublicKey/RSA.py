@@ -33,7 +33,7 @@ __revision__ = "$Id$"
 __all__ = ['generate', 'construct', 'error', 'importKey' ]
 
 from Crypto.Util.python_compat import *
-from Crypto.Util.number import getRandomRange, bytes_to_long
+from Crypto.Util.number import getRandomRange, bytes_to_long, long_to_bytes
 
 from Crypto.PublicKey import _RSA, _slowmath, pubkey
 from Crypto import Random
@@ -172,6 +172,7 @@ class _RSAobj(pubkey.pubkey):
         :Parameter format: The encoding to use to wrap the key.
 
             - *'DER'* for PKCS#1
+            - *'OpenSSH'* for OpenSSH public keys (no private key)
             - *'PEM'* for RFC1421
         :Type format: string
 
@@ -179,6 +180,17 @@ class _RSAobj(pubkey.pubkey):
         :Raise ValueError:
             When the format is unknown.
         """
+        if format=='OpenSSH':
+               eb = long_to_bytes(self.e)
+               nb = long_to_bytes(self.n)
+               if ord(eb[0]) & 0x80: eb='\x00'+nb
+               if ord(nb[0]) & 0x80: nb='\x00'+nb
+               keyparts = [ 'ssh-rsa', eb, nb ]
+               keystring = ''.join([ struct.pack(">I",len(kp))+kp for kp in keyparts]) 
+               return 'ssh-rsa '+binascii.b2a_base64(keystring)[:-1]
+
+        # PKCS#1 is a direct DER encoding. PEM uses it as well, but
+        # wraps in an ASCII envelope.
         der = DerSequence()
         if self.has_private():
                 keyType = "RSA PRIVATE"
@@ -389,10 +401,10 @@ class RSAImplementation(object):
                 # This is probably an OpenSSH key
                 keystring = binascii.a2b_base64(externKey.split(' ')[1])
                 keyparts = []
-                while keystring:
-                    len = struct.unpack(">I",keystring[:4])[0]
-                    keyparts.append(keystring[4:4+len])
-                    keystring = keystring[4+len:]
+                while len(keystring)>4:
+                    l = struct.unpack(">I",keystring[:4])[0]
+                    keyparts.append(keystring[4:4+l])
+                    keystring = keystring[4+l:]
                 e = bytes_to_long(keyparts[1])
                 n = bytes_to_long(keyparts[2])
                 return self.construct([n, e])
