@@ -27,8 +27,8 @@ Subpackages:
 Crypto.Cipher             Secret-key encryption algorithms (AES, DES, ARC4)
 Crypto.Hash               Hashing algorithms (MD5, SHA, HMAC)
 Crypto.Protocol           Cryptographic protocols (Chaffing, all-or-nothing
-                          transform).   This package does not contain any
-                          network protocols.
+                          transform, key derivation functions).
+                          This package does not contain any network protocols.
 Crypto.PublicKey          Public-key encryption and signature algorithms
                           (RSA, DSA)
 Crypto.Util               Various useful modules and functions (long-to-string
