@@ -127,23 +127,23 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                         # Build the key
                         key = RSA.importKey(test[0])
                         # The real test
-                        pt = PKCS.decrypt(t2b(test[2]), key)
+                        pt = PKCS.decrypt(t2b(test[2]), key, "---")
                         self.assertEqual(pt, test[1])
 
         def testVerify2(self):
                 # Verify that decryption fails if ciphertext is not as long as
                 # RSA modulus
                 self.assertRaises(ValueError, PKCS.decrypt, '\x00'*127,
-                        self.key1024)
+                        self.key1024, "---")
                 self.assertRaises(ValueError, PKCS.decrypt, '\x00'*129,
-                        self.key1024)
+                        self.key1024, "---")
 
                 # Verify that decryption fails if there are less then 8 non-zero padding
                 # bytes
                 pt = '\x00\x02' + '\xFF'*7 + '\x00' + '\x45'*118
                 ct = self.key1024.encrypt(pt, 0)[0]
                 ct = '\x00'*(128-len(ct)) + ct
-                self.assertRaises(ValueError, PKCS.decrypt, ct, self.key1024)
+                self.assertEqual("---", PKCS.decrypt(ct, self.key1024, "---"))
 
         def testEncryptVerify1(self):
                 # Encrypt/Verify messages of length [0..RSAlen-11]
@@ -151,7 +151,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                 for pt_len in xrange(0,128-11+1):
                     pt = self.rng(pt_len)
                     ct = PKCS.encrypt(pt, self.key1024, self.rng)
-                    pt2 = PKCS.decrypt(ct, self.key1024)
+                    pt2 = PKCS.decrypt(ct, self.key1024, "---")
                     self.assertEqual(pt,pt2)
 
 
