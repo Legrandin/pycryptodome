@@ -53,6 +53,25 @@ def t2b(t):
         raise ValueError("Even number of characters expected")
     return a2b_hex(clean)
 
+# Helper class to count how many bytes have been requested
+# from the key's private RNG, w/o counting those used for blinding
+class MyKey:
+    def __init__(self, key):
+        self._key = key
+        self.n = key.n
+        self.asked = 0
+    def _randfunc(self, N):
+        self.asked += N
+        return self._key._randfunc(N)
+    def sign(self, m):
+        return self._key.sign(m)
+    def decrypt(self, m):
+        return self._key.decrypt(m)
+    def verify(self, m, p):
+        return self._key.verify(m, p)
+    def encrypt(self, m, p):
+        return self._key.encrypt(m, p)
+
 class PKCS1_PSS_Tests(unittest.TestCase):
 
         # List of tuples with test data for PKCS#1 PSS
@@ -325,23 +344,23 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                 for i in range(len(self._testData)):
                         # Build the key
                         comps = [ long(rws(self._testData[i][0][x]),16) for x in ('n','e','d') ]
-                        key = RSA.construct(comps)
+                        key = MyKey(RSA.construct(comps))
                         # Hash function
                         h = self._testData[i][4].new()
                         # Data to sign
                         h.update(t2b(self._testData[i][1]))
                         # Salt
                         test_salt = t2b(self._testData[i][3])
+                        key._randfunc = lambda N: test_salt
                         # The real test
-                        randfunc = lambda N: test_salt
-                        s = PKCS.sign(h, key, randfunc)
+                        s = PKCS.sign(h, key)
                         self.assertEqual(s, t2b(self._testData[i][2]))
 
         def testVerify1(self):
                for i in range(len(self._testData)):
                         # Build the key
                         comps = [ long(rws(self._testData[i][0][x]),16) for x in ('n','e') ]
-                        key = RSA.construct(comps)
+                        key = MyKey(RSA.construct(comps))
                         # Hash function
                         h = self._testData[i][4].new()
                         # Data to sign
@@ -349,23 +368,19 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         # Salt
                         test_salt = t2b(self._testData[i][3])
                         # The real test
+                        key._randfunc = lambda N: test_salt
                         result = PKCS.verify(h, key, t2b(self._testData[i][2]))
                         self.failUnless(result)
 
         def testSignVerify(self):
-                        rng = Random.new().read
-                        key = RSA.generate(1024, rng)
-
                         h = SHA1.new()
                         h.update('blah blah blah')
 
-                        # Helper function to monitor what's request from RNG
-                        global asked, mgfcalls
-                        def localRng(N):
-                            global asked
-                            asked += N
-                            return rng(N)
+                        rng = Random.new().read
+                        key = MyKey(RSA.generate(1024,rng))
+                         
                         # Helper function to monitor what's request from MGF
+                        global mgfcalls
                         def newMGF(seed,maskLen):
                             global mgfcalls
                             mgfcalls += 1
@@ -378,33 +393,33 @@ class PKCS1_PSS_Tests(unittest.TestCase):
 
                             # Verify that sign() asks for as many random bytes
                             # as the hash output size
-                            asked = 0
-                            s = PKCS.sign(h, key, localRng)
+                            key.asked = 0
+                            s = PKCS.sign(h, key)
                             self.failUnless(PKCS.verify(h, key, s))
-                            self.assertEqual(asked, h.digest_size)
+                            self.assertEqual(key.asked, h.digest_size)
 
                         h = SHA1.new()
                         h.update('blah blah blah')
 
                         # Verify that sign() uses a different salt length
                         for sLen in (0,3,21):
-                            asked = 0
-                            s = PKCS.sign(h, key, localRng, saltLen=sLen)
-                            self.assertEqual(asked, sLen)
+                            key.asked = 0
+                            s = PKCS.sign(h, key, saltLen=sLen)
+                            self.assertEqual(key.asked, sLen)
                             self.failUnless(PKCS.verify(h, key, s, saltLen=sLen))
 
                         # Verify that sign() uses the custom MGF
                         mgfcalls = 0
-                        s = PKCS.sign(h, key, rng, newMGF)
+                        s = PKCS.sign(h, key, newMGF)
                         self.assertEqual(mgfcalls, 1)
                         self.failUnless(PKCS.verify(h, key, s, newMGF))
 
                         # Verify that sign() does not call the RNG
                         # when salt length is 0, even when a new MGF is provided
-                        asked = 0
+                        key.asked = 0
                         mgfcalls = 0
-                        s = PKCS.sign(h, key, localRng, newMGF, 0)
-                        self.assertEqual(asked,0)
+                        s = PKCS.sign(h, key, newMGF, 0)
+                        self.assertEqual(key.asked,0)
                         self.assertEqual(mgfcalls, 1)
                         self.failUnless(PKCS.verify(h, key, s, newMGF, 0))
 

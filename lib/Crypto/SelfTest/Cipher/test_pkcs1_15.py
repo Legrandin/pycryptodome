@@ -114,13 +114,14 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                                 self.idx += N
                                 return r
                         # The real test
-                        ct = PKCS.encrypt(test[1], key, randGen(t2b(test[3])))
+                        key._randfunc = randGen(t2b(test[3]))
+                        ct = PKCS.encrypt(test[1], key)
                         self.assertEqual(ct, t2b(test[2]))
 
         def testEncrypt2(self):
                 # Verify that encryption fail if plaintext is too long
                 pt = '\x00'*(128-11+1)
-                self.assertRaises(ValueError, PKCS.encrypt, pt, self.key1024, self.rng)
+                self.assertRaises(ValueError, PKCS.encrypt, pt, self.key1024)
 
         def testVerify1(self):
                 for test in self._testData:
@@ -150,7 +151,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                 # and therefore padding [8..117]
                 for pt_len in xrange(0,128-11+1):
                     pt = self.rng(pt_len)
-                    ct = PKCS.encrypt(pt, self.key1024, self.rng)
+                    ct = PKCS.encrypt(pt, self.key1024)
                     pt2 = PKCS.decrypt(ct, self.key1024, "---")
                     self.assertEqual(pt,pt2)
 

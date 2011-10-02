@@ -22,8 +22,7 @@
 
 """RSA digital signature protocol with appendix according to PKCS#1 PSS.
 
-See RFC3447 or the original RSA Labs specification at
-http://www.rsa.com/rsalabs/node.asp?id=2125.
+See RFC3447__ or the `original RSA Labs specification`__.
 
 This scheme is more properly called ``RSASSA-PSS``.
 
@@ -36,16 +35,15 @@ this:
     >>> from Crypto import Random
     >>>
     >>> message = 'To be signed'
-    >>> rng = Random.new().read
-    >>> key = RSA.importKey('privkey.der')
+    >>> key = RSA.importKey(open('privkey.der').read())
     >>> h = SHA.new()
     >>> h.update(message)
-    >>> signature = PKCS1_PSS.sign(h, key, rng)
+    >>> signature = PKCS1_PSS.sign(h, key)
 
 At the receiver side, verification can be done like using the public part of
 the RSA key:
 
-    >>> key = RSA.importKey('pubkey.der')
+    >>> key = RSA.importKey(open('pubkey.der').read())
     >>> h = SHA.new()
     >>> h.update(message)
     >>> if PKCS1_PSS.verify(h, key, signature):
@@ -53,6 +51,10 @@ the RSA key:
     >>> else:
     >>>     print "The signature is not authentic."
 
+:undocumented: __revision__, __package__
+
+.. __: http://www.ietf.org/rfc/rfc3447.txt
+.. __: http://www.rsa.com/rsalabs/node.asp?id=2125
 """
 
 # Allow nested scopes in Python 2.1
@@ -66,7 +68,7 @@ import Crypto.Util.number
 from Crypto.Util.number import ceil_shift, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
 
-def sign(mhash, key, randfunc, mgfunc=None, saltLen=None):
+def sign(mhash, key, mgfunc=None, saltLen=None):
     """Produce the PKCS#1 PSS signature of a message.
 
     This function is named ``RSASSA-PSS-SIGN``, and is specified in
@@ -79,10 +81,6 @@ def sign(mhash, key, randfunc, mgfunc=None, saltLen=None):
      key : RSA key object
             The key to use to sign the message. This is a `Crypto.PublicKey.RSA`
             object and must have its private half.
-     randfunc : callable
-            An RNG function that accepts as only parameter an int, and returns
-            a string of random bytes, to be used as salt.
-            This parameter is ignored if salt length is zero.
      mgfunc : callable
             A mask generation function that accepts two parameters: a string to
             use as seed, and the lenth of the mask to generate, in bytes.
@@ -103,6 +101,8 @@ def sign(mhash, key, randfunc, mgfunc=None, saltLen=None):
                 The receiver must use the same parameters too.
     """
     # TODO: Verify the key is RSA
+
+    randfunc = key._randfunc
 
     # Set defaults for salt length and mask generation function
     if saltLen == None:
@@ -216,7 +216,7 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
      randFunc : callable
             An RNG function that accepts as only parameter an int, and returns
             a string of random bytes, to be used as salt.
-     mfg : callable
+     mgf : callable
             A mask generation function that accepts two parameters: a string to
             use as seed, and the lenth of the mask to generate, in bytes.
      sLen : int
@@ -275,10 +275,7 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
             the message that was received.
      emBits : int
             Length of the final encoding (em), in bits.
-     randfunc : callable
-            An RNG function that accepts as only parameter an int, and returns
-            a string of random bytes, to be used as salt.
-     mfg : callable
+     mgf : callable
             A mask generation function that accepts two parameters: a string to
             use as seed, and the lenth of the mask to generate, in bytes.
      sLen : int

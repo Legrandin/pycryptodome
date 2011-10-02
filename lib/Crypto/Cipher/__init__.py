@@ -58,7 +58,7 @@ Asymmetric algorithms
 For asymmetric algorithms, the key to be used for decryption is totally
 different and cannot be derived in a feasible way from the key used
 for encryption. Put differently, sender and receiver each own one half
-of a key pair. The encryption key is often called ``public``` whereas
+of a key pair. The encryption key is often called ``public`` whereas
 the decryption key is called ``private``.
 
 ========================    =======================
@@ -68,6 +68,7 @@ Crypto.Cipher.PKCS1_v1.5    PKCS#1 v1.5 encryption, based on RSA key pairs
 Crypto.Cipher.PKCS1_OAEP    PKCS#1 OAEP encryption, based on RSA key pairs
 ========================    =======================
 
+:undocumented: __revision__, __package__
 """
 
 __all__ = ['AES', 'ARC2', 'ARC4',

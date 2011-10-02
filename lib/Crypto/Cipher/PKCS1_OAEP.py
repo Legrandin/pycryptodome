@@ -22,8 +22,7 @@
 
 """RSA encryption protocol according to PKCS#1 OAEP
 
-See RFC3447 or the original RSA Labs specification at
-http://www.rsa.com/rsalabs/node.asp?id=2125.
+See RFC3447__ or the `original RSA Labs specification`__ .
 
 This scheme is more properly called ``RSAES-OAEP``.
 
@@ -31,18 +30,21 @@ As an example, a sender may encrypt a message in this way:
 
         >>> from Crypto.Cipher import PKCS1_OAEP
         >>> from Crypto.PublicKey import RSA
-        >>> from Crypto import Random
         >>>
         >>> message = 'To be encrypted'
-        >>> key = RSA.importKey('pubkey.der')
-        >>> rng = Random.new().read
-        >>> ciphertext = PKCS1_OAEP.encrypt(message, key, rng)
+        >>> key = RSA.importKey(open('pubkey.der').read())
+        >>> ciphertext = PKCS1_OAEP.encrypt(message, key)
 
 At the receiver side, decryption can be done using the private part of
 the RSA key:
 
-        >>> key = RSA.importKey('privkey.der')
+        >>> key = RSA.importKey(open('privkey.der').read())
         >>> message = PKCS1_OAEP.decrypt(ciphertext, key):
+
+:undocumented: __revision__, __package__
+
+.. __: http://www.ietf.org/rfc/rfc3447.txt
+.. __: http://www.rsa.com/rsalabs/node.asp?id=2125.
 """
 
 from __future__ import nested_scopes
@@ -57,9 +59,7 @@ import Crypto.Util.number
 from   Crypto.Util.number import ceil_div
 from   Crypto.Util.strxor import strxor
 
-import re
-
-def encrypt(message, key, randFunc, hashAlgo=None, mgfunc=None, label=''):
+def encrypt(message, key, hashAlgo=None, mgfunc=None, label=''):
     """Produce the PKCS#1 OAEP encryption of a message.
 
     This function is named ``RSAES-OAEP-ENCRYPT``, and is specified in
@@ -73,9 +73,6 @@ def encrypt(message, key, randFunc, hashAlgo=None, mgfunc=None, label=''):
      key : RSA key object
             The key to use to encrypt the message. This is a `Crypto.PublicKey.RSA`
             object.
-     randFunc : callable
-            An RNG function that accepts as only parameter an integer, and returns
-            a string of random bytes.
      hashAlgo : hash object
             The hash function to use. This can be a module under `Crypto.Hash`
             or an existing hash object created from any of such modules. If not specified,
@@ -99,6 +96,8 @@ def encrypt(message, key, randFunc, hashAlgo=None, mgfunc=None, label=''):
                 The receiver must use the same one too.
     """
     # TODO: Verify the key is RSA
+
+    randFunc = key._randfunc
 
     # See 7.1.1 in RFC3447
     modBits = Crypto.Util.number.size(key.n)
@@ -200,6 +199,8 @@ def decrypt(ct, key, hashAlgo=None, mgfunc=None, label=''):
     lHash = hashObj.new(label).digest()
     # Step 3b
     y = em[0]
+    # y must be 0, but we MUST NOT check it here in order not to
+    # allow attacks like Manger's (http://dl.acm.org/citation.cfm?id=704143)
     maskedSeed = em[1:hLen+1]
     maskedDB = em[hLen+1:]
     # Step 3c
@@ -212,14 +213,13 @@ def decrypt(ct, key, hashAlgo=None, mgfunc=None, label=''):
     db = strxor(maskedDB, dbMask)
     # Step 3g
     valid = 1
+    one = db[hLen:].find('\x01')
     lHash1 = db[:hLen]
     if lHash1!=lHash:
         valid = 0
-    try:
-        one = re.match('\x00+',db[hLen:]).end()
-        if db[hLen+one]!='\x01':
-            valid = 0
-    except (IndexError, AttributeError):
+    if one<0:
+        valid = 0
+    if y!='\x00':
         valid = 0
     if not valid:
         raise ValueError("Incorrect decryption.")

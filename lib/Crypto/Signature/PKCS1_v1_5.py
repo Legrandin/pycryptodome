@@ -20,10 +20,10 @@
 # SOFTWARE.
 # ===================================================================
 
-"""RSA digital signature protocol according to PKCS#1 v1.5
+"""
+RSA digital signature protocol according to PKCS#1 v1.5
 
-See RFC3447 or the original RSA Labs specification at
-http://www.rsa.com/rsalabs/node.asp?id=2125.
+See RFC3447__ or the `original RSA Labs specification`__.
 
 This scheme is more properly called ``RSASSA-PKCS1-v1_5``.
 
@@ -35,21 +35,24 @@ this:
         >>> from Crypto.PublicKey import RSA
         >>>
         >>> message = 'To be signed'
-        >>> key = RSA.importKey('key.der')
-        >>> h = SHA.new()
-        >>> h.update(message)
-        >>>> signature = PKCS1_v1_5.sign(h, key)
+        >>> key = RSA.importKey(open('privkey.der').read())
+        >>> h = SHA.new(message)
+        >>> signature = PKCS1_v1_5.sign(h, key)
 
 At the receiver side, verification can be done using the public part of
 the RSA key:
 
-        >>> key = RSA.importKey('pubkey.der')
-        >>> h = SHA.new()
-        >>> h.update(message)
+        >>> key = RSA.importKey(open('pubkey.der').read())
+        >>> h = SHA.new(message)
         >>> if PKCS.verify(h, key, signature):
         >>>    print "The signature is authentic."
         >>> else:
         >>>    print "The signature is not authentic."
+
+:undocumented: __revision__, __package__
+
+.. __: http://www.ietf.org/rfc/rfc3447.txt
+.. __: http://www.rsa.com/rsalabs/node.asp?id=2125
 """
 
 __revision__ = "$Id$"
@@ -113,7 +116,7 @@ def verify(mhash, key, S):
      S : string
             The signature that needs to be validated.
 
-    :Return: True if verification is correct. False otherwise.
+    :Return: True (1) if verification is correct. False (0) otherwise.
     """
     # TODO: Verify the key is RSA
 
@@ -137,6 +140,10 @@ def verify(mhash, key, S):
     except ValueError:
         return 0
     # Step 4
+    # By comparing the full encodings (as opposed to checking each
+    # of its components one at a time) we avoid attacks to the padding
+    # scheme like Bleichenbacher's (see http://www.mail-archive.com/cryptography@metzdowd.com/msg06537).
+    # 
     return em1==em2
 
 def EMSA_PKCS1_V1_5_ENCODE(hash, emLen):

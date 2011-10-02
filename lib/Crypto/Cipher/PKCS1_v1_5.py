@@ -22,7 +22,7 @@
 
 """RSA encryption protocol according to PKCS#1 v1.5
 
-See RFC3447 or the `original RSA Labs specification`__ .
+See RFC3447__ or the `original RSA Labs specification`__ .
 
 This scheme is more properly called ``RSAES-PKCS1-v1_5``.
 
@@ -33,13 +33,13 @@ As an example, a sender may encrypt a message in this way:
         >>> from Crypto.Cipher import PKCS1_v1_5
         >>> from Crypto.PublicKey import RSA
         >>> from Crypto.Hash import SHA
-        >>> from Crypto import Random
         >>>
-        >>> rng = Random.new()
         >>> message = 'To be encrypted'
         >>> h = SHA.new(message)
+        >>>
         >>> key = RSA.importKey(open('pubkey.der').read())
-        >>> ciphertext = PKCS1_v1_5.encrypt(message+h.digest(), key, rng.read)
+        >>>
+        >>> ciphertext = PKCS1_v1_5.encrypt(message+h.digest(), key)
 
 At the receiver side, decryption can be done using the private part of
 the RSA key:
@@ -47,17 +47,22 @@ the RSA key:
         >>> From Crypto.Hash import SHA
         >>> from Crypto import Random
         >>>
-        >>> rng = Random.new()
-        >>> dsize = SHA.digest_size
         >>> key = RSA.importKey(open('privkey.der').read())
+        >>>
+        >>> dsize = SHA.digest_size
         >>> sentinel = Random.new().read(15+dsize)      # Let's assume that average data length is 15
+        >>>
         >>> message = PKCS1_v1_5.decrypt(ciphertext, key, sentinel)
+        >>>
         >>> digest = SHA.new(message[:-dsize]).digest()
         >>> if digest==message[-dsize:]:                # Note how we DO NOT look for the sentinel
         >>>     print "Encryption was correct."
         >>> else:
         >>>     print "Encryption was not correct."
 
+:undocumented: __revision__, __package__
+
+.. __: http://www.ietf.org/rfc/rfc3447.txt
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125.
 """
 
@@ -67,7 +72,7 @@ __all__ = [ 'encrypt', 'decrypt' ]
 from Crypto.Util.number import ceil_div
 import Crypto.Util.number
 
-def encrypt(message, key, randFunc):
+def encrypt(message, key):
     """Produce the PKCS#1 v1.5 encryption of a message.
 
     This function is named ``RSAES-PKCS1-V1_5-ENCRYPT``, and is specified in
@@ -80,9 +85,6 @@ def encrypt(message, key, randFunc):
      key : RSA key object
             The key to use to encrypt the message. This is a `Crypto.PublicKey.RSA`
             object.
-     randFunc : callable
-            An RNG function that accepts as only parameter an integer, and returns
-            a string of random bytes.
 
     :Return: A string, the ciphertext in which the message is encrypted.
         It is as long as the RSA modulus (in bytes).
@@ -91,6 +93,8 @@ def encrypt(message, key, randFunc):
         message.
     """
     # TODO: Verify the key is RSA
+
+    randFunc = key._randfunc
 
     # See 7.2.1 in RFC3447
     modBits = Crypto.Util.number.size(key.n)
@@ -130,7 +134,7 @@ def decrypt(ct, key, sentinel):
      sentinel : string
             The string to return to indicate that an error was detected during decryption.
 
-    :Return: A string, the original message or the ``sentinel``.
+    :Return: A string. It is either the original message or the ``sentinel`` (in case of an error).
     :Raise ValueError:
         If the ciphertext length is incorrect
     :Raise TypeError:
@@ -138,9 +142,11 @@ def decrypt(ct, key, sentinel):
 
     :attention:
         You should **never** let the party who submitted the ciphertext know that
-        this function returned the ``sentinel`` value, since attacks exist (e.g. `Bleichenbacher's`__)
-        that can compromise your RSA private key by means of such information.
-
+        this function returned the ``sentinel`` value.
+        Armed with such knowledge (for a fair amount of carefully crafted but invalid ciphertexts),
+        an attacker is able to recontruct the plaintext of any other encryption that were carried out
+        with the same RSA public key (see `Bleichenbacher's`__ attack).
+        
         In general, it should not be possible for the other party to distinguish
         whether processing at the server side failed because the value returned
         was a ``sentinel`` as opposed to a random, invalid message.
@@ -157,12 +163,14 @@ def decrypt(ct, key, sentinel):
            Put differently, you should not explicitly check if the returned value is the ``sentinel`` or not.
         3. Cover all possible errors with a single, generic error indicator.
         4. Embed into the definition of ``message`` (at the protocol level) a digest (e.g. ``SHA-1``).
+           It is recommended for it to be the rightmost part ``message``.
         5. Where possible, monitor the number of errors due to ciphertexts originating from the same party,
            and slow down the rate of the requests from such party (or even blacklist it altogether).
  
         **If you are designing a new protocol, consider using the more robust PKCS#1 OAEP.**
 
-        .. __: http://www.springerlink.com/index/j5758n240017h867.pdf
+        .. __: http://www.bell-labs.com/user/bleichen/papers/pkcs.ps
+
     """
 
     # TODO: Verify the key is RSA
