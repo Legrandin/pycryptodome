@@ -42,6 +42,40 @@ JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
 n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
 -----END RSA PRIVATE KEY-----'''
 
+        # The same RSA private key as in rsaKeyPEM, but now encrypted
+        rsaKeyEncryptedPEM=(
+            
+            # With DES and passphrase 'test'
+            ('test', '''-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: DES-CBC,AF8F9A40BD2FA2FC
+
+Ckl9ex1kaVEWhYC2QBmfaF+YPiR4NFkRXA7nj3dcnuFEzBnY5XULupqQpQI3qbfA
+u8GYS7+b3toWWiHZivHbAAUBPDIZG9hKDyB9Sq2VMARGsX1yW1zhNvZLIiVJzUHs
+C6NxQ1IJWOXzTew/xM2I26kPwHIvadq+/VaT8gLQdjdH0jOiVNaevjWnLgrn1mLP
+BCNRMdcexozWtAFNNqSzfW58MJL2OdMi21ED184EFytIc1BlB+FZiGZduwKGuaKy
+9bMbdb/1PSvsSzPsqW7KSSrTw6MgJAFJg6lzIYvR5F4poTVBxwBX3+EyEmShiaNY
+IRX3TgQI0IjrVuLmvlZKbGWP18FXj7I7k9tSsNOOzllTTdq3ny5vgM3A+ynfAaxp
+dysKznQ6P+IoqML1WxAID4aGRMWka+uArOJ148Rbj9s=
+-----END RSA PRIVATE KEY-----''',
+            "\xAF\x8F\x9A\x40\xBD\x2F\xA2\xFC"),
+
+            # With Triple-DES and passphrase 'rocking'
+            ('rocking', '''-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: DES-EDE3-CBC,C05D6C07F7FC02F6
+
+w4lwQrXaVoTTJ0GgwY566htTA2/t1YlimhxkxYt9AEeCcidS5M0Wq9ClPiPz9O7F
+m6K5QpM1rxo1RUE/ZyI85gglRNPdNwkeTOqit+kum7nN73AToX17+irVmOA4Z9E+
+4O07t91GxGMcjUSIFk0ucwEU4jgxRvYscbvOMvNbuZszGdVNzBTVddnShKCsy9i7
+nJbPlXeEKYi/OkRgO4PtfqqWQu5GIEFVUf9ev1QV7AvC+kyWTR1wWYnHX265jU5c
+sopxQQtP8XEHIJEdd5/p1oieRcWTCNyY8EkslxDSsrf0OtZp6mZH9N+KU47cgQtt
+9qGORmlWnsIoFFKcDohbtOaWBTKhkj5h6OkLjFjfU/sBeV1c+7wDT3dAy5tawXjG
+YSxC7qDQIT/RECvV3+oQKEcmpEujn45wAnkTi12BH30=
+-----END RSA PRIVATE KEY-----''',
+            "\xC0\x5D\x6C\x07\xF7\xFC\x02\xF6"),
+        )
+
         rsaPublicKeyPEM = '''-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
@@ -129,6 +163,16 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                 self.assertEqual(key.n, self.n)
                 self.assertEqual(key.e, self.e)
 
+        def testImportKey8(self):
+                for t in self.rsaKeyEncryptedPEM:
+                    key = self.rsa.importKey(t[1], t[0])
+                    self.failUnless(key.has_private())
+                    self.assertEqual(key.n, self.n)
+                    self.assertEqual(key.e, self.e)
+                    self.assertEqual(key.d, self.d)
+                    self.assertEqual(key.p, self.p)
+                    self.assertEqual(key.q, self.q)
+
         ###
         def testExportKey1(self):
                 key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
@@ -157,6 +201,15 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                 self.assertEqual(openssh_1[0], openssh_2[0])
                 self.assertEqual(openssh_1[1], openssh_2[1])
 
+        def testExportKey4(self):
+                key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+                # Tuple with index #1 is encrypted with 3DES
+                t = self.rsaKeyEncryptedPEM[1]
+                # Force the salt being used when exporting
+                key._randfunc = lambda N: (t[2]*divmod(N+len(t[2]),len(t[2]))[0])[:N]
+                pemKey = key.exportKey("PEM", t[0])
+                self.assertEqual(pemKey, t[1])
+ 
 class ImportKeyTestsSlow(ImportKeyTests):
     def setUp(self):
         self.rsa = RSA.RSAImplementation(use_fast_math=0)

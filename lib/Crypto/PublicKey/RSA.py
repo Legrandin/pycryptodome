@@ -166,15 +166,18 @@ class _RSAobj(pubkey.pubkey):
             attrs.append("private")
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
-    def exportKey(self, format='PEM'):
+    def exportKey(self, format='PEM', passphrase=None):
         """Export this RSA key.
 
         :Parameter format: The encoding to use to wrap the key.
 
-            - *'DER'* for PKCS#1
+            - *'DER'* for PKCS#1. Always unencrypted.
             - *'OpenSSH'* for OpenSSH public keys (no private key)
-            - *'PEM'* for RFC1421
+            - *'PEM'* for RFC1421/3. Unencrypted (default) or encrypted.
         :Type format: string
+
+        :Parameter passphrase: In case of PEM, the pass phrase to derive the encryption key from.
+        :Type passphrase: string 
 
         :Return: A string with the encoded public or private half.
         :Raise ValueError:
@@ -209,7 +212,25 @@ class _RSAobj(pubkey.pubkey):
                 return der.encode()
         if format=='PEM':
                 pem = "-----BEGIN %s KEY-----\n" % keyType
+                keyobj = None
+                if passphrase and keyType=='RSA PRIVATE':
+                    # We only support 3DES for encryption
+                    import Crypto.Hash.MD5
+                    from Crypto.Cipher import DES3
+                    from Crypto.Protocol.KDF import PBKDF1
+                    salt = self._randfunc(8)
+                    key =  PBKDF1(passphrase, salt, 16, 1, Crypto.Hash.MD5)
+                    key += PBKDF1(key+passphrase, salt, 8, 1, Crypto.Hash.MD5)
+                    keyobj = DES3.new(key, Crypto.Cipher.DES3.MODE_CBC, salt)
+                    pem += 'Proc-Type: 4,ENCRYPTED\n'
+                    pem += 'DEK-Info: DES-EDE3-CBC,' + binascii.b2a_hex(salt).upper() + '\n\n'
+                
                 binaryKey = der.encode()
+                if keyobj:
+                    # Add PKCS#7-like padding
+                    padding = keyobj.block_size-len(binaryKey)%keyobj.block_size
+                    binaryKey = keyobj.encrypt(binaryKey+chr(padding)*padding)
+
                 # Each BASE64 line can take up to 64 characters (=48 bytes of data)
                 chunks = [ binascii.b2a_base64(binaryKey[i:i+48]) for i in range(0, len(binaryKey), 48) ]
                 pem += ''.join(chunks)
@@ -380,23 +401,59 @@ class RSAImplementation(object):
                                         return self.construct(der[:])
         raise ValueError("RSA key format is not supported")
 
-    def importKey(self, externKey):
+    def importKey(self, externKey, passphrase=None):
         """Import an RSA key (public or private half), encoded in standard form.
 
         :Parameter externKey:
             The RSA key to import, encoded as a string.
 
-            The key can be in DER (PKCS#1), OpenSSH or in unencrypted PEM format (RFC1421).
+            The key can be in DER (PKCS#1), OpenSSH or in PEM format (RFC1421/3).
+            In case of PEM, the key can be encrypted with DES or 3TDES according to a certain pass phrase.
+            Only OpenSSL-compatible pass phrases are supported.
         :Type externKey: string
 
-        :Raise ValueError/IndexError:
-            When the given key cannot be parsed.
+        :Parameter passphrase:
+            In case of an encrypted PEM key, this is the pass phrase from which the encryption key is derived.
+        :Type passphrase: string
+        
+        :Raise ValueError/IndexError/TypeError:
+            When the given key cannot be parsed (possibly because the pass phrase is wrong).
         """
         if externKey.startswith('-----'):
                 # This is probably a PEM encoded key
                 lines = externKey.replace(" ",'').split()
+                keyobj = None
+
+                # The encrypted PEM format
+                if lines[1].startswith('Proc-Type:4,ENCRYPTED'):
+                    DEK = lines[2].split(':')
+                    if len(DEK)!=2 or DEK[0]!='DEK-Info' or not passphrase:
+                        raise ValueError("PEM encryption format not supported.")
+                    algo, salt = DEK[1].split(',')
+                    salt = binascii.a2b_hex(salt)
+                    import Crypto.Hash.MD5
+                    from Crypto.Cipher import DES, DES3
+                    from Crypto.Protocol.KDF import PBKDF1
+                    if algo=="DES-CBC":
+                        # This is EVP_BytesToKey in OpenSSL
+                        key = PBKDF1(passphrase, salt, 8, 1, Crypto.Hash.MD5)
+                        keyobj = DES.new(key, Crypto.Cipher.DES.MODE_CBC, salt)
+                    elif algo=="DES-EDE3-CBC":
+                        # Note that EVP_BytesToKey is note exactly the same as PBKDF1
+                        key =  PBKDF1(passphrase, salt, 16, 1, Crypto.Hash.MD5)
+                        key += PBKDF1(key+passphrase, salt, 8, 1, Crypto.Hash.MD5)
+                        keyobj = DES3.new(key, Crypto.Cipher.DES3.MODE_CBC, salt)
+                    else:
+                        raise ValueError("Unsupport PEM encryption algorithm.")
+                    lines = lines[2:]
+                
                 der = binascii.a2b_base64(''.join(lines[1:-1]))
+                if keyobj:
+                    der = keyobj.decrypt(der)
+                    padding = ord(der[-1])
+                    der = der[:-padding]
                 return self._importKeyDER(der)
+
         if externKey.startswith('ssh-rsa '):
                 # This is probably an OpenSSH key
                 keystring = binascii.a2b_base64(externKey.split(' ')[1])
