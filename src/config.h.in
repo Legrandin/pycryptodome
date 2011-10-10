@@ -11,8 +11,11 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `' library (-l). */
-#undef HAVE_LIB
+/* Define to 1 if you have the `gmp' library (-lgmp). */
+#undef HAVE_LIBGMP
+
+/* Define to 1 if you have the `mpir' library (-lmpir). */
+#undef HAVE_LIBMPIR
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H

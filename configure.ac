@@ -10,9 +10,22 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_PROG_CC
 
 # Checks for libraries.
-AC_CHECK_LIB
-AC_CHECK_DECLS([mpz_powm], [], [], [[#include <gmp.h>]])
-AC_CHECK_DECLS([mpz_powm_sec], [], [], [[#include <gmp.h>]])
+AC_CHECK_LIB([gmp], [__gmpz_init])
+AC_CHECK_LIB([mpir], [__gmpz_init])
+AC_CHECK_DECLS([mpz_powm], [], [], [
+[#if HAVE_LIBGMP
+# include <gmp.h>
+#elif HAVE_LIBMPIR
+# include <mpir.h>
+#endif
+]])
+AC_CHECK_DECLS([mpz_powm_sec], [], [], [
+[#if HAVE_LIBGMP
+# include <gmp.h>
+#elif HAVE_LIBMPIR
+# include <mpir.h>
+#endif
+]])
 
 # Checks for header files.
 AC_CHECK_HEADERS([inttypes.h limits.h stddef.h stdint.h stdlib.h string.h wchar.h])

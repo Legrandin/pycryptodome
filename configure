@@ -3083,13 +3083,13 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 # Checks for libraries.
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for  in -l" >&5
-$as_echo_n "checking for  in -l... " >&6; }
-if test "${ac_cv_lib__+set}" = set; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __gmpz_init in -lgmp" >&5
+$as_echo_n "checking for __gmpz_init in -lgmp... " >&6; }
+if test "${ac_cv_lib_gmp___gmpz_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-l  $LIBS"
+LIBS="-lgmp  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3099,36 +3099,87 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char  ();
+char __gmpz_init ();
 int
 main ()
 {
-return  ();
+return __gmpz_init ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib__=yes
+  ac_cv_lib_gmp___gmpz_init=yes
 else
-  ac_cv_lib__=no
+  ac_cv_lib_gmp___gmpz_init=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib__" >&5
-$as_echo "$ac_cv_lib__" >&6; }
-if test "x$ac_cv_lib__" = x""yes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gmp___gmpz_init" >&5
+$as_echo "$ac_cv_lib_gmp___gmpz_init" >&6; }
+if test "x$ac_cv_lib_gmp___gmpz_init" = x""yes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_LIB 1
+#define HAVE_LIBGMP 1
 _ACEOF
 
-  LIBS="-l $LIBS"
+  LIBS="-lgmp $LIBS"
 
 fi
 
-ac_fn_c_check_decl "$LINENO" "mpz_powm" "ac_cv_have_decl_mpz_powm" "#include <gmp.h>
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __gmpz_init in -lmpir" >&5
+$as_echo_n "checking for __gmpz_init in -lmpir... " >&6; }
+if test "${ac_cv_lib_mpir___gmpz_init+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmpir  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char __gmpz_init ();
+int
+main ()
+{
+return __gmpz_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_mpir___gmpz_init=yes
+else
+  ac_cv_lib_mpir___gmpz_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mpir___gmpz_init" >&5
+$as_echo "$ac_cv_lib_mpir___gmpz_init" >&6; }
+if test "x$ac_cv_lib_mpir___gmpz_init" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBMPIR 1
+_ACEOF
+
+  LIBS="-lmpir $LIBS"
+
+fi
+
+ac_fn_c_check_decl "$LINENO" "mpz_powm" "ac_cv_have_decl_mpz_powm" "
+#if HAVE_LIBGMP
+# include <gmp.h>
+#elif HAVE_LIBMPIR
+# include <mpir.h>
+#endif
+
 "
 if test "x$ac_cv_have_decl_mpz_powm" = x""yes; then :
   ac_have_decl=1
@@ -3140,7 +3191,13 @@ cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_MPZ_POWM $ac_have_decl
 _ACEOF
 
-ac_fn_c_check_decl "$LINENO" "mpz_powm_sec" "ac_cv_have_decl_mpz_powm_sec" "#include <gmp.h>
+ac_fn_c_check_decl "$LINENO" "mpz_powm_sec" "ac_cv_have_decl_mpz_powm_sec" "
+#if HAVE_LIBGMP
+# include <gmp.h>
+#elif HAVE_LIBMPIR
+# include <mpir.h>
+#endif
+
 "
 if test "x$ac_cv_have_decl_mpz_powm_sec" = x""yes; then :
   ac_have_decl=1
