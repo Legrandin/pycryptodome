@@ -1,4 +1,3 @@
-#!/usr/local/bin/python
 # rfc1751.py : Converts between 128-bit strings and a human-readable
 # sequence of words, as defined in RFC1751: "A Convention for
 # Human-Readable 128-bit Keys", by Daniel L. McDonald.
