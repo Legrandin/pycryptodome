@@ -22,7 +22,7 @@
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
-__all__ = [ 'DerObject', 'DerInteger', 'DerOctetStrin', 'DerNull', 'DerSequence' ]
+__all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull', 'DerSequence' ]
 
 class DerObject:
         """Base class for defining a single DER object.
@@ -32,16 +32,19 @@ class DerObject:
 
         # Known TAG types
         typeTags = { 'SEQUENCE':'\x30', 'BIT STRING':'\x03', 'INTEGER':'\x02',
-                'OCTET STRING':'\x04', 'NULL':'\x05' }
+                'OCTET STRING':'\x04', 'NULL':'\x05', 'OBJECT IDENTIFIER':'\x06'}
 
-        def __init__(self, ASN1Type=None):
+        def __init__(self, ASN1Type=None, payload=''):
                 """Initialize the DER object according to a specific type.
 
                 The ASN.1 type is either specified as the ASN.1 string (e.g.
                 'SEQUENCE'), directly with its numerical tag or with no tag
                 atl all (None)."""
                 self.typeTag = self.typeTags.get(ASN1Type, ASN1Type)
-                self.payload = ''
+                self.payload = payload
+
+        def isType(self, ASN1Type):
+                return self.typeTags[ASN1Type]==self.typeTag
 
         def _lengthOctets(self, payloadLen):
                 """Return a string that encodes the given payload length (in
@@ -174,17 +177,21 @@ class DerSequence(DerObject):
         def append(self, item):
                 return self._seq.append(item)
 
-        def hasOnlyInts(self):
-                """Return 1/True is all items in this sequence are numbers."""
-                if not self._seq: return 0
-                test = 0
-                for item in self._seq:
+        def hasInts(self):
+                """Return the number of items in this sequence that are numbers."""
+                def isInt(x):
+                        test = 0
                         try:
-                                test += item
+                                test += x
                         except TypeError:
                                 return 0
-                return 1
+                        return 1
+                return len(filter(isInt, self._seq))
 
+        def hasOnlyInts(self):
+                """Return 1/True if all items in this sequence are numbers."""
+                return self._seq and self.hasInts()==len(self._seq)
+ 
         def encode(self):
                 """Return the DER encoding for the ASN.1 SEQUENCE, containing
                 the non-negative integers and longs added to this object.
@@ -248,7 +255,23 @@ class DerOctetString(DerObject):
         DerObject.__init__(self, 'OCTET STRING')
         self.payload = value
 
+    def decode(self, derEle, noLeftOvers=0):
+        p = DerObject.decode(derEle, noLeftOvers)
+        if not self.isType("OCTET STRING"):
+            raise ValueError("Not a valid OCTET STRING.")
+        return p
+
 class DerNull(DerObject):
     def __init__(self):
         DerObject.__init__(self, 'NULL')
+
+class DerObjectId(DerObject):
+    def __init__(self):
+        DerObject.__init__(self, 'OBJECT IDENTIFIER')
+
+    def decode(self, derEle, noLeftOvers=0):
+        p = DerObject.decode(derEle, noLeftOvers)
+        if not self.isType("OBJECT IDENTIFIER"):
+            raise ValueError("Not a valid OBJECT IDENTIFIER.")
+        return p
 
