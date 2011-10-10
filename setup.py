@@ -268,7 +268,11 @@ class PCTBuildConfigure(Command):
         if not os.path.exists("config.status"):
             if os.system("chmod 0755 configure") != 0:
                 raise RuntimeError("chmod error")
-            if os.system("./configure") != 0:
+            if self.verbose < 1:
+                cmd = "./configure -q"
+            else:
+                cmd = "./configure"
+            if os.system(cmd) != 0:
                 raise RuntimeError("autoconf error")
 
 class PCTBuildPy(build_py):
