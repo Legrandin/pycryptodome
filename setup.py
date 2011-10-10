@@ -84,6 +84,14 @@ else:
     if sys.platform != "win32": # Avoid nt.py, as 2to3 can't fix it w/o winrandom
         EXCLUDE_PY += [('Crypto.Random.OSRNG','nt')]
 
+# Exclude SHA224/384/512 if they're not present (Python < 2.5)
+try: from hashlib import sha224
+except ImportError: EXCLUDE_PY += [('Crypto.Hash', 'SHA224')]
+try: from hashlib import sha384
+except ImportError: EXCLUDE_PY += [('Crypto.Hash', 'SHA384')]
+try: from hashlib import sha512
+except ImportError: EXCLUDE_PY += [('Crypto.Hash', 'SHA512')]
+
 # Work around the print / print() issue with Python 2.x and 3.x. We only need
 # to print at one point of the code, which makes this easy
 

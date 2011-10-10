@@ -34,10 +34,14 @@ def get_tests(config={}):
     import test_MD5;    tests += test_MD5.get_tests(config=config)
     import test_RIPEMD; tests += test_RIPEMD.get_tests(config=config)
     import test_SHA;    tests += test_SHA.get_tests(config=config)
-    import test_SHA224; tests += test_SHA224.get_tests(config=config)
     import test_SHA256; tests += test_SHA256.get_tests(config=config)
-    import test_SHA384; tests += test_SHA384.get_tests(config=config)
-    import test_SHA512; tests += test_SHA512.get_tests(config=config)
+    try:
+        import test_SHA224; tests += test_SHA224.get_tests(config=config)
+        import test_SHA384; tests += test_SHA384.get_tests(config=config)
+        import test_SHA512; tests += test_SHA512.get_tests(config=config)
+    except ImportError:
+        import sys
+        sys.stderr.write("SelfTest: warning: not testing SHA224/SHA384/SHA512 modules (not available)\n")
     return tests
 
 if __name__ == '__main__':
