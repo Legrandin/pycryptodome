@@ -24,8 +24,9 @@ __revision__ = "$Id$"
 
 __all__ = ['new', 'digest_size']
 
-import hashlib
-def new(data=""):
-    return hashlib.sha384(data)
+from hashlib import sha384      # This will only work in versions of Python that support SHA384
+from Crypto.Util.py3compat import *
+def new(data=b("")):
+    return sha384(data)
 digest_size = new().digest_size
 block_size = 128
