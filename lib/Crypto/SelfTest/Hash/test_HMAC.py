@@ -175,12 +175,34 @@ test_data = [
             bfdc63644f0713938a7f51535c3a35e2
         '''),
         'RFC 4231 #7 (HMAC-SHA256)'),
+
+    # Test case 8 (SHA224)
+    ('4a656665',
+        '7768617420646f2079612077616e74'
+        + '20666f72206e6f7468696e673f',
+        dict(SHA224='a30e01098bc6dbbf45690f3a7e9e6d0f8bbea2a39e6148008fd05e44'),
+        'RFC 4634 8.4 SHA224 (HMAC-SHA224)'),
+
+    # Test case 9 (SHA384)
+    ('4a656665',
+        '7768617420646f2079612077616e74'
+        + '20666f72206e6f7468696e673f',
+        dict(SHA384='af45d2e376484031617f78d2b58a6b1b9c7ef464f5a01b47e42ec3736322445e8e2240ca5e69e2c78b3239ecfab21649'),
+        'RFC 4634 8.4 SHA384 (HMAC-SHA384)'),
+
+   # Test case 10 (SHA512)
+    ('4a656665',
+        '7768617420646f2079612077616e74'
+        + '20666f72206e6f7468696e673f',
+        dict(SHA512='164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea2505549758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737'),
+        'RFC 4634 8.4 SHA512 (HMAC-SHA512)'),
+
 ]
 
 def get_tests(config={}):
-    from Crypto.Hash import HMAC, MD5, SHA as SHA1, SHA256
+    from Crypto.Hash import HMAC, MD5, SHA as SHA1, SHA256, SHA224, SHA384, SHA512
     from common import make_mac_tests
-    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256, default=None)
+    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA224=SHA224, SHA256=SHA256, SHA384=SHA384, SHA512=SHA512, default=None)
     return make_mac_tests(HMAC, "HMAC", test_data, hashmods)
 
 if __name__ == '__main__':

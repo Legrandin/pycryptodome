@@ -38,6 +38,7 @@ __revision__ = "$Id$"
 
 from distutils import core
 from distutils.core import Extension, Command
+from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 
 import os, sys
@@ -248,6 +249,27 @@ class PCTBuildExt (build_ext):
             if compiler is not None:
                 compiler.append(option)
 
+class PCTBuild(build):
+    def has_configure(self):
+        return sys.platform != 'win32'
+
+    sub_commands = [ ('build_configure', has_configure) ] + build.sub_commands
+
+class PCTBuildConfigure(Command):
+    description = "Generate config.h using ./configure (autoconf)"
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if os.system("chmod 0755 configure") != 0:
+            raise RuntimeError("chmod error")
+        if os.system("./configure") != 0:
+            raise RuntimeError("autoconf error")
+
 class PCTBuildPy(build_py):
     def find_package_modules(self, package, package_dir, *args, **kwargs):
         modules = build_py.find_package_modules(self, package, package_dir,
@@ -319,9 +341,8 @@ kw = {'name':"pycrypto",
       'author_email':"dlitz@dlitz.net",
       'url':"http://www.pycrypto.org/",
 
-      'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy,
-                    'test': TestCommand },
-      'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util", 
+      'cmdclass' : {'build': PCTBuild, 'build_configure': PCTBuildConfigure, 'build_ext':PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
+      'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
                   "Crypto.Random",
                   "Crypto.Random.Fortuna",
                   "Crypto.Random.OSRNG",

@@ -33,6 +33,7 @@
 
 #define MODULE_NAME MD2
 #define DIGEST_SIZE 16
+#define BLOCK_SIZE 64
 
 typedef unsigned char U8;
 typedef unsigned int U32;

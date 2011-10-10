@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Hash/__init__.py: Self-test for hash modules
+#  SelfTest/Hash/SHA.py: Self-test for the SHA-1 hash function
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #
@@ -22,23 +22,29 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test for hash modules"""
+"""Self-test suite for Crypto.Hash.SHA224"""
 
 __revision__ = "$Id$"
 
+# Test vectors from various sources
+# This is a list of (expected_result, input[, description]) tuples.
+test_data = [
+
+    # RFC 3874: Section 3.1, "Test Vector #1
+    ('23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7', 'abc'),
+
+    # RFC 3874: Section 3.2, "Test Vector #2
+    ('75388b16512776cc5dba5da1fd890150b0c6455cb4f58b1952522525', 'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'),
+
+    # RFC 3874: Section 3.3, "Test Vector #3
+    ('20794655980c91d8bbb4c1ea97618a4bf03f42581948b2ee4ee7ad67', 'a' * 10**6),
+
+]
+
 def get_tests(config={}):
-    tests = []
-    import test_HMAC;   tests += test_HMAC.get_tests(config=config)
-    import test_MD2;    tests += test_MD2.get_tests(config=config)
-    import test_MD4;    tests += test_MD4.get_tests(config=config)
-    import test_MD5;    tests += test_MD5.get_tests(config=config)
-    import test_RIPEMD; tests += test_RIPEMD.get_tests(config=config)
-    import test_SHA;    tests += test_SHA.get_tests(config=config)
-    import test_SHA224; tests += test_SHA224.get_tests(config=config)
-    import test_SHA256; tests += test_SHA256.get_tests(config=config)
-    import test_SHA384; tests += test_SHA384.get_tests(config=config)
-    import test_SHA512; tests += test_SHA512.get_tests(config=config)
-    return tests
+    from Crypto.Hash import SHA224
+    from common import make_hash_tests
+    return make_hash_tests(SHA224, "SHA224", test_data)
 
 if __name__ == '__main__':
     import unittest

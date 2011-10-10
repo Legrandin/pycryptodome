@@ -49,6 +49,9 @@ class ClockRewindWarning(CryptoRuntimeWarning):
 class GetRandomNumber_DeprecationWarning(CryptoDeprecationWarning):
     """Issued when Crypto.Util.number.getRandomNumber is invoked."""
 
+class PowmInsecureWarning(CryptoRuntimeWarning):
+    """Warning for when _fastmath is built without mpz_powm_sec"""
+
 # By default, we want this warning to be shown every time we compensate for
 # clock rewinding.
 import warnings as _warnings

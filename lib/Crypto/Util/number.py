@@ -26,7 +26,8 @@
 
 __revision__ = "$Id$"
 
-from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning
+from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning, PowmInsecureWarning
+from warnings import warn as _warn
 import math
 import sys
 from Crypto.Util.py3compat import *
@@ -50,6 +51,10 @@ except ImportError:
             # "it failed. This may point to the gmp or mpir shared library "+
             # "not being in the path. _fastmath was found at "+_fm_path)
     _fastmath = None
+
+# You need libgmp v5 or later to get mpz_powm_sec.  Warn if it's not available.
+if _fastmath is not None and not _fastmath.HAVE_DECL_MPZ_POWM_SEC:
+    _warn("Not using mpz_powm_sec.  You should rebuild using libgmp >= 5 to avoid timing attack vulnerability.", PowmInsecureWarning)
 
 # New functions
 from _number_new import *
