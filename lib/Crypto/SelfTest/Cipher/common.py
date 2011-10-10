@@ -73,6 +73,7 @@ class CipherSelfTest(unittest.TestCase):
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
             self.iv = _extract(params, 'iv', None)
+            if self.iv is not None: self.iv = b(self.iv)
         else:
             # Stream cipher
             self.mode = None
@@ -91,8 +92,8 @@ class CipherSelfTest(unittest.TestCase):
             from Crypto.Util import Counter
             ctr_class = _extract(params, 'ctr_class', Counter.new)
             ctr_params = _extract(params, 'ctr_params', {}).copy()
-            if ctr_params.has_key('prefix'): ctr_params['prefix'] = a2b_hex(ctr_params['prefix'])
-            if ctr_params.has_key('suffix'): ctr_params['suffix'] = a2b_hex(ctr_params['suffix'])
+            if ctr_params.has_key('prefix'): ctr_params['prefix'] = a2b_hex(b(ctr_params['prefix']))
+            if ctr_params.has_key('suffix'): ctr_params['suffix'] = a2b_hex(b(ctr_params['suffix']))
             if not ctr_params.has_key('nbits'):
                 ctr_params['nbits'] = 8*(self.module.block_size - len(ctr_params.get('prefix', '')) - len(ctr_params.get('suffix', '')))
             params['counter'] = ctr_class(**ctr_params)

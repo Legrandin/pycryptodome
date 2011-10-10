@@ -92,8 +92,8 @@ class MACSelfTest(unittest.TestCase):
     def runTest(self):
         for hashname in self.expected_dict.keys():
             hashmod = self.hashmods[hashname]
-            key = binascii.a2b_hex(self.key)
-            data = binascii.a2b_hex(self.input)
+            key = binascii.a2b_hex(b(self.key))
+            data = binascii.a2b_hex(b(self.input))
 
             # Strip whitespace from the expected string (which should be in lowercase-hex)
             expected = b("".join(self.expected_dict[hashname].split()))
