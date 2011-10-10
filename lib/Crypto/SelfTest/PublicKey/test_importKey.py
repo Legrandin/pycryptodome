@@ -31,7 +31,7 @@ from Crypto.Util.number import inverse
 
 class ImportKeyTests(unittest.TestCase):
 
-        # 512-bit RSA key generated with openssl
+        # 512-bit RSA key generated with openssl (pure PEM format)
         rsaKeyPEM = '''-----BEGIN RSA PRIVATE KEY-----
 MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
 q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
@@ -41,6 +41,18 @@ OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
 JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
 n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
 -----END RSA PRIVATE KEY-----'''
+
+        # As above, but this is actually an unencrypted PKCS#8 key
+        rsaKeyPEM8 = '''-----BEGIN PRIVATE KEY-----
+MIIBVQIBADANBgkqhkiG9w0BAQEFAASCAT8wggE7AgEAAkEAvx4nkAqgiyNRGlwS
+ga5tkzEsPv6RP5MuvtSS8S0WtGEMMoy24girX0WsvilQgzKY8xIsGfeEkt7fQPDj
+wZAzhQIDAQABAkAJRIMSnxFN7fZ+2rwjAbxaiOXmYB3XAWIg6tn9S/xv3rdYk4mK
+5BxU3b2/FTn4zL0Y9ntEDeGsMEQCgdQM+sg5AiEA8g8vPh2mGIP2KYCSK9jfVFzk
+B8cmJBEDteLFNyMSSiMCIQDKH+kkeSz8yWv6t080Smi0GN9XgzgGSAYAD+KlyZoC
+NwIhAIe+HDApUEvPNOxxPYd5R0R4EyiJdcokAICvewlAkbEhAiBqtGn6bVZIpXUx
+yLAxpM6dtTvDEWz0M/Wm9rvqVgHOBQIhAL2fQKdkInohlipK3Qfk3v5D7ZGjrie7
+BX85JB8zqwHB
+-----END PRIVATE KEY-----'''
 
         # The same RSA private key as in rsaKeyPEM, but now encrypted
         rsaKeyEncryptedPEM=(
@@ -84,6 +96,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Obtained using 'ssh-keygen -i -m PKCS8 -f rsaPublicKeyPEM'
         rsaPublicKeyOpenSSH = '''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n'''
 
+        # The private key, in PKCS#1 format encoded with DER
         rsaKeyDER = a2b_hex(
         '''3082013b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe
         913f932ebed492f12d16b4610c328cb6e208ab5f45acbe2950833298f312
@@ -96,6 +109,22 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         240080af7b094091b12102206ab469fa6d5648a57531c8b031a4ce9db53b
         c3116cf433f5a6f6bbea5601ce05022100bd9f40a764227a21962a4add07
         e4defe43ed91a3ae27bb057f39241f33ab01c1
+        '''.replace(" ",""))
+
+        # The private key, in unencrypted PKCS#8 format encoded with DER
+        rsaKeyDER8 = a2b_hex(
+        '''30820155020100300d06092a864886f70d01010105000482013f3082013
+        b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe913f932
+        ebed492f12d16b4610c328cb6e208ab5f45acbe2950833298f3122c19f78
+        492dedf40f0e3c190338502030100010240094483129f114dedf67edabc2
+        301bc5a88e5e6601dd7016220ead9fd4bfc6fdeb75893898ae41c54ddbdb
+        f1539f8ccbd18f67b440de1ac30440281d40cfac839022100f20f2f3e1da
+        61883f62980922bd8df545ce407c726241103b5e2c53723124a23022100c
+        a1fe924792cfcc96bfab74f344a68b418df578338064806000fe2a5c99a0
+        23702210087be1c3029504bcf34ec713d877947447813288975ca240080a
+        f7b094091b12102206ab469fa6d5648a57531c8b031a4ce9db53bc3116cf
+        433f5a6f6bbea5601ce05022100bd9f40a764227a21962a4add07e4defe4
+        3ed91a3ae27bb057f39241f33ab01c1
         '''.replace(" ",""))
 
         rsaPublicKeyDER = a2b_hex(
@@ -173,6 +202,25 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                     self.assertEqual(key.p, self.p)
                     self.assertEqual(key.q, self.q)
 
+        def testImportKey9(self):
+                key = self.rsa.importKey(self.rsaKeyDER8)
+                self.failUnless(key.has_private())
+                self.assertEqual(key.n, self.n)
+                self.assertEqual(key.e, self.e)
+                self.assertEqual(key.d, self.d)
+                self.assertEqual(key.p, self.p)
+                self.assertEqual(key.q, self.q)
+ 
+        def testImportKey10(self):
+                key = self.rsa.importKey(self.rsaKeyPEM8)
+                self.failUnless(key.has_private())
+                self.assertEqual(key.n, self.n)
+                self.assertEqual(key.e, self.e)
+                self.assertEqual(key.d, self.d)
+                self.assertEqual(key.p, self.p)
+                self.assertEqual(key.q, self.q)
+
+
         ###
         def testExportKey1(self):
                 key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
@@ -210,6 +258,16 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
                 pemKey = key.exportKey("PEM", t[0])
                 self.assertEqual(pemKey, t[1])
  
+        def testExportKey5(self):
+                key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+                derKey = key.exportKey("DER", pkcs=8)
+                self.assertEqual(derKey, self.rsaKeyDER8)
+
+        def testExportKey6(self):
+                key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+                pemKey = key.exportKey("PEM", pkcs=8)
+                self.assertEqual(pemKey, self.rsaKeyPEM8)
+
 class ImportKeyTestsSlow(ImportKeyTests):
     def setUp(self):
         self.rsa = RSA.RSAImplementation(use_fast_math=0)
