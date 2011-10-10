@@ -265,10 +265,11 @@ class PCTBuildConfigure(Command):
         pass
 
     def run(self):
-        if os.system("chmod 0755 configure") != 0:
-            raise RuntimeError("chmod error")
-        if os.system("./configure") != 0:
-            raise RuntimeError("autoconf error")
+        if not os.path.exists("config.status"):
+            if os.system("chmod 0755 configure") != 0:
+                raise RuntimeError("chmod error")
+            if os.system("./configure") != 0:
+                raise RuntimeError("autoconf error")
 
 class PCTBuildPy(build_py):
     def find_package_modules(self, package, package_dir, *args, **kwargs):
