@@ -32,6 +32,18 @@
 #include <Python.h>
 #include <longintrepr.h>				/* for conversions */
 #include <gmp.h>
+#include "config.h"
+
+/* If available, use mpz_powm_sec to avoid timing attacks.
+ * See the talk by Geremy Condra -
+ *  "PyCon 2011: Through the Side Channel: Timing and Implementation Attacks in Python"
+ *  http://blip.tv/pycon-us-videos-2009-2010-2011/pycon-2011-through-the-side-channel-timing-and-implementation-attacks-in-python-4897955
+ */
+#if HAVE_DECL_MPZ_POWM_SEC == 1
+#define MPZ_POWM mpz_powm_sec
+#else
+#define MPZ_POWM mpz_powm
+#endif
 
 #define SIEVE_BASE_SIZE (sizeof (sieve_base) / sizeof (sieve_base[0]))
 
@@ -134,7 +146,7 @@ dsaSign (dsaKey * key, mpz_t m, mpz_t k, mpz_t r, mpz_t s)
 		return 1;
 	}
 	mpz_init (temp);
-	mpz_powm_sec (r, key->g, k, key->p);
+	MPZ_POWM (r, key->g, k, key->p);
 	mpz_mod (r, r, key->q);
 	mpz_invert (s, k, key->q);
 	mpz_mul (temp, key->x, r);
@@ -163,8 +175,8 @@ dsaVerify (dsaKey * key, mpz_t m, mpz_t r, mpz_t s)
 	mpz_mod (u1, u1, key->q);
 	mpz_mul (u2, r, w);
 	mpz_mod (u2, u2, key->q);
-	mpz_powm_sec (v1, key->g, u1, key->p);
-	mpz_powm_sec (v2, key->y, u2, key->p);
+	MPZ_POWM (v1, key->g, u1, key->p);
+	MPZ_POWM (v2, key->y, u2, key->p);
 	mpz_mul (w, v1, v2);
 	mpz_mod (w, w, key->p);
 	mpz_mod (w, w, key->q);
@@ -188,7 +200,7 @@ rsaEncrypt (rsaKey * key, mpz_t v)
 	{
 		return 1;
 	}
-	mpz_powm_sec (v, v, key->e, key->n);
+	MPZ_POWM (v, v, key->e, key->n);
 	return 0;
 }
 
@@ -216,11 +228,11 @@ rsaDecrypt (rsaKey * key, mpz_t v)
         /* m1 = c ^ (d mod (p-1)) mod p */
         mpz_sub_ui(h, key->p, 1);
         mpz_fdiv_r(h, key->d, h);
-        mpz_powm_sec(m1, v, h, key->p);
+        MPZ_POWM(m1, v, h, key->p);
         /* m2 = c ^ (d mod (q-1)) mod q */
         mpz_sub_ui(h, key->q, 1);
         mpz_fdiv_r(h, key->d, h);
-        mpz_powm_sec(m2, v, h, key->q);
+        MPZ_POWM(m2, v, h, key->q);
         /* h = u * ( m2 - m1 ) mod q */
         mpz_sub(h, m2, m1);
         if (mpz_sgn(h)==-1)
@@ -239,7 +251,7 @@ rsaDecrypt (rsaKey * key, mpz_t v)
     }
 
     /* slow */
-	mpz_powm_sec (v, v, key->d, key->n);
+	MPZ_POWM (v, v, key->d, key->n);
 	return 0;
 }
 
@@ -254,7 +266,7 @@ rsaBlind (rsaKey * key, mpz_t v, mpz_t b)
         {
             return 2;
         }
-    mpz_powm_sec (b, b, key->e, key->n);
+    MPZ_POWM (b, b, key->e, key->n);
     mpz_mul (v, v, b);
     mpz_mod (v, v, key->n);
     return 0;
@@ -1101,7 +1113,7 @@ rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 			}
 		} while (base_was_tested);
 		mpz_init_set (tested[i], a);
-		mpz_powm_sec (z, a, m, n);
+		MPZ_POWM (z, a, m, n);
 		if ((mpz_cmp_ui (z, 1) == 0) || (mpz_cmp (z, n_1) == 0))
 			continue;
 		composite = 1;
@@ -1390,6 +1402,8 @@ init_fastmath (void)
 	_fastmath_dict = PyModule_GetDict (_fastmath_module);
 	fastmathError = PyErr_NewException ("_fastmath.error", NULL, NULL);
 	PyDict_SetItemString (_fastmath_dict, "error", fastmathError);
+
+	PyModule_AddIntConstant(_fastmath_module, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
 }
 
 
