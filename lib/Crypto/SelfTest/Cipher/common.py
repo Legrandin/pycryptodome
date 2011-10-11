@@ -38,7 +38,7 @@ if sys.hexversion < 0x02030000:
     def dict(**kwargs):
         return kwargs.copy()
 else:
-    dict = __builtins__['dict']
+    dict = dict
 
 class _NoDefault: pass        # sentinel object
 def _extract(d, k, default=_NoDefault):
