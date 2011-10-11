@@ -281,13 +281,15 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                                 return r
                         # The real test
                         key._randfunc = randGen(t2b(test[3]))
-                        ct = PKCS.encrypt(t2b(test[1]), key, test[4])
+                        cipher = PKCS.new(key, test[4])
+                        ct = cipher.encrypt(t2b(test[1]))
                         self.assertEqual(ct, t2b(test[2]))
 
         def testEncrypt2(self):
                 # Verify that encryption fails if plaintext is too long
                 pt = '\x00'*(128-2*20-2+1)
-                self.assertRaises(ValueError, PKCS.encrypt, pt, self.key1024)
+                cipher = PKCS.new(self.key1024)
+                self.assertRaises(ValueError, cipher.encrypt, pt)
 
         def testDecrypt1(self):
                 # Verify decryption using all test vectors
@@ -296,14 +298,15 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                         comps = [ long(rws(test[0][x]),16) for x in ('n','e','d') ]
                         key = RSA.construct(comps)
                         # The real test
-                        pt = PKCS.decrypt(t2b(test[2]), key, test[4])
+                        cipher = PKCS.new(key, test[4])
+                        pt = cipher.decrypt(t2b(test[2]))
                         self.assertEqual(pt, t2b(test[1]))
 
         def testDecrypt2(self):
                 # Simplest possible negative tests
                 for ct_size in (127,128,129):
-                    self.assertRaises(ValueError, PKCS.decrypt, '\x00'*ct_size,
-                        self.key1024)
+                    cipher = PKCS.new(self.key1024)
+                    self.assertRaises(ValueError, cipher.decrypt, '\x00'*ct_size)
 
         def testEncryptDecrypt1(self):
                 # Encrypt/Decrypt messages of length [0..128-2*20-2]
@@ -327,16 +330,18 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                     asked = 0
                     pt = self.rng(40)
                     self.key1024._randfunc = localRng
-                    ct = PKCS.encrypt(pt, self.key1024, hashmod)
-                    self.assertEqual(PKCS.decrypt(ct, self.key1024, hashmod), pt)
+                    cipher = PKCS.new(self.key1024, hashmod)
+                    ct = cipher.encrypt(pt)
+                    self.assertEqual(cipher.decrypt(ct), pt)
                     self.assertTrue(asked > hashmod.digest_size)
 
         def testEncryptDecrypt2(self):
                 # Verify that OAEP supports labels
                 pt = self.rng(35)
                 xlabel = self.rng(22)
-                ct = PKCS.encrypt(pt, self.key1024, label=xlabel)
-                self.assertEqual(PKCS.decrypt(ct, self.key1024, label=xlabel), pt)
+                cipher = PKCS.new(self.key1024, label=xlabel)
+                ct = cipher.encrypt(pt)
+                self.assertEqual(cipher.decrypt(ct), pt)
 
         def testEncryptDecrypt3(self):
                 # Verify that encrypt() uses the custom MGF
@@ -348,9 +353,10 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                     return '\x00'*maskLen
                 mgfcalls = 0
                 pt = self.rng(32)
-                ct = PKCS.encrypt(pt, self.key1024, mgfunc=newMGF)
+                cipher = PKCS.new(self.key1024, mgfunc=newMGF)
+                ct = cipher.encrypt(pt)
                 self.assertEqual(mgfcalls, 2)
-                self.assertEqual(PKCS.decrypt(ct, self.key1024, mgfunc=newMGF), pt)
+                self.assertEqual(cipher.decrypt(ct), pt)
 
 def get_tests(config={}):
     tests = []

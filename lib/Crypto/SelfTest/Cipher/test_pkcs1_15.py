@@ -115,44 +115,47 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                                 return r
                         # The real test
                         key._randfunc = randGen(t2b(test[3]))
-                        ct = PKCS.encrypt(test[1], key)
+                        cipher = PKCS.new(key)
+                        ct = cipher.encrypt(test[1])
                         self.assertEqual(ct, t2b(test[2]))
 
         def testEncrypt2(self):
                 # Verify that encryption fail if plaintext is too long
                 pt = '\x00'*(128-11+1)
-                self.assertRaises(ValueError, PKCS.encrypt, pt, self.key1024)
+                cipher = PKCS.new(self.key1024)
+                self.assertRaises(ValueError, cipher.encrypt, pt)
 
         def testVerify1(self):
                 for test in self._testData:
                         # Build the key
                         key = RSA.importKey(test[0])
                         # The real test
-                        pt = PKCS.decrypt(t2b(test[2]), key, "---")
+                        cipher = PKCS.new(key)
+                        pt = cipher.decrypt(t2b(test[2]), "---")
                         self.assertEqual(pt, test[1])
 
         def testVerify2(self):
                 # Verify that decryption fails if ciphertext is not as long as
                 # RSA modulus
-                self.assertRaises(ValueError, PKCS.decrypt, '\x00'*127,
-                        self.key1024, "---")
-                self.assertRaises(ValueError, PKCS.decrypt, '\x00'*129,
-                        self.key1024, "---")
+                cipher = PKCS.new(self.key1024)
+                self.assertRaises(ValueError, cipher.decrypt, '\x00'*127, "---")
+                self.assertRaises(ValueError, cipher.decrypt, '\x00'*129, "---")
 
                 # Verify that decryption fails if there are less then 8 non-zero padding
                 # bytes
                 pt = '\x00\x02' + '\xFF'*7 + '\x00' + '\x45'*118
                 ct = self.key1024.encrypt(pt, 0)[0]
                 ct = '\x00'*(128-len(ct)) + ct
-                self.assertEqual("---", PKCS.decrypt(ct, self.key1024, "---"))
+                self.assertEqual("---", cipher.decrypt(ct, "---"))
 
         def testEncryptVerify1(self):
                 # Encrypt/Verify messages of length [0..RSAlen-11]
                 # and therefore padding [8..117]
                 for pt_len in xrange(0,128-11+1):
                     pt = self.rng(pt_len)
-                    ct = PKCS.encrypt(pt, self.key1024)
-                    pt2 = PKCS.decrypt(ct, self.key1024, "---")
+                    cipher = PKCS.new(self.key1024)
+                    ct = cipher.encrypt(pt)
+                    pt2 = cipher.decrypt(ct, "---")
                     self.assertEqual(pt,pt2)
 
 
