@@ -422,6 +422,10 @@ multiple of the algorithm's block size.  Returns a string containing
 the plaintext.
 Python 3.x: decrypt() will return a bytes object.
 
+Note: Do not use the same cipher object for both encryption an
+decryption, since both operations share the same IV buffer, so the results
+will probably not be what you expect.
+
 
 **encrypt(string)**:
 Encrypts a non-null ``string``, using the key-dependent data in the
@@ -431,6 +435,10 @@ ciphers, the string can be of any length.  Returns a string containing
 the ciphertext.
 Python 3.x: ```string``` must be an object interpretable as a buffer of bytes.
 encrypt() will return a bytes object.
+
+Note: Do not use the same cipher object for both encryption an
+decryption, since both operations share the same IV buffer, so the results
+will probably not be what you expect.
 
 
 Security Notes
