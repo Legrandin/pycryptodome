@@ -67,9 +67,9 @@ USE_GCOV = 0
 # List of pure Python modules that will be excluded from the binary packages.
 # The list consists of (package, module_name) tuples
 from distutils.command.build_py import build_py
-EXCLUDE_PY = [
-    ('Crypto.Hash', 'RIPEMD160'),  # Included for your amusement, but the C version is much faster.
-]
+EXCLUDE_PY = []
+#    ('Crypto.Hash', 'RIPEMD160'),  # Included for your amusement, but the C version is much faster.
+#]
 
 def libgmp_exists():
     '''Verify that the compiler and the linker can reach libgmp'''
@@ -281,16 +281,25 @@ kw = {'name':"pycrypto",
                       sources=["src/_fastmath.c"]),
 
             # Hash functions
-            Extension("Crypto.Hash.MD2",
+            Extension("Crypto.Hash._MD2",
                       include_dirs=['src/'],
                       sources=["src/MD2.c"]),
-            Extension("Crypto.Hash.MD4",
+            Extension("Crypto.Hash._MD4",
                       include_dirs=['src/'],
                       sources=["src/MD4.c"]),
-            Extension("Crypto.Hash.SHA256",
+            Extension("Crypto.Hash._SHA256",
                       include_dirs=['src/'],
                       sources=["src/SHA256.c"]),
-            Extension("Crypto.Hash.RIPEMD160",
+            Extension("Crypto.Hash._SHA224",
+                      include_dirs=['src/'],
+                      sources=["src/SHA224.c"]),
+            Extension("Crypto.Hash._SHA384",
+                      include_dirs=['src/'],
+                      sources=["src/SHA384.c"]),
+            Extension("Crypto.Hash._SHA512",
+                      include_dirs=['src/'],
+                      sources=["src/SHA512.c"]),
+            Extension("Crypto.Hash._RIPEMD160",
                       include_dirs=['src/'],
                       sources=["src/RIPEMD160.c"],
                       define_macros=[endianness_macro()]),

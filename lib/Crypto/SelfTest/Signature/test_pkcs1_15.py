@@ -26,7 +26,7 @@ import unittest
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
-from Crypto.Hash import MD2,MD5,SHA,SHA256,RIPEMD
+from Crypto.Hash import *
 from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5 as PKCS
 
@@ -194,7 +194,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                         rng = Random.new().read
                         key = RSA.generate(1024, rng)
 
-                        for hashmod in (MD2,MD5,SHA,SHA256,RIPEMD):
+                        for hashmod in (MD2,MD5,SHA,SHA224,SHA256,SHA384,SHA512,RIPEMD):
                             h = hashmod.new()
                             h.update('blah blah blah')
 

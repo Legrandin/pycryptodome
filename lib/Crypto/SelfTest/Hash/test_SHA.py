@@ -50,7 +50,9 @@ test_data = [
 def get_tests(config={}):
     from Crypto.Hash import SHA
     from common import make_hash_tests
-    return make_hash_tests(SHA, "SHA", test_data, "\x06\x05\x2B\x0E\x03\x02\x1A")
+    return make_hash_tests(SHA, "SHA", test_data,
+        digest_size=20,
+        oid="\x06\x05\x2B\x0E\x03\x02\x1A")
 
 if __name__ == '__main__':
     import unittest

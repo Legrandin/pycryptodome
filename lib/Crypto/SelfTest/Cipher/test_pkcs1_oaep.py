@@ -333,7 +333,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                     cipher = PKCS.new(self.key1024, hashmod)
                     ct = cipher.encrypt(pt)
                     self.assertEqual(cipher.decrypt(ct), pt)
-                    self.assertTrue(asked > hashmod.digest_size)
+                    self.failUnless(asked > hashmod.digest_size)
 
         def testEncryptDecrypt2(self):
                 # Verify that OAEP supports labels

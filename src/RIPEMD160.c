@@ -51,19 +51,6 @@
 #define RIPEMD160_DIGEST_SIZE 20
 #define BLOCK_SIZE 64
 
-/**
- * See http://homes.esat.kuleuven.be/~bosselae/ripemd160.html#More
- *
- * id-ripemd160      	OBJECT IDENTIFIER ::= {
- * 				iso(1) identified-organization(3) teletrust(36)
- * 				algorithm(3) hashAlgorithm(2) ripemd160(1)
- * 				}
- */
-static const char ripemd160_oid[] = {   0x06, 0x05, 0x2b, 0x24, 0x03, 0x02, 0x01 };
-
-#define DER_OID 		((void*)&ripemd160_oid)
-#define DER_OID_SIZE		(sizeof ripemd160_oid)
-
 #define RIPEMD160_MAGIC 0x9f19dd68u
 typedef struct {
     uint32_t magic;
@@ -404,7 +391,7 @@ static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
 }
 
 /* Template definitions */
-#define MODULE_NAME RIPEMD160
+#define MODULE_NAME _RIPEMD160
 #define DIGEST_SIZE RIPEMD160_DIGEST_SIZE
 #define hash_state ripemd160_state
 #define hash_init ripemd160_init

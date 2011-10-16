@@ -29,7 +29,7 @@ import unittest
 from Crypto.PublicKey import RSA
 from Crypto import Random
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
-from Crypto.Hash import MD2,MD5,SHA as SHA1,SHA256,RIPEMD
+from Crypto.Hash import *
 from Crypto.Signature import PKCS1_PSS as PKCS
 
 from string import maketrans
@@ -135,7 +135,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                 '''e3 b5 d5 d0 02 c1 bc e5 0c 2b 65 ef 88 a1 88 d8
                 3b ce 7e 61''',
                 # Hash algorithm
-                SHA1
+                SHA
                 ),
 
                 #
@@ -191,7 +191,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                 '''de e9 59 c7 e0 64 11 36 14 20 ff 80 18 5e d5 7f
                 3e 67 76 af''',
                 # Hash
-                SHA1
+                SHA
                 ),
 
                 #
@@ -237,7 +237,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                 '''ef 28 69 fa 40 c3 46 cb 18 3d ab 3d 7b ff c9 8f
                 d5 6d f4 2d''',
                 # Hash
-                SHA1
+                SHA
                 ),
 
                 #
@@ -284,7 +284,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                 # Salt
                 '''57 bf 16 0b cb 02 bb 1d c7 28 0c f0 45 85 30 b7
                 d2 83 2f f7''',
-                SHA1
+                SHA
                 ),
 
                 #
@@ -338,7 +338,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                 # Salt
                 '''1d 65 49 1d 79 c8 64 b3 73 00 9b e6 f6 f2 46 7b
                 ac 4c 78 fa''',
-                SHA1
+                SHA
                 )
         )
 
@@ -379,7 +379,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         self.failUnless(result)
 
         def testSignVerify(self):
-                        h = SHA1.new()
+                        h = SHA.new()
                         h.update('blah blah blah')
 
                         rng = Random.new().read
@@ -393,7 +393,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             return '\x00'*maskLen
 
                         # Verify that PSS is friendly to all ciphers
-                        for hashmod in (MD2,MD5,SHA1,SHA256,RIPEMD):
+                        for hashmod in (MD2,MD5,SHA,SHA224,SHA256,SHA384,RIPEMD):
                             h = hashmod.new()
                             h.update('blah blah blah')
 
@@ -405,7 +405,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             self.failUnless(signer.verify(h, s))
                             self.assertEqual(key.asked, h.digest_size)
 
-                        h = SHA1.new()
+                        h = SHA.new()
                         h.update('blah blah blah')
 
                         # Verify that sign() uses a different salt length

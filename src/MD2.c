@@ -30,7 +30,7 @@
 #include <string.h>
 #include "Python.h"
 
-#define MODULE_NAME MD2
+#define MODULE_NAME _MD2
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
 

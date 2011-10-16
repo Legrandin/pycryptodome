@@ -41,6 +41,25 @@ else:
     dict = __builtins__['dict']
 
 
+class HashDigestSizeSelfTest(unittest.TestCase):
+    
+    def __init__(self, hashmod, description, expected):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+        self.expected = expected
+        self.description = description
+        
+    def shortDescription(self):
+        return self.description
+
+    def runTest(self):
+        self.failUnless(hasattr(self.hashmod, "digest_size"))
+        self.assertEquals(self.hashmod.digest_size, self.expected)
+        h = self.hashmod.new()
+        self.failUnless(hasattr(h, "digest_size"))
+        self.assertEquals(h.digest_size, self.expected)
+
+
 class HashSelfTest(unittest.TestCase):
 
     def __init__(self, hashmod, description, expected, input):
@@ -140,7 +159,7 @@ class MACSelfTest(unittest.TestCase):
             self.assertEqual(expected, out4)
             self.assertEqual(expected, out5)
 
-def make_hash_tests(module, module_name, test_data, oid=None):
+def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     tests = []
     for i in range(len(test_data)):
         row = test_data[i]
@@ -151,6 +170,8 @@ def make_hash_tests(module, module_name, test_data, oid=None):
             (expected, input, description) = row
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input))
+    name = "%s #%d: digest_size" % (module_name, i+1)
+    tests.append(HashDigestSizeSelfTest(module, name, digest_size))
     tests.append(HashTestOID(module, oid))
     return tests
 

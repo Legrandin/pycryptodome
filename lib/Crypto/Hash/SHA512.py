@@ -43,9 +43,13 @@ def new(data=""):
         obj.digest_size = digest_size
     return obj
 
-# TOFIX: This code will not work for python<2.5
-import hashlib
-hashFactory = hashlib.sha512
+try:
+    import hashlib
+    hashFactory = hashlib.sha512
+
+except ImportError:
+    from Crypto.Hash import _SHA512
+    hashFactory = _SHA512
 
 digest_size = 64
 block_size = 128

@@ -30,20 +30,9 @@
 #include <string.h>
 #include <Python.h>
 
-#define MODULE_NAME MD4
+#define MODULE_NAME _MD4
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
-
-/**
- * id-md4      OBJECT IDENTIFIER ::= {
- * 			iso(1) member-body(2) us(840) rsadsi(113549)
- * 			digestAlgorithm(2) 4
- * 			}
- */
-static const char md4_oid[] = { 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x04 };
-
-#define DER_OID 		((void*)&md4_oid)
-#define DER_OID_SIZE		(sizeof md4_oid)
 
 typedef unsigned int U32;
 typedef unsigned char U8;
