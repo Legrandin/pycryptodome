@@ -165,14 +165,16 @@ class PKCS1_15_Tests(unittest.TestCase):
                         except:
                             h.update(self._testData[i][1])
                         # The real test
-                        s = PKCS.sign(h, key)
+                        signer = PKCS.new(key)
+                        self.failUnless(signer.can_sign())
+                        s = signer.sign(h)
                         self.assertEqual(s, t2b(self._testData[i][2]))
 
         def testVerify1(self):
                 for i in range(len(self._testData)):
                         # Build the key
                         if isStr(self._testData[i][0]):
-                                key = RSA.importKey(self._testData[i][0])
+                                key = RSA.importKey(self._testData[i][0]).publickey()
                         else:
                                 comps = [ long(rws(self._testData[i][0][x]),16) for x in ('n','e') ]
                                 key = RSA.construct(comps)
@@ -183,7 +185,9 @@ class PKCS1_15_Tests(unittest.TestCase):
                         except:
                             h.update(self._testData[i][1])
                         # The real test
-                        result = PKCS.verify(h, key, t2b(self._testData[i][2]))
+                        verifier = PKCS.new(key)
+                        self.failIf(verifier.can_sign())
+                        result = verifier.verify(h, t2b(self._testData[i][2]))
                         self.failUnless(result)
 
         def testSignVerify(self):
@@ -194,8 +198,9 @@ class PKCS1_15_Tests(unittest.TestCase):
                             h = hashmod.new()
                             h.update('blah blah blah')
 
-                            s = PKCS.sign(h, key)
-                            result = PKCS.verify(h, key, s)
+                            signer = PKCS.new(key)
+                            s = signer.sign(h)
+                            result = signer.verify(h, s)
                             self.failUnless(result)
 
 

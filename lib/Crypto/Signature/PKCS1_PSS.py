@@ -38,7 +38,8 @@ this:
     >>> key = RSA.importKey(open('privkey.der').read())
     >>> h = SHA.new()
     >>> h.update(message)
-    >>> signature = PKCS1_PSS.sign(h, key)
+    >>> signer = PKCS1_PSS.new(key)
+    >>> signature = PKCS1_PSS.sign(key)
 
 At the receiver side, verification can be done like using the public part of
 the RSA key:
@@ -46,7 +47,8 @@ the RSA key:
     >>> key = RSA.importKey(open('pubkey.der').read())
     >>> h = SHA.new()
     >>> h.update(message)
-    >>> if PKCS1_PSS.verify(h, key, signature):
+    >>> verifier = PKCS1_PSS.new(key)
+    >>> if verifier.verify(h, signature):
     >>>     print "The signature is authentic."
     >>> else:
     >>>     print "The signature is not authentic."
@@ -62,134 +64,137 @@ the RSA key:
 from __future__ import nested_scopes
 
 __revision__ = "$Id$"
-__all__ = [ 'sign', 'verify' ]
+__all__ = [ 'new' ]
 
 import Crypto.Util.number
 from Crypto.Util.number import ceil_shift, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
 
-def sign(mhash, key, mgfunc=None, saltLen=None):
-    """Produce the PKCS#1 PSS signature of a message.
+class PSS_SigScheme:
+    """This signature scheme can perform PKCS#1 PSS RSA signature or verification."""
 
-    This function is named ``RSASSA-PSS-SIGN``, and is specified in
-    section 8.1.1 of RFC3447.
+    def __init__(self, key, mgfunc, saltLen):
+        """Initialize this PKCS#1 PSS signature scheme object.
+        
+        :Parameters:
+         key : an RSA key object
+                If a private half is given, both signature and verification are possible.
+                If a public half is given, only verification is possible.
+         mgfunc : callable
+                A mask generation function that accepts two parameters: a string to
+                use as seed, and the lenth of the mask to generate, in bytes.
+         saltLen : int
+                Length of the salt, in bytes.
+        """
+        self._key = key
+        self._saltLen = saltLen
+        self._mgfunc = mgfunc
 
-    :Parameters:
-     mhash : hash object
-            The hash that was carried out over the message. This is an object
-            belonging to the `Crypto.Hash` module.
-     key : RSA key object
-            The key to use to sign the message. This is a `Crypto.PublicKey.RSA`
-            object and must have its private half.
-     mgfunc : callable
-            A mask generation function that accepts two parameters: a string to
-            use as seed, and the lenth of the mask to generate, in bytes.
-            If not specified, the standard MGF1 is used.
-     saltLen : int
-            Length of the salt, in bytes. If not specified, it matches the output
-            size of `mhash`.
+    def can_sign(self):
+        """Return True if this cipher object can be used for signing messages."""
+        return self._key.has_private()
+ 
+    def sign(self, mhash):
+        """Produce the PKCS#1 PSS signature of a message.
+    
+        This function is named ``RSASSA-PSS-SIGN``, and is specified in
+        section 8.1.1 of RFC3447.
+    
+        :Parameters:
+         mhash : hash object
+                The hash that was carried out over the message. This is an object
+                belonging to the `Crypto.Hash` module.
+   
+        :Return: The PSS signature encoded as a string.
+        :Raise ValueError:
+            If the RSA key length is not sufficiently long to deal with the given
+            hash algorithm.
+        :Raise TypeError:
+            If the RSA key has no private half.
+    
+        :attention: Modify the salt length and the mask generation function only
+                    if you know what you are doing.
+                    The receiver must use the same parameters too.
+        """
+        # TODO: Verify the key is RSA
+    
+        randfunc = self._key._randfunc
+        
+        # Set defaults for salt length and mask generation function
+        if self._saltLen == None:
+            sLen = mhash.digest_size
+        else:
+            sLen = self._saltLen
+        if self._mgfunc:
+            mgf = self._mgfunc
+        else:
+             mgf  = lambda x,y: MGF1(x,y,mhash)
+ 
+        modBits = Crypto.Util.number.size(self._key.n)
+    
+        # See 8.1.1 in RFC3447
+        k = ceil_div(modBits,8) # Convert from bits to bytes
+        # Step 1
+        em = EMSA_PSS_ENCODE(mhash, modBits-1, randfunc, mgf, sLen)
+        # Step 2a (OS2IP) and 2b (RSASP1)
+        m = self._key.decrypt(em)
+        # Step 2c (I2OSP)
+        S = '\x00'*(k-len(m)) + m
+        return S
+    
+    def verify(self, mhash, S):
+        """Verify that a certain PKCS#1 PSS signature is authentic.
+    
+        This function checks if the party holding the private half of the given
+        RSA key has really signed the message.
+    
+        This function is called ``RSASSA-PSS-VERIFY``, and is specified in section
+        8.1.2 of RFC3447.
+    
+        :Parameters:
+         mhash : hash object
+                The hash that was carried out over the message. This is an object
+                belonging to the `Crypto.Hash` module.
+         S : string
+                The signature that needs to be validated.
+    
+        :Return: True if verification is correct. False otherwise.
+        """
+        # TODO: Verify the key is RSA
+    
+        # Set defaults for salt length and mask generation function
+        if self._saltLen == None:
+            sLen = mhash.digest_size
+        else:
+            sLen = self._saltLen
+        if self._mgfunc:
+            mgf = self._mgfunc
+        else:
+            mgf  = lambda x,y: MGF1(x,y,mhash)
 
-    :Return: The PSS signature encoded as a string.
-    :Raise ValueError:
-        If the RSA key length is not sufficiently long to deal with the given
-        hash algorithm.
-    :Raise TypeError:
-        If the RSA key has no private half.
-
-    :attention: Modify the salt length and the mask generation function only
-                if you know what you are doing.
-                The receiver must use the same parameters too.
-    """
-    # TODO: Verify the key is RSA
-
-    randfunc = key._randfunc
-
-    # Set defaults for salt length and mask generation function
-    if saltLen == None:
-        sLen = mhash.digest_size
-    else:
-        sLen = saltLen
-    if mgfunc:
-        mgf = mgfunc
-    else:
-        mgf  = lambda x,y: MGF1(x,y,mhash)
-
-    modBits = Crypto.Util.number.size(key.n)
-
-    # See 8.1.1 in RFC3447
-    k = ceil_div(modBits,8) # Convert from bits to bytes
-    # Step 1
-    em = EMSA_PSS_ENCODE(mhash, modBits-1, randfunc, mgf, sLen)
-    # Step 2a (OS2IP) and 2b (RSASP1)
-    m = key.decrypt(em)
-    # Step 2c (I2OSP)
-    S = '\x00'*(k-len(m)) + m
-    return S
-
-def verify(mhash, key, S, mgfunc=None, saltLen=None):
-    """Verify that a certain PKCS#1 PSS signature is authentic.
-
-    This function checks if the party holding the private half of the given
-    RSA key has really signed the message.
-
-    This function is called ``RSASSA-PSS-VERIFY``, and is specified in section
-    8.1.2 of RFC3447.
-
-    :Parameters:
-     mhash : hash object
-            The hash that was carried out over the message. This is an object
-            belonging to the `Crypto.Hash` module.
-     key : RSA key object
-            The key to use to verify the message. This is a `Crypto.PublicKey.RSA`
-            object.
-     S : string
-            The signature that needs to be validated.
-     mgfunc : callable
-            A mask generation function that accepts two parameters: a string to
-            use as seed, and the lenth of the mask to generate, in bytes.
-            If not specified, the standard MGF1 is used. The sender must have
-            used the same function.
-     saltLen : int
-            Length of the salt, in bytes. If not specified, it matches the output
-            size of `mhash`.
-
-    :Return: True if verification is correct. False otherwise.
-    """
-    # TODO: Verify the key is RSA
-
-    # Set defaults for salt length and mask generation function
-    if saltLen == None:
-        sLen = mhash.digest_size
-    else:
-        sLen = saltLen
-    if mgfunc:
-        mgf = mgfunc
-    else:
-        mgf  = lambda x,y: MGF1(x,y,mhash)
-
-    modBits = Crypto.Util.number.size(key.n)
-
-    # See 8.1.2 in RFC3447
-    k = ceil_div(modBits,8) # Convert from bits to bytes
-    # Step 1
-    if len(S) != k:
-        return 0
-    # Step 2a (O2SIP), 2b (RSAVP1), and partially 2c (I2OSP)
-    # Note that signature must be smaller than the module
-    # but RSA.py won't complain about it.
-    # TODO: Fix RSA object; don't do it here.
-    em = key.encrypt(S, 0)[0]
-    # Step 2c
-    emLen = ceil_div(modBits-1,8)
-    em = '\x00'*(emLen-len(em)) + em
-    # Step 3
-    try:
-        result = EMSA_PSS_VERIFY(mhash, em, modBits-1, mgf, sLen)
-    except ValueError:
-        return 0
-    # Step 4
-    return result
-
+        modBits = Crypto.Util.number.size(self._key.n)
+    
+        # See 8.1.2 in RFC3447
+        k = ceil_div(modBits,8) # Convert from bits to bytes
+        # Step 1
+        if len(S) != k:
+            return 0
+        # Step 2a (O2SIP), 2b (RSAVP1), and partially 2c (I2OSP)
+        # Note that signature must be smaller than the module
+        # but RSA.py won't complain about it.
+        # TODO: Fix RSA object; don't do it here.
+        em = self._key.encrypt(S, 0)[0]
+        # Step 2c
+        emLen = ceil_div(modBits-1,8)
+        em = '\x00'*(emLen-len(em)) + em
+        # Step 3
+        try:
+            result = EMSA_PSS_VERIFY(mhash, em, modBits-1, mgf, sLen)
+        except ValueError:
+            return 0
+        # Step 4
+        return result
+    
 def MGF1(mgfSeed, maskLen, hash):
     """Mask Generation Function, described in B.2.1"""
     T = ""
@@ -325,4 +330,23 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     if h!=hp:
         return 0
     return 1
+
+def new(key, mgfunc=None, saltLen=None):
+    """Return a signature scheme object `PSS_SigScheme` that
+    can be used to perform PKCS#1 PSS signature or verification.
+
+    :Parameters:
+     key : RSA key object
+        The key to use to sign or verify the message. This is a `Crypto.PublicKey.RSA` object.
+        Signing is only possible if *key* is a private RSA key.
+     mgfunc : callable
+        A mask generation function that accepts two parameters: a string to
+        use as seed, and the lenth of the mask to generate, in bytes.
+        If not specified, the standard MGF1 is used.
+     saltLen : int
+        Length of the salt, in bytes. If not specified, it matches the output
+        size of the hash function.
+ 
+    """
+    return PSS_SigScheme(key, mgfunc, saltLen)
 

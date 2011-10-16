@@ -65,6 +65,8 @@ class MyKey:
         return self._key._randfunc(N)
     def sign(self, m):
         return self._key.sign(m)
+    def has_private(self):
+        return self._key.has_private()
     def decrypt(self, m):
         return self._key.decrypt(m)
     def verify(self, m, p):
@@ -353,7 +355,9 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         test_salt = t2b(self._testData[i][3])
                         key._randfunc = lambda N: test_salt
                         # The real test
-                        s = PKCS.sign(h, key)
+                        signer = PKCS.new(key)
+                        self.failUnless(signer.can_sign())
+                        s = signer.sign(h)
                         self.assertEqual(s, t2b(self._testData[i][2]))
 
         def testVerify1(self):
@@ -369,7 +373,9 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         test_salt = t2b(self._testData[i][3])
                         # The real test
                         key._randfunc = lambda N: test_salt
-                        result = PKCS.verify(h, key, t2b(self._testData[i][2]))
+                        verifier = PKCS.new(key)
+                        self.failIf(verifier.can_sign())
+                        result = verifier.verify(h, t2b(self._testData[i][2]))
                         self.failUnless(result)
 
         def testSignVerify(self):
@@ -394,8 +400,9 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             # Verify that sign() asks for as many random bytes
                             # as the hash output size
                             key.asked = 0
-                            s = PKCS.sign(h, key)
-                            self.failUnless(PKCS.verify(h, key, s))
+                            signer = PKCS.new(key)
+                            s = signer.sign(h)
+                            self.failUnless(signer.verify(h, s))
                             self.assertEqual(key.asked, h.digest_size)
 
                         h = SHA1.new()
@@ -404,24 +411,27 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         # Verify that sign() uses a different salt length
                         for sLen in (0,3,21):
                             key.asked = 0
-                            s = PKCS.sign(h, key, saltLen=sLen)
+                            signer = PKCS.new(key, saltLen=sLen)
+                            s = signer.sign(h)
                             self.assertEqual(key.asked, sLen)
-                            self.failUnless(PKCS.verify(h, key, s, saltLen=sLen))
+                            self.failUnless(signer.verify(h, s))
 
                         # Verify that sign() uses the custom MGF
                         mgfcalls = 0
-                        s = PKCS.sign(h, key, newMGF)
+                        signer = PKCS.new(key, newMGF)
+                        s = signer.sign(h)
                         self.assertEqual(mgfcalls, 1)
-                        self.failUnless(PKCS.verify(h, key, s, newMGF))
+                        self.failUnless(signer.verify(h, s))
 
                         # Verify that sign() does not call the RNG
                         # when salt length is 0, even when a new MGF is provided
                         key.asked = 0
                         mgfcalls = 0
-                        s = PKCS.sign(h, key, newMGF, 0)
+                        signer = PKCS.new(key, newMGF, 0)
+                        s = signer.sign(h)
                         self.assertEqual(key.asked,0)
                         self.assertEqual(mgfcalls, 1)
-                        self.failUnless(PKCS.verify(h, key, s, newMGF, 0))
+                        self.failUnless(signer.verify(h, s))
 
 def get_tests(config={}):
     tests = []
