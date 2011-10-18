@@ -29,6 +29,7 @@
 
 #include <string.h>
 #include "Python.h"
+#include "pycrypto_compat.h"
 
 #define MODULE_NAME _MD2
 #define DIGEST_SIZE 16
@@ -140,7 +141,7 @@ hash_digest (const hash_state *self)
 	for(i=0; i<padlen; i++) padding[i]=padlen;
 	hash_update(&temp, padding, padlen);
 	hash_update(&temp, temp.C, 16);
-	return PyString_FromStringAndSize((char *) temp.X, 16);
+	return PyBytes_FromStringAndSize((char *) temp.X, 16);
 }
 
 #include "hash_template.c"

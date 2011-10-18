@@ -23,22 +23,25 @@
 __revision__ = "$Id$"
 
 import unittest
-
-from string import maketrans
+import sys
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
+from Crypto.Util.py3compat import *
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
-    return t.translate(maketrans("",""),'\n\t ')
+    for c in ['\n', '\t', ' ']:
+        t = t.replace(c,'')
+    return t
 
 def t2b(t):
     """Convert a text string with bytes in hex form to a byte string"""
-    clean = rws(t)
+    clean = b(rws(t))
     if len(clean)%2 == 1:
+        print clean
         raise ValueError("Even number of characters expected")
     return a2b_hex(clean)
 
@@ -116,7 +119,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                         # The real test
                         key._randfunc = randGen(t2b(test[3]))
                         cipher = PKCS.new(key)
-                        ct = cipher.encrypt(test[1])
+                        ct = cipher.encrypt(b(test[1]))
                         self.assertEqual(ct, t2b(test[2]))
 
         def testEncrypt2(self):
@@ -132,7 +135,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                         # The real test
                         cipher = PKCS.new(key)
                         pt = cipher.decrypt(t2b(test[2]), "---")
-                        self.assertEqual(pt, test[1])
+                        self.assertEqual(pt, b(test[1]))
 
         def testVerify2(self):
                 # Verify that decryption fails if ciphertext is not as long as
@@ -143,9 +146,9 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
 
                 # Verify that decryption fails if there are less then 8 non-zero padding
                 # bytes
-                pt = '\x00\x02' + '\xFF'*7 + '\x00' + '\x45'*118
+                pt = b('\x00\x02' + '\xFF'*7 + '\x00' + '\x45'*118)
                 ct = self.key1024.encrypt(pt, 0)[0]
-                ct = '\x00'*(128-len(ct)) + ct
+                ct = b('\x00'*(128-len(ct))) + ct
                 self.assertEqual("---", cipher.decrypt(ct, "---"))
 
         def testEncryptVerify1(self):

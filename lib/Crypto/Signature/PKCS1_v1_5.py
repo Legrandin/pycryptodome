@@ -63,6 +63,7 @@ __all__ = [ 'new' ]
 import Crypto.Util.number
 from Crypto.Util.number import ceil_div
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString
+from Crypto.Util.py3compat import *
 
 class PKCS115_SigScheme:
     """This signature scheme can perform PKCS#1 v1.5 RSA signature or verification."""
@@ -110,7 +111,7 @@ class PKCS115_SigScheme:
         # Step 2a (OS2IP) and 2b (RSASP1)
         m = self._key.decrypt(em)
         # Step 2c (I2OSP)
-        S = '\x00'*(k-len(m)) + m
+        S = bchr(0x00)*(k-len(m)) + m
         return S
     
     def verify(self, mhash, S):
@@ -146,7 +147,7 @@ class PKCS115_SigScheme:
         # TODO: Fix RSA object; don't do it here.
         m = self._key.encrypt(S, 0)[0]
         # Step 2c (I2OSP)
-        em1 = '\x00'*(k-len(m)) + m
+        em1 = bchr(0x00)*(k-len(m)) + m
         # Step 3
         try:
             em2 = EMSA_PKCS1_V1_5_ENCODE(mhash, k)
@@ -218,8 +219,8 @@ def EMSA_PKCS1_V1_5_ENCODE(hash, emLen):
     # at least 8 bytes of padding).
     if emLen<len(digestInfo)+11:
         raise ValueError("Selected hash algorith has a too long digest (%d bytes)." % len(digest))
-    PS = "\xFF" * (emLen - len(digestInfo) - 3)
-    return "\x00" + "\x01" + PS + "\x00" + digestInfo
+    PS = bchr(0xFF) * (emLen - len(digestInfo) - 3)
+    return b("\x00\x01") + PS + bchr(0x00) + digestInfo
 
 def new(key):
     """Return a signature scheme object `PKCS115_SigScheme` that

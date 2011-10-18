@@ -26,8 +26,15 @@
  * http://www.schneier.com/paper-blowfish-fse.html
  */
 
+#include "config.h"
+#if HAVE_STDINT_H
+# include <stdint.h>
+#elif defined(__sun) || defined(__sun__)
+# include <sys/inttypes.h>
+#else
+# error "stdint.h not found"
+#endif
 #include <assert.h>
-#include <stdint.h>
 #include <string.h>
 #include "Python.h"
 

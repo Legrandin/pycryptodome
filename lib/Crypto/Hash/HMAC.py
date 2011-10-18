@@ -43,9 +43,8 @@ __revision__ = "$Id$"
 
 __all__ = ['new', 'digest_size']
 
-import string
-
 from Crypto.Util.strxor import strxor_c
+from Crypto.Util.py3compat import *
 
 # The size of the digests returned by HMAC depends on the underlying
 # hashing module used.
@@ -64,7 +63,7 @@ class HMAC:
         msg:       Initial input for the hash, if provided.
         digestmod: A module supporting PEP 247. Defaults to the md5 module.
         """
-        if digestmod == None:
+        if digestmod is None:
             import MD5
             digestmod = MD5
 
@@ -89,7 +88,7 @@ class HMAC:
         if len(key) > blocksize:
             key = digestmod.new(key).digest()
 
-        key = key + chr(0) * (blocksize - len(key))
+        key = key + bchr(0) * (blocksize - len(key))
         self.outer.update(strxor_c(key, opad))
         self.inner.update(strxor_c(key, ipad))
         if (msg):
@@ -108,7 +107,7 @@ class HMAC:
 
         An update to this copy won't affect the original object.
         """
-        other = HMAC("")
+        other = HMAC(b(""))
         other.digestmod = self.digestmod
         other.inner = self.inner.copy()
         other.outer = self.outer.copy()
@@ -128,8 +127,8 @@ class HMAC:
     def hexdigest(self):
         """Like digest(), but returns a string of hexadecimal digits instead.
         """
-        return "".join([string.zfill(hex(ord(x))[2:], 2)
-                        for x in tuple(self.digest())])
+        return "".join(["%02x" % bord(x)
+                  for x in tuple(self.digest())])
 
 def new(key, msg = None, digestmod = None):
     """Create a new hashing object and return it.

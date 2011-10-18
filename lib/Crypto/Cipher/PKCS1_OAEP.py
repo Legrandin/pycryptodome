@@ -57,6 +57,7 @@ __all__ = [ 'new' ]
 import Crypto.Signature.PKCS1_PSS
 import Crypto.Hash.SHA
 
+from Crypto.Util.py3compat import *
 import Crypto.Util.number
 from   Crypto.Util.number import ceil_div
 from   Crypto.Util.strxor import strxor
@@ -144,9 +145,9 @@ class PKCS1OAEP_Cipher:
         # Step 2a
         lHash = self._hashObj.new(self._label).digest()
         # Step 2b
-        ps = '\x00'*ps_len
+        ps = bchr(0x00)*ps_len
         # Step 2c
-        db = lHash + ps + '\x01' + message
+        db = lHash + ps + bchr(0x01) + message
         # Step 2d
         ros = randFunc(hLen)
         # Step 2e
@@ -158,11 +159,11 @@ class PKCS1OAEP_Cipher:
         # Step 2h
         maskedSeed = strxor(ros, seedMask)
         # Step 2i
-        em = '\x00' + maskedSeed + maskedDB
+        em = bchr(0x00) + maskedSeed + maskedDB
         # Step 3a (OS2IP), step 3b (RSAEP), part of step 3c (I2OSP)
         m = self._key.encrypt(em, 0)[0]
         # Complete step 3c (I2OSP)
-        c = '\x00'*(k-len(m)) + m
+        c = bchr(0x00)*(k-len(m)) + m
         return c
     
     def decrypt(self, ct):
@@ -195,7 +196,7 @@ class PKCS1OAEP_Cipher:
         # Step 2a (O2SIP), 2b (RSADP), and part of 2c (I2OSP)
         m = self._key.decrypt(ct)
         # Complete step 2c (I2OSP)
-        em = '\x00'*(k-len(m)) + m
+        em = bchr(0x00)*(k-len(m)) + m
         # Step 3a
         lHash = self._hashObj.new(self._label).digest()
         # Step 3b
@@ -214,20 +215,23 @@ class PKCS1OAEP_Cipher:
         db = strxor(maskedDB, dbMask)
         # Step 3g
         valid = 1
-        one = db[hLen:].find('\x01')
+        one = db[hLen:].find(bchr(0x01))
         lHash1 = db[:hLen]
         if lHash1!=lHash:
             valid = 0
+            r = 1
         if one<0:
             valid = 0
-        if y!='\x00':
+            r = 2
+        if bord(y)!=0:
             valid = 0
+            r = 3
         if not valid:
-            raise ValueError("Incorrect decryption.")
+            raise ValueError("Incorrect decryption.",r)
         # Step 4
         return db[hLen+one+1:]
 
-def new(key, hashAlgo=None, mgfunc=None, label=''):
+def new(key, hashAlgo=None, mgfunc=None, label=b('')):
     """Return a cipher object `PKCS1OAEP_Cipher` that can be used to perform PKCS#1 OAEP encryption or decryption.
 
     :Parameters:

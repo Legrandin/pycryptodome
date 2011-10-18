@@ -1,3 +1,30 @@
+2.4
+===
+	* Python 3 support!  (Thorsten E. Behrens, Anders Sundman)
+	  PyCrypto now supports every version of Python from 2.1 through 3.2.
+
+	* Timing-attack countermeasures in _fastmath: When built against
+	  libgmp version 5 or later, we use mpz_powm_sec instead of mpz_powm.
+	  This should prevent the timing attack described by Geremy Condra at
+	  PyCon 2011:
+	  http://blip.tv/pycon-us-videos-2009-2010-2011/pycon-2011-through-the-side-channel-timing-and-implementation-attacks-in-python-4897955
+
+	* New hash modules (for Python >= 2.5 only): SHA224, SHA384, and
+	  SHA512 (Frédéric Bertolus)
+
+	* Improve the test command in setup.py, by allowing tests to be
+	  performed on a single sub-package or module only. (Legrandin)
+
+	* Fix double-decref of "counter" when Cipher object initialisation
+	  fails (Ryan Kelly)
+
+	* Apply patches from Debian's python-crypto 2.3-3 package (Jan
+	  Dittberner, Sebastian Ramacher):
+	 - fix-RSA-generate-exception.patch
+	 - epydoc-exclude-introspect.patch
+	 - no-usr-local.patch
+
+
 2.3
 ===
 	* Fix NameError when attempting to use deprecated getRandomNumber()

@@ -29,8 +29,7 @@ from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto.Hash import *
 from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5 as PKCS
-
-from string import maketrans
+from Crypto.Util.py3compat import *
 
 def isStr(s):
         t = ''
@@ -42,11 +41,13 @@ def isStr(s):
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
-    return t.translate(maketrans("",""),'\n\t ')
+    for c in ['\n', '\t', ' ']:
+        t = t.replace(c,'')
+    return t
 
 def t2b(t):
     """Convert a text string with bytes in hex form to a byte string"""
-    clean = rws(t)
+    clean = b(rws(t))
     if len(clean)%2 == 1:
         raise ValueError("Even number of characters expected")
     return a2b_hex(clean)
@@ -152,42 +153,44 @@ class PKCS1_15_Tests(unittest.TestCase):
 
         def testSign1(self):
                 for i in range(len(self._testData)):
+                        row = self._testData[i]
                         # Build the key
-                        if isStr(self._testData[i][0]):
-                                key = RSA.importKey(self._testData[i][0])
+                        if isStr(row[0]):
+                                key = RSA.importKey(row[0])
                         else:
-                                comps = [ long(rws(self._testData[i][0][x]),16) for x in ('n','e','d') ]
+                                comps = [ long(rws(row[0][x]),16) for x in ('n','e','d') ]
                                 key = RSA.construct(comps)
-                        h = self._testData[i][3].new()
+                        h = row[3].new()
                         # Data to sign can either be in hex form or not
                         try:
-                            h.update(t2b(self._testData[i][1]))
+                            h.update(t2b(row[1]))
                         except:
-                            h.update(self._testData[i][1])
+                            h.update(b(row[1]))
                         # The real test
                         signer = PKCS.new(key)
                         self.failUnless(signer.can_sign())
                         s = signer.sign(h)
-                        self.assertEqual(s, t2b(self._testData[i][2]))
+                        self.assertEqual(s, t2b(row[2]))
 
         def testVerify1(self):
                 for i in range(len(self._testData)):
+                        row = self._testData[i]
                         # Build the key
-                        if isStr(self._testData[i][0]):
-                                key = RSA.importKey(self._testData[i][0]).publickey()
+                        if isStr(row[0]):
+                                key = RSA.importKey(row[0]).publickey()
                         else:
-                                comps = [ long(rws(self._testData[i][0][x]),16) for x in ('n','e') ]
+                                comps = [ long(rws(row[0][x]),16) for x in ('n','e') ]
                                 key = RSA.construct(comps)
-                        h = self._testData[i][3].new()
+                        h = row[3].new()
                         # Data to sign can either be in hex form or not
                         try:
-                            h.update(t2b(self._testData[i][1]))
+                            h.update(t2b(row[1]))
                         except:
-                            h.update(self._testData[i][1])
+                            h.update(b(row[1]))
                         # The real test
                         verifier = PKCS.new(key)
                         self.failIf(verifier.can_sign())
-                        result = verifier.verify(h, t2b(self._testData[i][2]))
+                        result = verifier.verify(h, t2b(row[2]))
                         self.failUnless(result)
 
         def testSignVerify(self):
@@ -196,7 +199,7 @@ class PKCS1_15_Tests(unittest.TestCase):
 
                         for hashmod in (MD2,MD5,SHA,SHA224,SHA256,SHA384,SHA512,RIPEMD):
                             h = hashmod.new()
-                            h.update('blah blah blah')
+                            h.update(b('blah blah blah'))
 
                             signer = PKCS.new(key)
                             s = signer.sign(h)

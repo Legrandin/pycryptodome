@@ -24,8 +24,11 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
-
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
+    
 from binascii import b2a_hex
 import time
 import warnings
@@ -59,7 +62,10 @@ class FortunaPool(object):
         return self._h.digest()
 
     def hexdigest(self):
-        return b2a_hex(self.digest())
+        if sys.version_info[0] == 2:
+            return b2a_hex(self.digest())
+        else:
+            return b2a_hex(self.digest()).decode()
 
     def reset(self):
         self._h = SHAd256.new()
@@ -105,7 +111,7 @@ class FortunaAccumulator(object):
 
     def random_data(self, bytes):
         current_time = time.time()
-        if self.last_reseed > current_time:
+        if (self.last_reseed is not None and self.last_reseed > current_time): # Avoid float comparison to None to make Py3k happy
             warnings.warn("Clock rewind detected. Resetting last_reseed.", ClockRewindWarning)
             self.last_reseed = None
         if (self.pools[0].length >= self.min_pool_size and
@@ -125,15 +131,15 @@ class FortunaAccumulator(object):
             seed.append(self.pools[i].digest())
             self.pools[i].reset()
 
-        seed = "".join(seed)
+        seed = b("").join(seed)
         self.generator.reseed(seed)
 
     def add_random_event(self, source_number, pool_number, data):
         assert 1 <= len(data) <= 32
         assert 0 <= source_number <= 255
         assert 0 <= pool_number <= 31
-        self.pools[pool_number].append(chr(source_number))
-        self.pools[pool_number].append(chr(len(data)))
+        self.pools[pool_number].append(bchr(source_number))
+        self.pools[pool_number].append(bchr(len(data)))
         self.pools[pool_number].append(data)
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

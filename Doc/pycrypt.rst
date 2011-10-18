@@ -111,25 +111,41 @@ public-key algorithm, can be used to implement digital signatures.
  
 The hashing algorithms currently implemented are:
 
-=============   =============
-Hash function   Digest length
-=============   =============
-MD2               128 bits
-MD4               128 bits
-MD5               128 bits
-RIPEMD            160 bits
-SHA1              160 bits
-SHA256            256 bits
-=============   =============
+=============   =============	========
+Hash function   Digest length	Security
+=============   =============	========
+MD2               128 bits		Insecure, do not use
+MD4               128 bits		Insecure, do not use
+MD5               128 bits		Insecure, do not use
+RIPEMD            160 bits		Secure. This is RIPEMD-160.
+SHA               160 bits		SHA1 is shaky. Walk, do not run, away from SHA1.
+SHA256            256 bits		Secure.
+=============   =============	========
 
-All hashing modules share the same interface.  After importing a given
-hashing module, call the ``new()`` function to create a new
-hashing object. You can now feed arbitrary strings into the object
+Resources:
+On SHA1 (in)security: http://www.schneier.com/blog/archives/2005/02/cryptanalysis_o.html
+SHA1 phase-out by 2010: http://csrc.nist.gov/groups/ST/toolkit/documents/shs/hash_standards_comments.pdf
+On MD5 insecurity: http://www.schneier.com/blog/archives/2008/12/forging_ssl_cer.html
+
+Crypto.Hash.HMAC implements the RFC-2104 HMAC algorithm. The HMAC module is
+a copy of Python 2.2's module, and works on Python 2.1 as well.
+HMAC's security depends on the cryptographic strength of the key handed to it,
+and on the underlying hashing method used. HMAC-MD5 and HMAC-SHA1 are used in
+IPSEC and TLS.
+
+All hashing modules with the exception of HMAC share the same interface.
+After importing a given hashing module, call the ``new()`` function to create
+a new hashing object. You can now feed arbitrary strings into the object
 with the ``update()`` method, and can ask for the hash value at
 any time by calling the ``digest()`` or ``hexdigest()``
 methods.  The ``new()`` function can also be passed an optional
 string parameter that will be immediately hashed into the object's
 state.
+
+To create a HMAC object, call HMAC's ```new()`` function with the key (as
+a string or bytes object) to be used, an optional message, and the hash
+function to use. HMAC defaults to using MD5. This is not a secure default,
+please use SHA256 or better instead in new implementations.
 
 Hash function modules define one variable:
 
@@ -150,7 +166,7 @@ this copy won't affect the original object.
 Return the hash value of this hashing object, as a string containing
 8-bit data.  The object is not altered in any way by this function;
 you can continue updating the object after calling this function.
-
+Python 3.x: digest() returns a bytes object
 
 **hexdigest()**:
 Return the hash value of this hashing object, as a string containing
@@ -162,19 +178,31 @@ object after calling this function.
 
 **update(arg)**:
 Update this hashing object with the string ``arg``.
+Python 3.x: The passed argument must be an object interpretable as
+a buffer of bytes
 
 
-Here's an example, using the MD5 algorithm::
+Here's an example, using the SHA-256 algorithm::
 
-    >>> from Crypto.Hash import MD5
-    >>> m = MD5.new()
+    >>> from Crypto.Hash import SHA256
+    >>> m = SHA256.new()
     >>> m.update('abc')
     >>> m.digest()
-    '\x90\x01P\x98<\xd2O\xb0\xd6\x96?}(\xe1\x7fr'
+    '\xbax\x16\xbf\x8f\x01\xcf\xeaAA@\xde]\xae"#\xb0\x03a\xa3\x96\x17z\x9c\xb4\x10\xffa\xf2\x00\x15\xad'
     >>> m.hexdigest()
-    '900150983cd24fb0d6963f7d28e17f72'
+    'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
 
+Here's an example of using HMAC::
 
+	>>> from Crypto.Hash import HMAC, SHA256
+	>>> m = HMAC.new('Please do not use this key in your code, with sugar on top',
+			'', SHA256)
+	>>> m.update('abc')
+	>>> m.digest()
+	'F\xaa\x83\t\x97<\x8c\x12\xff\xe8l\xca:\x1d\xb4\xfc7\xfa\x84tK-\xb0\x00v*\xc2\x90\x19\xaa\xfaz'
+	>>> m.hexdigest()
+	'46aa8309973c8c12ffe86cca3a1db4fc37fa84744b2db000762ac29019aafa7a'
+	
 Security Notes
 ==========================
 
@@ -199,27 +227,27 @@ Alice can protect herself by changing the protocol; she can simply
 append a random string to the contract before hashing and signing it;
 the random string can then be kept with the signature.
 
-None of the algorithms implemented here have been completely broken.
-There are no attacks on MD2, but it's rather slow at 1250 K/sec.  MD4
-is faster at 44,500 K/sec but there have been some partial attacks on
-it.  MD4 makes three iterations of a basic mixing operation; two of
-the three rounds have been cryptanalyzed, but the attack can't be
-extended to the full algorithm.  MD5 is a strengthened version of MD4
-with four rounds; beginning in 2004, a series of attacks were
-discovered and it's now possible to create pairs of files that result
-in the same MD5 hash.  It's still supported for compatibility with
-existing protocols, but implementors should use SHA1 in new software
-because there are no known attacks against SHA1.  The MD5
+Some of the algorithms implemented here have been completely broken.
+The MD2, MD4 and MD5 hash functions are widely considered insecure
+hash functions, as it has been proven that meaningful hash collisions
+can be generated for them, in the case of MD4 and MD5 in mere seconds.
+MD2 is rather slow at 1250 K/sec.  MD4 is faster at 44,500 K/sec.
+MD5 is a strengthened version of MD4 with four rounds; beginning in 2004,
+a series of attacks were discovered and it's now possible to create pairs
+of files that result in the same MD5 hash. The MD5
 implementation is moderately well-optimized and thus faster on x86
 processors, running at 35,500 K/sec.  MD5 may even be faster than MD4,
 depending on the processor and compiler you use.
+MD5 is still supported for compatibility with existing protocols, but
+implementors should use SHA256 in new software because there are no known
+attacks against SHA256.
 
-All the MD* algorithms produce 128-bit hashes; SHA1 produces a
-larger 160-bit hash, and there are no known attacks against it.  The
-first version of SHA had a weakness which was later corrected; the
-code used here implements the second, corrected, version.  It operates
-at 21,000 K/sec.  SHA256 is about as half as fast as SHA1.  RIPEMD has
-a 160-bit output, the same output size as SHA1, and operates at 17,600
+All the MD* algorithms produce 128-bit hashes.
+SHA1 produces a 160-bit hash. Because of recent theoretical attacks against SHA1,
+NIST recommended phasing out use of SHA1 by 2010.
+SHA256 produces a larger 256-bit hash, and there are no known attacks against it.
+It operates at 10,500 K/sec.
+RIPEMD has a 160-bit output, the same output size as SHA1, and operates at 17,600
 K/sec.
 
 Credits
@@ -292,16 +320,14 @@ Blowfish          Variable/8 bytes
 CAST              Variable/8 bytes
 DES               8 bytes/8 bytes
 DES3 (Triple DES) 16 bytes/8 bytes
-IDEA              16 bytes/8 bytes
-RC5               Variable/8 bytes
 ================= ============================
 
 
 In a strict formal sense, **stream ciphers** encrypt data bit-by-bit;
 practically, stream ciphers work on a character-by-character basis.
-Stream ciphers use exactly the
-same interface as block ciphers, with a block length that will always
-be 1; this is how block and stream ciphers can be distinguished. 
+Stream ciphers use exactly the same interface as block ciphers, with a block
+length that will always be 1; this is how block and stream ciphers can be
+distinguished. 
 The only feedback mode available for stream ciphers is ECB mode. 
 
 The currently available stream ciphers are listed in the following table:
@@ -346,10 +372,13 @@ available.
 
 **new(key, mode[, IV])**:
 Returns a ciphering object, using ``key`` and feedback mode
-``mode``.  If ``mode`` is ``MODE_CBC`` or ``MODE_CFB``, ``IV`` must be provided,
-and must be a string of the same length as the block size.  Some
-algorithms support additional keyword arguments to this function; see
+``mode``. 
+If ``mode`` is ``MODE_CBC`` or ``MODE_CFB``, ``IV`` must be provided,
+ and must be a string of the same length as the block size.
+Some algorithms support additional keyword arguments to this function; see
 the "Algorithm-specific Notes for Encryption Algorithms" section below for the details.
+Python 3.x: ```mode`` is a string object; ```key``` and ```IV``` must be
+objects interpretable as a buffer of bytes.
 
 **block_size**:
 An integer value; the size of the blocks encrypted by this module.
@@ -375,7 +404,7 @@ Contains the initial value which will be used to start a cipher
 feedback mode.  After encrypting or decrypting a string, this value
 will reflect the modified feedback text; it will always be one block
 in length.  It is read-only, and cannot be assigned a new value.
-
+Python 3.x: ```IV``` is a bytes object.
 
 **key_size**:
 An integer value equal to the size of the keys used by this object.  If
@@ -391,6 +420,11 @@ Decrypts ``string``, using the key-dependent data in the object, and
 with the appropriate feedback mode.  The string's length must be an exact
 multiple of the algorithm's block size.  Returns a string containing
 the plaintext.
+Python 3.x: decrypt() will return a bytes object.
+
+Note: Do not use the same cipher object for both encryption an
+decryption, since both operations share the same IV buffer, so the results
+will probably not be what you expect.
 
 
 **encrypt(string)**:
@@ -399,26 +433,12 @@ object, and with the appropriate feedback mode.  The string's length
 must be an exact multiple of the algorithm's block size; for stream
 ciphers, the string can be of any length.  Returns a string containing
 the ciphertext.
+Python 3.x: ```string``` must be an object interpretable as a buffer of bytes.
+encrypt() will return a bytes object.
 
-
-
-Algorithm-specific Notes for Encryption Algorithms
-=======================================================
-
-RC5 has a bunch of parameters; see Ronald Rivest's paper at
-<http://theory.lcs.mit.edu/~rivest/rc5rev.ps> for the
-implementation details.  The keyword parameters are:
-
-* ``version``: The version of the RC5 algorithm to use; currently
-  the only legal value is ``0x10`` for RC5 1.0.
-
-* ``wordsize``: The word size to use; 16 or 32 are the only legal
-  values.  (A larger word size is better, so usually 32 will be used.
-  16-bit RC5 is probably only of academic interest.)
-
-* ``rounds``: The number of rounds to apply, the larger the more
-  secure: this can be any value from 0 to 255, so you will have to
-  choose a value balanced between speed and security.
+Note: Do not use the same cipher object for both encryption an
+decryption, since both operations share the same IV buffer, so the results
+will probably not be what you expect.
 
 
 Security Notes
@@ -434,41 +454,67 @@ encrypted and forwarded to someone else.  This is a
 possible to choose plaintexts that reveal something about the key when
 encrypted.
 
-DES (5100 K/sec) has a 56-bit key; this is starting to become too small
-for safety.  It has been estimated that it would only cost $1,000,000 to
-build a custom DES-cracking machine that could find a key in 3 hours.  A
-chosen-ciphertext attack using the technique of 
-**linear cryptanalysis** can break DES in ``pow(2, 43)`` steps.  However,
-unless you're encrypting data that you want to be safe from major
-governments, DES will be fine. DES3 (1830 K/sec) uses three DES
-encryptions for greater security and a 112-bit or 168-bit key, but is
-correspondingly slower.
+Stream ciphers are only secure if any given key is never used twice.
+If two (or more) messages are encrypted using the same key in a stream
+cipher, the cipher can be broken fairly easily.
 
-There are no publicly known attacks against IDEA (3050 K/sec), and
-it's been around long enough to have been examined.  There are no
-known attacks against ARC2 (2160 K/sec), ARC4 (8830 K/sec), Blowfish
-(9250 K/sec), CAST (2960 K/sec), or RC5 (2060 K/sec), but they're all
-relatively new algorithms and there hasn't been time for much analysis
-to be performed; use them for serious applications only after careful
+DES (5100 K/sec) has a 56-bit key; this is starting to become too small
+for safety.  It has been shown in 2009 that a ~$10,000 machine can break
+DES in under a day on average. NIST has withdrawn FIPS 46-3 in 2005.  
+DES3 (1830 K/sec) uses three DES encryptions for greater security and a 112-bit
+or 168-bit key, but is correspondingly slower. Attacks against DES3 are
+not currently feasible, and it has been estimated to be useful until 2030.
+Bruce Schneier endorses DES3 for its security because of the decades of
+study applied against it. It is, however, slow.
+
+There are no known attacks against Blowfish (9250 K/sec) or CAST (2960 K/sec),
+but they're all relatively new algorithms and there hasn't been time for much
+analysis to be performed; use them for serious applications only after careful
 research.
+
+pycrypto implements CAST with up to 128 bits key length (CAST-128). This
+algorithm is considered obsoleted by CAST-256. CAST is patented by Entrust
+Technologies and free for non-commercial use.
+
+Bruce Schneier recommends his newer Twofish algorithm over Blowfish where
+a fast, secure symmetric cipher is desired. Twofish was an AES candidate. It
+is slightly slower than Rijndael (the chosen algorithm for AES) for 128-bit
+keys, and slightly faster for 256-bit keys.
 
 AES, the Advanced Encryption Standard, was chosen by the US National
 Institute of Standards and Technology from among 6 competitors, and is
 probably your best choice.  It runs at 7060 K/sec, so it's among the
 faster algorithms around.
 
+ARC4 ("Alleged" RC4) (8830 K/sec) has been weakened. Specifically, it has been
+shown that the first few bytes of the ARC4 keystream are strongly non-random,
+leaking information about the key. When the long-term key and nonce are merely
+concatenated to form the ARC4 key, such as is done in WEP, this weakness can be
+used to discover the long-term key by observing a large number of messages
+encrypted with this key.
+Because of these possible related-key attacks, ARC4 should only be used with
+keys generated by a strong RNG, or from a source of sufficiently uncorrelated
+bits, such as the output of a hash function.
+A further possible defense is to discard the initial portion of the keystream.
+This altered algorithm is called RC4-drop(n).
+While ARC4 is in wide-spread use in several protocols, its use in new protocols
+or applications is discouraged.
+
+ARC2 ("Alleged" RC2) is vulnerable to a related-key attack, 2^34 chosen
+plaintexts are needed.
+Because of these possible related-key attacks, ARC2 should only be used with
+keys generated by a strong RNG, or from a source of sufficiently uncorrelated
+bits, such as the output of a hash function.
 
 Credits
 =============
 
-The code for Blowfish was written by Bryan Olson, partially based on a
-previous implementation by Bruce Schneier, who also invented the
-algorithm; the Blowfish algorithm has been placed in the public domain
-and can be used freely.  (See http://www.counterpane.com for more
-information about Blowfish.)  The CAST implementation was written by 
-Wim Lewis.  The DES implementation was written by Eric Young, and the
-IDEA implementation by Colin Plumb. The RC5 implementation
-was written by A.M. Kuchling.
+The code for Blowfish was written from scratch by Dwayne Litzenberger, based
+on a specification by Bruce Schneier, who also invented the algorithm; the
+Blowfish algorithm has been placed in the public domain and can be used
+freely.  (See http://www.schneier.com/paper-blowfish-fse.html for more
+information about Blowfish.) The CAST implementation was written by Wim Lewis.
+The DES implementation uses libtomcrypt, which was written by Tom St Denis.
 
 The Alleged RC4 code was posted to the ``sci.crypt`` newsgroup by an
 unknown party, and re-implemented by A.M. Kuchling.  
@@ -630,10 +676,10 @@ following table:
 =============  ==========================================
 Algorithm		Capabilities
 =============  ==========================================
-RSA		Encryption, authentication/signatures
-ElGamal		Encryption, authentication/signatures
-DSA		Authentication/signatures
-qNEW		Authentication/signatures
+RSA				Encryption, authentication/signatures
+ElGamal			Encryption, authentication/signatures
+DSA				Authentication/signatures
+qNEW			Authentication/signatures
 =============  ==========================================
 
 Many of these algorithms are patented.  Before using any of them in a
@@ -771,6 +817,7 @@ inside the key object.  It will raise an exception if ``string`` is
 too long.  For ElGamal objects, the value of ``K`` expressed as a
 big-endian integer must be relatively prime to ``self.p-1``; an
 exception is raised if it is not.
+Python 3.x: ```string``` must be an object interpretable as a buffer of bytes.
 
 
 **has_private()**:
@@ -793,6 +840,7 @@ will return tuples of different sizes.  ``sign()`` raises an
 exception if ``string`` is too long.  For ElGamal objects, the value
 of ``K`` expressed as a big-endian integer must be relatively prime to
 ``self.p-1``; an exception is raised if it is not.
+Python 3.x: ```string``` must be an object interpretable as a buffer of bytes.
 
 
 **size()**:
@@ -808,6 +856,7 @@ it's simplest to just divide the size by 8 and round down.
 Returns true if the signature is valid, and false otherwise.
 ``string`` is not processed in any way; ``verify`` does
 not run a hash function over the data, but you can easily do that yourself.
+Python 3.x: ```string``` must be an object interpretable as a buffer of bytes.
 
 
 The ElGamal and DSA algorithms
@@ -817,8 +866,7 @@ For RSA, the ``K`` parameters are unused; if you like, you can just
 pass empty strings.  The ElGamal and DSA algorithms require a real
 ``K`` value for technical reasons; see Schneier's book for a detailed
 explanation of the respective algorithms.  This presents a possible
-hazard that can  
-inadvertently reveal the private key.  Without going into the
+hazard that can  inadvertently reveal the private key.  Without going into the
 mathematical details, the danger is as follows. ``K`` is never derived
 or needed by others; theoretically, it can be thrown away once the
 encryption or signing operation is performed.  However, revealing

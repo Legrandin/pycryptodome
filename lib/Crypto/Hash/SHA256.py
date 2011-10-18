@@ -23,6 +23,7 @@ __revision__ = "$Id$"
 __all__ = ['new', 'digest_size']
 
 from Crypto.Util.wrapper import Wrapper
+from Crypto.Util.py3compat import *
 
 # The OID for SHA-256 is:
 #
@@ -31,9 +32,9 @@ from Crypto.Util.wrapper import Wrapper
 # 			gov(101) csor(3) nistalgorithm(4) hashalgs(2) 1
 # 			}
 #
-oid = '\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01'
+oid = b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01')
 
-def new(data=""):
+def new(data=b("")):
     obj = Wrapper(hashFactory, data)
     obj.oid = oid
     obj.new = globals()['new']

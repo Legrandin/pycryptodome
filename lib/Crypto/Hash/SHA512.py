@@ -25,6 +25,7 @@ __revision__ = "$Id$"
 __all__ = ['new', 'digest_size']
 
 from Crypto.Util.wrapper import Wrapper
+from Crypto.Util.py3compat import *
 
 # The OID for SHA-512 is:
 #
@@ -33,9 +34,9 @@ from Crypto.Util.wrapper import Wrapper
 #			country(16) us(840) organization(1) gov(101) csor(3)
 #			nistalgorithm(4) hashalgs(2) 3
 #		}
-oid = '\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03'
+oid = b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03')
 
-def new(data=""):
+def new(data=b("")):
     obj = Wrapper(hashFactory, data)
     obj.oid = oid
     obj.new = globals()['new']

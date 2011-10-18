@@ -28,7 +28,9 @@ __revision__ = "$Id$"
 
 __all__ = ['generate', 'construct', 'error']
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 
 from Crypto.PublicKey import _DSA, _slowmath, pubkey
 from Crypto import Random
@@ -118,6 +120,7 @@ class _DSAobj(pubkey.pubkey):
                 attrs.append(k)
         if self.has_private():
             attrs.append("private")
+        # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
 class DSAImplementation(object):

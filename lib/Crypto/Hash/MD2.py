@@ -23,6 +23,7 @@ __revision__ = "$Id$"
 __all__ = ['new', 'digest_size']
 
 from Crypto.Util.wrapper import Wrapper
+from Crypto.Util.py3compat import *
 
 # The OID for MD2 is:
 #
@@ -31,9 +32,9 @@ from Crypto.Util.wrapper import Wrapper
 # 			digestAlgorithm(2) 2
 # 			}
 
-oid = '\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x02'
+oid = b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x02')
 
-def new(data=""):
+def new(data=b("")):
     obj = Wrapper(hashFactory, data)
     obj.oid = oid
     obj.new = globals()['new']

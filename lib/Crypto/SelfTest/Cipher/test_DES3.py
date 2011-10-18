@@ -27,10 +27,11 @@
 __revision__ = "$Id$"
 
 from common import dict     # For compatibility with Python 2.1 and 2.2
+from Crypto.Util.py3compat import *
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
-SP800_20_A1_KEY = "01" * 24
-SP800_20_A2_PT = "00" * 8
+SP800_20_A1_KEY = '01' * 24
+SP800_20_A2_PT = '00' * 8
 test_data = [
     # Test vector from Appendix B of NIST SP 800-67
     # "Recommendation for the Triple Data Encryption Algorithm (TDEA) Block

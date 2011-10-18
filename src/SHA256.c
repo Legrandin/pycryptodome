@@ -70,5 +70,4 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
 #define Gamma1(x)    (ROTR(x, 17) ^ ROTR(x, 19) ^ SHR(x, 10))
 
 #include "hash_SHA2_template.c"
- 
 

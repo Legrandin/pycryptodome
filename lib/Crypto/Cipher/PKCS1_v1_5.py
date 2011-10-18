@@ -71,6 +71,7 @@ __revision__ = "$Id$"
 __all__ = [ 'new' ]
 
 from Crypto.Util.number import ceil_div
+from Crypto.Util.py3compat import *
 import Crypto.Util.number
 
 class PKCS115_Cipher:
@@ -87,11 +88,11 @@ class PKCS115_Cipher:
         self._key = key
 
     def can_encrypt(self):
-        """Return True/1 if this cipher object can be used for encryption."""
+        """Return True if this cipher object can be used for encryption."""
         return self._key.can_encrypt()
 
     def can_decrypt(self):
-        """Return True/1 if this cipher object can be used for decryption."""
+        """Return True if this cipher object can be used for decryption."""
         return self._key.can_decrypt()
 
     def encrypt(self, message):
@@ -102,11 +103,11 @@ class PKCS115_Cipher:
         For a complete example see `Crypto.Cipher.PKCS1_v1_5`.
     
         :Parameters:
-         message : string
+         message : byte string
                 The message to encrypt, also known as plaintext. It can be of
                 variable length, but not longer than the RSA modulus (in bytes) minus 11.
     
-        :Return: A string, the ciphertext in which the message is encrypted.
+        :Return: A byte string, the ciphertext in which the message is encrypted.
             It is as long as the RSA modulus (in bytes).
         :Raise ValueError:
             If the RSA key length is not sufficiently long to deal with the given
@@ -129,15 +130,15 @@ class PKCS115_Cipher:
         class nonZeroRandByte:
             def __init__(self, rf): self.rf=rf
             def __call__(self, c):
-                while c=='\x00': c=self.rf(1)
+                while bord(c)==0x00: c=self.rf(1)[0]
                 return c
-        ps = "".join(map(nonZeroRandByte(randFunc), randFunc(k-mLen-3)))
+        ps = tobytes(map(nonZeroRandByte(randFunc), randFunc(k-mLen-3)))
         # Step 2b
-        em = '\x00\x02' + ps + '\x00' + message
+        em = b('\x00\x02') + ps + bchr(0x00) + message
         # Step 3a (OS2IP), step 3b (RSAEP), part of step 3c (I2OSP)
         m = self._key.encrypt(em, 0)[0]
         # Complete step 3c (I2OSP)
-        c = '\x00'*(k-len(m)) + m
+        c = bchr(0x00)*(k-len(m)) + m
         return c
     
     def decrypt(self, ct, sentinel):
@@ -148,12 +149,12 @@ class PKCS115_Cipher:
         For a complete example see `Crypto.Cipher.PKCS1_v1_5`.
     
         :Parameters:
-         ct : string
+         ct : byte string
                 The ciphertext that contains the message to recover.
-         sentinel : string
-                The string to return to indicate that an error was detected during decryption.
+         sentinel : any type
+                The object to return to indicate that an error was detected during decryption.
     
-        :Return: A string. It is either the original message or the ``sentinel`` (in case of an error).
+        :Return: A byte string. It is either the original message or the ``sentinel`` (in case of an error).
         :Raise ValueError:
             If the ciphertext length is incorrect
         :Raise TypeError:
@@ -204,10 +205,10 @@ class PKCS115_Cipher:
         # Step 2a (O2SIP), 2b (RSADP), and part of 2c (I2OSP)
         m = self._key.decrypt(ct)
         # Complete step 2c (I2OSP)
-        em = '\x00'*(k-len(m)) + m
+        em = bchr(0x00)*(k-len(m)) + m
         # Step 3
-        sep = em.find('\x00',2)
-        if  not em.startswith('\x00\x02') or sep<10:
+        sep = em.find(bchr(0x00),2)
+        if  not em.startswith(b('\x00\x02')) or sep<10:
             return sentinel
         # Step 4
         return em[sep+1:]

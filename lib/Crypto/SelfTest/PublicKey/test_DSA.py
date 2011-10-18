@@ -26,17 +26,21 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
+import sys
+import os
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
 import unittest
-import string
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 
 def _sws(s):
-    """Strip whitespace"""
-    s = s.translate(string.maketrans(string.whitespace, " "*len(string.whitespace)))
-    s = s.replace(" ", "")
-    return s
+    """Remove whitespace from a text or byte string"""
+    if isinstance(s,str):
+        return "".join(s.split())
+    else:
+        return b("").join(s.split())
 
 class DSATest(unittest.TestCase):
     # Test vector from "Appendix 5. Example of the DSA" of
@@ -63,7 +67,7 @@ class DSATest(unittest.TestCase):
 
     k = _sws("""358dad57 1462710f 50e254cf 1a376b2b deaadfbf""")
     k_inverse = _sws("""0d516729 8202e49b 4116ac10 4fc3f415 ae52f917""")
-    m = b2a_hex("abc")
+    m = b2a_hex(b("abc"))
     m_hash = _sws("""a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d""")
     r = _sws("""8bac1ab6 6410435c b7181f95 b16ab97c 92b341c0""")
     s = _sws("""41e2345f 1f56df24 58f426d1 55b4ba2d b6dcd8c8""")
@@ -153,8 +157,8 @@ class DSATest(unittest.TestCase):
         self.assertRaises(TypeError, dsaObj.sign, m_hash, k)
 
         # Check __eq__ and __ne__
-        self.assert_(dsaObj.publickey() == dsaObj.publickey())
-        self.assert_(not (dsaObj.publickey() != dsaObj.publickey()))
+        self.assertEqual(dsaObj.publickey() == dsaObj.publickey(),True) # assert_
+        self.assertEqual(dsaObj.publickey() != dsaObj.publickey(),False) # failIf
 
     def _test_signing(self, dsaObj):
         k = a2b_hex(self.k)
@@ -169,7 +173,7 @@ class DSATest(unittest.TestCase):
         r = bytes_to_long(a2b_hex(self.r))
         s = bytes_to_long(a2b_hex(self.s))
         self.assertEqual(1, dsaObj.verify(m_hash, (r, s)))
-        self.assertEqual(0, dsaObj.verify(m_hash + "\0", (r, s)))
+        self.assertEqual(0, dsaObj.verify(m_hash + b("\0"), (r, s)))
 
 class DSAFastMathTest(DSATest):
     def setUp(self):
@@ -221,9 +225,16 @@ def get_tests(config={}):
         from Crypto.PublicKey import _fastmath
         tests += list_test_cases(DSAFastMathTest)
     except ImportError:
-        pass
-    if config.get('slow_tests',1): 
-        tests += list_test_cases(DSASlowMathTest)
+        from distutils.sysconfig import get_config_var
+        import inspect
+        _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
+            inspect.getfile(inspect.currentframe())))
+            +"/../../PublicKey/_fastmath"+get_config_var("SO"))
+        if os.path.exists(_fm_path):
+            raise ImportError("While the _fastmath module exists, importing "+
+                "it failed. This may point to the gmp or mpir shared library "+
+                "not being in the path. _fastmath was found at "+_fm_path)
+    tests += list_test_cases(DSASlowMathTest)
     return tests
 
 if __name__ == '__main__':

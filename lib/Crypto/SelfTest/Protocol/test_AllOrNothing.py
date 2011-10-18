@@ -1,5 +1,5 @@
 #
-# Test script for Crypto.Protocol.Chaffing
+# Test script for Crypto.Protocol.AllOrNothing
 #
 # Part of the Python Cryptography Toolkit
 #
@@ -26,9 +26,10 @@
 __revision__ = "$Id$"
 
 import unittest
-from Crypto.Protocol import Chaffing
+from Crypto.Protocol import AllOrNothing
+from Crypto.Util.py3compat import *
 
-text = """\
+text = b("""\
 When in the Course of human events, it becomes necessary for one people to
 dissolve the political bands which have connected them with another, and to
 assume among the powers of the earth, the separate and equal station to which
@@ -45,30 +46,31 @@ destructive of these ends, it is the Right of the People to alter or to
 abolish it, and to institute new Government, laying its foundation on such
 principles and organizing its powers in such form, as to them shall seem most
 likely to effect their Safety and Happiness.
-"""
+""")
 
-class ChaffingTest (unittest.TestCase):
+class AllOrNothingTest (unittest.TestCase):
 
     def runTest(self):
-        "Simple tests of chaffing and winnowing"
-	# Test constructors
-        Chaffing.Chaff()
-        Chaffing.Chaff(0.5, 1)
-        self.assertRaises(ValueError, Chaffing.Chaff, factor=-1)
-        self.assertRaises(ValueError, Chaffing.Chaff, blocksper=-1)
+        "Simple test of AllOrNothing"
 
-        data = [(1, 'data1', 'data1'), (2, 'data2', 'data2')]
-        c = Chaffing.Chaff(1.0, 1)
-        c.chaff(data)
-        chaff = c.chaff(data)
-        self.assertEqual(len(chaff), 4)
+        from Crypto.Cipher import AES
+        import base64
 
-        c = Chaffing.Chaff(0.0, 1)
-        chaff = c.chaff(data)
-        self.assertEqual(len(chaff), 2)
+        # The current AllOrNothing will fail
+        # every so often. Repeat the test
+        # several times to force this.
+        for i in range(50):
+            x = AllOrNothing.AllOrNothing(AES)
+
+            msgblocks = x.digest(text)
+            
+            # get a new undigest-only object so there's no leakage
+            y = AllOrNothing.AllOrNothing(AES)
+            text2 = y.undigest(msgblocks)
+            self.assertEqual(text, text2)
 
 def get_tests(config={}):
-    return [ChaffingTest()]
+    return [AllOrNothingTest()]
 
 if __name__ == "__main__":
     unittest.main()

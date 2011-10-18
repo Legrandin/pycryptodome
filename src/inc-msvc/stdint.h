@@ -34,11 +34,9 @@ typedef unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
 
-/* Define the "inline" keyword */
 #ifndef inline
 # define inline __inline
 #endif /* inline */
-
 
 #endif /* PYCRYPTO_MSVC_STDINT_H */
 /* vim:set ts=4 sw=4 sts=4 expandtab: */

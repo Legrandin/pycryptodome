@@ -27,6 +27,7 @@
 __revision__ = "$Id$"
 
 from common import dict     # For compatibility with Python 2.1 and 2.2
+from Crypto.Util.py3compat import *
 
 # This is a list of (key, data, results, description) tuples.
 test_data = [
@@ -174,7 +175,9 @@ test_data = [
             bfdc63644f0713938a7f51535c3a35e2
         '''),
         'RFC 4231 #7 (HMAC-SHA256)'),
+]
 
+hashlib_test_data = [
     # Test case 8 (SHA224)
     ('4a656665',
         '7768617420646f2079612077616e74'
@@ -199,9 +202,17 @@ test_data = [
 ]
 
 def get_tests(config={}):
-    from Crypto.Hash import HMAC, MD5, SHA as SHA1, SHA256, SHA224, SHA384, SHA512
+    global test_data
+    from Crypto.Hash import HMAC, MD5, SHA as SHA1, SHA256
     from common import make_mac_tests
-    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA224=SHA224, SHA256=SHA256, SHA384=SHA384, SHA512=SHA512, default=None)
+    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256, default=None)
+    try:
+        from Crypto.Hash import SHA224, SHA384, SHA512
+        hashmods.update(dict(SHA224=SHA224, SHA384=SHA384, SHA512=SHA512))
+        test_data += hashlib_test_data
+    except ImportError:
+        import sys
+        sys.stderr.write("SelfTest: warning: not testing HMAC-SHA224/384/512 (not available)\n")
     return make_mac_tests(HMAC, "HMAC", test_data, hashmods)
 
 if __name__ == '__main__':

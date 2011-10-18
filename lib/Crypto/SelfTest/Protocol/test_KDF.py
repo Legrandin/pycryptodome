@@ -30,7 +30,7 @@ from Crypto.Hash import SHA as SHA1,HMAC
 
 from Crypto.Protocol.KDF import *
 
-def t2b(t): return unhexlify(t)
+def t2b(t): return unhexlify(b(t))
 
 class PBKDF1_Tests(unittest.TestCase):
 

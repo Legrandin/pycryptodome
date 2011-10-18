@@ -26,14 +26,35 @@
 
 __revision__ = "$Id$"
 
-from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning
+from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning, PowmInsecureWarning
+from warnings import warn as _warn
 import math
+import sys
+from Crypto.Util.py3compat import *
 
 bignum = long
 try:
     from Crypto.PublicKey import _fastmath
 except ImportError:
+    # For production, we are going to let import issues due to gmp/mpir shared
+    # libraries not loading slide silently and use slowmath. If you'd rather
+    # see an exception raised if _fastmath exists but cannot be imported,
+    # uncomment the below
+    #
+    # from distutils.sysconfig import get_config_var
+    # import inspect, os
+    # _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
+        # inspect.getfile(inspect.currentframe())))
+        # +"/../../PublicKey/_fastmath"+get_config_var("SO"))
+    # if os.path.exists(_fm_path):
+        # raise ImportError("While the _fastmath module exists, importing "+
+            # "it failed. This may point to the gmp or mpir shared library "+
+            # "not being in the path. _fastmath was found at "+_fm_path)
     _fastmath = None
+
+# You need libgmp v5 or later to get mpz_powm_sec.  Warn if it's not available.
+if _fastmath is not None and not _fastmath.HAVE_DECL_MPZ_POWM_SEC:
+    _warn("Not using mpz_powm_sec.  You should rebuild using libgmp >= 5 to avoid timing attack vulnerability.", PowmInsecureWarning)
 
 # New functions
 from _number_new import *
@@ -62,7 +83,8 @@ def size (N):
 
 def getRandomNumber(N, randfunc=None):
     """Deprecated.  Use getRandomInteger or getRandomNBitInteger instead."""
-    warnings.warn("Crypto.Util.number.getRandomNumber has confusing semantics and has been deprecated.  Use getRandomInteger or getRandomNBitInteger instead.",
+    warnings.warn("Crypto.Util.number.getRandomNumber has confusing semantics"+
+    "and has been deprecated.  Use getRandomInteger or getRandomNBitInteger instead.",
         GetRandomNumber_DeprecationWarning)
     return getRandomNBitInteger(N, randfunc)
 
@@ -83,7 +105,7 @@ def getRandomInteger(N, randfunc=None):
     odd_bits = N % 8
     if odd_bits != 0:
         char = ord(randfunc(1)) >> (8-odd_bits)
-        S = chr(char) + S
+        S = bchr(char) + S
     value = bytes_to_long(S)
     return value
 
@@ -221,7 +243,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     The optional false_positive_prob is the statistical probability
     that true is returned even though it is not (pseudo-prime).
     It defaults to 1e-6 (less than 1:1000000).
-    Note that the real probability of a false-positiv is far less. This is
+    Note that the real probability of a false-positive is far less. This is
     just the mathematically provable limit.
 
     randfunc should take a single int parameter and return that
@@ -239,7 +261,8 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
 
     # Use the accelerator if available
     if _fastmath is not None:
-        return _fastmath.getStrongPrime(long(N), long(e), false_positive_prob, randfunc)
+        return _fastmath.getStrongPrime(long(N), long(e), false_positive_prob,
+            randfunc)
 
     if (N < 512) or ((N % 128) != 0):
         raise ValueError ("bits must be multiple of 128 and > 512")
@@ -263,7 +286,6 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     for i in (0, 1):
         # randomly choose 101-bit y
         y = getRandomNBitInteger (101, randfunc)
-
         # initialize the field for sieving
         field = [0] * 5 * len (sieve_base)
         # sieve the field
@@ -300,13 +322,13 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     X = X + (R - (X % increment))
     while 1:
         is_possible_prime = 1
-        # first check canidate against sieve_base
+        # first check candidate against sieve_base
         for prime in sieve_base:
             if (X % prime) == 0:
                 is_possible_prime = 0
                 break
         # if e is given make sure that e and X-1 are coprime
-        # this is not necessarily a strong prime criterion but usefull when
+        # this is not necessarily a strong prime criterion but useful when
         # creating them for RSA where the p-1 and q-1 should be coprime to
         # the public exponent e
         if e and is_possible_prime:
@@ -314,8 +336,9 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
                 if GCD (e, X-1) != 1:
                     is_possible_prime = 0
             else:
-                if GCD (e, (X-1)/2) != 1:
+                if GCD (e, divmod((X-1),2)[0]) != 1:
                     is_possible_prime = 0
+
         # do some Rabin-Miller-Tests
         if is_possible_prime:
             result = _rabinMillerTest (X, rabin_miller_rounds)
@@ -336,7 +359,7 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
     The optional false_positive_prob is the statistical probability
     that true is returned even though it is not (pseudo-prime).
     It defaults to 1e-6 (less than 1:1000000).
-    Note that the real probability of a false-positiv is far less. This is
+    Note that the real probability of a false-positive is far less. This is
     just the mathematically provable limit.
 
     If randfunc is omitted, then Random.new().read is used.
@@ -370,7 +393,7 @@ def long_to_bytes(n, blocksize=0):
     blocksize.
     """
     # after much testing, this algorithm was deemed to be the fastest
-    s = ''
+    s = b('')
     n = long(n)
     pack = struct.pack
     while n > 0:
@@ -378,17 +401,17 @@ def long_to_bytes(n, blocksize=0):
         n = n >> 32
     # strip off leading zeros
     for i in range(len(s)):
-        if s[i] != '\000':
+        if s[i] != b('\000')[0]:
             break
     else:
         # only happens when n == 0
-        s = '\000'
+        s = b('\000')
         i = 0
     s = s[i:]
     # add back some pad bytes.  this could be done more efficiently w.r.t. the
     # de-padding being done above, but sigh...
     if blocksize > 0 and len(s) % blocksize:
-        s = (blocksize - len(s) % blocksize) * '\000' + s
+        s = (blocksize - len(s) % blocksize) * b('\000') + s
     return s
 
 def bytes_to_long(s):
@@ -402,7 +425,7 @@ def bytes_to_long(s):
     length = len(s)
     if length % 4:
         extra = (4 - length % 4)
-        s = '\000' * extra + s
+        s = b('\000') * extra + s
         length = length + extra
     for i in range(0, length, 4):
         acc = (acc << 32) + unpack('>I', s[i:i+4])[0]
@@ -418,7 +441,8 @@ def str2long(s):
     return bytes_to_long(s)
 
 def _import_Random():
-    # This is called in a function instead of at the module level in order to avoid problems with recursive imports
+    # This is called in a function instead of at the module level in order to
+    # avoid problems with recursive imports
     global Random, StrongRandom
     from Crypto import Random
     from Crypto.Random.random import StrongRandom

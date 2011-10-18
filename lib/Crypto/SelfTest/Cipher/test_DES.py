@@ -27,10 +27,12 @@
 __revision__ = "$Id$"
 
 from common import dict     # For compatibility with Python 2.1 and 2.2
+from Crypto.Util.py3compat import *
+import unittest
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
-SP800_17_B1_KEY = "01" * 8
-SP800_17_B2_PT = "00" * 8
+SP800_17_B1_KEY = '01' * 8
+SP800_17_B2_PT = '00' * 8
 test_data = [
     # Test vectors from Appendix A of NIST SP 800-17
     # "Modes of Operation Validation System (MOVS): Requirements and Procedures"
@@ -285,10 +287,49 @@ test_data = [
         'NIST SP800-17 B.2 #55'),
 ]
 
+class RonRivestTest(unittest.TestCase):
+    """ Ronald L. Rivest's DES test, see 
+        http://people.csail.mit.edu/rivest/Destest.txt
+    ABSTRACT
+    --------
+
+    We present a simple way to test the correctness of a DES implementation:
+    Use the recurrence relation:
+
+        X0      =       9474B8E8C73BCA7D (hexadecimal)
+
+        X(i+1)  =       IF  (i is even)  THEN  E(Xi,Xi)  ELSE  D(Xi,Xi)
+
+    to compute a sequence of 64-bit values:  X0, X1, X2, ..., X16.  Here
+    E(X,K)  denotes the DES encryption of  X  using key  K, and  D(X,K)  denotes
+    the DES decryption of  X  using key  K.  If you obtain
+
+        X16     =       1B1A2DDB4C642438
+
+    your implementation does not have any of the 36,568 possible single-fault 
+    errors described herein.
+    """
+    def runTest(self):
+        from Crypto.Cipher import DES
+        from binascii import b2a_hex
+
+        X = []
+        X[0:] = [b('\x94\x74\xB8\xE8\xC7\x3B\xCA\x7D')]
+        
+        for i in range(16):
+            c = DES.new(X[i],DES.MODE_ECB)
+            if not (i&1): # (num&1) returns 1 for odd numbers 
+                X[i+1:] = [c.encrypt(X[i])] # even
+            else:
+                X[i+1:] = [c.decrypt(X[i])] # odd
+
+        self.assertEqual(b2a_hex(X[16]),
+            b2a_hex(b('\x1B\x1A\x2D\xDB\x4C\x64\x24\x38')))
+
 def get_tests(config={}):
     from Crypto.Cipher import DES
     from common import make_block_tests
-    return make_block_tests(DES, "DES", test_data)
+    return make_block_tests(DES, "DES", test_data) + [RonRivestTest()]
 
 if __name__ == '__main__':
     import unittest

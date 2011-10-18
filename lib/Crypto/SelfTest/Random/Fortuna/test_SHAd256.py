@@ -25,6 +25,7 @@
 """Self-test suite for Crypto.Random.Fortuna.SHAd256"""
 
 __revision__ = "$Id$"
+from Crypto.Util.py3compat import *
 
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [

@@ -29,6 +29,7 @@ __revision__ = "$Id$"
 from common import dict     # For compatibility with Python 2.1 and 2.2
 
 import unittest
+from Crypto.Util.py3compat import *
 
 # This is a list of (plaintext, ciphertext, key[, description[, extra_params]]) tuples.
 test_data = [
@@ -67,26 +68,30 @@ test_data = [
         'PCTv201-2'),
     ('0011223344556677', '078656aaba61cbfb', '5068696c6970476c617373',
         'PCTv201-3'),
-    ('0000000000000000', 'd7bcc5dbb4d6e56a', 'ffffffffffffffff', 'PCTv201-4'),
-    ('ffffffffffffffff', '7259018ec557b357', 'ffffffffffffffff', 'PCTv201-5'),
-    ('0001020304050607', '93d20a497f2ccb62', 'ffffffffffffffff', 'PCTv201-6'),
-    ('0011223344556677', 'cb15a7f819c0014d', 'ffffffffffffffff', 'PCTv201-7'),
-    ('0000000000000000', '63ac98cdf3843a7a',
-        'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
+    ('0000000000000000', 'd7bcc5dbb4d6e56a', 'ffffffffffffffff',
+        'PCTv201-4'),
+    ('ffffffffffffffff', '7259018ec557b357', 'ffffffffffffffff',
+        'PCTv201-5'),
+    ('0001020304050607', '93d20a497f2ccb62', 'ffffffffffffffff',
+        'PCTv201-6'),
+    ('0011223344556677', 'cb15a7f819c0014d', 'ffffffffffffffff',
+        'PCTv201-7'),
+    ('0000000000000000', '63ac98cdf3843a7a', 'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
         'PCTv201-8'),
-    ('ffffffffffffffff', '3fb49e2fa12371dd',
-        'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
+    ('ffffffffffffffff', '3fb49e2fa12371dd', 'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
         'PCTv201-9'),
-    ('0001020304050607', '46414781ab387d5f',
-        'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
+    ('0001020304050607', '46414781ab387d5f', 'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
         'PCTv201-10'),
-    ('0011223344556677', 'be09dc81feaca271',
-        'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
+    ('0011223344556677', 'be09dc81feaca271', 'ffffffffffffffff5065746572477265656e6177617953e5ffe553',
         'PCTv201-11'),
-    ('0000000000000000', 'e64221e608be30ab', '53e5ffe553', 'PCTv201-12'),
-    ('ffffffffffffffff', '862bc60fdcd4d9a9', '53e5ffe553', 'PCTv201-13'),
-    ('0001020304050607', '6a34da50fa5e47de', '53e5ffe553', 'PCTv201-14'),
-    ('0011223344556677', '584644c34503122c', '53e5ffe553', 'PCTv201-15'),
+    ('0000000000000000', 'e64221e608be30ab', '53e5ffe553',
+        'PCTv201-12'),
+    ('ffffffffffffffff', '862bc60fdcd4d9a9', '53e5ffe553',
+        'PCTv201-13'),
+    ('0001020304050607', '6a34da50fa5e47de', '53e5ffe553',
+        'PCTv201-14'),
+    ('0011223344556677', '584644c34503122c', '53e5ffe553',
+        'PCTv201-15'),
 ]
 
 class BufferOverflowTest(unittest.TestCase):

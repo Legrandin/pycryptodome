@@ -29,6 +29,7 @@ __revision__ = "$Id$"
 from Crypto.PublicKey import pubkey
 from Crypto.Util.number import *
 from Crypto.Hash import SHA
+from Crypto.Util.py3compat import *
 
 class error (Exception):
     pass
@@ -70,7 +71,7 @@ def generate(bits, randfunc, progress_func=None):
             # data, that are assembled to produce a candidate
             # value for p.
             for k in range(0, n+1):
-                V[k]=bytes_to_long(SHA.new(S+str(N)+str(k)).digest())
+                V[k]=bytes_to_long(SHA.new(S+bytes(N)+bytes(k)).digest())
             p = V[n] % powb
             for k in range(n-1, -1, -1):
                 p= (p << long(HASHBITS) )+V[k]

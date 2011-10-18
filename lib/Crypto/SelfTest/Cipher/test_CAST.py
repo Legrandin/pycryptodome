@@ -26,6 +26,8 @@
 
 __revision__ = "$Id$"
 
+from Crypto.Util.py3compat import *
+
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
     # Test vectors from RFC 2144, B.1

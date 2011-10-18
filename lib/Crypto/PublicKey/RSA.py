@@ -32,7 +32,11 @@ __revision__ = "$Id$"
 
 __all__ = ['generate', 'construct', 'error', 'importKey' ]
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
+#from Crypto.Util.python_compat import *
 from Crypto.Util.number import getRandomRange, bytes_to_long, long_to_bytes
 
 from Crypto.PublicKey import _RSA, _slowmath, pubkey
@@ -164,6 +168,7 @@ class _RSAobj(pubkey.pubkey):
                 attrs.append(k)
         if self.has_private():
             attrs.append("private")
+        # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
     def exportKey(self, format='PEM', passphrase=None, pkcs=1):
@@ -192,11 +197,13 @@ class _RSAobj(pubkey.pubkey):
         :Raise ValueError:
             When the format is unknown.
         """
+        if passphrase is not None:
+            passphrase = tobytes(passphrase)
         if format=='OpenSSH':
                eb = long_to_bytes(self.e)
                nb = long_to_bytes(self.n)
-               if ord(eb[0]) & 0x80: eb='\x00'+eb
-               if ord(nb[0]) & 0x80: nb='\x00'+nb
+               if bord(eb[0]) & 0x80: eb=bchr(0x00)+eb
+               if bord(nb[0]) & 0x80: nb=bchr(0x00)+nb
                keyparts = [ 'ssh-rsa', eb, nb ]
                keystring = ''.join([ struct.pack(">I",len(kp))+kp for kp in keyparts]) 
                return 'ssh-rsa '+binascii.b2a_base64(keystring)[:-1]
@@ -219,12 +226,12 @@ class _RSAobj(pubkey.pubkey):
                 der.append(algorithmIdentifier)
                 bitmap = DerObject('BIT STRING')
                 derPK = DerSequence( [ self.n, self.e ] )
-                bitmap.payload = '\x00' + derPK.encode()
+                bitmap.payload = bchr(0x00) + derPK.encode()
                 der.append(bitmap.encode())
         if format=='DER':
                 return der.encode()
         if format=='PEM':
-                pem = "-----BEGIN %s KEY-----\n" % keyType
+                pem = b("-----BEGIN " + keyType + " KEY-----\n")
                 objenc = None
                 if passphrase and keyType.endswith('PRIVATE'):
                     # We only support 3DES for encryption
@@ -235,19 +242,19 @@ class _RSAobj(pubkey.pubkey):
                     key =  PBKDF1(passphrase, salt, 16, 1, Crypto.Hash.MD5)
                     key += PBKDF1(key+passphrase, salt, 8, 1, Crypto.Hash.MD5)
                     objenc = DES3.new(key, Crypto.Cipher.DES3.MODE_CBC, salt)
-                    pem += 'Proc-Type: 4,ENCRYPTED\n'
-                    pem += 'DEK-Info: DES-EDE3-CBC,' + binascii.b2a_hex(salt).upper() + '\n\n'
+                    pem += b('Proc-Type: 4,ENCRYPTED\n')
+                    pem += b('DEK-Info: DES-EDE3-CBC,') + binascii.b2a_hex(salt).upper() + b('\n\n')
                 
                 binaryKey = der.encode()
                 if objenc:
                     # Add PKCS#7-like padding
                     padding = objenc.block_size-len(binaryKey)%objenc.block_size
-                    binaryKey = objenc.encrypt(binaryKey+chr(padding)*padding)
+                    binaryKey = objenc.encrypt(binaryKey+bchr(padding)*padding)
 
                 # Each BASE64 line can take up to 64 characters (=48 bytes of data)
                 chunks = [ binascii.b2a_base64(binaryKey[i:i+48]) for i in range(0, len(binaryKey), 48) ]
-                pem += ''.join(chunks)
-                pem += "-----END %s KEY-----" % keyType
+                pem += b('').join(chunks)
+                pem += b("-----END " + keyType + " KEY-----")
                 return pem
         return ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
 
@@ -345,7 +352,7 @@ class RSAImplementation(object):
             **e** is not odd or smaller than 2.
         """
         if bits < 1024 or (bits & 0xff) != 0:
-            # pubkey.getStrongPrime doesn't like anything that's not a multiple of 128 and > 512
+            # pubkey.getStrongPrime doesn't like anything that's not a multiple of 256 and >= 1024
             raise ValueError("RSA modulus length must be a multiple of 256 and >= 1024")
         if e%2==0 or e<3:
             raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
@@ -407,7 +414,7 @@ class RSAImplementation(object):
                 if der[0]==algorithmIdentifier:
                         bitmap = DerObject()
                         bitmap.decode(der[1], True)
-                        if bitmap.isType('BIT STRING') and bitmap.payload[0]=='\x00':
+                        if bitmap.isType('BIT STRING') and bord(bitmap.payload[0])==0x00:
                                 der.decode(bitmap.payload[1:], True)
                                 if len(der)==2 and der.hasOnlyInts():
                                         return self.construct(der[:])
@@ -452,26 +459,30 @@ class RSAImplementation(object):
         :Raise ValueError/IndexError/TypeError:
             When the given key cannot be parsed (possibly because the pass phrase is wrong).
         """
-        if externKey.startswith('-----'):
+        externKey = tobytes(externKey)
+        if passphrase is not None:
+            passphrase = tobytes(passphrase)
+
+        if externKey.startswith(b('-----')):
                 # This is probably a PEM encoded key
-                lines = externKey.replace(" ",'').split()
+                lines = externKey.replace(b(" "),b('')).split()
                 keyobj = None
 
                 # The encrypted PEM format
-                if lines[1].startswith('Proc-Type:4,ENCRYPTED'):
-                    DEK = lines[2].split(':')
-                    if len(DEK)!=2 or DEK[0]!='DEK-Info' or not passphrase:
+                if lines[1].startswith(b('Proc-Type:4,ENCRYPTED')):
+                    DEK = lines[2].split(b(':'))
+                    if len(DEK)!=2 or DEK[0]!=b('DEK-Info') or not passphrase:
                         raise ValueError("PEM encryption format not supported.")
-                    algo, salt = DEK[1].split(',')
+                    algo, salt = DEK[1].split(b(','))
                     salt = binascii.a2b_hex(salt)
                     import Crypto.Hash.MD5
                     from Crypto.Cipher import DES, DES3
                     from Crypto.Protocol.KDF import PBKDF1
-                    if algo=="DES-CBC":
+                    if algo==b("DES-CBC"):
                         # This is EVP_BytesToKey in OpenSSL
                         key = PBKDF1(passphrase, salt, 8, 1, Crypto.Hash.MD5)
                         keyobj = DES.new(key, Crypto.Cipher.DES.MODE_CBC, salt)
-                    elif algo=="DES-EDE3-CBC":
+                    elif algo==b("DES-EDE3-CBC"):
                         # Note that EVP_BytesToKey is note exactly the same as PBKDF1
                         key =  PBKDF1(passphrase, salt, 16, 1, Crypto.Hash.MD5)
                         key += PBKDF1(key+passphrase, salt, 8, 1, Crypto.Hash.MD5)
@@ -480,16 +491,16 @@ class RSAImplementation(object):
                         raise ValueError("Unsupport PEM encryption algorithm.")
                     lines = lines[2:]
                 
-                der = binascii.a2b_base64(''.join(lines[1:-1]))
+                der = binascii.a2b_base64(b('').join(lines[1:-1]))
                 if keyobj:
                     der = keyobj.decrypt(der)
-                    padding = ord(der[-1])
+                    padding = bord(der[-1])
                     der = der[:-padding]
                 return self._importKeyDER(der)
 
-        if externKey.startswith('ssh-rsa '):
+        if externKey.startswith(b('ssh-rsa ')):
                 # This is probably an OpenSSH key
-                keystring = binascii.a2b_base64(externKey.split(' ')[1])
+                keystring = binascii.a2b_base64(externKey.split(b(' '))[1])
                 keyparts = []
                 while len(keystring)>4:
                     l = struct.unpack(">I",keystring[:4])[0]
@@ -498,9 +509,10 @@ class RSAImplementation(object):
                 e = bytes_to_long(keyparts[1])
                 n = bytes_to_long(keyparts[2])
                 return self.construct([n, e])
-        if externKey[0]=='\x30':
+        if bord(externKey[0])==0x30:
                 # This is probably a DER encoded key
                 return self._importKeyDER(externKey)
+        
         raise ValueError("RSA key format is not supported")
 
 #: This is the ASN.1 DER object that qualifies an algorithm as
@@ -512,7 +524,7 @@ class RSAImplementation(object):
 #               rsaEncryption (1 2 840 113549 1 1 1) (PKCS #1)
 #   0x05 0x00   NULL
 algorithmIdentifier = DerSequence(
-  [ '\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01',
+  [ b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'),
   DerNull().encode() ]
   ).encode()
  

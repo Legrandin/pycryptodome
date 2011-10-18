@@ -31,8 +31,7 @@ from Crypto import Random
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto.Hash import *
 from Crypto.Signature import PKCS1_PSS as PKCS
-
-from string import maketrans
+from Crypto.Util.py3compat import *
 
 def isStr(s):
         t = ''
@@ -44,11 +43,13 @@ def isStr(s):
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
-    return t.translate(maketrans("",""),'\n\t ')
+    for c in ['\t', '\n', ' ']:
+        t = t.replace(c,'')
+    return t
 
 def t2b(t):
     """Convert a text string with bytes in hex form to a byte string"""
-    clean = rws(t)
+    clean = b(rws(t))
     if len(clean)%2 == 1:
         raise ValueError("Even number of characters expected")
     return a2b_hex(clean)
@@ -380,7 +381,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
 
         def testSignVerify(self):
                         h = SHA.new()
-                        h.update('blah blah blah')
+                        h.update(b('blah blah blah'))
 
                         rng = Random.new().read
                         key = MyKey(RSA.generate(1024,rng))
@@ -390,12 +391,12 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         def newMGF(seed,maskLen):
                             global mgfcalls
                             mgfcalls += 1
-                            return '\x00'*maskLen
+                            return bchr(0x00)*maskLen
 
                         # Verify that PSS is friendly to all ciphers
                         for hashmod in (MD2,MD5,SHA,SHA224,SHA256,SHA384,RIPEMD):
                             h = hashmod.new()
-                            h.update('blah blah blah')
+                            h.update(b('blah blah blah'))
 
                             # Verify that sign() asks for as many random bytes
                             # as the hash output size
@@ -406,7 +407,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             self.assertEqual(key.asked, h.digest_size)
 
                         h = SHA.new()
-                        h.update('blah blah blah')
+                        h.update(b('blah blah blah'))
 
                         # Verify that sign() uses a different salt length
                         for sLen in (0,3,21):

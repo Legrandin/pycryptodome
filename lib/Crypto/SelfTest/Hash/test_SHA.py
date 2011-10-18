@@ -26,6 +26,8 @@
 
 __revision__ = "$Id$"
 
+from Crypto.Util.py3compat import *
+
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
@@ -43,7 +45,7 @@ test_data = [
 
     # RFC 3174: Section 7.3, "TEST4" (multiple of 512 bits)
     ('dea356a2cddd90c7a7ecedc5ebb563934f460452',
-        "01234567" * 80,
+        '01234567' * 80,
         '"01234567" * 80'),
 ]
 

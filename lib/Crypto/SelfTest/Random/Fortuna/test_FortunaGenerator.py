@@ -26,7 +26,10 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
 import unittest
 from binascii import b2a_hex
@@ -45,24 +48,24 @@ class FortunaGeneratorTests(unittest.TestCase):
         self.assertEqual(0, fg.counter.next_value())
 
         # Seed the generator, which should set the key and increment the counter.
-        fg.reseed("Hello")
-        self.assertEqual("0ea6919d4361551364242a4ba890f8f073676e82cf1a52bb880f7e496648b565", b2a_hex(fg.key))
+        fg.reseed(b("Hello"))
+        self.assertEqual(b("0ea6919d4361551364242a4ba890f8f073676e82cf1a52bb880f7e496648b565"), b2a_hex(fg.key))
         self.assertEqual(1, fg.counter.next_value())
 
         # Read 2 full blocks from the generator
-        self.assertEqual("7cbe2c17684ac223d08969ee8b565616" +       # counter=1
-                         "717661c0d2f4758bd6ba140bf3791abd",        # counter=2
+        self.assertEqual(b("7cbe2c17684ac223d08969ee8b565616") +       # counter=1
+                         b("717661c0d2f4758bd6ba140bf3791abd"),        # counter=2
             b2a_hex(fg.pseudo_random_data(32)))
 
         # Meanwhile, the generator will have re-keyed itself and incremented its counter
-        self.assertEqual("33a1bb21987859caf2bbfc5615bef56d" +       # counter=3
-                         "e6b71ff9f37112d0c193a135160862b7",        # counter=4
+        self.assertEqual(b("33a1bb21987859caf2bbfc5615bef56d") +       # counter=3
+                         b("e6b71ff9f37112d0c193a135160862b7"),        # counter=4
             b2a_hex(fg.key))
         self.assertEqual(5, fg.counter.next_value())
 
         # Read another 2 blocks from the generator
-        self.assertEqual("fd6648ba3086e919cee34904ef09a7ff" +       # counter=5
-                         "021f77580558b8c3e9248275f23042bf",        # counter=6
+        self.assertEqual(b("fd6648ba3086e919cee34904ef09a7ff") +       # counter=5
+                         b("021f77580558b8c3e9248275f23042bf"),        # counter=6
             b2a_hex(fg.pseudo_random_data(32)))
 
 

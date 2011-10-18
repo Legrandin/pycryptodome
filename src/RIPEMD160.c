@@ -43,10 +43,19 @@
  *   "RIPEMD-160 is big-bit-endian, little-byte-endian, and left-justified."
  */
 
+#include "config.h"
+#if HAVE_STDINT_H
+# include <stdint.h>
+#elif defined(__sun) || defined(__sun__)
+# include <sys/inttypes.h>
+#else
+# error "stdint.h not found"
+#endif
+
 #include <assert.h>
-#include <stdint.h>
 #include <string.h>
 #include "Python.h"
+#include "pycrypto_compat.h"
 
 #define RIPEMD160_DIGEST_SIZE 20
 #define BLOCK_SIZE 64
@@ -403,7 +412,7 @@ static PyObject *hash_digest(hash_state *self)
     PyObject *retval;
 
     if (ripemd160_digest(self, (unsigned char *) buf)) {
-        retval = PyString_FromStringAndSize(buf, DIGEST_SIZE);
+        retval = PyBytes_FromStringAndSize(buf, DIGEST_SIZE);
     } else {
         PyErr_SetString(PyExc_RuntimeError, "Internal error occurred while executing ripemd160_digest");
         retval = NULL;

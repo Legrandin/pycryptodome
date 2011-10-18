@@ -29,6 +29,7 @@ __revision__ = "$Id$"
 import sys
 import unittest
 from binascii import a2b_hex, b2a_hex
+from Crypto.Util.py3compat import *
 
 # For compatibility with Python 2.1 and Python 2.2
 if sys.hexversion < 0x02030000:
@@ -37,7 +38,7 @@ if sys.hexversion < 0x02030000:
     def dict(**kwargs):
         return kwargs.copy()
 else:
-    dict = __builtins__['dict']
+    dict = dict
 
 class _NoDefault: pass        # sentinel object
 def _extract(d, k, default=_NoDefault):
@@ -61,9 +62,9 @@ class CipherSelfTest(unittest.TestCase):
         # Extract the parameters
         params = params.copy()
         self.description = _extract(params, 'description')
-        self.key = _extract(params, 'key')
-        self.plaintext = _extract(params, 'plaintext')
-        self.ciphertext = _extract(params, 'ciphertext')
+        self.key = b(_extract(params, 'key'))
+        self.plaintext = b(_extract(params, 'plaintext'))
+        self.ciphertext = b(_extract(params, 'ciphertext'))
         self.module_name = _extract(params, 'module_name', None)
 
         mode = _extract(params, 'mode', None)
@@ -72,6 +73,7 @@ class CipherSelfTest(unittest.TestCase):
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
             self.iv = _extract(params, 'iv', None)
+            if self.iv is not None: self.iv = b(self.iv)
         else:
             # Stream cipher
             self.mode = None
@@ -90,8 +92,8 @@ class CipherSelfTest(unittest.TestCase):
             from Crypto.Util import Counter
             ctr_class = _extract(params, 'ctr_class', Counter.new)
             ctr_params = _extract(params, 'ctr_params', {}).copy()
-            if ctr_params.has_key('prefix'): ctr_params['prefix'] = a2b_hex(ctr_params['prefix'])
-            if ctr_params.has_key('suffix'): ctr_params['suffix'] = a2b_hex(ctr_params['suffix'])
+            if ctr_params.has_key('prefix'): ctr_params['prefix'] = a2b_hex(b(ctr_params['prefix']))
+            if ctr_params.has_key('suffix'): ctr_params['suffix'] = a2b_hex(b(ctr_params['suffix']))
             if not ctr_params.has_key('nbits'):
                 ctr_params['nbits'] = 8*(self.module.block_size - len(ctr_params.get('prefix', '')) - len(ctr_params.get('suffix', '')))
             params['counter'] = ctr_class(**ctr_params)
@@ -139,7 +141,7 @@ class CipherStreamingSelfTest(CipherSelfTest):
         cipher = self._new()
         for i in range(0, len(plaintext), 3):
             ct3.append(cipher.encrypt(plaintext[i:i+3]))
-        ct3 = b2a_hex("".join(ct3))
+        ct3 = b2a_hex(b("").join(ct3))
         self.assertEqual(self.ciphertext, ct3)  # encryption (3 bytes at a time)
 
         # Test counter mode decryption, 3 bytes at a time
@@ -147,7 +149,8 @@ class CipherStreamingSelfTest(CipherSelfTest):
         cipher = self._new()
         for i in range(0, len(ciphertext), 3):
             pt3.append(cipher.encrypt(ciphertext[i:i+3]))
-        pt3 = b2a_hex("".join(pt3))
+        # PY3K: This is meant to be text, do not change to bytes (data)
+        pt3 = b2a_hex(b("").join(pt3))
         self.assertEqual(self.plaintext, pt3)  # decryption (3 bytes at a time)
 
 class CTRSegfaultTest(unittest.TestCase):
@@ -155,7 +158,7 @@ class CTRSegfaultTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key']
+        self.key = b(params['key'])
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):
@@ -169,7 +172,7 @@ class CTRWraparoundTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key']
+        self.key = b(params['key'])
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):
@@ -182,7 +185,7 @@ class CTRWraparoundTest(unittest.TestCase):
             for little_endian in (0, 1): # (False, True) Test both endiannesses
                 ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian, disable_shortcut=disable_shortcut)
                 cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=ctr)
-                block = "\x00" * self.module.block_size
+                block = b("\x00") * self.module.block_size
                 cipher.encrypt(block)
                 self.assertRaises(OverflowError, cipher.encrypt, block)
 
@@ -191,7 +194,7 @@ class CFBSegmentSizeTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key']
+        self.key = b(params['key'])
         self.description = params['description']
 
     def shortDescription(self):
@@ -204,14 +207,13 @@ class CFBSegmentSizeTest(unittest.TestCase):
         self.module.new(a2b_hex(self.key), self.module.MODE_CFB, segment_size=8) # should succeed
 
 class RoundtripTest(unittest.TestCase):
-
     def __init__(self, module, params):
         from Crypto import Random
         unittest.TestCase.__init__(self)
         self.module = module
         self.iv = Random.get_random_bytes(module.block_size)
-        self.key = params['key']
-        self.plaintext = 100 * params['plaintext']
+        self.key = b(params['key'])
+        self.plaintext = 100 * b(params['plaintext'])
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):

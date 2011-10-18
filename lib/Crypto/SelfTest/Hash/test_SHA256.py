@@ -27,12 +27,13 @@
 __revision__ = "$Id$"
 
 import unittest
+from Crypto.Util.py3compat import *
 
 class LargeSHA256Test(unittest.TestCase):
     def runTest(self):
         """SHA256: 512/520 MiB test"""
         from Crypto.Hash import SHA256
-        zeros = '\0' * (1024*1024)
+        zeros = bchr(0x00) * (1024*1024)
 
         h = SHA256.new(zeros)
         for i in xrange(511):

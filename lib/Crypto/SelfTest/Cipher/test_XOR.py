@@ -28,6 +28,8 @@ import unittest
 
 __revision__ = "$Id$"
 
+from Crypto.Util.py3compat import *
+
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
     # Test vectors written from scratch.  (Nobody posts XOR test vectors on the web?  How disappointing.)

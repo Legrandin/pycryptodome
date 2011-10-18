@@ -26,9 +26,9 @@ __revision__ = "$Id$"
 
 import unittest
 
-from string import maketrans
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 
+from Crypto.Util.py3compat import *
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP as PKCS
 from Crypto.Hash import MD2,MD5,SHA as SHA1,SHA256,RIPEMD
@@ -36,7 +36,9 @@ from Crypto import Random
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
-    return t.translate(maketrans("",""),'\n\t ')
+    for c in ['\n', '\t', ' ']:
+        t = t.replace(c,'')
+    return t
 
 def t2b(t):
     """Convert a text string with bytes in hex form to a byte string"""
@@ -306,7 +308,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                 # Simplest possible negative tests
                 for ct_size in (127,128,129):
                     cipher = PKCS.new(self.key1024)
-                    self.assertRaises(ValueError, cipher.decrypt, '\x00'*ct_size)
+                    self.assertRaises(ValueError, cipher.decrypt, bchr(0x00)*ct_size)
 
         def testEncryptDecrypt1(self):
                 # Encrypt/Decrypt messages of length [0..128-2*20-2]
@@ -350,7 +352,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                 def newMGF(seed,maskLen):
                     global mgfcalls
                     mgfcalls += 1
-                    return '\x00'*maskLen
+                    return bchr(0x00)*maskLen
                 mgfcalls = 0
                 pt = self.rng(32)
                 cipher = PKCS.new(self.key1024, mgfunc=newMGF)

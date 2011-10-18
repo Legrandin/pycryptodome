@@ -38,6 +38,7 @@ __revision__ = "$Id$"
 import math
 import struct
 
+from Crypto.Util.py3compat import *
 from Crypto.Hash import SHA as SHA1, HMAC
 from Crypto.Util.strxor import strxor
 
@@ -54,7 +55,7 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=SHA1):
     :Parameters:
      password : string
         The secret password or pass phrase to generate the key from.
-     salt : string
+     salt : byte string
         An 8 byte string to use for better protection from dictionary attacks.
         This value does not need to be kept secret, but it should be randomly
         chosen for each derivation.
@@ -68,6 +69,7 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=SHA1):
 
     :Return: A byte string of length `dkLen` that can be used as key.
 """
+    password = tobytes(password)
     pHash = hashAlgo.new(password+salt)
     digest = pHash.digest_size
     if dkLen>digest:
@@ -102,9 +104,10 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
     :Return: A byte string of length `dkLen` that can be used as key material.
         If you wanted multiple keys, just break up this string into segments of the desired length.
 """
+    password = tobytes(password)
     if prf is None:
         prf = lambda p,s: HMAC.new(p,s,SHA1).digest()
-    key = ''
+    key = b('')
     i = 1
     while len(key)<dkLen:
         U = previousU = prf(password,salt+struct.pack(">I", i))

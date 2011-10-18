@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  Util/python_compat.py : Compatibility code for old versions of Python
+#  Util/py21compat.py : Compatibility code for Python 2.1
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #
@@ -22,7 +22,7 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Compatibility code for old versions of Python
+"""Compatibility code for Python 2.1
 
 Currently, this just defines:
     - True and False

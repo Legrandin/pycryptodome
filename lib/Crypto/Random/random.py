@@ -28,8 +28,9 @@ __revision__ = "$Id$"
 __all__ = ['StrongRandom', 'getrandbits', 'randrange', 'randint', 'choice', 'shuffle', 'sample']
 
 from Crypto import Random
-
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 
 class StrongRandom(object):
     def __init__(self, rng=None, randfunc=None):
@@ -108,9 +109,7 @@ class StrongRandom(object):
         # Choose a random item (without replacement) until all the items have been
         # chosen.
         for i in xrange(len(x)):
-            p = self.randint(len(items))
-            x[i] = items[p]
-            del items[p]
+            x[i] = items.pop(self.randrange(len(items)))
 
     def sample(self, population, k):
         """Return a k-length list of unique elements chosen from the population sequence."""
@@ -123,7 +122,7 @@ class StrongRandom(object):
         selected = {}  # we emulate a set using a dict here
         for i in xrange(k):
             r = None
-            while r is None or r in selected:
+            while r is None or selected.has_key(r):
                 r = self.randrange(num_choices)
             retval.append(population[r])
             selected[r] = 1

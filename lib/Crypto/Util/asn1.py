@@ -21,8 +21,10 @@
 # ===================================================================
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
+import sys
+from Crypto.Util.py3compat import *
 
-__all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull', 'DerSequence' ]
+__all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull', 'DerSequence', 'DerObjectId' ]
 
 class DerObject:
         """Base class for defining a single DER object.
@@ -31,35 +33,41 @@ class DerObject:
         """
 
         # Known TAG types
-        typeTags = { 'SEQUENCE':'\x30', 'BIT STRING':'\x03', 'INTEGER':'\x02',
-                'OCTET STRING':'\x04', 'NULL':'\x05', 'OBJECT IDENTIFIER':'\x06'}
+        typeTags = { 'SEQUENCE': 0x30, 'BIT STRING': 0x03, 'INTEGER': 0x02,
+                'OCTET STRING': 0x04, 'NULL': 0x05, 'OBJECT IDENTIFIER': 0x06 }
 
-        def __init__(self, ASN1Type=None, payload=''):
+        def __init__(self, ASN1Type=None, payload=b('')):
                 """Initialize the DER object according to a specific type.
 
                 The ASN.1 type is either specified as the ASN.1 string (e.g.
                 'SEQUENCE'), directly with its numerical tag or with no tag
-                atl all (None)."""
-                self.typeTag = self.typeTags.get(ASN1Type, ASN1Type)
+                at all (None)."""
+                if isInt(ASN1Type) or ASN1Type is None:
+                    self.typeTag = ASN1Type
+                else:
+                    if len(ASN1Type)==1:
+                        self.typeTag = ord(ASN1Type)
+                    else:
+                        self.typeTag = self.typeTags.get(ASN1Type)
                 self.payload = payload
 
         def isType(self, ASN1Type):
                 return self.typeTags[ASN1Type]==self.typeTag
 
         def _lengthOctets(self, payloadLen):
-                """Return a string that encodes the given payload length (in
+                """Return a byte string that encodes the given payload length (in
                 bytes) in a format suitable for a DER length tag (L).
                 """
                 if payloadLen>127:
                         encoding = long_to_bytes(payloadLen)
-                        return chr(len(encoding)+128) + encoding
-                return chr(payloadLen)
+                        return bchr(len(encoding)+128) + encoding
+                return bchr(payloadLen)
 
         def encode(self):
                 """Return a complete DER element, fully encoded as a TLV."""
-                return self.typeTag + self._lengthOctets(len(self.payload)) + self.payload
+                return bchr(self.typeTag) + self._lengthOctets(len(self.payload)) + self.payload
 
-        def _decodeLen(self, idx, str):
+        def _decodeLen(self, idx, der):
                 """Given a (part of a) DER element, and an index to the first byte of
                 a DER length tag (L), return a tuple with the payload size,
                 and the index of the first byte of the such payload (V).
@@ -67,10 +75,10 @@ class DerObject:
                 Raises a ValueError exception if the DER length is invalid.
                 Raises an IndexError exception if the DER element is too short.
                 """
-                length = ord(str[idx])
+                length = bord(der[idx])
                 if length<=127:
                         return (length,idx+1)
-                payloadLength = bytes_to_long(str[idx+1:idx+1+(length & 0x7F)])
+                payloadLength = bytes_to_long(der[idx+1:idx+1+(length & 0x7F)])
                 if payloadLength<=127:
                         raise ValueError("Not a DER length tag.")
                 return (payloadLength, idx+1+(length & 0x7F))
@@ -90,8 +98,8 @@ class DerObject:
                 Raises an IndexError exception if the DER element is too short.
                 """
                 try:
-                        self.typeTag = derEle[0]
-                        if (ord(self.typeTag) & 0x1F)==0x1F:
+                        self.typeTag = bord(derEle[0])
+                        if (self.typeTag & 0x1F)==0x1F:
                                 raise ValueError("Unsupported DER tag")
                         (length,idx) = self._decodeLen(1, derEle)
                         if noLeftOvers and len(derEle) != (idx+length):
@@ -113,8 +121,8 @@ class DerInteger(DerObject):
         def encode(self):
                 """Return a complete INTEGER DER element, fully encoded as a TLV."""
                 self.payload = long_to_bytes(self.value)
-                if ord(self.payload[0])>127:
-                        self.payload = '\x00' + self.payload
+                if bord(self.payload[0])>127:
+                        self.payload = bchr(0x00) + self.payload
                 return DerObject.encode(self)
 
         def decode(self, derEle, noLeftOvers=0):
@@ -135,7 +143,7 @@ class DerInteger(DerObject):
                 tlvLength = DerObject.decode(self, derEle, noLeftOvers)
                 if self.typeTag!=self.typeTags['INTEGER']:
                         raise ValueError ("Not a DER INTEGER.")
-                if ord(self.payload[0])>127:
+                if bord(self.payload[0])>127:
                         raise ValueError ("Negative INTEGER.")
                 self.value = bytes_to_long(self.payload)
                 return tlvLength
@@ -179,13 +187,6 @@ class DerSequence(DerObject):
 
         def hasInts(self):
                 """Return the number of items in this sequence that are numbers."""
-                def isInt(x):
-                        test = 0
-                        try:
-                                test += x
-                        except TypeError:
-                                return 0
-                        return 1
                 return len(filter(isInt, self._seq))
 
         def hasOnlyInts(self):
@@ -199,7 +200,7 @@ class DerSequence(DerObject):
                 Limitation: Raises a ValueError exception if it some elements
                 in the sequence are neither Python integers nor complete DER INTEGERs.
                 """
-                self.payload = ''
+                self.payload = b('')
                 for item in self._seq:
                         try:
                                 self.payload += item
@@ -274,4 +275,12 @@ class DerObjectId(DerObject):
         if not self.isType("OBJECT IDENTIFIER"):
             raise ValueError("Not a valid OBJECT IDENTIFIER.")
         return p
+
+def isInt(x):
+    test = 0
+    try:
+        test += x
+    except TypeError:
+        return 0
+    return 1
 

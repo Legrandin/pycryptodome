@@ -29,7 +29,7 @@ __revision__ = "$Id$"
 import sys
 import unittest
 import binascii
-import string
+from Crypto.Util.py3compat import *
 
 # For compatibility with Python 2.1 and Python 2.2
 if sys.hexversion < 0x02030000:
@@ -38,7 +38,7 @@ if sys.hexversion < 0x02030000:
     def dict(**kwargs):
         return kwargs.copy()
 else:
-    dict = __builtins__['dict']
+    dict = dict
 
 
 class HashDigestSizeSelfTest(unittest.TestCase):
@@ -84,9 +84,14 @@ class HashSelfTest(unittest.TestCase):
         out3 = h.hexdigest()
         out4 = binascii.b2a_hex(h.digest())
 
+        # PY3K: hexdigest() should return str(), and digest() bytes 
         self.assertEqual(self.expected, out1)   # h = .new(); h.update(data); h.digest()
-        self.assertEqual(self.expected, out2)   # h = .new(); h.update(data); h.hexdigest()
-        self.assertEqual(self.expected, out3)   # h = .new(data); h.hexdigest()
+        if sys.version_info[0] == 2:
+            self.assertEqual(self.expected, out2)   # h = .new(); h.update(data); h.hexdigest()
+            self.assertEqual(self.expected, out3)   # h = .new(data); h.hexdigest()
+        else:
+            self.assertEqual(self.expected.decode(), out2)   # h = .new(); h.update(data); h.hexdigest()
+            self.assertEqual(self.expected.decode(), out3)   # h = .new(data); h.hexdigest()
         self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
 
         # Verify that new() object method produces a fresh hash object
@@ -130,13 +135,11 @@ class MACSelfTest(unittest.TestCase):
     def runTest(self):
         for hashname in self.expected_dict.keys():
             hashmod = self.hashmods[hashname]
-            key = binascii.a2b_hex(self.key)
-            data = binascii.a2b_hex(self.input)
+            key = binascii.a2b_hex(b(self.key))
+            data = binascii.a2b_hex(b(self.input))
 
             # Strip whitespace from the expected string (which should be in lowercase-hex)
-            expected = self.expected_dict[hashname]
-            for ch in string.whitespace:
-                expected = expected.replace(ch, "")
+            expected = b("".join(self.expected_dict[hashname].split()))
 
             h = self.hashmod.new(key, digestmod=hashmod)
             h.update(data)
@@ -150,12 +153,17 @@ class MACSelfTest(unittest.TestCase):
 
             # Test .copy()
             h2 = h.copy()
-            h.update("blah blah blah")  # Corrupt the original hash object
+            h.update(b("blah blah blah"))  # Corrupt the original hash object
             out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
 
+            # PY3K: hexdigest() should return str(), and digest() bytes 
             self.assertEqual(expected, out1)
-            self.assertEqual(expected, out2)
-            self.assertEqual(expected, out3)
+            if sys.version_info[0] == 2:
+                self.assertEqual(expected, out2)
+                self.assertEqual(expected, out3)
+            else:
+                self.assertEqual(expected.decode(), out2)
+                self.assertEqual(expected.decode(), out3)                
             self.assertEqual(expected, out4)
             self.assertEqual(expected, out5)
 
@@ -163,13 +171,15 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     tests = []
     for i in range(len(test_data)):
         row = test_data[i]
+        (expected, input) = map(b,row[0:2])
         if len(row) < 3:
-            (expected, input) = row
             description = repr(input)
         else:
-            (expected, input, description) = row
+            description = row[2].encode('latin-1')
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input))
+    if oid is not None:
+        oid = b(oid)
     name = "%s #%d: digest_size" % (module_name, i+1)
     tests.append(HashDigestSizeSelfTest(module, name, digest_size))
     tests.append(HashTestOID(module, oid))

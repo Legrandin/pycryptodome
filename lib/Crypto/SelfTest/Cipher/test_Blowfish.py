@@ -26,6 +26,8 @@
 
 __revision__ = "$Id$"
 
+from Crypto.Util.py3compat import *
+
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
     # Test vectors from http://www.schneier.com/code/vectors.txt
@@ -63,7 +65,6 @@ test_data = [
     ('0000000000000000', 'f21e9a77b71c49bc', 'ffffffffffffffff'),
     ('0000000000000000', '245946885754369a', '0123456789abcdef'),
     ('ffffffffffffffff', '6b5c5a9c5d9e0a5a', 'fedcba9876543210'),
-
     ('fedcba9876543210', 'f9ad597c49db005e', 'f0'),
     ('fedcba9876543210', 'e91d21c1d961a6d6', 'f0e1'),
     ('fedcba9876543210', 'e9c2b70a1bc65cf3', 'f0e1d2'),

@@ -23,6 +23,7 @@ __revision__ = "$Id$"
 __all__ = ['new', 'digest_size']
 
 from Crypto.Util.wrapper import Wrapper
+from Crypto.Util.py3compat import *
 
 #
 # See http://homes.esat.kuleuven.be/~bosselae/ripemd160.html#More
@@ -32,9 +33,9 @@ from Crypto.Util.wrapper import Wrapper
 # 				algorithm(3) hashAlgorithm(2) ripemd160(1)
 # 				}
 
-oid = "\x06\x05\x2b\x24\x03\x02\x01"
+oid = b("\x06\x05\x2b\x24\x03\x02\x01")
 
-def new(data=""):
+def new(data=b("")):
     obj = Wrapper(hashFactory, data)
     obj.oid = oid
     obj.new = globals()['new']

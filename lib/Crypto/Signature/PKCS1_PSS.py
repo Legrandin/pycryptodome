@@ -66,6 +66,7 @@ from __future__ import nested_scopes
 __revision__ = "$Id$"
 __all__ = [ 'new' ]
 
+from Crypto.Util.py3compat import *
 import Crypto.Util.number
 from Crypto.Util.number import ceil_shift, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
@@ -139,7 +140,7 @@ class PSS_SigScheme:
         # Step 2a (OS2IP) and 2b (RSASP1)
         m = self._key.decrypt(em)
         # Step 2c (I2OSP)
-        S = '\x00'*(k-len(m)) + m
+        S = bchr(0x00)*(k-len(m)) + m
         return S
     
     def verify(self, mhash, S):
@@ -186,7 +187,7 @@ class PSS_SigScheme:
         em = self._key.encrypt(S, 0)[0]
         # Step 2c
         emLen = ceil_div(modBits-1,8)
-        em = '\x00'*(emLen-len(em)) + em
+        em = bchr(0x00)*(emLen-len(em)) + em
         # Step 3
         try:
             result = EMSA_PSS_VERIFY(mhash, em, modBits-1, mgf, sLen)
@@ -197,7 +198,7 @@ class PSS_SigScheme:
     
 def MGF1(mgfSeed, maskLen, hash):
     """Mask Generation Function, described in B.2.1"""
-    T = ""
+    T = b("")
     for counter in xrange(ceil_div(maskLen, hash.digest_size)):
         c = long_to_bytes(counter, 4)
         T = T + hash.new(mgfSeed + c).digest()
@@ -246,21 +247,21 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
     if emLen < mhash.digest_size+sLen+2:
         raise ValueError("Digest or salt length are too long for given key size.")
     # Step 4
-    salt = ""
+    salt = b("")
     if randFunc and sLen>0:
         salt = randFunc(sLen)
     # Step 5 and 6
-    h = mhash.new('\x00'*8 + mhash.digest() + salt)
+    h = mhash.new(bchr(0x00)*8 + mhash.digest() + salt)
     # Step 7 and 8
-    db = '\x00'*(emLen-sLen-mhash.digest_size-2) + '\x01' + salt
+    db = bchr(0x00)*(emLen-sLen-mhash.digest_size-2) + bchr(0x01) + salt
     # Step 9
     dbMask = mgf(h.digest(), emLen-mhash.digest_size-1)
     # Step 10
     maskedDB = strxor(db,dbMask)
     # Step 11
-    maskedDB = chr(ord(maskedDB[0]) & ~lmask) + maskedDB[1:]
+    maskedDB = bchr(bord(maskedDB[0]) & ~lmask) + maskedDB[1:]
     # Step 12
-    em = maskedDB + h.digest() + '\xBC'
+    em = maskedDB + h.digest() + bchr(0xBC)
     return em
 
 def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
@@ -304,28 +305,28 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     if emLen < mhash.digest_size+sLen+2:
         return 0
     # Step 4
-    if em[-1:]!='\xBC':
+    if ord(em[-1:])!=0xBC:
         return 0
     # Step 5
     maskedDB = em[:emLen-mhash.digest_size-1]
     h = em[emLen-mhash.digest_size-1:-1]
     # Step 6
-    if lmask & ord(em[0]):
+    if lmask & bord(em[0]):
         return 0
     # Step 7
     dbMask = mgf(h, emLen-mhash.digest_size-1)
     # Step 8
     db = strxor(maskedDB, dbMask)
     # Step 9
-    db = chr(ord(db[0]) & ~lmask) + db[1:]
+    db = bchr(bord(db[0]) & ~lmask) + db[1:]
     # Step 10
-    if not db.startswith('\x00'*(emLen-mhash.digest_size-sLen-2) + '\x01'):
+    if not db.startswith(bchr(0x00)*(emLen-mhash.digest_size-sLen-2) + bchr(0x01)):
         return 0
     # Step 11
-    salt = ""
+    salt = b("")
     if sLen: salt = db[-sLen:]
     # Step 12 and 13
-    hp = mhash.new('\x00'*8 + mhash.digest() + salt).digest()
+    hp = mhash.new(bchr(0x00)*8 + mhash.digest() + salt).digest()
     # Step 14
     if h!=hp:
         return 0

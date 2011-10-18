@@ -31,6 +31,7 @@ def get_tests(config={}):
     import test_chaffing;       tests += test_chaffing.get_tests(config=config)
     import test_rfc1751;        tests += test_rfc1751.get_tests(config=config)
     import test_KDF;            tests += test_KDF.get_tests(config=config)
+    import test_AllOrNothing;   tests += test_AllOrNothing.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

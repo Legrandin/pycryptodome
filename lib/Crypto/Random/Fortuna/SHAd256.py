@@ -31,7 +31,10 @@ This module should comply with PEP 247.
 __revision__ = "$Id$"
 __all__ = ['new', 'digest_size']
 
-from Crypto.Util.python_compat import *
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
 from binascii import b2a_hex
 
@@ -71,7 +74,10 @@ class _SHAd256(object):
         """Return the hash value of this object as a (lowercase) hexadecimal string"""
         retval = b2a_hex(self.digest())
         assert len(retval) == 64
-        return retval
+        if sys.version_info[0] == 2:
+            return retval
+        else:
+            return retval.decode()
 
     # PEP 247 "update" method
     def update(self, data):
@@ -81,8 +87,10 @@ class _SHAd256(object):
 digest_size = _SHAd256.digest_size
 
 # PEP 247 module-level "new" function
-def new(data=""):
+def new(data=None):
     """Return a new SHAd256 hashing object"""
+    if not data:
+        data=b("")
     sha = _SHAd256(_SHAd256._internal, SHA256.new(data))
     sha.new = globals()['new']
     return sha
