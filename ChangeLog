@@ -12,8 +12,17 @@
 	* New hash modules (for Python >= 2.5 only): SHA224, SHA384, and
 	  SHA512 (Frédéric Bertolus)
 
+	* Configuration using GNU autoconf.  This should help fix a bunch of
+	  build issues.
+
+	* Support using MPIR as an alternative to GMP.
+
 	* Improve the test command in setup.py, by allowing tests to be
 	  performed on a single sub-package or module only. (Legrandin)
+
+	  You can now do something like this:
+
+	    python setup.py test -m Hash.SHA256 --skip-slow-tests
 
 	* Fix double-decref of "counter" when Cipher object initialisation
 	  fails (Ryan Kelly)
@@ -24,6 +33,10 @@
 	 - epydoc-exclude-introspect.patch
 	 - no-usr-local.patch
 
+	* Fix launchpad bug #702835: "Import key code is not compatible with
+	  GMP library" (Legrandin)
+
+	* More tests, better documentation, various bugfixes.
 
 2.3
 ===
