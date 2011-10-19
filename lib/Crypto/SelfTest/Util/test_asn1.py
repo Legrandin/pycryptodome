@@ -41,6 +41,10 @@ class DerObjectTests(unittest.TestCase):
 		self.assertEquals(der.encode(), b('\x33\x01\x45'))
 		# Invariant
 		self.assertEquals(der.encode(), b('\x33\x01\x45'))
+		# Initialize with numerical tag
+		der = DerObject(b(0x33))
+		der.payload = b('\x45')
+		self.assertEquals(der.encode(), b('\x33\x01\x45'))
 
 	def testObjEncode2(self):
 		# Known types

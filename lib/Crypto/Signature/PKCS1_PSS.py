@@ -67,6 +67,8 @@ __revision__ = "$Id$"
 __all__ = [ 'new' ]
 
 from Crypto.Util.py3compat import *
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 import Crypto.Util.number
 from Crypto.Util.number import ceil_shift, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
@@ -179,7 +181,7 @@ class PSS_SigScheme:
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
         if len(S) != k:
-            return 0
+            return False
         # Step 2a (O2SIP), 2b (RSAVP1), and partially 2c (I2OSP)
         # Note that signature must be smaller than the module
         # but RSA.py won't complain about it.
@@ -192,7 +194,7 @@ class PSS_SigScheme:
         try:
             result = EMSA_PSS_VERIFY(mhash, em, modBits-1, mgf, sLen)
         except ValueError:
-            return 0
+            return False
         # Step 4
         return result
     
@@ -303,16 +305,16 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     # Step 1 and 2 have been already done
     # Step 3
     if emLen < mhash.digest_size+sLen+2:
-        return 0
+        return False
     # Step 4
     if ord(em[-1:])!=0xBC:
-        return 0
+        return False
     # Step 5
     maskedDB = em[:emLen-mhash.digest_size-1]
     h = em[emLen-mhash.digest_size-1:-1]
     # Step 6
     if lmask & bord(em[0]):
-        return 0
+        return False
     # Step 7
     dbMask = mgf(h, emLen-mhash.digest_size-1)
     # Step 8
@@ -321,7 +323,7 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     db = bchr(bord(db[0]) & ~lmask) + db[1:]
     # Step 10
     if not db.startswith(bchr(0x00)*(emLen-mhash.digest_size-sLen-2) + bchr(0x01)):
-        return 0
+        return False
     # Step 11
     salt = b("")
     if sLen: salt = db[-sLen:]
@@ -329,8 +331,8 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     hp = mhash.new(bchr(0x00)*8 + mhash.digest() + salt).digest()
     # Step 14
     if h!=hp:
-        return 0
-    return 1
+        return False
+    return True
 
 def new(key, mgfunc=None, saltLen=None):
     """Return a signature scheme object `PSS_SigScheme` that

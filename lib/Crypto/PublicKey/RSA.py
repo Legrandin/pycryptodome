@@ -418,7 +418,7 @@ class RSAImplementation(object):
                                 der.decode(bitmap.payload[1:], True)
                                 if len(der)==2 and der.hasOnlyInts():
                                         return self.construct(der[:])
-        
+
             # Try unencrypted PKCS#8
             if der[0]==0:
                 # The second element in the SEQUENCE is algorithmIdentifier.

@@ -190,7 +190,7 @@ class DerSequence(DerObject):
                 return len(filter(isInt, self._seq))
 
         def hasOnlyInts(self):
-                """Return 1/True if all items in this sequence are numbers."""
+                """Return True if all items in this sequence are numbers."""
                 return self._seq and self.hasInts()==len(self._seq)
  
         def encode(self):
@@ -238,7 +238,7 @@ class DerSequence(DerObject):
                         # Scan one TLV at once
                         idx = 0
                         while idx<len(self.payload):
-                                typeTag = self.payload[idx]
+                                typeTag = bord(self.payload[idx])
                                 if typeTag==self.typeTags['INTEGER']:
                                         newInteger = DerInteger()
                                         idx += newInteger.decode(self.payload[idx:])
@@ -252,7 +252,7 @@ class DerSequence(DerObject):
                 return tlvLength
 
 class DerOctetString(DerObject):
-    def __init__(self, value = ''):
+    def __init__(self, value = b('')):
         DerObject.__init__(self, 'OCTET STRING')
         self.payload = value
 

@@ -219,15 +219,12 @@ class PKCS1OAEP_Cipher:
         lHash1 = db[:hLen]
         if lHash1!=lHash:
             valid = 0
-            r = 1
         if one<0:
             valid = 0
-            r = 2
         if bord(y)!=0:
             valid = 0
-            r = 3
         if not valid:
-            raise ValueError("Incorrect decryption.",r)
+            raise ValueError("Incorrect decryption.")
         # Step 4
         return db[hLen+one+1:]
 

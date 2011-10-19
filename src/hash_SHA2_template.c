@@ -31,6 +31,7 @@
  */
 
 #include "Python.h"
+#include "pycrypto_compat.h"
 
 /* compress one block  */
 static void sha_compress(hash_state * hs)
@@ -192,7 +193,7 @@ hash_digest (const hash_state *self)
 
 	hash_copy((hash_state*)self,&temp);
 	sha_done(&temp,digest);
-	return PyString_FromStringAndSize((char *)digest, DIGEST_SIZE);
+	return PyBytes_FromStringAndSize((char *)digest, DIGEST_SIZE);
 }
 
 #include "hash_template.c"

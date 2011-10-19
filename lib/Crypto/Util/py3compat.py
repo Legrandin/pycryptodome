@@ -38,14 +38,18 @@ if sys.version_info[0] == 2:
         return str(s)
     def bord(s):
         return ord(s)
-    def tobytes(s):
-        if isinstance(s,str):
-            return s
-        else:
+    if sys.version_info[1] == 1:
+        def tobytes(s):
+            try:
+                return s.encode('latin-1')
+            except:
+                return ''.join(s)
+    else:
+        def tobytes(s):
             if isinstance(s, unicode):
                 return s.encode("latin-1")
             else:
-                ''.join(s)
+                return ''.join(s)
 else:
     def b(s):
        return s.encode("latin-1") # utf-8 would cause some side-effects we don't want
