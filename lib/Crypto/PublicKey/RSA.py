@@ -48,6 +48,8 @@ import struct
 
 from Crypto.Util.number import inverse
 
+from Crypto.Util.number import inverse
+
 try:
     from Crypto.PublicKey import _fastmath
 except ImportError:
