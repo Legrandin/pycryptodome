@@ -128,14 +128,14 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testImportKey5(self):
         """Verifies that the imported key is still a valid RSA pair"""
         key = RSA.importKey(self.rsaKeyPEM)
-        idem = key.encrypt(key.decrypt("Test"),0)
-        self.assertEqual(idem[0],"Test")
+        idem = key.encrypt(key.decrypt(b("Test")),0)
+        self.assertEqual(idem[0],b("Test"))
 
     def testImportKey6(self):
         """Verifies that the imported key is still a valid RSA pair"""
         key = RSA.importKey(self.rsaKeyDER)
-        idem = key.encrypt(key.decrypt("Test"),0)
-        self.assertEqual(idem[0],"Test")
+        idem = key.encrypt(key.decrypt(b("Test")),0)
+        self.assertEqual(idem[0],b("Test"))
 
     ###
     def testExportKey1(self):
