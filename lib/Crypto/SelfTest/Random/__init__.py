@@ -28,10 +28,10 @@ __revision__ = "$Id$"
 
 def get_tests(config={}):
     tests = []
-    import Fortuna;             tests += Fortuna.get_tests(config=config)
-    import OSRNG;               tests += OSRNG.get_tests(config=config)
-    import test_random;         tests += test_random.get_tests(config=config)
-    import test_rpoolcompat;    tests += test_rpoolcompat.get_tests(config=config)
+    from Crypto.SelfTest.Random import Fortuna;             tests += Fortuna.get_tests(config=config)
+    from Crypto.SelfTest.Random import OSRNG;               tests += OSRNG.get_tests(config=config)
+    from Crypto.SelfTest.Random import test_random;         tests += test_random.get_tests(config=config)
+    from Crypto.SelfTest.Random import test_rpoolcompat;    tests += test_rpoolcompat.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

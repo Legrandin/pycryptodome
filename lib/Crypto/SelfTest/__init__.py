@@ -32,7 +32,7 @@ __revision__ = "$Id$"
 
 import sys
 import unittest
-import StringIO
+from StringIO import StringIO
 
 class SelfTestError(Exception):
     def __init__(self, message, result):
@@ -65,7 +65,7 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
         else:
             raise ValueError("'module' and 'tests' arguments are mutually exclusive")
     if stream is None:
-        kwargs['stream'] = StringIO.StringIO()
+        kwargs['stream'] = StringIO()
     runner = unittest.TextTestRunner(verbosity=verbosity, **kwargs)
     result = runner.run(suite)
     if not result.wasSuccessful():
@@ -76,12 +76,12 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
 
 def get_tests(config={}):
     tests = []
-    import Cipher; tests += Cipher.get_tests(config=config)
-    import Hash;   tests += Hash.get_tests(config=config)
-    import Protocol; tests += Protocol.get_tests(config=config)
-    import PublicKey; tests += PublicKey.get_tests(config=config)
-    import Random; tests += Random.get_tests(config=config)
-    import Util;   tests += Util.get_tests(config=config)
+    from Crypto.SelfTest import Cipher; tests += Cipher.get_tests(config=config)
+    from Crypto.SelfTest import Hash;   tests += Hash.get_tests(config=config)
+    from Crypto.SelfTest import Protocol; tests += Protocol.get_tests(config=config)
+    from Crypto.SelfTest import PublicKey; tests += PublicKey.get_tests(config=config)
+    from Crypto.SelfTest import Random; tests += Random.get_tests(config=config)
+    from Crypto.SelfTest import Util;   tests += Util.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':
