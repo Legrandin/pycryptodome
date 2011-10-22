@@ -268,12 +268,15 @@ class RSAImplementation(object):
     def importKey(self, externKey):
         """Import an RSA key (public or private half).
 
-        externKey:	the RSA key to import, encoded as a string.
+        externKey:	the RSA key to import, encoded as bytes.
                 The key can be in DER (PKCS#1) or in unencrypted
                 PEM format (RFC1421).
 
         Raises a ValueError/IndexError if the given key cannot be parsed.
         """
+        if isinstance(externKey, unicode) and externKey.startswith("-----"):
+            # Convert unicode to bytes for PEM encoded keys
+            externKey = externKey.encode('ascii')
         if externKey.startswith(b('-----')):
             # This is probably a PEM encoded key
             lines = externKey.replace(b(" "),b('')).split()

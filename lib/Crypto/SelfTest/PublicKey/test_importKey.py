@@ -33,7 +33,7 @@ from Crypto.Util.number import inverse
 class ImportKeyTests(unittest.TestCase):
 
     # 512-bit RSA key generated with openssl
-    rsaKeyPEM = '''-----BEGIN RSA PRIVATE KEY-----
+    rsaKeyPEM = u'''-----BEGIN RSA PRIVATE KEY-----
 MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
 q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
 Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
@@ -43,7 +43,7 @@ JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
 n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
 -----END RSA PRIVATE KEY-----'''
 
-    rsaPublicKeyPEM = '''-----BEGIN PUBLIC KEY-----
+    rsaPublicKeyPEM = u'''-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 -----END PUBLIC KEY-----'''
@@ -95,7 +95,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
-    def testImportKey3(self):
+    def testImportKey3unicode(self):
         key = RSA.importKey(b(self.rsaKeyPEM))
         self.assertEqual(key.has_private(),True) # assert_
         self.assertEqual(key.n, self.n)
@@ -104,8 +104,23 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.p, self.p)
         self.assertEqual(key.q, self.q)
 
-    def testImportKey4(self):
-        key = RSA.importKey(b(self.rsaPublicKeyPEM))
+    def testImportKey3bytes(self):
+        key = RSA.importKey(b(self.rsaKeyPEM))
+        self.assertEqual(key.has_private(),True) # assert_
+        self.assertEqual(key.n, self.n)
+        self.assertEqual(key.e, self.e)
+        self.assertEqual(key.d, self.d)
+        self.assertEqual(key.p, self.p)
+        self.assertEqual(key.q, self.q)
+
+    def testImportKey4unicode(self):
+        key = RSA.importKey(self.rsaPublicKeyPEM)
+        self.assertEqual(key.has_private(),False) # failIf
+        self.assertEqual(key.n, self.n)
+        self.assertEqual(key.e, self.e)
+
+    def testImportKey4bytes(self):
+        key = RSA.importKey(self.rsaPublicKeyPEM.encode('ascii'))
         self.assertEqual(key.has_private(),False) # failIf
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
