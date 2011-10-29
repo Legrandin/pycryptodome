@@ -287,12 +287,17 @@ class PCTBuildExt (build_ext):
             f.close()
         return result
 
-class PCTBuild(build):
+    def run(self):
+        for cmd_name in self.get_sub_commands():
+            self.run_command(cmd_name)
+
+        build_ext.run(self)
+
     def has_configure(self):
         compiler = new_compiler(compiler=self.compiler)
         return compiler.compiler_type != 'msvc'
 
-    sub_commands = [ ('build_configure', has_configure) ] + build.sub_commands
+    sub_commands = [ ('build_configure', has_configure) ] + build_ext.sub_commands
 
 class PCTBuildConfigure(Command):
     description = "Generate config.h using ./configure (autoconf)"
@@ -384,7 +389,7 @@ kw = {'name':"pycrypto",
       'author_email':"dlitz@dlitz.net",
       'url':"http://www.pycrypto.org/",
 
-      'cmdclass' : {'build': PCTBuild, 'build_configure': PCTBuildConfigure, 'build_ext':PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
+      'cmdclass' : {'build_configure': PCTBuildConfigure, 'build_ext': PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
                   "Crypto.Random",
                   "Crypto.Random.Fortuna",
