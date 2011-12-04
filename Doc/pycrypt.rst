@@ -692,7 +692,7 @@ An example of using the RSA module to sign a message::
     >>> from Crypto.PublicKey import RSA
     >>> from Crypto import Random
     >>> rng = Random.new().read
-    >>> RSAkey = RSA.generate(384, rng)   # This will take a while...
+    >>> RSAkey = RSA.generate(2048, rng)   # This will take a while...
     >>> hash = MD5.new(plaintext).digest()
     >>> signature = RSAkey.sign(hash, rng)
     >>> signature   # Print what an RSA sig looks like--you don't really care.
