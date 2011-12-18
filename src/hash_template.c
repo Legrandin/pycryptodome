@@ -179,7 +179,12 @@ ALG_update(ALGobject *self, PyObject *args)
 }
 
 /** Forward declaration for this module's new() method **/
-static char ALG_new__doc__[];
+static char ALG_new__doc__[] =
+"new([string]): Return a new " _MODULE_STRING 
+" hashing object.  An optional string "
+"argument may be provided; if present, this string will be "
+"automatically hashed into the initial state of the object."; 
+
 static PyObject *ALG_new(PyObject*, PyObject*);
 
 static PyMethodDef ALG_methods[] = {
@@ -261,12 +266,6 @@ static PyTypeObject ALGtype = {
  };
 
 /* The single module-level function: new() */
-
-static char ALG_new__doc__[] =
-"new([string]): Return a new " _MODULE_STRING 
-" hashing object.  An optional string "
-"argument may be provided; if present, this string will be "
-"automatically hashed into the initial state of the object."; 
 
 /** This method belong to both the module and the hash object **/
 static PyObject *
