@@ -62,9 +62,8 @@ using os.fork()
 Installation
 ============
 
-PyCrypto is written and tested using Python version 2.1 through 2.6,
-though support for Python 2.1 will be dropped soon.  Python 1.5.2 is
-not supported.
+PyCrypto is written and tested using Python version 2.1 through 3.2.  Python
+1.5.2 is not supported.
 
 The modules are packaged using the Distutils, so you can simply run
 "python setup.py build" to build the package, and "python setup.py

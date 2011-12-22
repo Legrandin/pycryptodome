@@ -2,4 +2,6 @@ include MANIFEST.in
 include ACKS ChangeLog COPYRIGHT Doc/* TODO
 graft LEGAL
 recursive-include src *.h *.c
+include src/config.h.in
 include *.py
+include configure configure.ac

@@ -1,3 +1,8 @@
+2.4.1
+=====
+	* Fix "error: Setup script exited with error: src/config.h: No such file or
+	  directory" when installing via easy_install.  (Sebastian Ramacher)
+
 2.4
 ===
 	* Python 3 support!  (Thorsten E. Behrens, Anders Sundman)

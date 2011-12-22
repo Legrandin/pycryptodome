@@ -2,7 +2,7 @@
 Python Cryptography Toolkit
 ====================================
 
-**Version 2.3**
+**Version 2.4.1**
 
 The Python Cryptography Toolkit describes a package containing various
 cryptographic modules for the Python programming language.  This
@@ -692,7 +692,7 @@ An example of using the RSA module to sign a message::
     >>> from Crypto.PublicKey import RSA
     >>> from Crypto import Random
     >>> rng = Random.new().read
-    >>> RSAkey = RSA.generate(1024, rng)   # This will take a while...
+    >>> RSAkey = RSA.generate(2048, rng)   # This will take a while...
     >>> hash = MD5.new(plaintext).digest()
     >>> signature = RSAkey.sign(hash, rng)
     >>> signature   # Print what an RSA sig looks like--you don't really care.

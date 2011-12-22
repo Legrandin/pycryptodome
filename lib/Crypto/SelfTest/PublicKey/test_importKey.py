@@ -33,7 +33,7 @@ from Crypto.Util.number import inverse
 
 class ImportKeyTests(unittest.TestCase):
     # 512-bit RSA key generated with openssl
-    rsaKeyPEM = '''-----BEGIN RSA PRIVATE KEY-----
+    rsaKeyPEM = u'''-----BEGIN RSA PRIVATE KEY-----
 MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
 q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
 Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
@@ -44,7 +44,7 @@ n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
 -----END RSA PRIVATE KEY-----'''
 
     # As above, but this is actually an unencrypted PKCS#8 key
-    rsaKeyPEM8 = '''-----BEGIN PRIVATE KEY-----
+    rsaKeyPEM8 = u'''-----BEGIN PRIVATE KEY-----
 MIIBVQIBADANBgkqhkiG9w0BAQEFAASCAT8wggE7AgEAAkEAvx4nkAqgiyNRGlwS
 ga5tkzEsPv6RP5MuvtSS8S0WtGEMMoy24girX0WsvilQgzKY8xIsGfeEkt7fQPDj
 wZAzhQIDAQABAkAJRIMSnxFN7fZ+2rwjAbxaiOXmYB3XAWIg6tn9S/xv3rdYk4mK
@@ -59,7 +59,7 @@ BX85JB8zqwHB
     rsaKeyEncryptedPEM=(
             
         # With DES and passphrase 'test'
-        ('test', '''-----BEGIN RSA PRIVATE KEY-----
+        ('test', u'''-----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-CBC,AF8F9A40BD2FA2FC
 
@@ -74,7 +74,7 @@ dysKznQ6P+IoqML1WxAID4aGRMWka+uArOJ148Rbj9s=
         "\xAF\x8F\x9A\x40\xBD\x2F\xA2\xFC"),
 
         # With Triple-DES and passphrase 'rocking'
-        ('rocking', '''-----BEGIN RSA PRIVATE KEY-----
+        ('rocking', u'''-----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-EDE3-CBC,C05D6C07F7FC02F6
 
@@ -89,7 +89,7 @@ YSxC7qDQIT/RECvV3+oQKEcmpEujn45wAnkTi12BH30=
         "\xC0\x5D\x6C\x07\xF7\xFC\x02\xF6"),
     )
 
-    rsaPublicKeyPEM = '''-----BEGIN PUBLIC KEY-----
+    rsaPublicKeyPEM = u'''-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 -----END PUBLIC KEY-----'''
@@ -161,30 +161,45 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
-    def testImportKey3(self):
-        key = self.rsa.importKey(self.rsaKeyPEM)
-        self.failUnless(key.has_private())
+    def testImportKey3unicode(self):
+        key = RSA.importKey(b(self.rsaKeyPEM))
+        self.assertEqual(key.has_private(),True) # assert_
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
         self.assertEqual(key.d, self.d)
         self.assertEqual(key.p, self.p)
         self.assertEqual(key.q, self.q)
 
-    def testImportKey4(self):
-        key = self.rsa.importKey(self.rsaPublicKeyPEM)
-        self.failIf(key.has_private())
+    def testImportKey3bytes(self):
+        key = RSA.importKey(b(self.rsaKeyPEM))
+        self.assertEqual(key.has_private(),True) # assert_
+        self.assertEqual(key.n, self.n)
+        self.assertEqual(key.e, self.e)
+        self.assertEqual(key.d, self.d)
+        self.assertEqual(key.p, self.p)
+        self.assertEqual(key.q, self.q)
+
+    def testImportKey4unicode(self):
+        key = RSA.importKey(self.rsaPublicKeyPEM)
+        self.assertEqual(key.has_private(),False) # failIf
+        self.assertEqual(key.n, self.n)
+        self.assertEqual(key.e, self.e)
+
+    def testImportKey4bytes(self):
+        key = RSA.importKey(self.rsaPublicKeyPEM.encode('ascii'))
+        self.assertEqual(key.has_private(),False) # failIf
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
     def testImportKey5(self):
         """Verifies that the imported key is still a valid RSA pair"""
-        key = self.rsa.importKey(self.rsaKeyPEM)
+        key = RSA.importKey(self.rsaKeyPEM)
         idem = key.encrypt(key.decrypt(b("Test")),0)
         self.assertEqual(idem[0],b("Test"))
 
     def testImportKey6(self):
         """Verifies that the imported key is still a valid RSA pair"""
-        key = self.rsa.importKey(self.rsaKeyDER)
+        key = RSA.importKey(self.rsaKeyDER)
         idem = key.encrypt(key.decrypt(b("Test")),0)
         self.assertEqual(idem[0],b("Test"))
 
@@ -220,7 +235,6 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.d, self.d)
         self.assertEqual(key.p, self.p)
         self.assertEqual(key.q, self.q)
-
 
     ###
     def testExportKey1(self):
@@ -286,7 +300,7 @@ def get_tests(config={}):
         from Crypto.PublicKey import _fastmath
         tests += list_test_cases(ImportKeyTestsFast)
     except ImportError:
-        false
+        pass
     tests += list_test_cases(ImportKeyTestsSlow)
     return tests
 
