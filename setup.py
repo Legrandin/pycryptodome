@@ -478,6 +478,8 @@ if hasattr(core, 'setup_keywords'):
           'Operating System :: Microsoft :: Windows',
           'Operating System :: MacOS :: MacOS X',
           'Topic :: Security :: Cryptography',
+          'Programming Language :: Python :: 2',
+          'Programming Language :: Python :: 3',
           ]
     if 'download_url' in core.setup_keywords:
         kw['download_url'] = ('http://www.pycrypto.org/files/'
