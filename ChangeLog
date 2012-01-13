@@ -1,3 +1,36 @@
+2.5
+===
+	* Added PKCS#1 encryption schemes (v1.5 and OAEP).  We now have
+	  a decent, easy-to-use non-textbook RSA implementation.  Yay!
+
+	* Added PKCS#1 signature schemes (v1.5 and PSS). v1.5 required some
+	  extensive changes to Hash modules to contain the algorithm specific
+	  ASN.1 OID. To that end, we now always have a (thin) Python module to
+	  hide the one in pure C.
+
+	* Added 2 standard Key Derivation Functions (PBKDF1 and PBKDF2).
+
+	* Added export/import of RSA keys in OpenSSH and PKCS#8 formats.
+
+	* Added password-protected export/import of RSA keys (one old method
+	  for PKCS#8 PEM only).
+
+	* Added ability to generate RSA key pairs with configurable public
+	  exponent e.
+
+	* Added ability to construct an RSA key pair even if only the private
+	  exponent d is known, and not p and q.
+
+	* Added SHA-2 C source code (fully from Lorenz Quack).
+
+	* Unit tests for all the above.
+
+	* Updates to documentation (both inline and in Doc/pycrypt.rst)
+
+	* All of the above changes were put together by Legrandin (Thanks!)
+
+	* Minor bug fixes (setup.py and tests).
+
 2.4.1
 =====
 	* Fix "error: Setup script exited with error: src/config.h: No such file or
