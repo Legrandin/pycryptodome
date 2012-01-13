@@ -78,7 +78,7 @@ class PBKDF2_Tests(unittest.TestCase):
         def prf(p,s):
             return HMAC.new(p,s,SHA1).digest()
 
-        for i in [0]: #xrange(len(self._testData)):
+        for i in xrange(len(self._testData)):
             v = self._testData[i]
             res  = PBKDF2(v[0], t2b(v[1]), v[2], v[3])
             res2 = PBKDF2(v[0], t2b(v[1]), v[2], v[3], prf)
