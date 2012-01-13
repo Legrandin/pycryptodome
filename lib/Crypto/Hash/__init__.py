@@ -31,14 +31,32 @@ The hashing modules here all support the interface described in PEP
 247, "API for Cryptographic Hash Functions".
 
 Submodules:
-Crypto.Hash.HMAC          RFC 2104: Keyed-Hashing for Message Authentication
+
+Crypto.Hash.HMAC
+ RFC 2104. Keyed-Hashing for Message Authentication.
 Crypto.Hash.MD2
+ RFC1319. Rivest's Message Digest algorithm, with a 128 bit digest. This algorithm is both slow and insecure.
 Crypto.Hash.MD4
+ RFC1320. Rivest's Message Digest algorithm, with a 128 bit digest. This algorithm is insecure.
 Crypto.Hash.MD5
-Crypto.Hash.RIPEMD160
+ RFC1321. Rivest's Message Digest algorithm, with a 128 bit digest. This algorithm is insecure.
+Crypto.Hash.RIPEMD
+ RACE Integrity Primitives Evaluation Message Digest algorithm, with a 160 bit digest.
 Crypto.Hash.SHA
+ Secure Hash Algorithm 1 (SHA-1), with a 160 bit digest. Published in FIPS PUB 180-1/2/3.
+Crypto.Hash.SHA224
+ Secure Hash Algorithm 2 (SHA-2 family), with a 224 bit digest. Published in FIPS PUB 180-2/3.
+Crypto.Hash.SHA256
+ Secure Hash Algorithm 2 (SHA-2 family), with a 256 bit digest. Published in FIPS PUB 180-2/3.
+Crypto.Hash.SHA384
+ Secure Hash Algorithm 2 (SHA-2 family), with a 384 bit digest. Published in FIPS PUB 180-2/3.
+Crypto.Hash.SHA512
+ Secure Hash Algorithm 2 (SHA-2 family), with a 512 bit digest. Published in FIPS PUB 180-2/3.
+
 """
 
-__all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD', 'RIPEMD160', 'SHA', 'SHA256']
+__all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD', 'SHA',
+           'SHA224', 'SHA256', 'SHA384', 'SHA512']
 __revision__ = "$Id$"
+
 

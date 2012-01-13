@@ -277,13 +277,13 @@ rsaDecrypt (rsaKey * key, mpz_t v)
         mpz_sub_ui(h, key->q, 1);
         mpz_fdiv_r(h, key->d, h);
         MPZ_POWM(m2, v, h, key->q);
-        /* h = u * ( m2 - m1 ) mod q */
+        /* h = u * ( m2 - m1 + q) mod q */
         mpz_sub(h, m2, m1);
         if (mpz_sgn(h)==-1)
             mpz_add(h, h, key->q);
         mpz_mul(h, key->u, h);
         mpz_mod(h, h, key->q);
-        /* m = m2 + h * p */
+        /* m = m1 + h * p */
         mpz_mul(h, h, key->p);
         mpz_add(v, m1, h);
         /* ready */
@@ -633,6 +633,62 @@ dsaKey_has_private (dsaKey * key, PyObject * args)
         }
 }
 
+/**
+ * Compute key->p and key->q from the key with private exponent only.
+ * Return 0 if factoring was succesful, 1 otherwise.
+ */
+static int factorize_N_from_D(rsaKey *key)
+{
+	mpz_t ktot, t, a, k, cand, nminus1, cand2;
+	unsigned long cnt;
+	int spotted;
+
+	mpz_init(ktot);
+	mpz_init(t);
+	mpz_init(a);
+	mpz_init(k);
+	mpz_init(cand);
+	mpz_init(nminus1);
+	mpz_init(cand2);
+
+	mpz_sub_ui(nminus1, key->n, 1);
+
+	/** See _slowmath.py **/
+	mpz_mul(ktot, key->e, key->d);
+	mpz_sub_ui(ktot, ktot, 1);
+	mpz_set(t, ktot);
+	cnt = mpz_scan1(t, 0);
+	mpz_fdiv_q_2exp(t,t,cnt);
+	mpz_set_ui(a, 2);
+	for (spotted=0; (!spotted) && (mpz_cmp_ui(a,100)<0); mpz_add_ui(a,a,2)) {
+		mpz_set(k, t);
+		for (; (mpz_cmp(k,ktot)<0); mpz_mul_ui(k,k,2)) {
+			mpz_powm(cand,a,k,key->n);
+			if ((mpz_cmp_ui(cand,1)==0) || (mpz_cmp(cand,nminus1)==0))
+				continue;
+			mpz_powm_ui(cand2,cand,2,key->n);
+			if (mpz_cmp_ui(cand2,1)==0) {
+				mpz_add_ui(cand,cand,1);
+				mpz_gcd(key->p, cand, key->n);
+				spotted=1;
+				break;
+			}
+		}
+	}
+	if (spotted)
+		mpz_divexact(key->q, key->n, key->p);
+
+	mpz_clear(ktot);
+	mpz_clear(t);
+	mpz_clear(a);
+	mpz_clear(k);
+	mpz_clear(cand);
+	mpz_clear(nminus1);
+	mpz_clear(cand2);
+
+	return (spotted?0:1);
+}
+
 static PyObject *
 rsaKey_new (PyObject * self, PyObject * args)
 {
@@ -664,11 +720,18 @@ rsaKey_new (PyObject * self, PyObject * args)
 	{
 		longObjToMPZ (key->p, p);
 		longObjToMPZ (key->q, q);
-		if (u) {
-			longObjToMPZ (key->u, u);
-		} else {
-			mpz_invert (key->u, key->p, key->q);
+	} else {
+		if (factorize_N_from_D(key))
+		{
+			PyErr_SetString(PyExc_ValueError,
+			  "Unable to compute factors p and q from exponent d.");
+			return NULL;
 		}
+	}
+	if (u) {
+		longObjToMPZ (key->u, u);
+	} else {
+		mpz_invert (key->u, key->p, key->q);
 	}
 	return (PyObject *) key;
 }

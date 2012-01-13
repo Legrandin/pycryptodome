@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Hash/SHA.py: Self-test for the SHA-1 hash function
+#  SelfTest/Hash/test_SHA.py: Self-test for the SHA-384 hash function
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #
@@ -39,12 +39,21 @@ test_data = [
     # RFC 4634: Section Page 8.4, "Test 3"
     ('9d0e1809716474cb086e834e310a4a1ced149e9c00f248527972cec5704c2a5b07b8b3dc38ecc4ebae97ddd87f3d8985', 'a' * 10**6, "'a' * 10**6"),
 
+    # Taken from http://de.wikipedia.org/wiki/Secure_Hash_Algorithm
+    ('38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b', ''),
+    
+    # Example from http://de.wikipedia.org/wiki/Secure_Hash_Algorithm
+    ('71e8383a4cea32d6fd6877495db2ee353542f46fa44bc23100bca48f3366b84e809f0708e81041f427c6d5219a286677',
+     'Franz jagt im komplett verwahrlosten Taxi quer durch Bayern'),
+
 ]
 
 def get_tests(config={}):
     from Crypto.Hash import SHA384
     from common import make_hash_tests
-    return make_hash_tests(SHA384, "SHA384", test_data)
+    return make_hash_tests(SHA384, "SHA384", test_data,
+        digest_size=48,
+        oid='\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02')
 
 if __name__ == '__main__':
     import unittest

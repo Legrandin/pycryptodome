@@ -18,4 +18,33 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Hash.RIPEMD160 import new, digest_size
+__revision__ = "$Id$"
+
+__all__ = ['new', 'digest_size']
+
+from Crypto.Util.wrapper import Wrapper
+from Crypto.Util.py3compat import *
+
+#
+# See http://homes.esat.kuleuven.be/~bosselae/ripemd160.html#More
+#
+# id-ripemd160      	OBJECT IDENTIFIER ::= {
+# 				iso(1) identified-organization(3) teletrust(36)
+# 				algorithm(3) hashAlgorithm(2) ripemd160(1)
+# 				}
+
+oid = b("\x06\x05\x2b\x24\x03\x02\x01")
+
+def new(data=b("")):
+    obj = Wrapper(hashFactory, data)
+    obj.oid = oid
+    obj.new = globals()['new']
+    if not hasattr(obj, 'digest_size'):
+        obj.digest_size = digest_size
+    return obj
+
+import Crypto.Hash._RIPEMD160 as _RIPEMD160
+hashFactory = _RIPEMD160
+
+digest_size = 20
+

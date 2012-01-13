@@ -31,9 +31,20 @@
 #include "Python.h"
 #include "pycrypto_compat.h"
 
-#define MODULE_NAME MD2
+#define MODULE_NAME _MD2
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
+
+/**
+ * id-md2      OBJECT IDENTIFIER ::= {
+ * 			iso(1) member-body(2) us(840) rsadsi(113549)
+ * 			digestAlgorithm(2) 2
+ * 			}
+ */
+static const char md2_oid[] = { 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02 };
+
+#define DER_OID 		((void*)&md2_oid)
+#define DER_OID_SIZE		(sizeof md2_oid)
 
 typedef unsigned char U8;
 typedef unsigned int U32;

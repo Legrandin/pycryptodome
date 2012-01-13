@@ -400,7 +400,7 @@ static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
 }
 
 /* Template definitions */
-#define MODULE_NAME RIPEMD160
+#define MODULE_NAME _RIPEMD160
 #define DIGEST_SIZE RIPEMD160_DIGEST_SIZE
 #define hash_state ripemd160_state
 #define hash_init ripemd160_init

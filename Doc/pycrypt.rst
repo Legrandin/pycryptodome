@@ -709,7 +709,7 @@ Constructs a key object from a tuple of data.  This is
 algorithm-specific; look at the source code for the details.  (To be
 documented later.)
 
-**generate(size, randfunc, progress_func=None)**:
+**generate(size, randfunc, progress_func=None, e=65537)**:
 Generate a fresh public/private key pair.  ``size`` is a
 algorithm-dependent size parameter, usually measured in bits; the
 larger it is, the more difficult it will be to break the key.  Safe
@@ -729,6 +729,12 @@ string containing the key parameter currently being generated; it's
 useful for interactive applications where a user is waiting for a key
 to be generated.
 
+``e`` is the public RSA exponent, and must be an odd positive integer.
+It is typically a small number with very few ones in its binary representation.
+The default value 65537 (=0b10000000000000001) is a safe choice: other
+common values are 5, 7, 17, and 257. Exponent 3 is also widely used,
+but it requires very special care when padding the message.
+
 If you want to interface with some other program, you will have to know
 the details of the algorithm being used; this isn't a big loss.  If you
 don't care about working with non-Python software, simply use the
@@ -736,9 +742,47 @@ don't care about working with non-Python software, simply use the
 file.  It's portable across all the architectures that Python supports,
 and it's simple to use.
 
+In case interoperability were important, RSA key objects can be exported
+and imported in two standard formats: the DER binary encoding specified in
+PKCS#1 (see RFC3447) or the ASCII textual encoding specified by the
+old Privacy Enhanced Mail services (PEM, see RFC1421).
+
+
+The RSA module makes the following function available for importing keys:
+
+**importKey(externKey)**:
+Import an RSA key (pubic or private) encoded as a string ``externKey``.
+The key can follow either the PKCS#1/DER format (binary) or the PEM format
+(7-bit ASCII).
+
+For instance:
+    >>> from Crypto.PublicKey import RSA
+    >>> f = open("mykey.pem")
+    >>> RSAkey = RSA.importKey(f.read())
+    >>> if RSAkey.has_private(): print "Private key"
+
+Every RSA object supports the following method to export itself:
+
+**exportKey(format='PEM')**:
+Return the key encoded as a string, according to the specified ``format``:
+``'PEM'`` (default) or ``'DER'`` (also known as PKCS#1).
+
+For instance:
+    >>> from Crypto.PublicKey import RSA
+    >>> from Crypto import Random
+    >>> rng = Random.new().read
+    >>> RSAkey = RSA.generate(1024, rng)
+    >>> f = open("keyPrivate.der","w+")
+    >>> f.write(RSAkey.exportKey("DER"))
+    >>> f.close()
+    >>> f = open("keyPublic.pem","w+")
+    >>> f.write(RSAkey.publickey().exportKey("PEM"))
+    >>> f.close()
+
 Public-key objects always support the following methods.  Some of them
 may raise exceptions if their functionality is not supported by the
 algorithm.
+
 
 **can_blind()**:
 Returns true if the algorithm is capable of blinding data; 
@@ -876,6 +920,8 @@ levels of security: low-security commercial, high-security commercial,
 and military-grade.  For RSA, these three levels correspond roughly to
 768, 1024, and 2048-bit keys.
 
+When exporting private keys you should always carefully ensure that the
+chosen storage location cannot be accessed by adversaries.
 
 Crypto.Util: Odds and Ends
 --------------------------------------------------

@@ -41,13 +41,32 @@ else:
     dict = dict
 
 
+class HashDigestSizeSelfTest(unittest.TestCase):
+    
+    def __init__(self, hashmod, description, expected):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+        self.expected = expected
+        self.description = description
+        
+    def shortDescription(self):
+        return self.description
+
+    def runTest(self):
+        self.failUnless(hasattr(self.hashmod, "digest_size"))
+        self.assertEquals(self.hashmod.digest_size, self.expected)
+        h = self.hashmod.new()
+        self.failUnless(hasattr(h, "digest_size"))
+        self.assertEquals(h.digest_size, self.expected)
+
+
 class HashSelfTest(unittest.TestCase):
 
     def __init__(self, hashmod, description, expected, input):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
-        self.expected = b(expected)
-        self.input = b(input)
+        self.expected = expected
+        self.input = input
         self.description = description
 
     def shortDescription(self):
@@ -74,6 +93,30 @@ class HashSelfTest(unittest.TestCase):
             self.assertEqual(self.expected.decode(), out2)   # h = .new(); h.update(data); h.hexdigest()
             self.assertEqual(self.expected.decode(), out3)   # h = .new(data); h.hexdigest()
         self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
+
+        # Verify that new() object method produces a fresh hash object
+        h2 = h.new()
+        h2.update(self.input)
+        out5 = binascii.b2a_hex(h2.digest())
+        self.assertEqual(self.expected, out5)
+
+class HashTestOID(unittest.TestCase):
+    def __init__(self, hashmod, oid):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+        self.oid = oid
+
+    def runTest(self):
+        h = self.hashmod.new()
+        if self.oid==None:
+            try:
+                raised = 0
+                a = h.oid
+            except AttributeError:
+                raised = 1
+            self.assertEqual(raised,1)
+        else:
+            self.assertEqual(h.oid, self.oid)
 
 class MACSelfTest(unittest.TestCase):
 
@@ -124,17 +167,22 @@ class MACSelfTest(unittest.TestCase):
             self.assertEqual(expected, out4)
             self.assertEqual(expected, out5)
 
-def make_hash_tests(module, module_name, test_data):
+def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     tests = []
     for i in range(len(test_data)):
         row = test_data[i]
+        (expected, input) = map(b,row[0:2])
         if len(row) < 3:
-            (expected, input) = row
             description = repr(input)
         else:
-            (expected, input, description) = row
+            description = row[2].encode('latin-1')
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input))
+    if oid is not None:
+        oid = b(oid)
+    name = "%s #%d: digest_size" % (module_name, i+1)
+    tests.append(HashDigestSizeSelfTest(module, name, digest_size))
+    tests.append(HashTestOID(module, oid))
     return tests
 
 def make_mac_tests(module, module_name, test_data, hashmods):

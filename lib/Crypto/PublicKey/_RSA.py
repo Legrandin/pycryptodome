@@ -29,15 +29,15 @@ __revision__ = "$Id$"
 from Crypto.PublicKey import pubkey
 from Crypto.Util import number
 
-def generate_py(bits, randfunc, progress_func=None):
-    """generate(bits:int, randfunc:callable, progress_func:callable)
+def generate_py(bits, randfunc, progress_func=None, e=65537):
+    """generate(bits:int, randfunc:callable, progress_func:callable, e:int)
 
-    Generate an RSA key of length 'bits', using 'randfunc' to get
-    random data and 'progress_func', if present, to display
-    the progress of the key generation.
+    Generate an RSA key of length 'bits', public exponent 'e'(which must be
+    odd), using 'randfunc' to get random data and 'progress_func',
+    if present, to display the progress of the key generation.
     """
     obj=RSAobj()
-    obj.e = 65537L
+    obj.e = long(e)
 
     # Generate the prime factors of n
     if progress_func:
@@ -50,7 +50,9 @@ def generate_py(bits, randfunc, progress_func=None):
         p = pubkey.getStrongPrime(bits>>1, obj.e, 1e-12, randfunc)
         q = pubkey.getStrongPrime(bits - (bits>>1), obj.e, 1e-12, randfunc)
 
-    # p shall be smaller than q (for calc of u)
+    # It's OK for p to be larger than q, but let's be
+    # kind to the function that will invert it for
+    # th calculation of u.
     if p > q:
         (p, q)=(q, p)
     obj.p = p

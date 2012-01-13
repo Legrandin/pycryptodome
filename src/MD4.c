@@ -31,7 +31,7 @@
 #include "Python.h"
 #include "pycrypto_compat.h"
 
-#define MODULE_NAME MD4
+#define MODULE_NAME _MD4
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
 

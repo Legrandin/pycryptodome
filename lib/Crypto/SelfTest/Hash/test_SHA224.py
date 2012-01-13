@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Hash/SHA.py: Self-test for the SHA-1 hash function
+#  SelfTest/Hash/test_SHA224.py: Self-test for the SHA-224 hash function
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #
@@ -39,12 +39,23 @@ test_data = [
     # RFC 3874: Section 3.3, "Test Vector #3
     ('20794655980c91d8bbb4c1ea97618a4bf03f42581948b2ee4ee7ad67', 'a' * 10**6, "'a' * 10**6"),
 
+    # Examples from http://de.wikipedia.org/wiki/Secure_Hash_Algorithm
+    ('d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f', ''),
+
+    ('49b08defa65e644cbf8a2dd9270bdededabc741997d1dadd42026d7b',
+     'Franz jagt im komplett verwahrlosten Taxi quer durch Bayern'),
+    
+    ('58911e7fccf2971a7d07f93162d8bd13568e71aa8fc86fc1fe9043d1',
+     'Frank jagt im komplett verwahrlosten Taxi quer durch Bayern'),
+
 ]
 
 def get_tests(config={}):
     from Crypto.Hash import SHA224
     from common import make_hash_tests
-    return make_hash_tests(SHA224, "SHA224", test_data)
+    return make_hash_tests(SHA224, "SHA224", test_data,
+        digest_size=28,
+        oid='\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04')
 
 if __name__ == '__main__':
     import unittest

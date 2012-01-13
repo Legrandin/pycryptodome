@@ -41,7 +41,6 @@ from distutils.ccompiler import new_compiler
 from distutils.core import Extension, Command
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
-
 import os, sys, re
 import struct
 
@@ -73,6 +72,7 @@ try:
 except ImportError:
     # Python 2
     from distutils.command.build_py import build_py
+
 # List of pure Python modules that will be excluded from the binary packages.
 # The list consists of (package, module_name) tuples
 if sys.version_info[0] == 2:
@@ -84,14 +84,6 @@ else:
     ]
     if sys.platform != "win32": # Avoid nt.py, as 2to3 can't fix it w/o winrandom
         EXCLUDE_PY += [('Crypto.Random.OSRNG','nt')]
-
-# Exclude SHA224/384/512 if they're not present (Python < 2.5)
-try: from hashlib import sha224
-except ImportError: EXCLUDE_PY += [('Crypto.Hash', 'SHA224')]
-try: from hashlib import sha384
-except ImportError: EXCLUDE_PY += [('Crypto.Hash', 'SHA384')]
-try: from hashlib import sha512
-except ImportError: EXCLUDE_PY += [('Crypto.Hash', 'SHA512')]
 
 # Work around the print / print() issue with Python 2.x and 3.x. We only need
 # to print at one point of the code, which makes this easy
@@ -106,43 +98,6 @@ def PrintErr(*args, **kwd):
             w(sep)
             w(str(a))
         w(kwd.get("end", "\n"))
-
-# Functions for finding libraries and files, copied from Python's setup.py.
-
-def find_file(filename, std_dirs, paths):
-    """Searches for the directory where a given file is located,
-    and returns a possibly-empty list of additional directories, or None
-    if the file couldn't be found at all.
-
-    'filename' is the name of a file, such as readline.h or libcrypto.a.
-    'std_dirs' is the list of standard system directories; if the
-        file is found in one of them, no additional directives are needed.
-    'paths' is a list of additional locations to check; if the file is
-        found in one of them, the resulting list will contain the directory.
-    """
-
-    # Check the standard locations
-    for dir in std_dirs:
-        f = os.path.join(dir, filename)
-        if os.path.exists(f): return []
-
-    # Check the additional directories
-    for dir in paths:
-        f = os.path.join(dir, filename)
-        if os.path.exists(f):
-            return [dir]
-
-    # Not found anywhere
-    return None
-
-def find_library_file(compiler, libname, std_dirs, paths):
-    filename = compiler.library_filename(libname, lib_type='shared')
-    result = find_file(filename, std_dirs, paths)
-    if result is not None: return result
-
-    filename = compiler.library_filename(libname, lib_type='static')
-    result = find_file(filename, std_dirs, paths)
-    return result
 
 def endianness_macro():
     s = struct.pack("@I", 0x33221100)
@@ -403,7 +358,10 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest.Random.Fortuna",
                   "Crypto.SelfTest.Random.OSRNG",
                   "Crypto.SelfTest.Util",
-                  "Crypto.Protocol", "Crypto.PublicKey"],
+                  "Crypto.SelfTest.Signature",
+                  "Crypto.Protocol",
+                  "Crypto.PublicKey",
+                  "Crypto.Signature"],
       'package_dir' : { "Crypto": "lib/Crypto" },
       'ext_modules': plat_ext + [
             # _fastmath (uses GNU mp library)
@@ -413,16 +371,25 @@ kw = {'name':"pycrypto",
                       sources=["src/_fastmath.c"]),
 
             # Hash functions
-            Extension("Crypto.Hash.MD2",
+            Extension("Crypto.Hash._MD2",
                       include_dirs=['src/'],
                       sources=["src/MD2.c"]),
-            Extension("Crypto.Hash.MD4",
+            Extension("Crypto.Hash._MD4",
                       include_dirs=['src/'],
                       sources=["src/MD4.c"]),
-            Extension("Crypto.Hash.SHA256",
+            Extension("Crypto.Hash._SHA256",
                       include_dirs=['src/'],
                       sources=["src/SHA256.c"]),
-            Extension("Crypto.Hash.RIPEMD160",
+            Extension("Crypto.Hash._SHA224",
+                      include_dirs=['src/'],
+                      sources=["src/SHA224.c"]),
+            Extension("Crypto.Hash._SHA384",
+                      include_dirs=['src/'],
+                      sources=["src/SHA384.c"]),
+            Extension("Crypto.Hash._SHA512",
+                      include_dirs=['src/'],
+                      sources=["src/SHA512.c"]),
+            Extension("Crypto.Hash._RIPEMD160",
                       include_dirs=['src/'],
                       sources=["src/RIPEMD160.c"],
                       define_macros=[endianness_macro()]),

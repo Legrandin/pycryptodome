@@ -45,12 +45,12 @@ class FortunaAccumulatorTests(unittest.TestCase):
         self.assertEqual(0, pool.length)
         self.assertEqual("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456", pool.hexdigest())
 
-        pool.append('abc')
+        pool.append(b('abc'))
 
         self.assertEqual(3, pool.length)
         self.assertEqual("4f8b42c22dd3729b519ba6f68d2da7cc5b2d606d05daed5ad5128cc03e6c6358", pool.hexdigest())
 
-        pool.append("dbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
+        pool.append(b("dbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"))
 
         self.assertEqual(56, pool.length)
         self.assertEqual(b('0cffe17f68954dac3a84fb1458bd5ec99209449749b2b308b7cb55812f9563af'), b2a_hex(pool.digest()))
@@ -59,7 +59,7 @@ class FortunaAccumulatorTests(unittest.TestCase):
 
         self.assertEqual(0, pool.length)
 
-        pool.append('a' * 10**6)
+        pool.append(b('a') * 10**6)
 
         self.assertEqual(10**6, pool.length)
         self.assertEqual(b('80d1189477563e1b5206b2749f1afe4807e5705e8bd77887a60187a712156688'), b2a_hex(pool.digest()))

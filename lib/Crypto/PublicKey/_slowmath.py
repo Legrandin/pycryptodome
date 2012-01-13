@@ -32,7 +32,7 @@ import sys
 
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
-from Crypto.Util.number import size, inverse
+from Crypto.Util.number import size, inverse, GCD
 
 class error(Exception):
     pass
@@ -51,7 +51,7 @@ class _RSAKey(object):
         if not self.has_private():
             raise TypeError("No private key")
         if (hasattr(self,'p') and hasattr(self,'q') and hasattr(self,'u')):
-            m1 = pow(c, self.d % (self.p-1), self.p) 
+            m1 = pow(c, self.d % (self.p-1), self.p)
             m2 = pow(c, self.d % (self.q-1), self.q)
             h = m2 - m1
             if (h<0):
@@ -90,13 +90,53 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
     obj = _RSAKey()
     obj.n = n
     obj.e = e
-    if d is not None: obj.d = d
-    if p is not None: obj.p = p
-    if q is not None: obj.q = q
+    if d is None:
+        return obj
+    obj.d = d
+    if p is not None and q is not None:
+        obj.p = p
+        obj.q = q
+    else:
+        # Compute factors p and q from the private exponent d.
+        # We assume that n has no more than two factors.
+        # See 8.2.2(i) in Handbook of Applied Cryptography.
+        ktot = d*e-1
+        # The quantity d*e-1 is a multiple of phi(n), even,
+        # and can be represented as t*2^s.
+        t = ktot
+        while t%2==0:
+            t=divmod(t,2)[0]
+        # Cycle through all multiplicative inverses in Zn.
+        # The algorithm is non-deterministic, but there is a 50% chance
+        # any candidate a leads to successful factoring.
+        # See "Digitalized Signatures and Public Key Functions as Intractable
+        # as Factorization", M. Rabin, 1979
+        spotted = 0
+        a = 2
+        while not spotted and a<100:
+            k = t
+            # Cycle through all values a^{t*2^i}=a^k
+            while k<ktot:
+                cand = pow(a,k,n)
+                # Check if a^k is a non-trivial root of unity (mod n)
+                if cand!=1 and cand!=(n-1) and pow(cand,2,n)==1:
+                    # We have found a number such that (cand-1)(cand+1)=0 (mod n).
+                    # Either of the terms divides n.
+                    obj.p = GCD(cand+1,n)
+                    spotted = 1
+                    break
+                k = k*2
+            # This value was not any good... let's try another!
+            a = a+2
+        if not spotted:
+            raise ValueError("Unable to compute factors p and q from exponent d.")
+        # Found !
+        assert ((n % obj.p)==0)
+        obj.q = divmod(n,obj.p)[0]
     if u is not None:
         obj.u = u
-    elif p is not None and q is not None:
-        obj.u = inverse(p, q)
+    else:
+        obj.u = inverse(obj.p, obj.q)
     return obj
 
 class _DSAKey(object):

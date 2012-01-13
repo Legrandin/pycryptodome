@@ -1,5 +1,5 @@
 /*
- * An implementation of the SHA-256 hash function.
+ * An implementation of the SHA-224 hash function.
  *
  * The Federal Information Processing Standards (FIPS) Specification 
  * can be found here (FIPS 180-3):
@@ -26,24 +26,25 @@
  * ===================================================================
  *
  */
-#define MODULE_NAME _SHA256
-#define DIGEST_SIZE (256/8)
+
+#define MODULE_NAME _SHA224
+#define DIGEST_SIZE (224/8)
 #define BLOCK_SIZE (512/8)
 #define WORD_SIZE 4
 #define SCHEDULE_SIZE 64
- 
+
 #include "hash_SHA2.h"
 
 /* Initial Values H */
 static const sha2_word_t H[8] = {
-    0x6a09e667,
-    0xbb67ae85,
-    0x3c6ef372,
-    0xa54ff53a,
-    0x510e527f,
-    0x9b05688c,
-    0x1f83d9ab,
-    0x5be0cd19
+    0xc1059ed8,
+    0x367cd507,
+    0x3070dd17,
+    0xf70e5939,
+    0xffc00b31,
+    0x68581511,
+    0x64f98fa7,
+    0xbefa4fa4
 };
 
 /* the Constants K */
@@ -63,11 +64,11 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-/* SHA-256 specific functions */
-#define Sigma0(x)    (ROTR(x,  2) ^ ROTR(x, 13) ^ ROTR(x, 22))
-#define Sigma1(x)    (ROTR(x,  6) ^ ROTR(x, 11) ^ ROTR(x, 25))
-#define Gamma0(x)    (ROTR(x,  7) ^ ROTR(x, 18) ^ SHR(x,  3))
-#define Gamma1(x)    (ROTR(x, 17) ^ ROTR(x, 19) ^ SHR(x, 10))
+/* SHA-224 specific functions */
+#define Sigma0(x)  (ROTR(x,  2) ^ ROTR(x, 13) ^ ROTR(x, 22))
+#define Sigma1(x)  (ROTR(x,  6) ^ ROTR(x, 11) ^ ROTR(x, 25))
+#define Gamma0(x)  (ROTR(x,  7) ^ ROTR(x, 18) ^ SHR(x,  3))
+#define Gamma1(x)  (ROTR(x, 17) ^ ROTR(x, 19) ^ SHR(x, 10))
 
 #include "hash_SHA2_template.c"
 

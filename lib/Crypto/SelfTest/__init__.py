@@ -82,6 +82,7 @@ def get_tests(config={}):
     from Crypto.SelfTest import PublicKey; tests += PublicKey.get_tests(config=config)
     from Crypto.SelfTest import Random; tests += Random.get_tests(config=config)
     from Crypto.SelfTest import Util;   tests += Util.get_tests(config=config)
+    from Crypto.SelfTest import Signature;   tests += Signature.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

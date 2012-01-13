@@ -120,6 +120,15 @@ class RSATest(unittest.TestCase):
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
+    def test_generate_3args(self):
+        rsaObj = self.rsa.generate(1024, Random.new().read,e=65537)
+        self._check_private_key(rsaObj)
+        self._exercise_primitive(rsaObj)
+        pub = rsaObj.publickey()
+        self._check_public_key(pub)
+        self._exercise_public_primitive(rsaObj)
+        self.assertEqual(65537,rsaObj.e)
+
     def test_construct_2tuple(self):
         """RSA (default implementation) constructed key (2-tuple)"""
         pub = self.rsa.construct((self.n, self.e))
@@ -161,6 +170,14 @@ class RSATest(unittest.TestCase):
         self._check_signing(rsaObj)
         self._check_verification(rsaObj)
 
+    def test_factoring(self):
+        rsaObj = self.rsa.construct([self.n, self.e, self.d])
+        self.failUnless(rsaObj.p==self.p or rsaObj.p==self.q)
+        self.failUnless(rsaObj.q==self.p or rsaObj.q==self.q)
+        self.failUnless(rsaObj.q*rsaObj.p == self.n)
+
+        self.assertRaises(ValueError, self.rsa.construct, [self.n, self.e, self.n-1])
+
     def _check_private_key(self, rsaObj):
         # Check capabilities
         self.assertEqual(1, rsaObj.has_private())
@@ -177,7 +194,6 @@ class RSATest(unittest.TestCase):
         self.assertEqual(rsaObj.u, rsaObj.key.u)
 
         # Sanity check key data
-        self.assertEqual(1, rsaObj.p < rsaObj.q)            # p < q
         self.assertEqual(rsaObj.n, rsaObj.p * rsaObj.q)     # n = pq
         self.assertEqual(1, rsaObj.d * rsaObj.e % ((rsaObj.p-1) * (rsaObj.q-1))) # ed = 1 (mod (p-1)(q-1))
         self.assertEqual(1, rsaObj.p * rsaObj.u % rsaObj.q) # pu = 1 (mod q)
@@ -333,6 +349,9 @@ class RSAFastMathTest(RSATest):
         """RSA (_fastmath implementation) constructed key (6-tuple)"""
         RSATest.test_construct_6tuple(self)
 
+    def test_factoring(self):
+        RSATest.test_factoring(self)
+
 class RSASlowMathTest(RSATest):
     def setUp(self):
         RSATest.setUp(self)
@@ -366,6 +385,8 @@ class RSASlowMathTest(RSATest):
         """RSA (_slowmath implementation) constructed key (6-tuple)"""
         RSATest.test_construct_6tuple(self)
 
+    def test_factoring(self):
+        RSATest.test_factoring(self)
 
 def get_tests(config={}):
     tests = []
@@ -383,7 +404,8 @@ def get_tests(config={}):
             raise ImportError("While the _fastmath module exists, importing "+
                 "it failed. This may point to the gmp or mpir shared library "+
                 "not being in the path. _fastmath was found at "+_fm_path)
-    tests += list_test_cases(RSASlowMathTest)
+    if config.get('slow_tests',1):
+        tests += list_test_cases(RSASlowMathTest)
     return tests
 
 if __name__ == '__main__':

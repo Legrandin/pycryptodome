@@ -25,19 +25,32 @@ __revision__ = "$Id$"
 __all__ = ['new', 'digest_size']
 
 from Crypto.Util.py3compat import *
+from Crypto.Util.wrapper import Wrapper
+
+# The OID for SHA-1 is:
+#
+# id-sha1    OBJECT IDENTIFIER ::= {
+#          iso(1) identified-organization(3) oiw(14) secsig(3)
+#          algorithms(2) 26
+#      }
+oid = b('\x06\x05\x2b\x0e\x03\x02\x1a')
+
+def new(data=b("")):
+    obj = Wrapper(hashFactory, data)
+    obj.oid = oid
+    obj.new = globals()['new']
+    if not hasattr(obj, 'digest_size'):
+        obj.digest_size = digest_size
+    return obj
 
 try:
-    # The md5 module is deprecated in Python 2.6, so use hashlib when possible.
+    # The sha module is deprecated in Python 2.6, so use hashlib when possible.
     import hashlib
-    def new(data=b("")):
-        return hashlib.sha1(data)
-    digest_size = new().digest_size
+    hashFactory = hashlib.sha1
 
 except ImportError:
-    from sha import *
     import sha
-    if hasattr(sha, 'digestsize'):
-        digest_size = digestsize
-        del digestsize
-    del sha
+    hashFactory = sha
+
+digest_size = 20
 block_size = 64

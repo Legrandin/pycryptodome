@@ -27,6 +27,7 @@ __revision__ = "$Id$"
 import unittest
 import sys
 
+from Crypto.Util.py3compat import *
 from Crypto.Util.asn1 import DerSequence, DerObject
 
 class DerObjectTests(unittest.TestCase):
@@ -40,6 +41,10 @@ class DerObjectTests(unittest.TestCase):
 		self.assertEquals(der.encode(), b('\x33\x01\x45'))
 		# Invariant
 		self.assertEquals(der.encode(), b('\x33\x01\x45'))
+		# Initialize with numerical tag
+		der = DerObject(b(0x33))
+		der.payload = b('\x45')
+		self.assertEquals(der.encode(), b('\x33\x01\x45'))
 
 	def testObjEncode2(self):
 		# Known types
@@ -52,21 +57,21 @@ class DerObjectTests(unittest.TestCase):
 		# Long payload
 		der = DerObject(b('\x34'))
 		der.payload = b("0")*128
-		self.assertEquals(der.encode(), b('\x34\x81\x80') + (b("0")*128))		
+		self.assertEquals(der.encode(), b('\x34\x81\x80' + "0"*128))		
 
 	def testObjDecode1(self):
 		# Decode short payload
 		der = DerObject()
 		der.decode(b('\x20\x02\x01\x02'))
 		self.assertEquals(der.payload, b("\x01\x02"))
-		self.assertEquals(der.typeTag, b("\x20"))
+		self.assertEquals(der.typeTag, 0x20)
 
 	def testObjDecode2(self):
 		# Decode short payload
 		der = DerObject()
-		der.decode(b('\x22\x81\x80') + (b("1")*128))
+		der.decode(b('\x22\x81\x80' + "1"*128))
 		self.assertEquals(der.payload, b("1")*128)
-		self.assertEquals(der.typeTag, b("\x22"))
+		self.assertEquals(der.typeTag, 0x22)
 
 class DerSequenceTests(unittest.TestCase):
 
@@ -199,6 +204,8 @@ class DerSequenceTests(unittest.TestCase):
 		b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
 		b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
 		b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
+		b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
+        b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
 		b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
 		b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
 		b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+

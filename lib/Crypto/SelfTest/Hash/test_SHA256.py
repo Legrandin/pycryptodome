@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Hash/SHA256.py: Self-test for the SHA-256 hash function
+#  SelfTest/Hash/test_SHA256.py: Self-test for the SHA-256 hash function
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #
@@ -33,7 +33,7 @@ class LargeSHA256Test(unittest.TestCase):
     def runTest(self):
         """SHA256: 512/520 MiB test"""
         from Crypto.Hash import SHA256
-        zeros = '\0' * (1024*1024)
+        zeros = bchr(0x00) * (1024*1024)
 
         h = SHA256.new(zeros)
         for i in xrange(511):
@@ -69,11 +69,19 @@ def get_tests(config={}):
         ('f7fd017a3c721ce7ff03f3552c0813adcc48b7f33f07e5e2ba71e23ea393d103',
             'This message is precisely 55 bytes long, to test a bug.',
             'Length = 55 (mod 64)'),
+
+        # Example from http://de.wikipedia.org/wiki/Secure_Hash_Algorithm
+        ('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', ''),
+
+        ('d32b568cd1b96d459e7291ebf4b25d007f275c9f13149beeb782fac0716613f8',
+         'Franz jagt im komplett verwahrlosten Taxi quer durch Bayern'),
     ]
 
     from Crypto.Hash import SHA256
     from common import make_hash_tests
-    tests = make_hash_tests(SHA256, "SHA256", test_data)
+    tests = make_hash_tests(SHA256, "SHA256", test_data,
+        digest_size=32,
+        oid="\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01")
 
     if config.get('slow_tests'):
         tests += [LargeSHA256Test()]

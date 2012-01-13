@@ -18,8 +18,6 @@
 # SOFTWARE.
 # ===================================================================
 
-# Just use the SHA module from the Python standard library
-
 __revision__ = "$Id$"
 
 __all__ = ['new', 'digest_size']
@@ -27,14 +25,14 @@ __all__ = ['new', 'digest_size']
 from Crypto.Util.wrapper import Wrapper
 from Crypto.Util.py3compat import *
 
-# The OID for SHA-384 is:
+# The OID for SHA-256 is:
 #
-# id-sha384    OBJECT IDENTIFIER ::= {
-#			joint-iso-itu-t(2)
-#			country(16) us(840) organization(1) gov(101) csor(3)
-#			nistalgorithm(4) hashalgs(2) 2
-#		}
-oid = b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02')
+# id-sha256    OBJECT IDENTIFIER ::= {
+# 			joint-iso-itu-t(2) country(16) us(840) organization(1)
+# 			gov(101) csor(3) nistalgorithm(4) hashalgs(2) 1
+# 			}
+#
+oid = b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01')
 
 def new(data=b("")):
     obj = Wrapper(hashFactory, data)
@@ -46,12 +44,12 @@ def new(data=b("")):
 
 try:
     import hashlib
-    hashFactory = hashlib.sha384
+    hashFactory = hashlib.sha256
 
 except ImportError:
-    from Crypto.Hash import _SHA384
-    hashFactory = _SHA384
+    from Crypto.Hash import _SHA256
+    hashFactory = _SHA256
 
-digest_size = 48 
-block_size = 128
+digest_size = 32
+block_size = 64
 
