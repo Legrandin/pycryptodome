@@ -1136,6 +1136,11 @@ getRNG (void)
 	module_dict = PyModule_GetDict (module);
 	Py_DECREF (module);
 	new_func = PyDict_GetItemString (module_dict, "new");
+	if (new_func == NULL) {
+		PyErr_SetString (PyExc_RuntimeError,
+						 "Crypto.Random.new is missing.");
+		return NULL;
+	}
 	if (!PyCallable_Check (new_func))
 	{
 		PyErr_SetString (PyExc_RuntimeError,
