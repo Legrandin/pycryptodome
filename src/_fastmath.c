@@ -1139,7 +1139,7 @@ getRNG (void)
 	if (!PyCallable_Check (new_func))
 	{
 		PyErr_SetString (PyExc_RuntimeError,
-						 "Cryptor.Random.new is not callable.");
+						 "Crypto.Random.new is not callable.");
 		return NULL;
 	}
 	rng = PyObject_CallObject (new_func, NULL);
