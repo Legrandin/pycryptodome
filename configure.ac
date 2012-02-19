@@ -10,8 +10,16 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_PROG_CC
 
 # Checks for libraries.
-AC_CHECK_LIB([gmp], [__gmpz_init])
-AC_CHECK_LIB([mpir], [__gmpz_init])
+AC_ARG_WITH([gmp], AS_HELP_STRING([--without-gmp], [Build without gmp library (default: test)]))
+AS_IF([test "x$with_gmp" != "xno"], [
+  AC_CHECK_LIB([gmp], [__gmpz_init])
+])
+
+AC_ARG_WITH([mpir], AS_HELP_STRING([--without-mpir], [Build without mpir library (default: test)]))
+AS_IF([test "x$with_mpir" != "xno"], [
+  AC_CHECK_LIB([mpir], [__gmpz_init])
+])
+
 AC_CHECK_DECLS([mpz_powm], [], [], [
 [#if HAVE_LIBGMP
 # include <gmp.h>

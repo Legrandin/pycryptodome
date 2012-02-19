@@ -438,7 +438,7 @@ kw = {'name':"pycrypto",
 if hasattr(core, 'setup_keywords'):
     if 'classifiers' in core.setup_keywords:
         kw['classifiers'] = [
-          'Development Status :: 4 - Beta',
+          'Development Status :: 5 - Production/Stable',
           'License :: Public Domain',
           'Intended Audience :: Developers',
           'Operating System :: Unix',
@@ -448,9 +448,6 @@ if hasattr(core, 'setup_keywords'):
           'Programming Language :: Python :: 2',
           'Programming Language :: Python :: 3',
           ]
-    if 'download_url' in core.setup_keywords:
-        kw['download_url'] = ('http://www.pycrypto.org/files/'
-                              '%s-%s.tar.gz' % (kw['name'], kw['version']) )
 
 core.setup(**kw)
 

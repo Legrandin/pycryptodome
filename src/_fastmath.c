@@ -466,6 +466,8 @@ dsaKey_new (PyObject * self, PyObject * args)
 		return NULL;
 
 	key = PyObject_New (dsaKey, &dsaKeyType);
+	if (key == NULL)
+		return NULL;
 	mpz_init (key->y);
 	mpz_init (key->g);
 	mpz_init (key->p);
@@ -552,7 +554,7 @@ dsaKey_getattr (dsaKey * key, char *attr)
 static PyObject *
 dsaKey__sign (dsaKey * key, PyObject * args)
 {
-	PyObject *lm, *lk, *lr, *ls;
+	PyObject *lm, *lk, *lr, *ls, *retval;
 	mpz_t m, k, r, s;
 	int result;
 	if (!PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &lm,
@@ -574,11 +576,19 @@ dsaKey__sign (dsaKey * key, PyObject * args)
 	}
 	lr = mpzToLongObj (r);
 	ls = mpzToLongObj (s);
+	if (lr == NULL || ls == NULL) goto errout;
 	mpz_clear (m);
 	mpz_clear (k);
 	mpz_clear (r);
 	mpz_clear (s);
-	return Py_BuildValue ("(NN)", lr, ls);
+	retval = Py_BuildValue ("(NN)", lr, ls);
+	if (retval == NULL) goto errout;
+	return retval;
+
+errout:
+	Py_XDECREF(lr);
+	Py_XDECREF(ls);
+	return NULL;
 }
 
 static PyObject *
@@ -703,6 +713,8 @@ rsaKey_new (PyObject * self, PyObject * args)
 		return NULL;
 
 	key = PyObject_New (rsaKey, &rsaKeyType);
+	if (key == NULL)
+		return NULL;
 	mpz_init (key->n);
 	mpz_init (key->e);
 	mpz_init (key->d);
@@ -838,7 +850,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 static PyObject *
 rsaKey__encrypt (rsaKey * key, PyObject * args)
 {
-	PyObject *l, *r;
+	PyObject *l, *r, *retval;
 	mpz_t v;
 	int result;
 	if (!PyArg_ParseTuple (args, "O!", &PyLong_Type, &l))
@@ -854,14 +866,20 @@ rsaKey__encrypt (rsaKey * key, PyObject * args)
 		return NULL;
 	}
 	r = (PyObject *) mpzToLongObj (v);
+	if (r == NULL) return NULL;
 	mpz_clear (v);
-	return Py_BuildValue ("N", r);
+	retval = Py_BuildValue ("N", r);
+	if (retval == NULL) {
+		Py_DECREF(r);
+		return NULL;
+	}
+	return retval;
 }
 
 static PyObject *
 rsaKey__decrypt (rsaKey * key, PyObject * args)
 {
-	PyObject *l, *r;
+	PyObject *l, *r, *retval;
 	mpz_t v;
 	int result;
 	if (!PyArg_ParseTuple (args, "O!", &PyLong_Type, &l))
@@ -884,8 +902,14 @@ rsaKey__decrypt (rsaKey * key, PyObject * args)
 		return NULL;
 	}
 	r = mpzToLongObj (v);
+	if (r == NULL) return NULL;
 	mpz_clear (v);
-	return Py_BuildValue ("N", r);
+	retval = Py_BuildValue ("N", r);
+	if (retval == NULL) {
+		Py_DECREF(r);
+		return NULL;
+	}
+	return retval;
 }
 
 static PyObject *
@@ -916,7 +940,7 @@ rsaKey__verify (rsaKey * key, PyObject * args)
 static PyObject *
 rsaKey__blind (rsaKey * key, PyObject * args)
 {
-	PyObject *l, *lblind, *r;
+	PyObject *l, *lblind, *r, *retval;
 	mpz_t v, vblind;
 	int result;
 	if (!PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, 
@@ -940,15 +964,22 @@ rsaKey__blind (rsaKey * key, PyObject * args)
 			return NULL;
 		}
 	r = (PyObject *) mpzToLongObj (v);
+	if (r == NULL)
+		return NULL;
 	mpz_clear (v);
 	mpz_clear (vblind);
-	return Py_BuildValue ("N", r);
+	retval = Py_BuildValue ("N", r);
+	if (retval == NULL) {
+		Py_DECREF(r);
+		return NULL;
+	}
+	return retval;
 }
 
 static PyObject *
 rsaKey__unblind (rsaKey * key, PyObject * args)
 {
-	PyObject *l, *lblind, *r;
+	PyObject *l, *lblind, *r, *retval;
 	mpz_t v, vblind;
 	int result;
 	if (!PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &l, 
@@ -977,9 +1008,15 @@ rsaKey__unblind (rsaKey * key, PyObject * args)
 			return NULL;
 		}
 	r = (PyObject *) mpzToLongObj (v);
+	if (r == NULL) return NULL;
 	mpz_clear (v);
 	mpz_clear (vblind);
-	return Py_BuildValue ("N", r);
+	retval = Py_BuildValue ("N", r);
+	if (retval == NULL) {
+		Py_DECREF(r);
+		return NULL;
+	}
+	return retval;
 }
 
 static PyObject *
@@ -1099,10 +1136,15 @@ getRNG (void)
 	module_dict = PyModule_GetDict (module);
 	Py_DECREF (module);
 	new_func = PyDict_GetItemString (module_dict, "new");
+	if (new_func == NULL) {
+		PyErr_SetString (PyExc_RuntimeError,
+						 "Crypto.Random.new is missing.");
+		return NULL;
+	}
 	if (!PyCallable_Check (new_func))
 	{
 		PyErr_SetString (PyExc_RuntimeError,
-						 "Cryptor.Random.new is not callable.");
+						 "Crypto.Random.new is not callable.");
 		return NULL;
 	}
 	rng = PyObject_CallObject (new_func, NULL);
@@ -1153,7 +1195,15 @@ getRandomInteger (mpz_t n, unsigned long int bits, PyObject *randfunc_)
 	}
 
 	arglist = Py_BuildValue ("(l)", (long int)bytes);
+	if (arglist == NULL) {
+		return_val = 0;
+		goto cleanup;
+	}
 	rand_bytes = PyObject_CallObject (randfunc, arglist);
+	if (rand_bytes == NULL) {
+		return_val = 0;
+		goto cleanup;
+	}
 	Py_DECREF (arglist);
 	if (!PyBytes_Check (rand_bytes))
 	{
@@ -1650,6 +1700,9 @@ init_fastmath (void)
 #endif
  	_fastmath_dict = PyModule_GetDict (_fastmath_module);
 	fastmathError = PyErr_NewException ("_fastmath.error", NULL, NULL);
+#ifdef IS_PY3K
+	if (fastmathError == NULL) return NULL;
+#endif
  	PyDict_SetItemString (_fastmath_dict, "error", fastmathError);
 
 	PyModule_AddIntConstant(_fastmath_module, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
