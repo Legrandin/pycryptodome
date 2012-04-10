@@ -26,7 +26,7 @@
 
 __revision__ = "$Id$"
 
-__all__ = ['generate', 'construct', 'error']
+__all__ = ['generate', 'construct', 'error', 'DSAImplementation', '_DSAobj']
 
 import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:

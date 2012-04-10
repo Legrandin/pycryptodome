@@ -24,13 +24,45 @@
 
 """RSA public-key cryptography algorithm.
 
+RSA_ is the most widespread and used public key algorithm. Its security is
+based on the difficulty of factoring large integers. The algorithm has
+withstood attacks for 30 years, and it is therefore considered reasonably
+secure for new designs.
+
+The algorithm can be used for both confidentiality (encryption) and
+authentication (digital signature). It is worth noting that signing and
+decryption are significantly slower than verification and encryption.
+The cryptograhic strength is primarily linked to the length of the modulus.
+In 2012, a sufficient length is deemed to be 2048 bits. For more information,
+see the most recent ECRYPT_ report.
+
+This module provides facilities for generating fresh, new RSA keys, constructing
+them from known components, exporting them, and importing them.
+
+    >>> from Crypto.PublicKey import RSA
+    >>>
+    >>> key = RSA.generate(2048)
+    >>> f = open('mykey.pem','w')
+    >>> f.write(RSA.exportKey('PEM'))
+    >>> f.close()
+    ...
+    >>> f = open('mykey.pem','r')
+    >>> key = RSA.importKey(f.read())
+
+Even though you may choose to  directly use the methods of an RSA key object
+to perform the primitive cryptographic operations (e.g. `_RSAobj.encrypt`),
+it is recommended to use one of the standardized schemes instead (like
+`Crypto.Cipher.PKCS1_v1_5` or `Crypto.Signature.PKCS1_v1_5`).
+
+.. _RSA: http://en.wikipedia.org/wiki/RSA_%28algorithm%29
+.. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
+
 :sort: generate,construct,importKey,error
-:undocumented: _fastmath, __revision__, _impl
 """
 
 __revision__ = "$Id$"
 
-__all__ = ['generate', 'construct', 'error', 'importKey' ]
+__all__ = ['generate', 'construct', 'error', 'importKey', 'RSAImplementation', '_RSAobj']
 
 import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
@@ -56,8 +88,10 @@ except ImportError:
     _fastmath = None
 
 class _RSAobj(pubkey.pubkey):
-    """Class defining an actual RSA key."""
+    """Class defining an actual RSA key.
 
+    :undocumented: __getstate__, __setstate__, __repr__, __getattr__
+    """
     #: Dictionary of RSA parameters.
     #:
     #: A public key will only have the following entries:
@@ -87,6 +121,101 @@ class _RSAobj(pubkey.pubkey):
             return getattr(self.key, attrname)
         else:
             raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
+
+    def encrypt(self, plaintext, K):
+        """Encrypt a piece of data with RSA.
+
+        :Parameter plaintext: The piece of data to encrypt with RSA. It may not
+         be numerically larger than the RSA module (**n**).
+        :Type plaintext: byte string or long
+
+        :Parameter K: A random parameter (*for compatibility only. This
+         value will be ignored*)
+        :Type K: byte string or long
+
+        :attention: this function performs the plain, primitive RSA encryption
+         (*schoolbook*). In real applications, you always need to use proper
+         cryptographic padding, and you should not directly encrypt data with
+         this method. Failure to do so may lead to security vulnerabilities.
+         It is recommended to use modules
+         `Crypto.Cipher.PKCS1_OAEP` or `Crypto.Cipher.PKCS1_v1_5` instead.
+
+        :Return: A tuple with two items. The first item is the ciphertext
+         of the same type as the plaintext (string or long). The second item
+         is always None.
+        """
+        return pubkey.pubkey.encrypt(self, plaintext, K)
+ 
+    def decrypt(self, ciphertext):
+        """Decrypt a piece of data with RSA.
+
+        Decryption always takes place with blinding.
+
+        :attention: this function performs the plain, primitive RSA decryption
+         (*schoolbook*). In real applications, you always need to use proper
+         cryptographic padding, and you should not directly decrypt data with
+         this method. Failure to do so may lead to security vulnerabilities.
+         It is recommended to use modules
+         `Crypto.Cipher.PKCS1_OAEP` or `Crypto.Cipher.PKCS1_v1_5` instead.
+
+        :Parameter ciphertext: The piece of data to decrypt with RSA. It may
+         not be numerically larger than the RSA module (**n**). If a tuple,
+         the first item is the actual ciphertext; the second item is ignored.
+
+        :Type ciphertext: byte string, long or a 2-item tuple as returned by
+         `encrypt`
+
+        :Return: A byte string if ciphertext was a byte string or a tuple
+         of byte strings. A long otherwise.
+        """
+        return pubkey.pubkey.decrypt(self, ciphertext)
+
+    def sign(self, M, K):
+        """Sign a piece of data with RSA.
+
+        Signing always takes place with blinding.
+
+        :attention: this function performs the plain, primitive RSA decryption
+         (*schoolbook*). In real applications, you always need to use proper
+         cryptographic padding, and you should not directly sign data with
+         this method. Failure to do so may lead to security vulnerabilities.
+         It is recommended to use modules
+         `Crypto.Signature.PKCS1_PSS` or `Crypto.Signature.PKCS1_v1_5` instead.
+
+        :Parameter M: The piece of data to sign with RSA. It may
+         not be numerically larger than the RSA module (**n**).
+        :Type M: byte string or long
+
+        :Parameter K: A random parameter (*for compatibility only. This
+         value will be ignored*)
+        :Type K: byte string or long
+
+        :Return: A 2-item tuple. The first item is the actual signature (a
+         long). The second item is always None.
+        """
+        return pubkey.pubkey.sign(self, M, K)
+
+    def verify(self, M, signature):
+        """Verify the validity of an RSA signature.
+
+        :attention: this function performs the plain, primitive RSA encryption
+         (*schoolbook*). In real applications, you always need to use proper
+         cryptographic padding, and you should not directly verify data with
+         this method. Failure to do so may lead to security vulnerabilities.
+         It is recommended to use modules
+         `Crypto.Signature.PKCS1_PSS` or `Crypto.Signature.PKCS1_v1_5` instead.
+ 
+        :Parameter M: The expected message.
+        :Type M: byte string or long
+
+        :Parameter signature: The RSA signature to verify. The first item of
+         the tuple is the actual signature (a long not larger than the modulus
+         **n**), whereas the second item is always ignored.
+        :Type signature: A 2-item tuple as return by `sign`
+
+        :Return: True if the signature is correct, False otherwise.
+        """
+        return pubkey.pubkey.verify(self, M, signature)
 
     def _encrypt(self, c, K):
         return (self.key._encrypt(c),)
@@ -195,7 +324,7 @@ class _RSAobj(pubkey.pubkey):
          PKCS standards are not relevant for the *OpenSSH* format.
         :Type pkcs: integer
 
-        :Return: A string with the encoded public or private half.
+        :Return: A byte string with the encoded public or private half.
         :Raise ValueError:
             When the format is unknown.
         """
@@ -317,7 +446,7 @@ class RSAImplementation(object):
         return self._current_randfunc
 
     def generate(self, bits, randfunc=None, progress_func=None, e=65537):
-        """Randomly generate a fresh, new RSA key object.
+        """Randomly generate a fresh, new RSA key.
 
         :Parameters:
          bits : int
@@ -349,6 +478,8 @@ class RSAImplementation(object):
         :attention: Exponent 3 is also widely used, but it requires very special care when padding
             the message.
 
+        :Return: An RSA key object (`_RSAobj`).
+
         :Raise ValueError:
             When **bits** is too little or not a multiple of 256, or when
             **e** is not odd or smaller than 2.
@@ -364,7 +495,7 @@ class RSAImplementation(object):
         return _RSAobj(self, key)
 
     def construct(self, tup):
-        """Construct an RSA key object from a tuple of valid RSA components.
+        """Construct an RSA key from a tuple of valid RSA components.
 
         The modulus **n** must be the product of two primes.
         The public exponent **e** must be odd and larger than 1.
@@ -387,6 +518,8 @@ class RSAImplementation(object):
                     4. First factor of n (p). Optional.
                     5. Second factor of n (q). Optional.
                     6. CRT coefficient, (1/p) mod q (u). Optional.
+        
+        :Return: An RSA key object (`_RSAobj`).
         """
         key = self._math.rsa_construct(*tup)
         return _RSAobj(self, key)
@@ -458,6 +591,8 @@ class RSAImplementation(object):
             In case of an encrypted PEM key, this is the pass phrase from which the encryption key is derived.
         :Type passphrase: string
         
+        :Return: An RSA key object (`_RSAobj`).
+
         :Raise ValueError/IndexError/TypeError:
             When the given key cannot be parsed (possibly because the pass phrase is wrong).
         """

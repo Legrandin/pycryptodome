@@ -31,6 +31,10 @@ from Crypto.Util.number import *
 
 # Basic public key class
 class pubkey:
+    """An abstract class for a public key object.
+
+    :undocumented: __getstate__, __setstate__, __eq__, __ne__, validate
+    """
     def __init__(self):
         pass
 
@@ -52,9 +56,16 @@ integers, MPZ objects, or whatever."""
             if d.has_key(key): self.__dict__[key]=bignum(d[key])
 
     def encrypt(self, plaintext, K):
-        """encrypt(plaintext:string|long, K:string|long) : tuple
-        Encrypt the string or integer plaintext.  K is a random
-        parameter required by some algorithms.
+        """Encrypt a piece of data.
+
+        :Parameter plaintext: The piece of data to encrypt.
+        :Type plaintext: byte string or long
+
+        :Parameter K: A random parameter required by some algorithms
+        :Type K: byte string or long
+
+        :Return: A tuple with two items. Each item is of the same type as the
+         plaintext (string or long).
         """
         wasString=0
         if isinstance(plaintext, types.StringType):
@@ -66,8 +77,13 @@ integers, MPZ objects, or whatever."""
         else: return ciphertext
 
     def decrypt(self, ciphertext):
-        """decrypt(ciphertext:tuple|string|long): string
-        Decrypt 'ciphertext' using this key.
+        """Decrypt a piece of data. 
+
+        :Parameter ciphertext: The piece of data to decrypt.
+        :Type ciphertext: byte string, long or a 2-item tuple as returned by `encrypt`
+
+        :Return: A byte string if ciphertext was a byte string or a tuple
+         of byte strings. A long otherwise.
         """
         wasString=0
         if not isinstance(ciphertext, types.TupleType):
@@ -79,9 +95,15 @@ integers, MPZ objects, or whatever."""
         else: return plaintext
 
     def sign(self, M, K):
-        """sign(M : string|long, K:string|long) : tuple
-        Return a tuple containing the signature for the message M.
-        K is a random parameter required by some algorithms.
+        """Sign a piece of data.
+
+        :Parameter M: The piece of data to encrypt.
+        :Type M: byte string or long
+
+        :Parameter K: A random parameter required by some algorithms
+        :Type K: byte string or long
+
+        :Return: A tuple with two items.
         """
         if (not self.has_private()):
             raise TypeError('Private key not available in this object')
@@ -90,9 +112,15 @@ integers, MPZ objects, or whatever."""
         return self._sign(M, K)
 
     def verify (self, M, signature):
-        """verify(M:string|long, signature:tuple) : bool
-        Verify that the signature is valid for the message M;
-        returns true if the signature checks out.
+        """Verify the validity of a signature.
+
+        :Parameter M: The expected message.
+        :Type M: byte string or long
+
+        :Parameter signature: The signature to verify.
+        :Type signature: tuple with two items, as return by `sign`
+
+        :Return: True if the signature is correct, False otherwise.
         """
         if isinstance(M, types.StringType): M=bytes_to_long(M)
         return self._verify(M, signature)
@@ -103,8 +131,15 @@ integers, MPZ objects, or whatever."""
                       DeprecationWarning)
 
     def blind(self, M, B):
-        """blind(M : string|long, B : string|long) : string|long
-        Blind message M using blinding factor B.
+        """Blind a message to prevent certain side-channel attacks.
+       
+        :Parameter M: The message to blind.
+        :Type M: byte string or long
+
+        :Parameter B: Blinding factor.
+        :Type B: byte string or long
+
+        :Return: A byte string if M was so. A long otherwise.
         """
         wasString=0
         if isinstance(M, types.StringType):
@@ -115,8 +150,13 @@ integers, MPZ objects, or whatever."""
         else: return blindedmessage
 
     def unblind(self, M, B):
-        """unblind(M : string|long, B : string|long) : string|long
-        Unblind message M using blinding factor B.
+        """Unblind a message after cryptographic processing.
+        
+        :Parameter M: The encoded message to unblind.
+        :Type M: byte string or long
+
+        :Parameter B: Blinding factor.
+        :Type B: byte string or long
         """
         wasString=0
         if isinstance(M, types.StringType):
@@ -131,29 +171,35 @@ integers, MPZ objects, or whatever."""
     # signature-only algorithms.  They both return Boolean values
     # recording whether this key's algorithm can sign and encrypt.
     def can_sign (self):
-        """can_sign() : bool
-        Return a Boolean value recording whether this algorithm can
-        generate signatures.  (This does not imply that this
-        particular key object has the private information required to
-        to generate a signature.)
+        """Tell if the algorithm can deal with cryptographic signatures.
+
+        This property concerns the *algorithm*, not the key itself.
+        It may happen that this particular key object hasn't got
+        the private information required to generate a signature.
+
+        :Return: boolean
         """
         return 1
 
     def can_encrypt (self):
-        """can_encrypt() : bool
-        Return a Boolean value recording whether this algorithm can
-        encrypt data.  (This does not imply that this
-        particular key object has the private information required to
-        to decrypt a message.)
+        """Tell if the algorithm can deal with data encryption.
+       
+        This property concerns the *algorithm*, not the key itself.
+        It may happen that this particular key object hasn't got
+        the private information required to decrypt data.
+
+        :Return: boolean
         """
         return 1
 
     def can_blind (self):
-        """can_blind() : bool
-        Return a Boolean value recording whether this algorithm can
-        blind data.  (This does not imply that this
-        particular key object has the private information required to
-        to blind a message.)
+        """Tell if the algorithm can deal with data blinding.
+       
+        This property concerns the *algorithm*, not the key itself.
+        It may happen that this particular key object hasn't got
+        the private information required carry out blinding.
+
+        :Return: boolean
         """
         return 0
 
@@ -161,21 +207,23 @@ integers, MPZ objects, or whatever."""
     # subclasses.
 
     def size (self):
-        """size() : int
-        Return the maximum number of bits that can be handled by this key.
+        """Tell the maximum number of bits that can be handled by this key.
+
+        :Return: int
         """
         return 0
 
     def has_private (self):
-        """has_private() : bool
-        Return a Boolean denoting whether the object contains
-        private components.
+        """Tell if the key object contains private components.
+
+        :Return: bool
         """
         return 0
 
     def publickey (self):
-        """publickey(): object
-        Return a new key object containing only the public information.
+        """Construct a new key carrying only the public information.
+
+        :Return: A new `pubkey` object.
         """
         return self
 

@@ -8,6 +8,13 @@ output: html
 target: Doc/apidoc/
 sourcecode: no
 
+# Do not include private variables
+private: no
+
+# Include the complete set of inherited methods, but grouped in a special
+# section
+inheritance: grouped
+
 name: PyCrypto API Documentation
 url: http://www.pycrypto.org/
 
