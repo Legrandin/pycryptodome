@@ -134,7 +134,7 @@ class _RSAobj(pubkey.pubkey):
         :Type K: byte string or long
 
         :attention: this function performs the plain, primitive RSA encryption
-         (*schoolbook*). In real applications, you always need to use proper
+         (*textbook*). In real applications, you always need to use proper
          cryptographic padding, and you should not directly encrypt data with
          this method. Failure to do so may lead to security vulnerabilities.
          It is recommended to use modules
@@ -152,7 +152,7 @@ class _RSAobj(pubkey.pubkey):
         Decryption always takes place with blinding.
 
         :attention: this function performs the plain, primitive RSA decryption
-         (*schoolbook*). In real applications, you always need to use proper
+         (*textbook*). In real applications, you always need to use proper
          cryptographic padding, and you should not directly decrypt data with
          this method. Failure to do so may lead to security vulnerabilities.
          It is recommended to use modules
@@ -176,7 +176,7 @@ class _RSAobj(pubkey.pubkey):
         Signing always takes place with blinding.
 
         :attention: this function performs the plain, primitive RSA decryption
-         (*schoolbook*). In real applications, you always need to use proper
+         (*textbook*). In real applications, you always need to use proper
          cryptographic padding, and you should not directly sign data with
          this method. Failure to do so may lead to security vulnerabilities.
          It is recommended to use modules
@@ -199,7 +199,7 @@ class _RSAobj(pubkey.pubkey):
         """Verify the validity of an RSA signature.
 
         :attention: this function performs the plain, primitive RSA encryption
-         (*schoolbook*). In real applications, you always need to use proper
+         (*textbook*). In real applications, you always need to use proper
          cryptographic padding, and you should not directly verify data with
          this method. Failure to do so may lead to security vulnerabilities.
          It is recommended to use modules
@@ -393,7 +393,7 @@ class RSAImplementation(object):
     """
     An RSA key factory.
 
-    This class is only internally used to implement the methods of the `Crypto.PublicKey.RSA` modulule.
+    This class is only internally used to implement the methods of the `Crypto.PublicKey.RSA` module.
 
     :sort: __init__,generate,construct,importKey
     :undocumented: _g*, _i*
@@ -413,7 +413,7 @@ class RSAImplementation(object):
                                 Specify how to collect random data:
 
                                 - *None* (default). Use Random.new().read().
-                                - not *Note* . Use the specified function directly.
+                                - not *None* . Use the specified function directly.
         :Raise RuntimeError:
             When **use_fast_math** =True but fast math is not available.
         """
@@ -451,23 +451,25 @@ class RSAImplementation(object):
         :Parameters:
          bits : int
                             Key length, or size (in bits) of the RSA modulus.
-
                             It must be a multiple of 256, and no smaller than 1024.
+
          randfunc : callable
                             Random number generation function; it should accept
                             a single integer N and return a string of random data
                             N bytes long.
+                            If not specified, a new one will be instantiated
+                            from ``Crypto.Random``.
+
          progress_func : callable
                             Optional function that will be called with a short string
                             containing the key parameter currently being generated;
                             it's useful for interactive applications where a user is
                             waiting for a key to be generated.
+
          e : int
                             Public RSA exponent. It must be an odd positive integer.
-
                             It is typically a small number with very few ones in its
                             binary representation.
-
                             The default value 65537 (= ``0b10000000000000001`` ) is a safe
                             choice: other common values are 5, 7, 17, and 257.
 
