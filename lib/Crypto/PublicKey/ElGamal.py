@@ -23,6 +23,8 @@
 # SOFTWARE.
 # ===================================================================
 
+"""ElGamal public-key algorithm (encryption and signature)."""
+
 __revision__ = "$Id$"
 
 from Crypto.PublicKey.pubkey import *

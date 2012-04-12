@@ -24,6 +24,8 @@
 # ===================================================================
 #
 
+"""q-NEW public-key signature algorithm."""
+
 __revision__ = "$Id$"
 
 from Crypto.PublicKey import pubkey

@@ -33,6 +33,8 @@ Crypto.PublicKey.ElGamal  (Signing and encryption)
 Crypto.PublicKey.RSA      (Signing, encryption, and blinding)
 Crypto.PublicKey.qNEW     (Signature only)
 ========================  =============================================
+
+:undocumented: _DSA, _RSA, _fastmath, _slowmath, pubkey
 """
 
 __all__ = ['RSA', 'DSA', 'ElGamal', 'qNEW']

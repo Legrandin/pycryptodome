@@ -22,7 +22,7 @@
 # SOFTWARE.
 # ===================================================================
 
-"""RSA public-key cryptography algorithm.
+"""RSA public-key cryptography algorithm (signature and encryption).
 
 RSA_ is the most widespread and used public key algorithm. Its security is
 based on the difficulty of factoring large integers. The algorithm has
@@ -308,7 +308,7 @@ class _RSAobj(pubkey.pubkey):
         :Parameter format: The format to use for wrapping the key.
 
             - *'DER'*. Binary encoding, always unencrypted.
-            - *'PEM'*. Textual encoding, done according to RFC1421/3.
+            - *'PEM'*. Textual encoding, done according to `RFC1421`_/`RFC1423`_.
               Unencrypted (default) or encrypted.
             - *'OpenSSH'*. Textual encoding, done according to OpenSSH specification.
               Only suitable for public keys (not private keys).
@@ -318,7 +318,7 @@ class _RSAobj(pubkey.pubkey):
         :Type passphrase: string 
 
         :Parameter pkcs: The PKCS standard to follow for encoding the key.
-         You have two choices: **1** (PKCS#1, RFC3447) or **8** (PKCS#8, RFC5208).
+         You have two choices: **1** (PKCS#1, `RFC3447`_) or **8** (PKCS#8, `RFC5208`_).
          PKCS#8 is only available for private keys.
          PKCS#1 is the default.
          PKCS standards are not relevant for the *OpenSSH* format.
@@ -327,6 +327,11 @@ class _RSAobj(pubkey.pubkey):
         :Return: A byte string with the encoded public or private half.
         :Raise ValueError:
             When the format is unknown.
+
+        .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
+        .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
+        .. _RFC3447: http://www.ietf.org/rfc/rfc3447.txt
+        .. _RFC5208: http://www.ietf.org/rfc/rfc5208.txt
         """
         if passphrase is not None:
             passphrase = tobytes(passphrase)
@@ -580,9 +585,9 @@ class RSAImplementation(object):
             The key can be in any of the following formats:
 
             - DER + PKCS#1 (binary)
-            - PEM + PKCS#1 (textual, according to RFC1421/3)
+            - PEM + PKCS#1 (textual, according to `RFC1421`_/`RFC1423`_)
             - DER + PKCS#8 (binary, private key only)
-            - PEM + PKCS#8 (textual, according to RFC5208, private key only)
+            - PEM + PKCS#8 (textual, according to `RFC5208`_, private key only)
             - OpenSSH (textual public key only)
             
             In case of PEM + PKCS#1, the key can be encrypted with DES or 3TDES according to a certain ``pass phrase``.
@@ -597,6 +602,10 @@ class RSAImplementation(object):
 
         :Raise ValueError/IndexError/TypeError:
             When the given key cannot be parsed (possibly because the pass phrase is wrong).
+
+        .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
+        .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
+        .. _RFC5208: http://www.ietf.org/rfc/rfc5208.txt
         """
         externKey = tobytes(externKey)
         if passphrase is not None:
