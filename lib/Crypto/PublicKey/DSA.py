@@ -25,9 +25,9 @@
 """DSA public-key signature algorithm.
 
 DSA_ is a widespread public-key signature algorithm. Its security is
-based on the discrete logarithm problem, that is, given a multiplicative
-group, a generator *g*, and an element *h*, the difficulty
-of finding another element *x* such that *g^x = h*. The problem is believed
+based on the discrete logarithm problem (DLP_). Given a cyclic
+group, a generator *g*, and an element *h*, it is hard
+to find an integer *x* such that *g^x = h*. The problem is believed
 to be difficult, and it has been proved such (and therefore secure) for
 more than 30 years.
 
@@ -36,15 +36,17 @@ DSA is reasonably secure for new designs.
 The algorithm can only be used for authentication (digital signature).
 DSA cannot be used for confidentiality (encryption).
 
-The group is actually a sub-group over a finite finite field of prime order *p*.
-The sub-group order is *q*, and it always holds that *(p-1)* is a multiple of *q*. 
+The group is actually a sub-group over the integers modulo *p*, with *p* prime.
+The sub-group order is *q*, which is prime too; it always holds that *(p-1)* is a multiple of *q*.
 The cryptographic strength is linked to the magnitude of *p* and *q*.
 In 2012, a sufficient size is deemed to be 2048 bits for *p* and 256 bits for *q*.
 For more information, see the most recent ECRYPT_ report.
 
-The actual value of *g* is not important. *(p,q,g)* are called *domain
-parameters*; they are not sensitive but must be shared by both parties (the
-signer and the verifier).
+The values *(p,q,g)* are called *domain parameters*;
+they are not sensitive but must be shared by both parties (the signer and the verifier).
+
+The DSA signature is twice as big the size of *q* (64 bytes if *q* is 256 bit
+long).
 
 This module provides facilities for generating new DSA keys and for constructing
 them from known components. DSA keys allows you to perform basic signing and
@@ -66,6 +68,7 @@ verification.
     >>>     print "Incorrect signature"
 
 .. _DSA: http://en.wikipedia.org/wiki/Digital_Signature_Algorithm
+.. _DLP: http://www.cosic.esat.kuleuven.be/publications/talk-78.pdf
 .. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
 """
 
@@ -130,13 +133,17 @@ class _DSAobj(pubkey.pubkey):
         :attention: selection of *K* is crucial for security. Generating a
          random number larger than *q* and taking the modulus by *q* is
          **not** secure, since smaller values will occur more frequently.
-         Generating a random larger systematically smaller than *q-1*
-         (e.g. *floor((q-1)/8)* bytes) is also **not** secure. In general,
+         Generating a random number systematically smaller than *q-1*
+         (e.g. *floor((q-1)/8)* random bytes) is also **not** secure. In general,
          it shall not be possible for an attacker to know the value of `any
          bit of K`__.
 
         :attention: The number *K* shall not be reused for any other
          operation and shall be discarded immediately.
+
+        :attention: It is strongly recommended to have M be a digest created
+         via a cryptographic hash, otherwise an attacker may mount an
+         existential forgery attack.
 
         :Return: A tuple with 2 longs.
 

@@ -32,9 +32,12 @@ secure for new designs.
 The algorithm can be used for both confidentiality (encryption) and
 authentication (digital signature). It is worth noting that signing and
 decryption are significantly slower than verification and encryption.
-The cryptograhic strength is primarily linked to the length of the modulus.
+The cryptograhic strength is primarily linked to the length of the modulus *n*.
 In 2012, a sufficient length is deemed to be 2048 bits. For more information,
 see the most recent ECRYPT_ report.
+
+Both RSA ciphertext and RSA signature are as big as the modulus *n* (256
+bytes if *n* is 2048 bit long).
 
 This module provides facilities for generating fresh, new RSA keys, constructing
 them from known components, exporting them, and importing them.
