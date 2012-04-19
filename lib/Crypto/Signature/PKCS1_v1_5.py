@@ -58,7 +58,7 @@ the RSA key:
 """
 
 __revision__ = "$Id$"
-__all__ = [ 'new' ]
+__all__ = [ 'new', 'PKCS115_SigScheme' ]
 
 import Crypto.Util.number
 from Crypto.Util.number import ceil_div

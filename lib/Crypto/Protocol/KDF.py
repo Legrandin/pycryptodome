@@ -42,7 +42,7 @@ from Crypto.Util.py3compat import *
 from Crypto.Hash import SHA as SHA1, HMAC
 from Crypto.Util.strxor import strxor
 
-def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=SHA1):
+def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
 
     This function performs key derivation according an old version of
@@ -66,9 +66,12 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=SHA1):
      hashAlgo : module
         The hash algorithm to use, as a module or an object from the `Crypto.Hash` package.
         The digest length must be no shorter than ``dkLen``.
+        The default algorithm is `SHA1`.
 
     :Return: A byte string of length `dkLen` that can be used as key.
-"""
+    """
+    if not hashAlgo:
+        hashAlgo = SHA1
     password = tobytes(password)
     pHash = hashAlgo.new(password+salt)
     digest = pHash.digest_size

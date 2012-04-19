@@ -64,7 +64,7 @@ the RSA key:
 from __future__ import nested_scopes
 
 __revision__ = "$Id$"
-__all__ = [ 'new' ]
+__all__ = [ 'new', 'PSS_SigScheme' ]
 
 from Crypto.Util.py3compat import *
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:

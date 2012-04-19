@@ -52,7 +52,7 @@ the RSA key:
 from __future__ import nested_scopes
 
 __revision__ = "$Id$"
-__all__ = [ 'new' ]
+__all__ = [ 'new', 'PKCS1OAEP_Cipher' ]
 
 import Crypto.Signature.PKCS1_PSS
 import Crypto.Hash.SHA

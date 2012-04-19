@@ -68,7 +68,7 @@ the RSA key:
 """
 
 __revision__ = "$Id$"
-__all__ = [ 'new' ]
+__all__ = [ 'new', 'PKCS115_Cipher' ]
 
 from Crypto.Util.number import ceil_div
 from Crypto.Util.py3compat import *
