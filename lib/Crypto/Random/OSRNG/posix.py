@@ -25,10 +25,12 @@
 __revision__ = "$Id$"
 __all__ = ['DevURandomRNG']
 
+import errno
 import os
 import stat
 
 from rng_base import BaseRNG
+from Crypto.Util.py3compat import b
 
 class DevURandomRNG(BaseRNG):
 
@@ -46,7 +48,6 @@ class DevURandomRNG(BaseRNG):
             raise TypeError("%r is not a character special device" % (self.name,))
 
         self.__file = f
-        self._read = f.read
 
         BaseRNG.__init__(self)
 
@@ -54,7 +55,29 @@ class DevURandomRNG(BaseRNG):
         self.__file.close()
 
     def _read(self, N):
-        return self.__file.read(N)
+        # Starting with Python 3 open with buffering=0 returns a FileIO object.
+        # FileIO.read behaves like read(2) and not like fread(3) and thus we
+        # have to handle the case that read returns less data as requested here
+        # more carefully.
+        data = b("")
+        while len(data) < N:
+            try:
+                d = self.__file.read(N - len(data))
+            except IOError, e:
+                # read(2) has been interrupted by a signal; redo the read
+                if e.errno == errno.EINTR:
+                    continue
+                raise
+
+            if d is None:
+                # __file is in non-blocking mode and no data is available
+                return data
+            if len(d) == 0:
+                # __file is in blocking mode and arrived at EOF
+                return data
+
+            data += d
+        return data
 
 def new(*args, **kwargs):
     return DevURandomRNG(*args, **kwargs)

@@ -252,10 +252,14 @@ class MiscTests(unittest.TestCase):
 
     def test_isPrime(self):
         """Util.number.isPrime"""
+        self.assertEqual(number.isPrime(-3), False)     # Regression test: negative numbers should not be prime
+        self.assertEqual(number.isPrime(-2), False)     # Regression test: negative numbers should not be prime
+        self.assertEqual(number.isPrime(1), False)      # Regression test: isPrime(1) caused some versions of PyCrypto to crash.
         self.assertEqual(number.isPrime(2), True)
         self.assertEqual(number.isPrime(3), True)
         self.assertEqual(number.isPrime(4), False)
         self.assertEqual(number.isPrime(2L**1279-1), True)
+        self.assertEqual(number.isPrime(-(2L**1279-1)), False)     # Regression test: negative numbers should not be prime
         # test some known gmp pseudo-primes taken from
         # http://www.trnicely.net/misc/mpzspsp.html
         for composite in (43 * 127 * 211, 61 * 151 * 211, 15259 * 30517,
@@ -271,6 +275,14 @@ class MiscTests(unittest.TestCase):
         self.assertEqual(number.size(0xa2),8)
         self.assertEqual(number.size(0xa2ba40),8*3)
         self.assertEqual(number.size(0xa2ba40ee07e3b2bd2f02ce227f36a195024486e49c19cb41bbbdfbba98b22b0e577c2eeaffa20d883a76e65e394c69d4b3c05a1e8fadda27edb2a42bc000fe888b9b32c22d15add0cd76b3e7936e19955b220dd17d4ea904b1ec102b2e4de7751222aa99151024c7cb41cc5ea21d00eeb41f7c800834d2c6e06bce3bce7ea9a5L), 1024)
+
+    def test_negative_number_roundtrip_mpzToLongObj_longObjToMPZ(self):
+        """Test that mpzToLongObj and longObjToMPZ (internal functions) roundtrip negative numbers correctly."""
+        n = -100000000000000000000000000000000000L
+        e = 2L
+        k = number._fastmath.rsa_construct(n, e)
+        self.assertEqual(n, k.n)
+        self.assertEqual(e, k.e)
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
