@@ -31,21 +31,26 @@ to find an integer *x* such that *g^x = h*. The problem is believed
 to be difficult, and it has been proved such (and therefore secure) for
 more than 30 years.
 
+The group is actually a sub-group over the integers modulo *p*, with *p* prime.
+The sub-group order is *q*, which is prime too; it always holds that *(p-1)* is a multiple of *q*.
+The cryptographic strength is linked to the magnitude of *p* and *q*.
+The signer holds a value *x* (*0<x<q-1*) as private key, and its public
+key (*y* where *y=g^x mod p*) is distributed.
+
+In 2012, a sufficient size is deemed to be 2048 bits for *p* and 256 bits for *q*.
+For more information, see the most recent ECRYPT_ report.
+
 DSA is reasonably secure for new designs.
 
 The algorithm can only be used for authentication (digital signature).
 DSA cannot be used for confidentiality (encryption).
 
-The group is actually a sub-group over the integers modulo *p*, with *p* prime.
-The sub-group order is *q*, which is prime too; it always holds that *(p-1)* is a multiple of *q*.
-The cryptographic strength is linked to the magnitude of *p* and *q*.
-In 2012, a sufficient size is deemed to be 2048 bits for *p* and 256 bits for *q*.
-For more information, see the most recent ECRYPT_ report.
-
 The values *(p,q,g)* are called *domain parameters*;
 they are not sensitive but must be shared by both parties (the signer and the verifier).
+Different signers can share the same domain parameters with no security
+concerns.
 
-The DSA signature is twice as big the size of *q* (64 bytes if *q* is 256 bit
+The DSA signature is twice as big as the size of *q* (64 bytes if *q* is 256 bit
 long).
 
 This module provides facilities for generating new DSA keys and for constructing
@@ -141,9 +146,8 @@ class _DSAobj(pubkey.pubkey):
         :attention: The number *K* shall not be reused for any other
          operation and shall be discarded immediately.
 
-        :attention: It is strongly recommended to have M be a digest created
-         via a cryptographic hash, otherwise an attacker may mount an
-         existential forgery attack.
+        :attention: M must be a digest cryptographic hash, otherwise
+         an attacker may mount an existential forgery attack.
 
         :Return: A tuple with 2 longs.
 

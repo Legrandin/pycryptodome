@@ -34,7 +34,7 @@ and an element *h*, it is hard to find an integer *x* such that *g^x = h*.
 The group is the largest multiplicative sub-group of the integers modulo *p*,
 with *p* prime.
 The signer holds a value *x* (*0<x<p-1*) as private key, and its public
-key (*g*, *p*, *y* where *y=g^x mod p*) is distributed.
+key (*y* where *y=g^x mod p*) is distributed.
 
 The ElGamal signature is twice as big as *p*.
 
@@ -48,9 +48,18 @@ the element *g^{ab}* when only *g^a* and *g^b* are known, and not *a* and *b*.
 As before, the group is the largest multiplicative sub-group of the integers
 modulo *p*, with *p* prime.
 The receiver holds a value *a* (*0<a<p-1*) as private key, and its public key
-(*g*, *p*, *b* where *b*=g^a*) is given to the sender.
+(*b* where *b*=g^a*) is given to the sender.
 
 The ElGamal ciphertext is twice as big as *p*.
+
+Domain parameters
+-----------------
+For both signature and encryption schemes, the values *(p,g)* are called
+*domain parameters*.
+They are not sensitive but must be distributed to all parties (senders and
+receivers).
+Different signers can share the same domain parameters, as can
+different recipients of encrypted messages.
 
 Security
 --------
@@ -294,9 +303,8 @@ class ElGamalobj(pubkey):
         :attention: The number *K* shall not be reused for any other
          operation and shall be discarded immediately.
 
-        :attention: It is strongly recommended to have M be a digest created
-         via a cryptographic hash, otherwise an attacker may mount an
-         existential forgery attack.
+        :attention: M must be be a cryptographic hash, otherwise an
+         attacker may mount an existential forgery attack.
 
         :Return: A tuple with 2 longs.
         """
