@@ -1062,7 +1062,7 @@ isPrime (PyObject * self, PyObject * args, PyObject * kwargs)
 	longObjToMPZ (n, (PyLongObject *) l);
 
 	Py_BEGIN_ALLOW_THREADS;
-	/* first check if n is known to be prime and do some trail division */
+	/* first check if n is known to be prime and do some trial division */
 	for (i = 0; i < SIEVE_BASE_SIZE; ++i)
 	{
 		if (mpz_cmp_ui (n, sieve_base[i]) == 0)
@@ -1342,6 +1342,7 @@ rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 	}
 
 	Py_BEGIN_ALLOW_THREADS;
+	/* check special cases (n==2, n even, n < 2) */
 	if ((mpz_tstbit (n, 0) == 0) || (mpz_cmp_ui (n, 3) < 0)) {
 		return_val = (mpz_cmp_ui (n, 2) == 0);
 		Py_BLOCK_THREADS;
