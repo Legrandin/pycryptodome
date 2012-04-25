@@ -1342,8 +1342,11 @@ rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 	}
 
 	Py_BEGIN_ALLOW_THREADS;
-	if ((mpz_tstbit (n, 0) == 0) || (mpz_cmp_ui (n, 3) < 0))
-		return (mpz_cmp_ui (n, 2) == 0);
+	if ((mpz_tstbit (n, 0) == 0) || (mpz_cmp_ui (n, 3) < 0)) {
+		return_val = (mpz_cmp_ui (n, 2) == 0);
+		Py_BLOCK_THREADS;
+		return return_val;
+	}
 
 	mpz_init (tmp);
 	mpz_init (n_1);

@@ -252,6 +252,7 @@ class MiscTests(unittest.TestCase):
 
     def test_isPrime(self):
         """Util.number.isPrime"""
+        self.assertEqual(number.isPrime(1), False)      # Regression test: isPrime(1) caused some versions of PyCrypto to crash.
         self.assertEqual(number.isPrime(2), True)
         self.assertEqual(number.isPrime(3), True)
         self.assertEqual(number.isPrime(4), False)
