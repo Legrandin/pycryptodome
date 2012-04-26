@@ -216,11 +216,11 @@ def construct(tup):
     """
 
     obj=ElGamalobj()
-    if len(tuple) not in [3,4]:
+    if len(tup) not in [3,4]:
         raise ValueError('argument for construct() wrong length')
-    for i in range(len(tuple)):
+    for i in range(len(tup)):
         field = obj.keydata[i]
-        setattr(obj, field, tuple[i])
+        setattr(obj, field, tup[i])
     return obj
 
 class ElGamalobj(pubkey):
@@ -348,7 +348,7 @@ class ElGamalobj(pubkey):
         return (a, b)
 
     def _verify(self, M, sig):
-        if sig[0]<1 or sig[0]>p-1:
+        if sig[0]<1 or sig[0]>self.p-1:
             return 0
         v1=pow(self.y, sig[0], self.p)
         v1=(v1*pow(sig[0], sig[1], self.p)) % self.p
