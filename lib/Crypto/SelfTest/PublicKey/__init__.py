@@ -33,6 +33,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.PublicKey import test_DSA;       tests += test_DSA.get_tests(config=config)
     from Crypto.SelfTest.PublicKey import test_RSA;       tests += test_RSA.get_tests(config=config)
     from Crypto.SelfTest.PublicKey import test_importKey; tests += test_importKey.get_tests(config=config)
+    from Crypto.SelfTest.PublicKey import test_ElGamal;   tests += test_ElGamal.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':
