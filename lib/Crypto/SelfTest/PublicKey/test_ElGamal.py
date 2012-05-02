@@ -40,7 +40,8 @@ class ElGamalTest(unittest.TestCase):
     # public domain. The following test vectors have been generated
     # with libgcrypt 1.5.0.
     #
-    tvs=[
+    # Encryption
+    tve=[
         {
         # 256 bits
         'p'  :'BA4CAEAAED8CBE952AFD2126C63EB3B345D65C2A0A73D2A3AD4138B6D09BD933',
@@ -66,6 +67,32 @@ class ElGamalTest(unittest.TestCase):
         }
     ]
 
+    # Signature
+    tvs=[
+        {
+        # 256 bits
+        'p'  :'D2F3C41EA66530838A704A48FFAC9334F4701ECE3A97CEE4C69DD01AE7129DD7',
+        'g'  :'05',
+        'y'  :'C3F9417DC0DAFEA6A05C1D2333B7A95E63B3F4F28CC962254B3256984D1012E7',
+        'x'  :'165E4A39BE44D5A2D8B1332D416BC559616F536BC735BB',
+        'k'  :'C7F0C794A7EAD726E25A47FF8928013680E73C51DD3D7D99BFDA8F492585928F',
+        'h'  :'48656C6C6F207468657265',
+        'sig1':'35CA98133779E2073EF31165AFCDEB764DD54E96ADE851715495F9C635E1E7C2',
+        'sig2':'0135B88B1151279FE5D8078D4FC685EE81177EE9802AB123A73925FC1CB059A7',
+        },
+        {
+        # 512 bits
+        'p'  :'E24CF3A4B8A6AF749DCA6D714282FE4AABEEE44A53BB6ED15FBE32B5D3C3EF9CC4124A2ECA331F3C1C1B667ACA3766825217E7B5F9856648D95F05330C6A19CF',
+        'g'  :'0B',
+        'y'  :'2AD3A1049CA5D4ED207B2431C79A8719BB4073D4A94E450EA6CEE8A760EB07ADB67C0D52C275EE85D7B52789061EE45F2F37D9B2AE522A51C28329766BFE68AC',
+        'x'  :'16CBB4F46D9ECCF24FF9F7E63CAA3BD8936341555062AB',
+        'k'  :'8A3D89A4E429FD2476D7D717251FB79BF900FFE77444E6BB8299DC3F84D0DD57ABAB50732AE158EA52F5B9E7D8813E81FD9F79470AE22F8F1CF9AEC820A78C69',
+        'h'  :'48656C6C6F207468657265',
+        'sig1':'BE001AABAFFF976EC9016198FBFEA14CBEF96B000CCC0063D3324016F9E91FE80D8F9325812ED24DDB2B4D4CF4430B169880B3CE88313B53255BD4EC0378586F',
+        'sig2':'5E266F3F837BA204E3BBB6DBECC0611429D96F8C7CE8F4EFDF9D4CB681C2A954468A357BF4242CEC7418B51DFC081BCD21299EF5B5A0DDEF3A139A1817503DDE',
+        }
+    ]
+
     def test_generate_128(self):
         self._test_random_key(128)
 
@@ -73,7 +100,7 @@ class ElGamalTest(unittest.TestCase):
         self._test_random_key(512)
 
     def test_encryption(self):
-        for tv in self.tvs:
+        for tv in self.tve:
             for as_longs in (0,1):
                 d = self.convert_tv(tv, as_longs)
                 key = ElGamal.construct(d['key'])
@@ -82,31 +109,44 @@ class ElGamalTest(unittest.TestCase):
                 self.assertEquals(ct[1], d['ct2'])
 
     def test_decryption(self):
-        for tv in self.tvs:
+        for tv in self.tve:
             for as_longs in (0,1):
                 d = self.convert_tv(tv, as_longs)
                 key = ElGamal.construct(d['key'])
                 pt = key.decrypt((d['ct1'], d['ct2']))
                 self.assertEquals(pt, d['pt'])
 
+    def test_signing(self):
+        for tv in self.tvs:
+            for as_longs in (0,1):
+                d = self.convert_tv(tv, 0)
+                key = ElGamal.construct(d['key'])
+                sig1, sig2 = key.sign(d['h'], d['k'])
+                self.assertEquals(sig1, d['sig1'])
+                self.assertEquals(sig2, d['sig2'])
+
+    def test_verification(self):
+        for tv in self.tvs:
+            for as_longs in (0,1):
+                d = self.convert_tv(tv, 0)
+                key = ElGamal.construct(d['key'])
+                res = key.verify( d['h'], (d['sig1'],d['sig2']) )
+                self.assertTrue(res)
+
     def convert_tv(self, tv, as_longs=0):
         """Convert a test vector from textual form (hexadecimal ascii
         to either integers or byte strings."""
-        comps = []
-        for c in 'p','g','y','x','k','pt','ct1','ct2':
-            comps += [ tv[c] ]
-        comps = map(a2b_hex, comps)
-        if as_longs:
-            comps = map(bytes_to_long, comps)
-        else:
-            comps = map(bytes_to_long, comps[:4]) + comps[4:]
-        ret = {}
-        ret['key'] = comps[:4]
-        i = 4
-        for v in 'k','pt','ct1','ct2':
-            ret[v] = comps[i]
-            i += 1
-        return ret
+        key_comps = 'p','g','y','x'
+        tv2 = {}
+        for c in tv.keys():
+            tv2[c] = a2b_hex(tv[c])
+            if as_longs or c in key_comps or c in ('sig1','sig2'):
+                tv2[c] = bytes_to_long(tv2[c])
+        tv2['key']=[]
+        for c in key_comps:
+            tv2['key'] += [tv2[c]]
+            del tv2[c]
+        return tv2
  
     def _test_random_key(self, bits):
         elgObj = ElGamal.generate(bits, Random.new().read)
