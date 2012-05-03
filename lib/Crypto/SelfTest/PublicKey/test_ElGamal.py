@@ -119,7 +119,7 @@ class ElGamalTest(unittest.TestCase):
     def test_signing(self):
         for tv in self.tvs:
             for as_longs in (0,1):
-                d = self.convert_tv(tv, 0)
+                d = self.convert_tv(tv, as_longs)
                 key = ElGamal.construct(d['key'])
                 sig1, sig2 = key.sign(d['h'], d['k'])
                 self.assertEquals(sig1, d['sig1'])
@@ -128,10 +128,14 @@ class ElGamalTest(unittest.TestCase):
     def test_verification(self):
         for tv in self.tvs:
             for as_longs in (0,1):
-                d = self.convert_tv(tv, 0)
+                d = self.convert_tv(tv, as_longs)
                 key = ElGamal.construct(d['key'])
+                # Positive test
                 res = key.verify( d['h'], (d['sig1'],d['sig2']) )
                 self.assertTrue(res)
+                # Negative test
+                res = key.verify( d['h'], (d['sig1']+1,d['sig2']) )
+                self.assertFalse(res)
 
     def convert_tv(self, tv, as_longs=0):
         """Convert a test vector from textual form (hexadecimal ascii
