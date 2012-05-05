@@ -20,39 +20,33 @@
 
 """Hashing algorithms
 
-Hash functions take arbitrary strings as input, and produce an output
-of fixed size that is dependent on the input; it should never be
-possible to derive the input data given only the hash function's
-output.  Hash functions can be used simply as a checksum, or, in
+Hash functions take arbitrary binary strings as input, and produce a random-like output
+of fixed size that is dependent on the input; it should be practically infeasible 
+to derive the original input data given only the hash function's
+output. In other words, the hash function is *one-way*.
+
+It should also not be practically feasible to find a second piece of data
+(a *second pre-image*) whose hash is the same as the original message
+(*weak collision resistance*).
+
+Finally, it should not be feasible to find two arbitrary messages with the
+same hash (*strong collision resistance*).
+
+The output of the hash function is called the *digest* of the input message.
+In general, the security of a hash function is related to the length of the
+digest. If the digest is *n* bits long, its security level is roughly comparable
+to the the one offered by an *n/2* bit encryption algorithm.
+
+Hash functions can be used simply as a integrity check, or, in
 association with a public-key algorithm, can be used to implement
 digital signatures.
 
-The hashing modules here all support the interface described in PEP
-247, "API for Cryptographic Hash Functions".
+The hashing modules here all support the interface described in `PEP
+247`_ , "API for Cryptographic Hash Functions". 
 
-Submodules:
+.. _`PEP 247` : http://www.python.org/dev/peps/pep-0247/
 
-Crypto.Hash.HMAC
- RFC 2104. Keyed-Hashing for Message Authentication.
-Crypto.Hash.MD2
- RFC1319. Rivest's Message Digest algorithm, with a 128 bit digest. This algorithm is both slow and insecure.
-Crypto.Hash.MD4
- RFC1320. Rivest's Message Digest algorithm, with a 128 bit digest. This algorithm is insecure.
-Crypto.Hash.MD5
- RFC1321. Rivest's Message Digest algorithm, with a 128 bit digest. This algorithm is insecure.
-Crypto.Hash.RIPEMD
- RACE Integrity Primitives Evaluation Message Digest algorithm, with a 160 bit digest.
-Crypto.Hash.SHA
- Secure Hash Algorithm 1 (SHA-1), with a 160 bit digest. Published in FIPS PUB 180-1/2/3.
-Crypto.Hash.SHA224
- Secure Hash Algorithm 2 (SHA-2 family), with a 224 bit digest. Published in FIPS PUB 180-2/3.
-Crypto.Hash.SHA256
- Secure Hash Algorithm 2 (SHA-2 family), with a 256 bit digest. Published in FIPS PUB 180-2/3.
-Crypto.Hash.SHA384
- Secure Hash Algorithm 2 (SHA-2 family), with a 384 bit digest. Published in FIPS PUB 180-2/3.
-Crypto.Hash.SHA512
- Secure Hash Algorithm 2 (SHA-2 family), with a 512 bit digest. Published in FIPS PUB 180-2/3.
-
+:undocumented: _MD2, _MD4, _RIPEMD160, _SHA224, _SHA256, _SHA384, _SHA512
 """
 
 __all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD', 'SHA',

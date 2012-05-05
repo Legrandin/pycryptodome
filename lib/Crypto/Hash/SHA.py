@@ -18,30 +18,29 @@
 # SOFTWARE.
 # ===================================================================
 
-# Just use the SHA module from the Python standard library
+"""SHA-1 cryptographic hash algorithm.
 
-__revision__ = "$Id$"
+SHA-1_ produces the 160 bit digest of a message.
 
-__all__ = ['new', 'digest_size']
+    >>> from Crypto.Hash import SHA
+    >>>
+    >>> h = SHA.new()
+    >>> h.update(b'Hello')
+    >>> print h.hexdigest()
+
+*SHA* stands for Secure Hash Algorithm.
+
+This algorithm is not considered secure. Do not use it for new designs.
+
+.. _SHA-1: http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
+"""
+
+_revision__ = "$Id$"
+
+__all__ = ['new', 'digest_size', 'SHA1Hash' ]
 
 from Crypto.Util.py3compat import *
-from Crypto.Util.wrapper import Wrapper
-
-# The OID for SHA-1 is:
-#
-# id-sha1    OBJECT IDENTIFIER ::= {
-#          iso(1) identified-organization(3) oiw(14) secsig(3)
-#          algorithms(2) 26
-#      }
-oid = b('\x06\x05\x2b\x0e\x03\x02\x1a')
-
-def new(data=b("")):
-    obj = Wrapper(hashFactory, data)
-    obj.oid = oid
-    obj.new = globals()['new']
-    if not hasattr(obj, 'digest_size'):
-        obj.digest_size = digest_size
-    return obj
+from Crypto.Hash.hashalgo import HashAlgo
 
 try:
     # The sha module is deprecated in Python 2.6, so use hashlib when possible.
@@ -52,5 +51,48 @@ except ImportError:
     import sha
     hashFactory = sha
 
-digest_size = 20
-block_size = 64
+class SHA1Hash(HashAlgo):
+    """Class that implements a SHA-1 hash
+    
+    :undocumented: block_size
+    """
+
+    #: ASN.1 Object identifier (OID)::
+    #:
+    #:  id-sha1    OBJECT IDENTIFIER ::= {
+    #:      iso(1) identified-organization(3) oiw(14) secsig(3)
+    #:       algorithms(2) 26
+    #:  }
+    #:
+    #: This value uniquely identifies the SHA-1 algorithm.
+    oid = b('\x06\x05\x2b\x0e\x03\x02\x1a')
+
+    digest_size = 20
+    block_size = 64
+
+    def __init__(self, data=None):
+        HashAlgo.__init__(self, hashFactory, data)
+
+    def new(self, data=None):
+        return SHA1Hash(data)
+
+def new(data=None):
+    """Return a fresh instance of the hash object.
+
+    :Parameters:
+       data : byte string
+        The very first chunk of the message to hash.
+        It is equivalent to an early call to `SHA1Hash.update()`.
+        Optional.
+
+    :Return: A `SHA1Hash` object
+    """
+    return SHA1Hash().new(data)
+
+#: The size of the resulting hash in bytes.
+digest_size = SHA1Hash.digest_size
+
+#: The internal block size of the hash algorithm in bytes.
+block_size = SHA1Hash.block_size
+
+
