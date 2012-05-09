@@ -102,7 +102,7 @@ static void block_decrypt(block_state *self, unsigned char *in, unsigned char *o
 # define BLOCK_SIZE 8       /* 64-bit block size */
 # define KEY_SIZE  0        /* variable key size (can be 128 or 192 bits (including parity) */
 #else
-# define MODULE_NAME DES    /* single DES */
+# define MODULE_NAME _DES   /* single DES */
 # define BLOCK_SIZE 8       /* 64-bit block size */
 # define KEY_SIZE  8        /* 64-bit keys (including parity) */
 #endif

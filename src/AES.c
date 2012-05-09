@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include "Python.h"
 
-#define MODULE_NAME AES
+#define MODULE_NAME _AES
 #define BLOCK_SIZE 16
 #define KEY_SIZE 0
 
