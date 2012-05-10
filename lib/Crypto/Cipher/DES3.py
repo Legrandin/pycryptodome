@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  Cipher/DES.py : DES
+#  Cipher/DES3.py : DES3
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -19,21 +19,31 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 # ===================================================================
-"""DES symmetric cipher
+"""Triple DES symmetric cipher
 
-DES `(Data Encryption Standard)`__ is a symmetric block cipher standardized
-by NIST_ . It has a fixed data block size of 8 bytes.
-Its keys are 64 bit long, even though 8 bits were used for integrity (now they
-are ignored) and do not contribute to securty.
+`Triple DES`__ (or TDES or TDEA or 3DES) is a symmetric block cipher standardized by NIST_.
+It has a fixed data block size of 8 bytes. Its keys are 128 (*Option 1*) or 192
+bits (*Option 2*) long.
+However, 1 out of 8 bits is used for redundancy and do not contribute to
+security. The effective key length is respectively 112 or 168 bits.
 
-DES is cryptographically secure, but its key length is too short by nowadays
-standards and it could be brute forced with some effort.
+TDES consists of the concatenation of 3 simple `DES` ciphers.
 
-DES should not be used for new designs. Use `AES`.
+The plaintext is first DES encrypted with *K1*, then decrypted with *K2*,
+and finally encrypted again with *K3*.  The ciphertext is decrypted in the reverse manner.
 
-.. __: http://en.wikipedia.org/wiki/Data_Encryption_Standard
-.. _NIST: http://csrc.nist.gov/publications/fips/fips46-3/fips46-3.pdf
+The 192 bit key is a bundle of three 64 bit independent subkeys: *K1*, *K2*, and *K3*.
 
+The 128 bit key is split into *K1* and *K2*, whereas *K1=K3*.
+
+It is important that all subkeys are different, otherwise TDES would degrade to
+single `DES`.
+
+TDES is cryptographically secure, even though it is neither as secure nor as fast
+as `AES`.
+
+.. __: http://en.wikipedia.org/wiki/Triple_DES
+.. _NIST: http://csrc.nist.gov/publications/nistpubs/800-67/SP800-67.pdf
 
 :undocumented: __revision__, __package__
 """
@@ -42,24 +52,24 @@ __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
 from blockalgo import *
-from Crypto.Cipher import _DES
+from Crypto.Cipher import _DES3
 
-class DESCipher(blockalgo.BlockAlgo):
-    """DES cipher object"""
+class DES3Cipher(blockalgo.BlockAlgo):
+    """TDES cipher object"""
 
     def __init__(self, key, *args, **kwargs):
-        """Initialize a DES cipher object
+        """Initialize a TDES cipher object
         
         See also `new()` at the module level."""
         blockalgo.BlockAlgo.__init__(self, _DES, key, *args, **kwargs)
 
 def new(key, *args, **kwargs):
-    """Create a new DES cipher
+    """Create a new TDES cipher
 
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
-        It must be 8 byte long. The parity bits will be ignored.
+        It must be 16 or 24 bytes long. The parity bits will be ignored.
     :Keywords:
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
@@ -77,9 +87,11 @@ def new(key, *args, **kwargs):
         are segmented in.
         It must be a multiple of 8. If 0 or not specified, it will be assumed to be 8.
 
-    :Return: an `DESCipher` object
+    :Attention: it is important that all 8 byte subkeys are different,
+      otherwise TDES would degrade to single `DES`.
+    :Return: an `DES3Cipher` object
     """
-    return DESCipher(key, *args, **kwargs)
+    return DES3Cipher(key, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1
@@ -96,4 +108,4 @@ MODE_CTR = 6
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = 8
+key_size = { 16, 24 }

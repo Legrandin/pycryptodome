@@ -98,7 +98,7 @@ static void block_decrypt(block_state *self, unsigned char *in, unsigned char *o
 }
 
 #ifdef PCT_DES3_MODULE
-# define MODULE_NAME DES3   /* triple DES */
+# define MODULE_NAME _DES3   /* triple DES */
 # define BLOCK_SIZE 8       /* 64-bit block size */
 # define KEY_SIZE  0        /* variable key size (can be 128 or 192 bits (including parity) */
 #else

@@ -410,7 +410,7 @@ kw = {'name':"pycrypto",
             Extension("Crypto.Cipher._DES",
                       include_dirs=['src/', 'src/libtom/'],
                       sources=["src/DES.c"]),
-            Extension("Crypto.Cipher.DES3",
+            Extension("Crypto.Cipher._DES3",
                       include_dirs=['src/', 'src/libtom/'],
                       sources=["src/DES3.c"]),
 
