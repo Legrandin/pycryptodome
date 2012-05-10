@@ -20,6 +20,20 @@
 # ===================================================================
 """DES symmetric cipher
 
+DES `(Data Encryption Standard)`__ is a symmetric block cipher standardized
+by NIST_ . It has a fixed data block size of 8 bytes.
+Its keys are 64 bit long, even though 8 bits were used for integrity (now they
+are ignored) and do not contribute to securty.
+
+DES is cryptographically secure, but its key length is too short by nowadays
+standards and it could be brute forced with some effort.
+
+DES should not be used for new designs. Use `AES`.
+
+.. __: http://en.wikipedia.org/wiki/Data_Encryption_Standard
+.. _NIST: http://csrc.nist.gov/publications/fips/fips46-3/fips46-3.pdf
+
+
 :undocumented: __revision__, __package__
 """
 
@@ -44,7 +58,7 @@ def new(key, *args, **kwargs):
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
-        It must be 8 byte long.
+        It must be 8 byte long. The parity bits will be ignored.
     :Keywords:
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
