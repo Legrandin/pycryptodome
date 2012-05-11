@@ -40,7 +40,7 @@
 
 #include "Blowfish-tables.h"
 
-#define MODULE_NAME Blowfish
+#define MODULE_NAME _Blowfish
 #define BLOCK_SIZE 8    /* 64-bit block size */
 #define KEY_SIZE 0      /* variable key size */
 
