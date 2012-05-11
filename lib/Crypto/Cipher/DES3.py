@@ -108,4 +108,4 @@ MODE_CTR = 6
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = { 16, 24 }
+key_size = ( 16, 24 )

@@ -49,7 +49,13 @@ import sys
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.py3compat import *
 
-
+def isInt(x):
+    test = 0
+    try:
+        test += x
+    except TypeError:
+        return 0
+    return 1
 
 class AllOrNothing:
     """Class implementing the All-or-Nothing package transform.
@@ -81,7 +87,7 @@ class AllOrNothing:
         self.__mode = mode
         self.__IV = IV
         self.__key_size = ciphermodule.key_size
-        if self.__key_size == 0:
+        if not isInt(self.__key_size) or self.__key_size==0:
             self.__key_size = 16
 
     __K0digit = bchr(0x69)

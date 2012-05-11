@@ -132,10 +132,10 @@ class ElGamalTest(unittest.TestCase):
                 key = ElGamal.construct(d['key'])
                 # Positive test
                 res = key.verify( d['h'], (d['sig1'],d['sig2']) )
-                self.assertTrue(res)
+                self.failUnless(res)
                 # Negative test
                 res = key.verify( d['h'], (d['sig1']+1,d['sig2']) )
-                self.assertFalse(res)
+                self.failIf(res)
 
     def convert_tv(self, tv, as_longs=0):
         """Convert a test vector from textual form (hexadecimal ascii
