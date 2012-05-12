@@ -44,7 +44,7 @@
 
 #include "Python.h"
 
-#define MODULE_NAME CAST
+#define MODULE_NAME _CAST
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0
 
