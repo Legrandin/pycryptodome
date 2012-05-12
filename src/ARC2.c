@@ -44,7 +44,7 @@
 #include <string.h>  
 #include "Python.h"
 
-#define MODULE_NAME ARC2
+#define MODULE_NAME _ARC2
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0
 #define PCT_ARC2_MODULE  /* Defined to get ARC2's additional keyword arguments */
