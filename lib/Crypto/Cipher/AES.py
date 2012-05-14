@@ -23,10 +23,20 @@
 
 AES `(Advanced Encryption Standard)`__ is a symmetric block cipher standardized
 by NIST_ . It has a fixed data block size of 16 bytes.
-Its keys can be 128, 192, or 256 bit long.
+Its keys can be 128, 192, or 256 bits long.
 
 AES is very fast and secure, and it is the de facto standard for symmetric
 encryption.
+
+As an example, encryption can be done as follows:
+
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto import Random
+    >>>
+    >>> key = b'Sixteen byte key'
+    >>> iv = Random.new().read(AES.block_size)
+    >>> cipher = AES.new(key, AES.MODE_CFB, iv)
+    >>> msg = iv + cipher.encrypt(b'Attack at dawn')
 
 .. __: http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 .. _NIST: http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf

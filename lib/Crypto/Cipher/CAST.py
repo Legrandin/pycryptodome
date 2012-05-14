@@ -30,6 +30,17 @@ CAST is deemed to be cryptographically secure, but its usage is not widespread.
 Keys of sufficient length should be used to prevent brute force attacks
 (128 bits are recommended).
 
+As an example, encryption can be done as follows:
+
+    >>> from Crypto.Cipher import CAST
+    >>> from Crypto import Random
+    >>>
+    >>> key = b'Sixteen byte key'
+    >>> iv = Random.new().read(CAST.block_size)
+    >>> cipher = CAST.new(key, CAST.MODE_OFB, iv)
+    >>> plaintext = b'sona si latine loqueris '
+    >>> msg = iv + cipher.encrypt(plaintext)
+
 .. _CAST-128: http://en.wikipedia.org/wiki/CAST-128
 .. _RFC2144: http://tools.ietf.org/html/rfc2144
 

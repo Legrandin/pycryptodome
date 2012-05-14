@@ -44,6 +44,18 @@ concatenating key and nonce.
 New designs should not use ARC4. A good alternative is AES
 (`Crypto.Cipher.AES`) in any of the modes that turn it into a stream cipher (OFB, CFB, or CTR).
 
+As an example, encryption can be done as follows:
+
+    >>> from Crypto.Cipher import ARC4
+    >>> from Crypto.Hash import SHA
+    >>> from Crypto import Random
+    >>>
+    >>> key = b'Very long and confidential key'
+    >>> nonce = Random.new().read(16)
+    >>> tempkey = SHA.new(key+nonce).digest()
+    >>> cipher = ARC4.new(tempkey)
+    >>> msg = nonce + cipher.encrypt(b'Open the pod bay doors, HAL')
+
 .. _ARC4: http://en.wikipedia.org/wiki/RC4
 
 :undocumented: __revision__, __package__
