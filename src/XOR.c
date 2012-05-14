@@ -26,7 +26,7 @@
 
 #include "Python.h"
 
-#define MODULE_NAME XOR
+#define MODULE_NAME _XOR
 #define BLOCK_SIZE 1
 #define KEY_SIZE 0
 

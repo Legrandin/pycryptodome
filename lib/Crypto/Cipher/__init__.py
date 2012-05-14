@@ -69,7 +69,7 @@ Crypto.Cipher.PKCS1_OAEP    PKCS#1 OAEP encryption, based on RSA key pairs
 ========================    =======================
 
 :undocumented: __revision__, __package__, _AES, _ARC2, _ARC4, _Blowfish
-               _CAST, _DES, _DES3
+               _CAST, _DES, _DES3, _XOR
 """
 
 __all__ = ['AES', 'ARC2', 'ARC4',

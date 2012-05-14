@@ -418,7 +418,7 @@ kw = {'name':"pycrypto",
             Extension("Crypto.Cipher._ARC4",
                       include_dirs=['src/'],
                       sources=["src/ARC4.c"]),
-            Extension("Crypto.Cipher.XOR",
+            Extension("Crypto.Cipher._XOR",
                       include_dirs=['src/'],
                       sources=["src/XOR.c"]),
 
