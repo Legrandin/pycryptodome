@@ -49,7 +49,6 @@ New designs should not use RC2.
 __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
-from blockalgo import *
 from Crypto.Cipher import _ARC2
 
 class RC2Cipher (blockalgo.BlockAlgo):
@@ -107,5 +106,5 @@ MODE_CTR = 6
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = xrange(1,16)
+key_size = xrange(1,16+1)
 

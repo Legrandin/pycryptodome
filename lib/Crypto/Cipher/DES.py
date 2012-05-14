@@ -41,7 +41,6 @@ DES should not be used for new designs. Use `AES`.
 __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
-from blockalgo import *
 from Crypto.Cipher import _DES
 
 class DESCipher(blockalgo.BlockAlgo):

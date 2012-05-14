@@ -51,7 +51,6 @@ as `AES`.
 __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
-from blockalgo import *
 from Crypto.Cipher import _DES3
 
 class DES3Cipher(blockalgo.BlockAlgo):

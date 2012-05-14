@@ -37,7 +37,6 @@ to be big enough to withstand a brute force attack (e.g. at least 16 bytes).
 __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
-from blockalgo import *
 from Crypto.Cipher import _Blowfish
 
 class BlowfishCipher (blockalgo.BlockAlgo):
@@ -92,5 +91,5 @@ MODE_CTR = 6
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = xrange(4,56)
+key_size = xrange(4,56+1)
 

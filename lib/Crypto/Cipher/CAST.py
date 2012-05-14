@@ -39,7 +39,6 @@ Keys of sufficient length should be used to prevent brute force attacks
 __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
-from blockalgo import *
 from Crypto.Cipher import _CAST
 
 class CAST128Cipher(blockalgo.BlockAlgo):
@@ -94,4 +93,4 @@ MODE_CTR = 6
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = xrange(5,16)
+key_size = xrange(5,16+1)

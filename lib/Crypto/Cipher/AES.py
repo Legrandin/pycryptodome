@@ -37,7 +37,6 @@ encryption.
 __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
-from blockalgo import *
 from Crypto.Cipher import _AES
 
 class AESCipher (blockalgo.BlockAlgo):
