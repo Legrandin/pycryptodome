@@ -220,12 +220,25 @@ class RoundtripTest(unittest.TestCase):
         return """%s .decrypt() output of .encrypt() should not be garbled""" % (self.module_name,)
 
     def runTest(self):
-        for mode in (self.module.MODE_ECB, self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_PGP, self.module.MODE_OFB):
+        for mode in (self.module.MODE_ECB, self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_OFB):
             encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
             decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
             ciphertext = encryption_cipher.encrypt(self.plaintext)
             decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
             self.assertEqual(self.plaintext, decrypted_plaintext)
+
+class PGPTest(unittest.TestCase):
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.key = b(params['key'])
+
+    def shortDescription(self):
+        return "MODE_PGP was implemented incorrectly and insecurely. It's completely banished now."
+
+    def runTest(self):
+        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
+                self.module.MODE_PGP)
 
 def make_block_tests(module, module_name, test_data):
     tests = []
@@ -272,6 +285,7 @@ def make_block_tests(module, module_name, test_data):
                 CTRWraparoundTest(module, params),
                 CFBSegmentSizeTest(module, params),
                 RoundtripTest(module, params),
+                PGPTest(module, params),
             ]
             extra_tests_added = 1
 

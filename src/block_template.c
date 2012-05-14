@@ -171,6 +171,11 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 			     mode);
 		return NULL;
 	}
+	if (mode == MODE_PGP) {
+		PyErr_Format(PyExc_ValueError, 
+			     "MODE_PGP is not supported anymore");
+		return NULL;
+	}
 
 	/* Mode-specific checks */
 	if (mode == MODE_CFB) {
@@ -236,14 +241,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	memset(new->oldCipher, 0, BLOCK_SIZE);
 	memcpy(new->IV, IV, IVlen);
 	new->mode = mode;
-	switch(mode) {
-	case MODE_PGP:
-	    new->count=8;
-	    break;
-	case MODE_CTR:
-	default:
-	    new->count=BLOCK_SIZE;   /* stores how many bytes in new->oldCipher have been used */
-	}
+	new->count=BLOCK_SIZE;   /* stores how many bytes in new->oldCipher have been used */
 	return new;
 }
 
@@ -265,7 +263,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 		return PyBytes_FromStringAndSize(NULL, 0);
 	}
 	if ( (len % BLOCK_SIZE) !=0 && 
-	     (self->mode!=MODE_CFB) && (self->mode!=MODE_PGP) &&
+	     (self->mode!=MODE_CFB) &&
 	     (self->mode!=MODE_CTR))
 	{
 		PyErr_Format(PyExc_ValueError, 
@@ -335,37 +333,6 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 			else {
 				/* segment_size is not a multiple of 8; 
 				   currently this can't happen */
-			}
-		}
-		break;
-
-	case(MODE_PGP):
-		if (len<=BLOCK_SIZE-self->count) 
-		{			
-			/* If less than one block, XOR it in */
-			for(i=0; i<len; i++) 
-				buffer[i] = self->IV[self->count+i] ^= str[i];
-			self->count += len;
-		}
-		else 
-		{
-			int j;
-			for(i=0; i<BLOCK_SIZE-self->count; i++) 
-				buffer[i] = self->IV[self->count+i] ^= str[i];
-			self->count=0;
-			for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
-			{
-				block_encrypt(&(self->st), self->oldCipher, 
-					      self->IV);
-				for(j=0; j<BLOCK_SIZE; j++)
-					buffer[i+j] = self->IV[j] ^= str[i+j];
-			}
-			/* Do the remaining 1 to BLOCK_SIZE bytes */
-			block_encrypt(&(self->st), self->oldCipher, self->IV);
-			self->count=len-i;
-			for(j=0; j<len-i; j++) 
-			{
-				buffer[i+j] = self->IV[j] ^= str[i+j];
 			}
 		}
 		break;
@@ -531,8 +498,7 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	{
 		return PyBytes_FromStringAndSize(NULL, 0);
 	}
-	if ( (len % BLOCK_SIZE) !=0 && 
-	     (self->mode!=MODE_CFB && self->mode!=MODE_PGP))
+	if ( (len % BLOCK_SIZE) !=0 && (self->mode!=MODE_CFB))
 	{
 		PyErr_Format(PyExc_ValueError, 
 			     "Input strings must be "
@@ -605,48 +571,6 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 		}
 		break;
 
-	case(MODE_PGP):
-		if (len<=BLOCK_SIZE-self->count) 
-		{			
-                        /* If less than one block, XOR it in */
-			unsigned char t;
-			for(i=0; i<len; i++)
-			{
-				t=self->IV[self->count+i];
-				buffer[i] = t ^ (self->IV[self->count+i] = str[i]);
-			}
-			self->count += len;
-		}
-		else 
-		{
-			int j;
-			unsigned char t;
-			for(i=0; i<BLOCK_SIZE-self->count; i++) 
-			{
-				t=self->IV[self->count+i];
-				buffer[i] = t ^ (self->IV[self->count+i] = str[i]);
-			}
-			self->count=0;
-			for(; i<len-BLOCK_SIZE; i+=BLOCK_SIZE) 
-			{
-				block_encrypt(&(self->st), self->oldCipher, self->IV);
-				for(j=0; j<BLOCK_SIZE; j++)
-				{
-					t=self->IV[j];
-					buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
-				}
-			}
-			/* Do the remaining 1 to BLOCK_SIZE bytes */
-			block_encrypt(&(self->st), self->oldCipher, self->IV);
-			self->count=len-i;
-			for(j=0; j<len-i; j++) 
-			{
-				t=self->IV[j];
-				buffer[i+j] = t ^ (self->IV[j] = str[i+j]);
-			}
-		}
-		break;
-
 	case (MODE_OFB):
 		for(i=0; i<len; i+=BLOCK_SIZE) 
 		{
@@ -674,57 +598,6 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 	return(result);
 }
 
-static char ALG_Sync__doc__[] =
-"sync(): For objects using the PGP feedback mode, this method modifies "
-"the IV, synchronizing it with the preceding ciphertext.";
-
-static PyObject *
-ALG_Sync(ALGobject *self, PyObject *args)
-{
-	if (!PyArg_ParseTuple(args, "")) {
-		return NULL;
-	}
-
-	if (self->mode!=MODE_PGP) 
-	{
-		PyErr_SetString(PyExc_SystemError, "sync() operation not defined for "
-				"this feedback mode");
-		return NULL;
-	}
-	
-	if (self->count!=8) 
-	{
-		memmove(self->IV+BLOCK_SIZE-self->count, self->IV, 
-			self->count);
-		memcpy(self->IV, self->oldCipher+self->count, 
-		       BLOCK_SIZE-self->count);
-		self->count=8;
-	}
-	Py_INCREF(Py_None);
-	return Py_None;
-}
-
-#if 0
-void PrintState(self, msg)
-     ALGobject *self;
-     char * msg;
-{
-  int count;
-  
-  printf("%sing: %i IV ", msg, (int)self->count);
-  for(count=0; count<8; count++) printf("%i ", self->IV[count]);
-  printf("\noldCipher:");
-  for(count=0; count<8; count++) printf("%i ", self->oldCipher[count]);
-  printf("\n");
-}
-#endif
-
-
-
-
-
-
-
 /* ALG object methods */
 static PyMethodDef ALGmethods[] =
 {
@@ -735,7 +608,6 @@ static PyMethodDef ALGmethods[] =
  {"encrypt", (PyCFunction) ALG_Encrypt, 0, ALG_Encrypt__doc__},
  {"decrypt", (PyCFunction) ALG_Decrypt, 0, ALG_Decrypt__doc__},
 #endif
- {"sync", (PyCFunction) ALG_Sync, METH_VARARGS, ALG_Sync__doc__},
  {NULL, NULL}			/* sentinel */
 };
 
@@ -932,7 +804,7 @@ _MODULE_NAME (void)
 	PyModule_AddIntConstant(m, "MODE_ECB", MODE_ECB);
 	PyModule_AddIntConstant(m, "MODE_CBC", MODE_CBC);
 	PyModule_AddIntConstant(m, "MODE_CFB", MODE_CFB);
-	PyModule_AddIntConstant(m, "MODE_PGP", MODE_PGP);
+	PyModule_AddIntConstant(m, "MODE_PGP", MODE_PGP); /** Vestigial **/
 	PyModule_AddIntConstant(m, "MODE_OFB", MODE_OFB);
 	PyModule_AddIntConstant(m, "MODE_CTR", MODE_CTR);
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
