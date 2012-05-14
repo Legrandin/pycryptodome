@@ -36,20 +36,20 @@ The symmetric encryption modules here all support the interface described in PEP
 If you don't know which algorithm to choose, use AES because it's
 standard and has undergone a fair bit of examination.
 
-======================    ====================
-Module name               Description
-======================    ====================
-Crypto.Cipher.AES         Advanced Encryption Standard
-Crypto.Cipher.ARC2        Alleged RC2
-Crypto.Cipher.ARC4        Alleged RC4
-Crypto.Cipher.Blowfish    Blowfish
-Crypto.Cipher.CAST        CAST
-Crypto.Cipher.DES         The Data Encryption Standard.
-                          Very commonly used in the past,
-                          but today its 56-bit keys are too small.
-Crypto.Cipher.DES3        Triple DES.
-Crypto.Cipher.XOR         The simple XOR cipher.
-======================    ====================
+========================    =======   ========================
+Module name                 Type      Description
+========================    =======   ========================
+`Crypto.Cipher.AES`         Block     Advanced Encryption Standard
+`Crypto.Cipher.ARC2`        Block     Alleged RC2
+`Crypto.Cipher.ARC4`        Stream    Alleged RC4
+`Crypto.Cipher.Blowfish`    Block     Blowfish
+`Crypto.Cipher.CAST`        Block     CAST
+`Crypto.Cipher.DES`         Block     The Data Encryption Standard.
+                                      Very commonly used in the past,
+                                      but today its 56-bit keys are too small.
+`Crypto.Cipher.DES3`        Block     Triple DES.
+`Crypto.Cipher.XOR`         Stream    The simple XOR cipher.
+========================    =======   ========================
 
 
 Asymmetric algorithms
@@ -61,12 +61,12 @@ for encryption. Put differently, sender and receiver each own one half
 of a key pair. The encryption key is often called ``public`` whereas
 the decryption key is called ``private``.
 
-========================    =======================
-Module name                 Description
-========================    =======================
-Crypto.Cipher.PKCS1_v1.5    PKCS#1 v1.5 encryption, based on RSA key pairs
-Crypto.Cipher.PKCS1_OAEP    PKCS#1 OAEP encryption, based on RSA key pairs
-========================    =======================
+==========================    =======================
+Module name                   Description
+==========================    =======================
+`Crypto.Cipher.PKCS1_v1_5`    PKCS#1 v1.5 encryption, based on RSA key pairs
+`Crypto.Cipher.PKCS1_OAEP`    PKCS#1 OAEP encryption, based on RSA key pairs
+==========================    =======================
 
 :undocumented: __revision__, __package__, _AES, _ARC2, _ARC4, _Blowfish
                _CAST, _DES, _DES3, _XOR
