@@ -26,7 +26,7 @@
  *
  */
 
-#define MODULE_NAME ARC4
+#define MODULE_NAME _ARC4
 #define BLOCK_SIZE 1
 #define KEY_SIZE 0
 

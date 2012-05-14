@@ -415,7 +415,7 @@ kw = {'name':"pycrypto",
                       sources=["src/DES3.c"]),
 
             # Stream ciphers
-            Extension("Crypto.Cipher.ARC4",
+            Extension("Crypto.Cipher._ARC4",
                       include_dirs=['src/'],
                       sources=["src/ARC4.c"]),
             Extension("Crypto.Cipher.XOR",
