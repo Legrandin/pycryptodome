@@ -239,10 +239,16 @@ class RoundtripTest(unittest.TestCase):
         return """%s .decrypt() output of .encrypt() should not be garbled""" % (self.module_name,)
 
     def runTest(self):
-        for mode in (self.module.MODE_ECB, self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_OFB):
+        for mode in (self.module.MODE_ECB, self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_OFB, self.module.MODE_OPENPGP):
             encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
-            decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
             ciphertext = encryption_cipher.encrypt(self.plaintext)
+            
+            if mode != self.module.MODE_OPENPGP:
+                decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
+            else:
+                eiv = ciphertext[:self.module.block_size+2]
+                ciphertext = ciphertext[self.module.block_size+2:]
+                decryption_cipher = self.module.new(a2b_hex(self.key), mode, eiv)
             decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
             self.assertEqual(self.plaintext, decrypted_plaintext)
 
