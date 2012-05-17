@@ -37,9 +37,15 @@ As an example, encryption can be done as follows:
     >>>
     >>> key = b'Sixteen byte key'
     >>> iv = Random.new().read(CAST.block_size)
-    >>> cipher = CAST.new(key, CAST.MODE_OFB, iv)
+    >>> cipher = CAST.new(key, CAST.MODE_OPENPGP, iv)
     >>> plaintext = b'sona si latine loqueris '
-    >>> msg = iv + cipher.encrypt(plaintext)
+    >>> msg = cipher.encrypt(plaintext)
+    >>>
+    ...
+    >>> eiv = msg[:CAST.block_size+2]
+    >>> ciphertext = msg[CAST.block_size+2:]
+    >>> cipher = CAST.new(key, CAST.MODE_OPENPGP, eiv)
+    >>> print cipher.decrypt(ciphertext)
 
 .. _CAST-128: http://en.wikipedia.org/wiki/CAST-128
 .. _RFC2144: http://tools.ietf.org/html/rfc2144
