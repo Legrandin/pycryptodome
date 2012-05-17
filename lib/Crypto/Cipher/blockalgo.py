@@ -19,7 +19,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 # ===================================================================
-"""Module with definitions commont to all block ciphers."""
+"""Module with definitions common to all block ciphers."""
 
 #: *Electronic Code Book (ECB)*.
 #: This is the simplest encryption mode. Each of the plaintext blocks

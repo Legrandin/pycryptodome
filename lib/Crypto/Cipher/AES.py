@@ -64,7 +64,7 @@ def new(key, *args, **kwargs):
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
-        It must be 16 (*AES-128*), 24 (*AES-192), or 32 (*AES-256*) bytes long.
+        It must be 16 (*AES-128*), 24 (*AES-192*), or 32 (*AES-256*) bytes long.
     :Keywords:
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
