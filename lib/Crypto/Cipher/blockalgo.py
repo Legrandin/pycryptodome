@@ -21,6 +21,9 @@
 # ===================================================================
 """Module with definitions common to all block ciphers."""
 
+from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
+
 #: *Electronic Code Book (ECB)*.
 #: This is the simplest encryption mode. Each of the plaintext blocks
 #: is directly encrypted into a ciphertext block, independently of
@@ -105,14 +108,79 @@ MODE_OFB = 5
 #: .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 MODE_CTR = 6
 
+#: OpenPGP. This mode is a variant of CFB, and it is only used in PGP and OpenPGP_ applications.
+#: A Initialization Vector (*IV*) is required.
+#: 
+#: Unlike CFB, the IV is not transmitted to the receiver. Instead, the *encrypted* IV is.
+#: The IV is a random data block. Two of its bytes are duplicated to act as a checksum
+#: for the correctness of the key. The encrypted IV is therefore 2 bytes longer than
+#: the clean IV.
+#:
+#: .. _OpenPGP: http://tools.ietf.org/html/rfc4880
+MODE_OPENPGP = 7
+
+def _getParameter(name, index, args, kwargs, default=None):
+    """Find a parameter in tuple and dictionary arguments a function receives"""
+    param = kwargs.get(name)
+    if len(args)>index:
+        if param:
+            raise ValueError("Parameter '%s' is specified twice" % name)
+        param = args[index]
+    return param or default
+    
 class BlockAlgo:
     """Class modelling an abstract block cipher."""
 
     def __init__(self, factory, key, *args, **kwargs):
-        self._cipher = factory.new(key, *args, **kwargs)
-        self.block_size = self._cipher.block_size
-        self.mode = self._cipher.mode
-        self.IV = self._cipher.IV
+        self.mode = _getParameter('mode', 0, args, kwargs, default=MODE_ECB)
+        self.block_size = factory.block_size
+        
+        if self.mode != MODE_OPENPGP:
+            self._cipher = factory.new(key, *args, **kwargs)
+            self.IV = self._cipher.IV
+        else:
+            # OPENPGP mode. For details, see 13.9 in RCC4880.
+            #
+            # A few members are specifically created for this mode:
+            #  - _encrypted_iv, set in this constructor
+            #  - _done_first_block, set to True after the first encryption
+            #  - _done_last_block, set to True after a partial block is processed
+            
+            self._done_first_block = False
+            self._done_last_block = False
+            self.IV = _getParameter('iv', 1, args, kwargs)
+            if not self.IV:
+                raise ValueError("MODE_OPENPGP requires an IV")
+            
+            # Instantiate a temporary cipher to process the IV
+            IV_cipher = factory.new(key, MODE_CFB,
+                    b('\x00')*self.block_size,      # IV for CFB
+                    segment_size=self.block_size*8)
+           
+            # The cipher will be used for...
+            if len(self.IV) == self.block_size:
+                # ... encryption
+                self._encrypted_IV = IV_cipher.encrypt(
+                    self.IV + self.IV[-2:] +        # Plaintext
+                    b('\x00')*(self.block_size-2)   # Padding
+                    )[:self.block_size+2]
+            elif len(self.IV) == self.block_size+2:
+                # ... decryption
+                self._encrypted_IV = self.IV
+                self.IV = IV_cipher.decrypt(self.IV +   # Ciphertext
+                    b('\x00')*(self.block_size-2)       # Padding
+                    )[:self.block_size+2]
+                if self.IV[-2:] != self.IV[-4:-2]:
+                    raise ValueError("Failed integrity check for OPENPGP IV")
+                self.IV = self.IV[:-2]
+            else:
+                raise ValueError("Length of IV must be %d or %d bytes for MODE_OPENPGP"
+                    % (self.block_size, self.block_size+2))
+
+            # Instantiate the cipher for the real PGP data
+            self._cipher = factory.new(key, MODE_CFB,
+                self._encrypted_IV[-self.block_size:],
+                segment_size=self.block_size*8)
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -140,12 +208,37 @@ class BlockAlgo:
 
          - For `MODE_CTR`, *plaintext* can be of any length.
 
+         - For `MODE_OPENPGP`, *plaintext* must be a multiple of *block_size*,
+           unless it is the last chunk of the message.
+
         :Parameters:
           plaintext : byte string
             The piece of data to encrypt.
-        :Return: the encrypted data (as a byte string, as long as the
-          plaintext)
+        :Return:
+            the encrypted data, as a byte string. It is as long as
+            *plaintext* with one exception: when encrypting the first message
+            chunk with `MODE_OPENPGP`, the encypted IV is prepended to the
+            returned ciphertext.
         """
+
+        if self.mode == MODE_OPENPGP:
+            padding_length = (self.block_size - len(plaintext) % self.block_size) % self.block_size
+            if padding_length>0:
+                # CFB mode requires ciphertext to have length multiple of block size,
+                # but PGP mode allows the last block to be shorter
+                if self._done_last_block:
+                    raise ValueError("Only the last chunk is allowed to have length not multiple of %d bytes",
+                        self.block_size)
+                self._done_last_block = True
+                padded = plaintext + b('\x00')*padding_length
+                res = self._cipher.encrypt(padded)[:len(plaintext)]
+            else:
+                res = self._cipher.encrypt(plaintext)
+            if not self._done_first_block:
+                res = self._encrypted_IV + res
+                self._done_first_block = True
+            return res
+
         return self._cipher.encrypt(plaintext)
 
     def decrypt(self, ciphertext):
@@ -174,11 +267,28 @@ class BlockAlgo:
 
          - For `MODE_CTR`, *ciphertext* can be of any length.
 
+         - For `MODE_OPENPGP`, *plaintext* must be a multiple of *block_size*,
+           unless it is the last chunk of the message.
+
         :Parameters:
           ciphertext : byte string
             The piece of data to decrypt.
-        :Return: the decrypted data (as a byte string, as long as the
-          ciphertext)
+        :Return: the decrypted data (byte string, as long as *ciphertext*).
         """
+        if self.mode == MODE_OPENPGP:
+            padding_length = (self.block_size - len(ciphertext) % self.block_size) % self.block_size
+            if padding_length>0:
+                # CFB mode requires ciphertext to have length multiple of block size,
+                # but PGP mode allows the last block to be shorter
+                if self._done_last_block:
+                    raise ValueError("Only the last chunk is allowed to have length not multiple of %d bytes",
+                        self.block_size)
+                self._done_last_block = True
+                padded = ciphertext + b('\x00')*padding_length
+                res = self._cipher.decrypt(padded)[:len(ciphertext)]
+            else:
+                res = self._cipher.decrypt(ciphertext)
+            return res
+
         return self._cipher.decrypt(ciphertext)
 

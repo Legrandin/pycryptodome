@@ -83,8 +83,16 @@ def new(key, *args, **kwargs):
         Default is `MODE_ECB`.
       IV : byte string
         The initialization vector to use for encryption or decryption.
-        It must be `block_size` bytes longs. Ignored for `MODE_ECB`
-        and `MODE_CTR`. The default value is all zeroes.
+        
+        It is ignored for `MODE_ECB` and `MODE_CTR`.
+
+        For `MODE_OPENPGP`, IV must be `block_size` bytes long for encryption
+        and `block_size` +2 bytes for decryption (in the latter case, it is
+        actually the *encrypted* IV which was prefixed to the ciphertext).
+        It is mandatory.
+       
+        For all other modes, it must be `block_size` bytes longs. It is optional and
+        when not present it will be given a default value of all zeroes.
       counter : callable
         (*Only* `MODE_CTR`). A stateful function that returns the next
         *counter block*, which is a byte string of `block_size` bytes.
@@ -113,6 +121,8 @@ MODE_PGP = 4
 MODE_OFB = 5
 #: CounTer Mode (CTR). See `blockalgo.MODE_CTR`.
 MODE_CTR = 6
+#: OpenPGP Mode. See `blockalgo.MODE_OPENPGP`.
+MODE_OPENPGP = 7
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)

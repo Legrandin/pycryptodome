@@ -28,6 +28,7 @@ __revision__ = "$Id$"
 
 from common import dict     # For compatibility with Python 2.1 and 2.2
 from Crypto.Util.py3compat import *
+from binascii import hexlify
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]]) tuples.
 test_data = [
@@ -1253,6 +1254,34 @@ test_data = [
         'ff7a617ce69148e4f1726e2f43581de2'+'aa62d9f805532edff1eed687fb54153d',
         'RFC 3686 Test Vector #9: Encrypting 36 octets using AES-CTR with 256-bit key',
         dict(mode='CTR', ctr_params=dict(nbits=32, prefix='001cc5b7'+'51a51d70a1c11148'))),
+
+    # The following test vectors have been generated with gpg v1.4.0.
+    # The command line used was:
+    #
+    #    gpg -c -z 0 --cipher-algo AES --passphrase secret_passphrase \
+    #     --disable-mdc --s2k-mode 0 --output ct pt
+    #
+    # As result, the content of the file 'pt' is encrypted with a key derived
+    # from 'secret_passphrase' and written to file 'ct'.
+    # Test vectors must be extracted from 'ct', which is a collection of
+    # TLVs (see RFC4880 for all details):
+    # - the encrypted data (with the encrypted IV as prefix) is the payload
+    #   of the TLV with tag 9 (Symmetrical Encrypted Data Packet).
+    #   This is the ciphertext in the test vector.
+    # - inside the encrypted part, there is a further layer of TLVs. One must
+    #   look for tag 11 (Literal Data  Packet); in its payload, after a short
+    #   but time dependent header, there is the content of file 'pt'.
+    #   In the test vector, the plaintext is the complete set of TLVs that gets
+    #   encrypted. It is not just the content of 'pt'.
+    # - the key is the leftmost 16 bytes of the SHA1 digest of the password.
+    #   The test vector contains such shortened digest.
+    #
+    # Note that encryption uses a clear IV, and decryption an encrypted IV
+    ( 'ac18620270744fb4f647426c61636b4361745768697465436174',   # Plaintext, 'BlackCatWhiteCat'
+      'dc6b9e1f095de609765c59983db5956ae4f63aea7405389d2ebb',   # Ciphertext
+      '5baa61e4c9b93f3f0682250b6cf8331b', # Key (hash of 'password')
+      'GPG Test Vector #1',
+      dict(mode='OPENPGP', iv='3d7d3e62282add7eb203eeba5c800733', encrypted_iv='fd934601ef49cb58b6d9aebca6056bdb96ef' ) ),
 ]
 
 def get_tests(config={}):

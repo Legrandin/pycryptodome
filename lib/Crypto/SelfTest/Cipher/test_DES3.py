@@ -28,6 +28,7 @@ __revision__ = "$Id$"
 
 from common import dict     # For compatibility with Python 2.1 and 2.2
 from Crypto.Util.py3compat import *
+from binascii import hexlify
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
 SP800_20_A1_KEY = '01' * 24
@@ -306,6 +307,17 @@ test_data = [
     # output.
     ('21e81b7ade88a259', '5c577d4d9b20c0f8',
         '9b397ebf81b1181e282f4bb8adbadc6b', 'Two-key 3DES'),
+
+    # The following test vectors have been generated with gpg v1.4.0.
+    # The command line used was:
+    #    gpg -c -z 0 --cipher-algo 3DES --passphrase secret_passphrase \
+    #     --disable-mdc --s2k-mode 0 --output ct pt
+    # For an explanation, see test_AES.py .
+    ( 'ac1762037074324fb53ba3596f73656d69746556616c6c6579',     # Plaintext, 'YosemiteValley'
+      '9979238528357b90e2e0be549cb0b2d5999b9a4a447e5c5c7d',     # Ciphertext
+      '7ade65b460f5ea9be35f9e14aa883a2048e3824aa616c0b2',       # Key (hash of 'BearsAhead')
+      'GPG Test Vector #1',
+      dict(mode='OPENPGP', iv='cd47e2afb8b7e4b0', encrypted_iv='6a7eef0b58050e8b904a' ) ),
 ]
 
 def get_tests(config={}):

@@ -74,6 +74,11 @@ class CipherSelfTest(unittest.TestCase):
             self.mode = getattr(self.module, "MODE_" + mode)
             self.iv = _extract(params, 'iv', None)
             if self.iv is not None: self.iv = b(self.iv)
+
+            # Only relevant for OPENPGP mode
+            self.encrypted_iv = _extract(params, 'encrypted_iv', None)
+            if self.encrypted_iv is not None:
+                self.encrypted_iv = b(self.encrypted_iv)
         else:
             # Stream cipher
             self.mode = None
@@ -84,7 +89,7 @@ class CipherSelfTest(unittest.TestCase):
     def shortDescription(self):
         return self.description
 
-    def _new(self):
+    def _new(self, do_decryption=0):
         params = self.extra_params.copy()
 
         # Handle CTR mode parameters.  By default, we use Counter.new(self.module.block_size)
@@ -106,16 +111,30 @@ class CipherSelfTest(unittest.TestCase):
             return self.module.new(a2b_hex(self.key), self.mode, **params)
         else:
             # Block cipher with iv
-            return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **params)
+            if do_decryption and self.mode == self.module.MODE_OPENPGP:
+                # In PGP mode, the IV to feed for decryption is the *encrypted* one
+                return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.encrypted_iv), **params)
+            else:
+                return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **params)
 
     def runTest(self):
         plaintext = a2b_hex(self.plaintext)
         ciphertext = a2b_hex(self.ciphertext)
 
         ct1 = b2a_hex(self._new().encrypt(plaintext))
-        pt1 = b2a_hex(self._new().decrypt(ciphertext))
+        pt1 = b2a_hex(self._new(1).decrypt(ciphertext))
         ct2 = b2a_hex(self._new().encrypt(plaintext))
-        pt2 = b2a_hex(self._new().decrypt(ciphertext))
+        pt2 = b2a_hex(self._new(1).decrypt(ciphertext))
+
+        if hasattr(self.module, "MODE_OPENPGP") and self.mode == self.module.MODE_OPENPGP:
+            # In PGP mode, data returned by the first encrypt()
+            # is prefixed with the encrypted IV.
+            # Here we check it and then remove it from the ciphertexts.
+            eilen = len(self.encrypted_iv)
+            self.assertEqual(self.encrypted_iv, ct1[:eilen])
+            self.assertEqual(self.encrypted_iv, ct2[:eilen])
+            ct1 = ct1[eilen:]
+            ct2 = ct2[eilen:]
 
         self.assertEqual(self.ciphertext, ct1)  # encrypt
         self.assertEqual(self.ciphertext, ct2)  # encrypt (second time)
