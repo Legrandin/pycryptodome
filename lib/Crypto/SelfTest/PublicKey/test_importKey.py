@@ -147,6 +147,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     pInv = inverse(p,q)
 
     def testImportKey1(self):
+        """Verify import of RSAPrivateKey DER SEQUENCE"""
         key = self.rsa.importKey(self.rsaKeyDER)
         self.failUnless(key.has_private())
         self.assertEqual(key.n, self.n)
@@ -156,13 +157,15 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.q, self.q)
 
     def testImportKey2(self):
+        """Verify import of SubjectPublicKeyInfo DER SEQUENCE"""
         key = self.rsa.importKey(self.rsaPublicKeyDER)
         self.failIf(key.has_private())
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
     def testImportKey3unicode(self):
-        key = RSA.importKey(b(self.rsaKeyPEM))
+        """Verify import of RSAPrivateKey DER SEQUENCE, encoded with PEM as unicode"""
+        key = RSA.importKey(self.rsaKeyPEM)
         self.assertEqual(key.has_private(),True) # assert_
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
@@ -171,6 +174,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.q, self.q)
 
     def testImportKey3bytes(self):
+        """Verify import of RSAPrivateKey DER SEQUENCE, encoded with PEM as byte string"""
         key = RSA.importKey(b(self.rsaKeyPEM))
         self.assertEqual(key.has_private(),True) # assert_
         self.assertEqual(key.n, self.n)
@@ -180,13 +184,15 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.q, self.q)
 
     def testImportKey4unicode(self):
+        """Verify import of RSAPrivateKey DER SEQUENCE, encoded with PEM as unicode"""
         key = RSA.importKey(self.rsaPublicKeyPEM)
         self.assertEqual(key.has_private(),False) # failIf
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
     def testImportKey4bytes(self):
-        key = RSA.importKey(self.rsaPublicKeyPEM.encode('ascii'))
+        """Verify import of SubjectPublicKeyInfo DER SEQUENCE, encoded with PEM as byte string"""
+        key = RSA.importKey(b(self.rsaPublicKeyPEM))
         self.assertEqual(key.has_private(),False) # failIf
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
@@ -204,11 +210,13 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(idem[0],b("Test"))
 
     def testImportKey7(self):
+        """Verify import of OpenSSH public key"""
         key = self.rsa.importKey(self.rsaPublicKeyOpenSSH)
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
     def testImportKey8(self):
+        """Verify import of encrypted PrivateKeyInfo DER SEQUENCE"""
         for t in self.rsaKeyEncryptedPEM:
             key = self.rsa.importKey(t[1], t[0])
             self.failUnless(key.has_private())
@@ -219,6 +227,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
             self.assertEqual(key.q, self.q)
 
     def testImportKey9(self):
+        """Verify import of unencrypted PrivateKeyInfo DER SEQUENCE"""
         key = self.rsa.importKey(self.rsaKeyDER8)
         self.failUnless(key.has_private())
         self.assertEqual(key.n, self.n)
@@ -228,6 +237,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.q, self.q)
 
     def testImportKey10(self):
+        """Verify import of unencrypted PrivateKeyInfo DER SEQUENCE, encoded with PEM"""
         key = self.rsa.importKey(self.rsaKeyPEM8)
         self.failUnless(key.has_private())
         self.assertEqual(key.n, self.n)
