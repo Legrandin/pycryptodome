@@ -320,10 +320,15 @@ class _RSAobj(pubkey.pubkey):
         :Parameter passphrase: In case of PEM, the pass phrase to derive the encryption key from.
         :Type passphrase: string 
 
-        :Parameter pkcs: The PKCS standard to follow for encoding the key.
-         You have two choices: **1** (PKCS#1, `RFC3447`_) or **8** (PKCS#8, `RFC5208`_).
-         PKCS#8 is only available for private keys.
-         PKCS#1 is the default.
+        :Parameter pkcs: The PKCS standard to follow for assembling the key.
+         You have two choices:
+
+          - with **1**, the public key is embedded into an X.509 `SubjectPublicKeyInfo` DER SEQUENCE.
+            The private key is embedded into a `PKCS#1`_ `RSAPrivateKey` DER SEQUENCE.
+            This mode is the default.
+          - with **8**, the private key is embedded into a `PKCS#8`_ `PrivateKeyInfo` DER SEQUENCE.
+            This mode is not available for public keys.
+
          PKCS standards are not relevant for the *OpenSSH* format.
         :Type pkcs: integer
 
@@ -331,10 +336,10 @@ class _RSAobj(pubkey.pubkey):
         :Raise ValueError:
             When the format is unknown.
 
-        .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
-        .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
-        .. _RFC3447: http://www.ietf.org/rfc/rfc3447.txt
-        .. _RFC5208: http://www.ietf.org/rfc/rfc5208.txt
+        .. _RFC1421:    http://www.ietf.org/rfc/rfc1421.txt
+        .. _RFC1423:    http://www.ietf.org/rfc/rfc1423.txt
+        .. _`PKCS#1`:   http://www.ietf.org/rfc/rfc3447.txt
+        .. _`PKCS#8`:   http://www.ietf.org/rfc/rfc5208.txt
         """
         if passphrase is not None:
             passphrase = tobytes(passphrase)
@@ -587,13 +592,16 @@ class RSAImplementation(object):
 
             The key can be in any of the following formats:
 
-            - DER + PKCS#1 (binary)
-            - PEM + PKCS#1 (textual, according to `RFC1421`_/`RFC1423`_)
-            - DER + PKCS#8 (binary, private key only)
-            - PEM + PKCS#8 (textual, according to `RFC5208`_, private key only)
+            - X.509 `subjectPublicKeyInfo` DER SEQUENCE (binary, public key only)
+            - X.509 `subjectPublicKeyInfo` DER SEQUENCE (PEM encoding, public key only)
+            - `PKCS#1`_ `RSAPrivateKey` DER SEQUENCE (binary, private key only)
+            - `PKCS#8`_ `PrivateKeyInfo` DER SEQUENCE (binary, private key only)
+            - PKCS#8 `PrivateKeyInfo` DER SEQUENCE (PEM encoding, private key only)
             - OpenSSH (textual public key only)
+
+            For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
             
-            In case of PEM + PKCS#1, the key can be encrypted with DES or 3TDES according to a certain ``pass phrase``.
+            In case of PEM encoding, the private key can be encrypted with DES or 3TDES according to a certain ``pass phrase``.
             Only OpenSSL-compatible pass phrases are supported.
         :Type externKey: string
 
@@ -608,7 +616,8 @@ class RSAImplementation(object):
 
         .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
         .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
-        .. _RFC5208: http://www.ietf.org/rfc/rfc5208.txt
+        .. _`PKCS#1`: http://www.ietf.org/rfc/rfc3447.txt
+        .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
         """
         externKey = tobytes(externKey)
         if passphrase is not None:
