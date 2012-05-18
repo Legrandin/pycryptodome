@@ -557,6 +557,9 @@ class RSAImplementation(object):
 
             # Keep on trying PKCS#1, but now for a public key
             if len(der)==2:
+                # The DER object is an RSAPublicKey SEQUENCE with two elements
+                if der.hasOnlyInts():
+                    return self.construct(der[:])
                 # The DER object is a SubjectPublicKeyInfo SEQUENCE with two elements:
                 # an 'algorithm' (or 'algorithmIdentifier') SEQUENCE and a 'subjectPublicKey' BIT STRING.
                 # 'algorithm' takes the value given a few lines above.
@@ -590,13 +593,16 @@ class RSAImplementation(object):
         :Parameter externKey:
             The RSA key to import, encoded as a string.
 
-            The key can be in any of the following formats:
+            An RSA public key can be in any of the following formats:
 
-            - X.509 `subjectPublicKeyInfo` DER SEQUENCE (binary, public key only)
-            - X.509 `subjectPublicKeyInfo` DER SEQUENCE (PEM encoding, public key only)
-            - `PKCS#1`_ `RSAPrivateKey` DER SEQUENCE (binary, private key only)
-            - `PKCS#8`_ `PrivateKeyInfo` DER SEQUENCE (binary, private key only)
-            - PKCS#8 `PrivateKeyInfo` DER SEQUENCE (PEM encoding, private key only)
+            - X.509 `subjectPublicKeyInfo` DER SEQUENCE (binary or PEM encoding)
+            - `PKCS#1`_ `RSAPublicKey` DER SEQUENCE (binary or PEM encoding)
+            - OpenSSH (textual public key only)
+
+            An RSA private key can be in any of the following formats:
+
+            - PKCS#1 `RSAPrivateKey` DER SEQUENCE (binary or PEM encoding)
+            - `PKCS#8`_ `PrivateKeyInfo` DER SEQUENCE (binary or PEM encoding)
             - OpenSSH (textual public key only)
 
             For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.

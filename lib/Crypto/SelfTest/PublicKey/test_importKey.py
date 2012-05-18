@@ -30,6 +30,15 @@ from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import *
 from Crypto.Util.py3compat import *
 from Crypto.Util.number import inverse
+from Crypto.Util import asn1
+
+def der2pem(der, text='PUBLIC'):
+    import binascii
+    chunks = [ binascii.b2a_base64(der[i:i+48]) for i in range(0, len(der), 48) ]
+    pem  = b('-----BEGIN %s KEY-----\n' % text)
+    pem += b('').join(chunks)
+    pem += b('-----END %s KEY-----' % text)
+    return pem
 
 class ImportKeyTests(unittest.TestCase):
     # 512-bit RSA key generated with openssl
@@ -245,6 +254,21 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.d, self.d)
         self.assertEqual(key.p, self.p)
         self.assertEqual(key.q, self.q)
+
+    def testImportKey11(self):
+        """Verify import of RSAPublicKey DER SEQUENCE"""
+        der = asn1.DerSequence([17, 3]).encode()
+        key = self.rsa.importKey(der)
+        self.assertEqual(key.n, 17)
+        self.assertEqual(key.e, 3)
+
+    def testImportKey12(self):
+        """Verify import of RSAPublicKey DER SEQUENCE, encoded with PEM"""
+        der = asn1.DerSequence([17, 3]).encode()
+        pem = der2pem(der)
+        key = self.rsa.importKey(pem)
+        self.assertEqual(key.n, 17)
+        self.assertEqual(key.e, 3)
 
     ###
     def testExportKey1(self):
