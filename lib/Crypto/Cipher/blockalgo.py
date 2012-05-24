@@ -111,7 +111,7 @@ MODE_OFB = 5
 MODE_CTR = 6
 
 #: OpenPGP. This mode is a variant of CFB, and it is only used in PGP and OpenPGP_ applications.
-#: A Initialization Vector (*IV*) is required.
+#: An Initialization Vector (*IV*) is required.
 #: 
 #: Unlike CFB, the IV is not transmitted to the receiver. Instead, the *encrypted* IV is.
 #: The IV is a random data block. Two of its bytes are duplicated to act as a checksum

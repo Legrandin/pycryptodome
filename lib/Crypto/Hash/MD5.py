@@ -28,7 +28,7 @@ MD5 is specified in RFC1321_ and produces the 128 bit digest of a message.
     >>> h.update(b'Hello')
     >>> print h.hexdigest()
 
-MD4 stand for Message Digest version 5, and it was invented by Rivest in 1991.
+MD5 stand for Message Digest version 5, and it was invented by Rivest in 1991.
 
 This algorithm is insecure. Do not use it for new designs.
 
