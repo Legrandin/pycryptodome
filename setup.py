@@ -117,6 +117,10 @@ class PCTBuildExt (build_ext):
             # Tell GCC to compile using the C99 standard.
             self.__add_compiler_option("-std=c99")
 
+            # ... but don't tell that to the aCC compiler on HP-UX
+            if self.compiler.compiler_so[0] == 'cc' and sys.platform.startswith('hp-ux'):
+                self.__remove_compiler_option("-std=c99")
+
             # Make assert() statements always work
             self.__remove_compiler_option("-DNDEBUG")
 
