@@ -1,3 +1,56 @@
+2.6
+===
+	* [CVE-2012-2417] Fix LP#985164: insecure ElGamal key generation.
+	  (thanks: Legrandin)
+
+	  In the ElGamal schemes (for both encryption and signatures), g is
+	  supposed to be the generator of the entire Z^*_p group.  However, in
+	  PyCrypto 2.5 and earlier, g is more simply the generator of a random
+	  sub-group of Z^*_p.
+
+	  The result is that the signature space (when the key is used for
+	  signing) or the public key space (when the key is used for encryption)
+	  may be greatly reduced from its expected size of log(p) bits, possibly
+	  down to 1 bit (the worst case if the order of g is 2).
+
+	  While it has not been confirmed, it has also been suggested that an
+	  attacker might be able to use this fact to determine the private key.
+
+	  Anyone using ElGamal keys should generate new keys as soon as practical.
+
+	  Any additional information about this bug will be tracked at
+	  https://bugs.launchpad.net/pycrypto/+bug/985164
+
+	* Huge documentation cleanup (thanks: Legrandin).
+
+	* Added more tests, including test vectors from NIST 800-38A
+	  (thanks: Legrandin)
+
+	* Remove broken MODE_PGP, which never actually worked properly.
+	  A new mode, MODE_OPENPGP, has been added for people wishing to write
+	  OpenPGP implementations.  Note that this does not implement the full
+	  OpenPGP specification, only the "OpenPGP CFB mode" part of that
+	  specification.
+	  https://bugs.launchpad.net/pycrypto/+bug/996814
+
+	* Fix: getPrime with invalid input causes Python to abort with fatal error
+	  https://bugs.launchpad.net/pycrypto/+bug/988431
+
+	* Fix: Segfaults within error-handling paths
+	  (thanks: Paul Howarth & Dave Malcolm)
+	  https://bugs.launchpad.net/pycrypto/+bug/934294
+
+	* Fix: Block ciphers allow empty string as IV
+	  https://bugs.launchpad.net/pycrypto/+bug/997464
+
+	* Fix DevURandomRNG to work with Python3's new I/O stack.
+	  (thanks: Sebastian Ramacher)
+
+	* Remove automagic dependencies on libgmp and libmpir, let the caller
+	  disable them using args.
+
+	* Many other minor bug fixes and improvements (mostly thanks to Legrandin)
+
 2.5
 ===
 	* Added PKCS#1 encryption schemes (v1.5 and OAEP).  We now have
