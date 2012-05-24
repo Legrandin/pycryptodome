@@ -2,7 +2,7 @@
 Python Cryptography Toolkit
 ====================================
 
-**Version 2.5**
+**Version 2.6**
 
 The Python Cryptography Toolkit describes a package containing various
 cryptographic modules for the Python programming language.  This
