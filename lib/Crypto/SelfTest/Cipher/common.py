@@ -223,7 +223,7 @@ class CFBSegmentSizeTest(unittest.TestCase):
         """Regression test: m.new(key, m.MODE_CFB, segment_size=N) should require segment_size to be a multiple of 8 bits"""
         for i in range(1, 8):
             self.assertRaises(ValueError, self.module.new, a2b_hex(self.key), self.module.MODE_CFB, segment_size=i)
-        self.module.new(a2b_hex(self.key), self.module.MODE_CFB, segment_size=8) # should succeed
+        self.module.new(a2b_hex(self.key), self.module.MODE_CFB, "\0"*self.module.block_size, segment_size=8) # should succeed
 
 class RoundtripTest(unittest.TestCase):
     def __init__(self, module, params):
@@ -264,6 +264,30 @@ class PGPTest(unittest.TestCase):
     def runTest(self):
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
                 self.module.MODE_PGP)
+
+class IVLengthTest(unittest.TestCase):
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.key = b(params['key'])
+
+    def shortDescription(self):
+        return "Check that all modes except MODE_ECB and MODE_CTR require an IV of the proper length"
+
+    def runTest(self):
+        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
+                self.module.MODE_CBC, "")
+        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
+                self.module.MODE_CFB, "")
+        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
+                self.module.MODE_OFB, "")
+        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
+                self.module.MODE_OPENPGP, "")
+        self.module.new(a2b_hex(self.key), self.module.MODE_ECB, "")
+        self.module.new(a2b_hex(self.key), self.module.MODE_CTR, "", counter=self._dummy_counter)
+
+    def _dummy_counter(self):
+        return "\0" * self.module.block_size
 
 def make_block_tests(module, module_name, test_data):
     tests = []
@@ -311,6 +335,7 @@ def make_block_tests(module, module_name, test_data):
                 CFBSegmentSizeTest(module, params),
                 RoundtripTest(module, params),
                 PGPTest(module, params),
+                IVLengthTest(module, params),
             ]
             extra_tests_added = 1
 
