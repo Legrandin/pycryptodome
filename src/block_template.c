@@ -145,25 +145,6 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 		return NULL;
 	}
 
-	if (KEY_SIZE!=0 && keylen!=KEY_SIZE)
-	{
-		PyErr_Format(PyExc_ValueError, 
-			     "Key must be %i bytes long, not %i",
-			     KEY_SIZE, keylen);
-		return NULL;
-	}
-	if (KEY_SIZE==0 && keylen==0)
-	{
-		PyErr_SetString(PyExc_ValueError, 
-				"Key cannot be the null string");
-		return NULL;
-	}
-	if (IVlen != BLOCK_SIZE && IVlen != 0)
-	{
-		PyErr_Format(PyExc_ValueError, 
-			     "IV must be %i bytes long", BLOCK_SIZE);
-		return NULL;
-	}
 	if (mode<MODE_ECB || mode>MODE_CTR) 
 	{
 		PyErr_Format(PyExc_ValueError, 
@@ -174,6 +155,25 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	if (mode == MODE_PGP) {
 		PyErr_Format(PyExc_ValueError, 
 			     "MODE_PGP is not supported anymore");
+		return NULL;
+	}
+	if (KEY_SIZE!=0 && keylen!=KEY_SIZE)
+	{
+		PyErr_Format(PyExc_ValueError,
+			     "Key must be %i bytes long, not %i",
+			     KEY_SIZE, keylen);
+		return NULL;
+	}
+	if (KEY_SIZE==0 && keylen==0)
+	{
+		PyErr_SetString(PyExc_ValueError,
+				"Key cannot be the null string");
+		return NULL;
+	}
+	if (IVlen != BLOCK_SIZE && IVlen != 0)
+	{
+		PyErr_Format(PyExc_ValueError,
+			     "IV must be %i bytes long", BLOCK_SIZE);
 		return NULL;
 	}
 
