@@ -677,7 +677,6 @@ Algorithm		Capabilities
 RSA				Encryption, authentication/signatures
 ElGamal			Encryption, authentication/signatures
 DSA				Authentication/signatures
-qNEW			Authentication/signatures
 =============  ==========================================
 
 Many of these algorithms are patented.  Before using any of them in a
