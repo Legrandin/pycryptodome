@@ -156,7 +156,7 @@ class DerSequenceTests(unittest.TestCase):
 		self.assertEqual(der[1:-1],[9])
 		self.assertEquals(der.encode(), b('0\x0A\x02\x02\x01\x80\x02\x01\x09\x02\x01\x08'))
 
-	def testEncode6(self):
+	def testEncode7(self):
 		# One integer and another type (no matter what it is)
 		der = DerSequence()
 		der.append(0x180L)
