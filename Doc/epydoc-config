@@ -22,6 +22,5 @@ link: <a href="http://www.pycrypto.org/">PyCrypto.org</a>
 
 # The documentation is usually built on a Linux machine; nt.py tries to
 # import the winrandom module.
-exclude-introspect: ^Crypto\.Random\.OSRNG\.nt|Crypto\.Util\.winrandom$
-exclude-introspect: ^Crypto\.Util\.osentropy\.nt$
+exclude-introspect: ^Crypto\.Random\.OSRNG\.nt|Crypto\.Util\.winrandom|Crypto\.Util\.osentropy\.nt$
 exclude: ^Crypto\.SelfTest
