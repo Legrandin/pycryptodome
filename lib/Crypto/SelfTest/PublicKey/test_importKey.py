@@ -104,7 +104,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 -----END PUBLIC KEY-----'''
 
     # Obtained using 'ssh-keygen -i -m PKCS8 -f rsaPublicKeyPEM'
-    rsaPublicKeyOpenSSH = '''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n'''
+    rsaPublicKeyOpenSSH = b('''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n''')
 
     # The private key, in PKCS#1 format encoded with DER
     rsaKeyDER = a2b_hex(
@@ -298,7 +298,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(openssh_1[0], openssh_2[0])
         self.assertEqual(openssh_1[1], openssh_2[1])
 
-    def testExportKey4(self):
+    def testExportKey6(self):
         key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         # Tuple with index #1 is encrypted with 3DES
         t = map(b,self.rsaKeyEncryptedPEM[1])
@@ -307,15 +307,19 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         pemKey = key.exportKey("PEM", t[0])
         self.assertEqual(pemKey, t[1])
 
-    def testExportKey5(self):
+    def testExportKey7(self):
         key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         derKey = key.exportKey("DER", pkcs=8)
         self.assertEqual(derKey, self.rsaKeyDER8)
 
-    def testExportKey6(self):
+    def testExportKey8(self):
         key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         pemKey = key.exportKey("PEM", pkcs=8)
         self.assertEqual(pemKey, b(self.rsaKeyPEM8))
+
+    def testExportKey9(self):
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        self.assertRaises(ValueError, key.exportKey, "invalid-format")
 
 class ImportKeyTestsSlow(ImportKeyTests):
     def setUp(self):
