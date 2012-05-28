@@ -317,6 +317,10 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         pemKey = key.exportKey("PEM", pkcs=8)
         self.assertEqual(pemKey, b(self.rsaKeyPEM8))
 
+    def testExportKey9(self):
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        self.assertRaises(ValueError, key.exportKey, "invalid-format")
+
 class ImportKeyTestsSlow(ImportKeyTests):
     def setUp(self):
         self.rsa = RSA.RSAImplementation(use_fast_math=0)

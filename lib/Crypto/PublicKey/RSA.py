@@ -400,7 +400,7 @@ class _RSAobj(pubkey.pubkey):
                 pem += b('').join(chunks)
                 pem += b("-----END " + keyType + " KEY-----")
                 return pem
-        return ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
+        raise ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
 
 class RSAImplementation(object):
     """
