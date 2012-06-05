@@ -83,6 +83,8 @@ if sys.version_info[0] == 2:
                 return s.encode("latin-1")
             else:
                 return ''.join(s)
+    # In Pyton 2.x, StringIO is a stand-alone module
+    from StringIO import StringIO as BytesIO
 else:
     def b(s):
        return s.encode("latin-1") # utf-8 would cause some side-effects we don't want
@@ -103,5 +105,7 @@ else:
                 return s.encode("latin-1")
             else:
                 return bytes(s)
-
+    # In Pyton 3.x, StringIO is a sub-module of io
+    from io import BytesIO
+ 
 # vim:set ts=4 sw=4 sts=4 expandtab:
