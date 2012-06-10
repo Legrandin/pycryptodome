@@ -44,9 +44,10 @@ An example of usage is the following:
     >>> from Crypto.Cipher import AES
     >>> from Crypto.Util import Counter
     >>>
-    >>> pt = b'\x00'*1000000
+    >>> pt = b'X'*1000000
     >>> ctr = Counter.new(128)
-    >>> cipher = AES.new(b'\x00'*16, AES.MODE_CTR, counter=ctr)
+    >>> key = b'AES-128 symm. key'
+    >>> cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
     >>> ct = cipher.encrypt(pt)
 
 :undocumented: __package__
