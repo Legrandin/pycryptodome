@@ -33,12 +33,12 @@ DES should not be used for new designs. Use `AES`.
 
 As an example, encryption can be done as follows:
 
-    >>> from Crypto.Cipher import DES3
+    >>> from Crypto.Cipher import DES
     >>> from Crypto import Random
     >>>
-    >>> key = b'Sixteen byte key'
-    >>> iv = Random.new().read(DES3.block_size)
-    >>> cipher = DES3.new(key, DES3.MODE_OFB, iv)
+    >>> key = b'-8B key-'
+    >>> iv = Random.new().read(DES.block_size)
+    >>> cipher = DES.new(key, DES.MODE_OFB, iv)
     >>> plaintext = b'sona si latine loqueris '
     >>> msg = iv + cipher.encrypt(plaintext)
 
