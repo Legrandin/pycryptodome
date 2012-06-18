@@ -46,7 +46,7 @@ An example of usage is the following:
     >>>
     >>> pt = b'X'*1000000
     >>> ctr = Counter.new(128)
-    >>> key = b'AES-128 symm. key'
+    >>> key = b'AES-128 symm key'
     >>> cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
     >>> ct = cipher.encrypt(pt)
 
