@@ -63,6 +63,7 @@ As an example, encryption can be done as follows:
 
 __revision__ = "$Id$"
 
+from Crypto.Util.py3compat import *
 from Crypto.Cipher import _ARC4
 
 class ARC4Cipher:
@@ -74,7 +75,18 @@ class ARC4Cipher:
         
         See also `new()` at the module level."""
 
+        if len(args)>0:
+            ndrop = args[0]
+            args = args[1:]
+        else:
+            ndrop = kwargs.get('drop', 0)
+            if ndrop: del kwargs['drop'] 
         self._cipher = _ARC4.new(key, *args, **kwargs)
+        if ndrop:
+            # This is OK even if the cipher is used for decryption, since encrypt
+            # and decrypt are actually the same thing with ARC4.
+            self._cipher.encrypt(b('\x00')*ndrop)
+
         self.block_size = self._cipher.block_size
         self.key_size = self._cipher.key_size
 
@@ -108,8 +120,17 @@ def new(key, *args, **kwargs):
         The secret key to use in the symmetric cipher.
         It can have any length, with a minimum of 40 bytes.
         Its cryptograpic strength is always capped to 2048 bits (256 bytes).
+    :Keywords:
+      drop : integer
+        The amount of bytes to discard from the initial part of the keystream.
+        In fact, such part has been found to be distinguishable from random
+        data (while it shouldn't) and also correlated to key.
+        
+        The recommended value is 3072_ bytes. The default value is 0.
 
     :Return: an `ARC4Cipher` object
+
+    .. _3072: http://eprint.iacr.org/2002/067.pdf
     """
     return ARC4Cipher(key, *args, **kwargs)
 

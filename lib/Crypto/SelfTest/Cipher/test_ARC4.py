@@ -423,10 +423,30 @@ class RFC6229_Tests(unittest.TestCase):
                     count += 1
             self.assertEqual(count, len(tv[1]))
 
+class Drop_Tests(unittest.TestCase):
+    key = b('\xAA')*16
+    data = b('\x00')*5000
+
+    def setUp(self):
+        self.cipher = ARC4.new(self.key)
+
+    def test_drop256_encrypt(self):
+        cipher_drop = ARC4.new(self.key, 256)
+        ct_drop = cipher_drop.encrypt(self.data[:16])
+        ct = self.cipher.encrypt(self.data)[256:256+16]
+        self.assertEquals(ct_drop, ct)
+
+    def test_drop256_decrypt(self):
+        cipher_drop = ARC4.new(self.key, 256)
+        pt_drop = cipher_drop.decrypt(self.data[:16])
+        pt = self.cipher.decrypt(self.data)[256:256+16]
+        self.assertEquals(pt_drop, pt)
+
 def get_tests(config={}):
     from common import make_stream_tests
     tests = make_stream_tests(ARC4, "ARC4", test_data)
     tests += list_test_cases(RFC6229_Tests)
+    tests += list_test_cases(Drop_Tests)
     return tests
 
 if __name__ == '__main__':
