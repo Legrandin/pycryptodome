@@ -21,12 +21,12 @@ An example usage of the SHA256 module is:
 An example usage of an encryption algorithm (AES, in this case) is:
 
 >>> from Crypto.Cipher import AES
->>> obj = AES.new('This is a key456', AES.MODE_ECB)
+>>> obj = AES.new('This is a key123', AES.MODE_CBC, 'This is an IV456')
 >>> message = "The answer is no"
 >>> ciphertext = obj.encrypt(message)
 >>> ciphertext
-'o\x1aq_{P+\xd0\x07\xce\x89\xd1=M\x989'
->>> obj2 = AES.new('This is a key456', AES.MODE_ECB)
+'\xd6\x83\x8dd!VT\x92\xaa`A\x05\xe0\x9b\x8b\xf1'
+>>> obj2 = AES.new('This is a key123', AES.MODE_CBC, 'This is an IV456')
 >>> obj2.decrypt(ciphertext)
 'The answer is no'
 
