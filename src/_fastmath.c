@@ -1097,8 +1097,9 @@ cleanup:
 	mpz_clear (n);
 	Py_END_ALLOW_THREADS;
 
-	if (result == 0)
-	{
+	if (result < 0) {
+		return NULL;
+	} else if (result == 0) {
 		Py_INCREF(Py_False);
 		return Py_False;
 	} else {
@@ -1323,6 +1324,7 @@ sieve_field (char *field, unsigned long int field_size, mpz_t start)
 /* Tests if n is prime.
  * Returns 0 when n is definitly composite.
  * Returns 1 when n is probably prime.
+ * Returns -1 when there is an error.
  * every round reduces the chance of a false positive be at least 1/4.
  *
  * If randfunc is omitted, then the python version Random.new().read is used.
@@ -1335,7 +1337,8 @@ static int
 rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 {
 	int base_was_tested;
-	unsigned long int i, j, b, composite, return_val=1;
+	unsigned long int i, j, b, composite;
+	int return_val = 1;
 	mpz_t a, m, z, n_1, tmp;
 	mpz_t tested[MAX_RABIN_MILLER_ROUNDS];
 
@@ -1449,13 +1452,13 @@ cleanup:
 static PyObject *
 getStrongPrime (PyObject *self, PyObject *args, PyObject *kwargs)
 {
-	unsigned long int i, j, result, bits, x, e=0;
+	unsigned long int i, j, bits, x, e=0;
 	mpz_t p[2], y[2], R, X;
 	mpz_t tmp[2], lower_bound, upper_bound, range, increment;
 	mpf_t tmp_bound;
 	char *field;
 	double false_positive_prob;
-	int rabin_miller_rounds, is_possible_prime, error = 0;
+	int rabin_miller_rounds, is_possible_prime, error = 0, result;
 	PyObject *prime, *randfunc=NULL;
 	static char *kwlist[] = {"N", "e", "false_positive_prob", "randfunc", NULL};
 	unsigned long int base_size = SIEVE_BASE_SIZE;
