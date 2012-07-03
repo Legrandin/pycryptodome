@@ -1097,8 +1097,9 @@ cleanup:
 	mpz_clear (n);
 	Py_END_ALLOW_THREADS;
 
-	if (result == 0)
-	{
+	if (result < 0) {
+		return NULL;
+	} else if (result == 0) {
 		Py_INCREF(Py_False);
 		return Py_False;
 	} else {
@@ -1323,6 +1324,7 @@ sieve_field (char *field, unsigned long int field_size, mpz_t start)
 /* Tests if n is prime.
  * Returns 0 when n is definitly composite.
  * Returns 1 when n is probably prime.
+ * Returns -1 when there is an error.
  * every round reduces the chance of a false positive be at least 1/4.
  *
  * If randfunc is omitted, then the python version Random.new().read is used.
@@ -1335,7 +1337,8 @@ static int
 rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 {
 	int base_was_tested;
-	unsigned long int i, j, b, composite, return_val=1;
+	unsigned long int i, j, b, composite;
+	int return_val = 1;
 	mpz_t a, m, z, n_1, tmp;
 	mpz_t tested[MAX_RABIN_MILLER_ROUNDS];
 
