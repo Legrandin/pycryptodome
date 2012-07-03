@@ -32,6 +32,9 @@ if sys.version_info[0] == 2 and sys.version_info[1] == 1:
 
 import unittest
 
+class MyError(Exception):
+    """Dummy exception used for tests"""
+
 # NB: In some places, we compare tuples instead of just output values so that
 # if any inputs cause a test failure, we'll be able to tell which ones.
 
@@ -288,6 +291,32 @@ class FastmathTests(unittest.TestCase):
         k = number._fastmath.rsa_construct(n, e)
         self.assertEqual(n, k.n)
         self.assertEqual(e, k.e)
+
+    def test_isPrime_randfunc_exception(self):
+        """Test that when isPrime is called, an exception raised in randfunc is propagated."""
+        def randfunc(n):
+            raise MyError
+        prime = 3536384141L         # Needs to be large enough so that rabinMillerTest will be invoked
+        self.assertRaises(MyError, number._fastmath.isPrime, prime, randfunc=randfunc)
+
+    def test_getStrongPrime_randfunc_exception(self):
+        """Test that when getStrongPrime is called, an exception raised in randfunc is propagated."""
+        def randfunc(n):
+            raise MyError
+        self.assertRaises(MyError, number._fastmath.getStrongPrime, 512, randfunc=randfunc)
+
+    def test_isPrime_randfunc_bogus(self):
+        """Test that when isPrime is called, an exception is raised if randfunc returns something bogus."""
+        def randfunc(n):
+            return None
+        prime = 3536384141L         # Needs to be large enough so that rabinMillerTest will be invoked
+        self.assertRaises(TypeError, number._fastmath.isPrime, prime, randfunc=randfunc)
+
+    def test_getStrongPrime_randfunc_bogus(self):
+        """Test that when getStrongPrime is called, an exception is raised if randfunc returns something bogus."""
+        def randfunc(n):
+            return None
+        self.assertRaises(TypeError, number._fastmath.getStrongPrime, 512, randfunc=randfunc)
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
