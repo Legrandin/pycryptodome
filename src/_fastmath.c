@@ -1457,7 +1457,7 @@ getStrongPrime (PyObject *self, PyObject *args, PyObject *kwargs)
 	mpz_t tmp[2], lower_bound, upper_bound, range, increment;
 	mpf_t tmp_bound;
 	char *field;
-	double false_positive_prob;
+	double false_positive_prob = 1e-6;
 	int rabin_miller_rounds, is_possible_prime, error = 0, result;
 	PyObject *prime, *randfunc=NULL;
 	static char *kwlist[] = {"N", "e", "false_positive_prob", "randfunc", NULL};
