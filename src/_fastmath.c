@@ -1372,9 +1372,9 @@ rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 	b = mpz_scan1 (n_1, 0);
 	mpz_fdiv_q_2exp (m, n_1, b);
 
-	if (mpz_fits_ulong_p (n) && (mpz_get_ui (n) - 2 < rounds))
+	if (mpz_fits_ulong_p (n) && (mpz_get_ui (n) - 2 < (unsigned long)rounds))
 		rounds = mpz_get_ui (n) - 2;
-	for (i = 0; i < rounds; ++i)
+	for (i = 0; i < (unsigned long)rounds; ++i)
 	{
 		mpz_set_ui (tmp, 2);
 		do

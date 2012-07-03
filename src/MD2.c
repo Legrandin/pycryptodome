@@ -51,7 +51,7 @@ typedef unsigned int U32;
 
 typedef struct {
 	U8 C[16], X[48];
-	int count;
+	unsigned int count;
 	U8 buf[16];
 } hash_state;
 
@@ -134,7 +134,7 @@ hash_digest (const hash_state *self)
 	U8 padding[16];
 	U32 padlen;
 	hash_state temp;
-	int i;
+	unsigned int i;
   
 	memcpy(&temp, self, sizeof(hash_state));
 	padlen= 16-self->count;

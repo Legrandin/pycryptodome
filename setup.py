@@ -117,6 +117,11 @@ class PCTBuildExt (build_ext):
             # Tell GCC to compile using the C99 standard.
             self.__add_compiler_option("-std=c99")
 
+            # More compiler warnings
+            self.__add_compiler_option("-Wextra")
+            self.__add_compiler_option("-Wno-missing-field-initializers")
+            self.__add_compiler_option("-Wno-unused-parameter")
+
             # ... but don't tell that to the aCC compiler on HP-UX
             if self.compiler.compiler_so[0] == 'cc' and sys.platform.startswith('hp-ux'):
                 self.__remove_compiler_option("-std=c99")
