@@ -1260,7 +1260,7 @@ getRandomNBitInteger (mpz_t n, unsigned long int bits, PyObject *randfunc)
 }
 
 
-/* Sets n to a rangom number so that lower_bound <= n < upper_bound .
+/* Sets n to a random number so that lower_bound <= n < upper_bound .
  * If randfunc is provided it should be a callable which takes a single int
  * parameter and return as many random bytes as a python string.
  * Returns 1 on success
