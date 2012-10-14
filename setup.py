@@ -318,6 +318,10 @@ class TestCommand(Command):
         self.config = {'slow_tests': not self.skip_slow_tests}
 
     def run(self):
+        # Run sub commands
+        for cmd_name in self.get_sub_commands():
+            self.run_command(cmd_name)
+
         # Run SelfTest
         self.announce("running self-tests")
         old_path = sys.path[:]
@@ -345,6 +349,8 @@ class TestCommand(Command):
 
         # Run slower self-tests
         self.announce("running extended self-tests")
+
+    sub_commands = [ ('build', None) ]
 
 kw = {'name':"pycrypto",
       'version':"2.6",  # See also: lib/Crypto/__init__.py
