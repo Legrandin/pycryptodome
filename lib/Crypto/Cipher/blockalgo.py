@@ -202,13 +202,13 @@ class BlockAlgo:
 
         This function does not perform any padding.
        
-         - For `MODE_ECB`, `MODE_CBC`, and `MODE_OFB`, *plaintext* length
-           (in bytes) must be a multiple of *block_size*.
+         - For `MODE_ECB` and `MODE_CBC`, *plaintext* length (in bytes) must be
+           a multiple of *block_size*.
 
          - For `MODE_CFB`, *plaintext* length (in bytes) must be a multiple
            of *segment_size*/8.
 
-         - For `MODE_CTR`, *plaintext* can be of any length.
+         - For `MODE_OFB` and `MODE_CTR`, *plaintext* can be of any length.
 
          - For `MODE_OPENPGP`, *plaintext* must be a multiple of *block_size*,
            unless it is the last chunk of the message.
@@ -261,13 +261,13 @@ class BlockAlgo:
 
         This function does not perform any padding.
        
-         - For `MODE_ECB`, `MODE_CBC`, and `MODE_OFB`, *ciphertext* length
-           (in bytes) must be a multiple of *block_size*.
+         - For `MODE_ECB` and `MODE_CBC`, *ciphertext* length (in bytes) must
+           be a multiple of *block_size*.
 
          - For `MODE_CFB`, *ciphertext* length (in bytes) must be a multiple
            of *segment_size*/8.
 
-         - For `MODE_CTR`, *ciphertext* can be of any length.
+         - For `MODE_OFB` and `MODE_CTR`, *ciphertext* can be of any length.
 
          - For `MODE_OPENPGP`, *plaintext* must be a multiple of *block_size*,
            unless it is the last chunk of the message.

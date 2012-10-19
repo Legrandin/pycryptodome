@@ -371,7 +371,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         tests.append(CipherSelfTest(module, params))
 
         # When using CTR mode, test that the interface behaves like a stream cipher
-        if p_mode == 'CTR':
+        if p_mode in ('OFB', 'CTR'):
             tests.append(CipherStreamingSelfTest(module, params))
 
         # When using CTR mode, test the non-shortcut code path.
