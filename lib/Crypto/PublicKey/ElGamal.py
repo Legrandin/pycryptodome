@@ -111,6 +111,7 @@ __all__ = ['generate', 'construct', 'error', 'ElGamalobj']
 
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util import number
+from Crypto import Random
 
 class error (Exception):
     pass
@@ -242,6 +243,11 @@ class ElGamalobj(pubkey):
     #:  - **x**, the private key.
     keydata=['p', 'g', 'y', 'x']
 
+    def __init__(self, randfunc=None):
+        if randfunc is None:
+            randfunc = Random.new().read
+        self._randfunc = randfunc
+
     def encrypt(self, plaintext, K):
         """Encrypt a piece of data with ElGamal.
 
@@ -331,8 +337,11 @@ class ElGamalobj(pubkey):
     def _decrypt(self, M):
         if (not hasattr(self, 'x')):
             raise TypeError('Private key not available in this object')
-        ax=pow(M[0], self.x, self.p)
-        plaintext=(M[1] * inverse(ax, self.p ) ) % self.p
+        r = number.getRandomRange(2, self.p-1, self._randfunc)
+        a_blind = (M[0] * pow(self.g, r, self.p)) % self.p
+        ax=pow(a_blind, self.x, self.p)
+        plaintext_blind = (M[1] * inverse(ax, self.p ) ) % self.p
+        plaintext = (plaintext_blind * pow(self.y, r, self.p)) % self.p
         return plaintext
 
     def _sign(self, M, K):
