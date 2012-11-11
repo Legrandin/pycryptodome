@@ -746,6 +746,7 @@ rsaKey_new (PyObject * self, PyObject * args)
 	} else {
 		if (factorize_N_from_D(key))
 		{
+			Py_DECREF(key);
 			PyErr_SetString(PyExc_ValueError,
 			  "Unable to compute factors p and q from exponent d.");
 			return NULL;
@@ -1176,7 +1177,7 @@ getRNG (void)
 static int
 getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc_)
 {
-	PyObject *arglist, *randfunc=NULL, *rng=NULL, *rand_bytes=NULL;
+	PyObject *arglist=NULL, *randfunc=NULL, *rng=NULL, *rand_bytes=NULL;
 	int return_val = 1;
 	unsigned long bytes = bits / 8;
 	unsigned long odd_bits = bits % 8;
@@ -1216,7 +1217,6 @@ getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc_)
 		return_val = 0;
 		goto cleanup;
 	}
-	Py_DECREF (arglist);
 	if (!PyBytes_Check (rand_bytes))
 	{
 		PyErr_SetString (PyExc_TypeError,
@@ -1230,6 +1230,7 @@ getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc_)
 	mpz_fdiv_q_2exp (n, n, 8 - odd_bits);
 
 cleanup:
+	Py_XDECREF (arglist);
 	Py_XDECREF (rand_bytes);
 	if (rng)
 	{
