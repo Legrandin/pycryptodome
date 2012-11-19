@@ -286,6 +286,8 @@ class _RSAobj(pubkey.pubkey):
     def __setstate__(self, d):
         if not hasattr(self, 'implementation'):
             self.implementation = RSAImplementation()
+        if not hasattr(self, '_randfunc'):
+            self._randfunc = Random.new().read
         t = []
         for k in self.keydata:
             if not d.has_key(k):
