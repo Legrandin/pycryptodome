@@ -1445,6 +1445,240 @@ test_data = [
       '5baa61e4c9b93f3f0682250b6cf8331b', # Key (hash of 'password')
       'GPG Test Vector #1',
       dict(mode='OPENPGP', iv='3d7d3e62282add7eb203eeba5c800733', encrypted_iv='fd934601ef49cb58b6d9aebca6056bdb96ef' ) ),
+
+    # NIST SP 800-38C test vectors for CCM
+    # This is a list of tuples with 5 items:
+    #
+    #  1. Associated data + '|' + plaintext
+    #  2. Associated data + '|' + ciphertext + '|' + MAC
+    #  3. AES-128 key
+    #  4. Description
+    #  5. Dictionary of parameters to be passed to AES.new().
+    #     It must include the nonce.
+    #
+    ( '0001020304050607|20212223',
+      '0001020304050607|7162015b|4dac255d',
+      '404142434445464748494a4b4c4d4e4f',
+      'NIST SP 800-38C Appex C.1',
+      dict(mode='CCM', nonce='10111213141516')
+    ),
+    ( '000102030405060708090a0b0c0d0e0f|202122232425262728292a2b2c2d2e2f',
+      '000102030405060708090a0b0c0d0e0f|d2a1f0e051ea5f62081a7792073d593d|1fc64fbfaccd',
+      '404142434445464748494a4b4c4d4e4f',
+      'NIST SP 800-38C Appex C.2',
+      dict(mode='CCM', nonce='1011121314151617')
+    ),
+    ( '000102030405060708090a0b0c0d0e0f10111213|'+
+      '202122232425262728292a2b2c2d2e2f3031323334353637',
+      '000102030405060708090a0b0c0d0e0f10111213|'+
+      'e3b201a9f5b71a7a9b1ceaeccd97e70b6176aad9a4428aa5|484392fbc1b09951',
+      '404142434445464748494a4b4c4d4e4f',
+      'NIST SP 800-38C Appex C.3',
+      dict(mode='CCM', nonce='101112131415161718191a1b')
+    ),
+    (
+      (''.join(["%02X" % (x*16+y) for x in xrange(0,16) for y in xrange(0,16)]))*256+'|'+
+      '202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f',
+      (''.join(["%02X" % (x*16+y) for x in xrange(0,16) for y in xrange(0,16)]))*256+'|'+
+      '69915dad1e84c6376a68c2967e4dab615ae0fd1faec44cc484828529463ccf72|'+
+      'b4ac6bec93e8598e7f0dadbcea5b',
+      '404142434445464748494a4b4c4d4e4f',
+      'NIST SP 800-38C Appex C.4',
+      dict(mode='CCM', nonce='101112131415161718191a1b1c')
+    ),
+    # RFC3610 test vectors
+    (
+      '0001020304050607|08090a0b0c0d0e0f101112131415161718191a1b1c1d1e',
+      '0001020304050607|588c979a61c663d2f066d0c2c0f989806d5f6b61dac384|'+
+      '17e8d12cfdf926e0',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #1',
+      dict(mode='CCM', nonce='00000003020100a0a1a2a3a4a5')
+    ),
+    (
+      '0001020304050607|08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+      '0001020304050607|72c91a36e135f8cf291ca894085c87e3cc15c439c9e43a3b|'+
+      'a091d56e10400916',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #2',
+      dict(mode='CCM', nonce='00000004030201a0a1a2a3a4a5')
+    ),
+    (
+      '0001020304050607|08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20',
+      '0001020304050607|51b1e5f44a197d1da46b0f8e2d282ae871e838bb64da859657|'+
+      '4adaa76fbd9fb0c5',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #3',
+      dict(mode='CCM', nonce='00000005040302A0A1A2A3A4A5')
+    ),
+    (
+      '000102030405060708090a0b|0c0d0e0f101112131415161718191a1b1c1d1e',
+      '000102030405060708090a0b|a28c6865939a9a79faaa5c4c2a9d4a91cdac8c|'+
+      '96c861b9c9e61ef1',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #4',
+      dict(mode='CCM', nonce='00000006050403a0a1a2a3a4a5')
+    ),
+    (
+      '000102030405060708090a0b|0c0d0e0f101112131415161718191a1b1c1d1e1f',
+      '000102030405060708090a0b|dcf1fb7b5d9e23fb9d4e131253658ad86ebdca3e|'+
+      '51e83f077d9c2d93',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #5',
+      dict(mode='CCM', nonce='00000007060504a0a1a2a3a4a5')
+    ),
+    (
+      '000102030405060708090a0b|0c0d0e0f101112131415161718191a1b1c1d1e1f20',
+      '000102030405060708090a0b|6fc1b011f006568b5171a42d953d469b2570a4bd87|'+
+      '405a0443ac91cb94',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #6',
+      dict(mode='CCM', nonce='00000008070605a0a1a2a3a4a5')
+    ),
+    (
+      '0001020304050607|08090a0b0c0d0e0f101112131415161718191a1b1c1d1e',
+      '0001020304050607|0135d1b2c95f41d5d1d4fec185d166b8094e999dfed96c|'+
+      '048c56602c97acbb7490',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #7',
+      dict(mode='CCM', nonce='00000009080706a0a1a2a3a4a5')
+    ),
+    (
+      '0001020304050607|08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+      '0001020304050607|7b75399ac0831dd2f0bbd75879a2fd8f6cae6b6cd9b7db24|'+
+      'c17b4433f434963f34b4',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #8',
+      dict(mode='CCM', nonce='0000000a090807a0a1a2a3a4a5')
+    ),
+    (
+      '0001020304050607|08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20',
+      '0001020304050607|82531a60cc24945a4b8279181ab5c84df21ce7f9b73f42e197|'+
+      'ea9c07e56b5eb17e5f4e',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #9',
+      dict(mode='CCM', nonce='0000000b0a0908a0a1a2a3a4a5')
+    ),
+    (
+      '000102030405060708090a0b|0c0d0e0f101112131415161718191a1b1c1d1e',
+      '000102030405060708090a0b|07342594157785152b074098330abb141b947b|'+
+      '566aa9406b4d999988dd',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #10',
+      dict(mode='CCM', nonce='0000000c0b0a09a0a1a2a3a4a5')
+    ),
+    (
+      '000102030405060708090a0b|0c0d0e0f101112131415161718191a1b1c1d1e1f',
+      '000102030405060708090a0b|676bb20380b0e301e8ab79590a396da78b834934|'+
+      'f53aa2e9107a8b6c022c',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #11',
+      dict(mode='CCM', nonce='0000000d0c0b0aa0a1a2a3a4a5')
+    ),
+    (
+      '000102030405060708090a0b|0c0d0e0f101112131415161718191a1b1c1d1e1f20',
+      '000102030405060708090a0b|c0ffa0d6f05bdb67f24d43a4338d2aa4bed7b20e43|'+
+      'cd1aa31662e7ad65d6db',
+      'c0c1c2c3c4c5c6c7c8c9cacbcccdcecf',
+      'RFC3610 Packet Vector #12',
+      dict(mode='CCM', nonce='0000000e0d0c0ba0a1a2a3a4a5')
+    ),
+    (
+      '0be1a88bace018b1|08e8cf97d820ea258460e96ad9cf5289054d895ceac47c',
+      '0be1a88bace018b1|4cb97f86a2a4689a877947ab8091ef5386a6ffbdd080f8|'+
+      'e78cf7cb0cddd7b3',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #13',
+      dict(mode='CCM', nonce='00412b4ea9cdbe3c9696766cfa')
+    ),
+    (
+      '63018f76dc8a1bcb|9020ea6f91bdd85afa0039ba4baff9bfb79c7028949cd0ec',
+      '63018f76dc8a1bcb|4ccb1e7ca981befaa0726c55d378061298c85c92814abc33|'+
+      'c52ee81d7d77c08a',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #14',
+      dict(mode='CCM', nonce='0033568ef7b2633c9696766cfa')
+    ),
+    (
+      'aa6cfa36cae86b40|b916e0eacc1c00d7dcec68ec0b3bbb1a02de8a2d1aa346132e',
+      'aa6cfa36cae86b40|b1d23a2220ddc0ac900d9aa03c61fcf4a559a4417767089708|'+
+      'a776796edb723506',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #15',
+      dict(mode='CCM', nonce='00103fe41336713c9696766cfa')
+    ),
+    (
+      'd0d0735c531e1becf049c244|12daac5630efa5396f770ce1a66b21f7b2101c',
+      'd0d0735c531e1becf049c244|14d253c3967b70609b7cbb7c49916028324526|'+
+      '9a6f49975bcadeaf',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #16',
+      dict(mode='CCM', nonce='00764c63b8058e3c9696766cfa')
+    ),
+    (
+      '77b60f011c03e1525899bcae|e88b6a46c78d63e52eb8c546efb5de6f75e9cc0d',
+      '77b60f011c03e1525899bcae|5545ff1a085ee2efbf52b2e04bee1e2336c73e3f|'+
+      '762c0c7744fe7e3c',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #17',
+      dict(mode='CCM', nonce='00f8b678094e3b3c9696766cfa')
+    ),
+    (
+      'cd9044d2b71fdb8120ea60c0|6435acbafb11a82e2f071d7ca4a5ebd93a803ba87f',
+      'cd9044d2b71fdb8120ea60c0|009769ecabdf48625594c59251e6035722675e04c8|'+
+      '47099e5ae0704551',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #18',
+      dict(mode='CCM', nonce='00d560912d3f703c9696766cfa')
+    ),
+    (
+      'd85bc7e69f944fb8|8a19b950bcf71a018e5e6701c91787659809d67dbedd18',
+      'd85bc7e69f944fb8|bc218daa947427b6db386a99ac1aef23ade0b52939cb6a|'+
+      '637cf9bec2408897c6ba',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #19',
+      dict(mode='CCM', nonce='0042fff8f1951c3c9696766cfa')
+    ),
+    (
+      '74a0ebc9069f5b37|1761433c37c5a35fc1f39f406302eb907c6163be38c98437',
+      '74a0ebc9069f5b37|5810e6fd25874022e80361a478e3e9cf484ab04f447efff6|'+
+      'f0a477cc2fc9bf548944',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #20',
+      dict(mode='CCM', nonce='00920f40e56cdc3c9696766cfa')
+    ),
+    (
+      '44a3aa3aae6475ca|a434a8e58500c6e41530538862d686ea9e81301b5ae4226bfa',
+      '44a3aa3aae6475ca|f2beed7bc5098e83feb5b31608f8e29c38819a89c8e776f154|'+
+      '4d4151a4ed3a8b87b9ce',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #21',
+      dict(mode='CCM', nonce='0027ca0c7120bc3c9696766cfa')
+    ),
+    (
+      'ec46bb63b02520c33c49fd70|b96b49e21d621741632875db7f6c9243d2d7c2',
+      'ec46bb63b02520c33c49fd70|31d750a09da3ed7fddd49a2032aabf17ec8ebf|'+
+      '7d22c8088c666be5c197',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #22',
+      dict(mode='CCM', nonce='005b8ccbcd9af83c9696766cfa')
+    ),
+    (
+      '47a65ac78b3d594227e85e71|e2fcfbb880442c731bf95167c8ffd7895e337076',
+      '47a65ac78b3d594227e85e71|e882f1dbd38ce3eda7c23f04dd65071eb41342ac|'+
+      'df7e00dccec7ae52987d',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #23',
+      dict(mode='CCM', nonce='003ebe94044b9a3c9696766cfa')
+    ),
+    (
+      '6e37a6ef546d955d34ab6059|abf21c0b02feb88f856df4a37381bce3cc128517d4',
+      '6e37a6ef546d955d34ab6059|f32905b88a641b04b9c9ffb58cc390900f3da12ab1|'+
+      '6dce9e82efa16da62059',
+      'd7828d13b2b0bdc325a76236df93cc6b',
+      'RFC3610 Packet Vector #24',
+      dict(mode='CCM', nonce='008d493b30ae8b3c9696766cfa')
+    ),
 ]
 
 def get_tests(config={}):

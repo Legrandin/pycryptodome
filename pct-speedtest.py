@@ -167,6 +167,8 @@ class Benchmark:
         elif mode == "CTR-LE":
             from Crypto.Util import Counter
             cipher = module.new(key, module.MODE_CTR, counter=Counter.new(module.block_size*8, little_endian=True))
+        elif hasattr(module, 'MODE_CCM') and mode==module.MODE_CCM:
+            cipher = module.new(key, mode, iv[:8], msg_len=len(rand)*len(blocks))
         elif mode==module.MODE_CTR:
             ctr = Crypto.Util.Counter.new(module.block_size*8,
                     initial_value=bytes_to_long(iv),
@@ -359,6 +361,8 @@ class Benchmark:
             self.test_encryption("%s-OPENPGP" % (cipher_name,), module, key_bytes, module.MODE_OPENPGP)
             self.test_encryption("%s-CTR-BE" % (cipher_name,), module, key_bytes, "CTR-BE")
             self.test_encryption("%s-CTR-LE" % (cipher_name,), module, key_bytes, "CTR-LE")
+            if hasattr(module, "MODE_CCM"):
+                self.test_encryption("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
 
         # Crypto.Cipher (stream ciphers)
         for cipher_name, module, key_bytes in stream_specs:
