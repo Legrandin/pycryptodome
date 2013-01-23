@@ -111,7 +111,7 @@ MODE_OFB = 5
 #: .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 MODE_CTR = 6
 
-#: OpenPGP. This mode is a variant of CFB, and it is only used in PGP and
+#: *OpenPGP CFB*. This mode is a variant of CFB, and it is only used in PGP and
 #: OpenPGP_ applications. An Initialization Vector (*IV*) is required.
 #:
 #: Unlike CFB, the IV is not transmitted to the receiver.
