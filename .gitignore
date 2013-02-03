@@ -9,12 +9,15 @@
 MANIFEST
 
 # Autoconf
+/aclocal.m4
+/buildenv
 /autom4te.cache
 /autoscan.log
 /config.h
 /config.log
 /config.status
 src/config.h
+src/stamp-h1
 
 # Python versions
 /tools/py/

@@ -54,13 +54,21 @@ the public domain.  Most are distributed with the following notice:
   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
-Exception:
+Exceptions:
 
  - Portions of HMAC.py and setup.py are derived from Python 2.2, and
    are therefore Copyright (c) 2001, 2002, 2003 Python Software
    Foundation (All Rights Reserved).  They are licensed by the PSF
    under the terms of the Python 2.2 license.  (See the file
    LEGAL/copy/LICENSE.python-2.2 for details.)
+
+ - The various GNU autotools (autoconf, automake, aclocal, etc.) are
+   used during the build process.  This includes macros from
+   autoconf-archive, which are located in the m4/ directory.  As is
+   customary, some files from the GNU autotools are included in the
+   source tree (in the root directory, and in the build-aux/
+   directory).  These files are merely part of the build process, and
+   are not included in binary builds of the software.
 
 EXPORT RESTRICTIONS:
 
