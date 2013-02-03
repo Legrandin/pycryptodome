@@ -16,5 +16,8 @@ MANIFEST
 /config.status
 src/config.h
 
+# Python versions
+/tools/py/
+
 # Backup files
 *~
