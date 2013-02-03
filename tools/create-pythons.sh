@@ -68,7 +68,7 @@ wget -nc -i- <<-'EOF'
 https://gist.github.com/raw/1929293/18b5c29262ea04d0802e998da368e14b73112bda/fix-python-2.5.6-svnversion-issue.patch
 EOF
 
-# Check MD5 checksums (transcribed from www.python.org)
+# Check MD5 checksums (mostly transcribed from www.python.org)
 md5sum -c <<-'EOF'
 a8b04cdc822a6fc833ed9b99c7fba589 *Python-2.1.3.tgz
 169f89f318e252dac0c54dd1b165d229 *Python-2.2.3.tgz
@@ -81,6 +81,7 @@ c57477edd6d18bd9eeca2f21add73919 *Python-2.7.3.tar.bz2
 dc8a7a96c12880d2e61e9f4add9d3dc7 *Python-3.1.5.tar.bz2
 cea34079aeb2e21e7b60ee82a0ac286b *Python-3.2.3.tar.bz2
 b3b2524f72409d919a4137826a870a8f *Python-3.3.0.tar.bz2
+871fac364185ba4b94a74f6245f08f34 *fix-python-2.5.6-svnversion-issue.patch
 EOF
 #1d00e2fb19418e486c30b850df625aa3 *Python-2.5.5.tar.bz2
 #cf4e6881bb84a7ce6089e4a307f71f14 *Python-2.6.6.tar.bz2
@@ -119,12 +120,10 @@ fi
 # Extract
 #
 for filename in \
-        Python-3.0.1.tar.bz2
-
-#	Python-2.1.3.tgz Python-2.2.3.tgz \
-#	Python-2.3.7.tar.bz2 Python-2.4.6.tar.bz2 Python-2.5.6.tar.bz2 \
-#	Python-2.6.8.tar.bz2 Python-2.7.3.tar.bz2 Python-3.0.1.tar.bz2 \
-#	Python-3.1.5.tar.bz2 Python-3.2.3.tar.bz2 Python-3.3.0.tar.bz2
+	Python-2.1.3.tgz Python-2.2.3.tgz \
+	Python-2.3.7.tar.bz2 Python-2.4.6.tar.bz2 Python-2.5.6.tar.bz2 \
+	Python-2.6.8.tar.bz2 Python-2.7.3.tar.bz2 Python-3.0.1.tar.bz2 \
+	Python-3.1.5.tar.bz2 Python-3.2.3.tar.bz2 Python-3.3.0.tar.bz2
 do
 	dir="`basename "$filename"`"
 	dir=${dir%%.tgz}
@@ -185,6 +184,11 @@ do
 	else
 		extra_config_params=
 	fi
+
+        # Profiling support?
+        if [ "$PROFILING" -eq 1 ] ; then
+            extra_config_params="$extra_config_params --enable-profiling"
+        fi
 
 	# Create build directory, configure, and build
 	set -x
