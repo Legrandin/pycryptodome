@@ -31,6 +31,19 @@ AM_INIT_AUTOMAKE([foreign no-define no-dist])
 # Checks for programs.
 AC_PROG_CC_C99
 
+AC_CANONICAL_HOST()
+case "$host_os" in  # XXX - Does this break cross-compiling?
+openbsd*)
+    # According to gcc-local(1), OpenBSD's gcc is modified to ignore /usr/local
+    # by default.  However, libgmp is usually installed to /usr/local, so we
+    # want to look there for the libraries.
+    CFLAGS="$CFLAGS -I/usr/local/include"
+    LDFLAGS="$LDFLAGS -L/usr/local/lib"
+    ;;
+*)
+    ;;
+esac
+
 AX_CHECK_COMPILE_FLAG([-Wall], [AX_APPEND_FLAG([-Wall])])
 AX_CHECK_COMPILE_FLAG([-Wextra], [AX_APPEND_FLAG([-Wextra])])
 AX_CHECK_COMPILE_FLAG([-Wno-missing-field-initializers], [AX_APPEND_FLAG([-Wno-missing-field-initializers])])
