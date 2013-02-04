@@ -1,5 +1,8 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1 if you have the <cpuid.h> header file. */
+#undef HAVE_CPUID_H
+
 /* Define to 1 if you have the declaration of `mpz_powm', and to 0 if you
    don't. */
 #undef HAVE_DECL_MPZ_POWM
@@ -19,6 +22,9 @@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
+
+/* Define if CC supports -maes */
+#undef HAVE_MAES
 
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
    to 0 otherwise. */
@@ -62,6 +68,9 @@
 
 /* Define to 1 if you have the <wchar.h> header file. */
 #undef HAVE_WCHAR_H
+
+/* Define to 1 if you have the <wmmintrin.h> header file. */
+#undef HAVE_WMMINTRIN_H
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT

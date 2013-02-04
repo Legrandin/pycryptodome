@@ -48,6 +48,16 @@ __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _AES
+from Crypto.Util import cpuid
+# Import _AESNI. If AES-NI is not available or _AESNI has not been built, set
+# _AESNI to None.
+try:
+    if cpuid.have_aes_ni():
+        from Crypto.Cipher import _AESNI
+    else:
+        _AESNI = None
+except ImportError:
+    _AESNI = None
 
 class AESCipher (blockalgo.BlockAlgo):
     """AES cipher object"""
@@ -56,7 +66,18 @@ class AESCipher (blockalgo.BlockAlgo):
         """Initialize an AES cipher object
         
         See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _AES, key, *args, **kwargs)
+
+        # Check if the use_aesni was specified.
+        use_aesni = True
+        if 'use_aesni' in kwargs:
+            use_aesni = kwargs['use_aesni']
+            del kwargs['use_aesni']
+
+        # Use _AESNI if the user requested AES-NI and it's available
+        if _AESNI is not None and use_aesni:
+            blockalgo.BlockAlgo.__init__(self, _AESNI, key, *args, **kwargs)
+        else:
+            blockalgo.BlockAlgo.__init__(self, _AES, key, *args, **kwargs)
 
 def new(key, *args, **kwargs):
     """Create a new AES cipher
@@ -88,6 +109,8 @@ def new(key, *args, **kwargs):
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
         It must be a multiple of 8. If 0 or not specified, it will be assumed to be 8.
+      use_aesni : boolean
+        Use AES-NI if available.
 
     :Return: an `AESCipher` object
     """

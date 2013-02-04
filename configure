@@ -4373,6 +4373,39 @@ else
 fi
 
 
+# Checks for compiler flags.
+old_CFLAGS="$CFLAGS"
+CFLAGS=-maes
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether CC supports -maes" >&5
+$as_echo_n "checking whether CC supports -maes... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_MAES 1" >>confdefs.h
+
+  have_maes=yes
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+CFLAGS="$old_cflags"
+
 # Checks for libraries.
 
 # Check whether --with-gmp was given.
@@ -4921,7 +4954,7 @@ fi
 done
 
 
-for ac_header in inttypes.h sys/inttypes.h limits.h stddef.h stdint.h stdlib.h string.h wchar.h
+for ac_header in inttypes.h sys/inttypes.h cpuid.h limits.h stddef.h stdint.h stdlib.h string.h wchar.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -4934,6 +4967,25 @@ fi
 
 done
 
+old_CPPFLAGS="$CPPFLAGS"
+if test "x$have_maes" = "xyes"; then :
+
+    CPPFLAGS="$CPPFLAGS -maes"
+
+fi
+for ac_header in wmmintrin.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "wmmintrin.h" "ac_cv_header_wmmintrin_h" "$ac_includes_default"
+if test "x$ac_cv_header_wmmintrin_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_WMMINTRIN_H 1
+_ACEOF
+
+fi
+
+done
+
+CPPFLAGS="$old_CPPFLAGS"
 
 # Checks for typedefs, structures, and compiler characteristics.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for inline" >&5

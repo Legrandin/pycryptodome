@@ -289,7 +289,7 @@ class IVLengthTest(unittest.TestCase):
     def _dummy_counter(self):
         return "\0" * self.module.block_size
 
-def make_block_tests(module, module_name, test_data):
+def make_block_tests(module, module_name, test_data, additional_params=dict()):
     tests = []
     extra_tests_added = 0
     for i in range(len(test_data)):
@@ -326,6 +326,7 @@ def make_block_tests(module, module_name, test_data):
         name = "%s #%d: %s" % (module_name, i+1, description)
         params['description'] = name
         params['module_name'] = module_name
+        params.update(additional_params)
 
         # Add extra test(s) to the test suite before the current test
         if not extra_tests_added:
