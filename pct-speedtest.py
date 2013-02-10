@@ -30,10 +30,17 @@ import sys
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
 from Crypto.Hash import MD2, MD4, MD5, SHA256, SHA
+from Crypto.Random import get_random_bytes
 try:
     from Crypto.Hash import RIPEMD
 except ImportError: # Some builds of PyCrypto don't have the RIPEMD module
     RIPEMD = None
+
+# os.urandom() is less noisy when profiling, but it doesn't exist in Python < 2.4
+try:
+    urandom = os.urandom
+except AttributeError:
+    urandom = get_random_bytes
 
 class Benchmark:
 
@@ -70,7 +77,7 @@ class Benchmark:
             return self.__random_data
 
     def _random_bytes(self, b):
-        return os.urandom(b)
+        return urandom(b)
 
     def announce_start(self, test_name):
         sys.stdout.write("%s: " % (test_name,))
