@@ -22,8 +22,6 @@
  * ===================================================================
  */
 
-#include <assert.h>
-#include <stdlib.h>
 #include "Python.h"
 #include <wmmintrin.h>
 
