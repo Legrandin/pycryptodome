@@ -29,7 +29,7 @@ import sys
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
-from Crypto.Hash import MD2, MD4, MD5, SHA, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA, SHA224, SHA256, SHA384, SHA512
 from Crypto.Random import get_random_bytes
 try:
     from Crypto.Hash import RIPEMD
@@ -176,6 +176,19 @@ class Benchmark:
         hash_speed = len(blocks) * len(blocks[0]) / (t - t0)
         self.announce_result(hash_speed / 10**6, "MBps")
 
+    def test_hmac_small(self, mac_name, hmac_constructor, digestmod, digest_size):
+        keys = iter(self.random_keys(digest_size))
+        if sys.version_info[0] == 2:
+            mac_constructor = lambda data=None: hmac_constructor(keys.next(), data, digestmod)
+        else:
+            mac_constructor = lambda data=None: hmac_constructor(keys.__next__(), data, digestmod)
+        self.test_hash_small(mac_name, mac_constructor, digest_size)
+
+    def test_hmac_large(self, mac_name, hmac_constructor, digestmod, digest_size):
+        key = self.random_keys(digest_size)[0]
+        mac_constructor = lambda data=None: hmac_constructor(key, data, digestmod)
+        self.test_hash_large(mac_name, mac_constructor, digest_size)
+
     def run(self):
         pubkey_specs = [
             ("RSA(1024)", RSA, int(1024/8)),
@@ -249,6 +262,15 @@ class Benchmark:
             self.test_hash_small(hash_name, func, func().digest_size)
             self.test_hash_large(hash_name, func, func().digest_size)
 
+        # PyCrypto HMAC
+        for hash_name, module in hash_specs:
+            self.test_hmac_small("HMAC-"+hash_name, HMAC.new, module, module.digest_size)
+            self.test_hmac_large("HMAC-"+hash_name, HMAC.new, module, module.digest_size)
+
+        # standard hmac + hashlib
+        for hash_name, func in hashlib_specs:
+            self.test_hmac_small("hmac+"+hash_name, hmac.HMAC, func, func().digest_size)
+            self.test_hmac_large("hmac+"+hash_name, hmac.HMAC, func, func().digest_size)
 
 if __name__ == '__main__':
     Benchmark().run()
