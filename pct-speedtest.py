@@ -221,9 +221,11 @@ class Benchmark:
             if hasattr(hashlib, 'sha384'): hashlib_specs.append(("hashlib.sha384", hashlib.sha384))
             if hasattr(hashlib, 'sha512'): hashlib_specs.append(("hashlib.sha512", hashlib.sha512))
 
+        # Crypto.PublicKey
         for pubkey_name, module, key_bytes in pubkey_specs:
             self.test_pubkey_setup(pubkey_name, module, key_bytes)
 
+        # Crypto.Cipher (block ciphers)
         for cipher_name, module, key_bytes in block_specs:
             self.test_key_setup(cipher_name, module, key_bytes, module.MODE_CBC)
             self.test_encryption("%s-CBC" % (cipher_name,), module, key_bytes, module.MODE_CBC)
@@ -232,14 +234,17 @@ class Benchmark:
             self.test_encryption("%s-ECB" % (cipher_name,), module, key_bytes, module.MODE_ECB)
             self.test_encryption("%s-OPENPGP" % (cipher_name,), module, key_bytes, module.MODE_OPENPGP)
 
+        # Crypto.Cipher (stream ciphers)
         for cipher_name, module, key_bytes in stream_specs:
             self.test_key_setup(cipher_name, module, key_bytes, None)
             self.test_encryption(cipher_name, module, key_bytes, None)
 
+        # Crypto.Hash
         for hash_name, module in hash_specs:
             self.test_hash_small(hash_name, module.new, module.digest_size)
             self.test_hash_large(hash_name, module.new, module.digest_size)
 
+        # standard hashlib
         for hash_name, func in hashlib_specs:
             self.test_hash_small(hash_name, func, func().digest_size)
             self.test_hash_large(hash_name, func, func().digest_size)
