@@ -36,6 +36,12 @@ try:
 except ImportError: # Some builds of PyCrypto don't have the RIPEMD module
     RIPEMD = None
 
+try:
+    import hashlib
+    import hmac
+except ImportError: # Some builds/versions of Python don't have a hashlib module
+    hashlib = hmac = None
+
 # os.urandom() is less noisy when profiling, but it doesn't exist in Python < 2.4
 try:
     urandom = os.urandom
@@ -140,28 +146,28 @@ class Benchmark:
         encryption_speed = (len(blocks) * len(blocks[0])) / (t - t0)
         self.announce_result(encryption_speed / 10**6, "MBps")
 
-    def test_hash_small(self, hash_name, module):
-        self.announce_start("%s (%d-byte inputs)" % (hash_name, module.digest_size))
+    def test_hash_small(self, hash_name, hash_constructor, digest_size):
+        self.announce_start("%s (%d-byte inputs)" % (hash_name, digest_size))
 
-        blocks = self.random_blocks(module.digest_size, 10000)
+        blocks = self.random_blocks(digest_size, 10000)
 
         # Initialize hashes
         t0 = time.time()
         for b in blocks:
-            module.new(b).digest()
+            hash_constructor(b).digest()
         t = time.time()
 
         hashes_per_second = len(blocks) / (t - t0)
         self.announce_result(hashes_per_second / 1000, "kHashes/sec")
 
-    def test_hash_large(self, hash_name, module):
+    def test_hash_large(self, hash_name, hash_constructor, digest_size):
         self.announce_start("%s (single large input)" % (hash_name,))
 
         blocks = self.random_blocks(16384, 10000)
 
         # Perform hashing
         t0 = time.time()
-        h = module.new()
+        h = hash_constructor()
         for b in blocks:
             h.update(b)
         h.digest()
@@ -206,6 +212,15 @@ class Benchmark:
         if RIPEMD is not None:
             hash_specs += [("RIPEMD", RIPEMD)]
 
+        hashlib_specs = []
+        if hashlib is not None:
+            if hasattr(hashlib, 'md5'):    hashlib_specs.append(("hashlib.md5",    hashlib.md5))
+            if hasattr(hashlib, 'sha1'):   hashlib_specs.append(("hashlib.sha1",   hashlib.sha1))
+            if hasattr(hashlib, 'sha224'): hashlib_specs.append(("hashlib.sha224", hashlib.sha224))
+            if hasattr(hashlib, 'sha256'): hashlib_specs.append(("hashlib.sha256", hashlib.sha256))
+            if hasattr(hashlib, 'sha384'): hashlib_specs.append(("hashlib.sha384", hashlib.sha384))
+            if hasattr(hashlib, 'sha512'): hashlib_specs.append(("hashlib.sha512", hashlib.sha512))
+
         for pubkey_name, module, key_bytes in pubkey_specs:
             self.test_pubkey_setup(pubkey_name, module, key_bytes)
 
@@ -222,8 +237,13 @@ class Benchmark:
             self.test_encryption(cipher_name, module, key_bytes, None)
 
         for hash_name, module in hash_specs:
-            self.test_hash_small(hash_name, module)
-            self.test_hash_large(hash_name, module)
+            self.test_hash_small(hash_name, module.new, module.digest_size)
+            self.test_hash_large(hash_name, module.new, module.digest_size)
+
+        for hash_name, func in hashlib_specs:
+            self.test_hash_small(hash_name, func, func().digest_size)
+            self.test_hash_large(hash_name, func, func().digest_size)
+
 
 if __name__ == '__main__':
     Benchmark().run()
