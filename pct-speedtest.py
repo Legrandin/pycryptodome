@@ -29,7 +29,7 @@ import sys
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
-from Crypto.Hash import MD2, MD4, MD5, SHA256, SHA
+from Crypto.Hash import MD2, MD4, MD5, SHA, SHA224, SHA256, SHA384, SHA512
 from Crypto.Random import get_random_bytes
 try:
     from Crypto.Hash import RIPEMD
@@ -198,7 +198,10 @@ class Benchmark:
             ("MD4", MD4),
             ("MD5", MD5),
             ("SHA", SHA),
+            ("SHA224", SHA224),
             ("SHA256", SHA256),
+            ("SHA384", SHA384),
+            ("SHA512", SHA512),
         ]
         if RIPEMD is not None:
             hash_specs += [("RIPEMD", RIPEMD)]
