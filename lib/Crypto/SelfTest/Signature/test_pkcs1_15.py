@@ -206,10 +206,37 @@ class PKCS1_15_Tests(unittest.TestCase):
                             result = signer.verify(h, s)
                             self.failUnless(result)
 
+class PKCS1_15_NoParams(unittest.TestCase):
+    """Verify that PKCS#1 v1.5 signatures pass even without NULL parameters in
+    the algorithm identifier (bug #1119552)."""
+
+    rsakey = """-----BEGIN RSA PRIVATE KEY-----
+            MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
+            q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
+            Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
+            OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
+            +rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
+            JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
+            n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
+            -----END RSA PRIVATE KEY-----"""
+
+    msg = b("This is a test\x0a")
+
+    # PKCS1 v1.5 signature of the message computed using SHA-1.
+    # The digestAlgorithm SEQUENCE does NOT contain the NULL parameter.
+    signature = '''a287a13517f716e72fb14eea8e33a8db4a4643314607e7ca3e3e281893db7401
+            3dda8b855fd99f6fecedcb25fcb7a434f35cd0a101f8b19348e0bd7b6f152dfc'''
+
+    def testVerify(self):
+        verifier = PKCS.new(RSA.importKey(self.rsakey))
+        h = SHA1.new(self.msg)
+        result = verifier.verify(h, t2b(self.signature))
+        self.failUnless(result)
 
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(PKCS1_15_Tests)
+    tests += list_test_cases(PKCS1_15_NoParams)
     return tests
 
 if __name__ == '__main__':
