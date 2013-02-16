@@ -59,7 +59,7 @@ class Benchmark:
         bytes = bytes_per_block * blocks
         data = self.random_data(bytes)
         retval = []
-        for i in xrange(blocks):
+        for i in range(blocks):
             p = i * bytes_per_block
             retval.append(data[p:p+bytes_per_block])
         return retval
@@ -172,9 +172,9 @@ class Benchmark:
 
     def run(self):
         pubkey_specs = [
-            ("RSA(1024)", RSA, 1024/8),
-            ("RSA(2048)", RSA, 2048/8),
-            ("RSA(4096)", RSA, 4096/8),
+            ("RSA(1024)", RSA, int(1024/8)),
+            ("RSA(2048)", RSA, int(2048/8)),
+            ("RSA(4096)", RSA, int(4096/8)),
             ]
         block_specs = [
             ("DES", DES, 8),
