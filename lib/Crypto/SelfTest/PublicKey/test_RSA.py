@@ -209,13 +209,15 @@ class RSATest(unittest.TestCase):
         ciphertext2 = rsaObj.encrypt(plaintext, b(""))
         self.assertEqual(ciphertext1, ciphertext2)
 
-    def test_serialization_compat(self):
-        """RSA (default implementation) backward compatibility serialization"""
-        rsaObj = pickle.loads(self.pickled_key_2_3)
-        plaintext = a2b_hex(self.plaintext)
-        ciphertext = a2b_hex(self.ciphertext)
-        ciphertext_result = rsaObj.encrypt(plaintext, b(""))[0]
-        self.assertEqual(ciphertext_result, ciphertext)
+    if not (3, 0) <= sys.version_info < (3, 1, 2, 'final', 0):
+        # Unpickling is broken in Python 3 before 3.1.2 due to http://bugs.python.org/issue6137
+        def test_serialization_compat(self):
+            """RSA (default implementation) backward compatibility serialization"""
+            rsaObj = pickle.loads(b(self.pickled_key_2_3))
+            plaintext = a2b_hex(self.plaintext)
+            ciphertext = a2b_hex(self.ciphertext)
+            ciphertext_result = rsaObj.encrypt(plaintext, b(""))[0]
+            self.assertEqual(ciphertext_result, ciphertext)
 
     def _check_private_key(self, rsaObj):
         # Check capabilities
@@ -397,10 +399,12 @@ class RSAFastMathTest(RSATest):
         """
         RSATest.test_serialization(self)
 
-    def test_serialization_compat(self):
-        """RSA (_fastmath implementation) backward compatibility serialization
-        """
-        RSATest.test_serialization_compat(self)
+    if not (3, 0) <= sys.version_info < (3, 1, 2, 'final', 0):
+        # Unpickling is broken in Python 3 before 3.1.2 due to http://bugs.python.org/issue6137
+        def test_serialization_compat(self):
+            """RSA (_fastmath implementation) backward compatibility serialization
+            """
+            RSATest.test_serialization_compat(self)
 
 
 class RSASlowMathTest(RSATest):
@@ -443,10 +447,12 @@ class RSASlowMathTest(RSATest):
         """RSA (_slowmath implementation) serialize/unserialize key"""
         RSATest.test_serialization(self)
 
-    def test_serialization_compat(self):
-        """RSA (_slowmath implementation) backward compatibility serialization
-        """
-        RSATest.test_serialization_compat(self)
+    if not (3, 0) <= sys.version_info < (3, 1, 2, 'final', 0):
+        # Unpickling is broken in Python 3 before 3.1.2 due to http://bugs.python.org/issue6137
+        def test_serialization_compat(self):
+            """RSA (_slowmath implementation) backward compatibility serialization
+            """
+            RSATest.test_serialization_compat(self)
 
 def get_tests(config={}):
     tests = []
