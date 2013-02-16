@@ -133,7 +133,7 @@ class SimpleTest(unittest.TestCase):
             self.assertEqual(b('1') in z, True)
             self.assertRaises(TypeError, random.shuffle, b('12'))
         self.assertRaises(TypeError, random.shuffle, 1)
-        self.assertRaises(TypeError, random.shuffle, "1")
+        self.assertRaises(TypeError, random.shuffle, "11")
         self.assertRaises(TypeError, random.shuffle, (1,2))
         # 2to3 wraps a list() around it, alas - but I want to shoot
         # myself in the foot here! :D
