@@ -63,7 +63,7 @@ using os.fork()
 Installation
 ============
 
-PyCrypto is written and tested using Python version 2.1 through 3.2.  Python
+PyCrypto is written and tested using Python version 2.1 through 3.3.  Python
 1.5.2 is not supported.
 
 The modules are packaged using the Distutils, so you can simply run
