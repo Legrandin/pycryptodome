@@ -26,7 +26,7 @@ from Crypto.Util.py3compat import *
 
 __all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull', 'DerSequence', 'DerObjectId' ]
 
-class DerObject:
+class DerObject(object):
         """Base class for defining a single DER object.
 
         Instantiate this class ONLY when you have to decode a DER element.
