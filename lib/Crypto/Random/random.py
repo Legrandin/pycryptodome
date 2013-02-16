@@ -103,13 +103,13 @@ class StrongRandom(object):
 
     def shuffle(self, x):
         """Shuffle the sequence in place."""
-        # Make a (copy) of the list of objects we want to shuffle
-        items = list(x)
-
-        # Choose a random item (without replacement) until all the items have been
-        # chosen.
-        for i in xrange(len(x)):
-            x[i] = items.pop(self.randrange(len(items)))
+        # Fisher-Yates shuffle.  O(n)
+        # See http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
+        # Working backwards from the end of the array, we choose a random item
+        # from the remaining items until all items have been chosen.
+        for i in xrange(len(x)-1, 0, -1):   # iterate from len(x)-1 downto 1
+            j = self.randrange(0, i+1)      # choose random j such that 0 <= j <= i
+            x[i], x[j] = x[j], x[i]         # exchange x[i] and x[j]
 
     def sample(self, population, k):
         """Return a k-length list of unique elements chosen from the population sequence."""
