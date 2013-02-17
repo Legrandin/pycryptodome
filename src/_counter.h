@@ -38,7 +38,7 @@ typedef struct {
     PyBytesObject *prefix;     /* Prefix (useful for a nonce) */
     PyBytesObject *suffix;     /* Suffix (useful for a nonce) */
     uint8_t *val;       /* Buffer for our output string */
-    uint32_t buf_size;  /* Size of the buffer */
+    Py_ssize_t buf_size;/* Size of the buffer */
     uint8_t *p;         /* Pointer to the part of the buffer that we're allowed to update */
     uint16_t nbytes;    /* The number of bytes that from .p that are part of the counter */
     void (*inc_func)(void *);   /* Pointer to the counter increment function */
