@@ -35,54 +35,58 @@ This algorithm is insecure. Do not use it for new designs.
 .. _RFC1321: http://tools.ietf.org/html/rfc1321 
 """
 
+from __future__ import nested_scopes
+
 _revision__ = "$Id$"
 
-__all__ = ['new', 'digest_size', 'MD5Hash' ]
+__all__ = ['new', 'block_size', 'digest_size']
 
 from Crypto.Util.py3compat import *
-from Crypto.Hash.hashalgo import HashAlgo
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 
-try:
-    # The md5 module is deprecated in Python 2.6, so use hashlib when possible.
-    import hashlib
-    hashFactory = hashlib.md5
+def __make_constructor():
+    try:
+        # The md5 module is deprecated in Python 2.6, so use hashlib when possible.
+        from hashlib import md5 as _hash_new
+    except ImportError:
+        from md5 import new as _hash_new
 
-except ImportError:
-    import md5
-    hashFactory = md5
+    h = _hash_new()
+    if hasattr(h, 'new') and hasattr(h, 'name') and hasattr(h, 'digest_size') and hasattr(h, 'block_size'):
+        # The module from stdlib has the API that we need.  Just use it.
+        return _hash_new
+    else:
+        # Wrap the hash object in something that gives us the expected API.
+        _copy_sentinel = object()
+        class _MD5(object):
+            digest_size = 16
+            block_size = 64
+            name = "md5"
+            def __init__(self, *args):
+                if args and args[0] is _copy_sentinel:
+                    self._h = args[1]
+                else:
+                    self._h = _hash_new(*args)
+            def copy(self):
+                return _MD5(_copy_sentinel, self._h.copy())
+            def update(self, *args):
+                f = self.update = self._h.update
+                f(*args)
+            def digest(self):
+                f = self.digest = self._h.digest
+                return f()
+            def hexdigest(self):
+                f = self.hexdigest = self._h.hexdigest
+                return f()
+        _MD5.new = _MD5
+        return _MD5
 
-class MD5Hash(HashAlgo):
-    """Class that implements an MD5 hash
-    
-    :undocumented: block_size
-    """
-
-    digest_size = 16
-    block_size = 64
-
-    def __init__(self, data=None):
-        self.name = "MD5"
-        HashAlgo.__init__(self, hashFactory, data)
-
-    def new(self, data=None):
-        return MD5Hash(data)
-
-def new(data=None):
-    """Return a fresh instance of the hash object.
-
-    :Parameters:
-       data : byte string
-        The very first chunk of the message to hash.
-        It is equivalent to an early call to `MD5Hash.update()`.
-        Optional.
-
-    :Return: A `MD5Hash` object
-    """
-    return MD5Hash().new(data)
+new = __make_constructor()
+del __make_constructor
 
 #: The size of the resulting hash in bytes.
-digest_size = MD5Hash.digest_size
+digest_size = new().digest_size
 
 #: The internal block size of the hash algorithm in bytes.
-block_size = MD5Hash.block_size
-
+block_size = new().block_size

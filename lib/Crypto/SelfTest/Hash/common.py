@@ -31,6 +31,8 @@ import unittest
 import binascii
 import Crypto.Hash
 from Crypto.Util.py3compat import *
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 
 # For compatibility with Python 2.1 and Python 2.2
 if sys.hexversion < 0x02030000:
@@ -95,11 +97,14 @@ class HashSelfTest(unittest.TestCase):
             self.assertEqual(self.expected.decode(), out3)   # h = .new(data); h.hexdigest()
         self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
 
-        # Verify that new() object method produces a fresh hash object
-        h2 = h.new()
-        h2.update(self.input)
-        out5 = binascii.b2a_hex(h2.digest())
-        self.assertEqual(self.expected, out5)
+        # Verify that the .new() method produces a fresh hash object, except
+        # for MD5 and SHA1, which are hashlib objects.  (But test any .new()
+        # method that does exist.)
+        if self.hashmod.__name__ not in ('Crypto.Hash.MD5', 'Crypto.Hash.SHA1') or hasattr(h, 'new'):
+            h2 = h.new()
+            h2.update(self.input)
+            out5 = binascii.b2a_hex(h2.digest())
+            self.assertEqual(self.expected, out5)
 
         # Verify that Crypto.Hash.new(h) produces a fresh hash object
         h3 = Crypto.Hash.new(h)
@@ -124,6 +129,16 @@ class HashTestOID(unittest.TestCase):
         from Crypto.Signature import PKCS1_v1_5
         h = self.hashmod.new()
         self.assertEqual(PKCS1_v1_5._HASH_OIDS[h.name], self.oid)
+
+class HashDocStringTest(unittest.TestCase):
+    def __init__(self, hashmod):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+
+    def runTest(self):
+        docstring = self.hashmod.__doc__
+        self.assert_(hasattr(self.hashmod, '__doc__'))
+        self.assert_(isinstance(self.hashmod.__doc__, str))
 
 class GenericHashConstructorTest(unittest.TestCase):
     def __init__(self, hashmod):
@@ -208,6 +223,7 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     tests.append(HashDigestSizeSelfTest(module, name, digest_size))
     if oid is not None:
         tests.append(HashTestOID(module, b(oid)))
+    tests.append(HashDocStringTest(module))
     if getattr(module, 'name', None) is not None:
         tests.append(GenericHashConstructorTest(module))
     return tests

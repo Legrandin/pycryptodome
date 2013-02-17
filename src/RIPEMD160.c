@@ -61,6 +61,26 @@
 #define RIPEMD160_DIGEST_SIZE 20
 #define BLOCK_SIZE 64
 
+static char MODULE__doc__[] =
+    "RIPEMD-160 cryptographic hash algorithm.\n"
+    "\n"
+    "RIPEMD-160_ produces the 160 bit digest of a message.\n"
+    "\n"
+    "    >>> from Crypto.Hash import RIPEMD160\n"
+    "    >>>\n"
+    "    >>> h = RIPEMD160.new()\n"
+    "    >>> h.update(b'Hello')\n"
+    "    >>> print h.hexdigest()\n"
+    "\n"
+    "RIPEMD-160 stands for RACE Integrity Primitives Evaluation Message Digest\n"
+    "with a 160 bit digest. It was invented by Dobbertin, Bosselaers, and Preneel.\n"
+    "\n"
+    "This algorithm is considered secure, although it has not been scrutinized as\n"
+    "extensively as SHA-1. Moreover, it provides an informal security level of just\n"
+    "80bits.\n"
+    "\n"
+    ".. _RIPEMD-160: http://homes.esat.kuleuven.be/~bosselae/ripemd160.html\n";
+
 #define RIPEMD160_MAGIC 0x9f19dd68u
 typedef struct {
     uint32_t magic;
@@ -401,8 +421,7 @@ static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
 }
 
 /* Template definitions */
-#define MODULE_NAME _RIPEMD160
-#define ALGORITHM_NAME "RIPEMD160"
+#define MODULE_NAME RIPEMD160
 #define DIGEST_SIZE RIPEMD160_DIGEST_SIZE
 #define hash_state ripemd160_state
 #define hash_init ripemd160_init

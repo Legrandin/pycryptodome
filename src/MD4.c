@@ -31,10 +31,26 @@
 #include <string.h>
 #include "pycrypto_compat.h"
 
-#define MODULE_NAME _MD4
-#define ALGORITHM_NAME "MD4"
+#define MODULE_NAME MD4
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
+
+static char MODULE__doc__[] =
+    "MD4 cryptographic hash algorithm.\n"
+    "\n"
+    "MD4 is specified in RFC1320_ and produces the 128 bit digest of a message.\n"
+    "\n"
+    "    >>> from Crypto.Hash import MD4\n"
+    "    >>>\n"
+    "    >>> h = MD4.new()\n"
+    "    >>> h.update(b'Hello')\n"
+    "    >>> print h.hexdigest()\n"
+    "\n"
+    "MD4 stand for Message Digest version 4, and it was invented by Rivest in 1990.\n"
+    "\n"
+    "This algorithm is insecure. Do not use it for new designs.\n"
+    "\n"
+    ".. _RFC1320: http://tools.ietf.org/html/rfc1320\n";
 
 typedef unsigned int U32;
 typedef unsigned char U8;

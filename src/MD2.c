@@ -31,21 +31,26 @@
 #include <string.h>
 #include "pycrypto_compat.h"
 
-#define MODULE_NAME _MD2
-#define ALGORITHM_NAME "MD2"
+#define MODULE_NAME MD2
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
 
-/**
- * id-md2      OBJECT IDENTIFIER ::= {
- * 			iso(1) member-body(2) us(840) rsadsi(113549)
- * 			digestAlgorithm(2) 2
- * 			}
- */
-static const char md2_oid[] = { 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02 };
-
-#define DER_OID 		((void*)&md2_oid)
-#define DER_OID_SIZE		(sizeof md2_oid)
+static char MODULE__doc__[] =
+    "MD2 cryptographic hash algorithm.\n"
+    "\n"
+    "MD2 is specified in RFC1319_ and it produces the 128 bit digest of a message.\n"
+    "\n"
+    "    >>> from Crypto.Hash import MD2\n"
+    "    >>>\n"
+    "    >>> h = MD2.new()\n"
+    "    >>> h.update(b'Hello')\n"
+    "    >>> print h.hexdigest()\n"
+    "\n"
+    "MD2 stand for Message Digest version 2, and it was invented by Rivest in 1989.\n"
+    "\n"
+    "This algorithm is both slow and insecure. Do not use it for new designs.\n"
+    "\n"
+    ".. _RFC1319: http://tools.ietf.org/html/rfc1319\n";
 
 typedef unsigned char U8;
 typedef unsigned int U32;
