@@ -29,8 +29,13 @@ import sys
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
-from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512
 from Crypto.Random import get_random_bytes
+try:
+    from Crypto.Hash import SHA1
+except ImportError:
+    # Maybe it's called SHA
+    from Crypto.Hash import SHA as SHA1
 try:
     from Crypto.Hash import RIPEMD160
 except ImportError:
@@ -221,7 +226,7 @@ class Benchmark:
             ("MD2", MD2),
             ("MD4", MD4),
             ("MD5", MD5),
-            ("SHA", SHA),
+            ("SHA1", SHA1),
             ("SHA224", SHA224),
             ("SHA256", SHA256),
             ("SHA384", SHA384),
