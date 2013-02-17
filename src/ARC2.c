@@ -41,8 +41,8 @@
  *
  */
 
-#include <string.h>  
 #include "Python.h"
+#include <string.h>
 
 #define MODULE_NAME _ARC2
 #define BLOCK_SIZE 8

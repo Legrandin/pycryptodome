@@ -22,10 +22,10 @@
  * ===================================================================
  */
 
+#include "Python.h"
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
-#include "Python.h"
 #include "pycrypto_compat.h"
 #include "_counter.h"
 

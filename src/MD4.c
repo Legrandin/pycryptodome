@@ -27,8 +27,8 @@
  */
   
 
-#include <string.h>
 #include "Python.h"
+#include <string.h>
 #include "pycrypto_compat.h"
 
 #define MODULE_NAME _MD4

@@ -24,13 +24,13 @@
   
 /* Basic object type */
 
+#include "Python.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 #ifdef _HAVE_STDC_HEADERS
 #include <string.h>
 #endif
-#include "Python.h"
 #include "pycrypto_compat.h"
 
 #define _STR(x) #x

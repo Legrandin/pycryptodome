@@ -43,6 +43,8 @@
  *   "RIPEMD-160 is big-bit-endian, little-byte-endian, and left-justified."
  */
 
+#include "Python.h"
+
 #include "config.h"
 #if HAVE_STDINT_H
 # include <stdint.h>
@@ -54,7 +56,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include "Python.h"
 #include "pycrypto_compat.h"
 
 #define RIPEMD160_DIGEST_SIZE 20

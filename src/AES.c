@@ -24,9 +24,9 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "Python.h"
 #include <assert.h>
 #include <stdlib.h>
-#include "Python.h"
 
 #define MODULE_NAME _AES
 #define BLOCK_SIZE 16

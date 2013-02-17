@@ -24,6 +24,7 @@
  * ===================================================================
  */
 
+#include "Python.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -33,7 +34,6 @@
 #include <string.h>
 #endif
 
-#include "Python.h"
 #include "pycrypto_compat.h"
 #include "modsupport.h"
 

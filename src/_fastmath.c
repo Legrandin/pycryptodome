@@ -26,9 +26,9 @@
  * $Id$
  */
 
+#include "Python.h"
 #include <stdio.h>
 #include <string.h>
-#include "Python.h"
 #include "pycrypto_compat.h"
 #include <longintrepr.h>				/* for conversions */
 #include "config.h"
