@@ -209,9 +209,13 @@ ALG_getattr(PyObject *self, char *name)
  
 	if (PyUnicode_CompareWithASCIIString(attr, "digest_size")==0)
 		return PyLong_FromLong(DIGEST_SIZE);
+	if (PyUnicode_CompareWithASCIIString(attr, "name")==0)
+		return PyUnicode_FromString(ALGORITHM_NAME);
 #else
 	if (strcmp(name, "digest_size")==0)
 		return PyInt_FromLong(DIGEST_SIZE);
+	if (strcmp(name, "name")==0)
+		return PyString_FromString(ALGORITHM_NAME);
 #endif
 
 #ifdef IS_PY3K

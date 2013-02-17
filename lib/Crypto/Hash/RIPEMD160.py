@@ -54,16 +54,6 @@ class RIPEMD160Hash(HashAlgo):
     :undocumented: block_size
     """
 
-    #: ASN.1 Object identifier (OID)::
-    #:
-    #:  id-ripemd160 OBJECT IDENTIFIER ::= {
-    #:      iso(1) identified-organization(3) teletrust(36)
-    #:       algorithm(3) hashAlgorithm(2) ripemd160(1)
-    #:  }
-    #:
-    #: This value uniquely identifies the RIPMD-160 algorithm.
-    oid = b("\x06\x05\x2b\x24\x03\x02\x01")
-
     digest_size = 20
     block_size = 64
 

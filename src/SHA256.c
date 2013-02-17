@@ -27,6 +27,7 @@
  *
  */
 #define MODULE_NAME _SHA256
+#define ALGORITHM_NAME "SHA256"
 #define DIGEST_SIZE (256/8)
 #define BLOCK_SIZE (512/8)
 #define WORD_SIZE 4

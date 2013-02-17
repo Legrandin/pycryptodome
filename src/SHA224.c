@@ -28,6 +28,7 @@
  */
 
 #define MODULE_NAME _SHA224
+#define ALGORITHM_NAME "SHA224"
 #define DIGEST_SIZE (224/8)
 #define BLOCK_SIZE (512/8)
 #define WORD_SIZE 4

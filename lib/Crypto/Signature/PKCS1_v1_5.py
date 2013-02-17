@@ -208,7 +208,7 @@ def EMSA_PKCS1_V1_5_ENCODE(hash, emLen):
     #       { OID id-sha512 PARAMETERS NULL }
     #   }
     #
-    digestAlgo  = DerSequence([hash.oid, DerNull().encode()])
+    digestAlgo  = DerSequence([_HASH_OIDS[hash.name], DerNull().encode()])
     digest      = DerOctetString(hash.digest())
     digestInfo  = DerSequence([
                     digestAlgo.encode(),
@@ -234,3 +234,73 @@ def new(key):
     """
     return PKCS115_SigScheme(key)
 
+# AlgorithmIdentifier OIDs for use with PKCS#1 v1.5.
+#
+# These map names to the associated OIDs.  We should try to be compatible
+# with the standard library's hashlib modules, where possible.
+#
+# XXX - These will probably be moved somewhere else soon.
+_HASH_OIDS = {
+    #:  id-md2 OBJECT IDENTIFIER ::= {
+    #:      iso(1) member-body(2) us(840) rsadsi(113549)
+    #:       digestAlgorithm(2) 2
+    #:  }
+    "MD2": b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x02'),
+    "md2": b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x02'),
+
+    #:  id-md4 OBJECT IDENTIFIER ::= {
+    #:      iso(1) member-body(2) us(840) rsadsi(113549)
+    #:       digestAlgorithm(2) 4
+    #:  }
+    "MD4": b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x04'),
+    "md4": b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x04'),
+
+    #:  id-md5      OBJECT IDENTIFIER ::= {
+    #:      iso(1) member-body(2) us(840) rsadsi(113549)
+    #:       digestAlgorithm(2) 5
+    #:  }
+    "MD5": b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05'),
+    "md5": b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05'),
+
+    #:  id-ripemd160 OBJECT IDENTIFIER ::= {
+    #:      iso(1) identified-organization(3) teletrust(36)
+    #:       algorithm(3) hashAlgorithm(2) ripemd160(1)
+    #:  }
+    "RIPEMD160": b("\x06\x05\x2b\x24\x03\x02\x01"),
+    "ripemd160": b("\x06\x05\x2b\x24\x03\x02\x01"),
+
+    #:  id-sha1    OBJECT IDENTIFIER ::= {
+    #:      iso(1) identified-organization(3) oiw(14) secsig(3)
+    #:       algorithms(2) 26
+    #:  }
+    "SHA1": b('\x06\x05\x2b\x0e\x03\x02\x1a'),
+    "sha1": b('\x06\x05\x2b\x0e\x03\x02\x1a'),
+
+    #:  id-sha224    OBJECT IDENTIFIER ::= {
+    #:      joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3)
+    #:      nistalgorithm(4) hashalgs(2) 4
+    #:  }
+    "SHA224": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04'),
+    "sha224": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04'),
+
+    #:  id-sha256    OBJECT IDENTIFIER ::= {
+    #:      joint-iso-itu-t(2) country(16) us(840) organization(1)
+    #:       gov(101) csor(3) nistalgorithm(4) hashalgs(2) 1
+    #:  }
+    "SHA256": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01'),
+    "sha256": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01'),
+
+    #:  id-sha384    OBJECT IDENTIFIER ::= {
+    #:      joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3)
+    #:	     nistalgorithm(4) hashalgs(2) 2
+    #:  }
+    "SHA384": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02'),
+    "sha384": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02'),
+
+    #:  id-sha512    OBJECT IDENTIFIER ::= {
+    #:	    joint-iso-itu-t(2)
+    #:	    country(16) us(840) organization(1) gov(101) csor(3) nistalgorithm(4) hashalgs(2) 3
+    #:  }
+    "SHA512": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03'),
+    "sha512": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03'),
+}

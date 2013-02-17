@@ -28,6 +28,7 @@
  */
 
 #define MODULE_NAME _SHA384
+#define ALGORITHM_NAME "SHA384"
 #define DIGEST_SIZE (384/8)
 #define BLOCK_SIZE (1024/8)
 #define WORD_SIZE 8

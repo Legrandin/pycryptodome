@@ -57,20 +57,11 @@ class SHA1Hash(HashAlgo):
     :undocumented: block_size
     """
 
-    #: ASN.1 Object identifier (OID)::
-    #:
-    #:  id-sha1    OBJECT IDENTIFIER ::= {
-    #:      iso(1) identified-organization(3) oiw(14) secsig(3)
-    #:       algorithms(2) 26
-    #:  }
-    #:
-    #: This value uniquely identifies the SHA-1 algorithm.
-    oid = b('\x06\x05\x2b\x0e\x03\x02\x1a')
-
     digest_size = 20
     block_size = 64
 
     def __init__(self, data=None):
+        self.name = "SHA1"
         HashAlgo.__init__(self, hashFactory, data)
 
     def new(self, data=None):

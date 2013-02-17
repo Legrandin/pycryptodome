@@ -57,20 +57,11 @@ class MD5Hash(HashAlgo):
     :undocumented: block_size
     """
 
-    #: ASN.1 Object identifier (OID)::
-    #:
-    #:  id-md5      OBJECT IDENTIFIER ::= {
-    #:      iso(1) member-body(2) us(840) rsadsi(113549)
-    #:       digestAlgorithm(2) 5
-    #:  }
-    #:
-    #: This value uniquely identifies the MD5 algorithm.
-    oid = b('\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05')
-
     digest_size = 16
     block_size = 64
 
     def __init__(self, data=None):
+        self.name = "MD5"
         HashAlgo.__init__(self, hashFactory, data)
 
     def new(self, data=None):

@@ -55,16 +55,6 @@ class SHA224Hash(HashAlgo):
     :undocumented: block_size
     """
 
-    #: ASN.1 Object identifier (OID)::
-    #:
-    #:  id-sha224    OBJECT IDENTIFIER ::= {
-    #:      joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3)
-    #:      nistalgorithm(4) hashalgs(2) 4
-    #:  }
-    #:
-    #: This value uniquely identifies the SHA-224 algorithm.
-    oid = b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04')
-
     digest_size = 28
     block_size = 64
 

@@ -107,16 +107,9 @@ class HashTestOID(unittest.TestCase):
         self.oid = oid
 
     def runTest(self):
+        from Crypto.Signature import PKCS1_v1_5
         h = self.hashmod.new()
-        if self.oid==None:
-            try:
-                raised = 0
-                a = h.oid
-            except AttributeError:
-                raised = 1
-            self.assertEqual(raised,1)
-        else:
-            self.assertEqual(h.oid, self.oid)
+        self.assertEqual(PKCS1_v1_5._HASH_OIDS[h.name], self.oid)
 
 class MACSelfTest(unittest.TestCase):
 
@@ -178,11 +171,10 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
             description = row[2].encode('latin-1')
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input))
-    if oid is not None:
-        oid = b(oid)
     name = "%s #%d: digest_size" % (module_name, i+1)
     tests.append(HashDigestSizeSelfTest(module, name, digest_size))
-    tests.append(HashTestOID(module, oid))
+    if oid is not None:
+        tests.append(HashTestOID(module, b(oid)))
     return tests
 
 def make_mac_tests(module, module_name, test_data, hashmods):

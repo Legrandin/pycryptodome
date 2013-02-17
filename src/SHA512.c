@@ -28,6 +28,7 @@
  */
 
 #define MODULE_NAME _SHA512
+#define ALGORITHM_NAME "SHA512"
 #define DIGEST_SIZE (512/8)
 #define BLOCK_SIZE (1024/8)
 #define WORD_SIZE 8

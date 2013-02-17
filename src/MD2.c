@@ -32,6 +32,7 @@
 #include "pycrypto_compat.h"
 
 #define MODULE_NAME _MD2
+#define ALGORITHM_NAME "MD2"
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
 

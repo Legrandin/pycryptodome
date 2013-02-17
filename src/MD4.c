@@ -32,6 +32,7 @@
 #include "pycrypto_compat.h"
 
 #define MODULE_NAME _MD4
+#define ALGORITHM_NAME "MD4"
 #define DIGEST_SIZE 16
 #define BLOCK_SIZE 64
 

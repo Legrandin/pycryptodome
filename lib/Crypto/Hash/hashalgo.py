@@ -47,6 +47,10 @@ class HashAlgo:
             self._hash = hashFactory.new()
         else:
             self._hash = hashFactory()
+        try:
+            self.name = self._hash.name
+        except AttributeError:
+            pass
         if data:
             self.update(data)
 
