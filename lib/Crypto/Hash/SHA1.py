@@ -22,9 +22,9 @@
 
 SHA-1_ produces the 160 bit digest of a message.
 
-    >>> from Crypto.Hash import SHA
+    >>> from Crypto.Hash import SHA1
     >>>
-    >>> h = SHA.new()
+    >>> h = SHA1.new()
     >>> h.update(b'Hello')
     >>> print h.hexdigest()
 

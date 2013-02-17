@@ -28,13 +28,13 @@ __revision__ = "$Id$"
 
 def get_tests(config={}):
     tests = []
-    from Crypto.SelfTest.Hash import test_HMAC;   tests += test_HMAC.get_tests(config=config)
-    from Crypto.SelfTest.Hash import test_MD2;    tests += test_MD2.get_tests(config=config)
-    from Crypto.SelfTest.Hash import test_MD4;    tests += test_MD4.get_tests(config=config)
-    from Crypto.SelfTest.Hash import test_MD5;    tests += test_MD5.get_tests(config=config)
-    from Crypto.SelfTest.Hash import test_RIPEMD; tests += test_RIPEMD.get_tests(config=config)
-    from Crypto.SelfTest.Hash import test_SHA;    tests += test_SHA.get_tests(config=config)
-    from Crypto.SelfTest.Hash import test_SHA256; tests += test_SHA256.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_HMAC;       tests += test_HMAC.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_MD2;        tests += test_MD2.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_MD4;        tests += test_MD4.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_MD5;        tests += test_MD5.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_RIPEMD160;  tests += test_RIPEMD160.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA1;       tests += test_SHA1.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA256;     tests += test_SHA256.get_tests(config=config)
     try:
         from Crypto.SelfTest.Hash import test_SHA224; tests += test_SHA224.get_tests(config=config)
         from Crypto.SelfTest.Hash import test_SHA384; tests += test_SHA384.get_tests(config=config)

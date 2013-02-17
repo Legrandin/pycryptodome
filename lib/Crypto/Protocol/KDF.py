@@ -39,7 +39,7 @@ import math
 import struct
 
 from Crypto.Util.py3compat import *
-from Crypto.Hash import SHA as SHA1, HMAC
+from Crypto.Hash import SHA1, HMAC
 from Crypto.Util.strxor import strxor
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):

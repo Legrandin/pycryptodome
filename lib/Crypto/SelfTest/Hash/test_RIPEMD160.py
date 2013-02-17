@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Hash/SHA.py: Self-test for the SHA-1 hash function
+#  SelfTest/Hash/test_RIPEMD160.py: Self-test for the RIPEMD-160 hash function
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
 #
@@ -22,39 +22,48 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test suite for Crypto.Hash.SHA"""
+#"""Self-test suite for Crypto.Hash.RIPEMD160"""
 
 __revision__ = "$Id$"
 
 from Crypto.Util.py3compat import *
 
-# Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
-    # FIPS PUB 180-2, A.1 - "One-Block Message"
-    ('a9993e364706816aba3e25717850c26c9cd0d89d', 'abc'),
+    # Test vectors downloaded 2008-09-12 from
+    #   http://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+    ('9c1185a5c5e9fc54612808977ee8f548b2258d31', '', "'' (empty string)"),
+    ('0bdc9d2d256b3ee9daae347be6f4dc835a467ffe', 'a'),
+    ('8eb208f7e05d987a9b044a8e98c6b087f15a0bfc', 'abc'),
+    ('5d0689ef49d2fae572b881b123a85ffa21595f36', 'message digest'),
 
-    # FIPS PUB 180-2, A.2 - "Multi-Block Message"
-    ('84983e441c3bd26ebaae4aa1f95129e5e54670f1',
-        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'),
+    ('f71c27109c692c1b56bbdceb5b9d2865b3708dbc',
+        'abcdefghijklmnopqrstuvwxyz',
+        'a-z'),
 
-    # FIPS PUB 180-2, A.3 - "Long Message"
-#    ('34aa973cd4c4daa4f61eeb2bdbad27316534016f',
-#        'a' * 10**6,
-#         '"a" * 10**6'),
+    ('12a053384a9c0c88e405a06c27dcf49ada62eb2b',
+        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq',
+        'abcdbcd...pnopq'),
 
-    # RFC 3174: Section 7.3, "TEST4" (multiple of 512 bits)
-    ('dea356a2cddd90c7a7ecedc5ebb563934f460452',
-        '01234567' * 80,
-        '"01234567" * 80'),
+    ('b0e20b6e3116640286ed3a87a5713079b21f5189',
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+        'A-Z, a-z, 0-9'),
+
+    ('9b752e45573d4b39f4dbd3323cab82bf63326bfb',
+        '1234567890' * 8,
+        "'1234567890' * 8"),
+
+    ('52783243c1697bdbe16d37f97f68f08325dc1528',
+        'a' * 10**6,
+        '"a" * 10**6'),
 ]
 
 def get_tests(config={}):
-    from Crypto.Hash import SHA
+    from Crypto.Hash import RIPEMD160
     from common import make_hash_tests
-    return make_hash_tests(SHA, "SHA", test_data,
+    return make_hash_tests(RIPEMD160, "RIPEMD160", test_data,
         digest_size=20,
-        oid="\x06\x05\x2B\x0E\x03\x02\x1A")
+        oid="\x06\x05\x2b\x24\x03\02\x01")
 
 if __name__ == '__main__':
     import unittest

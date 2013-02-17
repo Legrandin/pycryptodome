@@ -30,13 +30,13 @@ For example, a sender may authenticate a message using SHA-1 and PSS like
 this:
 
     >>> from Crypto.Signature import PKCS1_PSS
-    >>> from Crypto.Hash import SHA
-    >>> from Crypto.PublicKey import RSA
+    >>> from Crypto.Hash import SHA1
+    >>> from Crypto.PublicKey import RSA1
     >>> from Crypto import Random
     >>>
     >>> message = 'To be signed'
     >>> key = RSA.importKey(open('privkey.der').read())
-    >>> h = SHA.new()
+    >>> h = SHA1.new()
     >>> h.update(message)
     >>> signer = PKCS1_PSS.new(key)
     >>> signature = signer.sign(key)
@@ -45,7 +45,7 @@ At the receiver side, verification can be done like using the public part of
 the RSA key:
 
     >>> key = RSA.importKey(open('pubkey.der').read())
-    >>> h = SHA.new()
+    >>> h = SHA1.new()
     >>> h.update(message)
     >>> verifier = PKCS1_PSS.new(key)
     >>> if verifier.verify(h, signature):

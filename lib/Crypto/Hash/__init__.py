@@ -49,7 +49,7 @@ The hashing modules here all support the interface described in `PEP
 :undocumented: _MD2, _MD4, _RIPEMD160, _SHA224, _SHA256, _SHA384, _SHA512
 """
 
-__all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD', 'SHA',
+__all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD160', 'SHA1',
            'SHA224', 'SHA256', 'SHA384', 'SHA512']
 __revision__ = "$Id$"
 

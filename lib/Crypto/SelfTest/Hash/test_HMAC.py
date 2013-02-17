@@ -203,7 +203,7 @@ hashlib_test_data = [
 
 def get_tests(config={}):
     global test_data
-    from Crypto.Hash import HMAC, MD5, SHA as SHA1, SHA256
+    from Crypto.Hash import HMAC, MD5, SHA1, SHA256
     from common import make_mac_tests
     hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256, default=None)
     try:

@@ -26,7 +26,7 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Hash import SHA as SHA1,HMAC
+from Crypto.Hash import SHA1, HMAC
 
 from Crypto.Protocol.KDF import *
 

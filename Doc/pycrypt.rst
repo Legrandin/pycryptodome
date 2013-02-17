@@ -117,8 +117,8 @@ Hash function   Digest length	Security
 MD2               128 bits		Insecure, do not use
 MD4               128 bits		Insecure, do not use
 MD5               128 bits		Insecure, do not use
-RIPEMD            160 bits		Secure. This is RIPEMD-160.
-SHA               160 bits		SHA1 is shaky. Walk, do not run, away from SHA1.
+RIPEMD160         160 bits		Secure.
+SHA1              160 bits		SHA1 is shaky. Walk, do not run, away from SHA1.
 SHA256            256 bits		Secure.
 =============   =============	========
 
@@ -1069,7 +1069,7 @@ with ASCII.  Unfortunately, it's difficult for humans to remember 16
 or 32 hex digits.
 
 One solution is to request a lengthy passphrase from the user, and
-then run it through a hash function such as SHA or MD5.  Another
+then run it through a hash function such as SHA1 or MD5.  Another
 solution is discussed in RFC 1751, "A Convention for Human-Readable
 128-bit Keys", by Daniel L. McDonald.  Binary keys are transformed
 into a list of short English words that should be easier to remember.

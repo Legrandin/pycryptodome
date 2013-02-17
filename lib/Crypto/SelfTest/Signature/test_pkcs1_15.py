@@ -123,7 +123,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                 '''4a700a16432a291a3194646952687d5316458b8b86fb0a25aa30e0dcecdb
                 442676759ac63d56ec1499c3ae4c0013c2053cabd5b5804848994541ac16
                 fa243a4d''',
-                SHA
+                SHA1
                 ),
 
                 #
@@ -146,7 +146,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                 A9D20970C54E6651070B0144D43844C899320DD8FA7819F7EBC6A7715287332E
                 C8675C136183B3F8A1F81EF969418267130A756FDBB2C71D9A667446E34E0EAD
                 9CF31BFB66F816F319D0B7E430A5F2891553986E003720261C7E9022C0D9F11F''',
-                SHA
+                SHA1
                 )
 
         )
@@ -197,7 +197,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                         rng = Random.new().read
                         key = RSA.generate(1024, rng)
 
-                        for hashmod in (MD2,MD5,SHA,SHA224,SHA256,SHA384,SHA512,RIPEMD):
+                        for hashmod in (MD2,MD5,SHA1,SHA224,SHA256,SHA384,SHA512,RIPEMD160):
                             h = hashmod.new()
                             h.update(b('blah blah blah'))
 

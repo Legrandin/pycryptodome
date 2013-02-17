@@ -22,9 +22,9 @@
 
 RIPEMD-160_ produces the 160 bit digest of a message.
 
-    >>> from Crypto.Hash import RIPEMD
+    >>> from Crypto.Hash import RIPEMD160
     >>>
-    >>> h = RIPEMD.new()
+    >>> h = RIPEMD160.new()
     >>> h.update(b'Hello')
     >>> print h.hexdigest()
 

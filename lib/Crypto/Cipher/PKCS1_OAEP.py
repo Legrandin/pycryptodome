@@ -55,7 +55,7 @@ __revision__ = "$Id$"
 __all__ = [ 'new', 'PKCS1OAEP_Cipher' ]
 
 import Crypto.Signature.PKCS1_PSS
-import Crypto.Hash.SHA
+import Crypto.Hash.SHA1
 
 from Crypto.Util.py3compat import *
 import Crypto.Util.number
@@ -75,7 +75,7 @@ class PKCS1OAEP_Cipher:
          hashAlgo : hash object
                 The hash function to use. This can be a module under `Crypto.Hash`
                 or an existing hash object created from any of such modules. If not specified,
-                `Crypto.Hash.SHA` (that is, SHA-1) is used.
+                `Crypto.Hash.SHA1` is used.
          mgfunc : callable
                 A mask generation function that accepts two parameters: a string to
                 use as seed, and the lenth of the mask to generate, in bytes.
@@ -93,7 +93,7 @@ class PKCS1OAEP_Cipher:
         if hashAlgo:
             self._hashObj = hashAlgo
         else:
-            self._hashObj = Crypto.Hash.SHA
+            self._hashObj = Crypto.Hash.SHA1
 
         if mgfunc:
             self._mgf = mgfunc
@@ -238,7 +238,7 @@ def new(key, hashAlgo=None, mgfunc=None, label=b('')):
      hashAlgo : hash object
       The hash function to use. This can be a module under `Crypto.Hash`
       or an existing hash object created from any of such modules. If not specified,
-      `Crypto.Hash.SHA` (that is, SHA-1) is used.
+      `Crypto.Hash.SHA1` is used.
      mgfunc : callable
       A mask generation function that accepts two parameters: a string to
       use as seed, and the lenth of the mask to generate, in bytes.

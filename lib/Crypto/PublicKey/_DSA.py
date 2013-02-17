@@ -30,7 +30,7 @@ __revision__ = "$Id$"
 from Crypto.PublicKey.pubkey import *
 from Crypto.Util import number
 from Crypto.Util.number import bytes_to_long, long_to_bytes
-from Crypto.Hash import SHA
+from Crypto.Hash import SHA1
 from Crypto.Util.py3compat import *
 
 class error (Exception):
@@ -38,8 +38,8 @@ class error (Exception):
 
 def generateQ(randfunc):
     S=randfunc(20)
-    hash1=SHA.new(S).digest()
-    hash2=SHA.new(long_to_bytes(bytes_to_long(S)+1)).digest()
+    hash1=SHA1.new(S).digest()
+    hash2=SHA1.new(long_to_bytes(bytes_to_long(S)+1)).digest()
     q = bignum(0)
     for i in range(0,20):
         c=bord(hash1[i])^bord(hash2[i])
@@ -77,7 +77,7 @@ def generate_py(bits, randfunc, progress_func=None):
         powL1=pow(bignum(2), bits-1)
         while C<4096:
             for k in range(0, n+1):
-                V[k]=bytes_to_long(SHA.new(S+bstr(N)+bstr(k)).digest())
+                V[k]=bytes_to_long(SHA1.new(S+bstr(N)+bstr(k)).digest())
             W=V[n] % powb
             for k in range(n-1, -1, -1):
                 W=(W<<160L)+V[k]

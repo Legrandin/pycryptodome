@@ -32,9 +32,14 @@ from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
 from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA, SHA224, SHA256, SHA384, SHA512
 from Crypto.Random import get_random_bytes
 try:
-    from Crypto.Hash import RIPEMD
-except ImportError: # Some builds of PyCrypto don't have the RIPEMD module
-    RIPEMD = None
+    from Crypto.Hash import RIPEMD160
+except ImportError:
+    # Maybe it's called RIPEMD
+    try:
+        from Crypto.Hash import RIPEMD as RIPEMD160
+    except ImportError:
+        # Some builds of PyCrypto don't have the RIPEMD module
+        RIPEMD160 = None
 
 try:
     import hashlib
@@ -222,8 +227,8 @@ class Benchmark:
             ("SHA384", SHA384),
             ("SHA512", SHA512),
         ]
-        if RIPEMD is not None:
-            hash_specs += [("RIPEMD", RIPEMD)]
+        if RIPEMD160 is not None:
+            hash_specs += [("RIPEMD160", RIPEMD160)]
 
         hashlib_specs = []
         if hashlib is not None:

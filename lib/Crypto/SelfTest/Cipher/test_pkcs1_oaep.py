@@ -31,7 +31,7 @@ from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto.Util.py3compat import *
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP as PKCS
-from Crypto.Hash import MD2,MD5,SHA as SHA1,SHA256,RIPEMD
+from Crypto.Hash import MD2,MD5,SHA1,SHA256,RIPEMD160
 from Crypto import Random
 
 def rws(t):
@@ -327,7 +327,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                     asked += N
                     return self.rng(N)
                 # Verify that OAEP is friendly to all hashes
-                for hashmod in (MD2,MD5,SHA1,SHA256,RIPEMD):
+                for hashmod in (MD2,MD5,SHA1,SHA256,RIPEMD160):
                     # Verify that encrypt() asks for as many random bytes
                     # as the hash output size
                     asked = 0
