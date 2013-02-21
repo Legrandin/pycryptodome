@@ -42,7 +42,7 @@
 
 */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 
 #define MODULE_NAME _CAST
 #define BLOCK_SIZE 8
@@ -50,8 +50,8 @@
 
 /* adjust these according to your compiler/platform. On some machines
    uint32 will have to be a long. It's OK if uint32 is more than 32 bits. */
-typedef unsigned int uint32;
-typedef unsigned char uint8;
+typedef uint32_t uint32;
+typedef uint8_t uint8;
 
 /* this struct probably belongs in cast.h */
 typedef struct {

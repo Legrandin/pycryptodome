@@ -27,9 +27,8 @@
  */
   
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include <string.h>
-#include "pycrypto_compat.h"
 
 #define MODULE_NAME MD2
 #define DIGEST_SIZE 16
@@ -52,8 +51,8 @@ static char MODULE__doc__[] =
     "\n"
     ".. _RFC1319: http://tools.ietf.org/html/rfc1319\n";
 
-typedef unsigned char U8;
-typedef unsigned int U32;
+typedef uint8_t U8;
+typedef uint32_t U32;
 
 typedef struct {
 	U8 C[16], X[48];

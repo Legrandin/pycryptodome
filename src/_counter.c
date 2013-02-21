@@ -22,11 +22,10 @@
  * ===================================================================
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
-#include "pycrypto_compat.h"
 #include "_counter.h"
 
 #ifndef IS_PY3K

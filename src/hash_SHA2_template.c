@@ -30,8 +30,7 @@
  *
  */
 
-#include "Python.h"
-#include "pycrypto_compat.h"
+#include "pycrypto_common.h"
 
 /* compress one block  */
 static void sha_compress(hash_state * hs)

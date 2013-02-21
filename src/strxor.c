@@ -21,12 +21,11 @@
  * SOFTWARE.
  * ===================================================================
  */
-#include "Python.h"
+
+#include "pycrypto_common.h"
 #include <stddef.h>
 #include <assert.h>
 #include <string.h>
-
-#include "pycrypto_compat.h"
 
 static const char rcsid[] = "$Id$";
 

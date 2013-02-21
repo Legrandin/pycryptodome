@@ -24,17 +24,7 @@
  * ===================================================================
  */
 
-#include "Python.h"
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#ifdef _HAVE_STDC_HEADERS
-#include <string.h>
-#endif
-
-#include "pycrypto_compat.h"
+#include "pycrypto_common.h"
 #include "modsupport.h"
 
 #define _STR(x) #x

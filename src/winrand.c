@@ -30,8 +30,7 @@
 
 /* Author: Mark Moraes */
 
-#include "Python.h"
-#include "pycrypto_compat.h"
+#include "pycrypto_common.h"
 
 #ifdef MS_WIN32
 

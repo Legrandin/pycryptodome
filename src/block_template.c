@@ -24,19 +24,9 @@
  * ===================================================================
  */
 
-#include "Python.h"
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#ifdef _HAVE_STDC_HEADERS
+#include "pycrypto_common.h"
+#include "modsupport.h"
 #include <string.h>
-#endif
-
-#include "pycrypto_compat.h"
-#include "modsupport.h" 
-
 #include "_counter.h"
 
 /* Cipher operation modes */

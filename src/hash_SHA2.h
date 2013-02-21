@@ -26,17 +26,7 @@
 #ifndef __HASH_SHA2_H
 #define __HASH_SHA2_H
 
-#include "Python.h"
-#include "config.h"
-#if HAVE_STDINT_H
-# include <stdint.h>
-#elif HAVE_INTTYPES_H
-# include <inttypes.h>
-#elif HAVE_SYS_INTTYPES_H
-# include <sys/inttypes.h>
-#else
-# error "stdint.h and inttypes.h not found"
-#endif
+#include "pycrypto_common.h"
 
 /* check if implementation set the correct macros */
 #ifndef MODULE_NAME

@@ -2,6 +2,7 @@
    These are the S-boxes for CAST5 as given in RFC 2144.
 */
 
+#include "pycrypto_common.h"
 
 static const uint32 S1[256] = {
 0x30fb40d4, 0x9fa0ff0b, 0x6beccd2f, 0x3f258c7a, 0x1e213f2f,

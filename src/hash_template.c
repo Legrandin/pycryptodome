@@ -24,14 +24,8 @@
   
 /* Basic object type */
 
-#include "Python.h"
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-#ifdef _HAVE_STDC_HEADERS
+#include "pycrypto_common.h"
 #include <string.h>
-#endif
-#include "pycrypto_compat.h"
 
 #define _STR(x) #x
 #define _XSTR(x) _STR(x)

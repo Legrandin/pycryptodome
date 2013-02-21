@@ -27,6 +27,8 @@
  *
  */
 
+#include "pycrypto_common.h"
+
 #define MODULE_NAME SHA384
 #define DIGEST_SIZE (384/8)
 #define BLOCK_SIZE (1024/8)

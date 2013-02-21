@@ -26,12 +26,10 @@
  * $Id$
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include <stdio.h>
 #include <string.h>
-#include "pycrypto_compat.h"
 #include <longintrepr.h>				/* for conversions */
-#include "config.h"
 #if HAVE_LIBGMP
 # include <gmp.h>
 #elif HAVE_LIBMPIR
@@ -52,12 +50,6 @@
 #endif
 
 #define SIEVE_BASE_SIZE (sizeof (sieve_base) / sizeof (sieve_base[0]))
-
-#ifdef _MSC_VER
-#define INLINE __inline
-#else
-#define INLINE inline
-#endif
 
 static unsigned int sieve_base[10000];
 static int rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc);
@@ -1111,7 +1103,7 @@ cleanup:
 
 
 
-INLINE size_t size (mpz_t n)
+inline size_t size (mpz_t n)
 {
 	return mpz_sizeinbase (n, 2);
 }

@@ -24,7 +24,7 @@
  * =======================================================================
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 
 #define MODULE_NAME _XOR
 #define BLOCK_SIZE 1

@@ -24,7 +24,7 @@
  * Country of origin: Canada
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 
 /* Setting this will cause LibTomCrypt to return CRYPT_INVALID_ARG when its
  * assert-like LTC_ARGCHK macro fails. */

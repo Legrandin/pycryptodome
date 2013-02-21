@@ -24,7 +24,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include <assert.h>
 #include <stdlib.h>
 
@@ -36,9 +36,9 @@
 #define MAXKB	(256/8)
 #define MAXNR	14
 
-typedef unsigned char	u8;	
-typedef unsigned short	u16;	
-typedef unsigned int	u32;
+typedef uint8_t     u8;
+typedef uint16_t    u16;
+typedef uint32_t    u32;
 
 typedef struct {
 	u32 ek[ 4*(MAXNR+1) ]; 

@@ -41,7 +41,7 @@
  *
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include <string.h>
 
 #define MODULE_NAME _ARC2
@@ -49,9 +49,9 @@
 #define KEY_SIZE 0
 #define PCT_ARC2_MODULE  /* Defined to get ARC2's additional keyword arguments */
 
-typedef unsigned int U32;
-typedef unsigned short U16;
-typedef unsigned char U8;
+typedef uint32_t U32;
+typedef uint16_t U16;
+typedef uint8_t U8;
 
 typedef struct 
 {
