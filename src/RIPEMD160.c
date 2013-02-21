@@ -44,14 +44,15 @@
  */
 
 #include "Python.h"
-
 #include "config.h"
 #if HAVE_STDINT_H
 # include <stdint.h>
-#elif defined(__sun) || defined(__sun__)
+#elif HAVE_INTTYPES_H
+# include <inttypes.h>
+#elif HAVE_SYS_INTTYPES_H
 # include <sys/inttypes.h>
 #else
-# error "stdint.h not found"
+# error "stdint.h and inttypes.h not found"
 #endif
 
 #include <assert.h>

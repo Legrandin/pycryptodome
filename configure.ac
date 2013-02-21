@@ -76,7 +76,7 @@ AC_CHECK_DECLS([mpz_powm_sec], [], [], [
 ]])
 
 # Checks for header files.
-AC_CHECK_HEADERS([inttypes.h limits.h stddef.h stdint.h stdlib.h string.h wchar.h])
+AC_CHECK_HEADERS([inttypes.h sys/inttypes.h limits.h stddef.h stdint.h stdlib.h string.h wchar.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
