@@ -27,7 +27,7 @@
 
 #include "Python.h"
 
-#include "salsa20/ecrypt-portable.h"
+#include "ecrypt/ecrypt-portable.h"
 
 #define MODULE_NAME _Salsa20
 #define BLOCK_SIZE 1
