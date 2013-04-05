@@ -70,7 +70,7 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
     result = runner.run(suite)
     if not result.wasSuccessful():
         if stream is None:
-            sys.stderr.write(stream.getvalue())
+            sys.stderr.write(kwargs['stream'].getvalue())
         raise SelfTestError("Self-test failed", result)
     return result
 
