@@ -66,6 +66,8 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
             raise ValueError("'module' and 'tests' arguments are mutually exclusive")
     if stream is None:
         kwargs['stream'] = StringIO()
+    else:
+        kwargs['stream'] = stream
     runner = unittest.TextTestRunner(verbosity=verbosity, **kwargs)
     result = runner.run(suite)
     if not result.wasSuccessful():
