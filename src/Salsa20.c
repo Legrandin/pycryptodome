@@ -26,8 +26,9 @@
  */
 
 #include "Python.h"
-
-#include "ecrypt/ecrypt-portable.h"
+#include "libtom/tomcrypt_cfg.h"
+#include "libtom/tomcrypt_custom.h"
+#include "libtom/tomcrypt_macros.h"
 
 #define MODULE_NAME _Salsa20
 #define BLOCK_SIZE 1
@@ -38,7 +39,10 @@
 static const char sigma[16] = "expand 32-byte k";
 static const char tau[16]   = "expand 16-byte k";
 
-#define ROTATE(v,c) (ROTL32(v,c))
+#define U32TO8_LITTLE(p,w) STORE32L(w, p)
+#define U8TO32_LITTLE(w,p) LOAD32L(w, p)
+#define ROTATE(v,c) (ROL(v,c))
+#define U32V(v) ((uint32_t)(v) & 0xFFFFFFFFUL)
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) (U32V((v) + (w)))
 #define PLUSONE(v) (PLUS((v),1))
@@ -152,9 +156,9 @@ _salsa20_block (stream_state *self)
     U32TO8_LITTLE (output + 60, x15);
     
     /* Increment block counter */
-    self->input[8] = PLUSONE (self->input[8]);
-    if (!self->input[8]) {
-        self->input[9] = PLUSONE (self->input[9]);
+    input[8] = PLUSONE (input[8]);
+    if (!input[8]) {
+        input[9] = PLUSONE (input[9]);
         /* stopping at 2^70 bytes per nonce is user's responsibility */
     }
 }
@@ -164,6 +168,7 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
 			 unsigned char *IV, int IVlen)
 {
     char *constants;
+    uint32_t *input;
     
     if (keylen != 16 && keylen != 32) {
         PyErr_SetString(PyExc_ValueError,
@@ -176,11 +181,12 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
         return;
     }
     
-    /* Key setup */
-    self->input[1] = U8TO32_LITTLE (key + 0);
-    self->input[2] = U8TO32_LITTLE (key + 4);
-    self->input[3] = U8TO32_LITTLE (key + 8);
-    self->input[4] = U8TO32_LITTLE (key + 12);
+    input = self->input;
+    
+    U8TO32_LITTLE (input[1], key);
+    U8TO32_LITTLE (input[2], key + 4);
+    U8TO32_LITTLE (input[3], key + 8);
+    U8TO32_LITTLE (input[4], key + 12);
     
     if (keylen == 32) {
         key += 16;
@@ -188,22 +194,23 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
     } else {
         constants = tau;
     }
-    self->input[11] = U8TO32_LITTLE (key + 0);
-    self->input[12] = U8TO32_LITTLE (key + 4);
-    self->input[13] = U8TO32_LITTLE (key + 8);
-    self->input[14] = U8TO32_LITTLE (key + 12);
-    self->input[0]  = U8TO32_LITTLE (constants + 0);
-    self->input[5]  = U8TO32_LITTLE (constants + 4);
-    self->input[10] = U8TO32_LITTLE (constants + 8);
-    self->input[15] = U8TO32_LITTLE (constants + 12);
+
+    U8TO32_LITTLE (input[11], key + 0);
+    U8TO32_LITTLE (input[12], key + 4);
+    U8TO32_LITTLE (input[13], key + 8);
+    U8TO32_LITTLE (input[14], key + 12);
+    U8TO32_LITTLE (input[0],  constants);
+    U8TO32_LITTLE (input[5],  constants + 4);
+    U8TO32_LITTLE (input[10], constants + 8);
+    U8TO32_LITTLE (input[15], constants + 12);
     
     /* IV setup */
-    self->input[6]  = U8TO32_LITTLE (IV + 0);
-    self->input[7]  = U8TO32_LITTLE (IV + 4);
+    U8TO32_LITTLE (input[6], IV);
+    U8TO32_LITTLE (input[7], IV + 4);
     
     /* Block counter setup*/
-    self->input[8]  = 0;
-    self->input[9]  = 0;
+    input[8]  = 0;
+    input[9]  = 0;
     self->blockindex = 64;
 }
 
