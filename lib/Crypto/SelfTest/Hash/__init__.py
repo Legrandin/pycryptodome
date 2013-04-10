@@ -35,6 +35,10 @@ def get_tests(config={}):
     from Crypto.SelfTest.Hash import test_RIPEMD160;  tests += test_RIPEMD160.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA1;       tests += test_SHA1.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA256;     tests += test_SHA256.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA3_224;   tests += test_SHA3_224.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA3_256;   tests += test_SHA3_256.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA3_384;   tests += test_SHA3_384.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA3_512;   tests += test_SHA3_512.get_tests(config=config)
     try:
         from Crypto.SelfTest.Hash import test_SHA224; tests += test_SHA224.get_tests(config=config)
         from Crypto.SelfTest.Hash import test_SHA384; tests += test_SHA384.get_tests(config=config)
