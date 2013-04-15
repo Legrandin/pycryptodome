@@ -320,9 +320,12 @@ keccak_finish (hash_state *self)
 {
     /* Padding */
     *(self->bufptr++) = 0x01U;
-    memset (self->bufptr, 0, self->bufend - self->bufptr);
-    *(self->bufend) = 0x80U;
-    self->bufptr = self->bufend;
+    if (self->bufend >= self->bufptr) {
+        memset (self->bufptr, 0, self->bufend - self->bufptr + 1);
+    }
+    *(self->bufend) |= 0x80U;
+    
+    self->bufptr = self->buf;
     
     /* Final absord */
     keccak_absorb (self);
