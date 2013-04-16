@@ -26,67 +26,57 @@
  * ===================================================================
 */
 
+#ifndef __KECCAK_H_
+#define __KECCAK_H_
 
-/*
-    MODULE_NAME and DIGEST_SIZE are defined in compiler command line
-    options - see setup.py:
-    
-    Extension("Crypto.Hash._SHA3_nnn",
-              include_dirs=['src/'],
-              sources=["src/sha3.c", "src/keccak.c"],
-              define_macros=[('MODULE_NAME', '_SHA3_nnn'),
-                ('DIGEST_SIZE', '%d' % (nnn/8))]),
-
-*/
 #include "config.h"
 
-#define CAPACITY (2*(DIGEST_SIZE))
-#define BLOCK_SIZE (200-CAPACITY)
-
-#include "Python.h"
-#include "pycrypto_compat.h"
-#include "keccak.h"
-
-typedef keccak_state hash_state;
-
-#ifdef _MSC_VER
-#define INLINE __inline
+/* determine fixed size types */
+#if HAVE_STDINT_H
+#include <stdint.h>
+#elif defined(__sun) || defined(__sun__)
+#include <sys/inttypes.h>
+#elif defined(_MSC_VER)
+typedef unsigned char    uint8_t;
+typedef unsigned __int64 uint64_t;
 #else
-#define INLINE inline
+typedef unsigned char      uint8_t;
+typedef unsigned long long uint64_t;
 #endif
 
-INLINE void
-hash_init (hash_state *self)
-{   
-    keccak_init (self, DIGEST_SIZE, KECCAK_INIT_SECURITY);
-}
-
-INLINE void
-hash_update (hash_state *self, unsigned char *buffer, int length)
+typedef struct
 {
-    keccak_absorb (self, buffer, length);
-}
+    uint64_t state[25];
+    uint8_t  buf[200];
+    uint8_t *bufptr;
+    uint8_t *bufend;
+    uint16_t security;
+    uint16_t capacity;
+    uint16_t rate;
+    uint8_t  squeezing;
+} keccak_state;
 
-INLINE void
-hash_copy (hash_state *source, hash_state *dest)
-{
-    keccak_copy (source, dest);
-}
+typedef enum {
+    KECCAK_OK,
+    KECCAK_ERR_CANTABSORB,
+    KECCAK_ERR_NOTIMPL
+} keccak_result;
 
-#undef INLINE
+typedef enum {
+    KECCAK_INIT_SECURITY,
+    KECCAK_INIT_RATE
+} keccak_init_param;
 
-PyObject
-*hash_digest (hash_state *self)
-{
-    hash_state tmp;
-    char buffer[DIGEST_SIZE];
-    
-    hash_copy (self, &tmp);
-    keccak_squeeze (&tmp, buffer, DIGEST_SIZE);
-    
-	return PyBytes_FromStringAndSize (buffer, DIGEST_SIZE);
-}
 
-#include "hash_template.c"
+keccak_result keccak_init    (keccak_state *self, unsigned int param, keccak_init_param initby);
+keccak_result keccak_finish  (keccak_state *self);
+keccak_result keccak_copy    (keccak_state *source, keccak_state *dest);
+keccak_result keccak_absorb  (keccak_state *self, unsigned char *buffer, int length);
+keccak_result keccak_squeeze (keccak_state *self, unsigned char *buffer, int length);
+
+void keccak_function (uint64_t *state);
+
+
+#endif /* __KECCAK_H_ */
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */
