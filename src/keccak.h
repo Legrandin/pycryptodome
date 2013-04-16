@@ -59,6 +59,8 @@ typedef struct
 typedef enum {
     KECCAK_OK,
     KECCAK_ERR_CANTABSORB,
+    KECCAK_ERR_INVALIDPARAM,
+    KECCAK_ERR_UNKNOWNPARAM,
     KECCAK_ERR_NOTIMPL
 } keccak_result;
 

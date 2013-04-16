@@ -67,9 +67,14 @@ keccak_init (keccak_state *self, unsigned int param, keccak_init_param initby)
             security = capacity/2;
             break;
         default:
-            return KECCAK_ERR_NOTIMPL;
+            return KECCAK_ERR_UNKNOWNPARAM;
     }
     
+    if (rate + capacity != 200)
+        return KECCAK_ERR_INVALIDPARAM;
+    if ((rate <= 0) || (rate >= 200) || ((rate % 8) != 0))
+        return KECCAK_ERR_INVALIDPARAM;
+        
     self->security  = security;
     self->capacity  = capacity;
     self->rate      = rate;
@@ -212,6 +217,8 @@ static const uint64_t roundconstants[KECCAK_ROUNDS] = {
     0x8000000080008008ULL
 };
 
+#define USE_COMPLEMENT_LANES_OPTIMIZATION
+
 void
 keccak_function (uint64_t *state)
 {
@@ -224,27 +231,37 @@ keccak_function (uint64_t *state)
     uint64_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12;
     uint64_t b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24;
       
-    a0  = state[0];
+#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
+    a1  = ~state[1];
+    a2  = ~state[2];
+    a8  = ~state[8];
+    a12 = ~state[12];
+    a17 = ~state[17];
+    a20 = ~state[20];
+#else
     a1  = state[1];
     a2  = state[2];
+    a8  = state[8];
+    a12 = state[12];
+    a17 = state[17];
+    a20 = state[20];
+#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
+
+    a0  = state[0];
     a3  = state[3];
     a4  = state[4];
     a5  = state[5];
     a6  = state[6];
     a7  = state[7];
-    a8  = state[8];
     a9  = state[9];
     a10 = state[10];
     a11 = state[11];
-    a12 = state[12];
     a13 = state[13];
     a14 = state[14];
     a15 = state[15];
     a16 = state[16];
-    a17 = state[17];
     a18 = state[18];
     a19 = state[19];
-    a20 = state[20];
     a21 = state[21];
     a22 = state[22];
     a23 = state[23];
@@ -325,8 +342,39 @@ keccak_function (uint64_t *state)
         b23 = ROL64(a15, ROT_03);
         b24 = ROL64(a21, ROT_09);
         
-        /* Chi step */
-        a0  = b0  ^ (~b1  & b2);
+        /* Chi + Iota steps */
+#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
+        a0 =   b0 ^ ( b1 | b2 ) ^ roundconstants[i];
+        a1 =   b1 ^ (~b2 | b3 );
+        a2 =   b2 ^ ( b3 & b4 );
+        a3 =   b3 ^ ( b4 | b0 );
+        a4 =   b4 ^ ( b0 & b1 );
+        
+        a5 =   b5 ^ ( b6 |  b7 );
+        a6 =   b6 ^ ( b7 &  b8 );
+        a7 =   b7 ^ ( b8 | ~b9);
+        a8 =   b8 ^ ( b9 |  b5 );
+        a9 =   b9 ^ ( b5 &  b6 );
+        
+        a10 =   b10 ^ ( b11 |  b12 );
+        a11 =   b11 ^ ( b12 &  b13 );
+        a12 =   b12 ^ (~b13 &  b14 );
+        a13 =  ~b13 ^ ( b14 |  b10 );
+        a14 =   b14 ^ ( b10 &  b11 );
+        
+        a15 =   b15 ^ ( b16 & b17 );
+        a16 =   b16 ^ ( b17 | b18 );
+        a17 =   b17 ^ (~b18 | b19 );
+        a18 =  ~b18 ^ ( b19 & b15 );
+        a19 =   b19 ^ ( b15 | b16 );
+        
+        a20 =   b20 ^ (~b21 & b22 );
+        a21 =  ~b21 ^ ( b22 | b23 );
+        a22 =   b22 ^ ( b23 & b24 );
+        a23 =   b23 ^ ( b24 | b20 );
+        a24 =   b24 ^ ( b20 & b21 );
+#else
+        a0  = b0  ^ (~b1  & b2) ^ roundconstants[i];
         a1  = b1  ^ (~b2  & b3);
         a2  = b2  ^ (~b3  & b4);
         a3  = b3  ^ (~b4  & b0);
@@ -355,32 +403,41 @@ keccak_function (uint64_t *state)
         a22 = b22 ^ (~b23 & b24);
         a23 = b23 ^ (~b24 & b20);
         a24 = b24 ^ (~b20 & b21);
+#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
         
-        /* Iota step */
-        a0 ^= roundconstants[i];
     }
     
-    state[0] = a0;
-    state[1] = a1;
-    state[2] = a2;
-    state[3] = a3;
-    state[4] = a4;
-    state[5] = a5;
-    state[6] = a6;
-    state[7] = a7;
-    state[8] = a8;
-    state[9] = a9;
+#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
+    state[1]  = ~a1;
+    state[2]  = ~a2;
+    state[8]  = ~a8;
+    state[12] = ~a12;
+    state[17] = ~a17;
+    state[20] = ~a20;
+#else
+    state[1]  = a1;
+    state[2]  = a2;
+    state[8]  = a8;
+    state[12] = a12;
+    state[17] = a17;
+    state[20] = a20;
+#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
+        
+    state[0]  = a0;
+    state[3]  = a3;
+    state[4]  = a4;
+    state[5]  = a5;
+    state[6]  = a6;
+    state[7]  = a7;
+    state[9]  = a9;
     state[10] = a10;
     state[11] = a11;
-    state[12] = a12;
     state[13] = a13;
     state[14] = a14;
     state[15] = a15;
     state[16] = a16;
-    state[17] = a17;
     state[18] = a18;
     state[19] = a19;
-    state[20] = a20;
     state[21] = a21;
     state[22] = a22;
     state[23] = a23;
