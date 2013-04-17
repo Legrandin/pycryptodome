@@ -35,6 +35,8 @@
 #include "libtom/tomcrypt_custom.h"
 #include "libtom/tomcrypt_macros.h"
 
+#define USE_COMPLEMENT_LANES_OPTIMIZATION
+
 static void
 keccak_absorb_internal (keccak_state *self)
 {
@@ -47,12 +49,39 @@ keccak_absorb_internal (keccak_state *self)
     }
 }
 
+static void
+keccak_squeeze_internal (keccak_state *self)
+{
+    short i, j;
+
+    for (i = j = 0; j < self->rate; ++i, j += 8) {
+#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
+        if ((i==1) || (i==2) || (i==8) || (i==12) || (i==17) || (i==20)) {
+            STORE64L(~self->state[i], self->buf + j);
+        } else {
+            STORE64L(self->state[i], self->buf + j);
+        }
+#else
+        STORE64L(self->state[i], self->buf + j);
+#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
+    }
+}
+
 keccak_result
 keccak_init (keccak_state *self, unsigned int param, keccak_init_param initby)
 {
     uint16_t security, capacity, rate;
     
     memset (self, 0, sizeof(keccak_state));
+#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
+    self->state[1]  = 0xFFFFFFFFFFFFFFFFULL;
+    self->state[2]  = 0xFFFFFFFFFFFFFFFFULL;
+    self->state[8]  = 0xFFFFFFFFFFFFFFFFULL;
+    self->state[12] = 0xFFFFFFFFFFFFFFFFULL;
+    self->state[17] = 0xFFFFFFFFFFFFFFFFULL;
+    self->state[20] = 0xFFFFFFFFFFFFFFFFULL;
+#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
+
     self->bufptr    = self->buf;
     
     switch (initby) {
@@ -92,7 +121,7 @@ keccak_absorb (keccak_state *self, unsigned char *buffer, int length)
     if (self->squeezing)
         return KECCAK_ERR_CANTABSORB;
     
-    while (self->bufptr + length > self->bufend) {
+    while (length > (self->bufend - self->bufptr)) {
         bytestocopy = self->bufend - self->bufptr + 1;
         memcpy (self->bufptr, buffer, bytestocopy);
         keccak_absorb_internal (self);
@@ -120,9 +149,10 @@ keccak_finish (keccak_state *self)
     self->bufptr = self->buf;
     self->squeezing = 1;
     
-    /* Final absord */
+    /* Final absord-permutation-squeeze */
     keccak_absorb_internal (self);
     keccak_function (self->state);
+    keccak_squeeze_internal (self);
     
     return KECCAK_OK;
 }
@@ -145,19 +175,29 @@ keccak_copy (keccak_state *source, keccak_state *dest)
 keccak_result
 keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
 {
-    int i, j;
-    
-    if (length > self->rate) {
-        return KECCAK_ERR_NOTIMPL; /* TODO: implement arbitrary size output */
-    }
+    int bytestocopy;
     
     if (!self->squeezing) {
         keccak_finish (self);
     }
-
-    for (i = j = 0; j < length; ++i, j += 8) {
-        STORE64L(self->state[i], buffer + j);
+    
+    /*
+       Support for arbitrary output length
+       (not yet used in python module)   
+    */
+    
+    while (length > (self->bufend - self->bufptr)) {
+        bytestocopy = self->bufend - self->bufptr + 1;
+        memcpy (buffer, self->bufptr, bytestocopy);
+        keccak_function (self->state);
+        keccak_squeeze_internal (self);
+        self->bufptr = self->buf;
+        buffer += bytestocopy;
+        length -= bytestocopy;
     }
+    memcpy (buffer, self->bufptr, length);
+    self->bufptr += length;
+    
     return KECCAK_OK;
 }
 
@@ -217,8 +257,6 @@ static const uint64_t roundconstants[KECCAK_ROUNDS] = {
     0x8000000080008008ULL
 };
 
-#define USE_COMPLEMENT_LANES_OPTIMIZATION
-
 void
 keccak_function (uint64_t *state)
 {
@@ -230,38 +268,28 @@ keccak_function (uint64_t *state)
     
     uint64_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12;
     uint64_t b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24;
-      
-#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
-    a1  = ~state[1];
-    a2  = ~state[2];
-    a8  = ~state[8];
-    a12 = ~state[12];
-    a17 = ~state[17];
-    a20 = ~state[20];
-#else
-    a1  = state[1];
-    a2  = state[2];
-    a8  = state[8];
-    a12 = state[12];
-    a17 = state[17];
-    a20 = state[20];
-#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
 
     a0  = state[0];
+    a1  = state[1];
+    a2  = state[2];
     a3  = state[3];
     a4  = state[4];
     a5  = state[5];
     a6  = state[6];
     a7  = state[7];
+    a8  = state[8];
     a9  = state[9];
     a10 = state[10];
     a11 = state[11];
+    a12 = state[12];
     a13 = state[13];
     a14 = state[14];
     a15 = state[15];
     a16 = state[16];
+    a17 = state[17];
     a18 = state[18];
     a19 = state[19];
+    a20 = state[20];
     a21 = state[21];
     a22 = state[22];
     a23 = state[23];
@@ -404,40 +432,29 @@ keccak_function (uint64_t *state)
         a23 = b23 ^ (~b24 & b20);
         a24 = b24 ^ (~b20 & b21);
 #endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
-        
     }
     
-#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
-    state[1]  = ~a1;
-    state[2]  = ~a2;
-    state[8]  = ~a8;
-    state[12] = ~a12;
-    state[17] = ~a17;
-    state[20] = ~a20;
-#else
-    state[1]  = a1;
-    state[2]  = a2;
-    state[8]  = a8;
-    state[12] = a12;
-    state[17] = a17;
-    state[20] = a20;
-#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
-        
     state[0]  = a0;
+    state[1]  = a1;
+    state[2]  = a2;   
     state[3]  = a3;
     state[4]  = a4;
     state[5]  = a5;
     state[6]  = a6;
-    state[7]  = a7;
+    state[7]  = a7;    
+    state[8]  = a8;
     state[9]  = a9;
     state[10] = a10;
     state[11] = a11;
+    state[12] = a12;   
     state[13] = a13;
     state[14] = a14;
     state[15] = a15;
     state[16] = a16;
+    state[17] = a17;    
     state[18] = a18;
     state[19] = a19;
+    state[20] = a20;   
     state[21] = a21;
     state[22] = a22;
     state[23] = a23;
