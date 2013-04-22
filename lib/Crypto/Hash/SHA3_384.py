@@ -30,7 +30,7 @@
 SHA3-384 belongs to the SHA-3 family of cryptographic hashes.
 It produces the 384 bit digest of a message.
 
-    >>> from Crypto.Hash import SHA3-384
+    >>> from Crypto.Hash import SHA3_384
     >>>
     >>> h = SHA3_384.new()
     >>> h.update(b'Hello')

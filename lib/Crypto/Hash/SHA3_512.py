@@ -30,7 +30,7 @@
 SHA3-512 belongs to the SHA-3 family of cryptographic hashes.
 It produces the 512 bit digest of a message.
 
-    >>> from Crypto.Hash import SHA3-512
+    >>> from Crypto.Hash import SHA3_512
     >>>
     >>> h = SHA3_512.new()
     >>> h.update(b'Hello')

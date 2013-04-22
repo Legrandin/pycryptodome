@@ -30,7 +30,7 @@
 SHA3-224 belongs to the SHA-3 family of cryptographic hashes.
 It produces the 224 bit digest of a message.
 
-    >>> from Crypto.Hash import SHA3-224
+    >>> from Crypto.Hash import SHA3_224
     >>>
     >>> h = SHA3_224.new()
     >>> h.update(b'Hello')
