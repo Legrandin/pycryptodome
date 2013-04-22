@@ -36,6 +36,9 @@ import warnings
 from Crypto.pct_warnings import ClockRewindWarning
 import SHAd256
 
+# If the system has monotonic time, we'll use it.
+from Crypto.Util._time import maybe_monotonic_time
+
 import FortunaGenerator
 
 class FortunaPool(object):
@@ -110,7 +113,7 @@ class FortunaAccumulator(object):
         assert(self.pools[0] is not self.pools[1])
 
     def random_data(self, bytes):
-        current_time = time.time()
+        current_time = maybe_monotonic_time()
         if (self.last_reseed is not None and self.last_reseed > current_time): # Avoid float comparison to None to make Py3k happy
             warnings.warn("Clock rewind detected. Resetting last_reseed.", ClockRewindWarning)
             self.last_reseed = None
@@ -123,7 +126,7 @@ class FortunaAccumulator(object):
 
     def _reseed(self, current_time=None):
         if current_time is None:
-            current_time = time.time()
+            current_time = maybe_monotonic_time()
         seed = []
         self.reseed_count += 1
         self.last_reseed = current_time
