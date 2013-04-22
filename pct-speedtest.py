@@ -60,6 +60,9 @@ try:
 except AttributeError:
     urandom = get_random_bytes
 
+from Crypto.Random import random as pycrypto_random
+import random as stdlib_random
+
 class Benchmark:
 
     def __init__(self):
@@ -104,6 +107,16 @@ class Benchmark:
     def announce_result(self, value, units):
         sys.stdout.write("%.2f %s\n" % (value, units))
         sys.stdout.flush()
+
+    def test_random_module(self, module_name, module):
+        self.announce_start("%s.choice" % (module_name,))
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        t0 = time.time()
+        for i in range(5000):
+            module.choice(alphabet)
+        t = time.time()
+        invocations_per_second = 5000 / (t - t0)
+        self.announce_result(invocations_per_second, "invocations/sec")
 
     def test_pubkey_setup(self, pubkey_name, module, key_bytes):
         self.announce_start("%s pubkey setup" % (pubkey_name,))
@@ -298,6 +311,12 @@ class Benchmark:
             if hasattr(hashlib, 'sha256'): hashlib_specs.append(("hashlib.sha256", hashlib.sha256))
             if hasattr(hashlib, 'sha384'): hashlib_specs.append(("hashlib.sha384", hashlib.sha384))
             if hasattr(hashlib, 'sha512'): hashlib_specs.append(("hashlib.sha512", hashlib.sha512))
+
+        # stdlib random
+        self.test_random_module("stdlib random", stdlib_random)
+
+        # Crypto.Random.random
+        self.test_random_module("Crypto.Random.random", pycrypto_random)
 
         # Crypto.PublicKey
         for pubkey_name, module, key_bytes in pubkey_specs:
