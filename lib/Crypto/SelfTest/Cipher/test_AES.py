@@ -26,8 +26,11 @@
 
 __revision__ = "$Id$"
 
-from common import dict     # For compatibility with Python 2.1 and 2.2
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
+from common import dict     # For compatibility with Python 2.1 and 2.2
 from binascii import hexlify
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]]) tuples.

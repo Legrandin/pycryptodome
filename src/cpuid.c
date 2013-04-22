@@ -42,6 +42,9 @@ static char have_aes_ni__doc__[] =
 static PyObject *
 have_aes_ni(PyObject *self, PyObject *args)
 {
+    if (!PyArg_ParseTuple(args, ""))
+        return NULL;
+
 #ifndef HAVE_CPUID_H
     Py_INCREF(Py_False);
     return Py_False;
@@ -64,7 +67,7 @@ have_aes_ni(PyObject *self, PyObject *args)
  */
 
 static PyMethodDef cpuid_methods[] = {
-    {"have_aes_ni", have_aes_ni, METH_NOARGS, have_aes_ni__doc__},
+    {"have_aes_ni", have_aes_ni, METH_VARARGS, have_aes_ni__doc__},
     {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
 };
 

@@ -46,6 +46,9 @@ As an example, encryption can be done as follows:
 
 __revision__ = "$Id$"
 
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _AES
 from Crypto.Util import cpuid
@@ -69,7 +72,7 @@ class AESCipher (blockalgo.BlockAlgo):
 
         # Check if the use_aesni was specified.
         use_aesni = True
-        if 'use_aesni' in kwargs:
+        if kwargs.has_key('use_aesni'):
             use_aesni = kwargs['use_aesni']
             del kwargs['use_aesni']
 
