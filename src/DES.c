@@ -24,6 +24,8 @@
  * Country of origin: Canada
  */
 
+#include "Python.h"
+
 /* Setting this will cause LibTomCrypt to return CRYPT_INVALID_ARG when its
  * assert-like LTC_ARGCHK macro fails. */
 #define ARGTYPE 4
@@ -34,7 +36,6 @@
 #undef DES  /* this is needed because tomcrypt_custom.h defines DES to an empty string */
 
 #include <assert.h>
-#include "Python.h"
 
 typedef struct {
     symmetric_key sk;

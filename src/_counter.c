@@ -22,10 +22,10 @@
  * ===================================================================
  */
 
+#include "Python.h"
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
-#include "Python.h"
 #include "pycrypto_compat.h"
 #include "_counter.h"
 
@@ -106,6 +106,7 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 
     /* Sanity-check pointers */
     assert(self->val <= self->p);
+    assert(self->buf_size >= 0);
     assert(self->p + self->nbytes <= self->val + self->buf_size);
     assert(self->val + PyBytes_GET_SIZE(self->prefix) == self->p);
     assert(PyBytes_GET_SIZE(self->prefix) + self->nbytes + PyBytes_GET_SIZE(self->suffix) == self->buf_size);

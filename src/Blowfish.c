@@ -26,6 +26,7 @@
  * http://www.schneier.com/paper-blowfish-fse.html
  */
 
+#include "Python.h"
 #include "config.h"
 #if HAVE_STDINT_H
 # include <stdint.h>
@@ -36,7 +37,6 @@
 #endif
 #include <assert.h>
 #include <string.h>
-#include "Python.h"
 
 #include "Blowfish-tables.h"
 

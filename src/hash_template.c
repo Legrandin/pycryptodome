@@ -24,13 +24,13 @@
   
 /* Basic object type */
 
+#include "Python.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 #ifdef _HAVE_STDC_HEADERS
 #include <string.h>
 #endif
-#include "Python.h"
 #include "pycrypto_compat.h"
 
 #define _STR(x) #x
@@ -209,9 +209,13 @@ ALG_getattr(PyObject *self, char *name)
  
 	if (PyUnicode_CompareWithASCIIString(attr, "digest_size")==0)
 		return PyLong_FromLong(DIGEST_SIZE);
+	if (PyUnicode_CompareWithASCIIString(attr, "name")==0)
+		return PyUnicode_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
 #else
 	if (strcmp(name, "digest_size")==0)
 		return PyInt_FromLong(DIGEST_SIZE);
+	if (strcmp(name, "name")==0)
+		return PyString_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
 #endif
 
 #ifdef IS_PY3K
@@ -309,14 +313,14 @@ static struct PyMethodDef ALG_functions[] = {
 #ifdef IS_PY3K
 static struct PyModuleDef moduledef = {
 	PyModuleDef_HEAD_INIT,
-	"Crypto.Hash." _MODULE_STRING,
-	NULL,
-	-1,
-	ALG_functions,
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	"Crypto.Hash." _MODULE_STRING,  /* m_name */
+	MODULE__doc__,                  /* m_doc */
+	-1,                             /* m_size */
+	ALG_functions,                  /* m_methods */
+	NULL,                           /* m_reload */
+	NULL,                           /* m_traverse */
+	NULL,                           /* m_clear */
+	NULL                            /* m_free */
 };
 #endif
 
@@ -349,7 +353,7 @@ _MODULE_NAME (void)
         return NULL;
 #else
 	ALGtype.ob_type = &PyType_Type;
-	m = Py_InitModule("Crypto.Hash." _MODULE_STRING, ALG_functions);
+	m = Py_InitModule3("Crypto.Hash." _MODULE_STRING, ALG_functions, MODULE__doc__);
 #endif
 
 	/* Add some symbolic constants to the module */

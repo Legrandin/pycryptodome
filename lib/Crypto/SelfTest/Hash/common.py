@@ -29,7 +29,10 @@ __revision__ = "$Id$"
 import sys
 import unittest
 import binascii
+import Crypto.Hash
 from Crypto.Util.py3compat import *
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 
 # For compatibility with Python 2.1 and Python 2.2
 if sys.hexversion < 0x02030000:
@@ -94,11 +97,27 @@ class HashSelfTest(unittest.TestCase):
             self.assertEqual(self.expected.decode(), out3)   # h = .new(data); h.hexdigest()
         self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
 
-        # Verify that new() object method produces a fresh hash object
-        h2 = h.new()
-        h2.update(self.input)
-        out5 = binascii.b2a_hex(h2.digest())
-        self.assertEqual(self.expected, out5)
+        # Verify that the .new() method produces a fresh hash object, except
+        # for MD5 and SHA1, which are hashlib objects.  (But test any .new()
+        # method that does exist.)
+        if self.hashmod.__name__ not in ('Crypto.Hash.MD5', 'Crypto.Hash.SHA1') or hasattr(h, 'new'):
+            h2 = h.new()
+            h2.update(self.input)
+            out5 = binascii.b2a_hex(h2.digest())
+            self.assertEqual(self.expected, out5)
+
+        # Verify that Crypto.Hash.new(h) produces a fresh hash object
+        h3 = Crypto.Hash.new(h)
+        h3.update(self.input)
+        out6 = binascii.b2a_hex(h3.digest())
+        self.assertEqual(self.expected, out6)
+
+        if hasattr(h, 'name'):
+            # Verify that Crypto.Hash.new(h.name) produces a fresh hash object
+            h4 = Crypto.Hash.new(h.name)
+            h4.update(self.input)
+            out7 = binascii.b2a_hex(h4.digest())
+            self.assertEqual(self.expected, out7)
 
 class HashTestOID(unittest.TestCase):
     def __init__(self, hashmod, oid):
@@ -107,16 +126,38 @@ class HashTestOID(unittest.TestCase):
         self.oid = oid
 
     def runTest(self):
+        from Crypto.Signature import PKCS1_v1_5
         h = self.hashmod.new()
-        if self.oid==None:
-            try:
-                raised = 0
-                a = h.oid
-            except AttributeError:
-                raised = 1
-            self.assertEqual(raised,1)
-        else:
-            self.assertEqual(h.oid, self.oid)
+        self.assertEqual(PKCS1_v1_5._HASH_OIDS[h.name], self.oid)
+
+class HashDocStringTest(unittest.TestCase):
+    def __init__(self, hashmod):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+
+    def runTest(self):
+        docstring = self.hashmod.__doc__
+        self.assert_(hasattr(self.hashmod, '__doc__'))
+        self.assert_(isinstance(self.hashmod.__doc__, str))
+
+class GenericHashConstructorTest(unittest.TestCase):
+    def __init__(self, hashmod):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+
+    def runTest(self):
+        obj1 = self.hashmod.new("foo")
+        obj2 = self.hashmod.new()
+        obj3 = Crypto.Hash.new(obj1.name, "foo")
+        obj4 = Crypto.Hash.new(obj1.name)
+        obj5 = Crypto.Hash.new(obj1, "foo")
+        obj6 = Crypto.Hash.new(obj1)
+        self.assert_(isinstance(self.hashmod, obj1))
+        self.assert_(isinstance(self.hashmod, obj2))
+        self.assert_(isinstance(self.hashmod, obj3))
+        self.assert_(isinstance(self.hashmod, obj4))
+        self.assert_(isinstance(self.hashmod, obj5))
+        self.assert_(isinstance(self.hashmod, obj6))
 
 class MACSelfTest(unittest.TestCase):
 
@@ -178,11 +219,13 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
             description = row[2].encode('latin-1')
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input))
-    if oid is not None:
-        oid = b(oid)
     name = "%s #%d: digest_size" % (module_name, i+1)
     tests.append(HashDigestSizeSelfTest(module, name, digest_size))
-    tests.append(HashTestOID(module, oid))
+    if oid is not None:
+        tests.append(HashTestOID(module, b(oid)))
+    tests.append(HashDocStringTest(module))
+    if getattr(module, 'name', None) is not None:
+        tests.append(GenericHashConstructorTest(module))
     return tests
 
 def make_mac_tests(module, module_name, test_data, hashmods):

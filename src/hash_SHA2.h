@@ -26,6 +26,8 @@
 #ifndef __HASH_SHA2_H
 #define __HASH_SHA2_H
 
+#include "Python.h"
+
 /* check if implementation set the correct macros */
 #ifndef MODULE_NAME
 #error SHA2 Implementation must define MODULE_NAME before including this header
