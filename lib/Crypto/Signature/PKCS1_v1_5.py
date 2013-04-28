@@ -303,4 +303,14 @@ _HASH_OIDS = {
     #:  }
     "SHA512": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03'),
     "sha512": b('\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03'),
+    
+    # OIDs for SHA-3 not yet assigned
+    "SHA3_224": b('*-not yet assigned-*'),
+    "sha3_224": b('*-not yet assigned-*'),
+    "SHA3_256": b('*-not yet assigned-*'),
+    "sha3_256": b('*-not yet assigned-*'),
+    "SHA3_384": b('*-not yet assigned-*'),
+    "sha3_384": b('*-not yet assigned-*'),
+    "SHA3_512": b('*-not yet assigned-*'),
+    "sha3_512": b('*-not yet assigned-*'),
 }

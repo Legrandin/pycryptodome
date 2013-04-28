@@ -43,8 +43,55 @@
 #define CAPACITY (2*(DIGEST_SIZE))
 #define BLOCK_SIZE (200-CAPACITY)
 
-#include "Python.h"
-#include "pycrypto_compat.h"
+static char MODULE__doc__[] =
+#if   (MODULE_NAME == SHA3_224)
+    "SHA3-224 cryptographic hash algorithm.\n"
+    "\n"
+    "SHA3-224 belongs to the SHA-3 family of cryptographic hashes.\n"
+    "It produces the 224 bit digest of a message.\n"
+    "  \n"
+    "    >>> from Crypto.Hash import SHA3_224\n"
+    "    >>>\n"
+    "    >>> h = SHA3_224.new()\n"
+#elif (MODULE_NAME == SHA3_256)
+    "SHA3-256 cryptographic hash algorithm.\n"
+    "\n"
+    "SHA3-256 belongs to the SHA-3 family of cryptographic hashes.\n"
+    "It produces the 256 bit digest of a message.\n"
+    "  \n"
+    "    >>> from Crypto.Hash import SHA3_256\n"
+    "    >>>\n"
+    "    >>> h = SHA3_256.new()\n"
+#elif (MODULE_NAME == SHA3_384)
+    "SHA3-384 cryptographic hash algorithm.\n"
+    "\n"
+    "SHA3-384 belongs to the SHA-3 family of cryptographic hashes.\n"
+    "It produces the 384 bit digest of a message.\n"
+    "  \n"
+    "    >>> from Crypto.Hash import SHA3_384\n"
+    "    >>>\n"
+    "    >>> h = SHA3_384.new()\n"
+#elif (MODULE_NAME == SHA3_512)
+    "SHA3-512 cryptographic hash algorithm.\n"
+    "\n"
+    "SHA3-512 belongs to the SHA-3 family of cryptographic hashes.\n"
+    "It produces the 512 bit digest of a message.\n"
+    "  \n"
+    "    >>> from Crypto.Hash import SHA3_512\n"
+    "    >>>\n"
+    "    >>> h = SHA3_512.new()\n"
+#endif
+"    >>> h.update(b'Hello')\n"
+"    >>> print h.hexdigest()\n"
+"\n"
+"*SHA* stands for Secure Hash Algorithm.\n"
+"\n"
+".. Algorithm specifications: http://keccak.noekeon.org/\n"
+".. As of April 2013, NIST has not yet updated Secure Hash Standard\n"
+".. (SHS) for SHA-3. This module is subject to change once the final\n"
+".. standard is published.";
+
+#include "pycrypto_common.h"
 #include "keccak.h"
 
 typedef keccak_state hash_state;

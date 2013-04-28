@@ -173,3 +173,32 @@ def _sha512_new(*args):
     return SHA512.new(*args)
 _new_funcs['SHA512'] = _new_funcs['sha512'] = _sha512_new
 del _sha512_new
+
+# SHA/3
+def _sha3_224_new(*args):
+    from Crypto.Hash import SHA3_224
+    _new_funcs['SHA3_224'] = _new_funcs['sha3_224'] = SHA3_224.new
+    return SHA3_224.new(*args)
+_new_funcs['SHA3_224'] = _new_funcs['sha3_224'] = _sha3_224_new
+del _sha3_224_new
+
+def _sha3_256_new(*args):
+    from Crypto.Hash import SHA3_256
+    _new_funcs['SHA3_256'] = _new_funcs['sha3_256'] = SHA3_256.new
+    return SHA3_256.new(*args)
+_new_funcs['SHA3_256'] = _new_funcs['sha3_256'] = _sha3_256_new
+del _sha3_256_new
+
+def _sha3_384_new(*args):
+    from Crypto.Hash import SHA3_384
+    _new_funcs['SHA3_384'] = _new_funcs['sha3_384'] = SHA3_384.new
+    return SHA3_384.new(*args)
+_new_funcs['SHA3_384'] = _new_funcs['sha3_384'] = _sha3_384_new
+del _sha3_384_new
+
+def _sha3_512_new(*args):
+    from Crypto.Hash import SHA3_512
+    _new_funcs['SHA3_512'] = _new_funcs['sha3_512'] = SHA3_512.new
+    return SHA3_512.new(*args)
+_new_funcs['SHA3_512'] = _new_funcs['sha3_512'] = _sha3_512_new
+del _sha3_512_new

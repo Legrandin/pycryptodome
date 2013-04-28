@@ -26,7 +26,7 @@
  * ===================================================================
 */
 
-#include "config.h"
+#include "pycrypto_common.h"
 #include "keccak.h"
 
 #include <string.h>

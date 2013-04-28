@@ -29,20 +29,7 @@
 #ifndef __KECCAK_H_
 #define __KECCAK_H_
 
-#include "config.h"
-
-/* determine fixed size types */
-#if HAVE_STDINT_H
-#include <stdint.h>
-#elif defined(__sun) || defined(__sun__)
-#include <sys/inttypes.h>
-#elif defined(_MSC_VER)
-typedef unsigned char    uint8_t;
-typedef unsigned __int64 uint64_t;
-#else
-typedef unsigned char      uint8_t;
-typedef unsigned long long uint64_t;
-#endif
+#include "pycrypto_common.h"
 
 typedef struct
 {
