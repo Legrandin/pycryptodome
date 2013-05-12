@@ -200,7 +200,7 @@ class BlockAlgo:
         That also means that you cannot reuse an object for encrypting
         or decrypting other data with the same key.
 
-        This function does not perform any padding.
+        This function does not add any padding to the plaintext.
        
          - For `MODE_ECB` and `MODE_CBC`, *plaintext* length (in bytes) must be
            a multiple of *block_size*.
@@ -259,7 +259,7 @@ class BlockAlgo:
         That also means that you cannot reuse an object for encrypting
         or decrypting other data with the same key.
 
-        This function does not perform any padding.
+        This function does not remove any padding from the plaintext.
        
          - For `MODE_ECB` and `MODE_CBC`, *ciphertext* length (in bytes) must
            be a multiple of *block_size*.

@@ -86,6 +86,8 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_e
         used.
       initial_value : integer
         The initial value of the counter. Default value is 1.
+      overflow : integer
+        This value is currently ignored.
       little_endian : boolean
         If *True*, the counter number will be encoded in little endian format.
         If *False* (default), in big endian format.
