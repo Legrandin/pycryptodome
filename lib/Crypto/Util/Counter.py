@@ -73,7 +73,7 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_e
  
       prefix || counter value || postfix
 
-    The counter value is incremented by one at each call.
+    The counter value is incremented by 1 at each call.
 
     :Parameters:
       nbits : integer
@@ -87,12 +87,12 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_e
       initial_value : integer
         The initial value of the counter. Default value is 1.
       little_endian : boolean
-        If True, the counter number will be encoded in little endian format.
-        If False (default), in big endian format.
+        If *True*, the counter number will be encoded in little endian format.
+        If *False* (default), in big endian format.
       allow_wraparound : boolean
-        If True, the function will raise an *OverflowError* exception as soon
-        as the counter wraps around. If False (default), the counter will
-        simply restart from zero.
+        If *True*, the counter will automatically restart from zero after
+        reaching the maximum value (``2**nbits-1``).
+        If *False* (default), the object will raise an *OverflowError*.
       disable_shortcut : deprecated
         This option is a no-op for backward compatibility.  It will be removed
         in a future version.  Don't use it.
