@@ -50,7 +50,8 @@ The hashing modules here all support the interface described in `PEP
 """
 
 __all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD160', 'SHA1',
-           'SHA224', 'SHA256', 'SHA384', 'SHA512']
+           'SHA224', 'SHA256', 'SHA384', 'SHA512', 'CMAC']
+
 __revision__ = "$Id$"
 
 import sys
