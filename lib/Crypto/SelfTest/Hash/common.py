@@ -43,6 +43,7 @@ if sys.hexversion < 0x02030000:
 else:
     dict = dict
 
+from Crypto.Util.strxor import strxor_c
 
 class HashDigestSizeSelfTest(unittest.TestCase):
     
@@ -184,8 +185,18 @@ class MACSelfTest(unittest.TestCase):
 
             h = self.hashmod.new(key, digestmod=hashmod)
             h.update(data)
-            out1 = binascii.b2a_hex(h.digest())
+            out1_bin = h.digest()
+            out1 = binascii.b2a_hex(out1_bin)
             out2 = h.hexdigest()
+
+            # Verify that correct MAC does not raise any exception
+            h.hexverify(out1)
+            h.verify(out1_bin)
+
+            # Verify that incorrect MAC does raise ValueError exception
+            wrong_mac = strxor_c(out1_bin, 255)
+            self.assertRaises(ValueError, h.verify, wrong_mac)
+            self.assertRaises(ValueError, h.hexverify, "4556")
 
             h = self.hashmod.new(key, data, hashmod)
 
