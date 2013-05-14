@@ -4372,13 +4372,15 @@ else
   :
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -maes" >&5
+$as_echo_n "checking whether C compiler accepts -maes... " >&6; }
+if ${ax_cv_check_cflags___maes+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
 
-# Checks for compiler flags.
-old_CFLAGS="$CFLAGS"
-CFLAGS=-maes
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether CC supports -maes" >&5
-$as_echo_n "checking whether CC supports -maes... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  ax_check_save_flags=$CFLAGS
+  CFLAGS="$CFLAGS  -maes"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 int
@@ -4390,21 +4392,26 @@ main ()
 }
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_check_cflags___maes=yes
+else
+  ax_cv_check_cflags___maes=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___maes" >&5
+$as_echo "$ax_cv_check_cflags___maes" >&6; }
+if test x"$ax_cv_check_cflags___maes" = xyes; then :
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
+    have_maes=yes
 
 $as_echo "#define HAVE_MAES 1" >>confdefs.h
 
-  have_maes=yes
 
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
+  :
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-CFLAGS="$old_cflags"
+
 
 # Checks for libraries.
 
