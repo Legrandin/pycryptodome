@@ -48,18 +48,10 @@ AX_CHECK_COMPILE_FLAG([-Wall], [AX_APPEND_FLAG([-Wall])])
 AX_CHECK_COMPILE_FLAG([-Wextra], [AX_APPEND_FLAG([-Wextra])])
 AX_CHECK_COMPILE_FLAG([-Wno-missing-field-initializers], [AX_APPEND_FLAG([-Wno-missing-field-initializers])])
 AX_CHECK_COMPILE_FLAG([-Wno-unused-parameter], [AX_APPEND_FLAG([-Wno-unused-parameter])])
-
-# Checks for compiler flags.
-old_CFLAGS="$CFLAGS"
-CFLAGS=-maes
-AC_MSG_CHECKING([whether CC supports -maes])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])], [
-  AC_MSG_RESULT([yes])
-  AC_DEFINE(HAVE_MAES, [1], [Define if CC supports -maes])
-  have_maes=yes
-  ], [AC_MSG_RESULT([no])]
-)
-CFLAGS="$old_cflags"
+AX_CHECK_COMPILE_FLAG([-maes], [
+    have_maes=yes
+    AC_DEFINE(HAVE_MAES, [1], [Define if CC supports -maes])
+])
 
 # Checks for libraries.
 AC_ARG_WITH([gmp], AS_HELP_STRING([--without-gmp], [Build without gmp library (default: test)]))
