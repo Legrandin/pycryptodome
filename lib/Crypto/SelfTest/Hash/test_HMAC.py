@@ -29,13 +29,17 @@ __revision__ = "$Id$"
 from common import dict     # For compatibility with Python 2.1 and 2.2
 from Crypto.Util.py3compat import *
 
+from Crypto.Hash import MD5, SHA1, SHA224, SHA256, SHA384, SHA512, HMAC
+
+default_hash = None
+
 # This is a list of (key, data, results, description) tuples.
 test_data = [
     ## Test vectors from RFC 2202 ##
     # Test that the default hashmod is MD5
     ('0b' * 16,
         '4869205468657265',
-        dict(default='9294727a3638bb1c13f48ef8158bfc9d'),
+        dict(default_hash='9294727a3638bb1c13f48ef8158bfc9d'),
         'default-is-MD5'),
 
     # Test case 1 (MD5)
@@ -175,9 +179,7 @@ test_data = [
             bfdc63644f0713938a7f51535c3a35e2
         '''),
         'RFC 4231 #7 (HMAC-SHA256)'),
-]
 
-hashlib_test_data = [
     # Test case 8 (SHA224)
     ('4a656665',
         '7768617420646f2079612077616e74'
@@ -203,17 +205,25 @@ hashlib_test_data = [
 
 def get_tests(config={}):
     global test_data
-    from Crypto.Hash import HMAC, MD5, SHA1, SHA256
     from common import make_mac_tests
-    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256, default=None)
-    try:
-        from Crypto.Hash import SHA224, SHA384, SHA512
-        hashmods.update(dict(SHA224=SHA224, SHA384=SHA384, SHA512=SHA512))
-        test_data += hashlib_test_data
-    except ImportError:
-        import sys
-        sys.stderr.write("SelfTest: warning: not testing HMAC-SHA224/384/512 (not available)\n")
-    return make_mac_tests(HMAC, "HMAC", test_data, hashmods)
+
+    # A test vector contains multiple results, each one for a
+    # different hash algorithm.
+    # Here we expand each test vector into multiple ones,
+    # and add the relevant parameters that will be passed to new()
+    exp_test_data = []
+    for row in test_data:
+        for modname in row[2].keys():
+            t = list(row)
+            t[2] = row[2][modname]
+            try:
+                t.append(dict(digestmod=globals()[modname]))
+                exp_test_data.append(t)
+            except AttributeError:
+                import sys
+                sys.stderr.write("SelfTest: warning: not testing HMAC-%s (not available)\n" % modname)
+
+    return make_mac_tests(HMAC, "HMAC", exp_test_data)
 
 if __name__ == '__main__':
     import unittest
