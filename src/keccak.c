@@ -31,6 +31,14 @@
 #include <string.h>
 
 #define USE_COMPLEMENT_LANES_OPTIMIZATION
+/*
+    The lane complementing optimization is described in
+    ``Keccak implementation overview'' ver. 3.2 sect. 2.2
+    <http://keccak.noekeon.org/Keccak-implementation-3.2.pdf>
+    
+    The number of NOT operations in the Chi step can be reduced
+    by representing certain lanes by their complement.
+*/
 
 #ifdef KECCAK_USE_BIT_INTERLEAVING
 /*
@@ -51,85 +59,66 @@ typedef uint16_t UINT16;
 typedef uint32_t UINT32;
 typedef uint64_t UINT64;
 
-static short    interleaveTablesBuilt = 0;
-static uint16_t interleaveTable[65536];
-static uint16_t deinterleaveTable[65536];
-
 /*
     from the Keccak reference implementation
     <http://keccak.noekeon.org/files.html>
 */
 
-static void
-buildInterleaveTables()
-{
-    UINT32 i, j;
-    UINT16 x;
+#ifdef ENDIAN_LITTLE
 
-    if (!interleaveTablesBuilt) {
-        for(i=0; i<65536; i++) {
-            x = 0;
-            for(j=0; j<16; j++) {
-                if (i & (1 << j))
-                    x |= (1 << (j/2 + 8*(j%2)));
-            }
-            interleaveTable[i] = x;
-            deinterleaveTable[x] = (UINT16)i;
-        }
-        interleaveTablesBuilt = 1;
+static void
+keccak_absorb_internal (keccak_state *self)
+{
+    short i;
+    const UINT32 *pI = (const UINT32 *)self->buf;
+    UINT32 *pS = self->state;
+    UINT32 t, x0, x1;
+    
+    /* Credit: Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
+    for (i = 0; i < self->rate; i += 8) {
+        x0 = *(pI++);
+        t = (x0 ^ (x0 >> 1)) & 0x22222222UL; x0 ^= t ^ (t <<  1);
+        t = (x0 ^ (x0 >> 2)) & 0x0C0C0C0CUL; x0 ^= t ^ (t <<  2);
+        t = (x0 ^ (x0 >> 4)) & 0x00F000F0UL; x0 ^= t ^ (t <<  4);
+        t = (x0 ^ (x0 >> 8)) & 0x0000FF00UL; x0 ^= t ^ (t <<  8);
+        
+        x1 = *(pI++);
+        t = (x1 ^ (x1 >> 1)) & 0x22222222UL; x1 ^= t ^ (t <<  1);
+        t = (x1 ^ (x1 >> 2)) & 0x0C0C0C0CUL; x1 ^= t ^ (t <<  2);
+        t = (x1 ^ (x1 >> 4)) & 0x00F000F0UL; x1 ^= t ^ (t <<  4);
+        t = (x1 ^ (x1 >> 8)) & 0x0000FF00UL; x1 ^= t ^ (t <<  8);
+        
+        *(pS++) ^= (x0 >> 16) | (x1 & 0xFFFF0000);
+        *(pS++) ^= (UINT16)x0 | (x1 << 16);
     }
 }
 
-#ifdef ENDIAN_LITTLE
+#else
+/* ENDIAN_BIG */ 
 
-#define xor2bytesIntoInterleavedWords(even, odd, source, j) \
-    i##j = interleaveTable[((const UINT16*)source)[j]]; \
-    ((UINT8*)even)[j] ^= i##j & 0xFF; \
-    ((UINT8*)odd)[j] ^= i##j >> 8;
-
-#define setInterleavedWordsInto2bytes(dest, even, odd, j) \
-    d##j = deinterleaveTable[((even >> (j*8)) & 0xFF) ^ (((odd >> (j*8)) & 0xFF) << 8)]; \
-    ((UINT16*)dest)[j] = d##j;
-
-#else /* ENDIAN_BIG */
-
-#define xor2bytesIntoInterleavedWords(even, odd, source, j) \
-    i##j = interleaveTable[source[2*j] ^ ((UINT16)source[2*j+1] << 8)]; \
-    *even ^= (i##j & 0xFF) << (j*8); \
-    *odd ^= ((i##j >> 8) & 0xFF) << (j*8);
-
-#define setInterleavedWordsInto2bytes(dest, even, odd, j) \
-    d##j = deinterleaveTable[((even >> (j*8)) & 0xFF) ^ (((odd >> (j*8)) & 0xFF) << 8)]; \
-    dest[2*j] = d##j & 0xFF; \
-    dest[2*j+1] = d##j >> 8;
-
-#endif /* Endianness */
-
-static void
-xor8bytesIntoInterleavedWords(UINT32 *even, UINT32 *odd, const UINT8* source)
+/* Credit: Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
+UINT64 toInterleaving(UINT64 x) 
 {
-    UINT16 i0, i1, i2, i3;
+   UINT64 t;
 
-    xor2bytesIntoInterleavedWords(even, odd, source, 0)
-    xor2bytesIntoInterleavedWords(even, odd, source, 1)
-    xor2bytesIntoInterleavedWords(even, odd, source, 2)
-    xor2bytesIntoInterleavedWords(even, odd, source, 3)
+   t = (x ^ (x >>  1)) & 0x2222222222222222ULL; x ^= t ^ (t <<  1);
+   t = (x ^ (x >>  2)) & 0x0C0C0C0C0C0C0C0CULL; x ^= t ^ (t <<  2);
+   t = (x ^ (x >>  4)) & 0x00F000F000F000F0ULL; x ^= t ^ (t <<  4);
+   t = (x ^ (x >>  8)) & 0x0000FF000000FF00ULL; x ^= t ^ (t <<  8);
+   t = (x ^ (x >> 16)) & 0x00000000FFFF0000ULL; x ^= t ^ (t << 16);
+
+   return x;
 }
 
-static void
-setInterleavedWordsInto8bytes(UINT8* dest, UINT32 even, UINT32 odd)
+void xor8bytesIntoInterleavedWords(UINT32* even, UINT32 *odd, const UINT8* source)
 {
-    UINT16 d0, d1, d2, d3;
-
-    setInterleavedWordsInto2bytes(dest, even, odd, 0)
-    setInterleavedWordsInto2bytes(dest, even, odd, 1)
-    setInterleavedWordsInto2bytes(dest, even, odd, 2)
-    setInterleavedWordsInto2bytes(dest, even, odd, 3)
+    UINT64 sourceWord, evenAndOddWord; 
+    LOAD64L(sourceWord, source);
+           
+    evenAndOddWord = toInterleaving(sourceWord);
+    *even ^= (UINT32)evenAndOddWord;
+    *odd  ^= (UINT32)(evenAndOddWord >> 32);
 }
-
-#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
-    static short complemented_lanes[6] = {2, 4, 16, 24, 34, 40};
-#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
 
 static void
 keccak_absorb_internal (keccak_state *self)
@@ -140,6 +129,32 @@ keccak_absorb_internal (keccak_state *self)
         xor8bytesIntoInterleavedWords (&(self->state[i+1]), &(self->state[i]), self->buf + j);
     }
 }
+#endif /* Endianness */
+
+/* Credit: Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
+UINT64 fromInterleaving(UINT64 x)
+{
+   UINT64 t;
+
+   t = (x ^ (x >> 16)) & 0x00000000FFFF0000ULL; x ^= t ^ (t << 16);
+   t = (x ^ (x >>  8)) & 0x0000FF000000FF00ULL; x ^= t ^ (t <<  8);
+   t = (x ^ (x >>  4)) & 0x00F000F000F000F0ULL; x ^= t ^ (t <<  4);
+   t = (x ^ (x >>  2)) & 0x0C0C0C0C0C0C0C0CULL; x ^= t ^ (t <<  2);
+   t = (x ^ (x >>  1)) & 0x2222222222222222ULL; x ^= t ^ (t <<  1);
+
+   return x;
+}
+
+void setInterleavedWordsInto8bytes(UINT8* dest, UINT32 even, UINT32 odd)
+{
+    UINT64 evenAndOddWord = (UINT64)even ^ ((UINT64)odd << 32);
+    UINT64 destWord = fromInterleaving(evenAndOddWord);
+    STORE64L(destWord, dest);
+}
+
+#ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
+    static short complemented_lanes[6] = {2, 4, 16, 24, 34, 40};
+#endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
 
 static void
 keccak_squeeze_internal (keccak_state *self)
@@ -203,10 +218,6 @@ keccak_result
 keccak_init (keccak_state *self, unsigned int param, keccak_init_param initby)
 {
     uint16_t security, capacity, rate;
-    
-#ifdef KECCAK_USE_BIT_INTERLEAVING
-    buildInterleaveTables();
-#endif /* KECCAK_USE_BIT_INTERLEAVING */
 
     memset (self, 0, sizeof(keccak_state));
     
@@ -437,7 +448,7 @@ static const uint32_t roundconstants[KECCAK_ROUNDS * 2] = {
     0x00000001UL,    0x00008000UL,
     0x00000000UL,    0x80008082UL
 };
-#else /* not KECCAK_USE_BIT_INTERLEAVING */
+#else /* use 64 bit instructions */
 
 #define ROT_01 36
 #define ROT_02 3
