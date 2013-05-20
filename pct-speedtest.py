@@ -363,6 +363,8 @@ class Benchmark:
             self.test_encryption("%s-CTR-LE" % (cipher_name,), module, key_bytes, "CTR-LE")
             if hasattr(module, "MODE_CCM"):
                 self.test_encryption("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
+            if hasattr(module, "MODE_EAX"):
+                self.test_encryption("%s-EAX" % (cipher_name,), module, key_bytes, module.MODE_EAX)
 
         # Crypto.Cipher (stream ciphers)
         for cipher_name, module, key_bytes in stream_specs:

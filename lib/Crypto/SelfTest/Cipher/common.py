@@ -382,12 +382,12 @@ class CCMSplitEncryptionTest(unittest.TestCase):
 class AEADTests(unittest.TestCase):
     """Tests generic to all AEAD modes"""
 
-    def __init__(self, module, mode_name):
+    def __init__(self, module, mode_name, key_size):
         unittest.TestCase.__init__(self)
         self.module = module
         self.mode_name = mode_name
         self.mode = getattr(module, mode_name)
-        self.key = b('\xFF')*16
+        self.key = b('\xFF')*key_size
         self.iv = b('\x00')*10
         self.description = "AEAD Test"
 
@@ -658,7 +658,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             extra_tests_added = 1
 
         # Extract associated data and MAC for AEAD modes
-        if p_mode == 'CCM':
+        if p_mode in ('CCM', 'EAX'):
             assoc_data, params['plaintext'] = params['plaintext'].split('|')
             assoc_data2, params['ciphertext'], params['mac'] = params['ciphertext'].split('|')
             params['assoc_data'] = assoc_data
@@ -687,10 +687,16 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             CCMMACLengthTest(module),
             CCMSplitEncryptionTest(module),
         ]
-    for aead_mode in ("MODE_CCM",):
+    for aead_mode in ("MODE_CCM","MODE_EAX"):
         if hasattr(module, aead_mode):
-            tests += [
-                AEADTests(module, aead_mode),
+            key_sizes = []
+            try:
+                key_sizes += module.key_size
+            except TypeError:
+                key_sizes = [ module.key_size ]
+            for ks in key_sizes:
+                tests += [
+                    AEADTests(module, aead_mode, ks),
                 ]
 
     return tests

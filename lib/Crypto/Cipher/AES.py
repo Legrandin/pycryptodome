@@ -138,7 +138,7 @@ def new(key, *args, **kwargs):
 
         For all other modes, it must be 16 bytes long.
       nonce : byte string
-        (*Only* `MODE_CCM`).
+        (*Only* `MODE_CCM`, `MODE_EAX`).
 
         A mandatory value that must never be reused for any other encryption.
 
@@ -146,6 +146,9 @@ def new(key, *args, **kwargs):
         11 or 12 bytes are reasonable values in general. Bear in
         mind that with CCM there is a trade-off between nonce length and
         maximum message size.
+
+        For the other modes, there are no restrictions on its length,
+        but it is recommended to use at least 16 bytes.
       counter : callable
         (*Only* `MODE_CTR`). A stateful function that returns the next
         *counter block*, which is a byte string of `block_size` bytes.
@@ -157,6 +160,9 @@ def new(key, *args, **kwargs):
       mac_len : integer
         (*Only* `MODE_CCM`). Length of the MAC, in bytes. It must be even and in
         the range ``[4..16]``. The default is 16.
+
+        (*Only* `MODE_EAX`). Length of the MAC, in bytes. It must be no
+        larger than 16 bytes (which is the default).
       msg_len : integer
         (*Only* `MODE_CCM`). Length of the message to (de)cipher.
         If not specified, ``encrypt`` or ``decrypt`` may only be called once.
@@ -186,6 +192,8 @@ MODE_CTR = 6
 MODE_OPENPGP = 7
 #: Counter with CBC-MAC (CCM) Mode. See `blockalgo.MODE_CCM`.
 MODE_CCM = 8
+#: EAX Mode. See `blockalgo.MODE_EAX`.
+MODE_EAX = 9
 #: Size of a data block (in bytes)
 block_size = 16
 #: Size of a key (in bytes)
