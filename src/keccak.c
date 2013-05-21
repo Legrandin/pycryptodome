@@ -54,13 +54,9 @@
     steps with 32-bit rotations.
 */
 
-typedef uint8_t  UINT8;
-typedef uint16_t UINT16;
-typedef uint32_t UINT32;
-typedef uint64_t UINT64;
 
 /*
-    from the Keccak reference implementation
+    Some code from the Keccak reference implementation
     <http://keccak.noekeon.org/files.html>
 */
 
@@ -70,9 +66,9 @@ static void
 keccak_absorb_internal (keccak_state *self)
 {
     short i;
-    const UINT32 *pI = (const UINT32 *)self->buf;
-    UINT32 *pS = self->state;
-    UINT32 t, x0, x1;
+    const uint32_t *pI = (const uint32_t *)self->buf;
+    uint32_t *pS = self->state;
+    uint32_t t, x0, x1;
     
     /* Credit: Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
     for (i = 0; i < self->rate; i += 8) {
@@ -89,7 +85,7 @@ keccak_absorb_internal (keccak_state *self)
         t = (x1 ^ (x1 >> 8)) & 0x0000FF00UL; x1 ^= t ^ (t <<  8);
         
         *(pS++) ^= (x0 >> 16) | (x1 & 0xFFFF0000);
-        *(pS++) ^= (UINT16)x0 | (x1 << 16);
+        *(pS++) ^= (uint16_t)x0 | (x1 << 16);
     }
 }
 
@@ -97,9 +93,10 @@ keccak_absorb_internal (keccak_state *self)
 /* ENDIAN_BIG */ 
 
 /* Credit: Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
-UINT64 toInterleaving(UINT64 x) 
+static uint64_t
+toInterleaving (uint64_t x) 
 {
-   UINT64 t;
+   uint64_t t;
 
    t = (x ^ (x >>  1)) & 0x2222222222222222ULL; x ^= t ^ (t <<  1);
    t = (x ^ (x >>  2)) & 0x0C0C0C0C0C0C0C0CULL; x ^= t ^ (t <<  2);
@@ -108,33 +105,28 @@ UINT64 toInterleaving(UINT64 x)
    t = (x ^ (x >> 16)) & 0x00000000FFFF0000ULL; x ^= t ^ (t << 16);
 
    return x;
-}
-
-void xor8bytesIntoInterleavedWords(UINT32* even, UINT32 *odd, const UINT8* source)
-{
-    UINT64 sourceWord, evenAndOddWord; 
-    LOAD64L(sourceWord, source);
-           
-    evenAndOddWord = toInterleaving(sourceWord);
-    *even ^= (UINT32)evenAndOddWord;
-    *odd  ^= (UINT32)(evenAndOddWord >> 32);
 }
 
 static void
 keccak_absorb_internal (keccak_state *self)
 {
     short i,j;
+    uint64_t sourceWord, evenAndOddWord;
     
     for (i = j = 0; j < self->rate; i += 2, j += 8) {
-        xor8bytesIntoInterleavedWords (&(self->state[i+1]), &(self->state[i]), self->buf + j);
+        LOAD64L(sourceWord, self->buf + j);
+        evenAndOddWord = toInterleaving (sourceWord);
+        self->state[i+1] ^= (uint32_t)evenAndOddWord;
+        self->state[i]   ^= (uint32_t)(evenAndOddWord >> 32);
     }
 }
 #endif /* Endianness */
 
 /* Credit: Henry S. Warren, Hacker's Delight, Addison-Wesley, 2002 */
-UINT64 fromInterleaving(UINT64 x)
+static uint64_t
+fromInterleaving (uint64_t x)
 {
-   UINT64 t;
+   uint64_t t;
 
    t = (x ^ (x >> 16)) & 0x00000000FFFF0000ULL; x ^= t ^ (t << 16);
    t = (x ^ (x >>  8)) & 0x0000FF000000FF00ULL; x ^= t ^ (t <<  8);
@@ -145,21 +137,21 @@ UINT64 fromInterleaving(UINT64 x)
    return x;
 }
 
-void setInterleavedWordsInto8bytes(UINT8* dest, UINT32 even, UINT32 odd)
-{
-    UINT64 evenAndOddWord = (UINT64)even ^ ((UINT64)odd << 32);
-    UINT64 destWord = fromInterleaving(evenAndOddWord);
-    STORE64L(destWord, dest);
-}
-
 #ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
-    static short complemented_lanes[6] = {2, 4, 16, 24, 34, 40};
+static short complemented_lanes[6] = {2, 4, 16, 24, 34, 40};
 #endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
+
+#define setInterleavedWordsInto8bytes(dest, even, odd)  \
+    { \
+        destWord = fromInterleaving((uint64_t)even ^ ((uint64_t)odd << 32)); \
+        STORE64L(destWord, dest); \
+    }
 
 static void
 keccak_squeeze_internal (keccak_state *self)
 {
     short i, j, x = 0;
+    uint64_t destWord;
 
     for (i = j = 0; j < self->rate; i += 2, j += 8) {
 #ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
@@ -178,7 +170,7 @@ keccak_squeeze_internal (keccak_state *self)
 #else /* Use 64bit instructions */
 
 #ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
-    static short complemented_lanes[6] = {1, 2, 8, 12, 17, 20};
+static short complemented_lanes[6] = {1, 2, 8, 12, 17, 20};
 #endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
 
 static void
