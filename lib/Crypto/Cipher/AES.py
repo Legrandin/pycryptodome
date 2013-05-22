@@ -120,6 +120,8 @@ def new(key, *args, **kwargs):
       key : byte string
         The secret key to use in the symmetric cipher.
         It must be 16 (*AES-128*), 24 (*AES-192*), or 32 (*AES-256*) bytes long.
+
+        Only in `MODE_SIV`, it needs to be 32, 48, or 64 bytes long.
     :Keywords:
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
@@ -138,7 +140,7 @@ def new(key, *args, **kwargs):
 
         For all other modes, it must be 16 bytes long.
       nonce : byte string
-        (*Only* `MODE_CCM`, `MODE_EAX`).
+        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_SIV`).
 
         A mandatory value that must never be reused for any other encryption.
 
@@ -194,6 +196,8 @@ MODE_OPENPGP = 7
 MODE_CCM = 8
 #: EAX Mode. See `blockalgo.MODE_EAX`.
 MODE_EAX = 9
+#: Syntethic Initialization Vector (SIV). See `blockalgo.MODE_SIV`.
+MODE_SIV = 10
 #: Size of a data block (in bytes)
 block_size = 16
 #: Size of a key (in bytes)

@@ -17,9 +17,13 @@ packet header.
 In this file, that is called "associated data" (AD) even though terminology
 may vary from mode to mode.
 
+The term "MAC" is used to indicate the authentication tag generated as part
+of the encryption process. The MAC is consumed by the receiver to tell
+whether the message has been tampered with.
+
 === Goals of the AEAD API
 
-1. Any piece of data (AD, ciphertext, plaintext) is passed only once.
+1. Any piece of data (AD, ciphertext, plaintext, MAC) is passed only once.
 2. It is possible to encrypt/decrypt huge files withe little memory cost.
    To this end, authentication, encryption, and decryption are always
    incremental. That is, the caller may split data in any way, and the end
@@ -116,7 +120,7 @@ In addition to the existing Cipher methods new(), encrypt() and decrypt(),
  - hexdigest() as digest(), but the output is ASCII hexadecimal.
 
  - verify() to evaluate if the binary MAC is correct. It can only be
-   called at the end of decryption.
+   called at the end of decryption. It takes the MAC as input.
 
  - hexverify() as verify(), but the input is ASCII hexadecimal.
 
@@ -128,13 +132,13 @@ IV/nonce to never repeat, this method may be misused and lead to security
 holes.
 
 Since MAC validation (decryption mode) is subject to timing attacks,
-the (hex)verify() method accepts as input the expected MAC and raises a
-ValueError exception if it does not match.
-Internally, the method can perform the validation using time-independent code.
+the (hex)verify() method internally performs comparison of received
+and computed MACs using time-independent code.
+A ValueError exception is issued if the MAC does not match.
 
 === Padding
 
-The proposed API only supports AEAD modes than do not require padding
+The proposed API only supports AEAD modes that do not require padding
 of the plaintext. Adding support for that would make the API more complex
 (for instance, an external "finished" flag to pass encrypt()).
 
@@ -153,8 +157,8 @@ it such results across several encryptions/decryptions.
 The proposed API supports single-pass, online AEAD modes.
 
 A "single-pass" mode processes each block of AD or data only once.
-Compare that to "2-pass" modes, where each block of data (not AD) twice:
-once for authentication and one for enciphering.
+Compare that to "2-pass" modes, where each block of data (not AD)
+is processed twice: once for authentication and once for enciphering.
 
 An "online" mode does not need to know the size of the message before
 encryption starts. As a consequence:
@@ -169,11 +173,26 @@ are in widespread use.
 That is still OK, provided that encryption can start *before* authentication is
 completed. If that's the case (e.g. GCM, EAX) encrypt()/decrypt() will also
 take care of completing the authentication over the plaintext.
-If that's NOT the case (e.g. SIV), encrypt()/decrypt() can only be called once.
 
 A similar problem arises with non-online modes (e.g. CCM): they have to wait to see
 the end of the plaintext before encryption can start. The only way to achieve
 that is to only allow encrypt()/decrypt() to be called once.
+
+To summarize:
+
+Single-pass and online:
+ Fully supported by the API. The mode is most likely patented.
+
+Single-pass and not-online:
+ encrypt()/decrypt() can only be called once. The mode is most likely patented.
+
+2-pass and online:
+ Fully supported by the API, but only if encryption or decryption can start
+ *before* authentication is finished.
+
+2-pass and not-online:
+ Fully supported by the API, but only if encryption or decryption can start
+ *before* authentication is finished. encrypt()/decrypt() can only be called once.
 
 === Associated Data
 
@@ -199,6 +218,13 @@ For modes of the 2nd type (e.g. SIV), the API assumes that each call
 to update() ingests one full item of the vector. The two examples above
 are now different.
 
+=== MAC
+
+During encryption, the MAC is computed and returned by digest().
+
+During decryption, the received MAC is passed as a parameter to verify()
+at the very end.
+
 === CCM mode
 Number of keys required:	1
 Compatible with ciphers:	AES (may be used with others if block length
@@ -206,6 +232,8 @@ Compatible with ciphers:	AES (may be used with others if block length
 Counter/IV/nonce:		1 nonce required (length 8..13 bytes)
 Single-pass:			no
 Online:				no
+Encryption can start before
+authentication is complete:	yes
 Term for AD:			"associate data" (NIST) or "additional
                                 authenticated data" (RFC)
 Term for MAC:			part of ciphertext (NIST) or
@@ -228,13 +256,12 @@ Compatible with ciphers:	AES (may be used with others if block length
 Counter/IV/nonce:		1 IV required (any length)
 Single-pass:			no
 Online:				yes
+Encryption can start before
+authentication is complete:	yes
 Term for AD:			"additional authenticated data"
 Term for MAC:			"authentication tag" or "tag"
 Padding required:		no
 Pre-processing of AD:		possible
-
-Encryption can start before authentication, so encrypt()/decrypt() can always
-be called multiple times.
 
 === EAX mode
 Number of keys required:	1
@@ -242,13 +269,12 @@ Compatible with ciphers:	any
 Counter/IV/nonce:		1 IV required (any length)
 Single-pass:			no
 Online:				yes
+Encryption can start before
+authentication is complete:	yes
 Term for AD:			"header"
 Term for MAC:			"tag"
 Padding required:		no
 Pre-processing of AD:		possible
-
-Encryption can start before authentication, so encrypt()/decrypt() can always
-be called multiple times.
 
 === SIV
 Number of keys required:	2
@@ -256,12 +282,23 @@ Compatible with ciphers:	AES
 Counter/IV/nonce:		1 IV required (any length)
 Single-pass:			no
 Online:				no
+Encryption can start before
+authentication is complete:	no
 Term for AD:			"associated data" (vector)
 Term for MAC:			"tag"
 Padding required:		no
 Pre-processing of AD:		possible
 
-Encryption can only start before authentication is ended, so encrypt()/decrypt()
-an only be called once. SIV is not suitable for big files or streaming.
-
 AD is a vector of strings. One item in the vector is the (optional) IV.
+
+One property of SIV is that encryption or decryption can only start
+as soon as the MAC is available.
+
+That is not a problem for encryption: since encrypt() can only be called
+once, it can internally compute the MAC first, perform the encryption,
+and return the ciphertext. The MAC is cached for the subsequent call to digest().
+
+The major problem is decryption: decrypt() cannot produce any output because
+the MAC is meant to be passed to verify() only later.
+To overcome this limitation, decrypt() *exceptionally* accepts the ciphertext
+concatenated to the MAC. The MAC check is still performed with verify().

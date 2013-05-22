@@ -38,16 +38,21 @@ __revision__ = "$Id$"
 import math
 import struct
 
+import sys
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
-from Crypto.Hash import SHA1, HMAC
+
+from Crypto.Hash import SHA1, HMAC, CMAC
 from Crypto.Util.strxor import strxor
+from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
 
     This function performs key derivation according an old version of
     the PKCS#5 standard (v1.5).
-    
+
     This algorithm is called ``PBKDF1``. Even though it is still described
     in the latest version of the PKCS#5 standard (version 2, or RFC2898),
     newer applications should use the more secure and versatile `PBKDF2` instead.
@@ -121,3 +126,84 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
         i = i + 1
     return key[:dkLen]
 
+class S2V(object):
+    """String-to-vector PRF as defined in `RFC5297`_.
+
+    This class implements a pseudorandom function family
+    based on CMAC that takes as input a vector of strings.
+
+    .. _RFC5297: http://tools.ietf.org/html/rfc5297
+    """
+
+    def __init__(self, key, ciphermod):
+        """Initialize the S2V PRF.
+
+        :Parameters:
+          key : byte string
+            A secret that can be used as key for CMACs
+            based on ciphers from ``ciphermod``.
+          ciphermod : module
+            A block cipher module from `Crypto.Cipher`.
+        """
+
+        self._key = key
+        self._ciphermod = ciphermod
+        self._last_string = self._cache = bchr(0)*ciphermod.block_size
+        self._n_updates = ciphermod.block_size*8-1
+
+    def new(key, ciphermod):
+        """Create a new S2V PRF.
+
+        :Parameters:
+          key : byte string
+            A secret that can be used as key for CMACs
+            based on ciphers from ``ciphermod``.
+          ciphermod : module
+            A block cipher module from `Crypto.Cipher`.
+        """
+        return S2V(key, ciphermod)
+    new = staticmethod(new)
+
+    def _double(self, bs):
+        doubled = bytes_to_long(bs)<<1
+        if bord(bs[0]) & 0x80:
+            doubled ^= 0x87
+        return long_to_bytes(doubled, len(bs))[-len(bs):]
+
+    def update(self, item):
+        """Pass the next component of the vector.
+
+        The maximum number of components you can pass is equal to the block
+        length of the cipher (in bits) minus 1.
+
+        :Parameters:
+          item : byte string
+            The next component of the vector.
+        :Raise TypeError: when the limit on the number of components has been reached.
+        :Raise ValueError: when the component is empty
+        """
+
+        if not item:
+            raise ValueError("A component cannot be empty")
+
+        if self._n_updates==0:
+            raise TypeError("Too many components passed to S2V")
+        self._n_updates -= 1
+
+        mac = CMAC.new(self._key, msg=self._last_string, ciphermod=self._ciphermod)
+        self._cache = strxor(self._double(self._cache), mac.digest())
+        self._last_string = item
+
+    def derive(self):
+        """"Derive a secret from the vector of components.
+
+        :Return: a byte string, as long as the block length of the cipher.
+        """
+
+        if len(self._last_string)>=16:
+            final = self._last_string[:-16] + strxor(self._last_string[-16:], self._cache)
+        else:
+            padded = (self._last_string + bchr(0x80)+ bchr(0)*15)[:16]
+            final = strxor(padded, self._double(self._cache))
+        mac = CMAC.new(self._key, msg=final, ciphermod=self._ciphermod)
+        return mac.digest()

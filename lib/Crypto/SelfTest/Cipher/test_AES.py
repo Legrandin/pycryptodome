@@ -1759,6 +1759,42 @@ test_data = [
       'EAX spec Appendix G',
       dict(mode='EAX', nonce='22E7ADD93CFC6393C57EC0B3C17D6B44')
     ),
+
+    # Test vectors for SIV taken from RFC5297
+    # This is a list of tuples with 5 items:
+    #
+    #  1. Header + '|' + plaintext
+    #  2. Header + '|' + ciphertext + '|' + MAC
+    #  3. AES-128 key
+    #  4. Description
+    #  5. Dictionary of parameters to be passed to AES.new().
+    #     It must include the nonce.
+    #
+    #  A "Header" is a dash ('-') separated sequece of components.
+    #
+    ( '101112131415161718191a1b1c1d1e1f2021222324252627|112233445566778899aabbccddee',
+      '101112131415161718191a1b1c1d1e1f2021222324252627|40c02b9690c4dc04daef7f6afe5c|' +
+      '85632d07c6e8f37f950acd320a2ecc93',
+      'fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff',
+      'RFC5297 A.1',
+      dict(mode='SIV', nonce=None)
+    ),
+
+    ( '00112233445566778899aabbccddeeffdeaddadadeaddadaffeeddccbbaa9988' +
+      '7766554433221100-102030405060708090a0|' +
+      '7468697320697320736f6d6520706c61696e7465787420746f20656e63727970' +
+      '74207573696e67205349562d414553',
+
+      '00112233445566778899aabbccddeeffdeaddadadeaddadaffeeddccbbaa9988' +
+      '7766554433221100-102030405060708090a0|' +
+      'cb900f2fddbe404326601965c889bf17dba77ceb094fa663b7a3f748ba8af829' +
+      'ea64ad544a272e9c485b62a3fd5c0d|' +
+      '7bdb6e3b432667eb06f4d14bff2fbd0f',
+
+      '7f7e7d7c7b7a79787776757473727170404142434445464748494a4b4c4d4e4f',
+      'RFC5297 A.2',
+      dict(mode='SIV', nonce='09f911029d74e35bd84156c5635688c0')
+    ),
 ]
 
 def get_tests(config={}):
