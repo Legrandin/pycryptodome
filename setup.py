@@ -477,6 +477,9 @@ kw = {'name':"pycrypto",
             Extension("Crypto.Util.cpuid",
                       include_dirs=['src/'],
                       sources=['src/cpuid.c']),
+            Extension("Crypto.Util.galois",
+                      include_dirs=['src/'],
+                      sources=['src/galois.c']),
 
             # Counter modules
             Extension("Crypto.Util._counter",

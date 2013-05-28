@@ -688,7 +688,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             extra_tests_added = 1
 
         # Extract associated data and MAC for AEAD modes
-        if p_mode in ('CCM', 'EAX', 'SIV'):
+        if p_mode in ('CCM', 'EAX', 'SIV', 'GCM'):
             assoc_data, params['plaintext'] = params['plaintext'].split('|')
             assoc_data2, params['ciphertext'], params['mac'] = params['ciphertext'].split('|')
             params['assoc_data'] = assoc_data.split("-")
@@ -717,7 +717,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             CCMMACLengthTest(module),
             CCMSplitEncryptionTest(module),
         ]
-    for aead_mode in ("MODE_CCM","MODE_EAX", "MODE_SIV"):
+    for aead_mode in ("MODE_CCM","MODE_EAX", "MODE_SIV", "MODE_GCM"):
         if hasattr(module, aead_mode):
             key_sizes = []
             try:

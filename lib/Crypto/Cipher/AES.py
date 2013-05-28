@@ -140,7 +140,7 @@ def new(key, *args, **kwargs):
 
         For all other modes, it must be 16 bytes long.
       nonce : byte string
-        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_SIV`).
+        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_GCM`, `MODE_SIV`).
 
         A mandatory value that must never be reused for any other encryption.
 
@@ -163,7 +163,7 @@ def new(key, *args, **kwargs):
         (*Only* `MODE_CCM`). Length of the MAC, in bytes. It must be even and in
         the range ``[4..16]``. The default is 16.
 
-        (*Only* `MODE_EAX`). Length of the MAC, in bytes. It must be no
+        (*Only* `MODE_EAX` and `MODE_GCM`). Length of the MAC, in bytes. It must be no
         larger than 16 bytes (which is the default).
       msg_len : integer
         (*Only* `MODE_CCM`). Length of the message to (de)cipher.
@@ -198,6 +198,8 @@ MODE_CCM = 8
 MODE_EAX = 9
 #: Syntethic Initialization Vector (SIV). See `blockalgo.MODE_SIV`.
 MODE_SIV = 10
+#: Galois Counter Mode (GCM). See `blockalgo.MODE_GCM`.
+MODE_GCM = 11
 #: Size of a data block (in bytes)
 block_size = 16
 #: Size of a key (in bytes)
