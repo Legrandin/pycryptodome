@@ -70,13 +70,13 @@ class Benchmark:
     def __init__(self):
         self.__random_data = None
 
-    def random_keys(self, bytes):
+    def random_keys(self, bytes, n=10**5):
         """Return random keys of the specified number of bytes.
 
         If this function has been called before with the same number of bytes,
         cached keys are used instead of randomly generating new ones.
         """
-        return self.random_blocks(bytes, 10**5)     # 100k
+        return self.random_blocks(bytes, n)
 
     def random_blocks(self, bytes_per_block, blocks):
         bytes = bytes_per_block * blocks
@@ -135,7 +135,12 @@ class Benchmark:
         self.announce_start("%s key setup" % (cipher_name,))
 
         # Generate random keys for use with the tests
-        keys = self.random_keys(key_bytes)
+        keys = self.random_keys(key_bytes, n=5000)
+
+        if hasattr(module, "MODE_CCM") and mode==module.MODE_CCM:
+            iv = b"\xAA"*8
+        else:
+            iv = b"\xAA"*module.block_size
 
         # Perform key setups
         if mode is None:
@@ -145,8 +150,15 @@ class Benchmark:
             t = time.time()
         else:
             t0 = time.time()
-            for k in keys:
-                module.new(k, module.MODE_ECB)
+
+            if mode==module.MODE_CTR:
+                for k in keys:
+                    ctr = Crypto.Util.Counter.new(module.block_size*8,
+                        initial_value=bytes_to_long(iv))
+                    module.new(k, module.MODE_CTR, counter=ctr)
+            else:
+                for k in keys:
+                    module.new(k, mode, iv)
             t = time.time()
 
         key_setups_per_second = len(keys) / (t - t0)
@@ -352,20 +364,29 @@ class Benchmark:
 
         # Crypto.Cipher (block ciphers)
         for cipher_name, module, key_bytes in block_specs:
-            self.test_key_setup(cipher_name, module, key_bytes, module.MODE_CBC)
+            self.test_key_setup("%s-CBC" % (cipher_name,), module, key_bytes, module.MODE_CBC)
             self.test_encryption("%s-CBC" % (cipher_name,), module, key_bytes, module.MODE_CBC)
             self.test_encryption("%s-CFB-8" % (cipher_name,), module, key_bytes, module.MODE_CFB)
             self.test_encryption("%s-OFB" % (cipher_name,), module, key_bytes, module.MODE_OFB)
             self.test_encryption("%s-ECB" % (cipher_name,), module, key_bytes, module.MODE_ECB)
+
+            self.test_key_setup("%s-CTR" % (cipher_name,), module, key_bytes, module.MODE_CTR)
             self.test_encryption("%s-CTR" % (cipher_name,), module, key_bytes, module.MODE_CTR)
+
             self.test_encryption("%s-OPENPGP" % (cipher_name,), module, key_bytes, module.MODE_OPENPGP)
             self.test_encryption("%s-CTR-BE" % (cipher_name,), module, key_bytes, "CTR-BE")
             self.test_encryption("%s-CTR-LE" % (cipher_name,), module, key_bytes, "CTR-LE")
+
             if hasattr(module, "MODE_CCM"):
+                self.test_key_setup("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
                 self.test_encryption("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
+
             if hasattr(module, "MODE_EAX"):
+                self.test_key_setup("%s-EAX" % (cipher_name,), module, key_bytes, module.MODE_EAX)
                 self.test_encryption("%s-EAX" % (cipher_name,), module, key_bytes, module.MODE_EAX)
+
             if hasattr(module, "MODE_GCM"):
+                self.test_key_setup("%s-GCM" % (cipher_name,), module, key_bytes, module.MODE_GCM)
                 self.test_encryption("%s-GCM" % (cipher_name,), module, key_bytes, module.MODE_GCM)
 
         # Crypto.Cipher (stream ciphers)
