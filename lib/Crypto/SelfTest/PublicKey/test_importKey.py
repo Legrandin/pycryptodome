@@ -66,7 +66,8 @@ BX85JB8zqwHB
 
     # The same RSA private key as in rsaKeyPEM, but now encrypted
     rsaKeyEncryptedPEM=(
-            
+
+        # PEM encryption
         # With DES and passphrase 'test'
         ('test', u'''-----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
@@ -79,29 +80,27 @@ BCNRMdcexozWtAFNNqSzfW58MJL2OdMi21ED184EFytIc1BlB+FZiGZduwKGuaKy
 9bMbdb/1PSvsSzPsqW7KSSrTw6MgJAFJg6lzIYvR5F4poTVBxwBX3+EyEmShiaNY
 IRX3TgQI0IjrVuLmvlZKbGWP18FXj7I7k9tSsNOOzllTTdq3ny5vgM3A+ynfAaxp
 dysKznQ6P+IoqML1WxAID4aGRMWka+uArOJ148Rbj9s=
------END RSA PRIVATE KEY-----''',
-        "\xAF\x8F\x9A\x40\xBD\x2F\xA2\xFC"),
+-----END RSA PRIVATE KEY-----'''),
 
-        # With Triple-DES and passphrase 'rocking'
-        ('rocking', u'''-----BEGIN RSA PRIVATE KEY-----
-Proc-Type: 4,ENCRYPTED
-DEK-Info: DES-EDE3-CBC,C05D6C07F7FC02F6
-
-w4lwQrXaVoTTJ0GgwY566htTA2/t1YlimhxkxYt9AEeCcidS5M0Wq9ClPiPz9O7F
-m6K5QpM1rxo1RUE/ZyI85gglRNPdNwkeTOqit+kum7nN73AToX17+irVmOA4Z9E+
-4O07t91GxGMcjUSIFk0ucwEU4jgxRvYscbvOMvNbuZszGdVNzBTVddnShKCsy9i7
-nJbPlXeEKYi/OkRgO4PtfqqWQu5GIEFVUf9ev1QV7AvC+kyWTR1wWYnHX265jU5c
-sopxQQtP8XEHIJEdd5/p1oieRcWTCNyY8EkslxDSsrf0OtZp6mZH9N+KU47cgQtt
-9qGORmlWnsIoFFKcDohbtOaWBTKhkj5h6OkLjFjfU/sBeV1c+7wDT3dAy5tawXjG
-YSxC7qDQIT/RECvV3+oQKEcmpEujn45wAnkTi12BH30=
------END RSA PRIVATE KEY-----''',
-        "\xC0\x5D\x6C\x07\xF7\xFC\x02\xF6"),
+        # PKCS8 encryption
+        ('winter', u'''-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIIBpjBABgkqhkiG9w0BBQ0wMzAbBgkqhkiG9w0BBQwwDgQIeZIsbW3O+JcCAggA
+MBQGCCqGSIb3DQMHBAgSM2p0D8FilgSCAWBhFyP2tiGKVpGj3mO8qIBzinU60ApR
+3unvP+N6j7LVgnV2lFGaXbJ6a1PbQXe+2D6DUyBLo8EMXrKKVLqOMGkFMHc0UaV6
+R6MmrsRDrbOqdpTuVRW+NVd5J9kQQh4xnfU/QrcPPt7vpJvSf4GzG0n666Ki50OV
+M/feuVlIiyGXY6UWdVDpcOV72cq02eNUs/1JWdh2uEBvA9fCL0c07RnMrdT+CbJQ
+NjJ7f8ULtp7xvR9O3Al/yJ4Wv3i4VxF1f3MCXzhlUD4I0ONlr0kJWgeQ80q/cWhw
+ntvgJwnCn2XR1h6LA8Wp+0ghDTsL2NhJpWd78zClGhyU4r3hqu1XDjoXa7YCXCix
+jCV15+ViDJzlNCwg+W6lRg18sSLkCT7alviIE0U5tHc6UPbbHwT5QqAxAABaP+nZ
+CGqJGyiwBzrKebjgSm/KRd4C91XqcsysyH2kKPfT51MLAoD4xelOURBP
+-----END ENCRYPTED PRIVATE KEY-----'''
+        ),
     )
 
-    rsaPublicKeyPEM = u'''-----BEGIN PUBLIC KEY-----
+    rsaPublicKeyPEM = u'''-----BEGIN RSA PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
------END PUBLIC KEY-----'''
+-----END RSA PUBLIC KEY-----'''
 
     # Obtained using 'ssh-keygen -i -m PKCS8 -f rsaPublicKeyPEM'
     rsaPublicKeyOpenSSH = b('''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n''')
@@ -298,15 +297,6 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(openssh_1[0], openssh_2[0])
         self.assertEqual(openssh_1[1], openssh_2[1])
 
-    def testExportKey6(self):
-        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        # Tuple with index #1 is encrypted with 3DES
-        t = map(b,self.rsaKeyEncryptedPEM[1])
-        # Force the salt being used when exporting
-        key._randfunc = lambda N: (t[2]*divmod(N+len(t[2]),len(t[2]))[0])[:N]
-        pemKey = key.exportKey("PEM", t[0])
-        self.assertEqual(pemKey, t[1])
-
     def testExportKey7(self):
         key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         derKey = key.exportKey("DER", pkcs=8)
@@ -320,6 +310,71 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testExportKey9(self):
         key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         self.assertRaises(ValueError, key.exportKey, "invalid-format")
+
+    def testExportKey10(self):
+        # Export and re-import the encrypted key. It must match.
+        # PEM envelope, PKCS#1, old PEM encryption
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        outkey = key.exportKey('PEM', 'test')
+        self.failUnless(tostr(outkey).find('4,ENCRYPTED')!=-1)
+        self.failUnless(tostr(outkey).find('BEGIN RSA PRIVATE KEY')!=-1)
+        inkey = RSA.importKey(outkey, 'test')
+        self.assertEqual(key.n, inkey.n)
+        self.assertEqual(key.e, inkey.e)
+        self.assertEqual(key.d, inkey.d)
+
+    def testExportKey11(self):
+        # Export and re-import the encrypted key. It must match.
+        # PEM envelope, PKCS#1, old PEM encryption
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        outkey = key.exportKey('PEM', 'test', pkcs=1)
+        self.failUnless(tostr(outkey).find('4,ENCRYPTED')!=-1)
+        self.failUnless(tostr(outkey).find('BEGIN RSA PRIVATE KEY')!=-1)
+        inkey = RSA.importKey(outkey, 'test')
+        self.assertEqual(key.n, inkey.n)
+        self.assertEqual(key.e, inkey.e)
+        self.assertEqual(key.d, inkey.d)
+
+    def testExportKey12(self):
+        # Export and re-import the encrypted key. It must match.
+        # PEM envelope, PKCS#8, old PEM encryption
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        outkey = key.exportKey('PEM', 'test', pkcs=8)
+        self.failUnless(tostr(outkey).find('4,ENCRYPTED')!=-1)
+        self.failUnless(tostr(outkey).find('BEGIN PRIVATE KEY')!=-1)
+        inkey = RSA.importKey(outkey, 'test')
+        self.assertEqual(key.n, inkey.n)
+        self.assertEqual(key.e, inkey.e)
+        self.assertEqual(key.d, inkey.d)
+ 
+    def testExportKey13(self):
+        # Export and re-import the encrypted key. It must match.
+        # PEM envelope, PKCS#8, PKCS#8 encryption
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        outkey = key.exportKey('PEM', 'test', pkcs=8,
+                protection='PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC')
+        self.failUnless(tostr(outkey).find('4,ENCRYPTED')==-1)
+        self.failUnless(tostr(outkey).find('BEGIN ENCRYPTED PRIVATE KEY')!=-1)
+        inkey = RSA.importKey(outkey, 'test')
+        self.assertEqual(key.n, inkey.n)
+        self.assertEqual(key.e, inkey.e)
+        self.assertEqual(key.d, inkey.d)
+
+    def testExportKey14(self):
+        # Export and re-import the encrypted key. It must match.
+        # DER envelope, PKCS#8, PKCS#8 encryption
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        outkey = key.exportKey('DER', 'test', pkcs=8)
+        inkey = RSA.importKey(outkey, 'test')
+        self.assertEqual(key.n, inkey.n)
+        self.assertEqual(key.e, inkey.e)
+        self.assertEqual(key.d, inkey.d)
+
+    def testExportKey15(self):
+        # Verify that that error an condition is detected when trying to
+        # use a password with DER encoding and PKCS#1.
+        key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        self.assertRaises(ValueError, key.exportKey, 'DER', 'test', 1)
 
 class ImportKeyTestsSlow(ImportKeyTests):
     def setUp(self):

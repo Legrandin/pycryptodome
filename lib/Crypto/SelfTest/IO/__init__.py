@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 #
-#  SelfTest/Util/__init__.py: Self-test for utility modules
-#
-# Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
+#  SelfTest/IO/__init__.py: Self-test for input/output module
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -22,19 +19,11 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test for utility modules"""
-
-__revision__ = "$Id$"
-
-import os
+"""Self-test for I/O"""
 
 def get_tests(config={}):
     tests = []
-    if os.name == 'nt':
-        from Crypto.SelfTest.Util import test_winrandom; tests += test_winrandom.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_number; tests += test_number.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_Counter; tests += test_Counter.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_Padding; tests += test_Padding.get_tests(config=config)
+    from Crypto.SelfTest.IO import test_PKCS8;     tests += test_PKCS8.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':
@@ -42,4 +31,4 @@ if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
 
-# vim:set ts=4 sw=4 sts=4 expandtab:
+

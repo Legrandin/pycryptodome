@@ -63,7 +63,7 @@ def get_tests(config={}):
     from common import make_hash_tests
     return make_hash_tests(RIPEMD160, "RIPEMD160", test_data,
         digest_size=20,
-        oid="\x06\x05\x2b\x24\x03\02\x01")
+        oid="1.3.36.3.2.1")
 
 if __name__ == '__main__':
     import unittest

@@ -54,7 +54,7 @@ def get_tests(config={}):
     from common import make_hash_tests
     return make_hash_tests(MD4, "MD4", test_data,
         digest_size=16,
-        oid="\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x04")
+        oid="1.2.840.113549.2.4")
 
 if __name__ == '__main__':
     import unittest

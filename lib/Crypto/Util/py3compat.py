@@ -77,12 +77,16 @@ if sys.version_info[0] == 2:
                 return s.encode('latin-1')
             except:
                 return ''.join(s)
+        def tostr(bs):
+            return unicode(bs, 'latin-1')
     else:
         def tobytes(s):
             if isinstance(s, unicode):
                 return s.encode("latin-1")
             else:
                 return ''.join(s)
+        def tostr(bs):
+            return bs.decode('latin-1')
     # In Pyton 2.x, StringIO is a stand-alone module
     from StringIO import StringIO as BytesIO
 else:
@@ -105,6 +109,8 @@ else:
                 return s.encode("latin-1")
             else:
                 return bytes(s)
+    def tostr(bs):
+        return bs.decode("latin-1")
     # In Pyton 3.x, StringIO is a sub-module of io
     from io import BytesIO
  

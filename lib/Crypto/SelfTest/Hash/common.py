@@ -222,7 +222,7 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     name = "%s #%d: digest_size" % (module_name, i+1)
     tests.append(HashDigestSizeSelfTest(module, name, digest_size))
     if oid is not None:
-        tests.append(HashTestOID(module, b(oid)))
+        tests.append(HashTestOID(module, oid))
     tests.append(HashDocStringTest(module))
     if getattr(module, 'name', None) is not None:
         tests.append(GenericHashConstructorTest(module))

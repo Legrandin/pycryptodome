@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/Util/__init__.py: Self-test for utility modules
-#
-# Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
-#
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
 # the extent that dedication to the public domain is not available,
@@ -22,24 +18,15 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test for utility modules"""
+"""
+Modules for reading and writing cryptographic data.
 
-__revision__ = "$Id$"
+========================  =============================================
+Module                    Description
+========================  =============================================
+Crypto.Util.PEM           Set of functions for encapsulating data according to the PEM format.
+Crypto.Util.PKCS8         Set of functions for wrapping/unwrapping private keys.
+========================  =============================================
+"""
 
-import os
-
-def get_tests(config={}):
-    tests = []
-    if os.name == 'nt':
-        from Crypto.SelfTest.Util import test_winrandom; tests += test_winrandom.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_number; tests += test_number.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_Counter; tests += test_Counter.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_Padding; tests += test_Padding.get_tests(config=config)
-    return tests
-
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+__all__ = ['PEM', 'PKCS8']

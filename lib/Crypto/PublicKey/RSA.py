@@ -65,23 +65,24 @@ it is recommended to use one of the standardized schemes instead (like
 
 __revision__ = "$Id$"
 
-__all__ = ['generate', 'construct', 'error', 'importKey', 'RSAImplementation', '_RSAobj']
+__all__ = ['generate', 'construct', 'error', 'importKey', 'RSAImplementation',
+    '_RSAobj', 'oid' , 'algorithmIdentifier' ]
 
 import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
-#from Crypto.Util.python_compat import *
+
 from Crypto.Util.number import getRandomRange, bytes_to_long, long_to_bytes
 
 from Crypto.PublicKey import _RSA, _slowmath, pubkey
+from Crypto.IO import PKCS8, PEM
 from Crypto import Random
 
-from Crypto.Util.asn1 import DerObject, DerSequence, DerNull
+from Crypto.Util.asn1 import *
+
 import binascii
 import struct
-
-from Crypto.Util.number import inverse
 
 from Crypto.Util.number import inverse
 
@@ -89,6 +90,13 @@ try:
     from Crypto.PublicKey import _fastmath
 except ImportError:
     _fastmath = None
+
+def decode_der(obj_class, binstr):
+    """Instantiate a DER object class, decode a DER binary string in it, and
+    return the object."""
+    der = obj_class()
+    der.decode(binstr)
+    return der
 
 class _RSAobj(pubkey.pubkey):
     """Class defining an actual RSA key.
@@ -307,36 +315,66 @@ class _RSAobj(pubkey.pubkey):
         # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
-    def exportKey(self, format='PEM', passphrase=None, pkcs=1):
+    def exportKey(self, format='PEM', passphrase=None, pkcs=1, protection=None):
         """Export this RSA key.
 
-        :Parameter format: The format to use for wrapping the key.
+        :Parameters:
+          format : string
+            The format to use for wrapping the key:
 
-            - *'DER'*. Binary encoding, always unencrypted.
+            - *'DER'*. Binary encoding.
             - *'PEM'*. Textual encoding, done according to `RFC1421`_/`RFC1423`_.
-              Unencrypted (default) or encrypted.
             - *'OpenSSH'*. Textual encoding, done according to OpenSSH specification.
               Only suitable for public keys (not private keys).
-        :Type format: string
 
-        :Parameter passphrase: In case of PEM, the pass phrase to derive the encryption key from.
-        :Type passphrase: string 
+          passphrase : string
+            For private keys only. The pass phrase used for deriving the encryption
+            key.
 
-        :Parameter pkcs: The PKCS standard to follow for assembling the key.
-         You have two choices:
+          pkcs : integer
+            For *DER* and *PEM* format only.
+            The PKCS standard to follow for assembling the components of the key.
+            You have two choices:
 
-          - with **1**, the public key is embedded into an X.509 `SubjectPublicKeyInfo` DER SEQUENCE.
-            The private key is embedded into a `PKCS#1`_ `RSAPrivateKey` DER SEQUENCE.
-            This mode is the default.
-          - with **8**, the private key is embedded into a `PKCS#8`_ `PrivateKeyInfo` DER SEQUENCE.
-            This mode is not available for public keys.
+            - **1** (default): the public key is embedded into
+              an X.509 ``SubjectPublicKeyInfo`` DER SEQUENCE.
+              The private key is embedded into a `PKCS#1`_
+              ``RSAPrivateKey`` DER SEQUENCE.
+            - **8**: the private key is embedded into a `PKCS#8`_
+              ``PrivateKeyInfo`` DER SEQUENCE. This value cannot be used
+              for public keys.
 
-         PKCS standards are not relevant for the *OpenSSH* format.
-        :Type pkcs: integer
+          protection : string
+            The encryption scheme to use for protecting the private key.
 
-        :Return: A byte string with the encoded public or private half.
+            If ``None`` (default), the behavior depends on ``format``:
+
+            - For *DER*, the *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
+              scheme is used. The following operations are performed:
+
+                1. A 16 byte Triple DES key is derived from the passphrase
+                   using `Crypto.Protocol.KDF.PBKDF2` with 8 bytes salt,
+                   and 1 000 iterations of `Crypto.Hash.HMAC`.
+                2. The private key is encrypted using CBC.
+                3. The encrypted key is encoded according to PKCS#8.
+
+            - For *PEM*, the obsolete PEM encryption scheme is used.
+              It is based on MD5 for key derivation, and Triple DES for encryption.
+
+            Specifying a value for ``protection`` is only meaningful for PKCS#8
+            (that is, ``pkcs=8``) and only if a pass phrase is present too.
+
+            The supported schemes for PKCS#8 are listed in the
+            `Crypto.IO.PKCS8` module (see ``wrap_algo`` parameter).
+
+        :Return: A byte string with the encoded public or private half
+          of the key.
         :Raise ValueError:
-            When the format is unknown.
+            When the format is unknown or when you try to encrypt a private
+            key with *DER* format and PKCS#1.
+        :attention:
+            If you don't provide a pass phrase, the private key will be
+            exported in the clear!
 
         .. _RFC1421:    http://www.ietf.org/rfc/rfc1421.txt
         .. _RFC1423:    http://www.ietf.org/rfc/rfc1423.txt
@@ -356,52 +394,45 @@ class _RSAobj(pubkey.pubkey):
 
         # DER format is always used, even in case of PEM, which simply
         # encodes it into BASE64.
-        der = DerSequence()
         if self.has_private():
-                keyType= { 1: 'RSA PRIVATE', 8: 'PRIVATE' }[pkcs]
-                der[:] = [ 0, self.n, self.e, self.d, self.p, self.q,
-                           self.d % (self.p-1), self.d % (self.q-1),
-                           inverse(self.q, self.p) ]
-                if pkcs==8:
-                    derkey = der.encode()
-                    der = DerSequence([0])
-                    der.append(algorithmIdentifier)
-                    der.append(DerObject('OCTET STRING', derkey).encode())
+                binary_key = newDerSequence(
+                        0,
+                        self.n,
+                        self.e,
+                        self.d,
+                        self.p,
+                        self.q,
+                        self.d % (self.p-1),
+                        self.d % (self.q-1),
+                        inverse(self.q, self.p)
+                    ).encode()
+                if pkcs==1:
+                    keyType = 'RSA PRIVATE'
+                    if format=='DER' and passphrase:
+                        raise ValueError("PKCS#1 private key cannot be encrypted")
+                else: # PKCS#8
+                    if format=='PEM' and protection is None:
+                        keyType = 'PRIVATE'
+                        binary_key = PKCS8.wrap(binary_key, oid, None)
+                    else:
+                        keyType = 'ENCRYPTED PRIVATE'
+                        if not protection:
+                            protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
+                        binary_key = PKCS8.wrap(binary_key, oid, passphrase, protection)
+                        passphrase = None
         else:
-                keyType = "PUBLIC"
-                der.append(algorithmIdentifier)
-                bitmap = DerObject('BIT STRING')
-                derPK = DerSequence( [ self.n, self.e ] )
-                bitmap.payload = bchr(0x00) + derPK.encode()
-                der.append(bitmap.encode())
+                keyType = "RSA PUBLIC"
+                binary_key = newDerSequence(
+                    algorithmIdentifier,
+                    newDerBitString(
+                        newDerSequence( self.n, self.e )
+                        )
+                    ).encode()
         if format=='DER':
-                return der.encode()
+            return binary_key
         if format=='PEM':
-                pem = b("-----BEGIN " + keyType + " KEY-----\n")
-                objenc = None
-                if passphrase and keyType.endswith('PRIVATE'):
-                    # We only support 3DES for encryption
-                    import Crypto.Hash.MD5
-                    from Crypto.Cipher import DES3
-                    from Crypto.Protocol.KDF import PBKDF1
-                    salt = self._randfunc(8)
-                    key =  PBKDF1(passphrase, salt, 16, 1, Crypto.Hash.MD5)
-                    key += PBKDF1(key+passphrase, salt, 8, 1, Crypto.Hash.MD5)
-                    objenc = DES3.new(key, Crypto.Cipher.DES3.MODE_CBC, salt)
-                    pem += b('Proc-Type: 4,ENCRYPTED\n')
-                    pem += b('DEK-Info: DES-EDE3-CBC,') + binascii.b2a_hex(salt).upper() + b('\n\n')
-                
-                binaryKey = der.encode()
-                if objenc:
-                    # Add PKCS#7-like padding
-                    padding = objenc.block_size-len(binaryKey)%objenc.block_size
-                    binaryKey = objenc.encrypt(binaryKey+bchr(padding)*padding)
-
-                # Each BASE64 line can take up to 64 characters (=48 bytes of data)
-                chunks = [ binascii.b2a_base64(binaryKey[i:i+48]) for i in range(0, len(binaryKey), 48) ]
-                pem += b('').join(chunks)
-                pem += b("-----END " + keyType + " KEY-----")
-                return pem
+            pem_str = PEM.encode(binary_key, keyType+" KEY", passphrase, self._randfunc)
+            return tobytes(pem_str)
         raise ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
 
 class RSAImplementation(object):
@@ -541,159 +572,139 @@ class RSAImplementation(object):
         key = self._math.rsa_construct(*tup)
         return _RSAobj(self, key)
 
-    def _importKeyDER(self, externKey):
+    def _importKeyDER(self, extern_key, passphrase=None):
         """Import an RSA key (public or private half), encoded in DER form."""
 
         try:
 
-            der = DerSequence()
-            der.decode(externKey, True)
+            der = decode_der(DerSequence, extern_key)
 
             # Try PKCS#1 first, for a private key
-            if len(der)==9 and der.hasOnlyInts() and der[0]==0:
+            if len(der) == 9 and der.hasOnlyInts() and der[0] == 0:
                 # ASN.1 RSAPrivateKey element
-                del der[6:]     # Remove d mod (p-1), d mod (q-1), and q^{-1} mod p
-                der.append(inverse(der[4],der[5])) # Add p^{-1} mod q
+                del der[6:]     # Remove d mod (p-1),
+                                # d mod (q-1), and
+                                # q^{-1} mod p
+                der.append(inverse(der[4], der[5]))  # Add p^{-1} mod q
                 del der[0]      # Remove version
                 return self.construct(der[:])
 
             # Keep on trying PKCS#1, but now for a public key
-            if len(der)==2:
-                # The DER object is an RSAPublicKey SEQUENCE with two elements
-                if der.hasOnlyInts():
-                    return self.construct(der[:])
-                # The DER object is a SubjectPublicKeyInfo SEQUENCE with two elements:
-                # an 'algorithm' (or 'algorithmIdentifier') SEQUENCE and a 'subjectPublicKey' BIT STRING.
-                # 'algorithm' takes the value given a few lines above.
-                # 'subjectPublicKey' encapsulates the actual ASN.1 RSAPublicKey element.
-                if der[0]==algorithmIdentifier:
-                        bitmap = DerObject()
-                        bitmap.decode(der[1], True)
-                        if bitmap.isType('BIT STRING') and bord(bitmap.payload[0])==0x00:
-                                der.decode(bitmap.payload[1:], True)
-                                if len(der)==2 and der.hasOnlyInts():
-                                        return self.construct(der[:])
+            if len(der) == 2:
+                try:
+                    # The DER object is an RSAPublicKey SEQUENCE with
+                    # two elements
+                    if der.hasOnlyInts():
+                        return self.construct(der[:])
+                    # The DER object is a SubjectPublicKeyInfo SEQUENCE
+                    # with two elements: an 'algorithmIdentifier' and a
+                    # 'subjectPublicKey'BIT STRING.
+                    # 'algorithmIdentifier' takes the value given at the
+                    # module level.
+                    # 'subjectPublicKey' encapsulates the actual ASN.1
+                    # RSAPublicKey element.
+                    if der[0] == algorithmIdentifier:
+                        bitmap = decode_der(DerBitString, der[1])
+                        rsaPub = decode_der(DerSequence, bitmap.value)
+                        if len(rsaPub) == 2 and rsaPub.hasOnlyInts():
+                            return self.construct(rsaPub[:])
+                except (ValueError, EOFError):
+                    pass
 
-            # Try unencrypted PKCS#8
-            if der[0]==0:
-                # The second element in the SEQUENCE is algorithmIdentifier.
-                # It must say RSA (see above for description).
-                if der[1]==algorithmIdentifier:
-                    privateKey = DerObject()
-                    privateKey.decode(der[2], True)
-                    if privateKey.isType('OCTET STRING'):
-                        return self._importKeyDER(privateKey.payload)
+            # Try PKCS#8 (possibly encrypted)
+            k = PKCS8.unwrap(extern_key, passphrase)
+            if k[0] == oid:
+                return self._importKeyDER(k[1], passphrase)
 
-        except (ValueError, IndexError):
+        except (ValueError, EOFError):
             pass
 
         raise ValueError("RSA key format is not supported")
 
-    def importKey(self, externKey, passphrase=None):
-        """Import an RSA key (public or private half), encoded in standard form.
+    def importKey(self, extern_key, passphrase=None):
+        """Import an RSA key (public or private half), encoded in standard
+        form.
 
-        :Parameter externKey:
+        :Parameter extern_key:
             The RSA key to import, encoded as a string.
 
             An RSA public key can be in any of the following formats:
 
-            - X.509 `subjectPublicKeyInfo` DER SEQUENCE (binary or PEM encoding)
-            - `PKCS#1`_ `RSAPublicKey` DER SEQUENCE (binary or PEM encoding)
+            - X.509 ``subjectPublicKeyInfo`` DER SEQUENCE (binary or PEM
+              encoding)
+            - `PKCS#1`_ ``RSAPublicKey`` DER SEQUENCE (binary or PEM encoding)
             - OpenSSH (textual public key only)
 
             An RSA private key can be in any of the following formats:
 
-            - PKCS#1 `RSAPrivateKey` DER SEQUENCE (binary or PEM encoding)
-            - `PKCS#8`_ `PrivateKeyInfo` DER SEQUENCE (binary or PEM encoding)
+            - PKCS#1 ``RSAPrivateKey`` DER SEQUENCE (binary or PEM encoding)
+            - `PKCS#8`_ ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo``
+              DER SEQUENCE (binary or PEM encoding)
             - OpenSSH (textual public key only)
 
             For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
-            
-            In case of PEM encoding, the private key can be encrypted with DES or 3TDES according to a certain ``pass phrase``.
-            Only OpenSSL-compatible pass phrases are supported.
-        :Type externKey: string
+
+            The private key may be encrypted by means of a certain pass phrase
+            either at the PEM level or at the PKCS#8 level.
+        :Type extern_key: string
 
         :Parameter passphrase:
-            In case of an encrypted PEM key, this is the pass phrase from which the encryption key is derived.
+            In case of an encrypted private key, this is the pass phrase from
+            which the decryption key is derived.
         :Type passphrase: string
-        
+
         :Return: An RSA key object (`_RSAobj`).
 
         :Raise ValueError/IndexError/TypeError:
-            When the given key cannot be parsed (possibly because the pass phrase is wrong).
+            When the given key cannot be parsed (possibly because the pass
+            phrase is wrong).
 
         .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
         .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
         .. _`PKCS#1`: http://www.ietf.org/rfc/rfc3447.txt
         .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
         """
-        externKey = tobytes(externKey)
+        extern_key = tobytes(extern_key)
         if passphrase is not None:
             passphrase = tobytes(passphrase)
 
-        if externKey.startswith(b('-----')):
-                # This is probably a PEM encoded key
-                lines = externKey.replace(b(" "),b('')).split()
-                keyobj = None
+        if extern_key.startswith(b('-----')):
+            # This is probably a PEM encoded key.
+            (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
+            if enc_flag:
+                passphrase = None
+            return self._importKeyDER(der, passphrase)
 
-                # The encrypted PEM format
-                if lines[1].startswith(b('Proc-Type:4,ENCRYPTED')):
-                    DEK = lines[2].split(b(':'))
-                    if len(DEK)!=2 or DEK[0]!=b('DEK-Info') or not passphrase:
-                        raise ValueError("PEM encryption format not supported.")
-                    algo, salt = DEK[1].split(b(','))
-                    salt = binascii.a2b_hex(salt)
-                    import Crypto.Hash.MD5
-                    from Crypto.Cipher import DES, DES3
-                    from Crypto.Protocol.KDF import PBKDF1
-                    if algo==b("DES-CBC"):
-                        # This is EVP_BytesToKey in OpenSSL
-                        key = PBKDF1(passphrase, salt, 8, 1, Crypto.Hash.MD5)
-                        keyobj = DES.new(key, Crypto.Cipher.DES.MODE_CBC, salt)
-                    elif algo==b("DES-EDE3-CBC"):
-                        # Note that EVP_BytesToKey is note exactly the same as PBKDF1
-                        key =  PBKDF1(passphrase, salt, 16, 1, Crypto.Hash.MD5)
-                        key += PBKDF1(key+passphrase, salt, 8, 1, Crypto.Hash.MD5)
-                        keyobj = DES3.new(key, Crypto.Cipher.DES3.MODE_CBC, salt)
-                    else:
-                        raise ValueError("Unsupport PEM encryption algorithm.")
-                    lines = lines[2:]
-                
-                der = binascii.a2b_base64(b('').join(lines[1:-1]))
-                if keyobj:
-                    der = keyobj.decrypt(der)
-                    padding = bord(der[-1])
-                    der = der[:-padding]
-                return self._importKeyDER(der)
-
-        if externKey.startswith(b('ssh-rsa ')):
+        if extern_key.startswith(b('ssh-rsa ')):
                 # This is probably an OpenSSH key
-                keystring = binascii.a2b_base64(externKey.split(b(' '))[1])
+                keystring = binascii.a2b_base64(extern_key.split(b(' '))[1])
                 keyparts = []
-                while len(keystring)>4:
-                    l = struct.unpack(">I",keystring[:4])[0]
-                    keyparts.append(keystring[4:4+l])
-                    keystring = keystring[4+l:]
+                while len(keystring) > 4:
+                    l = struct.unpack(">I", keystring[:4])[0]
+                    keyparts.append(keystring[4:4 + l])
+                    keystring = keystring[4 + l:]
                 e = bytes_to_long(keyparts[1])
                 n = bytes_to_long(keyparts[2])
                 return self.construct([n, e])
-        if bord(externKey[0])==0x30:
+
+        if bord(extern_key[0]) == 0x30:
                 # This is probably a DER encoded key
-                return self._importKeyDER(externKey)
-        
+                return self._importKeyDER(extern_key, passphrase)
+
         raise ValueError("RSA key format is not supported")
 
-#: This is the ASN.1 DER object that qualifies an algorithm as
-#: compliant to PKCS#1 (that is, the standard RSA).
-# It is found in all 'algorithm' fields (also called 'algorithmIdentifier').
-# It is a SEQUENCE with the oid assigned to RSA and with its parameters (none).
-#   0x06 0x09   OBJECT IDENTIFIER, 9 bytes of payload
-#     0x2A 0x86 0x48 0x86 0xF7 0x0D 0x01 0x01 0x01
-#               rsaEncryption (1 2 840 113549 1 1 1) (PKCS #1)
-#   0x05 0x00   NULL
+#: `Object ID`_ for the RSA encryption algorithm. This OID often indicates
+#: a generic RSA key, even when such key will be actually used for digital
+#: signatures.
+#:
+#: .. _`Object ID`: http://www.alvestrand.no/objectid/1.2.840.113549.1.1.1.html
+oid = "1.2.840.113549.1.1.1"
+
+#: This is the standard DER object that qualifies a cryptographic algorithm
+#: in ASN.1-based data structures (e.g. X.509 certificates).
 algorithmIdentifier = DerSequence(
-  [ b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'),
-  DerNull().encode() ]
+  [DerObjectId(oid).encode(),      # algorithm field
+  DerNull().encode()]              # parameters field
   ).encode()
  
 _impl = RSAImplementation()

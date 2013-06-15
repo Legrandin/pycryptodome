@@ -50,7 +50,7 @@ def get_tests(config={}):
     from common import make_hash_tests
     return make_hash_tests(SHA512, "SHA512", test_data,
         digest_size=64,
-        oid="\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03")
+        oid="2.16.840.1.101.3.4.2.3")
 
 if __name__ == '__main__':
     import unittest

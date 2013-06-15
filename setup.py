@@ -402,9 +402,11 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest.Random.OSRNG",
                   "Crypto.SelfTest.Util",
                   "Crypto.SelfTest.Signature",
+                  "Crypto.SelfTest.IO",
                   "Crypto.Protocol",
                   "Crypto.PublicKey",
-                  "Crypto.Signature"],
+                  "Crypto.Signature",
+                  "Crypto.IO"],
       'package_dir' : { "Crypto": "lib/Crypto" },
       'ext_modules': plat_ext + [
             # _fastmath (uses GNU mp library)
