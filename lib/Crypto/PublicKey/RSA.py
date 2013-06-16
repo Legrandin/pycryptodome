@@ -46,7 +46,7 @@ them from known components, exporting them, and importing them.
     >>>
     >>> key = RSA.generate(2048)
     >>> f = open('mykey.pem','w')
-    >>> f.write(RSA.exportKey('PEM'))
+    >>> f.write(key.exportKey('PEM'))
     >>> f.close()
     ...
     >>> f = open('mykey.pem','r')
