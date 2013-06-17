@@ -137,6 +137,24 @@ class ElGamalTest(unittest.TestCase):
                 res = key.verify( d['h'], (d['sig1']+1,d['sig2']) )
                 self.failIf(res)
 
+    def test_bad_key3(self):
+        tup = tup0 = list(self.convert_tv(self.tvs[0], 1)['key'])[:3]
+        tup[0] += 1 # p += 1 (not prime)
+        self.assertRaises(ValueError, ElGamal.construct, tup)
+
+        tup = tup0
+        tup[1] = 1 # g = 1
+        self.assertRaises(ValueError, ElGamal.construct, tup)
+
+        tup = tup0
+        tup[2] = tup[0]*2 # y = 2*p
+        self.assertRaises(ValueError, ElGamal.construct, tup)
+
+    def test_bad_key4(self):
+        tup = tup0 = list(self.convert_tv(self.tvs[0], 1)['key'])
+        tup[3] += 1 # x += 1
+        self.assertRaises(ValueError, ElGamal.construct, tup)
+
     def convert_tv(self, tv, as_longs=0):
         """Convert a test vector from textual form (hexadecimal ascii
         to either integers or byte strings."""

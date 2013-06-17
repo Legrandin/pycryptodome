@@ -43,7 +43,7 @@ Encryption algorithm
 The security of the ElGamal encryption scheme is based on the computational
 Diffie-Hellman problem (CDH_). Given a cyclic group, a generator *g*,
 and two integers *a* and *b*, it is difficult to find
-the element *g^{ab}* when only *g^a* and *g^b* are known, and not *a* and *b*. 
+the element *g^{ab}* when only *g^a* and *g^b* are known, and not *a* and *b*.
 
 As before, the group is the largest multiplicative sub-group of the integers
 modulo *p*, with *p* prime.
@@ -109,8 +109,10 @@ __revision__ = "$Id$"
 
 __all__ = ['generate', 'construct', 'error', 'ElGamalobj']
 
-from Crypto.PublicKey.pubkey import *
+from Crypto.PublicKey.pubkey import pubkey
 from Crypto.Util import number
+from Crypto.Util.number import GCD, bignum, isPrime, getRandomRange, \
+                               inverse, size, getPrime
 from Crypto import Random
 
 class error (Exception):
@@ -151,7 +153,7 @@ def generate(bits, randfunc, progress_func=None):
     while 1:
         q = bignum(getPrime(bits-1, randfunc))
         obj.p = 2*q+1
-        if number.isPrime(obj.p, randfunc=randfunc):
+        if isPrime(obj.p, randfunc=randfunc):
             break
     # Generate generator g
     # See Algorithm 4.80 in Handbook of Applied Cryptography
@@ -163,7 +165,7 @@ def generate(bits, randfunc, progress_func=None):
         # in "Generating ElGamal signatures without knowning the secret key",
         # 1996
         #
-        obj.g = number.getRandomRange(3, obj.p, randfunc)
+        obj.g = getRandomRange(3, obj.p, randfunc)
         safe = 1
         if pow(obj.g, 2, obj.p)==1:
             safe=0
@@ -176,7 +178,7 @@ def generate(bits, randfunc, progress_func=None):
         # g^{-1} must not divide p-1 because of Khadir's attack
         # described in "Conditions of the generator for forging ElGamal
         # signature", 2011
-        ginv = number.inverse(obj.g, obj.p)
+        ginv = inverse(obj.g, obj.p)
         if safe and divmod(obj.p-1, ginv)[1]==0:
             safe=0
         if safe:
@@ -184,7 +186,7 @@ def generate(bits, randfunc, progress_func=None):
     # Generate private key x
     if progress_func:
         progress_func('x\n')
-    obj.x=number.getRandomRange(2, obj.p-1, randfunc)
+    obj.x=getRandomRange(2, obj.p-1, randfunc)
     # Generate public key y
     if progress_func:
         progress_func('y\n')
@@ -213,6 +215,8 @@ def construct(tup):
             3. Public key (*y*).
             4. Private key (*x*). Optional.
 
+    :Raise PublicKey.ValueError:
+        When the key being imported fails the most basic ElGamal validity checks.
     :Return: An ElGamal key object (`ElGamalobj`).
     """
 
@@ -222,6 +226,18 @@ def construct(tup):
     for i in range(len(tup)):
         field = obj.keydata[i]
         setattr(obj, field, tup[i])
+
+    fmt_error = not isPrime(obj.p)
+    fmt_error |= obj.g<=1 or obj.g>=obj.p
+    fmt_error |= pow(obj.g, obj.p-1, obj.p)!=1
+    fmt_error |= obj.y<1 or obj.y>=obj.p
+    if len(tup)==4:
+        fmt_error |= obj.x<=1 or obj.x>=obj.p
+        fmt_error |= pow(obj.g, obj.x, obj.p)!=obj.y
+
+    if fmt_error:
+        raise ValueError("Invalid ElGamal key components")
+
     return obj
 
 class ElGamalobj(pubkey):
@@ -274,7 +290,7 @@ class ElGamalobj(pubkey):
          operation and shall be discarded immediately.
         """
         return pubkey.encrypt(self, plaintext, K)
- 
+
     def decrypt(self, ciphertext):
         """Decrypt a piece of data with ElGamal.
 
@@ -337,7 +353,7 @@ class ElGamalobj(pubkey):
     def _decrypt(self, M):
         if (not hasattr(self, 'x')):
             raise TypeError('Private key not available in this object')
-        r = number.getRandomRange(2, self.p-1, self._randfunc)
+        r = getRandomRange(2, self.p-1, self._randfunc)
         a_blind = (M[0] * pow(self.g, r, self.p)) % self.p
         ax=pow(a_blind, self.x, self.p)
         plaintext_blind = (M[1] * inverse(ax, self.p ) ) % self.p
@@ -367,7 +383,7 @@ class ElGamalobj(pubkey):
         return 0
 
     def size(self):
-        return number.size(self.p) - 1
+        return size(self.p) - 1
 
     def has_private(self):
         if hasattr(self, 'x'):
