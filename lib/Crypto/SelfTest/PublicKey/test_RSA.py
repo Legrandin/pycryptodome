@@ -190,6 +190,10 @@ class RSATest(unittest.TestCase):
         tup = (self.n, 1L)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
+        # An even modulus is wrong
+        tup = (self.n+1, self.e)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
     def test_construct_bad_key3(self):
         tup = (self.n, self.e, self.d+1)
         self.assertRaises(ValueError, self.rsa.construct, tup)

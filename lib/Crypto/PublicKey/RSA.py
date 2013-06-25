@@ -579,6 +579,9 @@ class RSAImplementation(object):
         fmt_error = key.e<=1 or key.e>=key.n
         fmt_error |= GCD(key.n, key.e)!=1
 
+        # For RSA, modulus must be odd
+        fmt_error |= not key.n&1
+
         if not fmt_error and hasattr(key, 'd'):
             # Modulus and private exponent must be coprime
             fmt_error = key.d<=1 or key.d>=key.n
