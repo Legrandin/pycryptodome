@@ -329,14 +329,17 @@ class _GHASH(_SmoothMAC):
     (x^128 + x^7 + x^2 + x + 1).
     """
 
-    def __init__(self, hash_subkey, block_size):
+    def __init__(self, hash_subkey, block_size, table_size='64K'):
         _SmoothMAC.__init__(self, block_size, None, 0)
-        self._hash_subkey = galois._ghash_expand(hash_subkey)
+        if table_size == '64K':
+            self._hash_subkey = galois._ghash_expand(hash_subkey)
+        else:
+            self._hash_subkey = hash_subkey
         self._last_y = bchr(0) * 16
         self._mac = galois._ghash
 
     def copy(self):
-        clone = _GHASH(self._hash_subkey, self._bs)
+        clone = _GHASH(self._hash_subkey, self._bs, table_size='0K')
         _SmoothMAC._deep_copy(self, clone)
         clone._last_y = self._last_y
         return clone
@@ -433,7 +436,7 @@ class BlockAlgo:
                         bchr(0) * fill +
                         long_to_bytes(8 * len(self.nonce), 8))
 
-            mac = _GHASH(hash_subkey, factory.block_size)
+            mac = _GHASH(hash_subkey, factory.block_size, '0K')
             mac.update(ghash_in)
             self._j0 = bytes_to_long(mac.digest())
 
@@ -443,7 +446,7 @@ class BlockAlgo:
         self._cipher = self._factory.new(key, MODE_CTR, counter=ctr)
 
         # Step 5 - Bootstrat GHASH
-        self._cipherMAC = _GHASH(hash_subkey, factory.block_size)
+        self._cipherMAC = _GHASH(hash_subkey, factory.block_size, '64K')
 
         # Step 6 - Prepare GCTR cipher for GMAC
         ctr = Counter.new(128, initial_value=self._j0, allow_wraparound=True)
