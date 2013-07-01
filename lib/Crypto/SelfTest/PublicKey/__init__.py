@@ -32,7 +32,13 @@ def get_tests(config={}):
     tests = []
     from Crypto.SelfTest.PublicKey import test_DSA;       tests += test_DSA.get_tests(config=config)
     from Crypto.SelfTest.PublicKey import test_RSA;       tests += test_RSA.get_tests(config=config)
-    from Crypto.SelfTest.PublicKey import test_importKey; tests += test_importKey.get_tests(config=config)
+    
+    from Crypto.SelfTest.PublicKey import test_import_DSA
+    tests +=test_import_DSA.get_tests(config=config)
+    
+    from Crypto.SelfTest.PublicKey import test_import_RSA
+    tests += test_import_RSA.get_tests(config=config)
+
     from Crypto.SelfTest.PublicKey import test_ElGamal;   tests += test_ElGamal.get_tests(config=config)
     return tests
 
