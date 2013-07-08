@@ -57,23 +57,22 @@ This module provides facilities for generating new DSA keys and for constructing
 them from known components. DSA keys allows you to perform basic signing and
 verification.
 
-    >>> from Crypto.Random import random
     >>> from Crypto.PublicKey import DSA
+    >>> from Crypto.Signature.DSS
     >>> from Crypto.Hash import SHA256
     >>>
-    >>> message = "Hello"
+    >>> message = b"Hello"
     >>> key = DSA.generate(2048)
     >>> f = open("public_key.pem", "w")
     >>> f.write(key.publickey().exportKey(key))
-    >>> h = SHA256.new(message).digest()
-    >>> k = random.StrongRandom().randint(1,key.q-1)
-    >>> sig = key.sign(h,k)
-    >>> ...
+    >>> hash_obj = SHA256.new(message)
+    >>> signer = DSS.new(key, 'fips-186-3')
+    >>> signature = key.sign(hash_obj)
     >>> ...
     >>> f = open("public_key.pem", "r")
-    >>> h = SHA256.new(message).digest()
-    >>> key = DSA.importKey(f.read())
-    >>> if key.verify(h,sig):
+    >>> hash_obj = SHA256.new(message)
+    >>> pub_key = DSA.importKey(f.read())
+    >>> if pub_key.verify(hash_obj, signature):
     >>>     print "OK"
     >>> else:
     >>>     print "Incorrect signature"
@@ -180,6 +179,11 @@ class _DSAobj(pubkey.pubkey):
     def sign(self, M, K):
         """Sign a piece of data with DSA.
 
+        This method is very low-level and must not be used directly.
+
+        **If you want to perform signing, use the `Crypto.Signature.DSS`
+        module instead.**
+
         :Parameter M: The piece of data to sign with DSA. It may
          not be longer in bit size than the sub-group order (*q*).
         :Type M: byte string or long
@@ -210,6 +214,11 @@ class _DSAobj(pubkey.pubkey):
 
     def verify(self, M, signature):
         """Verify the validity of a DSA signature.
+
+        This method is very low-level and must not be used directly.
+
+        **If you want to validate a signature, use
+        the `Crypto.Signature.DSS` module instead.**
 
         :Parameter M: The expected message.
         :Type M: byte string or long
@@ -496,7 +505,7 @@ class DSAImplementation(object):
         :Raise ValueError:
             When **bits** is too little, too big, or not a multiple of 64.
         """
- 
+
         # Check against FIPS 186-2, which says that the size of the prime p
         # must be a multiple of 64 bits between 512 and 1024
         for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
