@@ -51,6 +51,12 @@
 
 #define SIEVE_BASE_SIZE (sizeof (sieve_base) / sizeof (sieve_base[0]))
 
+#ifdef IS_PY3K
+#define OB_SIZE(p) ((p)->ob_base.ob_size)
+#else
+#define OB_SIZE(p) ((p)->ob_size)
+#endif
+
 static unsigned int sieve_base[10000];
 static int rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc);
 
@@ -62,23 +68,13 @@ longObjToMPZ (mpz_t m, PyLongObject * p)
 	mpz_t temp, temp2;
 	mpz_init (temp);
 	mpz_init (temp2);
-#ifdef IS_PY3K
-	if (p->ob_base.ob_size > 0) {
-		size = p->ob_base.ob_size;
+	if (OB_SIZE(p) > 0) {
+		size = OB_SIZE(p);
 		negative = 1;
 	} else {
-		size = -p->ob_base.ob_size;
+		size = -OB_SIZE(p);
 		negative = -1;
 	}
-#else
-	if (p->ob_size > 0) {
-		size = p->ob_size;
-		negative = 1;
-	} else {
-		size = -p->ob_size;
-		negative = -1;
-	}
-#endif
 	mpz_set_ui (m, 0);
 	for (i = 0; i < size; i++)
 	{
@@ -113,11 +109,7 @@ mpzToLongObj (mpz_t m)
 	i = size;
 	while ((i > 0) && (l->ob_digit[i - 1] == 0))
 		i--;
-#ifdef IS_PY3K
-	l->ob_base.ob_size = i * sgn;
-#else
-	l->ob_size = i * sgn;
-#endif
+	OB_SIZE(l) = i * sgn;
 	mpz_clear (temp);
 	return (PyObject *) l;
 }
