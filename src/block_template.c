@@ -49,6 +49,11 @@
 #endif
 #define _MODULE_STRING _XSTR(MODULE_NAME)
 
+/* Object references for the counter_shortcut */
+static PyObject *_counter_module = NULL;
+static PyTypeObject *PCT_CounterBEType = NULL;
+static PyTypeObject *PCT_CounterLEType = NULL;
+
 typedef struct 
 {
 	PyObject_HEAD 
@@ -182,11 +187,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 			PyErr_SetString(PyExc_TypeError,
 					"'counter' keyword parameter is required with CTR mode");
 			return NULL;
-#ifdef IS_PY3K
-		} else if (PyObject_HasAttr(counter, PyUnicode_FromString("__PCT_CTR_SHORTCUT__"))) {
-#else
-		} else if (PyObject_HasAttrString(counter, "__PCT_CTR_SHORTCUT__")) {
-#endif
+		} else if (counter->ob_type == PCT_CounterBEType || counter->ob_type == PCT_CounterLEType) {
 			counter_shortcut = 1;
 		} else if (!PyCallable_Check(counter)) {
 			PyErr_SetString(PyExc_ValueError, 
@@ -799,6 +800,13 @@ _MODULE_NAME (void)
 	PyModule_AddIntConstant(m, "MODE_CTR", MODE_CTR);
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 	PyModule_AddIntConstant(m, "key_size", KEY_SIZE);
+
+	Py_CLEAR(_counter_module);
+	_counter_module = PyImport_ImportModule("Crypto.Util._counter");
+	if (_counter_module) {
+		PCT_CounterBEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterBE");
+		PCT_CounterLEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterLE");
+	}
 
 	/* Check for errors */
 	if (PyErr_Occurred())

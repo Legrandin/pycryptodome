@@ -374,7 +374,7 @@ CounterBEObject_getattr(PyObject *s, char *name)
 }
 
 static PyTypeObject
-my_CounterLEType = {
+PCT_CounterLEType = {
 #ifdef IS_PY3K
 	PyVarObject_HEAD_INIT(NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
 #else
@@ -422,7 +422,7 @@ my_CounterLEType = {
 };
 
 static PyTypeObject
-my_CounterBEType = {
+PCT_CounterBEType = {
 #ifdef IS_PY3K
 	PyVarObject_HEAD_INIT(NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
 #else
@@ -478,7 +478,7 @@ CounterLE_new(PyObject *self, PyObject *args, PyObject *kwargs)
     PCT_CounterObject *obj = NULL;
 
     /* Create the new object */
-    obj = PyObject_New(PCT_CounterObject, &my_CounterLEType);
+    obj = PyObject_New(PCT_CounterObject, &PCT_CounterLEType);
     if (obj == NULL) {
         return NULL;
     }
@@ -504,7 +504,7 @@ CounterBE_new(PyObject *self, PyObject *args, PyObject *kwargs)
     PCT_CounterObject *obj = NULL;
 
     /* Create the new object */
-    obj = PyObject_New(PCT_CounterObject, &my_CounterBEType);
+    obj = PyObject_New(PCT_CounterObject, &PCT_CounterBEType);
     if (obj == NULL) {
         return NULL;
     }
@@ -559,25 +559,33 @@ init_counter(void)
 
     /* TODO - Is the error handling here correct? */
 #ifdef IS_PY3K
-	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
-	if (PyType_Ready(&my_CounterLEType) < 0)
-		return NULL;
-	if (PyType_Ready(&my_CounterBEType) < 0)
-		return NULL;
+    /* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
+    if (PyType_Ready(&PCT_CounterLEType) < 0)
+        return NULL;
+    if (PyType_Ready(&PCT_CounterBEType) < 0)
+        return NULL;
 
     /* Initialize the module */
     m = PyModule_Create(&moduledef);
     if (m == NULL)
         return NULL;
 
-	return m;
 #else
     m = Py_InitModule("_counter", module_methods);
     if (m == NULL)
         return;
-		
-	my_CounterLEType.ob_type = &PyType_Type;
-    my_CounterBEType.ob_type = &PyType_Type;
+
+    PCT_CounterLEType.ob_type = &PyType_Type;
+    PCT_CounterBEType.ob_type = &PyType_Type;
+#endif
+
+    /* Add the counter types to the module so that epydoc can see them, and so
+     * that we can access them in the block cipher modules. */
+    PyObject_SetAttrString(m, "CounterBE", (PyObject *)&PCT_CounterBEType);
+    PyObject_SetAttrString(m, "CounterLE", (PyObject *)&PCT_CounterLEType);
+
+#ifdef IS_PY3K
+    return m;
 #endif
 }
 
