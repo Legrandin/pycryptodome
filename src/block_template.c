@@ -591,13 +591,8 @@ ALG_Decrypt(ALGobject *self, PyObject *args)
 /* ALG object methods */
 static PyMethodDef ALGmethods[] =
 {
-#ifdef IS_PY3K
  {"encrypt", (PyCFunction) ALG_Encrypt, METH_O, ALG_Encrypt__doc__},
  {"decrypt", (PyCFunction) ALG_Decrypt, METH_O, ALG_Decrypt__doc__},
-#else
- {"encrypt", (PyCFunction) ALG_Encrypt, 0, ALG_Encrypt__doc__},
- {"decrypt", (PyCFunction) ALG_Decrypt, 0, ALG_Decrypt__doc__},
-#endif
  {NULL, NULL}			/* sentinel */
 };
 

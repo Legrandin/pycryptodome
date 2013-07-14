@@ -45,6 +45,9 @@
 #  define PyLong_SHIFT SHIFT
 #  define PyUnicode_FromString PyString_FromString
 # endif
+# if PY_MINOR_VERSION <= 1 /* Python 2.1 only */
+#  define METH_O METH_OLDARGS   /* METH_O is a subset of what METH_OLDARGS provides */
+# endif
 #endif
 
 /* Python 2.1 doesn't have PyModule_AddIntConstant */
