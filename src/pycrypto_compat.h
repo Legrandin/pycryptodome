@@ -52,6 +52,7 @@
 # if PY_MINOR_VERSION <= 1 /* Python 2.1 only */
 #  define METH_O METH_OLDARGS   /* METH_O is a subset of what METH_OLDARGS provides */
 #  define PyInt_CheckExact PyInt_Check
+#  define PyType_Ready(t) (((t)->ob_type = &PyType_Type) ? 0 : 0)
 # endif
 #endif
 

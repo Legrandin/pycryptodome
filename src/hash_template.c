@@ -323,7 +323,6 @@ _MODULE_NAME (void)
 	PyObject *m;
 
 #ifdef IS_PY3K
-	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
 	if (PyType_Ready(&ALGtype) < 0)
 		return NULL;
 
@@ -332,7 +331,9 @@ _MODULE_NAME (void)
    if (m == NULL)
         return NULL;
 #else
-	ALGtype.ob_type = &PyType_Type;
+	if (PyType_Ready(&ALGtype) < 0)
+		return;
+
 	m = Py_InitModule3("Crypto.Hash." _MODULE_STRING, ALG_functions, MODULE__doc__);
 #endif
 

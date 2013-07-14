@@ -285,7 +285,6 @@ initwinrandom()
 {
 	PyObject *m;
 #ifdef IS_PY3K
-	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
 	if (PyType_Ready(&WRtype) < 0)
 		return NULL;
     /* Initialize the module */
@@ -293,7 +292,8 @@ initwinrandom()
     if (m == NULL)
         return NULL;
 #else
-	WRtype.ob_type = &PyType_Type;
+	if (PyType_Ready(&WRtype) < 0)
+		return NULL;
 	m = Py_InitModule("winrandom", WR_mod_methods);
 #endif
 

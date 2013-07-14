@@ -1682,7 +1682,6 @@ init_fastmath (void)
     PyObject *_fastmath_dict;
  
 #ifdef IS_PY3K
-	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
 	if (PyType_Ready(&rsaKeyType) < 0)
 		return NULL;
 	if (PyType_Ready(&dsaKeyType) < 0)
@@ -1692,8 +1691,10 @@ init_fastmath (void)
 	if (_fastmath_module == NULL)
         return NULL;
 #else
-	rsaKeyType.ob_type = &PyType_Type;
-	dsaKeyType.ob_type = &PyType_Type;
+	if (PyType_Ready(&rsaKeyType) < 0)
+		return;
+	if (PyType_Ready(&dsaKeyType) < 0)
+		return;
 	_fastmath_module = Py_InitModule ("_fastmath", _fastmath__methods__);
 #endif
  	_fastmath_dict = PyModule_GetDict (_fastmath_module);

@@ -537,7 +537,6 @@ init_counter(void)
 
     /* TODO - Is the error handling here correct? */
 #ifdef IS_PY3K
-    /* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
     if (PyType_Ready(&PCT_CounterLEType) < 0)
         return NULL;
     if (PyType_Ready(&PCT_CounterBEType) < 0)
@@ -549,12 +548,14 @@ init_counter(void)
         return NULL;
 
 #else
+    if (PyType_Ready(&PCT_CounterLEType) < 0)
+        return;
+    if (PyType_Ready(&PCT_CounterBEType) < 0)
+        return;
+
     m = Py_InitModule("_counter", module_methods);
     if (m == NULL)
         return;
-
-    PCT_CounterLEType.ob_type = &PyType_Type;
-    PCT_CounterBEType.ob_type = &PyType_Type;
 #endif
 
     /* Add the counter types to the module so that epydoc can see them, and so

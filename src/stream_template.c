@@ -301,7 +301,6 @@ void
  	PyObject *m;
  
 #ifdef IS_PY3K
-	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
 	if (PyType_Ready(&ALGtype) < 0)
 		return NULL;
 
@@ -310,7 +309,9 @@ void
 	if (m == NULL)
         	return NULL;
 #else
-	ALGtype.ob_type = &PyType_Type;
+	if (PyType_Ready(&ALGtype) < 0)
+		return;
+
 	/* Create the module and add the functions */
 	m = Py_InitModule("Crypto.Cipher." _MODULE_STRING, modulemethods);
 #endif
