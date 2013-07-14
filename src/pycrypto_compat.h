@@ -31,6 +31,8 @@
 
 #if PY_MAJOR_VERSION >= 3
 # define IS_PY3K
+# define PyInt_AS_LONG PyLong_AS_LONG
+# define PyInt_CheckExact PyLong_CheckExact
 # define PyInt_FromLong PyLong_FromLong
 # define staticforward static
 #else
@@ -49,6 +51,7 @@
 # endif
 # if PY_MINOR_VERSION <= 1 /* Python 2.1 only */
 #  define METH_O METH_OLDARGS   /* METH_O is a subset of what METH_OLDARGS provides */
+#  define PyInt_CheckExact PyInt_Check
 # endif
 #endif
 

@@ -67,10 +67,6 @@ typedef struct
 /* Please see PEP3123 for a discussion of PyObject_HEAD and changes made in 3.x to make it conform to Standard C.
  * These changes also dictate using Py_TYPE to check type, and PyVarObject_HEAD_INIT(NULL, 0) to initialize
  */
-#ifdef IS_PY3K
-#define PyInt_CheckExact	PyLong_CheckExact
-#define PyInt_AS_LONG		PyLong_AS_LONG
-#endif
 staticforward PyTypeObject ALGtype;
 
 static ALGobject *
@@ -751,13 +747,6 @@ static struct PyModuleDef moduledef = {
 #endif
 
 /* Initialization function for the module */
-
-/* Deal with old API in Python 2.1 */
-#if PYTHON_API_VERSION < 1011
-#define PyInt_CheckExact	PyInt_Check
-#endif
-
-
 #ifdef IS_PY3K
 PyMODINIT_FUNC
 #else
