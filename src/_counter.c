@@ -42,11 +42,10 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 	PyStringObject *prefix=NULL, *suffix=NULL, *initval=NULL;
 #endif
     int allow_wraparound = 0;
-    int disable_shortcut = 0;
     Py_ssize_t size;
 
-    static char *kwlist[] = {"prefix", "suffix", "initval", "allow_wraparound", "disable_shortcut", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "SSS|ii", kwlist, &prefix, &suffix, &initval, &allow_wraparound, &disable_shortcut))
+    static char *kwlist[] = {"prefix", "suffix", "initval", "allow_wraparound", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "SSS|i", kwlist, &prefix, &suffix, &initval, &allow_wraparound))
         return -1;
 
     /* Check string size and set nbytes */
@@ -115,8 +114,7 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
     memcpy(self->p, PyBytes_AS_STRING(initval), self->nbytes);
     memcpy(self->p + self->nbytes, PyBytes_AS_STRING(suffix), PyBytes_GET_SIZE(suffix));
 
-    /* Set shortcut_disabled and allow_wraparound */
-    self->shortcut_disabled = disable_shortcut;
+    /* Set allow_wraparound */
     self->allow_wraparound = allow_wraparound;
 
     /* Clear the carry flag */
@@ -322,14 +320,6 @@ CounterLEObject_getattr(PyObject *s, char *name)
     if (strcmp(name, "carry") == 0) {
 #endif
         return PyLong_FromLong((long)self->carry);
-#ifdef IS_PY3K
-    } else if (!self->shortcut_disabled && PyUnicode_CompareWithASCIIString(attr, "__PCT_CTR_SHORTCUT__") == 0) {
-#else
-    } else if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
-#endif
-        /* Shortcut hack - See block_template.c */
-        Py_INCREF(Py_True);
-        return Py_True;
     }
 #ifdef IS_PY3K
   generic:
@@ -356,14 +346,6 @@ CounterBEObject_getattr(PyObject *s, char *name)
     if (strcmp(name, "carry") == 0) {
 #endif
         return PyLong_FromLong((long)self->carry);
-#ifdef IS_PY3K
-    } else if (!self->shortcut_disabled && PyUnicode_CompareWithASCIIString(attr, "__PCT_CTR_SHORTCUT__") == 0) {
-#else
-    } else if (!self->shortcut_disabled && strcmp(name, "__PCT_CTR_SHORTCUT__") == 0) {
-#endif
-        /* Shortcut hack - See block_template.c */
-        Py_INCREF(Py_True);
-        return Py_True;
     }
 #ifdef IS_PY3K
   generic:

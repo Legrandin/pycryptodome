@@ -801,6 +801,7 @@ _MODULE_NAME (void)
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 	PyModule_AddIntConstant(m, "key_size", KEY_SIZE);
 
+	/* Import CounterBE and CounterLE from the _counter module */
 	Py_CLEAR(_counter_module);
 	_counter_module = PyImport_ImportModule("Crypto.Util._counter");
 	if (_counter_module) {

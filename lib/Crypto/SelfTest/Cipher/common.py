@@ -24,6 +24,8 @@
 
 """Self-testing for PyCrypto hash modules"""
 
+from __future__ import nested_scopes
+
 __revision__ = "$Id$"
 
 import sys
@@ -195,18 +197,43 @@ class CTRWraparoundTest(unittest.TestCase):
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):
-        return """Regression test: %s with MODE_CTR should raise OverflowError on wraparound when shortcut used""" % (self.module_name,)
+        return """Regression test: %s with MODE_CTR raising OverflowError on wraparound""" % (self.module_name,)
 
     def runTest(self):
         from Crypto.Util import Counter
 
-        for disable_shortcut in (0, 1): # (False, True) Test CTR-mode shortcut and PyObject_CallObject code paths
-            for little_endian in (0, 1): # (False, True) Test both endiannesses
-                ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian, disable_shortcut=disable_shortcut)
-                cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=ctr)
-                block = b("\x00") * self.module.block_size
-                cipher.encrypt(block)
-                self.assertRaises(OverflowError, cipher.encrypt, block)
+        def pythonCounter():
+            state = [0]
+            def ctr():
+                # First block succeeds; Second and subsequent blocks raise OverflowError
+                if state[0] == 0:
+                    state[0] = 1
+                    return b("\xff") * self.module.block_size
+                else:
+                    raise OverflowError
+            return ctr
+
+        for little_endian in (0, 1): # (False, True) Test both endiannesses
+            block = b("\x00") * self.module.block_size
+
+            # Test PyObject_CallObject code path: if the counter raises OverflowError
+            cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=pythonCounter())
+            cipher.encrypt(block)
+            self.assertRaises(OverflowError, cipher.encrypt, block)
+            self.assertRaises(OverflowError, cipher.encrypt, block)
+
+            # Test PyObject_CallObject code path: counter object should raise OverflowError
+            ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian)
+            ctr()
+            self.assertRaises(OverflowError, ctr)
+            self.assertRaises(OverflowError, ctr)
+
+            # Test the CTR-mode shortcut
+            ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian)
+            cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=ctr)
+            cipher.encrypt(block)
+            self.assertRaises(OverflowError, cipher.encrypt, block)
+            self.assertRaises(OverflowError, cipher.encrypt, block)
 
 class CFBSegmentSizeTest(unittest.TestCase):
 

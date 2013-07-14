@@ -39,34 +39,24 @@ class CounterTests(unittest.TestCase):
         from Crypto.Util import Counter
 
     def test_BE_shortcut(self):
-        """Big endian, shortcut enabled"""
+        """Big endian"""
         c = Counter.new(128)
-        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
         c = Counter.new(128, little_endian=False)
-        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
-        c = Counter.new(128, disable_shortcut=False)
-        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
-        c = Counter.new(128, little_endian=False, disable_shortcut=False)
-        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
 
     def test_LE_shortcut(self):
-        """Little endian, shortcut enabled"""
+        """Little endian"""
         c = Counter.new(128, little_endian=True)
-        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
-        c = Counter.new(128, little_endian=True, disable_shortcut=False)
-        self.assertEqual(c.__PCT_CTR_SHORTCUT__,True) # assert_
 
     def test_BE_no_shortcut(self):
-        """Big endian, shortcut disabled"""
+        """Big endian, with disable_shortcut"""
+        # Just testing API backward-compatibility.  disable_shortcut is now a no-op.
         c = Counter.new(128, disable_shortcut=True)
-        self.assertRaises(AttributeError, getattr, c, '__PCT_CTR_SHORTCUT__')
         c = Counter.new(128, little_endian=False, disable_shortcut=True)
-        self.assertRaises(AttributeError, getattr, c, '__PCT_CTR_SHORTCUT__')
 
     def test_LE_no_shortcut(self):
         """Little endian, shortcut disabled"""
+        # Just testing API backward-compatibility.  disable_shortcut is now a no-op.
         c = Counter.new(128, little_endian=True, disable_shortcut=True)
-        self.assertRaises(AttributeError, getattr, c, '__PCT_CTR_SHORTCUT__')
 
     def test_BE_defaults(self):
         """128-bit, Big endian, defaults"""
