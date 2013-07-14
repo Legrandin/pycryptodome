@@ -47,6 +47,18 @@
 # endif
 #endif
 
+/* Python 2.1 doesn't have PyModule_AddIntConstant */
+#if PYTHON_API_VERSION < 1011
+#define PyModule_AddIntConstant(m,n,v)  \
+    do { \
+        PyObject *o=PyInt_FromLong(v); \
+        if (o!=NULL) { \
+            PyObject_SetAttrString((m),(n),o); \
+            Py_DECREF(o); \
+        } \
+    } while(0)
+#endif
+
 /*
  * Py_CLEAR for Python < 2.4
  * See http://docs.python.org/api/countingRefs.html

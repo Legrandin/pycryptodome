@@ -317,13 +317,6 @@ static struct PyModuleDef moduledef = {
 
 /* Initialize this module. */
 
-/* Deal with old API in Python 2.1 */
-#if PYTHON_API_VERSION < 1011
-#define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
-           if (o!=NULL) \
-             {PyDict_SetItemString(PyModule_GetDict(m),n,o); Py_DECREF(o);}}
-#endif
-
 #ifdef IS_PY3K
 PyMODINIT_FUNC
 #else

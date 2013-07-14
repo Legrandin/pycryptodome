@@ -28,13 +28,6 @@
 #include <string.h>
 #include "_counter.h"
 
-/* Deal with old API in Python 2.1 */
-#if PYTHON_API_VERSION < 1011
-#define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
-           if (o!=NULL) \
-             {PyDict_SetItemString(PyModule_GetDict(m),n,o); Py_DECREF(o);}}
-#endif
-
 /* NB: This can be called multiple times for a given object, via the __init__ method.  Be careful. */
 static int
 CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
