@@ -159,6 +159,12 @@ class Benchmark:
         blocks = self.random_blocks(16384, 1000)
         if mode is None:
             cipher = module.new(key)
+        elif mode == "CTR-BE":
+            from Crypto.Util import Counter
+            cipher = module.new(key, module.MODE_CTR, counter=Counter.new(module.block_size*8, little_endian=False))
+        elif mode == "CTR-LE":
+            from Crypto.Util import Counter
+            cipher = module.new(key, module.MODE_CTR, counter=Counter.new(module.block_size*8, little_endian=True))
         else:
             cipher = module.new(key, mode, iv)
 
@@ -330,6 +336,8 @@ class Benchmark:
             self.test_encryption("%s-OFB" % (cipher_name,), module, key_bytes, module.MODE_OFB)
             self.test_encryption("%s-ECB" % (cipher_name,), module, key_bytes, module.MODE_ECB)
             self.test_encryption("%s-OPENPGP" % (cipher_name,), module, key_bytes, module.MODE_OPENPGP)
+            self.test_encryption("%s-CTR-BE" % (cipher_name,), module, key_bytes, "CTR-BE")
+            self.test_encryption("%s-CTR-LE" % (cipher_name,), module, key_bytes, "CTR-LE")
 
         # Crypto.Cipher (stream ciphers)
         for cipher_name, module, key_bytes in stream_specs:
