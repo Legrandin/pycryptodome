@@ -48,6 +48,7 @@
 #  define PyLong_MASK MASK
 #  define PyLong_SHIFT SHIFT
 #  define PyUnicode_FromString PyString_FromString
+#  define PyVarObject_HEAD_INIT(a,b) PyObject_HEAD_INIT(a) 0,
 # endif
 # if PY_MINOR_VERSION <= 1 /* Python 2.1 only */
 #  define METH_O METH_OLDARGS   /* METH_O is a subset of what METH_OLDARGS provides */

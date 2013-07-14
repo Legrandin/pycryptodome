@@ -353,12 +353,7 @@ CounterBEObject_getattr(PyObject *s, char *name)
 
 static PyTypeObject
 PCT_CounterLEType = {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT(NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-    PyObject_HEAD_INIT(NULL)
-    0,                              /* ob_size */
-#endif
 	"_counter.CounterLE",           /* tp_name */
 	sizeof(PCT_CounterObject),       /* tp_basicsize */
     0,                              /* tp_itemsize */
@@ -401,12 +396,7 @@ PCT_CounterLEType = {
 
 static PyTypeObject
 PCT_CounterBEType = {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT(NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-    PyObject_HEAD_INIT(NULL)
-    0,                              /* ob_size */
-#endif
 	"_counter.CounterBE",           /* tp_name */
 	sizeof(PCT_CounterObject),       /* tp_basicsize */
     0,                              /* tp_itemsize */

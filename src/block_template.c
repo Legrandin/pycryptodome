@@ -690,12 +690,7 @@ static struct PyMethodDef modulemethods[] =
 
 static PyTypeObject ALGtype =
 {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT(NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-	PyObject_HEAD_INIT(NULL)
-	0,				/*ob_size*/
-#endif
 	_MODULE_STRING,		/*tp_name*/
 	sizeof(ALGobject),	/*tp_size*/
 	0,				/*tp_itemsize*/

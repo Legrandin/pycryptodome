@@ -361,12 +361,7 @@ static PyMethodDef rsaKey__methods__[] = {
 static PyObject *fastmathError;							/* raised on errors */
 
 static PyTypeObject dsaKeyType = {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT (NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-	PyObject_HEAD_INIT (NULL) 
-	0,				/*ob_size*/
-#endif
 	"dsaKey",
 	sizeof (dsaKey),
 	0,
@@ -403,12 +398,7 @@ static PyTypeObject dsaKeyType = {
 };
 
 static PyTypeObject rsaKeyType = {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT (NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-	PyObject_HEAD_INIT (NULL) 
-	0,				/*ob_size*/
-#endif
 	"rsaKey",		/*tp_name*/
 	sizeof (rsaKey),	/*tp_size*/
 	0,				/*tp_itemsize*/
