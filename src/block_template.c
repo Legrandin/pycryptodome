@@ -69,12 +69,10 @@ typedef struct
  */
 #ifdef IS_PY3K
 static PyTypeObject ALGtype;
-#define is_ALGobject(v)		(Py_TYPE(v) == &ALGtype)
 #define PyInt_CheckExact	PyLong_CheckExact
 #define PyInt_AS_LONG		PyLong_AS_LONG
 #else
 staticforward PyTypeObject ALGtype;
-#define is_ALGobject(v)		((v)->ob_type == &ALGtype)
 #endif
 
 static ALGobject *

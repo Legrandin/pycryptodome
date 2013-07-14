@@ -55,10 +55,8 @@ typedef struct
  */
 #ifdef IS_PY3K
 static PyTypeObject ALGtype;
-#define is_ALGobject(v)		(Py_TYPE(v) == &ALGtype)
 #else
 staticforward PyTypeObject ALGtype;
-#define is_ALGobject(v)		((v)->ob_type == &ALGtype)
 #endif
 
 static ALGobject *
