@@ -317,7 +317,7 @@ void
 #endif
  _MODULE_NAME (void)
  {
- 	PyObject *m, *d, *x;
+ 	PyObject *m;
  
 #ifdef IS_PY3K
 	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
@@ -333,11 +333,6 @@ void
 	/* Create the module and add the functions */
 	m = Py_InitModule("Crypto.Cipher." _MODULE_STRING, modulemethods);
 #endif
- 
- 	/* Add some symbolic constants to the module */
- 	d = PyModule_GetDict(m);
-	x = PyUnicode_FromString(_MODULE_STRING ".error");
- 	PyDict_SetItemString(d, "error", x);
  
  	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 	PyModule_AddIntConstant(m, "key_size", KEY_SIZE);
