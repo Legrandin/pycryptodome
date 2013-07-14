@@ -52,7 +52,6 @@ static PyTypeObject ALGtype;
 #else
 staticforward PyTypeObject ALGtype;
 #define is_ALGobject(v) ((v)->ob_type == &ALGtype)
-#define PyLong_FromLong PyInt_FromLong /* For Python 2.x */
 #endif
 
 static ALGobject *
@@ -202,7 +201,7 @@ ALG_getattr(PyObject *self, char *name)
 		goto generic;
  
 	if (PyUnicode_CompareWithASCIIString(attr, "digest_size")==0)
-		return PyLong_FromLong(DIGEST_SIZE);
+		return PyInt_FromLong(DIGEST_SIZE);
 	if (PyUnicode_CompareWithASCIIString(attr, "name")==0)
 		return PyUnicode_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
 #else

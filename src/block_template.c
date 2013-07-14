@@ -75,7 +75,6 @@ static PyTypeObject ALGtype;
 #else
 staticforward PyTypeObject ALGtype;
 #define is_ALGobject(v)		((v)->ob_type == &ALGtype)
-#define PyLong_FromLong PyInt_FromLong /* For Python 2.x */
 #endif
 
 static ALGobject *
@@ -668,7 +667,7 @@ ALGgetattr(PyObject *s, char *name)
   if (strcmp(name, "mode") == 0)
 #endif
      {
-       return(PyLong_FromLong((long)(self->mode)));
+       return(PyInt_FromLong((long)(self->mode)));
      }
 #ifdef IS_PY3K
   if (PyUnicode_CompareWithASCIIString(attr, "block_size") == 0)
@@ -676,7 +675,7 @@ ALGgetattr(PyObject *s, char *name)
   if (strcmp(name, "block_size") == 0)
 #endif
      {
-       return PyLong_FromLong(BLOCK_SIZE);
+       return PyInt_FromLong(BLOCK_SIZE);
      }
 #ifdef IS_PY3K
   if (PyUnicode_CompareWithASCIIString(attr, "key_size") == 0)
@@ -684,7 +683,7 @@ ALGgetattr(PyObject *s, char *name)
   if (strcmp(name, "key_size") == 0)
 #endif
      {
-       return PyLong_FromLong(KEY_SIZE);
+       return PyInt_FromLong(KEY_SIZE);
      }
 #ifdef IS_PY3K
   generic:

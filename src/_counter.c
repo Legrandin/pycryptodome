@@ -28,10 +28,6 @@
 #include <string.h>
 #include "_counter.h"
 
-#ifndef IS_PY3K
-#define PyLong_FromLong PyInt_FromLong
-#endif
-
 /* Deal with old API in Python 2.1 */
 #if PYTHON_API_VERSION < 1011
 #define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
@@ -166,7 +162,7 @@ _CounterObject_next_value(PCT_CounterObject *self, int little_endian)
         goto err_out;
     }
 
-    eight = PyLong_FromLong(8);
+    eight = PyInt_FromLong(8);
     if (!eight)
         goto err_out;
 
@@ -191,7 +187,7 @@ _CounterObject_next_value(PCT_CounterObject *self, int little_endian)
 
         /* ch = ord(p) */
         Py_CLEAR(ch);   /* delete old ch */
-        ch = PyLong_FromLong((long) *p);
+        ch = PyInt_FromLong((long) *p);
         if (!ch)
             goto err_out;
 
@@ -326,7 +322,7 @@ CounterLEObject_getattr(PyObject *s, char *name)
 #else
     if (strcmp(name, "carry") == 0) {
 #endif
-        return PyLong_FromLong((long)self->carry);
+        return PyInt_FromLong((long)self->carry);
     }
 #ifdef IS_PY3K
   generic:
@@ -352,7 +348,7 @@ CounterBEObject_getattr(PyObject *s, char *name)
 #else
     if (strcmp(name, "carry") == 0) {
 #endif
-        return PyLong_FromLong((long)self->carry);
+        return PyInt_FromLong((long)self->carry);
     }
 #ifdef IS_PY3K
   generic:

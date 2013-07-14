@@ -31,6 +31,7 @@
 
 #if PY_MAJOR_VERSION >= 3
 # define IS_PY3K
+# define PyInt_FromLong PyLong_FromLong
 #else
 # define PyBytes_GET_SIZE PyString_GET_SIZE
 # define PyBytes_FromStringAndSize PyString_FromStringAndSize

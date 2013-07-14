@@ -64,7 +64,6 @@ static PyTypeObject WRtype;
 #else
 staticforward PyTypeObject WRtype;
 #define is_WRobject(v) ((v)->ob_type == &WRtype)
-#define PyLong_FromLong PyInt_FromLong /* for Python 2.x */
 #endif
 
 static void
@@ -216,7 +215,7 @@ WRgetattr(PyObject *s, char *name)
 #else
 	if (strcmp(name, "hcp") == 0)
 #endif
-		return PyLong_FromLong((long) self->hcp);
+		return PyInt_FromLong((long) self->hcp);
 #ifdef IS_PY3K
   generic:
 	return PyObject_GenericGetAttr(s, attr);
