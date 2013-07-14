@@ -40,7 +40,9 @@
 # define PyBytes_Size PyString_Size
 # define PyBytes_AsString PyString_AsString
 # define PyBytesObject PyStringObject
-# if PY_MINOR_VERSION <= 5 /* PyUnicode_FromString exists from Python 2.6 on up */
+# if PY_MINOR_VERSION <= 5 /* Python 2.5 and earlier */
+#  define PyLong_MASK MASK
+#  define PyLong_SHIFT SHIFT
 #  define PyUnicode_FromString PyString_FromString
 # endif
 #endif

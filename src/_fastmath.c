@@ -83,11 +83,7 @@ longObjToMPZ (mpz_t m, PyLongObject * p)
 	for (i = 0; i < size; i++)
 	{
 		mpz_set_ui (temp, p->ob_digit[i]);
-#ifdef IS_PY3K
 		mpz_mul_2exp (temp2, temp, PyLong_SHIFT * i);
-#else
-		mpz_mul_2exp (temp2, temp, SHIFT * i);
-#endif
 		mpz_add (m, m, temp2);
 	}
 	mpz_mul_si(m, m, negative);
@@ -99,11 +95,7 @@ static PyObject *
 mpzToLongObj (mpz_t m)
 {
 	/* borrowed from gmpy */
-#ifdef IS_PY3K
 	int size = (mpz_sizeinbase (m, 2) + PyLong_SHIFT - 1) / PyLong_SHIFT;
-#else
-	int size = (mpz_sizeinbase (m, 2) + SHIFT - 1) / SHIFT;
-#endif
 	int sgn;
 	int i;
 	mpz_t temp;
@@ -115,13 +107,8 @@ mpzToLongObj (mpz_t m)
 	mpz_mul_si(temp, m, sgn);
 	for (i = 0; i < size; i++)
 	{
-#ifdef IS_PY3K
 		l->ob_digit[i] = (digit) (mpz_get_ui (temp) & PyLong_MASK);
 		mpz_fdiv_q_2exp (temp, temp, PyLong_SHIFT);
-#else
-		l->ob_digit[i] = (digit) (mpz_get_ui (temp) & MASK);
-		mpz_fdiv_q_2exp (temp, temp, SHIFT);
-#endif
 	}
 	i = size;
 	while ((i > 0) && (l->ob_digit[i - 1] == 0))
