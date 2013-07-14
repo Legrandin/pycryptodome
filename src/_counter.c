@@ -32,6 +32,13 @@
 #define PyLong_FromLong PyInt_FromLong
 #endif
 
+/* Deal with old API in Python 2.1 */
+#if PYTHON_API_VERSION < 1011
+#define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
+           if (o!=NULL) \
+             {PyDict_SetItemString(PyModule_GetDict(m),n,o); Py_DECREF(o);}}
+#endif
+
 /* NB: This can be called multiple times for a given object, via the __init__ method.  Be careful. */
 static int
 CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
@@ -565,6 +572,9 @@ init_counter(void)
      * that we can access them in the block cipher modules. */
     PyObject_SetAttrString(m, "CounterBE", (PyObject *)&PCT_CounterBEType);
     PyObject_SetAttrString(m, "CounterLE", (PyObject *)&PCT_CounterLEType);
+
+    /* Allow block_template.c to do an ABI check */
+    PyModule_AddIntConstant(m, "_PCT_CTR_ABI_VERSION", PCT_CTR_ABI_VERSION);
 
 #ifdef IS_PY3K
     return m;

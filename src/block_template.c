@@ -70,6 +70,8 @@ typedef struct
 #ifdef IS_PY3K
 static PyTypeObject ALGtype;
 #define is_ALGobject(v)		(Py_TYPE(v) == &ALGtype)
+#define PyInt_CheckExact	PyLong_CheckExact
+#define PyInt_AS_LONG		PyLong_AS_LONG
 #else
 staticforward PyTypeObject ALGtype;
 #define is_ALGobject(v)		((v)->ob_type == &ALGtype)
@@ -765,6 +767,7 @@ static struct PyModuleDef moduledef = {
 #define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
            if (o!=NULL) \
              {PyDict_SetItemString(PyModule_GetDict(m),n,o); Py_DECREF(o);}}
+#define PyInt_CheckExact	PyInt_Check
 #endif
 
 
@@ -807,6 +810,17 @@ _MODULE_NAME (void)
 	if (_counter_module) {
 		PCT_CounterBEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterBE");
 		PCT_CounterLEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterLE");
+
+		/* Simple ABI version check in case the user doesn't re-compile all of
+		 * the modules during an upgrade. */
+		PyObject *abiver = PyObject_GetAttrString(_counter_module, "_PCT_CTR_ABI_VERSION");
+		if (PCT_CounterBEType == NULL || PyType_Check((PyObject *)PCT_CounterBEType) < 0 ||
+			 PCT_CounterLEType == NULL || PyType_Check((PyObject *)PCT_CounterLEType) < 0 ||
+			 abiver == NULL || PyInt_CheckExact(abiver) < 0 || PyInt_AS_LONG(abiver) != PCT_CTR_ABI_VERSION)
+		{
+			PyErr_SetString(PyExc_ImportError, "Crypto.Util._counter ABI mismatch.  Was PyCrypto incorrectly compiled?");
+		}
+		Py_CLEAR(abiver);
 	}
 
 	/* Check for errors */

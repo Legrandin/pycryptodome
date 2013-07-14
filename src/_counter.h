@@ -26,6 +26,8 @@
 
 #include "pycrypto_common.h"
 
+#define PCT_CTR_ABI_VERSION   1   /* Bump this whenever the structure below changes */
+
 typedef struct {
     PyObject_HEAD
     PyBytesObject *prefix;     /* Prefix (useful for a nonce) */
