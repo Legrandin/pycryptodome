@@ -58,13 +58,8 @@ typedef struct
 /* Please see PEP3123 for a discussion of PyObject_HEAD and changes made in 3.x to make it conform to Standard C.
  * These changes also dictate using Py_TYPE to check type, and PyVarObject_HEAD_INIT(NULL, 0) to initialize
  */
-#ifdef IS_PY3K
-static PyTypeObject WRtype;
 #define is_WRobject(v) (Py_TYPE(v) == &WRtype)
-#else
 staticforward PyTypeObject WRtype;
-#define is_WRobject(v) ((v)->ob_type == &WRtype)
-#endif
 
 static void
 WRdealloc(PyObject *ptr)

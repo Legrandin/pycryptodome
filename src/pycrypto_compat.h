@@ -32,6 +32,7 @@
 #if PY_MAJOR_VERSION >= 3
 # define IS_PY3K
 # define PyInt_FromLong PyLong_FromLong
+# define staticforward static
 #else
 # define PyBytes_GET_SIZE PyString_GET_SIZE
 # define PyBytes_FromStringAndSize PyString_FromStringAndSize
@@ -41,6 +42,7 @@
 # define PyBytes_AsString PyString_AsString
 # define PyBytesObject PyStringObject
 # if PY_MINOR_VERSION <= 5 /* Python 2.5 and earlier */
+#  define Py_TYPE(v) ((v)->ob_type)
 #  define PyLong_MASK MASK
 #  define PyLong_SHIFT SHIFT
 #  define PyUnicode_FromString PyString_FromString

@@ -68,12 +68,10 @@ typedef struct
  * These changes also dictate using Py_TYPE to check type, and PyVarObject_HEAD_INIT(NULL, 0) to initialize
  */
 #ifdef IS_PY3K
-static PyTypeObject ALGtype;
 #define PyInt_CheckExact	PyLong_CheckExact
 #define PyInt_AS_LONG		PyLong_AS_LONG
-#else
-staticforward PyTypeObject ALGtype;
 #endif
+staticforward PyTypeObject ALGtype;
 
 static ALGobject *
 newALGobject(void)
@@ -186,7 +184,7 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 			PyErr_SetString(PyExc_TypeError,
 					"'counter' keyword parameter is required with CTR mode");
 			return NULL;
-		} else if (counter->ob_type == PCT_CounterBEType || counter->ob_type == PCT_CounterLEType) {
+		} else if (Py_TYPE(counter) == PCT_CounterBEType || Py_TYPE(counter) == PCT_CounterLEType) {
 			counter_shortcut = 1;
 		} else if (!PyCallable_Check(counter)) {
 			PyErr_SetString(PyExc_ValueError, 
