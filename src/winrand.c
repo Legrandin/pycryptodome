@@ -270,11 +270,10 @@ static struct PyModuleDef moduledef = {
  };
 #endif
 
-#ifdef IS_PY3K
 PyMODINIT_FUNC
+#ifdef IS_PY3K
 PyInit_winrandom()
 #else
-void
 initwinrandom()
 #endif
 {

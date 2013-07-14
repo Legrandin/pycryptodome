@@ -742,11 +742,7 @@ static struct PyModuleDef moduledef = {
 #endif
 
 /* Initialization function for the module */
-#ifdef IS_PY3K
 PyMODINIT_FUNC
-#else
-void
-#endif
 _MODULE_NAME (void)
 {
 	PyObject *m;
