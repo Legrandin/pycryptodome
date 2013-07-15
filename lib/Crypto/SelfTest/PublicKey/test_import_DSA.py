@@ -43,7 +43,7 @@ class ImportKeyTests(unittest.TestCase):
         for mname, mvalue in ImportKeyTests.__dict__.items():
             if mname[:4] in ('der_', 'pem_', 'ssh_'):
                 if mname[:4] == 'der_':
-                    mvalue = unhexlify(mvalue)
+                    mvalue = unhexlify(tobytes(mvalue))
                 mvalue = tobytes(mvalue)
                 setattr(self, mname, mvalue)
 
