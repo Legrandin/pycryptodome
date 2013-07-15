@@ -1598,36 +1598,34 @@ PyInit__fastmath (void)
 init_fastmath (void)
 #endif
 {
-    PyObject *_fastmath_module;
-    PyObject *_fastmath_dict;
- 
+    PyObject *m;
+
 #ifdef IS_PY3K
 	if (PyType_Ready(&rsaKeyType) < 0)
 		return NULL;
 	if (PyType_Ready(&dsaKeyType) < 0)
 		return NULL;
 	
-	_fastmath_module = PyModule_Create(&moduledef);
-	if (_fastmath_module == NULL)
+	m = PyModule_Create(&moduledef);
+	if (m == NULL)
         return NULL;
 #else
 	if (PyType_Ready(&rsaKeyType) < 0)
 		return;
 	if (PyType_Ready(&dsaKeyType) < 0)
 		return;
-	_fastmath_module = Py_InitModule ("_fastmath", _fastmath__methods__);
+	m = Py_InitModule ("_fastmath", _fastmath__methods__);
 #endif
- 	_fastmath_dict = PyModule_GetDict (_fastmath_module);
 	fastmathError = PyErr_NewException ("_fastmath.error", NULL, NULL);
 #ifdef IS_PY3K
 	if (fastmathError == NULL) return NULL;
 #endif
- 	PyDict_SetItemString (_fastmath_dict, "error", fastmathError);
+	PyObject_SetAttrString(m, "error", fastmathError);
 
-	PyModule_AddIntConstant(_fastmath_module, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
+	PyModule_AddIntConstant(m, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
 
 #ifdef IS_PY3K
-	return _fastmath_module;
+	return m;
 #endif
 }
 
