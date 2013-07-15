@@ -1598,35 +1598,50 @@ PyInit__fastmath (void)
 init_fastmath (void)
 #endif
 {
-    PyObject *m;
+	PyObject *m = NULL;
 
+	if (PyType_Ready(&rsaKeyType) < 0)
+		goto errout;
+	if (PyType_Ready(&dsaKeyType) < 0)
+		goto errout;
+
+	/* Initialize the module */
 #ifdef IS_PY3K
-	if (PyType_Ready(&rsaKeyType) < 0)
-		return NULL;
-	if (PyType_Ready(&dsaKeyType) < 0)
-		return NULL;
-	
 	m = PyModule_Create(&moduledef);
-	if (m == NULL)
-        return NULL;
 #else
-	if (PyType_Ready(&rsaKeyType) < 0)
-		return;
-	if (PyType_Ready(&dsaKeyType) < 0)
-		return;
 	m = Py_InitModule ("_fastmath", _fastmath__methods__);
 #endif
+	if (m == NULL)
+		goto errout;
+
 	fastmathError = PyErr_NewException ("_fastmath.error", NULL, NULL);
-#ifdef IS_PY3K
-	if (fastmathError == NULL) return NULL;
-#endif
+	if (fastmathError == NULL)
+		goto errout;
 	PyObject_SetAttrString(m, "error", fastmathError);
 
 	PyModule_AddIntConstant(m, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
 
+out:
+	/* Final error check */
+	if (m == NULL && !PyErr_Occurred()) {
+		PyErr_SetString(PyExc_ImportError, "can't initialize module");
+		goto errout;
+	}
+
+	/* Free local objects here */
+
+	/* Return */
 #ifdef IS_PY3K
 	return m;
+#else
+	return;
 #endif
+
+errout:
+	/* Free the module and other global objects here */
+	Py_CLEAR(m);
+	Py_CLEAR(fastmathError);
+	goto out;
 }
 
 /* The first 10000 primes to be used as a base for sieving */

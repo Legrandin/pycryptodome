@@ -300,32 +300,42 @@ static struct PyModuleDef moduledef = {
 PyMODINIT_FUNC
 _MODULE_NAME (void)
 {
-	PyObject *m;
+	PyObject *m = NULL;
 
-#ifdef IS_PY3K
 	if (PyType_Ready(&ALGtype) < 0)
-		return NULL;
+		goto errout;
 
 	/* Create the module and add the functions */
+#ifdef IS_PY3K
 	m = PyModule_Create(&moduledef);
-   if (m == NULL)
-        return NULL;
 #else
-	if (PyType_Ready(&ALGtype) < 0)
-		return;
-
 	m = Py_InitModule3("Crypto.Hash." _MODULE_STRING, ALG_functions, MODULE__doc__);
 #endif
+	if (m == NULL)
+		goto errout;
 
 	/* Add some symbolic constants to the module */
 	PyModule_AddIntConstant(m, "digest_size", DIGEST_SIZE);
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 
-	/* Check for errors */
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module " 
-                              _MODULE_STRING);
+out:
+	/* Final error check, then return */
+	if (m == NULL && !PyErr_Occurred()) {
+		PyErr_SetString(PyExc_ImportError, "can't initialize module");
+		goto errout;
+	}
+
+	/* Free local objects here */
+
+	/* Return */
 #ifdef IS_PY3K
 	return m;
+#else
+	return;
 #endif
+
+errout:
+	/* Free the module and other global objects here */
+	Py_CLEAR(m);
+	goto out;
 }

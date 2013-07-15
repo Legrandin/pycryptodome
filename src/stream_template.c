@@ -277,34 +277,44 @@ static PyTypeObject ALGtype =
 PyMODINIT_FUNC
 _MODULE_NAME (void)
 {
- 	PyObject *m;
- 
-#ifdef IS_PY3K
-	if (PyType_Ready(&ALGtype) < 0)
-		return NULL;
+	PyObject *m = NULL;
 
+	if (PyType_Ready(&ALGtype) < 0)
+		goto errout;
+
+#ifdef IS_PY3K
 	/* Create the module and add the functions */
 	m = PyModule_Create(&moduledef);
-	if (m == NULL)
-        	return NULL;
 #else
-	if (PyType_Ready(&ALGtype) < 0)
-		return;
-
 	/* Create the module and add the functions */
 	m = Py_InitModule("Crypto.Cipher." _MODULE_STRING, modulemethods);
 #endif
- 
- 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
+	if (m == NULL)
+		goto errout;
+
+	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 	PyModule_AddIntConstant(m, "key_size", KEY_SIZE);
 
- 	/* Check for errors */
- 	if (PyErr_Occurred())
- 		Py_FatalError("can't initialize module " _MODULE_STRING);
+out:
+	/* Final error check */
+	if (m == NULL && !PyErr_Occurred()) {
+		PyErr_SetString(PyExc_ImportError, "can't initialize module");
+		goto errout;
+	}
 
+	/* Free local objects here */
+
+	/* Return */
 #ifdef IS_PY3K
 	return m;
+#else
+	return;
 #endif
- }
- 
+
+errout:
+	/* Free the module and other global objects here */
+	Py_CLEAR(m);
+	goto out;
+}
+
 /* vim:set ts=4 sw=4 sts=0 noexpandtab: */

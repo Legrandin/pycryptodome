@@ -271,19 +271,19 @@ PyInit_winrandom()
 initwinrandom()
 #endif
 {
-	PyObject *m;
+	PyObject *m = NULL;
+
+	if (PyType_Ready(&WRtype) < 0)
+		goto errout;
+
+	/* Initialize the module */
 #ifdef IS_PY3K
-	if (PyType_Ready(&WRtype) < 0)
-		return NULL;
-    /* Initialize the module */
-    m = PyModule_Create(&moduledef);
-    if (m == NULL)
-        return NULL;
+	m = PyModule_Create(&moduledef);
 #else
-	if (PyType_Ready(&WRtype) < 0)
-		return NULL;
 	m = Py_InitModule("winrandom", WR_mod_methods);
 #endif
+	if (m == NULL)
+		goto errout;
 
 	/* define Windows CSP Provider Types */
 #ifdef PROV_RSA_FULL
@@ -359,12 +359,26 @@ initwinrandom()
 	PyModule_AddStringConstant(m, "INTEL_DEF_PROV", INTEL_DEF_PROV);
 #endif
 
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module winrandom");
+out:
+	/* Final error check */
+	if (m == NULL && !PyErr_Occurred()) {
+		PyErr_SetString(PyExc_ImportError, "can't initialize module");
+		goto errout;
+	}
 
+	/* Free local objects here */
+
+	/* Return */
 #ifdef IS_PY3K
 	return m;
+#else
+	return;
 #endif
+
+errout:
+	/* Free the module and other global objects here */
+	Py_CLEAR(m);
+	goto out;
 }
 /*
 

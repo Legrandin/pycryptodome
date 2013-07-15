@@ -725,23 +725,20 @@ static struct PyModuleDef moduledef = {
 PyMODINIT_FUNC
 _MODULE_NAME (void)
 {
-	PyObject *m;
+	PyObject *m = NULL;
+	PyObject *abiver = NULL;
 
+	if (PyType_Ready(&ALGtype) < 0)
+		goto errout;
+
+	/* Create the module and add the functions */
 #ifdef IS_PY3K
-	if (PyType_Ready(&ALGtype) < 0)
-		return NULL;
-
-	/* Create the module and add the functions */
 	m = PyModule_Create(&moduledef);
-	if (m == NULL)
-        	return NULL;
 #else
-	if (PyType_Ready(&ALGtype) < 0)
-		return;
-
-	/* Create the module and add the functions */
 	m = Py_InitModule("Crypto.Cipher." _MODULE_STRING, modulemethods);
 #endif
+	if (m == NULL)
+		goto errout;
 
 	PyModule_AddIntConstant(m, "MODE_ECB", MODE_ECB);
 	PyModule_AddIntConstant(m, "MODE_CBC", MODE_CBC);
@@ -755,28 +752,45 @@ _MODULE_NAME (void)
 	/* Import CounterBE and CounterLE from the _counter module */
 	Py_CLEAR(_counter_module);
 	_counter_module = PyImport_ImportModule("Crypto.Util._counter");
-	if (_counter_module) {
-		PCT_CounterBEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterBE");
-		PCT_CounterLEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterLE");
+	if (_counter_module == NULL)
+		goto errout;
+	PCT_CounterBEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterBE");
+	PCT_CounterLEType = (PyTypeObject *)PyObject_GetAttrString(_counter_module, "CounterLE");
 
-		/* Simple ABI version check in case the user doesn't re-compile all of
-		 * the modules during an upgrade. */
-		PyObject *abiver = PyObject_GetAttrString(_counter_module, "_PCT_CTR_ABI_VERSION");
-		if (PCT_CounterBEType == NULL || PyType_Check((PyObject *)PCT_CounterBEType) < 0 ||
-			 PCT_CounterLEType == NULL || PyType_Check((PyObject *)PCT_CounterLEType) < 0 ||
-			 abiver == NULL || PyInt_CheckExact(abiver) < 0 || PyInt_AS_LONG(abiver) != PCT_CTR_ABI_VERSION)
-		{
-			PyErr_SetString(PyExc_ImportError, "Crypto.Util._counter ABI mismatch.  Was PyCrypto incorrectly compiled?");
-		}
-		Py_CLEAR(abiver);
+	/* Simple ABI version check in case the user doesn't re-compile all of
+	 * the modules during an upgrade. */
+	abiver = PyObject_GetAttrString(_counter_module, "_PCT_CTR_ABI_VERSION");
+	if (PCT_CounterBEType == NULL || PyType_Check((PyObject *)PCT_CounterBEType) < 0 ||
+		 PCT_CounterLEType == NULL || PyType_Check((PyObject *)PCT_CounterLEType) < 0 ||
+		 abiver == NULL || PyInt_CheckExact(abiver) < 0 || PyInt_AS_LONG(abiver) != PCT_CTR_ABI_VERSION)
+	{
+		PyErr_SetString(PyExc_ImportError, "Crypto.Util._counter ABI mismatch.  Was PyCrypto incorrectly compiled?");
+		goto errout;
 	}
 
-	/* Check for errors */
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module " _MODULE_STRING);
+out:
+	/* Final error check */
+	if (m == NULL && !PyErr_Occurred()) {
+		PyErr_SetString(PyExc_ImportError, "can't initialize module");
+		goto errout;
+	}
 
+	/* Free local objects here */
+	Py_CLEAR(abiver);
+
+	/* Return */
 #ifdef IS_PY3K
 	return m;
+#else
+	return;
 #endif
+
+errout:
+	/* Free the module and other global objects here */
+	Py_CLEAR(m);
+	Py_CLEAR(_counter_module);
+	Py_CLEAR(PCT_CounterBEType);
+	Py_CLEAR(PCT_CounterLEType);
+	goto out;
 }
 /* vim:set ts=4 sw=4 sts=0 noexpandtab: */

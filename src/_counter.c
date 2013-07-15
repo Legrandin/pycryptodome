@@ -495,30 +495,21 @@ PyInit__counter(void)
 init_counter(void)
 #endif
 {
-    PyObject *m;
+    PyObject *m = NULL;
 
-    /* TODO - Is the error handling here correct? */
-#ifdef IS_PY3K
     if (PyType_Ready(&PCT_CounterLEType) < 0)
-        return NULL;
+        goto errout;
     if (PyType_Ready(&PCT_CounterBEType) < 0)
-        return NULL;
+        goto errout;
 
     /* Initialize the module */
+#ifdef IS_PY3K
     m = PyModule_Create(&moduledef);
-    if (m == NULL)
-        return NULL;
-
 #else
-    if (PyType_Ready(&PCT_CounterLEType) < 0)
-        return;
-    if (PyType_Ready(&PCT_CounterBEType) < 0)
-        return;
-
     m = Py_InitModule("_counter", module_methods);
-    if (m == NULL)
-        return;
 #endif
+    if (m == NULL)
+        goto errout;
 
     /* Add the counter types to the module so that epydoc can see them, and so
      * that we can access them in the block cipher modules. */
@@ -528,9 +519,27 @@ init_counter(void)
     /* Allow block_template.c to do an ABI check */
     PyModule_AddIntConstant(m, "_PCT_CTR_ABI_VERSION", PCT_CTR_ABI_VERSION);
 
+
+out:
+    /* Final error check */
+    if (m == NULL && !PyErr_Occurred()) {
+        PyErr_SetString(PyExc_ImportError, "can't initialize module");
+        goto errout;
+    }
+
+    /* Free local objects here */
+
+    /* Return */
 #ifdef IS_PY3K
     return m;
+#else
+    return;
 #endif
+
+errout:
+    /* Free the module and other global objects here */
+    Py_CLEAR(m);
+    goto out;
 }
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */
