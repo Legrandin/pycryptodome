@@ -32,11 +32,7 @@
 static int
 CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 {
-#ifdef IS_PY3K
     PyBytesObject *prefix=NULL, *suffix=NULL, *initval=NULL;
-#else
-	PyStringObject *prefix=NULL, *suffix=NULL, *initval=NULL;
-#endif
     int allow_wraparound = 0;
     Py_ssize_t size;
 
