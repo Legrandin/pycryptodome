@@ -184,32 +184,25 @@ static PyMethodDef ALG_methods[] = {
 };
 
 static PyObject *
-#ifdef IS_PY3K
 ALG_getattro(PyObject *self, PyObject *attr)
-#else
-ALG_getattr(PyObject *self, char *name)
-#endif
 {
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
+	if (!PyString_Check(attr))
 		goto generic;
- 
-	if (PyUnicode_CompareWithASCIIString(attr, "digest_size")==0)
-		return PyInt_FromLong(DIGEST_SIZE);
-	if (PyUnicode_CompareWithASCIIString(attr, "name")==0)
-		return PyUnicode_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
-#else
-	if (strcmp(name, "digest_size")==0)
-		return PyInt_FromLong(DIGEST_SIZE);
-	if (strcmp(name, "name")==0)
-		return PyString_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
-#endif
 
-#ifdef IS_PY3K
+	if (PyString_CompareWithASCIIString(attr, "digest_size")==0)
+		return PyInt_FromLong(DIGEST_SIZE);
+	if (PyString_CompareWithASCIIString(attr, "name")==0)
+		return PyString_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
+
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	return PyObject_GenericGetAttr(self, attr);
 #else
-	return Py_FindMethod(ALG_methods, self, name);
+	if (PyString_Check(attr) < 0) {
+		PyErr_SetObject(PyExc_AttributeError, attr);
+		return NULL;
+	}
+	return Py_FindMethod(ALG_methods, (PyObject *)self, PyString_AsString(attr));
 #endif
 }
 
@@ -221,16 +214,11 @@ static PyTypeObject ALGtype = {
  	/* methods */
 	(destructor) ALG_dealloc, /*tp_dealloc*/
  	0,			/*tp_print*/
-#ifdef IS_PY3K
-	0, 			/*tp_getattr*/
-#else
-	ALG_getattr, /*tp_getattr*/
-#endif
+	0,			/*tp_getattr*/
  	0,			/*tp_setattr*/
  	0,			/*tp_compare*/
  	0,			/*tp_repr*/
     0,			/*tp_as_number*/
-#ifdef IS_PY3K
 	0,				/*tp_as_sequence */
 	0,				/*tp_as_mapping */
 	0,				/*tp_hash*/
@@ -245,6 +233,7 @@ static PyTypeObject ALGtype = {
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	ALG_methods,		/*tp_methods*/

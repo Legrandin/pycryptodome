@@ -629,54 +629,38 @@ ALGsetattr(PyObject *ptr, char *name, PyObject *v)
 }
 
 static PyObject *
-#ifdef IS_PY3K
 ALGgetattro(PyObject *s, PyObject *attr)
-#else
-ALGgetattr(PyObject *s, char *name)
-#endif
 {
   ALGobject *self = (ALGobject*)s;
 
-#ifdef IS_PY3K
-  if (!PyUnicode_Check(attr))
+  if (!PyString_Check(attr))
 	goto generic;
 
-  if (PyUnicode_CompareWithASCIIString(attr, "IV") == 0)
-#else
-  if (strcmp(name, "IV") == 0) 
-#endif
+  if (PyString_CompareWithASCIIString(attr, "IV") == 0)
     {
       return(PyBytes_FromStringAndSize((char *) self->IV, BLOCK_SIZE));
     }
-#ifdef IS_PY3K
-  if (PyUnicode_CompareWithASCIIString(attr, "mode") == 0)
-#else
-  if (strcmp(name, "mode") == 0)
-#endif
+  if (PyString_CompareWithASCIIString(attr, "mode") == 0)
      {
        return(PyInt_FromLong((long)(self->mode)));
      }
-#ifdef IS_PY3K
-  if (PyUnicode_CompareWithASCIIString(attr, "block_size") == 0)
-#else
-  if (strcmp(name, "block_size") == 0)
-#endif
+  if (PyString_CompareWithASCIIString(attr, "block_size") == 0)
      {
        return PyInt_FromLong(BLOCK_SIZE);
      }
-#ifdef IS_PY3K
-  if (PyUnicode_CompareWithASCIIString(attr, "key_size") == 0)
-#else
-  if (strcmp(name, "key_size") == 0)
-#endif
+  if (PyString_CompareWithASCIIString(attr, "key_size") == 0)
      {
        return PyInt_FromLong(KEY_SIZE);
      }
-#ifdef IS_PY3K
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	return PyObject_GenericGetAttr(s, attr);
 #else
-	return Py_FindMethod(ALGmethods, (PyObject *) self, name);
+	if (PyString_Check(attr) < 0) {
+		PyErr_SetObject(PyExc_AttributeError, attr);
+		return NULL;
+	}
+	return Py_FindMethod(ALGmethods, (PyObject *)self, PyString_AsString(attr));
 #endif
 }
 
@@ -697,16 +681,11 @@ static PyTypeObject ALGtype =
 	/* methods */
 	(destructor) ALGdealloc,	/*tp_dealloc*/
 	0,				/*tp_print*/
-#ifdef IS_PY3K
 	0,				/*tp_getattr*/
-#else
-	ALGgetattr,		/*tp_getattr*/
-#endif
 	ALGsetattr,    /*tp_setattr*/
 	0,			/*tp_compare*/
 	(reprfunc) 0,				/*tp_repr*/
 	0,				/*tp_as_number*/
-#ifdef IS_PY3K
 	0,				/*tp_as_sequence */
 	0,				/*tp_as_mapping */
 	0,				/*tp_hash*/
@@ -721,6 +700,7 @@ static PyTypeObject ALGtype =
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	ALGmethods,		/*tp_methods*/

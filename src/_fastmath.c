@@ -139,22 +139,14 @@ static PyObject *rsaKey_new (PyObject *, PyObject *);
 static PyObject *dsaKey_new (PyObject *, PyObject *);
 
 static void dsaKey_dealloc (dsaKey *);
-#ifdef IS_PY3K
 static PyObject *dsaKey_getattro (dsaKey *, PyObject *);
-#else
-static PyObject *dsaKey_getattr (dsaKey *, char *);
-#endif
 static PyObject *dsaKey__sign (dsaKey *, PyObject *);
 static PyObject *dsaKey__verify (dsaKey *, PyObject *);
 static PyObject *dsaKey_size (dsaKey *, PyObject *);
 static PyObject *dsaKey_has_private (dsaKey *, PyObject *);
 
 static void rsaKey_dealloc (rsaKey *);
-#ifdef IS_PY3K
 static PyObject *rsaKey_getattro (rsaKey *, PyObject *);
-#else
-static PyObject *rsaKey_getattr (rsaKey *, char *);
-#endif
 static PyObject *rsaKey__encrypt (rsaKey *, PyObject *);
 static PyObject *rsaKey__decrypt (rsaKey *, PyObject *);
 static PyObject *rsaKey__verify (rsaKey *, PyObject *);
@@ -359,11 +351,7 @@ static PyTypeObject dsaKeyType = {
 	0,
 	(destructor) dsaKey_dealloc,	/* dealloc */
 	0,				/* print */
-#ifdef IS_PY3K
 	0,				/* getattr */
-#else
-	(getattrfunc) dsaKey_getattr, /* getattr */
-#endif
 	0,              /* setattr */
 	0,				/* compare */
 	0,				/* repr */
@@ -372,7 +360,6 @@ static PyTypeObject dsaKeyType = {
 	0,				/* as_mapping */
 	0,				/* hash */
 	0,				/* call */
-#ifdef IS_PY3K
 	0,				/*tp_str*/
 	(getattrofunc) dsaKey_getattro,	/*tp_getattro*/
 	0,				/*tp_setattro*/
@@ -383,6 +370,7 @@ static PyTypeObject dsaKeyType = {
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	dsaKey__methods__,		/*tp_methods*/
@@ -397,11 +385,7 @@ static PyTypeObject rsaKeyType = {
 	/* methods */
 	(destructor) rsaKey_dealloc,	/* dealloc */
 	0,				/* print */
-#ifdef IS_PY3K
 	0,				/* getattr */
-#else
-	(getattrfunc) rsaKey_getattr,	/* getattr */
-#endif
 	0,              /* setattr */
 	0,				/* compare */
 	0,				/* repr */
@@ -410,7 +394,6 @@ static PyTypeObject rsaKeyType = {
 	0,				/* as_mapping */
 	0,				/* hash */
 	0,				/* call */
-#ifdef IS_PY3K
 	0,				/*tp_str*/
 	(getattrofunc) rsaKey_getattro,	/*tp_getattro*/
 	0,				/*tp_setattro*/
@@ -421,6 +404,7 @@ static PyTypeObject rsaKeyType = {
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	rsaKey__methods__,		/*tp_methods*/
@@ -468,43 +452,19 @@ dsaKey_dealloc (dsaKey * key)
 }
 
 static PyObject *
-#ifdef IS_PY3K
 dsaKey_getattro (dsaKey * key, PyObject *attr)
-#else
-dsaKey_getattr (dsaKey * key, char *attr)
-#endif
 {
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
+	if (!PyString_Check(attr))
 		goto generic;
-	if (PyUnicode_CompareWithASCIIString(attr,"y") == 0)
-#else
-	if (strcmp (attr, "y") == 0)
-#endif
+	if (PyString_CompareWithASCIIString(attr,"y") == 0)
 		return mpzToLongObj (key->y);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "g") == 0)
-#else
-	else if (strcmp (attr, "g") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "g") == 0)
 		return mpzToLongObj (key->g);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "p") == 0)
-#else
-	else if (strcmp (attr, "p") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "p") == 0)
 		return mpzToLongObj (key->p);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "q") == 0)
-#else
-	else if (strcmp (attr, "q") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "q") == 0)
 		return mpzToLongObj (key->q);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "x") == 0)
-#else
-	else if (strcmp (attr, "x") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "x") == 0)
 	{
 		if (mpz_size (key->x) == 0)
 		{
@@ -515,11 +475,15 @@ dsaKey_getattr (dsaKey * key, char *attr)
 		return mpzToLongObj (key->x);
 	}
 	else
-#ifdef IS_PY3K
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 		return PyObject_GenericGetAttr((PyObject *) key, attr);
 #else
-		return Py_FindMethod (dsaKey__methods__, (PyObject *) key, attr);
+		if (PyString_Check(attr) < 0) {
+			PyErr_SetObject(PyExc_AttributeError, attr);
+			return NULL;
+		}
+		return Py_FindMethod(dsaKey__methods__, (PyObject *)key, PyString_AsString(attr));
 #endif
 }
 
@@ -734,31 +698,15 @@ rsaKey_dealloc (rsaKey * key)
 }
 
 static PyObject *
-#ifdef IS_PY3K
 rsaKey_getattro (rsaKey * key, PyObject *attr)
-#else
-rsaKey_getattr (rsaKey * key, char *attr)
-#endif
 {
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
+	if (!PyString_Check(attr))
 		goto generic;
-	if (PyUnicode_CompareWithASCIIString(attr, "n") == 0)
-#else
-	if (strcmp (attr, "n") == 0)
-#endif
+	if (PyString_CompareWithASCIIString(attr, "n") == 0)
 		return mpzToLongObj (key->n);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "e") == 0)
-#else
-	else if (strcmp (attr, "e") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "e") == 0)
 		return mpzToLongObj (key->e);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "d") == 0)
-#else
-	else if (strcmp (attr, "d") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "d") == 0)
 	{
 		if (mpz_size (key->d) == 0)
 		{
@@ -768,11 +716,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		}
 		return mpzToLongObj (key->d);
 	}
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "p") == 0)
-#else
-	else if (strcmp (attr, "p") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "p") == 0)
 	{
 		if (mpz_size (key->p) == 0)
 		{
@@ -782,11 +726,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		}
 		return mpzToLongObj (key->p);
 	}
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "q") == 0)
-#else
-	else if (strcmp (attr, "q") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "q") == 0)
 	{
 		if (mpz_size (key->q) == 0)
 		{
@@ -796,11 +736,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		}
 		return mpzToLongObj (key->q);
 	}
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "u") == 0)
-#else
-	else if (strcmp (attr, "u") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "u") == 0)
 	{
 		if (mpz_size (key->u) == 0)
 		{
@@ -811,12 +747,15 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		return mpzToLongObj (key->u);
 	}
 	else
-#ifdef IS_PY3K
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 		return PyObject_GenericGetAttr((PyObject *) key, attr);
 #else
-		return Py_FindMethod (rsaKey__methods__, 
-				      (PyObject *) key, attr);
+		if (PyString_Check(attr) < 0) {
+			PyErr_SetObject(PyExc_AttributeError, attr);
+			return NULL;
+		}
+		return Py_FindMethod(rsaKey__methods__, (PyObject *)key, PyString_AsString(attr));
 #endif
 }
 

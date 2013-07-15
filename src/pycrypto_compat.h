@@ -34,6 +34,9 @@
 # define PyInt_AS_LONG PyLong_AS_LONG
 # define PyInt_CheckExact PyLong_CheckExact
 # define PyInt_FromLong PyLong_FromLong
+# define PyString_Check PyUnicode_Check
+# define PyString_CompareWithASCIIString PyUnicode_CompareWithASCIIString
+# define PyString_FromString PyUnicode_FromString
 # define staticforward static
 #else
 # define PyBytes_GET_SIZE PyString_GET_SIZE
@@ -43,16 +46,18 @@
 # define PyBytes_Size PyString_Size
 # define PyBytes_AsString PyString_AsString
 # define PyBytesObject PyStringObject
+# define PyString_CompareWithASCIIString(o,s) \
+    (PyString_Check(o) ? strcmp(PyString_AsString(o),(s)) : -1)  /* NB: only compares up to the first NUL byte */
 # if PY_MINOR_VERSION <= 5 /* Python 2.5 and earlier */
 #  define Py_TYPE(v) ((v)->ob_type)
 #  define PyLong_MASK MASK
 #  define PyLong_SHIFT SHIFT
-#  define PyUnicode_FromString PyString_FromString
 #  define PyVarObject_HEAD_INIT(a,b) PyObject_HEAD_INIT(a) 0,
 # endif
 # if PY_MINOR_VERSION <= 1 /* Python 2.1 only */
 #  define METH_O METH_OLDARGS   /* METH_O is a subset of what METH_OLDARGS provides */
 #  define PyInt_CheckExact PyInt_Check
+#  define PyString_CheckExact PyString_Check
 #  define PyType_Ready(t) (((t)->ob_type = &PyType_Type) ? 0 : 0)
 # endif
 #endif

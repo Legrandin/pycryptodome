@@ -191,11 +191,7 @@ static PyMethodDef WR_mod_methods[] = {
 };
 
 static PyObject *
-#ifdef IS_PY3K
 WRgetattro(PyObject *s, PyObject *attr)
-#else
-WRgetattr(PyObject *s, char *name)
-#endif
 {
 	WRobject *self = (WRobject*)s;
 	if (! is_WRobject(self)) {
@@ -203,19 +199,19 @@ WRgetattr(PyObject *s, char *name)
 		    "WinRandom trying to getattr with non-WinRandom object");
 		return NULL;
 	}
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
+	if (!PyString_Check(attr))
 		goto generic;
-	if (PyUnicode_CompareWithASCIIString(attr, "hcp") == 0)
-#else
-	if (strcmp(name, "hcp") == 0)
-#endif
+	if (PyString_CompareWithASCIIString(attr, "hcp") == 0)
 		return PyInt_FromLong((long) self->hcp);
-#ifdef IS_PY3K
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	return PyObject_GenericGetAttr(s, attr);
 #else
-	return Py_FindMethod(WRmethods, (PyObject *) self, name);
+	if (PyString_Check(attr) < 0) {
+		PyErr_SetObject(PyExc_AttributeError, attr);
+		return NULL;
+	}
+	return Py_FindMethod(WRmethods, (PyObject *)self, PyString_AsString(attr));
 #endif
 }
 
@@ -228,9 +224,6 @@ static PyTypeObject WRtype =
  	/* methods */
 	(destructor) WRdealloc,		/*tp_dealloc*/
 	0,				/*tp_print*/
-#ifndef IS_PY3K
-	WRgetattr,		/*tp_getattr*/
-#else
 	0,				/*tp_getattr*/
 	0,				/*tp_setattr*/
 	0,				/*tp_compare*/
@@ -250,6 +243,7 @@ static PyTypeObject WRtype =
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	WRmethods,		/*tp_methods*/

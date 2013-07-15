@@ -300,54 +300,46 @@ static PyMethodDef CounterBEObject_methods[] = {
  * so we hack it here. */
 
 static PyObject *
-#ifdef IS_PY3K
 CounterLEObject_getattro(PyObject *s, PyObject *attr)
-#else
-CounterLEObject_getattr(PyObject *s, char *name)
-#endif
 {
     PCT_CounterObject *self = (PCT_CounterObject *)s;
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
-		goto generic;
+    if (!PyString_Check(attr))
+        goto generic;
 
-	if (PyUnicode_CompareWithASCIIString(attr, "carry") == 0) {
-#else
-    if (strcmp(name, "carry") == 0) {
-#endif
+    if (PyString_CompareWithASCIIString(attr, "carry") == 0) {
         return PyInt_FromLong((long)self->carry);
     }
-#ifdef IS_PY3K
   generic:
-	return PyObject_GenericGetAttr(s, attr);
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
+    return PyObject_GenericGetAttr(s, attr);
 #else
-    return Py_FindMethod(CounterLEObject_methods, (PyObject *)self, name);
+    if (PyString_Check(attr) < 0) {
+        PyErr_SetObject(PyExc_AttributeError, attr);
+        return NULL;
+    }
+    return Py_FindMethod(CounterLEObject_methods, (PyObject *)self, PyString_AsString(attr));
 #endif
 }
 
 static PyObject *
-#ifdef IS_PY3K
 CounterBEObject_getattro(PyObject *s, PyObject *attr)
-#else
-CounterBEObject_getattr(PyObject *s, char *name)
-#endif
 {
     PCT_CounterObject *self = (PCT_CounterObject *)s;
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
-		goto generic;
+    if (!PyString_Check(attr))
+        goto generic;
 
-	if (PyUnicode_CompareWithASCIIString(attr, "carry") == 0) {
-#else
-    if (strcmp(name, "carry") == 0) {
-#endif
+    if (PyString_CompareWithASCIIString(attr, "carry") == 0) {
         return PyInt_FromLong((long)self->carry);
     }
-#ifdef IS_PY3K
   generic:
-	return PyObject_GenericGetAttr(s, attr);
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
+    return PyObject_GenericGetAttr(s, attr);
 #else
-    return Py_FindMethod(CounterBEObject_methods, (PyObject *)self, name);
+    if (PyString_Check(attr) < 0) {
+        PyErr_SetObject(PyExc_AttributeError, attr);
+        return NULL;
+    }
+    return Py_FindMethod(CounterBEObject_methods, (PyObject *)self, PyString_AsString(attr));
 #endif
 }
 
@@ -360,11 +352,7 @@ PCT_CounterLEType = {
 	/* methods */
     (destructor)CounterObject_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
-#ifdef IS_PY3K
-	0,								/* tp_getattr */
-#else
-    CounterLEObject_getattr,        /* tp_getattr */
-#endif
+    0,                              /* tp_getattr */
     0,                              /* tp_setattr */
     0,                              /* tp_compare */
     0,                              /* tp_repr */
@@ -374,20 +362,16 @@ PCT_CounterLEType = {
     0,                              /* tp_hash */
     (ternaryfunc)CounterObject_call, /* tp_call */
     0,                              /* tp_str */
-#ifdef IS_PY3K
-	CounterLEObject_getattro,		 /* tp_getattro */
-#else
-    0,                              /* tp_getattro */
-#endif
+    CounterLEObject_getattro,       /* tp_getattro */
     0,                              /* tp_setattro */
     0,                              /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,             /* tp_flags */
     "Counter (little endian)",      /* tp_doc */
-#ifdef IS_PY3K
 	0,								/*tp_traverse*/
 	0,								/*tp_clear*/
 	0,								/*tp_richcompare*/
 	0,								/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,								/*tp_iter*/
 	0,								/*tp_iternext*/
 	CounterLEObject_methods,		/*tp_methods*/
@@ -402,11 +386,7 @@ PCT_CounterBEType = {
     0,                              /* tp_itemsize */
     (destructor)CounterObject_dealloc, /* tp_dealloc */
     0,                              /* tp_print */
-#ifdef IS_PY3K
-	0,								/* tp_getattr */
-#else
-    CounterBEObject_getattr,        /* tp_getattr */
-#endif
+    0,                              /* tp_getattr */
     0,                              /* tp_setattr */
     0,                              /* tp_compare */
     0,                              /* tp_repr */
@@ -416,20 +396,16 @@ PCT_CounterBEType = {
     0,                              /* tp_hash */
     (ternaryfunc)CounterObject_call, /* tp_call */
     0,                              /* tp_str */
-#ifdef IS_PY3K
-    CounterBEObject_getattro,		 /* tp_getattro */
-#else
-    0,                              /* tp_getattro */
-#endif
+    CounterBEObject_getattro,       /* tp_getattro */
     0,                              /* tp_setattro */
     0,                              /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,             /* tp_flags */
     "Counter (big endian)",         /* tp_doc */
-#ifdef IS_PY3K
 	0,								/*tp_traverse*/
 	0,								/*tp_clear*/
 	0,								/*tp_richcompare*/
 	0,								/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,								/*tp_iter*/
 	0,								/*tp_iternext*/
 	CounterBEObject_methods,		/*tp_methods*/
