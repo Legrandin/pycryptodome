@@ -408,11 +408,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				if (!PyBytes_Check(ctr))
 				{
 					PyErr_SetString(PyExc_TypeError,
-#ifdef IS_PY3K
-							"CTR counter function didn't return bytes");
-#else
-							"CTR counter function didn't return a string");
-#endif
+							"CTR counter function didn't return a bytestring");
 					Py_DECREF(ctr);
 					free(buffer);
 					return NULL;
@@ -420,11 +416,7 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 				if (PyBytes_Size(ctr) != BLOCK_SIZE) {
 					PyErr_Format(PyExc_TypeError,
 						     "CTR counter function returned "
-#ifdef IS_PY3K
-						     "bytes not of length %i",
-#else
-						     "string not of length %i",
-#endif
+						     "bytestring not of length %i",
 						     BLOCK_SIZE);
 					Py_DECREF(ctr);
 					free(buffer);
@@ -610,11 +602,7 @@ ALGsetattr(PyObject *ptr, char *name, PyObject *v)
   if (!PyBytes_Check(v))
     {
       PyErr_SetString(PyExc_TypeError,
-#ifdef IS_PY3K
-			  "IV attribute of block cipher object must be bytes");
-#else
-		      "IV attribute of block cipher object must be string");
-#endif
+			  "IV attribute of block cipher object must be bytestring");
       return -1;
     }
   if (PyBytes_Size(v)!=BLOCK_SIZE) 
