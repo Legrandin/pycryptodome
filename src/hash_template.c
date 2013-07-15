@@ -48,6 +48,9 @@ typedef struct {
  */
 staticforward PyTypeObject ALGtype;
 
+static char ALG__doc__[] =
+"Class that implements a " _MODULE_STRING " hash.";
+
 static ALGobject *
 newALGobject(void)
 {
@@ -72,8 +75,16 @@ ALG_dealloc(PyObject *ptr)
 
 /* External methods for a hashing object */
 
-static char ALG_copy__doc__[] = 
-"copy(): Return a copy of the hashing object.";
+static char ALG_copy__doc__[] =
+"copy()\n"
+"Return a copy (\"clone\") of the hash object.\n"
+"\n"
+"The copy will have the same internal state as the original hash\n"
+"object.\n"
+"This can be used to efficiently compute the digests of strings that\n"
+"share a common initial substring.\n"
+"\n"
+":Return: A hash object of the same type\n";
 
 static PyObject *
 ALG_copy(ALGobject *self, PyObject *args)
@@ -91,8 +102,15 @@ ALG_copy(ALGobject *self, PyObject *args)
 	return((PyObject *)newobj); 
 }
 
-static char ALG_digest__doc__[] = 
-"digest(): Return the digest value as a string of binary data.";
+static char ALG_digest__doc__[] =
+"digest()\n"
+"Return the **binary** (non-printable) digest of the message that has been hashed so far.\n"
+"\n"
+"This method does not change the state of the hash object.\n"
+"You can continue updating the object after calling this function.\n"
+"\n"
+":Return: A byte string of `digest_size` bytes. It may contain non-ASCII\n"
+"characters, including null bytes.\n";
 
 static PyObject *
 ALG_digest(ALGobject *self, PyObject *args)
@@ -103,8 +121,14 @@ ALG_digest(ALGobject *self, PyObject *args)
 	return (PyObject *)hash_digest(&(self->st));
 }
 
-static char ALG_hexdigest__doc__[] = 
-"hexdigest(): Return the digest value as a string of hexadecimal digits.";
+static char ALG_hexdigest__doc__[] =
+"hexdigest()\n"
+"Return the **printable** digest of the message that has been hashed so far.\n"
+"\n"
+"This method does not change the state of the hash object.\n"
+"\n"
+":Return: A string of 2* `digest_size` characters. It contains only\n"
+"hexadecimal ASCII digits.\n";
 
 static PyObject *
 ALG_hexdigest(ALGobject *self, PyObject *args)
@@ -143,8 +167,22 @@ ALG_hexdigest(ALGobject *self, PyObject *args)
 	return retval;
 }
 
-static char ALG_update__doc__[] = 
-"update(string): Update this hashing object's state with the provided string.";
+static char ALG_update__doc__[] =
+"update(data)\n"
+"Continue hashing of a message by consuming the next chunk of data.\n"
+"\n"
+"Repeated calls are equivalent to a single call with the concatenation\n"
+"of all the arguments. In other words:\n"
+"\n"
+"   >>> m.update(a); m.update(b)\n"
+"\n"
+"is equivalent to:\n"
+"\n"
+"   >>> m.update(a+b)\n"
+"\n"
+":Parameters:\n"
+"  data : byte string\n"
+"    The next chunk of the message being hashed.\n";
 
 static PyObject *
 ALG_update(ALGobject *self, PyObject *args)
@@ -167,10 +205,16 @@ ALG_update(ALGobject *self, PyObject *args)
 
 /** Forward declaration for this module's new() method **/
 static char ALG_new__doc__[] =
-"new([string]): Return a new " _MODULE_STRING 
-" hashing object.  An optional string "
-"argument may be provided; if present, this string will be "
-"automatically hashed into the initial state of the object."; 
+"new(data=None)\n"
+"Return a fresh instance of the hash object.\n"
+"\n"
+":Parameters:\n"
+"   data : byte string\n"
+"    The very first chunk of the message to hash.\n"
+"    It is equivalent to an early call to `" _MODULE_STRING ".update()`.\n"
+"    Optional.\n"
+"\n"
+":Return: A `" _MODULE_STRING "` object\n";
 
 static PyObject *ALG_new(PyObject*, PyObject*);
 
@@ -228,7 +272,7 @@ static PyTypeObject ALGtype = {
 	0,				/*tp_setattro*/
 	0,				/*tp_as_buffer*/
 	Py_TPFLAGS_DEFAULT,		/*tp_flags*/
-	0,				/*tp_doc*/
+	ALG__doc__,	/*tp_doc*/
 	0,				/*tp_traverse*/
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
@@ -301,6 +345,7 @@ PyMODINIT_FUNC
 _MODULE_NAME (void)
 {
 	PyObject *m = NULL;
+	PyObject *__all__ = NULL;
 
 	if (PyType_Ready(&ALGtype) < 0)
 		goto errout;
@@ -314,9 +359,23 @@ _MODULE_NAME (void)
 	if (m == NULL)
 		goto errout;
 
+	/* Add the type object to the module (using the name of the module itself),
+	 * so that its methods docstrings are discoverable by introspection tools. */
+	PyObject_SetAttrString(m, _MODULE_STRING, (PyObject *)&ALGtype);
+
 	/* Add some symbolic constants to the module */
 	PyModule_AddIntConstant(m, "digest_size", DIGEST_SIZE);
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
+
+	/* Create __all__ (to help generate documentation) */
+	__all__ = PyList_New(4);
+	if (__all__ == NULL)
+		goto errout;
+	PyList_SetItem(__all__, 0, PyString_FromString(_MODULE_STRING));	/* This is the ALGType object */
+	PyList_SetItem(__all__, 1, PyString_FromString("new"));
+	PyList_SetItem(__all__, 2, PyString_FromString("digest_size"));
+	PyList_SetItem(__all__, 3, PyString_FromString("block_size"));
+	PyObject_SetAttrString(m, "__all__", __all__);
 
 out:
 	/* Final error check, then return */
@@ -326,6 +385,7 @@ out:
 	}
 
 	/* Free local objects here */
+	Py_CLEAR(__all__);
 
 	/* Return */
 #ifdef IS_PY3K

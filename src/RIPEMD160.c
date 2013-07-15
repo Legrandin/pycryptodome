@@ -68,7 +68,13 @@ static char MODULE__doc__[] =
     "extensively as SHA-1. Moreover, it provides an informal security level of just\n"
     "80bits.\n"
     "\n"
-    ".. _RIPEMD-160: http://homes.esat.kuleuven.be/~bosselae/ripemd160.html\n";
+    ".. _RIPEMD-160: http://homes.esat.kuleuven.be/~bosselae/ripemd160.html\n"
+    "\n"
+    ":Variables:\n"
+    " block_size\n"
+    "    The internal block size of the hash algorithm in bytes.\n"
+    " digest_size\n"
+    "    The size of the resulting hash in bytes.\n";
 
 #define RIPEMD160_MAGIC 0x9f19dd68u
 typedef struct {

@@ -278,6 +278,7 @@ PyMODINIT_FUNC
 _MODULE_NAME (void)
 {
 	PyObject *m = NULL;
+	PyObject *__all__ = NULL;
 
 	if (PyType_Ready(&ALGtype) < 0)
 		goto errout;
@@ -292,8 +293,23 @@ _MODULE_NAME (void)
 	if (m == NULL)
 		goto errout;
 
+	/* Add the type object to the module (using the name of the module itself),
+	 * so that its methods docstrings are discoverable by introspection tools. */
+	PyObject_SetAttrString(m, _MODULE_STRING, (PyObject *)&ALGtype);
+
+	/* Add some symbolic constants to the module */
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 	PyModule_AddIntConstant(m, "key_size", KEY_SIZE);
+
+	/* Create __all__ (to help generate documentation) */
+	__all__ = PyList_New(4);
+	if (__all__ == NULL)
+		goto errout;
+	PyList_SetItem(__all__, 0, PyString_FromString(_MODULE_STRING));	/* This is the ALGType object */
+	PyList_SetItem(__all__, 1, PyString_FromString("new"));
+	PyList_SetItem(__all__, 2, PyString_FromString("block_size"));
+	PyList_SetItem(__all__, 3, PyString_FromString("key_size"));
+	PyObject_SetAttrString(m, "__all__", __all__);
 
 out:
 	/* Final error check */
@@ -303,6 +319,7 @@ out:
 	}
 
 	/* Free local objects here */
+	Py_CLEAR(__all__);
 
 	/* Return */
 #ifdef IS_PY3K
