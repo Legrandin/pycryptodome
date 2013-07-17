@@ -61,6 +61,8 @@ from Crypto.Random.random import StrongRandom
 from Crypto.Util.asn1 import DerSequence
 from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
 
+from Crypto.Hash import HMAC
+
 
 class DSS_SigScheme(object):
     """This signature scheme can perform DSS signature or verification."""
@@ -79,7 +81,9 @@ class DSS_SigScheme(object):
             If it only has the public half, verification is possible
             but not signature generation.
 
-            If *L* and *N* are the bit lengths of the modules *p* and *q*,
+            Let *L* and *N* be the bit lengths of the modules *p* and *q*.
+
+            If mode is *'fips-186-3'*,
             the combination *(L,N)* must apper in the following list,
             in compliance to section 4.2 of `FIPS-186`__:
 
@@ -93,7 +97,13 @@ class DSS_SigScheme(object):
             in a FIPS compliant way.
 
           mode : string
-            The parameter must have value *'fips-186-3'*.
+            The parameter can take these values:
+
+            - *'fips-186-3'*. The signature generation is carried out
+              according to `FIPS-186`__: the nonce *k* is taken from the RNG.
+            - *'deterministic-dsa-draft-02'*. The signature generation
+              process does not rely on a random generator.
+              See the `most recent IETF draft`__.
 
           encoding : string
             How the signature is encoded. This value determines the output of
@@ -110,8 +120,11 @@ class DSS_SigScheme(object):
 
           randfunc : callable
             The source of randomness. If `None`, the internal RNG is used.
+            It is not used under mode *'deterministic-dsa-draft-02'*.
 
         .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
+        .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
+        .. __: http://www.ietf.org/id/draft-pornin-deterministic-dsa-02.txt
         """
 
         # The goal of the 'mode' parameter is to avoid to
@@ -120,7 +133,10 @@ class DSS_SigScheme(object):
         # Over time, such version will be superseded by (for instance)
         # FIPS 186-4 and it will be odd to have -3 as default.
 
-        if mode not in ('fips-186-3', ):
+        self._deterministic = False
+        if mode == 'deterministic-dsa-draft-02':
+            self._deterministic = True
+        elif mode not in ('fips-186-3', ):
             raise ValueError("Unknown DSS mode '%s'" % mode)
 
         if encoding not in ('binary', 'der'):
@@ -133,10 +149,12 @@ class DSS_SigScheme(object):
         self._randfunc = randfunc
 
         # Verify that lengths of p and q are standard compliant
-        self._l, self._n = [bit_size(x) >> 3 for x in (key.p, key.q)]
-        if (self._l * 8, self._n * 8) not in self.fips_186_3_ln:
-            raise ValueError("L/N (%d, %d) is not compliant to FIPS 186-3" %
-                             (self._l, self._n))
+        self._l, self._n = [(bit_size(x) + 7) >> 3 for x in (key.p, key.q)]
+        if not self._deterministic:
+            if (self._l * 8, self._n * 8) not in self.fips_186_3_ln:
+                raise ValueError("L/N (%d, %d) is not compliant"
+                                 " to FIPS 186-3" %
+                                 (self._l, self._n))
         self._key = key
 
     def can_sign(self):
@@ -144,6 +162,73 @@ class DSS_SigScheme(object):
         for signing messages."""
 
         return self._key.has_private()
+
+    def _bits2int(self, bstr):
+        """See 2.3.2 in draft-pornin-deterministic-dsa-02"""
+
+        result = bytes_to_long(bstr)
+        q_len = bit_size(self._key.q)
+        b_len = len(bstr) * 8
+        if b_len > q_len:
+            result >>= (b_len - q_len)
+        return result
+
+    def _int2octets(self, int_mod_q):
+        """See 2.3.3 in draft-pornin-deterministic-dsa-02"""
+
+        if not (0 < int_mod_q < self._key.q):
+            raise ValueError("Wrong input to int2octets()")
+        return long_to_bytes(int_mod_q, self._n)
+
+    def _bits2octets(self, bstr):
+        """See 2.3.4 in draft-pornin-deterministic-dsa-02"""
+
+        z1 = self._bits2int(bstr)
+        if z1 < self._key.q:
+            z2 = z1
+        else:
+            z2 = z1 - self._key.q
+        return self._int2octets(z2)
+
+    def _compute_nonce(self, mhash):
+        """Generate k in a deterministic way"""
+
+        # See section 3.2 in draft-pornin-deterministic-dsa-02.txt
+        # Step a
+        h1 = mhash.digest()
+        # Step b
+        mask_v = bchr(1) * mhash.digest_size
+        # Step c
+        nonce_k = bchr(0) * mhash.digest_size
+
+        for int_oct in 0, 1:
+            # Step d/f
+            nonce_k = HMAC.new(nonce_k,
+                               mask_v + bchr(int_oct) +
+                               self._int2octets(self._key.x) +
+                               self._bits2octets(h1), mhash).digest()
+            # Step e/g
+            mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
+
+        nonce = -1
+        while not (0 < nonce < self._key.q):
+            # Step h.C (second part)
+            if nonce != -1:
+                nonce_k = HMAC.new(nonce_k, mask_v + bchr(0),
+                                   mhash).digest()
+                mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
+
+            # Step h.A
+            mask_t = b("")
+
+            # Step h.B
+            while len(mask_t) < self._n:
+                mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
+                mask_t += mask_v
+
+            # Step h.C (first part)
+            nonce = self._bits2int(mask_t)
+        return nonce
 
     def sign(self, mhash):
         """Produce the DSS signature of a message.
@@ -153,8 +238,8 @@ class DSS_SigScheme(object):
             The hash that was carried out over the message.
             The object belongs to the `Crypto.Hash` package.
 
-            The hash must be a FIPS approved secure hash
-            (SHA-1 or a member of the SHA-2 family).
+            Under mode *'fips-186-3'*, the hash must be a FIPS
+            approved secure hash (SHA-1 or a member of the SHA-2 family).
 
         :Return: The signature encoded as a byte string.
         :Raise ValueError:
@@ -163,21 +248,24 @@ class DSS_SigScheme(object):
             If the DSA key has no private half.
         """
 
-        if self._n > mhash.digest_size * 8:
-            raise ValueError("Hash is not long enough")
-        if not mhash.name.upper().startswith("SHA"):
-            raise ValueError("Hash %s does not belong to SHS" % mhash.name)
-
         # Generate the nonce k (critical!)
-        rng = StrongRandom(randfunc=self._randfunc)
-        nonce = rng.randint(1, self._key.q - 1)
+        if self._deterministic:
+            nonce = self._compute_nonce(mhash)
+        else:
+            if self._n > mhash.digest_size * 8:
+                raise ValueError("Hash is not long enough")
+
+            if not mhash.name.upper().startswith("SHA"):
+                raise ValueError("Hash %s does not belong to SHS" % mhash.name)
+
+            rng = StrongRandom(randfunc=self._randfunc)
+            nonce = rng.randint(1, self._key.q - 1)
 
         # Perform signature using the crippled API
         z = mhash.digest()[:self._n]
         sig_pair = self._key.sign(z, nonce)
 
         # Encode the signature into a single byte string
-
         if self._encoding == 'binary':
             output = b("").join([long_to_bytes(x, self._n)
                                  for x in sig_pair])
@@ -202,8 +290,9 @@ class DSS_SigScheme(object):
             The hash that was carried out over the message.
             This is an object belonging to the `Crypto.Hash` module.
 
-            The hash must be a FIPS approved secure hash (SHA-1 or
-            a member of the SHA-2 family).
+
+            Under mode *'fips-186-3'*, the hash must be a FIPS
+            approved secure hash (SHA-1 or a member of the SHA-2 family).
 
           signature : byte string
             The signature that needs to be validated.
@@ -211,10 +300,11 @@ class DSS_SigScheme(object):
         :Return: True if verification is correct. False otherwise.
         """
 
-        if self._n > mhash.digest_size * 8:
-            raise ValueError("Hash is not long enough")
-        if not mhash.name.lower().startswith("sha"):
-            raise ValueError("Hash %s does not belong to SHS" % mhash.name)
+        if not self._deterministic:
+            if self._n > mhash.digest_size * 8:
+                raise ValueError("Hash is not long enough")
+            if not mhash.name.lower().startswith("sha"):
+                raise ValueError("Hash %s does not belong to SHS" % mhash.name)
 
         if self._encoding == 'binary':
             if len(signature) != (2 * self._n):
@@ -262,7 +352,13 @@ def new(key, mode, encoding='binary', randfunc=None):
         - (3072, 256)
 
       mode : string
-        The parameter must have value *'fips-186-3'*.
+        The parameter can take these values:
+
+        - *'fips-186-3'*. The signature generation is carried out
+          according to `FIPS-186`__: the nonce *k* is taken from the RNG.
+        - *'deterministic-dsa-draft-02'*. The signature generation
+          process does not rely on a random generator.
+          See the `most recent IETF draft`__.
 
       encoding : string
         How the signature is encoded. This value determines the output of
@@ -279,8 +375,11 @@ def new(key, mode, encoding='binary', randfunc=None):
 
       randfunc : callable
         The source of randomness. If ``None``, the internal RNG is used.
+        It is not used under mode *'deterministic-dsa-draft-02'*.
 
     .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
+    .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
+    .. __: http://www.ietf.org/id/draft-pornin-deterministic-dsa-02.txt
     """
 
     return DSS_SigScheme(key, mode, encoding, randfunc)
