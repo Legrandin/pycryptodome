@@ -107,6 +107,18 @@ class DSATest(unittest.TestCase):
         self._test_signing(dsaObj)
         self._test_verification(dsaObj)
 
+    def test_domain1(self):
+        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
+        dsa_key_1 = self.dsa.construct((y, g, p, q))
+        domain_params = dsa_key_1.domain()
+
+        dsa_key_2 = self.dsa.generate(1024, domain=domain_params)
+        self.assertEqual(dsa_key_1.key.p, dsa_key_2.key.p)
+        self.assertEqual(dsa_key_1.key.q, dsa_key_2.key.q)
+        self.assertEqual(dsa_key_1.key.g, dsa_key_2.key.g)
+
+        self.assertEqual(dsa_key_1.domain(), dsa_key_2.domain())
+
     def _check_private_key(self, dsaObj):
         # Check capabilities
         self.assertEqual(1, dsaObj.has_private())
