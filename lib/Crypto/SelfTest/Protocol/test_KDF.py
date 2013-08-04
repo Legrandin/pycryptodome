@@ -45,7 +45,7 @@ class PBKDF1_Tests(unittest.TestCase):
             # From http://www.di-mgt.com.au/cryptoKDFs.html#examplespbkdf
             ("password","78578E5A5D63CB06",16,1000,"DC19847E05C64D2FAF10EBFB4A3D2A20"),
     )
-    
+
     def test1(self):
         v = self._testData[0]
         res = PBKDF1(v[0], t2b(v[1]), v[2], v[3], SHA1)
@@ -71,7 +71,7 @@ class PBKDF2_Tests(unittest.TestCase):
                                     25, 4096,       "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038"),
             ( 'pass\x00word',"7361006c74",16,4096,  "56fa6aa75548099dcc37d7f03425e0c3"),
     )
-    
+
     def test1(self):
         # Test only for HMAC-SHA1 as PRF
 

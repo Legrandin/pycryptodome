@@ -385,7 +385,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
 
                         rng = Random.new().read
                         key = MyKey(RSA.generate(1024,rng))
-                         
+
                         # Helper function to monitor what's request from MGF
                         global mgfcalls
                         def newMGF(seed,maskLen):

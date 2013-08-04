@@ -32,7 +32,7 @@ The company eventually published its full specification in RFC2268_.
 
 RC2 has a fixed data block size of 8 bytes. Length of its keys can vary from
 8 to 128 bits. One particular property of RC2 is that the actual
-cryptographic strength of the key (*effective key length*) can be reduced 
+cryptographic strength of the key (*effective key length*) can be reduced
 via a parameter.
 
 Even though RC2 is not cryptographically broken, it has not been analyzed as
@@ -66,7 +66,7 @@ class RC2Cipher (blockalgo.BlockAlgo):
 
     def __init__(self, key, *args, **kwargs):
         """Initialize an ARC2 cipher object
-        
+
         See also `new()` at the module level."""
         blockalgo.BlockAlgo.__init__(self, _ARC2, key, *args, **kwargs)
 

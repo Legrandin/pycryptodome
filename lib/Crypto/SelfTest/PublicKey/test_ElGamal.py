@@ -151,7 +151,7 @@ class ElGamalTest(unittest.TestCase):
             tv2['key'] += [tv2[c]]
             del tv2[c]
         return tv2
- 
+
     def _test_random_key(self, bits):
         elgObj = ElGamal.generate(bits, Random.new().read)
         self._check_private_key(elgObj)

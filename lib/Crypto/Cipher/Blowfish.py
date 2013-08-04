@@ -60,7 +60,7 @@ class BlowfishCipher (blockalgo.BlockAlgo):
 
     def __init__(self, key, *args, **kwargs):
         """Initialize a Blowfish cipher object
-        
+
         See also `new()` at the module level."""
         blockalgo.BlockAlgo.__init__(self, _Blowfish, key, *args, **kwargs)
 

@@ -35,7 +35,7 @@ Crypto.Protocol
 Crypto.PublicKey
  Public-key encryption and signature algorithms (RSA, DSA)
 Crypto.Signature
- Public-key signature algorithms (RSA PKCS#1) 
+ Public-key signature algorithms (RSA PKCS#1)
 Crypto.Util
  Various useful modules and functions (long-to-string conversion, random number
  generation, number theoretic functions)

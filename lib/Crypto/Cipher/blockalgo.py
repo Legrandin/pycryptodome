@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  Cipher/blockalgo.py 
+#  Cipher/blockalgo.py
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -100,7 +100,7 @@ MODE_OFB = 5
 #: to the *IV* for the other modes) and increment its lowest **m** bits by
 #: one (modulo *2^m*) for each block. In most cases, **m** is chosen to be half
 #: the block size.
-#: 
+#:
 #: Reusing the same *initial counter block* for encryptions done with the same
 #: key lead to catastrophic cryptograhic failures.
 #:
@@ -201,7 +201,7 @@ class BlockAlgo:
         or decrypting other data with the same key.
 
         This function does not add any padding to the plaintext.
-       
+
          - For `MODE_ECB` and `MODE_CBC`, *plaintext* length (in bytes) must be
            a multiple of *block_size*.
 
@@ -245,11 +245,12 @@ class BlockAlgo:
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key and the parameters set at initialization.
-        
+
         The cipher object is stateful; decryption of a long block
         of data can be broken up in two or more calls to `decrypt()`.
+
         That is, the statement:
-            
+
             >>> c.decrypt(a) + c.decrypt(b)
 
         is always equivalent to:
@@ -260,7 +261,7 @@ class BlockAlgo:
         or decrypting other data with the same key.
 
         This function does not remove any padding from the plaintext.
-       
+
          - For `MODE_ECB` and `MODE_CBC`, *ciphertext* length (in bytes) must
            be a multiple of *block_size*.
 

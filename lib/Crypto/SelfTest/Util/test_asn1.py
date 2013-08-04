@@ -63,12 +63,12 @@ class DerObjectTests(unittest.TestCase):
         # Initialize with payload
         der = DerObject(0x03, b('\x12\x12'))
         self.assertEquals(der.encode(), b('\x03\x02\x12\x12'))
-        
+
     def testObjEncode3(self):
         # Long payload
         der = DerObject(b('\x10'))
         der.payload = b("0")*128
-        self.assertEquals(der.encode(), b('\x10\x81\x80' + "0"*128))        
+        self.assertEquals(der.encode(), b('\x10\x81\x80' + "0"*128))
 
     def testObjEncode4(self):
         # Implicit tags (constructed)
@@ -79,7 +79,7 @@ class DerObjectTests(unittest.TestCase):
         der = DerObject(0x02, implicit=0x1E, constructed=False)
         der.payload = b('ppll')
         self.assertEquals(der.encode(), b('\x9E\x04ppll'))
-    
+
     # -----
 
     def testObjDecode1(self):
@@ -185,7 +185,7 @@ class DerIntegerTests(unittest.TestCase):
         # Value -128
         der = DerInteger(-128)
         self.assertEquals(der.encode(), b('\x02\x01\x80'))
-        # Value 
+        # Value
         der = DerInteger(-87873)
         self.assertEquals(der.encode(), b('\x02\x03\xFE\xA8\xBF'))
 
@@ -260,7 +260,7 @@ class DerIntegerTests(unittest.TestCase):
         # Wide length field
         der = DerInteger()
         self.assertRaises(ValueError, der.decode, b('\x02\x81\x01\x01'))
- 
+
 class DerSequenceTests(unittest.TestCase):
 
     def testInit1(self):
@@ -296,13 +296,13 @@ class DerSequenceTests(unittest.TestCase):
         self.assertEquals(len(der),1)
         self.assertEquals(der[0],1)
         self.assertEquals(der.encode(), b('0\x03\x02\x01\x01'))
-    
+
     def testEncode3(self):
         # One multi-byte integer (non-zero)
         der = DerSequence()
         der.append(0x180L)
         self.assertEquals(der.encode(), b('0\x04\x02\x02\x01\x80'))
-    
+
     def testEncode4(self):
         # One very long integer
         der = DerSequence()
@@ -389,7 +389,7 @@ class DerSequenceTests(unittest.TestCase):
         der.decode(b('0\x03\x02\x01\x7f'))
         self.assertEquals(len(der),1)
         self.assertEquals(der[0],127)
-    
+
     def testDecode4(self):
         # One very long integer
         der = DerSequence()
@@ -495,7 +495,7 @@ class DerOctetStringTests(unittest.TestCase):
         # No leftovers allowed
         der = DerOctetString()
         self.assertRaises(ValueError, der.decode, b('\x04\x01\x01\xff'))
- 
+
 class DerNullTests(unittest.TestCase):
 
     def testEncode1(self):
@@ -632,7 +632,7 @@ class DerSetOfTests(unittest.TestCase):
         der = DerSetOf()
         self.assertRaises(ValueError, der.decode,
             b('1\x08\x02\x02\x01\x80\x02\x02\x00\xff\xAA'))
- 
+
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
     listTests = []

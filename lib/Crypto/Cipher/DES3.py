@@ -71,7 +71,7 @@ class DES3Cipher(blockalgo.BlockAlgo):
 
     def __init__(self, key, *args, **kwargs):
         """Initialize a TDES cipher object
-        
+
         See also `new()` at the module level."""
         blockalgo.BlockAlgo.__init__(self, _DES3, key, *args, **kwargs)
 

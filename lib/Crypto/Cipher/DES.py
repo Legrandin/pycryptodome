@@ -58,7 +58,7 @@ class DESCipher(blockalgo.BlockAlgo):
 
     def __init__(self, key, *args, **kwargs):
         """Initialize a DES cipher object
-        
+
         See also `new()` at the module level."""
         blockalgo.BlockAlgo.__init__(self, _DES, key, *args, **kwargs)
 

@@ -63,7 +63,7 @@ class CAST128Cipher(blockalgo.BlockAlgo):
 
     def __init__(self, key, *args, **kwargs):
         """Initialize a CAST-128 cipher object
-        
+
         See also `new()` at the module level."""
         blockalgo.BlockAlgo.__init__(self, _CAST, key, *args, **kwargs)
 
