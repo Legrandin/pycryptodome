@@ -42,8 +42,8 @@ MODE_ECB = 1
 #: (*IV*) is required.
 #:
 #: The *IV* is a data block to be transmitted to the receiver.
-#: The *IV* can be made public, but it must be authenticated by the receiver and
-#: it should be picked randomly.
+#: The *IV* can be made public, but it must be authenticated by the receiver
+#: and it should be picked randomly.
 #:
 #: See `NIST SP800-38A`_ , Section 6.2 .
 #:
@@ -73,7 +73,8 @@ MODE_PGP = 4
 
 #: *Output FeedBack (OFB)*. This mode is very similar to CBC, but it
 #: transforms the underlying block cipher into a stream cipher.
-#: The keystream is the iterated block encryption of an Initialization Vector (*IV*).
+#: The keystream is the iterated block encryption of an
+#: Initialization Vector (*IV*).
 #:
 #: The *IV* is a data block to be transmitted to the receiver.
 #: The *IV* can be made public, but it should be picked randomly.
@@ -110,21 +111,23 @@ MODE_OFB = 5
 #: .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 MODE_CTR = 6
 
-#: OpenPGP. This mode is a variant of CFB, and it is only used in PGP and OpenPGP_ applications.
-#: An Initialization Vector (*IV*) is required.
-#: 
-#: Unlike CFB, the IV is not transmitted to the receiver. Instead, the *encrypted* IV is.
-#: The IV is a random data block. Two of its bytes are duplicated to act as a checksum
-#: for the correctness of the key. The encrypted IV is therefore 2 bytes longer than
-#: the clean IV.
+#: OpenPGP. This mode is a variant of CFB, and it is only used in PGP and
+#: OpenPGP_ applications. An Initialization Vector (*IV*) is required.
+#:
+#: Unlike CFB, the IV is not transmitted to the receiver.
+#: Instead, the *encrypted* IV is.
+#: The IV is a random data block. Two of its bytes are duplicated to act
+#: as a checksum for the correctness of the key. The encrypted IV is
+#: therefore 2 bytes longer than the clean IV.
 #:
 #: .. _OpenPGP: http://tools.ietf.org/html/rfc4880
 MODE_OPENPGP = 7
 
 def _getParameter(name, index, args, kwargs, default=None):
     """Find a parameter in tuple and dictionary arguments a function receives"""
+
     param = kwargs.get(name)
-    if len(args)>index:
+    if len(args) > index:
         if param:
             raise ValueError("Parameter '%s' is specified twice" % name)
         param = args[index]
@@ -225,14 +228,15 @@ class BlockAlgo:
 
         if self.mode == MODE_OPENPGP:
             padding_length = (self.block_size - len(plaintext) % self.block_size) % self.block_size
-            if padding_length>0:
-                # CFB mode requires ciphertext to have length multiple of block size,
+            if padding_length > 0:
+                # CFB mode requires ciphertext to have length multiple
+                # of block size,
                 # but PGP mode allows the last block to be shorter
                 if self._done_last_block:
                     raise ValueError("Only the last chunk is allowed to have length not multiple of %d bytes",
                         self.block_size)
                 self._done_last_block = True
-                padded = plaintext + b('\x00')*padding_length
+                padded = plaintext + b('\x00') * padding_length
                 res = self._cipher.encrypt(padded)[:len(plaintext)]
             else:
                 res = self._cipher.encrypt(plaintext)
@@ -280,14 +284,15 @@ class BlockAlgo:
         """
         if self.mode == MODE_OPENPGP:
             padding_length = (self.block_size - len(ciphertext) % self.block_size) % self.block_size
-            if padding_length>0:
-                # CFB mode requires ciphertext to have length multiple of block size,
+            if padding_length > 0:
+                # CFB mode requires ciphertext to have length multiple
+                # of block size,
                 # but PGP mode allows the last block to be shorter
                 if self._done_last_block:
                     raise ValueError("Only the last chunk is allowed to have length not multiple of %d bytes",
                         self.block_size)
                 self._done_last_block = True
-                padded = ciphertext + b('\x00')*padding_length
+                padded = ciphertext + b('\x00') * padding_length
                 res = self._cipher.decrypt(padded)[:len(ciphertext)]
             else:
                 res = self._cipher.decrypt(ciphertext)
