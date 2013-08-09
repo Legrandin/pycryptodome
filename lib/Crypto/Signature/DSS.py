@@ -101,9 +101,9 @@ class DSS_SigScheme(object):
 
             - *'fips-186-3'*. The signature generation is carried out
               according to `FIPS-186`__: the nonce *k* is taken from the RNG.
-            - *'deterministic-dsa-draft-02'*. The signature generation
+            - *'deterministic-rfc6979'*. The signature generation
               process does not rely on a random generator.
-              See the `most recent IETF draft`__.
+              See RFC6979_.
 
           encoding : string
             How the signature is encoded. This value determines the output of
@@ -120,11 +120,11 @@ class DSS_SigScheme(object):
 
           randfunc : callable
             The source of randomness. If `None`, the internal RNG is used.
-            It is not used under mode *'deterministic-dsa-draft-02'*.
+            It is not used under mode *'deterministic-rfc6979'*.
 
         .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
         .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
-        .. __: http://www.ietf.org/id/draft-pornin-deterministic-dsa-02.txt
+        .. _RFC6979: http://tools.ietf.org/html/rfc6979
         """
 
         # The goal of the 'mode' parameter is to avoid to
@@ -134,7 +134,7 @@ class DSS_SigScheme(object):
         # FIPS 186-4 and it will be odd to have -3 as default.
 
         self._deterministic = False
-        if mode == 'deterministic-dsa-draft-02':
+        if mode == 'deterministic-rfc6979':
             self._deterministic = True
         elif mode not in ('fips-186-3', ):
             raise ValueError("Unknown DSS mode '%s'" % mode)
@@ -164,7 +164,7 @@ class DSS_SigScheme(object):
         return self._key.has_private()
 
     def _bits2int(self, bstr):
-        """See 2.3.2 in draft-pornin-deterministic-dsa-02"""
+        """See 2.3.2 in RFC6979"""
 
         result = bytes_to_long(bstr)
         q_len = bit_size(self._key.q)
@@ -174,14 +174,14 @@ class DSS_SigScheme(object):
         return result
 
     def _int2octets(self, int_mod_q):
-        """See 2.3.3 in draft-pornin-deterministic-dsa-02"""
+        """See 2.3.3 in RFC6979"""
 
         if not (0 < int_mod_q < self._key.q):
             raise ValueError("Wrong input to int2octets()")
         return long_to_bytes(int_mod_q, self._n)
 
     def _bits2octets(self, bstr):
-        """See 2.3.4 in draft-pornin-deterministic-dsa-02"""
+        """See 2.3.4 in RFC6979"""
 
         z1 = self._bits2int(bstr)
         if z1 < self._key.q:
@@ -193,7 +193,7 @@ class DSS_SigScheme(object):
     def _compute_nonce(self, mhash):
         """Generate k in a deterministic way"""
 
-        # See section 3.2 in draft-pornin-deterministic-dsa-02.txt
+        # See section 3.2 in RFC6979.txt
         # Step a
         h1 = mhash.digest()
         # Step b
@@ -356,9 +356,9 @@ def new(key, mode, encoding='binary', randfunc=None):
 
         - *'fips-186-3'*. The signature generation is carried out
           according to `FIPS-186`__: the nonce *k* is taken from the RNG.
-        - *'deterministic-dsa-draft-02'*. The signature generation
+        - *'deterministic-rfc6979'*. The signature generation
           process does not rely on a random generator.
-          See the `most recent IETF draft`__.
+          See RFC6979_.
 
       encoding : string
         How the signature is encoded. This value determines the output of
@@ -375,11 +375,11 @@ def new(key, mode, encoding='binary', randfunc=None):
 
       randfunc : callable
         The source of randomness. If ``None``, the internal RNG is used.
-        It is not used under mode *'deterministic-dsa-draft-02'*.
+        It is not used under mode *'deterministic-rfc6979'*.
 
     .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
     .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
-    .. __: http://www.ietf.org/id/draft-pornin-deterministic-dsa-02.txt
+    .. _RFC6979: http://tools.ietf.org/html/rfc6979
     """
 
     return DSS_SigScheme(key, mode, encoding, randfunc)

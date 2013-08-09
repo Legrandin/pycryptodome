@@ -255,7 +255,7 @@ class FIPS_DSS_Tests(unittest.TestCase):
 
 
 class Det_DSA_Tests(unittest.TestCase):
-    """Tests from draft-pornin-deterministic-dsa-02"""
+    """Tests from rfc6979"""
 
     keys = {}
     key = TestKey()
@@ -507,7 +507,7 @@ class Det_DSA_Tests(unittest.TestCase):
         p = 2 * q + 1
         y = pow(2, x, p)
         key = DSA.construct([pow(y, 2, p), 2L, p, q, x])
-        signer = DSS.new(key, 'deterministic-dsa-draft-02')
+        signer = DSS.new(key, 'deterministic-rfc6979')
 
         # Test _int2octets
         self.assertEqual(hexlify(signer._int2octets(x)),
@@ -525,7 +525,7 @@ class Det_DSA_Tests(unittest.TestCase):
         for sig in self.signatures:
             tk = sig.test_key
             key = DSA.construct([tk.y, tk.g, tk.p, tk.q, tk.x])
-            signer = DSS.new(key, 'deterministic-dsa-draft-02')
+            signer = DSS.new(key, 'deterministic-rfc6979')
 
             hash_obj = sig.module.new(sig.message)
             result = signer.sign(hash_obj)
