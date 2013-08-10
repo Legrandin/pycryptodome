@@ -43,9 +43,11 @@ if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
-from Crypto.Hash import SHA1, HMAC, CMAC
+from Crypto.Cipher import _Salsa20
+from Crypto.Hash import SHA1, SHA256, HMAC, CMAC
 from Crypto.Util.strxor import strxor
-from Crypto.Util.number import long_to_bytes, bytes_to_long
+from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
+from Crypto.Util.number import bytes_to_long_le
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
@@ -91,8 +93,8 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
 def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
     """Derive one or more keys from a password (or passphrase).
 
-    This performs key derivation according to the PKCS#5 standard (v2.0),
-    by means of the ``PBKDF2`` algorithm.
+    This function performs key derivation according to
+    the PKCS#5 standard (v2.0), by means of the ``PBKDF2`` algorithm.
 
     :Parameters:
      password : string
@@ -125,6 +127,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
         key += U
         i = i + 1
     return key[:dkLen]
+
 
 class _S2V(object):
     """String-to-vector PRF as defined in `RFC5297`_.
@@ -207,3 +210,104 @@ class _S2V(object):
             final = strxor(padded, self._double(self._cache))
         mac = CMAC.new(self._key, msg=final, ciphermod=self._ciphermod)
         return mac.digest()
+
+
+def _scryptBlockMix(blocks):
+    """Hash function for ROMix."""
+
+    x = blocks[-1]
+    core = _Salsa20._salsa20_8_core
+    result = [None]*len(blocks)
+    for i in xrange(len(blocks)):
+        x = core(strxor(x, blocks[i]))
+        result[i] = x
+    return [result[i + j] for j in xrange(2)
+            for i in xrange(0, len(blocks), 2)]
+
+
+def _scryptROMix(blocks, n):
+    """Sequential memory-hard function for scrypt."""
+
+    x = [blocks[i:i + 64] for i in xrange(0, len(blocks), 64)]
+    len_x = len(x)
+    v = []
+    for i in xrange(n):
+        v.append(x)
+        x = _scryptBlockMix(x)
+    for i in xrange(n):
+        j = bytes_to_long_le(x[-1]) & (n - 1)
+        t = [strxor(x[idx], v[j][idx]) for idx in xrange(len_x)]
+        x = _scryptBlockMix(t)
+    return b("").join(x)
+
+
+def scrypt(password, salt, key_len, N, r, p, num_keys=1):
+    """Derive one or more keys from a passphrase.
+
+    This function performs key derivation according to
+    the `scrypt`_ algorithm, introduced in Percival's paper
+    `"Stronger key derivation via sequential memory-hard functions"`__.
+
+    This implementation is based on the `RFC draft`__.
+
+    :Parameters:
+     password : string
+        The secret pass phrase to generate the keys from.
+     salt : string
+        A string to use for better protection from dictionary attacks.
+        This value does not need to be kept secret,
+        but it should be randomly chosen for each derivation.
+        It is recommended to be at least 8 bytes long.
+     key_len : integer
+        The length in bytes of every derived key.
+     N : integer
+        CPU/Memory cost parameter. It must be a power of 2 and less
+        than ``2**(16r)``.
+     r : integer
+        Block size parameter.
+     p : integer
+        Parallelization parameter.
+        It must be no greater than ``(2**32-1)/(4r)``.
+     num_keys : integer
+        The number of keys to derive. Every key is ``key_len`` bytes long.
+        By default, only 1 key is generated.
+        The maximum cumulative length of all keys is ``(2**32-1)*32``
+        (that is, 128TB).
+
+    A good choice of parameters *(N, r , p)* was suggested
+    by Colin Percival in his `presentation in 2009`__:
+
+    - *(16384, 8, 1)* for interactive logins (<=100ms)
+    - *(1048576, 8, 1)* for file encryption (<=5s)
+
+    :Return: A byte string or a tuple of byte strings.
+
+    .. _scrypt: http://www.tarsnap.com/scrypt.html
+    .. __: http://www.tarsnap.com/scrypt/scrypt.pdf
+    .. __: http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-01
+    .. __: http://www.tarsnap.com/scrypt/scrypt-slides.pdf
+    """
+
+    if 2 ** (bit_size(N) - 1) != N:
+        raise ValueError("N must be a power of 2")
+    if N >= 2L ** (16 * r):
+        raise ValueError("N is too big (or r is too small)")
+    if p > divmod((2L ** 32 - 1) * 32, 128 * r)[0]:
+        raise ValueError("p or r are too big")
+
+    prf_hmac_sha256 = lambda p, s: HMAC.new(p, s, SHA256).digest()
+
+    blocks = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
+
+    blocks = b("").join([_scryptROMix(blocks[x:x + 128 * r], N)
+                         for x in xrange(0, len(blocks), 128 * r)])
+
+    dk = PBKDF2(password, blocks, key_len * num_keys, 1,
+                prf=prf_hmac_sha256)
+
+    if num_keys == 1:
+        return dk
+
+    kol = [dk[idx:idx + key_len]
+           for idx in xrange(0, key_len * num_keys, key_len)]
+    return kol

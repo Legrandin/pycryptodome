@@ -25,12 +25,13 @@ if sys.version_info[0] == 2 and sys.version_info[1] == 1:
 from Crypto.Util.py3compat import *
 
 from Crypto import Random
-from Crypto.Util.asn1 import *
+from Crypto.Util.asn1 import DerSequence, DerOctetString,\
+                             DerObjectId, DerInteger, newDerSequence
 
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import MD5, SHA1
 from Crypto.Cipher import DES, ARC2, DES3, AES
-from Crypto.Protocol.KDF import PBKDF1, PBKDF2
+from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
 
 
 # These are the ASN.1 definitions used by the PBES1/2 logic:
@@ -170,13 +171,23 @@ class PBES2(object):
             | Key              | Description                                   |
             +==================+===============================================+
             | iteration_count  | The KDF algorithm is repeated several times to|
-            |                  | slow down brute force attacks on passwords.   |
-            |                  | The default value is 1 000.                   |
+            |                  | slow down brute force attacks on passwords    |
+            |                  | (called *N* or CPU/memory cost in scrypt).    |
+            |                  |                                               |
+            |                  | The default value for PBKDF2 is 1 000.        |
+            |                  | The default value for scrypt is 16 384.       |
             +------------------+-----------------------------------------------+
             | salt_size        | Salt is used to thwart dictionary and rainbow |
             |                  | attacks on passwords. The default value is 8  |
             |                  | bytes.                                        |
             +------------------+-----------------------------------------------+
+            | block_size       | *(scrypt only)* Memory-cost (r). The default  |
+            |                  | value is 8.                                   |
+            +------------------+-----------------------------------------------+
+            | parallelization  | *(scrypt only)* CPU-cost (p). The default     |
+            |                  | value is 1.                                   |
+            +------------------+-----------------------------------------------+
+
 
           randfunc : callable
             Random number generation function; it should accept
@@ -197,22 +208,25 @@ class PBES2(object):
         if protection == 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC':
             key_size = 24
             module = DES3
-            protection = DES3.MODE_CBC
+            cipher_mode = DES3.MODE_CBC
             enc_oid = "1.2.840.113549.3.7"
-        elif protection == 'PBKDF2WithHMAC-SHA1AndAES128-CBC':
+        elif protection in ('PBKDF2WithHMAC-SHA1AndAES128-CBC',
+                'scryptAndAES128-CBC'):
             key_size = 16
             module = AES
-            protection = AES.MODE_CBC
+            cipher_mode = AES.MODE_CBC
             enc_oid = "2.16.840.1.101.3.4.1.2"
-        elif protection == 'PBKDF2WithHMAC-SHA1AndAES192-CBC':
+        elif protection in ('PBKDF2WithHMAC-SHA1AndAES192-CBC',
+                'scryptAndAES192-CBC'):
             key_size = 24
             module = AES
-            protection = AES.MODE_CBC
+            cipher_mode = AES.MODE_CBC
             enc_oid = "2.16.840.1.101.3.4.1.22"
-        elif protection == 'PBKDF2WithHMAC-SHA1AndAES256-CBC':
+        elif protection in ('PBKDF2WithHMAC-SHA1AndAES256-CBC',
+                'scryptAndAES256-CBC'):
             key_size = 32
             module = AES
-            protection = AES.MODE_CBC
+            cipher_mode = AES.MODE_CBC
             enc_oid = "2.16.840.1.101.3.4.1.42"
         else:
             raise ValueError("Unknown mode")
@@ -222,18 +236,35 @@ class PBES2(object):
         salt = randfunc(prot_params.get("salt_size", 8))
 
         # Derive key from password
-        count = prot_params.get("iteration_count", 1000)
-        key = PBKDF2(passphrase, salt, key_size, count)
-        key_derivation_func = newDerSequence(
-                DerObjectId("1.2.840.113549.1.5.12"),   # PBKDF2
-                newDerSequence(
-                    DerOctetString(salt),
-                    DerInteger(count)
-                )
-        )
+        if protection.startswith('PBKDF2'):
+            count = prot_params.get("iteration_count", 1000)
+            key = PBKDF2(passphrase, salt, key_size, count)
+            key_derivation_func = newDerSequence(
+                    DerObjectId("1.2.840.113549.1.5.12"),   # PBKDF2
+                    newDerSequence(
+                        DerOctetString(salt),
+                        DerInteger(count)
+                    )
+            )
+        else:
+            # It must be scrypt
+            count = prot_params.get("iteration_count", 16384)
+            scrypt_r = prot_params.get('block_size', 8)
+            scrypt_p = prot_params.get('parallelization', 1)
+            key = scrypt(passphrase, salt, key_size,
+                         count, scrypt_r, scrypt_p)
+            key_derivation_func = newDerSequence(
+                    DerObjectId("1.3.6.1.4.1.11591.4.11"),  # scrypt
+                    newDerSequence(
+                        DerOctetString(salt),
+                        DerInteger(count),
+                        DerInteger(scrypt_r),
+                        DerInteger(scrypt_p)
+                    )
+            )
 
         # Create cipher and use it
-        cipher = module.new(key, protection, iv)
+        cipher = module.new(key, cipher_mode, iv)
         encrypted_data = cipher.encrypt(pad(data, cipher.block_size))
         encryption_scheme = newDerSequence(
                 DerObjectId(enc_oid),
@@ -292,19 +323,31 @@ class PBES2(object):
                                 key_derivation_func[0]
                                 ).value
 
-        # For now, we only support PBKDF2
-        if key_derivation_oid != "1.2.840.113549.1.5.12":
-            raise ValueError("Unknown KDF")
+        # We only support PBKDF2 or scrypt
+        if key_derivation_oid == "1.2.840.113549.1.5.12":
 
-        pbkdf2_params = decode_der(DerSequence, key_derivation_func[1])
-        salt = decode_der(DerOctetString, pbkdf2_params[0]).payload
-        iteration_count = pbkdf2_params[1]
-        if len(pbkdf2_params) > 2:
-            pbkdf2_key_length = pbkdf2_params[2]
+            pbkdf2_params = decode_der(DerSequence, key_derivation_func[1])
+            salt = decode_der(DerOctetString, pbkdf2_params[0]).payload
+            iteration_count = pbkdf2_params[1]
+            if len(pbkdf2_params) > 2:
+                kdf_key_length = pbkdf2_params[2]
+            else:
+                kdf_key_length = None
+            if len(pbkdf2_params) > 3:
+                raise ValueError("Unsupported PRF for PBKDF2")
+
+        elif key_derivation_oid == "1.3.6.1.4.1.11591.4.11":
+
+            scrypt_params = decode_der(DerSequence, key_derivation_func[1])
+            salt = decode_der(DerOctetString, scrypt_params[0]).payload
+            iteration_count, scrypt_r, scrypt_p = [scrypt_params[x]
+                                                   for x in (1, 2, 3)]
+            if len(scrypt_params) > 4:
+                kdf_key_length = scrypt_params[4]
+            else:
+                kdf_key_length = None
         else:
-            pbkdf2_key_length = None
-        if len(pbkdf2_params) > 3:
-            raise ValueError("Unsupported PRF for PBKDF2")
+            raise ValueError("Unknown KDF")
 
         ### Cipher selection
         encryption_scheme = decode_der(DerSequence, pbes2_params[1])
@@ -332,14 +375,18 @@ class PBES2(object):
         else:
             raise ValueError("Unsupported cipher")
 
-        if pbkdf2_key_length and pbkdf2_key_length != key_size:
-            raise ValueError("Mismatch between PBKDF2 parameters"
+        if kdf_key_length and kdf_key_length != key_size:
+            raise ValueError("Mismatch between KDF parameters"
                              " and selected cipher")
 
         IV = decode_der(DerOctetString, encryption_scheme[1]).payload
 
         # Create cipher
-        key = PBKDF2(passphrase, salt, key_size, iteration_count)
+        if key_derivation_oid == "1.2.840.113549.1.5.12": # PBKDF2
+            key = PBKDF2(passphrase, salt, key_size, iteration_count)
+        else:
+            key = scrypt(passphrase, salt, key_size, iteration_count,
+                         scrypt_r, scrypt_p)
         cipher = ciphermod.new(key, ciphermod.MODE_CBC, IV)
 
         # Decrypt data

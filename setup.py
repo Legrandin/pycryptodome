@@ -81,7 +81,7 @@ if sys.version_info[0] == 2:
 else:
     EXCLUDE_PY = [
         # We don't want Py3k to choke on the 2.x compat code
-        ('Crypto.Util', 'py21compat'), 
+        ('Crypto.Util', 'py21compat'),
     ]
     if sys.platform != "win32": # Avoid nt.py, as 2to3 can't fix it w/o winrandom
         EXCLUDE_PY += [('Crypto.Random.OSRNG','nt')]
