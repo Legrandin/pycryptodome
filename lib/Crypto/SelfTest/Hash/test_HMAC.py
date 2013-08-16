@@ -26,10 +26,24 @@
 
 __revision__ = "$Id$"
 
+import unittest
+
 from common import dict     # For compatibility with Python 2.1 and 2.2
 from Crypto.Util.py3compat import *
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
 
-from Crypto.Hash import MD5, SHA1, SHA224, SHA256, SHA384, SHA512, HMAC
+from Crypto.Hash import HMAC, MD5, SHA1, SHA256
+hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256)
+
+try:
+    from Crypto.Hash import SHA224, SHA384, SHA512, RIPEMD160
+    hash_modules.update(dict(SHA224=SHA224, SHA384=SHA384, SHA512=SHA512,
+                             RIPEMD160=RIPEMD160))
+except ImportError:
+    import sys
+    sys.stderr.write("SelfTest: warning: not testing HMAC-SHA224/384/512"
+                     " (not available)\n")
 
 default_hash = None
 
@@ -203,6 +217,39 @@ test_data = [
 
 ]
 
+
+class HMAC_Module_and_Instance_Test(unittest.TestCase):
+    """Test the HMAC construction and verify that it does not
+    matter if you initialize it with a hash module or
+    with an hash instance.
+
+    See https://bugs.launchpad.net/pycrypto/+bug/1209399
+    """
+
+    def __init__(self, hashmods):
+        """Initialize the test with a dictionary of hash modules
+        indexed by their names"""
+
+        unittest.TestCase.__init__(self)
+        self.hashmods = hashmods
+        self.description = ""
+
+    def shortDescription(self):
+        return self.description
+
+    def runTest(self):
+        key = b("\x90\x91\x92\x93") * 4
+        payload = b("\x00") * 100
+
+        for hashname, hashmod in self.hashmods.items():
+            if hashmod is None:
+                continue
+            self.description = "Test HMAC in combination with " + hashname
+            one = HMAC.new(key, payload, hashmod).digest()
+            two = HMAC.new(key, payload, hashmod.new()).digest()
+            self.assertEqual(one, two)
+
+
 def get_tests(config={}):
     global test_data
     from common import make_mac_tests
@@ -221,12 +268,13 @@ def get_tests(config={}):
                 exp_test_data.append(t)
             except AttributeError:
                 import sys
-                sys.stderr.write("SelfTest: warning: not testing HMAC-%s (not available)\n" % modname)
-
-    return make_mac_tests(HMAC, "HMAC", exp_test_data)
+                sys.stderr.write("SelfTest: warning: not testing HMAC-%s"
+                                 " (not available)\n" % modname)
+    tests = make_mac_tests(HMAC, "HMAC", exp_test_data)
+    tests.append(HMAC_Module_and_Instance_Test(hash_modules))
+    return tests
 
 if __name__ == '__main__':
-    import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
 

@@ -235,6 +235,8 @@ ALG_getattro(PyObject *self, PyObject *attr)
 
 	if (PyString_CompareWithASCIIString(attr, "digest_size")==0)
 		return PyInt_FromLong(DIGEST_SIZE);
+	if (PyString_CompareWithASCIIString(attr, "block_size")==0)
+		return PyInt_FromLong(BLOCK_SIZE);
 	if (PyString_CompareWithASCIIString(attr, "name")==0)
 		return PyString_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
 
