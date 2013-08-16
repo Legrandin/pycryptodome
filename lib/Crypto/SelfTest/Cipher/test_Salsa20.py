@@ -33,7 +33,8 @@ from Crypto.Util.py3compat import *
 # This is a list of (plaintext, ciphertext, key[, description[, params]])
 # tuples.
 test_data = [
-    # Test vectors
+    # Test vectors are taken from
+    # http://www.ecrypt.eu.org/stream/svn/viewcvs.cgi/ecrypt/trunk/submissions/salsa20/full/verified.test-vectors
     ( '00' * 512,
       '4dfa5e481da23ea09a31022050859936da52fcee218005164f267cb65f5cfd7f'
     + '2b4f97e0ff16924a52df269515110a07f9e460bc65ef95da58f740b7d1dbb0aa'
