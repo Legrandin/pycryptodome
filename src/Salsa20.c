@@ -176,8 +176,10 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
         return;
     }
     if (IVlen != 8) {
-        PyErr_SetString(PyExc_ValueError,
-            "Salsa20 IV (Initialization Vector) must be 8 bytes long");
+        char buf[160];
+        sprintf(buf, "Salsa20 IV (Initialization Vector) must be 8 bytes long"
+                     " (got %d)", IVlen);
+        PyErr_SetString(PyExc_ValueError, buf);
         return;
     }
     

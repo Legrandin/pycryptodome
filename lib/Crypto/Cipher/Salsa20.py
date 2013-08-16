@@ -38,7 +38,7 @@ class Salsa20Cipher:
 
     def __init__(self, key, *args, **kwargs):
         """Initialize a Salsa20 cipher object
-        
+
         See also `new()` at the module level."""
         self._cipher = _Salsa20.new(key, *args, **kwargs)
         self.block_size = self._cipher.block_size
