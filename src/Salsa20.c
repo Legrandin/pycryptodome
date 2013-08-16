@@ -25,7 +25,7 @@
  * =======================================================================
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include "libtom/tomcrypt_cfg.h"
 #include "libtom/tomcrypt_custom.h"
 #include "libtom/tomcrypt_macros.h"
