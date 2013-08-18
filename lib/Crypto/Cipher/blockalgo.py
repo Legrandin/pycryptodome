@@ -822,7 +822,11 @@ class BlockAlgo:
                 res = self._cipher.decrypt(ciphertext)
             return res
 
-        if self.mode in (MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM):
+        if self.mode == MODE_SIV:
+            raise TypeError("decrypt() not allowed for SIV mode."
+                            " Use decrypt_and_verify() instead.")
+
+        if self.mode in (MODE_CCM, MODE_EAX, MODE_GCM):
 
             if self.decrypt not in self._next:
                 raise TypeError("decrypt() can only be called after initialization or an update()")
@@ -849,26 +853,10 @@ class BlockAlgo:
             if self.mode == MODE_EAX:
                 self._omac[2].update(ciphertext)
 
-            if self.mode == MODE_SIV:
-                self._next = [self.verify]
-
-                # Take the MAC and start the cipher for decryption
-                self._mac = ciphertext[-self._factory.block_size:]
-                self._cipher = self._siv_ctr_cipher(self._mac)
-
-                # Remove MAC from ciphertext
-                ciphertext = ciphertext[:-self._factory.block_size]
-
         pt = self._cipher.decrypt(ciphertext)
 
         if self.mode == MODE_CCM:
             self._cipherMAC.update(pt)
-
-        if self.mode == MODE_SIV:
-            if self.nonce:
-                self._cipherMAC.update(self.nonce)
-            if pt:
-                self._cipherMAC.update(pt)
 
         return pt
 
@@ -987,3 +975,55 @@ class BlockAlgo:
         """
 
         self.verify(unhexlify(hex_mac_tag))
+
+    def encrypt_and_digest(self, plaintext):
+        """Perform encrypt() and digest() in one step.
+
+        :Parameters:
+          plaintext : byte string
+            The piece of data to encrypt.
+        :Return:
+            a tuple with two byte strings:
+
+            - the encrypted data
+            - the MAC
+        """
+
+        return self.encrypt(plaintext), self.digest()
+
+    def decrypt_and_verify(self, ciphertext, mac_tag):
+        """Perform decrypt() and verify() in one step.
+
+        :Parameters:
+          ciphertext : byte string
+            The piece of data to decrypt.
+          mac_tag : byte string
+            This is the *binary* MAC, as received from the sender.
+
+        :Return: the decrypted data (byte string).
+        :Raises ValueError:
+            if the MAC does not match. The message has been tampered with
+            or the key is incorrect.
+        """
+
+        if self.mode == MODE_SIV:
+            if self.decrypt not in self._next:
+                raise TypeError("decrypt() can only be called"
+                                " after initialization or an update()")
+            self._next = [self.verify]
+
+            # Take the MAC and start the cipher for decryption
+            self._mac = mac_tag
+            self._cipher = self._siv_ctr_cipher(self._mac)
+
+            pt = self._cipher.decrypt(ciphertext)
+
+            if self.nonce:
+                self._cipherMAC.update(self.nonce)
+            if pt:
+                self._cipherMAC.update(pt)
+        else:
+            pt = self.decrypt(ciphertext)
+
+        self.verify(mac_tag)
+        return pt

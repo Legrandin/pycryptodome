@@ -162,7 +162,7 @@ class CipherSelfTest(unittest.TestCase):
 
             ctX = b2a_hex(cipher.encrypt(plaintext))
             if self.isMode("SIV"):
-                ptX = b2a_hex(decipher.decrypt(ciphertext+a2b_hex(self.mac)))
+                ptX = b2a_hex(decipher.decrypt_and_verify(ciphertext, a2b_hex(self.mac)))
             else:
                 ptX = b2a_hex(decipher.decrypt(ciphertext))
 
@@ -427,11 +427,7 @@ class AEADTests(unittest.TestCase):
         # Decrypt and verify that MAC is accepted
         decipher = self.module.new(self.key, self.mode, self.iv)
         decipher.update(ad_ref)
-        if not self.isMode("SIV"):
-            pt = decipher.decrypt(ct_ref)
-        else:
-            pt = decipher.decrypt(ct_ref+mac_ref)
-        decipher.verify(mac_ref)
+        pt = decipher.decrypt_and_verify(ct_ref, mac_ref)
         self.assertEqual(pt, pt_ref)
 
         # Verify that hexverify work
@@ -456,8 +452,8 @@ class AEADTests(unittest.TestCase):
         wrong_mac = strxor_c(mac_ref, 255)
         decipher = self.module.new(self.key, self.mode, self.iv)
         decipher.update(ad_ref)
-        pt = decipher.decrypt(ct_ref)
-        self.assertRaises(ValueError, decipher.verify, wrong_mac)
+        self.assertRaises(ValueError, decipher.decrypt_and_verify,
+                          ct_ref, wrong_mac)
 
     def zero_data(self):
         """Verify transition from INITIALIZED to FINISHED"""
@@ -522,10 +518,12 @@ class AEADTests(unittest.TestCase):
         cipher.encrypt(b("PT")*40)
         self.assertRaises(TypeError, cipher.decrypt, b("XYZ")*40)
 
-        # Calling encrypt after decrypt raises an exception
-        cipher = self.module.new(self.key, self.mode, self.iv)
-        cipher.decrypt(b("CT")*40)
-        self.assertRaises(TypeError, cipher.encrypt, b("XYZ")*40)
+        # Calling encrypt() after decrypt() raises an exception
+        # (excluded for SIV, since decrypt() is not valid)
+        if not self.isMode("SIV"):
+            cipher = self.module.new(self.key, self.mode, self.iv)
+            cipher.decrypt(b("CT")*40)
+            self.assertRaises(TypeError, cipher.encrypt, b("XYZ")*40)
 
         # Calling verify after encrypt raises an exception
         cipher = self.module.new(self.key, self.mode, self.iv)
@@ -533,11 +531,13 @@ class AEADTests(unittest.TestCase):
         self.assertRaises(TypeError, cipher.verify, b("XYZ"))
         self.assertRaises(TypeError, cipher.hexverify, "12")
 
-        # Calling digest after decrypt raises an exception
-        cipher = self.module.new(self.key, self.mode, self.iv)
-        cipher.decrypt(b("CT")*40)
-        self.assertRaises(TypeError, cipher.digest)
-        self.assertRaises(TypeError, cipher.hexdigest)
+        # Calling digest() after decrypt() raises an exception
+        # (excluded for SIV, since decrypt() is not valid)
+        if not self.isMode("SIV"):
+            cipher = self.module.new(self.key, self.mode, self.iv)
+            cipher.decrypt(b("CT")*40)
+            self.assertRaises(TypeError, cipher.digest)
+            self.assertRaises(TypeError, cipher.hexdigest)
 
     def no_late_update(self):
         """Verify that update cannot be called after encrypt or decrypt"""
@@ -551,11 +551,33 @@ class AEADTests(unittest.TestCase):
         cipher.encrypt(b("PT")*40)
         self.assertRaises(TypeError, cipher.update, b("XYZ"))
 
-        # Calling update after decrypt raises an exception
-        cipher = self.module.new(self.key, self.mode, self.iv)
-        cipher.update(b("XX"))
-        cipher.decrypt(b("CT")*40)
-        self.assertRaises(TypeError, cipher.update, b("XYZ"))
+        # Calling update() after decrypt() raises an exception
+        # (excluded for SIV, since decrypt() is not valid)
+        if not self.isMode("SIV"):
+            cipher = self.module.new(self.key, self.mode, self.iv)
+            cipher.update(b("XX"))
+            cipher.decrypt(b("CT")*40)
+            self.assertRaises(TypeError, cipher.update, b("XYZ"))
+
+    def loopback(self):
+        """Verify composition of encrypt_and_digest() and decrypt_and_verify()
+        is the identity function."""
+
+        self.description  = "Lookback test decrypt_and_verify(encrypt_and_digest)"\
+                            "for %s in %s" % (self.mode_name,
+                            self.module.__name__)
+
+        enc_cipher = self.module.new(self.key, self.mode, self.iv)
+        dec_cipher = self.module.new(self.key, self.mode, self.iv)
+
+        enc_cipher.update(b("XXX"))
+        dec_cipher.update(b("XXX"))
+
+        plaintext = b("Reference") * 10
+        ct, mac = enc_cipher.encrypt_and_digest(plaintext)
+        pt = dec_cipher.decrypt_and_verify(ct, mac)
+
+        self.assertEqual(plaintext, pt)
 
     def runTest(self):
         self.right_mac_test()
@@ -564,6 +586,7 @@ class AEADTests(unittest.TestCase):
         self.multiple_updates()
         self.no_mix_encrypt_decrypt()
         self.no_late_update()
+        self.loopback()
 
     def shortDescription(self):
         return self.description
@@ -585,7 +608,7 @@ class RoundtripTest(unittest.TestCase):
         for mode in (self.module.MODE_ECB, self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_OFB, self.module.MODE_OPENPGP):
             encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
             ciphertext = encryption_cipher.encrypt(self.plaintext)
-            
+
             if mode != self.module.MODE_OPENPGP:
                 decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
             else:
