@@ -83,7 +83,11 @@ ALGdealloc(PyObject *ptr)
 static char ALGnew__doc__[] = 
 "Return a new " _MODULE_STRING " encryption object.";
 
-static char *kwlist[] = {"key", NULL};
+static char *kwlist[] = { "key",
+#ifdef STREAM_CIPHER_NEEDS_IV
+                          "iv",
+#endif
+                          NULL};
 
 static ALGobject *
 ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
@@ -91,10 +95,24 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	unsigned char *key;
 	ALGobject * new;
 	int keylen;
+#ifdef STREAM_CIPHER_NEEDS_IV
+        unsigned char *IV;
+        int IVlen=0;
+#endif
 
 	new = newALGobject();
-	if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#", kwlist, 
-					 &key, &keylen))
+	if (!PyArg_ParseTupleAndKeywords(args, kwdict,
+#ifdef STREAM_CIPHER_NEEDS_IV
+                                        "s#s#",
+#else
+                                        "s#",
+#endif
+                                         kwlist, 
+					 &key, &keylen
+#ifdef STREAM_CIPHER_NEEDS_IV
+                                         , &IV, &IVlen
+#endif
+                                         ))
 	{
 		Py_DECREF(new);
 		return NULL;
@@ -114,7 +132,11 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 				"the null string (0 bytes long)");
 		return NULL;
 	}
-	stream_init(&(new->st), key, keylen);
+	stream_init(&(new->st), key, keylen
+#ifdef STREAM_CIPHER_NEEDS_IV
+                , IV, IVlen
+#endif
+                );
 	if (PyErr_Occurred())
 	{
 		Py_DECREF(new);

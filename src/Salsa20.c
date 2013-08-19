@@ -25,7 +25,7 @@
  * =======================================================================
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include "libtom/tomcrypt_cfg.h"
 #include "libtom/tomcrypt_custom.h"
 #include "libtom/tomcrypt_macros.h"
@@ -167,7 +167,7 @@ static void
 stream_init (stream_state *self, unsigned char *key, int keylen,
 			 unsigned char *IV, int IVlen)
 {
-    char *constants;
+    const char *constants;
     uint32_t *input;
     
     if (keylen != 16 && keylen != 32) {
@@ -176,8 +176,10 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
         return;
     }
     if (IVlen != 8) {
-        PyErr_SetString(PyExc_ValueError,
-            "Salsa20 IV (Initialization Vector) must be 8 bytes long");
+        char buf[160];
+        sprintf(buf, "Salsa20 IV (Initialization Vector) must be 8 bytes long"
+                     " (got %d)", IVlen);
+        PyErr_SetString(PyExc_ValueError, buf);
         return;
     }
     
@@ -231,6 +233,7 @@ stream_encrypt (stream_state *self, unsigned char *block, int len)
     }
 }
 
-#include "streamIV_template.c"
+#define STREAM_CIPHER_NEEDS_IV
+#include "stream_template.c"
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */

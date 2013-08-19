@@ -27,13 +27,14 @@
 import unittest
 
 __revision__ = "$Id$"
-from common import dict 
+from common import dict
 from Crypto.Util.py3compat import *
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]])
 # tuples.
 test_data = [
-    # Test vectors 
+    # Test vectors are taken from
+    # http://www.ecrypt.eu.org/stream/svn/viewcvs.cgi/ecrypt/trunk/submissions/salsa20/full/verified.test-vectors
     ( '00' * 512,
       '4dfa5e481da23ea09a31022050859936da52fcee218005164f267cb65f5cfd7f'
     + '2b4f97e0ff16924a52df269515110a07f9e460bc65ef95da58f740b7d1dbb0aa'
@@ -51,10 +52,10 @@ test_data = [
     + 'b52fafbcfbc202d8a259a611e901d3f62d065eb13f09bbc45cd45119b843efaa'
     + 'b375703739daced4dd4059fd71c3c47fc2f9939670fad4a46066adcc6a564578'
     + '3308b90ffb72be04a6b147cbe38cc0c3b9267c296a92a7c69873f9f263be9703',
-     '80000000000000000000000000000000',
-     '128 bits key, set 1, vector 0',
-     dict (iv='\x00\x00\x00\x00\x00\x00\x00\x00')),
-     
+      '80000000000000000000000000000000',
+      '128 bits key, set 1, vector 0',
+      dict (iv='00'*8)),
+
     ( '00' * 512,
       'e3be8fdd8beca2e3ea8ef9475b29a6e7003951e1097a5c38d23b7a5fad9f6844'
     + 'b22c97559e2723c7cbbd3fe4fc8d9a0744652a83e72a9c461876af4d7ef1a117'
@@ -72,10 +73,10 @@ test_data = [
     + '903e6505ce44fdc293920c6a9ec7057e23df7dad298f82ddf4efb7fdc7bfc622'
     + '696afcfd0cddcc83c7e77f11a649d79acdc3354e9635ff137e929933a0bd6f53'
     + '77efa105a3a4266b7c0d089d08f1e855cc32b15b93784a36e56a76cc64bc8477',
-     '8000000000000000000000000000000000000000000000000000000000000000',
-     '256 bits key, set 1, vector 0',
-     dict (iv='\x00\x00\x00\x00\x00\x00\x00\x00')),
-     
+      '8000000000000000000000000000000000000000000000000000000000000000',
+      '256 bits key, set 1, vector 0',
+      dict (iv='00'*8)),
+
     ( '00' * 512,
       '169060ccb42bea7bee4d8012a02f3635eb7bca12859fa159cd559094b3507db8'
     + '01735d1a1300102a9c9415546829cbd2021ba217b39b81d89c55b13d0c603359'
@@ -95,8 +96,8 @@ test_data = [
     + '59ae329599a3949272a37b9b2183a0910922a3f325ae124dcbdd735364055ceb',
       '09090909090909090909090909090909',
       '128 bits key, set 2, vector 9',
-      dict (iv='\x00\x00\x00\x00\x00\x00\x00\x00')),
-     
+      dict (iv='00'*8)),
+
     ( '00' * 512,
       '7041e747ceb22ed7812985465f50333124f971da1c5d6efe5ca201b886f31046'
     + 'e757e5c3ec914f60ed1f6bce2819b6810953f12b8ba1199bf82d746a8b8a88f1'
@@ -116,8 +117,8 @@ test_data = [
     + 'b3443f596ac730f3df3dfcdb343c307c80f76e43e8898c5e8f43dc3bb280add0',
       '0909090909090909090909090909090909090909090909090909090909090909',
       '256 bits key, set 2, vector 9',
-      dict (iv='\x00\x00\x00\x00\x00\x00\x00\x00')),
-    
+      dict (iv='00'*8)),
+
     ( '00' * 1024,
       '71daee5142d0728b41b6597933ebf467e43279e30978677078941602629cbf68'
     + 'b73d6bd2c95f118d2b3e6ec955dabb6dc61c4143bc9a9b32b99dbe6866166dc0'
@@ -153,8 +154,8 @@ test_data = [
     + '8ecb001963bd2dd8a2baa0083ec09751cd9742402ad716be16d5c052304cfca1',
       '0F62B5085BAE0154A7FA4DA0F34699EC',
       '128 bits key, Set 6, vector#  3',
-      dict (iv='\x28\x8F\xF6\x5D\xC4\x2B\x92\xF9')),
-      
+      dict (iv='288FF65DC42B92F9')),
+
     ( '00' * 1024,
       '5e5e71f90199340304abb22a37b6625bf883fb89ce3b21f54a10b81066ef87da'
     + '30b77699aa7379da595c77dd59542da208e5954f89e40eb7aa80a84a6176663f'
@@ -190,7 +191,7 @@ test_data = [
     + 'a658e5f257e0db39384d02e6145c4c00eaa079098f6d820d872de711b6ed08cf',
       '0F62B5085BAE0154A7FA4DA0F34699EC3F92E5388BDE3184D72A7DD02376C91C',
       '256 bits key, Set 6, vector#  3',
-      dict (iv='\x28\x8F\xF6\x5D\xC4\x2B\x92\xF9')),
+      dict (iv='288FF65DC42B92F9')),
 
 ]
 
