@@ -160,24 +160,33 @@ _salsa20_block(int rounds, uint32_t *input, uint8_t *output)
     }
 }
 
+/*
+ * Salsa20/8 Core function (combined with XOR)
+ *
+ * This function accepts two 64-byte Python byte strings (x and y).
+ * It creates a new 64-byte Python byte string with the result
+ * of the expression salsa20_8(xor(x,y)).
+ */
 static PyObject *
 ALG_salsa20_8_core(PyObject *self, PyObject *args, PyObject *kwdict)
 {
     PyObject *input_str;
-    Py_ssize_t len_input;
+    PyObject *previous_input_str;
     uint8_t *input_bytes;
+    uint8_t *previous_input_bytes;
+    uint8_t *output_bytes;
     uint32_t input_32[16];
     PyObject *output;
     int i;
 
     output = NULL;
 
-    if (!PyArg_ParseTuple(args, "S", &input_str)) {
+    if (!PyArg_ParseTuple(args, "SS", &previous_input_str, &input_str)) {
         goto out;
     }
 
-    len_input = PyBytes_GET_SIZE(input_str);
-    if (len_input != 64) {
+    if (PyBytes_GET_SIZE(previous_input_str)!=64 ||
+            PyBytes_GET_SIZE(input_str)!=64) {
         goto out;
     }
 
@@ -186,13 +195,19 @@ ALG_salsa20_8_core(PyObject *self, PyObject *args, PyObject *kwdict)
         goto out;
     }
 
+    previous_input_bytes = (uint8_t*)PyBytes_AS_STRING(previous_input_str);
     input_bytes = (uint8_t*)PyBytes_AS_STRING(input_str);
     for (i=0; i<16; i++) {
+        uint32_t tmp;
+
+        U8TO32_LITTLE(tmp, &previous_input_bytes[i*4]);
         U8TO32_LITTLE(input_32[i], &input_bytes[i*4]);
+        input_32[i] ^= tmp;
     }
+    output_bytes = (uint8_t*)PyBytes_AS_STRING(output);
 
     Py_BEGIN_ALLOW_THREADS;
-    _salsa20_block(8, input_32, (uint8_t*)PyBytes_AS_STRING(output) );
+    _salsa20_block(8, input_32, output_bytes);
     Py_END_ALLOW_THREADS;
 
 out:

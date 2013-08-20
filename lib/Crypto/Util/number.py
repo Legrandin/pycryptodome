@@ -431,17 +431,6 @@ def bytes_to_long(s):
         acc = (acc << 32) + unpack('>I', s[i:i+4])[0]
     return acc
 
-def bytes_to_long_le(s):
-    acc = 0L
-    unpack = struct.unpack
-    length = len(s)
-    if length & 3:
-        extra = 4 - (length & 3)
-        s = s + b('\000') * extra
-        length += extra
-    for i in range(0, length, 4):
-        acc = acc | (unpack('<I', s[i:i+4])[0] << (32*(i>>2)))
-    return acc
 
 # For backwards compatibility...
 import warnings

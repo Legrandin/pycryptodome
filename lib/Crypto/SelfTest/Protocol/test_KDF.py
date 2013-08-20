@@ -33,13 +33,19 @@ from Crypto.Cipher import AES, DES3
 
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, _S2V, scrypt
 
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
+
 
 def t2b(t):
     t2 = t.replace(" ", "").replace("\n", "")
     return unhexlify(b(t2))
 
-class TestVector():
+
+class TestVector(object):
     pass
+
 
 class PBKDF1_Tests(unittest.TestCase):
 
@@ -181,7 +187,7 @@ class scrypt_Tests(unittest.TestCase):
 
     # Test vectors taken from
     # http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-00
-    test_vectors = (
+    data = (
                 (
                     "",
                     "",
@@ -238,7 +244,7 @@ class scrypt_Tests(unittest.TestCase):
 
     def setUp(self):
         new_test_vectors = []
-        for tv in self.test_vectors:
+        for tv in self.data:
             new_tv = TestVector()
             new_tv.P = b(tv[0])
             new_tv.S = b(tv[1])
@@ -248,7 +254,7 @@ class scrypt_Tests(unittest.TestCase):
             new_tv.output = t2b(tv[5])
             new_tv.dkLen = len(new_tv.output)
             new_test_vectors.append(new_tv)
-        self.test_vectors = new_test_vectors
+        self.data = new_test_vectors
 
     def _test1(self):
         b_input = t2b("""
@@ -278,7 +284,7 @@ class scrypt_Tests(unittest.TestCase):
         self.assertEqual(output, b_output)
 
     def test2(self):
-        for tv in self.test_vectors:
+        for tv in self.data:
 
             # TODO: add runtime flag to enable test vectors
             # with humongous memory usage

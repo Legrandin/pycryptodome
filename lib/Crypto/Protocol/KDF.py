@@ -37,6 +37,7 @@ __revision__ = "$Id$"
 
 import math
 import struct
+from struct import unpack
 
 import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
@@ -47,7 +48,6 @@ from Crypto.Cipher import _Salsa20
 from Crypto.Hash import SHA1, SHA256, HMAC, CMAC
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
-from Crypto.Util.number import bytes_to_long_le
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
@@ -212,17 +212,16 @@ class _S2V(object):
         return mac.digest()
 
 
-def _scryptBlockMix(blocks):
+def _scryptBlockMix(blocks, len_blocks):
     """Hash function for ROMix."""
 
     x = blocks[-1]
     core = _Salsa20._salsa20_8_core
-    result = [None]*len(blocks)
+    result = [None]*len_blocks
     for i in xrange(len(blocks)):
-        x = core(strxor(x, blocks[i]))
-        result[i] = x
+        x = result[i] = core(x, blocks[i])
     return [result[i + j] for j in xrange(2)
-            for i in xrange(0, len(blocks), 2)]
+            for i in xrange(0, len_blocks, 2)]
 
 
 def _scryptROMix(blocks, n):
@@ -230,14 +229,14 @@ def _scryptROMix(blocks, n):
 
     x = [blocks[i:i + 64] for i in xrange(0, len(blocks), 64)]
     len_x = len(x)
-    v = []
+    v = [None]*n
     for i in xrange(n):
-        v.append(x)
-        x = _scryptBlockMix(x)
+        v[i] = x
+        x = _scryptBlockMix(x, len_x)
     for i in xrange(n):
-        j = bytes_to_long_le(x[-1]) & (n - 1)
+        j = unpack("<I", x[-1][:4])[0] & (n-1)
         t = [strxor(x[idx], v[j][idx]) for idx in xrange(len_x)]
-        x = _scryptBlockMix(t)
+        x = _scryptBlockMix(t, len_x)
     return b("").join(x)
 
 
@@ -262,7 +261,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
         The length in bytes of every derived key.
      N : integer
         CPU/Memory cost parameter. It must be a power of 2 and less
-        than ``2**(16r)``.
+        than ``2**32``.
      r : integer
         Block size parameter.
      p : integer
@@ -290,8 +289,8 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     if 2 ** (bit_size(N) - 1) != N:
         raise ValueError("N must be a power of 2")
-    if N >= 2L ** (16 * r):
-        raise ValueError("N is too big (or r is too small)")
+    if N >= 2L ** 32:
+        raise ValueError("N is too big")
     if p > divmod((2L ** 32 - 1) * 32, 128 * r)[0]:
         raise ValueError("p or r are too big")
 
