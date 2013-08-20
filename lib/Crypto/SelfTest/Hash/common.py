@@ -88,7 +88,10 @@ class HashMonteCarloTest (unittest.TestCase):
             for i in xrange (self.iterations):
                 digest = self.hashmod.new(msg).digest()
                 msg = digest + msg[:self.msgcut]
-            self.assertEqual (chk, binascii.b2a_hex(digest), "Failed at checkpoint n. %d" % j)
+            if sys.version_info[0] == 2:
+                self.assertEqual (chk, binascii.b2a_hex(digest), "Failed at checkpoint n. %d" % j)
+            else:
+                self.assertEqual (chk, binascii.b2a_hex(digest).decode(), "Failed at checkpoint n. %d" % j)
             j += 1
 
 class HashSelfTest(unittest.TestCase):
