@@ -1036,35 +1036,6 @@ void bytes_to_mpz (mpz_t result, const unsigned char *bytes, size_t size)
 }
 
 
-/* Returns a new reference to a rng from the Crypto.Random module. */
-static PyObject *
-getRNG (void)
-{
-	/* PyModule_GetDict, PyDict_GetItemString return a borrowed ref */
-	PyObject *module, *module_dict, *new_func, *rng;
-
-	module = PyImport_ImportModule ("Crypto.Random");
-	if (!module)
-		return NULL;
-	module_dict = PyModule_GetDict (module);
-	Py_DECREF (module);
-	new_func = PyDict_GetItemString (module_dict, "new");
-	if (new_func == NULL) {
-		PyErr_SetString (PyExc_RuntimeError,
-						 "Crypto.Random.new is missing.");
-		return NULL;
-	}
-	if (!PyCallable_Check (new_func))
-	{
-		PyErr_SetString (PyExc_RuntimeError,
-						 "Crypto.Random.new is not callable.");
-		return NULL;
-	}
-	rng = PyObject_CallObject (new_func, NULL);
-	return rng;
-}
-
-
 /* Sets n to a rangom number with at most `bits` bits .
  * If randfunc is provided it should be a callable which takes a single int
  * parameter and return as many random bytes as a python string.
@@ -1075,30 +1046,16 @@ getRNG (void)
  * support 2.1)
  */
 static int
-getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc_)
+getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc)
 {
-	PyObject *arglist=NULL, *randfunc=NULL, *rng=NULL, *rand_bytes=NULL;
+	PyObject *arglist=NULL, *rand_bytes=NULL;
 	int return_val = 1;
 	unsigned long bytes = bits / 8;
 	unsigned long odd_bits = bits % 8;
-	/* generate 1 to 8 bits too many.
+	
+        /* generate 1 to 8 bits too many.
 	   we will remove them later by right-shifting */
 	bytes++;
-	/* we need to handle the cases where randfunc is NULL or None */
-	if ((randfunc_ == NULL) || (randfunc_ == Py_None))
-	{
-		rng = getRNG();
-		if (!rng)
-		{
-			return_val = 0;
-			goto cleanup;
-		}
-		randfunc = PyObject_GetAttrString (rng, "read");
-	}
-	else
-	{
-		randfunc = randfunc_;
-	}
 
 	if (!PyCallable_Check (randfunc))
 	{
@@ -1132,11 +1089,6 @@ getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc_)
 cleanup:
 	Py_XDECREF (arglist);
 	Py_XDECREF (rand_bytes);
-	if (rng)
-	{
-		Py_XDECREF (randfunc);
-		Py_DECREF (rng);
-	}
 	return return_val;
 }
 
