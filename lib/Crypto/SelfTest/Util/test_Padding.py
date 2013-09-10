@@ -25,7 +25,7 @@ from binascii import unhexlify as uh
 
 from Crypto.Util.py3compat import *
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.Padding import *
+from Crypto.Util.Padding import pad, unpad
 
 class PKCS7_Tests(unittest.TestCase):
 

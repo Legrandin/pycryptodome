@@ -26,14 +26,13 @@ __revision__ = "$Id$"
 
 import unittest
 import sys
+from binascii import unhexlify
 
 from Crypto.Util.py3compat import *
-from Crypto.Util.asn1 import *
-from Crypto.IO import PKCS8
-from binascii import *
-
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
+
+from Crypto.IO import PKCS8
 
 oid_key = '1.2.840.113549.1.1.1'
 

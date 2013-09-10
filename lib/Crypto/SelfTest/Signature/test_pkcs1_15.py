@@ -26,7 +26,8 @@ import unittest
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
-from Crypto.Hash import *
+from Crypto.Hash import MD2, SHA1, MD5, SHA224, SHA256, SHA384, SHA512,\
+                        RIPEMD160
 from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5 as PKCS
 from Crypto.Util.py3compat import *

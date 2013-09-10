@@ -28,7 +28,11 @@ import unittest
 import sys
 
 from Crypto.Util.py3compat import *
-from Crypto.Util.asn1 import *
+from Crypto.Util.asn1 import DerObject, DerSetOf, newDerSetOf, DerInteger,\
+                             DerBitString, newDerBitString, newDerObjectId,\
+                             DerObjectId, DerNull, DerOctetString,\
+                             newDerOctetString, DerSequence, newDerSequence,\
+                             newDerInteger
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
 

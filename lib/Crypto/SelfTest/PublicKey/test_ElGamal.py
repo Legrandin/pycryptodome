@@ -28,7 +28,7 @@ import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto import Random
 from Crypto.PublicKey import ElGamal
-from Crypto.Util.number import *
+from Crypto.Util.number import bytes_to_long
 from Crypto.Util.py3compat import *
 
 class ElGamalTest(unittest.TestCase):
