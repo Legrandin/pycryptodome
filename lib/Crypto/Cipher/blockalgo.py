@@ -526,7 +526,14 @@ class BlockAlgo:
 
         self._done_first_block = False
         self._done_last_block = False
-        self.IV = _getParameter('iv', 1, args, kwargs)
+        self.IV = _getParameter('IV', 1, args, kwargs)
+        if self.IV is None:
+            # TODO: Decide whether 'IV' or 'iv' should be used going forward,
+            # and deprecate the other.  'IV' is consistent with the rest of
+            # PyCrypto, but 'iv' is more common in Python generally.  For now,
+            # we'll support both here.  When in doubt, use a positional
+            # parameter for now.
+            self.IV = _getParameter('iv', 1, args, kwargs)
         if not self.IV:
             raise ValueError("MODE_OPENPGP requires an IV")
 
