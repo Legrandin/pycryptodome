@@ -301,9 +301,9 @@ class _CBCMAC(_SmoothMAC):
         self._key = key
         self._factory = ciphermod
 
-    def ignite(self, data):
+    def _ignite(self, data):
         if self._mac:
-            raise TypeError("ignite() cannot be called twice")
+            raise TypeError("_ignite() cannot be called twice")
 
         self._buffer.insert(0, data)
         self._buffer_len += len(data)
@@ -606,7 +606,7 @@ class BlockAlgo:
                 assoc_len_encoded = b('\xFF\xFF')
                 enc_size = 8
             assoc_len_encoded += long_to_bytes(self._assoc_len, enc_size)
-        self._cipherMAC.ignite(b_0 + assoc_len_encoded)
+        self._cipherMAC._ignite(b_0 + assoc_len_encoded)
 
         # Start CTR cipher
         prefix = bchr(q - 1) + self.nonce
