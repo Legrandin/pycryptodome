@@ -81,7 +81,7 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     pHash = hashAlgo.new(password+salt)
     digest = pHash.digest_size
     if dkLen>digest:
-        raise ValueError("Selected hash algorithm has a too short digest (%d bytes)." % digest)
+        raise TypeError("Selected hash algorithm has a too short digest (%d bytes)." % digest)
     if len(salt)!=8:
         raise ValueError("Salt is not 8 bytes long.")
     for i in xrange(count-1):

@@ -289,7 +289,7 @@ def _getParameter(name, index, args, kwargs, default=None):
     param = kwargs.get(name)
     if len(args) > index:
         if param:
-            raise ValueError("Parameter '%s' is specified twice" % name)
+            raise TypeError("Parameter '%s' is specified twice" % name)
         param = args[index]
     return param or default
 
@@ -363,7 +363,7 @@ class BlockAlgo:
 
         if self.mode == MODE_CCM:
             if self.block_size != 16:
-                raise ValueError("CCM mode is only available for ciphers that operate on 128 bits blocks")
+                raise TypeError("CCM mode is only available for ciphers that operate on 128 bits blocks")
 
             self._mac_len = kwargs.get('mac_len', 16)        # t
             if self._mac_len not in (4, 6, 8, 10, 12, 14, 16):
@@ -404,11 +404,11 @@ class BlockAlgo:
     def _start_gcm(self, factory, key, *args, **kwargs):
 
         if self.block_size != 16:
-            raise ValueError("GCM mode is only available for ciphers that operate on 128 bits blocks")
+            raise TypeError("GCM mode is only available for ciphers that operate on 128 bits blocks")
 
         self.nonce = _getParameter('nonce', 1, args, kwargs)
         if not self.nonce:
-            raise ValueError("MODE_GCM requires a nonce")
+            raise TypeError("MODE_GCM requires a nonce")
 
         self._mac_len = kwargs.get('mac_len', 16)
         if not (self._mac_len and 4 <= self._mac_len <= 16):
@@ -486,7 +486,7 @@ class BlockAlgo:
 
         self.nonce = _getParameter('nonce', 1, args, kwargs)
         if not self.nonce:
-            raise ValueError("MODE_EAX requires a nonce")
+            raise TypeError("MODE_EAX requires a nonce")
 
         # Allowed transitions after initialization
         self._next = [self.update, self.encrypt, self.decrypt,
@@ -641,7 +641,7 @@ class BlockAlgo:
         """
 
         if self.mode not in (MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM):
-            raise ValueError("update() not supported by this mode of operation")
+            raise TypeError("update() not supported by this mode of operation")
 
         if self.update not in self._next:
             raise TypeError("update() can only be called immediately after initialization")
