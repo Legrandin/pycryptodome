@@ -184,7 +184,7 @@ class CMAC(_SmoothMAC):
         """
 
         if ciphermod is None:
-            raise ValueError("ciphermod must be specified (try AES)")
+            raise TypeError("ciphermod must be specified (try AES)")
 
         _SmoothMAC.__init__(self, ciphermod.block_size, msg, 1)
 
@@ -197,7 +197,8 @@ class CMAC(_SmoothMAC):
         elif ciphermod.block_size==16:
             const_Rb = 0x87
         else:
-            raise ValueError("For CMAC, block length of the selected cipher must be 8 or 16 bytes")
+            raise TypeError("CMAC requires a cipher with a block size of 8 or 16 bytes, not %d" %
+                            (ciphermod.block_size,))
         self.digest_size = ciphermod.block_size
 
         # Compute sub-keys
