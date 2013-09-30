@@ -238,7 +238,7 @@ class HMAC:
             has been tampered with or that the MAC key is incorrect.
         """
 
-        self.verify(unhexlify(hex_mac_tag))
+        self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 def new(key, msg = None, digestmod = None):
     """Create a new HMAC object.

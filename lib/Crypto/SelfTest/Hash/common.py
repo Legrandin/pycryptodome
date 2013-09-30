@@ -206,7 +206,17 @@ class MACSelfTest(unittest.TestCase):
         h.update(b("blah blah blah"))  # Corrupt the original hash object
         out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
 
-        # PY3K: hexdigest() should return str(), and digest() bytes
+        # PY3K: Check that hexdigest() returns str and digest() returns bytes
+        if sys.version_info[0] > 2:
+            self.assertTrue(isinstance(h.digest(), type(b(""))))
+            self.assertTrue(isinstance(h.hexdigest(), type("")))
+
+        # PY3K: Check that .hexverify() accepts bytes or str
+        if sys.version_info[0] > 2:
+            h.hexverify(h.hexdigest())
+            h.hexverify(h.hexdigest().encode('ascii'))
+
+        # PY3K: hexdigest() should return str, and digest() should return bytes
         self.assertEqual(expected, out1)
         if sys.version_info[0] == 2:
             self.assertEqual(expected, out2)
