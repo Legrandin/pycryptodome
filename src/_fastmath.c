@@ -60,7 +60,7 @@
 #if ULONG_MAX==0xFFFFFFFFUL
 /** LLP64, like 64-bit Windows **/
 #define ULONG_BITS 32
-#elif ULONG_MAC==0xFFFFFFFFFFFFFFFFUL
+#elif ULONG_MAX==0xFFFFFFFFFFFFFFFFUL
 /** ILP64 and LP64, like 64-bit Unix **/
 #define ULONG_BITS 64
 #else
@@ -86,17 +86,23 @@ longObjToMPZ (mpz_t m, PyLongObject *p)
 	int last_loop;
 	mpz_t temp;
 	int i;
-#ifndef PYPY_VERSION
 	int sign;
-#else
-	long sign;
-#endif
 
 	mpz_init (temp);
 	mpz_set_ui (m, 0);
-	p_copy = PyNumber_Long((PyObject*)p);
 	bitsInLong = PyLong_FromUnsignedLong(ULONG_BITS);
 	zero = PyLong_FromUnsignedLong(0);
+
+#ifdef IS_PY3K
+	sign = PyObject_RichCompareBool((PyObject*)p, zero, Py_GE)>0 ? 1 : -1;
+#else
+	sign = PyObject_Compare((PyObject*)p, (PyObject*)zero);
+#endif
+	if (-1 == sign) {
+		p_copy = PyNumber_Negative((PyObject*)p);
+	} else {
+		p_copy = PyNumber_Long((PyObject*)p);
+	}
 
 	last_loop = 0;
 	for (i=0; !last_loop; i++) {
@@ -112,18 +118,13 @@ longObjToMPZ (mpz_t m, PyLongObject *p)
 		}
 
 		mpz_set_ui (temp, chunk);
-		mpz_mul_2exp (temp, temp, 32*i);
+		mpz_mul_2exp (temp, temp, ULONG_BITS*i);
 		mpz_add (m, m, temp);
 		x = PyNumber_Rshift(p_copy, bitsInLong);
 		Py_DECREF(p_copy);
 		p_copy = x;
 	}
 
-#ifdef IS_PY3K
-	sign = PyObject_RichCompare((PyObject*)p, zero, Py_GE) ? 1 : -1;
-#else
-	PyObject_Cmp((PyObject*)p, zero, &sign);
-#endif
 	if (-1 == sign) {
 		mpz_neg(m, m);
 	}
@@ -177,6 +178,10 @@ mpzToLongObj (mpz_t m)
 	result = PyLong_FromUnsignedLong(0);
 	shift_amount = PyLong_FromUnsignedLong(0);
 	bitsInLong = PyLong_FromUnsignedLong(ULONG_BITS);
+
+	if (mpz_sgn(m_copy)<0) {
+		mpz_neg(m_copy, m_copy);
+	}
 
 	while (mpz_sgn(m_copy)) {
 		unsigned long digit;
