@@ -1,3 +1,55 @@
+2.6.1
+=====
+	* [CVE-2013-1445] Fix PRNG not correctly reseeded in some situations.
+
+	  In previous versions of PyCrypto, the Crypto.Random PRNG exhibits a
+	  race condition that may cause forked processes to generate identical
+	  sequences of 'random' numbers.
+
+	  This is a fairly obscure bug that will (hopefully) not affect many
+	  applications, but the failure scenario is pretty bad.  Here is some
+	  sample code that illustrates the problem:
+
+	      from binascii import hexlify
+	      import multiprocessing, pprint, time
+	      import Crypto.Random
+
+	      def task_main(arg):
+	          a = Crypto.Random.get_random_bytes(8)
+	          time.sleep(0.1)
+	          b = Crypto.Random.get_random_bytes(8)
+	          rdy, ack = arg
+	          rdy.set()
+	          ack.wait()
+	          return "%s,%s" % (hexlify(a).decode(),
+	                            hexlify(b).decode())
+
+	      n_procs = 4
+	      manager = multiprocessing.Manager()
+	      rdys = [manager.Event() for i in range(n_procs)]
+	      acks = [manager.Event() for i in range(n_procs)]
+	      Crypto.Random.get_random_bytes(1)
+	      pool = multiprocessing.Pool(processes=n_procs,
+	                                  initializer=Crypto.Random.atfork)
+	      res_async = pool.map_async(task_main, zip(rdys, acks))
+	      pool.close()
+	      [rdy.wait() for rdy in rdys]
+	      [ack.set() for ack in acks]
+	      res = res_async.get()
+	      pprint.pprint(sorted(res))
+	      pool.join()
+
+	  The output should be random, but it looked like this:
+
+	      ['c607803ae01aa8c0,2e4de6457a304b34',
+	       'c607803ae01aa8c0,af80d08942b4c987',
+	       'c607803ae01aa8c0,b0e4c0853de927c4',
+	       'c607803ae01aa8c0,f0362585b3fceba4']
+
+	  This release fixes the problem by resetting the rate-limiter when
+	  Crypto.Random.atfork() is invoked.  It also adds some tests and a
+	  few related comments.
+
 2.6
 ===
 	* [CVE-2012-2417] Fix LP#985164: insecure ElGamal key generation.
