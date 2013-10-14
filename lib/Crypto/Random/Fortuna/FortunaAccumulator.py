@@ -94,8 +94,25 @@ def which_pools(r):
 
 class FortunaAccumulator(object):
 
-    min_pool_size = 64      # TODO: explain why
-    reseed_interval = 0.100   # 100 ms    TODO: explain why
+    # An estimate of how many bytes we must append to pool 0 before it will
+    # contain 128 bits of entropy (with respect to an attack).  We reseed the
+    # generator only after pool 0 contains `min_pool_size` bytes.  Note that
+    # unlike with some other PRNGs, Fortuna's security does not rely on the
+    # accuracy of this estimate---we can accord to be optimistic here.
+    min_pool_size = 64  # size in bytes
+
+    # If an attacker can predict some (but not all) of our entropy sources, the
+    # `min_pool_size` check may not be sufficient to prevent a successful state
+    # compromise extension attack.  To resist this attack, Fortuna spreads the
+    # input across 32 pools, which are then consumed (to reseed the output
+    # generator) with exponentially decreasing frequency.
+    #
+    # In order to prevent an attacker from gaining knowledge of all 32 pools
+    # before we have a chance to fill them with enough information that the
+    # attacker cannot predict, we impose a rate limit of 10 reseeds/second (one
+    # per 100 ms).  This ensures that a hypothetical 33rd pool would only be
+    # needed after a minimum of 13 years of sustained attack.
+    reseed_interval = 0.100     # time in seconds
 
     def __init__(self):
         self.reseed_count = 0
