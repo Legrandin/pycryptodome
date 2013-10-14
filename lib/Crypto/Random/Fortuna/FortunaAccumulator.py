@@ -109,6 +109,15 @@ class FortunaAccumulator(object):
         self.pools = [FortunaPool() for i in range(32)]     # 32 pools
         assert(self.pools[0] is not self.pools[1])
 
+    def _forget_last_reseed(self):
+        # This is not part of the standard Fortuna definition, and using this
+        # function frequently can weaken Fortuna's ability to resist a state
+        # compromise extension attack, but we need this in order to properly
+        # implement Crypto.Random.atfork().  Otherwise, forked child processes
+        # might continue to use their parent's PRNG state for up to 100ms in
+        # some cases. (e.g. CVE-2013-1445)
+        self.last_reseed = None
+
     def random_data(self, bytes):
         current_time = time.time()
         if (self.last_reseed is not None and self.last_reseed > current_time): # Avoid float comparison to None to make Py3k happy
