@@ -90,8 +90,23 @@ class _UserFriendlyRNG(object):
         """Initialize the random number generator and seed it with entropy from
         the operating system.
         """
+
+        # Save the pid (helps ensure that Crypto.Random.atfork() gets called)
         self._pid = os.getpid()
+
+        # Collect entropy from the operating system and feed it to
+        # FortunaAccumulator
         self._ec.reinit()
+
+        # Override FortunaAccumulator's 100ms minimum re-seed interval.  This
+        # is necessary to avoid a race condition between this function and
+        # self.read(), which that can otherwise cause forked child processes to
+        # produce identical output.  (e.g. CVE-2013-1445)
+        #
+        # Note that if this function can be called frequently by an attacker,
+        # (and if the bits from OSRNG are insufficiently random) it will weaken
+        # Fortuna's ability to resist a state compromise extension attack.
+        self._fa._forget_last_reseed()
 
     def close(self):
         self.closed = True
