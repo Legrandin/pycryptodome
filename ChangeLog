@@ -1,3 +1,76 @@
+2.7a1
+=====
+	* Experimental release.  This introduces a new API for AEAD modes, and
+	  makes a few other minor API changes.  These APIs should be considered
+	  experimental, and may be changed before the final release.
+	* New API for authenticated encryption with associated data (AEAD):
+	  - New block cipher modes:
+	    - MODE_CCM
+	    - MODE_EAX
+	    - MODE_GCM
+	    - MODE_SIV
+	  - New methods:
+	    - .encrypt_and_digest()
+	    - .decrypt_and_verify()
+	    - .digest()
+	    - .verify()
+	  - New MAC algorithm:
+	    - Crypto.Cipher.CMAC
+	  - New .verify() and .hexverify() methods also added to Hash and
+	    HMAC/CMAC objects, providing constant-time hash comparison.
+	  (Thanks: Legrandin, Lucas Garron)
+	* LP#1132550: Fix MODE_OPENPGP not accepting uppercase 'IV' kwarg.
+	* LP#1119552: Fix PKCS#1v1.5 not accepting signatures without the
+	  optional NULL parameter
+	* Add support for import/export of DSA keys.  (Thanks: Legrandin)
+	* Add support for PKCS#8-encrypted private keys.  (Thanks: Legrandin)
+	* LP#996193: Fix MODE_OFB requiring padding (it now behaves as a stream
+	  cipher)
+	* Improve C extension autodocs
+	* Remove pointless 'error' attribute from stream ciphers.
+	* Deprecate the disable_shortcut option to Crypto.Util.Counter;
+	  Remove __PCT_CTR_SHORTCUT__ entirely.
+	* Fix small MODE_CTR memory leak under Python 3.
+	* Fix error importing winrandom on Python 3.  (Thanks: Jason R. Coombs)
+	* FortunaAccumulator: Use time.monotonic for rate-limiting if available
+	  (i.e. Python 3.3 and later)
+	* AES-NI support (Thanks: Sebastian Ramacher)
+	* setup.py: Fix compilation on HP-UX 11.31.  (Thanks: Adam Woodbeck)
+	* ElGamal: Add blinding to ElGamal decryption. (Thanks: Legrandin)
+	* Hash: Remove pure-Python wrappers (speeds up hash init 4x-7x)
+	* Hash: Add generic Crypto.Hash.new(algo, [data]) function
+	  (like hashlib.new)
+	* Hash: Remove 'oid' attributes; Add 'name' attributes for compatibility
+	  with hashlib.
+	* Hash: Rename SHA -> SHA1 and RIPEMD -> RIPEMD160, since the original
+	  names are frequently used as the names of other algorithms.
+	* setup.py: Use autoconf to generate compiler options;
+	  Fix OpenBSD build issues.
+	* Fix RSA object serialization (i.e. pickle)
+	* LP#1061217: random.shuffle takes O(n^2) time.
+	  (Thanks: Sujay Jayakar, Andrew Cooke)
+	* _fastmath: Fix leaks when errors occur.
+	  (Thanks: Sebastian Ramacher, Andreas Stührk)
+	* SHA256/224/384/512: Don't export symbol 'add_length'
+	* setup.py: Use os.chmod instead of os.system("chmod ...").
+	  (Thanks: Sebastian Ramacher)
+	* setup.py: The 'test' command now runs the 'build' command first.
+	  (Thanks: Sebastian Ramacher)
+	* New tools/create-pythons.sh and tools/test-all.sh scripts for testing
+	  against multiple versions of Python.
+	* getStrongProne: Fix error handling (Thanks: Sebastian Ramacher)
+	* ARC4: Add ARC4-drop[n] cipher support. (Thanks: Legrandin)
+	* RSA.importKey: Properly catch IndexError. (Thanks: Sebastian Ramacher)
+	* RSA.exportKey: Raise ValueError as documented when key format is
+	  unknown. (Thanks: Sebastian Ramacher)
+	* RSA.exportKey: Always return bytes (Thanks: Sebastian Ramacher)
+	* Fix & re-enable some broken tests (Thanks: Sebastian Ramacher)
+	* Improve Python 3 compatibility
+	* Various documentation fixes and improvements
+	  (Thanks: Anton Rieder, Legrandin, Sebastian Ramacher, Stefano Rivera)
+	* Various cleanups, especially for Python 3.
+
+
 2.6.1
 =====
 	* [CVE-2013-1445] Fix PRNG not correctly reseeded in some situations.
