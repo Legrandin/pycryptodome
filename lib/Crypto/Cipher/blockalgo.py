@@ -35,7 +35,7 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 import Crypto.Util.Counter
 from Crypto.Hash import CMAC
 from Crypto.Hash.CMAC import _SmoothMAC
-from Crypto.Protocol.KDF import S2V
+from Crypto.Protocol.KDF import _S2V
 
 from Crypto.Util import galois
 
@@ -461,7 +461,7 @@ class BlockAlgo:
         # IV is optional
         self.nonce = _getParameter('nonce', 1, args, kwargs)
 
-        self._cipherMAC = S2V(key[:subkey_size], ciphermod=factory)
+        self._cipherMAC = _S2V(key[:subkey_size], ciphermod=factory)
         self._subkey_ctr = key[subkey_size:]
         self._mac_len = factory.block_size
 

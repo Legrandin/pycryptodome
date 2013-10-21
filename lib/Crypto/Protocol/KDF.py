@@ -126,7 +126,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
         i = i + 1
     return key[:dkLen]
 
-class S2V(object):
+class _S2V(object):
     """String-to-vector PRF as defined in `RFC5297`_.
 
     This class implements a pseudorandom function family
@@ -161,7 +161,7 @@ class S2V(object):
           ciphermod : module
             A block cipher module from `Crypto.Cipher`.
         """
-        return S2V(key, ciphermod)
+        return _S2V(key, ciphermod)
     new = staticmethod(new)
 
     def _double(self, bs):

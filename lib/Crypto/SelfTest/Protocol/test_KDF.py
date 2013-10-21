@@ -31,7 +31,7 @@ from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Hash import SHA1, HMAC
 from Crypto.Cipher import AES, DES3
 
-from Crypto.Protocol.KDF import PBKDF1, PBKDF2, S2V
+from Crypto.Protocol.KDF import PBKDF1, PBKDF2, _S2V
 
 def t2b(t): return unhexlify(b(t))
 
@@ -127,7 +127,7 @@ class S2V_Tests(unittest.TestCase):
     def test1(self):
         """Verify correctness of test vector"""
         for tv in self._testData:
-            s2v = S2V.new(t2b(tv[1]), tv[3])
+            s2v = _S2V.new(t2b(tv[1]), tv[3])
             for s in tv[0]:
                 s2v.update(t2b(s))
             result = s2v.derive()
@@ -138,7 +138,7 @@ class S2V_Tests(unittest.TestCase):
         components are accepted."""
         key = bchr(0)*16
         for module in (AES, DES3):
-            s2v = S2V.new(key, module)
+            s2v = _S2V.new(key, module)
             max_comps = module.block_size*8-1
             for i in xrange(max_comps):
                 s2v.update(b("XX"))
