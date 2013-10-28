@@ -22,8 +22,12 @@
  * ===================================================================
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include <wmmintrin.h>
+#include <stdlib.h>
+#if defined(HAVE__ALIGNED_MALLOC)
+#include <malloc.h>
+#endif
 
 #define MODULE_NAME _AESNI
 #define BLOCK_SIZE 16
@@ -36,9 +40,9 @@
 typedef unsigned char u8;
 
 typedef struct {
-	__m128i ek[MAXNR + 1];
-	__m128i dk[MAXNR + 1];
-	int rounds;
+    __m128i* ek;
+    __m128i* dk;
+    int rounds;
 } block_state;
 
 /* Helper functions to expand keys */
@@ -161,6 +165,36 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
                 "AES key must be either 16, 24, or 32 bytes long");
             return;
     }
+
+    /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
+    void* tek = NULL;
+    void* tdk = NULL;
+#if defined(HAVE_POSIX_MEMALIGN)
+    /* posix_memalign is defined by POSIX */
+    posix_memalign(&tek, 16, (nr + 1) * sizeof(__m128i));
+    posix_memalign(&tdk, 16, (nr + 1) * sizeof(__m128i));
+#elif defined(HAVE_ALIGNED_ALLOC)
+    /* aligned_alloc is defined by C11 */
+    tek = aligned_alloc(16, (nr + 1) * sizeof(__m128i));
+    tdk = aligned_alloc(16, (nr + 1) * sizeof(__m128i));
+#elif defined(HAVE__ALIGNED_MALLOC)
+    /* _aligned_malloc is available on Windows */
+    tek = _aligned_malloc(16, (nr + 1) * sizeof(__m128i));
+    tdk = _aligned_malloc(16, (nr + 1) * sizeof(__m128i));
+#else
+#error "No function to allocate aligned memory is available."
+#endif
+    if (!tek || !tdk) {
+        free(tek);
+        free(tdk);
+        PyErr_SetString(PyExc_MemoryError,
+                "failed to allocate memory for keys");
+        return;
+    }
+
+    self->ek = tek;
+    self->dk = tdk;
+
     self->rounds = nr;
     aes_key_setup_enc(self->ek, key, keylen);
     aes_key_setup_dec(self->dk, self->ek, nr);
@@ -168,6 +202,12 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
 
 static void block_finalize(block_state* self)
 {
+    /* overwrite contents of ek and dk */
+    memset(self->ek, 0, (self->rounds + 1) * sizeof(__m128i));
+    memset(self->dk, 0, (self->rounds + 1) * sizeof(__m128i));
+
+    free(self->ek);
+    free(self->dk);
 }
 
 static void block_encrypt(block_state* self, const u8* in, u8* out)
