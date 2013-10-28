@@ -29,9 +29,9 @@
 #define BLOCK_SIZE 16
 #define KEY_SIZE 0
 
-#define MAXKC	(256/32)
-#define MAXKB	(256/8)
-#define MAXNR	14
+#define MAXKC (256/32)
+#define MAXKB (256/8)
+#define MAXNR 14
 
 typedef unsigned char u8;
 
@@ -151,18 +151,18 @@ static void aes_key_setup_dec(__m128i dk[], const __m128i ek[], int rounds)
 
 static void block_init(block_state* self, unsigned char* key, int keylen)
 {
-	int nr = 0;
-	switch (keylen) {
-	    case 16: nr = 10; break;
-	    case 24: nr = 12; break;
-	    case 32: nr = 14; break;
+    int nr = 0;
+    switch (keylen) {
+        case 16: nr = 10; break;
+        case 24: nr = 12; break;
+        case 32: nr = 14; break;
         default:
             PyErr_SetString(PyExc_ValueError,
                 "AES key must be either 16, 24, or 32 bytes long");
-		    return;
-	}
-	self->rounds = nr;
-	aes_key_setup_enc(self->ek, key, keylen);
+            return;
+    }
+    self->rounds = nr;
+    aes_key_setup_enc(self->ek, key, keylen);
     aes_key_setup_dec(self->dk, self->ek, nr);
 }
 
@@ -196,7 +196,7 @@ static void block_encrypt(block_state* self, const u8* in, u8* out)
 
 static void block_decrypt(block_state* self, const u8* in, u8* out)
 {
-	__m128i m = _mm_loadu_si128((const __m128i*) in);
+    __m128i m = _mm_loadu_si128((const __m128i*) in);
     /* first 9 rounds */
     m = _mm_xor_si128(m, self->dk[0]);
     m = _mm_aesdec_si128(m, self->dk[1]);
