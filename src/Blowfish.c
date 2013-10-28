@@ -231,6 +231,10 @@ static void Blowfish_init(Blowfish_state *self, const unsigned char *key, int ke
 #define block_encrypt Blowfish_encrypt
 #define block_decrypt Blowfish_decrypt
 
+static void block_finalize(block_state *self)
+{
+}
+
 #include "block_template.c"
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */

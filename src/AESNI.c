@@ -166,6 +166,10 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
     aes_key_setup_dec(self->dk, self->ek, nr);
 }
 
+static void block_finalize(block_state* self)
+{
+}
+
 static void block_encrypt(block_state* self, const u8* in, u8* out)
 {
     __m128i m = _mm_loadu_si128((const __m128i*) in);

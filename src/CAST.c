@@ -435,6 +435,11 @@ block_init(block_state *self, unsigned char *key, int keylength)
 }
 
 static void
+block_finalize(block_state* self)
+{
+}
+
+static void
 block_encrypt(block_state *self, unsigned char *in,
 	      unsigned char *out)
 {

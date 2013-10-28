@@ -76,6 +76,10 @@ static void block_init(block_state *self, unsigned char *key, int keylen)
     }
 }
 
+static void block_finalize(block_state *self)
+{
+}
+
 static void block_encrypt(block_state *self, unsigned char *in, unsigned char *out)
 {
     int rc;
