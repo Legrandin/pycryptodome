@@ -45,6 +45,26 @@ typedef struct {
     int rounds;
 } block_state;
 
+/* Wrapper function for malloc with memory alignment */
+
+static void* memalign_wrapper(size_t alignment, size_t size)
+{
+#if defined(HAVE_POSIX_MEMALIGN)
+    /* posix_memalign is defined by POSIX */
+    void* tmp = NULL;
+    posix_memalign(&tmp, alignment, size);
+    return tmp;
+#elif defined(HAVE_ALIGNED_ALLOC)
+    /* aligned_alloc is defined by C11 */
+    return aligned_alloc(alignment, size);
+#elif defined(HAVE__ALIGNED_MALLOC)
+    /* _aligned_malloc is available on Windows */
+    return _aligned_malloc(size, alignment);
+#else
+#error "No function to allocate aligned memory is available."
+#endif
+}
+
 /* Helper functions to expand keys */
 
 static __m128i aes128_keyexpand(__m128i key, __m128i keygened, int shuf)
@@ -167,23 +187,8 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
     }
 
     /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
-    void* tek = NULL;
-    void* tdk = NULL;
-#if defined(HAVE_POSIX_MEMALIGN)
-    /* posix_memalign is defined by POSIX */
-    posix_memalign(&tek, 16, (nr + 1) * sizeof(__m128i));
-    posix_memalign(&tdk, 16, (nr + 1) * sizeof(__m128i));
-#elif defined(HAVE_ALIGNED_ALLOC)
-    /* aligned_alloc is defined by C11 */
-    tek = aligned_alloc(16, (nr + 1) * sizeof(__m128i));
-    tdk = aligned_alloc(16, (nr + 1) * sizeof(__m128i));
-#elif defined(HAVE__ALIGNED_MALLOC)
-    /* _aligned_malloc is available on Windows */
-    tek = _aligned_malloc(16, (nr + 1) * sizeof(__m128i));
-    tdk = _aligned_malloc(16, (nr + 1) * sizeof(__m128i));
-#else
-#error "No function to allocate aligned memory is available."
-#endif
+    void* tek = memalign_wrapper(16, (nr + 1) * sizeof(__m128i));
+    void* tdk = memalign_wrapper(16, (nr + 1) * sizeof(__m128i));
     if (!tek || !tdk) {
         free(tek);
         free(tdk);
