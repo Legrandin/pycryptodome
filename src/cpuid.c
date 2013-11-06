@@ -24,8 +24,21 @@
 #include "Python.h"
 #include <stdint.h>
 #include "config.h"
+
 #ifdef HAVE_CPUID_H
 #include <cpuid.h>
+
+/* it's bit_AES with gcc */
+#ifndef bit_AES
+/* but some versions of clang provide bit_AESNI instead */
+#ifdef bit_AESNI
+#define bit_AES bit_AESNI
+/* and others do not provide any define at all */
+#else
+#define bit_AES 0x02000000
+#endif
+#endif
+
 #endif
 
 #include "pycrypto_compat.h"
