@@ -327,9 +327,10 @@ def get_tests(config={}):
     except ImportError:
         from distutils.sysconfig import get_config_var
         import inspect, os.path
+        ext_suffix = get_config_var("EXT_SUFFIX") or get_config_var("SO")
         _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
             inspect.getfile(inspect.currentframe())))
-            +"/../../PublicKey/_fastmath"+get_config_var("SO"))
+            +"/../../PublicKey/_fastmath"+ext_suffix)
         if os.path.exists(_fm_path):
             raise ImportError("While the _fastmath module exists, importing "+
                 "it failed. This may point to the gmp or mpir shared library "+
