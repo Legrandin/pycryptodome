@@ -50,7 +50,11 @@ static void ltcseterr(int rc)
         break;
 
     case CRYPT_INVALID_KEYSIZE:
+#ifdef PCT_DES3_MODULE
         PyErr_SetString(PyExc_ValueError, "Invalid key size (must be either 16 or 24 bytes long)");
+#else
+        PyErr_SetString(PyExc_ValueError, "Invalid key size (must be either 8 bytes long)");
+#endif
         break;
 
     case CRYPT_INVALID_ROUNDS:
