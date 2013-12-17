@@ -40,7 +40,8 @@ As an example, encryption can be done as follows:
 
 A more complicated example is based on CCM, (see `MODE_CCM`) an `AEAD`_ mode
 that provides both confidentiality and authentication for a message.
-It also allows message for the header to remain in the clear, whilst still
+
+It optionally allows the header of the message to remain in the clear, whilst still
 being authenticated. The encryption is done as follows:
 
     >>> from Crypto.Cipher import AES
@@ -130,7 +131,7 @@ def new(key, *args, **kwargs):
         (*Only* `MODE_CBC`, `MODE_CFB`, `MODE_OFB`, `MODE_OPENPGP`).
 
         The initialization vector to use for encryption or decryption.
-        
+
         It is ignored for `MODE_ECB` and `MODE_CTR`.
 
         For `MODE_OPENPGP`, IV must be `block_size` bytes long for encryption
