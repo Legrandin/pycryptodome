@@ -43,12 +43,14 @@ An example of usage is the following:
 
     >>> from Crypto.Cipher import AES
     >>> from Crypto.Util import Counter
+    >>> from Crypto import Random
     >>>
-    >>> pt = b'X'*1000000
-    >>> ctr = Counter.new(128)
+    >>> nonce = Random.get_random_bytes(8)
+    >>> ctr = Counter.new(64, nonce)
     >>> key = b'AES-128 symm key'
+    >>> plaintext = b'X'*1000000
     >>> cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
-    >>> ct = cipher.encrypt(pt)
+    >>> ciphertext = cipher.encrypt(plaintext)
 
 :undocumented: __package__
 """
@@ -70,7 +72,7 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_e
 
     Each call to the function returns the next counter block.
     Each counter block is made up by three parts::
- 
+
       prefix || counter value || postfix
 
     The counter value is incremented by 1 at each call.
