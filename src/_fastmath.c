@@ -193,8 +193,8 @@ dsaVerify (dsaKey * key, mpz_t m, mpz_t r, mpz_t s)
 	mpz_mod (u1, u1, key->q);
 	mpz_mul (u2, r, w);
 	mpz_mod (u2, u2, key->q);
-	MPZ_POWM (v1, key->g, u1, key->p);
-	MPZ_POWM (v2, key->y, u2, key->p);
+	mpz_powm (v1, key->g, u1, key->p);
+	mpz_powm (v2, key->y, u2, key->p);
 	mpz_mul (w, v1, v2);
 	mpz_mod (w, w, key->p);
 	mpz_mod (w, w, key->q);
@@ -218,7 +218,7 @@ rsaEncrypt (rsaKey * key, mpz_t v)
 	{
 		return 1;
 	}
-	MPZ_POWM (v, v, key->e, key->n);
+	mpz_powm (v, v, key->e, key->n);
 	return 0;
 }
 
@@ -284,7 +284,7 @@ rsaBlind (rsaKey * key, mpz_t v, mpz_t b)
         {
             return 2;
         }
-    MPZ_POWM (b, b, key->e, key->n);
+    mpz_powm (b, b, key->e, key->n);
     mpz_mul (v, v, b);
     mpz_mod (v, v, key->n);
     return 0;
@@ -1299,7 +1299,7 @@ rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc)
 			}
 		} while (base_was_tested);
 		mpz_init_set (tested[i], a);
-		MPZ_POWM (z, a, m, n);
+		mpz_powm (z, a, m, n);
 		if ((mpz_cmp_ui (z, 1) == 0) || (mpz_cmp (z, n_1) == 0))
 			continue;
 		composite = 1;
