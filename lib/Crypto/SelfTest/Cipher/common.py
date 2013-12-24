@@ -81,10 +81,6 @@ class CipherSelfTest(unittest.TestCase):
         mode = _extract(params, 'mode', None)
         self.mode_name = str(mode)
 
-        self.mode = mode
-        self.iv = _extract(params, 'iv', None)
-        if self.iv is not None: self.iv = b(self.iv)
-
         if mode is not None:
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
@@ -99,6 +95,12 @@ class CipherSelfTest(unittest.TestCase):
             self.encrypted_iv = _extract(params, 'encrypted_iv', None)
             if self.encrypted_iv is not None:
                 self.encrypted_iv = b(self.encrypted_iv)
+        else:
+            # Stream cipher
+            self.mode = None
+            self.iv = _extract(params, 'iv', None)
+            if self.iv is not None:
+                self.iv = b(self.iv)
 
         self.extra_params = params
 
