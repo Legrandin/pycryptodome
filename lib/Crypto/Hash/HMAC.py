@@ -43,7 +43,7 @@ The strength of an HMAC depends on:
  - the strength of the hash algorithm
  - the length and entropy of the secret key
 
-An example of possible usage is the following:
+This is an example showing how to *create* a MAC:
 
     >>> from Crypto.Hash import HMAC
     >>>
@@ -51,6 +51,22 @@ An example of possible usage is the following:
     >>> h = HMAC.new(secret)
     >>> h.update(b'Hello')
     >>> print h.hexdigest()
+
+This is an example showing how to *check* a MAC:
+
+    >>> from Crypto.Hash import HMAC
+    >>>
+    >>> # We have received a message 'msg' together
+    >>> # with its MAC 'mac'
+    >>>
+    >>> secret = b'Swordfish'
+    >>> h = HMAC.new(secret)
+    >>> h.update(msg)
+    >>> try:
+    >>>   h.verify(mac)
+    >>>   print "The message '%s' is authentic" % msg
+    >>> except ValueError:
+    >>>   print "The message or the key is wrong"
 
 .. _RFC2104: http://www.ietf.org/rfc/rfc2104.txt
 .. _FIPS-198: http://csrc.nist.gov/publications/fips/fips198/fips-198a.pdf
@@ -62,6 +78,8 @@ An example of possible usage is the following:
 __revision__ = "$Id$"
 
 __all__ = ['new', 'digest_size', 'HMAC' ]
+
+from binascii import unhexlify
 
 from Crypto.Util.strxor import strxor_c
 from Crypto.Util.py3compat import *
@@ -171,11 +189,31 @@ class HMAC:
         You can continue updating the object after calling this function.
         
         :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-         characters, including null bytes.
+            characters, including null bytes.
         """
+
         h = self.outer.copy()
         h.update(self.inner.digest())
         return h.digest()
+
+    def verify(self, mac_tag):
+        """Verify that a given **binary** MAC (computed by another party) is valid.
+
+        :Parameters:
+          mac_tag : byte string
+            The expected MAC of the message.
+        :Raises ValueError:
+            if the MAC does not match. It means that the message
+            has been tampered with or that the MAC key is incorrect.
+        """
+
+        mac = self.digest()
+        res = 0
+        # Constant-time comparison
+        for x,y in zip(mac, mac_tag):
+            res |= bord(x) ^ bord(y)
+        if res or len(mac_tag)!=self.digest_size:
+            raise ValueError("MAC check failed")
 
     def hexdigest(self):
         """Return the **printable** MAC of the message that has been
@@ -188,6 +226,19 @@ class HMAC:
         """
         return "".join(["%02x" % bord(x)
                   for x in tuple(self.digest())])
+
+    def hexverify(self, hex_mac_tag):
+        """Verify that a given **printable** MAC (computed by another party) is valid.
+
+        :Parameters:
+          hex_mac_tag : string
+            The expected MAC of the message, as a hexadecimal string.
+        :Raises ValueError:
+            if the MAC does not match. It means that the message
+            has been tampered with or that the MAC key is incorrect.
+        """
+
+        self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 def new(key, msg = None, digestmod = None):
     """Create a new HMAC object.

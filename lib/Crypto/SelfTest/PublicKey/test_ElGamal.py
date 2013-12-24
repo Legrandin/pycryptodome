@@ -28,7 +28,7 @@ import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto import Random
 from Crypto.PublicKey import ElGamal
-from Crypto.Util.number import *
+from Crypto.Util.number import bytes_to_long
 from Crypto.Util.py3compat import *
 
 class ElGamalTest(unittest.TestCase):
@@ -151,7 +151,7 @@ class ElGamalTest(unittest.TestCase):
             tv2['key'] += [tv2[c]]
             del tv2[c]
         return tv2
- 
+
     def _test_random_key(self, bits):
         elgObj = ElGamal.generate(bits, Random.new().read)
         self._check_private_key(elgObj)

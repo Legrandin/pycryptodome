@@ -21,4 +21,6 @@
 # This file exists for backward compatibility with old code that refers to
 # Crypto.Hash.RIPEMD
 
-from Crypto.Hash.RIPEMD160 import __doc__, new, block_size, digest_size
+"""Deprecated alias for `Crypto.Hash.RIPEMD160`"""
+
+from Crypto.Hash.RIPEMD160 import new, block_size, digest_size

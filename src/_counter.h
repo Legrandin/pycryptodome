@@ -26,6 +26,8 @@
 
 #include "pycrypto_common.h"
 
+#define PCT_CTR_ABI_VERSION   1   /* Bump this whenever the structure below changes */
+
 typedef struct {
     PyObject_HEAD
     PyBytesObject *prefix;     /* Prefix (useful for a nonce) */
@@ -35,7 +37,6 @@ typedef struct {
     uint8_t *p;         /* Pointer to the part of the buffer that we're allowed to update */
     uint16_t nbytes;    /* The number of bytes that from .p that are part of the counter */
     void (*inc_func)(void *);   /* Pointer to the counter increment function */
-    int shortcut_disabled;  /* This gets set to a non-zero value when the shortcut mechanism is disabled */
     int carry;         /* This gets set by Counter*Object_increment when the counter wraps around */
     int allow_wraparound;   /* When this is false, we raise OverflowError on next_value() or __call__() when the counter wraps around */
 } PCT_CounterObject;

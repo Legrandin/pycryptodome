@@ -59,14 +59,20 @@ verification.
 
     >>> from Crypto.Random import random
     >>> from Crypto.PublicKey import DSA
-    >>> from Crypto.Hash import SHA
+    >>> from Crypto.Hash import SHA256
     >>>
     >>> message = "Hello"
-    >>> key = DSA.generate(1024)
-    >>> h = SHA.new(message).digest()
+    >>> key = DSA.generate(2048)
+    >>> f = open("public_key.pem", "w")
+    >>> f.write(key.publickey().exportKey(key))
+    >>> h = SHA256.new(message).digest()
     >>> k = random.StrongRandom().randint(1,key.q-1)
     >>> sig = key.sign(h,k)
     >>> ...
+    >>> ...
+    >>> f = open("public_key.pem", "r")
+    >>> h = SHA256.new(message).digest()
+    >>> key = DSA.importKey(f.read())
     >>> if key.verify(h,sig):
     >>>     print "OK"
     >>> else:
@@ -79,19 +85,63 @@ verification.
 
 __revision__ = "$Id$"
 
-__all__ = ['generate', 'construct', 'error', 'DSAImplementation', '_DSAobj']
+__all__ = ['generate', 'construct', 'error', 'DSAImplementation',
+           '_DSAobj', 'importKey']
+
+import binascii
+import struct
 
 import sys
 if sys.version_info[0] == 2 and sys.version_info[1] == 1:
     from Crypto.Util.py21compat import *
+from Crypto.Util.py3compat import *
 
-from Crypto.PublicKey import _DSA, _slowmath, pubkey
 from Crypto import Random
+from Crypto.IO import PKCS8, PEM
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.PublicKey import _DSA, _slowmath, pubkey, KeyFormatError
+from Crypto.Util.asn1 import DerObject, DerSequence,\
+        DerInteger, DerObjectId, DerBitString, newDerSequence, newDerBitString
 
 try:
     from Crypto.PublicKey import _fastmath
 except ImportError:
     _fastmath = None
+
+def decode_der(obj_class, binstr):
+    """Instantiate a DER object class, decode a DER binary string in it,
+    and return the object."""
+    der = obj_class()
+    der.decode(binstr)
+    return der
+
+#   ; The following ASN.1 types are relevant for DSA
+#
+#   SubjectPublicKeyInfo    ::=     SEQUENCE {
+#       algorithm   AlgorithmIdentifier,
+#       subjectPublicKey BIT STRING
+#   }
+#
+#   id-dsa ID ::= { iso(1) member-body(2) us(840) x9-57(10040) x9cm(4) 1 }
+#
+#   ; See RFC3279
+#   Dss-Parms  ::=  SEQUENCE  {
+#       p INTEGER,
+#       q INTEGER,
+#       g INTEGER
+#   }
+#
+#   DSAPublicKey ::= INTEGER
+#
+#   DSSPrivatKey_OpenSSL ::= SEQUENCE
+#       version INTEGER,
+#       p INTEGER,
+#       q INTEGER,
+#       g INTEGER,
+#       y INTEGER,
+#       x INTEGER
+#   }
+#
 
 class _DSAobj(pubkey.pubkey):
     """Class defining an actual DSA key.
@@ -112,9 +162,12 @@ class _DSAobj(pubkey.pubkey):
     #:  - **x**, the private key.
     keydata = ['y', 'g', 'p', 'q', 'x']
 
-    def __init__(self, implementation, key):
+    def __init__(self, implementation, key, randfunc=None):
         self.implementation = implementation
         self.key = key
+        if randfunc is None:
+            randfunc = Random.new().read
+        self._randfunc = randfunc
 
     def __getattr__(self, attrname):
         if attrname in self.keydata:
@@ -217,6 +270,8 @@ class _DSAobj(pubkey.pubkey):
     def __setstate__(self, d):
         if not hasattr(self, 'implementation'):
             self.implementation = DSAImplementation()
+        if not hasattr(self, '_randfunc'):
+            self._randfunc = Random.new().read
         t = []
         for k in self.keydata:
             if not d.has_key(k):
@@ -236,6 +291,124 @@ class _DSAobj(pubkey.pubkey):
         # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
+    def exportKey(self, format='PEM', pkcs8=None, passphrase=None,
+                  protection=None):
+        """Export this DSA key.
+
+        :Parameters:
+          format : string
+            The format to use for wrapping the key:
+
+            - *'DER'*. Binary encoding.
+            - *'PEM'*. Textual encoding, done according to `RFC1421`_/
+              `RFC1423`_ (default).
+            - *'OpenSSH'*. Textual encoding, one line of text, see `RFC4253`_.
+              Only suitable for public keys, not private keys.
+
+          passphrase : string
+            For private keys only. The pass phrase to use for deriving
+            the encryption key.
+
+          pkcs8 : boolean
+            For private keys only. If ``True`` (default), the key is arranged
+            according to `PKCS#8`_ and if `False`, according to the custom
+            OpenSSL/OpenSSH encoding.
+
+          protection : string
+            The encryption scheme to use for protecting the private key.
+            It is only meaningful when a pass phrase is present too.
+
+            If ``pkcs8`` takes value ``True``, ``protection`` is the PKCS#8
+            algorithm to use for deriving the secret and encrypting
+            the private DSA key.
+            For a complete list of algorithms, see `Crypto.IO.PKCS8`.
+            The default is *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*.
+
+            If ``pkcs8`` is ``False``, the obsolete PEM encryption scheme is
+            used. It is based on MD5 for key derivation, and Triple DES for
+            encryption. Parameter ``protection`` is ignored.
+
+            The combination ``format='DER'`` and ``pkcs8=False`` is not allowed
+            if a passphrase is present.
+
+        :Return: A byte string with the encoded public or private half
+          of the key.
+        :Raise ValueError:
+            When the format is unknown or when you try to encrypt a private
+            key with *DER* format and OpenSSL/OpenSSH.
+        :attention:
+            If you don't provide a pass phrase, the private key will be
+            exported in the clear!
+
+        .. _RFC1421:    http://www.ietf.org/rfc/rfc1421.txt
+        .. _RFC1423:    http://www.ietf.org/rfc/rfc1423.txt
+        .. _RFC4253:    http://www.ietf.org/rfc/rfc4253.txt
+        .. _`PKCS#8`:   http://www.ietf.org/rfc/rfc5208.txt
+        """
+        if passphrase is not None:
+            passphrase = tobytes(passphrase)
+        if format == 'OpenSSH':
+            tup1 = [long_to_bytes(x) for x in (self.p, self.q, self.g, self.y)]
+
+            def func(x):
+                if (bord(x[0]) & 0x80):
+                    return bchr(0) + x
+                else:
+                    return x
+
+            tup2 = map(func, tup1)
+            keyparts = [b('ssh-dss')] + tup2
+            keystring = b('').join(
+                            [struct.pack(">I", len(kp)) + kp for kp in keyparts]
+                            )
+            return b('ssh-dss ') + binascii.b2a_base64(keystring)[:-1]
+
+        # DER format is always used, even in case of PEM, which simply
+        # encodes it into BASE64.
+        params = newDerSequence(self.p, self.q, self.g)
+        if self.has_private():
+            if pkcs8 is None:
+                pkcs8 = True
+            if pkcs8:
+                if not protection:
+                    protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
+                private_key = DerInteger(self.x).encode()
+                binary_key = PKCS8.wrap(
+                                private_key, oid, passphrase,
+                                protection, key_params=params,
+                                randfunc=self._randfunc
+                                )
+                if passphrase:
+                    key_type = 'ENCRYPTED PRIVATE'
+                else:
+                    key_type = 'PRIVATE'
+                passphrase = None
+            else:
+                if format != 'PEM' and passphrase:
+                    raise ValueError("DSA private key cannot be encrypted")
+                ints = [0, self.p, self.q, self.g, self.y, self.x]
+                binary_key = newDerSequence(*ints).encode()
+                key_type = "DSA PRIVATE"
+        else:
+            if pkcs8:
+                raise ValueError("PKCS#8 is only meaningful for private keys")
+            binary_key = newDerSequence(
+                            newDerSequence(DerObjectId(oid), params),
+                            newDerBitString(DerInteger(self.y))
+                            ).encode()
+            key_type = "DSA PUBLIC"
+
+        if format == 'DER':
+            return binary_key
+        if format == 'PEM':
+            pem_str = PEM.encode(
+                                binary_key, key_type + " KEY",
+                                passphrase, self._randfunc
+                            )
+            return tobytes(pem_str)
+        raise ValueError("Unknown key format '%s'. Cannot export the DSA key." % format)
+
+
 class DSAImplementation(object):
     """
     A DSA key factory.
@@ -243,7 +416,7 @@ class DSAImplementation(object):
     This class is only internally used to implement the methods of the
     `Crypto.PublicKey.DSA` module.
     """
- 
+
     def __init__(self, **kwargs):
         """Create a new DSA key factory.
 
@@ -370,9 +543,139 @@ class DSAImplementation(object):
         key = self._math.dsa_construct(*tup)
         return _DSAobj(self, key)
 
+    def _importKeyDER(self, key_data, passphrase=None, params=None):
+        """Import a DSA key (public or private half), encoded in DER form."""
+
+        try:
+            #
+            # Dss-Parms  ::=  SEQUENCE  {
+            #       p       OCTET STRING,
+            #       q       OCTET STRING,
+            #       g       OCTET STRING
+            # }
+            #
+
+            # Try a simple private key first
+            if params:
+                x = decode_der(DerInteger, key_data).value
+                params = decode_der(DerSequence, params)    # Dss-Parms
+                p, q, g = list(params)
+                y = pow(g, x, p)
+                tup = (y, g, p, q, x)
+                return self.construct(tup)
+
+            der = decode_der(DerSequence, key_data)
+
+            # Try OpenSSL format for private keys
+            if len(der) == 6 and der.hasOnlyInts() and der[0] == 0:
+                tup = [der[comp] for comp in (4, 3, 1, 2, 5)]
+                return self.construct(tup)
+
+            # Try SubjectPublicKeyInfo
+            if len(der) == 2:
+                try:
+                    algo = decode_der(DerSequence, der[0])
+                    algo_oid = decode_der(DerObjectId, algo[0]).value
+                    params = decode_der(DerSequence, algo[1])  # Dss-Parms
+
+                    if algo_oid == oid and len(params) == 3 and\
+                            params.hasOnlyInts():
+                        bitmap = decode_der(DerBitString, der[1])
+                        pub_key = decode_der(DerInteger, bitmap.value)
+                        tup = [pub_key.value]
+                        tup += [params[comp] for comp in (2, 0, 1)]
+                        return self.construct(tup)
+                except (ValueError, EOFError):
+                    pass
+
+            # Try unencrypted PKCS#8
+            p8_pair = PKCS8.unwrap(key_data, passphrase)
+            if p8_pair[0] == oid:
+                return self._importKeyDER(p8_pair[1], passphrase, p8_pair[2])
+
+        except (ValueError, EOFError):
+            pass
+
+        raise KeyFormatError("DSA key format is not supported")
+
+    def importKey(self, extern_key, passphrase=None):
+        """Import a DSA key (public or private).
+
+        :Parameters:
+          extern_key : (byte) string
+            The DSA key to import.
+
+            An DSA *public* key can be in any of the following formats:
+
+            - X.509 ``subjectPublicKeyInfo`` (binary or PEM)
+            - OpenSSH (one line of text, see `RFC4253`_)
+
+            A DSA *private* key can be in any of the following formats:
+
+            - `PKCS#8`_ ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo``
+              DER SEQUENCE (binary or PEM encoding)
+            - OpenSSL/OpenSSH (binary or PEM)
+
+            For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
+
+            The private key may be encrypted by means of a certain pass phrase
+            either at the PEM level or at the PKCS#8 level.
+
+          passphrase : string
+            In case of an encrypted private key, this is the pass phrase
+            from which the decryption key is derived.
+
+        :Return: A DSA key object (`_DSAobj`).
+        :Raise KeyFormatError:
+            When the given key cannot be parsed (possibly because
+            the pass phrase is wrong).
+
+        .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
+        .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
+        .. _RFC4253: http://www.ietf.org/rfc/rfc4253.txt
+        .. _PKCS#8: http://www.ietf.org/rfc/rfc5208.txt
+        """
+
+        extern_key = tobytes(extern_key)
+        if passphrase is not None:
+            passphrase = tobytes(passphrase)
+
+        if extern_key.startswith(b('-----')):
+            # This is probably a PEM encoded key
+            (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
+            if enc_flag:
+                passphrase = None
+            return self._importKeyDER(der, passphrase)
+
+        if extern_key.startswith(b('ssh-dss ')):
+            # This is probably a public OpenSSH key
+            keystring = binascii.a2b_base64(extern_key.split(b(' '))[1])
+            keyparts = []
+            while len(keystring) > 4:
+                length = struct.unpack(">I", keystring[:4])[0]
+                keyparts.append(keystring[4:4 + length])
+                keystring = keystring[4 + length:]
+            if keyparts[0] == b("ssh-dss"):
+                tup = [bytes_to_long(keyparts[x]) for x in (4, 3, 1, 2)]
+                return self.construct(tup)
+
+        if bord(extern_key[0]) == 0x30:
+            # This is probably a DER encoded key
+            return self._importKeyDER(extern_key, passphrase)
+
+        raise KeyFormatError("DSA key format is not supported")
+
+#: `Object ID`_ for a DSA key.
+#:
+#: id-dsa ID ::= { iso(1) member-body(2) us(840) x9-57(10040) x9cm(4) 1 }
+#:
+#: .. _`Object ID`: http://www.alvestrand.no/objectid/1.2.840.10040.4.1.html
+oid = "1.2.840.10040.4.1"
+
 _impl = DSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
+importKey = _impl.importKey
 error = _impl.error
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

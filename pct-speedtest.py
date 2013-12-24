@@ -31,8 +31,10 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
 from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
 from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
-from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512, CMAC
 from Crypto.Random import get_random_bytes
+import Crypto.Util.Counter
+from Crypto.Util.number import bytes_to_long
 try:
     from Crypto.Hash import SHA1
 except ImportError:
@@ -68,13 +70,13 @@ class Benchmark:
     def __init__(self):
         self.__random_data = None
 
-    def random_keys(self, bytes):
+    def random_keys(self, bytes, n=10**5):
         """Return random keys of the specified number of bytes.
 
         If this function has been called before with the same number of bytes,
         cached keys are used instead of randomly generating new ones.
         """
-        return self.random_blocks(bytes, 10**5)     # 100k
+        return self.random_blocks(bytes, n)
 
     def random_blocks(self, bytes_per_block, blocks):
         bytes = bytes_per_block * blocks
@@ -133,7 +135,12 @@ class Benchmark:
         self.announce_start("%s key setup" % (cipher_name,))
 
         # Generate random keys for use with the tests
-        keys = self.random_keys(key_bytes)
+        keys = self.random_keys(key_bytes, n=5000)
+
+        if hasattr(module, "MODE_CCM") and mode==module.MODE_CCM:
+            iv = b"\xAA"*8
+        else:
+            iv = b"\xAA"*module.block_size
 
         # Perform key setups
         if mode is None:
@@ -143,8 +150,15 @@ class Benchmark:
             t = time.time()
         else:
             t0 = time.time()
-            for k in keys:
-                module.new(k, module.MODE_ECB)
+
+            if mode==module.MODE_CTR:
+                for k in keys:
+                    ctr = Crypto.Util.Counter.new(module.block_size*8,
+                        initial_value=bytes_to_long(iv))
+                    module.new(k, module.MODE_CTR, counter=ctr)
+            else:
+                for k in keys:
+                    module.new(k, mode, iv)
             t = time.time()
 
         key_setups_per_second = len(keys) / (t - t0)
@@ -159,6 +173,19 @@ class Benchmark:
         blocks = self.random_blocks(16384, 1000)
         if mode is None:
             cipher = module.new(key)
+        elif mode == "CTR-BE":
+            from Crypto.Util import Counter
+            cipher = module.new(key, module.MODE_CTR, counter=Counter.new(module.block_size*8, little_endian=False))
+        elif mode == "CTR-LE":
+            from Crypto.Util import Counter
+            cipher = module.new(key, module.MODE_CTR, counter=Counter.new(module.block_size*8, little_endian=True))
+        elif hasattr(module, 'MODE_CCM') and mode==module.MODE_CCM:
+            cipher = module.new(key, mode, iv[:8], msg_len=len(rand)*len(blocks))
+        elif mode==module.MODE_CTR:
+            ctr = Crypto.Util.Counter.new(module.block_size*8,
+                    initial_value=bytes_to_long(iv),
+                    allow_wraparound=True)
+            cipher = module.new(key, module.MODE_CTR, counter=ctr)
         else:
             cipher = module.new(key, mode, iv)
 
@@ -213,6 +240,19 @@ class Benchmark:
         key = self.random_keys(digest_size)[0]
         mac_constructor = lambda data=None: hmac_constructor(key, data, digestmod)
         self.test_hash_large(mac_name, mac_constructor, digest_size)
+
+    def test_cmac_small(self, mac_name, cmac_constructor, ciphermod, key_size):
+        keys = iter(self.random_keys(key_size))
+        if sys.version_info[0] == 2:
+            mac_constructor = lambda data=None: cmac_constructor(keys.next(), data, ciphermod)
+        else:
+            mac_constructor = lambda data=None: cmac_constructor(keys.__next__(), data, ciphermod)
+        self.test_hash_small(mac_name, mac_constructor, ciphermod.block_size)
+
+    def test_cmac_large(self, mac_name, cmac_constructor, ciphermod, key_size):
+        key = self.random_keys(key_size)[0]
+        mac_constructor = lambda data=None: cmac_constructor(key, data, ciphermod)
+        self.test_hash_large(mac_name, mac_constructor, ciphermod.block_size)
 
     def test_pkcs1_sign(self, scheme_name, scheme_constructor, hash_name, hash_constructor, digest_size):
         self.announce_start("%s signing %s (%d-byte inputs)" % (scheme_name, hash_name, digest_size))
@@ -324,12 +364,30 @@ class Benchmark:
 
         # Crypto.Cipher (block ciphers)
         for cipher_name, module, key_bytes in block_specs:
-            self.test_key_setup(cipher_name, module, key_bytes, module.MODE_CBC)
+            self.test_key_setup("%s-CBC" % (cipher_name,), module, key_bytes, module.MODE_CBC)
             self.test_encryption("%s-CBC" % (cipher_name,), module, key_bytes, module.MODE_CBC)
             self.test_encryption("%s-CFB-8" % (cipher_name,), module, key_bytes, module.MODE_CFB)
             self.test_encryption("%s-OFB" % (cipher_name,), module, key_bytes, module.MODE_OFB)
             self.test_encryption("%s-ECB" % (cipher_name,), module, key_bytes, module.MODE_ECB)
+
+            self.test_key_setup("%s-CTR" % (cipher_name,), module, key_bytes, module.MODE_CTR)
+            self.test_encryption("%s-CTR" % (cipher_name,), module, key_bytes, module.MODE_CTR)
+
             self.test_encryption("%s-OPENPGP" % (cipher_name,), module, key_bytes, module.MODE_OPENPGP)
+            self.test_encryption("%s-CTR-BE" % (cipher_name,), module, key_bytes, "CTR-BE")
+            self.test_encryption("%s-CTR-LE" % (cipher_name,), module, key_bytes, "CTR-LE")
+
+            if hasattr(module, "MODE_CCM"):
+                self.test_key_setup("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
+                self.test_encryption("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
+
+            if hasattr(module, "MODE_EAX"):
+                self.test_key_setup("%s-EAX" % (cipher_name,), module, key_bytes, module.MODE_EAX)
+                self.test_encryption("%s-EAX" % (cipher_name,), module, key_bytes, module.MODE_EAX)
+
+            if hasattr(module, "MODE_GCM"):
+                self.test_key_setup("%s-GCM" % (cipher_name,), module, key_bytes, module.MODE_GCM)
+                self.test_encryption("%s-GCM" % (cipher_name,), module, key_bytes, module.MODE_GCM)
 
         # Crypto.Cipher (stream ciphers)
         for cipher_name, module, key_bytes in stream_specs:
@@ -355,6 +413,11 @@ class Benchmark:
         for hash_name, func in hashlib_specs:
             self.test_hmac_small("hmac+"+hash_name, hmac.HMAC, func, func().digest_size)
             self.test_hmac_large("hmac+"+hash_name, hmac.HMAC, func, func().digest_size)
+
+        # CMAC
+        for cipher_name, module, key_size in (("AES128", AES, 16),):
+            self.test_cmac_small(cipher_name+"-CMAC", CMAC.new, module, key_size)
+            self.test_cmac_large(cipher_name+"-CMAC", CMAC.new, module, key_size)
 
         # PKCS1_v1_5 (sign) + Crypto.Hash
         for hash_name, module in hash_specs:

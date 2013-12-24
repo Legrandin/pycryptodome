@@ -49,7 +49,13 @@ static char MODULE__doc__[] =
     "\n"
     "This algorithm is both slow and insecure. Do not use it for new designs.\n"
     "\n"
-    ".. _RFC1319: http://tools.ietf.org/html/rfc1319\n";
+    ".. _RFC1319: http://tools.ietf.org/html/rfc1319\n"
+    "\n"
+    ":Variables:\n"
+    " block_size\n"
+    "    The internal block size of the hash algorithm in bytes.\n"
+    " digest_size\n"
+    "    The size of the resulting hash in bytes.\n";
 
 typedef uint8_t U8;
 typedef uint32_t U32;

@@ -54,7 +54,7 @@ def get_tests(config={}):
     from common import make_hash_tests
     return make_hash_tests(SHA1, "SHA1", test_data,
         digest_size=20,
-        oid="\x06\x05\x2B\x0E\x03\x02\x1A")
+        oid="1.3.14.3.2.26")
 
 if __name__ == '__main__':
     import unittest

@@ -29,6 +29,7 @@ __revision__ = "$Id$"
 def get_tests(config={}):
     tests = []
     from Crypto.SelfTest.Hash import test_HMAC;       tests += test_HMAC.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_CMAC;       tests += test_CMAC.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_MD2;        tests += test_MD2.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_MD4;        tests += test_MD4.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_MD5;        tests += test_MD5.get_tests(config=config)

@@ -48,7 +48,13 @@ static char MODULE__doc__[] =
     "\n"
     "This algorithm is insecure. Do not use it for new designs.\n"
     "\n"
-    ".. _RFC1320: http://tools.ietf.org/html/rfc1320\n";
+    ".. _RFC1320: http://tools.ietf.org/html/rfc1320\n"
+    "\n"
+    ":Variables:\n"
+    " block_size\n"
+    "    The internal block size of the hash algorithm in bytes.\n"
+    " digest_size\n"
+    "    The size of the resulting hash in bytes.\n";
 
 typedef uint32_t U32;
 typedef uint8_t U8;

@@ -381,7 +381,7 @@ class TestCommand(Command):
     sub_commands = [ ('build', None) ]
 
 kw = {'name':"pycrypto",
-      'version':"2.6",  # See also: lib/Crypto/__init__.py
+      'version':"2.7a1",  # See also: lib/Crypto/__init__.py
       'description':"Cryptographic modules for Python.",
       'author':"Dwayne C. Litzenberger",
       'author_email':"dlitz@dlitz.net",
@@ -402,9 +402,11 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest.Random.OSRNG",
                   "Crypto.SelfTest.Util",
                   "Crypto.SelfTest.Signature",
+                  "Crypto.SelfTest.IO",
                   "Crypto.Protocol",
                   "Crypto.PublicKey",
-                  "Crypto.Signature"],
+                  "Crypto.Signature",
+                  "Crypto.IO"],
       'package_dir' : { "Crypto": "lib/Crypto" },
       'ext_modules': plat_ext + [
             # _fastmath (uses GNU mp library)
@@ -478,6 +480,9 @@ kw = {'name':"pycrypto",
             Extension("Crypto.Util.cpuid",
                       include_dirs=['src/'],
                       sources=['src/cpuid.c']),
+            Extension("Crypto.Util.galois",
+                      include_dirs=['src/'],
+                      sources=['src/galois.c']),
 
             # Counter modules
             Extension("Crypto.Util._counter",

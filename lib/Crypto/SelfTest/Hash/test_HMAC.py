@@ -26,8 +26,30 @@
 
 __revision__ = "$Id$"
 
+import unittest
+from binascii import hexlify
+
 from common import dict     # For compatibility with Python 2.1 and 2.2
 from Crypto.Util.py3compat import *
+if sys.version_info[0] == 2 and sys.version_info[1] == 1:
+    from Crypto.Util.py21compat import *
+
+from Crypto.Hash import HMAC, MD5, SHA1, SHA256
+hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256)
+
+try:
+    from Crypto.Hash import SHA224, SHA384, SHA512, RIPEMD160
+    hash_modules.update(dict(SHA224=SHA224, SHA384=SHA384, SHA512=SHA512,
+                             RIPEMD160=RIPEMD160))
+except ImportError:
+    import sys
+    sys.stderr.write("SelfTest: warning: not testing HMAC-SHA224/384/512"
+                     " (not available)\n")
+
+default_hash = None
+
+def xl(text):
+    return tostr(hexlify(b(text)))
 
 # This is a list of (key, data, results, description) tuples.
 test_data = [
@@ -35,7 +57,7 @@ test_data = [
     # Test that the default hashmod is MD5
     ('0b' * 16,
         '4869205468657265',
-        dict(default='9294727a3638bb1c13f48ef8158bfc9d'),
+        dict(default_hash='9294727a3638bb1c13f48ef8158bfc9d'),
         'default-is-MD5'),
 
     # Test case 1 (MD5)
@@ -175,9 +197,7 @@ test_data = [
             bfdc63644f0713938a7f51535c3a35e2
         '''),
         'RFC 4231 #7 (HMAC-SHA256)'),
-]
 
-hashlib_test_data = [
     # Test case 8 (SHA224)
     ('4a656665',
         '7768617420646f2079612077616e74'
@@ -199,24 +219,108 @@ hashlib_test_data = [
         dict(SHA512='164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea2505549758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737'),
         'RFC 4634 8.4 SHA512 (HMAC-SHA512)'),
 
+    # Test case 11 (RIPEMD)
+    ('0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b',
+     xl("Hi There"),
+     dict(RIPEMD160='24cb4bd67d20fc1a5d2ed7732dcc39377f0a5668'),
+     'RFC 2286 #1 (HMAC-RIPEMD)'),
+
+    # Test case 12 (RIPEMD)
+    (xl("Jefe"),
+     xl("what do ya want for nothing?"),
+     dict(RIPEMD160='dda6c0213a485a9e24f4742064a7f033b43c4069'),
+     'RFC 2286 #2 (HMAC-RIPEMD)'),
+
+    # Test case 13 (RIPEMD)
+    ('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+     'dd' * 50,
+     dict(RIPEMD160='b0b105360de759960ab4f35298e116e295d8e7c1'),
+     'RFC 2286 #3 (HMAC-RIPEMD)'),
+
+    # Test case 14 (RIPEMD)
+    ('0102030405060708090a0b0c0d0e0f10111213141516171819',
+     'cd' * 50,
+     dict(RIPEMD160='d5ca862f4d21d5e610e18b4cf1beb97a4365ecf4'),
+     'RFC 2286 #4 (HMAC-RIPEMD)'),
+
+    # Test case 15 (RIPEMD)
+    ('0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c',
+     xl("Test With Truncation"),
+     dict(RIPEMD160='7619693978f91d90539ae786500ff3d8e0518e39'),
+     'RFC 2286 #5 (HMAC-RIPEMD)'),
+
+    # Test case 16 (RIPEMD)
+    ('aa' * 80,
+     xl("Test Using Larger Than Block-Size Key - Hash Key First"),
+     dict(RIPEMD160='6466ca07ac5eac29e1bd523e5ada7605b791fd8b'),
+     'RFC 2286 #6 (HMAC-RIPEMD)'),
+
+    # Test case 17 (RIPEMD)
+    ('aa' * 80,
+     xl("Test Using Larger Than Block-Size Key and Larger Than One Block-Size Data"),
+     dict(RIPEMD160='69ea60798d71616cce5fd0871e23754cd75d5a0a'),
+     'RFC 2286 #7 (HMAC-RIPEMD)'),
+
 ]
+
+
+class HMAC_Module_and_Instance_Test(unittest.TestCase):
+    """Test the HMAC construction and verify that it does not
+    matter if you initialize it with a hash module or
+    with an hash instance.
+
+    See https://bugs.launchpad.net/pycrypto/+bug/1209399
+    """
+
+    def __init__(self, hashmods):
+        """Initialize the test with a dictionary of hash modules
+        indexed by their names"""
+
+        unittest.TestCase.__init__(self)
+        self.hashmods = hashmods
+        self.description = ""
+
+    def shortDescription(self):
+        return self.description
+
+    def runTest(self):
+        key = b("\x90\x91\x92\x93") * 4
+        payload = b("\x00") * 100
+
+        for hashname, hashmod in self.hashmods.items():
+            if hashmod is None:
+                continue
+            self.description = "Test HMAC in combination with " + hashname
+            one = HMAC.new(key, payload, hashmod).digest()
+            two = HMAC.new(key, payload, hashmod.new()).digest()
+            self.assertEqual(one, two)
+
 
 def get_tests(config={}):
     global test_data
-    from Crypto.Hash import HMAC, MD5, SHA1, SHA256
     from common import make_mac_tests
-    hashmods = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256, default=None)
-    try:
-        from Crypto.Hash import SHA224, SHA384, SHA512
-        hashmods.update(dict(SHA224=SHA224, SHA384=SHA384, SHA512=SHA512))
-        test_data += hashlib_test_data
-    except ImportError:
-        import sys
-        sys.stderr.write("SelfTest: warning: not testing HMAC-SHA224/384/512 (not available)\n")
-    return make_mac_tests(HMAC, "HMAC", test_data, hashmods)
+
+    # A test vector contains multiple results, each one for a
+    # different hash algorithm.
+    # Here we expand each test vector into multiple ones,
+    # and add the relevant parameters that will be passed to new()
+    exp_test_data = []
+    for row in test_data:
+        for modname in row[2].keys():
+            t = list(row)
+            t[2] = row[2][modname]
+            try:
+                t.append(dict(digestmod=globals()[modname]))
+                exp_test_data.append(t)
+            except AttributeError:
+                import sys
+                sys.stderr.write("SelfTest: warning: not testing HMAC-%s"
+                                 " (not available)\n" % modname)
+    tests = make_mac_tests(HMAC, "HMAC", exp_test_data)
+    tests.append(HMAC_Module_and_Instance_Test(hash_modules))
+    return tests
 
 if __name__ == '__main__':
-    import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
 

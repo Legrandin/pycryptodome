@@ -49,7 +49,13 @@ static char MODULE__doc__[] =
     "\n"
     "*SHA* stands for Secure Hash Algorithm.\n"
     "\n"
-    ".. _SHA-2: http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf\n";
+    ".. _SHA-2: http://csrc.nist.gov/publications/fips/fips180-4/fips-180-4.pdf\n"
+    "\n"
+    ":Variables:\n"
+    " block_size\n"
+    "    The internal block size of the hash algorithm in bytes.\n"
+    " digest_size\n"
+    "    The size of the resulting hash in bytes.\n";
 
 #include "hash_SHA2.h"
 

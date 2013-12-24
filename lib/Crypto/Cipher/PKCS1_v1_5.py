@@ -34,7 +34,7 @@ As an example, a sender may encrypt a message in this way:
         >>> from Crypto.PublicKey import RSA
         >>> from Crypto.Hash import SHA
         >>>
-        >>> message = 'To be encrypted'
+        >>> message = b'To be encrypted'
         >>> h = SHA.new(message)
         >>>
         >>> key = RSA.importKey(open('pubkey.der').read())

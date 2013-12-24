@@ -49,6 +49,9 @@ class ClockRewindWarning(CryptoRuntimeWarning):
 class GetRandomNumber_DeprecationWarning(CryptoDeprecationWarning):
     """Issued when Crypto.Util.number.getRandomNumber is invoked."""
 
+class DisableShortcut_DeprecationWarning(CryptoDeprecationWarning):
+    """Issued when Counter.new(disable_shortcut=...) is invoked."""
+
 class PowmInsecureWarning(CryptoRuntimeWarning):
     """Warning for when _fastmath is built without mpz_powm_sec"""
 

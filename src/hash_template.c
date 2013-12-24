@@ -46,14 +46,10 @@ typedef struct {
 /* Please see PEP3123 for a discussion of PyObject_HEAD and changes made in 3.x to make it conform to Standard C.
  * These changes also dictate using Py_TYPE to check type, and PyVarObject_HEAD_INIT(NULL, 0) to initialize
  */
-#ifdef IS_PY3K
-static PyTypeObject ALGtype;
-#define is_ALGobject(v) (Py_TYPE(v) == &ALGtype)
-#else
 staticforward PyTypeObject ALGtype;
-#define is_ALGobject(v) ((v)->ob_type == &ALGtype)
-#define PyLong_FromLong PyInt_FromLong /* For Python 2.x */
-#endif
+
+static char ALG__doc__[] =
+"Class that implements a " _MODULE_STRING " hash.";
 
 static ALGobject *
 newALGobject(void)
@@ -79,8 +75,16 @@ ALG_dealloc(PyObject *ptr)
 
 /* External methods for a hashing object */
 
-static char ALG_copy__doc__[] = 
-"copy(): Return a copy of the hashing object.";
+static char ALG_copy__doc__[] =
+"copy()\n"
+"Return a copy (\"clone\") of the hash object.\n"
+"\n"
+"The copy will have the same internal state as the original hash\n"
+"object.\n"
+"This can be used to efficiently compute the digests of strings that\n"
+"share a common initial substring.\n"
+"\n"
+":Return: A hash object of the same type\n";
 
 static PyObject *
 ALG_copy(ALGobject *self, PyObject *args)
@@ -98,8 +102,15 @@ ALG_copy(ALGobject *self, PyObject *args)
 	return((PyObject *)newobj); 
 }
 
-static char ALG_digest__doc__[] = 
-"digest(): Return the digest value as a string of binary data.";
+static char ALG_digest__doc__[] =
+"digest()\n"
+"Return the **binary** (non-printable) digest of the message that has been hashed so far.\n"
+"\n"
+"This method does not change the state of the hash object.\n"
+"You can continue updating the object after calling this function.\n"
+"\n"
+":Return: A byte string of `digest_size` bytes. It may contain non-ASCII\n"
+"characters, including null bytes.\n";
 
 static PyObject *
 ALG_digest(ALGobject *self, PyObject *args)
@@ -110,8 +121,14 @@ ALG_digest(ALGobject *self, PyObject *args)
 	return (PyObject *)hash_digest(&(self->st));
 }
 
-static char ALG_hexdigest__doc__[] = 
-"hexdigest(): Return the digest value as a string of hexadecimal digits.";
+static char ALG_hexdigest__doc__[] =
+"hexdigest()\n"
+"Return the **printable** digest of the message that has been hashed so far.\n"
+"\n"
+"This method does not change the state of the hash object.\n"
+"\n"
+":Return: A string of 2* `digest_size` characters. It contains only\n"
+"hexadecimal ASCII digits.\n";
 
 static PyObject *
 ALG_hexdigest(ALGobject *self, PyObject *args)
@@ -150,8 +167,22 @@ ALG_hexdigest(ALGobject *self, PyObject *args)
 	return retval;
 }
 
-static char ALG_update__doc__[] = 
-"update(string): Update this hashing object's state with the provided string.";
+static char ALG_update__doc__[] =
+"update(data)\n"
+"Continue hashing of a message by consuming the next chunk of data.\n"
+"\n"
+"Repeated calls are equivalent to a single call with the concatenation\n"
+"of all the arguments. In other words:\n"
+"\n"
+"   >>> m.update(a); m.update(b)\n"
+"\n"
+"is equivalent to:\n"
+"\n"
+"   >>> m.update(a+b)\n"
+"\n"
+":Parameters:\n"
+"  data : byte string\n"
+"    The next chunk of the message being hashed.\n";
 
 static PyObject *
 ALG_update(ALGobject *self, PyObject *args)
@@ -174,10 +205,16 @@ ALG_update(ALGobject *self, PyObject *args)
 
 /** Forward declaration for this module's new() method **/
 static char ALG_new__doc__[] =
-"new([string]): Return a new " _MODULE_STRING 
-" hashing object.  An optional string "
-"argument may be provided; if present, this string will be "
-"automatically hashed into the initial state of the object."; 
+"new(data=None)\n"
+"Return a fresh instance of the hash object.\n"
+"\n"
+":Parameters:\n"
+"   data : byte string\n"
+"    The very first chunk of the message to hash.\n"
+"    It is equivalent to an early call to `" _MODULE_STRING ".update()`.\n"
+"    Optional.\n"
+"\n"
+":Return: A `" _MODULE_STRING "` object\n";
 
 static PyObject *ALG_new(PyObject*, PyObject*);
 
@@ -191,58 +228,43 @@ static PyMethodDef ALG_methods[] = {
 };
 
 static PyObject *
-#ifdef IS_PY3K
 ALG_getattro(PyObject *self, PyObject *attr)
-#else
-ALG_getattr(PyObject *self, char *name)
-#endif
 {
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
+	if (!PyString_Check(attr))
 		goto generic;
- 
-	if (PyUnicode_CompareWithASCIIString(attr, "digest_size")==0)
-		return PyLong_FromLong(DIGEST_SIZE);
-	if (PyUnicode_CompareWithASCIIString(attr, "name")==0)
-		return PyUnicode_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
-#else
-	if (strcmp(name, "digest_size")==0)
-		return PyInt_FromLong(DIGEST_SIZE);
-	if (strcmp(name, "name")==0)
-		return PyString_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
-#endif
 
-#ifdef IS_PY3K
+	if (PyString_CompareWithASCIIString(attr, "digest_size")==0)
+		return PyInt_FromLong(DIGEST_SIZE);
+	if (PyString_CompareWithASCIIString(attr, "block_size")==0)
+		return PyInt_FromLong(BLOCK_SIZE);
+	if (PyString_CompareWithASCIIString(attr, "name")==0)
+		return PyString_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
+
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	return PyObject_GenericGetAttr(self, attr);
 #else
-	return Py_FindMethod(ALG_methods, self, name);
+	if (PyString_Check(attr) < 0) {
+		PyErr_SetObject(PyExc_AttributeError, attr);
+		return NULL;
+	}
+	return Py_FindMethod(ALG_methods, (PyObject *)self, PyString_AsString(attr));
 #endif
 }
 
 static PyTypeObject ALGtype = {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT(NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-	PyObject_HEAD_INIT(NULL)
-	0,			/*ob_size*/
-#endif
  	_MODULE_STRING,			/*tp_name*/
  	sizeof(ALGobject),	/*tp_size*/
  	0,			/*tp_itemsize*/
  	/* methods */
 	(destructor) ALG_dealloc, /*tp_dealloc*/
  	0,			/*tp_print*/
-#ifdef IS_PY3K
-	0, 			/*tp_getattr*/
-#else
-	ALG_getattr, /*tp_getattr*/
-#endif
+	0,			/*tp_getattr*/
  	0,			/*tp_setattr*/
  	0,			/*tp_compare*/
  	0,			/*tp_repr*/
     0,			/*tp_as_number*/
-#ifdef IS_PY3K
 	0,				/*tp_as_sequence */
 	0,				/*tp_as_mapping */
 	0,				/*tp_hash*/
@@ -252,11 +274,12 @@ static PyTypeObject ALGtype = {
 	0,				/*tp_setattro*/
 	0,				/*tp_as_buffer*/
 	Py_TPFLAGS_DEFAULT,		/*tp_flags*/
-	0,				/*tp_doc*/
+	ALG__doc__,	/*tp_doc*/
 	0,				/*tp_traverse*/
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	ALG_methods,		/*tp_methods*/
@@ -320,45 +343,61 @@ static struct PyModuleDef moduledef = {
 
 /* Initialize this module. */
 
-/* Deal with old API in Python 2.1 */
-#if PYTHON_API_VERSION < 1011
-#define PyModule_AddIntConstant(m,n,v) {PyObject *o=PyInt_FromLong(v); \
-           if (o!=NULL) \
-             {PyDict_SetItemString(PyModule_GetDict(m),n,o); Py_DECREF(o);}}
-#endif
-
-#ifdef IS_PY3K
 PyMODINIT_FUNC
-#else
-void
-#endif
 _MODULE_NAME (void)
 {
-	PyObject *m;
+	PyObject *m = NULL;
+	PyObject *__all__ = NULL;
 
-#ifdef IS_PY3K
-	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
 	if (PyType_Ready(&ALGtype) < 0)
-		return NULL;
+		goto errout;
 
 	/* Create the module and add the functions */
+#ifdef IS_PY3K
 	m = PyModule_Create(&moduledef);
-   if (m == NULL)
-        return NULL;
 #else
-	ALGtype.ob_type = &PyType_Type;
 	m = Py_InitModule3("Crypto.Hash." _MODULE_STRING, ALG_functions, MODULE__doc__);
 #endif
+	if (m == NULL)
+		goto errout;
+
+	/* Add the type object to the module (using the name of the module itself),
+	 * so that its methods docstrings are discoverable by introspection tools. */
+	PyObject_SetAttrString(m, _MODULE_STRING, (PyObject *)&ALGtype);
 
 	/* Add some symbolic constants to the module */
 	PyModule_AddIntConstant(m, "digest_size", DIGEST_SIZE);
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
 
-	/* Check for errors */
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module " 
-                              _MODULE_STRING);
+	/* Create __all__ (to help generate documentation) */
+	__all__ = PyList_New(4);
+	if (__all__ == NULL)
+		goto errout;
+	PyList_SetItem(__all__, 0, PyString_FromString(_MODULE_STRING));	/* This is the ALGType object */
+	PyList_SetItem(__all__, 1, PyString_FromString("new"));
+	PyList_SetItem(__all__, 2, PyString_FromString("digest_size"));
+	PyList_SetItem(__all__, 3, PyString_FromString("block_size"));
+	PyObject_SetAttrString(m, "__all__", __all__);
+
+out:
+	/* Final error check, then return */
+	if (m == NULL && !PyErr_Occurred()) {
+		PyErr_SetString(PyExc_ImportError, "can't initialize module");
+		goto errout;
+	}
+
+	/* Free local objects here */
+	Py_CLEAR(__all__);
+
+	/* Return */
 #ifdef IS_PY3K
 	return m;
+#else
+	return;
 #endif
+
+errout:
+	/* Free the module and other global objects here */
+	Py_CLEAR(m);
+	goto out;
 }

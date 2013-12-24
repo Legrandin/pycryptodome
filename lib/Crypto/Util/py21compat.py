@@ -81,4 +81,21 @@ except TypeError:
                     return True
             return False
 
+#
+# Python 2.2 introduces the built-in staticmethod(). Python 2.4 turns
+# it into a function decorator (@staticmethod).
+#
+# The following recipe for achieving the same thing in Python 2.1 comes
+# from the Python Cookbok ("Implementanting Static Methods").
+#
+try:
+    class A:
+        def a(): pass
+        a = staticmethod(a)
+except NameError:
+    class staticmethod:
+        def __init__(self, anycallable):
+            self.__call__ = anycallable
+    __all__ += ['staticmethod']
+
 # vim:set ts=4 sw=4 sts=4 expandtab:

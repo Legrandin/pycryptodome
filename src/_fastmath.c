@@ -51,6 +51,12 @@
 
 #define SIEVE_BASE_SIZE (sizeof (sieve_base) / sizeof (sieve_base[0]))
 
+#ifdef IS_PY3K
+#define OB_SIZE(p) ((p)->ob_base.ob_size)
+#else
+#define OB_SIZE(p) ((p)->ob_size)
+#endif
+
 static unsigned int sieve_base[10000];
 static int rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc);
 
@@ -62,32 +68,18 @@ longObjToMPZ (mpz_t m, PyLongObject * p)
 	mpz_t temp, temp2;
 	mpz_init (temp);
 	mpz_init (temp2);
-#ifdef IS_PY3K
-	if (p->ob_base.ob_size > 0) {
-		size = p->ob_base.ob_size;
+	if (OB_SIZE(p) > 0) {
+		size = OB_SIZE(p);
 		negative = 1;
 	} else {
-		size = -p->ob_base.ob_size;
+		size = -OB_SIZE(p);
 		negative = -1;
 	}
-#else
-	if (p->ob_size > 0) {
-		size = p->ob_size;
-		negative = 1;
-	} else {
-		size = -p->ob_size;
-		negative = -1;
-	}
-#endif
 	mpz_set_ui (m, 0);
 	for (i = 0; i < size; i++)
 	{
 		mpz_set_ui (temp, p->ob_digit[i]);
-#ifdef IS_PY3K
 		mpz_mul_2exp (temp2, temp, PyLong_SHIFT * i);
-#else
-		mpz_mul_2exp (temp2, temp, SHIFT * i);
-#endif
 		mpz_add (m, m, temp2);
 	}
 	mpz_mul_si(m, m, negative);
@@ -99,11 +91,7 @@ static PyObject *
 mpzToLongObj (mpz_t m)
 {
 	/* borrowed from gmpy */
-#ifdef IS_PY3K
 	int size = (mpz_sizeinbase (m, 2) + PyLong_SHIFT - 1) / PyLong_SHIFT;
-#else
-	int size = (mpz_sizeinbase (m, 2) + SHIFT - 1) / SHIFT;
-#endif
 	int sgn;
 	int i;
 	mpz_t temp;
@@ -115,22 +103,13 @@ mpzToLongObj (mpz_t m)
 	mpz_mul_si(temp, m, sgn);
 	for (i = 0; i < size; i++)
 	{
-#ifdef IS_PY3K
 		l->ob_digit[i] = (digit) (mpz_get_ui (temp) & PyLong_MASK);
 		mpz_fdiv_q_2exp (temp, temp, PyLong_SHIFT);
-#else
-		l->ob_digit[i] = (digit) (mpz_get_ui (temp) & MASK);
-		mpz_fdiv_q_2exp (temp, temp, SHIFT);
-#endif
 	}
 	i = size;
 	while ((i > 0) && (l->ob_digit[i - 1] == 0))
 		i--;
-#ifdef IS_PY3K
-	l->ob_base.ob_size = i * sgn;
-#else
-	l->ob_size = i * sgn;
-#endif
+	OB_SIZE(l) = i * sgn;
 	mpz_clear (temp);
 	return (PyObject *) l;
 }
@@ -160,22 +139,14 @@ static PyObject *rsaKey_new (PyObject *, PyObject *);
 static PyObject *dsaKey_new (PyObject *, PyObject *);
 
 static void dsaKey_dealloc (dsaKey *);
-#ifdef IS_PY3K
 static PyObject *dsaKey_getattro (dsaKey *, PyObject *);
-#else
-static PyObject *dsaKey_getattr (dsaKey *, char *);
-#endif
 static PyObject *dsaKey__sign (dsaKey *, PyObject *);
 static PyObject *dsaKey__verify (dsaKey *, PyObject *);
 static PyObject *dsaKey_size (dsaKey *, PyObject *);
 static PyObject *dsaKey_has_private (dsaKey *, PyObject *);
 
 static void rsaKey_dealloc (rsaKey *);
-#ifdef IS_PY3K
 static PyObject *rsaKey_getattro (rsaKey *, PyObject *);
-#else
-static PyObject *rsaKey_getattr (rsaKey *, char *);
-#endif
 static PyObject *rsaKey__encrypt (rsaKey *, PyObject *);
 static PyObject *rsaKey__decrypt (rsaKey *, PyObject *);
 static PyObject *rsaKey__verify (rsaKey *, PyObject *);
@@ -374,22 +345,13 @@ static PyMethodDef rsaKey__methods__[] = {
 static PyObject *fastmathError;							/* raised on errors */
 
 static PyTypeObject dsaKeyType = {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT (NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-	PyObject_HEAD_INIT (NULL) 
-	0,				/*ob_size*/
-#endif
 	"dsaKey",
 	sizeof (dsaKey),
 	0,
 	(destructor) dsaKey_dealloc,	/* dealloc */
 	0,				/* print */
-#ifdef IS_PY3K
 	0,				/* getattr */
-#else
-	(getattrfunc) dsaKey_getattr, /* getattr */
-#endif
 	0,              /* setattr */
 	0,				/* compare */
 	0,				/* repr */
@@ -398,7 +360,6 @@ static PyTypeObject dsaKeyType = {
 	0,				/* as_mapping */
 	0,				/* hash */
 	0,				/* call */
-#ifdef IS_PY3K
 	0,				/*tp_str*/
 	(getattrofunc) dsaKey_getattro,	/*tp_getattro*/
 	0,				/*tp_setattro*/
@@ -409,6 +370,7 @@ static PyTypeObject dsaKeyType = {
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	dsaKey__methods__,		/*tp_methods*/
@@ -416,23 +378,14 @@ static PyTypeObject dsaKeyType = {
 };
 
 static PyTypeObject rsaKeyType = {
-#ifdef IS_PY3K
 	PyVarObject_HEAD_INIT (NULL, 0)  /* deferred type init for compilation on Windows, type will be filled in at runtime */
-#else
-	PyObject_HEAD_INIT (NULL) 
-	0,				/*ob_size*/
-#endif
 	"rsaKey",		/*tp_name*/
 	sizeof (rsaKey),	/*tp_size*/
 	0,				/*tp_itemsize*/
 	/* methods */
 	(destructor) rsaKey_dealloc,	/* dealloc */
 	0,				/* print */
-#ifdef IS_PY3K
 	0,				/* getattr */
-#else
-	(getattrfunc) rsaKey_getattr,	/* getattr */
-#endif
 	0,              /* setattr */
 	0,				/* compare */
 	0,				/* repr */
@@ -441,7 +394,6 @@ static PyTypeObject rsaKeyType = {
 	0,				/* as_mapping */
 	0,				/* hash */
 	0,				/* call */
-#ifdef IS_PY3K
 	0,				/*tp_str*/
 	(getattrofunc) rsaKey_getattro,	/*tp_getattro*/
 	0,				/*tp_setattro*/
@@ -452,6 +404,7 @@ static PyTypeObject rsaKeyType = {
 	0,				/*tp_clear*/
 	0,				/*tp_richcompare*/
 	0,				/*tp_weaklistoffset*/
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 	0,				/*tp_iter*/
 	0,				/*tp_iternext*/
 	rsaKey__methods__,		/*tp_methods*/
@@ -499,43 +452,19 @@ dsaKey_dealloc (dsaKey * key)
 }
 
 static PyObject *
-#ifdef IS_PY3K
 dsaKey_getattro (dsaKey * key, PyObject *attr)
-#else
-dsaKey_getattr (dsaKey * key, char *attr)
-#endif
 {
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
+	if (!PyString_Check(attr))
 		goto generic;
-	if (PyUnicode_CompareWithASCIIString(attr,"y") == 0)
-#else
-	if (strcmp (attr, "y") == 0)
-#endif
+	if (PyString_CompareWithASCIIString(attr,"y") == 0)
 		return mpzToLongObj (key->y);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "g") == 0)
-#else
-	else if (strcmp (attr, "g") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "g") == 0)
 		return mpzToLongObj (key->g);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "p") == 0)
-#else
-	else if (strcmp (attr, "p") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "p") == 0)
 		return mpzToLongObj (key->p);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "q") == 0)
-#else
-	else if (strcmp (attr, "q") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "q") == 0)
 		return mpzToLongObj (key->q);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "x") == 0)
-#else
-	else if (strcmp (attr, "x") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "x") == 0)
 	{
 		if (mpz_size (key->x) == 0)
 		{
@@ -546,11 +475,15 @@ dsaKey_getattr (dsaKey * key, char *attr)
 		return mpzToLongObj (key->x);
 	}
 	else
-#ifdef IS_PY3K
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 		return PyObject_GenericGetAttr((PyObject *) key, attr);
 #else
-		return Py_FindMethod (dsaKey__methods__, (PyObject *) key, attr);
+		if (PyString_Check(attr) < 0) {
+			PyErr_SetObject(PyExc_AttributeError, attr);
+			return NULL;
+		}
+		return Py_FindMethod(dsaKey__methods__, (PyObject *)key, PyString_AsString(attr));
 #endif
 }
 
@@ -765,31 +698,15 @@ rsaKey_dealloc (rsaKey * key)
 }
 
 static PyObject *
-#ifdef IS_PY3K
 rsaKey_getattro (rsaKey * key, PyObject *attr)
-#else
-rsaKey_getattr (rsaKey * key, char *attr)
-#endif
 {
-#ifdef IS_PY3K
-	if (!PyUnicode_Check(attr))
+	if (!PyString_Check(attr))
 		goto generic;
-	if (PyUnicode_CompareWithASCIIString(attr, "n") == 0)
-#else
-	if (strcmp (attr, "n") == 0)
-#endif
+	if (PyString_CompareWithASCIIString(attr, "n") == 0)
 		return mpzToLongObj (key->n);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "e") == 0)
-#else
-	else if (strcmp (attr, "e") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "e") == 0)
 		return mpzToLongObj (key->e);
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "d") == 0)
-#else
-	else if (strcmp (attr, "d") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "d") == 0)
 	{
 		if (mpz_size (key->d) == 0)
 		{
@@ -799,11 +716,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		}
 		return mpzToLongObj (key->d);
 	}
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "p") == 0)
-#else
-	else if (strcmp (attr, "p") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "p") == 0)
 	{
 		if (mpz_size (key->p) == 0)
 		{
@@ -813,11 +726,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		}
 		return mpzToLongObj (key->p);
 	}
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "q") == 0)
-#else
-	else if (strcmp (attr, "q") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "q") == 0)
 	{
 		if (mpz_size (key->q) == 0)
 		{
@@ -827,11 +736,7 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		}
 		return mpzToLongObj (key->q);
 	}
-#ifdef IS_PY3K
-	else if (PyUnicode_CompareWithASCIIString(attr, "u") == 0)
-#else
-	else if (strcmp (attr, "u") == 0)
-#endif
+	else if (PyString_CompareWithASCIIString(attr, "u") == 0)
 	{
 		if (mpz_size (key->u) == 0)
 		{
@@ -842,12 +747,15 @@ rsaKey_getattr (rsaKey * key, char *attr)
 		return mpzToLongObj (key->u);
 	}
 	else
-#ifdef IS_PY3K
   generic:
+#if PYTHON_API_VERSION >= 1011          /* Python 2.2 and later */
 		return PyObject_GenericGetAttr((PyObject *) key, attr);
 #else
-		return Py_FindMethod (rsaKey__methods__, 
-				      (PyObject *) key, attr);
+		if (PyString_Check(attr) < 0) {
+			PyErr_SetObject(PyExc_AttributeError, attr);
+			return NULL;
+		}
+		return Py_FindMethod(rsaKey__methods__, (PyObject *)key, PyString_AsString(attr));
 #endif
 }
 
@@ -1683,44 +1591,57 @@ static struct PyModuleDef moduledef = {
 };
 #endif
 
-#ifdef IS_PY3K
 PyMODINIT_FUNC
+#ifdef IS_PY3K
 PyInit__fastmath (void)
 #else
-void
 init_fastmath (void)
 #endif
 {
-    PyObject *_fastmath_module;
-    PyObject *_fastmath_dict;
- 
-#ifdef IS_PY3K
-	/* PyType_Ready automatically fills in ob_type with &PyType_Type if it's not already set */
+	PyObject *m = NULL;
+
 	if (PyType_Ready(&rsaKeyType) < 0)
-		return NULL;
+		goto errout;
 	if (PyType_Ready(&dsaKeyType) < 0)
-		return NULL;
-	
-	_fastmath_module = PyModule_Create(&moduledef);
-	if (_fastmath_module == NULL)
-        return NULL;
+		goto errout;
+
+	/* Initialize the module */
+#ifdef IS_PY3K
+	m = PyModule_Create(&moduledef);
 #else
-	rsaKeyType.ob_type = &PyType_Type;
-	dsaKeyType.ob_type = &PyType_Type;
-	_fastmath_module = Py_InitModule ("_fastmath", _fastmath__methods__);
+	m = Py_InitModule ("_fastmath", _fastmath__methods__);
 #endif
- 	_fastmath_dict = PyModule_GetDict (_fastmath_module);
+	if (m == NULL)
+		goto errout;
+
 	fastmathError = PyErr_NewException ("_fastmath.error", NULL, NULL);
-#ifdef IS_PY3K
-	if (fastmathError == NULL) return NULL;
-#endif
- 	PyDict_SetItemString (_fastmath_dict, "error", fastmathError);
+	if (fastmathError == NULL)
+		goto errout;
+	PyObject_SetAttrString(m, "error", fastmathError);
 
-	PyModule_AddIntConstant(_fastmath_module, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
+	PyModule_AddIntConstant(m, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
 
+out:
+	/* Final error check */
+	if (m == NULL && !PyErr_Occurred()) {
+		PyErr_SetString(PyExc_ImportError, "can't initialize module");
+		goto errout;
+	}
+
+	/* Free local objects here */
+
+	/* Return */
 #ifdef IS_PY3K
-	return _fastmath_module;
+	return m;
+#else
+	return;
 #endif
+
+errout:
+	/* Free the module and other global objects here */
+	Py_CLEAR(m);
+	Py_CLEAR(fastmathError);
+	goto out;
 }
 
 /* The first 10000 primes to be used as a base for sieving */
