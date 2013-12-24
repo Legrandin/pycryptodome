@@ -39,7 +39,7 @@ this:
     >>> h = SHA1.new()
     >>> h.update(message)
     >>> signer = PKCS1_PSS.new(key)
-    >>> signature = signer.sign(key)
+    >>> signature = signer.sign(h)
 
 At the receiver side, verification can be done like using the public part of
 the RSA key:
