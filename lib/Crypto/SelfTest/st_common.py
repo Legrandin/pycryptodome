@@ -60,15 +60,16 @@ def b2a_hex(s):
     return binascii.b2a_hex(s)
 
 def handle_fastmath_import_error():
-    from distutils.sysconfig import get_config_var
-    import inspect, os.path
-    ext_suffix = get_config_var("EXT_SUFFIX") or get_config_var("SO")
-    _fm_path = os.path.normpath(os.path.dirname(os.path.abspath(
-        inspect.getfile(inspect.currentframe())))
-        +"/../../PublicKey/_fastmath"+ext_suffix)
-    if os.path.exists(_fm_path):
-        raise ImportError("While the _fastmath module exists, importing "+
-            "it failed. This may point to the gmp or mpir shared library "+
-            "not being in the path. _fastmath was found at "+_fm_path)
+    import Crypto.PublicKey
+    import imp
+    try:
+        file, pathname, description = imp.find_module("_fastmath", Crypto.PublicKey.__path__)
+    except ImportError:
+        sys.stderr.write("SelfTest: warning: not testing _fastmath module (not available)\n")
+    else:
+        file.close()
+        raise ImportError("While the _fastmath module exists, importing "
+            "it failed. This may point to the gmp or mpir shared library "
+            "not being in the path. _fastmath was found at %s" % (pathname,))
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
