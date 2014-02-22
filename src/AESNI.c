@@ -49,16 +49,16 @@ typedef struct {
 
 static void* memalign_wrapper(size_t alignment, size_t size)
 {
-#if defined(HAVE_POSIX_MEMALIGN)
+#if defined(HAVE_ALIGNED_ALLOC)
+    /* aligned_alloc is defined by C11 */
+    return aligned_alloc(alignment, size);
+#elif defined(HAVE_POSIX_MEMALIGN)
     /* posix_memalign is defined by POSIX */
     void* tmp = NULL;
     int result = posix_memalign(&tmp, alignment, size);
     if (result != 0)
         return NULL;
     return tmp;
-#elif defined(HAVE_ALIGNED_ALLOC)
-    /* aligned_alloc is defined by C11 */
-    return aligned_alloc(alignment, size);
 #elif defined(HAVE__ALIGNED_MALLOC)
     /* _aligned_malloc is available on Windows */
     return _aligned_malloc(size, alignment);
