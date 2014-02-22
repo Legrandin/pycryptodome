@@ -61,6 +61,7 @@ http://www.python.org/ftp/python/3.0.1/Python-3.0.1.tar.bz2
 http://www.python.org/ftp/python/3.1.5/Python-3.1.5.tar.bz2
 http://www.python.org/ftp/python/3.2.3/Python-3.2.3.tar.bz2
 http://www.python.org/ftp/python/3.3.0/Python-3.3.0.tar.bz2
+http://www.python.org/ftp/python/3.4.0/Python-3.4.0rc1.tgz
 EOF
 
 # HACK - "wget -c" doesn't properly handle sites like this that don't support the Range header
@@ -68,7 +69,7 @@ wget -nc -i- <<-'EOF'
 https://gist.github.com/raw/1929293/18b5c29262ea04d0802e998da368e14b73112bda/fix-python-2.5.6-svnversion-issue.patch
 EOF
 
-# Check MD5 checksums (mostly transcribed from www.python.org)
+# Check MD5 checksums (mostly transcribed from www.python.org, up to v3.3)
 md5sum -c <<-'EOF'
 a8b04cdc822a6fc833ed9b99c7fba589 *Python-2.1.3.tgz
 169f89f318e252dac0c54dd1b165d229 *Python-2.2.3.tgz
@@ -81,6 +82,7 @@ c57477edd6d18bd9eeca2f21add73919 *Python-2.7.3.tar.bz2
 dc8a7a96c12880d2e61e9f4add9d3dc7 *Python-3.1.5.tar.bz2
 cea34079aeb2e21e7b60ee82a0ac286b *Python-3.2.3.tar.bz2
 b3b2524f72409d919a4137826a870a8f *Python-3.3.0.tar.bz2
+8f75b4e8e907bc17d9e4478da1bd0f0f *Python-3.4.0rc1.tgz
 871fac364185ba4b94a74f6245f08f34 *fix-python-2.5.6-svnversion-issue.patch
 EOF
 #1d00e2fb19418e486c30b850df625aa3 *Python-2.5.5.tar.bz2
@@ -104,6 +106,7 @@ c34036718ee1f091736677f543bc7960861cf9fcbea77d49572b59f7f1ab3c3f *Python-2.6.8.t
 3a72a21528f0751e89151744350dd12004131d312d47b935ce8041b070c90361 *Python-3.1.5.tar.bz2
 5648ec81f93870fde2f0aa4ed45c8718692b15ce6fd9ed309bfb827ae12010aa *Python-3.2.3.tar.bz2
 15c113fd6c058712f05d31b4eff149d4d823b8e39ef5e37228dc5dc4f8716df9 *Python-3.3.0.tar.bz2
+95fae4e71ffd4b442527a379f1a7d8ca7ac1ca3c60f3c740fe06d8562814722f *Python-3.4.0rc1.tgz
 46c40e269b073155f7b5c2e2aa7abdac55b0756d6239def317fff81f7d5088d7 *fix-python-2.5.6-svnversion-issue.patch
 	EOF
 #2623a04d40123950eb2a459aa39805f48f6254c21b4c0fcfa430d5eca8a0389b *Python-2.5.5.tar.bz2
