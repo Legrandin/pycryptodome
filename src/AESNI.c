@@ -45,40 +45,29 @@ typedef struct {
     int rounds;
 } block_state;
 
-/* Wrapper function for malloc and free with memory alignment */
-
-static void* memalign_wrapper(size_t alignment, size_t size)
+/* Wrapper functions for malloc and free with memory alignment */
+#if defined(HAVE_ALIGNED_ALLOC) /* aligned_alloc is defined by C11 */
+# define aligned_malloc_wrapper aligned_alloc
+# define aligned_free_wrapper free
+#elif defined(HAVE_POSIX_MEMALIGN) /* posix_memalign is defined by POSIX */
+static void* aligned_malloc_wrapper(size_t alignment, size_t size)
 {
-#if defined(HAVE_ALIGNED_ALLOC)
-    /* aligned_alloc is defined by C11 */
-    return aligned_alloc(alignment, size);
-#elif defined(HAVE_POSIX_MEMALIGN)
-    /* posix_memalign is defined by POSIX */
     void* tmp = NULL;
-    int result = posix_memalign(&tmp, alignment, size);
-    if (result != 0)
+    int err = posix_memalign(&tmp, alignment, size);
+    if (err != 0) {
+        /* posix_memalign does NOT set errno on failure; the error is returned */
+        errno = err;
         return NULL;
+    }
     return tmp;
-#elif defined(HAVE__ALIGNED_MALLOC)
-    /* _aligned_malloc is available on Windows */
-    return _aligned_malloc(size, alignment);
-#else
-#error "No function to allocate/free aligned memory is available."
-#endif
 }
-
-static void free_wrapper(void* ptr)
-{
-#if defined(HAVE_POSIX_MEMALIGN) || defined(HAVE_ALIGNED_ALLOC)
-    /* free is fine for aligned_alloc and posix_memalign */
-    free(ptr);
-#elif defined(HAVE__ALIGNED_MALLOC)
-    /* _aligned_malloc requires _aligned_free */
-    _aligned_free(ptr);
+# define aligned_free_wrapper free
+#elif defined(HAVE__ALIGNED_MALLOC) /* _aligned_malloc is available on Windows */
+# define aligned_malloc_wrapper _aligned_malloc
+# define aligned_free_wrapper _aligned_free
 #else
-#error "No function to allocate/free aligned memory is available."
+# error "No function to allocate/free aligned memory is available."
 #endif
-}
 
 /* Helper functions to expand keys */
 
@@ -202,11 +191,11 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
     }
 
     /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
-    void* tek = memalign_wrapper(16, (nr + 1) * sizeof(__m128i));
-    void* tdk = memalign_wrapper(16, (nr + 1) * sizeof(__m128i));
+    void* tek = aligned_malloc_wrapper(16, (nr + 1) * sizeof(__m128i));
+    void* tdk = aligned_malloc_wrapper(16, (nr + 1) * sizeof(__m128i));
     if (!tek || !tdk) {
-        free_wrapper(tek);
-        free_wrapper(tdk);
+        aligned_free_wrapper(tek);
+        aligned_free_wrapper(tdk);
         PyErr_SetString(PyExc_MemoryError,
                 "failed to allocate memory for keys");
         return;
@@ -226,8 +215,8 @@ static void block_finalize(block_state* self)
     memset(self->ek, 0, (self->rounds + 1) * sizeof(__m128i));
     memset(self->dk, 0, (self->rounds + 1) * sizeof(__m128i));
 
-    free_wrapper(self->ek);
-    free_wrapper(self->dk);
+    aligned_free_wrapper(self->ek);
+    aligned_free_wrapper(self->dk);
 }
 
 static void block_encrypt(block_state* self, const u8* in, u8* out)
