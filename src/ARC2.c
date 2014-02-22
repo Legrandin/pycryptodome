@@ -216,5 +216,9 @@ block_init(block_state *self, U8 *key, int keylength)
 	} while (i--);
 }
 
+static void
+block_finalize(block_state* self)
+{
+}
 
 #include "block_template.c"

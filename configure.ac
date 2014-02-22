@@ -103,5 +103,6 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memmove memset])
+AC_CHECK_FUNCS([posix_memalign aligned_alloc _aligned_malloc])
 
 AC_OUTPUT

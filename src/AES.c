@@ -1446,6 +1446,10 @@ static void block_init(block_state *state, unsigned char *key,
 	rijndaelKeySetupDec(state->dk, key, keylen*8);
 }
 
+static void block_finalize(block_state* self)
+{
+}
+
 static void block_encrypt(block_state *self, u8 *in, u8 *out)
 {
 	rijndaelEncrypt(self->ek, self->rounds, in, out);

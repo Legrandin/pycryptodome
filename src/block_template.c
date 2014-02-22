@@ -84,6 +84,7 @@ static void
 ALGdealloc(PyObject *ptr)
 {		
 	ALGobject *self = (ALGobject *)ptr;
+	block_finalize(&self->st);
 
 	/* Overwrite the contents of the object */
 	Py_XDECREF(self->counter);

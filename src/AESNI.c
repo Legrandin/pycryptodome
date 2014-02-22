@@ -22,24 +22,63 @@
  * ===================================================================
  */
 
-#include "Python.h"
+#include "pycrypto_common.h"
 #include <wmmintrin.h>
+#include <stdlib.h>
+#if defined(HAVE__ALIGNED_MALLOC)
+#include <malloc.h>
+#endif
 
 #define MODULE_NAME _AESNI
 #define BLOCK_SIZE 16
 #define KEY_SIZE 0
 
-#define MAXKC	(256/32)
-#define MAXKB	(256/8)
-#define MAXNR	14
+#define MAXKC (256/32)
+#define MAXKB (256/8)
+#define MAXNR 14
 
 typedef unsigned char u8;
 
 typedef struct {
-	__m128i ek[MAXNR + 1];
-	__m128i dk[MAXNR + 1];
-	int rounds;
+    __m128i* ek;
+    __m128i* dk;
+    int rounds;
 } block_state;
+
+/* Wrapper function for malloc and free with memory alignment */
+
+static void* memalign_wrapper(size_t alignment, size_t size)
+{
+#if defined(HAVE_ALIGNED_ALLOC)
+    /* aligned_alloc is defined by C11 */
+    return aligned_alloc(alignment, size);
+#elif defined(HAVE_POSIX_MEMALIGN)
+    /* posix_memalign is defined by POSIX */
+    void* tmp = NULL;
+    int result = posix_memalign(&tmp, alignment, size);
+    if (result != 0)
+        return NULL;
+    return tmp;
+#elif defined(HAVE__ALIGNED_MALLOC)
+    /* _aligned_malloc is available on Windows */
+    return _aligned_malloc(size, alignment);
+#else
+#error "No function to allocate/free aligned memory is available."
+#endif
+}
+
+static void free_wrapper(void* ptr)
+{
+#if defined(HAVE_POSIX_MEMALIGN) || defined(HAVE_ALIGNED_ALLOC)
+    /* free is fine for aligned_alloc and posix_memalign */
+    free(ptr);
+#elif defined(HAVE__ALIGNED_MALLOC)
+    /* _aligned_malloc requires _aligned_free */
+    _aligned_free(ptr);
+#else
+#error "No function to allocate/free aligned memory is available."
+#endif
+}
 
 /* Helper functions to expand keys */
 
@@ -151,19 +190,44 @@ static void aes_key_setup_dec(__m128i dk[], const __m128i ek[], int rounds)
 
 static void block_init(block_state* self, unsigned char* key, int keylen)
 {
-	int nr = 0;
-	switch (keylen) {
-	    case 16: nr = 10; break;
-	    case 24: nr = 12; break;
-	    case 32: nr = 14; break;
+    int nr = 0;
+    switch (keylen) {
+        case 16: nr = 10; break;
+        case 24: nr = 12; break;
+        case 32: nr = 14; break;
         default:
             PyErr_SetString(PyExc_ValueError,
                 "AES key must be either 16, 24, or 32 bytes long");
-		    return;
-	}
-	self->rounds = nr;
-	aes_key_setup_enc(self->ek, key, keylen);
+            return;
+    }
+
+    /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
+    void* tek = memalign_wrapper(16, (nr + 1) * sizeof(__m128i));
+    void* tdk = memalign_wrapper(16, (nr + 1) * sizeof(__m128i));
+    if (!tek || !tdk) {
+        free_wrapper(tek);
+        free_wrapper(tdk);
+        PyErr_SetString(PyExc_MemoryError,
+                "failed to allocate memory for keys");
+        return;
+    }
+
+    self->ek = tek;
+    self->dk = tdk;
+
+    self->rounds = nr;
+    aes_key_setup_enc(self->ek, key, keylen);
     aes_key_setup_dec(self->dk, self->ek, nr);
+}
+
+static void block_finalize(block_state* self)
+{
+    /* overwrite contents of ek and dk */
+    memset(self->ek, 0, (self->rounds + 1) * sizeof(__m128i));
+    memset(self->dk, 0, (self->rounds + 1) * sizeof(__m128i));
+
+    free_wrapper(self->ek);
+    free_wrapper(self->dk);
 }
 
 static void block_encrypt(block_state* self, const u8* in, u8* out)
@@ -196,7 +260,7 @@ static void block_encrypt(block_state* self, const u8* in, u8* out)
 
 static void block_decrypt(block_state* self, const u8* in, u8* out)
 {
-	__m128i m = _mm_loadu_si128((const __m128i*) in);
+    __m128i m = _mm_loadu_si128((const __m128i*) in);
     /* first 9 rounds */
     m = _mm_xor_si128(m, self->dk[0]);
     m = _mm_aesdec_si128(m, self->dk[1]);
