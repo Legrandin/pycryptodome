@@ -126,7 +126,8 @@ for filename in \
 	Python-2.1.3.tgz Python-2.2.3.tgz \
 	Python-2.3.7.tar.bz2 Python-2.4.6.tar.bz2 Python-2.5.6.tar.bz2 \
 	Python-2.6.8.tar.bz2 Python-2.7.3.tar.bz2 Python-3.0.1.tar.bz2 \
-	Python-3.1.5.tar.bz2 Python-3.2.3.tar.bz2 Python-3.3.0.tar.bz2
+	Python-3.1.5.tar.bz2 Python-3.2.3.tar.bz2 Python-3.3.0.tar.bz2 \
+	Python-3.4.0rc1.tgz
 do
 	dir="`basename "$filename"`"
 	dir=${dir%%.tgz}
