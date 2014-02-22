@@ -36,6 +36,35 @@ patch -p1 <<'EOF'
 EOF
 }
 
+apply_plat_linux3_patch() {
+patch -p1 <<'EOF'
+diff -ru Python-2.2.3.orig/configure Python-2.2.3/configure
+--- Python-2.2.3.orig/configure 2003-03-29 14:25:14.000000000 -0800
++++ Python-2.2.3/configure      2014-02-22 14:37:36.540457776 -0800
+@@ -641,6 +641,8 @@
+	MACHDEP="$ac_md_system$ac_md_release"
+ 
+	case $MACHDEP in
++	linux1) MACHDEP="linux1";;
++	linux*) MACHDEP="linux2";;
+	cygwin*) MACHDEP="cygwin";;
+	darwin*) MACHDEP="darwin";;
+	'')	MACHDEP="unknown";;
+diff -ru Python-2.2.3.orig/configure.in Python-2.2.3/configure.in
+--- Python-2.2.3.orig/configure.in      2003-03-29 14:25:17.000000000 -0800
++++ Python-2.2.3/configure.in   2014-02-22 14:37:29.668562217 -0800
+@@ -68,6 +68,8 @@
+	MACHDEP="$ac_md_system$ac_md_release"
+ 
+	case $MACHDEP in
++	linux1) MACHDEP="linux1";;
++	linux*) MACHDEP="linux2";;
+	cygwin*) MACHDEP="cygwin";;
+	darwin*) MACHDEP="darwin";;
+	'')	MACHDEP="unknown";;
+EOF
+}
+
 PREFIX=${PREFIX:-$(dirname "$(readlink -f "$0")")/py}
 CONCURRENCY_LEVEL=${CONCURRENCY_LEVEL:-5}
 
@@ -177,6 +206,16 @@ do
             apply_multiarch_hack_patch
             touch .multiarch-hack.applied
             export EXTRA_LIBDIR=/usr/lib/`gcc -print-multiarch`
+        fi
+        if ! [ -e .plat-linux3.applied ] ; then
+            # sys.platform should return "linux2" on Linux, even if the system
+            # was compiled on Linux 3.x or later.
+            case "$dir" in
+            Python-2.[23456]*)
+                apply_plat_linux3_patch
+                touch .plat-linux3.applied
+                ;;
+            esac
         fi
 
         # Set some special configure parameters
