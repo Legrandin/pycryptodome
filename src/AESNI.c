@@ -52,7 +52,9 @@ static void* memalign_wrapper(size_t alignment, size_t size)
 #if defined(HAVE_POSIX_MEMALIGN)
     /* posix_memalign is defined by POSIX */
     void* tmp = NULL;
-    posix_memalign(&tmp, alignment, size);
+    int result = posix_memalign(&tmp, alignment, size);
+    if (result != 0)
+        return NULL;
     return tmp;
 #elif defined(HAVE_ALIGNED_ALLOC)
     /* aligned_alloc is defined by C11 */
