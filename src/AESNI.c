@@ -63,7 +63,11 @@ static void* aligned_malloc_wrapper(size_t alignment, size_t size)
 }
 # define aligned_free_wrapper free
 #elif defined(HAVE__ALIGNED_MALLOC) /* _aligned_malloc is available on Windows */
-# define aligned_malloc_wrapper _aligned_malloc
+static void* aligned_malloc_wrapper(size_t alignment, size_t size)
+{
+    /* NB: _aligned_malloc takes its args in the opposite order from aligned_alloc */
+    return _aligned_malloc(size, alignment);
+}
 # define aligned_free_wrapper _aligned_free
 #else
 # error "No function to allocate/free aligned memory is available."
