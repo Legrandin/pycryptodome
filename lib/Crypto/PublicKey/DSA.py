@@ -99,7 +99,7 @@ from Crypto.Util.py3compat import *
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
 from Crypto.Util.number import bytes_to_long, long_to_bytes
-from Crypto.PublicKey import _DSA, _slowmath, pubkey, KeyFormatError
+from Crypto.PublicKey import _DSA, _slowmath, pubkey
 from Crypto.Util.asn1 import DerObject, DerSequence,\
         DerInteger, DerObjectId, DerBitString, newDerSequence, newDerBitString
 
@@ -496,7 +496,7 @@ class DSAImplementation(object):
         :Raise ValueError:
             When **bits** is too little, too big, or not a multiple of 64.
         """
- 
+
         # Check against FIPS 186-2, which says that the size of the prime p
         # must be a multiple of 64 bits between 512 and 1024
         for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
@@ -596,7 +596,7 @@ class DSAImplementation(object):
         except (ValueError, EOFError):
             pass
 
-        raise KeyFormatError("DSA key format is not supported")
+        raise ValueError("DSA key format is not supported")
 
     def importKey(self, extern_key, passphrase=None):
         """Import a DSA key (public or private).
@@ -626,7 +626,7 @@ class DSAImplementation(object):
             from which the decryption key is derived.
 
         :Return: A DSA key object (`_DSAobj`).
-        :Raise KeyFormatError:
+        :Raise ValueError:
             When the given key cannot be parsed (possibly because
             the pass phrase is wrong).
 
@@ -663,7 +663,7 @@ class DSAImplementation(object):
             # This is probably a DER encoded key
             return self._importKeyDER(extern_key, passphrase)
 
-        raise KeyFormatError("DSA key format is not supported")
+        raise ValueError("DSA key format is not supported")
 
 #: `Object ID`_ for a DSA key.
 #:
