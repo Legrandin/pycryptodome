@@ -25,10 +25,28 @@
 #include <assert.h>
 #include <string.h>
 
-/** Type for tables containing the expanded hash key **/
-typedef uint64_t t_key_tables[16][256][2];
+#define ALIGNMENT 32
 
-typedef uint64_t t_v_tables[128][2];
+/**
+ * A V table is a 4096 bytes table that will contain the expanded
+ * GHASH key (H). It is used to speed up the GF(128) multiplication Z = X*H.
+ *
+ * The table contains 128 entries, one for each bit of X.
+ * Each entry takes 32 bytes and can fit into the cache line of a modern
+ * processor. If we assume that access to memory mapped to the same
+ * cache line is somewhat constant, we can make GHASH robust again
+ * cache timing attacks.
+ */
+typedef uint64_t t_v_tables[128][2][2];
+
+/**
+ * To ensure that the V table is aligned to a 32-byte memory boundary,
+ * we allocate a larger piece of memory and carve the V table from there.
+ */
+typedef struct {
+    uint8_t buffer[sizeof(t_v_tables)+ALIGNMENT];
+    t_v_tables *v_tables;
+} t_exp_key;
 
 /**
  * Big Endian to word conversions
@@ -56,230 +74,121 @@ static void word_to_be(uint8_t fb[8], uint64_t w)
 }
 
 /**
- * Compute H*x^i for i=0..127. Store the results in a new
- * vector indexed by i.
+ * Create a V table. V[i] is the value H*x^i (i=0..127).
+ * \param h         The 16 byte GHASH key
+ * \param tables    A pointer to an allocated V table
  */
-static const t_v_tables* make_v_tables(const uint8_t y[16])
+static void make_v_tables(const uint8_t h[16], t_v_tables *tables)
 {
-    t_v_tables *tables;
-    uint64_t *cur;
+    uint64_t (*cur)[2];
     int i;
 
-    tables = (t_v_tables*) calloc(128*2, sizeof(uint64_t));
-    if (!tables) {
-        return NULL;
-    }
+    memset(tables, 0, sizeof(t_v_tables));
 
-    cur = &((*tables)[0][0]);
+    cur = &((*tables)[0][1]);
 
-    cur[0] = be_to_word(&y[0]);
-    cur[1] = be_to_word(&y[8]);
+    (*cur)[0] = be_to_word(&h[0]);
+    (*cur)[1] = be_to_word(&h[8]);
 
     for (i=1; i<128; i++) {
         uint64_t c;
-        uint64_t *next;
+        uint64_t (*next)[2];
 
-        next = &((*tables)[i][0]);
+        next = &((*tables)[i][1]);
 
         /** v = (v&1)*0xE1000000000000000000000000000000L ^ (v>>1) **/
-        c = cur[1]&1 ? 0xE100000000000000 : 0;
-        next[1] = cur[1]>>1 | cur[0]<<63;
-        next[0] = cur[0]>>1 ^ c;
+        c = (*cur)[1]&1 ? 0xE100000000000000 : 0;
+        (*next)[1] = (*cur)[1]>>1 | (*cur)[0]<<63;
+        (*next)[0] = (*cur)[0]>>1 ^ c;
 
         cur = next;
     }
-
-    return (const t_v_tables*)tables;
-}
-
-/**
- * Multiply to elements of GF(2**128) using the reducing polynomial
- * (x^128 + x^7 + x^2 + x + 1).
- */
-static void gcm_mult(uint8_t out[16], const uint8_t x[16], const uint8_t y[16])
-{
-    uint64_t z[2], v[2];
-    int i;
-
-    /** z, v = 0, y **/
-    z[0] = z[1] = 0;
-    v[0] = be_to_word(&y[0]);
-    v[1] = be_to_word(&y[8]);
-
-    for (i=0; i<16; i++) {
-        uint8_t j;
-
-        for (j=0x80; j>0; j>>=1) {
-            uint64_t c;
-
-            /** z ^= (x>>i&1)*v **/
-            if (x[i] & j) {
-
-                z[0] ^= v[0];
-                z[1] ^= v[1];
-            }
-            /** v = (v&1)*0xE1000000000000000000000000000000L ^ (v>>1) **/
-            c = v[1]&1 ? 0xE100000000000000 : 0;
-            v[1] = v[1]>>1 | (v[0] << 63);
-            v[0] = v[0]>>1 ^ c;
-        }
-    }
-    word_to_be(out, z[0]);
-    word_to_be(out+8, z[1]);
 }
 
 /**
  * Multiply two elements of GF(2**128) using the reducing polynomial
  * (x^128 + x^7 + x^2 + x + 1).
  *
- * The first element has been expanded into H tables.
+ * \param   out         The 16 byte buffer that will receive the result
+ * \param   key_tables  One factor, expanded into a V table
+ * \param   x           The other factor (16 bytes)
  */
-static void gcm_mult2(uint8_t out[16], const t_key_tables *key_tables, const uint8_t x[16])
+static void gcm_mult2(uint8_t out[16], const t_v_tables *key_tables, const uint8_t x[16])
 {
-    int i;
+    int i, bit_scan_128;
     uint64_t z[2];
 
     z[0] = z[1] = 0;
+    bit_scan_128 = 0;
     for (i=0; i<16; i++) {
-        z[0] ^= (*key_tables)[i][x[i]][0];
-        z[1] ^= (*key_tables)[i][x[i]][1];
+        uint8_t xi;
+        int j;
+
+        xi = x[i];
+        for (j=0; j<8; j++) {
+            int bit;
+
+            bit = xi>>7 & 1; /** Constant time */
+            z[0] ^= (*key_tables)[bit_scan_128][bit][0];
+            z[1] ^= (*key_tables)[bit_scan_128][bit][1];
+
+            xi <<= 1;
+            bit_scan_128++;
+        }
     }
+    
     word_to_be(out,   z[0]);
     word_to_be(out+8, z[1]);
 }
 
-/**
- * Multiply two elements of GF(2**128) using the reducing polynomial
- * (x^128 + x^7 + x^2 + x + 1).
- *
- * In first element, only the byte at position 'pos' is non-zero at has
- * value 'x'.
- *
- * The second element, is expanded in V tables (128 elements, one per
- * each bit position).
- */
-static void gcm_mult3(uint64_t out[2], uint8_t x, uint8_t pos, const t_v_tables *v_tables)
-{
-    uint64_t z[2];
-    int j;
-    const uint64_t (*v)[2];
-
-    /** z, v = 0, y **/
-    z[0] = z[1] = 0;
-
-    v = &((*v_tables)[pos*8]);
-    for (j=0x80; j!=0; j>>=1, v++) {
-        if (x & j) {
-            z[0] ^= (*v)[0];
-            z[1] ^= (*v)[1];
-        }
-    }
-    out[0] = z[0];
-    out[1] = z[1];
-}
 
 /**
- * Expand a hash key into a set of tables that will speed
- * up GHASH.
+ * Compute the GHASH of a piece of data given an arbitrary Y_0,
+ * as specified in NIST SP 800 38D.
  *
- * \param tables    Pointer to allocated memory that will hold
- *                  the tables.
- * \param h         The hash key.
- */
-static int ghash_expand(t_key_tables *key_tables, const uint8_t h[16])
-{
-    int i;
-    const t_v_tables *v_tables;
-
-    v_tables = make_v_tables(h);
-    if (v_tables==NULL) {
-        return -1;
-    }
-
-    for (i=0; i<16; i++) {
-        int j;
-
-        for (j=0; j<256; j++) {
-            /** Z = H*j*P^{8i} **/
-            gcm_mult3(&((*key_tables)[i][j][0]), j, i, v_tables);
-        }
-    }
-
-    free(v_tables);
-    return 0;
-}
-
-/**
- * Compute the GHASH of a piece of an arbitrary data given an
- * arbitrary Y_0, as specified in NIST SP 800 38D.
- *
- * \param y_out             The resulting GHASH (16 bytes).
- * \param block_data        Pointer to the data to hash.
- * \param len               Length of the data to hash (multiple of 16).
- * \param y_in              The initial Y (Y_0, 16 bytes).
- * \param key_tables        The hash key, possibly expanded to 16*256*16 bytes.
- * \param key_tables_len    The length of the data pointed by key_table.
+ * \param y_out      The resulting GHASH (16 bytes).
+ * \param block_data Pointer to the data to hash.
+ * \param len        Length of the data to hash (multiple of 16).
+ * \param y_in       The initial Y (Y_0, 16 bytes).
+ * \param key_tables The expanded hash key (16*256*16 bytes).
  */
 static void ghash(
         uint8_t y_out[16],
         const uint8_t block_data[],
         int len,
         const uint8_t y_in[16],
-        const void *key_tables,
-        int key_tables_len
+        const t_v_tables *key_tables
         )
 {
-    int i, j;
-    uint8_t x[16];
-    const t_key_tables *key_tables_64 = NULL;
-    const uint8_t (*key)[16] = NULL;
-
-    switch (key_tables_len) {
-        case sizeof(t_key_tables):
-            {
-                key_tables_64 = (const t_key_tables*) key_tables;
-                break;
-            }
-        case 16:
-            {
-                key = (const uint8_t (*)[16]) key_tables;
-                break;
-            }
-        default:
-            return;
-    }
+    int i;
 
     memcpy(y_out, y_in, 16);
+    for (i=0; i<len; i+=16) {
+        int j;
+        uint8_t x[16];
 
-    if (key_tables_64) {
-        for (i=0; i<len; i+=16) {
-            for (j=0; j<16; j++) {
-                x[j] = y_out[j] ^ block_data[i+j];
-            }
-            gcm_mult2(y_out, key_tables_64, x);
+        for (j=0; j<16; j++) {
+            x[j] = y_out[j] ^ block_data[i+j];
         }
-    } else {
-        for (i=0; i<len; i+=16) {
-            for (j=0; j<16; j++) {
-                x[j] = y_out[j] ^ block_data[i+j];
-            }
-            gcm_mult(y_out, *key, x);
-        }
+        gcm_mult2(y_out, key_tables, x);
     }
 }
 
 static char ghash_expand__doc__[] =
 "_ghash_expand(h:str) -> str\n"
 "\n"
-"Return an expanded hash key for GHASH.\n";
+"Return an expanded GHASH key.\n";
 
+/**
+ * Expand the AES key into a Python (byte) string object.
+ */ 
 static PyObject *
 ghash_expand_function(PyObject *self, PyObject *args)
 {
     PyObject *h;
     PyObject *retval = NULL;
     Py_ssize_t len_h;
-    int err;
+    t_exp_key *exp_key;
 
     if (!PyArg_ParseTuple(args, "S", &h)) {
         goto out;
@@ -292,25 +201,20 @@ ghash_expand_function(PyObject *self, PyObject *args)
         goto out;
     }
 
-    /* Create return string */
-    retval = PyBytes_FromStringAndSize(NULL, sizeof(t_key_tables));
+    retval = PyBytes_FromStringAndSize(NULL, sizeof(t_exp_key));
     if (!retval) {
         goto out;
     }
 
+    exp_key = (t_exp_key*) PyBytes_AS_STRING(retval);
+    exp_key->v_tables = (t_v_tables*)
+        (((uintptr_t)exp_key->buffer & ~(ALIGNMENT-1)) + ALIGNMENT);
+
     Py_BEGIN_ALLOW_THREADS;
-
-    err = ghash_expand(
-            (t_key_tables*)PyBytes_AS_STRING(retval),
-            (uint8_t*)PyBytes_AS_STRING(h)
-            );
-
+    
+    make_v_tables((uint8_t*)PyBytes_AS_STRING(h), exp_key->v_tables);
+    
     Py_END_ALLOW_THREADS;
-
-    if (err!=0) {
-        Py_DECREF(retval);
-        retval = NULL;
-    }
 
 out:
     return retval;
@@ -318,24 +222,25 @@ out:
 
 
 static char ghash__doc__[] =
-"_ghash(data:str, y:str, exp_h:str) -> str\n"
+"_ghash(data:str, y:str, exp_key:str) -> str\n"
 "\n"
 "Return a GHASH.\n";
 
 static PyObject *
 ghash_function(PyObject *self, PyObject *args)
 {
-    PyObject *data, *y, *exp_h;
+    PyObject *data, *y, *exp_key;
     PyObject *retval = NULL;
-    Py_ssize_t len_data, len_y, len_exp_h;
+    Py_ssize_t len_data, len_y, len_exp_key;
+    const t_v_tables *v_tables;
 
-    if (!PyArg_ParseTuple(args, "SSS", &data, &y, &exp_h)) {
+    if (!PyArg_ParseTuple(args, "SSS", &data, &y, &exp_key)) {
         goto out;
     }
 
     len_data = PyBytes_GET_SIZE(data);
     len_y = PyBytes_GET_SIZE(y);
-    len_exp_h = PyBytes_GET_SIZE(exp_h);
+    len_exp_key = PyBytes_GET_SIZE(exp_key);
 
     if (len_data%16!=0) {
         PyErr_SetString(PyExc_ValueError, "Length of data must be a multiple of 16 bytes.");
@@ -347,7 +252,7 @@ ghash_function(PyObject *self, PyObject *args)
         goto out;
     }
 
-    if (len_exp_h!=sizeof(t_key_tables) && len_exp_h!=16) {
+    if (len_exp_key!=sizeof(t_exp_key)) {
         PyErr_SetString(PyExc_ValueError, "Length of expanded key is incorrect.");
         goto out;
     }
@@ -361,10 +266,10 @@ ghash_function(PyObject *self, PyObject *args)
     Py_BEGIN_ALLOW_THREADS;
 
 #define PyBytes_Buffer(a)   (uint8_t*)PyBytes_AS_STRING(a)
-
+    
+    v_tables = (const t_v_tables*)((t_exp_key *)PyBytes_AS_STRING(exp_key))->v_tables;
     ghash(  PyBytes_Buffer(retval), PyBytes_Buffer(data), len_data,
-            PyBytes_Buffer(y),
-            PyBytes_Buffer(exp_h), len_exp_h );
+            PyBytes_Buffer(y), v_tables);
 
 #undef PyBytes_Buffer
 
