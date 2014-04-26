@@ -175,7 +175,7 @@ static void ghash(
 }
 
 static char ghash_expand__doc__[] =
-"_ghash_expand(h:str) -> str\n"
+"ghash_expand(h:str) -> str\n"
 "\n"
 "Return an expanded GHASH key.\n";
 
@@ -222,7 +222,7 @@ out:
 
 
 static char ghash__doc__[] =
-"_ghash(data:str, y:str, exp_key:str) -> str\n"
+"ghash(data:str, y:str, exp_key:str) -> str\n"
 "\n"
 "Return a GHASH.\n";
 
@@ -284,8 +284,8 @@ out:
  */
 
 static PyMethodDef galois_methods[] = {
-    {"_ghash_expand", ghash_expand_function, METH_VARARGS, ghash_expand__doc__},
-    {"_ghash", ghash_function, METH_VARARGS, ghash__doc__},
+    {"ghash_expand", ghash_expand_function, METH_VARARGS, ghash_expand__doc__},
+    {"ghash", ghash_function, METH_VARARGS, ghash__doc__},
     {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
 };
 
@@ -293,8 +293,8 @@ static PyMethodDef galois_methods[] = {
 
 static struct PyModuleDef moduledef = {
 	PyModuleDef_HEAD_INIT,
-	"galois",
-	NULL,
+	"_galois",
+	"Arithmetic in Galois Fields",
 	-1,
 	galois_methods,
 	NULL,
@@ -304,7 +304,7 @@ static struct PyModuleDef moduledef = {
 };
 
 PyMODINIT_FUNC
-PyInit_galois(void)
+PyInit__galois(void)
 {
     PyObject *m;
 
@@ -318,12 +318,12 @@ PyInit_galois(void)
 #else
 
 PyMODINIT_FUNC
-initgalois(void)
+init_galois(void)
 {
     PyObject *m;
 
     /* Initialize the module */
-    m = Py_InitModule("galois", galois_methods);
+    m = Py_InitModule("_galois", galois_methods);
     if (m == NULL)
         return;
 }

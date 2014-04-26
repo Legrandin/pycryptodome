@@ -37,7 +37,7 @@ from Crypto.Hash import CMAC
 from Crypto.Hash.CMAC import _SmoothMAC
 from Crypto.Protocol.KDF import _S2V
 
-from Crypto.Util import galois
+from Crypto.Util import _galois
 
 #: *Electronic Code Book (ECB)*.
 #: This is the simplest encryption mode. Each of the plaintext blocks
@@ -331,9 +331,9 @@ class _GHASH(_SmoothMAC):
 
     def __init__(self, hash_subkey, block_size):
         _SmoothMAC.__init__(self, block_size, None, 0)
-        self._hash_subkey = galois._ghash_expand(hash_subkey)
+        self._hash_subkey = _galois.ghash_expand(hash_subkey)
         self._last_y = bchr(0) * 16
-        self._mac = galois._ghash
+        self._mac = _galois.ghash
 
     def copy(self):
         clone = _GHASH(self._hash_subkey, self._bs)
@@ -342,7 +342,7 @@ class _GHASH(_SmoothMAC):
         return clone
 
     def _update(self, block_data):
-        self._last_y = galois._ghash(block_data, self._last_y,
+        self._last_y = _galois.ghash(block_data, self._last_y,
                                      self._hash_subkey)
 
     def _digest(self, left_data):
