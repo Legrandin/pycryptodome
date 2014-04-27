@@ -32,6 +32,10 @@ def get_tests(config={}):
     from Crypto.SelfTest.Protocol import test_rfc1751;        tests += test_rfc1751.get_tests(config=config)
     from Crypto.SelfTest.Protocol import test_AllOrNothing;        tests += test_AllOrNothing.get_tests(config=config)
     from Crypto.SelfTest.Protocol import test_KDF;        tests += test_KDF.get_tests(config=config)
+
+    from Crypto.SelfTest.Protocol import test_SecretSharing;
+    tests += test_SecretSharing.get_tests(config=config)
+
     return tests
 
 if __name__ == '__main__':

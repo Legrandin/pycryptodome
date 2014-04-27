@@ -34,8 +34,11 @@ Crypto.Protocol.Chaffing
 Crypto.Protocol.KDF
  A collection of standard key derivation functions.
 
+Crypto.Protocol.SecretSharing
+ Distribute a secret amongst a group of participants.
+
 :undocumented: __revision__
 """
 
-__all__ = ['AllOrNothing', 'Chaffing', 'KDF']
+__all__ = ['AllOrNothing', 'Chaffing', 'KDF', 'SecretSharing']
 __revision__ = "$Id$"
