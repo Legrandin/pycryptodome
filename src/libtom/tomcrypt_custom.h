@@ -69,10 +69,10 @@
 /* Easy button? */
 #ifdef LTC_EASY
    #define LTC_NO_CIPHERS
-   #define RIJNDAEL
-   #define BLOWFISH
-   #define DES
-   #define CAST5
+   #define LTC_RIJNDAEL
+   #define LTC_BLOWFISH
+   #define LTC_DES
+   #define LTC_CAST5
    
    #define LTC_NO_MODES
    #define LTC_ECB_MODE
@@ -80,26 +80,26 @@
    #define LTC_CTR_MODE
    
    #define LTC_NO_HASHES
-   #define SHA1
-   #define SHA512
-   #define SHA384
-   #define SHA256
-   #define SHA224
+   #define LTC_SHA1
+   #define LTC_SHA512
+   #define LTC_SHA384
+   #define LTC_SHA256
+   #define LTC_SHA224
    
    #define LTC_NO_MACS
-   #define HMAC
-   #define OMAC
-   #define CCM_MODE
+   #define LTC_HMAC
+   #define LTC_OMAC
+   #define LTC_CCM_MODE
 
    #define LTC_NO_PRNGS
-   #define SPRNG
-   #define YARROW
-   #define DEVRANDOM
+   #define LTC_SPRNG
+   #define LTC_YARROW
+   #define LTC_DEVRANDOM
    #define TRY_URANDOM_FIRST
       
    #define LTC_NO_PK
-   #define MRSA
-   #define MECC
+   #define LTC_MRSA
+   #define LTC_MECC
 #endif   
 
 /* Use small code where possible */
@@ -128,33 +128,33 @@
 /* ---> Symmetric Block Ciphers <--- */
 #ifndef LTC_NO_CIPHERS
 
-#define BLOWFISH
-#define RC2
-#define RC5
-#define RC6
-#define SAFERP
-#define RIJNDAEL
-#define XTEA
+#define LTC_BLOWFISH
+#define LTC_RC2
+#define LTC_RC5
+#define LTC_RC6
+#define LTC_SAFERP
+#define LTC_RIJNDAEL
+#define LTC_XTEA
 /* _TABLES tells it to use tables during setup, _SMALL means to use the smaller scheduled key format
  * (saves 4KB of ram), _ALL_TABLES enables all tables during setup */
-#define TWOFISH
+#define LTC_TWOFISH
 #ifndef LTC_NO_TABLES
-   #define TWOFISH_TABLES
-   /* #define TWOFISH_ALL_TABLES */
+   #define LTC_TWOFISH_TABLES
+   /* #define LTC_TWOFISH_ALL_TABLES */
 #else
-   #define TWOFISH_SMALL
+   #define LTC_TWOFISH_SMALL
 #endif
-/* #define TWOFISH_SMALL */
-/* DES includes EDE triple-DES */
-#define DES
-#define CAST5
-#define NOEKEON
-#define SKIPJACK
-#define SAFER
-#define KHAZAD
-#define ANUBIS
-#define ANUBIS_TWEAK
-#define KSEED
+/* #define LTC_TWOFISH_SMALL */
+/* LTC_DES includes EDE triple-LTC_DES */
+#define LTC_DES
+#define LTC_CAST5
+#define LTC_NOEKEON
+#define LTC_SKIPJACK
+#define LTC_SAFER
+#define LTC_KHAZAD
+#define LTC_ANUBIS
+#define LTC_ANUBIS_TWEAK
+#define LTC_KSEED
 #define LTC_KASUMI
 
 #endif /* LTC_NO_CIPHERS */
@@ -181,26 +181,29 @@
    #define LRW_TABLES
 #endif
 
+/* XTS mode */
+#define LTC_XTS_MODE
+
 #endif /* LTC_NO_MODES */
 
 /* ---> One-Way Hash Functions <--- */
 #ifndef LTC_NO_HASHES 
 
-#define CHC_HASH
-#define WHIRLPOOL
-#define SHA512
-#define SHA384
-#define SHA256
-#define SHA224
-#define TIGER
-#define SHA1
-#define MD5
-#define MD4
-#define MD2
-#define RIPEMD128
-#define RIPEMD160
-#define RIPEMD256
-#define RIPEMD320
+#define LTC_CHC_HASH
+#define LTC_WHIRLPOOL
+#define LTC_SHA512
+#define LTC_SHA384
+#define LTC_SHA256
+#define LTC_SHA224
+#define LTC_TIGER
+#define LTC_SHA1
+#define LTC_MD5
+#define LTC_MD4
+#define LTC_MD2
+#define LTC_RIPEMD128
+#define LTC_RIPEMD160
+#define LTC_RIPEMD256
+#define LTC_RIPEMD320
 
 #endif /* LTC_NO_HASHES */
 
@@ -212,69 +215,69 @@
 #define LTC_PMAC
 #define LTC_XCBC
 #define LTC_F9_MODE
-#define PELICAN
+#define LTC_PELICAN
 
-#if defined(PELICAN) && !defined(RIJNDAEL)
-   #error Pelican-MAC requires RIJNDAEL
+#if defined(LTC_PELICAN) && !defined(LTC_RIJNDAEL)
+   #error Pelican-MAC requires LTC_RIJNDAEL
 #endif
 
 /* ---> Encrypt + Authenticate Modes <--- */
 
-#define EAX_MODE
-#if defined(EAX_MODE) && !(defined(LTC_CTR_MODE) && defined(LTC_OMAC))
-   #error EAX_MODE requires CTR and OMAC mode
+#define LTC_EAX_MODE
+#if defined(LTC_EAX_MODE) && !(defined(LTC_CTR_MODE) && defined(LTC_OMAC))
+   #error LTC_EAX_MODE requires CTR and LTC_OMAC mode
 #endif
 
-#define OCB_MODE
-#define CCM_MODE
-#define GCM_MODE
+#define LTC_OCB_MODE
+#define LTC_CCM_MODE
+#define LTC_GCM_MODE
 
 /* Use 64KiB tables */
 #ifndef LTC_NO_TABLES
-   #define GCM_TABLES 
+   #define LTC_GCM_TABLES
 #endif
 
 /* USE SSE2? requires GCC works on x86_32 and x86_64*/
-#ifdef GCM_TABLES
-/* #define GCM_TABLES_SSE2 */
+#ifdef LTC_GCM_TABLES
+/* #define LTC_GCM_TABLES_SSE2 */
 #endif
 
 #endif /* LTC_NO_MACS */
 
 /* Various tidbits of modern neatoness */
-#define BASE64
+#define LTC_BASE64
 
 /* --> Pseudo Random Number Generators <--- */
 #ifndef LTC_NO_PRNGS
 
 /* Yarrow */
-#define YARROW
+#define LTC_YARROW
 /* which descriptor of AES to use?  */
 /* 0 = rijndael_enc 1 = aes_enc, 2 = rijndael [full], 3 = aes [full] */
-#define YARROW_AES 0
+#define LTC_YARROW_AES 0
 
-#if defined(YARROW) && !defined(LTC_CTR_MODE)
-   #error YARROW requires LTC_CTR_MODE chaining mode to be defined!
+#if defined(LTC_YARROW) && !defined(LTC_CTR_MODE)
+   #error LTC_YARROW requires LTC_CTR_MODE chaining mode to be defined!
 #endif
 
 /* a PRNG that simply reads from an available system source */
-#define SPRNG
+#define LTC_SPRNG
 
-/* The RC4 stream cipher */
-#define RC4
+/* The LTC_RC4 stream cipher */
+#define LTC_RC4
 
 /* Fortuna PRNG */
-#define FORTUNA
+#define LTC_FORTUNA
 /* reseed every N calls to the read function */
-#define FORTUNA_WD    10
+#define LTC_FORTUNA_WD    10
 /* number of pools (4..32) can save a bit of ram by lowering the count */
-#define FORTUNA_POOLS 32
+#define LTC_FORTUNA_POOLS 32
 
-/* Greg's SOBER128 PRNG ;-0 */
-#define SOBER128
+/* Greg's LTC_SOBER128 PRNG ;-0 */
+#define LTC_SOBER128
 
 /* the *nix style /dev/random device */
-#define DEVRANDOM
+#define LTC_DEVRANDOM
 /* try /dev/urandom before trying /dev/random */
 #define TRY_URANDOM_FIRST
 
@@ -284,10 +287,10 @@
 #ifndef LTC_NO_MATH
 
 /* LibTomMath */
-/* #define LTM_DESC */
+/* #define LTM_LTC_DESC */
 
 /* TomsFastMath */
-/* #define TFM_DESC */
+/* #define TFM_LTC_DESC */
 
 #endif /* LTC_NO_MATH */
 
@@ -295,37 +298,37 @@
 #ifndef LTC_NO_PK
 
 /* Include RSA support */
-#define MRSA
+#define LTC_MRSA
 
 /* Include Katja (a Rabin variant like RSA) */
 /* #define MKAT */ 
 
 /* Digital Signature Algorithm */
-#define MDSA
+#define LTC_MDSA
 
 /* ECC */
-#define MECC
+#define LTC_MECC
 
 /* use Shamir's trick for point mul (speeds up signature verification) */
 #define LTC_ECC_SHAMIR
 
-#if defined(TFM_DESC) && defined(MECC)
-   #define MECC_ACCEL
+#if defined(TFM_LTC_DESC) && defined(LTC_MECC)
+   #define LTC_MECC_ACCEL
 #endif   
 
 /* do we want fixed point ECC */
-/* #define MECC_FP */
+/* #define LTC_MECC_FP */
 
 /* Timing Resistant? */
 /* #define LTC_ECC_TIMING_RESISTANT */
 
 #endif /* LTC_NO_PK */
 
-/* PKCS #1 (RSA) and #5 (Password Handling) stuff */
+/* LTC_PKCS #1 (RSA) and #5 (Password Handling) stuff */
 #ifndef LTC_NO_PKCS
 
-#define PKCS_1
-#define PKCS_5
+#define LTC_PKCS_1
+#define LTC_PKCS_5
 
 /* Include ASN.1 DER (required by DSA/RSA) */
 #define LTC_DER
@@ -334,7 +337,7 @@
 
 /* cleanup */
 
-#ifdef MECC
+#ifdef LTC_MECC
 /* Supported ECC Key Sizes */
 #ifndef LTC_NO_CURVES
    #define ECC112
@@ -348,20 +351,20 @@
 #endif
 #endif
 
-#if defined(MECC) || defined(MRSA) || defined(MDSA) || defined(MKATJA)
+#if defined(LTC_MECC) || defined(LTC_MRSA) || defined(LTC_MDSA) || defined(MKATJA)
    /* Include the MPI functionality?  (required by the PK algorithms) */
    #define MPI
 #endif
 
-#ifdef MRSA
-   #define PKCS_1
+#ifdef LTC_MRSA
+   #define LTC_PKCS_1
 #endif   
 
 #if defined(LTC_DER) && !defined(MPI) 
    #error ASN.1 DER requires MPI functionality
 #endif
 
-#if (defined(MDSA) || defined(MRSA) || defined(MECC) || defined(MKATJA)) && !defined(LTC_DER)
+#if (defined(LTC_MDSA) || defined(LTC_MRSA) || defined(LTC_MECC) || defined(MKATJA)) && !defined(LTC_DER)
    #error PK requires ASN.1 DER functionality, make sure LTC_DER is enabled
 #endif
 
@@ -391,13 +394,13 @@
 
 /* Debuggers */
 
-/* define this if you use Valgrind, note: it CHANGES the way SOBER-128 and RC4 work (see the code) */
+/* define this if you use Valgrind, note: it CHANGES the way SOBER-128 and LTC_RC4 work (see the code) */
 /* #define LTC_VALGRIND */
 
 #endif
 
 
 
-/* $Source: /cvs/libtom/libtomcrypt/src/headers/tomcrypt_custom.h,v $ */
-/* $Revision: 1.66 $ */
-/* $Date: 2006/12/04 02:50:11 $ */
+/* $Source$ */
+/* $Revision$ */
+/* $Date$ */

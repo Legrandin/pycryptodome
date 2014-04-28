@@ -1,5 +1,5 @@
 /* ---- PRNG Stuff ---- */
-#ifdef YARROW
+#ifdef LTC_YARROW
 struct yarrow_prng {
     int                   cipher, hash;
     unsigned char         pool[MAXBLOCKSIZE];
@@ -8,16 +8,16 @@ struct yarrow_prng {
 };
 #endif
 
-#ifdef RC4
+#ifdef LTC_RC4
 struct rc4_prng {
     int x, y;
     unsigned char buf[256];
 };
 #endif
 
-#ifdef FORTUNA
+#ifdef LTC_FORTUNA
 struct fortuna_prng {
-    hash_state pool[FORTUNA_POOLS];     /* the  pools */
+    hash_state pool[LTC_FORTUNA_POOLS];     /* the  pools */
 
     symmetric_key skey;
 
@@ -33,7 +33,7 @@ struct fortuna_prng {
 };
 #endif
 
-#ifdef SOBER128
+#ifdef LTC_SOBER128
 struct sober128_prng {
     ulong32      R[17],          /* Working storage for the shift register */
                  initR[17],      /* saved register contents */ 
@@ -49,16 +49,16 @@ struct sober128_prng {
 
 typedef union Prng_state {
     char dummy[1];
-#ifdef YARROW
+#ifdef LTC_YARROW
     struct yarrow_prng    yarrow;
 #endif
-#ifdef RC4
+#ifdef LTC_RC4
     struct rc4_prng       rc4;
 #endif
-#ifdef FORTUNA
+#ifdef LTC_FORTUNA
     struct fortuna_prng   fortuna;
 #endif
-#ifdef SOBER128
+#ifdef LTC_SOBER128
     struct sober128_prng  sober128;
 #endif
 } prng_state;
@@ -118,7 +118,7 @@ extern struct ltc_prng_descriptor {
     int (*test)(void);
 } prng_descriptor[];
 
-#ifdef YARROW
+#ifdef LTC_YARROW
 int yarrow_start(prng_state *prng);
 int yarrow_add_entropy(const unsigned char *in, unsigned long inlen, prng_state *prng);
 int yarrow_ready(prng_state *prng);
@@ -130,7 +130,7 @@ int  yarrow_test(void);
 extern const struct ltc_prng_descriptor yarrow_desc;
 #endif
 
-#ifdef FORTUNA
+#ifdef LTC_FORTUNA
 int fortuna_start(prng_state *prng);
 int fortuna_add_entropy(const unsigned char *in, unsigned long inlen, prng_state *prng);
 int fortuna_ready(prng_state *prng);
@@ -142,7 +142,7 @@ int  fortuna_test(void);
 extern const struct ltc_prng_descriptor fortuna_desc;
 #endif
 
-#ifdef RC4
+#ifdef LTC_RC4
 int rc4_start(prng_state *prng);
 int rc4_add_entropy(const unsigned char *in, unsigned long inlen, prng_state *prng);
 int rc4_ready(prng_state *prng);
@@ -154,7 +154,7 @@ int  rc4_test(void);
 extern const struct ltc_prng_descriptor rc4_desc;
 #endif
 
-#ifdef SPRNG
+#ifdef LTC_SPRNG
 int sprng_start(prng_state *prng);
 int sprng_add_entropy(const unsigned char *in, unsigned long inlen, prng_state *prng);
 int sprng_ready(prng_state *prng);
@@ -166,7 +166,7 @@ int  sprng_test(void);
 extern const struct ltc_prng_descriptor sprng_desc;
 #endif
 
-#ifdef SOBER128
+#ifdef LTC_SOBER128
 int sober128_start(prng_state *prng);
 int sober128_add_entropy(const unsigned char *in, unsigned long inlen, prng_state *prng);
 int sober128_ready(prng_state *prng);
@@ -194,6 +194,6 @@ unsigned long rng_get_bytes(unsigned char *out,
 int rng_make_prng(int bits, int wprng, prng_state *prng, void (*callback)(void));
 
 
-/* $Source: /cvs/libtom/libtomcrypt/src/headers/tomcrypt_prng.h,v $ */
-/* $Revision: 1.8 $ */
-/* $Date: 2006/11/05 01:36:43 $ */
+/* $Source$ */
+/* $Revision$ */
+/* $Date$ */

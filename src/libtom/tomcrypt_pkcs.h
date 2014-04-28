@@ -1,19 +1,19 @@
-/* PKCS Header Info */
+/* LTC_PKCS Header Info */
 
-/* ===> PKCS #1 -- RSA Cryptography <=== */
-#ifdef PKCS_1
+/* ===> LTC_PKCS #1 -- RSA Cryptography <=== */
+#ifdef LTC_PKCS_1
 
 enum ltc_pkcs_1_v1_5_blocks
 {
-  LTC_PKCS_1_EMSA   = 1,        /* Block type 1 (PKCS #1 v1.5 signature padding) */
-  LTC_PKCS_1_EME    = 2         /* Block type 2 (PKCS #1 v1.5 encryption padding) */
+  LTC_LTC_PKCS_1_EMSA   = 1,        /* Block type 1 (LTC_PKCS #1 v1.5 signature padding) */
+  LTC_LTC_PKCS_1_EME    = 2         /* Block type 2 (LTC_PKCS #1 v1.5 encryption padding) */
 };
 
 enum ltc_pkcs_1_paddings
 {
-  LTC_PKCS_1_V1_5   = 1,        /* PKCS #1 v1.5 padding (\sa ltc_pkcs_1_v1_5_blocks) */
-  LTC_PKCS_1_OAEP   = 2,        /* PKCS #1 v2.0 encryption padding */
-  LTC_PKCS_1_PSS    = 3         /* PKCS #1 v2.1 signature padding */
+  LTC_LTC_PKCS_1_V1_5   = 1,        /* LTC_PKCS #1 v1.5 padding (\sa ltc_pkcs_1_v1_5_blocks) */
+  LTC_LTC_PKCS_1_OAEP   = 2,        /* LTC_PKCS #1 v2.0 encryption padding */
+  LTC_LTC_PKCS_1_PSS    = 3         /* LTC_PKCS #1 v2.1 signature padding */
 };
 
 int pkcs_1_mgf1(      int            hash_idx,
@@ -65,10 +65,10 @@ int pkcs_1_pss_decode(const unsigned char *msghash, unsigned long msghashlen,
                             unsigned long saltlen,  int           hash_idx,
                             unsigned long modulus_bitlen, int    *res);
 
-#endif /* PKCS_1 */
+#endif /* LTC_PKCS_1 */
 
-/* ===> PKCS #5 -- Password Based Cryptography <=== */
-#ifdef PKCS_5
+/* ===> LTC_PKCS #5 -- Password Based Cryptography <=== */
+#ifdef LTC_PKCS_5
 
 /* Algorithm #1 (old) */
 int pkcs_5_alg1(const unsigned char *password, unsigned long password_len, 
@@ -82,8 +82,8 @@ int pkcs_5_alg2(const unsigned char *password, unsigned long password_len,
                 int iteration_count,           int hash_idx,
                 unsigned char *out,            unsigned long *outlen);
 
-#endif  /* PKCS_5 */
+#endif  /* LTC_PKCS_5 */
 
-/* $Source: /cvs/libtom/libtomcrypt/src/headers/tomcrypt_pkcs.h,v $ */
-/* $Revision: 1.7 $ */
-/* $Date: 2006/11/15 12:44:59 $ */
+/* $Source$ */
+/* $Revision$ */
+/* $Date$ */

@@ -419,6 +419,6 @@ static inline unsigned long ROR64c(unsigned long word, const int i)
    #define byte(x, n) (((x) >> (8 * (n))) & 255)
 #endif   
 
-/* $Source: /cvs/libtom/libtomcrypt/src/headers/tomcrypt_macros.h,v $ */
-/* $Revision: 1.15 $ */
-/* $Date: 2006/11/29 23:43:57 $ */
+/* $Source$ */
+/* $Revision$ */
+/* $Date$ */
