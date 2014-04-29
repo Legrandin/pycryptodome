@@ -75,7 +75,7 @@ if sys.version_info[0] == 2:
         def tobytes(s):
             try:
                 return s.encode('latin-1')
-            except:
+            except UnicodeError:
                 return ''.join(s)
         def tostr(bs):
             return unicode(bs, 'latin-1')
