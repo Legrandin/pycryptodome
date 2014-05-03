@@ -1,0 +1,26 @@
+# epydoc configuration file for PyCrypto.
+# See http://epydoc.sourceforge.net/configfile.html for sample configuration.
+
+[epydoc]
+modules: Crypto
+docformat: restructuredtext
+output: html
+target: Doc/apidoc/
+sourcecode: no
+
+# Do not include private variables
+private: no
+
+# Include the complete set of inherited methods, but grouped in a special
+# section
+inheritance: grouped
+
+name: PyCrypto API Documentation
+url: http://www.pycrypto.org/
+
+link: <a href="http://www.pycrypto.org/">PyCrypto.org</a>
+
+# The documentation is usually built on a Linux machine; nt.py tries to
+# import the winrandom module.
+exclude-introspect: ^Crypto\.Random\.OSRNG\.nt|Crypto\.Util\.winrandom|Crypto\.Util\.osentropy\.nt$
+exclude: ^Crypto\.SelfTest

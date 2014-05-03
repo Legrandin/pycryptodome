@@ -1,0 +1,109 @@
+Py code:
+
+setup.py invokes 2to3 automatically. This handles int/long and print issues,
+ among others.
+setup.py will touch nt.py on win32 after build and build again. This is
+ necessary so 2to3 can do its magic on that file.
+
+There are still a lot of places in the code that need manual attention even
+ with 2to3. They mostly have to do with string (2.x) vs. byte/unicode (3.x)
+ representation
+
+Use "if sys.version_info[0] == 2:" where needed. Ideally, most of the
+ conditional code can be in py3compat.
+
+Replace str(x) with bstr(x) if bytes were intended. Becomes str(x) in 2.x and
+ bytes(x) in 3.x through py3compat module.
+Replace chr(x) with bchr(x) if bytes were intended. Becomes chr(x) in 2.x and
+ bytes([x]) in 3.x through py3compat module.
+Replace ord(x) with bord(x) if bytes were intended. Becomes ord(x) in 2.x and
+ x in 3.x through py3compat module.
+
+Comparing a string index to a string literal needs to be changed in 3.x, as
+ b'string'[0] returns an integer, not b's'.
+The comparison can be fixed by indexing the right side, too:
+ "if s[0]==b('\x30')[0]:" or "if self.typeTag!=self.typeTags['SEQUENCE'][0]:"
+
+String literals need to be bytes if bytes were intended. 
+Replace "x" with b("x") if bytes were intended. Becomes "x" in 2.x, and
+ s.encode("x","latin-1") in 3.x through py3compat module.
+For example, '"".join' is replaced by 'b("").join', and 's = ""' becomes
+ 's = b("")'.
+Search for \x to find literals that may have been intended as byte strings
+!! However, where a human-readable ASCII text string output was intended,
+ such as in AllOrNothing.undigest(), leave as a string literal !!
+
+Only load py21compat.py
+ "if sys.version_info[0] == 2 and sys.version_info[1] == 1:" . 
+ The assignment to True, False generates syntax errors in 3.x, and >= 2.2 don't
+ need the compatibility code.
+
+Where print is used with >> to redirect, use a separate function instead.
+ See setup.py for an example
+
+The string module has been changed in 3.x. It lost join and split, maketrans
+ now expects bytes, and so on. 
+Replace string.join(a,b) with b.join(a).
+Replace string.split(a) with a.split().
+Replace body of white-space-stripping functions with 'return "".join(s.split())'
+
+Integer division via the "/" operator can return a float in 3.x. This causes
+ issues in Util.number.getStrongPrime. As 2.1 does not support the "//"
+ operator, divmod(a,b)[0] is used instead, to conform with an existing practice
+ throughout the rest of the pycrypto code base.
+
+Do not use assert_/failUnless or failIf. These are deprecated and are scheduled
+ to be removed in Python 3.3 and 3.4. 
+Use instead assertEqual(expr,True) for assert_ and assertEqual(expr,False) for
+ failIf
+
+Added unit tests for Crypto.Random.random. Fixed random.shuffle().
+random.sample() changed to no longer fail on Python 2.1.
+
+Added unit test for Crypto.Protocol.AllOrNothing.
+AllOrNothing changed to no longer fail occasionally.
+
+C code:
+
+Extended "pycrypto_compat.h". It handles #define's for Python 3.x forward
+ compatibility
+
+#include "pycrypto_compat.h"
+// All other local includes after this, so they can benefit from the
+// definitions in pycrypto_compat.h
+
+The compat header #defines IS_PY3K if compiling on 3.x
+The compat header #defines PyBytes_*, PyUnicode_*, PyBytesObject to resolve to
+ their PyString* counterparts if compiling on 2.x.
+PyLong_* can be dangerous depending on code construct (think an if that runs
+ PyInt_* with else PyLong_*),
+therefore it is #defined in each individual module if needed and safe to do so.
+
+PyString_* has been replaced with PyBytes_* or PyUnicode_* depending on intent
+PyStringObject has been replaced with PyBytesObject or PyUnicodeObject
+ depending on intent.
+PyInt_* has been replaced with PyLong_*, where safe to do (in all cases so far)
+
+The C code uses "#ifdef IS_PY3K" liberally.
+Code duplication has been avoided.
+
+Module initialization and module structure differ significantly in 3.x.
+ Conditionals take care of it.
+
+myModuleType.ob_type assignment conditionally becomes PyTypeReady for 3.x.
+
+getattr cannot be used to check against custom attributes in 3.x. For 3.x,
+ conditional code uses getattro and PyUnicode_CompareWithASCIIString instead
+ of strcmp
+
+hexdigest() needed to be changed to return a Unicode object with 3.x
+
+
+TODO for extra credit:
+- Check for type of string in functions and throw an error when it's not
+  correct. While at it, ensure that functions observe the guidelines below
+  re type. 
+  This is friendlier than just relying on Python's errors.
+- Make sure DerSequence slicing is tested, since I took the explicit slice
+  functions away in 3.x
+

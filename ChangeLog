@@ -1,0 +1,772 @@
+2.7a1
+=====
+	* Experimental release.  This introduces a new API for AEAD modes, and
+	  makes a few other minor API changes.  These APIs should be considered
+	  experimental, and may be changed before the final release.
+	* New API for authenticated encryption with associated data (AEAD):
+	  - New block cipher modes:
+	    - MODE_CCM
+	    - MODE_EAX
+	    - MODE_GCM
+	    - MODE_SIV
+	  - New methods:
+	    - .encrypt_and_digest()
+	    - .decrypt_and_verify()
+	    - .digest()
+	    - .verify()
+	  - New MAC algorithm:
+	    - Crypto.Cipher.CMAC
+	  - New .verify() and .hexverify() methods also added to Hash and
+	    HMAC/CMAC objects, providing constant-time hash comparison.
+	  (Thanks: Legrandin, Lucas Garron)
+	* LP#1132550: Fix MODE_OPENPGP not accepting uppercase 'IV' kwarg.
+	* LP#1119552: Fix PKCS#1v1.5 not accepting signatures without the
+	  optional NULL parameter
+	* Add support for import/export of DSA keys.  (Thanks: Legrandin)
+	* Add support for PKCS#8-encrypted private keys.  (Thanks: Legrandin)
+	* LP#996193: Fix MODE_OFB requiring padding (it now behaves as a stream
+	  cipher)
+	* Improve C extension autodocs
+	* Remove pointless 'error' attribute from stream ciphers.
+	* Deprecate the disable_shortcut option to Crypto.Util.Counter;
+	  Remove __PCT_CTR_SHORTCUT__ entirely.
+	* Fix small MODE_CTR memory leak under Python 3.
+	* Fix error importing winrandom on Python 3.  (Thanks: Jason R. Coombs)
+	* FortunaAccumulator: Use time.monotonic for rate-limiting if available
+	  (i.e. Python 3.3 and later)
+	* AES-NI support (Thanks: Sebastian Ramacher)
+	* setup.py: Fix compilation on HP-UX 11.31.  (Thanks: Adam Woodbeck)
+	* ElGamal: Add blinding to ElGamal decryption. (Thanks: Legrandin)
+	* Hash: Remove pure-Python wrappers (speeds up hash init 4x-7x)
+	* Hash: Add generic Crypto.Hash.new(algo, [data]) function
+	  (like hashlib.new)
+	* Hash: Remove 'oid' attributes; Add 'name' attributes for compatibility
+	  with hashlib.
+	* Hash: Rename SHA -> SHA1 and RIPEMD -> RIPEMD160, since the original
+	  names are frequently used as the names of other algorithms.
+	* setup.py: Use autoconf to generate compiler options;
+	  Fix OpenBSD build issues.
+	* Fix RSA object serialization (i.e. pickle)
+	* LP#1061217: random.shuffle takes O(n^2) time.
+	  (Thanks: Sujay Jayakar, Andrew Cooke)
+	* _fastmath: Fix leaks when errors occur.
+	  (Thanks: Sebastian Ramacher, Andreas Stührk)
+	* SHA256/224/384/512: Don't export symbol 'add_length'
+	* setup.py: Use os.chmod instead of os.system("chmod ...").
+	  (Thanks: Sebastian Ramacher)
+	* setup.py: The 'test' command now runs the 'build' command first.
+	  (Thanks: Sebastian Ramacher)
+	* New tools/create-pythons.sh and tools/test-all.sh scripts for testing
+	  against multiple versions of Python.
+	* getStrongProne: Fix error handling (Thanks: Sebastian Ramacher)
+	* ARC4: Add ARC4-drop[n] cipher support. (Thanks: Legrandin)
+	* RSA.importKey: Properly catch IndexError. (Thanks: Sebastian Ramacher)
+	* RSA.exportKey: Raise ValueError as documented when key format is
+	  unknown. (Thanks: Sebastian Ramacher)
+	* RSA.exportKey: Always return bytes (Thanks: Sebastian Ramacher)
+	* Fix & re-enable some broken tests (Thanks: Sebastian Ramacher)
+	* Improve Python 3 compatibility
+	* Various documentation fixes and improvements
+	  (Thanks: Anton Rieder, Legrandin, Sebastian Ramacher, Stefano Rivera)
+	* Various cleanups, especially for Python 3.
+
+
+2.6.1
+=====
+	* [CVE-2013-1445] Fix PRNG not correctly reseeded in some situations.
+
+	  In previous versions of PyCrypto, the Crypto.Random PRNG exhibits a
+	  race condition that may cause forked processes to generate identical
+	  sequences of 'random' numbers.
+
+	  This is a fairly obscure bug that will (hopefully) not affect many
+	  applications, but the failure scenario is pretty bad.  Here is some
+	  sample code that illustrates the problem:
+
+	      from binascii import hexlify
+	      import multiprocessing, pprint, time
+	      import Crypto.Random
+
+	      def task_main(arg):
+	          a = Crypto.Random.get_random_bytes(8)
+	          time.sleep(0.1)
+	          b = Crypto.Random.get_random_bytes(8)
+	          rdy, ack = arg
+	          rdy.set()
+	          ack.wait()
+	          return "%s,%s" % (hexlify(a).decode(),
+	                            hexlify(b).decode())
+
+	      n_procs = 4
+	      manager = multiprocessing.Manager()
+	      rdys = [manager.Event() for i in range(n_procs)]
+	      acks = [manager.Event() for i in range(n_procs)]
+	      Crypto.Random.get_random_bytes(1)
+	      pool = multiprocessing.Pool(processes=n_procs,
+	                                  initializer=Crypto.Random.atfork)
+	      res_async = pool.map_async(task_main, zip(rdys, acks))
+	      pool.close()
+	      [rdy.wait() for rdy in rdys]
+	      [ack.set() for ack in acks]
+	      res = res_async.get()
+	      pprint.pprint(sorted(res))
+	      pool.join()
+
+	  The output should be random, but it looked like this:
+
+	      ['c607803ae01aa8c0,2e4de6457a304b34',
+	       'c607803ae01aa8c0,af80d08942b4c987',
+	       'c607803ae01aa8c0,b0e4c0853de927c4',
+	       'c607803ae01aa8c0,f0362585b3fceba4']
+
+	  This release fixes the problem by resetting the rate-limiter when
+	  Crypto.Random.atfork() is invoked.  It also adds some tests and a
+	  few related comments.
+
+2.6
+===
+	* [CVE-2012-2417] Fix LP#985164: insecure ElGamal key generation.
+	  (thanks: Legrandin)
+
+	  In the ElGamal schemes (for both encryption and signatures), g is
+	  supposed to be the generator of the entire Z^*_p group.  However, in
+	  PyCrypto 2.5 and earlier, g is more simply the generator of a random
+	  sub-group of Z^*_p.
+
+	  The result is that the signature space (when the key is used for
+	  signing) or the public key space (when the key is used for encryption)
+	  may be greatly reduced from its expected size of log(p) bits, possibly
+	  down to 1 bit (the worst case if the order of g is 2).
+
+	  While it has not been confirmed, it has also been suggested that an
+	  attacker might be able to use this fact to determine the private key.
+
+	  Anyone using ElGamal keys should generate new keys as soon as practical.
+
+	  Any additional information about this bug will be tracked at
+	  https://bugs.launchpad.net/pycrypto/+bug/985164
+
+	* Huge documentation cleanup (thanks: Legrandin).
+
+	* Added more tests, including test vectors from NIST 800-38A
+	  (thanks: Legrandin)
+
+	* Remove broken MODE_PGP, which never actually worked properly.
+	  A new mode, MODE_OPENPGP, has been added for people wishing to write
+	  OpenPGP implementations.  Note that this does not implement the full
+	  OpenPGP specification, only the "OpenPGP CFB mode" part of that
+	  specification.
+	  https://bugs.launchpad.net/pycrypto/+bug/996814
+
+	* Fix: getPrime with invalid input causes Python to abort with fatal error
+	  https://bugs.launchpad.net/pycrypto/+bug/988431
+
+	* Fix: Segfaults within error-handling paths
+	  (thanks: Paul Howarth & Dave Malcolm)
+	  https://bugs.launchpad.net/pycrypto/+bug/934294
+
+	* Fix: Block ciphers allow empty string as IV
+	  https://bugs.launchpad.net/pycrypto/+bug/997464
+
+	* Fix DevURandomRNG to work with Python3's new I/O stack.
+	  (thanks: Sebastian Ramacher)
+
+	* Remove automagic dependencies on libgmp and libmpir, let the caller
+	  disable them using args.
+
+	* Many other minor bug fixes and improvements (mostly thanks to Legrandin)
+
+2.5
+===
+	* Added PKCS#1 encryption schemes (v1.5 and OAEP).  We now have
+	  a decent, easy-to-use non-textbook RSA implementation.  Yay!
+
+	* Added PKCS#1 signature schemes (v1.5 and PSS). v1.5 required some
+	  extensive changes to Hash modules to contain the algorithm specific
+	  ASN.1 OID. To that end, we now always have a (thin) Python module to
+	  hide the one in pure C.
+
+	* Added 2 standard Key Derivation Functions (PBKDF1 and PBKDF2).
+
+	* Added export/import of RSA keys in OpenSSH and PKCS#8 formats.
+
+	* Added password-protected export/import of RSA keys (one old method
+	  for PKCS#8 PEM only).
+
+	* Added ability to generate RSA key pairs with configurable public
+	  exponent e.
+
+	* Added ability to construct an RSA key pair even if only the private
+	  exponent d is known, and not p and q.
+
+	* Added SHA-2 C source code (fully from Lorenz Quack).
+
+	* Unit tests for all the above.
+
+	* Updates to documentation (both inline and in Doc/pycrypt.rst)
+
+	* All of the above changes were put together by Legrandin (Thanks!)
+
+	* Minor bug fixes (setup.py and tests).
+
+2.4.1
+=====
+	* Fix "error: Setup script exited with error: src/config.h: No such file or
+	  directory" when installing via easy_install.  (Sebastian Ramacher)
+
+2.4
+===
+	* Python 3 support!  (Thorsten E. Behrens, Anders Sundman)
+	  PyCrypto now supports every version of Python from 2.1 through 3.2.
+
+	* Timing-attack countermeasures in _fastmath: When built against
+	  libgmp version 5 or later, we use mpz_powm_sec instead of mpz_powm.
+	  This should prevent the timing attack described by Geremy Condra at
+	  PyCon 2011:
+	  http://blip.tv/pycon-us-videos-2009-2010-2011/pycon-2011-through-the-side-channel-timing-and-implementation-attacks-in-python-4897955
+
+	* New hash modules (for Python >= 2.5 only): SHA224, SHA384, and
+	  SHA512 (Frédéric Bertolus)
+
+	* Configuration using GNU autoconf.  This should help fix a bunch of
+	  build issues.
+
+	* Support using MPIR as an alternative to GMP.
+
+	* Improve the test command in setup.py, by allowing tests to be
+	  performed on a single sub-package or module only. (Legrandin)
+
+	  You can now do something like this:
+
+	    python setup.py test -m Hash.SHA256 --skip-slow-tests
+
+	* Fix double-decref of "counter" when Cipher object initialisation
+	  fails (Ryan Kelly)
+
+	* Apply patches from Debian's python-crypto 2.3-3 package (Jan
+	  Dittberner, Sebastian Ramacher):
+	 - fix-RSA-generate-exception.patch
+	 - epydoc-exclude-introspect.patch
+	 - no-usr-local.patch
+
+	* Fix launchpad bug #702835: "Import key code is not compatible with
+	  GMP library" (Legrandin)
+
+	* More tests, better documentation, various bugfixes.
+
+2.3
+===
+	* Fix NameError when attempting to use deprecated getRandomNumber()
+	  function.
+
+	* _slowmath: Compute RSA u parameter when it's not given to
+	  RSA.construct. This makes _slowmath behave the same as _fastmath in
+	  this regard.
+
+	* Make RSA.generate raise a more user-friendly exception message when
+	  the user tries to generate a bogus-length key.
+
+
+2.2
+===
+
+	* Deprecated Crypto.Util.number.getRandomNumber(), which had confusing
+	  semantics.  It's been replaced by getRandomNBitInteger and
+	  getRandomInteger.  (Thanks: Lorenz Quack)
+
+	* Better isPrime() and getPrime() implementations that do a real
+	  Rabin-Miller probabilistic primality test (not the phony test we did
+	  before with fixed bases).  (Thanks: Lorenz Quack)
+
+	* getStrongPrime() implementation for generating RSA primes.
+	  (Thanks: Lorenz Quack)
+
+	* Support for importing and exporting RSA keys in DER and PEM format.
+	  (Thanks: Legrandin)
+
+	* Fix PyCrypto when floor division (python -Qnew) is enabled.
+
+	* When building using gcc, use -std=c99 for compilation.  This should
+	  fix building on FreeBSD and NetBSD.
+
+
+2.1.0
+=====
+
+	* Fix building PyCrypto on Win64 using MS Visual Studio 9.
+	  (Thanks: Nevins Bartolomeo.)
+
+
+2.1.0beta1
+==========
+
+	* Modified RSA.generate() to ensure that e is coprime to p-1 and q-1.
+	  Apparently, RSA.generate was capable of generating unusable keys.
+
+
+2.1.0alpha2
+===========
+
+	* Modified isPrime() to release the global interpreter lock while
+	  performing computations. (patch from Lorenz Quack)
+
+	* Release the GIL while encrypting, decrypting, and hashing (but not
+	  during initialization or finalization).
+
+	* API changes:
+
+	  - Removed RandomPoolCompat and made Crypto.Util.randpool.RandomPool
+	    a wrapper around Crypto.Random that emits a DeprecationWarning.
+	    This is to discourage developers from attempting to provide
+	    backwards compatibility for systems where there are NO strong
+	    entropy sources available.
+
+	  - Added Crypto.Random.get_random_bytes().  This should allow people
+	    to use something like this if they want backwards-compatibility:
+
+	        try:
+	             from Crypto.Random import get_random_bytes
+	        except ImportError:
+	             try:
+	                 from os import urandom as get_random_bytes
+	             except ImportError:
+	                 get_random_bytes = open("/dev/urandom", "rb").read
+
+	  - Implemented __ne__() on pubkey, which fixes the following broken
+	    behaviour:
+	        >>> pk.publickey() == pk.publickey()
+	        True
+	        >>> pk.publickey() != pk.publickey()
+	        True
+	    (patch from Lorenz Quack)
+
+	  - Block ciphers created with MODE_CTR can now operate on strings of
+	    any size, rather than just multiples of the underlying cipher's
+	    block size.
+
+	  - Crypto.Util.Counter objects now raise OverflowError when they wrap
+	    around to zero.  You can override this new behaviour by passing
+	    allow_wraparound=True to Counter.new()
+
+
+2.1.0alpha1
+===========
+
+	* This version supports Python versions 2.1 through 2.6.
+
+	* Clarified copyright status of much of the existing code by tracking
+	  down Andrew M. Kuchling, Barry A. Warsaw, Jeethu Rao, Joris Bontje,
+	  Mark Moraes, Paul Swartz, Robey Pointer, and Wim Lewis and getting
+	  their permission to clarify the license/public-domain status of their
+	  contributions.  Many thanks to all involved!
+
+	* Replaced the test suite with a new, comprehensive package
+	  (Crypto.SelfTest) that includes documentation about where its test
+	  vectors came from, or how they were derived.
+
+	  Use "python setup.py test" to run the tests after building.
+
+	* API changes:
+
+	  - Added Crypto.version_info, which from now on will contain version
+	    information in a format similar to Python's sys.version_info.
+
+	  - Added a new random numbers API (Crypto.Random), and deprecated the
+	    old one (Crypto.Util.randpool.RandomPool), which was misused more
+	    often than not.
+
+	    The new API is used by invoking Crypto.Random.new() and then just
+	    reading from the file-like object that is returned.
+
+	    CAVEAT: To maintain the security of the PRNG, you must call
+	    Crypto.Random.atfork() in both the parent and the child processes
+	    whenever you use os.fork().  Otherwise, the parent and child will
+	    share copies of the same entropy pool, causing them to return the
+	    same results!  This is a limitation of Python, which does not
+	    provide readily-accessible hooks to os.fork().  It's also a
+	    limitation caused by the failure of operating systems to provide
+	    sufficiently fast, trustworthy sources of cryptographically-strong
+	    random numbers.
+
+	  - Crypto.PublicKey now raises ValueError/TypeError/RuntimeError
+	    instead of the various custom "error" exceptions
+
+	  - Removed the IDEA and RC5 modules due to software patents.  Debian
+	    has been doing this for a while
+
+	  - Added Crypto.Random.random, a strong version of the standard Python
+	   'random' module.
+
+	  - Added Crypto.Util.Counter, providing fast counter implementations
+	    for use with CTR-mode ciphers.
+
+	* Bug fixes:
+
+	  - Fixed padding bug in SHA256; this resulted in bad digests whenever
+	    (the number of bytes hashed) mod 64 == 55.
+
+	  - Fixed a 32-bit limitation on the length of messages the SHA256 module
+	    could hash.
+
+	  - AllOrNothing: Fixed padding bug in digest()
+
+	  - Fixed a bad behaviour of the XOR cipher module: It would silently
+	    truncate all keys to 32 bytes.  Now it raises ValueError when the
+	    key is too long.
+
+	  - DSA: Added code to enforce FIPS 186-2 requirements on the size of
+	    the prime p
+
+	  - Fixed the winrandom module, which had been omitted from the build
+	    process, causing security problems for programs that misuse RandomPool.
+
+	  - Fixed infinite loop when attempting to generate RSA keys with an
+	    odd number of bits in the modulus.  (Not that you should do that.)
+
+	* Clarified the documentation for Crypto.Util.number.getRandomNumber.
+
+	  Confusingly, this function does NOT return N random bits; It returns
+	  a random N-bit number, i.e. a random number between 2**(N-1) and (2**N)-1.
+
+	  Note that getRandomNumber is for internal use only and may be
+	  renamed or removed in future releases.
+
+	* Replaced RIPEMD.c with a new implementation (RIPEMD160.c) to
+	  alleviate copyright concerns.
+
+	* Replaced the DES/DES3 modules with ones based on libtomcrypt-1.16 to
+	  alleviate copyright concerns.
+
+	* Replaced Blowfish.c with a new implementation to alleviate copyright
+	  concerns.
+
+	* Added a string-XOR implementation written in C (Crypto.Util.strxor)
+	  and used it to speed up Crypto.Hash.HMAC
+
+	* Converted documentation to reStructured Text.
+
+	* Added epydoc configuration Doc/epydoc-config
+
+	* setup.py now emits a warning when building without GMP.
+
+	* Added pct-speedtest.py to the source tree for doing performance
+	  testing on the new code.
+
+	* Cleaned up the code in several places.
+
+
+2.0.1
+=====
+
+	* Fix SHA256 and RIPEMD on AMD64 platform.
+        * Deleted Demo/ directory.
+	* Add PublicKey to Crypto.__all__
+
+
+2.0
+===
+
+	* Added SHA256 module contributed by Jeethu Rao, with test data
+	  from Taylor Boon.
+
+	* Fixed AES.c compilation problems with Borland C.  
+	  (Contributed by Jeethu Rao.)
+
+	* Fix ZeroDivisionErrors on Windows, caused by the system clock
+	  not having enough resolution.
+	
+        * Fix 2.1/2.2-incompatible use of (key not in dict),
+	  pointed out by Ian Bicking.
+
+	* Fix FutureWarning in Crypto.Util.randpool, noted by James P Rutledge.
+
+	
+1.9alpha6
+=========
+
+	* Util.number.getPrime() would inadvertently round off the bit
+	  size; if you asked for a 129-bit prime or 135-bit prime, you
+	  got a 128-bit prime.
+
+	* Added Util/test/prime_speed.py to measure the speed of prime
+ 	  generation, and PublicKey/test/rsa_speed.py to measure
+	  the speed of RSA operations.
+
+	* Merged the _rsa.c and _dsa.c files into a single accelerator
+	  module, _fastmath.c.  
+
+	* Speed improvements: Added fast isPrime() function to _fastmath,
+	  cutting the time to generate a 1024-bit prime by a factor of 10.
+	  Optimized the C version of RSA decryption to use a longer series
+	  of operations that's roughly 3x faster than a single
+	  exponentiation.  (Contributed by Joris Bontje.)
+
+	* Added support to RSA key objects for blinding and unblinding 
+	  data. (Contributed by Joris Bontje.)
+
+	* Simplified RSA key generation: hard-wired the encryption
+	  exponent to 65537 instead of generating a random prime;
+	  generate prime factors in a loop until the product 
+	  is large enough.
+	
+	* Renamed cansign(), canencrypt(), hasprivate(), to 
+	  can_sign, can_encrypt, has_private.  If people shriek about
+	  this change very loudly, I'll add aliases for the old method
+	  names that log a warning and call the new method.
+	
+
+1.9alpha5
+=========
+
+        * Many randpool changes.  RandomPool now has a
+          randomize(N:int) method that can be called to get N
+          bytes of entropy for the pool (N defaults to 0,
+          which 'fills up' the pool's entropy) KeyboardRandom
+          overloads this method.
+
+        * Added src/winrand.c for Crypto.Util.winrandom and
+          now use winrandom for _randomize if possible.
+          (Calls Windows CryptoAPI CryptGenRandom)
+
+        * Several additional places for stirring the pool,
+          capturing inter-event entropy when reading/writing,
+          stirring before and after saves.
+
+        * RandomPool.add_event now returns the number of
+          estimated bits of added entropy, rather than the
+          pool entropy itself (since the pool entropy is
+          capped at the number of bits in the pool)
+
+        * Moved termios code from KeyboardRandomPool into a
+          KeyboardEntry class, provided a version for Windows
+          using msvcrt.
+
+        * Fix randpool.py crash on machines with poor timer resolution.
+          (Reported by Mark Moraes and others.)
+
+        * If the GNU GMP library is available, two C extensions will be 
+          compiled to speed up RSA and DSA operations.  (Contributed by 
+          Paul Swartz.)
+
+        * DES3 with a 24-byte key was broken; now fixed.  
+	  (Patch by Philippe Frycia.)
+
+
+1.9alpha4
+=========
+
+        * Fix compilation problem on Windows.
+
+        * HMAC.py fixed to work with pre-2.2 Pythons
+        
+        * setup.py now dies if built with Python 1.x
+        
+
+1.9alpha3
+=========
+
+        * Fix a ref-counting bug that caused core dumps.  
+          (Reported by Piers Lauder and an anonymous SF poster.)
+        
+
+1.9alpha2
+=========
+
+        * (Backwards incompatible) The old Crypto.Hash.HMAC module is
+          gone, replaced by a copy of hmac.py from Python 2.2's standard
+          library.  It will display a warning on interpreter versions
+          older than 2.2.
+        
+        * (Backwards incompatible) Restored the Crypto.Protocol package,
+          and modernized and tidied up the two modules in it,
+          AllOrNothing.py and Chaffing.py, renaming various methods
+          and changing the interface.
+          
+        * (Backwards incompatible) Changed the function names in
+          Crypto.Util.RFC1751.
+        
+        * Restored the Crypto.PublicKey package at user request.  I
+          think I'll leave it in the package and warn about it in the
+          documentation.  I hope that eventually I can point to
+          someone else's better public-key code, and at that point I
+          may insert warnings and begin the process of deprecating
+          this code.
+
+        * Fix use of a Python 2.2 C function, replacing it with a 
+          2.1-compatible equivalent.  (Bug report and patch by Andrew
+          Eland.)  
+
+        * Fix endianness bugs that caused test case failures on Sparc,
+          PPC, and doubtless other platforms.
+
+        * Fixed compilation problem on FreeBSD and MacOS X.
+        
+        * Expanded the test suite (requires Sancho, from 
+          http://www.mems-exchange.org/software/sancho/)
+
+        * Added lots of docstrings, so 'pydoc Crypto' now produces 
+          helpful output.  (Open question: maybe *all* of the documentation
+          should be moved into docstrings?)
+          
+        * Make test.py automatically add the build/* directory to sys.path.
+
+        * Removed 'inline' declaration from C functions.  Some compilers
+          don't support it, and Python's pyconfig.h no longer tells you whether
+          it's supported or not.  After this change, some ciphers got slower,
+          but others got faster.
+          
+        * The C-level API has been changed to reduce the amount of
+          memory-to-memory copying.   This makes the code neater, but 
+          had ambiguous performance effects; again, some ciphers got slower
+          and others became faster.  Probably this is due to my compiler
+          optimizing slightly worse or better as a result.
+
+        * Moved C source implementations into src/ from block/, hash/, 
+          and stream/.  Having Hash/ and hash/ directories causes problems
+          on case-insensitive filesystems such as Mac OS.
+
+        * Cleaned up the C code for the extensions.
+                
+        
+1.9alpha1
+=========
+
+        * Added Crypto.Cipher.AES.
+
+        * Added the CTR mode and the variable-sized CFB mode from the
+          NIST standard on feedback modes. 
+        
+        * Removed Diamond, HAVAL, MD5, Sapphire, SHA, and Skipjack.  MD5
+          and SHA are included with Python; the others are all of marginal
+          usefulness in the real world.
+
+        * Renamed the module-level constants ECB, CFB, &c., to MODE_ECB,
+          MODE_CFB, as part of making the block encryption modules 
+          compliant with PEP 272.  (I'm not sure about this change;
+          if enough users complain about it, I might back it out.)
+        
+        * Made the hashing modules compliant with PEP 247 (not backward
+          compatible -- the major changes are that the constructor is now 
+          MD2.new and not MD2.MD2, and the size of the digest is now 
+          given as 'digest_size', not 'digestsize'.
+
+        * The Crypto.PublicKey package is no longer installed; the
+          interfaces are all wrong, and I have no idea what the right
+          interfaces should be.  
+
+
+1.1alpha2
+=========
+        * Most importantly, the distribution has been broken into two
+parts: exportable, and export-controlled.  The exportable part
+contains all the hashing algorithms, signature-only public key
+algorithms, chaffing & winnowing, random number generation, various
+utility modules, and the documentation.
+
+        The export-controlled part contains public-key encryption
+algorithms such as RSA and ElGamal, and bulk encryption algorithms
+like DES, IDEA, or Skipjack.  Getting this code still requires that
+you go through an access control CGI script, and denies you access if
+you're outside the US or Canada.
+
+        * Added the RIPEMD hashing algorithm.  (Contributed by
+Hirendra Hindocha.)
+
+        * Implemented the recently declassified Skipjack block
+encryption algorithm.  My implementation runs at 864 K/sec on a
+PII/266, which isn't particularly fast, but you're probably better off
+using another algorithm anyway.  :)
+
+        * A simple XOR cipher has been added, mostly for use by the
+chaffing/winnowing code.  (Contributed by Barry Warsaw.)
+
+        * Added Protocol.Chaffing and Hash.HMAC.py.  (Contributed by
+Barry Warsaw.)  
+
+        Protocol.Chaffing implements chaffing and winnowing, recently
+proposed by R. Rivest, which hides a message (the wheat) by adding
+many noise messages to it (the chaff).  The chaff can be discarded by
+the receiver through a message authentication code.  The neat thing
+about this is that it allows secret communication without actually
+having an encryption algorithm, and therefore this falls within the
+exportable subset.  
+
+        * Tidied up randpool.py, and removed its use of a block
+cipher; this makes it work with only the export-controlled subset
+available.
+
+        * Various renamings and reorganizations, mostly internal.
+
+        
+1.0.2
+=====
+
+        * Changed files to work with Python 1.5; everything has been
+re-arranged into a hierarchical package.  (Not backward compatible.)
+The package organization is:
+Crypto.
+        Hash.
+                MD2, MD4, MD5, SHA, HAVAL
+        Cipher.
+                ARC2, ARC4, Blowfish, CAST, DES, DES3, Diamond, 
+                IDEA, RC5, Sapphire
+        PublicKey.
+                DSA, ElGamal, qNEW, RSA
+        Util.
+                number, randpool, RFC1751
+
+        Since this is backward-incompatible anyway, I also changed
+module names from all lower-case to mixed-case: diamond -> Diamond,
+rc5 -> RC5, etc.  That had been an annoying inconsistency for a while.
+        
+        * Added CAST5 module contributed by <wiml@hhhh.org>.
+
+        * Added qNEW digital signature algorithm (from the digisign.py
+I advertised a while back).  (If anyone would like to suggest new
+algorithms that should be implemented, please do; I think I've got
+everything that's really useful at the moment, but...)
+
+        * Support for keyword arguments has been added.  This allowed
+removing the obnoxious key handling for Diamond and RC5, where the
+first few bytes of the key indicated the number of rounds to use, and
+various other parameters.  Now you need only do something like:
+
+from Crypto.Cipher import RC5
+obj = RC5.new(key, RC5.ECB, rounds=8)
+
+(Not backward compatible.) 
+
+        * Various function names have been changed, and parameter
+names altered.  None of these were part of the public interface, so it
+shouldn't really matter much.
+
+        * Various bugs fixed, the test suite has been expanded, and
+the build process simplified.
+
+        * Updated the documentation accordingly.
+
+        
+1.0.1
+=====
+        
+        * Changed files to work with Python 1.4 .
+
+        * The DES and DES3 modules now automatically correct the
+parity of their keys.
+        
+        * Added R. Rivest's DES test (see http://theory.lcs.mit.edu/~rivest/destest.txt)
+
+
+1.0.0
+=====
+
+        * REDOC III succumbed to differential cryptanalysis, and has
+been removed. 
+
+        * The crypt and rotor modules have been dropped; they're still
+available in the standard Python distribution. 
+
+        * The Ultra-Fast crypt() module has been placed in a separate
+distribution.
+
+        * Various bugs fixed.

@@ -1,0 +1,30 @@
+- Clean up and stabilize the Crypto.PublicKey API.  The previous attempt to
+  unify fundamentally different algorithms, such as RSA and DSA, should be
+  avoided, since it simply adds confusion.
+
+- Add algorithms:
+    - Camellia
+    - SHA512
+    - Diffie-Hellmen key agreement
+    - Authenticated Diffie-Hellmen key agreement
+    - RSA PKCS#1 v1.5
+    - RSA PKCS#1 v2 (OAEP)
+
+- Add a *complete* DSA implementation. (The current implementation doesn't do
+  the necessary hashing, for example.)
+
+- Coverage testing
+
+- Run lint on the C code
+
+- Separate the exported API from the internal implementation details.
+
+- Provide drop-in support for extensions/drivers like amkCrypto/mxCrypto.
+  There should be some way to register these drivers in your package, e.g. by
+  defining a certain subdirectory to be a place where pycrypto looks for these
+  drivers at startup time.
+
+- Merge Crypto.Cipher.XOR and Crypto.Util.strxor somehow
+
+- Document our experiences with RandomPool and why it was bad.
+
