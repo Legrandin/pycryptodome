@@ -35,7 +35,6 @@ master key, or to thwart attacks on pass phrases (e.g. via rainbow tables).
 
 __revision__ = "$Id$"
 
-import math
 import struct
 
 import sys
@@ -46,6 +45,7 @@ from Crypto.Util.py3compat import *
 from Crypto.Hash import SHA1, HMAC, CMAC
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
+
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
@@ -207,3 +207,69 @@ class _S2V(object):
             final = strxor(padded, self._double(self._cache))
         mac = CMAC.new(self._key, msg=final, ciphermod=self._ciphermod)
         return mac.digest()
+
+
+def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
+    """Derive one or more keys from a master secret using
+    the HMAC-based KDF defined in RFC5869_.
+
+    This KDF is not suitable for deriving keys from a password or for key
+    stretching. Use `PBKDF2` instead.
+
+    HKDF is a key derivation method approved by NIST in `SP 800 56C`__.
+
+    :Parameters:
+     master : byte string
+        The unguessable value used by the KDF to generate the other keys.
+        It must be a high-entropy secret, though not necessarily uniform.
+        It must not be a password.
+     salt : byte string
+        A non-secret, reusable value that strengthens the randomness
+        extraction step.
+        Ideally, it is as long as the digest size of the chosen hash.
+        If empty, a string of zeroes in used.
+     key_len : integer
+        The length in bytes of every derived key.
+     hashmod : module
+        A cryptographic hash algorithm from `Crypto.Hash`.
+        `Crypto.Hash.SHA512` is a good choice.
+     num_keys : integer
+        The number of keys to derive. Every key is ``key_len`` bytes long.
+        The maximum cumulative length of all keys is
+        255 times the digest size.
+     context : byte string
+        Optional identifier describing what the keys are used for.
+
+    :Return: A byte string or a tuple of byte strings.
+
+    .. _RFC5869: http://tools.ietf.org/html/rfc5869
+    .. __: http://csrc.nist.gov/publications/nistpubs/800-56C/SP-800-56C.pdf
+    """
+
+    output_len = key_len * num_keys
+    if output_len > (255 * hashmod.digest_size):
+        raise ValueError("Too much secret data to derive")
+    if not salt:
+        salt = bchr(0) * hashmod.digest_size
+    if context is None:
+        context = b("")
+
+    # Step 1: extract
+    hmac = HMAC.new(salt, master, digestmod=hashmod)
+    prk = hmac.digest()
+
+    # Step 2: expand
+    t = [b("")]
+    n = 1
+    tlen = 0
+    while tlen < output_len:
+        hmac = HMAC.new(prk, t[-1] + context + bchr(n), digestmod=hashmod)
+        t.append(hmac.digest())
+        tlen += hashmod.digest_size
+        n += 1
+    derived_output = b("").join(t)
+    if num_keys == 1:
+        return derived_output[:key_len]
+    kol = [derived_output[idx:idx + key_len]
+           for idx in xrange(0, output_len, key_len)]
+    return list(kol[:num_keys])
