@@ -57,9 +57,87 @@
 #define OB_SIZE(p) ((p)->ob_size)
 #endif
 
+#if ULONG_MAX==0xFFFFFFFFUL
+/** LLP64, like 64-bit Windows **/
+#define ULONG_BITS 32
+#elif ULONG_MAX==0xFFFFFFFFFFFFFFFFUL
+/** ILP64 and LP64, like 64-bit Unix **/
+#define ULONG_BITS 64
+#else
+#error Cannot determine how many bits a long is made of
+#endif
+
 static unsigned int sieve_base[10000];
 static int rabinMillerTest (mpz_t n, int rounds, PyObject *randfunc);
 
+#if (PY_VERSION_HEX >= 0x02070000)
+/**
+ * PyLong_AsLongAndOverflow() was introduced in Python 2.7.
+ * For older versions, we use the routine that accesses
+ * internals of the PyLong object.
+ * That's OK, because pypy only works with Python 2.7.
+ */
+static void
+longObjToMPZ (mpz_t m, PyLongObject *p)
+{
+	PyObject *p_copy;
+	PyObject *bitsInLong;
+	PyObject *zero;
+	int last_loop;
+	mpz_t temp;
+	int i;
+	int sign;
+
+	mpz_init (temp);
+	mpz_set_ui (m, 0);
+	bitsInLong = PyLong_FromUnsignedLong(ULONG_BITS);
+	zero = PyLong_FromUnsignedLong(0);
+
+#ifdef IS_PY3K
+	sign = PyObject_RichCompareBool((PyObject*)p, zero, Py_GE)>0 ? 1 : -1;
+#else
+	sign = PyObject_Compare((PyObject*)p, (PyObject*)zero);
+#endif
+	if (-1 == sign) {
+		p_copy = PyNumber_Negative((PyObject*)p);
+	} else {
+		p_copy = PyNumber_Long((PyObject*)p);
+	}
+
+	last_loop = 0;
+	for (i=0; !last_loop; i++) {
+		PyObject *x;
+		unsigned long chunk;
+		int overflow;
+
+		chunk = PyLong_AsLongAndOverflow(p_copy, &overflow);
+		if (overflow == 0) {        // no overflow?
+			last_loop = 1;
+		} else {
+			chunk = PyLong_AsUnsignedLongMask(p_copy);
+		}
+
+		mpz_set_ui (temp, chunk);
+		mpz_mul_2exp (temp, temp, ULONG_BITS*i);
+		mpz_add (m, m, temp);
+		x = PyNumber_Rshift(p_copy, bitsInLong);
+		Py_DECREF(p_copy);
+		p_copy = x;
+	}
+
+	if (-1 == sign) {
+		mpz_neg(m, m);
+	}
+
+	Py_DECREF(p_copy);
+	Py_DECREF(bitsInLong);
+	Py_DECREF(zero);
+	mpz_clear (temp);
+}
+#else
+/**
+ * Python version 2.6 or earlier.
+ */
 static void
 longObjToMPZ (mpz_t m, PyLongObject * p)
 {
@@ -86,32 +164,61 @@ longObjToMPZ (mpz_t m, PyLongObject * p)
 	mpz_clear (temp);
 	mpz_clear (temp2);
 }
+#endif
 
 static PyObject *
 mpzToLongObj (mpz_t m)
 {
-	/* borrowed from gmpy */
-	int size = (mpz_sizeinbase (m, 2) + PyLong_SHIFT - 1) / PyLong_SHIFT;
-	int sgn;
-	int i;
-	mpz_t temp;
-	PyLongObject *l = _PyLong_New (size);
-	if (!l)
-		return NULL;
-	sgn = mpz_sgn(m);
-	mpz_init(temp);
-	mpz_mul_si(temp, m, sgn);
-	for (i = 0; i < size; i++)
-	{
-		l->ob_digit[i] = (digit) (mpz_get_ui (temp) & PyLong_MASK);
-		mpz_fdiv_q_2exp (temp, temp, PyLong_SHIFT);
+	PyObject *result;
+	PyObject *shift_amount;
+	PyObject *bitsInLong;
+	mpz_t m_copy;
+
+	mpz_init_set(m_copy, m);
+	result = PyLong_FromUnsignedLong(0);
+	shift_amount = PyLong_FromUnsignedLong(0);
+	bitsInLong = PyLong_FromUnsignedLong(ULONG_BITS);
+
+	if (mpz_sgn(m_copy)<0) {
+		mpz_neg(m_copy, m_copy);
 	}
-	i = size;
-	while ((i > 0) && (l->ob_digit[i - 1] == 0))
-		i--;
-	OB_SIZE(l) = i * sgn;
-	mpz_clear (temp);
-	return (PyObject *) l;
+
+	while (mpz_sgn(m_copy)) {
+		unsigned long digit;
+		PyObject *x;
+		PyObject *y;
+		PyObject *z;
+		PyObject *w;
+
+		/** Truncate least significant bits **/
+		digit = mpz_get_ui(m_copy);
+		/** Shift to right **/
+		mpz_div_2exp(m_copy, m_copy, ULONG_BITS);
+
+		z = PyLong_FromUnsignedLong(digit);
+		x = PyNumber_Lshift(z, shift_amount);
+		y = PyNumber_Add(result, x);
+		Py_DECREF(result);
+		Py_DECREF(z);
+		Py_DECREF(x);
+		result = y;
+
+		w = PyNumber_Add(shift_amount, bitsInLong);
+		Py_DECREF(shift_amount);
+		shift_amount = w;
+	}
+
+	if (mpz_sgn(m)<0) {
+		PyObject *x;
+
+		x = PyNumber_Negative(result);
+		Py_DECREF(result);
+		result = x;
+	}
+
+	Py_DECREF(bitsInLong);
+	mpz_clear (m_copy);
+	return result;
 }
 
 typedef struct
@@ -1036,35 +1143,6 @@ void bytes_to_mpz (mpz_t result, const unsigned char *bytes, size_t size)
 }
 
 
-/* Returns a new reference to a rng from the Crypto.Random module. */
-static PyObject *
-getRNG (void)
-{
-	/* PyModule_GetDict, PyDict_GetItemString return a borrowed ref */
-	PyObject *module, *module_dict, *new_func, *rng;
-
-	module = PyImport_ImportModule ("Crypto.Random");
-	if (!module)
-		return NULL;
-	module_dict = PyModule_GetDict (module);
-	Py_DECREF (module);
-	new_func = PyDict_GetItemString (module_dict, "new");
-	if (new_func == NULL) {
-		PyErr_SetString (PyExc_RuntimeError,
-						 "Crypto.Random.new is missing.");
-		return NULL;
-	}
-	if (!PyCallable_Check (new_func))
-	{
-		PyErr_SetString (PyExc_RuntimeError,
-						 "Crypto.Random.new is not callable.");
-		return NULL;
-	}
-	rng = PyObject_CallObject (new_func, NULL);
-	return rng;
-}
-
-
 /* Sets n to a rangom number with at most `bits` bits .
  * If randfunc is provided it should be a callable which takes a single int
  * parameter and return as many random bytes as a python string.
@@ -1075,30 +1153,16 @@ getRNG (void)
  * support 2.1)
  */
 static int
-getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc_)
+getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc)
 {
-	PyObject *arglist=NULL, *randfunc=NULL, *rng=NULL, *rand_bytes=NULL;
+	PyObject *arglist=NULL, *rand_bytes=NULL;
 	int return_val = 1;
 	unsigned long bytes = bits / 8;
 	unsigned long odd_bits = bits % 8;
-	/* generate 1 to 8 bits too many.
+	
+        /* generate 1 to 8 bits too many.
 	   we will remove them later by right-shifting */
 	bytes++;
-	/* we need to handle the cases where randfunc is NULL or None */
-	if ((randfunc_ == NULL) || (randfunc_ == Py_None))
-	{
-		rng = getRNG();
-		if (!rng)
-		{
-			return_val = 0;
-			goto cleanup;
-		}
-		randfunc = PyObject_GetAttrString (rng, "read");
-	}
-	else
-	{
-		randfunc = randfunc_;
-	}
 
 	if (!PyCallable_Check (randfunc))
 	{
@@ -1132,11 +1196,6 @@ getRandomInteger (mpz_t n, unsigned long bits, PyObject *randfunc_)
 cleanup:
 	Py_XDECREF (arglist);
 	Py_XDECREF (rand_bytes);
-	if (rng)
-	{
-		Py_XDECREF (randfunc);
-		Py_DECREF (rng);
-	}
 	return return_val;
 }
 

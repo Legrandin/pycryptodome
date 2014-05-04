@@ -259,6 +259,10 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     # which by the time of writing could be freely downloaded here:
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.17.2713&rep=rep1&type=pdf
 
+    if randfunc is None:
+        _import_Random()
+        randfunc = Random.new().read
+
     # Use the accelerator if available
     if _fastmath is not None:
         return _fastmath.getStrongPrime(long(N), long(e), false_positive_prob,
@@ -364,6 +368,11 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
 
     If randfunc is omitted, then Random.new().read is used.
     """
+
+    if randfunc is None:
+        _import_Random()
+        randfunc = Random.new().read
+
     if _fastmath is not None:
         return _fastmath.isPrime(long(N), false_positive_prob, randfunc)
 

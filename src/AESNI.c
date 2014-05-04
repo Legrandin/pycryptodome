@@ -175,8 +175,10 @@ static void aes_key_setup_enc(__m128i rk[], const u8* cipherKey, int keylen)
 /* Decryption key setup */
 static void aes_key_setup_dec(__m128i dk[], const __m128i ek[], int rounds)
 {
+    int i;
+
     dk[rounds] = ek[0];
-    for (int i = 1; i < rounds; ++i) {
+    for (i = 1; i < rounds; ++i) {
         dk[rounds - i] = _mm_aesimc_si128(ek[i]);
     }
     dk[0] = ek[rounds];

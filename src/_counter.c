@@ -41,7 +41,7 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
         return -1;
 
     /* Check string size and set nbytes */
-    size = PyBytes_GET_SIZE(initval);
+    size = PyBytes_GET_SIZE((PyObject*)initval);
     if (size < 1) {
         PyErr_SetString(PyExc_ValueError, "initval length too small (must be >= 1 byte)");
         return -1;
@@ -52,7 +52,7 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
     self->nbytes = (uint16_t) size;
 
     /* Check prefix length */
-    size = PyBytes_GET_SIZE(prefix);
+    size = PyBytes_GET_SIZE((PyObject*)prefix);
     assert(size >= 0);
     if (size > 0xffff) {
         PyErr_SetString(PyExc_ValueError, "prefix length too large (must be <= 65535 bytes)");
@@ -60,7 +60,7 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
     }
 
     /* Check suffix length */
-    size = PyBytes_GET_SIZE(suffix);
+    size = PyBytes_GET_SIZE((PyObject*)suffix);
     assert(size >= 0);
     if (size > 0xffff) {
         PyErr_SetString(PyExc_ValueError, "suffix length too large (must be <= 65535 bytes)");
@@ -86,25 +86,29 @@ CounterObject_init(PCT_CounterObject *self, PyObject *args, PyObject *kwargs)
 
     /* Allocate new buffer */
     /* buf_size won't overflow because the length of each string will always be <= 0xffff */
-    self->buf_size = PyBytes_GET_SIZE(prefix) + PyBytes_GET_SIZE(suffix) + self->nbytes;
+    self->buf_size = PyBytes_GET_SIZE((PyObject*)prefix) +
+                     PyBytes_GET_SIZE((PyObject*)suffix) + self->nbytes;
     self->val = self->p = PyMem_Malloc(self->buf_size);
     if (self->val == NULL) {
         self->buf_size = 0;
         return -1;
     }
-    self->p = self->val + PyBytes_GET_SIZE(prefix);
+    self->p = self->val + PyBytes_GET_SIZE((PyObject*)prefix);
 
     /* Sanity-check pointers */
     assert(self->val <= self->p);
     assert(self->buf_size >= 0);
     assert(self->p + self->nbytes <= self->val + self->buf_size);
-    assert(self->val + PyBytes_GET_SIZE(self->prefix) == self->p);
-    assert(PyBytes_GET_SIZE(self->prefix) + self->nbytes + PyBytes_GET_SIZE(self->suffix) == self->buf_size);
+    assert(self->val + PyBytes_GET_SIZE((PyObject*)self->prefix) == self->p);
+    assert(PyBytes_GET_SIZE((PyObject*)self->prefix) + self->nbytes +
+            PyBytes_GET_SIZE((PyObject*)self->suffix) == self->buf_size);
 
     /* Copy the prefix, suffix, and initial value into the buffer. */
-    memcpy(self->val, PyBytes_AS_STRING(prefix), PyBytes_GET_SIZE(prefix));
-    memcpy(self->p, PyBytes_AS_STRING(initval), self->nbytes);
-    memcpy(self->p + self->nbytes, PyBytes_AS_STRING(suffix), PyBytes_GET_SIZE(suffix));
+    memcpy(self->val, PyBytes_AS_STRING((PyObject*)prefix),
+            PyBytes_GET_SIZE((PyObject*)prefix));
+    memcpy(self->p, PyBytes_AS_STRING((PyObject*)initval), self->nbytes);
+    memcpy(self->p + self->nbytes, PyBytes_AS_STRING((PyObject*)suffix),
+            PyBytes_GET_SIZE((PyObject*)suffix));
 
     /* Set allow_wraparound */
     self->allow_wraparound = allow_wraparound;
