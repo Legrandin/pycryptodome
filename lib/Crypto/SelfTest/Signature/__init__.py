@@ -30,6 +30,7 @@ def get_tests(config={}):
     tests = []
     import test_pkcs1_15; tests += test_pkcs1_15.get_tests(config=config)
     import test_pkcs1_pss; tests += test_pkcs1_pss.get_tests(config=config)
+    import test_dss; tests += test_dss.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

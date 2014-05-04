@@ -57,23 +57,22 @@ This module provides facilities for generating new DSA keys and for constructing
 them from known components. DSA keys allows you to perform basic signing and
 verification.
 
-    >>> from Crypto.Random import random
     >>> from Crypto.PublicKey import DSA
+    >>> from Crypto.Signature.DSS
     >>> from Crypto.Hash import SHA256
     >>>
-    >>> message = "Hello"
+    >>> message = b"Hello"
     >>> key = DSA.generate(2048)
     >>> f = open("public_key.pem", "w")
     >>> f.write(key.publickey().exportKey(key))
-    >>> h = SHA256.new(message).digest()
-    >>> k = random.StrongRandom().randint(1,key.q-1)
-    >>> sig = key.sign(h,k)
-    >>> ...
+    >>> hash_obj = SHA256.new(message)
+    >>> signer = DSS.new(key, 'fips-186-3')
+    >>> signature = key.sign(hash_obj)
     >>> ...
     >>> f = open("public_key.pem", "r")
-    >>> h = SHA256.new(message).digest()
-    >>> key = DSA.importKey(f.read())
-    >>> if key.verify(h,sig):
+    >>> hash_obj = SHA256.new(message)
+    >>> pub_key = DSA.importKey(f.read())
+    >>> if pub_key.verify(hash_obj, signature):
     >>>     print "OK"
     >>> else:
     >>>     print "Incorrect signature"
@@ -86,7 +85,7 @@ verification.
 __revision__ = "$Id$"
 
 __all__ = ['generate', 'construct', 'error', 'DSAImplementation',
-           '_DSAobj', 'importKey']
+           '_DSAobj', 'importKey' ]
 
 import binascii
 import struct
@@ -180,6 +179,11 @@ class _DSAobj(pubkey.pubkey):
     def sign(self, M, K):
         """Sign a piece of data with DSA.
 
+        This method is very low-level and must not be used directly.
+
+        **If you want to perform signing, use the `Crypto.Signature.DSS`
+        module instead.**
+
         :Parameter M: The piece of data to sign with DSA. It may
          not be longer in bit size than the sub-group order (*q*).
         :Type M: byte string or long
@@ -210,6 +214,11 @@ class _DSAobj(pubkey.pubkey):
 
     def verify(self, M, signature):
         """Verify the validity of a DSA signature.
+
+        This method is very low-level and must not be used directly.
+
+        **If you want to validate a signature, use
+        the `Crypto.Signature.DSS` module instead.**
 
         :Parameter M: The expected message.
         :Type M: byte string or long
@@ -257,6 +266,11 @@ class _DSAobj(pubkey.pubkey):
 
     def publickey(self):
         return self.implementation.construct((self.key.y, self.key.g, self.key.p, self.key.q))
+
+    def domain(self):
+        """The DSA domain parameters: *p*, *q* and *g*. """
+
+        return (self.key.p, self.key.q, self.key.g)
 
     def __getstate__(self):
         d = {}
@@ -466,29 +480,33 @@ class DSAImplementation(object):
             self._current_randfunc = Random.new().read
         return self._current_randfunc
 
-    def generate(self, bits, randfunc=None, progress_func=None):
+    def generate(self, bits, randfunc=None, progress_func=None, domain=None):
         """Randomly generate a fresh, new DSA key.
 
         :Parameters:
-         bits : int
-                            Key length, or size (in bits) of the DSA modulus
-                            *p*.
-                            It must be a multiple of 64, in the closed
-                            interval [512,1024].
-         randfunc : callable
-                            Random number generation function; it should accept
-                            a single integer N and return a string of random data
-                            N bytes long.
-                            If not specified, a new one will be instantiated
-                            from ``Crypto.Random``.
-         progress_func : callable
-                            Optional function that will be called with a short string
-                            containing the key parameter currently being generated;
-                            it's useful for interactive applications where a user is
-                            waiting for a key to be generated.
 
-        :attention: You should always use a cryptographically secure random number generator,
-            such as the one defined in the ``Crypto.Random`` module; **don't** just use the
+          bits : int
+            Key length, or size (in bits) of the DSA modulus *p*.
+            It must be a multiple of 64, in the closed interval [512,1024].
+
+          randfunc : callable
+            Random number generation function; it accepts a single integer N
+            and return a string of random data N bytes long.
+            If not specified, the default from ``Crypto.Random`` is used.
+
+          progress_func : callable
+            Optional function that will be called with a short string
+            containing the key parameter currently being generated.
+            It's useful for interactive applications where a user is
+            waiting for a key to be generated.
+
+          domain : list
+            The DSA domain parameters *p*, *q* and *g* as a list of 3
+            integers. If not specified, they are created anew.
+
+        :attention: You should always use a cryptographically secure
+            random number generator, such as the one defined in the
+            ``Crypto.Random`` module; **don't** just use the
             current time and the ``random`` module.
 
         :Return: A DSA key object (`_DSAobj`).
@@ -496,12 +514,12 @@ class DSAImplementation(object):
         :Raise ValueError:
             When **bits** is too little, too big, or not a multiple of 64.
         """
- 
+
         # Check against FIPS 186-2, which says that the size of the prime p
         # must be a multiple of 64 bits between 512 and 1024
         for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
             if bits == 512 + 64*i:
-                return self._generate(bits, randfunc, progress_func)
+                return self._generate(bits, randfunc, progress_func, domain)
 
         # The March 2006 draft of FIPS 186-3 also allows 2048 and 3072-bit
         # primes, but only with longer q values.  Since the current DSA
@@ -509,9 +527,9 @@ class DSAImplementation(object):
         # values.
         raise ValueError("Number of bits in p must be a multiple of 64 between 512 and 1024, not %d bits" % (bits,))
 
-    def _generate(self, bits, randfunc=None, progress_func=None):
+    def _generate(self, bits, randfunc=None, progress_func=None, domain=None):
         rf = self._get_randfunc(randfunc)
-        obj = _DSA.generate_py(bits, rf, progress_func)    # TODO: Don't use legacy _DSA module
+        obj = _DSA.generate_py(bits, rf, progress_func, domain)    # TODO: Don't use legacy _DSA module
         key = self._math.dsa_construct(obj.y, obj.g, obj.p, obj.q, obj.x)
         return _DSAobj(self, key)
 
