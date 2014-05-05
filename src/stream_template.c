@@ -77,8 +77,8 @@ static char ALGnew__doc__[] =
 "Return a new " _MODULE_STRING " encryption object.";
 
 static char *kwlist[] = { "key",
-#ifdef STREAM_CIPHER_NEEDS_IV
-                          "iv",
+#ifdef STREAM_CIPHER_NEEDS_NONCE
+                          "nonce",
 #endif
                           NULL};
 
@@ -88,22 +88,22 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 	unsigned char *key;
 	ALGobject * new;
 	int keylen;
-#ifdef STREAM_CIPHER_NEEDS_IV
-        unsigned char *IV;
-        int IVlen=0;
+#ifdef STREAM_CIPHER_NEEDS_NONCE
+        unsigned char *nonce;
+        int nonce_len=0;
 #endif
 
 	new = newALGobject();
 	if (!PyArg_ParseTupleAndKeywords(args, kwdict,
-#ifdef STREAM_CIPHER_NEEDS_IV
+#ifdef STREAM_CIPHER_NEEDS_NONCE
                                         "s#s#",
 #else
                                         "s#",
 #endif
                                          kwlist, 
 					 &key, &keylen
-#ifdef STREAM_CIPHER_NEEDS_IV
-                                         , &IV, &IVlen
+#ifdef STREAM_CIPHER_NEEDS_NONCE
+                                         , &nonce, &nonce_len
 #endif
                                          ))
 	{
@@ -126,8 +126,8 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 		return NULL;
 	}
 	stream_init(&(new->st), key, keylen
-#ifdef STREAM_CIPHER_NEEDS_IV
-                , IV, IVlen
+#ifdef STREAM_CIPHER_NEEDS_NONCE
+                , nonce, nonce_len
 #endif
                 );
 	if (PyErr_Occurred())

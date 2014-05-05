@@ -72,8 +72,9 @@ def new(key, *args, **kwargs):
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
-      iv : byte string
-        Initialization vector
+      nonce : byte string
+        A mandatory value that must never be reused for any other encryption.
+        It must be 8 bytes long.
 
     :Return: an `Salsa20Cipher` object
     """

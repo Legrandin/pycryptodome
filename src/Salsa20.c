@@ -165,7 +165,7 @@ _salsa20_block (stream_state *self)
 
 static void
 stream_init (stream_state *self, unsigned char *key, int keylen,
-			 unsigned char *IV, int IVlen)
+			 unsigned char *nonce, int nonce_len)
 {
     const char *constants;
     uint32_t *input;
@@ -175,10 +175,10 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
             "Salsa20 key must be 16 or 32 bytes long");
         return;
     }
-    if (IVlen != 8) {
+    if (nonce_len != 8) {
         char buf[160];
-        sprintf(buf, "Salsa20 IV (Initialization Vector) must be 8 bytes long"
-                     " (got %d)", IVlen);
+        sprintf(buf, "Salsa20 nonce must be 8 bytes long"
+                     " (got %d)", nonce_len);
         PyErr_SetString(PyExc_ValueError, buf);
         return;
     }
@@ -206,9 +206,9 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
     U8TO32_LITTLE (input[10], constants + 8);
     U8TO32_LITTLE (input[15], constants + 12);
     
-    /* IV setup */
-    U8TO32_LITTLE (input[6], IV);
-    U8TO32_LITTLE (input[7], IV + 4);
+    /* nonce setup */
+    U8TO32_LITTLE (input[6], nonce);
+    U8TO32_LITTLE (input[7], nonce + 4);
     
     /* Block counter setup*/
     input[8]  = 0;
@@ -233,7 +233,7 @@ stream_encrypt (stream_state *self, unsigned char *block, int len)
     }
 }
 
-#define STREAM_CIPHER_NEEDS_IV
+#define STREAM_CIPHER_NEEDS_NONCE
 #include "stream_template.c"
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */
