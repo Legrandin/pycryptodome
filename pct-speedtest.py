@@ -30,7 +30,8 @@ import sys
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
 from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
-from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR
+from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR,\
+                          Salsa20
 from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512, CMAC
 from Crypto.Random import get_random_bytes
 import Crypto.Util.Counter
@@ -64,6 +65,11 @@ except AttributeError:
 
 from Crypto.Random import random as pycrypto_random
 import random as stdlib_random
+
+class ModeNotAvailable(ValueError):
+    pass
+
+rng = get_random_bytes
 
 class Benchmark:
 
@@ -131,73 +137,31 @@ class Benchmark:
         pubkey_setups_per_second = len(keys) / (t - t0)
         self.announce_result(pubkey_setups_per_second, "Keys/sec")
 
-    def test_key_setup(self, cipher_name, module, key_bytes, mode):
+    def test_key_setup(self, cipher_name, module, key_bytes, params):
+        self.generate_cipher(module, key_bytes, params)
         self.announce_start("%s key setup" % (cipher_name,))
 
-        # Generate random keys for use with the tests
-        keys = self.random_keys(key_bytes, n=5000)
-
-        if hasattr(module, "MODE_CCM") and mode==module.MODE_CCM:
-            iv = b"\xAA"*8
-        else:
-            iv = b"\xAA"*module.block_size
-
-        # Perform key setups
-        if mode is None:
+        for x in xrange(5000):
             t0 = time.time()
-            for k in keys:
-                module.new(k)
-            t = time.time()
-        else:
-            t0 = time.time()
-
-            if mode==module.MODE_CTR:
-                for k in keys:
-                    ctr = Crypto.Util.Counter.new(module.block_size*8,
-                        initial_value=bytes_to_long(iv))
-                    module.new(k, module.MODE_CTR, counter=ctr)
-            else:
-                for k in keys:
-                    module.new(k, mode, iv)
+            self.generate_cipher(module, key_bytes, params)
             t = time.time()
 
-        key_setups_per_second = len(keys) / (t - t0)
+        key_setups_per_second = 5000 / (t - t0)
         self.announce_result(key_setups_per_second/1000, "kKeys/sec")
 
-    def test_encryption(self, cipher_name, module, key_bytes, mode):
+    def test_encryption(self, cipher_name, module, key_bytes, params):
         self.announce_start("%s encryption" % (cipher_name,))
 
-        # Generate random keys for use with the tests
-        rand = self.random_data(key_bytes + module.block_size)
-        key, iv = rand[:key_bytes], rand[key_bytes:]
-        blocks = self.random_blocks(16384, 1000)
-        if mode is None:
-            cipher = module.new(key)
-        elif mode == "CTR-BE":
-            from Crypto.Util import Counter
-            cipher = module.new(key, module.MODE_CTR, counter=Counter.new(module.block_size*8, little_endian=False))
-        elif mode == "CTR-LE":
-            from Crypto.Util import Counter
-            cipher = module.new(key, module.MODE_CTR, counter=Counter.new(module.block_size*8, little_endian=True))
-        elif hasattr(module, 'MODE_CCM') and mode==module.MODE_CCM:
-            cipher = module.new(key, mode, iv[:8], msg_len=len(rand)*len(blocks))
-        elif mode==module.MODE_CTR:
-            ctr = Crypto.Util.Counter.new(module.block_size*8,
-                    initial_value=bytes_to_long(iv),
-                    allow_wraparound=True)
-            cipher = module.new(key, module.MODE_CTR, counter=ctr)
-        elif mode==module.MODE_ECB:
-            cipher = module.new(key, module.MODE_ECB)
-        else:
-            cipher = module.new(key, mode, iv)
+        pt_size = 16384000L
+        pt = rng(pt_size)
+        cipher = self.generate_cipher(module, key_bytes, params)
 
         # Perform encryption
         t0 = time.time()
-        for b in blocks:
-            cipher.encrypt(b)
+        cipher.encrypt(pt)
         t = time.time()
 
-        encryption_speed = (len(blocks) * len(blocks[0])) / (t - t0)
+        encryption_speed = pt_size / (t - t0)
         self.announce_result(encryption_speed / 10**6, "MBps")
 
     def test_hash_small(self, hash_name, hash_constructor, digest_size):
@@ -309,28 +273,98 @@ class Benchmark:
         speed = len(hashes) / (t - t0)
         self.announce_result(speed, "sigs/sec")
 
+
+    def generate_cipher(self, module, key_size, params):
+        params_dict = {}
+        if params:
+            params_dict = dict([x.split("=") for x in params.split(" ")])
+
+        gen_tuple = []
+        gen_dict = {}
+
+        # 1st parameter (mandatory): key
+        if params_dict.get('ks') == "x2":
+            key = rng(2 * key_size)
+        else:
+            key = rng(key_size)
+        gen_tuple.append(key)
+
+        # 2nd parameter: mode
+        mode = params_dict.get("mode")
+        if mode:
+            mode_value = getattr(module, mode, None)
+            if mode_value is None:
+                # Mode not available for this cipher
+                raise ModeNotAvailable()
+            gen_tuple.append(getattr(module, mode))
+
+        # 3rd parameter: IV/nonce
+        iv_length = params_dict.get("iv")
+        if iv_length is None:
+            iv_length = params_dict.get("nonce")
+        if iv_length:
+            if iv_length == "bs":
+                iv_length = module.block_size
+            iv = rng(int(iv_length))
+            gen_tuple.append(iv)
+
+        # Specific to CTR mode
+        le = params_dict.get("little_endian")
+        if le:
+            if le == "True":
+                le = True
+            else:
+                le = False
+
+            # Remove iv from parameters
+            gen_tuple = gen_tuple[:-1]
+            ctr = Crypto.Util.Counter.new(module.block_size*8,
+                                          initial_value=bytes_to_long(iv),
+                                          little_endian=le,
+                                          allow_wraparound=True)
+            gen_dict['counter'] = ctr
+
+        # Generate cipher
+        return module.new(*gen_tuple, **gen_dict)
+
     def run(self):
         pubkey_specs = [
             ("RSA(1024)", RSA, int(1024/8)),
             ("RSA(2048)", RSA, int(2048/8)),
             ("RSA(4096)", RSA, int(4096/8)),
             ]
+        block_cipher_modes = [
+            # Mode name, key setup, parameters
+            ("CBC",     True,   "mode=MODE_CBC iv=bs"),
+            ("CFB-8",   False,  "mode=MODE_CFB iv=bs"),
+            ("OFB",     False,  "mode=MODE_OFB iv=bs"),
+            ("ECB",     False,  "mode=MODE_ECB"),
+            ("CTR-LE",  True,   "mode=MODE_CTR iv=bs little_endian=True"),
+            ("CTR-BE",  False,  "mode=MODE_CTR iv=bs little_endian=False"),
+            ("OPENPGP", False,  "mode=MODE_OPENPGP iv=bs"),
+            ("CCM",     True,   "mode=MODE_CCM nonce=12"),
+            ("GCM",     True,   "mode=MODE_GCM nonce=16"),
+            ("EAX",     True,   "mode=MODE_GCM nonce=16"),
+            ("SIV",     True,   "mode=MODE_SIV ks=x2 nonce=16")
+            ]
         block_specs = [
+            # Cipher name, module, key size
             ("DES", DES, 8),
             ("DES3", DES3, 24),
             ("AES128", AES, 16),
             ("AES192", AES, 24),
             ("AES256", AES, 32),
             ("Blowfish(256)", Blowfish, 32),
-            ("CAST(40)", CAST, 5),
-            ("CAST(80)", CAST, 10),
             ("CAST(128)", CAST, 16),
         ]
         stream_specs = [
-            ("ARC2(128)", ARC2, 16),
-            ("ARC4(128)", ARC4, 16),
-            ("XOR(24)", XOR, 3),
-            ("XOR(256)", XOR, 32),
+            # Cipher name, module, key size, nonce size
+            ("ARC2(128)", ARC2, 16, 0),
+            ("ARC4(128)", ARC4, 16, 0),
+            ("Salsa20(16)", Salsa20, 16, 8),
+            ("Salsa20(32)", Salsa20, 32, 8),
+            ("XOR(24)", XOR, 3, 0),
+            ("XOR(256)", XOR, 32, 0),
         ]
         hash_specs = [
             ("MD2", MD2),
@@ -366,35 +400,25 @@ class Benchmark:
 
         # Crypto.Cipher (block ciphers)
         for cipher_name, module, key_bytes in block_specs:
-            self.test_key_setup("%s-CBC" % (cipher_name,), module, key_bytes, module.MODE_CBC)
-            self.test_encryption("%s-CBC" % (cipher_name,), module, key_bytes, module.MODE_CBC)
-            self.test_encryption("%s-CFB-8" % (cipher_name,), module, key_bytes, module.MODE_CFB)
-            self.test_encryption("%s-OFB" % (cipher_name,), module, key_bytes, module.MODE_OFB)
-            self.test_encryption("%s-ECB" % (cipher_name,), module, key_bytes, module.MODE_ECB)
 
-            self.test_key_setup("%s-CTR" % (cipher_name,), module, key_bytes, module.MODE_CTR)
-            self.test_encryption("%s-CTR" % (cipher_name,), module, key_bytes, module.MODE_CTR)
+            # Benchmark each cipher in each of the various modes (CBC, etc)
+            for mode_name, test_ks, params in block_cipher_modes:
 
-            self.test_encryption("%s-OPENPGP" % (cipher_name,), module, key_bytes, module.MODE_OPENPGP)
-            self.test_encryption("%s-CTR-BE" % (cipher_name,), module, key_bytes, "CTR-BE")
-            self.test_encryption("%s-CTR-LE" % (cipher_name,), module, key_bytes, "CTR-LE")
-
-            if hasattr(module, "MODE_CCM"):
-                self.test_key_setup("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
-                self.test_encryption("%s-CCM" % (cipher_name,), module, key_bytes, module.MODE_CCM)
-
-            if hasattr(module, "MODE_EAX"):
-                self.test_key_setup("%s-EAX" % (cipher_name,), module, key_bytes, module.MODE_EAX)
-                self.test_encryption("%s-EAX" % (cipher_name,), module, key_bytes, module.MODE_EAX)
-
-            if hasattr(module, "MODE_GCM"):
-                self.test_key_setup("%s-GCM" % (cipher_name,), module, key_bytes, module.MODE_GCM)
-                self.test_encryption("%s-GCM" % (cipher_name,), module, key_bytes, module.MODE_GCM)
+                mode_text = "%s-%s" % (cipher_name, mode_name)
+                try:
+                    if test_ks:
+                        self.test_key_setup(mode_text, module, key_bytes, params)
+                    self.test_encryption(mode_text, module, key_bytes, params)
+                except ModeNotAvailable as e:
+                    pass
 
         # Crypto.Cipher (stream ciphers)
-        for cipher_name, module, key_bytes in stream_specs:
-            self.test_key_setup(cipher_name, module, key_bytes, None)
-            self.test_encryption(cipher_name, module, key_bytes, None)
+        for cipher_name, module, key_bytes, nonce_bytes in stream_specs:
+            params = ""
+            if nonce_bytes:
+                params = "nonce=" + str(nonce_bytes)
+            self.test_key_setup(cipher_name, module, key_bytes, params)
+            self.test_encryption(cipher_name, module, key_bytes, params)
 
         # Crypto.Hash
         for hash_name, module in hash_specs:
