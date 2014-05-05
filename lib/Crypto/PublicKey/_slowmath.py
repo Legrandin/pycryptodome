@@ -50,6 +50,8 @@ class _RSAKey(object):
         # compute c**d (mod n)
         if not self.has_private():
             raise TypeError("No private key")
+        if c >= self.n:
+            raise ValueError("Message too large")
         if (hasattr(self,'p') and hasattr(self,'q') and hasattr(self,'u')):
             m1 = pow(c, self.d % (self.p-1), self.p)
             m2 = pow(c, self.d % (self.q-1), self.q)
@@ -62,6 +64,8 @@ class _RSAKey(object):
 
     def _encrypt(self, m):
         # compute m**d (mod n)
+        if m >= self.n:
+            raise ValueError("Plaintext too large")
         return pow(m, self.e, self.n)
 
     def _sign(self, m):   # alias for _decrypt
