@@ -74,7 +74,7 @@ class PKCS115_SigScheme:
 
     def __init__(self, key):
         """Initialize this PKCS#1 v1.5 signature scheme object.
-        
+
         :Parameters:
          key : an RSA key object
           If a private half is given, both signature and verification are possible.
@@ -88,15 +88,15 @@ class PKCS115_SigScheme:
 
     def sign(self, mhash):
         """Produce the PKCS#1 v1.5 signature of a message.
-    
+
         This function is named ``RSASSA-PKCS1-V1_5-SIGN``, and is specified in
         section 8.2.1 of RFC3447.
-    
+
         :Parameters:
          mhash : hash object
                 The hash that was carried out over the message. This is an object
                 belonging to the `Crypto.Hash` module.
-    
+
         :Return: The signature encoded as a string.
         :Raise ValueError:
             If the RSA key length is not sufficiently long to deal with the given
@@ -105,11 +105,11 @@ class PKCS115_SigScheme:
             If the RSA key has no private half.
         """
         # TODO: Verify the key is RSA
-    
+
         # See 8.2.1 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits,8) # Convert from bits to bytes
-    
+
         # Step 1
         em = EMSA_PKCS1_V1_5_ENCODE(mhash, k)
         # Step 2a (OS2IP) and 2b (RSASP1)
@@ -117,31 +117,31 @@ class PKCS115_SigScheme:
         # Step 2c (I2OSP)
         S = bchr(0x00)*(k-len(m)) + m
         return S
-    
+
     def verify(self, mhash, S):
         """Verify that a certain PKCS#1 v1.5 signature is authentic.
-    
+
         This function checks if the party holding the private half of the key
         really signed the message.
-    
+
         This function is named ``RSASSA-PKCS1-V1_5-VERIFY``, and is specified in
         section 8.2.2 of RFC3447.
-    
+
         :Parameters:
          mhash : hash object
                 The hash that was carried out over the message. This is an object
                 belonging to the `Crypto.Hash` module.
          S : string
                 The signature that needs to be validated.
-    
+
         :Return: True if verification is correct. False otherwise.
         """
         # TODO: Verify the key is RSA
-    
+
         # See 8.2.2 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits,8) # Convert from bits to bytes
-    
+
         # Step 1
         if len(S) != k:
             return 0
@@ -167,9 +167,9 @@ class PKCS115_SigScheme:
         # By comparing the full encodings (as opposed to checking each
         # of its components one at a time) we avoid attacks to the padding
         # scheme like Bleichenbacher's (see http://www.mail-archive.com/cryptography@metzdowd.com/msg06537).
-        # 
+        #
         return em1==em2_with_params or em1==em2_without_params
-    
+
 def EMSA_PKCS1_V1_5_ENCODE(hash, emLen, with_hash_parameters=True):
     """
     Implement the ``EMSA-PKCS1-V1_5-ENCODE`` function, as defined
@@ -324,5 +324,28 @@ _HASH_OIDS = {
     "SHA512": "2.16.840.1.101.3.4.2.3",
     "sha512": "2.16.840.1.101.3.4.2.3",
 
+    #: id-sha3-224  OBJECT-IDENTIFIER ::= {
+    #:      hashAlgs 7
+    #:      }
+    "SHA3_224" : "2.16.840.1.101.3.4.2.7",
+    "sha3_224" : "2.16.840.1.101.3.4.2.7",
+
+    #: id-sha3-256  OBJECT-IDENTIFIER ::= {
+    #:      hashAlgs 8
+    #:      }
+    "SHA3_256" : "2.16.840.1.101.3.4.2.8",
+    "sha3_256" : "2.16.840.1.101.3.4.2.8",
+
+    #: id-sha3-384  OBJECT-IDENTIFIER ::= {
+    #:      hashAlgs 9
+    #:      }
+    "SHA3_384" : "2.16.840.1.101.3.4.2.9",
+    "sha3_384" : "2.16.840.1.101.3.4.2.9",
+
+    #: id-sha3-512  OBJECT-IDENTIFIER ::= {
+    #:      hashAlgs 10
+    #:      }
+    "SHA3_512" : "2.16.840.1.101.3.4.2.10",
+    "sha3_512" : "2.16.840.1.101.3.4.2.10",
 }
 

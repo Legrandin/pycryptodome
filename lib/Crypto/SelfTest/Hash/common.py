@@ -3,6 +3,7 @@
 #  SelfTest/Hash/common.py: Common code for Crypto.SelfTest.Hash
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
+# and in 2013 by Fabrizio Tarizzo <fabrizio@fabriziotarizzo.org>
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -46,13 +47,13 @@ else:
 from Crypto.Util.strxor import strxor_c
 
 class HashDigestSizeSelfTest(unittest.TestCase):
-    
+
     def __init__(self, hashmod, description, expected):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
         self.expected = expected
         self.description = description
-        
+
     def shortDescription(self):
         return self.description
 
@@ -63,6 +64,36 @@ class HashDigestSizeSelfTest(unittest.TestCase):
         self.failUnless(hasattr(h, "digest_size"))
         self.assertEquals(h.digest_size, self.expected)
 
+
+# Monte Carlo Test (MCT) - see ``Description of Known Answer Test (KAT)
+# and Monte Carlo Test (MCT) for SHA-3 Candidate Algorithm Submissions''
+# <http://csrc.nist.gov/groups/ST/hash/documents/SHA3-KATMCT1.pdf>
+class HashMonteCarloTest (unittest.TestCase):
+
+    def __init__ (self, hashmod, description, seed, checkpoints, iterations=1000):
+        unittest.TestCase.__init__(self)
+        self.hashmod = hashmod
+        self.description = description
+        self.seed = binascii.a2b_hex(seed)
+        self.checkpoints = checkpoints
+        self.iterations = iterations
+        self.msgcut = len(self.seed) - hashmod.digest_size
+
+    def shortDescription(self):
+        return self.description
+
+    def runTest(self):
+        msg = self.seed
+        j = 0
+        for chk in self.checkpoints:
+            for i in xrange (self.iterations):
+                digest = self.hashmod.new(msg).digest()
+                msg = digest + msg[:self.msgcut]
+            if sys.version_info[0] == 2:
+                self.assertEqual (chk, binascii.b2a_hex(digest), "Failed at checkpoint n. %d" % j)
+            else:
+                self.assertEqual (chk, binascii.b2a_hex(digest).decode(), "Failed at checkpoint n. %d" % j)
+            j += 1
 
 class HashSelfTest(unittest.TestCase):
 
@@ -88,7 +119,7 @@ class HashSelfTest(unittest.TestCase):
         out3 = h.hexdigest()
         out4 = binascii.b2a_hex(h.digest())
 
-        # PY3K: hexdigest() should return str(), and digest() bytes 
+        # PY3K: hexdigest() should return str(), and digest() bytes
         self.assertEqual(self.expected, out1)   # h = .new(); h.update(data); h.digest()
         if sys.version_info[0] == 2:
             self.assertEqual(self.expected, out2)   # h = .new(); h.update(data); h.hexdigest()
@@ -227,7 +258,7 @@ class MACSelfTest(unittest.TestCase):
         self.assertEqual(expected, out4)
         self.assertEqual(expected, out5)
 
-def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
+def make_hash_tests(module, module_name, test_data, digest_size, oid=None, mct_data=None):
     tests = []
     for i in range(len(test_data)):
         row = test_data[i]
@@ -240,11 +271,19 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
         tests.append(HashSelfTest(module, name, expected, input))
     name = "%s #%d: digest_size" % (module_name, i+1)
     tests.append(HashDigestSizeSelfTest(module, name, digest_size))
+
     if oid is not None:
         tests.append(HashTestOID(module, oid))
     tests.append(HashDocStringTest(module))
+
     if getattr(module, 'name', None) is not None:
         tests.append(GenericHashConstructorTest(module))
+
+    if mct_data is not None:
+        (mct_seed, mct_checkpoints, mct_iterations) = mct_data
+        tests.append (HashMonteCarloTest(module, 'Monte Carlo Test for ' + module_name,
+                        mct_seed, mct_checkpoints, mct_iterations))
+
     return tests
 
 def make_mac_tests(module, module_name, test_data):
