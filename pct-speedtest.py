@@ -186,6 +186,8 @@ class Benchmark:
                     initial_value=bytes_to_long(iv),
                     allow_wraparound=True)
             cipher = module.new(key, module.MODE_CTR, counter=ctr)
+        elif mode==module.MODE_ECB:
+            cipher = module.new(key, module.MODE_ECB)
         else:
             cipher = module.new(key, mode, iv)
 
