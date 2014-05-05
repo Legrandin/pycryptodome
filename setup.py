@@ -473,6 +473,9 @@ kw = {'name':"pycrypto",
             Extension("Crypto.Cipher._XOR",
                       include_dirs=['src/'],
                       sources=["src/XOR.c"]),
+            Extension("Crypto.Cipher._Salsa20",
+                      include_dirs=['src/', 'src/libtom/'],
+                      sources=["src/Salsa20.c"]),
 
             # Utility modules
             Extension("Crypto.Util.strxor",

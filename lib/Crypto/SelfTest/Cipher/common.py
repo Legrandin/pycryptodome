@@ -80,11 +80,15 @@ class CipherSelfTest(unittest.TestCase):
 
         mode = _extract(params, 'mode', None)
         self.mode_name = str(mode)
+
+        self.mode = mode
+        self.iv = _extract(params, 'iv', None)
+        if self.iv is not None: self.iv = b(self.iv)
+
         if mode is not None:
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
 
-            self.iv = _extract(params, 'iv', None)
             if self.iv is None:
                 self.iv = _extract(params, 'nonce', None)
             if self.iv is not None:
@@ -94,10 +98,6 @@ class CipherSelfTest(unittest.TestCase):
             self.encrypted_iv = _extract(params, 'encrypted_iv', None)
             if self.encrypted_iv is not None:
                 self.encrypted_iv = b(self.encrypted_iv)
-        else:
-            # Stream cipher
-            self.mode = None
-            self.iv = None
 
         self.extra_params = params
 
@@ -119,8 +119,10 @@ class CipherSelfTest(unittest.TestCase):
             params['counter'] = ctr_class(**ctr_params)
 
         if self.mode is None:
-            # Stream cipher
-            return self.module.new(a2b_hex(self.key), **params)
+            if self.iv is None:
+                return self.module.new(a2b_hex(self.key), **params)
+            else:
+                return self.module.new(a2b_hex(self.key), a2b_hex(self.iv), **params)
         elif self.iv is None:
             # Block cipher without iv
             return self.module.new(a2b_hex(self.key), self.mode, **params)
@@ -628,7 +630,14 @@ class RoundtripTest(unittest.TestCase):
         for mode in (self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_OFB):
             encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
             ciphertext = encryption_cipher.encrypt(self.plaintext)
-            decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
+
+            if mode != self.module.MODE_OPENPGP:
+                decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
+            else:
+                eiv = ciphertext[:self.module.block_size+2]
+                ciphertext = ciphertext[self.module.block_size+2:]
+                decryption_cipher = self.module.new(a2b_hex(self.key), mode, eiv)
+
             decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
             self.assertEqual(self.plaintext, decrypted_plaintext)
 
