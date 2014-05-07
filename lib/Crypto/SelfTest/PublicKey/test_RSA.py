@@ -219,6 +219,17 @@ class RSATest(unittest.TestCase):
             ciphertext_result = rsaObj.encrypt(plaintext, b(""))[0]
             self.assertEqual(ciphertext_result, ciphertext)
 
+    def test_raw_rsa_boundary(self):
+        # The argument of every RSA raw operation (encrypt/decrypt) must be positive
+        # and no larger than the modulus
+        rsa_obj = self.rsa.generate(1024)
+
+        self.assertRaises(ValueError, rsa_obj.decrypt, (rsa_obj.n,))
+        self.assertRaises(ValueError, rsa_obj.encrypt, rsa_obj.n, b(""))
+        
+        self.assertRaises(ValueError, rsa_obj.decrypt, (0,))
+        self.assertRaises(ValueError, rsa_obj.encrypt, 0, b(""))
+
     def _check_private_key(self, rsaObj):
         # Check capabilities
         self.assertEqual(1, rsaObj.has_private())

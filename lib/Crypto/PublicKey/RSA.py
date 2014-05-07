@@ -229,6 +229,8 @@ class _RSAobj(pubkey.pubkey):
         return pubkey.pubkey.verify(self, M, signature)
 
     def _encrypt(self, c, K):
+        if not 0 < c < self.n:
+            raise ValueError("Plaintext too large")
         return (self.key._encrypt(c),)
 
     def _decrypt(self, c):
@@ -237,6 +239,9 @@ class _RSAobj(pubkey.pubkey):
                                # instead, but this is more compatible and we're
                                # going to replace the Crypto.PublicKey API soon
                                # anyway.
+
+        if not 0 < ciphertext < self.n:
+            raise ValueError("Ciphertext too large")
 
         # Blinded RSA decryption (to prevent timing attacks):
         # Step 1: Generate random secret blinding factor r, such that 0 < r < n-1
