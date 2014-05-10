@@ -235,8 +235,10 @@ ALG_getattro(PyObject *self, PyObject *attr)
 
 	if (PyString_CompareWithASCIIString(attr, "digest_size")==0)
 		return PyInt_FromLong(DIGEST_SIZE);
+#ifndef NO_MERKLE_DAMGARD
 	if (PyString_CompareWithASCIIString(attr, "block_size")==0)
 		return PyInt_FromLong(BLOCK_SIZE);
+#endif
 	if (PyString_CompareWithASCIIString(attr, "name")==0)
 		return PyString_FromString(_MODULE_STRING);     /* we should try to be compatible with hashlib here */
 
@@ -367,16 +369,24 @@ _MODULE_NAME (void)
 
 	/* Add some symbolic constants to the module */
 	PyModule_AddIntConstant(m, "digest_size", DIGEST_SIZE);
+#ifndef NO_MERKLE_DAMGARD
 	PyModule_AddIntConstant(m, "block_size", BLOCK_SIZE);
+#endif
 
 	/* Create __all__ (to help generate documentation) */
+#ifndef NO_MERKLE_DAMGARD
 	__all__ = PyList_New(4);
+#else
+	__all__ = PyList_New(3);
+#endif
 	if (__all__ == NULL)
 		goto errout;
 	PyList_SetItem(__all__, 0, PyString_FromString(_MODULE_STRING));	/* This is the ALGType object */
 	PyList_SetItem(__all__, 1, PyString_FromString("new"));
 	PyList_SetItem(__all__, 2, PyString_FromString("digest_size"));
+#ifndef NO_MERKLE_DAMGARD
 	PyList_SetItem(__all__, 3, PyString_FromString("block_size"));
+#endif
 	PyObject_SetAttrString(m, "__all__", __all__);
 
 out:

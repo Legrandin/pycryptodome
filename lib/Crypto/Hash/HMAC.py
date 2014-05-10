@@ -96,7 +96,7 @@ class HMAC:
     #: It matches the digest size on the underlying
     #: hashing module used.
     digest_size = None
-    
+
     def __init__(self, key, msg = None, digestmod = None):
         """Create a new HMAC object.
 
@@ -132,7 +132,7 @@ class HMAC:
             # for the others hash function
             blocksize = digestmod.block_size
         except AttributeError:
-            blocksize = 64
+            raise ValueError("Hash type incompatible to HMAC")
 
         ipad = 0x36
         opad = 0x5C
@@ -148,21 +148,21 @@ class HMAC:
 
     def update(self, msg):
         """Continue authentication of a message by consuming the next chunk of data.
-        
+
         Repeated calls are equivalent to a single call with the concatenation
         of all the arguments. In other words:
 
            >>> m.update(a); m.update(b)
-           
+
         is equivalent to:
-        
+
            >>> m.update(a+b)
 
         :Parameters:
           msg : byte string
             The next chunk of the message being authenticated
         """
- 
+
         self.inner.update(msg)
 
     def copy(self):
@@ -187,7 +187,7 @@ class HMAC:
 
         This method does not change the state of the MAC object.
         You can continue updating the object after calling this function.
-        
+
         :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
             characters, including null bytes.
         """
@@ -220,7 +220,7 @@ class HMAC:
         authenticated so far.
 
         This method does not change the state of the MAC object.
-        
+
         :Return: A string of 2* `digest_size` bytes. It contains only
          hexadecimal ASCII digits.
         """
