@@ -32,7 +32,8 @@ from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
 from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
 from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR,\
                           Salsa20
-from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512, CMAC
+from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,\
+                        CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512
 from Crypto.Random import get_random_bytes
 import Crypto.Util.Counter
 from Crypto.Util.number import bytes_to_long
@@ -375,6 +376,10 @@ class Benchmark:
             ("SHA256", SHA256),
             ("SHA384", SHA384),
             ("SHA512", SHA512),
+            ("SHA3_224", SHA3_224),
+            ("SHA3_256", SHA3_256),
+            ("SHA3_384", SHA3_384),
+            ("SHA3_512", SHA3_512),
         ]
         if RIPEMD160 is not None:
             hash_specs += [("RIPEMD160", RIPEMD160)]
@@ -432,11 +437,15 @@ class Benchmark:
 
         # PyCrypto HMAC
         for hash_name, module in hash_specs:
+            if not hasattr(module, "block_size"):
+                continue
             self.test_hmac_small("HMAC-"+hash_name, HMAC.new, module, module.digest_size)
             self.test_hmac_large("HMAC-"+hash_name, HMAC.new, module, module.digest_size)
 
         # standard hmac + hashlib
         for hash_name, func in hashlib_specs:
+            if not hasattr(module, "block_size"):
+                continue
             self.test_hmac_small("hmac+"+hash_name, hmac.HMAC, func, func().digest_size)
             self.test_hmac_large("hmac+"+hash_name, hmac.HMAC, func, func().digest_size)
 
