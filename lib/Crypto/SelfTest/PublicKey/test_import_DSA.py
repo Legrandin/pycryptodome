@@ -22,7 +22,7 @@
 
 import unittest
 
-from Crypto.PublicKey import DSA, KeyFormatError
+from Crypto.PublicKey import DSA
 from Crypto.SelfTest.st_common import *
 from Crypto.Util.py3compat import *
 
@@ -73,7 +73,7 @@ class ImportKeyTests(unittest.TestCase):
         self.assertEqual(self.g, key_obj.key.g)
 
     def testExportKey1(self):
-        tup = (self.y, self.g, self.p, self.q) 
+        tup = (self.y, self.g, self.p, self.q)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('DER')
         self.assertEqual(self.der_public, encoded)
@@ -103,7 +103,7 @@ tPG+TJKpGYb7pVk=
             self.assertEqual(self.g, key_obj.key.g)
 
     def testExportKey2(self):
-        tup = (self.y, self.g, self.p, self.q) 
+        tup = (self.y, self.g, self.p, self.q)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('PEM')
         self.assertEqual(self.pem_public, encoded)
@@ -124,7 +124,7 @@ tPG+TJKpGYb7pVk=
     'a40ed9c2630c2fa4cdbf838539deb9a29f919085f2046369f627ca84b2cb1e2c'+\
     '7940564b670f963ab1164d4e2ca2bf6ffd39f12f548928bf4d2d1b5e6980b4f1'+\
     'be4c92a91986fba55902145ebd9a3f0b82069d98420986b314215025756065'
- 
+
     def testImportKey3(self):
         key_obj = self.dsa.importKey(self.der_private)
         self.failUnless(key_obj.has_private())
@@ -135,11 +135,11 @@ tPG+TJKpGYb7pVk=
         self.assertEqual(self.x, key_obj.key.x)
 
     def testExportKey3(self):
-        tup = (self.y, self.g, self.p, self.q, self.x) 
+        tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('DER', pkcs8=False)
         self.assertEqual(self.der_private, encoded)
- 
+
     # 4.
     pem_private="""\
 -----BEGIN DSA PRIVATE KEY-----
@@ -166,11 +166,11 @@ ggadmEIJhrMUIVAldWBl
             self.assertEqual(self.x, key_obj.key.x)
 
     def testExportKey4(self):
-        tup = (self.y, self.g, self.p, self.q, self.x) 
+        tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('PEM', pkcs8=False)
         self.assertEqual(self.pem_private, encoded)
- 
+
     # 5. PKCS8 (unencrypted)
     der_pkcs8=\
     '3082014a0201003082012b06072a8648ce3804013082011e02818100e756ee17'+\
@@ -183,8 +183,8 @@ ggadmEIJhrMUIVAldWBl
     'f444f34b82e3554d0b90a778faaf1306f025dae6a3e36c7f93dd5bac4052b923'+\
     '70040aca70b8d5820599711900efbc961812c355dd9beffe0981da85c5548074'+\
     'b41c56ae43fd300d89262e4efd89943f99a651b03888041602145ebd9a3f0b82'+\
-    '069d98420986b314215025756065' 
- 
+    '069d98420986b314215025756065'
+
     def testImportKey5(self):
         key_obj = self.dsa.importKey(self.der_pkcs8)
         self.failUnless(key_obj.has_private())
@@ -195,13 +195,13 @@ ggadmEIJhrMUIVAldWBl
         self.assertEqual(self.x, key_obj.key.x)
 
     def testExportKey5(self):
-        tup = (self.y, self.g, self.p, self.q, self.x) 
+        tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('DER')
         self.assertEqual(self.der_pkcs8, encoded)
         encoded = key.exportKey('DER', pkcs8=True)
         self.assertEqual(self.der_pkcs8, encoded)
- 
+
     # 6.
     pem_pkcs8="""\
 -----BEGIN PRIVATE KEY-----
@@ -213,7 +213,7 @@ fq6uNxjcLv77RSgpk6xnSdyDwiPYwYhyljFrOwtURmz0RPNLguNVTQuQp3j6rxMG
 8CXa5qPjbH+T3VusQFK5I3AECspwuNWCBZlxGQDvvJYYEsNV3Zvv/gmB2oXFVIB0
 tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
 -----END PRIVATE KEY-----"""
-  
+
     def testImportKey6(self):
         for pem in (self.pem_pkcs8, tostr(self.pem_pkcs8)):
             key_obj = self.dsa.importKey(pem)
@@ -225,16 +225,16 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
             self.assertEqual(self.x, key_obj.key.x)
 
     def testExportKey6(self):
-        tup = (self.y, self.g, self.p, self.q, self.x) 
+        tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('PEM')
         self.assertEqual(self.pem_pkcs8, encoded)
         encoded = key.exportKey('PEM', pkcs8=True)
         self.assertEqual(self.pem_pkcs8, encoded)
- 
+
     # 7. OpenSSH/RFC4253
     ssh_pub="""ssh-dss AAAAB3NzaC1kc3MAAACBAOdW7hcX9LZ5THwhRyShl2N0LEVXK0s/j/O0Tzvp9EzgOaJ1dpXskVaX2nTvkU/NGwVmDiQZx2HWOfRdLXm4AtvSPnq4uBtHmjgOHzCTJYS6KguVUDI0LryDy1ypBuew181v5lbOy0yLWncSOoxnUKSB47BgV6/2qm66YguDLWDDAAAAFQCtMvSM064MRaGYph+kteIDIHY7IwAAAIB539w9YU/mNfzrfq6uNxjcLv77RSgpk6xnSdyDwiPYwYhyljFrOwtURmz0RPNLguNVTQuQp3j6rxMG8CXa5qPjbH+T3VusQFK5I3AECspwuNWCBZlxGQDvvJYYEsNV3Zvv/gmB2oXFVIB0tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAAAAIEAgzUqaaEy80hD0qDrmVv/Ti8IOnPwBJ0skeovDOQ9FEq9pIGZ5LADxXCor4MwPUUQX2BsXEjZJaQO2cJjDC+kzb+DhTneuaKfkZCF8gRjafYnyoSyyx4seUBWS2cPljqxFk1OLKK/b/058S9UiSi/TS0bXmmAtPG+TJKpGYb7pVk="""
- 
+
     def testImportKey7(self):
         for ssh in (self.ssh_pub, tostr(self.ssh_pub)):
             key_obj = self.dsa.importKey(ssh)
@@ -245,11 +245,11 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
             self.assertEqual(self.g, key_obj.key.g)
 
     def testExportKey7(self):
-        tup = (self.y, self.g, self.p, self.q) 
+        tup = (self.y, self.g, self.p, self.q)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('OpenSSH')
         self.assertEqual(self.ssh_pub, encoded)
- 
+
     # 8. Encrypted OpenSSL/OpenSSH
     pem_private_encrypted="""\
 -----BEGIN DSA PRIVATE KEY-----
@@ -279,7 +279,7 @@ xVJtxaV37m3aXxtCsPnbBg==
             self.assertEqual(self.x, key_obj.key.x)
 
     def testExportKey8(self):
-        tup = (self.y, self.g, self.p, self.q, self.x) 
+        tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('PEM', pkcs8=False, passphrase="PWDTEST")
         key = self.dsa.importKey(encoded, "PWDTEST")
@@ -288,7 +288,7 @@ xVJtxaV37m3aXxtCsPnbBg==
         self.assertEqual(self.q, key.key.q)
         self.assertEqual(self.g, key.key.g)
         self.assertEqual(self.x, key.key.x)
- 
+
     # 9. Encrypted PKCS8
     # pbeWithMD5AndDES-CBC
     pem_pkcs8_encrypted="""\
@@ -343,7 +343,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         self.assertEqual(self.x, key_obj.key.x)
 
     def testExportKey10(self):
-        tup = (self.y, self.g, self.p, self.q, self.x) 
+        tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         randfunc = BytesIO(unhexlify(b("27A1C66C42AFEECE") + b("D725BF1B6B8239F4"))).read
         key._randfunc = randfunc
@@ -353,10 +353,10 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
     # ----
 
     def testImportError1(self):
-        self.assertRaises(KeyFormatError, self.dsa.importKey, self.der_pkcs8_encrypted, "wrongpwd")
+        self.assertRaises(ValueError, self.dsa.importKey, self.der_pkcs8_encrypted, "wrongpwd")
 
     def testExportError2(self):
-        tup = (self.y, self.g, self.p, self.q, self.x) 
+        tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         self.assertRaises(ValueError, key.exportKey, 'DER', pkcs8=False, passphrase="PWDTEST")
 

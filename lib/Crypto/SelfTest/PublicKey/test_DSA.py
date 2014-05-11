@@ -119,6 +119,25 @@ class DSATest(unittest.TestCase):
 
         self.assertEqual(dsa_key_1.domain(), dsa_key_2.domain())
 
+    def test_construct_bad_key4(self):
+        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
+        tup = (y, g, p+1, q)
+        self.assertRaises(ValueError, self.dsa.construct, tup)
+
+        tup = (y, g, p, q+1)
+        self.assertRaises(ValueError, self.dsa.construct, tup)
+
+        tup = (y, 1L, p, q)
+        self.assertRaises(ValueError, self.dsa.construct, tup)
+
+    def test_construct_bad_key5(self):
+        (y, g, p, q, x) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)]
+        tup = (y, g, p, q, x+1)
+        self.assertRaises(ValueError, self.dsa.construct, tup)
+
+        tup = (y, g, p, q, q+10)
+        self.assertRaises(ValueError, self.dsa.construct, tup)
+
     def _check_private_key(self, dsaObj):
         # Check capabilities
         self.assertEqual(1, dsaObj.has_private())

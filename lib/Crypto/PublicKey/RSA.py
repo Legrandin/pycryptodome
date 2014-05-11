@@ -84,7 +84,7 @@ from Crypto.Util.asn1 import *
 import binascii
 import struct
 
-from Crypto.Util.number import inverse
+from Crypto.Util.number import inverse, GCD, isPrime
 
 try:
     from Crypto.PublicKey import _fastmath
@@ -156,7 +156,7 @@ class _RSAobj(pubkey.pubkey):
          is always None.
         """
         return pubkey.pubkey.encrypt(self, plaintext, K)
- 
+
     def decrypt(self, ciphertext):
         """Decrypt a piece of data with RSA.
 
@@ -215,7 +215,7 @@ class _RSAobj(pubkey.pubkey):
          this method. Failure to do so may lead to security vulnerabilities.
          It is recommended to use modules
          `Crypto.Signature.PKCS1_PSS` or `Crypto.Signature.PKCS1_v1_5` instead.
- 
+
         :Parameter M: The expected message.
         :Type M: byte string or long
 
@@ -563,13 +563,47 @@ class RSAImplementation(object):
                     1. RSA modulus (n).
                     2. Public exponent (e).
                     3. Private exponent (d). Only required if the key is private.
-                    4. First factor of n (p). Optional.
+                    4. First factor of n (p). Optional, but factor q must also
+                       be present.
                     5. Second factor of n (q). Optional.
                     6. CRT coefficient, (1/p) mod q (u). Optional.
-        
+
+        :Raise ValueError:
+            When the key being imported fails the most basic RSA validity checks.
         :Return: An RSA key object (`_RSAobj`).
         """
+
         key = self._math.rsa_construct(*tup)
+
+        # Modulus and public exponent must be coprime
+        fmt_error = key.e<=1 or key.e>=key.n
+        fmt_error |= GCD(key.n, key.e)!=1
+
+        # For RSA, modulus must be odd
+        fmt_error |= not key.n&1
+
+        if not fmt_error and hasattr(key, 'd'):
+            # Modulus and private exponent must be coprime
+            fmt_error = key.d<=1 or key.d>=key.n
+            fmt_error |= GCD(key.n, key.d)!=1
+            # Modulus must be product of 2 primes
+            fmt_error |= (key.p*key.q != key.n)
+            fmt_error |= not isPrime(key.p)
+            fmt_error |= not isPrime(key.q)
+            # See Carmichael theorem
+            phi = (key.p-1)*(key.q-1)
+            lcm = divmod(phi, GCD(key.p-1, key.q-1))[0]
+            fmt_error |= (key.e*key.d % lcm)!=1
+            if hasattr(key, 'u'):
+                # CRT coefficient
+                fmt_error |= key.u<=1 or key.u>=key.q
+                fmt_error |= (key.p*key.u % key.q)!=1
+            else:
+                fmt_error = True
+
+        if fmt_error:
+            raise ValueError("Invalid RSA key components")
+
         return _RSAobj(self, key)
 
     def _importKeyDER(self, extern_key, passphrase=None):
@@ -706,7 +740,7 @@ algorithmIdentifier = DerSequence(
   [DerObjectId(oid).encode(),      # algorithm field
   DerNull().encode()]              # parameters field
   ).encode()
- 
+
 _impl = RSAImplementation()
 #:
 #: Randomly generate a fresh, new RSA key object.

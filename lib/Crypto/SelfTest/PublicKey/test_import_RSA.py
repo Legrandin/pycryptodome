@@ -346,7 +346,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.n, inkey.n)
         self.assertEqual(key.e, inkey.e)
         self.assertEqual(key.d, inkey.d)
- 
+
     def testExportKey13(self):
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#8, PKCS#8 encryption

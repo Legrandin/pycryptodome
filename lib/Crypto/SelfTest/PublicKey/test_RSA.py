@@ -186,6 +186,36 @@ class RSATest(unittest.TestCase):
         self._check_signing(rsaObj)
         self._check_verification(rsaObj)
 
+    def test_construct_bad_key2(self):
+        tup = (self.n, 1L)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
+        # An even modulus is wrong
+        tup = (self.n+1, self.e)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
+    def test_construct_bad_key3(self):
+        tup = (self.n, self.e, self.d+1)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
+    def test_construct_bad_key5(self):
+        tup = (self.n, self.e, self.d, self.p, self.p)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
+        tup = (self.p*self.p, self.e, self.p, self.p)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
+        tup = (self.p*self.p, 3L, self.p, self.q)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
+    def test_construct_bad_key6(self):
+        tup = (self.n, self.e, self.d, self.p, self.q, 10L)
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
+        from Crypto.Util.number import inverse
+        tup = (self.n, self.e, self.d, self.p, self.q, inverse(self.q, self.p))
+        self.assertRaises(ValueError, self.rsa.construct, tup)
+
     def test_factoring(self):
         rsaObj = self.rsa.construct([self.n, self.e, self.d])
         self.failUnless(rsaObj.p==self.p or rsaObj.p==self.q)

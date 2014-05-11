@@ -36,9 +36,6 @@ Crypto.PublicKey.RSA      (Signing, encryption, and blinding)
 :undocumented: _DSA, _RSA, _fastmath, _slowmath, pubkey
 """
 
-class KeyFormatError(ValueError):
-    pass
-
 __all__ = ['RSA', 'DSA', 'ElGamal']
 __revision__ = "$Id$"
 

@@ -97,8 +97,8 @@ from Crypto.Util.py3compat import *
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.Util.number import bytes_to_long, long_to_bytes
-from Crypto.PublicKey import _DSA, _slowmath, pubkey, KeyFormatError
+from Crypto.Util.number import bytes_to_long, long_to_bytes, isPrime
+from Crypto.PublicKey import _DSA, _slowmath, pubkey
 from Crypto.Util.asn1 import DerObject, DerSequence,\
         DerInteger, DerObjectId, DerBitString, newDerSequence, newDerBitString
 
@@ -556,9 +556,28 @@ class DSAImplementation(object):
                     4. Sub-group order (*q*).
                     5. Private key (*x*). Optional.
 
+        :Raise PublicKey.ValueError:
+            When the key being imported fails the most basic DSA validity checks.
         :Return: A DSA key object (`_DSAobj`).
         """
+
         key = self._math.dsa_construct(*tup)
+
+        # Modulus must be prime
+        fmt_error = not isPrime(key.p)
+        # Verify Lagrange's theorem for sub-group
+        fmt_error |= ((key.p-1) % key.q)!=0
+        fmt_error |= key.g<=1 or key.g>=key.p
+        fmt_error |= pow(key.g, key.q, key.p)!=1
+        # Public key
+        fmt_error |= key.y<=0 or key.y>=key.p
+        if hasattr(key, 'x'):
+            fmt_error |= key.x<=0 or key.x>=key.q
+            fmt_error |= pow(key.g, key.x, key.p)!=key.y
+
+        if fmt_error:
+            raise ValueError("Invalid DSA key components")
+
         return _DSAobj(self, key)
 
     def _importKeyDER(self, key_data, passphrase=None, params=None):
@@ -614,7 +633,7 @@ class DSAImplementation(object):
         except (ValueError, EOFError):
             pass
 
-        raise KeyFormatError("DSA key format is not supported")
+        raise ValueError("DSA key format is not supported")
 
     def importKey(self, extern_key, passphrase=None):
         """Import a DSA key (public or private).
@@ -644,7 +663,7 @@ class DSAImplementation(object):
             from which the decryption key is derived.
 
         :Return: A DSA key object (`_DSAobj`).
-        :Raise KeyFormatError:
+        :Raise ValueError:
             When the given key cannot be parsed (possibly because
             the pass phrase is wrong).
 
@@ -681,7 +700,7 @@ class DSAImplementation(object):
             # This is probably a DER encoded key
             return self._importKeyDER(extern_key, passphrase)
 
-        raise KeyFormatError("DSA key format is not supported")
+        raise ValueError("DSA key format is not supported")
 
 #: `Object ID`_ for a DSA key.
 #:
