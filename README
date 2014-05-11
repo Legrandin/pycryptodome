@@ -70,13 +70,12 @@ The modules are packaged using the Distutils, so you can simply run
 "python setup.py build" to build the package, and "python setup.py
 install" to install it.
 
-If the setup.py script crashes with a DistutilsPlatformError
-complaining that the file /usr/lib/python2.2/config/Makefile doesn't
-exist, this means that the files needed for compiling new Python
-modules aren't installed on your system.  Red Hat users often run into
-this because they don't have the python2-devel RPM installed.  The fix
-is to simply install the requisite RPM.  On Debian/Ubuntu, you need the
-python-dev package.
+Linux installation requires the Python developer tools to be installed. These
+can be found in the ``python-dev`` package on Debian/Ubuntu and the 
+``python2-devel`` package on Red Hat/Fedora. If you are using a non-standard
+Python version for your distribution, you may require a different package.
+Consult your package manager's documentation for instructions on how to
+install these packages. Other distributions may have different package names.
 
 To verify that everything is in order, run "python setup.py test".  It
 will test all the cryptographic modules, skipping ones that aren't
