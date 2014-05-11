@@ -23,13 +23,25 @@
 # ===================================================================
 """Salsa20 stream cipher
 
-Salsa20 is a stream cipher submitted to eSTREAM project by Daniel J.
-Bernstein.
+`Salsa20`_ is a stream cipher designed by Daniel J. Bernstein.
 
-:undocumented: __revision__, __package__
+Its key is by preference 256 bits long, but it can also work
+with 128 bit keys.
+
+As an example, encryption can be done as follows:
+
+    >>> from Crypto.Cipher import Salsa20
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> key = b'*Thirty-two byte (256 bits) key*'
+    >>> iv = get_random_bytes(8)
+    >>> cipher = Salsa20.new(key, iv)
+    >>> msg = iv + cipher.encrypt(b'Attack at dawn')
+
+.. _Salsa20: http://cr.yp.to/snuffle/spec.pdf
+
+:undocumented: __package__
 """
-
-__revision__ = "$Id$"
 
 from Crypto.Cipher import _Salsa20
 
@@ -66,19 +78,20 @@ class Salsa20Cipher:
         """
         return self._cipher.decrypt(ciphertext)
 
-def new(key, *args, **kwargs):
+def new(key, nonce):
     """Create a new Salsa20 cipher
 
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
+        It must be 16 or 32 bytes long.
       nonce : byte string
         A mandatory value that must never be reused for any other encryption.
         It must be 8 bytes long.
 
     :Return: an `Salsa20Cipher` object
     """
-    return Salsa20Cipher(key, *args, **kwargs)
+    return Salsa20Cipher(key, nonce)
 
 #: Size of a data block (in bytes)
 block_size = 1
