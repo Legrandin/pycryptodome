@@ -48,7 +48,7 @@
     steps with 32-bit rotations.
 */
 #define KECCAK_USE_BIT_INTERLEAVING
-#pragma message "Keccak: Compiling at 32 bit, using bit interleaving"
+/* #pragma message "Keccak: Compiling at 32 bit, using bit interleaving" */
 #endif
 
 #include "pycrypto_common.h"
