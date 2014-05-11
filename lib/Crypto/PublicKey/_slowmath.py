@@ -147,15 +147,16 @@ class _DSAKey(object):
     def has_private(self):
         return hasattr(self, 'x')
 
-    def _sign(self, m, k):   # alias for _decrypt
+    def _sign(self, m, k, blind):   # alias for _decrypt
         # SECURITY TODO - We _should_ be computing SHA1(m), but we don't because that's the API.
         if not self.has_private():
             raise TypeError("No private key")
         if not (1L < k < self.q):
             raise ValueError("k is not between 2 and q-1")
-        inv_k = inverse(k, self.q)   # Compute k**-1 mod q
+        inv_blind_k = inverse(blind * k, self.q) # Compute (blind * k)**-1 mod q
+        blind_x = self.x * blind
         r = pow(self.g, k, self.p) % self.q  # r = (g**k mod p) mod q
-        s = (inv_k * (m + self.x * r)) % self.q
+        s = (inv_blind_k * (m * blind + blind_x * r)) % self.q
         return (r, s)
 
     def _verify(self, m, r, s):

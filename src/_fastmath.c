@@ -263,22 +263,28 @@ static PyObject *rsaKey_size (rsaKey *, PyObject *);
 static PyObject *rsaKey_has_private (rsaKey *, PyObject *);
 
 static int
-dsaSign (dsaKey * key, mpz_t m, mpz_t k, mpz_t r, mpz_t s)
+dsaSign (dsaKey * key, mpz_t m, mpz_t k, mpz_t blind, mpz_t r, mpz_t s)
 {
 	mpz_t temp;
+	mpz_t temp2;
 	if (mpz_cmp_ui (k, 2) < 0 || mpz_cmp (k, key->q) >= 0)
 	{
 		return 1;
 	}
 	mpz_init (temp);
+	mpz_init (temp2);
 	MPZ_POWM (r, key->g, k, key->p);
 	mpz_mod (r, r, key->q);
-	mpz_invert (s, k, key->q);
-	mpz_mul (temp, key->x, r);
-	mpz_add (temp, m, temp);
+	mpz_mul (temp, blind, key->x);
+	mpz_mul (temp, temp, r);
+	mpz_mul (temp2, m, blind);
+	mpz_add (temp, temp2, temp);
+	mpz_mul (s, k, blind);
+	mpz_invert (s, s, key->q);
 	mpz_mul (s, s, temp);
 	mpz_mod (s, s, key->q);
 	mpz_clear (temp);
+	mpz_clear (temp2);
 	return 0;
 }
 
@@ -597,21 +603,24 @@ dsaKey_getattro (dsaKey * key, PyObject *attr)
 static PyObject *
 dsaKey__sign (dsaKey * key, PyObject * args)
 {
-	PyObject *lm, *lk, *lr, *ls, *retval;
-	mpz_t m, k, r, s;
+	PyObject *lm, *lk, *lblind, *lr, *ls, *retval;
+	mpz_t m, k, blind, r, s;
 	int result;
-	if (!PyArg_ParseTuple (args, "O!O!", &PyLong_Type, &lm,
-			       &PyLong_Type, &lk))
+	if (!PyArg_ParseTuple (args, "O!O!O!", &PyLong_Type, &lm,
+			       &PyLong_Type, &lk,
+			       &PyLong_Type, &lblind))
 	{
 		return NULL;
 	}
 	mpz_init (m);
 	mpz_init (k);
+	mpz_init (blind);
 	mpz_init (r);
 	mpz_init (s);
 	longObjToMPZ (m, (PyLongObject *) lm);
 	longObjToMPZ (k, (PyLongObject *) lk);
-	result = dsaSign (key, m, k, r, s);
+	longObjToMPZ (blind, (PyLongObject *) lblind);
+	result = dsaSign (key, m, k, blind, r, s);
 	if (result == 1)
 	{
 		PyErr_SetString (PyExc_ValueError, "K not between 2 and q");
@@ -622,6 +631,7 @@ dsaKey__sign (dsaKey * key, PyObject * args)
 	if (lr == NULL || ls == NULL) goto errout;
 	mpz_clear (m);
 	mpz_clear (k);
+	mpz_clear (blind);
 	mpz_clear (r);
 	mpz_clear (s);
 	retval = Py_BuildValue ("(NN)", lr, ls);

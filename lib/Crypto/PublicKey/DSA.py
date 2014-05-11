@@ -97,7 +97,8 @@ from Crypto.Util.py3compat import *
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.Util.number import bytes_to_long, long_to_bytes, isPrime
+from Crypto.Util.number import bytes_to_long, long_to_bytes,\
+                        isPrime, getRandomRange
 from Crypto.PublicKey import _DSA, _slowmath, pubkey
 from Crypto.Util.asn1 import DerObject, DerSequence,\
         DerInteger, DerObjectId, DerBitString, newDerSequence, newDerBitString
@@ -243,7 +244,8 @@ class _DSAobj(pubkey.pubkey):
         raise TypeError("DSA cannot unblind")
 
     def _sign(self, m, k):
-        return self.key._sign(m, k)
+        blind_factor = getRandomRange(1, self.key.q, self._randfunc)
+        return self.key._sign(m, k, blind_factor)
 
     def _verify(self, m, sig):
         (r, s) = sig
