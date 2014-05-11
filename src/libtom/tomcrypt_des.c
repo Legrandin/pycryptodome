@@ -6,21 +6,21 @@
  * The library is free for all purposes without any express
  * guarantee it works.
  *
- * Tom St Denis, tomstdenis@gmail.com, http://libtomcrypt.com
+ * Tom St Denis, tomstdenis@gmail.com, http://libtom.org
  */
 #include "tomcrypt.h"
 
 /** 
   @file des.c
-  DES code submitted by Dobes Vandermeer 
+  LTC_DES code submitted by Dobes Vandermeer
 */
 
-#ifdef DES
+#ifdef LTC_DES
 
 #define EN0 0 
 #define DE1 1
 
-static const struct ltc_cipher_descriptor des_desc =
+const struct ltc_cipher_descriptor des_desc =
 {
     "des",
     13,
@@ -34,7 +34,7 @@ static const struct ltc_cipher_descriptor des_desc =
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-static const struct ltc_cipher_descriptor des3_desc =
+const struct ltc_cipher_descriptor des3_desc =
 {
     "3des",
     14,
@@ -1519,14 +1519,14 @@ static void desfunc(ulong32 *block, const ulong32 *keys)
 #endif
 
  /**
-    Initialize the DES block cipher
+    Initialize the LTC_DES block cipher
     @param key The symmetric key you wish to pass
     @param keylen The key length in bytes
     @param num_rounds The number of rounds desired (0 for default)
     @param skey The key in as scheduled by this function.
     @return CRYPT_OK if successful
  */
-static int des_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
+int des_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
 {
     LTC_ARGCHK(key != NULL);
     LTC_ARGCHK(skey != NULL);
@@ -1546,14 +1546,14 @@ static int des_setup(const unsigned char *key, int keylen, int num_rounds, symme
 }
 
  /**
-    Initialize the 3DES-EDE block cipher
+    Initialize the 3LTC_DES-EDE block cipher
     @param key The symmetric key you wish to pass
     @param keylen The key length in bytes
     @param num_rounds The number of rounds desired (0 for default)
     @param skey The key in as scheduled by this function.
     @return CRYPT_OK if successful
  */
-static int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
+int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
 {
     LTC_ARGCHK(key != NULL);
     LTC_ARGCHK(skey != NULL);
@@ -1562,39 +1562,29 @@ static int des3_setup(const unsigned char *key, int keylen, int num_rounds, symm
         return CRYPT_INVALID_ROUNDS;
     }
 
-    if (keylen != 24 && keylen != 16) {
+    if (keylen != 24) {
         return CRYPT_INVALID_KEYSIZE;
     }
 
     deskey(key,    EN0, skey->des3.ek[0]);
     deskey(key+8,  DE1, skey->des3.ek[1]);
-    if (keylen == 24) {
-        deskey(key+16, EN0, skey->des3.ek[2]);
-    } else {
-        /* two-key 3DES: K3=K1 */
-        deskey(key, EN0, skey->des3.ek[2]);
-    }
+    deskey(key+16, EN0, skey->des3.ek[2]);
 
     deskey(key,    DE1, skey->des3.dk[2]);
     deskey(key+8,  EN0, skey->des3.dk[1]);
-    if (keylen == 24) {
-        deskey(key+16, DE1, skey->des3.dk[0]);
-    } else {
-        /* two-key 3DES: K3=K1 */
-        deskey(key, DE1, skey->des3.dk[0]);
-    }
+    deskey(key+16, DE1, skey->des3.dk[0]);
 
     return CRYPT_OK;
 }
 
 /**
-  Encrypts a block of text with DES
+  Encrypts a block of text with LTC_DES
   @param pt The input plaintext (8 bytes)
   @param ct The output ciphertext (8 bytes)
   @param skey The key as scheduled
   @return CRYPT_OK if successful
 */
-static int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
+int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
 {
     ulong32 work[2];
     LTC_ARGCHK(pt   != NULL);
@@ -1609,13 +1599,13 @@ static int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric
 }
 
 /**
-  Decrypts a block of text with DES
+  Decrypts a block of text with LTC_DES
   @param ct The input ciphertext (8 bytes)
   @param pt The output plaintext (8 bytes)
   @param skey The key as scheduled 
   @return CRYPT_OK if successful
 */
-static int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
+int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
 {
     ulong32 work[2];
     LTC_ARGCHK(pt   != NULL);
@@ -1630,13 +1620,13 @@ static int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric
 }
 
 /**
-  Encrypts a block of text with 3DES-EDE
+  Encrypts a block of text with 3LTC_DES-EDE
   @param pt The input plaintext (8 bytes)
   @param ct The output ciphertext (8 bytes)
   @param skey The key as scheduled
   @return CRYPT_OK if successful
 */
-static int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
+int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
 {
     ulong32 work[2];
     
@@ -1654,13 +1644,13 @@ static int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetri
 }
 
 /**
-  Decrypts a block of text with 3DES-EDE
+  Decrypts a block of text with 3LTC_DES-EDE
   @param ct The input ciphertext (8 bytes)
   @param pt The output plaintext (8 bytes)
   @param skey The key as scheduled 
   @return CRYPT_OK if successful
 */
-static int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
+int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
 {
     ulong32 work[2];
     LTC_ARGCHK(pt   != NULL);
@@ -1677,10 +1667,10 @@ static int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetri
 }
 
 /**
-  Performs a self-test of the DES block cipher
+  Performs a self-test of the LTC_DES block cipher
   @return CRYPT_OK if functional, CRYPT_NOP if self-test has been disabled
 */
-static int des_test(void)
+int des_test(void)
 {
  #ifndef LTC_TEST
     return CRYPT_NOP;
@@ -1823,7 +1813,7 @@ static int des_test(void)
   #endif
 }
 
-static int des3_test(void)
+int des3_test(void)
 {
  #ifndef LTC_TEST
     return CRYPT_NOP;
@@ -1862,14 +1852,14 @@ static int des3_test(void)
 /** Terminate the context 
    @param skey    The scheduled key
 */
-static void des_done(symmetric_key *skey)
+void des_done(symmetric_key *skey)
 {
 }
 
 /** Terminate the context 
    @param skey    The scheduled key
 */
-static void des3_done(symmetric_key *skey)
+void des3_done(symmetric_key *skey)
 {
 }
 
@@ -1879,7 +1869,7 @@ static void des3_done(symmetric_key *skey)
   @param keysize [in/out] The length of the recommended key (in bytes).  This function will store the suitable size back in this variable.
   @return CRYPT_OK if the input key size is acceptable.
 */
-static int des_keysize(int *keysize)
+int des_keysize(int *keysize)
 {
     LTC_ARGCHK(keysize != NULL);
     if(*keysize < 8) {
@@ -1894,7 +1884,7 @@ static int des_keysize(int *keysize)
   @param keysize [in/out] The length of the recommended key (in bytes).  This function will store the suitable size back in this variable.
   @return CRYPT_OK if the input key size is acceptable.
 */
-static int des3_keysize(int *keysize)
+int des3_keysize(int *keysize)
 {
     LTC_ARGCHK(keysize != NULL);
     if(*keysize < 24) {
@@ -1907,6 +1897,6 @@ static int des3_keysize(int *keysize)
 #endif
 
 
-/* $Source: /cvs/libtom/libtomcrypt/src/ciphers/des.c,v $ */
-/* $Revision: 1.13 $ */
-/* $Date: 2006/11/08 23:01:06 $ */
+/* $Source$ */
+/* $Revision$ */
+/* $Date$ */

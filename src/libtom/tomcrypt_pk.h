@@ -8,13 +8,13 @@ enum {
 int rand_prime(void *N, long len, prng_state *prng, int wprng);
 
 /* ---- RSA ---- */
-#ifdef MRSA
+#ifdef LTC_MRSA
 
 /* Min and Max RSA key sizes (in bits) */
 #define MIN_RSA_SIZE 1024
 #define MAX_RSA_SIZE 4096
 
-/** RSA PKCS style key */
+/** RSA LTC_PKCS style key */
 typedef struct Rsa_key {
     /** Type of key, PK_PRIVATE or PK_PUBLIC */
     int type;
@@ -44,20 +44,20 @@ int rsa_exptmod(const unsigned char *in,   unsigned long inlen,
 
 void rsa_free(rsa_key *key);
 
-/* These use PKCS #1 v2.0 padding */
+/* These use LTC_PKCS #1 v2.0 padding */
 #define rsa_encrypt_key(_in, _inlen, _out, _outlen, _lparam, _lparamlen, _prng, _prng_idx, _hash_idx, _key) \
-  rsa_encrypt_key_ex(_in, _inlen, _out, _outlen, _lparam, _lparamlen, _prng, _prng_idx, _hash_idx, LTC_PKCS_1_OAEP, _key)
+  rsa_encrypt_key_ex(_in, _inlen, _out, _outlen, _lparam, _lparamlen, _prng, _prng_idx, _hash_idx, LTC_LTC_PKCS_1_OAEP, _key)
 
 #define rsa_decrypt_key(_in, _inlen, _out, _outlen, _lparam, _lparamlen, _hash_idx, _stat, _key) \
-  rsa_decrypt_key_ex(_in, _inlen, _out, _outlen, _lparam, _lparamlen, _hash_idx, LTC_PKCS_1_OAEP, _stat, _key)
+  rsa_decrypt_key_ex(_in, _inlen, _out, _outlen, _lparam, _lparamlen, _hash_idx, LTC_LTC_PKCS_1_OAEP, _stat, _key)
 
 #define rsa_sign_hash(_in, _inlen, _out, _outlen, _prng, _prng_idx, _hash_idx, _saltlen, _key) \
-  rsa_sign_hash_ex(_in, _inlen, _out, _outlen, LTC_PKCS_1_PSS, _prng, _prng_idx, _hash_idx, _saltlen, _key)
+  rsa_sign_hash_ex(_in, _inlen, _out, _outlen, LTC_LTC_PKCS_1_PSS, _prng, _prng_idx, _hash_idx, _saltlen, _key)
 
 #define rsa_verify_hash(_sig, _siglen, _hash, _hashlen, _hash_idx, _saltlen, _stat, _key) \
-  rsa_verify_hash_ex(_sig, _siglen, _hash, _hashlen, LTC_PKCS_1_PSS, _hash_idx, _saltlen, _stat, _key)
+  rsa_verify_hash_ex(_sig, _siglen, _hash, _hashlen, LTC_LTC_PKCS_1_PSS, _hash_idx, _saltlen, _stat, _key)
 
-/* These can be switched between PKCS #1 v2.x and PKCS #1 v1.5 paddings */
+/* These can be switched between LTC_PKCS #1 v2.x and LTC_PKCS #1 v1.5 paddings */
 int rsa_encrypt_key_ex(const unsigned char *in,     unsigned long inlen,
                              unsigned char *out,    unsigned long *outlen,
                        const unsigned char *lparam, unsigned long lparamlen,
@@ -82,7 +82,7 @@ int rsa_verify_hash_ex(const unsigned char *sig,      unsigned long siglen,
                              int            hash_idx, unsigned long saltlen,
                              int           *stat,     rsa_key      *key);
 
-/* PKCS #1 import/export */
+/* LTC_PKCS #1 import/export */
 int rsa_export(unsigned char *out, unsigned long *outlen, int type, rsa_key *key);
 int rsa_import(const unsigned char *in, unsigned long inlen, rsa_key *key);
                         
@@ -95,7 +95,7 @@ int rsa_import(const unsigned char *in, unsigned long inlen, rsa_key *key);
 #define MIN_KAT_SIZE 1024
 #define MAX_KAT_SIZE 4096
 
-/** Katja PKCS style key */
+/** Katja LTC_PKCS style key */
 typedef struct KAT_key {
     /** Type of key, PK_PRIVATE or PK_PUBLIC */
     int type;
@@ -125,7 +125,7 @@ int katja_exptmod(const unsigned char *in,   unsigned long inlen,
 
 void katja_free(katja_key *key);
 
-/* These use PKCS #1 v2.0 padding */
+/* These use LTC_PKCS #1 v2.0 padding */
 int katja_encrypt_key(const unsigned char *in,     unsigned long inlen,
                             unsigned char *out,    unsigned long *outlen,
                       const unsigned char *lparam, unsigned long lparamlen,
@@ -137,14 +137,14 @@ int katja_decrypt_key(const unsigned char *in,       unsigned long inlen,
                             int            hash_idx, int *stat,
                             katja_key       *key);
 
-/* PKCS #1 import/export */
+/* LTC_PKCS #1 import/export */
 int katja_export(unsigned char *out, unsigned long *outlen, int type, katja_key *key);
 int katja_import(const unsigned char *in, unsigned long inlen, katja_key *key);
                         
 #endif
 
 /* ---- ECC Routines ---- */
-#ifdef MECC
+#ifdef LTC_MECC
 
 /* size of our temp buffers for exported keys */
 #define ECC_BUF_SIZE 256
@@ -251,7 +251,7 @@ void       ltc_ecc_del_point(ecc_point *p);
 int        ltc_ecc_is_valid_idx(int n);
 
 /* point ops (mp == montgomery digit) */
-#if !defined(MECC_ACCEL) || defined(LTM_DESC) || defined(GMP_DESC)
+#if !defined(LTC_MECC_ACCEL) || defined(LTM_LTC_DESC) || defined(GMP_LTC_DESC)
 /* R = 2P */
 int ltc_ecc_projective_dbl_point(ecc_point *P, ecc_point *R, void *modulus, void *mp);
 
@@ -259,11 +259,18 @@ int ltc_ecc_projective_dbl_point(ecc_point *P, ecc_point *R, void *modulus, void
 int ltc_ecc_projective_add_point(ecc_point *P, ecc_point *Q, ecc_point *R, void *modulus, void *mp);
 #endif
 
-#if defined(MECC_FP)
+#if defined(LTC_MECC_FP)
+/* optimized point multiplication using fixed point cache (HAC algorithm 14.117) */
 int ltc_ecc_fp_mulmod(void *k, ecc_point *G, ecc_point *R, void *modulus, int map);
+
+/* functions for saving/loading/freeing/adding to fixed point cache */
 int ltc_ecc_fp_save_state(unsigned char **out, unsigned long *outlen);
 int ltc_ecc_fp_restore_state(unsigned char *in, unsigned long inlen);
 void ltc_ecc_fp_free(void);
+int ltc_ecc_fp_add_point(ecc_point *g, void *modulus, int lock);
+
+/* lock/unlock all points currently in fixed point cache */
+void ltc_ecc_fp_tablelock(int lock);
 #endif
 
 /* R = kG */
@@ -276,7 +283,8 @@ int ltc_ecc_mul2add(ecc_point *A, void *kA,
                     ecc_point *C,
                          void *modulus);
 
-#ifdef MECC_FP
+#ifdef LTC_MECC_FP
+/* Shamir's trick with optimized point multiplication using fixed point cache */
 int ltc_ecc_fp_mul2add(ecc_point *A, void *kA,
                        ecc_point *B, void *kB,
                        ecc_point *C, void *modulus);
@@ -290,13 +298,13 @@ int ltc_ecc_map(ecc_point *P, void *modulus, void *mp);
 
 #endif
 
-#ifdef MDSA
+#ifdef LTC_MDSA
 
 /* Max diff between group and modulus size in bytes */
-#define MDSA_DELTA     512
+#define LTC_MDSA_DELTA     512
 
 /* Max DSA group size in bytes (default allows 4k-bit groups) */
-#define MDSA_MAX_GROUP 512
+#define LTC_MDSA_MAX_GROUP 512
 
 /** DSA key structure */
 typedef struct {
@@ -496,7 +504,7 @@ int der_printable_char_encode(int c);
 int der_printable_value_decode(int v);
 
 /* UTF-8 */
-#if (defined(SIZE_MAX) || __STDC_VERSION__ >= 199901L || defined(WCHAR_MAX) || defined(_WCHAR_T) || defined(_WCHAR_T_DEFINED)) && !defined(LTC_NO_WCHAR)
+#if (defined(SIZE_MAX) || __STDC_VERSION__ >= 199901L || defined(WCHAR_MAX) || defined(_WCHAR_T) || defined(_WCHAR_T_DEFINED) || defined (__WCHAR_TYPE__)) && !defined(LTC_NO_WCHAR)
 #include <wchar.h>
 #else
 typedef ulong32 wchar_t;
@@ -539,6 +547,6 @@ int der_length_utctime(ltc_utctime *utctime, unsigned long *outlen);
 
 #endif
 
-/* $Source: /cvs/libtom/libtomcrypt/src/headers/tomcrypt_pk.h,v $ */
-/* $Revision: 1.77 $ */
-/* $Date: 2006/12/03 00:39:56 $ */
+/* $Source$ */
+/* $Revision$ */
+/* $Date$ */

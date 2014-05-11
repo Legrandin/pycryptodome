@@ -51,7 +51,7 @@ int omac_file(int cipher,
               const          char *filename, 
                     unsigned char *out, unsigned long *outlen);
 int omac_test(void);
-#endif /* OMAC */
+#endif /* LTC_OMAC */
 
 #ifdef LTC_PMAC
 
@@ -96,10 +96,10 @@ void pmac_shift_xor(pmac_state *pmac);
 
 #endif /* PMAC */
 
-#ifdef EAX_MODE
+#ifdef LTC_EAX_MODE
 
 #if !(defined(LTC_OMAC) && defined(LTC_CTR_MODE))
-   #error EAX_MODE requires OMAC and CTR
+   #error LTC_EAX_MODE requires LTC_OMAC and CTR
 #endif
 
 typedef struct {
@@ -137,7 +137,7 @@ int eax_decrypt_verify_memory(int cipher,
  int eax_test(void);
 #endif /* EAX MODE */
 
-#ifdef OCB_MODE
+#ifdef LTC_OCB_MODE
 typedef struct {
    unsigned char     L[MAXBLOCKSIZE],         /* L value */
                      Ls[32][MAXBLOCKSIZE],    /* L shifted by i bits to the left */
@@ -191,9 +191,9 @@ int ocb_ntz(unsigned long x);
 int s_ocb_done(ocb_state *ocb, const unsigned char *pt, unsigned long ptlen,
                unsigned char *ct, unsigned char *tag, unsigned long *taglen, int mode);
 
-#endif /* OCB_MODE */
+#endif /* LTC_OCB_MODE */
 
-#ifdef CCM_MODE
+#ifdef LTC_CCM_MODE
 
 #define CCM_ENCRYPT 0
 #define CCM_DECRYPT 1
@@ -210,26 +210,26 @@ int ccm_memory(int cipher,
 
 int ccm_test(void);
 
-#endif /* CCM_MODE */
+#endif /* LTC_CCM_MODE */
 
-#if defined(LRW_MODE) || defined(GCM_MODE)
+#if defined(LRW_MODE) || defined(LTC_GCM_MODE)
 void gcm_gf_mult(const unsigned char *a, const unsigned char *b, unsigned char *c);
 #endif
 
 
 /* table shared between GCM and LRW */
-#if defined(GCM_TABLES) || defined(LRW_TABLES) || ((defined(GCM_MODE) || defined(GCM_MODE)) && defined(LTC_FAST))
+#if defined(LTC_GCM_TABLES) || defined(LRW_TABLES) || ((defined(LTC_GCM_MODE) || defined(LTC_GCM_MODE)) && defined(LTC_FAST))
 extern const unsigned char gcm_shift_table[];
 #endif
 
-#ifdef GCM_MODE
+#ifdef LTC_GCM_MODE
 
 #define GCM_ENCRYPT 0
 #define GCM_DECRYPT 1
 
-#define GCM_MODE_IV    0
-#define GCM_MODE_AAD   1
-#define GCM_MODE_TEXT  2
+#define LTC_GCM_MODE_IV    0
+#define LTC_GCM_MODE_AAD   1
+#define LTC_GCM_MODE_TEXT  2
 
 typedef struct { 
    symmetric_key       K;
@@ -247,9 +247,9 @@ typedef struct {
    ulong64             totlen,       /* 64-bit counter used for IV and AAD */
                        pttotlen;     /* 64-bit counter for the PT */
 
-#ifdef GCM_TABLES
+#ifdef LTC_GCM_TABLES
    unsigned char       PC[16][256][16]  /* 16 tables of 8x128 */
-#ifdef GCM_TABLES_SSE2
+#ifdef LTC_GCM_TABLES_SSE2
 __attribute__ ((aligned (16)))
 #endif
 ;
@@ -287,9 +287,9 @@ int gcm_memory(      int           cipher,
                                int direction);
 int gcm_test(void);
 
-#endif /* GCM_MODE */
+#endif /* LTC_GCM_MODE */
 
-#ifdef PELICAN
+#ifdef LTC_PELICAN
 
 typedef struct pelican_state
 {
@@ -310,6 +310,9 @@ int pelican_memory(const unsigned char *key, unsigned long keylen,
 #endif
 
 #ifdef LTC_XCBC
+
+/* add this to "keylen" to xcbc_init to use a pure three-key XCBC MAC */
+#define LTC_XCBC_PURE  0x8000UL
 
 typedef struct {
    unsigned char K[3][MAXBLOCKSIZE],
@@ -376,6 +379,6 @@ int f9_test(void);
 #endif
 
 
-/* $Source: /cvs/libtom/libtomcrypt/src/headers/tomcrypt_mac.h,v $ */
-/* $Revision: 1.20 $ */
-/* $Date: 2006/11/08 21:57:04 $ */
+/* $Source$ */
+/* $Revision$ */
+/* $Date$ */
