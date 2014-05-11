@@ -242,6 +242,19 @@ static struct PyMethodDef modulemethods[] =
 {
 	{"new", (PyCFunction) ALGnew, 
 	 METH_VARARGS|METH_KEYWORDS, ALGnew__doc__},
+#ifdef _MODULE_CUSTOM_FUNCTION
+#define XSTR(s) #s
+#define XJOIN(a,b) a##b
+#define STR(s) XSTR(s)
+#define JOIN(a,b) XJOIN(a,b)
+        {STR(_MODULE_CUSTOM_FUNCTION) , (PyCFunction)
+         JOIN(ALG,_MODULE_CUSTOM_FUNCTION),
+         METH_VARARGS|METH_KEYWORDS, NULL},
+#undef XSTR
+#undef XJOIN
+#undef STR
+#undef JOIN
+#endif
 	{NULL, NULL}			/* sentinel */
 };
 

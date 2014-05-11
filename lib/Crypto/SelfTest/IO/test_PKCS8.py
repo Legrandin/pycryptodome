@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#  SelfTest/PublicKey/test_PKCS8.py: Self-test for the PKCS8 module
+#  SelfTest/IO/test_PKCS8.py: Self-test for the PKCS8 module
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -20,7 +20,7 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-tests for Crypto.PublicKey.PKCS8 module"""
+"""Self-tests for Crypto.IO.PKCS8 module"""
 
 __revision__ = "$Id$"
 

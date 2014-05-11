@@ -425,7 +425,7 @@ def long_to_bytes(n, blocksize=0):
 
 def bytes_to_long(s):
     """bytes_to_long(string) : long
-    Convert a byte string to a long integer.
+    Convert a byte string to a long integer (big endian).
 
     This is (essentially) the inverse of long_to_bytes().
     """
@@ -439,6 +439,7 @@ def bytes_to_long(s):
     for i in range(0, length, 4):
         acc = (acc << 32) + unpack('>I', s[i:i+4])[0]
     return acc
+
 
 # For backwards compatibility...
 import warnings

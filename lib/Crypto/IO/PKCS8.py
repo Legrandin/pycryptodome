@@ -32,6 +32,9 @@ The following mechanisms are fully supported:
 * *PBKDF2WithHMAC-SHA1AndAES192-CBC*
 * *PBKDF2WithHMAC-SHA1AndAES256-CBC*
 * *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
+* *scryptAndAES128-CBC*
+* *scryptAndAES192-CBC*
+* *scryptAndAES256-CBC*
 
 The following mechanisms are only supported for importing keys.
 They are much weaker than the ones listed above, and they are provided
@@ -96,12 +99,21 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
         | Key              | Description                                   |
         +==================+===============================================+
         | iteration_count  | The KDF algorithm is repeated several times to|
-        |                  | slow down brute force attacks on passwords.   |
-        |                  | The default value is 1 000.                   |
+        |                  | slow down brute force attacks on passwords    |
+        |                  | (called *N* or CPU/memory cost in scrypt).    |
+        |                  |                                               |
+        |                  | The default value for PBKDF2 is 1 000.        |
+        |                  | The default value for scrypt is 16 384.       |
         +------------------+-----------------------------------------------+
         | salt_size        | Salt is used to thwart dictionary and rainbow |
         |                  | attacks on passwords. The default value is 8  |
         |                  | bytes.                                        |
+        +------------------+-----------------------------------------------+
+        | block_size       | *(scrypt only)* Memory-cost (r). The default  |
+        |                  | value is 8.                                   |
+        +------------------+-----------------------------------------------+
+        | parallelization  | *(scrypt only)* CPU-cost (p). The default     |
+        |                  | value is 1.                                   |
         +------------------+-----------------------------------------------+
 
       key_params : DER object

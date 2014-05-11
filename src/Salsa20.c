@@ -47,6 +47,8 @@ static const char tau[16]   = "expand 16-byte k";
 #define PLUS(v,w) (U32V((v) + (w)))
 #define PLUSONE(v) (PLUS((v),1))
 
+#define _MODULE_CUSTOM_FUNCTION _salsa20_8_core
+
 typedef struct 
 {
     uint32_t input[16];
@@ -55,16 +57,11 @@ typedef struct
 } stream_state;
 
 static void
-_salsa20_block (stream_state *self)
+_salsa20_block(int rounds, uint32_t *input, uint8_t *output)
 {
     uint32_t x0, x1, x2, x3, x4, x5, x6, x7;
     uint32_t x8, x9, x10, x11, x12, x13, x14, x15;
     uint8_t  i;
-    uint32_t *input;
-    uint8_t  *output;
-    
-    input  = self->input;
-    output = self->block;
 
     x0  = input[0];
     x1  = input[1];
@@ -83,7 +80,7 @@ _salsa20_block (stream_state *self)
     x14 = input[14];
     x15 = input[15];
     
-    for (i = ROUNDS; i > 0; i -= 2) {
+    for (i = rounds; i > 0; i -= 2) {
         /* Column round */
         x4  = XOR ( x4, ROTATE (PLUS ( x0,x12), 7));
         x8  = XOR ( x8, ROTATE (PLUS ( x4, x0), 9));
@@ -163,6 +160,60 @@ _salsa20_block (stream_state *self)
     }
 }
 
+/*
+ * Salsa20/8 Core function (combined with XOR)
+ *
+ * This function accepts two 64-byte Python byte strings (x and y).
+ * It creates a new 64-byte Python byte string with the result
+ * of the expression salsa20_8(xor(x,y)).
+ */
+static PyObject *
+ALG_salsa20_8_core(PyObject *self, PyObject *args, PyObject *kwdict)
+{
+    PyObject *input_str;
+    PyObject *previous_input_str;
+    uint8_t *input_bytes;
+    uint8_t *previous_input_bytes;
+    uint8_t *output_bytes;
+    uint32_t input_32[16];
+    PyObject *output;
+    int i;
+
+    output = NULL;
+
+    if (!PyArg_ParseTuple(args, "SS", &previous_input_str, &input_str)) {
+        goto out;
+    }
+
+    if (PyBytes_GET_SIZE(previous_input_str)!=64 ||
+            PyBytes_GET_SIZE(input_str)!=64) {
+        goto out;
+    }
+
+    output = PyBytes_FromStringAndSize(NULL, 64);
+    if (!output) {
+        goto out;
+    }
+
+    previous_input_bytes = (uint8_t*)PyBytes_AS_STRING(previous_input_str);
+    input_bytes = (uint8_t*)PyBytes_AS_STRING(input_str);
+    for (i=0; i<16; i++) {
+        uint32_t tmp;
+
+        U8TO32_LITTLE(tmp, &previous_input_bytes[i*4]);
+        U8TO32_LITTLE(input_32[i], &input_bytes[i*4]);
+        input_32[i] ^= tmp;
+    }
+    output_bytes = (uint8_t*)PyBytes_AS_STRING(output);
+
+    Py_BEGIN_ALLOW_THREADS;
+    _salsa20_block(8, input_32, output_bytes);
+    Py_END_ALLOW_THREADS;
+
+out:
+    return output;
+}
+
 static void
 stream_init (stream_state *self, unsigned char *key, int keylen,
 			 unsigned char *nonce, int nonce_len)
@@ -220,15 +271,15 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
 #define stream_decrypt stream_encrypt	
 
 static void
-stream_encrypt (stream_state *self, unsigned char *block, int len)
+stream_encrypt (stream_state *self, unsigned char *buffer, int len)
 {
     int i;
     for (i = 0; i < len; ++i) {
         if (self->blockindex == 64) {
             self->blockindex = 0;
-            _salsa20_block (self);
+            _salsa20_block(ROUNDS, self->input, self->block);
         }
-        block[i] ^= self->block[self->blockindex];
+        buffer[i] ^= self->block[self->blockindex];
         self->blockindex ++;
     }
 }
