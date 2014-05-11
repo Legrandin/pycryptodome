@@ -295,7 +295,7 @@ keccak_result
 keccak_finish (keccak_state *self)
 {
     /* Padding */
-    *(self->bufptr++) = 0x01U;
+    *(self->bufptr++) = 0x06U;
     if (self->bufend >= self->bufptr) {
         memset (self->bufptr, 0, self->bufend - self->bufptr + 1);
     }
