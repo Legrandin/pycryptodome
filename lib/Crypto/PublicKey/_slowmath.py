@@ -40,7 +40,7 @@ class error(Exception):
 class _RSAKey(object):
     def _blind(self, m, r):
         # compute r**e * m (mod n)
-        return m * pow(r, self.e, self.n)
+        return (m * pow(r, self.e, self.n)) % self.n
 
     def _unblind(self, m, r):
         # compute m / r (mod n)
