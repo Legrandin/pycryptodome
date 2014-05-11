@@ -165,7 +165,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                         # Data to sign can either be in hex form or not
                         try:
                             h.update(t2b(row[1]))
-                        except:
+                        except ValueError:
                             h.update(b(row[1]))
                         # The real test
                         signer = PKCS.new(key)
@@ -186,7 +186,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                         # Data to sign can either be in hex form or not
                         try:
                             h.update(t2b(row[1]))
-                        except:
+                        except ValueError:
                             h.update(b(row[1]))
                         # The real test
                         verifier = PKCS.new(key)
