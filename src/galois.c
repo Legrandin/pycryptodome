@@ -45,7 +45,7 @@ typedef uint64_t t_v_tables[128][2][2];
  */
 typedef struct {
     uint8_t buffer[sizeof(t_v_tables)+ALIGNMENT];
-    t_v_tables *v_tables;
+    int offset;
 } t_exp_key;
 
 /**
@@ -174,6 +174,19 @@ static void ghash(
     }
 }
 
+static void realign_v_tables(t_exp_key *exp_key)
+{
+    int new_offset;
+    
+    new_offset = ALIGNMENT - ((uintptr_t)exp_key->buffer & (ALIGNMENT-1));
+    if (new_offset != exp_key->offset) {
+        memmove(exp_key->buffer+new_offset,
+                exp_key->buffer+exp_key->offset,
+                sizeof(t_v_tables));
+        exp_key->offset = new_offset;
+    }
+}
+
 static char ghash_expand__doc__[] =
 "ghash_expand(h:str) -> str\n"
 "\n"
@@ -201,20 +214,21 @@ ghash_expand_function(PyObject *self, PyObject *args)
         goto out;
     }
 
-    retval = PyBytes_FromStringAndSize(NULL, sizeof(t_exp_key));
-    if (!retval) {
+    exp_key = calloc(1, sizeof(t_exp_key));
+    if (!exp_key) {
         goto out;
     }
 
-    exp_key = (t_exp_key*) PyBytes_AS_STRING(retval);
-    exp_key->v_tables = (t_v_tables*)
-        (((uintptr_t)exp_key->buffer & ~(ALIGNMENT-1)) + ALIGNMENT);
-
     Py_BEGIN_ALLOW_THREADS;
     
-    make_v_tables((uint8_t*)PyBytes_AS_STRING(h), exp_key->v_tables);
+    exp_key->offset = ALIGNMENT - ((uintptr_t)exp_key->buffer & (ALIGNMENT-1));
+    make_v_tables((uint8_t*)PyBytes_AS_STRING(h),
+            (t_v_tables*)(exp_key->buffer + exp_key->offset));
     
     Py_END_ALLOW_THREADS;
+
+    retval = PyBytes_FromStringAndSize((const char*)exp_key, sizeof *exp_key);
+    free(exp_key);
 
 out:
     return retval;
@@ -229,18 +243,19 @@ static char ghash__doc__[] =
 static PyObject *
 ghash_function(PyObject *self, PyObject *args)
 {
-    PyObject *data, *y, *exp_key;
+    PyObject *data, *y, *exp_key_serial;
     PyObject *retval = NULL;
-    Py_ssize_t len_data, len_y, len_exp_key;
+    Py_ssize_t len_data, len_y, len_exp_key_serial;
     const t_v_tables *v_tables;
+    t_exp_key *exp_key;
 
-    if (!PyArg_ParseTuple(args, "SSS", &data, &y, &exp_key)) {
+    if (!PyArg_ParseTuple(args, "SSS", &data, &y, &exp_key_serial)) {
         goto out;
     }
 
     len_data = PyBytes_GET_SIZE(data);
     len_y = PyBytes_GET_SIZE(y);
-    len_exp_key = PyBytes_GET_SIZE(exp_key);
+    len_exp_key_serial = PyBytes_GET_SIZE(exp_key_serial);
 
     if (len_data%16!=0) {
         PyErr_SetString(PyExc_ValueError, "Length of data must be a multiple of 16 bytes.");
@@ -252,7 +267,7 @@ ghash_function(PyObject *self, PyObject *args)
         goto out;
     }
 
-    if (len_exp_key!=sizeof(t_exp_key)) {
+    if (len_exp_key_serial!=sizeof(t_exp_key)) {
         PyErr_SetString(PyExc_ValueError, "Length of expanded key is incorrect.");
         goto out;
     }
@@ -266,8 +281,10 @@ ghash_function(PyObject *self, PyObject *args)
     Py_BEGIN_ALLOW_THREADS;
 
 #define PyBytes_Buffer(a)   (uint8_t*)PyBytes_AS_STRING(a)
-    
-    v_tables = (const t_v_tables*)((t_exp_key *)PyBytes_AS_STRING(exp_key))->v_tables;
+
+    exp_key = (t_exp_key *)PyBytes_AS_STRING(exp_key_serial);
+    realign_v_tables(exp_key);
+    v_tables = (const t_v_tables*)(exp_key->buffer + exp_key->offset);
     ghash(  PyBytes_Buffer(retval), PyBytes_Buffer(data), len_data,
             PyBytes_Buffer(y), v_tables);
 
