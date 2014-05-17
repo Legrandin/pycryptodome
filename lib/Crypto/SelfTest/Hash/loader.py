@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# SelfTest/Hash/SHA3/__init__.py: Module with FIPS 202 test vectors
+# SelfTest/Hash/loader.py: Module to load FIPS 202 test vectors
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -26,12 +26,10 @@ if sys.version_info[0] == 2 and sys.version_info[1] == 1:
 from Crypto.Util.py3compat import *
 
 import re
-from StringIO import StringIO
 from binascii import unhexlify
 
-def load_fips_test_module(module):
-    f = StringIO(module.content)
-    line = f.readline()
+def load_fips_test_module(file_in):
+    line = file_in.readline()
 
     line_number = 0
     test_number = 1
@@ -43,7 +41,7 @@ def load_fips_test_module(module):
 
     while line:
         line_number += 1
-        line = f.readline()
+        line = file_in.readline()
 
         # Skip comments and empty lines
         if line.startswith('#') or not line.strip():
@@ -85,6 +83,8 @@ def load_fips_test_module(module):
 
 
 def load_tests(file_name):
-    module_name = file_name.replace("-", "_").replace(".", "_")
-    module = __import__("Crypto.SelfTest.Hash.SHA3." + module_name, globals(), locals(), ['new'])
-    return load_fips_test_module(module)
+    import os.path
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    abs_file_name = os.path.join(base_dir, "test_vectors", "SHA3", file_name)
+    return load_fips_test_module(open(abs_file_name))

@@ -384,6 +384,7 @@ class TestCommand(Command):
 
     sub_commands = [ ('build', None) ]
 
+
 kw = {'name':"pycrypto",
       'version':"2.7a1",  # See also: lib/Crypto/__init__.py
       'description':"Cryptographic modules for Python.",
@@ -391,7 +392,11 @@ kw = {'name':"pycrypto",
       'author_email':"dlitz@dlitz.net",
       'url':"http://www.pycrypto.org/",
 
-      'cmdclass' : {'build_configure': PCTBuildConfigure, 'build_ext': PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
+      'cmdclass' : {'build_configure': PCTBuildConfigure,
+                    'build_ext': PCTBuildExt,
+                    'build_py': PCTBuildPy,
+                    'test': TestCommand },
+
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
                   "Crypto.Random",
                   "Crypto.Random.Fortuna",
@@ -399,7 +404,6 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest",
                   "Crypto.SelfTest.Cipher",
                   "Crypto.SelfTest.Hash",
-                  "Crypto.SelfTest.Hash.SHA3",
                   "Crypto.SelfTest.Protocol",
                   "Crypto.SelfTest.PublicKey",
                   "Crypto.SelfTest.Random",
@@ -413,6 +417,10 @@ kw = {'name':"pycrypto",
                   "Crypto.Signature",
                   "Crypto.IO"],
       'package_dir' : { "Crypto": "lib/Crypto" },
+      'package_data' : {
+                    "Crypto.SelfTest.Hash" : [
+                        "test_vectors/SHA3/*.txt" ]
+                    },
       'ext_modules': plat_ext + [
             # _fastmath (uses GNU mp library)
             Extension("Crypto.PublicKey._fastmath",

@@ -22,7 +22,8 @@
 
 """Self-test suite for Crypto.Hash.SHA3_224"""
 
-from Crypto.SelfTest.Hash.SHA3 import load_tests
+from Crypto.SelfTest.Hash.loader import load_tests
+from StringIO import StringIO
 
 def get_tests(config={}):
     from Crypto.Hash import SHA3_224
