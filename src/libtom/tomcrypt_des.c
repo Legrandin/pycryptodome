@@ -20,7 +20,7 @@
 #define EN0 0 
 #define DE1 1
 
-const struct ltc_cipher_descriptor des_desc =
+static const struct ltc_cipher_descriptor des_desc =
 {
     "des",
     13,
@@ -34,7 +34,7 @@ const struct ltc_cipher_descriptor des_desc =
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-const struct ltc_cipher_descriptor des3_desc =
+static const struct ltc_cipher_descriptor des3_desc =
 {
     "3des",
     14,
@@ -1526,7 +1526,7 @@ static void desfunc(ulong32 *block, const ulong32 *keys)
     @param skey The key in as scheduled by this function.
     @return CRYPT_OK if successful
  */
-int des_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
+static int des_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
 {
     LTC_ARGCHK(key != NULL);
     LTC_ARGCHK(skey != NULL);
@@ -1553,7 +1553,7 @@ int des_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_ke
     @param skey The key in as scheduled by this function.
     @return CRYPT_OK if successful
  */
-int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
+static int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_key *skey)
 {
     LTC_ARGCHK(key != NULL);
     LTC_ARGCHK(skey != NULL);
@@ -1562,17 +1562,27 @@ int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_k
         return CRYPT_INVALID_ROUNDS;
     }
 
-    if (keylen != 24) {
+    if (keylen != 24 && keylen != 16) {
         return CRYPT_INVALID_KEYSIZE;
     }
 
     deskey(key,    EN0, skey->des3.ek[0]);
     deskey(key+8,  DE1, skey->des3.ek[1]);
-    deskey(key+16, EN0, skey->des3.ek[2]);
+    if (keylen == 24) {
+        deskey(key+16, EN0, skey->des3.ek[2]);
+    } else {
+        /* two-key 3DES: K3=K1 */
+        deskey(key, EN0, skey->des3.ek[2]);
+    }
 
     deskey(key,    DE1, skey->des3.dk[2]);
     deskey(key+8,  EN0, skey->des3.dk[1]);
-    deskey(key+16, DE1, skey->des3.dk[0]);
+    if (keylen == 24) {
+        deskey(key+16, DE1, skey->des3.dk[0]);
+    } else {
+        /* two-key 3DES: K3=K1 */
+        deskey(key, DE1, skey->des3.dk[0]);
+    }
 
     return CRYPT_OK;
 }
@@ -1584,7 +1594,7 @@ int des3_setup(const unsigned char *key, int keylen, int num_rounds, symmetric_k
   @param skey The key as scheduled
   @return CRYPT_OK if successful
 */
-int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
+static int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
 {
     ulong32 work[2];
     LTC_ARGCHK(pt   != NULL);
@@ -1605,7 +1615,7 @@ int des_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *s
   @param skey The key as scheduled 
   @return CRYPT_OK if successful
 */
-int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
+static int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
 {
     ulong32 work[2];
     LTC_ARGCHK(pt   != NULL);
@@ -1626,7 +1636,7 @@ int des_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *s
   @param skey The key as scheduled
   @return CRYPT_OK if successful
 */
-int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
+static int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *skey)
 {
     ulong32 work[2];
     
@@ -1650,7 +1660,7 @@ int des3_ecb_encrypt(const unsigned char *pt, unsigned char *ct, symmetric_key *
   @param skey The key as scheduled 
   @return CRYPT_OK if successful
 */
-int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
+static int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *skey)
 {
     ulong32 work[2];
     LTC_ARGCHK(pt   != NULL);
@@ -1670,7 +1680,7 @@ int des3_ecb_decrypt(const unsigned char *ct, unsigned char *pt, symmetric_key *
   Performs a self-test of the LTC_DES block cipher
   @return CRYPT_OK if functional, CRYPT_NOP if self-test has been disabled
 */
-int des_test(void)
+static int des_test(void)
 {
  #ifndef LTC_TEST
     return CRYPT_NOP;
@@ -1813,7 +1823,7 @@ int des_test(void)
   #endif
 }
 
-int des3_test(void)
+static int des3_test(void)
 {
  #ifndef LTC_TEST
     return CRYPT_NOP;
@@ -1852,14 +1862,14 @@ int des3_test(void)
 /** Terminate the context 
    @param skey    The scheduled key
 */
-void des_done(symmetric_key *skey)
+static void des_done(symmetric_key *skey)
 {
 }
 
 /** Terminate the context 
    @param skey    The scheduled key
 */
-void des3_done(symmetric_key *skey)
+static void des3_done(symmetric_key *skey)
 {
 }
 
@@ -1869,7 +1879,7 @@ void des3_done(symmetric_key *skey)
   @param keysize [in/out] The length of the recommended key (in bytes).  This function will store the suitable size back in this variable.
   @return CRYPT_OK if the input key size is acceptable.
 */
-int des_keysize(int *keysize)
+static int des_keysize(int *keysize)
 {
     LTC_ARGCHK(keysize != NULL);
     if(*keysize < 8) {
@@ -1884,7 +1894,7 @@ int des_keysize(int *keysize)
   @param keysize [in/out] The length of the recommended key (in bytes).  This function will store the suitable size back in this variable.
   @return CRYPT_OK if the input key size is acceptable.
 */
-int des3_keysize(int *keysize)
+static int des3_keysize(int *keysize)
 {
     LTC_ARGCHK(keysize != NULL);
     if(*keysize < 24) {
