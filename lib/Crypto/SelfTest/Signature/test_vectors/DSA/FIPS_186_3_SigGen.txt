@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-#
-#  SelfTest/Signature/FIPS_186_3_SigGen_txt.py: FIPS 180-3 DSA Test vectors
-#
 # This file contains the full content of the SigGen.txt file found in
 # http://csrc.nist.gov/groups/STM/cavp/documents/dss/186-3dsatestvectors.zip
 #
 
-content = """
 # CAVS 11.2
 # "SigGen" information for "dsa2_values"
 # Mod sizes selected: L=1024, N=160, SHA-1 L=1024, N=160, SHA-224 L=1024, N=160, SHA-256 L=1024, N=160, SHA-384 L=1024, N=160, SHA-512 L=2048, N=224, SHA-1 L=2048, N=224, SHA-224 L=2048, N=224, SHA-256 L=2048, N=224, SHA-384 L=2048, N=224, SHA-512 L=2048, N=256, SHA-1 L=2048, N=256, SHA-224 L=2048, N=256, SHA-256 L=2048, N=256, SHA-384 L=2048, N=256, SHA-512 L=3072, N=256, SHA-1 L=3072, N=256, SHA-224 L=3072, N=256, SHA-256 L=3072, N=256, SHA-384 L=3072, N=256, SHA-512
@@ -2231,4 +2226,3 @@ Y = b265edfed77b3ad511e56d583129b12e5796d659d484a2fce350661f79e545dd0a06c23774c8
 K = 5359fe067eb9d98ec2217500de743b0dbe88e8d94552b53a0117aac4d3390083
 R = 6ed82af8e89e38c49a58010f0564165a16a76a2bfb348466d9b4a91e5ce53ab2
 S = 8c466a8b3e4c90886f29986a4d513904f31db43a68ce880311403cc755466604
-"""

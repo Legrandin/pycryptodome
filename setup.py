@@ -405,7 +405,9 @@ kw = {'name':"pycrypto",
       'package_dir' : { "Crypto": "lib/Crypto" },
       'package_data' : {
                     "Crypto.SelfTest.Hash" : [
-                        "test_vectors/SHA3/*.txt" ]
+                        "test_vectors/SHA3/*.txt" ],
+                    "Crypto.SelfTest.Signature" : [
+                        "test_vectors/DSA/*.*" ],
                     },
       'ext_modules': plat_ext + [
             # _fastmath (uses GNU mp library)

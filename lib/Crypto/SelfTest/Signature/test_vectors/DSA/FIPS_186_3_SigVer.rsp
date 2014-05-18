@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-#
-#  SelfTest/Signature/FIPS_186_3_SigVer_rsp.py: FIPS 180-3 DSA Test vectors
-#
 # This file contains the full content of the SigVer.rsp file found in
 # http://csrc.nist.gov/groups/STM/cavp/documents/dss/186-3dsatestvectors.zip
 #
 
-content = """
 # CAVS 11.0
 # "SigVer" information 
 # Mod sizes selected: L=1024, N=160, SHA-1 L=1024, N=160, SHA-224 L=1024, N=160, SHA-256 L=1024, N=160, SHA-384 L=1024, N=160, SHA-512 L=2048, N=224, SHA-1 L=2048, N=224, SHA-224 L=2048, N=224, SHA-256 L=2048, N=224, SHA-384 L=2048, N=224, SHA-512 L=2048, N=256, SHA-1 L=2048, N=256, SHA-224 L=2048, N=256, SHA-256 L=2048, N=256, SHA-384 L=2048, N=256, SHA-512 L=3072, N=256, SHA-1 L=3072, N=256, SHA-224 L=3072, N=256, SHA-256 L=3072, N=256, SHA-384 L=3072, N=256, SHA-512
@@ -2231,4 +2226,3 @@ Y = 91816cb559b27992d2f852061b4661c73badb9e2270a7553e0c27750076813bc021a3371b7df
 R = 2c78c2e09723cab4d9c668cf3213411ec4dd94a6122bf492e1812ea2108bca02
 S = adcf4c2e606e099e58a5f5a5597334c2fc5dfbe715121cb7b971b5609855499f
 Result = P
-"""
