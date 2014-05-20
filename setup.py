@@ -49,18 +49,6 @@ if sys.version[0:1] == '1':
     raise RuntimeError ("The Python Cryptography Toolkit requires "
                          "Python 2.x or 3.x to build.")
 
-if sys.platform == 'win32':
-    HTONS_LIBS = ['ws2_32']
-    plat_ext = [
-                Extension("Crypto.Random.OSRNG.winrandom",
-                          libraries = HTONS_LIBS + ['advapi32'],
-                          include_dirs=['src/'],
-                          sources=["src/winrand.c"])
-               ]
-else:
-    HTONS_LIBS = []
-    plat_ext = []
-
 # For test development: Set this to 1 to build with gcov support.
 # Use "gcov -p -o build/temp.*/src build/temp.*/src/*.gcda" to build the
 # .gcov files
@@ -73,18 +61,6 @@ try:
 except ImportError:
     # Python 2
     from distutils.command.build_py import build_py
-
-# List of pure Python modules that will be excluded from the binary packages.
-# The list consists of (package, module_name) tuples
-if sys.version_info[0] == 2:
-    EXCLUDE_PY = []
-else:
-    EXCLUDE_PY = [
-        # We don't want Py3k to choke on the 2.x compat code
-        ('Crypto.Util', 'py21compat'),
-    ]
-    if sys.platform != "win32": # Avoid nt.py, as 2to3 can't fix it w/o winrandom
-        EXCLUDE_PY += [('Crypto.Random.OSRNG','nt')]
 
 # Work around the print / print() issue with Python 2.x and 3.x. We only need
 # to print at one point of the code, which makes this easy
@@ -309,8 +285,6 @@ class PCTBuildPy(build_py):
         retval = []
         for item in modules:
             pkg, module = item[:2]
-            if (pkg, module) in EXCLUDE_PY:
-                continue
             retval.append(item)
         return retval
 
@@ -386,7 +360,6 @@ kw = {'name':"pycrypto",
       'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
                   "Crypto.Random",
                   "Crypto.Random.Fortuna",
-                  "Crypto.Random.OSRNG",
                   "Crypto.SelfTest",
                   "Crypto.SelfTest.Cipher",
                   "Crypto.SelfTest.Hash",
@@ -394,7 +367,6 @@ kw = {'name':"pycrypto",
                   "Crypto.SelfTest.PublicKey",
                   "Crypto.SelfTest.Random",
                   "Crypto.SelfTest.Random.Fortuna",
-                  "Crypto.SelfTest.Random.OSRNG",
                   "Crypto.SelfTest.Util",
                   "Crypto.SelfTest.Signature",
                   "Crypto.SelfTest.IO",
@@ -409,7 +381,7 @@ kw = {'name':"pycrypto",
                     "Crypto.SelfTest.Signature" : [
                         "test_vectors/DSA/*.*" ],
                     },
-      'ext_modules': plat_ext + [
+      'ext_modules': [
             # _fastmath (uses GNU mp library)
             Extension("Crypto.PublicKey._fastmath",
                       include_dirs=['src/'],
@@ -529,11 +501,3 @@ def touch(path):
         os.utime(path, (now, now))
     except os.error:
         PrintErr("Failed to update timestamp of "+path)
-
-# PY3K: Workaround for winrandom.pyd not existing during the first pass.
-# It needs to be there for 2to3 to fix the import in nt.py
-if (sys.platform == 'win32' and sys.version_info[0] == 3 and
-    'build' in sys.argv[1:]):
-    PrintErr("\nSecond pass to allow 2to3 to fix nt.py. No cause for alarm.\n")
-    touch("./lib/Crypto/Random/OSRNG/nt.py")
-    core.setup(**kw)

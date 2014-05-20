@@ -2,8 +2,6 @@
 #
 #  Random/__init__.py : PyCrypto random number generation
 #
-# Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
-#
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
 # the extent that dedication to the public domain is not available,
@@ -22,22 +20,38 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
-__all__ = ['new']
+__all__ = ['new', 'get_random_bytes']
 
-from Crypto.Random import OSRNG
-from Crypto.Random import _UserFriendlyRNG
+from os import urandom
+
+class _UrandomRNG(object):
+
+    def read(self, n):
+        """Return a random byte string of the desired size."""
+        return urandom(n)
+
+    def flush(self):
+        """Method provided for backward compatibility only."""
+        pass
+
+    def reinit(self):
+        """Method provided for backward compatibility only."""
+        pass
+
+    def close(self):
+        """Method provided for backward compatibility only."""
+        pass
+        
 
 def new(*args, **kwargs):
     """Return a file-like object that outputs cryptographically random bytes."""
-    return _UserFriendlyRNG.new(*args, **kwargs)
+    return _UrandomRNG()
+
 
 def atfork():
-    """Call this whenever you call os.fork()"""
-    _UserFriendlyRNG.reinit()
+    pass
 
-def get_random_bytes(n):
-    """Return the specified number of cryptographically-strong random bytes."""
-    return _UserFriendlyRNG.get_random_bytes(n)
 
-# vim:set ts=4 sw=4 sts=4 expandtab:
+#: Function that returns a random byte string of the desired size.
+get_random_bytes = urandom
+
