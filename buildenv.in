@@ -1,4 +1,0 @@
-# @configure_input@
-CC = @CC@
-CFLAGS = @CFLAGS@ @DEFS@
-LDFLAGS = @LDFLAGS@

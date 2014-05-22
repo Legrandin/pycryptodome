@@ -21,11 +21,12 @@
  * SOFTWARE.
  * ===================================================================
  */
-#include "Python.h"
-#include <stdint.h>
-#include "config.h"
+
+#include "pycrypto_common.h"
+#include "pycrypto_compat.h"
 
 #ifdef HAVE_CPUID_H
+
 #include <cpuid.h>
 
 /* it's bit_AES with gcc */
@@ -40,8 +41,6 @@
 #endif
 
 #endif
-
-#include "pycrypto_compat.h"
 
 /*
  * The have_aes_ni Python function

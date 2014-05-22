@@ -21,7 +21,7 @@
 */
 
 
-#include "config.h"
+#include "pycrypto_common.h"
 
 #define CAPACITY (2*(DIGEST_SIZE))
 #define BLOCK_SIZE (200-CAPACITY)

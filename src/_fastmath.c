@@ -30,23 +30,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <longintrepr.h>				/* for conversions */
-#if HAVE_LIBGMP
-# include <gmp.h>
-#elif HAVE_LIBMPIR
-# include <mpir.h>
-#else
-# error "Neither HAVE_LIBGMP nor HAVE_LIBMPIR are set.  Can't build."
-#endif
+#include <gmp.h>
 
 /* If available, use mpz_powm_sec to avoid timing attacks.
  * See the talk by Geremy Condra -
  *  "PyCon 2011: Through the Side Channel: Timing and Implementation Attacks in Python"
  *  http://blip.tv/pycon-us-videos-2009-2010-2011/pycon-2011-through-the-side-channel-timing-and-implementation-attacks-in-python-4897955
  */
-#if HAVE_DECL_MPZ_POWM_SEC
-#define MPZ_POWM mpz_powm_sec
+#if (__GNU_MP_VERSION>=5)
+#define MPZ_POWM    mpz_powm_sec
+#define HAVE_DECL_MPZ_POWM_SEC 1
 #else
-#define MPZ_POWM mpz_powm
+#define MPZ_POWM    mpz_powm
+#define HAVE_DECL_MPZ_POWM_SEC 0
 #endif
 
 #define SIEVE_BASE_SIZE (sizeof (sieve_base) / sizeof (sieve_base[0]))

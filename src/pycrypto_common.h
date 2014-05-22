@@ -26,16 +26,6 @@
 
 #include "Python.h"
 #include "pycrypto_compat.h"
-#include "config.h"
-#if HAVE_STDINT_H
-# include <stdint.h>
-#elif HAVE_INTTYPES_H
-# include <inttypes.h>
-#elif HAVE_SYS_INTTYPES_H
-# include <sys/inttypes.h>
-#else
-# error "stdint.h and inttypes.h not found"
-#endif
-
+#include <stdint.h>
 
 #endif /* PYCRYPTO_COMMON_H */

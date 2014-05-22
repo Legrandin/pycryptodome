@@ -1,8 +1,5 @@
 include MANIFEST.in
-include ACKS build-aux/* ChangeLog COPYRIGHT Doc/* TODO
+include ACKS ChangeLog COPYRIGHT Doc/* TODO
 graft LEGAL
 recursive-include src *.h *.c
-include buildenv.in
-include src/config.h.in
 include *.py
-include configure
