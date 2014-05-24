@@ -32,7 +32,7 @@ LTC_EXPORT void LTC_CALL XQSORT(void *base, size_t nmemb, size_t size, int(*comp
 
 
 /* change the clock function too */
-LTC_EXPORT clock_t LTC_CALL XCLOCK(void);
+/* LTC_EXPORT clock_t LTC_CALL XCLOCK(void); */
 
 /* various other functions */
 LTC_EXPORT void * LTC_CALL XMEMCPY(void *dest, const void *src, size_t n);
