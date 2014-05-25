@@ -1,4 +1,4 @@
-# epydoc configuration file for PyCrypto.
+# epydoc configuration file for PyCryptodome.
 # See http://epydoc.sourceforge.net/configfile.html for sample configuration.
 
 [epydoc]
@@ -15,12 +15,9 @@ private: no
 # section
 inheritance: grouped
 
-name: PyCrypto API Documentation
-url: http://www.pycrypto.org/
+name: PyCryptodome API Documentation
+url: http://www.pycryptodome.org/
 
-link: <a href="http://www.pycrypto.org/">PyCrypto.org</a>
+link: <a href="http://www.pycryptodome.org/">PyCryptodome.org</a>
 
-# The documentation is usually built on a Linux machine; nt.py tries to
-# import the winrandom module.
-exclude-introspect: ^Crypto\.Random\.OSRNG\.nt|Crypto\.Util\.winrandom|Crypto\.Util\.osentropy\.nt$
 exclude: ^Crypto\.SelfTest

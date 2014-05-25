@@ -72,7 +72,7 @@ class FortunaPool(object):
 def which_pools(r):
     """Return a list of pools indexes (in range(32)) that are to be included during reseed number r.
 
-    According to _Practical Cryptography_, chapter 10.5.2 "Pools":
+    According to 'Practical Cryptography' (chapter 10.5.2 "Pools"):
 
         "Pool P_i is included if 2**i is a divisor of r.  Thus P_0 is used
         every reseed, P_1 every other reseed, P_2 every fourth reseed, etc."

@@ -109,8 +109,8 @@ static char ALG_digest__doc__[] =
 "This method does not change the state of the hash object.\n"
 "You can continue updating the object after calling this function.\n"
 "\n"
-":Return: A byte string of `digest_size` bytes. It may contain non-ASCII\n"
-"characters, including null bytes.\n";
+":Return: A byte string of `digest_size` bytes. "
+"It may contain non-ASCII characters, including null bytes.\n";
 
 static PyObject *
 ALG_digest(ALGobject *self, PyObject *args)
@@ -127,8 +127,8 @@ static char ALG_hexdigest__doc__[] =
 "\n"
 "This method does not change the state of the hash object.\n"
 "\n"
-":Return: A string of 2* `digest_size` characters. It contains only\n"
-"hexadecimal ASCII digits.\n";
+":Return: A string of 2* `digest_size` characters. "
+"It contains only hexadecimal ASCII digits.\n";
 
 static PyObject *
 ALG_hexdigest(ALGobject *self, PyObject *args)

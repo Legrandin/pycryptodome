@@ -180,7 +180,7 @@ def EMSA_PKCS1_V1_5_ENCODE(hash, emLen, with_hash_parameters=True):
             The hash object that holds the digest of the message being signed.
      emLen : int
             The length the final encoding must have, in bytes.
-     with_hash_parameters:
+     with_hash_parameters : bool
             If True (default), include NULL parameters for the hash
             algorithm in the ``digestAlgorithm`` SEQUENCE.
 
@@ -257,90 +257,90 @@ def new(key):
 #
 # XXX - These will probably be moved somewhere else soon.
 _HASH_OIDS = {
-    #:  id-md2 OBJECT IDENTIFIER ::= {
-    #:      iso(1) member-body(2) us(840) rsadsi(113549)
-    #:       digestAlgorithm(2) 2
-    #:  }
+    #  id-md2 OBJECT IDENTIFIER ::= {
+    #      iso(1) member-body(2) us(840) rsadsi(113549)
+    #       digestAlgorithm(2) 2
+    #  }
     "MD2": "1.2.840.113549.2.2",
     "md2": "1.2.840.113549.2.2",
 
-    #:  id-md4 OBJECT IDENTIFIER ::= {
-    #:      iso(1) member-body(2) us(840) rsadsi(113549)
-    #:       digestAlgorithm(2) 4
-    #:  }
+    #  id-md4 OBJECT IDENTIFIER ::= {
+    #      iso(1) member-body(2) us(840) rsadsi(113549)
+    #       digestAlgorithm(2) 4
+    #  }
     "MD4": "1.2.840.113549.2.4",
     "md4": "1.2.840.113549.2.4",
 
-    #:  id-md5      OBJECT IDENTIFIER ::= {
-    #:      iso(1) member-body(2) us(840) rsadsi(113549)
-    #:       digestAlgorithm(2) 5
-    #:  }
+    #  id-md5      OBJECT IDENTIFIER ::= {
+    #      iso(1) member-body(2) us(840) rsadsi(113549)
+    #       digestAlgorithm(2) 5
+    #  }
     "MD5": "1.2.840.113549.2.5",
     "md5": "1.2.840.113549.2.5",
 
-    #:  id-ripemd160 OBJECT IDENTIFIER ::= {
-    #:      iso(1) identified-organization(3) teletrust(36)
-    #:       algorithm(3) hashAlgorithm(2) ripemd160(1)
-    #:  }
+    #  id-ripemd160 OBJECT IDENTIFIER ::= {
+    #      iso(1) identified-organization(3) teletrust(36)
+    #       algorithm(3) hashAlgorithm(2) ripemd160(1)
+    #  }
     "RIPEMD160": "1.3.36.3.2.1",
     "ripemd160": "1.3.36.3.2.1",
 
-    #:  id-sha1    OBJECT IDENTIFIER ::= {
-    #:      iso(1) identified-organization(3) oiw(14) secsig(3)
-    #:       algorithms(2) 26
-    #:  }
+    #  id-sha1    OBJECT IDENTIFIER ::= {
+    #      iso(1) identified-organization(3) oiw(14) secsig(3)
+    #       algorithms(2) 26
+    #  }
     "SHA1": "1.3.14.3.2.26",
     "sha1": "1.3.14.3.2.26",
 
-    #:  id-sha224    OBJECT IDENTIFIER ::= {
-    #:      joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3)
-    #:      nistalgorithm(4) hashalgs(2) 4
-    #:  }
+    #  id-sha224    OBJECT IDENTIFIER ::= {
+    #      joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3)
+    #      nistalgorithm(4) hashalgs(2) 4
+    #  }
     "SHA224": '2.16.840.1.101.3.4.2.4',
     "sha224": '2.16.840.1.101.3.4.2.4',
 
-    #:  id-sha256    OBJECT IDENTIFIER ::= {
-    #:      joint-iso-itu-t(2) country(16) us(840) organization(1)
-    #:       gov(101) csor(3) nistalgorithm(4) hashalgs(2) 1
-    #:  }
+    #  id-sha256    OBJECT IDENTIFIER ::= {
+    #      joint-iso-itu-t(2) country(16) us(840) organization(1)
+    #       gov(101) csor(3) nistalgorithm(4) hashalgs(2) 1
+    #  }
     "SHA256": "2.16.840.1.101.3.4.2.1",
     "sha256": "2.16.840.1.101.3.4.2.1",
 
-    #:  id-sha384    OBJECT IDENTIFIER ::= {
-    #:      joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3)
-    #:	     nistalgorithm(4) hashalgs(2) 2
-    #:  }
+    #  id-sha384    OBJECT IDENTIFIER ::= {
+    #      joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3)
+    #	     nistalgorithm(4) hashalgs(2) 2
+    #  }
     "SHA384": '2.16.840.1.101.3.4.2.2',
     "sha384": '2.16.840.1.101.3.4.2.2',
 
-    #:  id-sha512    OBJECT IDENTIFIER ::= {
-    #:	    joint-iso-itu-t(2)
-    #:	    country(16) us(840) organization(1) gov(101) csor(3) nistalgorithm(4) hashalgs(2) 3
-    #:  }
+    #  id-sha512    OBJECT IDENTIFIER ::= {
+    #	    joint-iso-itu-t(2)
+    #	    country(16) us(840) organization(1) gov(101) csor(3) nistalgorithm(4) hashalgs(2) 3
+    #  }
     "SHA512": "2.16.840.1.101.3.4.2.3",
     "sha512": "2.16.840.1.101.3.4.2.3",
 
-    #: id-sha3-224  OBJECT-IDENTIFIER ::= {
-    #:      hashAlgs 7
-    #:      }
+    # id-sha3-224  OBJECT-IDENTIFIER ::= {
+    #      hashAlgs 7
+    #      }
     "SHA3_224" : "2.16.840.1.101.3.4.2.7",
     "sha3_224" : "2.16.840.1.101.3.4.2.7",
 
-    #: id-sha3-256  OBJECT-IDENTIFIER ::= {
-    #:      hashAlgs 8
-    #:      }
+    # id-sha3-256  OBJECT-IDENTIFIER ::= {
+    #      hashAlgs 8
+    #      }
     "SHA3_256" : "2.16.840.1.101.3.4.2.8",
     "sha3_256" : "2.16.840.1.101.3.4.2.8",
 
-    #: id-sha3-384  OBJECT-IDENTIFIER ::= {
-    #:      hashAlgs 9
-    #:      }
+    # id-sha3-384  OBJECT-IDENTIFIER ::= {
+    #      hashAlgs 9
+    #      }
     "SHA3_384" : "2.16.840.1.101.3.4.2.9",
     "sha3_384" : "2.16.840.1.101.3.4.2.9",
 
-    #: id-sha3-512  OBJECT-IDENTIFIER ::= {
-    #:      hashAlgs 10
-    #:      }
+    # id-sha3-512  OBJECT-IDENTIFIER ::= {
+    #      hashAlgs 10
+    #      }
     "SHA3_512" : "2.16.840.1.101.3.4.2.10",
     "sha3_512" : "2.16.840.1.101.3.4.2.10",
 }
