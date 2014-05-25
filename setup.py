@@ -34,10 +34,16 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
+longdesc = """
+This is a self-contained, public domain package of low-level
+cryptographic primitives.
 
-from distutils import core
-from distutils.core import Extension, Command
+It supports Python 2.4 or newer, all Python 3 versions and PyPy.
+
+It is a (recent) fork of PyCrypto (https://www.dlitz.net/software/pycrypto).
+"""
+
+from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
 from distutils.errors import CCompilerError
 import distutils
@@ -295,145 +301,153 @@ class TestCommand(Command):
     sub_commands = [ ('build', None) ]
 
 
+setup(
+    name = "pycryptodome",
+    version = "3.0rc1",
+    description = "Cryptographic library for Python",
+    long_description = longdesc,
+    author = "Legrandin",
+    author_email = "helderijs@gmail.com",
+    url = "https://www.pycryptodome.org",
+    license = "Public Domain",
+    platforms = 'Posix; MacOS X; Windows',
+    classifiers = [
+        'Development Status :: 5 - Production/Stable',
+        'License :: Public Domain',
+        'Intended Audience :: Developers',
+        'Operating System :: Unix',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: MacOS :: MacOS X',
+        'Topic :: Security :: Cryptography',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.4',
+        'Programming Language :: Python :: 3',
+    ],
+    packages =  [
+        "Crypto",
+        "Crypto.Cipher",
+        "Crypto.Hash",
+        "Crypto.IO",
+        "Crypto.PublicKey",
+        "Crypto.Protocol",
+        "Crypto.Random",
+        "Crypto.Random.Fortuna",
+        "Crypto.Signature",
+        "Crypto.Util",
+        "Crypto.SelfTest",
+        "Crypto.SelfTest.Cipher",
+        "Crypto.SelfTest.Hash",
+        "Crypto.SelfTest.IO",
+        "Crypto.SelfTest.Protocol",
+        "Crypto.SelfTest.PublicKey",
+        "Crypto.SelfTest.Random",
+        "Crypto.SelfTest.Random.Fortuna",
+        "Crypto.SelfTest.Signature",
+        "Crypto.SelfTest.Util",
+        ],
+    package_dir = { "Crypto": "lib/Crypto" },
+    package_data = {
+        "Crypto.SelfTest.Hash" : [
+            "test_vectors/SHA3/*.txt" ],
+        "Crypto.SelfTest.Signature" : [
+            "test_vectors/DSA/*.*" ],
+        },
+    cmdclass = {
+        'build_ext':PCTBuildExt,
+        'build_py': PCTBuildPy,
+        'test': TestCommand
+        },
+    ext_modules = [
+        # _fastmath (uses GNU mp library)
+        Extension("Crypto.PublicKey._fastmath",
+            include_dirs=['src/'],
+            libraries=['gmp'],
+            sources=["src/_fastmath.c"]),
 
-kw = {'name':"pycrypto",
-      'version':"2.7.1a",  # See also: lib/Crypto/__init__.py
-      'description':"Cryptographic modules for Python.",
-      'author':"Dwayne C. Litzenberger",
-      'author_email':"dlitz@dlitz.net",
-      'url':"http://www.pycrypto.org/",
+        # Hash functions
+        Extension("Crypto.Hash.MD2",
+            include_dirs=['src/'],
+            sources=["src/MD2.c"]),
+        Extension("Crypto.Hash.MD4",
+            include_dirs=['src/'],
+            sources=["src/MD4.c"]),
+        Extension("Crypto.Hash.SHA256",
+            include_dirs=['src/'],
+            sources=["src/SHA256.c"]),
+        Extension("Crypto.Hash.SHA224",
+            include_dirs=['src/'],
+            sources=["src/SHA224.c"]),
+        Extension("Crypto.Hash.SHA384",
+            include_dirs=['src/'],
+            sources=["src/SHA384.c"]),
+        Extension("Crypto.Hash.SHA512",
+            include_dirs=['src/'],
+            sources=["src/SHA512.c"]),
+        Extension("Crypto.Hash.RIPEMD160",
+            include_dirs=['src/'],
+            sources=["src/RIPEMD160.c"],
+            define_macros=[endianness_macro()]),
+        Extension("Crypto.Hash.SHA3_224",
+            include_dirs=['src/'],
+            sources=["src/SHA3_224.c"]),
+        Extension("Crypto.Hash.SHA3_256",
+            include_dirs=['src/'],
+            sources=["src/SHA3_256.c"]),
+        Extension("Crypto.Hash.SHA3_384",
+            include_dirs=['src/'],
+            sources=["src/SHA3_384.c"]),
+        Extension("Crypto.Hash.SHA3_512",
+            include_dirs=['src/'],
+            sources=["src/SHA3_512.c"]),
 
-      'cmdclass' : {'build_ext':PCTBuildExt, 'build_py': PCTBuildPy, 'test': TestCommand },
-      'packages' : ["Crypto", "Crypto.Hash", "Crypto.Cipher", "Crypto.Util",
-                  "Crypto.Random",
-                  "Crypto.Random.Fortuna",
-                  "Crypto.SelfTest",
-                  "Crypto.SelfTest.Cipher",
-                  "Crypto.SelfTest.Hash",
-                  "Crypto.SelfTest.Protocol",
-                  "Crypto.SelfTest.PublicKey",
-                  "Crypto.SelfTest.Random",
-                  "Crypto.SelfTest.Random.Fortuna",
-                  "Crypto.SelfTest.Util",
-                  "Crypto.SelfTest.Signature",
-                  "Crypto.SelfTest.IO",
-                  "Crypto.Protocol",
-                  "Crypto.PublicKey",
-                  "Crypto.Signature",
-                  "Crypto.IO"],
-      'package_dir' : { "Crypto": "lib/Crypto" },
-      'package_data' : {
-                    "Crypto.SelfTest.Hash" : [
-                        "test_vectors/SHA3/*.txt" ],
-                    "Crypto.SelfTest.Signature" : [
-                        "test_vectors/DSA/*.*" ],
-                    },
-      'ext_modules': [
-            # _fastmath (uses GNU mp library)
-            Extension("Crypto.PublicKey._fastmath",
-                      include_dirs=['src/'],
-                      libraries=['gmp'],
-                      sources=["src/_fastmath.c"]),
+        # Block encryption algorithms
+        Extension("Crypto.Cipher._AES",
+            include_dirs=['src/'],
+            sources=["src/AES.c"]),
+        Extension("Crypto.Cipher._AESNI",
+            include_dirs=['src/'],
+            sources=["src/AESNI.c"]),
+        Extension("Crypto.Cipher._ARC2",
+            include_dirs=['src/'],
+            sources=["src/ARC2.c"]),
+        Extension("Crypto.Cipher._Blowfish",
+            include_dirs=['src/'],
+            sources=["src/Blowfish.c"]),
+        Extension("Crypto.Cipher._CAST",
+            include_dirs=['src/'],
+            sources=["src/CAST.c"]),
+        Extension("Crypto.Cipher._DES",
+            include_dirs=['src/', 'src/libtom/'],
+            sources=["src/DES.c"]),
+        Extension("Crypto.Cipher._DES3",
+            include_dirs=['src/', 'src/libtom/'],
+            sources=["src/DES3.c"]),
+        Extension("Crypto.Util._galois",
+            include_dirs=['src/'],
+            sources=['src/galois.c']),
+        Extension("Crypto.Util.cpuid",
+            include_dirs=['src/'],
+            sources=['src/cpuid.c']),
 
-            # Hash functions
-            Extension("Crypto.Hash.MD2",
-                      include_dirs=['src/'],
-                      sources=["src/MD2.c"]),
-            Extension("Crypto.Hash.MD4",
-                      include_dirs=['src/'],
-                      sources=["src/MD4.c"]),
-            Extension("Crypto.Hash.SHA256",
-                      include_dirs=['src/'],
-                      sources=["src/SHA256.c"]),
-            Extension("Crypto.Hash.SHA224",
-                      include_dirs=['src/'],
-                      sources=["src/SHA224.c"]),
-            Extension("Crypto.Hash.SHA384",
-                      include_dirs=['src/'],
-                      sources=["src/SHA384.c"]),
-            Extension("Crypto.Hash.SHA512",
-                      include_dirs=['src/'],
-                      sources=["src/SHA512.c"]),
-            Extension("Crypto.Hash.RIPEMD160",
-                      include_dirs=['src/'],
-                      sources=["src/RIPEMD160.c"],
-                      define_macros=[endianness_macro()]),
-            Extension("Crypto.Hash.SHA3_224",
-                      include_dirs=['src/'],
-                      sources=["src/SHA3_224.c"]),
-            Extension("Crypto.Hash.SHA3_256",
-                      include_dirs=['src/'],
-                      sources=["src/SHA3_256.c"]),
-            Extension("Crypto.Hash.SHA3_384",
-                      include_dirs=['src/'],
-                      sources=["src/SHA3_384.c"]),
-            Extension("Crypto.Hash.SHA3_512",
-                      include_dirs=['src/'],
-                      sources=["src/SHA3_512.c"]),
+        # Stream ciphers
+        Extension("Crypto.Cipher._ARC4",
+            include_dirs=['src/'],
+            sources=["src/ARC4.c"]),
+        Extension("Crypto.Cipher._XOR",
+            include_dirs=['src/'],
+            sources=["src/XOR.c"]),
+        Extension("Crypto.Cipher._Salsa20",
+            include_dirs=['src/', 'src/libtom/'],
+            sources=["src/Salsa20.c"]),
 
-            # Block encryption algorithms
-            Extension("Crypto.Cipher._AES",
-                      include_dirs=['src/'],
-                      sources=["src/AES.c"]),
-            Extension("Crypto.Cipher._AESNI",
-                      include_dirs=['src/'],
-                      sources=["src/AESNI.c"]),
-            Extension("Crypto.Cipher._ARC2",
-                      include_dirs=['src/'],
-                      sources=["src/ARC2.c"]),
-            Extension("Crypto.Cipher._Blowfish",
-                      include_dirs=['src/'],
-                      sources=["src/Blowfish.c"]),
-            Extension("Crypto.Cipher._CAST",
-                      include_dirs=['src/'],
-                      sources=["src/CAST.c"]),
-            Extension("Crypto.Cipher._DES",
-                      include_dirs=['src/', 'src/libtom/'],
-                      sources=["src/DES.c"]),
-            Extension("Crypto.Cipher._DES3",
-                      include_dirs=['src/', 'src/libtom/'],
-                      sources=["src/DES3.c"]),
-            Extension("Crypto.Util._galois",
-                      include_dirs=['src/'],
-                      sources=['src/galois.c']),
-            Extension("Crypto.Util.cpuid",
-                      include_dirs=['src/'],
-                      sources=['src/cpuid.c']),
+        # Utility modules
+        Extension("Crypto.Util.strxor",
+            include_dirs=['src/'],
+            sources=['src/strxor.c']),
 
-            # Stream ciphers
-            Extension("Crypto.Cipher._ARC4",
-                      include_dirs=['src/'],
-                      sources=["src/ARC4.c"]),
-            Extension("Crypto.Cipher._XOR",
-                      include_dirs=['src/'],
-                      sources=["src/XOR.c"]),
-            Extension("Crypto.Cipher._Salsa20",
-                      include_dirs=['src/', 'src/libtom/'],
-                      sources=["src/Salsa20.c"]),
-
-            # Utility modules
-            Extension("Crypto.Util.strxor",
-                      include_dirs=['src/'],
-                      sources=['src/strxor.c']),
-
-            # Counter modules
-            Extension("Crypto.Util._counter",
-                      include_dirs=['src/'],
-                      sources=['src/_counter.c']),
-    ]
-}
-
-kw['classifiers'] = [
-    'Development Status :: 5 - Production/Stable',
-    'License :: Public Domain',
-    'Intended Audience :: Developers',
-    'Operating System :: Unix',
-    'Operating System :: Microsoft :: Windows',
-    'Operating System :: MacOS :: MacOS X',
-    'Topic :: Security :: Cryptography',
-    'Programming Language :: Python :: 2',
-    'Programming Language :: Python :: 3',
-    ]
-
-core.setup(**kw)
-
+        # Counter modules
+        Extension("Crypto.Util._counter",
+            include_dirs=['src/'],
+            sources=['src/_counter.c']),
+        ]
+)
