@@ -312,7 +312,7 @@ setup(
     license = "Public Domain",
     platforms = 'Posix; MacOS X; Windows',
     classifiers = [
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
         'License :: Public Domain',
         'Intended Audience :: Developers',
         'Operating System :: Unix',
