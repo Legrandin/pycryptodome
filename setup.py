@@ -151,7 +151,7 @@ def aesni_support():
     if test_compilation(source):
         extra_cc_options += [ "-DHAVE_CPUID_H" ]
     else:
-        return (False, None)
+        return (False, [])
 
     source = """
     #include <wmmintrin.h>
@@ -204,7 +204,7 @@ class PCTBuildExt (build_ext):
         if compile_supports_aesni:
             PrintErr("Compiling support for Intel AES instructions")
         else:
-            PrintErr ("warning: no support for Intel AESNI intructions; Not building " +
+            PrintErr ("warning: no support for Intel AESNI instructions; Not building " +
                 "Crypto.Cipher._AESNI")
             self.__remove_extensions(["Crypto.Cipher._AESNI"])
 
@@ -309,7 +309,7 @@ setup(
     long_description = longdesc,
     author = "Legrandin",
     author_email = "helderijs@gmail.com",
-    url = "https://www.pycryptodome.org",
+    url = "http://www.pycryptodome.org",
     license = "Public Domain",
     platforms = 'Posix; MacOS X; Windows',
     classifiers = [
