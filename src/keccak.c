@@ -277,7 +277,7 @@ keccak_absorb (keccak_state *self, unsigned char *buffer, int length)
         return KECCAK_ERR_CANTABSORB;
     
     while (length > (self->bufend - self->bufptr)) {
-        bytestocopy = self->bufend - self->bufptr + 1;
+        bytestocopy = (int)(self->bufend - self->bufptr + 1);
         memcpy (self->bufptr, buffer, bytestocopy);
         keccak_absorb_internal (self);
         keccak_function (self->state);
@@ -346,7 +346,7 @@ keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
     */
     
     while (length > (self->bufend - self->bufptr)) {
-        bytestocopy = self->bufend - self->bufptr + 1;
+        bytestocopy = (int)(self->bufend - self->bufptr + 1);
         memcpy (buffer, self->bufptr, bytestocopy);
         keccak_function (self->state);
         keccak_squeeze_internal (self);

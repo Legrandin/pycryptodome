@@ -434,8 +434,8 @@ ALG_Encrypt(ALGobject *self, PyObject *args)
 					Py_BLOCK_THREADS;
 					PyErr_Format(PyExc_TypeError,
 						     "CTR counter function returned "
-						     "string of length %zi, not %i",
-						     ctr->buf_size, BLOCK_SIZE);
+						     "string of length %i, not %i",
+						     (int)ctr->buf_size, BLOCK_SIZE);
 					free(buffer);
 					return NULL;
 				}
