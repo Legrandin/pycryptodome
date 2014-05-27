@@ -52,13 +52,13 @@ typedef struct {
 /* The Blowfish round function F.  Everything is taken modulo 2**32 */
 #define F(a, b, c, d) (((a) + (b)) ^ (c)) + (d)
 
-static inline uint32_t bytes_to_word(const unsigned char *in)
+static uint32_t bytes_to_word(const unsigned char *in)
 {
     /* big endian */
     return (in[0] << 24) | (in[1] << 16) | (in[2] << 8) | in[3];
 }
 
-static inline void word_to_bytes(uint32_t w, unsigned char *out)
+static void word_to_bytes(uint32_t w, unsigned char *out)
 {
     /* big endian */
     out[0] = (w >> 24) & 0xff;
@@ -67,7 +67,7 @@ static inline void word_to_bytes(uint32_t w, unsigned char *out)
     out[3] = w & 0xff;
 }
 
-static inline void inline_encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
+static void inline_encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;
@@ -97,7 +97,7 @@ static inline void inline_encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t 
     *pxR = xR;
 }
 
-static inline void inline_decrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
+static void inline_decrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;

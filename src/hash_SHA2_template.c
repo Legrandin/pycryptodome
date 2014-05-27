@@ -161,27 +161,23 @@ static void sha_done(hash_state * hs, unsigned char *hash)
                    ((WORD_SIZE - 1 - (i % WORD_SIZE)) * 8)) & 0xFF;
 }
 
-// Done
 static void hash_init (hash_state *ptr)
 {
 	sha_init(ptr);
 }
 
-// Done
 static void
 hash_update (hash_state *self, const U8 *buf, int len)
 {
 	sha_process(self,(unsigned char *)buf, len);
 }
 
-// Done
 static void
 hash_copy(hash_state *src, hash_state *dest)
 {
 	memcpy(dest,src,sizeof(hash_state));
 }
 
-// Done
 static PyObject *
 hash_digest (const hash_state *self)
 {

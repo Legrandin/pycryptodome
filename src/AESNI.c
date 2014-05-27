@@ -175,8 +175,8 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
 
     /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
     offset = ALIGNMENT - ((uintptr_t)self->buffer & (ALIGNMENT-1));
-    self->ek = (uint8_t*)self->buffer + offset;
-    self->dk = (uint8_t*)self->ek + (MAXNR+1)*sizeof(__m128i);
+    self->ek = (__m128i*)((uint8_t*)self->buffer + offset);
+    self->dk = (__m128i*)((uint8_t*)self->ek + (MAXNR+1)*sizeof(__m128i));
 
     self->rounds = nr;
     aes_key_setup_enc(self->ek, key, keylen);

@@ -185,6 +185,7 @@ class PCTBuildExt (build_ext):
         # Detect which modules should be compiled
         self.detect_modules()
 
+        # Call the superclass's build_extensions method
         build_ext.build_extensions(self)
 
     def detect_modules (self):

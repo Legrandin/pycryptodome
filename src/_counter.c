@@ -138,7 +138,7 @@ CounterObject_dealloc(PCT_CounterObject *self)
     PyObject_Del(self);
 }
 
-static inline PyObject *
+static PyObject *
 _CounterObject_next_value(PCT_CounterObject *self, int little_endian)
 {
     unsigned int i;
