@@ -25,21 +25,10 @@
 #include "pycrypto_common.h"
 #include "pycrypto_compat.h"
 
-#ifdef HAVE_CPUID_H
-
+#if defined HAVE_CPUID_H
 #include <cpuid.h>
-
-/* it's bit_AES with gcc */
-#ifndef bit_AES
-/* but some versions of clang provide bit_AESNI instead */
-#ifdef bit_AESNI
-#define bit_AES bit_AESNI
-/* and others do not provide any define at all */
-#else
-#define bit_AES 0x02000000
-#endif
-#endif
-
+#elif defined HAVE_INTRIN_H
+#include <intrin.h>
 #endif
 
 /*
@@ -54,24 +43,29 @@ static char have_aes_ni__doc__[] =
 static PyObject *
 have_aes_ni(PyObject *self, PyObject *args)
 {
+    uint32_t info[4];
+
+    memset(info, 0, sizeof info);
+    
     if (!PyArg_ParseTuple(args, ""))
         return NULL;
 
-#ifndef HAVE_CPUID_H
-    Py_INCREF(Py_False);
-    return Py_False;
-#else
-    uint32_t eax, ebx, ecx, edx;
-    /* call cpuid to check if AES-NI instructions are available */
-    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
-        if (ecx & bit_AES) {
-            Py_INCREF(Py_True);
-            return Py_True;
-        }
-    }
-    Py_INCREF(Py_False);
-    return Py_False;
+    /* Call cpuid to retrieve x86 Processor Info and Feature bits.
+     * info[2] is ecx. If bit 25 is set, the CPU supports the
+     * AES-NI extension. */
+#if defined HAVE_CPUID_H
+    __get_cpuid(1, info, info+1, info+2, info+3);
+#elif defined HAVE_INTRIN_H
+    __cpuidex(info, 1, 0);
 #endif
+
+    if (info[2] & ((int)1<<25)) {
+        Py_INCREF(Py_True);
+        return Py_True;
+    }
+    
+    Py_INCREF(Py_False);
+    return Py_False;
 }
 
 /*

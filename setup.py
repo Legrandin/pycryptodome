@@ -88,12 +88,14 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
     # Name for the temporary executable
     oname = tempfile.mktemp(".out")
 
+    debug = False
     # Mute the compiler and the linker
-    old_stdout = os.dup(sys.stdout.fileno())
-    old_stderr = os.dup(sys.stderr.fileno())
-    dev_null = open(os.devnull, "w")
-    os.dup2(dev_null.fileno(), sys.stdout.fileno())
-    os.dup2(dev_null.fileno(), sys.stderr.fileno())
+    if not debug:
+        old_stdout = os.dup(sys.stdout.fileno())
+        old_stderr = os.dup(sys.stderr.fileno())
+        dev_null = open(os.devnull, "w")
+        os.dup2(dev_null.fileno(), sys.stdout.fileno())
+        os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
     objects = []
     try:
@@ -111,12 +113,13 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
             pass
 
     # Restore stdout and stderr
-    if old_stdout is not None:
-        os.dup2(old_stdout, sys.stdout.fileno())
-    if old_stderr is not None:
-        os.dup2(old_stderr, sys.stderr.fileno())
-    if dev_null is not None:
-        dev_null.close()
+    if not debug:
+        if old_stdout is not None:
+            os.dup2(old_stdout, sys.stdout.fileno())
+        if old_stderr is not None:
+            os.dup2(old_stderr, sys.stderr.fileno())
+        if dev_null is not None:
+            dev_null.close()
 
     return result
 
@@ -135,40 +138,7 @@ def libgmp_exists():
 
     return test_compilation(source, extra_libraries=('gmp',))
 
-def aesni_support():
 
-    extra_cc_options = []
-
-    source = """
-    #include <cpuid.h>
-    int main(void)
-    {
-        unsigned int eax, ebx, ecx, edx;
-        __get_cpuid(1, &eax, &ebx, &ecx, &edx);
-        return 0;
-    }
-    """
-    if test_compilation(source):
-        extra_cc_options += [ "-DHAVE_CPUID_H" ]
-    else:
-        return (False, [])
-
-    source = """
-    #include <wmmintrin.h>
-    __m128i f(__m128i x, __m128i y) {
-        return _mm_aesenc_si128(x, y);
-    }
-    int main(void) {
-        return 0;
-    }
-    """
-
-    result = test_compilation(source)
-    if not result:
-        result = test_compilation(source, extra_cc_options=['-maes'])
-        if result:
-            extra_cc_options += ['-maes']
-    return (result, extra_cc_options)
 
 
 def endianness_macro():
@@ -188,51 +158,82 @@ class PCTBuildExt (build_ext):
         # Call the superclass's build_extensions method
         build_ext.build_extensions(self)
 
+    def check_cpuid_h(self):
+        # UNIX
+        source = """
+        #include <cpuid.h>
+        int main(void)
+        {
+            unsigned int eax, ebx, ecx, edx;
+            __get_cpuid(1, &eax, &ebx, &ecx, &edx);
+            return 0;
+        }
+        """
+        if test_compilation(source):
+            self.compiler.define_macro("HAVE_CPUID_H")
+            return True
+        else:
+            return False
+
+    def check_intrin_h(self):
+        # Windows
+        source = """
+        #include <intrin.h>
+        int main(void)
+        {
+            int a, b[4];
+            __cpuid(b, a);
+            return 0;
+        }
+        """
+        if test_compilation(source):
+            self.compiler.define_macro("HAVE_INTRIN_H")
+            return True
+        else:
+            return False
+
+    def check_aesni(self):
+
+        source = """
+        #include <wmmintrin.h>
+        __m128i f(__m128i x, __m128i y) {
+            return _mm_aesenc_si128(x, y);
+        }
+        int main(void) {
+            return 0;
+        }
+        """
+        aesni = [ x for x in self.extensions if x.name == "Crypto.Cipher._AESNI" ][0]
+        result = test_compilation(source)
+        if not result:
+            result = test_compilation(source, extra_cc_options=['-maes'])
+            if result:
+                aesni.extra_compile_args += ['-maes']
+        return result
+
     def detect_modules (self):
+
         # Detect libgmp and don't build _fastmath if it is missing.
         if libgmp_exists():
             PrintErr("Compiling _fastmath using the GMP library")
         else:
             PrintErr ("warning: GMP library not found; Not building " +
                 "Crypto.PublicKey._fastmath.")
-            self.__remove_extensions(["Crypto.PublicKey._fastmath"])
+            self.remove_extensions(["Crypto.PublicKey._fastmath"])
 
-        # Detect compiler support for AESNI
-        compile_supports_aesni, extra_cc_options = aesni_support()
-        for option in extra_cc_options:
-                self.__add_compiler_option(option)
-        if compile_supports_aesni:
+        # Detect compiler support for CPUID instruction and AESNI
+        if (self.check_cpuid_h() or self.check_intrin_h()) and self.check_aesni():
             PrintErr("Compiling support for Intel AES instructions")
         else:
             PrintErr ("warning: no support for Intel AESNI instructions; Not building " +
-                "Crypto.Cipher._AESNI")
-            self.__remove_extensions(["Crypto.Cipher._AESNI"])
+                      "Crypto.Cipher._AESNI")
+            self.remove_extensions(["Crypto.Cipher._AESNI"])
 
-    def __remove_extensions(self, names):
+    def remove_extensions(self, names):
         """Remove the specified extension from the list of extensions
         to build"""
 
         self.extensions = [ x for x in self.extensions if x.name not in names ]
-
-    def __remove_compiler_option(self, option):
-        """Remove the specified compiler option.
-
-        Return true if the option was found.  Return false otherwise.
-        """
-        found = 0
-        for attrname in ('compiler', 'compiler_so'):
-            compiler = getattr(self.compiler, attrname, None)
-            if compiler is not None:
-                while option in compiler:
-                    compiler.remove(option)
-                    found += 1
-        return found
-
-    def __add_compiler_option(self, option):
-        for attrname in ('compiler', 'compiler_so'):
-            compiler = getattr(self.compiler, attrname, None)
-            if compiler is not None:
-                compiler.append(option)
 
 class PCTBuildPy(build_py):
     def find_package_modules(self, package, package_dir, *args, **kwargs):

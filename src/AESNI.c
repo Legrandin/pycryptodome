@@ -36,8 +36,6 @@
 
 #define ALIGNMENT 16
 
-typedef unsigned char u8;
-
 typedef struct {
     /** Both ek and dk points into the buffer and are aligned to the 16 byte boundary **/
     __m128i* ek;
@@ -72,8 +70,22 @@ static __m128i aes192_keyexpand_2(__m128i key, __m128i key2)
 #define KEYEXP256(K1, K2, I)  KEYEXP128_H(K1, K2, I, 0xff)
 #define KEYEXP256_2(K1, K2) KEYEXP128_H(K1, K2, 0x00, 0xaa)
 
+#define SHUFFLE128_0(a, b)      \
+    _mm_castpd_si128(           \
+      _mm_shuffle_pd(           \
+        _mm_castsi128_pd(a),    \
+        _mm_castsi128_pd(b),    \
+        0))
+
+#define SHUFFLE128_1(a, b)      \
+    _mm_castpd_si128(           \
+      _mm_shuffle_pd(           \
+        _mm_castsi128_pd(a),    \
+        _mm_castsi128_pd(b),    \
+        1))
+
 /* Encryption key setup */
-static void aes_key_setup_enc(__m128i rk[], const u8* cipherKey, int keylen)
+static void aes_key_setup_enc(__m128i rk[], const uint8_t* cipherKey, int keylen)
 {
     switch (keylen) {
         case 16:
@@ -100,26 +112,26 @@ static void aes_key_setup_enc(__m128i rk[], const u8* cipherKey, int keylen)
             rk[1] = _mm_loadu_si128((const __m128i*) (cipherKey+16));
             temp[0] = KEYEXP192(rk[0], rk[1], 0x01);
             temp[1] = KEYEXP192_2(temp[0], rk[1]);
-            rk[1] = (__m128i)_mm_shuffle_pd((__m128d)rk[1], (__m128d)temp[0], 0);
-            rk[2] = (__m128i)_mm_shuffle_pd((__m128d)temp[0], (__m128d)temp[1], 1);
+            rk[1] = SHUFFLE128_0(rk[1], temp[0]);
+            rk[2] = SHUFFLE128_1(temp[0], temp[1]);
             rk[3] = KEYEXP192(temp[0], temp[1], 0x02);
             rk[4] = KEYEXP192_2(rk[3], temp[1]);
             temp[0] = KEYEXP192(rk[3], rk[4], 0x04);
             temp[1] = KEYEXP192_2(temp[0], rk[4]);
-            rk[4] = (__m128i)_mm_shuffle_pd((__m128d)rk[4], (__m128d)temp[0], 0);
-            rk[5] = (__m128i)_mm_shuffle_pd((__m128d)temp[0], (__m128d)temp[1], 1);
+            rk[4] = SHUFFLE128_0(rk[4], temp[0]);
+            rk[5] = SHUFFLE128_1(temp[0], temp[1]); 
             rk[6] = KEYEXP192(temp[0], temp[1], 0x08);
             rk[7] = KEYEXP192_2(rk[6], temp[1]);
             temp[0] = KEYEXP192(rk[6], rk[7], 0x10);
             temp[1] = KEYEXP192_2(temp[0], rk[7]);
-            rk[7] = (__m128i)_mm_shuffle_pd((__m128d)rk[7], (__m128d)temp[0], 0);
-            rk[8] = (__m128i)_mm_shuffle_pd((__m128d)temp[0], (__m128d)temp[1], 1);
+            rk[7] = SHUFFLE128_0(rk[7], temp[0]);
+            rk[8] = SHUFFLE128_1(temp[0], temp[1]);
             rk[9] = KEYEXP192(temp[0], temp[1], 0x20);
             rk[10] = KEYEXP192_2(rk[9], temp[1]);
             temp[0] = KEYEXP192(rk[9], rk[10], 0x40);
             temp[1] = KEYEXP192_2(temp[0], rk[10]);
-            rk[10] = (__m128i)_mm_shuffle_pd((__m128d)rk[10], (__m128d) temp[0], 0);
-            rk[11] = (__m128i)_mm_shuffle_pd((__m128d)temp[0],(__m128d) temp[1], 1);
+            rk[10] = SHUFFLE128_0(rk[10], temp[0]);
+            rk[11] = SHUFFLE128_1(temp[0], temp[1]);            
             rk[12] = KEYEXP192(temp[0], temp[1], 0x80);
             break;
         }
@@ -188,7 +200,7 @@ static void block_finalize(block_state* self)
     memset(self, 0, sizeof(*self));
 }
 
-static void block_encrypt(block_state* self, const u8* in, u8* out)
+static void block_encrypt(block_state* self, const uint8_t* in, uint8_t* out)
 {
     __m128i m = _mm_loadu_si128((const __m128i*) in);
     /* first 9 rounds */
@@ -216,7 +228,7 @@ static void block_encrypt(block_state* self, const u8* in, u8* out)
     _mm_storeu_si128((__m128i*) out, m);
 }
 
-static void block_decrypt(block_state* self, const u8* in, u8* out)
+static void block_decrypt(block_state* self, const uint8_t* in, uint8_t* out)
 {
     __m128i m = _mm_loadu_si128((const __m128i*) in);
     /* first 9 rounds */
