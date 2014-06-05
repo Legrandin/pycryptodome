@@ -139,17 +139,6 @@ def libgmp_exists():
     return test_compilation(source, extra_libraries=('gmp',))
 
 
-
-
-def endianness_macro():
-    import struct
-    s = struct.pack("@I", 0x33221100)
-    if s == "\x00\x11\x22\x33".encode():     # little endian
-        return ('PCT_LITTLE_ENDIAN', 1)
-    elif s == "\x33\x22\x11\x00".encode():   # big endian
-        return ('PCT_BIG_ENDIAN', 1)
-    raise AssertionError("Machine is neither little-endian nor big-endian")
-
 class PCTBuildExt (build_ext):
     def build_extensions(self):
         # Detect which modules should be compiled
@@ -387,8 +376,7 @@ setup(
             sources=["src/SHA512.c"]),
         Extension("Crypto.Hash.RIPEMD160",
             include_dirs=['src/'],
-            sources=["src/RIPEMD160.c"],
-            define_macros=[endianness_macro()]),
+            sources=["src/RIPEMD160.c"]),
         Extension("Crypto.Hash.SHA3_224",
             include_dirs=['src/'],
             sources=["src/SHA3_224.c"]),
