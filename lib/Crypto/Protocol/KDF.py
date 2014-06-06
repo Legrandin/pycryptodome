@@ -112,15 +112,17 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
     password = tobytes(password)
     if prf is None:
         prf = lambda p,s: HMAC.new(p,s,SHA1).digest()
+    
+    def link(s):
+        s[0], s[1] = s[1], prf(password, s[1])
+        return s[0]
+
     key = b('')
     i = 1
     while len(key)<dkLen:
-        U = previousU = prf(password,salt+struct.pack(">I", i))
-        for j in xrange(count-1):
-            previousU = t = prf(password,previousU)
-            U = strxor(U,t)
-        key += U
-        i = i + 1
+        s = [ prf(password, salt + struct.pack(">I", i)) ] * 2
+        key += reduce(strxor, (link(s) for j in range(count)) )
+        i += 1
     return key[:dkLen]
 
 
