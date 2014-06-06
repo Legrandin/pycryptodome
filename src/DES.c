@@ -33,10 +33,6 @@
 /* Include the actial DES implementation */
 #include "libtom/tomcrypt_des.c"
 
-#undef DES  /* this is needed because tomcrypt_custom.h defines DES to an empty string */
-
-#include <assert.h>
-
 typedef struct {
     symmetric_key sk;
 } block_state;
@@ -86,24 +82,20 @@ static void block_finalize(block_state *self)
 
 static void block_encrypt(block_state *self, unsigned char *in, unsigned char *out)
 {
-    int rc;
 #ifdef PCT_DES3_MODULE
-    rc = des3_ecb_encrypt(in, out, &self->sk);
+    des3_ecb_encrypt(in, out, &self->sk);
 #else
-    rc = des_ecb_encrypt(in, out, &self->sk);
+    des_ecb_encrypt(in, out, &self->sk);
 #endif
-    assert(rc == CRYPT_OK);
 }
 
 static void block_decrypt(block_state *self, unsigned char *in, unsigned char *out)
 {
-    int rc;
 #ifdef PCT_DES3_MODULE
-    rc = des3_ecb_decrypt(in, out, &self->sk);
+    des3_ecb_decrypt(in, out, &self->sk);
 #else
-    rc = des_ecb_decrypt(in, out, &self->sk);
+    des_ecb_decrypt(in, out, &self->sk);
 #endif
-    assert(rc == CRYPT_OK);
 }
 
 #ifdef PCT_DES3_MODULE
