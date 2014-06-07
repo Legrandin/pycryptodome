@@ -46,9 +46,10 @@ the RSA key:
         >>> key = RSA.importKey(open('pubkey.der').read())
         >>> h = SHA.new(message)
         >>> verifier = PKCS1_v1_5.new(key)
-        >>> if verifier.verify(h, signature):
-        >>>    print "The signature is authentic."
-        >>> else:
+        >>> try:
+        >>>     verifier.verify(h, signature):
+        >>>     print "The signature is authentic."
+        >>> except ValueError:
         >>>    print "The signature is not authentic."
 
 :undocumented: __revision__, __package__
@@ -82,18 +83,18 @@ class PKCS115_SigScheme:
         """Return True if this cipher object can be used for signing messages."""
         return self._key.has_private()
 
-    def sign(self, mhash):
+    def sign(self, msg_hash):
         """Produce the PKCS#1 v1.5 signature of a message.
 
         This function is named ``RSASSA-PKCS1-V1_5-SIGN``, and is specified in
         section 8.2.1 of RFC3447.
 
         :Parameters:
-         mhash : hash object
-                The hash that was carried out over the message. This is an object
-                belonging to the `Crypto.Hash` module.
+          msg_hash : hash object
+            The hash that was carried out over the message. This is an object
+            belonging to the `Crypto.Hash` module.
 
-        :Return: The signature encoded as a string.
+        :Return: The signature encoded as a byte string.
         :Raise ValueError:
             If the RSA key length is not sufficiently long to deal with the given
             hash algorithm.
@@ -107,14 +108,14 @@ class PKCS115_SigScheme:
         k = ceil_div(modBits,8) # Convert from bits to bytes
 
         # Step 1
-        em = EMSA_PKCS1_V1_5_ENCODE(mhash, k)
+        em = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k)
         # Step 2a (OS2IP) and 2b (RSASP1)
         m = self._key.decrypt(em)
         # Step 2c (I2OSP)
-        S = bchr(0x00)*(k-len(m)) + m
-        return S
+        signature = bchr(0x00)*(k-len(m)) + m
+        return signature
 
-    def verify(self, mhash, S):
+    def verify(self, msg_hash, signature):
         """Verify that a certain PKCS#1 v1.5 signature is authentic.
 
         This function checks if the party holding the private half of the key
@@ -124,13 +125,13 @@ class PKCS115_SigScheme:
         section 8.2.2 of RFC3447.
 
         :Parameters:
-         mhash : hash object
-                The hash that was carried out over the message. This is an object
-                belonging to the `Crypto.Hash` module.
-         S : string
-                The signature that needs to be validated.
-
-        :Return: True if verification is correct. False otherwise.
+          msg_hash : hash object
+            The hash that was carried out over the message. This is an object
+            belonging to the `Crypto.Hash` module.
+          signature : byte string
+            The signature that needs to be validated.
+        :Raise ValueError:
+            If the signature is not authentic.
         """
         # TODO: Verify the key is RSA
 
@@ -139,32 +140,34 @@ class PKCS115_SigScheme:
         k = ceil_div(modBits,8) # Convert from bits to bytes
 
         # Step 1
-        if len(S) != k:
-            return 0
+        if len(signature) != k:
+            raise ValueError("Signature is not authentic")
         # Step 2a (O2SIP) and 2b (RSAVP1)
         # Note that signature must be smaller than the module
         # but RSA.py won't complain about it.
         # TODO: Fix RSA object; don't do it here.
-        m = self._key.encrypt(S, 0)[0]
+        m = self._key.encrypt(signature, 0)[0]
         # Step 2c (I2OSP)
         em1 = bchr(0x00)*(k-len(m)) + m
         # Step 3
         try:
-            em2_with_params = EMSA_PKCS1_V1_5_ENCODE(mhash, k, True)
+            em2_with_params = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, True)
             # MD hashes always require NULL params in AlgorithmIdentifier.
             # For all others, it is optional.
-            if _HASH_OIDS[mhash.name].startswith('1.2.840.113549.2.'):  # MD2/MD4/MD5
+            if _HASH_OIDS[msg_hash.name].startswith('1.2.840.113549.2.'):  # MD2/MD4/MD5
                 em2_without_params = em2_with_params
             else:
-                em2_without_params = EMSA_PKCS1_V1_5_ENCODE(mhash, k, False)
+                em2_without_params = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, False)
         except ValueError:
-            return 0
+            raise ValueError("Signature is not authentic")
         # Step 4
         # By comparing the full encodings (as opposed to checking each
         # of its components one at a time) we avoid attacks to the padding
         # scheme like Bleichenbacher's (see http://www.mail-archive.com/cryptography@metzdowd.com/msg06537).
         #
-        return em1==em2_with_params or em1==em2_without_params
+        if em1!=em2_with_params and em1!=em2_without_params:
+            raise ValueError("Signature is not authentic")
+
 
 def EMSA_PKCS1_V1_5_ENCODE(hash, emLen, with_hash_parameters=True):
     """

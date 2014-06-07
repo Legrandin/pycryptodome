@@ -191,8 +191,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                         # The real test
                         verifier = PKCS.new(key)
                         self.failIf(verifier.can_sign())
-                        result = verifier.verify(h, t2b(row[2]))
-                        self.failUnless(result)
+                        verifier.verify(h, t2b(row[2]))
 
         def testSignVerify(self):
                         rng = Random.new().read
@@ -204,8 +203,23 @@ class PKCS1_15_Tests(unittest.TestCase):
 
                             signer = PKCS.new(key)
                             s = signer.sign(h)
-                            result = signer.verify(h, s)
-                            self.failUnless(result)
+                            signer.verify(h, s)
+
+        def test_wrong_signature(self):
+            key = RSA.generate(1024)
+            msg_hash = SHA1.new(b("Message"))
+
+            signer = PKCS.new(key)
+            s = signer.sign(msg_hash)
+
+            verifier = PKCS.new(key.publickey())
+
+            # The signature s should be OK
+            verifier.verify(msg_hash, s)
+
+            # Construct an incorrect signature and ensure that the check fails
+            wrong_s = s[:-1] + bchr(bord(s[-1]) ^ 0xFF)
+            self.assertRaises(ValueError, verifier.verify, msg_hash, wrong_s)
 
 class PKCS1_15_NoParams(unittest.TestCase):
     """Verify that PKCS#1 v1.5 signatures pass even without NULL parameters in
@@ -231,8 +245,7 @@ class PKCS1_15_NoParams(unittest.TestCase):
     def testVerify(self):
         verifier = PKCS.new(RSA.importKey(self.rsakey))
         h = SHA1.new(self.msg)
-        result = verifier.verify(h, t2b(self.signature))
-        self.failUnless(result)
+        verifier.verify(h, t2b(self.signature))
 
 def get_tests(config={}):
     tests = []

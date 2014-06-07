@@ -227,11 +227,11 @@ class DSS_SigScheme(object):
             nonce = self._bits2int(mask_t)
         return nonce
 
-    def sign(self, mhash):
+    def sign(self, msg_hash):
         """Produce the DSS signature of a message.
 
         :Parameters:
-          mhash : hash object
+          msg_hash : hash object
             The hash that was carried out over the message.
             The object belongs to the `Crypto.Hash` package.
 
@@ -247,19 +247,19 @@ class DSS_SigScheme(object):
 
         # Generate the nonce k (critical!)
         if self._deterministic:
-            nonce = self._compute_nonce(mhash)
+            nonce = self._compute_nonce(msg_hash)
         else:
-            if self._n > mhash.digest_size * 8:
+            if self._n > msg_hash.digest_size * 8:
                 raise ValueError("Hash is not long enough")
 
-            if not mhash.name.upper().startswith("SHA"):
-                raise ValueError("Hash %s does not belong to SHS" % mhash.name)
+            if not msg_hash.name.upper().startswith("SHA"):
+                raise ValueError("Hash %s does not belong to SHS" % msg_hash.name)
 
             rng = StrongRandom(randfunc=self._randfunc)
             nonce = rng.randint(1, self._key.q - 1)
 
         # Perform signature using the crippled API
-        z = mhash.digest()[:self._n]
+        z = msg_hash.digest()[:self._n]
         sig_pair = self._key.sign(z, nonce)
 
         # Encode the signature into a single byte string
@@ -276,17 +276,16 @@ class DSS_SigScheme(object):
 
         return output
 
-    def verify(self, mhash, signature):
+    def verify(self, msg_hash, signature):
         """Verify that a certain DSS signature is authentic.
 
         This function checks if the party holding the private half of the key
         really signed the message.
 
         :Parameters:
-          mhash : hash object
+          msg_hash : hash object
             The hash that was carried out over the message.
             This is an object belonging to the `Crypto.Hash` module.
-
 
             Under mode *'fips-186-3'*, the hash must be a FIPS
             approved secure hash (SHA-1 or a member of the SHA-2 family).
@@ -294,18 +293,19 @@ class DSS_SigScheme(object):
           signature : byte string
             The signature that needs to be validated.
 
-        :Return: True if verification is correct. False otherwise.
+        :Raise ValueError:
+            If the signature is not authentic.
         """
 
         if not self._deterministic:
-            if self._n > mhash.digest_size * 8:
+            if self._n > msg_hash.digest_size * 8:
                 raise ValueError("Hash is not long enough")
-            if not mhash.name.lower().startswith("sha"):
-                raise ValueError("Hash %s does not belong to SHS" % mhash.name)
+            if not msg_hash.name.lower().startswith("sha"):
+                raise ValueError("Hash %s does not belong to SHS" % msg_hash.name)
 
         if self._encoding == 'binary':
             if len(signature) != (2 * self._n):
-                return False
+                raise ValueError("The signature is not authentic")
             r_prime, s_prime = [bytes_to_long(x)
                                 for x in (signature[:self._n],
                                           signature[self._n:])]
@@ -314,17 +314,20 @@ class DSS_SigScheme(object):
                 der_seq = DerSequence()
                 der_seq.decode(signature)
             except (ValueError, IndexError):
-                return False
+                raise ValueError("The signature is not authentic")
             if len(der_seq) != 2 or not der_seq.hasOnlyInts():
-                return False
+                raise ValueError("The signature is not authentic")
             r_prime, s_prime = der_seq[0], der_seq[1]
 
         if not (0 < r_prime < self._key.q) or not (0 < s_prime < self._key.q):
-            return False
+            raise ValueError("The signature is not authentic")
 
-        z = mhash.digest()[:self._n]
+        z = msg_hash.digest()[:self._n]
         result = self._key.verify(z, (r_prime, s_prime))
-        return result
+        if not result:
+            raise ValueError("The signature is not authentic")
+        # Make PyCrypto code to fail
+        return False
 
 
 def new(key, mode, encoding='binary', randfunc=None):

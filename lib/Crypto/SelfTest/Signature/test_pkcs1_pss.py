@@ -373,8 +373,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         key._randfunc = lambda N: test_salt
                         verifier = PKCS.new(key)
                         self.failIf(verifier.can_sign())
-                        result = verifier.verify(h, t2b(self._testData[i][2]))
-                        self.failUnless(result)
+                        verifier.verify(h, t2b(self._testData[i][2]))
 
         def testSignVerify(self):
                         h = SHA1.new()
@@ -400,7 +399,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             key.asked = 0
                             signer = PKCS.new(key)
                             s = signer.sign(h)
-                            self.failUnless(signer.verify(h, s))
+                            signer.verify(h, s)
                             self.assertEqual(key.asked, h.digest_size)
 
                         h = SHA1.new()
@@ -412,14 +411,14 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             signer = PKCS.new(key, saltLen=sLen)
                             s = signer.sign(h)
                             self.assertEqual(key.asked, sLen)
-                            self.failUnless(signer.verify(h, s))
+                            signer.verify(h, s)
 
                         # Verify that sign() uses the custom MGF
                         mgfcalls = 0
                         signer = PKCS.new(key, newMGF)
                         s = signer.sign(h)
                         self.assertEqual(mgfcalls, 1)
-                        self.failUnless(signer.verify(h, s))
+                        signer.verify(h, s)
 
                         # Verify that sign() does not call the RNG
                         # when salt length is 0, even when a new MGF is provided
@@ -429,7 +428,24 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         s = signer.sign(h)
                         self.assertEqual(key.asked,0)
                         self.assertEqual(mgfcalls, 1)
-                        self.failUnless(signer.verify(h, s))
+                        signer.verify(h, s)
+
+        def test_wrong_signature(self):
+            key = RSA.generate(1024)
+            msg_hash = SHA1.new(b("Message"))
+
+            signer = PKCS.new(key)
+            s = signer.sign(msg_hash)
+
+            verifier = PKCS.new(key.publickey())
+
+            # The signature s should be OK
+            verifier.verify(msg_hash, s)
+
+            # Construct an incorrect signature and ensure that the check fails
+            wrong_s = s[:-1] + bchr(bord(s[-1]) ^ 0xFF)
+            self.assertRaises(ValueError, verifier.verify, msg_hash, wrong_s)
+
 
 def get_tests(config={}):
     tests = []

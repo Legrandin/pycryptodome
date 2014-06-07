@@ -48,9 +48,10 @@ the RSA key:
     >>> h = SHA1.new()
     >>> h.update(message)
     >>> verifier = PKCS1_PSS.new(key)
-    >>> if verifier.verify(h, signature):
+    >>> try:
+    >>>     verifier.verify(h, signature):
     >>>     print "The signature is authentic."
-    >>> else:
+    >>> except ValueError:
     >>>     print "The signature is not authentic."
 
 :undocumented: __revision__, __package__
@@ -91,18 +92,18 @@ class PSS_SigScheme:
         """Return True if this cipher object can be used for signing messages."""
         return self._key.has_private()
 
-    def sign(self, mhash):
+    def sign(self, msg_hash):
         """Produce the PKCS#1 PSS signature of a message.
 
         This function is named ``RSASSA-PSS-SIGN``, and is specified in
         section 8.1.1 of RFC3447.
 
         :Parameters:
-         mhash : hash object
-                The hash that was carried out over the message. This is an object
-                belonging to the `Crypto.Hash` module.
+          msg_hash : hash object
+            The hash that was carried out over the message. This is an object
+            belonging to the `Crypto.Hash` module.
 
-        :Return: The PSS signature encoded as a string.
+        :Return: The PSS signature encoded as a byte string.
         :Raise ValueError:
             If the RSA key length is not sufficiently long to deal with the given
             hash algorithm.
@@ -119,27 +120,27 @@ class PSS_SigScheme:
 
         # Set defaults for salt length and mask generation function
         if self._saltLen == None:
-            sLen = mhash.digest_size
+            sLen = msg_hash.digest_size
         else:
             sLen = self._saltLen
         if self._mgfunc:
             mgf = self._mgfunc
         else:
-             mgf  = lambda x,y: MGF1(x,y,mhash)
+             mgf  = lambda x,y: MGF1(x,y,msg_hash)
 
         modBits = Crypto.Util.number.size(self._key.n)
 
         # See 8.1.1 in RFC3447
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
-        em = EMSA_PSS_ENCODE(mhash, modBits-1, randfunc, mgf, sLen)
+        em = EMSA_PSS_ENCODE(msg_hash, modBits-1, randfunc, mgf, sLen)
         # Step 2a (OS2IP) and 2b (RSASP1)
         m = self._key.decrypt(em)
         # Step 2c (I2OSP)
-        S = bchr(0x00)*(k-len(m)) + m
-        return S
+        signature = bchr(0x00)*(k-len(m)) + m
+        return signature
 
-    def verify(self, mhash, S):
+    def verify(self, msg_hash, signature):
         """Verify that a certain PKCS#1 PSS signature is authentic.
 
         This function checks if the party holding the private half of the given
@@ -149,48 +150,51 @@ class PSS_SigScheme:
         8.1.2 of RFC3447.
 
         :Parameters:
-         mhash : hash object
-                The hash that was carried out over the message. This is an object
-                belonging to the `Crypto.Hash` module.
-         S : string
-                The signature that needs to be validated.
-
-        :Return: True if verification is correct. False otherwise.
+          msg_hash : hash object
+            The hash that was carried out over the message. This is an object
+            belonging to the `Crypto.Hash` module.
+          signature : byte string
+            The signature that needs to be validated.
+        :Raise ValueError:
+            If the signature is not authentic.
         """
         # TODO: Verify the key is RSA
 
         # Set defaults for salt length and mask generation function
         if self._saltLen == None:
-            sLen = mhash.digest_size
+            sLen = msg_hash.digest_size
         else:
             sLen = self._saltLen
         if self._mgfunc:
             mgf = self._mgfunc
         else:
-            mgf  = lambda x,y: MGF1(x,y,mhash)
+            mgf  = lambda x,y: MGF1(x,y,msg_hash)
 
         modBits = Crypto.Util.number.size(self._key.n)
 
         # See 8.1.2 in RFC3447
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
-        if len(S) != k:
-            return False
+        if len(signature) != k:
+            raise ValueError("The signature is not authentic")
         # Step 2a (O2SIP), 2b (RSAVP1), and partially 2c (I2OSP)
         # Note that signature must be smaller than the module
         # but RSA.py won't complain about it.
         # TODO: Fix RSA object; don't do it here.
-        em = self._key.encrypt(S, 0)[0]
+        em = self._key.encrypt(signature, 0)[0]
         # Step 2c
         emLen = ceil_div(modBits-1,8)
         em = bchr(0x00)*(emLen-len(em)) + em
         # Step 3
+        failed = False
         try:
-            result = EMSA_PSS_VERIFY(mhash, em, modBits-1, mgf, sLen)
+            failed = not EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
         except ValueError:
-            return False
+            failed = True
         # Step 4
-        return result
+        if failed:
+            raise ValueError("The signature is not authentic")
+
 
 def MGF1(mgfSeed, maskLen, hash):
     """Mask Generation Function, described in B.2.1"""

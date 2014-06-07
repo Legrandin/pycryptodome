@@ -170,7 +170,7 @@ class FIPS_DSS_Tests(unittest.TestCase):
             key = DSA.construct([tv.Y, tv.G, tv.P, tv.Q], False)
             hash_obj = tv.hashmod.new(tv.Msg)
             signer = DSS.new(key, 'fips-186-3')
-            self.failUnless(signer.verify(hash_obj, tv.Signature))
+            signer.verify(hash_obj, tv.Signature)
 
     def _fips_verify_negative(self, test_vectors):
         """Negative tests for signature verification"""
@@ -180,7 +180,7 @@ class FIPS_DSS_Tests(unittest.TestCase):
             key = DSA.construct([tv.Y, tv.G, tv.P, tv.Q], False)
             hash_obj = tv.hashmod.new(tv.Msg)
             signer = DSS.new(key, 'fips-186-3')
-            self.failIf(signer.verify(hash_obj, tv.Signature))
+            self.assertRaises(ValueError, signer.verify, hash_obj, tv.Signature)
 
     def test4(self):
         """Verify that unapproved hashes are rejected"""
@@ -215,11 +215,11 @@ class FIPS_DSS_Tests(unittest.TestCase):
 
         # Verify that output looks like a SEQUENCE
         self.assertEqual(bord(signature[0]), 48)
-        self.failUnless(signer.verify(hash_obj, signature))
+        signer.verify(hash_obj, signature)
 
         # Verify that ASN.1 parsing fails as expected
         signature = bchr(7) + signature[1:]
-        self.failIf(signer.verify(hash_obj, signature))
+        self.assertRaises(ValueError, signer.verify, hash_obj, signature)
 
     def test7(self):
         """Verify public/private method"""
