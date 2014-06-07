@@ -235,7 +235,7 @@ class AllOrNothing:
 
     def __newcipher(self, key):
         if self.__mode is None and self.__IV is None:
-            return self.__ciphermodule.new(key)
+            return self.__ciphermodule.new(key, self.__ciphermodule.MODE_ECB)
         elif self.__IV is None:
             return self.__ciphermodule.new(key, self.__mode)
         else:

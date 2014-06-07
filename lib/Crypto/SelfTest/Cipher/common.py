@@ -669,14 +669,30 @@ class IVLengthTest(unittest.TestCase):
     def _dummy_counter(self):
         return "\0" * self.module.block_size
 
+class NoDefaultECBTest(unittest.TestCase):
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.key = b(params['key'])
+
+    def runTest(self):
+        self.assertRaises(TypeError, self.module.new, a2b_hex(self.key))
+
+
 def make_block_tests(module, module_name, test_data, additional_params=dict()):
     tests = []
     extra_tests_added = 0
     for i in range(len(test_data)):
         row = test_data[i]
 
-        # Build the "params" dictionary
-        params = {'mode': 'ECB'}
+        # Build the "params" dictionary with
+        # - plaintext
+        # - ciphertext
+        # - key
+        # - mode (default is ECB)
+        # - (optionally) description
+        # - (optionally) any other parameter that this cipher mode requires
+        params = {}
         if len(row) == 3:
             (params['plaintext'], params['ciphertext'], params['key']) = row
         elif len(row) == 4:
@@ -687,15 +703,16 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         else:
             raise AssertionError("Unsupported tuple size %d" % (len(row),))
 
+        if not params.has_key("mode"):
+            params["mode"] = "ECB"
+
         # Build the display-name for the test
         p2 = params.copy()
         p_key = _extract(p2, 'key')
         p_plaintext = _extract(p2, 'plaintext')
         p_ciphertext = _extract(p2, 'ciphertext')
+        p_mode = _extract(p2, 'mode')
         p_description = _extract(p2, 'description', None)
-        p_mode = p2.get('mode', 'ECB')
-        if p_mode == 'ECB':
-            _extract(p2, 'mode', 'ECB')
 
         if p_description is not None:
             description = p_description
@@ -717,6 +734,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
                 RoundtripTest(module, params),
                 PGPTest(module, params),
                 IVLengthTest(module, params),
+                NoDefaultECBTest(module, params),
             ]
             extra_tests_added = 1
 

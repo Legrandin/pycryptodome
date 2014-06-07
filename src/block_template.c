@@ -31,6 +31,8 @@
 
 /* Cipher operation modes */
 
+static const int MODE_INVALID = -1;
+
 #define MODE_ECB 1
 #define MODE_CBC 2
 #define MODE_CFB 3
@@ -74,7 +76,7 @@ newALGobject(void)
 {
 	ALGobject * new;
 	new = PyObject_New(ALGobject, &ALGtype);
-	new->mode = MODE_ECB;
+	new->mode = MODE_INVALID;
 	new->counter = NULL;
 	new->counter_shortcut = 0;
 	return new;
@@ -99,7 +101,7 @@ ALGdealloc(PyObject *ptr)
 
 
 static char ALGnew__doc__[] = 
-"new(key, [mode], [IV]): Return a new " _MODULE_STRING " encryption object.";
+"new(key, mode, [IV]): Return a new " _MODULE_STRING " encryption object.";
 
 static char *kwlist[] = {"key", "mode", "IV", "counter", "segment_size",
 #ifdef PCT_ARC2_MODULE
@@ -112,14 +114,21 @@ ALGnew(PyObject *self, PyObject *args, PyObject *kwdict)
 {
 	unsigned char *key, *IV;
 	ALGobject * new=NULL;
-	int keylen, IVlen=0, mode=MODE_ECB, segment_size=0;
+	int keylen, IVlen=0, segment_size=0;
 	PyObject *counter = NULL;
 	int counter_shortcut = 0;
 #ifdef PCT_ARC2_MODULE
         int effective_keylen = 1024;    /* this is a weird default, but it's compatible with old versions of PyCrypto */
 #endif
+        
+        /**
+         * Mode used to be optional, with ECB as default value.
+         * In PyCrypodome, passing an explicit cipher mode is mandatory.
+         */
+        int mode = MODE_INVALID;
+
 	/* Set default values */
-	if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#|is#Oi"
+	if (!PyArg_ParseTupleAndKeywords(args, kwdict, "s#i|s#Oi"
 #ifdef PCT_ARC2_MODULE
 					 "i"
 #endif

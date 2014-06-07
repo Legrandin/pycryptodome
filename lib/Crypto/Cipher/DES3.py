@@ -69,28 +69,27 @@ from Crypto.Cipher import _DES3
 class DES3Cipher(blockalgo.BlockAlgo):
     """TDES cipher object"""
 
-    def __init__(self, key, *args, **kwargs):
+    def __init__(self, key, mode, *args, **kwargs):
         """Initialize a TDES cipher object
 
         See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _DES3, key, *args, **kwargs)
+        blockalgo.BlockAlgo.__init__(self, _DES3, key, mode, *args, **kwargs)
 
-def new(key, *args, **kwargs):
+def new(key, mode, *args, **kwargs):
     """Create a new TDES cipher
 
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
         It must be 16 or 24 bytes long. The parity bits will be ignored.
-    :Keywords:
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
-        Default is `MODE_ECB`.
+    :Keywords:
       IV : byte string
         (*Only* `MODE_CBC`, `MODE_CFB`, `MODE_OFB`, `MODE_OPENPGP`).
 
         The initialization vector to use for encryption or decryption.
-        
+
         It is ignored for `MODE_ECB` and `MODE_CTR`.
 
         For `MODE_OPENPGP`, IV must be `block_size` bytes long for encryption
@@ -120,7 +119,7 @@ def new(key, *args, **kwargs):
       otherwise TDES would degrade to single `DES`.
     :Return: an `DES3Cipher` object
     """
-    return DES3Cipher(key, *args, **kwargs)
+    return DES3Cipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

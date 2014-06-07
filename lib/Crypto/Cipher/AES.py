@@ -92,7 +92,7 @@ except ImportError:
 class AESCipher (blockalgo.BlockAlgo):
     """AES cipher object"""
 
-    def __init__(self, key, *args, **kwargs):
+    def __init__(self, key, mode, *args, **kwargs):
         """Initialize an AES cipher object
 
         See also `new()` at the module level."""
@@ -105,11 +105,11 @@ class AESCipher (blockalgo.BlockAlgo):
 
         # Use _AESNI if the user requested AES-NI and it's available
         if _AESNI is not None and use_aesni:
-            blockalgo.BlockAlgo.__init__(self, _AESNI, key, *args, **kwargs)
+            blockalgo.BlockAlgo.__init__(self, _AESNI, key, mode, *args, **kwargs)
         else:
-            blockalgo.BlockAlgo.__init__(self, _AES, key, *args, **kwargs)
+            blockalgo.BlockAlgo.__init__(self, _AES, key, mode, *args, **kwargs)
 
-def new(key, *args, **kwargs):
+def new(key, mode, *args, **kwargs):
     """Create a new AES cipher
 
     :Parameters:
@@ -118,10 +118,9 @@ def new(key, *args, **kwargs):
         It must be 16 (*AES-128*), 24 (*AES-192*), or 32 (*AES-256*) bytes long.
 
         Only in `MODE_SIV`, it needs to be 32, 48, or 64 bytes long.
-    :Keywords:
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
-        Default is `MODE_ECB`.
+    :Keywords:
       IV : byte string
         (*Only* `MODE_CBC`, `MODE_CFB`, `MODE_OFB`, `MODE_OPENPGP`).
 
@@ -172,7 +171,7 @@ def new(key, *args, **kwargs):
 
     :Return: an `AESCipher` object
     """
-    return AESCipher(key, *args, **kwargs)
+    return AESCipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

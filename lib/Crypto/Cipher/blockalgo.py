@@ -418,7 +418,7 @@ class BlockAlgo:
 
         # Step 1 in SP800-38D, Algorithm 4 (encryption) - Compute H
         # See also Algorithm 5 (decryption)
-        hash_subkey = factory.new(key).encrypt(bchr(0) * 16)
+        hash_subkey = factory.new(key, MODE_ECB).encrypt(bchr(0) * 16)
 
         # Step 2 - Compute J0 (integer, not byte string!)
         if len(self.nonce) == 12:
