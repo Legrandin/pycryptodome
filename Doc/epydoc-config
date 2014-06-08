@@ -7,6 +7,7 @@ docformat: restructuredtext
 output: html
 target: Doc/apidoc/
 sourcecode: no
+frames: no
 
 # Do not include private variables
 private: no
