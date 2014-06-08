@@ -34,20 +34,14 @@
 # SOFTWARE.
 # ===================================================================
 
-longdesc = """
-This is a self-contained, public domain package of low-level
-cryptographic primitives.
-
-It supports Python 2.4 or newer, all Python 3 versions and PyPy.
-
-It is a (recent) fork of PyCrypto (https://www.dlitz.net/software/pycrypto).
-"""
-
 from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
 from distutils.errors import CCompilerError
 import distutils
 import os, sys
+
+longdesc = open(os.path.join(os.path.dirname(__file__), "Doc",
+                "index.rst")).read()
 
 if sys.version[0:1] == '1':
     raise RuntimeError ("The Python Cryptography Toolkit requires "
