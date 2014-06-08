@@ -107,9 +107,12 @@ static void aes_key_setup_enc(__m128i rk[], const uint8_t* cipherKey, int keylen
         case 24:
         {
             /* 192 bit key setup */
+            uint8_t key[24];
+
             __m128i temp[2];
-            rk[0] = _mm_loadu_si128((const __m128i*) cipherKey);
-            rk[1] = _mm_loadu_si128((const __m128i*) (cipherKey+16));
+            memcpy(key, cipherKey, 24);
+            rk[0] = _mm_loadu_si128((const __m128i*) key);
+            rk[1] = _mm_loadu_si128((const __m128i*) (key+16));
             temp[0] = KEYEXP192(rk[0], rk[1], 0x01);
             temp[1] = KEYEXP192_2(temp[0], rk[1]);
             rk[1] = SHUFFLE128_0(rk[1], temp[0]);
