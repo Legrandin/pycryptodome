@@ -40,9 +40,6 @@ class CryptoRuntimeWarning(RuntimeWarning, CryptoWarning):
 # Warnings that we might actually use
 #
 
-class RandomPool_DeprecationWarning(CryptoDeprecationWarning):
-    """Issued when Crypto.Util.randpool.RandomPool is instantiated."""
-
 class ClockRewindWarning(CryptoRuntimeWarning):
     """Warning for when the system clock moves backwards."""
 

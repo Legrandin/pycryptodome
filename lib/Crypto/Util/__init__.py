@@ -28,7 +28,6 @@ Module                      Description
 ========================    =============================================
 `Crypto.Util.number`        Number-theoretic functions (primality testing, etc.)
 `Crypto.Util.Counter`       Fast counter functions for CTR cipher modes.
-`Crypto.Util.randpool`      Random number generation
 `Crypto.Util.RFC1751`       Converts between 128-bit keys and human-readable
                             strings of words.
 `Crypto.Util.asn1`          Minimal support for ASN.1 DER encoding
@@ -38,8 +37,5 @@ Module                      Description
 :undocumented: _counter, _galois, _number_new, _time, cpuid, py3compat
 """
 
-__all__ = ['randpool', 'RFC1751', 'number', 'strxor', 'asn1', 'Counter',
-            'Padding' ]
-
-__revision__ = "$Id$"
+__all__ = ['RFC1751', 'number', 'strxor', 'asn1', 'Counter', 'Padding']
 
