@@ -21,7 +21,7 @@
 """Hashing algorithms
 
 Hash functions take arbitrary binary strings as input, and produce a random-like output
-of fixed size that is dependent on the input; it should be practically infeasible 
+of fixed size that is dependent on the input; it should be practically infeasible
 to derive the original input data given only the hash function's
 output. In other words, the hash function is *one-way*.
 
@@ -42,11 +42,11 @@ association with a public-key algorithm, can be used to implement
 digital signatures.
 
 The hashing modules here all support the interface described in `PEP
-247`_ , "API for Cryptographic Hash Functions". 
+247`_ , "API for Cryptographic Hash Functions".
 
 .. _`PEP 247` : http://www.python.org/dev/peps/pep-0247/
 
-:undocumented: _MD2, _MD4, _RIPEMD160, _SHA224, _SHA256, _SHA384, _SHA512
+:undocumented: _MD2, _MD4, _RIPEMD160, _SHA224, _SHA256, _SHA384, _SHA512, _RIPEMD
 """
 
 __all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD160', 'SHA1',

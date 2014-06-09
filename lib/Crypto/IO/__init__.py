@@ -27,6 +27,8 @@ Module                    Description
 Crypto.Util.PEM           Set of functions for encapsulating data according to the PEM format.
 Crypto.Util.PKCS8         Set of functions for wrapping/unwrapping private keys.
 ========================  =============================================
+
+:undocumented: _PBES
 """
 
 __all__ = ['PEM', 'PKCS8']
