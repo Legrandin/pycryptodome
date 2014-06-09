@@ -1,18 +1,3 @@
-Acknowledgements
-----------------
-
-This list is sorted in alphabetical order, and is probably incomplete.
-I'd like to thank everybody who contributed in any way, with code, bug
-reports, and comments.
-
-This list should not be interpreted as an endorsement of PyCrypto by the
-people on it.
-
-Please let me know if your name isn't here and should be!
-
-- Dwayne C. Litzenberger
-
-
 Nevins Bartolomeo
 Thorsten E. Behrens
 Tim Berners-Lee
@@ -34,9 +19,11 @@ Sebastian Kayser
 Ryan Kelly
 Andrew M. Kuchling
 Piers Lauder
-Legrandin <gooksankoo@hoiptorrow.mailexpire.com>
+Legrandin
 M.-A. Lemburg
 Wim Lewis
+Dwayne C. Litzenberger
+Richard Mitchell
 Mark Moraes
 Lim Chee Siang
 Bryan Olson
@@ -53,6 +40,7 @@ Janne Snabb
 Tom St. Denis
 Anders Sundman
 Paul Swartz
+Fabrizio Tarizzo
 Kevin M. Turner
 Barry A. Warsaw
 Eric Young

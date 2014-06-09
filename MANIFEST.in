@@ -1,5 +1,9 @@
 include MANIFEST.in
-include ACKS ChangeLog COPYRIGHT Doc/* TODO
+include *.rst *.txt
+include Doc/index.rst Doc/src/*
+include Doc/conf.py Doc/Makefile Doc/make.bat
+include Doc/python-3-changes.txt Doc/Changelog.pycrypto
+include Doc/epydoc-config
 graft LEGAL
 recursive-include src *.h *.c
 include *.py

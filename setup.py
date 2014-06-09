@@ -40,8 +40,7 @@ from distutils.errors import CCompilerError
 import distutils
 import os, sys
 
-longdesc = open(os.path.join(os.path.dirname(__file__), "Doc",
-                "index.rst")).read()
+longdesc = open("README.rst").read()
 
 if sys.version[0:1] == '1':
     raise RuntimeError ("The Python Cryptography Toolkit requires "
