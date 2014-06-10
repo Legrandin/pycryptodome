@@ -752,16 +752,6 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         if p_mode in ('OFB', 'CTR'):
             tests.append(CipherStreamingSelfTest(module, params))
 
-        # When using CTR mode, test the non-shortcut code path.
-        if p_mode == 'CTR' and not params.has_key('ctr_class'):
-            params2 = params.copy()
-            params2['description'] += " (shortcut disabled)"
-            ctr_params2 = params.get('ctr_params', {}).copy()
-            params2['ctr_params'] = ctr_params2
-            if not params2['ctr_params'].has_key('disable_shortcut'):
-                params2['ctr_params']['disable_shortcut'] = 1
-            tests.append(CipherSelfTest(module, params2))
-
     # Add tests that don't use test vectors
     if hasattr(module, "MODE_CCM"):
         tests += [

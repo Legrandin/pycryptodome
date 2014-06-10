@@ -57,15 +57,12 @@ An example of usage is the following:
 
 from Crypto.Util.py3compat import *
 
-from Crypto.pct_warnings import DisableShortcut_DeprecationWarning
 from Crypto.Util import _counter
 import struct
-import warnings
-
 
 # Factory function
 _deprecated = "deprecated"
-def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_endian=False, allow_wraparound=False, disable_shortcut=_deprecated):
+def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, little_endian=False, allow_wraparound=False):
     """Create a stateful counter block function suitable for CTR encryption modes.
 
     Each call to the function returns the next counter block.
@@ -86,8 +83,6 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_e
         used.
       initial_value : integer
         The initial value of the counter. Default value is 1.
-      overflow : integer
-        This value is currently ignored.
       little_endian : boolean
         If *True*, the counter number will be encoded in little endian format.
         If *False* (default), in big endian format.
@@ -95,9 +90,6 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_e
         If *True*, the counter will automatically restart from zero after
         reaching the maximum value (``2**nbits-1``).
         If *False* (default), the object will raise an *OverflowError*.
-      disable_shortcut : deprecated
-        This option is a no-op for backward compatibility.  It will be removed
-        in a future version.  Don't use it.
     :Returns:
       The counter block function.
     """
@@ -113,9 +105,6 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, overflow=0, little_e
         raise ValueError("nbits too large")
 
     initval = _encode(initial_value, nbytes, little_endian)
-
-    if disable_shortcut is not _deprecated:  # exact object comparison
-        warnings.warn("disable_shortcut has no effect and is deprecated", DisableShortcut_DeprecationWarning)
 
     if little_endian:
         return _counter._newLE(bstr(prefix), bstr(suffix), initval, allow_wraparound=allow_wraparound)

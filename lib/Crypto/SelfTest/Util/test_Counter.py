@@ -33,25 +33,14 @@ class CounterTests(unittest.TestCase):
         global Counter
         from Crypto.Util import Counter
 
-    def test_BE_shortcut(self):
+    def test_BE(self):
         """Big endian"""
         c = Counter.new(128)
         c = Counter.new(128, little_endian=False)
 
-    def test_LE_shortcut(self):
+    def test_LE(self):
         """Little endian"""
         c = Counter.new(128, little_endian=True)
-
-    def test_BE_no_shortcut(self):
-        """Big endian, with disable_shortcut"""
-        # Just testing API backward-compatibility.  disable_shortcut is now a no-op.
-        c = Counter.new(128, disable_shortcut=True)
-        c = Counter.new(128, little_endian=False, disable_shortcut=True)
-
-    def test_LE_no_shortcut(self):
-        """Little endian, shortcut disabled"""
-        # Just testing API backward-compatibility.  disable_shortcut is now a no-op.
-        c = Counter.new(128, little_endian=True, disable_shortcut=True)
 
     def test_BE_defaults(self):
         """128-bit, Big endian, defaults"""
