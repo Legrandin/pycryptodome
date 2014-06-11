@@ -23,10 +23,6 @@
 """Self-tests for Crypto.IO._PBES module"""
 
 import unittest
-import sys
-
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 from Crypto.IO._PBES import PBES2

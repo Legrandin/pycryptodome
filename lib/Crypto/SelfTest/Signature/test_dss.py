@@ -21,14 +21,10 @@
 # ===================================================================
 
 import re
-import sys
 import copy
 import unittest
 from binascii import unhexlify, hexlify
 from StringIO import StringIO
-
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512

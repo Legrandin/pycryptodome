@@ -22,12 +22,7 @@
 
 """Self-test suite for Crypto.Hash.CMAC"""
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
-
-from common import dict
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3

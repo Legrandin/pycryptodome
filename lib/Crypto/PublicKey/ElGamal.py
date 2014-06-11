@@ -111,9 +111,12 @@ __all__ = ['generate', 'construct', 'error', 'ElGamalobj']
 
 from Crypto.PublicKey.pubkey import pubkey
 from Crypto.Util import number
-from Crypto.Util.number import GCD, bignum, isPrime, getRandomRange, \
-                               inverse, size, getPrime
 from Crypto import Random
+from Crypto.Util.number import (
+                GCD, bignum, isPrime,
+                getRandomRange, inverse,
+                size, getPrime
+                )
 
 class error (Exception):
     pass
@@ -173,13 +176,13 @@ def generate(bits, randfunc, progress_func=None):
             safe=0
         # Discard g if it divides p-1 because of the attack described
         # in Note 11.67 (iii) in HAC
-        if safe and divmod(obj.p-1, obj.g)[1]==0:
+        if safe and (obj.p-1) % obj.g == 0:
             safe=0
         # g^{-1} must not divide p-1 because of Khadir's attack
         # described in "Conditions of the generator for forging ElGamal
         # signature", 2011
         ginv = inverse(obj.g, obj.p)
-        if safe and divmod(obj.p-1, ginv)[1]==0:
+        if safe and (obj.p-1) % ginv == 0:
             safe=0
         if safe:
             break

@@ -26,11 +26,8 @@
 
 __revision__ = "$Id$"
 
-import sys
 import os
 import pickle
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 import unittest
@@ -112,7 +109,7 @@ class RSATest(unittest.TestCase):
         self.p = bytes_to_long(a2b_hex(self.prime_factor))
 
         # Compute q, d, and u from n, e, and p
-        self.q = divmod(self.n, self.p)[0]
+        self.q = self.n // self.p
         self.d = inverse(self.e, (self.p-1)*(self.q-1))
         self.u = inverse(self.p, self.q)    # u = e**-1 (mod q)
 
@@ -256,7 +253,7 @@ class RSATest(unittest.TestCase):
 
         self.assertRaises(ValueError, rsa_obj.decrypt, (rsa_obj.n,))
         self.assertRaises(ValueError, rsa_obj.encrypt, rsa_obj.n, b(""))
-        
+
         self.assertRaises(ValueError, rsa_obj.decrypt, (0,))
         self.assertRaises(ValueError, rsa_obj.encrypt, 0, b(""))
 

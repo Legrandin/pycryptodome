@@ -31,9 +31,6 @@ keys and certificates into text.
 
 __all__ = ['encode', 'decode']
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 import re

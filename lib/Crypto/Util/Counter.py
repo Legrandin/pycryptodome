@@ -54,9 +54,7 @@ An example of usage is the following:
 
 :undocumented: __package__
 """
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
+
 from Crypto.Util.py3compat import *
 
 from Crypto.pct_warnings import DisableShortcut_DeprecationWarning

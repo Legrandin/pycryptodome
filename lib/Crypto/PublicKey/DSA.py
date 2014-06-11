@@ -82,26 +82,27 @@ verification.
 .. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
 """
 
-__revision__ = "$Id$"
-
 __all__ = ['generate', 'construct', 'error', 'DSAImplementation',
            '_DSAobj', 'importKey' ]
 
 import binascii
 import struct
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.Util.number import bytes_to_long, long_to_bytes,\
-                        isPrime, getRandomRange
 from Crypto.PublicKey import _DSA, _slowmath, pubkey
-from Crypto.Util.asn1 import DerObject, DerSequence,\
-        DerInteger, DerObjectId, DerBitString, newDerSequence, newDerBitString
+from Crypto.Util.number import (
+                        bytes_to_long, long_to_bytes,
+                        isPrime, getRandomRange
+                        )
+from Crypto.Util.asn1 import (
+                DerObject, DerSequence,
+                DerInteger, DerObjectId,
+                DerBitString, newDerSequence,
+                newDerBitString
+                )
 
 try:
     from Crypto.PublicKey import _fastmath
@@ -535,28 +536,22 @@ class DSAImplementation(object):
         key = self._math.dsa_construct(obj.y, obj.g, obj.p, obj.q, obj.x)
         return _DSAobj(self, key)
 
-    def construct(self, tup):
+    def construct(self, tup, consistency_check=True):
         """Construct a DSA key from a tuple of valid DSA components.
-
-        The modulus *p* must be a prime.
-
-        The following equations must apply:
-
-        - p-1 = 0 mod q
-        - g^x = y mod p
-        - 0 < x < q
-        - 1 < g < p
 
         :Parameters:
          tup : tuple
-                    A tuple of long integers, with 4 or 5 items
-                    in the following order:
+            A tuple of long integers, with 4 or 5 items
+            in the following order:
 
-                    1. Public key (*y*).
-                    2. Sub-group generator (*g*).
-                    3. Modulus, finite field order (*p*).
-                    4. Sub-group order (*q*).
-                    5. Private key (*x*). Optional.
+                1. Public key (*y*).
+                2. Sub-group generator (*g*).
+                3. Modulus, finite field order (*p*).
+                4. Sub-group order (*q*).
+                5. Private key (*x*). Optional.
+         consistency_check : boolean
+            If *True*, the library will verify that the provided components
+            fulfil the main DSA properties.
 
         :Raise PublicKey.ValueError:
             When the key being imported fails the most basic DSA validity checks.
@@ -565,17 +560,19 @@ class DSAImplementation(object):
 
         key = self._math.dsa_construct(*tup)
 
-        # Modulus must be prime
-        fmt_error = not isPrime(key.p)
-        # Verify Lagrange's theorem for sub-group
-        fmt_error |= ((key.p-1) % key.q)!=0
-        fmt_error |= key.g<=1 or key.g>=key.p
-        fmt_error |= pow(key.g, key.q, key.p)!=1
-        # Public key
-        fmt_error |= key.y<=0 or key.y>=key.p
-        if hasattr(key, 'x'):
-            fmt_error |= key.x<=0 or key.x>=key.q
-            fmt_error |= pow(key.g, key.x, key.p)!=key.y
+        fmt_error = False
+        if consistency_check:
+            # Modulus must be prime
+            fmt_error = not isPrime(key.p)
+            # Verify Lagrange's theorem for sub-group
+            fmt_error |= ((key.p-1) % key.q)!=0
+            fmt_error |= key.g<=1 or key.g>=key.p
+            fmt_error |= pow(key.g, key.q, key.p)!=1
+            # Public key
+            fmt_error |= key.y<=0 or key.y>=key.p
+            if hasattr(key, 'x'):
+                fmt_error |= key.x<=0 or key.x>=key.q
+                fmt_error |= pow(key.g, key.x, key.p)!=key.y
 
         if fmt_error:
             raise ValueError("Invalid DSA key components")

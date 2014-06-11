@@ -30,14 +30,10 @@ The protocol guarantees that nobody can learn anything about the
 secret, unless *k* players gather together to assemble their shares.
 """
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 from Crypto.Util import number
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Random import get_random_bytes as rng
-
 
 def _mult_gf2(f1, f2):
     """Multiply two polynomials in GF(2)"""
@@ -45,7 +41,7 @@ def _mult_gf2(f1, f2):
     # Ensure f2 is the smallest
     if f2 > f1:
         f1, f2 = f2, f1
-    z = 0L
+    z = 0
     while f2:
         if f2 & 1:
             z ^= f1
@@ -63,14 +59,14 @@ def _div_gf2(a, b):
     """
 
     if (a < b):
-        return 0L, a
+        return 0, a
 
     deg = number.size
-    q = 0L
+    q = 0
     r = a
     d = deg(b)
     while deg(r) >= d:
-        s = 1L << (deg(r) - d)
+        s = 1 << (deg(r) - d)
         q ^= s
         r ^= _mult_gf2(b, s)
     return (q, r)
@@ -80,7 +76,7 @@ class _Element(object):
     """Element of GF(2^128) field"""
 
     # The irreducible polynomial defining this field is 1+x+x^2+x^7+x^128
-    irr_poly = 1 + 2 + 4 + 128 + 2L ** 128
+    irr_poly = 1 + 2 + 4 + 128 + 2 ** 128
 
     def __init__(self, encoded_value):
         """Initialize the element to a certain value.
@@ -118,8 +114,8 @@ class _Element(object):
 
         if self.irr_poly in (f1, f2):
             return _Element(0)
-        mask1 = 2L ** 128
-        v, z = f1, 0L
+        mask1 = 2 ** 128
+        v, z = f1, 0
         while f2:
             if f2 & 1:
                 z ^= v
@@ -139,7 +135,7 @@ class _Element(object):
         # http://en.wikipedia.org/wiki/Polynomial_greatest_common_divisor
 
         r0, r1 = self._value, self.irr_poly
-        s0, s1 = 1L, 0L
+        s0, s1 = 1, 0
         while r1 > 0:
             q = _div_gf2(r0, r1)[0]
             r0, r1 = r1, r0 ^ _mult_gf2(q, r1)
@@ -228,6 +224,7 @@ class Shamir(object):
     .. _ssss: http://point-at-infinity.org/ssss/
     """
 
+    @staticmethod
     def split(k, n, secret):
         """Split a secret into *n* shares.
 
@@ -276,8 +273,7 @@ class Shamir(object):
 
         return [(i, make_share(i, coeffs)) for i in xrange(1, n + 1)]
 
-    split = staticmethod(split)
-
+    @staticmethod
     def combine(shares):
         """Recombine a secret, if enough shares are presented.
 
@@ -323,4 +319,3 @@ class Shamir(object):
                     coeff_0_l *= t
             result += y_j * coeff_0_l * inv
         return result.encode()
-    combine = staticmethod(combine)

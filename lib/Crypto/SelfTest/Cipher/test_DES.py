@@ -24,9 +24,6 @@
 
 """Self-test suite for Crypto.Cipher.DES"""
 
-__revision__ = "$Id$"
-
-from common import dict     # For compatibility with Python 2.1 and 2.2
 from Crypto.Util.py3compat import *
 import unittest
 
@@ -288,7 +285,7 @@ test_data = [
 ]
 
 class RonRivestTest(unittest.TestCase):
-    """ Ronald L. Rivest's DES test, see 
+    """ Ronald L. Rivest's DES test, see
         http://people.csail.mit.edu/rivest/Destest.txt
     ABSTRACT
     --------
@@ -306,7 +303,7 @@ class RonRivestTest(unittest.TestCase):
 
         X16     =       1B1A2DDB4C642438
 
-    your implementation does not have any of the 36,568 possible single-fault 
+    your implementation does not have any of the 36,568 possible single-fault
     errors described herein.
     """
     def runTest(self):
@@ -315,10 +312,10 @@ class RonRivestTest(unittest.TestCase):
 
         X = []
         X[0:] = [b('\x94\x74\xB8\xE8\xC7\x3B\xCA\x7D')]
-        
+
         for i in range(16):
             c = DES.new(X[i],DES.MODE_ECB)
-            if not (i&1): # (num&1) returns 1 for odd numbers 
+            if not (i&1): # (num&1) returns 1 for odd numbers
                 X[i+1:] = [c.encrypt(X[i])] # even
             else:
                 X[i+1:] = [c.decrypt(X[i])] # odd

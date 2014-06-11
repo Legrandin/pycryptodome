@@ -59,16 +59,9 @@ the RSA key:
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125
 """
 
-# Allow nested scopes in Python 2.1
-# See http://oreilly.com/pub/a/python/2001/04/19/pythonnews.html
-from __future__ import nested_scopes
-
-__revision__ = "$Id$"
 __all__ = [ 'new', 'PSS_SigScheme' ]
 
 from Crypto.Util.py3compat import *
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 import Crypto.Util.number
 from Crypto.Util.number import ceil_shift, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
@@ -79,7 +72,7 @@ class PSS_SigScheme:
 
     def __init__(self, key, mgfunc, saltLen):
         """Initialize this PKCS#1 PSS signature scheme object.
-        
+
         :Parameters:
          key : an RSA key object
                 If a private half is given, both signature and verification are possible.
@@ -97,33 +90,33 @@ class PSS_SigScheme:
     def can_sign(self):
         """Return True if this cipher object can be used for signing messages."""
         return self._key.has_private()
- 
+
     def sign(self, mhash):
         """Produce the PKCS#1 PSS signature of a message.
-    
+
         This function is named ``RSASSA-PSS-SIGN``, and is specified in
         section 8.1.1 of RFC3447.
-    
+
         :Parameters:
          mhash : hash object
                 The hash that was carried out over the message. This is an object
                 belonging to the `Crypto.Hash` module.
-   
+
         :Return: The PSS signature encoded as a string.
         :Raise ValueError:
             If the RSA key length is not sufficiently long to deal with the given
             hash algorithm.
         :Raise TypeError:
             If the RSA key has no private half.
-    
+
         :attention: Modify the salt length and the mask generation function only
                     if you know what you are doing.
                     The receiver must use the same parameters too.
         """
         # TODO: Verify the key is RSA
-    
+
         randfunc = self._key._randfunc
-        
+
         # Set defaults for salt length and mask generation function
         if self._saltLen == None:
             sLen = mhash.digest_size
@@ -133,9 +126,9 @@ class PSS_SigScheme:
             mgf = self._mgfunc
         else:
              mgf  = lambda x,y: MGF1(x,y,mhash)
- 
+
         modBits = Crypto.Util.number.size(self._key.n)
-    
+
         # See 8.1.1 in RFC3447
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
@@ -145,27 +138,27 @@ class PSS_SigScheme:
         # Step 2c (I2OSP)
         S = bchr(0x00)*(k-len(m)) + m
         return S
-    
+
     def verify(self, mhash, S):
         """Verify that a certain PKCS#1 PSS signature is authentic.
-    
+
         This function checks if the party holding the private half of the given
         RSA key has really signed the message.
-    
+
         This function is called ``RSASSA-PSS-VERIFY``, and is specified in section
         8.1.2 of RFC3447.
-    
+
         :Parameters:
          mhash : hash object
                 The hash that was carried out over the message. This is an object
                 belonging to the `Crypto.Hash` module.
          S : string
                 The signature that needs to be validated.
-    
+
         :Return: True if verification is correct. False otherwise.
         """
         # TODO: Verify the key is RSA
-    
+
         # Set defaults for salt length and mask generation function
         if self._saltLen == None:
             sLen = mhash.digest_size
@@ -177,7 +170,7 @@ class PSS_SigScheme:
             mgf  = lambda x,y: MGF1(x,y,mhash)
 
         modBits = Crypto.Util.number.size(self._key.n)
-    
+
         # See 8.1.2 in RFC3447
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
@@ -198,7 +191,7 @@ class PSS_SigScheme:
             return False
         # Step 4
         return result
-    
+
 def MGF1(mgfSeed, maskLen, hash):
     """Mask Generation Function, described in B.2.1"""
     T = b("")
@@ -362,7 +355,7 @@ def new(key, mgfunc=None, saltLen=None):
      saltLen : int
         Length of the salt, in bytes. If not specified, it matches the output
         size of the hash function.
- 
+
     """
     return PSS_SigScheme(key, mgfunc, saltLen)
 

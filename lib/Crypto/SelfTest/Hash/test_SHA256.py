@@ -24,8 +24,6 @@
 
 """Self-test suite for Crypto.Hash.SHA256"""
 
-__revision__ = "$Id$"
-
 import unittest
 from Crypto.Util.py3compat import *
 

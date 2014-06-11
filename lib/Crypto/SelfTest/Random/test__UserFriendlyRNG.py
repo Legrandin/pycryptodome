@@ -23,18 +23,11 @@
 
 """Self-test suite for generic Crypto.Random stuff """
 
-from __future__ import nested_scopes
-
-__revision__ = "$Id$"
-
 import binascii
 import pprint
 import unittest
 import os
 import time
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 try:

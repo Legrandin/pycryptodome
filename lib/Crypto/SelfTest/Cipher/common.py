@@ -24,28 +24,11 @@
 
 """Self-testing for PyCrypto hash modules"""
 
-from __future__ import nested_scopes
-
-__revision__ = "$Id$"
-
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
-
 import unittest
 from binascii import a2b_hex, b2a_hex, hexlify
 
 from Crypto.Util.py3compat import *
 from Crypto.Util.strxor import strxor_c
-
-# For compatibility with Python 2.1 and Python 2.2
-if sys.hexversion < 0x02030000:
-    # Python 2.1 doesn't have a dict() function
-    # Python 2.2 dict() function raises TypeError if you do dict(MD5='blah')
-    def dict(**kwargs):
-        return kwargs.copy()
-else:
-    dict = dict
 
 class _NoDefault: pass        # sentinel object
 def _extract(d, k, default=_NoDefault):

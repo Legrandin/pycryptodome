@@ -28,15 +28,7 @@ objects.
 
 """
 
-from __future__ import nested_scopes
-
-import sys
-
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -290,7 +282,7 @@ class DerInteger(DerObject):
                 DerObject._decodeFromStream(self, s)
 
                 # Derive self.value from self.payload
-                self.value = 0L
+                self.value = 0
                 bits = 1
                 for i in self.payload:
                     self.value *= 256
@@ -344,7 +336,7 @@ class DerSequence(DerObject):
 
           3
           4
-          [4L, 9L, b'\x07\x01\x02']
+          [4, 9, b'\x07\x01\x02']
 
         """
 
@@ -766,7 +758,7 @@ class DerSetOf(DerObject):
     >>> except (ValueError, EOFError):
     >>>   print "Not a valid DER SET OF"
 
-    the output will be ``[4L, 5L, 6L]``.
+    the output will be ``[4, 5, 6]``.
     """
 
     def __init__(self, startSet=None, implicit=None):

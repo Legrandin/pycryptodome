@@ -24,15 +24,12 @@
 # ===================================================================
 #
 
-__revision__ = "$Id$"
-
 from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning, PowmInsecureWarning
 from warnings import warn as _warn
 import math
 import sys
 from Crypto.Util.py3compat import *
 
-bignum = long
 try:
     from Crypto.PublicKey import _fastmath
 except ImportError:
@@ -136,7 +133,7 @@ def getRandomNBitInteger(N, randfunc=None):
     the future.
     """
     value = getRandomInteger (N-1, randfunc)
-    value |= 2L ** (N-1)                # Ensure high bit is set
+    value |= 2 ** (N-1)                # Ensure high bit is set
     assert size(value) >= N
     return value
 
@@ -154,9 +151,9 @@ def inverse(u, v):
     Return the inverse of u mod v.
     """
     u3, v3 = long(u), long(v)
-    u1, v1 = 1L, 0L
+    u1, v1 = 1, 0
     while v3 > 0:
-        q=divmod(u3, v3)[0]
+        q = u3 // v3
         u1, v1 = v1, u1 - v1*q
         u3, v3 = v3, u3 - v3*q
     while u1<0:
@@ -279,9 +276,8 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     x = (N - 512) >> 7;
     # We need to approximate the sqrt(2) in the lower_bound by an integer
     # expression because floating point math overflows with these numbers
-    lower_bound = divmod(14142135623730950489L * (2L ** (511 + 128*x)),
-                         10000000000000000000L)[0]
-    upper_bound = (1L << (512 + 128*x)) - 1
+    lower_bound = (14142135623730950489 * (2 ** (511 + 128*x))) //  10000000000000000000
+    upper_bound = (1 << (512 + 128*x)) - 1
     # Randomly choose X in calculated range
     X = getRandomRange (lower_bound, upper_bound, randfunc)
 
@@ -337,10 +333,10 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
         # the public exponent e
         if e and is_possible_prime:
             if e & 1:
-                if GCD (e, X-1) != 1:
+                if GCD(e, X-1) != 1:
                     is_possible_prime = 0
             else:
-                if GCD (e, divmod((X-1),2)[0]) != 1:
+                if GCD(e, (X-1) // 2) != 1:
                     is_possible_prime = 0
 
         # do some Rabin-Miller-Tests
@@ -351,7 +347,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
         X += increment
 		# abort when X has more bits than requested
 		# TODO: maybe we shouldn't abort but rather start over.
-        if X >= 1L << N:
+        if X >= 1 << N:
             raise RuntimeError ("Couln't find prime in field. "
                                 "Developer: Increase field_size")
     return X
@@ -429,7 +425,7 @@ def bytes_to_long(s):
 
     This is (essentially) the inverse of long_to_bytes().
     """
-    acc = 0L
+    acc = 0
     unpack = struct.unpack
     length = len(s)
     if length % 4:

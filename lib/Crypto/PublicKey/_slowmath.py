@@ -24,14 +24,8 @@
 
 """Pure Python implementation of the RSA-related portions of Crypto.PublicKey._fastmath."""
 
-__revision__ = "$Id$"
-
 __all__ = ['rsa_construct']
 
-import sys
-
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.number import size, inverse, GCD
 
 class error(Exception):
@@ -104,8 +98,8 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
         # The quantity d*e-1 is a multiple of phi(n), even,
         # and can be represented as t*2^s.
         t = ktot
-        while t%2==0:
-            t=divmod(t,2)[0]
+        while t % 2 ==0:
+            t //= 2  
         # Cycle through all multiplicative inverses in Zn.
         # The algorithm is non-deterministic, but there is a 50% chance
         # any candidate a leads to successful factoring.
@@ -132,7 +126,7 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
             raise ValueError("Unable to compute factors p and q from exponent d.")
         # Found !
         assert ((n % obj.p)==0)
-        obj.q = divmod(n,obj.p)[0]
+        obj.q = n // obj.p
     if u is not None:
         obj.u = u
     else:

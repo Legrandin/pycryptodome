@@ -22,13 +22,8 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
-
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
-    
+
 from binascii import b2a_hex
 import time
 import warnings

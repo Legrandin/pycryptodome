@@ -134,7 +134,7 @@ class AllOrNothing:
         # The one complication I add is that the last message block is hard
         # coded to the number of padbytes added, so that these can be stripped
         # during the undigest() step
-        s = divmod(len(text), block_size)[0]
+        s = len(text) // block_size
         blocks = []
         hashes = []
         for i in range(1, s+1):

@@ -24,8 +24,6 @@
 
 """Self-test suite for Crypto.Hash.SHA224"""
 
-__revision__ = "$Id$"
-
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
@@ -44,7 +42,7 @@ test_data = [
 
     ('49b08defa65e644cbf8a2dd9270bdededabc741997d1dadd42026d7b',
      'Franz jagt im komplett verwahrlosten Taxi quer durch Bayern'),
-    
+
     ('58911e7fccf2971a7d07f93162d8bd13568e71aa8fc86fc1fe9043d1',
      'Frank jagt im komplett verwahrlosten Taxi quer durch Bayern'),
 

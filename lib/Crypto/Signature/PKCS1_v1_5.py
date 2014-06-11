@@ -57,17 +57,13 @@ the RSA key:
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125
 """
 
-__revision__ = "$Id$"
 __all__ = [ 'new', 'PKCS115_SigScheme' ]
 
-import sys
+from Crypto.Util.py3compat import *
 
 import Crypto.Util.number
 from Crypto.Util.number import ceil_div
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString, DerObjectId
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
-from Crypto.Util.py3compat import *
 
 class PKCS115_SigScheme:
     """This signature scheme can perform PKCS#1 v1.5 RSA signature or verification."""

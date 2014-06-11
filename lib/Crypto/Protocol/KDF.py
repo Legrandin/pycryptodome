@@ -33,14 +33,9 @@ master key, or to thwart attacks on pass phrases (e.g. via rainbow tables).
 :undocumented: __revision__
 """
 
-__revision__ = "$Id$"
-
 import struct
 from struct import unpack
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 from Crypto.Cipher import _Salsa20
@@ -154,6 +149,7 @@ class _S2V(object):
         self._last_string = self._cache = bchr(0)*ciphermod.block_size
         self._n_updates = ciphermod.block_size*8-1
 
+    @staticmethod
     def new(key, ciphermod):
         """Create a new S2V PRF.
 
@@ -165,7 +161,6 @@ class _S2V(object):
             A block cipher module from `Crypto.Cipher`.
         """
         return _S2V(key, ciphermod)
-    new = staticmethod(new)
 
     def _double(self, bs):
         doubled = bytes_to_long(bs)<<1
@@ -355,9 +350,9 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     if 2 ** (bit_size(N) - 1) != N:
         raise ValueError("N must be a power of 2")
-    if N >= 2L ** 32:
+    if N >= 2 ** 32:
         raise ValueError("N is too big")
-    if p > divmod((2L ** 32 - 1) * 32, 128 * r)[0]:
+    if p > ((2 ** 32 - 1) * 32)  // (128 * r):
         raise ValueError("p or r are too big")
 
     prf_hmac_sha256 = lambda p, s: HMAC.new(p, s, SHA256).digest()

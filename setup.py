@@ -123,14 +123,6 @@ class PCTBuildExt (build_ext):
                 self.__add_compiler_option("-ftest-coverage")
                 self.compiler.libraries += ['gcov']
 
-            # Python 2.1 and 2.2 don't respect the LDFLAGS environment variable.  Hack it.
-            if sys.version_info < (2, 3, 'final', 0):
-                if os.environ.get('LDFLAGS'):       # Set from ./buildenv (ultimately provided by autoconf)
-                    for opt in os.environ['LDFLAGS'].split(" "):
-                        opt = opt.strip()
-                        if not opt: continue
-                        self.compiler.linker_so.append(opt)
-
         # Call the superclass's build_extensions method
         build_ext.build_extensions(self)
 
@@ -270,12 +262,6 @@ class PCTBuildExt (build_ext):
                         os.environ[k] = v
                 finally:
                     f.close()
-
-                # Python 2.1 and 2.2 don't respect the CC environment variable by default.  Monkey-patch it.
-                if sys.version_info < (2, 3, 'final', 0) and os.environ.get('CC'):
-                    distutils.sysconfig.get_config_vars()   # populates distutils.sysconfig._config_vars
-                    orig_cc = distutils.sysconfig._config_vars['CC']
-                    distutils.sysconfig._config_vars['CC'] = os.environ['CC']
 
             # Build the extension modules
             build_ext.run(self)

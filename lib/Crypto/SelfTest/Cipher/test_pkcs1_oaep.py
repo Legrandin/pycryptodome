@@ -20,10 +20,6 @@
 # SOFTWARE.
 # ===================================================================
 
-from __future__ import nested_scopes
-
-__revision__ = "$Id$"
-
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex

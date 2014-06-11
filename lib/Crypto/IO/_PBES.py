@@ -19,14 +19,14 @@
 # SOFTWARE.
 # ===================================================================
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 from Crypto import Random
-from Crypto.Util.asn1 import DerSequence, DerOctetString,\
-                             DerObjectId, DerInteger, newDerSequence
+from Crypto.Util.asn1 import (
+            DerSequence, DerOctetString,
+            DerObjectId, DerInteger,
+            newDerSequence
+            )
 
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import MD5, SHA1
@@ -87,6 +87,7 @@ class PBES1(object):
     .. __: http://www.ietf.org/rfc/rfc2898.txt
     """
 
+    @staticmethod
     def decrypt(data, passphrase):
         """Decrypt a piece of data using a passphrase and *PBES1*.
 
@@ -144,7 +145,6 @@ class PBES1(object):
         cipher = ciphermod.new(key, ciphermod.MODE_CBC, iv, **cipher_params)
         pt = cipher.decrypt(encrypted_data)
         return unpad(pt, cipher.block_size)
-    decrypt = staticmethod(decrypt)
 
 
 class PBES2(object):
@@ -153,6 +153,7 @@ class PBES2(object):
 
     .. __: http://www.ietf.org/rfc/rfc2898.txt."""
 
+    @staticmethod
     def encrypt(data, passphrase, protection, prot_params=None, randfunc=None):
         """Encrypt a piece of data using a passphrase and *PBES2*.
 
@@ -284,8 +285,8 @@ class PBES2(object):
             DerOctetString(encrypted_data)
         )
         return encrypted_private_key_info.encode()
-    encrypt = staticmethod(encrypt)
 
+    @staticmethod
     def decrypt(data, passphrase):
         """Decrypt a piece of data using a passphrase and *PBES2*.
 
@@ -392,4 +393,3 @@ class PBES2(object):
         # Decrypt data
         pt = cipher.decrypt(encrypted_data)
         return unpad(pt, cipher.block_size)
-    decrypt = staticmethod(decrypt)

@@ -24,8 +24,6 @@
 
 """Self-test suite for Crypto.Hash.SHA384"""
 
-__revision__ = "$Id$"
-
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
@@ -41,7 +39,7 @@ test_data = [
 
     # Taken from http://de.wikipedia.org/wiki/Secure_Hash_Algorithm
     ('38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b', ''),
-    
+
     # Example from http://de.wikipedia.org/wiki/Secure_Hash_Algorithm
     ('71e8383a4cea32d6fd6877495db2ee353542f46fa44bc23100bca48f3366b84e809f0708e81041f427c6d5219a286677',
      'Franz jagt im komplett verwahrlosten Taxi quer durch Bayern'),

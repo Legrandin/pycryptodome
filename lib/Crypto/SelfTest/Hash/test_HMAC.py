@@ -24,15 +24,9 @@
 
 """Self-test suite for Crypto.Hash.HMAC"""
 
-__revision__ = "$Id$"
-
 import unittest
 from binascii import hexlify
-
-from common import dict     # For compatibility with Python 2.1 and 2.2
 from Crypto.Util.py3compat import *
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 
 from Crypto.Hash import HMAC, MD5, SHA1, SHA256
 hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256)

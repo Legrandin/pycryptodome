@@ -20,8 +20,6 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
-
 import unittest
 from binascii import unhexlify
 
@@ -32,11 +30,6 @@ from Crypto.Hash import SHA1, HMAC, SHA256
 from Crypto.Cipher import AES, DES3
 
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, _S2V, HKDF, scrypt
-
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
-from Crypto.Util.py3compat import *
-
 
 def t2b(t):
     if t is None:

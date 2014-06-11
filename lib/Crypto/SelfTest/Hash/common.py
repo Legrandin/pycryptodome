@@ -24,25 +24,10 @@
 
 """Self-testing for PyCrypto hash modules"""
 
-__revision__ = "$Id$"
-
-import sys
 import unittest
 import binascii
 import Crypto.Hash
 from Crypto.Util.py3compat import *
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
-
-# For compatibility with Python 2.1 and Python 2.2
-if sys.hexversion < 0x02030000:
-    # Python 2.1 doesn't have a dict() function
-    # Python 2.2 dict() function raises TypeError if you do dict(MD5='blah')
-    def dict(**kwargs):
-        return kwargs.copy()
-else:
-    dict = dict
-
 from Crypto.Util.strxor import strxor_c
 
 class HashDigestSizeSelfTest(unittest.TestCase):

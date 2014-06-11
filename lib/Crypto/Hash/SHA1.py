@@ -35,15 +35,9 @@ This algorithm is not considered secure. Do not use it for new designs.
 .. _SHA-1: http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
 """
 
-from __future__ import nested_scopes
-
-_revision__ = "$Id$"
-
 __all__ = ['new', 'block_size', 'digest_size']
 
 from Crypto.Util.py3compat import *
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 
 def __make_constructor():
     try:

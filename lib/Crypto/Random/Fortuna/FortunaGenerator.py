@@ -22,11 +22,6 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
-
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 import struct
@@ -93,8 +88,8 @@ class AESGenerator(object):
         for i in xrange(num_full_blocks):
             retval.append(self._pseudo_random_data(1<<20))
         retval.append(self._pseudo_random_data(remainder))
-        
-        return b("").join(retval)  
+
+        return b("").join(retval)
 
     def _set_key(self, key):
         self.key = key

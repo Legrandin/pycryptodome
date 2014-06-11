@@ -24,12 +24,7 @@
 
 ## NOTE: Do not import this module directly.  Import these functions from Crypto.Util.number.
 
-__revision__ = "$Id$"
 __all__ = ['ceil_shift', 'ceil_div', 'floor_div', 'exact_log2', 'exact_div']
-
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 
 def ceil_shift(n, b):
     """Return ceil(n / 2**b) without performing any floating-point or division operations.
@@ -41,7 +36,7 @@ def ceil_shift(n, b):
         raise TypeError("unsupported operand type(s): %r and %r" % (type(n).__name__, type(b).__name__))
 
     assert n >= 0 and b >= 0    # I haven't tested or even thought about negative values
-    mask = (1L << b) - 1
+    mask = (1 << b) - 1
     if n & mask:
         return (n >> b) + 1
     else:
@@ -87,7 +82,7 @@ def exact_log2(num):
         n >>= 1
     i -= 1
 
-    assert num == (1L << i)
+    assert num == (1 << i)
     return i
 
 def exact_div(p, d, allow_divzero=False):

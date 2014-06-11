@@ -25,9 +25,6 @@
 """Self-test suite for Crypto.Cipher.Salsa20"""
 
 import unittest
-
-__revision__ = "$Id$"
-from common import dict
 from Crypto.Util.py3compat import *
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]])

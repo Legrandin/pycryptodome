@@ -20,10 +20,7 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
-
 import unittest
-import sys
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex

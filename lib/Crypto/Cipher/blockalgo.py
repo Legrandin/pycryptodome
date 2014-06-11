@@ -21,10 +21,6 @@
 # ===================================================================
 """Module with definitions common to all block ciphers."""
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
-
 from Crypto.Util.py3compat import *
 
 from binascii import unhexlify
@@ -472,7 +468,7 @@ class BlockAlgo:
         """Create a new CTR cipher from the MAC in SIV mode"""
 
         tag_int = bytes_to_long(tag)
-        init_counter = tag_int ^ (tag_int & 0x8000000080000000L)
+        init_counter = tag_int ^ (tag_int & 0x8000000080000000)
         ctr = Counter.new(self._factory.block_size * 8,
                           initial_value=init_counter,
                           allow_wraparound=True)
@@ -593,7 +589,7 @@ class BlockAlgo:
         ## Compute B_0
         flags = (
                 64 * (self._assoc_len > 0) +
-                8 * divmod(self._mac_len - 2, 2)[0] +
+                8 * ((self._mac_len - 2) // 2) +
                 (q - 1)
                 )
         b_0 = bchr(flags) + self.nonce + long_to_bytes(self._msg_len, q)
@@ -603,7 +599,7 @@ class BlockAlgo:
         if self._assoc_len > 0:
             if self._assoc_len < (2 ** 16 - 2 ** 8):
                 enc_size = 2
-            elif self._assoc_len < (2L ** 32):
+            elif self._assoc_len < (2 ** 32):
                 assoc_len_encoded = b('\xFF\xFE')
                 enc_size = 4
             else:

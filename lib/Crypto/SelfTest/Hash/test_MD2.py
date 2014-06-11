@@ -24,8 +24,6 @@
 
 """Self-test suite for Crypto.Hash.MD2"""
 
-__revision__ = "$Id$"
-
 from Crypto.Util.py3compat import *
 
 # This is a list of (expected_result, input[, description]) tuples.

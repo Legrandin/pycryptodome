@@ -20,10 +20,6 @@
 # SOFTWARE.
 # ===================================================================
 
-from __future__ import nested_scopes
-
-__revision__ = "$Id$"
-
 import unittest
 
 from Crypto.PublicKey import RSA

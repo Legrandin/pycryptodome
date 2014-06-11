@@ -24,12 +24,7 @@
 
 """Self-test suite for Crypto.PublicKey.DSA"""
 
-__revision__ = "$Id$"
-
-import sys
 import os
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
 
 import unittest

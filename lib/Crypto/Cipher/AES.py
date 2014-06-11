@@ -76,11 +76,6 @@ We assume that the tuple ``msg`` is transmitted to the receiver:
 :undocumented: __revision__, __package__
 """
 
-__revision__ = "$Id$"
-
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _AES
 from Crypto.Util import cpuid

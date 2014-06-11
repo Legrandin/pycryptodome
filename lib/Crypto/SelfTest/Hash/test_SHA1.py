@@ -24,8 +24,6 @@
 
 """Self-test suite for Crypto.Hash.SHA"""
 
-__revision__ = "$Id$"
-
 from Crypto.Util.py3compat import *
 
 # Test vectors from various sources

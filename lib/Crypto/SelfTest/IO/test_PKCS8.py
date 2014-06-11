@@ -22,16 +22,10 @@
 
 """Self-tests for Crypto.IO.PKCS8 module"""
 
-__revision__ = "$Id$"
-
 import unittest
-import sys
 from binascii import unhexlify
 
 from Crypto.Util.py3compat import *
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
-
 from Crypto.IO import PKCS8
 
 oid_key = '1.2.840.113549.1.1.1'

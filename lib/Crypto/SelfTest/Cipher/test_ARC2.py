@@ -24,10 +24,6 @@
 
 """Self-test suite for Crypto.Cipher.ARC2"""
 
-__revision__ = "$Id$"
-
-from common import dict     # For compatibility with Python 2.1 and 2.2
-
 import unittest
 from Crypto.Util.py3compat import *
 

@@ -63,28 +63,29 @@ it is recommended to use one of the standardized schemes instead (like
 :sort: generate,construct,importKey,error
 """
 
-__revision__ = "$Id$"
-
 __all__ = ['generate', 'construct', 'error', 'importKey', 'RSAImplementation',
     '_RSAobj', 'oid' , 'algorithmIdentifier' ]
 
-import sys
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 from Crypto.Util.py3compat import *
-
-from Crypto.Util.number import getRandomRange, bytes_to_long, long_to_bytes
-
-from Crypto.PublicKey import _RSA, _slowmath, pubkey
-from Crypto.IO import PKCS8, PEM
-from Crypto import Random
-
-from Crypto.Util.asn1 import *
 
 import binascii
 import struct
 
+
+from Crypto import Random
+from Crypto.IO import PKCS8, PEM
+from Crypto.PublicKey import _RSA, _slowmath, pubkey
 from Crypto.Util.number import inverse, GCD, isPrime
+from Crypto.Util.number import getRandomRange, bytes_to_long, long_to_bytes
+
+from Crypto.Util.asn1 import (
+                DerNull,
+                DerSequence,
+                DerBitString,
+                DerObjectId,
+                newDerSequence,
+                newDerBitString
+                )
 
 try:
     from Crypto.PublicKey import _fastmath
@@ -547,7 +548,7 @@ class RSAImplementation(object):
         key = self._math.rsa_construct(obj.n, obj.e, obj.d, obj.p, obj.q, obj.u)
         return _RSAobj(self, key)
 
-    def construct(self, tup):
+    def construct(self, tup, consistency_check=True):
         """Construct an RSA key from a tuple of valid RSA components.
 
         The modulus **n** must be the product of two primes.
@@ -562,16 +563,19 @@ class RSAImplementation(object):
 
         :Parameters:
          tup : tuple
-                    A tuple of long integers, with at least 2 and no
-                    more than 6 items. The items come in the following order:
+            A tuple of long integers, with at least 2 and no
+            more than 6 items. The items come in the following order:
 
-                    1. RSA modulus (n).
-                    2. Public exponent (e).
-                    3. Private exponent (d). Only required if the key is private.
-                    4. First factor of n (p). Optional, but factor q must also
-                       be present.
-                    5. Second factor of n (q). Optional.
-                    6. CRT coefficient, (1/p) mod q (u). Optional.
+                1. RSA modulus (n).
+                2. Public exponent (e).
+                3. Private exponent (d). Only required if the key is private.
+                4. First factor of n (p). Optional, but factor q must also
+                    be present.
+                5. Second factor of n (q). Optional.
+                6. CRT coefficient, (1/p) mod q (u). Optional.
+         consistency_check : boolean
+            If *True*, the library will verify that the provided components
+            fulfil the main RSA properties.
 
         :Raise ValueError:
             When the key being imported fails the most basic RSA validity checks.
@@ -580,31 +584,33 @@ class RSAImplementation(object):
 
         key = self._math.rsa_construct(*tup)
 
-        # Modulus and public exponent must be coprime
-        fmt_error = key.e<=1 or key.e>=key.n
-        fmt_error |= GCD(key.n, key.e)!=1
+        fmt_error = False
+        if consistency_check:
+            # Modulus and public exponent must be coprime
+            fmt_error = key.e<=1 or key.e>=key.n
+            fmt_error |= GCD(key.n, key.e)!=1
 
-        # For RSA, modulus must be odd
-        fmt_error |= not key.n&1
+            # For RSA, modulus must be odd
+            fmt_error |= not key.n&1
 
-        if not fmt_error and hasattr(key, 'd'):
-            # Modulus and private exponent must be coprime
-            fmt_error = key.d<=1 or key.d>=key.n
-            fmt_error |= GCD(key.n, key.d)!=1
-            # Modulus must be product of 2 primes
-            fmt_error |= (key.p*key.q != key.n)
-            fmt_error |= not isPrime(key.p)
-            fmt_error |= not isPrime(key.q)
-            # See Carmichael theorem
-            phi = (key.p-1)*(key.q-1)
-            lcm = divmod(phi, GCD(key.p-1, key.q-1))[0]
-            fmt_error |= (key.e*key.d % lcm)!=1
-            if hasattr(key, 'u'):
-                # CRT coefficient
-                fmt_error |= key.u<=1 or key.u>=key.q
-                fmt_error |= (key.p*key.u % key.q)!=1
-            else:
-                fmt_error = True
+            if not fmt_error and hasattr(key, 'd'):
+                # Modulus and private exponent must be coprime
+                fmt_error = key.d<=1 or key.d>=key.n
+                fmt_error |= GCD(key.n, key.d)!=1
+                # Modulus must be product of 2 primes
+                fmt_error |= (key.p*key.q != key.n)
+                fmt_error |= not isPrime(key.p)
+                fmt_error |= not isPrime(key.q)
+                # See Carmichael theorem
+                phi = (key.p-1)*(key.q-1)
+                lcm = phi // GCD(key.p-1, key.q-1)
+                fmt_error |= (key.e*key.d % lcm)!=1
+                if hasattr(key, 'u'):
+                    # CRT coefficient
+                    fmt_error |= key.u<=1 or key.u>=key.q
+                    fmt_error |= (key.p*key.u % key.q)!=1
+                else:
+                    fmt_error = True
 
         if fmt_error:
             raise ValueError("Invalid RSA key components")

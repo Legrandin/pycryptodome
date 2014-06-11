@@ -32,18 +32,12 @@ MD5 stand for Message Digest version 5, and it was invented by Rivest in 1991.
 
 This algorithm is insecure. Do not use it for new designs.
 
-.. _RFC1321: http://tools.ietf.org/html/rfc1321 
+.. _RFC1321: http://tools.ietf.org/html/rfc1321
 """
-
-from __future__ import nested_scopes
-
-_revision__ = "$Id$"
 
 __all__ = ['new', 'block_size', 'digest_size']
 
 from Crypto.Util.py3compat import *
-if sys.version_info[0] == 2 and sys.version_info[1] == 1:
-    from Crypto.Util.py21compat import *
 
 def __make_constructor():
     try:
