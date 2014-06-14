@@ -1,24 +1,12 @@
 # HMAC.py - Implements the HMAC algorithm as described by RFC 2104.
 #
 # ===================================================================
-# Portions Copyright (c) 2001, 2002, 2003 Python Software Foundation;
-# All Rights Reserved
-#
-# This file contains code from the Python 2.2 hmac.py module (the
-# "Original Code"), with modifications made after it was incorporated
-# into PyCrypto (the "Modifications").
-#
-# To the best of our knowledge, the Python Software Foundation is the
-# copyright holder of the Original Code, and has licensed it under the
-# Python 2.2 license.  See the file LEGAL/copy/LICENSE.python-2.2 for
-# details.
-#
-# The Modifications to this file are dedicated to the public domain.
-# To the extent that dedication to the public domain is not available,
+# The contents of this file are dedicated to the public domain.  To
+# the extent that dedication to the public domain is not available,
 # everyone is granted a worldwide, perpetual, royalty-free,
 # non-exclusive license to exercise all rights associated with the
-# contents of this file for any purpose whatsoever.  No rights are
-# reserved.
+# contents of this file for any purpose whatsoever.
+# No rights are reserved.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -29,7 +17,6 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 # ===================================================================
-
 
 """HMAC (Hash-based Message Authentication Code) algorithm
 
@@ -69,35 +56,23 @@ This is an example showing how to *check* a MAC:
     >>>   print "The message or the key is wrong"
 
 .. _RFC2104: http://www.ietf.org/rfc/rfc2104.txt
-.. _FIPS-198: http://csrc.nist.gov/publications/fips/fips198/fips-198a.pdf
+.. _FIPS-198: http://csrc.nist.gov/publications/fips/fips198/fips-198-1_final.pdf
 """
 
-# This is just a copy of the Python 2.2 HMAC module, modified to work when
-# used on versions of Python before 2.2.
+__all__ = ['new', 'HMAC']
 
-__revision__ = "$Id$"
-
-__all__ = ['new', 'digest_size', 'HMAC' ]
+from Crypto.Util.py3compat import b, bchr, bord, tobytes
 
 from binascii import unhexlify
 
-from Crypto.Util.strxor import strxor_c
-from Crypto.Util.py3compat import *
+import MD5
+from Crypto.Util.strxor import strxor
 
-#: The size of the authentication tag produced by the MAC.
-#: It matches the digest size on the underlying
-#: hashing module used.
-digest_size = None
 
 class HMAC:
     """Class that implements HMAC"""
 
-    #: The size of the authentication tag produced by the MAC.
-    #: It matches the digest size on the underlying
-    #: hashing module used.
-    digest_size = None
-
-    def __init__(self, key, msg = None, digestmod = None):
+    def __init__(self, key, msg=b(""), digestmod=None):
         """Create a new HMAC object.
 
         :Parameters:
@@ -115,39 +90,43 @@ class HMAC:
         :Type digestmod:
             A hash module or object instantiated from `Crypto.Hash`
         """
+
         if digestmod is None:
-            import MD5
             digestmod = MD5
 
-        self.digestmod = digestmod
-        self.outer = digestmod.new()
-        self.inner = digestmod.new()
-        try:
-            self.digest_size = digestmod.digest_size
-        except AttributeError:
-            self.digest_size = len(self.outer.digest())
+        #: Size of the MAC tag
+        self.digest_size = digestmod.digest_size
+
+        self._digestmod = digestmod
 
         try:
-            # The block size is 128 bytes for SHA384 and SHA512 and 64 bytes
-            # for the others hash function
-            blocksize = digestmod.block_size
+            if len(key) <= digestmod.block_size:
+                # Step 1 or 2
+                key_0 = key + bchr(0) * (digestmod.block_size - len(key))
+            else:
+                # Step 3
+                hash_k = digestmod.new(key).digest()
+                key_0 = hash_k + bchr(0) * (digestmod.block_size - len(hash_k))
         except AttributeError:
+            # Not all hash types have "block_size"
             raise ValueError("Hash type incompatible to HMAC")
 
-        ipad = 0x36
-        opad = 0x5C
+        # Step 4
+        key_0_ipad = strxor(key_0, bchr(0x36) * len(key_0))
 
-        if len(key) > blocksize:
-            key = digestmod.new(key).digest()
+        # Start step 5 and 6
+        self._inner = digestmod.new(key_0_ipad)
+        self._inner.update(msg)
 
-        key = key + bchr(0) * (blocksize - len(key))
-        self.outer.update(strxor_c(key, opad))
-        self.inner.update(strxor_c(key, ipad))
-        if (msg):
-            self.update(msg)
+        # Step 7
+        key_0_opad = strxor(key_0, bchr(0x5c) * len(key_0))
+
+        # Start step 8 and 9
+        self._outer = digestmod.new(key_0_opad)
 
     def update(self, msg):
-        """Continue authentication of a message by consuming the next chunk of data.
+        """Continue authentication of a message by consuming the next
+        chunk of data.
 
         Repeated calls are equivalent to a single call with the concatenation
         of all the arguments. In other words:
@@ -163,7 +142,7 @@ class HMAC:
             The next chunk of the message being authenticated
         """
 
-        self.inner.update(msg)
+        self._inner.update(msg)
 
     def copy(self):
         """Return a copy ("clone") of the MAC object.
@@ -175,11 +154,14 @@ class HMAC:
 
         :Returns: An `HMAC` object
         """
-        other = HMAC(b(""))
-        other.digestmod = self.digestmod
-        other.inner = self.inner.copy()
-        other.outer = self.outer.copy()
-        return other
+
+        new_hmac = HMAC(b("fake key"), digestmod=self._digestmod)
+
+        # Syncronize the state
+        new_hmac._inner = self._inner.copy()
+        new_hmac._outer = self._outer.copy()
+
+        return new_hmac
 
     def digest(self):
         """Return the **binary** (non-printable) MAC of the message that has
@@ -192,12 +174,13 @@ class HMAC:
             characters, including null bytes.
         """
 
-        h = self.outer.copy()
-        h.update(self.inner.digest())
-        return h.digest()
+        frozen_outer_hash = self._outer.copy()
+        frozen_outer_hash.update(self._inner.digest())
+        return frozen_outer_hash.digest()
 
     def verify(self, mac_tag):
-        """Verify that a given **binary** MAC (computed by another party) is valid.
+        """Verify that a given **binary** MAC (computed by another party)
+        is valid.
 
         :Parameters:
           mac_tag : byte string
@@ -210,9 +193,9 @@ class HMAC:
         mac = self.digest()
         res = 0
         # Constant-time comparison
-        for x,y in zip(mac, mac_tag):
+        for x, y in zip(mac, mac_tag):
             res |= bord(x) ^ bord(y)
-        if res or len(mac_tag)!=self.digest_size:
+        if res or len(mac_tag) != self._inner.digest_size:
             raise ValueError("MAC check failed")
 
     def hexdigest(self):
@@ -225,10 +208,11 @@ class HMAC:
          hexadecimal ASCII digits.
         """
         return "".join(["%02x" % bord(x)
-                  for x in tuple(self.digest())])
+                        for x in tuple(self.digest())])
 
     def hexverify(self, hex_mac_tag):
-        """Verify that a given **printable** MAC (computed by another party) is valid.
+        """Verify that a given **printable** MAC (computed by another party)
+        is valid.
 
         :Parameters:
           hex_mac_tag : string
@@ -240,7 +224,8 @@ class HMAC:
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
-def new(key, msg = None, digestmod = None):
+
+def new(key, msg=b(""), digestmod=None):
     """Create a new HMAC object.
 
     :Parameters:
@@ -248,7 +233,7 @@ def new(key, msg = None, digestmod = None):
         key for the MAC object.
         It must be long enough to match the expected security level of the
         MAC. However, there is no benefit in using keys longer than the
-        `digest_size` of the underlying hash algorithm.
+        *digest_size* of the underlying hash algorithm.
       msg : byte string
         The very first chunk of the message to authenticate.
         It is equivalent to an early call to `HMAC.update()`.
@@ -260,4 +245,3 @@ def new(key, msg = None, digestmod = None):
     :Returns: An `HMAC` object
     """
     return HMAC(key, msg, digestmod)
-

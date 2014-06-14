@@ -54,14 +54,6 @@ the public domain.  Most are distributed with the following notice:
   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
-Exceptions:
-
- - Portions of HMAC.py and setup.py are derived from Python 2.2, and
-   are therefore Copyright (c) 2001, 2002, 2003 Python Software
-   Foundation (All Rights Reserved).  They are licensed by the PSF
-   under the terms of the Python 2.2 license.  (See the file
-   LEGAL/copy/LICENSE.python-2.2 for details.)
-
 EXPORT RESTRICTIONS:
 
 Note that the export or re-export of cryptographic software and/or
