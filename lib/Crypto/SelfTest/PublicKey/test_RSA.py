@@ -28,6 +28,7 @@ __revision__ = "$Id$"
 
 import os
 import pickle
+from pickle import PicklingError
 from Crypto.Util.py3compat import *
 
 import unittest
@@ -85,21 +86,6 @@ class RSATest(unittest.TestCase):
         ce 33 52 52 4d 04 16 a5 a4 41 e7 00 af 46 15 03
     """
 
-    # The same key, in pickled format (from pycrypto 2.3)
-    # to ensure backward compatibility
-    pickled_key_2_3 = \
-        "(iCrypto.PublicKey.RSA\n_RSAobj\np0\n(dp2\nS'e'\np3\nL17L\nsS'd'\np4"\
-        "\nL11646763154293086160147889314553506764606353688284149120983587488"\
-        "79382229568306696406525871631480713149376749558222371890533687587223"\
-        "51580531956820574156366843733156436163097164007967904900300775223658"\
-        "03543233292399245064743971969473468304536714979010219881003396235861"\
-        "8370829441895425705728523874962107052993L\nsS'n'\np5\nL1319966490819"\
-        "88309815009412231606409998872008467220356704480658206329986017741425"\
-        "59273959878490114749026269828326520214759381792655199845793621772998"\
-        "40439054838068985140623386496543388290455526885872858516219460533763"\
-        "92312680578795692682905599590422046720587710762927130740460442438533"\
-        "124053848898103790124491L\nsb."
-
     def setUp(self):
         global RSA, Random, bytes_to_long
         from Crypto.PublicKey import RSA
@@ -147,23 +133,18 @@ class RSATest(unittest.TestCase):
         pub = self.rsa.construct((self.n, self.e))
         self._check_public_key(pub)
         self._check_encryption(pub)
-        self._check_verification(pub)
 
     def test_construct_3tuple(self):
         """RSA (default implementation) constructed key (3-tuple)"""
         rsaObj = self.rsa.construct((self.n, self.e, self.d))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
-        self._check_signing(rsaObj)
-        self._check_verification(rsaObj)
 
     def test_construct_4tuple(self):
         """RSA (default implementation) constructed key (4-tuple)"""
         rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p))
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
-        self._check_signing(rsaObj)
-        self._check_verification(rsaObj)
 
     def test_construct_5tuple(self):
         """RSA (default implementation) constructed key (5-tuple)"""
@@ -171,8 +152,6 @@ class RSATest(unittest.TestCase):
         self._check_private_key(rsaObj)
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
-        self._check_signing(rsaObj)
-        self._check_verification(rsaObj)
 
     def test_construct_6tuple(self):
         """RSA (default implementation) constructed key (6-tuple)"""
@@ -180,8 +159,6 @@ class RSATest(unittest.TestCase):
         self._check_private_key(rsaObj)
         self._check_encryption(rsaObj)
         self._check_decryption(rsaObj)
-        self._check_signing(rsaObj)
-        self._check_verification(rsaObj)
 
     def test_construct_bad_key2(self):
         tup = (self.n, 1L)
@@ -222,47 +199,25 @@ class RSATest(unittest.TestCase):
         self.assertRaises(ValueError, self.rsa.construct, [self.n, self.e, self.n-1])
 
     def test_serialization(self):
-        """RSA (default implementation) serialize/unserialize key"""
-        rsaObj_orig = self.rsa.generate(1024)
-        rsaObj = pickle.loads(pickle.dumps(rsaObj_orig))
-        self._check_private_key(rsaObj)
-        self._exercise_primitive(rsaObj)
-        pub = rsaObj.publickey()
-        self._check_public_key(pub)
-        self._exercise_public_primitive(rsaObj)
+        """RSA keys are unpickable"""
 
-        plaintext = a2b_hex(self.plaintext)
-        ciphertext1 = rsaObj_orig.encrypt(plaintext, b(""))
-        ciphertext2 = rsaObj.encrypt(plaintext, b(""))
-        self.assertEqual(ciphertext1, ciphertext2)
-
-    if not (3, 0) <= sys.version_info < (3, 1, 2, 'final', 0):
-        # Unpickling is broken in Python 3 before 3.1.2 due to http://bugs.python.org/issue6137
-        def test_serialization_compat(self):
-            """RSA (default implementation) backward compatibility serialization"""
-            rsaObj = pickle.loads(b(self.pickled_key_2_3))
-            plaintext = a2b_hex(self.plaintext)
-            ciphertext = a2b_hex(self.ciphertext)
-            ciphertext_result = rsaObj.encrypt(plaintext, b(""))[0]
-            self.assertEqual(ciphertext_result, ciphertext)
+        rsa_key = self.rsa.generate(1024)
+        self.assertRaises(PicklingError, pickle.dumps, rsa_key)
 
     def test_raw_rsa_boundary(self):
         # The argument of every RSA raw operation (encrypt/decrypt) must be positive
         # and no larger than the modulus
         rsa_obj = self.rsa.generate(1024)
 
-        self.assertRaises(ValueError, rsa_obj.decrypt, (rsa_obj.n,))
-        self.assertRaises(ValueError, rsa_obj.encrypt, rsa_obj.n, b(""))
+        self.assertRaises(ValueError, rsa_obj._decrypt, rsa_obj.n)
+        self.assertRaises(ValueError, rsa_obj._encrypt, rsa_obj.n)
 
-        self.assertRaises(ValueError, rsa_obj.decrypt, (0,))
-        self.assertRaises(ValueError, rsa_obj.encrypt, 0, b(""))
+        self.assertRaises(ValueError, rsa_obj._decrypt, 0)
+        self.assertRaises(ValueError, rsa_obj._encrypt, 0)
 
     def _check_private_key(self, rsaObj):
         # Check capabilities
         self.assertEqual(1, rsaObj.has_private())
-        self.assertEqual(1, rsaObj.can_sign())
-        self.assertEqual(1, rsaObj.can_encrypt())
-        self.assertEqual(1, rsaObj.can_blind())
 
         # Check rsaObj.[nedpqu] -> rsaObj.key.[nedpqu] mapping
         self.assertEqual(rsaObj.n, rsaObj.key.n)
@@ -286,9 +241,6 @@ class RSATest(unittest.TestCase):
 
         # Check capabilities
         self.assertEqual(0, rsaObj.has_private())
-        self.assertEqual(1, rsaObj.can_sign())
-        self.assertEqual(1, rsaObj.can_encrypt())
-        self.assertEqual(1, rsaObj.can_blind())
 
         # Check rsaObj.[ne] -> rsaObj.key.[ne] mapping
         self.assertEqual(rsaObj.n, rsaObj.key.n)
@@ -308,8 +260,8 @@ class RSATest(unittest.TestCase):
         self.assertEqual(1, rsaObj.e > 1)   # e > 1
 
         # Public keys should not be able to sign or decrypt
-        self.assertRaises(TypeError, rsaObj.sign, ciphertext, b(""))
-        self.assertRaises(TypeError, rsaObj.decrypt, ciphertext)
+        self.assertRaises(TypeError, rsaObj._decrypt,
+                bytes_to_long(ciphertext))
 
         # Check __eq__ and __ne__
         self.assertEqual(rsaObj.publickey() == rsaObj.publickey(),True) # assert_
@@ -319,81 +271,36 @@ class RSATest(unittest.TestCase):
         # Since we're using a randomly-generated key, we can't check the test
         # vector, but we can make sure encryption and decryption are inverse
         # operations.
-        ciphertext = a2b_hex(self.ciphertext)
+        ciphertext = bytes_to_long(a2b_hex(self.ciphertext))
 
         # Test decryption
-        plaintext = rsaObj.decrypt((ciphertext,))
+        plaintext = rsaObj._decrypt(ciphertext)
 
         # Test encryption (2 arguments)
-        (new_ciphertext2,) = rsaObj.encrypt(plaintext, b(""))
-        self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext2))
-
-        # Test blinded decryption
-        blinding_factor = Random.new().read(len(ciphertext)-1)
-        blinded_ctext = rsaObj.blind(ciphertext, blinding_factor)
-        blinded_ptext = rsaObj.decrypt((blinded_ctext,))
-        unblinded_plaintext = rsaObj.unblind(blinded_ptext, blinding_factor)
-        self.assertEqual(b2a_hex(plaintext), b2a_hex(unblinded_plaintext))
-
-        # Test signing (2 arguments)
-        signature2 = rsaObj.sign(ciphertext, b(""))
-        self.assertEqual((bytes_to_long(plaintext),), signature2)
-
-        # Test verification
-        self.assertEqual(1, rsaObj.verify(ciphertext, (bytes_to_long(plaintext),)))
+        new_ciphertext2 = rsaObj._encrypt(plaintext)
+        self.assertEqual(ciphertext, new_ciphertext2)
 
     def _exercise_public_primitive(self, rsaObj):
         plaintext = a2b_hex(self.plaintext)
 
         # Test encryption (2 arguments)
-        (new_ciphertext2,) = rsaObj.encrypt(plaintext, b(""))
-
-        # Exercise verification
-        rsaObj.verify(new_ciphertext2, (bytes_to_long(plaintext),))
+        new_ciphertext2 = rsaObj._encrypt(bytes_to_long(plaintext))
 
     def _check_encryption(self, rsaObj):
         plaintext = a2b_hex(self.plaintext)
         ciphertext = a2b_hex(self.ciphertext)
 
-        # Test encryption (2 arguments)
-        (new_ciphertext2,) = rsaObj.encrypt(plaintext, b(""))
-        self.assertEqual(b2a_hex(ciphertext), b2a_hex(new_ciphertext2))
+        # Test encryption
+        new_ciphertext2 = rsaObj._encrypt(bytes_to_long(plaintext))
+        self.assertEqual(bytes_to_long(ciphertext), new_ciphertext2)
 
     def _check_decryption(self, rsaObj):
-        plaintext = a2b_hex(self.plaintext)
-        ciphertext = a2b_hex(self.ciphertext)
+        plaintext = bytes_to_long(a2b_hex(self.plaintext))
+        ciphertext = bytes_to_long(a2b_hex(self.ciphertext))
 
         # Test plain decryption
-        new_plaintext = rsaObj.decrypt((ciphertext,))
-        self.assertEqual(b2a_hex(plaintext), b2a_hex(new_plaintext))
-
-        # Test blinded decryption
-        blinding_factor = Random.new().read(len(ciphertext)-1)
-        blinded_ctext = rsaObj.blind(ciphertext, blinding_factor)
-        blinded_ptext = rsaObj.decrypt((blinded_ctext,))
-        unblinded_plaintext = rsaObj.unblind(blinded_ptext, blinding_factor)
-        self.assertEqual(b2a_hex(plaintext), b2a_hex(unblinded_plaintext))
-
-    def _check_verification(self, rsaObj):
-        signature = bytes_to_long(a2b_hex(self.plaintext))
-        message = a2b_hex(self.ciphertext)
-
-        # Test verification
-        t = (signature,)     # rsaObj.verify expects a tuple
-        self.assertEqual(1, rsaObj.verify(message, t))
-
-        # Test verification with overlong tuple (this is a
-        # backward-compatibility hack to support some harmless misuse of the
-        # API)
-        t2 = (signature, '')
-        self.assertEqual(1, rsaObj.verify(message, t2)) # extra garbage at end of tuple
-
-    def _check_signing(self, rsaObj):
-        signature = bytes_to_long(a2b_hex(self.plaintext))
-        message = a2b_hex(self.ciphertext)
-
-        # Test signing (2 argument)
-        self.assertEqual((signature,), rsaObj.sign(message, b("")))
+        new_plaintext = rsaObj._decrypt(ciphertext)
+        self.assertEqual(plaintext, new_plaintext)
 
 class RSAFastMathTest(RSATest):
     def setUp(self):
@@ -437,13 +344,6 @@ class RSAFastMathTest(RSATest):
         """
         RSATest.test_serialization(self)
 
-    if not (3, 0) <= sys.version_info < (3, 1, 2, 'final', 0):
-        # Unpickling is broken in Python 3 before 3.1.2 due to http://bugs.python.org/issue6137
-        def test_serialization_compat(self):
-            """RSA (_fastmath implementation) backward compatibility serialization
-            """
-            RSATest.test_serialization_compat(self)
-
 
 class RSASlowMathTest(RSATest):
     def setUp(self):
@@ -485,12 +385,6 @@ class RSASlowMathTest(RSATest):
         """RSA (_slowmath implementation) serialize/unserialize key"""
         RSATest.test_serialization(self)
 
-    if not (3, 0) <= sys.version_info < (3, 1, 2, 'final', 0):
-        # Unpickling is broken in Python 3 before 3.1.2 due to http://bugs.python.org/issue6137
-        def test_serialization_compat(self):
-            """RSA (_slowmath implementation) backward compatibility serialization
-            """
-            RSATest.test_serialization_compat(self)
 
 def get_tests(config={}):
     tests = []

@@ -208,14 +208,14 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testImportKey5(self):
         """Verifies that the imported key is still a valid RSA pair"""
         key = RSA.importKey(self.rsaKeyPEM)
-        idem = key.encrypt(key.decrypt(b("Test")),0)
-        self.assertEqual(idem[0],b("Test"))
+        idem = key._encrypt(key._decrypt(89L))
+        self.assertEqual(idem, 89L)
 
     def testImportKey6(self):
         """Verifies that the imported key is still a valid RSA pair"""
         key = RSA.importKey(self.rsaKeyDER)
-        idem = key.encrypt(key.decrypt(b("Test")),0)
-        self.assertEqual(idem[0],b("Test"))
+        idem = key._encrypt(key._decrypt(65L))
+        self.assertEqual(idem, 65L)
 
     def testImportKey7(self):
         """Verify import of OpenSSH public key"""

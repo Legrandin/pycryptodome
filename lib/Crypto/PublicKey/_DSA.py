@@ -25,11 +25,8 @@
 # ===================================================================
 #
 
-__revision__ = "$Id$"
-
-from Crypto.PublicKey.pubkey import *
 from Crypto.Util import number
-from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Util.number import bytes_to_long, long_to_bytes, isPrime
 from Crypto.Hash import SHA1
 from Crypto.Util.py3compat import *
 
@@ -40,7 +37,7 @@ def generateQ(randfunc):
     S=randfunc(20)
     hash1=SHA1.new(S).digest()
     hash2=SHA1.new(long_to_bytes(bytes_to_long(S)+1)).digest()
-    q = bignum(0)
+    q = 0
     for i in range(0,20):
         c=bord(hash1[i])^bord(hash2[i])
         if i==0:
@@ -50,7 +47,7 @@ def generateQ(randfunc):
         q=q*256+c
     while (not isPrime(q)):
         q=q+2
-    if pow(2,159L) < q < pow(2,160L):
+    if pow(2,159) < q < pow(2,160):
         return S, q
     raise RuntimeError('Bad q value generated')
 
@@ -80,14 +77,14 @@ def generate_py(bits, randfunc, progress_func=None, domain=None):
             n =(bits-1) // 160
             C, N, V = 0, 2, {}
             b=(obj.q >> 5) & 15
-            powb=pow(bignum(2), b)
-            powL1=pow(bignum(2), bits-1)
+            powb=pow(2, b)
+            powL1=pow(2, bits-1)
             while C<4096:
                 for k in range(0, n+1):
                     V[k]=bytes_to_long(SHA1.new(S+bstr(N)+bstr(k)).digest())
                 W=V[n] % powb
                 for k in range(n-1, -1, -1):
-                    W=(W<<160L)+V[k]
+                    W=(W<<160)+V[k]
                 X=W+powL1
                 p=X-(X%(2*obj.q)-1)
                 if powL1<=p and isPrime(p):

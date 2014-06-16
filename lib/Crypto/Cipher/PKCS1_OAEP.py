@@ -49,7 +49,6 @@ the RSA key:
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125.
 """
 
-__revision__ = "$Id$"
 __all__ = [ 'new', 'PKCS1OAEP_Cipher' ]
 
 import Crypto.Signature.PKCS1_PSS
@@ -57,7 +56,7 @@ import Crypto.Hash.SHA1
 
 from Crypto.Util.py3compat import *
 import Crypto.Util.number
-from   Crypto.Util.number import ceil_div
+from   Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from   Crypto.Util.strxor import strxor
 
 class PKCS1OAEP_Cipher:
@@ -158,10 +157,12 @@ class PKCS1OAEP_Cipher:
         maskedSeed = strxor(ros, seedMask)
         # Step 2i
         em = bchr(0x00) + maskedSeed + maskedDB
-        # Step 3a (OS2IP), step 3b (RSAEP), part of step 3c (I2OSP)
-        m = self._key.encrypt(em, 0)[0]
-        # Complete step 3c (I2OSP)
-        c = bchr(0x00)*(k-len(m)) + m
+        # Step 3a (OS2IP)
+        em_int = bytes_to_long(em)
+        # Step 3b (RSAEP)
+        m_int = self._key._encrypt(em_int)
+        # Step 3c (I2OSP)
+        c = long_to_bytes(m_int, k)
         return c
 
     def decrypt(self, ct):
@@ -181,7 +182,6 @@ class PKCS1OAEP_Cipher:
         :Raise TypeError:
             If the RSA key has no private half.
         """
-        # TODO: Verify the key is RSA
 
         # See 7.1.2 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
@@ -191,10 +191,12 @@ class PKCS1OAEP_Cipher:
         # Step 1b and 1c
         if len(ct) != k or k<hLen+2:
             raise ValueError("Ciphertext with incorrect length.")
-        # Step 2a (O2SIP), 2b (RSADP), and part of 2c (I2OSP)
-        m = self._key.decrypt(ct)
+        # Step 2a (O2SIP)
+        ct_int = bytes_to_long(ct)
+        # Step 2b (RSADP)
+        m_int = self._key._decrypt(ct_int)
         # Complete step 2c (I2OSP)
-        em = bchr(0x00)*(k-len(m)) + m
+        em = long_to_bytes(m_int, k)
         # Step 3a
         lHash = self._hashObj.new(self._label).digest()
         # Step 3b

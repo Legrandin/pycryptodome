@@ -82,7 +82,7 @@ verification.
 .. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
 """
 
-__all__ = ['generate', 'construct', 'error', 'DSAImplementation',
+__all__ = ['generate', 'construct', 'DSAImplementation',
            '_DSAobj', 'importKey' ]
 
 import binascii
@@ -92,7 +92,7 @@ from Crypto.Util.py3compat import *
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.PublicKey import _DSA, _slowmath, pubkey
+from Crypto.PublicKey import _DSA, _slowmath
 from Crypto.Util.number import (
                         bytes_to_long, long_to_bytes,
                         isPrime, getRandomRange
@@ -109,7 +109,7 @@ try:
 except ImportError:
     _fastmath = None
 
-def decode_der(obj_class, binstr):
+def _decode_der(obj_class, binstr):
     """Instantiate a DER object class, decode a DER binary string in it,
     and return the object."""
     der = obj_class()
@@ -144,7 +144,7 @@ def decode_der(obj_class, binstr):
 #   }
 #
 
-class _DSAobj(pubkey.pubkey):
+class _DSAobj(object):
     """Class defining an actual DSA key.
 
     :undocumented: __getstate__, __setstate__, __repr__, __getattr__
@@ -161,7 +161,7 @@ class _DSAobj(pubkey.pubkey):
     #: A private key will also have:
     #:
     #:  - **x**, the private key.
-    keydata = ['y', 'g', 'p', 'q', 'x']
+    _keydata = ['y', 'g', 'p', 'q', 'x']
 
     def __init__(self, implementation, key, randfunc=None):
         self.implementation = implementation
@@ -171,95 +171,28 @@ class _DSAobj(pubkey.pubkey):
         self._randfunc = randfunc
 
     def __getattr__(self, attrname):
-        if attrname in self.keydata:
+        if attrname in self._keydata:
             # For backward compatibility, allow the user to get (not set) the
             # DSA key parameters directly from this object.
             return getattr(self.key, attrname)
         else:
             raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
 
-    def sign(self, M, K):
-        """Sign a piece of data with DSA.
-
-        This method is very low-level and must not be used directly.
-
-        **If you want to perform signing, use the `Crypto.Signature.DSS`
-        module instead.**
-
-        :Parameter M: The piece of data to sign with DSA. It may
-         not be longer in bit size than the sub-group order (*q*).
-        :Type M: byte string or long
-
-        :Parameter K: A secret number, chosen randomly in the closed
-         range *[1,q-1]*.
-        :Type K: long (recommended) or byte string (not recommended)
-
-        :attention: selection of *K* is crucial for security. Generating a
-         random number larger than *q* and taking the modulus by *q* is
-         **not** secure, since smaller values will occur more frequently.
-         Generating a random number systematically smaller than *q-1*
-         (e.g. *floor((q-1)/8)* random bytes) is also **not** secure. In general,
-         it shall not be possible for an attacker to know the value of `any
-         bit of K`__.
-
-        :attention: The number *K* shall not be reused for any other
-         operation and shall be discarded immediately.
-
-        :attention: M must be a digest cryptographic hash, otherwise
-         an attacker may mount an existential forgery attack.
-
-        :Return: A tuple with 2 longs.
-
-        .. __: http://www.di.ens.fr/~pnguyen/pub_NgSh00.htm
-        """
-        return pubkey.pubkey.sign(self, M, K)
-
-    def verify(self, M, signature):
-        """Verify the validity of a DSA signature.
-
-        This method is very low-level and must not be used directly.
-
-        **If you want to validate a signature, use
-        the `Crypto.Signature.DSS` module instead.**
-
-        :Parameter M: The expected message.
-        :Type M: byte string or long
-
-        :Parameter signature: The DSA signature to verify.
-        :Type signature: A tuple with 2 longs as return by `sign`
-
-        :Return: True if the signature is correct, False otherwise.
-        """
-        return pubkey.pubkey.verify(self, M, signature)
-
-    def _encrypt(self, c, K):
-        raise TypeError("DSA cannot encrypt")
-
-    def _decrypt(self, c):
-        raise TypeError("DSA cannot decrypt")
-
-    def _blind(self, m, r):
-        raise TypeError("DSA cannot blind")
-
-    def _unblind(self, m, r):
-        raise TypeError("DSA cannot unblind")
-
     def _sign(self, m, k):
+        if not self.has_private():
+            raise TypeError("DSA public key cannot be used for signing")
         blind_factor = getRandomRange(1, self.key.q, self._randfunc)
-        return self.key._sign(m, k, blind_factor)
+        return self.key._sign(long(m), long(k), blind_factor)
 
     def _verify(self, m, sig):
-        (r, s) = sig
-        return self.key._verify(m, r, s)
+        (r, s) = map(long, sig)
+        return self.key._verify(long(m), r, s)
 
     def has_private(self):
         return self.key.has_private()
 
     def size(self):
         return self.key.size()
-
-    def can_blind(self):
-        return False
 
     def can_encrypt(self):
         return False
@@ -270,35 +203,32 @@ class _DSAobj(pubkey.pubkey):
     def publickey(self):
         return self.implementation.construct((self.key.y, self.key.g, self.key.p, self.key.q))
 
+    def __eq__(self, other):
+        if bool(self.has_private()) != bool(other.has_private()):
+            return False
+
+        result = True
+        for comp in self._keydata:
+            result = result and (getattr(self.key, comp, None) ==
+                                 getattr(other.key, comp, None))
+        return result
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __getstate__(self):
+        # DSA key is not pickable
+        from pickle import PicklingError
+        raise PicklingError
+
     def domain(self):
         """The DSA domain parameters: *p*, *q* and *g*. """
 
         return (self.key.p, self.key.q, self.key.g)
 
-    def __getstate__(self):
-        d = {}
-        for k in self.keydata:
-            try:
-                d[k] = getattr(self.key, k)
-            except AttributeError:
-                pass
-        return d
-
-    def __setstate__(self, d):
-        if not hasattr(self, 'implementation'):
-            self.implementation = DSAImplementation()
-        if not hasattr(self, '_randfunc'):
-            self._randfunc = Random.new().read
-        t = []
-        for k in self.keydata:
-            if not d.has_key(k):
-                break
-            t.append(d[k])
-        self.key = self.implementation._math.dsa_construct(*tuple(t))
-
     def __repr__(self):
         attrs = []
-        for k in self.keydata:
+        for k in self._keydata:
             if k == 'p':
                 attrs.append("p(%d)" % (self.size()+1,))
             elif hasattr(self.key, k):
@@ -468,8 +398,6 @@ class DSAImplementation(object):
         else:   # Explicitly select slow math
             self._math = _slowmath
 
-        self.error = self._math.error
-
         # 'default_randfunc' parameter:
         #   None (default) - use Random.new().read
         #   not None       - use the specified function
@@ -558,7 +486,7 @@ class DSAImplementation(object):
         :Return: A DSA key object (`_DSAobj`).
         """
 
-        key = self._math.dsa_construct(*tup)
+        key = self._math.dsa_construct(*map(long, tup))
 
         fmt_error = False
         if consistency_check:
@@ -593,14 +521,14 @@ class DSAImplementation(object):
 
             # Try a simple private key first
             if params:
-                x = decode_der(DerInteger, key_data).value
-                params = decode_der(DerSequence, params)    # Dss-Parms
+                x = _decode_der(DerInteger, key_data).value
+                params = _decode_der(DerSequence, params)    # Dss-Parms
                 p, q, g = list(params)
                 y = pow(g, x, p)
                 tup = (y, g, p, q, x)
                 return self.construct(tup)
 
-            der = decode_der(DerSequence, key_data)
+            der = _decode_der(DerSequence, key_data)
 
             # Try OpenSSL format for private keys
             if len(der) == 6 and der.hasOnlyInts() and der[0] == 0:
@@ -610,14 +538,14 @@ class DSAImplementation(object):
             # Try SubjectPublicKeyInfo
             if len(der) == 2:
                 try:
-                    algo = decode_der(DerSequence, der[0])
-                    algo_oid = decode_der(DerObjectId, algo[0]).value
-                    params = decode_der(DerSequence, algo[1])  # Dss-Parms
+                    algo = _decode_der(DerSequence, der[0])
+                    algo_oid = _decode_der(DerObjectId, algo[0]).value
+                    params = _decode_der(DerSequence, algo[1])  # Dss-Parms
 
                     if algo_oid == oid and len(params) == 3 and\
                             params.hasOnlyInts():
-                        bitmap = decode_der(DerBitString, der[1])
-                        pub_key = decode_der(DerInteger, bitmap.value)
+                        bitmap = _decode_der(DerBitString, der[1])
+                        pub_key = _decode_der(DerInteger, bitmap.value)
                         tup = [pub_key.value]
                         tup += [params[comp] for comp in (2, 0, 1)]
                         return self.construct(tup)
@@ -712,7 +640,6 @@ _impl = DSAImplementation()
 generate = _impl.generate
 construct = _impl.construct
 importKey = _impl.importKey
-error = _impl.error
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
 

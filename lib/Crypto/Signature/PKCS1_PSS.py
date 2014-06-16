@@ -64,7 +64,9 @@ __all__ = [ 'new', 'PSS_SigScheme' ]
 
 from Crypto.Util.py3compat import *
 import Crypto.Util.number
-from Crypto.Util.number import ceil_shift, ceil_div, long_to_bytes
+from Crypto.Util.number import (
+            ceil_shift, ceil_div, long_to_bytes, bytes_to_long
+            )
 from Crypto.Util.strxor import strxor
 from Crypto.Hash import new as Hash_new
 
@@ -134,10 +136,12 @@ class PSS_SigScheme:
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
         em = EMSA_PSS_ENCODE(msg_hash, modBits-1, randfunc, mgf, sLen)
-        # Step 2a (OS2IP) and 2b (RSASP1)
-        m = self._key.decrypt(em)
+        # Step 2a (OS2IP)
+        em_int = bytes_to_long(em)
+        # Step 2b (RSASP1)
+        m_int = self._key._decrypt(em_int)
         # Step 2c (I2OSP)
-        signature = bchr(0x00)*(k-len(m)) + m
+        signature = long_to_bytes(m_int, k)
         return signature
 
     def verify(self, msg_hash, signature):
@@ -177,14 +181,14 @@ class PSS_SigScheme:
         # Step 1
         if len(signature) != k:
             raise ValueError("The signature is not authentic")
-        # Step 2a (O2SIP), 2b (RSAVP1), and partially 2c (I2OSP)
-        # Note that signature must be smaller than the module
-        # but RSA.py won't complain about it.
-        # TODO: Fix RSA object; don't do it here.
-        em = self._key.encrypt(signature, 0)[0]
-        # Step 2c
-        emLen = ceil_div(modBits-1,8)
-        em = bchr(0x00)*(emLen-len(em)) + em
+        # Step 2a (O2SIP)
+        signature_int = bytes_to_long(signature)
+        # Step 2b (RSAVP1)
+        em_int = self._key._encrypt(signature_int)
+        # Step 2c (I2OSP)
+        emLen = ceil_div(modBits - 1, 8)
+        em = long_to_bytes(em_int, emLen)
+        #bchr(0x00)*(emLen-len(em)) + em
         # Step 3
         failed = False
         try:

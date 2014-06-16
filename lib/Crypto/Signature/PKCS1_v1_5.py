@@ -63,7 +63,7 @@ __all__ = [ 'new', 'PKCS115_SigScheme' ]
 from Crypto.Util.py3compat import *
 
 import Crypto.Util.number
-from Crypto.Util.number import ceil_div
+from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString, DerObjectId
 
 class PKCS115_SigScheme:
@@ -109,10 +109,12 @@ class PKCS115_SigScheme:
 
         # Step 1
         em = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k)
-        # Step 2a (OS2IP) and 2b (RSASP1)
-        m = self._key.decrypt(em)
+        # Step 2a (OS2IP)
+        em_int = bytes_to_long(em)
+        # Step 2b (RSASP1)
+        m_int = self._key._decrypt(em_int)
         # Step 2c (I2OSP)
-        signature = bchr(0x00)*(k-len(m)) + m
+        signature = long_to_bytes(m_int, k)
         return signature
 
     def verify(self, msg_hash, signature):
@@ -133,22 +135,20 @@ class PKCS115_SigScheme:
         :Raise ValueError:
             If the signature is not authentic.
         """
-        # TODO: Verify the key is RSA
 
         # See 8.2.2 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits,8) # Convert from bits to bytes
+        k = ceil_div(modBits, 8) # Convert from bits to bytes
 
         # Step 1
         if len(signature) != k:
             raise ValueError("Signature is not authentic")
-        # Step 2a (O2SIP) and 2b (RSAVP1)
-        # Note that signature must be smaller than the module
-        # but RSA.py won't complain about it.
-        # TODO: Fix RSA object; don't do it here.
-        m = self._key.encrypt(signature, 0)[0]
+        # Step 2a (O2SIP)
+        signature_int = bytes_to_long(signature)
+        # Step 2b (RSAVP1)
+        em_int = self._key._encrypt(signature_int)
         # Step 2c (I2OSP)
-        em1 = bchr(0x00)*(k-len(m)) + m
+        em1 = long_to_bytes(em_int, k)
         # Step 3
         try:
             em2_with_params = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, True)

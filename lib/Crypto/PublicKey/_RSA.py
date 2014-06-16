@@ -24,9 +24,6 @@
 # ===================================================================
 #
 
-__revision__ = "$Id$"
-
-from Crypto.PublicKey import pubkey
 from Crypto.Util import number
 
 def generate_py(bits, randfunc, progress_func=None, e=65537):
@@ -42,13 +39,13 @@ def generate_py(bits, randfunc, progress_func=None, e=65537):
     # Generate the prime factors of n
     if progress_func:
         progress_func('p,q\n')
-    p = q = 1L
+    p = q = 1
     while number.size(p*q) < bits:
         # Note that q might be one bit longer than p if somebody specifies an odd
         # number of bits for the key. (Why would anyone do that?  You don't get
         # more security.)
-        p = pubkey.getStrongPrime(bits>>1, obj.e, 1e-12, randfunc)
-        q = pubkey.getStrongPrime(bits - (bits>>1), obj.e, 1e-12, randfunc)
+        p = number.getStrongPrime(bits>>1, obj.e, 1e-12, randfunc)
+        q = number.getStrongPrime(bits - (bits>>1), obj.e, 1e-12, randfunc)
 
     # It's OK for p to be larger than q, but let's be
     # kind to the function that will invert it for
@@ -60,18 +57,18 @@ def generate_py(bits, randfunc, progress_func=None, e=65537):
 
     if progress_func:
         progress_func('u\n')
-    obj.u = pubkey.inverse(obj.p, obj.q)
+    obj.u = number.inverse(obj.p, obj.q)
     obj.n = obj.p*obj.q
 
     if progress_func:
         progress_func('d\n')
-    obj.d=pubkey.inverse(obj.e, (obj.p-1)*(obj.q-1))
+    obj.d=number.inverse(obj.e, (obj.p-1)*(obj.q-1))
 
     assert bits <= 1+obj.size(), "Generated key is too small"
 
     return obj
 
-class RSAobj(pubkey.pubkey):
+class RSAobj(object):
 
     def size(self):
         """size() : int

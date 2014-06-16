@@ -65,12 +65,12 @@ class MyKey:
         return self._key.sign(m)
     def has_private(self):
         return self._key.has_private()
-    def decrypt(self, m):
-        return self._key.decrypt(m)
+    def _decrypt(self, m):
+        return self._key._decrypt(m)
     def verify(self, m, p):
         return self._key.verify(m, p)
-    def encrypt(self, m, p):
-        return self._key.encrypt(m, p)
+    def _encrypt(self, m):
+        return self._key._encrypt(m)
 
 class PKCS1_PSS_Tests(unittest.TestCase):
 

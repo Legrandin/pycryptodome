@@ -1679,11 +1679,6 @@ init_fastmath (void)
 	if (m == NULL)
 		goto errout;
 
-	fastmathError = PyErr_NewException ("_fastmath.error", NULL, NULL);
-	if (fastmathError == NULL)
-		goto errout;
-	PyObject_SetAttrString(m, "error", fastmathError);
-
 	PyModule_AddIntConstant(m, "HAVE_DECL_MPZ_POWM_SEC", HAVE_DECL_MPZ_POWM_SEC);
 
 out:

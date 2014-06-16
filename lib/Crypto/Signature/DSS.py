@@ -258,9 +258,9 @@ class DSS_SigScheme(object):
             rng = StrongRandom(randfunc=self._randfunc)
             nonce = rng.randint(1, self._key.q - 1)
 
-        # Perform signature using the crippled API
-        z = msg_hash.digest()[:self._n]
-        sig_pair = self._key.sign(z, nonce)
+        # Perform signature using the raw API
+        z = bytes_to_long(msg_hash.digest()[:self._n])
+        sig_pair = self._key._sign(z, nonce)
 
         # Encode the signature into a single byte string
         if self._encoding == 'binary':
@@ -322,8 +322,8 @@ class DSS_SigScheme(object):
         if not (0 < r_prime < self._key.q) or not (0 < s_prime < self._key.q):
             raise ValueError("The signature is not authentic")
 
-        z = msg_hash.digest()[:self._n]
-        result = self._key.verify(z, (r_prime, s_prime))
+        z = bytes_to_long(msg_hash.digest()[:self._n])
+        result = self._key._verify(z, (r_prime, s_prime))
         if not result:
             raise ValueError("The signature is not authentic")
         # Make PyCrypto code to fail

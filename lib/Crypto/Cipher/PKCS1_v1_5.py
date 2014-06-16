@@ -67,10 +67,9 @@ the RSA key:
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125.
 """
 
-__revision__ = "$Id$"
 __all__ = [ 'new', 'PKCS115_Cipher' ]
 
-from Crypto.Util.number import ceil_div
+from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.py3compat import *
 import Crypto.Util.number
 
@@ -79,7 +78,7 @@ class PKCS115_Cipher:
 
     def __init__(self, key):
         """Initialize this PKCS#1 v1.5 cipher object.
-        
+
         :Parameters:
          key : an RSA key object
           If a private half is given, both encryption and decryption are possible.
@@ -97,16 +96,16 @@ class PKCS115_Cipher:
 
     def encrypt(self, message):
         """Produce the PKCS#1 v1.5 encryption of a message.
-    
+
         This function is named ``RSAES-PKCS1-V1_5-ENCRYPT``, and is specified in
         section 7.2.1 of RFC3447.
         For a complete example see `Crypto.Cipher.PKCS1_v1_5`.
-    
+
         :Parameters:
          message : byte string
                 The message to encrypt, also known as plaintext. It can be of
                 variable length, but not longer than the RSA modulus (in bytes) minus 11.
-    
+
         :Return: A byte string, the ciphertext in which the message is encrypted.
             It is as long as the RSA modulus (in bytes).
         :Raise ValueError:
@@ -115,14 +114,14 @@ class PKCS115_Cipher:
 
         """
         # TODO: Verify the key is RSA
-    
+
         randFunc = self._key._randfunc
-    
+
         # See 7.2.1 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits,8) # Convert from bits to bytes
         mLen = len(message)
-    
+
         # Step 1
         if mLen > k-11:
             raise ValueError("Plaintext is too long.")
@@ -135,49 +134,51 @@ class PKCS115_Cipher:
         ps = tobytes(map(nonZeroRandByte(randFunc), randFunc(k-mLen-3)))
         # Step 2b
         em = b('\x00\x02') + ps + bchr(0x00) + message
-        # Step 3a (OS2IP), step 3b (RSAEP), part of step 3c (I2OSP)
-        m = self._key.encrypt(em, 0)[0]
-        # Complete step 3c (I2OSP)
-        c = bchr(0x00)*(k-len(m)) + m
+        # Step 3a (OS2IP)
+        em_int = bytes_to_long(em)
+        # Step 3b (RSAEP)
+        m_int = self._key._encrypt(em_int)
+        # Step 3c (I2OSP)
+        c = long_to_bytes(m_int, k)
         return c
-    
+
     def decrypt(self, ct, sentinel):
         """Decrypt a PKCS#1 v1.5 ciphertext.
-    
+
         This function is named ``RSAES-PKCS1-V1_5-DECRYPT``, and is specified in
         section 7.2.2 of RFC3447.
         For a complete example see `Crypto.Cipher.PKCS1_v1_5`.
-    
+
         :Parameters:
          ct : byte string
                 The ciphertext that contains the message to recover.
          sentinel : any type
                 The object to return to indicate that an error was detected during decryption.
-    
+
         :Return: A byte string. It is either the original message or the ``sentinel`` (in case of an error).
         :Raise ValueError:
             If the ciphertext length is incorrect
         :Raise TypeError:
             If the RSA key has no private half.
-    
+
         :attention:
             You should **never** let the party who submitted the ciphertext know that
             this function returned the ``sentinel`` value.
             Armed with such knowledge (for a fair amount of carefully crafted but invalid ciphertexts),
             an attacker is able to recontruct the plaintext of any other encryption that were carried out
             with the same RSA public key (see `Bleichenbacher's`__ attack).
-            
+
             In general, it should not be possible for the other party to distinguish
             whether processing at the server side failed because the value returned
             was a ``sentinel`` as opposed to a random, invalid message.
-            
+
             In fact, the second option is not that unlikely: encryption done according to PKCS#1 v1.5
             embeds no good integrity check. There is roughly one chance
             in 2^16 for a random ciphertext to be returned as a valid message
             (although random looking).
-    
+
             It is therefore advisabled to:
-    
+
             1. Select as ``sentinel`` a value that resembles a plausable random, invalid message.
             2. Not report back an error as soon as you detect a ``sentinel`` value.
                Put differently, you should not explicitly check if the returned value is the ``sentinel`` or not.
@@ -186,26 +187,26 @@ class PKCS115_Cipher:
                It is recommended for it to be the rightmost part ``message``.
             5. Where possible, monitor the number of errors due to ciphertexts originating from the same party,
                and slow down the rate of the requests from such party (or even blacklist it altogether).
-     
+
             **If you are designing a new protocol, consider using the more robust PKCS#1 OAEP.**
-    
+
             .. __: http://www.bell-labs.com/user/bleichen/papers/pkcs.ps
-    
+
         """
-    
-        # TODO: Verify the key is RSA
-    
+
         # See 7.2.1 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits,8) # Convert from bits to bytes
-    
+
         # Step 1
         if len(ct) != k:
             raise ValueError("Ciphertext with incorrect length.")
-        # Step 2a (O2SIP), 2b (RSADP), and part of 2c (I2OSP)
-        m = self._key.decrypt(ct)
+        # Step 2a (O2SIP)
+        ct_int = bytes_to_long(ct)
+        # Step 2b (RSADP)
+        m_int = self._key._decrypt(ct_int)
         # Complete step 2c (I2OSP)
-        em = bchr(0x00)*(k-len(m)) + m
+        em = long_to_bytes(m_int, k)
         # Step 3
         sep = em.find(bchr(0x00),2)
         if  not em.startswith(b('\x00\x02')) or sep<10:

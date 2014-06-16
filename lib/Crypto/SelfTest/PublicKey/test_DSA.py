@@ -138,7 +138,6 @@ class DSATest(unittest.TestCase):
         self.assertEqual(1, dsaObj.has_private())
         self.assertEqual(1, dsaObj.can_sign())
         self.assertEqual(0, dsaObj.can_encrypt())
-        self.assertEqual(0, dsaObj.can_blind())
 
         # Check dsaObj.[ygpqx] -> dsaObj.key.[ygpqx] mapping
         self.assertEqual(dsaObj.y, dsaObj.key.y)
@@ -155,14 +154,13 @@ class DSATest(unittest.TestCase):
         self.assertEqual(1, 0 < dsaObj.x < dsaObj.q)       # 0 < x < q
 
     def _check_public_key(self, dsaObj):
-        k = a2b_hex(self.k)
-        m_hash = a2b_hex(self.m_hash)
+        k = bytes_to_long(a2b_hex(self.k))
+        m_hash = bytes_to_long(a2b_hex(self.m_hash))
 
         # Check capabilities
         self.assertEqual(0, dsaObj.has_private())
         self.assertEqual(1, dsaObj.can_sign())
         self.assertEqual(0, dsaObj.can_encrypt())
-        self.assertEqual(0, dsaObj.can_blind())
 
         # Check dsaObj.[ygpq] -> dsaObj.key.[ygpq] mapping
         self.assertEqual(dsaObj.y, dsaObj.key.y)
@@ -180,26 +178,26 @@ class DSATest(unittest.TestCase):
         self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)      # q is a divisor of p-1
 
         # Public-only key objects should raise an error when .sign() is called
-        self.assertRaises(TypeError, dsaObj.sign, m_hash, k)
+        self.assertRaises(TypeError, dsaObj._sign, m_hash, k)
 
         # Check __eq__ and __ne__
         self.assertEqual(dsaObj.publickey() == dsaObj.publickey(),True) # assert_
         self.assertEqual(dsaObj.publickey() != dsaObj.publickey(),False) # failIf
 
     def _test_signing(self, dsaObj):
-        k = a2b_hex(self.k)
-        m_hash = a2b_hex(self.m_hash)
+        k = bytes_to_long(a2b_hex(self.k))
+        m_hash = bytes_to_long(a2b_hex(self.m_hash))
         r = bytes_to_long(a2b_hex(self.r))
         s = bytes_to_long(a2b_hex(self.s))
-        (r_out, s_out) = dsaObj.sign(m_hash, k)
+        (r_out, s_out) = dsaObj._sign(m_hash, k)
         self.assertEqual((r, s), (r_out, s_out))
 
     def _test_verification(self, dsaObj):
-        m_hash = a2b_hex(self.m_hash)
+        m_hash = bytes_to_long(a2b_hex(self.m_hash))
         r = bytes_to_long(a2b_hex(self.r))
         s = bytes_to_long(a2b_hex(self.s))
-        self.assertEqual(1, dsaObj.verify(m_hash, (r, s)))
-        self.assertEqual(0, dsaObj.verify(m_hash + b("\0"), (r, s)))
+        self.failUnless(dsaObj._verify(m_hash, (r, s)))
+        self.failIf(dsaObj._verify(m_hash + 1, (r, s)))
 
 class DSAFastMathTest(DSATest):
     def setUp(self):

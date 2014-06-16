@@ -28,8 +28,6 @@ __all__ = ['rsa_construct']
 
 from Crypto.Util.number import size, inverse, GCD
 
-class error(Exception):
-    pass
 
 class _RSAKey(object):
     def _blind(self, m, r):
@@ -99,7 +97,7 @@ def rsa_construct(n, e, d=None, p=None, q=None, u=None):
         # and can be represented as t*2^s.
         t = ktot
         while t % 2 ==0:
-            t //= 2  
+            t //= 2
         # Cycle through all multiplicative inverses in Zn.
         # The algorithm is non-deterministic, but there is a 50% chance
         # any candidate a leads to successful factoring.
@@ -145,7 +143,7 @@ class _DSAKey(object):
         # SECURITY TODO - We _should_ be computing SHA1(m), but we don't because that's the API.
         if not self.has_private():
             raise TypeError("No private key")
-        if not (1L < k < self.q):
+        if not (1 < k < self.q):
             raise ValueError("k is not between 2 and q-1")
         inv_blind_k = inverse(blind * k, self.q) # Compute (blind * k)**-1 mod q
         blind_x = self.x * blind

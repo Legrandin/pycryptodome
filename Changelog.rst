@@ -22,8 +22,8 @@ New features
   See module ``Crypto.Protocol.SecretSharing``.
 * Ability to generate a DSA key given the domain parameters.
 
-Bugs fixed
-----------
+Resolved issues
+---------------
 
 * LP#1193521: ``mpz_powm_sec()`` (and Python) crashed when modulus was odd.
 * Benchmarks work again (they broke when ECB stopped working if
@@ -42,10 +42,24 @@ Breaks in compatibility
 -----------------------
 
 * Removed support for Python < 2.4.
+* Removed the following methods from all 3 public key object types (RSA, DSA, ElGamal):
+
+  - ``sign``
+  - ``verify``
+  - ``encrypt``
+  - ``decrypt``
+  - ``blind``
+  - ``unblind``
+  - ``can_encrypt``
+  - ``can_sign``
+
+  Code that uses such methods is doomed anyway. It should be fixed ASAP to
+  use the algorithms available in ``Crypto.Signature`` and ``Crypto.Cipher``.
+* The 3 public key object types (RSA, DSA, ElGamal) are now unpickable.
 * Symmetric ciphers do not have a default mode anymore (used to be ECB).
   An expression like ``AES.new(key)`` will now fail. If ECB is the desired mode,
   one has to explicitly use ``AES.new(key, AES.MODE_ECB)``.
-* Unsuccessful verification of a signature will no raise an exception.
+* Unsuccessful verification of a signature will now raise an exception.
   Code should not check the return value of ``verify()``.
   You can make your code compatible to both PyCryptodome and PyCrypto in the following way:
 
@@ -72,4 +86,4 @@ Other changes
 * Simplified build process by removing autoconf.
 * Speed optimization to PBKDF2.
 * Add support for MSVC.
-* Replaced HMAC code with a public domain implementation.
+* Replaced HMAC code with a public domain implementation. The whole base is hopefully in the public domain.

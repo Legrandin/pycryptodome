@@ -53,17 +53,17 @@ them from known components, exporting them, and importing them.
     >>> key = RSA.importKey(f.read())
 
 Even though you may choose to  directly use the methods of an RSA key object
-to perform the primitive cryptographic operations (e.g. `_RSAobj.encrypt`),
+to perform the primitive cryptographic operations (e.g. `_RSAobj._encrypt`),
 it is recommended to use one of the standardized schemes instead (like
 `Crypto.Cipher.PKCS1_v1_5` or `Crypto.Signature.PKCS1_v1_5`).
 
 .. _RSA: http://en.wikipedia.org/wiki/RSA_%28algorithm%29
 .. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
 
-:sort: generate,construct,importKey,error
+:sort: generate,construct,importKey
 """
 
-__all__ = ['generate', 'construct', 'error', 'importKey', 'RSAImplementation',
+__all__ = ['generate', 'construct', 'importKey', 'RSAImplementation',
     '_RSAobj', 'oid' , 'algorithmIdentifier' ]
 
 from Crypto.Util.py3compat import *
@@ -71,10 +71,9 @@ from Crypto.Util.py3compat import *
 import binascii
 import struct
 
-
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.PublicKey import _RSA, _slowmath, pubkey
+from Crypto.PublicKey import _RSA, _slowmath
 from Crypto.Util.number import inverse, GCD, isPrime
 from Crypto.Util.number import getRandomRange, bytes_to_long, long_to_bytes
 
@@ -92,14 +91,14 @@ try:
 except ImportError:
     _fastmath = None
 
-def decode_der(obj_class, binstr):
+def _decode_der(obj_class, binstr):
     """Instantiate a DER object class, decode a DER binary string in it, and
     return the object."""
     der = obj_class()
     der.decode(binstr)
     return der
 
-class _RSAobj(pubkey.pubkey):
+class _RSAobj(object):
     """Class defining an actual RSA key.
 
     :undocumented: __getstate__, __setstate__, __repr__, __getattr__
@@ -117,7 +116,7 @@ class _RSAobj(pubkey.pubkey):
     #:  - **p**, the first factor of n.
     #:  - **q**, the second factor of n.
     #:  - **u**, the CRT coefficient (1/p) mod q.
-    keydata = ['n', 'e', 'd', 'p', 'q', 'u']
+    _keydata = ['n', 'e', 'd', 'p', 'q', 'u']
 
     def __init__(self, implementation, key, randfunc=None):
         self.implementation = implementation
@@ -127,120 +126,19 @@ class _RSAobj(pubkey.pubkey):
         self._randfunc = randfunc
 
     def __getattr__(self, attrname):
-        if attrname in self.keydata:
+        if attrname in self._keydata:
             # For backward compatibility, allow the user to get (not set) the
             # RSA key parameters directly from this object.
             return getattr(self.key, attrname)
         else:
             raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
 
-    def encrypt(self, plaintext, K):
-        """Encrypt a piece of data with RSA.
-
-        :Parameter plaintext: The piece of data to encrypt with RSA. It may not
-         be numerically larger than the RSA module (**n**).
-        :Type plaintext: byte string or long
-
-        :Parameter K: A random parameter (*for compatibility only. This
-         value will be ignored*)
-        :Type K: byte string or long
-
-        :attention: this function performs the plain, primitive RSA encryption
-         (*textbook*). In real applications, you always need to use proper
-         cryptographic padding, and you should not directly encrypt data with
-         this method. Failure to do so may lead to security vulnerabilities.
-         It is recommended to use modules
-         `Crypto.Cipher.PKCS1_OAEP` or `Crypto.Cipher.PKCS1_v1_5` instead.
-
-        :Return: A tuple with two items. The first item is the ciphertext
-         of the same type as the plaintext (string or long). The second item
-         is always None.
-        """
-        return pubkey.pubkey.encrypt(self, plaintext, K)
-
-    def decrypt(self, ciphertext):
-        """Decrypt a piece of data with RSA.
-
-        Decryption always takes place with blinding.
-
-        :attention: this function performs the plain, primitive RSA decryption
-         (*textbook*). In real applications, you always need to use proper
-         cryptographic padding, and you should not directly decrypt data with
-         this method. Failure to do so may lead to security vulnerabilities.
-         It is recommended to use modules
-         `Crypto.Cipher.PKCS1_OAEP` or `Crypto.Cipher.PKCS1_v1_5` instead.
-
-        :Parameter ciphertext: The piece of data to decrypt with RSA. It may
-         not be numerically larger than the RSA module (**n**). If a tuple,
-         the first item is the actual ciphertext; the second item is ignored.
-
-        :Type ciphertext: byte string, long or a 2-item tuple as returned by
-         `encrypt`
-
-        :Return: A byte string if ciphertext was a byte string or a tuple
-         of byte strings. A long otherwise.
-        """
-        return pubkey.pubkey.decrypt(self, ciphertext)
-
-    def sign(self, M, K):
-        """Sign a piece of data with RSA.
-
-        Signing always takes place with blinding.
-
-        :attention: this function performs the plain, primitive RSA decryption
-         (*textbook*). In real applications, you always need to use proper
-         cryptographic padding, and you should not directly sign data with
-         this method. Failure to do so may lead to security vulnerabilities.
-         It is recommended to use modules
-         `Crypto.Signature.PKCS1_PSS` or `Crypto.Signature.PKCS1_v1_5` instead.
-
-        :Parameter M: The piece of data to sign with RSA. It may
-         not be numerically larger than the RSA module (**n**).
-        :Type M: byte string or long
-
-        :Parameter K: A random parameter (*for compatibility only. This
-         value will be ignored*)
-        :Type K: byte string or long
-
-        :Return: A 2-item tuple. The first item is the actual signature (a
-         long). The second item is always None.
-        """
-        return pubkey.pubkey.sign(self, M, K)
-
-    def verify(self, M, signature):
-        """Verify the validity of an RSA signature.
-
-        :attention: this function performs the plain, primitive RSA encryption
-         (*textbook*). In real applications, you always need to use proper
-         cryptographic padding, and you should not directly verify data with
-         this method. Failure to do so may lead to security vulnerabilities.
-         It is recommended to use modules
-         `Crypto.Signature.PKCS1_PSS` or `Crypto.Signature.PKCS1_v1_5` instead.
-
-        :Parameter M: The expected message.
-        :Type M: byte string or long
-
-        :Parameter signature: The RSA signature to verify. The first item of
-         the tuple is the actual signature (a long not larger than the modulus
-         **n**), whereas the second item is always ignored.
-        :Type signature: A 2-item tuple as return by `sign`
-
-        :Return: True if the signature is correct, False otherwise.
-        """
-        return pubkey.pubkey.verify(self, M, signature)
-
-    def _encrypt(self, c, K):
-        if not 0 < c < self.n:
+    def _encrypt(self, plaintext):
+        if not 0 < plaintext < self.n:
             raise ValueError("Plaintext too large")
-        return (self.key._encrypt(c),)
+        return self.key._encrypt(long(plaintext))
 
-    def _decrypt(self, c):
-        #(ciphertext,) = c
-        (ciphertext,) = c[:1]  # HACK - We should use the previous line
-                               # instead, but this is more compatible and we're
-                               # going to replace the Crypto.PublicKey API soon
-                               # anyway.
-
+    def _decrypt(self, ciphertext):
         if not 0 < ciphertext < self.n:
             raise ValueError("Ciphertext too large")
 
@@ -248,27 +146,11 @@ class _RSAobj(pubkey.pubkey):
         # Step 1: Generate random secret blinding factor r, such that 0 < r < n-1
         r = getRandomRange(1, self.key.n-1, randfunc=self._randfunc)
         # Step 2: Compute c' = c * r**e mod n
-        cp = self.key._blind(ciphertext, r)
+        cp = self.key._blind(long(ciphertext), r)
         # Step 3: Compute m' = c'**d mod n       (ordinary RSA decryption)
         mp = self.key._decrypt(cp)
         # Step 4: Compute m = m**(r-1) mod n
         return self.key._unblind(mp, r)
-
-    def _blind(self, m, r):
-        return self.key._blind(m, r)
-
-    def _unblind(self, m, r):
-        return self.key._unblind(m, r)
-
-    def _sign(self, m, K=None):
-        return (self.key._sign(m),)
-
-    def _verify(self, m, sig):
-        #(s,) = sig
-        (s,) = sig[:1]  # HACK - We should use the previous line instead, but
-                        # this is more compatible and we're going to replace
-                        # the Crypto.PublicKey API soon anyway.
-        return self.key._verify(m, s)
 
     def has_private(self):
         return self.key.has_private()
@@ -276,42 +158,30 @@ class _RSAobj(pubkey.pubkey):
     def size(self):
         return self.key.size()
 
-    def can_blind(self):
-        return True
-
-    def can_encrypt(self):
-        return True
-
-    def can_sign(self):
-        return True
-
     def publickey(self):
         return self.implementation.construct((self.key.n, self.key.e))
 
-    def __getstate__(self):
-        d = {}
-        for k in self.keydata:
-            try:
-                d[k] = getattr(self.key, k)
-            except AttributeError:
-                pass
-        return d
+    def __eq__(self, other):
+        if bool(self.has_private()) != bool(other.has_private()):
+            return False
 
-    def __setstate__(self, d):
-        if not hasattr(self, 'implementation'):
-            self.implementation = RSAImplementation()
-        if not hasattr(self, '_randfunc'):
-            self._randfunc = Random.new().read
-        t = []
-        for k in self.keydata:
-            if not d.has_key(k):
-                break
-            t.append(d[k])
-        self.key = self.implementation._math.rsa_construct(*tuple(t))
+        result = True
+        for comp in self._keydata:
+            result = result and (getattr(self.key, comp, None) ==
+                                 getattr(other.key, comp, None))
+        return result
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __getstate__(self):
+        # RSA key is not pickable
+        from pickle import PicklingError
+        raise PicklingError
 
     def __repr__(self):
         attrs = []
-        for k in self.keydata:
+        for k in self._keydata:
             if k == 'n':
                 attrs.append("n(%d)" % (self.size()+1,))
             elif hasattr(self.key, k):
@@ -485,8 +355,6 @@ class RSAImplementation(object):
         else:   # Explicitly select slow math
             self._math = _slowmath
 
-        self.error = self._math.error
-
         self._default_randfunc = kwargs.get('default_randfunc', None)
         self._current_randfunc = None
 
@@ -539,7 +407,6 @@ class RSAImplementation(object):
             **e** is not odd or smaller than 2.
         """
         if bits < 1024 or (bits & 0xff) != 0:
-            # pubkey.getStrongPrime doesn't like anything that's not a multiple of 256 and >= 1024
             raise ValueError("RSA modulus length must be a multiple of 256 and >= 1024")
         if e%2==0 or e<3:
             raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
@@ -582,7 +449,7 @@ class RSAImplementation(object):
         :Return: An RSA key object (`_RSAobj`).
         """
 
-        key = self._math.rsa_construct(*tup)
+        key = self._math.rsa_construct(*map(long, tup))
 
         fmt_error = False
         if consistency_check:
@@ -622,7 +489,7 @@ class RSAImplementation(object):
 
         try:
 
-            der = decode_der(DerSequence, extern_key)
+            der = _decode_der(DerSequence, extern_key)
 
             # Try PKCS#1 first, for a private key
             if len(der) == 9 and der.hasOnlyInts() and der[0] == 0:
@@ -649,8 +516,8 @@ class RSAImplementation(object):
                     # 'subjectPublicKey' encapsulates the actual ASN.1
                     # RSAPublicKey element.
                     if der[0] == algorithmIdentifier:
-                        bitmap = decode_der(DerBitString, der[1])
-                        rsaPub = decode_der(DerSequence, bitmap.value)
+                        bitmap = _decode_der(DerBitString, der[1])
+                        rsaPub = _decode_der(DerSequence, bitmap.value)
                         if len(rsaPub) == 2 and rsaPub.hasOnlyInts():
                             return self.construct(rsaPub[:])
                 except (ValueError, EOFError):
@@ -771,7 +638,6 @@ construct = _impl.construct
 #: See `RSAImplementation.importKey`.
 #:
 importKey = _impl.importKey
-error = _impl.error
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
 
