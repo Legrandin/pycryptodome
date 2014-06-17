@@ -43,8 +43,5 @@ Crypto.Util
 
 __all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util', 'Signature', 'IO']
 
-__version__ = '3.0rc1'     # See also below and setup.py
-
-# New software should look at this instead of at __version__ above.
-version_info = (3, 0, 'rc1')    # See also above and setup.py
+version_info = (3, 0, 'rc2')
 

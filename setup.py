@@ -28,6 +28,17 @@ import os, sys
 
 longdesc = open("README.rst").read()
 
+# By doing this we neeed to change version information in a single file
+for line in open(os.path.join("lib", "Crypto", "__init__.py")):
+    if line.startswith("version_info"):
+        version_tuple = eval(line.split("=")[1])
+
+version_string = "%d.%d" % version_tuple[:-1]
+if version_tuple[2].isdigit():
+    version_string += "."
+if version_tuple[2] is not None:
+    version_string += str(version_tuple[2])
+
 if sys.version[0:1] == '1':
     raise RuntimeError ("The Python Cryptography Toolkit requires "
                          "Python 2.x or 3.x to build.")
@@ -273,7 +284,7 @@ class TestCommand(Command):
 
 setup(
     name = "pycryptodome",
-    version = "3.0rc1",
+    version = version_string,
     description = "Cryptographic library for Python",
     long_description = longdesc,
     author = "Legrandin",
