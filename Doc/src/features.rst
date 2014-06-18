@@ -1,7 +1,18 @@
 Features
 --------
 
-* Symmetric cipher algorithms:
+This page lists the low-level primitives that PyCryptodome provides.
+
+You are expected to have a solid understanding of cryptography and security
+engineering to successfully use them.
+
+You must also be able to recognize that some primitives are obsolete (e.g. TDES)
+or even unsecure (RC4). They are provided only to enable backward compatibility
+where required by the applications.
+
+A list of useful resources in that area can be found on `Matthew Green's blog`_.
+
+* Symmetric ciphers:
 
   - AES
   - Single and Triple DES
@@ -24,12 +35,12 @@ Features
   - GCM (AES only)
   - SIV (AES only)
 
-* Stream cipher algorithms:
+* Stream ciphers:
 
   - Salsa20
   - RC4
 
-* Hash algorithms:
+* Cryptographic hashes:
 
   - SHA-1
   - SHA-2 family (224, 256, 384, 512)
@@ -37,12 +48,12 @@ Features
   - RIPE-MD160
   - MD5
 
-* Message Authentication Code (MAC) algorithms:
+* Message Authentication Codes (MAC):
   
   - HMAC
   - CMAC
 
-* Key generation for asymmetric algorithms:
+* Asymmetric key generation:
   
   - RSA
   - DSA
@@ -54,14 +65,14 @@ Features
   - PKCS#8 (clear and encrypted)
   - ASN.1 DER
 
-* Public Key encryption algorithms:
+* Asymmetric ciphers:
  
   - PKCS#1
     
     - RSAES-PKCS1-v1_5
     - RSAES-OAEP
 
-* Public Key signature algorithms:
+* Asymmtric digital signatures:
   
   - PKCS#1
     
@@ -73,7 +84,7 @@ Features
     - FIPS 186-3
     - Deterministic (RFC6979)
 
-* Key derivation algorithms:
+* Key derivation:
  
   - PBKDF1
   - PBKDF2
@@ -91,4 +102,4 @@ Features
     - ISO-7816
     - X.923
 
-
+.. _`Matthew Green's blog`: http://blog.cryptographyengineering.com/p/useful-cryptography-resources.html

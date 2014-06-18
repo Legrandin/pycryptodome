@@ -9,9 +9,7 @@ Welcome to PyCryptodome's documentation
    src/installation
    src/api
    src/examples
-   src/pycrypto
-   src/contributing
-   src/support
+   src/contribute_support
    src/future
    src/changelog
    src/license

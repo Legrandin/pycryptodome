@@ -104,8 +104,7 @@ html_theme = 'haiku'
 # documentation.
 html_theme_options = {
         "textcolor" : "#000000",
-        "headingcolor" : "#000000",
-        "linkcolor" : "#FF0000"
+        "headingcolor" : "#000000"
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
