@@ -74,6 +74,8 @@ Breaks in compatibility
 * Removed the ``Crypto.Util.winrandom`` module.
 * Removed the ``Crypto.Random.randpool`` module.
 * Removed the ``Crypto.Cipher.XOR`` module.
+* Removed the ``Crypto.Protocol.AllOrNothing`` module.
+* Removed the ``Crypto.Protocol.Chaffing`` module.
 * Removed the parameters ``disabled_shortcut`` and ``overflow`` from ``Crypto.Util.Counter.new``.
 
 Other changes

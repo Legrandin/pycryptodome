@@ -94,8 +94,6 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Other cryptographic protocols:
  
   - Shamir Secret Sharing
-  - AllOrNothing
-  - Chaffing
   - Padding
     
     - PKCS#7
