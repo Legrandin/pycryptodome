@@ -1,5 +1,5 @@
 include MANIFEST.in
-include *.rst *.txt
+include *.rst
 include Doc/index.rst Doc/src/*
 include Doc/conf.py Doc/Makefile Doc/make.bat
 include Doc/python-3-changes.txt Doc/Changelog.pycrypto
