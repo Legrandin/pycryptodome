@@ -48,7 +48,6 @@ Module name                 Type      Description
                                       Very commonly used in the past,
                                       but today its 56-bit keys are too small.
 `Crypto.Cipher.DES3`        Block     Triple DES.
-`Crypto.Cipher.XOR`         Stream    The simple XOR cipher.
 ========================    =======   ========================
 
 
@@ -74,10 +73,7 @@ Module name                   Description
 
 __all__ = ['AES', 'ARC2', 'ARC4',
            'Blowfish', 'CAST', 'DES', 'DES3',
-           'XOR',
            'PKCS1_v1_5', 'PKCS1_OAEP'
            ]
-
-__revision__ = "$Id$"
 
 

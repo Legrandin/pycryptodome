@@ -73,6 +73,7 @@ Breaks in compatibility
 * Removed the ``Crypto.Random.OSRNG`` package.
 * Removed the ``Crypto.Util.winrandom`` module.
 * Removed the ``Crypto.Random.randpool`` module.
+* Removed the ``Crypto.Cipher.XOR`` module.
 * Removed the parameters ``disabled_shortcut`` and ``overflow`` from ``Crypto.Util.Counter.new``.
 
 Other changes
