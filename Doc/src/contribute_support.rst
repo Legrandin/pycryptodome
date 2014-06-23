@@ -4,13 +4,10 @@ Contribute and support
 - Do not be afraid to contribute with small and apparently insignificant
   improvements like correction to typos. Every change counts.
 - Read carefully the :doc:`license` of PyCryptodome. By submitting your code,
-  you acknowledge that you accept to release it according to the terms described
-  in the license (*public domain*). As a fallback, you also accept to release it
-  under the `MIT license`_ in those jurisdictions that do not recognize public
-  domain works.
+  you acknowledge that you accept to release it according to the `BSD 2-clause license`_.
 - You must disclaim which parts of your code in your contribution were partially
-  copied or derived from an existing source. Ensure that the original is in the
-  public domain.
+  copied or derived from an existing source. Ensure that the original is licensed
+  in a way compatible to the *BSD 2-clause license*.
 - You can propose changes in any way you find most convenient.
   However, the preferred approach is to:
 
@@ -33,6 +30,7 @@ You can mail any comment or question to *pycryptodome@googlegroups.com*.
 
 Bug reports can be filed on the `GitHub tracker <https://github.com/Legrandin/pycryptodome/issues>`_.
 
+.. _BSD 2-clause license: http://opensource.org/licenses/BSD-2-Clause
 .. _GitHub: https://github.com/Legrandin/pycryptodome
 .. _pull request: https://help.github.com/articles/using-pull-requests
 .. _PEP8: http://www.python.org/dev/peps/pep-0008/

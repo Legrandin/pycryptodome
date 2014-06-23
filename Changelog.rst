@@ -90,4 +90,5 @@ Other changes
 * Simplified build process by removing autoconf.
 * Speed optimization to PBKDF2.
 * Add support for MSVC.
-* Replaced HMAC code with a public domain implementation. The whole base is hopefully in the public domain.
+* Replaced HMAC code with a BSD implementation. Clarified that starting from the fork,
+  all contributions are released under the BSD license.
