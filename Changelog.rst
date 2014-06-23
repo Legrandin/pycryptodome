@@ -21,6 +21,7 @@ New features
 * Shamir's Secret Sharing protocol, compatible with *ssss* (128 bits only).
   See module ``Crypto.Protocol.SecretSharing``.
 * Ability to generate a DSA key given the domain parameters.
+* Ability to test installation with a simple ``python -m Crypto.SelfTest``.
 
 Resolved issues
 ---------------

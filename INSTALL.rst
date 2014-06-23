@@ -9,6 +9,7 @@ The procedures below all perform the same actions, just in different operating s
 #. Download PyCryptodome from ``pypi``
 #. Compile the C extensions of PyCryptodome
 #. Install PyCryptodome in the virtual environment
+#. Run the test suite to verify that all algorithms work correctly
 
 .. note::
 
@@ -27,6 +28,7 @@ For Python 2.x::
         $ cd MyProject
         $ . bin/activate
         $ pip install pycryptodome
+        $ python -m Crypto.SelfTest
 
 For Python 3.x::
 
@@ -36,6 +38,7 @@ For Python 3.x::
         $ cd MyProject
         $ . bin/activate
         $ pip install pycryptodome
+        $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
@@ -45,6 +48,7 @@ For PyPy::
         $ cd MyProject
         $ . bin/activate
         $ pip install pycryptodome
+        $ pypy -m Crypto.SelfTest
 
 Linux Fedora
 ~~~~~~~~~~~~
@@ -57,6 +61,7 @@ For Python 2.x::
         $ cd MyProject
         $ . bin/activate
         $ pip install pycryptodome
+        $ python -m Crypto.SelfTest
 
 For Python 3.x::
 
@@ -66,6 +71,7 @@ For Python 3.x::
         $ cd MyProject
         $ . bin/activate
         $ pip install pycryptodome
+        $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
@@ -75,6 +81,7 @@ For PyPy::
         $ cd MyProject
         $ . bin/activate
         $ pip install pycryptodome
+        $ pypy -m Crypto.SelfTest
 
 Windows
 ~~~~~~~
@@ -145,6 +152,10 @@ Windows
 #. Congratulations. You should be able to install PyCryptodome with::
 
         > pip install pycryptodome
+
+#. To make sure everything work fine, run the test suite::
+
+        > python -m Crypto.SelfTest
 
 .. _get-pip.py: https://bootstrap.pypa.io/get-pip.py
 .. _MS Windows SDK for Windows 7 and .NET Framework 3.5 SP1: http://www.microsoft.com/en-us/download/details.aspx?id=18950
