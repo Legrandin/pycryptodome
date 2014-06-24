@@ -294,7 +294,7 @@ setup(
     platforms = 'Posix; MacOS X; Windows',
     classifiers = [
         'Development Status :: 4 - Beta',
-        'License :: Public Domain',
+        'License :: OSI Approved :: BSD License',
         'Intended Audience :: Developers',
         'Operating System :: Unix',
         'Operating System :: Microsoft :: Windows',
