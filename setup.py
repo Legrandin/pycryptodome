@@ -34,9 +34,9 @@ for line in open(os.path.join("lib", "Crypto", "__init__.py")):
         version_tuple = eval(line.split("=")[1])
 
 version_string = "%d.%d" % version_tuple[:-1]
-if version_tuple[2].isdigit():
-    version_string += "."
 if version_tuple[2] is not None:
+    if str(version_tuple[2]).isdigit():
+        version_string += "."
     version_string += str(version_tuple[2])
 
 if sys.version[0:1] == '1':
