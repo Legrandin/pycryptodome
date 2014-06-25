@@ -96,6 +96,10 @@ Windows
 #. Make sure the directory where your Python is installed and its subdirectory ``Scripts``
    are included in your ``PATH`` environmental variable.
 
+   If needed, typically that means something like::
+
+       > set PATH=%PATH%;C:\Python27;C:\Python27\Scripts
+
 #. You need to know exactly the version of Python you have and
    whether it is a 32 bit or a 64 bit application.
    You can easily discover that by running the interpreter from the command
@@ -107,16 +111,16 @@ Windows
 
    You clearly have Python 2.7 and it is a 32 bit application.
 
-#. **[Skip if you have Python 3.4 or newer]** Install ``pip`` by downloading and executing
+#. **[Only once. Skip if you have Python 3.4 or newer]** Install ``pip`` by downloading and executing
    the Python script `get-pip.py`_::
 
         > python get-pip.py
 
-#. Install ``virtualenv`` with::
+#. **[Only once]** Install ``virtualenv`` with::
 
         > pip install virtualenv
 
-#. Install a Visual Studio C++ (MSVC) compiler that matches the runtime your Python
+#. **[Only once]** Install a Visual Studio C++ (MSVC) compiler that matches the runtime your Python
    is linked to. The good news is that the compilers can be found inside some Microsoft SDKs
    that are available free of charge from the Microsoft website.
    The bad news is that you need to download between 500MB and 1.4GB of data that mostly you will not need.
@@ -141,10 +145,11 @@ Windows
    For other combinations, the steps need to be slightly adjusted:
 
    * If you have installed Visual C++ **2010** you must replace ``v7.0`` with ``v7.1``.
-   * If your Python is a 32 bit application you must replace ``/x64`` with ``/x32``.
+   * If your Python is a 32 bit application you must replace ``/x64`` with ``/x86``.
 
 #. Create a virtual environment for your project::
 
+        > cd %USERPROFILE%
         > virtualenv MyProject
         > cd MyProject
         > Scripts\activate
