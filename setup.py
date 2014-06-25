@@ -20,7 +20,10 @@
 # SOFTWARE.
 # ===================================================================
 
-from distutils.core import Extension, Command, setup
+try:
+    from setuptools import Extension, Command, setup
+except ImportError:
+    from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
 from distutils.errors import CCompilerError
 import distutils
