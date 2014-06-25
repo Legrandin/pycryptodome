@@ -9,6 +9,7 @@ no more dangerous public key methods, etc).
 Future releases will include:
 
 - Clean up the Crypto.PublicKey API to reduce the call depth
+- Add back support for MPIR on Windows
 - Move API documentation from epydoc to sphinx
 - Add algorithms:
     - ChaCha20
