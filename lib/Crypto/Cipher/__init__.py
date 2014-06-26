@@ -68,7 +68,7 @@ Module name                   Description
 ==========================    =======================
 
 :undocumented: __revision__, __package__, _AES, _ARC2, _ARC4, _Blowfish
-               _CAST, _DES, _DES3, _XOR, _AESNI, _Salsa20, blockalgo
+               _CAST, _DES, _DES3, _XOR, _AESNI, _Salsa20
 """
 
 __all__ = ['AES', 'ARC2', 'ARC4',
