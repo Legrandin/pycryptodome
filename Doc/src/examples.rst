@@ -4,35 +4,124 @@ Examples
 Encrypt data with AES
 ~~~~~~~~~~~~~~~~~~~~~
 
-The following code generates a new AES key and encrypts a piece of data into a file:
+The following code generates a new AES128 key and encrypts a piece of data into a file.
+We use the `EAX mode <http://en.wikipedia.org/wiki/EAX_mode>`_ because it allows the receiver
+to detect any unauthorized modification.
 
 .. code-block:: python
 
     from Crypto.Cipher import AES
     from Crypto.Random import get_random_bytes
 
-    f = open("encrypted.bin", "wb")
-    key = get_random_bytes(16)        # AES-128
+    file_out = open("encrypted.bin", "wb")
+    key = get_random_bytes(16)
     nonce = get_random_bytes(16)
     cipher = AES.new(key, AES.MODE_EAX, nonce)
     ciphertext, tag = cipher.encrypt_and_digest(data)
-    [ f.write(x) for x in (nonce, tag, ciphertext) ]
+    [ file_out.write(x) for x in (nonce, tag, ciphertext) ]
 
-At the other end, the receiver can securely load the piece of data back (if they know the key!):
+At the other end, the receiver can securely load the piece of data back (if they know the key!).
+Note that the code generates a ``ValueError`` exception when tampering is detected.
 
 .. code-block:: python
 
     from Crypto.Cipher import AES
 
-    f = open("encrypted.bin", "rb")
-    nonce = f.read(16)
-    tag = f.read(16)
-    ciphertext = f.read()
+    file_in = open("encrypted.bin", "rb")
+    nonce, tag, ciphertext = [ file_in.read(x) for x in (16, 16, -1) ]
     # let's assume that the key is somehow available again
     cipher = AES.new(key, AES.MODE_EAX, nonce)
-    try:
-        data = cipher.decrypt_and_verify(ciphertext, tag)
-    except ValueError:
-        print "Error detected"
-        raise
+    data = cipher.decrypt_and_verify(ciphertext, tag)
+
+Generate an RSA key
+~~~~~~~~~~~~~~~~~~~
+
+The following code generates a new RSA key pair (secret) and saves it into a file, protected by a password.
+We use the `scrypt <http://en.wikipedia.org/wiki/Scrypt>`_ key derivation function to thwart dictionary attacks.
+At the end, the code prints our the RSA public key in ASCII/PEM format:
+
+.. code-block:: python
+
+    from Crypto.PublicKey import RSA
+
+    secret_code = "Unguessable"
+    key = RSA.generate(2048)
+    file_out = open("rsa_key.bin", "wb")
+    encrypted_key = key.exportKey(passphrase=secret_code, pkcs=8,
+                                  protection="scryptAndAES128-CBC")
+    file_out.write(encrypted_key)
+
+    print key.publickey().exportKey()
+
+The following code reads the private RSA key back in, and then prints again the public key:
+
+.. code-block:: python
+
+    from Crypto.PublicKey import RSA
+
+    secret_code = "Unguessable"
+    file_in = open("rsa_key.bin", "rb")
+    key = RSA.importKey(file_in.read(), passphrase=secret_code)
+
+    print key.publickey().exportKey()
+
+
+Encrypt data with RSA
+~~~~~~~~~~~~~~~~~~~~~
+
+The following code encrypts a piece of data for a receiver we have the RSA public key of.
+The RSA public key is stored in a file called ``receiver.pem``.
+
+Since we want to be able to encrypt an arbitrary amount of data, we use a hybrid encryption scheme.
+We use RSA with PKCS#1 `OAEP padding <http://en.wikipedia.org/wiki/Optimal_asymmetric_encryption_padding>`_
+for asymmetric encryption of an AES session key.
+The session key can then be used to encrypt all the actual data.
+
+As in the first example, we use the EAX mode to allow detection of unauthorized modifications.
+
+.. code-block:: python
+
+    from Crypto.PublicKey import RSA
+    from Crypto.Random import get_random_bytes
+    from Crypto.Cipher import AES, PKCS1_OAEP
+
+    file_out = open("encrypted_data.bin", "wb")
+
+    recipient_key = RSA.importKey(open("receiver.pem").read())
+    session_key = get_random_bytes(16)
+    nonce = get_random_bytes(16)
+
+    # Encrypt the session key with the public RSA key
+    cipher_rsa = PKCS1_OAEP.new(recipient_key)
+    file_out.write(cipher_rsa.encrypt(session_key))
+
+    # Encrypt the data with the AES session key
+    cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+    ciphertext, tag = cipher_aes.encrypt_and_digest(data)
+    [ file_out.write(x) for x in (nonce, tag, ciphertext) ]
+
+The receiver has the private RSA key. They will use it to decrypt the session key
+first, and with that the rest of the file:
+
+.. code-block:: python
+
+    from Crypto.PublicKey import RSA
+    from Crypto.Cipher import AES, PKCS1_OAEP
+    import math
+
+    file_in = open("encrypted_data.bin", "rb")
+
+    private_key = RSA.importKey(open("private.pem").read())
+    rsa_size = ceil(private_key.size()/8.0)
+
+    enc_session_key, nonce, tag, ciphertext = \
+       [ file_in.read(x) for x in (rsa_size, 16, 16, -1) ]
+
+    # Decrypt the session key with the public RSA key
+    cipher_rsa = PKCS1_OAEP.new(private_key)
+    session_key = cipher_rsa.decrypt(enc_session_key)
+
+    # Decrypt the data with the AES session key
+    cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+    data = cipher.decrypt_and_verify(ciphertext, tag)
 
