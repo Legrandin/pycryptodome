@@ -104,7 +104,8 @@ html_theme = 'alabaster'
 # documentation.
 html_theme_options = {
         "github_user" : "Legrandin",
-        "github_repo" : "pycryptodome"
+        "github_repo" : "pycryptodome",
+        "github_banner" : "true",
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
