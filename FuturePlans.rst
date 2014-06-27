@@ -11,6 +11,8 @@ Future releases will include:
 - Clean up the Crypto.PublicKey API to reduce the call depth
 - Add back support for MPIR on Windows
 - Move API documentation from epydoc to sphinx
+- Add CI (including coverage)
+- Add ability to import keys from X.509 certificates
 - Add algorithms:
     - ChaCha20
     - Poly1305
@@ -20,15 +22,18 @@ Future releases will include:
     - Diffie-Hellman
     - bcrypt
     - SRP
+- Speed up execution on pypy (via ctypes?)
 - Add more key management:
     - Export/import of DSA keys
     - Export/import of EC keys
     - JWK
 - Add support for CMS/PKCS#7
+- Add support for RNG backed by PKCS#11 and/or KMIP
+- Add support for Format-Preserving Encryption
 - Add the complete set of NIST test vectors for the various algorithms
-- Add CI (including coverage)
 - Remove dependency on libtomcrypto headers
 - Speed up (T)DES with a bitsliced implementation
 - Add support for PCLMULQDQ in AES-GCM
 - Coverage testing
 - Run lint on the C code
+- Add (minimal) support for PGP
