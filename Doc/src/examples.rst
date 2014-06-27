@@ -5,8 +5,9 @@ Encrypt data with AES
 ~~~~~~~~~~~~~~~~~~~~~
 
 The following code generates a new AES128 key and encrypts a piece of data into a file.
-We use the `EAX mode <http://en.wikipedia.org/wiki/EAX_mode>`_ because it allows the receiver
-to detect any unauthorized modification.
+We use the `EAX mode`_ because it allows the receiver to detect any
+unauthorized modification (similarly, we could have used other `authenticated
+encryption modes`_ like `GCM`_, `CCM`_ or `SIV`_).
 
 .. code-block:: python
 
@@ -37,7 +38,7 @@ Generate an RSA key
 ~~~~~~~~~~~~~~~~~~~
 
 The following code generates a new RSA key pair (secret) and saves it into a file, protected by a password.
-We use the `scrypt <http://en.wikipedia.org/wiki/Scrypt>`_ key derivation function to thwart dictionary attacks.
+We use the `scrypt`_ key derivation function to thwart dictionary attacks.
 At the end, the code prints our the RSA public key in ASCII/PEM format:
 
 .. code-block:: python
@@ -73,8 +74,7 @@ The following code encrypts a piece of data for a receiver we have the RSA publi
 The RSA public key is stored in a file called ``receiver.pem``.
 
 Since we want to be able to encrypt an arbitrary amount of data, we use a hybrid encryption scheme.
-We use RSA with PKCS#1 `OAEP padding <http://en.wikipedia.org/wiki/Optimal_asymmetric_encryption_padding>`_
-for asymmetric encryption of an AES session key.
+We use RSA with PKCS#1 `OAEP`_ for asymmetric encryption of an AES session key.
 The session key can then be used to encrypt all the actual data.
 
 As in the first example, we use the EAX mode to allow detection of unauthorized modifications.
@@ -125,3 +125,10 @@ first, and with that the rest of the file:
     cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
     data = cipher.decrypt_and_verify(ciphertext, tag)
 
+.. _EAX mode: http://en.wikipedia.org/wiki/EAX_mode
+.. _CCM: http://en.wikipedia.org/wiki/CCM_mode
+.. _GCM: http://en.wikipedia.org/wiki/GCM_mode
+.. _SIV: http://tools.ietf.org/html/rfc5297
+.. _scrypt: http://it.wikipedia.org/wiki/Scrypt
+.. _OAEP: http://en.wikipedia.org/wiki/Optimal_asymmetric_encryption_padding
+.. _authenticated encryption modes: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
