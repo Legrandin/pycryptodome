@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/Legrandin/pycryptodome.svg?branch=master
+   :target: https://travis-ci.org/Legrandin/pycryptodome
+
 PyCryptodome
 ============
 
