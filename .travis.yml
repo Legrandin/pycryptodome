@@ -1,10 +1,20 @@
-language: python
-python:
- - "2.6"
- - "2.7"
- - "3.2"
- - "3.3"
- - "pypy"
-before_install: sudo apt-get install libgmp-dev
-install: python setup.py install 
-script: python setup.py test
+language: c
+env:
+ - PYTHON_INTP="python2.4"
+ - PYTHON_INTP="python2.5"
+ - PYTHON_INTP="python2.6"
+ - PYTHON_INTP="python2.7"
+ - PYTHON_INTP="python3.1"
+ - PYTHON_INTP="python3.2"
+ - PYTHON_INTP="python3.3"
+ - PYTHON_INTP="python3.4"
+ - PYTHON_INTP="pypy"
+install:
+ - ./travis_install.sh
+script:
+ - . bin/activate
+ - "major=$(python -V 2>&1 | cut -f2 -d' ' | cut -f1 -d'.')"
+ - if [ "$major" -ge 3 ]; then xflags="-bb" ; fi
+ - python -V
+ - python -tt $xflags setup.py build
+ - python -tt $xflags setup.py test
