@@ -153,13 +153,13 @@ class Shamir_Tests(TestCase):
 
         bin_shares = []
         for share in shares:
-            bin_shares.append((share[0], unhexlify(share[1])))
+            bin_shares.append((share[0], unhexlify(b(share[1]))))
         result = Shamir.combine(bin_shares)
         self.assertEqual(hexlify(result), secret)
 
     def test3(self):
         # Loopback split/recombine
-        secret = unhexlify("000102030405060708090a0b0c0d0e0f")
+        secret = unhexlify(b("000102030405060708090a0b0c0d0e0f"))
 
         shares = Shamir.split(2, 3, secret)
 

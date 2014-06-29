@@ -121,7 +121,7 @@ def load_fips_test_module(file_name):
                 if comp in ('X', 'Y'):
                     setattr(tv, comp, long(res.group(1), 16))
                 else:
-                    setattr(tv, comp, unhexlify(res.group(1)))
+                    setattr(tv, comp, unhexlify(b(res.group(1))))
                 line = '\n'
             setattr(tv, 'Signature', tv.R + tv.S)
 

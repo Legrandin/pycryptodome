@@ -220,7 +220,7 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
         if len(row) < 3:
             description = repr(input)
         else:
-            description = row[2].encode('latin-1')
+            description = row[2]
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input))
     name = "%s #%d: digest_size" % (module_name, i+1)
