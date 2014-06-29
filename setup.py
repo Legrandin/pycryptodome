@@ -73,13 +73,13 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
     import tempfile
 
     # Create a temporary file with the C program
-    fname = tempfile.mktemp(".c")
+    fname = tempfile.mkstemp(".c")[1]
     f = open(fname, 'w')
     f.write(program)
     f.close()
 
     # Name for the temporary executable
-    oname = tempfile.mktemp(".out")
+    oname = tempfile.mkstemp(".out")[1]
 
     debug = False
     # Mute the compiler and the linker
