@@ -4,5 +4,6 @@ python:
  - "2.7"
  - "3.2"
  - "3.3"
+before_install: sudo apt-get install libgmp-dev
 install: python setup.py install 
 script: python setup.py test
