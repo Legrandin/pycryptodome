@@ -13,8 +13,9 @@ install:
  - ./travis_install.sh
 script:
  - . bin/activate
- - "major=$(python -V 2>&1 | cut -f2 -d' ' | cut -f1 -d'.')"
+ - major=$(python -V 2>&1 | cut -f2 -d' ' | cut -f1 -d'.')
  - if [ "$major" -ge 3 ]; then xflags="-bb" ; fi
  - python -V
+ - echo "Custom Python flags:" \"${xflags:-none}\"
  - python -tt $xflags setup.py build
  - python -tt $xflags setup.py test
