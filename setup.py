@@ -93,9 +93,17 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
     objects = []
     try:
         compiler = distutils.ccompiler.new_compiler()
+
+        if compiler.compiler_type in [ 'msvc' ]:
+            # Force creation of the manifest file (http://bugs.python.org/issue16296)
+            # as needed by VS2010
+            extra_linker_options = [ "/MANIFEST" ]
+        else:
+            extra_linker_options = []
+
         distutils.sysconfig.customize_compiler(compiler)
         objects = compiler.compile([fname], extra_postargs=extra_cc_options)
-        compiler.link_executable(objects, oname, libraries=extra_libraries)
+        compiler.link_executable(objects, oname, libraries=extra_libraries, extra_preargs=extra_linker_options)
         result = True
     except CCompilerError:
         result = False
