@@ -9,6 +9,9 @@ env:
  - PYTHON_INTP="python3.3"
  - PYTHON_INTP="python3.4"
  - PYTHON_INTP="pypy"
+branches:
+ except:
+  - /^.*-wip$/
 install:
  - ./travis_install.sh
 script:
