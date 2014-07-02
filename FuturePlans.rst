@@ -8,10 +8,12 @@ no more dangerous public key methods, etc).
 
 Future releases will include:
 
+- Break-up blockalgo.py (and if possible block_template.c too)
+  in more manageable modules
 - Clean up the Crypto.PublicKey API to reduce the call depth
-- Add back support for MPIR on Windows
+- Add back support for MPIR on Windows, or
+  investigate performance of other, smaller arbitrary-precision arithmetic libaries
 - Move API documentation from epydoc to sphinx
-- Add CI (including coverage)
 - Add ability to import keys from X.509 certificates
 - Add algorithms:
     - ChaCha20
@@ -19,6 +21,7 @@ Future releases will include:
     - BLAKE2
     - Elliptic Curves (ECDSA, ECIES, ECDH)
     - Camellia, GOST
+    - OCB cipher mode
     - Diffie-Hellman
     - bcrypt
     - SRP
