@@ -6,7 +6,7 @@ The procedures below all perform the same actions, just in different operating s
 #. Install ``virtualenv``
 #. Install a C compiler
 #. Create a virtual environment (and install ``pip`` in it)
-#. Download PyCryptodome from ``pypi``
+#. Download PyCryptodome from `pypi`_
 #. Compile the C extensions of PyCryptodome
 #. Install PyCryptodome in the virtual environment
 #. Run the test suite to verify that all algorithms work correctly
@@ -88,10 +88,11 @@ Windows
 
 .. note::
 
-        Installing a Python package with C extensions (like PyCryptodome)
-        is clearly very complicated on Windows.      
-        In the future, pre-compiled binaries will be made available
-        as `Python wheels <http://pythonwheels.com/>`_ on ``pypi``.
+        Pre-compiled binaries for a few Windows configurations are available
+        as `Python wheels <http://pythonwheels.com/>`_ on `pypi`_.
+        
+        To use them, follow the steps below and skip **#5** and **#6**
+        (that is, the installation of the Microsoft compiler).
 
 #. Make sure the directory where your Python is installed and its subdirectory ``Scripts``
    are included in your ``PATH`` environmental variable.
@@ -162,6 +163,7 @@ Windows
 
         > python -m Crypto.SelfTest
 
+.. _pypi: https://pypi.python.org/pypi/pycryptodome
 .. _get-pip.py: https://bootstrap.pypa.io/get-pip.py
 .. _MS Windows SDK for Windows 7 and .NET Framework 3.5 SP1: http://www.microsoft.com/en-us/download/details.aspx?id=18950
 .. _MS Windows SDK for Windows 7 and .NET Framework 4: https://www.microsoft.com/en-us/download/details.aspx?id=8442
