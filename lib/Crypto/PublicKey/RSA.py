@@ -81,6 +81,7 @@ from Crypto.Util.asn1 import (
                 DerNull,
                 DerSequence,
                 DerBitString,
+                DerInteger,
                 DerObjectId,
                 newDerSequence,
                 newDerBitString
@@ -521,6 +522,31 @@ class RSAImplementation(object):
                         if len(rsaPub) == 2 and rsaPub.hasOnlyInts():
                             return self.construct(rsaPub[:])
                 except (ValueError, EOFError):
+                    pass
+
+            # Try to see if this is an X.509 certificate
+            # (Certificate ASN.1 # type)
+            if len(der) == 3:
+                try:
+
+                    # The public key is in tbsCertificate.subjectPublicKeyInfo
+                    x509_tbs_cert = _decode_der(DerSequence, der[0])
+
+                    index = -1
+                    try:
+                        # The first element of tbsCertificate may be
+                        # the serial number for v1 certificates
+                        _ = x509_tbs_cert[0] + 1
+                        index = 5
+                    except TypeError:
+                        x509_version = DerInteger(explicit=0)
+                        x509_version.decode(x509_tbs_cert[0])
+                        index = 6
+
+                    if index in (5, 6):
+                        return self._importKeyDER(x509_tbs_cert[index])
+
+                except (TypeError, IndexError, ValueError, EOFError):
                     pass
 
             # Try PKCS#8 (possibly encrypted)
