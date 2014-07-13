@@ -304,7 +304,7 @@ class DerIntegerTests(unittest.TestCase):
 class DerSequenceTests(unittest.TestCase):
 
     def testInit1(self):
-        der = newDerSequence(1, DerInteger(2), '0\x00')
+        der = newDerSequence(1, DerInteger(2), b('0\x00'))
         self.assertEquals(der.encode(), b('0\x08\x02\x01\x01\x02\x01\x020\x00'))
 
     def testEncode1(self):
