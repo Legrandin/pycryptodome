@@ -81,7 +81,6 @@ from Crypto.Util.asn1 import (
                 DerNull,
                 DerSequence,
                 DerBitString,
-                DerInteger,
                 DerObjectId,
                 newDerSequence,
                 newDerBitString
@@ -527,46 +526,13 @@ class RSAImplementation(object):
             # Try to see if this is an X.509 DER certificate
             # (Certificate ASN.1 type)
             if len(der) == 3:
+                from Crypto.PublicKey import _extract_sp_info
                 try:
-
-                    # This code will partially parse tbsCertificate
-                    # to get to subjectPublicKeyInfo.
-                    #
-                    # However, the first 2 elements of tbsCertificate are:
-                    #
-                    #   version [0]  Version DEFAULT v1,
-                    #   serialNumber         CertificateSerialNumber,
-                    #
-                    # where:
-                    #
-                    #   Version  ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
-                    #   CertificateSerialNumber  ::=  INTEGER
-                    #
-                    # In order to know the position of subjectPublicKeyInfo
-                    # in the tbsCertificate SEQUENCE, we try to see if the
-                    # first element is an untagged INTEGER (that is, the
-                    # certificate serial number).
-
-                    x509_tbs_cert = _decode_der(DerSequence, der[0])
-
-                    index = -1  # Sentinel
-                    try:
-                        _ = x509_tbs_cert[0] + 1
-                        # Still here? There was no version then
-                        index = 5
-                    except TypeError:
-                        # Landed here? Version was there
-                        x509_version = DerInteger(explicit=0)
-                        x509_version.decode(x509_tbs_cert[0])
-                        index = 6
-
-                    if index in (5, 6):
-                        if verify_x509_cert:
-                            raise NotImplementedError("X.509 certificate validation is not supported")
-                        return self._importKeyDER(x509_tbs_cert[index],
-                                                  passphrase, False)
-
-                except (TypeError, IndexError, ValueError, EOFError):
+                    sp_info = _extract_sp_info(der)
+                    if verify_x509_cert:
+                        raise NotImplementedError("X.509 certificate validation is not supported")
+                    return self._importKeyDER(sp_info, passphrase, False)
+                except ValueError:
                     pass
 
             # Try PKCS#8 (possibly encrypted)

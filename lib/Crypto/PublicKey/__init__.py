@@ -38,3 +38,49 @@ Crypto.PublicKey.RSA      (Signing, encryption, and blinding)
 
 __all__ = ['RSA', 'DSA', 'ElGamal']
 
+def _extract_sp_info(x509_certificate):
+    """Extract subjectPublicKeyInfo from a DER X.509 certificate."""
+
+    from Crypto.Util.asn1 import DerSequence, DerInteger
+
+    try:
+        # This code will partially parse tbsCertificate
+        # to get to subjectPublicKeyInfo.
+        #
+        # However, the first 2 elements of tbsCertificate are:
+        #
+        #   version [0]  Version DEFAULT v1,
+        #   serialNumber         CertificateSerialNumber,
+        #
+        # where:
+        #
+        #   Version  ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
+        #   CertificateSerialNumber  ::=  INTEGER
+        #
+        # In order to know the position of subjectPublicKeyInfo
+        # in the tbsCertificate SEQUENCE, we try to see if the
+        # first element is an untagged INTEGER (that is, the
+        # certificate serial number).
+
+        x509_tbs_cert = DerSequence()
+        x509_tbs_cert.decode(x509_certificate[0])
+
+        index = -1  # Sentinel
+        try:
+            _ = x509_tbs_cert[0] + 1
+            # Still here? There was no version then
+            index = 5
+        except TypeError:
+            # Landed here? Version was there
+            x509_version = DerInteger(explicit=0)
+            x509_version.decode(x509_tbs_cert[0])
+            index = 6
+
+        if index in (5, 6):
+            return x509_tbs_cert[index]
+
+    except (TypeError, IndexError, ValueError, EOFError):
+        pass
+
+    raise ValueError("Cannot extract subjectPublicKeyInfo")
+

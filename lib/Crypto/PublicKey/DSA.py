@@ -507,7 +507,7 @@ class DSAImplementation(object):
 
         return _DSAobj(self, key)
 
-    def _importKeyDER(self, key_data, passphrase=None, params=None):
+    def _importKeyDER(self, key_data, passphrase, params, verify_x509_cert):
         """Import a DSA key (public or private half), encoded in DER form."""
 
         try:
@@ -552,17 +552,29 @@ class DSAImplementation(object):
                 except (ValueError, EOFError):
                     pass
 
+            # Try to see if this is an X.509 DER certificate
+            # (Certificate ASN.1 type)
+            if len(der) == 3:
+                from Crypto.PublicKey import _extract_sp_info
+                try:
+                    sp_info = _extract_sp_info(der)
+                    if verify_x509_cert:
+                        raise NotImplementedError("X.509 certificate validation is not supported")
+                    return self._importKeyDER(sp_info, passphrase, None, False)
+                except ValueError:
+                    pass
+
             # Try unencrypted PKCS#8
             p8_pair = PKCS8.unwrap(key_data, passphrase)
             if p8_pair[0] == oid:
-                return self._importKeyDER(p8_pair[1], passphrase, p8_pair[2])
+                return self._importKeyDER(p8_pair[1], passphrase, p8_pair[2], True)
 
         except (ValueError, EOFError):
             pass
 
         raise ValueError("DSA key format is not supported")
 
-    def importKey(self, extern_key, passphrase=None):
+    def importKey(self, extern_key, passphrase=None, verify_x509_cert=True):
         """Import a DSA key (public or private).
 
         :Parameters:
@@ -571,6 +583,7 @@ class DSAImplementation(object):
 
             An DSA *public* key can be in any of the following formats:
 
+            - X.509 certificate (binary or PEM format)
             - X.509 ``subjectPublicKeyInfo`` (binary or PEM)
             - OpenSSH (one line of text, see `RFC4253`_)
 
@@ -588,6 +601,13 @@ class DSAImplementation(object):
           passphrase : string
             In case of an encrypted private key, this is the pass phrase
             from which the decryption key is derived.
+
+          verify_x509_cert : bool
+            When importing the public key from an X.509 certificate, whether
+            the certificate should be validated. **Since verification is not
+            yet supported, this value must always be set to False**.
+
+            This value is ignored if an X.509 certificate is not passed.
 
         :Return: A DSA key object (`_DSAobj`).
         :Raise ValueError:
@@ -609,7 +629,7 @@ class DSAImplementation(object):
             (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
             if enc_flag:
                 passphrase = None
-            return self._importKeyDER(der, passphrase)
+            return self._importKeyDER(der, passphrase, None, verify_x509_cert)
 
         if extern_key.startswith(b('ssh-dss ')):
             # This is probably a public OpenSSH key
@@ -625,7 +645,7 @@ class DSAImplementation(object):
 
         if bord(extern_key[0]) == 0x30:
             # This is probably a DER encoded key
-            return self._importKeyDER(extern_key, passphrase)
+            return self._importKeyDER(extern_key, passphrase, None, verify_x509_cert)
 
         raise ValueError("DSA key format is not supported")
 
