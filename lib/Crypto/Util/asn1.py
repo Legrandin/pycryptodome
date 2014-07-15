@@ -77,51 +77,65 @@ class DerObject(object):
         This class should never be directly instantiated.
         """
 
-        def __init__(self, asn1Id=None, payload=b(''), implicit=None, constructed=False):
+        def __init__(self, asn1Id=None, payload=b(''), implicit=None,
+                     constructed=False, explicit=None):
                 """Initialize the DER object according to a specific ASN.1 type.
 
                 :Parameters:
                   asn1Id : integer
-                    The universal DER tag identifier for this object
-                    (e.g. 0x10 for a SEQUENCE). If None, the tag is not known
-                    yet.
+                    The universal DER tag number for this object
+                    (e.g. 0x10 for a SEQUENCE).
+                    If None, the tag is not known yet.
 
                   payload : byte string
-                    The initial payload of the object.
+                    The initial payload of the object (that it,
+                    the content octets).
                     If not specified, the payload is empty.
 
                   implicit : integer
-                    The IMPLICIT tag to use for the encoded object.
+                    The IMPLICIT tag number to use for the encoded object.
                     It overrides the universal tag *asn1Id*.
 
                   constructed : bool
                     True when the ASN.1 type is *constructed*.
                     False when it is *primitive*.
+
+                  explicit : integer
+                    The EXPLICIT tag number to use for the encoded object.
                 """
 
                 if asn1Id==None:
-                    self._idOctet = None
+                    # The tag octet will be read in with ``decode``
+                    self._tag_octet = None
                     return
                 asn1Id = self._convertTag(asn1Id)
-                self._implicit = implicit
-                if implicit:
-                    # In a BER/DER identifier octet:
-                    # * bits 4-0 contain the tag value
-                    # * bit 5 is set if the type is 'construted'
-                    #   and unset if 'primitive'
-                    # * bits 7-6 depend on the encoding class
-                    #
-                    # Class        | Bit 7, Bit 6
-                    # universal    |   0      0
-                    # application  |   0      1
-                    # context-spec |   1      0 (default for IMPLICIT)
-                    # private      |   1      1
-                    #
-                    self._idOctet = 0x80 | self._convertTag(implicit)
+
+                # In a BER/DER identifier octet:
+                # * bits 4-0 contain the tag value
+                # * bit 5 is set if the type is 'constructed'
+                #   and unset if 'primitive'
+                # * bits 7-6 depend on the encoding class
+                #
+                # Class        | Bit 7, Bit 6
+                # ----------------------------------
+                # universal    |   0      0
+                # application  |   0      1
+                # context-spec |   1      0 (default for IMPLICIT/EXPLICIT)
+                # private      |   1      1
+                #
+                if explicit is None:
+                    if implicit is None:
+                        self._tag_octet = asn1Id
+                    else:
+                        self._tag_octet = 0x80 | self._convertTag(implicit)
+                    self._tag_octet |= 0x20 * constructed
                 else:
-                    self._idOctet = asn1Id
-                if constructed:
-                    self._idOctet |= 0x20
+                    if implicit is None:
+                        self._tag_octet = 0xA0 | self._convertTag(explicit)
+                    else:
+                        raise ValueError("Explicit and implicit tags are mutually exclusive")
+                    self._inner_tag_octet = asn1Id + 0x20 * constructed
+
                 self.payload = payload
 
         def _convertTag(self, tag):
@@ -136,23 +150,34 @@ class DerObject(object):
                     raise ValueError("Wrong DER tag")
                 return tag
 
-        def _lengthOctets(self):
-                """Build length octets according to the current object's payload.
-
-                Return a byte string that encodes the payload length (in
-                bytes) in a format suitable for DER length octets (L).
+        @staticmethod
+        def _definite_form(length):
+                """Build length octets according to BER/DER
+                definite form.
                 """
-                payloadLen = len(self.payload)
-                if payloadLen>127:
-                        encoding = long_to_bytes(payloadLen)
-                        return bchr(len(encoding)+128) + encoding
-                return bchr(payloadLen)
+                if length>127:
+                        encoding = long_to_bytes(length)
+                        return bchr(len(encoding) + 128) + encoding
+                return bchr(length)
 
         def encode(self):
                 """Return this DER element, fully encoded as a binary byte string."""
+
                 # Concatenate identifier octets, length octets,
                 # and contents octets
-                return bchr(self._idOctet) + self._lengthOctets() + self.payload
+
+                output_payload = self.payload
+
+                # In case of an EXTERNAL tag, first encode the inner
+                # element.
+                if hasattr(self, "_inner_tag_octet"):
+                    output_payload = bchr(self._inner_tag_octet) +\
+                                     self._definite_form(len(self.payload)) +\
+                                     self.payload
+
+                return bchr(self._tag_octet) +\
+                       self._definite_form(len(output_payload)) +\
+                       output_payload
 
         def _decodeLen(self, s):
                 """Decode DER length octets from a file."""
@@ -190,6 +215,13 @@ class DerObject(object):
                 except EOFError:
                     pass
 
+                # In case of an EXTERNAL tag, further decode the inner
+                # element.
+                if hasattr(self, "_inner_tag_octet"):
+                    self._tag_octet = self._inner_tag_octet
+                    del self._inner_tag_octet
+                    self.decode(self.payload)
+
         def _decodeFromStream(self, s):
                 """Decode a complete DER element from a file."""
 
@@ -197,11 +229,11 @@ class DerObject(object):
                     idOctet = bord(s.read_byte())
                 except EOFError:
                     raise _NoDerElementError
-                if self._idOctet != None:
-                    if idOctet != self._idOctet:
+                if self._tag_octet != None:
+                    if idOctet != self._tag_octet:
                         raise ValueError("Unexpected DER tag")
                 else:
-                    self._idOctet = idOctet
+                    self._tag_octet = idOctet
                 length = self._decodeLen(s)
                 self.payload = s.read(length)
 
@@ -230,7 +262,7 @@ class DerInteger(DerObject):
         the output will be ``9``.
         """
 
-        def __init__(self, value=0, implicit=None):
+        def __init__(self, value=0, implicit=None, explicit=None):
                 """Initialize the DER object as an INTEGER.
 
                 :Parameters:
@@ -242,7 +274,8 @@ class DerInteger(DerObject):
                     It overrides the universal tag for INTEGER (2).
                 """
 
-                DerObject.__init__(self, 0x02, b(''), implicit, False)
+                DerObject.__init__(self, 0x02, b(''), implicit,
+                                   False, explicit)
                 self.value = value #: The integer value
 
         def encode(self):
@@ -461,7 +494,7 @@ class DerSequence(DerObject):
                         der._decodeFromStream(p)
 
                         # Parse INTEGERs differently
-                        if der._idOctet != 0x02:
+                        if der._tag_octet != 0x02:
                             self._seq.append(p._recording)
                         else:
                             derInt = DerInteger()
@@ -541,7 +574,7 @@ class DerNull(DerObject):
     def __init__(self):
         """Initialize the DER object as a NULL."""
 
-        DerObject.__init__(self, 0x05, b(''), False)
+        DerObject.__init__(self, 0x05, b(''), None, False)
 
 class DerObjectId(DerObject):
     """Class to model a DER OBJECT ID.
@@ -844,9 +877,9 @@ class DerSetOf(DerObject):
 
                 # Verify that all members are of the same type
                 if setIdOctet < 0:
-                    setIdOctet = der._idOctet
+                    setIdOctet = der._tag_octet
                 else:
-                    if setIdOctet != der._idOctet:
+                    if setIdOctet != der._tag_octet:
                         raise ValueError("Not all elements are of the same DER type")
 
                 # Parse INTEGERs differently

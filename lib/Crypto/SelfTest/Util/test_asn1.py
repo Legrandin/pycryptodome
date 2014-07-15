@@ -33,8 +33,6 @@
 
 """Self-tests for Crypto.Util.asn1"""
 
-__revision__ = "$Id$"
-
 import unittest
 
 from Crypto.Util.py3compat import *
@@ -92,6 +90,12 @@ class DerObjectTests(unittest.TestCase):
         der.payload = b('ppll')
         self.assertEquals(der.encode(), b('\x9E\x04ppll'))
 
+    def testObjEncode5(self):
+        # Encode type with explicit tag
+        der = DerObject(0x10, explicit=5)
+        der.payload = b("xxll")
+        self.assertEqual(der.encode(), b("\xa5\x06\x10\x04xxll"))
+
     # -----
 
     def testObjDecode1(self):
@@ -99,14 +103,14 @@ class DerObjectTests(unittest.TestCase):
         der = DerObject(0x02)
         der.decode(b('\x02\x02\x01\x02'))
         self.assertEquals(der.payload, b("\x01\x02"))
-        self.assertEquals(der._idOctet, 0x02)
+        self.assertEquals(der._tag_octet, 0x02)
 
     def testObjDecode2(self):
         # Decode long payload
         der = DerObject(0x02)
         der.decode(b('\x02\x81\x80' + "1"*128))
         self.assertEquals(der.payload, b("1")*128)
-        self.assertEquals(der._idOctet, 0x02)
+        self.assertEquals(der._tag_octet, 0x02)
 
     def testObjDecode3(self):
         # Decode payload with too much data gives error
@@ -137,8 +141,21 @@ class DerObjectTests(unittest.TestCase):
         # Arbitrary DER object
         der = DerObject()
         der.decode(b('\x65\x01\x88'))
-        self.assertEquals(der._idOctet, 0x65)
+        self.assertEquals(der._tag_octet, 0x65)
         self.assertEquals(der.payload, b('\x88'))
+
+    def testObjDecode7(self):
+        # Decode explicit tag
+        der = DerObject(0x10, explicit=5)
+        der.decode(b("\xa5\x06\x10\x04xxll"))
+        self.assertEquals(der._tag_octet, 0x10)
+        self.assertEquals(der.payload, b('xxll'))
+
+        # Explicit tag may be 0
+        der = DerObject(0x10, explicit=0)
+        der.decode(b("\xa0\x06\x10\x04xxll"))
+        self.assertEquals(der._tag_octet, 0x10)
+        self.assertEquals(der.payload, b('xxll'))
 
 class DerIntegerTests(unittest.TestCase):
 
@@ -200,6 +217,11 @@ class DerIntegerTests(unittest.TestCase):
         # Value
         der = DerInteger(-87873)
         self.assertEquals(der.encode(), b('\x02\x03\xFE\xA8\xBF'))
+
+    def testEncode4(self):
+        # Explicit encoding
+        number = DerInteger(0x34, explicit=3)
+        self.assertEquals(number.encode(), b('\xa3\x03\x02\x01\x34'))
 
     # -----
 
@@ -268,6 +290,12 @@ class DerIntegerTests(unittest.TestCase):
         der.decode(b('\x02\x00'))
         self.assertEquals(der.value, 0)
 
+    def testDecode6(self):
+        # Explicit encoding
+        number = DerInteger(explicit=3)
+        number.decode(b('\xa3\x03\x02\x01\x34'))
+        self.assertEquals(number.value, 0x34)
+
     def testErrDecode1(self):
         # Wide length field
         der = DerInteger()
@@ -276,7 +304,7 @@ class DerIntegerTests(unittest.TestCase):
 class DerSequenceTests(unittest.TestCase):
 
     def testInit1(self):
-        der = newDerSequence(1, DerInteger(2), '0\x00')
+        der = newDerSequence(1, DerInteger(2), b('0\x00'))
         self.assertEquals(der.encode(), b('0\x08\x02\x01\x01\x02\x01\x020\x00'))
 
     def testEncode1(self):

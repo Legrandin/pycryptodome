@@ -20,11 +20,8 @@
 # SOFTWARE.
 # ===================================================================
 
-from __future__ import nested_scopes
-
-__revision__ = "$Id$"
-
 import unittest
+import re
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import *
@@ -376,6 +373,125 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         key = self.rsa.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         self.assertRaises(ValueError, key.exportKey, 'DER', 'test', 1)
 
+
+class ImportKeyFromX509Cert(unittest.TestCase):
+
+    def test_x509v1(self):
+
+        # Sample V1 certificate with a 1024 bit RSA key
+        x509_v1_cert = """
+-----BEGIN CERTIFICATE-----
+MIICOjCCAaMCAQEwDQYJKoZIhvcNAQEEBQAwfjENMAsGA1UEChMEQWNtZTELMAkG
+A1UECxMCUkQxHDAaBgkqhkiG9w0BCQEWDXNwYW1AYWNtZS5vcmcxEzARBgNVBAcT
+Ck1ldHJvcG9saXMxETAPBgNVBAgTCE5ldyBZb3JrMQswCQYDVQQGEwJVUzENMAsG
+A1UEAxMEdGVzdDAeFw0xNDA3MTExOTU3MjRaFw0xNzA0MDYxOTU3MjRaME0xCzAJ
+BgNVBAYTAlVTMREwDwYDVQQIEwhOZXcgWW9yazENMAsGA1UEChMEQWNtZTELMAkG
+A1UECxMCUkQxDzANBgNVBAMTBmxhdHZpYTCBnzANBgkqhkiG9w0BAQEFAAOBjQAw
+gYkCgYEAyG+kytdRj3TFbRmHDYp3TXugVQ81chew0qeOxZWOz80IjtWpgdOaCvKW
+NCuc8wUR9BWrEQW+39SaRMLiQfQtyFSQZijc3nsEBu/Lo4uWZ0W/FHDRVSvkJA/V
+Ex5NL5ikI+wbUeCV5KajGNDalZ8F1pk32+CBs8h1xNx5DyxuEHUCAwEAATANBgkq
+hkiG9w0BAQQFAAOBgQCVQF9Y//Q4Psy+umEM38pIlbZ2hxC5xNz/MbVPwuCkNcGn
+KYNpQJP+JyVTsPpO8RLZsAQDzRueMI3S7fbbwTzAflN0z19wvblvu93xkaBytVok
+9VBAH28olVhy9b1MMeg2WOt5sUEQaFNPnwwsyiY9+HsRpvpRnPSQF+kyYVsshQ==
+-----END CERTIFICATE-----
+        """.strip()
+
+        # RSA public key as dumped by openssl
+        exponent = 65537
+        modulus_str = """
+00:c8:6f:a4:ca:d7:51:8f:74:c5:6d:19:87:0d:8a:
+77:4d:7b:a0:55:0f:35:72:17:b0:d2:a7:8e:c5:95:
+8e:cf:cd:08:8e:d5:a9:81:d3:9a:0a:f2:96:34:2b:
+9c:f3:05:11:f4:15:ab:11:05:be:df:d4:9a:44:c2:
+e2:41:f4:2d:c8:54:90:66:28:dc:de:7b:04:06:ef:
+cb:a3:8b:96:67:45:bf:14:70:d1:55:2b:e4:24:0f:
+d5:13:1e:4d:2f:98:a4:23:ec:1b:51:e0:95:e4:a6:
+a3:18:d0:da:95:9f:05:d6:99:37:db:e0:81:b3:c8:
+75:c4:dc:79:0f:2c:6e:10:75
+        """
+        modulus = int(re.sub("[^0-9a-f]","", modulus_str), 16)
+
+        key = RSA.importKey(x509_v1_cert, verify_x509_cert=False)
+        self.assertEqual(key.e, exponent)
+        self.assertEqual(key.n, modulus)
+        self.failIf(key.has_private())
+
+    def test_x509v3(self):
+
+        # Sample V3 certificate with a 1024 bit RSA key
+        x509_v3_cert = """
+-----BEGIN CERTIFICATE-----
+MIIEcjCCAlqgAwIBAgIBATANBgkqhkiG9w0BAQsFADBhMQswCQYDVQQGEwJVUzEL
+MAkGA1UECAwCTUQxEjAQBgNVBAcMCUJhbHRpbW9yZTEQMA4GA1UEAwwHVGVzdCBD
+QTEfMB0GCSqGSIb3DQEJARYQdGVzdEBleGFtcGxlLmNvbTAeFw0xNDA3MTIwOTM1
+MTJaFw0xNzA0MDcwOTM1MTJaMEQxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJNRDES
+MBAGA1UEBwwJQmFsdGltb3JlMRQwEgYDVQQDDAtUZXN0IFNlcnZlcjCBnzANBgkq
+hkiG9w0BAQEFAAOBjQAwgYkCgYEA/S7GJV2OcFdyNMQ4K75KrYFtMEn3VnEFdPHa
+jyS37XlMxSh0oS4GeTGVUCJInl5Cpsv8WQdh03FfeOdvzp5IZ46OcjeOPiWnmjgl
+2G5j7e2bDH7RSchGV+OD6Fb1Agvuu2/9iy8fdf3rPQ/7eAddzKUrzwacVbnW+tg2
+QtSXKRcCAwEAAaOB1TCB0jAdBgNVHQ4EFgQU/WwCX7FfWMIPDFfJ+I8a2COG+l8w
+HwYDVR0jBBgwFoAUa0hkif3RMaraiWtsOOZZlLu9wJwwCQYDVR0TBAIwADALBgNV
+HQ8EBAMCBeAwSgYDVR0RBEMwQYILZXhhbXBsZS5jb22CD3d3dy5leGFtcGxlLmNv
+bYIQbWFpbC5leGFtcGxlLmNvbYIPZnRwLmV4YW1wbGUuY29tMCwGCWCGSAGG+EIB
+DQQfFh1PcGVuU1NMIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTANBgkqhkiG9w0BAQsF
+AAOCAgEAvO6xfdsGbnoK4My3eJthodTAjMjPwFVY133LH04QLcCv54TxKhtUg1fi
+PgdjVe1HpTytPBfXy2bSZbXAN0abZCtw1rYrnn7o1g2pN8iypVq3zVn0iMTzQzxs
+zEPO3bpR/UhNSf90PmCsS5rqZpAAnXSaAy1ClwHWk/0eG2pYkhE1m1ABVMN2lsAW
+e9WxGk6IFqaI9O37NYQwmEypMs4DC+ECJEvbPFiqi3n0gbXCZJJ6omDA5xJldaYK
+Oa7KR3s/qjBsu9UAiWpLBuFoSTHIF2aeRKRFmUdmzwo43eVPep65pY6eQ4AdL2RF
+rqEuINbGlzI5oQyYhu71IwB+iPZXaZZPlwjLgOsuad/p2hOgDb5WxUi8FnDPursQ
+ujfpIpmrOP/zpvvQWnwePI3lI+5n41kTBSbefXEdv6rXpHk3QRzB90uPxnXPdxSC
+16ASA8bQT5an/1AgoE3k9CrcD2K0EmgaX0YI0HUhkyzbkg34EhpWJ6vvRUbRiNRo
+9cIbt/ya9Y9u0Ja8GLXv6dwX0l0IdJMkL8KifXUFAVCujp1FBrr/gdmwQn8itANy
++qbnWSxmOvtaY0zcaFAcONuHva0h51/WqXOMO1eb8PhR4HIIYU8p1oBwQp7dSni8
+THDi1F+GG5PsymMDj5cWK42f+QzjVw5PrVmFqqrrEoMlx8DWh5Y=
+-----END CERTIFICATE-----
+""".strip()
+
+        # RSA public key as dumped by openssl
+        exponent = 65537
+        modulus_str = """
+00:fd:2e:c6:25:5d:8e:70:57:72:34:c4:38:2b:be:
+4a:ad:81:6d:30:49:f7:56:71:05:74:f1:da:8f:24:
+b7:ed:79:4c:c5:28:74:a1:2e:06:79:31:95:50:22:
+48:9e:5e:42:a6:cb:fc:59:07:61:d3:71:5f:78:e7:
+6f:ce:9e:48:67:8e:8e:72:37:8e:3e:25:a7:9a:38:
+25:d8:6e:63:ed:ed:9b:0c:7e:d1:49:c8:46:57:e3:
+83:e8:56:f5:02:0b:ee:bb:6f:fd:8b:2f:1f:75:fd:
+eb:3d:0f:fb:78:07:5d:cc:a5:2b:cf:06:9c:55:b9:
+d6:fa:d8:36:42:d4:97:29:17
+        """
+        modulus = int(re.sub("[^0-9a-f]","", modulus_str), 16)
+
+        key = RSA.importKey(x509_v3_cert, verify_x509_cert=False)
+        self.assertEqual(key.e, exponent)
+        self.assertEqual(key.n, modulus)
+        self.failIf(key.has_private())
+
+    def test_x509v1_validation(self):
+
+        # Sample V1 certificate with a 1024 bit RSA key
+        x509_v1_cert = """
+-----BEGIN CERTIFICATE-----
+MIICOjCCAaMCAQEwDQYJKoZIhvcNAQEEBQAwfjENMAsGA1UEChMEQWNtZTELMAkG
+A1UECxMCUkQxHDAaBgkqhkiG9w0BCQEWDXNwYW1AYWNtZS5vcmcxEzARBgNVBAcT
+Ck1ldHJvcG9saXMxETAPBgNVBAgTCE5ldyBZb3JrMQswCQYDVQQGEwJVUzENMAsG
+A1UEAxMEdGVzdDAeFw0xNDA3MTExOTU3MjRaFw0xNzA0MDYxOTU3MjRaME0xCzAJ
+BgNVBAYTAlVTMREwDwYDVQQIEwhOZXcgWW9yazENMAsGA1UEChMEQWNtZTELMAkG
+A1UECxMCUkQxDzANBgNVBAMTBmxhdHZpYTCBnzANBgkqhkiG9w0BAQEFAAOBjQAw
+gYkCgYEAyG+kytdRj3TFbRmHDYp3TXugVQ81chew0qeOxZWOz80IjtWpgdOaCvKW
+NCuc8wUR9BWrEQW+39SaRMLiQfQtyFSQZijc3nsEBu/Lo4uWZ0W/FHDRVSvkJA/V
+Ex5NL5ikI+wbUeCV5KajGNDalZ8F1pk32+CBs8h1xNx5DyxuEHUCAwEAATANBgkq
+hkiG9w0BAQQFAAOBgQCVQF9Y//Q4Psy+umEM38pIlbZ2hxC5xNz/MbVPwuCkNcGn
+KYNpQJP+JyVTsPpO8RLZsAQDzRueMI3S7fbbwTzAflN0z19wvblvu93xkaBytVok
+9VBAH28olVhy9b1MMeg2WOt5sUEQaFNPnwwsyiY9+HsRpvpRnPSQF+kyYVsshQ==
+-----END CERTIFICATE-----
+        """.strip()
+
+        self.assertRaises(NotImplementedError, RSA.importKey,
+                          x509_v1_cert, verify_x509_cert=True)
+
+
 class ImportKeyTestsSlow(ImportKeyTests):
     def setUp(self):
         self.rsa = RSA.RSAImplementation(use_fast_math=0)
@@ -395,6 +511,7 @@ def get_tests(config={}):
     except ImportError:
         pass
     tests += list_test_cases(ImportKeyTestsSlow)
+    tests += list_test_cases(ImportKeyFromX509Cert)
     return tests
 
 if __name__ == '__main__':

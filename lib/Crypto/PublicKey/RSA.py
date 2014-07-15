@@ -484,7 +484,7 @@ class RSAImplementation(object):
 
         return _RSAobj(self, key)
 
-    def _importKeyDER(self, extern_key, passphrase=None):
+    def _importKeyDER(self, extern_key, passphrase, verify_x509_cert):
         """Import an RSA key (public or private half), encoded in DER form."""
 
         try:
@@ -523,25 +523,38 @@ class RSAImplementation(object):
                 except (ValueError, EOFError):
                     pass
 
+            # Try to see if this is an X.509 DER certificate
+            # (Certificate ASN.1 type)
+            if len(der) == 3:
+                from Crypto.PublicKey import _extract_sp_info
+                try:
+                    sp_info = _extract_sp_info(der)
+                    if verify_x509_cert:
+                        raise NotImplementedError("X.509 certificate validation is not supported")
+                    return self._importKeyDER(sp_info, passphrase, False)
+                except ValueError:
+                    pass
+
             # Try PKCS#8 (possibly encrypted)
             k = PKCS8.unwrap(extern_key, passphrase)
             if k[0] == oid:
-                return self._importKeyDER(k[1], passphrase)
+                return self._importKeyDER(k[1], passphrase, False)
 
         except (ValueError, EOFError):
             pass
 
         raise ValueError("RSA key format is not supported")
 
-    def importKey(self, extern_key, passphrase=None):
+    def importKey(self, extern_key, passphrase=None, verify_x509_cert=True):
         """Import an RSA key (public or private half), encoded in standard
         form.
 
         :Parameter extern_key:
-            The RSA key to import, encoded as a string.
+            The RSA key to import, encoded as a byte string.
 
             An RSA public key can be in any of the following formats:
 
+            - X.509 certificate (binary or PEM format)
             - X.509 ``subjectPublicKeyInfo`` DER SEQUENCE (binary or PEM
               encoding)
             - `PKCS#1`_ ``RSAPublicKey`` DER SEQUENCE (binary or PEM encoding)
@@ -565,6 +578,14 @@ class RSAImplementation(object):
             which the decryption key is derived.
         :Type passphrase: string
 
+        :Parameter verify_x509_cert:
+            When importing the public key from an X.509 certificate, whether
+            the certificate should be validated. **Since verification is not
+            yet supported, this value must always be set to False**.
+
+            This value is ignored if an X.509 certificate is not passed.
+        :Type verify_x509_cert: bool
+
         :Return: An RSA key object (`_RSAobj`).
 
         :Raise ValueError/IndexError/TypeError:
@@ -585,7 +606,7 @@ class RSAImplementation(object):
             (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
             if enc_flag:
                 passphrase = None
-            return self._importKeyDER(der, passphrase)
+            return self._importKeyDER(der, passphrase, verify_x509_cert)
 
         if extern_key.startswith(b('ssh-rsa ')):
                 # This is probably an OpenSSH key
@@ -601,7 +622,8 @@ class RSAImplementation(object):
 
         if bord(extern_key[0]) == 0x30:
                 # This is probably a DER encoded key
-                return self._importKeyDER(extern_key, passphrase)
+                return self._importKeyDER(extern_key, passphrase,
+                                          verify_x509_cert)
 
         raise ValueError("RSA key format is not supported")
 
