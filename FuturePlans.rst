@@ -14,7 +14,6 @@ Future releases will include:
 - Add back support for MPIR on Windows, or
   investigate performance of other, smaller arbitrary-precision arithmetic libaries
 - Move API documentation from epydoc to sphinx
-- Add ability to import keys from X.509 certificates
 - Add algorithms:
     - ChaCha20
     - Poly1305
