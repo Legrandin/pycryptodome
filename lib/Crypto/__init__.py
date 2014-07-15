@@ -41,7 +41,8 @@ Crypto.Util
  generation, number theoretic functions)
 """
 
-__all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util', 'Signature', 'IO']
+__all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util', 'Signature',
+           'IO', 'Math']
 
 version_info = (3, 1, "dev")
 

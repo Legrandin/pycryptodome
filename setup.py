@@ -326,6 +326,7 @@ setup(
         "Crypto.Random.Fortuna",
         "Crypto.Signature",
         "Crypto.Util",
+        "Crypto.Math",
         "Crypto.SelfTest",
         "Crypto.SelfTest.Cipher",
         "Crypto.SelfTest.Hash",
@@ -336,6 +337,7 @@ setup(
         "Crypto.SelfTest.Random.Fortuna",
         "Crypto.SelfTest.Signature",
         "Crypto.SelfTest.Util",
+        "Crypto.SelfTest.Math",
         ],
     package_dir = { "Crypto": "lib/Crypto" },
     package_data = {
