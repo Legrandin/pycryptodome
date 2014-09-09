@@ -1,6 +1,3 @@
-#
-#  SelfTest/Math/__init__.py: Self-test for math module
-#
 # ===================================================================
 #
 # Copyright (c) 2014, Legrandin <helderijs@gmail.com>
@@ -31,15 +28,17 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Self-test for Math"""
+from ctypes import *
+from ctypes.util import find_library
 
-def get_tests(config={}):
-    tests = []
-    from Crypto.SelfTest.Math import test_Numbers
-    tests += test_Numbers.get_tests(config=config)
-    return tests
 
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+lib_path = find_library("gmp")
+if lib_path is None:
+    raise ImportError("Cannot find GMP library")
+try:
+    CDLL(lib_path)
+except OSError, desc:
+    raise ImportError("Cannot load GMP library (%s)" % desc)
+
+
+raise ImportError("Backend for GMP not implemented")
