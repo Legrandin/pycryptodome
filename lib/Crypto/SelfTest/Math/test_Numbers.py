@@ -39,95 +39,95 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Math.Numbers import Natural
 
+from Crypto.Util.py3compat import *
+
 def Naturals(*arg):
     return map(Natural, arg)
 
 class TestNatural(unittest.TestCase):
 
-    def test_conversion_from_int(self):
+    def test_init_and_equality(self):
         a = Natural(23)
-        self.assertEqual(23, a)
-        self.assertEqual(23, int(a))
+        d = Natural(a)
+        self.assertRaises(ValueError, Natural, 1.0)
+        self.assertRaises(ValueError, Natural, -1)
 
-        b = Natural(0xFFFF)
-        self.assertEqual(0xFFFF, b)
-        self.assertEqual(0xFFFF, int(b))
-
-    def test_conversion_from_bytes(self):
-        a = Natural.from_bytes("\x00")
-        self.assertEqual(0, a)
-
-        b = Natural.from_bytes("\xFF\xFF")
-        self.assertEqual(0xFFFF, b)
+        c = Natural(10)
+        self.failUnless(a == a)
+        self.failUnless(a == d)
+        self.failIf(a == c)
 
     def test_conversion_to_bytes(self):
         a = Natural(0x17)
-        self.assertEqual("\x17", a.to_bytes())
+        self.assertEqual(b("\x17"), a.to_bytes())
 
-        b = Natural(0xFFFF)
-        self.assertEqual("\xFF\xFF", b.to_bytes())
+        c = Natural(0xFFFF)
+        self.assertEqual(b("\xFF\xFF"), c.to_bytes())
+        self.assertEqual(b("\x00\xFF\xFF"), c.to_bytes(3))
+        self.assertRaises(ValueError, c.to_bytes, 1)
 
-    def test_negative_number_is_not_natural(self):
-        self.assertRaises(ValueError, Natural, -1)
+    def test_conversion_to_int(self):
+        a = Natural(23)
+        self.assertEqual(int(a), 23)
 
-    def test_floating_number_is_not_natural(self):
-        self.assertRaises(ValueError, Natural, 1.0)
+        f = Natural(2**1000)
+        self.assertEqual(int(f), 2**1000)
 
-    def test_equality(self):
-        # Test Natural==Natural and Natural==int
-        a, b, c = Naturals(89, 89, 90)
-        self.failUnless(a == b)
-        self.failUnless(a == 89)
-        self.failIf(a == c)
-        self.failIf(a == 90)
+    def test_equality_with_ints(self):
+        a = Natural(23)
+        self.failUnless(a == 23)
+        self.failIf(a == 24)
+
+    def test_conversion_from_bytes(self):
+        a = Natural.from_bytes(b("\x00"))
+        self.assertEqual(0, a)
+
+        a = Natural.from_bytes(b("\x00\x00"))
+        self.assertEqual(0, a)
+
+        c = Natural.from_bytes(b("\xFF\xFF"))
+        self.assertEqual(0xFFFF, c)
 
     def test_inequality(self):
         # Test Natural!=Natural and Natural!=int
-        a, b, c = Naturals(89, 89, 90)
+        a, d, c = Naturals(89, 89, 90)
         self.failUnless(a != c)
         self.failUnless(a != 90)
-        self.failIf(a != b)
+        self.failIf(a != d)
         self.failIf(a != 89)
 
     def test_less_than(self):
         # Test Natural<Natural and Natural<int
-        a, b, c = Naturals(13, 13, 14)
+        a, d, c = Naturals(13, 13, 14)
         self.failUnless(a < c)
         self.failUnless(a < 14)
-        self.failIf(a < b)
+        self.failIf(a < d)
         self.failIf(a < 13)
 
     def test_addition(self):
         # Test Natural+Natural and Natural+int
-        a, b = Naturals(7, 90)
-        self.assertEqual(a + b, 97)
+        a, d = Naturals(7, 90)
+        self.assertEqual(a + d, 97)
         self.assertEqual(a + 90, 97)
         self.assertEqual(a + (-7), 0)
         self.assertRaises(ValueError, lambda: a + (-8))
 
     def test_subtraction(self):
         # Test Natural-Natural and Natural-int
-        a, b = Naturals(7, 90)
-        self.assertEqual(b - a, 83)
-        self.assertEqual(b - 7, 83)
-        self.assertEqual(b - (-7), 97)
-        self.assertRaises(ValueError, lambda: a - b)
+        a, d = Naturals(7, 90)
+        self.assertEqual(d - a, 83)
+        self.assertEqual(d - 7, 83)
+        self.assertEqual(d - (-7), 97)
+        self.assertRaises(ValueError, lambda: a - d)
         self.assertRaises(ValueError, lambda: a - 90)
 
     def test_remainder(self):
         # Test Natural%Natural and Natural%int
-        a, b = Naturals(23, 5)
-        self.assertEqual(a % b, 3)
+        a, d = Naturals(23, 5)
+        self.assertEqual(a % d, 3)
         self.assertEqual(a % 5, 3)
         self.assertRaises(ZeroDivisionError, lambda: a % 0)
 
-    def test_power(self):
-        # Test Natural**Natural, Natural**int and int**Natural
-        a, b = Naturals(3, 4)
-        self.assertEqual(a ** b, 81)
-        self.assertEqual(a ** 4, 81)
-        self.assertEqual(3 ** b, 81)
-        self.assertRaises(ValueError, lambda: a ** -1)
 
 def get_tests(config={}):
     tests = []

@@ -28,17 +28,186 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from ctypes import *
+from ctypes import (CDLL, Structure, c_int, c_void_p, byref,
+                    create_string_buffer)
 from ctypes.util import find_library
 
+from Crypto.Util.py3compat import *
 
-lib_path = find_library("gmp")
-if lib_path is None:
-    raise ImportError("Cannot find GMP library")
-try:
-    CDLL(lib_path)
-except OSError, desc:
-    raise ImportError("Cannot load GMP library (%s)" % desc)
+class _GMP(object):
+
+    gmp_lib_path = find_library("gmp")
+    if gmp_lib_path is None:
+        raise ImportError("Cannot find GMP library")
+    try:
+        lib = CDLL(gmp_lib_path)
+    except OSError, desc:
+        raise ImportError("Cannot load GMP library (%s)" % desc)
+
+# Unfortunately, all symbols exported by the GMP library start with "__"
+# and have no trailing underscore.
+# You cannot directly refer to them as members of the ctypes' library
+# object from within any class because Python will replace the double
+# underscore with "_classname_".
+_gmp = _GMP()
+_gmp.mpz_init_set_si = _gmp.lib.__gmpz_init_set_si
+_gmp.mpz_init_set_str = _gmp.lib.__gmpz_init_set_str
+_gmp.mpz_set = _gmp.lib.__gmpz_set
+_gmp.mpz_set_str = _gmp.lib.__gmpz_set_str
+_gmp.gmp_snprintf = _gmp.lib.__gmp_snprintf
+_gmp.mpz_add = _gmp.lib.__gmpz_add
+_gmp.mpz_import = _gmp.lib.__gmpz_import
+_gmp.mpz_export = _gmp.lib.__gmpz_export
+_gmp.mpz_sizeinbase = _gmp.lib.__gmpz_sizeinbase
+_gmp.mpz_sub = _gmp.lib.__gmpz_sub
+_gmp.mpz_cmp = _gmp.lib.__gmpz_cmp
+_gmp.mpz_mod = _gmp.lib.__gmpz_mod
+_gmp.mpz_neg = _gmp.lib.__gmpz_neg
+_gmp.mpz_clear = _gmp.lib.__gmpz_clear
 
 
-raise ImportError("Backend for GMP not implemented")
+class _MPZ(Structure):
+    _fields_ = [('_mp_alloc', c_int),
+                ('_mp_size', c_int),
+                ('_mp_d', c_void_p)]
+
+
+class Natural(object):
+
+    _zero_mpz = _MPZ()
+    _zero_mpz_p = byref(_zero_mpz)
+    _gmp.mpz_init_set_si(_zero_mpz_p, 0)
+
+    def __init__(self, value):
+
+        self._mpz = None
+        self._mpz_p = None
+
+        self._set(value)
+
+        if _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) < 0:
+            raise ValueError("Negative values are not natural")
+
+    def _set(self, value):
+        """Set this object to an integer value (possibly negative)"""
+
+        if isinstance(value, float):
+            raise ValueError("A floating point type is not a natural number")
+
+        if self._mpz_p is not None:
+            _gmp.mpz_clear(self._mpz_p)
+
+        self._mpz = _MPZ()
+        self._mpz_p = byref(self._mpz)
+
+        if isinstance(value, Natural):
+            _gmp.mpz_set(self._mpz_p, value._mpz_p)
+        else:
+            abs_value = abs(value)
+            if abs_value < 256:
+                _gmp.mpz_init_set_si(self._mpz_p, value)
+            else:
+                if _gmp.mpz_init_set_str(self._mpz_p, tobytes(str(abs_value)), 10) != 0:
+                    _gmp.mpz_clear(self._mpz_p)
+                    raise ValueError("Error converting '%d'" % value)
+                if value < 0:
+                    _gmp.mpz_neg(self._mpz_p, self._mpz_p)
+
+        return self
+
+    def to_bytes(self, block_size=0):
+
+        buf_len = (_gmp.mpz_sizeinbase(self._mpz_p, 2) + 7) // 8
+        if buf_len > block_size > 0:
+            raise ValueError("Too big to convert")
+        buf = create_string_buffer(buf_len)
+
+        _gmp.mpz_export(
+                byref(buf),
+                0,  # Ignore countp
+                1,  # Big endian
+                1,  # Each word is 1 byte long
+                0,  # Endianess within a word - not relevant
+                0,  # No nails
+                self._mpz_p)
+        return bchr(0) * max(0, block_size - buf_len) + buf.raw
+
+    def __int__(self):
+
+        buf_len = _gmp.mpz_sizeinbase(self._mpz_p, 2) // 3 + 3
+        buf = create_string_buffer(buf_len)
+
+        _gmp.gmp_snprintf(buf, buf_len, b("%Zd"), self._mpz_p)
+        return int(buf.value)
+
+    @staticmethod
+    def from_bytes(byte_string):
+        result = Natural(0)
+        _gmp.mpz_import(
+                        result._mpz_p,
+                        len(byte_string),
+                        1,  # Big endian
+                        1,  # Each word is 1 byte long
+                        0,  # Endianess within a word - not relevant
+                        0,  # No nails
+                        byte_string)
+        return result
+
+    # Arithmetic operations
+    def __add__(self, term):
+
+        result = Natural(0)
+        if not isinstance(term, Natural):
+            term = Natural(0)._set(term)
+        _gmp.mpz_add(result._mpz_p, self._mpz_p, term._mpz_p)
+
+        if _gmp.mpz_cmp(result._mpz_p, self._zero_mpz_p) < 0:
+            raise ValueError("Result of addition is negative")
+
+        return result
+
+    def __sub__(self, term):
+
+        result = Natural(0)
+        if not isinstance(term, Natural):
+            term = Natural(0)._set(term)
+        _gmp.mpz_sub(result._mpz_p, self._mpz_p, term._mpz_p)
+
+        if _gmp.mpz_cmp(result._mpz_p, self._zero_mpz_p) < 0:
+            raise ValueError("Result of subtraction is negative")
+
+        return result
+
+    def __mod__(self, divisor):
+
+        result = Natural(0)
+        if not isinstance(divisor, Natural):
+            divisor = Natural(divisor)
+
+        if _gmp.mpz_cmp(divisor._mpz_p, self._zero_mpz_p) == 0:
+            raise ZeroDivisionError("Division by zero")
+
+        _gmp.mpz_mod(result._mpz_p, self._mpz_p, divisor._mpz_p)
+        return result
+
+    # Relations
+    def __eq__(self, term):
+
+        if not isinstance(term, Natural):
+            term = Natural(0)._set(term)
+        return _gmp.mpz_cmp(self._mpz_p, term._mpz_p) == 0
+
+    def __ne__(self, term):
+        return not self.__eq__(term)
+
+    def __lt__(self, term):
+
+        if not isinstance(term, Natural):
+            term = Natural(0)._set(term)
+        return _gmp.mpz_cmp(self._mpz_p, term._mpz_p) < 0
+
+    def __del__(self):
+
+        if self._mpz_p is not None:
+            _gmp.mpz_clear(self._mpz_p)
+        self._mpz_p = None

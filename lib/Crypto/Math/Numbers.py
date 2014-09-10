@@ -28,4 +28,4 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Math._Numbers_int import Natural
+from Crypto.Math._Numbers_gmp import Natural

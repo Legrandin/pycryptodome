@@ -73,18 +73,6 @@ class Natural(object):
         except AttributeError:
             return Natural(self._value % divisor)
 
-    def __pow__(self, exponent):
-        try:
-            return Natural(self._value ** exponent._value)
-        except AttributeError:
-            return Natural(self._value ** exponent)
-
-    def __rpow__(self, base):
-        try:
-            return Natural(base._value ** self._value)
-        except AttributeError:
-            return Natural(base ** self._value)
-
     # Relations
     def __eq__(self, term):
         try:
