@@ -30,3 +30,8 @@ else
 fi
 
 virtualenv -p ${PYTHON_INTP} .
+
+if [ ${PYV} -eq 24 ]; then
+	. bin/activate
+	pip install ctypes
+fi
