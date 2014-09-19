@@ -29,7 +29,7 @@
 # ===================================================================
 
 from ctypes import (CDLL, Structure, c_int, c_void_p, c_long, byref,
-                    create_string_buffer)
+                    c_size_t, c_int, create_string_buffer)
 from ctypes.util import find_library
 
 from Crypto.Util.py3compat import *
@@ -76,7 +76,7 @@ class Natural(object):
 
     _zero_mpz = _MPZ()
     _zero_mpz_p = byref(_zero_mpz)
-    _gmp.mpz_init_set_si(_zero_mpz_p, 0)
+    _gmp.mpz_init_set_si(_zero_mpz_p, c_long(0))
 
     def __init__(self, value):
 
@@ -107,7 +107,8 @@ class Natural(object):
             if abs_value < 256:
                 _gmp.mpz_init_set_si(self._mpz_p, c_long(value))
             else:
-                if _gmp.mpz_init_set_str(self._mpz_p, tobytes(str(abs_value)), 10) != 0:
+                if _gmp.mpz_init_set_str(self._mpz_p, tobytes(str(abs_value)),
+                                         c_int(10)) != 0:
                     _gmp.mpz_clear(self._mpz_p)
                     raise ValueError("Error converting '%d'" % value)
                 if value < 0:
@@ -117,27 +118,27 @@ class Natural(object):
 
     def to_bytes(self, block_size=0):
 
-        buf_len = (_gmp.mpz_sizeinbase(self._mpz_p, 2) + 7) // 8
+        buf_len = (_gmp.mpz_sizeinbase(self._mpz_p, c_int(2)) + 7) // 8
         if buf_len > block_size > 0:
             raise ValueError("Too big to convert")
         buf = create_string_buffer(buf_len)
 
         _gmp.mpz_export(
                 byref(buf),
-                0,  # Ignore countp
-                1,  # Big endian
-                1,  # Each word is 1 byte long
-                0,  # Endianess within a word - not relevant
-                0,  # No nails
+                None,         # Ignore countp
+                c_int(1),     # Big endian
+                c_size_t(1),  # Each word is 1 byte long
+                c_int(0),     # Endianess within a word - not relevant
+                c_size_t(0),  # No nails
                 self._mpz_p)
         return bchr(0) * max(0, block_size - buf_len) + buf.raw
 
     def __int__(self):
 
-        buf_len = _gmp.mpz_sizeinbase(self._mpz_p, 2) // 3 + 3
+        buf_len = _gmp.mpz_sizeinbase(self._mpz_p, c_int(2)) // 3 + 3
         buf = create_string_buffer(buf_len)
 
-        _gmp.gmp_snprintf(buf, buf_len, b("%Zd"), self._mpz_p)
+        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b("%Zd"), self._mpz_p)
         return int(buf.value)
 
     @staticmethod
@@ -145,11 +146,11 @@ class Natural(object):
         result = Natural(0)
         _gmp.mpz_import(
                         result._mpz_p,
-                        len(byte_string),
-                        1,  # Big endian
-                        1,  # Each word is 1 byte long
-                        0,  # Endianess within a word - not relevant
-                        0,  # No nails
+                        c_size_t(len(byte_string)),  # Amount of words to read
+                        c_int(1),     # Big endian
+                        c_size_t(1),  # Each word is 1 byte long
+                        c_int(0),     # Endianess within a word - not relevant
+                        c_size_t(0),  # No nails
                         byte_string)
         return result
 
