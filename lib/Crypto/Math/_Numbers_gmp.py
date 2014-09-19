@@ -28,7 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from ctypes import (CDLL, Structure, c_int, c_void_p, byref,
+from ctypes import (CDLL, Structure, c_int, c_void_p, c_long, byref,
                     create_string_buffer)
 from ctypes.util import find_library
 
@@ -105,7 +105,7 @@ class Natural(object):
         else:
             abs_value = abs(value)
             if abs_value < 256:
-                _gmp.mpz_init_set_si(self._mpz_p, value)
+                _gmp.mpz_init_set_si(self._mpz_p, c_long(value))
             else:
                 if _gmp.mpz_init_set_str(self._mpz_p, tobytes(str(abs_value)), 10) != 0:
                     _gmp.mpz_clear(self._mpz_p)
