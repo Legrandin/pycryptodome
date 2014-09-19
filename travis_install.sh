@@ -33,5 +33,7 @@ virtualenv -p ${PYTHON_INTP} .
 
 if [ ${PYV} -eq 24 ]; then
 	. bin/activate
+	pip install --no-install ctypes
+	chmod +x build/ctypes/source/libffi/configure
 	pip install ctypes
 fi
