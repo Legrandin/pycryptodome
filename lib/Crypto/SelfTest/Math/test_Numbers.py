@@ -37,16 +37,22 @@ import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
 
-from Crypto.Math.Numbers import Natural
-
 from Crypto.Util.py3compat import *
 
-def Naturals(*arg):
-    return map(Natural, arg)
 
 class TestNatural(unittest.TestCase):
 
+    def setUp(self):
+        if not hasattr(self, "Natural"):
+            from Crypto.Math.Numbers import Natural as NaturalDefault
+            self.Natural = NaturalDefault
+
+    def Naturals(self, *arg):
+        return map(self.Natural, arg)
+
     def test_init_and_equality(self):
+        Natural = self.Natural
+
         a = Natural(23)
         d = Natural(a)
         self.assertRaises(ValueError, Natural, 1.0)
@@ -58,6 +64,8 @@ class TestNatural(unittest.TestCase):
         self.failIf(a == c)
 
     def test_conversion_to_bytes(self):
+        Natural = self.Natural
+
         a = Natural(0x17)
         self.assertEqual(b("\x17"), a.to_bytes())
 
@@ -67,18 +75,22 @@ class TestNatural(unittest.TestCase):
         self.assertRaises(ValueError, c.to_bytes, 1)
 
     def test_conversion_to_int(self):
+        Natural = self.Natural
+
         a = Natural(23)
         self.assertEqual(int(a), 23)
 
-        f = Natural(2**1000)
-        self.assertEqual(int(f), 2**1000)
+        f = Natural(2 ** 1000)
+        self.assertEqual(int(f), 2 ** 1000)
 
     def test_equality_with_ints(self):
-        a = Natural(23)
+        a = self.Natural(23)
         self.failUnless(a == 23)
         self.failIf(a == 24)
 
     def test_conversion_from_bytes(self):
+        Natural = self.Natural
+
         a = Natural.from_bytes(b("\x00"))
         self.assertEqual(0, a)
 
@@ -90,7 +102,7 @@ class TestNatural(unittest.TestCase):
 
     def test_inequality(self):
         # Test Natural!=Natural and Natural!=int
-        a, d, c = Naturals(89, 89, 90)
+        a, d, c = self.Naturals(89, 89, 90)
         self.failUnless(a != c)
         self.failUnless(a != 90)
         self.failIf(a != d)
@@ -98,7 +110,7 @@ class TestNatural(unittest.TestCase):
 
     def test_less_than(self):
         # Test Natural<Natural and Natural<int
-        a, d, c = Naturals(13, 13, 14)
+        a, d, c = self.Naturals(13, 13, 14)
         self.failUnless(a < c)
         self.failUnless(a < 14)
         self.failIf(a < d)
@@ -106,7 +118,7 @@ class TestNatural(unittest.TestCase):
 
     def test_addition(self):
         # Test Natural+Natural and Natural+int
-        a, d = Naturals(7, 90)
+        a, d = self.Naturals(7, 90)
         self.assertEqual(a + d, 97)
         self.assertEqual(a + 90, 97)
         self.assertEqual(a + (-7), 0)
@@ -114,7 +126,7 @@ class TestNatural(unittest.TestCase):
 
     def test_subtraction(self):
         # Test Natural-Natural and Natural-int
-        a, d = Naturals(7, 90)
+        a, d = self.Naturals(7, 90)
         self.assertEqual(d - a, 83)
         self.assertEqual(d - 7, 83)
         self.assertEqual(d - (-7), 97)
@@ -123,13 +135,13 @@ class TestNatural(unittest.TestCase):
 
     def test_remainder(self):
         # Test Natural%Natural and Natural%int
-        a, d = Naturals(23, 5)
+        a, d = self.Naturals(23, 5)
         self.assertEqual(a % d, 3)
         self.assertEqual(a % 5, 3)
         self.assertRaises(ZeroDivisionError, lambda: a % 0)
 
     def test_exponentiation(self):
-        a, d, e = Naturals(23, 5, 17)
+        a, d, e = self.Naturals(23, 5, 17)
 
         self.assertEqual(pow(a, d, e), 7)
         self.assertEqual(pow(a, 5, e), 7)
@@ -141,8 +153,31 @@ class TestNatural(unittest.TestCase):
         self.assertRaises(ValueError, pow, a, 5, -4)
         self.assertRaises(ValueError, pow, a, -3, 8)
 
+
+class TestNaturalInt(TestNatural):
+
+    def setUp(self):
+        from Crypto.Math._Numbers_int import Natural as NaturalInt
+        self.Natural = NaturalInt
+        TestNatural.setUp(self)
+
+
+class TestNaturalGMP(TestNatural):
+
+    def setUp(self):
+        from Crypto.Math._Numbers_gmp import Natural as NaturalGMP
+        self.Natural = NaturalGMP
+        TestNatural.setUp(self)
+
+
 def get_tests(config={}):
     tests = []
+    tests += list_test_cases(TestNaturalInt)
+    try:
+        from Crypto.Math._Numbers_gmp import Natural as NaturalGMP
+        tests += list_test_cases(TestNaturalGMP)
+    except ImportError:
+        print "Skipping GMP tests"
     tests += list_test_cases(TestNatural)
     return tests
 

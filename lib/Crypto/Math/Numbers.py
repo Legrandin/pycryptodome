@@ -28,4 +28,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Math._Numbers_gmp import Natural
+try:
+    from Crypto.Math._Numbers_gmp import Natural
+    _implementation = "gmp"
+except ImportError:
+    from Crypto.Math._Numbers_int import Natural
+    _implementation = "python"
+

@@ -29,10 +29,11 @@
 # ===================================================================
 
 from ctypes import (CDLL, Structure, c_int, c_void_p, c_long, byref,
-                    c_size_t, c_int, create_string_buffer)
+                    c_size_t, create_string_buffer)
 from ctypes.util import find_library
 
 from Crypto.Util.py3compat import *
+
 
 class _GMP(object):
 
