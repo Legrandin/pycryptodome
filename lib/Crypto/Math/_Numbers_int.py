@@ -42,7 +42,10 @@ class Natural(object):
         self._value = value
 
     def to_bytes(self, block_size=0):
-        return long_to_bytes(self._value, block_size)
+        result = long_to_bytes(self._value, block_size)
+        if len(result) > block_size > 0:
+            raise ValueError("Value too large to encode")
+        return result
 
     def __int__(self):
         return self._value
@@ -72,6 +75,21 @@ class Natural(object):
             return Natural(self._value % divisor._value)
         except AttributeError:
             return Natural(self._value % divisor)
+
+    def __pow__(self, exponent, modulus):
+        try:
+            exp_value = exponent._value
+        except AttributeError:
+            exp_value = exponent
+        try:
+            mod_value = modulus._value
+        except AttributeError:
+            mod_value = modulus
+        if exp_value < 0:
+            raise ValueError("Exponent must not be negative")
+        if mod_value < 0:
+            raise ValueError("Modulus must be positive")
+        return pow(self._value, exp_value, mod_value)
 
     # Relations
     def __eq__(self, term):

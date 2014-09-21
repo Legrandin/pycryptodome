@@ -128,6 +128,18 @@ class TestNatural(unittest.TestCase):
         self.assertEqual(a % 5, 3)
         self.assertRaises(ZeroDivisionError, lambda: a % 0)
 
+    def test_exponentiation(self):
+        a, d, e = Naturals(23, 5, 17)
+
+        self.assertEqual(pow(a, d, e), 7)
+        self.assertEqual(pow(a, 5, e), 7)
+        self.assertEqual(pow(a, d, 17), 7)
+        self.assertEqual(pow(a, 5, 17), 7)
+        self.assertEqual(pow(a, 0, 17), 1)
+
+        self.assertRaises(ValueError, pow, a, 5, 0)
+        self.assertRaises(ValueError, pow, a, 5, -4)
+        self.assertRaises(ValueError, pow, a, -3, 8)
 
 def get_tests(config={}):
     tests = []

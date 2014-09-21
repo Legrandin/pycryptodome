@@ -61,6 +61,7 @@ _gmp.mpz_export = _gmp.lib.__gmpz_export
 _gmp.mpz_sizeinbase = _gmp.lib.__gmpz_sizeinbase
 _gmp.mpz_sub = _gmp.lib.__gmpz_sub
 _gmp.mpz_cmp = _gmp.lib.__gmpz_cmp
+_gmp.mpz_powm = _gmp.lib.__gmpz_powm
 _gmp.mpz_mod = _gmp.lib.__gmpz_mod
 _gmp.mpz_neg = _gmp.lib.__gmpz_neg
 _gmp.mpz_clear = _gmp.lib.__gmpz_clear
@@ -189,6 +190,24 @@ class Natural(object):
             raise ZeroDivisionError("Division by zero")
 
         _gmp.mpz_mod(result._mpz_p, self._mpz_p, divisor._mpz_p)
+        return result
+
+    def __pow__(self, exponent, modulus):
+
+        result = Natural(0)
+        if not isinstance(exponent, Natural):
+            exponent = Natural(exponent)
+        if not isinstance(modulus, Natural):
+            modulus = Natural(modulus)
+
+        if modulus == 0:
+            raise ValueError("Modulus must not be zero")
+
+        _gmp.mpz_powm(result._mpz_p,
+                      self._mpz_p,     # Base
+                      exponent._mpz_p,
+                      modulus._mpz_p
+                      )
         return result
 
     # Relations
