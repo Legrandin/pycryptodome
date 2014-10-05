@@ -50,6 +50,9 @@ class Natural(object):
     def __int__(self):
         return self._value
 
+    def __str__(self):
+        return str(int(self))
+
     @staticmethod
     def from_bytes(byte_string):
         return Natural(bytes_to_long(byte_string))
@@ -91,6 +94,39 @@ class Natural(object):
             raise ValueError("Modulus must be positive")
         return pow(self._value, exp_value, mod_value)
 
+    # Boolean
+    def __and__(self, term):
+        try:
+            return Natural(self._value & term._value)
+        except AttributeError:
+            return Natural(self._value % term)
+
+    def __irshift__(self, pos):
+        try:
+            self._value >>= pos._value
+        except AttributeError:
+            self._value >>= pos
+        return self
+
+    def size_in_bits(self):
+
+        if self._value == 0:
+            return 1
+
+        bit_size = 0
+        tmp = self._value
+        while tmp:
+            tmp >>= 1
+            bit_size += 1
+
+        return bit_size
+
+    def is_odd(self):
+        return (self._value & 1) == 1
+
+    def is_even(self):
+        return (self._value & 1) == 0
+
     # Relations
     def __eq__(self, term):
         try:
@@ -108,3 +144,16 @@ class Natural(object):
         except AttributeError:
             result = self._value < term
         return result
+
+    def __le__(self, term):
+        return self.__lt__(term) or self.__eq__(term)
+
+    def __gt__(self, term):
+        return not self.__le__(term)
+
+    def __ge__(self, term):
+        return not self.__lt__(term)
+
+    def __nonzero__(self):
+        return self._value != 0
+

@@ -65,7 +65,10 @@ _gmp.mpz_cmp = _gmp.lib.__gmpz_cmp
 _gmp.mpz_powm = _gmp.lib.__gmpz_powm
 _gmp.mpz_mod = _gmp.lib.__gmpz_mod
 _gmp.mpz_neg = _gmp.lib.__gmpz_neg
+_gmp.mpz_and = _gmp.lib.__gmpz_and
 _gmp.mpz_clear = _gmp.lib.__gmpz_clear
+_gmp.mpz_fdiv_q_2exp = _gmp.lib.__gmpz_fdiv_q_2exp
+_gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
 
 
 class _MPZ(Structure):
@@ -143,6 +146,9 @@ class Natural(object):
         _gmp.gmp_snprintf(buf, c_size_t(buf_len), b("%Zd"), self._mpz_p)
         return int(buf.value)
 
+    def __str__(self):
+        return str(int(self))
+
     @staticmethod
     def from_bytes(byte_string):
         result = Natural(0)
@@ -211,6 +217,28 @@ class Natural(object):
                       )
         return result
 
+    # Boolean operations
+    def __and__(self, term):
+
+        result = Natural(0)
+        if not isinstance(term, Natural):
+            term = Natural(term)
+        _gmp.mpz_and(result._mpz_p, self._mpz_p, term._mpz_p)
+        return result
+
+    def __irshift__(self, pos):
+        _gmp.mpz_fdiv_q_2exp(self._mpz_p, self._mpz_p, c_int(int(pos)))
+        return self
+
+    def size_in_bits(self):
+        return _gmp.mpz_sizeinbase(self._mpz_p, c_int(2))
+
+    def is_odd(self):
+        return _gmp.mpz_tstbit(self._mpz_p, 0) == 1
+
+    def is_even(self):
+        return _gmp.mpz_tstbit(self._mpz_p, 0) == 0
+
     # Relations
     def __eq__(self, term):
 
@@ -226,6 +254,18 @@ class Natural(object):
         if not isinstance(term, Natural):
             term = Natural(0)._set(term)
         return _gmp.mpz_cmp(self._mpz_p, term._mpz_p) < 0
+
+    def __le__(self, term):
+        return self.__lt__(term) or self.__eq__(term)
+
+    def __gt__(self, term):
+        return not self.__le__(term)
+
+    def __ge__(self, term):
+        return not self.__lt__(term)
+
+    def __nonzero__(self):
+        return _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) != 0
 
     def __del__(self):
 

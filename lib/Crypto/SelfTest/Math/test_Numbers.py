@@ -39,8 +39,12 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Util.py3compat import *
 
+from Crypto.Math.Numbers import Natural as NaturalGeneric
+from Crypto.Math._Numbers_int import Natural as NaturalInt
+from Crypto.Math._Numbers_gmp import Natural as NaturalGMP
 
-class TestNatural(unittest.TestCase):
+
+class TestNaturalBase(unittest.TestCase):
 
     def setUp(self):
         if not hasattr(self, "Natural"):
@@ -116,6 +120,34 @@ class TestNatural(unittest.TestCase):
         self.failIf(a < d)
         self.failIf(a < 13)
 
+    def test_less_than_or_equal(self):
+        # Test Natural<=Natural and Natural<=int
+        a, d, c, e = self.Naturals(13, 13, 14, 4)
+        self.failUnless(a <= c)
+        self.failUnless(a <= 14)
+        self.failUnless(a <= d)
+        self.failUnless(a <= a)
+        self.failUnless(a <= 13)
+        self.failIf(a <= e)
+
+    def test_more_than(self):
+        # Test Natural>Natural and Natural>int
+        a, d, c = self.Naturals(13, 13, 14)
+        self.failUnless(c > a)
+        self.failUnless(c > 13)
+        self.failIf(d > a)
+        self.failIf(d < 13)
+
+    def test_more_than_or_equal(self):
+        # Test Natural>=Natural and Natural>=int
+        a, d, c, e = self.Naturals(13, 13, 14, 4)
+        self.failUnless(c >= a)
+        self.failUnless(c >= 13)
+        self.failUnless(a >= d)
+        self.failUnless(a >= a)
+        self.failUnless(a >= 13)
+        self.failIf(e >= a)
+
     def test_addition(self):
         # Test Natural+Natural and Natural+int
         a, d = self.Naturals(7, 90)
@@ -153,22 +185,102 @@ class TestNatural(unittest.TestCase):
         self.assertRaises(ValueError, pow, a, 5, -4)
         self.assertRaises(ValueError, pow, a, -3, 8)
 
+    def test_and(self):
+        a, d = self.Naturals(0xF4, 0x31)
+        self.assertEqual(a & d, 0x30)
+        self.assertEqual(a & 0x31, 0x30)
 
-class TestNaturalInt(TestNatural):
+    def test_bool(self):
+        a, d = self.Naturals(0, 1)
+        self.failIf(a)
+        self.failUnless(d)
+
+    def test_in_place_right_shift(self):
+        a, one = self.Naturals(0x10, 1)
+        a >>= 0
+        self.assertEqual(a, 0x10)
+        a >>= 1
+        self.assertEqual(a, 0x08)
+        a >>= one
+        self.assertEqual(a, 0x04)
+
+    def test_size_in_bits(self):
+        a, c, d = self.Naturals(0, 1, 0x100)
+        self.assertEqual(a.size_in_bits(), 1)
+        self.assertEqual(c.size_in_bits(), 1)
+        self.assertEqual(d.size_in_bits(), 9)
+
+    def test_odd_even(self):
+        a, c, d = self.Naturals(0, 4, 17)
+
+        self.failUnless(a.is_even())
+        self.failUnless(c.is_even())
+        self.failIf(d.is_even())
+
+        self.failIf(a.is_odd())
+        self.failIf(c.is_odd())
+        self.failUnless(d.is_odd())
+
+class TestNaturalInt(TestNaturalBase):
 
     def setUp(self):
-        from Crypto.Math._Numbers_int import Natural as NaturalInt
         self.Natural = NaturalInt
-        TestNatural.setUp(self)
+        TestNaturalBase.setUp(self)
 
 
-class TestNaturalGMP(TestNatural):
+class TestNaturalGMP(TestNaturalBase):
 
     def setUp(self):
-        from Crypto.Math._Numbers_gmp import Natural as NaturalGMP
         self.Natural = NaturalGMP
-        TestNatural.setUp(self)
+        TestNaturalBase.setUp(self)
 
+
+class TestNaturalGeneric(unittest.TestCase):
+
+    def test_random_exact_bits(self):
+
+        for _ in xrange(1000):
+            a = NaturalGeneric.random(exact_bits=8)
+            self.failIf(a < 128)
+            self.failIf(a >= 256)
+
+        for bits_value in xrange(1024, 1024 + 8):
+            a = NaturalGeneric.random(exact_bits=bits_value)
+            self.failIf(a < 2**(bits_value - 1))
+            self.failIf(a >= 2**bits_value)
+
+    def test_random_max_bits(self):
+
+        flag = False
+        for _ in xrange(1000):
+            a = NaturalGeneric.random(max_bits=8)
+            flag = flag or a < 128
+            self.failIf(a>=256)
+        self.failUnless(flag)
+
+        for bits_value in xrange(1024, 1024 + 8):
+            a = NaturalGeneric.random(max_bits=bits_value)
+            self.failIf(a >= 2**bits_value)
+
+    def test_random_bits_custom_rng(self):
+
+        class CustomRNG(object):
+            def __init__(self):
+                self.counter = 0
+
+            def __call__(self, size):
+                self.counter += size
+                return bchr(0) * size
+
+        custom_rng = CustomRNG()
+        a = NaturalGeneric.random(exact_bits=32, randfunc=custom_rng)
+        self.assertEqual(custom_rng.counter, 4)
+
+    def test_random_range(self):
+
+        for x in xrange(2, 20):
+            a = NaturalGeneric.random_range(1, x)
+            self.failUnless(1 <= a <= x)
 
 def get_tests(config={}):
     tests = []
@@ -178,7 +290,7 @@ def get_tests(config={}):
         tests += list_test_cases(TestNaturalGMP)
     except ImportError:
         print "Skipping GMP tests"
-    tests += list_test_cases(TestNatural)
+    tests += list_test_cases(TestNaturalGeneric)
     return tests
 
 if __name__ == '__main__':
