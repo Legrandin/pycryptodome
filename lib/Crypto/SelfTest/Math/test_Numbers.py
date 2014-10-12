@@ -165,6 +165,13 @@ class TestNaturalBase(unittest.TestCase):
         self.assertRaises(ValueError, lambda: a - d)
         self.assertRaises(ValueError, lambda: a - 90)
 
+    def test_multiplication(self):
+        # Test Natural-Natural and Natural-int
+        a, d = self.Naturals(4, 5)
+        self.assertEqual(a * d, 20)
+        self.assertEqual(a * 5, 20)
+        self.assertRaises(ValueError, lambda: a * (-3))
+
     def test_remainder(self):
         # Test Natural%Natural and Natural%int
         a, d = self.Naturals(23, 5)
@@ -172,7 +179,17 @@ class TestNaturalBase(unittest.TestCase):
         self.assertEqual(a % 5, 3)
         self.assertRaises(ZeroDivisionError, lambda: a % 0)
 
-    def test_exponentiation(self):
+    def test_simple_exponentiation(self):
+        a, d = self.Naturals(4, 3)
+
+        self.assertEqual(a ** d, 64)
+        self.assertEqual(pow(a, d), 64)
+        self.assertEqual(a ** 3, 64)
+        self.assertEqual(pow(a, 3), 64)
+
+        self.assertRaises(ValueError, pow, a, -3)
+
+    def test_modular_exponentiation(self):
         a, d, e = self.Naturals(23, 5, 17)
 
         self.assertEqual(pow(a, d, e), 7)
@@ -194,6 +211,12 @@ class TestNaturalBase(unittest.TestCase):
         a, d = self.Naturals(0, 1)
         self.failIf(a)
         self.failUnless(d)
+
+    def test_right_shift(self):
+        a, one = self.Naturals(0x10, 1)
+        self.assertEqual(a >> 0, a)
+        self.assertEqual(a >> one, 0x08)
+        self.assertEqual(a >> 1, 0x08)
 
     def test_in_place_right_shift(self):
         a, one = self.Naturals(0x10, 1)
@@ -232,6 +255,25 @@ class TestNaturalBase(unittest.TestCase):
         for x in xrange(100, 1000):
             self.failIf(self.Natural(x**2+1).is_perfect_square())
             self.failUnless(self.Natural(x**2).is_perfect_square())
+
+    def test_jacobi_symbol(self):
+
+        data = (
+            (1001, 1, 1),
+            (19, 45, 1),
+            (8, 21, -1),
+            (5, 21, 1),
+            (610, 987, -1),
+            (1001, 9907, -1),
+            (5, 3439601197, -1)
+            )
+
+        for tv in data:
+            self.assertEqual(self.Natural.jacobi_symbol(tv[0], tv[1]), tv[2])
+            self.assertEqual(self.Natural.jacobi_symbol(self.Natural(tv[0]), tv[1]), tv[2])
+            self.assertEqual(self.Natural.jacobi_symbol(tv[0], self.Natural(tv[1])), tv[2])
+
+        self.assertRaises(ValueError, self.Natural.jacobi_symbol, 6, 8)
 
 class TestNaturalInt(TestNaturalBase):
 

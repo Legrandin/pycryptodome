@@ -61,8 +61,10 @@ _gmp.mpz_import = _gmp.lib.__gmpz_import
 _gmp.mpz_export = _gmp.lib.__gmpz_export
 _gmp.mpz_sizeinbase = _gmp.lib.__gmpz_sizeinbase
 _gmp.mpz_sub = _gmp.lib.__gmpz_sub
+_gmp.mpz_mul = _gmp.lib.__gmpz_mul
 _gmp.mpz_cmp = _gmp.lib.__gmpz_cmp
 _gmp.mpz_powm = _gmp.lib.__gmpz_powm
+_gmp.mpz_pow_ui = _gmp.lib.__gmpz_pow_ui
 _gmp.mpz_mod = _gmp.lib.__gmpz_mod
 _gmp.mpz_neg = _gmp.lib.__gmpz_neg
 _gmp.mpz_and = _gmp.lib.__gmpz_and
@@ -70,6 +72,7 @@ _gmp.mpz_clear = _gmp.lib.__gmpz_clear
 _gmp.mpz_fdiv_q_2exp = _gmp.lib.__gmpz_fdiv_q_2exp
 _gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
 _gmp.mpz_perfect_square_p = _gmp.lib.__gmpz_perfect_square_p
+_gmp.mpz_jacobi = _gmp.lib.__gmpz_jacobi
 
 
 class _MPZ(Structure):
@@ -191,6 +194,16 @@ class Natural(object):
 
         return result
 
+    def __mul__(self, factor):
+
+        result = Natural(0)
+        if not isinstance(factor, Natural):
+            factor = Natural(factor)
+
+        _gmp.mpz_mul(result, self, factor)
+
+        return result
+
     def __mod__(self, divisor):
 
         result = Natural(0)
@@ -203,22 +216,36 @@ class Natural(object):
         _gmp.mpz_mod(result, self, divisor)
         return result
 
-    def __pow__(self, exponent, modulus):
+    def __pow__(self, exponent, modulus=None):
 
         result = Natural(0)
         if not isinstance(exponent, Natural):
             exponent = Natural(exponent)
-        if not isinstance(modulus, Natural):
-            modulus = Natural(modulus)
 
         if modulus == 0:
             raise ValueError("Modulus must not be zero")
 
-        _gmp.mpz_powm(result,
-                      self,     # Base
-                      exponent,
-                      modulus
-                      )
+        if modulus is None:
+
+            exp_int = int(exponent)
+            if exp_int > 2**256:
+                raise ValueError("Exponent is too big")
+
+            _gmp.mpz_pow_ui(result,
+                            self,   # Base
+                            exp_int
+                            )
+
+        else:
+
+            if not isinstance(modulus, Natural):
+                modulus = Natural(modulus)
+
+            _gmp.mpz_powm(result,
+                          self,     # Base
+                          exponent,
+                          modulus
+                          )
         return result
 
     # Boolean operations
@@ -228,6 +255,11 @@ class Natural(object):
         if not isinstance(term, Natural):
             term = Natural(term)
         _gmp.mpz_and(result, self, term)
+        return result
+
+    def __rshift__(self, pos):
+        result = Natural(0)
+        _gmp.mpz_fdiv_q_2exp(result, self, c_int(int(pos)))
         return result
 
     def __irshift__(self, pos):
@@ -274,6 +306,18 @@ class Natural(object):
     # Extra
     def is_perfect_square(self):
         return _gmp.mpz_perfect_square_p(self) != 0
+
+    @staticmethod
+    def jacobi_symbol(a, n):
+        if not isinstance(a, Natural):
+            a = Natural(a)
+        if not isinstance(n, Natural):
+            n = Natural(n)
+
+        if n.is_even() or not n:
+            raise ValueError("n must be positive even for the Jacobi symbol")
+
+        return _gmp.mpz_jacobi(a, n)
 
     def __del__(self):
 

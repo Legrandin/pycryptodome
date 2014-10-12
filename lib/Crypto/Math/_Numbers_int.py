@@ -73,24 +73,31 @@ class Natural(object):
             raise ValueError("Result of subtraction is not a natural value")
         return Natural(diff)
 
+    def __mul__(self, factor):
+        try:
+            return Natural(self._value * factor._value)
+        except AttributeError:
+            return Natural(self._value * factor)
+
     def __mod__(self, divisor):
         try:
             return Natural(self._value % divisor._value)
         except AttributeError:
             return Natural(self._value % divisor)
 
-    def __pow__(self, exponent, modulus):
+    def __pow__(self, exponent, modulus=None):
         try:
             exp_value = exponent._value
         except AttributeError:
             exp_value = exponent
+        if exp_value < 0:
+            raise ValueError("Exponent must not be negative")
+
         try:
             mod_value = modulus._value
         except AttributeError:
             mod_value = modulus
-        if exp_value < 0:
-            raise ValueError("Exponent must not be negative")
-        if mod_value < 0:
+        if mod_value is not None and mod_value < 0:
             raise ValueError("Modulus must be positive")
         return pow(self._value, exp_value, mod_value)
 
@@ -100,6 +107,12 @@ class Natural(object):
             return Natural(self._value & term._value)
         except AttributeError:
             return Natural(self._value % term)
+
+    def __rshift__(self, pos):
+        try:
+            return Natural(self._value >> pos._value)
+        except AttributeError:
+            return Natural(self._value >> pos)
 
     def __irshift__(self, pos):
         try:
@@ -170,3 +183,43 @@ class Natural(object):
             square_x = x**2
 
         return self._value == x**2
+
+    @staticmethod
+    def jacobi_symbol(a, n):
+        if isinstance(a, Natural):
+            a = a._value
+        if isinstance(n, Natural):
+            n = n._value
+
+        if (n & 1) == 0:
+            raise ValueError("n must be even for the Jacobi symbol")
+
+        # Step 1
+        a = a % n
+        # Step 2
+        if a == 1 or n == 1:
+            return 1
+        # Step 3
+        if a == 0:
+            return 0
+        # Step 4
+        e = 0
+        a1 = a
+        while (a1 & 1) == 0:
+            a1 >>= 1
+            e += 1
+        # Step 5
+        if (e & 1) == 0:
+            s = 1
+        elif n % 8 in (1, 7):
+            s = 1
+        else:
+            s = -1
+        # Step 6
+        if n % 4 == 3 and a1 % 4 == 3:
+            s = -s
+        # Step 7
+        n1 = n % a1
+        # Step 8
+        return s * Natural.jacobi_symbol(n1, a1)
+
