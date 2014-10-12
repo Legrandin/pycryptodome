@@ -69,6 +69,7 @@ _gmp.mpz_and = _gmp.lib.__gmpz_and
 _gmp.mpz_clear = _gmp.lib.__gmpz_clear
 _gmp.mpz_fdiv_q_2exp = _gmp.lib.__gmpz_fdiv_q_2exp
 _gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
+_gmp.mpz_perfect_square_p = _gmp.lib.__gmpz_perfect_square_p
 
 
 class _MPZ(Structure):
@@ -266,6 +267,10 @@ class Natural(object):
 
     def __nonzero__(self):
         return _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) != 0
+
+    # Extra
+    def is_perfect_square(self):
+        return _gmp.mpz_perfect_square_p(self._mpz_p) != 0
 
     def __del__(self):
 

@@ -221,6 +221,18 @@ class TestNaturalBase(unittest.TestCase):
         self.failIf(c.is_odd())
         self.failUnless(d.is_odd())
 
+    def test_perfect_square(self):
+
+        self.failUnless(self.Natural(0).is_perfect_square())
+        self.failUnless(self.Natural(1).is_perfect_square())
+        self.failIf(self.Natural(2).is_perfect_square())
+        self.failIf(self.Natural(3).is_perfect_square())
+        self.failUnless(self.Natural(4).is_perfect_square())
+
+        for x in xrange(100, 1000):
+            self.failIf(self.Natural(x**2+1).is_perfect_square())
+            self.failUnless(self.Natural(x**2).is_perfect_square())
+
 class TestNaturalInt(TestNaturalBase):
 
     def setUp(self):

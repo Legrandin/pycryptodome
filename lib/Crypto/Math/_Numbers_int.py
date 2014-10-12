@@ -157,3 +157,16 @@ class Natural(object):
     def __nonzero__(self):
         return self._value != 0
 
+    # Extra
+    def is_perfect_square(self):
+        if self._value in (0, 1):
+            return True
+
+        x = self._value // 2
+        square_x = x**2
+
+        while square_x > self._value:
+            x = (square_x + self._value) // (2 * x)
+            square_x = x**2
+
+        return self._value == x**2
