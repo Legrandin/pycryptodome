@@ -91,7 +91,7 @@ class Natural(object):
 
         self._set(value)
 
-        if _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) < 0:
+        if _gmp.mpz_cmp(self, self._zero_mpz_p) < 0:
             raise ValueError("Negative values are not natural")
 
     def _set(self, value):
@@ -120,11 +120,14 @@ class Natural(object):
                 if value < 0:
                     _gmp.mpz_neg(self._mpz_p, self._mpz_p)
 
+        # Special attribute that ctypes checks
+        self._as_parameter_ = self._mpz_p
+
         return self
 
     def to_bytes(self, block_size=0):
 
-        buf_len = (_gmp.mpz_sizeinbase(self._mpz_p, c_int(2)) + 7) // 8
+        buf_len = (_gmp.mpz_sizeinbase(self, c_int(2)) + 7) // 8
         if buf_len > block_size > 0:
             raise ValueError("Too big to convert")
         buf = create_string_buffer(buf_len)
@@ -136,15 +139,15 @@ class Natural(object):
                 c_size_t(1),  # Each word is 1 byte long
                 c_int(0),     # Endianess within a word - not relevant
                 c_size_t(0),  # No nails
-                self._mpz_p)
+                self)
         return bchr(0) * max(0, block_size - buf_len) + buf.raw
 
     def __int__(self):
 
-        buf_len = _gmp.mpz_sizeinbase(self._mpz_p, c_int(2)) // 3 + 3
+        buf_len = _gmp.mpz_sizeinbase(self, c_int(2)) // 3 + 3
         buf = create_string_buffer(buf_len)
 
-        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b("%Zd"), self._mpz_p)
+        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b("%Zd"), self)
         return int(buf.value)
 
     def __str__(self):
@@ -154,7 +157,7 @@ class Natural(object):
     def from_bytes(byte_string):
         result = Natural(0)
         _gmp.mpz_import(
-                        result._mpz_p,
+                        result,
                         c_size_t(len(byte_string)),  # Amount of words to read
                         c_int(1),     # Big endian
                         c_size_t(1),  # Each word is 1 byte long
@@ -169,9 +172,9 @@ class Natural(object):
         result = Natural(0)
         if not isinstance(term, Natural):
             term = Natural(0)._set(term)
-        _gmp.mpz_add(result._mpz_p, self._mpz_p, term._mpz_p)
+        _gmp.mpz_add(result, self, term)
 
-        if _gmp.mpz_cmp(result._mpz_p, self._zero_mpz_p) < 0:
+        if _gmp.mpz_cmp(result, self._zero_mpz_p) < 0:
             raise ValueError("Result of addition is negative")
 
         return result
@@ -181,9 +184,9 @@ class Natural(object):
         result = Natural(0)
         if not isinstance(term, Natural):
             term = Natural(0)._set(term)
-        _gmp.mpz_sub(result._mpz_p, self._mpz_p, term._mpz_p)
+        _gmp.mpz_sub(result, self, term)
 
-        if _gmp.mpz_cmp(result._mpz_p, self._zero_mpz_p) < 0:
+        if _gmp.mpz_cmp(result, self._zero_mpz_p) < 0:
             raise ValueError("Result of subtraction is negative")
 
         return result
@@ -194,10 +197,10 @@ class Natural(object):
         if not isinstance(divisor, Natural):
             divisor = Natural(divisor)
 
-        if _gmp.mpz_cmp(divisor._mpz_p, self._zero_mpz_p) == 0:
+        if _gmp.mpz_cmp(divisor, self._zero_mpz_p) == 0:
             raise ZeroDivisionError("Division by zero")
 
-        _gmp.mpz_mod(result._mpz_p, self._mpz_p, divisor._mpz_p)
+        _gmp.mpz_mod(result, self, divisor)
         return result
 
     def __pow__(self, exponent, modulus):
@@ -211,10 +214,10 @@ class Natural(object):
         if modulus == 0:
             raise ValueError("Modulus must not be zero")
 
-        _gmp.mpz_powm(result._mpz_p,
-                      self._mpz_p,     # Base
-                      exponent._mpz_p,
-                      modulus._mpz_p
+        _gmp.mpz_powm(result,
+                      self,     # Base
+                      exponent,
+                      modulus
                       )
         return result
 
@@ -224,28 +227,28 @@ class Natural(object):
         result = Natural(0)
         if not isinstance(term, Natural):
             term = Natural(term)
-        _gmp.mpz_and(result._mpz_p, self._mpz_p, term._mpz_p)
+        _gmp.mpz_and(result, self, term)
         return result
 
     def __irshift__(self, pos):
-        _gmp.mpz_fdiv_q_2exp(self._mpz_p, self._mpz_p, c_int(int(pos)))
+        _gmp.mpz_fdiv_q_2exp(self, self, c_int(int(pos)))
         return self
 
     def size_in_bits(self):
-        return _gmp.mpz_sizeinbase(self._mpz_p, c_int(2))
+        return _gmp.mpz_sizeinbase(self, c_int(2))
 
     def is_odd(self):
-        return _gmp.mpz_tstbit(self._mpz_p, 0) == 1
+        return _gmp.mpz_tstbit(self, 0) == 1
 
     def is_even(self):
-        return _gmp.mpz_tstbit(self._mpz_p, 0) == 0
+        return _gmp.mpz_tstbit(self, 0) == 0
 
     # Relations
     def __eq__(self, term):
 
         if not isinstance(term, Natural):
             term = Natural(0)._set(term)
-        return _gmp.mpz_cmp(self._mpz_p, term._mpz_p) == 0
+        return _gmp.mpz_cmp(self, term) == 0
 
     def __ne__(self, term):
         return not self.__eq__(term)
@@ -254,7 +257,7 @@ class Natural(object):
 
         if not isinstance(term, Natural):
             term = Natural(0)._set(term)
-        return _gmp.mpz_cmp(self._mpz_p, term._mpz_p) < 0
+        return _gmp.mpz_cmp(self, term) < 0
 
     def __le__(self, term):
         return self.__lt__(term) or self.__eq__(term)
@@ -266,11 +269,11 @@ class Natural(object):
         return not self.__lt__(term)
 
     def __nonzero__(self):
-        return _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) != 0
+        return _gmp.mpz_cmp(self, self._zero_mpz_p) != 0
 
     # Extra
     def is_perfect_square(self):
-        return _gmp.mpz_perfect_square_p(self._mpz_p) != 0
+        return _gmp.mpz_perfect_square_p(self) != 0
 
     def __del__(self):
 
