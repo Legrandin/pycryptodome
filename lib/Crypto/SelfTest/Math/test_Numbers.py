@@ -39,222 +39,250 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Util.py3compat import *
 
-from Crypto.Math.Numbers import Natural as NaturalGeneric
-from Crypto.Math._Numbers_int import Natural as NaturalInt
-from Crypto.Math._Numbers_gmp import Natural as NaturalGMP
+from Crypto.Math.Numbers import Integer as IntegerGeneric
+from Crypto.Math import _Numbers_int as NumbersInt
+from Crypto.Math import _Numbers_gmp as NumbersGMP
 
 
-class TestNaturalBase(unittest.TestCase):
+class TestIntegerBase(unittest.TestCase):
 
     def setUp(self):
-        if not hasattr(self, "Natural"):
-            from Crypto.Math.Numbers import Natural as NaturalDefault
-            self.Natural = NaturalDefault
+        if not hasattr(self, "Integer"):
+            from Crypto.Math.Numbers import Integer as IntegerDefault
+            self.Integer = IntegerDefault
 
-    def Naturals(self, *arg):
-        return map(self.Natural, arg)
+    def Integers(self, *arg):
+        return map(self.Integer, arg)
 
     def test_init_and_equality(self):
-        Natural = self.Natural
+        Integer = self.Integer
 
-        a = Natural(23)
-        d = Natural(a)
-        self.assertRaises(ValueError, Natural, 1.0)
-        self.assertRaises(ValueError, Natural, -1)
+        v1 = Integer(23)
+        v2 = Integer(v1)
+        v3 = Integer(-9)
+        self.assertRaises(ValueError, Integer, 1.0)
 
-        c = Natural(10)
-        self.failUnless(a == a)
-        self.failUnless(a == d)
-        self.failIf(a == c)
-
-    def test_conversion_to_bytes(self):
-        Natural = self.Natural
-
-        a = Natural(0x17)
-        self.assertEqual(b("\x17"), a.to_bytes())
-
-        c = Natural(0xFFFF)
-        self.assertEqual(b("\xFF\xFF"), c.to_bytes())
-        self.assertEqual(b("\x00\xFF\xFF"), c.to_bytes(3))
-        self.assertRaises(ValueError, c.to_bytes, 1)
+        v4 = Integer(10**10)
+        self.failUnless(v1 == v1)
+        self.failUnless(v1 == v2)
+        self.failIf(v1 == v4)
 
     def test_conversion_to_int(self):
-        Natural = self.Natural
-
-        a = Natural(23)
-        self.assertEqual(int(a), 23)
-
-        f = Natural(2 ** 1000)
-        self.assertEqual(int(f), 2 ** 1000)
+        v1, v2 = self.Integers(-23, 2 ** 1000)
+        self.assertEqual(int(v1), -23)
+        self.assertEqual(int(v2), 2 ** 1000)
 
     def test_equality_with_ints(self):
-        a = self.Natural(23)
-        self.failUnless(a == 23)
-        self.failIf(a == 24)
+        v1, v2 = self.Integers(23, -89)
+        self.failUnless(v1 == 23)
+        self.failUnless(v2 == -89)
+        self.failIf(v1 == 24)
+
+    def test_conversion_to_str(self):
+        v1, v2, v3 = self.Integers(20, 0, -20)
+        self.failUnless(str(v1) == "20")
+        self.failUnless(str(v2) == "0")
+        self.failUnless(str(v3) == "-20")
+
+    def test_conversion_to_bytes(self):
+        Integer = self.Integer
+
+        v1 = Integer(0x17)
+        self.assertEqual(b("\x17"), v1.to_bytes())
+
+        v2 = Integer(0xFFFF)
+        self.assertEqual(b("\xFF\xFF"), v2.to_bytes())
+        self.assertEqual(b("\x00\xFF\xFF"), v2.to_bytes(3))
+        self.assertRaises(ValueError, v2.to_bytes, 1)
+
+        v3 = Integer(-90)
+        self.assertRaises(ValueError, v3.to_bytes)
 
     def test_conversion_from_bytes(self):
-        Natural = self.Natural
+        Integer = self.Integer
 
-        a = Natural.from_bytes(b("\x00"))
-        self.assertEqual(0, a)
+        v1 = Integer.from_bytes(b("\x00"))
+        self.assertEqual(0, v1)
 
-        a = Natural.from_bytes(b("\x00\x00"))
-        self.assertEqual(0, a)
+        v2 = Integer.from_bytes(b("\x00\x00"))
+        self.assertEqual(0, v2)
 
-        c = Natural.from_bytes(b("\xFF\xFF"))
-        self.assertEqual(0xFFFF, c)
+        v3 = Integer.from_bytes(b("\xFF\xFF"))
+        self.assertEqual(0xFFFF, v3)
 
     def test_inequality(self):
-        # Test Natural!=Natural and Natural!=int
-        a, d, c = self.Naturals(89, 89, 90)
-        self.failUnless(a != c)
-        self.failUnless(a != 90)
-        self.failIf(a != d)
-        self.failIf(a != 89)
+        # Test Integer!=Integer and Integer!=int
+        v1, v2, v3 = self.Integers(89, 89, 90)
+        self.failUnless(v1 != v3)
+        self.failUnless(v1 != 90)
+        self.failIf(v1 != v2)
+        self.failIf(v1 != 89)
 
     def test_less_than(self):
-        # Test Natural<Natural and Natural<int
-        a, d, c = self.Naturals(13, 13, 14)
-        self.failUnless(a < c)
-        self.failUnless(a < 14)
-        self.failIf(a < d)
-        self.failIf(a < 13)
+        # Test Integer<Integer and Integer<int
+        v1, v2, v3 = self.Integers(13, 13, 14)
+        self.failUnless(v1 < v3)
+        self.failUnless(v1 < 14)
+        self.failIf(v1 < v2)
+        self.failIf(v1 < 13)
 
     def test_less_than_or_equal(self):
-        # Test Natural<=Natural and Natural<=int
-        a, d, c, e = self.Naturals(13, 13, 14, 4)
-        self.failUnless(a <= c)
-        self.failUnless(a <= 14)
-        self.failUnless(a <= d)
-        self.failUnless(a <= a)
-        self.failUnless(a <= 13)
-        self.failIf(a <= e)
+        # Test Integer<=Integer and Integer<=int
+        v1, v2, v3, v4 = self.Integers(13, 13, 14, -4)
+        self.failUnless(v1 <= v1)
+        self.failUnless(v1 <= 13)
+        self.failUnless(v1 <= v2)
+        self.failUnless(v1 <= 14)
+        self.failUnless(v1 <= v3)
+        self.failIf(v1 <= v4)
 
     def test_more_than(self):
-        # Test Natural>Natural and Natural>int
-        a, d, c = self.Naturals(13, 13, 14)
-        self.failUnless(c > a)
-        self.failUnless(c > 13)
-        self.failIf(d > a)
-        self.failIf(d < 13)
+        # Test Integer>Integer and Integer>int
+        v1, v2, v3 = self.Integers(13, 13, 14)
+        self.failUnless(v3 > v1)
+        self.failUnless(v3 > 13)
+        self.failIf(v1 > v1)
+        self.failIf(v1 > v2)
+        self.failIf(v1 > 13)
 
     def test_more_than_or_equal(self):
-        # Test Natural>=Natural and Natural>=int
-        a, d, c, e = self.Naturals(13, 13, 14, 4)
-        self.failUnless(c >= a)
-        self.failUnless(c >= 13)
-        self.failUnless(a >= d)
-        self.failUnless(a >= a)
-        self.failUnless(a >= 13)
-        self.failIf(e >= a)
-
-    def test_addition(self):
-        # Test Natural+Natural and Natural+int
-        a, d = self.Naturals(7, 90)
-        self.assertEqual(a + d, 97)
-        self.assertEqual(a + 90, 97)
-        self.assertEqual(a + (-7), 0)
-        self.assertRaises(ValueError, lambda: a + (-8))
-
-    def test_subtraction(self):
-        # Test Natural-Natural and Natural-int
-        a, d = self.Naturals(7, 90)
-        self.assertEqual(d - a, 83)
-        self.assertEqual(d - 7, 83)
-        self.assertEqual(d - (-7), 97)
-        self.assertRaises(ValueError, lambda: a - d)
-        self.assertRaises(ValueError, lambda: a - 90)
-
-    def test_multiplication(self):
-        # Test Natural-Natural and Natural-int
-        a, d = self.Naturals(4, 5)
-        self.assertEqual(a * d, 20)
-        self.assertEqual(a * 5, 20)
-        self.assertRaises(ValueError, lambda: a * (-3))
-
-    def test_remainder(self):
-        # Test Natural%Natural and Natural%int
-        a, d = self.Naturals(23, 5)
-        self.assertEqual(a % d, 3)
-        self.assertEqual(a % 5, 3)
-        self.assertRaises(ZeroDivisionError, lambda: a % 0)
-
-    def test_simple_exponentiation(self):
-        a, d = self.Naturals(4, 3)
-
-        self.assertEqual(a ** d, 64)
-        self.assertEqual(pow(a, d), 64)
-        self.assertEqual(a ** 3, 64)
-        self.assertEqual(pow(a, 3), 64)
-
-        self.assertRaises(ValueError, pow, a, -3)
-
-    def test_modular_exponentiation(self):
-        a, d, e = self.Naturals(23, 5, 17)
-
-        self.assertEqual(pow(a, d, e), 7)
-        self.assertEqual(pow(a, 5, e), 7)
-        self.assertEqual(pow(a, d, 17), 7)
-        self.assertEqual(pow(a, 5, 17), 7)
-        self.assertEqual(pow(a, 0, 17), 1)
-
-        self.assertRaises(ValueError, pow, a, 5, 0)
-        self.assertRaises(ValueError, pow, a, 5, -4)
-        self.assertRaises(ValueError, pow, a, -3, 8)
-
-    def test_and(self):
-        a, d = self.Naturals(0xF4, 0x31)
-        self.assertEqual(a & d, 0x30)
-        self.assertEqual(a & 0x31, 0x30)
+        # Test Integer>=Integer and Integer>=int
+        v1, v2, v3, v4 = self.Integers(13, 13, 14, -4)
+        self.failUnless(v3 >= v1)
+        self.failUnless(v3 >= 13)
+        self.failUnless(v1 >= v2)
+        self.failUnless(v1 >= v1)
+        self.failUnless(v1 >= 13)
+        self.failIf(v4 >= v1)
 
     def test_bool(self):
-        a, d = self.Naturals(0, 1)
-        self.failIf(a)
-        self.failUnless(d)
+        v1, v2 = self.Integers(0, 10)
+        self.failIf(v1)
+        self.failIf(bool(v1))
+        self.failUnless(v2)
+        self.failUnless(bool(v2))
+
+    def test_addition(self):
+        # Test Integer+Integer and Integer+int
+        v1, v2, v3 = self.Integers(7, 90, -7)
+        self.assertEqual(v1 + v2, 97)
+        self.assertEqual(v1 + 90, 97)
+        self.assertEqual(v1 + v3, 0)
+
+    def test_subtraction(self):
+        # Test Integer-Integer and Integer-int
+        v1, v2, v3 = self.Integers(7, 90, -7)
+        self.assertEqual(v2 - v1, 83)
+        self.assertEqual(v2 - 7, 83)
+        self.assertEqual(v2 - v3, 97)
+
+    def test_multiplication(self):
+        # Test Integer-Integer and Integer-int
+        v1, v2 = self.Integers(4, 5)
+        self.assertEqual(v1 * v2, 20)
+        self.assertEqual(v1 * 5, 20)
+
+    def test_remainder(self):
+        # Test Integer%Integer and Integer%int
+        v1, v2, v3 = self.Integers(23, 5, -4)
+        self.assertEqual(v1 % v2, 3)
+        self.assertEqual(v1 % 5, 3)
+        self.assertEqual(v3 % 5, 1)
+        self.assertRaises(ZeroDivisionError, lambda: v1 % 0)
+        self.assertRaises(ValueError, lambda: v1 % -6)
+
+    def test_simple_exponentiation(self):
+        v1, v2, v3 = self.Integers(4, 3, -2)
+
+        self.assertEqual(v1 ** v2, 64)
+        self.assertEqual(pow(v1, v2), 64)
+        self.assertEqual(v1 ** 3, 64)
+        self.assertEqual(pow(v1, 3), 64)
+        self.assertEqual(v3 ** 2, 4)
+        self.assertEqual(v3 ** 3, -8)
+
+        self.assertRaises(ValueError, pow, v1, -3)
+
+    def test_modular_exponentiation(self):
+        v1, v2, v3 = self.Integers(23, 5, 17)
+
+        self.assertEqual(pow(v1, v2, v3), 7)
+        self.assertEqual(pow(v1, 5,  v3), 7)
+        self.assertEqual(pow(v1, v2, 17), 7)
+        self.assertEqual(pow(v1, 5,  17), 7)
+        self.assertEqual(pow(v1, 0,  17), 1)
+
+        self.assertRaises(ZeroDivisionError, pow, v1, 5, 0)
+        self.assertRaises(ValueError, pow, v1, 5, -4)
+        self.assertRaises(ValueError, pow, v1, -3, 8)
+
+    def test_and(self):
+        v1, v2, v3 = self.Integers(0xF4, 0x31, -0xF)
+        self.assertEqual(v1 & v2, 0x30)
+        self.assertEqual(v1 & 0x31, 0x30)
+        self.assertEqual(v1 & v3, 0xF0)
+        self.assertEqual(v1 & -0xF, 0xF0)
+        self.assertEqual(v3 & -0xF, -0xF)
 
     def test_right_shift(self):
-        a, one = self.Naturals(0x10, 1)
-        self.assertEqual(a >> 0, a)
-        self.assertEqual(a >> one, 0x08)
-        self.assertEqual(a >> 1, 0x08)
+        v1, v2, v3 = self.Integers(0x10, 1, -0x10)
+        self.assertEqual(v1 >> 0, v1)
+        self.assertEqual(v1 >> v2, 0x08)
+        self.assertEqual(v1 >> 1, 0x08)
+        self.assertEqual(v3 >> 1, -0x08)
+        self.assertRaises(ValueError, lambda: v1 >> -1)
 
     def test_in_place_right_shift(self):
-        a, one = self.Naturals(0x10, 1)
-        a >>= 0
-        self.assertEqual(a, 0x10)
-        a >>= 1
-        self.assertEqual(a, 0x08)
-        a >>= one
-        self.assertEqual(a, 0x04)
-
-    def test_size_in_bits(self):
-        a, c, d = self.Naturals(0, 1, 0x100)
-        self.assertEqual(a.size_in_bits(), 1)
-        self.assertEqual(c.size_in_bits(), 1)
-        self.assertEqual(d.size_in_bits(), 9)
+        v1, v2, v3 = self.Integers(0x10, 1, -0x10)
+        v1 >>= 0
+        self.assertEqual(v1, 0x10)
+        v1 >>= 1
+        self.assertEqual(v1, 0x08)
+        v1 >>= v2
+        self.assertEqual(v1, 0x04)
+        v3 >>= 1
+        self.assertEqual(v3, -0x08)
+        def l():
+            v4 = self.Integer(0x90)
+            v4 >>= -1
+        self.assertRaises(ValueError, l)
 
     def test_odd_even(self):
-        a, c, d = self.Naturals(0, 4, 17)
+        v1, v2, v3, v4, v5 = self.Integers(0, 4, 17, -4, -17)
 
-        self.failUnless(a.is_even())
-        self.failUnless(c.is_even())
-        self.failIf(d.is_even())
+        self.failUnless(v1.is_even())
+        self.failUnless(v2.is_even())
+        self.failIf(v3.is_even())
+        self.failUnless(v4.is_even())
+        self.failIf(v5.is_even())
 
-        self.failIf(a.is_odd())
-        self.failIf(c.is_odd())
-        self.failUnless(d.is_odd())
+        self.failIf(v1.is_odd())
+        self.failIf(v2.is_odd())
+        self.failUnless(v3.is_odd())
+        self.failIf(v4.is_odd())
+        self.failUnless(v5.is_odd())
+
+    def test_size_in_bits(self):
+        v1, v2, v3, v4 = self.Integers(0, 1, 0x100, -90)
+        self.assertEqual(v1.size_in_bits(), 1)
+        self.assertEqual(v2.size_in_bits(), 1)
+        self.assertEqual(v3.size_in_bits(), 9)
+        self.assertRaises(ValueError, v4.size_in_bits)
 
     def test_perfect_square(self):
 
-        self.failUnless(self.Natural(0).is_perfect_square())
-        self.failUnless(self.Natural(1).is_perfect_square())
-        self.failIf(self.Natural(2).is_perfect_square())
-        self.failIf(self.Natural(3).is_perfect_square())
-        self.failUnless(self.Natural(4).is_perfect_square())
+        self.failIf(self.Integer(-9).is_perfect_square())
+        self.failUnless(self.Integer(0).is_perfect_square())
+        self.failUnless(self.Integer(1).is_perfect_square())
+        self.failIf(self.Integer(2).is_perfect_square())
+        self.failIf(self.Integer(3).is_perfect_square())
+        self.failUnless(self.Integer(4).is_perfect_square())
+        self.failUnless(self.Integer(39*39).is_perfect_square())
+        self.failIf(self.Integer(39*39+1).is_perfect_square())
 
         for x in xrange(100, 1000):
-            self.failIf(self.Natural(x**2+1).is_perfect_square())
-            self.failUnless(self.Natural(x**2).is_perfect_square())
+            self.failIf(self.Integer(x**2+1).is_perfect_square())
+            self.failUnless(self.Integer(x**2).is_perfect_square())
 
     def test_jacobi_symbol(self):
 
@@ -268,38 +296,42 @@ class TestNaturalBase(unittest.TestCase):
             (5, 3439601197, -1)
             )
 
+        js = self.Integer.jacobi_symbol
+
         for tv in data:
-            self.assertEqual(self.Natural.jacobi_symbol(tv[0], tv[1]), tv[2])
-            self.assertEqual(self.Natural.jacobi_symbol(self.Natural(tv[0]), tv[1]), tv[2])
-            self.assertEqual(self.Natural.jacobi_symbol(tv[0], self.Natural(tv[1])), tv[2])
+            self.assertEqual(js(tv[0], tv[1]), tv[2])
+            self.assertEqual(js(self.Integer(tv[0]), tv[1]), tv[2])
+            self.assertEqual(js(tv[0], self.Integer(tv[1])), tv[2])
 
-        self.assertRaises(ValueError, self.Natural.jacobi_symbol, 6, 8)
+        self.assertRaises(ValueError, js, 6, 8)
 
-class TestNaturalInt(TestNaturalBase):
-
-    def setUp(self):
-        self.Natural = NaturalInt
-        TestNaturalBase.setUp(self)
-
-
-class TestNaturalGMP(TestNaturalBase):
+class TestIntegerInt(TestIntegerBase):
 
     def setUp(self):
-        self.Natural = NaturalGMP
-        TestNaturalBase.setUp(self)
+        self.Numbers = NumbersInt
+        self.Integer = NumbersInt.Integer
+        TestIntegerBase.setUp(self)
 
 
-class TestNaturalGeneric(unittest.TestCase):
+class TestIntegerGMP(TestIntegerBase):
+
+    def setUp(self):
+        self.Numbers = NumbersGMP
+        self.Integer = NumbersGMP.Integer
+        TestIntegerBase.setUp(self)
+
+
+class TestIntegerGeneric(unittest.TestCase):
 
     def test_random_exact_bits(self):
 
         for _ in xrange(1000):
-            a = NaturalGeneric.random(exact_bits=8)
+            a = IntegerGeneric.random(exact_bits=8)
             self.failIf(a < 128)
             self.failIf(a >= 256)
 
         for bits_value in xrange(1024, 1024 + 8):
-            a = NaturalGeneric.random(exact_bits=bits_value)
+            a = IntegerGeneric.random(exact_bits=bits_value)
             self.failIf(a < 2**(bits_value - 1))
             self.failIf(a >= 2**bits_value)
 
@@ -307,13 +339,13 @@ class TestNaturalGeneric(unittest.TestCase):
 
         flag = False
         for _ in xrange(1000):
-            a = NaturalGeneric.random(max_bits=8)
+            a = IntegerGeneric.random(max_bits=8)
             flag = flag or a < 128
             self.failIf(a>=256)
         self.failUnless(flag)
 
         for bits_value in xrange(1024, 1024 + 8):
-            a = NaturalGeneric.random(max_bits=bits_value)
+            a = IntegerGeneric.random(max_bits=bits_value)
             self.failIf(a >= 2**bits_value)
 
     def test_random_bits_custom_rng(self):
@@ -327,24 +359,24 @@ class TestNaturalGeneric(unittest.TestCase):
                 return bchr(0) * size
 
         custom_rng = CustomRNG()
-        a = NaturalGeneric.random(exact_bits=32, randfunc=custom_rng)
+        a = IntegerGeneric.random(exact_bits=32, randfunc=custom_rng)
         self.assertEqual(custom_rng.counter, 4)
 
     def test_random_range(self):
 
         for x in xrange(2, 20):
-            a = NaturalGeneric.random_range(1, x)
+            a = IntegerGeneric.random_range(1, x)
             self.failUnless(1 <= a <= x)
 
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(TestNaturalInt)
+    tests += list_test_cases(TestIntegerInt)
     try:
-        from Crypto.Math._Numbers_gmp import Natural as NaturalGMP
-        tests += list_test_cases(TestNaturalGMP)
+        from Crypto.Math._Numbers_gmp import Integer as IntegerGMP
+        tests += list_test_cases(TestIntegerGMP)
     except ImportError:
         print "Skipping GMP tests"
-    tests += list_test_cases(TestNaturalGeneric)
+    tests += list_test_cases(TestIntegerGeneric)
     return tests
 
 if __name__ == '__main__':

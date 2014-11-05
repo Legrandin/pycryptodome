@@ -32,10 +32,10 @@ from Crypto.Util.py3compat import *
 from Crypto import Random
 
 try:
-    from Crypto.Math._Numbers_gmp import Natural
+    from Crypto.Math._Numbers_gmp import Integer
     _implementation = "gmp"
 except ImportError:
-    from Crypto.Math._Numbers_int import Natural
+    from Crypto.Math._Numbers_int import Integer
     _implementation = "python"
 
 
@@ -44,13 +44,13 @@ def _random(**kwargs):
 
     :Keywords:
       exact_bits : positive integer
-        The length in bits of the resulting random Natural number.
+        The length in bits of the resulting random Integer number.
         The number is guaranteed to fulfil the relation:
 
             2^bits > result >= 2^(bits - 1)
 
       max_bits : positive integer
-        The maximum length in bits of the resulting random Natural number.
+        The maximum length in bits of the resulting random Integer number.
         The number is guaranteed to fulfil the relation:
 
             2^bits > result >=0
@@ -59,7 +59,7 @@ def _random(**kwargs):
         A function that returns a random byte string. The length of the
         byte string is passed as parameter.
 
-    :Return: a Natural object
+    :Return: a Integer object
     """
 
     exact_bits = kwargs.pop("exact_bits", None)
@@ -83,13 +83,13 @@ def _random(**kwargs):
         msb |= 1 << (significant_bits_msb - 1)
     msb &= (1 << significant_bits_msb) - 1
 
-    return Natural.from_bytes(bchr(msb) + randfunc(bytes_needed - 1))
+    return Integer.from_bytes(bchr(msb) + randfunc(bytes_needed - 1))
 
 
 def _random_range(minimum, maximum, randfunc=None):
 
     norm_maximum = maximum - minimum
-    bits_needed = Natural(norm_maximum).size_in_bits()
+    bits_needed = Integer(norm_maximum).size_in_bits()
 
     norm_candidate = -1
     while not 0 <= norm_candidate <= norm_maximum:
@@ -99,5 +99,5 @@ def _random_range(minimum, maximum, randfunc=None):
                                 )
     return norm_candidate + minimum
 
-Natural.random = staticmethod(_random)
-Natural.random_range = staticmethod(_random_range)
+Integer.random = staticmethod(_random)
+Integer.random_range = staticmethod(_random_range)

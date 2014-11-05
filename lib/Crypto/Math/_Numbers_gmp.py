@@ -69,7 +69,7 @@ _gmp.mpz_mod = _gmp.lib.__gmpz_mod
 _gmp.mpz_neg = _gmp.lib.__gmpz_neg
 _gmp.mpz_and = _gmp.lib.__gmpz_and
 _gmp.mpz_clear = _gmp.lib.__gmpz_clear
-_gmp.mpz_fdiv_q_2exp = _gmp.lib.__gmpz_fdiv_q_2exp
+_gmp.mpz_tdiv_q_2exp = _gmp.lib.__gmpz_tdiv_q_2exp
 _gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
 _gmp.mpz_perfect_square_p = _gmp.lib.__gmpz_perfect_square_p
 _gmp.mpz_jacobi = _gmp.lib.__gmpz_jacobi
@@ -81,7 +81,7 @@ class _MPZ(Structure):
                 ('_mp_d', c_void_p)]
 
 
-class Natural(object):
+class Integer(object):
 
     _zero_mpz = _MPZ()
     _zero_mpz_p = byref(_zero_mpz)
@@ -89,46 +89,48 @@ class Natural(object):
 
     def __init__(self, value):
 
-        self._mpz = None
-        self._mpz_p = None
-
-        self._set(value)
-
-        if _gmp.mpz_cmp(self, self._zero_mpz_p) < 0:
-            raise ValueError("Negative values are not natural")
-
-    def _set(self, value):
-        """Set this object to an integer value (possibly negative)"""
+        self._mpz = _MPZ()
+        self._mpz_p = byref(self._mpz)
 
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
 
-        if self._mpz_p is not None:
-            _gmp.mpz_clear(self._mpz_p)
-
-        self._mpz = _MPZ()
-        self._mpz_p = byref(self._mpz)
-
-        if isinstance(value, Natural):
-            _gmp.mpz_set(self._mpz_p, value._mpz_p)
-        else:
-            abs_value = abs(value)
-            if abs_value < 256:
-                _gmp.mpz_init_set_si(self._mpz_p, c_long(value))
-            else:
-                if _gmp.mpz_init_set_str(self._mpz_p, tobytes(str(abs_value)),
-                                         c_int(10)) != 0:
-                    _gmp.mpz_clear(self._mpz_p)
-                    raise ValueError("Error converting '%d'" % value)
-                if value < 0:
-                    _gmp.mpz_neg(self._mpz_p, self._mpz_p)
-
         # Special attribute that ctypes checks
         self._as_parameter_ = self._mpz_p
 
-        return self
+        if hasattr(value, "_mpz_p"):
+            _gmp.mpz_set(self, value)
+        else:
+            abs_value = abs(value)
+            if abs_value < 256:
+                _gmp.mpz_init_set_si(self, c_long(value))
+            else:
+                if _gmp.mpz_init_set_str(self, tobytes(str(abs_value)),
+                                         c_int(10)) != 0:
+                    _gmp.mpz_clear(self)
+                    raise ValueError("Error converting '%d'" % value)
+                if value < 0:
+                    _gmp.mpz_neg(self, self)
+
+    # Conversions
+    def __int__(self):
+
+        # buf will contain the integer encoded in decimal plus the trailing
+        # zero, and possibly the negative sign.
+        # dig10(x) < log10(x) + 1 = log2(x)/log2(10) + 1 < log2(x)/3 + 1
+        buf_len = _gmp.mpz_sizeinbase(self, c_int(2)) // 3 + 3
+        buf = create_string_buffer(buf_len)
+
+        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b("%Zd"), self)
+        return int(buf.value)
+
+    def __str__(self):
+        return str(int(self))
 
     def to_bytes(self, block_size=0):
+
+        if self < 0:
+            raise ValueError("Conversion only valid for non-negative numbers")
 
         buf_len = (_gmp.mpz_sizeinbase(self, c_int(2)) + 7) // 8
         if buf_len > block_size > 0:
@@ -145,20 +147,9 @@ class Natural(object):
                 self)
         return bchr(0) * max(0, block_size - buf_len) + buf.raw
 
-    def __int__(self):
-
-        buf_len = _gmp.mpz_sizeinbase(self, c_int(2)) // 3 + 3
-        buf = create_string_buffer(buf_len)
-
-        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b("%Zd"), self)
-        return int(buf.value)
-
-    def __str__(self):
-        return str(int(self))
-
     @staticmethod
     def from_bytes(byte_string):
-        result = Natural(0)
+        result = Integer(0)
         _gmp.mpz_import(
                         result,
                         c_size_t(len(byte_string)),  # Amount of words to read
@@ -169,156 +160,140 @@ class Natural(object):
                         byte_string)
         return result
 
-    # Arithmetic operations
-    def __add__(self, term):
-
-        result = Natural(0)
-        if not isinstance(term, Natural):
-            term = Natural(0)._set(term)
-        _gmp.mpz_add(result, self, term)
-
-        if _gmp.mpz_cmp(result, self._zero_mpz_p) < 0:
-            raise ValueError("Result of addition is negative")
-
-        return result
-
-    def __sub__(self, term):
-
-        result = Natural(0)
-        if not isinstance(term, Natural):
-            term = Natural(0)._set(term)
-        _gmp.mpz_sub(result, self, term)
-
-        if _gmp.mpz_cmp(result, self._zero_mpz_p) < 0:
-            raise ValueError("Result of subtraction is negative")
-
-        return result
-
-    def __mul__(self, factor):
-
-        result = Natural(0)
-        if not isinstance(factor, Natural):
-            factor = Natural(factor)
-
-        _gmp.mpz_mul(result, self, factor)
-
-        return result
-
-    def __mod__(self, divisor):
-
-        result = Natural(0)
-        if not isinstance(divisor, Natural):
-            divisor = Natural(divisor)
-
-        if _gmp.mpz_cmp(divisor, self._zero_mpz_p) == 0:
-            raise ZeroDivisionError("Division by zero")
-
-        _gmp.mpz_mod(result, self, divisor)
-        return result
-
-    def __pow__(self, exponent, modulus=None):
-
-        result = Natural(0)
-        if not isinstance(exponent, Natural):
-            exponent = Natural(exponent)
-
-        if modulus == 0:
-            raise ValueError("Modulus must not be zero")
-
-        if modulus is None:
-
-            exp_int = int(exponent)
-            if exp_int > 2**256:
-                raise ValueError("Exponent is too big")
-
-            _gmp.mpz_pow_ui(result,
-                            self,   # Base
-                            exp_int
-                            )
-
-        else:
-
-            if not isinstance(modulus, Natural):
-                modulus = Natural(modulus)
-
-            _gmp.mpz_powm(result,
-                          self,     # Base
-                          exponent,
-                          modulus
-                          )
-        return result
-
-    # Boolean operations
-    def __and__(self, term):
-
-        result = Natural(0)
-        if not isinstance(term, Natural):
-            term = Natural(term)
-        _gmp.mpz_and(result, self, term)
-        return result
-
-    def __rshift__(self, pos):
-        result = Natural(0)
-        _gmp.mpz_fdiv_q_2exp(result, self, c_int(int(pos)))
-        return result
-
-    def __irshift__(self, pos):
-        _gmp.mpz_fdiv_q_2exp(self, self, c_int(int(pos)))
-        return self
-
-    def size_in_bits(self):
-        return _gmp.mpz_sizeinbase(self, c_int(2))
-
-    def is_odd(self):
-        return _gmp.mpz_tstbit(self, 0) == 1
-
-    def is_even(self):
-        return _gmp.mpz_tstbit(self, 0) == 0
-
     # Relations
-    def __eq__(self, term):
+    def _apply_and_return(self, func, term):
+        int_type = self.__class__
+        if not isinstance(term, int_type):
+            term = int_type(term)
+        return func(self, term)
 
-        if not isinstance(term, Natural):
-            term = Natural(0)._set(term)
-        return _gmp.mpz_cmp(self, term) == 0
+    def __eq__(self, term):
+        return self._apply_and_return(_gmp.mpz_cmp, term) == 0
 
     def __ne__(self, term):
-        return not self.__eq__(term)
+        return self._apply_and_return(_gmp.mpz_cmp, term) != 0
 
     def __lt__(self, term):
-
-        if not isinstance(term, Natural):
-            term = Natural(0)._set(term)
-        return _gmp.mpz_cmp(self, term) < 0
+        return self._apply_and_return(_gmp.mpz_cmp, term) < 0
 
     def __le__(self, term):
-        return self.__lt__(term) or self.__eq__(term)
+        return self._apply_and_return(_gmp.mpz_cmp, term) <= 0
 
     def __gt__(self, term):
-        return not self.__le__(term)
+        return self._apply_and_return(_gmp.mpz_cmp, term) > 0
 
     def __ge__(self, term):
-        return not self.__lt__(term)
+        return self._apply_and_return(_gmp.mpz_cmp, term) >= 0
 
     def __nonzero__(self):
         return _gmp.mpz_cmp(self, self._zero_mpz_p) != 0
 
+    # Arithmetic operations
+    def _apply_in_new_int(self, func, *terms):
+        int_type = self.__class__
+        result = int_type(0)
+
+        def convert(x):
+            if isinstance(x, int_type):
+                return x
+            else:
+                return int_type(x)
+
+        terms = [convert(x) for x in terms]
+        func(result, self, *terms)
+        return result
+
+    def __add__(self, term):
+        return self._apply_in_new_int(_gmp.mpz_add, term)
+
+    def __sub__(self, term):
+        return self._apply_in_new_int(_gmp.mpz_sub, term)
+
+    def __mul__(self, term):
+        return self._apply_in_new_int(_gmp.mpz_mul, term)
+
+    def __mod__(self, divisor):
+
+        def mod_with_check(result, value, divisor):
+            comp = _gmp.mpz_cmp(divisor, value._zero_mpz_p)
+            if comp == 0:
+                raise ZeroDivisionError("Division by zero")
+            if comp < 0:
+                raise ValueError("Modulus must be positive")
+            _gmp.mpz_mod(result, value, divisor)
+
+        return self._apply_in_new_int(mod_with_check, divisor)
+
+    def __pow__(self, exponent, modulus=None):
+
+        if exponent < 0:
+            raise ValueError("Exponent must not be negative")
+
+        if modulus is None:
+            # Normal exponentiation
+            int_type = self.__class__
+            result = int_type(0)
+            if exponent > 256:
+                raise ValueError("Exponent is too big")
+            _gmp.mpz_pow_ui(result,
+                            self,   # Base
+                            c_long(int(exponent))
+                            )
+            return result
+        else:
+            # Modular exponentiation
+            if modulus == 0:
+                raise ZeroDivisionError("Division by zero")
+            if modulus < 0:
+                raise ValueError("Modulus must be positive")
+            return self._apply_in_new_int(_gmp.mpz_powm, exponent, modulus)
+
+    # Boolean/bit operations
+    def __and__(self, term):
+        return self._apply_in_new_int(_gmp.mpz_and, term)
+
+    def __rshift__(self, pos):
+        result = self.__class__(0)
+        shift_amount = int(pos)
+        if shift_amount < 0:
+            raise ValueError("Negative shift count")
+        _gmp.mpz_tdiv_q_2exp(result, self, c_int(shift_amount))
+        return result
+
+    def __irshift__(self, pos):
+        shift_amount = int(pos)
+        if shift_amount < 0:
+            raise ValueError("Negative shift count")
+        _gmp.mpz_tdiv_q_2exp(self, self, c_int(shift_amount))
+        return self
+
     # Extra
+    def is_odd(self):
+        return _gmp.mpz_tstbit(self, c_int(0)) == 1
+
+    def is_even(self):
+        return _gmp.mpz_tstbit(self, c_int(0)) == 0
+
+    def size_in_bits(self):
+        if self < 0:
+            raise ValueError("Conversion only valid for non-negative numbers")
+        return _gmp.mpz_sizeinbase(self, c_int(2))
+
     def is_perfect_square(self):
         return _gmp.mpz_perfect_square_p(self) != 0
 
     @staticmethod
     def jacobi_symbol(a, n):
-        if not isinstance(a, Natural):
-            a = Natural(a)
-        if not isinstance(n, Natural):
-            n = Natural(n)
 
-        if n.is_even() or not n:
+        if not isinstance(a, Integer):
+            a = Integer(a)
+        if not isinstance(n, Integer):
+            n = Integer(n)
+        if n <= 0 or n.is_even():
             raise ValueError("n must be positive even for the Jacobi symbol")
-
         return _gmp.mpz_jacobi(a, n)
 
+    # Clean-up
     def __del__(self):
 
         if self._mpz_p is not None:

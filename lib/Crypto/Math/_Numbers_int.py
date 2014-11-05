@@ -31,114 +31,32 @@
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 
-class Natural(object):
+class Integer(object):
     """A class to model a natural integer (including zero)"""
 
     def __init__(self, value):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
-        if value < 0:
-            raise ValueError("A natural number is not negative")
         self._value = value
 
-    def to_bytes(self, block_size=0):
-        result = long_to_bytes(self._value, block_size)
-        if len(result) > block_size > 0:
-            raise ValueError("Value too large to encode")
-        return result
-
+    # Conversions
     def __int__(self):
         return self._value
 
     def __str__(self):
         return str(int(self))
 
+    def to_bytes(self, block_size=0):
+        if self._value < 0:
+            raise ValueError("Conversion only valid for non-negative numbers")
+        result = long_to_bytes(self._value, block_size)
+        if len(result) > block_size > 0:
+            raise ValueError("Value too large to encode")
+        return result
+
     @staticmethod
     def from_bytes(byte_string):
-        return Natural(bytes_to_long(byte_string))
-
-    # Arithmetic operations
-    def __add__(self, term):
-        try:
-            return Natural(self._value + term._value)
-        except AttributeError:
-            return Natural(self._value + term)
-
-    def __sub__(self, term):
-        try:
-            diff = self._value - term._value
-        except AttributeError:
-            diff = self._value - term
-        if diff < 0:
-            raise ValueError("Result of subtraction is not a natural value")
-        return Natural(diff)
-
-    def __mul__(self, factor):
-        try:
-            return Natural(self._value * factor._value)
-        except AttributeError:
-            return Natural(self._value * factor)
-
-    def __mod__(self, divisor):
-        try:
-            return Natural(self._value % divisor._value)
-        except AttributeError:
-            return Natural(self._value % divisor)
-
-    def __pow__(self, exponent, modulus=None):
-        try:
-            exp_value = exponent._value
-        except AttributeError:
-            exp_value = exponent
-        if exp_value < 0:
-            raise ValueError("Exponent must not be negative")
-
-        try:
-            mod_value = modulus._value
-        except AttributeError:
-            mod_value = modulus
-        if mod_value is not None and mod_value < 0:
-            raise ValueError("Modulus must be positive")
-        return pow(self._value, exp_value, mod_value)
-
-    # Boolean
-    def __and__(self, term):
-        try:
-            return Natural(self._value & term._value)
-        except AttributeError:
-            return Natural(self._value % term)
-
-    def __rshift__(self, pos):
-        try:
-            return Natural(self._value >> pos._value)
-        except AttributeError:
-            return Natural(self._value >> pos)
-
-    def __irshift__(self, pos):
-        try:
-            self._value >>= pos._value
-        except AttributeError:
-            self._value >>= pos
-        return self
-
-    def size_in_bits(self):
-
-        if self._value == 0:
-            return 1
-
-        bit_size = 0
-        tmp = self._value
-        while tmp:
-            tmp >>= 1
-            bit_size += 1
-
-        return bit_size
-
-    def is_odd(self):
-        return (self._value & 1) == 1
-
-    def is_even(self):
-        return (self._value & 1) == 0
+        return Integer(bytes_to_long(byte_string))
 
     # Relations
     def __eq__(self, term):
@@ -170,25 +88,118 @@ class Natural(object):
     def __nonzero__(self):
         return self._value != 0
 
+    # Arithmetic operations
+    def __add__(self, term):
+        try:
+            return Integer(self._value + term._value)
+        except AttributeError:
+            return Integer(self._value + term)
+
+    def __sub__(self, term):
+        try:
+            diff = self._value - term._value
+        except AttributeError:
+            diff = self._value - term
+        return Integer(diff)
+
+    def __mul__(self, factor):
+        try:
+            return Integer(self._value * factor._value)
+        except AttributeError:
+            return Integer(self._value * factor)
+
+    def __mod__(self, divisor):
+        try:
+            divisor_value = divisor._value
+        except AttributeError:
+            divisor_value = divisor
+        if divisor_value < 0:
+            raise ValueError("Modulus must be positive")
+        return Integer(self._value % divisor_value)
+
+    def __pow__(self, exponent, modulus=None):
+        try:
+            exp_value = exponent._value
+        except AttributeError:
+            exp_value = exponent
+        if exp_value < 0:
+            raise ValueError("Exponent must not be negative")
+
+        try:
+            mod_value = modulus._value
+        except AttributeError:
+            mod_value = modulus
+        if mod_value is not None:
+            if mod_value < 0:
+                raise ValueError("Modulus must be positive")
+            if mod_value == 0:
+                raise ZeroDivisionError("Modulus cannot be zero")
+        return pow(self._value, exp_value, mod_value)
+
+    # Boolean/bit operations
+    def __and__(self, term):
+        try:
+            return Integer(self._value & term._value)
+        except AttributeError:
+            return Integer(self._value & term)
+
+    def __rshift__(self, pos):
+        try:
+            return Integer(self._value >> pos._value)
+        except AttributeError:
+            return Integer(self._value >> pos)
+
+    def __irshift__(self, pos):
+        try:
+            self._value >>= pos._value
+        except AttributeError:
+            self._value >>= pos
+        return self
+
     # Extra
+    def is_odd(self):
+        return (self._value & 1) == 1
+
+    def is_even(self):
+        return (self._value & 1) == 0
+
+    def size_in_bits(self):
+
+        if self._value < 0:
+            raise ValueError("Conversion only valid for non-negative numbers")
+
+        if self._value == 0:
+            return 1
+
+        bit_size = 0
+        tmp = self._value
+        while tmp:
+            tmp >>= 1
+            bit_size += 1
+
+        return bit_size
+
     def is_perfect_square(self):
+        if self._value < 0:
+            return False
         if self._value in (0, 1):
             return True
 
         x = self._value // 2
-        square_x = x**2
+        square_x = x ** 2
 
         while square_x > self._value:
             x = (square_x + self._value) // (2 * x)
-            square_x = x**2
+            square_x = x ** 2
 
-        return self._value == x**2
+        return self._value == x ** 2
+
 
     @staticmethod
     def jacobi_symbol(a, n):
-        if isinstance(a, Natural):
+        if isinstance(a, Integer):
             a = a._value
-        if isinstance(n, Natural):
+        if isinstance(n, Integer):
             n = n._value
 
         if (n & 1) == 0:
@@ -221,5 +232,4 @@ class Natural(object):
         # Step 7
         n1 = n % a1
         # Step 8
-        return s * Natural.jacobi_symbol(n1, a1)
-
+        return s * Integer.jacobi_symbol(n1, a1)

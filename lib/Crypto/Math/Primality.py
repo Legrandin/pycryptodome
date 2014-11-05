@@ -28,7 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Math.Numbers import Natural
+from Crypto.Math.Numbers import Integer
 from Crypto import Random
 
 COMPOSITE = 1
@@ -55,20 +55,20 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
 
-    if not isinstance(candidate, Natural):
-        candidate = Natural(candidate)
+    if not isinstance(candidate, Integer):
+        candidate = Integer(candidate)
 
     if candidate.is_even():
         return COMPOSITE
 
-    one = Natural(1)
-    minus_one = Natural(candidate - 1)
+    one = Integer(1)
+    minus_one = Integer(candidate - 1)
 
     if randfunc is None:
         randfunc = Random.new().read
 
     # Step 1 and 2
-    m = Natural(minus_one)
+    m = Integer(minus_one)
     a = 0
     while m.is_even():
         m >>= 1
@@ -82,7 +82,7 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
         # Step 4.1-2
         base = 1
         while base in (one, minus_one):
-            base = Natural.random_range(2, candidate - 2)
+            base = Integer.random_range(2, candidate - 2)
 
         # Step 4.3-4.4
         z = pow(base, m, candidate)
