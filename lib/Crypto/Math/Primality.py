@@ -102,3 +102,68 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     # Step 5
     return PROBABLY_PRIME
 
+
+def lucas_test(candidate):
+    """Perform a Lucas primality test on an integer.
+
+    The test is specified in Section C.3.3 of `FIPS PUB 186-4`__.
+
+    :Parameters:
+      :candidate: integer
+        The number to test for primality.
+
+    :Returns:
+      ``Primality.COMPOSITE`` or ``Primality.PROBABLY_PRIME``.
+
+    .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+    """
+
+    if not isinstance(candidate, Integer):
+        candidate = Integer(candidate)
+
+    # Step 1
+    if candidate.is_even() or candidate.is_perfect_square():
+        return COMPOSITE
+
+    # Step 2
+    def alternate(modulus):
+        sgn = 1
+        value = 5
+        for x in xrange(10):
+            yield sgn * value
+            sgn, value = -sgn, value + 2
+
+    for D in alternate(int(candidate)):
+        js = Integer.jacobi_symbol(D, candidate)
+        if js == 0:
+            return COMPOSITE
+        if js == -1:
+            break
+    else:
+        return COMPOSITE
+    # Found D. P=1 and Q=(1-D)/4 (note that Q is guaranteed to be an integer)
+
+    # Step 3
+    # This is \delta(n) = n - jacobi(D/n)
+    K = candidate + 1
+    # Step 4
+    r = K.size_in_bits() - 1
+    # Step 5
+    # U_1=1 and V_1=P
+    U_i = V_i = Integer(1)
+    # Step 6
+    for i in xrange(r - 1, -1, -1):
+        # Square
+        U_temp = (U_i * V_i) % candidate
+        V_temp = (((V_i ** 2 + (U_i ** 2 * D)) * K) >> 1) % candidate
+        # Multiply
+        if (K >> i).is_odd():
+            U_i = (((U_temp + V_temp) * K) >> 1) % candidate
+            V_i = (((V_temp + U_temp * D) * K) >> 1) % candidate
+        else:
+            U_i = U_temp
+            V_i = V_temp
+    # Step 7
+    if U_i == 0:
+        return PROBABLY_PRIME
+    return COMPOSITE
