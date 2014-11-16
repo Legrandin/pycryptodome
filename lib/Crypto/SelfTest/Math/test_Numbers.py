@@ -224,6 +224,12 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1 & -0xF, 0xF0)
         self.assertEqual(v3 & -0xF, -0xF)
 
+    def test_or(self):
+        v1, v2, v3 = self.Integers(0x40, 0x82, -0xF)
+        self.assertEqual(v1 | v2, 0xC2)
+        self.assertEqual(v1 | 0x82, 0xC2)
+        self.assertEqual(v2 | v3, -0xD)
+
     def test_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         self.assertEqual(v1 >> 0, v1)

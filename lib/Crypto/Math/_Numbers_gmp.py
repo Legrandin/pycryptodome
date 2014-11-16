@@ -68,6 +68,7 @@ _gmp.mpz_pow_ui = _gmp.lib.__gmpz_pow_ui
 _gmp.mpz_mod = _gmp.lib.__gmpz_mod
 _gmp.mpz_neg = _gmp.lib.__gmpz_neg
 _gmp.mpz_and = _gmp.lib.__gmpz_and
+_gmp.mpz_ior = _gmp.lib.__gmpz_ior
 _gmp.mpz_clear = _gmp.lib.__gmpz_clear
 _gmp.mpz_tdiv_q_2exp = _gmp.lib.__gmpz_tdiv_q_2exp
 _gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
@@ -251,6 +252,9 @@ class Integer(object):
     # Boolean/bit operations
     def __and__(self, term):
         return self._apply_in_new_int(_gmp.mpz_and, term)
+
+    def __or__(self, term):
+        return self._apply_in_new_int(_gmp.mpz_ior, term)
 
     def __rshift__(self, pos):
         result = self.__class__(0)

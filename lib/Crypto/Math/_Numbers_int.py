@@ -143,6 +143,12 @@ class Integer(object):
         except AttributeError:
             return Integer(self._value & term)
 
+    def __or__(self, term):
+        try:
+            return Integer(self._value | term._value)
+        except AttributeError:
+            return Integer(self._value | term)
+
     def __rshift__(self, pos):
         try:
             return Integer(self._value >> pos._value)
