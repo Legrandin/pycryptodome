@@ -43,6 +43,7 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (
         PROBABLY_PRIME, COMPOSITE,
         miller_rabin_test, lucas_test,
+        generate_probable_prime
         )
 
 
@@ -62,6 +63,10 @@ class TestPrimality(unittest.TestCase):
             self.assertEqual(lucas_test(prime), PROBABLY_PRIME)
         for composite in self.composites:
             self.assertEqual(lucas_test(composite), COMPOSITE)
+
+    def test_generate_prime(self):
+        generate_probable_prime(512)
+
 
 def get_tests(config={}):
     tests = []

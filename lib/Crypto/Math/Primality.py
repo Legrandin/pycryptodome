@@ -31,8 +31,8 @@
 from Crypto.Math.Numbers import Integer
 from Crypto import Random
 
-COMPOSITE = 1
-PROBABLY_PRIME = 2
+COMPOSITE = 0
+PROBABLY_PRIME = 1
 
 
 def miller_rabin_test(candidate, iterations, randfunc=None):
@@ -167,3 +167,58 @@ def lucas_test(candidate):
     if U_i == 0:
         return PROBABLY_PRIME
     return COMPOSITE
+
+
+def generate_probable_prime(bit_size, randfunc=None):
+    """Generate a random probable prime.
+    
+    The prime will not have any specific properties
+    (E.g. it will not be a _strong prime_).
+
+    Random numbers are evaluated for primality until one
+    passes all tests, consisting of a certain number of
+    Miller-Rabin tests with random bases followed by
+    a single Lucas test.
+
+    The number of Miller-Rabin iterations is chosen such that
+    the probability that the output number is a non-prime is
+    less than 1E-30 (roughly 2**{-100}).
+
+    This approach is compliant to `FIPS PUB 186-4`__.
+
+    :Parameters:
+      :bit_size:
+        The desired size in bits of the probable prime.
+        It must be at least 512.
+      :randfunc: callable
+        An RNG function where candidate primes are taken from.
+    
+    :Return:
+        A probable prime in the range 2**bit_size > p > 2**(bit_size-1).
+    
+    .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+    """
+
+    if bit_size < 512:
+        raise ValueError("Prime number is not big enough.")
+
+    if randfunc is None:
+        randfunc = Random.new().read
+
+    # These are the number of Miller-Rabin iterations s.t. p(k, t) < 1E-30,
+    # with p(k, t) being the probability that a randomly chosen k-bit number
+    # is composite but still survives t MR iterations.
+    mr_ranges = ( (620,7), (740,6), (890,5), (1200,4), (1700,3), (3700,2) )
+    try:
+        mr_iterations = list(filter(lambda x: bit_size < x[0], mr_ranges))[0][1]
+    except IndexError:
+        mr_iterations = 1
+
+    while True:
+        candidate = Integer.random(exact_bits = bit_size) | 1
+        if miller_rabin_test(candidate, mr_iterations) == COMPOSITE:
+            continue
+        if lucas_test(candidate) == PROBABLY_PRIME:
+            break
+
+    return candidate
