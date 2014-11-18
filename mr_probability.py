@@ -20,17 +20,36 @@ def p(k, t):
         p_M.append(d * (math.pow(2, -M * t) + c * sums * math.pow(2, t)))
     return min(p_M)
 
+
+## Bit size 160..512
+plt.subplot(1, 2, 1)
+x = np.arange(160, 512+1, )
+for t in xrange(10, 40+1, 5):
+    y = np.vectorize(lambda param: p(param, t))(x)
+    plt.plot(x, np.log2(y), label="t=%d"%t)
+plt.ylabel(r"$log_{10} \/ p{k,t}$", fontsize=20)
+plt.xlabel(r"$size (bits)$", fontsize=20)
+plt.ylim([-256, 0])
+plt.xlim([160, 512])
+plt.axhline(y=-100, color="gray", linestyle="--")
+plt.yticks(size=10)
+plt.xticks([160, 224, 256, 384, 512], size=10)
+plt.legend(ncol=2, prop={'size':10})
+plt.grid(True)
+
+## Bit size 512..4096
+plt.subplot(1, 2, 2)
 x = np.arange(512, 4096+1, 512)
 for t in xrange(1, 8):
     y = np.vectorize(lambda param: p(param, t))(x)
     plt.plot(x, np.log2(y), label="t=%d"%t)
-
-plt.ylabel(r"$log_{10} \/ p{k,t}$", fontsize=20)
 plt.xlabel(r"$size (bits)$", fontsize=20)
 plt.ylim([-256, 0])
-plt.xlim([512,4096])
+plt.xlim([512, 4096])
 plt.axhline(y=-100, color="gray", linestyle="--")
-plt.xticks([512, 1024, 1536, 2048, 3072, 4096])
-plt.legend(ncol=2)
+plt.yticks(size=10)
+plt.xticks([512, 1024, 1536, 2048, 3072, 4096], size=10)
+plt.legend(ncol=2, prop={'size':10})
 plt.grid(True)
+
 plt.show()
