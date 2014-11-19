@@ -29,7 +29,7 @@
 # ===================================================================
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
-
+from Crypto.Util.py3compat import maxint
 
 class Integer(object):
     """A class to model a natural integer (including zero)"""
@@ -200,6 +200,10 @@ class Integer(object):
 
         return self._value == x ** 2
 
+    def is_divisible_by_ulong(self, divisor):
+        if not (0 < divisor < maxint):
+            raise ValueError("Divisor is not a C unsigned long")
+        return (self._value % divisor) == 0
 
     @staticmethod
     def jacobi_symbol(a, n):

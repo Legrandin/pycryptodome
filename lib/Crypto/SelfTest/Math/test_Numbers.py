@@ -290,6 +290,16 @@ class TestIntegerBase(unittest.TestCase):
             self.failIf(self.Integer(x**2+1).is_perfect_square())
             self.failUnless(self.Integer(x**2).is_perfect_square())
 
+    def test_is_divisible_by_ulong(self):
+        v1, v2 = self.Integers(12, -12)
+        self.failUnless(v1.is_divisible_by_ulong(3))
+        self.failIf(v1.is_divisible_by_ulong(5))
+        self.failUnless(v2.is_divisible_by_ulong(3))
+        self.failIf(v2.is_divisible_by_ulong(5))
+
+        self.assertRaises(ValueError, v1.is_divisible_by_ulong, 2**80)
+        self.assertRaises(ValueError, v1.is_divisible_by_ulong, -4)
+
     def test_jacobi_symbol(self):
 
         data = (

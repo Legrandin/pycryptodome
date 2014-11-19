@@ -28,8 +28,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from ctypes import (CDLL, Structure, c_int, c_void_p, c_long, byref,
-                    c_size_t, create_string_buffer)
+from ctypes import (CDLL, Structure, c_int, c_void_p, c_long, c_ulong,
+                    byref, c_size_t, create_string_buffer)
 from ctypes.util import find_library
 
 from Crypto.Util.py3compat import *
@@ -74,6 +74,7 @@ _gmp.mpz_tdiv_q_2exp = _gmp.lib.__gmpz_tdiv_q_2exp
 _gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
 _gmp.mpz_perfect_square_p = _gmp.lib.__gmpz_perfect_square_p
 _gmp.mpz_jacobi = _gmp.lib.__gmpz_jacobi
+_gmp.mpz_divisible_ui_p = _gmp.lib.__gmpz_divisible_ui_p
 
 
 class _MPZ(Structure):
@@ -285,6 +286,12 @@ class Integer(object):
 
     def is_perfect_square(self):
         return _gmp.mpz_perfect_square_p(self) != 0
+
+    def is_divisible_by_ulong(self, divisor):
+        d = c_ulong(divisor)
+        if d.value != divisor:
+            raise ValueError("Divisor is not a C unsigned long")
+        return _gmp.mpz_divisible_ui_p(self, d)
 
     @staticmethod
     def jacobi_symbol(a, n):
