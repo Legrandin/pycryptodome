@@ -171,7 +171,7 @@ def lucas_test(candidate):
 
 def generate_probable_prime(bit_size, randfunc=None):
     """Generate a random probable prime.
-    
+
     The prime will not have any specific properties
     (E.g. it will not be a _strong prime_).
 
@@ -189,17 +189,17 @@ def generate_probable_prime(bit_size, randfunc=None):
     :Parameters:
       :bit_size:
         The desired size in bits of the probable prime.
-        It must be at least 512.
+        It must be at least 160.
       :randfunc: callable
         An RNG function where candidate primes are taken from.
-    
+
     :Return:
         A probable prime in the range 2**bit_size > p > 2**(bit_size-1).
-    
+
     .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
 
-    if bit_size < 512:
+    if bit_size < 160:
         raise ValueError("Prime number is not big enough.")
 
     if randfunc is None:
@@ -208,15 +208,20 @@ def generate_probable_prime(bit_size, randfunc=None):
     # These are the number of Miller-Rabin iterations s.t. p(k, t) < 1E-30,
     # with p(k, t) being the probability that a randomly chosen k-bit number
     # is composite but still survives t MR iterations.
-    mr_ranges = ( (620,7), (740,6), (890,5), (1200,4), (1700,3), (3700,2) )
+    mr_ranges = ((220, 30), (280, 20), (390, 15), (512, 10),
+                 (620, 7), (740, 6), (890, 5), (1200, 4),
+                 (1700, 3), (3700, 2))
     try:
-        mr_iterations = list(filter(lambda x: bit_size < x[0], mr_ranges))[0][1]
+        mr_iterations = list(filter(lambda x: bit_size < x[0],
+                                    mr_ranges))[0][1]
     except IndexError:
         mr_iterations = 1
 
     while True:
-        candidate = Integer.random(exact_bits = bit_size) | 1
-        if miller_rabin_test(candidate, mr_iterations) == COMPOSITE:
+
+        candidate = Integer.random(exact_bits=bit_size, randfunc=randfunc) | 1
+
+        if miller_rabin_test(candidate, mr_iterations, randfunc=randfunc) == COMPOSITE:
             continue
         if lucas_test(candidate) == PROBABLY_PRIME:
             break
