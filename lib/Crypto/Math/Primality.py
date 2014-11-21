@@ -217,9 +217,18 @@ def generate_probable_prime(bit_size, randfunc=None):
     except IndexError:
         mr_iterations = 1
 
+    from Crypto.Util.number import sieve_base
+
     while True:
 
-        candidate = Integer.random(exact_bits=bit_size, randfunc=randfunc) | 1
+        small_divisor_found = True
+        while small_divisor_found:
+            candidate = Integer.random(exact_bits=bit_size, randfunc=randfunc) | 1
+            for p in sieve_base:
+                if candidate.is_divisible_by_ulong(p):
+                    break
+            else:
+                small_divisor_found = False
 
         if miller_rabin_test(candidate, mr_iterations, randfunc=randfunc) == COMPOSITE:
             continue
