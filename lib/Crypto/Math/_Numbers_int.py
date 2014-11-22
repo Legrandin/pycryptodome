@@ -162,6 +162,12 @@ class Integer(object):
             self._value >>= pos
         return self
 
+    def get_bit(self, n):
+        if type(n) == Integer:
+            return (self._value >> n._value) & 1
+        else:
+            return (self._value >> n) & 1
+
     # Extra
     def is_odd(self):
         return (self._value & 1) == 1
@@ -204,6 +210,20 @@ class Integer(object):
         if not (0 < divisor < maxint):
             raise ValueError("Divisor is not a C unsigned long")
         return (self._value % divisor) == 0
+
+    def multiply_accumulate(self, a, b):
+        if type(a) == Integer:
+            a = a._value
+        if type(b) == Integer:
+            b = b._value
+        self._value += a * b
+        return self
+
+    def set(self, source):
+        if type(source) == Integer:
+            self._value = source._value
+        else:
+            self._value = source
 
     @staticmethod
     def jacobi_symbol(a, n):

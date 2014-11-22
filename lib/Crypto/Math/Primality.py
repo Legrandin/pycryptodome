@@ -150,19 +150,45 @@ def lucas_test(candidate):
     r = K.size_in_bits() - 1
     # Step 5
     # U_1=1 and V_1=P
-    U_i = V_i = Integer(1)
+    U_i = Integer(1)
+    V_i = Integer(1)
+    U_temp = Integer(0)
+    V_temp = Integer(0)
     # Step 6
     for i in xrange(r - 1, -1, -1):
         # Square
-        U_temp = (U_i * V_i) % candidate
-        V_temp = (((V_i ** 2 + (U_i ** 2 * D)) * K) >> 1) % candidate
+        # U_temp = U_i * V_i % candidate
+        U_temp.set(U_i)
+        U_temp *= V_i
+        U_temp %= candidate
+        # V_temp = (((V_i ** 2 + (U_i ** 2 * D)) * K) >> 1) % candidate
+        V_temp.set(U_i)
+        V_temp *= U_i
+        V_temp *= D
+        V_temp.multiply_accumulate(V_i, V_i)
+        if V_temp.is_odd():
+            V_temp += candidate
+        V_temp >>= 1
+        V_temp %= candidate
         # Multiply
-        if (K >> i).is_odd():
-            U_i = (((U_temp + V_temp) * K) >> 1) % candidate
-            V_i = (((V_temp + U_temp * D) * K) >> 1) % candidate
+        if K.get_bit(i):
+            # U_i = (((U_temp + V_temp) * K) >> 1) % candidate
+            U_i.set(U_temp)
+            U_i += V_temp
+            if U_i.is_odd():
+                U_i += candidate
+            U_i >>= 1
+            U_i %= candidate
+            # V_i = (((V_temp + U_temp * D) * K) >> 1) % candidate
+            V_i.set(V_temp)
+            V_i.multiply_accumulate(U_temp, D)
+            if V_i.is_odd():
+                V_i += candidate
+            V_i >>= 1
+            V_i %= candidate
         else:
-            U_i = U_temp
-            V_i = V_temp
+            U_i.set(U_temp)
+            V_i.set(V_temp)
     # Step 7
     if U_i == 0:
         return PROBABLY_PRIME
@@ -218,6 +244,7 @@ def generate_probable_prime(bit_size, randfunc=None):
         mr_iterations = 1
 
     from Crypto.Util.number import sieve_base
+    sieve_base = sieve_base[:100]
 
     while True:
 

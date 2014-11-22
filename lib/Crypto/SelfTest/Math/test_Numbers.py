@@ -216,6 +216,34 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, pow, v1, 5, -4)
         self.assertRaises(ValueError, pow, v1, -3, 8)
 
+    def test_in_place_add(self):
+        v1, v2 = self.Integers(10, 20)
+
+        v1 += v2
+        self.assertEqual(v1, 30)
+        v1 += 10
+        self.assertEqual(v1, 40)
+
+    def test_in_place_mul(self):
+        v1, v2 = self.Integers(3, 5)
+
+        v1 *= v2
+        self.assertEqual(v1, 15)
+        v1 *= 2
+        self.assertEqual(v1, 30)
+
+    def test_in_place_modulus(self):
+        v1, v2 = self.Integers(20, 7)
+
+        v1 %= v2
+        self.assertEqual(v1, 6)
+        v1 %= 2
+        self.assertEqual(v1, 0)
+        def t():
+            v3 = self.Integer(9)
+            v3 %= 0
+        self.assertRaises(ZeroDivisionError, t)
+
     def test_and(self):
         v1, v2, v3 = self.Integers(0xF4, 0x31, -0xF)
         self.assertEqual(v1 & v2, 0x30)
@@ -252,6 +280,15 @@ class TestIntegerBase(unittest.TestCase):
             v4 = self.Integer(0x90)
             v4 >>= -1
         self.assertRaises(ValueError, l)
+
+    def test_get_bit(self):
+        v1, v2, v3 = self.Integers(0x102, -3, 1)
+        self.assertEqual(v1.get_bit(0), 0)
+        self.assertEqual(v1.get_bit(1), 1)
+        self.assertEqual(v1.get_bit(v3), 1)
+        self.assertEqual(v1.get_bit(8), 1)
+        self.assertEqual(v2.get_bit(0), 1)
+        self.assertEqual(v2.get_bit(8), 1)
 
     def test_odd_even(self):
         v1, v2, v3, v4, v5 = self.Integers(0, 4, 17, -4, -17)
@@ -299,6 +336,22 @@ class TestIntegerBase(unittest.TestCase):
 
         self.assertRaises(ValueError, v1.is_divisible_by_ulong, 2**80)
         self.assertRaises(ValueError, v1.is_divisible_by_ulong, -4)
+
+    def test_multiply_accumulate(self):
+        v1, v2, v3 = self.Integers(4, 3, 2)
+        v1.multiply_accumulate(v2, v3)
+        self.assertEqual(v1, 10)
+        v1.multiply_accumulate(v2, 2)
+        self.assertEqual(v1, 16)
+        v1.multiply_accumulate(3, v3)
+        self.assertEqual(v1, 22)
+
+    def test_set(self):
+        v1, v2 = self.Integers(3, 6)
+        v1.set(v2)
+        self.assertEqual(v1, 6)
+        v1.set(9)
+        self.assertEqual(v1, 9)
 
     def test_jacobi_symbol(self):
 

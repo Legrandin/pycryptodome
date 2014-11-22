@@ -57,11 +57,17 @@ _gmp.mpz_set = _gmp.lib.__gmpz_set
 _gmp.mpz_set_str = _gmp.lib.__gmpz_set_str
 _gmp.gmp_snprintf = _gmp.lib.__gmp_snprintf
 _gmp.mpz_add = _gmp.lib.__gmpz_add
+_gmp.mpz_add_ui = _gmp.lib.__gmpz_add_ui
+_gmp.mpz_sub_ui = _gmp.lib.__gmpz_sub_ui
+_gmp.mpz_addmul = _gmp.lib.__gmpz_addmul
+_gmp.mpz_addmul_ui = _gmp.lib.__gmpz_addmul_ui
+_gmp.mpz_submul_ui = _gmp.lib.__gmpz_submul_ui
 _gmp.mpz_import = _gmp.lib.__gmpz_import
 _gmp.mpz_export = _gmp.lib.__gmpz_export
 _gmp.mpz_sizeinbase = _gmp.lib.__gmpz_sizeinbase
 _gmp.mpz_sub = _gmp.lib.__gmpz_sub
 _gmp.mpz_mul = _gmp.lib.__gmpz_mul
+_gmp.mpz_mul_si = _gmp.lib.__gmpz_mul_si
 _gmp.mpz_cmp = _gmp.lib.__gmpz_cmp
 _gmp.mpz_powm = _gmp.lib.__gmpz_powm
 _gmp.mpz_pow_ui = _gmp.lib.__gmpz_pow_ui
@@ -250,6 +256,43 @@ class Integer(object):
                 raise ValueError("Modulus must be positive")
             return self._apply_in_new_int(_gmp.mpz_powm, exponent, modulus)
 
+    def __iadd__(self, term):
+        if isinstance(term, (int, long)):
+            op2_p = c_long(term)
+            op2_m = c_long(-term)
+            if op2_p.value == term:
+                _gmp.mpz_add_ui(self, self, op2_p)
+                return self
+            elif op2_m.value == -term:
+                _gmp.mpz_sub_ui(self, self, op2_m)
+                return self
+            else:
+                term = Integer(term)
+        _gmp.mpz_add(self, self, term)
+        return self
+
+    def __imul__(self, term):
+        if isinstance(term, (int, long)):
+            op2 = c_long(term)
+            if op2.value == term:
+                _gmp.mpz_mul_si(self, self, op2)
+                return self
+            else:
+                term = Integer(term)
+        _gmp.mpz_mul(self, self, term)
+        return self
+
+    def __imod__(self, divisor):
+        if type(divisor) != Integer:
+            divisor = Integer(divisor)
+        comp = _gmp.mpz_cmp(divisor, divisor._zero_mpz_p)
+        if comp == 0:
+            raise ZeroDivisionError("Division by zero")
+        if comp < 0:
+            raise ValueError("Modulus must be positive")
+        _gmp.mpz_mod(self, self, divisor)
+        return self
+
     # Boolean/bit operations
     def __and__(self, term):
         return self._apply_in_new_int(_gmp.mpz_and, term)
@@ -272,6 +315,10 @@ class Integer(object):
         _gmp.mpz_tdiv_q_2exp(self, self, c_int(shift_amount))
         return self
 
+    def get_bit(self, n):
+        n = int(n)
+        return _gmp.mpz_tstbit(self, c_int(n))
+
     # Extra
     def is_odd(self):
         return _gmp.mpz_tstbit(self, c_int(0)) == 1
@@ -292,6 +339,30 @@ class Integer(object):
         if d.value != divisor:
             raise ValueError("Divisor is not a C unsigned long")
         return _gmp.mpz_divisible_ui_p(self, d)
+
+    def multiply_accumulate(self, a, b):
+        # self = self + a * b
+        if type(a) != Integer:
+            a = Integer(a)
+        if isinstance(b, (int, long)):
+            op2 = c_ulong(b)
+            if op2.value == b:
+                _gmp.mpz_addmul_ui(self, a, op2)
+                return self
+            else:
+                op2 = c_ulong(-b)
+                if op2.value == -b:
+                    _gmp.mpz_submul_ui(self, a, op2)
+                    return self
+            b = Integer(b)
+        _gmp.mpz_addmul(self, a, b)
+        return self
+
+    def set(self, source):
+        if type(source) != Integer:
+            source = Integer(source)
+        _gmp.mpz_set(self, source)
+        return self
 
     @staticmethod
     def jacobi_symbol(a, n):
