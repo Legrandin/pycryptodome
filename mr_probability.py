@@ -23,17 +23,17 @@ def p(k, t):
 
 ## Bit size 160..512
 plt.subplot(1, 2, 1)
-x = np.arange(160, 512+1, )
+x = np.arange(100, 512+1, )
 for t in xrange(10, 40+1, 5):
     y = np.vectorize(lambda param: p(param, t))(x)
     plt.plot(x, np.log2(y), label="t=%d"%t)
 plt.ylabel(r"$log_{10} \/ p{k,t}$", fontsize=20)
 plt.xlabel(r"$size (bits)$", fontsize=20)
 plt.ylim([-256, 0])
-plt.xlim([160, 512])
+plt.xlim([100, 512])
 plt.axhline(y=-100, color="gray", linestyle="--")
 plt.yticks(size=10)
-plt.xticks([160, 224, 256, 384, 512], size=10)
+plt.xticks([100, 160, 224, 256, 384, 512], size=10)
 plt.legend(ncol=2, prop={'size':10})
 plt.grid(True)
 
