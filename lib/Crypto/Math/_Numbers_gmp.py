@@ -258,8 +258,8 @@ class Integer(object):
 
     def __iadd__(self, term):
         if isinstance(term, (int, long)):
-            op2_p = c_long(term)
-            op2_m = c_long(-term)
+            op2_p = c_ulong(term)
+            op2_m = c_ulong(-term)
             if op2_p.value == term:
                 _gmp.mpz_add_ui(self, self, op2_p)
                 return self
@@ -302,22 +302,24 @@ class Integer(object):
 
     def __rshift__(self, pos):
         result = self.__class__(0)
-        shift_amount = int(pos)
-        if shift_amount < 0:
-            raise ValueError("Negative shift count")
-        _gmp.mpz_tdiv_q_2exp(result, self, c_int(shift_amount))
+        shift_amount = c_ulong(int(pos))
+        if shift_amount.value != pos:
+            raise ValueError("Incorrect shift count")
+        _gmp.mpz_tdiv_q_2exp(result, self, shift_amount)
         return result
 
     def __irshift__(self, pos):
-        shift_amount = int(pos)
-        if shift_amount < 0:
-            raise ValueError("Negative shift count")
-        _gmp.mpz_tdiv_q_2exp(self, self, c_int(shift_amount))
+        shift_amount = c_ulong(int(pos))
+        if shift_amount.value != pos:
+            raise ValueError("Incorrect shift count")
+        _gmp.mpz_tdiv_q_2exp(self, self, shift_amount)
         return self
 
     def get_bit(self, n):
-        n = int(n)
-        return _gmp.mpz_tstbit(self, c_int(n))
+        bit_pos = c_ulong(int(n))
+        if bit_pos.value != n:
+            raise ValueError("Incorrect bit position")
+        return _gmp.mpz_tstbit(self, bit_pos)
 
     # Extra
     def is_odd(self):

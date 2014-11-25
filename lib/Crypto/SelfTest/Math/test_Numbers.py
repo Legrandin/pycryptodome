@@ -73,16 +73,18 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(int(v2), 2 ** 1000)
 
     def test_equality_with_ints(self):
-        v1, v2 = self.Integers(23, -89)
+        v1, v2, v3 = self.Integers(23, -89, 2 ** 1000)
         self.failUnless(v1 == 23)
         self.failUnless(v2 == -89)
         self.failIf(v1 == 24)
+        self.failUnless(v3 == 2 ** 1000)
 
     def test_conversion_to_str(self):
-        v1, v2, v3 = self.Integers(20, 0, -20)
+        v1, v2, v3, v4 = self.Integers(20, 0, -20, 2 ** 1000)
         self.failUnless(str(v1) == "20")
         self.failUnless(str(v2) == "0")
         self.failUnless(str(v3) == "-20")
+        self.failUnless(str(v4) == "10715086071862673209484250490600018105614048117055336074437503883703510511249361224931983788156958581275946729175531468251871452856923140435984577574698574803934567774824230985421074605062371141877954182153046474983581941267398767559165543946077062914571196477686542167660429831652624386837205668069376")
 
     def test_conversion_to_bytes(self):
         Integer = self.Integer
@@ -112,38 +114,50 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_inequality(self):
         # Test Integer!=Integer and Integer!=int
-        v1, v2, v3 = self.Integers(89, 89, 90)
+        v1, v2, v3, v4 = self.Integers(89, 89, 90, -8)
         self.failUnless(v1 != v3)
         self.failUnless(v1 != 90)
         self.failIf(v1 != v2)
         self.failIf(v1 != 89)
+        self.failUnless(v1 != v4)
+        self.failUnless(v4 != v1)
 
     def test_less_than(self):
         # Test Integer<Integer and Integer<int
-        v1, v2, v3 = self.Integers(13, 13, 14)
+        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2 ** 10)
         self.failUnless(v1 < v3)
         self.failUnless(v1 < 14)
         self.failIf(v1 < v2)
         self.failIf(v1 < 13)
+        self.failUnless(v4 < v1)
+        self.failIf(v1 < v4)
+        self.failUnless(v1 < v5)
+        self.failIf(v5 < v1)
 
     def test_less_than_or_equal(self):
         # Test Integer<=Integer and Integer<=int
-        v1, v2, v3, v4 = self.Integers(13, 13, 14, -4)
+        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -4, 2 ** 10)
         self.failUnless(v1 <= v1)
         self.failUnless(v1 <= 13)
         self.failUnless(v1 <= v2)
         self.failUnless(v1 <= 14)
         self.failUnless(v1 <= v3)
         self.failIf(v1 <= v4)
+        self.failUnless(v1 <= v5)
+        self.failIf(v5 <= v1)
 
     def test_more_than(self):
         # Test Integer>Integer and Integer>int
-        v1, v2, v3 = self.Integers(13, 13, 14)
+        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2 ** 10)
         self.failUnless(v3 > v1)
         self.failUnless(v3 > 13)
         self.failIf(v1 > v1)
         self.failIf(v1 > v2)
         self.failIf(v1 > 13)
+        self.failUnless(v1 > v4)
+        self.failIf(v4 > v1)
+        self.failUnless(v5 > v1)
+        self.failIf(v1 > v5)
 
     def test_more_than_or_equal(self):
         # Test Integer>=Integer and Integer>=int
@@ -156,11 +170,13 @@ class TestIntegerBase(unittest.TestCase):
         self.failIf(v4 >= v1)
 
     def test_bool(self):
-        v1, v2 = self.Integers(0, 10)
+        v1, v2, v3, v4 = self.Integers(0, 10, -9, 2 ** 10)
         self.failIf(v1)
         self.failIf(bool(v1))
         self.failUnless(v2)
         self.failUnless(bool(v2))
+        self.failUnless(v3)
+        self.failUnless(v4)
 
     def test_addition(self):
         # Test Integer+Integer and Integer+int
@@ -168,6 +184,8 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1 + v2, 97)
         self.assertEqual(v1 + 90, 97)
         self.assertEqual(v1 + v3, 0)
+        self.assertEqual(v1 + (-7), 0)
+        self.assertEqual(v1 + 2 ** 10, 2 ** 10 + 7)
 
     def test_subtraction(self):
         # Test Integer-Integer and Integer-int
@@ -175,12 +193,16 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v2 - v1, 83)
         self.assertEqual(v2 - 7, 83)
         self.assertEqual(v2 - v3, 97)
+        self.assertEqual(v1 - (-7), 14)
+        self.assertEqual(v1 - 2 ** 10, 7 - 2 ** 10)
 
     def test_multiplication(self):
         # Test Integer-Integer and Integer-int
-        v1, v2 = self.Integers(4, 5)
+        v1, v2, v3, v4 = self.Integers(4, 5, -2, 2 ** 10)
         self.assertEqual(v1 * v2, 20)
         self.assertEqual(v1 * 5, 20)
+        self.assertEqual(v1 * -2, -8)
+        self.assertEqual(v1 * 2 ** 10, 4 * (2 ** 10))
 
     def test_remainder(self):
         # Test Integer%Integer and Integer%int
@@ -188,6 +210,7 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1 % v2, 3)
         self.assertEqual(v1 % 5, 3)
         self.assertEqual(v3 % 5, 1)
+        self.assertEqual(v1 % 2 ** 10, 23)
         self.assertRaises(ZeroDivisionError, lambda: v1 % 0)
         self.assertRaises(ValueError, lambda: v1 % -6)
 
@@ -211,6 +234,7 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(pow(v1, v2, 17), 7)
         self.assertEqual(pow(v1, 5,  17), 7)
         self.assertEqual(pow(v1, 0,  17), 1)
+        self.assertEqual(pow(v1, 1,  2 ** 10), 23)
 
         self.assertRaises(ZeroDivisionError, pow, v1, 5, 0)
         self.assertRaises(ValueError, pow, v1, 5, -4)
@@ -223,6 +247,10 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1, 30)
         v1 += 10
         self.assertEqual(v1, 40)
+        v1 += -1
+        self.assertEqual(v1, 39)
+        v1 += 2 ** 1000
+        self.assertEqual(v1, 39 + 2 ** 1000)
 
     def test_in_place_mul(self):
         v1, v2 = self.Integers(3, 5)
@@ -231,11 +259,17 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1, 15)
         v1 *= 2
         self.assertEqual(v1, 30)
+        v1 *= -2
+        self.assertEqual(v1, -60)
+        v1 *= 2 ** 1000
+        self.assertEqual(v1, -60 * (2 ** 1000))
 
     def test_in_place_modulus(self):
         v1, v2 = self.Integers(20, 7)
 
         v1 %= v2
+        self.assertEqual(v1, 6)
+        v1 %= 2 ** 1000
         self.assertEqual(v1, 6)
         v1 %= 2
         self.assertEqual(v1, 0)
@@ -251,12 +285,14 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1 & v3, 0xF0)
         self.assertEqual(v1 & -0xF, 0xF0)
         self.assertEqual(v3 & -0xF, -0xF)
+        self.assertEqual(v2 & (2 ** 1000 + 0x31), 0x31)
 
     def test_or(self):
         v1, v2, v3 = self.Integers(0x40, 0x82, -0xF)
         self.assertEqual(v1 | v2, 0xC2)
         self.assertEqual(v1 | 0x82, 0xC2)
         self.assertEqual(v2 | v3, -0xD)
+        self.assertEqual(v2 | 2 ** 1000, 2 ** 1000 + 0x82)
 
     def test_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
@@ -265,6 +301,7 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1 >> 1, 0x08)
         self.assertEqual(v3 >> 1, -0x08)
         self.assertRaises(ValueError, lambda: v1 >> -1)
+        self.assertRaises(ValueError, lambda: v1 >> (2 ** 1000))
 
     def test_in_place_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
@@ -280,6 +317,10 @@ class TestIntegerBase(unittest.TestCase):
             v4 = self.Integer(0x90)
             v4 >>= -1
         self.assertRaises(ValueError, l)
+        def m():
+            v4 = self.Integer(0x90)
+            v4 >>= 2 ** 1000
+        self.assertRaises(ValueError, m)
 
     def test_get_bit(self):
         v1, v2, v3 = self.Integers(0x102, -3, 1)
@@ -289,6 +330,8 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1.get_bit(8), 1)
         self.assertEqual(v2.get_bit(0), 1)
         self.assertEqual(v2.get_bit(8), 1)
+        self.assertRaises(ValueError, v2.get_bit, -1)
+        self.assertRaises(ValueError, v2.get_bit, 2 ** 1000)
 
     def test_odd_even(self):
         v1, v2, v3, v4, v5 = self.Integers(0, 4, 17, -4, -17)
@@ -345,6 +388,14 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1, 16)
         v1.multiply_accumulate(3, v3)
         self.assertEqual(v1, 22)
+        v1.multiply_accumulate(1, -2)
+        self.assertEqual(v1, 20)
+        v1.multiply_accumulate(-2, 1)
+        self.assertEqual(v1, 18)
+        v1.multiply_accumulate(1, 2 ** 1000)
+        self.assertEqual(v1, 18 + 2 ** 1000)
+        v1.multiply_accumulate(2 ** 1000, 1)
+        self.assertEqual(v1, 18 + 2 ** 1001)
 
     def test_set(self):
         v1, v2 = self.Integers(3, 6)
@@ -352,6 +403,10 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1, 6)
         v1.set(9)
         self.assertEqual(v1, 9)
+        v1.set(-2)
+        self.assertEqual(v1, -2)
+        v1.set(2 ** 1000)
+        self.assertEqual(v1, 2 ** 1000)
 
     def test_jacobi_symbol(self):
 

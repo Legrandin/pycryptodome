@@ -151,22 +151,31 @@ class Integer(object):
 
     def __rshift__(self, pos):
         try:
-            return Integer(self._value >> pos._value)
-        except AttributeError:
-            return Integer(self._value >> pos)
+            try:
+                return Integer(self._value >> pos._value)
+            except AttributeError:
+                return Integer(self._value >> pos)
+        except OverflowError:
+            raise ValueError("Incorrect shift count")
 
     def __irshift__(self, pos):
         try:
-            self._value >>= pos._value
-        except AttributeError:
-            self._value >>= pos
+            try:
+                self._value >>= pos._value
+            except AttributeError:
+                self._value >>= pos
+        except OverflowError:
+            raise ValueError("Incorrect shift count")
         return self
 
     def get_bit(self, n):
-        if type(n) == Integer:
-            return (self._value >> n._value) & 1
-        else:
-            return (self._value >> n) & 1
+        try:
+            try:
+                return (self._value >> n._value) & 1
+            except AttributeError:
+                return (self._value >> n) & 1
+        except OverflowError:
+            raise ValueError("Incorrect bit position")
 
     # Extra
     def is_odd(self):
