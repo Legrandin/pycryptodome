@@ -80,6 +80,7 @@ _gmp.mpz_tdiv_q_2exp = _gmp.lib.__gmpz_tdiv_q_2exp
 _gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
 _gmp.mpz_perfect_square_p = _gmp.lib.__gmpz_perfect_square_p
 _gmp.mpz_jacobi = _gmp.lib.__gmpz_jacobi
+_gmp.mpz_divisible_p = _gmp.lib.__gmpz_divisible_p
 _gmp.mpz_divisible_ui_p = _gmp.lib.__gmpz_divisible_ui_p
 
 
@@ -196,6 +197,9 @@ class Integer(object):
     def __nonzero__(self):
         return _gmp.mpz_cmp(self, self._zero_mpz_p) != 0
 
+    def is_negative(self):
+        return _gmp.mpz_cmp(self, self._zero_mpz_p) < 0
+
     # Arithmetic operations
     def _apply_in_new_int(self, func, *terms):
         int_type = self.__class__
@@ -234,10 +238,12 @@ class Integer(object):
 
     def __pow__(self, exponent, modulus=None):
 
-        if exponent < 0:
-            raise ValueError("Exponent must not be negative")
+        result = Integer(0)
 
         if modulus is None:
+            if exponent < 0:
+                raise ValueError("Exponent must not be negative")
+
             # Normal exponentiation
             int_type = self.__class__
             result = int_type(0)
@@ -250,11 +256,25 @@ class Integer(object):
             return result
         else:
             # Modular exponentiation
-            if modulus == 0:
+            if type(modulus) != Integer:
+                modulus = Integer(modulus)
+            if not modulus:
                 raise ZeroDivisionError("Division by zero")
-            if modulus < 0:
+            if modulus.is_negative():
                 raise ValueError("Modulus must be positive")
-            return self._apply_in_new_int(_gmp.mpz_powm, exponent, modulus)
+            if isinstance(exponent, (int, long)):
+                if exponent < 0:
+                    raise ValueError("Exponent must not be negative")
+                exponent = c_ulong(exponent)
+                if exponent.value == exponent:
+                    _gmp.mpz_powm_ui(result, self, exponent, modulus)
+                    return result
+                else:
+                    exponent = Integer(exponent.value)
+            elif exponent.is_negative():
+                raise ValueError("Exponent must not be negative")
+            _gmp.mpz_powm(result, self, exponent, modulus)
+            return result
 
     def __iadd__(self, term):
         if isinstance(term, (int, long)):
@@ -336,11 +356,17 @@ class Integer(object):
     def is_perfect_square(self):
         return _gmp.mpz_perfect_square_p(self) != 0
 
-    def is_divisible_by_ulong(self, divisor):
-        d = c_ulong(divisor)
-        if d.value != divisor:
-            raise ValueError("Divisor is not a C unsigned long")
-        return _gmp.mpz_divisible_ui_p(self, d)
+    def fail_if_divisible_by(self, small_prime):
+        if type(small_prime) == Integer:
+            if _gmp.mpz_divisible_p(self, small_prime):
+                raise ValueError("The value is composite")
+        else:
+            d = c_ulong(small_prime)
+            if d.value != small_prime:
+                self.fail_if_divisible_by(Integer(small_prime))
+                return
+            if _gmp.mpz_divisible_ui_p(self, d):
+                raise ValueError("The value is composite")
 
     def multiply_accumulate(self, a, b):
         # self = self + a * b

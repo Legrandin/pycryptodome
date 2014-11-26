@@ -178,6 +178,12 @@ class TestIntegerBase(unittest.TestCase):
         self.failUnless(v3)
         self.failUnless(v4)
 
+    def test_is_negative(self):
+        v1, v2, v3 = self.Integers(-3, 0, 3)
+        self.failUnless(v1.is_negative())
+        self.failIf(v2.is_negative())
+        self.failIf(v3.is_negative())
+
     def test_addition(self):
         # Test Integer+Integer and Integer+int
         v1, v2, v3 = self.Integers(7, 90, -7)
@@ -370,15 +376,17 @@ class TestIntegerBase(unittest.TestCase):
             self.failIf(self.Integer(x**2+1).is_perfect_square())
             self.failUnless(self.Integer(x**2).is_perfect_square())
 
-    def test_is_divisible_by_ulong(self):
-        v1, v2 = self.Integers(12, -12)
-        self.failUnless(v1.is_divisible_by_ulong(3))
-        self.failIf(v1.is_divisible_by_ulong(5))
-        self.failUnless(v2.is_divisible_by_ulong(3))
-        self.failIf(v2.is_divisible_by_ulong(5))
+    def test_fail_if_divisible_by(self):
+        v1, v2, v3 = self.Integers(12, -12, 4)
 
-        self.assertRaises(ValueError, v1.is_divisible_by_ulong, 2**80)
-        self.assertRaises(ValueError, v1.is_divisible_by_ulong, -4)
+        # No failure expected
+        v1.fail_if_divisible_by(7)
+        v2.fail_if_divisible_by(7)
+        v2.fail_if_divisible_by(2 ** 80)
+
+        # Failure expected
+        self.assertRaises(ValueError, v1.fail_if_divisible_by, 4)
+        self.assertRaises(ValueError, v1.fail_if_divisible_by, v3)
 
     def test_multiply_accumulate(self):
         v1, v2, v3 = self.Integers(4, 3, 2)

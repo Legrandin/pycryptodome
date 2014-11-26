@@ -244,6 +244,8 @@ def generate_probable_prime(bit_size, randfunc=None):
         mr_iterations = 1
 
     from Crypto.Util.number import sieve_base
+    ## The optimal number of small primes to use for the sieve
+    ## is probably dependent on the platform and the candidate size
     sieve_base = sieve_base[:100]
 
     while True:
@@ -251,11 +253,11 @@ def generate_probable_prime(bit_size, randfunc=None):
         small_divisor_found = True
         while small_divisor_found:
             candidate = Integer.random(exact_bits=bit_size, randfunc=randfunc) | 1
-            for p in sieve_base:
-                if candidate.is_divisible_by_ulong(p):
-                    break
-            else:
+            try:
+                map(candidate.fail_if_divisible_by, sieve_base)
                 small_divisor_found = False
+            except ValueError:
+                pass
 
         if miller_rabin_test(candidate, mr_iterations, randfunc=randfunc) == COMPOSITE:
             continue

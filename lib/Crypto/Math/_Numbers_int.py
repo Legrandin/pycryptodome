@@ -88,6 +88,9 @@ class Integer(object):
     def __nonzero__(self):
         return self._value != 0
 
+    def is_negative(self):
+        return self._value < 0
+
     # Arithmetic operations
     def __add__(self, term):
         try:
@@ -215,10 +218,13 @@ class Integer(object):
 
         return self._value == x ** 2
 
-    def is_divisible_by_ulong(self, divisor):
-        if not (0 < divisor < maxint):
-            raise ValueError("Divisor is not a C unsigned long")
-        return (self._value % divisor) == 0
+    def fail_if_divisible_by(self, small_prime):
+        try:
+            if (self._value % small_prime._value) == 0:
+                raise ValueError("Value is composite")
+        except AttributeError:
+            if (self._value % small_prime) == 0:
+                raise ValueError("Value is composite")
 
     def multiply_accumulate(self, a, b):
         if type(a) == Integer:
