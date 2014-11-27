@@ -126,14 +126,14 @@ def lucas_test(candidate):
         return COMPOSITE
 
     # Step 2
-    def alternate(modulus):
+    def alternate():
         sgn = 1
         value = 5
         for x in xrange(10):
             yield sgn * value
             sgn, value = -sgn, value + 2
 
-    for D in alternate(int(candidate)):
+    for D in alternate():
         js = Integer.jacobi_symbol(D, candidate)
         if js == 0:
             return COMPOSITE
@@ -195,7 +195,64 @@ def lucas_test(candidate):
     return COMPOSITE
 
 
-def generate_probable_prime(bit_size, randfunc=None):
+from Crypto.Util.number import sieve_base as _sieve_base
+## The optimal number of small primes to use for the sieve
+## is probably dependent on the platform and the candidate size
+_sieve_base = _sieve_base[:100]
+
+
+def test_probable_prime(candidate, randfunc=None):
+    """Test if a number is prime.
+
+    The probability of a false positive (a composite number that
+    this routine declares as prime) is negligeable, but not zero.
+
+    :Parameters:
+      candidate : integer
+        The number to test for primality.
+      randfunc: callable
+        The routine to draw random bytes from to select Miller-Rabin bases.
+    :Returns:
+      ``PROBABLE_PRIME`` if the number if prime with very high probability.
+      ``COMPOSITE`` if the number is a composite.
+      For efficiency reasons, ``COMPOSITE`` is also returned for small primes.
+    """
+
+    if randfunc is None:
+        randfunc = Random.new().read
+
+    if not isinstance(candidate, Integer):
+        candidate = Integer(candidate)
+
+    # First,  check trial division by the smallest primes
+    try:
+        map(candidate.fail_if_divisible_by, _sieve_base)
+    except ValueError:
+        return False
+
+    # These are the number of Miller-Rabin iterations s.t. p(k, t) < 1E-30,
+    # with p(k, t) being the probability that a randomly chosen k-bit number
+    # is composite but still survives t MR iterations.
+    mr_ranges = ((220, 30), (280, 20), (390, 15), (512, 10),
+                 (620, 7), (740, 6), (890, 5), (1200, 4),
+                 (1700, 3), (3700, 2))
+
+    bit_size = candidate.size_in_bits()
+    try:
+        mr_iterations = list(filter(lambda x: bit_size < x[0],
+                                    mr_ranges))[0][1]
+    except IndexError:
+        mr_iterations = 1
+
+    if miller_rabin_test(candidate, mr_iterations,
+                         randfunc=randfunc) == COMPOSITE:
+        return COMPOSITE
+    if lucas_test(candidate) == COMPOSITE:
+        return COMPOSITE
+    return PROBABLY_PRIME
+
+
+def generate_probable_prime(**kwargs):
     """Generate a random probable prime.
 
     The prime will not have any specific properties
@@ -212,56 +269,69 @@ def generate_probable_prime(bit_size, randfunc=None):
 
     This approach is compliant to `FIPS PUB 186-4`__.
 
-    :Parameters:
-      :bit_size:
+    :Keywords:
+      :exact_bits:
         The desired size in bits of the probable prime.
         It must be at least 160.
       :randfunc: callable
         An RNG function where candidate primes are taken from.
 
     :Return:
-        A probable prime in the range 2**bit_size > p > 2**(bit_size-1).
+        A probable prime in the range 2**exact_bits > p > 2**(exact_bits-1).
 
     .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
 
-    if bit_size < 160:
+    exact_bits = kwargs.pop("exact_bits", None)
+    randfunc = kwargs.pop("randfunc", None)
+    if kwargs:
+        print "Unknown parameters:", kwargs.keys()
+
+    if exact_bits is None:
+        raise ValueError("Missing exact_bits parameter")
+    if exact_bits < 160:
         raise ValueError("Prime number is not big enough.")
 
     if randfunc is None:
         randfunc = Random.new().read
 
-    # These are the number of Miller-Rabin iterations s.t. p(k, t) < 1E-30,
-    # with p(k, t) being the probability that a randomly chosen k-bit number
-    # is composite but still survives t MR iterations.
-    mr_ranges = ((220, 30), (280, 20), (390, 15), (512, 10),
-                 (620, 7), (740, 6), (890, 5), (1200, 4),
-                 (1700, 3), (3700, 2))
-    try:
-        mr_iterations = list(filter(lambda x: bit_size < x[0],
-                                    mr_ranges))[0][1]
-    except IndexError:
-        mr_iterations = 1
+    result = COMPOSITE
+    while result == COMPOSITE:
+        candidate = Integer.random(exact_bits=exact_bits,
+                                   randfunc=randfunc) | 1
+        result = test_probable_prime(candidate, randfunc)
+    return candidate
 
-    from Crypto.Util.number import sieve_base
-    ## The optimal number of small primes to use for the sieve
-    ## is probably dependent on the platform and the candidate size
-    sieve_base = sieve_base[:100]
 
-    while True:
+def generate_probable_safe_prime(**kwargs):
+    """Generate a random, probable safe prime.
 
-        small_divisor_found = True
-        while small_divisor_found:
-            candidate = Integer.random(exact_bits=bit_size, randfunc=randfunc) | 1
-            try:
-                map(candidate.fail_if_divisible_by, sieve_base)
-                small_divisor_found = False
-            except ValueError:
-                pass
+    Note this operation is much slower than generating a simple prime.
 
-        if miller_rabin_test(candidate, mr_iterations, randfunc=randfunc) == COMPOSITE:
+    :Keywords:
+      :exact_bits:
+        The desired size in bits of the probable safe prime.
+      :randfunc: callable
+        An RNG function where candidate primes are taken from.
+
+    :Return:
+        A probable safe prime in the range
+        2**exact_bits > p > 2**(exact_bits-1).
+    """
+
+    exact_bits = kwargs.pop("exact_bits", None)
+    randfunc = kwargs.pop("randfunc", None)
+    if kwargs:
+        print "Unknown parameters:", kwargs.keys()
+
+    if randfunc is None:
+        randfunc = Random.new().read
+
+    result = COMPOSITE
+    while result == COMPOSITE:
+        q = generate_probable_prime(exact_bits=exact_bits - 1, randfunc=randfunc)
+        candidate = q * 2 + 1
+        if candidate.size_in_bits() != exact_bits:
             continue
-        if lucas_test(candidate) == PROBABLY_PRIME:
-            break
-
+        result = test_probable_prime(candidate, randfunc=randfunc)
     return candidate

@@ -86,6 +86,11 @@ class TestIntegerBase(unittest.TestCase):
         self.failUnless(str(v3) == "-20")
         self.failUnless(str(v4) == "10715086071862673209484250490600018105614048117055336074437503883703510511249361224931983788156958581275946729175531468251871452856923140435984577574698574803934567774824230985421074605062371141877954182153046474983581941267398767559165543946077062914571196477686542167660429831652624386837205668069376")
 
+    def test_repr(self):
+        v1, v2 = self.Integers(-1, 2**80)
+        self.assertEqual(repr(v1), "Integer(-1)")
+        self.assertEqual(repr(v2), "Integer(1208925819614629174706176)")
+
     def test_conversion_to_bytes(self):
         Integer = self.Integer
 
@@ -240,7 +245,8 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(pow(v1, v2, 17), 7)
         self.assertEqual(pow(v1, 5,  17), 7)
         self.assertEqual(pow(v1, 0,  17), 1)
-        self.assertEqual(pow(v1, 1,  2 ** 10), 23)
+        self.assertEqual(pow(v1, 1,  2 ** 80), 23)
+        self.assertEqual(pow(v1, 2 ** 80,  89298), 17689)
 
         self.assertRaises(ZeroDivisionError, pow, v1, 5, 0)
         self.assertRaises(ValueError, pow, v1, 5, -4)

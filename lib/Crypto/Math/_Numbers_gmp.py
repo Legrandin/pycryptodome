@@ -70,6 +70,7 @@ _gmp.mpz_mul = _gmp.lib.__gmpz_mul
 _gmp.mpz_mul_si = _gmp.lib.__gmpz_mul_si
 _gmp.mpz_cmp = _gmp.lib.__gmpz_cmp
 _gmp.mpz_powm = _gmp.lib.__gmpz_powm
+_gmp.mpz_powm_ui = _gmp.lib.__gmpz_powm_ui
 _gmp.mpz_pow_ui = _gmp.lib.__gmpz_pow_ui
 _gmp.mpz_mod = _gmp.lib.__gmpz_mod
 _gmp.mpz_neg = _gmp.lib.__gmpz_neg
@@ -107,9 +108,7 @@ class Integer(object):
         # Special attribute that ctypes checks
         self._as_parameter_ = self._mpz_p
 
-        if hasattr(value, "_mpz_p"):
-            _gmp.mpz_set(self, value)
-        else:
+        if isinstance(value, (int, long)):
             abs_value = abs(value)
             if abs_value < 256:
                 _gmp.mpz_init_set_si(self, c_long(value))
@@ -120,6 +119,8 @@ class Integer(object):
                     raise ValueError("Error converting '%d'" % value)
                 if value < 0:
                     _gmp.mpz_neg(self, self)
+        else:
+            _gmp.mpz_set(self, value)
 
     # Conversions
     def __int__(self):
@@ -136,14 +137,34 @@ class Integer(object):
     def __str__(self):
         return str(int(self))
 
+    def __repr__(self):
+        return "Integer(%s)" % str(self)
+
     def to_bytes(self, block_size=0):
+        """Convert the number into a byte string.
+
+        This method encodes the number in network order and prepends
+        as many zero bytes as required. It only works for non-negative
+        values.
+
+        :Parameters:
+          block_size : integer
+            The exact size the output byte string must have.
+            If zero, the string has the minimal length.
+        :Returns:
+          A byte string.
+        :Raises:
+          ``ValueError`` if the value is negative or if ``block_size`` is
+          provided and the length of the byte string would exceed it.
+        """
 
         if self < 0:
             raise ValueError("Conversion only valid for non-negative numbers")
 
         buf_len = (_gmp.mpz_sizeinbase(self, c_int(2)) + 7) // 8
         if buf_len > block_size > 0:
-            raise ValueError("Too big to convert")
+            raise ValueError("Number is too big to convert to byte string"
+                             "of prescribed length")
         buf = create_string_buffer(buf_len)
 
         _gmp.mpz_export(
@@ -158,6 +179,15 @@ class Integer(object):
 
     @staticmethod
     def from_bytes(byte_string):
+        """Convert a byte string into a number.
+
+        :Parameters:
+          byte_string : byte string
+            The input number, encoded in network order.
+            It can only be non-negative.
+        :Return:
+          The ``Integer`` object carrying the same value as the input.
+        """
         result = Integer(0)
         _gmp.mpz_import(
                         result,
@@ -171,9 +201,8 @@ class Integer(object):
 
     # Relations
     def _apply_and_return(self, func, term):
-        int_type = self.__class__
-        if not isinstance(term, int_type):
-            term = int_type(term)
+        if not isinstance(term, Integer):
+            term = Integer(term)
         return func(self, term)
 
     def __eq__(self, term):
@@ -202,14 +231,13 @@ class Integer(object):
 
     # Arithmetic operations
     def _apply_in_new_int(self, func, *terms):
-        int_type = self.__class__
-        result = int_type(0)
+        result = Integer(0)
 
         def convert(x):
-            if isinstance(x, int_type):
+            if isinstance(x, Integer):
                 return x
             else:
-                return int_type(x)
+                return Integer(x)
 
         terms = [convert(x) for x in terms]
         func(result, self, *terms)
@@ -245,8 +273,7 @@ class Integer(object):
                 raise ValueError("Exponent must not be negative")
 
             # Normal exponentiation
-            int_type = self.__class__
-            result = int_type(0)
+            result = Integer(0)
             if exponent > 256:
                 raise ValueError("Exponent is too big")
             _gmp.mpz_pow_ui(result,
@@ -256,7 +283,7 @@ class Integer(object):
             return result
         else:
             # Modular exponentiation
-            if type(modulus) != Integer:
+            if not isinstance(modulus, Integer):
                 modulus = Integer(modulus)
             if not modulus:
                 raise ZeroDivisionError("Division by zero")
@@ -265,12 +292,12 @@ class Integer(object):
             if isinstance(exponent, (int, long)):
                 if exponent < 0:
                     raise ValueError("Exponent must not be negative")
-                exponent = c_ulong(exponent)
-                if exponent.value == exponent:
-                    _gmp.mpz_powm_ui(result, self, exponent, modulus)
+                exp_ulong = c_ulong(exponent)
+                if exp_ulong.value == exponent:
+                    _gmp.mpz_powm_ui(result, self, exp_ulong, modulus)
                     return result
                 else:
-                    exponent = Integer(exponent.value)
+                    exponent = Integer(exponent)
             elif exponent.is_negative():
                 raise ValueError("Exponent must not be negative")
             _gmp.mpz_powm(result, self, exponent, modulus)
@@ -303,7 +330,7 @@ class Integer(object):
         return self
 
     def __imod__(self, divisor):
-        if type(divisor) != Integer:
+        if not isinstance(divisor, Integer):
             divisor = Integer(divisor)
         comp = _gmp.mpz_cmp(divisor, divisor._zero_mpz_p)
         if comp == 0:
@@ -321,7 +348,7 @@ class Integer(object):
         return self._apply_in_new_int(_gmp.mpz_ior, term)
 
     def __rshift__(self, pos):
-        result = self.__class__(0)
+        result = Integer(0)
         shift_amount = c_ulong(int(pos))
         if shift_amount.value != pos:
             raise ValueError("Incorrect shift count")
@@ -336,10 +363,13 @@ class Integer(object):
         return self
 
     def get_bit(self, n):
+        """Return True if the n-th bit is set to 1.
+        Bit 0 is the least significant."""
+
         bit_pos = c_ulong(int(n))
         if bit_pos.value != n:
             raise ValueError("Incorrect bit position")
-        return _gmp.mpz_tstbit(self, bit_pos)
+        return bool(_gmp.mpz_tstbit(self, bit_pos))
 
     # Extra
     def is_odd(self):
@@ -349,6 +379,8 @@ class Integer(object):
         return _gmp.mpz_tstbit(self, c_int(0)) == 0
 
     def size_in_bits(self):
+        """Return the minimum number of bits that can encode the number."""
+
         if self < 0:
             raise ValueError("Conversion only valid for non-negative numbers")
         return _gmp.mpz_sizeinbase(self, c_int(2))
@@ -357,6 +389,8 @@ class Integer(object):
         return _gmp.mpz_perfect_square_p(self) != 0
 
     def fail_if_divisible_by(self, small_prime):
+        """Raise an exception if the small prime is a divisor."""
+
         if type(small_prime) == Integer:
             if _gmp.mpz_divisible_p(self, small_prime):
                 raise ValueError("The value is composite")
@@ -369,8 +403,9 @@ class Integer(object):
                 raise ValueError("The value is composite")
 
     def multiply_accumulate(self, a, b):
-        # self = self + a * b
-        if type(a) != Integer:
+        """Increment the number by the product of a and b."""
+
+        if not isinstance(a, Integer):
             a = Integer(a)
         if isinstance(b, (int, long)):
             op2 = c_ulong(b)
@@ -387,7 +422,7 @@ class Integer(object):
         return self
 
     def set(self, source):
-        if type(source) != Integer:
+        if not isinstance(source, Integer):
             source = Integer(source)
         _gmp.mpz_set(self, source)
         return self
@@ -406,6 +441,9 @@ class Integer(object):
     # Clean-up
     def __del__(self):
 
-        if self._mpz_p is not None:
-            _gmp.mpz_clear(self._mpz_p)
-        self._mpz_p = None
+        try:
+            if self._mpz_p is not None:
+                _gmp.mpz_clear(self._mpz_p)
+            self._mpz_p = None
+        except AttributeError:
+            pass

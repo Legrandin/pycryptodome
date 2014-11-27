@@ -43,7 +43,9 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (
         PROBABLY_PRIME, COMPOSITE,
         miller_rabin_test, lucas_test,
-        generate_probable_prime
+        test_probable_prime,
+        generate_probable_prime,
+        generate_probable_safe_prime,
         )
 
 
@@ -64,9 +66,27 @@ class TestPrimality(unittest.TestCase):
         for composite in self.composites:
             self.assertEqual(lucas_test(composite), COMPOSITE)
 
-    def test_generate_prime(self):
-        generate_probable_prime(512)
+    def test_is_prime(self):
+        primes = (170141183460469231731687303715884105727,
+                  19175002942688032928599,
+                  1363005552434666078217421284621279933627102780881053358473,
+                  2 ** 521 - 1)
+        for p in primes:
+            self.assertEqual(test_probable_prime(p), PROBABLY_PRIME)
 
+        not_primes = (
+                    4754868377601046732119933839981363081972014948522510826417784001,
+                    1334733877147062382486934807105197899496002201113849920496510541601,
+                    260849323075371835669784094383812120359260783810157225730623388382401,
+                    )
+        for np in not_primes:
+            self.assertEqual(test_probable_prime(np), COMPOSITE)
+
+    def test_generate_prime(self):
+        generate_probable_prime(exact_bits=512)
+
+    def test_generate_safe_prime(self):
+        p = generate_probable_safe_prime(exact_bits=161)
 
 def get_tests(config={}):
     tests = []

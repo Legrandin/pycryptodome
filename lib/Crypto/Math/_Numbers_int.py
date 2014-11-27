@@ -46,6 +46,9 @@ class Integer(object):
     def __str__(self):
         return str(int(self))
 
+    def __repr__(self):
+        return "Integer(%s)" % str(self)
+
     def to_bytes(self, block_size=0):
         if self._value < 0:
             raise ValueError("Conversion only valid for non-negative numbers")
