@@ -215,6 +215,14 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1 * -2, -8)
         self.assertEqual(v1 * 2 ** 10, 4 * (2 ** 10))
 
+    def test_floor_div(self):
+        v1, v2, v3 = self.Integers(3, 8, 2 ** 80)
+        self.assertEqual(v2 // v1, 2)
+        self.assertEqual(v2 // 3, 2)
+        self.assertEqual(v2 // -3, -3)
+        self.assertEqual(v3 // 2 ** 79, 2)
+        self.assertRaises(ZeroDivisionError, lambda: v1 // 0)
+
     def test_remainder(self):
         # Test Integer%Integer and Integer%int
         v1, v2, v3 = self.Integers(23, 5, -4)
@@ -334,6 +342,35 @@ class TestIntegerBase(unittest.TestCase):
             v4 >>= 2 ** 1000
         self.assertRaises(ValueError, m)
 
+    def test_left_shift(self):
+        v1, v2, v3 = self.Integers(0x10, 1, -0x10)
+        self.assertEqual(v1 << 0, v1)
+        self.assertEqual(v1 << v2, 0x20)
+        self.assertEqual(v1 << 1, 0x20)
+        self.assertEqual(v3 << 1, -0x20)
+        self.assertRaises(ValueError, lambda: v1 << -1)
+        self.assertRaises(ValueError, lambda: v1 << (2 ** 1000))
+
+    def test_in_place_right_shift(self):
+        v1, v2, v3 = self.Integers(0x10, 1, -0x10)
+        v1 <<= 0
+        self.assertEqual(v1, 0x10)
+        v1 <<= 1
+        self.assertEqual(v1, 0x20)
+        v1 <<= v2
+        self.assertEqual(v1, 0x40)
+        v3 <<= 1
+        self.assertEqual(v3, -0x20)
+        def l():
+            v4 = self.Integer(0x90)
+            v4 <<= -1
+        self.assertRaises(ValueError, l)
+        def m():
+            v4 = self.Integer(0x90)
+            v4 <<= 2 ** 1000
+        self.assertRaises(ValueError, m)
+
+
     def test_get_bit(self):
         v1, v2, v3 = self.Integers(0x102, -3, 1)
         self.assertEqual(v1.get_bit(0), 0)
@@ -421,6 +458,27 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1, -2)
         v1.set(2 ** 1000)
         self.assertEqual(v1, 2 ** 1000)
+
+    def test_inverse(self):
+        v1, v2, v3, v4, v5, v6 = self.Integers(2, 5, -3, 0, 723872, 3433)
+        self.assertEqual(v1.inverse(v2), 3)
+        self.assertEqual(v1.inverse(5), 3)
+        self.assertEqual(v3.inverse(5), 3)
+        self.assertEqual(v5.inverse(92929921), 58610507)
+        self.assertEqual(v6.inverse(9912), 5353)
+
+        self.assertRaises(ValueError, v2.inverse, 10)
+        self.assertRaises(ValueError, v1.inverse, -3)
+        self.assertRaises(ValueError, v4.inverse, 10)
+        self.assertRaises(ZeroDivisionError, v2.inverse, 0)
+
+    def test_gcd(self):
+        v1, v2, v3, v4 = self.Integers(6, 10, 17, -2)
+        self.assertEqual(v1.gcd(v2), 2)
+        self.assertEqual(v1.gcd(10), 2)
+        self.assertEqual(v1.gcd(v3), 1)
+        self.assertEqual(v1.gcd(-2), 2)
+        self.assertEqual(v4.gcd(6), 2)
 
     def test_jacobi_symbol(self):
 

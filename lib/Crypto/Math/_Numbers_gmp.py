@@ -78,9 +78,14 @@ _gmp.mpz_and = _gmp.lib.__gmpz_and
 _gmp.mpz_ior = _gmp.lib.__gmpz_ior
 _gmp.mpz_clear = _gmp.lib.__gmpz_clear
 _gmp.mpz_tdiv_q_2exp = _gmp.lib.__gmpz_tdiv_q_2exp
+_gmp.mpz_fdiv_q = _gmp.lib.__gmpz_fdiv_q
+_gmp.mpz_mul_2exp = _gmp.lib.__gmpz_mul_2exp
 _gmp.mpz_tstbit = _gmp.lib.__gmpz_tstbit
 _gmp.mpz_perfect_square_p = _gmp.lib.__gmpz_perfect_square_p
 _gmp.mpz_jacobi = _gmp.lib.__gmpz_jacobi
+_gmp.mpz_gcd = _gmp.lib.__gmpz_gcd
+_gmp.mpz_gcd_ui = _gmp.lib.__gmpz_gcd_ui
+_gmp.mpz_invert = _gmp.lib.__gmpz_invert
 _gmp.mpz_divisible_p = _gmp.lib.__gmpz_divisible_p
 _gmp.mpz_divisible_ui_p = _gmp.lib.__gmpz_divisible_ui_p
 
@@ -252,6 +257,16 @@ class Integer(object):
     def __mul__(self, term):
         return self._apply_in_new_int(_gmp.mpz_mul, term)
 
+    def __floordiv__(self, divisor):
+        if not isinstance(divisor, Integer):
+            divisor = Integer(divisor)
+        comp = _gmp.mpz_cmp(divisor, self._zero_mpz_p)
+        if comp == 0:
+            raise ZeroDivisionError("Division by zero")
+        result = Integer(0)
+        _gmp.mpz_fdiv_q(result, self, divisor)
+        return result
+
     def __mod__(self, divisor):
 
         def mod_with_check(result, value, divisor):
@@ -362,6 +377,21 @@ class Integer(object):
         _gmp.mpz_tdiv_q_2exp(self, self, shift_amount)
         return self
 
+    def __lshift__(self, pos):
+        result = Integer(0)
+        shift_amount = c_ulong(int(pos))
+        if shift_amount.value != pos:
+            raise ValueError("Incorrect shift count")
+        _gmp.mpz_mul_2exp(result, self, shift_amount)
+        return result
+
+    def __ilshift__(self, pos):
+        shift_amount = c_ulong(int(pos))
+        if shift_amount.value != pos:
+            raise ValueError("Incorrect shift count")
+        _gmp.mpz_mul_2exp(self, self, shift_amount)
+        return self
+
     def get_bit(self, n):
         """Return True if the n-th bit is set to 1.
         Bit 0 is the least significant."""
@@ -426,6 +456,40 @@ class Integer(object):
             source = Integer(source)
         _gmp.mpz_set(self, source)
         return self
+
+    def inverse(self, modulus):
+        """Compute the inverse of this number in the ring of
+        modulo integers.
+
+        Raise an exception if no inverse exists.
+        """
+
+        if not isinstance(modulus, Integer):
+            modulus = Integer(modulus)
+        comp = _gmp.mpz_cmp(modulus, self._zero_mpz_p)
+        if comp == 0:
+            raise ZeroDivisionError("Modulus cannot be zero")
+        if comp < 0:
+            raise ValueError("Modulus must be positive")
+        result = Integer(0)
+        _gmp.mpz_invert(result, self, modulus)
+        if not result:
+            raise ValueError("No inverse value can be computed")
+        return result
+
+    def gcd(self, term):
+        """Compute the greatest common denominator between this
+        number and another term."""
+
+        result = Integer(0)
+        if isinstance(term, (int, long)):
+            b = c_ulong(term)
+            if b.value == term:
+                _gmp.mpz_gcd_ui(result, self, b)
+                return result
+            term = Integer(term)
+        _gmp.mpz_gcd(result, self, term)
+        return result
 
     @staticmethod
     def jacobi_symbol(a, n):

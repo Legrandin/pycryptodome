@@ -114,6 +114,13 @@ class Integer(object):
         except AttributeError:
             return Integer(self._value * factor)
 
+    def __floordiv__(self, divisor):
+        try:
+            divisor_value = divisor._value
+        except AttributeError:
+            divisor_value = divisor
+        return Integer(self._value // divisor_value)
+
     def __mod__(self, divisor):
         try:
             divisor_value = divisor._value
@@ -173,6 +180,26 @@ class Integer(object):
         except OverflowError:
             raise ValueError("Incorrect shift count")
         return self
+
+    def __lshift__(self, pos):
+        try:
+            try:
+                return Integer(self._value << pos._value)
+            except AttributeError:
+                return Integer(self._value << pos)
+        except OverflowError:
+            raise ValueError("Incorrect shift count")
+
+    def __ilshift__(self, pos):
+        try:
+            try:
+                self._value <<= pos._value
+            except AttributeError:
+                self._value <<= pos
+        except OverflowError:
+            raise ValueError("Incorrect shift count")
+        return self
+
 
     def get_bit(self, n):
         try:
@@ -242,6 +269,38 @@ class Integer(object):
             self._value = source._value
         else:
             self._value = source
+
+    def inverse(self, modulus):
+        try:
+            modulus = modulus._value
+        except AttributeError:
+            pass
+        if modulus == 0:
+            raise ZeroDivisionError("Modulus cannot be zero")
+        if modulus < 0:
+            raise ValueError("Modulus cannot be negative")
+        r_p, r_n = self._value, modulus
+        s_p, s_n = 1, 0
+        while r_n > 0:
+            q = r_p // r_n
+            r_p, r_n = r_n, r_p - q * r_n
+            s_p, s_n = s_n, s_p - q * s_n
+        if r_p != 1:
+            raise ValueError("No inverse value can be computed" + str(r_p))
+        while s_p < 0:
+            s_p += modulus
+        return s_p
+
+    def gcd(self, term):
+        try:
+            term = term._value
+        except AttributeError:
+            pass
+        r_p, r_n = abs(self._value), abs(term)
+        while r_n > 0:
+            q = r_p // r_n
+            r_p, r_n = r_n, r_p - q * r_n
+        return r_p
 
     @staticmethod
     def jacobi_symbol(a, n):
