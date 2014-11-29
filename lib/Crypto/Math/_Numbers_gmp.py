@@ -51,6 +51,7 @@ class _GMP(object):
 # object from within any class because Python will replace the double
 # underscore with "_classname_".
 _gmp = _GMP()
+_gmp.mpz_init_set = _gmp.lib.__gmpz_init_set
 _gmp.mpz_init_set_si = _gmp.lib.__gmpz_init_set_si
 _gmp.mpz_init_set_str = _gmp.lib.__gmpz_init_set_str
 _gmp.mpz_set = _gmp.lib.__gmpz_set
@@ -125,7 +126,7 @@ class Integer(object):
                 if value < 0:
                     _gmp.mpz_neg(self, self)
         else:
-            _gmp.mpz_set(self, value)
+            _gmp.mpz_init_set(self, value._mpz_p)
 
     # Conversions
     def __int__(self):
@@ -211,9 +212,13 @@ class Integer(object):
         return func(self, term)
 
     def __eq__(self, term):
+        if not isinstance(term, (Integer, int, long)):
+            return False
         return self._apply_and_return(_gmp.mpz_cmp, term) == 0
 
     def __ne__(self, term):
+        if not isinstance(term, (Integer, int, long)):
+            return True
         return self._apply_and_return(_gmp.mpz_cmp, term) != 0
 
     def __lt__(self, term):
@@ -235,27 +240,26 @@ class Integer(object):
         return _gmp.mpz_cmp(self, self._zero_mpz_p) < 0
 
     # Arithmetic operations
-    def _apply_in_new_int(self, func, *terms):
+    def __add__(self, term):
         result = Integer(0)
-
-        def convert(x):
-            if isinstance(x, Integer):
-                return x
-            else:
-                return Integer(x)
-
-        terms = [convert(x) for x in terms]
-        func(result, self, *terms)
+        if not isinstance(term, Integer):
+            term = Integer(term)
+        _gmp.mpz_add(result, self, term)
         return result
 
-    def __add__(self, term):
-        return self._apply_in_new_int(_gmp.mpz_add, term)
-
     def __sub__(self, term):
-        return self._apply_in_new_int(_gmp.mpz_sub, term)
+        result = Integer(0)
+        if not isinstance(term, Integer):
+            term = Integer(term)
+        _gmp.mpz_sub(result, self, term)
+        return result
 
     def __mul__(self, term):
-        return self._apply_in_new_int(_gmp.mpz_mul, term)
+        result = Integer(0)
+        if not isinstance(term, Integer):
+            term = Integer(term)
+        _gmp.mpz_mul(result, self, term)
+        return result
 
     def __floordiv__(self, divisor):
         if not isinstance(divisor, Integer):
@@ -268,16 +272,16 @@ class Integer(object):
         return result
 
     def __mod__(self, divisor):
-
-        def mod_with_check(result, value, divisor):
-            comp = _gmp.mpz_cmp(divisor, value._zero_mpz_p)
-            if comp == 0:
-                raise ZeroDivisionError("Division by zero")
-            if comp < 0:
-                raise ValueError("Modulus must be positive")
-            _gmp.mpz_mod(result, value, divisor)
-
-        return self._apply_in_new_int(mod_with_check, divisor)
+        if not isinstance(divisor, Integer):
+            divisor = Integer(divisor)
+        comp = _gmp.mpz_cmp(divisor, self._zero_mpz_p)
+        if comp == 0:
+            raise ZeroDivisionError("Division by zero")
+        if comp < 0:
+            raise ValueError("Modulus must be positive")
+        result = Integer(0)
+        _gmp.mpz_mod(result, self, divisor)
+        return result
 
     def __pow__(self, exponent, modulus=None):
 
@@ -330,7 +334,7 @@ class Integer(object):
                 return self
             else:
                 term = Integer(term)
-        _gmp.mpz_add(self, self, term)
+        _gmp.mpz_add(self, self, term._mpz_p)
         return self
 
     def __imul__(self, term):
@@ -341,7 +345,7 @@ class Integer(object):
                 return self
             else:
                 term = Integer(term)
-        _gmp.mpz_mul(self, self, term)
+        _gmp.mpz_mul(self, self, term._mpz_p)
         return self
 
     def __imod__(self, divisor):
@@ -357,10 +361,18 @@ class Integer(object):
 
     # Boolean/bit operations
     def __and__(self, term):
-        return self._apply_in_new_int(_gmp.mpz_and, term)
+        result = Integer(0)
+        if not isinstance(term, Integer):
+            term = Integer(term)
+        _gmp.mpz_and(result, self, term)
+        return result
 
     def __or__(self, term):
-        return self._apply_in_new_int(_gmp.mpz_ior, term)
+        result = Integer(0)
+        if not isinstance(term, Integer):
+            term = Integer(term)
+        _gmp.mpz_ior(result, self, term)
+        return result
 
     def __rshift__(self, pos):
         result = Integer(0)
@@ -421,16 +433,15 @@ class Integer(object):
     def fail_if_divisible_by(self, small_prime):
         """Raise an exception if the small prime is a divisor."""
 
-        if type(small_prime) == Integer:
-            if _gmp.mpz_divisible_p(self, small_prime):
-                raise ValueError("The value is composite")
-        else:
+        if isinstance(small_prime, (int, long)):
             d = c_ulong(small_prime)
-            if d.value != small_prime:
-                self.fail_if_divisible_by(Integer(small_prime))
+            if d.value == small_prime:
+                if _gmp.mpz_divisible_ui_p(self, d):
+                    raise ValueError("The value is composite")
                 return
-            if _gmp.mpz_divisible_ui_p(self, d):
-                raise ValueError("The value is composite")
+            small_prime = Integer(small_prime)
+        if _gmp.mpz_divisible_p(self, small_prime._mpz_p):
+            raise ValueError("The value is composite")
 
     def multiply_accumulate(self, a, b):
         """Increment the number by the product of a and b."""

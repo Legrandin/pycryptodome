@@ -67,6 +67,8 @@ class TestIntegerBase(unittest.TestCase):
         self.failUnless(v1 == v2)
         self.failIf(v1 == v4)
 
+        self.failIf(Integer(0) == None)
+
     def test_conversion_to_int(self):
         v1, v2 = self.Integers(-23, 2 ** 1000)
         self.assertEqual(int(v1), -23)
@@ -126,6 +128,7 @@ class TestIntegerBase(unittest.TestCase):
         self.failIf(v1 != 89)
         self.failUnless(v1 != v4)
         self.failUnless(v4 != v1)
+        self.failUnless(self.Integer(0) != None)
 
     def test_less_than(self):
         # Test Integer<Integer and Integer<int
