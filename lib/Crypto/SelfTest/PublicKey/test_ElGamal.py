@@ -93,11 +93,8 @@ class ElGamalTest(unittest.TestCase):
         }
     ]
 
-    def test_generate_128(self):
-        self._test_random_key(128)
-
-    def test_generate_512(self):
-        self._test_random_key(512)
+    def test_generate_180(self):
+        self._test_random_key(180)
 
     def test_encryption(self):
         for tv in self.tve:

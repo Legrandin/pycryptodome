@@ -82,17 +82,16 @@ them from known components. ElGamal keys allows you to perform basic signing,
 verification, encryption, and decryption.
 
     >>> from Crypto import Random
-    >>> from Crypto.Random import random
     >>> from Crypto.PublicKey import ElGamal
-    >>> from Crypto.Util.number import GCD
     >>> from Crypto.Hash import SHA
+    >>> from Crypto.Math import Number
     >>>
     >>> message = "Hello"
     >>> key = ElGamal.generate(1024, Random.new().read)
     >>> h = SHA.new(message).digest()
     >>> while 1:
-    >>>     k = random.StrongRandom().randint(1,key.p-1)
-    >>>     if GCD(k,key.p-1)==1: break
+    >>>     k = Number.random_range(1, key.p-2)
+    >>>     if k.gcd(key.p-1)==1: break
     >>> sig = key.sign(h,k)
     >>> ...
     >>> if key.verify(h,sig):
@@ -107,14 +106,10 @@ verification, encryption, and decryption.
 
 __all__ = ['generate', 'construct', 'ElGamalobj']
 
-from Crypto.Util import number
 from Crypto import Random
-from Crypto.Util.number import (
-                GCD, isPrime,
-                getRandomRange, inverse,
-                size, getPrime
-                )
-
+from Crypto.Math.Primality import ( generate_probable_safe_prime,
+                                    test_probable_prime, COMPOSITE )
+from Crypto.Math.Numbers import Integer
 
 # Generate an ElGamal key with N bits
 def generate(bits, randfunc, progress_func=None):
@@ -148,11 +143,10 @@ def generate(bits, randfunc, progress_func=None):
     # See Algorithm 4.86 in Handbook of Applied Cryptography
     if progress_func:
         progress_func('p\n')
-    while 1:
-        q = getPrime(bits-1, randfunc)
-        obj.p = 2*q+1
-        if isPrime(obj.p, randfunc=randfunc):
-            break
+
+    obj.p = generate_probable_safe_prime(exact_bits=bits, randfunc=randfunc)
+    q = (obj.p - 1) >> 1
+
     # Generate generator g
     # See Algorithm 4.80 in Handbook of Applied Cryptography
     # Note that the order of the group is n=p-1=2q, where q is prime
@@ -163,7 +157,7 @@ def generate(bits, randfunc, progress_func=None):
         # in "Generating ElGamal signatures without knowning the secret key",
         # 1996
         #
-        obj.g = getRandomRange(3, obj.p, randfunc)
+        obj.g = Integer.random_range(3, obj.p - 1, randfunc)
         safe = 1
         if pow(obj.g, 2, obj.p)==1:
             safe=0
@@ -176,7 +170,7 @@ def generate(bits, randfunc, progress_func=None):
         # g^{-1} must not divide p-1 because of Khadir's attack
         # described in "Conditions of the generator for forging ElGamal
         # signature", 2011
-        ginv = inverse(obj.g, obj.p)
+        ginv = obj.g.inverse(obj.p)
         if safe and (obj.p-1) % ginv == 0:
             safe=0
         if safe:
@@ -184,7 +178,7 @@ def generate(bits, randfunc, progress_func=None):
     # Generate private key x
     if progress_func:
         progress_func('x\n')
-    obj.x=getRandomRange(2, obj.p-1, randfunc)
+    obj.x = Integer.random_range(2, obj.p-2, randfunc)
     # Generate public key y
     if progress_func:
         progress_func('y\n')
@@ -223,9 +217,9 @@ def construct(tup):
         raise ValueError('argument for construct() wrong length')
     for i in range(len(tup)):
         field = obj._keydata[i]
-        setattr(obj, field, tup[i])
+        setattr(obj, field, Integer(tup[i]))
 
-    fmt_error = not isPrime(obj.p)
+    fmt_error = test_probable_prime(obj.p) == COMPOSITE
     fmt_error |= obj.g<=1 or obj.g>=obj.p
     fmt_error |= pow(obj.g, obj.p-1, obj.p)!=1
     fmt_error |= obj.y<1 or obj.y>=obj.p
@@ -264,32 +258,34 @@ class ElGamalobj(object):
 
     def _encrypt(self, M, K):
         a=pow(self.g, K, self.p)
-        b=( M*pow(self.y, K, self.p) ) % self.p
-        return ( a,b )
+        b=( pow(self.y, K, self.p)*M ) % self.p
+        return map(int, ( a,b ))
 
     def _decrypt(self, M):
         if (not hasattr(self, 'x')):
             raise TypeError('Private key not available in this object')
-        r = getRandomRange(2, self.p-1, self._randfunc)
-        a_blind = (M[0] * pow(self.g, r, self.p)) % self.p
+        r = Integer.random_range(2, self.p-2, self._randfunc)
+        a_blind = (pow(self.g, r, self.p) * M[0]) % self.p
         ax=pow(a_blind, self.x, self.p)
-        plaintext_blind = (M[1] * inverse(ax, self.p ) ) % self.p
+        plaintext_blind = (ax.inverse(self.p) * M[1] ) % self.p
         plaintext = (plaintext_blind * pow(self.y, r, self.p)) % self.p
-        return plaintext
+        return int(plaintext)
 
     def _sign(self, M, K):
         if (not hasattr(self, 'x')):
             raise TypeError('Private key not available in this object')
         p1=self.p-1
-        if (GCD(K, p1)!=1):
+        K = Integer(K)
+        if (K.gcd(p1)!=1):
             raise ValueError('Bad K value: GCD(K,p-1)!=1')
         a=pow(self.g, K, self.p)
-        t=(M-self.x*a) % p1
+        t=(Integer(M)-self.x*a) % p1
         while t<0: t=t+p1
-        b=(t*inverse(K, p1)) % p1
-        return (a, b)
+        b=(t*K.inverse(p1)) % p1
+        return map(int, (a, b))
 
     def _verify(self, M, sig):
+        sig = map(Integer, sig)
         if sig[0]<1 or sig[0]>self.p-1:
             return 0
         v1=pow(self.y, sig[0], self.p)
@@ -300,7 +296,7 @@ class ElGamalobj(object):
         return 0
 
     def size(self):
-        return size(self.p) - 1
+        return self.p.size_in_bits() - 1
 
     def has_private(self):
         if hasattr(self, 'x'):
