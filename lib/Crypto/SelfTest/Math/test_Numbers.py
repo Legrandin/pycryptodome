@@ -563,9 +563,19 @@ class TestIntegerGeneric(unittest.TestCase):
 
     def test_random_range(self):
 
-        for x in xrange(2, 20):
-            a = IntegerGeneric.random_range(1, x)
-            self.failUnless(1 <= a <= x)
+        func = IntegerGeneric.random_range
+
+        for x in xrange(200):
+            a = func(min_inclusive=1, max_inclusive=15)
+            self.failUnless(1 <= a <= 15)
+
+        for x in xrange(200):
+            a = func(min_inclusive=1, max_exclusive=15)
+            self.failUnless(1 <= a < 15)
+
+        self.assertRaises(ValueError, func, min_inclusive=1, max_inclusive=2,
+                                            max_exclusive=3)
+        self.assertRaises(ValueError, func, max_inclusive=2, max_exclusive=3)
 
 def get_tests(config={}):
     tests = []

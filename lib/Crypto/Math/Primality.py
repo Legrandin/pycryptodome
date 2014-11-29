@@ -82,7 +82,9 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
         # Step 4.1-2
         base = 1
         while base in (one, minus_one):
-            base = Integer.random_range(2, candidate - 2)
+            base = Integer.random_range(min_inclusive=2,
+                    max_inclusive=candidate - 2)
+            assert(2 <= base <= candidate - 2)
 
         # Step 4.3-4.4
         z = pow(base, m, candidate)

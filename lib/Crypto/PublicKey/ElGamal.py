@@ -90,7 +90,7 @@ verification, encryption, and decryption.
     >>> key = ElGamal.generate(1024, Random.new().read)
     >>> h = SHA.new(message).digest()
     >>> while 1:
-    >>>     k = Number.random_range(1, key.p-2)
+    >>>     k = Number.random_range(min_inclusive=1, min_exclusive=key.p-1)
     >>>     if k.gcd(key.p-1)==1: break
     >>> sig = key.sign(h,k)
     >>> ...
@@ -157,7 +157,9 @@ def generate(bits, randfunc, progress_func=None):
         # in "Generating ElGamal signatures without knowning the secret key",
         # 1996
         #
-        obj.g = Integer.random_range(3, obj.p - 1, randfunc)
+        obj.g = Integer.random_range(min_inclusive=3,
+                                     max_exclusive=obj.p,
+                                     randfunc=randfunc)
         safe = 1
         if pow(obj.g, 2, obj.p)==1:
             safe=0
@@ -178,7 +180,9 @@ def generate(bits, randfunc, progress_func=None):
     # Generate private key x
     if progress_func:
         progress_func('x\n')
-    obj.x = Integer.random_range(2, obj.p-2, randfunc)
+    obj.x = Integer.random_range(min_inclusive=2,
+                                 max_exclusive=obj.p-1,
+                                 randfunc=randfunc)
     # Generate public key y
     if progress_func:
         progress_func('y\n')
@@ -264,7 +268,9 @@ class ElGamalobj(object):
     def _decrypt(self, M):
         if (not hasattr(self, 'x')):
             raise TypeError('Private key not available in this object')
-        r = Integer.random_range(2, self.p-2, self._randfunc)
+        r = Integer.random_range(min_inclusive=2,
+                                 max_exclusive=self.p-1,
+                                 randfunc=self._randfunc)
         a_blind = (pow(self.g, r, self.p) * M[0]) % self.p
         ax=pow(a_blind, self.x, self.p)
         plaintext_blind = (ax.inverse(self.p) * M[1] ) % self.p
