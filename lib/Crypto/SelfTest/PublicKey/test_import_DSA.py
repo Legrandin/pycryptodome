@@ -68,10 +68,10 @@ class ImportKeyTests(unittest.TestCase):
     def testImportKey1(self):
         key_obj = self.dsa.importKey(self.der_public)
         self.failIf(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.key.y)
-        self.assertEqual(self.p, key_obj.key.p)
-        self.assertEqual(self.q, key_obj.key.q)
-        self.assertEqual(self.g, key_obj.key.g)
+        self.assertEqual(self.y, key_obj.y)
+        self.assertEqual(self.p, key_obj.p)
+        self.assertEqual(self.q, key_obj.q)
+        self.assertEqual(self.g, key_obj.g)
 
     def testExportKey1(self):
         tup = (self.y, self.g, self.p, self.q)
@@ -98,10 +98,10 @@ tPG+TJKpGYb7pVk=
         for pem in (self.pem_public, tostr(self.pem_public)):
             key_obj = self.dsa.importKey(pem)
             self.failIf(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.key.y)
-            self.assertEqual(self.p, key_obj.key.p)
-            self.assertEqual(self.q, key_obj.key.q)
-            self.assertEqual(self.g, key_obj.key.g)
+            self.assertEqual(self.y, key_obj.y)
+            self.assertEqual(self.p, key_obj.p)
+            self.assertEqual(self.q, key_obj.q)
+            self.assertEqual(self.g, key_obj.g)
 
     def testExportKey2(self):
         tup = (self.y, self.g, self.p, self.q)
@@ -129,11 +129,11 @@ tPG+TJKpGYb7pVk=
     def testImportKey3(self):
         key_obj = self.dsa.importKey(self.der_private)
         self.failUnless(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.key.y)
-        self.assertEqual(self.p, key_obj.key.p)
-        self.assertEqual(self.q, key_obj.key.q)
-        self.assertEqual(self.g, key_obj.key.g)
-        self.assertEqual(self.x, key_obj.key.x)
+        self.assertEqual(self.y, key_obj.y)
+        self.assertEqual(self.p, key_obj.p)
+        self.assertEqual(self.q, key_obj.q)
+        self.assertEqual(self.g, key_obj.g)
+        self.assertEqual(self.x, key_obj.x)
 
     def testExportKey3(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
@@ -160,11 +160,11 @@ ggadmEIJhrMUIVAldWBl
         for pem in (self.pem_private, tostr(self.pem_private)):
             key_obj = self.dsa.importKey(pem)
             self.failUnless(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.key.y)
-            self.assertEqual(self.p, key_obj.key.p)
-            self.assertEqual(self.q, key_obj.key.q)
-            self.assertEqual(self.g, key_obj.key.g)
-            self.assertEqual(self.x, key_obj.key.x)
+            self.assertEqual(self.y, key_obj.y)
+            self.assertEqual(self.p, key_obj.p)
+            self.assertEqual(self.q, key_obj.q)
+            self.assertEqual(self.g, key_obj.g)
+            self.assertEqual(self.x, key_obj.x)
 
     def testExportKey4(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
@@ -189,11 +189,11 @@ ggadmEIJhrMUIVAldWBl
     def testImportKey5(self):
         key_obj = self.dsa.importKey(self.der_pkcs8)
         self.failUnless(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.key.y)
-        self.assertEqual(self.p, key_obj.key.p)
-        self.assertEqual(self.q, key_obj.key.q)
-        self.assertEqual(self.g, key_obj.key.g)
-        self.assertEqual(self.x, key_obj.key.x)
+        self.assertEqual(self.y, key_obj.y)
+        self.assertEqual(self.p, key_obj.p)
+        self.assertEqual(self.q, key_obj.q)
+        self.assertEqual(self.g, key_obj.g)
+        self.assertEqual(self.x, key_obj.x)
 
     def testExportKey5(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
@@ -219,11 +219,11 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
         for pem in (self.pem_pkcs8, tostr(self.pem_pkcs8)):
             key_obj = self.dsa.importKey(pem)
             self.failUnless(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.key.y)
-            self.assertEqual(self.p, key_obj.key.p)
-            self.assertEqual(self.q, key_obj.key.q)
-            self.assertEqual(self.g, key_obj.key.g)
-            self.assertEqual(self.x, key_obj.key.x)
+            self.assertEqual(self.y, key_obj.y)
+            self.assertEqual(self.p, key_obj.p)
+            self.assertEqual(self.q, key_obj.q)
+            self.assertEqual(self.g, key_obj.g)
+            self.assertEqual(self.x, key_obj.x)
 
     def testExportKey6(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
@@ -240,10 +240,10 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
         for ssh in (self.ssh_pub, tostr(self.ssh_pub)):
             key_obj = self.dsa.importKey(ssh)
             self.failIf(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.key.y)
-            self.assertEqual(self.p, key_obj.key.p)
-            self.assertEqual(self.q, key_obj.key.q)
-            self.assertEqual(self.g, key_obj.key.g)
+            self.assertEqual(self.y, key_obj.y)
+            self.assertEqual(self.p, key_obj.p)
+            self.assertEqual(self.q, key_obj.q)
+            self.assertEqual(self.g, key_obj.g)
 
     def testExportKey7(self):
         tup = (self.y, self.g, self.p, self.q)
@@ -273,22 +273,22 @@ xVJtxaV37m3aXxtCsPnbBg==
         for pem in (self.pem_private_encrypted, tostr(self.pem_private_encrypted)):
             key_obj = self.dsa.importKey(pem, "PWDTEST")
             self.failUnless(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.key.y)
-            self.assertEqual(self.p, key_obj.key.p)
-            self.assertEqual(self.q, key_obj.key.q)
-            self.assertEqual(self.g, key_obj.key.g)
-            self.assertEqual(self.x, key_obj.key.x)
+            self.assertEqual(self.y, key_obj.y)
+            self.assertEqual(self.p, key_obj.p)
+            self.assertEqual(self.q, key_obj.q)
+            self.assertEqual(self.g, key_obj.g)
+            self.assertEqual(self.x, key_obj.x)
 
     def testExportKey8(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = self.dsa.construct(tup)
         encoded = key.exportKey('PEM', pkcs8=False, passphrase="PWDTEST")
         key = self.dsa.importKey(encoded, "PWDTEST")
-        self.assertEqual(self.y, key.key.y)
-        self.assertEqual(self.p, key.key.p)
-        self.assertEqual(self.q, key.key.q)
-        self.assertEqual(self.g, key.key.g)
-        self.assertEqual(self.x, key.key.x)
+        self.assertEqual(self.y, key.y)
+        self.assertEqual(self.p, key.p)
+        self.assertEqual(self.q, key.q)
+        self.assertEqual(self.g, key.g)
+        self.assertEqual(self.x, key.x)
 
     # 9. Encrypted PKCS8
     # pbeWithMD5AndDES-CBC
@@ -308,11 +308,11 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         for pem in (self.pem_pkcs8_encrypted, tostr(self.pem_pkcs8_encrypted)):
             key_obj = self.dsa.importKey(pem, "PWDTEST")
             self.failUnless(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.key.y)
-            self.assertEqual(self.p, key_obj.key.p)
-            self.assertEqual(self.q, key_obj.key.q)
-            self.assertEqual(self.g, key_obj.key.g)
-            self.assertEqual(self.x, key_obj.key.x)
+            self.assertEqual(self.y, key_obj.y)
+            self.assertEqual(self.p, key_obj.p)
+            self.assertEqual(self.q, key_obj.q)
+            self.assertEqual(self.g, key_obj.g)
+            self.assertEqual(self.x, key_obj.x)
 
     # 10. Encrypted PKCS8
     # pkcs5PBES2 /
@@ -337,11 +337,11 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
     def testImportKey10(self):
         key_obj = self.dsa.importKey(self.der_pkcs8_encrypted, "PWDTEST")
         self.failUnless(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.key.y)
-        self.assertEqual(self.p, key_obj.key.p)
-        self.assertEqual(self.q, key_obj.key.q)
-        self.assertEqual(self.g, key_obj.key.g)
-        self.assertEqual(self.x, key_obj.key.x)
+        self.assertEqual(self.y, key_obj.y)
+        self.assertEqual(self.p, key_obj.p)
+        self.assertEqual(self.q, key_obj.q)
+        self.assertEqual(self.g, key_obj.g)
+        self.assertEqual(self.x, key_obj.x)
 
     def testExportKey10(self):
         tup = (self.y, self.g, self.p, self.q, self.x)

@@ -92,11 +92,7 @@ from Crypto.Util.py3compat import *
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.PublicKey import _DSA, _slowmath
-from Crypto.Util.number import (
-                        bytes_to_long, long_to_bytes,
-                        isPrime, getRandomRange
-                        )
+from Crypto.PublicKey import _DSA
 from Crypto.Util.asn1 import (
                 DerObject, DerSequence,
                 DerInteger, DerObjectId,
@@ -104,10 +100,9 @@ from Crypto.Util.asn1 import (
                 newDerBitString
                 )
 
-try:
-    from Crypto.PublicKey import _fastmath
-except ImportError:
-    _fastmath = None
+from Crypto.Math.Numbers import Integer
+from Crypto.Math.Primality import test_probable_prime, COMPOSITE
+
 
 def _decode_der(obj_class, binstr):
     """Instantiate a DER object class, decode a DER binary string in it,
@@ -163,36 +158,53 @@ class _DSAobj(object):
     #:  - **x**, the private key.
     _keydata = ['y', 'g', 'p', 'q', 'x']
 
-    def __init__(self, implementation, key, randfunc=None):
-        self.implementation = implementation
-        self.key = key
-        if randfunc is None:
-            randfunc = Random.new().read
-        self._randfunc = randfunc
-
-    def __getattr__(self, attrname):
-        if attrname in self._keydata:
-            # For backward compatibility, allow the user to get (not set) the
-            # DSA key parameters directly from this object.
-            return getattr(self.key, attrname)
-        else:
-            raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
+    def __init__(self, key_dict, randfunc):
+        input_set = set(key_dict.keys())
+        public_set = set(('y' , 'g', 'p', 'q'))
+        if not public_set.issubset(input_set):
+            raise ValueError("Some DSA components are missing = %s" %
+                             str(public_set - input_set))
+        extra_set = input_set - public_set
+        if extra_set and extra_set != set(('x',)):
+            raise ValueError("Unknown DSA components = %s" %
+                             str(extra_set - set(('x',))))
+        self._key = dict(key_dict)
+        self._randfunc = Random.new().read
 
     def _sign(self, m, k):
         if not self.has_private():
             raise TypeError("DSA public key cannot be used for signing")
-        blind_factor = getRandomRange(1, self.key.q, self._randfunc)
-        return self.key._sign(long(m), long(k), blind_factor)
+        if not (1 < k < self.q):
+            raise ValueError("k is not between 2 and q-1")
+
+        x, q, p, g = [self._key[comp] for comp in ['x', 'q', 'p', 'g']]
+
+        blind_factor = Integer.random_range(min_inclusive=1,
+                                           max_exclusive=q,
+                                           randfunc=self._randfunc)
+        inv_blind_k = (blind_factor * k).inverse(q)
+        blind_x = x * blind_factor
+
+        r = pow(g, k, p) % q  # r = (g**k mod p) mod q
+        s = (inv_blind_k * (blind_factor * m + blind_x * r)) % q
+        return map(int, (r, s))
 
     def _verify(self, m, sig):
-        (r, s) = map(long, sig)
-        return self.key._verify(long(m), r, s)
+        r, s = sig
+        y, q, p, g = [self._key[comp] for comp in ['y', 'q', 'p', 'g']]
+        if not (0 < r < q) or not (0 < s < q):
+            return False
+        w = Integer(s).inverse(q)
+        u1 = (w * m) % q
+        u2 = (w * r) % q
+        v = (pow(g, u1, p) * pow(y, u2, p) % p) % q
+        return v == r
 
     def has_private(self):
-        return self.key.has_private()
+        return 'x' in self._key
 
     def size(self):
-        return self.key.size()
+        return self._key.p.size_in_bits() - 1
 
     def can_encrypt(self):
         return False
@@ -201,7 +213,8 @@ class _DSAobj(object):
         return True
 
     def publickey(self):
-        return self.implementation.construct((self.key.y, self.key.g, self.key.p, self.key.q))
+        public_components = dict((k, self._key[k]) for k in ('y', 'g', 'p', 'q'))
+        return _DSAobj(public_components, self._randfunc)
 
     def __eq__(self, other):
         if bool(self.has_private()) != bool(other.has_private()):
@@ -209,8 +222,8 @@ class _DSAobj(object):
 
         result = True
         for comp in self._keydata:
-            result = result and (getattr(self.key, comp, None) ==
-                                 getattr(other.key, comp, None))
+            result = result and (getattr(self._key, comp, None) ==
+                                 getattr(other._key, comp, None))
         return result
 
     def __ne__(self, other):
@@ -224,19 +237,25 @@ class _DSAobj(object):
     def domain(self):
         """The DSA domain parameters: *p*, *q* and *g*. """
 
-        return (self.key.p, self.key.q, self.key.g)
+        return map(int, [self._key[comp] for comp in 'p', 'q', 'g'])
 
     def __repr__(self):
         attrs = []
         for k in self._keydata:
             if k == 'p':
                 attrs.append("p(%d)" % (self.size()+1,))
-            elif hasattr(self.key, k):
+            elif hasattr(self, k):
                 attrs.append(k)
         if self.has_private():
             attrs.append("private")
         # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
+
+    def __getattr__(self, item):
+        try:
+            return int(self._key[item])
+        except KeyError:
+            raise AttributeError(item)
 
     def exportKey(self, format='PEM', pkcs8=None, passphrase=None,
                   protection=None):
@@ -295,7 +314,7 @@ class _DSAobj(object):
         if passphrase is not None:
             passphrase = tobytes(passphrase)
         if format == 'OpenSSH':
-            tup1 = [long_to_bytes(x) for x in (self.p, self.q, self.g, self.y)]
+            tup1 = [self._key[x].to_bytes() for x in 'p', 'q', 'g', 'y']
 
             def func(x):
                 if (bord(x[0]) & 0x80):
@@ -368,12 +387,6 @@ class DSAImplementation(object):
         """Create a new DSA key factory.
 
         :Keywords:
-         use_fast_math : bool
-                                Specify which mathematic library to use:
-
-                                - *None* (default). Use fastest math available.
-                                - *True* . Use fast math.
-                                - *False* . Use slow math.
          default_randfunc : callable
                                 Specify how to collect random data:
 
@@ -382,34 +395,12 @@ class DSAImplementation(object):
         :Raise RuntimeError:
             When **use_fast_math** =True but fast math is not available.
         """
-        use_fast_math = kwargs.get('use_fast_math', None)
-        if use_fast_math is None:   # Automatic
-            if _fastmath is not None:
-                self._math = _fastmath
-            else:
-                self._math = _slowmath
-
-        elif use_fast_math:     # Explicitly select fast math
-            if _fastmath is not None:
-                self._math = _fastmath
-            else:
-                raise RuntimeError("fast math module not available")
-
-        else:   # Explicitly select slow math
-            self._math = _slowmath
 
         # 'default_randfunc' parameter:
         #   None (default) - use Random.new().read
         #   not None       - use the specified function
-        self._default_randfunc = kwargs.get('default_randfunc', None)
-        self._current_randfunc = None
-
-    def _get_randfunc(self, randfunc):
-        if randfunc is not None:
-            return randfunc
-        elif self._current_randfunc is None:
-            self._current_randfunc = Random.new().read
-        return self._current_randfunc
+        self._default_randfunc = kwargs.get('default_randfunc',
+                                            Random.new().read)
 
     def generate(self, bits, randfunc=None, progress_func=None, domain=None):
         """Randomly generate a fresh, new DSA key.
@@ -446,6 +437,9 @@ class DSAImplementation(object):
             When **bits** is too little, too big, or not a multiple of 64.
         """
 
+        if randfunc is None:
+            ranfunc = self._default_randfunc
+
         # Check against FIPS 186-2, which says that the size of the prime p
         # must be a multiple of 64 bits between 512 and 1024
         for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
@@ -459,10 +453,11 @@ class DSAImplementation(object):
         raise ValueError("Number of bits in p must be a multiple of 64 between 512 and 1024, not %d bits" % (bits,))
 
     def _generate(self, bits, randfunc=None, progress_func=None, domain=None):
-        rf = self._get_randfunc(randfunc)
-        obj = _DSA.generate_py(bits, rf, progress_func, domain)    # TODO: Don't use legacy _DSA module
-        key = self._math.dsa_construct(obj.y, obj.g, obj.p, obj.q, obj.x)
-        return _DSAobj(self, key)
+        if randfunc is None:
+            randfunc = self._default_randfunc
+        comps = _DSA.generate_py(bits, randfunc, progress_func, domain)
+        key_dict = dict(zip(('y', 'g', 'p', 'q', 'x'), comps))
+        return _DSAobj(key_dict, randfunc)
 
     def construct(self, tup, consistency_check=True):
         """Construct a DSA key from a tuple of valid DSA components.
@@ -486,26 +481,27 @@ class DSAImplementation(object):
         :Return: A DSA key object (`_DSAobj`).
         """
 
-        key = self._math.dsa_construct(*map(long, tup))
+        key_dict = dict(zip(('y', 'g', 'p', 'q', 'x'), map(Integer, tup)))
+        key = _DSAobj(key_dict, self._default_randfunc)
 
         fmt_error = False
         if consistency_check:
             # Modulus must be prime
-            fmt_error = not isPrime(key.p)
+            fmt_error = test_probable_prime(key.p) == COMPOSITE
             # Verify Lagrange's theorem for sub-group
-            fmt_error |= ((key.p-1) % key.q)!=0
-            fmt_error |= key.g<=1 or key.g>=key.p
-            fmt_error |= pow(key.g, key.q, key.p)!=1
+            fmt_error |= ((key.p - 1) % key.q) != 0
+            fmt_error |= key.g <= 1 or key.g >= key.p
+            fmt_error |= pow(key.g, key.q, key.p) != 1
             # Public key
-            fmt_error |= key.y<=0 or key.y>=key.p
+            fmt_error |= key.y <= 0 or key.y >= key.p
             if hasattr(key, 'x'):
-                fmt_error |= key.x<=0 or key.x>=key.q
-                fmt_error |= pow(key.g, key.x, key.p)!=key.y
+                fmt_error |= key.x <= 0 or key.x >= key.q
+                fmt_error |= pow(key.g, key.x, key.p) != key.y
 
         if fmt_error:
             raise ValueError("Invalid DSA key components")
 
-        return _DSAobj(self, key)
+        return key
 
     def _importKeyDER(self, key_data, passphrase, params, verify_x509_cert):
         """Import a DSA key (public or private half), encoded in DER form."""
@@ -640,7 +636,7 @@ class DSAImplementation(object):
                 keyparts.append(keystring[4:4 + length])
                 keystring = keystring[4 + length:]
             if keyparts[0] == b("ssh-dss"):
-                tup = [bytes_to_long(keyparts[x]) for x in (4, 3, 1, 2)]
+                tup = [Integer.from_bytes(keyparts[x]) for x in (4, 3, 1, 2)]
                 return self.construct(tup)
 
         if bord(extern_key[0]) == 0x30:

@@ -25,29 +25,29 @@
 # ===================================================================
 #
 
-from Crypto.Util import number
-from Crypto.Util.number import bytes_to_long, long_to_bytes, isPrime
 from Crypto.Hash import SHA1
+
 from Crypto.Util.py3compat import *
 
-class error (Exception):
-    pass
+from Crypto.Math.Numbers import Integer
+from Crypto.Math.Primality import (
+            test_probable_prime, COMPOSITE, PROBABLY_PRIME )
 
 def generateQ(randfunc):
-    S=randfunc(20)
-    hash1=SHA1.new(S).digest()
-    hash2=SHA1.new(long_to_bytes(bytes_to_long(S)+1)).digest()
-    q = 0
+    S = randfunc(20)
+    S_next = (Integer.from_bytes(S) + 1).to_bytes(block_size=20)
+    hash1, hash2 = [ SHA1.new(x).digest() for x in S, S_next ]
+    q = Integer(0)
     for i in range(0,20):
-        c=bord(hash1[i])^bord(hash2[i])
-        if i==0:
-            c=c | 128
-        if i==19:
-            c= c | 1
-        q=q*256+c
-    while (not isPrime(q)):
-        q=q+2
-    if pow(2,159) < q < pow(2,160):
+        c = bord(hash1[i]) ^ bord(hash2[i])
+        if i == 0:
+            c = c | 128
+        if i == 19:
+            c = c | 1
+        q = q * 256 + c
+    while test_probable_prime(q) == COMPOSITE:
+        q += 2
+    if q.size_in_bits() == 160:
         return S, q
     raise RuntimeError('Bad q value generated')
 
@@ -62,59 +62,54 @@ def generate_py(bits, randfunc, progress_func=None, domain=None):
 
     if bits<160:
         raise ValueError('Key length < 160 bits')
-    obj=DSAobj()
 
     # Generate string S and prime q
     if progress_func:
         progress_func('p,q\n')
 
     # Domain parameters may be given
+    two = Integer(2)
     if domain is not None:
-        obj.p, obj.q, obj.g = domain
+        p, q, g = map(Integer, domain)
     else:
-        while (1):
-            S, obj.q = generateQ(randfunc)
-            n =(bits-1) // 160
+        while True:
+            S, q = generateQ(randfunc)
+            n = (bits - 1) // 160
             C, N, V = 0, 2, {}
-            b=(obj.q >> 5) & 15
-            powb=pow(2, b)
-            powL1=pow(2, bits-1)
-            while C<4096:
-                for k in range(0, n+1):
-                    V[k]=bytes_to_long(SHA1.new(S+bstr(N)+bstr(k)).digest())
-                W=V[n] % powb
-                for k in range(n-1, -1, -1):
-                    W=(W<<160)+V[k]
-                X=W+powL1
-                p=X-(X%(2*obj.q)-1)
-                if powL1<=p and isPrime(p):
+            b = (q >> 5) & 15
+            powb = pow(2, int(b))
+            powL1 = pow(2, int(bits - 1))
+            while C < 4096:
+                for k in range(0, n + 1):
+                    V[k] = Integer.from_bytes(SHA1.new(
+                             S + bstr(N) + bstr(k)).digest())
+                W = V[n] % powb
+                for k in range(n - 1, -1, -1):
+                    W = (W << 160) + V[k]
+                X = W + powL1
+                p = X - (X % (q * 2) - 1)
+                if powL1 <= p and test_probable_prime(p) == PROBABLY_PRIME:
                     break
-                C, N = C+1, N+n+1
-            if C<4096:
+                C, N = C + 1, N + n +1
+            if C < 4096:
                 break
             if progress_func:
                 progress_func('4096 multiples failed\n')
 
-        obj.p = p
-        power = (p-1) // obj.q
+        power = (p - 1) // q
         if progress_func:
             progress_func('h,g\n')
-        while (1):
-            h=bytes_to_long(randfunc(bits)) % (p-1)
-            g=pow(h, power, p)
-            if 1<h<p-1 and g>1:
+        while True:
+            h = Integer.from_bytes(randfunc(bits)) % (p - 1)
+            g = pow(h, power, p)
+            if 1 < h < p - 1 and g  >1:
                 break
-        obj.g=g
 
     if progress_func:
         progress_func('x,y\n')
-    while (1):
-        x=bytes_to_long(randfunc(20))
-        if 0 < x < obj.q:
+    while True:
+        x = Integer.from_bytes(randfunc(20))
+        if 0 < x < q:
             break
-    obj.x, obj.y = x, pow(obj.g, x, obj.p)
-    return obj
-
-class DSAobj:
-    pass
-
+    y = pow(g, x, p)
+    return y, g, p, q, x

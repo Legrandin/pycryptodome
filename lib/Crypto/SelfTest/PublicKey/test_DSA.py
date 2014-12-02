@@ -108,9 +108,9 @@ class DSATest(unittest.TestCase):
         domain_params = dsa_key_1.domain()
 
         dsa_key_2 = self.dsa.generate(1024, domain=domain_params)
-        self.assertEqual(dsa_key_1.key.p, dsa_key_2.key.p)
-        self.assertEqual(dsa_key_1.key.q, dsa_key_2.key.q)
-        self.assertEqual(dsa_key_1.key.g, dsa_key_2.key.g)
+        self.assertEqual(dsa_key_1.p, dsa_key_2.p)
+        self.assertEqual(dsa_key_1.q, dsa_key_2.q)
+        self.assertEqual(dsa_key_1.g, dsa_key_2.g)
 
         self.assertEqual(dsa_key_1.domain(), dsa_key_2.domain())
 
@@ -139,13 +139,6 @@ class DSATest(unittest.TestCase):
         self.assertEqual(1, dsaObj.can_sign())
         self.assertEqual(0, dsaObj.can_encrypt())
 
-        # Check dsaObj.[ygpqx] -> dsaObj.key.[ygpqx] mapping
-        self.assertEqual(dsaObj.y, dsaObj.key.y)
-        self.assertEqual(dsaObj.g, dsaObj.key.g)
-        self.assertEqual(dsaObj.p, dsaObj.key.p)
-        self.assertEqual(dsaObj.q, dsaObj.key.q)
-        self.assertEqual(dsaObj.x, dsaObj.key.x)
-
         # Sanity check key data
         self.assertEqual(1, dsaObj.p > dsaObj.q)            # p > q
         self.assertEqual(160, size(dsaObj.q))               # size(q) == 160 bits
@@ -162,15 +155,8 @@ class DSATest(unittest.TestCase):
         self.assertEqual(1, dsaObj.can_sign())
         self.assertEqual(0, dsaObj.can_encrypt())
 
-        # Check dsaObj.[ygpq] -> dsaObj.key.[ygpq] mapping
-        self.assertEqual(dsaObj.y, dsaObj.key.y)
-        self.assertEqual(dsaObj.g, dsaObj.key.g)
-        self.assertEqual(dsaObj.p, dsaObj.key.p)
-        self.assertEqual(dsaObj.q, dsaObj.key.q)
-
         # Check that private parameters are all missing
         self.assertEqual(0, hasattr(dsaObj, 'x'))
-        self.assertEqual(0, hasattr(dsaObj.key, 'x'))
 
         # Sanity check key data
         self.assertEqual(1, dsaObj.p > dsaObj.q)            # p > q
