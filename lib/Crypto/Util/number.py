@@ -24,7 +24,7 @@
 # ===================================================================
 #
 
-from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning, PowmInsecureWarning
+from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning
 from warnings import warn as _warn
 import math
 import sys
@@ -399,7 +399,7 @@ def long_to_bytes(n, blocksize=0):
     """
     # after much testing, this algorithm was deemed to be the fastest
     s = b('')
-    n = long(n)
+    n = int(n)
     pack = struct.pack
     while n > 0:
         s = pack('>I', n & 0xffffffffL) + s

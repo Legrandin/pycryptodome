@@ -203,14 +203,6 @@ class PCTBuildExt (build_ext):
 
     def detect_modules (self):
 
-        # Detect libgmp and don't build _fastmath if it is missing.
-        if libgmp_exists():
-            PrintErr("Compiling _fastmath using the GMP library")
-        else:
-            PrintErr ("warning: GMP library not found; Not building " +
-                "Crypto.PublicKey._fastmath.")
-            self.remove_extensions(["Crypto.PublicKey._fastmath"])
-
         # Detect compiler support for CPUID instruction and AESNI
         if (self.check_cpuid_h() or self.check_intrin_h()) and self.check_aesni():
             PrintErr("Compiling support for Intel AES instructions")
@@ -352,12 +344,6 @@ setup(
         'test': TestCommand
         },
     ext_modules = [
-        # _fastmath (uses GNU mp library)
-        Extension("Crypto.PublicKey._fastmath",
-            include_dirs=['src/'],
-            libraries=['gmp'],
-            sources=["src/_fastmath.c"]),
-
         # Hash functions
         Extension("Crypto.Hash.MD2",
             include_dirs=['src/'],

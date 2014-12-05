@@ -185,59 +185,10 @@ class DSATest(unittest.TestCase):
         self.failUnless(dsaObj._verify(m_hash, (r, s)))
         self.failIf(dsaObj._verify(m_hash + 1, (r, s)))
 
-class DSAFastMathTest(DSATest):
-    def setUp(self):
-        DSATest.setUp(self)
-        self.dsa = DSA.DSAImplementation(use_fast_math=True)
-
-    def test_generate_1arg(self):
-        """DSA (_fastmath implementation) generated key (1 argument)"""
-        DSATest.test_generate_1arg(self)
-
-    def test_generate_2arg(self):
-        """DSA (_fastmath implementation) generated key (2 arguments)"""
-        DSATest.test_generate_2arg(self)
-
-    def test_construct_4tuple(self):
-        """DSA (_fastmath implementation) constructed key (4-tuple)"""
-        DSATest.test_construct_4tuple(self)
-
-    def test_construct_5tuple(self):
-        """DSA (_fastmath implementation) constructed key (5-tuple)"""
-        DSATest.test_construct_5tuple(self)
-
-class DSASlowMathTest(DSATest):
-    def setUp(self):
-        DSATest.setUp(self)
-        self.dsa = DSA.DSAImplementation(use_fast_math=False)
-
-    def test_generate_1arg(self):
-        """DSA (_slowmath implementation) generated key (1 argument)"""
-        DSATest.test_generate_1arg(self)
-
-    def test_generate_2arg(self):
-        """DSA (_slowmath implementation) generated key (2 arguments)"""
-        DSATest.test_generate_2arg(self)
-
-    def test_construct_4tuple(self):
-        """DSA (_slowmath implementation) constructed key (4-tuple)"""
-        DSATest.test_construct_4tuple(self)
-
-    def test_construct_5tuple(self):
-        """DSA (_slowmath implementation) constructed key (5-tuple)"""
-        DSATest.test_construct_5tuple(self)
-
 
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(DSATest)
-    try:
-        from Crypto.PublicKey import _fastmath
-        tests += list_test_cases(DSAFastMathTest)
-    except ImportError:
-        from Crypto.SelfTest.st_common import handle_fastmath_import_error
-        handle_fastmath_import_error()
-    tests += list_test_cases(DSASlowMathTest)
     return tests
 
 if __name__ == '__main__':

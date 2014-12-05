@@ -473,10 +473,10 @@ class RSAImplementation(object):
                 # any candidate a leads to successful factoring.
                 # See "Digitalized Signatures and Public Key Functions as Intractable
                 # as Factorization", M. Rabin, 1979
-                spotted = 0
+                spotted = False
                 a = Integer(2)
-                while not spotted and a<100:
-                    k = t
+                while not spotted and a < 100:
+                    k = Integer(t)
                     # Cycle through all values a^{t*2^i}=a^k
                     while k < ktot:
                         cand = pow(a, k, n)
@@ -485,7 +485,7 @@ class RSAImplementation(object):
                             # We have found a number such that (cand-1)(cand+1)=0 (mod n).
                             # Either of the terms divides n.
                             p = Integer(n).gcd(cand + 1)
-                            spotted = 1
+                            spotted = True
                             break
                         k *= 2
                     # This value was not any good... let's try another!

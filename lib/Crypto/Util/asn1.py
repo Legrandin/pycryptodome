@@ -285,7 +285,7 @@ class DerInteger(DerObject):
                 number = self.value
                 self.payload = b('')
                 while True:
-                    self.payload = bchr(number&255) + self.payload
+                    self.payload = bchr(int(number&255)) + self.payload
                     if 128 <= number <= 255:
                         self.payload = bchr(0x00) + self.payload
                     if -128 <= number <= 255:

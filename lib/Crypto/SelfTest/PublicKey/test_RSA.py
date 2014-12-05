@@ -298,101 +298,10 @@ class RSATest(unittest.TestCase):
         new_plaintext = rsaObj._decrypt(ciphertext)
         self.assertEqual(plaintext, new_plaintext)
 
-class RSAFastMathTest(RSATest):
-    def setUp(self):
-        RSATest.setUp(self)
-        self.rsa = RSA.RSAImplementation(use_fast_math=True)
-
-    def test_generate_1arg(self):
-        """RSA (_fastmath implementation) generated key (1 argument)"""
-        RSATest.test_generate_1arg(self)
-
-    def test_generate_2arg(self):
-        """RSA (_fastmath implementation) generated key (2 arguments)"""
-        RSATest.test_generate_2arg(self)
-
-    def test_construct_2tuple(self):
-        """RSA (_fastmath implementation) constructed key (2-tuple)"""
-        RSATest.test_construct_2tuple(self)
-
-    def test_construct_3tuple(self):
-        """RSA (_fastmath implementation) constructed key (3-tuple)"""
-        RSATest.test_construct_3tuple(self)
-
-    def test_construct_4tuple(self):
-        """RSA (_fastmath implementation) constructed key (4-tuple)"""
-        RSATest.test_construct_4tuple(self)
-
-    def test_construct_5tuple(self):
-        """RSA (_fastmath implementation) constructed key (5-tuple)"""
-        RSATest.test_construct_5tuple(self)
-
-    def test_construct_6tuple(self):
-        """RSA (_fastmath implementation) constructed key (6-tuple)"""
-        RSATest.test_construct_6tuple(self)
-
-    def test_factoring(self):
-        RSATest.test_factoring(self)
-
-
-    def test_serialization(self):
-        """RSA (_fastmath implementation) serialize/unserialize key
-        """
-        RSATest.test_serialization(self)
-
-
-class RSASlowMathTest(RSATest):
-    def setUp(self):
-        RSATest.setUp(self)
-        self.rsa = RSA.RSAImplementation(use_fast_math=False)
-
-    def test_generate_1arg(self):
-        """RSA (_slowmath implementation) generated key (1 argument)"""
-        RSATest.test_generate_1arg(self)
-
-    def test_generate_2arg(self):
-        """RSA (_slowmath implementation) generated key (2 arguments)"""
-        RSATest.test_generate_2arg(self)
-
-    def test_construct_2tuple(self):
-        """RSA (_slowmath implementation) constructed key (2-tuple)"""
-        RSATest.test_construct_2tuple(self)
-
-    def test_construct_3tuple(self):
-        """RSA (_slowmath implementation) constructed key (3-tuple)"""
-        RSATest.test_construct_3tuple(self)
-
-    def test_construct_4tuple(self):
-        """RSA (_slowmath implementation) constructed key (4-tuple)"""
-        RSATest.test_construct_4tuple(self)
-
-    def test_construct_5tuple(self):
-        """RSA (_slowmath implementation) constructed key (5-tuple)"""
-        RSATest.test_construct_5tuple(self)
-
-    def test_construct_6tuple(self):
-        """RSA (_slowmath implementation) constructed key (6-tuple)"""
-        RSATest.test_construct_6tuple(self)
-
-    def test_factoring(self):
-        RSATest.test_factoring(self)
-
-    def test_serialization(self):
-        """RSA (_slowmath implementation) serialize/unserialize key"""
-        RSATest.test_serialization(self)
-
 
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(RSATest)
-    try:
-        from Crypto.PublicKey import _fastmath
-        tests += list_test_cases(RSAFastMathTest)
-    except ImportError:
-        from Crypto.SelfTest.st_common import handle_fastmath_import_error
-        handle_fastmath_import_error()
-    if config.get('slow_tests',1):
-        tests += list_test_cases(RSASlowMathTest)
     return tests
 
 if __name__ == '__main__':
