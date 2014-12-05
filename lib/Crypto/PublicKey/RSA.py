@@ -73,9 +73,6 @@ import struct
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.PublicKey import _RSA, _slowmath
-from Crypto.Util.number import inverse, GCD, isPrime
-from Crypto.Util.number import getRandomRange, bytes_to_long, long_to_bytes
 
 from Crypto.Util.asn1 import (
                 DerNull,
@@ -86,10 +83,9 @@ from Crypto.Util.asn1 import (
                 newDerBitString
                 )
 
-try:
-    from Crypto.PublicKey import _fastmath
-except ImportError:
-    _fastmath = None
+from Crypto.Math.Numbers import Integer
+from Crypto.Math.Primality import (test_probable_prime,
+                                generate_probable_prime, COMPOSITE)
 
 def _decode_der(obj_class, binstr):
     """Instantiate a DER object class, decode a DER binary string in it, and
@@ -118,61 +114,65 @@ class _RSAobj(object):
     #:  - **u**, the CRT coefficient (1/p) mod q.
     _keydata = ['n', 'e', 'd', 'p', 'q', 'u']
 
-    def __init__(self, implementation, key, randfunc=None):
-        self.implementation = implementation
-        self.key = key
-        if randfunc is None:
-            randfunc = Random.new().read
+    def __init__(self, key_dict, randfunc):
+        input_set = set(key_dict.keys())
+        public_set = set(('n' , 'e'))
+        private_set = public_set | set(('p' , 'q', 'd', 'u'))
+        if input_set not in (private_set, public_set):
+            raise ValueError("Some RSA components are missing")
+        self._key = dict(key_dict)
         self._randfunc = randfunc
 
     def __getattr__(self, attrname):
-        if attrname in self._keydata:
-            # For backward compatibility, allow the user to get (not set) the
-            # RSA key parameters directly from this object.
-            return getattr(self.key, attrname)
-        else:
-            raise AttributeError("%s object has no %r attribute" % (self.__class__.__name__, attrname,))
+        try:
+            return int(self._key[attrname])
+        except KeyError:
+            raise AttributeError(attrname)
 
     def _encrypt(self, plaintext):
         if not 0 < plaintext < self.n:
             raise ValueError("Plaintext too large")
-        return self.key._encrypt(long(plaintext))
+        e, n = self._key['e'], self._key['n']
+        return int(pow(Integer(plaintext), e, n))
 
     def _decrypt(self, ciphertext):
         if not 0 < ciphertext < self.n:
             raise ValueError("Ciphertext too large")
+        if not self.has_private():
+            raise TypeError("This is not a private key")
+
+        e, d, n, p, q, u = [self._key[comp] for comp in 'e', 'd', 'n', 'p', 'q', 'u']
 
         # Blinded RSA decryption (to prevent timing attacks):
         # Step 1: Generate random secret blinding factor r, such that 0 < r < n-1
-        r = getRandomRange(1, self.key.n-1, randfunc=self._randfunc)
+        r = Integer.random_range(min_inclusive=1, max_exclusive=n, randfunc=self._randfunc)
         # Step 2: Compute c' = c * r**e mod n
-        cp = self.key._blind(long(ciphertext), r)
+        cp = Integer(ciphertext) * pow(r, e, n) % n
         # Step 3: Compute m' = c'**d mod n       (ordinary RSA decryption)
-        mp = self.key._decrypt(cp)
+        m1 = pow(cp, d % (p - 1), p)
+        m2 = pow(cp, d % (q - 1), q)
+        h = m2 - m1
+        while h < 0:
+            h += q
+        h = (h * u) % q
+        mp = h * p + m1
         # Step 4: Compute m = m**(r-1) mod n
-        return self.key._unblind(mp, r)
+        return (r.inverse(n) * mp) % n
 
     def has_private(self):
-        return self.key.has_private()
+        return 'd' in self._key
 
     def size(self):
-        return self.key.size()
+        return self._key['p'].size_in_bits() - 1
 
     def publickey(self):
-        return self.implementation.construct((self.key.n, self.key.e))
+        return _RSAobj(dict([(k, self._key[k]) for k in 'n', 'e']), self._randfunc)
 
     def __eq__(self, other):
-        if bool(self.has_private()) != bool(other.has_private()):
-            return False
-
-        result = True
-        for comp in self._keydata:
-            result = result and (getattr(self.key, comp, None) ==
-                                 getattr(other.key, comp, None))
-        return result
+        return self._key == other._key
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        return self._key != other._key
 
     def __getstate__(self):
         # RSA key is not pickable
@@ -260,8 +260,7 @@ class _RSAobj(object):
         if passphrase is not None:
             passphrase = tobytes(passphrase)
         if format=='OpenSSH':
-               eb = long_to_bytes(self.e)
-               nb = long_to_bytes(self.n)
+               eb, nb = [self._key[comp].to_bytes() for comp in 'e', 'n']
                if bord(eb[0]) & 0x80: eb=bchr(0x00)+eb
                if bord(nb[0]) & 0x80: nb=bchr(0x00)+nb
                keyparts = [ b('ssh-rsa'), eb, nb ]
@@ -280,7 +279,7 @@ class _RSAobj(object):
                         self.q,
                         self.d % (self.p-1),
                         self.d % (self.q-1),
-                        inverse(self.q, self.p)
+                        Integer(self.q).inverse(self.p)
                     ).encode()
                 if pkcs==1:
                     keyType = 'RSA PRIVATE'
@@ -325,45 +324,13 @@ class RSAImplementation(object):
         """Create a new RSA key factory.
 
         :Keywords:
-         use_fast_math : bool
-                                Specify which mathematic library to use:
-
-                                - *None* (default). Use fastest math available.
-                                - *True* . Use fast math.
-                                - *False* . Use slow math.
          default_randfunc : callable
                                 Specify how to collect random data:
 
                                 - *None* (default). Use Random.new().read().
                                 - not *None* . Use the specified function directly.
-        :Raise RuntimeError:
-            When **use_fast_math** =True but fast math is not available.
         """
-        use_fast_math = kwargs.get('use_fast_math', None)
-        if use_fast_math is None:   # Automatic
-            if _fastmath is not None:
-                self._math = _fastmath
-            else:
-                self._math = _slowmath
-
-        elif use_fast_math:     # Explicitly select fast math
-            if _fastmath is not None:
-                self._math = _fastmath
-            else:
-                raise RuntimeError("fast math module not available")
-
-        else:   # Explicitly select slow math
-            self._math = _slowmath
-
-        self._default_randfunc = kwargs.get('default_randfunc', None)
-        self._current_randfunc = None
-
-    def _get_randfunc(self, randfunc):
-        if randfunc is not None:
-            return randfunc
-        elif self._current_randfunc is None:
-            self._current_randfunc = Random.new().read
-        return self._current_randfunc
+        self._default_randfunc = kwargs.get('default_randfunc', Random.new().read)
 
     def generate(self, bits, randfunc=None, progress_func=None, e=65537):
         """Randomly generate a fresh, new RSA key.
@@ -410,10 +377,46 @@ class RSAImplementation(object):
             raise ValueError("RSA modulus length must be a multiple of 256 and >= 1024")
         if e%2==0 or e<3:
             raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
-        rf = self._get_randfunc(randfunc)
-        obj = _RSA.generate_py(bits, rf, progress_func, e)    # TODO: Don't use legacy _RSA module
-        key = self._math.rsa_construct(obj.n, obj.e, obj.d, obj.p, obj.q, obj.u)
-        return _RSAobj(self, key)
+        if randfunc is None:
+            randfunc = self._default_randfunc
+
+        e = Integer(e)
+
+        # Generate the prime factors of n
+        if progress_func:
+            progress_func('p,q\n')
+        p = q = n = Integer(1)
+        size_p = bits >> 1
+        size_q = bits - size_p
+        while n.size_in_bits() != bits:
+            # Note that q might be one bit longer than p if somebody specifies an odd
+            # number of bits for the key. (Why would anyone do that?  You don't get
+            # more security.)
+            p = generate_probable_prime(exact_bits=size_p,
+                                        randfunc=randfunc,
+                                        totient_coprime_to=e)
+            q = generate_probable_prime(exact_bits=size_q,
+                                        randfunc=randfunc,
+                                        totient_coprime_to=e)
+            n = p * q
+
+        # It's OK for p to be larger than q, but let's be
+        # kind to the function that will invert it for
+        # th calculation of u.
+        if p > q:
+            p, q = q, p
+
+        if progress_func:
+            progress_func('u\n')
+        u = p.inverse(q)
+
+        if progress_func:
+            progress_func('d\n')
+        d = e.inverse((p - 1) * (q - 1))
+
+        key_dict = dict(zip(('n', 'e', 'd', 'p', 'q', 'u'),
+                            (n, e, d, p, q, u)))
+        return _RSAobj(key_dict, randfunc)
 
     def construct(self, tup, consistency_check=True):
         """Construct an RSA key from a tuple of valid RSA components.
@@ -449,40 +452,93 @@ class RSAImplementation(object):
         :Return: An RSA key object (`_RSAobj`).
         """
 
-        key = self._math.rsa_construct(*map(long, tup))
+        comp_names = 'n', 'e', 'd', 'p', 'q', 'u'
+        key_dict = dict(zip(comp_names, map(Integer, tup)))
+        n, e, d, p, q, u = [key_dict.get(comp) for comp in comp_names]
 
+        if d is not None:
+
+            if None in (p, q):
+                # Compute factors p and q from the private exponent d.
+                # We assume that n has no more than two factors.
+                # See 8.2.2(i) in Handbook of Applied Cryptography.
+                ktot = d * e - 1
+                # The quantity d*e-1 is a multiple of phi(n), even,
+                # and can be represented as t*2^s.
+                t = ktot
+                while t % 2 ==0:
+                    t //= 2
+                # Cycle through all multiplicative inverses in Zn.
+                # The algorithm is non-deterministic, but there is a 50% chance
+                # any candidate a leads to successful factoring.
+                # See "Digitalized Signatures and Public Key Functions as Intractable
+                # as Factorization", M. Rabin, 1979
+                spotted = 0
+                a = Integer(2)
+                while not spotted and a<100:
+                    k = t
+                    # Cycle through all values a^{t*2^i}=a^k
+                    while k < ktot:
+                        cand = pow(a, k, n)
+                        # Check if a^k is a non-trivial root of unity (mod n)
+                        if cand != 1 and cand != (n - 1) and pow(cand, 2, n) == 1:
+                            # We have found a number such that (cand-1)(cand+1)=0 (mod n).
+                            # Either of the terms divides n.
+                            p = Integer(n).gcd(cand + 1)
+                            spotted = 1
+                            break
+                        k *= 2
+                    # This value was not any good... let's try another!
+                    a += 2
+                if not spotted:
+                    raise ValueError("Unable to compute factors p and q from exponent d.")
+                # Found !
+                assert ((n % p) == 0)
+                q = n // p
+
+            if u is None:
+                u = p.inverse(q)
+
+            key_dict['p'] = p
+            key_dict['q'] = q
+            key_dict['u'] = u
+
+        # Build key object
+        key = _RSAobj(key_dict, self._default_randfunc)
+
+        # Very consistency of the key
         fmt_error = False
         if consistency_check:
             # Modulus and public exponent must be coprime
-            fmt_error = key.e<=1 or key.e>=key.n
-            fmt_error |= GCD(key.n, key.e)!=1
+            fmt_error = e <= 1 or e >= n
+            fmt_error |= Integer(n).gcd(e) != 1
 
             # For RSA, modulus must be odd
-            fmt_error |= not key.n&1
+            fmt_error |= not n & 1
 
-            if not fmt_error and hasattr(key, 'd'):
+            if not fmt_error and key.has_private():
                 # Modulus and private exponent must be coprime
-                fmt_error = key.d<=1 or key.d>=key.n
-                fmt_error |= GCD(key.n, key.d)!=1
+                fmt_error = d <= 1 or d >= n
+                fmt_error |= Integer(n).gcd(d) != 1
                 # Modulus must be product of 2 primes
-                fmt_error |= (key.p*key.q != key.n)
-                fmt_error |= not isPrime(key.p)
-                fmt_error |= not isPrime(key.q)
+                fmt_error |= (p * q != n)
+                fmt_error |= test_probable_prime(p) == COMPOSITE
+                fmt_error |= test_probable_prime(q) == COMPOSITE
                 # See Carmichael theorem
-                phi = (key.p-1)*(key.q-1)
-                lcm = phi // GCD(key.p-1, key.q-1)
-                fmt_error |= (key.e*key.d % lcm)!=1
+                phi = (p - 1) * (q - 1)
+                lcm = phi // (p - 1).gcd(q - 1)
+                fmt_error |= (e * d % int(lcm)) != 1
                 if hasattr(key, 'u'):
                     # CRT coefficient
-                    fmt_error |= key.u<=1 or key.u>=key.q
-                    fmt_error |= (key.p*key.u % key.q)!=1
+                    fmt_error |= u <= 1 or u >= q
+                    fmt_error |= (p * u % q) != 1
                 else:
                     fmt_error = True
 
         if fmt_error:
             raise ValueError("Invalid RSA key components")
 
-        return _RSAobj(self, key)
+        return key
 
     def _importKeyDER(self, extern_key, passphrase, verify_x509_cert):
         """Import an RSA key (public or private half), encoded in DER form."""
@@ -497,7 +553,7 @@ class RSAImplementation(object):
                 del der[6:]     # Remove d mod (p-1),
                                 # d mod (q-1), and
                                 # q^{-1} mod p
-                der.append(inverse(der[4], der[5]))  # Add p^{-1} mod q
+                der.append(Integer(der[4]).inverse(der[5]))  # Add p^{-1} mod q
                 del der[0]      # Remove version
                 return self.construct(der[:])
 
@@ -616,8 +672,8 @@ class RSAImplementation(object):
                     l = struct.unpack(">I", keystring[:4])[0]
                     keyparts.append(keystring[4:4 + l])
                     keystring = keystring[4 + l:]
-                e = bytes_to_long(keyparts[1])
-                n = bytes_to_long(keyparts[2])
+                e = Integer.from_bytes(keyparts[1])
+                n = Integer.from_bytes(keyparts[2])
                 return self.construct([n, e])
 
         if bord(extern_key[0]) == 0x30:

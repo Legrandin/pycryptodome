@@ -277,6 +277,8 @@ def generate_probable_prime(**kwargs):
         It must be at least 160.
       :randfunc: callable
         An RNG function where candidate primes are taken from.
+      :totient_coprime_to:
+        If provided, an integer the totient must be coprime to.
 
     :Return:
         A probable prime in the range 2**exact_bits > p > 2**(exact_bits-1).
@@ -286,6 +288,7 @@ def generate_probable_prime(**kwargs):
 
     exact_bits = kwargs.pop("exact_bits", None)
     randfunc = kwargs.pop("randfunc", None)
+    totient_coprime = kwargs.pop("totient_coprime_to", None)
     if kwargs:
         print "Unknown parameters:", kwargs.keys()
 
@@ -301,6 +304,10 @@ def generate_probable_prime(**kwargs):
     while result == COMPOSITE:
         candidate = Integer.random(exact_bits=exact_bits,
                                    randfunc=randfunc) | 1
+        if totient_coprime:
+            totient = candidate - 1
+            if totient.gcd(totient_coprime) != 1:
+                continue
         result = test_probable_prime(candidate, randfunc)
     return candidate
 

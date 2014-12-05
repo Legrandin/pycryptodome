@@ -219,13 +219,13 @@ class RSATest(unittest.TestCase):
         # Check capabilities
         self.assertEqual(1, rsaObj.has_private())
 
-        # Check rsaObj.[nedpqu] -> rsaObj.key.[nedpqu] mapping
-        self.assertEqual(rsaObj.n, rsaObj.key.n)
-        self.assertEqual(rsaObj.e, rsaObj.key.e)
-        self.assertEqual(rsaObj.d, rsaObj.key.d)
-        self.assertEqual(rsaObj.p, rsaObj.key.p)
-        self.assertEqual(rsaObj.q, rsaObj.key.q)
-        self.assertEqual(rsaObj.u, rsaObj.key.u)
+        # Check rsaObj.[nedpqu] -> rsaObj.[nedpqu] mapping
+        self.assertEqual(rsaObj.n, rsaObj.n)
+        self.assertEqual(rsaObj.e, rsaObj.e)
+        self.assertEqual(rsaObj.d, rsaObj.d)
+        self.assertEqual(rsaObj.p, rsaObj.p)
+        self.assertEqual(rsaObj.q, rsaObj.q)
+        self.assertEqual(rsaObj.u, rsaObj.u)
 
         # Sanity check key data
         self.assertEqual(rsaObj.n, rsaObj.p * rsaObj.q)     # n = pq
@@ -242,19 +242,15 @@ class RSATest(unittest.TestCase):
         # Check capabilities
         self.assertEqual(0, rsaObj.has_private())
 
-        # Check rsaObj.[ne] -> rsaObj.key.[ne] mapping
-        self.assertEqual(rsaObj.n, rsaObj.key.n)
-        self.assertEqual(rsaObj.e, rsaObj.key.e)
+        # Check rsaObj.[ne] -> rsaObj.[ne] mapping
+        self.assertEqual(rsaObj.n, rsaObj.n)
+        self.assertEqual(rsaObj.e, rsaObj.e)
 
         # Check that private parameters are all missing
         self.assertEqual(0, hasattr(rsaObj, 'd'))
         self.assertEqual(0, hasattr(rsaObj, 'p'))
         self.assertEqual(0, hasattr(rsaObj, 'q'))
         self.assertEqual(0, hasattr(rsaObj, 'u'))
-        self.assertEqual(0, hasattr(rsaObj.key, 'd'))
-        self.assertEqual(0, hasattr(rsaObj.key, 'p'))
-        self.assertEqual(0, hasattr(rsaObj.key, 'q'))
-        self.assertEqual(0, hasattr(rsaObj.key, 'u'))
 
         # Sanity check key data
         self.assertEqual(1, rsaObj.e > 1)   # e > 1

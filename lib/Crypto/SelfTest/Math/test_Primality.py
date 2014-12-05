@@ -83,10 +83,16 @@ class TestPrimality(unittest.TestCase):
             self.assertEqual(test_probable_prime(np), COMPOSITE)
 
     def test_generate_prime(self):
-        generate_probable_prime(exact_bits=512)
+        p = generate_probable_prime(exact_bits=512)
+        self.assertEqual(p.size_in_bits(), 512)
+
+        for x in xrange(20):
+            q = generate_probable_prime(exact_bits=160, totient_coprime_to=3)
+            self.assertEqual((q-1).gcd(3), 1)
 
     def test_generate_safe_prime(self):
         p = generate_probable_safe_prime(exact_bits=161)
+        self.assertEqual(p.size_in_bits(), 161)
 
 def get_tests(config={}):
     tests = []
