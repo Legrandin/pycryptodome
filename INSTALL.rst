@@ -22,7 +22,7 @@ Linux Ubuntu
 
 For Python 2.x::
 
-        $ sudo apt-get install build-essential libgmp3-dev
+        $ sudo apt-get install build-essential libgmp3c2
         $ sudo apt-get install python-virtualenv python-dev
         $ virtualenv -p /usr/bin/python2 MyProject
         $ cd MyProject
@@ -32,7 +32,7 @@ For Python 2.x::
 
 For Python 3.x::
 
-        $ sudo apt-get install build-essential libgmp3-dev
+        $ sudo apt-get install build-essential libgmp3c2
         $ sudo apt-get install python-virtualenv python3-dev
         $ virtualenv -p /usr/bin/python3 MyProject
         $ cd MyProject
@@ -42,7 +42,7 @@ For Python 3.x::
 
 For PyPy::
 
-        $ sudo apt-get install build-essential libgmp3-dev
+        $ sudo apt-get install build-essential libgmp3c2
         $ sudo apt-get install python-virtualenv pypy-dev
         $ virtualenv -p /usr/bin/pypy MyProject
         $ cd MyProject
@@ -55,7 +55,7 @@ Linux Fedora
 
 For Python 2.x::
 
-        $ sudo yum install gcc gmp-devel
+        $ sudo yum install gcc gmp
         $ sudo yum install python-virtualenv python-devel 
         $ virtualenv -p /usr/bin/python2 MyProject
         $ cd MyProject
@@ -65,7 +65,7 @@ For Python 2.x::
 
 For Python 3.x::
 
-        $ sudo yum install gcc gmp-devel
+        $ sudo yum install gcc gmp
         $ sudo yum install python-virtualenv python3-devel 
         $ virtualenv -p /usr/bin/python3 MyProject
         $ cd MyProject
@@ -75,7 +75,7 @@ For Python 3.x::
 
 For PyPy::
 
-        $ sudo apt-get install build-essential libgmp3-dev
+        $ sudo apt-get install build-essential gmp
         $ sudo apt-get install python-virtualenv pypy-devel
         $ virtualenv -p /usr/bin/pypy MyProject
         $ cd MyProject

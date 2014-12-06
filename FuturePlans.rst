@@ -1,18 +1,9 @@
-The first release of PyCryptoDome (3.0) is only meant to repackage
-the current alpha version of PyCrypto (2.7), add features that
-cannot be delayed anymore (``scrypt``, MSVC support, etc) and remove
-the most obvious cruft (``autoconf``, user-space CSPRNG, etc).
-This is also the right time to break backward compatibility
-(no more default ECB mode for ciphers, no ``Crypto.Random.OS`` package,
-no more dangerous public key methods, etc).
-
 Future releases will include:
 
 - Break-up blockalgo.py (and if possible block_template.c too)
   in more manageable modules
-- Clean up the Crypto.PublicKey API to reduce the call depth
-- Add back support for MPIR on Windows, or
-  investigate performance of other, smaller arbitrary-precision arithmetic libaries
+- Refactor RSA/DSA code and make it compliant to FIPS 186-4
+- Add back support for MPIR on Windows
 - Move API documentation from epydoc to sphinx
 - Add algorithms:
     - ChaCha20
@@ -24,7 +15,7 @@ Future releases will include:
     - Diffie-Hellman
     - bcrypt
     - SRP
-- Speed up execution on pypy (via ctypes?)
+- Speed up execution on pypy
 - Add more key management:
     - Export/import of DSA keys
     - Export/import of EC keys

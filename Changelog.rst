@@ -1,6 +1,26 @@
 Changelog
 =========
 
+3.1
++++
+
+New features
+------------
+
+* None so far
+
+Resolved issues
+---------------
+
+* GMP headers and static libraries are not required anymore at the time
+  PyCryptodome is built. Instead, the code will automatically use the
+  GMP dynamic library (.so/.DLL) if found in the system at runtime.
+
+Breaks in compatibility
+-----------------------
+
+* None so far
+
 3.0
 +++
 
