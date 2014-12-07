@@ -211,51 +211,6 @@ MODE_CCM = 8
 #: .. __: http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf
 MODE_EAX = 9
 
-#: *Synthetic Initialization Vector*. This is an Authenticated Encryption with
-#: Associated Data (`AEAD`_) mode. It provides both confidentiality and
-#: authenticity.
-#: The header of the message may be left in the clear, if needed, and it will
-#: still be subject to authentication. The decryption step tells the receiver
-#: if the message comes from a source that really knowns the secret key.
-#: Additionally, decryption detects if any part of the message - including the
-#: header - has been modified or corrupted.
-#:
-#: If the data being encrypted is completely unpredictable to an adversary
-#: (e.g. a secret key, for key wrapping purposes) a nonce is not strictly
-#: required.
-#:
-#: Otherwise, a nonce has to be provided; the nonce shall never repeat
-#: for two different messages encrypted with the same key, but it does not
-#: need to be random.
-#:
-#: Unlike other AEAD modes such as CCM, EAX or GCM, accidental reuse of a
-#: nonce is not catastrophic for the confidentiality of the message. The only
-#: effect is that an attacker can tell when the same plaintext (and same
-#: associated data) is protected with the same key.
-#:
-#: The length of the MAC is fixed to the block size of the underlying cipher.
-#: The key size is twice the length of the key of the underlying cipher.
-#:
-#: This mode is only available for AES ciphers.
-#:
-#: +--------------------+---------------+-------------------+
-#: |      Cipher        | SIV MAC size  |   SIV key length  |
-#: |                    |    (bytes)    |     (bytes)       |
-#: +====================+===============+===================+
-#: |    AES-128         |      16       |        32         |
-#: +--------------------+---------------+-------------------+
-#: |    AES-192         |      16       |        48         |
-#: +--------------------+---------------+-------------------+
-#: |    AES-256         |      16       |        64         |
-#: +--------------------+---------------+-------------------+
-#:
-#: See `RFC5297`_ and the `original paper`__.
-#:
-#: .. _RFC5297: https://tools.ietf.org/html/rfc5297
-#: .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
-#: .. __: http://www.cs.ucdavis.edu/~rogaway/papers/keywrap.pdf
-MODE_SIV = 10
-
 #: *Galois/Counter Mode (GCM)*. This is an Authenticated Encryption with
 #: Associated Data (`AEAD`_) mode. It provides both confidentiality and
 #: authenticity.
@@ -386,8 +341,6 @@ class BlockAlgo:
             self._start_PGP(factory, key, *args, **kwargs)
         elif self.mode == MODE_EAX:
             self._start_eax(factory, key, *args, **kwargs)
-        elif self.mode == MODE_SIV:
-            self._start_siv(factory, key, *args, **kwargs)
         elif self.mode == MODE_GCM:
             self._start_gcm(factory, key, *args, **kwargs)
         else:
@@ -444,36 +397,6 @@ class BlockAlgo:
         # Step 6 - Prepare GCTR cipher for GMAC
         ctr = Counter.new(128, initial_value=self._j0, allow_wraparound=True)
         self._tag_cipher = self._factory.new(key, MODE_CTR, counter=ctr)
-
-    def _start_siv(self, factory, key, *args, **kwargs):
-
-        subkey_size, rem = divmod(len(key), 2)
-        if rem:
-            raise ValueError("MODE_SIV requires a key twice as long as for the underlying cipher")
-
-        # IV is optional
-        self.nonce = _getParameter('nonce', 1, args, kwargs)
-
-        self._cipherMAC = _S2V(key[:subkey_size], ciphermod=factory)
-        self._subkey_ctr = key[subkey_size:]
-        self._mac_len = factory.block_size
-
-        self._cipherMAC = self._cipherMAC
-
-        # Allowed transitions after initialization
-        self._next = [self.update, self.encrypt, self.decrypt,
-                      self.digest, self.verify]
-
-    def _siv_ctr_cipher(self, tag):
-        """Create a new CTR cipher from the MAC in SIV mode"""
-
-        tag_int = bytes_to_long(tag)
-        init_counter = tag_int ^ (tag_int & 0x8000000080000000)
-        ctr = Counter.new(self._factory.block_size * 8,
-                          initial_value=init_counter,
-                          allow_wraparound=True)
-
-        return self._factory.new(self._subkey_ctr, MODE_CTR, counter=ctr)
 
     def _start_eax(self, factory, key, *args, **kwargs):
 
@@ -618,7 +541,7 @@ class BlockAlgo:
     def update(self, assoc_data):
         """Protect associated data
 
-        When using an AEAD mode like CCM, EAX, GCM or SIV, and
+        When using an AEAD mode like CCM, EAX or GCM and
         if there is any associated data, the caller has to invoke
         this function one or more times, before using
         ``decrypt`` or ``encrypt``.
@@ -640,7 +563,7 @@ class BlockAlgo:
             A piece of associated data. There are no restrictions on its size.
         """
 
-        if self.mode not in (MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM):
+        if self.mode not in (MODE_CCM, MODE_EAX, MODE_GCM):
             raise TypeError("update() not supported by this mode of operation")
 
         if self.update not in self._next:
@@ -658,7 +581,7 @@ class BlockAlgo:
         you cannot encrypt (or decrypt) another message using the same
         object.
 
-        For `MODE_SIV` (always) and `MODE_CCM` (when ``msg_len`` was not
+        For `MODE_CCM` (when ``msg_len`` was not
         passed at initialization), this method can be called only **once**.
 
         For all other modes, the data to encrypt can be broken up in two or
@@ -718,7 +641,7 @@ class BlockAlgo:
                 self._done_first_block = True
             return res
 
-        if self.mode in (MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM):
+        if self.mode in (MODE_CCM, MODE_EAX, MODE_GCM):
             if self.encrypt not in self._next:
                 raise TypeError("encrypt() can only be called after initialization or an update()")
             self._next = [self.encrypt, self.digest]
@@ -734,15 +657,6 @@ class BlockAlgo:
                 self._done_assoc_data = True
 
             self._cipherMAC.update(plaintext)
-
-        if self.mode == MODE_SIV:
-            self._next = [self.digest]
-
-            if self.nonce:
-                self._cipherMAC.update(self.nonce)
-
-            self._cipherMAC.update(plaintext)
-            self._cipher = self._siv_ctr_cipher(self._cipherMAC.derive())
 
         ct = self._cipher.encrypt(plaintext)
 
@@ -765,7 +679,7 @@ class BlockAlgo:
         you cannot decrypt (or encrypt) another message with the same
         object.
 
-        For `MODE_SIV` (always) and `MODE_CCM` (when ``msg_len`` was not
+        For `MODE_CCM` (when ``msg_len`` was not
         passed at initialization), this method can be called only **once**.
 
         For all other modes, the data to decrypt can be broken up in two or
@@ -796,12 +710,9 @@ class BlockAlgo:
          - For `MODE_OPENPGP`, *plaintext* must be a multiple of *block_size*,
            unless it is the last chunk of the message.
 
-         - For `MODE_SIV`, *ciphertext* can be of any length, but it must also
-           include the MAC (concatenated at the end).
-
         :Parameters:
           ciphertext : byte string
-            The piece of data to decrypt (plus the MAC, for `MODE_SIV` only).
+            The piece of data to decrypt.
 
         :Return: the decrypted data (byte string).
         """
@@ -821,10 +732,6 @@ class BlockAlgo:
             else:
                 res = self._cipher.decrypt(ciphertext)
             return res
-
-        if self.mode == MODE_SIV:
-            raise TypeError("decrypt() not allowed for SIV mode."
-                            " Use decrypt_and_verify() instead.")
 
         if self.mode in (MODE_CCM, MODE_EAX, MODE_GCM):
 
@@ -872,7 +779,7 @@ class BlockAlgo:
         :Return: the MAC, as a byte string.
         """
 
-        if self.mode not in (MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM):
+        if self.mode not in (MODE_CCM, MODE_EAX, MODE_GCM):
             raise TypeError("digest() not supported by this mode of operation")
 
         if self.digest not in self._next:
@@ -915,9 +822,6 @@ class BlockAlgo:
                 tag = strxor(tag, self._omac[i].digest())
             self._tag = tag[:self._mac_len]
 
-        if self.mode == MODE_SIV:
-            self._tag = self._cipherMAC.derive()
-
         return self._tag
 
     def hexdigest(self):
@@ -947,7 +851,7 @@ class BlockAlgo:
             or the key is incorrect.
         """
 
-        if self.mode not in (MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM):
+        if self.mode not in (MODE_CCM, MODE_EAX, MODE_GCM):
             raise TypeError("verify() not supported by this mode of operation")
 
         if self.verify not in self._next:
@@ -1006,24 +910,6 @@ class BlockAlgo:
             or the key is incorrect.
         """
 
-        if self.mode == MODE_SIV:
-            if self.decrypt not in self._next:
-                raise TypeError("decrypt() can only be called"
-                                " after initialization or an update()")
-            self._next = [self.verify]
-
-            # Take the MAC and start the cipher for decryption
-            self._mac = mac_tag
-            self._cipher = self._siv_ctr_cipher(self._mac)
-
-            pt = self._cipher.decrypt(ciphertext)
-
-            if self.nonce:
-                self._cipherMAC.update(self.nonce)
-            if pt:
-                self._cipherMAC.update(pt)
-        else:
-            pt = self.decrypt(ciphertext)
-
+        pt = self.decrypt(ciphertext)
         self.verify(mac_tag)
         return pt

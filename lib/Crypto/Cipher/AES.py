@@ -77,6 +77,7 @@ We assume that the tuple ``msg`` is transmitted to the receiver:
 """
 
 from Crypto.Cipher import blockalgo
+from Crypto.Cipher._mode_siv import ModeSIV
 from Crypto.Cipher import _AES
 from Crypto.Util import cpuid
 # Import _AESNI. If AES-NI is not available or _AESNI has not been built, set
@@ -171,6 +172,16 @@ def new(key, mode, *args, **kwargs):
 
     :Return: an `AESCipher` object
     """
+
+    if mode == MODE_SIV:
+        kwargs = dict(kwargs)
+        kwargs['key'] = key
+        if args:
+            kwargs['nonce'] = args[0]
+        kwargs.pop("mac_len", None)
+        kwargs.pop("use_aesni", None)
+        return ModeSIV(_AES, **kwargs)
+
     return AESCipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
