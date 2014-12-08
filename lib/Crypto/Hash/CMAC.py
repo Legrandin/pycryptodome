@@ -99,7 +99,7 @@ class _SmoothMAC(object):
     def can_reduce(self):
         return (self._mac is not None)
 
-    def get_len(self):
+    def data_signed_so_far(self):
         return self._total_len
 
     def zero_pad(self):
