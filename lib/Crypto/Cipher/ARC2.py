@@ -61,6 +61,7 @@ __revision__ = "$Id$"
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _ARC2
 from Crypto.Cipher._mode_openpgp import ModeOpenPGP
+from Crypto.Cipher._mode_eax import ModeEAX
 
 class RC2Cipher (blockalgo.BlockAlgo):
     """RC2 cipher object"""
@@ -123,6 +124,12 @@ def new(key, mode, *args, **kwargs):
             kwargs['IV'] = args[0]
         kwargs.pop("use_aesni", None)
         return ModeOpenPGP(_ARC2, **kwargs)
+    elif mode == MODE_EAX:
+        kwargs['key'] = key
+        if args:
+            kwargs['nonce'] = args[0]
+        kwargs.pop("use_aesni", None)
+        return ModeEAX(_ARC2, **kwargs)
 
     return RC2Cipher(key, mode, *args, **kwargs)
 

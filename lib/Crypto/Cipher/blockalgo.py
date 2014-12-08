@@ -119,31 +119,6 @@ MODE_OFB = 5
 #: .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 MODE_CTR = 6
 
-#: *EAX*. This is an Authenticated Encryption with Associated Data
-#: (`AEAD`_) mode. It provides both confidentiality and authenticity.
-#:
-#: The header of the message may be left in the clear, if needed, and it will
-#: still be subject to authentication.
-#:
-#: The decryption step tells the receiver if the message comes from a source
-#: that really knowns the secret key.
-#: Additionally, decryption detects if any part of the message - including the
-#: header - has been modified or corrupted.
-#:
-#: This mode requires a nonce. The nonce shall never repeat for two
-#: different messages encrypted with the same key, but it does not need to
-#: be random.
-#
-#: This mode is only available for ciphers that operate on 64 or
-#: 128 bits blocks.
-#:
-#: There are no official standards defining EAX. The implementation is based on
-#: `a proposal`__ that was presented to NIST.
-#:
-#: .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
-#: .. __: http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf
-MODE_EAX = 9
-
 #: *Galois/Counter Mode (GCM)*. This is an Authenticated Encryption with
 #: Associated Data (`AEAD`_) mode. It provides both confidentiality and
 #: authenticity.
@@ -219,9 +194,7 @@ class BlockAlgo:
         self._factory = factory
         self._tag = None
 
-        if self.mode == MODE_EAX:
-            self._start_eax(factory, key, *args, **kwargs)
-        elif self.mode == MODE_GCM:
+        if self.mode == MODE_GCM:
             self._start_gcm(factory, key, *args, **kwargs)
         else:
             self._cipher = factory.new(key, *args, **kwargs)
@@ -278,44 +251,10 @@ class BlockAlgo:
         ctr = Counter.new(128, initial_value=self._j0, allow_wraparound=True)
         self._tag_cipher = self._factory.new(key, MODE_CTR, counter=ctr)
 
-    def _start_eax(self, factory, key, *args, **kwargs):
-
-        self.nonce = _getParameter('nonce', 1, args, kwargs)
-        if not self.nonce:
-            raise TypeError("MODE_EAX requires a nonce")
-
-        # Allowed transitions after initialization
-        self._next = [self.update, self.encrypt, self.decrypt,
-                      self.digest, self.verify]
-
-        self._mac_len = kwargs.get('mac_len', self.block_size)
-        if not (self._mac_len and 4 <= self._mac_len <= self.block_size):
-            raise ValueError("Parameter 'mac_len' must not be larger than %d"
-                             % self.block_size)
-
-        self._omac = [
-                CMAC.new(key, bchr(0) * (self.block_size - 1) + bchr(i),
-                         ciphermod=factory)
-                for i in xrange(0, 3)
-                ]
-
-        # Compute MAC of nonce
-        self._omac[0].update(self.nonce)
-
-        self._cipherMAC = self._omac[1]
-
-        # MAC of the nonce is also the initial counter for CTR encryption
-        counter_int = bytes_to_long(self._omac[0].digest())
-        counter_obj = Crypto.Util.Counter.new(
-                        self.block_size * 8,
-                        initial_value=counter_int,
-                        allow_wraparound=True)
-        self._cipher = factory.new(key, MODE_CTR, counter=counter_obj)
-
     def update(self, assoc_data):
         """Protect associated data
 
-        When using an AEAD mode like CCM, EAX or GCM and
+        When using an AEAD mode like GCM and
         if there is any associated data, the caller has to invoke
         this function one or more times, before using
         ``decrypt`` or ``encrypt``.
@@ -325,7 +264,6 @@ class BlockAlgo:
         However, the receiver is still able to detect any modification to it.
         In CCM and GCM, the *associated data* is also called
         *additional authenticated data* (AAD).
-        In EAX, the *associated data* is called *header*.
 
         If there is no associated data, this method must not be called.
 
@@ -337,7 +275,7 @@ class BlockAlgo:
             A piece of associated data. There are no restrictions on its size.
         """
 
-        if self.mode not in (MODE_EAX, MODE_GCM):
+        if self.mode not in (MODE_GCM, ):
             raise TypeError("update() not supported by this mode of operation")
 
         if self.update not in self._next:
@@ -388,15 +326,12 @@ class BlockAlgo:
             *plaintext*.
         """
 
-        if self.mode in (MODE_EAX, MODE_GCM):
+        if self.mode in (MODE_GCM, ):
             if self.encrypt not in self._next:
                 raise TypeError("encrypt() can only be called after initialization or an update()")
             self._next = [self.encrypt, self.digest]
 
         ct = self._cipher.encrypt(plaintext)
-
-        if self.mode == MODE_EAX:
-            self._omac[2].update(ct)
 
         if self.mode == MODE_GCM:
             if not self._done_assoc_data:
@@ -446,7 +381,7 @@ class BlockAlgo:
         :Return: the decrypted data (byte string).
         """
 
-        if self.mode in (MODE_EAX, MODE_GCM):
+        if self.mode in (MODE_GCM, ):
 
             if self.decrypt not in self._next:
                 raise TypeError("decrypt() can only be called after initialization or an update()")
@@ -459,9 +394,6 @@ class BlockAlgo:
 
                 self._cipherMAC.update(ciphertext)
                 self._msg_len += len(ciphertext)
-
-            if self.mode == MODE_EAX:
-                self._omac[2].update(ciphertext)
 
         pt = self._cipher.decrypt(ciphertext)
 
@@ -479,7 +411,7 @@ class BlockAlgo:
         :Return: the MAC, as a byte string.
         """
 
-        if self.mode not in (MODE_EAX, MODE_GCM):
+        if self.mode not in (MODE_GCM, ):
             raise TypeError("digest() not supported by this mode of operation")
 
         if self.digest not in self._next:
@@ -505,12 +437,6 @@ class BlockAlgo:
 
             # Step 6 - Compute T
             self._tag = self._tag_cipher.encrypt(s_tag)[:self._mac_len]
-
-        if self.mode == MODE_EAX:
-            tag = bchr(0) * self.block_size
-            for i in xrange(3):
-                tag = strxor(tag, self._omac[i].digest())
-            self._tag = tag[:self._mac_len]
 
         return self._tag
 
@@ -541,7 +467,7 @@ class BlockAlgo:
             or the key is incorrect.
         """
 
-        if self.mode not in (MODE_EAX, MODE_GCM):
+        if self.mode not in (MODE_GCM, ):
             raise TypeError("verify() not supported by this mode of operation")
 
         if self.verify not in self._next:
