@@ -60,6 +60,7 @@ __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _ARC2
+from Crypto.Cipher._mode_openpgp import ModeOpenPGP
 
 class RC2Cipher (blockalgo.BlockAlgo):
     """RC2 cipher object"""
@@ -115,6 +116,14 @@ def new(key, mode, *args, **kwargs):
 
     :Return: an `RC2Cipher` object
     """
+
+    if mode == MODE_OPENPGP:
+        kwargs['key'] = key
+        if args:
+            kwargs['IV'] = args[0]
+        kwargs.pop("use_aesni", None)
+        return ModeOpenPGP(_ARC2, **kwargs)
+
     return RC2Cipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.

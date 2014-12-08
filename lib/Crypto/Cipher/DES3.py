@@ -65,6 +65,7 @@ __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _DES3
+from Crypto.Cipher._mode_openpgp import ModeOpenPGP
 
 class DES3Cipher(blockalgo.BlockAlgo):
     """TDES cipher object"""
@@ -119,6 +120,14 @@ def new(key, mode, *args, **kwargs):
       otherwise TDES would degrade to single `DES`.
     :Return: an `DES3Cipher` object
     """
+
+    if mode == MODE_OPENPGP:
+        kwargs['key'] = key
+        if args:
+            kwargs['IV'] = args[0]
+        kwargs.pop("use_aesni", None)
+        return ModeOpenPGP(_DES3, **kwargs)
+
     return DES3Cipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.

@@ -57,6 +57,7 @@ __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _CAST
+from Crypto.Cipher._mode_openpgp import ModeOpenPGP
 
 class CAST128Cipher(blockalgo.BlockAlgo):
     """CAST-128 cipher object"""
@@ -109,6 +110,14 @@ def new(key, mode, *args, **kwargs):
 
     :Return: an `CAST128Cipher` object
     """
+
+    if mode == MODE_OPENPGP:
+        kwargs['key'] = key
+        if args:
+            kwargs['IV'] = args[0]
+        kwargs.pop("use_aesni", None)
+        return ModeOpenPGP(_CAST, **kwargs)
+
     return CAST128Cipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.

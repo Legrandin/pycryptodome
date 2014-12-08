@@ -54,6 +54,7 @@ __revision__ = "$Id$"
 
 from Crypto.Cipher import blockalgo
 from Crypto.Cipher import _Blowfish
+from Crypto.Cipher._mode_openpgp import ModeOpenPGP
 
 class BlowfishCipher (blockalgo.BlockAlgo):
     """Blowfish cipher object"""
@@ -106,6 +107,14 @@ def new(key, mode, *args, **kwargs):
 
     :Return: a `BlowfishCipher` object
     """
+
+    if mode == MODE_OPENPGP:
+        kwargs['key'] = key
+        if args:
+            kwargs['IV'] = args[0]
+        kwargs.pop("use_aesni", None)
+        return ModeOpenPGP(_Blowfish, **kwargs)
+
     return BlowfishCipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.

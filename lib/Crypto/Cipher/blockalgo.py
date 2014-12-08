@@ -119,18 +119,6 @@ MODE_OFB = 5
 #: .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
 MODE_CTR = 6
 
-#: *OpenPGP CFB*. This mode is a variant of CFB, and it is only used in PGP and
-#: OpenPGP_ applications. An Initialization Vector (*IV*) is required.
-#:
-#: Unlike CFB, the IV is not transmitted to the receiver.
-#: Instead, the *encrypted* IV is.
-#: The IV is a random data block. Two of its bytes are duplicated to act
-#: as a checksum for the correctness of the key. The encrypted IV is
-#: therefore 2 bytes longer than the clean IV.
-#:
-#: .. _OpenPGP: http://tools.ietf.org/html/rfc4880
-MODE_OPENPGP = 7
-
 #: *EAX*. This is an Authenticated Encryption with Associated Data
 #: (`AEAD`_) mode. It provides both confidentiality and authenticity.
 #:
@@ -231,9 +219,7 @@ class BlockAlgo:
         self._factory = factory
         self._tag = None
 
-        if self.mode == MODE_OPENPGP:
-            self._start_PGP(factory, key, *args, **kwargs)
-        elif self.mode == MODE_EAX:
+        if self.mode == MODE_EAX:
             self._start_eax(factory, key, *args, **kwargs)
         elif self.mode == MODE_GCM:
             self._start_gcm(factory, key, *args, **kwargs)
@@ -326,63 +312,6 @@ class BlockAlgo:
                         allow_wraparound=True)
         self._cipher = factory.new(key, MODE_CTR, counter=counter_obj)
 
-    def _start_PGP(self, factory, key, *args, **kwargs):
-        # OPENPGP mode. For details, see 13.9 in RCC4880.
-        #
-        # A few members are specifically created for this mode:
-        #  - _encrypted_iv, set in this constructor
-        #  - _done_first_block, set to True after the first encryption
-        #  - _done_last_block, set to True after a partial block is processed
-
-        self._done_first_block = False
-        self._done_last_block = False
-        self.IV = _getParameter('IV', 1, args, kwargs)
-        if self.IV is None:
-            # TODO: Decide whether 'IV' or 'iv' should be used going forward,
-            # and deprecate the other.  'IV' is consistent with the rest of
-            # PyCrypto, but 'iv' is more common in Python generally.  For now,
-            # we'll support both here.  When in doubt, use a positional
-            # parameter for now.
-            self.IV = _getParameter('iv', 1, args, kwargs)
-        if not self.IV:
-            raise ValueError("MODE_OPENPGP requires an IV")
-
-        # Instantiate a temporary cipher to process the IV
-        IV_cipher = factory.new(
-                        key,
-                        MODE_CFB,
-                        b('\x00') * self.block_size,    # IV for CFB
-                        segment_size=self.block_size * 8)
-
-        # The cipher will be used for...
-        if len(self.IV) == self.block_size:
-            # ... encryption
-            self._encrypted_IV = IV_cipher.encrypt(
-                    self.IV + self.IV[-2:] +            # Plaintext
-                    b('\x00') * (self.block_size - 2)   # Padding
-                    )[:self.block_size + 2]
-        elif len(self.IV) == self.block_size + 2:
-            # ... decryption
-            self._encrypted_IV = self.IV
-            self.IV = IV_cipher.decrypt(
-                        self.IV +                           # Ciphertext
-                        b('\x00') * (self.block_size - 2)   # Padding
-                        )[:self.block_size + 2]
-            if self.IV[-2:] != self.IV[-4:-2]:
-                raise ValueError("Failed integrity check for OPENPGP IV")
-            self.IV = self.IV[:-2]
-        else:
-            raise ValueError("Length of IV must be %d or %d bytes for MODE_OPENPGP"
-                % (self.block_size, self.block_size+2))
-
-        # Instantiate the cipher for the real PGP data
-        self._cipher = factory.new(
-                            key,
-                            MODE_CFB,
-                            self._encrypted_IV[-self.block_size:],
-                            segment_size=self.block_size * 8
-                            )
-
     def update(self, assoc_data):
         """Protect associated data
 
@@ -451,37 +380,13 @@ class BlockAlgo:
          - For `MODE_OFB`, `MODE_CTR` and all AEAD modes
            *plaintext* can be of any length.
 
-         - For `MODE_OPENPGP`, *plaintext* must be a multiple of *block_size*,
-           unless it is the last chunk of the message.
-
         :Parameters:
           plaintext : byte string
             The piece of data to encrypt.
         :Return:
             the encrypted data, as a byte string. It is as long as
-            *plaintext* with one exception: when encrypting the first message
-            chunk with `MODE_OPENPGP`, the encypted IV is prepended to the
-            returned ciphertext.
+            *plaintext*.
         """
-
-        if self.mode == MODE_OPENPGP:
-            padding_length = (self.block_size - len(plaintext) % self.block_size) % self.block_size
-            if padding_length > 0:
-                # CFB mode requires ciphertext to have length multiple
-                # of block size,
-                # but PGP mode allows the last block to be shorter
-                if self._done_last_block:
-                    raise ValueError("Only the last chunk is allowed to have length not multiple of %d bytes",
-                        self.block_size)
-                self._done_last_block = True
-                padded = plaintext + b('\x00') * padding_length
-                res = self._cipher.encrypt(padded)[:len(plaintext)]
-            else:
-                res = self._cipher.encrypt(plaintext)
-            if not self._done_first_block:
-                res = self._encrypted_IV + res
-                self._done_first_block = True
-            return res
 
         if self.mode in (MODE_EAX, MODE_GCM):
             if self.encrypt not in self._next:
@@ -534,31 +439,12 @@ class BlockAlgo:
          - For `MODE_OFB`, `MODE_CTR` and all AEAD modes
            *ciphertext* can be of any length.
 
-         - For `MODE_OPENPGP`, *plaintext* must be a multiple of *block_size*,
-           unless it is the last chunk of the message.
-
         :Parameters:
           ciphertext : byte string
             The piece of data to decrypt.
 
         :Return: the decrypted data (byte string).
         """
-
-        if self.mode == MODE_OPENPGP:
-            padding_length = (self.block_size - len(ciphertext) % self.block_size) % self.block_size
-            if padding_length > 0:
-                # CFB mode requires ciphertext to have length multiple
-                # of block size,
-                # but PGP mode allows the last block to be shorter
-                if self._done_last_block:
-                    raise ValueError("Only the last chunk is allowed to have length not multiple of %d bytes",
-                        self.block_size)
-                self._done_last_block = True
-                padded = ciphertext + b('\x00') * padding_length
-                res = self._cipher.decrypt(padded)[:len(ciphertext)]
-            else:
-                res = self._cipher.decrypt(ciphertext)
-            return res
 
         if self.mode in (MODE_EAX, MODE_GCM):
 
