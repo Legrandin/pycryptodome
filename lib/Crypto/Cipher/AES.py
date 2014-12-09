@@ -81,6 +81,7 @@ from Crypto.Cipher._mode_siv import ModeSIV
 from Crypto.Cipher._mode_ccm import ModeCCM
 from Crypto.Cipher._mode_openpgp import ModeOpenPGP
 from Crypto.Cipher._mode_eax import ModeEAX
+from Crypto.Cipher._mode_gcm import ModeGCM
 from Crypto.Cipher import _AES
 from Crypto.Util import cpuid
 # Import _AESNI. If AES-NI is not available or _AESNI has not been built, set
@@ -182,6 +183,12 @@ def new(key, mode, *args, **kwargs):
             kwargs['nonce'] = args[0]
         kwargs.pop("use_aesni", None)
         return ModeCCM(_AES, **kwargs)
+    elif mode == MODE_GCM:
+        kwargs['key'] = key
+        if args:
+            kwargs['nonce'] = args[0]
+        kwargs.pop("use_aesni", None)
+        return ModeGCM(_AES, **kwargs)
     elif mode == MODE_EAX:
         kwargs['key'] = key
         if args:
