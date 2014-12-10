@@ -163,7 +163,7 @@ class CMAC(_SmoothMAC):
     #: The size of the authentication tag produced by the MAC.
     digest_size = None
 
-    def __init__(self, key, msg = None, ciphermod = None):
+    def __init__(self, key, msg=None, ciphermod=None, cipher_params=None):
         """Create a new CMAC object.
 
         :Parameters:
@@ -178,6 +178,8 @@ class CMAC(_SmoothMAC):
             A cipher module from `Crypto.Cipher`.
             The cipher's block size must be 64 or 128 bits.
             It is recommended to use `Crypto.Cipher.AES`.
+          cipher_params : dictionary
+            Extra keywords to use when creating a new cipher.
         """
 
         if ciphermod is None:
@@ -187,6 +189,10 @@ class CMAC(_SmoothMAC):
 
         self._key = key
         self._factory = ciphermod
+        if cipher_params is None:
+            self._cipher_params = {}
+        else:
+            self._cipher_params = dict(cipher_params)
 
         # Section 5.3 of NIST SP 800 38B
         if ciphermod.block_size==8:
@@ -199,7 +205,9 @@ class CMAC(_SmoothMAC):
         self.digest_size = ciphermod.block_size
 
         # Compute sub-keys
-        cipher = ciphermod.new(key, ciphermod.MODE_ECB)
+        cipher = ciphermod.new(key,
+                               ciphermod.MODE_ECB,
+                               **self._cipher_params)
         l = cipher.encrypt(bchr(0)*ciphermod.block_size)
         if bord(l[0]) & 0x80:
             self._k1 = _shift_bytes(l, const_Rb)
@@ -212,7 +220,10 @@ class CMAC(_SmoothMAC):
 
         # Initialize CBC cipher with zero IV
         self._IV = bchr(0)*ciphermod.block_size
-        self._mac = ciphermod.new(key, ciphermod.MODE_CBC, self._IV)
+        self._mac = ciphermod.new(key,
+                                  ciphermod.MODE_CBC,
+                                  self._IV,
+                                  **self._cipher_params)
 
     def update(self, msg):
         """Continue authentication of a message by consuming the next chunk of data.
@@ -246,10 +257,15 @@ class CMAC(_SmoothMAC):
 
         :Returns: A `CMAC` object
         """
-        obj = CMAC(self._key, ciphermod=self._factory)
+        obj = CMAC(self._key,
+                   ciphermod=self._factory,
+                   cipher_params=self._cipher_params)
 
         _SmoothMAC._deep_copy(self, obj)
-        obj._mac = self._factory.new(self._key, self._factory.MODE_CBC, self._IV)
+        obj._mac = self._factory.new(self._key,
+                                     self._factory.MODE_CBC,
+                                     self._IV,
+                                     **self._cipher_params)
         for m in [ '_tag', '_k1', '_k2', '_IV']:
             setattr(obj, m, getattr(self, m))
         return obj
@@ -319,7 +335,7 @@ class CMAC(_SmoothMAC):
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
-def new(key, msg = None, ciphermod = None):
+def new(key, msg=None, ciphermod=None, cipher_params=None):
     """Create a new CMAC object.
 
     :Parameters:
@@ -337,4 +353,4 @@ def new(key, msg = None, ciphermod = None):
 
     :Returns: A `CMAC` object
     """
-    return CMAC(key, msg, ciphermod)
+    return CMAC(key, msg, ciphermod, cipher_params)

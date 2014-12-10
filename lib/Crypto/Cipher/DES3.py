@@ -58,24 +58,11 @@ As an example, encryption can be done as follows:
 .. __: http://en.wikipedia.org/wiki/Triple_DES
 .. _NIST: http://csrc.nist.gov/publications/nistpubs/800-67/SP800-67.pdf
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+from Crypto.Cipher import _DES3, _create_cipher
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _DES3
-from Crypto.Cipher._mode_openpgp import ModeOpenPGP
-from Crypto.Cipher._mode_eax import ModeEAX
-
-class DES3Cipher(blockalgo.BlockAlgo):
-    """TDES cipher object"""
-
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize a TDES cipher object
-
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _DES3, key, mode, *args, **kwargs)
 
 def new(key, mode, *args, **kwargs):
     """Create a new TDES cipher
@@ -122,20 +109,7 @@ def new(key, mode, *args, **kwargs):
     :Return: an `DES3Cipher` object
     """
 
-    if mode == MODE_OPENPGP:
-        kwargs['key'] = key
-        if args:
-            kwargs['IV'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeOpenPGP(_DES3, **kwargs)
-    elif mode == MODE_EAX:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeEAX(_DES3, **kwargs)
-
-    return DES3Cipher(key, mode, *args, **kwargs)
+    return _create_cipher(_DES3, key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

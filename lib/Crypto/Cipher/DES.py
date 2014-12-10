@@ -45,24 +45,11 @@ As an example, encryption can be done as follows:
 .. __: http://en.wikipedia.org/wiki/Data_Encryption_Standard
 .. _NIST: http://csrc.nist.gov/publications/fips/fips46-3/fips46-3.pdf
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+from Crypto.Cipher import _DES, _create_cipher
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _DES
-from Crypto.Cipher._mode_openpgp import ModeOpenPGP
-from Crypto.Cipher._mode_eax import ModeEAX
-
-class DESCipher(blockalgo.BlockAlgo):
-    """DES cipher object"""
-
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize a DES cipher object
-
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _DES, key, mode, *args, **kwargs)
 
 def new(key, mode, *args, **kwargs):
     """Create a new DES cipher
@@ -107,20 +94,7 @@ def new(key, mode, *args, **kwargs):
     :Return: an `DESCipher` object
     """
 
-    if mode == MODE_OPENPGP:
-        kwargs['key'] = key
-        if args:
-            kwargs['IV'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeOpenPGP(_DES, **kwargs)
-    elif mode == MODE_EAX:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeEAX(_DES, **kwargs)
-
-    return DESCipher(key, mode, *args, **kwargs)
+    return _create_cipher(_DES, key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

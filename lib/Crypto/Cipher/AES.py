@@ -76,13 +76,7 @@ We assume that the tuple ``msg`` is transmitted to the receiver:
 :undocumented: __revision__, __package__
 """
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher._mode_siv import ModeSIV
-from Crypto.Cipher._mode_ccm import ModeCCM
-from Crypto.Cipher._mode_openpgp import ModeOpenPGP
-from Crypto.Cipher._mode_eax import ModeEAX
-from Crypto.Cipher._mode_gcm import ModeGCM
-from Crypto.Cipher import _AES
+from Crypto.Cipher import _AES, _create_cipher
 from Crypto.Util import cpuid
 # Import _AESNI. If AES-NI is not available or _AESNI has not been built, set
 # _AESNI to None.
@@ -94,25 +88,6 @@ try:
 except ImportError:
     _AESNI = None
 
-class AESCipher (blockalgo.BlockAlgo):
-    """AES cipher object"""
-
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize an AES cipher object
-
-        See also `new()` at the module level."""
-
-        # Check if the use_aesni was specified.
-        use_aesni = True
-        if kwargs.has_key('use_aesni'):
-            use_aesni = kwargs['use_aesni']
-            del kwargs['use_aesni']
-
-        # Use _AESNI if the user requested AES-NI and it's available
-        if _AESNI is not None and use_aesni:
-            blockalgo.BlockAlgo.__init__(self, _AESNI, key, mode, *args, **kwargs)
-        else:
-            blockalgo.BlockAlgo.__init__(self, _AES, key, mode, *args, **kwargs)
 
 def new(key, mode, *args, **kwargs):
     """Create a new AES cipher
@@ -177,39 +152,14 @@ def new(key, mode, *args, **kwargs):
     :Return: an `AESCipher` object
     """
 
-    if mode == MODE_CCM:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeCCM(_AES, **kwargs)
-    elif mode == MODE_GCM:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeGCM(_AES, **kwargs)
-    elif mode == MODE_EAX:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeEAX(_AES, **kwargs)
-    elif mode == MODE_OPENPGP:
-        kwargs['key'] = key
-        if args:
-            kwargs['IV'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeOpenPGP(_AES, **kwargs)
-    elif mode == MODE_SIV:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("mac_len", None)
-        kwargs.pop("use_aesni", None)
-        return ModeSIV(_AES, **kwargs)
+    use_aesni = kwargs.pop("use_aesni", None)
+    if _AES is not None and use_aesni:
+        aes_module = _AESNI
+    else:
+        aes_module = _AES
 
-    return AESCipher(key, mode, *args, **kwargs)
+    kwargs["add_aes_modes"] = True
+    return _create_cipher(aes_module, key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

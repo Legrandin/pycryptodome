@@ -133,11 +133,12 @@ class ModeGCM(object):
                              " that operate on 128 bits blocks")
 
         self._factory = factory
-        self._key = key = kwargs.pop("key")
-        nonce = kwargs.pop("nonce")
+        try:
+            self._key = key = kwargs.pop("key")
+            nonce = kwargs.pop("nonce")
+        except KeyError, e:
+            raise TypeError("Missing parameter:" + str(e))
         self._mac_len = kwargs.pop("mac_len", 16)
-        if kwargs:
-            raise TypeError("Unknown parameters: " + str(kwargs))
 
         self._tag = None  ## Cache for MAC tag
 
@@ -158,7 +159,8 @@ class ModeGCM(object):
         # Step 1 in SP800-38D, Algorithm 4 (encryption) - Compute H
         # See also Algorithm 5 (decryption)
         hash_subkey = factory.new(key,
-                                  self._factory.MODE_ECB
+                                  self._factory.MODE_ECB,
+                                  **kwargs
                                   ).encrypt(bchr(0) * 16)
 
         # Step 2 - Compute J0 (integer, not byte string!)
@@ -178,7 +180,8 @@ class ModeGCM(object):
         ctr = Counter.new(128, initial_value=self._j0 + 1)
         self._cipher = factory.new(key,
                                    self._factory.MODE_CTR,
-                                   counter=ctr)
+                                   counter=ctr,
+                                   **kwargs)
 
         # Step 5 - Bootstrat GHASH
         self._signer = _GHASH(hash_subkey, factory.block_size)
@@ -187,7 +190,8 @@ class ModeGCM(object):
         ctr = Counter.new(128, initial_value=self._j0)
         self._tag_cipher = factory.new(key,
                                        self._factory.MODE_CTR,
-                                       counter=ctr)
+                                       counter=ctr,
+                                       **kwargs)
 
     def update(self, assoc_data):
         """Protect associated data

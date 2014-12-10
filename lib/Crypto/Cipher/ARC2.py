@@ -53,24 +53,11 @@ As an example, encryption can be done as follows:
 .. _RC2: http://en.wikipedia.org/wiki/RC2
 .. _RFC2268: http://tools.ietf.org/html/rfc2268
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+from Crypto.Cipher import _ARC2, _create_cipher
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _ARC2
-from Crypto.Cipher._mode_openpgp import ModeOpenPGP
-from Crypto.Cipher._mode_eax import ModeEAX
-
-class RC2Cipher (blockalgo.BlockAlgo):
-    """RC2 cipher object"""
-
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize an ARC2 cipher object
-
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _ARC2, key, mode, *args, **kwargs)
 
 def new(key, mode, *args, **kwargs):
     """Create a new RC2 cipher
@@ -118,20 +105,7 @@ def new(key, mode, *args, **kwargs):
     :Return: an `RC2Cipher` object
     """
 
-    if mode == MODE_OPENPGP:
-        kwargs['key'] = key
-        if args:
-            kwargs['IV'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeOpenPGP(_ARC2, **kwargs)
-    elif mode == MODE_EAX:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeEAX(_ARC2, **kwargs)
-
-    return RC2Cipher(key, mode, *args, **kwargs)
+    return _create_cipher(_ARC2, key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

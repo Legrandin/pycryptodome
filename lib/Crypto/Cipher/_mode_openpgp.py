@@ -82,14 +82,14 @@ class ModeOpenPGP(object):
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
 
-        self._factory = factory
-        key = kwargs.pop("key")
         self.IV = kwargs.pop("IV", None)
-        if self.IV is None:
-            self.IV = kwargs.pop("iv")
-        self.iv = self.IV
-        if kwargs:
-            raise TypeError("Unknown parameters: " + str(kwargs))
+
+        try:
+            key = kwargs.pop("key")
+            if self.IV is None:
+                self.IV = kwargs.pop("iv")
+        except KeyError, e:
+            raise TypeError("Missing component: " + str(e))
 
         self._done_first_block = False  # True after the first encryption
         self._done_last_block = False   # True after a partial block is processed
@@ -99,15 +99,16 @@ class ModeOpenPGP(object):
                         key,
                         factory.MODE_CFB,
                         IV=bchr(0) * self.block_size,
-                        segment_size=self.block_size * 8)
+                        segment_size=self.block_size * 8,
+                        **kwargs)
 
         # The cipher will be used for...
         if len(self.IV) == self.block_size:
             # ... encryption
             self._encrypted_IV = IV_cipher.encrypt(
-                    self.IV + self.IV[-2:] +            # Plaintext
-                    bchr(0) * (self.block_size - 2)     # Padding
-                    )[:self.block_size + 2]
+                        self.IV + self.IV[-2:] +            # Plaintext
+                        bchr(0) * (self.block_size - 2)     # Padding
+                        )[:self.block_size + 2]
         elif len(self.IV) == self.block_size + 2:
             # ... decryption
             self._encrypted_IV = self.IV
@@ -128,7 +129,8 @@ class ModeOpenPGP(object):
                             key,
                             factory.MODE_CFB,
                             IV=self._encrypted_IV[-self.block_size:],
-                            segment_size=self.block_size * 8
+                            segment_size=self.block_size * 8,
+                            **kwargs
                             )
 
     def encrypt(self, plaintext):

@@ -48,10 +48,11 @@ class _CBCMAC(_SmoothMAC):
     """MAC class based on CBC-MAC that does not need
     to operate on data chunks multiple of the block size"""
 
-    def __init__(self, key, cipher_factory):
+    def __init__(self, key, cipher_factory, cipher_params):
         _SmoothMAC.__init__(self, cipher_factory.block_size, None, 0)
         self._key = key
         self._factory = cipher_factory
+        self._cipher_params = dict(cipher_params)
 
     def ignite(self, data):
         """Start the MAC. Data provided here is consumed *before*
@@ -62,7 +63,10 @@ class _CBCMAC(_SmoothMAC):
 
         self._buffer.insert(0, data)
         self._buffer_len += len(data)
-        self._mac = self._factory.new(self._key, self._factory.MODE_CBC, bchr(0) * 16)
+        self._mac = self._factory.new(self._key,
+                                      self._factory.MODE_CBC,
+                                      bchr(0) * 16,
+                                      **self._cipher_params)
         self.update(b(""))
 
     def _update(self, block_data):
@@ -165,13 +169,15 @@ class ModeCCM(object):
         self.block_size = factory.block_size
 
         self._factory = factory
-        self._key = key = kwargs.pop("key")
-        self._nonce = kwargs.pop("nonce")  # N
+        try:
+            self._key = key = kwargs.pop("key")
+            self._nonce = kwargs.pop("nonce")  # N
+        except KeyError, e:
+            raise TypeError("Missing parameter: " + str(e))
         self._mac_len = kwargs.pop("mac_len", self.block_size)
         self._msg_len = kwargs.pop("msg_len", None)      # p
         self._assoc_len = kwargs.pop("assoc_len", None)  # a
-        if kwargs:
-            raise TypeError("Unknown parameters: " + str(kwargs))
+        self._cipher_params = dict(kwargs)
 
         self._mac_tag = None  # Cache for MAC tag
 
@@ -189,7 +195,7 @@ class ModeCCM(object):
             raise ValueError("Length of parameter 'nonce' must be"
                              " in the range 7..13 bytes")
 
-        self._signer = _CBCMAC(key, factory)
+        self._signer = _CBCMAC(key, factory, self._cipher_params)
         self._no_more_assoc_data = False      # True when all associated data
                                               # has been processed
 
@@ -247,7 +253,8 @@ class ModeCCM(object):
         ctr = Counter.new(128 - len(prefix) * 8, prefix, initial_value=0)
         self._cipher = self._factory.new(self._key,
                                          self._factory.MODE_CTR,
-                                         counter=ctr)
+                                         counter=ctr,
+                                         **self._cipher_params)
 
         # S_0, step 6 in 6.1 for j=0
         self._s_0 = self._cipher.encrypt(bchr(0) * 16)

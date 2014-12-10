@@ -50,24 +50,11 @@ As an example, encryption can be done as follows:
 .. _CAST-128: http://en.wikipedia.org/wiki/CAST-128
 .. _RFC2144: http://tools.ietf.org/html/rfc2144
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+from Crypto.Cipher import _CAST, _create_cipher
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _CAST
-from Crypto.Cipher._mode_openpgp import ModeOpenPGP
-from Crypto.Cipher._mode_eax import ModeEAX
-
-class CAST128Cipher(blockalgo.BlockAlgo):
-    """CAST-128 cipher object"""
-
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize a CAST-128 cipher object
-
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _CAST, key, mode, *args, **kwargs)
 
 def new(key, mode, *args, **kwargs):
     """Create a new CAST-128 cipher
@@ -112,20 +99,7 @@ def new(key, mode, *args, **kwargs):
     :Return: an `CAST128Cipher` object
     """
 
-    if mode == MODE_OPENPGP:
-        kwargs['key'] = key
-        if args:
-            kwargs['IV'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeOpenPGP(_CAST, **kwargs)
-    elif mode == MODE_EAX:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeEAX(_CAST, **kwargs)
-
-    return CAST128Cipher(key, mode, *args, **kwargs)
+    return _create_cipher(_CAST, key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

@@ -67,7 +67,7 @@ Module name                   Description
 `Crypto.Cipher.PKCS1_OAEP`    PKCS#1 OAEP encryption, based on RSA key pairs
 ==========================    =======================
 
-:undocumented: __revision__, __package__, _AES, _ARC2, _ARC4, _Blowfish
+:undocumented:  __package__, _AES, _ARC2, _ARC4, _Blowfish
                _CAST, _DES, _DES3, _XOR, _AESNI, _Salsa20
 """
 
@@ -76,4 +76,41 @@ __all__ = ['AES', 'ARC2', 'ARC4',
            'PKCS1_v1_5', 'PKCS1_OAEP'
            ]
 
+from Crypto.Cipher._mode_gcm import ModeGCM
+from Crypto.Cipher._mode_ctr import ModeCTR
+from Crypto.Cipher._mode_cfb import ModeCFB
+from Crypto.Cipher._mode_cbc import ModeCBC
+from Crypto.Cipher._mode_ecb import ModeECB
+from Crypto.Cipher._mode_ofb import ModeOFB
+from Crypto.Cipher._mode_ccm import ModeCCM
+from Crypto.Cipher._mode_siv import ModeSIV
+from Crypto.Cipher._mode_eax import ModeEAX
+from Crypto.Cipher._mode_openpgp import ModeOpenPGP
 
+_modes = { 1:ModeECB,
+           2:ModeCBC,
+           3:ModeCFB,
+           5:ModeOFB,
+           6:ModeCTR,
+           7:ModeOpenPGP,
+           9:ModeEAX }
+
+_extra_modes = { 8:ModeCCM, 10:ModeSIV, 11:ModeGCM }
+
+def _create_cipher(factory, key, mode, *args, **kwargs):
+
+    kwargs["key"] = key
+
+    modes = dict(_modes)
+    if kwargs.pop("add_aes_modes", False):
+        modes.update(_extra_modes)
+    if not modes.has_key(mode):
+        raise ValueError("Mode not supported")
+
+    if args:
+        if mode in (8, 9, 10, 11):
+            kwargs["nonce"] = args[0]
+        elif mode in (2, 3, 5, 7):
+            kwargs["IV"] = args[0]
+
+    return modes[mode](factory, **kwargs)

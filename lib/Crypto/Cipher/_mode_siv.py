@@ -112,10 +112,15 @@ class ModeSIV(object):
 
         self.block_size = factory.block_size
         self._factory = factory
-        self._key = key = kwargs.pop("key", None)
+
+        try:
+            self._key = key = kwargs.pop("key")
+        except KeyError, e:
+            raise TypeError("Missing parameter: " + str(e))
+
         self._nonce = kwargs.pop("nonce", None)
-        if kwargs:
-            raise TypeError("Unknown parameters: " + str(kwargs))
+
+        self._cipher_params = dict(kwargs)
 
         subkey_size = len(key) // 2
         if len(key) & 1:
@@ -123,7 +128,9 @@ class ModeSIV(object):
                              " for the underlying cipher")
 
         self._mac_tag = None  # Cache for MAC tag
-        self._kdf = _S2V(key[:subkey_size], ciphermod=factory)
+        self._kdf = _S2V(key[:subkey_size],
+                         ciphermod=factory,
+                         cipher_params=self._cipher_params)
         self._subkey_cipher = key[subkey_size:]
 
         # Allowed transitions after initialization
@@ -141,7 +148,8 @@ class ModeSIV(object):
         return self._factory.new(
                     self._subkey_cipher,
                     self._factory.MODE_CTR,
-                    counter=ctr)
+                    counter=ctr,
+                    **self._cipher_params)
 
     def update(self, assoc_data):
         """Protect associated data

@@ -98,12 +98,12 @@ class ModeEAX(object):
 
         self.block_size = factory.block_size
 
-        self._factory = factory
-        key = kwargs.pop("key")
-        nonce = kwargs.pop("nonce")
+        try:
+            key = kwargs.pop("key")
+            nonce = kwargs.pop("nonce")
+        except KeyError, e:
+            raise TypeError("Missing parameter: " + str(e))
         self._mac_len = kwargs.pop("mac_len", self.block_size)
-        if kwargs:
-            raise TypeError("Unknown parameters: " + str(kwargs))
 
         self._mac_tag = None  # Cache for MAC tag
 
@@ -117,8 +117,10 @@ class ModeEAX(object):
                              % self.block_size)
 
         self._omac = [
-                CMAC.new(key, bchr(0) * (self.block_size - 1) + bchr(i),
-                         ciphermod=factory)
+                CMAC.new(key,
+                         bchr(0) * (self.block_size - 1) + bchr(i),
+                         ciphermod=factory,
+                         cipher_params=kwargs)
                 for i in xrange(0, 3)
                 ]
 
@@ -133,7 +135,8 @@ class ModeEAX(object):
                         initial_value=counter_int)
         self._cipher = factory.new(key,
                                    factory.MODE_CTR,
-                                   counter=counter_obj)
+                                   counter=counter_obj,
+                                   **kwargs)
 
     def update(self, assoc_data):
         """Protect associated data

@@ -47,24 +47,11 @@ As an example, encryption can be done as follows:
 
 .. _Blowfish: http://www.schneier.com/blowfish.html
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+from Crypto.Cipher import _Blowfish, _create_cipher
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _Blowfish
-from Crypto.Cipher._mode_openpgp import ModeOpenPGP
-from Crypto.Cipher._mode_eax import ModeEAX
-
-class BlowfishCipher (blockalgo.BlockAlgo):
-    """Blowfish cipher object"""
-
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize a Blowfish cipher object
-
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _Blowfish, key, mode, *args, **kwargs)
 
 def new(key, mode, *args, **kwargs):
     """Create a new Blowfish cipher
@@ -109,20 +96,8 @@ def new(key, mode, *args, **kwargs):
     :Return: a `BlowfishCipher` object
     """
 
-    if mode == MODE_OPENPGP:
-        kwargs['key'] = key
-        if args:
-            kwargs['IV'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeOpenPGP(_Blowfish, **kwargs)
-    elif mode == MODE_EAX:
-        kwargs['key'] = key
-        if args:
-            kwargs['nonce'] = args[0]
-        kwargs.pop("use_aesni", None)
-        return ModeEAX(_Blowfish, **kwargs)
+    return _create_cipher(_Blowfish, key, mode, *args, **kwargs)
 
-    return BlowfishCipher(key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

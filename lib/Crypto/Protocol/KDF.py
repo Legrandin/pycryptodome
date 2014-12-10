@@ -112,7 +112,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
     password = tobytes(password)
     if prf is None:
         prf = lambda p,s: HMAC.new(p,s,SHA1).digest()
-    
+
     def link(s):
         s[0], s[1] = s[1], prf(password, s[1])
         return s[0]
@@ -135,7 +135,7 @@ class _S2V(object):
     .. _RFC5297: http://tools.ietf.org/html/rfc5297
     """
 
-    def __init__(self, key, ciphermod):
+    def __init__(self, key, ciphermod, cipher_params=None):
         """Initialize the S2V PRF.
 
         :Parameters:
@@ -144,12 +144,18 @@ class _S2V(object):
             based on ciphers from ``ciphermod``.
           ciphermod : module
             A block cipher module from `Crypto.Cipher`.
+          cipher_params : dictionary
+            A set of extra parameters to use to create a cipher instance.
         """
 
         self._key = key
         self._ciphermod = ciphermod
         self._last_string = self._cache = bchr(0)*ciphermod.block_size
         self._n_updates = ciphermod.block_size*8-1
+        if cipher_params is None:
+            self._cipher_params = {}
+        else:
+            self._cipher_params = dict(cipher_params)
 
     @staticmethod
     def new(key, ciphermod):
@@ -190,7 +196,10 @@ class _S2V(object):
             raise TypeError("Too many components passed to S2V")
         self._n_updates -= 1
 
-        mac = CMAC.new(self._key, msg=self._last_string, ciphermod=self._ciphermod)
+        mac = CMAC.new(self._key,
+                       msg=self._last_string,
+                       ciphermod=self._ciphermod,
+                       cipher_params=self._cipher_params)
         self._cache = strxor(self._double(self._cache), mac.digest())
         self._last_string = item
 
@@ -205,7 +214,10 @@ class _S2V(object):
         else:
             padded = (self._last_string + bchr(0x80)+ bchr(0)*15)[:16]
             final = strxor(padded, self._double(self._cache))
-        mac = CMAC.new(self._key, msg=final, ciphermod=self._ciphermod)
+        mac = CMAC.new(self._key,
+                       msg=final,
+                       ciphermod=self._ciphermod,
+                       cipher_params=self._cipher_params)
         return mac.digest()
 
 
