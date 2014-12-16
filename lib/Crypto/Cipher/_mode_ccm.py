@@ -533,3 +533,7 @@ class ModeCCM(object):
         plaintext = self.decrypt(ciphertext)
         self.verify(received_mac_tag)
         return plaintext
+
+
+def _create_ccm_cipher(factory, **kwargs):
+    return ModeCCM(factory, **kwargs)

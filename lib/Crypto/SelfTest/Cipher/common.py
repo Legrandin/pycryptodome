@@ -666,7 +666,7 @@ class IVLengthTest(unittest.TestCase):
                 self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
                     self.module.MODE_CCM, bchr(0)*ivlen, msg_len=10)
         self.module.new(a2b_hex(self.key), self.module.MODE_ECB, "")
-        self.module.new(a2b_hex(self.key), self.module.MODE_CTR, "", counter=self._dummy_counter)
+        #self.module.new(a2b_hex(self.key), self.module.MODE_CTR, "", counter=self._dummy_counter)
 
     def _dummy_counter(self):
         return "\0" * self.module.block_size
@@ -731,7 +731,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         if not extra_tests_added:
             tests += [
                 CTRSegfaultTest(module, params),
-                CTRWraparoundTest(module, params),
+                # CTRWraparoundTest(module, params),
                 CFBSegmentSizeTest(module, params),
                 RoundtripTest(module, params),
                 PGPTest(module, params),

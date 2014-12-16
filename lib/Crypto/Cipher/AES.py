@@ -72,21 +72,56 @@ We assume that the tuple ``msg`` is transmitted to the receiver:
 .. __: http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 .. _NIST: http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
 .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
-
-:undocumented: __revision__, __package__
 """
 
-from Crypto.Cipher import _AES, _create_cipher
+import sys
+from ctypes import CDLL, c_void_p, byref
+
+from Crypto.Cipher import _create_cipher
 from Crypto.Util import cpuid
-# Import _AESNI. If AES-NI is not available or _AESNI has not been built, set
-# _AESNI to None.
+from Crypto.Util.py3compat import byte_string
+from Crypto.Util._modules import get_mod_name
+
+
+_raw_aes_lib = CDLL(get_mod_name("Crypto.Cipher._raw_aes"))
+_raw_aesni_lib = None
 try:
     if cpuid.have_aes_ni():
-        from Crypto.Cipher import _AESNI
+        _raw_aesni_lib = CDLL(get_mod_name("Crypto.Cipher._raw_aesni"))
+except OSError:
+    pass
+
+
+def _create_base_cipher(dict_parameters):
+    """This method instantiates and returns a handle to a low-level base cipher.
+    It will absorb named parameters in the process."""
+
+    use_aesni = dict_parameters.pop("use_aesni", True)
+
+    try:
+        key = dict_parameters.pop("key")
+    except KeyError:
+        raise TypeError("Missing 'key' parameter")
+
+    if not byte_string(key):
+        raise TypeError("The cipher key must be a byte string")
+
+    if len(key) not in key_size:
+        raise ValueError("Incorrect AES key length (%d bytes)" % len(key))
+
+    if use_aesni and _raw_aesni_lib:
+        start_operation = _raw_aesni_lib.AESNI_start_operation
+        stop_operation = _raw_aesni_lib.AESNI_stop_operation
     else:
-        _AESNI = None
-except ImportError:
-    _AESNI = None
+        start_operation = _raw_aes_lib.AES_start_operation
+        stop_operation = _raw_aes_lib.AES_stop_operation
+
+    cipher = c_void_p()
+    result = start_operation(key, len(key), byref(cipher))
+    if result:
+        raise ValueError("Error %X while instantiating the AES cipher"
+                         % result)
+    return cipher.value, stop_operation
 
 
 def new(key, mode, *args, **kwargs):
@@ -152,14 +187,9 @@ def new(key, mode, *args, **kwargs):
     :Return: an `AESCipher` object
     """
 
-    use_aesni = kwargs.pop("use_aesni", None)
-    if _AES is not None and use_aesni:
-        aes_module = _AESNI
-    else:
-        aes_module = _AES
-
     kwargs["add_aes_modes"] = True
-    return _create_cipher(aes_module, key, mode, *args, **kwargs)
+    return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
+
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1
@@ -186,5 +216,4 @@ MODE_GCM = 11
 #: Size of a data block (in bytes)
 block_size = 16
 #: Size of a key (in bytes)
-key_size = ( 16, 24, 32 )
-
+key_size = (16, 24, 32)

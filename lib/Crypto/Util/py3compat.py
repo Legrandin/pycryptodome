@@ -58,8 +58,6 @@ tobytes(s)
     a byte string and make a byte string.
 """
 
-__revision__ = "$Id$"
-
 import sys
 
 if sys.version_info[0] == 2:
@@ -87,6 +85,8 @@ if sys.version_info[0] == 2:
                 return ''.join(s)
         def tostr(bs):
             return bs
+    def byte_string(s):
+        return isinstance(s, str)
     # In Pyton 2.x, StringIO is a stand-alone module
     from StringIO import StringIO as BytesIO
     from sys import maxint
@@ -112,6 +112,8 @@ else:
                 return bytes(s)
     def tostr(bs):
         return bs.decode("latin-1")
+    def byte_string(s):
+        return isinstance(s, bytes)
     # In Pyton 3.x, StringIO is a sub-module of io
     from io import BytesIO
     from sys import maxsize as maxint

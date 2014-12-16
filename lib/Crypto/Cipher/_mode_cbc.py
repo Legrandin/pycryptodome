@@ -32,7 +32,14 @@
 Ciphertext Block Chaining (CBC) mode.
 """
 
-class ModeCBC(object):
+from ctypes import CDLL, byref, c_void_p, create_string_buffer
+
+from Crypto.Util._modules import get_mod_name
+
+raw_cbc_lib = CDLL(get_mod_name("Crypto.Cipher._raw_cbc"))
+
+
+class RawCbcMode(object):
     """*Cipher-Block Chaining (CBC)*.
 
     Each of the ciphertext blocks depends on the current
@@ -45,43 +52,40 @@ class ModeCBC(object):
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
     """
 
-    def __init__(self, factory, **kwargs):
+    def __init__(self, block_cipher, iv):
         """Create a new block cipher, configured in CBC mode.
 
         :Parameters:
-          factory : module
-            A cryptographic algorithm module from `Crypto.Cipher`.
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-          IV : byte string
+          block_cipher : C pointer
+            A pointer to the low-level block cipher instance.
+
+          iv : byte string
             The initialization vector to use for encryption or decryption.
             It is as long as the cipher block.
 
-            The *IV* shall be unpredictable and it is best picked randomly.
+            **The IV must be unpredictable**. Ideally it is picked randomly.
 
             Reusing the *IV* for encryptions performed with the same key
             compromises confidentiality.
         """
 
+        self._state = None
+        state = c_void_p()
+        result = raw_cbc_lib.CBC_start_operation(block_cipher,
+                                                 iv,
+                                                 len(iv),
+                                                 byref(state))
+        if result:
+            raise ValueError("Error %d while instatiating the CBC mode"
+                             % result)
+        self._state = state.value
+
         #: The block size of the underlying cipher, in bytes.
-        self.block_size = factory.block_size
+        self.block_size = len(iv)
 
         #: The Initialization Vector originally used to create the object.
         #: The value does not change.
-        self.IV = kwargs.pop("IV", None)
-
-        try:
-            key = kwargs.pop("key")
-            if self.IV is None:
-                self.IV = kwargs.pop("iv")
-        except KeyError, e:
-            raise TypeError("Missing parameter: ", str(e))
-
-        self._cipher = factory.new(key,
-                                   factory.MODE_CBC,
-                                   self.IV,
-                                   **kwargs)
+        self.IV = iv
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -115,7 +119,12 @@ class ModeCBC(object):
             It is as long as *plaintext*.
         """
 
-        return self._cipher.encrypt(plaintext)
+        ciphertext = create_string_buffer(len(plaintext))
+        result = raw_cbc_lib.CBC_encrypt(self._state, plaintext, ciphertext,
+                                         len(plaintext))
+        if result:
+            raise ValueError("Error %d while encrypting in CBC mode" % result)
+        return ciphertext.raw
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key and the parameters set at initialization.
@@ -145,4 +154,29 @@ class ModeCBC(object):
         :Return: the decrypted data (byte string).
         """
 
-        return self._cipher.decrypt(ciphertext)
+        plaintext = create_string_buffer(len(ciphertext))
+        result = raw_cbc_lib.CBC_decrypt(self._state, ciphertext, plaintext,
+                                         len(ciphertext))
+        if result:
+            raise ValueError("Error %d while decrypting in CBC mode" % result)
+        return plaintext.raw
+
+    def __del__(self):
+        if self._state:
+            raw_cbc_lib.CBC_stop_operation(self._state)
+            self._state = None
+
+
+def _create_cbc_cipher(factory, **kwargs):
+
+    cipher_state, stop_op = factory._create_base_cipher(kwargs)
+    try:
+        iv = kwargs.pop("IV", None)
+        if iv is None:
+            iv = kwargs.pop("iv")
+        if kwargs:
+            raise ValueError("Unknown parameters for CBC: %s" % str(kwargs))
+        return RawCbcMode(cipher_state, iv)
+    except:
+        stop_op(cipher_state)
+        raise

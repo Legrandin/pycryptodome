@@ -24,7 +24,14 @@
 Electronic Code Book (ECB) mode.
 """
 
-class ModeECB(object):
+import os
+from ctypes import CDLL, byref, c_void_p, create_string_buffer
+
+from Crypto.Util._modules import get_mod_name
+
+raw_ecb_lib = CDLL(get_mod_name("Crypto.Cipher._raw_ecb"))
+
+class RawEcbMode(object):
     """*Electronic Code Book (ECB)*.
 
     This is the simplest encryption mode. Each of the plaintext blocks
@@ -39,26 +46,21 @@ class ModeECB(object):
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
     """
 
-    def __init__(self, factory, **kwargs):
+    def __init__(self, block_cipher):
         """Create a new block cipher, configured in ECB mode.
 
         :Parameters:
-          factory : module
-            A cryptographic algorithm module from `Crypto.Cipher`.
-
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
+          block_cipher : C pointer
+            A pointer to the low-level block cipher instance.
         """
 
-        self.block_size = factory.block_size
-
-        try:
-            key = kwargs.pop("key")
-        except KeyError, e:
-            raise TypeError("Missing parameter: " + str(e))
-
-        self._cipher = factory.new(key, factory.MODE_ECB, **kwargs)
+        self._state = None
+        state = c_void_p()
+        result = raw_ecb_lib.ECB_start_operation(block_cipher,
+                                                 byref(state))
+        if result:
+            raise ValueError("Error %d while instatiating the ECB mode" % result)
+        self._state = state.value
 
     def encrypt(self, plaintext):
         """Encrypt data with the key set at initialization.
@@ -85,7 +87,11 @@ class ModeECB(object):
             It is as long as *plaintext*.
         """
 
-        return self._cipher.encrypt(plaintext)
+        ciphertext = create_string_buffer(len(plaintext))
+        result = raw_ecb_lib.ECB_encrypt(self._state, plaintext, ciphertext, len(plaintext))
+        if result:
+            raise ValueError("Error %d while encrypting in ECB mode" % result)
+        return ciphertext.raw
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key set at initialization.
@@ -113,4 +119,23 @@ class ModeECB(object):
             It is as long as *ciphertext*.
         """
 
-        return self._cipher.decrypt(ciphertext)
+        plaintext = create_string_buffer(len(ciphertext))
+        result = raw_ecb_lib.ECB_decrypt(self._state, ciphertext, plaintext, len(ciphertext))
+        if result:
+            raise ValueError("Error %d while decrypting in ECB mode" % result)
+        return plaintext.raw
+
+    def __del__(self):
+        if self._state:
+            raw_ecb_lib.ECB_stop_operation(self._state)
+            self._state  = None
+
+def _create_ecb_cipher(factory, **kwargs):
+    cipher_state, stop_op = factory._create_base_cipher(kwargs)
+    try:
+        if kwargs:
+            raise ValueError("Unknown parameters for ECB: %s" % str(kwargs))
+        return RawEcbMode(cipher_state)
+    except:
+        stop_op(cipher_state)
+        raise

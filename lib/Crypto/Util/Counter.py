@@ -52,16 +52,10 @@ An example of usage is the following:
     >>> cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
     >>> ciphertext = cipher.encrypt(plaintext)
 
-:undocumented: __package__
 """
 
 from Crypto.Util.py3compat import *
 
-from Crypto.Util import _counter
-import struct
-
-# Factory function
-_deprecated = "deprecated"
 def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, little_endian=False, allow_wraparound=False):
     """Create a stateful counter block function suitable for CTR encryption modes.
 
@@ -87,39 +81,19 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, little_endian=False,
         If *True*, the counter number will be encoded in little endian format.
         If *False* (default), in big endian format.
       allow_wraparound : boolean
-        If *True*, the counter will automatically restart from zero after
-        reaching the maximum value (``2**nbits-1``).
-        If *False* (default), the object will raise an *OverflowError*.
+        This parameter is ignored.
     :Returns:
-      The counter block function.
+      An object that can be passed with the 'counter' parameter to a CTR mode
+      cipher.
     """
 
-    # Sanity-check the message size
-    (nbytes, remainder) = divmod(nbits, 8)
-    if remainder != 0:
-        # In the future, we might support arbitrary bit lengths, but for now we don't.
-        raise ValueError("nbits must be a multiple of 8; got %d" % (nbits,))
-    if nbytes < 1:
-        raise ValueError("nbits too small")
-    elif nbytes > 0xffff:
-        raise ValueError("nbits too large")
+    if (nbits % 8) != 0:
+        raise ValueError("'nbits' must be a multiple of 8")
 
-    initval = _encode(initial_value, nbytes, little_endian)
-
-    if little_endian:
-        return _counter._newLE(bstr(prefix), bstr(suffix), initval, allow_wraparound=allow_wraparound)
-    else:
-        return _counter._newBE(bstr(prefix), bstr(suffix), initval, allow_wraparound=allow_wraparound)
-
-def _encode(n, nbytes, little_endian=False):
-    retval = []
-    n = long(n)
-    for i in range(nbytes):
-        if little_endian:
-            retval.append(bchr(n & 0xff))
-        else:
-            retval.insert(0, bchr(n & 0xff))
-        n >>= 8
-    return b("").join(retval)
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+    # Ignore wraparound
+    return {"counter_len": nbits // 8,
+            "prefix": prefix,
+            "suffix": suffix,
+            "initial_value": initial_value,
+            "little_endian": little_endian
+            }

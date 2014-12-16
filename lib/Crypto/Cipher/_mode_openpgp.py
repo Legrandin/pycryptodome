@@ -238,3 +238,6 @@ class ModeOpenPGP(object):
             res = self._cipher.decrypt(ciphertext)
         return res
 
+
+def _create_openpgp_cipher(factory, **kwargs):
+    return ModeOpenPGP(factory, **kwargs)

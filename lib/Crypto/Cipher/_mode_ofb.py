@@ -24,9 +24,14 @@
 Output Feedback (CFB) mode.
 """
 
-from Crypto.Util import Counter
+from ctypes import CDLL, byref, c_void_p, create_string_buffer
 
-class ModeOFB(object):
+from Crypto.Util._modules import get_mod_name
+
+raw_ofb_lib = CDLL(get_mod_name("Crypto.Cipher._raw_ofb"))
+
+
+class RawOfbMode(object):
     """*Output FeedBack (OFB)*.
 
     This mode is very similar to CBC, but it
@@ -42,17 +47,14 @@ class ModeOFB(object):
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
     """
 
-    def __init__(self, factory, **kwargs):
+    def __init__(self, block_cipher, iv):
         """Create a new block cipher, configured in OFB mode.
 
         :Parameters:
-          factory : module
-            A cryptographic algorithm module from `Crypto.Cipher`.
+          block_cipher : C pointer
+            A pointer to the low-level block cipher instance.
 
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-          IV : byte string
+          iv: byte string
             The initialization vector to use for encryption or decryption.
             It is as long as the cipher block.
 
@@ -63,24 +65,16 @@ class ModeOFB(object):
             compromises confidentiality.
         """
 
-        #: The block size of the underlying cipher, in bytes.
-        self.block_size = factory.block_size
-
-        #: The Initialization Vector originally used to create the object.
-        #: The value does not change.
-        self.IV = kwargs.pop("IV", None)
-
-        try:
-            key = kwargs.pop("key")
-            if self.IV is None:
-                self.IV = kwargs.pop("iv")
-        except KeyError, e:
-            raise TypeError("Missing parameter: " + str(e))
-
-        self._cipher = factory.new(key,
-                                   factory.MODE_OFB,
-                                   self.IV,
-                                   **kwargs)
+        self._state = None
+        state = c_void_p()
+        result = raw_ofb_lib.OFB_start_operation(block_cipher,
+                                                 iv,
+                                                 len(iv),
+                                                 byref(state))
+        if result:
+            raise ValueError("Error %d while instatiating the OFB mode"
+                             % result)
+        self._state = state.value
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -111,7 +105,12 @@ class ModeOFB(object):
             It is as long as *plaintext*.
         """
 
-        return self._cipher.encrypt(plaintext)
+        ciphertext = create_string_buffer(len(plaintext))
+        result = raw_ofb_lib.OFB_encrypt(self._state, plaintext, ciphertext,
+                                         len(plaintext))
+        if result:
+            raise ValueError("Error %d while encrypting in OFB mode" % result)
+        return ciphertext.raw
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key and the parameters set at initialization.
@@ -141,4 +140,28 @@ class ModeOFB(object):
         :Return: the decrypted data (byte string).
         """
 
-        return self._cipher.decrypt(ciphertext)
+        plaintext = create_string_buffer(len(ciphertext))
+        result = raw_ofb_lib.OFB_decrypt(self._state, ciphertext, plaintext,
+                                         len(ciphertext))
+        if result:
+            raise ValueError("Error %d while decrypting in OFB mode" % result)
+        return plaintext.raw
+
+    def __del__(self):
+        if self._state:
+            raw_ofb_lib.OFB_stop_operation(self._state)
+            self._state = None
+
+
+def _create_ofb_cipher(factory, **kwargs):
+    cipher_state, stop_op = factory._create_base_cipher(kwargs)
+    try:
+        iv = kwargs.pop("IV", None)
+        if iv is None:
+            iv = kwargs.pop("iv")
+        if kwargs:
+            raise ValueError("Unknown parameters for OFB: %s" % str(kwargs))
+        return RawOfbMode(cipher_state, iv)
+    except:
+        stop_op(cipher_state)
+        raise

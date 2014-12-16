@@ -42,91 +42,18 @@ class CounterTests(unittest.TestCase):
         """Little endian"""
         c = Counter.new(128, little_endian=True)
 
-    def test_BE_defaults(self):
-        """128-bit, Big endian, defaults"""
-        c = Counter.new(128)
-        self.assertEqual(1, c.next_value())
-        self.assertEqual(b("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"), c())
-        self.assertEqual(2, c.next_value())
-        self.assertEqual(b("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02"), c())
-        for i in xrange(3, 256):
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(b("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")+bchr(i), c())
-        self.assertEqual(256, c.next_value())
-        self.assertEqual(b("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00"), c())
+    def test_nbits(self):
+        c = Counter.new(nbits=128)
+        self.assertRaises(ValueError, Counter.new, 129)
 
-    def test_LE_defaults(self):
-        """128-bit, Little endian, defaults"""
-        c = Counter.new(128, little_endian=True)
-        self.assertEqual(1, c.next_value())
-        self.assertEqual(b("\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"), c())
-        self.assertEqual(2, c.next_value())
-        self.assertEqual(b("\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"), c())
-        for i in xrange(3, 256):
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(bchr(i)+b("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"), c())
-        self.assertEqual(256, c.next_value())
-        self.assertEqual(b("\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"), c())
+    def test_prefix(self):
+        c = Counter.new(128, prefix=b("xx"))
 
-    def test_BE8_wraparound(self):
-        """8-bit, Big endian, wraparound"""
-        c = Counter.new(8)
-        for i in xrange(1, 256):
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(bchr(i), c())
-        self.assertRaises(OverflowError, c.next_value)
-        self.assertRaises(OverflowError, c)
-        self.assertRaises(OverflowError, c.next_value)
-        self.assertRaises(OverflowError, c)
+    def test_suffix(self):
+        c = Counter.new(128, suffix=b("xx"))
 
-    def test_LE8_wraparound(self):
-        """8-bit, Little endian, wraparound"""
-        c = Counter.new(8, little_endian=True)
-        for i in xrange(1, 256):
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(bchr(i), c())
-        self.assertRaises(OverflowError, c.next_value)
-        self.assertRaises(OverflowError, c)
-        self.assertRaises(OverflowError, c.next_value)
-        self.assertRaises(OverflowError, c)
-
-    def test_BE8_wraparound_allowed(self):
-        """8-bit, Big endian, wraparound with allow_wraparound=True"""
-        c = Counter.new(8, allow_wraparound=True)
-        for i in xrange(1, 256):
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(bchr(i), c())
-        self.assertEqual(0, c.next_value())
-        self.assertEqual(b("\x00"), c())
-        self.assertEqual(1, c.next_value())
-
-    def test_LE8_wraparound_allowed(self):
-        """8-bit, Little endian, wraparound with allow_wraparound=True"""
-        c = Counter.new(8, little_endian=True, allow_wraparound=True)
-        for i in xrange(1, 256):
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(bchr(i), c())
-        self.assertEqual(0, c.next_value())
-        self.assertEqual(b("\x00"), c())
-        self.assertEqual(1, c.next_value())
-
-    def test_BE8_carry(self):
-        """8-bit, Big endian, carry attribute"""
-        c = Counter.new(8)
-        for i in xrange(1, 256):
-            self.assertEqual(0, c.carry)
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(bchr(i), c())
-        self.assertEqual(1, c.carry)
-
-    def test_LE8_carry(self):
-        """8-bit, Little endian, carry attribute"""
-        c = Counter.new(8, little_endian=True)
-        for i in xrange(1, 256):
-            self.assertEqual(0, c.carry)
-            self.assertEqual(i, c.next_value())
-            self.assertEqual(bchr(i), c())
-        self.assertEqual(1, c.carry)
+    def test_iv(self):
+        c = Counter.new(128, initial_value=2)
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases

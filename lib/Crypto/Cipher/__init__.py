@@ -76,26 +76,30 @@ __all__ = ['AES', 'ARC2', 'ARC4',
            'PKCS1_v1_5', 'PKCS1_OAEP'
            ]
 
-from Crypto.Cipher._mode_gcm import ModeGCM
-from Crypto.Cipher._mode_ctr import ModeCTR
-from Crypto.Cipher._mode_cfb import ModeCFB
-from Crypto.Cipher._mode_cbc import ModeCBC
-from Crypto.Cipher._mode_ecb import ModeECB
-from Crypto.Cipher._mode_ofb import ModeOFB
-from Crypto.Cipher._mode_ccm import ModeCCM
-from Crypto.Cipher._mode_siv import ModeSIV
-from Crypto.Cipher._mode_eax import ModeEAX
-from Crypto.Cipher._mode_openpgp import ModeOpenPGP
+import os
 
-_modes = { 1:ModeECB,
-           2:ModeCBC,
-           3:ModeCFB,
-           5:ModeOFB,
-           6:ModeCTR,
-           7:ModeOpenPGP,
-           9:ModeEAX }
+from Crypto.Cipher._mode_ecb import _create_ecb_cipher
+from Crypto.Cipher._mode_cbc import _create_cbc_cipher
+from Crypto.Cipher._mode_cfb import _create_cfb_cipher
+from Crypto.Cipher._mode_ofb import _create_ofb_cipher
+from Crypto.Cipher._mode_ctr import _create_ctr_cipher
+from Crypto.Cipher._mode_openpgp import _create_openpgp_cipher
+from Crypto.Cipher._mode_ccm import _create_ccm_cipher
+from Crypto.Cipher._mode_eax import _create_eax_cipher
+from Crypto.Cipher._mode_siv import _create_siv_cipher
+from Crypto.Cipher._mode_gcm import _create_gcm_cipher
 
-_extra_modes = { 8:ModeCCM, 10:ModeSIV, 11:ModeGCM }
+_modes = { 1:_create_ecb_cipher,
+           2:_create_cbc_cipher,
+           3:_create_cfb_cipher,
+           5:_create_ofb_cipher,
+           6:_create_ctr_cipher,
+           7:_create_openpgp_cipher,
+           9:_create_eax_cipher }
+
+_extra_modes = { 8:_create_ccm_cipher,
+                10:_create_siv_cipher,
+                11:_create_gcm_cipher }
 
 def _create_cipher(factory, key, mode, *args, **kwargs):
 

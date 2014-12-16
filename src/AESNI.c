@@ -26,7 +26,7 @@
 #include <wmmintrin.h>
 #include <stdlib.h>
 
-#define MODULE_NAME _AESNI
+#define MODULE_NAME AESNI
 #define BLOCK_SIZE 16
 #define KEY_SIZE 0
 
@@ -122,7 +122,7 @@ static void aes_key_setup_enc(__m128i rk[], const uint8_t* cipherKey, int keylen
             temp[0] = KEYEXP192(rk[3], rk[4], 0x04);
             temp[1] = KEYEXP192_2(temp[0], rk[4]);
             rk[4] = SHUFFLE128_0(rk[4], temp[0]);
-            rk[5] = SHUFFLE128_1(temp[0], temp[1]); 
+            rk[5] = SHUFFLE128_1(temp[0], temp[1]);
             rk[6] = KEYEXP192(temp[0], temp[1], 0x08);
             rk[7] = KEYEXP192_2(rk[6], temp[1]);
             temp[0] = KEYEXP192(rk[6], rk[7], 0x10);
@@ -134,7 +134,7 @@ static void aes_key_setup_enc(__m128i rk[], const uint8_t* cipherKey, int keylen
             temp[0] = KEYEXP192(rk[9], rk[10], 0x40);
             temp[1] = KEYEXP192_2(temp[0], rk[10]);
             rk[10] = SHUFFLE128_0(rk[10], temp[0]);
-            rk[11] = SHUFFLE128_1(temp[0], temp[1]);            
+            rk[11] = SHUFFLE128_1(temp[0], temp[1]);
             rk[12] = KEYEXP192(temp[0], temp[1], 0x80);
             break;
         }
@@ -183,8 +183,6 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
         case 24: nr = 12; break;
         case 32: nr = 14; break;
         default:
-            PyErr_SetString(PyExc_ValueError,
-                "AES key must be either 16, 24, or 32 bytes long");
             return;
     }
 
@@ -259,4 +257,4 @@ static void block_decrypt(block_state* self, const uint8_t* in, uint8_t* out)
     _mm_storeu_si128((__m128i*) out, m);
 }
 
-#include "block_template.c"
+#include "block_common.c"

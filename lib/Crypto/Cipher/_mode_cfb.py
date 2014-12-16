@@ -24,7 +24,13 @@
 Counter Feedback (CFB) mode.
 """
 
-class ModeCFB(object):
+from ctypes import CDLL, byref, c_void_p, create_string_buffer
+
+from Crypto.Util._modules import get_mod_name
+
+raw_cfb_lib = CDLL(get_mod_name("Crypto.Cipher._raw_cfb"))
+
+class RawCfbMode(object):
     """*Cipher FeedBack (CFB)*.
 
     This mode is similar to CBC, but it transforms
@@ -41,18 +47,14 @@ class ModeCFB(object):
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
     """
 
-    def __init__(self, factory, **kwargs):
+    def __init__(self, block_cipher, iv, segment_size):
         """Create a new block cipher, configured in CFB mode.
 
         :Parameters:
-          factory : module
-            A cryptographic algorithm module from `Crypto.Cipher`.
+          block_cipher : C pointer
+            A pointer to the low-level block cipher instance.
 
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-
-          IV : byte string
+          iv : byte string
             The initialization vector to use for encryption or decryption.
             It is as long as the cipher block.
 
@@ -61,27 +63,20 @@ class ModeCFB(object):
             Reusing the *IV* for encryptions performed with the same key
             compromises confidentiality.
 
-        segment_size : integer
-            The number of bits the plaintext and ciphertext are segmented in.
-            It must be a multiple of 8.
-            If 0 or not specified, it will be assumed to be 8.
+          segment_size : integer
+            The number of bytes the plaintext and ciphertext are segmented in.
         """
 
-        #: The block size of the underlying cipher, in bytes.
-        self.block_size = factory.block_size
-
-        #: The Initialization Vector originally used to create the object.
-        #: The value does not change.
-        self.IV = kwargs.pop("IV", None)
-
-        try:
-            key = kwargs.pop("key")
-            if self.IV is None:
-                self.IV = kwargs.pop("iv")
-        except KeyError, e:
-            raise TypeError("Missing parameter: " + str(e))
-
-        self._cipher = factory.new(key, factory.MODE_CFB, self.IV, **kwargs)
+        self._state = None
+        state = c_void_p()
+        result = raw_cfb_lib.CFB_start_operation(block_cipher,
+                                                 iv,
+                                                 len(iv),
+                                                 segment_size,
+                                                 byref(state))
+        if result:
+            raise ValueError("Error %d while instatiating the CFB mode" % result)
+        self._state = state.value
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -112,7 +107,11 @@ class ModeCFB(object):
             It is as long as *plaintext*.
         """
 
-        return self._cipher.encrypt(plaintext)
+        ciphertext = create_string_buffer(len(plaintext))
+        result = raw_cfb_lib.CFB_encrypt(self._state, plaintext, ciphertext, len(plaintext))
+        if result:
+            raise ValueError("Error %d while encrypting in CBC mode" % result)
+        return ciphertext.raw
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key and the parameters set at initialization.
@@ -142,4 +141,34 @@ class ModeCFB(object):
         :Return: the decrypted data (byte string).
         """
 
-        return self._cipher.decrypt(ciphertext)
+        plaintext = create_string_buffer(len(ciphertext))
+        result = raw_cfb_lib.CFB_decrypt(self._state, ciphertext, plaintext, len(ciphertext))
+        if result:
+            raise ValueError("Error %d while decrypting in CBC mode" % result)
+        return plaintext.raw
+
+    def __del__(self):
+        if self._state:
+            raw_cfb_lib.CFB_stop_operation(self._state)
+            self._state  = None
+
+def _create_cfb_cipher(factory, **kwargs):
+
+    cipher_state, stop_op = factory._create_base_cipher(kwargs)
+    try:
+        iv = kwargs.pop("IV", None)
+        if iv is None:
+            iv = kwargs.pop("iv")
+
+        segment_size_bytes, rem = divmod(kwargs.pop("segment_size", 8), 8)
+        if rem:
+            raise ValueError("'segment_size' must be a multiple of 8 bits")
+        if segment_size_bytes == 0:
+            segment_size_bytes = 1
+
+        if kwargs:
+            raise ValueError("Unknown parameters for CBC: %s" % str(kwargs))
+        return RawCfbMode(cipher_state, iv, segment_size_bytes)
+    except:
+        stop_op(cipher_state)
+        raise

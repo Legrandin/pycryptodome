@@ -353,3 +353,7 @@ class ModeEAX(object):
         pt = self.decrypt(ciphertext)
         self.verify(received_mac_tag)
         return pt
+
+
+def _create_eax_cipher(factory, **kwargs):
+    return ModeEAX(factory, **kwargs)

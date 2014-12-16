@@ -359,3 +359,7 @@ class ModeSIV(object):
 
         self.verify(mac_tag)
         return plaintext
+
+
+def _create_siv_cipher(factory, **kwargs):
+    return ModeSIV(factory, **kwargs)
