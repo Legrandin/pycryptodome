@@ -24,12 +24,12 @@
 Counter (CTR) mode.
 """
 
-from ctypes import CDLL, byref, c_void_p, create_string_buffer
+from ctypes import byref, c_void_p, create_string_buffer
 
 from Crypto.Util.py3compat import *
-from Crypto.Util._modules import get_mod_name
+from Crypto.Util._modules import get_CDLL
 
-raw_ctr_lib = CDLL(get_mod_name("Crypto.Cipher._raw_ctr"))
+raw_ctr_lib = get_CDLL("Crypto.Cipher._raw_ctr")
 
 
 class RawCtrMode(object):

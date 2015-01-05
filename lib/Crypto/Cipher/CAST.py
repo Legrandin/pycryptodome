@@ -54,13 +54,13 @@ As an example, encryption can be done as follows:
 """
 
 import sys
-from ctypes import CDLL, c_void_p, byref
+from ctypes import c_void_p, byref
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util.py3compat import byte_string
-from Crypto.Util._modules import get_mod_name
+from Crypto.Util._modules import get_CDLL
 
-_raw_cast_lib = CDLL(get_mod_name("Crypto.Cipher._raw_cast"))
+_raw_cast_lib = get_CDLL("Crypto.Cipher._raw_cast")
 
 
 def _create_base_cipher(dict_parameters):

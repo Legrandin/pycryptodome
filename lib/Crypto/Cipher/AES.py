@@ -75,19 +75,19 @@ We assume that the tuple ``msg`` is transmitted to the receiver:
 """
 
 import sys
-from ctypes import CDLL, c_void_p, byref
+from ctypes import c_void_p, byref
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util import cpuid
 from Crypto.Util.py3compat import byte_string
-from Crypto.Util._modules import get_mod_name
+from Crypto.Util._modules import get_CDLL
 
 
-_raw_aes_lib = CDLL(get_mod_name("Crypto.Cipher._raw_aes"))
+_raw_aes_lib = get_CDLL("Crypto.Cipher._raw_aes")
 _raw_aesni_lib = None
 try:
     if cpuid.have_aes_ni():
-        _raw_aesni_lib = CDLL(get_mod_name("Crypto.Cipher._raw_aesni"))
+        _raw_aesni_lib = get_CDLL("Crypto.Cipher._raw_aesni")
 except OSError:
     pass
 

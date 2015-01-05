@@ -24,11 +24,11 @@
 Output Feedback (CFB) mode.
 """
 
-from ctypes import CDLL, byref, c_void_p, create_string_buffer
+from ctypes import byref, c_void_p, create_string_buffer
 
-from Crypto.Util._modules import get_mod_name
+from Crypto.Util._modules import get_CDLL
 
-raw_ofb_lib = CDLL(get_mod_name("Crypto.Cipher._raw_ofb"))
+raw_ofb_lib = get_CDLL("Crypto.Cipher._raw_ofb")
 
 
 class RawOfbMode(object):

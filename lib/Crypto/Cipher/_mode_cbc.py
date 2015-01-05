@@ -32,11 +32,11 @@
 Ciphertext Block Chaining (CBC) mode.
 """
 
-from ctypes import CDLL, byref, c_void_p, create_string_buffer
+from ctypes import byref, c_void_p, create_string_buffer
 
-from Crypto.Util._modules import get_mod_name
+from Crypto.Util._modules import get_CDLL
 
-raw_cbc_lib = CDLL(get_mod_name("Crypto.Cipher._raw_cbc"))
+raw_cbc_lib = get_CDLL("Crypto.Cipher._raw_cbc")
 
 
 class RawCbcMode(object):

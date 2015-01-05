@@ -29,27 +29,29 @@
 # ===================================================================
 
 import os
+import imp
+from ctypes import CDLL
 
-def get_mod_name(name):
+
+def _get_mod_name(name, c_extension):
 
     comps = name.split(".")
     if comps[0] != "Crypto":
         raise ValueError("Only available for modules under 'Crypto'")
 
-    mod_extension = None
-    try:
-        import sysconfig
-        # Native module extensions changed with PEP3149
-        mod_extension = sysconfig.get_config_var('EXT_SUFFIX')
-    except ImportError:
-        pass
-    if mod_extension is None:
-        # Todo: use distutils to figure out the actual one
-        mod_extension = ".so"
-
-    comps = comps[1:-1] + [comps[-1] + mod_extension]
+    comps = comps[1:-1] + [comps[-1] + c_extension]
 
     util_lib, _ = os.path.split(os.path.abspath(__file__))
     root_lib = os.path.join(util_lib, "..")
 
     return os.path.join(root_lib, *comps)
+
+
+def get_CDLL(name):
+    for ext, mod, typ in imp.get_suffixes():
+        if typ == imp.C_EXTENSION:
+            try:
+                return CDLL(_get_mod_name(name, ext))
+            except OSError:
+                pass
+    raise OSError("Cannot load native module '%s' % name" % name)

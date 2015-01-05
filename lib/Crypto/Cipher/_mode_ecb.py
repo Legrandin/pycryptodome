@@ -25,11 +25,11 @@ Electronic Code Book (ECB) mode.
 """
 
 import os
-from ctypes import CDLL, byref, c_void_p, create_string_buffer
+from ctypes import byref, c_void_p, create_string_buffer
 
-from Crypto.Util._modules import get_mod_name
+from Crypto.Util._modules import get_CDLL
 
-raw_ecb_lib = CDLL(get_mod_name("Crypto.Cipher._raw_ecb"))
+raw_ecb_lib = get_CDLL("Crypto.Cipher._raw_ecb")
 
 class RawEcbMode(object):
     """*Electronic Code Book (ECB)*.
