@@ -56,7 +56,45 @@ As an example, encryption can be done as follows:
 :undocumented: __package__
 """
 
-from Crypto.Cipher import _ARC2, _create_cipher
+import sys
+from ctypes import CDLL, c_void_p, byref
+
+from Crypto.Cipher import _create_cipher
+from Crypto.Util.py3compat import byte_string
+from Crypto.Util._modules import get_mod_name
+
+_raw_arc2_lib = CDLL(get_mod_name("Crypto.Cipher._raw_arc2"))
+
+
+def _create_base_cipher(dict_parameters):
+    """This method instantiates and returns a handle to a low-level base cipher.
+    It will absorb named parameters in the process."""
+
+    try:
+        key = dict_parameters.pop("key")
+    except KeyError:
+        raise TypeError("Missing 'key' parameter")
+
+    effective_keylen = dict_parameters.pop("effective_keylen", 1024)
+
+    if not byte_string(key):
+        raise TypeError("The cipher key must be a byte string")
+
+    if len(key) not in key_size:
+        raise ValueError("Incorrect ARC2 key length (%d bytes)" % len(key))
+
+    if not (0 <= effective_keylen <= 1024):
+        raise ValueError("'effective_key_len' must be positive and no larger than 1024")
+
+    start_operation = _raw_arc2_lib.ARC2_start_operation
+    stop_operation = _raw_arc2_lib.ARC2_stop_operation
+
+    cipher = c_void_p()
+    result = start_operation(key, len(key), effective_keylen, byref(cipher))
+    if result:
+        raise ValueError("Error %X while instantiating the ARC2 cipher"
+                         % result)
+    return cipher.value, stop_operation
 
 
 def new(key, mode, *args, **kwargs):
@@ -105,7 +143,7 @@ def new(key, mode, *args, **kwargs):
     :Return: an `RC2Cipher` object
     """
 
-    return _create_cipher(_ARC2, key, mode, *args, **kwargs)
+    return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1
@@ -126,5 +164,4 @@ MODE_EAX = 9
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = xrange(1,16+1)
-
+key_size = xrange(1, 128 + 1)

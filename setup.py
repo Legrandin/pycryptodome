@@ -390,7 +390,7 @@ setup(
         Extension("Crypto.Cipher._raw_aesni",
             include_dirs=['src/'],
             sources=["src/AESNI.c"]),
-        Extension("Crypto.Cipher._ARC2",
+        Extension("Crypto.Cipher._raw_arc2",
             include_dirs=['src/'],
             sources=["src/ARC2.c"]),
         Extension("Crypto.Cipher._raw_blowfish",

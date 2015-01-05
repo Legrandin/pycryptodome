@@ -44,7 +44,7 @@
 #include "pycrypto_common.h"
 #include <string.h>
 
-#define MODULE_NAME _ARC2
+#define MODULE_NAME ARC2
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0
 #define PCT_ARC2_MODULE  /* Defined to get ARC2's additional keyword arguments */
@@ -53,7 +53,7 @@ typedef uint32_t U32;
 typedef uint16_t U16;
 typedef uint8_t U8;
 
-typedef struct 
+typedef struct
 {
 	U16 xkey[64];
         int effective_keylen;
@@ -64,26 +64,26 @@ block_encrypt(block_state *self, U8 *in, U8 *out)
 {
 	U16 x76, x54, x32, x10;
 	int i;
-  
+
 	x76 = (in[7] << 8) + in[6];
 	x54 = (in[5] << 8) + in[4];
 	x32 = (in[3] << 8) + in[2];
 	x10 = (in[1] << 8) + in[0];
-  
+
 	for (i = 0; i < 16; i++)
 	{
 		x10 += (x32 & ~x76) + (x54 & x76) + self->xkey[4*i+0];
 		x10 = (x10 << 1) + (x10 >> 15 & 1);
-      
+
 		x32 += (x54 & ~x10) + (x76 & x10) + self->xkey[4*i+1];
 		x32 = (x32 << 2) + (x32 >> 14 & 3);
-      
+
 		x54 += (x76 & ~x32) + (x10 & x32) + self->xkey[4*i+2];
 		x54 = (x54 << 3) + (x54 >> 13 & 7);
-      
+
 		x76 += (x10 & ~x54) + (x32 & x54) + self->xkey[4*i+3];
 		x76 = (x76 << 5) + (x76 >> 11 & 31);
-      
+
 		if (i == 4 || i == 10) {
 			x10 += self->xkey[x76 & 63];
 			x32 += self->xkey[x10 & 63];
@@ -91,7 +91,7 @@ block_encrypt(block_state *self, U8 *in, U8 *out)
 			x76 += self->xkey[x54 & 63];
 		}
 	}
-  
+
 	out[0] = (U8)x10;
 	out[1] = (U8)(x10 >> 8);
 	out[2] = (U8)x32;
@@ -108,30 +108,30 @@ block_decrypt(block_state *self, U8 *in, U8 *out)
 {
 	U16 x76, x54, x32, x10;
 	int i;
-  
+
 	x76 = (in[7] << 8) + in[6];
 	x54 = (in[5] << 8) + in[4];
 	x32 = (in[3] << 8) + in[2];
 	x10 = (in[1] << 8) + in[0];
-  
+
 	i = 15;
 	do {
 		x76 &= 65535;
 		x76 = (x76 << 11) + (x76 >> 5);
 		x76 -= (x10 & ~x54) + (x32 & x54) + self->xkey[4*i+3];
-    
+
 		x54 &= 65535;
 		x54 = (x54 << 13) + (x54 >> 3);
 		x54 -= (x76 & ~x32) + (x10 & x32) + self->xkey[4*i+2];
-    
+
 		x32 &= 65535;
 		x32 = (x32 << 14) + (x32 >> 2);
 		x32 -= (x54 & ~x10) + (x76 & x10) + self->xkey[4*i+1];
-    
+
 		x10 &= 65535;
 		x10 = (x10 << 15) + (x10 >> 1);
 		x10 -= (x32 & ~x76) + (x54 & x76) + self->xkey[4*i+0];
-    
+
 		if (i == 5 || i == 11) {
 			x76 -= self->xkey[x54 & 63];
 			x54 -= self->xkey[x32 & 63];
@@ -139,7 +139,7 @@ block_decrypt(block_state *self, U8 *in, U8 *out)
 			x10 -= self->xkey[x76 & 63];
 		}
 	} while (i--);
-  
+
 	out[0] = (U8)x10;
 	out[1] = (U8)(x10 >> 8);
 	out[2] = (U8)x32;
@@ -151,7 +151,7 @@ block_decrypt(block_state *self, U8 *in, U8 *out)
 }
 
 
-static void 
+static void
 block_init(block_state *self, U8 *key, int keylength)
 {
 	U8 x;
@@ -183,7 +183,7 @@ block_init(block_state *self, U8 *key, int keylength)
 	}
 
 	memcpy(self->xkey, key, keylength);
-  
+
 	/* Phase 1: Expand input key to 128 bytes */
 	if (keylength < 128) {
 		i = 0;
@@ -193,7 +193,7 @@ block_init(block_state *self, U8 *key, int keylength)
                         ((U8 *)self->xkey)[keylength++] = x;
                 } while (keylength < 128);
 	}
-  
+
 	/* Phase 2 - reduce effective key size to "effective_keylen" */
         keylength = (self->effective_keylen+7) >> 3;
 	i = 128-keylength;
@@ -202,12 +202,12 @@ block_init(block_state *self, U8 *key, int keylength)
 					      ((self->effective_keylen %8 ) ? 8-(self->effective_keylen%8): 0))
 		)];
 	((U8 *)self->xkey)[i] = x;
-  
+
 	while (i--) {
 		x = permute[ x ^ ((U8 *)self->xkey)[i+keylength] ];
 		((U8 *)self->xkey)[i] = x;
         }
-  
+
 	/* Phase 3 - copy to self->xkey in little-endian order */
 	i = 63;
 	do {
@@ -221,4 +221,29 @@ block_finalize(block_state* self)
 {
 }
 
-#include "block_template.c"
+#define NON_STANDARD_START_OPERATION
+#include "block_common.c"
+
+int ARC2_start_operation(const uint8_t key[], size_t key_len, size_t effective_key_len, ARC2_State **pResult)
+{
+    BlockBase *block_base;
+
+    if ((key == NULL) || (pResult == NULL))
+        return ERR_NULL;
+
+    *pResult = calloc(1, sizeof(ARC2_State));
+    if (NULL == *pResult)
+        return ERR_MEMORY;
+
+    block_base = &((*pResult)->base_state);
+    block_base->encrypt = &ARC2_encrypt;
+    block_base->decrypt = &ARC2_decrypt;
+    block_base->destructor = &ARC2_stop_operation;
+    block_base->block_len = BLOCK_SIZE;
+
+    (*pResult)->algo_state.effective_keylen = effective_key_len;
+
+    block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
+    return 0;
+}
+
