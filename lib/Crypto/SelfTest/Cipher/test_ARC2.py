@@ -99,7 +99,7 @@ class BufferOverflowTest(unittest.TestCase):
 
     def runTest(self):
         """ARC2 with keylength > 128"""
-        key = "x" * 16384
+        key = b("x") * 16384
         mode = ARC2.MODE_ECB
         self.assertRaises(ValueError, ARC2.new, key, mode)
 

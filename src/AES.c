@@ -28,7 +28,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#define MODULE_NAME _AES
+#define MODULE_NAME AES
 #define BLOCK_SIZE 16
 #define KEY_SIZE 0
 
@@ -41,7 +41,7 @@ typedef uint16_t    u16;
 typedef uint32_t    u32;
 
 typedef struct {
-	u32 ek[ 4*(MAXNR+1) ]; 
+	u32 ek[ 4*(MAXNR+1) ];
 	u32 dk[ 4*(MAXNR+1) ];
 	int rounds;
 } block_state;
@@ -1322,7 +1322,7 @@ static void rijndaelEncryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[
 			(Te4[(s1 >>  8) & 0xff] & 0x0000ff00) ^
 			(Te4[(s2      ) & 0xff] & 0x000000ff) ^
 			rk[3];
-		
+
 		s0 = t0;
 		s1 = t1;
 		s2 = t2;
@@ -1431,11 +1431,6 @@ static void block_init(block_state *state, unsigned char *key,
 {
 	int Nr = 0;
 
-	if (keylen != 16 && keylen != 24 && keylen != 32) {
-		PyErr_SetString(PyExc_ValueError,
-				"AES key must be either 16, 24, or 32 bytes long");
-		return;
-	}
 	switch (keylen) {
 	case(16): Nr = 10; break;
 	case(24): Nr = 12; break;
@@ -1460,4 +1455,4 @@ static void block_decrypt(block_state *self, u8 *in, u8 *out)
 	rijndaelDecrypt(self->dk, self->rounds, in, out);
 }
 
-#include "block_template.c"
+#include "block_common.c"

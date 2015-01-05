@@ -50,22 +50,44 @@ As an example, encryption can be done as follows:
 .. _CAST-128: http://en.wikipedia.org/wiki/CAST-128
 .. _RFC2144: http://tools.ietf.org/html/rfc2144
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+import sys
+from ctypes import c_void_p, byref
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _CAST
+from Crypto.Cipher import _create_cipher
+from Crypto.Util.py3compat import byte_string
+from Crypto.Util._modules import get_CDLL
 
-class CAST128Cipher(blockalgo.BlockAlgo):
-    """CAST-128 cipher object"""
+_raw_cast_lib = get_CDLL("Crypto.Cipher._raw_cast")
 
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize a CAST-128 cipher object
 
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _CAST, key, mode, *args, **kwargs)
+def _create_base_cipher(dict_parameters):
+    """This method instantiates and returns a handle to a low-level base cipher.
+    It will absorb named parameters in the process."""
+
+    try:
+        key = dict_parameters.pop("key")
+    except KeyError:
+        raise TypeError("Missing 'key' parameter")
+
+    if not byte_string(key):
+        raise TypeError("The cipher key must be a byte string")
+
+    if len(key) not in key_size:
+        raise ValueError("Incorrect CAST key length (%d bytes)" % len(key))
+
+    start_operation = _raw_cast_lib.CAST_start_operation
+    stop_operation = _raw_cast_lib.CAST_stop_operation
+
+    cipher = c_void_p()
+    result = start_operation(key, len(key), byref(cipher))
+    if result:
+        raise ValueError("Error %X while instantiating the CAST cipher"
+                         % result)
+    return cipher.value, stop_operation
+
 
 def new(key, mode, *args, **kwargs):
     """Create a new CAST-128 cipher
@@ -109,7 +131,8 @@ def new(key, mode, *args, **kwargs):
 
     :Return: an `CAST128Cipher` object
     """
-    return CAST128Cipher(key, mode, *args, **kwargs)
+
+    return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1
@@ -130,4 +153,4 @@ MODE_EAX = 9
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = xrange(5,16+1)
+key_size = xrange(5, 16 + 1)

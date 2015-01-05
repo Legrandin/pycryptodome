@@ -28,7 +28,6 @@ __revision__ = "$Id$"
 
 def get_tests(config={}):
     tests = []
-    from Crypto.SelfTest.Random import Fortuna;             tests += Fortuna.get_tests(config=config)
     from Crypto.SelfTest.Random import test_random;         tests += test_random.get_tests(config=config)
     return tests
 

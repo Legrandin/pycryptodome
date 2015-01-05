@@ -141,6 +141,9 @@ def libgmp_exists():
 
 
 class PCTBuildExt (build_ext):
+
+    aesni_mod_names = "Crypto.Cipher._raw_aesni",
+
     def build_extensions(self):
         # Detect which modules should be compiled
         self.detect_modules()
@@ -193,12 +196,14 @@ class PCTBuildExt (build_ext):
             return 0;
         }
         """
-        aesni = [ x for x in self.extensions if x.name == "Crypto.Cipher._AESNI" ][0]
+
+        aes_mods = [ x for x in self.extensions if x.name in self.aesni_mod_names ]
         result = test_compilation(source)
         if not result:
             result = test_compilation(source, extra_cc_options=['-maes'])
             if result:
-                aesni.extra_compile_args += ['-maes']
+                for x in aes_mods:
+                    x.extra_compile_args += ['-maes']
         return result
 
     def detect_modules (self):
@@ -207,9 +212,8 @@ class PCTBuildExt (build_ext):
         if (self.check_cpuid_h() or self.check_intrin_h()) and self.check_aesni():
             PrintErr("Compiling support for Intel AES instructions")
         else:
-            PrintErr ("warning: no support for Intel AESNI instructions; Not building " +
-                      "Crypto.Cipher._AESNI")
-            self.remove_extensions(["Crypto.Cipher._AESNI"])
+            PrintErr ("warning: no support for Intel AESNI instructions")
+            self.remove_extensions(self.aesni_mod_names)
 
     def remove_extensions(self, names):
         """Remove the specified extension from the list of extensions
@@ -315,7 +319,6 @@ setup(
         "Crypto.PublicKey",
         "Crypto.Protocol",
         "Crypto.Random",
-        "Crypto.Random.Fortuna",
         "Crypto.Signature",
         "Crypto.Util",
         "Crypto.Math",
@@ -326,7 +329,6 @@ setup(
         "Crypto.SelfTest.Protocol",
         "Crypto.SelfTest.PublicKey",
         "Crypto.SelfTest.Random",
-        "Crypto.SelfTest.Random.Fortuna",
         "Crypto.SelfTest.Signature",
         "Crypto.SelfTest.Util",
         "Crypto.SelfTest.Math",
@@ -380,25 +382,25 @@ setup(
             sources=["src/SHA3_512.c"]),
 
         # Block encryption algorithms
-        Extension("Crypto.Cipher._AES",
+        Extension("Crypto.Cipher._raw_aes",
             include_dirs=['src/'],
             sources=["src/AES.c"]),
-        Extension("Crypto.Cipher._AESNI",
+        Extension("Crypto.Cipher._raw_aesni",
             include_dirs=['src/'],
             sources=["src/AESNI.c"]),
-        Extension("Crypto.Cipher._ARC2",
+        Extension("Crypto.Cipher._raw_arc2",
             include_dirs=['src/'],
             sources=["src/ARC2.c"]),
-        Extension("Crypto.Cipher._Blowfish",
+        Extension("Crypto.Cipher._raw_blowfish",
             include_dirs=['src/'],
             sources=["src/Blowfish.c"]),
-        Extension("Crypto.Cipher._CAST",
+        Extension("Crypto.Cipher._raw_cast",
             include_dirs=['src/'],
             sources=["src/CAST.c"]),
-        Extension("Crypto.Cipher._DES",
+        Extension("Crypto.Cipher._raw_des",
             include_dirs=['src/', 'src/libtom/'],
             sources=["src/DES.c"]),
-        Extension("Crypto.Cipher._DES3",
+        Extension("Crypto.Cipher._raw_des3",
             include_dirs=['src/', 'src/libtom/'],
             sources=["src/DES3.c"]),
         Extension("Crypto.Util._galois",
@@ -407,6 +409,23 @@ setup(
         Extension("Crypto.Util.cpuid",
             include_dirs=['src/'],
             sources=['src/cpuid.c']),
+
+        # Chaining modes
+        Extension("Crypto.Cipher._raw_ecb",
+            include_dirs=['src/'],
+            sources=["src/raw_ecb.c"]),
+        Extension("Crypto.Cipher._raw_cbc",
+            include_dirs=['src/'],
+            sources=["src/raw_cbc.c"]),
+        Extension("Crypto.Cipher._raw_cfb",
+            include_dirs=['src/'],
+            sources=["src/raw_cfb.c"]),
+        Extension("Crypto.Cipher._raw_ofb",
+            include_dirs=['src/'],
+            sources=["src/raw_ofb.c"]),
+        Extension("Crypto.Cipher._raw_ctr",
+            include_dirs=['src/'],
+            sources=["src/raw_ctr.c"]),
 
         # Stream ciphers
         Extension("Crypto.Cipher._ARC4",

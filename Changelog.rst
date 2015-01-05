@@ -19,7 +19,10 @@ Resolved issues
 Breaks in compatibility
 -----------------------
 
-* None so far
+* New dependency on ctypes with Python 2.4. 
+* The ``counter`` parameter of a CTR mode cipher must be generated via
+  ``Crypto.Util.Counter``. It cannot be a generic callable anymore.
+* Removed the ``Crypto.Random.Fortuna`` package (due to lack of test vectors).
 
 3.0
 +++

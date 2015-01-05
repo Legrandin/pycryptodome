@@ -58,22 +58,44 @@ As an example, encryption can be done as follows:
 .. __: http://en.wikipedia.org/wiki/Triple_DES
 .. _NIST: http://csrc.nist.gov/publications/nistpubs/800-67/SP800-67.pdf
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+import sys
+from ctypes import c_void_p, byref
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _DES3
+from Crypto.Cipher import _create_cipher
+from Crypto.Util.py3compat import byte_string
+from Crypto.Util._modules import get_CDLL
 
-class DES3Cipher(blockalgo.BlockAlgo):
-    """TDES cipher object"""
+_raw_des3_lib = get_CDLL("Crypto.Cipher._raw_des3")
 
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize a TDES cipher object
 
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _DES3, key, mode, *args, **kwargs)
+def _create_base_cipher(dict_parameters):
+    """This method instantiates and returns a handle to a low-level base cipher.
+    It will absorb named parameters in the process."""
+
+    try:
+        key = dict_parameters.pop("key")
+    except KeyError:
+        raise TypeError("Missing 'key' parameter")
+
+    if not byte_string(key):
+        raise TypeError("The cipher key must be a byte string")
+
+    if len(key) not in key_size:
+        raise ValueError("Incorrect TDES key length (%d bytes)" % len(key))
+
+    start_operation = _raw_des3_lib.DES3_start_operation
+    stop_operation = _raw_des3_lib.DES3_stop_operation
+
+    cipher = c_void_p()
+    result = start_operation(key, len(key), byref(cipher))
+    if result:
+        raise ValueError("Error %X while instantiating the TDES cipher"
+                         % result)
+    return cipher.value, stop_operation
+
 
 def new(key, mode, *args, **kwargs):
     """Create a new TDES cipher
@@ -119,7 +141,8 @@ def new(key, mode, *args, **kwargs):
       otherwise TDES would degrade to single `DES`.
     :Return: an `DES3Cipher` object
     """
-    return DES3Cipher(key, mode, *args, **kwargs)
+
+    return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

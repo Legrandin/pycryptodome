@@ -2,9 +2,13 @@ Future releases will include:
 
 - Break-up blockalgo.py (and if possible block_template.c too)
   in more manageable modules
+- Use cffi and fallback to ctypes
+- Break-up test cases of ciphers and make them mode-specific
 - Refactor RSA/DSA code and make it compliant to FIPS 186-4
 - Add back support for MPIR on Windows
 - Move API documentation from epydoc to sphinx
+- Move old ciphers into a Museum submodule
+- Implement AES with bitslicing
 - Add algorithms:
     - ChaCha20
     - Poly1305

@@ -45,22 +45,44 @@ As an example, encryption can be done as follows:
 .. __: http://en.wikipedia.org/wiki/Data_Encryption_Standard
 .. _NIST: http://csrc.nist.gov/publications/fips/fips46-3/fips46-3.pdf
 
-:undocumented: __revision__, __package__
+:undocumented: __package__
 """
 
-__revision__ = "$Id$"
+import sys
+from ctypes import c_void_p, byref
 
-from Crypto.Cipher import blockalgo
-from Crypto.Cipher import _DES
+from Crypto.Cipher import _create_cipher
+from Crypto.Util.py3compat import byte_string
+from Crypto.Util._modules import get_CDLL
 
-class DESCipher(blockalgo.BlockAlgo):
-    """DES cipher object"""
+_raw_des_lib = get_CDLL("Crypto.Cipher._raw_des")
 
-    def __init__(self, key, mode, *args, **kwargs):
-        """Initialize a DES cipher object
 
-        See also `new()` at the module level."""
-        blockalgo.BlockAlgo.__init__(self, _DES, key, mode, *args, **kwargs)
+def _create_base_cipher(dict_parameters):
+    """This method instantiates and returns a handle to a low-level base cipher.
+    It will absorb named parameters in the process."""
+
+    try:
+        key = dict_parameters.pop("key")
+    except KeyError:
+        raise TypeError("Missing 'key' parameter")
+
+    if not byte_string(key):
+        raise TypeError("The cipher key must be a byte string")
+
+    if len(key) != key_size:
+        raise ValueError("Incorrect DES key length (%d bytes)" % len(key))
+
+    start_operation = _raw_des_lib.DES_start_operation
+    stop_operation = _raw_des_lib.DES_stop_operation
+
+    cipher = c_void_p()
+    result = start_operation(key, len(key), byref(cipher))
+    if result:
+        raise ValueError("Error %X while instantiating the DES cipher"
+                         % result)
+    return cipher.value, stop_operation
+
 
 def new(key, mode, *args, **kwargs):
     """Create a new DES cipher
@@ -104,7 +126,8 @@ def new(key, mode, *args, **kwargs):
 
     :Return: an `DESCipher` object
     """
-    return DESCipher(key, mode, *args, **kwargs)
+
+    return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
 #: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
 MODE_ECB = 1

@@ -280,9 +280,11 @@ class CFBSegmentSizeTest(unittest.TestCase):
 
     def runTest(self):
         """Regression test: m.new(key, m.MODE_CFB, segment_size=N) should require segment_size to be a multiple of 8 bits"""
+        iv = bchr(0) * self.module.block_size
         for i in range(1, 8):
-            self.assertRaises(ValueError, self.module.new, a2b_hex(self.key), self.module.MODE_CFB, segment_size=i)
-        self.module.new(a2b_hex(self.key), self.module.MODE_CFB, "\0"*self.module.block_size, segment_size=8) # should succeed
+            self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
+                    self.module.MODE_CFB, iv, segment_size=i)
+        self.module.new(a2b_hex(self.key), self.module.MODE_CFB, iv, segment_size=8) # should succeed
 
 class CCMMACLengthTest(unittest.TestCase):
     """CCM specific tests about MAC"""
@@ -664,7 +666,7 @@ class IVLengthTest(unittest.TestCase):
                 self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
                     self.module.MODE_CCM, bchr(0)*ivlen, msg_len=10)
         self.module.new(a2b_hex(self.key), self.module.MODE_ECB, "")
-        self.module.new(a2b_hex(self.key), self.module.MODE_CTR, "", counter=self._dummy_counter)
+        #self.module.new(a2b_hex(self.key), self.module.MODE_CTR, "", counter=self._dummy_counter)
 
     def _dummy_counter(self):
         return "\0" * self.module.block_size
@@ -729,7 +731,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         if not extra_tests_added:
             tests += [
                 CTRSegfaultTest(module, params),
-                CTRWraparoundTest(module, params),
+                # CTRWraparoundTest(module, params),
                 CFBSegmentSizeTest(module, params),
                 RoundtripTest(module, params),
                 PGPTest(module, params),
@@ -743,7 +745,8 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             assoc_data, params['plaintext'] = params['plaintext'].split('|')
             assoc_data2, params['ciphertext'], params['mac'] = params['ciphertext'].split('|')
             params['assoc_data'] = assoc_data.split("-")
-            params['mac_len'] = len(params['mac'])>>1
+            if p_mode not in ('SIV', ):
+                params['mac_len'] = len(params['mac'])>>1
 
         # Add the current test to the test suite
         tests.append(CipherSelfTest(module, params))
