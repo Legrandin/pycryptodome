@@ -396,7 +396,7 @@ setup(
         Extension("Crypto.Cipher._Blowfish",
             include_dirs=['src/'],
             sources=["src/Blowfish.c"]),
-        Extension("Crypto.Cipher._CAST",
+        Extension("Crypto.Cipher._raw_cast",
             include_dirs=['src/'],
             sources=["src/CAST.c"]),
         Extension("Crypto.Cipher._raw_des",

@@ -44,7 +44,7 @@
 
 #include "pycrypto_common.h"
 
-#define MODULE_NAME _CAST
+#define MODULE_NAME CAST
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0
 
@@ -73,7 +73,7 @@ static uint32 castfunc(uint32 D, uint32 Kmi, uint8 Kri, int type)
 {
 	uint32 I, f;
 	short Ia, Ib, Ic, Id;
-    
+
 	switch(type) {
 	case 0:
 		I = (Kmi + D) ;
@@ -86,14 +86,14 @@ static uint32 castfunc(uint32 D, uint32 Kmi, uint8 Kri, int type)
 		I = (Kmi - D) ;
 		break;
 	}
-    
+
 	I &= 0xFFFFFFFF;
 	I = ( I << Kri ) | ( I >> ( 32-Kri ) );
 	Ia = ( I >> 24 ) & 0xFF;
 	Ib = ( I >> 16 ) & 0xFF;
 	Ic = ( I >>  8 ) & 0xFF;
 	Id = ( I       ) & 0xFF;
-    
+
 	switch(type) {
 	case 0:
 		f = ((S1[Ia] ^ S2[Ib]) - S3[Ic]) + S4[Id];
@@ -118,14 +118,14 @@ static void castcrypt(block_state *key, uint8 *block, int decrypt)
 	uint32 Kmi;
 	uint8  Kri;
 	short functype, round;
-    
+
 	L = fetch(block, 0);
 	R = fetch(block, 4);
-    
+
 /*  printf("L0 = %08x R0 = %08x\n", L, R); */
 
 	for(round = 0; round < key->rounds; round ++) {
-	
+
 		if (!decrypt) {
 			Kmi = key->Km[round];
 			Kri = key->Kr[round];
@@ -135,16 +135,16 @@ static void castcrypt(block_state *key, uint8 *block, int decrypt)
 			Kri = key->Kr[(key->rounds) - round - 1];
 			functype = (((key->rounds) - round - 1) % 3);
 		}
-	
+
 		f = castfunc(R, Kmi, Kri, functype);
-	
+
 		tmp = L;
 		L = R;
 		R = tmp ^ f;
 
 /*	printf("L%d = %08x R%d = %08x\n", round+1, L, round+1, R); */
 	}
-    
+
 	block[0] = ( R & 0xFF000000 ) >> 24;
 	block[1] = ( R & 0x00FF0000 ) >> 16;
 	block[2] = ( R & 0x0000FF00 ) >> 8;
@@ -193,12 +193,12 @@ static void castcrypt(block_state *key, uint8 *block, int decrypt)
 static void schedulekeys_half(uint32 *in, uint32 *keys)
 {
 	uint32 x[4], z[4];
-    
+
 	x[0] = in[0];
 	x[1] = in[1];
 	x[2] = in[2];
 	x[3] = in[3];
-    
+
 	zxround();
 	Kround(keys, 0, z,
 	       8,  9, 7, 6,  2,
@@ -223,7 +223,7 @@ static void schedulekeys_half(uint32 *in, uint32 *keys)
 	       10, 11, 5, 4,  7,
 	       12, 13, 3, 2,  8,
 	       14, 15, 1, 0, 13);
-	   
+
 	in[0] = x[0];
 	in[1] = x[1];
 	in[2] = x[2];
@@ -237,25 +237,25 @@ static void castschedulekeys(block_state *schedule, uint8 *key, int keybytes)
 	uint8  paddedkey[16];
 	uint32 Kr_wide[16];
 	int i;
-    
+
 	for(i = 0; i < keybytes; i++)
 		paddedkey[i] = key[i];
 	for(     ; i < 16      ; i++)
 		paddedkey[i] = 0;
-    
+
 	if (keybytes <= 10)
 		schedule->rounds = 12;
 	else
 		schedule->rounds = 16;
-    
+
 	x[0] = fetch(paddedkey, 0);
 	x[1] = fetch(paddedkey, 4);
 	x[2] = fetch(paddedkey, 8);
 	x[3] = fetch(paddedkey, 12);
-    
+
 	schedulekeys_half(x, schedule->Km);
 	schedulekeys_half(x, Kr_wide);
-    
+
 	for(i = 0; i < 16; i ++) {
 		/* The Kr[] subkeys are used for 32-bit circular shifts,
 		   so we only need to keep them modulo 32 */
@@ -280,9 +280,9 @@ void encrypt(key, keylen, in, out)
 {
 	int i;
 	uint8 k[16];
-    
+
 	castschedulekeys(&sched, key, keylen);
-    
+
 	for(i = 0; i < 8; i++)
 		out[i] = in[i];
 	castcrypt(&sched, out, 0);
@@ -295,13 +295,13 @@ void tst(key, keylen, data, result)
 {
 	uint8 d[8];
 	int i;
-    
+
 	encrypt(key, keylen, data, d);
-    
+
 	for(i = 0; i < 8; i++)
 		if (d[i] != result[i])
 			break;
-    
+
 	if (i == 8) {
 		printf("-- test ok (encrypt)\n");
 	} else {
@@ -312,14 +312,14 @@ void tst(key, keylen, data, result)
 			printf(" %02x", result[i]);
 		printf("   (expected)\n");
 	}
-    
+
 	/* uses key schedule already set up */
 	castcrypt(&sched, d, 1);
 	if (bcmp(d, data, 8))
 		printf("   test FAILED (decrypt)\n");
 	else
 		printf("   test ok (decrypt)\n");
-    
+
 }
 
 uint8 key[16] = { 0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78,
@@ -405,7 +405,7 @@ main()
 		}
 
 		printf("\r       \r");
-		if (bcmp(abuf, key, 16) || bcmp(bbuf, key, 16)) 
+		if (bcmp(abuf, key, 16) || bcmp(bbuf, key, 16))
 			printf("-- reverse maintenance test FAILED\n");
 		else
 			printf("-- reverse maintenance test ok\n");
@@ -447,7 +447,7 @@ block_encrypt(block_state *self, unsigned char *in,
 	castcrypt(self, out, 0);
 }
 
-static void block_decrypt(block_state *self, 
+static void block_decrypt(block_state *self,
 			  unsigned char *in,
 			  unsigned char *out)
 {
@@ -455,4 +455,4 @@ static void block_decrypt(block_state *self,
 	castcrypt(self, out, 1);
 }
 
-#include "block_template.c"
+#include "block_common.c"
