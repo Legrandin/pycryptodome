@@ -44,5 +44,5 @@ Crypto.Util
 __all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util', 'Signature',
            'IO', 'Math']
 
-version_info = (3, 1, "dev")
+version_info = (3, 1, "dev0")
 
