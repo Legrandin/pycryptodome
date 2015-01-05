@@ -393,7 +393,7 @@ setup(
         Extension("Crypto.Cipher._ARC2",
             include_dirs=['src/'],
             sources=["src/ARC2.c"]),
-        Extension("Crypto.Cipher._Blowfish",
+        Extension("Crypto.Cipher._raw_blowfish",
             include_dirs=['src/'],
             sources=["src/Blowfish.c"]),
         Extension("Crypto.Cipher._raw_cast",

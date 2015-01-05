@@ -31,7 +31,7 @@
 #include <assert.h>
 #include <string.h>
 
-#define MODULE_NAME _Blowfish
+#define MODULE_NAME Blowfish
 #define BLOCK_SIZE 8    /* 64-bit block size */
 #define KEY_SIZE 0      /* variable key size */
 
@@ -47,7 +47,7 @@ typedef struct {
     uint32_t S2[256];
     uint32_t S3[256];
     uint32_t S4[256];
-} Blowfish_state;
+} block_state;
 
 /* The Blowfish round function F.  Everything is taken modulo 2**32 */
 #define F(a, b, c, d) (((a) + (b)) ^ (c)) + (d)
@@ -67,7 +67,7 @@ static void word_to_bytes(uint32_t w, unsigned char *out)
     out[3] = w & 0xff;
 }
 
-static void inline_encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
+static void inline_encrypt(block_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;
@@ -97,7 +97,7 @@ static void inline_encrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
     *pxR = xR;
 }
 
-static void inline_decrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
+static void inline_decrypt(block_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;
@@ -127,7 +127,7 @@ static void inline_decrypt(Blowfish_state *self, uint32_t *pxL, uint32_t *pxR)
     *pxR = xR;
 }
 
-static void Blowfish_encrypt(Blowfish_state *self, const unsigned char *in, unsigned char *out)
+static void block_encrypt(block_state *self, const unsigned char *in, unsigned char *out)
 {
     uint32_t xL, xR;
 
@@ -145,7 +145,7 @@ static void Blowfish_encrypt(Blowfish_state *self, const unsigned char *in, unsi
     word_to_bytes(xR, out+4);
 }
 
-static void Blowfish_decrypt(Blowfish_state *self, const unsigned char *in, unsigned char *out)
+static void block_decrypt(block_state *self, const unsigned char *in, unsigned char *out)
 {
     uint32_t xL, xR;
 
@@ -163,7 +163,7 @@ static void Blowfish_decrypt(Blowfish_state *self, const unsigned char *in, unsi
     word_to_bytes(xR, out+4);
 }
 
-static void Blowfish_init(Blowfish_state *self, const unsigned char *key, int keylen)
+static void block_init(block_state *self, const unsigned char *key, int keylen)
 {
     uint32_t word;
     int i;
@@ -226,15 +226,10 @@ static void Blowfish_init(Blowfish_state *self, const unsigned char *key, int ke
     self->magic = BLOWFISH_MAGIC;
 }
 
-#define block_state Blowfish_state
-#define block_init Blowfish_init
-#define block_encrypt Blowfish_encrypt
-#define block_decrypt Blowfish_decrypt
-
 static void block_finalize(block_state *self)
 {
 }
 
-#include "block_template.c"
+#include "block_common.c"
 
 /* vim:set ts=4 sw=4 sts=4 expandtab: */
