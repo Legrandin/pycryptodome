@@ -440,9 +440,5 @@ setup(
             include_dirs=['src/'],
             sources=['src/strxor.c']),
 
-        # Counter modules
-        Extension("Crypto.Util._counter",
-            include_dirs=['src/'],
-            sources=['src/_counter.c']),
         ]
 )
