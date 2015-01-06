@@ -1,14 +1,12 @@
 Future releases will include:
 
-- Break-up blockalgo.py (and if possible block_template.c too)
-  in more manageable modules
-- Use cffi and fallback to ctypes
+- Use cffi and fallback to ctypes to speed up execution on pypy
 - Break-up test cases of ciphers and make them mode-specific
 - Refactor RSA/DSA code and make it compliant to FIPS 186-4
 - Add back support for MPIR on Windows
 - Move API documentation from epydoc to sphinx
-- Move old ciphers into a Museum submodule
 - Implement AES with bitslicing
+- Move old ciphers into a Museum submodule
 - Add algorithms:
     - ChaCha20
     - Poly1305
@@ -19,7 +17,6 @@ Future releases will include:
     - Diffie-Hellman
     - bcrypt
     - SRP
-- Speed up execution on pypy
 - Add more key management:
     - Export/import of DSA keys
     - Export/import of EC keys
