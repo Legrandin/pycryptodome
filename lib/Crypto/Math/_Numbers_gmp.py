@@ -500,7 +500,7 @@ class Integer(object):
             raise ValueError("Incorrect shift count")
         _gmp.mpz_tdiv_q_2exp(result._mpz_p,
                              self._mpz_p,
-                             c_ulong(pos))
+                             c_ulong(int(pos)))
         return result
 
     def __irshift__(self, pos):
@@ -508,7 +508,7 @@ class Integer(object):
             raise ValueError("Incorrect shift count")
         _gmp.mpz_tdiv_q_2exp(self._mpz_p,
                              self._mpz_p,
-                             c_ulong(pos))
+                             c_ulong(int(pos)))
         return self
 
     def __lshift__(self, pos):
@@ -517,7 +517,7 @@ class Integer(object):
             raise ValueError("Incorrect shift count")
         _gmp.mpz_mul_2exp(result._mpz_p,
                           self._mpz_p,
-                          c_ulong(pos))
+                          c_ulong(int(pos)))
         return result
 
     def __ilshift__(self, pos):
@@ -525,7 +525,7 @@ class Integer(object):
             raise ValueError("Incorrect shift count")
         _gmp.mpz_mul_2exp(self._mpz_p,
                           self._mpz_p,
-                          c_ulong(pos))
+                          c_ulong(int(pos)))
         return self
 
     def get_bit(self, n):
@@ -535,7 +535,7 @@ class Integer(object):
         if not 0 <= n < 65536:
             raise ValueError("Incorrect bit position")
         return bool(_gmp.mpz_tstbit(self._mpz_p,
-                                    c_ulong(n)))
+                                    c_ulong(int(n))))
 
     # Extra
     def is_odd(self):
