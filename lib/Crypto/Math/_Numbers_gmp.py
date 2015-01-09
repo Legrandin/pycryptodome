@@ -67,7 +67,7 @@ try:
         size_t __gmpz_sizeinbase (const mpz_t op, int base);
         void __gmpz_sub (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_mul (mpz_t rop, const mpz_t op1, const mpz_t op2);
-        void __gmpz_mul_si (mpz_t rop, const mpz_t op1, long op2);
+        void __gmpz_mul_ui (mpz_t rop, const mpz_t op1, long op2);
         int __gmpz_cmp (const mpz_t op1, const mpz_t op2);
         void __gmpz_powm (mpz_t rop, const mpz_t base, const mpz_t exp, const
                           mpz_t mod);
@@ -165,7 +165,7 @@ _gmp.mpz_export = lib.__gmpz_export
 _gmp.mpz_sizeinbase = lib.__gmpz_sizeinbase
 _gmp.mpz_sub = lib.__gmpz_sub
 _gmp.mpz_mul = lib.__gmpz_mul
-_gmp.mpz_mul_si = lib.__gmpz_mul_si
+_gmp.mpz_mul_ui = lib.__gmpz_mul_ui
 _gmp.mpz_cmp = lib.__gmpz_cmp
 _gmp.mpz_powm = lib.__gmpz_powm
 _gmp.mpz_powm_ui = lib.__gmpz_powm_ui
@@ -426,15 +426,15 @@ class Integer(object):
 
     def __iadd__(self, term):
         if isinstance(term, (int, long)):
-            if 0 < term < 65536:
+            if 0 <= term < 65536:
                 _gmp.mpz_add_ui(self._mpz_p,
                                 self._mpz_p,
-                                term)
+                                c_ulong(term))
                 return self
             if -65535 < term < 0:
                 _gmp.mpz_sub_ui(self._mpz_p,
                                 self._mpz_p,
-                                -term)
+                                c_ulong(-term))
                 return self
             term = Integer(term)
         _gmp.mpz_add(self._mpz_p,
@@ -444,13 +444,18 @@ class Integer(object):
 
     def __imul__(self, term):
         if isinstance(term, (int, long)):
-            if -65535 < term < 65536:
-                _gmp.mpz_mul_si(self._mpz_p,
+            if 0 <= term < 65536:
+                _gmp.mpz_mul_ui(self._mpz_p,
                                 self._mpz_p,
-                                term)
+                                c_ulong(term))
                 return self
-            else:
-                term = Integer(term)
+            if -65535 < term < 0:
+                _gmp.mpz_mul_ui(self._mpz_p,
+                                self._mpz_p,
+                                c_ulong(-term))
+                _gmp.mpz_neg(self._mpz_p, self._mpz_p)
+                return self
+            term = Integer(term)
         _gmp.mpz_mul(self._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
