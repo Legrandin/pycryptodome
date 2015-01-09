@@ -2,13 +2,19 @@ language: c
 env:
  - PYTHON_INTP="python2.4"
  - PYTHON_INTP="python2.5"
- - PYTHON_INTP="python2.6"
- - PYTHON_INTP="python2.7"
- - PYTHON_INTP="python3.1"
- - PYTHON_INTP="python3.2"
- - PYTHON_INTP="python3.3"
- - PYTHON_INTP="python3.4"
- - PYTHON_INTP="pypy"
+ - PYTHON_INTP="python2.6" CFFI=no
+ - PYTHON_INTP="python2.6" CFFI=yes
+ - PYTHON_INTP="python2.7" CFFI=no
+ - PYTHON_INTP="python2.7" CFFI=yes
+ - PYTHON_INTP="python3.1" CFFI=no
+ - PYTHON_INTP="python3.1" CFFI=yes
+ - PYTHON_INTP="python3.2" CFFI=no
+ - PYTHON_INTP="python3.2" CFFI=yes
+ - PYTHON_INTP="python3.3" CFFI=no
+ - PYTHON_INTP="python3.3" CFFI=yes
+ - PYTHON_INTP="python3.4" CFFI=no
+ - PYTHON_INTP="python3.4" CFFI=yes
+ - PYTHON_INTP="pypy" CFFI=yes
 branches:
  except:
   - /^.*-wip$/
@@ -16,6 +22,9 @@ install:
  - ./travis_install.sh
 script:
  - . bin/activate
+ - python -c "import cffi" 2>/dev/null && echo CFFI is installed || true
+ - if [ x${CFFI} = "xyes" ]; then python -c"import cffi"; fi
+ - if [ x${CFFI} != "xyes" ]; then ! python -c"import cffi" 2>/dev/null; fi
  - major=$(python -V 2>&1 | cut -f2 -d' ' | cut -f1 -d'.')
  - if [ "$major" -ge 3 ]; then xflags="-bb" ; fi
  - python -V
