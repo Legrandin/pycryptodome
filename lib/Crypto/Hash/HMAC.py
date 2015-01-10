@@ -107,6 +107,9 @@ class HMAC:
         if digestmod is None:
             digestmod = MD5
 
+        if msg is None:
+            msg = b("")
+
         #: Size of the MAC tag
         self.digest_size = digestmod.digest_size
 

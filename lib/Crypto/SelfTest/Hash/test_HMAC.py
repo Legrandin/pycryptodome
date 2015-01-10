@@ -289,6 +289,14 @@ class HMAC_Module_and_Instance_Test(unittest.TestCase):
             two = HMAC.new(key, payload, hashmod.new()).digest()
             self.assertEqual(one, two)
 
+class HMAC_None(unittest.TestCase):
+
+    def runTest(self):
+
+        key = bchr(4) * 20
+        one = HMAC.new(key, b(""), SHA1).digest()
+        two = HMAC.new(key, None, SHA1).digest()
+        self.assertEqual(one, two)
 
 def get_tests(config={}):
     global test_data
@@ -312,6 +320,7 @@ def get_tests(config={}):
                                  " (not available)\n" % modname)
     tests = make_mac_tests(HMAC, "HMAC", exp_test_data)
     tests.append(HMAC_Module_and_Instance_Test(hash_modules))
+    tests.append(HMAC_None())
     return tests
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@ import sys
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
 from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
-from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES, XOR,\
+from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,\
                           Salsa20
 from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,\
                         CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512
@@ -357,15 +357,13 @@ class Benchmark:
             ("AES256", AES, 32),
             ("Blowfish(256)", Blowfish, 32),
             ("CAST(128)", CAST, 16),
+            ("ARC2(128)", ARC2, 16),
         ]
         stream_specs = [
             # Cipher name, module, key size, nonce size
-            ("ARC2(128)", ARC2, 16, 0),
             ("ARC4(128)", ARC4, 16, 0),
             ("Salsa20(16)", Salsa20, 16, 8),
             ("Salsa20(32)", Salsa20, 32, 8),
-            ("XOR(24)", XOR, 3, 0),
-            ("XOR(256)", XOR, 32, 0),
         ]
         hash_specs = [
             ("MD2", MD2),
