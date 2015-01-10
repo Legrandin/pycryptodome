@@ -6,8 +6,7 @@ env:
  - PYTHON_INTP="python2.6" CFFI=yes
  - PYTHON_INTP="python2.7" CFFI=no
  - PYTHON_INTP="python2.7" CFFI=yes
- - PYTHON_INTP="python3.1" CFFI=no
- - PYTHON_INTP="python3.1" CFFI=yes
+ - PYTHON_INTP="python3.1"
  - PYTHON_INTP="python3.2" CFFI=no
  - PYTHON_INTP="python3.2" CFFI=yes
  - PYTHON_INTP="python3.3" CFFI=no
