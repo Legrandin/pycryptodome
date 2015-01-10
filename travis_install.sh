@@ -37,3 +37,8 @@ if [ ${PYV} -eq 24 ]; then
 	chmod +x build/ctypes/source/libffi/configure
 	pip install ctypes
 fi
+
+if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
+	. bin/activate
+	pip install cffi
+fi

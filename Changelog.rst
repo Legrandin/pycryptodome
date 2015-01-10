@@ -7,7 +7,8 @@ Changelog
 New features
 ------------
 
-* None so far
+* Speed up execution of Public Key algorithms on PyPy, when backed
+  by libgmp.
 
 Resolved issues
 ---------------
