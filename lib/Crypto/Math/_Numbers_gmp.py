@@ -67,7 +67,7 @@ try:
         size_t __gmpz_sizeinbase (const mpz_t op, int base);
         void __gmpz_sub (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_mul (mpz_t rop, const mpz_t op1, const mpz_t op2);
-        void __gmpz_mul_ui (mpz_t rop, const mpz_t op1, long op2);
+        void __gmpz_mul_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
         int __gmpz_cmp (const mpz_t op1, const mpz_t op2);
         void __gmpz_powm (mpz_t rop, const mpz_t base, const mpz_t exp, const
                           mpz_t mod);
