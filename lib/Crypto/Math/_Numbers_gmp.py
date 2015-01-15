@@ -196,6 +196,7 @@ class Integer(object):
     def __init__(self, value):
 
         self._mpz_p = new_mpz()
+        self._initialized = False
 
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
@@ -213,6 +214,8 @@ class Integer(object):
                     _gmp.mpz_neg(self._mpz_p, self._mpz_p)
         else:
             _gmp.mpz_init_set(self._mpz_p, value._mpz_p)
+
+        self._initialized = True
 
     # Conversions
     def __int__(self):
@@ -653,7 +656,9 @@ class Integer(object):
 
         try:
             if self._mpz_p is not None:
-                _gmp.mpz_clear(self._mpz_p)
+                if self._initialized:
+                    _gmp.mpz_clear(self._mpz_p)
+
             self._mpz_p = None
         except AttributeError:
             pass
