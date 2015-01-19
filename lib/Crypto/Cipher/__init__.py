@@ -95,7 +95,8 @@ _modes = { 1:_create_ecb_cipher,
            5:_create_ofb_cipher,
            6:_create_ctr_cipher,
            7:_create_openpgp_cipher,
-           9:_create_eax_cipher }
+           9:_create_eax_cipher
+           }
 
 _extra_modes = { 8:_create_ccm_cipher,
                 10:_create_siv_cipher,
@@ -116,5 +117,7 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
             kwargs["nonce"] = args[0]
         elif mode in (2, 3, 5, 7):
             kwargs["IV"] = args[0]
+        elif mode == 1:
+            raise TypeError("IV is not meaningful for the ECB mode")
 
     return modes[mode](factory, **kwargs)

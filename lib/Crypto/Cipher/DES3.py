@@ -62,13 +62,28 @@ As an example, encryption can be done as follows:
 """
 
 import sys
-from ctypes import c_void_p, byref
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util.py3compat import byte_string
-from Crypto.Util._modules import get_CDLL
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  VoidPointer, SmartPointer)
 
-_raw_des3_lib = get_CDLL("Crypto.Cipher._raw_des3")
+_raw_des3_lib = load_pycryptodome_raw_lib(
+                    "Crypto.Cipher._raw_des3",
+                    """
+                    int DES3_start_operation(const uint8_t key[],
+                                             size_t key_len,
+                                             void **pResult);
+                    int DES3_encrypt(const void *state,
+                                     const uint8_t *in,
+                                     uint8_t *out,
+                                     size_t data_len);
+                    int DES3_decrypt(const void *state,
+                                     const uint8_t *in,
+                                     uint8_t *out,
+                                     size_t data_len);
+                    int DES3_stop_operation(void *state);
+                    """)
 
 
 def _create_base_cipher(dict_parameters):
@@ -89,12 +104,14 @@ def _create_base_cipher(dict_parameters):
     start_operation = _raw_des3_lib.DES3_start_operation
     stop_operation = _raw_des3_lib.DES3_stop_operation
 
-    cipher = c_void_p()
-    result = start_operation(key, len(key), byref(cipher))
+    cipher = VoidPointer()
+    result = start_operation(key,
+                             len(key),
+                             cipher.address_of())
     if result:
         raise ValueError("Error %X while instantiating the TDES cipher"
                          % result)
-    return cipher.value, stop_operation
+    return SmartPointer(cipher.get(), stop_operation)
 
 
 def new(key, mode, *args, **kwargs):
@@ -163,4 +180,4 @@ MODE_EAX = 9
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = ( 16, 24 )
+key_size = (16, 24)
