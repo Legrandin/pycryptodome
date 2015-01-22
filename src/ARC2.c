@@ -42,6 +42,7 @@
  */
 
 #include "pycrypto_common.h"
+#include "block_base.h"
 #include <string.h>
 
 #define MODULE_NAME ARC2
@@ -151,7 +152,7 @@ block_decrypt(block_state *self, U8 *in, U8 *out)
 }
 
 
-static void
+static int
 block_init(block_state *self, U8 *key, int keylength)
 {
 	U8 x;
@@ -177,9 +178,7 @@ block_init(block_state *self, U8 *key, int keylength)
         };
 
 	if ((U32)keylength > sizeof(self->xkey)) {
-		PyErr_SetString(PyExc_ValueError,
-				"ARC2 key length must be less than 128 bytes");
-		return;
+            return ERR_KEY_SIZE;
 	}
 
 	memcpy(self->xkey, key, keylength);
@@ -214,6 +213,8 @@ block_init(block_state *self, U8 *key, int keylength)
 		self->xkey[i] =  ((U8 *)self->xkey)[2*i] +
 			(((U8 *)self->xkey)[2*i+1] << 8);
 	} while (i--);
+
+        return 0;
 }
 
 static void
@@ -243,7 +244,6 @@ int ARC2_start_operation(const uint8_t key[], size_t key_len, size_t effective_k
 
     (*pResult)->algo_state.effective_keylen = effective_key_len;
 
-    block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
-    return 0;
+    return block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
 }
 

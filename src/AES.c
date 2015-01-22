@@ -25,6 +25,7 @@
  */
 
 #include "pycrypto_common.h"
+#include "block_base.h"
 #include <assert.h>
 #include <stdlib.h>
 
@@ -1426,7 +1427,7 @@ static void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[
 
 #endif /* INTERMEDIATE_VALUE_KAT */
 
-static void block_init(block_state *state, unsigned char *key,
+static int block_init(block_state *state, unsigned char *key,
 		       int keylen)
 {
 	int Nr = 0;
@@ -1435,10 +1436,12 @@ static void block_init(block_state *state, unsigned char *key,
 	case(16): Nr = 10; break;
 	case(24): Nr = 12; break;
 	case(32): Nr = 14; break;
+        default: return ERR_NR_ROUNDS;
 	}
 	state->rounds = Nr;
 	rijndaelKeySetupEnc(state->ek, key, keylen*8);
 	rijndaelKeySetupDec(state->dk, key, keylen*8);
+        return 0;
 }
 
 static void block_finalize(block_state* self)

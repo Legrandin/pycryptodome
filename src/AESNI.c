@@ -23,6 +23,7 @@
  */
 
 #include "pycrypto_common.h"
+#include "block_base.h"
 #include <wmmintrin.h>
 #include <stdlib.h>
 
@@ -173,7 +174,7 @@ static void aes_key_setup_dec(__m128i dk[], const __m128i ek[], int rounds)
     dk[0] = ek[rounds];
 }
 
-static void block_init(block_state* self, unsigned char* key, int keylen)
+static int block_init(block_state* self, unsigned char* key, int keylen)
 {
     int nr = 0;
     int offset;
@@ -183,7 +184,7 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
         case 24: nr = 12; break;
         case 32: nr = 14; break;
         default:
-            return;
+            return ERR_NR_ROUNDS;
     }
 
     /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
@@ -194,6 +195,8 @@ static void block_init(block_state* self, unsigned char* key, int keylen)
     self->rounds = nr;
     aes_key_setup_enc(self->ek, key, keylen);
     aes_key_setup_dec(self->dk, self->ek, nr);
+
+    return 0;
 }
 
 static void block_finalize(block_state* self)

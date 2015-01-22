@@ -102,7 +102,6 @@ int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHER_STATE_TYP
     block_base->destructor = &CIPHER_STOP_OPERATION;
     block_base->block_len = BLOCK_SIZE;
 
-    block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
-    return 0;
+    return block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
 }
 #endif

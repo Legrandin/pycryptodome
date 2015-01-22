@@ -21,5 +21,7 @@ typedef struct _BlockBase {
 #define ERR_ENCRYPT             4
 #define ERR_DECRYPT             5
 #define ERR_KEY_SIZE            6
+#define ERR_NR_ROUNDS           7
+#define ERR_UNKNOWN             8
 
 #endif

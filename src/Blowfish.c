@@ -27,6 +27,7 @@
  */
 
 #include "pycrypto_common.h"
+#include "block_base.h"
 #include "Blowfish-tables.h"
 #include <assert.h>
 #include <string.h>
@@ -163,7 +164,7 @@ static void block_decrypt(block_state *self, const unsigned char *in, unsigned c
     word_to_bytes(xR, out+4);
 }
 
-static void block_init(block_state *self, const unsigned char *key, int keylen)
+static int block_init(block_state *self, const unsigned char *key, int keylen)
 {
     uint32_t word;
     int i;
@@ -172,11 +173,9 @@ static void block_init(block_state *self, const unsigned char *key, int keylen)
     self->magic = 0;
 
     if (keylen < 1) {
-        PyErr_SetString(PyExc_ValueError, "Key cannot be empty");
-        return;
+        return ERR_KEY_SIZE;
     } else if (keylen > 56) {
-        PyErr_SetString(PyExc_ValueError, "Maximum key size is 448 bits");
-        return;
+        return ERR_KEY_SIZE;
     }
 
     /* Initialize the P-array with the digits of Pi, and XOR it with the key */
@@ -224,6 +223,7 @@ static void block_init(block_state *self, const unsigned char *key, int keylen)
     }
 
     self->magic = BLOWFISH_MAGIC;
+    return 0;
 }
 
 static void block_finalize(block_state *self)
