@@ -436,7 +436,7 @@ setup(
             sources=["src/Salsa20.c"]),
 
         # Utility modules
-        Extension("Crypto.Util.strxor",
+        Extension("Crypto.Util._strxor",
             include_dirs=['src/'],
             sources=['src/strxor.c']),
 
