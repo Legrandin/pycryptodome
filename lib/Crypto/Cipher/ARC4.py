@@ -57,14 +57,20 @@ As an example, encryption can be done as follows:
     >>> msg = nonce + cipher.encrypt(b'Open the pod bay doors, HAL')
 
 .. _ARC4: http://en.wikipedia.org/wiki/RC4
-
-:undocumented: __revision__, __package__
 """
 
-__revision__ = "$Id$"
-
 from Crypto.Util.py3compat import *
-from Crypto.Cipher import _ARC4
+
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
+                                  create_string_buffer, get_raw_buffer,
+                                  SmartPointer)
+
+
+_raw_arc4_lib = load_pycryptodome_raw_lib("Crypto.Cipher._ARC4","""
+                    int ARC4_stream_encrypt(void *rc4State, const uint8_t in[], uint8_t out[], size_t len);
+                    int ARC4_stream_init(uint8_t *key, size_t keylen, void **pRc4State);
+                    int ARC4_stream_destroy(void *rc4State);
+                    """);
 
 class ARC4Cipher:
     """ARC4 cipher object"""
@@ -79,16 +85,25 @@ class ARC4Cipher:
             ndrop = args[0]
             args = args[1:]
         else:
-            ndrop = kwargs.get('drop', 0)
-            if ndrop: del kwargs['drop'] 
-        self._cipher = _ARC4.new(key, *args, **kwargs)
-        if ndrop:
+            ndrop = kwargs.pop('drop', 0)
+        
+        self._state = VoidPointer()
+        result = _raw_arc4_lib.ARC4_stream_init(key,
+                                                len(key),
+                                                self._state.address_of())
+        if result != 0:
+            raise ValueError("Error %d while creating the ARC4 cipher"
+                             % result)
+        self._state = SmartPointer(self._state.get(),
+                                   _raw_arc4_lib.ARC4_stream_destroy)
+        
+        if ndrop > 0:
             # This is OK even if the cipher is used for decryption, since encrypt
             # and decrypt are actually the same thing with ARC4.
-            self._cipher.encrypt(b('\x00')*ndrop)
+            self.encrypt(b('\x00') * ndrop)
 
-        self.block_size = self._cipher.block_size
-        self.key_size = self._cipher.key_size
+        self.block_size = 1
+        self.key_size = len(key)
 
     def encrypt(self, plaintext):
         """Encrypt a piece of data.
@@ -99,7 +114,15 @@ class ARC4Cipher:
         :Return: the encrypted data (byte string, as long as the
           plaintext).
         """
-        return self._cipher.encrypt(plaintext)
+
+        ciphertext = create_string_buffer(len(plaintext))
+        result = _raw_arc4_lib.ARC4_stream_encrypt(self._state.get(),
+                                         plaintext,
+                                         ciphertext,
+                                         len(plaintext))
+        if result:
+            raise ValueError("Error %d while encrypting with RC4" % result)
+        return get_raw_buffer(ciphertext)
 
     def decrypt(self, ciphertext):
         """Decrypt a piece of data.
@@ -110,7 +133,10 @@ class ARC4Cipher:
         :Return: the decrypted data (byte string, as long as the
           ciphertext).
         """
-        return self._cipher.decrypt(ciphertext)
+        try:
+            return self.encrypt(ciphertext)
+        except ValueError, e:
+            raise ValueError(str(e).replace("enc", "dec"))
 
 def new(key, *args, **kwargs):
     """Create a new ARC4 cipher

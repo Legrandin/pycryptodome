@@ -43,18 +43,43 @@ As an example, encryption can be done as follows:
 :undocumented: __package__
 """
 
-from Crypto.Cipher import _Salsa20
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  create_string_buffer,
+                                  get_raw_buffer, VoidPointer,
+                                  SmartPointer)
+
+_raw_salsa20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20",
+                    """
+                    int Salsa20_stream_init(uint8_t *key, size_t keylen,
+                                            uint8_t *nonce, size_t nonce_len,
+                                            void **pSalsaState);
+                    int Salsa20_stream_destroy(void *salsaState);
+                    int Salsa20_stream_encrypt(void *salsaState,
+                                               const uint8_t in[],
+                                               uint8_t out[], size_t len);
+                    """)
+
 
 class Salsa20Cipher:
     """Salsa20 cipher object"""
 
-    def __init__(self, key, *args, **kwargs):
+    def __init__(self, key, nonce):
         """Initialize a Salsa20 cipher object
 
         See also `new()` at the module level."""
-        self._cipher = _Salsa20.new(key, *args, **kwargs)
-        self.block_size = self._cipher.block_size
-        self.key_size = self._cipher.key_size
+
+        self._state = VoidPointer()
+        result = _raw_salsa20_lib.Salsa20_stream_init(
+                        key, len(key),
+                        nonce, len(nonce),
+                        self._state.address_of())
+        if result:
+            raise ValueError("Error %d instantiating a Salsa20 cipher")
+        self._state = SmartPointer(self._state.get(),
+                                   _raw_salsa20_lib.Salsa20_stream_destroy)
+
+        self.block_size = 1
+        self.key_size = len(key)
 
     def encrypt(self, plaintext):
         """Encrypt a piece of data.
@@ -65,7 +90,16 @@ class Salsa20Cipher:
         :Return: the encrypted data (byte string, as long as the
           plaintext).
         """
-        return self._cipher.encrypt(plaintext)
+
+        ciphertext = create_string_buffer(len(plaintext))
+        result = _raw_salsa20_lib.Salsa20_stream_encrypt(
+                                         self._state.get(),
+                                         plaintext,
+                                         ciphertext,
+                                         len(plaintext))
+        if result:
+            raise ValueError("Error %d while encrypting with Salsa20" % result)
+        return get_raw_buffer(ciphertext)
 
     def decrypt(self, ciphertext):
         """Decrypt a piece of data.
@@ -76,7 +110,11 @@ class Salsa20Cipher:
         :Return: the decrypted data (byte string, as long as the
           ciphertext).
         """
-        return self._cipher.decrypt(ciphertext)
+
+        try:
+            return self.encrypt(ciphertext)
+        except ValueError, e:
+            raise ValueError(str(e).replace("enc", "dec"))
 
 def new(key, nonce):
     """Create a new Salsa20 cipher
@@ -98,6 +136,4 @@ block_size = 1
 
 #: Size of a key (in bytes)
 key_size = (16, 32)
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
 

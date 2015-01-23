@@ -29,8 +29,6 @@ one primary secret (a master key or a pass phrase).
 This is typically done to insulate the secondary keys from each other,
 to avoid that leakage of a secondary key compromises the security of the
 master key, or to thwart attacks on pass phrases (e.g. via rainbow tables).
-
-:undocumented: __revision__
 """
 
 import struct
@@ -38,11 +36,20 @@ from struct import unpack
 
 from Crypto.Util.py3compat import *
 
-from Crypto.Cipher import _Salsa20
 from Crypto.Hash import SHA1, SHA256, HMAC, CMAC
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
 
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  create_string_buffer,
+                                  get_raw_buffer)
+
+_raw_salsa20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20",
+                    """
+                    int Salsa20_8_core(const uint8_t *x, const uint8_t *y,
+                                       uint8_t *out);
+                    uint32_t load_le_uint32(const uint8_t *in);
+                    """)
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
@@ -291,10 +298,11 @@ def _scryptBlockMix(blocks, len_blocks):
     """Hash function for ROMix."""
 
     x = blocks[-1]
-    core = _Salsa20._salsa20_8_core
-    result = [None]*len_blocks
+    core = _raw_salsa20_lib.Salsa20_8_core
+    result = [ create_string_buffer(64) for _ in range(len(blocks)) ]
     for i in xrange(len(blocks)):
-        x = result[i] = core(x, blocks[i])
+        core(x, blocks[i], result[i])
+        x = result[i]
     return [result[i + j] for j in xrange(2)
             for i in xrange(0, len_blocks, 2)]
 
@@ -305,14 +313,15 @@ def _scryptROMix(blocks, n):
     x = [blocks[i:i + 64] for i in xrange(0, len(blocks), 64)]
     len_x = len(x)
     v = [None]*n
+    load_le_uint32 = _raw_salsa20_lib.load_le_uint32
     for i in xrange(n):
         v[i] = x
         x = _scryptBlockMix(x, len_x)
     for i in xrange(n):
-        j = unpack("<I", x[-1][:4])[0] & (n-1)
+        j = load_le_uint32(x[-1]) & (n - 1)
         t = [strxor(x[idx], v[j][idx]) for idx in xrange(len_x)]
         x = _scryptBlockMix(t, len_x)
-    return b("").join(x)
+    return b("").join([get_raw_buffer(y) for y in x])
 
 
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
