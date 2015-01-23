@@ -78,10 +78,13 @@ import sys
 from ctypes import c_void_p, byref
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util import cpuid
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer)
+
+
+_raw_cpuid_lib = load_pycryptodome_raw_lib("Crypto.Util.cpuid",
+                                            "int have_aes_ni(void);")
 
 cproto = """
         int AES_start_operation(const uint8_t key[],
@@ -104,7 +107,7 @@ _raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes",
 
 _raw_aesni_lib = None
 try:
-    if cpuid.have_aes_ni():
+    if _raw_cpuid_lib.have_aes_ni() == 1:
         _raw_aesni_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aesni",
                                                    cproto.replace("AES", "AESNI"))
 except OSError:

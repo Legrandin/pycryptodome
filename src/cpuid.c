@@ -1,29 +1,36 @@
-/*
- *  cpuid.c: check CPU capabilities
+/* ===================================================================
  *
- * Written in 2013 by Sebastian Ramacher <sebastian@ramacher.at>
+ * Copyright (c) 2014, Legrandin <helderijs@gmail.com>
+ * All rights reserved.
  *
- * ===================================================================
- * The contents of this file are dedicated to the public domain.  To
- * the extent that dedication to the public domain is not available,
- * everyone is granted a worldwide, perpetual, royalty-free,
- * non-exclusive license to exercise all rights associated with the
- * contents of this file for any purpose whatsoever.
- * No rights are reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
-#include "pycrypto_compat.h"
+#include <stdint.h>
+#include <string.h>
 
 #if defined HAVE_CPUID_H
 #include <cpuid.h>
@@ -31,25 +38,13 @@
 #include <intrin.h>
 #endif
 
-/*
- * The have_aes_ni Python function
- */
-
-static char have_aes_ni__doc__[] =
-"have_aes_ni() -> bool\n"
-"\n"
-"Return whether AES-NI instructions are available.\n";
-
-static PyObject *
-have_aes_ni(PyObject *self, PyObject *args)
+/** Return 1 if the CPU supports the AESNI extension **/
+int have_aes_ni(void)
 {
     uint32_t info[4];
 
     memset(info, 0, sizeof info);
     
-    if (!PyArg_ParseTuple(args, ""))
-        return NULL;
-
     /* Call cpuid to retrieve x86 Processor Info and Feature bits.
      * info[2] is ecx. If bit 25 is set, the CPU supports the
      * AES-NI extension. */
@@ -59,51 +54,5 @@ have_aes_ni(PyObject *self, PyObject *args)
     __cpuidex(info, 1, 0);
 #endif
 
-    if (info[2] & ((int)1<<25)) {
-        Py_INCREF(Py_True);
-        return Py_True;
-    }
-    
-    Py_INCREF(Py_False);
-    return Py_False;
+    return (info[2] & ((int)1<<25)) ? 1 : 0;
 }
-
-/*
- * Module-level method table and module initialization function
- */
-
-static PyMethodDef cpuid_methods[] = {
-    {"have_aes_ni", have_aes_ni, METH_VARARGS, have_aes_ni__doc__},
-    {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
-};
-
-#ifdef IS_PY3K
-static struct PyModuleDef moduledef = {
-	PyModuleDef_HEAD_INIT,
-	"cpuid",
-	NULL,
-	-1,
-	cpuid_methods,
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-#endif
-
-PyMODINIT_FUNC
-#ifdef IS_PY3K
-PyInit_cpuid(void)
-#else
-initcpuid(void)
-#endif
-{
-    /* Initialize the module */
-#ifdef IS_PY3K
-    return PyModule_Create(&moduledef);
-#else
-    Py_InitModule("cpuid", cpuid_methods);
-#endif
-}
-
-/* vim:set ts=4 sw=4 sts=4 expandtab: */
