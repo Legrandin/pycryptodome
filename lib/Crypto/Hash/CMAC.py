@@ -132,7 +132,7 @@ class _SmoothMAC(object):
             self._buffer_len -= aligned_data
 
     def _deep_copy(self, target):
-        # Copy everything by self._mac, since we don't know how to
+        # Copy everything but self._mac, since we don't know how to
         target._buffer = self._buffer[:]
         for m in [ '_bs', '_buffer_len', '_total_len', '_min_digest', '_tag' ]:
             setattr(target, m, getattr(self, m))

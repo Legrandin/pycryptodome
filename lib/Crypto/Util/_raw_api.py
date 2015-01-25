@@ -160,4 +160,4 @@ def load_pycryptodome_raw_lib(name, cdecl):
                 return load_lib(_get_mod_name(name, ext), cdecl)
             except OSError:
                 pass
-    raise OSError("Cannot load native module '%s' % name" % name)
+    raise OSError("Cannot load native module '%s'" % name)

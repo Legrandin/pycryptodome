@@ -20,10 +20,12 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
 #include <stddef.h>
-#include <assert.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "errors.h"
 
 #define ALIGNMENT 32
 
@@ -150,17 +152,28 @@ static void gcm_mult2(uint8_t out[16], const t_v_tables *key_tables, const uint8
  * \param block_data Pointer to the data to hash.
  * \param len        Length of the data to hash (multiple of 16).
  * \param y_in       The initial Y (Y_0, 16 bytes).
- * \param key_tables The expanded hash key (16*256*16 bytes).
+ * \param exp_key    The expanded hash key (16*256*16 bytes + alignment).
+ *
+ * y_out and y_int can point to the same buffer.
  */
-static void ghash(
+int ghash(
         uint8_t y_out[16],
         const uint8_t block_data[],
-        int len,
+        size_t len,
         const uint8_t y_in[16],
-        const t_v_tables *key_tables
+        const t_exp_key *exp_key
         )
 {
     int i;
+    const t_v_tables *v_tables;
+
+    if (NULL==y_out || NULL==block_data || NULL==y_in || NULL==exp_key)
+        return ERR_NULL;
+
+    if (len % 16)
+        return ERR_NOT_ENOUGH_DATA;
+     
+    v_tables = (const t_v_tables*)(exp_key->buffer + exp_key->offset);
 
     memcpy(y_out, y_in, 16);
     for (i=0; i<len; i+=16) {
@@ -170,179 +183,34 @@ static void ghash(
         for (j=0; j<16; j++) {
             x[j] = y_out[j] ^ block_data[i+j];
         }
-        gcm_mult2(y_out, key_tables, x);
+        gcm_mult2(y_out, v_tables, x);
     }
-}
 
-static void realign_v_tables(t_exp_key *exp_key)
-{
-    int new_offset;
-    
-    new_offset = ALIGNMENT - ((uintptr_t)exp_key->buffer & (ALIGNMENT-1));
-    if (new_offset != exp_key->offset) {
-        memmove(exp_key->buffer+new_offset,
-                exp_key->buffer+exp_key->offset,
-                sizeof(t_v_tables));
-        exp_key->offset = new_offset;
-    }
+    return 0;
 }
-
-static char ghash_expand__doc__[] =
-"ghash_expand(h:str) -> str\n"
-"\n"
-"Return an expanded GHASH key.\n";
 
 /**
  * Expand the AES key into a Python (byte) string object.
  */ 
-static PyObject *
-ghash_expand_function(PyObject *self, PyObject *args)
+int ghash_expand(const uint8_t h[16], t_exp_key **ghash_tables)
 {
-    PyObject *h;
-    PyObject *retval = NULL;
-    Py_ssize_t len_h;
     t_exp_key *exp_key;
 
-    if (!PyArg_ParseTuple(args, "S", &h)) {
-        goto out;
-    }
+    if (NULL==h || NULL==ghash_tables)
+        return ERR_NULL;
 
-    len_h = PyBytes_GET_SIZE(h);
-
-    if (len_h!=16) {
-        PyErr_SetString(PyExc_ValueError, "Length of h must be 16 bytes.");
-        goto out;
-    }
-
-    exp_key = calloc(1, sizeof(t_exp_key));
-    if (!exp_key) {
-        goto out;
-    }
-
-    Py_BEGIN_ALLOW_THREADS;
+    *ghash_tables = exp_key = calloc(1, sizeof(t_exp_key));
+    if (NULL == exp_key)
+        return ERR_MEMORY;
     
     exp_key->offset = ALIGNMENT - ((uintptr_t)exp_key->buffer & (ALIGNMENT-1));
-    make_v_tables((uint8_t*)PyBytes_AS_STRING(h),
-            (t_v_tables*)(exp_key->buffer + exp_key->offset));
+    make_v_tables(h, (t_v_tables*)(exp_key->buffer + exp_key->offset));
     
-    Py_END_ALLOW_THREADS;
-
-    retval = PyBytes_FromStringAndSize((const char*)exp_key, sizeof *exp_key);
-    free(exp_key);
-
-out:
-    return retval;
+    return 0;
 }
 
-
-static char ghash__doc__[] =
-"ghash(data:str, y:str, exp_key:str) -> str\n"
-"\n"
-"Return a GHASH.\n";
-
-static PyObject *
-ghash_function(PyObject *self, PyObject *args)
+int ghash_destroy(t_exp_key *ghash_tables)
 {
-    PyObject *data, *y, *exp_key_serial;
-    PyObject *retval = NULL;
-    Py_ssize_t len_data, len_y, len_exp_key_serial;
-    const t_v_tables *v_tables;
-    t_exp_key *exp_key;
-
-    if (!PyArg_ParseTuple(args, "SSS", &data, &y, &exp_key_serial)) {
-        goto out;
-    }
-
-    len_data = PyBytes_GET_SIZE(data);
-    len_y = PyBytes_GET_SIZE(y);
-    len_exp_key_serial = PyBytes_GET_SIZE(exp_key_serial);
-
-    if (len_data%16!=0) {
-        PyErr_SetString(PyExc_ValueError, "Length of data must be a multiple of 16 bytes.");
-        goto out;
-    }
-
-    if (len_y!=16) {
-        PyErr_SetString(PyExc_ValueError, "Length of y must be 16 bytes.");
-        goto out;
-    }
-
-    if (len_exp_key_serial!=sizeof(t_exp_key)) {
-        PyErr_SetString(PyExc_ValueError, "Length of expanded key is incorrect.");
-        goto out;
-    }
-
-    /* Create return string */
-    retval = PyBytes_FromStringAndSize(NULL, 16);
-    if (!retval) {
-        goto out;
-    }
-
-    Py_BEGIN_ALLOW_THREADS;
-
-#define PyBytes_Buffer(a)   (uint8_t*)PyBytes_AS_STRING(a)
-
-    exp_key = (t_exp_key *)PyBytes_AS_STRING(exp_key_serial);
-    realign_v_tables(exp_key);
-    v_tables = (const t_v_tables*)(exp_key->buffer + exp_key->offset);
-    ghash(  PyBytes_Buffer(retval), PyBytes_Buffer(data), len_data,
-            PyBytes_Buffer(y), v_tables);
-
-#undef PyBytes_Buffer
-
-     Py_END_ALLOW_THREADS;
-
-out:
-    return retval;
+    free(ghash_tables);
+    return 0;
 }
-
-/*
- * Module-level method table and module initialization function
- */
-
-static PyMethodDef galois_methods[] = {
-    {"ghash_expand", ghash_expand_function, METH_VARARGS, ghash_expand__doc__},
-    {"ghash", ghash_function, METH_VARARGS, ghash__doc__},
-    {NULL, NULL, 0, NULL}   /* end-of-list sentinel value */
-};
-
-#ifdef IS_PY3K
-
-static struct PyModuleDef moduledef = {
-	PyModuleDef_HEAD_INIT,
-	"_galois",
-	"Arithmetic in Galois Fields",
-	-1,
-	galois_methods,
-	NULL,
-	NULL,
-	NULL,
-	NULL
-};
-
-PyMODINIT_FUNC
-PyInit__galois(void)
-{
-    PyObject *m;
-
-    /* Initialize the module */
-    m = PyModule_Create(&moduledef);
-    if (m == NULL)
-       return NULL;
-    return m;
-}
-
-#else
-
-PyMODINIT_FUNC
-init_galois(void)
-{
-    PyObject *m;
-
-    /* Initialize the module */
-    m = Py_InitModule("_galois", galois_methods);
-    if (m == NULL)
-        return;
-}
-
-#endif
