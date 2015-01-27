@@ -27,35 +27,11 @@
  *
  */
 
-#include "pycrypto_common.h"
-
 #define MODULE_NAME SHA224
 #define DIGEST_SIZE (224/8)
 #define BLOCK_SIZE (512/8)
 #define WORD_SIZE 4
 #define SCHEDULE_SIZE 64
-
-static char MODULE__doc__[] =
-    "SHA-224 cryptographic hash algorithm.\n"
-    "\n"
-    "SHA-224 belongs to the SHA-2_ family of cryptographic hashes.\n"
-    "It produces the 224 bit digest of a message.\n"
-    "\n"
-    "    >>> from Crypto.Hash import SHA224\n"
-    "    >>>\n"
-    "    >>> h = SHA224.new()\n"
-    "    >>> h.update(b'Hello')\n"
-    "    >>> print h.hexdigest()\n"
-    "\n"
-    "*SHA* stands for Secure Hash Algorithm.\n"
-    "\n"
-    ".. _SHA-2: http://csrc.nist.gov/publications/fips/fips180-4/fips-180-4.pdf\n"
-    "\n"
-    ":Variables:\n"
-    " block_size\n"
-    "    The internal block size of the hash algorithm in bytes.\n"
-    " digest_size\n"
-    "    The size of the resulting hash in bytes.\n";
 
 #include "hash_SHA2.h"
 
