@@ -365,7 +365,7 @@ setup(
         Extension("Crypto.Hash._SHA512",
             include_dirs=['src/'],
             sources=["src/SHA512.c"]),
-        Extension("Crypto.Hash.RIPEMD160",
+        Extension("Crypto.Hash._RIPEMD160",
             include_dirs=['src/'],
             sources=["src/RIPEMD160.c"]),
         Extension("Crypto.Hash.SHA3_224",
