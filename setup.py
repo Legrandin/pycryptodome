@@ -347,7 +347,7 @@ setup(
         },
     ext_modules = [
         # Hash functions
-        Extension("Crypto.Hash.MD2",
+        Extension("Crypto.Hash._MD2",
             include_dirs=['src/'],
             sources=["src/MD2.c"]),
         Extension("Crypto.Hash.MD4",

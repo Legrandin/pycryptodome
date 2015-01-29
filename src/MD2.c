@@ -1,4 +1,3 @@
-
 /*
  *  md2.c : MD2 hash algorithm.
  *
@@ -26,54 +25,40 @@
  *
  */
   
-
-#include "pycrypto_common.h"
 #include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-#define MODULE_NAME MD2
-#define DIGEST_SIZE 16
-#define BLOCK_SIZE 64
-
-static char MODULE__doc__[] =
-    "MD2 cryptographic hash algorithm.\n"
-    "\n"
-    "MD2 is specified in RFC1319_ and it produces the 128 bit digest of a message.\n"
-    "\n"
-    "    >>> from Crypto.Hash import MD2\n"
-    "    >>>\n"
-    "    >>> h = MD2.new()\n"
-    "    >>> h.update(b'Hello')\n"
-    "    >>> print h.hexdigest()\n"
-    "\n"
-    "MD2 stand for Message Digest version 2, and it was invented by Rivest in 1989.\n"
-    "\n"
-    "This algorithm is both slow and insecure. Do not use it for new designs.\n"
-    "\n"
-    ".. _RFC1319: http://tools.ietf.org/html/rfc1319\n"
-    "\n"
-    ":Variables:\n"
-    " block_size\n"
-    "    The internal block size of the hash algorithm in bytes.\n"
-    " digest_size\n"
-    "    The size of the resulting hash in bytes.\n";
-
-typedef uint8_t U8;
-typedef uint32_t U32;
+#include "errors.h"
 
 typedef struct {
-	U8 C[16], X[48];
-	unsigned int count;
-	U8 buf[16];
+	uint8_t C[16], X[48];
+	size_t count;
+	uint8_t buf[16];
 } hash_state;
 
-static void hash_init (hash_state *ptr)
+int md2_init(hash_state **md2State)
 {
-	memset(ptr->X, 0, 48);
-	memset(ptr->C, 0, 16);
-	ptr->count=0;
+    hash_state *hs;
+    
+    if (NULL == md2State) {
+        return ERR_NULL;
+    }
+
+    *md2State = hs = (hash_state*) calloc(1, sizeof(hash_state));
+    if (NULL == hs)
+        return ERR_MEMORY;
+    
+    return 0;
 }
 
-static U8 S[256] = {
+int md2_destroy(hash_state *hs)
+{
+    free(hs);
+    return 0;
+}
+
+static const uint8_t S[256] = {
 	41, 46, 67, 201, 162, 216, 124, 1, 61, 54, 84, 161, 236, 240, 6,
 	19, 98, 167, 5, 243, 192, 199, 115, 140, 152, 147, 43, 217, 188,
 	76, 130, 202, 30, 155, 87, 60, 253, 212, 224, 22, 103, 66, 111, 24,
@@ -94,65 +79,67 @@ static U8 S[256] = {
 	31, 26, 219, 153, 141, 51, 159, 17, 131, 20
 };
 
-static void
-hash_copy(hash_state *src, hash_state *dest)
+int md2_copy(const hash_state *src, hash_state *dst)
 {
-	dest->count=src->count;  
-	memcpy(dest->buf, src->buf, dest->count);
-	memcpy(dest->X, src->X, 48);
-	memcpy(dest->C, src->C, 16);
+    if (NULL == src || NULL == dst) {
+        return ERR_NULL;
+    }
+
+    *dst = *src;
+    return 0;
 }
 
-
-static void hash_update (hash_state *self, const U8 *buf, U32 len)
+int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
-	U32 L;
+	uint32_t L;
 	while (len) 
 	{
-		L=(16-self->count) < len ? (16-self->count) : len;
-		memcpy(self->buf+self->count, buf, L);
-		self->count+=L;
+		L=(16-hs->count) < len ? (16-hs->count) : len;
+		memcpy(hs->buf+hs->count, buf, L);
+		hs->count+=L;
 		buf+=L;
 		len-=L;
-		if (self->count==16) 
+		if (hs->count==16) 
 		{
-			U8 t;
+			uint8_t t;
 			int i,j;
 	  
-			self->count=0;
-			memcpy(self->X+16, self->buf, 16);
-			t=self->C[15];
+			hs->count=0;
+			memcpy(hs->X+16, hs->buf, 16);
+			t=hs->C[15];
 			for(i=0; i<16; i++)
 			{
-				self->X[32+i]=self->X[16+i]^self->X[i];
-				t=self->C[i]^=S[self->buf[i]^t];
+				hs->X[32+i]=hs->X[16+i]^hs->X[i];
+				t=hs->C[i]^=S[hs->buf[i]^t];
 			}
 	  
 			t=0;
 			for(i=0; i<18; i++)
 			{
 				for(j=0; j<48; j++)
-					t=self->X[j]^=S[t];
+					t=hs->X[j]^=S[t];
 				t=(t+i) & 0xFF;
 			}
 		}
 	}
+        return 0;
 }
 
-static PyObject *
-hash_digest (const hash_state *self)
+int md2_digest(const hash_state *hs, uint8_t digest[16])
 {
-	U8 padding[16];
-	U32 padlen;
+	uint8_t padding[16];
+	uint32_t padlen;
 	hash_state temp;
 	unsigned int i;
+ 
+        if (NULL==hs || digest==NULL)
+            return ERR_NULL;
   
-	memcpy(&temp, self, sizeof(hash_state));
-	padlen= 16-self->count;
+        temp = *hs;
+	padlen= 16-hs->count;
 	for(i=0; i<padlen; i++) padding[i]=padlen;
-	hash_update(&temp, padding, padlen);
-	hash_update(&temp, temp.C, 16);
-	return PyBytes_FromStringAndSize((char *) temp.X, 16);
+	md2_update(&temp, padding, padlen);
+	md2_update(&temp, temp.C, 16);
+        memcpy(digest, temp.X, 16);
+        return 0;
 }
-
-#include "hash_template.c"
