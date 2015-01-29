@@ -91,6 +91,9 @@ int md2_copy(const hash_state *src, hash_state *dst)
 
 int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
+        if (NULL == hs || NULL == buf)
+            return ERR_NULL;
+
 	uint32_t L;
 	while (len) 
 	{

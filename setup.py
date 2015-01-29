@@ -350,7 +350,7 @@ setup(
         Extension("Crypto.Hash._MD2",
             include_dirs=['src/'],
             sources=["src/MD2.c"]),
-        Extension("Crypto.Hash.MD4",
+        Extension("Crypto.Hash._MD4",
             include_dirs=['src/'],
             sources=["src/MD4.c"]),
         Extension("Crypto.Hash._SHA256",
