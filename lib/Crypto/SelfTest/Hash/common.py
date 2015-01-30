@@ -92,19 +92,6 @@ class HashSelfTest(unittest.TestCase):
             out5 = binascii.b2a_hex(h2.digest())
             self.assertEqual(self.expected, out5)
 
-        # Verify that Crypto.Hash.new(h) produces a fresh hash object
-        h3 = Crypto.Hash.new(h)
-        h3.update(self.input)
-        out6 = binascii.b2a_hex(h3.digest())
-        self.assertEqual(self.expected, out6)
-
-        if hasattr(h, 'name'):
-            # Verify that Crypto.Hash.new(h.name) produces a fresh hash object
-            h4 = Crypto.Hash.new(h.name)
-            h4.update(self.input)
-            out7 = binascii.b2a_hex(h4.digest())
-            self.assertEqual(self.expected, out7)
-
 class HashTestOID(unittest.TestCase):
     def __init__(self, hashmod, oid):
         unittest.TestCase.__init__(self)
