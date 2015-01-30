@@ -86,7 +86,7 @@ typedef enum {
 keccak_result keccak_init    (keccak_state *self, unsigned int param, keccak_init_param initby);
 keccak_result keccak_finish  (keccak_state *self);
 keccak_result keccak_copy    (keccak_state *source, keccak_state *dest);
-keccak_result keccak_absorb  (keccak_state *self, unsigned char *buffer, int length);
+keccak_result keccak_absorb  (keccak_state *self, const unsigned char *buffer, int length);
 keccak_result keccak_squeeze (keccak_state *self, unsigned char *buffer, int length);
 
 

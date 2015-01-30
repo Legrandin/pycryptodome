@@ -20,65 +20,73 @@
  * ===================================================================
 */
 
-
-#include "pycrypto_common.h"
+#include "errors.h"
 
 #define CAPACITY (2*(DIGEST_SIZE))
 #define BLOCK_SIZE (200-CAPACITY)
 #define NO_MERKLE_DAMGARD
 
-#define _STR(x) #x
-#define _XSTR(x) _STR(x)
-
-static char MODULE__doc__[] =
-    HASH_NAME " cryptographic hash algorithm.\n"
-    "\n"
-    HASH_NAME " belongs to the SHA-3 family of cryptographic hashes, as specified\n"
-    "in `FIPS 202`__ (currently in draft stage).\n"
-    "The hash function produces the " _XSTR(DIGEST_SIZE_BITS)  " bit digest of a message.\n"
-    "  \n"
-    "    >>> from Crypto.Hash import SHA3_" _XSTR(DIGEST_SIZE_BITS)  "\n"
-    "    >>>\n"
-    "    >>> h_obj = SHA3_" _XSTR(DIGEST_SIZE_BITS)  ".new()\n"
-    "    >>> h_obj.update(b'Some data')\n"
-    "    >>> print h_obj.hexdigest()\n"
-    "\n"
-    ".. __: http://csrc.nist.gov/publications/drafts/fips-202/fips_202_draft.pdf\n"
-    ;
-
-#include "pycrypto_common.h"
 #include "keccak.c"
+
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+
+#define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
 
 typedef keccak_state hash_state;
 
-static void
-hash_init (hash_state *self)
+int FUNC_NAME(_init) (hash_state **shaState)
 {   
-    keccak_init (self, DIGEST_SIZE, KECCAK_INIT_SECURITY);
+    hash_state *hs;
+
+    if (NULL == shaState) {
+        return ERR_NULL;
+    }
+
+    *shaState = hs = (hash_state*) calloc(1, sizeof(hash_state));
+    if (NULL == hs)
+        return ERR_MEMORY;
+
+    keccak_init (hs, DIGEST_SIZE, KECCAK_INIT_SECURITY);
+    return 0;
 }
 
-static void
-hash_update (hash_state *self, unsigned char *buffer, int length)
+int FUNC_NAME(_destroy) (hash_state *shaState)
 {
-    keccak_absorb (self, buffer, length);
+    free(shaState);
+    return 0;
 }
 
-static void
-hash_copy (hash_state *source, hash_state *dest)
+int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
 {
-    keccak_copy (source, dest);
+    if (NULL == hs || NULL == buf) {
+        return ERR_NULL;
+    }
+    keccak_absorb (hs, buf, len);
+    return 0;
 }
 
-static PyObject
-*hash_digest (hash_state *self)
+int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
+{
+    if (NULL == src || NULL == dst) {
+        return ERR_NULL;
+    }
+
+    *dst = *src;
+    dst->bufptr = dst->buf + (src->bufptr - src->buf);
+    dst->bufend = dst->buf + (src->bufend - src->buf);
+    return 0;
+}
+
+int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
 {
     hash_state tmp;
-    unsigned char buffer[DIGEST_SIZE];
-    
-    hash_copy (self, &tmp);
-    keccak_squeeze (&tmp, buffer, DIGEST_SIZE);
-    
-    return PyBytes_FromStringAndSize ((char*)buffer, DIGEST_SIZE);
-}
 
-#include "hash_template.c"
+    if (NULL == shaState) {
+        return ERR_NULL;
+    }
+
+    FUNC_NAME(_copy)(shaState, &tmp);
+    keccak_squeeze (&tmp, digest, DIGEST_SIZE);
+    return 0;
+}
