@@ -269,7 +269,7 @@ keccak_init (keccak_state *self, unsigned int param, keccak_init_param initby)
 }
 
 keccak_result
-keccak_absorb (keccak_state *self, unsigned char *buffer, int length)
+keccak_absorb (keccak_state *self, const unsigned char *buffer, int length)
 {
     int bytestocopy;
     

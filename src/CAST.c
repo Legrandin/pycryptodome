@@ -43,6 +43,7 @@
 */
 
 #include "pycrypto_common.h"
+#include "block_base.h"
 
 #define MODULE_NAME CAST
 #define BLOCK_SIZE 8
@@ -414,24 +415,17 @@ main()
 
 #endif
 
-static void
+static int
 block_init(block_state *self, unsigned char *key, int keylength)
 {
-	/* presumably this will optimize out */
-	if (sizeof(uint32) < 4 || sizeof(uint8) != 1) {
-		PyErr_SetString(PyExc_SystemError,
-				"CAST module compiled with bad typedefs!");
-	}
-
 	/* make sure the key length is within bounds */
 	if (keylength < 5 || keylength > 16) {
-		PyErr_SetString(PyExc_ValueError, "CAST key must be "
-				"at least 5 bytes and no more than 16 bytes long");
-		return;
+            return ERR_KEY_SIZE;
 	}
 
 	/* do the actual key schedule setup */
 	castschedulekeys(self, key, keylength);
+        return 0;
 }
 
 static void

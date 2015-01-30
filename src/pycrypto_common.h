@@ -24,9 +24,6 @@
 #ifndef PYCRYPTO_COMMON_H
 #define PYCRYPTO_COMMON_H
 
-#include "Python.h"
-#include "pycrypto_compat.h"
-
 #ifdef _MSC_VER
 
 typedef __int8 int8_t;
@@ -41,5 +38,10 @@ typedef unsigned __int64 uint64_t;
 #else
 #include <stdint.h>
 #endif
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "errors.h"
 
 #endif /* PYCRYPTO_COMMON_H */

@@ -24,12 +24,30 @@
 Counter (CTR) mode.
 """
 
-from ctypes import byref, c_void_p, create_string_buffer
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
+                                  create_string_buffer, get_raw_buffer,
+                                  SmartPointer)
 
 from Crypto.Util.py3compat import *
-from Crypto.Util._modules import get_CDLL
 
-raw_ctr_lib = get_CDLL("Crypto.Cipher._raw_ctr")
+raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
+                    int CTR_start_operation(void *cipher,
+                                            uint8_t   initialCounterBlock[],
+                                            size_t    initialCounterBlock_len,
+                                            size_t    prefix_len,
+                                            unsigned  counter_len,
+                                            unsigned  littleEndian,
+                                            void **pResult);
+                    int CTR_encrypt(void *ctrState,
+                                    const uint8_t *in,
+                                    uint8_t *out,
+                                    size_t data_len);
+                    int CTR_decrypt(void *ctrState,
+                                    const uint8_t *in,
+                                    uint8_t *out,
+                                    size_t data_len);
+                    int CTR_stop_operation(void *ctrState);"""
+                                        )
 
 
 class RawCtrMode(object):
@@ -65,7 +83,7 @@ class RawCtrMode(object):
 
         :Parameters:
           block_cipher : C pointer
-            A pointer to the low-level block cipher instance.
+            A smart pointer to the low-level block cipher instance.
 
           initial_counter_block : byte string
             The initial plaintext to use to generate the key stream.
@@ -91,19 +109,26 @@ class RawCtrMode(object):
             in little endian mode. If False, it is big endian.
         """
 
-        self._state = None
-        state = c_void_p()
-        result = raw_ctr_lib.CTR_start_operation(block_cipher,
+        self._state = VoidPointer()
+        result = raw_ctr_lib.CTR_start_operation(block_cipher.get(),
                                                  initial_counter_block,
                                                  len(initial_counter_block),
                                                  prefix_len,
                                                  counter_len,
                                                  little_endian,
-                                                 byref(state))
+                                                 self._state.address_of())
         if result:
             raise ValueError("Error %X while instatiating the CTR mode"
                              % result)
-        self._state = state.value
+
+        # Ensure that object disposal of this Python object will (eventually)
+        # free the memory allocated by the raw library for the cipher mode
+        self._state = SmartPointer(self._state.get(),
+                                   raw_ctr_lib.CTR_stop_operation)
+
+        # Memory allocated for the underlying block cipher is now owed
+        # by the cipher mode
+        block_cipher.release()
 
         #: The block size of the underlying cipher, in bytes.
         self.block_size = len(initial_counter_block)
@@ -138,11 +163,13 @@ class RawCtrMode(object):
         """
 
         ciphertext = create_string_buffer(len(plaintext))
-        result = raw_ctr_lib.CTR_encrypt(self._state, plaintext, ciphertext,
+        result = raw_ctr_lib.CTR_encrypt(self._state.get(),
+                                         plaintext,
+                                         ciphertext,
                                          len(plaintext))
         if result:
             raise ValueError("Error %X while encrypting in CTR mode" % result)
-        return ciphertext.raw
+        return get_raw_buffer(ciphertext)
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key and the parameters set at initialization.
@@ -173,52 +200,64 @@ class RawCtrMode(object):
         """
 
         plaintext = create_string_buffer(len(ciphertext))
-        result = raw_ctr_lib.CTR_decrypt(self._state, ciphertext, plaintext,
+        result = raw_ctr_lib.CTR_decrypt(self._state.get(),
+                                         ciphertext,
+                                         plaintext,
                                          len(ciphertext))
         if result:
             raise ValueError("Error %X while decrypting in CTR mode" % result)
-        return plaintext.raw
-
-    def __del__(self):
-        if self._state:
-            raw_ctr_lib.CTR_stop_operation(self._state)
-            self._state = None
+        return get_raw_buffer(plaintext)
 
 
 def _create_ctr_cipher(factory, **kwargs):
+    """Instantiate a cipher object that performs CTR encryption/decryption.
 
-    cipher_state, stop_op = factory._create_base_cipher(kwargs)
+    :Parameters:
+      factory : module
+        The underlying block cipher, a module from ``Crypto.Cipher``.
+
+    :Keywords:
+      iv : byte string
+        The IV to use for CBC.
+
+      IV : byte string
+        Alias for ``iv``.
+
+      counter : object
+        Instance of ``Crypto.Util.Counter``.
+
+    Any other keyword will be passed to the underlying block cipher.
+    See the relevant documentation for details (at least ``key`` will need
+    to be present).
+    """
+
+    cipher_state = factory._create_base_cipher(kwargs)
     try:
+        counter = kwargs.pop("counter")
+    except KeyError:
+        # Required by unit test
+        raise TypeError("Missing 'counter' parameter for CTR mode")
 
-        try:
-            counter = kwargs.pop("counter")
-        except KeyError:
-            # Require by unit test
-            raise TypeError("Missing 'counter' parameter for CTR mode")
+    # 'counter' used to be a callable object, but now it is
+    # just a dictionary for backward compatibility.
+    counter_len = counter.pop("counter_len")
+    prefix = counter.pop("prefix")
+    suffix = counter.pop("suffix")
+    initial_value = counter.pop("initial_value")
+    little_endian = counter.pop("little_endian")
 
-        # 'counter' used to be a callable object, but now it is
-        # just a dictionary for backward compatibility.
-        counter_len = counter.pop("counter_len")
-        prefix = counter.pop("prefix")
-        suffix = counter.pop("suffix")
-        initial_value = counter.pop("initial_value")
-        little_endian = counter.pop("little_endian")
+    # Compute initial counter block
+    words = []
+    while initial_value > 0:
+        words.append(bchr(initial_value & 255))
+        initial_value >>= 8
+    words += [bchr(0)] * max(0, counter_len - len(words))
+    if not little_endian:
+        words.reverse()
+    initial_counter_block = prefix + b("").join(words) + suffix
 
-        # Compute initial counter block
-        words = []
-        while initial_value > 0:
-            words.append(bchr(initial_value & 255))
-            initial_value >>= 8
-        words += [bchr(0)] * max(0, counter_len - len(words))
-        if not little_endian:
-            words.reverse()
-        initial_counter_block = prefix + b("").join(words) + suffix
-
-        if kwargs:
-            raise ValueError("Unknown parameters for CTR mode: %s"
-                             % str(kwargs))
-        return RawCtrMode(cipher_state, initial_counter_block,
-                          len(prefix), counter_len, little_endian)
-    except:
-        stop_op(cipher_state)
-        raise
+    if kwargs:
+        raise ValueError("Unknown parameters for CTR mode: %s"
+                         % str(kwargs))
+    return RawCtrMode(cipher_state, initial_counter_block,
+                      len(prefix), counter_len, little_endian)

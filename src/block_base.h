@@ -2,6 +2,7 @@
 #define _BLOCK_BASE
 
 #include <stdint.h>
+#include "errors.h"
 
 typedef struct _BlockBase BlockBase;
 
@@ -13,13 +14,5 @@ typedef struct _BlockBase {
     int (*destructor)(BlockBase *state);
     size_t block_len;
 } BlockBase;
-
-/** Standard errors common to all ciphers **/
-#define ERR_NULL                1
-#define ERR_MEMORY              2
-#define ERR_NOT_ENOUGH_DATA     3
-#define ERR_ENCRYPT             4
-#define ERR_DECRYPT             5
-#define ERR_KEY_SIZE            6
 
 #endif

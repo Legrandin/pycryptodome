@@ -654,18 +654,19 @@ class IVLengthTest(unittest.TestCase):
 
     def runTest(self):
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_CBC, "")
+                self.module.MODE_CBC, b(""))
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_CFB, "")
+                self.module.MODE_CFB, b(""))
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_OFB, "")
+                self.module.MODE_OFB, b(""))
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_OPENPGP, "")
+                self.module.MODE_OPENPGP, b(""))
         if hasattr(self.module, "MODE_CCM"):
             for ivlen in (0,6,14):
                 self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
                     self.module.MODE_CCM, bchr(0)*ivlen, msg_len=10)
-        self.module.new(a2b_hex(self.key), self.module.MODE_ECB, "")
+        self.assertRaises(TypeError, self.module.new, a2b_hex(self.key),
+                self.module.MODE_ECB, b(""))
         #self.module.new(a2b_hex(self.key), self.module.MODE_CTR, "", counter=self._dummy_counter)
 
     def _dummy_counter(self):

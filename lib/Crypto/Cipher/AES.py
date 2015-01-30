@@ -41,8 +41,8 @@ As an example, encryption can be done as follows:
 A more complicated example is based on CCM, (see `MODE_CCM`) an `AEAD`_ mode
 that provides both confidentiality and authentication for a message.
 
-It optionally allows the header of the message to remain in the clear, whilst still
-being authenticated. The encryption is done as follows:
+It optionally allows the header of the message to remain in the clear,
+whilst still being authenticated. The encryption is done as follows:
 
     >>> from Crypto.Cipher import AES
     >>> from Crypto.Random import get_random_bytes
@@ -78,16 +78,38 @@ import sys
 from ctypes import c_void_p, byref
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util import cpuid
 from Crypto.Util.py3compat import byte_string
-from Crypto.Util._modules import get_CDLL
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  VoidPointer, SmartPointer)
 
 
-_raw_aes_lib = get_CDLL("Crypto.Cipher._raw_aes")
+_raw_cpuid_lib = load_pycryptodome_raw_lib("Crypto.Util.cpuid",
+                                            "int have_aes_ni(void);")
+
+cproto = """
+        int AES_start_operation(const uint8_t key[],
+                                size_t key_len,
+                                void **pResult);
+        int AES_encrypt(const void *state,
+                        const uint8_t *in,
+                        uint8_t *out,
+                        size_t data_len);
+        int AES_decrypt(const void *state,
+                        const uint8_t *in,
+                        uint8_t *out,
+                        size_t data_len);
+        int AES_stop_operation(void *state);
+        """
+
+
+_raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes",
+                                         cproto)
+
 _raw_aesni_lib = None
 try:
-    if cpuid.have_aes_ni():
-        _raw_aesni_lib = get_CDLL("Crypto.Cipher._raw_aesni")
+    if _raw_cpuid_lib.have_aes_ni() == 1:
+        _raw_aesni_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aesni",
+                                                   cproto.replace("AES", "AESNI"))
 except OSError:
     pass
 
@@ -116,12 +138,14 @@ def _create_base_cipher(dict_parameters):
         start_operation = _raw_aes_lib.AES_start_operation
         stop_operation = _raw_aes_lib.AES_stop_operation
 
-    cipher = c_void_p()
-    result = start_operation(key, len(key), byref(cipher))
+    cipher = VoidPointer()
+    result = start_operation(key,
+                             len(key),
+                             cipher.address_of())
     if result:
         raise ValueError("Error %X while instantiating the AES cipher"
                          % result)
-    return cipher.value, stop_operation
+    return SmartPointer(cipher.get(), stop_operation)
 
 
 def new(key, mode, *args, **kwargs):

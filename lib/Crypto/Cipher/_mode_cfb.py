@@ -24,16 +24,32 @@
 Counter Feedback (CFB) mode.
 """
 
-from ctypes import byref, c_void_p, create_string_buffer
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
+                                  create_string_buffer, get_raw_buffer,
+                                  SmartPointer)
 
-from Crypto.Util._modules import get_CDLL
+raw_cfb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_cfb","""
+                    int CFB_start_operation(void *cipher,
+                                            const uint8_t iv[],
+                                            size_t iv_len,
+                                            size_t segment_len, /* In bytes */
+                                            void **pResult);
+                    int CFB_encrypt(void *cfbState,
+                                    const uint8_t *in,
+                                    uint8_t *out,
+                                    size_t data_len);
+                    int CFB_decrypt(void *cfbState,
+                                    const uint8_t *in,
+                                    uint8_t *out,
+                                    size_t data_len);
+                    int CFB_stop_operation(void *state);"""
+                    )
 
-raw_cfb_lib = get_CDLL("Crypto.Cipher._raw_cfb")
 
 class RawCfbMode(object):
     """*Cipher FeedBack (CFB)*.
 
-    This mode is similar to CBC, but it transforms
+    This mode is similar to CFB, but it transforms
     the underlying block cipher into a stream cipher.
 
     Plaintext and ciphertext are processed in *segments*
@@ -52,7 +68,7 @@ class RawCfbMode(object):
 
         :Parameters:
           block_cipher : C pointer
-            A pointer to the low-level block cipher instance.
+            A smart pointer to the low-level block cipher instance.
 
           iv : byte string
             The initialization vector to use for encryption or decryption.
@@ -67,16 +83,31 @@ class RawCfbMode(object):
             The number of bytes the plaintext and ciphertext are segmented in.
         """
 
-        self._state = None
-        state = c_void_p()
-        result = raw_cfb_lib.CFB_start_operation(block_cipher,
+        self._state = VoidPointer()
+        result = raw_cfb_lib.CFB_start_operation(block_cipher.get(),
                                                  iv,
                                                  len(iv),
                                                  segment_size,
-                                                 byref(state))
+                                                 self._state.address_of())
         if result:
             raise ValueError("Error %d while instatiating the CFB mode" % result)
-        self._state = state.value
+
+        # Ensure that object disposal of this Python object will (eventually)
+        # free the memory allocated by the raw library for the cipher mode
+        self._state = SmartPointer(self._state.get(),
+                                   raw_cfb_lib.CFB_stop_operation)
+
+        # Memory allocated for the underlying block cipher is now owed
+        # by the cipher mode
+        block_cipher.release()
+
+        #: The block size of the underlying cipher, in bytes.
+        self.block_size = len(iv)
+
+        #: The Initialization Vector originally used to create the object.
+        #: The value does not change.
+        self.IV = iv
+
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -108,10 +139,13 @@ class RawCfbMode(object):
         """
 
         ciphertext = create_string_buffer(len(plaintext))
-        result = raw_cfb_lib.CFB_encrypt(self._state, plaintext, ciphertext, len(plaintext))
+        result = raw_cfb_lib.CFB_encrypt(self._state.get(),
+                                         plaintext,
+                                         ciphertext,
+                                         len(plaintext))
         if result:
             raise ValueError("Error %d while encrypting in CBC mode" % result)
-        return ciphertext.raw
+        return get_raw_buffer(ciphertext)
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key and the parameters set at initialization.
@@ -142,33 +176,50 @@ class RawCfbMode(object):
         """
 
         plaintext = create_string_buffer(len(ciphertext))
-        result = raw_cfb_lib.CFB_decrypt(self._state, ciphertext, plaintext, len(ciphertext))
+        result = raw_cfb_lib.CFB_decrypt(self._state.get(),
+                                         ciphertext,
+                                         plaintext,
+                                         len(ciphertext))
         if result:
             raise ValueError("Error %d while decrypting in CBC mode" % result)
-        return plaintext.raw
+        return get_raw_buffer(plaintext)
 
-    def __del__(self):
-        if self._state:
-            raw_cfb_lib.CFB_stop_operation(self._state)
-            self._state  = None
 
 def _create_cfb_cipher(factory, **kwargs):
+    """Instantiate a cipher object that performs CFB encryption/decryption.
 
-    cipher_state, stop_op = factory._create_base_cipher(kwargs)
-    try:
-        iv = kwargs.pop("IV", None)
-        if iv is None:
-            iv = kwargs.pop("iv")
+    :Parameters:
+      factory : module
+        The underlying block cipher, a module from ``Crypto.Cipher``.
 
-        segment_size_bytes, rem = divmod(kwargs.pop("segment_size", 8), 8)
-        if rem:
-            raise ValueError("'segment_size' must be a multiple of 8 bits")
-        if segment_size_bytes == 0:
-            segment_size_bytes = 1
+    :Keywords:
+      iv : byte string
+        The IV to use for CBC.
 
-        if kwargs:
-            raise ValueError("Unknown parameters for CBC: %s" % str(kwargs))
-        return RawCfbMode(cipher_state, iv, segment_size_bytes)
-    except:
-        stop_op(cipher_state)
-        raise
+      IV : byte string
+        Alias for ``iv``.
+
+      segment_size : integer
+        The number of bit the plaintext and ciphertext are segmented in.
+        If not present, the default is 8.
+
+    Any other keyword will be passed to the underlying block cipher.
+    See the relevant documentation for details (at least ``key`` will need
+    to be present).
+    """
+
+    cipher_state = factory._create_base_cipher(kwargs)
+
+    iv = kwargs.pop("IV", None)
+    if iv is None:
+        iv = kwargs.pop("iv")
+
+    segment_size_bytes, rem = divmod(kwargs.pop("segment_size", 8), 8)
+    if rem:
+        raise ValueError("'segment_size' must be a multiple of 8 bits")
+    if segment_size_bytes == 0:
+        segment_size_bytes = 1
+
+    if kwargs:
+        raise ValueError("Unknown parameters for CFB: %s" % str(kwargs))
+    return RawCfbMode(cipher_state, iv, segment_size_bytes)

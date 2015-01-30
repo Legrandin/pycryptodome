@@ -43,42 +43,15 @@
  *   "RIPEMD-160 is big-bit-endian, little-byte-endian, and left-justified."
  */
 
-#include "pycrypto_common.h"
-#include <assert.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "errors.h"
 
 #define RIPEMD160_DIGEST_SIZE 20
-#define BLOCK_SIZE 64
 
-static char MODULE__doc__[] =
-    "RIPEMD-160 cryptographic hash algorithm.\n"
-    "\n"
-    "RIPEMD-160_ produces the 160 bit digest of a message.\n"
-    "\n"
-    "    >>> from Crypto.Hash import RIPEMD160\n"
-    "    >>>\n"
-    "    >>> h = RIPEMD160.new()\n"
-    "    >>> h.update(b'Hello')\n"
-    "    >>> print h.hexdigest()\n"
-    "\n"
-    "RIPEMD-160 stands for RACE Integrity Primitives Evaluation Message Digest\n"
-    "with a 160 bit digest. It was invented by Dobbertin, Bosselaers, and Preneel.\n"
-    "\n"
-    "This algorithm is considered secure, although it has not been scrutinized as\n"
-    "extensively as SHA-1. Moreover, it provides an informal security level of just\n"
-    "80bits.\n"
-    "\n"
-    ".. _RIPEMD-160: http://homes.esat.kuleuven.be/~bosselae/ripemd160.html\n"
-    "\n"
-    ":Variables:\n"
-    " block_size\n"
-    "    The internal block size of the hash algorithm in bytes.\n"
-    " digest_size\n"
-    "    The size of the resulting hash in bytes.\n";
-
-#define RIPEMD160_MAGIC 0x9f19dd68u
 typedef struct {
-    uint32_t magic;
     uint32_t h[5];      /* The current hash state */
     uint64_t length;    /* Total number of _bits_ (not bytes) added to the
                            hash.  This includes bits that have been buffered
@@ -88,15 +61,10 @@ typedef struct {
         uint8_t b[64];
     } buf;
     uint8_t bufpos;     /* number of bytes currently in the buffer */
-} ripemd160_state;
-
+} hash_state;
 
 /* cyclic left-shift the 32-bit word n left by s bits */
 #define ROL(s, n) (((n) << (s)) | ((n) >> (32-(s))))
-
-/* Initial values for the chaining variables.
- * This is just 0123456789ABCDEFFEDCBA9876543210F0E1D2C3 in little-endian. */
-static const uint32_t initial_h[5] = { 0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u };
 
 /* Ordering of message words.  Based on the permutations rho(i) and pi(i), defined as follows:
  *
@@ -178,21 +146,30 @@ static const uint32_t KR[5] = {
     0x00000000u     /* Round 5: 0 */
 };
 
-static void ripemd160_init(ripemd160_state *self)
+int ripemd160_init(hash_state **ripemd160State)
 {
+    hash_state *hs;
+    
+    /* Initial values for the chaining variables.
+    * This is just 0123456789ABCDEFFEDCBA9876543210F0E1D2C3 in little-endian. */
+    static const uint32_t initial_h[5] = { 0x67452301u, 0xEFCDAB89u, 0x98BADCFEu, 0x10325476u, 0xC3D2E1F0u };
 
-    memcpy(self->h, initial_h, RIPEMD160_DIGEST_SIZE);
-    memset(&self->buf, 0, sizeof(self->buf));
-    self->length = 0;
-    self->bufpos = 0;
-    self->magic = RIPEMD160_MAGIC;
+    if (NULL == ripemd160State) {
+        return ERR_NULL;
+    }
+
+    *ripemd160State = hs = (hash_state*) calloc(1, sizeof(hash_state));
+    if (NULL == hs)
+        return ERR_MEMORY;
+
+    memcpy(hs->h, initial_h, RIPEMD160_DIGEST_SIZE);
+    return 0;
 }
 
-/* NB: This is not currently called in the hash object's destructor. */
-static void ripemd160_wipe(ripemd160_state *self)
+int ripemd160_destroy(hash_state *hs)
 {
-    memset(self, 0, sizeof(ripemd160_state));
-    self->magic = 0;
+    free(hs);
+    return 0;
 }
 
 static int little_endian(void) {
@@ -234,20 +211,12 @@ static void byteswap_digest(uint32_t *p)
 }
 
 /* The RIPEMD160 compression function.  Operates on self->buf */
-static void ripemd160_compress(ripemd160_state *self)
+static void ripemd160_compress(hash_state *self)
 {
     uint8_t w, round;
     uint32_t T;
     uint32_t AL, BL, CL, DL, EL;    /* left line */
     uint32_t AR, BR, CR, DR, ER;    /* right line */
-
-    /* Sanity check */
-    assert(self->magic == RIPEMD160_MAGIC);
-    assert(self->bufpos == 64);
-    if (self->magic != RIPEMD160_MAGIC || self->bufpos != 64) {
-        ripemd160_wipe(self);
-        return; /* error */
-    }
 
     /* Byte-swap the buffer if we're on a big-endian machine */
     byteswap_digest(self->buf.w);
@@ -328,65 +297,58 @@ static void ripemd160_compress(ripemd160_state *self)
     self->bufpos = 0;
 }
 
-static void ripemd160_update(ripemd160_state *self, const unsigned char *p, int length)
+int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
     unsigned int bytes_needed;
 
-    /* Some assertions */
-    assert(self->magic == RIPEMD160_MAGIC);
-    assert(p != NULL && length >= 0);
+    if (NULL==hs || NULL==buf)
+        return ERR_NULL;
 
-    /* NDEBUG is probably defined, so check for invalid inputs explicitly. */
-    if (self->magic != RIPEMD160_MAGIC || p == NULL || length < 0) {
-        /* error */
-        ripemd160_wipe(self);
-        return;
-    }
-
-    /* We never leave a full buffer */
-    assert(self->bufpos < 64);
-
-    while (length > 0) {
+    while (len > 0) {
         /* Figure out how many bytes we need to fill the internal buffer. */
-        bytes_needed = 64 - self->bufpos;
+        bytes_needed = 64 - hs->bufpos;
 
-        if ((unsigned int) length >= bytes_needed) {
+        if (len >= bytes_needed) {
             /* We have enough bytes, so copy them into the internal buffer and run
              * the compression function. */
-            memcpy(&self->buf.b[self->bufpos], p, bytes_needed);
-            self->bufpos += bytes_needed;
-            self->length += bytes_needed << 3;    /* length is in bits */
-            p += bytes_needed;
-            ripemd160_compress(self);
-            length -= bytes_needed;
+            memcpy(&hs->buf.b[hs->bufpos], buf, bytes_needed);
+            hs->bufpos += bytes_needed;
+            hs->length += bytes_needed * 8;    /* length is in bits */
+            buf += bytes_needed;
+            ripemd160_compress(hs);
+            len -= bytes_needed;
             continue;
         }
 
         /* We do not have enough bytes to fill the internal buffer.
          * Copy what's there and return. */
-        memcpy(&self->buf.b[self->bufpos], p, length);
-        self->bufpos += length;
-        self->length += length << 3;    /* length is in bits */
-        return;
-    }
-}
-
-static void ripemd160_copy(const ripemd160_state *source, ripemd160_state *dest)
-{
-    memcpy(dest, source, sizeof(ripemd160_state));
-}
-
-static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
-{
-    ripemd160_state tmp;
-
-    assert(self->magic == RIPEMD160_MAGIC);
-    assert(out != NULL);
-    if (self->magic != RIPEMD160_MAGIC || out == NULL) {
+        memcpy(&hs->buf.b[hs->bufpos], buf, len);
+        hs->bufpos += len;
+        hs->length += len * 8;    /* length is in bits */
         return 0;
     }
 
-    ripemd160_copy(self, &tmp);
+    return 0;
+}
+
+int ripemd160_copy(const hash_state *src, hash_state *dst)
+{
+    if (NULL == src || NULL == dst) {
+        return ERR_NULL;
+    }
+
+    *dst = *src;
+    return 0;
+}
+
+int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_DIGEST_SIZE])
+{
+    hash_state tmp;
+
+    if (NULL==hs || digest==NULL)
+        return ERR_NULL;
+
+    tmp = *hs;
 
     /* Append the padding */
     tmp.buf.b[tmp.bufpos++] = 0x80;
@@ -406,43 +368,7 @@ static int ripemd160_digest(const ripemd160_state *self, unsigned char *out)
 
     /* Copy the final state into the output buffer */
     byteswap_digest(tmp.h);
-    memcpy(out, &tmp.h, RIPEMD160_DIGEST_SIZE);
+    memcpy(digest, &tmp.h, RIPEMD160_DIGEST_SIZE);
 
-    if (tmp.magic == RIPEMD160_MAGIC) {
-        /* success */
-        ripemd160_wipe(&tmp);
-        return 1;
-    } else {
-        /* error */
-        ripemd160_wipe(&tmp);
-        memset(out, 0, RIPEMD160_DIGEST_SIZE);
-        return 0;
-    }
+    return 0;
 }
-
-/* Template definitions */
-#define MODULE_NAME RIPEMD160
-#define DIGEST_SIZE RIPEMD160_DIGEST_SIZE
-#define hash_state ripemd160_state
-#define hash_init ripemd160_init
-#define hash_update ripemd160_update
-#define hash_copy ripemd160_copy
-static PyObject *hash_digest(hash_state *self)
-{
-    char buf[DIGEST_SIZE];
-    PyObject *retval;
-
-    if (ripemd160_digest(self, (unsigned char *) buf)) {
-        retval = PyBytes_FromStringAndSize(buf, DIGEST_SIZE);
-    } else {
-        PyErr_SetString(PyExc_RuntimeError, "Internal error occurred while executing ripemd160_digest");
-        retval = NULL;
-    }
-
-    memset(buf, 0, DIGEST_SIZE);
-    return retval;
-}
-
-#include "hash_template.c"
-
-/* vim:set ts=4 sw=4 sts=4 expandtab: */

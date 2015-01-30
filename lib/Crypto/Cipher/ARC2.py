@@ -57,18 +57,35 @@ As an example, encryption can be done as follows:
 """
 
 import sys
-from ctypes import c_void_p, byref
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util.py3compat import byte_string
-from Crypto.Util._modules import get_CDLL
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  VoidPointer, SmartPointer)
 
-_raw_arc2_lib = get_CDLL("Crypto.Cipher._raw_arc2")
+_raw_arc2_lib = load_pycryptodome_raw_lib(
+                        "Crypto.Cipher._raw_arc2",
+                        """
+                        int ARC2_start_operation(const uint8_t key[],
+                                                 size_t key_len,
+                                                 size_t effective_key_len,
+                                                 void **pResult);
+                        int ARC2_encrypt(const void *state,
+                                         const uint8_t *in,
+                                         uint8_t *out,
+                                         size_t data_len);
+                        int ARC2_decrypt(const void *state,
+                                         const uint8_t *in,
+                                         uint8_t *out,
+                                         size_t data_len);
+                        int ARC2_stop_operation(void *state);
+                        """
+                        )
 
 
 def _create_base_cipher(dict_parameters):
-    """This method instantiates and returns a handle to a low-level base cipher.
-    It will absorb named parameters in the process."""
+    """This method instantiates and returns a handle to a low-level
+    base cipher. It will absorb named parameters in the process."""
 
     try:
         key = dict_parameters.pop("key")
@@ -89,12 +106,16 @@ def _create_base_cipher(dict_parameters):
     start_operation = _raw_arc2_lib.ARC2_start_operation
     stop_operation = _raw_arc2_lib.ARC2_stop_operation
 
-    cipher = c_void_p()
-    result = start_operation(key, len(key), effective_keylen, byref(cipher))
+    cipher = VoidPointer()
+    result = start_operation(key,
+                             len(key),
+                             effective_keylen,
+                             cipher.address_of())
     if result:
         raise ValueError("Error %X while instantiating the ARC2 cipher"
                          % result)
-    return cipher.value, stop_operation
+
+    return SmartPointer(cipher.get(), stop_operation)
 
 
 def new(key, mode, *args, **kwargs):
@@ -135,7 +156,8 @@ def new(key, mode, *args, **kwargs):
       segment_size : integer
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
-        It must be a multiple of 8. If 0 or not specified, it will be assumed to be 8.
+        It must be a multiple of 8. If 0 or not specified, it will be assumed
+        to be 8.
       effective_keylen : integer
         Maximum cryptographic strength of the key, in bits.
         It can vary from 0 to 1024. The default value is 1024.

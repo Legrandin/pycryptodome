@@ -36,10 +36,26 @@ from binascii import unhexlify, hexlify
 
 from Crypto.Util.py3compat import *
 
-from Crypto.Util import Counter, _galois
+from Crypto.Util import Counter
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Hash.CMAC import _SmoothMAC
 from Crypto.Hash import SHA3_224 as SHA3
+
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
+                                  create_string_buffer, get_raw_buffer,
+                                  SmartPointer)
+
+_raw_galois_lib = load_pycryptodome_raw_lib("Crypto.Util._galois",
+                    """
+                    int ghash(  uint8_t y_out[16],
+                                const uint8_t block_data[],
+                                size_t len,
+                                const uint8_t y_in[16],
+                                const void *exp_key);
+                    int ghash_expand(const uint8_t h[16],
+                                     void **ghash_tables);
+                    int ghash_destroy(void *ghash_tables);
+                    """)
 
 class _GHASH(_SmoothMAC):
     """GHASH function defined in NIST SP 800-38D, Algorithm 2.
@@ -55,22 +71,38 @@ class _GHASH(_SmoothMAC):
 
     def __init__(self, hash_subkey, block_size):
         _SmoothMAC.__init__(self, block_size, None, 0)
-        self._hash_subkey = _galois.ghash_expand(hash_subkey)
-        self._last_y = bchr(0) * 16
-        self._mac = _galois.ghash
+
+        self._key = hash_subkey
+        self._exp_key = VoidPointer()
+        result = _raw_galois_lib.ghash_expand(self._key,
+                                              self._exp_key.address_of())
+        if result:
+            raise ValueError("Error %d while expanding the GMAC key" % result)
+        self._exp_key = SmartPointer(self._exp_key.get(),
+                                     _raw_galois_lib.ghash_destroy)
+
+        self._last_y = create_string_buffer(16)
+        for i in xrange(16):
+            self._last_y[i] = bchr(0)
+        self._mac = _raw_galois_lib.ghash
 
     def copy(self):
-        clone = _GHASH(self._hash_subkey, self._bs)
+        clone = _GHASH(self._key, self._bs)
         _SmoothMAC._deep_copy(self, clone)
         clone._last_y = self._last_y
         return clone
 
     def _update(self, block_data):
-        self._last_y = _galois.ghash(block_data, self._last_y,
-                                     self._hash_subkey)
+        result = _raw_galois_lib.ghash(self._last_y,
+                                       block_data,
+                                       len(block_data),
+                                       self._last_y,
+                                       self._exp_key.get())
+        if result:
+            raise ValueError("Error %d while updating GMAC" % result)
 
     def _digest(self, left_data):
-        return self._last_y
+        return get_raw_buffer(self._last_y)
 
 
 class ModeGCM(object):

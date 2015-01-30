@@ -25,14 +25,15 @@
  * =======================================================================
  */
 
-#include "pycrypto_common.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+
 #include "libtom/tomcrypt_cfg.h"
 #include "libtom/tomcrypt_custom.h"
 #include "libtom/tomcrypt_macros.h"
+#include "errors.h"
 
-#define MODULE_NAME _Salsa20
-#define BLOCK_SIZE 1
-#define KEY_SIZE 0
 #define ROUNDS 20
 #define MAX_KEY_SIZE 32
 
@@ -46,8 +47,6 @@ static const char tau[16]   = "expand 16-byte k";
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) (U32V((v) + (w)))
 #define PLUSONE(v) (PLUS((v),1))
-
-#define _MODULE_CUSTOM_FUNCTION _salsa20_8_core
 
 typedef struct 
 {
@@ -160,6 +159,29 @@ _salsa20_block(int rounds, uint32_t *input, uint8_t *output)
     }
 }
 
+static int little_endian(void) {
+    int test = 1;
+    return *((uint8_t*)&test) == 1;
+}
+
+uint32_t load_le_uint32(const uint8_t *in)
+{
+    union {
+        uint32_t w;
+        uint8_t b[4];
+    } x, y;
+
+    memcpy(&x, in, 4);
+    y = x;
+    if (!little_endian()) {
+        y.b[0] = x.b[3];
+        y.b[1] = x.b[2];
+        y.b[2] = x.b[1];
+        y.b[3] = x.b[0];
+    }
+    return y.w;
+}
+
 /*
  * Salsa20/8 Core function (combined with XOR)
  *
@@ -167,74 +189,48 @@ _salsa20_block(int rounds, uint32_t *input, uint8_t *output)
  * It creates a new 64-byte Python byte string with the result
  * of the expression salsa20_8(xor(x,y)).
  */
-static PyObject *
-ALG_salsa20_8_core(PyObject *self, PyObject *args, PyObject *kwdict)
+int Salsa20_8_core(const uint8_t *x, const uint8_t *y, uint8_t *out)
 {
-    PyObject *input_str;
-    PyObject *previous_input_str;
-    uint8_t *input_bytes;
-    uint8_t *previous_input_bytes;
-    uint8_t *output_bytes;
     uint32_t input_32[16];
-    PyObject *output;
     int i;
 
-    output = NULL;
+    if (NULL==x || NULL==y || NULL==out)
+        return ERR_NULL;
 
-    if (!PyArg_ParseTuple(args, "SS", &previous_input_str, &input_str)) {
-        goto out;
-    }
-
-    if (PyBytes_GET_SIZE(previous_input_str)!=64 ||
-            PyBytes_GET_SIZE(input_str)!=64) {
-        goto out;
-    }
-
-    output = PyBytes_FromStringAndSize(NULL, 64);
-    if (!output) {
-        goto out;
-    }
-
-    previous_input_bytes = (uint8_t*)PyBytes_AS_STRING(previous_input_str);
-    input_bytes = (uint8_t*)PyBytes_AS_STRING(input_str);
     for (i=0; i<16; i++) {
         uint32_t tmp;
 
-        U8TO32_LITTLE(tmp, &previous_input_bytes[i*4]);
-        U8TO32_LITTLE(input_32[i], &input_bytes[i*4]);
+        U8TO32_LITTLE(tmp, &x[i*4]);
+        U8TO32_LITTLE(input_32[i], &y[i*4]);
         input_32[i] ^= tmp;
     }
-    output_bytes = (uint8_t*)PyBytes_AS_STRING(output);
 
-    Py_BEGIN_ALLOW_THREADS;
-    _salsa20_block(8, input_32, output_bytes);
-    Py_END_ALLOW_THREADS;
-
-out:
-    return output;
+    _salsa20_block(8, input_32, out);
+    return 0;
 }
 
-static void
-stream_init (stream_state *self, unsigned char *key, int keylen,
-			 unsigned char *nonce, int nonce_len)
+int Salsa20_stream_init(uint8_t *key, size_t keylen,
+                        uint8_t *nonce, size_t nonce_len,
+                        stream_state **pSalsaState)
 {
     const char *constants;
     uint32_t *input;
+    stream_state *salsaState;
+
+    if (NULL == pSalsaState || NULL == key || NULL == nonce)
+        return ERR_NULL;
+
+    if (keylen != 16 && keylen != 32)
+        return ERR_KEY_SIZE;
+
+    if (nonce_len != 8)
+        return ERR_NONCE_SIZE;
     
-    if (keylen != 16 && keylen != 32) {
-        PyErr_SetString(PyExc_ValueError,
-            "Salsa20 key must be 16 or 32 bytes long");
-        return;
-    }
-    if (nonce_len != 8) {
-        char buf[160];
-        sprintf(buf, "Salsa20 nonce must be 8 bytes long"
-                     " (got %d)", nonce_len);
-        PyErr_SetString(PyExc_ValueError, buf);
-        return;
-    }
-    
-    input = self->input;
+    *pSalsaState = salsaState = calloc(1, sizeof(stream_state));
+    if (NULL == salsaState)
+        return ERR_MEMORY;
+
+    input = salsaState->input;
     
     U8TO32_LITTLE (input[1], key);
     U8TO32_LITTLE (input[2], key + 4);
@@ -264,27 +260,27 @@ stream_init (stream_state *self, unsigned char *key, int keylen,
     /* Block counter setup*/
     input[8]  = 0;
     input[9]  = 0;
-    self->blockindex = 64;
+    salsaState->blockindex = 64;
+    return 0;
 }
 
-/* Encryption and decryption are symmetric */
-#define stream_decrypt stream_encrypt	
-
-static void
-stream_encrypt (stream_state *self, unsigned char *buffer, int len)
+int Salsa20_stream_destroy(stream_state *salsaState)
 {
-    int i;
-    for (i = 0; i < len; ++i) {
-        if (self->blockindex == 64) {
-            self->blockindex = 0;
-            _salsa20_block(ROUNDS, self->input, self->block);
-        }
-        buffer[i] ^= self->block[self->blockindex];
-        self->blockindex ++;
-    }
+    free(salsaState);
+    return 0;
 }
 
-#define STREAM_CIPHER_NEEDS_NONCE
-#include "stream_template.c"
-
-/* vim:set ts=4 sw=4 sts=4 expandtab: */
+int Salsa20_stream_encrypt(stream_state *salsaState, const uint8_t in[],
+                           uint8_t out[], size_t len)
+{
+    unsigned i;
+    for (i = 0; i < len; ++i) {
+        if (salsaState->blockindex == 64) {
+            salsaState->blockindex = 0;
+            _salsa20_block(ROUNDS, salsaState->input, salsaState->block);
+        }
+        out[i] = in[i] ^ salsaState->block[salsaState->blockindex];
+        salsaState->blockindex++;
+    }
+    return 0;
+}

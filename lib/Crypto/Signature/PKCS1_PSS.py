@@ -68,7 +68,6 @@ from Crypto.Util.number import (
             ceil_shift, ceil_div, long_to_bytes, bytes_to_long
             )
 from Crypto.Util.strxor import strxor
-from Crypto.Hash import new as Hash_new
 
 class PSS_SigScheme:
     """This signature scheme can perform PKCS#1 PSS RSA signature or verification."""
@@ -205,11 +204,7 @@ def MGF1(mgfSeed, maskLen, hash):
     T = b("")
     for counter in xrange(ceil_div(maskLen, hash.digest_size)):
         c = long_to_bytes(counter, 4)
-        try:
-            T = T + hash.new(mgfSeed + c).digest()
-        except AttributeError:
-            # hash object doesn't have a "new" method.  Use Crypto.Hash.new() to instantiate it
-            T = T + Hash_new(hash, mgfSeed + c).digest()
+        T = T + hash.new(mgfSeed + c).digest()
     assert(len(T)>=maskLen)
     return T[:maskLen]
 
@@ -259,11 +254,7 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
     if randFunc and sLen>0:
         salt = randFunc(sLen)
     # Step 5 and 6
-    try:
-        h = mhash.new(bchr(0x00)*8 + mhash.digest() + salt)
-    except AttributeError:
-        # hash object doesn't have a "new" method.  Use Crypto.Hash.new() to instantiate it
-        h = Hash_new(mhash, bchr(0x00)*8 + mhash.digest() + salt)
+    h = mhash.new(bchr(0x00)*8 + mhash.digest() + salt)
     # Step 7 and 8
     db = bchr(0x00)*(emLen-sLen-mhash.digest_size-2) + bchr(0x01) + salt
     # Step 9
@@ -338,11 +329,7 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     salt = b("")
     if sLen: salt = db[-sLen:]
     # Step 12 and 13
-    try:
-        hp = mhash.new(bchr(0x00)*8 + mhash.digest() + salt).digest()
-    except AttributeError:
-        # hash object doesn't have a "new" method.  Use Crypto.Hash.new() to instantiate it
-        hp = Hash_new(mhash, bchr(0x00)*8 + mhash.digest() + salt).digest()
+    hp = mhash.new(bchr(0x00)*8 + mhash.digest() + salt).digest()
     # Step 14
     if h!=hp:
         return False

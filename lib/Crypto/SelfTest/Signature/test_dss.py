@@ -550,7 +550,7 @@ class Det_DSA_Tests(unittest.TestCase):
               "62e862272f"))
 
         # Test _bits2octets
-        h1 = SHA256.new("sample").digest()
+        h1 = SHA256.new(b("sample")).digest()
         self.assertEqual(hexlify(signer._bits2octets(h1)),
             b("01795edf0d54db760f156d0dac04c032"
               "2b3a204224"))

@@ -28,30 +28,41 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import os
-import imp
-from ctypes import CDLL
+"""
+Fast XOR of byte strings.
+"""
+
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  create_string_buffer, get_raw_buffer)
+
+_raw_strxor = load_pycryptodome_raw_lib("Crypto.Util._strxor",
+                    """
+                    void strxor(const uint8_t *in1,
+                                const uint8_t *in2,
+                                uint8_t *out, size_t len);
+                    void strxor_c(const uint8_t *in,
+                                  uint8_t c,
+                                  uint8_t *out,
+                                  size_t len);
+                    """)
 
 
-def _get_mod_name(name, c_extension):
+def strxor(term1, term2):
+    """Return term1 xored with term2.
+    The two byte strings must have equal length."""
 
-    comps = name.split(".")
-    if comps[0] != "Crypto":
-        raise ValueError("Only available for modules under 'Crypto'")
-
-    comps = comps[1:-1] + [comps[-1] + c_extension]
-
-    util_lib, _ = os.path.split(os.path.abspath(__file__))
-    root_lib = os.path.join(util_lib, "..")
-
-    return os.path.join(root_lib, *comps)
+    if len(term1) != len(term2):
+        raise ValueError("Only byte strings of equal length can be xored")
+    result = create_string_buffer(len(term1))
+    _raw_strxor.strxor(term1, term2, result, len(term1))
+    return get_raw_buffer(result)
 
 
-def get_CDLL(name):
-    for ext, mod, typ in imp.get_suffixes():
-        if typ == imp.C_EXTENSION:
-            try:
-                return CDLL(_get_mod_name(name, ext))
-            except OSError:
-                pass
-    raise OSError("Cannot load native module '%s' % name" % name)
+def strxor_c(term, c):
+    """Return term xored with a sequence of characters c."""
+
+    if not 0 <= c < 256:
+        raise ValueError("c must be in range(256)")
+    result = create_string_buffer(len(term))
+    _raw_strxor.strxor_c(term, c, result, len(term))
+    return get_raw_buffer(result)

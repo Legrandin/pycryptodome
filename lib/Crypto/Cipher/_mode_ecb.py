@@ -24,12 +24,25 @@
 Electronic Code Book (ECB) mode.
 """
 
-import os
-from ctypes import byref, c_void_p, create_string_buffer
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  VoidPointer, create_string_buffer,
+                                  get_raw_buffer, SmartPointer)
 
-from Crypto.Util._modules import get_CDLL
+raw_ecb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ecb", """
+                    int ECB_start_operation(void *cipher,
+                                            void **pResult);
+                    int ECB_encrypt(void *ecbState,
+                                    const uint8_t *in,
+                                    uint8_t *out,
+                                    size_t data_len);
+                    int ECB_decrypt(void *ecbState,
+                                    const uint8_t *in,
+                                    uint8_t *out,
+                                    size_t data_len);
+                    int ECB_stop_operation(void *state);
+                    """
+                                        )
 
-raw_ecb_lib = get_CDLL("Crypto.Cipher._raw_ecb")
 
 class RawEcbMode(object):
     """*Electronic Code Book (ECB)*.
@@ -51,16 +64,25 @@ class RawEcbMode(object):
 
         :Parameters:
           block_cipher : C pointer
-            A pointer to the low-level block cipher instance.
+            A smart pointer to the low-level block cipher instance.
         """
 
-        self._state = None
-        state = c_void_p()
-        result = raw_ecb_lib.ECB_start_operation(block_cipher,
-                                                 byref(state))
+        self._state = VoidPointer()
+        result = raw_ecb_lib.ECB_start_operation(block_cipher.get(),
+                                                 self._state.address_of())
         if result:
-            raise ValueError("Error %d while instatiating the ECB mode" % result)
-        self._state = state.value
+            raise ValueError("Error %d while instatiating the ECB mode"
+                             % result)
+
+        # Ensure that object disposal of this Python object will (eventually)
+        # free the memory allocated by the raw library for the cipher
+        # mode
+        self._state = SmartPointer(self._state.get(),
+                                   raw_ecb_lib.ECB_stop_operation)
+
+        # Memory allocated for the underlying block cipher is now owned
+        # by the cipher mode
+        block_cipher.release()
 
     def encrypt(self, plaintext):
         """Encrypt data with the key set at initialization.
@@ -88,10 +110,13 @@ class RawEcbMode(object):
         """
 
         ciphertext = create_string_buffer(len(plaintext))
-        result = raw_ecb_lib.ECB_encrypt(self._state, plaintext, ciphertext, len(plaintext))
+        result = raw_ecb_lib.ECB_encrypt(self._state.get(),
+                                         plaintext,
+                                         ciphertext,
+                                         len(plaintext))
         if result:
             raise ValueError("Error %d while encrypting in ECB mode" % result)
-        return ciphertext.raw
+        return get_raw_buffer(ciphertext)
 
     def decrypt(self, ciphertext):
         """Decrypt data with the key set at initialization.
@@ -120,22 +145,27 @@ class RawEcbMode(object):
         """
 
         plaintext = create_string_buffer(len(ciphertext))
-        result = raw_ecb_lib.ECB_decrypt(self._state, ciphertext, plaintext, len(ciphertext))
+        result = raw_ecb_lib.ECB_decrypt(self._state.get(),
+                                         ciphertext,
+                                         plaintext,
+                                         len(ciphertext))
         if result:
             raise ValueError("Error %d while decrypting in ECB mode" % result)
-        return plaintext.raw
+        return get_raw_buffer(plaintext)
 
-    def __del__(self):
-        if self._state:
-            raw_ecb_lib.ECB_stop_operation(self._state)
-            self._state  = None
 
 def _create_ecb_cipher(factory, **kwargs):
-    cipher_state, stop_op = factory._create_base_cipher(kwargs)
-    try:
-        if kwargs:
-            raise ValueError("Unknown parameters for ECB: %s" % str(kwargs))
-        return RawEcbMode(cipher_state)
-    except:
-        stop_op(cipher_state)
-        raise
+    """Instantiate a cipher object that performs ECB encryption/decryption.
+
+    :Parameters:
+      factory : module
+        The underlying block cipher, a module from ``Crypto.Cipher``.
+
+    All keywords are passed to the underlying block cipher.
+    See the relevant documentation for details (at least ``key`` will need
+    to be present"""
+
+    cipher_state = factory._create_base_cipher(kwargs)
+    if kwargs:
+        raise ValueError("Unknown parameters for ECB: %s" % str(kwargs))
+    return RawEcbMode(cipher_state)

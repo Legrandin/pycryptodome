@@ -25,6 +25,7 @@
  */
 
 #include "pycrypto_common.h"
+#include "block_base.h"
 
 /* Setting this will cause LibTomCrypt to return CRYPT_INVALID_ARG when its
  * assert-like LTC_ARGCHK macro fails. */
@@ -37,33 +38,7 @@ typedef struct {
     symmetric_key sk;
 } block_state;
 
-static void ltcseterr(int rc)
-{
-    /* error */
-    switch (rc) {
-    case CRYPT_INVALID_ARG:
-        PyErr_SetString(PyExc_AssertionError, "CRYPT_INVALID_ARG");
-        break;
-
-    case CRYPT_INVALID_KEYSIZE:
-#ifdef PCT_DES3_MODULE
-        PyErr_SetString(PyExc_ValueError, "Invalid key size (must be either 16 or 24 bytes long)");
-#else
-        PyErr_SetString(PyExc_ValueError, "Invalid key size (must be 8 bytes long)");
-#endif
-        break;
-
-    case CRYPT_INVALID_ROUNDS:
-        PyErr_SetString(PyExc_ValueError, "Invalid number of rounds specified");
-        break;
-
-    default:
-        PyErr_Format(PyExc_RuntimeError,
-            "unexpected run-time error (LTC#%d)", rc);
-    }
-}
-
-static void block_init(block_state *self, unsigned char *key, int keylen)
+static int block_init(block_state *self, unsigned char *key, int keylen)
 {
     int rc;
 #ifdef PCT_DES3_MODULE
@@ -71,9 +46,17 @@ static void block_init(block_state *self, unsigned char *key, int keylen)
 #else
     rc = des_setup(key, keylen, 0, &self->sk);
 #endif
-    if (rc != CRYPT_OK) {
-        ltcseterr(rc);
+    switch (rc) {
+    case CRYPT_OK:
+        return 0;
+    case CRYPT_INVALID_KEYSIZE:
+        return ERR_KEY_SIZE;
+    case CRYPT_INVALID_ROUNDS:
+        return ERR_NR_ROUNDS;
+    case CRYPT_INVALID_ARG:
+        return ERR_UNKNOWN;
     }
+    return ERR_UNKNOWN;
 }
 
 static void block_finalize(block_state *self)

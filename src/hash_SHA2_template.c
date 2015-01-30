@@ -32,6 +32,11 @@
 
 #include "pycrypto_common.h"
 
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+
+#define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
+
 /* compress one block  */
 static void sha_compress(hash_state * hs)
 {
@@ -98,16 +103,37 @@ static int add_length(hash_state *hs, sha2_word_t inc) {
 }
 
 /* init the SHA state */
-static void sha_init(hash_state * hs)
+int FUNC_NAME(_init) (hash_state **shaState)
 {
     int i;
+    hash_state *hs;
+
+    if (NULL == shaState) {
+        return ERR_NULL;
+    }
+
+    *shaState = hs = (hash_state*) calloc(1, sizeof(hash_state));
+    if (NULL == hs)
+        return ERR_MEMORY;
+
     hs->curlen = hs->length_upper = hs->length_lower = 0;
     for (i = 0; i < 8; ++i)
         hs->state[i] = H[i];
+    return 0;
 }
 
-static void sha_process(hash_state * hs, unsigned char *buf, int len)
+int FUNC_NAME(_destroy) (hash_state *shaState)
 {
+    free(shaState);
+    return 0;
+}
+
+int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
+{
+    if (NULL == hs || NULL == buf) {
+        return ERR_NULL;
+    }
+
     while (len--) {
         /* copy byte */
         hs->buf[hs->curlen++] = *buf++;
@@ -119,11 +145,12 @@ static void sha_process(hash_state * hs, unsigned char *buf, int len)
             hs->curlen = 0;
         }
     }
+    return 0;
 }
 
-static void sha_done(hash_state * hs, unsigned char *hash)
+static int sha_finalize(hash_state *hs, uint8_t hash[DIGEST_SIZE])
 {
-    int i;
+    unsigned i;
 
     /* increase the length of the message */
     add_length(hs, hs->curlen * 8);
@@ -159,34 +186,28 @@ static void sha_done(hash_state * hs, unsigned char *hash)
     for (i = 0; i < DIGEST_SIZE; i++)
         hash[i] = (hs->state[i / WORD_SIZE] >> 
                    ((WORD_SIZE - 1 - (i % WORD_SIZE)) * 8)) & 0xFF;
+    return 0;
 }
 
-static void hash_init (hash_state *ptr)
+int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
 {
-	sha_init(ptr);
+    hash_state temp;
+
+    if (NULL == shaState) {
+        return ERR_NULL;
+    }
+
+    temp = *shaState;
+    sha_finalize(&temp, digest);
+    return 0;
 }
 
-static void
-hash_update (hash_state *self, const U8 *buf, int len)
+int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
 {
-	sha_process(self,(unsigned char *)buf, len);
+    if (NULL == src || NULL == dst) {
+        return ERR_NULL;
+    }
+
+    *dst = *src;
+    return 0;
 }
-
-static void
-hash_copy(hash_state *src, hash_state *dest)
-{
-	memcpy(dest,src,sizeof(hash_state));
-}
-
-static PyObject *
-hash_digest (const hash_state *self)
-{
-	unsigned char digest[DIGEST_SIZE];
-	hash_state temp;
-
-	hash_copy((hash_state*)self,&temp);
-	sha_done(&temp,digest);
-	return PyBytes_FromStringAndSize((char *)digest, DIGEST_SIZE);
-}
-
-#include "hash_template.c"

@@ -1,4 +1,3 @@
-
 /*
  *  md4.c : MD4 hash algorithm.
  *
@@ -26,44 +25,16 @@
  *
  */
 
-#include "pycrypto_common.h"
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define MODULE_NAME MD4
-#define DIGEST_SIZE 16
-#define BLOCK_SIZE 64
-
-static char MODULE__doc__[] =
-    "MD4 cryptographic hash algorithm.\n"
-    "\n"
-    "MD4 is specified in RFC1320_ and produces the 128 bit digest of a message.\n"
-    "\n"
-    "    >>> from Crypto.Hash import MD4\n"
-    "    >>>\n"
-    "    >>> h = MD4.new()\n"
-    "    >>> h.update(b'Hello')\n"
-    "    >>> print h.hexdigest()\n"
-    "\n"
-    "MD4 stand for Message Digest version 4, and it was invented by Rivest in 1990.\n"
-    "\n"
-    "This algorithm is insecure. Do not use it for new designs.\n"
-    "\n"
-    ".. _RFC1320: http://tools.ietf.org/html/rfc1320\n"
-    "\n"
-    ":Variables:\n"
-    " block_size\n"
-    "    The internal block size of the hash algorithm in bytes.\n"
-    " digest_size\n"
-    "    The size of the resulting hash in bytes.\n";
-
-typedef uint32_t U32;
-typedef uint8_t U8;
-#define U32_MAX (U32)4294967295
+#include "errors.h"
 
 typedef struct {
-	U32 A,B,C,D, count;
-	U32 len1, len2;
-	U8 buf[64];
+	uint32_t A,B,C,D, count;
+	uint32_t len1, len2;
+	uint8_t buf[64];
 } hash_state;
 
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
@@ -73,58 +44,75 @@ typedef struct {
 /* ROTATE_LEFT rotates x left n bits */
 #define ROL(x, n) (((x) << n) | ((x) >> (32-n) ))
 
-static void 
-hash_init (hash_state *ptr)
+int md4_init (hash_state **md4State)
 {
-	ptr->A=(U32)0x67452301;
-	ptr->B=(U32)0xefcdab89;
-	ptr->C=(U32)0x98badcfe;
-	ptr->D=(U32)0x10325476;
-	ptr->count=ptr->len1=ptr->len2=0;
+    hash_state *hs;
+    
+    if (NULL == md4State) {
+        return ERR_NULL;
+    }
+
+    *md4State = hs = (hash_state*) calloc(1, sizeof(hash_state));
+    if (NULL == hs)
+        return ERR_MEMORY;
+ 
+    hs->A=0x67452301;
+    hs->B=0xefcdab89;
+    hs->C=0x98badcfe;
+    hs->D=0x10325476;
+
+    return 0;
 }
 
-static void
-hash_copy(hash_state *src, hash_state *dest)
+int md4_destroy(hash_state *hs)
 {
-	dest->len1=src->len1;
-	dest->len2=src->len2;
-	dest->A=src->A;
-	dest->B=src->B;
-	dest->C=src->C;
-	dest->D=src->D;
-	dest->count=src->count;  
-	memcpy(dest->buf, src->buf, dest->count);
+    free(hs);
+    return 0;
 }
 
-static void 
-hash_update (hash_state *self, const U8 *buf, U32 len)
+int md4_copy(const hash_state *src, hash_state *dst)
 {
-	U32 L;
+    if (NULL == src || NULL == dst) {
+        return ERR_NULL;
+    }
 
-	if ((self->len1+(len<<3))<self->len1)
+    *dst = *src;
+    return 0;
+}
+
+int md4_update(hash_state *hs, const uint8_t *buf, size_t len)
+{
+	uint32_t L;
+
+        if (NULL == hs || NULL == buf)
+            return ERR_NULL;
+	
+        if ((hs->len1+(len<<3))<hs->len1)
 	{
-		self->len2++;
+		hs->len2++;
 	}
-	self->len1+=len<< 3;
-	self->len2+=len>>29;
+	hs->len1+=len<< 3;
+	hs->len2+=len>>29;
 	while (len>0) 
 	{
-		L=(64-self->count) < len ? (64-self->count) : len;
-		memcpy(self->buf+self->count, buf, L);
-		self->count+=L;
+		L=(64-hs->count) < len ? (64-hs->count) : len;
+		memcpy(hs->buf+hs->count, buf, L);
+		hs->count+=L;
 		buf+=L;
 		len-=L;
-		if (self->count==64) 
+		if (hs->count==64) 
 		{
-			U32 X[16], A, B, C, D;
+			uint32_t X[16], A, B, C, D;
 			int i,j;
-			self->count=0;
+			hs->count=0;
 			for(i=j=0; j<16; i+=4, j++) 
-				X[j]=((U32)self->buf[i]       + ((U32)self->buf[i+1]<<8) +
-				      ((U32)self->buf[i+2]<<16) + ((U32)self->buf[i+3]<<24));
+				X[j]=((uint32_t)hs->buf[i]       +
+                                      ((uint32_t)hs->buf[i+1]<<8) +
+				      ((uint32_t)hs->buf[i+2]<<16) +
+                                      ((uint32_t)hs->buf[i+3]<<24));
 
 
-			A=self->A; B=self->B; C=self->C; D=self->D;
+			A=hs->A; B=hs->B; C=hs->C; D=hs->D;
 
 #define function(a,b,c,d,k,s) a=ROL(a+F(b,c,d)+X[k],s);	 
 			function(A,B,C,D, 0, 3);
@@ -145,7 +133,7 @@ hash_update (hash_state *self, const U8 *buf, U32 len)
 			function(B,C,D,A,15,19);
 
 #undef function	  
-#define function(a,b,c,d,k,s) a=ROL(a+G(b,c,d)+X[k]+(U32)0x5a827999,s);	 
+#define function(a,b,c,d,k,s) a=ROL(a+G(b,c,d)+X[k]+(uint32_t)0x5a827999,s);	 
 			function(A,B,C,D, 0, 3);
 			function(D,A,B,C, 4, 5);
 			function(C,D,A,B, 8, 9);
@@ -164,7 +152,7 @@ hash_update (hash_state *self, const U8 *buf, U32 len)
 			function(B,C,D,A,15,13);
 
 #undef function	 
-#define function(a,b,c,d,k,s) a=ROL(a+H(b,c,d)+X[k]+(U32)0x6ed9eba1,s);	 
+#define function(a,b,c,d,k,s) a=ROL(a+H(b,c,d)+X[k]+(uint32_t)0x6ed9eba1,s);	 
 			function(A,B,C,D, 0, 3);
 			function(D,A,B,C, 8, 9);
 			function(C,D,A,B, 4,11);
@@ -182,19 +170,19 @@ hash_update (hash_state *self, const U8 *buf, U32 len)
 			function(C,D,A,B, 7,11);
 			function(B,C,D,A,15,15);
 
-			self->A+=A; self->B+=B; self->C+=C; self->D+=D;
+			hs->A+=A; hs->B+=B; hs->C+=C; hs->D+=D;
 		}
 	}
+
+        return 0;
 }
 
-static PyObject *
-hash_digest (const hash_state *self)
+int md4_digest(const hash_state *hs, uint8_t digest[16])
 {
-	U8 digest[16];
-	static U8 s[8];
-	U32 padlen, oldlen1, oldlen2;
+	static uint8_t s[8];
+	uint32_t padlen, oldlen1, oldlen2;
 	hash_state temp;
-	static U8 padding[64] = {
+	static const uint8_t padding[64] = {
 		0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -205,10 +193,13 @@ hash_digest (const hash_state *self)
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 	};
 
-	memcpy(&temp, self, sizeof(hash_state));
+        if (NULL==hs || NULL==digest)
+            return ERR_NULL;
+
+        temp = *hs;
 	oldlen1=temp.len1; oldlen2=temp.len2;  /* Save current length */
-	padlen= (56<=self->count) ? 56-self->count+64: 56-self->count;
-	hash_update(&temp, padding, padlen);
+	padlen= (56<=hs->count) ? 56-hs->count+64: 56-hs->count;
+	md4_update(&temp, padding, padlen);
 	s[0]= oldlen1       & 255;
 	s[1]=(oldlen1 >>  8) & 255;
 	s[2]=(oldlen1 >> 16) & 255;
@@ -217,7 +208,7 @@ hash_digest (const hash_state *self)
 	s[5]=(oldlen2 >>  8) & 255;
 	s[6]=(oldlen2 >> 16) & 255;
 	s[7]=(oldlen2 >> 24) & 255;
-	hash_update(&temp, s, 8);
+	md4_update(&temp, s, 8);
   
 	digest[ 0]= temp.A        & 255;
 	digest[ 1]=(temp.A >>  8) & 255;
@@ -235,8 +226,6 @@ hash_digest (const hash_state *self)
 	digest[13]=(temp.D >>  8) & 255;
 	digest[14]=(temp.D >> 16) & 255;
 	digest[15]=(temp.D >> 24) & 255;
-  
-	return PyBytes_FromStringAndSize((char *) digest, 16);
-}
 
-#include "hash_template.c"
+        return 0;
+}

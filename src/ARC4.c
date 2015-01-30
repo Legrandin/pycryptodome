@@ -1,4 +1,3 @@
-
 /*
  *  arc4.c : Implementation for the Alleged-RC4 stream cipher
  *
@@ -26,65 +25,76 @@
  *
  */
 
-#include "pycrypto_common.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include "errors.h"
 
-#define MODULE_NAME _ARC4
-#define BLOCK_SIZE 1
-#define KEY_SIZE 0
-
-typedef struct 
+typedef struct
 {
-	unsigned char state[256];
-	unsigned char x,y;
+    unsigned char state[256];
+    unsigned char x,y;
 } stream_state;
 
-/* Encryption and decryption are symmetric */
-#define stream_decrypt stream_encrypt	
-
-static void stream_encrypt(stream_state *self, unsigned char *block, 
-			   int len)
+int ARC4_stream_encrypt(stream_state *rc4State, const uint8_t in[], uint8_t out[], size_t len)
 {
-	register int i, x=self->x, y=self->y;
+    int i, x=rc4State->x, y=rc4State->y;
 
-	for (i=0; i<len; i++) 
-	{
-		x = (x + 1) % 256;
-		y = (y + self->state[x]) % 256;
-		{
-			register int t;		/* Exchange state[x] and state[y] */
-			t = self->state[x];
-			self->state[x] = self->state[y];
-			self->state[y] = t;
-		}
-		{
-			register int xorIndex;	/* XOR the data with the stream data */
-			xorIndex=(self->state[x]+self->state[y]) % 256;
-			block[i] ^= self->state[xorIndex];
-		}
-	}
-	self->x=x;
-	self->y=y;
+    for (i=0; i<len; i++)
+    {
+        x = (x + 1) % 256;
+        y = (y + rc4State->state[x]) % 256;
+        {
+            int t;      /* Exchange state[x] and state[y] */
+            t = rc4State->state[x];
+            rc4State->state[x] = rc4State->state[y];
+            rc4State->state[y] = t;
+        }
+        {
+            int xorIndex;   /* XOR the data with the stream data */
+            xorIndex=(rc4State->state[x]+rc4State->state[y]) % 256;
+            out[i] = in[i] ^ rc4State->state[xorIndex];
+        }
+    }
+    rc4State->x=x;
+    rc4State->y=y;
+    return 0;
 }
 
 
-static void stream_init(stream_state *self, unsigned char *key, int keylen)
+int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4State)
 {
-	register int i, index1, index2;
+    int i, index1, index2;
+    stream_state *rc4State;
 
-	for(i=0; i<256; i++) self->state[i]=i;
-	self->x=0; self->y=0;
-	index1=0; index2=0;
-	for(i=0; i<256; i++) 
-	{
-		register int t;
-		index2 = ( key[index1] + self->state[i] + index2) % 256;
-		t = self->state[i];
-		self->state[i] = self->state[index2];
-		self->state[index2] = t;
-		index1 = (index1 + 1) % keylen;
-	}
+    if (NULL == pRc4State || NULL == key)
+        return ERR_NULL;
+
+    *pRc4State = rc4State = calloc(1, sizeof(stream_state));
+    if (NULL == rc4State)
+        return ERR_MEMORY;
+
+    for(i=0; i<256; i++)
+        rc4State->state[i]=i;
+
+    rc4State->x=0;
+    rc4State->y=0;
+
+    index1=0;
+    index2=0;
+    for(i=0; i<256; i++)
+    {
+        int t;
+        index2 = ( key[index1] + rc4State->state[i] + index2) % 256;
+        t = rc4State->state[i];
+        rc4State->state[i] = rc4State->state[index2];
+        rc4State->state[index2] = t;
+        index1 = (index1 + 1) % keylen;
+    }
+    return 0;
 }
-     
-#include "stream_template.c"
 
-  
+int ARC4_stream_destroy(stream_state *rc4State)
+{
+    free(rc4State);
+    return 0;
+}
