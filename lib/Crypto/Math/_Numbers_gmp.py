@@ -28,23 +28,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import tobytes, b, bchr
 
+from Crypto.Util._raw_api import (load_lib,
+                                  get_raw_buffer, get_c_string,
+                                  null_pointer, create_string_buffer,
+                                  c_ulong, c_size_t)
 
-class _GMP(object):
-    pass
-_gmp = _GMP()
-
-try:
-    from cffi import FFI
-
-    ffi = FFI()
-    try:
-        lib = ffi.dlopen("gmp")
-    except OSError, desc:
-        raise ImportError("Cannot load GMP library (%s)" % desc)
-
-    ffi.cdef("""
+lib = load_lib(
+        "gmp",
+        """
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
         typedef unsigned long        mp_bitcnt_t;
@@ -62,7 +55,8 @@ try:
         void __gmpz_submul_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
         void __gmpz_import (mpz_t rop, size_t count, int order, size_t size,
                             int endian, size_t nails, const void *op);
-        void * __gmpz_export (void *rop, size_t *countp, int order, size_t size,
+        void * __gmpz_export (void *rop, size_t *countp, int order,
+                              size_t size,
                               int endian, size_t nails, const mpz_t op);
         size_t __gmpz_sizeinbase (const mpz_t op, int base);
         void __gmpz_sub (mpz_t rop, const mpz_t op1, const mpz_t op2);
@@ -86,67 +80,48 @@ try:
         int __gmpz_perfect_square_p (const mpz_t op);
         int __gmpz_jacobi (const mpz_t a, const mpz_t b);
         void __gmpz_gcd (mpz_t rop, const mpz_t op1, const mpz_t op2);
-        unsigned long __gmpz_gcd_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
+        unsigned long __gmpz_gcd_ui (mpz_t rop, const mpz_t op1,
+                                     unsigned long op2);
         int __gmpz_invert (mpz_t rop, const mpz_t op1, const mpz_t op2);
         int __gmpz_divisible_p (const mpz_t n, const mpz_t d);
         int __gmpz_divisible_ui_p (const mpz_t n, unsigned long d);
         """)
 
-    null_pointer = ffi.NULL
-
-    def c_ulong(x):
-        return x
-
-    def c_size_t(x):
-        return x
-
-    def new_mpz():
-        return ffi.new("MPZ*")
-
-    def create_string_buffer(size):
-        return ffi.new("char[]", size)
-
-    def get_c_string(c_string):
-        return ffi.string(c_string)
-
-    def get_raw_buffer(buf):
-        return ffi.buffer(buf)[:]
-
-except ImportError:
-
-    from ctypes import (CDLL, Structure, c_void_p, c_ulong, c_int,
-                        byref, c_size_t, create_string_buffer)
-    from ctypes.util import find_library
-
-    gmp_lib_path = find_library("gmp")
-    if gmp_lib_path is None:
-        raise ImportError("Cannot find GMP library")
-    try:
-        lib = CDLL(gmp_lib_path)
-    except OSError, desc:
-        raise ImportError("Cannot load GMP library (%s)" % desc)
+# In order to create a function that returns a pointer to
+# a new MPZ structure, we need to break the abstraction
+# and know exactly what ffi backend we have
+from ctypes import c_ulong as _c_ulong
+if c_ulong is _c_ulong:
+    # We are using ctypes
+    from ctypes import Structure, c_int, c_void_p, byref
 
     class _MPZ(Structure):
         _fields_ = [('_mp_alloc', c_int),
                     ('_mp_size', c_int),
                     ('_mp_d', c_void_p)]
 
-    null_pointer = None
-
     def new_mpz():
         return byref(_MPZ())
 
-    def get_c_string(c_string):
-        return c_string.value
+else:
+    # We are using CFFI
+    from Crypto.Util._raw_api import ffi
 
-    def get_raw_buffer(buf):
-        return buf.raw
+    def new_mpz():
+        return ffi.new("MPZ*")
+
 
 # Unfortunately, all symbols exported by the GMP library start with "__"
 # and have no trailing underscore.
 # You cannot directly refer to them as members of the ctypes' library
 # object from within any class because Python will replace the double
 # underscore with "_classname_".
+
+
+class _GMP(object):
+    pass
+_gmp = _GMP()
+
 _gmp = _GMP()
 _gmp.mpz_init_set = lib.__gmpz_init_set
 _gmp.mpz_init_set_ui = lib.__gmpz_init_set_ui

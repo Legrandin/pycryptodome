@@ -40,7 +40,7 @@ try:
     def load_lib(name, cdecl):
         """Load a shared library and return a handle to it.
 
-        @name,  either an abdolute path or the name of a library
+        @name,  either an absolute path or the name of a library
                 in the system search path.
 
         @cdecl, the C function declarations.
@@ -86,10 +86,16 @@ try:
 except ImportError:
     from ctypes import (CDLL, c_void_p, byref, c_ulong, c_size_t,
                         create_string_buffer)
+    from ctypes.util import find_library
 
     null_pointer = None
 
     def load_lib(name, cdecl):
+        if "." not in name:
+            full_name = find_library(name)
+            if full_name is None:
+                raise OSError("Cannot load library '%s'" % name)
+            name = full_name
         return CDLL(name)
 
     def get_c_string(c_string):
