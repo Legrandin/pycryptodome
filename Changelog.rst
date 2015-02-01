@@ -8,14 +8,19 @@ New features
 ------------
 
 * Speed up execution of Public Key algorithms on PyPy, when backed
-  by libgmp.
+  by the Gnu Multiprecision (GMP) library.
+* GMP headers and static libraries are not required anymore at the time
+  PyCryptodome is built. Instead, the code will automatically use the
+  GMP dynamic library (.so/.DLL) if found in the system at runtime.
+* Reduced the amount of C code by almost 40% (4700 lines).
+  Modularized and simplified all code (C and Python) related to block ciphers.
+  Pycryptodome is now free of CPython extensions.
+* RSA key generation complies to FIPS 186-4.
 
 Resolved issues
 ---------------
 
-* GMP headers and static libraries are not required anymore at the time
-  PyCryptodome is built. Instead, the code will automatically use the
-  GMP dynamic library (.so/.DLL) if found in the system at runtime.
+* None
 
 Breaks in compatibility
 -----------------------
@@ -25,6 +30,8 @@ Breaks in compatibility
   ``Crypto.Util.Counter``. It cannot be a generic callable anymore.
 * Removed the ``Crypto.Random.Fortuna`` package (due to lack of test vectors).
 * Removed the ``Crypto.Hash.new`` function.
+* The ``allow_wraparound`` parameter of ``Crypto.Util.Counter`` is ignored.
+  An exception is always generated if the counter is reused.
 
 3.0
 +++
