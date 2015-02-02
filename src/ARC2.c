@@ -226,7 +226,7 @@ block_finalize(block_state* self)
 #define NON_STANDARD_START_OPERATION
 #include "block_common.c"
 
-int ARC2_start_operation(const uint8_t key[], size_t key_len, size_t effective_key_len, ARC2_State **pResult)
+EXPORT_SYM int ARC2_start_operation(const uint8_t key[], size_t key_len, size_t effective_key_len, ARC2_State **pResult)
 {
     BlockBase *block_base;
 

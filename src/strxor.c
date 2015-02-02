@@ -33,13 +33,13 @@
 
 FAKE_INIT(strxor)
 
-void strxor(const uint8_t *in1, const uint8_t *in2, uint8_t *out, size_t len)
+EXPORT_SYM void strxor(const uint8_t *in1, const uint8_t *in2, uint8_t *out, size_t len)
 {
     for (; len>0; len--)
         *out++ = *in1++ ^ *in2++;
 }
 
-void strxor_c(const uint8_t *in, uint8_t c, uint8_t *out, size_t len)
+EXPORT_SYM void strxor_c(const uint8_t *in, uint8_t c, uint8_t *out, size_t len)
 {
     for (; len>0; len--)
         *out++ = *in++ ^ c;

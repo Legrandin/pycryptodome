@@ -42,7 +42,7 @@ typedef struct {
     uint8_t iv[0];
 } CbcModeState;
 
-int CBC_start_operation(BlockBase *cipher,
+EXPORT_SYM int CBC_start_operation(BlockBase *cipher,
                     const uint8_t iv[],
                     size_t iv_len,
                     CbcModeState **pResult) {
@@ -66,7 +66,7 @@ int CBC_start_operation(BlockBase *cipher,
     return 0;
 }
 
-int CBC_encrypt(CbcModeState *cbcState,
+EXPORT_SYM int CBC_encrypt(CbcModeState *cbcState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -107,7 +107,7 @@ int CBC_encrypt(CbcModeState *cbcState,
     return 0;
 }
 
-int CBC_decrypt(CbcModeState *cbcState,
+EXPORT_SYM int CBC_decrypt(CbcModeState *cbcState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -149,7 +149,7 @@ int CBC_decrypt(CbcModeState *cbcState,
 }
 
 
-int CBC_stop_operation(CbcModeState *state)
+EXPORT_SYM int CBC_stop_operation(CbcModeState *state)
 {
     state->cipher->destructor(state->cipher);
     free(state);

@@ -41,7 +41,6 @@ from Crypto.Util.py3compat import *
 
 from Crypto.Math.Numbers import Integer as IntegerGeneric
 from Crypto.Math import _Numbers_int as NumbersInt
-from Crypto.Math import _Numbers_gmp as NumbersGMP
 
 
 class TestIntegerBase(unittest.TestCase):
@@ -583,7 +582,7 @@ def get_tests(config={}):
     try:
         from Crypto.Math._Numbers_gmp import Integer as IntegerGMP
         tests += list_test_cases(TestIntegerGMP)
-    except ImportError:
+    except (ImportError, OSError):
         print "Skipping GMP tests"
     tests += list_test_cases(TestIntegerGeneric)
     return tests

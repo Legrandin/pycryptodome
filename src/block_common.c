@@ -71,7 +71,7 @@ static int CIPHER_DECRYPT
     return 0;
 }
 
-int CIPHER_STOP_OPERATION(BlockBase *state)
+EXPORT_SYM int CIPHER_STOP_OPERATION(BlockBase *state)
 {
     if (NULL == state)
         return ERR_NULL;
@@ -82,7 +82,7 @@ int CIPHER_STOP_OPERATION(BlockBase *state)
 }
 
 #ifndef NON_STANDARD_START_OPERATION
-int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHER_STATE_TYPE **pResult)
+EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHER_STATE_TYPE **pResult)
 {
     BlockBase *block_base;
 

@@ -50,6 +50,9 @@ typedef unsigned __int64 uint64_t;
 
 #include "errors.h"
 
+/*
+ * On Windows, distutils expects that a CPython module always exports the symbol init${MODNAME}
+ */
 #ifdef _MSC_VER
 #include <Python.h>
 #ifdef IS_PY3K
@@ -62,4 +65,13 @@ typedef unsigned __int64 uint64_t;
 #define FAKE_INIT(x)
 #endif
 
+/*
+ * On Windows, functions must be explicitly marked for export.
+ */
+#ifdef _MSC_VER
+#define EXPORT_SYM __declspec(dllexport)
+#else
+#define EXPORT_SYM
+#endif
+ 
 #endif /* PYCRYPTO_COMMON_H */

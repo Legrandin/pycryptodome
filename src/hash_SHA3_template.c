@@ -34,7 +34,7 @@ FAKE_INIT(MODULE_NAME)
 
 typedef keccak_state hash_state;
 
-int FUNC_NAME(_init) (hash_state **shaState)
+EXPORT_SYM int FUNC_NAME(_init) (hash_state **shaState)
 {   
     hash_state *hs;
 
@@ -50,13 +50,13 @@ int FUNC_NAME(_init) (hash_state **shaState)
     return 0;
 }
 
-int FUNC_NAME(_destroy) (hash_state *shaState)
+EXPORT_SYM int FUNC_NAME(_destroy) (hash_state *shaState)
 {
     free(shaState);
     return 0;
 }
 
-int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
+EXPORT_SYM int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
 {
     if (NULL == hs || NULL == buf) {
         return ERR_NULL;
@@ -65,7 +65,7 @@ int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
     return 0;
 }
 
-int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
+EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;
@@ -77,7 +77,7 @@ int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
     return 0;
 }
 
-int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
+EXPORT_SYM int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
 {
     hash_state tmp;
 

@@ -34,7 +34,7 @@ from Crypto import Random
 try:
     from Crypto.Math._Numbers_gmp import Integer
     _implementation = "gmp"
-except ImportError:
+except (ImportError, OSError):
     from Crypto.Math._Numbers_int import Integer
     _implementation = "python"
 

@@ -85,7 +85,7 @@ static void increment_be(uint8_t *pCounter, size_t counter_len) {
     }
 }
 
-int CTR_start_operation(BlockBase *cipher,
+EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
                     uint8_t   initialCounterBlock[],
                     size_t    initialCounterBlock_len,
                     size_t    prefix_len,
@@ -125,7 +125,7 @@ int CTR_start_operation(BlockBase *cipher,
     return 0;
 }
 
-int CTR_encrypt(CtrModeState *ctrState,
+EXPORT_SYM int CTR_encrypt(CtrModeState *ctrState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -176,14 +176,14 @@ int CTR_encrypt(CtrModeState *ctrState,
     return 0;
 }
 
-int CTR_decrypt(CtrModeState *ctrState,
+EXPORT_SYM int CTR_decrypt(CtrModeState *ctrState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
     return CTR_encrypt(ctrState, in, out, data_len);
 }
 
-int CTR_stop_operation(CtrModeState *ctrState)
+EXPORT_SYM int CTR_stop_operation(CtrModeState *ctrState)
 {
     if (NULL == ctrState)
         return ERR_NULL;

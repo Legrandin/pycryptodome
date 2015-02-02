@@ -37,7 +37,7 @@ FAKE_INIT(raw_ecb)
 
 typedef BlockBase EcbModeState;
 
-int ECB_start_operation(BlockBase *cipher,
+EXPORT_SYM int ECB_start_operation(BlockBase *cipher,
                     EcbModeState **pResult) {
 
     if ((NULL == cipher) || (NULL == pResult)) {
@@ -48,7 +48,7 @@ int ECB_start_operation(BlockBase *cipher,
     return 0;
 }
 
-int ECB_encrypt(EcbModeState *ecbState,
+EXPORT_SYM int ECB_encrypt(EcbModeState *ecbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -78,7 +78,7 @@ int ECB_encrypt(EcbModeState *ecbState,
     return 0;
 }
 
-int ECB_decrypt(EcbModeState *ecbState,
+EXPORT_SYM int ECB_decrypt(EcbModeState *ecbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -109,7 +109,7 @@ int ECB_decrypt(EcbModeState *ecbState,
 }
 
 
-int ECB_stop_operation(EcbModeState *state)
+EXPORT_SYM int ECB_stop_operation(EcbModeState *state)
 {
     state->destructor((BlockBase*)state);
     return 0;

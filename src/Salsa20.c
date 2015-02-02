@@ -163,7 +163,7 @@ static int little_endian(void) {
     return *((uint8_t*)&test) == 1;
 }
 
-uint32_t load_le_uint32(const uint8_t *in)
+EXPORT_SYM uint32_t load_le_uint32(const uint8_t *in)
 {
     union {
         uint32_t w;
@@ -188,7 +188,7 @@ uint32_t load_le_uint32(const uint8_t *in)
  * It creates a new 64-byte Python byte string with the result
  * of the expression salsa20_8(xor(x,y)).
  */
-int Salsa20_8_core(const uint8_t *x, const uint8_t *y, uint8_t *out)
+EXPORT_SYM int Salsa20_8_core(const uint8_t *x, const uint8_t *y, uint8_t *out)
 {
     uint32_t input_32[16];
     int i;
@@ -208,7 +208,7 @@ int Salsa20_8_core(const uint8_t *x, const uint8_t *y, uint8_t *out)
     return 0;
 }
 
-int Salsa20_stream_init(uint8_t *key, size_t keylen,
+EXPORT_SYM int Salsa20_stream_init(uint8_t *key, size_t keylen,
                         uint8_t *nonce, size_t nonce_len,
                         stream_state **pSalsaState)
 {
@@ -263,13 +263,13 @@ int Salsa20_stream_init(uint8_t *key, size_t keylen,
     return 0;
 }
 
-int Salsa20_stream_destroy(stream_state *salsaState)
+EXPORT_SYM int Salsa20_stream_destroy(stream_state *salsaState)
 {
     free(salsaState);
     return 0;
 }
 
-int Salsa20_stream_encrypt(stream_state *salsaState, const uint8_t in[],
+EXPORT_SYM int Salsa20_stream_encrypt(stream_state *salsaState, const uint8_t in[],
                            uint8_t out[], size_t len)
 {
     unsigned i;

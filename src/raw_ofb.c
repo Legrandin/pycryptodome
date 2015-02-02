@@ -21,7 +21,7 @@ static unsigned min_ab(unsigned a, unsigned b) {
     return a < b ? a : b;
 }
 
-int OFB_start_operation(BlockBase *cipher,
+EXPORT_SYM int OFB_start_operation(BlockBase *cipher,
                     const uint8_t iv[],
                     size_t iv_len,
                     OfbModeState **pResult) {
@@ -46,7 +46,7 @@ int OFB_start_operation(BlockBase *cipher,
     return 0;
 }
 
-int OFB_encrypt(OfbModeState *ofbState,
+EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -90,14 +90,14 @@ int OFB_encrypt(OfbModeState *ofbState,
     return 0;
 }
 
-int OFB_decrypt(OfbModeState *ofbState,
+EXPORT_SYM int OFB_decrypt(OfbModeState *ofbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
     return OFB_encrypt(ofbState, in, out, data_len);
 }
 
-int OFB_stop_operation(OfbModeState *state)
+EXPORT_SYM int OFB_stop_operation(OfbModeState *state)
 {
     state->cipher->destructor(state->cipher);
     free(state);

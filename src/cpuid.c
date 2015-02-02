@@ -40,7 +40,7 @@ FAKE_INIT(cpuid)
 #endif
 
 /** Return 1 if the CPU supports the AESNI extension **/
-int have_aes_ni(void)
+EXPORT_SYM int have_aes_ni(void)
 {
     uint32_t info[4];
 

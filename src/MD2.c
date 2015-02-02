@@ -35,7 +35,7 @@ typedef struct {
 	uint8_t buf[16];
 } hash_state;
 
-int md2_init(hash_state **md2State)
+EXPORT_SYM int md2_init(hash_state **md2State)
 {
     hash_state *hs;
     
@@ -50,7 +50,7 @@ int md2_init(hash_state **md2State)
     return 0;
 }
 
-int md2_destroy(hash_state *hs)
+EXPORT_SYM int md2_destroy(hash_state *hs)
 {
     free(hs);
     return 0;
@@ -77,7 +77,7 @@ static const uint8_t S[256] = {
 	31, 26, 219, 153, 141, 51, 159, 17, 131, 20
 };
 
-int md2_copy(const hash_state *src, hash_state *dst)
+EXPORT_SYM int md2_copy(const hash_state *src, hash_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;
@@ -87,7 +87,7 @@ int md2_copy(const hash_state *src, hash_state *dst)
     return 0;
 }
 
-int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
+EXPORT_SYM int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
 	uint32_t L;
 
@@ -127,7 +127,7 @@ int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
         return 0;
 }
 
-int md2_digest(const hash_state *hs, uint8_t digest[16])
+EXPORT_SYM int md2_digest(const hash_state *hs, uint8_t digest[16])
 {
 	uint8_t padding[16];
 	uint32_t padlen;
