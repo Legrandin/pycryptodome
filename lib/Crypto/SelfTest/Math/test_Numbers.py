@@ -511,14 +511,6 @@ class TestIntegerInt(TestIntegerBase):
         TestIntegerBase.setUp(self)
 
 
-class TestIntegerGMP(TestIntegerBase):
-
-    def setUp(self):
-        self.Numbers = NumbersGMP
-        self.Integer = NumbersGMP.Integer
-        TestIntegerBase.setUp(self)
-
-
 class TestIntegerGeneric(unittest.TestCase):
 
     def test_random_exact_bits(self):
@@ -579,8 +571,16 @@ class TestIntegerGeneric(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestIntegerInt)
+
     try:
-        from Crypto.Math._Numbers_gmp import Integer as IntegerGMP
+        from Crypto.Math import _Numbers_gmp as NumbersGMP
+
+        class TestIntegerGMP(TestIntegerBase):
+            def setUp(self):
+                self.Numbers = NumbersGMP
+                self.Integer = NumbersGMP.Integer
+                TestIntegerBase.setUp(self)
+
         tests += list_test_cases(TestIntegerGMP)
     except (ImportError, OSError):
         print "Skipping GMP tests"
