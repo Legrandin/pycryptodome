@@ -20,16 +20,15 @@
  * ===================================================================
 */
 
-#include "errors.h"
+#include "pycrypto_common.h"
+
+FAKE_INIT(MODULE_NAME)
 
 #define CAPACITY (2*(DIGEST_SIZE))
 #define BLOCK_SIZE (200-CAPACITY)
 #define NO_MERKLE_DAMGARD
 
 #include "keccak.c"
-
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
 
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
 

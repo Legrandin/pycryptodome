@@ -20,12 +20,9 @@
  * ===================================================================
  */
 
-#include <stddef.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include "pycrypto_common.h"
 
-#include "errors.h"
+FAKE_INIT(galois)
 
 #define ALIGNMENT 32
 

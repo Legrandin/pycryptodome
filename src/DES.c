@@ -27,11 +27,18 @@
 #include "pycrypto_common.h"
 #include "block_base.h"
 
+#ifndef PCT_DES3_MODULE
+FAKE_INIT(raw_des)
+#else
+FAKE_INIT(raw_des3)
+#endif
+
 /* Setting this will cause LibTomCrypt to return CRYPT_INVALID_ARG when its
  * assert-like LTC_ARGCHK macro fails. */
 #define ARGTYPE 4
 
 /* Include the actial DES implementation */
+#define LTC_NO_PROTOTYPES
 #include "libtom/tomcrypt_des.c"
 
 typedef struct {

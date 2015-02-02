@@ -33,9 +33,6 @@
 
 #include "block_base.h"
 
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
-
 #define CIPHER_STATE_TYPE       _PASTE2(MODULE_NAME, _State)
 #define CIPHER_ENCRYPT          _PASTE2(MODULE_NAME, _encrypt)
 #define CIPHER_DECRYPT          _PASTE2(MODULE_NAME, _decrypt)

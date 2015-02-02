@@ -1,5 +1,6 @@
-#include <stdlib.h>
-#include <string.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(raw_ofb)
 
 #include "block_base.h"
 
@@ -16,7 +17,7 @@ typedef struct {
     uint8_t keyStream[0];
 } OfbModeState;
 
-static unsigned min(unsigned a, unsigned b) {
+static unsigned min_ab(unsigned a, unsigned b) {
     return a < b ? a : b;
 }
 
@@ -78,7 +79,7 @@ int OFB_encrypt(OfbModeState *ofbState,
             ofbState->usedKeyStream = 0;
         }
 
-        keyStreamToUse = min(data_len, block_len - ofbState->usedKeyStream);
+        keyStreamToUse = min_ab(data_len, block_len - ofbState->usedKeyStream);
         for (i=0; i<keyStreamToUse; i++)
             *out++ = *in++ ^ ofbState->keyStream[i + ofbState->usedKeyStream];
 

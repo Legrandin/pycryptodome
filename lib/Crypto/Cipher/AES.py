@@ -83,7 +83,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer)
 
 
-_raw_cpuid_lib = load_pycryptodome_raw_lib("Crypto.Util.cpuid",
+_raw_cpuid_lib = load_pycryptodome_raw_lib("Crypto.Util._cpuid",
                                             "int have_aes_ni(void);")
 
 cproto = """

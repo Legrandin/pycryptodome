@@ -1,5 +1,5 @@
 /*
- *  pycrypto_compat.h: Common header file for PyCrypto
+ *  pycrypto_common.h: Common header file for PyCrypto
  *
  * Written in 2013 by Dwayne C. Litzenberger <dlitz@dlitz.net>
  *
@@ -24,6 +24,9 @@
 #ifndef PYCRYPTO_COMMON_H
 #define PYCRYPTO_COMMON_H
 
+#define _PASTE(x,y) x##y
+#define _PASTE2(x,y) _PASTE(x,y)
+
 #ifdef _MSC_VER
 
 typedef __int8 int8_t;
@@ -35,6 +38,9 @@ typedef unsigned __int32 uint32_t;
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 
+#include <malloc.h>
+#define alloca _alloca
+
 #else
 #include <stdint.h>
 #endif
@@ -43,5 +49,17 @@ typedef unsigned __int64 uint64_t;
 #include <string.h>
 
 #include "errors.h"
+
+#ifdef _MSC_VER
+#include <Python.h>
+#ifdef IS_PY3K
+#define WHAT_INIT_RETURNS NULL
+#else
+#define WHAT_INIT_RETURNS
+#endif
+#define FAKE_INIT(x) PyMODINIT_FUNC _PASTE2(init_,x) (void) { return WHAT_INIT_RETURNS; }
+#else
+#define FAKE_INIT(x)
+#endif
 
 #endif /* PYCRYPTO_COMMON_H */

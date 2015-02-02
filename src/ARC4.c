@@ -25,9 +25,9 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdint.h>
-#include "errors.h"
+#include "pycrypto_common.h"
+
+FAKE_INIT(ARC4)
 
 typedef struct
 {

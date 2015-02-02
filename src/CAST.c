@@ -45,6 +45,8 @@
 #include "pycrypto_common.h"
 #include "block_base.h"
 
+FAKE_INIT(raw_cast)
+
 #define MODULE_NAME CAST
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0

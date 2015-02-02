@@ -29,8 +29,9 @@
  * ===================================================================
  */
 
-#include <stdint.h>
-#include <stdlib.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(strxor)
 
 void strxor(const uint8_t *in1, const uint8_t *in2, uint8_t *out, size_t len)
 {

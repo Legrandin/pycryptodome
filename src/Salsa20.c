@@ -25,14 +25,13 @@
  * =======================================================================
  */
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(Salsa20)
 
 #include "libtom/tomcrypt_cfg.h"
 #include "libtom/tomcrypt_custom.h"
 #include "libtom/tomcrypt_macros.h"
-#include "errors.h"
 
 #define ROUNDS 20
 #define MAX_KEY_SIZE 32

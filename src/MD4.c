@@ -25,11 +25,9 @@
  *
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include "pycrypto_common.h"
 
-#include "errors.h"
+FAKE_INIT(MD4)
 
 typedef struct {
 	uint32_t A,B,C,D, count;

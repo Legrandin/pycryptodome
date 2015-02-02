@@ -29,8 +29,9 @@
  * ===================================================================
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(raw_ecb)
 
 #include "block_base.h"
 

@@ -29,8 +29,9 @@
  * ===================================================================
  */
 
-#include <stdint.h>
-#include <string.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(cpuid)
 
 #if defined HAVE_CPUID_H
 #include <cpuid.h>

@@ -32,8 +32,7 @@
 
 #include "pycrypto_common.h"
 
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
+FAKE_INIT(MODULE_NAME)
 
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
 

@@ -24,12 +24,10 @@
  * ===================================================================
  *
  */
-  
-#include <string.h>
-#include <stdint.h>
-#include <stdlib.h>
 
-#include "errors.h"
+#include "pycrypto_common.h"
+
+FAKE_INIT(MD2)
 
 typedef struct {
 	uint8_t C[16], X[48];
@@ -91,10 +89,11 @@ int md2_copy(const hash_state *src, hash_state *dst)
 
 int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
+	uint32_t L;
+
         if (NULL == hs || NULL == buf)
             return ERR_NULL;
 
-	uint32_t L;
 	while (len) 
 	{
 		L=(16-hs->count) < len ? (16-hs->count) : len;

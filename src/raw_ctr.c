@@ -29,9 +29,9 @@
  * ===================================================================
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(raw_ctr)
 
 #include "block_base.h"
 
@@ -62,7 +62,7 @@ typedef struct {
     uint8_t buffer[0];
 } CtrModeState;
 
-static unsigned min(unsigned a, unsigned b) {
+static unsigned min_ab(unsigned a, unsigned b) {
     return a < b ? a : b;
 }
 
@@ -165,7 +165,7 @@ int CTR_encrypt(CtrModeState *ctrState,
                 return ERR_CTR_REPEATED_KEY_STREAM;
         }
 
-        keyStreamToUse = min(data_len, block_len - ctrState->usedKeyStream);
+        keyStreamToUse = min_ab(data_len, block_len - ctrState->usedKeyStream);
         for (j=0; j<keyStreamToUse; j++)
             *out++ = *in++ ^ keyStream[j + ctrState->usedKeyStream];
 

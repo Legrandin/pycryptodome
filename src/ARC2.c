@@ -43,7 +43,8 @@
 
 #include "pycrypto_common.h"
 #include "block_base.h"
-#include <string.h>
+
+FAKE_INIT(raw_arc2)
 
 #define MODULE_NAME ARC2
 #define BLOCK_SIZE 8

@@ -406,7 +406,7 @@ setup(
         Extension("Crypto.Util._galois",
             include_dirs=['src/'],
             sources=['src/galois.c']),
-        Extension("Crypto.Util.cpuid",
+        Extension("Crypto.Util._cpuid",
             include_dirs=['src/'],
             sources=['src/cpuid.c']),
 

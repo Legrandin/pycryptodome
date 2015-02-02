@@ -26,8 +26,8 @@
 
 #include "pycrypto_common.h"
 #include "block_base.h"
-#include <assert.h>
-#include <stdlib.h>
+
+FAKE_INIT(raw_aes)
 
 #define MODULE_NAME AES
 #define BLOCK_SIZE 16

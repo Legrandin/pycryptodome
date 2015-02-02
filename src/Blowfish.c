@@ -28,9 +28,10 @@
 
 #include "pycrypto_common.h"
 #include "block_base.h"
+
+FAKE_INIT(raw_blowfish)
+
 #include "Blowfish-tables.h"
-#include <assert.h>
-#include <string.h>
 
 #define MODULE_NAME Blowfish
 #define BLOCK_SIZE 8    /* 64-bit block size */
