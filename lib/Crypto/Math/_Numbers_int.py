@@ -37,7 +37,10 @@ class Integer(object):
     def __init__(self, value):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
-        self._value = value
+        try:
+            self._value = value._value
+        except AttributeError:
+            self._value = value
 
     # Conversions
     def __int__(self):
@@ -147,7 +150,7 @@ class Integer(object):
                 raise ValueError("Modulus must be positive")
             if mod_value == 0:
                 raise ZeroDivisionError("Modulus cannot be zero")
-        return pow(self._value, exp_value, mod_value)
+        return Integer(pow(self._value, exp_value, mod_value))
 
     # Boolean/bit operations
     def __and__(self, term):
@@ -289,7 +292,7 @@ class Integer(object):
             raise ValueError("No inverse value can be computed" + str(r_p))
         while s_p < 0:
             s_p += modulus
-        return s_p
+        return Integer(s_p)
 
     def gcd(self, term):
         try:
@@ -300,7 +303,7 @@ class Integer(object):
         while r_n > 0:
             q = r_p // r_n
             r_p, r_n = r_n, r_p - q * r_n
-        return r_p
+        return Integer(r_p)
 
     @staticmethod
     def jacobi_symbol(a, n):
