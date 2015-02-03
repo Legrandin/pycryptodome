@@ -30,15 +30,17 @@ else
 fi
 
 virtualenv -p ${PYTHON_INTP} .
+. bin/activate
 
 if [ ${PYV} -eq 24 ]; then
-	. bin/activate
 	pip install --no-install ctypes
 	chmod +x build/ctypes/source/libffi/configure
 	pip install ctypes
 fi
 
 if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
-	. bin/activate
 	pip install cffi
 fi
+
+# List all installed packages
+pip freeze
