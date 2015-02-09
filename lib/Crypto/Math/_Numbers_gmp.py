@@ -35,9 +35,7 @@ from Crypto.Util._raw_api import (load_lib,
                                   null_pointer, create_string_buffer,
                                   c_ulong, c_size_t)
 
-lib = load_lib(
-        "gmp",
-        """
+gmp_defs = """
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
         typedef unsigned long        mp_bitcnt_t;
@@ -85,7 +83,12 @@ lib = load_lib(
         int __gmpz_invert (mpz_t rop, const mpz_t op1, const mpz_t op2);
         int __gmpz_divisible_p (const mpz_t n, const mpz_t d);
         int __gmpz_divisible_ui_p (const mpz_t n, unsigned long d);
-        """)
+        """
+
+try:
+    lib = load_lib("gmp", gmp_defs)
+except OSError:
+    lib = load_lib("mpir", gmp_defs)
 
 # In order to create a function that returns a pointer to
 # a new MPZ structure, we need to break the abstraction
