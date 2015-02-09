@@ -39,9 +39,11 @@ gmp_defs = """
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
         typedef unsigned long        mp_bitcnt_t;
+        void __gmpz_init (mpz_t x);
         void __gmpz_init_set (mpz_t rop, const mpz_t op);
         void __gmpz_init_set_ui (mpz_t rop, unsigned long op);
         int __gmpz_init_set_str (mpz_t rop, const char *str, int base);
+        int __gmp_sscanf (const char *s, const char *fmt, ...);
         void __gmpz_set (mpz_t rop, const mpz_t op);
         int __gmpz_set_str (mpz_t rop, const char *str, int base);
         int __gmp_snprintf (char *buf, size_t size, const char *fmt, ...);
@@ -126,12 +128,14 @@ class _GMP(object):
 _gmp = _GMP()
 
 _gmp = _GMP()
+_gmp.mpz_init = lib.__gmpz_init
 _gmp.mpz_init_set = lib.__gmpz_init_set
 _gmp.mpz_init_set_ui = lib.__gmpz_init_set_ui
 _gmp.mpz_init_set_str = lib.__gmpz_init_set_str
 _gmp.mpz_set = lib.__gmpz_set
 _gmp.mpz_set_str = lib.__gmpz_set_str
 _gmp.gmp_snprintf = lib.__gmp_snprintf
+_gmp.gmp_sscanf = lib.__gmp_sscanf
 _gmp.mpz_add = lib.__gmpz_add
 _gmp.mpz_add_ui = lib.__gmpz_add_ui
 _gmp.mpz_sub_ui = lib.__gmpz_sub_ui
@@ -179,21 +183,14 @@ class Integer(object):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
 
+        self._initialized = True
         if isinstance(value, (int, long)):
-            if 0 <= value < 65536:
-                _gmp.mpz_init_set_ui(self._mpz_p, c_ulong(value))
-            else:
-                if _gmp.mpz_init_set_str(self._mpz_p,
-                                         tobytes(str(abs(value))),
-                                         10) != 0:
-                    _gmp.mpz_clear(self._mpz_p)
-                    raise ValueError("Error converting '%d'" % value)
-                if value < 0:
-                    _gmp.mpz_neg(self._mpz_p, self._mpz_p)
+            _gmp.mpz_init(self._mpz_p)
+            result = _gmp.gmp_sscanf(tobytes(str(value)), b("%Zd"), self._mpz_p)
+            if result != 1:
+                raise ValueError("Error converting '%d'" % value)
         else:
             _gmp.mpz_init_set(self._mpz_p, value._mpz_p)
-
-        self._initialized = True
 
     # Conversions
     def __int__(self):

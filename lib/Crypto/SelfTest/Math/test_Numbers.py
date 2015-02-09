@@ -62,8 +62,11 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, Integer, 1.0)
 
         v4 = Integer(10**10)
-        self.failUnless(v1 == v1)
-        self.failUnless(v1 == v2)
+        self.assertEqual(v1, v1)
+        self.assertEqual(v1, 23)
+        self.assertEqual(v1, v2)
+        self.assertEqual(v3, -9)
+
         self.failIf(v1 == v4)
 
         v5 = Integer(v1)
