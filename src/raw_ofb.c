@@ -43,7 +43,7 @@ typedef struct {
     /** How many bytes at the beginning of the key stream
       * have already been used.
       */
-    uint8_t usedKeyStream;
+    size_t usedKeyStream;
 
     uint8_t keyStream[0];
 } OfbModeState;

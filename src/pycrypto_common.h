@@ -55,12 +55,11 @@ typedef unsigned __int64 uint64_t;
  */
 #ifdef _MSC_VER
 #include <Python.h>
-#ifdef IS_PY3K
-#define WHAT_INIT_RETURNS NULL
+#if PY_MAJOR_VERSION >= 3
+#define FAKE_INIT(x) PyMODINIT_FUNC _PASTE2(PyInit__,x) (void) { return NULL; }
 #else
-#define WHAT_INIT_RETURNS
+#define FAKE_INIT(x) PyMODINIT_FUNC _PASTE2(init_,x) (void) { return; }
 #endif
-#define FAKE_INIT(x) PyMODINIT_FUNC _PASTE2(init_,x) (void) { return WHAT_INIT_RETURNS; }
 #else
 #define FAKE_INIT(x)
 #endif
