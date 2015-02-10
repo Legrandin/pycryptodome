@@ -54,6 +54,8 @@ try:
         """Convert a Python integer to unsigned long"""
         return x
 
+    c_ulonglong = c_ulong
+
     def c_size_t(x):
         """Convert a Python integer to size_t"""
         return x
@@ -84,7 +86,7 @@ try:
 
 
 except ImportError:
-    from ctypes import (CDLL, c_void_p, byref, c_ulong, c_size_t,
+    from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong, c_size_t,
                         create_string_buffer)
     from ctypes.util import find_library
 

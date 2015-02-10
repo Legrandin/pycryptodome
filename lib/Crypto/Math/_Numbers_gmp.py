@@ -33,26 +33,31 @@ from Crypto.Util.py3compat import tobytes, b, bchr
 from Crypto.Util._raw_api import (load_lib,
                                   get_raw_buffer, get_c_string,
                                   null_pointer, create_string_buffer,
-                                  c_ulong, c_size_t)
+                                  c_ulong, c_ulonglong, c_size_t)
 
-gmp_defs = """
+# GMP uses unsigned longs in several functions prototypes.
+# On a UNIX 64 bit platform that type takes 64 bits but in Windows 64
+# it is still 32 bits.
+# The intention of the MPIR developers is to maintain binary compatibility
+# so they probably assumed that that GMP would compile on Windows 64
+# by treating it as a UNIX platform.
+
+gmp_defs_common = """
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
-        typedef unsigned long        mp_bitcnt_t;
+        typedef UNIX_ULONG mp_bitcnt_t;
         void __gmpz_init (mpz_t x);
         void __gmpz_init_set (mpz_t rop, const mpz_t op);
-        void __gmpz_init_set_ui (mpz_t rop, unsigned long op);
-        int __gmpz_init_set_str (mpz_t rop, const char *str, int base);
+        void __gmpz_init_set_ui (mpz_t rop, UNIX_ULONG op);
         int __gmp_sscanf (const char *s, const char *fmt, ...);
         void __gmpz_set (mpz_t rop, const mpz_t op);
-        int __gmpz_set_str (mpz_t rop, const char *str, int base);
         int __gmp_snprintf (char *buf, size_t size, const char *fmt, ...);
         void __gmpz_add (mpz_t rop, const mpz_t op1, const mpz_t op2);
-        void __gmpz_add_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
-        void __gmpz_sub_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
+        void __gmpz_add_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
+        void __gmpz_sub_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
         void __gmpz_addmul (mpz_t rop, const mpz_t op1, const mpz_t op2);
-        void __gmpz_addmul_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
-        void __gmpz_submul_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
+        void __gmpz_addmul_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
+        void __gmpz_submul_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
         void __gmpz_import (mpz_t rop, size_t count, int order, size_t size,
                             int endian, size_t nails, const void *op);
         void * __gmpz_export (void *rop, size_t *countp, int order,
@@ -61,13 +66,13 @@ gmp_defs = """
         size_t __gmpz_sizeinbase (const mpz_t op, int base);
         void __gmpz_sub (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_mul (mpz_t rop, const mpz_t op1, const mpz_t op2);
-        void __gmpz_mul_ui (mpz_t rop, const mpz_t op1, unsigned long op2);
+        void __gmpz_mul_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
         int __gmpz_cmp (const mpz_t op1, const mpz_t op2);
         void __gmpz_powm (mpz_t rop, const mpz_t base, const mpz_t exp, const
                           mpz_t mod);
-        void __gmpz_powm_ui (mpz_t rop, const mpz_t base, unsigned long exp,
+        void __gmpz_powm_ui (mpz_t rop, const mpz_t base, UNIX_ULONG exp,
                              const mpz_t mod);
-        void __gmpz_pow_ui (mpz_t rop, const mpz_t base, unsigned long exp);
+        void __gmpz_pow_ui (mpz_t rop, const mpz_t base, UNIX_ULONG exp);
         void __gmpz_mod (mpz_t r, const mpz_t n, const mpz_t d);
         void __gmpz_neg (mpz_t rop, const mpz_t op);
         void __gmpz_and (mpz_t rop, const mpz_t op1, const mpz_t op2);
@@ -80,16 +85,24 @@ gmp_defs = """
         int __gmpz_perfect_square_p (const mpz_t op);
         int __gmpz_jacobi (const mpz_t a, const mpz_t b);
         void __gmpz_gcd (mpz_t rop, const mpz_t op1, const mpz_t op2);
-        unsigned long __gmpz_gcd_ui (mpz_t rop, const mpz_t op1,
-                                     unsigned long op2);
+        UNIX_ULONG __gmpz_gcd_ui (mpz_t rop, const mpz_t op1,
+                                     UNIX_ULONG op2);
         int __gmpz_invert (mpz_t rop, const mpz_t op1, const mpz_t op2);
         int __gmpz_divisible_p (const mpz_t n, const mpz_t d);
-        int __gmpz_divisible_ui_p (const mpz_t n, unsigned long d);
+        int __gmpz_divisible_ui_p (const mpz_t n, UNIX_ULONG d);
         """
 
 try:
+    gmp_defs = "typedef unsigned long UNIX_ULONG;" + gmp_defs_common
     lib = load_lib("gmp", gmp_defs)
 except OSError:
+    import platform
+    bits, linkage = platform.architecture()
+    if bits.startswith("64") and linkage.startswith("Win"):
+        # MPIR uses unsigned long long where GMP uses unsigned long
+        # (LLP64 vs LP64)
+        gmp_defs = "typedef unsigned long long UNIX_ULONG;" + gmp_defs_common
+        c_ulong = c_ulonglong
     lib = load_lib("mpir", gmp_defs)
 
 # In order to create a function that returns a pointer to
@@ -131,9 +144,7 @@ _gmp = _GMP()
 _gmp.mpz_init = lib.__gmpz_init
 _gmp.mpz_init_set = lib.__gmpz_init_set
 _gmp.mpz_init_set_ui = lib.__gmpz_init_set_ui
-_gmp.mpz_init_set_str = lib.__gmpz_init_set_str
 _gmp.mpz_set = lib.__gmpz_set
-_gmp.mpz_set_str = lib.__gmpz_set_str
 _gmp.gmp_snprintf = lib.__gmp_snprintf
 _gmp.gmp_sscanf = lib.__gmp_sscanf
 _gmp.mpz_add = lib.__gmpz_add
