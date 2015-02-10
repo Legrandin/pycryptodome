@@ -26,7 +26,7 @@ Counter Feedback (CFB) mode.
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t)
+                                  SmartPointer, c_size_t, expect_byte_string)
 
 raw_cfb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_cfb","""
                     int CFB_start_operation(void *cipher,
@@ -83,6 +83,7 @@ class RawCfbMode(object):
             The number of bytes the plaintext and ciphertext are segmented in.
         """
 
+        expect_byte_string(iv)
         self._state = VoidPointer()
         result = raw_cfb_lib.CFB_start_operation(block_cipher.get(),
                                                  iv,
@@ -138,13 +139,14 @@ class RawCfbMode(object):
             It is as long as *plaintext*.
         """
 
+        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_cfb_lib.CFB_encrypt(self._state.get(),
                                          plaintext,
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
-            raise ValueError("Error %d while encrypting in CBC mode" % result)
+            raise ValueError("Error %d while encrypting in CFB mode" % result)
         return get_raw_buffer(ciphertext)
 
     def decrypt(self, ciphertext):
@@ -175,13 +177,14 @@ class RawCfbMode(object):
         :Return: the decrypted data (byte string).
         """
 
+        expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_cfb_lib.CFB_decrypt(self._state.get(),
                                          ciphertext,
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:
-            raise ValueError("Error %d while decrypting in CBC mode" % result)
+            raise ValueError("Error %d while decrypting in CFB mode" % result)
         return get_raw_buffer(plaintext)
 
 
@@ -194,7 +197,7 @@ def _create_cfb_cipher(factory, **kwargs):
 
     :Keywords:
       iv : byte string
-        The IV to use for CBC.
+        The IV to use for CFB.
 
       IV : byte string
         Alias for ``iv``.

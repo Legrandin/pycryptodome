@@ -63,7 +63,7 @@ from Crypto.Util.py3compat import *
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t)
+                                  SmartPointer, c_size_t, expect_byte_string)
 
 
 _raw_arc4_lib = load_pycryptodome_raw_lib("Crypto.Cipher._ARC4","""
@@ -78,7 +78,7 @@ class ARC4Cipher:
 
     def __init__(self, key, *args, **kwargs):
         """Initialize an ARC4 cipher object
-        
+
         See also `new()` at the module level."""
 
         if len(args)>0:
@@ -86,7 +86,9 @@ class ARC4Cipher:
             args = args[1:]
         else:
             ndrop = kwargs.pop('drop', 0)
-        
+
+        expect_byte_string(key)
+
         self._state = VoidPointer()
         result = _raw_arc4_lib.ARC4_stream_init(key,
                                                 c_size_t(len(key)),
@@ -96,7 +98,7 @@ class ARC4Cipher:
                              % result)
         self._state = SmartPointer(self._state.get(),
                                    _raw_arc4_lib.ARC4_stream_destroy)
-        
+
         if ndrop > 0:
             # This is OK even if the cipher is used for decryption, since encrypt
             # and decrypt are actually the same thing with ARC4.
@@ -115,6 +117,7 @@ class ARC4Cipher:
           plaintext).
         """
 
+        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = _raw_arc4_lib.ARC4_stream_encrypt(self._state.get(),
                                          plaintext,
@@ -151,7 +154,7 @@ def new(key, *args, **kwargs):
         The amount of bytes to discard from the initial part of the keystream.
         In fact, such part has been found to be distinguishable from random
         data (while it shouldn't) and also correlated to key.
-        
+
         The recommended value is 3072_ bytes. The default value is 0.
 
     :Return: an `ARC4Cipher` object

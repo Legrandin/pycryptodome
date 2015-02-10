@@ -48,7 +48,8 @@ from Crypto.Util.py3compat import bord
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
-                                  get_raw_buffer, c_size_t)
+                                  get_raw_buffer, c_size_t,
+                                  expect_byte_string)
 
 _raw_md4_lib = load_pycryptodome_raw_lib(
                         "Crypto.Hash._MD4",
@@ -103,6 +104,7 @@ class MD4Hash(object):
             The next chunk of the message being hashed.
         """
 
+        expect_byte_string(data)
         result = _raw_md4_lib.md4_update(self._state.get(),
                                          data,
                                          c_size_t(len(data)))

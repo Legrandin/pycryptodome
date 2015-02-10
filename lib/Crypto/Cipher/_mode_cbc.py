@@ -34,7 +34,7 @@ Ciphertext Block Chaining (CBC) mode.
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t)
+                                  SmartPointer, c_size_t, expect_byte_string)
 
 raw_cbc_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_cbc", """
                 int CBC_start_operation(void *cipher,
@@ -84,6 +84,7 @@ class RawCbcMode(object):
             compromises confidentiality.
         """
 
+        expect_byte_string(iv)
         self._state = VoidPointer()
         result = raw_cbc_lib.CBC_start_operation(block_cipher.get(),
                                                  iv,
@@ -141,6 +142,7 @@ class RawCbcMode(object):
             It is as long as *plaintext*.
         """
 
+        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_cbc_lib.CBC_encrypt(self._state.get(),
                                          plaintext,
@@ -178,6 +180,7 @@ class RawCbcMode(object):
         :Return: the decrypted data (byte string).
         """
 
+        expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_cbc_lib.CBC_decrypt(self._state.get(),
                                          ciphertext,
