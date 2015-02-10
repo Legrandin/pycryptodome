@@ -26,7 +26,7 @@ Output Feedback (CFB) mode.
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer)
+                                  SmartPointer, c_size_t)
 
 raw_ofb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ofb", """
                         int OFB_start_operation(void *cipher,
@@ -83,7 +83,7 @@ class RawOfbMode(object):
         self._state = VoidPointer()
         result = raw_ofb_lib.OFB_start_operation(block_cipher.get(),
                                                  iv,
-                                                 len(iv),
+                                                 c_size_t(len(iv)),
                                                  self._state.address_of())
         if result:
             raise ValueError("Error %d while instatiating the OFB mode"
@@ -138,7 +138,7 @@ class RawOfbMode(object):
         result = raw_ofb_lib.OFB_encrypt(self._state.get(),
                                          plaintext,
                                          ciphertext,
-                                         len(plaintext))
+                                         c_size_t(len(plaintext)))
         if result:
             raise ValueError("Error %d while encrypting in OFB mode" % result)
         return get_raw_buffer(ciphertext)
@@ -175,7 +175,7 @@ class RawOfbMode(object):
         result = raw_ofb_lib.OFB_decrypt(self._state.get(),
                                          ciphertext,
                                          plaintext,
-                                         len(ciphertext))
+                                         c_size_t(len(ciphertext)))
         if result:
             raise ValueError("Error %d while decrypting in OFB mode" % result)
         return get_raw_buffer(plaintext)

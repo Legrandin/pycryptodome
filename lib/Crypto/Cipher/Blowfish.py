@@ -55,7 +55,7 @@ import sys
 from Crypto.Cipher import _create_cipher
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer)
+                                  VoidPointer, SmartPointer, c_size_t)
 
 _raw_blowfish_lib = load_pycryptodome_raw_lib(
         "Crypto.Cipher._raw_blowfish",
@@ -96,7 +96,7 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_blowfish_lib.Blowfish_stop_operation
 
     void_p = VoidPointer()
-    result = start_operation(key, len(key), void_p.address_of())
+    result = start_operation(key, c_size_t(len(key)), void_p.address_of())
     if result:
         raise ValueError("Error %X while instantiating the Blowfish cipher"
                          % result)

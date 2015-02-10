@@ -26,7 +26,7 @@ Electronic Code Book (ECB) mode.
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, create_string_buffer,
-                                  get_raw_buffer, SmartPointer)
+                                  get_raw_buffer, SmartPointer, c_size_t)
 
 raw_ecb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ecb", """
                     int ECB_start_operation(void *cipher,
@@ -113,7 +113,7 @@ class RawEcbMode(object):
         result = raw_ecb_lib.ECB_encrypt(self._state.get(),
                                          plaintext,
                                          ciphertext,
-                                         len(plaintext))
+                                         c_size_t(len(plaintext)))
         if result:
             raise ValueError("Error %d while encrypting in ECB mode" % result)
         return get_raw_buffer(ciphertext)
@@ -148,7 +148,7 @@ class RawEcbMode(object):
         result = raw_ecb_lib.ECB_decrypt(self._state.get(),
                                          ciphertext,
                                          plaintext,
-                                         len(ciphertext))
+                                         c_size_t(len(ciphertext)))
         if result:
             raise ValueError("Error %d while decrypting in ECB mode" % result)
         return get_raw_buffer(plaintext)

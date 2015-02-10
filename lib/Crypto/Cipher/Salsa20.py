@@ -46,7 +46,7 @@ As an example, encryption can be done as follows:
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
-                                  SmartPointer)
+                                  SmartPointer, c_size_t)
 
 _raw_salsa20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20",
                     """
@@ -70,8 +70,10 @@ class Salsa20Cipher:
 
         self._state = VoidPointer()
         result = _raw_salsa20_lib.Salsa20_stream_init(
-                        key, len(key),
-                        nonce, len(nonce),
+                        key,
+                        c_size_t(len(key)),
+                        nonce,
+                        c_size_t(len(nonce)),
                         self._state.address_of())
         if result:
             raise ValueError("Error %d instantiating a Salsa20 cipher")
@@ -96,7 +98,7 @@ class Salsa20Cipher:
                                          self._state.get(),
                                          plaintext,
                                          ciphertext,
-                                         len(plaintext))
+                                         c_size_t(len(plaintext)))
         if result:
             raise ValueError("Error %d while encrypting with Salsa20" % result)
         return get_raw_buffer(ciphertext)

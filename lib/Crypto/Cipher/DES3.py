@@ -66,7 +66,7 @@ import sys
 from Crypto.Cipher import _create_cipher
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer)
+                                  VoidPointer, SmartPointer, c_size_t)
 
 _raw_des3_lib = load_pycryptodome_raw_lib(
                     "Crypto.Cipher._raw_des3",
@@ -106,7 +106,7 @@ def _create_base_cipher(dict_parameters):
 
     cipher = VoidPointer()
     result = start_operation(key,
-                             len(key),
+                             c_size_t(len(key)),
                              cipher.address_of())
     if result:
         raise ValueError("Error %X while instantiating the TDES cipher"

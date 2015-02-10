@@ -43,7 +43,7 @@ from Crypto.Hash import SHA3_224 as SHA3
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer)
+                                  SmartPointer, c_size_t)
 
 _raw_galois_lib = load_pycryptodome_raw_lib("Crypto.Util._galois",
                     """
@@ -95,7 +95,7 @@ class _GHASH(_SmoothMAC):
     def _update(self, block_data):
         result = _raw_galois_lib.ghash(self._last_y,
                                        block_data,
-                                       len(block_data),
+                                       c_size_t(len(block_data)),
                                        self._last_y,
                                        self._exp_key.get())
         if result:

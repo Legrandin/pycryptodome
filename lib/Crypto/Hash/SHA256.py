@@ -39,7 +39,7 @@ from Crypto.Util.py3compat import *
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
-                                  get_raw_buffer)
+                                  get_raw_buffer, c_size_t)
 
 _raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
                         """
@@ -94,7 +94,7 @@ class SHA256Hash(object):
 
         result = _raw_sha256_lib.SHA256_update(self._state.get(),
                                                data,
-                                               len(data))
+                                               c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while instantiating SHA256"
                              % result)

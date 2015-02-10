@@ -26,7 +26,7 @@ Counter (CTR) mode.
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer)
+                                  SmartPointer, c_size_t)
 
 from Crypto.Util.py3compat import *
 
@@ -112,8 +112,8 @@ class RawCtrMode(object):
         self._state = VoidPointer()
         result = raw_ctr_lib.CTR_start_operation(block_cipher.get(),
                                                  initial_counter_block,
-                                                 len(initial_counter_block),
-                                                 prefix_len,
+                                                 c_size_t(len(initial_counter_block)),
+                                                 c_size_t(prefix_len),
                                                  counter_len,
                                                  little_endian,
                                                  self._state.address_of())
@@ -166,7 +166,7 @@ class RawCtrMode(object):
         result = raw_ctr_lib.CTR_encrypt(self._state.get(),
                                          plaintext,
                                          ciphertext,
-                                         len(plaintext))
+                                         c_size_t(len(plaintext)))
         if result:
             raise ValueError("Error %X while encrypting in CTR mode" % result)
         return get_raw_buffer(ciphertext)
@@ -203,7 +203,7 @@ class RawCtrMode(object):
         result = raw_ctr_lib.CTR_decrypt(self._state.get(),
                                          ciphertext,
                                          plaintext,
-                                         len(ciphertext))
+                                         c_size_t(len(ciphertext)))
         if result:
             raise ValueError("Error %X while decrypting in CTR mode" % result)
         return get_raw_buffer(plaintext)

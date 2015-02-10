@@ -63,7 +63,7 @@ from Crypto.Util.py3compat import *
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer)
+                                  SmartPointer, c_size_t)
 
 
 _raw_arc4_lib = load_pycryptodome_raw_lib("Crypto.Cipher._ARC4","""
@@ -89,7 +89,7 @@ class ARC4Cipher:
         
         self._state = VoidPointer()
         result = _raw_arc4_lib.ARC4_stream_init(key,
-                                                len(key),
+                                                c_size_t(len(key)),
                                                 self._state.address_of())
         if result != 0:
             raise ValueError("Error %d while creating the ARC4 cipher"
@@ -119,7 +119,7 @@ class ARC4Cipher:
         result = _raw_arc4_lib.ARC4_stream_encrypt(self._state.get(),
                                          plaintext,
                                          ciphertext,
-                                         len(plaintext))
+                                         c_size_t(len(plaintext)))
         if result:
             raise ValueError("Error %d while encrypting with RC4" % result)
         return get_raw_buffer(ciphertext)
