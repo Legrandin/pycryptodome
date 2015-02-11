@@ -28,9 +28,10 @@
 
 #include "pycrypto_common.h"
 #include "block_base.h"
+
+FAKE_INIT(raw_blowfish)
+
 #include "Blowfish-tables.h"
-#include <assert.h>
-#include <string.h>
 
 #define MODULE_NAME Blowfish
 #define BLOCK_SIZE 8    /* 64-bit block size */
@@ -132,9 +133,6 @@ static void block_encrypt(block_state *self, const unsigned char *in, unsigned c
 {
     uint32_t xL, xR;
 
-    /* Make sure the object is initialized */
-    assert(self->magic == BLOWFISH_MAGIC);
-
     /* big endian */
     xL = bytes_to_word(in);
     xR = bytes_to_word(in+4);
@@ -149,9 +147,6 @@ static void block_encrypt(block_state *self, const unsigned char *in, unsigned c
 static void block_decrypt(block_state *self, const unsigned char *in, unsigned char *out)
 {
     uint32_t xL, xR;
-
-    /* Make sure the object is initialized */
-    assert(self->magic == BLOWFISH_MAGIC);
 
     /* big endian */
     xL = bytes_to_word(in);

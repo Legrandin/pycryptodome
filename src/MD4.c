@@ -25,11 +25,9 @@
  *
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include "pycrypto_common.h"
 
-#include "errors.h"
+FAKE_INIT(MD4)
 
 typedef struct {
 	uint32_t A,B,C,D, count;
@@ -44,7 +42,7 @@ typedef struct {
 /* ROTATE_LEFT rotates x left n bits */
 #define ROL(x, n) (((x) << n) | ((x) >> (32-n) ))
 
-int md4_init (hash_state **md4State)
+EXPORT_SYM int md4_init (hash_state **md4State)
 {
     hash_state *hs;
     
@@ -64,13 +62,13 @@ int md4_init (hash_state **md4State)
     return 0;
 }
 
-int md4_destroy(hash_state *hs)
+EXPORT_SYM int md4_destroy(hash_state *hs)
 {
     free(hs);
     return 0;
 }
 
-int md4_copy(const hash_state *src, hash_state *dst)
+EXPORT_SYM int md4_copy(const hash_state *src, hash_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;
@@ -80,7 +78,7 @@ int md4_copy(const hash_state *src, hash_state *dst)
     return 0;
 }
 
-int md4_update(hash_state *hs, const uint8_t *buf, size_t len)
+EXPORT_SYM int md4_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
 	uint32_t L;
 
@@ -177,7 +175,7 @@ int md4_update(hash_state *hs, const uint8_t *buf, size_t len)
         return 0;
 }
 
-int md4_digest(const hash_state *hs, uint8_t digest[16])
+EXPORT_SYM int md4_digest(const hash_state *hs, uint8_t digest[16])
 {
 	static uint8_t s[8];
 	uint32_t padlen, oldlen1, oldlen2;

@@ -31,6 +31,8 @@
 import os
 import imp
 
+from Crypto.Util.py3compat import byte_string
+
 try:
     from cffi import FFI
 
@@ -53,6 +55,8 @@ try:
     def c_ulong(x):
         """Convert a Python integer to unsigned long"""
         return x
+
+    c_ulonglong = c_ulong
 
     def c_size_t(x):
         """Convert a Python integer to size_t"""
@@ -82,11 +86,15 @@ try:
         def address_of(self):
             return self._pp
 
+    Array = ffi.new("char[1]").__class__.__bases__
+
+    backend = "cffi"
 
 except ImportError:
-    from ctypes import (CDLL, c_void_p, byref, c_ulong, c_size_t,
+    from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong, c_size_t,
                         create_string_buffer)
     from ctypes.util import find_library
+    from _ctypes import Array
 
     null_pointer = None
 
@@ -116,6 +124,7 @@ except ImportError:
         def address_of(self):
             return byref(self._p)
 
+    backend = "ctypes"
 
 class SmartPointer(object):
     """Class to hold a non-managed piece of memory"""
@@ -167,3 +176,7 @@ def load_pycryptodome_raw_lib(name, cdecl):
             except OSError:
                 pass
     raise OSError("Cannot load native module '%s'" % name)
+
+def expect_byte_string(data):
+    if not byte_string(data) and not isinstance(data, Array):
+        raise TypeError("Only byte strings can be passed to C code")

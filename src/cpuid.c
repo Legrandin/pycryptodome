@@ -29,8 +29,9 @@
  * ===================================================================
  */
 
-#include <stdint.h>
-#include <string.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(cpuid)
 
 #if defined HAVE_CPUID_H
 #include <cpuid.h>
@@ -39,7 +40,7 @@
 #endif
 
 /** Return 1 if the CPU supports the AESNI extension **/
-int have_aes_ni(void)
+EXPORT_SYM int have_aes_ni(void)
 {
     uint32_t info[4];
 

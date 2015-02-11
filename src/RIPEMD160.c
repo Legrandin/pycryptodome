@@ -43,11 +43,9 @@
  *   "RIPEMD-160 is big-bit-endian, little-byte-endian, and left-justified."
  */
 
-#include <string.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include "pycrypto_common.h"
 
-#include "errors.h"
+FAKE_INIT(RIPEMD160)
 
 #define RIPEMD160_DIGEST_SIZE 20
 
@@ -146,7 +144,7 @@ static const uint32_t KR[5] = {
     0x00000000u     /* Round 5: 0 */
 };
 
-int ripemd160_init(hash_state **ripemd160State)
+EXPORT_SYM int ripemd160_init(hash_state **ripemd160State)
 {
     hash_state *hs;
     
@@ -166,7 +164,7 @@ int ripemd160_init(hash_state **ripemd160State)
     return 0;
 }
 
-int ripemd160_destroy(hash_state *hs)
+EXPORT_SYM int ripemd160_destroy(hash_state *hs)
 {
     free(hs);
     return 0;
@@ -297,7 +295,7 @@ static void ripemd160_compress(hash_state *self)
     self->bufpos = 0;
 }
 
-int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
+EXPORT_SYM int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
     unsigned int bytes_needed;
 
@@ -331,7 +329,7 @@ int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
     return 0;
 }
 
-int ripemd160_copy(const hash_state *src, hash_state *dst)
+EXPORT_SYM int ripemd160_copy(const hash_state *src, hash_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;
@@ -341,7 +339,7 @@ int ripemd160_copy(const hash_state *src, hash_state *dst)
     return 0;
 }
 
-int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_DIGEST_SIZE])
+EXPORT_SYM int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_DIGEST_SIZE])
 {
     hash_state tmp;
 

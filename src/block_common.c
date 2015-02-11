@@ -33,9 +33,6 @@
 
 #include "block_base.h"
 
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
-
 #define CIPHER_STATE_TYPE       _PASTE2(MODULE_NAME, _State)
 #define CIPHER_ENCRYPT          _PASTE2(MODULE_NAME, _encrypt)
 #define CIPHER_DECRYPT          _PASTE2(MODULE_NAME, _decrypt)
@@ -74,7 +71,7 @@ static int CIPHER_DECRYPT
     return 0;
 }
 
-int CIPHER_STOP_OPERATION(BlockBase *state)
+EXPORT_SYM int CIPHER_STOP_OPERATION(BlockBase *state)
 {
     if (NULL == state)
         return ERR_NULL;
@@ -85,7 +82,7 @@ int CIPHER_STOP_OPERATION(BlockBase *state)
 }
 
 #ifndef NON_STANDARD_START_OPERATION
-int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHER_STATE_TYPE **pResult)
+EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHER_STATE_TYPE **pResult)
 {
     BlockBase *block_base;
 

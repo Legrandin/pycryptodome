@@ -20,7 +20,9 @@
  * ===================================================================
 */
 
-#include "errors.h"
+#include "pycrypto_common.h"
+
+FAKE_INIT(MODULE_NAME)
 
 #define CAPACITY (2*(DIGEST_SIZE))
 #define BLOCK_SIZE (200-CAPACITY)
@@ -28,14 +30,11 @@
 
 #include "keccak.c"
 
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
-
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
 
 typedef keccak_state hash_state;
 
-int FUNC_NAME(_init) (hash_state **shaState)
+EXPORT_SYM int FUNC_NAME(_init) (hash_state **shaState)
 {   
     hash_state *hs;
 
@@ -51,13 +50,13 @@ int FUNC_NAME(_init) (hash_state **shaState)
     return 0;
 }
 
-int FUNC_NAME(_destroy) (hash_state *shaState)
+EXPORT_SYM int FUNC_NAME(_destroy) (hash_state *shaState)
 {
     free(shaState);
     return 0;
 }
 
-int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
+EXPORT_SYM int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
 {
     if (NULL == hs || NULL == buf) {
         return ERR_NULL;
@@ -66,7 +65,7 @@ int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
     return 0;
 }
 
-int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
+EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;
@@ -78,7 +77,7 @@ int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
     return 0;
 }
 
-int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
+EXPORT_SYM int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
 {
     hash_state tmp;
 

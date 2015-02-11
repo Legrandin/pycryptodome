@@ -32,8 +32,7 @@
 
 #include "pycrypto_common.h"
 
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
+FAKE_INIT(MODULE_NAME)
 
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
 
@@ -103,7 +102,7 @@ static int add_length(hash_state *hs, sha2_word_t inc) {
 }
 
 /* init the SHA state */
-int FUNC_NAME(_init) (hash_state **shaState)
+EXPORT_SYM int FUNC_NAME(_init) (hash_state **shaState)
 {
     int i;
     hash_state *hs;
@@ -122,13 +121,13 @@ int FUNC_NAME(_init) (hash_state **shaState)
     return 0;
 }
 
-int FUNC_NAME(_destroy) (hash_state *shaState)
+EXPORT_SYM int FUNC_NAME(_destroy) (hash_state *shaState)
 {
     free(shaState);
     return 0;
 }
 
-int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
+EXPORT_SYM int FUNC_NAME(_update) (hash_state *hs, const uint8_t *buf, size_t len)
 {
     if (NULL == hs || NULL == buf) {
         return ERR_NULL;
@@ -189,7 +188,7 @@ static int sha_finalize(hash_state *hs, uint8_t hash[DIGEST_SIZE])
     return 0;
 }
 
-int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
+EXPORT_SYM int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
 {
     hash_state temp;
 
@@ -202,7 +201,7 @@ int FUNC_NAME(_digest) (const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
     return 0;
 }
 
-int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
+EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;

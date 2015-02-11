@@ -25,9 +25,9 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdint.h>
-#include "errors.h"
+#include "pycrypto_common.h"
+
+FAKE_INIT(ARC4)
 
 typedef struct
 {
@@ -35,7 +35,7 @@ typedef struct
     unsigned char x,y;
 } stream_state;
 
-int ARC4_stream_encrypt(stream_state *rc4State, const uint8_t in[], uint8_t out[], size_t len)
+EXPORT_SYM int ARC4_stream_encrypt(stream_state *rc4State, const uint8_t in[], uint8_t out[], size_t len)
 {
     int i, x=rc4State->x, y=rc4State->y;
 
@@ -60,8 +60,7 @@ int ARC4_stream_encrypt(stream_state *rc4State, const uint8_t in[], uint8_t out[
     return 0;
 }
 
-
-int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4State)
+EXPORT_SYM int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4State)
 {
     int i, index1, index2;
     stream_state *rc4State;
@@ -93,7 +92,7 @@ int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4State)
     return 0;
 }
 
-int ARC4_stream_destroy(stream_state *rc4State)
+EXPORT_SYM int ARC4_stream_destroy(stream_state *rc4State)
 {
     free(rc4State);
     return 0;

@@ -1,5 +1,37 @@
-#include <stdlib.h>
-#include <string.h>
+/* ===================================================================
+ *
+ * Copyright (c) 2014, Legrandin <helderijs@gmail.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * ===================================================================
+ */
+
+#include "pycrypto_common.h"
+
+FAKE_INIT(raw_ofb)
 
 #include "block_base.h"
 
@@ -11,16 +43,16 @@ typedef struct {
     /** How many bytes at the beginning of the key stream
       * have already been used.
       */
-    uint8_t usedKeyStream;
+    size_t usedKeyStream;
 
     uint8_t keyStream[0];
 } OfbModeState;
 
-static unsigned min(unsigned a, unsigned b) {
+static unsigned min_ab(unsigned a, unsigned b) {
     return a < b ? a : b;
 }
 
-int OFB_start_operation(BlockBase *cipher,
+EXPORT_SYM int OFB_start_operation(BlockBase *cipher,
                     const uint8_t iv[],
                     size_t iv_len,
                     OfbModeState **pResult) {
@@ -45,7 +77,7 @@ int OFB_start_operation(BlockBase *cipher,
     return 0;
 }
 
-int OFB_encrypt(OfbModeState *ofbState,
+EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -78,7 +110,7 @@ int OFB_encrypt(OfbModeState *ofbState,
             ofbState->usedKeyStream = 0;
         }
 
-        keyStreamToUse = min(data_len, block_len - ofbState->usedKeyStream);
+        keyStreamToUse = min_ab(data_len, block_len - ofbState->usedKeyStream);
         for (i=0; i<keyStreamToUse; i++)
             *out++ = *in++ ^ ofbState->keyStream[i + ofbState->usedKeyStream];
 
@@ -89,14 +121,14 @@ int OFB_encrypt(OfbModeState *ofbState,
     return 0;
 }
 
-int OFB_decrypt(OfbModeState *ofbState,
+EXPORT_SYM int OFB_decrypt(OfbModeState *ofbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
     return OFB_encrypt(ofbState, in, out, data_len);
 }
 
-int OFB_stop_operation(OfbModeState *state)
+EXPORT_SYM int OFB_stop_operation(OfbModeState *state)
 {
     state->cipher->destructor(state->cipher);
     free(state);

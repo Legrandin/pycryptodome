@@ -29,8 +29,9 @@
  * ===================================================================
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(raw_cfb)
 
 #include "block_base.h"
 
@@ -43,7 +44,7 @@ typedef struct {
     uint8_t iv[0];
 } CfbModeState;
 
-int CFB_start_operation(BlockBase *cipher,
+EXPORT_SYM int CFB_start_operation(BlockBase *cipher,
                     const uint8_t iv[],
                     size_t iv_len,
                     size_t segment_len, /* In bytes */
@@ -73,7 +74,7 @@ int CFB_start_operation(BlockBase *cipher,
     return 0;
 }
 
-int CFB_encrypt(CfbModeState *cfbState,
+EXPORT_SYM int CFB_encrypt(CfbModeState *cfbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -119,7 +120,7 @@ int CFB_encrypt(CfbModeState *cfbState,
     return 0;
 }
 
-int CFB_decrypt(CfbModeState *cfbState,
+EXPORT_SYM int CFB_decrypt(CfbModeState *cfbState,
             const uint8_t *in,
             uint8_t *out,
             size_t data_len) {
@@ -165,7 +166,7 @@ int CFB_decrypt(CfbModeState *cfbState,
     return 0;
 }
 
-int CFB_stop_operation(CfbModeState *state)
+EXPORT_SYM int CFB_stop_operation(CfbModeState *state)
 {
     state->cipher->destructor(state->cipher);
     free(state);

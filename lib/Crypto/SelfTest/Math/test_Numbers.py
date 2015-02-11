@@ -41,7 +41,6 @@ from Crypto.Util.py3compat import *
 
 from Crypto.Math.Numbers import Integer as IntegerGeneric
 from Crypto.Math import _Numbers_int as NumbersInt
-from Crypto.Math import _Numbers_gmp as NumbersGMP
 
 
 class TestIntegerBase(unittest.TestCase):
@@ -63,9 +62,19 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, Integer, 1.0)
 
         v4 = Integer(10**10)
-        self.failUnless(v1 == v1)
-        self.failUnless(v1 == v2)
+        v5 = Integer(-10**10)
+        self.assertEqual(v1, v1)
+        self.assertEqual(v1, 23)
+        self.assertEqual(v1, v2)
+        self.assertEqual(v3, -9)
+        self.assertEqual(v4, 10 ** 10)
+        self.assertEqual(v5, -10 ** 10)
+
         self.failIf(v1 == v4)
+
+        # Init and comparison between Integer's
+        v6 = Integer(v1)
+        self.assertEqual(v1, v6)
 
         self.failIf(Integer(0) == None)
 
@@ -111,6 +120,7 @@ class TestIntegerBase(unittest.TestCase):
         Integer = self.Integer
 
         v1 = Integer.from_bytes(b("\x00"))
+        self.failUnless(isinstance(v1, Integer))
         self.assertEqual(0, v1)
 
         v2 = Integer.from_bytes(b("\x00\x00"))
@@ -187,14 +197,16 @@ class TestIntegerBase(unittest.TestCase):
         self.failUnless(v4)
 
     def test_is_negative(self):
-        v1, v2, v3 = self.Integers(-3, 0, 3)
+        v1, v2, v3, v4, v5 = self.Integers(-3 ** 100, -3, 0, 3, 3**100)
         self.failUnless(v1.is_negative())
-        self.failIf(v2.is_negative())
-        self.failIf(v3.is_negative())
+        self.failUnless(v2.is_negative())
+        self.failIf(v4.is_negative())
+        self.failIf(v5.is_negative())
 
     def test_addition(self):
         # Test Integer+Integer and Integer+int
         v1, v2, v3 = self.Integers(7, 90, -7)
+        self.failUnless(isinstance(v1 + v2, self.Integer))
         self.assertEqual(v1 + v2, 97)
         self.assertEqual(v1 + 90, 97)
         self.assertEqual(v1 + v3, 0)
@@ -204,6 +216,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_subtraction(self):
         # Test Integer-Integer and Integer-int
         v1, v2, v3 = self.Integers(7, 90, -7)
+        self.failUnless(isinstance(v1 - v2, self.Integer))
         self.assertEqual(v2 - v1, 83)
         self.assertEqual(v2 - 7, 83)
         self.assertEqual(v2 - v3, 97)
@@ -213,6 +226,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_multiplication(self):
         # Test Integer-Integer and Integer-int
         v1, v2, v3, v4 = self.Integers(4, 5, -2, 2 ** 10)
+        self.failUnless(isinstance(v1 * v2, self.Integer))
         self.assertEqual(v1 * v2, 20)
         self.assertEqual(v1 * 5, 20)
         self.assertEqual(v1 * -2, -8)
@@ -220,6 +234,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_floor_div(self):
         v1, v2, v3 = self.Integers(3, 8, 2 ** 80)
+        self.failUnless(isinstance(v1 // v2, self.Integer))
         self.assertEqual(v2 // v1, 2)
         self.assertEqual(v2 // 3, 2)
         self.assertEqual(v2 // -3, -3)
@@ -229,6 +244,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_remainder(self):
         # Test Integer%Integer and Integer%int
         v1, v2, v3 = self.Integers(23, 5, -4)
+        self.failUnless(isinstance(v1 % v2, self.Integer))
         self.assertEqual(v1 % v2, 3)
         self.assertEqual(v1 % 5, 3)
         self.assertEqual(v3 % 5, 1)
@@ -238,7 +254,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_simple_exponentiation(self):
         v1, v2, v3 = self.Integers(4, 3, -2)
-
+        self.failUnless(isinstance(v1 ** v2, self.Integer))
         self.assertEqual(v1 ** v2, 64)
         self.assertEqual(pow(v1, v2), 64)
         self.assertEqual(v1 ** 3, 64)
@@ -251,6 +267,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_modular_exponentiation(self):
         v1, v2, v3 = self.Integers(23, 5, 17)
 
+        self.failUnless(isinstance(pow(v1, v2, v3), self.Integer))
         self.assertEqual(pow(v1, v2, v3), 7)
         self.assertEqual(pow(v1, 5,  v3), 7)
         self.assertEqual(pow(v1, v2, 17), 7)
@@ -303,6 +320,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_and(self):
         v1, v2, v3 = self.Integers(0xF4, 0x31, -0xF)
+        self.failUnless(isinstance(v1 & v2, self.Integer))
         self.assertEqual(v1 & v2, 0x30)
         self.assertEqual(v1 & 0x31, 0x30)
         self.assertEqual(v1 & v3, 0xF0)
@@ -312,6 +330,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_or(self):
         v1, v2, v3 = self.Integers(0x40, 0x82, -0xF)
+        self.failUnless(isinstance(v1 | v2, self.Integer))
         self.assertEqual(v1 | v2, 0xC2)
         self.assertEqual(v1 | 0x82, 0xC2)
         self.assertEqual(v2 | v3, -0xD)
@@ -320,6 +339,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         self.assertEqual(v1 >> 0, v1)
+        self.failUnless(isinstance(v1 >> v2, self.Integer))
         self.assertEqual(v1 >> v2, 0x08)
         self.assertEqual(v1 >> 1, 0x08)
         self.assertEqual(v3 >> 1, -0x08)
@@ -348,6 +368,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_left_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         self.assertEqual(v1 << 0, v1)
+        self.failUnless(isinstance(v1 << v2, self.Integer))
         self.assertEqual(v1 << v2, 0x20)
         self.assertEqual(v1 << 1, 0x20)
         self.assertEqual(v3 << 1, -0x20)
@@ -429,7 +450,7 @@ class TestIntegerBase(unittest.TestCase):
         v1.fail_if_divisible_by(7)
         v2.fail_if_divisible_by(7)
         v2.fail_if_divisible_by(2 ** 80)
-
+    
         # Failure expected
         self.assertRaises(ValueError, v1.fail_if_divisible_by, 4)
         self.assertRaises(ValueError, v1.fail_if_divisible_by, v3)
@@ -464,6 +485,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_inverse(self):
         v1, v2, v3, v4, v5, v6 = self.Integers(2, 5, -3, 0, 723872, 3433)
+        self.failUnless(isinstance(v1.inverse(v2), self.Integer))
         self.assertEqual(v1.inverse(v2), 3)
         self.assertEqual(v1.inverse(5), 3)
         self.assertEqual(v3.inverse(5), 3)
@@ -477,6 +499,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_gcd(self):
         v1, v2, v3, v4 = self.Integers(6, 10, 17, -2)
+        self.failUnless(isinstance(v1.gcd(v2), self.Integer))
         self.assertEqual(v1.gcd(v2), 2)
         self.assertEqual(v1.gcd(10), 2)
         self.assertEqual(v1.gcd(v3), 1)
@@ -509,14 +532,6 @@ class TestIntegerInt(TestIntegerBase):
     def setUp(self):
         self.Numbers = NumbersInt
         self.Integer = NumbersInt.Integer
-        TestIntegerBase.setUp(self)
-
-
-class TestIntegerGMP(TestIntegerBase):
-
-    def setUp(self):
-        self.Numbers = NumbersGMP
-        self.Integer = NumbersGMP.Integer
         TestIntegerBase.setUp(self)
 
 
@@ -580,11 +595,20 @@ class TestIntegerGeneric(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestIntegerInt)
+
     try:
-        from Crypto.Math._Numbers_gmp import Integer as IntegerGMP
+        from Crypto.Math import _Numbers_gmp as NumbersGMP
+
+        class TestIntegerGMP(TestIntegerBase):
+            def setUp(self):
+                self.Numbers = NumbersGMP
+                self.Integer = NumbersGMP.Integer
+                TestIntegerBase.setUp(self)
+
         tests += list_test_cases(TestIntegerGMP)
-    except ImportError:
-        print "Skipping GMP tests"
+    except (ImportError, OSError):
+        import sys
+        sys.stderr.write("Skipping GMP tests")
     tests += list_test_cases(TestIntegerGeneric)
     return tests
 
