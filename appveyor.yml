@@ -39,7 +39,10 @@ init:
 install:
   - "powershell appveyor\\install.ps1"
 
-build: off
+#build: off
+
+build_script:
+  - "%WITH_COMPILER% %PYTHON%/python setup.py build"
 
 test_script:
   - "%WITH_COMPILER% %PYTHON%/python setup.py test"
