@@ -45,6 +45,7 @@ build_script:
   - "%WITH_COMPILER% %PYTHON%/python setup.py build"
 
 test_script:
+  - "dir %PYTHON%"
   - "%WITH_COMPILER% %PYTHON%/python setup.py test"
 
 after_test:
