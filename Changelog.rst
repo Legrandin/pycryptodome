@@ -15,6 +15,7 @@ New features
 * Reduced the amount of C code by almost 40% (4700 lines).
   Modularized and simplified all code (C and Python) related to block ciphers.
   Pycryptodome is now free of CPython extensions.
+* Add support for CI in Windows via Appveyor.
 * RSA key generation complies to FIPS 186-4.
 
 Resolved issues

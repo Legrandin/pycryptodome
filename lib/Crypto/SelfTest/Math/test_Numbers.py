@@ -450,7 +450,7 @@ class TestIntegerBase(unittest.TestCase):
         v1.fail_if_divisible_by(7)
         v2.fail_if_divisible_by(7)
         v2.fail_if_divisible_by(2 ** 80)
-    
+
         # Failure expected
         self.assertRaises(ValueError, v1.fail_if_divisible_by, 4)
         self.assertRaises(ValueError, v1.fail_if_divisible_by, v3)
@@ -606,9 +606,9 @@ def get_tests(config={}):
                 TestIntegerBase.setUp(self)
 
         tests += list_test_cases(TestIntegerGMP)
-    except (ImportError, OSError):
+    except (ImportError, OSError), e:
         import sys
-        sys.stderr.write("Skipping GMP tests")
+        sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
     tests += list_test_cases(TestIntegerGeneric)
     return tests
 

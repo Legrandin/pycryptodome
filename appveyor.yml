@@ -23,6 +23,7 @@ environment:
       PYTHON_VERSION: "2.7.8"
       PYTHON_ARCH: "64"
       WINDOWS_SDK_VERSION: "v7.0"
+
     - PYTHON: "C:\\Python33-x64"
       PYTHON_VERSION: "3.3.5"
       PYTHON_ARCH: "64"
@@ -45,11 +46,12 @@ build_script:
   - "%WITH_COMPILER% %PYTHON%/python setup.py build"
 
 test_script:
+  - "%PYTHON%/python -c \"from ctypes import CDLL; CDLL('mpir')\""
   - "dir %PYTHON%"
   - "%WITH_COMPILER% %PYTHON%/python setup.py test"
 
-after_test:
-  - "%WITH_COMPILER% %PYTHON%/python setup.py bdist_wheel"
+#after_test:
+#  - "%WITH_COMPILER% %PYTHON%/python setup.py bdist_wheel"
 
 artifacts:
   - path: dist\*

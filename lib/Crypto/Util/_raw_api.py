@@ -99,7 +99,9 @@ except ImportError:
     null_pointer = None
 
     def load_lib(name, cdecl):
-        if "." not in name:
+        import platform
+        bits, linkage = platform.architecture()
+        if "." not in name and not linkage.startswith("Win"):
             full_name = find_library(name)
             if full_name is None:
                 raise OSError("Cannot load library '%s'" % name)
