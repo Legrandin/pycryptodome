@@ -110,9 +110,7 @@ except OSError:
 # In order to create a function that returns a pointer to
 # a new MPZ structure, we need to break the abstraction
 # and know exactly what ffi backend we have
-from ctypes import c_ulong as _c_ulong
-if c_ulong is _c_ulong:
-    # We are using ctypes
+if implementation["api"] == "ctypes":
     from ctypes import Structure, c_int, c_void_p, byref
 
     class _MPZ(Structure):
