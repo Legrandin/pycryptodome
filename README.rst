@@ -1,6 +1,9 @@
 .. image:: https://travis-ci.org/Legrandin/pycryptodome.svg?branch=master
    :target: https://travis-ci.org/Legrandin/pycryptodome
 
+.. image:: https://ci.appveyor.com/api/projects/status/mbxyqdodw9ylfib9?svg=true
+   :target: https://ci.appveyor.com/project/Legrandin/pycryptodome
+
 PyCryptodome
 ============
 
