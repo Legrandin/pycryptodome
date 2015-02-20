@@ -30,7 +30,7 @@
 
 from Crypto.Util.py3compat import tobytes, b, bchr
 
-from Crypto.Util._raw_api import (load_lib,
+from Crypto.Util._raw_api import (backend, load_lib,
                                   get_raw_buffer, get_c_string,
                                   null_pointer, create_string_buffer,
                                   c_ulong, c_ulonglong, c_size_t)
@@ -95,6 +95,7 @@ gmp_defs_common = """
 try:
     gmp_defs = "typedef unsigned long UNIX_ULONG;" + gmp_defs_common
     lib = load_lib("gmp", gmp_defs)
+    implementation = { "library":"gmp", "api":backend }
 except OSError:
     import platform
     bits, linkage = platform.architecture()
@@ -104,13 +105,12 @@ except OSError:
         gmp_defs = "typedef unsigned long long UNIX_ULONG;" + gmp_defs_common
         c_ulong = c_ulonglong
     lib = load_lib("mpir", gmp_defs)
+    implementation = { "library":"mpir", "api":backend }
 
 # In order to create a function that returns a pointer to
 # a new MPZ structure, we need to break the abstraction
 # and know exactly what ffi backend we have
-from ctypes import c_ulong as _c_ulong
-if c_ulong is _c_ulong:
-    # We are using ctypes
+if implementation["api"] == "ctypes":
     from ctypes import Structure, c_int, c_void_p, byref
 
     class _MPZ(Structure):

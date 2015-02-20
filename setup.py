@@ -278,6 +278,11 @@ class TestCommand(Command):
                     full_module = "Crypto.SelfTest." + comps[0] + "." + module_name
                 # Import sub-package or module
                 moduleObj = __import__( full_module, globals(), locals(), module_name )
+
+            from Crypto.Math import Numbers
+            PrintErr("Crypto.Math implementation:",
+                     str(Numbers._implementation))
+
             SelfTest.run(module=moduleObj, verbosity=self.verbose, stream=sys.stdout, config=self.config)
         finally:
             # Restore sys.path

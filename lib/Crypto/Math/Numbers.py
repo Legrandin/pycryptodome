@@ -33,10 +33,10 @@ from Crypto import Random
 
 try:
     from Crypto.Math._Numbers_gmp import Integer
-    _implementation = "gmp"
+    from Crypto.Math._Numbers_gmp import implementation as _implementation
 except (ImportError, OSError):
     from Crypto.Math._Numbers_int import Integer
-    _implementation = "python"
+    _implementation = { }
 
 
 def _random(**kwargs):
