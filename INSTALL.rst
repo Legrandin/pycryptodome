@@ -1,13 +1,12 @@
 Installation
 ------------
 
-The procedures below all perform the same actions, just in different operating systems:
+The procedures below all perform the same actions:
 
-#. Install ``virtualenv``
-#. Install a C compiler
-#. Create a virtual environment (and install ``pip`` in it)
+#. Install ``virtualenv`` and ``pip``
+#. Create a virtual environment
 #. Download PyCryptodome from `pypi`_
-#. Compile the C extensions of PyCryptodome
+#. *(In Unix only)* Compile the C extensions of PyCryptodome
 #. Install PyCryptodome in the virtual environment
 #. Run the test suite to verify that all algorithms work correctly
 
@@ -83,28 +82,23 @@ For PyPy::
         $ pip install pycryptodome
         $ pypy -m Crypto.SelfTest
 
-Windows
-~~~~~~~
+Windows (pre-compiled)
+~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+#. Make sure that the ``PATH`` environment variable contains
+   the directory of your Python interpreter and its subdirectory ``Scripts``.
 
-        Pre-compiled binaries for a few Windows configurations are available
-        as `Python wheels <http://pythonwheels.com/>`_ on `pypi`_.
-        
-        To use them, follow the steps below and skip **#5** and **#6**
-        (that is, the installation of the Microsoft compiler).
-
-#. Make sure the directory where your Python is installed and its subdirectory ``Scripts``
-   are included in your ``PATH`` environmental variable.
-
-   If needed, typically that means something like::
+   Typically, that means typing something like this
+   at the command prompt::
 
        > set PATH=%PATH%;C:\Python27;C:\Python27\Scripts
 
-#. You need to know exactly the version of Python you have and
-   whether it is a 32 bit or a 64 bit application.
-   You can easily discover that by running the interpreter from the command
-   prompt. Look at the very first line it prints.
+   or::
+
+       > set PATH=%PATH%;C:\Python34;C:\Python34\Scripts
+
+#. Run Python from the command line and note down its version
+   and whether it is a 32 bit or a 64 bit application.
 
    For instance, if you see::
 
@@ -112,8 +106,9 @@ Windows
 
    You clearly have Python 2.7 and it is a 32 bit application.
 
-#. **[Only once. Skip if you have Python 3.4 or newer]** Install ``pip`` by downloading and executing
-   the Python script `get-pip.py`_::
+#. **[Only once. Skip if you have Python 3.4 or newer]**
+   Install ``pip`` by downloading and executing the Python
+   script `get-pip.py`_::
 
         > python get-pip.py
 
@@ -121,32 +116,25 @@ Windows
 
         > pip install virtualenv
 
-#. **[Only once]** Install a Visual Studio C++ (MSVC) compiler that matches the runtime your Python
-   is linked to. The good news is that the compilers can be found inside some Microsoft SDKs
-   that are available free of charge from the Microsoft website.
-   The bad news is that you need to download between 500MB and 1.4GB of data that mostly you will not need.
+#. **[Only once]** In order to speed up asymmetric key algorithms like RSA,
+   it is recommended to install the MPIR_ library (a fork of the popular
+   GMP_ library, more suitable for the Windows environment).
+   For convenience, I made available pre-compiled *mpir.dll* files to match
+   the various types of Python one may have:
+    
+     - Python 2.x, 3.1, 3.2 (VS2008 runtime)
+       
+       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2008_32/mpir.dll>`_
+       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2008_64/mpir.dll>`_
+     
+     - Python 3.3 and 3.4 (VS2010 runtime)
+       
+       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_32/mpir.dll>`_
+       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_64/mpir.dll>`_
 
-   The specific Microsoft SDK to download depends on the version of Python you have:
-
-   * For Python 3.2 or older (including all 2.x), you need Visual C++ Compiler **2008** from the `MS Windows SDK for Windows 7 and .NET Framework 3.5 SP1`_.
-   * For Python 3.3 or newer, you need Visual C++ Compiler **2010** from the `MS Windows SDK for Windows 7 and .NET Framework 4`_.
-
-   In either case, you will be given the possibility to download three different ISO files.
-   Most probably, these days you have a 64 bit version of a Windows OS so you can just
-   select the file ``GRMSDKX_EN_DVD.iso`` (the other two ISOs are for 32 bit x86 and for IA).
-   Mount the ISO (for instance by means of `Virtual Clone Drive`_) and install just
-   the compiler and the redistributables.
-
-#. If you have installed Visual C++ **2008** and your Python is a 64 bit application, perform the following steps::
-
-        > cd "C:\Program Files\Microsoft SDKs\Windows\v7.0"
-        > cmd /V:ON /K Bin\SetEnv.Cmd /x64 /release
-        > set DISTUTILS_USE_SDK=1
-
-   For other combinations, the steps need to be slightly adjusted:
-
-   * If you have installed Visual C++ **2010** you must replace ``v7.0`` with ``v7.1``.
-   * If your Python is a 32 bit application you must replace ``/x64`` with ``/x86``.
+   Download the correct *mpir.dll* and drop it into the Python interpreter
+   directory (for instance ``C:\Python34``). *Pycryptodome* will
+   automatically make use of it.
 
 #. Create a virtual environment for your project::
 
@@ -155,9 +143,60 @@ Windows
         > cd MyProject
         > Scripts\activate
 
-#. Congratulations. You should be able to install PyCryptodome with::
+#. Install PyCryptodome as a `wheel <http://pythonwheels.com/>`_::
 
         > pip install pycryptodome
+
+#. To make sure everything works fine, run the test suite::
+
+        > python -m Crypto.SelfTest
+
+Windows (from sources)
+~~~~~~~~~~~~~~~~~~~~~~
+
+Windows does not come with a C compiler like most Unix systems.
+The simplest way to compile the *Pycryptodome* extensions from
+source code is to install the minimum set of Visual Studio
+components freely made available by Microsoft.
+
+First, perform all steps from the previous section and stop
+before executing ``pip install pycryptodome``.
+Proceed then as follows.
+
+#. **[Only once]** Download the correct Microsoft SDK (ISO image):
+
+   * For Python 2.x, 3.1 and 3.2, you need Visual C++ Compiler **2008** from the `MS Windows SDK for Windows 7 and .NET Framework 3.5 SP1`_.
+   * For Python 3.3 and 3.4 you need Visual C++ Compiler **2010** from the `MS Windows SDK for Windows 7 and .NET Framework 4`_.
+
+   In either case, you will be given the possibility to download three different ISO files.
+   Most probably, these days you have a 64 bit version of a Windows OS so you can just
+   select the file ``GRMSDKX_EN_DVD.iso`` (the other two ISOs are for 32 bit x86 and for IA).
+
+   After mounting the ISO (for instance by means of `Virtual Clone Drive`_), you can
+   run the install application. It is sufficient to select the C/C++ compiler and
+   the redistributables only.
+
+#. If you have installed Visual C++ **2010** and your Python is a 64 bit application,
+   open a command prompt and perform the following steps::
+
+        > cd "C:\Program Files\Microsoft SDKs\Windows\v7.1"
+        > cmd /V:ON /K Bin\SetEnv.Cmd /x64 /release
+        > set DISTUTILS_USE_SDK=1
+
+   For other combinations, the steps above need to be slightly adjusted:
+
+   * If you have installed Visual C++ **2008** you must replace ``v7.1`` with ``v7.0``.
+   * If your Python is a 32 bit application you must replace ``/x64`` with ``/x86``.
+
+#. Enter the virtual environment for your project::
+
+        > cd %USERPROFILE%
+        > cd MyProject
+        > Scripts\activate
+
+#. Compile and install PyCryptodome::
+
+        > pip install pycryptodome --no-use-wheel
 
 #. To make sure everything work fine, run the test suite::
 
@@ -168,3 +207,5 @@ Windows
 .. _MS Windows SDK for Windows 7 and .NET Framework 3.5 SP1: http://www.microsoft.com/en-us/download/details.aspx?id=18950
 .. _MS Windows SDK for Windows 7 and .NET Framework 4: https://www.microsoft.com/en-us/download/details.aspx?id=8442
 .. _Virtual Clone Drive: http://www.slysoft.com/it/virtual-clonedrive.html
+.. _MPIR: http://mpir.org
+.. _GMP: http://gmplib.org
