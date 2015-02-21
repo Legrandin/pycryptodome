@@ -16,16 +16,25 @@ are implemented as C extensions.
 PyCryptodome and PyCrypto
 -------------------------
 
-PyCryptodome is a recent fork of the `PyCrypto <https://www.dlitz.net/software/pycrypto>`_ project.
-At the time of the fork (May 2014), the last official PyCrypto release was v2.6 and v2.7 was in alpha stage.
+PyCryptodome is a fork of the `PyCrypto <https://www.dlitz.net/software/pycrypto>`_ project.
 
-The fork took place because PyCrypto had gone almost unmaintained for the past four years.
-New features were considered for inclusion on average after more than 1 year they
-were originally submitted, even if they concerned fundamental primitives for any modern
-security software (PKCS#1 paddings, AEAD modes, tools for importing/exporting keys,
-scrypt KDF, etc).
+It brings the following enhancements with respect to the last official version of PyCrypto (2.6.1):
 
-Additionally, it was felt that too little attention was paid to having a good, detailed
-API documentation and too much to performance optimizations.
+* Authenticated encryption modes (GCM, CCM, EAX, SIV)
+* Accelerated AES on Intel platforms via AES-NI
+* First class support for PyPy
+* SHA-3 hash algorithm
+* Salsa20 stream cipher
+* scrypt and HKDF
+* Deterministic DSA
+* Password-protected PKCS#8 key containers
+* Shamir's Secret Sharing scheme
+* Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
+* Simplified install process, including better support for Windows
+* FIPS 186-4 compliant RSA key generation
+* Major clean ups and simplification of the code base
+
+The fork took place because of the very bad state PyCrypto was in,
+and the little maintanance it was receiving.
 
 .. _GitHub: https://github.com/Legrandin/pycryptodome
