@@ -389,15 +389,19 @@ class RSAImplementation(object):
         size_p = bits >> 1
         size_q = bits - size_p
         while n.size_in_bits() != bits:
+
+            def totient_coprime_to_e(candidate):
+                return (candidate - 1).gcd(e) == 1
+
             # Note that q might be one bit longer than p if somebody specifies an odd
             # number of bits for the key. (Why would anyone do that?  You don't get
             # more security.)
             p = generate_probable_prime(exact_bits=size_p,
                                         randfunc=randfunc,
-                                        totient_coprime_to=e)
+                                        prime_filter=totient_coprime_to_e)
             q = generate_probable_prime(exact_bits=size_q,
                                         randfunc=randfunc,
-                                        totient_coprime_to=e)
+                                        prime_filter=totient_coprime_to_e)
             n = p * q
 
         # It's OK for p to be larger than q, but let's be
