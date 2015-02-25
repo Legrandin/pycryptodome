@@ -112,7 +112,7 @@ from Crypto.Math.Primality import ( generate_probable_safe_prime,
 from Crypto.Math.Numbers import Integer
 
 # Generate an ElGamal key with N bits
-def generate(bits, randfunc, progress_func=None):
+def generate(bits, randfunc):
     """Randomly generate a fresh, new ElGamal key.
 
     The key will be safe for use for both encryption and signature
@@ -126,11 +126,6 @@ def generate(bits, randfunc, progress_func=None):
             Random number generation function; it should accept
             a single integer N and return a string of random data
             N bytes long.
-        progress_func : callable
-            Optional function that will be called with a short string
-            containing the key parameter currently being generated;
-            it's useful for interactive applications where a user is
-            waiting for a key to be generated.
 
     :attention: You should always use a cryptographically secure random number generator,
         such as the one defined in the ``Crypto.Random`` module; **don't** just use the
@@ -141,8 +136,6 @@ def generate(bits, randfunc, progress_func=None):
     obj=ElGamalobj()
     # Generate a safe prime p
     # See Algorithm 4.86 in Handbook of Applied Cryptography
-    if progress_func:
-        progress_func('p\n')
 
     obj.p = generate_probable_safe_prime(exact_bits=bits, randfunc=randfunc)
     q = (obj.p - 1) >> 1
@@ -150,8 +143,6 @@ def generate(bits, randfunc, progress_func=None):
     # Generate generator g
     # See Algorithm 4.80 in Handbook of Applied Cryptography
     # Note that the order of the group is n=p-1=2q, where q is prime
-    if progress_func:
-        progress_func('g\n')
     while 1:
         # We must avoid g=2 because of Bleichenbacher's attack described
         # in "Generating ElGamal signatures without knowning the secret key",
@@ -178,14 +169,10 @@ def generate(bits, randfunc, progress_func=None):
         if safe:
             break
     # Generate private key x
-    if progress_func:
-        progress_func('x\n')
     obj.x = Integer.random_range(min_inclusive=2,
                                  max_exclusive=obj.p-1,
                                  randfunc=randfunc)
     # Generate public key y
-    if progress_func:
-        progress_func('y\n')
     obj.y = pow(obj.g, obj.x, obj.p)
     return obj
 

@@ -332,7 +332,7 @@ class RSAImplementation(object):
         """
         self._default_randfunc = kwargs.get('default_randfunc', Random.new().read)
 
-    def generate(self, bits, randfunc=None, progress_func=None, e=65537):
+    def generate(self, bits, randfunc=None, e=65537):
         """Randomly generate a fresh, new RSA key.
 
         :Parameters:
@@ -346,12 +346,6 @@ class RSAImplementation(object):
                             N bytes long.
                             If not specified, a new one will be instantiated
                             from ``Crypto.Random``.
-
-         progress_func : callable
-                            Optional function that will be called with a short string
-                            containing the key parameter currently being generated;
-                            it's useful for interactive applications where a user is
-                            waiting for a key to be generated.
 
          e : int
                             Public RSA exponent. It must be an odd positive integer.
@@ -383,8 +377,6 @@ class RSAImplementation(object):
         e = Integer(e)
 
         # Generate the prime factors of n
-        if progress_func:
-            progress_func('p,q\n')
         p = q = n = Integer(1)
         size_p = bits >> 1
         size_q = bits - size_p
@@ -410,12 +402,7 @@ class RSAImplementation(object):
         if p > q:
             p, q = q, p
 
-        if progress_func:
-            progress_func('u\n')
         u = p.inverse(q)
-
-        if progress_func:
-            progress_func('d\n')
         d = e.inverse((p - 1) * (q - 1))
 
         key_dict = dict(zip(('n', 'e', 'd', 'p', 'q', 'u'),

@@ -33,6 +33,8 @@ Breaks in compatibility
 * Removed the ``Crypto.Hash.new`` function.
 * The ``allow_wraparound`` parameter of ``Crypto.Util.Counter`` is ignored.
   An exception is always generated if the counter is reused.
+* ``DSA.generate``, ``RSA.generate`` and ``ElGamal.generate`` do not
+  accept the ``progress_func`` parameter anymore.
 
 3.0
 +++

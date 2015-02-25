@@ -402,7 +402,7 @@ class DSAImplementation(object):
         self._default_randfunc = kwargs.get('default_randfunc',
                                             Random.new().read)
 
-    def generate(self, bits, randfunc=None, progress_func=None, domain=None):
+    def generate(self, bits, randfunc=None, domain=None):
         """Randomly generate a fresh, new DSA key.
 
         :Parameters:
@@ -415,12 +415,6 @@ class DSAImplementation(object):
             Random number generation function; it accepts a single integer N
             and return a string of random data N bytes long.
             If not specified, the default from ``Crypto.Random`` is used.
-
-          progress_func : callable
-            Optional function that will be called with a short string
-            containing the key parameter currently being generated.
-            It's useful for interactive applications where a user is
-            waiting for a key to be generated.
 
           domain : list
             The DSA domain parameters *p*, *q* and *g* as a list of 3
@@ -444,7 +438,7 @@ class DSAImplementation(object):
         # must be a multiple of 64 bits between 512 and 1024
         for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
             if bits == 512 + 64*i:
-                return self._generate(bits, randfunc, progress_func, domain)
+                return self._generate(bits, randfunc, domain)
 
         # The March 2006 draft of FIPS 186-3 also allows 2048 and 3072-bit
         # primes, but only with longer q values.  Since the current DSA
@@ -452,10 +446,10 @@ class DSAImplementation(object):
         # values.
         raise ValueError("Number of bits in p must be a multiple of 64 between 512 and 1024, not %d bits" % (bits,))
 
-    def _generate(self, bits, randfunc=None, progress_func=None, domain=None):
+    def _generate(self, bits, randfunc=None, domain=None):
         if randfunc is None:
             randfunc = self._default_randfunc
-        comps = _DSA.generate_py(bits, randfunc, progress_func, domain)
+        comps = _DSA.generate_py(bits, randfunc, domain)
         key_dict = dict(zip(('y', 'g', 'p', 'q', 'x'), comps))
         return _DSAobj(key_dict, randfunc)
 

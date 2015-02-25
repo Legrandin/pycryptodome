@@ -51,21 +51,15 @@ def generateQ(randfunc):
         return S, q
     raise RuntimeError('Bad q value generated')
 
-def generate_py(bits, randfunc, progress_func=None, domain=None):
-    """generate(bits:int, randfunc:callable, progress_func:callable,
-                domain:list)
+def generate_py(bits, randfunc, domain=None):
+    """generate(bits:int, randfunc:callable, domain:list)
 
     Generate a DSA key of length 'bits', using 'randfunc' to get
-    random data and 'progress_func', if present, to display
-    the progress of the key generation.
+    random data.
     """
 
     if bits<160:
         raise ValueError('Key length < 160 bits')
-
-    # Generate string S and prime q
-    if progress_func:
-        progress_func('p,q\n')
 
     # Domain parameters may be given
     two = Integer(2)
@@ -93,20 +87,14 @@ def generate_py(bits, randfunc, progress_func=None, domain=None):
                 C, N = C + 1, N + n +1
             if C < 4096:
                 break
-            if progress_func:
-                progress_func('4096 multiples failed\n')
 
         power = (p - 1) // q
-        if progress_func:
-            progress_func('h,g\n')
         while True:
             h = Integer.from_bytes(randfunc(bits)) % (p - 1)
             g = pow(h, power, p)
             if 1 < h < p - 1 and g  >1:
                 break
 
-    if progress_func:
-        progress_func('x,y\n')
     while True:
         x = Integer.from_bytes(randfunc(20))
         if 0 < x < q:
