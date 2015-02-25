@@ -73,6 +73,7 @@ gmp_defs_common = """
         void __gmpz_powm_ui (mpz_t rop, const mpz_t base, UNIX_ULONG exp,
                              const mpz_t mod);
         void __gmpz_pow_ui (mpz_t rop, const mpz_t base, UNIX_ULONG exp);
+        void __gmpz_sqrt(mpz_t rop, const mpz_t op);
         void __gmpz_mod (mpz_t r, const mpz_t n, const mpz_t d);
         void __gmpz_neg (mpz_t rop, const mpz_t op);
         void __gmpz_and (mpz_t rop, const mpz_t op1, const mpz_t op2);
@@ -163,6 +164,7 @@ _gmp.mpz_cmp = lib.__gmpz_cmp
 _gmp.mpz_powm = lib.__gmpz_powm
 _gmp.mpz_powm_ui = lib.__gmpz_powm_ui
 _gmp.mpz_pow_ui = lib.__gmpz_pow_ui
+_gmp.mpz_sqrt = lib.__gmpz_sqrt
 _gmp.mpz_mod = lib.__gmpz_mod
 _gmp.mpz_neg = lib.__gmpz_neg
 _gmp.mpz_and = lib.__gmpz_and
@@ -412,6 +414,14 @@ class Integer(object):
                           exponent._mpz_p,
                           modulus._mpz_p)
             return result
+
+    def sqrt(self):
+        if self < 0:
+            raise ValueError("Square root of negative value")
+        result = Integer(0)
+        _gmp.mpz_sqrt(result._mpz_p,
+                      self._mpz_p)
+        return result
 
     def __iadd__(self, term):
         if isinstance(term, (int, long)):

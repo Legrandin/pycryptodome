@@ -280,6 +280,14 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, pow, v1, 5, -4)
         self.assertRaises(ValueError, pow, v1, -3, 8)
 
+    def test_sqrt(self):
+        v1, v2, v3, v4 = self.Integers(-2, 0, 49, 10**100)
+
+        self.assertRaises(ValueError, v1.sqrt)
+        self.assertEqual(v2.sqrt(), 0)
+        self.assertEqual(v3.sqrt(), 7)
+        self.assertEqual(v4.sqrt(), 10**50)
+
     def test_in_place_add(self):
         v1, v2 = self.Integers(10, 20)
 

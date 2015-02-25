@@ -152,6 +152,17 @@ class Integer(object):
                 raise ZeroDivisionError("Modulus cannot be zero")
         return Integer(pow(self._value, exp_value, mod_value))
 
+    def sqrt(self):
+        # http://stackoverflow.com/questions/15390807/integer-square-root-in-python
+        if self._value < 0:
+            raise ValueError("Square root of negative value")
+        x = self._value
+        y = (x + 1) // 2
+        while y < x:
+            x = y
+            y = (x + self._value // x) // 2
+        return Integer(x)
+
     # Boolean/bit operations
     def __and__(self, term):
         try:
