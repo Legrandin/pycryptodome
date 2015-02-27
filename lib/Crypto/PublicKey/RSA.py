@@ -163,7 +163,9 @@ class _RSAobj(object):
         return 'd' in self._key
 
     def size(self):
-        return self._key['p'].size_in_bits() - 1
+        """Return the largest x such that 2^x
+        is always smaller than the modulus"""
+        return self._key['n'].size_in_bits() - 1
 
     def publickey(self):
         return _RSAobj(dict([(k, self._key[k]) for k in 'n', 'e']), self._randfunc)
@@ -333,77 +335,83 @@ class RSAImplementation(object):
         self._default_randfunc = kwargs.get('default_randfunc', Random.new().read)
 
     def generate(self, bits, randfunc=None, e=65537):
-        """Randomly generate a fresh, new RSA key.
+        """Create a new RSA key.
+
+        The algorithm closely follows NIST `FIPS 186-4`_ in its
+        sections B.3.1 and B.3.3. The modulus is the product of
+        two non-strong probable primes.
+        Each prime passes a suitable number of Miller-Rabin tests
+        with random bases and a single Lucas test.
 
         :Parameters:
-         bits : int
-                            Key length, or size (in bits) of the RSA modulus.
-                            It must be a multiple of 256, and no smaller than 1024.
+          bits : integer
+            Key length, or size (in bits) of the RSA modulus.
+            It must be at least 1024.
+            The FIPS standard only defines 1024, 2048 and 3072.
 
-         randfunc : callable
-                            Random number generation function; it should accept
-                            a single integer N and return a string of random data
-                            N bytes long.
-                            If not specified, a new one will be instantiated
-                            from ``Crypto.Random``.
+          randfunc : callable
+            Random number generation function; it should accept
+            a single integer N and return a string of random data
+            bytes long.
+            If not specified, a new one will be instantiated
+            from ``Crypto.Random``.
 
-         e : int
-                            Public RSA exponent. It must be an odd positive integer.
-                            It is typically a small number with very few ones in its
-                            binary representation.
-                            The default value 65537 (= ``0b10000000000000001`` ) is a safe
-                            choice: other common values are 5, 7, 17, and 257.
-
-        :attention: You should always use a cryptographically secure random number generator,
-            such as the one defined in the ``Crypto.Random`` module; **don't** just use the
-            current time and the ``random`` module.
-
-        :attention: Exponent 3 is also widely used, but it requires very special care when padding
-            the message.
+          e : integer
+            Public RSA exponent. It must be an odd positive integer.
+            It is typically a small number with very few ones in its
+            binary representation.
+            The FIPS standard requires the public exponent to be
+            at least 65537 (the default).
 
         :Return: An RSA key object (`_RSAobj`).
-
-        :Raise ValueError:
-            When **bits** is too little or not a multiple of 256, or when
-            **e** is not odd or smaller than 2.
         """
-        if bits < 1024 or (bits & 0xff) != 0:
-            raise ValueError("RSA modulus length must be a multiple of 256 and >= 1024")
-        if e%2==0 or e<3:
+
+        if bits < 1024:
+            raise ValueError("RSA modulus length must be >= 1024")
+        if e % 2 == 0 or e < 3:
             raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
         if randfunc is None:
             randfunc = self._default_randfunc
 
+        d = n = Integer(1)
         e = Integer(e)
 
-        # Generate the prime factors of n
-        p = q = n = Integer(1)
-        size_p = bits >> 1
-        size_q = bits - size_p
-        while n.size_in_bits() != bits:
+        while n.size_in_bits() != bits and d < (1 << (bits // 2)):
+            # Generate the prime factors of n: p and q.
+            # By construciton, their product is always
+            # 2^{bits-1} < p*q < 2^bits.
+            size_q = bits // 2
+            size_p = bits - size_q
 
-            def totient_coprime_to_e(candidate):
-                return (candidate - 1).gcd(e) == 1
+            min_p = min_q = (Integer(1) << (2 * size_q - 1)).sqrt()
+            if size_q != size_p:
+                min_p = (Integer(1) << (2 * size_p - 1)).sqrt()
 
-            # Note that q might be one bit longer than p if somebody specifies an odd
-            # number of bits for the key. (Why would anyone do that?  You don't get
-            # more security.)
+            def filter_p(candidate):
+                return candidate > min_p and (candidate - 1).gcd(e) == 1
+
             p = generate_probable_prime(exact_bits=size_p,
                                         randfunc=randfunc,
-                                        prime_filter=totient_coprime_to_e)
+                                        prime_filter=filter_p)
+
+            min_distance = Integer(1) << (bits // 2 - 100)
+
+            def filter_q(candidate):
+                return candidate > min_q and (candidate - 1).gcd(e) == 1 \
+                                         and abs(candidate - p) > min_distance
+
             q = generate_probable_prime(exact_bits=size_q,
                                         randfunc=randfunc,
-                                        prime_filter=totient_coprime_to_e)
-            n = p * q
+                                        prime_filter=filter_q)
 
-        # It's OK for p to be larger than q, but let's be
-        # kind to the function that will invert it for
-        # th calculation of u.
+            n = p * q
+            lcm = (p - 1).lcm(q - 1)
+            d = e.inverse(lcm)
+
         if p > q:
             p, q = q, p
 
         u = p.inverse(q)
-        d = e.inverse((p - 1) * (q - 1))
 
         key_dict = dict(zip(('n', 'e', 'd', 'p', 'q', 'u'),
                             (n, e, d, p, q, u)))

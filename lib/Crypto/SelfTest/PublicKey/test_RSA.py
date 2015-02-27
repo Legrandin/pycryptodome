@@ -215,21 +215,23 @@ class RSATest(unittest.TestCase):
         self.assertRaises(ValueError, rsa_obj._decrypt, 0)
         self.assertRaises(ValueError, rsa_obj._encrypt, 0)
 
+    def test_rsa_key_size(self):
+        key = self.rsa.generate(1024)
+        self.assertEqual(key.size(), 1023)
+
+        key = self.rsa.generate(1025)
+        self.assertEqual(key.size(), 1024)
+
     def _check_private_key(self, rsaObj):
+        from Crypto.Math.Numbers import Integer
+
         # Check capabilities
         self.assertEqual(1, rsaObj.has_private())
 
-        # Check rsaObj.[nedpqu] -> rsaObj.[nedpqu] mapping
-        self.assertEqual(rsaObj.n, rsaObj.n)
-        self.assertEqual(rsaObj.e, rsaObj.e)
-        self.assertEqual(rsaObj.d, rsaObj.d)
-        self.assertEqual(rsaObj.p, rsaObj.p)
-        self.assertEqual(rsaObj.q, rsaObj.q)
-        self.assertEqual(rsaObj.u, rsaObj.u)
-
         # Sanity check key data
         self.assertEqual(rsaObj.n, rsaObj.p * rsaObj.q)     # n = pq
-        self.assertEqual(1, rsaObj.d * rsaObj.e % ((rsaObj.p-1) * (rsaObj.q-1))) # ed = 1 (mod (p-1)(q-1))
+        lcm = int(Integer(rsaObj.p-1).lcm(rsaObj.q-1))
+        self.assertEqual(1, rsaObj.d * rsaObj.e % lcm) # ed = 1 (mod LCM(p-1, q-1))
         self.assertEqual(1, rsaObj.p * rsaObj.u % rsaObj.q) # pu = 1 (mod q)
         self.assertEqual(1, rsaObj.p > 1)   # p > 1
         self.assertEqual(1, rsaObj.q > 1)   # q > 1
