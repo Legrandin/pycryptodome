@@ -280,6 +280,14 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, pow, v1, 5, -4)
         self.assertRaises(ValueError, pow, v1, -3, 8)
 
+    def test_abs(self):
+        v1, v2, v3, v4, v5 = self.Integers(-2 ** 100, -2, 0, 2, 2 ** 100)
+        self.assertEqual(abs(v1), 2 ** 100)
+        self.assertEqual(abs(v2), 2)
+        self.assertEqual(abs(v3), 0)
+        self.assertEqual(abs(v4), 2)
+        self.assertEqual(abs(v5), 2 ** 100)
+
     def test_sqrt(self):
         v1, v2, v3, v4 = self.Integers(-2, 0, 49, 10**100)
 
@@ -513,6 +521,17 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1.gcd(v3), 1)
         self.assertEqual(v1.gcd(-2), 2)
         self.assertEqual(v4.gcd(6), 2)
+
+    def test_lcm(self):
+        v1, v2, v3, v4, v5 = self.Integers(6, 10, 17, -2, 0)
+        self.failUnless(isinstance(v1.lcm(v2), self.Integer))
+        self.assertEqual(v1.lcm(v2), 30)
+        self.assertEqual(v1.lcm(10), 30)
+        self.assertEqual(v1.lcm(v3), 102)
+        self.assertEqual(v1.lcm(-2), 6)
+        self.assertEqual(v4.lcm(6), 6)
+        self.assertEqual(v1.lcm(0), 0)
+        self.assertEqual(v5.lcm(0), 0)
 
     def test_jacobi_symbol(self):
 

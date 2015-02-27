@@ -76,6 +76,7 @@ gmp_defs_common = """
         void __gmpz_sqrt(mpz_t rop, const mpz_t op);
         void __gmpz_mod (mpz_t r, const mpz_t n, const mpz_t d);
         void __gmpz_neg (mpz_t rop, const mpz_t op);
+        void __gmpz_abs (mpz_t rop, const mpz_t op);
         void __gmpz_and (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_ior (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_clear (mpz_t x);
@@ -88,6 +89,7 @@ gmp_defs_common = """
         void __gmpz_gcd (mpz_t rop, const mpz_t op1, const mpz_t op2);
         UNIX_ULONG __gmpz_gcd_ui (mpz_t rop, const mpz_t op1,
                                      UNIX_ULONG op2);
+        void __gmpz_lcm (mpz_t rop, const mpz_t op1, const mpz_t op2);
         int __gmpz_invert (mpz_t rop, const mpz_t op1, const mpz_t op2);
         int __gmpz_divisible_p (const mpz_t n, const mpz_t d);
         int __gmpz_divisible_ui_p (const mpz_t n, UNIX_ULONG d);
@@ -167,6 +169,7 @@ _gmp.mpz_pow_ui = lib.__gmpz_pow_ui
 _gmp.mpz_sqrt = lib.__gmpz_sqrt
 _gmp.mpz_mod = lib.__gmpz_mod
 _gmp.mpz_neg = lib.__gmpz_neg
+_gmp.mpz_abs = lib.__gmpz_abs
 _gmp.mpz_and = lib.__gmpz_and
 _gmp.mpz_ior = lib.__gmpz_ior
 _gmp.mpz_clear = lib.__gmpz_clear
@@ -178,6 +181,7 @@ _gmp.mpz_perfect_square_p = lib.__gmpz_perfect_square_p
 _gmp.mpz_jacobi = lib.__gmpz_jacobi
 _gmp.mpz_gcd = lib.__gmpz_gcd
 _gmp.mpz_gcd_ui = lib.__gmpz_gcd_ui
+_gmp.mpz_lcm = lib.__gmpz_lcm
 _gmp.mpz_invert = lib.__gmpz_invert
 _gmp.mpz_divisible_p = lib.__gmpz_divisible_p
 _gmp.mpz_divisible_ui_p = lib.__gmpz_divisible_ui_p
@@ -415,6 +419,11 @@ class Integer(object):
                           modulus._mpz_p)
             return result
 
+    def __abs__(self):
+        result = Integer(0)
+        _gmp.mpz_abs(result._mpz_p, self._mpz_p)
+        return result
+
     def sqrt(self):
         if self < 0:
             raise ValueError("Square root of negative value")
@@ -634,6 +643,13 @@ class Integer(object):
                 return result
             term = Integer(term)
         _gmp.mpz_gcd(result._mpz_p, self._mpz_p, term._mpz_p)
+        return result
+
+    def lcm(self, term):
+        result = Integer(0)
+        if not isinstance(term, Integer):
+            term = Integer(term)
+        _gmp.mpz_lcm(result._mpz_p, self._mpz_p, term._mpz_p)
         return result
 
     @staticmethod

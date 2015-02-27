@@ -152,6 +152,9 @@ class Integer(object):
                 raise ZeroDivisionError("Modulus cannot be zero")
         return Integer(pow(self._value, exp_value, mod_value))
 
+    def __abs__(self):
+        return abs(self._value)
+
     def sqrt(self):
         # http://stackoverflow.com/questions/15390807/integer-square-root-in-python
         if self._value < 0:
@@ -315,6 +318,15 @@ class Integer(object):
             q = r_p // r_n
             r_p, r_n = r_n, r_p - q * r_n
         return Integer(r_p)
+
+    def lcm(self, term):
+        try:
+            term = term._value
+        except AttributeError:
+            pass
+        if self._value == 0 or term == 0:
+            return Integer(0)
+        return Integer(abs((self._value * term) // self.gcd(term)._value))
 
     @staticmethod
     def jacobi_symbol(a, n):
