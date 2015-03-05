@@ -16,7 +16,8 @@ New features
   Modularized and simplified all code (C and Python) related to block ciphers.
   Pycryptodome is now free of CPython extensions.
 * Add support for CI in Windows via Appveyor.
-* RSA key generation complies to FIPS 186-4.
+* RSA key generation more closely follows FIPS 186-4 (though it is
+  not 100% compliant).
 
 Resolved issues
 ---------------

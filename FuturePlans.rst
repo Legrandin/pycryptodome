@@ -3,7 +3,7 @@ Future releases will include:
 - Use cffi and fallback to ctypes to speed up execution on pypy
   (ciphers and strxor)
 - Break-up test cases of ciphers and make them mode-specific
-- Refactor RSA/DSA code and make it compliant to FIPS 186-4
+- Refactor DSA code and make it compliant to FIPS 186-4
 - Add back support for MPIR on Windows
 - Move API documentation from epydoc to sphinx
 - Implement AES with bitslicing
