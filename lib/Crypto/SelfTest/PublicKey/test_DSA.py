@@ -103,8 +103,7 @@ class DSATest(unittest.TestCase):
         self._test_verification(dsaObj)
 
     def test_domain1(self):
-        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
-        dsa_key_1 = self.dsa.construct((y, g, p, q))
+        dsa_key_1 = self.dsa.generate(1024)
         domain_params = dsa_key_1.domain()
 
         dsa_key_2 = self.dsa.generate(1024, domain=domain_params)

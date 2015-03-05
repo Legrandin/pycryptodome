@@ -87,12 +87,13 @@ __all__ = ['generate', 'construct', 'DSAImplementation',
 
 import binascii
 import struct
+import itertools
 
 from Crypto.Util.py3compat import *
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.PublicKey import _DSA
+from Crypto.Hash import SHA256
 from Crypto.Util.asn1 import (
                 DerObject, DerSequence,
                 DerInteger, DerObjectId,
@@ -101,7 +102,8 @@ from Crypto.Util.asn1 import (
                 )
 
 from Crypto.Math.Numbers import Integer
-from Crypto.Math.Primality import test_probable_prime, COMPOSITE
+from Crypto.Math.Primality import (test_probable_prime, COMPOSITE,
+                                   PROBABLY_PRIME)
 
 
 def _decode_der(obj_class, binstr):
@@ -396,20 +398,70 @@ class DSAImplementation(object):
             When **use_fast_math** =True but fast math is not available.
         """
 
-        # 'default_randfunc' parameter:
-        #   None (default) - use Random.new().read
-        #   not None       - use the specified function
         self._default_randfunc = kwargs.get('default_randfunc',
                                             Random.new().read)
 
+    def _generate_domain(self, L, randfunc):
+
+        N = { 1024:160, 2048:224, 3072:256 }.get(L)
+        if N is None:
+            raise ValueError("Invalid modulus length (%d)" % L)
+
+        outlen = SHA256.digest_size * 8
+        n = (L + outlen - 1) // outlen - 1  # ceil(L/outlen) -1
+        b_ = L - 1 - (n * outlen)
+
+        # Generate q (A.1.1.2)
+        q = Integer(4)
+        upper_bit = 1 << (N - 1)
+        while test_probable_prime(q, randfunc) != PROBABLY_PRIME:
+            seed = randfunc(64)
+            U = Integer.from_bytes(SHA256.new(seed).digest()) & (upper_bit - 1)
+            q = U | upper_bit | 1
+        assert(q.size_in_bits() == N)
+
+        # Generate p (A.1.1.2)
+        offset = 1
+        upper_bit = 1 << (L - 1)
+        while True:
+            V = [ SHA256.new(seed + Integer(offset + j).to_bytes()).digest()
+                  for j in xrange(n + 1) ]
+            V = [ Integer.from_bytes(v) for v in V ]
+            W = sum([V[i] * (1 << (i * outlen)) for i in xrange(n)],
+                    (V[n] & (1 << b_ - 1)) * (1 << (n * outlen)))
+
+            X = Integer(W + upper_bit) # 2^{L-1} < X < 2^{L}
+            assert(X.size_in_bits() == L)
+
+            c = X % (q * 2)
+            p = X - (c - 1)  # 2q divides (p-1)
+            if p.size_in_bits() == L and \
+               test_probable_prime(p, randfunc) == PROBABLY_PRIME:
+                   break
+            offset += n + 1
+
+        # Generate g (A.2.3, index=1)
+        e = (p - 1) // q
+        for count in itertools.count(1):
+            U = seed + b("ggen") + bchr(1) + Integer(count).to_bytes()
+            W = Integer.from_bytes(SHA256.new(U).digest())
+            g = pow(W, e, p)
+            if g != 1:
+                break
+
+        return (p, q, g, seed)
+
+
     def generate(self, bits, randfunc=None, domain=None):
-        """Randomly generate a fresh, new DSA key.
+        """Generate a new DSA key pair.
+
+        The algorithm follows Appendix A.1/A.2 and B.1 of `FIPS 186-4`_,
+        respectively for domain generation and key pair generation.
 
         :Parameters:
-
-          bits : int
+          bits : integer
             Key length, or size (in bits) of the DSA modulus *p*.
-            It must be a multiple of 64, in the closed interval [512,1024].
+            It must be 1024, 2048 or 3072.
 
           randfunc : callable
             Random number generation function; it accepts a single integer N
@@ -418,39 +470,46 @@ class DSAImplementation(object):
 
           domain : list
             The DSA domain parameters *p*, *q* and *g* as a list of 3
-            integers. If not specified, they are created anew.
-
-        :attention: You should always use a cryptographically secure
-            random number generator, such as the one defined in the
-            ``Crypto.Random`` module; **don't** just use the
-            current time and the ``random`` module.
+            integers. Size of *p* and *q* must comply to `FIPS 186-4`.
+            If not specified, the parameters are created anew.
 
         :Return: A DSA key object (`_DSAobj`).
 
         :Raise ValueError:
             When **bits** is too little, too big, or not a multiple of 64.
+
+        .. _FIPS 186-4:: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
         """
 
         if randfunc is None:
-            ranfunc = self._default_randfunc
-
-        # Check against FIPS 186-2, which says that the size of the prime p
-        # must be a multiple of 64 bits between 512 and 1024
-        for i in (0, 1, 2, 3, 4, 5, 6, 7, 8):
-            if bits == 512 + 64*i:
-                return self._generate(bits, randfunc, domain)
-
-        # The March 2006 draft of FIPS 186-3 also allows 2048 and 3072-bit
-        # primes, but only with longer q values.  Since the current DSA
-        # implementation only supports a 160-bit q, we don't support larger
-        # values.
-        raise ValueError("Number of bits in p must be a multiple of 64 between 512 and 1024, not %d bits" % (bits,))
-
-    def _generate(self, bits, randfunc=None, domain=None):
-        if randfunc is None:
             randfunc = self._default_randfunc
-        comps = _DSA.generate_py(bits, randfunc, domain)
-        key_dict = dict(zip(('y', 'g', 'p', 'q', 'x'), comps))
+
+        if domain:
+            p, q, g = map(Integer, domain)
+        else:
+            p, q, g, _ = self._generate_domain(bits, randfunc)
+
+        L = p.size_in_bits()
+        N = q.size_in_bits()
+
+        if L != bits:
+            raise ValueError("Mismatch between size of modulus (%d)"
+                             " and 'bits' parameter (%d)" % (L, bits))
+
+        if (L, N) not in [(1024, 160), (2048, 224),
+                          (2048, 256), (3072, 256)]:
+            raise ValueError("Lengths of p and q (%d, %d) are not compatible"
+                             "to FIPS 186-3" % (L, N))
+
+        if not 1 < g < p:
+            raise ValueError("Incorrent DSA generator")
+
+        # B.1.1
+        c = Integer.random(exact_bits=N + 64)
+        x = c % (q - 1) + 1 # 1 <= x <= q-1
+        y = pow(g, x, p)
+
+        key_dict = { 'y':y, 'g':g, 'p':p, 'q':q, 'x':x }
         return _DSAobj(key_dict, randfunc)
 
     def construct(self, tup, consistency_check=True):

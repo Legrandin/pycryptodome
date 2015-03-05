@@ -26,7 +26,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Shamir's Secret Sharing scheme
 * Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
 * Simplified install process, including better support for Windows
-* FIPS 186-4 compliant RSA key generation
+* Cleaner RSA and DSA key generation (largely based on FIPS 186-4)
 * Major clean ups and simplification of the code base
 
 For more information, see the `homepage`_.
