@@ -24,6 +24,8 @@
 Counter (CTR) mode.
 """
 
+__all__ = ['CtrMode']
+
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, expect_byte_string)
@@ -50,7 +52,7 @@ raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
                                         )
 
 
-class RawCtrMode(object):
+class CtrMode(object):
     """*CounTeR (CTR)* mode.
 
     This mode is very similar to ECB, in that
@@ -71,7 +73,7 @@ class RawCtrMode(object):
     (modulo *2^m*) for each block. In most cases, **m** is
     chosen to be half the block size.
 
-    See `NIST SP800-38A`_ , Section 6.5 (for the mode) and
+    See `NIST SP800-38A`_, Section 6.5 (for the mode) and
     Appendix B (for how to manage the *initial counter block*).
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
@@ -262,5 +264,5 @@ def _create_ctr_cipher(factory, **kwargs):
     if kwargs:
         raise ValueError("Unknown parameters for CTR mode: %s"
                          % str(kwargs))
-    return RawCtrMode(cipher_state, initial_counter_block,
+    return CtrMode(cipher_state, initial_counter_block,
                       len(prefix), counter_len, little_endian)

@@ -32,6 +32,8 @@
 Counter with CBC-MAC (CCM) mode.
 """
 
+__all__ = ['CcmMode']
+
 from Crypto.Util.py3compat import *
 
 from binascii import unhexlify, hexlify
@@ -76,7 +78,7 @@ class _CBCMAC(_SmoothMAC):
         return self._t
 
 
-class ModeCCM(object):
+class CcmMode(object):
     """Counter with CBC-MAC (CCM).
 
     This is an Authenticated Encryption with Associated Data (`AEAD`_) mode.
@@ -110,23 +112,23 @@ class ModeCCM(object):
     | before keystream   |    size       |     size          |
     | repeats            |    (bytes)    |     (bytes)       |
     +====================+===============+===================+
-    |       2**52        |      13       |        64K        |
+    |       2^52         |      13       |        64K        |
     +--------------------+---------------+-------------------+
-    |       2**48        |      12       |        16M        |
+    |       2^48         |      12       |        16M        |
     +--------------------+---------------+-------------------+
-    |       2**44        |      11       |         4G        |
+    |       2^44         |      11       |         4G        |
     +--------------------+---------------+-------------------+
-    |       2**40        |      10       |         1T        |
+    |       2^40         |      10       |         1T        |
     +--------------------+---------------+-------------------+
-    |       2**36        |       9       |        64P        |
+    |       2^36         |       9       |        64P        |
     +--------------------+---------------+-------------------+
-    |       2**32        |       8       |        16E        |
+    |       2^32         |       8       |        16E        |
     +--------------------+---------------+-------------------+
 
     This mode is only available for ciphers that operate on 128 bits blocks
     (e.g. AES but not TDES).
 
-    See `NIST SP800-38C`_ or RFC3610_ .
+    See `NIST SP800-38C`_ or RFC3610_.
 
     .. _`NIST SP800-38C`: http://csrc.nist.gov/publications/nistpubs/800-38C/SP800-38C.pdf
     .. _RFC3610: https://tools.ietf.org/html/rfc3610
@@ -138,7 +140,8 @@ class ModeCCM(object):
 
         :Parameters:
           factory : module
-            A cryptographic algorithm module from `Crypto.Cipher`.
+            A symmetric cipher module from `Crypto.Cipher`
+            (like `Crypto.Cipher.AES`).
 
         :Keywords:
           key : byte string
@@ -536,4 +539,4 @@ class ModeCCM(object):
 
 
 def _create_ccm_cipher(factory, **kwargs):
-    return ModeCCM(factory, **kwargs)
+    return CcmMode(factory, **kwargs)

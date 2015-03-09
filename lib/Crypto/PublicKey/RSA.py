@@ -348,14 +348,12 @@ class RSAImplementation(object):
             Key length, or size (in bits) of the RSA modulus.
             It must be at least 1024.
             The FIPS standard only defines 1024, 2048 and 3072.
-
           randfunc : callable
             Random number generation function; it should accept
             a single integer N and return a string of random data
             bytes long.
             If not specified, a new one will be instantiated
             from ``Crypto.Random``.
-
           e : integer
             Public RSA exponent. It must be an odd positive integer.
             It is typically a small number with very few ones in its
@@ -364,6 +362,8 @@ class RSAImplementation(object):
             at least 65537 (the default).
 
         :Return: An RSA key object (`_RSAobj`).
+
+        .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
         """
 
         if bits < 1024:
@@ -435,13 +435,14 @@ class RSAImplementation(object):
             A tuple of long integers, with at least 2 and no
             more than 6 items. The items come in the following order:
 
-                1. RSA modulus (n).
-                2. Public exponent (e).
-                3. Private exponent (d). Only required if the key is private.
-                4. First factor of n (p). Optional, but factor q must also
-                    be present.
-                5. Second factor of n (q). Optional.
-                6. CRT coefficient, (1/p) mod q (u). Optional.
+                1. RSA modulus (*n*).
+                2. Public exponent (*e*).
+                3. Private exponent (*d*).
+                   Only required if the key is private.
+                4. First factor of *n* (*p*).
+                   Optional, but factor q must also be present.
+                5. Second factor of *n* (*q*). Optional.
+                6. CRT coefficient, *(1/p) mod q* (*u*). Optional.
          consistency_check : boolean
             If *True*, the library will verify that the provided components
             fulfil the main RSA properties.

@@ -34,7 +34,7 @@ Module                      Description
 `Crypto.Util.Padding`       Set of functions for adding and removing padding.
 ========================    =============================================
 
-:undocumented: _galois, _number_new, cpuid, py3compat
+:undocumented: _galois, _number_new, cpuid, py3compat, _raw_api
 """
 
 __all__ = ['RFC1751', 'number', 'strxor', 'asn1', 'Counter', 'Padding']

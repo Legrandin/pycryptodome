@@ -24,6 +24,8 @@
 Electronic Code Book (ECB) mode.
 """
 
+__all__ = [ 'EcbMode' ]
+
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, create_string_buffer,
                                   get_raw_buffer, SmartPointer,
@@ -45,7 +47,7 @@ raw_ecb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ecb", """
                                         )
 
 
-class RawEcbMode(object):
+class EcbMode(object):
     """*Electronic Code Book (ECB)*.
 
     This is the simplest encryption mode. Each of the plaintext blocks
@@ -55,7 +57,7 @@ class RawEcbMode(object):
     This mode is dangerous because it exposes frequency of symbols
     in your plaintext. Other modes (e.g. *CBC*) should be used instead.
 
-    See `NIST SP800-38A`_ , Section 6.1 .
+    See `NIST SP800-38A`_ , Section 6.1.
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
     """
@@ -171,4 +173,4 @@ def _create_ecb_cipher(factory, **kwargs):
     cipher_state = factory._create_base_cipher(kwargs)
     if kwargs:
         raise ValueError("Unknown parameters for ECB: %s" % str(kwargs))
-    return RawEcbMode(cipher_state)
+    return EcbMode(cipher_state)

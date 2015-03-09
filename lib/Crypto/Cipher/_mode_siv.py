@@ -32,6 +32,8 @@
 Synthetic Initialization Vector (SIV) mode.
 """
 
+__all__ = ['SivMode']
+
 from binascii import unhexlify, hexlify
 
 from Crypto.Util.py3compat import *
@@ -41,7 +43,7 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Protocol.KDF import _S2V
 from Crypto.Hash import SHA3_224 as SHA3
 
-class ModeSIV(object):
+class SivMode(object):
     """Synthetic Initialization Vector (SIV).
 
     This is an Authenticated Encryption with Associated Data (`AEAD`_) mode.
@@ -93,8 +95,8 @@ class ModeSIV(object):
 
         :Parameters:
           factory : object
-            A object with a method ``new`` that creates an instance of
-            a basic cipher.
+            A symmetric cipher module from `Crypto.Cipher`
+            (like `Crypto.Cipher.AES`).
         :Keywords:
           key : byte string
             The secret key to use in the symmetric cipher.
@@ -269,7 +271,7 @@ class ModeSIV(object):
         tampered with while in transit.
 
         :Parameters:
-          mac_tag : byte string
+          received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -362,4 +364,4 @@ class ModeSIV(object):
 
 
 def _create_siv_cipher(factory, **kwargs):
-    return ModeSIV(factory, **kwargs)
+    return SivMode(factory, **kwargs)

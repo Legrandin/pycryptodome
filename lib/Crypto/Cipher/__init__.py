@@ -71,11 +71,6 @@ Module name                   Description
                _CAST, _DES, _DES3, _XOR, _AESNI, _Salsa20
 """
 
-__all__ = ['AES', 'ARC2', 'ARC4',
-           'Blowfish', 'CAST', 'DES', 'DES3',
-           'PKCS1_v1_5', 'PKCS1_OAEP'
-           ]
-
 import os
 
 from Crypto.Cipher._mode_ecb import _create_ecb_cipher

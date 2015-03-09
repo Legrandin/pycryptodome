@@ -156,27 +156,27 @@ def new(key, mode, *args, **kwargs):
 
     :Attention: it is important that all 8 byte subkeys are different,
       otherwise TDES would degrade to single `DES`.
-    :Return: an `DES3Cipher` object
+
+    :Return: a DES cipher object, of the applicable mode.
     """
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
-#: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
+#: Electronic Code Book (ECB). See `Crypto.Cipher._mode_ecb.EcbMode`.
 MODE_ECB = 1
-#: Cipher-Block Chaining (CBC). See `blockalgo.MODE_CBC`.
+#: Cipher-Block Chaining (CBC). See `Crypto.Cipher._mode_cbc.CbcMode`.
 MODE_CBC = 2
-#: Cipher FeedBack (CFB). See `blockalgo.MODE_CFB`.
+#: Cipher FeedBack (CFB). See `Crypto.Cipher._mode_cfb.CfbMode`.
 MODE_CFB = 3
-#: This mode should not be used.
-MODE_PGP = 4
-#: Output FeedBack (OFB). See `blockalgo.MODE_OFB`.
+#: Output FeedBack (OFB). See `Crypto.Cipher._mode_ofb.OfbMode`.
 MODE_OFB = 5
-#: CounTer Mode (CTR). See `blockalgo.MODE_CTR`.
+#: CounTer Mode (CTR). See `Crypto.Cipher._mode_ctr.CtrMode`.
 MODE_CTR = 6
-#: OpenPGP Mode. See `blockalgo.MODE_OPENPGP`.
+#: OpenPGP Mode. See `Crypto.Cipher._mode_openpgp.OpenPgpMode`.
 MODE_OPENPGP = 7
-#: EAX Mode. See `blockalgo.MODE_EAX`.
+#: EAX Mode. See `Crypto.Cipher._mode_eax.EaxMode`.
 MODE_EAX = 9
+
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)

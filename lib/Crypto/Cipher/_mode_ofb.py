@@ -24,6 +24,8 @@
 Output Feedback (CFB) mode.
 """
 
+__all__ = ['OfbMode']
+
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, expect_byte_string)
@@ -46,7 +48,7 @@ raw_ofb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ofb", """
                                         )
 
 
-class RawOfbMode(object):
+class OfbMode(object):
     """*Output FeedBack (OFB)*.
 
     This mode is very similar to CBC, but it
@@ -57,7 +59,7 @@ class RawOfbMode(object):
 
     An Initialization Vector (*IV*) is required.
 
-    See `NIST SP800-38A`_ , Section 6.4 .
+    See `NIST SP800-38A`_ , Section 6.4.
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
     """
@@ -69,7 +71,7 @@ class RawOfbMode(object):
           block_cipher : C pointer
             A smart pointer to the low-level block cipher instance.
 
-          iv: byte string
+          iv : byte string
             The initialization vector to use for encryption or decryption.
             It is as long as the cipher block.
 
@@ -210,4 +212,4 @@ def _create_ofb_cipher(factory, **kwargs):
         iv = kwargs.pop("iv")
     if kwargs:
         raise ValueError("Unknown parameters for OFB: %s" % str(kwargs))
-    return RawOfbMode(cipher_state, iv)
+    return OfbMode(cipher_state, iv)

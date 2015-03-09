@@ -41,12 +41,12 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     The test is specified in Section C.3.1 of `FIPS PUB 186-4`__.
 
     :Parameters:
-      :candidate: integer
+      candidate : integer
         The number to test for primality.
-      :iterations: integer
+      iterations : integer
         The maximum number of iterations to perform before
         declaring a candidate a probable prime.
-      :randfunc: callable
+      randfunc : callable
         An RNG function where bases are taken from.
 
     :Returns:
@@ -111,7 +111,7 @@ def lucas_test(candidate):
     The test is specified in Section C.3.3 of `FIPS PUB 186-4`__.
 
     :Parameters:
-      :candidate: integer
+      candidate : integer
         The number to test for primality.
 
     :Returns:
@@ -212,7 +212,7 @@ def test_probable_prime(candidate, randfunc=None):
     :Parameters:
       candidate : integer
         The number to test for primality.
-      randfunc: callable
+      randfunc : callable
         The routine to draw random bytes from to select Miller-Rabin bases.
     :Returns:
       ``PROBABLE_PRIME`` if the number if prime with very high probability.
@@ -258,7 +258,7 @@ def generate_probable_prime(**kwargs):
     """Generate a random probable prime.
 
     The prime will not have any specific properties
-    (E.g. it will not be a _strong prime_).
+    (E.g. it will not be a _strong_ _prime_).
 
     Random numbers are evaluated for primality until one
     passes all tests, consisting of a certain number of
@@ -272,12 +272,12 @@ def generate_probable_prime(**kwargs):
     This approach is compliant to `FIPS PUB 186-4`__.
 
     :Keywords:
-      :exact_bits:
+      exact_bits : integer
         The desired size in bits of the probable prime.
         It must be at least 160.
-      :randfunc: callable
+      randfunc : callable
         An RNG function where candidate primes are taken from.
-      :prime_filter: callable
+      prime_filter : callable
         A function that takes an Integer as parameter and returns
         True if the number can be passed to further primality tests,
         False if it should be immediately discarded.
@@ -318,9 +318,9 @@ def generate_probable_safe_prime(**kwargs):
     Note this operation is much slower than generating a simple prime.
 
     :Keywords:
-      :exact_bits:
+      exact_bits : integer
         The desired size in bits of the probable safe prime.
-      :randfunc: callable
+      randfunc : callable
         An RNG function where candidate primes are taken from.
 
     :Return:

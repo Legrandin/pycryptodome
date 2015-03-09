@@ -24,6 +24,8 @@
 Counter Feedback (CFB) mode.
 """
 
+__all__ = ['CfbMode']
+
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, expect_byte_string)
@@ -46,7 +48,7 @@ raw_cfb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_cfb","""
                     )
 
 
-class RawCfbMode(object):
+class CfbMode(object):
     """*Cipher FeedBack (CFB)*.
 
     This mode is similar to CFB, but it transforms
@@ -58,7 +60,7 @@ class RawCfbMode(object):
 
     An Initialization Vector (*IV*) is required.
 
-    See `NIST SP800-38A`_ , Section 6.3 .
+    See `NIST SP800-38A`_ , Section 6.3.
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
     """
@@ -225,4 +227,4 @@ def _create_cfb_cipher(factory, **kwargs):
 
     if kwargs:
         raise ValueError("Unknown parameters for CFB: %s" % str(kwargs))
-    return RawCfbMode(cipher_state, iv, segment_size_bytes)
+    return CfbMode(cipher_state, iv, segment_size_bytes)

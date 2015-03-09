@@ -30,17 +30,16 @@
 
 """
 OpenPGP mode.
-
 """
 
-from binascii import unhexlify, hexlify
+__all__ = ['OpenPgpMode']
 
 from Crypto.Util.py3compat import *
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 
-class ModeOpenPGP(object):
+class OpenPgpMode(object):
     """OpenPGP mode.
 
     This mode is a variant of CFB, and it is only used in PGP and
@@ -240,4 +239,4 @@ class ModeOpenPGP(object):
 
 
 def _create_openpgp_cipher(factory, **kwargs):
-    return ModeOpenPGP(factory, **kwargs)
+    return OpenPgpMode(factory, **kwargs)

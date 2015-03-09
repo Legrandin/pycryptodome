@@ -75,17 +75,15 @@ We assume that the tuple ``msg`` is transmitted to the receiver:
 """
 
 import sys
-from ctypes import c_void_p, byref
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util.py3compat import byte_string
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   c_size_t, expect_byte_string)
 
 
 _raw_cpuid_lib = load_pycryptodome_raw_lib("Crypto.Util._cpuid",
-                                            "int have_aes_ni(void);")
+                                           "int have_aes_ni(void);")
 
 cproto = """
         int AES_start_operation(const uint8_t key[],
@@ -110,14 +108,15 @@ _raw_aesni_lib = None
 try:
     if _raw_cpuid_lib.have_aes_ni() == 1:
         _raw_aesni_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aesni",
-                                                   cproto.replace("AES", "AESNI"))
+                                                   cproto.replace("AES",
+                                                                  "AESNI"))
 except OSError:
     pass
 
 
 def _create_base_cipher(dict_parameters):
-    """This method instantiates and returns a handle to a low-level base cipher.
-    It will absorb named parameters in the process."""
+    """This method instantiates and returns a handle to a low-level
+    base cipher. It will absorb named parameters in the process."""
 
     use_aesni = dict_parameters.pop("use_aesni", True)
 
@@ -154,7 +153,8 @@ def new(key, mode, *args, **kwargs):
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
-        It must be 16 (*AES-128*), 24 (*AES-192*), or 32 (*AES-256*) bytes long.
+        It must be 16 (*AES-128*), 24 (*AES-192*), or 32 (*AES-256*)
+        bytes long.
 
         Only in `MODE_SIV`, it needs to be 32, 48, or 64 bytes long.
       mode : a *MODE_** constant
@@ -192,13 +192,14 @@ def new(key, mode, *args, **kwargs):
       segment_size : integer
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
-        It must be a multiple of 8. If 0 or not specified, it will be assumed to be 8.
+        It must be a multiple of 8. If 0 or not specified,
+        it will be assumed to be 8.
       mac_len : integer
-        (*Only* `MODE_CCM`). Length of the MAC, in bytes. It must be even and in
-        the range ``[4..16]``. The default is 16.
+        (*Only* `MODE_CCM`). Length of the MAC, in bytes. It must be even
+        and in the range ``[4..16]``. The default is 16.
 
-        (*Only* `MODE_EAX` and `MODE_GCM`). Length of the MAC, in bytes. It must be no
-        larger than 16 bytes (which is the default).
+        (*Only* `MODE_EAX` and `MODE_GCM`). Length of the MAC, in bytes.
+        It must be no larger than 16 bytes (which is the default).
       msg_len : integer
         (*Only* `MODE_CCM`). Length of the message to (de)cipher.
         If not specified, ``encrypt`` or ``decrypt`` may only be called once.
@@ -208,35 +209,33 @@ def new(key, mode, *args, **kwargs):
       use_aesni : boolean
         Use AES-NI if available.
 
-    :Return: an `AESCipher` object
+    :Return: an AES object, of the applicable mode.
     """
 
     kwargs["add_aes_modes"] = True
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
-
-#: Electronic Code Book (ECB). See `blockalgo.MODE_ECB`.
+#: Electronic Code Book (ECB). See `Crypto.Cipher._mode_ecb.EcbMode`.
 MODE_ECB = 1
-#: Cipher-Block Chaining (CBC). See `blockalgo.MODE_CBC`.
+#: Cipher-Block Chaining (CBC). See `Crypto.Cipher._mode_cbc.CbcMode`.
 MODE_CBC = 2
-#: Cipher FeedBack (CFB). See `blockalgo.MODE_CFB`.
+#: Cipher FeedBack (CFB). See `Crypto.Cipher._mode_cfb.CfbMode`.
 MODE_CFB = 3
-#: This mode should not be used.
-MODE_PGP = 4
-#: Output FeedBack (OFB). See `blockalgo.MODE_OFB`.
+#: Output FeedBack (OFB). See `Crypto.Cipher._mode_ofb.OfbMode`.
 MODE_OFB = 5
-#: CounTer Mode (CTR). See `blockalgo.MODE_CTR`.
+#: CounTer Mode (CTR). See `Crypto.Cipher._mode_ctr.CtrMode`.
 MODE_CTR = 6
-#: OpenPGP Mode. See `blockalgo.MODE_OPENPGP`.
+#: OpenPGP Mode. See `Crypto.Cipher._mode_openpgp.OpenPgpMode`.
 MODE_OPENPGP = 7
-#: Counter with CBC-MAC (CCM) Mode. See `blockalgo.MODE_CCM`.
+#: Counter with CBC-MAC (CCM) Mode. See `Crypto.Cipher._mode_ccm.CcmMode`.
 MODE_CCM = 8
-#: EAX Mode. See `blockalgo.MODE_EAX`.
+#: EAX Mode. See `Crypto.Cipher._mode_eax.EaxMode`.
 MODE_EAX = 9
-#: Syntethic Initialization Vector (SIV). See `blockalgo.MODE_SIV`.
+#: Syntethic Initialization Vector (SIV). See `Crypto.Cipher._mode_siv.SivMode`.
 MODE_SIV = 10
-#: Galois Counter Mode (GCM). See `blockalgo.MODE_GCM`.
+#: Galois Counter Mode (GCM). See `Crypto.Cipher._mode_gcm.GcmMode`.
 MODE_GCM = 11
+
 #: Size of a data block (in bytes)
 block_size = 16
 #: Size of a key (in bytes)

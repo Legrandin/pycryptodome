@@ -32,6 +32,8 @@
 Galois/Counter Mode (GCM).
 """
 
+__all__ = ['GcmMode']
+
 from binascii import unhexlify, hexlify
 
 from Crypto.Util.py3compat import *
@@ -107,7 +109,7 @@ class _GHASH(_SmoothMAC):
         return get_raw_buffer(self._last_y)
 
 
-class ModeGCM(object):
+class GcmMode(object):
     """Galois Counter Mode (GCM).
 
     This is an Authenticated Encryption with Associated Data (`AEAD`_) mode.
@@ -124,7 +126,7 @@ class ModeGCM(object):
     This mode is only available for ciphers that operate on 128 bits blocks
     (e.g. AES but not TDES).
 
-    See `NIST SP800-38D`_ .
+    See `NIST SP800-38D`_.
 
     .. _`NIST SP800-38D`: http://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
@@ -476,4 +478,4 @@ class ModeGCM(object):
 
 
 def _create_gcm_cipher(factory, **kwargs):
-    return ModeGCM(factory, **kwargs)
+    return GcmMode(factory, **kwargs)

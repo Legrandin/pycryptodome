@@ -45,7 +45,7 @@ This algorithm is considered secure, although it has not been scrutinized as
 extensively as SHA-1. Moreover, it provides an informal security level of just
 80bits.
 
-.. _RIPEMD-160: http://homes.esat.kuleuven.be/~bosselae/ripemd160.html\n"
+.. _RIPEMD-160: http://homes.esat.kuleuven.be/~bosselae/ripemd160.html
 """
 
 from Crypto.Util.py3compat import bord

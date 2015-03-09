@@ -32,6 +32,8 @@
 EAX mode.
 """
 
+__all__ = ['EaxMode']
+
 from binascii import unhexlify, hexlify
 
 from Crypto.Util.py3compat import *
@@ -44,7 +46,7 @@ from Crypto.Hash import CMAC
 from Crypto.Hash import SHA3_224 as SHA3
 
 
-class ModeEAX(object):
+class EaxMode(object):
     """*EAX* mode.
 
     This is an Authenticated Encryption with Associated Data
@@ -76,7 +78,8 @@ class ModeEAX(object):
 
         :Parameters:
           factory : module
-            A cryptographic algorithm module from `Crypto.Cipher`.
+            A symmetric cipher module from `Crypto.Cipher`
+            (like `Crypto.Cipher.AES`).
 
         :Keywords:
           key : byte string
@@ -356,4 +359,4 @@ class ModeEAX(object):
 
 
 def _create_eax_cipher(factory, **kwargs):
-    return ModeEAX(factory, **kwargs)
+    return EaxMode(factory, **kwargs)

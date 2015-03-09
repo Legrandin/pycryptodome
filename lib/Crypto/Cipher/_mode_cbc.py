@@ -32,6 +32,8 @@
 Ciphertext Block Chaining (CBC) mode.
 """
 
+__all__ = ['CbcMode']
+
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, expect_byte_string)
@@ -51,10 +53,10 @@ raw_cbc_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_cbc", """
                                 size_t data_len);
                 int CBC_stop_operation(void *state);
                 """
-                                        )
+                )
 
 
-class RawCbcMode(object):
+class CbcMode(object):
     """*Cipher-Block Chaining (CBC)*.
 
     Each of the ciphertext blocks depends on the current
@@ -216,4 +218,4 @@ def _create_cbc_cipher(factory, **kwargs):
         iv = kwargs.pop("iv")
     if kwargs:
         raise ValueError("Unknown parameters for CBC: %s" % str(kwargs))
-    return RawCbcMode(cipher_state, iv)
+    return CbcMode(cipher_state, iv)

@@ -470,7 +470,7 @@ class DSAImplementation(object):
 
           domain : list
             The DSA domain parameters *p*, *q* and *g* as a list of 3
-            integers. Size of *p* and *q* must comply to `FIPS 186-4`.
+            integers. Size of *p* and *q* must comply to `FIPS 186-4`_.
             If not specified, the parameters are created anew.
 
         :Return: A DSA key object (`_DSAobj`).
@@ -478,7 +478,7 @@ class DSAImplementation(object):
         :Raise ValueError:
             When **bits** is too little, too big, or not a multiple of 64.
 
-        .. _FIPS 186-4:: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+        .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
         """
 
         if randfunc is None:

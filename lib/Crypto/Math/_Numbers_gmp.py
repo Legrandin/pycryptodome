@@ -240,8 +240,8 @@ class Integer(object):
             If zero, the string has the minimal length.
         :Returns:
           A byte string.
-        :Raises:
-          ``ValueError`` if the value is negative or if ``block_size`` is
+        :Raise ValueError:
+          If the value is negative or if ``block_size`` is
           provided and the length of the byte string would exceed it.
         """
 
