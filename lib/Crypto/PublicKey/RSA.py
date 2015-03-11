@@ -53,7 +53,7 @@ them from known components, exporting them, and importing them.
     >>> key = RSA.importKey(f.read())
 
 Even though you may choose to  directly use the methods of an RSA key object
-to perform the primitive cryptographic operations (e.g. `_RSAobj._encrypt`),
+to perform the primitive cryptographic operations (e.g. `RsaKey._encrypt`),
 it is recommended to use one of the standardized schemes instead (like
 `Crypto.Cipher.PKCS1_v1_5` or `Crypto.Signature.PKCS1_v1_5`).
 
@@ -64,7 +64,7 @@ it is recommended to use one of the standardized schemes instead (like
 """
 
 __all__ = ['generate', 'construct', 'importKey', 'RSAImplementation',
-    '_RSAobj', 'oid' , 'algorithmIdentifier' ]
+    'RsaKey', 'oid' , 'algorithmIdentifier' ]
 
 from Crypto.Util.py3compat import *
 
@@ -94,7 +94,7 @@ def _decode_der(obj_class, binstr):
     der.decode(binstr)
     return der
 
-class _RSAobj(object):
+class RsaKey(object):
     """Class defining an actual RSA key.
 
     :undocumented: __getstate__, __setstate__, __repr__, __getattr__
@@ -167,7 +167,7 @@ class _RSAobj(object):
         return self._key['n'].size_in_bits() - 1
 
     def publickey(self):
-        return _RSAobj(dict([(k, self._key[k]) for k in 'n', 'e']))
+        return RsaKey(dict([(k, self._key[k]) for k in 'n', 'e']))
 
     def __eq__(self, other):
         return self._key == other._key
@@ -345,7 +345,7 @@ def generate(bits, randfunc=None, e=65537):
         The FIPS standard requires the public exponent to be
         at least 65537 (the default).
 
-    :Return: An RSA key object (`_RSAobj`).
+    :Return: An RSA key object (`RsaKey`).
 
     .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
@@ -400,7 +400,7 @@ def generate(bits, randfunc=None, e=65537):
 
     key_dict = dict(zip(('n', 'e', 'd', 'p', 'q', 'u'),
                         (n, e, d, p, q, u)))
-    return _RSAobj(key_dict)
+    return RsaKey(key_dict)
 
 
 def construct(tup, consistency_check=True):
@@ -413,7 +413,7 @@ def construct(tup, consistency_check=True):
 
     - e != 1
     - p*q = n
-    - e*d = 1 mod (p-1)(q-1)
+    - e*d = 1 mod lcm[(p-1)(q-1)]
     - p*u = 1 mod q
 
     :Parameters:
@@ -435,7 +435,7 @@ def construct(tup, consistency_check=True):
 
     :Raise ValueError:
         When the key being imported fails the most basic RSA validity checks.
-    :Return: An RSA key object (`_RSAobj`).
+    :Return: An RSA key object (`RsaKey`).
     """
 
     comp_names = 'n', 'e', 'd', 'p', 'q', 'u'
@@ -490,7 +490,7 @@ def construct(tup, consistency_check=True):
         key_dict['u'] = u
 
     # Build key object
-    key = _RSAobj(key_dict)
+    key = RsaKey(key_dict)
 
     # Very consistency of the key
     fmt_error = False
@@ -629,7 +629,7 @@ def importKey(extern_key, passphrase=None, verify_x509_cert=True):
         This value is ignored if an X.509 certificate is not passed.
     :Type verify_x509_cert: bool
 
-    :Return: An RSA key object (`_RSAobj`).
+    :Return: An RSA key object (`RsaKey`).
 
     :Raise ValueError/IndexError/TypeError:
         When the given key cannot be parsed (possibly because the pass

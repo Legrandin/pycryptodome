@@ -28,6 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+"""Fast, arbitrary precision integers.
+
+:undocumented: __package__
+"""
+
+__all__ = ["Integer"]
+
 from Crypto.Util.py3compat import *
 from Crypto import Random
 

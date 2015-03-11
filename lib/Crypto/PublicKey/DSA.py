@@ -83,7 +83,7 @@ verification.
 """
 
 __all__ = ['generate', 'construct', 'DSAImplementation',
-           '_DSAobj', 'importKey' ]
+           'DsaKey', 'importKey' ]
 
 import binascii
 import struct
@@ -141,7 +141,7 @@ def _decode_der(obj_class, binstr):
 #   }
 #
 
-class _DSAobj(object):
+class DsaKey(object):
     """Class defining an actual DSA key.
 
     :undocumented: __getstate__, __setstate__, __repr__, __getattr__
@@ -214,7 +214,7 @@ class _DSAobj(object):
 
     def publickey(self):
         public_components = dict((k, self._key[k]) for k in ('y', 'g', 'p', 'q'))
-        return _DSAobj(public_components)
+        return DsaKey(public_components)
 
     def __eq__(self, other):
         if bool(self.has_private()) != bool(other.has_private()):
@@ -458,7 +458,7 @@ def generate(bits, randfunc=None, domain=None):
         integers. Size of *p* and *q* must comply to `FIPS 186-4`_.
         If not specified, the parameters are created anew.
 
-    :Return: A DSA key object (`_DSAobj`).
+    :Return: A DSA key object (`DsaKey`).
 
     :Raise ValueError:
         When **bits** is too little, too big, or not a multiple of 64.
@@ -495,7 +495,7 @@ def generate(bits, randfunc=None, domain=None):
     y = pow(g, x, p)
 
     key_dict = { 'y':y, 'g':g, 'p':p, 'q':q, 'x':x }
-    return _DSAobj(key_dict)
+    return DsaKey(key_dict)
 
 
 def construct(tup, consistency_check=True):
@@ -517,11 +517,11 @@ def construct(tup, consistency_check=True):
 
     :Raise PublicKey.ValueError:
         When the key being imported fails the most basic DSA validity checks.
-    :Return: A DSA key object (`_DSAobj`).
+    :Return: A DSA key object (`DsaKey`).
     """
 
     key_dict = dict(zip(('y', 'g', 'p', 'q', 'x'), map(Integer, tup)))
-    key = _DSAobj(key_dict)
+    key = DsaKey(key_dict)
 
     fmt_error = False
     if consistency_check:
@@ -644,7 +644,7 @@ def importKey(extern_key, passphrase=None, verify_x509_cert=True):
 
         This value is ignored if an X.509 certificate is not passed.
 
-    :Return: A DSA key object (`_DSAobj`).
+    :Return: A DSA key object (`DsaKey`).
     :Raise ValueError:
         When the given key cannot be parsed (possibly because
         the pass phrase is wrong).

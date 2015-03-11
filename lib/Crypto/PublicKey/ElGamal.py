@@ -104,7 +104,7 @@ verification, encryption, and decryption.
 .. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
 """
 
-__all__ = ['generate', 'construct', 'ElGamalobj']
+__all__ = ['generate', 'construct', 'ElGamalKey']
 
 from Crypto import Random
 from Crypto.Math.Primality import ( generate_probable_safe_prime,
@@ -131,9 +131,9 @@ def generate(bits, randfunc):
         such as the one defined in the ``Crypto.Random`` module; **don't** just use the
         current time and the ``random`` module.
 
-    :Return: An ElGamal key object (`ElGamalobj`).
+    :Return: An ElGamal key object (`ElGamalKey`).
     """
-    obj=ElGamalobj()
+    obj=ElGamalKey()
     # Generate a safe prime p
     # See Algorithm 4.86 in Handbook of Applied Cryptography
 
@@ -200,10 +200,10 @@ def construct(tup):
 
     :Raise PublicKey.ValueError:
         When the key being imported fails the most basic ElGamal validity checks.
-    :Return: An ElGamal key object (`ElGamalobj`).
+    :Return: An ElGamal key object (`ElGamalKey`).
     """
 
-    obj=ElGamalobj()
+    obj=ElGamalKey()
     if len(tup) not in [3,4]:
         raise ValueError('argument for construct() wrong length')
     for i in range(len(tup)):
@@ -223,7 +223,7 @@ def construct(tup):
 
     return obj
 
-class ElGamalobj(object):
+class ElGamalKey(object):
     """Class defining an ElGamal key.
 
     :undocumented: __getstate__, __setstate__, __repr__, __getattr__
@@ -318,5 +318,3 @@ class ElGamalobj(object):
         from pickle import PicklingError
         raise PicklingError
 
-
-object=ElGamalobj

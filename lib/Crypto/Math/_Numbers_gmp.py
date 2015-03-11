@@ -188,11 +188,13 @@ _gmp.mpz_divisible_ui_p = lib.__gmpz_divisible_ui_p
 
 
 class Integer(object):
+    """A fast, arbitrary precision integer"""
 
     _zero_mpz_p = new_mpz()
     _gmp.mpz_init_set_ui(_zero_mpz_p, c_ulong(0))
 
     def __init__(self, value):
+        """Initialize the integer to the given value."""
 
         self._mpz_p = new_mpz()
         self._initialized = False
@@ -211,7 +213,6 @@ class Integer(object):
 
     # Conversions
     def __int__(self):
-
         # buf will contain the integer encoded in decimal plus the trailing
         # zero, and possibly the negative sign.
         # dig10(x) < log10(x) + 1 = log2(x)/log2(10) + 1 < log2(x)/3 + 1
@@ -425,6 +426,9 @@ class Integer(object):
         return result
 
     def sqrt(self):
+        """Return the largest Integer that does not
+        exceed the square root"""
+
         if self < 0:
             raise ValueError("Square root of negative value")
         result = Integer(0)
@@ -599,6 +603,8 @@ class Integer(object):
         return self
 
     def set(self, source):
+        """Set the Integer to have the given value"""
+
         if not isinstance(source, Integer):
             source = Integer(source)
         _gmp.mpz_set(self._mpz_p,
@@ -646,6 +652,9 @@ class Integer(object):
         return result
 
     def lcm(self, term):
+        """Compute the least common multiplier between this
+        number and another term."""
+
         result = Integer(0)
         if not isinstance(term, Integer):
             term = Integer(term)
@@ -654,6 +663,7 @@ class Integer(object):
 
     @staticmethod
     def jacobi_symbol(a, n):
+        """Compute the Jacobi symbol"""
 
         if not isinstance(a, Integer):
             a = Integer(a)

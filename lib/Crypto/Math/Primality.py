@@ -28,6 +28,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+"""Function to create and test prime numbers."""
+
 from Crypto.Math.Numbers import Integer
 from Crypto import Random
 
@@ -206,8 +208,13 @@ _sieve_base = _sieve_base[:100]
 def test_probable_prime(candidate, randfunc=None):
     """Test if a number is prime.
 
-    The probability of a false positive (a composite number that
-    this routine declares as prime) is negligeable, but not zero.
+    A number is qualified as prime if it passes a certain
+    number of Miller-Rabin tests (dependent on the size
+    of the number, but such that probability of a false
+    positive is less than 10^-30) and a single Lucas test.
+
+    For instance, a 1024-bit candidate will need to pass
+    4 Miller-Rabin tests.
 
     :Parameters:
       candidate : integer
@@ -258,7 +265,7 @@ def generate_probable_prime(**kwargs):
     """Generate a random probable prime.
 
     The prime will not have any specific properties
-    (E.g. it will not be a _strong_ _prime_).
+    (e.g. it will not be a *strong* prime).
 
     Random numbers are evaluated for primality until one
     passes all tests, consisting of a certain number of
@@ -267,7 +274,7 @@ def generate_probable_prime(**kwargs):
 
     The number of Miller-Rabin iterations is chosen such that
     the probability that the output number is a non-prime is
-    less than 1E-30 (roughly 2**{-100}).
+    less than 1E-30 (roughly 2^{-100}).
 
     This approach is compliant to `FIPS PUB 186-4`__.
 
@@ -283,7 +290,7 @@ def generate_probable_prime(**kwargs):
         False if it should be immediately discarded.
 
     :Return:
-        A probable prime in the range 2**exact_bits > p > 2**(exact_bits-1).
+        A probable prime in the range 2^exact_bits > p > 2^(exact_bits-1).
 
     .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
@@ -325,7 +332,7 @@ def generate_probable_safe_prime(**kwargs):
 
     :Return:
         A probable safe prime in the range
-        2**exact_bits > p > 2**(exact_bits-1).
+        2^exact_bits > p > 2^(exact_bits-1).
     """
 
     exact_bits = kwargs.pop("exact_bits", None)
