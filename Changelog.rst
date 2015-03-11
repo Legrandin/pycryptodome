@@ -37,6 +37,7 @@ Breaks in compatibility
 * ``DSA.generate``, ``RSA.generate`` and ``ElGamal.generate`` do not
   accept the ``progress_func`` parameter anymore.
 * Removed ``Crypto.PublicKey.RSA.RSAImplementation``.
+* Removed ``Crypto.PublicKey.DSA.DSAImplementation``.
 
 3.0
 +++
