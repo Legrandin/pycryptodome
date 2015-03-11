@@ -630,19 +630,6 @@ class RoundtripTest(unittest.TestCase):
             self.assertEqual(self.plaintext, decrypted_plaintext)
 
 
-class PGPTest(unittest.TestCase):
-    def __init__(self, module, params):
-        unittest.TestCase.__init__(self)
-        self.module = module
-        self.key = b(params['key'])
-
-    def shortDescription(self):
-        return "MODE_PGP was implemented incorrectly and insecurely. It's completely banished now."
-
-    def runTest(self):
-        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_PGP)
-
 class IVLengthTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
@@ -735,7 +722,6 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
                 # CTRWraparoundTest(module, params),
                 CFBSegmentSizeTest(module, params),
                 RoundtripTest(module, params),
-                PGPTest(module, params),
                 IVLengthTest(module, params),
                 NoDefaultECBTest(module, params),
             ]

@@ -36,6 +36,7 @@ Breaks in compatibility
   An exception is always generated if the counter is reused.
 * ``DSA.generate``, ``RSA.generate`` and ``ElGamal.generate`` do not
   accept the ``progress_func`` parameter anymore.
+* Removed ``Crypto.PublicKey.RSA.RSAImplementation``.
 
 3.0
 +++

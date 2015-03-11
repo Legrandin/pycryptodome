@@ -278,8 +278,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                                 self.idx += N
                                 return r
                         # The real test
-                        key._randfunc = randGen(t2b(test[3]))
-                        cipher = PKCS.new(key, test[4])
+                        cipher = PKCS.new(key, test[4], randfunc=randGen(t2b(test[3])))
                         ct = cipher.encrypt(t2b(test[1]))
                         self.assertEqual(ct, t2b(test[2]))
 
@@ -328,11 +327,10 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                     # as the hash output size
                     asked = 0
                     pt = self.rng(40)
-                    self.key1024._randfunc = localRng
-                    cipher = PKCS.new(self.key1024, hashmod)
+                    cipher = PKCS.new(self.key1024, hashmod, randfunc=localRng)
                     ct = cipher.encrypt(pt)
                     self.assertEqual(cipher.decrypt(ct), pt)
-                    self.failUnless(asked > hashmod.digest_size)
+                    self.assertEqual(asked, hashmod.digest_size)
 
         def testEncryptDecrypt3(self):
                 # Verify that OAEP supports labels

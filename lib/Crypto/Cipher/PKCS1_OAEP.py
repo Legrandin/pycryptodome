@@ -58,11 +58,12 @@ from Crypto.Util.py3compat import *
 import Crypto.Util.number
 from   Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from   Crypto.Util.strxor import strxor
+from Crypto import Random
 
 class PKCS1OAEP_Cipher:
     """This cipher can perform PKCS#1 v1.5 OAEP encryption or decryption."""
 
-    def __init__(self, key, hashAlgo, mgfunc, label):
+    def __init__(self, key, hashAlgo, mgfunc, label, randfunc):
         """Initialize this PKCS#1 OAEP cipher object.
 
         :Parameters:
@@ -81,6 +82,8 @@ class PKCS1OAEP_Cipher:
                 A label to apply to this particular encryption. If not specified,
                 an empty string is used. Specifying a label does not improve
                 security.
+         randfunc : callable
+                A function that returns random bytes.
 
         :attention: Modify the mask generation function only if you know what you are doing.
                     Sender and receiver must use the same one.
@@ -98,6 +101,7 @@ class PKCS1OAEP_Cipher:
             self._mgf = lambda x,y: Crypto.Signature.PKCS1_PSS.MGF1(x,y,self._hashObj)
 
         self._label = label
+        self._randfunc = randfunc
 
     def can_encrypt(self):
         """Return True/1 if this cipher object can be used for encryption."""
@@ -127,8 +131,6 @@ class PKCS1OAEP_Cipher:
         """
         # TODO: Verify the key is RSA
 
-        randFunc = self._key._randfunc
-
         # See 7.1.1 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits,8) # Convert from bits to bytes
@@ -146,7 +148,7 @@ class PKCS1OAEP_Cipher:
         # Step 2c
         db = lHash + ps + bchr(0x01) + message
         # Step 2d
-        ros = randFunc(hLen)
+        ros = self._randfunc(hLen)
         # Step 2e
         dbMask = self._mgf(ros, k-hLen-1)
         # Step 2f
@@ -228,7 +230,7 @@ class PKCS1OAEP_Cipher:
         # Step 4
         return db[hLen+one+1:]
 
-def new(key, hashAlgo=None, mgfunc=None, label=b('')):
+def new(key, hashAlgo=None, mgfunc=None, label=b(''), randfunc=None):
     """Return a cipher object `PKCS1OAEP_Cipher` that can be used to perform PKCS#1 OAEP encryption or decryption.
 
     :Parameters:
@@ -247,9 +249,15 @@ def new(key, hashAlgo=None, mgfunc=None, label=b('')):
       A label to apply to this particular encryption. If not specified,
       an empty string is used. Specifying a label does not improve
       security.
+     randfunc : callable
+      A function that returns random bytes.
+      The default is `Random.get_random_bytes`.
 
     :attention: Modify the mask generation function only if you know what you are doing.
       Sender and receiver must use the same one.
     """
-    return PKCS1OAEP_Cipher(key, hashAlgo, mgfunc, label)
+
+    if randfunc is None:
+        randfunc = Random.get_random_bytes
+    return PKCS1OAEP_Cipher(key, hashAlgo, mgfunc, label, randfunc)
 

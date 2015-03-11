@@ -72,19 +72,24 @@ __all__ = [ 'new', 'PKCS115_Cipher' ]
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.py3compat import *
 import Crypto.Util.number
+from Crypto import Random
 
 class PKCS115_Cipher:
     """This cipher can perform PKCS#1 v1.5 RSA encryption or decryption."""
 
-    def __init__(self, key):
+    def __init__(self, key, randfunc):
         """Initialize this PKCS#1 v1.5 cipher object.
 
         :Parameters:
          key : an RSA key object
           If a private half is given, both encryption and decryption are possible.
           If a public half is given, only encryption is possible.
+         randfunc : callable
+          Function that returns random bytes.
         """
+
         self._key = key
+        self._randfunc = randfunc
 
     def can_encrypt(self):
         """Return True if this cipher object can be used for encryption."""
@@ -113,9 +118,6 @@ class PKCS115_Cipher:
             message.
 
         """
-        # TODO: Verify the key is RSA
-
-        randFunc = self._key._randfunc
 
         # See 7.2.1 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
@@ -131,7 +133,7 @@ class PKCS115_Cipher:
             def __call__(self, c):
                 while bord(c)==0x00: c=self.rf(1)[0]
                 return c
-        ps = tobytes(map(nonZeroRandByte(randFunc), randFunc(k-mLen-3)))
+        ps = tobytes(map(nonZeroRandByte(self._randfunc), self._randfunc(k-mLen-3)))
         # Step 2b
         em = b('\x00\x02') + ps + bchr(0x00) + message
         # Step 3a (OS2IP)
@@ -214,14 +216,19 @@ class PKCS115_Cipher:
         # Step 4
         return em[sep+1:]
 
-def new(key):
+def new(key, randfunc=None):
     """Return a cipher object `PKCS115_Cipher` that can be used to perform PKCS#1 v1.5 encryption or decryption.
 
     :Parameters:
      key : RSA key object
       The key to use to encrypt or decrypt the message. This is a `Crypto.PublicKey.RSA` object.
       Decryption is only possible if *key* is a private RSA key.
-
+     randfunc : callable
+      Function that return random bytes.
+      The default is `Crypto.Random.get_random_bytes`.
     """
-    return PKCS115_Cipher(key)
+
+    if randfunc is None:
+        randfunc = Random.get_random_bytes
+    return PKCS115_Cipher(key, randfunc)
 

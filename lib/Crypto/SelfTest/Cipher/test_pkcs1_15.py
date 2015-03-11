@@ -115,8 +115,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                                 self.idx += N
                                 return r
                         # The real test
-                        key._randfunc = randGen(t2b(test[3]))
-                        cipher = PKCS.new(key)
+                        cipher = PKCS.new(key, randfunc=randGen(t2b(test[3])))
                         ct = cipher.encrypt(b(test[1]))
                         self.assertEqual(ct, t2b(test[2]))
 

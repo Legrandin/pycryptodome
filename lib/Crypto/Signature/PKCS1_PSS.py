@@ -68,11 +68,12 @@ from Crypto.Util.number import (
             ceil_shift, ceil_div, long_to_bytes, bytes_to_long
             )
 from Crypto.Util.strxor import strxor
+from Crypto import Random
 
 class PSS_SigScheme:
     """This signature scheme can perform PKCS#1 PSS RSA signature or verification."""
 
-    def __init__(self, key, mgfunc, saltLen):
+    def __init__(self, key, mgfunc, saltLen, randfunc):
         """Initialize this PKCS#1 PSS signature scheme object.
 
         :Parameters:
@@ -82,12 +83,16 @@ class PSS_SigScheme:
          mgfunc : callable
                 A mask generation function that accepts two parameters: a string to
                 use as seed, and the lenth of the mask to generate, in bytes.
-         saltLen : int
+         saltLen : integer
                 Length of the salt, in bytes.
+         randfunc : callable
+                A function that returns random bytes.
         """
+
         self._key = key
         self._saltLen = saltLen
         self._mgfunc = mgfunc
+        self._randfunc = randfunc
 
     def can_sign(self):
         """Return True if this cipher object can be used for signing messages."""
@@ -115,9 +120,6 @@ class PSS_SigScheme:
                     if you know what you are doing.
                     The receiver must use the same parameters too.
         """
-        # TODO: Verify the key is RSA
-
-        randfunc = self._key._randfunc
 
         # Set defaults for salt length and mask generation function
         if self._saltLen == None:
@@ -134,7 +136,7 @@ class PSS_SigScheme:
         # See 8.1.1 in RFC3447
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
-        em = EMSA_PSS_ENCODE(msg_hash, modBits-1, randfunc, mgf, sLen)
+        em = EMSA_PSS_ENCODE(msg_hash, modBits-1, self._randfunc, mgf, sLen)
         # Step 2a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 2b (RSASP1)
@@ -335,7 +337,7 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
         return False
     return True
 
-def new(key, mgfunc=None, saltLen=None):
+def new(key, mgfunc=None, saltLen=None, randfunc=None):
     """Return a signature scheme object `PSS_SigScheme` that
     can be used to perform PKCS#1 PSS signature or verification.
 
@@ -350,7 +352,12 @@ def new(key, mgfunc=None, saltLen=None):
      saltLen : int
         Length of the salt, in bytes. If not specified, it matches the output
         size of the hash function.
-
+     randfunc : callable
+        A function that returns random bytes.
+        The default is `Crypto.Random.get_random_bytes`.
     """
-    return PSS_SigScheme(key, mgfunc, saltLen)
+
+    if randfunc is None:
+        randfunc = Random.get_random_bytes
+    return PSS_SigScheme(key, mgfunc, saltLen, randfunc)
 
