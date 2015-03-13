@@ -203,9 +203,6 @@ class DsaKey(object):
     def has_private(self):
         return 'x' in self._key
 
-    def size(self):
-        return self._key.p.size_in_bits() - 1
-
     def can_encrypt(self):
         return False
 

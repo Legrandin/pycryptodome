@@ -161,11 +161,6 @@ class RsaKey(object):
     def has_private(self):
         return 'd' in self._key
 
-    def size(self):
-        """Return the largest x such that 2^x
-        is always smaller than the modulus"""
-        return self._key['n'].size_in_bits() - 1
-
     def publickey(self):
         return RsaKey(dict([(k, self._key[k]) for k in 'n', 'e']))
 

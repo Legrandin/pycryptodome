@@ -38,6 +38,7 @@ Breaks in compatibility
   accept the ``progress_func`` parameter anymore.
 * Removed ``Crypto.PublicKey.RSA.RSAImplementation``.
 * Removed ``Crypto.PublicKey.DSA.DSAImplementation``.
+* Remove ambiguous method ``size()`` from RSA, DSA and ElGamal keys.
 
 3.0
 +++

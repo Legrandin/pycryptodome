@@ -288,9 +288,6 @@ class ElGamalKey(object):
             return 1
         return 0
 
-    def size(self):
-        return self.p.size_in_bits() - 1
-
     def has_private(self):
         if hasattr(self, 'x'):
             return 1
