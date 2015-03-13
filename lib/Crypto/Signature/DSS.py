@@ -51,10 +51,11 @@ The receiver can verify authenticity of the message:
         >>> key = DSA.importKey(open('pubkey.der').read())
         >>> h = SHA256.new(received_message)
         >>> verifier = DSS.new(key, 'fips-186-3')
-        >>> if verifier.verify(h, signature):
-        >>>    print "The signature is authentic."
-        >>> else:
-        >>>    print "The signature is not authentic."
+        >>> try:
+        >>>     verifier.verify(h, signature):
+        >>>     print "The signature is authentic."
+        >>> except ValueError:
+        >>>     print "The signature is not authentic."
 
 .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
 
