@@ -13,6 +13,12 @@ To the largest possible extent, algorithms are implemented in pure Python.
 Only the pieces that are extremely critical to performance (e.g. block ciphers)
 are implemented as C extensions.
 
+News
+----
+
+* **15 Mar 2015 (NEW)**. Release 3.1.
+* 24 Jun 2014. Release 3.0.
+
 PyCryptodome and PyCrypto
 -------------------------
 

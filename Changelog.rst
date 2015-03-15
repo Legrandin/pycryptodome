@@ -1,8 +1,8 @@
 Changelog
 =========
 
-3.1
-+++
+3.1 (15 March 2015)
++++++++++++++++++++
 
 New features
 ------------
@@ -40,8 +40,8 @@ Breaks in compatibility
 * Removed ``Crypto.PublicKey.DSA.DSAImplementation``.
 * Remove ambiguous method ``size()`` from RSA, DSA and ElGamal keys.
 
-3.0
-+++
+3.0 (24 June 2014)
+++++++++++++++++++
 
 New features
 ------------
