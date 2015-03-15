@@ -302,11 +302,11 @@ setup(
     author = "Legrandin",
     author_email = "helderijs@gmail.com",
     url = "http://www.pycryptodome.org",
-    license = "Public Domain",
     platforms = 'Posix; MacOS X; Windows',
     classifiers = [
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: BSD License',
+        'License :: Public Domain',
         'Intended Audience :: Developers',
         'Operating System :: Unix',
         'Operating System :: Microsoft :: Windows',
