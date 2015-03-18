@@ -157,6 +157,11 @@ class DerObjectTests(unittest.TestCase):
         self.assertEquals(der._tag_octet, 0x10)
         self.assertEquals(der.payload, b('xxll'))
 
+    def testObjDecode8(self):
+        # Verify that decode returns the object
+        der = DerObject(0x02)
+        self.assertEqual(der, der.decode(b('\x02\x02\x01\x02')))
+
 class DerIntegerTests(unittest.TestCase):
 
     def testInit1(self):
@@ -296,10 +301,18 @@ class DerIntegerTests(unittest.TestCase):
         number.decode(b('\xa3\x03\x02\x01\x34'))
         self.assertEquals(number.value, 0x34)
 
+    def testDecode7(self):
+        # Verify decode returns the DerInteger
+        der = DerInteger()
+        self.assertEquals(der, der.decode(b('\x02\x01\x7F')))
+
+    ###
+
     def testErrDecode1(self):
         # Wide length field
         der = DerInteger()
         self.assertRaises(ValueError, der.decode, b('\x02\x81\x01\x01'))
+
 
 class DerSequenceTests(unittest.TestCase):
 
@@ -485,6 +498,13 @@ class DerSequenceTests(unittest.TestCase):
         self.failIf(der.hasOnlyInts())
         self.failIf(der.hasOnlyInts(False))
 
+    def testDecode9(self):
+        # Verify that decode returns itself
+        der = DerSequence()
+        self.assertEqual(der, der.decode(b('0\x06\x24\x02\xb6\x63\x12\x00')))
+
+    ###
+
     def testErrDecode1(self):
         # Not a sequence
         der = DerSequence()
@@ -531,6 +551,11 @@ class DerOctetStringTests(unittest.TestCase):
         der.decode(b('\x04\x02\x01\x02'))
         self.assertEquals(der.payload, b('\x01\x02'))
 
+    def testDecode2(self):
+        # Verify that decode returns the object
+        der = DerOctetString()
+        self.assertEqual(der, der.decode(b('\x04\x00')))
+
     def testErrDecode1(self):
         # No leftovers allowed
         der = DerOctetString()
@@ -547,7 +572,7 @@ class DerNullTests(unittest.TestCase):
     def testDecode1(self):
         # Empty sequence
         der = DerNull()
-        der.decode(b('\x05\x00'))
+        self.assertEquals(der, der.decode(b('\x05\x00')))
 
 class DerObjectIdTests(unittest.TestCase):
 
@@ -570,6 +595,13 @@ class DerObjectIdTests(unittest.TestCase):
         der = DerObjectId()
         der.decode(b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'))
         self.assertEquals(der.value, '1.2.840.113549.1.1.1')
+
+    def testDecode2(self):
+        # Verify that decode returns the object
+        der = DerObjectId()
+        self.assertEquals(der,
+                der.decode(b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01')))
+
 
 class DerBitStringTests(unittest.TestCase):
 
@@ -599,6 +631,12 @@ class DerBitStringTests(unittest.TestCase):
         # Small payload
         der.decode(b('\x03\x03\x00\x01\x02'))
         self.assertEquals(der.value, b('\x01\x02'))
+
+    def testDecode2(self):
+        # Verify that decode returns the object
+        der = DerBitString()
+        self.assertEquals(der, der.decode(b('\x03\x00')))
+
 
 class DerSetOfTests(unittest.TestCase):
 
@@ -666,6 +704,14 @@ class DerSetOfTests(unittest.TestCase):
         #import pdb; pdb.set_trace()
         self.assertRaises(ValueError, der.decode,
             b('0\x0A\x02\x02\x01\x80\x24\x02\xb6\x63\x12\x00'))
+
+    def testDecode4(self):
+        # Verify that decode returns the object
+        der = DerSetOf()
+        self.assertEquals(der,
+                der.decode(b('1\x08\x02\x02\x01\x80\x02\x02\x00\xff')))
+
+    ###
 
     def testErrDecode1(self):
         # No leftovers allowed

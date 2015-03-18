@@ -87,12 +87,6 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (test_probable_prime,
                                 generate_probable_prime, COMPOSITE)
 
-def _decode_der(obj_class, binstr):
-    """Instantiate a DER object class, decode a DER binary string in it, and
-    return the object."""
-    der = obj_class()
-    der.decode(binstr)
-    return der
 
 class RsaKey(object):
     """Class defining an actual RSA key.
@@ -527,7 +521,7 @@ def _importKeyDER(extern_key, passphrase, verify_x509_cert):
 
     try:
 
-        der = _decode_der(DerSequence, extern_key)
+        der = DerSequence().decode(extern_key)
 
         # Try PKCS#1 first, for a private key
         if len(der) == 9 and der.hasOnlyInts() and der[0] == 0:
@@ -554,8 +548,8 @@ def _importKeyDER(extern_key, passphrase, verify_x509_cert):
                 # 'subjectPublicKey' encapsulates the actual ASN.1
                 # RSAPublicKey element.
                 if der[0] == algorithmIdentifier:
-                    bitmap = _decode_der(DerBitString, der[1])
-                    rsaPub = _decode_der(DerSequence, bitmap.value)
+                    bitmap = DerBitString().decode(der[1])
+                    rsaPub = DerSequence().decode(bitmap.value)
                     if len(rsaPub) == 2 and rsaPub.hasOnlyInts():
                         return construct(rsaPub[:])
             except (ValueError, EOFError):

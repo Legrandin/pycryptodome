@@ -221,6 +221,7 @@ class DerObject(object):
                     self._tag_octet = self._inner_tag_octet
                     del self._inner_tag_octet
                     self.decode(self.payload)
+                return self
 
         def _decodeFromStream(self, s):
                 """Decode a complete DER element from a file."""
@@ -306,7 +307,8 @@ class DerInteger(DerObject):
                 :Raise EOFError:
                   If the DER element is too short.
                 """
-                DerObject.decode(self, derEle)
+
+                return DerObject.decode(self, derEle)
 
         def _decodeFromStream(self, s):
                 """Decode a complete DER INTEGER from a file."""
@@ -475,7 +477,8 @@ class DerSequence(DerObject):
                 DER INTEGERs are decoded into Python integers. Any other DER
                 element is not decoded. Its validity is not checked.
                 """
-                DerObject.decode(self, derEle)
+
+                return DerObject.decode(self, derEle)
 
         def _decodeFromStream(self, s):
                 """Decode a complete DER SEQUENCE from a file."""
@@ -647,7 +650,7 @@ class DerObjectId(DerObject):
             If the DER element is too short.
         """
 
-        DerObject.decode(self, derEle)
+        return DerObject.decode(self, derEle)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER OBJECT ID from a file."""
@@ -740,7 +743,7 @@ class DerBitString(DerObject):
             If the DER element is too short.
         """
 
-        DerObject.decode(self, derEle)
+        return DerObject.decode(self, derEle)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER BIT STRING DER from a file."""
@@ -856,7 +859,7 @@ class DerSetOf(DerObject):
             If the DER element is too short.
         """
 
-        DerObject.decode(self, derEle)
+        return DerObject.decode(self, derEle)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER SET OF from a file."""

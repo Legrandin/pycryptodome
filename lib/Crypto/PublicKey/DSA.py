@@ -106,13 +106,6 @@ from Crypto.Math.Primality import (test_probable_prime, COMPOSITE,
                                    PROBABLY_PRIME)
 
 
-def _decode_der(obj_class, binstr):
-    """Instantiate a DER object class, decode a DER binary string in it,
-    and return the object."""
-    der = obj_class()
-    der.decode(binstr)
-    return der
-
 #   ; The following ASN.1 types are relevant for DSA
 #
 #   SubjectPublicKeyInfo    ::=     SEQUENCE {
@@ -553,14 +546,12 @@ def _importKeyDER(key_data, passphrase, params, verify_x509_cert):
 
         # Try a simple private key first
         if params:
-            x = _decode_der(DerInteger, key_data).value
-            params = _decode_der(DerSequence, params)    # Dss-Parms
-            p, q, g = list(params)
-            y = pow(g, x, p)
-            tup = (y, g, p, q, x)
+            x = DerInteger().decode(key_data).value
+            p, q, g = list(DerSequence().decode(params))    # Dss-Parms
+            tup = (pow(g, x, p), g, p, q, x)
             return construct(tup)
 
-        der = _decode_der(DerSequence, key_data)
+        der = DerSequence().decode(key_data)
 
         # Try OpenSSL format for private keys
         if len(der) == 6 and der.hasOnlyInts() and der[0] == 0:
@@ -570,14 +561,14 @@ def _importKeyDER(key_data, passphrase, params, verify_x509_cert):
         # Try SubjectPublicKeyInfo
         if len(der) == 2:
             try:
-                algo = _decode_der(DerSequence, der[0])
-                algo_oid = _decode_der(DerObjectId, algo[0]).value
-                params = _decode_der(DerSequence, algo[1])  # Dss-Parms
+                algo = DerSequence().decode(der[0])
+                algo_oid = DerObjectId().decode(algo[0]).value
+                params = DerSequence().decode(algo[1])  # Dss-Parms
 
                 if algo_oid == oid and len(params) == 3 and\
                         params.hasOnlyInts():
-                    bitmap = _decode_der(DerBitString, der[1])
-                    pub_key = _decode_der(DerInteger, bitmap.value)
+                    bitmap = DerBitString().decode(der[1])
+                    pub_key = DerInteger().decode(bitmap.value)
                     tup = [pub_key.value]
                     tup += [params[comp] for comp in (2, 0, 1)]
                     return construct(tup)
