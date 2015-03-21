@@ -30,10 +30,11 @@ import sys
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
 from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
-from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,\
-                          Salsa20
-from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,\
-                        CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512
+from Crypto.Cipher import (AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,
+                           Salsa20)
+from Crypto.Hash import (HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,
+                         CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512,
+                         BLAKE2b)
 from Crypto.Random import get_random_bytes
 import Crypto.Util.Counter
 from Crypto.Util.number import bytes_to_long
@@ -378,6 +379,7 @@ class Benchmark:
             ("SHA3_256", SHA3_256),
             ("SHA3_384", SHA3_384),
             ("SHA3_512", SHA3_512),
+            ("BLAKE2b", BLAKE2b),
         ]
         if RIPEMD160 is not None:
             hash_specs += [("RIPEMD160", RIPEMD160)]

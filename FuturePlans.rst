@@ -7,7 +7,6 @@ Future releases will include:
 - Add algorithms:
     - ChaCha20
     - Poly1305
-    - BLAKE2
     - Elliptic Curves (ECDSA, ECIES, ECDH)
     - Camellia, GOST
     - OCB cipher mode

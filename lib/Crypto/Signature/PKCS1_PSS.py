@@ -206,7 +206,9 @@ def MGF1(mgfSeed, maskLen, hash):
     T = b("")
     for counter in xrange(ceil_div(maskLen, hash.digest_size)):
         c = long_to_bytes(counter, 4)
-        T = T + hash.new(mgfSeed + c).digest()
+        hobj = hash.new()
+        hobj.update(mgfSeed + c)
+        T = T + hobj.digest()
     assert(len(T)>=maskLen)
     return T[:maskLen]
 
@@ -256,7 +258,8 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
     if randFunc and sLen>0:
         salt = randFunc(sLen)
     # Step 5 and 6
-    h = mhash.new(bchr(0x00)*8 + mhash.digest() + salt)
+    h = mhash.new()
+    h.update(bchr(0x00)*8 + mhash.digest() + salt)
     # Step 7 and 8
     db = bchr(0x00)*(emLen-sLen-mhash.digest_size-2) + bchr(0x01) + salt
     # Step 9
@@ -331,7 +334,9 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     salt = b("")
     if sLen: salt = db[-sLen:]
     # Step 12 and 13
-    hp = mhash.new(bchr(0x00)*8 + mhash.digest() + salt).digest()
+    hobj = mhash.new()
+    hobj.update(bchr(0x00)*8 + mhash.digest() + salt)
+    hp = hobj.digest()
     # Step 14
     if h!=hp:
         return False

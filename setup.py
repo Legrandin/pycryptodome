@@ -341,7 +341,9 @@ setup(
     package_dir = { "Crypto": "lib/Crypto" },
     package_data = {
         "Crypto.SelfTest.Hash" : [
-            "test_vectors/SHA3/*.txt" ],
+            "test_vectors/SHA3/*.txt",
+            "test_vectors/BLAKE2s/*.txt",
+            "test_vectors/BLAKE2b/*.txt" ],
         "Crypto.SelfTest.Signature" : [
             "test_vectors/DSA/*.*" ],
         },
@@ -385,6 +387,12 @@ setup(
         Extension("Crypto.Hash._SHA3_512",
             include_dirs=['src/'],
             sources=["src/SHA3_512.c"]),
+        Extension("Crypto.Hash._BLAKE2b",
+            include_dirs=['src/'],
+            sources=["src/blake2b.c"]),
+        Extension("Crypto.Hash._BLAKE2s",
+            include_dirs=['src/'],
+            sources=["src/blake2s.c"]),
 
         # Block encryption algorithms
         Extension("Crypto.Cipher._raw_aes",

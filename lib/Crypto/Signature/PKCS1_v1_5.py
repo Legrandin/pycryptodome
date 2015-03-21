@@ -151,13 +151,15 @@ class PKCS115_SigScheme:
         em1 = long_to_bytes(em_int, k)
         # Step 3
         try:
-            em2_with_params = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, True)
-            # MD hashes always require NULL params in AlgorithmIdentifier.
+            possible_em1 = [ EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, True) ]
+            # MD2/4/5 hashes always require NULL params in AlgorithmIdentifier.
             # For all others, it is optional.
-            if _HASH_OIDS[msg_hash.name].startswith('1.2.840.113549.2.'):  # MD2/MD4/MD5
-                em2_without_params = em2_with_params
-            else:
-                em2_without_params = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, False)
+            try:
+                algorithm_is_md = _HASH_OIDS[msg_hash.name].startswith('1.2.840.113549.2.')
+            except AttributeError:
+                algorithm_is_md = False
+            if not algorithm_is_md:  # MD2/MD4/MD5
+                possible_em1.append(EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, False))
         except ValueError:
             raise ValueError("Signature is not authentic")
         # Step 4
@@ -165,7 +167,7 @@ class PKCS115_SigScheme:
         # of its components one at a time) we avoid attacks to the padding
         # scheme like Bleichenbacher's (see http://www.mail-archive.com/cryptography@metzdowd.com/msg06537).
         #
-        if em1!=em2_with_params and em1!=em2_without_params:
+        if em1 not in possible_em1:
             raise ValueError("Signature is not authentic")
 
 
@@ -219,15 +221,16 @@ def EMSA_PKCS1_V1_5_ENCODE(hash, emLen, with_hash_parameters=True):
     # should be omitted. They may be present, but when they are, they shall
     # have NULL value.
 
+    try:
+        oid_str = hash.oid
+    except AttributeError:
+        oid_str = _HASH_OIDS[hash.name]
+
+    digestAlgo = DerSequence([ DerObjectId(oid_str).encode() ])
+
     if with_hash_parameters:
-        digestAlgo  = DerSequence([
-                        DerObjectId(_HASH_OIDS[hash.name]).encode(),
-                        DerNull().encode()
-                        ])
-    else:
-        digestAlgo  = DerSequence([
-                        DerObjectId(_HASH_OIDS[hash.name]).encode(),
-                        ])
+        digestAlgo.append(DerNull().encode())
+
     digest      = DerOctetString(hash.digest())
     digestInfo  = DerSequence([
                     digestAlgo.encode(),
