@@ -38,6 +38,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Stream ciphers:
 
   - Salsa20
+  - BLAKE2b and BLAKE2s
   - RC4
 
 * Cryptographic hashes:

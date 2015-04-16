@@ -18,7 +18,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Authenticated encryption modes (GCM, CCM, EAX, SIV)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* SHA-3 hash algorithm
+* SHA-3 and BLAKE2 hash algorithms
 * Salsa20 stream cipher
 * scrypt and HKDF
 * Deterministic DSA
