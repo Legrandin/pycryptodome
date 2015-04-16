@@ -25,8 +25,8 @@ import unittest
 from Crypto.PublicKey import RSA
 from Crypto import Random
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
-from Crypto.Hash import SHA1, MD2, RIPEMD160, SHA224, SHA384, SHA512,\
-                        SHA256, MD5
+from Crypto.Hash import (SHA1, MD2, RIPEMD160, SHA224, SHA384, SHA512,
+                        SHA256, MD5, BLAKE2b, BLAKE2s)
 from Crypto.Signature import PKCS1_PSS as PKCS
 from Crypto.Util.py3compat import *
 
@@ -374,7 +374,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             mgfcalls += 1
                             return bchr(0x00)*maskLen
 
-                        # Verify that PSS is friendly to all ciphers
+                        # Verify that PSS is friendly to all hashes
                         for hashmod in (MD2,MD5,SHA1,SHA224,SHA256,SHA384,RIPEMD160):
                             h = hashmod.new()
                             h.update(b('blah blah blah'))
@@ -386,6 +386,25 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             s = signer.sign(h)
                             signer.verify(h, s)
                             self.assertEqual(rng.asked, h.digest_size)
+
+                        # Blake2b has variable digest size
+                        for digest_bits in (160, 256, 384):  # 512 is too long
+                            hobj = BLAKE2b.new(digest_bits=digest_bits)
+                            hobj.update(b("BLAKE2b supports several digest sizes"))
+
+                            signer = PKCS.new(key)
+                            signature = signer.sign(hobj)
+                            signer.verify(hobj, signature)
+
+                        # Blake2s too
+                        for digest_bits in (128, 160, 224, 256):
+                            hobj = BLAKE2s.new(digest_bits=digest_bits)
+                            hobj.update(b("BLAKE2s supports several digest sizes"))
+
+                            signer = PKCS.new(key)
+                            signature = signer.sign(hobj)
+                            signer.verify(hobj, signature)
+
 
                         h = SHA1.new()
                         h.update(b('blah blah blah'))

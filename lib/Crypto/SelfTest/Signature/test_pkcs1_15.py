@@ -20,14 +20,12 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
-
 import unittest
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
-from Crypto.Hash import MD2, SHA1, MD5, SHA224, SHA256, SHA384, SHA512,\
-                        RIPEMD160
+from Crypto.Hash import (MD2, SHA1, MD5, SHA224, SHA256, SHA384, SHA512,
+                         RIPEMD160, BLAKE2b, BLAKE2s)
 from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5 as PKCS
 from Crypto.Util.py3compat import *
@@ -194,16 +192,34 @@ class PKCS1_15_Tests(unittest.TestCase):
                         verifier.verify(h, t2b(row[2]))
 
         def testSignVerify(self):
-                        rng = Random.new().read
-                        key = RSA.generate(1024, rng)
+            rng = Random.new().read
+            key = RSA.generate(1024, rng)
 
-                        for hashmod in (MD2,MD5,SHA1,SHA224,SHA256,SHA384,SHA512,RIPEMD160):
-                            h = hashmod.new()
-                            h.update(b('blah blah blah'))
+            for hashmod in (MD2, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, RIPEMD160):
+                hobj = hashmod.new()
+                hobj.update(b('blah blah blah'))
 
-                            signer = PKCS.new(key)
-                            s = signer.sign(h)
-                            signer.verify(h, s)
+                signer = PKCS.new(key)
+                signature = signer.sign(hobj)
+                signer.verify(hobj, signature)
+
+            # Blake2b has variable digest size
+            for digest_bits in (160, 256, 384, 512):
+                hobj = BLAKE2b.new(digest_bits=digest_bits)
+                hobj.update(b("BLAKE2b supports several digest sizes"))
+
+                signer = PKCS.new(key)
+                signature = signer.sign(hobj)
+                signer.verify(hobj, signature)
+
+            # Blake2s too
+            for digest_bits in (128, 160, 224, 256):
+                hobj = BLAKE2s.new(digest_bits=digest_bits)
+                hobj.update(b("BLAKE2s supports several digest sizes"))
+
+                signer = PKCS.new(key)
+                signature = signer.sign(hobj)
+                signer.verify(hobj, signature)
 
         def test_wrong_signature(self):
             key = RSA.generate(1024)

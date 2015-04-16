@@ -47,6 +47,7 @@ def get_tests(config={}):
     except ImportError:
         import sys
         sys.stderr.write("SelfTest: warning: not testing SHA224/SHA384/SHA512 modules (not available)\n")
+    from Crypto.SelfTest.Hash import test_BLAKE2;  tests += test_BLAKE2.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

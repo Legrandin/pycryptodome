@@ -30,10 +30,11 @@ import sys
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
 from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
-from Crypto.Cipher import AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,\
-                          Salsa20
-from Crypto.Hash import HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,\
-                        CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512
+from Crypto.Cipher import (AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,
+                           Salsa20)
+from Crypto.Hash import (HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,
+                         CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512,
+                         BLAKE2b, BLAKE2s)
 from Crypto.Random import get_random_bytes
 import Crypto.Util.Counter
 from Crypto.Util.number import bytes_to_long
@@ -66,6 +67,18 @@ except AttributeError:
 
 from Crypto.Random import random as pycrypto_random
 import random as stdlib_random
+
+class BLAKE2b_512(object):
+    digest_size = 512
+    @staticmethod
+    def new(data=None):
+        return BLAKE2b.new(digest_bits=512, data=data)
+
+class BLAKE2s_256(object):
+    digest_size = 256
+    @staticmethod
+    def new(data=None):
+        return BLAKE2s.new(digest_bits=256, data=data)
 
 class ModeNotAvailable(ValueError):
     pass
@@ -378,6 +391,8 @@ class Benchmark:
             ("SHA3_256", SHA3_256),
             ("SHA3_384", SHA3_384),
             ("SHA3_512", SHA3_512),
+            ("BLAKE2b", BLAKE2b_512),
+            ("BLAKE2s", BLAKE2s_256),
         ]
         if RIPEMD160 is not None:
             hash_specs += [("RIPEMD160", RIPEMD160)]

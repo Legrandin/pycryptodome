@@ -66,8 +66,10 @@ from Crypto.Util.py3compat import *
 
 from binascii import unhexlify
 
+from Crypto.Hash import BLAKE2s
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
+from Crypto.Random import get_random_bytes
 
 #: The size of the authentication tag produced by the MAC.
 digest_size = None
@@ -314,12 +316,12 @@ class CMAC(_SmoothMAC):
             has been tampered with or that the MAC key is incorrect.
         """
 
-        mac = self.digest()
-        res = 0
-        # Constant-time comparison
-        for x,y in zip(mac, mac_tag):
-            res |= bord(x) ^ bord(y)
-        if res or len(mac_tag)!=self.digest_size:
+        secret = get_random_bytes(16)
+
+        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=mac_tag)
+        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=self.digest())
+
+        if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):

@@ -42,8 +42,8 @@ from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
-from Crypto.Hash import CMAC
-from Crypto.Hash import SHA3_224 as SHA3
+from Crypto.Hash import CMAC, BLAKE2s
+from Crypto.Random import get_random_bytes
 
 
 class EaxMode(object):
@@ -304,8 +304,12 @@ class EaxMode(object):
                 tag = strxor(tag, self._omac[i].digest())
             self._mac_tag = tag[:self._mac_len]
 
-        # Constant-time comparison
-        if SHA3.new(self._mac_tag).digest() != SHA3.new(received_mac_tag).digest():
+        secret = get_random_bytes(16)
+
+        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._mac_tag)
+        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=received_mac_tag)
+
+        if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):

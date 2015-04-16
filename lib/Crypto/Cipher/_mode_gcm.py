@@ -41,7 +41,8 @@ from Crypto.Util.py3compat import *
 from Crypto.Util import Counter
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Hash.CMAC import _SmoothMAC
-from Crypto.Hash import SHA3_224 as SHA3
+from Crypto.Hash import BLAKE2s
+from Crypto.Random import get_random_bytes
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
@@ -423,8 +424,12 @@ class GcmMode(object):
                             " when encrypting a message")
         self._next = [self.verify]
 
-        # Constant-time comparison
-        if SHA3.new(self._compute_mac()).digest() != SHA3.new(received_mac_tag).digest():
+        secret = get_random_bytes(16)
+
+        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._compute_mac())
+        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=received_mac_tag)
+
+        if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):

@@ -10,6 +10,8 @@
 #define ERR_KEY_SIZE            6
 #define ERR_NONCE_SIZE          7
 #define ERR_NR_ROUNDS           8
+#define ERR_DIGEST_SIZE         9
+#define ERR_MAX_DATA            10
 #define ERR_UNKNOWN             32
 
 #endif

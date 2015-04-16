@@ -78,8 +78,9 @@ from Crypto.Util.py3compat import b, bchr, bord, tobytes
 
 from binascii import unhexlify
 
-import MD5
+import MD5, BLAKE2s
 from Crypto.Util.strxor import strxor
+from Crypto.Random import get_random_bytes
 
 
 class HMAC:
@@ -206,12 +207,12 @@ class HMAC:
             has been tampered with or that the MAC key is incorrect.
         """
 
-        mac = self.digest()
-        res = 0
-        # Constant-time comparison
-        for x, y in zip(mac, mac_tag):
-            res |= bord(x) ^ bord(y)
-        if res or len(mac_tag) != self._inner.digest_size:
+        secret = get_random_bytes(16)
+
+        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=mac_tag)
+        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=self.digest())
+
+        if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
     def hexdigest(self):

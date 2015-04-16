@@ -1,6 +1,24 @@
 Changelog
 =========
 
+3.2 (WIP)
++++++++++++++++++++
+
+New features
+------------
+
+* Added hash functions BLAKE2b and BLAKE2s.
+
+Resolved issues
+---------------
+
+* None
+
+Breaks in compatibility
+-----------------------
+
+* None
+
 3.1 (15 March 2015)
 +++++++++++++++++++
 
