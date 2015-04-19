@@ -5,7 +5,6 @@ Future releases will include:
 - Implement AES with bitslicing
 - Move old ciphers into a Museum submodule
 - Add algorithms:
-    - ChaCha20
     - Poly1305
     - Elliptic Curves (ECDSA, ECIES, ECDH)
     - Camellia, GOST

@@ -447,6 +447,9 @@ setup(
         Extension("Crypto.Cipher._Salsa20",
             include_dirs=['src/', 'src/libtom/'],
             sources=["src/Salsa20.c"]),
+        Extension("Crypto.Cipher._chacha20",
+            include_dirs=['src/'],
+            sources=["src/chacha20.c"]),
 
         # Utility modules
         Extension("Crypto.Util._strxor",
