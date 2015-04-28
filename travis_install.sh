@@ -2,7 +2,7 @@
 
 set -x
 
-sudo apt-get install libgmp-dev
+sudo apt-get install libgmp10
 
 if [ x${PYTHON_INTP} = "x" ]; then
 	echo "Undefined python implementation"
@@ -23,27 +23,34 @@ ${PYTHON_INTP} -V
 
 PYV=$(${PYTHON_INTP} -V 2>&1 | head -1 | sed -n 's/\w\+ \([23]\)\.\([0-9]\).*/\1\2/p')
 
-if [ ${PYV} -ge 26 ]; then
-	sudo pip install virtualenv
-else
-	sudo apt-get install python-virtualenv
-fi
+export PYTHONPATH=${PWD}/custom_packages
+mkdir ${PYTHONPATH}
 
-virtualenv -p ${PYTHON_INTP} .
-. bin/activate
-
+# Ctypes was only included in python 2.5, so it needs to be installed if we target python 2.4.
+# We do not rely on pypi because it refers us to sourceforge, not the most available site around.
+# Instead, we mirror ctypes on github.
 if [ ${PYV} -eq 24 ]; then
 	(
 	cd /tmp
 	git clone https://github.com/Legrandin/ctypes
 	cd ctypes
-	${PYTHON_INTP} setup.py install
+	${PYTHON_INTP} setup.py build
+	cp -r build/lib*/* ${PYTHONPATH}
 	)
 fi
 
-if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
-	pip install cffi
-fi
+# Why bother with pip/virtualenv complexity when we can just do this
+install_from_pypi() {
+	URL=$(curl -s https://pypi.python.org/pypi/$1/json | jq '.releases[.info.version]' | jq -r 'map(select(.python_version == "source"))[0].url')
+	wget -q -O - $URL | tar -xzC /tmp
+	(
+	cd /tmp/$1-*
+	${PYTHON_INTP} setup.py build
+	cp -r build/lib*/* ${PYTHONPATH}
+	)
+}
 
-# List all installed packages
-pip freeze
+if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
+	install_from_pypi setuptools
+	install_from_pypi cffi
+fi

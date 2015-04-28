@@ -19,13 +19,13 @@ branches:
 install:
  - ./travis_install.sh
 script:
- - . bin/activate
- - python -c "import cffi" 2>/dev/null && echo CFFI is installed || true
- - if [ x${CFFI} = "xyes" ]; then python -c"import cffi"; fi
- - if [ x${CFFI} != "xyes" ]; then ! python -c"import cffi" 2>/dev/null; fi
- - major=$(python -V 2>&1 | cut -f2 -d' ' | cut -f1 -d'.')
+ - export PYTHONPATH=${PWD}/custom_packages
+ - ${PYTHON_INTP} -c "import cffi" 2>/dev/null && echo CFFI is installed || true
+ - if [ x${CFFI} = "xyes" ]; then ${PYTHON_INTP} -c"import cffi"; fi
+ - if [ x${CFFI} != "xyes" ]; then ! ${PYTHON_INTP} -c"import cffi" 2>/dev/null; fi
+ - major=$(${PYTHON_INTP} -V 2>&1 | cut -f2 -d' ' | cut -f1 -d'.')
  - if [ "$major" -ge 3 ]; then xflags="-bb" ; fi
- - python -V
+ - ${PYTHON_INTP} -V
  - echo "Custom Python flags:" \"${xflags:-none}\"
- - python -tt $xflags setup.py build
- - python -tt $xflags setup.py test
+ - ${PYTHON_INTP} -tt $xflags setup.py build
+ - ${PYTHON_INTP} -tt $xflags setup.py test
