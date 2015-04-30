@@ -19,7 +19,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
 * SHA-3 and BLAKE2 hash algorithms
-* Salsa20 stream cipher
+* Salsa20 and ChaCha20 stream ciphers
 * scrypt and HKDF
 * Deterministic DSA
 * Password-protected PKCS#8 key containers
