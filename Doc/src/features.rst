@@ -38,7 +38,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Stream ciphers:
 
   - Salsa20
-  - BLAKE2b and BLAKE2s
+  - ChaCha20
   - RC4
 
 * Cryptographic hashes:
@@ -46,6 +46,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - SHA-1
   - SHA-2 family (224, 256, 384, 512)
   - SHA-3 family (224, 256, 384, 512 - FIPS 202 draft May 2014)
+  - BLAKE2b and BLAKE2s
   - RIPE-MD160
   - MD5
 

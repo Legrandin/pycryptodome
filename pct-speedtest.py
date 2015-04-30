@@ -31,7 +31,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
 from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
 from Crypto.Cipher import (AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,
-                           Salsa20)
+                           Salsa20, ChaCha20)
 from Crypto.Hash import (HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,
                          CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512,
                          BLAKE2b, BLAKE2s)
@@ -79,6 +79,11 @@ class BLAKE2s_256(object):
     @staticmethod
     def new(data=None):
         return BLAKE2s.new(digest_bits=256, data=data)
+
+class ChaCha20_old_style(object):
+    @staticmethod
+    def new(key, nonce):
+        return ChaCha20.new(key=key, nonce=nonce)
 
 class ModeNotAvailable(ValueError):
     pass
@@ -377,6 +382,7 @@ class Benchmark:
             ("ARC4(128)", ARC4, 16, 0),
             ("Salsa20(16)", Salsa20, 16, 8),
             ("Salsa20(32)", Salsa20, 32, 8),
+            ("ChaCha20", ChaCha20_old_style, 32, 8),
         ]
         hash_specs = [
             ("MD2", MD2),
