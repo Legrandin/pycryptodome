@@ -235,6 +235,8 @@ MODE_EAX = 9
 MODE_SIV = 10
 #: Galois Counter Mode (GCM). See `Crypto.Cipher._mode_gcm.GcmMode`.
 MODE_GCM = 11
+#: Offset Code Book
+MODE_OCB = 12
 
 #: Size of a data block (in bytes)
 block_size = 16

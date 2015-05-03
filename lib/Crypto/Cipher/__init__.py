@@ -83,6 +83,7 @@ from Crypto.Cipher._mode_ccm import _create_ccm_cipher
 from Crypto.Cipher._mode_eax import _create_eax_cipher
 from Crypto.Cipher._mode_siv import _create_siv_cipher
 from Crypto.Cipher._mode_gcm import _create_gcm_cipher
+from Crypto.Cipher._mode_ocb import _create_ocb_cipher
 
 _modes = { 1:_create_ecb_cipher,
            2:_create_cbc_cipher,
@@ -95,7 +96,9 @@ _modes = { 1:_create_ecb_cipher,
 
 _extra_modes = { 8:_create_ccm_cipher,
                 10:_create_siv_cipher,
-                11:_create_gcm_cipher }
+                11:_create_gcm_cipher,
+                12:_create_ocb_cipher
+                }
 
 def _create_cipher(factory, key, mode, *args, **kwargs):
 
