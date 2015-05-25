@@ -52,15 +52,11 @@ typedef struct {
     uint64_t    counter_A;
     DataBlock   offset_A;
     DataBlock   sum;
-    DataBlock   cached_A;
-    size_t      cached_A_occ;
 
     /** Ciphertext/plaintext **/
     uint64_t    counter_P;
     DataBlock   offset_P;
     DataBlock   checksum;
-    DataBlock   cached_P;
-    size_t      cached_P_occ;
 } OcbModeState;
 
 static void double_L(DataBlock *out, DataBlock *in)
@@ -89,11 +85,6 @@ static unsigned ntz(uint64_t counter)
         counter >>= 1;
     }
     return 64;
-}
-
-static unsigned minAB(unsigned a, unsigned b)
-{
-    return a<b ? a : b;
 }
 
 EXPORT_SYM int OCB_start_operation(BlockBase *cipher,
@@ -139,26 +130,27 @@ EXPORT_SYM int OCB_start_operation(BlockBase *cipher,
 
 enum OcbDirection { OCB_ENCRYPT, OCB_DECRYPT };
 
-static int OCB_transcrypt_aligned(OcbModeState *state,
-                                  const uint8_t* in,
-                                  uint8_t *out,
-                                  size_t in_len,
-                                  enum OcbDirection direction)
+EXPORT_SYM int OCB_transcrypt(OcbModeState *state,
+                              const uint8_t *in,
+                              uint8_t *out,
+                              size_t in_len,
+                              enum OcbDirection direction)
 {
     CipherOperation process = NULL;
     const uint8_t *checksummed = NULL;
+    int result;
+    unsigned i;
 
-    assert(in_len % BLOCK_SIZE == 0);
+    if ((NULL == state) || (NULL == out) || (NULL == in))
+        return ERR_NULL;
 
     assert(OCB_ENCRYPT==direction || OCB_DECRYPT==direction);
     checksummed = OCB_ENCRYPT==direction ? in : out;
     process = OCB_ENCRYPT==direction ? state->cipher->encrypt : state->cipher->decrypt;
 
-    while (in_len>0) {
+    for (;in_len>=BLOCK_SIZE; in_len-=BLOCK_SIZE) {
         unsigned idx;
-        unsigned i;
         DataBlock pre;
-        int result;
 
         idx = ntz(state->counter_P);
         for (i=0; i<BLOCK_SIZE; i++) {
@@ -180,41 +172,12 @@ static int OCB_transcrypt_aligned(OcbModeState *state,
         in += BLOCK_SIZE;
         checksummed += BLOCK_SIZE;
         out += BLOCK_SIZE;
-        in_len -= BLOCK_SIZE;
     }
 
-    return 0;
-}
-
-EXPORT_SYM int OCB_transcrypt(OcbModeState *state,
-                              const uint8_t *in,
-                              uint8_t *out,
-                              size_t in_len,
-                              enum OcbDirection direction)
-{
-    int result;
-    size_t out_len = 0;
-    int8_t *delta = (int8_t*)&out[0];
-    size_t orig_in_len = in_len;
-
-    if ((NULL == state) || (NULL == out) || (NULL == in && 0 != in_len))
-        return ERR_NULL;
-
-    assert(state->cache_P_occ <= BLOCK_SIZE);
-
-    /** @out will point to the first byte of ciphertext **/
-    out++;
-
     /** Process last piece (if any) **/
-    if (NULL == in && 0 != state->cached_P_occ) {
+    if (in_len>0) {
         DataBlock pad;
-        unsigned i;
-        const uint8_t *checksummed = NULL;
 
-        assert(OCB_ENCRYPT==direction || OCB_DECRYPT==direction);
-        checksummed = OCB_ENCRYPT==direction ? state->cached_P : out;
-
-        *delta = (uint8_t)state->cached_P_occ;
         for (i=0; i<BLOCK_SIZE; i++)
             state->offset_P[i] ^= state->L_star[i];
 
@@ -222,58 +185,13 @@ EXPORT_SYM int OCB_transcrypt(OcbModeState *state,
         if (result)
             return result;
 
-        for (i=0; i<*delta; i++) {
-            out[i] = state->cached_P[i] ^ pad[i];
+        for (i=0; i<in_len; i++) {
+            out[i] = in[i] ^ pad[i];
             state->checksum[i] ^= checksummed[i];
         }
-        state->checksum[*delta] ^= 0x80;
-        state->cached_P_occ = 0;
-
-        return 0;
+        state->checksum[in_len] ^= 0x80;
     }
 
-    /** First ensure that the cache gets filled, if it contains something **/
-    if (state->cached_P_occ > 0 && state->cached_P_occ < BLOCK_SIZE) {
-        size_t filler;
-
-        filler = minAB(BLOCK_SIZE - state->cached_P_occ, in_len);
-        memcpy(&state->cached_P[state->cached_P_occ], in, filler);
-
-        state->cached_P_occ += filler;
-        in += filler;
-        in_len -= filler;
-    }
-
-    /** Clear the cache, when possible **/
-    if (BLOCK_SIZE == state->cached_P_occ) {
-        state->cached_P_occ = 0;
-        result = OCB_transcrypt_aligned(state, state->cached_P, out-1,
-                                        BLOCK_SIZE, direction);
-        if (result)
-            return result;
-
-        out += BLOCK_SIZE;
-        out_len += BLOCK_SIZE;
-    }
-
-    /** Encrypt/decrypt multiple blocks **/
-    {
-    size_t len;
-
-    len = (in_len / BLOCK_SIZE) * BLOCK_SIZE;
-    result = OCB_transcrypt_aligned(state, in, out, len, direction);
-    if (result)
-        return result;
-    out_len += len;
-    in_len -= len;
-    in += len;
-    out += len;
-    }
-
-    memcpy(state->cached_P, in, in_len);
-    state->cached_P_occ = in_len;
-
-    *delta = (int8_t)(out_len - orig_in_len);
     return 0;
 }
 
@@ -281,19 +199,13 @@ EXPORT_SYM int OCB_transcrypt(OcbModeState *state,
  * Encrypt a piece of plaintext.
  *
  * @state   The block cipher state.
- * @in      A pointer to the plaintext. It does not need to be aligned.
- *          Passing NULL signals that the previous piece was the last
- *          one: the routine should produce any outstanding ciphertext.
- * @out     A pointer to an output buffer. The caller must allocate
- *          an area of memory as big as the plaintext plus 16 bytes.
- *          If @in is NULL, the output buffer must be 16 bytes long.
+ * @in      A pointer to the plaintext. It is aligned to the 16 byte boundary
+ *          unless it is the last block.
+ * @out     A pointer to an output buffer, that will hold the ciphertext.
+ *          The caller must allocate an area of memory as big as the plaintext.
  * @in_len  The size of the plaintext pointed to by @in.
  *
  * @return  0 in case of success, otherwise the relevant error code.
- *
- * If case of correct encryption, the first byte of the output buffer is
- * the difference between the length of the ciphertext and the length
- * of the plaintext. The ciphertext (if any) starts at the second byte.
  */
 EXPORT_SYM int OCB_encrypt(OcbModeState *state,
                            const uint8_t *in,
@@ -304,22 +216,16 @@ EXPORT_SYM int OCB_encrypt(OcbModeState *state,
 }
 
 /**
- * Decrypt a piece of plaintext.
+ * Decrypt a piece of ciphertext.
  *
  * @state   The block cipher state.
- * @in      A pointer to the ciphertext. It does not need to be aligned.
- *          Passing NULL signals that the previous piece was the last
- *          one: the routine should produce any outstanding plaintext.
- * @out     A pointer to an output buffer. The caller must allocate
- *          an area of memory as big as the plaintext plus 16 bytes.
- *          If @in is NULL, the output buffer must be 16 bytes long.
+ * @in      A pointer to the ciphertext. It is aligned to the 16 byte boundary
+ *          unless it is the last block.
+ * @out     A pointer to an output buffer, that will hold the plaintext.
+ *          The caller must allocate an area of memory as big as the ciphertext.
  * @in_len  The size of the ciphertext pointed to by @in.
  *
  * @return  0 in case of success, otherwise the relevant error code.
- *
- * If case of correct decryption, the first byte of the output buffer is
- * the difference between the length of the plaintext and the length
- * of the ciphertext. The plaintext (if any) starts at the second byte.
  */
 EXPORT_SYM int OCB_decrypt(OcbModeState *state,
                            const uint8_t *in,
@@ -333,10 +239,9 @@ EXPORT_SYM int OCB_decrypt(OcbModeState *state,
  * Process a piece of authenticated data.
  *
  * @state   The block cipher state.
- * @in      A pointer to the authenticated data. It does not need to be
- *          aligned.
- *          Passing NULL signals that the previous piece was the last
- *          one.
+ * @in      A pointer to the authenticated data.
+ *          It must be aligned to the 16 byte boundary, unless it is
+ *          the last piece.
  * @in_len  The size of the authenticated data pointed to by @in.
  */
 EXPORT_SYM int OCB_update(OcbModeState *state,
@@ -345,62 +250,14 @@ EXPORT_SYM int OCB_update(OcbModeState *state,
 {
     int result;
     unsigned i;
+    DataBlock pt;
+    DataBlock ct;
 
-    if ((NULL == state) || (NULL == in && 0 != in_len))
+    if ((NULL == state) || (NULL == in))
         return ERR_NULL;
 
-    assert(state->cache_A_occ < BLOCK_SIZE);
-
-    /** Process last piece (if any) **/
-    if (NULL == in && 0 != state->cached_A_occ) {
-        DataBlock pt;
-        DataBlock ct;
-
-        memset(pt, 0, sizeof pt);
-        memcpy(pt, state->cached_A, state->cached_A_occ);
-        pt[state->cached_A_occ] = 0x80;
-
-        for (i=0; i<BLOCK_SIZE; i++)
-            pt[i] ^= state->offset_A[i] ^ state->L_star[i];
-
-        result = state->cipher->encrypt(state->cipher, pt, ct, BLOCK_SIZE);
-        if (result)
-            return result;
-
-        for (i=0; i<BLOCK_SIZE; i++)
-            state->sum[i] ^= ct[i];
-
-        state->cached_A_occ = 0;
-        return 0;
-    }
-
-    /** First ensure that the cache gets filled, if it contains something **/
-    if (state->cached_A_occ > 0 && state->cached_A_occ < BLOCK_SIZE) {
-        size_t filler;
-
-        filler = minAB(BLOCK_SIZE - state->cached_A_occ, in_len);
-        memcpy(&state->cached_A[state->cached_A_occ], in, filler);
-
-        state->cached_A_occ += filler;
-        in_len -= filler;
-        in += filler;
-    }
-
-    /** Clear the cache, when possible **/
-    if (state->cached_A_occ == BLOCK_SIZE) {
-        state->cached_A_occ = 0;
-        result = OCB_update(state, state->cached_A, BLOCK_SIZE);
-        if (result)
-            return result;
-    }
-
-    assert(state->cached_A_occ == 0 || in_len == 0);
-
-    /** Proceed with aligned data only **/
     for (;in_len>=BLOCK_SIZE; in_len-=BLOCK_SIZE) {
         unsigned idx;
-        DataBlock pt;
-        DataBlock ct;
 
         idx = ntz(state->counter_A);
         for (i=0; i<BLOCK_SIZE; i++) {
@@ -420,8 +277,22 @@ EXPORT_SYM int OCB_update(OcbModeState *state,
         in += BLOCK_SIZE;
     }
 
-    memcpy(state->cached_A, in, in_len);
-    state->cached_A_occ = in_len;
+    /** Process last piece (if any) **/
+    if (in_len>0) {
+        memset(pt, 0, sizeof pt);
+        memcpy(pt, in, in_len);
+        pt[in_len] = 0x80;
+
+        for (i=0; i<BLOCK_SIZE; i++)
+            pt[i] ^= state->offset_A[i] ^ state->L_star[i];
+
+        result = state->cipher->encrypt(state->cipher, pt, ct, BLOCK_SIZE);
+        if (result)
+            return result;
+
+        for (i=0; i<BLOCK_SIZE; i++)
+            state->sum[i] ^= ct[i];
+    }
 
     return 0;
 }
@@ -439,13 +310,6 @@ EXPORT_SYM int OCB_digest(OcbModeState *state,
 
     if (BLOCK_SIZE != tag_len)
         return ERR_TAG_SIZE;
-
-    result = OCB_update(state, NULL, 0);
-    if (result)
-        return result;
-
-    assert(state->cached_A_occ == 0);
-    assert(state->cached_P_occ == 0);
 
     for (i=0; i<BLOCK_SIZE; i++)
         pt[i] = state->checksum[i] ^ state->offset_P[i] ^ state->L_dollar[i];

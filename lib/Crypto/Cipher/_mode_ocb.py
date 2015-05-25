@@ -30,6 +30,22 @@
 
 """
 Offset Codebook (OCB) mode.
+
+OCB is Authenticated Encryption with Associated Data (AEAD) cipher mode
+designed by Prof. Phillip Rogaway and specified in `RFC7253`_.
+
+The algorithm provides both authenticity and privacy, it is very efficient,
+it uses only one key and it can be used in online mode (so that encryption
+or decryption can start before the end of the message is available).
+
+This module implements the third and last variant of OCB (OCB3) and it only
+work in combination with a 128-bit block symmetric cipher, like AES.
+
+OCB is patented in US but `free licenses`_ exist for software implementations
+meant for non-military purposes.
+
+.. _RFC7253: http://www.rfc-editor.org/info/rfc7253
+.. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
 """
 
 import struct
@@ -45,7 +61,7 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, expect_byte_string,
-                                  null_pointer)
+                                  )
 
 raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
                                     int OCB_start_operation(void *cipher,
@@ -98,23 +114,31 @@ class OcbMode(object):
         if factory.block_size != 16:
             raise ValueError("OCB mode is only available for ciphers"
                              " that operate on 128 bits blocks")
+
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
 
         try:
             key = kwargs.get("key")
-            external_nonce = kwargs.pop("nonce")  # N
+            self.nonce = kwargs.pop("nonce")  # N
             self._mac_len = kwargs.pop("mac_len", 16)
         except KeyError, e:
             raise TypeError("Keyword missing: " + str(e))
 
-        if len(external_nonce) not in range(1,16):
+        if len(self.nonce) not in range(1,16):
             raise ValueError("Nonce must be at most 15 bytes long")
 
         if not 8 <= self._mac_len <= 16:
             raise ValueError("MAC tag must be between 8 and 16 bytes long")
-        #: Cache for MAC tag
+
+        # Cache for MAC tag
         self._mac_tag = None
+
+        # Cache for unaligned associated data
+        self._cache_A = b("")
+
+        # Cache for unaligned ciphertext/plaintext
+        self._cache_P = b("")
 
         # Allowed transitions after initialization
         self._next = [self.update, self.encrypt, self.decrypt,
@@ -123,8 +147,8 @@ class OcbMode(object):
         # Compute Offset_0
         ecb_cipher = factory.new(key, factory.MODE_ECB)
         nonce = bchr(self._mac_len << 4 & 0xFF) + \
-                bchr(0) * (14 - len(external_nonce)) + bchr(1) + \
-                external_nonce
+                bchr(0) * (14 - len(self.nonce)) + bchr(1) + \
+                self.nonce
         bottom = bord(nonce[15]) & 0x3F   # 6 bits, 0..63
         ktop = ecb_cipher.encrypt(nonce[:15] + bchr(bord(nonce[15]) & 0xC0))
         stretch = ktop + strxor(ktop[:8], ktop[1:9])    # 192 bits
@@ -153,16 +177,24 @@ class OcbMode(object):
         # by the cipher mode
         raw_cipher.release()
 
+    def _update(self, assoc_data):
+        expect_byte_string(assoc_data)
+        result = raw_ocb_lib.OCB_update(self._state.get(),
+                                        assoc_data,
+                                        c_size_t(len(assoc_data)))
+        if result:
+            raise ValueError("Error %d while MAC-ing in OCB mode" % result)
+
     def update(self, assoc_data):
-        """Protect associated data
+        """Process the associated data.
 
         If there is any associated data, the caller has to invoke
-        this function one or more times, before using
+        this method one or more times, before using
         ``decrypt`` or ``encrypt``.
 
         By *associated data* it is meant any data (e.g. packet headers) that
         will not be encrypted and will be transmitted in the clear.
-        However, the receiver is still able to detect any modification to it.
+        However, the receiver shall still able to detect modifications.
 
         If there is no associated data, this method must not be called.
 
@@ -181,16 +213,73 @@ class OcbMode(object):
         self._next = [self.encrypt, self.decrypt, self.digest,
                       self.verify, self.update]
 
-        expect_byte_string(assoc_data)
-        result = raw_ocb_lib.OCB_update(self._state.get(),
-                                        assoc_data,
-                                        c_size_t(len(assoc_data)))
+        if len(self._cache_A) > 0:
+            filler = min(self.block_size - len(self._cache_A), len(assoc_data))
+            self._cache_A += assoc_data[:filler]
+            assoc_data = assoc_data[filler:]
 
+            if len(self._cache_A) == self.block_size:
+                self._cache_A, seg = b(""), self._cache_A
+                self.update(seg)
+
+        update_len = len(assoc_data) // self.block_size * self.block_size
+        self._cache_A = assoc_data[update_len:]
+        self._update(assoc_data[:update_len])
+
+    def _transcrypt_aligned(self, in_data, trans_func, trans_desc):
+        out_data = create_string_buffer(len(in_data))
+        result = trans_func(self._state.get(),
+                            in_data,
+                            out_data,
+                            c_size_t(len(in_data)))
         if result:
-            raise ValueError("Error %d while encrypting in OCB mode" % result)
+            raise ValueError("Error %d while %sing in OCB mode"
+                             % (result, trans_desc))
+        return get_raw_buffer(out_data)
+
+    def _transcrypt(self, in_data, trans_func, trans_desc):
+        # Last piece to encrypt/decrypt
+        if in_data is None:
+            out_data = self._transcrypt_aligned(self._cache_P,
+                                                trans_func,
+                                                trans_desc)
+            self._cache_P = b("")
+            return out_data
+
+        # Try to fill up the cache, if it already contains something
+        expect_byte_string(in_data)
+        prefix = b("")
+        if len(self._cache_P) > 0:
+            filler = min(self.block_size - len(self._cache_P), len(in_data))
+            self._cache_P += in_data[:filler]
+            in_data = in_data[filler:]
+
+            if len(self._cache_P) < self.block_size:
+                # We could not manage to fill the cache, so there is certainly
+                # no output yet.
+                return b("")
+
+            # Clear the cache, and proceeding with any other aligned data
+            prefix = self._transcrypt_aligned(self._cache_P,
+                                              trans_func,
+                                              trans_desc)
+            self._cache_P = b("")
+
+        # Process data in multiples of the block size
+        trans_len = len(in_data) // self.block_size * self.block_size
+        result = self._transcrypt_aligned(in_data[:trans_len],
+                                          trans_func,
+                                          trans_desc)
+        if prefix:
+            result = prefix + result
+
+        # Left-over
+        self._cache_P = in_data[trans_len:]
+
+        return result
 
     def encrypt(self, plaintext=None):
-        """Encrypt the next piece of clear data.
+        """Encrypt the next piece of plaintext.
 
         :Parameters:
           plaintext : byte string
@@ -207,28 +296,13 @@ class OcbMode(object):
                             " initialization or an update()")
 
         if plaintext is None:
-            pt_len = 0
             self._next = [self.digest]
-            plaintext = null_pointer
         else:
-            pt_len = len(plaintext)
-            self._next = [self.digest, self.encrypt]
-            expect_byte_string(plaintext)
-
-        ciphertext = create_string_buffer(pt_len + self.block_size)
-        result = raw_ocb_lib.OCB_encrypt(self._state.get(),
-                                         plaintext,
-                                         ciphertext,
-                                         c_size_t(pt_len))
-
-        if result:
-            raise ValueError("Error %d while encrypting in OCB mode" % result)
-
-        ct_len = pt_len + struct.unpack('b', ciphertext[0])[0]
-        return get_raw_buffer(ciphertext)[1:ct_len+1]
+            self._next = [self.encrypt, self.digest]
+        return self._transcrypt(plaintext, raw_ocb_lib.OCB_encrypt, "encrypt")
 
     def decrypt(self, ciphertext=None):
-        """Decrypt the next piece of encrypted data.
+        """Decrypt the next piece of ciphertext.
 
         :Parameters:
           ciphertext : byte string
@@ -245,25 +319,29 @@ class OcbMode(object):
                             " initialization or an update()")
 
         if ciphertext is None:
-            ct_len = 0
-            self._next = [self.digest]
-            ciphertext = null_pointer
+            self._next = [self.verify]
         else:
-            ct_len = len(ciphertext)
-            self._next = [self.digest, self.decrypt]
-            expect_byte_string(ciphertext)
+            self._next = [self.decrypt, self.digest]
+        return self._transcrypt(ciphertext, raw_ocb_lib.OCB_decrypt, "decrypt")
 
-        plaintext = create_string_buffer(ct_len + self.block_size)
-        result = raw_ocb_lib.OCB_decrypt(self._state.get(),
-                                         ciphertext,
-                                         plaintext,
-                                         c_size_t(ct_len))
+    def _compute_mac_tag(self):
 
+        if self._mac_tag is not None:
+            return
+
+        if self._cache_A:
+            self._update(self._cache_A)
+            self._cache_A = b("")
+
+        mac_tag = create_string_buffer(self.block_size)
+        result = raw_ocb_lib.OCB_digest(self._state.get(),
+                                        mac_tag,
+                                        c_size_t(len(mac_tag))
+                                        )
         if result:
-            raise ValueError("Error %d while decrypting in OCB mode" % result)
-
-        pt_len = ct_len + struct.unpack('b', plaintext[0])[0]
-        return get_raw_buffer(plaintext)[1:pt_len+1]
+            raise ValueError("Error %d while computing digest in OCB mode"
+                             % result)
+        self._mac_tag = get_raw_buffer(mac_tag)[:self._mac_len]
 
     def digest(self):
         """Compute the *binary* MAC tag.
@@ -279,19 +357,15 @@ class OcbMode(object):
         if self.digest not in self._next:
             raise TypeError("digest() cannot be called when decrypting"
                             " or validating a message")
+
+        if len(self._cache_P) > 0:
+            raise TypeError("There is outstanding data."
+                            " Call encrypt/decrypt again with no parameters.")
+
         self._next = [self.digest]
 
         if self._mac_tag is None:
-
-            mac_tag = create_string_buffer(self.block_size)
-            result = raw_ocb_lib.OCB_digest(self._state.get(),
-                                            mac_tag,
-                                            c_size_t(len(mac_tag))
-                                            )
-            if result:
-                raise ValueError("Error %d while computing digest in OCB mode"
-                                 % result)
-            self._mac_tag = get_raw_buffer(mac_tag)[:self._mac_len]
+            self._compute_mac_tag()
 
         return self._mac_tag
 
@@ -324,17 +398,14 @@ class OcbMode(object):
         if self.verify not in self._next:
             raise TypeError("verify() cannot be called"
                             " when encrypting a message")
+        if len(self._cache_P) > 0:
+            raise TypeError("There is outstanding data."
+                            " Call encrypt/decrypt again with no parameters.")
+
         self._next = [self.verify]
 
         if self._mac_tag is None:
-
-            mac_tag = create_string_buffer(self.block_size)
-            result = raw_ocb_lib.OCB_digest(self._state.get(),
-                                            mac_tag)
-            if result:
-                raise ValueError("Error %d while computing digest in OCB mode"
-                                 % result)
-            self._mac_tag = get_raw_buffer(mac_tag)
+            self._compute_mac_tag()
 
         secret = get_random_bytes(16)
         mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._mac_tag)
@@ -371,7 +442,7 @@ class OcbMode(object):
             - the MAC
         """
 
-        return self.encrypt(plaintext), self.digest()
+        return self.encrypt(plaintext) + self.encrypt(), self.digest()
 
     def decrypt_and_verify(self, ciphertext, received_mac_tag):
         """Perform decrypt() and verify() in one step.
@@ -388,7 +459,7 @@ class OcbMode(object):
             or the key is incorrect.
         """
 
-        plaintext = self.decrypt(ciphertext)
+        plaintext = self.decrypt(ciphertext) + self.decrypt()
         self.verify(received_mac_tag)
         return plaintext
 

@@ -8,7 +8,6 @@ Future releases will include:
     - Poly1305
     - Elliptic Curves (ECDSA, ECIES, ECDH)
     - Camellia, GOST
-    - OCB cipher mode
     - Diffie-Hellman
     - bcrypt
     - SRP

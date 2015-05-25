@@ -111,7 +111,7 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
         raise ValueError("Mode not supported")
 
     if args:
-        if mode in (8, 9, 10, 11):
+        if mode in (8, 9, 10, 11, 12):
             kwargs["nonce"] = args[0]
         elif mode in (2, 3, 5, 7):
             kwargs["IV"] = args[0]

@@ -40,6 +40,162 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Cipher import AES
 
+class OcbTest(unittest.TestCase):
+
+    key = bchr(8) * 16
+
+    def _create_cipher(self, mac_len=16):
+        return AES.new(self.key, AES.MODE_OCB, nonce=bchr(0)*15, mac_len=mac_len)
+
+    def test_init(self):
+        # Verify that nonce can be passed in the old way (3rd parameter)
+        # or in the new way ('nonce' parameter)
+        ct, mac = self._create_cipher().encrypt_and_digest(b("XXX"))
+
+        cipher = AES.new(self.key, AES.MODE_OCB, bchr(0)*15)
+        ct2, mac2 = cipher.encrypt_and_digest(b("XXX"))
+        self.assertEquals(ct, ct2)
+        self.assertEquals(mac, mac2)
+
+    def test_nonce(self):
+        for x in range(1, 15 + 1):
+            AES.new(self.key, AES.MODE_OCB, nonce=bchr(0)*x)
+        self.assertRaises(TypeError, AES.new, self.key, AES.MODE_OCB)
+        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=b(""))
+        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=bchr(0)*16)
+
+    def test_round_trip(self):
+        aad = bchr(8) * 100
+        pt = bchr(9) * 100
+
+        cipher = self._create_cipher()
+        cipher.update(aad)
+        ct, mac = cipher.encrypt_and_digest(pt)
+
+        cipher = self._create_cipher()
+        cipher.update(aad)
+        pt2 = cipher.decrypt_and_verify(ct, mac)
+        self.assertEquals(pt, pt2)
+
+    def test_mac_length(self):
+        pt = bchr(9) * 100
+
+        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=bchr(0)*15, mac_len=7)
+        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=bchr(0)*15, mac_len=17)
+
+        ct, mac = self._create_cipher().encrypt_and_digest(pt)
+        self.assertEquals(len(mac), 16)
+
+        for mac_len in xrange(8, 16+1):
+            ct, mac = self._create_cipher(mac_len=mac_len).encrypt_and_digest(pt)
+            self.assertEquals(len(mac), mac_len)
+
+    def test_failed_mac(self):
+        pt = bchr(9) * 100
+        ct, mac = self._create_cipher().encrypt_and_digest(pt)
+        cipher = self._create_cipher()
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, strxor_c(mac, 1))
+
+    def test_partial(self):
+        # Ensure that a last call to encrypt()/decrypt() is required when
+        # dealing with misaligned data
+        pt = ct = bchr(9) * 17
+
+        cipher = self._create_cipher()
+        cipher.encrypt(pt)
+        self.assertRaises(TypeError, cipher.digest)
+
+        cipher = self._create_cipher()
+        cipher.decrypt(ct)
+        self.assertRaises(TypeError, cipher.verify, ct)
+
+    def test_byte_by_byte(self):
+        pt = bchr(3) * 101
+        ct, mac = self._create_cipher().encrypt_and_digest(pt)
+
+        # Encryption
+        cipher = self._create_cipher()
+        ct2 = b("")
+        for x in xrange(len(pt)):
+            ct2 += cipher.encrypt(pt[x:x+1])
+        ct2 += cipher.encrypt()
+        mac2 = cipher.digest()
+
+        self.assertEqual(ct, ct2)
+        self.assertEqual(mac, mac2)
+
+        # Decryption
+        cipher = self._create_cipher()
+        pt2 = b("")
+        for x in xrange(len(ct)):
+            pt2 += cipher.decrypt(ct[x:x+1])
+        pt2 += cipher.decrypt()
+        self.assertEqual(pt, pt2)
+        cipher.verify(mac)
+
+    def test_fsm(self):
+
+        # INIT --> DIGEST
+        cipher = self._create_cipher()
+        mac1 = cipher.digest()
+        mac2 = cipher.digest()
+        self.assertEquals(mac1, mac2)
+
+        # DIGEST --> VERIFY
+        self.assertRaises(TypeError, cipher.verify, mac1)
+
+        # INIT --> VERIFY
+        cipher = self._create_cipher()
+        cipher.verify(mac1)
+        cipher.verify(mac1)
+
+        # VERIFY --> DIGEST
+        self.assertRaises(TypeError, cipher.digest)
+
+        # ENCRYPT --> DECRYPT
+        cipher = self._create_cipher()
+        cipher.encrypt(b("XXX"))
+        self.assertRaises(TypeError, cipher.decrypt, b("YYY"))
+
+        # ENCRYPT --> DIGEST
+        cipher = self._create_cipher()
+        cipher.encrypt(b("XXX"))
+        self.assertRaises(TypeError, cipher.digest)
+        cipher.encrypt()
+        cipher.digest()
+
+        # ENCRYPT --> VERIFY
+        cipher = self._create_cipher()
+        cipher.encrypt(b("XXX"))
+        self.assertRaises(TypeError, cipher.verify, b("XXX"))
+
+        # ENCRYPT --> UPDATE
+        cipher = self._create_cipher()
+        cipher.encrypt(b("XXX"))
+        self.assertRaises(TypeError, cipher.update, b("XXX"))
+
+        # DECRYPT --> ENCRYPT
+        cipher = self._create_cipher()
+        cipher.decrypt(b("XXX"))
+        self.assertRaises(TypeError, cipher.encrypt, b("YYY"))
+
+        # DECRYPT --> VERIFY
+        pt, mac = self._create_cipher().encrypt_and_digest(b("XXX"))
+        cipher = self._create_cipher()
+        cipher.decrypt(pt)
+        self.assertRaises(TypeError, cipher.verify, mac)
+        cipher.decrypt()
+        cipher.verify(mac)
+
+        # DECRYPT --> DIGEST
+        cipher = self._create_cipher()
+        cipher.decrypt(b("XXX"))
+        self.assertRaises(TypeError, cipher.digest)
+
+        # DECRYPT --> UPDATE
+        cipher = self._create_cipher()
+        cipher.decrypt(b("XXX"))
+        self.assertRaises(TypeError, cipher.update, b("XXX"))
 
 class OcbRfc7253Test(unittest.TestCase):
 
@@ -201,9 +357,9 @@ class OcbRfc7253Test(unittest.TestCase):
     )
 
     def test1(self):
-        key = unhexlify(self.tv1_key)
+        key = unhexlify(b(self.tv1_key))
         for tv in self.tv1:
-            nonce, aad, pt, ct = [ unhexlify(x) for x in tv ]
+            nonce, aad, pt, ct = [ unhexlify(b(x)) for x in tv ]
             ct, mac_tag = ct[:-16], ct[-16:]
 
             cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
@@ -216,11 +372,11 @@ class OcbRfc7253Test(unittest.TestCase):
             cipher.update(aad)
             pt2 = cipher.decrypt(ct) + cipher.decrypt()
             self.assertEquals(pt, pt2)
-            self.assertEquals(mac_tag, cipher.digest())
+            cipher.verify(mac_tag)
 
     def test2(self):
 
-        key, nonce, aad, pt, ct = [ unhexlify(x) for x in self.tv2 ]
+        key, nonce, aad, pt, ct = [ unhexlify(b(x)) for x in self.tv2 ]
         ct, mac_tag = ct[:-12], ct[-12:]
 
         cipher = AES.new(key, AES.MODE_OCB, nonce=nonce, mac_len=12)
@@ -233,7 +389,7 @@ class OcbRfc7253Test(unittest.TestCase):
         cipher.update(aad)
         pt2 = cipher.decrypt(ct) + cipher.decrypt()
         self.assertEquals(pt, pt2)
-        self.assertEquals(mac_tag, cipher.digest())
+        cipher.verify(mac_tag)
 
     def test3(self):
 
@@ -263,11 +419,12 @@ class OcbRfc7253Test(unittest.TestCase):
             cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
             cipher.update(C)
             result2 = cipher.encrypt() + cipher.digest()
-            self.assertEquals(unhexlify(result), result2)
+            self.assertEquals(unhexlify(b(result)), result2)
 
 
 def get_tests(config={}):
     tests = []
+    tests += list_test_cases(OcbTest)
     tests += list_test_cases(OcbRfc7253Test)
     return tests
 
