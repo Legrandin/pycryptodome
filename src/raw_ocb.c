@@ -72,8 +72,11 @@ static void double_L(DataBlock *out, DataBlock *in)
         carry = t >> 8;
         (*out)[i] = t;
     }
-    if (carry)
-        (*out)[BLOCK_SIZE-1] ^= 0x87;
+    carry |= 0x100;
+    carry |= carry << 1;
+    carry |= carry << 2;
+    carry |= carry << 4;
+    (*out)[BLOCK_SIZE-1] ^= carry & 0x87;
 }
 
 static unsigned ntz(uint64_t counter)
