@@ -364,7 +364,8 @@ class Benchmark:
             ("CCM",     True,   "mode=MODE_CCM nonce=12"),
             ("GCM",     True,   "mode=MODE_GCM nonce=16"),
             ("EAX",     True,   "mode=MODE_GCM nonce=16"),
-            ("SIV",     True,   "mode=MODE_SIV ks=x2 nonce=16")
+            ("SIV",     True,   "mode=MODE_SIV ks=x2 nonce=16"),
+            ("OCB",     True,   "mode=MODE_OCB nonce=15"),
             ]
         block_specs = [
             # Cipher name, module, key size

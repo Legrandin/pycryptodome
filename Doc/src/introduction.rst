@@ -16,7 +16,8 @@ are implemented as C extensions.
 News
 ----
 
-* **15 Mar 2015 (NEW)**. Release 3.1.
+* **?? ??? 2015 (NEW)**. Release 3.2.
+* 15 Mar 2015 (NEW). Release 3.1.
 * 24 Jun 2014. Release 3.0.
 
 PyCryptodome and PyCrypto
@@ -26,7 +27,7 @@ PyCryptodome is a fork of the `PyCrypto <https://www.dlitz.net/software/pycrypto
 
 It brings the following enhancements with respect to the last official version of PyCrypto (2.6.1):
 
-* Authenticated encryption modes (GCM, CCM, EAX, SIV)
+* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
 * SHA-3 and BLAKE2 hash algorithms

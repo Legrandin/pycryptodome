@@ -9,6 +9,7 @@ New features
 
 * Added hash functions BLAKE2b and BLAKE2s.
 * Added stream cipher ChaCha20.
+* Added OCB cipher mode.
 
 Resolved issues
 ---------------

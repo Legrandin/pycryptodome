@@ -174,7 +174,7 @@ def new(key, mode, *args, **kwargs):
 
         For all other modes, it must be 16 bytes long.
       nonce : byte string
-        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_GCM`, `MODE_SIV`).
+        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_GCM`, `MODE_SIV`, `MODE_OCB`).
 
         A mandatory value that must never be reused for any other encryption.
 
@@ -182,6 +182,9 @@ def new(key, mode, *args, **kwargs):
         11 or 12 bytes are reasonable values in general. Bear in
         mind that with CCM there is a trade-off between nonce length and
         maximum message size.
+
+        For `MODE_OCB`, its length must be in the range ``[1..15]``.
+        It is recommended to use 15 bytes.
 
         For the other modes, there are no restrictions on its length,
         but it is recommended to use at least 16 bytes.
@@ -198,7 +201,7 @@ def new(key, mode, *args, **kwargs):
         (*Only* `MODE_CCM`). Length of the MAC, in bytes. It must be even
         and in the range ``[4..16]``. The default is 16.
 
-        (*Only* `MODE_EAX` and `MODE_GCM`). Length of the MAC, in bytes.
+        (*Only* `MODE_EAX`, `MODE_GCM`, `MODE_OCB`). Length of the MAC, in bytes.
         It must be no larger than 16 bytes (which is the default).
       msg_len : integer
         (*Only* `MODE_CCM`). Length of the message to (de)cipher.
@@ -235,6 +238,8 @@ MODE_EAX = 9
 MODE_SIV = 10
 #: Galois Counter Mode (GCM). See `Crypto.Cipher._mode_gcm.GcmMode`.
 MODE_GCM = 11
+#: Offset Code Book (OCB)
+MODE_OCB = 12
 
 #: Size of a data block (in bytes)
 block_size = 16
