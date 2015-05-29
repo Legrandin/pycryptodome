@@ -15,7 +15,7 @@ It supports Python 2.4 or newer, all Python 3 versions and PyPy.
 PyCryptodome is a fork of PyCrypto. It brings the following enhancements
 with respect to the last official version of PyCrypto (2.6.1):
 
-* Authenticated encryption modes (GCM, CCM, EAX, SIV)
+* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
 * SHA-3 and BLAKE2 hash algorithms
