@@ -218,13 +218,17 @@ class OcbMode(object):
             self._cache_A += assoc_data[:filler]
             assoc_data = assoc_data[filler:]
 
-            if len(self._cache_A) == self.block_size:
-                self._cache_A, seg = b(""), self._cache_A
-                self.update(seg)
+            if len(self._cache_A) < self.block_size:
+                return self
+
+            # Clear the cache, and proceeding with any other aligned data
+            self._cache_A, seg = b(""), self._cache_A
+            self.update(seg)
 
         update_len = len(assoc_data) // self.block_size * self.block_size
         self._cache_A = assoc_data[update_len:]
         self._update(assoc_data[:update_len])
+        return self
 
     def _transcrypt_aligned(self, in_data, trans_func, trans_desc):
         out_data = create_string_buffer(len(in_data))

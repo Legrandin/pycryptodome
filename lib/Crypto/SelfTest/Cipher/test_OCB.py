@@ -109,7 +109,7 @@ class OcbTest(unittest.TestCase):
         cipher.decrypt(ct)
         self.assertRaises(TypeError, cipher.verify, ct)
 
-    def test_byte_by_byte(self):
+    def test_byte_by_byte_confidentiality(self):
         pt = bchr(3) * 101
         ct, mac = self._create_cipher().encrypt_and_digest(pt)
 
@@ -132,6 +132,18 @@ class OcbTest(unittest.TestCase):
         pt2 += cipher.decrypt()
         self.assertEqual(pt, pt2)
         cipher.verify(mac)
+
+    def test_byte_by_byte_associated_data(self):
+        ad = bchr(4) * 101
+
+        mac = self._create_cipher().update(ad).digest()
+
+        cipher = self._create_cipher()
+        for x in xrange(len(ad)):
+            cipher.update(ad[x:x+1])
+        mac2 = cipher.digest()
+
+        self.assertEquals(mac, mac2)
 
     def test_fsm(self):
 
@@ -196,6 +208,17 @@ class OcbTest(unittest.TestCase):
         cipher = self._create_cipher()
         cipher.decrypt(b("XXX"))
         self.assertRaises(TypeError, cipher.update, b("XXX"))
+
+    def test_update_chaining(self):
+        cipher = self._create_cipher()
+        cipher.update(b("XXX")).update(b("YYY"))
+        mac = cipher.digest()
+
+        cipher = self._create_cipher()
+        cipher.update(b("XXXYYY"))
+        mac2 = cipher.digest()
+
+        self.assertEquals(mac, mac2)
 
 class OcbRfc7253Test(unittest.TestCase):
 
