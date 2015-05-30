@@ -44,6 +44,25 @@ work in combination with a 128-bit block symmetric cipher, like AES.
 OCB is patented in US but `free licenses`_ exist for software implementations
 meant for non-military purposes.
 
+Example:
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> key = get_random_bytes(32)
+    >>> nonce = get_random_bytes(16)
+    >>> cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
+    >>> plaintext = b"Attack at dawn"
+    >>> ciphertext, mac = cipher.encrypt_and_digest(plaintext)
+    >>> # Deliver nonce, ciphertext and mac
+    ...
+    >>> cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
+    >>> try:
+    >>>     plaintext = cipher.decrypt_and_verify(ciphertext, mac)
+    >>> except ValueError:
+    >>>     print "Invalid message"
+    >>> else:
+    >>>     print plaintext
+
 .. _RFC7253: http://www.rfc-editor.org/info/rfc7253
 .. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
 """
@@ -293,6 +312,9 @@ class OcbMode(object):
         :Return:
             the ciphertext, as a byte string.
             Its length may not match the length of the *plaintext*.
+        :Important:
+            You must always call `encrypt()` (with no arguments) at the end to
+            collect the last piece of ciphertext.
         """
 
         if self.encrypt not in self._next:
@@ -316,6 +338,9 @@ class OcbMode(object):
         :Return:
             the plaintext, as a byte string.
             Its length may not match the length of the *ciphertext*.
+        :Important:
+            You must always call `decrypt()` (with no arguments) at the end to
+            collect the last piece of plaintext.
         """
 
         if self.decrypt not in self._next:
