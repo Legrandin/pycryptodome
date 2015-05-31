@@ -196,11 +196,11 @@ class OcbMode(object):
         # by the cipher mode
         raw_cipher.release()
 
-    def _update(self, assoc_data):
+    def _update(self, assoc_data, assoc_data_len):
         expect_byte_string(assoc_data)
         result = raw_ocb_lib.OCB_update(self._state.get(),
                                         assoc_data,
-                                        c_size_t(len(assoc_data)))
+                                        c_size_t(assoc_data_len))
         if result:
             raise ValueError("Error %d while MAC-ing in OCB mode" % result)
 
@@ -246,15 +246,15 @@ class OcbMode(object):
 
         update_len = len(assoc_data) // self.block_size * self.block_size
         self._cache_A = assoc_data[update_len:]
-        self._update(assoc_data[:update_len])
+        self._update(assoc_data, update_len)
         return self
 
-    def _transcrypt_aligned(self, in_data, trans_func, trans_desc):
-        out_data = create_string_buffer(len(in_data))
+    def _transcrypt_aligned(self, in_data, in_data_len, trans_func, trans_desc):
+        out_data = create_string_buffer(in_data_len)
         result = trans_func(self._state.get(),
                             in_data,
                             out_data,
-                            c_size_t(len(in_data)))
+                            c_size_t(in_data_len))
         if result:
             raise ValueError("Error %d while %sing in OCB mode"
                              % (result, trans_desc))
@@ -264,6 +264,7 @@ class OcbMode(object):
         # Last piece to encrypt/decrypt
         if in_data is None:
             out_data = self._transcrypt_aligned(self._cache_P,
+                                                len(self._cache_P),
                                                 trans_func,
                                                 trans_desc)
             self._cache_P = b("")
@@ -284,13 +285,15 @@ class OcbMode(object):
 
             # Clear the cache, and proceeding with any other aligned data
             prefix = self._transcrypt_aligned(self._cache_P,
+                                              len(self._cache_P),
                                               trans_func,
                                               trans_desc)
             self._cache_P = b("")
 
         # Process data in multiples of the block size
         trans_len = len(in_data) // self.block_size * self.block_size
-        result = self._transcrypt_aligned(in_data[:trans_len],
+        result = self._transcrypt_aligned(in_data,
+                                          trans_len,
                                           trans_func,
                                           trans_desc)
         if prefix:
@@ -359,7 +362,7 @@ class OcbMode(object):
             return
 
         if self._cache_A:
-            self._update(self._cache_A)
+            self._update(self._cache_A, len(self._cache_A))
             self._cache_A = b("")
 
         mac_tag = create_string_buffer(self.block_size)
