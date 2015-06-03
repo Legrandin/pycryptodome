@@ -159,7 +159,7 @@ class _SmoothMAC(object):
         self._tag = self._digest(left_data)
         return self._tag
 
-class CMAC(_SmoothMAC):
+class CMAC(object):
     """Class that implements CMAC"""
 
     #: The size of the authentication tag produced by the MAC.
@@ -187,8 +187,6 @@ class CMAC(_SmoothMAC):
         if ciphermod is None:
             raise TypeError("ciphermod must be specified (try AES)")
 
-        _SmoothMAC.__init__(self, ciphermod.block_size, msg, 1)
-
         self._key = key
         self._factory = ciphermod
         if cipher_params is None:
@@ -204,13 +202,17 @@ class CMAC(_SmoothMAC):
         else:
             raise TypeError("CMAC requires a cipher with a block size of 8 or 16 bytes, not %d" %
                             (ciphermod.block_size,))
+
+        # Size of the final MAC tag, in bytes
         self.digest_size = ciphermod.block_size
+        self._mac_tag = None
 
         # Compute sub-keys
+        zero_block = bchr(0) * ciphermod.block_size
         cipher = ciphermod.new(key,
                                ciphermod.MODE_ECB,
                                **self._cipher_params)
-        l = cipher.encrypt(bchr(0)*ciphermod.block_size)
+        l = cipher.encrypt(zero_block)
         if bord(l[0]) & 0x80:
             self._k1 = _shift_bytes(l, const_Rb)
         else:
@@ -221,11 +223,20 @@ class CMAC(_SmoothMAC):
             self._k2 = _shift_bytes(self._k1)
 
         # Initialize CBC cipher with zero IV
-        self._IV = bchr(0)*ciphermod.block_size
-        self._mac = ciphermod.new(key,
+        self._cbc = ciphermod.new(key,
                                   ciphermod.MODE_CBC,
-                                  self._IV,
+                                  zero_block,
                                   **self._cipher_params)
+
+        # Cache for outstanding data to authenticate
+        self._cache = b("")
+
+        # Last two pieces of ciphertext produced
+        self._last_ct = self._last_pt = zero_block
+        self._before_last_ct = None
+
+        if msg:
+            self.update(msg)
 
     def update(self, msg):
         """Continue authentication of a message by consuming the next chunk of data.
@@ -244,10 +255,42 @@ class CMAC(_SmoothMAC):
             The next chunk of the message being authenticated
         """
 
-        _SmoothMAC.update(self, msg)
+        if len(self._cache) > 0:
+            filler = min(self.digest_size - len(self._cache), len(msg))
+            self._cache += msg[:filler]
+
+            if len(self._cache) < self.digest_size:
+                return self
+
+            msg = msg[filler:]
+            self._update(self._cache)
+            self._cache = b("")
+
+        update_len, remain = divmod(len(msg), self.digest_size)
+        update_len *= self.digest_size
+        if remain > 0:
+            self._update(msg[:update_len])
+            self._cache = msg[update_len:]
+        else:
+            self._update(msg)
+            self._cache = b("")
+        return self
 
     def _update(self, data_block):
-        self._IV = self._mac.encrypt(data_block)[-self._mac.block_size:]
+        """Update a block aligned to the block boundary"""
+        if len(data_block) == 0:
+            return
+
+        assert len(data_block) % self.digest_size == 0
+
+        ct = self._cbc.encrypt(data_block)
+
+        if len(data_block) == self.digest_size:
+            self._before_last_ct = self._last_ct
+        else:
+            self._before_last_ct = ct[-self.digest_size * 2:-self.digest_size]
+        self._last_ct = ct[-self.digest_size:]
+        self._last_pt = data_block[-self.digest_size:]
 
     def copy(self):
         """Return a copy ("clone") of the MAC object.
@@ -263,12 +306,11 @@ class CMAC(_SmoothMAC):
                    ciphermod=self._factory,
                    cipher_params=self._cipher_params)
 
-        _SmoothMAC._deep_copy(self, obj)
-        obj._mac = self._factory.new(self._key,
+        obj._cbc = self._factory.new(self._key,
                                      self._factory.MODE_CBC,
-                                     self._IV,
+                                     self._last_ct,
                                      **self._cipher_params)
-        for m in [ '_tag', '_k1', '_k2', '_IV']:
+        for m in [ '_mac_tag', '_last_ct', '_before_last_ct', '_cache' ]:
             setattr(obj, m, getattr(self, m))
         return obj
 
@@ -282,16 +324,25 @@ class CMAC(_SmoothMAC):
         :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
          characters, including null bytes.
         """
-        return _SmoothMAC.digest(self)
 
-    def _digest(self, last_data):
-        if len(last_data)==self._bs:
-            last_block = strxor(last_data, self._k1)
+        if self._mac_tag is not None:
+            return self._mac_tag
+
+        if len(self._cache) == 0 and self._before_last_ct is not None:
+            ## Last block was full
+            pt = strxor(strxor(self._before_last_ct, self._k1), self._last_pt)
         else:
-            last_block = strxor(last_data+bchr(128)+
-                    bchr(0)*(self._bs-1-len(last_data)), self._k2)
-        tag = self._mac.encrypt(last_block)
-        return tag
+            ## Last block is partial (or message length is zero)
+            ext = self._cache + bchr(0x80) +\
+                  bchr(0) * (self.digest_size - len(self._cache) - 1)
+            pt = strxor(strxor(self._last_ct, self._k2), ext)
+
+        cipher = self._factory.new(self._key,
+                                   self._factory.MODE_ECB,
+                                   **self._cipher_params)
+        self._mac_tag = cipher.encrypt(pt)
+
+        return self._mac_tag
 
     def hexdigest(self):
         """Return the **printable** MAC of the message that has been

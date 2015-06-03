@@ -82,12 +82,9 @@ EXPORT_SYM int CBC_encrypt(CbcModeState *cbcState,
     iv = (uint8_t *) alloca(block_len);
 
     memcpy(iv, cbcState->iv, block_len);
-    while (data_len > 0) {
+    while (data_len >= block_len) {
         unsigned i;
         int result;
-
-        if (data_len < block_len)
-            return ERR_NOT_ENOUGH_DATA;
 
         for (i=0; i<block_len; i++)
             pt[i] = in[i] ^ iv[i];
@@ -103,6 +100,9 @@ EXPORT_SYM int CBC_encrypt(CbcModeState *cbcState,
         out += block_len;
     }
     memcpy(cbcState->iv, iv, block_len);
+
+    if (data_len > 0)
+        return ERR_NOT_ENOUGH_DATA;
 
     return 0;
 }
@@ -123,12 +123,9 @@ EXPORT_SYM int CBC_decrypt(CbcModeState *cbcState,
     iv = (uint8_t *) alloca(block_len);
 
     memcpy(iv, cbcState->iv, block_len);
-    while (data_len > 0) {
+    while (data_len >= block_len) {
         unsigned i;
         int result;
-
-        if (data_len < block_len)
-            return ERR_NOT_ENOUGH_DATA;
 
         result = cbcState->cipher->decrypt(cbcState->cipher, in, pt, block_len);
         if (result)
@@ -144,6 +141,9 @@ EXPORT_SYM int CBC_decrypt(CbcModeState *cbcState,
         out += block_len;
     }
     memcpy(cbcState->iv, iv, block_len);
+
+    if (data_len > 0)
+        return ERR_NOT_ENOUGH_DATA;
 
     return 0;
 }
