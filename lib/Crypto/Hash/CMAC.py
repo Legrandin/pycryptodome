@@ -55,14 +55,21 @@ And this is an example showing how to *check* an AES-CMAC:
     >>> except ValueError:
     >>>   print "The message or the key is wrong"
 
+A cipher block size of 128 bits (like for AES) guarantees that the risk
+of MAC collisions remains negligeable even when the same CMAC key is
+used to authenticate a large amount of data (2^22 Gbytes).
+
+This implementation allows also usage of ciphers with a 64 bits block size
+(like TDES) for legacy purposes only.
+However, the risk is much higher and one CMAC key should be rotated
+after as little as 16 MBytes (in total) have been authenticated.
+
 .. _`NIST SP 800-38B`: http://csrc.nist.gov/publications/nistpubs/800-38B/SP_800-38B.pdf
 .. _RFC4493: http://www.ietf.org/rfc/rfc4493.txt
 .. _OMAC1: http://www.nuee.nagoya-u.ac.jp/labs/tiwata/omac/omac.html
 """
 
-__all__ = ['new', 'digest_size', 'CMAC' ]
-
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b, bchr, bord, tobytes
 
 from binascii import unhexlify
 
@@ -178,7 +185,7 @@ class CMAC(object):
             It is equivalent to an early call to `update`. Optional.
           ciphermod : module
             A cipher module from `Crypto.Cipher`.
-            The cipher's block size must be 64 or 128 bits.
+            The cipher's block size has to be 128 bits.
             It is recommended to use `Crypto.Cipher.AES`.
           cipher_params : dictionary
             Extra keywords to use when creating a new cipher.
@@ -194,11 +201,13 @@ class CMAC(object):
         else:
             self._cipher_params = dict(cipher_params)
 
-        # Section 5.3 of NIST SP 800 38B
+        # Section 5.3 of NIST SP 800 38B and Appendix B
         if ciphermod.block_size==8:
             const_Rb = 0x1B
+            self._max_size = 8 * (2 ** 21)
         elif ciphermod.block_size==16:
             const_Rb = 0x87
+            self._max_size = 16 * (2 ** 48)
         else:
             raise TypeError("CMAC requires a cipher with a block size of 8 or 16 bytes, not %d" %
                             (ciphermod.block_size,))
@@ -235,6 +244,9 @@ class CMAC(object):
         self._last_ct = self._last_pt = zero_block
         self._before_last_ct = None
 
+        # Counter for total message size
+        self._data_size = 0
+
         if msg:
             self.update(msg)
 
@@ -254,6 +266,8 @@ class CMAC(object):
           msg : byte string
             The next chunk of the message being authenticated
         """
+
+        self._data_size += len(msg)
 
         if len(self._cache) > 0:
             filler = min(self.digest_size - len(self._cache), len(msg))
@@ -310,7 +324,8 @@ class CMAC(object):
                                      self._factory.MODE_CBC,
                                      self._last_ct,
                                      **self._cipher_params)
-        for m in [ '_mac_tag', '_last_ct', '_before_last_ct', '_cache' ]:
+        for m in [ '_mac_tag', '_last_ct', '_before_last_ct', '_cache',
+                   '_data_size', '_max_size' ]:
             setattr(obj, m, getattr(self, m))
         return obj
 
@@ -327,6 +342,9 @@ class CMAC(object):
 
         if self._mac_tag is not None:
             return self._mac_tag
+
+        if self._data_size > self._max_size:
+            raise ValueError("MAC is unsafe for this message")
 
         if len(self._cache) == 0 and self._before_last_ct is not None:
             ## Last block was full
@@ -401,8 +419,8 @@ def new(key, msg=None, ciphermod=None, cipher_params=None):
             It is equivalent to an early call to `CMAC.update`. Optional.
         ciphermod : module
             A cipher module from `Crypto.Cipher`.
-            The cipher's block size must be 64 or 128 bits.
-            Default is `Crypto.Cipher.AES`.
+            The cipher's block size has to be 128 bits,
+            like `Crypto.Cipher.AES`, to reduce the probability of collisions.
 
     :Returns: A `CMAC` object
     """

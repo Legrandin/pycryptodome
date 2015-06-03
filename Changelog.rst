@@ -10,6 +10,8 @@ New features
 * Added hash functions BLAKE2b and BLAKE2s.
 * Added stream cipher ChaCha20.
 * Added OCB cipher mode.
+* CMAC raises an exception whenever the message length is found to be
+  too large and the chance of collisions not negligeable.
 
 Resolved issues
 ---------------
