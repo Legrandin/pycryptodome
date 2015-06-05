@@ -82,8 +82,9 @@ from Crypto.Random import get_random_bytes
 digest_size = None
 
 def _shift_bytes(bs, xor_lsb=0):
-    num = (bytes_to_long(bs)<<1) ^ xor_lsb
+    num = (bytes_to_long(bs) << 1) ^ xor_lsb
     return long_to_bytes(num, len(bs))[-len(bs):]
+
 
 class _SmoothMAC(object):
     """Turn a MAC that only operates on aligned blocks of data
@@ -166,6 +167,7 @@ class _SmoothMAC(object):
         self._tag = self._digest(left_data)
         return self._tag
 
+
 class CMAC(object):
     """Class that implements CMAC"""
 
@@ -202,14 +204,15 @@ class CMAC(object):
             self._cipher_params = dict(cipher_params)
 
         # Section 5.3 of NIST SP 800 38B and Appendix B
-        if ciphermod.block_size==8:
+        if ciphermod.block_size == 8:
             const_Rb = 0x1B
             self._max_size = 8 * (2 ** 21)
-        elif ciphermod.block_size==16:
+        elif ciphermod.block_size == 16:
             const_Rb = 0x87
             self._max_size = 16 * (2 ** 48)
         else:
-            raise TypeError("CMAC requires a cipher with a block size of 8 or 16 bytes, not %d" %
+            raise TypeError("CMAC requires a cipher with a block size"
+                            "of 8 or 16 bytes, not %d" %
                             (ciphermod.block_size,))
 
         # Size of the final MAC tag, in bytes
@@ -251,10 +254,11 @@ class CMAC(object):
             self.update(msg)
 
     def update(self, msg):
-        """Continue authentication of a message by consuming the next chunk of data.
+        """Continue authentication of a message by consuming
+        the next chunk of data.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
+        Repeated calls are equivalent to a single call with
+        the concatenation of all the arguments. In other words:
 
            >>> m.update(a); m.update(b)
 
@@ -324,8 +328,8 @@ class CMAC(object):
                                      self._factory.MODE_CBC,
                                      self._last_ct,
                                      **self._cipher_params)
-        for m in [ '_mac_tag', '_last_ct', '_before_last_ct', '_cache',
-                   '_data_size', '_max_size' ]:
+        for m in ['_mac_tag', '_last_ct', '_before_last_ct', '_cache',
+                  '_data_size', '_max_size']:
             setattr(obj, m, getattr(self, m))
         return obj
 
@@ -352,7 +356,7 @@ class CMAC(object):
         else:
             ## Last block is partial (or message length is zero)
             ext = self._cache + bchr(0x80) +\
-                  bchr(0) * (self.digest_size - len(self._cache) - 1)
+                    bchr(0) * (self.digest_size - len(self._cache) - 1)
             pt = strxor(strxor(self._last_ct, self._k2), ext)
 
         cipher = self._factory.new(self._key,
@@ -372,10 +376,11 @@ class CMAC(object):
          hexadecimal ASCII digits.
         """
         return "".join(["%02x" % bord(x)
-                  for x in tuple(self.digest())])
+                        for x in tuple(self.digest())])
 
     def verify(self, mac_tag):
-        """Verify that a given **binary** MAC (computed by another party) is valid.
+        """Verify that a given **binary** MAC (computed by another party)
+        is valid.
 
         :Parameters:
           mac_tag : byte string
@@ -394,7 +399,8 @@ class CMAC(object):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):
-        """Verify that a given **printable** MAC (computed by another party) is valid.
+        """Verify that a given **printable** MAC (computed by another party)
+        is valid.
 
         :Parameters:
           hex_mac_tag : string
@@ -405,6 +411,7 @@ class CMAC(object):
         """
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
+
 
 def new(key, msg=None, ciphermod=None, cipher_params=None):
     """Create a new CMAC object.
