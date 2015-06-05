@@ -67,7 +67,6 @@ Example:
 .. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
 """
 
-import struct
 from binascii import unhexlify
 
 from Crypto.Util.py3compat import b, bord, bchr
@@ -103,6 +102,7 @@ raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
                                         size_t tag_len);
                                     int OCB_stop_operation(void *state);
                                     """)
+
 
 class OcbMode(object):
     """Offset Codebook (OCB) mode."""
@@ -144,7 +144,7 @@ class OcbMode(object):
         except KeyError, e:
             raise TypeError("Keyword missing: " + str(e))
 
-        if len(self.nonce) not in range(1,16):
+        if len(self.nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
 
         if not 8 <= self._mac_len <= 16:
@@ -165,13 +165,14 @@ class OcbMode(object):
 
         # Compute Offset_0
         ecb_cipher = factory.new(key, factory.MODE_ECB)
-        nonce = bchr(self._mac_len << 4 & 0xFF) + \
-                bchr(0) * (14 - len(self.nonce)) + bchr(1) + \
+        nonce = bchr(self._mac_len << 4 & 0xFF) +\
+                bchr(0) * (14 - len(self.nonce)) + bchr(1) +\
                 self.nonce
         bottom = bord(nonce[15]) & 0x3F   # 6 bits, 0..63
         ktop = ecb_cipher.encrypt(nonce[:15] + bchr(bord(nonce[15]) & 0xC0))
         stretch = ktop + strxor(ktop[:8], ktop[1:9])    # 192 bits
-        offset_0 = long_to_bytes(bytes_to_long(stretch) >> (64 - bottom), 24)[8:]
+        offset_0 = long_to_bytes(bytes_to_long(stretch) >>
+                   (64 - bottom), 24)[8:]
 
         # Create low-level cipher instance
         raw_cipher = factory._create_base_cipher(kwargs)
@@ -249,7 +250,9 @@ class OcbMode(object):
         self._update(assoc_data, update_len)
         return self
 
-    def _transcrypt_aligned(self, in_data, in_data_len, trans_func, trans_desc):
+    def _transcrypt_aligned(self, in_data, in_data_len,
+                           trans_func, trans_desc):
+
         out_data = create_string_buffer(in_data_len)
         result = trans_func(self._state.get(),
                             in_data,
