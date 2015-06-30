@@ -411,7 +411,7 @@ a3:18:d0:da:95:9f:05:d6:99:37:db:e0:81:b3:c8:
         """
         modulus = int(re.sub("[^0-9a-f]","", modulus_str), 16)
 
-        key = RSA.importKey(x509_v1_cert, verify_x509_cert=False)
+        key = RSA.importKey(x509_v1_cert)
         self.assertEqual(key.e, exponent)
         self.assertEqual(key.n, modulus)
         self.failIf(key.has_private())
@@ -463,33 +463,10 @@ d6:fa:d8:36:42:d4:97:29:17
         """
         modulus = int(re.sub("[^0-9a-f]","", modulus_str), 16)
 
-        key = RSA.importKey(x509_v3_cert, verify_x509_cert=False)
+        key = RSA.importKey(x509_v3_cert)
         self.assertEqual(key.e, exponent)
         self.assertEqual(key.n, modulus)
         self.failIf(key.has_private())
-
-    def test_x509v1_validation(self):
-
-        # Sample V1 certificate with a 1024 bit RSA key
-        x509_v1_cert = """
------BEGIN CERTIFICATE-----
-MIICOjCCAaMCAQEwDQYJKoZIhvcNAQEEBQAwfjENMAsGA1UEChMEQWNtZTELMAkG
-A1UECxMCUkQxHDAaBgkqhkiG9w0BCQEWDXNwYW1AYWNtZS5vcmcxEzARBgNVBAcT
-Ck1ldHJvcG9saXMxETAPBgNVBAgTCE5ldyBZb3JrMQswCQYDVQQGEwJVUzENMAsG
-A1UEAxMEdGVzdDAeFw0xNDA3MTExOTU3MjRaFw0xNzA0MDYxOTU3MjRaME0xCzAJ
-BgNVBAYTAlVTMREwDwYDVQQIEwhOZXcgWW9yazENMAsGA1UEChMEQWNtZTELMAkG
-A1UECxMCUkQxDzANBgNVBAMTBmxhdHZpYTCBnzANBgkqhkiG9w0BAQEFAAOBjQAw
-gYkCgYEAyG+kytdRj3TFbRmHDYp3TXugVQ81chew0qeOxZWOz80IjtWpgdOaCvKW
-NCuc8wUR9BWrEQW+39SaRMLiQfQtyFSQZijc3nsEBu/Lo4uWZ0W/FHDRVSvkJA/V
-Ex5NL5ikI+wbUeCV5KajGNDalZ8F1pk32+CBs8h1xNx5DyxuEHUCAwEAATANBgkq
-hkiG9w0BAQQFAAOBgQCVQF9Y//Q4Psy+umEM38pIlbZ2hxC5xNz/MbVPwuCkNcGn
-KYNpQJP+JyVTsPpO8RLZsAQDzRueMI3S7fbbwTzAflN0z19wvblvu93xkaBytVok
-9VBAH28olVhy9b1MMeg2WOt5sUEQaFNPnwwsyiY9+HsRpvpRnPSQF+kyYVsshQ==
------END CERTIFICATE-----
-        """.strip()
-
-        self.assertRaises(NotImplementedError, RSA.importKey,
-                          x509_v1_cert, verify_x509_cert=True)
 
 
 if __name__ == '__main__':

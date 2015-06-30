@@ -428,7 +428,7 @@ a1:e4:20:fa:55:a8:a7:5c:d2:f0:ea:9a:0c:2e:da:
 2c:62:a9:58:dd:ff:9b:c9
         """
 
-        key = DSA.importKey(x509_v1_cert, verify_x509_cert=False)
+        key = DSA.importKey(x509_v1_cert)
         for comp_name in ('y', 'p', 'q', 'g'):
             comp_str = locals()[comp_name + "_str"]
             comp = int(re.sub("[^0-9a-f]", "", comp_str), 16)
@@ -512,40 +512,12 @@ c4:ee:bd:e3:82:e5:9a:2e:3e:b5:e8:01:b5:1d:63:
 07:c6:cb:a8:ee:89:c0:6f
         """
 
-        key = DSA.importKey(x509_v3_cert, verify_x509_cert=False)
+        key = DSA.importKey(x509_v3_cert)
         for comp_name in ('y', 'p', 'q', 'g'):
             comp_str = locals()[comp_name + "_str"]
             comp = int(re.sub("[^0-9a-f]", "", comp_str), 16)
             self.assertEqual(getattr(key, comp_name), comp)
         self.failIf(key.has_private())
-
-    def test_x509v1_validation(self):
-
-        # Sample V1 certificate with a 1024 bit DSA key
-        x509_v1_cert = """
------BEGIN CERTIFICATE-----
-MIIDUjCCArsCAQIwDQYJKoZIhvcNAQEFBQAwfjENMAsGA1UEChMEQWNtZTELMAkG
-A1UECxMCUkQxHDAaBgkqhkiG9w0BCQEWDXNwYW1AYWNtZS5vcmcxEzARBgNVBAcT
-Ck1ldHJvcG9saXMxETAPBgNVBAgTCE5ldyBZb3JrMQswCQYDVQQGEwJVUzENMAsG
-A1UEAxMEdGVzdDAeFw0xNDA3MTEyMDM4NDNaFw0xNzA0MDYyMDM4NDNaME0xCzAJ
-BgNVBAYTAlVTMREwDwYDVQQIEwhOZXcgWW9yazENMAsGA1UEChMEQWNtZTELMAkG
-A1UECxMCUkQxDzANBgNVBAMTBnBvbGFuZDCCAbYwggErBgcqhkjOOAQBMIIBHgKB
-gQDOrN4Ox4+t3T6wKeHfhzArhcrNEFMQ4Ss+4PIKyimDy9Bn64WPkL1B/9dvYIga
-23GLu6tVJmXo6EdJnVOHEMhr99EeOwuDWWeP7Awq7RSlKEejokr4BEzMTW/tExSD
-cO6/GI7xzh0eTH+VTTPDfyrJMYCkh0rJAfCP+5xrmPNetwIVALtXYOV1yoRrzJ2Q
-M5uEjidH6GiZAoGAfUqA1SAm5g5U68SILMVX9l5rq0OpB0waBMpJQ31/R/yXNDqo
-c3gGWZTOJFU4IzwNpGhrGNADUByz/lc1SAOAdEJIr0JVrhbGewQjB4pWqoLGbBKz
-RoavTNDc/zD7SYa12evWDHADwvlXoeQg+lWop1zS8OqaDC7aLGKpWN3/m8kDgYQA
-AoGAKoirPAfcp1rbbl4y2FFAIktfW8f4+T7d2iKSg73aiVfujhNOt1Zz1lfC0NI2
-eonLWO3tAM4XGKf1TLjb5UXngGn40okPsaA81YE6ZIKm20ywjlOY3QkAEdMaLVY3
-9PJvM8RGB9m7pLKxyHfGMfF40MVN4222zKeGp7xhM0CNiCUwDQYJKoZIhvcNAQEF
-BQADgYEAfbNZfpYa2KlALEM1FZnwvQDvJHntHz8LdeJ4WM7CXDlKi67wY2HKM30w
-s2xej75imkVOFd1kF2d0A8sjfriXLVIt1Hwq9ANZomhu4Edx0xpH8tqdh/bDtnM2
-TmduZNY9OWkb07h0CtWD6Zt8fhRllVsSSrlWd/2or7FXNC5weFQ=
------END CERTIFICATE-----
-        """.strip()
-        self.assertRaises(NotImplementedError, DSA.importKey,
-                          x509_v1_cert, verify_x509_cert=True)
 
 
 if __name__ == '__main__':
