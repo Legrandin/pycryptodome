@@ -343,9 +343,13 @@ setup(
         "Crypto.SelfTest.Hash" : [
             "test_vectors/SHA3/*.txt",
             "test_vectors/BLAKE2s/*.txt",
-            "test_vectors/BLAKE2b/*.txt" ],
+            "test_vectors/BLAKE2b/*.txt"
+            ],
         "Crypto.SelfTest.Signature" : [
-            "test_vectors/DSA/*.*" ],
+            "test_vectors/DSA/*.*",
+            "test_vectors/PKCS1-v1.5/*.*",
+            "test_vectors/PKCS1-PSS/*.*"
+            ],
         },
     cmdclass = {
         'build_ext':PCTBuildExt,

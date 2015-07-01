@@ -72,6 +72,10 @@ from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
 
 from Crypto.Hash import HMAC
 
+def hash_is_shs(msg_hash):
+    """Return True if hash is SHA-1, SHA-2 or SHA-3"""
+    return msg_hash.oid == "1.3.14.3.2.26" or \
+           msg_hash.oid.startswith("2.16.840.1.101.3.4.2.")
 
 class DSS_SigScheme(object):
     """This signature scheme can perform DSS signature or verification."""
@@ -264,8 +268,8 @@ class DSS_SigScheme(object):
             if self._n > msg_hash.digest_size * 8:
                 raise ValueError("Hash is not long enough")
 
-            if not msg_hash.name.upper().startswith("SHA"):
-                raise ValueError("Hash %s does not belong to SHS" % msg_hash.name)
+            if not hash_is_shs(msg_hash):
+                raise ValueError("Hash does not belong to SHS")
 
             rng = StrongRandom(randfunc=self._randfunc)
             nonce = rng.randint(1, self._key.q - 1)
@@ -312,8 +316,9 @@ class DSS_SigScheme(object):
         if not self._deterministic:
             if self._n > msg_hash.digest_size * 8:
                 raise ValueError("Hash is not long enough")
-            if not msg_hash.name.lower().startswith("sha"):
-                raise ValueError("Hash %s does not belong to SHS" % msg_hash.name)
+
+            if not hash_is_shs(msg_hash):
+                raise ValueError("Hash does not belong to SHS")
 
         if self._encoding == 'binary':
             if len(signature) != (2 * self._n):

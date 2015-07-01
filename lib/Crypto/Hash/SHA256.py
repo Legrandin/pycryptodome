@@ -62,8 +62,8 @@ class SHA256Hash(object):
     digest_size = 32
     #: The internal block size of the hash algorithm in bytes.
     block_size = 64
-
-    name = "SHA256"
+    #: ASN.1 Object ID
+    oid = "2.16.840.1.101.3.4.2.1"
 
     def __init__(self, data=None):
         state = VoidPointer()

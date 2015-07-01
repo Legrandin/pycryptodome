@@ -78,8 +78,8 @@ class RIPEMD160Hash(object):
     digest_size = 20
     #: The internal block size of the hash algorithm in bytes.
     block_size = 64
-
-    name = "ripemd160"
+    #: ASN.1 Object ID
+    oid = "1.3.36.3.2.1"
 
     def __init__(self, data=None):
         state = VoidPointer()

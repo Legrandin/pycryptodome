@@ -62,8 +62,8 @@ class SHA512Hash(object):
     digest_size = 64
     #: The internal block size of the hash algorithm in bytes.
     block_size = 128
-
-    name = "SHA512"
+    #: ASN.1 Object ID
+    oid = "2.16.840.1.101.3.4.2.3"
 
     def __init__(self, data=None):
         state = VoidPointer()

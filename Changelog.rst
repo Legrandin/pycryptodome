@@ -12,6 +12,8 @@ New features
 * Added OCB cipher mode.
 * CMAC raises an exception whenever the message length is found to be
   too large and the chance of collisions not negligeable.
+* New attribute ``oid`` for Hash objects with ASN.1 Object ID
+* Added NIST test vectors (roughly 600) for PKCS#1 v1.5 signatures.
 
 Resolved issues
 ---------------

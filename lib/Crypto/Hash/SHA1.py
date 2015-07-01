@@ -56,7 +56,7 @@ def __make_constructor():
         class _SHA1(object):
             digest_size = 20
             block_size = 64
-            name = "sha1"
+            oid = "1.3.14.3.2.26"
             def __init__(self, *args):
                 if args and args[0] is _copy_sentinel:
                     self._h = args[1]
