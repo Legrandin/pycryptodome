@@ -189,7 +189,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                         # The real test
                         verifier = PKCS.new(key)
                         self.failIf(verifier.can_sign())
-                        verifier.verify(h, t2b(row[2]))
+                        self.assertEqual(verifier.verify(h, t2b(row[2])), True)
 
         def testSignVerify(self):
             rng = Random.new().read
@@ -201,7 +201,7 @@ class PKCS1_15_Tests(unittest.TestCase):
 
                 signer = PKCS.new(key)
                 signature = signer.sign(hobj)
-                signer.verify(hobj, signature)
+                self.assertEqual(signer.verify(hobj, signature), True)
 
             # Blake2b has variable digest size
             for digest_bits in (160, 256, 384, 512):
@@ -210,7 +210,7 @@ class PKCS1_15_Tests(unittest.TestCase):
 
                 signer = PKCS.new(key)
                 signature = signer.sign(hobj)
-                signer.verify(hobj, signature)
+                self.assertEqual(signer.verify(hobj, signature), True)
 
             # Blake2s too
             for digest_bits in (128, 160, 224, 256):
@@ -219,7 +219,7 @@ class PKCS1_15_Tests(unittest.TestCase):
 
                 signer = PKCS.new(key)
                 signature = signer.sign(hobj)
-                signer.verify(hobj, signature)
+                self.assertEqual(signer.verify(hobj, signature), True)
 
         def test_wrong_signature(self):
             key = RSA.generate(1024)
@@ -231,11 +231,11 @@ class PKCS1_15_Tests(unittest.TestCase):
             verifier = PKCS.new(key.publickey())
 
             # The signature s should be OK
-            verifier.verify(msg_hash, s)
+            self.assertEqual(verifier.verify(msg_hash, s), True)
 
             # Construct an incorrect signature and ensure that the check fails
             wrong_s = s[:-1] + bchr(bord(s[-1]) ^ 0xFF)
-            self.assertRaises(ValueError, verifier.verify, msg_hash, wrong_s)
+            self.assertEqual(verifier.verify(msg_hash, wrong_s), False)
 
 class PKCS1_15_NoParams(unittest.TestCase):
     """Verify that PKCS#1 v1.5 signatures pass even without NULL parameters in
@@ -261,7 +261,7 @@ class PKCS1_15_NoParams(unittest.TestCase):
     def testVerify(self):
         verifier = PKCS.new(RSA.importKey(self.rsakey))
         h = SHA1.new(self.msg)
-        verifier.verify(h, t2b(self.signature))
+        self.assertEqual(verifier.verify(h, t2b(self.signature)), True)
 
 def get_tests(config={}):
     tests = []

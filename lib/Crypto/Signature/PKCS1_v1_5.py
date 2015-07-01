@@ -46,10 +46,9 @@ the RSA key:
         >>> key = RSA.importKey(open('pubkey.der').read())
         >>> h = SHA.new(message)
         >>> verifier = PKCS1_v1_5.new(key)
-        >>> try:
-        >>>     verifier.verify(h, signature):
+        >>> if verifier.verify(h, signature):
         >>>     print "The signature is authentic."
-        >>> except ValueError:
+        >>> else:
         >>>    print "The signature is not authentic."
 
 :undocumented: __revision__, __package__
@@ -132,8 +131,9 @@ class PKCS115_SigScheme:
             belonging to the `Crypto.Hash` module.
           signature : byte string
             The signature that needs to be validated.
-        :Raise ValueError:
-            If the signature is not authentic.
+
+        :Returns:
+            True is the signature is valid, False if it is not authentic.
         """
 
         # See 8.2.2 in RFC3447
@@ -142,7 +142,7 @@ class PKCS115_SigScheme:
 
         # Step 1
         if len(signature) != k:
-            raise ValueError("Signature is not authentic")
+            return False
         # Step 2a (O2SIP)
         signature_int = bytes_to_long(signature)
         # Step 2b (RSAVP1)
@@ -161,14 +161,15 @@ class PKCS115_SigScheme:
             if not algorithm_is_md:  # MD2/MD4/MD5
                 possible_em1.append(EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, False))
         except ValueError:
-            raise ValueError("Signature is not authentic")
+            return False
         # Step 4
         # By comparing the full encodings (as opposed to checking each
         # of its components one at a time) we avoid attacks to the padding
         # scheme like Bleichenbacher's (see http://www.mail-archive.com/cryptography@metzdowd.com/msg06537).
         #
         if em1 not in possible_em1:
-            raise ValueError("Signature is not authentic")
+            return False
+        return True
 
 
 def EMSA_PKCS1_V1_5_ENCODE(hash, emLen, with_hash_parameters=True):
