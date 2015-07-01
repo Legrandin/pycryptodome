@@ -352,7 +352,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         key._randfunc = lambda N: test_salt
                         verifier = PKCS.new(key)
                         self.failIf(verifier.can_sign())
-                        verifier.verify(h, t2b(self._testData[i][2]))
+                        self.assertEqual(verifier.verify(h, t2b(self._testData[i][2])), True)
 
         def testSignVerify(self):
                         h = SHA1.new()
@@ -384,7 +384,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             rng = RNG()
                             signer = PKCS.new(key, randfunc=rng)
                             s = signer.sign(h)
-                            signer.verify(h, s)
+                            self.assertEqual(signer.verify(h, s), True)
                             self.assertEqual(rng.asked, h.digest_size)
 
                         # Blake2b has variable digest size
@@ -394,7 +394,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
 
                             signer = PKCS.new(key)
                             signature = signer.sign(hobj)
-                            signer.verify(hobj, signature)
+                            self.assertEqual(signer.verify(hobj, signature), True)
 
                         # Blake2s too
                         for digest_bits in (128, 160, 224, 256):
@@ -403,7 +403,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
 
                             signer = PKCS.new(key)
                             signature = signer.sign(hobj)
-                            signer.verify(hobj, signature)
+                            self.assertEqual(signer.verify(hobj, signature), True)
 
 
                         h = SHA1.new()
@@ -415,14 +415,14 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                             signer = PKCS.new(key, saltLen=sLen, randfunc=rng)
                             s = signer.sign(h)
                             self.assertEqual(rng.asked, sLen)
-                            signer.verify(h, s)
+                            self.assertEqual(signer.verify(h, s), True)
 
                         # Verify that sign() uses the custom MGF
                         mgfcalls = 0
                         signer = PKCS.new(key, newMGF)
                         s = signer.sign(h)
                         self.assertEqual(mgfcalls, 1)
-                        signer.verify(h, s)
+                        self.assertEqual(signer.verify(h, s), True)
 
                         # Verify that sign() does not call the RNG
                         # when salt length is 0, even when a new MGF is provided
@@ -432,7 +432,7 @@ class PKCS1_PSS_Tests(unittest.TestCase):
                         s = signer.sign(h)
                         self.assertEqual(key.asked,0)
                         self.assertEqual(mgfcalls, 1)
-                        signer.verify(h, s)
+                        self.assertEqual(signer.verify(h, s), True)
 
         def test_wrong_signature(self):
             key = RSA.generate(1024)
@@ -444,11 +444,11 @@ class PKCS1_PSS_Tests(unittest.TestCase):
             verifier = PKCS.new(key.publickey())
 
             # The signature s should be OK
-            verifier.verify(msg_hash, s)
+            self.assertEqual(verifier.verify(msg_hash, s), True)
 
             # Construct an incorrect signature and ensure that the check fails
             wrong_s = s[:-1] + bchr(bord(s[-1]) ^ 0xFF)
-            self.assertRaises(ValueError, verifier.verify, msg_hash, wrong_s)
+            self.assertEqual(verifier.verify(msg_hash, wrong_s), False)
 
 
 def get_tests(config={}):

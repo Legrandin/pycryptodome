@@ -1,23 +1,31 @@
-# -*- coding: utf-8 -*-
-#
-#  Signature/PKCS1_PSS.py : PKCS#1 PPS
-#
 # ===================================================================
-# The contents of this file are dedicated to the public domain.  To
-# the extent that dedication to the public domain is not available,
-# everyone is granted a worldwide, perpetual, royalty-free,
-# non-exclusive license to exercise all rights associated with the
-# contents of this file for any purpose whatsoever.
-# No rights are reserved.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-# BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-# ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# Copyright (c) 2014, Legrandin <helderijs@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
 """RSA digital signature protocol with appendix according to PKCS#1 PSS.
@@ -30,28 +38,26 @@ For example, a sender may authenticate a message using SHA-1 and PSS like
 this:
 
     >>> from Crypto.Signature import PKCS1_PSS
-    >>> from Crypto.Hash import SHA1
-    >>> from Crypto.PublicKey import RSA1
+    >>> from Crypto.Hash import SHA256
+    >>> from Crypto.PublicKey import RSA
     >>> from Crypto import Random
     >>>
     >>> message = 'To be signed'
     >>> key = RSA.importKey(open('privkey.der').read())
-    >>> h = SHA1.new()
+    >>> h = SHA256.new()
     >>> h.update(message)
-    >>> signer = PKCS1_PSS.new(key)
-    >>> signature = signer.sign(h)
+    >>> signature = PKCS1_PSS.new(key).sign(h)
 
 At the receiver side, verification can be done like using the public part of
 the RSA key:
 
     >>> key = RSA.importKey(open('pubkey.der').read())
-    >>> h = SHA1.new()
+    >>> h = SHA256.new()
     >>> h.update(message)
     >>> verifier = PKCS1_PSS.new(key)
-    >>> try:
-    >>>     verifier.verify(h, signature):
+    >>> if verifier.verify(h, signature):
     >>>     print "The signature is authentic."
-    >>> except ValueError:
+    >>> else:
     >>>     print "The signature is not authentic."
 
 :undocumented: __revision__, __package__
@@ -160,10 +166,10 @@ class PSS_SigScheme:
             belonging to the `Crypto.Hash` module.
           signature : byte string
             The signature that needs to be validated.
-        :Raise ValueError:
-            If the signature is not authentic.
+
+        :Returns:
+            True is the signature is valid, False if it is not authentic.
         """
-        # TODO: Verify the key is RSA
 
         # Set defaults for salt length and mask generation function
         if self._saltLen == None:
@@ -181,7 +187,7 @@ class PSS_SigScheme:
         k = ceil_div(modBits,8) # Convert from bits to bytes
         # Step 1
         if len(signature) != k:
-            raise ValueError("The signature is not authentic")
+            return False
         # Step 2a (O2SIP)
         signature_int = bytes_to_long(signature)
         # Step 2b (RSAVP1)
@@ -189,16 +195,14 @@ class PSS_SigScheme:
         # Step 2c (I2OSP)
         emLen = ceil_div(modBits - 1, 8)
         em = long_to_bytes(em_int, emLen)
-        #bchr(0x00)*(emLen-len(em)) + em
         # Step 3
-        failed = False
+        success = False
         try:
-            failed = not EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
+            success = EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
         except ValueError:
-            failed = True
+            pass
         # Step 4
-        if failed:
-            raise ValueError("The signature is not authentic")
+        return success
 
 
 def MGF1(mgfSeed, maskLen, hash):
