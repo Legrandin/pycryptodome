@@ -54,7 +54,7 @@ using the public RSA key:
         >>> try:
         >>>     pkcs1_v1_5.new(key).verify(h, signature):
         >>>     print "The signature is valid."
-        >>> except ValueError, TypeError:
+        >>> except (ValueError, TypeError):
         >>>    print "The signature is not valid."
 
 .. __: http://www.ietf.org/rfc/rfc3447.txt

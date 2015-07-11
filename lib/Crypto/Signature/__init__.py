@@ -31,10 +31,6 @@
 """Digital signature protocols
 
 A collection of standardized protocols to carry out digital signatures.
-
-:undocumented: __revision__, __package__
 """
 
-__all__ = ['PKCS1_v1_5', 'PKCS1_PSS', 'DSS', 'pkcs1_v1_5']
-
-
+__all__ = ['PKCS1_v1_5', 'PKCS1_PSS', 'DSS', 'pkcs1_v1_5', 'pkcs1_pss']

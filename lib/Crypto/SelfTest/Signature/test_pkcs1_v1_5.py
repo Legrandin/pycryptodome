@@ -42,7 +42,8 @@ from Crypto.SelfTest.Signature.nist import (load_test_vector,
 
 from Crypto.Hash import SHA1
 from Crypto.PublicKey import RSA
-from Crypto.Signature import pkcs1_v1_5, PKCS1_v1_5
+from Crypto.Signature import pkcs1_v1_5
+from Crypto.Signature import PKCS1_v1_5
 
 
 class FIPS_PKCS1_Verify_Tests(unittest.TestCase):

@@ -51,7 +51,7 @@ the RSA key:
 
 __all__ = [ 'new', 'PKCS1OAEP_Cipher' ]
 
-import Crypto.Signature.PKCS1_PSS
+from Crypto.Signature.pkcs1_pss import MGF1
 import Crypto.Hash.SHA1
 
 from Crypto.Util.py3compat import *
@@ -98,7 +98,7 @@ class PKCS1OAEP_Cipher:
         if mgfunc:
             self._mgf = mgfunc
         else:
-            self._mgf = lambda x,y: Crypto.Signature.PKCS1_PSS.MGF1(x,y,self._hashObj)
+            self._mgf = lambda x,y: MGF1(x,y,self._hashObj)
 
         self._label = label
         self._randfunc = randfunc

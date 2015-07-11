@@ -124,7 +124,7 @@ def load_test_vector(file_in, skip_hex_conversion):
         # Just another entry in the vector set
         if current_vector is None:
             raise ValueError("Detected data before section")
-        res = re.match("(\S+) = (\S+)\s*", line)
+        res = re.match("(.*) = ?(\S+)\s*", line)
         if not res:
             raise ValueError("Incorrect data line: %s" % line)
         current_vector[res.group(1)] = convert(res.group(1), res.group(2))

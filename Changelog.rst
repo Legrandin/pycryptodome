@@ -14,6 +14,7 @@ New features
   too large and the chance of collisions not negligeable.
 * New attribute ``oid`` for Hash objects with ASN.1 Object ID
 * Added NIST test vectors (roughly 600) for PKCS#1 v1.5 signatures.
+* Added NIST test vectors (roughly 600) for PKCS#1 PSS signatures.
 
 Resolved issues
 ---------------
