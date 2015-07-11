@@ -37,7 +37,7 @@ This scheme is more properly called ``RSASSA-PSS``.
 For example, a sender may authenticate a message using SHA-1 and PSS like
 this:
 
-    >>> from Crypto.Signature import pkcs1_pss
+    >>> from Crypto.Signature import pss
     >>> from Crypto.Hash import SHA256
     >>> from Crypto.PublicKey import RSA
     >>> from Crypto import Random
@@ -46,7 +46,7 @@ this:
     >>> key = RSA.importKey(open('privkey.der').read())
     >>> h = SHA256.new()
     >>> h.update(message)
-    >>> signature = pkcs1_pss.new(key).sign(h)
+    >>> signature = pss.new(key).sign(h)
 
 At the receiver side, verification can be done using
 the public RSA key:
@@ -54,7 +54,7 @@ the public RSA key:
     >>> key = RSA.importKey(open('pubkey.der').read())
     >>> h = SHA256.new()
     >>> h.update(message)
-    >>> verifier = pkcs1_pss.new(key)
+    >>> verifier = pss.new(key)
     >>> try:
     >>>     verifier.verify(h, signature):
     >>>     print "The signature is authentic."

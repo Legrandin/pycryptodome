@@ -13,8 +13,8 @@ New features
 * CMAC raises an exception whenever the message length is found to be
   too large and the chance of collisions not negligeable.
 * New attribute ``oid`` for Hash objects with ASN.1 Object ID
-* Added NIST test vectors (roughly 600) for PKCS#1 v1.5 signatures.
-* Added NIST test vectors (roughly 600) for PKCS#1 PSS signatures.
+* Added ``Crypto.Signature.pss`` and ``Crypto.Signature.pkcs1_15``
+* Added NIST test vectors (roughly 1200) for PKCS#1 v1.5 and PSS signatures.
 
 Resolved issues
 ---------------

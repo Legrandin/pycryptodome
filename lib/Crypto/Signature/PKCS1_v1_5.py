@@ -34,7 +34,7 @@ Legacy module for PKCS#1 v1.5 signatures.
 
 import types
 
-from Crypto.Signature import pkcs1_v1_5
+from Crypto.Signature import pkcs1_15
 
 def pycrypto_verify(self, hash_object, signature):
     try:
@@ -44,7 +44,7 @@ def pycrypto_verify(self, hash_object, signature):
     return True
 
 def new(rsa_key):
-    pkcs1 = pkcs1_v1_5.new(rsa_key)
+    pkcs1 = pkcs1_15.new(rsa_key)
     pkcs1._verify = pkcs1.verify
     pkcs1.verify = types.MethodType(pycrypto_verify, pkcs1)
     return pkcs1

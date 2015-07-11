@@ -37,14 +37,14 @@ This scheme is more properly called ``RSASSA-PKCS1-v1_5``.
 
 For example, a sender may authenticate a message like this:
 
-        >>> from Crypto.Signature import pkcs1_v1_5
+        >>> from Crypto.Signature import pkcs1_15
         >>> from Crypto.Hash import SHA256
         >>> from Crypto.PublicKey import RSA
         >>>
         >>> message = 'To be signed'
         >>> key = RSA.importKey(open('private_key.der').read())
         >>> h = SHA256.new(message)
-        >>> signature = pkcs1_v1_5.new(key).sign(h)
+        >>> signature = pkcs1_15.new(key).sign(h)
 
 At the other side, the receiver side can verify the signature
 using the public RSA key:
@@ -52,7 +52,7 @@ using the public RSA key:
         >>> key = RSA.importKey(open('public_key.der').read())
         >>> h = SHA.new(message)
         >>> try:
-        >>>     pkcs1_v1_5.new(key).verify(h, signature):
+        >>>     pkcs1_15.new(key).verify(h, signature):
         >>>     print "The signature is valid."
         >>> except (ValueError, TypeError):
         >>>    print "The signature is not valid."

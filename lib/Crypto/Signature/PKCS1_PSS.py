@@ -34,7 +34,7 @@ Legacy module for PKCS#1 PSS signatures.
 
 import types
 
-from Crypto.Signature import pkcs1_pss
+from Crypto.Signature import pss
 
 
 def pycrypto_verify(self, hash_object, signature):
@@ -46,7 +46,7 @@ def pycrypto_verify(self, hash_object, signature):
 
 
 def new(rsa_key, mgfunc=None, saltLen=None, randfunc=None):
-    pkcs1 = pkcs1_pss.new(rsa_key, mgfunc, saltLen, randfunc)
+    pkcs1 = pss.new(rsa_key, mgfunc, saltLen, randfunc)
     pkcs1._verify = pkcs1.verify
     pkcs1.verify = types.MethodType(pycrypto_verify, pkcs1)
     return pkcs1
