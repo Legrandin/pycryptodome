@@ -34,8 +34,8 @@ See RFC3447__ or the `original RSA Labs specification`__.
 
 This scheme is more properly called ``RSASSA-PSS``.
 
-For example, a sender may authenticate a message using SHA-1 and PSS like
-this:
+The following example shows how the sender can authenticate a message
+with PSS:
 
     >>> from Crypto.Signature import pss
     >>> from Crypto.Hash import SHA256
@@ -135,15 +135,16 @@ class PSS_SigScheme:
             sLen = msg_hash.digest_size
         else:
             sLen = self._saltLen
-        if self._mgfunc:
-            mgf = self._mgfunc
-        else:
+
+        if self._mgfunc is None:
             mgf = lambda x, y: MGF1(x, y, msg_hash)
+        else:
+            mgf = self._mgfunc
 
         modBits = Crypto.Util.number.size(self._key.n)
 
         # See 8.1.1 in RFC3447
-        k = ceil_div(modBits, 8)  # Convert from bits to bytes
+        k = ceil_div(modBits, 8)  # k is length in bytes of the modulus
         # Step 1
         em = EMSA_PSS_ENCODE(msg_hash, modBits-1, self._randfunc, mgf, sLen)
         # Step 2a (OS2IP)
@@ -257,14 +258,16 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
         raise ValueError("Digest or salt length are too long"
                          " for given key size.")
     # Step 4
-    salt = b("")
-    if randFunc and sLen > 0:
-        salt = randFunc(sLen)
-    # Step 5 and 6
+    salt = randFunc(sLen)
+    # Step 5
+    m_prime = bchr(0)*8 + mhash.digest() + salt
+    # Step 6
     h = mhash.new()
-    h.update(bchr(0x00)*8 + mhash.digest() + salt)
-    # Step 7 and 8
-    db = bchr(0x00)*(emLen-sLen-mhash.digest_size-2) + bchr(0x01) + salt
+    h.update(m_prime)
+    # Step 7
+    ps = bchr(0)*(emLen-sLen-mhash.digest_size-2)
+    # Step 8
+    db = ps + bchr(1) + salt
     # Step 9
     dbMask = mgf(h.digest(), emLen-mhash.digest_size-1)
     # Step 10
@@ -321,7 +324,6 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     # Step 5
     maskedDB = em[:emLen-mhash.digest_size-1]
     h = em[emLen-mhash.digest_size-1:-1]
-    assert(len(em) == len(maskedDB) + len(h) + 1)
     # Step 6
     if lmask & bord(em[0]):
         raise ValueError("Incorrect signature")
@@ -335,39 +337,49 @@ def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     if not db.startswith(bchr(0)*(emLen-mhash.digest_size-sLen-2) + bchr(1)):
         raise ValueError("Incorrect signature")
     # Step 11
-    salt = b("")
-    if sLen:
+    if sLen > 0:
         salt = db[-sLen:]
-    # Step 12 and 13
+    else:
+        salt = b("")
+    # Step 12
+    m_prime = bchr(0)*8 + mhash.digest() + salt
+    # Step 13
     hobj = mhash.new()
-    hobj.update(bchr(0x00)*8 + mhash.digest() + salt)
+    hobj.update(m_prime)
     hp = hobj.digest()
     # Step 14
     if h != hp:
         raise ValueError("Incorrect signature")
 
 
-def new(key, mgfunc=None, saltLen=None, randfunc=None):
+def new(rsa_key, **kwargs):
     """Return a signature scheme object `PSS_SigScheme` that
     can be used to perform PKCS#1 PSS signature or verification.
 
     :Parameters:
-     key : RSA key object
+      rsa_key : RSA key object
         The key to use to sign or verify the message.
         This is a `Crypto.PublicKey.RSA` object.
         Signing is only possible if *key* is a private RSA key.
-     mgfunc : callable
+    :Keywords:
+      mask_func : callable
         A mask generation function that accepts two parameters: a string to
-        use as seed, and the lenth of the mask to generate, in bytes.
+        use as seed, and the length of the mask in bytes to generate.
         If not specified, the standard MGF1 is used.
-     saltLen : int
+      salt_len : int
         Length of the salt, in bytes.
         If not specified, it matches the output size of the hash function.
-     randfunc : callable
+        If zero, the signature scheme becomes deterministic.
+      rand_func : callable
         A function that returns random bytes.
         The default is `Crypto.Random.get_random_bytes`.
     """
 
-    if randfunc is None:
-        randfunc = Random.get_random_bytes
-    return PSS_SigScheme(key, mgfunc, saltLen, randfunc)
+    mask_func = kwargs.pop("mask_func", None)
+    salt_len = kwargs.pop("salt_len", None)
+    rand_func = kwargs.pop("rand_func", None)
+    if rand_func is None:
+        rand_func = Random.get_random_bytes
+    if kwargs:
+        raise ValueError("Unknown keywords: " + str(kwargs.keys()))
+    return PSS_SigScheme(rsa_key, mask_func, salt_len, rand_func)
