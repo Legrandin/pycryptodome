@@ -73,8 +73,8 @@ class MD4Hash(object):
     digest_size = 16
     #: The internal block size of the hash algorithm in bytes.
     block_size = 64
-
-    name = "md4"
+    #: ASN.1 Object ID
+    oid = "1.2.840.113549.2.4"
 
     def __init__(self, data=None):
         state = VoidPointer()

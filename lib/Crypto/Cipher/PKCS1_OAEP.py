@@ -43,15 +43,13 @@ the RSA key:
         >>> cipher = PKCS1_OAP.new(key)
         >>> message = cipher.decrypt(ciphertext)
 
-:undocumented: __revision__, __package__
-
 .. __: http://www.ietf.org/rfc/rfc3447.txt
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125.
 """
 
 __all__ = [ 'new', 'PKCS1OAEP_Cipher' ]
 
-import Crypto.Signature.PKCS1_PSS
+from Crypto.Signature.pss import MGF1
 import Crypto.Hash.SHA1
 
 from Crypto.Util.py3compat import *
@@ -98,7 +96,7 @@ class PKCS1OAEP_Cipher:
         if mgfunc:
             self._mgf = mgfunc
         else:
-            self._mgf = lambda x,y: Crypto.Signature.PKCS1_PSS.MGF1(x,y,self._hashObj)
+            self._mgf = lambda x,y: MGF1(x,y,self._hashObj)
 
         self._label = label
         self._randfunc = randfunc

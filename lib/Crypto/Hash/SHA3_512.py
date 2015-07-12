@@ -61,7 +61,8 @@ class SHA3_512_Hash(object):
     #: The size of the resulting hash in bytes.
     digest_size = 64
 
-    name = "SHA3_512"
+    #: ASN.1 Object ID
+    oid = "2.16.840.1.101.3.4.2.10"
 
     def __init__(self, data=None):
         state = VoidPointer()

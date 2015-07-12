@@ -99,9 +99,8 @@ class HashTestOID(unittest.TestCase):
         self.oid = oid
 
     def runTest(self):
-        from Crypto.Signature import PKCS1_v1_5
         h = self.hashmod.new()
-        self.assertEqual(PKCS1_v1_5._HASH_OIDS[h.name], self.oid)
+        self.assertEqual(h.oid, self.oid)
 
 class HashDocStringTest(unittest.TestCase):
     def __init__(self, hashmod):

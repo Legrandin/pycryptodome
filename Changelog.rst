@@ -12,6 +12,9 @@ New features
 * Added OCB cipher mode.
 * CMAC raises an exception whenever the message length is found to be
   too large and the chance of collisions not negligeable.
+* New attribute ``oid`` for Hash objects with ASN.1 Object ID
+* Added ``Crypto.Signature.pss`` and ``Crypto.Signature.pkcs1_15``
+* Added NIST test vectors (roughly 1200) for PKCS#1 v1.5 and PSS signatures.
 
 Resolved issues
 ---------------
@@ -22,6 +25,8 @@ Breaks in compatibility
 -----------------------
 
 * Removed keyword ``verify_x509_cert`` from module method ``importKey`` (RSA and DSA).
+* Reverted to original PyCrypto behavior of method ``verify`` in ``PKCS1_v1_5``
+  and ``PKCS1_PSS``.
 
 3.1 (15 March 2015)
 +++++++++++++++++++
@@ -121,17 +126,7 @@ Breaks in compatibility
 * Symmetric ciphers do not have a default mode anymore (used to be ECB).
   An expression like ``AES.new(key)`` will now fail. If ECB is the desired mode,
   one has to explicitly use ``AES.new(key, AES.MODE_ECB)``.
-* Unsuccessful verification of a signature will now raise an exception.
-  Code should not check the return value of ``verify()``.
-  You can make your code compatible to both PyCryptodome and PyCrypto in the following way:
-
-  .. code-block:: python
-
-        verifier = PKCS1_v1_5.new(key)
-        valid = verifier.verify(hash_object, signature)
-        if not (valid or valid is None):
-            raise ValueError("Invalid signature")
-
+* Unsuccessful verification of a signature will now raise an exception [reverted in 3.2].
 * Removed the ``Crypto.Random.OSRNG`` package.
 * Removed the ``Crypto.Util.winrandom`` module.
 * Removed the ``Crypto.Random.randpool`` module.

@@ -56,7 +56,7 @@ def __make_constructor():
         class _MD5(object):
             digest_size = 16
             block_size = 64
-            name = "md5"
+            oid = "1.2.840.113549.2.5"
             def __init__(self, *args):
                 if args and args[0] is _copy_sentinel:
                     self._h = args[1]
