@@ -28,7 +28,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Function to create and test prime numbers."""
+"""Functions to create and test prime numbers.
+
+:undocumented: __package__
+"""
 
 from Crypto.Math.Numbers import Integer
 from Crypto import Random

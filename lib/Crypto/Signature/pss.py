@@ -34,8 +34,8 @@ See RFC3447__ or the `original RSA Labs specification`__.
 
 This scheme is more properly called ``RSASSA-PSS``.
 
-The following example shows how the sender can authenticate a message
-with PSS:
+The following example shows how the sender can create the signatue of
+a message using their private key:
 
     >>> from Crypto.Signature import pss
     >>> from Crypto.Hash import SHA256
@@ -44,22 +44,21 @@ with PSS:
     >>>
     >>> message = 'To be signed'
     >>> key = RSA.importKey(open('privkey.der').read())
-    >>> h = SHA256.new()
-    >>> h.update(message)
+    >>> h = SHA256.new(message)
     >>> signature = pss.new(key).sign(h)
 
-At the receiver side, verification can be done using
-the public RSA key:
+At the receiver side, verification can be done using the public RSA key:
 
     >>> key = RSA.importKey(open('pubkey.der').read())
-    >>> h = SHA256.new()
-    >>> h.update(message)
+    >>> h = SHA256.new(message)
     >>> verifier = pss.new(key)
     >>> try:
     >>>     verifier.verify(h, signature):
     >>>     print "The signature is authentic."
     >>> except (ValueError, TypeError):
     >>>     print "The signature is not authentic."
+
+:undocumented: __package__
 
 .. __: http://www.ietf.org/rfc/rfc3447.txt
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125
@@ -76,8 +75,7 @@ from Crypto import Random
 
 
 class PSS_SigScheme:
-    """This signature scheme can perform PKCS#1 PSS
-    RSA signature or verification."""
+    """An instance of the PKCS#1 PSS signature scheme for a specific RSA key."""
 
     def __init__(self, key, mgfunc, saltLen, randfunc):
         """Initialize this PKCS#1 PSS signature scheme object.
@@ -146,7 +144,7 @@ class PSS_SigScheme:
         # See 8.1.1 in RFC3447
         k = ceil_div(modBits, 8)  # k is length in bytes of the modulus
         # Step 1
-        em = EMSA_PSS_ENCODE(msg_hash, modBits-1, self._randfunc, mgf, sLen)
+        em = _EMSA_PSS_ENCODE(msg_hash, modBits-1, self._randfunc, mgf, sLen)
         # Step 2a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 2b (RSASP1)
@@ -171,8 +169,8 @@ class PSS_SigScheme:
           signature : byte string
             The signature that needs to be validated.
 
-        :Raises:
-            ValueError is the signature is incorrect.
+        :Raise ValueError:
+            if the signature is incorrect.
         """
 
         # Set defaults for salt length and mask generation function
@@ -200,7 +198,7 @@ class PSS_SigScheme:
         emLen = ceil_div(modBits - 1, 8)
         em = long_to_bytes(em_int, emLen)
         # Step 3/4
-        EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
+        _EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
 
 
 def MGF1(mgfSeed, maskLen, hash):
@@ -215,7 +213,7 @@ def MGF1(mgfSeed, maskLen, hash):
     return T[:maskLen]
 
 
-def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
+def _EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
     """
     Implement the ``EMSA-PSS-ENCODE`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.1.1).
@@ -279,7 +277,7 @@ def EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
     return em
 
 
-def EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
+def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     """
     Implement the ``EMSA-PSS-VERIFY`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.1.2).
@@ -366,7 +364,7 @@ def new(rsa_key, **kwargs):
         A mask generation function that accepts two parameters: a string to
         use as seed, and the length of the mask in bytes to generate.
         If not specified, the standard MGF1 is used.
-      salt_len : int
+      salt_bytes : int
         Length of the salt, in bytes.
         If not specified, it matches the output size of the hash function.
         If zero, the signature scheme becomes deterministic.
@@ -376,7 +374,7 @@ def new(rsa_key, **kwargs):
     """
 
     mask_func = kwargs.pop("mask_func", None)
-    salt_len = kwargs.pop("salt_len", None)
+    salt_len = kwargs.pop("salt_bytes", None)
     rand_func = kwargs.pop("rand_func", None)
     if rand_func is None:
         rand_func = Random.get_random_bytes

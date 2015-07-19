@@ -44,6 +44,8 @@ As an example, encryption can be done as follows:
     >>> cipher = ChaCha20.new(key, iv)
     >>> msg = iv + cipher.encrypt(b'Attack at dawn')
 
+:undocumented: __package__
+
 .. _ChaCha20: http://http://cr.yp.to/chacha.html
 """
 

@@ -64,13 +64,13 @@ class FIPS_PKCS1_Verify_Tests(unittest.TestCase):
     def verify_positive(self, hashmod, message, public_key, salt, signature):
         prng = PRNG(salt)
         hashed = hashmod.new(message)
-        verifier = pss.new(public_key, salt_len=len(salt), rand_func=prng)
+        verifier = pss.new(public_key, salt_bytes=len(salt), rand_func=prng)
         verifier.verify(hashed, signature)
 
     def verify_negative(self, hashmod, message, public_key, salt, signature):
         prng = PRNG(salt)
         hashed = hashmod.new(message)
-        verifier = pss.new(public_key, salt_len=len(salt), rand_func=prng)
+        verifier = pss.new(public_key, salt_bytes=len(salt), rand_func=prng)
         self.assertRaises(ValueError, verifier.verify, hashed, signature)
 
     counter_positive = 1
@@ -144,7 +144,7 @@ class FIPS_PKCS1_Sign_Tests(unittest.TestCase):
     def _test_sign(self, hashmod, message, private_key, salt, signature):
         prng = PRNG(salt)
         hashed = hashmod.new(message)
-        signer = pss.new(private_key, salt_len=len(salt), rand_func=prng)
+        signer = pss.new(private_key, salt_bytes=len(salt), rand_func=prng)
         signature2 = signer.sign(hashed)
         self.assertEqual(signature, signature2)
 

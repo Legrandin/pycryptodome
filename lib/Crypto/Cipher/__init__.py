@@ -47,7 +47,9 @@ Module name                 Type      Description
 `Crypto.Cipher.DES`         Block     The Data Encryption Standard.
                                       Very commonly used in the past,
                                       but today its 56-bit keys are too small.
-`Crypto.Cipher.DES3`        Block     Triple DES.
+`Crypto.Cipher.DES3`        Block     Triple DES
+`Crypto.Cipher.Salsa20`     Stream    Salsa20
+`Crypto.Cipher.ChaCha20`    Stream    ChaCha20
 ========================    =======   ========================
 
 

@@ -30,10 +30,10 @@
 
 """BLAKE2s cryptographic hash algorithm.
 
-`BLAKE2s` is an optimized variant of BLAKE, one of the SHA-3 candidates that
+`BLAKE2s`_ is an optimized variant of BLAKE, one of the SHA-3 candidates that
 made it to the final round of the NIST hash competition.
 
-The algorithm uses 32 bit words, and it is therefore works best
+The algorithm uses 32 bit words, and it therefore works best
 on 32-bit platforms. The digest size ranges from 8 to 256 bits.
 
     >>> from Crypto.Hash import BLAKE2s
@@ -50,6 +50,8 @@ with a secret key.
     >>> mac = BLAKE2s.new(digest_bits=128, key=b'secret')
     >>> mac.update(b'Some data')
     >>> print mac.hexdigest()
+
+:undocumented: __package__
 
 .. _BLAKE2s: https://blake2.net/
 """
@@ -238,7 +240,7 @@ def new(**kwargs):
     :Keywords:
       data : byte string
         The very first chunk of the message to hash.
-        It is equivalent to an early call to `BLAKE2s_Hash.upIdate()`.
+        It is equivalent to an early call to `BLAKE2s_Hash.update()`.
       digest_bytes : integer
         The size of the digest, in bytes (1 to 32).
       digest_bits : integer

@@ -35,7 +35,8 @@ See RFC3447__ or the `original RSA Labs specification`__.
 
 This scheme is more properly called ``RSASSA-PKCS1-v1_5``.
 
-For example, a sender may authenticate a message like this:
+For example, a sender can create the signature of a message using
+its private RSA key:
 
         >>> from Crypto.Signature import pkcs1_15
         >>> from Crypto.Hash import SHA256
@@ -46,8 +47,8 @@ For example, a sender may authenticate a message like this:
         >>> h = SHA256.new(message)
         >>> signature = pkcs1_15.new(key).sign(h)
 
-At the other side, the receiver side can verify the signature
-using the public RSA key:
+At the other side, the receiver can verify the signature (and therefore
+the authenticity of the message) using the public RSA key:
 
         >>> key = RSA.importKey(open('public_key.der').read())
         >>> h = SHA.new(message)
@@ -56,6 +57,8 @@ using the public RSA key:
         >>>     print "The signature is valid."
         >>> except (ValueError, TypeError):
         >>>    print "The signature is not valid."
+
+:undocumented: __package__
 
 .. __: http://www.ietf.org/rfc/rfc3447.txt
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125
@@ -68,17 +71,15 @@ from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString, DerObjectId
 
 class PKCS115_SigScheme:
-    """This signature scheme can perform PKCS#1 v1.5 RSA signature or verification."""
+    """An instance of the PKCS#1 v1.5 signature scheme for a specific RSA key."""
 
     def __init__(self, rsa_key):
         """Initialize this PKCS#1 v1.5 signature scheme object.
 
         :Parameters:
           rsa_key : an RSA key object
-            The object will be usable to sign message only if a *private*
-            RSA key is provided.
-            The object can always be used to verify signatures.
-          If a public half is given, only verification is possible.
+            Creation of signatures is only possible if this is a *private*
+            RSA key. Verification of signatures is always possible.
         """
         self._key = rsa_key
 
@@ -110,7 +111,7 @@ class PKCS115_SigScheme:
         k = ceil_div(modBits,8) # Convert from bits to bytes
 
         # Step 1
-        em = EMSA_PKCS1_V1_5_ENCODE(msg_hash, k)
+        em = _EMSA_PKCS1_V1_5_ENCODE(msg_hash, k)
         # Step 2a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 2b (RSASP1)
@@ -135,8 +136,8 @@ class PKCS115_SigScheme:
             belonging to the `Crypto.Hash` module.
           signature : byte string
             The signature that needs to be validated.
-        :Raises:
-            ValueError is the signature is not valid.
+        :Raise ValueError:
+            if the signature is not valid.
         """
 
         # See 8.2.2 in RFC3447
@@ -154,7 +155,7 @@ class PKCS115_SigScheme:
         em1 = long_to_bytes(em_int, k)
         # Step 3
         try:
-            possible_em1 = [ EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, True) ]
+            possible_em1 = [ _EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, True) ]
             # MD2/4/5 hashes always require NULL params in AlgorithmIdentifier.
             # For all others, it is optional.
             try:
@@ -162,7 +163,7 @@ class PKCS115_SigScheme:
             except AttributeError:
                 algorithm_is_md = False
             if not algorithm_is_md:  # MD2/MD4/MD5
-                possible_em1.append(EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, False))
+                possible_em1.append(_EMSA_PKCS1_V1_5_ENCODE(msg_hash, k, False))
         except ValueError:
             raise ValueError("Invalid signature")
         # Step 4
@@ -175,12 +176,12 @@ class PKCS115_SigScheme:
         pass
 
 
-def EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):
+def _EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):
     """
     Implement the ``EMSA-PKCS1-V1_5-ENCODE`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.2).
 
-    ``EMSA-PKCS1-V1_5-ENCODE`` actually accepts the message ``M`` as input,
+    ``_EMSA-PKCS1-V1_5-ENCODE`` actually accepts the message ``M`` as input,
     and hash it internally. Here, we expect that the message has already
     been hashed instead.
 

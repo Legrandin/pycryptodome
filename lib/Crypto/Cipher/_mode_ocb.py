@@ -39,7 +39,7 @@ it uses only one key and it can be used in online mode (so that encryption
 or decryption can start before the end of the message is available).
 
 This module implements the third and last variant of OCB (OCB3) and it only
-work in combination with a 128-bit block symmetric cipher, like AES.
+works in combination with a 128-bit block symmetric cipher, like AES.
 
 OCB is patented in US but `free licenses`_ exist for software implementations
 meant for non-military purposes.
@@ -63,6 +63,8 @@ Example:
     >>> else:
     >>>     print plaintext
 
+:undocumented: __package__
+
 .. _RFC7253: http://www.rfc-editor.org/info/rfc7253
 .. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
 """
@@ -81,7 +83,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   SmartPointer, c_size_t, expect_byte_string,
                                   )
 
-raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
+_raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
                                     int OCB_start_operation(void *cipher,
                                         const uint8_t *offset_0,
                                         size_t offset_0_len,
@@ -180,7 +182,7 @@ class OcbMode(object):
             raise TypeError("Unknown keywords: " + str(kwargs))
 
         self._state = VoidPointer()
-        result = raw_ocb_lib.OCB_start_operation(raw_cipher.get(),
+        result = _raw_ocb_lib.OCB_start_operation(raw_cipher.get(),
                                                  offset_0,
                                                  c_size_t(len(offset_0)),
                                                  self._state.address_of())
@@ -191,7 +193,7 @@ class OcbMode(object):
         # Ensure that object disposal of this Python object will (eventually)
         # free the memory allocated by the raw library for the cipher mode
         self._state = SmartPointer(self._state.get(),
-                                   raw_ocb_lib.OCB_stop_operation)
+                                   _raw_ocb_lib.OCB_stop_operation)
 
         # Memory allocated for the underlying block cipher is now owed
         # by the cipher mode
@@ -199,7 +201,7 @@ class OcbMode(object):
 
     def _update(self, assoc_data, assoc_data_len):
         expect_byte_string(assoc_data)
-        result = raw_ocb_lib.OCB_update(self._state.get(),
+        result = _raw_ocb_lib.OCB_update(self._state.get(),
                                         assoc_data,
                                         c_size_t(assoc_data_len))
         if result:
@@ -310,6 +312,12 @@ class OcbMode(object):
     def encrypt(self, plaintext=None):
         """Encrypt the next piece of plaintext.
 
+        After the entire plaintext has been passed (but before `digest`),
+        you must call this method one last time with no arguments to collect
+        the final piece of ciphertext.
+
+        If possible, use the method `encrypt_and_digest` instead.
+
         :Parameters:
           plaintext : byte string
             The next piece of data to encrypt or ``None`` to signify
@@ -318,9 +326,6 @@ class OcbMode(object):
         :Return:
             the ciphertext, as a byte string.
             Its length may not match the length of the *plaintext*.
-        :Important:
-            You must always call `encrypt()` (with no arguments) at the end to
-            collect the last piece of ciphertext.
         """
 
         if self.encrypt not in self._next:
@@ -331,10 +336,16 @@ class OcbMode(object):
             self._next = [self.digest]
         else:
             self._next = [self.encrypt, self.digest]
-        return self._transcrypt(plaintext, raw_ocb_lib.OCB_encrypt, "encrypt")
+        return self._transcrypt(plaintext, _raw_ocb_lib.OCB_encrypt, "encrypt")
 
     def decrypt(self, ciphertext=None):
         """Decrypt the next piece of ciphertext.
+
+        After the entire ciphertext has been passed (but before `verify`),
+        you must call this method one last time with no arguments to collect
+        the remaining piece of plaintext.
+
+        If possible, use the method `decrypt_and_verify` instead.
 
         :Parameters:
           ciphertext : byte string
@@ -344,9 +355,6 @@ class OcbMode(object):
         :Return:
             the plaintext, as a byte string.
             Its length may not match the length of the *ciphertext*.
-        :Important:
-            You must always call `decrypt()` (with no arguments) at the end to
-            collect the last piece of plaintext.
         """
 
         if self.decrypt not in self._next:
@@ -357,7 +365,7 @@ class OcbMode(object):
             self._next = [self.verify]
         else:
             self._next = [self.decrypt, self.digest]
-        return self._transcrypt(ciphertext, raw_ocb_lib.OCB_decrypt, "decrypt")
+        return self._transcrypt(ciphertext, _raw_ocb_lib.OCB_decrypt, "decrypt")
 
     def _compute_mac_tag(self):
 
@@ -369,7 +377,7 @@ class OcbMode(object):
             self._cache_A = b("")
 
         mac_tag = create_string_buffer(self.block_size)
-        result = raw_ocb_lib.OCB_digest(self._state.get(),
+        result = _raw_ocb_lib.OCB_digest(self._state.get(),
                                         mac_tag,
                                         c_size_t(len(mac_tag))
                                         )
@@ -381,10 +389,11 @@ class OcbMode(object):
     def digest(self):
         """Compute the *binary* MAC tag.
 
-        The caller invokes this function at the very end.
+        Call this method after the final `encrypt` (the one with no arguments)
+        to obtain the MAC tag.
 
-        This method returns the MAC that shall be sent to the receiver,
-        together with the ciphertext.
+        The MAC tag is needed by the receiver to determine authenticity
+        of the message.
 
         :Return: the MAC, as a byte string.
         """
@@ -416,11 +425,8 @@ class OcbMode(object):
     def verify(self, received_mac_tag):
         """Validate the *binary* MAC tag.
 
-        The caller invokes this function at the very end.
-
-        This method checks if the decrypted message is indeed valid
-        (that is, if the key is correct) and it has not been
-        tampered with while in transit.
+        Call this method after the final `decrypt` (the one with no arguments)
+        to check if the message is authentic and valid.
 
         :Parameters:
           received_mac_tag : byte string
@@ -465,11 +471,11 @@ class OcbMode(object):
         self.verify(unhexlify(hex_mac_tag))
 
     def encrypt_and_digest(self, plaintext):
-        """Perform encrypt() and digest() in one step.
+        """Encrypt the message and create the MAC tag in one step.
 
         :Parameters:
           plaintext : byte string
-            The piece of data to encrypt.
+            The entire message to encrypt.
         :Return:
             a tuple with two byte strings:
 
@@ -480,11 +486,11 @@ class OcbMode(object):
         return self.encrypt(plaintext) + self.encrypt(), self.digest()
 
     def decrypt_and_verify(self, ciphertext, received_mac_tag):
-        """Perform decrypt() and verify() in one step.
+        """Decrypted the message and verify its authenticity in one step.
 
         :Parameters:
           ciphertext : byte string
-            The piece of data to decrypt.
+            The entire message to decrypt.
           received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
 
