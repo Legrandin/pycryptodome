@@ -367,7 +367,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     .. _scrypt: http://www.tarsnap.com/scrypt.html
     .. __: http://www.tarsnap.com/scrypt/scrypt.pdf
-    .. __: http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-01
+    .. __: http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-03
     .. __: http://www.tarsnap.com/scrypt/scrypt-slides.pdf
     """
 
