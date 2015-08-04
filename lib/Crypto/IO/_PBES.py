@@ -45,6 +45,8 @@ from Crypto.Hash import MD5, SHA1
 from Crypto.Cipher import DES, ARC2, DES3, AES
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
 
+class PbesError(ValueError):
+    pass
 
 # These are the ASN.1 definitions used by the PBES1/2 logic:
 #
@@ -145,7 +147,7 @@ class PBES1(object):
             ciphermod = ARC2
             cipher_params['effective_keylen'] = 64
         else:
-            raise ValueError("Unknown OID")
+            raise PbesError("Unknown OID for PBES1")
 
         pbe_params = decode_der(DerSequence, encrypted_algorithm[1])
         salt = decode_der(DerOctetString, pbe_params[0]).payload
@@ -242,7 +244,7 @@ class PBES2(object):
             cipher_mode = AES.MODE_CBC
             enc_oid = "2.16.840.1.101.3.4.1.42"
         else:
-            raise ValueError("Unknown mode")
+            raise ValueError("Unknown PBES2 mode")
 
         # Get random data
         iv = randfunc(module.block_size)
@@ -325,7 +327,7 @@ class PBES2(object):
 
         pbe_oid = decode_der(DerObjectId, encryption_algorithm[0]).value
         if pbe_oid != "1.2.840.113549.1.5.13":
-            raise ValueError("Not a PBES2 object")
+            raise PbesError("Not a PBES2 object")
 
         pbes2_params = decode_der(DerSequence, encryption_algorithm[1])
 
@@ -347,7 +349,7 @@ class PBES2(object):
             else:
                 kdf_key_length = None
             if len(pbkdf2_params) > 3:
-                raise ValueError("Unsupported PRF for PBKDF2")
+                raise PbesError("Unsupported PRF for PBKDF2")
 
         elif key_derivation_oid == "1.3.6.1.4.1.11591.4.11":
 
@@ -360,7 +362,7 @@ class PBES2(object):
             else:
                 kdf_key_length = None
         else:
-            raise ValueError("Unknown KDF")
+            raise PbesError("Unsupported PBES2 KDF")
 
         ### Cipher selection
         encryption_scheme = decode_der(DerSequence, pbes2_params[1])
@@ -386,11 +388,11 @@ class PBES2(object):
             ciphermod = AES
             key_size = 32
         else:
-            raise ValueError("Unsupported cipher")
+            raise PbesError("Unsupported PBES2 cipher")
 
         if kdf_key_length and kdf_key_length != key_size:
-            raise ValueError("Mismatch between KDF parameters"
-                             " and selected cipher")
+            raise PbesError("Mismatch between PBES2 KDF parameters"
+                            " and selected cipher")
 
         IV = decode_der(DerOctetString, encryption_scheme[1]).payload
 

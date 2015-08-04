@@ -72,7 +72,7 @@ from Crypto.Util.asn1 import (
             newDerOctetString,
             )
 
-from Crypto.IO._PBES import PBES1, PBES2
+from Crypto.IO._PBES import PBES1, PBES2, PbesError
 
 __all__ = ['wrap', 'unwrap']
 
@@ -183,7 +183,7 @@ def unwrap(p8_private_key, passphrase=None):
 
     :Parameters:
       p8_private_key : byte string
-        The private key wrapped into a PKCS#8 blob
+        The private key wrapped into a PKCS#8 blob, DER encoded.
       passphrase : (byte) string
         The passphrase to use to decrypt the blob (if it is encrypted).
     :Return:
@@ -199,17 +199,27 @@ def unwrap(p8_private_key, passphrase=None):
 
     if passphrase:
         passphrase = tobytes(passphrase)
+
         found = False
-        for pbes in PBES1, PBES2:
-            try:
-                p8_private_key = pbes.decrypt(p8_private_key, passphrase)
-            except ValueError:
-                pass
-            else:
-                found = True
-                break
+        try:
+            p8_private_key = PBES1.decrypt(p8_private_key, passphrase)
+            found = True
+        except PbesError, e:
+            error_str = "PBES1[%s]" % str(e)
+        except ValueError:
+            error_str = "PBES1[Invalid]"
+
         if not found:
-            raise ValueError("Unsupported PKCS#5 Object ID ")
+            try:
+                p8_private_key = PBES2.decrypt(p8_private_key, passphrase)
+                found = True
+            except PbesError, e:
+                error_str += ",PBES2[%s]" % str(e)
+            except ValueError:
+                error_str += ",PBES2[Invalid]"
+
+        if not found:
+            raise ValueError("Error decoding PKCS#8 (%s)" % error_str)
 
     pk_info = decode_der(DerSequence, p8_private_key)
     if len(pk_info) == 2 and not passphrase:
