@@ -145,6 +145,9 @@ class PCTBuildExt (build_ext):
     aesni_mod_names = "Crypto.Cipher._raw_aesni",
 
     def build_extensions(self):
+        # Disable any assembly in libtomcrypt files
+        self.compiler.define_macro("LTC_NO_ASM")
+
         # Detect which modules should be compiled
         self.detect_modules()
 
