@@ -65,7 +65,7 @@ For Python 2.x::
 For Python 3.x::
 
         $ sudo yum install gcc gmp
-        $ sudo yum install python-virtualenv python3-devel 
+        $ sudo yum install python3-virtualenv python3-devel
         $ virtualenv -p /usr/bin/python3 MyProject
         $ cd MyProject
         $ . bin/activate
@@ -74,8 +74,8 @@ For Python 3.x::
 
 For PyPy::
 
-        $ sudo apt-get install build-essential gmp
-        $ sudo apt-get install python-virtualenv pypy-devel
+        $ sudo yum install gcc gmp
+        $ sudo yum install python-virtualenv pypy-devel
         $ virtualenv -p /usr/bin/pypy MyProject
         $ cd MyProject
         $ . bin/activate
