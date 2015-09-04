@@ -21,7 +21,7 @@
 """SHA-3/256 cryptographic hash algorithm.
 
 SHA-3/256 belongs to the SHA-3 family of cryptographic hashes, as specified
-in `FIPS 202`__ (currently in draft stage).
+in `FIPS 202`__.
 
 The hash function produces the 256 bit digest of a message.
 
@@ -31,7 +31,7 @@ The hash function produces the 256 bit digest of a message.
     >>> h_obj.update(b'Some data')
     >>> print h_obj.hexdigest()
 
-.. __: http://csrc.nist.gov/publications/drafts/fips-202/fips_202_draft.pdf
+.. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
 """
 
 from Crypto.Util.py3compat import bord
