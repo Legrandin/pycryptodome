@@ -16,7 +16,7 @@ are implemented as C extensions.
 News
 ----
 
-* **?? ??? 2015 (NEW)**. Release 3.2.
+* **6 Sep 2015 (NEW)**. Release 3.2.
 * 15 Mar 2015 (NEW). Release 3.1.
 * 24 Jun 2014. Release 3.0.
 
