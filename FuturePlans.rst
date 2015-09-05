@@ -12,8 +12,8 @@ Future releases will include:
     - bcrypt
     - SRP
 - Add more key management:
-    - Export/import of DSA keys
     - Export/import of EC keys
+    - Export/import of DSA domain parameters
     - JWK
 - Add support for CMS/PKCS#7
 - Add support for RNG backed by PKCS#11 and/or KMIP
