@@ -19,7 +19,7 @@ New features
 Resolved issues
 ---------------
 
-* None
+* tomcrypt_macros.h asm error #1
 
 Breaks in compatibility
 -----------------------
