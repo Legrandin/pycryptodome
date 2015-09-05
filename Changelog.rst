@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.2 (WIP)
+3.2 (6 September 2015)
 +++++++++++++++++++
 
 New features
