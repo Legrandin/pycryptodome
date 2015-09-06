@@ -1,6 +1,24 @@
 Changelog
 =========
 
+3.3 (WIP)
++++++++++++++++++++
+
+New features
+------------
+
+* None
+
+Resolved issues
+---------------
+
+* None
+
+Breaks in compatibility
+-----------------------
+
+* None
+
 3.2 (6 September 2015)
 +++++++++++++++++++
 
