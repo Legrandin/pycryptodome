@@ -46,7 +46,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 
   - SHA-1
   - SHA-2 family (224, 256, 384, 512)
-  - SHA-3 family (224, 256, 384, 512 - FIPS 202 draft May 2014)
+  - SHA-3 family (224, 256, 384, 512)
   - BLAKE2b and BLAKE2s
   - RIPE-MD160
   - MD5
@@ -70,14 +70,14 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 
 * Asymmetric ciphers:
  
-  - PKCS#1
+  - PKCS#1 (RSA)
     
     - RSAES-PKCS1-v1_5
     - RSAES-OAEP
 
 * Asymmtric digital signatures:
   
-  - PKCS#1
+  - PKCS#1 (RSA)
     
     - RSASSA-PKCS1-v1_5
     - RSASSA-PSS
