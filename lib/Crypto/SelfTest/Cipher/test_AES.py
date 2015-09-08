@@ -1994,9 +1994,11 @@ def get_tests(config={}):
     from common import make_block_tests
 
     tests = make_block_tests(AES, "AES", test_data, {'use_aesni': False})
-    if _raw_cpuid_lib.have_aes_ni() == 1:
+    if _raw_cpuid_lib.have_aes_ni():
         # Run tests with AES-NI instructions if they are available.
         tests += make_block_tests(AES, "AESNI", test_data, {'use_aesni': True})
+    else:
+        print "Skipping AESNI tests"
     return tests
 
 if __name__ == '__main__':
