@@ -86,7 +86,7 @@ static __m128i aes192_keyexpand_2(__m128i key, __m128i key2)
         1))
 
 /* Encryption key setup */
-static void aes_key_setup_enc(__m128i rk[], const uint8_t* cipherKey, int keylen)
+static void aes_key_setup_enc(__m128i *rk, const uint8_t* cipherKey, int keylen)
 {
     switch (keylen) {
         case 16:
@@ -163,7 +163,7 @@ static void aes_key_setup_enc(__m128i rk[], const uint8_t* cipherKey, int keylen
 }
 
 /* Decryption key setup */
-static void aes_key_setup_dec(__m128i dk[], const __m128i ek[], int rounds)
+static void aes_key_setup_dec(__m128i *dk, const __m128i *ek, int rounds)
 {
     int i;
 
