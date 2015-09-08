@@ -27,6 +27,8 @@
 #include <wmmintrin.h>
 #include <stdlib.h>
 
+FAKE_INIT(raw_aesni)
+
 #define MODULE_NAME AESNI
 #define BLOCK_SIZE 16
 #define KEY_SIZE 0
