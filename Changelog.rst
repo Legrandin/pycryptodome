@@ -1,13 +1,13 @@
 Changelog
 =========
 
-3.3 (WIP)
+3.2.1 (9 September 2015)
 +++++++++++++++++++
 
 New features
 ------------
 
-* None
+* Windows wheels are automatically built on Appveyor
 
 Resolved issues
 ---------------
