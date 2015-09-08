@@ -70,16 +70,14 @@ def PrintErr(*args, **kwd):
 def test_compilation(program, extra_cc_options=None, extra_libraries=None):
     """Test if a certain C program can be compiled."""
 
-    import tempfile
-
     # Create a temporary file with the C program
-    fname = tempfile.mkstemp(".c")[1]
+    fname = os.path.join("build", "test1.c")
     f = open(fname, 'w')
     f.write(program)
     f.close()
 
     # Name for the temporary executable
-    oname = tempfile.mkstemp(".out")[1]
+    oname = os.path.join("build", "test1.out")
 
     debug = False
     # Mute the compiler and the linker
