@@ -132,6 +132,11 @@ Windows (pre-compiled)
        - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_32/mpir.dll>`_
        - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_64/mpir.dll>`_
 
+     - Python 3.5 (VS2015 runtime)
+
+       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2015_32/mpir.dll>`_
+       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2015_64/mpir.dll>`_
+
    Download the correct *mpir.dll* and drop it into the Python interpreter
    directory (for instance ``C:\Python34``). *Pycryptodome* will
    automatically make use of it.
@@ -151,42 +156,35 @@ Windows (pre-compiled)
 
         > python -m Crypto.SelfTest
 
-Windows (from sources)
-~~~~~~~~~~~~~~~~~~~~~~
+Windows (from sources, Python 2.x, Python <=3.2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *Pycryptodome* extensions from
 source code is to install the minimum set of Visual Studio
 components freely made available by Microsoft.
 
-First, perform all steps from the previous section and stop
-before executing ``pip install pycryptodome``.
-Proceed then as follows.
+#. Perform all steps from the previous section and stop
+   before executing ``pip install pycryptodome``.
 
-#. **[Only once]** Download the correct Microsoft SDK (ISO image):
+#. **[Only once]** Install `Virtual Clone Drive`_.
 
-   * For Python 2.x, 3.1 and 3.2, you need Visual C++ Compiler **2008** from the `MS Windows SDK for Windows 7 and .NET Framework 3.5 SP1`_.
-   * For Python 3.3 and 3.4 you need Visual C++ Compiler **2010** from the `MS Windows SDK for Windows 7 and .NET Framework 4`_.
+#. **[Only once]** Download the ISO image of the `Microsoft SDK for Windows 7 and . NET Framework 3.5 SP1`_.
+   It contains the Visual C++ 2008 compiler.
+   
+   There are three ISO images available: you will need ``GRMSDK_EN_DVD.iso`` if your
+   Windows OS is 32 bits or ``GRMSDKX_EN_DVD.iso`` if 64 bits.
 
-   In either case, you will be given the possibility to download three different ISO files.
-   Most probably, these days you have a 64 bit version of a Windows OS so you can just
-   select the file ``GRMSDKX_EN_DVD.iso`` (the other two ISOs are for 32 bit x86 and for IA).
+   Mount the ISO with *Virtual Clone Drive* and install the C/C++ compilers and the
+   redistributable only.
 
-   After mounting the ISO (for instance by means of `Virtual Clone Drive`_), you can
-   run the install application. It is sufficient to select the C/C++ compiler and
-   the redistributables only.
+#. If your Python is a 64 bit application, open a command prompt and perform the following steps::
 
-#. If you have installed Visual C++ **2010** and your Python is a 64 bit application,
-   open a command prompt and perform the following steps::
-
-        > cd "C:\Program Files\Microsoft SDKs\Windows\v7.1"
+        > cd "C:\Program Files\Microsoft SDKs\Windows\v7.0"
         > cmd /V:ON /K Bin\SetEnv.Cmd /x64 /release
         > set DISTUTILS_USE_SDK=1
-
-   For other combinations, the steps above need to be slightly adjusted:
-
-   * If you have installed Visual C++ **2008** you must replace ``v7.1`` with ``v7.0``.
-   * If your Python is a 32 bit application you must replace ``/x64`` with ``/x86``.
+   
+   Replace ``/x64`` with ``/x86`` if your Python is a 32 bit application.
 
 #. Enter the virtual environment for your project::
 
@@ -202,6 +200,66 @@ Proceed then as follows.
 
         > python -m Crypto.SelfTest
 
+Windows (from sources, Python 3.3 and 3.4)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Windows does not come with a C compiler like most Unix systems.
+The simplest way to compile the *Pycryptodome* extensions from
+source code is to install the minimum set of Visual Studio
+components freely made available by Microsoft.
+
+#. Perform all steps from the previous section and stop
+   before executing ``pip install pycryptodome``.
+
+#. **[Only once]** Install `Virtual Clone Drive`_.
+
+#. **[Only once]** Download the ISO image of the `Microsoft SDK for Windows 7 and . NET Framework 4`_.
+   It contains the Visual C++ 2010 compiler.
+   
+   There are three ISO images available: you will need ``GRMSDK_EN_DVD.iso`` if your
+   Windows OS is 32 bits or ``GRMSDKX_EN_DVD.iso`` if 64 bits.
+
+   Mount the ISO with *Virtual Clone Drive* and install the C/C++ compilers and the
+   redistributable only.
+
+#. If your Python is a 64 bit application, open a command prompt and perform the following steps::
+
+        > cd "C:\Program Files\Microsoft SDKs\Windows\v7.1"
+        > cmd /V:ON /K Bin\SetEnv.Cmd /x64 /release
+        > set DISTUTILS_USE_SDK=1
+   
+   Replace ``/x64`` with ``/x86`` if your Python is a 32 bit application.
+
+#. Enter the virtual environment for your project::
+
+        > cd %USERPROFILE%
+        > cd MyProject
+        > Scripts\activate
+
+#. Compile and install PyCryptodome::
+
+        > pip install pycryptodome --no-use-wheel
+
+#. To make sure everything work fine, run the test suite::
+
+        > python -m Crypto.SelfTest
+
+Windows (from sources, Python 3.5 and newer)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Windows does not come with a C compiler like most Unix systems.
+The simplest way to compile the *Pycryptodome* extensions from
+source code is to install the minimum set of Visual Studio
+components freely made available by Microsoft.
+
+#. **[Once only]** Download `MS Windows Studio 2015`_ (Community Edition) and install the C/C++
+   compilers and the redistributable only.
+
+#. Perform all steps from the section *Windows (pre-compiled)* but add the ``--no-use-wheel``
+   parameter when calling ``pip``.
+
+        > pip install pycryptodome --no-use-wheel
+
 .. _pypi: https://pypi.python.org/pypi/pycryptodome
 .. _get-pip.py: https://bootstrap.pypa.io/get-pip.py
 .. _MS Windows SDK for Windows 7 and .NET Framework 3.5 SP1: http://www.microsoft.com/en-us/download/details.aspx?id=18950
@@ -209,3 +267,4 @@ Proceed then as follows.
 .. _Virtual Clone Drive: http://www.slysoft.com/it/virtual-clonedrive.html
 .. _MPIR: http://mpir.org
 .. _GMP: http://gmplib.org
+.. _MS Visual Studio 2015: https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx
