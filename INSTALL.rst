@@ -169,7 +169,7 @@ components freely made available by Microsoft.
 
 #. **[Only once]** Install `Virtual Clone Drive`_.
 
-#. **[Only once]** Download the ISO image of the `Microsoft SDK for Windows 7 and . NET Framework 3.5 SP1`_.
+#. **[Only once]** Download the ISO image of the `MS SDK for Windows 7 and . NET Framework 3.5 SP1`_.
    It contains the Visual C++ 2008 compiler.
    
    There are three ISO images available: you will need ``GRMSDK_EN_DVD.iso`` if your
@@ -213,7 +213,7 @@ components freely made available by Microsoft.
 
 #. **[Only once]** Install `Virtual Clone Drive`_.
 
-#. **[Only once]** Download the ISO image of the `Microsoft SDK for Windows 7 and . NET Framework 4`_.
+#. **[Only once]** Download the ISO image of the `MS SDK for Windows 7 and . NET Framework 4`_.
    It contains the Visual C++ 2010 compiler.
    
    There are three ISO images available: you will need ``GRMSDK_EN_DVD.iso`` if your
@@ -252,11 +252,11 @@ The simplest way to compile the *Pycryptodome* extensions from
 source code is to install the minimum set of Visual Studio
 components freely made available by Microsoft.
 
-#. **[Once only]** Download `MS Windows Studio 2015`_ (Community Edition) and install the C/C++
+#. **[Once only]** Download `MS Visual Studio 2015`_ (Community Edition) and install the C/C++
    compilers and the redistributable only.
 
 #. Perform all steps from the section *Windows (pre-compiled)* but add the ``--no-use-wheel``
-   parameter when calling ``pip``.
+   parameter when calling ``pip``::
 
         > pip install pycryptodome --no-use-wheel
 
