@@ -12,6 +12,8 @@ env:
  - PYTHON_INTP="python3.3" CFFI=yes
  - PYTHON_INTP="python3.4" CFFI=no
  - PYTHON_INTP="python3.4" CFFI=yes
+ - PYTHON_INTP="python3.5" CFFI=no
+ - PYTHON_INTP="python3.5" CFFI=yes
  - PYTHON_INTP="pypy" CFFI=yes
 branches:
  except:
