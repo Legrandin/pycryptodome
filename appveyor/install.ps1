@@ -79,7 +79,11 @@ function InstallPackage ($python_home, $pkg) {
 function InstallMPIR ($python_version, $architecture, $python_home) {
     $pyver = $python_version.split(".")
     if ($pyver[0] -gt 2) {
-      $vs = "VS2010"
+	  if ($pyver[1] -gt 4 ) {
+		$vs = "VS2015"
+      } else {
+		$vs = "VS2010"
+	  }
     } else {
       $vs = "VS2008"
     }
