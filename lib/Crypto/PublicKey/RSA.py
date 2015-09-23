@@ -150,7 +150,11 @@ class RsaKey(object):
         h = (h * u) % q
         mp = h * p + m1
         # Step 4: Compute m = m**(r-1) mod n
-        return (r.inverse(n) * mp) % n
+        result = (r.inverse(n) * mp) % n
+        # Verify no faults occured
+        if ciphertext != pow(result, e, n):
+            raise ValueError("Fault detected in RSA decryption")
+        return result
 
     def has_private(self):
         return 'd' in self._key
