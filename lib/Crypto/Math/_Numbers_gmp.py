@@ -107,7 +107,15 @@ except OSError:
         # (LLP64 vs LP64)
         gmp_defs = "typedef unsigned long long UNIX_ULONG;" + gmp_defs_common
         c_ulong = c_ulonglong
-    lib = load_lib("mpir", gmp_defs)
+    # Try to load private MPIR lib first (wheel)
+    try:
+        import os.path
+        this_dir, _ = os.path.split(os.path.abspath(__file__))
+        mpir_dll = os.path.join(this_dir, "mpir.dll")
+        lib = load_lib(mpir_dll, gmp_defs)
+    except OSError:
+        lib = load_lib("mpir", gmp_defs)
+
     implementation = { "library":"mpir", "api":backend }
 
 # In order to create a function that returns a pointer to

@@ -351,6 +351,7 @@ setup(
             "test_vectors/PKCS1-v1.5/*.*",
             "test_vectors/PKCS1-PSS/*.*"
             ],
+        "Crypto.Math" : [ "mpir.dll" ],
         },
     cmdclass = {
         'build_ext':PCTBuildExt,

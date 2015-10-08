@@ -67,10 +67,10 @@ install:
 #build: off
 
 build_script:
+  - "copy C:\\mpir\\mpir.dll lib\\Crypto\\Math"
   - "%WITH_COMPILER% python setup.py build"
 
 test_script:
-  - "python -c \"from ctypes import CDLL; CDLL('mpir')\""
   - "dir %PYTHON%"
   - "%WITH_COMPILER% python setup.py test"
 

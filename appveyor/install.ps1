@@ -76,7 +76,7 @@ function InstallPackage ($python_home, $pkg) {
     & $pip_path install $pkg
 }
 
-function InstallMPIR ($python_version, $architecture, $python_home) {
+function InstallMPIR ($python_version, $architecture, $target_dir) {
     $pyver = $python_version.split(".")
     if ($pyver[0] -gt 2) {
 	  if ($pyver[1] -gt 4 ) {
@@ -90,14 +90,16 @@ function InstallMPIR ($python_version, $architecture, $python_home) {
     $download_uri = $MPIR_GITHUB + "mpir-2.6.0_" + $vs + "_" + $architecture + "/mpir.dll"
     Write-Host "Downloading MPIR from " $download_uri
     $webclient = New-Object System.Net.WebClient
-    $webclient.DownloadFile($download_uri, $python_home + "\mpir.dll")
+    $webclient.DownloadFile($download_uri, $target_dir + "\mpir.dll")
 }
 
 function main () {
     InstallPython $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     InstallPip $env:PYTHON
     InstallPackage $env:PYTHON wheel
-    InstallMPIR $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
+
+    New-Item -ItemType directory "C:\mpir"
+    InstallMPIR $env:PYTHON_VERSION $env:PYTHON_ARCH "C:\mpir"
 }
 
 main
