@@ -123,21 +123,6 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
     return result
 
 
-def libgmp_exists():
-    '''Tests if the GMP library is available'''
-
-    source = """
-    #include <gmp.h>
-    int main(void)
-    {
-        mpz_init((void*)0);
-        return 0;
-    }
-    """
-
-    return test_compilation(source, extra_libraries=('gmp',))
-
-
 class PCTBuildExt (build_ext):
 
     aesni_mod_names = "Crypto.Cipher._raw_aesni",
