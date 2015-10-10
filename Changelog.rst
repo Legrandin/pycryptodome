@@ -1,6 +1,25 @@
 Changelog
 =========
 
+3.x (???)
++++++++++++++++++++
+
+New features
+------------
+
+* Windows wheels bundle the MPIR library
+* Detection of faults occuring during secret RSA operations
+
+Resolved issues
+---------------
+
+* None
+
+Breaks in compatibility
+-----------------------
+
+* None
+
 3.2.1 (9 September 2015)
 +++++++++++++++++++
 
