@@ -9,16 +9,7 @@ New features
 
 * Windows wheels bundle the MPIR library
 * Detection of faults occuring during secret RSA operations
-
-Resolved issues
----------------
-
-* None
-
-Breaks in compatibility
------------------------
-
-* None
+* Detection of non-prime (weak) q value in DSA domain parameters
 
 3.2.1 (9 September 2015)
 +++++++++++++++++++
@@ -27,16 +18,6 @@ New features
 ------------
 
 * Windows wheels are automatically built on Appveyor
-
-Resolved issues
----------------
-
-* None
-
-Breaks in compatibility
------------------------
-
-* None
 
 3.2 (6 September 2015)
 +++++++++++++++++++
