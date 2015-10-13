@@ -24,10 +24,6 @@
 
 FAKE_INIT(MODULE_NAME)
 
-#define CAPACITY (2*(DIGEST_SIZE))
-#define BLOCK_SIZE (200-CAPACITY)
-#define NO_MERKLE_DAMGARD
-
 #include "keccak.c"
 
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
@@ -46,7 +42,7 @@ EXPORT_SYM int FUNC_NAME(_init) (hash_state **shaState)
     if (NULL == hs)
         return ERR_MEMORY;
 
-    keccak_init (hs, DIGEST_SIZE, KECCAK_INIT_SECURITY);
+    keccak_init (hs, DIGEST_SIZE, 0x06);
     return 0;
 }
 

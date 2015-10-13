@@ -207,10 +207,8 @@ keccak_squeeze_internal (keccak_state *self)
 #endif /* KECCAK_USE_BIT_INTERLEAVING */
 
 keccak_result
-keccak_init (keccak_state *self, unsigned int param, keccak_init_param initby)
+keccak_init (keccak_state *self, unsigned int digest_bytes, uint8_t padding)
 {
-    uint16_t security, capacity, rate;
-
     memset (self, 0, sizeof(keccak_state));
     
 #ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
@@ -238,32 +236,17 @@ keccak_init (keccak_state *self, unsigned int param, keccak_init_param initby)
 #endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
 
     self->bufptr    = self->buf;
-    
-    switch (initby) {
-        case KECCAK_INIT_SECURITY:
-            security = param;
-            capacity = 2 * security;
-            rate     = 200 - capacity;
-            break;
-        case KECCAK_INIT_RATE:
-            rate     = param;
-            capacity = 200 - rate;
-            security = capacity/2;
-            break;
-        default:
-            return KECCAK_ERR_UNKNOWNPARAM;
-    }
-    
-    if (rate + capacity != 200)
+   
+    self->security  = digest_bytes;
+    self->capacity  = digest_bytes * 2;
+
+    if (self->capacity >= 200)
         return KECCAK_ERR_INVALIDPARAM;
-    if ((rate <= 0) || (rate >= 200) || ((rate % 8) != 0))
-        return KECCAK_ERR_INVALIDPARAM;
-        
-    self->security  = security;
-    self->capacity  = capacity;
-    self->rate      = rate;
-    self->bufend    = self->buf + rate - 1;
+
+    self->rate      = 200 - self->capacity;
+    self->bufend    = self->buf + self->rate - 1;
     self->squeezing = 0;
+    self->padding   = padding;
     
     return KECCAK_OK;
 }
@@ -295,7 +278,7 @@ keccak_result
 keccak_finish (keccak_state *self)
 {
     /* Padding */
-    *(self->bufptr++) = 0x06U;
+    *(self->bufptr++) = self->padding;
     if (self->bufend >= self->bufptr) {
         memset (self->bufptr, 0, self->bufend - self->bufptr + 1);
     }

@@ -67,10 +67,11 @@ typedef struct
     uint16_t capacity;
     uint16_t rate;
     uint8_t  squeezing;
+    uint8_t  padding;
 } keccak_state;
 
 typedef enum {
-    KECCAK_OK,
+    KECCAK_OK = 0,
     KECCAK_ERR_CANTABSORB,
     KECCAK_ERR_INVALIDPARAM,
     KECCAK_ERR_UNKNOWNPARAM,
@@ -83,7 +84,7 @@ typedef enum {
 } keccak_init_param;
 
 
-keccak_result keccak_init    (keccak_state *self, unsigned int param, keccak_init_param initby);
+keccak_result keccak_init    (keccak_state *self, unsigned int digest_bytes, uint8_t padding);
 keccak_result keccak_finish  (keccak_state *self);
 keccak_result keccak_copy    (keccak_state *source, keccak_state *dest);
 keccak_result keccak_absorb  (keccak_state *self, const unsigned char *buffer, int length);
