@@ -42,16 +42,17 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, c_size_t,
                                   expect_byte_string)
 
-_raw_sha3_384_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA3_384",
+_raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         """
-                        int SHA3_384_init(void **shaState);
-                        int SHA3_384_destroy(void *shaState);
-                        int SHA3_384_update(void *hs,
+                        int keccak_init(void **state, size_t digest_size,
+                                        uint8_t padding_byte);
+                        int keccak_destroy(void *state);
+                        int keccak_absorb(void *state,
                                           const uint8_t *buf,
                                           size_t len);
-                        int SHA3_384_digest(const void *shaState,
-                                          uint8_t digest[16]);
-                        int SHA3_384_copy(const void *src, void *dst);
+                        int keccak_digest(const void *state,
+                                          uint8_t *digest);
+                        int keccak_copy(const void *src, void *dst);
                         """)
 
 class SHA3_384_Hash(object):
@@ -66,12 +67,14 @@ class SHA3_384_Hash(object):
 
     def __init__(self, data=None):
         state = VoidPointer()
-        result = _raw_sha3_384_lib.SHA3_384_init(state.address_of())
+        result = _raw_keccak_lib.keccak_init(state.address_of(),
+                                             c_size_t(self.digest_size),
+                                             0x06)
         if result:
             raise ValueError("Error %d while instantiating SHA-3/384"
                              % result)
         self._state = SmartPointer(state.get(),
-                                   _raw_sha3_384_lib.SHA3_384_destroy)
+                                   _raw_keccak_lib.keccak_destroy)
         if data:
             self.update(data)
 
@@ -93,9 +96,9 @@ class SHA3_384_Hash(object):
         """
 
         expect_byte_string(data)
-        result = _raw_sha3_384_lib.SHA3_384_update(self._state.get(),
-                                                   data,
-                                                   c_size_t(len(data)))
+        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
+                                               data,
+                                               c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/384"
                              % result)
@@ -111,8 +114,8 @@ class SHA3_384_Hash(object):
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_sha3_384_lib.SHA3_384_digest(self._state.get(),
-                                                   bfr)
+        result = _raw_keccak_lib.keccak_digest(self._state.get(),
+                                               bfr)
         if result:
             raise ValueError("Error %d while instantiating SHA-3/384"
                              % result)
@@ -141,15 +144,16 @@ class SHA3_384_Hash(object):
         :Return: A hash object of the same type
         """
 
-        clone = SHA3_384_Hash()
-        result = _raw_sha3_384_lib.SHA3_384_copy(self._state.get(),
-                                                 clone._state.get())
+        clone = type(self)()
+        result = _raw_keccak_lib.keccak_copy(self._state.get(),
+                                             clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHA-3/384" % result)
         return clone
 
     def new(self, data=None):
-        return SHA3_384_Hash(data)
+        return type(self)(data=data)
+
 
 def new(data=None):
     """Return a fresh instance of the hash object.
@@ -157,12 +161,12 @@ def new(data=None):
     :Parameters:
        data : byte string
         The very first chunk of the message to hash.
-        It is equivalent to an early call to `SHA3_384_Hash.update()`.
+        It is equivalent to an early call to ``update()``.
         Optional.
 
     :Return: A `SHA3_384_Hash` object
     """
-    return SHA3_384_Hash().new(data)
+    return SHA3_384_Hash(data=data)
 
 #: The size of the resulting hash in bytes.
 digest_size = SHA3_384_Hash.digest_size

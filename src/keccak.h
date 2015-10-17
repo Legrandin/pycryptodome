@@ -70,33 +70,10 @@ typedef struct
     uint8_t  padding;
 } keccak_state;
 
-typedef enum {
-    KECCAK_OK = 0,
-    KECCAK_ERR_CANTABSORB,
-    KECCAK_ERR_INVALIDPARAM,
-    KECCAK_ERR_UNKNOWNPARAM,
-    KECCAK_ERR_NOTIMPL
-} keccak_result;
-
-typedef enum {
-    KECCAK_INIT_SECURITY,
-    KECCAK_INIT_RATE
-} keccak_init_param;
-
-
-keccak_result keccak_init    (keccak_state *self, unsigned int digest_bytes, uint8_t padding);
-keccak_result keccak_finish  (keccak_state *self);
-keccak_result keccak_copy    (keccak_state *source, keccak_state *dest);
-keccak_result keccak_absorb  (keccak_state *self, const unsigned char *buffer, int length);
-keccak_result keccak_squeeze (keccak_state *self, unsigned char *buffer, int length);
-
-
-#ifdef KECCAK_USE_BIT_INTERLEAVING
-void keccak_function (uint32_t *state);
-#else
-void keccak_function (uint64_t *state);
-#endif
+EXPORT_SYM int keccak_init   (keccak_state **state, size_t digest_bytes, uint8_t padding);
+EXPORT_SYM int keccak_destroy(keccak_state *state);
+EXPORT_SYM int keccak_absorb (keccak_state *state, const uint8_t *buffer, size_t length);
+EXPORT_SYM int keccak_copy   (const keccak_state *source, keccak_state *dest);
+EXPORT_SYM int keccak_digest (const keccak_state *state, uint8_t *digest);
 
 #endif /* __KECCAK_H_ */
-
-/* vim:set ts=4 sw=4 sts=4 expandtab: */

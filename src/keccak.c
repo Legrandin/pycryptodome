@@ -30,6 +30,25 @@
 #include "keccak.h"
 #include <string.h>
 
+typedef enum {
+    KECCAK_OK = 0,
+    KECCAK_ERR_CANTABSORB,
+    KECCAK_ERR_INVALIDPARAM,
+    KECCAK_ERR_UNKNOWNPARAM,
+    KECCAK_ERR_NOTIMPL
+} keccak_result;
+
+typedef enum {
+    KECCAK_INIT_SECURITY,
+    KECCAK_INIT_RATE
+} keccak_init_param;
+
+#ifdef KECCAK_USE_BIT_INTERLEAVING
+void keccak_function (uint32_t *state);
+#else
+void keccak_function (uint64_t *state);
+#endif
+
 #define USE_COMPLEMENT_LANES_OPTIMIZATION
 /*
     The lane complementing optimization is described in
@@ -206,58 +225,77 @@ keccak_squeeze_internal (keccak_state *self)
 
 #endif /* KECCAK_USE_BIT_INTERLEAVING */
 
-keccak_result
-keccak_init (keccak_state *self, unsigned int digest_bytes, uint8_t padding)
+EXPORT_SYM int keccak_init (keccak_state **state,
+                            size_t digest_bytes,
+                            uint8_t padding)
 {
-    memset (self, 0, sizeof(keccak_state));
-    
+    keccak_state *ks;
+
+    if (NULL == state) {
+        return ERR_NULL;
+    }
+
+    *state = ks = (keccak_state*) calloc(1, sizeof(keccak_state));
+    if (NULL == ks)
+        return ERR_MEMORY;
+
 #ifdef USE_COMPLEMENT_LANES_OPTIMIZATION
 #ifdef KECCAK_USE_BIT_INTERLEAVING
-    self->state[2]  = 0xFFFFFFFFUL;
-    self->state[3]  = 0xFFFFFFFFUL;
-    self->state[4]  = 0xFFFFFFFFUL;
-    self->state[5]  = 0xFFFFFFFFUL;
-    self->state[16] = 0xFFFFFFFFUL;
-    self->state[17] = 0xFFFFFFFFUL;
-    self->state[24] = 0xFFFFFFFFUL;
-    self->state[25] = 0xFFFFFFFFUL;
-    self->state[34] = 0xFFFFFFFFUL;
-    self->state[35] = 0xFFFFFFFFUL;
-    self->state[40] = 0xFFFFFFFFUL;
-    self->state[41] = 0xFFFFFFFFUL;
+    ks->state[2]  = 0xFFFFFFFFUL;
+    ks->state[3]  = 0xFFFFFFFFUL;
+    ks->state[4]  = 0xFFFFFFFFUL;
+    ks->state[5]  = 0xFFFFFFFFUL;
+    ks->state[16] = 0xFFFFFFFFUL;
+    ks->state[17] = 0xFFFFFFFFUL;
+    ks->state[24] = 0xFFFFFFFFUL;
+    ks->state[25] = 0xFFFFFFFFUL;
+    ks->state[34] = 0xFFFFFFFFUL;
+    ks->state[35] = 0xFFFFFFFFUL;
+    ks->state[40] = 0xFFFFFFFFUL;
+    ks->state[41] = 0xFFFFFFFFUL;
 #else
-    self->state[1]  = 0xFFFFFFFFFFFFFFFFULL;
-    self->state[2]  = 0xFFFFFFFFFFFFFFFFULL;
-    self->state[8]  = 0xFFFFFFFFFFFFFFFFULL;
-    self->state[12] = 0xFFFFFFFFFFFFFFFFULL;
-    self->state[17] = 0xFFFFFFFFFFFFFFFFULL;
-    self->state[20] = 0xFFFFFFFFFFFFFFFFULL;
+    ks->state[1]  = 0xFFFFFFFFFFFFFFFFULL;
+    ks->state[2]  = 0xFFFFFFFFFFFFFFFFULL;
+    ks->state[8]  = 0xFFFFFFFFFFFFFFFFULL;
+    ks->state[12] = 0xFFFFFFFFFFFFFFFFULL;
+    ks->state[17] = 0xFFFFFFFFFFFFFFFFULL;
+    ks->state[20] = 0xFFFFFFFFFFFFFFFFULL;
 #endif /* KECCAK_USE_BIT_INTERLEAVING */
 #endif /* USE_COMPLEMENT_LANES_OPTIMIZATION */
 
-    self->bufptr    = self->buf;
+    ks->bufptr    = ks->buf;
    
-    self->security  = digest_bytes;
-    self->capacity  = digest_bytes * 2;
+    ks->security  = digest_bytes;
+    ks->capacity  = digest_bytes * 2;
 
-    if (self->capacity >= 200)
-        return KECCAK_ERR_INVALIDPARAM;
+    if (ks->capacity >= 200)
+        return ERR_DIGEST_SIZE;
 
-    self->rate      = 200 - self->capacity;
-    self->bufend    = self->buf + self->rate - 1;
-    self->squeezing = 0;
-    self->padding   = padding;
+    ks->rate      = 200 - ks->capacity;
+    ks->bufend    = ks->buf + ks->rate - 1;
+    ks->squeezing = 0;
+    ks->padding   = padding;
     
-    return KECCAK_OK;
+    return 0;
 }
 
-keccak_result
-keccak_absorb (keccak_state *self, const unsigned char *buffer, int length)
+EXPORT_SYM int keccak_destroy(keccak_state *state)
+{
+    free(state);
+    return 0;
+}
+
+EXPORT_SYM int keccak_absorb (keccak_state *self,
+                              const uint8_t *buffer,
+                              size_t length)
 {
     int bytestocopy;
+
+    if (NULL==self || NULL==buffer)
+        return ERR_NULL;
     
     if (self->squeezing)
-        return KECCAK_ERR_CANTABSORB;
+        return ERR_UNKNOWN;
     
     while (length > (self->bufend - self->bufptr)) {
         bytestocopy = (int)(self->bufend - self->bufptr + 1);
@@ -271,7 +309,7 @@ keccak_absorb (keccak_state *self, const unsigned char *buffer, int length)
     memcpy (self->bufptr, buffer, length);
     self->bufptr += length;
     
-    return KECCAK_OK;
+    return 0;
 }
 
 keccak_result
@@ -295,23 +333,16 @@ keccak_finish (keccak_state *self)
     return KECCAK_OK;
 }
 
-keccak_result
-keccak_copy (keccak_state *source, keccak_state *dest)
+EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
 {
-#ifdef KECCAK_USE_BIT_INTERLEAVING
-    memcpy (dest->state, source->state, 50 * sizeof(uint32_t));
-#else
-    memcpy (dest->state, source->state, 25 * sizeof(uint64_t));
-#endif
-    memcpy (dest->buf, source->buf, source->rate);
-    dest->bufptr = dest->buf + (source->bufptr - source->buf);
-    dest->bufend = dest->buf + source->rate - 1;
-    dest->security  = source->security;
-    dest->capacity  = source->capacity;
-    dest->rate      = source->rate;
-    dest->squeezing = source->squeezing;
-    
-    return KECCAK_OK;
+    if (NULL == src || NULL == dst) {
+        return ERR_NULL;
+    }
+
+    *dst = *src;
+    dst->bufptr = dst->buf + (src->bufptr - src->buf);
+    dst->bufend = dst->buf + (src->bufend - src->buf);
+    return 0;
 }
 
 keccak_result
@@ -341,6 +372,19 @@ keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
     self->bufptr += length;
     
     return KECCAK_OK;
+}
+
+EXPORT_SYM int keccak_digest(const keccak_state *state, uint8_t *digest)
+{
+    keccak_state tmp;
+
+    if (NULL == state) {
+        return ERR_NULL;
+    }
+
+    keccak_copy(state, &tmp);
+    keccak_squeeze(&tmp, digest, state->security);
+    return 0;
 }
 
 /* Keccak core function */
