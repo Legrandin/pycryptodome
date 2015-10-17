@@ -51,7 +51,8 @@ _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                                           const uint8_t *buf,
                                           size_t len);
                         int keccak_digest(const void *state,
-                                          uint8_t *digest);
+                                          uint8_t *digest,
+                                          size_t digest_bytes);
                         int keccak_copy(const void *src, void *dst);
                         """)
 
@@ -115,7 +116,8 @@ class SHA3_256_Hash(object):
 
         bfr = create_string_buffer(self.digest_size)
         result = _raw_keccak_lib.keccak_digest(self._state.get(),
-                                               bfr)
+                                               bfr,
+                                               c_size_t(self.digest_size))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/256"
                              % result)

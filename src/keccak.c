@@ -30,23 +30,12 @@
 #include "keccak.h"
 #include <string.h>
 
-typedef enum {
-    KECCAK_OK = 0,
-    KECCAK_ERR_CANTABSORB,
-    KECCAK_ERR_INVALIDPARAM,
-    KECCAK_ERR_UNKNOWNPARAM,
-    KECCAK_ERR_NOTIMPL
-} keccak_result;
-
-typedef enum {
-    KECCAK_INIT_SECURITY,
-    KECCAK_INIT_RATE
-} keccak_init_param;
+FAKE_INIT(keccak)
 
 #ifdef KECCAK_USE_BIT_INTERLEAVING
-void keccak_function (uint32_t *state);
+static void keccak_function (uint32_t *state);
 #else
-void keccak_function (uint64_t *state);
+static void keccak_function (uint64_t *state);
 #endif
 
 #define USE_COMPLEMENT_LANES_OPTIMIZATION
@@ -297,7 +286,7 @@ EXPORT_SYM int keccak_absorb (keccak_state *self,
     if (self->squeezing)
         return ERR_UNKNOWN;
     
-    while (length > (self->bufend - self->bufptr)) {
+    while (self->bufptr + length > self->bufend) {
         bytestocopy = (int)(self->bufend - self->bufptr + 1);
         memcpy (self->bufptr, buffer, bytestocopy);
         keccak_absorb_internal (self);
@@ -312,8 +301,7 @@ EXPORT_SYM int keccak_absorb (keccak_state *self,
     return 0;
 }
 
-keccak_result
-keccak_finish (keccak_state *self)
+static void keccak_finish (keccak_state *self)
 {
     /* Padding */
     *(self->bufptr++) = self->padding;
@@ -329,8 +317,6 @@ keccak_finish (keccak_state *self)
     keccak_absorb_internal (self);
     keccak_function (self->state);
     keccak_squeeze_internal (self);
-    
-    return KECCAK_OK;
 }
 
 EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
@@ -345,8 +331,7 @@ EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
     return 0;
 }
 
-keccak_result
-keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
+static void keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
 {
     int bytestocopy;
     
@@ -359,7 +344,7 @@ keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
        (not yet used in python module)   
     */
     
-    while (length > (self->bufend - self->bufptr)) {
+    while (length + self->bufptr > self->bufend) {
         bytestocopy = (int)(self->bufend - self->bufptr + 1);
         memcpy (buffer, self->bufptr, bytestocopy);
         keccak_function (self->state);
@@ -370,17 +355,20 @@ keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
     }
     memcpy (buffer, self->bufptr, length);
     self->bufptr += length;
-    
-    return KECCAK_OK;
 }
 
-EXPORT_SYM int keccak_digest(const keccak_state *state, uint8_t *digest)
+EXPORT_SYM int keccak_digest(const keccak_state *state,
+                             uint8_t *digest,
+                             size_t digest_bytes)
 {
     keccak_state tmp;
 
     if (NULL == state) {
         return ERR_NULL;
     }
+
+    if (digest_bytes != state->security)
+        return ERR_DIGEST_SIZE;
 
     keccak_copy(state, &tmp);
     keccak_squeeze(&tmp, digest, state->security);
@@ -1075,7 +1063,5 @@ keccak_function (uint64_t *state)
     state[24] = a24;
 #endif /* KECCAK_USE_BIT_INTERLEAVING */
 }
-
-/* vim:set ts=4 sw=4 sts=4 expandtab: */
 
 

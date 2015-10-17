@@ -74,6 +74,6 @@ EXPORT_SYM int keccak_init   (keccak_state **state, size_t digest_bytes, uint8_t
 EXPORT_SYM int keccak_destroy(keccak_state *state);
 EXPORT_SYM int keccak_absorb (keccak_state *state, const uint8_t *buffer, size_t length);
 EXPORT_SYM int keccak_copy   (const keccak_state *source, keccak_state *dest);
-EXPORT_SYM int keccak_digest (const keccak_state *state, uint8_t *digest);
+EXPORT_SYM int keccak_digest (const keccak_state *state, uint8_t *digest, size_t digest_bytes);
 
 #endif /* __KECCAK_H_ */
