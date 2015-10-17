@@ -34,32 +34,11 @@
 #include "libtom/tomcrypt_custom.h"
 #include "libtom/tomcrypt_macros.h"
 
-#ifdef ENDIAN_32BITWORD
-/*
-    Use bit interleaving when compiling at 32 bit.
-    
-    The bit interleaving technique is described in
-    ``Keccak implementation overview'' ver. 3.2 sect. 2.1
-    <http://keccak.noekeon.org/Keccak-implementation-3.2.pdf>
-    
-    A 64-bit lane is coded as two 32-bit words, one containing
-    the lane bits in even position and the other those in odd
-    position. This permits to implement rotations in Rho and Pi
-    steps with 32-bit rotations.
-*/
-#define KECCAK_USE_BIT_INTERLEAVING
-/* #pragma message "Keccak: Compiling at 32 bit, using bit interleaving" */
-#endif
-
 #include "pycrypto_common.h"
 
 typedef struct
 {
-#ifdef KECCAK_USE_BIT_INTERLEAVING
-    uint32_t state[50];
-#else
     uint64_t state[25];
-#endif
     uint8_t  buf[200];
     uint8_t *bufptr;
     uint8_t *bufend;

@@ -42,19 +42,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, c_size_t,
                                   expect_byte_string)
 
-_raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
-                        """
-                        int keccak_init(void **state, size_t digest_size,
-                                        uint8_t padding_byte);
-                        int keccak_destroy(void *state);
-                        int keccak_absorb(void *state,
-                                          const uint8_t *buf,
-                                          size_t len);
-                        int keccak_digest(const void *state,
-                                          uint8_t *digest,
-                                          size_t digest_bytes);
-                        int keccak_copy(const void *src, void *dst);
-                        """)
+from Crypto.Hash.keccak import _raw_keccak_lib
 
 class SHA3_256_Hash(object):
     """Class that implements a SHA-3/256 hash
