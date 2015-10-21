@@ -32,16 +32,60 @@
 
 FAKE_INIT(keccak)
 
+#undef ROL64
+#define ROL64(x,y) ((((x) << (y)) | (x) >> (64-(y))) & 0xFFFFFFFFFFFFFFFFULL)
+
+static inline int little_endian(void) {
+    const int test = 1;
+    return *((uint8_t*)&test) == 1;
+}
+
+static inline uint64_t load64_le(const uint8_t p[])
+{
+    union {
+        int64_t dw;
+        uint8_t b[4];
+    } result;
+
+    if (little_endian()) {
+        memcpy(&result, p, sizeof result);
+    } else {
+        result.b[0] = p[3];
+        result.b[1] = p[2];
+        result.b[2] = p[1];
+        result.b[3] = p[0];
+    }
+
+    return result.dw;
+}
+
+static inline void store64_le(uint8_t dest[], uint64_t src)
+{
+    union t {
+        int64_t dw;
+        uint8_t b[4];
+    } *result = (void*) &src;
+
+    if (little_endian()) {
+        memcpy(dest, &src, sizeof src);
+    } else {
+        dest[0] = result->b[3];
+        dest[1] = result->b[2];
+        dest[2] = result->b[1];
+        dest[3] = result->b[0];
+    }
+}
+
+
 static void keccak_function (uint64_t *state);
 
-static void
-keccak_absorb_internal (keccak_state *self)
+static void keccak_absorb_internal (keccak_state *self)
 {
     short i,j;
     uint64_t d;
     
     for (i = j = 0; j < self->rate; ++i, j += 8) {
-        LOAD64L(d, self->buf + j);
+        d = load64_le(self->buf + j);
         self->state[i] ^= d;
     }
 }
@@ -52,7 +96,7 @@ keccak_squeeze_internal (keccak_state *self)
     short i, j;
 
     for (i = j = 0; j < self->rate; ++i, j += 8) {
-        STORE64L(self->state[i], self->buf + j);
+        store64_le(self->buf+j, self->state[i]);
     }
 }
 

@@ -29,11 +29,6 @@
 #ifndef __KECCAK_H_
 #define __KECCAK_H_
 
-#include <time.h> /* libtom requires definition of clock_t */
-#include "libtom/tomcrypt_cfg.h"
-#include "libtom/tomcrypt_custom.h"
-#include "libtom/tomcrypt_macros.h"
-
 #include "pycrypto_common.h"
 
 typedef struct
