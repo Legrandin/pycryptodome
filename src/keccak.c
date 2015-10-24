@@ -27,10 +27,22 @@
 */
 
 #include "pycrypto_common.h"
-#include "keccak.h"
 #include <string.h>
 
 FAKE_INIT(keccak)
+
+typedef struct
+{
+    uint64_t state[25];
+    uint8_t  buf[200];
+    uint8_t *bufptr;
+    uint8_t *bufend;
+    uint16_t security;
+    uint16_t capacity;
+    uint16_t rate;
+    uint8_t  squeezing;
+    uint8_t  padding;
+} keccak_state;
 
 #undef ROL64
 #define ROL64(x,y) ((((x) << (y)) | (x) >> (64-(y))) & 0xFFFFFFFFFFFFFFFFULL)
