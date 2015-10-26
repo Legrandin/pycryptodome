@@ -28,18 +28,31 @@
 
 #include "pycrypto_common.h"
 #include <string.h>
+#include <assert.h>
 
 FAKE_INIT(keccak)
 
 typedef struct
 {
     uint64_t state[25];
+
+    /*  The buffer is as long as the state,
+     *  but only 'rate' bytes will be used.
+     */
     uint8_t  buf[200];
-    uint8_t *bufptr;
-    uint8_t *bufend;
+
+    /*  When absorbing, this is the number of bytes in buf that
+     *  are coming from the message and outstanding.
+     *  When squeezing, this is the remaining number of bytes
+     *  that can be used as digest.
+     */
+    size_t  valid_bytes;
+
+    /* All values in bytes */
     uint16_t security;
     uint16_t capacity;
     uint16_t rate;
+
     uint8_t  squeezing;
     uint8_t  padding;
 } keccak_state;
@@ -126,8 +139,6 @@ EXPORT_SYM int keccak_init (keccak_state **state,
     if (NULL == ks)
         return ERR_MEMORY;
 
-    ks->bufptr    = ks->buf;
-   
     ks->security  = digest_bytes;
     ks->capacity  = digest_bytes * 2;
 
@@ -135,7 +146,7 @@ EXPORT_SYM int keccak_init (keccak_state **state,
         return ERR_DIGEST_SIZE;
 
     ks->rate      = 200 - ks->capacity;
-    ks->bufend    = ks->buf + ks->rate - 1;
+    
     ks->squeezing = 0;
     ks->padding   = padding;
     
@@ -148,49 +159,59 @@ EXPORT_SYM int keccak_destroy(keccak_state *state)
     return 0;
 }
 
+static inline unsigned minAB(unsigned a, unsigned b)
+{
+    return a<b ? a :b;
+}
+
 EXPORT_SYM int keccak_absorb (keccak_state *self,
-                              const uint8_t *buffer,
+                              const uint8_t *in,
                               size_t length)
 {
-    int bytestocopy;
-
-    if (NULL==self || NULL==buffer)
+    if (NULL==self || NULL==in)
         return ERR_NULL;
     
     if (self->squeezing)
         return ERR_UNKNOWN;
     
-    while (self->bufptr + length > self->bufend) {
-        bytestocopy = (int)(self->bufend - self->bufptr + 1);
-        memcpy (self->bufptr, buffer, bytestocopy);
-        keccak_absorb_internal (self);
-        keccak_function (self->state);
-        self->bufptr = self->buf;
-        buffer += bytestocopy;
-        length -= bytestocopy;
+    while (length > 0) {
+        unsigned bytestocopy;
+        
+        bytestocopy = minAB(length, self->rate - self->valid_bytes);
+        memcpy(self->buf + self->valid_bytes, in, bytestocopy);
+      
+        self->valid_bytes += bytestocopy;
+        in                += bytestocopy;  
+        length            -= bytestocopy;
+
+        if (self->valid_bytes == self->rate) {
+            keccak_absorb_internal (self);
+            keccak_function (self->state);
+            self->valid_bytes = 0;
+        }
     }
-    memcpy (self->bufptr, buffer, length);
-    self->bufptr += length;
-    
+
     return 0;
 }
 
 static void keccak_finish (keccak_state *self)
 {
+    assert(self->squeezing == 0);
+    assert(self->valid_bytes < self->rate);
+
     /* Padding */
-    *(self->bufptr++) = self->padding;
-    if (self->bufend >= self->bufptr) {
-        memset (self->bufptr, 0, self->bufend - self->bufptr + 1);
-    }
-    *(self->bufend) |= 0x80U;
+    memset(self->buf + self->valid_bytes, 0, self->rate - self->valid_bytes);
+    self->buf[self->valid_bytes] = self->padding;
+    self->buf[self->rate-1] |= 0x80;
     
-    self->bufptr = self->buf;
-    self->squeezing = 1;
-    
-    /* Final absord-permutation-squeeze */
+    /* Final absorb */
     keccak_absorb_internal (self);
     keccak_function (self->state);
+    
+    /* First squeeze */
+    self->squeezing = 1;
     keccak_squeeze_internal (self);
+    self->valid_bytes = self->rate;
 }
 
 EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
@@ -200,35 +221,34 @@ EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
     }
 
     *dst = *src;
-    dst->bufptr = dst->buf + (src->bufptr - src->buf);
-    dst->bufend = dst->buf + (src->bufend - src->buf);
     return 0;
 }
 
-static void keccak_squeeze (keccak_state *self, unsigned char *buffer, int length)
+static void keccak_squeeze (keccak_state *self, unsigned char *out, int length)
 {
-    int bytestocopy;
-    
     if (!self->squeezing) {
         keccak_finish (self);
     }
-    
-    /*
-       Support for arbitrary output length
-       (not yet used in python module)   
-    */
-    
-    while (length + self->bufptr > self->bufend) {
-        bytestocopy = (int)(self->bufend - self->bufptr + 1);
-        memcpy (buffer, self->bufptr, bytestocopy);
-        keccak_function (self->state);
-        keccak_squeeze_internal (self);
-        self->bufptr = self->buf;
-        buffer += bytestocopy;
-        length -= bytestocopy;
+
+    assert(self->valid_bytes > 0);
+    assert(self->valid_bytes <= self->rate);
+
+    while (length > 0) {
+        unsigned bytestocopy;
+
+        bytestocopy = minAB(self->valid_bytes, length);
+        memcpy(out, self->buf + (self->rate - self->valid_bytes), bytestocopy);
+        
+        self->valid_bytes -= bytestocopy;
+        out               += bytestocopy;
+        length            -= bytestocopy;
+
+        if (self->valid_bytes == 0) {
+            keccak_function (self->state);
+            keccak_squeeze_internal (self);
+            self->valid_bytes = self->rate;
+        }
     }
-    memcpy (buffer, self->bufptr, length);
-    self->bufptr += length;
 }
 
 EXPORT_SYM int keccak_digest(const keccak_state *state,
