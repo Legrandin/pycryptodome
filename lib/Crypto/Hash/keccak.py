@@ -59,16 +59,16 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         """
-                        int keccak_init(void **state, size_t digest_size,
+                        int keccak_init(void **state,
+                                        size_t capacity_bytes,
                                         uint8_t padding_byte);
                         int keccak_destroy(void *state);
                         int keccak_absorb(void *state,
-                                          const uint8_t *buf,
+                                          const uint8_t *in,
                                           size_t len);
-                        int keccak_digest(const void *state,
-                                          uint8_t *digest,
-                                          size_t digest_bytes);
-                        int keccak_copy(const void *src, void *dst);
+                        int keccak_squeeze(const void *state,
+                                           uint8_t *out,
+                                           size_t len);
                         """)
 
 class Keccak_Hash(object):
@@ -81,7 +81,7 @@ class Keccak_Hash(object):
 
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(self.digest_size),
+                                             c_size_t(self.digest_size * 2),
                                              0x01)
         if result:
             raise ValueError("Error %d while instantiating keccak" % result)
@@ -107,32 +107,39 @@ class Keccak_Hash(object):
             The next chunk of the message being hashed.
         """
 
+        if hasattr(self, "_digest_value"):
+            raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
+
         expect_byte_string(data)
         result = _raw_keccak_lib.keccak_absorb(self._state.get(),
                                                data,
                                                c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating keccak" % result)
+            raise ValueError("Error %d while updating keccak" % result)
         return self
 
     def digest(self):
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-        You can continue updating the object after calling this function.
+        You cannot update the hash anymore after the first call to ``digest``
+        (or ``hexdigest``).
 
-        :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-         characters, including null bytes.
+        :Return: A byte string of `digest_size` bytes.
+                 It may contain non-ASCII characters, including null bytes.
         """
 
-        bfr = create_string_buffer(self.digest_size)
-        result = _raw_keccak_lib.keccak_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size))
-        if result:
-            raise ValueError("Error %d while instantiating keccak" % result)
+        if hasattr(self, "_digest_value"):
+            return self._digest_value
 
-        return get_raw_buffer(bfr)
+        bfr = create_string_buffer(self.digest_size)
+        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
+                                                bfr,
+                                                c_size_t(self.digest_size))
+        if result:
+            raise ValueError("Error %d while squeezing keccak" % result)
+
+        self._digest_value = get_raw_buffer(bfr)
+        return self._digest_value
 
     def hexdigest(self):
         """Return the **printable** digest of the message that has been hashed so far.
@@ -144,24 +151,6 @@ class Keccak_Hash(object):
         """
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
-
-    def copy(self):
-        """Return a copy ("clone") of the hash object.
-
-        The copy will have the same internal state as the original hash
-        object.
-        This can be used to efficiently compute the digests of strings that
-        share a common initial substring.
-
-        :Return: A hash object of the same type
-        """
-
-        clone = type(self)(None, self.digest_size)
-        result = _raw_keccak_lib.keccak_copy(self._state.get(),
-                                             clone._state.get())
-        if result:
-            raise ValueError("Error %d while copying keccak" % result)
-        return clone
 
     def new(self):
         return type(self)(None, self.digest_size)

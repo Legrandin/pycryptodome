@@ -126,7 +126,7 @@ keccak_squeeze_internal (keccak_state *self)
 }
 
 EXPORT_SYM int keccak_init (keccak_state **state,
-                            size_t digest_bytes,
+                            size_t capacity_bytes,
                             uint8_t padding)
 {
     keccak_state *ks;
@@ -139,8 +139,7 @@ EXPORT_SYM int keccak_init (keccak_state **state,
     if (NULL == ks)
         return ERR_MEMORY;
 
-    ks->security  = digest_bytes;
-    ks->capacity  = digest_bytes * 2;
+    ks->capacity  = capacity_bytes;
 
     if (ks->capacity >= 200)
         return ERR_DIGEST_SIZE;
@@ -214,18 +213,11 @@ static void keccak_finish (keccak_state *self)
     self->valid_bytes = self->rate;
 }
 
-EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
+EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length)
 {
-    if (NULL == src || NULL == dst) {
+    if ((NULL == self) || (NULL == out))
         return ERR_NULL;
-    }
 
-    *dst = *src;
-    return 0;
-}
-
-static void keccak_squeeze (keccak_state *self, unsigned char *out, int length)
-{
     if (!self->squeezing) {
         keccak_finish (self);
     }
@@ -249,23 +241,7 @@ static void keccak_squeeze (keccak_state *self, unsigned char *out, int length)
             self->valid_bytes = self->rate;
         }
     }
-}
 
-EXPORT_SYM int keccak_digest(const keccak_state *state,
-                             uint8_t *digest,
-                             size_t digest_bytes)
-{
-    keccak_state tmp;
-
-    if (NULL == state) {
-        return ERR_NULL;
-    }
-
-    if (digest_bytes != state->security)
-        return ERR_DIGEST_SIZE;
-
-    keccak_copy(state, &tmp);
-    keccak_squeeze(&tmp, digest, state->security);
     return 0;
 }
 

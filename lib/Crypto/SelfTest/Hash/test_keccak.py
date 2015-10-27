@@ -118,15 +118,11 @@ class KeccakTest(unittest.TestCase):
         # hexdigest returns a string
         self.failUnless(isinstance(hexdigest, type("digest")))
 
-    def test_copy(self):
-        h = keccak.new(digest_bits=512, data=b("init"))
-        h2 = h.copy()
-        self.assertEqual(h.digest(), h2.digest())
-        h.update(b("second"))
-        self.assertNotEqual(h.digest(), h2.digest())
-        h2.update(b("second"))
-        self.assertEqual(h.digest(), h2.digest())
-
+    def test_update_after_digest(self):
+        mac = keccak.new(digest_bits=512)
+        mac.update(b("rrrr"))
+        mac.digest()
+        self.assertRaises(TypeError, mac.update, b("ttt"))
 
 class KeccakVectors(unittest.TestCase):
 
