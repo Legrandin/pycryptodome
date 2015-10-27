@@ -1,6 +1,7 @@
 Future releases will include:
 
 - Break-up test cases of ciphers and make them mode-specific
+- Make all hash object non-copiable and immutable after the first digest
 - Move API documentation from epydoc to sphinx
 - Implement AES with bitslicing
 - Move old ciphers into a Museum submodule

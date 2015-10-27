@@ -57,7 +57,7 @@ class SHA3_512_Hash(object):
     def __init__(self, data=None):
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(self.digest_size),
+                                             c_size_t(self.digest_size * 2),
                                              0x06)
         if result:
             raise ValueError("Error %d while instantiating SHA-3/512"
@@ -84,33 +84,41 @@ class SHA3_512_Hash(object):
             The next chunk of the message being hashed.
         """
 
+        if hasattr(self, "_digest_value"):
+            raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
+
         expect_byte_string(data)
         result = _raw_keccak_lib.keccak_absorb(self._state.get(),
                                                data,
                                                c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating SHA-3/512"
+            raise ValueError("Error %d while updating SHA-3/512"
                              % result)
+        return self
 
     def digest(self):
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-        You can continue updating the object after calling this function.
+        You cannot update the hash anymore after the first call to ``digest``
+        (or ``hexdigest``).
 
         :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
          characters, including null bytes.
         """
 
+        if hasattr(self, "_digest_value"):
+            return self._digest_value
+
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_keccak_lib.keccak_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size))
+        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
+                                                bfr,
+                                                c_size_t(self.digest_size))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/512"
                              % result)
 
-        return get_raw_buffer(bfr)
+        self._digest_value = get_raw_buffer(bfr)
+        return self._digest_value
 
     def hexdigest(self):
         """Return the **printable** digest of the message that has been hashed so far.
@@ -122,24 +130,6 @@ class SHA3_512_Hash(object):
         """
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
-
-    def copy(self):
-        """Return a copy ("clone") of the hash object.
-
-        The copy will have the same internal state as the original hash
-        object.
-        This can be used to efficiently compute the digests of strings that
-        share a common initial substring.
-
-        :Return: A hash object of the same type
-        """
-
-        clone = type(self)()
-        result = _raw_keccak_lib.keccak_copy(self._state.get(),
-                                             clone._state.get())
-        if result:
-            raise ValueError("Error %d while copying SHA-3/512" % result)
-        return clone
 
     def new(self, data=None):
         return type(self)(data=data)
