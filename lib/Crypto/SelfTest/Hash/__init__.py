@@ -41,6 +41,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Hash import test_SHA3_384;   tests += test_SHA3_384.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA3_512;   tests += test_SHA3_512.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_keccak;     tests += test_keccak.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHAKE;      tests += test_SHAKE.get_tests(config=config)
     try:
         from Crypto.SelfTest.Hash import test_SHA224; tests += test_SHA224.get_tests(config=config)
         from Crypto.SelfTest.Hash import test_SHA384; tests += test_SHA384.get_tests(config=config)

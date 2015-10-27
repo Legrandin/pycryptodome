@@ -71,9 +71,9 @@ def load_fips_test_module(desc, file_in):
                 bytedata = unhexlify(tobytes(res.group(1)))
             test_vector.append(tostr(bytedata))
             # Next state
-            expected = "MD"
-        elif expected == "MD":
-            test_vector.append(res.group(1).lower())
+            expected = "(MD|Squeezed)"
+        elif expected == "(MD|Squeezed)":
+            test_vector.append(res.group(2).lower())
             test_vector.reverse()
 
             # Ignore data with partial number of bits, since our interface
