@@ -10,8 +10,14 @@ New features
 * Windows wheels bundle the MPIR library
 * Detection of faults occuring during secret RSA operations
 * Detection of non-prime (weak) q value in DSA domain parameters
-* Original Keccak hash family
+* Original Keccak hash family (b=1600 only)
 * SHAKE128 and SHAKE256 (of SHA-3 family)
+
+Breaks in compatibility
+-----------------------
+
+* Removed method `copy` from all SHA-3 hashes
+* Removed ability to `update` a SHA-3 hash after the first call to `(hex)digest`
 
 3.2.1 (9 September 2015)
 +++++++++++++++++++

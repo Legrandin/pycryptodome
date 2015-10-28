@@ -1,7 +1,8 @@
 Future releases will include:
 
 - Break-up test cases of ciphers and make them mode-specific
-- Make all hash object non-copiable and immutable after the first digest
+- Make all hash objects non-copiable and immutable after the first digest
+- Automatic IV/nonce generation for cipher modes
 - Move API documentation from epydoc to sphinx
 - Implement AES with bitslicing
 - Move old ciphers into a Museum submodule
@@ -26,3 +27,4 @@ Future releases will include:
 - Coverage testing
 - Run lint on the C code
 - Add (minimal) support for PGP
+- Add (minimal) support for PKIX / X.509

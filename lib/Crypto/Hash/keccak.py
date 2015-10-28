@@ -42,9 +42,9 @@ length (b=1600) and the fixed digest sizes of 224, 256, 384 and 512 bits.
 
     >>> from Crypto.Hash import keccak
     >>>
-    >>> h_obj = keccak.new(digest_bits=512)
-    >>> h_obj.update(b'Some data')
-    >>> print h_obj.hexdigest()
+    >>> keccak_hash = keccak.new(digest_bits=512)
+    >>> keccak_hash.update(b'Some data')
+    >>> print keccak_hash.hexdigest()
 
 .. _Keccak: http://www.keccak.noekeon.org/Keccak-specifications.pdf
 """

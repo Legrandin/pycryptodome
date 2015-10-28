@@ -32,8 +32,14 @@
 
 SHAKE256 belongs to the SHA-3 family, as specified in `FIPS 202`__.
 
-The function produces an unlimited amount of bytes in output, all
-dependent on the input message.
+As a XOF, SHAKE256 is a generalization of a cryptographic hash function.
+Instead of having a fixed-length output (e.g. 32 bytes like SHA-2/256),
+the output length for a XOF is unlimited.
+
+The *256* in its name indicates its maximum security level (in bits),
+as described in Section A.2 of `FIPS 202`__.
+
+For instance:
 
     >>> from Crypto.Hash import SHAKE256
     >>> from binascii import hexlify
