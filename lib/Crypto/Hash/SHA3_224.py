@@ -42,17 +42,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, c_size_t,
                                   expect_byte_string)
 
-_raw_sha3_224_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA3_224",
-                        """
-                        int SHA3_224_init(void **shaState);
-                        int SHA3_224_destroy(void *shaState);
-                        int SHA3_224_update(void *hs,
-                                          const uint8_t *buf,
-                                          size_t len);
-                        int SHA3_224_digest(const void *shaState,
-                                          uint8_t digest[16]);
-                        int SHA3_224_copy(const void *src, void *dst);
-                        """)
+from Crypto.Hash.keccak import _raw_keccak_lib
 
 class SHA3_224_Hash(object):
     """Class that implements a SHA-3/224 hash
@@ -66,12 +56,14 @@ class SHA3_224_Hash(object):
 
     def __init__(self, data=None):
         state = VoidPointer()
-        result = _raw_sha3_224_lib.SHA3_224_init(state.address_of())
+        result = _raw_keccak_lib.keccak_init(state.address_of(),
+                                             c_size_t(self.digest_size * 2),
+                                             0x06)
         if result:
             raise ValueError("Error %d while instantiating SHA-3/224"
                              % result)
         self._state = SmartPointer(state.get(),
-                                   _raw_sha3_224_lib.SHA3_224_destroy)
+                                   _raw_keccak_lib.keccak_destroy)
         if data:
             self.update(data)
 
@@ -92,32 +84,41 @@ class SHA3_224_Hash(object):
             The next chunk of the message being hashed.
         """
 
+        if hasattr(self, "_digest_value"):
+            raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
+
         expect_byte_string(data)
-        result = _raw_sha3_224_lib.SHA3_224_update(self._state.get(),
-                                                   data,
-                                                   c_size_t(len(data)))
+        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
+                                               data,
+                                               c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating SHA-3/224"
+            raise ValueError("Error %d while updating SHA-3/224"
                              % result)
+        return self
 
     def digest(self):
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-        You can continue updating the object after calling this function.
+        You cannot update the hash anymore after the first call to ``digest``
+        (or ``hexdigest``).
 
         :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
          characters, including null bytes.
         """
 
+        if hasattr(self, "_digest_value"):
+            return self._digest_value
+
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_sha3_224_lib.SHA3_224_digest(self._state.get(),
-                                                   bfr)
+        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
+                                                bfr,
+                                                c_size_t(self.digest_size))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/224"
                              % result)
 
-        return get_raw_buffer(bfr)
+        self._digest_value = get_raw_buffer(bfr)
+        return self._digest_value
 
     def hexdigest(self):
         """Return the **printable** digest of the message that has been hashed so far.
@@ -130,26 +131,9 @@ class SHA3_224_Hash(object):
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
-    def copy(self):
-        """Return a copy ("clone") of the hash object.
-
-        The copy will have the same internal state as the original hash
-        object.
-        This can be used to efficiently compute the digests of strings that
-        share a common initial substring.
-
-        :Return: A hash object of the same type
-        """
-
-        clone = SHA3_224_Hash()
-        result = _raw_sha3_224_lib.SHA3_224_copy(self._state.get(),
-                                                 clone._state.get())
-        if result:
-            raise ValueError("Error %d while copying SHA-3/224" % result)
-        return clone
-
     def new(self, data=None):
-        return SHA3_224_Hash(data)
+        return type(self)(data=data)
+
 
 def new(data=None):
     """Return a fresh instance of the hash object.
@@ -157,12 +141,12 @@ def new(data=None):
     :Parameters:
        data : byte string
         The very first chunk of the message to hash.
-        It is equivalent to an early call to `SHA3_224_Hash.update()`.
+        It is equivalent to an early call to ``update()``.
         Optional.
 
     :Return: A `SHA3_224_Hash` object
     """
-    return SHA3_224_Hash().new(data)
+    return SHA3_224_Hash(data=data)
 
 #: The size of the resulting hash in bytes.
 digest_size = SHA3_224_Hash.digest_size

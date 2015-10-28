@@ -1,5 +1,5 @@
 #
-# SelfTest/Hash/loader.py: Module to load FIPS 202 test vectors
+# SelfTest/Hash/loader.py: Module to load FIPS test vectors
 #
 # ===================================================================
 #
@@ -36,7 +36,7 @@ from Crypto.Util.py3compat import *
 import re
 from binascii import unhexlify
 
-def load_fips_test_module(file_in):
+def load_fips_test_module(desc, file_in):
     line = file_in.readline()
 
     line_number = 0
@@ -45,7 +45,7 @@ def load_fips_test_module(file_in):
 
     expected = "Len"
     bitlength = -1
-    test_vector = [ " FIPS 202 test" ]
+    test_vector = [ desc ]
 
     while line:
         line_number += 1
@@ -71,9 +71,9 @@ def load_fips_test_module(file_in):
                 bytedata = unhexlify(tobytes(res.group(1)))
             test_vector.append(tostr(bytedata))
             # Next state
-            expected = "MD"
-        else:
-            test_vector.append(res.group(1).lower())
+            expected = "(MD|Squeezed)"
+        elif expected == "(MD|Squeezed)":
+            test_vector.append(res.group(2).lower())
             test_vector.reverse()
 
             # Ignore data with partial number of bits, since our interface
@@ -84,15 +84,17 @@ def load_fips_test_module(file_in):
             # Next state
             expected = "Len"
             test_number += 1
-            test_vector = [ " FIPS 202 test" ]
+            test_vector = [ desc ]
+        else:
+            raise ValueError("Unexpected line: " + line)
 
         # This line is ignored
     return results
 
 
-def load_tests(file_name):
+def load_tests(subdir, file_name):
     import os.path
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_file_name = os.path.join(base_dir, "test_vectors", "SHA3", file_name)
-    return load_fips_test_module(open(abs_file_name))
+    abs_file_name = os.path.join(base_dir, "test_vectors", subdir, file_name)
+    return load_fips_test_module("Keccak test", open(abs_file_name))

@@ -28,7 +28,7 @@ def get_tests(config={}):
     from Crypto.Hash import SHA3_384
     from common import make_hash_tests
 
-    test_data = load_tests("ShortMsgKAT_SHA3-384.txt")
+    test_data = load_tests("SHA3", "ShortMsgKAT_SHA3-384.txt")
     return make_hash_tests(SHA3_384, "SHA3_384", test_data,
         digest_size=SHA3_384.digest_size,
         oid="2.16.840.1.101.3.4.2.9")
