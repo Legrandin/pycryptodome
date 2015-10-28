@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.x (???)
+3.3 (29 October 2015)
 +++++++++++++++++++
 
 New features
@@ -10,8 +10,14 @@ New features
 * Windows wheels bundle the MPIR library
 * Detection of faults occuring during secret RSA operations
 * Detection of non-prime (weak) q value in DSA domain parameters
-* Original Keccak hash family (b=1600 only)
-* SHAKE128 and SHAKE256 (of SHA-3 family)
+* Added original Keccak hash family (b=1600 only).
+  In the process, simplified the C code base for SHA-3.
+* Added SHAKE128 and SHAKE256 (of SHA-3 family)
+
+Resolved issues
+---------------
+
+* GH#3: gcc 4.4.7 unhappy about double typedef
 
 Breaks in compatibility
 -----------------------

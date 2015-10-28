@@ -30,14 +30,14 @@
 
 """SHAKE128 extendable-output function (XOF).
 
-SHAKE128 belongs to the SHA-3 family, as specified in `FIPS 202`__.
+SHAKE128 belongs to the SHA-3 family, as specified in `FIPS 202`_.
 
 As a XOF, SHAKE128 is a generalization of a cryptographic hash function.
 Instead of having a fixed-length output (e.g. 32 bytes like SHA-2/256),
 the output length for a XOF is unlimited.
 
 The *128* in its name indicates its maximum security level (in bits),
-as described in Section A.2 of `FIPS 202`__.
+as described in Section A.2 of `FIPS 202`_.
 
 For instance:
 
@@ -48,7 +48,7 @@ For instance:
     >>> shake.update(b'Some data')
     >>> print hexlify(shake.read(26))
 
-.. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+.. _FIPS 202: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
 """
 
 from Crypto.Util.py3compat import bord
