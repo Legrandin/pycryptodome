@@ -32,7 +32,14 @@
 # ===================================================================
 
 import re
-from binascii import unhexlify, hexlify
+import sys
+import binascii
+
+# Fix for Python 3.[12]
+if sys.version_info[0] == 3 and sys.version_info[1] <= 2:
+    unhexlify = lambda x: binascii.unhexlify(x.encode("latin-1"))
+else:
+    from binascii import unhexlify
 
 def load_fips_test_module(desc, file_in):
     """Return a list of tuples (desc, digest, messages)"""
@@ -100,7 +107,6 @@ def load_tests(subdir, file_name):
     return load_fips_test_module("Keccak test", open(abs_file_name))
 
 if __name__ == '__main__':
-    import sys
 
     if len(sys.argv) != 2:
         sys.stdout.write("Usage: %s nist_test_vector.txt\n" % sys.argv[0])
@@ -115,6 +121,6 @@ if __name__ == '__main__':
         if len(message) == 0:
             enc_msg = "00"
         else:
-            enc_msg = hexlify(message).upper()
+            enc_msg = binascii.hexlify(message).upper()
         sys.stdout.write("Msg = %s\n" % enc_msg)
         sys.stdout.write("MD = %s\n\n" % digest.upper())
