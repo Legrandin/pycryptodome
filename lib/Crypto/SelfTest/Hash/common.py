@@ -202,7 +202,7 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     tests = []
     for i in range(len(test_data)):
         row = test_data[i]
-        (expected, input) = map(b,row[0:2])
+        (expected, input) = map(tobytes,row[0:2])
         if len(row) < 3:
             description = repr(input)
         else:

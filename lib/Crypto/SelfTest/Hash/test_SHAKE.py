@@ -38,7 +38,7 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from StringIO import StringIO
 from Crypto.Hash import SHAKE128, SHAKE256
-from Crypto.Util.py3compat import b, bchr, bord
+from Crypto.Util.py3compat import b, bchr, bord, tobytes
 
 class SHAKETest(unittest.TestCase):
 
@@ -93,7 +93,7 @@ class SHAKEVectors(unittest.TestCase):
     def test_short_128(self):
         test_vectors = load_tests("SHA3", "ShortMsgKAT_SHAKE128.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = SHAKE128.new(data=data)
             assert(len(result) % 2 == 0)
             digest = hobj.read(len(result)//2)
@@ -103,7 +103,7 @@ class SHAKEVectors(unittest.TestCase):
     def test_short_256(self):
         test_vectors = load_tests("SHA3", "ShortMsgKAT_SHAKE256.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = SHAKE256.new(data=data)
             assert(len(result) % 2 == 0)
             digest = hobj.read(len(result)//2)

@@ -31,12 +31,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import *
-
 import re
-from binascii import unhexlify
+from binascii import unhexlify, hexlify
 
 def load_fips_test_module(desc, file_in):
+    """Return a list of tuples (desc, digest, messages)"""
+
     line = file_in.readline()
 
     line_number = 0
@@ -66,10 +66,10 @@ def load_fips_test_module(desc, file_in):
             expected = "Msg"
         elif expected == "Msg":
             if bitlength == 0:
-                bytedata = b('')
+                bytedata = ""
             else:
-                bytedata = unhexlify(tobytes(res.group(1)))
-            test_vector.append(tostr(bytedata))
+                bytedata = unhexlify(res.group(1))
+            test_vector.append(bytedata)
             # Next state
             expected = "(MD|Squeezed)"
         elif expected == "(MD|Squeezed)":
@@ -98,3 +98,23 @@ def load_tests(subdir, file_name):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     abs_file_name = os.path.join(base_dir, "test_vectors", subdir, file_name)
     return load_fips_test_module("Keccak test", open(abs_file_name))
+
+if __name__ == '__main__':
+    import sys
+
+    if len(sys.argv) != 2:
+        sys.stdout.write("Usage: %s nist_test_vector.txt\n" % sys.argv[0])
+        sys.exit(1)
+
+    results = load_fips_test_module("Keccak test", open(sys.argv[1]))
+    # Rebuild the test vectors file,
+    # but keep only messages aligned to the byte
+    sys.stdout.write("# File generated with %s from %s\n\n" % (sys.argv[0], sys.argv[1]))
+    for digest, message, desc in results:
+        sys.stdout.write("Len = %d\n" % (len(message) * 8))
+        if len(message) == 0:
+            enc_msg = "00"
+        else:
+            enc_msg = hexlify(message).upper()
+        sys.stdout.write("Msg = %s\n" % enc_msg)
+        sys.stdout.write("MD = %s\n\n" % digest.upper())

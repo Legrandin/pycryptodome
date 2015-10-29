@@ -129,56 +129,56 @@ class KeccakVectors(unittest.TestCase):
     def test_short_224(self):
         test_vectors = load_tests("keccak", "ShortMsgKAT_224.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=224, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
     def test_short_256(self):
         test_vectors = load_tests("keccak", "ShortMsgKAT_256.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=256, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
     def test_short_384(self):
         test_vectors = load_tests("keccak", "ShortMsgKAT_384.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=384, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
     def test_short_512(self):
         test_vectors = load_tests("keccak", "ShortMsgKAT_512.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=512, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
     def test_long_224(self):
         test_vectors = load_tests("keccak", "LongMsgKAT_224.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=224, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
     def test_long_256(self):
         test_vectors = load_tests("keccak", "LongMsgKAT_256.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=256, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
     def test_long_384(self):
         test_vectors = load_tests("keccak", "LongMsgKAT_384.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=384, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
     def test_long_512(self):
         test_vectors = load_tests("keccak", "LongMsgKAT_512.txt")
         for result, data, desc in test_vectors:
-            data = b(data)
+            data = tobytes(data)
             hobj = keccak.new(digest_bits=512, data=data)
             self.assertEqual(hobj.hexdigest(), result)
 
