@@ -119,10 +119,22 @@ class KeccakTest(unittest.TestCase):
         self.failUnless(isinstance(hexdigest, type("digest")))
 
     def test_update_after_digest(self):
-        mac = keccak.new(digest_bits=512)
-        mac.update(b("rrrr"))
-        mac.digest()
-        self.assertRaises(TypeError, mac.update, b("ttt"))
+        msg=b("rrrrttt")
+
+        # Normally, update() cannot be done after digest()
+        h = keccak.new(digest_bits=512, data=msg[:4])
+        dig1 = h.digest()
+        self.assertRaises(TypeError, h.update, msg[4:])
+        dig2 = keccak.new(digest_bits=512, data=msg).digest()
+
+        # With the proper flag, it is allowed
+        h = keccak.new(digest_bits=512, data=msg[:4], update_after_digest=True)
+        self.assertEquals(h.digest(), dig1)
+        # ... and the subsequent digest applies to the entire message
+        # up to that point
+        h.update(msg[4:])
+        self.assertEquals(h.digest(), dig2)
+
 
 class KeccakVectors(unittest.TestCase):
 

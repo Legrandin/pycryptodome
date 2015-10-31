@@ -245,6 +245,20 @@ EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length)
     return 0;
 }
 
+EXPORT_SYM int keccak_digest(keccak_state *state, uint8_t *digest, size_t len)
+{
+    keccak_state tmp;
+
+    if ((NULL==state) || (NULL==digest))
+        return ERR_NULL;
+    
+    if (2*len != state->capacity)
+        return ERR_UNKNOWN;
+    
+    tmp = *state;
+    return keccak_squeeze(&tmp, digest, len);
+}
+
 /* Keccak core function */
 
 #define KECCAK_ROUNDS 24

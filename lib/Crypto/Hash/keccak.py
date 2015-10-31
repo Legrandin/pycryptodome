@@ -69,15 +69,19 @@ _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         int keccak_squeeze(const void *state,
                                            uint8_t *out,
                                            size_t len);
+                        int keccak_digest(void *state, uint8_t *digest, size_t len);
                         """)
 
 class Keccak_Hash(object):
     """Class that implements a Keccak hash
     """
 
-    def __init__(self, data, digest_bytes):
+    def __init__(self, data, digest_bytes, update_after_digest):
         #: The size of the resulting hash in bytes.
         self.digest_size = digest_bytes
+
+        self._update_after_digest = update_after_digest
+        self._digest_done = False
 
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
@@ -107,7 +111,7 @@ class Keccak_Hash(object):
             The next chunk of the message being hashed.
         """
 
-        if hasattr(self, "_digest_value"):
+        if self._digest_done and not self._update_after_digest:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
         expect_byte_string(data)
@@ -128,18 +132,15 @@ class Keccak_Hash(object):
                  It may contain non-ASCII characters, including null bytes.
         """
 
-        if hasattr(self, "_digest_value"):
-            return self._digest_value
-
+        self._digest_done = True
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
-                                                bfr,
-                                                c_size_t(self.digest_size))
+        result = _raw_keccak_lib.keccak_digest(self._state.get(),
+                                               bfr,
+                                               c_size_t(self.digest_size))
         if result:
             raise ValueError("Error %d while squeezing keccak" % result)
 
-        self._digest_value = get_raw_buffer(bfr)
-        return self._digest_value
+        return get_raw_buffer(bfr)
 
     def hexdigest(self):
         """Return the **printable** digest of the message that has been hashed so far.
@@ -153,7 +154,7 @@ class Keccak_Hash(object):
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
     def new(self):
-        return type(self)(None, self.digest_size)
+        return type(self)(None, self.digest_size, self._update_after_digest)
 
 
 def new(**kwargs):
@@ -167,11 +168,16 @@ def new(**kwargs):
         The size of the digest, in bytes (24, 32, 48, 64).
       digest_bits : integer
         The size of the digest, in bits (224, 256, 384, 512).
+      update_after_digest : boolean
+        Optional. By default, a hash object cannot be updated anymore after
+        the digest is computed. When this flag is ``True``, such check
+        is no longer enforced.
 
     :Return: A `Keccak_Hash` object
     """
 
     data = kwargs.pop("data", None)
+    update_after_digest = kwargs.pop("update_after_digest", False)
 
     digest_bytes = kwargs.pop("digest_bytes", None)
     digest_bits = kwargs.pop("digest_bits", None)
@@ -190,4 +196,4 @@ def new(**kwargs):
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
-    return Keccak_Hash(data, digest_bytes)
+    return Keccak_Hash(data, digest_bytes, update_after_digest)
