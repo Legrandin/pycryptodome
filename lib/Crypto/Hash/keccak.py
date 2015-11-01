@@ -160,7 +160,7 @@ class Keccak_Hash(object):
 def new(**kwargs):
     """Return a fresh instance of the hash object.
 
-    :Parameters:
+    :Keywords:
       data : byte string
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to ``update()``.

@@ -22,16 +22,45 @@
 
 """Self-test suite for Crypto.Hash.SHA3_256"""
 
+import unittest
 from Crypto.SelfTest.Hash.loader import load_tests
+from Crypto.SelfTest.st_common import list_test_cases
+from StringIO import StringIO
+from Crypto.Hash import SHA3_256 as SHA3
+from Crypto.Util.py3compat import b
+
+
+class APITest(unittest.TestCase):
+
+    def test_update_after_digest(self):
+        msg=b("rrrrttt")
+
+        # Normally, update() cannot be done after digest()
+        h = SHA3.new(data=msg[:4])
+        dig1 = h.digest()
+        self.assertRaises(TypeError, h.update, msg[4:])
+        dig2 = SHA3.new(data=msg).digest()
+
+        # With the proper flag, it is allowed
+        h = SHA3.new(data=msg[:4], update_after_digest=True)
+        self.assertEquals(h.digest(), dig1)
+        # ... and the subsequent digest applies to the entire message
+        # up to that point
+        h.update(msg[4:])
+        self.assertEquals(h.digest(), dig2)
+
 
 def get_tests(config={}):
-    from Crypto.Hash import SHA3_256
     from common import make_hash_tests
 
+    tests = []
+
     test_data = load_tests("SHA3", "ShortMsgKAT_SHA3-256.txt")
-    return make_hash_tests(SHA3_256, "SHA3_256", test_data,
-        digest_size=SHA3_256.digest_size,
-        oid="2.16.840.1.101.3.4.2.8")
+    tests += make_hash_tests(SHA3, "SHA3_256", test_data,
+                             digest_size=SHA3.digest_size,
+                             oid="2.16.840.1.101.3.4.2.8")
+    tests += list_test_cases(APITest)
+    return tests
 
 if __name__ == '__main__':
     import unittest
