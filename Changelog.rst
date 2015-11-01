@@ -1,6 +1,20 @@
 Changelog
 =========
 
+3.3.1 (1 November 2015)
++++++++++++++++++++
+
+New features
+------------
+
+* Opt-in for `update` after `digest` for SHA-3 and keccak hashes
+
+Resolved issues
+------------
+
+* Removed unused SHA-3 and keccak test vectors, therefore significantly reducing
+  the package from 13MB to 3MB.
+
 3.3 (29 October 2015)
 +++++++++++++++++++
 
