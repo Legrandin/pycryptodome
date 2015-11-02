@@ -51,7 +51,7 @@ class KeccakTest(unittest.TestCase):
             hobj2 = hobj.new()
             self.assertEqual(hobj2.digest_size, digest_bits // 8)
 
-        for digest_bytes in (24, 32, 48, 64):
+        for digest_bytes in (28, 32, 48, 64):
             hobj = keccak.new(digest_bytes=digest_bytes)
             self.assertEqual(hobj.digest_size, digest_bytes)
 

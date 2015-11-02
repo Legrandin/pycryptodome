@@ -153,8 +153,12 @@ class Keccak_Hash(object):
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
-    def new(self):
-        return type(self)(None, self.digest_size, self._update_after_digest)
+    def new(self, **kwargs):
+
+        if "digest_bytes" not in kwargs and "digest_bits" not in kwargs:
+            kwargs["digest_bytes"] = self.digest_size
+
+        return new(**kwargs)
 
 
 def new(**kwargs):
@@ -165,7 +169,7 @@ def new(**kwargs):
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to ``update()``.
       digest_bytes : integer
-        The size of the digest, in bytes (24, 32, 48, 64).
+        The size of the digest, in bytes (28, 32, 48, 64).
       digest_bits : integer
         The size of the digest, in bits (224, 256, 384, 512).
       update_after_digest : boolean
@@ -186,8 +190,8 @@ def new(**kwargs):
     if (None, None) == (digest_bytes, digest_bits):
         raise TypeError("Digest size (bits, bytes) not provided")
     if digest_bytes is not None:
-        if digest_bytes not in (24, 32, 48, 64):
-            raise ValueError("'digest_bytes' must be: 24, 32, 48 or 64")
+        if digest_bytes not in (28, 32, 48, 64):
+            raise ValueError("'digest_bytes' must be: 28, 32, 48 or 64")
     else:
         if digest_bits not in (224, 256, 384, 512):
             raise ValueError("'digest_bytes' must be: 224, 256, 384 or 512")
