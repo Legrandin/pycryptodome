@@ -90,13 +90,16 @@ class BLAKE2b_Hash(object):
     #: The internal block size of the hash algorithm in bytes.
     block_size = 64
 
-    def __init__(self, data, key, digest_bytes):
+    def __init__(self, data, key, digest_bytes, update_after_digest):
         """
         Initialize a BLAKE2b hash object.
         """
 
         #: The size of the resulting hash in bytes.
         self.digest_size = digest_bytes
+
+        self._update_after_digest = update_after_digest
+        self._digest_done = False
 
         # See https://tools.ietf.org/html/draft-saarinen-blake2-02
         if digest_bytes in (20, 32, 48, 64) and not key:
@@ -134,6 +137,9 @@ class BLAKE2b_Hash(object):
             The next chunk of the message being hashed.
         """
 
+        if self._digest_done and not self._update_after_digest:
+            raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
+
         expect_byte_string(data)
         result = _raw_blake2b_lib.blake2b_update(self._state.get(),
                                                  data,
@@ -146,8 +152,8 @@ class BLAKE2b_Hash(object):
         """Return the **binary** (non-printable) digest of the message that
         has been hashed so far.
 
-        This method does not change the state of the hash object.
-        You can continue updating the object after calling this function.
+        You cannot update the hash anymore after the first call to ``digest``
+        (or ``hexdigest``).
 
         :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
          characters, including null bytes.
@@ -158,6 +164,8 @@ class BLAKE2b_Hash(object):
                                                  bfr)
         if result:
             raise ValueError("Error %d while creating BLAKE2b digest" % result)
+
+        self._digest_done = True
 
         return get_raw_buffer(bfr)[:self.digest_size]
 
@@ -172,24 +180,6 @@ class BLAKE2b_Hash(object):
         """
 
         return "".join(["%02x" % bord(x) for x in tuple(self.digest())])
-
-    def copy(self):
-        """Return a copy ("clone") of the hash object.
-
-        The copy will have the same internal state as the original hash
-        object.
-        This can be used to efficiently compute the digests of strings that
-        share a common initial substring.
-
-        :Return: A hash object of the same type
-        """
-
-        clone = BLAKE2b_Hash(None, b(""), self.digest_size)
-        result = _raw_blake2b_lib.blake2b_copy(self._state.get(),
-                                               clone._state.get())
-        if result:
-            raise ValueError("Error %d while copying BLAKE2b" % result)
-        return clone
 
     def verify(self, mac_tag):
         """Verify that a given **binary** MAC (computed by another party)
@@ -248,10 +238,15 @@ def new(**kwargs):
       key : byte string
         The key to use to compute the MAC (1 to 64 bytes).
         If not specified, no key will be used.
+      update_after_digest : boolean
+        Optional. By default, a hash object cannot be updated anymore after
+        the digest is computed. When this flag is ``True``, such check
+        is no longer enforced.
     :Return: A `BLAKE2b_Hash` object
     """
 
     data = kwargs.pop("data", None)
+    update_after_digest = kwargs.pop("update_after_digest", False)
 
     digest_bytes = kwargs.pop("digest_bytes", None)
     digest_bits = kwargs.pop("digest_bits", None)
@@ -275,4 +270,4 @@ def new(**kwargs):
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
-    return BLAKE2b_Hash(data, key, digest_bytes)
+    return BLAKE2b_Hash(data, key, digest_bytes, update_after_digest)

@@ -109,6 +109,25 @@ class Blake2Test(unittest.TestCase):
         # digest returns a byte string
         self.failUnless(isinstance(digest, type(b("digest"))))
 
+    def test_update_after_digest(self):
+        msg=b("rrrrttt")
+
+        #import pdb; pdb.set_trace()
+
+        # Normally, update() cannot be done after digest()
+        h = self.BLAKE2.new(digest_bits=256, data=msg[:4])
+        dig1 = h.digest()
+        self.assertRaises(TypeError, h.update, msg[4:])
+        dig2 = self.BLAKE2.new(digest_bits=256, data=msg).digest()
+
+        # With the proper flag, it is allowed
+        h = self.BLAKE2.new(digest_bits=256, data=msg[:4], update_after_digest=True)
+        self.assertEquals(h.digest(), dig1)
+        # ... and the subsequent digest applies to the entire message
+        # up to that point
+        h.update(msg[4:])
+        self.assertEquals(h.digest(), dig2)
+
     def test_hex_digest(self):
         mac = self.BLAKE2.new(digest_bits=self.max_bits)
         digest = mac.digest()
@@ -120,15 +139,6 @@ class Blake2Test(unittest.TestCase):
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
         self.failUnless(isinstance(hexdigest, type("digest")))
-
-    def test_copy(self):
-        h = self.BLAKE2.new(digest_bits=self.max_bits, data=b("init"))
-        h2 = h.copy()
-        self.assertEqual(h.digest(), h2.digest())
-        h.update(b("second"))
-        self.assertNotEqual(h.digest(), h2.digest())
-        h2.update(b("second"))
-        self.assertEqual(h.digest(), h2.digest())
 
     def test_verify(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b("4"))

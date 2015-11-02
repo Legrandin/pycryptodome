@@ -7,13 +7,19 @@ Changelog
 New features
 ------------
 
-* Opt-in for `update` after `digest` for SHA-3 and keccak hashes
+* Opt-in for `update` after `digest` for SHA-3, keccak, BLAKE2 hashes
 
 Resolved issues
 ------------
 
 * Removed unused SHA-3 and keccak test vectors, therefore significantly reducing
   the package from 13MB to 3MB.
+
+Breaks in compatibility
+-----------------------
+
+* Removed method `copy` from BLAKE2 hashes
+* Removed ability to `update` a BLAKE2 hash after the first call to `(hex)digest`
 
 3.3 (29 October 2015)
 +++++++++++++++++++
