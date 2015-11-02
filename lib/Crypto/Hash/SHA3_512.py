@@ -140,7 +140,7 @@ class SHA3_512_Hash(object):
 def new(*args, **kwargs):
     """Return a fresh instance of the hash object.
 
-    :Keyords:
+    :Keywords:
       data : byte string
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to ``update()``.
