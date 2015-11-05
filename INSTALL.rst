@@ -1,51 +1,46 @@
 Installation
 ------------
 
-The procedures below all perform the same actions:
+In general, installing PyCryptodome means issuing a simple::
 
-#. Install ``virtualenv`` and ``pip``
-#. Create a virtual environment
-#. Download PyCryptodome from `pypi`_
-#. *(In Unix only)* Compile the C extensions of PyCryptodome
-#. Install PyCryptodome in the virtual environment
-#. Run the test suite to verify that all algorithms work correctly
+		pip install pycryptodome
 
-.. note::
+The procedures below go a bit more in detail by explaining
+how to setup the environment for compiling the C extensions
+for each OS, and how to install the GMP library.
 
-        PyCryptodome resides in the same namespace of PyCrypto (``Crypto``).
-        In order to avoid any possible conflict, these instructions do not
-        install PyCryptodome at the system level.
+Also, note that it is good practice to verify that everything
+has been installed correcty by running the complete test suite
+at the end::
+
+		python -m Crypto.SelfTest
+
+Finally, you should keep in mind that PyCryptodome resides in the same
+namespace of PyCrypto (``Crypto``). In case you have PyCrypto already
+installed at the system level, you will want to install PyCryptodome
+in a virtual environment.
 
 Linux Ubuntu
 ~~~~~~~~~~~~
 
 For Python 2.x::
 
-        $ sudo apt-get install build-essential libgmp3c2
-        $ sudo apt-get install python-virtualenv python-dev
-        $ virtualenv -p /usr/bin/python2 MyProject
-        $ cd MyProject
-        $ . bin/activate
+        $ sudo apt-get install build-essential libgmp3c2 python-dev
+        $ # Create and move to a virtualenv
         $ pip install pycryptodome
         $ python -m Crypto.SelfTest
 
 For Python 3.x::
 
-        $ sudo apt-get install build-essential libgmp3c2
-        $ sudo apt-get install python-virtualenv python3-dev
-        $ virtualenv -p /usr/bin/python3 MyProject
-        $ cd MyProject
-        $ . bin/activate
+        $ sudo apt-get install build-essential libgmp3c2 python3-dev
+        $ # Create and move to a virtualenv
         $ pip install pycryptodome
         $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
-        $ sudo apt-get install build-essential libgmp3c2
-        $ sudo apt-get install python-virtualenv pypy-dev
-        $ virtualenv -p /usr/bin/pypy MyProject
-        $ cd MyProject
-        $ . bin/activate
+        $ sudo apt-get install build-essential libgmp3c2 pypy-dev
+        $ # Create and move to a virtualenv
         $ pip install pycryptodome
         $ pypy -m Crypto.SelfTest
 
@@ -54,65 +49,29 @@ Linux Fedora
 
 For Python 2.x::
 
-        $ sudo yum install gcc gmp
-        $ sudo yum install python-virtualenv python-devel 
-        $ virtualenv -p /usr/bin/python2 MyProject
-        $ cd MyProject
-        $ . bin/activate
+        $ sudo yum install gcc gmp python-devel 
+        $ # Create and move to a virtualenv
         $ pip install pycryptodome
         $ python -m Crypto.SelfTest
 
 For Python 3.x::
 
-        $ sudo yum install gcc gmp
-        $ sudo yum install python3-virtualenv python3-devel
-        $ virtualenv -p /usr/bin/python3 MyProject
-        $ cd MyProject
-        $ . bin/activate
+        $ sudo yum install gcc gmp python3-devel
+        $ # Create and move to a virtualenv
         $ pip install pycryptodome
         $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
-        $ sudo yum install gcc gmp
-        $ sudo yum install python-virtualenv pypy-devel
-        $ virtualenv -p /usr/bin/pypy MyProject
-        $ cd MyProject
-        $ . bin/activate
+        $ sudo yum install gcc gmp pypy-devel
+        $ # Create and move to a virtualenv
         $ pip install pycryptodome
         $ pypy -m Crypto.SelfTest
 
 Windows (pre-compiled)
 ~~~~~~~~~~~~~~~~~~~~~~
 
-#. Make sure that the ``PATH`` environment variable contains
-   the directory of your Python interpreter and its subdirectory ``Scripts``.
-
-   Typically, that means typing something like this
-   at the command prompt::
-
-       > set PATH=%PATH%;C:\Python27;C:\Python27\Scripts
-
-   or::
-
-       > set PATH=%PATH%;C:\Python34;C:\Python34\Scripts
-
-#. **[Only once. Skip if you have Python 3.4 or newer]**
-   Install ``pip`` by downloading and executing the Python
-   script `get-pip.py`_::
-
-        > python get-pip.py
-
-#. **[Only once]** Install ``virtualenv`` with::
-
-        > pip install virtualenv
-
-#. Create a virtual environment for your project::
-
-        > cd %USERPROFILE%
-        > virtualenv MyProject
-        > cd MyProject
-        > Scripts\activate
+#. Create and move to a *virtualenv*.
 
 #. Install PyCryptodome as a `wheel <http://pythonwheels.com/>`_::
 
@@ -129,8 +88,6 @@ Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *Pycryptodome* extensions from
 source code is to install the minimum set of Visual Studio
 components freely made available by Microsoft.
-
-#. Ensure you have *pip* and *virtualenv* installed (see previous section).
 
 #. Run Python from the command line and note down its version
    and whether it is a 32 bit or a 64 bit application.
@@ -185,11 +142,7 @@ components freely made available by Microsoft.
    
    Replace ``/x64`` with ``/x86`` if your Python is a 32 bit application.
 
-#. Enter the virtual environment for your project::
-
-        > cd %USERPROFILE%
-        > cd MyProject
-        > Scripts\activate
+#. Create and move to a *virtualenv*.
 
 #. Compile and install PyCryptodome::
 
@@ -206,8 +159,6 @@ Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *Pycryptodome* extensions from
 source code is to install the minimum set of Visual Studio
 components freely made available by Microsoft.
-
-#. Ensure you have *pip* and *virtualenv* installed (see previous section).
 
 #. Run Python from the command line and note down its version
    and whether it is a 32 bit or a 64 bit application.
@@ -261,12 +212,6 @@ components freely made available by Microsoft.
         > set DISTUTILS_USE_SDK=1
    
    Replace ``/x64`` with ``/x86`` if your Python is a 32 bit application.
-
-#. Enter the virtual environment for your project::
-
-        > cd %USERPROFILE%
-        > cd MyProject
-        > Scripts\activate
 
 #. Compile and install PyCryptodome::
 

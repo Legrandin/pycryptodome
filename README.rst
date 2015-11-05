@@ -12,6 +12,10 @@ cryptographic primitives.
 
 It supports Python 2.4 or newer, all Python 3 versions and PyPy.
 
+You can install it with a simple::
+
+	pip install pycryptodome
+
 PyCryptodome is a fork of PyCrypto. It brings the following enhancements
 with respect to the last official version of PyCrypto (2.6.1):
 
