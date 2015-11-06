@@ -45,11 +45,11 @@ typedef struct {
 } CfbModeState;
 
 EXPORT_SYM int CFB_start_operation(BlockBase *cipher,
-                    const uint8_t iv[],
-                    size_t iv_len,
-                    size_t segment_len, /* In bytes */
-                    CfbModeState **pResult) {
-
+                                   const uint8_t iv[],
+                                   size_t iv_len,
+                                   size_t segment_len, /* In bytes */
+                                   CfbModeState **pResult)
+{
     if ((NULL == cipher) || (NULL == iv) || (NULL == pResult)) {
         return ERR_NULL;
     }
@@ -75,10 +75,10 @@ EXPORT_SYM int CFB_start_operation(BlockBase *cipher,
 }
 
 EXPORT_SYM int CFB_encrypt(CfbModeState *cfbState,
-            const uint8_t *in,
-            uint8_t *out,
-            size_t data_len) {
-
+                           const uint8_t *in,
+                           uint8_t *out,
+                           size_t data_len)
+{
     uint8_t *keyStream, *iv;
     size_t block_len;
     size_t segment_len;
@@ -121,10 +121,10 @@ EXPORT_SYM int CFB_encrypt(CfbModeState *cfbState,
 }
 
 EXPORT_SYM int CFB_decrypt(CfbModeState *cfbState,
-            const uint8_t *in,
-            uint8_t *out,
-            size_t data_len) {
-
+                           const uint8_t *in,
+                           uint8_t *out,
+                           size_t data_len)
+{
     uint8_t *keyStream, *iv;
     size_t block_len;
     size_t segment_len;
@@ -168,6 +168,9 @@ EXPORT_SYM int CFB_decrypt(CfbModeState *cfbState,
 
 EXPORT_SYM int CFB_stop_operation(CfbModeState *state)
 {
+    if (NULL == state)
+        return ERR_NULL;
+
     state->cipher->destructor(state->cipher);
     free(state);
     return 0;

@@ -48,15 +48,15 @@ typedef struct {
     uint8_t keyStream[0];
 } OfbModeState;
 
-static unsigned min_ab(unsigned a, unsigned b) {
+static inline unsigned min_ab(unsigned a, unsigned b) {
     return a < b ? a : b;
 }
 
 EXPORT_SYM int OFB_start_operation(BlockBase *cipher,
-                    const uint8_t iv[],
-                    size_t iv_len,
-                    OfbModeState **pResult) {
-
+                                   const uint8_t iv[],
+                                   size_t iv_len,
+                                   OfbModeState **pResult)
+{
     if ((NULL == cipher) || (NULL == iv) || (NULL == pResult)) {
         return ERR_NULL;
     }
@@ -78,10 +78,10 @@ EXPORT_SYM int OFB_start_operation(BlockBase *cipher,
 }
 
 EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
-            const uint8_t *in,
-            uint8_t *out,
-            size_t data_len) {
-
+                           const uint8_t *in,
+                           uint8_t *out,
+                           size_t data_len)
+{
     size_t block_len;
     uint8_t *oldKeyStream;
 
@@ -122,14 +122,17 @@ EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
 }
 
 EXPORT_SYM int OFB_decrypt(OfbModeState *ofbState,
-            const uint8_t *in,
-            uint8_t *out,
-            size_t data_len) {
+                           const uint8_t *in,
+                           uint8_t *out,
+                           size_t data_len)
+{
     return OFB_encrypt(ofbState, in, out, data_len);
 }
 
 EXPORT_SYM int OFB_stop_operation(OfbModeState *state)
 {
+    if (NULL == state)
+        return ERR_NULL;
     state->cipher->destructor(state->cipher);
     free(state);
     return 0;
