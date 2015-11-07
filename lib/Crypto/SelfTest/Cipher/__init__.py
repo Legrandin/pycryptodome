@@ -40,6 +40,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Cipher import test_pkcs1_15; tests += test_pkcs1_15.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_pkcs1_oaep; tests += test_pkcs1_oaep.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_OCB;        tests += test_OCB.get_tests(config=config)
+    from Crypto.SelfTest.Cipher import test_CBC;        tests += test_CBC.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

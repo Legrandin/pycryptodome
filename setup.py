@@ -329,6 +329,9 @@ setup(
         ],
     package_dir = { "Crypto": "lib/Crypto" },
     package_data = {
+        "Crypto.SelfTest.Cipher" : [
+            "test_vectors/AES/*.rsp",
+            ],
         "Crypto.SelfTest.Hash" : [
             "test_vectors/SHA3/*.txt",
             "test_vectors/keccak/*.txt",
