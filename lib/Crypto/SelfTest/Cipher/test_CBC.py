@@ -32,7 +32,85 @@ import unittest
 
 from Crypto.SelfTest.Cipher.nist_loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Util.py3compat import tobytes, b
 from Crypto.Cipher import AES
+from Crypto.Hash import SHAKE128
+
+def get_tag_random(tag, length):
+    return SHAKE128.new(data=tobytes(tag)).read(length)
+
+class CbcTests(unittest.TestCase):
+
+    key_128 = get_tag_random("key_128", 16)
+    iv_128 = get_tag_random("iv_128", 16)
+
+    def test_loopback(self):
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        pt = get_tag_random("plaintext", 16 * 100)
+        ct = cipher.encrypt(pt)
+
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        pt2 = cipher.decrypt(ct)
+        self.assertEqual(pt, pt2)
+
+    def test_iv_is_required(self):
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC)
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, AES.MODE_CBC, iv=self.iv_128)
+        cipher = AES.new(self.key_128, AES.MODE_CBC, IV=self.iv_128)
+
+    def test_only_one_iv(self):
+        # Only one IV/iv keyword allowed
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+                          iv=self.iv_128, IV=self.iv_128)
+
+    def test_iv_with_matching_length(self):
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
+                          self.iv_128[:15])
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
+                          self.iv_128 + b("0"))
+
+    def test_block_size(self):
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        self.assertEqual(cipher.block_size, AES.block_size)
+
+    def test_unaligned_data(self):
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        for wrong_length in xrange(1,16):
+            self.assertRaises(ValueError, cipher.encrypt, b("5") * wrong_length)
+
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        for wrong_length in xrange(1,16):
+            self.assertRaises(ValueError, cipher.decrypt, b("5") * wrong_length)
+
+    def test_IV_iv_attributes(self):
+        data = get_tag_random("data", 16 * 100)
+        for func in "encrypt", "decrypt":
+            cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+            getattr(cipher, func)(data)
+            self.assertEqual(cipher.iv, self.iv_128)
+            self.assertEqual(cipher.IV, self.iv_128)
+
+    def test_unknown_attributes(self):
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+                          self.iv_128, 7)
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+                          iv=self.iv_128, unknown=7)
+
+    def test_null_encryption_decryption(self):
+        for func in "encrypt", "decrypt":
+            cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+            result = getattr(cipher, func)(b(""))
+            self.assertEqual(result, b(""))
+
+    def test_either_encrypt_or_decrypt(self):
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher.encrypt(b(""))
+        self.assertRaises(TypeError, cipher.decrypt, b(""))
+
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher.decrypt(b(""))
+        self.assertRaises(TypeError, cipher.encrypt, b(""))
 
 
 class NistCbcVectors(unittest.TestCase):
@@ -108,8 +186,10 @@ for file_name in nist_aes_mct_files:
     setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
 del file_name, new_func
 
+
 def get_tests(config={}):
     tests = []
+    tests += list_test_cases(CbcTests)
     tests += list_test_cases(NistCbcVectors)
     return tests
 
