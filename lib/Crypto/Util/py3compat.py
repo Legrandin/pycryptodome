@@ -69,22 +69,13 @@ if sys.version_info[0] == 2:
         return str(s)
     def bord(s):
         return ord(s)
-    if sys.version_info[1] == 1:
-        def tobytes(s):
-            try:
-                return s.encode('latin-1')
-            except UnicodeError:
-                return ''.join(s)
-        def tostr(bs):
-            return bs
-    else:
-        def tobytes(s):
-            if isinstance(s, unicode):
-                return s.encode("latin-1")
-            else:
-                return ''.join(s)
-        def tostr(bs):
-            return bs
+    def tobytes(s):
+        if isinstance(s, unicode):
+            return s.encode("latin-1")
+        else:
+            return ''.join(s)
+    def tostr(bs):
+        return bs
     def byte_string(s):
         return isinstance(s, str)
     # In Pyton 2.x, StringIO is a stand-alone module
