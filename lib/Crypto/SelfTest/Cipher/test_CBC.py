@@ -29,6 +29,7 @@
 # ===================================================================
 
 import unittest
+
 from Crypto.SelfTest.Cipher.nist_loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Cipher import AES
@@ -36,7 +37,7 @@ from Crypto.Cipher import AES
 
 class NistCbcVectors(unittest.TestCase):
 
-    def _do_test(self, file_name):
+    def _do_kat_test(self, file_name):
         test_vectors = load_tests("AES", file_name)
         assert(test_vectors)
         for tv in test_vectors:
@@ -47,9 +48,40 @@ class NistCbcVectors(unittest.TestCase):
             else:
                 self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
 
+    # See Section 6.4.2 in AESAVS
+    def _do_mct_test(self, file_name):
+        test_vectors = load_tests("AES", file_name)
+        assert(test_vectors)
+        for tv in test_vectors:
+
+            self.description = tv.desc
+            cipher = AES.new(tv.key, AES.MODE_CBC, tv.iv)
+
+            if tv.direction == 'ENC':
+                cts = []
+                for count in xrange(1000):
+                    cts.append(cipher.encrypt(tv.plaintext))
+                    # Set next plaintext
+                    if count == 0:
+                        tv.plaintext = tv.iv
+                    else:
+                        tv.plaintext = cts[count-1]
+                self.assertEqual(cts[-1], tv.ciphertext)
+            else:
+                pts = []
+                for count in xrange(1000):
+                    pts.append(cipher.decrypt(tv.ciphertext))
+                    # Set next ciphertext
+                    if count == 0:
+                        tv.ciphertext = tv.iv
+                    else:
+                        tv.ciphertext = pts[count-1]
+                self.assertEqual(pts[-1], tv.plaintext)
+
 
 # Create one test method per file
-nist_aes_files = (
+nist_aes_kat_mmt_files = (
+    # KAT
     "CBCGFSbox128.rsp",
     "CBCGFSbox192.rsp",
     "CBCGFSbox256.rsp",
@@ -62,11 +94,26 @@ nist_aes_files = (
     "CBCVarTxt128.rsp",
     "CBCVarTxt192.rsp",
     "CBCVarTxt256.rsp",
+    # MMT
+    "CBCMMT128.rsp",
+    "CBCMMT192.rsp",
+    "CBCMMT256.rsp",
     )
-for file_name in nist_aes_files:
+nist_aes_mct_files = (
+    "CBCMCT128.rsp",
+    "CBCMCT192.rsp",
+    "CBCMCT256.rsp",
+    )
+
+for file_name_kat_mmt in nist_aes_kat_mmt_files:
     def new_func(self):
-        self._do_test(file_name)
-    setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
+        self._do_kat_test(file_name_kat_mmt)
+    setattr(NistCbcVectors, "test_AES_" + file_name_kat_mmt, new_func)
+
+for file_name_mct in nist_aes_mct_files:
+    def new_func(self):
+        self._do_mct_test(file_name_mct)
+    setattr(NistCbcVectors, "test_AES_" + file_name_mct, new_func)
 
 
 def get_tests(config={}):
