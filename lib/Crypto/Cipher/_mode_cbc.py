@@ -228,9 +228,11 @@ def _create_cbc_cipher(factory, **kwargs):
 
     if (None, None) == (iv, IV):
         raise TypeError("An IV must be provided for CBC mode")
-    if iv and IV:
-        raise TypeError("You must either use 'iv' or 'IV', not both")
-    iv = iv or IV
+    if iv is not None:
+        if IV is not None:
+            raise TypeError("You must either use 'iv' or 'IV', not both")
+    else:
+        iv = IV
 
     if kwargs:
         raise TypeError("Unknown parameters for CBC: %s" % str(kwargs))

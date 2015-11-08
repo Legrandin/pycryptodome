@@ -66,6 +66,8 @@ class CbcTests(unittest.TestCase):
 
     def test_iv_with_matching_length(self):
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
+                          b(""))
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
                           self.iv_128[:15])
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
                           self.iv_128 + b("0"))
