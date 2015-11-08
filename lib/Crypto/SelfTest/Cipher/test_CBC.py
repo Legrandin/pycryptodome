@@ -58,24 +58,16 @@ class NistCbcVectors(unittest.TestCase):
             cipher = AES.new(tv.key, AES.MODE_CBC, tv.iv)
 
             if tv.direction == 'ENC':
-                cts = []
+                cts = [ tv.iv ]
                 for count in xrange(1000):
                     cts.append(cipher.encrypt(tv.plaintext))
-                    # Set next plaintext
-                    if count == 0:
-                        tv.plaintext = tv.iv
-                    else:
-                        tv.plaintext = cts[count-1]
+                    tv.plaintext = cts[-2]
                 self.assertEqual(cts[-1], tv.ciphertext)
             else:
-                pts = []
+                pts = [ tv.iv]
                 for count in xrange(1000):
                     pts.append(cipher.decrypt(tv.ciphertext))
-                    # Set next ciphertext
-                    if count == 0:
-                        tv.ciphertext = tv.iv
-                    else:
-                        tv.ciphertext = pts[count-1]
+                    tv.ciphertext = pts[-2]
                 self.assertEqual(pts[-1], tv.plaintext)
 
 
