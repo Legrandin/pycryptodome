@@ -43,10 +43,10 @@ keys and certificates into text.
 
 __all__ = ['encode', 'decode']
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b, hexlify, unhexlify, tobytes, tostr
 
 import re
-from binascii import hexlify, unhexlify, a2b_base64, b2a_base64
+from binascii import a2b_base64, b2a_base64
 
 from Crypto.Hash import MD5
 from Crypto.Util.Padding import pad, unpad

@@ -24,8 +24,9 @@
 
 """Self-test suite for Crypto.Random.new()"""
 
+import sys
 import unittest
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b
 
 class SimpleTest(unittest.TestCase):
     def runTest(self):
