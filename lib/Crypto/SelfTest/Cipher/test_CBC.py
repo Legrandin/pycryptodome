@@ -105,16 +105,16 @@ nist_aes_mct_files = (
     "CBCMCT256.rsp",
     )
 
-for file_name_kat_mmt in nist_aes_kat_mmt_files:
-    def new_func(self):
-        self._do_kat_test(file_name_kat_mmt)
-    setattr(NistCbcVectors, "test_AES_" + file_name_kat_mmt, new_func)
+for file_name in nist_aes_kat_mmt_files:
+    def new_func(self, file_name=file_name):
+        self._do_kat_test(file_name)
+    setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
 
-for file_name_mct in nist_aes_mct_files:
-    def new_func(self):
-        self._do_mct_test(file_name_mct)
-    setattr(NistCbcVectors, "test_AES_" + file_name_mct, new_func)
-
+for file_name in nist_aes_mct_files:
+    def new_func(self, file_name=file_name):
+        self._do_mct_test(file_name)
+    setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
+del file_name, new_func
 
 def get_tests(config={}):
     tests = []
