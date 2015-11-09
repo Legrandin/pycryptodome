@@ -42,14 +42,25 @@ def get_tag_random(tag, length):
 class CbcTests(unittest.TestCase):
 
     key_128 = get_tag_random("key_128", 16)
+    key_192 = get_tag_random("key_192", 24)
     iv_128 = get_tag_random("iv_128", 16)
+    iv_64 = get_tag_random("iv_64", 8)
 
-    def test_loopback(self):
+    def test_loopback_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
         pt = get_tag_random("plaintext", 16 * 100)
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        pt2 = cipher.decrypt(ct)
+        self.assertEqual(pt, pt2)
+
+    def test_loopback_64(self):
+        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        pt = get_tag_random("plaintext", 16 * 100)
+        ct = cipher.encrypt(pt)
+
+        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
@@ -72,17 +83,30 @@ class CbcTests(unittest.TestCase):
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
                           self.iv_128 + b("0"))
 
-    def test_block_size(self):
+    def test_block_size_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
         self.assertEqual(cipher.block_size, AES.block_size)
 
-    def test_unaligned_data(self):
+    def test_block_size_64(self):
+        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        self.assertEqual(cipher.block_size, DES3.block_size)
+
+    def test_unaligned_data_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
         for wrong_length in xrange(1,16):
             self.assertRaises(ValueError, cipher.encrypt, b("5") * wrong_length)
 
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
         for wrong_length in xrange(1,16):
+            self.assertRaises(ValueError, cipher.decrypt, b("5") * wrong_length)
+
+    def test_unaligned_data_64(self):
+        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        for wrong_length in xrange(1,8):
+            self.assertRaises(ValueError, cipher.encrypt, b("5") * wrong_length)
+
+        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        for wrong_length in xrange(1,8):
             self.assertRaises(ValueError, cipher.decrypt, b("5") * wrong_length)
 
     def test_IV_iv_attributes(self):
