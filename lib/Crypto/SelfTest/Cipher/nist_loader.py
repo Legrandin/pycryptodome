@@ -76,7 +76,7 @@ def load_fips_test_module(desc, file_in):
             direction = "DEC"
             continue
 
-        res = re.match("([A-Za-z]+) = ([0-9A-Fa-f]+)", line)
+        res = re.match("([A-Za-z0-9]+) = ([0-9A-Fa-f]+)", line)
         if not res:
             raise ValueError("Incorrect test vector format (line %d): %s" % (line_number, line))
         token = res.group(1)
@@ -93,9 +93,9 @@ def load_fips_test_module(desc, file_in):
     return results
 
 
-def load_tests(subdir, file_name):
+def load_tests(subdir, file_name, description):
     import os.path
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     abs_file_name = os.path.join(base_dir, "test_vectors", subdir, file_name)
-    return load_fips_test_module("AES CBC test (%s)" % file_name, open(abs_file_name))
+    return load_fips_test_module("%s test (%s)" % (description, file_name), open(abs_file_name))

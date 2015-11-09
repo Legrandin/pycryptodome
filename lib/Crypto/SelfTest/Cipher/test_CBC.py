@@ -33,7 +33,7 @@ import unittest
 from Crypto.SelfTest.Cipher.nist_loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, b, unhexlify
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 
 def get_tag_random(tag, length):
@@ -117,8 +117,8 @@ class CbcTests(unittest.TestCase):
 
 class NistCbcVectors(unittest.TestCase):
 
-    def _do_kat_test(self, file_name):
-        test_vectors = load_tests("AES", file_name)
+    def _do_kat_aes_test(self, file_name):
+        test_vectors = load_tests("AES", file_name, "AES CBC KAT")
         assert(test_vectors)
         for tv in test_vectors:
             self.description = tv.desc
@@ -129,8 +129,8 @@ class NistCbcVectors(unittest.TestCase):
                 self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
 
     # See Section 6.4.2 in AESAVS
-    def _do_mct_test(self, file_name):
-        test_vectors = load_tests("AES", file_name)
+    def _do_mct_aes_test(self, file_name):
+        test_vectors = load_tests("AES", file_name, "AES CBC Montecarlo")
         assert(test_vectors)
         for tv in test_vectors:
 
@@ -149,6 +149,21 @@ class NistCbcVectors(unittest.TestCase):
                     pts.append(cipher.decrypt(tv.ciphertext))
                     tv.ciphertext = pts[-2]
                 self.assertEqual(pts[-1], tv.plaintext)
+
+    def _do_mmt_tdes_test(self, file_name):
+        test_vectors = load_tests("TDES", file_name, "TDES CBC KAT")
+        assert(test_vectors)
+        for tv in test_vectors:
+            self.description = tv.desc
+            if tv.key1 != tv.key3:
+                key = tv.key1 + tv.key2 + tv.key3  # Option 3
+            else:
+                key = tv.key1 + tv.key2            # Option 2
+            cipher = DES3.new(key, DES3.MODE_CBC, tv.iv)
+            if tv.direction == "ENC":
+                self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
+            else:
+                self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
 
 
 # Create one test method per file
@@ -179,14 +194,24 @@ nist_aes_mct_files = (
 
 for file_name in nist_aes_kat_mmt_files:
     def new_func(self, file_name=file_name):
-        self._do_kat_test(file_name)
+        self._do_kat_aes_test(file_name)
     setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
 
 for file_name in nist_aes_mct_files:
     def new_func(self, file_name=file_name):
-        self._do_mct_test(file_name)
+        self._do_mct_aes_test(file_name)
     setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
 del file_name, new_func
+
+nist_tdes_mmt_files = (
+    "TCBCMMT2.rsp",
+    "TCBCMMT3.rsp",
+    )
+
+for file_name in nist_tdes_mmt_files:
+    def new_func(self, file_name=file_name):
+        self._do_mmt_tdes_test(file_name)
+    setattr(NistCbcVectors, "test_TDES_" + file_name, new_func)
 
 # END OF NIST CBC TEST VECTORS
 
