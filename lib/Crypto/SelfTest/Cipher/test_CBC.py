@@ -33,7 +33,7 @@ import unittest
 from Crypto.SelfTest.Cipher.nist_loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, b, unhexlify
-from Crypto.Cipher import AES, DES3
+from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
 def get_tag_random(tag, length):
@@ -150,16 +150,19 @@ class NistCbcVectors(unittest.TestCase):
                     tv.ciphertext = pts[-2]
                 self.assertEqual(pts[-1], tv.plaintext)
 
-    def _do_mmt_tdes_test(self, file_name):
+    def _do_tdes_test(self, file_name):
         test_vectors = load_tests("TDES", file_name, "TDES CBC KAT")
         assert(test_vectors)
         for tv in test_vectors:
             self.description = tv.desc
-            if tv.key1 != tv.key3:
-                key = tv.key1 + tv.key2 + tv.key3  # Option 3
+            if hasattr(tv, "keys"):
+                cipher = DES.new(tv.keys, DES.MODE_CBC, tv.iv)
             else:
-                key = tv.key1 + tv.key2            # Option 2
-            cipher = DES3.new(key, DES3.MODE_CBC, tv.iv)
+                if tv.key1 != tv.key3:
+                    key = tv.key1 + tv.key2 + tv.key3  # Option 3
+                else:
+                    key = tv.key1 + tv.key2            # Option 2
+                cipher = DES3.new(key, DES3.MODE_CBC, tv.iv)
             if tv.direction == "ENC":
                 self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
             else:
@@ -203,14 +206,19 @@ for file_name in nist_aes_mct_files:
     setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
 del file_name, new_func
 
-nist_tdes_mmt_files = (
-    "TCBCMMT2.rsp",
-    "TCBCMMT3.rsp",
+nist_tdes_files = (
+    "TCBCMMT2.rsp",    # 2TDES
+    "TCBCMMT3.rsp",    # 3TDES
+    "TCBCinvperm.rsp", # Single DES
+    "TCBCpermop.rsp",
+    "TCBCsubtab.rsp",
+    "TCBCvarkey.rsp",
+    "TCBCvartext.rsp",
     )
 
-for file_name in nist_tdes_mmt_files:
+for file_name in nist_tdes_files:
     def new_func(self, file_name=file_name):
-        self._do_mmt_tdes_test(file_name)
+        self._do_tdes_test(file_name)
     setattr(NistCbcVectors, "test_TDES_" + file_name, new_func)
 
 # END OF NIST CBC TEST VECTORS
