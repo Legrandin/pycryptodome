@@ -48,13 +48,14 @@ def load_fips_test_module(desc, file_in):
 
     line_number = 0
     results = []
-    expected = "COUNT"
     direction = "ENC"
 
     class TestVector(object):
         def __init__(self, description, direction):
             self.desc = description
             self.direction = direction
+
+    test_vector = None
 
     while True:
         line_number += 1
@@ -75,37 +76,18 @@ def load_fips_test_module(desc, file_in):
             direction = "DEC"
             continue
 
-        if not isinstance(expected, basestring):
-            expected = "|".join(expected)
-        res = re.match("(%s) = ([0-9A-Fa-f]+)" % expected, line)
+        res = re.match("([A-Za-z]+) = ([0-9A-Fa-f]+)", line)
         if not res:
-            raise ValueError("Incorrect test vector format (line %d), expecting %s" % (line_number, expected))
+            raise ValueError("Incorrect test vector format (line %d): %s" % (line_number, line))
         token = res.group(1)
         data = res.group(2)
 
         if token == "COUNT":
+            if test_vector is not None:
+                results.append(test_vector)
             test_vector = TestVector("%s(%s)" % (desc, data), direction)
-            expected = "KEY"
-        elif token == "KEY":
-            test_vector.key = unhexlify(data)
-            expected = "IV"
-        elif token == "IV":
-            test_vector.iv = unhexlify(data)
-            expected = "PLAINTEXT", "CIPHERTEXT"
-        elif token == "PLAINTEXT":
-            test_vector.plaintext = unhexlify(data)
-            expected = "CIPHERTEXT"
-        elif token == "CIPHERTEXT":
-            test_vector.ciphertext = unhexlify(data)
-            expected = "PLAINTEXT"
         else:
-            raise ValueError("Unexpected line: " + line)
-
-        if hasattr(test_vector, "plaintext") and hasattr(test_vector, "ciphertext"):
-            #import pdb; pdb.set_trace()
-            results.append(test_vector)
-            del test_vector
-            expected = "COUNT"
+            setattr(test_vector, token.lower(), unhexlify(data))
 
         # This line is ignored
     return results
