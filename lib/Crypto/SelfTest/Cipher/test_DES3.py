@@ -40,16 +40,6 @@ test_data = [
         '0123456789abcdef23456789abcdef01456789abcdef0123',
         'NIST SP800-67 B.1'),
 
-    # Test vectors "The Multi-block Message Test (MMT) for DES and TDES"
-    # http://csrc.nist.gov/groups/STM/cavp/documents/des/DESMMT.pdf
-    ('326a494cd33fe756', 'b22b8d66de970692',
-        '627f460e08104a1043cd265d5840eaf1313edf97df2a8a8c',
-        'DESMMT #1', dict(mode='CBC', iv='8e29f75ea77e5475')),
-
-    ('84401f78fe6c10876d8ea23094ea5309', '7b1f7c7e3b1c948ebd04a75ffba7d2f5',
-        '37ae5ebf46dff2dc0754b94f31cbb3855e7fd36dc870bfae',
-        'DESMMT #2', dict(mode='CBC', iv='3d1de3cc132e3b65')),
-
     # Test vectors from Appendix A of NIST SP 800-20
     # "Modes of Operation Validation System for the Triple Data Encryption
     # Algorithm (TMOVS): Requirements and Procedures"

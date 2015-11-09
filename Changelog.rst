@@ -1,6 +1,16 @@
 Changelog
 =========
 
+3.4 (???)
++++++++++++++++++++
+
+New features
+------------
+
+* For CBC, `encrypt` and `decrypt` cannot be intermixed.
+  Also, the cipher object has both `IV` and `iv` attributes.
+* Dedicated tests for CBC, including NIST test vectors
+
 3.3.1 (1 November 2015)
 +++++++++++++++++++
 

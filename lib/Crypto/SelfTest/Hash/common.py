@@ -24,10 +24,11 @@
 
 """Self-testing for PyCrypto hash modules"""
 
+import sys
 import unittest
 import binascii
 import Crypto.Hash
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b, tobytes
 from Crypto.Util.strxor import strxor_c
 
 class HashDigestSizeSelfTest(unittest.TestCase):

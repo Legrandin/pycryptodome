@@ -330,6 +330,8 @@ EXPORT_SYM int OCB_digest(OcbModeState *state,
 
 EXPORT_SYM int OCB_stop_operation(OcbModeState *state)
 {
+    if (NULL == state)
+        return ERR_NULL;
     state->cipher->destructor(state->cipher);
     free(state);
     return 0;

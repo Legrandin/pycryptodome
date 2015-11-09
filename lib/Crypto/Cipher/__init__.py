@@ -116,6 +116,8 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
         if mode in (8, 9, 10, 11, 12):
             kwargs["nonce"] = args[0]
         elif mode in (2, 3, 5, 7):
+            if len(args) > 1:
+                raise TypeError("Too many arguments for this mode")
             kwargs["IV"] = args[0]
         elif mode == 1:
             raise TypeError("IV is not meaningful for the ECB mode")
