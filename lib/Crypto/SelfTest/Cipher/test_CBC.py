@@ -57,7 +57,7 @@ class CbcTests(unittest.TestCase):
 
     def test_loopback_64(self):
         cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
-        pt = get_tag_random("plaintext", 16 * 100)
+        pt = get_tag_random("plaintext", 8 * 100)
         ct = cipher.encrypt(pt)
 
         cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
