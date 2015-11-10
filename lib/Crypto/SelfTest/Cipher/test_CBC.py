@@ -45,6 +45,7 @@ class CbcTests(unittest.TestCase):
     key_192 = get_tag_random("key_192", 24)
     iv_128 = get_tag_random("iv_128", 16)
     iv_64 = get_tag_random("iv_64", 8)
+    data_128 = get_tag_random("data_128", 16)
 
     def test_loopback_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
@@ -67,8 +68,13 @@ class CbcTests(unittest.TestCase):
     def test_iv_is_required(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC)
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        ct = cipher.encrypt(self.data_128)
+
         cipher = AES.new(self.key_128, AES.MODE_CBC, iv=self.iv_128)
+        self.assertEquals(ct, cipher.encrypt(self.data_128))
+
         cipher = AES.new(self.key_128, AES.MODE_CBC, IV=self.iv_128)
+        self.assertEquals(ct, cipher.encrypt(self.data_128))
 
     def test_only_one_iv(self):
         # Only one IV/iv keyword allowed
