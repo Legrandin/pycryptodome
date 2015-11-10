@@ -118,6 +118,8 @@ class CfbTests(unittest.TestCase):
                           self.iv_128, 7)
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB,
                           iv=self.iv_128, unknown=7)
+        # But some are only known by the base cipher (e.g. use_aesni consumed by the AES module)
+        AES.new(self.key_128, AES.MODE_CFB, iv=self.iv_128, use_aesni=False)
 
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
