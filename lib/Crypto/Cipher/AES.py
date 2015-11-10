@@ -195,8 +195,7 @@ def new(key, mode, *args, **kwargs):
       segment_size : integer
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
-        It must be a multiple of 8. If 0 or not specified,
-        it will be assumed to be 8.
+        It must be a multiple of 8. If not specified, it will be assumed to be 8.
       mac_len : integer
         (*Only* `MODE_CCM`). Length of the MAC, in bytes. It must be even
         and in the range ``[4..16]``. The default is 16.

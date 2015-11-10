@@ -11,6 +11,11 @@ New features
   Also, the cipher object has both `IV` and `iv` attributes.
 * Dedicated tests for CBC, including NIST test vectors
 
+Breaks in compatibility
+-----------------------
+
+* Parameter `segment_size` cannot be 0 for the CFB mode.
+
 3.3.1 (1 November 2015)
 +++++++++++++++++++
 

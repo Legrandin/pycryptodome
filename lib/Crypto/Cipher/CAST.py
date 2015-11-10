@@ -145,8 +145,7 @@ def new(key, mode, *args, **kwargs):
       segment_size : integer
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
-        It must be a multiple of 8. If 0 or not specified, it will be assumed
-        to be 8.
+        It must be a multiple of 8. If not specified, it will be assumed to be 8.
 
     :Return: a CAST cipher object, of the applicable mode.
     """
