@@ -7,10 +7,10 @@ Changelog
 New features
 ------------
 
-* For CBC and CFB, `encrypt` and `decrypt` cannot be intermixed.
+* For CBC/CFB/OFB, `encrypt` and `decrypt` cannot be intermixed.
   Also, the cipher object has both `IV` and `iv` attributes.
   `new` accepts `IV` as well as `iv` as parameter.
-* Dedicated tests for CBC and CFB, including NIST test vectors
+* Dedicated tests for CBC/CFB/OFB, including NIST test vectors
 
 Resolved issues
 ---------------

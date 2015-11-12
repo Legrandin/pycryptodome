@@ -596,21 +596,6 @@ class RoundtripTest(unittest.TestCase):
         decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
         self.assertEqual(self.plaintext, decrypted_plaintext)
 
-        ## All other non-AEAD modes (but CTR)
-        for mode in (self.module.MODE_OFB, ):
-            encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
-            ciphertext = encryption_cipher.encrypt(self.plaintext)
-
-            if mode != self.module.MODE_OPENPGP:
-                decryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
-            else:
-                eiv = ciphertext[:self.module.block_size+2]
-                ciphertext = ciphertext[self.module.block_size+2:]
-                decryption_cipher = self.module.new(a2b_hex(self.key), mode, eiv)
-
-            decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
-            self.assertEqual(self.plaintext, decrypted_plaintext)
-
 
 class IVLengthTest(unittest.TestCase):
     def __init__(self, module, params):
@@ -622,8 +607,6 @@ class IVLengthTest(unittest.TestCase):
         return "Check that all modes except MODE_ECB and MODE_CTR require an IV of the proper length"
 
     def runTest(self):
-        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_OFB, b(""))
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
                 self.module.MODE_OPENPGP, b(""))
         if hasattr(self.module, "MODE_CCM"):
@@ -716,7 +699,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         tests.append(CipherSelfTest(module, params))
 
         # When using CTR mode, test that the interface behaves like a stream cipher
-        if p_mode in ('OFB', 'CTR'):
+        if p_mode in ('CTR', ):
             tests.append(CipherStreamingSelfTest(module, params))
 
     # Add tests that don't use test vectors

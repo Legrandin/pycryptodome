@@ -106,7 +106,9 @@ class OfbMode(object):
 
         #: The Initialization Vector originally used to create the object.
         #: The value does not change.
-        self.IV = iv
+        self.IV = self.iv = iv
+
+        self._next = [ self.encrypt, self.decrypt ]
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -136,6 +138,10 @@ class OfbMode(object):
             the encrypted data, as a byte string.
             It is as long as *plaintext*.
         """
+
+        if self.encrypt not in self._next:
+            raise TypeError("encrypt() cannot be called after decrypt()")
+        self._next = [ self.encrypt ]
 
         expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
@@ -175,6 +181,10 @@ class OfbMode(object):
         :Return: the decrypted data (byte string).
         """
 
+        if self.decrypt not in self._next:
+            raise TypeError("decrypt() cannot be called after encrypt()")
+        self._next = [ self.decrypt ]
+
         expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_ofb_lib.OFB_decrypt(self._state.get(),
@@ -206,10 +216,18 @@ def _create_ofb_cipher(factory, **kwargs):
     """
 
     cipher_state = factory._create_base_cipher(kwargs)
-
     iv = kwargs.pop("IV", None)
-    if iv is None:
-        iv = kwargs.pop("iv")
+    IV = kwargs.pop("iv", None)
+
+    if (None, None) == (iv, IV):
+        raise TypeError("An IV must be provided for CBC mode")
+    if iv is not None:
+        if IV is not None:
+            raise TypeError("You must either use 'iv' or 'IV', not both")
+    else:
+        iv = IV
+
     if kwargs:
         raise ValueError("Unknown parameters for OFB: %s" % str(kwargs))
+
     return OfbMode(cipher_state, iv)
