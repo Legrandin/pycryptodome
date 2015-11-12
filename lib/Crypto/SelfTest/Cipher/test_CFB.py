@@ -76,6 +76,10 @@ class CfbTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CFB, IV=self.iv_128)
         self.assertEquals(ct, cipher.encrypt(self.data_128))
 
+    def test_iv_must_be_bytes(self):
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB,
+                          iv = u'test1234567890-*')
+
     def test_only_one_iv(self):
         # Only one IV/iv keyword allowed
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB,
@@ -172,6 +176,13 @@ class CfbTests(unittest.TestCase):
             self.assertRaises(ValueError, DES3.new, self.key_192, AES.MODE_CFB,
                               self.iv_64,
                               segment_size=bits)
+
+    def test_data_must_be_bytes(self):
+        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
+        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+
+        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
+        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
 
 class NistCfbVectors(unittest.TestCase):

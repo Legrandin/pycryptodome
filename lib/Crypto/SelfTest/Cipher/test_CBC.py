@@ -76,6 +76,10 @@ class CbcTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CBC, IV=self.iv_128)
         self.assertEquals(ct, cipher.encrypt(self.data_128))
 
+    def test_iv_must_be_bytes(self):
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+                          iv = u'test1234567890-*')
+
     def test_only_one_iv(self):
         # Only one IV/iv keyword allowed
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
@@ -145,6 +149,13 @@ class CbcTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
         cipher.decrypt(b(""))
         self.assertRaises(TypeError, cipher.encrypt, b(""))
+
+    def test_data_must_be_bytes(self):
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
 
 class NistCbcVectors(unittest.TestCase):
