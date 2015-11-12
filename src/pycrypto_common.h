@@ -49,6 +49,8 @@ typedef unsigned __int64 uint64_t;
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+
 
 #include "errors.h"
 
@@ -74,5 +76,5 @@ typedef unsigned __int64 uint64_t;
 #else
 #define EXPORT_SYM
 #endif
- 
+
 #endif /* PYCRYPTO_COMMON_H */
