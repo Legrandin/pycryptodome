@@ -101,7 +101,7 @@ else:
             if isinstance(s,str):
                 return s.encode("latin-1")
             else:
-                return bytes(s)
+                return bytes([s])
     def tostr(bs):
         return bs.decode("latin-1")
     def byte_string(s):
