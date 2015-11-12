@@ -45,6 +45,7 @@ class CbcTests(unittest.TestCase):
     key_192 = get_tag_random("key_192", 24)
     iv_128 = get_tag_random("iv_128", 16)
     iv_64 = get_tag_random("iv_64", 8)
+    data_128 = get_tag_random("data_128", 16)
 
     def test_loopback_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
@@ -67,8 +68,17 @@ class CbcTests(unittest.TestCase):
     def test_iv_is_required(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC)
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        ct = cipher.encrypt(self.data_128)
+
         cipher = AES.new(self.key_128, AES.MODE_CBC, iv=self.iv_128)
+        self.assertEquals(ct, cipher.encrypt(self.data_128))
+
         cipher = AES.new(self.key_128, AES.MODE_CBC, IV=self.iv_128)
+        self.assertEquals(ct, cipher.encrypt(self.data_128))
+
+    def test_iv_must_be_bytes(self):
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+                          iv = u'test1234567890-*')
 
     def test_only_one_iv(self):
         # Only one IV/iv keyword allowed
@@ -122,6 +132,8 @@ class CbcTests(unittest.TestCase):
                           self.iv_128, 7)
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
                           iv=self.iv_128, unknown=7)
+        # But some are only known by the base cipher (e.g. use_aesni consumed by the AES module)
+        AES.new(self.key_128, AES.MODE_CBC, iv=self.iv_128, use_aesni=False)
 
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
@@ -137,6 +149,13 @@ class CbcTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
         cipher.decrypt(b(""))
         self.assertRaises(TypeError, cipher.encrypt, b(""))
+
+    def test_data_must_be_bytes(self):
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+
+        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
 
 class NistCbcVectors(unittest.TestCase):

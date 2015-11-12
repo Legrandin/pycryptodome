@@ -111,7 +111,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                                 self.data = data
                                 self.idx = 0
                             def __call__(self, N):
-                                r = self.data[self.idx:N]
+                                r = self.data[self.idx:self.idx+N]
                                 self.idx += N
                                 return r
                         # The real test

@@ -7,9 +7,15 @@ Changelog
 New features
 ------------
 
-* For CBC, `encrypt` and `decrypt` cannot be intermixed.
+* For CBC and CFB, `encrypt` and `decrypt` cannot be intermixed.
   Also, the cipher object has both `IV` and `iv` attributes.
-* Dedicated tests for CBC, including NIST test vectors
+  `new` accepts `IV` as well as `iv` as parameter.
+* Dedicated tests for CBC and CFB, including NIST test vectors
+
+Breaks in compatibility
+-----------------------
+
+* Parameter `segment_size` cannot be 0 for the CFB mode.
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++

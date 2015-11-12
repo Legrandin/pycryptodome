@@ -1228,47 +1228,6 @@ test_data = [
      '603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4',
      'NIST 800-38A, F.1.3, ECB and AES-256'),
 
-    # Skip CFB-1 since it is not supported by PyCrypto
-
-    ('6bc1bee22e409f96e93d7e117393172aae2d','3b79424c9c0dd436bace9e0ed4586a4f32b9',
-     '2b7e151628aed2a6abf7158809cf4f3c',
-     'NIST 800-38A, F.3.7, CFB-8 and AES-128',
-     dict(mode='CFB', iv='000102030405060708090a0b0c0d0e0f', segment_size=8)),
-
-    ('6bc1bee22e409f96e93d7e117393172aae2d','cda2521ef0a905ca44cd057cbf0d47a0678a',
-     '8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b',
-     'NIST 800-38A, F.3.9, CFB-8 and AES-192',
-     dict(mode='CFB', iv='000102030405060708090a0b0c0d0e0f', segment_size=8)),
-
-    ('6bc1bee22e409f96e93d7e117393172aae2d','dc1f1a8520a64db55fcc8ac554844e889700',
-     '603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4',
-     'NIST 800-38A, F.3.11, CFB-8 and AES-256',
-     dict(mode='CFB', iv='000102030405060708090a0b0c0d0e0f', segment_size=8)),
-
-    ('6bc1bee22e409f96e93d7e117393172a'+'ae2d8a571e03ac9c9eb76fac45af8e51'+
-     '30c81c46a35ce411e5fbc1191a0a52ef'+'f69f2445df4f9b17ad2b417be66c3710',
-     '3b3fd92eb72dad20333449f8e83cfb4a'+'c8a64537a0b3a93fcde3cdad9f1ce58b'+
-     '26751f67a3cbb140b1808cf187a4f4df'+'c04b05357c5d1c0eeac4c66f9ff7f2e6',
-     '2b7e151628aed2a6abf7158809cf4f3c',
-     'NIST 800-38A, F.3.13, CFB-128 and AES-128',
-     dict(mode='CFB', iv='000102030405060708090a0b0c0d0e0f', segment_size=128)),
-
-    ('6bc1bee22e409f96e93d7e117393172a'+'ae2d8a571e03ac9c9eb76fac45af8e51'+
-     '30c81c46a35ce411e5fbc1191a0a52ef'+'f69f2445df4f9b17ad2b417be66c3710',
-     'cdc80d6fddf18cab34c25909c99a4174'+'67ce7f7f81173621961a2b70171d3d7a'+
-     '2e1e8a1dd59b88b1c8e60fed1efac4c9'+'c05f9f9ca9834fa042ae8fba584b09ff',
-     '8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b',
-     'NIST 800-38A, F.3.15, CFB-128 and AES-192',
-     dict(mode='CFB', iv='000102030405060708090a0b0c0d0e0f', segment_size=128)),
-
-    ('6bc1bee22e409f96e93d7e117393172a'+'ae2d8a571e03ac9c9eb76fac45af8e51'+
-     '30c81c46a35ce411e5fbc1191a0a52ef'+'f69f2445df4f9b17ad2b417be66c3710',
-     'dc7e84bfda79164b7ecd8486985d3860'+'39ffed143b28b1c832113c6331e5407b'+
-     'df10132415e54b92a13ed0a8267ae2f9'+'75a385741ab9cef82031623d55b1e471',
-     '603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4',
-     'NIST 800-38A, F.3.17, CFB-128 and AES-256',
-     dict(mode='CFB', iv='000102030405060708090a0b0c0d0e0f', segment_size=128)),
-
     ('6bc1bee22e409f96e93d7e117393172a'+'ae2d8a571e03ac9c9eb76fac45af8e51'+
      '30c81c46a35ce411e5fbc1191a0a52ef'+'f69f2445df4f9b17ad2b417be66c3710',
      '3b3fd92eb72dad20333449f8e83cfb4a'+'7789508d16918f03f53c52dac54ed825'+

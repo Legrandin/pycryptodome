@@ -128,12 +128,14 @@ class PKCS115_Cipher:
         if mLen > k-11:
             raise ValueError("Plaintext is too long.")
         # Step 2a
-        class nonZeroRandByte:
-            def __init__(self, rf): self.rf=rf
-            def __call__(self, c):
-                while bord(c)==0x00: c=self.rf(1)[0]
-                return c
-        ps = tobytes(map(nonZeroRandByte(self._randfunc), self._randfunc(k-mLen-3)))
+        ps = []
+        while len(ps) != k - mLen - 3:
+            new_byte = self._randfunc(1)
+            if bord(new_byte[0]) == 0x00:
+                continue
+            ps.append(new_byte)
+        ps = b("").join(ps)
+        assert(len(ps) == k - mLen - 3)
         # Step 2b
         em = b('\x00\x02') + ps + bchr(0x00) + message
         # Step 3a (OS2IP)
