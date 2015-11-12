@@ -98,18 +98,29 @@ class CfbTests(unittest.TestCase):
         self.assertEqual(cipher.block_size, DES3.block_size)
 
     def test_unaligned_data_128(self):
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        cipher.encrypt(b("5") * 7)
+        plaintexts = [ b("7777777") ] * 100
 
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        cipher.decrypt(b("5") * 7)
+        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
+        ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
+        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
+        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
+
+        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
+        ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
+        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
+        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
 
     def test_unaligned_data_64(self):
-        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64)
-        cipher.encrypt(b("5") * 7)
+        plaintexts = [ b("7777777") ] * 100
+        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
+        ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
+        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
+        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
 
-        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64)
-        cipher.decrypt(b("5") * 7)
+        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
+        ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
+        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
+        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
 
     def test_IV_iv_attributes(self):
         data = get_tag_random("data", 16 * 100)
