@@ -267,24 +267,6 @@ class CTRWraparoundTest(unittest.TestCase):
             self.assertRaises(OverflowError, cipher.encrypt, block)
             self.assertRaises(OverflowError, cipher.encrypt, block)
 
-class CFBSegmentSizeTest(unittest.TestCase):
-
-    def __init__(self, module, params):
-        unittest.TestCase.__init__(self)
-        self.module = module
-        self.key = b(params['key'])
-        self.description = params['description']
-
-    def shortDescription(self):
-        return self.description
-
-    def runTest(self):
-        """Regression test: m.new(key, m.MODE_CFB, segment_size=N) should require segment_size to be a multiple of 8 bits"""
-        iv = bchr(0) * self.module.block_size
-        for i in range(1, 8):
-            self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                    self.module.MODE_CFB, iv, segment_size=i)
-        self.module.new(a2b_hex(self.key), self.module.MODE_CFB, iv, segment_size=8) # should succeed
 
 class CCMMACLengthTest(unittest.TestCase):
     """CCM specific tests about MAC"""
@@ -615,7 +597,7 @@ class RoundtripTest(unittest.TestCase):
         self.assertEqual(self.plaintext, decrypted_plaintext)
 
         ## All other non-AEAD modes (but CTR)
-        for mode in (self.module.MODE_CBC, self.module.MODE_CFB, self.module.MODE_OFB):
+        for mode in (self.module.MODE_OFB, ):
             encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
             ciphertext = encryption_cipher.encrypt(self.plaintext)
 
@@ -640,10 +622,6 @@ class IVLengthTest(unittest.TestCase):
         return "Check that all modes except MODE_ECB and MODE_CTR require an IV of the proper length"
 
     def runTest(self):
-        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_CBC, b(""))
-        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_CFB, b(""))
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
                 self.module.MODE_OFB, b(""))
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
@@ -720,7 +698,6 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             tests += [
                 CTRSegfaultTest(module, params),
                 # CTRWraparoundTest(module, params),
-                CFBSegmentSizeTest(module, params),
                 RoundtripTest(module, params),
                 IVLengthTest(module, params),
                 NoDefaultECBTest(module, params),
