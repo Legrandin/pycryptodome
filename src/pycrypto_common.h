@@ -49,6 +49,11 @@ typedef unsigned __int64 uint64_t;
 
 #include <stdlib.h>
 #include <string.h>
+
+/** Force checking of assertions **/
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 
 
