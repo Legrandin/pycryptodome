@@ -11,3 +11,4 @@ MANIFEST
 
 # Backup files
 *~
+*.bak

@@ -12,6 +12,11 @@ New features
   `new` accepts `IV` as well as `iv` as parameter.
 * Dedicated tests for CBC and CFB, including NIST test vectors
 
+Resolved issues
+---------------
+
+* RSA key size returned correctly in RsaKey.__repr__ method.
+
 Breaks in compatibility
 -----------------------
 
@@ -122,7 +127,7 @@ Resolved issues
 Breaks in compatibility
 -----------------------
 
-* New dependency on ctypes with Python 2.4. 
+* New dependency on ctypes with Python 2.4.
 * The ``counter`` parameter of a CTR mode cipher must be generated via
   ``Crypto.Util.Counter``. It cannot be a generic callable anymore.
 * Removed the ``Crypto.Random.Fortuna`` package (due to lack of test vectors).
