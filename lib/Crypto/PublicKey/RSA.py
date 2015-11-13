@@ -69,6 +69,7 @@ __all__ = ['generate', 'construct', 'importKey', 'RSAImplementation',
 from Crypto.Util.py3compat import *
 
 import binascii
+import math
 import struct
 
 from Crypto import Random
@@ -134,7 +135,7 @@ class RsaKey(object):
         if not self.has_private():
             raise TypeError("This is not a private key")
 
-        e, d, n, p, q, u = [self._key[comp] for comp in 'e', 'd', 'n', 'p', 'q', 'u']
+        e, d, n, p, q, u = [self._key[comp] for comp in ('e', 'd', 'n', 'p', 'q', 'u')]
 
         # Blinded RSA decryption (to prevent timing attacks):
         # Step 1: Generate random secret blinding factor r, such that 0 < r < n-1
@@ -160,7 +161,7 @@ class RsaKey(object):
         return 'd' in self._key
 
     def publickey(self):
-        return RsaKey(dict([(k, self._key[k]) for k in 'n', 'e']))
+        return RsaKey(dict([(k, self._key[k]) for k in ('n', 'e')]))
 
     def __eq__(self, other):
         return self._key == other._key
@@ -177,8 +178,8 @@ class RsaKey(object):
         attrs = []
         for k in self._keydata:
             if k == 'n':
-                attrs.append("n(%d)" % (self.size()+1,))
-            elif hasattr(self.key, k):
+                attrs.append("n(%d)" % (int(math.log(self.n, 2))+1))
+            elif hasattr(self, k):
                 attrs.append(k)
         if self.has_private():
             attrs.append("private")
@@ -263,7 +264,7 @@ class RsaKey(object):
             randfunc = Random.get_random_bytes
 
         if format=='OpenSSH':
-               eb, nb = [self._key[comp].to_bytes() for comp in 'e', 'n']
+               eb, nb = [self._key[comp].to_bytes() for comp in ('e', 'n')]
                if bord(eb[0]) & 0x80: eb=bchr(0x00)+eb
                if bord(nb[0]) & 0x80: nb=bchr(0x00)+nb
                keyparts = [ b('ssh-rsa'), eb, nb ]
