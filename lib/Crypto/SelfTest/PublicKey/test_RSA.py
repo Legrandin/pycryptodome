@@ -198,6 +198,10 @@ class RSATest(unittest.TestCase):
 
         self.assertRaises(ValueError, self.rsa.construct, [self.n, self.e, self.n-1])
 
+    def test_repr(self):
+        rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
+        repr(rsaObj)
+
     def test_serialization(self):
         """RSA keys are unpickable"""
 
