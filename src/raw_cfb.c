@@ -120,7 +120,7 @@ static int CFB_transcrypt(CfbModeState *cfbState,
     segment_len = cfbState->segment_len;
     next_iv = cfbState->next_iv;
 
-    assert(cfbState->usedKeyStream < segment_len);
+    assert(cfbState->usedKeyStream <= segment_len);
     assert((direction == DirEncrypt) || (direction == DirDecrypt));
 
     while (data_len > 0) {
