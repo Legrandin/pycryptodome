@@ -39,7 +39,7 @@ from Crypto.Hash import SHAKE128
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
-class CbcTests(unittest.TestCase):
+class BlockChainingTests(unittest.TestCase):
 
     key_128 = get_tag_random("key_128", 16)
     key_192 = get_tag_random("key_192", 24)
@@ -48,124 +48,129 @@ class CbcTests(unittest.TestCase):
     data_128 = get_tag_random("data_128", 16)
 
     def test_loopback_128(self):
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         pt = get_tag_random("plaintext", 16 * 100)
         ct = cipher.encrypt(pt)
 
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
     def test_loopback_64(self):
-        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         pt = get_tag_random("plaintext", 8 * 100)
         ct = cipher.encrypt(pt)
 
-        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
     def test_iv_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC)
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         ct = cipher.encrypt(self.data_128)
 
-        cipher = AES.new(self.key_128, AES.MODE_CBC, iv=self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, iv=self.iv_128)
         self.assertEquals(ct, cipher.encrypt(self.data_128))
 
-        cipher = AES.new(self.key_128, AES.MODE_CBC, IV=self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, IV=self.iv_128)
         self.assertEquals(ct, cipher.encrypt(self.data_128))
 
     def test_iv_must_be_bytes(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,
                           iv = u'test1234567890-*')
 
     def test_only_one_iv(self):
         # Only one IV/iv keyword allowed
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,
                           iv=self.iv_128, IV=self.iv_128)
 
     def test_iv_with_matching_length(self):
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
+        self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode,
                           b(""))
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
+        self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode,
                           self.iv_128[:15])
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CBC,
+        self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode,
                           self.iv_128 + b("0"))
 
     def test_block_size_128(self):
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         self.assertEqual(cipher.block_size, AES.block_size)
 
     def test_block_size_64(self):
-        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         self.assertEqual(cipher.block_size, DES3.block_size)
 
     def test_unaligned_data_128(self):
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         for wrong_length in xrange(1,16):
             self.assertRaises(ValueError, cipher.encrypt, b("5") * wrong_length)
 
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         for wrong_length in xrange(1,16):
             self.assertRaises(ValueError, cipher.decrypt, b("5") * wrong_length)
 
     def test_unaligned_data_64(self):
-        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         for wrong_length in xrange(1,8):
             self.assertRaises(ValueError, cipher.encrypt, b("5") * wrong_length)
 
-        cipher = DES3.new(self.key_192, DES3.MODE_CBC, self.iv_64)
+        cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         for wrong_length in xrange(1,8):
             self.assertRaises(ValueError, cipher.decrypt, b("5") * wrong_length)
 
     def test_IV_iv_attributes(self):
         data = get_tag_random("data", 16 * 100)
         for func in "encrypt", "decrypt":
-            cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+            cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
             getattr(cipher, func)(data)
             self.assertEqual(cipher.iv, self.iv_128)
             self.assertEqual(cipher.IV, self.iv_128)
 
     def test_unknown_attributes(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,
                           self.iv_128, 7)
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CBC,
+        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,
                           iv=self.iv_128, unknown=7)
         # But some are only known by the base cipher (e.g. use_aesni consumed by the AES module)
-        AES.new(self.key_128, AES.MODE_CBC, iv=self.iv_128, use_aesni=False)
+        AES.new(self.key_128, self.aes_mode, iv=self.iv_128, use_aesni=False)
 
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
-            cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+            cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
             result = getattr(cipher, func)(b(""))
             self.assertEqual(result, b(""))
 
     def test_either_encrypt_or_decrypt(self):
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         cipher.encrypt(b(""))
         self.assertRaises(TypeError, cipher.decrypt, b(""))
 
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         cipher.decrypt(b(""))
         self.assertRaises(TypeError, cipher.encrypt, b(""))
 
     def test_data_must_be_bytes(self):
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
 
-        cipher = AES.new(self.key_128, AES.MODE_CBC, self.iv_128)
+        cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
 
-class NistCbcVectors(unittest.TestCase):
+class CbcTests(BlockChainingTests):
+    aes_mode = AES.MODE_CBC
+    des3_mode = DES3.MODE_CBC
+
+
+class NistBlockChainingVectors(unittest.TestCase):
 
     def _do_kat_aes_test(self, file_name):
-        test_vectors = load_tests("AES", file_name, "AES CBC KAT")
+        test_vectors = load_tests("AES", file_name, "AES KAT")
         assert(test_vectors)
         for tv in test_vectors:
             self.description = tv.desc
-            cipher = AES.new(tv.key, AES.MODE_CBC, tv.iv)
+            cipher = AES.new(tv.key, self.aes_mode, tv.iv)
             if tv.direction == "ENC":
                 self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
             else:
@@ -173,12 +178,12 @@ class NistCbcVectors(unittest.TestCase):
 
     # See Section 6.4.2 in AESAVS
     def _do_mct_aes_test(self, file_name):
-        test_vectors = load_tests("AES", file_name, "AES CBC Montecarlo")
+        test_vectors = load_tests("AES", file_name, "AES Montecarlo")
         assert(test_vectors)
         for tv in test_vectors:
 
             self.description = tv.desc
-            cipher = AES.new(tv.key, AES.MODE_CBC, tv.iv)
+            cipher = AES.new(tv.key, self.aes_mode, tv.iv)
 
             if tv.direction == 'ENC':
                 cts = [ tv.iv ]
@@ -199,17 +204,23 @@ class NistCbcVectors(unittest.TestCase):
         for tv in test_vectors:
             self.description = tv.desc
             if hasattr(tv, "keys"):
-                cipher = DES.new(tv.keys, DES.MODE_CBC, tv.iv)
+                cipher = DES.new(tv.keys, self.des_mode, tv.iv)
             else:
                 if tv.key1 != tv.key3:
                     key = tv.key1 + tv.key2 + tv.key3  # Option 3
                 else:
                     key = tv.key1 + tv.key2            # Option 2
-                cipher = DES3.new(key, DES3.MODE_CBC, tv.iv)
+                cipher = DES3.new(key, self.des3_mode, tv.iv)
             if tv.direction == "ENC":
                 self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
             else:
                 self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+
+
+class NistCbcVectors(NistBlockChainingVectors):
+    aes_mode = AES.MODE_CBC
+    des_mode = DES.MODE_CBC
+    des3_mode = DES3.MODE_CBC
 
 
 # Create one test method per file

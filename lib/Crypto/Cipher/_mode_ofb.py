@@ -228,6 +228,6 @@ def _create_ofb_cipher(factory, **kwargs):
         iv = IV
 
     if kwargs:
-        raise ValueError("Unknown parameters for OFB: %s" % str(kwargs))
+        raise TypeError("Unknown parameters for OFB: %s" % str(kwargs))
 
     return OfbMode(cipher_state, iv)
