@@ -131,10 +131,8 @@ def new(key, mode, *args, **kwargs):
         A mandatory value that must never be reused for any other encryption.
         There are no restrictions on its length, but it is recommended to
         use at least 16 bytes.
-      counter : callable
-        (*Only* `MODE_CTR`). A stateful function that returns the next
-        *counter block*, which is a byte string of `block_size` bytes.
-        For better performance, use `Crypto.Util.Counter`.
+      counter : object
+        (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
       mac_len : integer
         (*Only* `MODE_EAX`). Length of the MAC, in bytes.
         It must be no larger than 8 (which is the default).

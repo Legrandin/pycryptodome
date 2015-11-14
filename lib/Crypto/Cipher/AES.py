@@ -188,10 +188,8 @@ def new(key, mode, *args, **kwargs):
 
         For the other modes, there are no restrictions on its length,
         but it is recommended to use at least 16 bytes.
-      counter : callable
-        (*Only* `MODE_CTR`). A stateful function that returns the next
-        *counter block*, which is a byte string of `block_size` bytes.
-        For better performance, use `Crypto.Util.Counter`.
+      counter : object
+        (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
       segment_size : integer
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
