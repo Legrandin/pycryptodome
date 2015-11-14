@@ -39,67 +39,15 @@ from Crypto.Hash import SHAKE128
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
-class CfbTests(unittest.TestCase):
 
-    key_128 = get_tag_random("key_128", 16)
-    key_192 = get_tag_random("key_192", 24)
-    iv_128 = get_tag_random("iv_128", 16)
-    iv_64 = get_tag_random("iv_64", 8)
-    data_128 = get_tag_random("data_128", 16)
+from Crypto.SelfTest.Cipher.test_CBC import BlockChainingTests
 
-    def test_loopback_128(self):
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        pt = get_tag_random("plaintext", 16 * 100)
-        ct = cipher.encrypt(pt)
+class CfbTests(BlockChainingTests):
 
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+    aes_mode = AES.MODE_CFB
+    des3_mode = DES3.MODE_CFB
 
-    def test_loopback_64(self):
-        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64)
-        pt = get_tag_random("plaintext", 8 * 100)
-        ct = cipher.encrypt(pt)
-
-        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64)
-        pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
-
-    def test_iv_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB)
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        ct = cipher.encrypt(self.data_128)
-
-        cipher = AES.new(self.key_128, AES.MODE_CFB, iv=self.iv_128)
-        self.assertEquals(ct, cipher.encrypt(self.data_128))
-
-        cipher = AES.new(self.key_128, AES.MODE_CFB, IV=self.iv_128)
-        self.assertEquals(ct, cipher.encrypt(self.data_128))
-
-    def test_iv_must_be_bytes(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB,
-                          iv = u'test1234567890-*')
-
-    def test_only_one_iv(self):
-        # Only one IV/iv keyword allowed
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB,
-                          iv=self.iv_128, IV=self.iv_128)
-
-    def test_iv_with_matching_length(self):
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CFB,
-                          b(""))
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CFB,
-                          self.iv_128[:15])
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CFB,
-                          self.iv_128 + b("0"))
-
-    def test_block_size_128(self):
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        self.assertEqual(cipher.block_size, AES.block_size)
-
-    def test_block_size_64(self):
-        cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64)
-        self.assertEqual(cipher.block_size, DES3.block_size)
+    # Redefine test_unaligned_data_128/64
 
     def test_unaligned_data_128(self):
         plaintexts = [ b("7777777") ] * 100
@@ -126,36 +74,7 @@ class CfbTests(unittest.TestCase):
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
         self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
 
-    def test_IV_iv_attributes(self):
-        data = get_tag_random("data", 16 * 100)
-        for func in "encrypt", "decrypt":
-            cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-            getattr(cipher, func)(data)
-            self.assertEqual(cipher.iv, self.iv_128)
-            self.assertEqual(cipher.IV, self.iv_128)
-
-    def test_unknown_attributes(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB,
-                          self.iv_128, 7)
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB,
-                          iv=self.iv_128, unknown=7)
-        # But some are only known by the base cipher (e.g. use_aesni consumed by the AES module)
-        AES.new(self.key_128, AES.MODE_CFB, iv=self.iv_128, use_aesni=False)
-
-    def test_null_encryption_decryption(self):
-        for func in "encrypt", "decrypt":
-            cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-            result = getattr(cipher, func)(b(""))
-            self.assertEqual(result, b(""))
-
-    def test_either_encrypt_or_decrypt(self):
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        cipher.encrypt(b(""))
-        self.assertRaises(TypeError, cipher.decrypt, b(""))
-
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        cipher.decrypt(b(""))
-        self.assertRaises(TypeError, cipher.encrypt, b(""))
+    # Extra
 
     def test_segment_size_128(self):
         for bits in xrange(8, 129, 8):
@@ -176,13 +95,6 @@ class CfbTests(unittest.TestCase):
             self.assertRaises(ValueError, DES3.new, self.key_192, AES.MODE_CFB,
                               self.iv_64,
                               segment_size=bits)
-
-    def test_data_must_be_bytes(self):
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
-
-        cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128)
-        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
 
 class NistCfbVectors(unittest.TestCase):
