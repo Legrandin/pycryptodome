@@ -245,11 +245,15 @@ def _create_ctr_cipher(factory, **kwargs):
 
     # 'counter' used to be a callable object, but now it is
     # just a dictionary for backward compatibility.
-    counter_len = counter.pop("counter_len")
-    prefix = counter.pop("prefix")
-    suffix = counter.pop("suffix")
-    initial_value = counter.pop("initial_value")
-    little_endian = counter.pop("little_endian")
+    _counter = dict(counter)
+    try:
+        counter_len = _counter.pop("counter_len")
+        prefix = _counter.pop("prefix")
+        suffix = _counter.pop("suffix")
+        initial_value = _counter.pop("initial_value")
+        little_endian = _counter.pop("little_endian")
+    except KeyError:
+        raise TypeError("Incorrect counter object (use Crypto.Util.Counter.new)")
 
     # Compute initial counter block
     words = []
