@@ -65,8 +65,8 @@ class CtrTests(unittest.TestCase):
         self.assertEqual(pt, pt2)
 
     def test_counter_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CFB)
-        self.assertRaises(TypeError, AES.new, self.key_128, self.ctr_128)
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR)
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR, self.ctr_128)
 
     def test_iv_with_matching_length(self):
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
