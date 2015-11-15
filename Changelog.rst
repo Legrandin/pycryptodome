@@ -7,15 +7,16 @@ Changelog
 New features
 ------------
 
-* For CBC/CFB/OFB, `encrypt` and `decrypt` cannot be intermixed.
-  Also, the cipher object has both `IV` and `iv` attributes.
+* For CBC/CFB/OFB/CTR, `encrypt` and `decrypt` cannot be intermixed.
+* For CBC/CFB/OFB, the cipher object has both `IV` and `iv` attributes.
   `new` accepts `IV` as well as `iv` as parameter.
-* Dedicated tests for CBC/CFB/OFB, including NIST test vectors
+* Dedicated tests for CBC/CFB/OFB/CTR, including NIST test vectors
 
 Resolved issues
 ---------------
 
 * RSA key size returned correctly in RsaKey.__repr__ method.
+* CTR mode does not modify anymore 'counter' parameter passed to 'new' method.
 
 Breaks in compatibility
 -----------------------
