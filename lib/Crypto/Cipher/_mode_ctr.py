@@ -275,8 +275,12 @@ def _create_ctr_cipher(factory, **kwargs):
         words.reverse()
     initial_counter_block = prefix + b("").join(words) + suffix
 
+    if len(initial_counter_block) != factory.block_size:
+        raise ValueError("Size of the counter block (% bytes) must match"
+                         " block size (%d)", (len(initial_counter_block), factory.block_size))
+
     if kwargs:
-        raise ValueError("Unknown parameters for CTR mode: %s"
+        raise TypeError("Unknown parameters for CTR mode: %s"
                          % str(kwargs))
     return CtrMode(cipher_state, initial_counter_block,
                       len(prefix), counter_len, little_endian)
