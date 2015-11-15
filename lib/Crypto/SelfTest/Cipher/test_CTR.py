@@ -204,10 +204,69 @@ class SP800TestVectors(unittest.TestCase):
         self.assertEqual(cipher.decrypt(ciphertext), plaintext)
 
 
+class RFC3686TestVectors(unittest.TestCase):
+
+    # Each item is a test vector with:
+    # - plaintext
+    # - ciphertext
+    # - key (AES 128, 192 or 256 bits)
+    # - counter prefix
+    data = (
+            ('53696e676c6520626c6f636b206d7367',
+             'e4095d4fb7a7b3792d6175a3261311b8',
+             'ae6852f8121067cc4bf7a5765577f39e',
+             '00000030'+'0000000000000000'),
+            ('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+             '5104a106168a72d9790d41ee8edad388eb2e1efc46da57c8fce630df9141be28',
+             '7e24067817fae0d743d6ce1f32539163',
+             '006cb6dbc0543b59da48d90b'),
+            ('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223',
+             'c1cf48a89f2ffdd9cf4652e9efdb72d74540a42bde6d7836d59a5ceaaef3105325b2072f',
+             '7691be035e5020a8ac6e618529f9a0dc',
+             '00e0017b27777f3f4a1786f0'),
+            ('53696e676c6520626c6f636b206d7367',
+             '4b55384fe259c9c84e7935a003cbe928',
+             '16af5b145fc9f579c175f93e3bfb0eed863d06ccfdb78515',
+             '0000004836733c147d6d93cb'),
+            ('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+             '453243fc609b23327edfaafa7131cd9f8490701c5ad4a79cfc1fe0ff42f4fb00',
+             '7c5cb2401b3dc33c19e7340819e0f69c678c3db8e6f6a91a',
+             '0096b03b020c6eadc2cb500d'),
+            ('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223',
+             '96893fc55e5c722f540b7dd1ddf7e758d288bc95c69165884536c811662f2188abee0935',
+             '02bf391ee8ecb159b959617b0965279bf59b60a786d3e0fe',
+             '0007bdfd5cbd60278dcc0912'),
+            ('53696e676c6520626c6f636b206d7367',
+             '145ad01dbf824ec7560863dc71e3e0c0',
+             '776beff2851db06f4c8a0542c8696f6c6a81af1eec96b4d37fc1d689e6c1c104',
+             '00000060db5672c97aa8f0b2'),
+            ('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+             'f05e231b3894612c49ee000b804eb2a9b8306b508f839d6a5530831d9344af1c',
+             'f6d66d6bd52d59bb0796365879eff886c66dd51a5b6a99744b50590c87a23884',
+             '00faac24c1585ef15a43d875'),
+            ('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223',
+             'eb6c52821d0bbbf7ce7594462aca4faab407df866569fd07f48cc0b583d6071f1ec0e6b8',
+             'ff7a617ce69148e4f1726e2f43581de2aa62d9f805532edff1eed687fb54153d',
+             '001cc5b751a51d70a1c11148')
+        )
+
+    bindata = []
+    for tv in data:
+        bindata.append([unhexlify(x) for x in tv])
+
+    def runTest(self):
+        for pt, ct, key, prefix in self.bindata:
+            counter = Counter.new(32, prefix=prefix)
+            cipher = AES.new(key, AES.MODE_CTR, counter=counter)
+            result = cipher.encrypt(pt)
+            self.assertEqual(ct, result)
+
+
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(CtrTests)
     tests += list_test_cases(SP800TestVectors)
+    tests += [ RFC3686TestVectors() ]
     return tests
 
 
