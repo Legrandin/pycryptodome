@@ -136,6 +136,8 @@ class CtrMode(object):
         #: The block size of the underlying cipher, in bytes.
         self.block_size = len(initial_counter_block)
 
+        self._next = [ self.encrypt, self.decrypt ]
+
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
 
@@ -165,6 +167,10 @@ class CtrMode(object):
             It is as long as *plaintext*.
         """
 
+        if self.encrypt not in self._next:
+            raise TypeError("encrypt() cannot be called after decrypt()")
+        self._next = [ self.encrypt ]
+
         expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_ctr_lib.CTR_encrypt(self._state.get(),
@@ -172,6 +178,8 @@ class CtrMode(object):
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
+            if result == 0x60002:
+                raise OverflowError("The counter has wrapped around in CTR mode")
             raise ValueError("Error %X while encrypting in CTR mode" % result)
         return get_raw_buffer(ciphertext)
 
@@ -203,6 +211,10 @@ class CtrMode(object):
         :Return: the decrypted data (byte string).
         """
 
+        if self.decrypt not in self._next:
+            raise TypeError("decrypt() cannot be called after encrypt()")
+        self._next = [ self.decrypt ]
+
         expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_ctr_lib.CTR_decrypt(self._state.get(),
@@ -210,6 +222,8 @@ class CtrMode(object):
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:
+            if result == 0x60002:
+                raise OverflowError("The counter has wrapped around in CTR mode")
             raise ValueError("Error %X while decrypting in CTR mode" % result)
         return get_raw_buffer(plaintext)
 
@@ -245,11 +259,15 @@ def _create_ctr_cipher(factory, **kwargs):
 
     # 'counter' used to be a callable object, but now it is
     # just a dictionary for backward compatibility.
-    counter_len = counter.pop("counter_len")
-    prefix = counter.pop("prefix")
-    suffix = counter.pop("suffix")
-    initial_value = counter.pop("initial_value")
-    little_endian = counter.pop("little_endian")
+    _counter = dict(counter)
+    try:
+        counter_len = _counter.pop("counter_len")
+        prefix = _counter.pop("prefix")
+        suffix = _counter.pop("suffix")
+        initial_value = _counter.pop("initial_value")
+        little_endian = _counter.pop("little_endian")
+    except KeyError:
+        raise TypeError("Incorrect counter object (use Crypto.Util.Counter.new)")
 
     # Compute initial counter block
     words = []
@@ -261,8 +279,12 @@ def _create_ctr_cipher(factory, **kwargs):
         words.reverse()
     initial_counter_block = prefix + b("").join(words) + suffix
 
+    if len(initial_counter_block) != factory.block_size:
+        raise ValueError("Size of the counter block (% bytes) must match"
+                         " block size (%d)", (len(initial_counter_block), factory.block_size))
+
     if kwargs:
-        raise ValueError("Unknown parameters for CTR mode: %s"
+        raise TypeError("Unknown parameters for CTR mode: %s"
                          % str(kwargs))
     return CtrMode(cipher_state, initial_counter_block,
                       len(prefix), counter_len, little_endian)

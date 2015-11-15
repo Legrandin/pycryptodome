@@ -398,7 +398,8 @@ class CcmMode(object):
             self._signer.zero_pad()
             self._no_more_assoc_data = True
 
-        plaintext = self._cipher.decrypt(ciphertext)
+        # Encrypt is equivalent to decrypt with the CTR mode
+        plaintext = self._cipher.encrypt(ciphertext)
         self._signer.update(plaintext)
         return plaintext
 

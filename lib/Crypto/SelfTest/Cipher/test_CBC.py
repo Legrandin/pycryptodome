@@ -127,7 +127,7 @@ class BlockChainingTests(unittest.TestCase):
             self.assertEqual(cipher.iv, self.iv_128)
             self.assertEqual(cipher.IV, self.iv_128)
 
-    def test_unknown_attributes(self):
+    def test_unknown_parameters(self):
         self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,
                           self.iv_128, 7)
         self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,

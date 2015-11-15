@@ -68,7 +68,7 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, little_endian=False,
 
     :Parameters:
       nbits : integer
-        Length of the desired counter, in bits. It must be a multiple of 8.
+        Length of the desired counter value, in bits. It must be a multiple of 8.
       prefix : byte string
         The constant prefix of the counter block. By default, no prefix is
         used.
@@ -85,6 +85,9 @@ def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, little_endian=False,
     :Returns:
       An object that can be passed with the 'counter' parameter to a CTR mode
       cipher.
+
+    It must hold that ``len(prefix) + nbits//8 + len(suffix)`` matches the
+    block size of the underlying block cipher.
     """
 
     if (nbits % 8) != 0:
