@@ -31,7 +31,7 @@
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, b, unhexlify
+from Crypto.Util.py3compat import tobytes, b, unhexlify, bchr
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 from Crypto.Util import Counter
@@ -130,6 +130,16 @@ class CtrTests(unittest.TestCase):
         cipher.decrypt(b(""))
         self.assertRaises(TypeError, cipher.encrypt, b(""))
 
+    def test_wrap_around(self):
+        counter = Counter.new(8, prefix=bchr(9) * 15)
+
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        cipher.encrypt(bchr(9) * 16 * 255)
+        self.assertRaises(OverflowError, cipher.encrypt, bchr(9) * 16)
+
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        cipher.decrypt(bchr(9) * 16 * 255)
+        self.assertRaises(OverflowError, cipher.decrypt, bchr(9) * 16)
 
 class SP800TestVectors(unittest.TestCase):
     """Class exercising the CTR test vectors found in Section F.3

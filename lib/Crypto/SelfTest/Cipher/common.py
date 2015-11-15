@@ -93,17 +93,6 @@ class CipherSelfTest(unittest.TestCase):
     def _new(self, do_decryption=0):
         params = self.extra_params.copy()
 
-        # Handle CTR mode parameters.  By default, we use Counter.new(self.module.block_size)
-        if hasattr(self.module, "MODE_CTR") and self.mode == self.module.MODE_CTR:
-            from Crypto.Util import Counter
-            ctr_class = _extract(params, 'ctr_class', Counter.new)
-            ctr_params = _extract(params, 'ctr_params', {}).copy()
-            if ctr_params.has_key('prefix'): ctr_params['prefix'] = a2b_hex(b(ctr_params['prefix']))
-            if ctr_params.has_key('suffix'): ctr_params['suffix'] = a2b_hex(b(ctr_params['suffix']))
-            if not ctr_params.has_key('nbits'):
-                ctr_params['nbits'] = 8*(self.module.block_size - len(ctr_params.get('prefix', '')) - len(ctr_params.get('suffix', '')))
-            params['counter'] = ctr_class(**ctr_params)
-
         if self.mode is None:
             if self.iv is None:
                 return self.module.new(a2b_hex(self.key), **params)
@@ -205,67 +194,6 @@ class CipherStreamingSelfTest(CipherSelfTest):
         # PY3K: This is meant to be text, do not change to bytes (data)
         pt3 = b2a_hex(b("").join(pt3))
         self.assertEqual(self.plaintext, pt3)  # decryption (3 bytes at a time)
-
-class CTRSegfaultTest(unittest.TestCase):
-
-    def __init__(self, module, params):
-        unittest.TestCase.__init__(self)
-        self.module = module
-        self.key = b(params['key'])
-        self.module_name = params.get('module_name', None)
-
-    def shortDescription(self):
-        return """Regression test: %s.new(key, %s.MODE_CTR) should raise TypeError, not segfault""" % (self.module_name, self.module_name)
-
-    def runTest(self):
-        self.assertRaises(TypeError, self.module.new, a2b_hex(self.key), self.module.MODE_CTR)
-
-class CTRWraparoundTest(unittest.TestCase):
-
-    def __init__(self, module, params):
-        unittest.TestCase.__init__(self)
-        self.module = module
-        self.key = b(params['key'])
-        self.module_name = params.get('module_name', None)
-
-    def shortDescription(self):
-        return """Regression test: %s with MODE_CTR raising OverflowError on wraparound""" % (self.module_name,)
-
-    def runTest(self):
-        from Crypto.Util import Counter
-
-        def pythonCounter():
-            state = [0]
-            def ctr():
-                # First block succeeds; Second and subsequent blocks raise OverflowError
-                if state[0] == 0:
-                    state[0] = 1
-                    return b("\xff") * self.module.block_size
-                else:
-                    raise OverflowError
-            return ctr
-
-        for little_endian in (0, 1): # (False, True) Test both endiannesses
-            block = b("\x00") * self.module.block_size
-
-            # Test PyObject_CallObject code path: if the counter raises OverflowError
-            cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=pythonCounter())
-            cipher.encrypt(block)
-            self.assertRaises(OverflowError, cipher.encrypt, block)
-            self.assertRaises(OverflowError, cipher.encrypt, block)
-
-            # Test PyObject_CallObject code path: counter object should raise OverflowError
-            ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian)
-            ctr()
-            self.assertRaises(OverflowError, ctr)
-            self.assertRaises(OverflowError, ctr)
-
-            # Test the CTR-mode shortcut
-            ctr = Counter.new(8*self.module.block_size, initial_value=2L**(8*self.module.block_size)-1, little_endian=little_endian)
-            cipher = self.module.new(a2b_hex(self.key), self.module.MODE_CTR, counter=ctr)
-            cipher.encrypt(block)
-            self.assertRaises(OverflowError, cipher.encrypt, block)
-            self.assertRaises(OverflowError, cipher.encrypt, block)
 
 
 class CCMMACLengthTest(unittest.TestCase):
@@ -615,7 +543,6 @@ class IVLengthTest(unittest.TestCase):
                     self.module.MODE_CCM, bchr(0)*ivlen, msg_len=10)
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key),
                 self.module.MODE_ECB, b(""))
-        #self.module.new(a2b_hex(self.key), self.module.MODE_CTR, "", counter=self._dummy_counter)
 
     def _dummy_counter(self):
         return "\0" * self.module.block_size
@@ -679,8 +606,6 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         # Add extra test(s) to the test suite before the current test
         if not extra_tests_added:
             tests += [
-                CTRSegfaultTest(module, params),
-                # CTRWraparoundTest(module, params),
                 RoundtripTest(module, params),
                 IVLengthTest(module, params),
                 NoDefaultECBTest(module, params),
@@ -697,10 +622,6 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
 
         # Add the current test to the test suite
         tests.append(CipherSelfTest(module, params))
-
-        # When using CTR mode, test that the interface behaves like a stream cipher
-        if p_mode in ('CTR', ):
-            tests.append(CipherStreamingSelfTest(module, params))
 
     # Add tests that don't use test vectors
     if hasattr(module, "MODE_CCM"):

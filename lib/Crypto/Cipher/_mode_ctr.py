@@ -178,6 +178,8 @@ class CtrMode(object):
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
+            if result == 0x60002:
+                raise OverflowError("The counter has wrapped around in CTR mode")
             raise ValueError("Error %X while encrypting in CTR mode" % result)
         return get_raw_buffer(ciphertext)
 
@@ -220,6 +222,8 @@ class CtrMode(object):
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:
+            if result == 0x60002:
+                raise OverflowError("The counter has wrapped around in CTR mode")
             raise ValueError("Error %X while decrypting in CTR mode" % result)
         return get_raw_buffer(plaintext)
 
