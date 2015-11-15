@@ -1228,30 +1228,6 @@ test_data = [
      '603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4',
      'NIST 800-38A, F.1.3, ECB and AES-256'),
 
-    ('6bc1bee22e409f96e93d7e117393172a'+'ae2d8a571e03ac9c9eb76fac45af8e51'+
-     '30c81c46a35ce411e5fbc1191a0a52ef'+'f69f2445df4f9b17ad2b417be66c3710',
-     '874d6191b620e3261bef6864990db6ce'+'9806f66b7970fdff8617187bb9fffdff'+
-     '5ae4df3edbd5d35e5b4f09020db03eab'+'1e031dda2fbe03d1792170a0f3009cee',
-     '2b7e151628aed2a6abf7158809cf4f3c',
-     'NIST 800-38A, F.5.1, CTR and AES-128',
-     dict(mode='CTR', ctr_params=dict(nbits=16, prefix='f0f1f2f3f4f5f6f7f8f9fafbfcfd', initial_value=0xfeff))),
-
-    ('6bc1bee22e409f96e93d7e117393172a'+'ae2d8a571e03ac9c9eb76fac45af8e51'+
-     '30c81c46a35ce411e5fbc1191a0a52ef'+'f69f2445df4f9b17ad2b417be66c3710',
-     '1abc932417521ca24f2b0459fe7e6e0b'+'090339ec0aa6faefd5ccc2c6f4ce8e94'+
-     '1e36b26bd1ebc670d1bd1d665620abf7'+'4f78a7f6d29809585a97daec58c6b050',
-     '8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b',
-     'NIST 800-38A, F.5.3, CTR and AES-192',
-     dict(mode='CTR', ctr_params=dict(nbits=16, prefix='f0f1f2f3f4f5f6f7f8f9fafbfcfd', initial_value=0xfeff))),
-
-    ('6bc1bee22e409f96e93d7e117393172a'+'ae2d8a571e03ac9c9eb76fac45af8e51'+
-     '30c81c46a35ce411e5fbc1191a0a52ef'+'f69f2445df4f9b17ad2b417be66c3710',
-     '601ec313775789a5b7a7f504bbf3d228'+'f443e3ca4d62b59aca84e990cacaf5c5'+
-     '2b0930daa23de94ce87017ba2d84988d'+'dfc9c58db67aada613c2dd08457941a6',
-     '603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4',
-     'NIST 800-38A, F.5.5, CTR and AES-256',
-     dict(mode='CTR', ctr_params=dict(nbits=16, prefix='f0f1f2f3f4f5f6f7f8f9fafbfcfd', initial_value=0xfeff))),
-
     # RFC 3686 test vectors
     # This is a list of (plaintext, ciphertext, key[, description[, params]]) tuples.
     ('53696e676c6520626c6f636b206d7367', 'e4095d4fb7a7b3792d6175a3261311b8',
