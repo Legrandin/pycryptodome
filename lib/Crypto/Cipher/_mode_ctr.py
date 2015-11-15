@@ -136,6 +136,8 @@ class CtrMode(object):
         #: The block size of the underlying cipher, in bytes.
         self.block_size = len(initial_counter_block)
 
+        self._next = [ self.encrypt, self.decrypt ]
+
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
 
@@ -164,6 +166,10 @@ class CtrMode(object):
             the encrypted data, as a byte string.
             It is as long as *plaintext*.
         """
+
+        if self.encrypt not in self._next:
+            raise TypeError("encrypt() cannot be called after decrypt()")
+        self._next = [ self.encrypt ]
 
         expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
@@ -202,6 +208,10 @@ class CtrMode(object):
 
         :Return: the decrypted data (byte string).
         """
+
+        if self.decrypt not in self._next:
+            raise TypeError("decrypt() cannot be called after encrypt()")
+        self._next = [ self.decrypt ]
 
         expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
