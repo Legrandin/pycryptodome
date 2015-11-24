@@ -114,6 +114,8 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
 
     if args:
         if mode in (8, 9, 10, 11, 12):
+            if len(args) > 1:
+                raise TypeError("Too many arguments for this mode")
             kwargs["nonce"] = args[0]
         elif mode in (2, 3, 5, 7):
             if len(args) > 1:

@@ -134,7 +134,7 @@ class CcmMode(object):
         # MAC tag length (Tlen)
         if mac_len not in (4, 6, 8, 10, 12, 14, 16):
             raise ValueError("Parameter 'mac_len' must be even"
-                             " and in the range 4..16")
+                             " and in the range 4..16 (not %d)" % mac_len)
 
         # Nonce value
         if not (nonce and 7 <= len(nonce) <= 13):

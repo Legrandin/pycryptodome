@@ -196,99 +196,6 @@ class CipherStreamingSelfTest(CipherSelfTest):
         self.assertEqual(self.plaintext, pt3)  # decryption (3 bytes at a time)
 
 
-class CCMMACLengthTest(unittest.TestCase):
-    """CCM specific tests about MAC"""
-
-    def __init__(self, module):
-        unittest.TestCase.__init__(self)
-        self.module = module
-        self.key = b('\xFF')*16
-        self.iv = b('\x00')*10
-
-    def shortDescription(self):
-        return self.description
-
-    def runTest(self):
-        """Verify that MAC can only be 4,6,8,..,16 bytes long."""
-        for i in range(3,16,2):
-            self.description = "CCM MAC length check (%d bytes)" % i
-            self.assertRaises(ValueError, self.module.new, self.key,
-                    self.module.MODE_CCM, self.iv, msg_len=10, mac_len=i)
-
-        """Verify that default MAC length is 16."""
-        self.description = "CCM default MAC length check"
-        cipher = self.module.new(self.key, self.module.MODE_CCM,
-                self.iv, msg_len=4)
-        cipher.encrypt(b('z')*4)
-        self.assertEqual(len(cipher.digest()), 16)
-
-class CCMSplitEncryptionTest(unittest.TestCase):
-    """CCM specific tests to validate how encrypt()
-    decrypt() can be called multiple times on the
-    same object."""
-
-    def __init__(self, module):
-        unittest.TestCase.__init__(self)
-        self.module = module
-        self.key = b('\xFF')*16
-        self.iv = b('\x00')*10
-        self.description = "CCM Split Encryption Test"
-
-    def shortDescription(self):
-        return self.description
-
-    def runTest(self):
-        """Verify that CCM update()/encrypt() can be called multiple times,
-        provided that lengths are declared beforehand"""
-
-        data = b("AUTH DATA")
-        pt1  = b("PLAINTEXT1")       # Short
-        pt2  = b("PLAINTEXT2")       # Long
-        pt_ref = pt1+pt2
-
-        # REFERENCE: Run with 1 update() and 1 encrypt()
-        cipher = self.module.new(self.key, self.module.MODE_CCM,
-            self.iv)
-        cipher.update(data)
-        ct_ref = cipher.encrypt(pt_ref)
-        mac_ref = cipher.digest()
-
-        # Verify that calling CCM encrypt()/decrypt() twice is not
-        # possible without the 'msg_len' parameter and regardless
-        # of the 'assoc_len' parameter
-        for ad_len in None, len(data):
-            cipher = self.module.new(self.key, self.module.MODE_CCM,
-                self.iv, assoc_len=ad_len)
-            cipher.update(data)
-            cipher.encrypt(pt1)
-            self.assertRaises(TypeError, cipher.encrypt, pt2)
-
-            cipher = self.module.new(self.key, self.module.MODE_CCM,
-                self.iv, assoc_len=ad_len)
-            cipher.update(data)
-            cipher.decrypt(ct_ref[:len(pt1)])
-            self.assertRaises(TypeError, cipher.decrypt, ct_ref[len(pt1):])
-
-        # Run with 2 encrypt()/decrypt(). Results must be the same
-        # regardless of the 'assoc_len' parameter
-        for ad_len in None, len(data):
-            cipher = self.module.new(self.key, self.module.MODE_CCM,
-                self.iv, assoc_len=ad_len, msg_len=len(pt_ref))
-            cipher.update(data)
-            ct = cipher.encrypt(pt1)
-            ct += cipher.encrypt(pt2)
-            mac = cipher.digest()
-            self.assertEqual(ct_ref, ct)
-            self.assertEqual(mac_ref, mac)
-
-            cipher = self.module.new(self.key, self.module.MODE_CCM,
-                self.iv, msg_len=len(pt1+pt2))
-            cipher.update(data)
-            pt = cipher.decrypt(ct[:len(pt1)])
-            pt += cipher.decrypt(ct[len(pt1):])
-            mac = cipher.verify(mac_ref)
-            self.assertEqual(pt_ref, pt)
-
 class AEADTests(unittest.TestCase):
     """Tests generic to all AEAD modes"""
 
@@ -537,10 +444,6 @@ class IVLengthTest(unittest.TestCase):
     def runTest(self):
         self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
                 self.module.MODE_OPENPGP, b(""))
-        if hasattr(self.module, "MODE_CCM"):
-            for ivlen in (0,6,14):
-                self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                    self.module.MODE_CCM, bchr(0)*ivlen, msg_len=10)
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key),
                 self.module.MODE_ECB, b(""))
 
@@ -613,7 +516,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             extra_tests_added = 1
 
         # Extract associated data and MAC for AEAD modes
-        if p_mode in ('CCM', 'EAX', 'SIV', 'GCM'):
+        if p_mode in ('EAX', 'SIV', 'GCM'):
             assoc_data, params['plaintext'] = params['plaintext'].split('|')
             assoc_data2, params['ciphertext'], params['mac'] = params['ciphertext'].split('|')
             params['assoc_data'] = assoc_data.split("-")
@@ -624,11 +527,6 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         tests.append(CipherSelfTest(module, params))
 
     # Add tests that don't use test vectors
-    if hasattr(module, "MODE_CCM"):
-        tests += [
-            CCMMACLengthTest(module),
-            CCMSplitEncryptionTest(module),
-        ]
     for aead_mode in ("MODE_CCM","MODE_EAX", "MODE_SIV", "MODE_GCM"):
         if hasattr(module, aead_mode):
             key_sizes = []
