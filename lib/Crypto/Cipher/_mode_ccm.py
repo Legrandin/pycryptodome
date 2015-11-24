@@ -115,9 +115,11 @@ class CcmMode(object):
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
 
+        #: The nonce used for this cipher instance
+        self.nonce = nonce
+
         self._factory = factory
         self._key = key
-        self._nonce = nonce
         self._mac_len = mac_len
         self._msg_len = msg_len
         self._assoc_len = assoc_len

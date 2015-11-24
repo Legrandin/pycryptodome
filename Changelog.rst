@@ -11,6 +11,7 @@ New features
 * For CBC/CFB/OFB, the cipher object has both `IV` and `iv` attributes.
   `new` accepts `IV` as well as `iv` as parameter.
 * Dedicated tests for CBC/CFB/OFB/CTR, including NIST test vectors
+* CCM cipher object has attribute `nonce`.
 
 Resolved issues
 ---------------
