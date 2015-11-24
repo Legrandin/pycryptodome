@@ -34,7 +34,7 @@ Counter with CBC-MAC (CCM) mode.
 
 __all__ = ['CcmMode']
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import byte_string, b, bchr
 
 from binascii import unhexlify, hexlify
 
@@ -42,40 +42,14 @@ from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
-from Crypto.Hash.CMAC import _SmoothMAC
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 
-class _CBCMAC(_SmoothMAC):
-    """MAC class based on CBC-MAC that does not need
-    to operate on data chunks multiple of the block size"""
 
-    def __init__(self, key, cipher_factory, cipher_params):
-        _SmoothMAC.__init__(self, cipher_factory.block_size, None, 0)
-        self._key = key
-        self._factory = cipher_factory
-        self._cipher_params = dict(cipher_params)
+def enum(**enums):
+    return type('Enum', (), enums)
 
-    def ignite(self, data):
-        """Start the MAC. Data provided here is consumed *before*
-        whatever is already stored in the internal buffer."""
-
-        if self._mac:
-            raise TypeError("ignite() cannot be called twice")
-
-        self._buffer.insert(0, data)
-        self._buffer_len += len(data)
-        self._mac = self._factory.new(self._key,
-                                      self._factory.MODE_CBC,
-                                      bchr(0) * 16,
-                                      **self._cipher_params)
-        self.update(b(""))
-
-    def _update(self, block_data):
-        self._t = self._mac.encrypt(block_data)[-16:]
-
-    def _digest(self, left_data):
-        return self._t
+MacStatus = enum(NOT_STARTED=0, PROCESSING_AUTH_DATA=1, PROCESSING_PLAINTEXT=2)
 
 
 class CcmMode(object):
@@ -135,52 +109,19 @@ class CcmMode(object):
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
     """
 
-    def __init__(self, factory, **kwargs):
-        """Create a new block cipher, configured in CCM mode.
-
-        :Parameters:
-          factory : module
-            A symmetric cipher module from `Crypto.Cipher`
-            (like `Crypto.Cipher.AES`).
-
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-
-          nonce : byte string
-            A mandatory value that must never be reused for any other encryption.
-
-            Its length must be in the range ``[7..13]``.
-            11 or 12 bytes are reasonable values in general. Bear in
-            mind that with CCM there is a trade-off between nonce length and
-            maximum message size.
-
-          mac_len : integer
-            Length of the MAC, in bytes. It must be even and in
-            the range ``[4..16]``. The default is 16.
-
-          msg_len : integer
-            Length of the message to (de)cipher.
-            If not specified, ``encrypt`` or ``decrypt`` may only be called once.
-
-          assoc_len : integer
-            Length of the associated data.
-            If not specified, all data is internally buffered.
-        """
+    def __init__(self, factory, key, nonce, mac_len, msg_len, assoc_len,
+                 cipher_params):
 
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
 
         self._factory = factory
-        try:
-            self._key = key = kwargs.pop("key")
-            self._nonce = kwargs.pop("nonce")  # N
-        except KeyError, e:
-            raise TypeError("Missing parameter: " + str(e))
-        self._mac_len = kwargs.pop("mac_len", self.block_size)
-        self._msg_len = kwargs.pop("msg_len", None)      # p
-        self._assoc_len = kwargs.pop("assoc_len", None)  # a
-        self._cipher_params = dict(kwargs)
+        self._key = key
+        self._nonce = nonce
+        self._mac_len = mac_len
+        self._msg_len = msg_len
+        self._assoc_len = assoc_len
+        self._cipher_params = cipher_params
 
         self._mac_tag = None  # Cache for MAC tag
 
@@ -189,51 +130,63 @@ class CcmMode(object):
                              " that operate on 128 bits blocks")
 
         # MAC tag length (Tlen)
-        if self._mac_len not in (4, 6, 8, 10, 12, 14, 16):
+        if mac_len not in (4, 6, 8, 10, 12, 14, 16):
             raise ValueError("Parameter 'mac_len' must be even"
                              " and in the range 4..16")
 
         # Nonce value
-        if not (self._nonce and 7 <= len(self._nonce) <= 13):
+        if not (nonce and 7 <= len(nonce) <= 13):
             raise ValueError("Length of parameter 'nonce' must be"
                              " in the range 7..13 bytes")
 
-        self._signer = _CBCMAC(key, factory, self._cipher_params)
-        self._no_more_assoc_data = False      # True when all associated data
-                                              # has been processed
+        # Create MAC object (the tag will be the last block
+        # bytes worth of ciphertext)
+        self._mac = self._factory.new(key,
+                                      factory.MODE_CBC,
+                                      iv=bchr(0) * 16,
+                                      **cipher_params)
+        self._mac_status = MacStatus.NOT_STARTED
+        self._t = None
 
         # Allowed transitions after initialization
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
-        # Try to start CCM
-        self._start_ccm()
+        # Cache for unaligned associated data/plaintext.
+        # This is a list, but when the MAC starts, it will become a binary
+        # string no longer than the block size.
+        self._cache = []
 
-    def _start_ccm(self, assoc_len=None, msg_len=None):
-        # CCM mode. This method creates the 2 ciphers used for the MAC
-        # (self._signer) and for the encryption/decryption (self._cipher).
-        #
-        # Member _assoc_buffer may already contain user data that needs to be
-        # authenticated.
+        # Start CTR cipher, by formatting the counter (A.3)
+        q = 15 - len(nonce)  # length of Q, the encoded message length
+        prefix = bchr(q - 1) + nonce
+        ctr = Counter.new(128 - len(prefix) * 8, prefix, initial_value=0)
+        self._cipher = self._factory.new(key,
+                                         self._factory.MODE_CTR,
+                                         counter=ctr,
+                                         **cipher_params)
 
-        if self._signer.can_reduce():
-            # Already started
-            return
-        if assoc_len is not None:
-            self._assoc_len = assoc_len
-        if msg_len is not None:
-            self._msg_len = msg_len
-        if None in (self._assoc_len, self._msg_len):
-            return
+        # S_0, step 6 in 6.1 for j=0
+        self._s_0 = self._cipher.encrypt(bchr(0) * 16)
+
+        # Try to start the MAC
+        if None not in (assoc_len, msg_len):
+            self._start_mac()
+
+    def _start_mac(self):
+
+        assert(self._mac_status == MacStatus.NOT_STARTED)
+        assert(None not in (self._assoc_len, self._msg_len))
+        assert(isinstance(self._cache, list))
 
         ## Formatting control information and nonce (A.2.1)
-        q = 15 - len(self._nonce)  # length of Q, the encoded message length
+        q = 15 - len(self.nonce)  # length of Q, the encoded message length
         flags = (
                 64 * (self._assoc_len > 0) +
                 8 * divmod(self._mac_len - 2, 2)[0] +
                 (q - 1)
                 )
-        b_0 = bchr(flags) + self._nonce + long_to_bytes(self._msg_len, q)
+        b_0 = bchr(flags) + self.nonce + long_to_bytes(self._msg_len, q)
 
         ## Formatting associated data (A.2.2)
         ## Encoded 'a' is concatenated with the associated data 'A'
@@ -248,19 +201,29 @@ class CcmMode(object):
                 assoc_len_encoded = b('\xFF\xFF')
                 enc_size = 8
             assoc_len_encoded += long_to_bytes(self._assoc_len, enc_size)
-        self._signer.ignite(b_0 + assoc_len_encoded)  # CBC-MAC will consume
-                                                      # B_0, 'a' and then 'A'
 
-        # Start CTR cipher, by formatting the counter (A.3)
-        prefix = bchr(q - 1) + self._nonce
-        ctr = Counter.new(128 - len(prefix) * 8, prefix, initial_value=0)
-        self._cipher = self._factory.new(self._key,
-                                         self._factory.MODE_CTR,
-                                         counter=ctr,
-                                         **self._cipher_params)
+        # b_0 and assoc_len_encoded must be processed first
+        self._cache.insert(0, b_0)
+        self._cache.insert(1, assoc_len_encoded)
 
-        # S_0, step 6 in 6.1 for j=0
-        self._s_0 = self._cipher.encrypt(bchr(0) * 16)
+        # Process all the data cached so far
+        first_data_to_mac = b("").join(self._cache)
+        self._cache = b("")
+        self._mac_status = MacStatus.PROCESSING_AUTH_DATA
+        self._update(first_data_to_mac)
+
+    def _pad_cache_and_update(self):
+
+        assert(self._mac_status != MacStatus.NOT_STARTED)
+        assert(byte_string(self._cache))
+        assert(len(self._cache) < self.block_size)
+
+        # Associated data is concatenated with the least number
+        # of zero bytes (possibly none) to reach alignment to
+        # the 16 byte boundary (A.2.3)
+        len_cache = len(self._cache)
+        if len_cache > 0:
+            self._update(bchr(0) * (self.block_size - len_cache))
 
     def update(self, assoc_data):
         """Protect associated data
@@ -292,7 +255,36 @@ class CcmMode(object):
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
-        return self._signer.update(assoc_data)
+        self._update(assoc_data)
+        return self
+
+    def _update(self, assoc_data_pt=b("")):
+        """Update the MAC with associated data or plaintext (without FSM checks)"""
+
+        if self._mac_status == MacStatus.NOT_STARTED:
+            self._cache.append(assoc_data_pt)
+            return
+
+        assert(byte_string(self._cache))
+        assert(len(self._cache) < self.block_size)
+
+        if len(self._cache) > 0:
+            filler = min(self.block_size - len(self._cache),
+                         len(assoc_data_pt))
+            self._cache += assoc_data_pt[:filler]
+            assoc_data_pt = assoc_data_pt[filler:]
+
+            if len(self._cache) < self.block_size:
+                return
+
+            # The cache is exactly one block
+            self._t = self._mac.encrypt(self._cache)
+            self._cache = b("")
+
+        update_len = len(assoc_data_pt) // self.block_size * self.block_size
+        self._cache = assoc_data_pt[update_len:]
+        if update_len > 0:
+            self._t = self._mac.encrypt(assoc_data_pt[:update_len])[-16:]
 
     def encrypt(self, plaintext):
         """Encrypt data with the key set at initialization.
@@ -332,20 +324,28 @@ class CcmMode(object):
                             " initialization or an update()")
         self._next = [self.encrypt, self.digest]
 
+        # No more associated data allowed from now
         if self._assoc_len is None:
-            self._start_ccm(assoc_len=self._signer.data_signed_so_far())
+            assert(isinstance(self._cache, list))
+            self._assoc_len = sum([ len(x) for x in self._cache ])
+            if self._msg_len is not None:
+                self._start_mac()
+
+        # Only once piece of plaintext accepted if message length was
+        # not declared in advance
         if self._msg_len is None:
-            self._start_ccm(msg_len=len(plaintext))
+            self._msg_len = len(plaintext)
+            self._start_mac()
             self._next = [self.digest]
 
-        if not self._no_more_assoc_data:
+        if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number
             # of zero bytes (possibly none) to reach alignment to
             # the 16 byte boundary (A.2.3)
-            self._signer.zero_pad()
-            self._no_more_assoc_data = True
+            self._pad_cache_and_update()
+            self._mac_status = MacStatus.PROCESSING_PLAINTEXT
 
-        self._signer.update(plaintext)
+        self._update(plaintext)
         return self._cipher.encrypt(plaintext)
 
     def decrypt(self, ciphertext):
@@ -385,22 +385,30 @@ class CcmMode(object):
                             " after initialization or an update()")
         self._next = [self.decrypt, self.verify]
 
+        # No more associated data allowed from now
         if self._assoc_len is None:
-            self._start_ccm(assoc_len=self._signer.data_signed_so_far())
+            assert(isinstance(self._cache, list))
+            self._assoc_len = sum([ len(x) for x in self._cache ])
+            if self._msg_len is not None:
+                self._start_mac()
+
+        # Only once piece of ciphertext accepted if message length was
+        # not declared in advance
         if self._msg_len is None:
-            self._start_ccm(msg_len=len(ciphertext))
+            self._msg_len = len(ciphertext)
+            self._start_mac()
             self._next = [self.verify]
 
-        if not self._no_more_assoc_data:
+        if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number
             # of zero bytes (possibly none) to reach alignment to
             # the 16 byte boundary (A.2.3)
-            self._signer.zero_pad()
-            self._no_more_assoc_data = True
+            self._pad_cache_and_update()
+            self._mac_status = MacStatus.PROCESSING_PLAINTEXT
 
         # Encrypt is equivalent to decrypt with the CTR mode
         plaintext = self._cipher.encrypt(ciphertext)
-        self._signer.update(plaintext)
+        self._update(plaintext)
         return plaintext
 
     def digest(self):
@@ -418,23 +426,29 @@ class CcmMode(object):
             raise TypeError("digest() cannot be called when decrypting"
                                 " or validating a message")
         self._next = [self.digest]
+        return self._digest()
 
+    def _digest(self):
         if self._mac_tag:
             return self._mac_tag
 
         if self._assoc_len is None:
-            self._start_ccm(assoc_len=self._signer.data_signed_so_far())
+            assert(isinstance(self._cache, list))
+            self._assoc_len = sum([ len(x) for x in self._cache ])
+            if self._msg_len is not None:
+                self._start_mac()
+
         if self._msg_len is None:
-            self._start_ccm(msg_len=0)
+            self._msg_len = 0
+            self._start_mac()
 
         # Both associated data and payload are concatenated with the least
         # number of zero bytes (possibly none) that align it to the
         # 16 byte boundary (A.2.2 and A.2.3)
-        self._signer.zero_pad()
+        self._pad_cache_and_update()
 
         # Step 8 in 6.1 (T xor MSB_Tlen(S_0))
-        self._mac_tag = strxor(self._signer.digest(),
-                           self._s_0)[:self._mac_len]
+        self._mac_tag = strxor(self._t, self._s_0)[:self._mac_len]
 
         return self._mac_tag
 
@@ -469,22 +483,7 @@ class CcmMode(object):
                                 " when encrypting a message")
         self._next = [self.verify]
 
-        if not self._mac_tag:
-
-            if self._assoc_len is None:
-                self._start_ccm(assoc_len=self._signer.data_signed_so_far())
-            if self._msg_len is None:
-                self._start_ccm(msg_len=0)
-
-            # Both associated data and payload are concatenated with the least
-            # number of zero bytes (possibly none) that align it to the
-            # 16 byte boundary (A.2.2 and A.2.3)
-            self._signer.zero_pad()
-
-            # Step 8 in 6.1 (T xor MSB_Tlen(S_0))
-            self._mac_tag = strxor(self._signer.digest(),
-                                   self._s_0)[:self._mac_len]
-
+        self._digest()
         secret = get_random_bytes(16)
 
         mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._mac_tag)
@@ -544,4 +543,47 @@ class CcmMode(object):
 
 
 def _create_ccm_cipher(factory, **kwargs):
-    return CcmMode(factory, **kwargs)
+    """Create a new block cipher, configured in CCM mode.
+
+    :Parameters:
+      factory : module
+        A symmetric cipher module from `Crypto.Cipher` (like
+        `Crypto.Cipher.AES`).
+
+    :Keywords:
+      key : byte string
+        The secret key to use in the symmetric cipher.
+
+      nonce : byte string
+        A mandatory value that must never be reused for any other encryption.
+
+        Its length must be in the range ``[7..13]``.
+        11 or 12 bytes are reasonable values in general. Bear in
+        mind that with CCM there is a trade-off between nonce length and
+        maximum message size.
+
+      mac_len : integer
+        Length of the MAC, in bytes. It must be even and in
+        the range ``[4..16]``. The default is 16.
+
+      msg_len : integer
+        Length of the message to (de)cipher.
+        If not specified, ``encrypt`` or ``decrypt`` may only be called once.
+
+      assoc_len : integer
+        Length of the associated data.
+        If not specified, all data is internally buffered.
+    """
+
+    try:
+        key = key = kwargs.pop("key")
+        nonce = kwargs.pop("nonce")  # N
+    except KeyError, e:
+        raise TypeError("Missing parameter: " + str(e))
+
+    mac_len = kwargs.pop("mac_len", factory.block_size)
+    msg_len = kwargs.pop("msg_len", None)      # p
+    assoc_len = kwargs.pop("assoc_len", None)  # a
+    cipher_params = dict(kwargs)
+
+    return CcmMode(factory, key, nonce, mac_len, msg_len, assoc_len, cipher_params)

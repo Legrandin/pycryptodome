@@ -40,7 +40,6 @@ from Crypto.Util.py3compat import *
 
 from Crypto.Util import Counter
 from Crypto.Util.number import long_to_bytes, bytes_to_long
-from Crypto.Hash.CMAC import _SmoothMAC
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 
@@ -59,6 +58,89 @@ _raw_galois_lib = load_pycryptodome_raw_lib("Crypto.Util._galois",
                                      void **ghash_tables);
                     int ghash_destroy(void *ghash_tables);
                     """)
+
+
+class _SmoothMAC(object):
+    """Turn a MAC that only operates on aligned blocks of data
+    into a MAC with granularity of 1 byte."""
+
+    def __init__(self, block_size, msg=b(""), min_digest=0):
+        self._bs = block_size
+        #: Data waiting to be MAC-ed
+        self._buffer = []
+        self._buffer_len = 0
+        #: Data received via update()
+        self._total_len = 0
+        #: Minimum amount of bytes required by the final digest step
+        self._min_digest = min_digest
+        #: Block MAC object
+        self._mac = None
+        #: Cached digest
+        self._tag = None
+        if msg:
+            self.update(msg)
+
+    def can_reduce(self):
+        return (self._mac is not None)
+
+    def data_signed_so_far(self):
+        return self._total_len
+
+    def zero_pad(self):
+        if self._buffer_len & (self._bs-1):
+            npad = self._bs - self._buffer_len & (self._bs-1)
+            self._buffer.append(bchr(0)*npad)
+            self._buffer_len += npad
+
+    def update(self, data):
+        # Optimization (try not to copy data if possible)
+        if self._buffer_len==0 and self.can_reduce() and\
+                self._min_digest==0 and len(data)%self._bs==0:
+            self._update(data)
+            self._total_len += len(data)
+            return
+
+        self._buffer.append(data)
+        self._buffer_len += len(data)
+        self._total_len += len(data)
+
+        # Feed data into MAC
+        blocks, rem = divmod(self._buffer_len, self._bs)
+        if rem<self._min_digest:
+            blocks -= 1
+        if blocks>0 and self.can_reduce():
+            aligned_data = blocks*self._bs
+            buf = b("").join(self._buffer)
+            self._update(buf[:aligned_data])
+            self._buffer = [ buf[aligned_data:] ]
+            self._buffer_len -= aligned_data
+
+    def _deep_copy(self, target):
+        # Copy everything but self._mac, since we don't know how to
+        target._buffer = self._buffer[:]
+        for m in [ '_bs', '_buffer_len', '_total_len', '_min_digest', '_tag' ]:
+            setattr(target, m, getattr(self, m))
+
+    def _update(self, data_block):
+        """Delegate to the implementation the update
+        of the MAC state given some new *block aligned* data."""
+        raise NotImplementedError("_update() must be still implemented")
+
+    def _digest(self, left_data):
+        """Delegate to the implementation the computation
+        of the final MAC given the current MAC state
+        and the last piece of data (not block aligned)."""
+        raise NotImplementedError("_digest() must be still implemented")
+
+    def digest(self):
+        if self._tag:
+            return self._tag
+        if self._buffer_len>0:
+            self.update(b(""))
+        left_data = b("").join(self._buffer)
+        self._tag = self._digest(left_data)
+        return self._tag
+
 
 class _GHASH(_SmoothMAC):
     """GHASH function defined in NIST SP 800-38D, Algorithm 2.
