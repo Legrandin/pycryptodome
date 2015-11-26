@@ -34,9 +34,7 @@ OpenPGP mode.
 
 __all__ = ['OpenPgpMode']
 
-from Crypto.Util.py3compat import *
-
-from Crypto.Util.number import long_to_bytes, bytes_to_long
+from Crypto.Util.py3compat import bchr
 
 
 class OpenPgpMode(object):
@@ -57,41 +55,12 @@ class OpenPgpMode(object):
     .. _OpenPGP: http://tools.ietf.org/html/rfc4880
     """
 
-    def __init__(self, factory, **kwargs):
-        """Create a new block cipher, configured in OpenPGP mode.
-
-        :Parameters:
-          factory : module
-            The module.
-
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-
-          IV : byte string
-            The initialization vector to use for encryption or decryption.
-
-            For encryption, the IV must be as long as the
-            cipher block size.
-
-            For decryption, it must be 2 bytes longer (it is actually
-            the *encrypted* IV which was prefixed to the ciphertext).
-        """
+    def __init__(self, factory, key, iv, cipher_params):
 
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
 
-        self.IV = kwargs.pop("IV", None)
-
-        try:
-            key = kwargs.pop("key")
-            if self.IV is None:
-                self.IV = kwargs.pop("iv")
-        except KeyError, e:
-            raise TypeError("Missing component: " + str(e))
-
         self._done_first_block = False  # True after the first encryption
-        self._done_last_block = False   # True after a partial block is processed
 
         # Instantiate a temporary cipher to process the IV
         IV_cipher = factory.new(
@@ -99,29 +68,25 @@ class OpenPgpMode(object):
                         factory.MODE_CFB,
                         IV=bchr(0) * self.block_size,
                         segment_size=self.block_size * 8,
-                        **kwargs)
+                        **cipher_params)
 
         # The cipher will be used for...
-        if len(self.IV) == self.block_size:
+        if len(iv) == self.block_size:
             # ... encryption
-            self._encrypted_IV = IV_cipher.encrypt(
-                        self.IV + self.IV[-2:] +            # Plaintext
-                        bchr(0) * (self.block_size - 2)     # Padding
-                        )[:self.block_size + 2]
-        elif len(self.IV) == self.block_size + 2:
+            self._encrypted_IV = IV_cipher.encrypt(iv + iv[-2:])
+        elif len(iv) == self.block_size + 2:
             # ... decryption
-            self._encrypted_IV = self.IV
-            self.IV = IV_cipher.decrypt(
-                        self.IV +                           # Ciphertext
-                        bchr(0) * (self.block_size - 2)     # Padding
-                        )[:self.block_size + 2]
-            if self.IV[-2:] != self.IV[-4:-2]:
+            self._encrypted_IV = iv
+            iv = IV_cipher.decrypt(iv)
+            if iv[-2:] != iv[-4:-2]:
                 raise ValueError("Failed integrity check for OPENPGP IV")
-            self.IV = self.iv = self.IV[:-2]
+            iv = iv[:-2]
         else:
             raise ValueError("Length of IV must be %d or %d bytes"
                              " for MODE_OPENPGP"
                              % (self.block_size, self.block_size + 2))
+
+        self.iv = self.IV = iv
 
         # Instantiate the cipher for the real PGP data
         self._cipher = factory.new(
@@ -129,8 +94,7 @@ class OpenPgpMode(object):
                             factory.MODE_CFB,
                             IV=self._encrypted_IV[-self.block_size:],
                             segment_size=self.block_size * 8,
-                            **kwargs
-                            )
+                            **cipher_params)
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -155,8 +119,6 @@ class OpenPgpMode(object):
         :Parameters:
           plaintext : byte string
             The piece of data to encrypt.
-            It must be a multiple of *block_size*,
-            unless it is the last chunk of the message.
 
         :Return:
             the encrypted data, as a byte string.
@@ -165,24 +127,7 @@ class OpenPgpMode(object):
             the encypted IV is prepended to the returned ciphertext.
         """
 
-        padding_length = ((self.block_size -
-                           len(plaintext) % self.block_size)
-                           % self.block_size)
-        if padding_length > 0:
-            # CFB mode requires ciphertext to have length multiple
-            # of block size,
-            # but PGP mode allows the last block to be shorter
-            if self._done_last_block:
-                 raise ValueError(
-                         "Only the last chunk is allowed to have"
-                        " length not multiple of %d bytes",
-                        self.block_size
-                        )
-            self._done_last_block = True
-            padded = plaintext + bchr(0) * padding_length
-            res = self._cipher.encrypt(padded)[:len(plaintext)]
-        else:
-             res = self._cipher.encrypt(plaintext)
+        res = self._cipher.encrypt(plaintext)
         if not self._done_first_block:
             res = self._encrypted_IV + res
             self._done_first_block = True
@@ -211,32 +156,39 @@ class OpenPgpMode(object):
         :Parameters:
           ciphertext : byte string
             The piece of data to decrypt.
-            It must be a multiple of *block_size*,
-            unless it is the last chunk of the message.
 
         :Return: the decrypted data (byte string).
         """
 
-        padding_length = ((self.block_size -
-                         len(ciphertext) % self.block_size)
-                         % self.block_size)
-        if padding_length > 0:
-            # CFB mode requires ciphertext to have length multiple
-            # of block size,
-            # but PGP mode allows the last block to be shorter
-            if self._done_last_block:
-                raise ValueError(
-                        "Only the last chunk is allowed to have"
-                        " length not multiple of %d bytes",
-                        self.block_size
-                        )
-            self._done_last_block = True
-            padded = ciphertext + bchr(0) * padding_length
-            res = self._cipher.decrypt(padded)[:len(ciphertext)]
-        else:
-            res = self._cipher.decrypt(ciphertext)
-        return res
+        return self._cipher.decrypt(ciphertext)
 
 
 def _create_openpgp_cipher(factory, **kwargs):
-    return OpenPgpMode(factory, **kwargs)
+    """Create a new block cipher, configured in OpenPGP mode.
+
+    :Parameters:
+      factory : module
+        The module.
+
+    :Keywords:
+      key : byte string
+        The secret key to use in the symmetric cipher.
+
+      IV : byte string
+        The initialization vector to use for encryption or decryption.
+
+        For encryption, the IV must be as long as the cipher block size.
+
+        For decryption, it must be 2 bytes longer (it is actually the
+        *encrypted* IV which was prefixed to the ciphertext).
+    """
+
+    try:
+        iv = kwargs.pop("IV", None)
+        if iv is None:
+            iv = kwargs.pop("iv")
+        key = kwargs.pop("key")
+    except KeyError, e:
+        raise TypeError("Missing component: " + str(e))
+
+    return OpenPgpMode(factory, key, iv, kwargs)

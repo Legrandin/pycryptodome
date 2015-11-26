@@ -42,6 +42,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Cipher import test_OCB;        tests += test_OCB.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_CBC;        tests += test_CBC.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_CFB;        tests += test_CFB.get_tests(config=config)
+    from Crypto.SelfTest.Cipher import test_OpenPGP;    tests += test_OpenPGP.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_OFB;        tests += test_OFB.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_CTR;        tests += test_CTR.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_CCM;        tests += test_CCM.get_tests(config=config)

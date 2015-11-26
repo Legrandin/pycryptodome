@@ -74,10 +74,6 @@ class CipherSelfTest(unittest.TestCase):
             if self.iv is not None:
                 self.iv = b(self.iv)
 
-            # Only relevant for OPENPGP mode
-            self.encrypted_iv = _extract(params, 'encrypted_iv', None)
-            if self.encrypted_iv is not None:
-                self.encrypted_iv = b(self.encrypted_iv)
         else:
             # Stream cipher
             self.mode = None
@@ -102,12 +98,7 @@ class CipherSelfTest(unittest.TestCase):
             # Block cipher without iv
             return self.module.new(a2b_hex(self.key), self.mode, **params)
         else:
-            # Block cipher with iv
-            if do_decryption and self.mode == self.module.MODE_OPENPGP:
-                # In PGP mode, the IV to feed for decryption is the *encrypted* one
-                return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.encrypted_iv), **params)
-            else:
-                return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **params)
+            return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **params)
 
     def isMode(self, name):
         if not hasattr(self.module, "MODE_"+name):
@@ -147,14 +138,6 @@ class CipherSelfTest(unittest.TestCase):
                 self.assertEqual(ct, ctX)
                 self.assertEqual(pt, ptX)
             ct, pt = ctX, ptX
-
-        if self.isMode("OPENPGP"):
-            # In PGP mode, data returned by the first encrypt()
-            # is prefixed with the encrypted IV.
-            # Here we check it and then remove it from the ciphertexts.
-            eilen = len(self.encrypted_iv)
-            self.assertEqual(self.encrypted_iv, ct[:eilen])
-            ct = ct[eilen:]
 
         self.assertEqual(self.ciphertext, ct)  # encrypt
         self.assertEqual(self.plaintext, pt)   # decrypt
@@ -421,16 +404,6 @@ class RoundtripTest(unittest.TestCase):
         decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
         self.assertEqual(self.plaintext, decrypted_plaintext)
 
-        ## OPENPGP mode
-        mode = self.module.MODE_OPENPGP
-        encryption_cipher = self.module.new(a2b_hex(self.key), mode, self.iv)
-        eiv_ciphertext = encryption_cipher.encrypt(self.plaintext)
-        eiv = eiv_ciphertext[:self.module.block_size+2]
-        ciphertext = eiv_ciphertext[self.module.block_size+2:]
-        decryption_cipher = self.module.new(a2b_hex(self.key), mode, eiv)
-        decrypted_plaintext = decryption_cipher.decrypt(ciphertext)
-        self.assertEqual(self.plaintext, decrypted_plaintext)
-
 
 class IVLengthTest(unittest.TestCase):
     def __init__(self, module, params):
@@ -442,8 +415,6 @@ class IVLengthTest(unittest.TestCase):
         return "Check that all modes except MODE_ECB and MODE_CTR require an IV of the proper length"
 
     def runTest(self):
-        self.assertRaises(ValueError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_OPENPGP, b(""))
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key),
                 self.module.MODE_ECB, b(""))
 
