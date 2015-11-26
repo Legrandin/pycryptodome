@@ -34,13 +34,11 @@ Counter with CBC-MAC (CCM) mode.
 
 __all__ = ['CcmMode']
 
-from Crypto.Util.py3compat import byte_string, b, bchr
-
-from binascii import unhexlify, hexlify
+from Crypto.Util.py3compat import byte_string, b, bchr, bord, unhexlify
 
 from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
-from Crypto.Util.number import long_to_bytes, bytes_to_long
+from Crypto.Util.number import long_to_bytes
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
@@ -185,17 +183,14 @@ class CcmMode(object):
         assert(None not in (self._assoc_len, self._msg_len))
         assert(isinstance(self._cache, list))
 
-        ## Formatting control information and nonce (A.2.1)
+        # Formatting control information and nonce (A.2.1)
         q = 15 - len(self.nonce)  # length of Q, the encoded message length
-        flags = (
-                64 * (self._assoc_len > 0) +
-                8 * divmod(self._mac_len - 2, 2)[0] +
-                (q - 1)
-                )
+        flags = (64 * (self._assoc_len > 0) + 8 * ((self._mac_len - 2) // 2) +
+                 (q - 1))
         b_0 = bchr(flags) + self.nonce + long_to_bytes(self._msg_len, q)
 
-        ## Formatting associated data (A.2.2)
-        ## Encoded 'a' is concatenated with the associated data 'A'
+        # Formatting associated data (A.2.2)
+        # Encoded 'a' is concatenated with the associated data 'A'
         assoc_len_encoded = b('')
         if self._assoc_len > 0:
             if self._assoc_len < (2 ** 16 - 2 ** 8):
@@ -256,7 +251,7 @@ class CcmMode(object):
 
         if self.update not in self._next:
             raise TypeError("update() can only be called"
-                                " immediately after initialization")
+                            " immediately after initialization")
 
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
@@ -270,7 +265,8 @@ class CcmMode(object):
         return self
 
     def _update(self, assoc_data_pt=b("")):
-        """Update the MAC with associated data or plaintext (without FSM checks)"""
+        """Update the MAC with associated data or plaintext
+           (without FSM checks)"""
 
         if self._mac_status == MacStatus.NOT_STARTED:
             self._cache.append(assoc_data_pt)
@@ -338,7 +334,7 @@ class CcmMode(object):
         # No more associated data allowed from now
         if self._assoc_len is None:
             assert(isinstance(self._cache, list))
-            self._assoc_len = sum([ len(x) for x in self._cache ])
+            self._assoc_len = sum([len(x) for x in self._cache])
             if self._msg_len is not None:
                 self._start_mac()
         else:
@@ -406,7 +402,7 @@ class CcmMode(object):
         # No more associated data allowed from now
         if self._assoc_len is None:
             assert(isinstance(self._cache, list))
-            self._assoc_len = sum([ len(x) for x in self._cache ])
+            self._assoc_len = sum([len(x) for x in self._cache])
             if self._msg_len is not None:
                 self._start_mac()
         else:
@@ -449,7 +445,7 @@ class CcmMode(object):
 
         if self.digest not in self._next:
             raise TypeError("digest() cannot be called when decrypting"
-                                " or validating a message")
+                            " or validating a message")
         self._next = [self.digest]
         return self._digest()
 
@@ -459,7 +455,7 @@ class CcmMode(object):
 
         if self._assoc_len is None:
             assert(isinstance(self._cache, list))
-            self._assoc_len = sum([ len(x) for x in self._cache ])
+            self._assoc_len = sum([len(x) for x in self._cache])
             if self._msg_len is not None:
                 self._start_mac()
         else:
@@ -511,7 +507,7 @@ class CcmMode(object):
 
         if self.verify not in self._next:
             raise TypeError("verify() cannot be called"
-                                " when encrypting a message")
+                            " when encrypting a message")
         self._next = [self.verify]
 
         self._digest()
@@ -617,4 +613,5 @@ def _create_ccm_cipher(factory, **kwargs):
     assoc_len = kwargs.pop("assoc_len", None)  # a
     cipher_params = dict(kwargs)
 
-    return CcmMode(factory, key, nonce, mac_len, msg_len, assoc_len, cipher_params)
+    return CcmMode(factory, key, nonce, mac_len, msg_len,
+                   assoc_len, cipher_params)

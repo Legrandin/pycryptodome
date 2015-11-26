@@ -165,6 +165,14 @@ class CcmTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, invalid_mac)
 
+    def test_hex_mac(self):
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+        mac_hex = cipher.hexdigest()
+        self.assertEqual(cipher.digest(), unhexlify(mac_hex))
+
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+        cipher.hexverify(mac_hex)
+
     def test_longer_assoc_data_than_declared(self):
         # More than zero
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
