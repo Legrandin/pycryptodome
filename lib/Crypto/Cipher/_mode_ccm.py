@@ -154,6 +154,9 @@ class CcmMode(object):
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
+        # Cumulative lengths
+        self._cumul_assoc_len = 0
+
         # Cache for unaligned associated data/plaintext.
         # This is a list, but when the MAC starts, it will become a binary
         # string no longer than the block size.
@@ -257,6 +260,11 @@ class CcmMode(object):
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
+        self._cumul_assoc_len += len(assoc_data)
+        if self._assoc_len is not None and \
+           self._cumul_assoc_len > self._assoc_len:
+            raise ValueError("Associated data is too long")
+
         self._update(assoc_data)
         return self
 
@@ -332,6 +340,9 @@ class CcmMode(object):
             self._assoc_len = sum([ len(x) for x in self._cache ])
             if self._msg_len is not None:
                 self._start_mac()
+        else:
+            if self._cumul_assoc_len < self._assoc_len:
+                raise ValueError("Associated data is too short")
 
         # Only once piece of plaintext accepted if message length was
         # not declared in advance
@@ -393,6 +404,9 @@ class CcmMode(object):
             self._assoc_len = sum([ len(x) for x in self._cache ])
             if self._msg_len is not None:
                 self._start_mac()
+        else:
+            if self._cumul_assoc_len < self._assoc_len:
+                raise ValueError("Associated data is too short")
 
         # Only once piece of ciphertext accepted if message length was
         # not declared in advance
@@ -439,6 +453,9 @@ class CcmMode(object):
             self._assoc_len = sum([ len(x) for x in self._cache ])
             if self._msg_len is not None:
                 self._start_mac()
+        else:
+            if self._cumul_assoc_len < self._assoc_len:
+                raise ValueError("Associated data is too short")
 
         if self._msg_len is None:
             self._msg_len = 0

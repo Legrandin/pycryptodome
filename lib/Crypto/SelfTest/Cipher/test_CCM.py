@@ -165,8 +165,45 @@ class CcmTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, invalid_mac)
 
-    def test_shorter_assoc_data_than_declared(self):
-        pass
+    def test_longer_assoc_data_than_declared(self):
+        # More than zero
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         assoc_len=0)
+        self.assertRaises(ValueError, cipher.update, b("1"))
+
+        # Too large
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         assoc_len=15)
+        self.assertRaises(ValueError, cipher.update, self.data_128)
+
+    def test_shorter_assoc_data_than_expected(self):
+        # With plaintext
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         assoc_len=17)
+        cipher.update(self.data_128)
+        self.assertRaises(ValueError, cipher.encrypt, self.data_128)
+
+        # With empty plaintext
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         assoc_len=17)
+        cipher.update(self.data_128)
+        self.assertRaises(ValueError, cipher.digest)
+
+        # With ciphertext
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         assoc_len=17)
+        cipher.update(self.data_128)
+        self.assertRaises(ValueError, cipher.decrypt, self.data_128)
+
+        # With empty ciphertext
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        mac = cipher.digest()
+
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         assoc_len=17)
+        cipher.update(self.data_128)
+        self.assertRaises(ValueError, cipher.verify, mac)
 
     def test_shorter_plaintext_than_declared(self):
         pass
