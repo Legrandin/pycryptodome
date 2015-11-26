@@ -156,6 +156,7 @@ class CcmMode(object):
 
         # Cumulative lengths
         self._cumul_assoc_len = 0
+        self._cumul_msg_len = 0
 
         # Cache for unaligned associated data/plaintext.
         # This is a list, but when the MAC starts, it will become a binary
@@ -351,6 +352,10 @@ class CcmMode(object):
             self._start_mac()
             self._next = [self.digest]
 
+        self._cumul_msg_len += len(plaintext)
+        if self._cumul_msg_len > self._msg_len:
+            raise ValueError("Message is too long")
+
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number
             # of zero bytes (possibly none) to reach alignment to
@@ -415,6 +420,10 @@ class CcmMode(object):
             self._start_mac()
             self._next = [self.verify]
 
+        self._cumul_msg_len += len(ciphertext)
+        if self._cumul_msg_len > self._msg_len:
+            raise ValueError("Message is too long")
+
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number
             # of zero bytes (possibly none) to reach alignment to
@@ -460,6 +469,9 @@ class CcmMode(object):
         if self._msg_len is None:
             self._msg_len = 0
             self._start_mac()
+
+        if self._cumul_msg_len != self._msg_len:
+            raise ValueError("Message is too short")
 
         # Both associated data and payload are concatenated with the least
         # number of zero bytes (possibly none) that align it to the

@@ -205,11 +205,28 @@ class CcmTests(unittest.TestCase):
         cipher.update(self.data_128)
         self.assertRaises(ValueError, cipher.verify, mac)
 
-    def test_shorter_plaintext_than_declared(self):
-        pass
+    def test_shorter_and_longer_plaintext_than_declared(self):
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         msg_len=17)
+        cipher.encrypt(self.data_128)
+        self.assertRaises(ValueError, cipher.digest)
+
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         msg_len=15)
+        self.assertRaises(ValueError, cipher.encrypt, self.data_128)
 
     def test_shorter_ciphertext_than_declared(self):
-        pass
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+        ct, mac = cipher.encrypt_and_digest(self.data_128)
+
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         msg_len=17)
+        cipher.decrypt(ct)
+        self.assertRaises(ValueError, cipher.verify, mac)
+
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                         msg_len=15)
+        self.assertRaises(ValueError, cipher.decrypt, ct)
 
 
 class CcmFSMTests(unittest.TestCase):

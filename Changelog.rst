@@ -12,8 +12,8 @@ New features
   `new` accepts `IV` as well as `iv` as parameter.
 * Dedicated tests for CBC/CFB/OFB/CTR, including NIST test vectors
 * CCM cipher object has attribute `nonce`.
-* CCM cipher checks if the declared length of the associated data matches
-  the actual one.
+* CCM cipher checks if the declared lengths of the associated data and of the
+  message match the actual ones.
 
 Resolved issues
 ---------------
