@@ -527,7 +527,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         tests.append(CipherSelfTest(module, params))
 
     # Add tests that don't use test vectors
-    for aead_mode in ("MODE_CCM","MODE_EAX", "MODE_SIV", "MODE_GCM"):
+    for aead_mode in ("MODE_EAX", "MODE_SIV", "MODE_GCM"):
         if hasattr(module, aead_mode):
             key_sizes = []
             try:
