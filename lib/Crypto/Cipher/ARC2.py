@@ -100,8 +100,9 @@ def _create_base_cipher(dict_parameters):
     if len(key) not in key_size:
         raise ValueError("Incorrect ARC2 key length (%d bytes)" % len(key))
 
-    if not (0 <= effective_keylen <= 1024):
-        raise ValueError("'effective_key_len' must be positive and no larger than 1024")
+    if not (0 < effective_keylen <= 1024):
+        raise ValueError("'effective_key_len' must be no larger than 1024 "
+                         "(not %d)" % effective_keylen)
 
     start_operation = _raw_arc2_lib.ARC2_start_operation
     stop_operation = _raw_arc2_lib.ARC2_stop_operation
