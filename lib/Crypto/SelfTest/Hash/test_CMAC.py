@@ -33,10 +33,13 @@
 
 """Self-test suite for Crypto.Hash.CMAC"""
 
-from Crypto.Util.py3compat import *
+import unittest
+
+from Crypto.Util.py3compat import tobytes
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3
+from Crypto.Hash import SHAKE128
 
 # This is a list of (key, data, result, description, module) tuples.
 test_data = [
@@ -236,6 +239,33 @@ test_data = [
 
 ]
 
+
+def get_tag_random(tag, length):
+    return SHAKE128.new(data=tobytes(tag)).read(length)
+
+
+class MultipleUpdates(unittest.TestCase):
+    """Verify that internal caching is implemented correctly"""
+
+    def runTest(self):
+
+        data_to_mac = get_tag_random("data_to_mac", 128)
+        key = get_tag_random("key", 16)
+        ref_mac = CMAC.new(key, msg=data_to_mac, ciphermod=AES).digest()
+
+        # Break up in chunks of different length
+        # The result must always be the same
+        for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
+
+            chunks = [data_to_mac[i:i+chunk_length] for i in
+                      range(0, len(data_to_mac), chunk_length)]
+
+            mac = CMAC.new(key, ciphermod=AES)
+            for chunk in chunks:
+                mac.update(chunk)
+            self.assertEqual(ref_mac, mac.digest())
+
+
 def get_tests(config={}):
     global test_data
     from common import make_mac_tests
@@ -247,7 +277,10 @@ def get_tests(config={}):
         t[4] = dict(ciphermod=t[4])
         params_test_data.append(t)
 
-    return make_mac_tests(CMAC, "CMAC", params_test_data)
+    tests = make_mac_tests(CMAC, "CMAC", params_test_data)
+    tests.append(MultipleUpdates())
+    return tests
+
 
 if __name__ == '__main__':
     import unittest
