@@ -82,30 +82,6 @@ class CcmTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertEqual(cipher.block_size, AES.block_size)
 
-    def test_unaligned_message_pieces(self):
-        plaintexts = [b("7777777")] * 100
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         msg_len=7*100)
-        ciphertexts = [cipher.encrypt(x) for x in plaintexts]
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        self.assertEqual(b("").join(ciphertexts),
-                         cipher.encrypt(b("").join(plaintexts)))
-
-    def test_unaligned_assoc_data_piece(self):
-        assoc_data = [b("7777777")] * 100
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         assoc_len=7*100)
-        for x in assoc_data:
-            cipher.update(x)
-        mac = cipher.digest()
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        cipher.update(b("").join(assoc_data))
-        cipher.verify(mac)
-
     def test_nonce_attribute(self):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertEqual(cipher.nonce, self.nonce_96)
@@ -242,6 +218,49 @@ class CcmTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
                          msg_len=15)
         self.assertRaises(ValueError, cipher.decrypt, ct)
+
+    def test_message_chunks(self):
+        # Validate that both associated data and plaintext/ciphertext
+        # can be broken up in chunks of arbitrary length
+
+        auth_data = get_tag_random("authenticated data", 127)
+        plaintext = get_tag_random("plaintext", 127)
+
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+        cipher.update(auth_data)
+        ciphertext, ref_mac = cipher.encrypt_and_digest(plaintext)
+
+        def break_up(data, chunk_length):
+            return [data[i:i+chunk_length] for i in range(0, len(data),
+                    chunk_length)]
+
+        # Encryption
+        for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
+
+            cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                             msg_len=127, assoc_len=127)
+
+            for chunk in break_up(auth_data, chunk_length):
+                cipher.update(chunk)
+            pt2 = b("")
+            for chunk in break_up(ciphertext, chunk_length):
+                pt2 += cipher.decrypt(chunk)
+            self.assertEqual(plaintext, pt2)
+            cipher.verify(ref_mac)
+
+        # Decryption
+        for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
+
+            cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                             msg_len=127, assoc_len=127)
+
+            for chunk in break_up(auth_data, chunk_length):
+                cipher.update(chunk)
+            ct2 = b("")
+            for chunk in break_up(plaintext, chunk_length):
+                ct2 += cipher.encrypt(chunk)
+            self.assertEqual(ciphertext, ct2)
+            self.assertEquals(cipher.digest(), ref_mac)
 
 
 class CcmFSMTests(unittest.TestCase):
