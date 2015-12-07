@@ -172,5 +172,5 @@ def _create_ecb_cipher(factory, **kwargs):
 
     cipher_state = factory._create_base_cipher(kwargs)
     if kwargs:
-        raise ValueError("Unknown parameters for ECB: %s" % str(kwargs))
+        raise TypeError("Unknown parameters for ECB: %s" % str(kwargs))
     return EcbMode(cipher_state)

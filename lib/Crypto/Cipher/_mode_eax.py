@@ -36,7 +36,7 @@ __all__ = ['EaxMode']
 
 from binascii import unhexlify, hexlify
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import byte_string, bchr, bord
 
 from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
@@ -73,41 +73,13 @@ class EaxMode(object):
     .. __: http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf
     """
 
-    def __init__(self, factory, **kwargs):
-        """Create a new block cipher, configured in EAX mode.
-
-        :Parameters:
-          factory : module
-            A symmetric cipher module from `Crypto.Cipher`
-            (like `Crypto.Cipher.AES`).
-
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-
-          nonce : byte string
-            A mandatory value that must never be reused for any other encryption.
-            There are no restrictions on its length,
-            but it is recommended to use at least 16 bytes.
-
-            The nonce shall never repeat for two
-            different messages encrypted with the same key,
-            but it does not need to be random.
-
-          mac_len : integer
-            Length of the MAC, in bytes. It must be no
-            larger than the cipher block bytes (which is the default).
-        """
+    def __init__(self, factory, key, nonce, mac_len, cipher_params):
+        """EAX cipher mode"""
 
         self.block_size = factory.block_size
+        self.nonce = nonce
 
-        try:
-            key = kwargs.pop("key")
-            nonce = kwargs.pop("nonce")
-        except KeyError, e:
-            raise TypeError("Missing parameter: " + str(e))
-        self._mac_len = kwargs.pop("mac_len", self.block_size)
-
+        self._mac_len = mac_len
         self._mac_tag = None  # Cache for MAC tag
 
         # Allowed transitions after initialization
@@ -119,11 +91,17 @@ class EaxMode(object):
             raise ValueError("Parameter 'mac_len' must not be larger than %d"
                              % self.block_size)
 
+        # Nonce cannot be empty and must be a byte string
+        if len(nonce) == 0:
+            raise ValueError("Nonce cannot be empty in EAX mode")
+        if not byte_string(nonce):
+            raise TypeError("Nonce must be a byte string")
+
         self._omac = [
                 CMAC.new(key,
                          bchr(0) * (self.block_size - 1) + bchr(i),
                          ciphermod=factory,
-                         cipher_params=kwargs)
+                         cipher_params=cipher_params)
                 for i in xrange(0, 3)
                 ]
 
@@ -139,7 +117,7 @@ class EaxMode(object):
         self._cipher = factory.new(key,
                                    factory.MODE_CTR,
                                    counter=counter_obj,
-                                   **kwargs)
+                                   **cipher_params)
 
     def update(self, assoc_data):
         """Protect associated data
@@ -363,4 +341,35 @@ class EaxMode(object):
 
 
 def _create_eax_cipher(factory, **kwargs):
-    return EaxMode(factory, **kwargs)
+    """Create a new block cipher, configured in EAX mode.
+
+    :Parameters:
+      factory : module
+        A symmetric cipher module from `Crypto.Cipher` (like
+        `Crypto.Cipher.AES`).
+
+    :Keywords:
+      key : byte string
+        The secret key to use in the symmetric cipher.
+
+      nonce : byte string
+        A mandatory value that must never be reused for any other encryption.
+        There are no restrictions on its length, but it is recommended to use
+        at least 16 bytes.
+
+        The nonce shall never repeat for two different messages encrypted with
+        the same key, but it does not need to be random.
+
+      mac_len : integer
+        Length of the MAC, in bytes. It must be no larger than the cipher
+        block bytes (which is the default).
+    """
+
+    try:
+        key = kwargs.pop("key")
+        nonce = kwargs.pop("nonce")
+        mac_len = kwargs.pop("mac_len", factory.block_size)
+    except KeyError, e:
+        raise TypeError("Missing parameter: " + str(e))
+
+    return EaxMode(factory, key, nonce, mac_len, kwargs)
