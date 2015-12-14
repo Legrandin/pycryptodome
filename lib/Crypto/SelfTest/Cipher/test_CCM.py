@@ -35,8 +35,10 @@ from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
+
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
+
 
 class CcmTests(unittest.TestCase):
 
@@ -80,29 +82,6 @@ class CcmTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertEqual(cipher.block_size, AES.block_size)
 
-    def test_unaligned_message_pieces(self):
-        plaintexts = [ b("7777777") ] * 100
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                 msg_len=7*100)
-        ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
-
-    def test_unaligned_assoc_data_piece(self):
-        assoc_data = [ b("7777777") ] * 100
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                 assoc_len=7*100)
-        for x in assoc_data:
-            cipher.update(x)
-        mac = cipher.digest()
-
-        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        cipher.update(b("").join(assoc_data))
-        cipher.verify(mac)
-
     def test_nonce_attribute(self):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertEqual(cipher.nonce, self.nonce_96)
@@ -112,8 +91,11 @@ class CcmTests(unittest.TestCase):
                           self.nonce_96, 7)
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CCM,
                           nonce=self.nonce_96, unknown=7)
-        # But some are only known by the base cipher (e.g. use_aesni consumed by the AES module)
-        AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96, use_aesni=False)
+
+        # But some are only known by the base cipher
+        # (e.g. use_aesni consumed by the AES module)
+        AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                use_aesni=False)
 
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
@@ -163,7 +145,8 @@ class CcmTests(unittest.TestCase):
         invalid_mac = strxor_c(mac, 0x01)
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, invalid_mac)
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct,
+                          invalid_mac)
 
     def test_hex_mac(self):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
@@ -236,6 +219,49 @@ class CcmTests(unittest.TestCase):
                          msg_len=15)
         self.assertRaises(ValueError, cipher.decrypt, ct)
 
+    def test_message_chunks(self):
+        # Validate that both associated data and plaintext/ciphertext
+        # can be broken up in chunks of arbitrary length
+
+        auth_data = get_tag_random("authenticated data", 127)
+        plaintext = get_tag_random("plaintext", 127)
+
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+        cipher.update(auth_data)
+        ciphertext, ref_mac = cipher.encrypt_and_digest(plaintext)
+
+        def break_up(data, chunk_length):
+            return [data[i:i+chunk_length] for i in range(0, len(data),
+                    chunk_length)]
+
+        # Encryption
+        for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
+
+            cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                             msg_len=127, assoc_len=127)
+
+            for chunk in break_up(auth_data, chunk_length):
+                cipher.update(chunk)
+            pt2 = b("")
+            for chunk in break_up(ciphertext, chunk_length):
+                pt2 += cipher.decrypt(chunk)
+            self.assertEqual(plaintext, pt2)
+            cipher.verify(ref_mac)
+
+        # Decryption
+        for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
+
+            cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                             msg_len=127, assoc_len=127)
+
+            for chunk in break_up(auth_data, chunk_length):
+                cipher.update(chunk)
+            ct2 = b("")
+            for chunk in break_up(plaintext, chunk_length):
+                ct2 += cipher.encrypt(chunk)
+            self.assertEqual(ciphertext, ct2)
+            self.assertEquals(cipher.digest(), ref_mac)
+
 
 class CcmFSMTests(unittest.TestCase):
 
@@ -248,14 +274,18 @@ class CcmFSMTests(unittest.TestCase):
         for assoc_len in (None, 0):
             for msg_len in (None, len(self.data_128)):
                 # Verify path INIT->ENCRYPT->DIGEST
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                                 assoc_len=assoc_len, msg_len=msg_len)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
+                                 assoc_len=assoc_len,
+                                 msg_len=msg_len)
                 ct = cipher.encrypt(self.data_128)
                 mac = cipher.digest()
 
                 # Verify path INIT->DECRYPT->VERIFY
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                                 assoc_len=assoc_len, msg_len=msg_len)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
+                                 assoc_len=assoc_len,
+                                 msg_len=msg_len)
                 cipher.decrypt(ct)
                 cipher.verify(mac)
 
@@ -264,14 +294,18 @@ class CcmFSMTests(unittest.TestCase):
         for assoc_len in (None, len(self.data_128)):
             for msg_len in (None, 0):
                 # Verify path INIT->UPDATE->DIGEST
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                                 assoc_len=assoc_len, msg_len=msg_len)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
+                                 assoc_len=assoc_len,
+                                 msg_len=msg_len)
                 cipher.update(self.data_128)
                 mac = cipher.digest()
 
                 # Verify path INIT->UPDATE->VERIFY
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                                 assoc_len=assoc_len, msg_len=msg_len)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
+                                 assoc_len=assoc_len,
+                                 msg_len=msg_len)
                 cipher.update(self.data_128)
                 cipher.verify(mac)
 
@@ -280,15 +314,19 @@ class CcmFSMTests(unittest.TestCase):
         for assoc_len in (None, len(self.data_128)):
             for msg_len in (None, len(self.data_128)):
                 # Verify path INIT->UPDATE->ENCRYPT->DIGEST
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                                 assoc_len=assoc_len, msg_len=msg_len)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
+                                 assoc_len=assoc_len,
+                                 msg_len=msg_len)
                 cipher.update(self.data_128)
                 ct = cipher.encrypt(self.data_128)
                 mac = cipher.digest()
 
                 # Verify path INIT->UPDATE->DECRYPT->VERIFY
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                                 assoc_len=assoc_len, msg_len=msg_len)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
+                                 assoc_len=assoc_len,
+                                 msg_len=msg_len)
                 cipher.update(self.data_128)
                 cipher.decrypt(ct)
                 cipher.verify(mac)
@@ -309,13 +347,16 @@ class CcmFSMTests(unittest.TestCase):
     def test_valid_multiple_encrypt_or_decrypt(self):
         # Only possible if msg_len is declared in advance
         for method_name in "encrypt", "decrypt":
-            for auth_data in (None, b("333"), self.data_128, self.data_128 + b("3")):
+            for auth_data in (None, b("333"), self.data_128,
+                              self.data_128 + b("3")):
                 if auth_data is None:
                     assoc_len = None
                 else:
                     assoc_len = len(auth_data)
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                                 msg_len=64, assoc_len=assoc_len)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
+                                 msg_len=64,
+                                 assoc_len=assoc_len)
                 if auth_data is not None:
                     cipher.update(auth_data)
                 method = getattr(cipher, method_name)
@@ -354,7 +395,8 @@ class CcmFSMTests(unittest.TestCase):
         # Once per method, with or without assoc. data
         for method_name in "encrypt", "decrypt":
             for assoc_data_present in (True, False):
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96)
                 if assoc_data_present:
                     cipher.update(self.data_128)
                 method = getattr(cipher, method_name)
@@ -366,19 +408,22 @@ class CcmFSMTests(unittest.TestCase):
         for method1_name, method2_name in (("encrypt", "decrypt"),
                                            ("decrypt", "encrypt")):
             for assoc_data_present in (True, False):
-                cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
+                cipher = AES.new(self.key_128, AES.MODE_CCM,
+                                 nonce=self.nonce_96,
                                  msg_len=32)
                 if assoc_data_present:
                     cipher.update(self.data_128)
                 getattr(cipher, method1_name)(self.data_128)
-                self.assertRaises(TypeError, getattr(cipher, method2_name), self.data_128)
+                self.assertRaises(TypeError, getattr(cipher, method2_name),
+                                  self.data_128)
 
     def test_invalid_encrypt_or_update_after_digest(self):
         for method_name in "encrypt", "update":
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
             cipher.encrypt(self.data_128)
             cipher.digest()
-            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
+            self.assertRaises(TypeError, getattr(cipher, method_name),
+                              self.data_128)
 
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
             cipher.encrypt_and_digest(self.data_128)
@@ -392,11 +437,13 @@ class CcmFSMTests(unittest.TestCase):
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
             cipher.decrypt(ct)
             cipher.verify(mac)
-            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
+            self.assertRaises(TypeError, getattr(cipher, method_name),
+                              self.data_128)
 
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
             cipher.decrypt_and_verify(ct, mac)
-            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
+            self.assertRaises(TypeError, getattr(cipher, method_name),
+                              self.data_128)
 
 
 class TestVectors(unittest.TestCase):
@@ -607,7 +654,7 @@ def get_tests(config={}):
     tests = []
     tests += list_test_cases(CcmTests)
     tests += list_test_cases(CcmFSMTests)
-    tests += [ TestVectors() ]
+    tests += [TestVectors()]
     return tests
 
 
