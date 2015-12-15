@@ -487,7 +487,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
             extra_tests_added = 1
 
         # Extract associated data and MAC for AEAD modes
-        if p_mode in ('SIV', 'GCM'):
+        if p_mode in ('SIV', ):
             assoc_data, params['plaintext'] = params['plaintext'].split('|')
             assoc_data2, params['ciphertext'], params['mac'] = params['ciphertext'].split('|')
             params['assoc_data'] = assoc_data.split("-")
@@ -498,7 +498,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         tests.append(CipherSelfTest(module, params))
 
     # Add tests that don't use test vectors
-    for aead_mode in ("MODE_SIV", "MODE_GCM"):
+    for aead_mode in ("MODE_SIV", ):
         if hasattr(module, aead_mode):
             key_sizes = []
             try:

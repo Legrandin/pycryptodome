@@ -46,6 +46,8 @@ def get_tests(config={}):
     from Crypto.SelfTest.Cipher import test_OFB;        tests += test_OFB.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_CTR;        tests += test_CTR.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_CCM;        tests += test_CCM.get_tests(config=config)
+    from Crypto.SelfTest.Cipher import test_EAX;        tests += test_EAX.get_tests(config=config)
+    from Crypto.SelfTest.Cipher import test_GCM;        tests += test_GCM.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':
