@@ -61,6 +61,8 @@ def load_fips_test_module(desc, file_in):
         line_number += 1
         line = file_in.readline()
         if not line:
+            if test_vector is not None:
+                results.append(test_vector)
             break
         line = line.strip()
 
