@@ -505,26 +505,6 @@ for name, factory in (('DES', DES),
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(EaxTests)
-    def runTest(self):
-
-        from Crypto.Cipher import DES, DES3, ARC2, CAST, Blowfish
-
-        for factory in DES, DES3, ARC2, CAST, Blowfish:
-            key_sizes = []
-            try:
-                key_sizes += factory.key_size
-            except TypeError:
-                key_sizes = [factory.key_size]
-            for ks in key_sizes:
-                cipher = factory.new(bchr(1) * ks,
-                                 AES.MODE_EAX,
-                                 nonce=b("nonce"))
-                cipher.encrypt(b("plaintext"))
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(EaxTests)
     tests += list_test_cases(EaxFSMTests)
     tests += [TestVectors()]
     tests += list_test_cases(TestOtherCiphers)

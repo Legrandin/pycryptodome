@@ -34,9 +34,7 @@ Galois/Counter Mode (GCM).
 
 __all__ = ['GcmMode']
 
-from binascii import unhexlify, hexlify
-
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b, bchr, byte_string, bord, unhexlify
 
 from Crypto.Util import Counter
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -60,89 +58,7 @@ _raw_galois_lib = load_pycryptodome_raw_lib("Crypto.Util._galois",
                     """)
 
 
-class _SmoothMAC(object):
-    """Turn a MAC that only operates on aligned blocks of data
-    into a MAC with granularity of 1 byte."""
-
-    def __init__(self, block_size, msg=b(""), min_digest=0):
-        self._bs = block_size
-        #: Data waiting to be MAC-ed
-        self._buffer = []
-        self._buffer_len = 0
-        #: Data received via update()
-        self._total_len = 0
-        #: Minimum amount of bytes required by the final digest step
-        self._min_digest = min_digest
-        #: Block MAC object
-        self._mac = None
-        #: Cached digest
-        self._tag = None
-        if msg:
-            self.update(msg)
-
-    def can_reduce(self):
-        return (self._mac is not None)
-
-    def data_signed_so_far(self):
-        return self._total_len
-
-    def zero_pad(self):
-        if self._buffer_len & (self._bs-1):
-            npad = self._bs - self._buffer_len & (self._bs-1)
-            self._buffer.append(bchr(0)*npad)
-            self._buffer_len += npad
-
-    def update(self, data):
-        # Optimization (try not to copy data if possible)
-        if self._buffer_len==0 and self.can_reduce() and\
-                self._min_digest==0 and len(data)%self._bs==0:
-            self._update(data)
-            self._total_len += len(data)
-            return
-
-        self._buffer.append(data)
-        self._buffer_len += len(data)
-        self._total_len += len(data)
-
-        # Feed data into MAC
-        blocks, rem = divmod(self._buffer_len, self._bs)
-        if rem<self._min_digest:
-            blocks -= 1
-        if blocks>0 and self.can_reduce():
-            aligned_data = blocks*self._bs
-            buf = b("").join(self._buffer)
-            self._update(buf[:aligned_data])
-            self._buffer = [ buf[aligned_data:] ]
-            self._buffer_len -= aligned_data
-
-    def _deep_copy(self, target):
-        # Copy everything but self._mac, since we don't know how to
-        target._buffer = self._buffer[:]
-        for m in [ '_bs', '_buffer_len', '_total_len', '_min_digest', '_tag' ]:
-            setattr(target, m, getattr(self, m))
-
-    def _update(self, data_block):
-        """Delegate to the implementation the update
-        of the MAC state given some new *block aligned* data."""
-        raise NotImplementedError("_update() must be still implemented")
-
-    def _digest(self, left_data):
-        """Delegate to the implementation the computation
-        of the final MAC given the current MAC state
-        and the last piece of data (not block aligned)."""
-        raise NotImplementedError("_digest() must be still implemented")
-
-    def digest(self):
-        if self._tag:
-            return self._tag
-        if self._buffer_len>0:
-            self.update(b(""))
-        left_data = b("").join(self._buffer)
-        self._tag = self._digest(left_data)
-        return self._tag
-
-
-class _GHASH(_SmoothMAC):
+class _GHASH(object):
     """GHASH function defined in NIST SP 800-38D, Algorithm 2.
 
     If X_1, X_2, .. X_m are the blocks of input data, the function
@@ -154,31 +70,26 @@ class _GHASH(_SmoothMAC):
     (x^128 + x^7 + x^2 + x + 1).
     """
 
-    def __init__(self, hash_subkey, block_size):
-        _SmoothMAC.__init__(self, block_size, None, 0)
+    def __init__(self, subkey):
+        assert len(subkey) == 16
 
-        self._key = hash_subkey
+        expect_byte_string(subkey)
         self._exp_key = VoidPointer()
-        expect_byte_string(self._key)
-        result = _raw_galois_lib.ghash_expand(self._key,
+        result = _raw_galois_lib.ghash_expand(subkey,
                                               self._exp_key.address_of())
         if result:
             raise ValueError("Error %d while expanding the GMAC key" % result)
+
         self._exp_key = SmartPointer(self._exp_key.get(),
                                      _raw_galois_lib.ghash_destroy)
 
         self._last_y = create_string_buffer(16)
         for i in xrange(16):
             self._last_y[i] = bchr(0)
-        self._mac = _raw_galois_lib.ghash
 
-    def copy(self):
-        clone = _GHASH(self._key, self._bs)
-        _SmoothMAC._deep_copy(self, clone)
-        clone._last_y = self._last_y
-        return clone
+    def update(self, block_data):
+        assert len(block_data) % 16 == 0
 
-    def _update(self, block_data):
         expect_byte_string(block_data)
         result = _raw_galois_lib.ghash(self._last_y,
                                        block_data,
@@ -188,8 +99,16 @@ class _GHASH(_SmoothMAC):
         if result:
             raise ValueError("Error %d while updating GMAC" % result)
 
-    def _digest(self, left_data):
+        return self
+
+    def digest(self):
         return get_raw_buffer(self._last_y)
+
+
+def enum(**enums):
+    return type('Enum', (), enums)
+
+MacStatus = enum(PROCESSING_AUTH_DATA=1, PROCESSING_CIPHERTEXT=2)
 
 
 class GcmMode(object):
@@ -215,62 +134,37 @@ class GcmMode(object):
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
     """
 
-    def __init__(self, factory, **kwargs):
-        """Create a new block cipher, configured in
-        Galois Counter Mode (GCM).
-
-        :Parameters:
-          factory : module
-            A block cipher module, taken from `Crypto.Cipher`.
-            The cipher must have block length of 16 bytes.
-            GCM has been only defined for `Crypto.Cipher.AES`.
-
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-            It must be 16 (e.g. *AES-128*), 24 (e.g. *AES-192*)
-            or 32 (e.g. *AES-256*) bytes long.
-
-          nonce : byte string
-            A mandatory value that must never be reused for any other encryption.
-
-            There are no restrictions on its length,
-            but it is recommended to use at least 16 bytes.
-
-            The nonce shall never repeat for two
-            different messages encrypted with the same key,
-            but it does not need to be random.
-
-          mac_len : integer
-            Length of the MAC, in bytes.
-            It must be no larger than 16 bytes (which is the default).
-        """
+    def __init__(self, factory, key, nonce, mac_len, cipher_params):
 
         self.block_size = factory.block_size
         if self.block_size != 16:
             raise ValueError("GCM mode is only available for ciphers"
                              " that operate on 128 bits blocks")
 
+        if len(nonce) == 0:
+            raise ValueError("Nonce cannot be empty")
+        if not byte_string(nonce):
+            raise TypeError("Nonce must be a byte string")
+
+        #: Nonce
+        self.nonce = nonce
+
         self._factory = factory
-        try:
-            self._key = key = kwargs.pop("key")
-            nonce = kwargs.pop("nonce")
-        except KeyError, e:
-            raise TypeError("Missing parameter:" + str(e))
-        self._mac_len = kwargs.pop("mac_len", 16)
+        self._key = key
+        self._tag = None  # Cache for MAC tag
 
-        self._tag = None  ## Cache for MAC tag
-
-        # MAC tag length
-        if not (4 <= self._mac_len <= 16):
-            raise ValueError("Parameter 'mac_len' must not be larger"
-                             " than 16 bytes")
+        self._mac_len = mac_len
+        if not (4 <= mac_len <= 16):
+            raise ValueError("Parameter 'mac_len' must be in the range 4..16")
 
         # Allowed transitions after initialization
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
         self._no_more_assoc_data = False
+
+        # Length of associated data
+        self._auth_len = 0
 
         # Length of the ciphertext or plaintext
         self._msg_len = 0
@@ -279,7 +173,7 @@ class GcmMode(object):
         # See also Algorithm 5 (decryption)
         hash_subkey = factory.new(key,
                                   self._factory.MODE_ECB,
-                                  **kwargs
+                                  **cipher_params
                                   ).encrypt(bchr(0) * 16)
 
         # Step 2 - Compute J0 (integer, not byte string!)
@@ -290,27 +184,31 @@ class GcmMode(object):
             ghash_in = (nonce +
                         bchr(0) * fill +
                         long_to_bytes(8 * len(nonce), 8))
-            mac = _GHASH(hash_subkey, factory.block_size)
-            mac.update(ghash_in)
-            self._j0 = bytes_to_long(mac.digest())
-            del mac
+            self._j0 = bytes_to_long(_GHASH(hash_subkey)
+                                     .update(ghash_in)
+                                     .digest())
 
         # Step 3 - Prepare GCTR cipher for encryption/decryption
         ctr = Counter.new(128, initial_value=self._j0 + 1)
         self._cipher = factory.new(key,
                                    self._factory.MODE_CTR,
                                    counter=ctr,
-                                   **kwargs)
+                                   **cipher_params)
 
         # Step 5 - Bootstrat GHASH
-        self._signer = _GHASH(hash_subkey, factory.block_size)
+        self._signer = _GHASH(hash_subkey)
 
         # Step 6 - Prepare GCTR cipher for GMAC
         ctr = Counter.new(128, initial_value=self._j0)
         self._tag_cipher = factory.new(key,
                                        self._factory.MODE_CTR,
                                        counter=ctr,
-                                       **kwargs)
+                                       **cipher_params)
+
+        # Cache for data to authenticate
+        self._cache = b("")
+
+        self._status = MacStatus.PROCESSING_AUTH_DATA
 
     def update(self, assoc_data):
         """Protect associated data
@@ -337,12 +235,47 @@ class GcmMode(object):
 
         if self.update not in self._next:
             raise TypeError("update() can only be called"
-                                " immediately after initialization")
+                            " immediately after initialization")
 
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
-        return self._signer.update(assoc_data)
+        self._update(assoc_data)
+        self._auth_len += len(assoc_data)
+        return self
+
+    def _update(self, data):
+        assert(len(self._cache) < 16)
+
+        if len(self._cache) > 0:
+            filler = min(16 - len(self._cache), len(data))
+            self._cache += data[:filler]
+            data = data[filler:]
+
+            if len(self._cache) < 16:
+                return
+
+            # The cache is exactly one block
+            self._signer.update(self._cache)
+            self._cache = b("")
+
+        update_len = len(data) // 16 * 16
+        self._cache = data[update_len:]
+        if update_len > 0:
+            self._signer.update(data[:update_len])
+
+    def _pad_cache_and_update(self):
+        assert(len(self._cache) < 16)
+
+        # The authenticated data A is concatenated to the minimum
+        # number of zero bytes (possibly none) such that the
+        # - ciphertext C is aligned to the 16 byte boundary.
+        #   See step 5 in section 7.1
+        # - ciphertext C is aligned to the 16 byte boundary.
+        #   See step 6 in section 7.2
+        len_cache = len(self._cache)
+        if len_cache > 0:
+            self._update(bchr(0) * (16 - len_cache))
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -380,15 +313,11 @@ class GcmMode(object):
 
         ciphertext = self._cipher.encrypt(plaintext)
 
-        if not self._no_more_assoc_data:
-            # The authenticated data A is concatenated to the minimum
-            # number of zero bytes (possibly none) such that the
-            # ciphertext C is aligned to the 16 byte boundary.
-            # See step 5 in section 7.1
-            self._signer.zero_pad()
-            self._no_more_assoc_data = True
+        if self._status == MacStatus.PROCESSING_AUTH_DATA:
+            self._pad_cache_and_update()
+            self._status = MacStatus.PROCESSING_CIPHERTEXT
 
-        self._signer.update(ciphertext)
+        self._update(ciphertext)
         self._msg_len += len(plaintext)
 
         return ciphertext
@@ -426,15 +355,11 @@ class GcmMode(object):
                             " after initialization or an update()")
         self._next = [self.decrypt, self.verify]
 
-        if not self._no_more_assoc_data:
-            # The authenticated data A is concatenated to the minimum
-            # number of zero bytes (possibly none) such that the
-            # ciphertext C is aligned to the 16 byte boundary.
-            # See step 6 in section 7.2
-            self._signer.zero_pad()
-            self._no_more_assoc_data = True
+        if self._status == MacStatus.PROCESSING_AUTH_DATA:
+            self._pad_cache_and_update()
+            self._status = MacStatus.PROCESSING_CIPHERTEXT
 
-        self._signer.update(ciphertext)
+        self._update(ciphertext)
         self._msg_len += len(ciphertext)
 
         return self._cipher.decrypt(ciphertext)
@@ -452,7 +377,7 @@ class GcmMode(object):
 
         if self.digest not in self._next:
             raise TypeError("digest() cannot be called when decrypting"
-                                " or validating a message")
+                            " or validating a message")
         self._next = [self.digest]
 
         return self._compute_mac()
@@ -464,10 +389,9 @@ class GcmMode(object):
             return self._tag
 
         # Step 5 in NIST SP 800-38D, Algorithm 4 - Compute S
-        self._signer.zero_pad()
-        auth_len = self._signer.data_signed_so_far() - self._msg_len
-        self._signer.update(long_to_bytes(8 * auth_len, 8))
-        self._signer.update(long_to_bytes(8 * self._msg_len, 8))
+        self._pad_cache_and_update()
+        self._update(long_to_bytes(8 * self._auth_len, 8))
+        self._update(long_to_bytes(8 * self._msg_len, 8))
         s_tag = self._signer.digest()
 
         # Step 6 - Compute T
@@ -508,8 +432,10 @@ class GcmMode(object):
 
         secret = get_random_bytes(16)
 
-        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._compute_mac())
-        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=received_mac_tag)
+        mac1 = BLAKE2s.new(digest_bits=160, key=secret,
+                           data=self._compute_mac())
+        mac2 = BLAKE2s.new(digest_bits=160, key=secret,
+                           data=received_mac_tag)
 
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
@@ -565,4 +491,41 @@ class GcmMode(object):
 
 
 def _create_gcm_cipher(factory, **kwargs):
-    return GcmMode(factory, **kwargs)
+    """Create a new block cipher, configured in Galois Counter Mode (GCM).
+
+    :Parameters:
+      factory : module
+        A block cipher module, taken from `Crypto.Cipher`.
+        The cipher must have block length of 16 bytes.
+        GCM has been only defined for `Crypto.Cipher.AES`.
+
+    :Keywords:
+      key : byte string
+        The secret key to use in the symmetric cipher.
+        It must be 16 (e.g. *AES-128*), 24 (e.g. *AES-192*)
+        or 32 (e.g. *AES-256*) bytes long.
+
+      nonce : byte string
+        A mandatory value that must never be reused for any other encryption.
+
+        There are no restrictions on its length,
+        but it is recommended to use at least 16 bytes.
+
+        The nonce shall never repeat for two
+        different messages encrypted with the same key,
+        but it does not need to be random.
+
+      mac_len : integer
+        Length of the MAC, in bytes.
+        It must be no larger than 16 bytes (which is the default).
+    """
+
+    try:
+        key = kwargs.pop("key")
+        nonce = kwargs.pop("nonce")
+    except KeyError, e:
+        raise TypeError("Missing parameter:" + str(e))
+
+    mac_len = kwargs.pop("mac_len", 16)
+
+    return GcmMode(factory, key, nonce, mac_len, kwargs)
