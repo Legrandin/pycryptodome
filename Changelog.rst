@@ -12,8 +12,8 @@ New features
   `new` accepts `IV` as well as `iv` as parameter.
 * For CFB/OPENPGP, `encrypt` and `decrypt` do not require the plaintext
   or ciphertext pieces to have length multiple of the CFB segment size.
-* Dedicated tests for CBC/CFB/OFB/CTR/CCM/GCM/EAX/OPENPGP, including NIST test vectors
-* CCM/EAX/GCM cipher objects has attribute `nonce`.
+* Dedicated tests for all cipher modes, including NIST test vectors
+* CCM/EAX/GCM/SIV cipher objects expose attribute `nonce`.
 * CCM cipher checks if the declared lengths of the associated data and of the
   message match the actual ones.
 

@@ -34,9 +34,9 @@ Synthetic Initialization Vector (SIV) mode.
 
 __all__ = ['SivMode']
 
-from binascii import unhexlify, hexlify
+from binascii import hexlify
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import byte_string, bord, unhexlify
 
 from Crypto.Util import Counter
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -56,12 +56,6 @@ class SivMode(object):
     if the message comes from a source that really knowns the secret key.
     Additionally, decryption detects if any part of the message - including the
     header - has been modified or corrupted.
-
-    If the data being encrypted is completely unpredictable to an adversary
-    (e.g. a secret key, for key wrapping purposes) a nonce is not strictly
-    required.
-
-    Otherwise, a *nonce* has to be provided.
 
     Unlike other AEAD modes such as CCM, EAX or GCM, accidental reuse of a
     nonce is not catastrophic for the confidentiality of the message. The only
@@ -91,51 +85,33 @@ class SivMode(object):
     .. __: http://www.cs.ucdavis.edu/~rogaway/papers/keywrap.pdf
     """
 
-    def __init__(self, factory, **kwargs):
-        """Create a new block cipher, configured in
-        Synthetic Initializaton Vector (SIV) mode.
-
-        :Parameters:
-          factory : object
-            A symmetric cipher module from `Crypto.Cipher`
-            (like `Crypto.Cipher.AES`).
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-            It must be 32, 48 or 64 bytes long.
-            If AES is the chosen cipher, the variants *AES-128*,
-            *AES-192* and or *AES-256* will be used internally.
-          nonce : byte string
-            A mandatory value that must never be reused for any other encryption.
-            There are no restrictions on its length,
-            but it is recommended to use at least 16 bytes.
-
-            The nonce shall never repeat for two different messages encrypted
-            with the same key, but it does not need to be random.
-        """
-
+    def __init__(self, factory, key, nonce, kwargs):
         self.block_size = factory.block_size
         self._factory = factory
 
-        try:
-            self._key = key = kwargs.pop("key")
-        except KeyError, e:
-            raise TypeError("Missing parameter: " + str(e))
+        self.nonce = nonce
+        self._cipher_params = kwargs
 
-        self._nonce = kwargs.pop("nonce", None)
+        if len(key) not in (32, 48, 64):
+            raise ValueError("Incorrect key length (%d bytes)" % len(key))
 
-        self._cipher_params = dict(kwargs)
+        if nonce is not None:
+            if not byte_string(nonce):
+                raise TypeError("When provided, the nonce must be a byte string")
+
+            if len(nonce) == 0:
+                raise ValueError("When provided, the nonce must be non-empty")
 
         subkey_size = len(key) // 2
-        if len(key) & 1:
-            raise ValueError("MODE_SIV requires a key twice as long as"
-                             " for the underlying cipher")
 
         self._mac_tag = None  # Cache for MAC tag
         self._kdf = _S2V(key[:subkey_size],
                          ciphermod=factory,
                          cipher_params=self._cipher_params)
         self._subkey_cipher = key[subkey_size:]
+
+        # Purely for the purpose of verifying that cipher_params are OK
+        factory.new(key[:subkey_size], factory.MODE_ECB, **kwargs)
 
         # Allowed transitions after initialization
         self._next = [self.update, self.encrypt, self.decrypt,
@@ -155,25 +131,30 @@ class SivMode(object):
                     counter=ctr,
                     **self._cipher_params)
 
-    def update(self, assoc_data):
-        """Protect associated data
+    def update(self, component):
+        """Protect one associated data component
 
-        If there is any associated data, the caller has to invoke
-        this function one or more times, before using
-        ``decrypt`` or ``encrypt``.
+        For SIV, the associated data is a sequence (*vector*) of non-empty
+        byte strings (*components*).
 
-        By *associated data* it is meant any data (e.g. packet headers) that
-        will not be encrypted and will be transmitted in the clear.
-        However, the receiver is still able to detect any modification to it.
+        This method consumes the next component. It must be called
+        once for each of the components that constitue the associated data.
+
+        Note that the components have clear boundaries, so that:
+
+            >>> cipher.update(b"builtin")
+            >>> cipher.update(b"securely")
+
+        is not equivalent to:
+
+            >>> cipher.update(b"built")
+            >>> c.update(b"insecurely")
 
         If there is no associated data, this method must not be called.
 
-        The caller may split associated data in segments of any size, and
-        invoke this method multiple times, each time with the next segment.
-
         :Parameters:
-          assoc_data : byte string
-            A piece of associated data. There are no restrictions on its size.
+          component : byte string
+            The next associated data component. It must not be empty.
         """
 
         if self.update not in self._next:
@@ -183,7 +164,7 @@ class SivMode(object):
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
-        return self._kdf.update(assoc_data)
+        return self._kdf.update(component)
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -202,7 +183,7 @@ class SivMode(object):
         :Parameters:
           plaintext : byte string
             The piece of data to encrypt.
-            It can be of any length.
+            It can be of any length, but it cannot be empty.
         :Return:
             the encrypted data, as a byte string.
             It is as long as *plaintext*.
@@ -214,8 +195,8 @@ class SivMode(object):
 
         self._next = [self.digest]
 
-        if self._nonce:
-            self._kdf.update(self._nonce)
+        if self.nonce:
+            self._kdf.update(self.nonce)
         self._kdf.update(plaintext)
 
         self._mac_tag = self._kdf.derive()
@@ -361,8 +342,8 @@ class SivMode(object):
 
         plaintext = self._cipher.decrypt(ciphertext)
 
-        if self._nonce:
-            self._kdf.update(self._nonce)
+        if self.nonce:
+            self._kdf.update(self.nonce)
         if plaintext:
             self._kdf.update(plaintext)
 
@@ -371,4 +352,36 @@ class SivMode(object):
 
 
 def _create_siv_cipher(factory, **kwargs):
-    return SivMode(factory, **kwargs)
+    """Create a new block cipher, configured in
+    Synthetic Initializaton Vector (SIV) mode.
+
+    :Parameters:
+
+      factory : object
+        A symmetric cipher module from `Crypto.Cipher`
+        (like `Crypto.Cipher.AES`).
+
+    :Keywords:
+
+      key : byte string
+        The secret key to use in the symmetric cipher.
+        It must be 32, 48 or 64 bytes long.
+        If AES is the chosen cipher, the variants *AES-128*,
+        *AES-192* and or *AES-256* will be used internally.
+
+      nonce : byte string
+        For deterministic encryption, it is not present.
+
+        Otherwise, it is  value that must never be reused.
+        There are no restrictions on its length,
+        but it is recommended to use at least 16 bytes.
+    """
+
+    try:
+        key = kwargs.pop("key")
+    except KeyError, e:
+        raise TypeError("Missing parameter: " + str(e))
+
+    nonce = kwargs.pop("nonce", None)
+
+    return SivMode(factory, key, nonce, kwargs)
