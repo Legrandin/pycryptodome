@@ -611,7 +611,7 @@ for idx, tv in enumerate(test_vectors_nist):
             cipher = AES.new(tv.key, AES.MODE_GCM, nonce=tv.iv,
                              mac_len=len(tv.tag))
             cipher.update(tv.aad)
-            if tv.pt == "FAIL":
+            if isinstance(tv.pt, str) and tv.pt == "FAIL":
                 self.assertRaises(ValueError, cipher.decrypt_and_verify,
                                   tv.ct, tv.tag)
             else:
