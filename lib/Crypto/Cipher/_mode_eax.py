@@ -34,9 +34,7 @@ EAX mode.
 
 __all__ = ['EaxMode']
 
-from binascii import unhexlify, hexlify
-
-from Crypto.Util.py3compat import byte_string, bchr, bord
+from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify
 
 from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
