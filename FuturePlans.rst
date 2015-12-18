@@ -1,10 +1,10 @@
 Future releases will include:
 
-- Break-up test cases of ciphers and make them mode-specific
 - Make all hash objects non-copiable and immutable after the first digest
 - DES3 (TDES) should refuse keys where K1=K2=K3
 - Add alias 'segment_bits' to parameter 'segment_size' for CFB
 - Automatic IV/nonce generation for cipher modes
+- Add support for memoryview/buffer interface
 - Move API documentation from epydoc to sphinx
 - Implement AES with bitslicing
 - Move old ciphers into a Museum submodule
