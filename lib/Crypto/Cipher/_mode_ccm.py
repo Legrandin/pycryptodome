@@ -582,12 +582,14 @@ def _create_ccm_cipher(factory, **kwargs):
         The secret key to use in the symmetric cipher.
 
       nonce : byte string
-        A mandatory value that must never be reused for any other encryption.
+        A value that must never be reused for any other encryption.
 
         Its length must be in the range ``[7..13]``.
         11 or 12 bytes are reasonable values in general. Bear in
         mind that with CCM there is a trade-off between nonce length and
         maximum message size.
+
+        If not specified, a 11 byte long random string is used.
 
       mac_len : integer
         Length of the MAC, in bytes. It must be even and in
@@ -604,10 +606,10 @@ def _create_ccm_cipher(factory, **kwargs):
 
     try:
         key = key = kwargs.pop("key")
-        nonce = kwargs.pop("nonce")  # N
     except KeyError, e:
         raise TypeError("Missing parameter: " + str(e))
 
+    nonce = kwargs.pop("nonce", get_random_bytes(11))  # N
     mac_len = kwargs.pop("mac_len", factory.block_size)
     msg_len = kwargs.pop("msg_len", None)      # p
     assoc_len = kwargs.pop("assoc_len", None)  # a

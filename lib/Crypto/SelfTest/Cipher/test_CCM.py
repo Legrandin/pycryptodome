@@ -55,8 +55,14 @@ class CcmTests(unittest.TestCase):
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
-    def test_nonce_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CCM)
+    def test_nonce(self):
+        # If not passed, the nonce is created randomly
+        cipher = AES.new(self.key_128, AES.MODE_CCM)
+        nonce1 = cipher.nonce
+        cipher = AES.new(self.key_128, AES.MODE_CCM)
+        nonce2 = cipher.nonce
+        self.assertEqual(len(nonce1), 11)
+        self.assertNotEqual(nonce1, nonce2)
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, self.nonce_96)
         ct = cipher.encrypt(self.data_128)
