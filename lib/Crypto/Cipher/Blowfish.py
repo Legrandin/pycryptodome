@@ -32,18 +32,16 @@ to be big enough to withstand a brute force attack (e.g. at least 16 bytes).
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import Blowfish
-    >>> from Crypto import Random
     >>> from struct import pack
     >>>
     >>> bs = Blowfish.block_size
     >>> key = b'An arbitrarily long key'
-    >>> iv = Random.new().read(bs)
-    >>> cipher = Blowfish.new(key, Blowfish.MODE_CBC, iv)
+    >>> cipher = Blowfish.new(key, Blowfish.MODE_CBC)
     >>> plaintext = b'docendo discimus '
     >>> plen = bs - len(plaintext) % bs
     >>> padding = [plen]*plen
     >>> padding = pack('b'*plen, *padding)
-    >>> msg = iv + cipher.encrypt(plaintext + padding)
+    >>> msg = cipher.iv + cipher.encrypt(plaintext + padding)
 
 .. _Blowfish: http://www.schneier.com/blowfish.html
 

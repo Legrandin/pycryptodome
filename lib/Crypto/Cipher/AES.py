@@ -31,12 +31,10 @@ encryption.
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import AES
-    >>> from Crypto.Random import get_random_bytes
     >>>
     >>> key = b'Sixteen byte key'
-    >>> iv = get_random_bytes(16)
-    >>> cipher = AES.new(key, AES.MODE_CFB, iv)
-    >>> msg = iv + cipher.encrypt(b'Attack at dawn')
+    >>> cipher = AES.new(key, AES.MODE_CFB)
+    >>> msg = cipher.iv + cipher.encrypt(b'Attack at dawn')
 
 A more complicated example is based on CCM, (see `MODE_CCM`) an `AEAD`_ mode
 that provides both confidentiality and authentication for a message.

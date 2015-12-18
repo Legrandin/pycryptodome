@@ -35,7 +35,7 @@ OpenPGP mode.
 __all__ = ['OpenPgpMode']
 
 from Crypto.Util.py3compat import bchr
-
+from Crypto.Random import get_random_bytes
 
 class OpenPgpMode(object):
     """OpenPGP mode.
@@ -183,10 +183,18 @@ def _create_openpgp_cipher(factory, **kwargs):
         *encrypted* IV which was prefixed to the ciphertext).
     """
 
+    iv = kwargs.pop("IV", None)
+    IV = kwargs.pop("iv", None)
+
+    if (None, None) == (iv, IV):
+        iv = get_random_bytes(factory.block_size)
+    if iv is not None:
+        if IV is not None:
+            raise TypeError("You must either use 'iv' or 'IV', not both")
+    else:
+        iv = IV
+
     try:
-        iv = kwargs.pop("IV", None)
-        if iv is None:
-            iv = kwargs.pop("iv")
         key = kwargs.pop("key")
     except KeyError, e:
         raise TypeError("Missing component: " + str(e))
