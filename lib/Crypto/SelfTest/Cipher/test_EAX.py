@@ -65,8 +65,14 @@ class EaxTests(unittest.TestCase):
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
-    def test_nonce_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX)
+    def test_nonce(self):
+        # If not passed, the nonce is created randomly
+        cipher = AES.new(self.key_128, AES.MODE_EAX)
+        nonce1 = cipher.nonce
+        cipher = AES.new(self.key_128, AES.MODE_EAX)
+        nonce2 = cipher.nonce
+        self.assertEqual(len(nonce1), 16)
+        self.assertNotEqual(nonce1, nonce2)
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, self.nonce_96)
         ct = cipher.encrypt(self.data_128)
