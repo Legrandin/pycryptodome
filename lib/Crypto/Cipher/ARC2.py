@@ -132,8 +132,6 @@ def new(key, mode, *args, **kwargs):
 
         The initialization vector to use for encryption or decryption.
 
-        It is ignored for `MODE_ECB` and `MODE_CTR`.
-
         For `MODE_OPENPGP`, IV must be `block_size` bytes long for encryption
         and `block_size` +2 bytes for decryption (in the latter case, it is
         actually the *encrypted* IV which was prefixed to the ciphertext).
@@ -141,9 +139,12 @@ def new(key, mode, *args, **kwargs):
 
         For all other modes, it must be 8 bytes long.
       nonce : byte string
-        (*Only* `MODE_EAX`).
+        (*Only* `MODE_EAX` and `MODE_CTR`).
         A mandatory value that must never be reused for any other encryption.
-        There are no restrictions on its length, but it is recommended to
+
+        For `MODE_CTR`, its length must be in the range ``[0..7]``.
+
+        For `MODE_EAX`, there are no restrictions, but it is recommended to
         use at least 16 bytes.
       counter : object
         (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
@@ -154,6 +155,9 @@ def new(key, mode, *args, **kwargs):
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
         It must be a multiple of 8. If not specified, it will be assumed to be 8.
+      initial_value : integer
+        (*Only* `MODE_CTR`). The initial value for the counter within
+        the counter block. By default it is 0.
       effective_keylen : integer
         Maximum cryptographic strength of the key, in bits.
         It can vary from 0 to 1024. The default value is 1024.

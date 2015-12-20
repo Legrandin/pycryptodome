@@ -13,9 +13,11 @@ New features
 * For CFB/OPENPGP, `encrypt` and `decrypt` do not require the plaintext
   or ciphertext pieces to have length multiple of the CFB segment size.
 * Dedicated tests for all cipher modes, including NIST test vectors
-* CCM/EAX/GCM/SIV cipher objects expose attribute `nonce`.
+* CTR/CCM/EAX/GCM/SIV cipher objects expose attribute `nonce`.
 * CCM cipher checks if the declared lengths of the associated data and of the
   message match the actual ones.
+* CTR cipher accepts parameter `nonce` and possibly `initial_value` in
+  alternative to `counter`.
 
 Resolved issues
 ---------------

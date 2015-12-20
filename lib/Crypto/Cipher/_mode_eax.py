@@ -34,9 +34,8 @@ EAX mode.
 
 __all__ = ['EaxMode']
 
-from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify
+from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify, b
 
-from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -109,12 +108,10 @@ class EaxMode(object):
 
         # MAC of the nonce is also the initial counter for CTR encryption
         counter_int = bytes_to_long(self._omac[0].digest())
-        counter_obj = Counter.new(
-                        self.block_size * 8,
-                        initial_value=counter_int)
         self._cipher = factory.new(key,
                                    factory.MODE_CTR,
-                                   counter=counter_obj,
+                                   initial_value=counter_int,
+                                   nonce=b(""),
                                    **cipher_params)
 
     def update(self, assoc_data):

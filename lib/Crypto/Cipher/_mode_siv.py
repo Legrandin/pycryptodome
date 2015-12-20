@@ -36,9 +36,8 @@ __all__ = ['SivMode']
 
 from binascii import hexlify
 
-from Crypto.Util.py3compat import byte_string, bord, unhexlify
+from Crypto.Util.py3compat import byte_string, bord, unhexlify, b
 
-from Crypto.Util import Counter
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Protocol.KDF import _S2V
 from Crypto.Hash import BLAKE2s
@@ -125,14 +124,11 @@ class SivMode(object):
         """Create a new CTR cipher from the MAC in SIV mode"""
 
         tag_int = bytes_to_long(mac_tag)
-        init_counter = tag_int ^ (tag_int & 0x8000000080000000L)
-        ctr = Counter.new(self.block_size * 8,
-                          initial_value=init_counter)
-
         return self._factory.new(
                     self._subkey_cipher,
                     self._factory.MODE_CTR,
-                    counter=ctr,
+                    initial_value=tag_int ^ (tag_int & 0x8000000080000000L),
+                    nonce=b(""),
                     **self._cipher_params)
 
     def update(self, component):

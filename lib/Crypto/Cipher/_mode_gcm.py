@@ -36,7 +36,6 @@ __all__ = ['GcmMode']
 
 from Crypto.Util.py3compat import b, bchr, byte_string, bord, unhexlify
 
-from Crypto.Util import Counter
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
@@ -189,20 +188,20 @@ class GcmMode(object):
                                      .digest())
 
         # Step 3 - Prepare GCTR cipher for encryption/decryption
-        ctr = Counter.new(128, initial_value=self._j0 + 1)
         self._cipher = factory.new(key,
                                    self._factory.MODE_CTR,
-                                   counter=ctr,
+                                   initial_value=self._j0 + 1,
+                                   nonce=b(""),
                                    **cipher_params)
 
         # Step 5 - Bootstrat GHASH
         self._signer = _GHASH(hash_subkey)
 
         # Step 6 - Prepare GCTR cipher for GMAC
-        ctr = Counter.new(128, initial_value=self._j0)
         self._tag_cipher = factory.new(key,
                                        self._factory.MODE_CTR,
-                                       counter=ctr,
+                                       initial_value=self._j0,
+                                       nonce=b(""),
                                        **cipher_params)
 
         # Cache for data to authenticate

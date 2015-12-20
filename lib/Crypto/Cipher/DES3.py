@@ -45,13 +45,11 @@ as `AES`.
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import DES3
-    >>> from Crypto import Random
-    >>> from Crypto.Util import Counter
+    >>> from Crypto.Random import get_random_bytes
     >>>
     >>> key = b'Sixteen byte key'
-    >>> nonce = Random.new().read(DES3.block_size/2)
-    >>> ctr = Counter.new(DES3.block_size*8/2, prefix=nonce)
-    >>> cipher = DES3.new(key, DES3.MODE_CTR, counter=ctr)
+    >>> nonce = get_random_bytes(DES3.block_size/2)
+    >>> cipher = DES3.new(key, DES3.MODE_CTR, nonce=nonce)
     >>> plaintext = b'We are no longer the knights who say ni!'
     >>> msg = nonce + cipher.encrypt(plaintext)
 
@@ -138,9 +136,12 @@ def new(key, mode, *args, **kwargs):
 
         For all other modes, it must be 8 bytes long.
       nonce : byte string
-        (*Only* `MODE_EAX`).
+        (*Only* `MODE_EAX` and `MODE_CTR`).
         A mandatory value that must never be reused for any other encryption.
-        There are no restrictions on its length, but it is recommended to
+
+        For `MODE_CTR`, its length must be in the range ``[0..7]``.
+
+        For `MODE_EAX`, there are no restrictions, but it is recommended to
         use at least 16 bytes.
       counter : object
         (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
@@ -151,6 +152,9 @@ def new(key, mode, *args, **kwargs):
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
         It must be a multiple of 8. If not specified, it will be assumed to be 8.
+      initial_value : integer
+        (*Only* `MODE_CTR`). The initial value for the counter within
+        the counter block. By default it is 0.
 
     :Attention: it is important that all 8 byte subkeys are different,
       otherwise TDES would degrade to single `DES`.

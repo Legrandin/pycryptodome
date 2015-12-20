@@ -172,7 +172,8 @@ def new(key, mode, *args, **kwargs):
 
         For all other modes, it must be 16 bytes long.
       nonce : byte string
-        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_GCM`, `MODE_SIV`, `MODE_OCB`).
+        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_GCM`, `MODE_SIV`, `MODE_OCB`,
+        `MODE_CTR`).
 
         A mandatory value that must never be reused for any other encryption.
 
@@ -184,10 +185,10 @@ def new(key, mode, *args, **kwargs):
         For `MODE_OCB`, its length must be in the range ``[1..15]``.
         It is recommended to use 15 bytes.
 
+        For `MODE_CTR`, its length must be in the range ``[0..15]``.
+
         For the other modes, there are no restrictions on its length,
         but it is recommended to use at least 16 bytes.
-      counter : object
-        (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
       segment_size : integer
         (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
         are segmented in.
@@ -204,6 +205,9 @@ def new(key, mode, *args, **kwargs):
       assoc_len : integer
         (*Only* `MODE_CCM`). Length of the associated data.
         If not specified, all data is internally buffered.
+      initial_value : integer
+        (*Only* `MODE_CTR`). The initial value for the counter within
+        the counter block. By default it is 0.
       use_aesni : boolean
         Use AES-NI if available.
 

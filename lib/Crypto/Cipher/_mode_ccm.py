@@ -36,7 +36,6 @@ __all__ = ['CcmMode']
 
 from Crypto.Util.py3compat import byte_string, b, bchr, bord, unhexlify
 
-from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes
 
@@ -163,11 +162,9 @@ class CcmMode(object):
 
         # Start CTR cipher, by formatting the counter (A.3)
         q = 15 - len(nonce)  # length of Q, the encoded message length
-        prefix = bchr(q - 1) + nonce
-        ctr = Counter.new(128 - len(prefix) * 8, prefix, initial_value=0)
         self._cipher = self._factory.new(key,
                                          self._factory.MODE_CTR,
-                                         counter=ctr,
+                                         nonce=bchr(q - 1) + nonce,
                                          **cipher_params)
 
         # S_0, step 6 in 6.1 for j=0
