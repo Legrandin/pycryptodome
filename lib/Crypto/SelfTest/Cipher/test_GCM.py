@@ -55,8 +55,9 @@ class GcmTests(unittest.TestCase):
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
-    def test_nonce_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_GCM)
+    def test_nonce(self):
+        # Nonce is optional (a random one will be created)
+        AES.new(self.key_128, AES.MODE_GCM)
 
         cipher = AES.new(self.key_128, AES.MODE_GCM, self.nonce_96)
         ct = cipher.encrypt(self.data_128)

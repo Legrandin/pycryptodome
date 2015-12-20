@@ -505,7 +505,7 @@ def _create_gcm_cipher(factory, **kwargs):
         or 32 (e.g. *AES-256*) bytes long.
 
       nonce : byte string
-        A mandatory value that must never be reused for any other encryption.
+        A value that must never be reused for any other encryption.
 
         There are no restrictions on its length,
         but it is recommended to use at least 16 bytes.
@@ -514,6 +514,8 @@ def _create_gcm_cipher(factory, **kwargs):
         different messages encrypted with the same key,
         but it does not need to be random.
 
+        If not provided, a 16 byte nonce will be randomly created.
+
       mac_len : integer
         Length of the MAC, in bytes.
         It must be no larger than 16 bytes (which is the default).
@@ -521,10 +523,10 @@ def _create_gcm_cipher(factory, **kwargs):
 
     try:
         key = kwargs.pop("key")
-        nonce = kwargs.pop("nonce")
     except KeyError, e:
         raise TypeError("Missing parameter:" + str(e))
 
+    nonce = kwargs.pop("nonce", get_random_bytes(16))
     mac_len = kwargs.pop("mac_len", 16)
 
     return GcmMode(factory, key, nonce, mac_len, kwargs)
