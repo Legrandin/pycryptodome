@@ -86,6 +86,12 @@ class GcmTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
         self.assertEqual(cipher.nonce, self.nonce_96)
 
+        # By default, a 15 bytes long nonce is randomly generated
+        nonce1 = AES.new(self.key_128, AES.MODE_GCM).nonce
+        nonce2 = AES.new(self.key_128, AES.MODE_GCM).nonce
+        self.assertEqual(len(nonce1), 16)
+        self.assertNotEqual(nonce1, nonce2)
+
     def test_unknown_parameters(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_GCM,
                           self.nonce_96, 7)

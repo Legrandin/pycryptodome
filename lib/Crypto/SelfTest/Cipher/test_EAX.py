@@ -105,6 +105,12 @@ class EaxTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         self.assertEqual(cipher.nonce, self.nonce_96)
 
+        # By default, a 16 bytes long nonce is randomly generated
+        nonce1 = AES.new(self.key_128, AES.MODE_EAX).nonce
+        nonce2 = AES.new(self.key_128, AES.MODE_EAX).nonce
+        self.assertEqual(len(nonce1), 16)
+        self.assertNotEqual(nonce1, nonce2)
+
     def test_unknown_parameters(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX,
                           self.nonce_96, 7)

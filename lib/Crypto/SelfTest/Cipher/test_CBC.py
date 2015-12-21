@@ -72,6 +72,7 @@ class BlockChainingTests(unittest.TestCase):
         cipher = AES.new(self.key_128, self.aes_mode)
         iv2 = cipher.iv
         self.assertNotEqual(iv1, iv2)
+        self.assertEqual(len(iv1), 16)
 
         # IV can be passed in uppercase or lowercase
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
