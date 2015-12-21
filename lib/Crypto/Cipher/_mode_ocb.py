@@ -49,11 +49,10 @@ Example:
     >>> from Crypto.Random import get_random_bytes
     >>>
     >>> key = get_random_bytes(32)
-    >>> nonce = get_random_bytes(16)
-    >>> cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
+    >>> cipher = AES.new(key, AES.MODE_OCB)
     >>> plaintext = b"Attack at dawn"
     >>> ciphertext, mac = cipher.encrypt_and_digest(plaintext)
-    >>> # Deliver nonce, ciphertext and mac
+    >>> # Deliver cipher.nonce, ciphertext and mac
     ...
     >>> cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
     >>> try:
@@ -109,47 +108,21 @@ _raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
 class OcbMode(object):
     """Offset Codebook (OCB) mode."""
 
-    def __init__(self, factory, **kwargs):
-        """Create a new block cipher, configured in OCB mode.
-
-        :Parameters:
-          factory : module
-            A symmetric cipher module from `Crypto.Cipher`
-            (like `Crypto.Cipher.AES`).
-
-        :Keywords:
-          key : byte string
-            The secret key to use in the symmetric cipher.
-
-          nonce : byte string
-            A mandatory value that must never be reused for
-            any other encryption. Its length can vary from
-            1 to 15 bytes.
-
-          mac_len : integer
-            Length of the MAC, in bytes.
-            It must be in the range ``[8..16]``.
-            The default is 16 (128 bits).
-        """
+    def __init__(self, factory, nonce, mac_len, cipher_params):
 
         if factory.block_size != 16:
             raise ValueError("OCB mode is only available for ciphers"
                              " that operate on 128 bits blocks")
 
         #: The block size of the underlying cipher, in bytes.
-        self.block_size = factory.block_size
+        self.block_size = 16
 
-        try:
-            key = kwargs.get("key")
-            self.nonce = kwargs.pop("nonce")  # N
-            self._mac_len = kwargs.pop("mac_len", 16)
-        except KeyError, e:
-            raise TypeError("Keyword missing: " + str(e))
-
-        if len(self.nonce) not in range(1, 16):
+        self.nonce = nonce
+        if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
 
-        if not 8 <= self._mac_len <= 16:
+        self._mac_len = mac_len
+        if not 8 <= mac_len <= 16:
             raise ValueError("MAC tag must be between 8 and 16 bytes long")
 
         # Cache for MAC tag
@@ -166,26 +139,29 @@ class OcbMode(object):
                       self.digest, self.verify]
 
         # Compute Offset_0
-        ecb_cipher = factory.new(key, factory.MODE_ECB)
-        nonce = bchr(self._mac_len << 4 & 0xFF) +\
-                bchr(0) * (14 - len(self.nonce)) + bchr(1) +\
-                self.nonce
+        params_without_key = dict(cipher_params)
+        key = params_without_key.pop("key")
+        nonce = (bchr(self._mac_len << 4 & 0xFF) +
+                 bchr(0) * (14 - len(self.nonce)) +
+                 bchr(1) +
+                 self.nonce)
         bottom = bord(nonce[15]) & 0x3F   # 6 bits, 0..63
-        ktop = ecb_cipher.encrypt(nonce[:15] + bchr(bord(nonce[15]) & 0xC0))
+        ktop = factory.new(key, factory.MODE_ECB, **params_without_key)\
+                      .encrypt(nonce[:15] + bchr(bord(nonce[15]) & 0xC0))
         stretch = ktop + strxor(ktop[:8], ktop[1:9])    # 192 bits
         offset_0 = long_to_bytes(bytes_to_long(stretch) >>
-                   (64 - bottom), 24)[8:]
+                                 (64 - bottom), 24)[8:]
 
         # Create low-level cipher instance
-        raw_cipher = factory._create_base_cipher(kwargs)
-        if kwargs:
-            raise TypeError("Unknown keywords: " + str(kwargs))
+        raw_cipher = factory._create_base_cipher(cipher_params)
+        if cipher_params:
+            raise TypeError("Unknown keywords: " + str(cipher_params))
 
         self._state = VoidPointer()
         result = _raw_ocb_lib.OCB_start_operation(raw_cipher.get(),
-                                                 offset_0,
-                                                 c_size_t(len(offset_0)),
-                                                 self._state.address_of())
+                                                  offset_0,
+                                                  c_size_t(len(offset_0)),
+                                                  self._state.address_of())
         if result:
             raise ValueError("Error %d while instantiating the OCB mode"
                              % result)
@@ -202,8 +178,8 @@ class OcbMode(object):
     def _update(self, assoc_data, assoc_data_len):
         expect_byte_string(assoc_data)
         result = _raw_ocb_lib.OCB_update(self._state.get(),
-                                        assoc_data,
-                                        c_size_t(assoc_data_len))
+                                         assoc_data,
+                                         c_size_t(assoc_data_len))
         if result:
             raise ValueError("Error %d while MAC-ing in OCB mode" % result)
 
@@ -236,24 +212,24 @@ class OcbMode(object):
                       self.verify, self.update]
 
         if len(self._cache_A) > 0:
-            filler = min(self.block_size - len(self._cache_A), len(assoc_data))
+            filler = min(16 - len(self._cache_A), len(assoc_data))
             self._cache_A += assoc_data[:filler]
             assoc_data = assoc_data[filler:]
 
-            if len(self._cache_A) < self.block_size:
+            if len(self._cache_A) < 16:
                 return self
 
             # Clear the cache, and proceeding with any other aligned data
             self._cache_A, seg = b(""), self._cache_A
             self.update(seg)
 
-        update_len = len(assoc_data) // self.block_size * self.block_size
+        update_len = len(assoc_data) // 16 * 16
         self._cache_A = assoc_data[update_len:]
         self._update(assoc_data, update_len)
         return self
 
     def _transcrypt_aligned(self, in_data, in_data_len,
-                           trans_func, trans_desc):
+                            trans_func, trans_desc):
 
         out_data = create_string_buffer(in_data_len)
         result = trans_func(self._state.get(),
@@ -279,11 +255,11 @@ class OcbMode(object):
         expect_byte_string(in_data)
         prefix = b("")
         if len(self._cache_P) > 0:
-            filler = min(self.block_size - len(self._cache_P), len(in_data))
+            filler = min(16 - len(self._cache_P), len(in_data))
             self._cache_P += in_data[:filler]
             in_data = in_data[filler:]
 
-            if len(self._cache_P) < self.block_size:
+            if len(self._cache_P) < 16:
                 # We could not manage to fill the cache, so there is certainly
                 # no output yet.
                 return b("")
@@ -296,7 +272,7 @@ class OcbMode(object):
             self._cache_P = b("")
 
         # Process data in multiples of the block size
-        trans_len = len(in_data) // self.block_size * self.block_size
+        trans_len = len(in_data) // 16 * 16
         result = self._transcrypt_aligned(in_data,
                                           trans_len,
                                           trans_func,
@@ -313,7 +289,7 @@ class OcbMode(object):
         """Encrypt the next piece of plaintext.
 
         After the entire plaintext has been passed (but before `digest`),
-        you must call this method one last time with no arguments to collect
+        you **must** call this method one last time with no arguments to collect
         the final piece of ciphertext.
 
         If possible, use the method `encrypt_and_digest` instead.
@@ -335,14 +311,14 @@ class OcbMode(object):
         if plaintext is None:
             self._next = [self.digest]
         else:
-            self._next = [self.encrypt, self.digest]
+            self._next = [self.encrypt]
         return self._transcrypt(plaintext, _raw_ocb_lib.OCB_encrypt, "encrypt")
 
     def decrypt(self, ciphertext=None):
         """Decrypt the next piece of ciphertext.
 
         After the entire ciphertext has been passed (but before `verify`),
-        you must call this method one last time with no arguments to collect
+        you **must** call this method one last time with no arguments to collect
         the remaining piece of plaintext.
 
         If possible, use the method `decrypt_and_verify` instead.
@@ -364,8 +340,10 @@ class OcbMode(object):
         if ciphertext is None:
             self._next = [self.verify]
         else:
-            self._next = [self.decrypt, self.digest]
-        return self._transcrypt(ciphertext, _raw_ocb_lib.OCB_decrypt, "decrypt")
+            self._next = [self.decrypt]
+        return self._transcrypt(ciphertext,
+                                _raw_ocb_lib.OCB_decrypt,
+                                "decrypt")
 
     def _compute_mac_tag(self):
 
@@ -376,11 +354,11 @@ class OcbMode(object):
             self._update(self._cache_A, len(self._cache_A))
             self._cache_A = b("")
 
-        mac_tag = create_string_buffer(self.block_size)
+        mac_tag = create_string_buffer(16)
         result = _raw_ocb_lib.OCB_digest(self._state.get(),
-                                        mac_tag,
-                                        c_size_t(len(mac_tag))
-                                        )
+                                         mac_tag,
+                                         c_size_t(len(mac_tag))
+                                         )
         if result:
             raise ValueError("Error %d while computing digest in OCB mode"
                              % result)
@@ -399,12 +377,9 @@ class OcbMode(object):
         """
 
         if self.digest not in self._next:
-            raise TypeError("digest() cannot be called when decrypting"
-                            " or validating a message")
+            raise TypeError("digest() cannot be called now for this cipher")
 
-        if len(self._cache_P) > 0:
-            raise TypeError("There is outstanding data."
-                            " Call encrypt/decrypt again with no parameters.")
+        assert(len(self._cache_P) == 0)
 
         self._next = [self.digest]
 
@@ -437,11 +412,9 @@ class OcbMode(object):
         """
 
         if self.verify not in self._next:
-            raise TypeError("verify() cannot be called"
-                            " when encrypting a message")
-        if len(self._cache_P) > 0:
-            raise TypeError("There is outstanding data."
-                            " Call encrypt/decrypt again with no parameters.")
+            raise TypeError("verify() cannot be called now for this cipher")
+
+        assert(len(self._cache_P) == 0)
 
         self._next = [self.verify]
 
@@ -506,4 +479,33 @@ class OcbMode(object):
 
 
 def _create_ocb_cipher(factory, **kwargs):
-    return OcbMode(factory, **kwargs)
+    """Create a new block cipher, configured in OCB mode.
+
+    :Parameters:
+      factory : module
+        A symmetric cipher module from `Crypto.Cipher`
+        (like `Crypto.Cipher.AES`).
+
+    :Keywords:
+      nonce : byte string
+        A  value that must never be reused for any other encryption.
+        Its length can vary from 1 to 15 bytes.
+        If not specified, a random 15 bytes long nonce is generated.
+
+      mac_len : integer
+        Length of the MAC, in bytes.
+        It must be in the range ``[8..16]``.
+        The default is 16 (128 bits).
+
+    Any other keyword will be passed to the underlying block cipher.
+    See the relevant documentation for details (at least ``key`` will need
+    to be present).
+    """
+
+    try:
+        nonce = kwargs.pop("nonce", get_random_bytes(15))
+        mac_len = kwargs.pop("mac_len", 16)
+    except KeyError, e:
+        raise TypeError("Keyword missing: " + str(e))
+
+    return OcbMode(factory, nonce, mac_len, kwargs)

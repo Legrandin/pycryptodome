@@ -30,6 +30,8 @@ Breaks in compatibility
 -----------------------
 
 * Parameter `segment_size` cannot be 0 for the CFB mode.
+* For OCB ciphers, a final call without parameters to `encrypt` must end a sequence
+  of calls to `encrypt` with data (similarly for `decrypt`).
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++

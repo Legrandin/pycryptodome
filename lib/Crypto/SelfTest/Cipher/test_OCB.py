@@ -39,186 +39,363 @@ from Crypto.Util.number import long_to_bytes
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Cipher import AES
+from Crypto.Hash import SHAKE128
 
-class OcbTest(unittest.TestCase):
 
-    key = bchr(8) * 16
+def get_tag_random(tag, length):
+    return SHAKE128.new(data=tobytes(tag)).read(length)
 
-    def _create_cipher(self, mac_len=16):
-        return AES.new(self.key, AES.MODE_OCB, nonce=bchr(0)*15, mac_len=mac_len)
 
-    def test_init(self):
-        # Verify that nonce can be passed in the old way (3rd parameter)
-        # or in the new way ('nonce' parameter)
-        ct, mac = self._create_cipher().encrypt_and_digest(b("XXX"))
+class OcbTests(unittest.TestCase):
 
-        cipher = AES.new(self.key, AES.MODE_OCB, bchr(0)*15)
-        ct2, mac2 = cipher.encrypt_and_digest(b("XXX"))
-        self.assertEquals(ct, ct2)
-        self.assertEquals(mac, mac2)
+    key_128 = get_tag_random("key_128", 16)
+    nonce_96 = get_tag_random("nonce_128", 12)
+    data_128 = get_tag_random("data_128", 16)
 
-    def test_nonce(self):
-        for x in range(1, 15 + 1):
-            AES.new(self.key, AES.MODE_OCB, nonce=bchr(0)*x)
-        self.assertRaises(TypeError, AES.new, self.key, AES.MODE_OCB)
-        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=b(""))
-        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=bchr(0)*16)
-
-    def test_round_trip(self):
-        aad = bchr(8) * 100
-        pt = bchr(9) * 100
-
-        cipher = self._create_cipher()
-        cipher.update(aad)
+    def test_loopback_128(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        pt = get_tag_random("plaintext", 16 * 100)
         ct, mac = cipher.encrypt_and_digest(pt)
 
-        cipher = self._create_cipher()
-        cipher.update(aad)
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
         pt2 = cipher.decrypt_and_verify(ct, mac)
-        self.assertEquals(pt, pt2)
+        self.assertEqual(pt, pt2)
 
-    def test_mac_length(self):
-        pt = bchr(9) * 100
+    def test_nonce(self):
+        # Nonce is optional
+        AES.new(self.key_128, AES.MODE_OCB)
 
-        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=bchr(0)*15, mac_len=7)
-        self.assertRaises(ValueError, AES.new, self.key, AES.MODE_OCB, nonce=bchr(0)*15, mac_len=17)
+        cipher = AES.new(self.key_128, AES.MODE_OCB, self.nonce_96)
+        ct = cipher.encrypt(self.data_128)
 
-        ct, mac = self._create_cipher().encrypt_and_digest(pt)
-        self.assertEquals(len(mac), 16)
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        self.assertEquals(ct, cipher.encrypt(self.data_128))
 
-        for mac_len in xrange(8, 16+1):
-            ct, mac = self._create_cipher(mac_len=mac_len).encrypt_and_digest(pt)
-            self.assertEquals(len(mac), mac_len)
+    def test_nonce_must_be_bytes(self):
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_OCB,
+                          nonce=u'test12345678')
 
-    def test_failed_mac(self):
-        pt = bchr(9) * 100
-        ct, mac = self._create_cipher().encrypt_and_digest(pt)
-        cipher = self._create_cipher()
-        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, strxor_c(mac, 1))
+    def test_nonce_length(self):
+        # nonce cannot be empty
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_OCB,
+                          nonce=b(""))
 
-    def test_partial(self):
-        # Ensure that a last call to encrypt()/decrypt() is required when
-        # dealing with misaligned data
-        pt = ct = bchr(9) * 17
+        # nonce can be up to 15 bytes long
+        for length in xrange(1, 16):
+            AES.new(self.key_128, AES.MODE_OCB, nonce=self.data_128[:length])
 
-        cipher = self._create_cipher()
-        cipher.encrypt(pt)
-        self.assertRaises(TypeError, cipher.digest)
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_OCB,
+                          nonce=self.data_128)
 
-        cipher = self._create_cipher()
-        cipher.decrypt(ct)
-        self.assertRaises(TypeError, cipher.verify, ct)
+    def test_block_size_128(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        self.assertEqual(cipher.block_size, AES.block_size)
 
-    def test_byte_by_byte_confidentiality(self):
-        pt = bchr(3) * 101
-        ct, mac = self._create_cipher().encrypt_and_digest(pt)
+    def test_nonce_attribute(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        self.assertEqual(cipher.nonce, self.nonce_96)
+
+    def test_unknown_parameters(self):
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_OCB,
+                          self.nonce_96, 7)
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_OCB,
+                          nonce=self.nonce_96, unknown=7)
+
+        # But some are only known by the base cipher
+        # (e.g. use_aesni consumed by the AES module)
+        AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96,
+                use_aesni=False)
+
+    def test_null_encryption_decryption(self):
+        for func in "encrypt", "decrypt":
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+            result = getattr(cipher, func)(b(""))
+            self.assertEqual(result, b(""))
+
+    def test_either_encrypt_or_decrypt(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.encrypt(b("xyz"))
+        self.assertRaises(TypeError, cipher.decrypt, b("xyz"))
+
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.decrypt(b("xyz"))
+        self.assertRaises(TypeError, cipher.encrypt, b("xyz"))
+
+    def test_data_must_be_bytes(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
+
+    def test_mac_len(self):
+        # Invalid MAC length
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_OCB,
+                          nonce=self.nonce_96, mac_len=7)
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_OCB,
+                          nonce=self.nonce_96, mac_len=16+1)
+
+        # Valid MAC length
+        for mac_len in xrange(8, 16 + 1):
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96,
+                             mac_len=mac_len)
+            _, mac = cipher.encrypt_and_digest(self.data_128)
+            self.assertEqual(len(mac), mac_len)
+
+        # Default MAC length
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        _, mac = cipher.encrypt_and_digest(self.data_128)
+        self.assertEqual(len(mac), 16)
+
+    def test_invalid_mac(self):
+        from Crypto.Util.strxor import strxor_c
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        ct, mac = cipher.encrypt_and_digest(self.data_128)
+
+        invalid_mac = strxor_c(mac, 0x01)
+
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct,
+                          invalid_mac)
+
+    def test_hex_mac(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        mac_hex = cipher.hexdigest()
+        self.assertEqual(cipher.digest(), unhexlify(mac_hex))
+
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.hexverify(mac_hex)
+
+    def test_message_chunks(self):
+        # Validate that both associated data and plaintext/ciphertext
+        # can be broken up in chunks of arbitrary length
+
+        auth_data = get_tag_random("authenticated data", 127)
+        plaintext = get_tag_random("plaintext", 127)
+
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.update(auth_data)
+        ciphertext, ref_mac = cipher.encrypt_and_digest(plaintext)
+
+        def break_up(data, chunk_length):
+            return [data[i:i+chunk_length] for i in range(0, len(data),
+                    chunk_length)]
 
         # Encryption
-        cipher = self._create_cipher()
-        ct2 = b("")
-        for x in xrange(len(pt)):
-            ct2 += cipher.encrypt(pt[x:x+1])
-        ct2 += cipher.encrypt()
-        mac2 = cipher.digest()
+        for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
 
-        self.assertEqual(ct, ct2)
-        self.assertEqual(mac, mac2)
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+
+            for chunk in break_up(auth_data, chunk_length):
+                cipher.update(chunk)
+            pt2 = b("")
+            for chunk in break_up(ciphertext, chunk_length):
+                pt2 += cipher.decrypt(chunk)
+            pt2 += cipher.decrypt()
+            self.assertEqual(plaintext, pt2)
+            cipher.verify(ref_mac)
 
         # Decryption
-        cipher = self._create_cipher()
-        pt2 = b("")
-        for x in xrange(len(ct)):
-            pt2 += cipher.decrypt(ct[x:x+1])
-        pt2 += cipher.decrypt()
-        self.assertEqual(pt, pt2)
-        cipher.verify(mac)
+        for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
 
-    def test_byte_by_byte_associated_data(self):
-        ad = bchr(4) * 101
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
 
-        mac = self._create_cipher().update(ad).digest()
+            for chunk in break_up(auth_data, chunk_length):
+                cipher.update(chunk)
+            ct2 = b("")
+            for chunk in break_up(plaintext, chunk_length):
+                ct2 += cipher.encrypt(chunk)
+            ct2 += cipher.encrypt()
+            self.assertEqual(ciphertext, ct2)
+            self.assertEquals(cipher.digest(), ref_mac)
 
-        cipher = self._create_cipher()
-        for x in xrange(len(ad)):
-            cipher.update(ad[x:x+1])
-        mac2 = cipher.digest()
 
-        self.assertEquals(mac, mac2)
+class OcbFSMTests(unittest.TestCase):
 
-    def test_fsm(self):
+    key_128 = get_tag_random("key_128", 16)
+    nonce_96 = get_tag_random("nonce_128", 12)
+    data_128 = get_tag_random("data_128", 16)
 
-        # INIT --> DIGEST
-        cipher = self._create_cipher()
-        mac1 = cipher.digest()
-        mac2 = cipher.digest()
-        self.assertEquals(mac1, mac2)
+    def test_valid_init_encrypt_decrypt_digest_verify(self):
+        # No authenticated data, fixed plaintext
+        # Verify path INIT->ENCRYPT->ENCRYPT(NONE)->DIGEST
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        ct = cipher.encrypt(self.data_128)
+        ct += cipher.encrypt()
+        mac = cipher.digest()
 
-        # DIGEST --> VERIFY
-        self.assertRaises(TypeError, cipher.verify, mac1)
-
-        # INIT --> VERIFY
-        cipher = self._create_cipher()
-        cipher.verify(mac1)
-        cipher.verify(mac1)
-
-        # VERIFY --> DIGEST
-        self.assertRaises(TypeError, cipher.digest)
-
-        # ENCRYPT --> DECRYPT
-        cipher = self._create_cipher()
-        cipher.encrypt(b("XXX"))
-        self.assertRaises(TypeError, cipher.decrypt, b("YYY"))
-
-        # ENCRYPT --> DIGEST
-        cipher = self._create_cipher()
-        cipher.encrypt(b("XXX"))
-        self.assertRaises(TypeError, cipher.digest)
-        cipher.encrypt()
-        cipher.digest()
-
-        # ENCRYPT --> VERIFY
-        cipher = self._create_cipher()
-        cipher.encrypt(b("XXX"))
-        self.assertRaises(TypeError, cipher.verify, b("XXX"))
-
-        # ENCRYPT --> UPDATE
-        cipher = self._create_cipher()
-        cipher.encrypt(b("XXX"))
-        self.assertRaises(TypeError, cipher.update, b("XXX"))
-
-        # DECRYPT --> ENCRYPT
-        cipher = self._create_cipher()
-        cipher.decrypt(b("XXX"))
-        self.assertRaises(TypeError, cipher.encrypt, b("YYY"))
-
-        # DECRYPT --> VERIFY
-        pt, mac = self._create_cipher().encrypt_and_digest(b("XXX"))
-        cipher = self._create_cipher()
-        cipher.decrypt(pt)
-        self.assertRaises(TypeError, cipher.verify, mac)
+        # Verify path INIT->DECRYPT->DECRYPT(NONCE)->VERIFY
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.decrypt(ct)
         cipher.decrypt()
         cipher.verify(mac)
 
-        # DECRYPT --> DIGEST
-        cipher = self._create_cipher()
-        cipher.decrypt(b("XXX"))
+    def test_invalid_init_encrypt_decrypt_digest_verify(self):
+        # No authenticated data, fixed plaintext
+        # Verify path INIT->ENCRYPT->DIGEST
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        ct = cipher.encrypt(self.data_128)
         self.assertRaises(TypeError, cipher.digest)
 
-        # DECRYPT --> UPDATE
-        cipher = self._create_cipher()
-        cipher.decrypt(b("XXX"))
-        self.assertRaises(TypeError, cipher.update, b("XXX"))
+        # Verify path INIT->DECRYPT->VERIFY
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.decrypt(ct)
+        self.assertRaises(TypeError, cipher.verify)
 
-    def test_update_chaining(self):
-        cipher = self._create_cipher()
-        cipher.update(b("XXX")).update(b("YYY"))
+    def test_valid_init_update_digest_verify(self):
+        # No plaintext, fixed authenticated data
+        # Verify path INIT->UPDATE->DIGEST
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data_128)
         mac = cipher.digest()
 
-        cipher = self._create_cipher()
-        cipher.update(b("XXXYYY"))
-        mac2 = cipher.digest()
+        # Verify path INIT->UPDATE->VERIFY
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        cipher.verify(mac)
 
-        self.assertEquals(mac, mac2)
+    def test_valid_full_path(self):
+        # Fixed authenticated data, fixed plaintext
+        # Verify path INIT->UPDATE->ENCRYPT->ENCRYPT(NONE)->DIGEST
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        ct = cipher.encrypt(self.data_128)
+        ct += cipher.encrypt()
+        mac = cipher.digest()
+
+        # Verify path INIT->UPDATE->DECRYPT->DECRYPT(NONE)->VERIFY
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        cipher.decrypt(ct)
+        cipher.decrypt()
+        cipher.verify(mac)
+
+    def test_invalid_encrypt_after_final(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        cipher.encrypt(self.data_128)
+        cipher.encrypt()
+        self.assertRaises(TypeError, cipher.encrypt, self.data_128)
+
+    def test_invalid_decrypt_after_final(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        cipher.decrypt(self.data_128)
+        cipher.decrypt()
+        self.assertRaises(TypeError, cipher.decrypt, self.data_128)
+
+    def test_valid_init_digest(self):
+        # Verify path INIT->DIGEST
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.digest()
+
+    def test_valid_init_verify(self):
+        # Verify path INIT->VERIFY
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        mac = cipher.digest()
+
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.verify(mac)
+
+    def test_valid_multiple_encrypt_or_decrypt(self):
+        for method_name in "encrypt", "decrypt":
+            for auth_data in (None, b("333"), self.data_128,
+                              self.data_128 + b("3")):
+                if auth_data is None:
+                    assoc_len = None
+                else:
+                    assoc_len = len(auth_data)
+                cipher = AES.new(self.key_128, AES.MODE_OCB,
+                                 nonce=self.nonce_96)
+                if auth_data is not None:
+                    cipher.update(auth_data)
+                method = getattr(cipher, method_name)
+                method(self.data_128)
+                method(self.data_128)
+                method(self.data_128)
+                method(self.data_128)
+                method()
+
+    def test_valid_multiple_digest_or_verify(self):
+        # Multiple calls to digest
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        first_mac = cipher.digest()
+        for x in xrange(4):
+            self.assertEqual(first_mac, cipher.digest())
+
+        # Multiple calls to verify
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        for x in xrange(5):
+            cipher.verify(first_mac)
+
+    def test_valid_encrypt_and_digest_decrypt_and_verify(self):
+        # encrypt_and_digest
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        ct, mac = cipher.encrypt_and_digest(self.data_128)
+
+        # decrypt_and_verify
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        cipher.update(self.data_128)
+        pt = cipher.decrypt_and_verify(ct, mac)
+        self.assertEqual(self.data_128, pt)
+
+    def test_invalid_mixing_encrypt_decrypt(self):
+        # Once per method, with or without assoc. data
+        for method1_name, method2_name in (("encrypt", "decrypt"),
+                                           ("decrypt", "encrypt")):
+            for assoc_data_present in (True, False):
+                cipher = AES.new(self.key_128, AES.MODE_OCB,
+                                 nonce=self.nonce_96)
+                if assoc_data_present:
+                    cipher.update(self.data_128)
+                getattr(cipher, method1_name)(self.data_128)
+                self.assertRaises(TypeError, getattr(cipher, method2_name),
+                                  self.data_128)
+
+    def test_invalid_encrypt_or_update_after_digest(self):
+        for method_name in "encrypt", "update":
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+            cipher.encrypt(self.data_128)
+            cipher.encrypt()
+            cipher.digest()
+            self.assertRaises(TypeError, getattr(cipher, method_name),
+                              self.data_128)
+
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+            cipher.encrypt_and_digest(self.data_128)
+
+    def test_invalid_decrypt_or_update_after_verify(self):
+        cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+        ct = cipher.encrypt(self.data_128)
+        ct += cipher.encrypt()
+        mac = cipher.digest()
+
+        for method_name in "decrypt", "update":
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+            cipher.decrypt(ct)
+            cipher.decrypt()
+            cipher.verify(mac)
+            self.assertRaises(TypeError, getattr(cipher, method_name),
+                              self.data_128)
+
+            cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
+            cipher.decrypt_and_verify(ct, mac)
+            self.assertRaises(TypeError, getattr(cipher, method_name),
+                              self.data_128)
+
 
 class OcbRfc7253Test(unittest.TestCase):
 
@@ -447,7 +624,8 @@ class OcbRfc7253Test(unittest.TestCase):
 
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(OcbTest)
+    tests += list_test_cases(OcbTests)
+    tests += list_test_cases(OcbFSMTests)
     tests += list_test_cases(OcbRfc7253Test)
     return tests
 
