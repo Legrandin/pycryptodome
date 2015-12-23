@@ -89,7 +89,7 @@ class SivMode(object):
         self.block_size = factory.block_size
         self._factory = factory
 
-        self.nonce = nonce
+        self._nonce = nonce
         self._cipher_params = kwargs
 
         if len(key) not in (32, 48, 64):
@@ -101,6 +101,10 @@ class SivMode(object):
 
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
+
+            #: Public attribute is only available in case of non-deterministic
+            #: encryption
+            self.nonce = nonce
 
         subkey_size = len(key) // 2
 
@@ -148,7 +152,7 @@ class SivMode(object):
         is not equivalent to:
 
             >>> cipher.update(b"built")
-            >>> c.update(b"insecurely")
+            >>> cipher.update(b"insecurely")
 
         If there is no associated data, this method must not be called.
 
@@ -195,7 +199,7 @@ class SivMode(object):
 
         self._next = [self.digest]
 
-        if self.nonce:
+        if self._nonce:
             self._kdf.update(self.nonce)
         self._kdf.update(plaintext)
 
@@ -342,7 +346,7 @@ class SivMode(object):
 
         plaintext = self._cipher.decrypt(ciphertext)
 
-        if self.nonce:
+        if self._nonce:
             self._kdf.update(self.nonce)
         if plaintext:
             self._kdf.update(plaintext)
@@ -372,7 +376,9 @@ def _create_siv_cipher(factory, **kwargs):
       nonce : byte string
         For deterministic encryption, it is not present.
 
-        Otherwise, it is  value that must never be reused.
+        Otherwise, it is a value that must never be reused
+        for encrypting message under this key.
+
         There are no restrictions on its length,
         but it is recommended to use at least 16 bytes.
     """
