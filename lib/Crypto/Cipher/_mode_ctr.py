@@ -30,7 +30,9 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, expect_byte_string)
 
-from Crypto.Util.py3compat import *
+from Crypto.Random import get_random_bytes
+from Crypto.Util.py3compat import b, bchr
+from Crypto.Util.number import long_to_bytes
 
 raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
                     int CTR_start_operation(void *cipher,
@@ -111,6 +113,10 @@ class CtrMode(object):
             in little endian mode. If False, it is big endian.
         """
 
+        if len(initial_counter_block) == prefix_len + counter_len:
+            #: Nonce; not available if there is a fixed suffix
+            self.nonce = initial_counter_block[:prefix_len]
+
         expect_byte_string(initial_counter_block)
         self._state = VoidPointer()
         result = raw_ctr_lib.CTR_start_operation(block_cipher.get(),
@@ -136,7 +142,7 @@ class CtrMode(object):
         #: The block size of the underlying cipher, in bytes.
         self.block_size = len(initial_counter_block)
 
-        self._next = [ self.encrypt, self.decrypt ]
+        self._next = [self.encrypt, self.decrypt]
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
@@ -169,7 +175,7 @@ class CtrMode(object):
 
         if self.encrypt not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
-        self._next = [ self.encrypt ]
+        self._next = [self.encrypt]
 
         expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
@@ -179,7 +185,8 @@ class CtrMode(object):
                                          c_size_t(len(plaintext)))
         if result:
             if result == 0x60002:
-                raise OverflowError("The counter has wrapped around in CTR mode")
+                raise OverflowError("The counter has wrapped around in"
+                                    " CTR mode")
             raise ValueError("Error %X while encrypting in CTR mode" % result)
         return get_raw_buffer(ciphertext)
 
@@ -213,7 +220,7 @@ class CtrMode(object):
 
         if self.decrypt not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
-        self._next = [ self.decrypt ]
+        self._next = [self.decrypt]
 
         expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
@@ -223,7 +230,8 @@ class CtrMode(object):
                                          c_size_t(len(ciphertext)))
         if result:
             if result == 0x60002:
-                raise OverflowError("The counter has wrapped around in CTR mode")
+                raise OverflowError("The counter has wrapped around in"
+                                    " CTR mode")
             raise ValueError("Error %X while decrypting in CTR mode" % result)
         return get_raw_buffer(plaintext)
 
@@ -236,14 +244,29 @@ def _create_ctr_cipher(factory, **kwargs):
         The underlying block cipher, a module from ``Crypto.Cipher``.
 
     :Keywords:
-      iv : byte string
-        The IV to use for CBC.
+      nonce : binary string
+        The fixed part at the beginning of the counter block - the rest is
+        the counter number that gets increased when processing the next block.
+        The nonce must be such that no two messages are encrypted under the
+        same key and the same nonce.
 
-      IV : byte string
-        Alias for ``iv``.
+        The nonce must be shorter than the block size (it can have
+        zero length).
+
+        If this parameter is not present, a random nonce will be created with
+        length equal to half the block size. No random nonce shorter than
+        64 bits will be created though - you must really think through all
+        security consequences of using such a short block size.
+
+      initial_value : posive integer
+        The initial value for the counter. If not present, the cipher will
+        start counting from 0. The value is incremented by one for each block.
+        The counter number is encoded in big endian mode.
 
       counter : object
-        Instance of ``Crypto.Util.Counter``.
+        Instance of ``Crypto.Util.Counter``, which allows full customization
+        of the counter block. This parameter is incompatible to both ``nonce``
+        and ``initial_value``.
 
     Any other keyword will be passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need
@@ -251,11 +274,43 @@ def _create_ctr_cipher(factory, **kwargs):
     """
 
     cipher_state = factory._create_base_cipher(kwargs)
-    try:
-        counter = kwargs.pop("counter")
-    except KeyError:
-        # Required by unit test
-        raise TypeError("Missing 'counter' parameter for CTR mode")
+
+    counter = kwargs.pop("counter", None)
+    nonce = kwargs.pop("nonce", None)
+    initial_value = kwargs.pop("initial_value", None)
+    if kwargs:
+        raise TypeError("Invalid parameters for CTR mode: %s" % str(kwargs))
+
+    if counter is not None and (nonce, initial_value) != (None, None):
+            raise TypeError("'counter' and 'nonce'/'initial_value'"
+                            " are mutually exclusive")
+
+    if counter is None:
+        # Crypto.Util.Counter is not used
+        if nonce is None:
+            if factory.block_size < 16:
+                raise TypeError("Impossible to create a safe nonce for short"
+                                " block sizes")
+            nonce = get_random_bytes(factory.block_size // 2)
+
+        if initial_value is None:
+            initial_value = 0
+
+        if len(nonce) >= factory.block_size:
+            raise ValueError("Nonce is too long")
+
+        counter_len = factory.block_size - len(nonce)
+        if (1 << (counter_len * 8)) - 1 < initial_value:
+            raise ValueError("Initial counter value is too large")
+
+        return CtrMode(cipher_state,
+                       # initial_counter_block
+                       nonce + long_to_bytes(initial_value, counter_len),
+                       len(nonce),                     # prefix
+                       counter_len,
+                       False)                          # little_endian
+
+    # Crypto.Util.Counter is used
 
     # 'counter' used to be a callable object, but now it is
     # just a dictionary for backward compatibility.
@@ -267,7 +322,8 @@ def _create_ctr_cipher(factory, **kwargs):
         initial_value = _counter.pop("initial_value")
         little_endian = _counter.pop("little_endian")
     except KeyError:
-        raise TypeError("Incorrect counter object (use Crypto.Util.Counter.new)")
+        raise TypeError("Incorrect counter object"
+                        " (use Crypto.Util.Counter.new)")
 
     # Compute initial counter block
     words = []
@@ -281,10 +337,8 @@ def _create_ctr_cipher(factory, **kwargs):
 
     if len(initial_counter_block) != factory.block_size:
         raise ValueError("Size of the counter block (% bytes) must match"
-                         " block size (%d)", (len(initial_counter_block), factory.block_size))
+                         " block size (%d)" % (len(initial_counter_block),
+                                               factory.block_size))
 
-    if kwargs:
-        raise TypeError("Unknown parameters for CTR mode: %s"
-                         % str(kwargs))
     return CtrMode(cipher_state, initial_counter_block,
-                      len(prefix), counter_len, little_endian)
+                   len(prefix), counter_len, little_endian)

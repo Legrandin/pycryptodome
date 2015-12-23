@@ -36,7 +36,6 @@ __all__ = ['CcmMode']
 
 from Crypto.Util.py3compat import byte_string, b, bchr, bord, unhexlify
 
-from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes
 
@@ -163,11 +162,9 @@ class CcmMode(object):
 
         # Start CTR cipher, by formatting the counter (A.3)
         q = 15 - len(nonce)  # length of Q, the encoded message length
-        prefix = bchr(q - 1) + nonce
-        ctr = Counter.new(128 - len(prefix) * 8, prefix, initial_value=0)
         self._cipher = self._factory.new(key,
                                          self._factory.MODE_CTR,
-                                         counter=ctr,
+                                         nonce=bchr(q - 1) + nonce,
                                          **cipher_params)
 
         # S_0, step 6 in 6.1 for j=0
@@ -582,12 +579,14 @@ def _create_ccm_cipher(factory, **kwargs):
         The secret key to use in the symmetric cipher.
 
       nonce : byte string
-        A mandatory value that must never be reused for any other encryption.
+        A value that must never be reused for any other encryption.
 
         Its length must be in the range ``[7..13]``.
         11 or 12 bytes are reasonable values in general. Bear in
         mind that with CCM there is a trade-off between nonce length and
         maximum message size.
+
+        If not specified, a 11 byte long random string is used.
 
       mac_len : integer
         Length of the MAC, in bytes. It must be even and in
@@ -604,10 +603,12 @@ def _create_ccm_cipher(factory, **kwargs):
 
     try:
         key = key = kwargs.pop("key")
-        nonce = kwargs.pop("nonce")  # N
     except KeyError, e:
         raise TypeError("Missing parameter: " + str(e))
 
+    nonce = kwargs.pop("nonce", None)  # N
+    if nonce is None:
+        nonce = get_random_bytes(11)
     mac_len = kwargs.pop("mac_len", factory.block_size)
     msg_len = kwargs.pop("msg_len", None)      # p
     assoc_len = kwargs.pop("assoc_len", None)  # a

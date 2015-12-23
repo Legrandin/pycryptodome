@@ -65,8 +65,16 @@ class BlockChainingTests(unittest.TestCase):
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
-    def test_iv_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode)
+    def test_iv(self):
+        # If not passed, the iv is created randomly
+        cipher = AES.new(self.key_128, self.aes_mode)
+        iv1 = cipher.iv
+        cipher = AES.new(self.key_128, self.aes_mode)
+        iv2 = cipher.iv
+        self.assertNotEqual(iv1, iv2)
+        self.assertEqual(len(iv1), 16)
+
+        # IV can be passed in uppercase or lowercase
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         ct = cipher.encrypt(self.data_128)
 

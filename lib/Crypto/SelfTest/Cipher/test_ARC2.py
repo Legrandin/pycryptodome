@@ -25,7 +25,10 @@
 """Self-test suite for Crypto.Cipher.ARC2"""
 
 import unittest
-from Crypto.Util.py3compat import *
+
+from Crypto.Util.py3compat import b, bchr
+
+from Crypto.Cipher import ARC2
 
 # This is a list of (plaintext, ciphertext, key[, description[, extra_params]]) tuples.
 test_data = [
@@ -40,8 +43,8 @@ test_data = [
         'RFC2268-2', dict(effective_keylen=64)),
     ('1000000000000001', '30649edf9be7d2c2', '3000000000000000',
         'RFC2268-3', dict(effective_keylen=64)),
-    ('0000000000000000', '61a8a244adacccf0', '88',
-        'RFC2268-4', dict(effective_keylen=64)),
+    #('0000000000000000', '61a8a244adacccf0', '88',
+    #    'RFC2268-4', dict(effective_keylen=64)),
     ('0000000000000000', '6ccf4308974c267f', '88bca90e90875a',
         'RFC2268-5', dict(effective_keylen=64)),
     ('0000000000000000', '1a807d272bbe5db1', '88bca90e90875a7f0f79c384627bafb2',
@@ -93,15 +96,21 @@ test_data = [
 class BufferOverflowTest(unittest.TestCase):
     # Test a buffer overflow found in older versions of PyCrypto
 
-    def setUp(self):
-        global ARC2
-        from Crypto.Cipher import ARC2
-
     def runTest(self):
         """ARC2 with keylength > 128"""
         key = b("x") * 16384
-        mode = ARC2.MODE_ECB
-        self.assertRaises(ValueError, ARC2.new, key, mode)
+        self.assertRaises(ValueError, ARC2.new, key, ARC2.MODE_ECB)
+
+class KeyLength(unittest.TestCase):
+
+    def runTest(self):
+        self.assertRaises(ValueError, ARC2.new, bchr(0) * 4, ARC2.MODE_ECB)
+        self.assertRaises(ValueError, ARC2.new, bchr(0) * 129, ARC2.MODE_ECB)
+
+        self.assertRaises(ValueError, ARC2.new, bchr(0) * 16, ARC2.MODE_ECB,
+                          effective_keylen=39)
+        self.assertRaises(ValueError, ARC2.new, bchr(0) * 16, ARC2.MODE_ECB,
+                          effective_keylen=1025)
 
 def get_tests(config={}):
     from Crypto.Cipher import ARC2
@@ -109,6 +118,7 @@ def get_tests(config={}):
 
     tests = make_block_tests(ARC2, "ARC2", test_data)
     tests.append(BufferOverflowTest())
+    tests.append(KeyLength())
 
     return tests
 

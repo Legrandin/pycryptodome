@@ -48,8 +48,8 @@ test_data = [
     ('0000000000000000', 'de188941a3375d3a', '0000000000000000',
         'Test vector 2'),
 
-    ('00000000000000000000', 'd6a141a7ec3c38dfbd61', 'ef012345',
-        'Test vector 3'),
+    #('00000000000000000000', 'd6a141a7ec3c38dfbd61', 'ef012345',
+    #    'Test vector 3'),
 
     ('01' * 512,
         '7595c3e6114a09780c4ad452338e1ffd9a1be9498f813d76533449b6778dcad8'
@@ -242,7 +242,7 @@ class RFC6229_Tests(unittest.TestCase):
             4096:'f3 e4 c0 a2  e0 2d 1d 01   f7 f0 a7 46  18 af 2b 48'
         }
       ),
-      # Page 7 
+      # Page 7
       (
         '833222772a',
         {
@@ -289,7 +289,7 @@ class RFC6229_Tests(unittest.TestCase):
             4096:'02 78 81 fa  b4 99 3a 1c   26 20 24 a9  4f ff 3f 61'
         }
       ),
-      # Page 8 
+      # Page 8
       (
         '641910833222772a',
         {
@@ -336,7 +336,7 @@ class RFC6229_Tests(unittest.TestCase):
             4096:'5f 6b fc 73  81 58 74 d9   71 00 f0 86  97 93 57 d8'
         }
       ),
-      # Page 9 
+      # Page 9
       (
         'ebb46227c6cc8b37641910833222772a',
         {
@@ -442,11 +442,18 @@ class Drop_Tests(unittest.TestCase):
         pt = self.cipher.decrypt(self.data)[256:256+16]
         self.assertEquals(pt_drop, pt)
 
+class KeyLength(unittest.TestCase):
+
+    def runTest(self):
+        self.assertRaises(ValueError, ARC4.new, bchr(0) * 4)
+        self.assertRaises(ValueError, ARC4.new, bchr(0) * 257)
+
 def get_tests(config={}):
     from common import make_stream_tests
     tests = make_stream_tests(ARC4, "ARC4", test_data)
     tests += list_test_cases(RFC6229_Tests)
     tests += list_test_cases(Drop_Tests)
+    tests.append(KeyLength())
     return tests
 
 if __name__ == '__main__':

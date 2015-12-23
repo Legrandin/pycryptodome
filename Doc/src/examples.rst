@@ -16,10 +16,9 @@ encryption modes`_ like `GCM`_, `CCM`_ or `SIV`_).
 
     file_out = open("encrypted.bin", "wb")
     key = get_random_bytes(16)
-    nonce = get_random_bytes(16)
-    cipher = AES.new(key, AES.MODE_EAX, nonce)
+    cipher = AES.new(key, AES.MODE_EAX)
     ciphertext, tag = cipher.encrypt_and_digest(data)
-    [ file_out.write(x) for x in (nonce, tag, ciphertext) ]
+    [ file_out.write(x) for x in (cipher.nonce, tag, ciphertext) ]
 
 At the other end, the receiver can securely load the piece of data back (if they know the key!).
 Note that the code generates a ``ValueError`` exception when tampering is detected.
@@ -89,16 +88,15 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
 
     recipient_key = RSA.importKey(open("receiver.pem").read())
     session_key = get_random_bytes(16)
-    nonce = get_random_bytes(16)
 
     # Encrypt the session key with the public RSA key
     cipher_rsa = PKCS1_OAEP.new(recipient_key)
     file_out.write(cipher_rsa.encrypt(session_key))
 
     # Encrypt the data with the AES session key
-    cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+    cipher_aes = AES.new(session_key, AES.MODE_EAX)
     ciphertext, tag = cipher_aes.encrypt_and_digest(data)
-    [ file_out.write(x) for x in (nonce, tag, ciphertext) ]
+    [ file_out.write(x) for x in (cipher.nonce, tag, ciphertext) ]
 
 The receiver has the private RSA key. They will use it to decrypt the session key
 first, and with that the rest of the file:

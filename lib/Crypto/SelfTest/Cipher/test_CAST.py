@@ -24,9 +24,11 @@
 
 """Self-test suite for Crypto.Cipher.CAST"""
 
-__revision__ = "$Id$"
+import unittest
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import bchr
+
+from Crypto.Cipher import CAST
 
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
@@ -44,14 +46,21 @@ test_data = [
         '40-bit key'),
 ]
 
+
+class KeyLength(unittest.TestCase):
+
+    def runTest(self):
+        self.assertRaises(ValueError, CAST.new, bchr(0) * 4, CAST.MODE_ECB)
+        self.assertRaises(ValueError, CAST.new, bchr(0) * 17, CAST.MODE_ECB)
+
+
 def get_tests(config={}):
-    from Crypto.Cipher import CAST
     from common import make_block_tests
-    return make_block_tests(CAST, "CAST", test_data)
+
+    tests = make_block_tests(CAST, "CAST", test_data)
+    tests.append(KeyLength())
+    return tests
 
 if __name__ == '__main__':
-    import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

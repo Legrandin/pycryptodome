@@ -31,12 +31,10 @@ with 128 bit keys.
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import Salsa20
-    >>> from Crypto.Random import get_random_bytes
     >>>
     >>> key = b'*Thirty-two byte (256 bits) key*'
-    >>> iv = get_random_bytes(8)
-    >>> cipher = Salsa20.new(key, iv)
-    >>> msg = iv + cipher.encrypt(b'Attack at dawn')
+    >>> cipher = Salsa20.new(key)
+    >>> msg = cipher.nonce + cipher.encrypt(b'Attack at dawn')
 
 .. _Salsa20: http://cr.yp.to/snuffle/spec.pdf
 
@@ -48,6 +46,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, VoidPointer,
                                   SmartPointer, c_size_t,
                                   expect_byte_string)
+
+from Crypto.Random import get_random_bytes
 
 _raw_salsa20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20",
                     """
@@ -68,6 +68,16 @@ class Salsa20Cipher:
         """Initialize a Salsa20 cipher object
 
         See also `new()` at the module level."""
+
+        if len(key) not in key_size:
+            raise ValueError("Incorrect key length for Salsa20 (%d bytes)" % len(key))
+
+        if len(nonce) != 8:
+            raise ValueError("Incorrect nonce length for Salsa20 (%d bytes)" %
+                             len(nonce))
+
+        #: Nonce
+        self.nonce = nonce
 
         expect_byte_string(key)
         expect_byte_string(nonce)
@@ -123,19 +133,27 @@ class Salsa20Cipher:
         except ValueError, e:
             raise ValueError(str(e).replace("enc", "dec"))
 
-def new(key, nonce):
+def new(key, nonce=None):
     """Create a new Salsa20 cipher
 
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
         It must be 16 or 32 bytes long.
+
       nonce : byte string
-        A mandatory value that must never be reused for any other encryption.
+        A value that must never be reused for any other encryption.
         It must be 8 bytes long.
+
+        If not provided, a random byte string will be generated (you can
+        read it back via the ``nonce`` attribute).
 
     :Return: an `Salsa20Cipher` object
     """
+
+    if nonce is None:
+        nonce = get_random_bytes(8)
+
     return Salsa20Cipher(key, nonce)
 
 #: Size of a data block (in bytes)

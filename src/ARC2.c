@@ -73,10 +73,10 @@ block_init(block_state *self, const uint8_t *key, size_t t /* key_bytes */,
     if (NULL == self)
         return ERR_NULL;
 
-    if ((t < 1) || (t > 128))
+    if ((t < 5) || (t > 128))
         return ERR_KEY_SIZE;
 
-    if ((effective_key_bits < 1) || (effective_key_bits > 1024))
+    if ((effective_key_bits < 40) || (effective_key_bits > 1024))
         return ERR_KEY_SIZE;
 
     memcpy(bkey, key, t);

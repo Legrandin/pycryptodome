@@ -37,17 +37,17 @@ The key is 256 bits long.
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import ChaCha20
-    >>> from Crypto.Random import get_random_bytes
     >>>
     >>> key = b'*Thirty-two byte (256 bits) key*'
-    >>> iv = get_random_bytes(8)
-    >>> cipher = ChaCha20.new(key, iv)
-    >>> msg = iv + cipher.encrypt(b'Attack at dawn')
+    >>> cipher = ChaCha20.new(key)
+    >>> msg = cipher.nonce + cipher.encrypt(b'Attack at dawn')
 
 :undocumented: __package__
 
 .. _ChaCha20: http://http://cr.yp.to/chacha.html
 """
+
+from Crypto.Random import get_random_bytes
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
@@ -183,23 +183,30 @@ def new(**kwargs):
       key : byte string
         The secret key to use in the symmetric cipher.
         It must be 32 bytes long.
-      nonce : byte string
-        A mandatory value that must never be reused for any other encryption.
-        It must be 8 bytes long.
 
-    :Return: an `ChaCha20Cipher` object
+      nonce : byte string
+        A mandatory value that must never be reused for any other encryption
+        done with this key. It must be 8 bytes long.
+
+        If not provided, a random byte string will be generated (you can read
+        it back via the ``nonce`` attribute).
+
+    :Return: a `ChaCha20Cipher` object
     """
 
     try:
         key = kwargs.pop("key")
-        nonce = kwargs.pop("nonce")
     except KeyError, e:
         raise TypeError("Missing parameter %s" % e)
 
+    nonce = kwargs.pop("nonce", None)
+    if nonce is None:
+        nonce = get_random_bytes(8)
+
     if len(key) != 32:
-        raise ValueError("ChaCha20 key is 32 bytes long")
+        raise ValueError("ChaCha20 key must be 32 bytes long")
     if len(nonce) != 8:
-        raise ValueError("ChaCha20 nonce is 8 bytes long")
+        raise ValueError("ChaCha20 nonce must be 8 bytes long")
 
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))

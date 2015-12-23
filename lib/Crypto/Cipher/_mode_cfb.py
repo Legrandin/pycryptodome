@@ -30,6 +30,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, expect_byte_string)
 
+from Crypto.Random import get_random_bytes
+
 raw_cfb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_cfb","""
                     int CFB_start_operation(void *cipher,
                                             const uint8_t iv[],
@@ -228,7 +230,7 @@ def _create_cfb_cipher(factory, **kwargs):
     IV = kwargs.pop("iv", None)
 
     if (None, None) == (iv, IV):
-        raise TypeError("An IV must be provided for CBC mode")
+        iv = get_random_bytes(factory.block_size)
     if iv is not None:
         if IV is not None:
             raise TypeError("You must either use 'iv' or 'IV', not both")

@@ -24,9 +24,11 @@
 
 """Self-test suite for Crypto.Cipher.Blowfish"""
 
-__revision__ = "$Id$"
+import unittest
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import bchr
+
+from Crypto.Cipher import Blowfish
 
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
@@ -68,7 +70,7 @@ test_data = [
     #('fedcba9876543210', 'f9ad597c49db005e', 'f0'),
     #('fedcba9876543210', 'e91d21c1d961a6d6', 'f0e1'),
     #('fedcba9876543210', 'e9c2b70a1bc65cf3', 'f0e1d2'),
-    ('fedcba9876543210', 'be1e639408640f05', 'f0e1d2c3'),
+    #('fedcba9876543210', 'be1e639408640f05', 'f0e1d2c3'),
     ('fedcba9876543210', 'b39e44481bdb1e6e', 'f0e1d2c3b4'),
     ('fedcba9876543210', '9457aa83b1928c0d', 'f0e1d2c3b4a5'),
     ('fedcba9876543210', '8bb77032f960629d', 'f0e1d2c3b4a596'),
@@ -100,14 +102,23 @@ test_data = [
         'f0e1d2c3b4a5968778695a4b3c2d1e0f0011223344556677'),
 ]
 
+
+class KeyLength(unittest.TestCase):
+
+    def runTest(self):
+        self.assertRaises(ValueError, Blowfish.new, bchr(0) * 4,
+                          Blowfish.MODE_ECB)
+        self.assertRaises(ValueError, Blowfish.new, bchr(0) * 57,
+                          Blowfish.MODE_ECB)
+
 def get_tests(config={}):
-    from Crypto.Cipher import Blowfish
     from common import make_block_tests
-    return make_block_tests(Blowfish, "Blowfish", test_data)
+    tests = make_block_tests(Blowfish, "Blowfish", test_data)
+    tests.append(KeyLength())
+    return tests
+
 
 if __name__ == '__main__':
     import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

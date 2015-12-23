@@ -34,9 +34,8 @@ EAX mode.
 
 __all__ = ['EaxMode']
 
-from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify
+from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify, b
 
-from Crypto.Util import Counter
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -109,12 +108,10 @@ class EaxMode(object):
 
         # MAC of the nonce is also the initial counter for CTR encryption
         counter_int = bytes_to_long(self._omac[0].digest())
-        counter_obj = Counter.new(
-                        self.block_size * 8,
-                        initial_value=counter_int)
         self._cipher = factory.new(key,
                                    factory.MODE_CTR,
-                                   counter=counter_obj,
+                                   initial_value=counter_int,
+                                   nonce=b(""),
                                    **cipher_params)
 
     def update(self, assoc_data):
@@ -351,12 +348,14 @@ def _create_eax_cipher(factory, **kwargs):
         The secret key to use in the symmetric cipher.
 
       nonce : byte string
-        A mandatory value that must never be reused for any other encryption.
+        A value that must never be reused for any other encryption.
         There are no restrictions on its length, but it is recommended to use
         at least 16 bytes.
 
         The nonce shall never repeat for two different messages encrypted with
         the same key, but it does not need to be random.
+
+        If not specified, a 16 byte long random string is used.
 
       mac_len : integer
         Length of the MAC, in bytes. It must be no larger than the cipher
@@ -365,7 +364,9 @@ def _create_eax_cipher(factory, **kwargs):
 
     try:
         key = kwargs.pop("key")
-        nonce = kwargs.pop("nonce")
+        nonce = kwargs.pop("nonce", None)
+        if nonce is None:
+            nonce = get_random_bytes(16)
         mac_len = kwargs.pop("mac_len", factory.block_size)
     except KeyError, e:
         raise TypeError("Missing parameter: " + str(e))

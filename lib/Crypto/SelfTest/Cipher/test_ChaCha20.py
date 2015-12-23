@@ -49,10 +49,15 @@ class ChaCha20Test(unittest.TestCase):
     def test_new_negative(self):
         new = ChaCha20.new
         self.assertRaises(TypeError, new)
-        self.assertRaises(TypeError, new, key=b("0"))
         self.assertRaises(TypeError, new, nonce=b("0"))
         self.assertRaises(ValueError, new, nonce=b("0")*8, key=b("0"))
         self.assertRaises(ValueError, new, nonce=b("0"), key=b("0")*32)
+
+    def test_default_nonce(self):
+        cipher1 = ChaCha20.new(key=bchr(1) * 32)
+        cipher2 = ChaCha20.new(key=bchr(1) * 32)
+        self.assertEquals(len(cipher1.nonce), 8)
+        self.assertNotEqual(cipher1.nonce, cipher2.nonce)
 
     def test_eiter_encrypt_or_decrypt(self):
         """Verify that a cipher cannot be used for both decrypting and encrypting"""

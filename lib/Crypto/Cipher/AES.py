@@ -31,17 +31,15 @@ encryption.
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import AES
-    >>> from Crypto.Random import get_random_bytes
     >>>
     >>> key = b'Sixteen byte key'
-    >>> iv = get_random_bytes(16)
-    >>> cipher = AES.new(key, AES.MODE_CFB, iv)
-    >>> msg = iv + cipher.encrypt(b'Attack at dawn')
+    >>> cipher = AES.new(key, AES.MODE_CFB)
+    >>> msg = cipher.iv + cipher.encrypt(b'Attack at dawn')
 
 A more complicated example is based on CCM, (see `MODE_CCM`) an `AEAD`_ mode
 that provides both confidentiality and authentication for a message.
 
-It optionally allows the header of the message to remain in the clear,
+The CCM mode optionally allows the header of the message to remain in the clear,
 whilst still being authenticated. The encryption is done as follows:
 
     >>> from Crypto.Cipher import AES
@@ -51,10 +49,9 @@ whilst still being authenticated. The encryption is done as follows:
     >>> hdr = b'To your eyes only'
     >>> plaintext = b'Attack at dawn'
     >>> key = b'Sixteen byte key'
-    >>> nonce = get_random_bytes(11)
     >>> cipher = AES.new(key, AES.MODE_CCM, nonce)
     >>> cipher.update(hdr)
-    >>> msg = nonce, hdr, cipher.encrypt(plaintext), cipher.digest()
+    >>> msg = cipher.nonce, hdr, cipher.encrypt(plaintext), cipher.digest()
 
 We assume that the tuple ``msg`` is transmitted to the receiver:
 
@@ -72,6 +69,8 @@ We assume that the tuple ``msg`` is transmitted to the receiver:
 .. __: http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 .. _NIST: http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
 .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
+
+:undocumented: __package__
 """
 
 import sys
@@ -85,7 +84,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 _raw_cpuid_lib = load_pycryptodome_raw_lib("Crypto.Util._cpuid",
                                            "int have_aes_ni(void);")
 
-cproto = """
+_cproto = """
         int AES_start_operation(const uint8_t key[],
                                 size_t key_len,
                                 void **pResult);
@@ -102,13 +101,13 @@ cproto = """
 
 
 _raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes",
-                                         cproto)
+                                         _cproto)
 
 _raw_aesni_lib = None
 try:
     if _raw_cpuid_lib.have_aes_ni() == 1:
         _raw_aesni_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aesni",
-                                                   cproto.replace("AES",
+                                                   _cproto.replace("AES",
                                                                   "AESNI"))
 except OSError:
     pass
@@ -157,57 +156,78 @@ def new(key, mode, *args, **kwargs):
         bytes long.
 
         Only in `MODE_SIV`, it needs to be 32, 48, or 64 bytes long.
+
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
+        If in doubt, use `MODE_EAX`.
+
     :Keywords:
-      IV : byte string
+      iv : byte string
         (*Only* `MODE_CBC`, `MODE_CFB`, `MODE_OFB`, `MODE_OPENPGP`).
 
         The initialization vector to use for encryption or decryption.
 
-        It is ignored for `MODE_ECB` and `MODE_CTR`.
-
-        For `MODE_OPENPGP`, IV must be `block_size` bytes long for encryption
-        and `block_size` +2 bytes for decryption (in the latter case, it is
+        For `MODE_OPENPGP`, it must be 16 bytes long for encryption
+        and 18 bytes for decryption (in the latter case, it is
         actually the *encrypted* IV which was prefixed to the ciphertext).
-        It is mandatory.
 
         For all other modes, it must be 16 bytes long.
-      nonce : byte string
-        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_GCM`, `MODE_SIV`, `MODE_OCB`).
 
-        A mandatory value that must never be reused for any other encryption.
+        In not provided, a random byte string is used (you must then
+        read its value with the ``iv`` attribute).
+
+      nonce : byte string
+        (*Only* `MODE_CCM`, `MODE_EAX`, `MODE_GCM`, `MODE_SIV`, `MODE_OCB`,
+        `MODE_CTR`).
+
+        A value that must never be reused for any other encryption done
+        with this key.
 
         For `MODE_CCM`, its length must be in the range ``[7..13]``.
-        11 or 12 bytes are reasonable values in general. Bear in
-        mind that with CCM there is a trade-off between nonce length and
-        maximum message size.
+        Bear in mind that with CCM there is a trade-off between nonce
+        length and maximum message size.
 
         For `MODE_OCB`, its length must be in the range ``[1..15]``.
-        It is recommended to use 15 bytes.
 
-        For the other modes, there are no restrictions on its length,
-        but it is recommended to use at least 16 bytes.
-      counter : object
-        (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
+        For `MODE_CTR`, its length must be in the range ``[0..15]``.
+
+        For the other modes, there are no restrictions on its length.
+
+        The recommended length depends on the mode: 8 bytes for `MODE_CTR`,
+        11 bytes for `MODE_CCM`, 15 bytes for `MODE_OCB` and 16 bytes
+        for the remaining modes.
+
+        In not provided, a random byte string of the recommended
+        length is used (you must then read its value with the ``nonce`` attribute).
+
       segment_size : integer
-        (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
-        are segmented in.
-        It must be a multiple of 8. If not specified, it will be assumed to be 8.
-      mac_len : integer
-        (*Only* `MODE_CCM`). Length of the MAC, in bytes. It must be even
-        and in the range ``[4..16]``. The default is 16.
+        (*Only* `MODE_CFB`).The number of **bits** the plaintext and ciphertext
+        are segmented in. It must be a multiple of 8.
+        If not specified, it will be assumed to be 8.
 
-        (*Only* `MODE_EAX`, `MODE_GCM`, `MODE_OCB`). Length of the MAC, in bytes.
-        It must be no larger than 16 bytes (which is the default).
+      mac_len : integer
+        (*Only* `MODE_EAX`, `MODE_GCM`, `MODE_OCB`, `MODE_CCM`)
+        Length of the authentication tag, in bytes.
+
+        It must be even and in the range ``[4..16]``.
+        The recommended value (and the default, if not specified) is 16.
+
       msg_len : integer
         (*Only* `MODE_CCM`). Length of the message to (de)cipher.
-        If not specified, ``encrypt`` or ``decrypt`` may only be called once.
+        If not specified, ``encrypt`` must be called with the entire message.
+        Similarly, ``decrypt`` can only be called once.
+
       assoc_len : integer
         (*Only* `MODE_CCM`). Length of the associated data.
-        If not specified, all data is internally buffered.
+        If not specified, all associated data is buffered internally,
+        which may represent a problem for very large messages.
+
+      initial_value : integer
+        (*Only* `MODE_CTR`). The initial value for the counter within
+        the counter block. By default it is 0.
+
       use_aesni : boolean
-        Use AES-NI if available.
+        Use Intel AES-NI hardware extensions if available.
 
     :Return: an AES object, of the applicable mode.
     """

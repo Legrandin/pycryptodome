@@ -38,17 +38,15 @@ via a parameter.
 Even though RC2 is not cryptographically broken, it has not been analyzed as
 thoroughly as AES, which is also faster than RC2.
 
-New designs should not use RC2.
+**Use AES, not ARC2. This module is only provided for legacy purposes.**
 
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import ARC2
-    >>> from Crypto import Random
     >>>
     >>> key = b'Sixteen byte key'
-    >>> iv = Random.new().read(ARC2.block_size)
-    >>> cipher = ARC2.new(key, ARC2.MODE_CFB, iv)
-    >>> msg = iv + cipher.encrypt(b'Attack at dawn')
+    >>> cipher = ARC2.new(key, ARC2.MODE_CFB)
+    >>> msg = cipher.iv + cipher.encrypt(b'Attack at dawn')
 
 .. _RC2: http://en.wikipedia.org/wiki/RC2
 .. _RFC2268: http://tools.ietf.org/html/rfc2268
@@ -100,7 +98,7 @@ def _create_base_cipher(dict_parameters):
     if len(key) not in key_size:
         raise ValueError("Incorrect ARC2 key length (%d bytes)" % len(key))
 
-    if not (0 < effective_keylen <= 1024):
+    if not (40 < effective_keylen <= 1024):
         raise ValueError("'effective_key_len' must be no larger than 1024 "
                          "(not %d)" % effective_keylen)
 
@@ -125,40 +123,57 @@ def new(key, mode, *args, **kwargs):
     :Parameters:
       key : byte string
         The secret key to use in the symmetric cipher.
-        Its length can vary from 1 to 128 bytes.
+        Its length can vary from 5 to 128 bytes.
+
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
+
     :Keywords:
-      IV : byte string
+      iv : byte string
         (*Only* `MODE_CBC`, `MODE_CFB`, `MODE_OFB`, `MODE_OPENPGP`).
 
         The initialization vector to use for encryption or decryption.
 
-        It is ignored for `MODE_ECB` and `MODE_CTR`.
-
-        For `MODE_OPENPGP`, IV must be `block_size` bytes long for encryption
-        and `block_size` +2 bytes for decryption (in the latter case, it is
+        For `MODE_OPENPGP`, IV must be 8 bytes long for encryption
+        and 10 bytes for decryption (in the latter case, it is
         actually the *encrypted* IV which was prefixed to the ciphertext).
-        It is mandatory.
 
         For all other modes, it must be 8 bytes long.
+
+        If not provided, a random byte string will be generated (you
+        must read it back via the ``iv`` attribute of the cipher).
+
       nonce : byte string
-        (*Only* `MODE_EAX`).
-        A mandatory value that must never be reused for any other encryption.
-        There are no restrictions on its length, but it is recommended to
+        (*Only* `MODE_EAX` and `MODE_CTR`).
+        A value that must never be reused for any other encryption done with
+        this key.
+
+        For `MODE_CTR`, its length must be in the range ``[0..7]``.
+
+        For `MODE_EAX`, there are no restrictions, but it is recommended to
         use at least 16 bytes.
-      counter : object
-        (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
+
+        If not provided for `MODE_EAX`, a random byte string will be
+        generated (you must read it back via the ``nonce`` attribute
+        of the cipher).
+
       mac_len : integer
-        (*Only* `MODE_EAX`). Length of the MAC, in bytes.
+        (*Only* `MODE_EAX`). Length of the authentication tag, in bytes.
         It must be no larger than 8 (which is the default).
+
       segment_size : integer
-        (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
-        are segmented in.
-        It must be a multiple of 8. If not specified, it will be assumed to be 8.
+        (*Only* `MODE_CFB`).
+        The number of **bits** the plaintext and ciphertext are segmented in.
+        It must be a multiple of 8. If not specified,
+        it will be assumed to be 8.
+
+      initial_value : integer
+        (*Only* `MODE_CTR`). The initial value for the counter within
+        the counter block. By default it is 0.
+
       effective_keylen : integer
-        Maximum cryptographic strength of the key, in bits.
-        It can vary from 0 to 1024. The default value is 1024.
+        Maximum cryptographic strength of the key, in **bits**.
+        It can vary from 40 to 1024. The default value is 1024.
 
     :Return: an RC2 cipher object, of the applicable mode.
     """
@@ -183,4 +198,4 @@ MODE_EAX = 9
 #: Size of a data block (in bytes)
 block_size = 8
 #: Size of a key (in bytes)
-key_size = xrange(1, 128 + 1)
+key_size = xrange(5, 128 + 1)

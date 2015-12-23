@@ -43,8 +43,10 @@ class CtrTests(unittest.TestCase):
 
     key_128 = get_tag_random("key_128", 16)
     key_192 = get_tag_random("key_192", 24)
-    ctr_64 = Counter.new(32, prefix=get_tag_random("iv_64", 4))
-    ctr_128 = Counter.new(64, prefix=get_tag_random("iv_128", 8))
+    nonce_32 = get_tag_random("nonce_32", 4)
+    nonce_64 = get_tag_random("nonce_64", 8)
+    ctr_64 = Counter.new(32, prefix=nonce_32)
+    ctr_128 = Counter.new(64, prefix=nonce_64)
 
     def test_loopback_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
@@ -64,9 +66,73 @@ class CtrTests(unittest.TestCase):
         pt2 = cipher.decrypt(ct)
         self.assertEqual(pt, pt2)
 
-    def test_counter_is_required(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR)
+    def test_invalid_counter_parameter(self):
+        # Counter object is required for ciphers with short block size
+        self.assertRaises(TypeError, DES3.new, self.key_192, AES.MODE_CTR)
+        # Positional arguments are not allowed (Counter must be passed as
+        # keyword)
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR, self.ctr_128)
+
+    def test_nonce_attribute(self):
+        # Nonce attribute is the prefix passed to Counter (DES3)
+        cipher = DES3.new(self.key_192, DES3.MODE_CTR, counter=self.ctr_64)
+        self.assertEqual(cipher.nonce, self.nonce_32)
+
+        # Nonce attribute is the prefix passed to Counter (AES)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
+        self.assertEqual(cipher.nonce, self.nonce_64)
+
+        # Nonce attribute is not defined if suffix is used in Counter
+        counter = Counter.new(64, prefix=self.nonce_32, suffix=self.nonce_32)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        self.failIf(hasattr(cipher, "nonce"))
+
+    def test_nonce_parameter(self):
+        # Nonce parameter becomes nonce attribute
+        cipher1 = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64)
+        self.assertEqual(cipher1.nonce, self.nonce_64)
+
+        counter = Counter.new(64, prefix=self.nonce_64, initial_value=0)
+        cipher2 = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        pt = get_tag_random("plaintext", 65536)
+        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+
+        # Nonce is implicitly created (for AES) when no parameters are passed
+        nonce1 = AES.new(self.key_128, AES.MODE_CTR).nonce
+        nonce2 = AES.new(self.key_128, AES.MODE_CTR).nonce
+        self.assertNotEqual(nonce1, nonce2)
+        self.assertEqual(len(nonce1), 8)
+
+        # Nonce can be zero-length
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=b(""))
+        self.assertEqual(b(""), cipher.nonce)
+
+        # Nonce and Counter are mutually exclusive
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR,
+                          counter=self.ctr_128, nonce=self.nonce_64)
+
+    def test_initial_value_parameter(self):
+        # Test with nonce parameter
+        cipher1 = AES.new(self.key_128, AES.MODE_CTR,
+                          nonce=self.nonce_64, initial_value=0xFFFF)
+        counter = Counter.new(64, prefix=self.nonce_64, initial_value=0xFFFF)
+        cipher2 = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        pt = get_tag_random("plaintext", 65536)
+        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+
+        # Test without nonce parameter
+        cipher1 = AES.new(self.key_128, AES.MODE_CTR,
+                          initial_value=0xFFFF)
+        counter = Counter.new(64, prefix=cipher1.nonce, initial_value=0xFFFF)
+        cipher2 = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        pt = get_tag_random("plaintext", 65536)
+        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+
+        # Initial_value and Counter are mutually exclusive
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR,
+                          counter=self.ctr_128, initial_value=0)
 
     def test_iv_with_matching_length(self):
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
