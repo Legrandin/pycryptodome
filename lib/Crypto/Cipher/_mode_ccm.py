@@ -606,7 +606,9 @@ def _create_ccm_cipher(factory, **kwargs):
     except KeyError, e:
         raise TypeError("Missing parameter: " + str(e))
 
-    nonce = kwargs.pop("nonce", get_random_bytes(11))  # N
+    nonce = kwargs.pop("nonce", None)  # N
+    if nonce is None:
+        nonce = get_random_bytes(11)
     mac_len = kwargs.pop("mac_len", factory.block_size)
     msg_len = kwargs.pop("msg_len", None)      # p
     assoc_len = kwargs.pop("assoc_len", None)  # a

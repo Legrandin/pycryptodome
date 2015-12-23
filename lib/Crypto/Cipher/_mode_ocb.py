@@ -503,7 +503,9 @@ def _create_ocb_cipher(factory, **kwargs):
     """
 
     try:
-        nonce = kwargs.pop("nonce", get_random_bytes(15))
+        nonce = kwargs.pop("nonce", None)
+        if nonce is None:
+            nonce = get_random_bytes(15)
         mac_len = kwargs.pop("mac_len", 16)
     except KeyError, e:
         raise TypeError("Keyword missing: " + str(e))
