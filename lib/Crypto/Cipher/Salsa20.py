@@ -31,7 +31,6 @@ with 128 bit keys.
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import Salsa20
-    >>> from Crypto.Random import get_random_bytes
     >>>
     >>> key = b'*Thirty-two byte (256 bits) key*'
     >>> cipher = Salsa20.new(key)
