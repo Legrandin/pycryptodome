@@ -25,7 +25,12 @@
 """Self-test suite for Crypto.Cipher.Salsa20"""
 
 import unittest
-from Crypto.Util.py3compat import *
+
+from Crypto.Util.py3compat import bchr
+
+from Crypto.SelfTest.st_common import list_test_cases
+
+from Crypto.Cipher import Salsa20
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]])
 # tuples.
@@ -193,11 +198,38 @@ test_data = [
 ]
 
 
+class KeyLength(unittest.TestCase):
+
+    def runTest(self):
+
+        nonce = bchr(0) * 8
+        for key_length in (15, 30, 33):
+            key = bchr(1) * key_length
+            self.assertRaises(ValueError, Salsa20.new, key, nonce)
+
+
+class NonceTests(unittest.TestCase):
+
+    def test_invalid_nonce_length(self):
+        key = bchr(1) * 16
+        self.assertRaises(ValueError, Salsa20.new, key, bchr(0) * 7)
+        self.assertRaises(ValueError, Salsa20.new, key, bchr(0) * 9)
+
+    def test_default_nonce(self):
+
+        cipher1 = Salsa20.new(bchr(1) * 16)
+        cipher2 = Salsa20.new(bchr(1) * 16)
+        self.assertEqual(len(cipher1.nonce), 8)
+        self.assertNotEqual(cipher1.nonce, cipher2.nonce)
+
+
 def get_tests(config={}):
-    global Salsa20
-    from Crypto.Cipher import Salsa20
     from common import make_stream_tests
-    return make_stream_tests(Salsa20, "Salsa20", test_data)
+    tests = make_stream_tests(Salsa20, "Salsa20", test_data)
+    tests.append(KeyLength())
+    tests += list_test_cases(NonceTests)
+    return tests
+
 
 if __name__ == '__main__':
     import unittest
