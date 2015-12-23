@@ -16,7 +16,8 @@ are implemented as C extensions.
 News
 ----
 
-* **1 Nov 2015 (NEW)**. Release 3.3.1.
+* **?? 2015 (NEW()**. Release 3.4.
+* Nov 2015. Release 3.3.1.
 * 29 Oct 2015. Release 3.3.
 * 9 Sep 2015. Minor release 3.2.1.
 * 6 Sep 2015. Release 3.2.
@@ -33,6 +34,9 @@ It brings the following enhancements with respect to the last official version o
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
+* Better and more compact API (`nonce` and `iv` attributes for ciphers,
+  automatic generation of random nonces and IVs, simplified CTR cipher mode,
+  and more)
 * SHA-3 (including SHAKE XOFs) and BLAKE2 hash algorithms
 * Salsa20 stream cipher
 * scrypt and HKDF

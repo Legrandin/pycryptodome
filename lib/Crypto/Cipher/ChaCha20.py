@@ -40,7 +40,7 @@ As an example, encryption can be done as follows:
     >>>
     >>> key = b'*Thirty-two byte (256 bits) key*'
     >>> cipher = ChaCha20.new(key)
-    >>> msg = cipher.iv + cipher.encrypt(b'Attack at dawn')
+    >>> msg = cipher.nonce + cipher.encrypt(b'Attack at dawn')
 
 :undocumented: __package__
 
@@ -191,7 +191,7 @@ def new(**kwargs):
         If not provided, a random byte string will be generated (you can read
         it back via the ``nonce`` attribute).
 
-    :Return: an `ChaCha20Cipher` object
+    :Return: a `ChaCha20Cipher` object
     """
 
     try:

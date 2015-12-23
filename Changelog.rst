@@ -13,18 +13,22 @@ New features
 * For CFB/OPENPGP, `encrypt` and `decrypt` do not require the plaintext
   or ciphertext pieces to have length multiple of the CFB segment size.
 * Dedicated tests for all cipher modes, including NIST test vectors
-* CTR/CCM/EAX/GCM/SIV cipher objects expose attribute `nonce`.
-* CCM cipher checks if the declared lengths of the associated data and of the
+* CTR/CCM/EAX/GCM/SIV/Salsa20/ChaCha20 objects expose the new attribute `nonce`.
+* CCM cipher checks if the declared lengths of the associated data the
   message match the actual ones.
 * CTR cipher accepts parameter `nonce` and possibly `initial_value` in
-  alternative to `counter`.
+  alternative to `counter` (which is deprecated).
+* All `iv`/`IV` and `nonce` parameters are optional. If not provided,
+  they will be randomly generated (exception: `nonce` for CTR mode in case
+  of block sizes smaller than 16 bytes).
+* Refactored ARC2 cipher.
 
 Resolved issues
 ---------------
 
-* RSA key size returned correctly in RsaKey.__repr__ method.
-* CTR mode does not modify anymore 'counter' parameter passed to 'new' method.
-* CTR raises OverflowError instead of ValueError in case of counter wrapping around.
+* RSA key size returned correctly in `RsaKey.__repr__` method (kudos to hannesv).
+* CTR mode does not modify anymore `counter` parameter passed to 'new' method.
+* CTR raises `OverflowError` instead of `ValueError` in case of counter wrapping around.
 
 Breaks in compatibility
 -----------------------
@@ -32,6 +36,7 @@ Breaks in compatibility
 * Parameter `segment_size` cannot be 0 for the CFB mode.
 * For OCB ciphers, a final call without parameters to `encrypt` must end a sequence
   of calls to `encrypt` with data (similarly for `decrypt`).
+* Key size for `ARC2`, `ARC4` and `Blowfish` must be at least 40 bits long (still very weak).
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++

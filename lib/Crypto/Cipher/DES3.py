@@ -42,6 +42,8 @@ single `DES`.
 TDES is cryptographically secure, even though it is neither as secure nor as fast
 as `AES`.
 
+*Use AES, not TDES. This module is provided for legacy purposes only.**
+
 As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import DES3
@@ -119,39 +121,46 @@ def new(key, mode, *args, **kwargs):
       key : byte string
         The secret key to use in the symmetric cipher.
         It must be 16 or 24 bytes long. The parity bits will be ignored.
+
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
+
     :Keywords:
-      IV : byte string
+      iv : byte string
         (*Only* `MODE_CBC`, `MODE_CFB`, `MODE_OFB`, `MODE_OPENPGP`).
 
         The initialization vector to use for encryption or decryption.
 
-        It is ignored for `MODE_ECB` and `MODE_CTR`.
-
-        For `MODE_OPENPGP`, IV must be `block_size` bytes long for encryption
-        and `block_size` +2 bytes for decryption (in the latter case, it is
+        For `MODE_OPENPGP`, IV must be 8 bytes long for encryption
+        and 10 bytes for decryption (in the latter case, it is
         actually the *encrypted* IV which was prefixed to the ciphertext).
-        It is mandatory.
 
         For all other modes, it must be 8 bytes long.
+
+        If not provided, a random byte string will be generated (you can read
+        it back via the ``iv`` attribute).
+
       nonce : byte string
-        (*Only* `MODE_EAX` and `MODE_CTR`).
-        A mandatory value that must never be reused for any other encryption.
+        (*Only* `MODE_EAX` and `MODE_CTR`)
+        A value that must never be reused for any other encryption.
 
         For `MODE_CTR`, its length must be in the range ``[0..7]``.
 
         For `MODE_EAX`, there are no restrictions, but it is recommended to
         use at least 16 bytes.
-      counter : object
-        (*Only* `MODE_CTR`). An object created by `Crypto.Util.Counter`.
+
+        If not provided for `MODE_EAX`, a random 16 byte string is generated
+        (you can read it back via the ``nonce`` attribute).
+
       mac_len : integer
-        (*Only* `MODE_EAX`). Length of the MAC, in bytes.
+        (*Only* `MODE_EAX`). Length of the authentication tag, in bytes.
         It must be no larger than 8 (which is the default).
+
       segment_size : integer
-        (*Only* `MODE_CFB`).The number of bits the plaintext and ciphertext
-        are segmented in.
-        It must be a multiple of 8. If not specified, it will be assumed to be 8.
+        (*Only* `MODE_CFB`).The number of **bits** the plaintext and ciphertext
+        are segmented in. It must be a multiple of 8.
+        If not specified, it will be assumed to be 8.
+
       initial_value : integer
         (*Only* `MODE_CTR`). The initial value for the counter within
         the counter block. By default it is 0.
