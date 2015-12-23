@@ -68,9 +68,7 @@ Example:
 .. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
 """
 
-from binascii import unhexlify
-
-from Crypto.Util.py3compat import b, bord, bchr
+from Crypto.Util.py3compat import b, bord, bchr, unhexlify
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.strxor import strxor
 
