@@ -483,12 +483,12 @@ class TestOtherCiphers(unittest.TestCase):
     def create_test(cls, name, factory, key_size):
 
         def test_template(self, factory=factory, key_size=key_size):
-            cipher = factory.new(bchr(1) * key_size,
+            cipher = factory.new(get_tag_random("cipher", key_size),
                                  factory.MODE_EAX,
                                  nonce=b("nonce"))
             ct, mac = cipher.encrypt_and_digest(b("plaintext"))
 
-            cipher = factory.new(bchr(1) * key_size,
+            cipher = factory.new(get_tag_random("cipher", key_size),
                                  factory.MODE_EAX,
                                  nonce=b("nonce"))
             pt2 = cipher.decrypt_and_verify(ct, mac)

@@ -64,7 +64,7 @@ As an example, encryption can be done as follows:
 import sys
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util.py3compat import byte_string
+from Crypto.Util.py3compat import byte_string, b, bchr, bord
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   c_size_t, expect_byte_string)
@@ -87,6 +87,22 @@ _raw_des3_lib = load_pycryptodome_raw_lib(
                     """)
 
 
+def adjust_key_parity(key):
+    """Return the TDES key with parity bits correctly set"""
+
+    def parity_byte(key_byte):
+        parity = 1
+        for i in xrange(1, 8):
+            parity ^= (key_byte >> i) & 1
+        return (key_byte & 0xFE) | parity
+
+    if len(key) not in (16, 24):
+        raise ValueError("Not a valid TDES key")
+
+    result = b("").join([ bchr(parity_byte(bord(x)) )for x in key ])
+    return result
+
+
 def _create_base_cipher(dict_parameters):
     """This method instantiates and returns a handle to a low-level base cipher.
     It will absorb named parameters in the process."""
@@ -100,6 +116,10 @@ def _create_base_cipher(dict_parameters):
 
     if len(key) not in key_size:
         raise ValueError("Incorrect TDES key length (%d bytes)" % len(key))
+
+    key = adjust_key_parity(key)
+    if key[:8] == key[8:16] or key[-16:-8] == key[-8:]:
+        raise ValueError("Triple DES key degenerates to single DES")
 
     start_operation = _raw_des3_lib.DES3_start_operation
     stop_operation = _raw_des3_lib.DES3_stop_operation
@@ -121,6 +141,7 @@ def new(key, mode, *args, **kwargs):
       key : byte string
         The secret key to use in the symmetric cipher.
         It must be 16 or 24 bytes long. The parity bits will be ignored.
+        The condition K1 != K2 != K3 must hold.
 
       mode : a *MODE_** constant
         The chaining mode to use for encryption or decryption.
@@ -167,6 +188,9 @@ def new(key, mode, *args, **kwargs):
 
     :Attention: it is important that all 8 byte subkeys are different,
       otherwise TDES would degrade to single `DES`.
+
+    :Raise ValueError:
+      when the key degrades to Single DES.
 
     :Return: a DES cipher object, of the applicable mode.
     """

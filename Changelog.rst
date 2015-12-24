@@ -22,6 +22,7 @@ New features
   they will be randomly generated (exception: `nonce` for CTR mode in case
   of block sizes smaller than 16 bytes).
 * Refactored ARC2 cipher.
+* Added `Crypto.Cipher.DES3.adjust_key_parity` function.
 
 Resolved issues
 ---------------
@@ -37,6 +38,7 @@ Breaks in compatibility
 * For OCB ciphers, a final call without parameters to `encrypt` must end a sequence
   of calls to `encrypt` with data (similarly for `decrypt`).
 * Key size for `ARC2`, `ARC4` and `Blowfish` must be at least 40 bits long (still very weak).
+* DES3 (Triple DES module) does not allow keys that degenerate to Single DES.
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++

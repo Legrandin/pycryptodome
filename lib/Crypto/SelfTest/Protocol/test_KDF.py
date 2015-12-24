@@ -169,7 +169,7 @@ class S2V_Tests(unittest.TestCase):
     def test2(self):
         """Verify that no more than 127(AES) and 63(TDES)
         components are accepted."""
-        key = bchr(0)*16
+        key = bchr(0) * 8 + bchr(255) * 8
         for module in (AES, DES3):
             s2v = _S2V.new(key, module)
             max_comps = module.block_size*8-1
