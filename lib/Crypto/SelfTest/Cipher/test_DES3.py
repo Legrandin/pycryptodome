@@ -25,14 +25,15 @@
 """Self-test suite for Crypto.Cipher.DES3"""
 
 import unittest
+from binascii import hexlify
 
-from Crypto.Util.py3compat import bchr, unhexlify
 from Crypto.Cipher import DES3
+
 from Crypto.Util.strxor import strxor_c
+from Crypto.Util.py3compat import bchr, unhexlify, tostr
+from Crypto.SelfTest.Cipher.nist_loader import load_tests
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
-SP800_20_A1_KEY = '01' * 24
-SP800_20_A2_PT = '00' * 8
 test_data = [
     # Test vector from Appendix B of NIST SP 800-67
     # "Recommendation for the Triple Data Encryption Algorithm (TDEA) Block
@@ -49,6 +50,21 @@ test_data = [
         '9b397ebf81b1181e282f4bb8adbadc6b', 'Two-key 3DES'),
 ]
 
+# NIST CAVP test vectors
+
+nist_tdes_mmt_files = ("TECBMMT2.rsp", "TECBMMT3.rsp")
+
+for tdes_file in nist_tdes_mmt_files:
+    test_vectors = load_tests("TDES", tdes_file, "TDES ECB (%s)" % tdes_file)
+    assert(test_vectors)
+    for index, tv in enumerate(test_vectors):
+        key = tv.key1 + tv.key2 + tv.key3
+        test_data_item = (tostr(hexlify(tv.plaintext)),
+                          tostr(hexlify(tv.ciphertext)),
+                          tostr(hexlify(key)),
+                          "%s (%s)" % (tdes_file, index))
+        test_data.append(test_data_item)
+
 
 class CheckParity(unittest.TestCase):
 
@@ -56,11 +72,13 @@ class CheckParity(unittest.TestCase):
 
         before_2k = unhexlify("CABF326FA56734324FFCCABCDEFACABF")
         after_2k = DES3.adjust_key_parity(before_2k)
-        self.assertEqual(after_2k, unhexlify("CBBF326EA46734324FFDCBBCDFFBCBBF"))
+        self.assertEqual(after_2k,
+                         unhexlify("CBBF326EA46734324FFDCBBCDFFBCBBF"))
 
         before_3k = unhexlify("AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCC")
         after_3k = DES3.adjust_key_parity(before_3k)
-        self.assertEqual(after_3k, unhexlify("ABABABABABABABABBABABABABABABABACDCDCDCDCDCDCDCD"))
+        self.assertEqual(after_3k,
+                         unhexlify("ABABABABABABABABBABABABABABABABACDCDCDCDCDCDCDCD"))
 
 
 class DegenerateToDESTest(unittest.TestCase):
