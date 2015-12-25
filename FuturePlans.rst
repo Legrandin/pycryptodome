@@ -1,9 +1,8 @@
 Future releases will include:
 
 - Make all hash objects non-copiable and immutable after the first digest
-- DES3 (TDES) should refuse keys where K1=K2=K3
 - Add alias 'segment_bits' to parameter 'segment_size' for CFB
-- Automatic IV/nonce generation for cipher modes
+- Coverage testing
 - Add support for memoryview/buffer interface
 - Move API documentation from epydoc to sphinx
 - Implement AES with bitslicing
@@ -14,6 +13,7 @@ Future releases will include:
     - Camellia, GOST
     - Diffie-Hellman
     - bcrypt
+    - argon2
     - SRP
 - Add more key management:
     - Export/import of EC keys
@@ -26,7 +26,6 @@ Future releases will include:
 - Remove dependency on libtomcrypto headers
 - Speed up (T)DES with a bitsliced implementation
 - Add support for PCLMULQDQ in AES-GCM
-- Coverage testing
 - Run lint on the C code
 - Add (minimal) support for PGP
 - Add (minimal) support for PKIX / X.509
