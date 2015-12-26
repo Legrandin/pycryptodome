@@ -120,7 +120,7 @@ def decode(pem_data, passphrase=None):
     """
 
     # Verify Pre-Encapsulation Boundary
-    r = re.compile("\s*-----BEGIN (.*)-----\n")
+    r = re.compile("\s*-----BEGIN (.*)-----\s+")
     m = r.match(pem_data)
     if not m:
         raise ValueError("Not a valid PEM pre boundary")

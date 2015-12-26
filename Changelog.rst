@@ -30,6 +30,7 @@ Resolved issues
 * RSA key size returned correctly in `RsaKey.__repr__` method (kudos to hannesv).
 * CTR mode does not modify anymore `counter` parameter passed to 'new' method.
 * CTR raises `OverflowError` instead of `ValueError` in case of counter wrapping around.
+* PEM files with Windows newlines could not be imported.
 
 Breaks in compatibility
 -----------------------

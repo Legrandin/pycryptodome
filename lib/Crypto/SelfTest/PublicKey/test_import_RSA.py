@@ -266,6 +266,15 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.n, 17)
         self.assertEqual(key.e, 3)
 
+    def test_import_key_windows_cr_lf(self):
+        pem_cr_lf = "\r\n".join(self.rsaKeyPEM.splitlines())
+        key = RSA.importKey(pem_cr_lf)
+        self.assertEqual(key.n, self.n)
+        self.assertEqual(key.e, self.e)
+        self.assertEqual(key.d, self.d)
+        self.assertEqual(key.p, self.p)
+        self.assertEqual(key.q, self.q)
+
     ###
     def testExportKey1(self):
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])

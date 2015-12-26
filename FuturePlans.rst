@@ -6,6 +6,7 @@ Future releases will include:
 - Add support for memoryview/buffer interface
 - Move API documentation from epydoc to sphinx
 - Implement AES with bitslicing
+- Add unit tests for PEM I/O
 - Move old ciphers into a Museum submodule
 - Add algorithms:
     - Poly1305
