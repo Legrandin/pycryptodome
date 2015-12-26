@@ -32,6 +32,7 @@ from Crypto.Cipher import DES3
 from Crypto.Util.strxor import strxor_c
 from Crypto.Util.py3compat import bchr, unhexlify, tostr
 from Crypto.SelfTest.Cipher.nist_loader import load_tests
+from Crypto.SelfTest.st_common import list_test_cases
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
 test_data = [
@@ -68,17 +69,37 @@ for tdes_file in nist_tdes_mmt_files:
 
 class CheckParity(unittest.TestCase):
 
-    def runTest(self):
-
+    def test_parity_option2(self):
         before_2k = unhexlify("CABF326FA56734324FFCCABCDEFACABF")
         after_2k = DES3.adjust_key_parity(before_2k)
         self.assertEqual(after_2k,
                          unhexlify("CBBF326EA46734324FFDCBBCDFFBCBBF"))
 
+    def test_parity_option3(self):
         before_3k = unhexlify("AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCC")
         after_3k = DES3.adjust_key_parity(before_3k)
         self.assertEqual(after_3k,
                          unhexlify("ABABABABABABABABBABABABABABABABACDCDCDCDCDCDCDCD"))
+
+    def test_degradation(self):
+        sub_key1 = bchr(1) * 8
+        sub_key2 = bchr(255) * 8
+
+        # K1 == K2
+        self.assertRaises(ValueError, DES3.adjust_key_parity,
+                          sub_key1 * 2 + sub_key2)
+
+        # K2 == K3
+        self.assertRaises(ValueError, DES3.adjust_key_parity,
+                          sub_key1 + sub_key2 * 2)
+
+        # K1 == K2 == K3
+        self.assertRaises(ValueError, DES3.adjust_key_parity,
+                          sub_key1 * 3)
+
+        # K1 == K2 (with different parity)
+        self.assertRaises(ValueError, DES3.adjust_key_parity,
+                          sub_key1  + strxor_c(sub_key1, 1) + sub_key2)
 
 
 class DegenerateToDESTest(unittest.TestCase):
@@ -97,6 +118,11 @@ class DegenerateToDESTest(unittest.TestCase):
                           sub_key1 + sub_key2 * 2,
                           DES3.MODE_ECB)
 
+        # K1 == K2 == K3
+        self.assertRaises(ValueError, DES3.new,
+                          sub_key1 *3,
+                          DES3.MODE_ECB)
+
         # K2 == K3 (parity is ignored)
         self.assertRaises(ValueError, DES3.new,
                           sub_key1 + sub_key2 + strxor_c(sub_key2, 0x1),
@@ -109,7 +135,7 @@ def get_tests(config={}):
     tests = []
     tests = make_block_tests(DES3, "DES3", test_data)
     tests.append(DegenerateToDESTest())
-    tests.append(CheckParity())
+    tests += list_test_cases(CheckParity)
     return tests
 
 

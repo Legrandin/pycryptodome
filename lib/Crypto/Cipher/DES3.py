@@ -21,26 +21,24 @@
 # ===================================================================
 """Triple DES symmetric cipher
 
-`Triple DES`__ (or TDES or TDEA or 3DES) is a symmetric block cipher standardized by NIST_.
-It has a fixed data block size of 8 bytes. Its keys are 128 (*Option 1*) or 192
-bits (*Option 2*) long.
-However, 1 out of 8 bits is used for redundancy and do not contribute to
-security. The effective key length is respectively 112 or 168 bits.
+`Triple DES`__ (or TDES or TDEA or 3DES) is a symmetric block cipher
+standardized by NIST_. It has a fixed data block size of 8 bytes.
 
-TDES consists of the concatenation of 3 simple `DES` ciphers.
+TDES consists of the concatenation of 3 simple Single `DES` ciphers
+(encryption - decryption - encryption), where each stage uses an
+indipendent sub-key.
 
-The plaintext is first DES encrypted with *K1*, then decrypted with *K2*,
-and finally encrypted again with *K3*.  The ciphertext is decrypted in the reverse manner.
+A TDES key is therefore 24 (8+8+8) bytes long. However, like Single DES,
+only 7 out of 8 bits are actually used: the remaining ones are parity
+bits (which practically all TDES implementations ignore).
+Theoreticaly, Triple DES achieves up to 112 bits of effective security.
 
-The 192 bit key is a bundle of three 64 bit independent subkeys: *K1*, *K2*, and *K3*.
+Triple DES can also operate with a 16 bytes key (Option 2, also termed 2TDES),
+in which case subkey *K1* equals subkey *K2*. The effective security
+is as low as `90 bits`_.
 
-The 128 bit key is split into *K1* and *K2*, whereas *K1=K3*.
-
-It is important that all subkeys are different, otherwise TDES would degrade to
-single `DES`.
-
-TDES is cryptographically secure, even though it is neither as secure nor as fast
-as `AES`.
+Thi implementation checks and enforces the condition *K1 != K2 != K3*
+(Option 3), as it degrades Triple DES to Single DES.
 
 *Use AES, not TDES. This module is provided for legacy purposes only.**
 
@@ -49,14 +47,22 @@ As an example, encryption can be done as follows:
     >>> from Crypto.Cipher import DES3
     >>> from Crypto.Random import get_random_bytes
     >>>
-    >>> key = b'Sixteen byte key'
-    >>> nonce = get_random_bytes(DES3.block_size/2)
-    >>> cipher = DES3.new(key, DES3.MODE_CTR, nonce=nonce)
+    >>> # When generating a Triple DES key you must check that
+    >>> # subkey1 != subkey2 and subkey2 != subkey3
+    >>> while True:
+    >>>     try:
+    >>>         key = DES3.adjust_key_parity(get_random_bytes(24))
+    >>>         break
+    >>>     except ValueError
+    >>>         pass
+    >>>
+    >>> cipher = DES3.new(key, DES3.MODE_CFB)
     >>> plaintext = b'We are no longer the knights who say ni!'
-    >>> msg = nonce + cipher.encrypt(plaintext)
+    >>> msg = cipher.nonce + cipher.encrypt(plaintext)
 
 .. __: http://en.wikipedia.org/wiki/Triple_DES
-.. _NIST: http://csrc.nist.gov/publications/nistpubs/800-67/SP800-67.pdf
+.. _NIST: http://csrc.nist.gov/publications/nistpubs/800-67-Rev1/SP-800-67-Rev1.pdf
+.. _90 bits: http://people.scs.carleton.ca/~paulv/papers/Euro90.pdf
 
 :undocumented: __package__
 """
@@ -87,7 +93,7 @@ _raw_des3_lib = load_pycryptodome_raw_lib(
                     """)
 
 
-def adjust_key_parity(key):
+def adjust_key_parity(key_in):
     """Return the TDES key with parity bits correctly set"""
 
     def parity_byte(key_byte):
@@ -96,11 +102,15 @@ def adjust_key_parity(key):
             parity ^= (key_byte >> i) & 1
         return (key_byte & 0xFE) | parity
 
-    if len(key) not in (16, 24):
+    if len(key_in) not in key_size:
         raise ValueError("Not a valid TDES key")
 
-    result = b("").join([ bchr(parity_byte(bord(x)) )for x in key ])
-    return result
+    key_out = b("").join([ bchr(parity_byte(bord(x)) )for x in key_in ])
+
+    if key_out[:8] == key_out[8:16] or key_out[-16:-8] == key_out[-8:]:
+        raise ValueError("Triple DES key degenerates to single DES")
+
+    return key_out
 
 
 def _create_base_cipher(dict_parameters):
@@ -108,18 +118,11 @@ def _create_base_cipher(dict_parameters):
     It will absorb named parameters in the process."""
 
     try:
-        key = dict_parameters.pop("key")
+        key_in = dict_parameters.pop("key")
     except KeyError:
         raise TypeError("Missing 'key' parameter")
 
-    expect_byte_string(key)
-
-    if len(key) not in key_size:
-        raise ValueError("Incorrect TDES key length (%d bytes)" % len(key))
-
-    key = adjust_key_parity(key)
-    if key[:8] == key[8:16] or key[-16:-8] == key[-8:]:
-        raise ValueError("Triple DES key degenerates to single DES")
+    key = adjust_key_parity(key_in)
 
     start_operation = _raw_des3_lib.DES3_start_operation
     stop_operation = _raw_des3_lib.DES3_stop_operation
