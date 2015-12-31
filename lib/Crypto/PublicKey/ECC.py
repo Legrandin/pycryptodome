@@ -131,12 +131,13 @@ class ECPoint(object):
         elif scalar == 1:
             return self.copy()
 
-        # Pre-compute the table
+        # Pre-compute the table (but only for entries as wide as the window)
         WINDOW_BITS = 3
-        precomp = [ self.point_at_infinity() ]     # 0
-        for x in xrange(1, 1 << WINDOW_BITS):
+        window_low = 1 << (WINDOW_BITS - 1)
+        precomp = []
+        for x in xrange(window_low, 1 << WINDOW_BITS):
             new_entry = self.point_at_infinity()
-            bit_mask = 1 << (Integer(x).size_in_bits() - 1)
+            bit_mask = window_low
             while bit_mask > 0:
                 new_entry = new_entry.double()
                 if (x & bit_mask):
@@ -144,17 +145,32 @@ class ECPoint(object):
                 bit_mask >>= 1
             precomp.append(new_entry)
 
-        # Windowed multiplication
-        digits = []
-        scalar_copy = int(scalar)
-        while scalar_copy > 0:
-            digits.append(scalar_copy & ((1 << WINDOW_BITS) - 1))
-            scalar_copy >>= WINDOW_BITS
-        digits.reverse()
+        # Sliding-window multiplication
+        digits = []     # pairs (size in bits, value)
+        msb_pos = Integer(scalar).size_in_bits() - 1
+        while msb_pos >= 0:
+            if (1 << msb_pos) & scalar == 0:
+                digit_size = 1
+                digit_value = 0
+            else:
+                digit_size = min(msb_pos + 1, WINDOW_BITS)
+                digit_value = (scalar >> (msb_pos + 1 - digit_size)) & ((1 << digit_size) - 1)
+            digits.append((digit_size, digit_value))
+            msb_pos -= digit_size
+
         result = self.point_at_infinity()
-        for digit in digits:
-            for _ in xrange(WINDOW_BITS):
-                result = result.double()
-            result = result.add(precomp[digit])
+        for digit_size, digit_value in digits:
+
+            if digit_size == WINDOW_BITS:
+                assert(window_low <= digit_value << (1 << WINDOW_BITS))
+                for _ in xrange(WINDOW_BITS):
+                    result = result.double()
+                result = result.add(precomp[digit_value - window_low])
+            else:
+                for _ in xrange(digit_size):
+                    result = result.double()
+                    if digit_value & 1:
+                        result = self.add(result)
+                    digit_value >>= 1
 
         return result
