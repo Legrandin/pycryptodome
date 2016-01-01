@@ -131,46 +131,38 @@ class ECPoint(object):
         elif scalar == 1:
             return self.copy()
 
-        # Pre-compute the table (but only for entries as wide as the window)
+        # Convert to NAF
         WINDOW_BITS = 3
+        window_high = 1 << WINDOW_BITS
         window_low = 1 << (WINDOW_BITS - 1)
-        precomp = []
-        for x in xrange(window_low, 1 << WINDOW_BITS):
-            new_entry = self.point_at_infinity()
-            bit_mask = window_low
-            while bit_mask > 0:
-                new_entry = new_entry.double()
-                if (x & bit_mask):
-                    new_entry = new_entry.add(self)
-                bit_mask >>= 1
-            precomp.append(new_entry)
+        window_mask = window_high - 1
 
-        # Sliding-window multiplication
-        digits = []     # pairs (size in bits, value)
-        msb_pos = Integer(scalar).size_in_bits() - 1
-        while msb_pos >= 0:
-            if (1 << msb_pos) & scalar == 0:
-                digit_size = 1
-                digit_value = 0
+        scalar_int = int(scalar)
+        naf = []
+        while scalar_int > 0:
+            if scalar_int & 1:
+                di = scalar_int & window_mask
+                if di >= window_low:
+                    di -= window_high
+                scalar_int -= di
             else:
-                digit_size = min(msb_pos + 1, WINDOW_BITS)
-                digit_value = (scalar >> (msb_pos + 1 - digit_size)) & ((1 << digit_size) - 1)
-            digits.append((digit_size, digit_value))
-            msb_pos -= digit_size
+                di = 0
+            naf.append(di)
+            scalar_int >>= 1
+        naf.reverse()
+
+        # naf contains d_(i-1), d_(i-2), .. d_1, d_0
+
+        # import pdb; pdb.set_trace()
+        # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
+        # which is only 1P, 3P for W=3 (we also add negatives)
+        precomp = [0, self, 0, self.add(self.double()) ]
+        precomp += [ -x for x in precomp[:0:-1]]
 
         result = self.point_at_infinity()
-        for digit_size, digit_value in digits:
-
-            if digit_size == WINDOW_BITS:
-                assert(window_low <= digit_value << (1 << WINDOW_BITS))
-                for _ in xrange(WINDOW_BITS):
-                    result = result.double()
-                result = result.add(precomp[digit_value - window_low])
-            else:
-                for _ in xrange(digit_size):
-                    result = result.double()
-                    if digit_value & 1:
-                        result = self.add(result)
-                    digit_value >>= 1
+        for x in naf:
+            result = result.double()
+            if x != 0:
+                result = result.add(precomp[x])
 
         return result
