@@ -89,11 +89,22 @@ class ECPoint(object):
         if self._y == 0:
             return self.point_at_infinity()
 
-        common = (pow(self._x, 2, _curve.p) * 3 - 3) * (self._y << 1).inverse(_curve.p) % _curve.p
-        x3 = pow(common, 2, _curve.p) - self._x - self._x
+        #common = (pow(self._x, 2, _curve.p) * 3 - 3) * (self._y << 1).inverse(_curve.p) % _curve.p
+        common = pow(self._x, 2, _curve.p)
+        common *= 3
+        common -= 3
+        common *= (self._y << 1).inverse(_curve.p)
+        common %= _curve.p
+        x3 = pow(common, 2, _curve.p)
+        x3 -= self._x
+        x3 -= self._x
         while x3 < 0:
             x3 += _curve.p
-        y3 = ((self._x - x3) * common - self._y) % _curve.p
+        # y3 = ((self._x - x3) * common - self._y) % _curve.p
+        y3 = self._x - x3
+        y3 *= common
+        y3 -= self._y
+        y3 %= _curve.p
 
         return ECPoint(x3, y3)
 
@@ -112,11 +123,20 @@ class ECPoint(object):
         if self._x == point._x:
             return self.point_at_infinity()
 
-        common = (point._y - self._y) * (point._x - self._x).inverse(_curve.p) % _curve.p
-        x3 = pow(common, 2, _curve.p) - self._x - point._x
+        # common = (point._y - self._y) * (point._x - self._x).inverse(_curve.p) % _curve.p
+        common = point._y - self._y
+        common *= (point._x - self._x).inverse(_curve.p)
+        common %= _curve.p
+        x3 = pow(common, 2, _curve.p)
+        x3 -= self._x
+        x3 -= point._x
         while x3 < 0:
             x3 += _curve.p
-        y3 = ((self._x - x3) * common - self._y) % _curve.p
+        # y3 = ((self._x - x3) * common - self._y) % _curve.p
+        y3 = (self._x - x3)
+        y3 *= common
+        y3 -= self._y
+        y3 %= _curve.p
 
         return ECPoint(x3, y3)
 
@@ -153,16 +173,19 @@ class ECPoint(object):
 
         # naf contains d_(i-1), d_(i-2), .. d_1, d_0
 
-        # import pdb; pdb.set_trace()
-        # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
-        # which is 1P..7P for W=4 (we also add negatives)
-        precomp =  [0, self, self.double()]      # 0, 1P, 2P
-        precomp += [precomp[2].add(precomp[1])]  # 3P
-        precomp += [0]                           # 4P
-        precomp += [precomp[2].add(precomp[3])]  # 5P
-        precomp += [0]                           # 6P
-        precomp += [precomp[2].add(precomp[5])]  # 7P
-        precomp += [ -x for x in precomp[:0:-1]]
+        if hasattr(self, "_precomp"):
+            precomp = self._precomp
+        else:
+            # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
+            # which is 1P..7P for W=4 (we also add negatives)
+            precomp =  [0, self, self.double()]      # 0, 1P, 2P
+            precomp += [precomp[2].add(precomp[1])]  # 3P
+            precomp += [0]                           # 4P
+            precomp += [precomp[2].add(precomp[3])]  # 5P
+            precomp += [0]                           # 6P
+            precomp += [precomp[2].add(precomp[5])]  # 7P
+            precomp += [ -x for x in precomp[:0:-1]]
+            self._precomp = precomp
 
         result = self.point_at_infinity()
         for x in naf:
