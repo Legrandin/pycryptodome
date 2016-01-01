@@ -132,7 +132,7 @@ class ECPoint(object):
             return self.copy()
 
         # Convert to NAF
-        WINDOW_BITS = 3
+        WINDOW_BITS = 4
         window_high = 1 << WINDOW_BITS
         window_low = 1 << (WINDOW_BITS - 1)
         window_mask = window_high - 1
@@ -155,8 +155,13 @@ class ECPoint(object):
 
         # import pdb; pdb.set_trace()
         # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
-        # which is only 1P, 3P for W=3 (we also add negatives)
-        precomp = [0, self, 0, self.add(self.double()) ]
+        # which is 1P..7P for W=4 (we also add negatives)
+        precomp =  [0, self, self.double()]      # 0, 1P, 2P
+        precomp += [precomp[2].add(precomp[1])]  # 3P
+        precomp += [0]                           # 4P
+        precomp += [precomp[2].add(precomp[3])]  # 5P
+        precomp += [0]                           # 6P
+        precomp += [precomp[2].add(precomp[5])]  # 7P
         precomp += [ -x for x in precomp[:0:-1]]
 
         result = self.point_at_infinity()
