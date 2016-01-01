@@ -344,6 +344,9 @@ setup(
             "test_vectors/PKCS1-v1.5/*.*",
             "test_vectors/PKCS1-PSS/*.*"
             ],
+        "Crypto.SelfTest.PublicKey" : [
+            "test_vectors/ECC/*.*",
+            ],
         "Crypto.Math" : [ "mpir.dll" ],
         },
     cmdclass = {

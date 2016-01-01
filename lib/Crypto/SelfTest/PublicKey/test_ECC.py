@@ -1,10 +1,12 @@
 import unittest
 import time
 from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.PublicKey.loader import load_tests
 
-from Crypto.PublicKey.ECC import ECPoint
+from Crypto.PublicKey.ECC import ECPoint, _curve
 
-class TestECPoint(unittest.TestCase):
+class TestECPoint_NIST(unittest.TestCase):
+    """Tests defined in section 4.3 of https://www.nsa.gov/ia/_files/nist-routines.pdf"""
 
     pointS = ECPoint(
                 0xde2444bebc8d36e682edd27e0f271508617519b3221a8fa0b77cab3989da97c9,
@@ -20,6 +22,21 @@ class TestECPoint(unittest.TestCase):
 
         pointR = self.pointS.add(self.pointT)
         self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pai = self.pointS.point_at_infinity()
+
+        # S + 0
+        pointR = self.pointS.add(pai)
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + S
+        pointR = pai.add(self.pointS)
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + 0
+        pointR = pai.add(pai)
+        self.assertEqual(pointR, pai)
 
     def test_doubling(self):
         pointRx = 0x7669e6901606ee3ba1a8eef1e0024c33df6c22f3b17481b82a860ffcdb6127b0
@@ -29,6 +46,11 @@ class TestECPoint(unittest.TestCase):
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
+        # 2*0
+        pai = self.pointS.point_at_infinity()
+        pointR = pai.double()
+        self.assertEqual(pointR, pai)
+
     def test_scalar_multiply(self):
         d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
         pointRx = 0x51d08d5f2d4278882946d88d83c97d11e62becc3cfc18bedacc89ba34eeca03f
@@ -37,6 +59,14 @@ class TestECPoint(unittest.TestCase):
         pointR = self.pointS.multiply(d)
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
+
+        # 0*S
+        pai = self.pointS.point_at_infinity()
+        pointR = self.pointS.multiply(0)
+        self.assertEqual(pointR, pai)
+
+        # -1*S
+        self.assertRaises(ValueError, self.pointS.multiply, -1)
 
     def test_joing_scalar_multiply(self):
         d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
@@ -58,13 +88,29 @@ class TestECPoint(unittest.TestCase):
         print (time.time() - start) / count * 1000, "ms"
 
 
+class TestECPoint_PAI(unittest.TestCase):
+    """Test vectors from http://point-at-infinity.org/ecc/nisttv"""
+
+    pointG = ECPoint(_curve.Gx, _curve.Gy)
+
+
+tv_pai = load_tests("ECC", "point-at-infinity.org-P256.txt",
+                    "P-256 tests from point-at-infinity.org")
+assert(tv_pai)
+for tv in tv_pai:
+    def new_test(self, scalar=tv.k, x=tv.x, y=tv.y):
+        result = self.pointG.multiply(scalar)
+        self.assertEqual(result.x, x)
+        self.assertEqual(result.y, y)
+    setattr(TestECPoint_PAI, "test_%d" % tv.count, new_test)
+
+
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(TestECPoint)
+    tests += list_test_cases(TestECPoint_NIST)
+    tests += list_test_cases(TestECPoint_PAI)
     return tests
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-
-

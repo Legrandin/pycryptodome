@@ -36,7 +36,7 @@ class _Curve(object):
 
 _curve = _Curve()
 _curve.p = Integer(115792089210356248762697446949407573530086143415290314195533631308867097853951)
-_curve.n = Integer(115792089210356248762697446949407573529996955224135760342422259061068512044369)
+_curve.order = Integer(115792089210356248762697446949407573529996955224135760342422259061068512044369)
 _curve.Gx = Integer(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)
 _curve.Gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
 
@@ -143,7 +143,8 @@ class ECPoint(object):
     def multiply(self, scalar):
         """Return a new point, the scalar product of this one"""
 
-        assert(scalar >= 0)
+        if scalar < 0:
+            raise ValueError("Scalar multiplication only defined for non-negative integers")
 
         # Trivial results
         if scalar == 0 or self.is_point_at_infinity():
