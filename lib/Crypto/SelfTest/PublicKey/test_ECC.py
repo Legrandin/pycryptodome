@@ -3,16 +3,16 @@ import time
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.PublicKey.loader import load_tests
 
-from Crypto.PublicKey.ECC import ECPoint, _curve
+from Crypto.PublicKey.ECC import EccPoint, _curve, EccKey, generate
 
-class TestECPoint_NIST(unittest.TestCase):
+class TestEccPoint_NIST(unittest.TestCase):
     """Tests defined in section 4.3 of https://www.nsa.gov/ia/_files/nist-routines.pdf"""
 
-    pointS = ECPoint(
+    pointS = EccPoint(
                 0xde2444bebc8d36e682edd27e0f271508617519b3221a8fa0b77cab3989da97c9,
                 0xc093ae7ff36e5380fc01a5aad1e66659702de80f53cec576b6350b243042a256)
 
-    pointT = ECPoint(
+    pointT = EccPoint(
                 0x55a8b00f8da1d44e62f6b3b25316212e39540dc861c89575bb8cf92e35e0986b,
                 0x5421c3209c2d6c704835d82ac4c3dd90f61a8a52598b9e7ab656e9d8c8b24316)
 
@@ -88,10 +88,10 @@ class TestECPoint_NIST(unittest.TestCase):
         print (time.time() - start) / count * 1000, "ms"
 
 
-class TestECPoint_PAI(unittest.TestCase):
+class TestEccPoint_PAI(unittest.TestCase):
     """Test vectors from http://point-at-infinity.org/ecc/nisttv"""
 
-    pointG = ECPoint(_curve.Gx, _curve.Gy)
+    pointG = EccPoint(_curve.Gx, _curve.Gy)
 
 
 tv_pai = load_tests("ECC", "point-at-infinity.org-P256.txt",
@@ -102,13 +102,55 @@ for tv in tv_pai:
         result = self.pointG.multiply(scalar)
         self.assertEqual(result.x, x)
         self.assertEqual(result.y, y)
-    setattr(TestECPoint_PAI, "test_%d" % tv.count, new_test)
+    setattr(TestEccPoint_PAI, "test_%d" % tv.count, new_test)
+
+
+class TestEccKey(unittest.TestCase):
+
+    def test_private_key(self):
+
+        key = EccKey(curve="P-256", d=1)
+        self.assertEqual(key.d, 1)
+        self.failUnless(key.has_private())
+        self.assertEqual(key.pointQ.x, _curve.Gx)
+        self.assertEqual(key.pointQ.y, _curve.Gy)
+
+        point = EccPoint(_curve.Gx, _curve.Gy)
+        key = EccKey(curve="P-256", d=1, point=point)
+        self.assertEqual(key.d, 1)
+        self.failUnless(key.has_private())
+        self.assertEqual(key.pointQ, point)
+
+    def test_public_key(self):
+
+        point = EccPoint(_curve.Gx, _curve.Gy)
+        key = EccKey(curve="P-256", point=point)
+        self.failIf(key.has_private())
+        self.assertEqual(key.pointQ, point)
+
+    def test_invalid_curve(self):
+        self.assertRaises(ValueError, lambda: EccKey(curve="P-257", d=1))
+
+    def test_invalid_d(self):
+        self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=0))
+        self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=_curve.order))
+
+
+class TestEccGenerate(unittest.TestCase):
+
+    def test_new_key(self):
+
+        key = generate("P-256")
+        self.failUnless(key.has_private())
+        self.assertEqual(key.pointQ, EccPoint(_curve.Gx, _curve.Gy).multiply(key.d))
 
 
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(TestECPoint_NIST)
-    tests += list_test_cases(TestECPoint_PAI)
+    tests += list_test_cases(TestEccPoint_NIST)
+    tests += list_test_cases(TestEccPoint_PAI)
+    tests += list_test_cases(TestEccKey)
+    tests += list_test_cases(TestEccGenerate)
     return tests
 
 if __name__ == '__main__':

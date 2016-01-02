@@ -30,6 +30,7 @@
 
 
 from Crypto.Math.Numbers import Integer
+from Crypto.Random import get_random_bytes
 
 class _Curve(object):
     pass
@@ -47,7 +48,7 @@ _curve.Gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837
 # https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates
 # https://eprint.iacr.org/2013/816.pdf
 
-class ECPoint(object):
+class EccPoint(object):
 
     def __init__(self, x, y):
         self._x = Integer(x)
@@ -59,17 +60,17 @@ class ECPoint(object):
     def __neg__(self):
         if self.is_point_at_infinity():
             return self.point_at_infinity()
-        return ECPoint(self._x, _curve.p - self._y)
+        return EccPoint(self._x, _curve.p - self._y)
 
     def copy(self):
-        return ECPoint(self._x, self._y)
+        return EccPoint(self._x, self._y)
 
     def is_point_at_infinity(self):
         return self._x == 0 and self._y == 0
 
     @staticmethod
     def point_at_infinity():
-        return ECPoint(0, 0)
+        return EccPoint(0, 0)
 
     @property
     def x(self):
@@ -106,7 +107,7 @@ class ECPoint(object):
         y3 -= self._y
         y3 %= _curve.p
 
-        return ECPoint(x3, y3)
+        return EccPoint(x3, y3)
 
     def add(self, point):
         """Return a new point, the addition of this one and another"""
@@ -138,7 +139,7 @@ class ECPoint(object):
         y3 -= self._y
         y3 %= _curve.p
 
-        return ECPoint(x3, y3)
+        return EccPoint(x3, y3)
 
     def multiply(self, scalar):
         """Return a new point, the scalar product of this one"""
@@ -195,3 +196,62 @@ class ECPoint(object):
                 result = result.add(precomp[x])
 
         return result
+
+
+class EccKey(object):
+
+    def __init__(self, **kwargs):
+        """Create a new ECC key
+
+        Do not instantiate this object directly.
+
+        Keywords:
+          curve : string
+            It must be "P-256".
+          d : integer
+            Only for a private key. It must be in the range [1..order-1].
+          point : EccPoint
+            Mandatory for a public key. If provided for a private key,
+            the implementation will NOT check whether it matches ``d``.
+        """
+
+        self.curve = kwargs.pop("curve", None)
+        self._d = kwargs.pop("d", None)
+        self._point = kwargs.pop("point", None)
+
+        if self.curve != "P-256":
+            raise ValueError("Unsupported curve (%s)", self.curve)
+
+        if self._d is None:
+            if self._point is None:
+                raise ValueError("Either private or public ECC component must be specified")
+        else:
+            if not 1 <= self._d < _curve.order:
+                raise ValueError("Invalid ECC private component")
+
+    def has_private(self):
+        return self._d is not None
+
+    @property
+    def d(self):
+        if not self.has_private():
+            raise ValueError("This is not a private ECC key")
+        return self._d
+
+    @property
+    def pointQ(self):
+        if self._point is None:
+            self._point = EccPoint(_curve.Gx, _curve.Gy).multiply(self._d)
+        return self._point
+
+
+def generate(curve, randfunc=None):
+
+    if randfunc is None:
+        randfunc = get_random_bytes
+
+    d = Integer.random_range(min_inclusive=1,
+                             max_exclusive=_curve.order,
+                             randfunc=randfunc)
+
+    return EccKey(curve=curve, d=d)
