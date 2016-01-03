@@ -1,6 +1,6 @@
 # ===================================================================
 #
-# Copyright (c) 2015, Legrandin <helderijs@gmail.com>
+# Copyright (c) 2016, Legrandin <helderijs@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,75 +29,80 @@
 # ===================================================================
 
 import re
+import sys
+import binascii
 
 from Crypto.Util.py3compat import unhexlify
 from Crypto.Util._file_system import pycryptodome_filename
 
-def load_fips_test_module(desc, file_in):
-    """Load and parse NIST test vector file
 
-    Return a list of objects with attributes:
-        "desc" : string
-        "key" : bytes
-        "iv" : bytes
-        "aad" : bytes (possibly empty)
-        "pt" : bytes (possibly empty) or "FAIL" if MAC tag is invalid
-        "ct" : bytes (possibly empty)
-        "tag" : bytes
+def load_tests(dir_comps, file_name, description, conversions):
+    """Load and parse a test vector file
+
+    This function returnis a list of objects, one per group of adjacent
+    KV lines or for a single line in the form "[.*]".
+
+    For a group of lines, the object has one attribute per line.
     """
 
+    file_in = open(pycryptodome_filename(dir_comps, file_name))
+    description = "%s test (%s)" % (description, file_name)
+
     line_number = 0
-    group = 0
     results = []
 
     class TestVector(object):
-        def __init__(self, description):
+        def __init__(self, description, count):
             self.desc = description
+            self.count = count
+            self.others = []
 
     test_vector = None
+    count = 0
+    new_group = True
 
     while True:
         line_number += 1
         line = file_in.readline()
         if not line:
+            if test_vector is not None:
+                results.append(test_vector)
             break
         line = line.strip()
 
         # Skip comments and empty lines
-        if not line or line.startswith("#"):
+        if line.startswith('#') or not line:
+            new_group = True
             continue
 
         if line.startswith("["):
-            if line.startswith("[K"):
-                group += 1
-            continue
-
-        # FAIL is a special token that replaces PT
-        if line == "FAIL":
-            test_vector.pt = "FAIL"
-            continue
-
-        res = re.match("([A-Za-z]+) = ?([0-9A-Fa-f]*)", line)
-        if not res:
-            raise ValueError("Incorrect test vector format (line %d): %s" %
-                             (line_number, line))
-        token = res.group(1).lower()
-        data = res.group(2)
-
-        if token == "count":
             if test_vector is not None:
                 results.append(test_vector)
-            test_vector = TestVector("%s(G%d-#%s)" % (desc, group, data))
+            test_vector = None
+            results.append(line)
+            continue
+
+        if new_group:
+            count += 1
+            new_group = False
+            if test_vector is not None:
+                results.append(test_vector)
+            test_vector = TestVector("%s (#%d)" % (description, count), count)
+
+        res = re.match("([A-Za-z0-9]+) = ?(.*)", line)
+        if not res:
+            test_vector.others += [line]
         else:
-            setattr(test_vector, token, unhexlify(data))
+            token = res.group(1).lower()
+            data = res.group(2).lower()
+
+            conversion = conversions.get(token, None)
+            if conversion is None:
+                if len(data) % 2 != 0:
+                    data = "0" + data
+                setattr(test_vector, token, unhexlify(data))
+            else:
+                setattr(test_vector, token, conversion(data))
 
         # This line is ignored
     return results
-
-
-def load_tests(subdir, file_name, description):
-    abs_file_name = pycryptodome_filename(
-                        ("Crypto", "SelfTest", "Cipher", "test_vectors", subdir),
-                        file_name)
-    return load_fips_test_module("%s test (%s)" % (description, file_name),
-                                 open(abs_file_name))

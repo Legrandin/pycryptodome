@@ -32,17 +32,15 @@
 # ===================================================================
 
 import re
-import copy
 import unittest
 from binascii import unhexlify, hexlify
-from StringIO import StringIO
-from Crypto.Util.py3compat import *
-from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.Util.py3compat import b, tobytes, bord, bchr
 
 from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Signature import DSS
 from Crypto.PublicKey import DSA
 from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.loader import load_tests
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
@@ -55,17 +53,9 @@ def t2l(hexstring):
     ws = hexstring.replace(" ", "").replace("\n", "")
     return long(ws, 16)
 
-#
-# This is a list of FIPS test vectors.
-#
-# Each item is an object with the following members:
-#  desc, P, Q, G, X, Y, Msg, K, Signature [, Result='P'/'F' ]
-#
-# http://csrc.nist.gov/groups/STM/cavp/documents/dss/186-3dsatestvectors.zip
-#
-fips_test_vectors = []
 
-det_dsa_test_vectrs = []
+def load_hash_by_name(hash_name):
+    return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
 
 class TestKey(object):
@@ -75,68 +65,6 @@ class TestKey(object):
 class TestVector(object):
     pass
 
-
-def load_fips_test_module(file_name):
-
-    abs_file_name = pycryptodome_filename(
-                        ("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
-                        file_name)
-
-    file_in = open(abs_file_name, "rt")
-    line = '\n'
-    test_count = 1
-    while line:
-        line = file_in.readline()
-
-        # New domain parameters
-        if line.startswith('[mod'):
-            domain_params = TestVector()
-
-            res = re.match("\[mod = L=(\d+), N=(\d+), ([^\]]+)\]", line)
-            if not res:
-                continue
-            domain_params.hashmod = __import__("Crypto.Hash." +
-                                               res.group(3).replace("-", ""),
-                                               globals(), locals(), ["new"])
-            domain_params.desc = "DSS test # (%s, %s) with " % \
-                                 (res.group(1), res.group(2))
-
-            file_in.readline()        # Eat one empty line
-            line = file_in.readline()
-            for comp in 'P', 'Q', 'G':
-                res = re.match(comp + ' = ([0-9a-fA-F]+)', line)
-                setattr(domain_params, comp, long(res.group(1), 16))
-                line = file_in.readline()
-            continue
-
-        # Read actual test
-        if line.startswith('Msg'):
-            tv = copy.copy(domain_params)
-            tv.desc = tv.desc.replace("#", "#" + str(test_count))
-            for comp in 'Msg', 'X', 'Y', 'K', 'R', 'S':
-                if line == '\n':
-                    line = file_in.readline()
-                res = re.match(comp + ' = ([0-9a-fA-F]+)', line)
-                if not res:
-                    continue
-                if comp in ('X', 'Y'):
-                    setattr(tv, comp, long(res.group(1), 16))
-                else:
-                    setattr(tv, comp, unhexlify(b(res.group(1))))
-                line = '\n'
-            setattr(tv, 'Signature', tv.R + tv.S)
-
-            # Optionally add the validity flag
-            line = file_in.readline()
-            res = re.match("Result = ([PF])", line)
-            if res:
-                setattr(tv, "Result", res.group(1))
-
-            fips_test_vectors.append(tv)
-            test_count += 1
-            continue
-
-        # This line is ignored
 
 class StrRNG:
 
@@ -151,6 +79,7 @@ class StrRNG:
         self._idx += n
         return out
 
+
 class FIPS_DSS_Tests(unittest.TestCase):
 
     # 1st 1024 bit key from SigGen.txt
@@ -162,37 +91,6 @@ class FIPS_DSS_Tests(unittest.TestCase):
 
     def shortDescription(self):
         return "FIPS DSS Tests"
-
-    def _fips_sign(self, test_vectors):
-        """Positive tests for signature generation"""
-
-        for tv in test_vectors:
-            self.description = tv.desc
-            key = DSA.construct([tv.Y, tv.G, tv.P, tv.Q, tv.X], False)
-            hash_obj = tv.hashmod.new(tv.Msg)
-            signer = DSS.new(key, 'fips-186-3', randfunc=StrRNG(tv.K))
-            signature = signer.sign(hash_obj)
-            self.assertEqual(signature, tv.Signature)
-
-    def _fips_verify_positive(self, test_vectors):
-        """Positive tests for signature verification"""
-
-        for tv in test_vectors:
-            self.description = tv.desc
-            key = DSA.construct([tv.Y, tv.G, tv.P, tv.Q], False)
-            hash_obj = tv.hashmod.new(tv.Msg)
-            signer = DSS.new(key, 'fips-186-3')
-            signer.verify(hash_obj, tv.Signature)
-
-    def _fips_verify_negative(self, test_vectors):
-        """Negative tests for signature verification"""
-
-        for tv in test_vectors:
-            self.description = tv.desc
-            key = DSA.construct([tv.Y, tv.G, tv.P, tv.Q], False)
-            hash_obj = tv.hashmod.new(tv.Msg)
-            signer = DSS.new(key, 'fips-186-3')
-            self.assertRaises(ValueError, signer.verify, hash_obj, tv.Signature)
 
     def test4(self):
         """Verify that unapproved hashes are rejected"""
@@ -246,48 +144,67 @@ class FIPS_DSS_Tests(unittest.TestCase):
         self.failIf(signer.can_sign())
 
 
-def add_fips_tests(slow_tests=False):
-    """Add all FIPS tests to FIPS_DSS_Tests class.
+test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
+                                 "FIPS_186_3_SigVer.rsp",
+                                 "Signature Verification 186-3",
+                                 {'result':lambda x: x})
 
-    The FIPS set is made up by 600 test vectors. In order to provide
-    a meaningful progress reports, we create one test method (a "dot")
-    every 10 test vectors."""
+for idx, tv in enumerate(test_vectors_verify):
 
-    load_fips_test_module("FIPS_186_3_SigGen.txt")
-    load_fips_test_module("FIPS_186_3_SigVer.rsp")
+    if isinstance(tv, basestring):
+        res = re.match("\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+        hash_name = res.group(3).replace("-", "")
+        hash_module = load_hash_by_name(hash_name)
+        continue
 
-    def chunks(sequence, max_chunk_size):
-        for i in xrange(0, len(sequence), max_chunk_size):
-            yield sequence[i:i + max_chunk_size]
+    if hasattr(tv, "p"):
+        modulus = tv.p
+        generator = tv.g
+        suborder = tv.q
+        continue
 
-    def add_method(old_method_name, index, param):
-        new_method_name = "test%s_%d" % (old_method_name, index)
-        def new_method(self):
-            return getattr(FIPS_DSS_Tests, old_method_name)(self, param)
-        setattr(FIPS_DSS_Tests, new_method_name, new_method)
+    hash_obj = hash_module.new(tv.msg)
+    key = DSA.construct([bytes_to_long(x) for x in tv.y, generator, modulus, suborder], False)
+    verifier = DSS.new(key, 'fips-186-3')
 
-    # Add methods (tests) to exercise signature creation
-    sign_tv = [ x for x in fips_test_vectors if hasattr(x, "K") ]
-    for i, sign_tv_10 in enumerate(chunks(sign_tv, 10)):
-        add_method("_fips_sign", i, sign_tv_10)
-        if not slow_tests:
-            break
+    def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
+        verifier.verify(hash_obj, signature)
 
-    # Add methods (test) to exercise successful signature verification
-    verify_pos_tv = [ x for x in fips_test_vectors
-                        if getattr(x, "Result", "P") == "P" ]
-    for i, verify_pos_tv_10 in enumerate(chunks(verify_pos_tv, 10)):
-        add_method("_fips_verify_positive", i, sign_tv_10)
-        if not slow_tests:
-            break
+    def negative_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
+        self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
-    # Add methods (test) to exercise failed signature verification
-    verify_neg_tv = [ x for x in fips_test_vectors
-                        if getattr(x, "Result", None) == "F" ]
-    for i, verify_neg_tv_10 in enumerate(chunks(verify_neg_tv, 10)):
-        add_method("_fips_verify_negative", i, verify_neg_tv_10)
-        if not slow_tests:
-            break
+    if tv.result == 'p':
+        setattr(FIPS_DSS_Tests, "test_verify_positive_%d" % idx, positive_test)
+    else:
+        setattr(FIPS_DSS_Tests, "test_verify_negative_%d" % idx, negative_test)
+
+
+test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
+                               "FIPS_186_3_SigGen.txt",
+                               "Signature Creation 186-3",
+                               {})
+
+for idx, tv in enumerate(test_vectors_sign):
+
+    if isinstance(tv, basestring):
+        res = re.match("\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+        hash_name = res.group(3).replace("-", "")
+        hash_module = load_hash_by_name(hash_name)
+        continue
+
+    if hasattr(tv, "p"):
+        modulus = tv.p
+        generator = tv.g
+        suborder = tv.q
+        continue
+
+    hash_obj = hash_module.new(tv.msg)
+    key = DSA.construct([bytes_to_long(x) for x in tv.y, generator, modulus, suborder, tv.x], False)
+    signer = DSS.new(key, 'fips-186-3', randfunc=StrRNG(tv.k))
+
+    def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
+        self.assertEqual(signer.sign(hash_obj), signature)
+    setattr(FIPS_DSS_Tests, "test_sign_%d" % idx, new_test)
 
 
 class Det_DSA_Tests(unittest.TestCase):
@@ -569,8 +486,6 @@ class Det_DSA_Tests(unittest.TestCase):
 
 
 def get_tests(config={}):
-    add_fips_tests(config.get("slow_tests", True))
-
     tests = []
     tests += list_test_cases(FIPS_DSS_Tests)
     tests += list_test_cases(Det_DSA_Tests)

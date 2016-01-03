@@ -33,7 +33,7 @@
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.SelfTest.Hash.loader import load_tests
+from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 
 from StringIO import StringIO
@@ -137,64 +137,105 @@ class KeccakTest(unittest.TestCase):
 
 
 class KeccakVectors(unittest.TestCase):
-
-    def test_short_224(self):
-        test_vectors = load_tests("keccak", "ShortMsgKAT_224.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=224, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
-
-    def test_short_256(self):
-        test_vectors = load_tests("keccak", "ShortMsgKAT_256.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=256, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
-
-    def test_short_384(self):
-        test_vectors = load_tests("keccak", "ShortMsgKAT_384.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=384, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
-
-    def test_short_512(self):
-        test_vectors = load_tests("keccak", "ShortMsgKAT_512.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=512, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
-
-    def test_long_224(self):
-        test_vectors = load_tests("keccak", "LongMsgKAT_224.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=224, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
-
-    def test_long_256(self):
-        test_vectors = load_tests("keccak", "LongMsgKAT_256.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=256, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
-
-    def test_long_384(self):
-        test_vectors = load_tests("keccak", "LongMsgKAT_384.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=384, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
-
-    def test_long_512(self):
-        test_vectors = load_tests("keccak", "LongMsgKAT_512.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = keccak.new(digest_bits=512, data=data)
-            self.assertEqual(hobj.hexdigest(), result)
+    pass
 
     # TODO: add ExtremelyLong tests
+
+
+test_vectors_224 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "ShortMsgKAT_224.txt",
+                                "Short Messages KAT 224",
+                                { "len" : lambda x: int(x) } )
+
+test_vectors_224 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "LongMsgKAT_224.txt",
+                                "Long Messages KAT 224",
+                                { "len" : lambda x: int(x) } )
+
+for idx, tv in enumerate(test_vectors_224):
+    if tv.len == 0:
+        data = b("")
+    else:
+        data = tobytes(tv.msg)
+
+    def new_test(self, data=data, result=tv.md):
+        hobj = keccak.new(digest_bits=224, data=data)
+        self.assertEqual(hobj.digest(), result)
+
+    setattr(KeccakVectors, "test_224_%d" % idx, new_test)
+
+# ---
+
+test_vectors_256 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "ShortMsgKAT_256.txt",
+                                "Short Messages KAT 256",
+                                { "len" : lambda x: int(x) } )
+
+test_vectors_256 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "LongMsgKAT_256.txt",
+                                "Long Messages KAT 256",
+                                { "len" : lambda x: int(x) } )
+
+for idx, tv in enumerate(test_vectors_256):
+    if tv.len == 0:
+        data = b("")
+    else:
+        data = tobytes(tv.msg)
+
+    def new_test(self, data=data, result=tv.md):
+        hobj = keccak.new(digest_bits=256, data=data)
+        self.assertEqual(hobj.digest(), result)
+
+    setattr(KeccakVectors, "test_256_%d" % idx, new_test)
+
+
+# ---
+
+test_vectors_384 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "ShortMsgKAT_384.txt",
+                                "Short Messages KAT 384",
+                                { "len" : lambda x: int(x) } )
+
+test_vectors_384 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "LongMsgKAT_384.txt",
+                                "Long Messages KAT 384",
+                                { "len" : lambda x: int(x) } )
+
+for idx, tv in enumerate(test_vectors_384):
+    if tv.len == 0:
+        data = b("")
+    else:
+        data = tobytes(tv.msg)
+
+    def new_test(self, data=data, result=tv.md):
+        hobj = keccak.new(digest_bits=384, data=data)
+        self.assertEqual(hobj.digest(), result)
+
+    setattr(KeccakVectors, "test_384_%d" % idx, new_test)
+
+# ---
+
+test_vectors_512 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "ShortMsgKAT_512.txt",
+                                "Short Messages KAT 512",
+                                { "len" : lambda x: int(x) } )
+
+test_vectors_512 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+                                "LongMsgKAT_512.txt",
+                                "Long Messages KAT 512",
+                                { "len" : lambda x: int(x) } )
+
+for idx, tv in enumerate(test_vectors_512):
+    if tv.len == 0:
+        data = b("")
+    else:
+        data = tobytes(tv.msg)
+
+    def new_test(self, data=data, result=tv.md):
+        hobj = keccak.new(digest_bits=512, data=data)
+        self.assertEqual(hobj.digest(), result)
+
+    setattr(KeccakVectors, "test_512_%d" % idx, new_test)
 
 
 def get_tests(config={}):

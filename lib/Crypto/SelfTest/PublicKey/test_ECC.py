@@ -1,7 +1,7 @@
 import unittest
 import time
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.PublicKey.loader import load_tests
+from Crypto.SelfTest.loader import load_tests
 
 from Crypto.PublicKey.ECC import EccPoint, _curve, EccKey, generate
 
@@ -94,8 +94,12 @@ class TestEccPoint_PAI(unittest.TestCase):
     pointG = EccPoint(_curve.Gx, _curve.Gy)
 
 
-tv_pai = load_tests("ECC", "point-at-infinity.org-P256.txt",
-                    "P-256 tests from point-at-infinity.org")
+tv_pai = load_tests(("Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC"),
+                    "point-at-infinity.org-P256.txt",
+                    "P-256 tests from point-at-infinity.org",
+                    { "k" : lambda k: int(k),
+                      "x" : lambda x: int(x, 16),
+                      "y" : lambda y: int(y, 16)} )
 assert(tv_pai)
 for tv in tv_pai:
     def new_test(self, scalar=tv.k, x=tv.x, y=tv.y):

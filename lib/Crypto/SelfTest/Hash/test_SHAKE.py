@@ -33,7 +33,7 @@
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.SelfTest.Hash.loader import load_tests
+from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 
 from StringIO import StringIO
@@ -89,26 +89,45 @@ class SHAKE256Test(SHAKETest):
 
 
 class SHAKEVectors(unittest.TestCase):
+    pass
 
-    def test_short_128(self):
-        test_vectors = load_tests("SHA3", "ShortMsgKAT_SHAKE128.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = SHAKE128.new(data=data)
-            assert(len(result) % 2 == 0)
-            digest = hobj.read(len(result)//2)
-            hexdigest = "".join(["%02x" % bord(x) for x in digest])
-            self.assertEqual(hexdigest, result)
 
-    def test_short_256(self):
-        test_vectors = load_tests("SHA3", "ShortMsgKAT_SHAKE256.txt")
-        for result, data, desc in test_vectors:
-            data = tobytes(data)
-            hobj = SHAKE256.new(data=data)
-            assert(len(result) % 2 == 0)
-            digest = hobj.read(len(result)//2)
-            hexdigest = "".join(["%02x" % bord(x) for x in digest])
-            self.assertEqual(hexdigest, result)
+test_vectors_128 = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA3"),
+                               "ShortMsgKAT_SHAKE128.txt",
+                               "Short Messages KAT SHAKE128",
+                               { "len" : lambda x: int(x) } )
+
+for idx, tv in enumerate(test_vectors_128):
+    if tv.len == 0:
+        data = b("")
+    else:
+        data = tobytes(tv.msg)
+
+    def new_test(self, data=data, result=tv.md):
+        hobj = SHAKE128.new(data=data)
+        digest = hobj.read(len(result))
+        self.assertEqual(digest, result)
+
+    setattr(SHAKEVectors, "test_128_%d" % idx, new_test)
+
+
+test_vectors_256 = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA3"),
+                               "ShortMsgKAT_SHAKE256.txt",
+                               "Short Messages KAT SHAKE256",
+                               { "len" : lambda x: int(x) } )
+
+for idx, tv in enumerate(test_vectors_256):
+    if tv.len == 0:
+        data = b("")
+    else:
+        data = tobytes(tv.msg)
+
+    def new_test(self, data=data, result=tv.md):
+        hobj = SHAKE256.new(data=data)
+        digest = hobj.read(len(result))
+        self.assertEqual(digest, result)
+
+    setattr(SHAKEVectors, "test_256_%d" % idx, new_test)
 
 
 def get_tests(config={}):

@@ -23,7 +23,9 @@
 """Self-test suite for Crypto.Hash.SHA3_384"""
 
 import unittest
-from Crypto.SelfTest.Hash.loader import load_tests
+from binascii import hexlify
+
+from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 from StringIO import StringIO
 from Crypto.Hash import SHA3_384 as SHA3
@@ -55,7 +57,17 @@ def get_tests(config={}):
 
     tests = []
 
-    test_data = load_tests("SHA3", "ShortMsgKAT_SHA3-384.txt")
+    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA3"),
+                                "ShortMsgKAT_SHA3-384.txt",
+                                "KAT SHA-3 384",
+                                { "len" : lambda x: int(x) } )
+
+    test_data = []
+    for tv in test_vectors:
+        if tv.len == 0:
+            tv.msg = b("")
+        test_data.append((hexlify(tv.md), tv.msg, tv.desc))
+
     tests += make_hash_tests(SHA3, "SHA3_384", test_data,
                              digest_size=SHA3.digest_size,
                              oid="2.16.840.1.101.3.4.2.9")
