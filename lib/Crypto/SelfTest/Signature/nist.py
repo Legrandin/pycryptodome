@@ -29,15 +29,15 @@
 # ===================================================================
 
 import re
-import os.path
 from binascii import unhexlify
 
 from Crypto.Util.py3compat import tobytes
-
+from Crypto.Util._file_system import pycryptodome_filename
 
 def open_fips_test_file(dir_name, file_name):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_file_name = os.path.join(base_dir, "test_vectors", dir_name, file_name)
+    abs_file_name = pycryptodome_filename(
+                        ("Crypto", "SelfTest", "Signature", "test_vectors", dir_name),
+                        file_name)
     return open(abs_file_name, "rt")
 
 

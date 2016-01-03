@@ -32,6 +32,8 @@ import re
 import sys
 import binascii
 
+from Crypto.Util._file_system import pycryptodome_filename
+
 
 def load_test_module(desc, file_in):
     """Load and parse a test vector file
@@ -88,8 +90,7 @@ def load_test_module(desc, file_in):
 
 
 def load_tests(subdir, file_name, description):
-    import os.path
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_file_name = os.path.join(base_dir, "test_vectors", subdir, file_name)
+    abs_file_name = pycryptodome_filename(
+                        ("Crypto", "SelfTest", "PublicKey", "test_vectors", subdir),
+                        file_name)
     return load_test_module("%s test (%s)" % (description, file_name), open(abs_file_name))

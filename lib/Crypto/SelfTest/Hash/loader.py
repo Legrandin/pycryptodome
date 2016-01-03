@@ -35,11 +35,10 @@ import re
 import sys
 import binascii
 
-# Fix for Python 3.[12]
-if sys.version_info[0] == 3 and sys.version_info[1] <= 2:
-    unhexlify = lambda x: binascii.unhexlify(x.encode("latin-1"))
-else:
-    from binascii import unhexlify
+from Crypto.Util.py3compat import unhexlify
+
+from Crypto.Util._file_system import pycryptodome_filename
+
 
 def load_fips_test_module(desc, file_in):
     """Return a list of tuples (desc, digest, messages)"""
@@ -100,10 +99,9 @@ def load_fips_test_module(desc, file_in):
 
 
 def load_tests(subdir, file_name):
-    import os.path
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_file_name = os.path.join(base_dir, "test_vectors", subdir, file_name)
+    abs_file_name = pycryptodome_filename(
+                        ("Crypto", "SelfTest", "Hash", "test_vectors", subdir),
+                        file_name)
     return load_fips_test_module("Keccak test", open(abs_file_name))
 
 if __name__ == '__main__':

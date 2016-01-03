@@ -28,10 +28,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import os
 import imp
 
 from Crypto.Util.py3compat import byte_string
+from Crypto.Util._file_system import pycryptodome_filename
 
 try:
     from cffi import FFI
@@ -148,20 +148,6 @@ class SmartPointer(object):
             self._raw_pointer = None
 
 
-def _get_mod_name(name, c_extension):
-
-    comps = name.split(".")
-    if comps[0] != "Crypto":
-        raise ValueError("Only available for modules under 'Crypto'")
-
-    comps = comps[1:-1] + [comps[-1] + c_extension]
-
-    util_lib, _ = os.path.split(os.path.abspath(__file__))
-    root_lib = os.path.join(util_lib, "..")
-
-    return os.path.join(root_lib, *comps)
-
-
 def load_pycryptodome_raw_lib(name, cdecl):
     """Load a shared library and return a handle to it.
 
@@ -171,10 +157,12 @@ def load_pycryptodome_raw_lib(name, cdecl):
     @cdecl, the C function declarations.
     """
 
+    split = name.split(".")
+    dir_comps, basename = split[:-1], split[-1]
     for ext, mod, typ in imp.get_suffixes():
         if typ == imp.C_EXTENSION:
             try:
-                return load_lib(_get_mod_name(name, ext), cdecl)
+                return load_lib(pycryptodome_filename(dir_comps, basename + ext), cdecl)
             except OSError:
                 pass
     raise OSError("Cannot load native module '%s'" % name)

@@ -109,9 +109,9 @@ except OSError:
         c_ulong = c_ulonglong
     # Try to load private MPIR lib first (wheel)
     try:
-        import os.path
-        this_dir, _ = os.path.split(os.path.abspath(__file__))
-        mpir_dll = os.path.join(this_dir, "mpir.dll")
+        from Crypto.Util._file_system import pycryptodome_filename
+
+        mpir_dll = pycryptodome_filename(("Crypto", "Math"), "mpir.dll")
         lib = load_lib(mpir_dll, gmp_defs)
     except OSError:
         lib = load_lib("mpir", gmp_defs)

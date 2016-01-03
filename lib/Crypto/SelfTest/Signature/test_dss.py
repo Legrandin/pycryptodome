@@ -37,6 +37,7 @@ import unittest
 from binascii import unhexlify, hexlify
 from StringIO import StringIO
 from Crypto.Util.py3compat import *
+from Crypto.Util._file_system import pycryptodome_filename
 
 from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Signature import DSS
@@ -76,10 +77,10 @@ class TestVector(object):
 
 
 def load_fips_test_module(file_name):
-    import os.path
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_file_name = os.path.join(base_dir, "test_vectors", "DSA", file_name)
+    abs_file_name = pycryptodome_filename(
+                        ("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
+                        file_name)
 
     file_in = open(abs_file_name, "rt")
     line = '\n'
