@@ -64,7 +64,8 @@ def _random(**kwargs):
 
       randfunc : callable
         A function that returns a random byte string. The length of the
-        byte string is passed as parameter.
+        byte string is passed as parameter. Optional.
+        If not provided (or ``None``), randomness is read from the system RNG.
 
     :Return: a Integer object
     """
@@ -106,6 +107,7 @@ def _random_range(**kwargs):
       randfunc : callable
         A function that returns a random byte string. The length of the
         byte string is passed as parameter. Optional.
+        If not provided (or ``None``), randomness is read from the system RNG.
     :Returns:
         An Integer randomly taken in the given interval.
     """

@@ -32,7 +32,7 @@
 # ===================================================================
 
 """
-Digital Signature Standard (DSS), as specified in `FIPS PUB 186`__.
+Digital Signature Standard (DSS), as specified in `FIPS PUB 186-3`__.
 
 A sender signs a message in the following way:
 
@@ -53,9 +53,9 @@ The receiver can verify authenticity of the message:
         >>> verifier = DSS.new(key, 'fips-186-3')
         >>> try:
         >>>     verifier.verify(h, signature):
-        >>>     print "The signature is authentic."
+        >>>     print "The message is authentic."
         >>> except ValueError:
-        >>>     print "The signature is not authentic."
+        >>>     print "The message is not authentic."
 
 .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
 
@@ -63,81 +63,40 @@ The receiver can verify authenticity of the message:
 
 __all__ = ['new', 'DSS_SigScheme']
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import bchr, b
 
-from Crypto import Random
-from Crypto.Random.random import StrongRandom
+
 from Crypto.Util.asn1 import DerSequence
 from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
+from Crypto.Math.Numbers import Integer
 
 from Crypto.Hash import HMAC
 
+
 def hash_is_shs(msg_hash):
     """Return True if hash is SHA-1, SHA-2 or SHA-3"""
-    return msg_hash.oid == "1.3.14.3.2.26" or \
-           msg_hash.oid.startswith("2.16.840.1.101.3.4.2.")
+    return (msg_hash.oid == "1.3.14.3.2.26" or
+            msg_hash.oid.startswith("2.16.840.1.101.3.4.2."))
+
 
 class DSS_SigScheme(object):
     """This signature scheme can perform DSS signature or verification."""
 
     #: List of L (bit length of p) and N (bit length of q) combinations
-    #: that are allowed by FIPS 186-3.
-    fips_186_3_ln = ((1024, 160), (2048, 224), (2048, 256), (3072, 256))
+    #: that are allowed by FIPS 186-3. The security level is provided in
+    #: Table 2 of FIPS 800-57 (rev3).
+    _fips_186_3_L_N = (
+                        (1024, 160),    # 80 bits  (SHA-1 or stronger)
+                        (2048, 224),    # 112 bits (SHA-224 or stronger)
+                        (2048, 256),    # 128 bits (SHA-256 or stronger)
+                        (3072, 256)     # 256 bits (SHA-512)
+                      )
 
-    def __init__(self, key, mode, encoding='binary', randfunc=None):
-        """Initialize this Digital Signature Standard object.
+    def __init__(self, key, mode, encoding, randfunc):
+        """Create a new Digital Signature Standard (DSS) object.
 
-        :Parameters:
-          key : a DSA key object
-            If the key has the private half, both signature and
-            verification are possible.
-            If it only has the public half, verification is possible
-            but not signature generation.
-
-            Let *L* and *N* be the bit lengths of the modules *p* and *q*.
-
-            If mode is *'fips-186-3'*,
-            the combination *(L,N)* must apper in the following list,
-            in compliance to section 4.2 of `FIPS-186`__:
-
-            - (1024, 160)
-            - (2048, 224)
-            - (2048, 256)
-            - (3072, 256)
-
-            Note that the FIPS specification also defines how the key
-            must be generated. PyCrypto does not generate DSA keys
-            in a FIPS compliant way.
-
-          mode : string
-            The parameter can take these values:
-
-            - *'fips-186-3'*. The signature generation is carried out
-              according to `FIPS-186`__: the nonce *k* is taken from the RNG.
-            - *'deterministic-rfc6979'*. The signature generation
-              process does not rely on a random generator.
-              See RFC6979_.
-
-          encoding : string
-            How the signature is encoded. This value determines the output of
-            ``sign`` and the input of ``verify``.
-
-            The following values are accepted:
-
-            - *'binary'*, the signature is the raw concatenation
-              of *r* and *s*. The size in bytes of the signature is always
-              two times the size of *q*.
-
-            - *'der'*, the signature is a DER encoded SEQUENCE with two
-              INTEGERs, *r* and *s*. The size of the signature is variable.
-
-          randfunc : callable
-            The source of randomness. If `None`, the internal RNG is used.
-            It is not used under mode *'deterministic-rfc6979'*.
-
-        .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
-        .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
-        .. _RFC6979: http://tools.ietf.org/html/rfc6979
+        Do not instantiate this object directly,
+        use `Crypto.Signature.DSS.new` instead.
         """
 
         # The goal of the 'mode' parameter is to avoid to
@@ -149,25 +108,23 @@ class DSS_SigScheme(object):
         self._deterministic = False
         if mode == 'deterministic-rfc6979':
             self._deterministic = True
-        elif mode not in ('fips-186-3', ):
+        elif mode != 'fips-186-3':
             raise ValueError("Unknown DSS mode '%s'" % mode)
 
         if encoding not in ('binary', 'der'):
             raise ValueError("Unknown encoding '%s'" % encoding)
 
-        if randfunc is None:
-            randfunc = Random.get_random_bytes
-
         self._encoding = encoding
         self._randfunc = randfunc
 
         # Verify that lengths of p and q are standard compliant
-        self._l, self._n = [(bit_size(x) + 7) >> 3 for x in (key.p, key.q)]
+        L, self._N = [Integer(x).size_in_bits() for x in (key.p, key.q)]
+        self._N_bytes = (self._N - 1) // 8 + 1
         if not self._deterministic:
-            if (self._l * 8, self._n * 8) not in self.fips_186_3_ln:
-                raise ValueError("L/N (%d, %d) is not compliant"
-                                 " to FIPS 186-3" %
-                                 (self._l, self._n))
+            if (L, self._N) not in self._fips_186_3_L_N:
+                error = ("L/N (%d, %d) is not compliant to FIPS 186-3"
+                        % (L, self._N))
+                raise ValueError(error)
         self._key = key
 
     def can_sign(self):
@@ -191,7 +148,7 @@ class DSS_SigScheme(object):
 
         if not (0 < int_mod_q < self._key.q):
             raise ValueError("Wrong input to int2octets()")
-        return long_to_bytes(int_mod_q, self._n)
+        return long_to_bytes(int_mod_q, self._N_bytes)
 
     def _bits2octets(self, bstr):
         """See 2.3.4 in RFC6979"""
@@ -235,7 +192,7 @@ class DSS_SigScheme(object):
             mask_t = b("")
 
             # Step h.B
-            while len(mask_t) < self._n:
+            while len(mask_t) < self._N_bytes:
                 mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
                 mask_t += mask_v
 
@@ -252,7 +209,10 @@ class DSS_SigScheme(object):
             The object belongs to the `Crypto.Hash` package.
 
             Under mode *'fips-186-3'*, the hash must be a FIPS
-            approved secure hash (SHA-1 or a member of the SHA-2 family).
+            approved secure hash (SHA-1 or a member of the SHA-2 family),
+            of cryptographic strength appropriate for the DSA key.
+            For instance, a 3072/256 DSA key can only be used
+            in combination with SHA-512.
 
         :Return: The signature encoded as a byte string.
         :Raise ValueError:
@@ -265,30 +225,27 @@ class DSS_SigScheme(object):
         if self._deterministic:
             nonce = self._compute_nonce(msg_hash)
         else:
-            if self._n > msg_hash.digest_size * 8:
-                raise ValueError("Hash is not long enough")
-
             if not hash_is_shs(msg_hash):
                 raise ValueError("Hash does not belong to SHS")
 
-            rng = StrongRandom(randfunc=self._randfunc)
-            nonce = rng.randint(1, self._key.q - 1)
+            nonce = Integer.random_range(min_inclusive=1,
+                                         max_exclusive=self._key.q,
+                                         randfunc=self._randfunc)
 
         # Perform signature using the raw API
-        z = bytes_to_long(msg_hash.digest()[:self._n])
+        z = bytes_to_long(msg_hash.digest()[:self._N_bytes])
         sig_pair = self._key._sign(z, nonce)
 
         # Encode the signature into a single byte string
         if self._encoding == 'binary':
-            output = b("").join([long_to_bytes(x, self._n)
+            output = b("").join([long_to_bytes(x, self._N_bytes)
                                  for x in sig_pair])
         else:
             # Dss-sig  ::=  SEQUENCE  {
             #               r       OCTET STRING,
             #               s       OCTET STRING
             # }
-            der_seq = DerSequence(sig_pair)
-            output = der_seq.encode()
+            output = DerSequence(sig_pair).encode()
 
         return output
 
@@ -304,7 +261,10 @@ class DSS_SigScheme(object):
             This is an object belonging to the `Crypto.Hash` module.
 
             Under mode *'fips-186-3'*, the hash must be a FIPS
-            approved secure hash (SHA-1 or a member of the SHA-2 family).
+            approved secure hash (SHA-1 or a member of the SHA-2 family),
+            of cryptographic strength appropriate for the DSA key.
+            For instance, a 3072/256 DSA key can only be used in
+            combination with SHA-512.
 
           signature : byte string
             The signature that needs to be validated.
@@ -314,32 +274,28 @@ class DSS_SigScheme(object):
         """
 
         if not self._deterministic:
-            if self._n > msg_hash.digest_size * 8:
-                raise ValueError("Hash is not long enough")
-
             if not hash_is_shs(msg_hash):
                 raise ValueError("Hash does not belong to SHS")
 
         if self._encoding == 'binary':
-            if len(signature) != (2 * self._n):
-                raise ValueError("The signature is not authentic")
+            if len(signature) != (2 * self._N_bytes):
+                raise ValueError("The signature is not authentic (length)")
             r_prime, s_prime = [bytes_to_long(x)
-                                for x in (signature[:self._n],
-                                          signature[self._n:])]
+                                for x in (signature[:self._N_bytes],
+                                          signature[self._N_bytes:])]
         else:
             try:
-                der_seq = DerSequence()
-                der_seq.decode(signature)
+                der_seq = DerSequence().decode(signature)
             except (ValueError, IndexError):
-                raise ValueError("The signature is not authentic")
+                raise ValueError("The signature is not authentic (DER)")
             if len(der_seq) != 2 or not der_seq.hasOnlyInts():
-                raise ValueError("The signature is not authentic")
+                raise ValueError("The signature is not authentic (DER content)")
             r_prime, s_prime = der_seq[0], der_seq[1]
 
         if not (0 < r_prime < self._key.q) or not (0 < s_prime < self._key.q):
-            raise ValueError("The signature is not authentic")
+            raise ValueError("The signature is not authentic (d)")
 
-        z = bytes_to_long(msg_hash.digest()[:self._n])
+        z = bytes_to_long(msg_hash.digest()[:self._N_bytes])
         result = self._key._verify(z, (r_prime, s_prime))
         if not result:
             raise ValueError("The signature is not authentic")
