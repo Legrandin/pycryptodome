@@ -78,15 +78,6 @@ class TestEccPoint_NIST(unittest.TestCase):
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
-    def _test_bench(self):
-        d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
-
-        start = time.time()
-        count = 30
-        for x in xrange(count):
-            self.pointS.multiply(d)
-        print (time.time() - start) / count * 1000, "ms"
-
 
 class TestEccPoint_PAI(unittest.TestCase):
     """Test vectors from http://point-at-infinity.org/ecc/nisttv"""

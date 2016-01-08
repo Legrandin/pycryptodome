@@ -90,12 +90,13 @@ class EccPoint(object):
         if self._y == 0:
             return self.point_at_infinity()
 
-        #common = (pow(self._x, 2, _curve.p) * 3 - 3) * (self._y << 1).inverse(_curve.p) % _curve.p
+        # common = (pow(self._x, 2, _curve.p) * 3 - 3) * (self._y << 1).inverse(_curve.p) % _curve.p
         common = pow(self._x, 2, _curve.p)
         common *= 3
         common -= 3
         common *= (self._y << 1).inverse(_curve.p)
         common %= _curve.p
+        # x3 = (pow(common, 2, _curve.p) - 2 * self._x) % _curve.p
         x3 = pow(common, 2, _curve.p)
         x3 -= self._x
         x3 -= self._x
@@ -128,6 +129,7 @@ class EccPoint(object):
         common = point._y - self._y
         common *= (point._x - self._x).inverse(_curve.p)
         common %= _curve.p
+        # x3 = (pow(common, 2, _curve.p) - self._x - point._x) % _curve.p
         x3 = pow(common, 2, _curve.p)
         x3 -= self._x
         x3 -= point._x
@@ -140,6 +142,7 @@ class EccPoint(object):
         y3 %= _curve.p
 
         return EccPoint(x3, y3)
+
 
     def multiply(self, scalar):
         """Return a new point, the scalar product of this one"""
@@ -246,6 +249,15 @@ class EccKey(object):
 
 
 def generate(curve, randfunc=None):
+    """Generate a new private key on the given curve.
+
+    :Parameters:
+      curve : string
+        It must be "P-256".
+      randfunc : callable
+        The RNG to read randomness from.
+        If ``None``, the system source is used.
+    """
 
     if randfunc is None:
         randfunc = get_random_bytes
@@ -255,3 +267,15 @@ def generate(curve, randfunc=None):
                              randfunc=randfunc)
 
     return EccKey(curve=curve, d=d)
+
+
+if __name__ == "__main__":
+    import time
+    d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
+
+    point = generate("P-256").pointQ
+    start = time.time()
+    count = 30
+    for x in xrange(count):
+        point.multiply(d)
+    print (time.time() - start) / count * 1000, "ms"
