@@ -486,7 +486,7 @@ class Det_DSA_Tests(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(FIPS_DSS_Tests)
-    #tests += list_test_cases(Det_DSA_Tests)
+    tests += list_test_cases(Det_DSA_Tests)
     return tests
 
 
