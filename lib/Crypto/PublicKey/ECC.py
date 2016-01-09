@@ -233,6 +233,7 @@ class EccKey(object):
             if self._point is None:
                 raise ValueError("Either private or public ECC component must be specified")
         else:
+            self._d = Integer(self._d)
             if not 1 <= self._d < _curve.order:
                 raise ValueError("Invalid ECC private component")
 

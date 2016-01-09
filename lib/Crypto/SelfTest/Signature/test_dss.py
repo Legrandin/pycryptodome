@@ -89,7 +89,7 @@ class FIPS_DSA_Tests(unittest.TestCase):
     X = 0xc53eae6d45323164c7d07af5715703744a63fc3aL
     Y = 0x313fd9ebca91574e1c2eebe1517c57e0c21b0209872140c5328761bbb2450b33f1b18b409ce9ab7c4cd8fda3391e8e34868357c199e16a6b2eba06d6749def791d79e95d3a4d09b24c392ad89dbf100995ae19c01062056bb14bce005e8731efde175f95b975089bdcdaea562b32786d96f5a31aedf75364008ad4fffebb970bL
 
-    key_pub  = DSA.construct((Y, G, P, Q))
+    key_pub = DSA.construct((Y, G, P, Q))
     key_priv = DSA.construct((Y, G, P, Q, X))
 
     def shortDescription(self):
@@ -153,7 +153,7 @@ class FIPS_DSA_Tests(unittest.TestCase):
 test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
                                  "FIPS_186_3_SigVer.rsp",
                                  "Signature Verification 186-3",
-                                 {'result':lambda x: x})
+                                 {'result' : lambda x: x})
 
 for idx, tv in enumerate(test_vectors_verify):
 
@@ -216,7 +216,7 @@ for idx, tv in enumerate(test_vectors_sign):
 class FIPS_ECDSA_Tests(unittest.TestCase):
 
     key_priv = ECC.generate(curve="P-256")
-    key_pub  = key_priv.public_key()
+    key_pub = key_priv.public_key()
 
     def shortDescription(self):
         return "FIPS ECDSA Tests"
@@ -249,6 +249,62 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
 
         signer = DSS.new(self.key_pub, 'fips-186-3')
         self.failIf(signer.can_sign())
+
+
+test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "ECDSA"),
+                                 "SigVer.rsp",
+                                 "ECDSA Signature Verification 186-3",
+                                 {'result': lambda x: x,
+                                  'qx': lambda x: int(x, 16),
+                                  'qy': lambda x: int(x, 16),
+                                  })
+
+for idx, tv in enumerate(test_vectors_verify):
+
+    if isinstance(tv, basestring):
+        res = re.match("\[P-256,(SHA-[0-9]+)\]", tv)
+        assert res
+        hash_name = res.group(1).replace("-", "")
+        hash_module = load_hash_by_name(hash_name)
+        continue
+
+    hash_obj = hash_module.new(tv.msg)
+    key = ECC.construct(curve="P-256", point_x=tv.qx, point_y=tv.qy)
+    verifier = DSS.new(key, 'fips-186-3')
+
+    def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
+        verifier.verify(hash_obj, signature)
+
+    def negative_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
+        self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
+
+    if tv.result.startswith('p'):
+        setattr(FIPS_ECDSA_Tests, "test_verify_positive_%d" % idx, positive_test)
+    else:
+        setattr(FIPS_ECDSA_Tests, "test_verify_negative_%d" % idx, negative_test)
+
+
+test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "ECDSA"),
+                               "SigGen.txt",
+                               "ECDSA Signature Verification 186-3",
+                               {'d': lambda x: int(x, 16)})
+
+for idx, tv in enumerate(test_vectors_sign):
+
+    if isinstance(tv, basestring):
+        res = re.match("\[P-256,(SHA-[0-9]+)\]", tv)
+        assert res
+        hash_name = res.group(1).replace("-", "")
+        hash_module = load_hash_by_name(hash_name)
+        continue
+
+    hash_obj = hash_module.new(tv.msg)
+    key = ECC.construct(curve="P-256", d=tv.d)
+    signer = DSS.new(key, 'fips-186-3', randfunc=StrRNG(tv.k))
+
+    def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
+        self.assertEqual(signer.sign(hash_obj), signature)
+    setattr(FIPS_ECDSA_Tests, "test_sign_%d" % idx, new_test)
 
 
 class Det_DSA_Tests(unittest.TestCase):
