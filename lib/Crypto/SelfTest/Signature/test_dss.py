@@ -585,11 +585,29 @@ class Det_DSA_Tests(unittest.TestCase):
             self.assertEqual(sig.result, result)
 
 
+class Det_ECDSA_Tests(unittest.TestCase):
+
+    key_priv = ECC.generate(curve="P-256")
+    key_pub = key_priv.public_key()
+
+    def shortDescription(self):
+        return "Deterministic ECDSA Tests"
+
+    def test_loopback(self):
+        hashed_msg = SHA512.new(b("test"))
+        signer = DSS.new(self.key_priv, 'deterministic-rfc6979')
+        signature = signer.sign(hashed_msg)
+
+        verifier = DSS.new(self.key_pub, 'deterministic-rfc6979')
+        verifier.verify(hashed_msg, signature)
+
+
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(FIPS_DSA_Tests)
     tests += list_test_cases(FIPS_ECDSA_Tests)
     tests += list_test_cases(Det_DSA_Tests)
+    tests += list_test_cases(Det_ECDSA_Tests)
     return tests
 
 

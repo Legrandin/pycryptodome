@@ -77,15 +77,17 @@ from Crypto.PublicKey.ECC import _curve, EccKey
 class DsaSigScheme(object):
     """This signature scheme can perform DSS signature or verification."""
 
-    def __init__(self, key, encoding):
+    def __init__(self, key, encoding, order):
         """Create a new Digital Signature Standard (DSS) object.
 
         Do not instantiate this object directly,
         use `Crypto.Signature.DSS.new` instead.
         """
 
-        self._encoding = encoding
         self._key = key
+        self._encoding = encoding
+        self._order = order
+
         self._order_bits = self._order.size_in_bits()
         self._order_bytes = (self._order_bits - 1) // 8 + 1
 
@@ -94,10 +96,6 @@ class DsaSigScheme(object):
         for signing messages."""
 
         return self._key.has_private()
-
-    @property
-    def _order(self):
-        raise NotImplementedError("To be provided by subclasses")
 
     def _compute_nonce(self, msg_hash):
         raise NotImplementedError("To be provided by subclasses")
@@ -202,17 +200,18 @@ class DsaSigScheme(object):
         return False
 
 
-class DeterministiDsaSigScheme(DsaSigScheme):
+class DeterministicDsaSigScheme(DsaSigScheme):
+    # Also applicable to ECDSA
 
-    @property
-    def _order(self):
-        return Integer(self._key.q)
+    def __init__(self, key, encoding, order, private_key):
+        super(DeterministicDsaSigScheme, self).__init__(key, encoding, order)
+        self._private_key = private_key
 
     def _bits2int(self, bstr):
         """See 2.3.2 in RFC6979"""
 
         result = Integer.from_bytes(bstr)
-        q_len = Integer(self._key.q).size_in_bits()
+        q_len = self._order.size_in_bits()
         b_len = len(bstr) * 8
         if b_len > q_len:
             result >>= (b_len - q_len)
@@ -221,17 +220,17 @@ class DeterministiDsaSigScheme(DsaSigScheme):
     def _int2octets(self, int_mod_q):
         """See 2.3.3 in RFC6979"""
 
-        assert 0 < int_mod_q < self._key.q
+        assert 0 < int_mod_q < self._order
         return long_to_bytes(int_mod_q, self._order_bytes)
 
     def _bits2octets(self, bstr):
         """See 2.3.4 in RFC6979"""
 
         z1 = self._bits2int(bstr)
-        if z1 < self._key.q:
+        if z1 < self._order:
             z2 = z1
         else:
-            z2 = z1 - self._key.q
+            z2 = z1 - self._order
         return self._int2octets(z2)
 
     def _compute_nonce(self, mhash):
@@ -249,13 +248,13 @@ class DeterministiDsaSigScheme(DsaSigScheme):
             # Step d/f
             nonce_k = HMAC.new(nonce_k,
                                mask_v + bchr(int_oct) +
-                               self._int2octets(self._key.x) +
+                               self._int2octets(self._private_key) +
                                self._bits2octets(h1), mhash).digest()
             # Step e/g
             mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
 
         nonce = -1
-        while not (0 < nonce < self._key.q):
+        while not (0 < nonce < self._order):
             # Step h.C (second part)
             if nonce != -1:
                 nonce_k = HMAC.new(nonce_k, mask_v + bchr(0),
@@ -290,8 +289,8 @@ class FipsDsaSigScheme(DsaSigScheme):
                         (3072, 256)     # 256 bits (SHA-512)
                       )
 
-    def __init__(self, key, encoding, randfunc):
-        super(FipsDsaSigScheme, self).__init__(key, encoding)
+    def __init__(self, key, encoding, order, randfunc):
+        super(FipsDsaSigScheme, self).__init__(key, encoding, order)
         self._randfunc = randfunc
 
         L = Integer(key.p).size_in_bits()
@@ -300,14 +299,10 @@ class FipsDsaSigScheme(DsaSigScheme):
                      % (L, self._order_bits))
             raise ValueError(error)
 
-    @property
-    def _order(self):
-        return Integer(self._key.q)
-
     def _compute_nonce(self, msg_hash):
         # hash is not used
         return Integer.random_range(min_inclusive=1,
-                                    max_exclusive=self._key.q,
+                                    max_exclusive=self._order,
                                     randfunc=self._randfunc)
 
     def _valid_hash(self, msg_hash):
@@ -318,13 +313,9 @@ class FipsDsaSigScheme(DsaSigScheme):
 
 class FipsEcDsaSigScheme(DsaSigScheme):
 
-    def __init__(self, key, encoding, randfunc):
-        super(FipsEcDsaSigScheme, self).__init__(key, encoding)
+    def __init__(self, key, encoding, order, randfunc):
+        super(FipsEcDsaSigScheme, self).__init__(key, encoding, order)
         self._randfunc = randfunc
-
-    @property
-    def _order(self):
-        return Integer(_curve.order)
 
     def _compute_nonce(self, msg_hash):
         return Integer.random_range(min_inclusive=1,
@@ -406,12 +397,24 @@ def new(key, mode, encoding='binary', randfunc=None):
     if encoding not in ('binary', 'der'):
         raise ValueError("Unknown encoding '%s'" % encoding)
 
+    if isinstance(key, EccKey):
+        order = _curve.order
+        private_key_attr = 'd'
+    else:
+        order = Integer(key.q)
+        private_key_attr = 'x'
+
+    if key.has_private():
+        private_key = getattr(key, private_key_attr)
+    else:
+        private_key = None
+
     if mode == 'deterministic-rfc6979':
-        return DeterministiDsaSigScheme(key, encoding)
+        return DeterministicDsaSigScheme(key, encoding, order, private_key)
     elif mode == 'fips-186-3':
         if isinstance(key, EccKey):
-            return FipsEcDsaSigScheme(key, encoding, randfunc)
+            return FipsEcDsaSigScheme(key, encoding, order, randfunc)
         else:
-            return FipsDsaSigScheme(key, encoding, randfunc)
+            return FipsDsaSigScheme(key, encoding, order, randfunc)
     else:
         raise ValueError("Unknown DSS mode '%s'" % mode)
