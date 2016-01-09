@@ -221,9 +221,10 @@ class EccKey(object):
             the implementation will NOT check whether it matches ``d``.
         """
 
-        self.curve = kwargs.pop("curve", None)
-        self._d = kwargs.pop("d", None)
-        self._point = kwargs.pop("point", None)
+        kwargs_ = dict(kwargs)
+        self.curve = kwargs_.pop("curve", None)
+        self._d = kwargs_.pop("d", None)
+        self._point = kwargs_.pop("point", None)
 
         if self.curve != "P-256":
             raise ValueError("Unsupported curve (%s)", self.curve)
@@ -286,6 +287,31 @@ def generate(**kwargs):
                              randfunc=randfunc)
 
     return EccKey(curve=curve, d=d)
+
+def construct(**kwargs):
+    """Build a new ECC key (private or public) starting
+    from some base components.
+
+    :Keywords:
+      curve : string
+        It must be present and set to "P-256".
+      d : integer
+        Only for a private key. It must be in the range [1..order-1].
+      point_x : integer
+        X coordinate (affine) of the ECC point.
+        This value is mandatory in case of a public key.
+      point_y : integer
+        Y coordinate (affine) of the ECC point.
+        This value is mandatory in case of a public key.
+    """
+
+    point_x = kwargs.pop("point_x", None)
+    point_y = kwargs.pop("point_y", None)
+
+    if None not in (point_x, point_y):
+        kwargs["point"] = EccPoint(point_x, point_y)
+
+    return EccKey(**kwargs)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,8 @@ import time
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 
-from Crypto.PublicKey.ECC import EccPoint, _curve, EccKey, generate
+from Crypto.PublicKey import ECC
+from Crypto.PublicKey.ECC import EccPoint, _curve, EccKey
 
 class TestEccPoint_NIST(unittest.TestCase):
     """Tests defined in section 4.3 of https://www.nsa.gov/ia/_files/nist-routines.pdf"""
@@ -138,13 +139,23 @@ class TestEccKey(unittest.TestCase):
         self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=_curve.order))
 
 
-class TestEccGenerate(unittest.TestCase):
+class TestEccModule(unittest.TestCase):
 
-    def test_new_key(self):
+    def test_generate(self):
 
-        key = generate(curve="P-256")
+        key = ECC.generate(curve="P-256")
         self.failUnless(key.has_private())
         self.assertEqual(key.pointQ, EccPoint(_curve.Gx, _curve.Gy).multiply(key.d))
+
+    def test_construct(self):
+
+        key = ECC.construct(curve="P-256", d=1)
+        self.failUnless(key.has_private())
+        self.assertEqual(key.pointQ, _curve.G)
+
+        key = ECC.construct(curve="P-256", point_x=_curve.Gx, point_y=_curve.Gy)
+        self.failIf(key.has_private())
+        self.assertEqual(key.pointQ, _curve.G)
 
 
 def get_tests(config={}):
@@ -152,7 +163,7 @@ def get_tests(config={}):
     tests += list_test_cases(TestEccPoint_NIST)
     tests += list_test_cases(TestEccPoint_PAI)
     tests += list_test_cases(TestEccKey)
-    tests += list_test_cases(TestEccGenerate)
+    tests += list_test_cases(TestEccModule)
     return tests
 
 if __name__ == '__main__':
