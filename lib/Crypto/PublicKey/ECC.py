@@ -247,6 +247,9 @@ class EccKey(object):
             self._point = EccPoint(_curve.Gx, _curve.Gy).multiply(self._d)
         return self._point
 
+    def public_key(self):
+        return EccKey(curve="P-256", point=self.pointQ)
+
 
 def generate(curve, randfunc=None):
     """Generate a new private key on the given curve.

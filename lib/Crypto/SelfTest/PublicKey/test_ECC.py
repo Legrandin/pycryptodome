@@ -123,6 +123,13 @@ class TestEccKey(unittest.TestCase):
         self.failIf(key.has_private())
         self.assertEqual(key.pointQ, point)
 
+    def test_public_key_derived(self):
+
+        priv_key = EccKey(curve="P-256", d=3)
+        pub_key = priv_key.public_key()
+        self.failIf(pub_key.has_private())
+        self.assertEqual(priv_key.pointQ, pub_key.pointQ)
+
     def test_invalid_curve(self):
         self.assertRaises(ValueError, lambda: EccKey(curve="P-257", d=1))
 
