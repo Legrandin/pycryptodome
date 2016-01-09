@@ -142,7 +142,7 @@ class TestEccGenerate(unittest.TestCase):
 
     def test_new_key(self):
 
-        key = generate("P-256")
+        key = generate(curve="P-256")
         self.failUnless(key.has_private())
         self.assertEqual(key.pointQ, EccPoint(_curve.Gx, _curve.Gy).multiply(key.d))
 

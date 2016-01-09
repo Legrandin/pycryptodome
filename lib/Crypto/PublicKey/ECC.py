@@ -201,6 +201,9 @@ class EccPoint(object):
         return result
 
 
+_curve.G = EccPoint(_curve.Gx, _curve.Gy)
+
+
 class EccKey(object):
 
     def __init__(self, **kwargs):
@@ -235,6 +238,19 @@ class EccKey(object):
     def has_private(self):
         return self._d is not None
 
+    def _sign(self, z, k):
+        assert 0 < k < _curve.order
+        # TODO: add blinding
+        r = _curve.G.multiply(k).x % _curve.order
+        s = k.inverse(_curve.order) * (z + self._d * r) % _curve.order
+        return (r, s)
+
+    def _verify(self, z, rs):
+        sinv = rs[1].inverse(_curve.order)
+        point1 = _curve.G.multiply((sinv * z) % _curve.order)
+        point2 = self.pointQ.multiply((sinv * rs[0])  % _curve.order)
+        return (point1.add(point2)).x == rs[0]
+
     @property
     def d(self):
         if not self.has_private():
@@ -244,17 +260,17 @@ class EccKey(object):
     @property
     def pointQ(self):
         if self._point is None:
-            self._point = EccPoint(_curve.Gx, _curve.Gy).multiply(self._d)
+            self._point = _curve.G.multiply(self._d)
         return self._point
 
     def public_key(self):
         return EccKey(curve="P-256", point=self.pointQ)
 
 
-def generate(curve, randfunc=None):
+def generate(**kwargs):
     """Generate a new private key on the given curve.
 
-    :Parameters:
+    :Keywords:
       curve : string
         It must be "P-256".
       randfunc : callable
@@ -262,8 +278,8 @@ def generate(curve, randfunc=None):
         If ``None``, the system source is used.
     """
 
-    if randfunc is None:
-        randfunc = get_random_bytes
+    curve = kwargs.pop("curve")
+    randfunc = kwargs.pop("randfunc", get_random_bytes)
 
     d = Integer.random_range(min_inclusive=1,
                              max_exclusive=_curve.order,

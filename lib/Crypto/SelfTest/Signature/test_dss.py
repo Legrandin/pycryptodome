@@ -38,7 +38,7 @@ from Crypto.Util.py3compat import b, tobytes, bord, bchr
 
 from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Signature import DSS
-from Crypto.PublicKey import DSA
+from Crypto.PublicKey import DSA, ECC
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -80,7 +80,7 @@ class StrRNG:
         return out
 
 
-class FIPS_DSS_Tests(unittest.TestCase):
+class FIPS_DSA_Tests(unittest.TestCase):
 
     # 1st 1024 bit key from SigGen.txt
     P = 0xa8f9cd201e5e35d892f85f80e4db2599a5676a3b1d4f190330ed3256b26d0e80a0e49a8fffaaad2a24f472d2573241d4d6d6c7480c80b4c67bb4479c15ada7ea8424d2502fa01472e760241713dab025ae1b02e1703a1435f62ddf4ee4c1b664066eb22f2e3bf28bb70a2a76e4fd5ebe2d1229681b5b06439ac9c7e9d8bde283L
@@ -93,7 +93,15 @@ class FIPS_DSS_Tests(unittest.TestCase):
     key_priv = DSA.construct((Y, G, P, Q, X))
 
     def shortDescription(self):
-        return "FIPS DSS Tests"
+        return "FIPS DSA Tests"
+
+    def test_loopback(self):
+        hashed_msg = SHA512.new(b("test"))
+        signer = DSS.new(self.key_priv, 'fips-186-3')
+        signature = signer.sign(hashed_msg)
+
+        verifier = DSS.new(self.key_pub, 'fips-186-3')
+        verifier.verify(hashed_msg, signature)
 
     def test_negative_unapproved_hashes(self):
         """Verify that unapproved hashes are rejected"""
@@ -172,9 +180,9 @@ for idx, tv in enumerate(test_vectors_verify):
         self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
     if tv.result == 'p':
-        setattr(FIPS_DSS_Tests, "test_verify_positive_%d" % idx, positive_test)
+        setattr(FIPS_DSA_Tests, "test_verify_positive_%d" % idx, positive_test)
     else:
-        setattr(FIPS_DSS_Tests, "test_verify_negative_%d" % idx, negative_test)
+        setattr(FIPS_DSA_Tests, "test_verify_negative_%d" % idx, negative_test)
 
 
 test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
@@ -202,7 +210,45 @@ for idx, tv in enumerate(test_vectors_sign):
 
     def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
         self.assertEqual(signer.sign(hash_obj), signature)
-    setattr(FIPS_DSS_Tests, "test_sign_%d" % idx, new_test)
+    setattr(FIPS_DSA_Tests, "test_sign_%d" % idx, new_test)
+
+
+class FIPS_ECDSA_Tests(unittest.TestCase):
+
+    key_priv = ECC.generate(curve="P-256")
+    key_pub  = key_priv.public_key()
+
+    def shortDescription(self):
+        return "FIPS ECDSA Tests"
+
+    def test_loopback(self):
+        hashed_msg = SHA512.new(b("test"))
+        signer = DSS.new(self.key_priv, 'fips-186-3')
+        signature = signer.sign(hashed_msg)
+
+        verifier = DSS.new(self.key_pub, 'fips-186-3')
+        verifier.verify(hashed_msg, signature)
+
+    def test_negative_unapproved_hashes(self):
+        """Verify that unapproved hashes are rejected"""
+
+        from Crypto.Hash import SHA1
+
+        self.description = "Unapproved hash (SHA-1) test"
+        hash_obj = SHA1.new()
+        signer = DSS.new(self.key_priv, 'fips-186-3')
+        self.assertRaises(ValueError, signer.sign, hash_obj)
+        self.assertRaises(ValueError, signer.verify, hash_obj, b("\x00") * 40)
+
+    def test_sign_verify(self):
+        """Verify public/private method"""
+
+        self.description = "can_sign() test"
+        signer = DSS.new(self.key_priv, 'fips-186-3')
+        self.failUnless(signer.can_sign())
+
+        signer = DSS.new(self.key_pub, 'fips-186-3')
+        self.failIf(signer.can_sign())
 
 
 class Det_DSA_Tests(unittest.TestCase):
@@ -485,7 +531,8 @@ class Det_DSA_Tests(unittest.TestCase):
 
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(FIPS_DSS_Tests)
+    tests += list_test_cases(FIPS_DSA_Tests)
+    tests += list_test_cases(FIPS_ECDSA_Tests)
     tests += list_test_cases(Det_DSA_Tests)
     return tests
 

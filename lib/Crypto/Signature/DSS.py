@@ -67,10 +67,11 @@ from Crypto.Util.py3compat import bchr, b
 
 
 from Crypto.Util.asn1 import DerSequence
-from Crypto.Util.number import long_to_bytes, bytes_to_long
+from Crypto.Util.number import long_to_bytes
 from Crypto.Math.Numbers import Integer
 
 from Crypto.Hash import HMAC
+from Crypto.PublicKey.ECC import _curve, EccKey
 
 
 class DsaSigScheme(object):
@@ -85,15 +86,18 @@ class DsaSigScheme(object):
 
         self._encoding = encoding
         self._key = key
-
-        self._N = Integer(key.q).size_in_bits()
-        self._N_bytes = (self._N - 1) // 8 + 1
+        self._order_bits = self._order.size_in_bits()
+        self._order_bytes = (self._order_bits - 1) // 8 + 1
 
     def can_sign(self):
         """Return True if this signature object can be used
         for signing messages."""
 
         return self._key.has_private()
+
+    @property
+    def _order(self):
+        raise NotImplementedError("To be provided by subclasses")
 
     def _compute_nonce(self, msg_hash):
         raise NotImplementedError("To be provided by subclasses")
@@ -129,12 +133,12 @@ class DsaSigScheme(object):
         nonce = self._compute_nonce(msg_hash)
 
         # Perform signature using the raw API
-        z = bytes_to_long(msg_hash.digest()[:self._N_bytes])
+        z = Integer.from_bytes(msg_hash.digest()[:self._order_bytes])
         sig_pair = self._key._sign(z, nonce)
 
         # Encode the signature into a single byte string
         if self._encoding == 'binary':
-            output = b("").join([long_to_bytes(x, self._N_bytes)
+            output = b("").join([long_to_bytes(x, self._order_bytes)
                                  for x in sig_pair])
         else:
             # Dss-sig  ::=  SEQUENCE  {
@@ -173,11 +177,11 @@ class DsaSigScheme(object):
             raise ValueError("Hash does not belong to SHS")
 
         if self._encoding == 'binary':
-            if len(signature) != (2 * self._N_bytes):
+            if len(signature) != (2 * self._order_bytes):
                 raise ValueError("The signature is not authentic (length)")
-            r_prime, s_prime = [bytes_to_long(x)
-                                for x in (signature[:self._N_bytes],
-                                          signature[self._N_bytes:])]
+            r_prime, s_prime = [Integer.from_bytes(x)
+                                for x in (signature[:self._order_bytes],
+                                          signature[self._order_bytes:])]
         else:
             try:
                 der_seq = DerSequence().decode(signature)
@@ -187,10 +191,10 @@ class DsaSigScheme(object):
                 raise ValueError("The signature is not authentic (DER content)")
             r_prime, s_prime = der_seq[0], der_seq[1]
 
-        if not (0 < r_prime < self._key.q) or not (0 < s_prime < self._key.q):
+        if not (0 < r_prime < self._order) or not (0 < s_prime < self._order):
             raise ValueError("The signature is not authentic (d)")
 
-        z = bytes_to_long(msg_hash.digest()[:self._N_bytes])
+        z = Integer.from_bytes(msg_hash.digest()[:self._order_bytes])
         result = self._key._verify(z, (r_prime, s_prime))
         if not result:
             raise ValueError("The signature is not authentic")
@@ -200,10 +204,14 @@ class DsaSigScheme(object):
 
 class DeterministiDsaSigScheme(DsaSigScheme):
 
+    @property
+    def _order(self):
+        return Integer(self._key.q)
+
     def _bits2int(self, bstr):
         """See 2.3.2 in RFC6979"""
 
-        result = bytes_to_long(bstr)
+        result = Integer.from_bytes(bstr)
         q_len = Integer(self._key.q).size_in_bits()
         b_len = len(bstr) * 8
         if b_len > q_len:
@@ -214,7 +222,7 @@ class DeterministiDsaSigScheme(DsaSigScheme):
         """See 2.3.3 in RFC6979"""
 
         assert 0 < int_mod_q < self._key.q
-        return long_to_bytes(int_mod_q, self._N_bytes)
+        return long_to_bytes(int_mod_q, self._order_bytes)
 
     def _bits2octets(self, bstr):
         """See 2.3.4 in RFC6979"""
@@ -258,7 +266,7 @@ class DeterministiDsaSigScheme(DsaSigScheme):
             mask_t = b("")
 
             # Step h.B
-            while len(mask_t) < self._N_bytes:
+            while len(mask_t) < self._order_bytes:
                 mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
                 mask_t += mask_v
 
@@ -287,19 +295,54 @@ class FipsDsaSigScheme(DsaSigScheme):
         self._randfunc = randfunc
 
         L = Integer(key.p).size_in_bits()
-        if (L, self._N) not in self._fips_186_3_L_N:
+        if (L, self._order_bits) not in self._fips_186_3_L_N:
             error = ("L/N (%d, %d) is not compliant to FIPS 186-3"
-                     % (L, self._N))
+                     % (L, self._order_bits))
             raise ValueError(error)
 
+    @property
+    def _order(self):
+        return Integer(self._key.q)
+
     def _compute_nonce(self, msg_hash):
+        # hash is not used
         return Integer.random_range(min_inclusive=1,
                                     max_exclusive=self._key.q,
                                     randfunc=self._randfunc)
 
     def _valid_hash(self, msg_hash):
+        """Verify that SHA-1, SHA-2 or SHA-3 are used"""
         return (msg_hash.oid == "1.3.14.3.2.26" or
                 msg_hash.oid.startswith("2.16.840.1.101.3.4.2."))
+
+
+class FipsEcDsaSigScheme(DsaSigScheme):
+
+    def __init__(self, key, encoding, randfunc):
+        super(FipsEcDsaSigScheme, self).__init__(key, encoding)
+        self._randfunc = randfunc
+
+    @property
+    def _order(self):
+        return Integer(_curve.order)
+
+    def _compute_nonce(self, msg_hash):
+        return Integer.random_range(min_inclusive=1,
+                                    max_exclusive=_curve.order,
+                                    randfunc=self._randfunc)
+
+    def _valid_hash(self, msg_hash):
+        """Verify that SHA-[23] (256|384|512) bits are used to
+        match the 128-bit security of P-256"""
+
+        approved = ("2.16.840.1.101.3.4.2.1",
+                    "2.16.840.1.101.3.4.2.2",
+                    "2.16.840.1.101.3.4.2.3",
+                    "2.16.840.1.101.3.4.2.8",
+                    "2.16.840.1.101.3.4.2.9",
+                    "2.16.840.1.101.3.4.2.10")
+
+        return msg_hash.oid in approved
 
 
 def new(key, mode, encoding='binary', randfunc=None):
@@ -366,6 +409,9 @@ def new(key, mode, encoding='binary', randfunc=None):
     if mode == 'deterministic-rfc6979':
         return DeterministiDsaSigScheme(key, encoding)
     elif mode == 'fips-186-3':
-        return FipsDsaSigScheme(key, encoding, randfunc)
+        if isinstance(key, EccKey):
+            return FipsEcDsaSigScheme(key, encoding, randfunc)
+        else:
+            return FipsDsaSigScheme(key, encoding, randfunc)
     else:
         raise ValueError("Unknown DSS mode '%s'" % mode)
