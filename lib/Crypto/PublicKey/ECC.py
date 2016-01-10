@@ -319,7 +319,7 @@ if __name__ == "__main__":
     import time
     d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
 
-    point = generate("P-256").pointQ
+    point = generate(curve="P-256").pointQ
     start = time.time()
     count = 30
     for x in xrange(count):
