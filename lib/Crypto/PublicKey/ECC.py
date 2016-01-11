@@ -54,6 +54,7 @@ class EccPoint(object):
         self._x = Integer(x)
         self._y = Integer(y)
 
+        # Buffers
         self._common = Integer(0)
         self._tmp1 = Integer(0)
         self._x3 = Integer(0)
@@ -115,6 +116,7 @@ class EccPoint(object):
         tmp1.inplace_inverse(_curve.p)
         common *= tmp1
         common %= _curve.p
+
         # x3 = (pow(common, 2, _curve.p) - 2 * self._x) % _curve.p
         x3.set(common)
         x3.inplace_pow(2, _curve.p)
@@ -122,6 +124,7 @@ class EccPoint(object):
         x3 -= self._x
         while x3.is_negative():
             x3 += _curve.p
+
         # y3 = ((self._x - x3) * common - self._y) % _curve.p
         y3.set(self._x)
         y3 -= x3
@@ -163,13 +166,13 @@ class EccPoint(object):
         common %= _curve.p
 
         # x3 = (pow(common, 2, _curve.p) - self._x - point._x) % _curve.p
-        tmp1.set(common)
-        tmp1.inplace_pow(2, _curve.p)
-        tmp1 -= self._x
-        tmp1 -= point._x
-        while tmp1.is_negative():
-            tmp1 += _curve.p
-        x3.set(tmp1)
+        x3.set(common)
+        x3.inplace_pow(2, _curve.p)
+        x3 -= self._x
+        x3 -= point._x
+        while x3.is_negative():
+            x3 += _curve.p
+
         # y3 = ((self._x - x3) * common - self._y) % _curve.p
         y3.set(self._x)
         y3 -= x3
