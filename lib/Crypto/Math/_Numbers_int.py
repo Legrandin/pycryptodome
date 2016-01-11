@@ -325,7 +325,7 @@ class Integer(object):
         else:
             self._value = source
 
-    def inverse(self, modulus):
+    def inplace_inverse(self, modulus):
         try:
             modulus = modulus._value
         except AttributeError:
@@ -344,7 +344,13 @@ class Integer(object):
             raise ValueError("No inverse value can be computed" + str(r_p))
         while s_p < 0:
             s_p += modulus
-        return Integer(s_p)
+        self._value = s_p
+        return self
+
+    def inverse(self, modulus):
+        result = Integer(self)
+        result.inplace_inverse(modulus)
+        return result
 
     def gcd(self, term):
         try:

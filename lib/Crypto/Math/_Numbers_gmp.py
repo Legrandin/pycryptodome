@@ -637,7 +637,7 @@ class Integer(object):
                      source._mpz_p)
         return self
 
-    def inverse(self, modulus):
+    def inplace_inverse(self, modulus):
         """Compute the inverse of this number in the ring of
         modulo integers.
 
@@ -654,12 +654,16 @@ class Integer(object):
         if comp < 0:
             raise ValueError("Modulus must be positive")
 
-        result = Integer(0)
-        _gmp.mpz_invert(result._mpz_p,
-                        self._mpz_p,
-                        modulus._mpz_p)
+        result = _gmp.mpz_invert(self._mpz_p,
+                                 self._mpz_p,
+                                 modulus._mpz_p)
         if not result:
             raise ValueError("No inverse value can be computed")
+        return self
+
+    def inverse(self, modulus):
+        result = Integer(self)
+        result.inplace_inverse(modulus)
         return result
 
     def gcd(self, term):

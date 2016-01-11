@@ -112,7 +112,8 @@ class EccPoint(object):
         common -= 3
         tmp1.set(self._y)
         tmp1 <<= 1
-        common *= tmp1.inverse(_curve.p)
+        tmp1.inplace_inverse(_curve.p)
+        common *= tmp1
         common %= _curve.p
         # x3 = (pow(common, 2, _curve.p) - 2 * self._x) % _curve.p
         x3.set(common)
@@ -157,7 +158,7 @@ class EccPoint(object):
         common -= self._y
         tmp1.set(point._x)
         tmp1 -= self._x
-        tmp1 = tmp1.inverse(_curve.p)
+        tmp1.inplace_inverse(_curve.p)
         common *= tmp1
         common %= _curve.p
 

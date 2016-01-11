@@ -522,6 +522,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_inverse(self):
         v1, v2, v3, v4, v5, v6 = self.Integers(2, 5, -3, 0, 723872, 3433)
+
         self.failUnless(isinstance(v1.inverse(v2), self.Integer))
         self.assertEqual(v1.inverse(v2), 3)
         self.assertEqual(v1.inverse(5), 3)
@@ -533,6 +534,12 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, v1.inverse, -3)
         self.assertRaises(ValueError, v4.inverse, 10)
         self.assertRaises(ZeroDivisionError, v2.inverse, 0)
+
+    def test_inplace_inverse(self):
+        v1, v2 = self.Integers(2, 5)
+
+        v1.inplace_inverse(v2)
+        self.assertEqual(v1, 3)
 
     def test_gcd(self):
         v1, v2, v3, v4 = self.Integers(6, 10, 17, -2)
