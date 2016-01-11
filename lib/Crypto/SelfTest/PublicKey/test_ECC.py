@@ -75,13 +75,15 @@ class TestEccPoint_NIST(unittest.TestCase):
         pointRx = 0x7669e6901606ee3ba1a8eef1e0024c33df6c22f3b17481b82a860ffcdb6127b0
         pointRy = 0xfa878162187a54f6c39f6ee0072f33de389ef3eecd03023de10ca2c1db61d0c7
 
-        pointR = self.pointS.double()
+        pointR = self.pointS.copy()
+        pointR.double()
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
         # 2*0
         pai = self.pointS.point_at_infinity()
-        pointR = pai.double()
+        pointR = pai.copy()
+        pointR.double()
         self.assertEqual(pointR, pai)
 
     def test_scalar_multiply(self):

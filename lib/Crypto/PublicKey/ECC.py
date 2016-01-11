@@ -54,6 +54,11 @@ class EccPoint(object):
         self._x = Integer(x)
         self._y = Integer(y)
 
+        self._common = Integer(0)
+        self._tmp1 = Integer(0)
+        self._x3 = Integer(0)
+        self._y3 = Integer(0)
+
     def set(self, point):
         self._x = Integer(point._x)
         self._y = Integer(point._y)
@@ -71,7 +76,7 @@ class EccPoint(object):
         return EccPoint(self._x, self._y)
 
     def is_point_at_infinity(self):
-        return self._x == 0 and self._y == 0
+        return not (self._x or self._y)
 
     @staticmethod
     def point_at_infinity():
@@ -90,33 +95,45 @@ class EccPoint(object):
         return self._y
 
     def double(self):
-        """Return a new point, doubling this one"""
+        """Double this point"""
 
-        if self._y == 0:
+        if not self._y:
             return self.point_at_infinity()
 
+        common = self._common
+        tmp1 = self._tmp1
+        x3 = self._x3
+        y3 = self._y3
+
         # common = (pow(self._x, 2, _curve.p) * 3 - 3) * (self._y << 1).inverse(_curve.p) % _curve.p
-        common = pow(self._x, 2, _curve.p)
+        common.set(self._x)
+        common.inplace_pow(2, _curve.p)
         common *= 3
         common -= 3
-        common *= (self._y << 1).inverse(_curve.p)
+        tmp1.set(self._y)
+        tmp1 <<= 1
+        common *= tmp1.inverse(_curve.p)
         common %= _curve.p
         # x3 = (pow(common, 2, _curve.p) - 2 * self._x) % _curve.p
-        x3 = pow(common, 2, _curve.p)
+        x3.set(common)
+        x3.inplace_pow(2, _curve.p)
         x3 -= self._x
         x3 -= self._x
-        while x3 < 0:
+        while x3.is_negative():
             x3 += _curve.p
         # y3 = ((self._x - x3) * common - self._y) % _curve.p
-        y3 = self._x - x3
+        y3.set(self._x)
+        y3 -= x3
         y3 *= common
         y3 -= self._y
         y3 %= _curve.p
 
-        return EccPoint(x3, y3)
+        self._x.set(x3)
+        self._y.set(y3)
+        return self
 
     def __iadd__(self, point):
-        """Return a new point, the addition of this one and another"""
+        """Add a second point to this one"""
 
         if self.is_point_at_infinity():
             return self.set(point)
@@ -125,29 +142,43 @@ class EccPoint(object):
             return self
 
         if self == point:
-            # FIX
-            return self.set(self.double())
+            return self.double()
 
         if self._x == point._x:
             return self.set(self.point_at_infinity())
 
+        common = self._common
+        tmp1 = self._tmp1
+        x3 = self._x3
+        y3 = self._y3
+
         # common = (point._y - self._y) * (point._x - self._x).inverse(_curve.p) % _curve.p
-        common = point._y - self._y
-        common *= (point._x - self._x).inverse(_curve.p)
+        common.set(point._y)
+        common -= self._y
+        tmp1.set(point._x)
+        tmp1 -= self._x
+        tmp1 = tmp1.inverse(_curve.p)
+        common *= tmp1
         common %= _curve.p
+
         # x3 = (pow(common, 2, _curve.p) - self._x - point._x) % _curve.p
-        x3 = pow(common, 2, _curve.p)
-        x3 -= self._x
-        x3 -= point._x
-        while x3 < 0:
-            x3 += _curve.p
+        tmp1.set(common)
+        tmp1.inplace_pow(2, _curve.p)
+        tmp1 -= self._x
+        tmp1 -= point._x
+        while tmp1.is_negative():
+            tmp1 += _curve.p
+        x3.set(tmp1)
         # y3 = ((self._x - x3) * common - self._y) % _curve.p
-        y3 = (self._x - x3)
+        y3.set(self._x)
+        y3 -= x3
         y3 *= common
         y3 -= self._y
         y3 %= _curve.p
 
-        return self.set(EccPoint(x3, y3))
+        self._x.set(x3)
+        self._y.set(y3)
+        return self
 
     def __add__(self, point):
         """Return a new point, the addition of this one and another"""
@@ -195,7 +226,8 @@ class EccPoint(object):
         else:
             # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
             # which is 1P..7P for W=4 (we also add negatives)
-            precomp =  [0, self, self.double()]     # 0, 1P, 2P
+            precomp =  [0, self]                    # 0, 1P
+            precomp += [precomp[1] + precomp[1]]    # 2P
             precomp += [precomp[2] + precomp[1]]    # 3P
             precomp += [0]                          # 4P
             precomp += [precomp[2] + precomp[3]]    # 5P
@@ -206,9 +238,9 @@ class EccPoint(object):
 
         result = self.point_at_infinity()
         for x in naf:
-            result = result.double()
+            result.double()
             if x != 0:
-                result = result + precomp[x]
+                result += precomp[x]
 
         return result
 
