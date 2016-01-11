@@ -21,22 +21,22 @@ class TestEccPoint_NIST(unittest.TestCase):
         pointRx = 0x72b13dd4354b6b81745195e98cc5ba6970349191ac476bd4553cf35a545a067e
         pointRy = 0x8d585cbb2e1327d75241a8a122d7620dc33b13315aa5c9d46d013011744ac264
 
-        pointR = self.pointS.add(self.pointT)
+        pointR = self.pointS + self.pointT
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
         pai = self.pointS.point_at_infinity()
 
         # S + 0
-        pointR = self.pointS.add(pai)
+        pointR = self.pointS + pai
         self.assertEqual(pointR, self.pointS)
 
         # 0 + S
-        pointR = pai.add(self.pointS)
+        pointR = pai + self.pointS
         self.assertEqual(pointR, self.pointS)
 
         # 0 + 0
-        pointR = pai.add(pai)
+        pointR = pai + pai
         self.assertEqual(pointR, pai)
 
     def test_doubling(self):
@@ -57,17 +57,17 @@ class TestEccPoint_NIST(unittest.TestCase):
         pointRx = 0x51d08d5f2d4278882946d88d83c97d11e62becc3cfc18bedacc89ba34eeca03f
         pointRy = 0x75ee68eb8bf626aa5b673ab51f6e744e06f8fcf8a6c0cf3035beca956a7b41d5
 
-        pointR = self.pointS.multiply(d)
+        pointR = self.pointS * d
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
         # 0*S
         pai = self.pointS.point_at_infinity()
-        pointR = self.pointS.multiply(0)
+        pointR = self.pointS * 0
         self.assertEqual(pointR, pai)
 
         # -1*S
-        self.assertRaises(ValueError, self.pointS.multiply, -1)
+        self.assertRaises(ValueError, lambda: self.pointS * -1)
 
     def test_joing_scalar_multiply(self):
         d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
@@ -75,7 +75,7 @@ class TestEccPoint_NIST(unittest.TestCase):
         pointRx = 0xd867b4679221009234939221b8046245efcf58413daacbeff857b8588341f6b8
         pointRy = 0xf2504055c03cede12d22720dad69c745106b6607ec7e50dd35d54bd80f615275
 
-        pointR = self.pointS.multiply(d).add(self.pointT.multiply(e))
+        pointR = self.pointS * d + self.pointT * e
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
@@ -95,7 +95,7 @@ tv_pai = load_tests(("Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC"),
 assert(tv_pai)
 for tv in tv_pai:
     def new_test(self, scalar=tv.k, x=tv.x, y=tv.y):
-        result = self.pointG.multiply(scalar)
+        result = self.pointG * scalar
         self.assertEqual(result.x, x)
         self.assertEqual(result.y, y)
     setattr(TestEccPoint_PAI, "test_%d" % tv.count, new_test)
@@ -145,7 +145,7 @@ class TestEccModule(unittest.TestCase):
 
         key = ECC.generate(curve="P-256")
         self.failUnless(key.has_private())
-        self.assertEqual(key.pointQ, EccPoint(_curve.Gx, _curve.Gy).multiply(key.d))
+        self.assertEqual(key.pointQ, EccPoint(_curve.Gx, _curve.Gy) * key.d)
 
     def test_construct(self):
 

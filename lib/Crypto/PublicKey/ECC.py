@@ -110,7 +110,7 @@ class EccPoint(object):
 
         return EccPoint(x3, y3)
 
-    def add(self, point):
+    def __add__(self, point):
         """Return a new point, the addition of this one and another"""
 
         if self.is_point_at_infinity():
@@ -143,8 +143,7 @@ class EccPoint(object):
 
         return EccPoint(x3, y3)
 
-
-    def multiply(self, scalar):
+    def __mul__(self, scalar):
         """Return a new point, the scalar product of this one"""
 
         if scalar < 0:
@@ -183,12 +182,12 @@ class EccPoint(object):
         else:
             # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
             # which is 1P..7P for W=4 (we also add negatives)
-            precomp =  [0, self, self.double()]      # 0, 1P, 2P
-            precomp += [precomp[2].add(precomp[1])]  # 3P
-            precomp += [0]                           # 4P
-            precomp += [precomp[2].add(precomp[3])]  # 5P
-            precomp += [0]                           # 6P
-            precomp += [precomp[2].add(precomp[5])]  # 7P
+            precomp =  [0, self, self.double()]     # 0, 1P, 2P
+            precomp += [precomp[2] + precomp[1]]    # 3P
+            precomp += [0]                          # 4P
+            precomp += [precomp[2] + precomp[3]]    # 5P
+            precomp += [0]                          # 6P
+            precomp += [precomp[2] + precomp[5]]    # 7P
             precomp += [ -x for x in precomp[:0:-1]]
             self._precomp = precomp
 
@@ -196,7 +195,7 @@ class EccPoint(object):
         for x in naf:
             result = result.double()
             if x != 0:
-                result = result.add(precomp[x])
+                result = result + precomp[x]
 
         return result
 
@@ -243,15 +242,15 @@ class EccKey(object):
     def _sign(self, z, k):
         assert 0 < k < _curve.order
         # TODO: add blinding
-        r = _curve.G.multiply(k).x % _curve.order
+        r = (_curve.G * k).x % _curve.order
         s = k.inverse(_curve.order) * (z + self._d * r) % _curve.order
         return (r, s)
 
     def _verify(self, z, rs):
         sinv = rs[1].inverse(_curve.order)
-        point1 = _curve.G.multiply((sinv * z) % _curve.order)
-        point2 = self.pointQ.multiply((sinv * rs[0])  % _curve.order)
-        return (point1.add(point2)).x == rs[0]
+        point1 = _curve.G * ((sinv * z) % _curve.order)
+        point2 = self.pointQ * ((sinv * rs[0])  % _curve.order)
+        return (point1 + point2).x == rs[0]
 
     @property
     def d(self):
@@ -262,7 +261,7 @@ class EccKey(object):
     @property
     def pointQ(self):
         if self._point is None:
-            self._point = _curve.G.multiply(self._d)
+            self._point = _curve.G * self._d
         return self._point
 
     def public_key(self):
@@ -323,5 +322,5 @@ if __name__ == "__main__":
     start = time.time()
     count = 30
     for x in xrange(count):
-        point.multiply(d)
+        _ = point * d
     print (time.time() - start) / count * 1000, "ms"
