@@ -171,6 +171,39 @@ class Integer(object):
             y = (x + self._value // x) // 2
         return Integer(x)
 
+    def __iadd__(self, term):
+        try:
+            self._value += term._value
+        except AttributeError:
+            self._value += term
+        return self
+
+    def __isub__(self, term):
+        try:
+            self._value -= term._value
+        except AttributeError:
+            self._value -= term
+        return self
+
+    def __imul__(self, term):
+        try:
+            self._value *= term._value
+        except AttributeError:
+            self._value *= term
+        return self
+
+    def __imod__(self, term):
+        try:
+            modulus = term._value
+        except AttributeError:
+            modulus = term
+        if modulus == 0:
+            raise ZeroDivisionError("Division by zero")
+        if modulus < 0:
+            raise ValueError("Modulus must be positive")
+        self._value %= modulus
+        return self
+
     # Boolean/bit operations
     def __and__(self, term):
         try:

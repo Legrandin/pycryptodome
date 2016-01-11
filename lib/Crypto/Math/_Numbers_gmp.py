@@ -462,6 +462,24 @@ class Integer(object):
                      term._mpz_p)
         return self
 
+    def __isub__(self, term):
+        if isinstance(term, (int, long)):
+            if 0 <= term < 65536:
+                _gmp.mpz_sub_ui(self._mpz_p,
+                                self._mpz_p,
+                                c_ulong(term))
+                return self
+            if -65535 < term < 0:
+                _gmp.mpz_add_ui(self._mpz_p,
+                                self._mpz_p,
+                                c_ulong(-term))
+                return self
+            term = Integer(term)
+        _gmp.mpz_sub(self._mpz_p,
+                     self._mpz_p,
+                     term._mpz_p)
+        return self
+
     def __imul__(self, term):
         if isinstance(term, (int, long)):
             if 0 <= term < 65536:
