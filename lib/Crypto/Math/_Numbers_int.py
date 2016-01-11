@@ -133,7 +133,7 @@ class Integer(object):
             raise ValueError("Modulus must be positive")
         return Integer(self._value % divisor_value)
 
-    def __pow__(self, exponent, modulus=None):
+    def inplace_pow(self, exponent, modulus=None):
         try:
             exp_value = exponent._value
         except AttributeError:
@@ -150,7 +150,12 @@ class Integer(object):
                 raise ValueError("Modulus must be positive")
             if mod_value == 0:
                 raise ZeroDivisionError("Modulus cannot be zero")
-        return Integer(pow(self._value, exp_value, mod_value))
+        self._value = pow(self._value, exp_value, mod_value)
+        return self
+
+    def __pow__(self, exponent, modulus=None):
+        result = Integer(self)
+        return result.inplace_pow(exponent, modulus)
 
     def __abs__(self):
         return abs(self._value)

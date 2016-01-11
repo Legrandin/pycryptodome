@@ -280,6 +280,15 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, pow, v1, 5, -4)
         self.assertRaises(ValueError, pow, v1, -3, 8)
 
+    def test_inplace_exponentiation(self):
+        v1 = self.Integer(4)
+        v1.inplace_pow(2)
+        self.assertEqual(v1, 16)
+
+        v1 = self.Integer(4)
+        v1.inplace_pow(2, 15)
+        self.assertEqual(v1, 1)
+
     def test_abs(self):
         v1, v2, v3, v4, v5 = self.Integers(-2 ** 100, -2, 0, 2, 2 ** 100)
         self.assertEqual(abs(v1), 2 ** 100)

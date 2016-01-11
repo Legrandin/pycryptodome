@@ -385,23 +385,19 @@ class Integer(object):
                      divisor._mpz_p)
         return result
 
-    def __pow__(self, exponent, modulus=None):
-
-        result = Integer(0)
+    def inplace_pow(self, exponent, modulus=None):
 
         if modulus is None:
             if exponent < 0:
                 raise ValueError("Exponent must not be negative")
 
             # Normal exponentiation
-            result = Integer(0)
             if exponent > 256:
                 raise ValueError("Exponent is too big")
-            _gmp.mpz_pow_ui(result._mpz_p,
+            _gmp.mpz_pow_ui(self._mpz_p,
                             self._mpz_p,   # Base
                             c_ulong(int(exponent))
                             )
-            return result
         else:
             # Modular exponentiation
             if not isinstance(modulus, Integer):
@@ -414,19 +410,23 @@ class Integer(object):
                 if exponent < 0:
                     raise ValueError("Exponent must not be negative")
                 if exponent < 65536:
-                    _gmp.mpz_powm_ui(result._mpz_p,
+                    _gmp.mpz_powm_ui(self._mpz_p,
                                      self._mpz_p,
                                      c_ulong(exponent),
                                      modulus._mpz_p)
-                    return result
+                    return self
                 exponent = Integer(exponent)
             elif exponent.is_negative():
                 raise ValueError("Exponent must not be negative")
-            _gmp.mpz_powm(result._mpz_p,
+            _gmp.mpz_powm(self._mpz_p,
                           self._mpz_p,
                           exponent._mpz_p,
                           modulus._mpz_p)
-            return result
+        return self
+
+    def __pow__(self, exponent, modulus=None):
+        result = Integer(self)
+        return result.inplace_pow(exponent, modulus)
 
     def __abs__(self):
         result = Integer(0)
