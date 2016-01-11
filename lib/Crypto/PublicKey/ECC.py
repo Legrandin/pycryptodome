@@ -54,6 +54,11 @@ class EccPoint(object):
         self._x = Integer(x)
         self._y = Integer(y)
 
+    def set(self, point):
+        self._x = Integer(point._x)
+        self._y = Integer(point._y)
+        return self
+
     def __eq__(self, point):
         return self._x == point._x and self._y == point._y
 
@@ -110,20 +115,21 @@ class EccPoint(object):
 
         return EccPoint(x3, y3)
 
-    def __add__(self, point):
+    def __iadd__(self, point):
         """Return a new point, the addition of this one and another"""
 
         if self.is_point_at_infinity():
-            return point.copy()
+            return self.set(point)
 
         if point.is_point_at_infinity():
-            return self.copy()
+            return self
 
         if self == point:
-            return self.double()
+            # FIX
+            return self.set(self.double())
 
         if self._x == point._x:
-            return self.point_at_infinity()
+            return self.set(self.point_at_infinity())
 
         # common = (point._y - self._y) * (point._x - self._x).inverse(_curve.p) % _curve.p
         common = point._y - self._y
@@ -141,7 +147,14 @@ class EccPoint(object):
         y3 -= self._y
         y3 %= _curve.p
 
-        return EccPoint(x3, y3)
+        return self.set(EccPoint(x3, y3))
+
+    def __add__(self, point):
+        """Return a new point, the addition of this one and another"""
+
+        result = self.copy()
+        result += point
+        return result
 
     def __mul__(self, scalar):
         """Return a new point, the scalar product of this one"""

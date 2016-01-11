@@ -17,6 +17,12 @@ class TestEccPoint_NIST(unittest.TestCase):
                 0x55a8b00f8da1d44e62f6b3b25316212e39540dc861c89575bb8cf92e35e0986b,
                 0x5421c3209c2d6c704835d82ac4c3dd90f61a8a52598b9e7ab656e9d8c8b24316)
 
+    def test_set(self):
+        pass
+
+    def test_copy(self):
+        pass
+
     def test_addition(self):
         pointRx = 0x72b13dd4354b6b81745195e98cc5ba6970349191ac476bd4553cf35a545a067e
         pointRy = 0x8d585cbb2e1327d75241a8a122d7620dc33b13315aa5c9d46d013011744ac264
@@ -25,7 +31,7 @@ class TestEccPoint_NIST(unittest.TestCase):
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
-        pai = self.pointS.point_at_infinity()
+        pai = EccPoint.point_at_infinity()
 
         # S + 0
         pointR = self.pointS + pai
@@ -37,6 +43,32 @@ class TestEccPoint_NIST(unittest.TestCase):
 
         # 0 + 0
         pointR = pai + pai
+        self.assertEqual(pointR, pai)
+
+    def test_iaddition(self):
+        pointRx = 0x72b13dd4354b6b81745195e98cc5ba6970349191ac476bd4553cf35a545a067e
+        pointRy = 0x8d585cbb2e1327d75241a8a122d7620dc33b13315aa5c9d46d013011744ac264
+
+        pointR = self.pointS.copy()
+        pointR += self.pointT
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pai = EccPoint.point_at_infinity()
+
+        # S + 0
+        pointR = self.pointS.copy()
+        pointR += pai
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + S
+        pointR = pai.copy()
+        pointR += self.pointS
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + 0
+        pointR = pai.copy()
+        pointR += pai
         self.assertEqual(pointR, pai)
 
     def test_doubling(self):
@@ -68,6 +100,9 @@ class TestEccPoint_NIST(unittest.TestCase):
 
         # -1*S
         self.assertRaises(ValueError, lambda: self.pointS * -1)
+
+        # S+S
+        # TODO
 
     def test_joing_scalar_multiply(self):
         d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
