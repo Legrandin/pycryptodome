@@ -40,6 +40,8 @@ Breaks in compatibility
   of calls to `encrypt` with data (similarly for `decrypt`).
 * Key size for `ARC2`, `ARC4` and `Blowfish` must be at least 40 bits long (still very weak).
 * DES3 (Triple DES module) does not allow keys that degenerate to Single DES.
+* Removed method `getRandomNumber` in `Crypto.Util.number`.
+* Removed module `Crypto.pct_warnings`.
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++
