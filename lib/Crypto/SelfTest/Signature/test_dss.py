@@ -33,8 +33,8 @@
 
 import re
 import unittest
-from binascii import unhexlify, hexlify
-from Crypto.Util.py3compat import b, tobytes, bord, bchr
+from binascii import hexlify
+from Crypto.Util.py3compat import b, tobytes, bord, bchr, unhexlify
 
 from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Signature import DSS
@@ -587,8 +587,89 @@ class Det_DSA_Tests(unittest.TestCase):
 
 class Det_ECDSA_Tests(unittest.TestCase):
 
-    key_priv = ECC.generate(curve="P-256")
+    key_priv = ECC.construct(curve="P-256", d=0xC9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721)
     key_pub = key_priv.public_key()
+
+    # This is a sequence of items:
+    # message, k, r, s, hash module
+    # taken from RFC6979
+    signatures_ = (
+        (
+            "sample",
+            "882905F1227FD620FBF2ABF21244F0BA83D0DC3A9103DBBEE43A1FB858109DB4",
+            "61340C88C3AAEBEB4F6D667F672CA9759A6CCAA9FA8811313039EE4A35471D32",
+            "6D7F147DAC089441BB2E2FE8F7A3FA264B9C475098FDCF6E00D7C996E1B8B7EB",
+            SHA1
+        ),
+        (
+            "sample",
+            "103F90EE9DC52E5E7FB5132B7033C63066D194321491862059967C715985D473",
+            "53B2FFF5D1752B2C689DF257C04C40A587FABABB3F6FC2702F1343AF7CA9AA3F",
+            "B9AFB64FDC03DC1A131C7D2386D11E349F070AA432A4ACC918BEA988BF75C74C",
+            SHA224
+        ),
+        (
+            "sample",
+            "A6E3C57DD01ABE90086538398355DD4C3B17AA873382B0F24D6129493D8AAD60",
+            "EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716",
+            "F7CB1C942D657C41D436C7A1B6E29F65F3E900DBB9AFF4064DC4AB2F843ACDA8",
+            SHA256
+        ),
+        (
+            "sample",
+            "09F634B188CEFD98E7EC88B1AA9852D734D0BC272F7D2A47DECC6EBEB375AAD4",
+            "0EAFEA039B20E9B42309FB1D89E213057CBF973DC0CFC8F129EDDDC800EF7719",
+            "4861F0491E6998B9455193E34E7B0D284DDD7149A74B95B9261F13ABDE940954",
+            SHA384
+        ),
+        (
+            "sample",
+            "5FA81C63109BADB88C1F367B47DA606DA28CAD69AA22C4FE6AD7DF73A7173AA5",
+            "8496A60B5E9B47C825488827E0495B0E3FA109EC4568FD3F8D1097678EB97F00",
+            "2362AB1ADBE2B8ADF9CB9EDAB740EA6049C028114F2460F96554F61FAE3302FE",
+            SHA512
+        ),
+        (
+            "test",
+            "8C9520267C55D6B980DF741E56B4ADEE114D84FBFA2E62137954164028632A2E",
+            "0CBCC86FD6ABD1D99E703E1EC50069EE5C0B4BA4B9AC60E409E8EC5910D81A89",
+            "01B9D7B73DFAA60D5651EC4591A0136F87653E0FD780C3B1BC872FFDEAE479B1",
+            SHA1
+        ),
+        (
+            "test",
+            "669F4426F2688B8BE0DB3A6BD1989BDAEFFF84B649EEB84F3DD26080F667FAA7",
+            "C37EDB6F0AE79D47C3C27E962FA269BB4F441770357E114EE511F662EC34A692",
+            "C820053A05791E521FCAAD6042D40AEA1D6B1A540138558F47D0719800E18F2D",
+            SHA224
+        ),
+        (
+            "test",
+            "D16B6AE827F17175E040871A1C7EC3500192C4C92677336EC2537ACAEE0008E0",
+            "F1ABB023518351CD71D881567B1EA663ED3EFCF6C5132B354F28D3B0B7D38367",
+            "019F4113742A2B14BD25926B49C649155F267E60D3814B4C0CC84250E46F0083",
+            SHA256
+        ),
+        (
+            "test",
+            "16AEFFA357260B04B1DD199693960740066C1A8F3E8EDD79070AA914D361B3B8",
+            "83910E8B48BB0C74244EBDF7F07A1C5413D61472BD941EF3920E623FBCCEBEB6",
+            "8DDBEC54CF8CD5874883841D712142A56A8D0F218F5003CB0296B6B509619F2C",
+            SHA384
+        ),
+        (
+            "test",
+            "6915D11632ACA3C40D5D51C08DAF9C555933819548784480E93499000D9F0B7F",
+            "461D93F31B6540894788FD206C07CFA0CC35F46FA3C91816FFF1040AD1581A04",
+            "39AF9F15DE0DB8D97E72719C74820D304CE5226E32DEDAE67519E840D1194E55",
+            SHA512
+        )
+    )
+
+    signatures = []
+    for a, b, c, d, e in signatures_:
+        new_tv = (tobytes(a), unhexlify(b), unhexlify(c), unhexlify(d), e)
+        signatures.append(new_tv)
 
     def shortDescription(self):
         return "Deterministic ECDSA Tests"
@@ -600,6 +681,13 @@ class Det_ECDSA_Tests(unittest.TestCase):
 
         verifier = DSS.new(self.key_pub, 'deterministic-rfc6979')
         verifier.verify(hashed_msg, signature)
+
+    def test_data_rfc6979(self):
+        signer = DSS.new(self.key_priv, 'deterministic-rfc6979')
+        for message, k, r, s, module  in self.signatures:
+            hash_obj = module.new(message)
+            result = signer.sign(hash_obj)
+            self.assertEqual(r + s, result)
 
 
 def get_tests(config={}):

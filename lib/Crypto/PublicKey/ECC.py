@@ -273,6 +273,8 @@ class EccKey(object):
         self.curve = kwargs_.pop("curve", None)
         self._d = kwargs_.pop("d", None)
         self._point = kwargs_.pop("point", None)
+        if kwargs_:
+            raise TypeError("Unknown parameters: " + str(kwargs_))
 
         if self.curve != "P-256":
             raise ValueError("Unsupported curve (%s)", self.curve)
@@ -330,6 +332,8 @@ def generate(**kwargs):
 
     curve = kwargs.pop("curve")
     randfunc = kwargs.pop("randfunc", get_random_bytes)
+    if kwargs:
+        raise TypeError("Unknown parameters: " + str(kwargs))
 
     d = Integer.random_range(min_inclusive=1,
                              max_exclusive=_curve.order,

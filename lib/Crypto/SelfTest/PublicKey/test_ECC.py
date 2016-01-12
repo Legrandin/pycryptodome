@@ -18,10 +18,16 @@ class TestEccPoint_NIST(unittest.TestCase):
                 0x5421c3209c2d6c704835d82ac4c3dd90f61a8a52598b9e7ab656e9d8c8b24316)
 
     def test_set(self):
-        pass
+        pointW = EccPoint(0, 0)
+        pointW.set(self.pointS)
+        self.assertEqual(pointW, self.pointS)
 
     def test_copy(self):
-        pass
+        pointW = self.pointS.copy()
+        self.assertEqual(pointW, self.pointS)
+        pointW.set(self.pointT)
+        self.assertEqual(pointW, self.pointT)
+        self.assertNotEqual(self.pointS, self.pointT)
 
     def test_addition(self):
         pointRx = 0x72b13dd4354b6b81745195e98cc5ba6970349191ac476bd4553cf35a545a067e
@@ -45,7 +51,7 @@ class TestEccPoint_NIST(unittest.TestCase):
         pointR = pai + pai
         self.assertEqual(pointR, pai)
 
-    def test_iaddition(self):
+    def test_inplace_addition(self):
         pointRx = 0x72b13dd4354b6b81745195e98cc5ba6970349191ac476bd4553cf35a545a067e
         pointRy = 0x8d585cbb2e1327d75241a8a122d7620dc33b13315aa5c9d46d013011744ac264
 
@@ -86,6 +92,12 @@ class TestEccPoint_NIST(unittest.TestCase):
         pointR.double()
         self.assertEqual(pointR, pai)
 
+        # S + S
+        pointR = self.pointS.copy()
+        pointR += pointR
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
     def test_scalar_multiply(self):
         d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
         pointRx = 0x51d08d5f2d4278882946d88d83c97d11e62becc3cfc18bedacc89ba34eeca03f
@@ -102,9 +114,6 @@ class TestEccPoint_NIST(unittest.TestCase):
 
         # -1*S
         self.assertRaises(ValueError, lambda: self.pointS * -1)
-
-        # S+S
-        # TODO
 
     def test_joing_scalar_multiply(self):
         d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
