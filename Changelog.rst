@@ -23,6 +23,8 @@ New features
   of block sizes smaller than 16 bytes).
 * Refactored ARC2 cipher.
 * Added `Crypto.Cipher.DES3.adjust_key_parity` function.
+* Added `Public.ECC` module (P-256 curve only).
+* Added support for ECDSA (FIPS 186-3 and RFC6979).
 
 Resolved issues
 ---------------
