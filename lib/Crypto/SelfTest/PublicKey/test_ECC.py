@@ -203,6 +203,13 @@ class TestEccModule(unittest.TestCase):
         self.failIf(key.has_private())
         self.assertEqual(key.pointQ, _curve.G)
 
+    def test_negative_construct(self):
+        coord = dict(point_x=10, point_y=4)
+        coordG = dict(point_x=_curve.Gx, point_y=_curve.Gy)
+
+        self.assertRaises(ValueError, ECC.construct, curve="P-256", **coord)
+        self.assertRaises(ValueError, ECC.construct, curve="P-256", d=2, **coordG)
+
 
 def get_tests(config={}):
     tests = []

@@ -36,8 +36,9 @@ class _Curve(object):
     pass
 
 _curve = _Curve()
-_curve.p = Integer(115792089210356248762697446949407573530086143415290314195533631308867097853951)
-_curve.order = Integer(115792089210356248762697446949407573529996955224135760342422259061068512044369)
+_curve.p = Integer(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffffL)
+_curve.b = Integer(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b)
+_curve.order = Integer(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551)
 _curve.Gx = Integer(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)
 _curve.Gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
 
@@ -361,8 +362,31 @@ def construct(**kwargs):
     point_x = kwargs.pop("point_x", None)
     point_y = kwargs.pop("point_y", None)
 
+    if "point" in kwargs:
+        raise TypeError("Unknown keyword: point")
+
     if None not in (point_x, point_y):
         kwargs["point"] = EccPoint(point_x, point_y)
+
+        # Validate that the point is on the P-256 curve
+        eq1 = pow(Integer(point_y), 2, _curve.p)
+        x = Integer(point_x)
+        eq2 = pow(x, 3, _curve.p)
+        x *= -3
+        eq2 += x
+        eq2 += _curve.b
+        eq2 %= _curve.p
+
+        if eq1 != eq2:
+            raise ValueError("The point is not on the curve")
+
+    # Validate that the private key matches the public one
+    d = kwargs.get("d", None)
+    if d is not None and "point" in kwargs:
+        pub_key = _curve.G * d
+        if pub_key.x != point_x or pub_key.y != point_y:
+            raise ValueError("Private and public ECC keys do not match")
+
 
     return EccKey(**kwargs)
 
