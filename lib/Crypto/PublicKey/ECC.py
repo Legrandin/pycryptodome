@@ -41,6 +41,7 @@ _curve.b = Integer(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d
 _curve.order = Integer(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551)
 _curve.Gx = Integer(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)
 _curve.Gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
+_curve.names = ("P-256", "prime256v1", "secp256r1")
 
 
 # https://www.nsa.gov/ia/_files/nist-routines.pdf
@@ -262,7 +263,7 @@ class EccKey(object):
 
         Keywords:
           curve : string
-            It must be "P-256".
+            It must be "P-256", "prime256v1" or "secp256r1".
           d : integer
             Only for a private key. It must be in the range [1..order-1].
           point : EccPoint
@@ -277,7 +278,7 @@ class EccKey(object):
         if kwargs_:
             raise TypeError("Unknown parameters: " + str(kwargs_))
 
-        if self.curve != "P-256":
+        if self.curve not in _curve.names:
             raise ValueError("Unsupported curve (%s)", self.curve)
 
         if self._d is None:
@@ -325,7 +326,7 @@ def generate(**kwargs):
 
     :Keywords:
       curve : string
-        It must be "P-256".
+        It must be "P-256", "prime256v1" or "secp256r1".
       randfunc : callable
         The RNG to read randomness from.
         If ``None``, the system source is used.
@@ -348,7 +349,7 @@ def construct(**kwargs):
 
     :Keywords:
       curve : string
-        It must be present and set to "P-256".
+        It must be present and set to "P-256", "prime256v1" or "secp256r1".
       d : integer
         Only for a private key. It must be in the range [1..order-1].
       point_x : integer

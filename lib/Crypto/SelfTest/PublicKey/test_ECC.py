@@ -163,6 +163,10 @@ class TestEccKey(unittest.TestCase):
         self.failUnless(key.has_private())
         self.assertEqual(key.pointQ, point)
 
+        # Other names
+        key = EccKey(curve="secp256r1", d=1)
+        key = EccKey(curve="prime256v1", d=1)
+
     def test_public_key(self):
 
         point = EccPoint(_curve.Gx, _curve.Gy)
@@ -193,6 +197,10 @@ class TestEccModule(unittest.TestCase):
         self.failUnless(key.has_private())
         self.assertEqual(key.pointQ, EccPoint(_curve.Gx, _curve.Gy) * key.d)
 
+        # Other names
+        ECC.generate(curve="secp256r1")
+        ECC.generate(curve="prime256v1")
+
     def test_construct(self):
 
         key = ECC.construct(curve="P-256", d=1)
@@ -202,6 +210,10 @@ class TestEccModule(unittest.TestCase):
         key = ECC.construct(curve="P-256", point_x=_curve.Gx, point_y=_curve.Gy)
         self.failIf(key.has_private())
         self.assertEqual(key.pointQ, _curve.G)
+
+        # Other names
+        ECC.construct(curve="secp256r1", d=1)
+        ECC.construct(curve="prime256v1", d=1)
 
     def test_negative_construct(self):
         coord = dict(point_x=10, point_y=4)
