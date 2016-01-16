@@ -413,11 +413,19 @@ class DerSequenceTests(unittest.TestCase):
         self.assertEquals(der.encode(), b('0\x09\x02\x01\x02\x02\x01\x09\x02\x01\x08'))
 
     def testEncode7(self):
-        # One integer and another type (no matter what it is)
+        # One integer and another type (already encoded)
         der = DerSequence()
         der.append(0x180L)
-        der.append(b('\x00\x02\x00\x00'))
-        self.assertEquals(der.encode(), b('0\x08\x02\x02\x01\x80\x00\x02\x00\x00'))
+        der.append(b('0\x03\x02\x01\x05'))
+        self.assertEquals(der.encode(), b('0\x09\x02\x02\x01\x800\x03\x02\x01\x05'))
+        self.failIf(der.hasOnlyInts())
+
+    def testEncode8(self):
+        # One integer and another type (yet to encode)
+        der = DerSequence()
+        der.append(0x180L)
+        der.append(DerSequence([5]))
+        self.assertEquals(der.encode(), b('0\x09\x02\x02\x01\x800\x03\x02\x01\x05'))
         self.failIf(der.hasOnlyInts())
 
     ####

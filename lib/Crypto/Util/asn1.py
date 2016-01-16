@@ -28,7 +28,7 @@ objects.
 
 """
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import byte_string, BytesIO, b, bchr, bord
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -37,7 +37,7 @@ __all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull',
             'newDerInteger', 'newDerOctetString', 'newDerSequence',
             'newDerObjectId', 'newDerBitString', 'newDerSetOf' ]
 
-def _isInt(x, onlyNonNegative=False):
+def _is_number(x, onlyNonNegative=False):
     test = 0
     try:
         test += x
@@ -142,11 +142,11 @@ class DerObject(object):
                 """Check if *tag* is a real DER tag.
                 Convert it from a character to number if necessary.
                 """
-                if not _isInt(tag):
+                if not _is_number(tag):
                     if len(tag)==1:
                         tag = bord(tag[0])
                 # Ensure that tag is a low tag
-                if not (_isInt(tag) and 0 <= tag < 0x1F):
+                if not (_is_number(tag) and 0 <= tag < 0x1F):
                     raise ValueError("Wrong DER tag")
                 return tag
 
@@ -425,9 +425,9 @@ class DerSequence(DerObject):
                   onlyNonNegative : boolean
                     If True, negative integers are not counted in.
                 """
-                def _isInt2(x):
-                    return _isInt(x, onlyNonNegative)
-                return len(filter(_isInt2, self._seq))
+                def _is_number2(x):
+                    return _is_number(x, onlyNonNegative)
+                return len(filter(_is_number2, self._seq))
 
         def hasOnlyInts(self, onlyNonNegative=True):
                 """Return True if all items in this sequence are integers
@@ -452,13 +452,12 @@ class DerSequence(DerObject):
                 """
                 self.payload = b('')
                 for item in self._seq:
-                    try:
+                    if byte_string(item):
                         self.payload += item
-                    except TypeError:
-                        try:
-                            self.payload += DerInteger(item).encode()
-                        except TypeError:
-                            raise ValueError("Trying to DER encode an unknown object")
+                    elif _is_number(item):
+                        self.payload += DerInteger(item).encode()
+                    else:
+                        self.payload += item.encode()
                 return DerObject.encode(self)
 
         def decode(self, derEle):
@@ -831,7 +830,7 @@ class DerSetOf(DerObject):
               An element of the same type of objects already in the set.
               It can be an integer or a DER encoded object.
         """
-        if _isInt(elem):
+        if _is_number(elem):
             eo = 0x02
         else:
             eo = bord(elem[0])
@@ -905,7 +904,7 @@ class DerSetOf(DerObject):
         # Elements in the set must be ordered in lexicographic order
         ordered = []
         for item in self._seq:
-            if _isInt(item):
+            if _is_number(item):
                 bys = DerInteger(item).encode()
             else:
                 bys = item
