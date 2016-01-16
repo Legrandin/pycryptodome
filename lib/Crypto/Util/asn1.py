@@ -35,7 +35,7 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 __all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull',
             'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf',
             'newDerInteger', 'newDerOctetString',
-            'newDerObjectId', 'newDerBitString', 'newDerSetOf' ]
+            'newDerObjectId', 'newDerSetOf' ]
 
 def _is_number(x, onlyNonNegative=False):
     test = 0
@@ -549,15 +549,6 @@ class DerOctetString(DerObject):
         """
         DerObject.__init__(self, 0x04, value, implicit, False)
 
-def newDerOctetString(binstring):
-    """Create a DerOctetString object, already initialized with the binary
-    string."""
-
-    if isinstance(binstring, DerObject):
-        der = DerOctetString(binstring.encode())
-    else:
-        der = DerOctetString(binstring)
-    return der
 
 class DerNull(DerObject):
     """Class to model a DER NULL element."""
@@ -699,7 +690,7 @@ class DerBitString(DerObject):
         """Initialize the DER object as a BIT STRING.
 
         :Parameters:
-          value : byte string
+          value : byte string or DER object
             The initial, packed bit string.
             If not specified, the bit string is empty.
           implicit : integer
@@ -707,7 +698,12 @@ class DerBitString(DerObject):
             It overrides the universal tag for OCTET STRING (3).
         """
         DerObject.__init__(self, 0x03, b(''), implicit, False)
-        self.value = value #: The bitstring value (packed)
+
+        # The bitstring value (packed)
+        if isinstance(value, DerObject):
+            self.value = value.encode()
+        else:
+            self.value = value
 
     def encode(self):
         """Return the DER BIT STRING, fully encoded as a
@@ -748,15 +744,6 @@ class DerBitString(DerObject):
         if self.payload:
             self.value = self.payload[1:]
 
-def newDerBitString(binstring):
-    """Create a DerStringString object, already initialized with the binary
-    string."""
-
-    if isinstance(binstring, DerObject):
-        der = DerBitString(binstring.encode())
-    else:
-        der = DerBitString(binstring)
-    return der
 
 class DerSetOf(DerObject):
     """Class to model a DER SET OF.

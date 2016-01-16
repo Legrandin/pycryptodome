@@ -79,7 +79,6 @@ from Crypto.Util.asn1 import (
                 DerSequence,
                 DerBitString,
                 DerObjectId,
-                newDerBitString
                 )
 
 from Crypto.Math.Numbers import Integer
@@ -301,7 +300,7 @@ class RsaKey(object):
                 keyType = "RSA PUBLIC"
                 binary_key = DerSequence([
                                             algorithmIdentifier,
-                                            newDerBitString(DerSequence([self.n, self.e]))
+                                            DerBitString(DerSequence([self.n, self.e]))
                                          ]).encode()
         if format=='DER':
             return binary_key

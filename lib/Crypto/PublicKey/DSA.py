@@ -98,7 +98,6 @@ from Crypto.Util.asn1 import (
                 DerObject, DerSequence,
                 DerInteger, DerObjectId,
                 DerBitString,
-                newDerBitString
                 )
 
 from Crypto.Math.Numbers import Integer
@@ -359,7 +358,7 @@ class DsaKey(object):
                 raise ValueError("PKCS#8 is only meaningful for private keys")
             binary_key = DerSequence([
                                 DerSequence([DerObjectId(oid), params]),
-                                newDerBitString(DerInteger(self.y))
+                                DerBitString(DerInteger(self.y))
                             ]).encode()
             key_type = "DSA PUBLIC"
 

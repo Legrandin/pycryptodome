@@ -68,7 +68,6 @@ from Crypto.Util.asn1 import (
             DerSequence,
             DerObjectId,
             DerOctetString,
-            newDerOctetString,
             )
 
 from Crypto.IO._PBES import PBES1, PBES2, PbesError
@@ -162,7 +161,7 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
                     DerObjectId(key_oid),
                     key_params
                 ]),
-                newDerOctetString(private_key)
+                DerOctetString(private_key)
             ])
     pk_info_der = pk_info.encode()
 
