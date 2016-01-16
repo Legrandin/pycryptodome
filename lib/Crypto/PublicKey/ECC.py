@@ -206,51 +206,18 @@ class EccPoint(object):
             return self.copy()
 
         # Scalar randomization
-        scalar_blind = int(Integer.random(exact_bits=64) * _curve.order + scalar)
+        scalar_blind = Integer.random(exact_bits=64) * _curve.order + scalar
 
-        # Convert to NAF
-        WINDOW_BITS = 4
-        window_high = 1 << WINDOW_BITS
-        window_low = 1 << (WINDOW_BITS - 1)
-        window_mask = window_high - 1
+        # Montgomery key ladder
+        r = [self.point_at_infinity().copy(), self.copy()]
+        bit_size = int(scalar_blind.size_in_bits())
+        scalar_int = int(scalar_blind)
+        for i in range(bit_size, -1, -1):
+            di = scalar_int >> i & 1
+            r[di ^ 1] += r[di]
+            r[di].double()
 
-        naf = []
-        while scalar_blind > 0:
-            if scalar_blind & 1:
-                di = scalar_blind & window_mask
-                if di >= window_low:
-                    di -= window_high
-                scalar_blind -= di
-            else:
-                di = 0
-            naf.append(di)
-            scalar_blind >>= 1
-        naf.reverse()
-
-        # naf contains d_(i-1), d_(i-2), .. d_1, d_0
-
-        if hasattr(self, "_precomp"):
-            precomp = self._precomp
-        else:
-            # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
-            # which is 1P..7P for W=4 (we also add negatives)
-            precomp =  [self, self]                 # 0, 1P
-            precomp += [precomp[1] + precomp[1]]    # 2P
-            precomp += [precomp[2] + precomp[1]]    # 3P
-            precomp += [0]                          # 4P
-            precomp += [precomp[2] + precomp[3]]    # 5P
-            precomp += [0]                          # 6P
-            precomp += [precomp[2] + precomp[5]]    # 7P
-            precomp += [ -x for x in precomp[:0:-1]]
-            self._precomp = precomp
-
-        # wNAF with always-add
-        result = [_curve.G.copy()] + [self.point_at_infinity()] * (len(precomp) - 1)
-        for x in naf:
-            result[1].double()
-            result[x] += precomp[x]
-
-        return result[1]
+        return r[0]
 
 
 _curve.G = EccPoint(_curve.Gx, _curve.Gy)
