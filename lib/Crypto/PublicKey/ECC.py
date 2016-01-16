@@ -205,24 +205,26 @@ class EccPoint(object):
         elif scalar == 1:
             return self.copy()
 
+        # Scalar randomization
+        scalar_blind = int(Integer.random(exact_bits=64) * _curve.order + scalar)
+
         # Convert to NAF
         WINDOW_BITS = 4
         window_high = 1 << WINDOW_BITS
         window_low = 1 << (WINDOW_BITS - 1)
         window_mask = window_high - 1
 
-        scalar_int = int(scalar)
         naf = []
-        while scalar_int > 0:
-            if scalar_int & 1:
-                di = scalar_int & window_mask
+        while scalar_blind > 0:
+            if scalar_blind & 1:
+                di = scalar_blind & window_mask
                 if di >= window_low:
                     di -= window_high
-                scalar_int -= di
+                scalar_blind -= di
             else:
                 di = 0
             naf.append(di)
-            scalar_int >>= 1
+            scalar_blind >>= 1
         naf.reverse()
 
         # naf contains d_(i-1), d_(i-2), .. d_1, d_0
@@ -232,7 +234,7 @@ class EccPoint(object):
         else:
             # Precompute 1P, 3P, 5P, .. (2**(W-1) - 1)P
             # which is 1P..7P for W=4 (we also add negatives)
-            precomp =  [0, self]                    # 0, 1P
+            precomp =  [self, self]                 # 0, 1P
             precomp += [precomp[1] + precomp[1]]    # 2P
             precomp += [precomp[2] + precomp[1]]    # 3P
             precomp += [0]                          # 4P
@@ -242,13 +244,13 @@ class EccPoint(object):
             precomp += [ -x for x in precomp[:0:-1]]
             self._precomp = precomp
 
-        result = self.point_at_infinity()
+        # wNAF with always-add
+        result = [_curve.G.copy()] + [self.point_at_infinity()] * (len(precomp) - 1)
         for x in naf:
-            result.double()
-            if x != 0:
-                result += precomp[x]
+            result[1].double()
+            result[x] += precomp[x]
 
-        return result
+        return result[1]
 
 
 _curve.G = EccPoint(_curve.Gx, _curve.Gy)
@@ -294,9 +296,15 @@ class EccKey(object):
 
     def _sign(self, z, k):
         assert 0 < k < _curve.order
-        # TODO: add blinding
+
+        blind = Integer.random_range(min_inclusive=1,
+                                     max_exclusive=_curve.order)
+
+        blind_d = self._d * blind
+        inv_blind_k = (blind * k).inverse(_curve.order)
+
         r = (_curve.G * k).x % _curve.order
-        s = k.inverse(_curve.order) * (z + self._d * r) % _curve.order
+        s = inv_blind_k * (blind * z + blind_d * r) % _curve.order
         return (r, s)
 
     def _verify(self, z, rs):
