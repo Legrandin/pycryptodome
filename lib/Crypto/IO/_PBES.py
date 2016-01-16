@@ -37,7 +37,6 @@ from Crypto import Random
 from Crypto.Util.asn1 import (
             DerSequence, DerOctetString,
             DerObjectId, DerInteger,
-            newDerSequence
             )
 
 from Crypto.Util.Padding import pad, unpad
@@ -254,13 +253,13 @@ class PBES2(object):
         if protection.startswith('PBKDF2'):
             count = prot_params.get("iteration_count", 1000)
             key = PBKDF2(passphrase, salt, key_size, count)
-            key_derivation_func = newDerSequence(
+            key_derivation_func = DerSequence([
                     DerObjectId("1.2.840.113549.1.5.12"),   # PBKDF2
-                    newDerSequence(
+                    DerSequence([
                         DerOctetString(salt),
                         DerInteger(count)
-                    )
-            )
+                    ])
+            ])
         else:
             # It must be scrypt
             count = prot_params.get("iteration_count", 16384)
@@ -268,36 +267,36 @@ class PBES2(object):
             scrypt_p = prot_params.get('parallelization', 1)
             key = scrypt(passphrase, salt, key_size,
                          count, scrypt_r, scrypt_p)
-            key_derivation_func = newDerSequence(
+            key_derivation_func = DerSequence([
                     DerObjectId("1.3.6.1.4.1.11591.4.11"),  # scrypt
-                    newDerSequence(
+                    DerSequence([
                         DerOctetString(salt),
                         DerInteger(count),
                         DerInteger(scrypt_r),
                         DerInteger(scrypt_p)
-                    )
-            )
+                    ])
+            ])
 
         # Create cipher and use it
         cipher = module.new(key, cipher_mode, iv)
         encrypted_data = cipher.encrypt(pad(data, cipher.block_size))
-        encryption_scheme = newDerSequence(
+        encryption_scheme = DerSequence([
                 DerObjectId(enc_oid),
                 DerOctetString(iv)
-        )
+        ])
 
         # Result
-        encrypted_private_key_info = newDerSequence(
+        encrypted_private_key_info = DerSequence([
             # encryptionAlgorithm
-            newDerSequence(
+            DerSequence([
                 DerObjectId("1.2.840.113549.1.5.13"),   # PBES2
-                newDerSequence(
+                DerSequence([
                     key_derivation_func,
                     encryption_scheme
-                ),
-            ),
+                ]),
+            ]),
             DerOctetString(encrypted_data)
-        )
+        ])
         return encrypted_private_key_info.encode()
 
     @staticmethod

@@ -97,7 +97,7 @@ from Crypto.Hash import SHA256
 from Crypto.Util.asn1 import (
                 DerObject, DerSequence,
                 DerInteger, DerObjectId,
-                DerBitString, newDerSequence,
+                DerBitString,
                 newDerBitString
                 )
 
@@ -330,7 +330,7 @@ class DsaKey(object):
 
         # DER format is always used, even in case of PEM, which simply
         # encodes it into BASE64.
-        params = newDerSequence(self.p, self.q, self.g)
+        params = DerSequence([self.p, self.q, self.g])
         if self.has_private():
             if pkcs8 is None:
                 pkcs8 = True
@@ -352,15 +352,15 @@ class DsaKey(object):
                 if format != 'PEM' and passphrase:
                     raise ValueError("DSA private key cannot be encrypted")
                 ints = [0, self.p, self.q, self.g, self.y, self.x]
-                binary_key = newDerSequence(*ints).encode()
+                binary_key = DerSequence(ints).encode()
                 key_type = "DSA PRIVATE"
         else:
             if pkcs8:
                 raise ValueError("PKCS#8 is only meaningful for private keys")
-            binary_key = newDerSequence(
-                            newDerSequence(DerObjectId(oid), params),
-                            newDerBitString(DerInteger(self.y))
-                            ).encode()
+            binary_key = DerSequence([
+                                DerSequence([DerObjectId(oid), params]),
+                                newDerBitString(DerInteger(self.y))
+                            ]).encode()
             key_type = "DSA PUBLIC"
 
         if format == 'DER':

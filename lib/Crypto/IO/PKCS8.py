@@ -66,7 +66,6 @@ from Crypto.Util.py3compat import *
 from Crypto.Util.asn1 import (
             DerNull,
             DerSequence,
-            newDerSequence,
             DerObjectId,
             DerOctetString,
             newDerOctetString,
@@ -157,14 +156,14 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
     #       attributes              [0]  IMPLICIT Attributes OPTIONAL
     #   }
     #
-    pk_info = newDerSequence(
+    pk_info = DerSequence([
                 0,
-                newDerSequence(
+                DerSequence([
                     DerObjectId(key_oid),
                     key_params
-                ),
+                ]),
                 newDerOctetString(private_key)
-            )
+            ])
     pk_info_der = pk_info.encode()
 
     if not passphrase:

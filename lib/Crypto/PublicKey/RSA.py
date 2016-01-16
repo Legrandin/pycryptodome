@@ -79,7 +79,6 @@ from Crypto.Util.asn1 import (
                 DerSequence,
                 DerBitString,
                 DerObjectId,
-                newDerSequence,
                 newDerBitString
                 )
 
@@ -273,7 +272,7 @@ class RsaKey(object):
         # DER format is always used, even in case of PEM, which simply
         # encodes it into BASE64.
         if self.has_private():
-                binary_key = newDerSequence(
+                binary_key = DerSequence([
                         0,
                         self.n,
                         self.e,
@@ -283,7 +282,7 @@ class RsaKey(object):
                         self.d % (self.p-1),
                         self.d % (self.q-1),
                         Integer(self.q).inverse(self.p)
-                    ).encode()
+                    ]).encode()
                 if pkcs==1:
                     keyType = 'RSA PRIVATE'
                     if format=='DER' and passphrase:
@@ -300,12 +299,10 @@ class RsaKey(object):
                         passphrase = None
         else:
                 keyType = "RSA PUBLIC"
-                binary_key = newDerSequence(
-                    algorithmIdentifier,
-                    newDerBitString(
-                        newDerSequence( self.n, self.e )
-                        )
-                    ).encode()
+                binary_key = DerSequence([
+                                            algorithmIdentifier,
+                                            newDerBitString(DerSequence([self.n, self.e]))
+                                         ]).encode()
         if format=='DER':
             return binary_key
         if format=='PEM':

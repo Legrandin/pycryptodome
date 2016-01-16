@@ -34,13 +34,13 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 __all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull',
             'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf',
-            'newDerInteger', 'newDerOctetString', 'newDerSequence',
+            'newDerInteger', 'newDerOctetString',
             'newDerObjectId', 'newDerBitString', 'newDerSetOf' ]
 
 def _is_number(x, onlyNonNegative=False):
     test = 0
     try:
-        test += x
+        test = x + test
     except TypeError:
         return False
     return not onlyNonNegative or x>=0
@@ -507,17 +507,6 @@ class DerSequence(DerObject):
                         break
                 # end
 
-def newDerSequence(*der_objs):
-    """Create a DerSequence object, already initialized with all objects
-    passed as parameters."""
-
-    der = DerSequence()
-    for obj in der_objs:
-        if isinstance(obj, DerObject):
-            der += obj.encode()
-        else:
-            der += obj
-    return der
 
 class DerOctetString(DerObject):
     """Class to model a DER OCTET STRING.

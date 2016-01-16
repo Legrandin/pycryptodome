@@ -36,11 +36,11 @@
 import unittest
 
 from Crypto.Util.py3compat import *
-from Crypto.Util.asn1 import DerObject, DerSetOf, newDerSetOf, DerInteger,\
-                             DerBitString, newDerBitString, newDerObjectId,\
-                             DerObjectId, DerNull, DerOctetString,\
-                             newDerOctetString, DerSequence, newDerSequence,\
-                             newDerInteger
+from Crypto.Util.asn1 import (DerObject, DerSetOf, newDerSetOf, DerInteger,
+                             DerBitString, newDerBitString, newDerObjectId,
+                             DerObjectId, DerNull, DerOctetString,
+                             newDerOctetString, DerSequence,
+                             newDerInteger)
 
 class DerObjectTests(unittest.TestCase):
 
@@ -317,7 +317,7 @@ class DerIntegerTests(unittest.TestCase):
 class DerSequenceTests(unittest.TestCase):
 
     def testInit1(self):
-        der = newDerSequence(1, DerInteger(2), b('0\x00'))
+        der = DerSequence([1, DerInteger(2), b('0\x00')])
         self.assertEquals(der.encode(), b('0\x08\x02\x01\x01\x02\x01\x020\x00'))
 
     def testEncode1(self):
