@@ -33,9 +33,7 @@ from Crypto.Util.py3compat import byte_string, BytesIO, b, bchr, bord
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 __all__ = [ 'DerObject', 'DerInteger', 'DerOctetString', 'DerNull',
-            'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf',
-            'newDerInteger', 'newDerOctetString',
-            'newDerObjectId', 'newDerSetOf' ]
+            'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf' ]
 
 def _is_number(x, onlyNonNegative=False):
     test = 0
@@ -326,11 +324,6 @@ class DerInteger(DerObject):
                 if self.payload and bord(self.payload[0]) & 0x80:
                     self.value -= bits
 
-def newDerInteger(number):
-    """Create a DerInteger object, already initialized with an integer."""
-
-    der = DerInteger(number)
-    return der
 
 class DerSequence(DerObject):
         """Class to model a DER SEQUENCE.
@@ -652,12 +645,6 @@ class DerObjectId(DerObject):
             pass
         self.value = '.'.join(comps)
 
-def newDerObjectId(dottedstring):
-    """Create a DerObjectId object, already initialized with the given Object
-    Identifier (a dotted string)."""
-
-    der = DerObjectId(dottedstring)
-    return der
 
 class DerBitString(DerObject):
     """Class to model a DER BIT STRING.
@@ -784,7 +771,11 @@ class DerSetOf(DerObject):
         """
         DerObject.__init__(self, 0x11, b(''), implicit, True)
         self._seq = []
+
+        # All elements must be of the same type (and therefore have the
+        # same leading octet)
         self._elemOctet = None
+
         if startSet:
             for e in startSet:
                 self.add(e)
@@ -806,15 +797,20 @@ class DerSetOf(DerObject):
               An element of the same type of objects already in the set.
               It can be an integer or a DER encoded object.
         """
+
         if _is_number(elem):
             eo = 0x02
+        elif isinstance(elem, DerObject):
+            eo = self._tag_octet
         else:
             eo = bord(elem[0])
+
         if self._elemOctet != eo:
-            if self._elemOctet:
+            if self._elemOctet is not None:
                 raise ValueError("New element does not belong to the set")
             self._elemOctet = eo
-        if not elem in self._seq:
+
+        if elem not in self._seq:
             self._seq.append(elem)
 
     def decode(self, derEle):
@@ -882,21 +878,11 @@ class DerSetOf(DerObject):
         for item in self._seq:
             if _is_number(item):
                 bys = DerInteger(item).encode()
+            elif isinstance(item, DerObject):
+                bys = item.encode()
             else:
                 bys = item
             ordered.append(bys)
         ordered.sort()
         self.payload = b('').join(ordered)
         return DerObject.encode(self)
-
-def newDerSetOf(*der_objs):
-    """Create a DerSequence object, already initialized with all objects
-    passed as parameters."""
-
-    der = DerSetOf()
-    for obj in der_objs:
-        if isinstance(obj, DerObject):
-            der.add(obj.encode())
-        else:
-            der.add(obj)
-    return der

@@ -36,11 +36,10 @@
 import unittest
 
 from Crypto.Util.py3compat import *
-from Crypto.Util.asn1 import (DerObject, DerSetOf, newDerSetOf, DerInteger,
-                             DerBitString, newDerObjectId,
+from Crypto.Util.asn1 import (DerObject, DerSetOf, DerInteger,
+                             DerBitString,
                              DerObjectId, DerNull, DerOctetString,
-                             newDerOctetString, DerSequence,
-                             newDerInteger)
+                             DerSequence)
 
 class DerObjectTests(unittest.TestCase):
 
@@ -165,7 +164,7 @@ class DerObjectTests(unittest.TestCase):
 class DerIntegerTests(unittest.TestCase):
 
     def testInit1(self):
-        der = newDerInteger(1)
+        der = DerInteger(1)
         self.assertEquals(der.encode(), b('\x02\x01\x01'))
 
     def testEncode1(self):
@@ -537,7 +536,7 @@ class DerSequenceTests(unittest.TestCase):
 class DerOctetStringTests(unittest.TestCase):
 
     def testInit1(self):
-        der = newDerOctetString(b('\xFF'))
+        der = DerOctetString(b('\xFF'))
         self.assertEquals(der.encode(), b('\x04\x01\xFF'))
 
     def testEncode1(self):
@@ -585,7 +584,7 @@ class DerNullTests(unittest.TestCase):
 class DerObjectIdTests(unittest.TestCase):
 
     def testInit1(self):
-        der = newDerObjectId("1.1")
+        der = DerObjectId("1.1")
         self.assertEquals(der.encode(), b('\x06\x01)'))
 
     def testEncode1(self):
@@ -653,7 +652,7 @@ class DerBitStringTests(unittest.TestCase):
 class DerSetOfTests(unittest.TestCase):
 
     def testInit1(self):
-        der = newDerSetOf(DerInteger(1), DerInteger(2))
+        der = DerSetOf([DerInteger(1), DerInteger(2)])
         self.assertEquals(der.encode(), b('1\x06\x02\x01\x01\x02\x01\x02'))
 
     def testEncode1(self):
