@@ -221,12 +221,6 @@ class DerObject(object):
                 if s.remaining_data() > 0:
                     raise ValueError("Unexpected extra data after the DER structure")
 
-                # In case of an EXTERNAL tag, further decode the inner
-                # element.
-                if hasattr(self, "_inner_tag_octet"):
-                    self._tag_octet = self._inner_tag_octet
-                    del self._inner_tag_octet
-                    self.decode(self.payload)
                 return self
 
         def _decodeFromStream(self, s):
@@ -240,6 +234,20 @@ class DerObject(object):
                     self._tag_octet = idOctet
                 length = self._decodeLen(s)
                 self.payload = s.read(length)
+
+                # In case of an EXTERNAL tag, further decode the inner
+                # element.
+                if hasattr(self, "_inner_tag_octet"):
+                    p = BytesIO_EOF(self.payload)
+                    inner_octet = p.read_byte()
+                    if inner_octet != self._inner_tag_octet:
+                        raise ValueError("Unexpected internal DER tag")
+                    length = self._decodeLen(p)
+                    self.payload = p.read(length)
+
+                    # There shouldn't be other bytes left
+                    if p.remaining_data() > 0:
+                        raise ValueError("Unexpected extra data after the DER structure")
 
 
 class DerInteger(DerObject):
@@ -606,7 +614,7 @@ class DerObjectId(DerObject):
     the output will be ``1.2.840.113549.1.1.1``.
     """
 
-    def __init__(self, value='', implicit=None):
+    def __init__(self, value='', implicit=None, explicit=None):
         """Initialize the DER object as an OBJECT ID.
 
         :Parameters:
@@ -615,8 +623,10 @@ class DerObjectId(DerObject):
           implicit : integer
             The IMPLICIT tag to use for the encoded object.
             It overrides the universal tag for OBJECT ID (6).
+          explicit : integer
+            The EXPLICIT tag to use for the encoded object.
         """
-        DerObject.__init__(self, 0x06, b(''), implicit, False)
+        DerObject.__init__(self, 0x06, b(''), implicit, False, explicit)
         self.value = value  #: The Object ID, a dot separated list of integers
 
     def encode(self):
@@ -696,7 +706,7 @@ class DerBitString(DerObject):
     the output will be ``aabb``.
     """
 
-    def __init__(self, value=b(''), implicit=None):
+    def __init__(self, value=b(''), implicit=None, explicit=None):
         """Initialize the DER object as a BIT STRING.
 
         :Parameters:
@@ -706,8 +716,10 @@ class DerBitString(DerObject):
           implicit : integer
             The IMPLICIT tag to use for the encoded object.
             It overrides the universal tag for OCTET STRING (3).
+          explicit : integer
+            The EXPLICIT tag to use for the encoded object.
         """
-        DerObject.__init__(self, 0x03, b(''), implicit, False)
+        DerObject.__init__(self, 0x03, b(''), implicit, False, explicit)
 
         # The bitstring value (packed)
         if isinstance(value, DerObject):

@@ -29,8 +29,17 @@
 # ===================================================================
 
 
+from Crypto.Util.py3compat import bord
+
 from Crypto.Math.Numbers import Integer
 from Crypto.Random import get_random_bytes
+from Crypto.Util.asn1 import (DerObjectId, DerOctetString, DerSequence,
+                              DerBitString)
+
+from Crypto.IO import PKCS8
+from Crypto.PublicKey import (_expand_subject_public_key_info,
+                              _extract_subject_public_key_info)
+
 
 class _Curve(object):
     pass
@@ -42,6 +51,7 @@ _curve.order = Integer(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac
 _curve.Gx = Integer(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)
 _curve.Gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
 _curve.names = ("P-256", "prime256v1", "secp256r1")
+_curve.oid = "1.2.840.10045.3.1.7"
 
 
 # https://www.nsa.gov/ia/_files/nist-routines.pdf
@@ -291,7 +301,7 @@ class EccKey(object):
     def _verify(self, z, rs):
         sinv = rs[1].inverse(_curve.order)
         point1 = _curve.G * ((sinv * z) % _curve.order)
-        point2 = self.pointQ * ((sinv * rs[0])  % _curve.order)
+        point2 = self.pointQ * ((sinv * rs[0]) % _curve.order)
         return (point1 + point2).x == rs[0]
 
     @property
@@ -331,6 +341,7 @@ def generate(**kwargs):
                              randfunc=randfunc)
 
     return EccKey(curve=curve, d=d)
+
 
 def construct(**kwargs):
     """Build a new ECC key (private or public) starting
@@ -377,8 +388,128 @@ def construct(**kwargs):
         if pub_key.x != point_x or pub_key.y != point_y:
             raise ValueError("Private and public ECC keys do not match")
 
-
     return EccKey(**kwargs)
+
+
+def _import_public_der(curve_name, publickey):
+
+    # We only support P-256 named curves for now
+    if curve_name != _curve.oid:
+        raise ValueError("Unsupport curve")
+
+    # ECPoint ::= OCTET STRING
+
+    # We support only uncompressed points
+    order_bytes = _curve.order.size_in_bytes()
+    if len(publickey) != (1 + 2 * order_bytes) or bord(publickey[0]) != 4:
+        raise ValueError("Only uncompressed points are supported")
+
+    point_x = Integer.from_bytes(publickey[1:order_bytes+1])
+    point_y = Integer.from_bytes(publickey[order_bytes+1:])
+    return construct(curve="P-256", point_x=point_x, point_y=point_y)
+
+
+def _import_subjectPublicKeyInfo(encoded, *kwargs):
+    oid, encoded_key, params = _expand_subject_public_key_info(encoded)
+
+    # We accept id-ecPublicKey, id-ecDH, id-ecMQV without making any
+    # distiction for now.
+    unrestricted_oid = "1.2.840.10045.2.1"
+    ecdh_oid = "1.3.132.1.12"
+    ecmqv_oid = "1.3.132.1.13"
+
+    if oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid) or not params:
+        raise ValueError("Invalid ECC OID")
+
+    # ECParameters ::= CHOICE {
+    #   namedCurve         OBJECT IDENTIFIER
+    #   -- implicitCurve   NULL
+    #   -- specifiedCurve  SpecifiedECDomain
+    # }
+    curve_name = DerObjectId().decode(params).value
+
+    return _import_public_der(curve_name, encoded_key)
+
+
+def _import_private_der(encoded, passphrase, curve_name=None):
+
+    # ECPrivateKey ::= SEQUENCE {
+    #           version        INTEGER { ecPrivkeyVer1(1) } (ecPrivkeyVer1),
+    #           privateKey     OCTET STRING,
+    #           parameters [0] ECParameters {{ NamedCurve }} OPTIONAL,
+    #           publicKey  [1] BIT STRING OPTIONAL
+    #    }
+
+    private_key = DerSequence().decode(encoded, nr_elements=(3, 4))
+    if private_key[0] != 1:
+        raise ValueError("Incorrect ECC private key version")
+
+    scalar_bytes = DerOctetString().decode(private_key[1]).payload
+    order_bytes = _curve.order.size_in_bytes()
+    if len(scalar_bytes) != order_bytes:
+        raise ValueError("Private key is too small")
+    d = Integer.from_bytes(scalar_bytes)
+
+    try:
+        curve_name = DerObjectId(explicit=0).decode(private_key[2]).value
+    except ValueError:
+        pass
+
+    if curve_name != _curve.oid:
+        raise ValueError("Unsupport curve")
+
+    # Decode public key (if any, it must be P-256)
+    if len(private_key) == 4:
+        public_key_enc = DerBitString(explicit=1).decode(private_key[3]).value
+        public_key = _import_public_der(curve_name, public_key_enc)
+        point_x = public_key.pointQ.x
+        point_y = public_key.pointQ.y
+    else:
+        point_x = point_y = None
+
+    return construct(curve="P-256", d=d, point_x=point_x, point_y=point_y)
+
+
+def _import_pkcs8(encoded, passphrase):
+
+    # From RFC5915, Section 1:
+    #
+    # Distributing an EC private key with PKCS#8 [RFC5208] involves including:
+    # a) id-ecPublicKey, id-ecDH, or id-ecMQV (from [RFC5480]) with the
+    #    namedCurve as the parameters in the privateKeyAlgorithm field; and
+    # b) ECPrivateKey in the PrivateKey field, which is an OCTET STRING.
+
+    algo_oid, private_key, params = PKCS8.unwrap(encoded, passphrase)
+
+    # We accept id-ecPublicKey, id-ecDH, id-ecMQV without making any
+    # distiction for now.
+    unrestricted_oid = "1.2.840.10045.2.1"
+    ecdh_oid = "1.3.132.1.12"
+    ecmqv_oid = "1.3.132.1.13"
+
+    if algo_oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid):
+        raise ValueError("No PKCS#8 encoded ECC key")
+
+    curve_name = DerObjectId().decode(params).value
+
+    return _import_private_der(private_key, passphrase, curve_name)
+
+
+def _import_der(encoded, passphrase):
+
+    decodings = (
+        _import_subjectPublicKeyInfo,
+        _import_private_der,
+        _import_pkcs8,
+        )
+
+    for decoding in decodings:
+        try:
+            return decoding(encoded, passphrase)
+        except (ValueError, TypeError, IndexError):
+            pass
+
+    raise ValueError("Not an ECC DER key")
 
 
 if __name__ == "__main__":
