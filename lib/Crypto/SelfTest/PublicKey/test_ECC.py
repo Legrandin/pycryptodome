@@ -188,6 +188,24 @@ class TestEccKey(unittest.TestCase):
         self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=0))
         self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=_curve.order))
 
+    def test_equality(self):
+
+        private_key = ECC.construct(d=3, curve="P-256")
+        private_key2 = ECC.construct(d=3, curve="P-256")
+        private_key3 = ECC.construct(d=4, curve="P-256")
+
+        public_key = private_key.public_key()
+        public_key2 = private_key2.public_key()
+        public_key3 = private_key3.public_key()
+
+        self.assertEqual(private_key, private_key2)
+        self.assertNotEqual(private_key, private_key3)
+
+        self.assertEqual(public_key, public_key2)
+        self.assertNotEqual(public_key, public_key3)
+
+        self.assertNotEqual(public_key, private_key)
+
 
 class TestEccModule(unittest.TestCase):
 

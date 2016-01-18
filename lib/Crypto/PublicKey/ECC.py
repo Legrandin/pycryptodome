@@ -258,6 +258,12 @@ class EccKey(object):
             if not 1 <= self._d < _curve.order:
                 raise ValueError("Invalid ECC private component")
 
+    def __eq__(self, other):
+        if other.has_private() != self.has_private():
+            return False
+
+        return (other.pointQ.x == self.pointQ.x) and (other.pointQ.y == self.pointQ.y)
+
     def has_private(self):
         return self._d is not None
 
