@@ -28,7 +28,7 @@ objects.
 
 """
 
-from Crypto.Util.py3compat import byte_string, BytesIO, b, bchr, bord
+from Crypto.Util.py3compat import byte_string, b, bchr, bord
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -45,35 +45,36 @@ def _is_number(x, only_non_negative=False):
     return not only_non_negative or x >= 0
 
 
-class BytesIO_EOF(BytesIO):
+class BytesIO_EOF(object):
     """This class differs from BytesIO in that a ValueError exception is
     raised whenever EOF is reached."""
 
-    def __init__(self, *params):
-        BytesIO.__init__(self, *params)
-        self.set_record(False)
+    def __init__(self, initial_bytes):
+        self._buffer = initial_bytes
+        self._index = 0
+        self._bookmark  = None
 
-    def set_record(self, record):
-        self._record = record
-        self._recording = b("")
+    def set_bookmark(self):
+        self._bookmark = self._index
+
+    def data_since_bookmark(self):
+        assert self._bookmark is not None
+        return self._buffer[self._bookmark:self._index]
+
+    def remaining_data(self):
+        return len(self._buffer) - self._index
 
     def read(self, length):
-        s = BytesIO.read(self, length)
+        new_index = self._index + length
+        if new_index > len(self._buffer):
+            raise ValueError
 
-        if len(s) < length:
-            raise EOFError
-
-        if self._record:
-            self._recording += s
-
-        return s
+        result = self._buffer[self._index:new_index]
+        self._index = new_index
+        return result
 
     def read_byte(self):
         return bord(self.read(1)[0])
-
-
-class _NoDerElementError(EOFError):
-    pass
 
 
 class DerObject(object):
@@ -208,18 +209,14 @@ class DerObject(object):
 
                 :Raise ValueError:
                   In case of parsing errors.
-                :Raise EOFError:
-                  If the DER element is too short.
                 """
 
                 s = BytesIO_EOF(derEle)
                 self._decodeFromStream(s)
+
                 # There shouldn't be other bytes left
-                try:
-                    s.read_byte()
+                if s.remaining_data() > 0:
                     raise ValueError("Unexpected extra data after the DER structure")
-                except EOFError:
-                    pass
 
                 # In case of an EXTERNAL tag, further decode the inner
                 # element.
@@ -232,10 +229,7 @@ class DerObject(object):
         def _decodeFromStream(self, s):
                 """Decode a complete DER element from a file."""
 
-                try:
-                    idOctet = s.read_byte()
-                except EOFError:
-                    raise _NoDerElementError
+                idOctet = s.read_byte()
                 if self._tag_octet is not None:
                     if idOctet != self._tag_octet:
                         raise ValueError("Unexpected DER tag")
@@ -264,7 +258,7 @@ class DerInteger(DerObject):
           >>>   int_der = DerInteger()
           >>>   int_der.decode(s)
           >>>   print int_der.value
-          >>> except (ValueError, EOFError):
+          >>> except ValueError:
           >>>   print "Not a valid DER INTEGER"
 
         the output will be ``9``.
@@ -311,8 +305,6 @@ class DerInteger(DerObject):
 
                 :Raise ValueError:
                   In case of parsing errors.
-                :Raise EOFError:
-                  If the DER element is too short.
                 """
 
                 return DerObject.decode(self, derEle)
@@ -366,7 +358,7 @@ class DerSequence(DerObject):
           >>>   print len(seq_der)
           >>>   print seq_der[0]
           >>>   print seq_der[:]
-          >>> except (ValueError, EOFError):
+          >>> except ValueError:
           >>>   print "Not a valid DER SEQUENCE"
 
         the output will be::
@@ -480,8 +472,6 @@ class DerSequence(DerObject):
 
                 :Raise ValueError:
                   In case of parsing errors.
-                :Raise EOFError:
-                  If the DER element is too short.
 
                 DER INTEGERs are decoded into Python integers. Any other DER
                 element is not decoded. Its validity is not checked.
@@ -499,22 +489,19 @@ class DerSequence(DerObject):
 
                 # Add one item at a time to self.seq, by scanning self.payload
                 p = BytesIO_EOF(self.payload)
-                while True:
-                    try:
-                        p.set_record(True)
-                        der = DerObject()
-                        der._decodeFromStream(p)
+                while p.remaining_data() > 0:
+                    p.set_bookmark()
 
-                        # Parse INTEGERs differently
-                        if der._tag_octet != 0x02:
-                            self._seq.append(p._recording)
-                        else:
-                            derInt = DerInteger()
-                            derInt.decode(p._recording)
-                            self._seq.append(derInt.value)
+                    der = DerObject()
+                    der._decodeFromStream(p)
 
-                    except _NoDerElementError:
-                        break
+                    # Parse INTEGERs differently
+                    if der._tag_octet != 0x02:
+                        self._seq.append(p.data_since_bookmark())
+                    else:
+                        derInt = DerInteger()
+                        derInt.decode(p.data_since_bookmark())
+                        self._seq.append(derInt.value)
                 # end
 
 
@@ -539,7 +526,7 @@ class DerOctetString(DerObject):
     >>>   os_der = DerOctetString()
     >>>   os_der.decode(s)
     >>>   print hexlify(os_der.payload)
-    >>> except (ValueError, EOFError):
+    >>> except ValueError:
     >>>   print "Not a valid DER OCTET STRING"
 
     the output will be ``aabb``.
@@ -590,7 +577,7 @@ class DerObjectId(DerObject):
     >>>   oid_der = DerObjectId()
     >>>   oid_der.decode(s)
     >>>   print oid_der.value
-    >>> except (ValueError, EOFError):
+    >>> except ValueError:
     >>>   print "Not a valid DER OBJECT ID"
 
     the output will be ``1.2.840.113549.1.1.1``.
@@ -636,8 +623,6 @@ class DerObjectId(DerObject):
 
         :Raise ValueError:
             In case of parsing errors.
-        :Raise EOFError:
-            If the DER element is too short.
         """
 
         return DerObject.decode(self, derEle)
@@ -652,15 +637,12 @@ class DerObjectId(DerObject):
         p = BytesIO_EOF(self.payload)
         comps = list(map(str, divmod(p.read_byte(), 40)))
         v = 0
-        try:
-            while True:
-                c = p.read_byte()
-                v = v*128 + (c & 0x7F)
-                if not (c & 0x80):
-                    comps.append(str(v))
-                    v = 0
-        except EOFError:
-            pass
+        while p.remaining_data():
+            c = p.read_byte()
+            v = v*128 + (c & 0x7F)
+            if not (c & 0x80):
+                comps.append(str(v))
+                v = 0
         self.value = '.'.join(comps)
 
 
@@ -685,7 +667,7 @@ class DerBitString(DerObject):
     >>>   bs_der = DerBitString()
     >>>   bs_der.decode(s)
     >>>   print hexlify(bs_der.value)
-    >>> except (ValueError, EOFError):
+    >>> except ValueError:
     >>>   print "Not a valid DER OCTET STRING"
 
     the output will be ``aabb``.
@@ -728,8 +710,6 @@ class DerBitString(DerObject):
 
         :Raise ValueError:
             In case of parsing errors.
-        :Raise EOFError:
-            If the DER element is too short.
         """
 
         return DerObject.decode(self, derEle)
@@ -771,7 +751,7 @@ class DerSetOf(DerObject):
     >>>   so_der = DerSetOf()
     >>>   so_der.decode(s)
     >>>   print [x for x in so_der]
-    >>> except (ValueError, EOFError):
+    >>> except ValueError:
     >>>   print "Not a valid DER SET OF"
 
     the output will be ``[4, 5, 6]``.
@@ -844,8 +824,6 @@ class DerSetOf(DerObject):
 
         :Raise ValueError:
             In case of parsing errors.
-        :Raise EOFError:
-            If the DER element is too short.
         """
 
         return DerObject.decode(self, derEle)
@@ -861,29 +839,26 @@ class DerSetOf(DerObject):
         # Add one item at a time to self.seq, by scanning self.payload
         p = BytesIO_EOF(self.payload)
         setIdOctet = -1
-        while True:
-            try:
-                p.set_record(True)
-                der = DerObject()
-                der._decodeFromStream(p)
+        while p.remaining_data() > 0:
+            p.set_bookmark()
 
-                # Verify that all members are of the same type
-                if setIdOctet < 0:
-                    setIdOctet = der._tag_octet
-                else:
-                    if setIdOctet != der._tag_octet:
-                        raise ValueError("Not all elements are of the same DER type")
+            der = DerObject()
+            der._decodeFromStream(p)
 
-                # Parse INTEGERs differently
-                if setIdOctet != 0x02:
-                    self._seq.append(p._recording)
-                else:
-                    derInt = DerInteger()
-                    derInt.decode(p._recording)
-                    self._seq.append(derInt.value)
+            # Verify that all members are of the same type
+            if setIdOctet < 0:
+                setIdOctet = der._tag_octet
+            else:
+                if setIdOctet != der._tag_octet:
+                    raise ValueError("Not all elements are of the same DER type")
 
-            except _NoDerElementError:
-                break
+            # Parse INTEGERs differently
+            if setIdOctet != 0x02:
+                self._seq.append(p.data_since_bookmark())
+            else:
+                derInt = DerInteger()
+                derInt.decode(p.data_since_bookmark())
+                self._seq.append(derInt.value)
         # end
 
     def encode(self):

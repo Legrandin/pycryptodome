@@ -79,7 +79,7 @@ def _extract_sp_info(x509_certificate):
         if index in (5, 6):
             return x509_tbs_cert[index]
 
-    except (TypeError, IndexError, ValueError, EOFError):
+    except (TypeError, IndexError, ValueError):
         pass
 
     raise ValueError("Cannot extract subjectPublicKeyInfo")

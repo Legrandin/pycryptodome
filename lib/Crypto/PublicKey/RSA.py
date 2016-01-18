@@ -552,7 +552,7 @@ def _importKeyDER(extern_key, passphrase):
                     rsaPub = DerSequence().decode(bitmap.value)
                     if len(rsaPub) == 2 and rsaPub.hasOnlyInts():
                         return construct(rsaPub[:])
-            except (ValueError, EOFError):
+            except ValueError:
                 pass
 
         # Try to see if this is an X.509 DER certificate
@@ -570,7 +570,7 @@ def _importKeyDER(extern_key, passphrase):
         if k[0] == oid:
             return _importKeyDER(k[1], passphrase)
 
-    except (ValueError, EOFError):
+    except ValueError:
         pass
 
     raise ValueError("RSA key format is not supported")

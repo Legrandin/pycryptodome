@@ -583,7 +583,7 @@ def _importKeyDER(key_data, passphrase, params):
                     tup = [pub_key.value]
                     tup += [params[comp] for comp in (2, 0, 1)]
                     return construct(tup)
-            except (ValueError, EOFError):
+            except ValueError:
                 pass
 
         # Try to see if this is an X.509 DER certificate
@@ -601,7 +601,7 @@ def _importKeyDER(key_data, passphrase, params):
         if p8_pair[0] == oid:
             return _importKeyDER(p8_pair[1], passphrase, p8_pair[2])
 
-    except (ValueError, EOFError):
+    except ValueError:
         pass
 
     raise ValueError("DSA key format is not supported")

@@ -117,7 +117,7 @@ class DerObjectTests(unittest.TestCase):
         self.assertRaises(ValueError, der.decode, b('\x02\x02\x01\x02\xFF'))
         # Decode payload with too little data gives error
         der = DerObject(0x02)
-        self.assertRaises(EOFError, der.decode, b('\x02\x02\x01'))
+        self.assertRaises(ValueError, der.decode, b('\x02\x02\x01'))
 
     def testObjDecode4(self):
         # Decode implicit tag (primitive)
@@ -515,9 +515,9 @@ class DerSequenceTests(unittest.TestCase):
     def testErrDecode1(self):
         # Not a sequence
         der = DerSequence()
-        self.assertRaises(EOFError, der.decode, b(''))
+        self.assertRaises(ValueError, der.decode, b(''))
         self.assertRaises(ValueError, der.decode, b('\x00'))
-        self.assertRaises(EOFError, der.decode, b('\x30'))
+        self.assertRaises(ValueError, der.decode, b('\x30'))
 
     def testErrDecode2(self):
         der = DerSequence()
@@ -528,7 +528,7 @@ class DerSequenceTests(unittest.TestCase):
         # Wrong length format
         der = DerSequence()
         # Missing length in sub-item
-        self.assertRaises(EOFError, der.decode, b('\x30\x04\x02\x01\x01\x00'))
+        self.assertRaises(ValueError, der.decode, b('\x30\x04\x02\x01\x01\x00'))
         # Valid BER, but invalid DER length
         self.assertRaises(ValueError, der.decode, b('\x30\x81\x03\x02\x01\x01'))
         self.assertRaises(ValueError, der.decode, b('\x30\x04\x02\x81\x01\x01'))
