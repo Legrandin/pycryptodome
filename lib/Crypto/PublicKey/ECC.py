@@ -264,6 +264,14 @@ class EccKey(object):
 
         return (other.pointQ.x == self.pointQ.x) and (other.pointQ.y == self.pointQ.y)
 
+    def __repr__(self):
+        if self.has_private():
+            extra = ", d=%d" % int(self._d)
+        else:
+            extra = ""
+        return "EccKey(curve='P-256', x=%d, y=%d%s)" %\
+               (self.pointQ.x, self.pointQ.y, extra)
+
     def has_private(self):
         return self._d is not None
 
