@@ -533,6 +533,15 @@ class DerSequenceTests(unittest.TestCase):
         self.assertRaises(ValueError, der.decode, b('\x30\x81\x03\x02\x01\x01'))
         self.assertRaises(ValueError, der.decode, b('\x30\x04\x02\x81\x01\x01'))
 
+    def test_expected_nr_elements(self):
+        der_bin = DerSequence([1, 2, 3]).encode()
+
+        DerSequence().decode(der_bin, nr_elements=3)
+        DerSequence().decode(der_bin, nr_elements=(2,3))
+        self.assertRaises(ValueError, DerSequence().decode, der_bin, nr_elements=1)
+        self.assertRaises(ValueError, DerSequence().decode, der_bin, nr_elements=(4,5))
+
+
 class DerOctetStringTests(unittest.TestCase):
 
     def testInit1(self):

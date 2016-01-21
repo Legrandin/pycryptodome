@@ -462,7 +462,7 @@ class DerSequence(DerObject):
                         self.payload += item.encode()
                 return DerObject.encode(self)
 
-        def decode(self, derEle):
+        def decode(self, derEle, nr_elements=None):
                 """Decode a complete DER SEQUENCE, and re-initializes this
                 object with it.
 
@@ -477,6 +477,7 @@ class DerSequence(DerObject):
                 element is not decoded. Its validity is not checked.
                 """
 
+                self._nr_elements = nr_elements
                 return DerObject.decode(self, derEle)
 
         def _decodeFromStream(self, s):
@@ -502,7 +503,17 @@ class DerSequence(DerObject):
                         derInt = DerInteger()
                         derInt.decode(p.data_since_bookmark())
                         self._seq.append(derInt.value)
-                # end
+
+                ok = True
+                if self._nr_elements is not None:
+                    try:
+                        ok = len(self._seq) in self._nr_elements
+                    except TypeError:
+                        ok = len(self._seq) == self._nr_elements
+
+                if not ok:
+                    raise ValueError("Unexpected number of members (%d)"
+                                     " in the sequence" % len(self._seq))
 
 
 class DerOctetString(DerObject):
