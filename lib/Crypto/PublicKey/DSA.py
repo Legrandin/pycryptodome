@@ -104,6 +104,8 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (test_probable_prime, COMPOSITE,
                                    PROBABLY_PRIME)
 
+from Crypto.PublicKey import (_expand_subject_public_key_info,
+                             _extract_subject_public_key_info)
 
 #   ; The following ASN.1 types are relevant for DSA
 #
@@ -543,68 +545,72 @@ def construct(tup, consistency_check=True):
 
     return key
 
-def _importKeyDER(key_data, passphrase, params):
+
+# Dss-Parms  ::=  SEQUENCE  {
+#       p       OCTET STRING,
+#       q       OCTET STRING,
+#       g       OCTET STRING
+# }
+# DSAPublicKey ::= INTEGER --  public key, y
+
+def _import_openssl_private(encoded, passphrase, params):
+    if params:
+        raise ValueError("DSA private key already comes with parameters")
+    der = DerSequence().decode(encoded, nr_elements=6, only_ints_expected=True)
+    if der[0] != 0:
+        raise ValueError("No version found")
+    tup = [der[comp] for comp in (4, 3, 1, 2, 5)]
+    return construct(tup)
+
+
+def _import_subjectPublicKeyInfo(encoded, passphrase, params):
+
+    algoid, emb_params, encoded_key =  _expand_subject_public_key_info(encoded)
+    if algoid != oid:
+        raise ValueError("No DSA subjectPublicKeyInfo")
+    if params and emb_params:
+        raise ValueError("Too many DSA parameters")
+
+    y = DerInteger().decode(encoded_key).value
+    p, q, g = list(DerSequence().decode(params or emb_params))
+    tup = (y, g, p, q)
+    return construct(tup)
+
+
+def _import_x509_cert(encoded, passphrase, params):
+
+    sp_info = _extract_subject_public_key_info(encoded)
+    return _import_subjectPublicKeyInfo(sp_info, None, params)
+
+
+def _import_pkcs8(encoded, passphrase, params):
+    if params:
+        raise ValueError("PKCS#8 already includes parameters")
+    k = PKCS8.unwrap(encoded, passphrase)
+    if k[0] != oid:
+        raise ValueError("No PKCS#8 encoded DSA key")
+    x = DerInteger().decode(k[1]).value
+    p, q, g = list(DerSequence().decode(k[2]))
+    tup = (pow(g, x, p), g, p, q, x)
+    return construct(tup)
+
+
+def _import_key_der(key_data, passphrase, params):
     """Import a DSA key (public or private half), encoded in DER form."""
 
-    try:
-        #
-        # Dss-Parms  ::=  SEQUENCE  {
-        #       p       OCTET STRING,
-        #       q       OCTET STRING,
-        #       g       OCTET STRING
-        # }
-        #
+    decodings = (_import_openssl_private,
+                 _import_subjectPublicKeyInfo,
+                 _import_x509_cert,
+                 _import_pkcs8)
 
-        # Try a simple private key first
-        if params:
-            x = DerInteger().decode(key_data).value
-            p, q, g = list(DerSequence().decode(params))    # Dss-Parms
-            tup = (pow(g, x, p), g, p, q, x)
-            return construct(tup)
-
-        der = DerSequence().decode(key_data)
-
-        # Try OpenSSL format for private keys
-        if len(der) == 6 and der.hasOnlyInts() and der[0] == 0:
-            tup = [der[comp] for comp in (4, 3, 1, 2, 5)]
-            return construct(tup)
-
-        # Try SubjectPublicKeyInfo
-        if len(der) == 2:
-            try:
-                algo = DerSequence().decode(der[0])
-                algo_oid = DerObjectId().decode(algo[0]).value
-                params = DerSequence().decode(algo[1])  # Dss-Parms
-
-                if algo_oid == oid and len(params) == 3 and\
-                        params.hasOnlyInts():
-                    bitmap = DerBitString().decode(der[1])
-                    pub_key = DerInteger().decode(bitmap.value)
-                    tup = [pub_key.value]
-                    tup += [params[comp] for comp in (2, 0, 1)]
-                    return construct(tup)
-            except ValueError:
-                pass
-
-        # Try to see if this is an X.509 DER certificate
-        # (Certificate ASN.1 type)
-        if len(der) == 3:
-            from Crypto.PublicKey import _extract_sp_info
-            try:
-                sp_info = _extract_sp_info(der)
-                return _importKeyDER(sp_info, passphrase, None)
-            except ValueError:
-                pass
-
-        # Try unencrypted PKCS#8
-        p8_pair = PKCS8.unwrap(key_data, passphrase)
-        if p8_pair[0] == oid:
-            return _importKeyDER(p8_pair[1], passphrase, p8_pair[2])
-
-    except ValueError:
-        pass
+    for decoding in decodings:
+        try:
+            return decoding(key_data, passphrase, params)
+        except ValueError:
+            pass
 
     raise ValueError("DSA key format is not supported")
+
 
 def importKey(extern_key, passphrase=None):
     """Import a DSA key (public or private).
@@ -654,7 +660,7 @@ def importKey(extern_key, passphrase=None):
         (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
         if enc_flag:
             passphrase = None
-        return _importKeyDER(der, passphrase, None)
+        return _import_key_der(der, passphrase, None)
 
     if extern_key.startswith(b('ssh-dss ')):
         # This is probably a public OpenSSH key
@@ -670,7 +676,7 @@ def importKey(extern_key, passphrase=None):
 
     if bord(extern_key[0]) == 0x30:
         # This is probably a DER encoded key
-        return _importKeyDER(extern_key, passphrase, None)
+        return _import_key_der(extern_key, passphrase, None)
 
     raise ValueError("DSA key format is not supported")
 

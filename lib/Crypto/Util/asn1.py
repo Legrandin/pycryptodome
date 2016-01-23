@@ -211,6 +211,9 @@ class DerObject(object):
                   In case of parsing errors.
                 """
 
+                if not byte_string(derEle):
+                    raise ValueError("Input is not a byte string")
+
                 s = BytesIO_EOF(derEle)
                 self._decodeFromStream(s)
 

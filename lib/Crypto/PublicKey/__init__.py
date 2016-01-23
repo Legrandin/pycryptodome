@@ -38,49 +38,64 @@ Crypto.PublicKey.RSA      (Signing, encryption, and blinding)
 
 __all__ = ['RSA', 'DSA', 'ElGamal']
 
-def _extract_sp_info(x509_certificate):
+from Crypto.Util.asn1 import (DerSequence, DerInteger, DerBitString,
+                             DerObjectId, DerNull)
+
+
+def _expand_subject_public_key_info(encoded):
+    """Parse a SubjectPublicKeyInfo structure.
+
+    It returns a triple with:
+        * OID (string)
+        * Algorithm parameters (bytes or None)
+        * encoded public key (bytes)
+    """
+
+    #
+    # SubjectPublicKeyInfo  ::=  SEQUENCE  {
+    #   algorithm         AlgorithmIdentifier,
+    #   subjectPublicKey  BIT STRING
+    # }
+    #
+    # AlgorithmIdentifier  ::=  SEQUENCE  {
+    #   algorithm   OBJECT IDENTIFIER,
+    #   parameters  ANY DEFINED BY algorithm OPTIONAL
+    # }
+    #
+
+    spki = DerSequence().decode(encoded, nr_elements=2)
+    algo = DerSequence().decode(spki[0], nr_elements=(1,2))
+    algo_oid = DerObjectId().decode(algo[0])
+    spk = DerBitString().decode(spki[1]).value
+
+    if len(algo) == 1:
+        algo_params = None
+    else:
+        try:
+            DerNull().decode(algo[1])
+            algo_params = None
+        except:
+            algo_params = algo[1]
+
+    return algo_oid.value, algo_params, spk
+
+
+def _extract_subject_public_key_info(x509_certificate):
     """Extract subjectPublicKeyInfo from a DER X.509 certificate."""
 
-    from Crypto.Util.asn1 import DerSequence, DerInteger
+    certificate = DerSequence().decode(x509_certificate, nr_elements=3)
+    tbs_certificate = DerSequence().decode(certificate[0],
+                                           nr_elements=range(6, 11))
 
+    index = 5
     try:
-        # This code will partially parse tbsCertificate
-        # to get to subjectPublicKeyInfo.
-        #
-        # However, the first 2 elements of tbsCertificate are:
-        #
-        #   version [0]  Version DEFAULT v1,
-        #   serialNumber         CertificateSerialNumber,
-        #
-        # where:
-        #
-        #   Version  ::=  INTEGER  {  v1(0), v2(1), v3(2)  }
-        #   CertificateSerialNumber  ::=  INTEGER
-        #
-        # In order to know the position of subjectPublicKeyInfo
-        # in the tbsCertificate SEQUENCE, we try to see if the
-        # first element is an untagged INTEGER (that is, the
-        # certificate serial number).
+        tbs_certificate[0] + 1
+        # Version not present
+        version = 1
+    except TypeError:
+        version = DerInteger(explicit=0).decode(tbs_certificate[0]).value
+        if version not in (2, 3):
+            raise ValueError("Incorrect X.509 certificate version")
+        index = 6
 
-        x509_tbs_cert = DerSequence()
-        x509_tbs_cert.decode(x509_certificate[0])
-
-        index = -1  # Sentinel
-        try:
-            _ = x509_tbs_cert[0] + 1
-            # Still here? There was no version then
-            index = 5
-        except TypeError:
-            # Landed here? Version was there
-            x509_version = DerInteger(explicit=0)
-            x509_version.decode(x509_tbs_cert[0])
-            index = 6
-
-        if index in (5, 6):
-            return x509_tbs_cert[index]
-
-    except (TypeError, IndexError, ValueError):
-        pass
-
-    raise ValueError("Cannot extract subjectPublicKeyInfo")
-
+    return tbs_certificate[index]

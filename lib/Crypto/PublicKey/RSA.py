@@ -85,6 +85,9 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (test_probable_prime,
                                 generate_probable_prime, COMPOSITE)
 
+from Crypto.PublicKey import (_expand_subject_public_key_info,
+                             _extract_subject_public_key_info)
+
 
 class RsaKey(object):
     """Class defining an actual RSA key.
@@ -516,64 +519,73 @@ def construct(tup, consistency_check=True):
     return key
 
 
+def _import_pkcs1_private(encoded, *kwargs):
+    # RSAPrivateKey ::= SEQUENCE {
+    #           version Version,
+    #           modulus INTEGER, -- n
+    #           publicExponent INTEGER, -- e
+    #           privateExponent INTEGER, -- d
+    #           prime1 INTEGER, -- p
+    #           prime2 INTEGER, -- q
+    #           exponent1 INTEGER, -- d mod (p-1)
+    #           exponent2 INTEGER, -- d mod (q-1)
+    #           coefficient INTEGER -- (inverse of q) mod p
+    # }
+    #
+    # Version ::= INTEGER
+    der = DerSequence().decode(encoded, nr_elements=9, only_ints_expected=True)
+    if der[0] != 0:
+        raise ValueError("No PKCS#1 encoding of an RSA private key")
+    return construct(der[1:6] + [Integer(der[4]).inverse(der[5])])
+
+
+def _import_pkcs1_public(encoded, *kwargs):
+    # RSAPublicKey ::= SEQUENCE {
+    #           modulus INTEGER, -- n
+    #           publicExponent INTEGER -- e
+    # }
+    der = DerSequence().decode(encoded, nr_elements=2, only_ints_expected=True)
+    return construct(der)
+
+
+def _import_subjectPublicKeyInfo(encoded, *kwargs):
+
+    algoid, params, encoded_key =  _expand_subject_public_key_info(encoded)
+    if algoid != oid or params != None:
+        raise ValueError("No RSA subjectPublicKeyInfo")
+    return _import_pkcs1_public(encoded_key)
+
+
+def _import_x509_cert(encoded, *kwargs):
+
+    sp_info = _extract_subject_public_key_info(encoded)
+    return _import_subjectPublicKeyInfo(sp_info)
+
+
+def _import_pkcs8(encoded, passphrase):
+    k = PKCS8.unwrap(encoded, passphrase)
+    if k[0] != oid:
+        raise ValueError("No PKCS#8 encoded RSA key")
+    return _importKeyDER(k[1], passphrase)
+
+
 def _importKeyDER(extern_key, passphrase):
     """Import an RSA key (public or private half), encoded in DER form."""
 
-    try:
+    decodings = (_import_pkcs1_private,
+                 _import_pkcs1_public,
+                 _import_subjectPublicKeyInfo,
+                 _import_x509_cert,
+                 _import_pkcs8)
 
-        der = DerSequence().decode(extern_key)
-
-        # Try PKCS#1 first, for a private key
-        if len(der) == 9 and der.hasOnlyInts() and der[0] == 0:
-            # ASN.1 RSAPrivateKey element
-            del der[6:]     # Remove d mod (p-1),
-                            # d mod (q-1), and
-                            # q^{-1} mod p
-            der.append(Integer(der[4]).inverse(der[5]))  # Add p^{-1} mod q
-            del der[0]      # Remove version
-            return construct(der[:])
-
-        # Keep on trying PKCS#1, but now for a public key
-        if len(der) == 2:
-            try:
-                # The DER object is an RSAPublicKey SEQUENCE with
-                # two elements
-                if der.hasOnlyInts():
-                    return construct(der[:])
-                # The DER object is a SubjectPublicKeyInfo SEQUENCE
-                # with two elements: an 'algorithmIdentifier' and a
-                # 'subjectPublicKey'BIT STRING.
-                # 'algorithmIdentifier' takes the value given at the
-                # module level.
-                # 'subjectPublicKey' encapsulates the actual ASN.1
-                # RSAPublicKey element.
-                if der[0] == algorithmIdentifier:
-                    bitmap = DerBitString().decode(der[1])
-                    rsaPub = DerSequence().decode(bitmap.value)
-                    if len(rsaPub) == 2 and rsaPub.hasOnlyInts():
-                        return construct(rsaPub[:])
-            except ValueError:
-                pass
-
-        # Try to see if this is an X.509 DER certificate
-        # (Certificate ASN.1 type)
-        if len(der) == 3:
-            from Crypto.PublicKey import _extract_sp_info
-            try:
-                sp_info = _extract_sp_info(der)
-                return _importKeyDER(sp_info, passphrase)
-            except ValueError:
-                pass
-
-        # Try PKCS#8 (possibly encrypted)
-        k = PKCS8.unwrap(extern_key, passphrase)
-        if k[0] == oid:
-            return _importKeyDER(k[1], passphrase)
-
-    except ValueError:
-        pass
+    for decoding in decodings:
+        try:
+            return decoding(extern_key, passphrase)
+        except ValueError:
+            pass
 
     raise ValueError("RSA key format is not supported")
+
 
 def importKey(extern_key, passphrase=None):
     """Import an RSA key (public or private half), encoded in standard
