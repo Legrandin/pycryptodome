@@ -462,13 +462,17 @@ class DerSequence(DerObject):
                         self.payload += item.encode()
                 return DerObject.encode(self)
 
-        def decode(self, derEle, nr_elements=None):
+        def decode(self, derEle, nr_elements=None, only_ints_expected=False):
                 """Decode a complete DER SEQUENCE, and re-initializes this
                 object with it.
 
                 :Parameters:
                   derEle : byte string
                     A complete SEQUENCE DER element.
+                  nr_elements : None, integer or list of integers
+                    The number of members the SEQUENCE can have
+                  only_ints_expected : boolean
+                    Whether the SEQUENCE is expected to contain only integers.
 
                 :Raise ValueError:
                   In case of parsing errors.
@@ -478,7 +482,12 @@ class DerSequence(DerObject):
                 """
 
                 self._nr_elements = nr_elements
-                return DerObject.decode(self, derEle)
+                result = DerObject.decode(self, derEle)
+
+                if only_ints_expected and not self.hasOnlyInts():
+                    raise ValueError("Some members are not INTEGERs")
+
+                return result
 
         def _decodeFromStream(self, s):
                 """Decode a complete DER SEQUENCE from a file."""
