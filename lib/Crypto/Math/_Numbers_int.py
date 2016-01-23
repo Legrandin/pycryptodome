@@ -133,7 +133,7 @@ class Integer(object):
             raise ValueError("Modulus must be positive")
         return Integer(self._value % divisor_value)
 
-    def __pow__(self, exponent, modulus=None):
+    def inplace_pow(self, exponent, modulus=None):
         try:
             exp_value = exponent._value
         except AttributeError:
@@ -150,7 +150,12 @@ class Integer(object):
                 raise ValueError("Modulus must be positive")
             if mod_value == 0:
                 raise ZeroDivisionError("Modulus cannot be zero")
-        return Integer(pow(self._value, exp_value, mod_value))
+        self._value = pow(self._value, exp_value, mod_value)
+        return self
+
+    def __pow__(self, exponent, modulus=None):
+        result = Integer(self)
+        return result.inplace_pow(exponent, modulus)
 
     def __abs__(self):
         return abs(self._value)
@@ -165,6 +170,39 @@ class Integer(object):
             x = y
             y = (x + self._value // x) // 2
         return Integer(x)
+
+    def __iadd__(self, term):
+        try:
+            self._value += term._value
+        except AttributeError:
+            self._value += term
+        return self
+
+    def __isub__(self, term):
+        try:
+            self._value -= term._value
+        except AttributeError:
+            self._value -= term
+        return self
+
+    def __imul__(self, term):
+        try:
+            self._value *= term._value
+        except AttributeError:
+            self._value *= term
+        return self
+
+    def __imod__(self, term):
+        try:
+            modulus = term._value
+        except AttributeError:
+            modulus = term
+        if modulus == 0:
+            raise ZeroDivisionError("Division by zero")
+        if modulus < 0:
+            raise ValueError("Modulus must be positive")
+        self._value %= modulus
+        return self
 
     # Boolean/bit operations
     def __and__(self, term):
@@ -287,7 +325,7 @@ class Integer(object):
         else:
             self._value = source
 
-    def inverse(self, modulus):
+    def inplace_inverse(self, modulus):
         try:
             modulus = modulus._value
         except AttributeError:
@@ -306,7 +344,13 @@ class Integer(object):
             raise ValueError("No inverse value can be computed" + str(r_p))
         while s_p < 0:
             s_p += modulus
-        return Integer(s_p)
+        self._value = s_p
+        return self
+
+    def inverse(self, modulus):
+        result = Integer(self)
+        result.inplace_inverse(modulus)
+        return result
 
     def gcd(self, term):
         try:

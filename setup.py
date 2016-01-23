@@ -341,8 +341,12 @@ setup(
             ],
         "Crypto.SelfTest.Signature" : [
             "test_vectors/DSA/*.*",
+            "test_vectors/ECDSA/*.*",
             "test_vectors/PKCS1-v1.5/*.*",
             "test_vectors/PKCS1-PSS/*.*"
+            ],
+        "Crypto.SelfTest.PublicKey" : [
+            "test_vectors/ECC/*.*",
             ],
         "Crypto.Math" : [ "mpir.dll" ],
         },

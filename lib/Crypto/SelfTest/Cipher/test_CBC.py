@@ -30,7 +30,7 @@
 
 import unittest
 
-from Crypto.SelfTest.Cipher.nist_loader import load_tests
+from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, b, unhexlify
 from Crypto.Cipher import AES, DES3, DES
@@ -174,42 +174,79 @@ class CbcTests(BlockChainingTests):
 class NistBlockChainingVectors(unittest.TestCase):
 
     def _do_kat_aes_test(self, file_name):
-        test_vectors = load_tests("AES", file_name, "AES KAT")
+        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
+                                  file_name,
+                                  "AES KAT",
+                                  { "count" : lambda x: int(x) } )
         assert(test_vectors)
+
+        direction = None
         for tv in test_vectors:
+
+            # The test vector file contains some directive lines
+            if isinstance(tv, basestring):
+                direction = tv
+                continue
+
             self.description = tv.desc
+
             cipher = AES.new(tv.key, self.aes_mode, tv.iv)
-            if tv.direction == "ENC":
+            if direction == "[ENCRYPT]":
                 self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
-            else:
+            elif direction == "[DECRYPT]":
                 self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+            else:
+                assert False
 
     # See Section 6.4.2 in AESAVS
     def _do_mct_aes_test(self, file_name):
-        test_vectors = load_tests("AES", file_name, "AES Montecarlo")
+        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
+                                  file_name,
+                                  "AES Montecarlo",
+                                  { "count" : lambda x: int(x) } )
         assert(test_vectors)
+
+        direction = None
         for tv in test_vectors:
+
+            # The test vector file contains some directive lines
+            if isinstance(tv, basestring):
+                direction = tv
+                continue
 
             self.description = tv.desc
             cipher = AES.new(tv.key, self.aes_mode, tv.iv)
 
-            if tv.direction == 'ENC':
+            if direction == '[ENCRYPT]':
                 cts = [ tv.iv ]
                 for count in xrange(1000):
                     cts.append(cipher.encrypt(tv.plaintext))
                     tv.plaintext = cts[-2]
                 self.assertEqual(cts[-1], tv.ciphertext)
-            else:
+            elif direction == '[DECRYPT]':
                 pts = [ tv.iv]
                 for count in xrange(1000):
                     pts.append(cipher.decrypt(tv.ciphertext))
                     tv.ciphertext = pts[-2]
                 self.assertEqual(pts[-1], tv.plaintext)
+            else:
+                assert False
 
     def _do_tdes_test(self, file_name):
-        test_vectors = load_tests("TDES", file_name, "TDES CBC KAT")
+        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "TDES"),
+                                  file_name,
+                                  "TDES CBC KAT",
+                                  { "count" : lambda x: int(x) } )
         assert(test_vectors)
+
+        direction = None
         for tv in test_vectors:
+
+            # The test vector file contains some directive lines
+            if isinstance(tv, basestring):
+                direction = tv
+                continue
+
             self.description = tv.desc
             if hasattr(tv, "keys"):
                 cipher = DES.new(tv.keys, self.des_mode, tv.iv)
@@ -219,10 +256,13 @@ class NistBlockChainingVectors(unittest.TestCase):
                 else:
                     key = tv.key1 + tv.key2            # Option 2
                 cipher = DES3.new(key, self.des3_mode, tv.iv)
-            if tv.direction == "ENC":
+
+            if direction == "[ENCRYPT]":
                 self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
-            else:
+            elif direction == "[DECRYPT]":
                 self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+            else:
+                assert False
 
 
 class NistCbcVectors(NistBlockChainingVectors):

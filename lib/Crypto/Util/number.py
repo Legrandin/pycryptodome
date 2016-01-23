@@ -24,7 +24,6 @@
 # ===================================================================
 #
 
-from Crypto.pct_warnings import GetRandomNumber_DeprecationWarning
 from warnings import warn as _warn
 import math
 import sys
@@ -78,12 +77,6 @@ def size (N):
         bits += 1
     return bits
 
-def getRandomNumber(N, randfunc=None):
-    """Deprecated.  Use getRandomInteger or getRandomNBitInteger instead."""
-    warnings.warn("Crypto.Util.number.getRandomNumber has confusing semantics"+
-    "and has been deprecated.  Use getRandomInteger or getRandomNBitInteger instead.",
-        GetRandomNumber_DeprecationWarning)
-    return getRandomNBitInteger(N, randfunc)
 
 def getRandomInteger(N, randfunc=None):
     """getRandomInteger(N:int, randfunc:callable):long

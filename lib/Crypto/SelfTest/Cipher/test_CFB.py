@@ -30,7 +30,7 @@
 
 import unittest
 
-from Crypto.SelfTest.Cipher.nist_loader import load_tests
+from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, b, unhexlify
 from Crypto.Cipher import AES, DES3, DES
@@ -100,25 +100,47 @@ class CfbTests(BlockChainingTests):
 class NistCfbVectors(unittest.TestCase):
 
     def _do_kat_aes_test(self, file_name, segment_size):
-        test_vectors = load_tests("AES", file_name,
-                                  "AES CFB%d KAT" % segment_size)
+        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
+                                  file_name,
+                                  "AES CFB%d KAT" % segment_size,
+                                  { "count" : lambda x: int(x) } )
         assert(test_vectors)
+
+        direction = None
         for tv in test_vectors:
+
+            # The test vector file contains some directive lines
+            if isinstance(tv, basestring):
+                direction = tv
+                continue
+
             self.description = tv.desc
             cipher = AES.new(tv.key, AES.MODE_CFB, tv.iv,
                              segment_size=segment_size)
-            if tv.direction == "ENC":
+            if direction == "[ENCRYPT]":
                 self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
-            else:
+            elif direction == "[DECRYPT]":
                 self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+            else:
+                assert False
 
     # See Section 6.4.5 in AESAVS
     def _do_mct_aes_test(self, file_name, segment_size):
-        test_vectors = load_tests("AES", file_name,
-                                  "AES CFB%d Montecarlo" % segment_size)
+        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
+                                  file_name,
+                                  "AES CFB%d Montecarlo" % segment_size,
+                                  { "count" : lambda x: int(x) } )
         assert(test_vectors)
         assert(segment_size in (8, 128))
+
+        direction = None
         for tv in test_vectors:
+
+            # The test vector file contains some directive lines
+            if isinstance(tv, basestring):
+                direction = tv
+                continue
+
             self.description = tv.desc
             cipher = AES.new(tv.key, AES.MODE_CFB, tv.iv,
                              segment_size=segment_size)
@@ -136,24 +158,36 @@ class NistCfbVectors(unittest.TestCase):
                     return tv.iv[j - 1:j]
                 return output_seq[j - 17]
 
-            if tv.direction == 'ENC':
+            if direction == '[ENCRYPT]':
                 cts = []
                 for j in xrange(1000):
                     plaintext = get_input(tv.plaintext, cts, j)
                     cts.append(cipher.encrypt(plaintext))
                 self.assertEqual(cts[-1], tv.ciphertext)
-            else:
+            elif direction == '[DECRYPT]':
                 pts = []
                 for j in xrange(1000):
                     ciphertext = get_input(tv.ciphertext, pts, j)
                     pts.append(cipher.decrypt(ciphertext))
                 self.assertEqual(pts[-1], tv.plaintext)
+            else:
+                assert False
 
     def _do_tdes_test(self, file_name, segment_size):
-        test_vectors = load_tests("TDES", file_name,
-                                  "TDES CFB%d KAT" % segment_size)
+        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "TDES"),
+                                  file_name,
+                                  "AES CFB%d KAT" % segment_size,
+                                  { "count" : lambda x: int(x) } )
         assert(test_vectors)
+
+        direction = None
         for tv in test_vectors:
+
+            # The test vector file contains some directive lines
+            if isinstance(tv, basestring):
+                direction = tv
+                continue
+
             self.description = tv.desc
             if hasattr(tv, "keys"):
                 cipher = DES.new(tv.keys, DES.MODE_CFB, tv.iv,
@@ -165,10 +199,12 @@ class NistCfbVectors(unittest.TestCase):
                     key = tv.key1 + tv.key2            # Option 2
                 cipher = DES3.new(key, DES3.MODE_CFB, tv.iv,
                                   segment_size=segment_size)
-            if tv.direction == "ENC":
+            if direction == "[ENCRYPT]":
                 self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
-            else:
+            elif direction == "[DECRYPT]":
                 self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+            else:
+                assert False
 
 
 # Create one test method per file

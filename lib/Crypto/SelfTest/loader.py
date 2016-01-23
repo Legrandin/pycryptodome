@@ -1,6 +1,6 @@
 # ===================================================================
 #
-# Copyright (c) 2014, Legrandin <helderijs@gmail.com>
+# Copyright (c) 2016, Legrandin <helderijs@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,29 +33,33 @@ import sys
 import binascii
 
 from Crypto.Util.py3compat import unhexlify
+from Crypto.Util._file_system import pycryptodome_filename
 
-def load_fips_test_module(desc, file_in):
-    """Load and parse NIST test vector file
 
-    Return a list of objects with attributes:
-        "desc" : string
-        "direction" : string ("ENC" or "DEC")
-        "key" : bytes
-        "iv" : bytes
-        "plaintext" : bytes
-        "ciphertext" : bytes
+def load_tests(dir_comps, file_name, description, conversions):
+    """Load and parse a test vector file
+
+    This function returnis a list of objects, one per group of adjacent
+    KV lines or for a single line in the form "[.*]".
+
+    For a group of lines, the object has one attribute per line.
     """
+
+    file_in = open(pycryptodome_filename(dir_comps, file_name))
+    description = "%s test (%s)" % (description, file_name)
 
     line_number = 0
     results = []
-    direction = "ENC"
 
     class TestVector(object):
-        def __init__(self, description, direction):
+        def __init__(self, description, count):
             self.desc = description
-            self.direction = direction
+            self.count = count
+            self.others = []
 
     test_vector = None
+    count = 0
+    new_group = True
 
     while True:
         line_number += 1
@@ -68,36 +72,37 @@ def load_fips_test_module(desc, file_in):
 
         # Skip comments and empty lines
         if line.startswith('#') or not line:
+            new_group = True
             continue
 
-        # Toggle direction
-        if line == "[ENCRYPT]":
-            direction = "ENC"
-            continue
-        elif line == "[DECRYPT]":
-            direction = "DEC"
-            continue
-
-        res = re.match("([A-Za-z0-9]+) = ([0-9A-Fa-f]+)", line)
-        if not res:
-            raise ValueError("Incorrect test vector format (line %d): %s" % (line_number, line))
-        token = res.group(1)
-        data = res.group(2)
-
-        if token == "COUNT":
+        if line.startswith("["):
             if test_vector is not None:
                 results.append(test_vector)
-            test_vector = TestVector("%s(%s)" % (desc, data), direction)
+            test_vector = None
+            results.append(line)
+            continue
+
+        if new_group:
+            count += 1
+            new_group = False
+            if test_vector is not None:
+                results.append(test_vector)
+            test_vector = TestVector("%s (#%d)" % (description, count), count)
+
+        res = re.match("([A-Za-z0-9]+) = ?(.*)", line)
+        if not res:
+            test_vector.others += [line]
         else:
-            setattr(test_vector, token.lower(), unhexlify(data))
+            token = res.group(1).lower()
+            data = res.group(2).lower()
+
+            conversion = conversions.get(token, None)
+            if conversion is None:
+                if len(data) % 2 != 0:
+                    data = "0" + data
+                setattr(test_vector, token, unhexlify(data))
+            else:
+                setattr(test_vector, token, conversion(data))
 
         # This line is ignored
     return results
-
-
-def load_tests(subdir, file_name, description):
-    import os.path
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    abs_file_name = os.path.join(base_dir, "test_vectors", subdir, file_name)
-    return load_fips_test_module("%s test (%s)" % (description, file_name), open(abs_file_name))

@@ -30,7 +30,6 @@
 
 import unittest
 
-from Crypto.SelfTest.Cipher.nist_loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, b, unhexlify
 from Crypto.Cipher import AES, DES3, DES

@@ -36,9 +36,7 @@ from Crypto.Util.py3compat import b, bchr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.Signature.nist import (load_test_vector,
-                                            open_fips_test_file,
-                                            load_hash_by_name)
+from Crypto.SelfTest.loader import load_tests
 
 from Crypto.Hash import SHA1
 from Crypto.PublicKey import RSA
@@ -46,69 +44,51 @@ from Crypto.Signature import pkcs1_15
 from Crypto.Signature import PKCS1_v1_5
 
 
+def load_hash_by_name(hash_name):
+    return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
+
+
 class FIPS_PKCS1_Verify_Tests(unittest.TestCase):
 
     def shortDescription(self):
         return "FIPS PKCS1 Tests (Verify)"
-
-    def verify_positive(self, hashmod, message, public_key, signature):
-        hashed = hashmod.new(message)
-        pkcs1_15.new(public_key).verify(hashed, signature)
-
-    def verify_negative(self, hashmod, message, public_key, signature):
-        hashed = hashmod.new(message)
-        verifier = pkcs1_15.new(public_key)
-        self.assertRaises(ValueError, verifier.verify, hashed, signature)
-
-    counter_positive = 1
-    counter_negative = 1
 
     def test_can_sign(self):
         test_public_key = RSA.generate(1024).publickey()
         verifier = pkcs1_15.new(test_public_key)
         self.assertEqual(verifier.can_sign(), False)
 
-    @classmethod
-    def add_positive_test(cls, hashmod, message, public_key, signature):
-        def new_method(self):
-            self.verify_positive(hashmod, message, public_key, signature)
-        setattr(cls, "test_verify_positive_%d" % cls.counter_positive,
-                new_method)
-        cls.counter_positive += 1
 
-    @classmethod
-    def add_negative_test(cls, hashmod, message, public_key, signature):
-        def new_method(self):
-            self.verify_negative(hashmod, message, public_key, signature)
-        setattr(cls, "test_verify_negative_%d" % cls.counter_negative,
-                new_method)
-        cls.counter_negative += 1
+test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-v1.5"),
+                                 "SigVer15_186-3.rsp",
+                                 "Signature Verification 186-3",
+                                 { 'shaalg' : lambda x: x,
+                                   'd' : lambda x: int(x),
+                                   'result' : lambda x: x })
 
-    @classmethod
-    def add_fips_tests(cls):
-        file_tv = open_fips_test_file("PKCS1-v1.5", "SigVer15_186-3.rsp")
-        sections = load_test_vector(file_tv, ('SHAAlg', 'd', 'Result'))
 
-        modulus = None
-        for mod_size, test_vectors in sections.iteritems():
-            for test_vector in test_vectors:
+for count, tv in enumerate(test_vectors_verify):
+    if isinstance(tv, basestring):
+        continue
+    if hasattr(tv, "n"):
+        modulus = tv.n
+        continue
 
-                # The modulus for all subsequent test vectors appear
-                # in a single line
-                if len(test_vector) == 1:
-                    modulus = bytes_to_long(test_vector['n'])
-                    continue
+    hash_module = load_hash_by_name(tv.shaalg.upper())
+    hash_obj = hash_module.new(tv.msg)
+    public_key = RSA.construct([bytes_to_long(x) for x in modulus, tv.e])
+    verifier = pkcs1_15.new(public_key)
 
-                hashmod = load_hash_by_name(test_vector['SHAAlg'])
-                pub_exp = bytes_to_long(test_vector['e'])
-                public_key = RSA.construct((modulus, pub_exp))
+    def positive_test(self, hash_obj=hash_obj, verifier=verifier, signature=tv.s):
+        verifier.verify(hash_obj, signature)
 
-                add_method_dict = {'P': cls.add_positive_test,
-                                   'F': cls.add_negative_test}
-                add_method = add_method_dict[test_vector['Result']]
+    def negative_test(self, hash_obj=hash_obj, verifier=verifier, signature=tv.s):
+        self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
-                add_method(hashmod, test_vector['Msg'],
-                           public_key, test_vector['S'])
+    if tv.result == 'f':
+        setattr(FIPS_PKCS1_Verify_Tests, "test_negative_%d" % count, negative_test)
+    else:
+        setattr(FIPS_PKCS1_Verify_Tests, "test_positive_%d" % count, positive_test)
 
 
 class FIPS_PKCS1_Sign_Tests(unittest.TestCase):
@@ -116,60 +96,41 @@ class FIPS_PKCS1_Sign_Tests(unittest.TestCase):
     def shortDescription(self):
         return "FIPS PKCS1 Tests (Sign)"
 
-    def _test_sign(self, hashmod, message, private_key, signature):
-        hashed = hashmod.new(message)
-        signature2 = pkcs1_15.new(private_key).sign(hashed)
-        self.assertEqual(signature, signature2)
-
-    counter = 1
-
     def test_can_sign(self):
         test_private_key = RSA.generate(1024)
         signer = pkcs1_15.new(test_private_key)
         self.assertEqual(signer.can_sign(), True)
 
-    @classmethod
-    def add_test(cls, hashmod, message, private_key, signature):
-        def new_method(self):
-            self._test_sign(hashmod, message, private_key, signature)
-        setattr(cls, "test_sign_%d" % cls.counter, new_method)
-        cls.counter += 1
 
-    @classmethod
-    def add_fips_tests(cls):
-        files = ("SigGen15_186-2.txt", "SigGen15_186-3.txt")
-        for file_name in files:
-            file_tv = open_fips_test_file("PKCS1-v1.5", file_name)
-            sections = load_test_vector(file_tv, ('SHAAlg', ))
+test_vectors_sign  = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-v1.5"),
+                                 "SigGen15_186-2.txt",
+                                 "Signature Generation 186-2",
+                                 { 'shaalg' : lambda x: x })
 
-            modulus = None
-            private_key = None
-            for mod_size, test_vectors in sections.iteritems():
-                for test_vector in test_vectors:
+test_vectors_sign += load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-v1.5"),
+                                 "SigGen15_186-3.txt",
+                                 "Signature Generation 186-3",
+                                 { 'shaalg' : lambda x: x })
 
-                    # The modulus for all subsequent test vectors appears
-                    # in a single line
-                    if len(test_vector) == 1:
-                        modulus = test_vector['n']
-                        continue
+for count, tv in enumerate(test_vectors_sign):
+    if isinstance(tv, basestring):
+        continue
+    if hasattr(tv, "n"):
+        modulus = tv.n
+        continue
+    if hasattr(tv, "e"):
+        private_key = RSA.construct([bytes_to_long(x) for x in modulus, tv.e, tv.d])
+        signer = pkcs1_15.new(private_key)
+        continue
 
-                    # Exponents appear in two lines
-                    if len(test_vector) == 2:
-                        test_vector['n'] = modulus
-                        triplet = [bytes_to_long(test_vector[x])
-                                   for x in ('n', 'e', 'd')]
-                        private_key = RSA.construct(triplet,
-                                                    consistency_check=False)
-                        continue
+    hash_module = load_hash_by_name(tv.shaalg.upper())
+    hash_obj = hash_module.new(tv.msg)
 
-                    hashmod = load_hash_by_name(test_vector['SHAAlg'])
-                    cls.add_test(hashmod, test_vector['Msg'],
-                                 private_key, test_vector['S'])
+    def new_test(self, hash_obj=hash_obj, signer=signer, result=tv.s):
+        signature = signer.sign(hash_obj)
+        self.assertEqual(signature, result)
 
-
-# Complete the classes at runtime
-FIPS_PKCS1_Verify_Tests.add_fips_tests()
-FIPS_PKCS1_Sign_Tests.add_fips_tests()
+    setattr(FIPS_PKCS1_Sign_Tests, "test_%d" % count, new_test)
 
 
 class PKCS1_15_NoParams(unittest.TestCase):

@@ -109,9 +109,9 @@ except OSError:
         c_ulong = c_ulonglong
     # Try to load private MPIR lib first (wheel)
     try:
-        import os.path
-        this_dir, _ = os.path.split(os.path.abspath(__file__))
-        mpir_dll = os.path.join(this_dir, "mpir.dll")
+        from Crypto.Util._file_system import pycryptodome_filename
+
+        mpir_dll = pycryptodome_filename(("Crypto", "Math"), "mpir.dll")
         lib = load_lib(mpir_dll, gmp_defs)
     except OSError:
         lib = load_lib("mpir", gmp_defs)
@@ -385,23 +385,19 @@ class Integer(object):
                      divisor._mpz_p)
         return result
 
-    def __pow__(self, exponent, modulus=None):
-
-        result = Integer(0)
+    def inplace_pow(self, exponent, modulus=None):
 
         if modulus is None:
             if exponent < 0:
                 raise ValueError("Exponent must not be negative")
 
             # Normal exponentiation
-            result = Integer(0)
             if exponent > 256:
                 raise ValueError("Exponent is too big")
-            _gmp.mpz_pow_ui(result._mpz_p,
+            _gmp.mpz_pow_ui(self._mpz_p,
                             self._mpz_p,   # Base
                             c_ulong(int(exponent))
                             )
-            return result
         else:
             # Modular exponentiation
             if not isinstance(modulus, Integer):
@@ -414,19 +410,23 @@ class Integer(object):
                 if exponent < 0:
                     raise ValueError("Exponent must not be negative")
                 if exponent < 65536:
-                    _gmp.mpz_powm_ui(result._mpz_p,
+                    _gmp.mpz_powm_ui(self._mpz_p,
                                      self._mpz_p,
                                      c_ulong(exponent),
                                      modulus._mpz_p)
-                    return result
+                    return self
                 exponent = Integer(exponent)
             elif exponent.is_negative():
                 raise ValueError("Exponent must not be negative")
-            _gmp.mpz_powm(result._mpz_p,
+            _gmp.mpz_powm(self._mpz_p,
                           self._mpz_p,
                           exponent._mpz_p,
                           modulus._mpz_p)
-            return result
+        return self
+
+    def __pow__(self, exponent, modulus=None):
+        result = Integer(self)
+        return result.inplace_pow(exponent, modulus)
 
     def __abs__(self):
         result = Integer(0)
@@ -458,6 +458,24 @@ class Integer(object):
                 return self
             term = Integer(term)
         _gmp.mpz_add(self._mpz_p,
+                     self._mpz_p,
+                     term._mpz_p)
+        return self
+
+    def __isub__(self, term):
+        if isinstance(term, (int, long)):
+            if 0 <= term < 65536:
+                _gmp.mpz_sub_ui(self._mpz_p,
+                                self._mpz_p,
+                                c_ulong(term))
+                return self
+            if -65535 < term < 0:
+                _gmp.mpz_add_ui(self._mpz_p,
+                                self._mpz_p,
+                                c_ulong(-term))
+                return self
+            term = Integer(term)
+        _gmp.mpz_sub(self._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
         return self
@@ -619,7 +637,7 @@ class Integer(object):
                      source._mpz_p)
         return self
 
-    def inverse(self, modulus):
+    def inplace_inverse(self, modulus):
         """Compute the inverse of this number in the ring of
         modulo integers.
 
@@ -636,12 +654,16 @@ class Integer(object):
         if comp < 0:
             raise ValueError("Modulus must be positive")
 
-        result = Integer(0)
-        _gmp.mpz_invert(result._mpz_p,
-                        self._mpz_p,
-                        modulus._mpz_p)
+        result = _gmp.mpz_invert(self._mpz_p,
+                                 self._mpz_p,
+                                 modulus._mpz_p)
         if not result:
             raise ValueError("No inverse value can be computed")
+        return self
+
+    def inverse(self, modulus):
+        result = Integer(self)
+        result.inplace_inverse(modulus)
         return result
 
     def gcd(self, term):

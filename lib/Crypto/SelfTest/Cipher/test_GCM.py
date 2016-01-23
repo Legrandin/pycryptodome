@@ -603,22 +603,37 @@ class TestVectorsGueronKrasnov(unittest.TestCase):
         self.assertEqual(digest, digest2)
 
 
-from Crypto.SelfTest.Cipher.nist_loader_gcm import load_tests
+from Crypto.SelfTest.loader import load_tests
 
 
 class NISTTestVectorsGCM(unittest.TestCase):
     pass
 
-test_vectors_nist = load_tests("AES", "gcmDecrypt128.rsp", "GCM decrypt")
-test_vectors_nist += load_tests("AES", "gcmEncryptExtIV128.rsp", "GCM decrypt")
+test_vectors_nist = load_tests(
+                        ("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
+                        "gcmDecrypt128.rsp",
+                        "GCM decrypt",
+                        { "count" : lambda x: int(x) })
+
+test_vectors_nist += load_tests(
+                        ("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
+                        "gcmEncryptExtIV128.rsp",
+                        "GCM encrypt",
+                        { "count" : lambda x: int(x) })
+
 for idx, tv in enumerate(test_vectors_nist):
 
+    # The test vector file contains some directive lines
+    if isinstance(tv, basestring):
+        continue
+
     def single_test(self, tv=tv):
+
             self.description = tv.desc
             cipher = AES.new(tv.key, AES.MODE_GCM, nonce=tv.iv,
                              mac_len=len(tv.tag))
             cipher.update(tv.aad)
-            if isinstance(tv.pt, str) and tv.pt == "FAIL":
+            if "FAIL" in tv.others:
                 self.assertRaises(ValueError, cipher.decrypt_and_verify,
                                   tv.ct, tv.tag)
             else:

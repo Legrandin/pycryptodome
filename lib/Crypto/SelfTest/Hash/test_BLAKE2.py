@@ -35,6 +35,7 @@ from binascii import unhexlify, hexlify
 
 from Crypto.Util.py3compat import b, tobytes, bchr
 from Crypto.Util.strxor import strxor_c
+from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import BLAKE2b, BLAKE2s
@@ -200,11 +201,9 @@ class Blake2OfficialTestVector(unittest.TestCase):
 
     def setUp(self):
 
-        test_dir, _ = os.path.split(os.path.abspath(__file__))
-        test_vector_file = os.path.join(test_dir,
-                                        "test_vectors",
-                                        self.name,
-                                        self.name.lower() + "-test.txt")
+        test_vector_file = pycryptodome_filename(
+                            ("Crypto", "SelfTest", "Hash", "test_vectors", self.name),
+                            self.name.lower() + "-test.txt")
 
         expected = "in"
         self.test_vectors = []
@@ -261,9 +260,9 @@ class Blake2sOfficialTestVector(Blake2OfficialTestVector):
 class Blake2TestVector1(unittest.TestCase):
 
     def setUp(self):
-        test_dir, _ = os.path.split(os.path.abspath(__file__))
-        test_vector_file = os.path.join(test_dir, "test_vectors",
-                                        self.name, "tv1.txt")
+        test_vector_file = pycryptodome_filename(
+                            ("Crypto", "SelfTest", "Hash", "test_vectors", self.name),
+                            "tv1.txt")
 
         self.test_vectors = []
         for line_number, line in enumerate(open(test_vector_file, "rt")):
@@ -305,9 +304,9 @@ class Blake2sTestVector1(Blake2TestVector1):
 class Blake2TestVector2(unittest.TestCase):
 
     def setUp(self):
-        test_dir, _ = os.path.split(os.path.abspath(__file__))
-        test_vector_file = os.path.join(test_dir, "test_vectors",
-                                        self.name, "tv2.txt")
+        test_vector_file = pycryptodome_filename(
+                            ("Crypto", "SelfTest", "Hash", "test_vectors", self.name),
+                            "tv2.txt")
 
         self.test_vectors = []
         for line_number, line in enumerate(open(test_vector_file, "rt")):

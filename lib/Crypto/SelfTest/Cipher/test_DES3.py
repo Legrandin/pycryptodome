@@ -31,7 +31,7 @@ from Crypto.Cipher import DES3
 
 from Crypto.Util.strxor import strxor_c
 from Crypto.Util.py3compat import bchr, unhexlify, tostr
-from Crypto.SelfTest.Cipher.nist_loader import load_tests
+from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
@@ -56,9 +56,17 @@ test_data = [
 nist_tdes_mmt_files = ("TECBMMT2.rsp", "TECBMMT3.rsp")
 
 for tdes_file in nist_tdes_mmt_files:
-    test_vectors = load_tests("TDES", tdes_file, "TDES ECB (%s)" % tdes_file)
+    test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "TDES"),
+                                  tdes_file,
+                                  "TDES ECB (%s)" % tdes_file,
+                                  { "count" : lambda x: int(x) } )
     assert(test_vectors)
     for index, tv in enumerate(test_vectors):
+
+        # The test vector file contains some directive lines
+        if isinstance(tv, basestring):
+            continue
+
         key = tv.key1 + tv.key2 + tv.key3
         test_data_item = (tostr(hexlify(tv.plaintext)),
                           tostr(hexlify(tv.ciphertext)),

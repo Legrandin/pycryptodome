@@ -23,6 +23,8 @@ New features
   of block sizes smaller than 16 bytes).
 * Refactored ARC2 cipher.
 * Added `Crypto.Cipher.DES3.adjust_key_parity` function.
+* Added `Public.ECC` module (P-256 curve only).
+* Added support for ECDSA (FIPS 186-3 and RFC6979).
 
 Resolved issues
 ---------------
@@ -40,6 +42,8 @@ Breaks in compatibility
   of calls to `encrypt` with data (similarly for `decrypt`).
 * Key size for `ARC2`, `ARC4` and `Blowfish` must be at least 40 bits long (still very weak).
 * DES3 (Triple DES module) does not allow keys that degenerate to Single DES.
+* Removed method `getRandomNumber` in `Crypto.Util.number`.
+* Removed module `Crypto.pct_warnings`.
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++
