@@ -41,7 +41,12 @@ fi
 
 # Why bother with pip/virtualenv complexity when we can just do this
 install_from_pypi() {
-	URL=$(curl -s https://pypi.python.org/pypi/$1/json | jq '.releases[.info.version]' | jq -r 'map(select(.python_version == "source"))[0].url')
+	if [ "$2" = "latest" ]; then
+		target_version=".info.version"
+	else
+		target_version=\"$2\"
+	fi
+	URL=$(curl -s https://pypi.python.org/pypi/$1/json | jq '.releases['$target_version']' | jq -r 'map(select(.python_version == "source"))[0].url')
 	wget -q -O - $URL | tar -xzC /tmp
 	(
 	cd /tmp/$1-*
@@ -51,6 +56,11 @@ install_from_pypi() {
 }
 
 if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
-	install_from_pypi setuptools
-	install_from_pypi cffi
+	if [ ${PYV} -lt 30 -o ${PYV} -gt 33 ]; then
+		install_from_pypi setuptools latest
+	else
+		# setuptools 19.5 does not support Python 3.2 anymore
+		install_from_pypi setuptools 19.4
+	fi
+	install_from_pypi cffi latest
 fi
