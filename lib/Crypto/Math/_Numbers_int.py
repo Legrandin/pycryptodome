@@ -288,6 +288,9 @@ class Integer(object):
 
         return bit_size
 
+    def size_in_bytes(self):
+        return (self.size_in_bits() - 1) // 8 + 1
+
     def is_perfect_square(self):
         if self._value < 0:
             return False

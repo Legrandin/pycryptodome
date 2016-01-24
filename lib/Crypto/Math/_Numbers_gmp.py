@@ -589,6 +589,10 @@ class Integer(object):
             raise ValueError("Conversion only valid for non-negative numbers")
         return _gmp.mpz_sizeinbase(self._mpz_p, 2)
 
+    def size_in_bytes(self):
+        """Return the minimum number of bytes that can encode the number."""
+        return (self.size_in_bits() - 1) // 8 + 1
+
     def is_perfect_square(self):
         return _gmp.mpz_perfect_square_p(self._mpz_p) != 0
 

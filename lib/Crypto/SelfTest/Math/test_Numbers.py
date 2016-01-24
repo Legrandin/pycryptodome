@@ -465,6 +465,15 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v3.size_in_bits(), 9)
         self.assertRaises(ValueError, v4.size_in_bits)
 
+    def test_size_in_bytes(self):
+        v1, v2, v3, v4, v5, v6 = self.Integers(0, 1, 0xFF, 0x1FF, 0x10000, -9)
+        self.assertEqual(v1.size_in_bytes(), 1)
+        self.assertEqual(v2.size_in_bytes(), 1)
+        self.assertEqual(v3.size_in_bytes(), 1)
+        self.assertEqual(v4.size_in_bytes(), 2)
+        self.assertEqual(v5.size_in_bytes(), 3)
+        self.assertRaises(ValueError, v6.size_in_bits)
+
     def test_perfect_square(self):
 
         self.failIf(self.Integer(-9).is_perfect_square())
