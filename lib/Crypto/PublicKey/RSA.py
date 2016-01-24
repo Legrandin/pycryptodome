@@ -550,7 +550,7 @@ def _import_pkcs1_public(encoded, *kwargs):
 
 def _import_subjectPublicKeyInfo(encoded, *kwargs):
 
-    algoid, params, encoded_key =  _expand_subject_public_key_info(encoded)
+    algoid, encoded_key, params =  _expand_subject_public_key_info(encoded)
     if algoid != oid or params != None:
         raise ValueError("No RSA subjectPublicKeyInfo")
     return _import_pkcs1_public(encoded_key)

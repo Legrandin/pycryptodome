@@ -72,15 +72,8 @@ from Crypto.Util.asn1 import (
 
 from Crypto.IO._PBES import PBES1, PBES2, PbesError
 
+
 __all__ = ['wrap', 'unwrap']
-
-
-def decode_der(obj_class, binstr):
-    """Instantiate a DER object class, decode a DER binary string in it, and
-    return the object."""
-    der = obj_class()
-    der.decode(binstr)
-    return der
 
 
 def wrap(private_key, key_oid, passphrase=None, protection=None,
@@ -219,26 +212,47 @@ def unwrap(p8_private_key, passphrase=None):
         if not found:
             raise ValueError("Error decoding PKCS#8 (%s)" % error_str)
 
-    pk_info = decode_der(DerSequence, p8_private_key)
+    pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4))
     if len(pk_info) == 2 and not passphrase:
         raise ValueError("Not a valid clear PKCS#8 structure "
                          "(maybe it is encrypted?)")
-    if not 3 <= len(pk_info) <= 4 or pk_info[0] != 0:
-        raise ValueError("Not a valid PrivateKeyInfo SEQUENCE")
 
     #
-    #   AlgorithmIdentifier  ::=  SEQUENCE  {
-    #       algorithm               OBJECT IDENTIFIER,
-    #       parameters              ANY DEFINED BY algorithm OPTIONAL
+    #   PrivateKeyInfo ::= SEQUENCE {
+    #       version                 Version,
+    #       privateKeyAlgorithm     PrivateKeyAlgorithmIdentifier,
+    #       privateKey              PrivateKey,
+    #       attributes              [0]  IMPLICIT Attributes OPTIONAL
     #   }
+    #   Version ::= INTEGER
+    if pk_info[0] != 0:
+        raise ValueError("Not a valid PrivateKeyInfo SEQUENCE")
+
+    # PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
     #
-    algo_id = decode_der(DerSequence, pk_info[1])
-    if not 1 <= len(algo_id) <= 2:
-        raise ValueError("Not a valid AlgorithmIdentifier SEQUENCE")
-    algo = decode_der(DerObjectId, algo_id[0]).value
-    private_key = decode_der(DerOctetString, pk_info[2]).payload
-    if len(algo_id) == 2 and algo_id[1] != b('\x05\x00'):
-        params = algo_id[1]
+    #   EncryptedPrivateKeyInfo ::= SEQUENCE {
+    #       encryptionAlgorithm  EncryptionAlgorithmIdentifier,
+    #       encryptedData        EncryptedData
+    #   }
+    #   EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
+
+    #   AlgorithmIdentifier  ::=  SEQUENCE  {
+    #       algorithm   OBJECT IDENTIFIER,
+    #       parameters  ANY DEFINED BY algorithm OPTIONAL
+    #   }
+
+    algo = DerSequence().decode(pk_info[1], nr_elements=(1, 2))
+    algo_oid = DerObjectId().decode(algo[0]).value
+    if len(algo) == 1:
+        algo_params = None
     else:
-        params = None
-    return (algo, private_key, params)
+        try:
+            DerNull().decode(algo[1])
+            algo_params = None
+        except:
+            algo_params = algo[1]
+
+    #   EncryptedData ::= OCTET STRING
+    private_key = DerOctetString().decode(pk_info[2]).payload
+
+    return (algo_oid, private_key, algo_params)

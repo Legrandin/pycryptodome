@@ -47,8 +47,8 @@ def _expand_subject_public_key_info(encoded):
 
     It returns a triple with:
         * OID (string)
-        * Algorithm parameters (bytes or None)
         * encoded public key (bytes)
+        * Algorithm parameters (bytes or None)
     """
 
     #
@@ -77,7 +77,7 @@ def _expand_subject_public_key_info(encoded):
         except:
             algo_params = algo[1]
 
-    return algo_oid.value, algo_params, spk
+    return algo_oid.value, spk, algo_params
 
 
 def _extract_subject_public_key_info(x509_certificate):

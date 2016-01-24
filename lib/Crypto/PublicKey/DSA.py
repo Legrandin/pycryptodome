@@ -565,7 +565,7 @@ def _import_openssl_private(encoded, passphrase, params):
 
 def _import_subjectPublicKeyInfo(encoded, passphrase, params):
 
-    algoid, emb_params, encoded_key =  _expand_subject_public_key_info(encoded)
+    algoid, encoded_key, emb_params =  _expand_subject_public_key_info(encoded)
     if algoid != oid:
         raise ValueError("No DSA subjectPublicKeyInfo")
     if params and emb_params:

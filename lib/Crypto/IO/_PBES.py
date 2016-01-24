@@ -83,15 +83,13 @@ class PbesError(ValueError):
 #   prf AlgorithmIdentifier {{PBKDF2-PRFs}} DEFAULT algid-hmacWithSHA1
 #   }
 #
-
-
-def decode_der(obj_class, binstr):
-    """Instantiate a DER object class, decode a DER binary string in it, and
-    return the object."""
-    der = obj_class()
-    der.decode(binstr)
-    return der
-
+# scrypt-params ::= SEQUENCE {
+#       salt OCTET STRING,
+#       costParameter INTEGER (1..MAX),
+#       blockSize INTEGER (1..MAX),
+#       parallelizationParameter INTEGER (1..MAX),
+#       keyLength INTEGER (1..MAX) OPTIONAL
+#   }
 
 class PBES1(object):
     """Deprecated encryption scheme with password-based key derivation
@@ -115,17 +113,11 @@ class PBES1(object):
           The decrypted data, as a binary string.
         """
 
-        encrypted_private_key_info = decode_der(DerSequence, data)
-        encrypted_algorithm = decode_der(
-                                DerSequence,
-                                encrypted_private_key_info[0]
-                                )
-        encrypted_data = decode_der(
-                            DerOctetString,
-                            encrypted_private_key_info[1]
-                            ).payload
+        enc_private_key_info = DerSequence().decode(data)
+        encrypted_algorithm = DerSequence().decode(enc_private_key_info[0])
+        encrypted_data = DerOctetString().decode(enc_private_key_info[1]).payload
 
-        pbe_oid = decode_der(DerObjectId, encrypted_algorithm[0]).value
+        pbe_oid = DerObjectId().decode(encrypted_algorithm[0]).value
         cipher_params = {}
         if pbe_oid == "1.2.840.113549.1.5.3":
             # PBE_MD5_DES_CBC
@@ -148,8 +140,8 @@ class PBES1(object):
         else:
             raise PbesError("Unknown OID for PBES1")
 
-        pbe_params = decode_der(DerSequence, encrypted_algorithm[1])
-        salt = decode_der(DerOctetString, pbe_params[0]).payload
+        pbe_params = DerSequence().decode(encrypted_algorithm[1], nr_elements=2)
+        salt = DerOctetString().decode(pbe_params[0]).payload
         iterations = pbe_params[1]
 
         key_iv = PBKDF1(passphrase, salt, 16, iterations, hashmod)
@@ -253,7 +245,7 @@ class PBES2(object):
         if protection.startswith('PBKDF2'):
             count = prot_params.get("iteration_count", 1000)
             key = PBKDF2(passphrase, salt, key_size, count)
-            key_derivation_func = DerSequence([
+            kdf_info = DerSequence([
                     DerObjectId("1.2.840.113549.1.5.12"),   # PBKDF2
                     DerSequence([
                         DerOctetString(salt),
@@ -267,7 +259,7 @@ class PBES2(object):
             scrypt_p = prot_params.get('parallelization', 1)
             key = scrypt(passphrase, salt, key_size,
                          count, scrypt_r, scrypt_p)
-            key_derivation_func = DerSequence([
+            kdf_info = DerSequence([
                     DerObjectId("1.3.6.1.4.1.11591.4.11"),  # scrypt
                     DerSequence([
                         DerOctetString(salt),
@@ -280,24 +272,24 @@ class PBES2(object):
         # Create cipher and use it
         cipher = module.new(key, cipher_mode, iv)
         encrypted_data = cipher.encrypt(pad(data, cipher.block_size))
-        encryption_scheme = DerSequence([
+        enc_info = DerSequence([
                 DerObjectId(enc_oid),
                 DerOctetString(iv)
         ])
 
         # Result
-        encrypted_private_key_info = DerSequence([
+        enc_private_key_info = DerSequence([
             # encryptionAlgorithm
             DerSequence([
                 DerObjectId("1.2.840.113549.1.5.13"),   # PBES2
                 DerSequence([
-                    key_derivation_func,
-                    encryption_scheme
+                    kdf_info,
+                    enc_info
                 ]),
             ]),
             DerOctetString(encrypted_data)
         ])
-        return encrypted_private_key_info.encode()
+        return enc_private_key_info.encode()
 
     @staticmethod
     def decrypt(data, passphrase):
@@ -314,34 +306,25 @@ class PBES2(object):
           The decrypted data, as a binary string.
         """
 
-        encrypted_private_key_info = decode_der(DerSequence, data)
-        encryption_algorithm = decode_der(
-                                DerSequence,
-                                encrypted_private_key_info[0]
-                                )
-        encrypted_data = decode_der(
-                            DerOctetString,
-                            encrypted_private_key_info[1]
-                            ).payload
+        enc_private_key_info = DerSequence().decode(data, nr_elements=2)
+        enc_algo = DerSequence().decode(enc_private_key_info[0])
+        encrypted_data = DerOctetString().decode(enc_private_key_info[1]).payload
 
-        pbe_oid = decode_der(DerObjectId, encryption_algorithm[0]).value
+        pbe_oid = DerObjectId().decode(enc_algo[0]).value
         if pbe_oid != "1.2.840.113549.1.5.13":
             raise PbesError("Not a PBES2 object")
 
-        pbes2_params = decode_der(DerSequence, encryption_algorithm[1])
+        pbes2_params = DerSequence().decode(enc_algo[1], nr_elements=2)
 
         ### Key Derivation Function selection
-        key_derivation_func = decode_der(DerSequence, pbes2_params[0])
-        key_derivation_oid = decode_der(
-                                DerObjectId,
-                                key_derivation_func[0]
-                                ).value
+        kdf_info = DerSequence().decode(pbes2_params[0], nr_elements=2)
+        kdf_oid = DerObjectId().decode(kdf_info[0]).value
 
         # We only support PBKDF2 or scrypt
-        if key_derivation_oid == "1.2.840.113549.1.5.12":
+        if kdf_oid == "1.2.840.113549.1.5.12":
 
-            pbkdf2_params = decode_der(DerSequence, key_derivation_func[1])
-            salt = decode_der(DerOctetString, pbkdf2_params[0]).payload
+            pbkdf2_params = DerSequence().decode(kdf_info[1], nr_elements=(2, 3, 4))
+            salt = DerOctetString().decode(pbkdf2_params[0]).payload
             iteration_count = pbkdf2_params[1]
             if len(pbkdf2_params) > 2:
                 kdf_key_length = pbkdf2_params[2]
@@ -350,10 +333,10 @@ class PBES2(object):
             if len(pbkdf2_params) > 3:
                 raise PbesError("Unsupported PRF for PBKDF2")
 
-        elif key_derivation_oid == "1.3.6.1.4.1.11591.4.11":
+        elif kdf_oid == "1.3.6.1.4.1.11591.4.11":
 
-            scrypt_params = decode_der(DerSequence, key_derivation_func[1])
-            salt = decode_der(DerOctetString, scrypt_params[0]).payload
+            scrypt_params = DerSequence().decode(kdf_info[1], nr_elements=(4, 5))
+            salt = DerOctetString().decode(scrypt_params[0]).payload
             iteration_count, scrypt_r, scrypt_p = [scrypt_params[x]
                                                    for x in (1, 2, 3)]
             if len(scrypt_params) > 4:
@@ -364,25 +347,22 @@ class PBES2(object):
             raise PbesError("Unsupported PBES2 KDF")
 
         ### Cipher selection
-        encryption_scheme = decode_der(DerSequence, pbes2_params[1])
-        encryption_oid = decode_der(
-                            DerObjectId,
-                            encryption_scheme[0]
-                            ).value
+        enc_info = DerSequence().decode(pbes2_params[1])
+        enc_oid = DerObjectId().decode(enc_info[0]).value
 
-        if encryption_oid == "1.2.840.113549.3.7":
+        if enc_oid == "1.2.840.113549.3.7":
             # DES_EDE3_CBC
             ciphermod = DES3
             key_size = 24
-        elif encryption_oid == "2.16.840.1.101.3.4.1.2":
+        elif enc_oid == "2.16.840.1.101.3.4.1.2":
             # AES128_CBC
             ciphermod = AES
             key_size = 16
-        elif encryption_oid == "2.16.840.1.101.3.4.1.22":
+        elif enc_oid == "2.16.840.1.101.3.4.1.22":
             # AES192_CBC
             ciphermod = AES
             key_size = 24
-        elif encryption_oid == "2.16.840.1.101.3.4.1.42":
+        elif enc_oid == "2.16.840.1.101.3.4.1.42":
             # AES256_CBC
             ciphermod = AES
             key_size = 32
@@ -393,10 +373,10 @@ class PBES2(object):
             raise PbesError("Mismatch between PBES2 KDF parameters"
                             " and selected cipher")
 
-        IV = decode_der(DerOctetString, encryption_scheme[1]).payload
+        IV = DerOctetString().decode(enc_info[1]).payload
 
         # Create cipher
-        if key_derivation_oid == "1.2.840.113549.1.5.12": # PBKDF2
+        if kdf_oid == "1.2.840.113549.1.5.12": # PBKDF2
             key = PBKDF2(passphrase, salt, key_size, iteration_count)
         else:
             key = scrypt(passphrase, salt, key_size, iteration_count,
