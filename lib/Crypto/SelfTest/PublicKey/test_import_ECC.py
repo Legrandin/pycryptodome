@@ -94,6 +94,11 @@ class TestImport(unittest.TestCase):
         key = ECC._import_der(key_file, None)
         self.assertEqual(ref_private, key)
 
+    def test_import_private_pkcs8_encrypted(self):
+        key_file = load_file("ecc_p256_private_p8.der")
+
+        key = ECC._import_der(key_file, "secret")
+        self.assertEqual(ref_private, key)
 
 
 def get_tests(config={}):
