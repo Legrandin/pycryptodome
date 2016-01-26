@@ -61,6 +61,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   
   - RSA
   - DSA
+  - ECC (NIST P-256 curve only)
   - ElGamal
 
 * Export and import format for asymmetric keys:
@@ -83,9 +84,9 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
     - RSASSA-PKCS1-v1_5
     - RSASSA-PSS
 
-  - DSA
+  - (EC)DSA
     
-    - FIPS 186-3
+    - Nonce-based (FIPS 186-3)
     - Deterministic (RFC6979)
 
 * Key derivation:
