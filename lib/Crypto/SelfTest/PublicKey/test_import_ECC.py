@@ -31,7 +31,7 @@
 import unittest
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._file_system import pycryptodome_filename
-from Crypto.Util.py3compat import b, unhexlify, bord
+from Crypto.Util.py3compat import b, unhexlify, bord, tostr
 from Crypto.Util.number import bytes_to_long
 
 from Crypto.PublicKey import ECC
@@ -44,12 +44,13 @@ def load_file(filename):
                                     "PublicKey",
                                     "test_vectors",
                                     "ECC",
-                                    ], filename))
+                                    ], filename), "rb")
     return fd.read()
 
 
 def compact(lines):
-    return unhexlify(b("").join(lines).replace(" ", "").replace(":", ""))
+    ext = b("").join(lines)
+    return unhexlify(tostr(ext).replace(" ", "").replace(":", ""))
 
 
 def create_ref_keys():
@@ -79,6 +80,9 @@ class TestImport(unittest.TestCase):
         key = ECC._import_der(key_file, None)
         self.assertEqual(ref_public, key)
 
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_public, key)
+
     def test_import_private_der(self):
         key_file = load_file("ecc_p256_private.der")
 
@@ -88,10 +92,16 @@ class TestImport(unittest.TestCase):
         key = ECC._import_der(key_file, None)
         self.assertEqual(ref_private, key)
 
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_private, key)
+
     def test_import_private_pkcs8_clear(self):
         key_file = load_file("ecc_p256_private_p8_clear.der")
 
         key = ECC._import_der(key_file, None)
+        self.assertEqual(ref_private, key)
+
+        key = ECC.import_key(key_file)
         self.assertEqual(ref_private, key)
 
     def test_import_private_pkcs8_encrypted(self):
@@ -100,12 +110,53 @@ class TestImport(unittest.TestCase):
         key = ECC._import_der(key_file, "secret")
         self.assertEqual(ref_private, key)
 
+        key = ECC.import_key(key_file, "secret")
+        self.assertEqual(ref_private, key)
+
     def test_import_x509_der(self):
         key_file = load_file("ecc_p256_x509.der")
 
         key = ECC._import_der(key_file, None)
         self.assertEqual(ref_public, key)
 
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_public, key)
+
+    def test_import_public_pem(self):
+        key_file = load_file("ecc_p256_public.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_public, key)
+
+    def test_import_private_pem(self):
+        key_file = load_file("ecc_p256_private.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_private, key)
+
+    def test_import_private_pem_encrypted(self):
+        key_file = load_file("ecc_p256_private_enc.pem")
+
+        key = ECC.import_key(key_file, "secret")
+        self.assertEqual(ref_private, key)
+
+        key = ECC.import_key(tostr(key_file), b("secret"))
+        self.assertEqual(ref_private, key)
+
+    def test_import_x509_pem(self):
+        key_file = load_file("ecc_p256_x509.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_public, key)
+
+    def test_import_openssh(self):
+        key_file = load_file("ecc_p256_public_openssh.txt")
+
+        key = ECC._import_openssh(key_file)
+        self.assertEqual(ref_public, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_public, key)
 
 
 def get_tests(config={}):

@@ -28,15 +28,17 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import struct
+import binascii
 
-from Crypto.Util.py3compat import bord
+from Crypto.Util.py3compat import bord, tobytes, b, tostr
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Random import get_random_bytes
 from Crypto.Util.asn1 import (DerObjectId, DerOctetString, DerSequence,
                               DerBitString)
 
-from Crypto.IO import PKCS8
+from Crypto.IO import PKCS8, PEM
 from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _extract_subject_public_key_info)
 
@@ -517,6 +519,45 @@ def _import_der(encoded, passphrase):
             pass
 
     raise ValueError("Not an ECC DER key")
+
+
+def _import_openssh(encoded):
+    keystring = binascii.a2b_base64(encoded.split(b(' '))[1])
+
+    keyparts = []
+    while len(keystring) > 4:
+        l = struct.unpack(">I", keystring[:4])[0]
+        keyparts.append(keystring[4:4 + l])
+        keystring = keystring[4 + l:]
+
+    if keyparts[1] != b("nistp256"):
+        raise ValueError("Unsupported ECC curve")
+
+    return _import_public_der(_curve.oid, keyparts[2])
+
+
+def import_key(encoded, passphrase=None):
+
+    encoded = tobytes(encoded)
+    if passphrase is not None:
+        passphrase = tobytes(passphrase)
+
+    # PEM
+    if encoded.startswith(b('-----')):
+        der_encoded, marker, enc_flag = PEM.decode(tostr(encoded), passphrase)
+        if enc_flag:
+            passphrase = None
+        return _import_der(der_encoded, passphrase)
+
+    # OpenSSH
+    if encoded.startswith(b('ecdsa-sha2-')):
+        return _import_openssh(encoded)
+
+    # DER
+    if bord(encoded[0]) == 0x30:
+        return _import_der(encoded, passphrase)
+
+    raise ValueError("ECC key format is not supported")
 
 
 if __name__ == "__main__":
