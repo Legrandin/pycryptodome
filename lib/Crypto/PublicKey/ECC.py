@@ -495,10 +495,17 @@ def _import_pkcs8(encoded, passphrase):
     return _import_private_der(private_key, passphrase, curve_name)
 
 
+def _import_x509_cert(encoded, *kwargs):
+
+    sp_info = _extract_subject_public_key_info(encoded)
+    return _import_subjectPublicKeyInfo(sp_info)
+
+
 def _import_der(encoded, passphrase):
 
     decodings = (
         _import_subjectPublicKeyInfo,
+        _import_x509_cert,
         _import_private_der,
         _import_pkcs8,
         )

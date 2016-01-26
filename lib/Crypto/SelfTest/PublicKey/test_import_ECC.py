@@ -100,6 +100,13 @@ class TestImport(unittest.TestCase):
         key = ECC._import_der(key_file, "secret")
         self.assertEqual(ref_private, key)
 
+    def test_import_x509_der(self):
+        key_file = load_file("ecc_p256_x509.der")
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(ref_public, key)
+
+
 
 def get_tests(config={}):
     tests = []
