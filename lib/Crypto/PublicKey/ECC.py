@@ -537,6 +537,43 @@ def _import_openssh(encoded):
 
 
 def import_key(encoded, passphrase=None):
+    """Import an ECC key (public or private).
+
+    :Parameters:
+      encoded : byte string
+        The ECC key to import.
+        An ECC public key can be in any of the following formats:
+
+        - A X.509 certificate (binary or PEM format)
+        - A X.509 ``subjectPublicKeyInfo`` (binary or PEM format)
+        - An OpenSSH line (e.g. the content of ~/.ssh/id_ecdsa)
+
+        An ECC private key can be in any of the following formats:
+
+        - An ``ECPrivateKey`` (binary or PEM format), as defined
+          in section 3 of `RFC5915`_.
+        - A ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo`` (binary or PEM
+          format) as defined in `PKCS#8`_.
+
+        For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
+
+    :Keywords:
+      passphrase : byte string
+        The passphrase to use to decrypt a private key. The key may be
+        protected either at the PEM level or at the PKCS#8 level.
+        This parameter is ignored if the key is not encrypted.
+
+    :Return: An ECC key object (`EccKey`)
+
+    :Raise ValueError:
+        When the given key cannot be parsed (possibly because
+        the pass phrase is wrong).
+
+    .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
+    .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
+    .. _RFC5915: http://www.ietf.org/rfc/rfc5915.txt
+    .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
+    """
 
     encoded = tobytes(encoded)
     if passphrase is not None:
