@@ -157,7 +157,7 @@ def decode(pem_data, passphrase=None):
             key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
             objdec = AES.new(key, AES.MODE_CBC, salt)
         else:
-            raise ValueError("Unsupport PEM encryption algorithm.")
+            raise ValueError("Unsupport PEM encryption algorithm (%s)." % algo)
         lines = lines[2:]
     else:
         objdec = None

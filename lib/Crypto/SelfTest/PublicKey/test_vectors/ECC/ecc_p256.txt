@@ -1,17 +1,18 @@
 Private-Key: (256 bit)
 priv:
-    45:9d:80:12:e6:e6:f8:04:48:d0:4e:cd:ef:aa:a9:
-    0d:9a:0d:60:d1:0f:a7:06:58:60:b6:ac:e3:89:10:
-    b0:0e
+    5c:4e:43:20:ef:26:0f:91:ed:9f:c5:97:ae:e9:8c:
+    82:36:b6:0e:0c:ed:69:2c:c7:a0:57:d5:e4:57:98:
+    a0:52
 pub: 
-    04:52:b6:00:8e:a3:3f:a7:18:cf:d7:ad:d7:7d:b2:
-    74:4b:43:02:b4:83:a3:ce:f2:0e:b3:5b:1c:77:c3:
-    f5:d0:79:85:c3:c7:6b:80:7f:57:9c:93:f4:17:1a:
-    5d:80:b5:9c:8b:e2:d1:21:c7:2b:c7:2a:15:f3:62:
-    68:fc:e5:83:1e
+    04:a4:0a:d5:9a:20:50:eb:e9:24:79:bd:5f:b1:6b:
+    b2:e4:5b:64:65:eb:3c:b2:b1:ef:fe:42:3f:ab:e6:
+    cb:74:24:db:82:19:ef:0b:ab:80:ac:f2:6f:d7:05:
+    95:b6:1f:e4:76:0d:33:ee:d8:0d:d0:3d:2f:d0:df:
+    b2:7b:8c:e7:5c
 ASN1 OID: prime256v1
+NIST CURVE: P-256
 -----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIEWdgBLm5vgESNBOze+qqQ2aDWDRD6cGWGC2rOOJELAOoAoGCCqGSM49
-AwEHoUQDQgAEUrYAjqM/pxjP163XfbJ0S0MCtIOjzvIOs1scd8P10HmFw8drgH9X
-nJP0FxpdgLWci+LRIccrxyoV82Jo/OWDHg==
+MHcCAQEEIFxOQyDvJg+R7Z/Fl67pjII2tg4M7Wksx6BX1eRXmKBSoAoGCCqGSM49
+AwEHoUQDQgAEpArVmiBQ6+kkeb1fsWuy5FtkZes8srHv/kI/q+bLdCTbghnvC6uA
+rPJv1wWVth/kdg0z7tgN0D0v0N+ye4znXA==
 -----END EC PRIVATE KEY-----

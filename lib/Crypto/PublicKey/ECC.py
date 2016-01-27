@@ -31,7 +31,7 @@
 import struct
 import binascii
 
-from Crypto.Util.py3compat import bord, tobytes, b, tostr
+from Crypto.Util.py3compat import bord, tobytes, b, tostr, bchr
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Random import get_random_bytes
@@ -40,6 +40,7 @@ from Crypto.Util.asn1 import (DerObjectId, DerOctetString, DerSequence,
 
 from Crypto.IO import PKCS8, PEM
 from Crypto.PublicKey import (_expand_subject_public_key_info,
+                              _create_subject_public_key_info,
                               _extract_subject_public_key_info)
 
 
@@ -320,6 +321,148 @@ class EccKey(object):
 
     def public_key(self):
         return EccKey(curve="P-256", point=self.pointQ)
+
+    def _export_subjectPublicKeyInfo(self):
+
+        # Uncompressed form
+        order_bytes = _curve.order.size_in_bytes()
+        public_key = (bchr(4) +
+                      self.pointQ.x.to_bytes(order_bytes) +
+                      self.pointQ.y.to_bytes(order_bytes))
+
+        unrestricted_oid = "1.2.840.10045.2.1"
+        return _create_subject_public_key_info(unrestricted_oid,
+                                               public_key,
+                                               DerObjectId(_curve.oid))
+
+    def _export_private_der(self, include_ec_params=True):
+
+        assert self.has_private()
+
+        # ECPrivateKey ::= SEQUENCE {
+        #           version        INTEGER { ecPrivkeyVer1(1) } (ecPrivkeyVer1),
+        #           privateKey     OCTET STRING,
+        #           parameters [0] ECParameters {{ NamedCurve }} OPTIONAL,
+        #           publicKey  [1] BIT STRING OPTIONAL
+        #    }
+
+        # Public key - uncompressed form
+        order_bytes = _curve.order.size_in_bytes()
+        public_key = (bchr(4) +
+                      self.pointQ.x.to_bytes(order_bytes) +
+                      self.pointQ.y.to_bytes(order_bytes))
+
+        seq = [1,
+               DerOctetString(self.d.to_bytes(order_bytes)),
+               DerObjectId(_curve.oid, explicit=0),
+               DerBitString(public_key, explicit=1)]
+
+        if not include_ec_params:
+            del seq[2]
+
+        return DerSequence(seq).encode()
+
+    def _export_pkcs8(self, **kwargs):
+        if kwargs.get('passphrase', None) is not None and 'protection' not in kwargs:
+            raise ValueError("At least the 'protection' parameter should be present")
+        unrestricted_oid = "1.2.840.10045.2.1"
+        private_key = self._export_private_der(include_ec_params=False)
+        result = PKCS8.wrap(private_key,
+                            unrestricted_oid,
+                            key_params=DerObjectId(_curve.oid),
+                            **kwargs)
+        return result
+
+    def _export_public_pem(self):
+        encoded_der = self._export_subjectPublicKeyInfo()
+        return PEM.encode(encoded_der, "PUBLIC KEY")
+
+    def _export_private_pem(self, passphrase):
+        encoded_der = self._export_private_der()
+        return PEM.encode(encoded_der, "EC PRIVATE KEY", passphrase)
+
+    def _export_private_clear_pkcs8_in_clear_pem(self):
+        encoded_der = self._export_pkcs8()
+        return PEM.encode(encoded_der, "PRIVATE KEY")
+
+    def _export_private_encrypted_pkcs8_in_clear_pem(self, passphrase, **kwargs):
+        assert passphrase
+        if 'protection' not in kwargs:
+            raise ValueError("At least the 'protection' parameter should be present")
+        encoded_der = self._export_pkcs8(passphrase=passphrase, **kwargs)
+        return PEM.encode(encoded_der, "ENCRYPTED PRIVATE KEY")
+
+    def export_key(self, **kwargs):
+        """Export this ECC key.
+
+        :Keywords:
+          format : string
+            The format to use for wrapping the key:
+            - *'DER'*. The key will be encoded in an ASN.1 `DER`_ stucture (binary).
+            - *'PEM'*. The key will be encoded in a `PEM`_ envelope (ASCII).
+
+          passphrase : byte string or string
+            The passphrase to use for protecting the private key.
+            *If not provided, the private key will remain in clear form!*
+
+          use_pkcs8 : boolean
+            In case of a private key, whether the `PKCS#8`_ representation
+            should be (internally) used. By default it will.
+
+            Not using PKCS#8 when exporting a private key in
+            password-protected PEM form means that the much weaker and
+            unflexible `PEM encryption`_ mechanism will be used.
+            Using PKCS#8 is therefore always recommended.
+
+          protection : string
+            In case of a private key being exported with password-protection
+            and PKCS#8 (both ``DER`` and ``PEM``), this parameter MUST be
+            present and be a valid algorithm supported by `Crypto.IO.PKCS8`.
+            It is recommended to use ``PBKDF2WithHMAC-SHA1AndAES128-CBC``.
+
+        In case of a private key being exported with password-protection
+        and PKCS#8 (both ``DER`` and ``PEM``), all additional parameters
+        will be passed to `Crypto.IO.PKCS8`.
+
+        .. _DER:        http://www.ietf.org/rfc/rfc5915.txt
+        .. _PEM:        http://www.ietf.org/rfc/rfc1421.txt
+        .. _`PEM encryption`: http://www.ietf.org/rfc/rfc1423.txt
+        .. _PKCS#8:     http://www.ietf.org/rfc/rfc5208.txt
+
+        :Return: A string (for PEM) or a byte string (for DER) with the encoded key.
+        """
+
+        args = kwargs.copy()
+        ext_format = args.pop("format")
+        if ext_format not in ("PEM", "DER"):
+            raise ValueError("Unknown format '%s'" % ext_format)
+
+        if self.has_private():
+            passphrase = args.pop("passphrase", None)
+            if isinstance(passphrase, basestring):
+                passphrase = tobytes(passphrase)
+            use_pkcs8 = args.pop("use_pkcs8", True)
+            if ext_format == "PEM":
+                if use_pkcs8:
+                    if passphrase:
+                        return self._export_private_encrypted_pkcs8_in_clear_pem(passphrase, **args)
+                    else:
+                        return self._export_private_clear_pkcs8_in_clear_pem()
+                else:
+                    return self._export_private_pem(passphrase)
+            else:
+                # DER
+                if passphrase and not use_pkcs8:
+                    raise ValueError("Private keys can only be encrpyted with DER using PKCS#8")
+                if use_pkcs8:
+                    return self._export_pkcs8(passphrase=passphrase, **args)
+                else:
+                    return self._export_private_der()
+        else:  # Public key
+            if ext_format == "PEM":
+                return self._export_public_pem()
+            else:
+                return self._export_subjectPublicKeyInfo()
 
 
 def generate(**kwargs):

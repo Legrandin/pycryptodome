@@ -40,6 +40,9 @@ def get_tests(config={}):
     from Crypto.SelfTest.PublicKey import test_import_RSA
     tests += test_import_RSA.get_tests(config=config)
 
+    from Crypto.SelfTest.PublicKey import test_import_ECC
+    tests += test_import_ECC.get_tests(config=config)
+
     from Crypto.SelfTest.PublicKey import test_ElGamal;   tests += test_ElGamal.get_tests(config=config)
     return tests
 
