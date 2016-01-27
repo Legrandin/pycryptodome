@@ -105,7 +105,8 @@ from Crypto.Math.Primality import (test_probable_prime, COMPOSITE,
                                    PROBABLY_PRIME)
 
 from Crypto.PublicKey import (_expand_subject_public_key_info,
-                             _extract_subject_public_key_info)
+                              _create_subject_public_key_info,
+                              _extract_subject_public_key_info)
 
 #   ; The following ASN.1 types are relevant for DSA
 #
@@ -358,10 +359,9 @@ class DsaKey(object):
         else:
             if pkcs8:
                 raise ValueError("PKCS#8 is only meaningful for private keys")
-            binary_key = DerSequence([
-                                DerSequence([DerObjectId(oid), params]),
-                                DerBitString(DerInteger(self.y))
-                            ]).encode()
+
+            binary_key = _create_subject_public_key_info(oid,
+                                DerInteger(self.y), params)
             key_type = "DSA PUBLIC"
 
         if format == 'DER':

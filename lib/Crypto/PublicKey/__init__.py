@@ -80,6 +80,20 @@ def _expand_subject_public_key_info(encoded):
     return algo_oid.value, spk, algo_params
 
 
+def _create_subject_public_key_info(algo_oid, secret_key, params=None):
+
+    if params is None:
+        params = DerNull()
+
+    spki = DerSequence([
+                DerSequence([
+                    DerObjectId(algo_oid),
+                    params]),
+                DerBitString(secret_key)
+                ])
+    return spki.encode()
+
+
 def _extract_subject_public_key_info(x509_certificate):
     """Extract subjectPublicKeyInfo from a DER X.509 certificate."""
 

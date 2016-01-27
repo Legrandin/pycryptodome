@@ -86,7 +86,8 @@ from Crypto.Math.Primality import (test_probable_prime,
                                 generate_probable_prime, COMPOSITE)
 
 from Crypto.PublicKey import (_expand_subject_public_key_info,
-                             _extract_subject_public_key_info)
+                              _create_subject_public_key_info,
+                              _extract_subject_public_key_info)
 
 
 class RsaKey(object):
@@ -301,10 +302,9 @@ class RsaKey(object):
                         passphrase = None
         else:
                 keyType = "RSA PUBLIC"
-                binary_key = DerSequence([
-                                            algorithmIdentifier,
-                                            DerBitString(DerSequence([self.n, self.e]))
-                                         ]).encode()
+                binary_key = _create_subject_public_key_info(oid,
+                                    DerSequence([self.n, self.e]))
+
         if format=='DER':
             return binary_key
         if format=='PEM':
