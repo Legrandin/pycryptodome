@@ -303,6 +303,17 @@ class TestExport(unittest.TestCase):
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(ref_private, decoded)
 
+    def test_export_openssh(self):
+        key_file = load_file("ecc_p256_public_openssh.txt", "rt")
+
+        encoded = ref_public._export_openssh()
+        self.assertEquals(key_file, encoded)
+
+        # ---
+
+        encoded = ref_public.export_key(format="OpenSSH")
+        self.assertEquals(key_file, encoded)
+
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
         encoded1 = ref_private.export_key(format="PEM",
@@ -364,6 +375,10 @@ class TestExport(unittest.TestCase):
         self.assertRaises(ValueError, ref_private.export_key, format="PEM",
                                       passphrase="",
                                       protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+
+        # No private keys with OpenSSH
+        self.assertRaises(ValueError, ref_private.export_key, format="OpenSSH",
+                                      passphrase="secret")
 
 
 def get_tests(config={}):

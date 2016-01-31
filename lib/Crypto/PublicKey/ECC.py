@@ -392,6 +392,21 @@ class EccKey(object):
         encoded_der = self._export_pkcs8(passphrase=passphrase, **kwargs)
         return PEM.encode(encoded_der, "ENCRYPTED PRIVATE KEY")
 
+    def _export_openssh(self):
+        assert not self.has_private()
+
+        desc = "ecdsa-sha2-nistp256"
+
+        # Uncompressed form
+        order_bytes = _curve.order.size_in_bytes()
+        public_key = (bchr(4) +
+                      self.pointQ.x.to_bytes(order_bytes) +
+                      self.pointQ.y.to_bytes(order_bytes))
+
+        comps = (tobytes(desc), b("nistp256"), public_key)
+        blob = b("").join([ struct.pack(">I", len(x)) + x for x in comps])
+        return desc + " " + tostr(binascii.b2a_base64(blob))
+
     def export_key(self, **kwargs):
         """Export this ECC key.
 
@@ -400,6 +415,8 @@ class EccKey(object):
             The format to use for wrapping the key:
             - *'DER'*. The key will be encoded in an ASN.1 `DER`_ stucture (binary).
             - *'PEM'*. The key will be encoded in a `PEM`_ envelope (ASCII).
+            - *'OpenSSH'*. The key will be encoded in the `OpenSSH`_ format
+              (ASCII, public keys only).
 
           passphrase : byte string or string
             The passphrase to use for protecting the private key.
@@ -428,13 +445,14 @@ class EccKey(object):
         .. _PEM:        http://www.ietf.org/rfc/rfc1421.txt
         .. _`PEM encryption`: http://www.ietf.org/rfc/rfc1423.txt
         .. _PKCS#8:     http://www.ietf.org/rfc/rfc5208.txt
+        .. _OpenSSH:    http://www.openssh.com/txt/rfc5656.txt
 
-        :Return: A string (for PEM) or a byte string (for DER) with the encoded key.
+        :Return: A string (for PEM and OpenSSH) or bytes (for DER) with the encoded key.
         """
 
         args = kwargs.copy()
         ext_format = args.pop("format")
-        if ext_format not in ("PEM", "DER"):
+        if ext_format not in ("PEM", "DER", "OpenSSH"):
             raise ValueError("Unknown format '%s'" % ext_format)
 
         if self.has_private():
@@ -452,7 +470,7 @@ class EccKey(object):
                         return self._export_private_clear_pkcs8_in_clear_pem()
                 else:
                     return self._export_private_pem(passphrase, **args)
-            else:
+            elif ext_format == "DER":
                 # DER
                 if passphrase and not use_pkcs8:
                     raise ValueError("Private keys can only be encrpyted with DER using PKCS#8")
@@ -460,13 +478,17 @@ class EccKey(object):
                     return self._export_pkcs8(passphrase=passphrase, **args)
                 else:
                     return self._export_private_der()
+            else:
+                raise ValueError("Private keys cannot be exported in OpenSSH format")
         else:  # Public key
             if args:
                 raise ValueError("Unexpected parameters: '%s'" % args)
             if ext_format == "PEM":
                 return self._export_public_pem()
-            else:
+            elif ext_format == "DER":
                 return self._export_subjectPublicKeyInfo()
+            else:
+                return self._export_openssh()
 
 
 def generate(**kwargs):
