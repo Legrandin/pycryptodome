@@ -327,6 +327,17 @@ class TestExport(unittest.TestCase):
                                           randfunc=get_fixed_prng())
         self.assertEquals(encoded1, encoded2)
 
+    def test_byte_or_string_passphrase(self):
+        encoded1 = ref_private.export_key(format="PEM",
+                                          use_pkcs8=False,
+                                          passphrase="secret",
+                                          randfunc=get_fixed_prng())
+        encoded2 = ref_private.export_key(format="PEM",
+                                          use_pkcs8=False,
+                                          passphrase=b("secret"),
+                                          randfunc=get_fixed_prng())
+        self.assertEquals(encoded1, encoded2)
+
     def test_error_params1(self):
         # Unknown format
         self.assertRaises(ValueError, ref_private.export_key, format="XXX")
