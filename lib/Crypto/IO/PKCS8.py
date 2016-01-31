@@ -158,8 +158,11 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
             ])
     pk_info_der = pk_info.encode()
 
-    if not passphrase:
+    if passphrase is None:
         return pk_info_der
+
+    if not passphrase:
+        raise ValueError("Empty passphrase")
 
     # Encryption with PBES2
     passphrase = tobytes(passphrase)

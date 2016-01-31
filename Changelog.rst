@@ -33,6 +33,7 @@ Resolved issues
 * CTR mode does not modify anymore `counter` parameter passed to 'new' method.
 * CTR raises `OverflowError` instead of `ValueError` in case of counter wrapping around.
 * PEM files with Windows newlines could not be imported.
+* `Crypto.IO.PEM` and `Crypto.IO.PKCS8` do not accept empty passphrases anymore.
 
 Breaks in compatibility
 -----------------------

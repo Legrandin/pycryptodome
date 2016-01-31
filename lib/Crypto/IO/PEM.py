@@ -92,6 +92,8 @@ def encode(data, marker, passphrase=None, randfunc=None):
             tostr(hexlify(salt).upper())
         # Encrypt with PKCS#7 padding
         data = objenc.encrypt(pad(data, objenc.block_size))
+    elif passphrase is not None:
+        raise ValueError("Empty password")
 
     # Each BASE64 line can take up to 64 characters (=48 bytes of data)
     # b2a_base64 adds a new line character!

@@ -441,6 +441,8 @@ class EccKey(object):
             passphrase = args.pop("passphrase", None)
             if isinstance(passphrase, basestring):
                 passphrase = tobytes(passphrase)
+                if not passphrase:
+                    raise ValueError("Empty passphrase")
             use_pkcs8 = args.pop("use_pkcs8", True)
             if ext_format == "PEM":
                 if use_pkcs8:
@@ -459,6 +461,8 @@ class EccKey(object):
                 else:
                     return self._export_private_der()
         else:  # Public key
+            if args:
+                raise ValueError("Unexpected parameters: '%s'" % args)
             if ext_format == "PEM":
                 return self._export_public_pem()
             else:

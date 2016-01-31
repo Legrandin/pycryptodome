@@ -33,6 +33,7 @@ from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.py3compat import b, unhexlify, bord, tostr
 from Crypto.Util.number import bytes_to_long
+from Crypto.Hash import SHAKE128
 
 from Crypto.PublicKey import ECC
 
@@ -66,6 +67,10 @@ def create_ref_keys():
 
 # Create reference key pair
 ref_private, ref_public = create_ref_keys()
+
+
+def get_fixed_prng():
+        return SHAKE128.new().update(b("SEED")).read
 
 
 class TestImport(unittest.TestCase):
@@ -300,20 +305,14 @@ class TestExport(unittest.TestCase):
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-
-        from Crypto.Hash import SHAKE128
-
-        def get_prng():
-            return SHAKE128.new().update(b("SEED")).read
-
         encoded1 = ref_private.export_key(format="PEM",
                                           passphrase="secret",
                                           protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_prng())
+                                          randfunc=get_fixed_prng())
         encoded2 = ref_private.export_key(format="PEM",
                                           passphrase="secret",
                                           protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_prng())
+                                          randfunc=get_fixed_prng())
         self.assertEquals(encoded1, encoded2)
 
         # ---
@@ -321,12 +320,39 @@ class TestExport(unittest.TestCase):
         encoded1 = ref_private.export_key(format="PEM",
                                           use_pkcs8=False,
                                           passphrase="secret",
-                                          randfunc=get_prng())
+                                          randfunc=get_fixed_prng())
         encoded2 = ref_private.export_key(format="PEM",
                                           use_pkcs8=False,
                                           passphrase="secret",
-                                          randfunc=get_prng())
+                                          randfunc=get_fixed_prng())
         self.assertEquals(encoded1, encoded2)
+
+    def test_error_params1(self):
+        # Unknown format
+        self.assertRaises(ValueError, ref_private.export_key, format="XXX")
+
+        # Missing 'protection' parameter when PKCS#8 is used
+        ref_private.export_key(format="PEM", passphrase="secret",
+                               use_pkcs8=False)
+        self.assertRaises(ValueError, ref_private.export_key, format="PEM",
+                                      passphrase="secret")
+
+        # DER format but no PKCS#8
+        self.assertRaises(ValueError, ref_private.export_key, format="DER",
+                                      passphrase="secret",
+                                      use_pkcs8=False,
+                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+
+        # Incorrect parameters for public keys
+        self.assertRaises(ValueError, ref_public.export_key, format="DER",
+                          use_pkcs8=False)
+
+        # Empty password
+        self.assertRaises(ValueError, ref_private.export_key, format="PEM",
+                                      passphrase="", use_pkcs8=False)
+        self.assertRaises(ValueError, ref_private.export_key, format="PEM",
+                                      passphrase="",
+                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
 
 
 def get_tests(config={}):
