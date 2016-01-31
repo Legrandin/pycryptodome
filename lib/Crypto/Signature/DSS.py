@@ -37,18 +37,18 @@ Digital Signature Standard (DSS), as specified in `FIPS PUB 186-3`__.
 A sender signs a message in the following way:
 
         >>> from Crypto.Hash import SHA256
-        >>> from Crypto.PublicKey import DSA
+        >>> from Crypto.PublicKey import ECC
         >>> from Crypto.Signature import DSS
         >>>
         >>> message = b'I give my permission to order #4355'
-        >>> key = DSA.importKey(open('privkey.der').read())
+        >>> key = ECC.import_key(open('privkey.der').read())
         >>> h = SHA256.new(message)
         >>> signer = DSS.new(key, 'fips-186-3')
         >>> signature = signer.sign(h)
 
 The receiver can verify authenticity of the message:
 
-        >>> key = DSA.importKey(open('pubkey.der').read())
+        >>> key = ECC.import_key(open('pubkey.der').read())
         >>> h = SHA256.new(received_message)
         >>> verifier = DSS.new(key, 'fips-186-3')
         >>> try:
@@ -61,7 +61,7 @@ The receiver can verify authenticity of the message:
 
 """
 
-__all__ = ['new', 'DsaSigScheme']
+__all__ = ['new', 'DssSigScheme']
 
 from Crypto.Util.py3compat import bchr, b
 
@@ -74,7 +74,7 @@ from Crypto.Hash import HMAC
 from Crypto.PublicKey.ECC import _curve, EccKey
 
 
-class DsaSigScheme(object):
+class DssSigScheme(object):
     """This signature scheme can perform DSS signature or verification."""
 
     def __init__(self, key, encoding, order):
@@ -200,7 +200,7 @@ class DsaSigScheme(object):
         return False
 
 
-class DeterministicDsaSigScheme(DsaSigScheme):
+class DeterministicDsaSigScheme(DssSigScheme):
     # Also applicable to ECDSA
 
     def __init__(self, key, encoding, order, private_key):
@@ -277,7 +277,7 @@ class DeterministicDsaSigScheme(DsaSigScheme):
         return True
 
 
-class FipsDsaSigScheme(DsaSigScheme):
+class FipsDsaSigScheme(DssSigScheme):
 
     #: List of L (bit length of p) and N (bit length of q) combinations
     #: that are allowed by FIPS 186-3. The security level is provided in
@@ -311,7 +311,7 @@ class FipsDsaSigScheme(DsaSigScheme):
                 msg_hash.oid.startswith("2.16.840.1.101.3.4.2."))
 
 
-class FipsEcDsaSigScheme(DsaSigScheme):
+class FipsEcDsaSigScheme(DssSigScheme):
 
     def __init__(self, key, encoding, order, randfunc):
         super(FipsEcDsaSigScheme, self).__init__(key, encoding, order)
@@ -341,15 +341,15 @@ def new(key, mode, encoding='binary', randfunc=None):
     can be used to perform DSS signature or verification.
 
     :Parameters:
-      key : a DSA key object
+      key : a `Crypto.PublicKey.DSA` or `Crypto.PublicKey.ECC` key object
         If the key has got its private half, both signature and
         verification are possible.
 
         If it only has the public half, verification is possible
         but not signature generation.
 
-        If *L* and *N* are the bit lengths of the modules *p* and *q*,
-        the combination *(L,N)* must appear in the following list,
+        For DSA keys, let *L* and *N* be the bit lengths of the modules *p*
+        and *q*: the combination *(L,N)* must appear in the following list,
         in compliance to section 4.2 of `FIPS-186`__:
 
         - (1024, 160)

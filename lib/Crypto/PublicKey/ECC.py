@@ -28,6 +28,53 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+"""Elliptic Curve Cryptography (ECC) algorithms.
+
+ECC_ is a modern and efficient type of public key cryptography.
+Its security is based on the difficulty to solve discrete logarithms
+on the field defined by specific equations involving points on a curve.
+
+ECC can be used to perform signing/verification and asymmetric
+encryption/decryption.
+
+The main benefit of ECC is that the size of a key is significantly smaller
+than with other, more traditional algorithms like RSA or DSA.
+
+For instance, consider the security level equivalent to AES128: an RSA
+key of similar strength must have a modulus of 3072 bits (therefore the total size
+is 768 bytes, comprising modulus and private exponent).
+An ECC private needs as little as 256 bits (32 bytes).
+
+This module provides mechanisms for generating new ECC keys, exporting them
+using widely supported formats like PEM or DER and importing them back.
+
+**This module currently supports only ECC keys defined over the standard
+NIST P-256 curve** (see `FIPS 186-4`_, Section D.1.2.3). More curves will be
+added in the future.
+
+The following example demonstrates how to generate a new key, export it,
+and subsequentely reload it back into the application:
+
+    >>> from Crypto.PublicKey import ECC
+    >>>
+    >>> key = ECC.generate(curve='P-256')
+    >>> f = open('myprivatekey.pem','wt')
+    >>> f.write(key.export_key('PEM'))
+    >>> f.close()
+    ...
+    >>> f = open('myprivatekey.pem','rt')
+    >>> key = RSA.import_key(f.read())
+
+The ECC key can be used to perform or verify ECDSA signatures, see
+`Crypto.Signature.DSS`.
+
+.. _ECC: http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/
+.. _`FIPS 186-4`: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+
+:undocumented: __package__
+"""
+
+
 import struct
 import binascii
 
@@ -57,13 +104,8 @@ _curve.names = ("P-256", "prime256v1", "secp256r1")
 _curve.oid = "1.2.840.10045.3.1.7"
 
 
-# https://www.nsa.gov/ia/_files/nist-routines.pdf
-# http://point-at-infinity.org/ecc/nisttv
-# http://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
-# https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates
-# https://eprint.iacr.org/2013/816.pdf
-
 class EccPoint(object):
+    """A class to abstract a point over an Elliptic Curve."""
 
     def __init__(self, x, y):
         self._x = Integer(x)
@@ -100,12 +142,14 @@ class EccPoint(object):
 
     @property
     def x(self):
+        """The X-coordinate of the ECC point"""
         if self.is_point_at_infinity():
             raise ValueError("Point at infinity")
         return self._x
 
     @property
     def y(self):
+        """The Y-coordinate of the ECC point"""
         if self.is_point_at_infinity():
             raise ValueError("Point at infinity")
         return self._y
@@ -237,6 +281,10 @@ _curve.G = EccPoint(_curve.Gx, _curve.Gy)
 
 
 class EccKey(object):
+    """A private or public key over an Elliptic Curve.
+
+    :undocumented: __eq__, __repr__, __init__
+    """
 
     def __init__(self, **kwargs):
         """Create a new ECC key
@@ -245,9 +293,9 @@ class EccKey(object):
 
         Keywords:
           curve : string
-            It must be "P-256", "prime256v1" or "secp256r1".
+            It must be *"P-256"*, *"prime256v1"* or *"secp256r1"*.
           d : integer
-            Only for a private key. It must be in the range [1..order-1].
+            Only for a private key. It must be in the range ``[1..order-1]``.
           point : EccPoint
             Mandatory for a public key. If provided for a private key,
             the implementation will NOT check whether it matches ``d``.
@@ -286,6 +334,7 @@ class EccKey(object):
                (self.pointQ.x, self.pointQ.y, extra)
 
     def has_private(self):
+        """True if this key can be used for making signatures or decrypting"""
         return self._d is not None
 
     def _sign(self, z, k):
@@ -309,17 +358,20 @@ class EccKey(object):
 
     @property
     def d(self):
+        """An integer (scalar), representating the private component"""
         if not self.has_private():
             raise ValueError("This is not a private ECC key")
         return self._d
 
     @property
     def pointQ(self):
+        """An `EccPoint`, representating the public component"""
         if self._point is None:
             self._point = _curve.G * self._d
         return self._point
 
     def public_key(self):
+        """Create a new `EccKey`, by retaining only the public components"""
         return EccKey(curve="P-256", point=self.pointQ)
 
     def _export_subjectPublicKeyInfo(self):
@@ -411,11 +463,13 @@ class EccKey(object):
         """Export this ECC key.
 
         :Keywords:
+
           format : string
             The format to use for wrapping the key:
-            - *'DER'*. The key will be encoded in an ASN.1 `DER`_ stucture (binary).
-            - *'PEM'*. The key will be encoded in a `PEM`_ envelope (ASCII).
-            - *'OpenSSH'*. The key will be encoded in the `OpenSSH`_ format
+
+            - *'DER'*. The key will be encoded in an ASN.1 DER_ structure (binary).
+            - *'PEM'*. The key will be encoded in a PEM_ envelope (ASCII).
+            - *'OpenSSH'*. The key will be encoded in the OpenSSH_ format
               (ASCII, public keys only).
 
           passphrase : byte string or string
@@ -423,31 +477,32 @@ class EccKey(object):
             *If not provided, the private key will remain in clear form!*
 
           use_pkcs8 : boolean
-            In case of a private key, whether the `PKCS#8`_ representation
+            In case of a private key, whether the PKCS#8_ representation
             should be (internally) used. By default it will.
 
             Not using PKCS#8 when exporting a private key in
-            password-protected PEM form means that the much weaker and
+            password-protected PEM_ form means that the much weaker and
             unflexible `PEM encryption`_ mechanism will be used.
-            Using PKCS#8 is therefore always recommended.
+            PKCS#8 is therefore always recommended.
 
           protection : string
             In case of a private key being exported with password-protection
-            and PKCS#8 (both ``DER`` and ``PEM``), this parameter MUST be
+            and PKCS#8 (both ``DER`` and ``PEM`` formats), this parameter MUST be
             present and be a valid algorithm supported by `Crypto.IO.PKCS8`.
             It is recommended to use ``PBKDF2WithHMAC-SHA1AndAES128-CBC``.
 
-        In case of a private key being exported with password-protection
-        and PKCS#8 (both ``DER`` and ``PEM``), all additional parameters
-        will be passed to `Crypto.IO.PKCS8`.
+        :Note:
+            In case of a private key being exported with password-protection
+            and PKCS#8_ (both ``DER`` and ``PEM`` formats), all additional parameters
+            will be passed to `Crypto.IO.PKCS8`.
 
         .. _DER:        http://www.ietf.org/rfc/rfc5915.txt
         .. _PEM:        http://www.ietf.org/rfc/rfc1421.txt
         .. _`PEM encryption`: http://www.ietf.org/rfc/rfc1423.txt
-        .. _PKCS#8:     http://www.ietf.org/rfc/rfc5208.txt
+        .. _`PKCS#8`:   http://www.ietf.org/rfc/rfc5208.txt
         .. _OpenSSH:    http://www.openssh.com/txt/rfc5656.txt
 
-        :Return: A string (for PEM and OpenSSH) or bytes (for DER) with the encoded key.
+        :Return: A multi-line string (for PEM and OpenSSH) or bytes (for DER) with the encoded key.
         """
 
         args = kwargs.copy()
@@ -496,9 +551,9 @@ def generate(**kwargs):
 
     :Keywords:
       curve : string
-        It must be "P-256", "prime256v1" or "secp256r1".
+        Mandatory. It must be "P-256", "prime256v1" or "secp256r1".
       randfunc : callable
-        The RNG to read randomness from.
+        Optional. The RNG to read randomness from.
         If ``None``, the system source is used.
     """
 
@@ -520,15 +575,13 @@ def construct(**kwargs):
 
     :Keywords:
       curve : string
-        It must be present and set to "P-256", "prime256v1" or "secp256r1".
+        Mandatory. It must be "P-256", "prime256v1" or "secp256r1".
       d : integer
-        Only for a private key. It must be in the range [1..order-1].
+        Only for a private key. It must be in the range ``[1..order-1]``.
       point_x : integer
-        X coordinate (affine) of the ECC point.
-        This value is mandatory in case of a public key.
+        Mandatory for a public key. X coordinate (affine) of the ECC point.
       point_y : integer
-        Y coordinate (affine) of the ECC point.
-        This value is mandatory in case of a public key.
+        Mandatory for a public key. Y coordinate (affine) of the ECC point.
     """
 
     point_x = kwargs.pop("point_x", None)
@@ -709,28 +762,29 @@ def import_key(encoded, passphrase=None):
     """Import an ECC key (public or private).
 
     :Parameters:
-      encoded : byte string
+      encoded : bytes or a (multi-line) string
         The ECC key to import.
-        An ECC public key can be in any of the following formats:
 
-        - A X.509 certificate (binary or PEM format)
-        - A X.509 ``subjectPublicKeyInfo`` (binary or PEM format)
-        - An OpenSSH line (e.g. the content of ~/.ssh/id_ecdsa)
+        An ECC public key can be:
 
-        An ECC private key can be in any of the following formats:
+        - An X.509 certificate, binary (DER) or ASCII (PEM)
+        - An X.509 ``subjectPublicKeyInfo``, binary (DER) or ASCII (PEM)
+        - An OpenSSH line (e.g. the content of ``~/.ssh/id_ecdsa``, ASCII)
 
-        - An ``ECPrivateKey`` (binary or PEM format), as defined
-          in section 3 of `RFC5915`_.
-        - A ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo`` (binary or PEM
-          format) as defined in `PKCS#8`_.
+        An ECC private key can be:
+
+        - In binary format (DER, see section 3 of `RFC5915`_ or `PKCS#8`_)
+        - In ASCII format (PEM or OpenSSH)
+
+        Private keys can be in the clear or password-protected.
 
         For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
 
     :Keywords:
       passphrase : byte string
-        The passphrase to use to decrypt a private key. The key may be
-        protected either at the PEM level or at the PKCS#8 level.
-        This parameter is ignored if the key is not encrypted.
+        The passphrase to use for decrypting a private key.
+        Encryption may be applied protected at the PEM level or at the PKCS#8 level.
+        This parameter is ignored if the key in input is not encrypted.
 
     :Return: An ECC key object (`EccKey`)
 
