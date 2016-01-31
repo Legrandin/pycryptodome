@@ -377,9 +377,9 @@ class EccKey(object):
         encoded_der = self._export_subjectPublicKeyInfo()
         return PEM.encode(encoded_der, "PUBLIC KEY")
 
-    def _export_private_pem(self, passphrase):
+    def _export_private_pem(self, passphrase, **kwargs):
         encoded_der = self._export_private_der()
-        return PEM.encode(encoded_der, "EC PRIVATE KEY", passphrase)
+        return PEM.encode(encoded_der, "EC PRIVATE KEY", passphrase, **kwargs)
 
     def _export_private_clear_pkcs8_in_clear_pem(self):
         encoded_der = self._export_pkcs8()
@@ -449,7 +449,7 @@ class EccKey(object):
                     else:
                         return self._export_private_clear_pkcs8_in_clear_pem()
                 else:
-                    return self._export_private_pem(passphrase)
+                    return self._export_private_pem(passphrase, **args)
             else:
                 # DER
                 if passphrase and not use_pkcs8:

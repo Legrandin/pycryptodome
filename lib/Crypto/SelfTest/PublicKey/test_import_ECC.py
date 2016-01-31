@@ -298,6 +298,36 @@ class TestExport(unittest.TestCase):
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(ref_private, decoded)
 
+    def test_prng(self):
+        # Test that password-protected containers use the provided PRNG
+
+        from Crypto.Hash import SHAKE128
+
+        def get_prng():
+            return SHAKE128.new().update(b("SEED")).read
+
+        encoded1 = ref_private.export_key(format="PEM",
+                                          passphrase="secret",
+                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+                                          randfunc=get_prng())
+        encoded2 = ref_private.export_key(format="PEM",
+                                          passphrase="secret",
+                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+                                          randfunc=get_prng())
+        self.assertEquals(encoded1, encoded2)
+
+        # ---
+
+        encoded1 = ref_private.export_key(format="PEM",
+                                          use_pkcs8=False,
+                                          passphrase="secret",
+                                          randfunc=get_prng())
+        encoded2 = ref_private.export_key(format="PEM",
+                                          use_pkcs8=False,
+                                          passphrase="secret",
+                                          randfunc=get_prng())
+        self.assertEquals(encoded1, encoded2)
+
 
 def get_tests(config={}):
     tests = []
