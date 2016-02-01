@@ -131,6 +131,8 @@ class GcmMode(object):
 
     .. _`NIST SP800-38D`: http://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
+
+    :undocumented: __init__
     """
 
     def __init__(self, factory, key, nonce, mac_len, cipher_params):

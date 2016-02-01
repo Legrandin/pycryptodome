@@ -82,6 +82,8 @@ class SivMode(object):
     .. _RFC5297: https://tools.ietf.org/html/rfc5297
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
     .. __: http://www.cs.ucdavis.edu/~rogaway/papers/keywrap.pdf
+
+    :undocumented: __init__
     """
 
     def __init__(self, factory, key, nonce, kwargs):

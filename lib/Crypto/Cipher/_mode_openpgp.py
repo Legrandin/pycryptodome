@@ -53,6 +53,8 @@ class OpenPgpMode(object):
     therefore 2 bytes longer than the clean IV.
 
     .. _OpenPGP: http://tools.ietf.org/html/rfc4880
+
+    :undocumented: __init__
     """
 
     def __init__(self, factory, key, iv, cipher_params):

@@ -104,7 +104,10 @@ _raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
 
 
 class OcbMode(object):
-    """Offset Codebook (OCB) mode."""
+    """Offset Codebook (OCB) mode.
+
+    :undocumented: __init__
+    """
 
     def __init__(self, factory, nonce, mac_len, cipher_params):
 

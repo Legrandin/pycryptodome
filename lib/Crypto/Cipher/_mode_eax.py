@@ -68,6 +68,8 @@ class EaxMode(object):
 
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
     .. __: http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf
+
+    :undocumented: __init__
     """
 
     def __init__(self, factory, key, nonce, mac_len, cipher_params):

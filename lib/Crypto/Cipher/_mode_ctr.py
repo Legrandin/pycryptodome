@@ -79,6 +79,8 @@ class CtrMode(object):
     Appendix B (for how to manage the *initial counter block*).
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+    :undocumented: __init__
     """
 
     def __init__(self, block_cipher, initial_counter_block,

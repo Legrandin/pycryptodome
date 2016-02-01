@@ -104,6 +104,8 @@ class CcmMode(object):
     .. _`NIST SP800-38C`: http://csrc.nist.gov/publications/nistpubs/800-38C/SP800-38C.pdf
     .. _RFC3610: https://tools.ietf.org/html/rfc3610
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
+
+    :undocumented: __init__
     """
 
     def __init__(self, factory, key, nonce, mac_len, msg_len, assoc_len,

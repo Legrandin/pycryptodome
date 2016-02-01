@@ -65,6 +65,8 @@ class CfbMode(object):
     See `NIST SP800-38A`_ , Section 6.3.
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
+
+    :undocumented: __init__
     """
 
     def __init__(self, block_cipher, iv, segment_size):
