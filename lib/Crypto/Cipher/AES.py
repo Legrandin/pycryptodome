@@ -229,7 +229,31 @@ def new(key, mode, *args, **kwargs):
       use_aesni : boolean
         Use Intel AES-NI hardware extensions if available.
 
-    :Return: an AES object, of the applicable mode.
+    :Return: an AES object, of the applicable mode:
+
+        - CBC_ mode
+        - CCM_ mode
+        - CFB_ mode
+        - CTR_ mode
+        - EAX_ mode
+        - ECB_ mode
+        - GCM_ mode
+        - OCB_ mode
+        - OFB_ mode
+        - OpenPgp_ mode
+        - SIV_ mode
+
+    .. _CBC: Crypto.Cipher._mode_cbc.CbcMode-class.html
+    .. _CCM: Crypto.Cipher._mode_ccm.CcmMode-class.html
+    .. _CFB: Crypto.Cipher._mode_cfb.CfbMode-class.html
+    .. _CTR: Crypto.Cipher._mode_ctr.CtrMode-class.html
+    .. _EAX: Crypto.Cipher._mode_eax.EaxMode-class.html
+    .. _ECB: Crypto.Cipher._mode_ecb.EcbMode-class.html
+    .. _GCM: Crypto.Cipher._mode_gcm.GcmMode-class.html
+    .. _OCB: Crypto.Cipher._mode_ocb.OcbMode-class.html
+    .. _OFB: Crypto.Cipher._mode_ofb.OfbMode-class.html
+    .. _OpenPgp: Crypto.Cipher._mode_openpgp.OpenPgpMode-class.html
+    .. _SIV: Crypto.Cipher._mode_siv.SivMode-class.html
     """
 
     kwargs["add_aes_modes"] = True

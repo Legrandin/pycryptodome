@@ -175,7 +175,24 @@ def new(key, mode, *args, **kwargs):
         Maximum cryptographic strength of the key, in **bits**.
         It can vary from 40 to 1024. The default value is 1024.
 
-    :Return: an RC2 cipher object, of the applicable mode.
+    :Return: an RC2 cipher object, of the applicable mode:
+
+        - CBC_ mode
+        - CFB_ mode
+        - CTR_ mode
+        - EAX_ mode
+        - ECB_ mode
+        - OFB_ mode
+        - OpenPgp_ mode
+
+    .. _CBC: Crypto.Cipher._mode_cbc.CbcMode-class.html
+    .. _CFB: Crypto.Cipher._mode_cfb.CfbMode-class.html
+    .. _CTR: Crypto.Cipher._mode_ctr.CtrMode-class.html
+    .. _EAX: Crypto.Cipher._mode_eax.EaxMode-class.html
+    .. _ECB: Crypto.Cipher._mode_ecb.EcbMode-class.html
+    .. _OFB: Crypto.Cipher._mode_ofb.OfbMode-class.html
+    .. _OpenPgp: Crypto.Cipher._mode_openpgp.OpenPgpMode-class.html
+
     """
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)

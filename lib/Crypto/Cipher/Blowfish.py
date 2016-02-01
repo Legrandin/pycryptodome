@@ -153,7 +153,23 @@ def new(key, mode, *args, **kwargs):
         (*Only* `MODE_CTR`). The initial value for the counter within
         the counter block. By default it is 0.
 
-    :Return: a Blowfish cipher object, of the applicable mode.
+    :Return: a Blowfish cipher object, of the applicable mode:
+
+        - CBC_ mode
+        - CFB_ mode
+        - CTR_ mode
+        - EAX_ mode
+        - ECB_ mode
+        - OFB_ mode
+        - OpenPgp_ mode
+
+    .. _CBC: Crypto.Cipher._mode_cbc.CbcMode-class.html
+    .. _CFB: Crypto.Cipher._mode_cfb.CfbMode-class.html
+    .. _CTR: Crypto.Cipher._mode_ctr.CtrMode-class.html
+    .. _EAX: Crypto.Cipher._mode_eax.EaxMode-class.html
+    .. _ECB: Crypto.Cipher._mode_ecb.EcbMode-class.html
+    .. _OFB: Crypto.Cipher._mode_ofb.OfbMode-class.html
+    .. _OpenPgp: Crypto.Cipher._mode_openpgp.OpenPgpMode-class.html
     """
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
