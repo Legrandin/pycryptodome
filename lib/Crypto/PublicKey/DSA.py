@@ -64,7 +64,7 @@ verification.
     >>> message = b"Hello"
     >>> key = DSA.generate(2048)
     >>> f = open("public_key.pem", "w")
-    >>> f.write(key.publickey().exportKey(key))
+    >>> f.write(key.publickey().export_key(key))
     >>> hash_obj = SHA256.new(message)
     >>> signer = DSS.new(key, 'fips-186-3')
     >>> signature = key.sign(hash_obj)
@@ -249,7 +249,7 @@ class DsaKey(object):
         except KeyError:
             raise AttributeError(item)
 
-    def exportKey(self, format='PEM', pkcs8=None, passphrase=None,
+    def export_key(self, format='PEM', pkcs8=None, passphrase=None,
                   protection=None, randfunc=None):
         """Export this DSA key.
 
@@ -373,6 +373,9 @@ class DsaKey(object):
                             )
             return tobytes(pem_str)
         raise ValueError("Unknown key format '%s'. Cannot export the DSA key." % format)
+
+    # Backward compatibility
+    exportKey = export_key
 
 
 def _generate_domain(L, randfunc):

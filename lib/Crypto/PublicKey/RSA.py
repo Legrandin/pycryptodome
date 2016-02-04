@@ -46,7 +46,7 @@ them from known components, exporting them, and importing them.
     >>>
     >>> key = RSA.generate(2048)
     >>> f = open('mykey.pem','w')
-    >>> f.write(key.exportKey('PEM'))
+    >>> f.write(key.export_key('PEM'))
     >>> f.close()
     ...
     >>> f = open('mykey.pem','r')
@@ -187,7 +187,7 @@ class RsaKey(object):
         # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
-    def exportKey(self, format='PEM', passphrase=None, pkcs=1, protection=None, randfunc=None):
+    def export_key(self, format='PEM', passphrase=None, pkcs=1, protection=None, randfunc=None):
         """Export this RSA key.
 
         :Parameters:
@@ -311,6 +311,9 @@ class RsaKey(object):
             pem_str = PEM.encode(binary_key, keyType+" KEY", passphrase, randfunc)
             return tobytes(pem_str)
         raise ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
+
+    # Backward compatibility
+    exportKey = export_key
 
 
 def generate(bits, randfunc=None, e=65537):

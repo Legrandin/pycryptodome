@@ -370,6 +370,12 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         self.assertEqual(self.q, key_obj.q)
         self.assertEqual(self.g, key_obj.g)
 
+    def test_export_key(self):
+        tup = (self.y, self.g, self.p, self.q)
+        key = DSA.construct(tup)
+        encoded = key.export_key('DER')
+        self.assertEqual(self.der_public, encoded)
+
 
 class ImportKeyFromX509Cert(unittest.TestCase):
 
