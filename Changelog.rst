@@ -38,6 +38,9 @@ Resolved issues
 * CTR raises `OverflowError` instead of `ValueError` in case of counter wrapping around.
 * PEM files with Windows newlines could not be imported.
 * `Crypto.IO.PEM` and `Crypto.IO.PKCS8` do not accept empty passphrases anymore.
+* GH#6: NotImplementedError now raised for unsupported methods `sign`, `verify`,
+  `encrypt`, `decrypt`, `blind`, `unblind` and `size` in objects `RsaKey`, `DsaKey`,
+  `ElGamalKey`.
 
 Breaks in compatibility
 -----------------------
@@ -218,8 +221,6 @@ Breaks in compatibility
   - ``decrypt``
   - ``blind``
   - ``unblind``
-  - ``can_encrypt``
-  - ``can_sign``
 
   Code that uses such methods is doomed anyway. It should be fixed ASAP to
   use the algorithms available in ``Crypto.Signature`` and ``Crypto.Cipher``.

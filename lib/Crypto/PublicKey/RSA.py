@@ -161,6 +161,12 @@ class RsaKey(object):
     def has_private(self):
         return 'd' in self._key
 
+    def can_encrypt(self):
+        return True
+
+    def can_sign(self):
+        return True
+
     def publickey(self):
         return RsaKey(dict([(k, self._key[k]) for k in ('n', 'e')]))
 
@@ -314,6 +320,29 @@ class RsaKey(object):
 
     # Backward compatibility
     exportKey = export_key
+
+    # Methods defined in PyCrypto that we don't support anymore
+
+    def sign(self, M, K):
+        raise NotImplementedError("Use module Crypto.Signature.pkcs1_15 instead")
+
+    def verify(self, M, signature):
+        raise NotImplementedError("Use module Crypto.Signature.pkcs1_15 instead")
+
+    def encrypt(self, plaintext, K):
+        raise NotImplementedError("Use module Crypto.Cipher.PKCS1_OAEP instead")
+
+    def decrypt(self, ciphertext):
+        raise NotImplementedError("Use module Crypto.Cipher.PKCS1_OAEP instead")
+
+    def blind(self, M, B):
+        raise NotImplementedError
+
+    def unblind(self, M, B):
+        raise NotImplementedError
+
+    def size():
+        raise NotImplementedError
 
 
 def generate(bits, randfunc=None, e=65537):

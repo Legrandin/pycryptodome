@@ -294,6 +294,12 @@ class ElGamalKey(object):
         else:
             return 0
 
+    def can_encrypt(self):
+        return True
+
+    def can_sign(self):
+        return True
+
     def publickey(self):
         return construct((self.p, self.g, self.y))
 
@@ -315,3 +321,25 @@ class ElGamalKey(object):
         from pickle import PicklingError
         raise PicklingError
 
+    # Methods defined in PyCrypto that we don't support anymore
+
+    def sign(self, M, K):
+        raise NotImplementedError
+
+    def verify(self, M, signature):
+        raise NotImplementedError
+
+    def encrypt(self, plaintext, K):
+        raise NotImplementedError
+
+    def decrypt(self, ciphertext):
+        raise NotImplementedError
+
+    def blind(self, M, B):
+        raise NotImplementedError
+
+    def unblind(self, M, B):
+        raise NotImplementedError
+
+    def size():
+        raise NotImplementedError

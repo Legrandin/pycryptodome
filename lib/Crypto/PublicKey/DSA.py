@@ -377,6 +377,29 @@ class DsaKey(object):
     # Backward compatibility
     exportKey = export_key
 
+    # Methods defined in PyCrypto that we don't support anymore
+
+    def sign(self, M, K):
+        raise NotImplementedError("Use module Crypto.Signature.DSS instead")
+
+    def verify(self, M, signature):
+        raise NotImplementedError("Use module Crypto.Signature.DSS instead")
+
+    def encrypt(self, plaintext, K):
+        raise NotImplementedError
+
+    def decrypt(self, ciphertext):
+        raise NotImplementedError
+
+    def blind(self, M, B):
+        raise NotImplementedError
+
+    def unblind(self, M, B):
+        raise NotImplementedError
+
+    def size():
+        raise NotImplementedError
+
 
 def _generate_domain(L, randfunc):
     """Generate a new set of DSA domain parameters"""
