@@ -360,6 +360,16 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         key = DSA.construct(tup)
         self.assertRaises(ValueError, key.exportKey, 'DER', pkcs8=False, passphrase="PWDTEST")
 
+    def test_import_key(self):
+        """Verify importKey is an alias to import_key"""
+
+        key_obj = DSA.import_key(self.der_public)
+        self.failIf(key_obj.has_private())
+        self.assertEqual(self.y, key_obj.y)
+        self.assertEqual(self.p, key_obj.p)
+        self.assertEqual(self.q, key_obj.q)
+        self.assertEqual(self.g, key_obj.g)
+
 
 class ImportKeyFromX509Cert(unittest.TestCase):
 

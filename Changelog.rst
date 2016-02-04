@@ -25,6 +25,8 @@ New features
 * Added `Crypto.Cipher.DES3.adjust_key_parity` function.
 * Added `Public.ECC` module (P-256 curve only), including export/import of ECC keys.
 * Added support for ECDSA (FIPS 186-3 and RFC6979).
+* Added `RSA.import_key` as an alias to the deprecated `RSA.importKey`
+  (same for the `DSA` module).
 
 Resolved issues
 ---------------

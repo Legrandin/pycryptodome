@@ -61,7 +61,7 @@ The following code reads the private RSA key back in, and then prints again the 
 
     secret_code = "Unguessable"
     file_in = open("rsa_key.bin", "rb")
-    key = RSA.importKey(file_in.read(), passphrase=secret_code)
+    key = RSA.import_key(file_in.read(), passphrase=secret_code)
 
     print key.publickey().exportKey()
 
@@ -86,7 +86,7 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
 
     file_out = open("encrypted_data.bin", "wb")
 
-    recipient_key = RSA.importKey(open("receiver.pem").read())
+    recipient_key = RSA.import_key(open("receiver.pem").read())
     session_key = get_random_bytes(16)
 
     # Encrypt the session key with the public RSA key
@@ -109,7 +109,7 @@ first, and with that the rest of the file:
 
     file_in = open("encrypted_data.bin", "rb")
 
-    private_key = RSA.importKey(open("private.pem").read())
+    private_key = RSA.import_key(open("private.pem").read())
     rsa_size = ceil(private_key.size()/8.0)
 
     enc_session_key, nonce, tag, ciphertext = \

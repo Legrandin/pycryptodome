@@ -71,7 +71,7 @@ verification.
     >>> ...
     >>> f = open("public_key.pem", "r")
     >>> hash_obj = SHA256.new(message)
-    >>> pub_key = DSA.importKey(f.read())
+    >>> pub_key = DSA.import_key(f.read())
     >>> if pub_key.verify(hash_obj, signature):
     >>>     print "OK"
     >>> else:
@@ -83,7 +83,7 @@ verification.
 """
 
 __all__ = ['generate', 'construct', 'DSAImplementation',
-           'DsaKey', 'importKey' ]
+           'DsaKey', 'import_key' ]
 
 import binascii
 import struct
@@ -612,7 +612,7 @@ def _import_key_der(key_data, passphrase, params):
     raise ValueError("DSA key format is not supported")
 
 
-def importKey(extern_key, passphrase=None):
+def import_key(extern_key, passphrase=None):
     """Import a DSA key (public or private).
 
     :Parameters:
@@ -679,6 +679,10 @@ def importKey(extern_key, passphrase=None):
         return _import_key_der(extern_key, passphrase, None)
 
     raise ValueError("DSA key format is not supported")
+
+
+# Backward compatibility
+importKey = import_key
 
 #: `Object ID`_ for a DSA key.
 #:

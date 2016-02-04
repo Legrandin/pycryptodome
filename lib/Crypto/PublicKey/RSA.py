@@ -50,7 +50,7 @@ them from known components, exporting them, and importing them.
     >>> f.close()
     ...
     >>> f = open('mykey.pem','r')
-    >>> key = RSA.importKey(f.read())
+    >>> key = RSA.import_key(f.read())
 
 Even though you may choose to  directly use the methods of an RSA key object
 to perform the primitive cryptographic operations (e.g. `RsaKey._encrypt`),
@@ -60,10 +60,10 @@ it is recommended to use one of the standardized schemes instead (like
 .. _RSA: http://en.wikipedia.org/wiki/RSA_%28algorithm%29
 .. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
 
-:sort: generate,construct,importKey
+:sort: generate,construct,import_key
 """
 
-__all__ = ['generate', 'construct', 'importKey', 'RSAImplementation',
+__all__ = ['generate', 'construct', 'import_key', 'RSAImplementation',
     'RsaKey', 'oid' , 'algorithmIdentifier' ]
 
 from Crypto.Util.py3compat import *
@@ -566,10 +566,10 @@ def _import_pkcs8(encoded, passphrase):
     k = PKCS8.unwrap(encoded, passphrase)
     if k[0] != oid:
         raise ValueError("No PKCS#8 encoded RSA key")
-    return _importKeyDER(k[1], passphrase)
+    return _import_keyDER(k[1], passphrase)
 
 
-def _importKeyDER(extern_key, passphrase):
+def _import_keyDER(extern_key, passphrase):
     """Import an RSA key (public or private half), encoded in DER form."""
 
     decodings = (_import_pkcs1_private,
@@ -587,7 +587,7 @@ def _importKeyDER(extern_key, passphrase):
     raise ValueError("RSA key format is not supported")
 
 
-def importKey(extern_key, passphrase=None):
+def import_key(extern_key, passphrase=None):
     """Import an RSA key (public or private half), encoded in standard
     form.
 
@@ -640,7 +640,7 @@ def importKey(extern_key, passphrase=None):
         (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
         if enc_flag:
             passphrase = None
-        return _importKeyDER(der, passphrase)
+        return _import_keyDER(der, passphrase)
 
     if extern_key.startswith(b('ssh-rsa ')):
             # This is probably an OpenSSH key
@@ -656,9 +656,12 @@ def importKey(extern_key, passphrase=None):
 
     if bord(extern_key[0]) == 0x30:
             # This is probably a DER encoded key
-            return _importKeyDER(extern_key, passphrase)
+            return _import_keyDER(extern_key, passphrase)
 
     raise ValueError("RSA key format is not supported")
+
+# Backward compatibility
+importKey = import_key
 
 #: `Object ID`_ for the RSA encryption algorithm. This OID often indicates
 #: a generic RSA key, even when such key will be actually used for digital

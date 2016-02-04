@@ -382,6 +382,14 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         self.assertRaises(ValueError, key.exportKey, 'DER', 'test', 1)
 
+    def test_import_key(self):
+        """Verify that import_key is an alias to importKey"""
+        key = RSA.import_key(self.rsaPublicKeyDER)
+        self.failIf(key.has_private())
+        self.assertEqual(key.n, self.n)
+        self.assertEqual(key.e, self.e)
+
+
 
 class ImportKeyFromX509Cert(unittest.TestCase):
 
