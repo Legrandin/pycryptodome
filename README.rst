@@ -16,6 +16,9 @@ You can install it with a simple::
 
 	pip install pycryptodome
 
+For faster public key operations, you should have `GMP`_ installed in your system
+(except on Windows, as the wheel on PyPi already comes with the equivalent `MPIR`_ library).
+
 PyCryptodome is a fork of PyCrypto. It brings the following enhancements
 with respect to the last official version of PyCrypto (2.6.1):
 
@@ -37,7 +40,27 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Cleaner RSA and DSA key generation (largely based on FIPS 186-4)
 * Major clean ups and simplification of the code base
 
+PyCryptodome is not a wrapper to a separate C library like *OpenSSL*.
+To the largest possible extent, algorithms are implemented in pure Python.
+Only the pieces that are extremely critical to performance (e.g. block ciphers)
+are implemented as C extensions.
+
 For more information, see the `homepage`_.
 
-.. _`homepage`: http://www.pycryptodome.org
+All the code can be downloaded from `GitHub`_.
 
+News
+----
+
+* **?? 2015 (NEW()**. Release 3.4.
+* Nov 2015. Release 3.3.1.
+* 29 Oct 2015. Release 3.3.
+* 9 Sep 2015. Minor release 3.2.1.
+* 6 Sep 2015. Release 3.2.
+* 15 Mar 2015. Release 3.1.
+* 24 Jun 2014. Release 3.0.
+
+.. _`homepage`: http://www.pycryptodome.org
+.. _`GMP`: https://gmplib.org
+.. _`MPIR`: http://mpir.org
+.. _GitHub: https://github.com/Legrandin/pycryptodome

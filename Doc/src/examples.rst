@@ -14,10 +14,11 @@ encryption modes`_ like `GCM`_, `CCM`_ or `SIV`_).
     from Crypto.Cipher import AES
     from Crypto.Random import get_random_bytes
 
-    file_out = open("encrypted.bin", "wb")
     key = get_random_bytes(16)
     cipher = AES.new(key, AES.MODE_EAX)
     ciphertext, tag = cipher.encrypt_and_digest(data)
+    
+    file_out = open("encrypted.bin", "wb")
     [ file_out.write(x) for x in (cipher.nonce, tag, ciphertext) ]
 
 At the other end, the receiver can securely load the piece of data back (if they know the key!).
@@ -29,6 +30,7 @@ Note that the code generates a ``ValueError`` exception when tampering is detect
 
     file_in = open("encrypted.bin", "rb")
     nonce, tag, ciphertext = [ file_in.read(x) for x in (16, 16, -1) ]
+    
     # let's assume that the key is somehow available again
     cipher = AES.new(key, AES.MODE_EAX, nonce)
     data = cipher.decrypt_and_verify(ciphertext, tag)
@@ -46,9 +48,10 @@ At the end, the code prints our the RSA public key in ASCII/PEM format:
 
     secret_code = "Unguessable"
     key = RSA.generate(2048)
-    file_out = open("rsa_key.bin", "wb")
     encrypted_key = key.export_key(passphrase=secret_code, pkcs=8,
                                   protection="scryptAndAES128-CBC")
+    
+    file_out = open("rsa_key.bin", "wb")
     file_out.write(encrypted_key)
 
     print key.publickey().export_key()
@@ -60,8 +63,8 @@ The following code reads the private RSA key back in, and then prints again the 
     from Crypto.PublicKey import RSA
 
     secret_code = "Unguessable"
-    file_in = open("rsa_key.bin", "rb")
-    key = RSA.import_key(file_in.read(), passphrase=secret_code)
+    encoded_key = open("rsa_key.bin", "rb").read()
+    key = RSA.import_key(encoded_key, passphrase=secret_code)
 
     print key.publickey().export_key()
 
