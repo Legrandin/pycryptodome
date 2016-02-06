@@ -182,7 +182,7 @@ class Shamir(object):
     >>> from Crypto.Random import get_random_bytes
     >>> from Crypto.Protocol.secret_sharing import Shamir
     >>>
-    >>> key, nonce = [ get_random_bytes(16) for x in range(2)]
+    >>> key = get_random_bytes(16)
     >>> shares = Shamir.split(2, 5, key)
     >>> for idx, share in shares:
     >>>     print "Index #%d: %s" % (idx, hexlify(share))
@@ -190,7 +190,7 @@ class Shamir(object):
     >>> fi = open("clear_file.txt", "rb")
     >>> fo = open("enc_file.txt", "wb")
     >>>
-    >>> cipher = AES.new(key, AES.MODE_EAX, nonce)
+    >>> cipher = AES.new(key, AES.MODE_EAX)
     >>> ct, tag = cipher.encrypt(fi.read()), cipher.digest()
     >>> fo.write(nonce + tag + ct)
 

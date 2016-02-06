@@ -8,22 +8,21 @@ Future releases will include:
 - Implement AES with bitslicing
 - Add unit tests for PEM I/O
 - Move old ciphers into a Museum submodule
+- Add more ECC curves
 - Add algorithms:
     - Poly1305
-    - Elliptic Curves (ECDSA, ECIES, ECDH)
+    - Elliptic Curves (ECIES, ECDH)
     - Camellia, GOST
     - Diffie-Hellman
     - bcrypt
     - argon2
     - SRP
 - Add more key management:
-    - Export/import of EC keys
     - Export/import of DSA domain parameters
     - JWK
 - Add support for CMS/PKCS#7
 - Add support for RNG backed by PKCS#11 and/or KMIP
 - Add support for Format-Preserving Encryption
-- Add the complete set of NIST test vectors for the various algorithms
 - Remove dependency on libtomcrypto headers
 - Speed up (T)DES with a bitsliced implementation
 - Add support for PCLMULQDQ in AES-GCM

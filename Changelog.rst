@@ -14,8 +14,9 @@ New features
   or ciphertext pieces to have length multiple of the CFB segment size.
 * Dedicated tests for all cipher modes, including NIST test vectors
 * CTR/CCM/EAX/GCM/SIV/Salsa20/ChaCha20 objects expose the new attribute `nonce`.
-* CCM cipher checks if the declared lengths of the associated data the
-  message match the actual ones.
+* For performance reasons, CCM cipher optionally accepted a pre-declaration of
+  the length of the associated data, but never checked if the actual data passed
+  to the cipher really matched that length. Now, such check is enforced.
 * CTR cipher accepts parameter `nonce` and possibly `initial_value` in
   alternative to `counter` (which is deprecated).
 * All `iv`/`IV` and `nonce` parameters are optional. If not provided,
@@ -32,11 +33,11 @@ New features
 Resolved issues
 ---------------
 
-* RSA key size returned correctly in `RsaKey.__repr__` method (kudos to hannesv).
+* RSA key size is now returned correctly in `RsaKey.__repr__` method (kudos to hannesv).
 * CTR mode does not modify anymore `counter` parameter passed to 'new' method.
-* CTR raises `OverflowError` instead of `ValueError` in case of counter wrapping around.
+* CTR raises `OverflowError` instead of `ValueError` when the counter wraps around.
 * PEM files with Windows newlines could not be imported.
-* `Crypto.IO.PEM` and `Crypto.IO.PKCS8` do not accept empty passphrases anymore.
+* `Crypto.IO.PEM` and `Crypto.IO.PKCS8` used to accept empty passphrases.
 * GH#6: NotImplementedError now raised for unsupported methods `sign`, `verify`,
   `encrypt`, `decrypt`, `blind`, `unblind` and `size` in objects `RsaKey`, `DsaKey`,
   `ElGamalKey`.

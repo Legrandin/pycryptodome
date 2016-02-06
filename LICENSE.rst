@@ -72,5 +72,5 @@ MPIR license
 ============
 
 When distributed as a Windows wheel, Pycryptodome bundles an unmodified,
-binary version of the MPIR library (https:\\www.mpir.org) which is licensed
+binary version of the MPIR library (https://www.mpir.org) which is licensed
 under the LGPLv3, a copy of which is available under Doc/mpir.
