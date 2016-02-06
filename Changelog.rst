@@ -27,6 +27,7 @@ New features
 * Added support for ECDSA (FIPS 186-3 and RFC6979).
 * Added `RSA.import_key` as an alias to the deprecated `RSA.importKey`
   (same for the `DSA` module).
+* Added `size_in_bits` and `size_in_bytes` methods to `RsaKey`.
 
 Resolved issues
 ---------------

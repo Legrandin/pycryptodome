@@ -108,15 +108,13 @@ first, and with that the rest of the file:
 
     from Crypto.PublicKey import RSA
     from Crypto.Cipher import AES, PKCS1_OAEP
-    import math
 
     file_in = open("encrypted_data.bin", "rb")
 
     private_key = RSA.import_key(open("private.pem").read())
-    rsa_size = ceil(private_key.size()/8.0)
 
     enc_session_key, nonce, tag, ciphertext = \
-       [ file_in.read(x) for x in (rsa_size, 16, 16, -1) ]
+       [ file_in.read(x) for x in (private_key.size_in_bytes(), 16, 16, -1) ]
 
     # Decrypt the session key with the public RSA key
     cipher_rsa = PKCS1_OAEP.new(private_key)

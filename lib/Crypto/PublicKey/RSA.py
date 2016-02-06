@@ -161,6 +161,14 @@ class RsaKey(object):
             raise AttributeError("No CRT component 'u' available for public keys")
         return int(self._u)
 
+    def size_in_bits(self):
+        """Size of the RSA modulus in bits"""
+        return self._n.size_in_bits()
+
+    def size_in_bytes(self):
+        """The minimal amount of bytes that can hold the RSA modulus"""
+        return (self._n.size_in_bits() - 1) // 8 + 1
+
     def _encrypt(self, plaintext):
         if not 0 < plaintext < self._n:
             raise ValueError("Plaintext too large")

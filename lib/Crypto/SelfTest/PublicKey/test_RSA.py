@@ -219,6 +219,11 @@ class RSATest(unittest.TestCase):
         self.assertRaises(ValueError, rsa_obj._decrypt, 0)
         self.assertRaises(ValueError, rsa_obj._encrypt, 0)
 
+    def test_size(self):
+        pub = self.rsa.construct((self.n, self.e))
+        self.assertEquals(pub.size_in_bits(), 1024)
+        self.assertEquals(pub.size_in_bytes(), 128)
+
     def _check_private_key(self, rsaObj):
         from Crypto.Math.Numbers import Integer
 
