@@ -27,8 +27,6 @@ New features
 * Added support for ECDSA (FIPS 186-3 and RFC6979).
 * Added `RSA.import_key` as an alias to the deprecated `RSA.importKey`
   (same for the `DSA` module).
-* Added `RsaKey.export_key` as an alias to the deprecated `RsaKey.exportKey`
-  (same for the `DsaKey` class).
 
 Resolved issues
 ---------------
@@ -52,6 +50,7 @@ Breaks in compatibility
 * DES3 (Triple DES module) does not allow keys that degenerate to Single DES.
 * Removed method `getRandomNumber` in `Crypto.Util.number`.
 * Removed module `Crypto.pct_warnings`.
+* Removed attribute `Crypto.PublicKey.RSA.algorithmIdentifier`.
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++

@@ -64,7 +64,7 @@ verification.
     >>> message = b"Hello"
     >>> key = DSA.generate(2048)
     >>> f = open("public_key.pem", "w")
-    >>> f.write(key.publickey().export_key(key))
+    >>> f.write(key.publickey().exportKey(key))
     >>> hash_obj = SHA256.new(message)
     >>> signer = DSS.new(key, 'fips-186-3')
     >>> signature = key.sign(hash_obj)
@@ -139,7 +139,9 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 class DsaKey(object):
     """Class defining an actual DSA key.
 
-    :undocumented: __getstate__, __setstate__, __repr__, __getattr__
+    :undocumented: __getstate__, __setstate__, __repr__, __getattr__,
+                   __init__, __eq__, __ne__, sign, verify, encrypt, decrypt,
+                   blind, unblind, size
     """
     #: Dictionary of DSA parameters.
     #:
@@ -249,7 +251,7 @@ class DsaKey(object):
         except KeyError:
             raise AttributeError(item)
 
-    def export_key(self, format='PEM', pkcs8=None, passphrase=None,
+    def exportKey(self, format='PEM', pkcs8=None, passphrase=None,
                   protection=None, randfunc=None):
         """Export this DSA key.
 
@@ -373,9 +375,6 @@ class DsaKey(object):
                             )
             return tobytes(pem_str)
         raise ValueError("Unknown key format '%s'. Cannot export the DSA key." % format)
-
-    # Backward compatibility
-    exportKey = export_key
 
     # Methods defined in PyCrypto that we don't support anymore
 

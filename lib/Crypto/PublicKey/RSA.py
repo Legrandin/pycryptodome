@@ -1,25 +1,31 @@
-# -*- coding: utf-8 -*-
-#
-#  PublicKey/RSA.py : RSA public key primitive
-#
-# Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
-#
 # ===================================================================
-# The contents of this file are dedicated to the public domain.  To
-# the extent that dedication to the public domain is not available,
-# everyone is granted a worldwide, perpetual, royalty-free,
-# non-exclusive license to exercise all rights associated with the
-# contents of this file for any purpose whatsoever.
-# No rights are reserved.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-# BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-# ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# Copyright (c) 2016, Legrandin <helderijs@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
 """RSA public-key cryptography algorithm (signature and encryption).
@@ -39,14 +45,14 @@ see the most recent ECRYPT_ report.
 Both RSA ciphertext and RSA signature are as big as the modulus *n* (256
 bytes if *n* is 2048 bit long).
 
-This module provides facilities for generating fresh, new RSA keys, constructing
-them from known components, exporting them, and importing them.
+This module provides facilities for generating fresh, new RSA keys,
+constructing them from known components, exporting them, and importing them.
 
     >>> from Crypto.PublicKey import RSA
     >>>
     >>> key = RSA.generate(2048)
     >>> f = open('mykey.pem','w')
-    >>> f.write(key.export_key('PEM'))
+    >>> f.write(key.exportKey('PEM'))
     >>> f.close()
     ...
     >>> f = open('mykey.pem','r')
@@ -63,27 +69,20 @@ it is recommended to use one of the standardized schemes instead (like
 :sort: generate,construct,import_key
 """
 
-__all__ = ['generate', 'construct', 'import_key', 'RSAImplementation',
-    'RsaKey', 'oid' , 'algorithmIdentifier' ]
-
-from Crypto.Util.py3compat import *
+__all__ = ['generate', 'construct', 'import_key',
+           'RsaKey', 'oid']
 
 import binascii
 import struct
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-
-from Crypto.Util.asn1 import (
-                DerNull,
-                DerSequence,
-                DerBitString,
-                DerObjectId,
-                )
+from Crypto.Util.py3compat import tobytes, bord, bchr, b, tostr
+from Crypto.Util.asn1 import DerSequence
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (test_probable_prime,
-                                generate_probable_prime, COMPOSITE)
+                                   generate_probable_prime, COMPOSITE)
 
 from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _create_subject_public_key_info,
@@ -93,73 +92,109 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 class RsaKey(object):
     """Class defining an actual RSA key.
 
-    :undocumented: __getstate__, __setstate__, __repr__, __getattr__
+    :undocumented: __init__, __repr__, __getstate__, __eq__, __ne__, __str__,
+                   sign, verify, encrypt, decrypt, blind, unblind, size
     """
-    #: Dictionary of RSA parameters.
-    #:
-    #: A public key will only have the following entries:
-    #:
-    #:  - **n**, the modulus.
-    #:  - **e**, the public exponent.
-    #:
-    #: A private key will also have:
-    #:
-    #:  - **d**, the private exponent.
-    #:  - **p**, the first factor of n.
-    #:  - **q**, the second factor of n.
-    #:  - **u**, the CRT coefficient (1/p) mod q.
-    _keydata = ['n', 'e', 'd', 'p', 'q', 'u']
 
-    def __init__(self, key_dict):
-        input_set = set(key_dict.keys())
-        public_set = set(('n' , 'e'))
-        private_set = public_set | set(('p' , 'q', 'd', 'u'))
+    def __init__(self, **kwargs):
+        """Build an RSA key.
+
+        :Keywords:
+          n : integer
+            The modulus.
+          e : integer
+            The public exponent.
+          d : integer
+            The private exponent. Only required for private keys.
+          p : integer
+            The first factor of the modulus. Only required for private keys.
+          q : integer
+            The second factor of the modulus. Only required for private keys.
+          u : integer
+            The CRT coefficient (inverse of p modulo q). Only required for
+            privta keys.
+        """
+
+        input_set = set(kwargs.keys())
+        public_set = set(('n', 'e'))
+        private_set = public_set | set(('p', 'q', 'd', 'u'))
         if input_set not in (private_set, public_set):
             raise ValueError("Some RSA components are missing")
-        self._key = dict(key_dict)
+        for component, value in kwargs.items():
+            setattr(self, "_" + component, value)
 
-    def __getattr__(self, attrname):
-        try:
-            return int(self._key[attrname])
-        except KeyError:
-            raise AttributeError(attrname)
+    @property
+    def n(self):
+        """Modulus"""
+        return int(self._n)
+
+    @property
+    def e(self):
+        """Public exponent"""
+        return int(self._e)
+
+    @property
+    def d(self):
+        """Private exponent"""
+        if not self.has_private():
+            raise AttributeError("No private exponent available for public keys")
+        return int(self._d)
+
+    @property
+    def p(self):
+        """First factor of the modulus"""
+        if not self.has_private():
+            raise AttributeError("No CRT component 'p' available for public keys")
+        return int(self._p)
+
+    @property
+    def q(self):
+        """Second factor of the modulus"""
+        if not self.has_private():
+            raise AttributeError("No CRT component 'q' available for public keys")
+        return int(self._q)
+
+    @property
+    def u(self):
+        """Chinese remainder component (inverse of *p* modulo *q*)"""
+        if not self.has_private():
+            raise AttributeError("No CRT component 'u' available for public keys")
+        return int(self._u)
 
     def _encrypt(self, plaintext):
-        if not 0 < plaintext < self.n:
+        if not 0 < plaintext < self._n:
             raise ValueError("Plaintext too large")
-        e, n = self._key['e'], self._key['n']
-        return int(pow(Integer(plaintext), e, n))
+        return int(pow(Integer(plaintext), self._e, self._n))
 
     def _decrypt(self, ciphertext):
-        if not 0 < ciphertext < self.n:
+        if not 0 < ciphertext < self._n:
             raise ValueError("Ciphertext too large")
         if not self.has_private():
             raise TypeError("This is not a private key")
 
-        e, d, n, p, q, u = [self._key[comp] for comp in ('e', 'd', 'n', 'p', 'q', 'u')]
-
         # Blinded RSA decryption (to prevent timing attacks):
-        # Step 1: Generate random secret blinding factor r, such that 0 < r < n-1
-        r = Integer.random_range(min_inclusive=1, max_exclusive=n)
+        # Step 1: Generate random secret blinding factor r,
+        # such that 0 < r < n-1
+        r = Integer.random_range(min_inclusive=1, max_exclusive=self._n)
         # Step 2: Compute c' = c * r**e mod n
-        cp = Integer(ciphertext) * pow(r, e, n) % n
+        cp = Integer(ciphertext) * pow(r, self._e, self._n) % self._n
         # Step 3: Compute m' = c'**d mod n       (ordinary RSA decryption)
-        m1 = pow(cp, d % (p - 1), p)
-        m2 = pow(cp, d % (q - 1), q)
+        m1 = pow(cp, self._d % (self._p - 1), self._p)
+        m2 = pow(cp, self._d % (self._q - 1), self._q)
         h = m2 - m1
         while h < 0:
-            h += q
-        h = (h * u) % q
-        mp = h * p + m1
+            h += self._q
+        h = (h * self._u) % self._q
+        mp = h * self._p + m1
         # Step 4: Compute m = m**(r-1) mod n
-        result = (r.inverse(n) * mp) % n
+        result = (r.inverse(self._n) * mp) % self._n
         # Verify no faults occured
-        if ciphertext != pow(result, e, n):
+        if ciphertext != pow(result, self._e, self._n):
             raise ValueError("Fault detected in RSA decryption")
         return result
 
     def has_private(self):
-        return 'd' in self._key
+        return hasattr(self, "_d")
 
     def can_encrypt(self):
         return True
@@ -168,13 +203,22 @@ class RsaKey(object):
         return True
 
     def publickey(self):
-        return RsaKey(dict([(k, self._key[k]) for k in ('n', 'e')]))
+        return RsaKey(n=self._n, e=self._e)
 
     def __eq__(self, other):
-        return self._key == other._key
+        if self.has_private() != other.has_private():
+            return False
+        if self.n != other.n or self.e != other.e:
+            return False
+        if not self.has_private():
+            return True
+        return (self.d == other.d and
+                self.q == other.q and
+                self.p == other.p and
+                self.u == other.u)
 
     def __ne__(self, other):
-        return self._key != other._key
+        return not (self == other)
 
     def __getstate__(self):
         # RSA key is not pickable
@@ -182,18 +226,22 @@ class RsaKey(object):
         raise PicklingError
 
     def __repr__(self):
-        attrs = []
-        for k in self._keydata:
-            if k == 'n':
-                attrs.append("n(%d)" % Integer(self.n).size_in_bits())
-            elif hasattr(self, k):
-                attrs.append(k)
         if self.has_private():
-            attrs.append("private")
-        # PY3K: This is meant to be text, do not change to bytes (data)
-        return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
+            extra = ", d=%d, p=%d, q=%d, u=%d" % (int(self._d), int(self._p),
+                                                  int(self._q), int(self._u))
+        else:
+            extra = ""
+        return "RsaKey(n=%d, e=%d%s)" % (int(self._n), int(self._e), extra)
 
-    def export_key(self, format='PEM', passphrase=None, pkcs=1, protection=None, randfunc=None):
+    def __str__(self):
+        if self.has_private():
+            key_type = "Private"
+        else:
+            key_type = "Public"
+        return "%s RSA key at 0x%X" % (key_type, id(self))
+
+    def exportKey(self, format='PEM', passphrase=None, pkcs=1,
+                   protection=None, randfunc=None):
         """Export this RSA key.
 
         :Parameters:
@@ -270,59 +318,60 @@ class RsaKey(object):
         if randfunc is None:
             randfunc = Random.get_random_bytes
 
-        if format=='OpenSSH':
-               eb, nb = [self._key[comp].to_bytes() for comp in ('e', 'n')]
-               if bord(eb[0]) & 0x80: eb=bchr(0x00)+eb
-               if bord(nb[0]) & 0x80: nb=bchr(0x00)+nb
-               keyparts = [ b('ssh-rsa'), eb, nb ]
-               keystring = b('').join([ struct.pack(">I",len(kp))+kp for kp in keyparts])
-               return b('ssh-rsa ')+binascii.b2a_base64(keystring)[:-1]
+        if format == 'OpenSSH':
+            e_bytes, n_bytes = [x.to_bytes() for x in (self._e, self._n)]
+            if bord(e_bytes[0]) & 0x80:
+                e_bytes = bchr(0) + e_bytes
+            if bord(n_bytes[0]) & 0x80:
+                n_bytes = bchr(0) + n_bytes
+            keyparts = [b('ssh-rsa'), e_bytes, n_bytes]
+            keystring = b('').join([struct.pack(">I", len(kp)) + kp for kp in keyparts])
+            return b('ssh-rsa ') + binascii.b2a_base64(keystring)[:-1]
 
         # DER format is always used, even in case of PEM, which simply
         # encodes it into BASE64.
         if self.has_private():
-                binary_key = DerSequence([
-                        0,
-                        self.n,
-                        self.e,
-                        self.d,
-                        self.p,
-                        self.q,
-                        self.d % (self.p-1),
-                        self.d % (self.q-1),
-                        Integer(self.q).inverse(self.p)
-                    ]).encode()
-                if pkcs==1:
-                    keyType = 'RSA PRIVATE'
-                    if format=='DER' and passphrase:
-                        raise ValueError("PKCS#1 private key cannot be encrypted")
-                else: # PKCS#8
-                    if format=='PEM' and protection is None:
-                        keyType = 'PRIVATE'
-                        binary_key = PKCS8.wrap(binary_key, oid, None)
-                    else:
-                        keyType = 'ENCRYPTED PRIVATE'
-                        if not protection:
-                            protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
-                        binary_key = PKCS8.wrap(binary_key, oid, passphrase, protection)
-                        passphrase = None
+            binary_key = DerSequence([0,
+                                      self.n,
+                                      self.e,
+                                      self.d,
+                                      self.p,
+                                      self.q,
+                                      self.d % (self.p-1),
+                                      self.d % (self.q-1),
+                                      Integer(self.q).inverse(self.p)
+                                      ]).encode()
+            if pkcs == 1:
+                key_type = 'RSA PRIVATE KEY'
+                if format == 'DER' and passphrase:
+                    raise ValueError("PKCS#1 private key cannot be encrypted")
+            else:  # PKCS#8
+                if format == 'PEM' and protection is None:
+                    key_type = 'PRIVATE KEY'
+                    binary_key = PKCS8.wrap(binary_key, oid, None)
+                else:
+                    key_type = 'ENCRYPTED PRIVATE KEY'
+                    if not protection:
+                        protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
+                    binary_key = PKCS8.wrap(binary_key, oid,
+                                            passphrase, protection)
+                    passphrase = None
         else:
-                keyType = "RSA PUBLIC"
-                binary_key = _create_subject_public_key_info(oid,
-                                    DerSequence([self.n, self.e]))
+            key_type = "RSA PUBLIC KEY"
+            binary_key = _create_subject_public_key_info(oid,
+                                                         DerSequence([self.n,
+                                                                      self.e])
+                                                         )
 
-        if format=='DER':
+        if format == 'DER':
             return binary_key
-        if format=='PEM':
-            pem_str = PEM.encode(binary_key, keyType+" KEY", passphrase, randfunc)
+        if format == 'PEM':
+            pem_str = PEM.encode(binary_key, key_type, passphrase, randfunc)
             return tobytes(pem_str)
+
         raise ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
 
-    # Backward compatibility
-    exportKey = export_key
-
     # Methods defined in PyCrypto that we don't support anymore
-
     def sign(self, M, K):
         raise NotImplementedError("Use module Crypto.Signature.pkcs1_15 instead")
 
@@ -406,8 +455,9 @@ def generate(bits, randfunc=None, e=65537):
         min_distance = Integer(1) << (bits // 2 - 100)
 
         def filter_q(candidate):
-            return candidate > min_q and (candidate - 1).gcd(e) == 1 \
-                                     and abs(candidate - p) > min_distance
+            return (candidate > min_q and
+                    (candidate - 1).gcd(e) == 1 and
+                    abs(candidate - p) > min_distance)
 
         q = generate_probable_prime(exact_bits=size_q,
                                     randfunc=randfunc,
@@ -422,12 +472,10 @@ def generate(bits, randfunc=None, e=65537):
 
     u = p.inverse(q)
 
-    key_dict = dict(zip(('n', 'e', 'd', 'p', 'q', 'u'),
-                        (n, e, d, p, q, u)))
-    return RsaKey(key_dict)
+    return RsaKey(n=n, e=e, d=d, p=p, q=q, u=u)
 
 
-def construct(tup, consistency_check=True):
+def construct(rsa_components, consistency_check=True):
     """Construct an RSA key from a tuple of valid RSA components.
 
     The modulus **n** must be the product of two primes.
@@ -441,7 +489,7 @@ def construct(tup, consistency_check=True):
     - p*u = 1 mod q
 
     :Parameters:
-     tup : tuple
+     rsa_components : tuple
         A tuple of long integers, with at least 2 and no
         more than 6 items. The items come in the following order:
 
@@ -462,13 +510,23 @@ def construct(tup, consistency_check=True):
     :Return: An RSA key object (`RsaKey`).
     """
 
-    comp_names = 'n', 'e', 'd', 'p', 'q', 'u'
-    key_dict = dict(zip(comp_names, map(Integer, tup)))
-    n, e, d, p, q, u = [key_dict.get(comp) for comp in comp_names]
+    class InputComps(object):
+        pass
 
-    if d is not None:
+    input_comps = InputComps()
+    for (comp, value) in zip(('n', 'e', 'd', 'p', 'q', 'u'), rsa_components):
+        setattr(input_comps, comp, Integer(value))
 
-        if None in (p, q):
+    n = input_comps.n
+    e = input_comps.e
+    if not hasattr(input_comps, 'd'):
+        key = RsaKey(n=n, e=e)
+    else:
+        d = input_comps.d
+        if hasattr(input_comps, 'q'):
+            p = input_comps.p
+            q = input_comps.q
+        else:
             # Compute factors p and q from the private exponent d.
             # We assume that n has no more than two factors.
             # See 8.2.2(i) in Handbook of Applied Cryptography.
@@ -476,7 +534,7 @@ def construct(tup, consistency_check=True):
             # The quantity d*e-1 is a multiple of phi(n), even,
             # and can be represented as t*2^s.
             t = ktot
-            while t % 2 ==0:
+            while t % 2 == 0:
                 t //= 2
             # Cycle through all multiplicative inverses in Zn.
             # The algorithm is non-deterministic, but there is a 50% chance
@@ -506,15 +564,13 @@ def construct(tup, consistency_check=True):
             assert ((n % p) == 0)
             q = n // p
 
-        if u is None:
+        if hasattr(input_comps, 'u'):
+            u = input_comps.u
+        else:
             u = p.inverse(q)
 
-        key_dict['p'] = p
-        key_dict['q'] = q
-        key_dict['u'] = u
-
-    # Build key object
-    key = RsaKey(key_dict)
+        # Build key object
+        key = RsaKey(n=n, e=e, d=d, p=p, q=q, u=u)
 
     # Very consistency of the key
     fmt_error = False
@@ -582,8 +638,8 @@ def _import_pkcs1_public(encoded, *kwargs):
 
 def _import_subjectPublicKeyInfo(encoded, *kwargs):
 
-    algoid, encoded_key, params =  _expand_subject_public_key_info(encoded)
-    if algoid != oid or params != None:
+    algoid, encoded_key, params = _expand_subject_public_key_info(encoded)
+    if algoid != oid or params is not None:
         raise ValueError("No RSA subjectPublicKeyInfo")
     return _import_pkcs1_public(encoded_key)
 
@@ -701,10 +757,3 @@ importKey = import_key
 #:
 #: .. _`Object ID`: http://www.alvestrand.no/objectid/1.2.840.113549.1.1.1.html
 oid = "1.2.840.113549.1.1.1"
-
-#: This is the standard DER object that qualifies a cryptographic algorithm
-#: in ASN.1-based data structures (e.g. X.509 certificates).
-algorithmIdentifier = DerSequence(
-  [DerObjectId(oid).encode(),      # algorithm field
-  DerNull().encode()]              # parameters field
-  ).encode()

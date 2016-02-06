@@ -48,13 +48,13 @@ At the end, the code prints our the RSA public key in ASCII/PEM format:
 
     secret_code = "Unguessable"
     key = RSA.generate(2048)
-    encrypted_key = key.export_key(passphrase=secret_code, pkcs=8,
+    encrypted_key = key.exportKey(passphrase=secret_code, pkcs=8,
                                   protection="scryptAndAES128-CBC")
     
     file_out = open("rsa_key.bin", "wb")
     file_out.write(encrypted_key)
 
-    print key.publickey().export_key()
+    print key.publickey().exportKey()
 
 The following code reads the private RSA key back in, and then prints again the public key:
 
@@ -66,7 +66,7 @@ The following code reads the private RSA key back in, and then prints again the 
     encoded_key = open("rsa_key.bin", "rb").read()
     key = RSA.import_key(encoded_key, passphrase=secret_code)
 
-    print key.publickey().export_key()
+    print key.publickey().exportKey()
 
 
 Encrypt data with RSA
