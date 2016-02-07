@@ -52,7 +52,7 @@ All the code can be downloaded from `GitHub`_.
 News
 ----
 
-* **?? 2015 (NEW()**. Release 3.4.
+* **7 Feb 2016 (NEW)**. Release 3.4.
 * Nov 2015. Release 3.3.1.
 * 29 Oct 2015. Release 3.3.
 * 9 Sep 2015. Minor release 3.2.1.

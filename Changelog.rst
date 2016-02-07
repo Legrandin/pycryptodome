@@ -1,58 +1,58 @@
 Changelog
 =========
 
-3.4 (???)
+3.4 (7 February 2016)
 +++++++++++++++++++
 
 New features
 ------------
 
-* For CBC/CFB/OFB/CTR, `encrypt` and `decrypt` cannot be intermixed.
-* For CBC/CFB/OFB, the cipher object has both `IV` and `iv` attributes.
-  `new` accepts `IV` as well as `iv` as parameter.
-* For CFB/OPENPGP, `encrypt` and `decrypt` do not require the plaintext
+* Added ``Crypto.PublicKey.ECC`` module (NIST P-256 curve only), including export/import of ECC keys.
+* Added support for ECDSA (FIPS 186-3 and RFC6979).
+* For CBC/CFB/OFB/CTR cipher objects, ``encrypt()`` and ``decrypt()`` cannot be intermixed.
+* CBC/CFB/OFB, the cipher objects have both ``IV`` and ``iv`` attributes.
+  ``new()`` accepts ``IV`` as well as ``iv`` as parameter.
+* For CFB/OPENPGP cipher object, ``encrypt()`` and ``decrypt()`` do not require the plaintext
   or ciphertext pieces to have length multiple of the CFB segment size.
-* Dedicated tests for all cipher modes, including NIST test vectors
-* CTR/CCM/EAX/GCM/SIV/Salsa20/ChaCha20 objects expose the new attribute `nonce`.
+* Added dedicated tests for all cipher modes, including NIST test vectors
+* CTR/CCM/EAX/GCM/SIV/Salsa20/ChaCha20 objects expose the ``nonce`` attribute.
 * For performance reasons, CCM cipher optionally accepted a pre-declaration of
   the length of the associated data, but never checked if the actual data passed
-  to the cipher really matched that length. Now, such check is enforced.
-* CTR cipher accepts parameter `nonce` and possibly `initial_value` in
-  alternative to `counter` (which is deprecated).
-* All `iv`/`IV` and `nonce` parameters are optional. If not provided,
-  they will be randomly generated (exception: `nonce` for CTR mode in case
+  to the cipher really matched that length. Such check is now enforced.
+* CTR cipher objects accept parameter ``nonce`` and possibly ``initial_value`` in
+  alternative to ``counter`` (which is deprecated).
+* All ``iv``/``IV`` and ``nonce`` parameters are optional. If not provided,
+  they will be randomly generated (exception: ``nonce`` for CTR mode in case
   of block sizes smaller than 16 bytes).
 * Refactored ARC2 cipher.
-* Added `Crypto.Cipher.DES3.adjust_key_parity` function.
-* Added `Public.ECC` module (P-256 curve only), including export/import of ECC keys.
-* Added support for ECDSA (FIPS 186-3 and RFC6979).
-* Added `RSA.import_key` as an alias to the deprecated `RSA.importKey`
-  (same for the `DSA` module).
-* Added `size_in_bits` and `size_in_bytes` methods to `RsaKey`.
+* Added ``Crypto.Cipher.DES3.adjust_key_parity()`` function.
+* Added ``RSA.import_key`` as an alias to the deprecated ``RSA.importKey``
+  (same for the ``DSA`` module).
+* Added ``size_in_bits()`` and ``size_in_bytes()`` methods to ``RsaKey``.
 
 Resolved issues
 ---------------
 
-* RSA key size is now returned correctly in `RsaKey.__repr__` method (kudos to hannesv).
-* CTR mode does not modify anymore `counter` parameter passed to 'new' method.
-* CTR raises `OverflowError` instead of `ValueError` when the counter wraps around.
+* RSA key size is now returned correctly in ``RsaKey.__repr__()`` method (kudos to *hannesv*).
+* CTR mode does not modify anymore ``counter`` parameter passed to ``new()`` method.
+* CTR raises ``OverflowError`` instead of ``ValueError`` when the counter wraps around.
 * PEM files with Windows newlines could not be imported.
-* `Crypto.IO.PEM` and `Crypto.IO.PKCS8` used to accept empty passphrases.
-* GH#6: NotImplementedError now raised for unsupported methods `sign`, `verify`,
-  `encrypt`, `decrypt`, `blind`, `unblind` and `size` in objects `RsaKey`, `DsaKey`,
-  `ElGamalKey`.
+* ``Crypto.IO.PEM`` and ``Crypto.IO.PKCS8`` used to accept empty passphrases.
+* GH#6: NotImplementedError now raised for unsupported methods ``sign``, ``verify``,
+  ``encrypt``, ``decrypt``, ``blind``, ``unblind`` and ``size`` in objects ``RsaKey``, ``DsaKey``,
+  ``ElGamalKey``.
 
 Breaks in compatibility
 -----------------------
 
-* Parameter `segment_size` cannot be 0 for the CFB mode.
-* For OCB ciphers, a final call without parameters to `encrypt` must end a sequence
-  of calls to `encrypt` with data (similarly for `decrypt`).
-* Key size for `ARC2`, `ARC4` and `Blowfish` must be at least 40 bits long (still very weak).
+* Parameter ``segment_size`` cannot be 0 for the CFB mode.
+* For OCB ciphers, a final call without parameters to ``encrypt`` must end a sequence
+  of calls to ``encrypt`` with data (similarly for ``decrypt``).
+* Key size for ``ARC2``, ``ARC4`` and ``Blowfish`` must be at least 40 bits long (still very weak).
 * DES3 (Triple DES module) does not allow keys that degenerate to Single DES.
-* Removed method `getRandomNumber` in `Crypto.Util.number`.
-* Removed module `Crypto.pct_warnings`.
-* Removed attribute `Crypto.PublicKey.RSA.algorithmIdentifier`.
+* Removed method ``getRandomNumber`` in ``Crypto.Util.number``.
+* Removed module ``Crypto.pct_warnings``.
+* Removed attribute ``Crypto.PublicKey.RSA.algorithmIdentifier``.
 
 3.3.1 (1 November 2015)
 +++++++++++++++++++
@@ -60,7 +60,7 @@ Breaks in compatibility
 New features
 ------------
 
-* Opt-in for `update` after `digest` for SHA-3, keccak, BLAKE2 hashes
+* Opt-in for ``update()`` after ``digest()`` for SHA-3, keccak, BLAKE2 hashes
 
 Resolved issues
 ------------
@@ -71,8 +71,8 @@ Resolved issues
 Breaks in compatibility
 -----------------------
 
-* Removed method `copy` from BLAKE2 hashes
-* Removed ability to `update` a BLAKE2 hash after the first call to `(hex)digest`
+* Removed method ``copy()`` from BLAKE2 hashes
+* Removed ability to ``update()`` a BLAKE2 hash after the first call to ``(hex)digest()``
 
 3.3 (29 October 2015)
 +++++++++++++++++++
@@ -95,8 +95,8 @@ Resolved issues
 Breaks in compatibility
 -----------------------
 
-* Removed method `copy` from all SHA-3 hashes
-* Removed ability to `update` a SHA-3 hash after the first call to `(hex)digest`
+* Removed method ``copy()`` from all SHA-3 hashes
+* Removed ability to ``update()`` a SHA-3 hash after the first call to ``(hex)digest()``
 
 3.2.1 (9 September 2015)
 +++++++++++++++++++

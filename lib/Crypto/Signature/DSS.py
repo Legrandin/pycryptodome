@@ -75,7 +75,10 @@ from Crypto.PublicKey.ECC import _curve, EccKey
 
 
 class DssSigScheme(object):
-    """This signature scheme can perform DSS signature or verification."""
+    """This signature scheme can perform DSS signature or verification.
+
+    :undocumented: __init__
+    """
 
     def __init__(self, key, encoding, order):
         """Create a new Digital Signature Standard (DSS) object.

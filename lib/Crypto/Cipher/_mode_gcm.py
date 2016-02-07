@@ -147,8 +147,8 @@ class GcmMode(object):
         if not byte_string(nonce):
             raise TypeError("Nonce must be a byte string")
 
-        #: Nonce
         self.nonce = nonce
+        """Nonce"""
 
         self._factory = factory
         self._key = key

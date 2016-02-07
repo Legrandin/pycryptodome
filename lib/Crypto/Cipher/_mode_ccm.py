@@ -111,11 +111,11 @@ class CcmMode(object):
     def __init__(self, factory, key, nonce, mac_len, msg_len, assoc_len,
                  cipher_params):
 
-        #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
+        """The block size of the underlying cipher, in bytes."""
 
-        #: The nonce used for this cipher instance
         self.nonce = nonce
+        """The nonce used for this cipher instance"""
 
         self._factory = factory
         self._key = key

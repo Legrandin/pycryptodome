@@ -115,10 +115,11 @@ class OcbMode(object):
             raise ValueError("OCB mode is only available for ciphers"
                              " that operate on 128 bits blocks")
 
-        #: The block size of the underlying cipher, in bytes.
         self.block_size = 16
+        """The block size of the underlying cipher, in bytes."""
 
         self.nonce = nonce
+        """Nonce used for this session."""
         if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
 

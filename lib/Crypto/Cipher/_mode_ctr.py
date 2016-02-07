@@ -116,8 +116,8 @@ class CtrMode(object):
         """
 
         if len(initial_counter_block) == prefix_len + counter_len:
-            #: Nonce; not available if there is a fixed suffix
             self.nonce = initial_counter_block[:prefix_len]
+            """Nonce; not available if there is a fixed suffix"""
 
         expect_byte_string(initial_counter_block)
         self._state = VoidPointer()
@@ -141,8 +141,8 @@ class CtrMode(object):
         # by the cipher mode
         block_cipher.release()
 
-        #: The block size of the underlying cipher, in bytes.
         self.block_size = len(initial_counter_block)
+        """The block size of the underlying cipher, in bytes."""
 
         self._next = [self.encrypt, self.decrypt]
 

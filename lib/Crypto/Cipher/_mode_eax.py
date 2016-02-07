@@ -76,7 +76,10 @@ class EaxMode(object):
         """EAX cipher mode"""
 
         self.block_size = factory.block_size
+        """The block size of the underlying cipher, in bytes."""
+
         self.nonce = nonce
+        """The nonce originally used to create the object."""
 
         self._mac_len = mac_len
         self._mac_tag = None  # Cache for MAC tag

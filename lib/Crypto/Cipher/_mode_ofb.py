@@ -105,12 +105,15 @@ class OfbMode(object):
         # by the cipher mode
         block_cipher.release()
 
-        #: The block size of the underlying cipher, in bytes.
         self.block_size = len(iv)
+        """The block size of the underlying cipher, in bytes."""
 
-        #: The Initialization Vector originally used to create the object.
-        #: The value does not change.
-        self.IV = self.iv = iv
+        self.iv = iv
+        """The Initialization Vector originally used to create the object.
+        The value does not change."""
+
+        self.IV = iv
+        """Alias for `iv`"""
 
         self._next = [ self.encrypt, self.decrypt ]
 

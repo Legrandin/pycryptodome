@@ -105,7 +105,10 @@ _curve.oid = "1.2.840.10045.3.1.7"
 
 
 class EccPoint(object):
-    """A class to abstract a point over an Elliptic Curve."""
+    """A class to abstract a point over an Elliptic Curve.
+
+    :undocumented: __init__, __eq__, __neg__, __iadd__, __add__, __mul__
+    """
 
     def __init__(self, x, y):
         self._x = Integer(x)

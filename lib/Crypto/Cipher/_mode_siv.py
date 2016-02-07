@@ -87,7 +87,10 @@ class SivMode(object):
     """
 
     def __init__(self, factory, key, nonce, kwargs):
+
         self.block_size = factory.block_size
+        """The block size of the underlying cipher, in bytes."""
+
         self._factory = factory
 
         self._nonce = nonce
@@ -103,9 +106,9 @@ class SivMode(object):
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
 
-            #: Public attribute is only available in case of non-deterministic
-            #: encryption
             self.nonce = nonce
+            """Public attribute is only available in case of non-deterministic
+            encryption."""
 
         subkey_size = len(key) // 2
 
