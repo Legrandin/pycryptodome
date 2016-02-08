@@ -14,10 +14,12 @@ It supports Python 2.4 or newer, all Python 3 versions and PyPy.
 
 You can install it with a simple::
 
+	pip install --upgrade pip
 	pip install pycryptodome
 
 For faster public key operations, you should have `GMP`_ installed in your system
-(except on Windows, as the wheel on PyPi already comes with the equivalent `MPIR`_ library).
+(except on Windows, as the wheel on PyPi already comes bundled with the equivalent
+`MPIR`_ library).
 
 PyCryptodome is a fork of PyCrypto. It brings the following enhancements
 with respect to the last official version of PyCrypto (2.6.1):
