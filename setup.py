@@ -25,9 +25,12 @@ try:
 except ImportError:
     from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
+from distutils.command.build import build
 from distutils.errors import CCompilerError
 import distutils
-import os, sys
+import os, sys, shutil
+
+use_separate_namespace = os.path.isfile(".separate_namespace")
 
 longdesc = open("README.rst").read()
 
@@ -219,6 +222,44 @@ class PCTBuildPy(build_py):
             retval.append(item)
         return retval
 
+class PCTBuild(build):
+
+    def run(self):
+        build.run(self)
+
+        if not use_separate_namespace:
+            return
+
+        PrintErr("Renaming Crypto to Cryptodome...\n")
+
+        # Rename root package
+        source = os.path.join(self.build_lib, "Crypto")
+        target = os.path.join(self.build_lib, "Cryptodome")
+        try:
+            shutil.rmtree(target)
+        except OSError:
+            pass
+        os.rename(source, target)
+
+        # Crypto becomes Cryptodome
+        for roots, dirs, files in os.walk(target):
+            files = [os.path.join(roots, f) for f in files if f.endswith(".py")]
+            for filepy in files:
+
+                fd = open(filepy, "rt")
+                content = (fd.read().
+                             replace("Crypto.", "Cryptodome.").
+                             replace("Crypto ", "Cryptodome ").
+                             replace("'Crypto'", "'Cryptodome'").
+                             replace('"Crypto"', '"Cryptodome"'))
+                fd.close()
+
+                os.remove(filepy)
+
+                fd = open(filepy, "wt")
+                fd.write(content)
+                fd.close()
+
 class TestCommand(Command):
 
     description = "Run self-test"
@@ -245,28 +286,35 @@ class TestCommand(Command):
             self.run_command(cmd_name)
 
         # Run SelfTest
-        self.announce("running self-tests")
         old_path = sys.path[:]
+        package_root = "Crypto" + "dome" * use_separate_namespace
+        self.announce("running self-tests on " + package_root)
         try:
             sys.path.insert(0, self.build_dir)
-            from Crypto import SelfTest
+
+            if use_separate_namespace:
+                from Cryptodome import SelfTest
+                from Cryptodome.Math import Numbers
+            else:
+                from Crypto import SelfTest
+                from Crypto.Math import Numbers
+
             moduleObj = None
             if self.module:
                 if self.module.count('.')==0:
                     # Test a whole a sub-package
-                    full_module = "Crypto.SelfTest." + self.module
+                    full_module = package_root + ".SelfTest." + self.module
                     module_name = self.module
                 else:
                     # Test only a module
                     # Assume only one dot is present
                     comps = self.module.split('.')
                     module_name = "test_" + comps[1]
-                    full_module = "Crypto.SelfTest." + comps[0] + "." + module_name
+                    full_module = package_root + ".SelfTest." + comps[0] + "." + module_name
                 # Import sub-package or module
                 moduleObj = __import__( full_module, globals(), locals(), module_name )
 
-            from Crypto.Math import Numbers
-            PrintErr("Crypto.Math implementation:",
+            PrintErr(package_root + ".Math implementation:",
                      str(Numbers._implementation))
 
             SelfTest.run(module=moduleObj, verbosity=self.verbose, stream=sys.stdout, config=self.config)
@@ -281,7 +329,7 @@ class TestCommand(Command):
 
 
 setup(
-    name = "pycryptodome",
+    name = "pycryptodome" + "x" * use_separate_namespace,
     version = version_string,
     description = "Cryptographic library for Python",
     long_description = longdesc,
@@ -351,6 +399,7 @@ setup(
         "Crypto.Math" : [ "mpir.dll" ],
         },
     cmdclass = {
+        'build':PCTBuild,
         'build_ext':PCTBuildExt,
         'build_py': PCTBuildPy,
         'test': TestCommand
