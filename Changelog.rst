@@ -1,14 +1,14 @@
 Changelog
 =========
 
-3.4.1 (?? February 2016)
+3.4.1 (21 February 2016)
 +++++++++++++++++++
 
 New features
 ------------
 
 * Added option to install the library under the ``Cryptodome`` package
-  (as opposed to ``Crypto``).
+  (instead of ``Crypto``).
 
 Changelog
 =========
