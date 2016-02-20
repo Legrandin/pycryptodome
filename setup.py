@@ -32,7 +32,71 @@ import os, sys, shutil
 
 use_separate_namespace = os.path.isfile(".separate_namespace")
 
-longdesc = open("README.rst").read()
+project_name = "pycryptodome"
+package_root = "Crypto"
+other_project = "pycryptodomex"
+other_root = "Cryptodome"
+
+if use_separate_namespace:
+    project_name, other_project = other_project, project_name
+    package_root, other_root = other_root, package_root
+
+longdesc = """
+PyCryptodome
+============
+
+PyCryptodome is a self-contained Python package of low-level
+cryptographic primitives.
+
+It supports Python 2.4 or newer, all Python 3 versions and PyPy.
+
+You can install it with::
+
+    pip install THIS_PROJECT
+
+All modules are installed under the ``THIS_ROOT`` package.
+
+Check the OTHER_PROJECT_ project for the equivalent library that
+works under the ``OTHER_ROOT`` package.
+
+PyCryptodome is a fork of PyCrypto. It brings several enhancements
+with respect to the last official version of PyCrypto (2.6.1),
+for instance:
+
+* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
+* Accelerated AES on Intel platforms via AES-NI
+* First class support for PyPy
+* Elliptic curves cryptography (NIST P-256 curve only)
+* Better and more compact API (`nonce` and `iv` attributes for ciphers,
+  automatic generation of random nonces and IVs, simplified CTR cipher mode,
+  and more)
+* SHA-3 (including SHAKE XOFs) and BLAKE2 hash algorithms
+* Salsa20 and ChaCha20 stream ciphers
+* scrypt and HKDF
+* Deterministic (EC)DSA
+* Password-protected PKCS#8 key containers
+* Shamir's Secret Sharing scheme
+* Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
+* Simplified install process, including better support for Windows
+* Cleaner RSA and DSA key generation (largely based on FIPS 186-4)
+* Major clean ups and simplification of the code base
+
+PyCryptodome is not a wrapper to a separate C library like *OpenSSL*.
+To the largest possible extent, algorithms are implemented in pure Python.
+Only the pieces that are extremely critical to performance (e.g. block ciphers)
+are implemented as C extensions.
+
+For more information, see the `homepage`_.
+
+All the code can be downloaded from `GitHub`_.
+
+.. _OTHER_PROJECT: https://pypi.python.org/pypi/OTHER_PROJECT
+.. _`homepage`: http://www.pycryptodome.org
+.. _GitHub: https://github.com/Legrandin/pycryptodome
+""".replace("THIS_PROJECT", project_name).\
+    replace("THIS_ROOT", package_root).\
+    replace("OTHER_PROJECT", other_project).\
+    replace("OTHER_ROOT", other_root)
 
 # By doing this we neeed to change version information in a single file
 for line in open(os.path.join("lib", "Crypto", "__init__.py")):
@@ -287,7 +351,6 @@ class TestCommand(Command):
 
         # Run SelfTest
         old_path = sys.path[:]
-        package_root = "Crypto" + "dome" * use_separate_namespace
         self.announce("running self-tests on " + package_root)
         try:
             sys.path.insert(0, self.build_dir)
@@ -329,11 +392,11 @@ class TestCommand(Command):
 
 
 setup(
-    name = "pycryptodome" + "x" * use_separate_namespace,
+    name = project_name,
     version = version_string,
     description = "Cryptographic library for Python",
     long_description = longdesc,
-    author = "Legrandin",
+    author = "Helder Eijs",
     author_email = "helderijs@gmail.com",
     url = "http://www.pycryptodome.org",
     platforms = 'Posix; MacOS X; Windows',

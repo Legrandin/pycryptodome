@@ -1,24 +1,44 @@
 Installation
 ------------
 
-In general, installing PyCryptodome means issuing a simple::
+The installation procedure depends on the package you want the library in.
+PyCryptodome can be used as:
 
-		pip install pycryptodome
+ #. **a drop-in replacement for the old PyCrypto library**.
+    You install it with::
 
-The procedures below go a bit more in detail by explaining
+        pip install pycryptodome
+   
+    In this case, all modules are installed under the ``Crypto`` package.
+    You can test everything is right with::
+		
+         python -m Crypto.SelfTest
+   
+    One must avoid having both PyCrypto and PyCryptodome installed
+    at the same time, as they will interfere with each other.
+
+    This option is therefore recommended only when you are sure that
+    the whole application is deployed in a ``virtualenv``.
+
+ #. **a library independent of the old PyCrypto**.
+    You install it with::
+
+        pip install pycryptodomex
+   
+    You can test everything is right with::
+		
+        python -m Cryptodome.SelfTest
+  
+    In this case, all modules are installed under the ``Cryptodome`` package.
+    PyCrypto and PyCryptodome can coexist.
+
+The procedures below go a bit more in detail, by explaining
 how to setup the environment for compiling the C extensions
 for each OS, and how to install the GMP library.
 
-Also, note that it is good practice to verify that everything
-has been installed correcty by running the complete test suite
-at the end::
-
-		python -m Crypto.SelfTest
-
-Finally, you should keep in mind that PyCryptodome resides in the same
-namespace of PyCrypto (``Crypto``). In case you have PyCrypto already
-installed at the system level, you will want to install PyCryptodome
-in a virtual environment.
+All instructions to follow install PyCryptodome as the ``Cryptodome`` package
+(option #2). Change ``pycryptodomex`` to ``pycryptodome`` if you prefer
+option #1 (``Crypto`` package).
 
 Linux Ubuntu
 ~~~~~~~~~~~~
@@ -26,23 +46,20 @@ Linux Ubuntu
 For Python 2.x::
 
         $ sudo apt-get install build-essential libgmp3c2 python-dev
-        $ # Create and move to a virtualenv
-        $ pip install pycryptodome
-        $ python -m Crypto.SelfTest
+        $ pip install pycryptodomex
+        $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 
         $ sudo apt-get install build-essential libgmp3c2 python3-dev
-        $ # Create and move to a virtualenv
-        $ pip install pycryptodome
-        $ python3 -m Crypto.SelfTest
+        $ pip install pycryptodomex
+        $ python3 -m Cryptodome.SelfTest
 
 For PyPy::
 
         $ sudo apt-get install build-essential libgmp3c2 pypy-dev
-        $ # Create and move to a virtualenv
-        $ pip install pycryptodome
-        $ pypy -m Crypto.SelfTest
+        $ pip install pycryptodomex
+        $ pypy -m Cryptodome.SelfTest
 
 Linux Fedora
 ~~~~~~~~~~~~
@@ -50,36 +67,31 @@ Linux Fedora
 For Python 2.x::
 
         $ sudo yum install gcc gmp python-devel 
-        $ # Create and move to a virtualenv
-        $ pip install pycryptodome
-        $ python -m Crypto.SelfTest
+        $ pip install pycryptodomex
+        $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 
         $ sudo yum install gcc gmp python3-devel
-        $ # Create and move to a virtualenv
-        $ pip install pycryptodome
-        $ python3 -m Crypto.SelfTest
+        $ pip install pycryptodomex
+        $ python3 -m Cryptodome.SelfTest
 
 For PyPy::
 
         $ sudo yum install gcc gmp pypy-devel
-        $ # Create and move to a virtualenv
-        $ pip install pycryptodome
-        $ pypy -m Crypto.SelfTest
+        $ pip install pycryptodomex
+        $ pypy -m Cryptodome.SelfTest
 
 Windows (pre-compiled)
 ~~~~~~~~~~~~~~~~~~~~~~
 
-#. Create and move to a *virtualenv*.
-
 #. Install PyCryptodome as a `wheel <http://pythonwheels.com/>`_::
 
-        > pip install pycryptodome
+        > pip install pycryptodomex
 
 #. To make sure everything works fine, run the test suite::
 
-        > python -m Crypto.SelfTest
+        > python -m Cryptodome.SelfTest
 
 Windows (from sources, Python 2.x, Python <=3.2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,15 +154,13 @@ components freely made available by Microsoft.
    
    Replace ``/x64`` with ``/x86`` if your Python is a 32 bit application.
 
-#. Create and move to a *virtualenv*.
-
 #. Compile and install PyCryptodome::
 
-        > pip install pycryptodome --no-use-wheel
+        > pip install pycryptodomex --no-use-wheel
 
 #. To make sure everything work fine, run the test suite::
 
-        > python -m Crypto.SelfTest
+        > python -m Cryptodome.SelfTest
 
 Windows (from sources, Python 3.3 and 3.4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -215,11 +225,11 @@ components freely made available by Microsoft.
 
 #. Compile and install PyCryptodome::
 
-        > pip install pycryptodome --no-use-wheel
+        > pip install pycryptodomex --no-use-wheel
 
 #. To make sure everything work fine, run the test suite::
 
-        > python -m Crypto.SelfTest
+        > python -m Cryptodome.SelfTest
 
 Windows (from sources, Python 3.5 and newer)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,7 +245,7 @@ components freely made available by Microsoft.
 #. Perform all steps from the section *Windows (pre-compiled)* but add the ``--no-use-wheel``
    parameter when calling ``pip``::
 
-        > pip install pycryptodome --no-use-wheel
+        > pip install pycryptodomex --no-use-wheel
 
 .. _pypi: https://pypi.python.org/pypi/pycryptodome
 .. _get-pip.py: https://bootstrap.pypa.io/get-pip.py
