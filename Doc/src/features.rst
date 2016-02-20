@@ -77,7 +77,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
     - RSAES-PKCS1-v1_5
     - RSAES-OAEP
 
-* Asymmtric digital signatures:
+* Asymmetric digital signatures:
   
   - PKCS#1 (RSA)
     
