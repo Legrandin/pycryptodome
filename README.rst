@@ -15,26 +15,26 @@ It supports Python 2.4 or newer, all Python 3 versions and PyPy.
 The installation procedure depends on the package you want the library in.
 PyCryptodome can be used as:
 
- #. **a drop-in replacement for the old PyCrypto library**.
-    You install it with::
+#. **a drop-in replacement for the old PyCrypto library**.
+   You install it with::
 
-        pip install pycryptodome
+       pip install pycryptodome
    
-    In this case, all modules are installed under the ``Crypto`` package.
+   In this case, all modules are installed under the ``Crypto`` package.
     
-    One must avoid having both PyCrypto and PyCryptodome installed
-    at the same time, as they will interfere with each other.
+   One must avoid having both PyCrypto and PyCryptodome installed
+   at the same time, as they will interfere with each other.
 
-    This option is therefore recommended only when you are sure that
-    the whole application is deployed in a ``virtualenv``.
+   This option is therefore recommended only when you are sure that
+   the whole application is deployed in a ``virtualenv``.
 
- #. **a library independent of the old PyCrypto**.
-    You install it with::
+#. **a library independent of the old PyCrypto**.
+   You install it with::
 
-        pip install pycryptodomex
+       pip install pycryptodomex
    
-    In this case, all modules are installed under the ``Cryptodome`` package.
-    PyCrypto and PyCryptodome can coexist.
+   In this case, all modules are installed under the ``Cryptodome`` package.
+   PyCrypto and PyCryptodome can coexist.
 
 For faster public key operations, you should have `GMP`_ installed in your system
 (except on Windows, as the wheel on PyPi already comes bundled with the equivalent
