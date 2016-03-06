@@ -1,6 +1,16 @@
 Changelog
 =========
 
+3.4.2 (8 March 2016)
++++++++++++++++++++
+
+
+Resolved issues
+---------------
+
+* Fix renaming of package for ``install`` command.
+
+
 3.4.1 (21 February 2016)
 +++++++++++++++++++
 

@@ -73,7 +73,8 @@ All the code can be downloaded from `GitHub`_.
 News
 ----
 
-* **21 Feb 2016 (NEW)**. Release 3.4.1.
+* **8 Mar 2016 (NEW)**. Bugfix release 3.4.2.
+* 21 Feb 2016. Release 3.4.1.
 * 7 Feb 2016. Release 3.4.
 * Nov 2015. Release 3.3.1.
 * 29 Oct 2015. Release 3.3.

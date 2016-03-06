@@ -26,9 +26,10 @@ except ImportError:
     from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
 from distutils.command.build import build
+from distutils.command.install_lib import install_lib
 from distutils.errors import CCompilerError
 import distutils
-import os, sys, shutil
+import re, os, sys, shutil
 
 use_separate_namespace = os.path.isfile(".separate_namespace")
 
@@ -134,6 +135,7 @@ def PrintErr(*args, **kwd):
             w(str(a))
         w(kwd.get("end", "\n"))
 
+
 def test_compilation(program, extra_cc_options=None, extra_libraries=None):
     """Test if a certain C program can be compiled."""
 
@@ -189,10 +191,74 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
 
     return result
 
+def change_module_name(file_name):
+    """Change any occurrance of 'Crypto' to 'Cryptodome'."""
+
+    fd = open(file_name, "rt")
+    content = (fd.read().
+               replace("Crypto.", "Cryptodome.").
+               replace("Crypto ", "Cryptodome ").
+               replace("'Crypto'", "'Cryptodome'").
+               replace('"Crypto"', '"Cryptodome"'))
+    fd.close()
+
+    os.remove(file_name)
+
+    fd = open(file_name, "wt")
+    fd.write(content)
+    fd.close()
+
+
+def rename_crypto_dir(build_lib):
+    """Move all files from the 'Crypto' package to the
+    'Cryptodome' package in the given build directory"""
+
+    source = os.path.join(build_lib, "Crypto")
+    target = os.path.join(build_lib, "Cryptodome")
+
+    if not os.path.exists(target):
+        PrintErr("Creating directory %s" % target)
+        os.makedirs(target)
+    else:
+        PrintErr("Directory %s already exists" % target)
+
+    # Crypto package becomes Cryptodome
+    for root_src, dirs, files in os.walk(source):
+
+        root_dst, nr_repl = re.subn('Crypto', 'Cryptodome', root_src)
+        assert nr_repl == 1
+
+        for dir_name in dirs:
+            full_dir_name_dst = os.path.join(root_dst, dir_name)
+            if not os.path.exists(full_dir_name_dst):
+                os.makedirs(full_dir_name_dst)
+
+        for file_name in files:
+            full_file_name_src = os.path.join(root_src, file_name)
+            full_file_name_dst = os.path.join(root_dst, file_name)
+
+            PrintErr("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
+            shutil.copy2(full_file_name_src, full_file_name_dst)
+
+            if file_name.endswith(".py"):
+                change_module_name(full_file_name_dst)
+
+
 
 class PCTBuildExt (build_ext):
 
     aesni_mod_names = "Crypto.Cipher._raw_aesni",
+
+    def run(self):
+        build_ext.run(self)
+
+        if use_separate_namespace:
+            rename_crypto_dir(self.build_lib)
+
+            # Clean-up (extensions are built last)
+            crypto_dir = os.path.join(self.build_lib, "Crypto")
+            PrintErr("Deleting directory %s" % crypto_dir)
+            shutil.rmtree(crypto_dir)
 
     def build_extensions(self):
         # Disable any assembly in libtomcrypt files
@@ -274,6 +340,7 @@ class PCTBuildExt (build_ext):
 
         self.extensions = [ x for x in self.extensions if x.name not in names ]
 
+
 class PCTBuildPy(build_py):
     def find_package_modules(self, package, package_dir, *args, **kwargs):
         modules = build_py.find_package_modules(self, package, package_dir,
@@ -286,43 +353,11 @@ class PCTBuildPy(build_py):
             retval.append(item)
         return retval
 
-class PCTBuild(build):
-
     def run(self):
-        build.run(self)
+        build_py.run(self)
+        if use_separate_namespace:
+            rename_crypto_dir(self.build_lib)
 
-        if not use_separate_namespace:
-            return
-
-        PrintErr("Renaming Crypto to Cryptodome...\n")
-
-        # Rename root package
-        source = os.path.join(self.build_lib, "Crypto")
-        target = os.path.join(self.build_lib, "Cryptodome")
-        try:
-            shutil.rmtree(target)
-        except OSError:
-            pass
-        os.rename(source, target)
-
-        # Crypto becomes Cryptodome
-        for roots, dirs, files in os.walk(target):
-            files = [os.path.join(roots, f) for f in files if f.endswith(".py")]
-            for filepy in files:
-
-                fd = open(filepy, "rt")
-                content = (fd.read().
-                             replace("Crypto.", "Cryptodome.").
-                             replace("Crypto ", "Cryptodome ").
-                             replace("'Crypto'", "'Cryptodome'").
-                             replace('"Crypto"', '"Cryptodome"'))
-                fd.close()
-
-                os.remove(filepy)
-
-                fd = open(filepy, "wt")
-                fd.write(content)
-                fd.close()
 
 class TestCommand(Command):
 
@@ -462,7 +497,6 @@ setup(
         "Crypto.Math" : [ "mpir.dll" ],
         },
     cmdclass = {
-        'build':PCTBuild,
         'build_ext':PCTBuildExt,
         'build_py': PCTBuildPy,
         'test': TestCommand
