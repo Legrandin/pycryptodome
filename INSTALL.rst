@@ -45,19 +45,19 @@ Linux Ubuntu
 
 For Python 2.x::
 
-        $ sudo apt-get install build-essential libgmp3c2 python-dev
+        $ sudo apt-get install build-essential libgmp3-dev python-dev
         $ pip install pycryptodomex
         $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 
-        $ sudo apt-get install build-essential libgmp3c2 python3-dev
+        $ sudo apt-get install build-essential libgmp3-dev python3-dev
         $ pip install pycryptodomex
         $ python3 -m Cryptodome.SelfTest
 
 For PyPy::
 
-        $ sudo apt-get install build-essential libgmp3c2 pypy-dev
+        $ sudo apt-get install build-essential libgmp3-dev pypy-dev
         $ pip install pycryptodomex
         $ pypy -m Cryptodome.SelfTest
 
