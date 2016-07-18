@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Future release
+++++++++++++++
+
+Resolved issues
+---------------
+
+* Undefined warning was raised with libgmp version < 5
+
 3.4.2 (8 March 2016)
 +++++++++++++++++++
 
