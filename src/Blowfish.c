@@ -169,8 +169,6 @@ static int block_init(block_state *self, const unsigned char *key, int keylen)
 
     if (keylen < 1) {
         return ERR_KEY_SIZE;
-    } else if (keylen > 56) {
-        return ERR_KEY_SIZE;
     }
 
     /* Initialize the P-array with the digits of Pi, and XOR it with the key */
