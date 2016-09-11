@@ -1,3 +1,4 @@
+Simon Arneaud
 Nevins Bartolomeo
 Thorsten E. Behrens
 Tim Berners-Lee

@@ -9,6 +9,7 @@ Resolved issues
 
 * Undefined warning was raised with libgmp version < 5
 * Forgot inclusion of ``alloca.h``
+* Removed implementation of deprecated "quick check" feature of PGP block cipher mode.
 
 3.4.2 (8 March 2016)
 +++++++++++++++++++
