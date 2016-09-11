@@ -41,16 +41,17 @@ class OpenPgpMode(object):
     """OpenPGP mode.
 
     This mode is a variant of CFB, and it is only used in PGP and
-    OpenPGP_ applications.
+    OpenPGP_ applications. If in doubt, use another mode.
 
     An Initialization Vector (*IV*) is required.
 
     Unlike CFB, the *encrypted* IV (not the IV itself) is
     transmitted to the receiver.
 
-    The IV is a random data block. Two of its bytes are duplicated to act
-    as a checksum for the correctness of the key. The encrypted IV is
-    therefore 2 bytes longer than the clean IV.
+    The IV is a random data block. For legacy reasons, two of its bytes are
+    duplicated to act as a checksum for the correctness of the key, which is now
+    known to be insecure and is ignored. The encrypted IV is therefore 2 bytes
+    longer than the clean IV.
 
     .. _OpenPGP: http://tools.ietf.org/html/rfc4880
 
@@ -80,8 +81,8 @@ class OpenPgpMode(object):
             # ... decryption
             self._encrypted_IV = iv
             iv = IV_cipher.decrypt(iv)
-            if iv[-2:] != iv[-4:-2]:
-                raise ValueError("Failed integrity check for OPENPGP IV")
+            # First two bytes are for a deprecated "quick check" feature that
+            # should not be used. (https://eprint.iacr.org/2005/033)
             iv = iv[:-2]
         else:
             raise ValueError("Length of IV must be %d or %d bytes"
