@@ -55,7 +55,7 @@ from Crypto.Protocol.KDF import PBKDF1
 from Crypto.Random import get_random_bytes
 
 
-def encode(data, marker, passphrase=None, randfunc=None):
+def encode(data, marker, passphrase=None, randfunc=None, algo=None):
     """Encode a piece of binary data into PEM format.
 
     :Parameters:
@@ -72,6 +72,8 @@ def encode(data, marker, passphrase=None, randfunc=None):
         Random number generation function; it accepts an integer N and returns
         a byte string of random data, N bytes long. If not given, a new one is
         instantiated.
+      algo: string
+        The encryption algorithm
     :Returns:
       The PEM block, as a string.
 
@@ -83,13 +85,34 @@ def encode(data, marker, passphrase=None, randfunc=None):
 
     out = "-----BEGIN %s-----\n" % marker
     if passphrase:
-        # We only support 3DES for encryption
-        salt = randfunc(8)
-        key = PBKDF1(passphrase, salt, 16, 1, MD5)
-        key += PBKDF1(key + passphrase, salt, 8, 1, MD5)
-        objenc = DES3.new(key, DES3.MODE_CBC, salt)
-        out += "Proc-Type: 4,ENCRYPTED\nDEK-Info: DES-EDE3-CBC,%s\n\n" %\
-            tostr(hexlify(salt).upper())
+        if (algo is None):
+            algo = "AES-256-CBC"
+
+        salt = randfunc(16)
+        if algo == "DES-CBC":
+            key = PBKDF1(passphrase, salt[:8], 8, 1, MD5)
+            objenc = DES.new(key, DES.MODE_CBC, salt)
+        elif (algo == "DES-EDE3-CBC"):
+            key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            key += PBKDF1(key + passphrase, salt, 8, 1, MD5)
+            objenc = DES3.new(key, DES3.MODE_CBC, salt)
+        elif (algo == "AES-128-CBC"):
+            key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            objenc = AES.new(key, AES.MODE_CBC, salt)
+        elif (algo == "AES-192-CBC"):
+            key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            key += PBKDF1(key + passphrase, salt[:8], 8, 1, MD5)
+            objenc = AES.new(key, AES.MODE_CBC, salt)
+        elif (algo == "AES-256-CBC"):
+            key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            key += PBKDF1(key + passphrase, salt[:8], 16, 1, MD5)
+            objenc = AES.new(key, AES.MODE_CBC, salt)
+        else:
+            raise ValueError("Unsupport PEM encryption algorithm (%s)." % algo)
+
+        out += "Proc-Type: 4,ENCRYPTED\nDEK-Info: %s,%s\n\n" %\
+            (algo, tostr(hexlify(salt).upper()))
+
         # Encrypt with PKCS#7 padding
         data = objenc.encrypt(pad(data, objenc.block_size))
     elif passphrase is not None:
@@ -157,6 +180,14 @@ def decode(pem_data, passphrase=None):
             objdec = DES3.new(key, DES3.MODE_CBC, salt)
         elif algo == "AES-128-CBC":
             key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            objdec = AES.new(key, AES.MODE_CBC, salt)
+        elif algo == "AES-192-CBC":
+            key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            key += PBKDF1(key + passphrase, salt[:8], 8, 1, MD5)
+            objdec = AES.new(key, AES.MODE_CBC, salt)
+        elif algo == "AES-256-CBC":
+            key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            key += PBKDF1(key + passphrase, salt[:8], 16, 1, MD5)
             objdec = AES.new(key, AES.MODE_CBC, salt)
         else:
             raise ValueError("Unsupport PEM encryption algorithm (%s)." % algo)

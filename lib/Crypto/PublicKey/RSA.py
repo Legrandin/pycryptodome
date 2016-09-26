@@ -293,9 +293,12 @@ class RsaKey(object):
                 3. The encrypted key is encoded according to PKCS#8.
 
             - For *PEM*, the obsolete PEM encryption scheme is used.
-              It is based on MD5 for key derivation, and Triple DES for encryption.
+              It is based on MD5 for key derivation, and AES 256 for encryption.
+              The encryption algorithm can be changed by specifying a value for
+              ``protection``. The supported algorithms are: *DES-CBC*,
+              *DES-EDE3-CBC*, *AES-128-CBC*, *AES-192-CBC* and *AES-256-CBC*
 
-            Specifying a value for ``protection`` is only meaningful for PKCS#8
+            Specifying a value for ``protection`` is also meaningful for PKCS#8
             (that is, ``pkcs=8``) and only if a pass phrase is present too.
 
             The supported schemes for PKCS#8 are listed in the
@@ -374,7 +377,7 @@ class RsaKey(object):
         if format == 'DER':
             return binary_key
         if format == 'PEM':
-            pem_str = PEM.encode(binary_key, key_type, passphrase, randfunc)
+            pem_str = PEM.encode(binary_key, key_type, passphrase, randfunc, protection)
             return tobytes(pem_str)
 
         raise ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
