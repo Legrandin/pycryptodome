@@ -615,7 +615,7 @@ def construct(rsa_components, consistency_check=True):
     return key
 
 
-def _import_pkcs1_private(encoded, passphrase=None, consistency_check=True):
+def _import_pkcs1_private(encoded, *args, **kwargs):
     # RSAPrivateKey ::= SEQUENCE {
     #           version Version,
     #           modulus INTEGER, -- n
@@ -629,6 +629,7 @@ def _import_pkcs1_private(encoded, passphrase=None, consistency_check=True):
     # }
     #
     # Version ::= INTEGER
+    consistency_check = kwargs.get('consistency_check', True)
     der = DerSequence().decode(encoded, nr_elements=9, only_ints_expected=True)
     if der[0] != 0:
         raise ValueError("No PKCS#1 encoding of an RSA private key")
@@ -636,34 +637,37 @@ def _import_pkcs1_private(encoded, passphrase=None, consistency_check=True):
                      consistency_check=consistency_check)
 
 
-def _import_pkcs1_public(encoded, passphrase=None, consistency_check=True):
+def _import_pkcs1_public(encoded, *args, **kwargs):
     # RSAPublicKey ::= SEQUENCE {
     #           modulus INTEGER, -- n
     #           publicExponent INTEGER -- e
     # }
+    consistency_check = kwargs.get('consistency_check', True)
     der = DerSequence().decode(encoded, nr_elements=2, only_ints_expected=True)
     return construct(der, consistency_check=consistency_check)
 
 
-def _import_subjectPublicKeyInfo(encoded, passphrase=None, consistency_check=True):
+def _import_subjectPublicKeyInfo(encoded, *args, **kwargs):
 
+    consistency_check = kwargs.get('consistency_check', True)
     algoid, encoded_key, params = _expand_subject_public_key_info(encoded)
     if algoid != oid or params is not None:
         raise ValueError("No RSA subjectPublicKeyInfo")
     return _import_pkcs1_public(encoded_key, consistency_check=consistency_check)
 
 
-def _import_x509_cert(encoded, passphrase=None, consistency_check=True):
+def _import_x509_cert(encoded, *args, **kwargs):
 
+    consistency_check = kwargs.get('consistency_check', True)
     sp_info = _extract_subject_public_key_info(encoded)
     return _import_subjectPublicKeyInfo(sp_info, consistency_check=consistency_check)
 
 
-def _import_pkcs8(encoded, passphrase=None, consistency_check=True):
+def _import_pkcs8(encoded, passphrase, consistency_check=True):
     k = PKCS8.unwrap(encoded, passphrase)
     if k[0] != oid:
         raise ValueError("No PKCS#8 encoded RSA key")
-    return _import_keyDER(k[1], passphrase, consistency_check)
+    return _import_keyDER(k[1], passphrase, consistency_check=consistency_check)
 
 
 def _import_keyDER(extern_key, passphrase, consistency_check=True):
@@ -677,7 +681,7 @@ def _import_keyDER(extern_key, passphrase, consistency_check=True):
 
     for decoding in decodings:
         try:
-            return decoding(extern_key, passphrase, consistency_check)
+            return decoding(extern_key, passphrase, consistency_check=consistency_check)
         except ValueError:
             pass
 
@@ -742,7 +746,7 @@ def import_key(extern_key, passphrase=None, consistency_check=True):
         (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
         if enc_flag:
             passphrase = None
-        return _import_keyDER(der, passphrase, consistency_check)
+        return _import_keyDER(der, passphrase, consistency_check=consistency_check)
 
     if extern_key.startswith(b('ssh-rsa ')):
             # This is probably an OpenSSH key
@@ -758,7 +762,7 @@ def import_key(extern_key, passphrase=None, consistency_check=True):
 
     if bord(extern_key[0]) == 0x30:
             # This is probably a DER encoded key
-            return _import_keyDER(extern_key, passphrase, consistency_check)
+            return _import_keyDER(extern_key, passphrase, consistency_check=consistency_check)
 
     raise ValueError("RSA key format is not supported")
 
