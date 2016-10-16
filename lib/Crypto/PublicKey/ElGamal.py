@@ -84,13 +84,13 @@ verification, encryption, and decryption.
     >>> from Crypto import Random
     >>> from Crypto.PublicKey import ElGamal
     >>> from Crypto.Hash import SHA
-    >>> from Crypto.Math import Number
+    >>> from Crypto.Math import Numbers
     >>>
     >>> message = "Hello"
     >>> key = ElGamal.generate(1024, Random.new().read)
     >>> h = SHA.new(message).digest()
     >>> while 1:
-    >>>     k = Number.random_range(min_inclusive=1, min_exclusive=key.p-1)
+    >>>     k = Numbers.random_range(min_inclusive=1, min_exclusive=key.p-1)
     >>>     if k.gcd(key.p-1)==1: break
     >>> sig = key.sign(h,k)
     >>> ...
