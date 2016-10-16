@@ -9,6 +9,7 @@ Resolved issues
 
 * Undefined warning was raised with libgmp version < 5
 * Forgot inclusion of ``alloca.h``
+* Fixed a warning about type mismatch raised by recent versions of cffi
 
 3.4.2 (8 March 2016)
 +++++++++++++++++++

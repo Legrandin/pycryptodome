@@ -64,7 +64,7 @@ try:
 
     def create_string_buffer(size):
         """Allocate the given amount of bytes"""
-        return ffi.new("char[]", size)
+        return ffi.new("uint8_t[]", size)
 
     def get_c_string(c_string):
         """Convert a C string into a Python byte sequence"""
