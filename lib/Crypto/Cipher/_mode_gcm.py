@@ -82,9 +82,8 @@ class _GHASH(object):
         self._exp_key = SmartPointer(self._exp_key.get(),
                                      _raw_galois_lib.ghash_destroy)
 
+        # create_string_buffer always returns a string of zeroes
         self._last_y = create_string_buffer(16)
-        for i in xrange(16):
-            self._last_y[i] = bchr(0)
 
     def update(self, block_data):
         assert len(block_data) % 16 == 0
