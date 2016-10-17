@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Future release
-++++++++++++++
+3.4.3 (17 October 2016)
++++++++++++++++++++++++
 
 Resolved issues
 ---------------
