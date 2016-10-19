@@ -41,11 +41,9 @@ typedef unsigned __int64 uint64_t;
 #define inline _inline
 
 #include <malloc.h>
-#define alloca _alloca
 
-#else
+#else /** Not MSC **/
 #include <stdint.h>
-#include <alloca.h>
 #endif
 
 #include <stdlib.h>

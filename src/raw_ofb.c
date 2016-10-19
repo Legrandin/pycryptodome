@@ -35,7 +35,9 @@ FAKE_INIT(raw_ofb)
 
 #include "block_base.h"
 
-#define ERR_OFB_IV_LEN           ((3 << 16) | 1)
+#define ERR_OFB_IV_LEN  ((3 << 16) | 1)
+
+#define MAX_BLOCK_LEN   16
 
 typedef struct {
     BlockBase *cipher;
@@ -83,14 +85,15 @@ EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
                            size_t data_len)
 {
     size_t block_len;
-    uint8_t *oldKeyStream;
+    uint8_t oldKeyStream[MAX_BLOCK_LEN];
 
     if ((NULL == ofbState) || (NULL == in) || (NULL == out))
         return ERR_NULL;
 
     block_len = ofbState->cipher->block_len;
-
-    oldKeyStream = (uint8_t*) alloca(block_len);
+    if (block_len > MAX_BLOCK_LEN) {
+        return ERR_BLOCK_SIZE;
+    }
 
     while (data_len > 0) {
         size_t i;

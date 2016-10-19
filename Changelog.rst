@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Future version
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* Removed use of alloca().
+
 3.4.3 (17 October 2016)
 +++++++++++++++++++++++
 

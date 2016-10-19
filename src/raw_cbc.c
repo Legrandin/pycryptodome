@@ -37,6 +37,8 @@ FAKE_INIT(raw_cbc)
 
 #define ERR_CBC_IV_LEN  ((1 << 16) | 1)
 
+#define MAX_BLOCK_LEN   16
+
 typedef struct {
     BlockBase *cipher;
     uint8_t iv[0];
@@ -71,15 +73,17 @@ EXPORT_SYM int CBC_encrypt(CbcModeState *cbcState,
                            uint8_t *out,
                            size_t data_len)
 {
-    uint8_t *pt, *iv;
+    uint8_t pt[MAX_BLOCK_LEN],
+            iv[MAX_BLOCK_LEN];
     size_t block_len;
 
     if ((NULL == cbcState) || (NULL == in) || (NULL == out))
         return ERR_NULL;
 
     block_len = cbcState->cipher->block_len;
-    pt = (uint8_t *) alloca(block_len);
-    iv = (uint8_t *) alloca(block_len);
+    if (block_len > MAX_BLOCK_LEN) {
+        return ERR_BLOCK_SIZE;
+    }
 
     memcpy(iv, cbcState->iv, block_len);
     while (data_len >= block_len) {
@@ -112,15 +116,17 @@ EXPORT_SYM int CBC_decrypt(CbcModeState *cbcState,
                            uint8_t *out,
                            size_t data_len)
 {
-    uint8_t *pt, *iv;
+    uint8_t pt[MAX_BLOCK_LEN],
+            iv[MAX_BLOCK_LEN];
     size_t block_len;
 
     if ((NULL == cbcState) || (NULL == in) || (NULL == out))
         return ERR_NULL;
 
     block_len = cbcState->cipher->block_len;
-    pt = (uint8_t *) alloca(block_len);
-    iv = (uint8_t *) alloca(block_len);
+    if (block_len > MAX_BLOCK_LEN) {
+        return ERR_BLOCK_SIZE;
+    }
 
     memcpy(iv, cbcState->iv, block_len);
     while (data_len >= block_len) {
