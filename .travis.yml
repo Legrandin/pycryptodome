@@ -14,7 +14,7 @@ env:
  - PYTHON_INTP="python3.4" CFFI=yes
  - PYTHON_INTP="python3.5" CFFI=no
  - PYTHON_INTP="python3.5" CFFI=yes
- - PYTHON_INTP="pypy" CFFI=yes xflags="--jit enable_opts=intbounds:rewrite:virtualize:pure:earlyforce:heap:unroll"
+ - PYTHON_INTP="pypy" CFFI=yes
 branches:
  except:
   - /^.*-wip$/
