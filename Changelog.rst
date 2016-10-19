@@ -8,6 +8,7 @@ Resolved issues
 ---------------
 
 * Removed use of alloca().
+* [Security] Removed implementation of deprecated "quick check" feature of PGP block cipher mode.
 
 3.4.3 (17 October 2016)
 +++++++++++++++++++++++
