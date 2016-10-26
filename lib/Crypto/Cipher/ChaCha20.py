@@ -38,8 +38,8 @@ As an example, encryption can be done as follows:
 
     >>> from Crypto.Cipher import ChaCha20
     >>>
-    >>> key = b'*Thirty-two byte (256 bits) key*'
-    >>> cipher = ChaCha20.new(key)
+    >>> secret = b'*Thirty-two byte (256 bits) key*'
+    >>> cipher = ChaCha20.new(key=secret)
     >>> msg = cipher.nonce + cipher.encrypt(b'Attack at dawn')
 
 :undocumented: __package__
