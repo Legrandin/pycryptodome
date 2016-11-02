@@ -143,9 +143,12 @@ class SmartPointer(object):
         return rp
 
     def __del__(self):
-        if hasattr(self, "_raw_pointer") and self._raw_pointer is not None:
-            self._destructor(self._raw_pointer)
-            self._raw_pointer = None
+        try:
+            if self._raw_pointer is not None:
+                self._destructor(self._raw_pointer)
+                self._raw_pointer = None
+        except AttributeError:
+            pass
 
 
 def load_pycryptodome_raw_lib(name, cdecl):
