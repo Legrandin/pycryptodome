@@ -44,7 +44,7 @@ As an example, encryption can be done as follows:
 
 :undocumented: __package__
 
-.. _ChaCha20: http://http://cr.yp.to/chacha.html
+.. _ChaCha20: https://cr.yp.to/chacha.html
 """
 
 from Crypto.Random import get_random_bytes
