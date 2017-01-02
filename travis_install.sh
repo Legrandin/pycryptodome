@@ -47,8 +47,17 @@ install_from_pypi() {
 		target_version=\"$2\"
 	fi
 	URL=$(curl -s https://pypi.python.org/pypi/$1/json | jq '.releases['$target_version']' | jq -r 'map(select(.python_version == "source"))[0].url')
-	wget -q -O - $URL | tar -xzC /tmp
 	(
+	cd /tmp
+	wget -q "$URL"
+	FILENAME="$(basename ${URL})"
+	EXT="${FILENAME:(-3)}"
+	echo "Filename:" "$FILENAME" "(ext:${EXT})"
+	if [ "${EXT}" = "zip" ]; then
+		unzip "$FILENAME"
+	else
+		tar -xzf "$FILENAME"
+	fi
 	cd /tmp/$1-*
 	${PYTHON_INTP} setup.py build
 	cp -r build/lib*/* ${PYTHONPATH}
