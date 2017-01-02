@@ -14,7 +14,10 @@ if [ ${PYTHON_INTP} = "pypy" ]; then
 	sudo apt-get -y update
 	sudo apt-get install -y --force-yes pypy pypy-dev
 elif [ x$(which ${PYTHON_INTP}) = "x" ]; then
+	# Everything but Python 3.6
 	sudo add-apt-repository -y ppa:fkrull/deadsnakes
+	# Python 3.6 only
+	sudo add-apt-repository -y ppa:jonathonf/python-3.6
 	sudo apt-get -y update
 	sudo apt-get install ${PYTHON_INTP} ${PYTHON_INTP}-dev
 fi
