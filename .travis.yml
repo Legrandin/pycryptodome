@@ -1,4 +1,5 @@
 language: c
+dist: trusty
 env:
  - PYTHON_INTP="python2.4"
  - PYTHON_INTP="python2.5"
