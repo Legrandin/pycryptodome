@@ -14,10 +14,14 @@ if [ ${PYTHON_INTP} = "pypy" ]; then
 	sudo apt-get -y update
 	sudo apt-get install -y --force-yes pypy pypy-dev
 elif [ x$(which ${PYTHON_INTP}) = "x" ]; then
+	
 	# Everything but Python 3.6
 	sudo add-apt-repository -y ppa:fkrull/deadsnakes
+	
 	# Python 3.6 only
 	sudo add-apt-repository -y ppa:jonathonf/python-3.6
+	sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+
 	sudo apt-get -y update
 	sudo apt-get install ${PYTHON_INTP} ${PYTHON_INTP}-dev
 fi
@@ -28,6 +32,14 @@ PYV=$(${PYTHON_INTP} -V 2>&1 | head -1 | sed -n 's/\w\+ \([23]\)\.\([0-9]\).*/\1
 
 export PYTHONPATH=${PWD}/custom_packages
 mkdir ${PYTHONPATH}
+
+# Use GCC 4.9 for building all extensions
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+sudo apt-get -y update
+sudo apt-get install gcc-4.9
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 60
+sudo update-alternatives --config gcc
+sudo ln -f $(which gcc) $(which x86_64-linux-gnu-gcc)
 
 # Ctypes was only included in python 2.5, so it needs to be installed if we target python 2.4.
 # We do not rely on pypi because it refers us to sourceforge, not the most available site around.
@@ -41,6 +53,9 @@ if [ ${PYV} -eq 24 ]; then
 	cp -r build/lib*/* ${PYTHONPATH}
 	)
 fi
+
+# Use GCC 4.9 for building all extensions
+sudo apt-get install gcc-4.9 g++-4.9
 
 # Why bother with pip/virtualenv complexity when we can just do this
 install_from_pypi() {
