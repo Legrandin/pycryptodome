@@ -140,6 +140,8 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
     """Test if a certain C program can be compiled."""
 
     # Create a temporary file with the C program
+    if not os.path.exists("build"):
+        os.makedirs("build")
     fname = os.path.join("build", "test1.c")
     f = open(fname, 'w')
     f.write(program)
