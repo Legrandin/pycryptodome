@@ -1,4 +1,5 @@
 language: c
+dist: trusty
 env:
  - PYTHON_INTP="python2.4"
  - PYTHON_INTP="python2.5"
@@ -14,6 +15,8 @@ env:
  - PYTHON_INTP="python3.4" CFFI=yes
  - PYTHON_INTP="python3.5" CFFI=no
  - PYTHON_INTP="python3.5" CFFI=yes
+ - PYTHON_INTP="python3.6" CFFI=no
+ - PYTHON_INTP="python3.6" CFFI=yes
  - PYTHON_INTP="pypy" CFFI=yes
 branches:
  except:
