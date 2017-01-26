@@ -161,7 +161,7 @@ EXPORT_SYM int ghash(
         const t_exp_key *exp_key
         )
 {
-    int i;
+    unsigned int i;
     const t_v_tables *v_tables;
 
     if (NULL==y_out || NULL==block_data || NULL==y_in || NULL==exp_key)

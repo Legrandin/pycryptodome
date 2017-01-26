@@ -37,7 +37,8 @@ typedef struct
 
 EXPORT_SYM int ARC4_stream_encrypt(stream_state *rc4State, const uint8_t in[], uint8_t out[], size_t len)
 {
-    int i, x=rc4State->x, y=rc4State->y;
+    unsigned i;
+    int x=rc4State->x, y=rc4State->y;
 
     for (i=0; i<len; i++)
     {
@@ -62,7 +63,8 @@ EXPORT_SYM int ARC4_stream_encrypt(stream_state *rc4State, const uint8_t in[], u
 
 EXPORT_SYM int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4State)
 {
-    int i, index1, index2;
+    unsigned i;
+    int index1, index2;
     stream_state *rc4State;
 
     if (NULL == pRc4State || NULL == key)

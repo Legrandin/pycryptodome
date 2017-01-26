@@ -51,7 +51,7 @@ gmp_defs_common = """
         void __gmpz_init_set_ui (mpz_t rop, UNIX_ULONG op);
         int __gmp_sscanf (const char *s, const char *fmt, ...);
         void __gmpz_set (mpz_t rop, const mpz_t op);
-        int __gmp_snprintf (char *buf, size_t size, const char *fmt, ...);
+        int __gmp_snprintf (unsigned char *buf, size_t size, const char *fmt, ...);
         void __gmpz_add (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_add_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
         void __gmpz_sub_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
