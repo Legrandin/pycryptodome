@@ -31,6 +31,7 @@ from Crypto.Cipher import AES, DES3
 
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, _S2V, HKDF, scrypt
 
+
 def t2b(t):
     if t is None:
         return None
@@ -314,6 +315,11 @@ class scrypt_Tests(unittest.TestCase):
 
     # Test vectors taken from
     # http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-00
+    # - password
+    # - salt
+    # - N
+    # - r
+    # - p
     data = (
                 (
                     "",
@@ -383,7 +389,50 @@ class scrypt_Tests(unittest.TestCase):
             new_test_vectors.append(new_tv)
         self.data = new_test_vectors
 
-    def _test1(self):
+    def test0(self):
+        b0 = t2b("""
+                f7 ce 0b 65 3d 2d 72 a4 10 8c f5 ab e9 12 ff dd
+                77 76 16 db bb 27 a7 0e 82 04 f3 ae 2d 0f 6f ad
+                89 f6 8f 48 11 d1 e8 7b cc 3b d7 40 0a 9f fd 29
+                09 4f 01 84 63 95 74 f3 9a e5 a1 31 52 17 bc d7
+                """)
+
+        b1 = t2b("""
+                89 49 91 44 72 13 bb 22 6c 25 b5 4d a8 63 70 fb
+                cd 98 43 80 37 46 66 bb 8f fc b5 bf 40 c2 54 b0
+                67 d2 7c 51 ce 4a d5 fe d8 29 c9 0b 50 5a 57 1b
+                7f 4d 1c ad 6a 52 3c da 77 0e 67 bc ea af 7e 89
+                """)
+
+        b0_p = t2b("""
+                a4 1f 85 9c 66 08 cc 99 3b 81 ca cb 02 0c ef 05
+                04 4b 21 81 a2 fd 33 7d fd 7b 1c 63 96 68 2f 29
+                b4 39 31 68 e3 c9 e6 bc fe 6b c5 b7 a0 6d 96 ba
+                e4 24 cc 10 2c 91 74 5c 24 ad 67 3d c7 61 8f 81
+                """)
+
+        b1_p = t2b("""
+                20 ed c9 75 32 38 81 a8 05 40 f6 4c 16 2d cd 3c
+                21 07 7c fe 5f 8d 5f e2 b1 a4 16 8f 95 36 78 b7
+                7d 3b 3d 80 3b 60 e4 ab 92 09 96 e5 9b 4d 53 b6
+                5d 2a 22 58 77 d5 ed f5 84 2c b9 f1 4e ef e4 25
+                """)
+
+        assert len(b0) == 64
+
+        from Crypto.Protocol.KDF import _scryptBlockMix
+        from Crypto.Util._raw_api import create_string_buffer, get_raw_buffer
+
+        output = [ create_string_buffer(64), create_string_buffer(64) ]
+        _scryptBlockMix([b0, b1], output)
+
+        out_b0_p = get_raw_buffer(output[0])
+        self.assertEqual(out_b0_p, b0_p)
+
+        out_b1_p = get_raw_buffer(output[1])
+        self.assertEqual(out_b1_p, b1_p)
+
+    def test1(self):
         b_input = t2b("""
         f7 ce 0b 65 3d 2d 72 a4 10 8c f5 ab e9 12 ff dd
         77 76 16 db bb 27 a7 0e 82 04 f3 ae 2d 0f 6f ad
@@ -411,6 +460,7 @@ class scrypt_Tests(unittest.TestCase):
         self.assertEqual(output, b_output)
 
     def test2(self):
+
         for tv in self.data:
 
             # TODO: add runtime flag to enable test vectors

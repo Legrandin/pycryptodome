@@ -294,34 +294,67 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     return list(kol[:num_keys])
 
 
-def _scryptBlockMix(blocks, len_blocks):
-    """Hash function for ROMix."""
+def _scryptBlockMix(buffers_64_in, buffers_64_out):
+    """Hash function for ROMix
 
-    x = blocks[-1]
+    :Parameters:
+      buffers_64_in : a list of buffers, each buffer is 64 bytes long
+      buffers_64_out : a list of buffers, each buffer is 64 bytes long
+
+    The input buffer is not modified.
+    """
+
+    two_r = len(buffers_64_in)
+
     core = _raw_salsa20_lib.Salsa20_8_core
-    result = [ create_string_buffer(64) for _ in range(len(blocks)) ]
-    for i in xrange(len(blocks)):
-        core(x, blocks[i], result[i])
-        x = result[i]
-    return [result[i + j] for j in xrange(2)
-            for i in xrange(0, len_blocks, 2)]
+    x = buffers_64_in[-1]
+    for i in xrange(two_r):
+        core(x, buffers_64_in[i], buffers_64_out[i])
+        x = buffers_64_out[i]
+
+    # Items at even positions first in the list
+    buffers_64_out[:] = [ buffers_64_out[i + j] for j in xrange(2)
+                          for i in xrange(0, two_r, 2)]
 
 
-def _scryptROMix(blocks, n):
-    """Sequential memory-hard function for scrypt."""
+def _scryptROMix(data_in, N):
+    """Sequential memory-hard function for scrypt.
 
-    x = [blocks[i:i + 64] for i in xrange(0, len(blocks), 64)]
-    len_x = len(x)
-    v = [None]*n
+    :Parameters:
+        data_in : byte string
+            It is 128 * r bytes long.
+        N : integer
+            CPU / memory cost parameter.
+
+    :Returns:
+        A byte string as long as ``data_in`` was.
+    """
+
+    from Crypto.Util.strxor import _strxor_direct
     load_le_uint32 = _raw_salsa20_lib.load_le_uint32
-    for i in xrange(n):
-        v[i] = x
-        x = _scryptBlockMix(x, len_x)
-    for i in xrange(n):
-        j = load_le_uint32(x[-1]) & (n - 1)
-        t = [strxor(x[idx], v[j][idx]) for idx in xrange(len_x)]
-        x = _scryptBlockMix(t, len_x)
-    return b("").join([get_raw_buffer(y) for y in x])
+
+    # Break up input in 2r segments of 64 bytes
+    two_r = len(data_in) // 64
+    assert two_r * 64 == len(data_in)
+    data_64 = [ data_in[i:i + 64] for i in xrange(0, len(data_in), 64)]
+
+    # Can we replace this with a single, very large allocation?
+    v = [ [ create_string_buffer(64) for i in xrange(two_r) ] for j in xrange(N) ]
+    v.insert(0, data_64)
+
+    for i in xrange(N):
+        _scryptBlockMix(v[i], v[i + 1])
+    x = v[N]
+
+    for i in xrange(N):
+        prnd_index = load_le_uint32(x[-1]) & (N - 1)
+        for j in xrange(two_r):
+            _strxor_direct(x[j], v[prnd_index][j], x[j])
+        _scryptBlockMix(x, x)
+
+    # Convert the resulting 2r segments into a single piece of memory
+    result = b("").join([get_raw_buffer(y) for y in x])
+    return result
 
 
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
@@ -380,12 +413,17 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     prf_hmac_sha256 = lambda p, s: HMAC.new(p, s, SHA256).digest()
 
-    blocks = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
+    stage_1 = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
 
-    blocks = b("").join([_scryptROMix(blocks[x:x + 128 * r], N)
-                         for x in xrange(0, len(blocks), 128 * r)])
+    # Parallelize into p flows
+    data_out = []
+    for flow in xrange(p):
+        idx = flow * 128 * r
+        data_out += [ _scryptROMix(stage_1[idx : idx + 128 * r], N) ]
 
-    dk = PBKDF2(password, blocks, key_len * num_keys, 1,
+    dk = PBKDF2(password,
+                b("").join(data_out),
+                key_len * num_keys, 1,
                 prf=prf_hmac_sha256)
 
     if num_keys == 1:
