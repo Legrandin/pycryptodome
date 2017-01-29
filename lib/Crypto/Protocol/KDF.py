@@ -48,8 +48,15 @@ _raw_salsa20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20",
                     """
                     int Salsa20_8_core(const uint8_t *x, const uint8_t *y,
                                        uint8_t *out);
-                    uint32_t load_le_uint32(const uint8_t *in);
                     """)
+
+_raw_scrypt_lib = load_pycryptodome_raw_lib("Crypto.Protocol._scrypt",
+                    """
+                    typedef int (core_t)(const uint8_t [64], const uint8_t [64], uint8_t [64]);
+                    int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
+                           size_t data_len, unsigned N, core_t *core);
+                    """)
+
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
@@ -294,69 +301,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     return list(kol[:num_keys])
 
 
-def _scryptBlockMix(buffers_64_in, buffers_64_out):
-    """Hash function for ROMix
-
-    :Parameters:
-      buffers_64_in : a list of buffers, each buffer is 64 bytes long
-      buffers_64_out : a list of buffers, each buffer is 64 bytes long
-
-    The input buffer is not modified.
-    """
-
-    two_r = len(buffers_64_in)
-
-    core = _raw_salsa20_lib.Salsa20_8_core
-    x = buffers_64_in[-1]
-    for i in xrange(two_r):
-        core(x, buffers_64_in[i], buffers_64_out[i])
-        x = buffers_64_out[i]
-
-    # Items at even positions first in the list
-    buffers_64_out[:] = [ buffers_64_out[i + j] for j in xrange(2)
-                          for i in xrange(0, two_r, 2)]
-
-
-def _scryptROMix(data_in, N):
-    """Sequential memory-hard function for scrypt.
-
-    :Parameters:
-        data_in : byte string
-            It is 128 * r bytes long.
-        N : integer
-            CPU / memory cost parameter.
-
-    :Returns:
-        A byte string as long as ``data_in`` was.
-    """
-
-    from Crypto.Util.strxor import _strxor_direct
-    load_le_uint32 = _raw_salsa20_lib.load_le_uint32
-
-    # Break up input in 2r segments of 64 bytes
-    two_r = len(data_in) // 64
-    assert two_r * 64 == len(data_in)
-    data_64 = [ data_in[i:i + 64] for i in xrange(0, len(data_in), 64)]
-
-    # Can we replace this with a single, very large allocation?
-    v = [ [ create_string_buffer(64) for i in xrange(two_r) ] for j in xrange(N) ]
-    v.insert(0, data_64)
-
-    for i in xrange(N):
-        _scryptBlockMix(v[i], v[i + 1])
-    x = v[N]
-
-    for i in xrange(N):
-        prnd_index = load_le_uint32(x[-1]) & (N - 1)
-        for j in xrange(two_r):
-            _strxor_direct(x[j], v[prnd_index][j], x[j])
-        _scryptBlockMix(x, x)
-
-    # Convert the resulting 2r segments into a single piece of memory
-    result = b("").join([get_raw_buffer(y) for y in x])
-    return result
-
-
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     """Derive one or more keys from a passphrase.
 
@@ -415,11 +359,20 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     stage_1 = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
 
+    scryptROMix = _raw_scrypt_lib.scryptROMix
+    core = _raw_salsa20_lib.Salsa20_8_core
+
     # Parallelize into p flows
     data_out = []
     for flow in xrange(p):
         idx = flow * 128 * r
-        data_out += [ _scryptROMix(stage_1[idx : idx + 128 * r], N) ]
+        buffer_out = create_string_buffer(128 * r)
+        scryptROMix(stage_1[idx : idx + 128 * r],
+                    buffer_out,
+                    128 * r,
+                    N,
+                    core)
+        data_out += [ get_raw_buffer(buffer_out) ]
 
     dk = PBKDF2(password,
                 b("").join(data_out),

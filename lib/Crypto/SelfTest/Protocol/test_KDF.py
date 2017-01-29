@@ -389,7 +389,7 @@ class scrypt_Tests(unittest.TestCase):
             new_test_vectors.append(new_tv)
         self.data = new_test_vectors
 
-    def test0(self):
+    def _test0(self):
         b0 = t2b("""
                 f7 ce 0b 65 3d 2d 72 a4 10 8c f5 ab e9 12 ff dd
                 77 76 16 db bb 27 a7 0e 82 04 f3 ae 2d 0f 6f ad
@@ -432,7 +432,7 @@ class scrypt_Tests(unittest.TestCase):
         out_b1_p = get_raw_buffer(output[1])
         self.assertEqual(out_b1_p, b1_p)
 
-    def test1(self):
+    def _test1(self):
         b_input = t2b("""
         f7 ce 0b 65 3d 2d 72 a4 10 8c f5 ab e9 12 ff dd
         77 76 16 db bb 27 a7 0e 82 04 f3 ae 2d 0f 6f ad
@@ -462,12 +462,6 @@ class scrypt_Tests(unittest.TestCase):
     def test2(self):
 
         for tv in self.data:
-
-            # TODO: add runtime flag to enable test vectors
-            # with humongous memory usage
-            if tv.N > 100000:
-                continue
-
             output = scrypt(tv.P, tv.S, tv.dkLen, tv.N, tv.r, tv.p)
             self.assertEqual(output, tv.output)
 
