@@ -86,6 +86,7 @@ if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
 	# Required by newer setuptools
 	if [ ${PYV} -gt 33 ]; then
 		install_from_pypi six latest
+		install_from_pypi pyparsing latest
 		install_from_pypi packaging latest
 		install_from_pypi appdirs latest
 	fi
