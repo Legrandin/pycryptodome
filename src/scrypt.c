@@ -31,7 +31,7 @@
 
 #include "pycrypto_common.h"
 
-FAKE_INIT(scryptROMix)
+FAKE_INIT(scrypt)
 
 static inline int little_endian(void) {
     int test = 1;
