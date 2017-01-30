@@ -9,6 +9,7 @@ Resolved issues
 
 * Removed use of alloca().
 * [Security] Removed implementation of deprecated "quick check" feature of PGP block cipher mode.
+* Improved the performance of ``scrypt`` by converting some Python to C.
 
 3.4.3 (17 October 2016)
 +++++++++++++++++++++++
