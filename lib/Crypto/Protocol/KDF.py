@@ -367,11 +367,13 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     for flow in xrange(p):
         idx = flow * 128 * r
         buffer_out = create_string_buffer(128 * r)
-        scryptROMix(stage_1[idx : idx + 128 * r],
-                    buffer_out,
-                    128 * r,
-                    N,
-                    core)
+        result = scryptROMix(stage_1[idx : idx + 128 * r],
+                             buffer_out,
+                             128 * r,
+                             N,
+                             core)
+        if result:
+            raise ValueError("Error %X while running scrypt" % result)
         data_out += [ get_raw_buffer(buffer_out) ]
 
     dk = PBKDF2(password,
