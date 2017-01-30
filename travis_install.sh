@@ -83,6 +83,9 @@ install_from_pypi() {
 }
 
 if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
+	if [ ${PYV} -gt 33 ]; then
+		install_from_pypi six latest
+	fi
 	if [ ${PYV} -lt 30 -o ${PYV} -gt 33 ]; then
 		install_from_pypi setuptools latest
 	else
