@@ -308,7 +308,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     the `scrypt`_ algorithm, introduced in Percival's paper
     `"Stronger key derivation via sequential memory-hard functions"`__.
 
-    This implementation is based on the `RFC draft`__.
+    This implementation is based on `RFC7914`__.
 
     :Parameters:
      password : string
@@ -344,7 +344,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     .. _scrypt: http://www.tarsnap.com/scrypt.html
     .. __: http://www.tarsnap.com/scrypt/scrypt.pdf
-    .. __: http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-03
+    .. __: https://tools.ietf.org/html/rfc7914
     .. __: http://www.tarsnap.com/scrypt/scrypt-slides.pdf
     """
 
