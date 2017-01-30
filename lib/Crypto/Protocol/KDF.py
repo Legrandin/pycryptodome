@@ -48,8 +48,15 @@ _raw_salsa20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20",
                     """
                     int Salsa20_8_core(const uint8_t *x, const uint8_t *y,
                                        uint8_t *out);
-                    uint32_t load_le_uint32(const uint8_t *in);
                     """)
+
+_raw_scrypt_lib = load_pycryptodome_raw_lib("Crypto.Protocol._scrypt",
+                    """
+                    typedef int (core_t)(const uint8_t [64], const uint8_t [64], uint8_t [64]);
+                    int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
+                           size_t data_len, unsigned N, core_t *core);
+                    """)
+
 
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
@@ -294,36 +301,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     return list(kol[:num_keys])
 
 
-def _scryptBlockMix(blocks, len_blocks):
-    """Hash function for ROMix."""
-
-    x = blocks[-1]
-    core = _raw_salsa20_lib.Salsa20_8_core
-    result = [ create_string_buffer(64) for _ in range(len(blocks)) ]
-    for i in xrange(len(blocks)):
-        core(x, blocks[i], result[i])
-        x = result[i]
-    return [result[i + j] for j in xrange(2)
-            for i in xrange(0, len_blocks, 2)]
-
-
-def _scryptROMix(blocks, n):
-    """Sequential memory-hard function for scrypt."""
-
-    x = [blocks[i:i + 64] for i in xrange(0, len(blocks), 64)]
-    len_x = len(x)
-    v = [None]*n
-    load_le_uint32 = _raw_salsa20_lib.load_le_uint32
-    for i in xrange(n):
-        v[i] = x
-        x = _scryptBlockMix(x, len_x)
-    for i in xrange(n):
-        j = load_le_uint32(x[-1]) & (n - 1)
-        t = [strxor(x[idx], v[j][idx]) for idx in xrange(len_x)]
-        x = _scryptBlockMix(t, len_x)
-    return b("").join([get_raw_buffer(y) for y in x])
-
-
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     """Derive one or more keys from a passphrase.
 
@@ -331,7 +308,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     the `scrypt`_ algorithm, introduced in Percival's paper
     `"Stronger key derivation via sequential memory-hard functions"`__.
 
-    This implementation is based on the `RFC draft`__.
+    This implementation is based on `RFC7914`__.
 
     :Parameters:
      password : string
@@ -367,7 +344,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     .. _scrypt: http://www.tarsnap.com/scrypt.html
     .. __: http://www.tarsnap.com/scrypt/scrypt.pdf
-    .. __: http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-03
+    .. __: https://tools.ietf.org/html/rfc7914
     .. __: http://www.tarsnap.com/scrypt/scrypt-slides.pdf
     """
 
@@ -380,12 +357,28 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     prf_hmac_sha256 = lambda p, s: HMAC.new(p, s, SHA256).digest()
 
-    blocks = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
+    stage_1 = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
 
-    blocks = b("").join([_scryptROMix(blocks[x:x + 128 * r], N)
-                         for x in xrange(0, len(blocks), 128 * r)])
+    scryptROMix = _raw_scrypt_lib.scryptROMix
+    core = _raw_salsa20_lib.Salsa20_8_core
 
-    dk = PBKDF2(password, blocks, key_len * num_keys, 1,
+    # Parallelize into p flows
+    data_out = []
+    for flow in xrange(p):
+        idx = flow * 128 * r
+        buffer_out = create_string_buffer(128 * r)
+        result = scryptROMix(stage_1[idx : idx + 128 * r],
+                             buffer_out,
+                             128 * r,
+                             N,
+                             core)
+        if result:
+            raise ValueError("Error %X while running scrypt" % result)
+        data_out += [ get_raw_buffer(buffer_out) ]
+
+    dk = PBKDF2(password,
+                b("").join(data_out),
+                key_len * num_keys, 1,
                 prf=prf_hmac_sha256)
 
     if num_keys == 1:

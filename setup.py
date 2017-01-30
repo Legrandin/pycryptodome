@@ -596,6 +596,11 @@ setup(
             include_dirs=['src/'],
             sources=["src/chacha20.c"]),
 
+        # Others
+        Extension("Crypto.Protocol._scrypt",
+            include_dirs=['src/'],
+            sources=["src/scrypt.c"]),
+
         # Utility modules
         Extension("Crypto.Util._strxor",
             include_dirs=['src/'],

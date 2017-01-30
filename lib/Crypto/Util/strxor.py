@@ -70,3 +70,8 @@ def strxor_c(term, c):
     result = create_string_buffer(len(term))
     _raw_strxor.strxor_c(term, c, result, c_size_t(len(term)))
     return get_raw_buffer(result)
+
+def _strxor_direct(term1, term2, result):
+    """Very fast XOR - check conditions!"""
+    _raw_strxor.strxor(term1, term2, result, c_size_t(len(term1)))
+

@@ -158,29 +158,6 @@ _salsa20_block(int rounds, uint32_t *input, uint8_t *output)
     }
 }
 
-static int little_endian(void) {
-    int test = 1;
-    return *((uint8_t*)&test) == 1;
-}
-
-EXPORT_SYM uint32_t load_le_uint32(const uint8_t *in)
-{
-    union {
-        uint32_t w;
-        uint8_t b[4];
-    } x, y;
-
-    memcpy(&x, in, 4);
-    y = x;
-    if (!little_endian()) {
-        y.b[0] = x.b[3];
-        y.b[1] = x.b[2];
-        y.b[2] = x.b[1];
-        y.b[3] = x.b[0];
-    }
-    return y.w;
-}
-
 /*
  * Salsa20/8 Core function (combined with XOR)
  *
