@@ -83,18 +83,6 @@ install_from_pypi() {
 }
 
 if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
-	# Required by newer setuptools
-	if [ ${PYV} -gt 33 ]; then
-		install_from_pypi six latest
-		install_from_pypi pyparsing latest
-		install_from_pypi packaging latest
-		install_from_pypi appdirs latest
-	fi
-	if [ ${PYV} -lt 30 -o ${PYV} -gt 33 ]; then
-		install_from_pypi setuptools latest
-	else
-		# setuptools 19.5 does not support Python 3.2 anymore
-		install_from_pypi setuptools 19.4
-	fi
+	install_from_pypi setuptools 19.4
 	install_from_pypi cffi latest
 fi
