@@ -42,7 +42,7 @@ from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
-                                  get_raw_buffer)
+                                  get_raw_buffer, c_size_t)
 
 _raw_salsa20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20",
                     """
@@ -369,7 +369,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
         buffer_out = create_string_buffer(128 * r)
         result = scryptROMix(stage_1[idx : idx + 128 * r],
                              buffer_out,
-                             128 * r,
+                             c_size_t(128 * r),
                              N,
                              core)
         if result:
