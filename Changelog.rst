@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Future version
+3.4.4 (1 February 2017)
 +++++++++++++++++++++++
 
 Resolved issues
