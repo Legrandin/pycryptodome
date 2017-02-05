@@ -61,7 +61,7 @@ typedef unsigned __int64 uint64_t;
 /*
  * On Windows, distutils expects that a CPython module always exports the symbol init${MODNAME}
  */
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #include <Python.h>
 #if PY_MAJOR_VERSION >= 3
 #define FAKE_INIT(x) PyMODINIT_FUNC _PASTE2(PyInit__,x) (void) { return NULL; }
@@ -75,7 +75,7 @@ typedef unsigned __int64 uint64_t;
 /*
  * On Windows, functions must be explicitly marked for export.
  */
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #define EXPORT_SYM __declspec(dllexport)
 #else
 #define EXPORT_SYM
