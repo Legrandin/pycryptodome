@@ -1,13 +1,21 @@
 Changelog
 =========
 
+3.4.5 (6 February 2017)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* The library can also be compiled using MinGW.
+
 3.4.4 (1 February 2017)
 +++++++++++++++++++++++
 
 Resolved issues
 ---------------
 
-* Removed use of alloca().
+* Removed use of ``alloca()``.
 * [Security] Removed implementation of deprecated "quick check" feature of PGP block cipher mode.
 * Improved the performance of ``scrypt`` by converting some Python to C.
 
