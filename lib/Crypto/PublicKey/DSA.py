@@ -396,7 +396,7 @@ class DsaKey(object):
     def unblind(self, M, B):
         raise NotImplementedError
 
-    def size():
+    def size(self):
         raise NotImplementedError
 
 
