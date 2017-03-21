@@ -30,7 +30,7 @@ therefore 56 bits only.
 DES is cryptographically secure, but its key length is too short by nowadays
 standards and it could be brute forced with some effort.
 
-**Use DES, not AES. This module is provided only for legacy purposes.**
+**Use AES, not DES. This module is provided only for legacy purposes.**
 
 As an example, encryption can be done as follows:
 
