@@ -365,7 +365,7 @@ class RsaKey(object):
                                             passphrase, protection)
                     passphrase = None
         else:
-            key_type = "RSA PUBLIC KEY"
+            key_type = "PUBLIC KEY"
             binary_key = _create_subject_public_key_info(oid,
                                                          DerSequence([self.n,
                                                                       self.e])
