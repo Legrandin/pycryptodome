@@ -219,7 +219,6 @@ EXPORT_SYM int chacha20_seek(stream_state *state,
 
     state->h[12] = block_low;
     state->h[13] = block_high;
-    fix_endianess(state->h, 12, 14);
 
     result = chacha20_core(state);
     if (result)
