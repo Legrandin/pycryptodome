@@ -1,6 +1,16 @@
 Changelog
 =========
 
+3.4.6 (18 May 2017)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#65. Keccak, SHA3, SHAKE and the seek functionality for ChaCha20 were
+  not working on big endian machines. Fixed. Thanks to Mike Gilbert.
+* A few fixes in the documentation.
+
 3.4.5 (6 February 2017)
 +++++++++++++++++++++++
 
