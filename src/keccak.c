@@ -69,16 +69,20 @@ static inline uint64_t load64_le(const uint8_t p[])
 {
     union {
         int64_t dw;
-        uint8_t b[4];
+        uint8_t b[8];
     } result;
 
     if (little_endian()) {
         memcpy(&result, p, sizeof result);
     } else {
-        result.b[0] = p[3];
-        result.b[1] = p[2];
-        result.b[2] = p[1];
-        result.b[3] = p[0];
+        result.b[0] = p[7];
+        result.b[1] = p[6];
+        result.b[2] = p[5];
+        result.b[3] = p[4];
+        result.b[4] = p[3];
+        result.b[5] = p[2];
+        result.b[6] = p[1];
+        result.b[7] = p[0];
     }
 
     return result.dw;
@@ -88,16 +92,20 @@ static inline void store64_le(uint8_t dest[], uint64_t src)
 {
     union t {
         int64_t dw;
-        uint8_t b[4];
+        uint8_t b[8];
     } *result = (void*) &src;
 
     if (little_endian()) {
         memcpy(dest, &src, sizeof src);
     } else {
-        dest[0] = result->b[3];
-        dest[1] = result->b[2];
-        dest[2] = result->b[1];
-        dest[3] = result->b[0];
+        dest[0] = result->b[7];
+        dest[1] = result->b[6];
+        dest[2] = result->b[5];
+        dest[3] = result->b[4];
+        dest[4] = result->b[3];
+        dest[5] = result->b[2];
+        dest[6] = result->b[1];
+        dest[7] = result->b[0];
     }
 }
 
