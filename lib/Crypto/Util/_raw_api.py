@@ -28,10 +28,27 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import imp
-
+import sys
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._file_system import pycryptodome_filename
+
+#
+# List of file suffixes for Python extensions
+#
+if sys.version_info[0] <= 3 or \
+   (sys.version_info[0] == 3 and sys.version_info[1] <= 3):
+
+    import imp
+    extension_suffixes = []
+    for ext, mod, typ in imp.get_suffixes():
+        if typ == imp.C_EXTENSION:
+            extension_suffixes.append(ext)
+
+else:
+
+    from importlib import machinery
+    extension_suffixes = machinery.EXTENSION_SUFFIXES
+
 
 try:
     from cffi import FFI
@@ -128,6 +145,7 @@ except ImportError:
 
     backend = "ctypes"
 
+
 class SmartPointer(object):
     """Class to hold a non-managed piece of memory"""
 
@@ -162,13 +180,14 @@ def load_pycryptodome_raw_lib(name, cdecl):
 
     split = name.split(".")
     dir_comps, basename = split[:-1], split[-1]
-    for ext, mod, typ in imp.get_suffixes():
-        if typ == imp.C_EXTENSION:
-            try:
-                return load_lib(pycryptodome_filename(dir_comps, basename + ext), cdecl)
-            except OSError:
-                pass
+    for ext in extension_suffixes:
+        try:
+            return load_lib(pycryptodome_filename(dir_comps, basename + ext),
+                            cdecl)
+        except OSError:
+            pass
     raise OSError("Cannot load native module '%s'" % name)
+
 
 def expect_byte_string(data):
     if not byte_string(data) and not isinstance(data, Array):
