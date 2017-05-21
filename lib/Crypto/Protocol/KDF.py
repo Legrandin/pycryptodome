@@ -124,6 +124,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
         If you wanted multiple keys, just break up this string into segments of the desired length.
 """
     password = tobytes(password)
+    salt = tobytes(salt)
     if prf is None:
         prf = lambda p,s: HMAC.new(p,s,SHA1).digest()
 

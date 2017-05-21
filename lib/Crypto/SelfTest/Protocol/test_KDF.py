@@ -91,8 +91,8 @@ class PBKDF2_Tests(unittest.TestCase):
 
         for i in xrange(len(self._testData)):
             v = self._testData[i]
-            res  = PBKDF2(v[0], t2b(v[1]), v[2], v[3])
-            res2 = PBKDF2(v[0], t2b(v[1]), v[2], v[3], prf)
+            res  = PBKDF2(v[0], v[1], v[2], v[3])
+            res2 = PBKDF2(v[0], v[1], v[2], v[3], prf)
             self.assertEqual(res, t2b(v[4]))
             self.assertEqual(res, res2)
 
