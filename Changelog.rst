@@ -40,7 +40,7 @@ Resolved issues
 * Fixed a warning about type mismatch raised by recent versions of cffi
 
 3.4.2 (8 March 2016)
-+++++++++++++++++++
+++++++++++++++++++++
 
 
 Resolved issues
@@ -50,7 +50,7 @@ Resolved issues
 
 
 3.4.1 (21 February 2016)
-+++++++++++++++++++
+++++++++++++++++++++++++
 
 New features
 ------------
@@ -59,7 +59,7 @@ New features
   (instead of ``Crypto``).
 
 3.4 (7 February 2016)
-+++++++++++++++++++
++++++++++++++++++++++
 
 New features
 ------------
@@ -112,7 +112,7 @@ Breaks in compatibility
 * Removed attribute ``Crypto.PublicKey.RSA.algorithmIdentifier``.
 
 3.3.1 (1 November 2015)
-+++++++++++++++++++
++++++++++++++++++++++++
 
 New features
 ------------
@@ -120,7 +120,7 @@ New features
 * Opt-in for ``update()`` after ``digest()`` for SHA-3, keccak, BLAKE2 hashes
 
 Resolved issues
-------------
+---------------
 
 * Removed unused SHA-3 and keccak test vectors, therefore significantly reducing
   the package from 13MB to 3MB.
@@ -132,7 +132,7 @@ Breaks in compatibility
 * Removed ability to ``update()`` a BLAKE2 hash after the first call to ``(hex)digest()``
 
 3.3 (29 October 2015)
-+++++++++++++++++++
++++++++++++++++++++++
 
 New features
 ------------
@@ -156,7 +156,7 @@ Breaks in compatibility
 * Removed ability to ``update()`` a SHA-3 hash after the first call to ``(hex)digest()``
 
 3.2.1 (9 September 2015)
-+++++++++++++++++++
+++++++++++++++++++++++++
 
 New features
 ------------
@@ -164,7 +164,7 @@ New features
 * Windows wheels are automatically built on Appveyor
 
 3.2 (6 September 2015)
-+++++++++++++++++++
+++++++++++++++++++++++
 
 New features
 ------------
