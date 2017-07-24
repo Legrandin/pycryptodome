@@ -15,7 +15,8 @@ There are three main types of encryption algorithms:
   Senders use *public* keys (non-secret) whereas receivers
   use *private* keys (secret).
   Asymmetric algorithms are typically very slow and can process
-  only very small payloads.
+  only very small payloads. Example: :doc:`oaep`.
+
 * **Hybrid**: as one can imagine, the two types of algorithms
   above can be combined by using *asymmetric* algorithms for
   delivering a short-lived and message-specific secret,
