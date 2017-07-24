@@ -14,7 +14,8 @@
 import sys, os
 
 # Modules to document with autodoc are in another directory
-sys.path.append(os.path.abspath('../lib'))
+#sys.path.insert(0, os.path.abspath('../lib'))
+#print sys.path
 
 # -- General configuration -----------------------------------------------------
 

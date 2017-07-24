@@ -4,7 +4,7 @@ API documentation
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
 
-* The :doc:`cipher` contains modules for protecting **confidentility**
+* The :doc:`cipher/cipher` contains modules for protecting **confidentility**
   that is, for encrypting and decrypting data (example: AES).
 * The :doc:`signature` contains modules for assuring **authenticity**,
   that is, for creating and verifying digital signatures of messages
