@@ -28,7 +28,9 @@ Symmetric algorithms are further sub-divided into two types:
 
 * **Stream ciphers**: the most natural kind of ciphers that
   take a certain amount of data and returns the exact same
-  amount just in encrypted form (example: :doc:`chacha20`).
+  amount just in encrypted form (example: :doc:`chacha20`,
+  :doc:`salsa20`).
+
 * **Block ciphers**: a cipher that only works on a fixed amount
   of data (example: AES, 16 bytes block size).
   
