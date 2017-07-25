@@ -32,13 +32,13 @@ Symmetric algorithms are further sub-divided into two types:
   amount just in encrypted form (example: :doc:`chacha20`,
   :doc:`salsa20`).
 
-* **Block ciphers**: a cipher that only works on a fixed amount
-  of data (example: AES, 16 bytes block size).
+* **Block ciphers**: ciphers that only operate on a fixed amount
+  of data (example: :doc:`aes`, with a 16 bytes block size).
   
-  Block ciphers are only useful in combination with *cipher modes*.
+  Block ciphers are in most cases useful only in combination with *cipher modes*.
   For instance, AES in CTR mode is equivalent to a stream cipher
   and can process messages of any length;
-  AES in GCM mode can do that **and** also generate a
+  AES in GCM mode can do that **plus** generate a
   *Message Authentication Code* (MAC).
 
 Historic ciphers
