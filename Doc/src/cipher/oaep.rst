@@ -35,7 +35,7 @@ We assume the key is stored in a file called ``private.pem``::
 
 .. note::
    This module does not generate nor load RSA keys.
-   Refer to the `Crypto.PublicKey.RSA` module.
+   Refer to the :mod:`Crypto.PublicKey.RSA` module.
 
 .. automodule:: Crypto.Cipher.PKCS1_OAEP
     :members:
