@@ -37,7 +37,7 @@ There are two types of symmetric ciphers:
   (example: :doc:`chacha20`, :doc:`salsa20`).
 
 * **Block ciphers**: ciphers that can only operate on a fixed amount
-  of data. The most important block cipher is `aes`, which has
+  of data. The most important block cipher is :doc:`aes`, which has
   a block size of 16 bytes.
   
   Block ciphers are in general useful only in combination with
@@ -124,13 +124,15 @@ MODE_ECB
     with length multiple of the block size.
 
 MODE_CBC
-    Ciphertext Block Chaining. A mode of operation where each
+    Ciphertext Block Chaining, defined in
+    `NIST SP 800-38A, section 6.2 <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
+    It is a mode of operation where each
     plaintext block is XOR-ed with the last produced ciphertext
     block prior to encryption.
 
     The :func:`new` function expects the following extra parameters:
 
-    * ``iv`` (*byte string*) : an unpredictable *Initialization Vector*
+    * ``iv`` (*byte string*): an unpredictable *Initialization Vector*
       of length equal to the block size
       (e.g. 16 bytes for :mod:`Crypto.Cipher.AES`).
       If not present, a random IV will be created.
@@ -142,7 +144,9 @@ MODE_CBC
     The cipher object has a read-only attribute :attr:`iv`.
 
 MODE_CFB
-    Cipher FeedBack. A mode of operation which turns the block
+    Cipher FeedBack, defined in
+    `NIST SP 800-38A, section 6.3 <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
+    It is a mode of operation which turns the block
     cipher into a stream cipher, with the plaintext getting
     XOR-ed with a *keystream* to obtain the ciphertext.
     The *keystream* is the last produced cipertext encrypted
@@ -150,20 +154,25 @@ MODE_CFB
 
     The :func:`new` function expects the following extra parameters:
 
-    * ``iv`` (*byte string*) : an non-repeatable *Initialization Vector*
+    * ``iv`` (*byte string*): an non-repeatable *Initialization Vector*
       of length equal to the block size
       (e.g. 16 bytes for :mod:`Crypto.Cipher.AES`).
       If not present, a random IV will be created.
 
+    * ``segment_size`` (*integer*): the number of bits the plaintext and the
+      ciphertext are segmented in (default if not specified: 8).
+
     The cipher object has a read-only attribute :attr:`iv`.
 
 MODE_OFB
-    Output FeedBack. Another mode that leads to a stream cipher.
+    Output FeedBack, defined in 
+    `NIST SP 800-38A, section 6.4 <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
+    It is another mode that leads to a stream cipher.
     The *keystream* is obtained by recursively encrypting the *IV*.
 
     The :func:`new` function expects the following extra parameters:
 
-    * ``iv`` (*byte string*) : an non-repeatable *Initialization Vector*
+    * ``iv`` (*byte string*): an non-repeatable *Initialization Vector*
       of length equal to the block size
       (e.g. 16 bytes for :mod:`Crypto.Cipher.AES`).
       If not present, a random IV will be created.
@@ -171,7 +180,9 @@ MODE_OFB
     The cipher object has a read-only attribute :attr:`iv`.
 
 MODE_CTR
-    CounTeR mode. Another mode that leads to a stream cipher.
+    CounTeR mode, defined in
+    `NIST SP 800-38A, section 6.5 and Appendix B <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
+    It is another mode that leads to a stream cipher.
     The *keystream* is obtained by encrypting a
     *block counter*, which is the concatenation of a *nonce* (fixed
     during the computation) to a *counter field* (ever increasing).
@@ -187,7 +198,7 @@ MODE_CTR
     The cipher object has a read-only attribute :attr:`nonce`.
 
 MODE_OPENPGP
-    OpenPGP (`RFC4880 <https://tools.ietf.org/html/rfc4880>`_).
+    OpenPGP (defined in `RFC4880 <https://tools.ietf.org/html/rfc4880>`_).
     A variant of CFB, with two differences:
 
     1. The first invokation to the :func:`encrypt` method
@@ -259,7 +270,7 @@ MODE_CCM
     `NIST SP 800-38C <http://csrc.nist.gov/publications/nistpubs/800-38C/SP800-38C.pdf>`_.
     It only works with ciphers having block size 128 bits (like AES).
     
-    The :func:`new` function expects the following extra paramters:
+    The :func:`new` function expects the following extra parameters:
 
     * ``nonce`` (*byte string*): a non-repeatable value,
       of length between 7 and 13 bytes.
@@ -285,12 +296,32 @@ MODE_EAX
     An AEAD mode designed for NIST by
     `Bellare, Rogaway, and Wagner in 2003 <http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf>`_.
 
-    The :func:`new` function expects the following extra paramters:
+    The :func:`new` function expects the following extra parameters:
 
     * ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
       If not present, a random *nonce* of the recommended length (16 bytes)
       will be created.
     
+    * ``mac_len`` (*integer*): the desired length of the 
+      MAC tag (default if not present: 16 bytes).
+
+    The cipher object has a read-only attribute :attr:`nonce`.
+
+MODE_GCM
+
+    Galois/Counter Mode, defined in
+    `NIST SP 800-38D <http://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf>`_.
+    It only works in combination with a 128 bits cipher like AES.
+
+    The :func:`new` function expects the following extra parameters:
+
+    * ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
+      If not present, a random *nonce* of the recommended length (16 bytes)
+      will be created.
+    
+    * ``mac_len`` (*integer*): the desired length of the 
+      MAC tag (default if not present: 16 bytes).
+
     The cipher object has a read-only attribute :attr:`nonce`.
 
 MODE_SIV
@@ -305,21 +336,63 @@ MODE_SIV
     and therefore allow an attacker to know whether two
     ciphertexts contain the same message or not.
 
-    The :func:`new` function expects the following extra paramters:
+    The :func:`new` function expects the following extra parameters:
 
     * ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
       If not present, the encryption will be **deterministic**.
 
-    Also, the length of the key passed to :func:`new` must be twice
+    The length of the key passed to :func:`new` must be twice
     as required by the underlying block cipher (e.g. 32 bytes for AES-128).
     
+    Each call to the method :func:`update` consumes an individual piece
+    of associated data. That is, the sequence::
+
+        >>> siv_cipher.update(b"builtin")
+        >>> siv_cipher.update(b"securely")
+
+    is not equivalent to::
+
+        >>> siv_cipher.update(b"built")
+        >>> siv_cipher.update(b"insecurely")
+
+    The methods :func:`encrypt` and :func:`decrypt` can only be called
+    **once**.
+
     The cipher object has a read-only attribute :attr:`nonce`.
 
-MODE_GCM
-
 MODE_OCB
+    Offset CodeBook mode, a cipher designed by Rogaway and specified in
+    `RFC7253 <http://www.rfc-editor.org/info/rfc7253>`_ (more specifically,
+    this module implements the last variant, OCB3).
+    It only works in combination with a 128 bits cipher like AES.
+
+    OCB is patented in USA but
+    `free licenses <http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm>`_
+    exist for software implementations meant for non-military purposes
+    and open source.
+
+    The :func:`new` function expects the following extra parameters:
+
+    * ``nonce`` (*byte string*): a non-repeatable value, of length between
+      1 and 15 bytes..
+      If not present, a random *nonce* of the recommended length (15 bytes)
+      will be created.
+    
+    * ``mac_len`` (*integer*): the desired length of the 
+      MAC tag (default if not present: 16 bytes).
+
+    The cipher object has a read-only attribute :attr:`nonce`.
 
 Historic ciphers
 ----------------
 
-...
+A number of ciphers are implemented purely for backward compatibility purposes,
+they are deprecated or even fully broken and should not be used in new designs.
+
+* :doc:`des` and :doc:`des3` (block cipher)
+* :doc:`arc2` (block cipher)
+* :doc:`arc4` (stream cipher)
+* :doc:`blowfish` (block cipher)
+* :doc:`cast` (block cipher)
+* :doc:`pkcs1_v1_5` (asymmetric cipher)
+

@@ -139,7 +139,7 @@ def new(key, mode, *args, **kwargs):
             and 18 bytes for decryption (in the latter case, it is
             actually the *encrypted* IV which was prefixed to the ciphertext).
 
-            In not provided, a random byte string is generated (you must then
+            If not provided, a random byte string is generated (you must then
             read its value with the :attr:`iv` attribute).
 
         *   *nonce* (``byte string``) --
