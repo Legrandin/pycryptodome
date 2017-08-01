@@ -389,7 +389,7 @@ Historic ciphers
 A number of ciphers are implemented purely for backward compatibility purposes,
 they are deprecated or even fully broken and should not be used in new designs.
 
-* :doc:`des` and :doc:`des3` (block cipher)
+* :doc:`des` and :doc:`des3` (block ciphers)
 * :doc:`arc2` (block cipher)
 * :doc:`arc4` (stream cipher)
 * :doc:`blowfish` (block cipher)
