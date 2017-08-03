@@ -1,6 +1,9 @@
 Blowfish
 ========
 
+.. warning::
+    Use :doc:`aes`. This module is provided only for legacy purposes.
+
 Blowfish_ is a symmetric block cipher designed by Bruce Schneier.
 
 It has a fixed data block size of 8 bytes and its keys can vary in length
@@ -8,8 +11,6 @@ from 32 to 448 bits (4 to 56 bytes).
 
 Blowfish is deemed secure and it is fast. However, its keys should be chosen
 to be big enough to withstand a brute force attack (e.g. at least 16 bytes).
-
-**Use AES, not Blowfish. This module is provided only for legacy purposes.**
 
 As an example, encryption can be done as follows::
 

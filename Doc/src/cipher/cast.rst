@@ -1,6 +1,9 @@
 CAST-128
 ========
 
+.. warning::
+    Use :doc:`aes`. This module is provided only for legacy purposes.
+
 CAST-128_ (or CAST5) is a symmetric block cipher specified in RFC2144_.
 
 It has a fixed data block size of 8 bytes. Its key can vary in length
@@ -9,8 +12,6 @@ from 40 to 128 bits.
 CAST is deemed to be cryptographically secure, but its usage is not widespread.
 Keys of sufficient length should be used to prevent brute force attacks
 (128 bits are recommended).
-
-**Use AES, not CAST. This module is only provided for legacy purposes.**
 
 As an example, encryption can be done as follows:
 

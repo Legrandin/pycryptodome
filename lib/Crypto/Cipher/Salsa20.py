@@ -123,7 +123,7 @@ def new(key, nonce=None):
     :type key: byte string
 
     :keyword nonce:
-        A mandatory value that must never be reused for any other encryption
+        A value that must never be reused for any other encryption
         done with this key. It must be 8 bytes long.
 
         If not provided, a random byte string will be generated (you can read

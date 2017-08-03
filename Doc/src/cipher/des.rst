@@ -1,6 +1,9 @@
 Single DES
 ==========
 
+.. warning::
+    Use :doc:`aes` instead. This module is provided only for legacy purposes.
+
 DES `(Data Encryption Standard)`__ is a symmetric block cipher standardized
 in `FIPS 46-3 <http://csrc.nist.gov/publications/fips/fips46-3/fips46-3.pdf>`_
 (now withdran).
@@ -12,8 +15,6 @@ therefore 56 bits only.
 
 DES was never cryptographically broken, but its key length is too short by nowadays
 standards and it could be brute forced with some effort.
-
-**Use AES, not DES. This module is provided only for legacy purposes.**
 
 As an example, encryption can be done as follows:
 

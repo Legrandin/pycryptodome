@@ -1,6 +1,9 @@
 RC2
 ===
 
+.. warning::
+    Use :doc:`aes` instead. This module is provided only for legacy purposes.
+
 RC2_ (Rivest's Cipher version 2)  is a symmetric block cipher designed
 by Ron Rivest in 1987. The cipher started as a proprietary design,
 that was reverse engineered and anonymously posted on Usenet in 1996.
@@ -17,8 +20,6 @@ via a parameter.
 
 Even though RC2 is not cryptographically broken, it has not been analyzed as
 thoroughly as AES, which is also faster than RC2.
-
-**Use AES, not ARC2. This module is only provided for legacy purposes.**
 
 As an example, encryption can be done as follows::
 

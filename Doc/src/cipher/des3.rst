@@ -1,12 +1,13 @@
 Triple DES
 ==========
 
+.. warning::
+    Use :doc:`aes` instead. This module is provided only for legacy purposes.
+
 `Triple DES`__ (or TDES or TDEA or 3DES) is a symmetric block cipher
 standardized by NIST in
 `SP 800-67 Rev1 <http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-67r1.pdf>`_,
 though they will `deprecate`_ it soon.
-
-**Use AES, not TDES. This module is provided for legacy purposes only.**
 
 TDES has a fixed data block size of 8 bytes.
 It consists of the cascade of 3 :doc:`des` ciphers

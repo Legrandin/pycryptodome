@@ -1,6 +1,9 @@
 ARC4
 ====
 
+.. warning::
+    Use :doc:`salsa20` or :doc:`aes` (CTR mode) instead. This module is provided only for legacy purposes.
+
 ARC4_ (Alleged RC4) is an implementation of RC4 (Rivest's Cipher version 4),
 a symmetric stream cipher designed by Ron Rivest in 1987.
 
@@ -20,8 +23,6 @@ key must be derived from the combination of the long-term key and the nonce.
 Due to the weak key scheduling algorithm of RC2, the combination must be
 carried out with a complex function (e.g. a cryptographic hash) and not by
 simply concatenating key and nonce.
-
-**If you need a stream cipher, use Salsa20, not ARC4. This module is only provided for legacy purposes.**
 
 As an example, encryption can be done as follows::
 

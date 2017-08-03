@@ -9,23 +9,23 @@ of data.
 
 There are three types of encryption algorithms:
 
-1. **Symmetric ciphers**: all parties that want to decrypt or encrypt
-   the data share the same secret key.
+1. **Symmetric ciphers**: all parties use the same key, for both
+   decrypting and encrypting data.
    Symmetric ciphers are typically very fast and can process
    very large amount of data.
 
-2. **Asymmetric ciphers**: senders and receivers have different keys.
-   Senders use *public* keys (non-secret) to encrypt whereas receivers
-   use *private* keys (secret) to decrypt.
+2. **Asymmetric ciphers**: senders and receivers use different keys.
+   Senders encrypt with *public* keys (non-secret) whereas receivers
+   decrypt with *private* keys (secret).
    Asymmetric ciphers are typically very slow and can process
    only very small payloads. Example: :doc:`oaep`.
 
 3. **Hybrid ciphers**: the two types of ciphers above can be combined
    in a construction that inherits the benefits of both.
    An *asymmetric* cipher is used to protect a short-lived
-   and message-specific symmetric key,
+   symmetric key,
    and a *symmetric* cipher (under that key) encrypts
-   the actual data.
+   the actual message.
 
 Symmetric ciphers
 -----------------
@@ -33,16 +33,23 @@ Symmetric ciphers
 There are two types of symmetric ciphers:
 
 * **Stream ciphers**: the most natural kind of ciphers;
-  they encrypt any piece of data by preserving its length
-  (example: :doc:`chacha20`, :doc:`salsa20`).
+  they encrypt any piece of data by preserving its length:
+  see :doc:`chacha20`, :doc:`salsa20`.
 
 * **Block ciphers**: ciphers that can only operate on a fixed amount
   of data. The most important block cipher is :doc:`aes`, which has
   a block size of 16 bytes.
   
-  Block ciphers are in general useful only in combination with
-  *modes of operation* (:ref:`classic modes <classic_cipher_modes>` like CTR or
-  :ref:`authenticated modes <aead>` like GCM).
+  A block ciphers is in general useful only in combination with
+  a *mode of operation* . There are
+  :ref:`classic modes <classic_cipher_modes>` like CTR or
+  :ref:`authenticated modes <aead>` like GCM.
+
+.. figure:: simple_mode.png
+    :align: center
+    :figwidth: 50%
+
+    Generic state diagram for a cipher object
 
 In either case, the base API of a cipher is fairly simple:
 
@@ -51,15 +58,15 @@ In either case, the base API of a cipher is fairly simple:
     The first parameter is always the *cryptographic key*;
     its length depends on the particular cipher.
     You can (and sometimes must) pass additional cipher- or mode-specific parameters
-    to :func:`new` (such as *nonces*).
+    to :func:`new` (such as a *nonce* or a *mode of operation*).
 
 *   For encrypting, you call the :func:`encrypt` method of the cipher
-    object for each piece of plaintext you want to encrypt.
+    object, once for each piece of plaintext you want to encrypt.
     The method returns the piece of ciphertext.
     You can call :func:`encrypt` multiple times.
 
 *   For decrypting, you call the :func:`decrypt` method of the cipher
-    object for each piece of ciphertext you want to decrypt.
+    object, once for each piece of ciphertext you want to decrypt.
     The method returns the piece of plaintext.
     You can call :func:`decrypt` multiple times.
 
@@ -70,32 +77,27 @@ In either case, the base API of a cipher is fairly simple:
     Python 3 strings, Python 2 Unicode strings, or byte arrays.
 
 In all cases (with the exception of the ECB mode), the sender
-will deliver to the receiver the **ciphertext** and a **nonce** /
-**Initialization Vector**.
+will deliver to the receiver an 
+**initialization vector** (or **nonce**) in addition to
+the **ciphertext**.
 
-This is an abstract example:
+This is a basic example:
 
-    >>> from Crypto.Cipher import <algo>
+    >>> from Crypto.Cipher import Salsa20
     >>>
-    >>> key = b'My very secret key'
-    >>> cipher = <algo>.new(key, <other options>)
+    >>> key = b'0123456789012345'
+    >>> cipher = Salsa20.new(key)
     >>> ciphertext =  cipher.encrypt(b'The secret I want to send.')
     >>> ciphertext += cipher.encrypt(b'The second part of the secret.')
-
-The state machine for a generic symmetric cipher looks like this:
-
-.. figure:: simple_mode.png
-    :align: center
-    :figwidth: 50%
 
 .. _classic_cipher_modes:
 
 Classic modes of operation for symmetric block ciphers
 ------------------------------------------------------
 
-Block ciphers are only used together with a *mode of operation*.
+Block ciphers are often only used together with a *mode of operation*.
 
-When you create a cipher object with the :func:`new` function,
+When you create a block cipher object with the :func:`new` function,
 the second argument (after the cryptographic key) is a constant
 that sets the desired mode of operation. For instance:
 
@@ -112,7 +114,9 @@ described in the :ref:`next section <aead>`).
 Mind the not all modes are available for all block ciphers.
 
 MODE_ECB
-    Electronic CodeBook. A weak mode of operation whereby
+    `Electronic CodeBook
+    <https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Electronic_Codebook_.28ECB.29>`_.
+    A weak mode of operation whereby
     the cipher is applied in isolation to each of the blocks
     that compose the overall message.
 
@@ -121,10 +125,11 @@ MODE_ECB
     and it exposes correlation between blocks.
 
     :func:`encrypt` and :func:`decrypt` methods only accept data
-    with length multiple of the block size.
+    having length multiple of the block size.
 
 MODE_CBC
-    Ciphertext Block Chaining, defined in
+    `Ciphertext Block Chaining <https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_Block_Chaining_.28CBC.29>`_,
+    defined in
     `NIST SP 800-38A, section 6.2 <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
     It is a mode of operation where each
     plaintext block is XOR-ed with the last produced ciphertext
@@ -139,12 +144,13 @@ MODE_CBC
 
     :func:`encrypt` and :func:`decrypt` methods only accept data
     with length multiple of the block size. You might need to
-    use `Crypto.Util.Padding`.
+    use :mod:`Crypto.Util.Padding`.
 
     The cipher object has a read-only attribute :attr:`iv`.
 
 MODE_CFB
-    Cipher FeedBack, defined in
+    `Cipher FeedBack <https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Electronic_Codebook_.28ECB.29>`_,
+    defined in
     `NIST SP 800-38A, section 6.3 <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
     It is a mode of operation which turns the block
     cipher into a stream cipher, with the plaintext getting
@@ -165,7 +171,8 @@ MODE_CFB
     The cipher object has a read-only attribute :attr:`iv`.
 
 MODE_OFB
-    Output FeedBack, defined in 
+    `Output FeedBack <https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Output_Feedback_.28OFB.29>`_,
+    defined in 
     `NIST SP 800-38A, section 6.4 <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
     It is another mode that leads to a stream cipher.
     The *keystream* is obtained by recursively encrypting the *IV*.
@@ -180,7 +187,8 @@ MODE_OFB
     The cipher object has a read-only attribute :attr:`iv`.
 
 MODE_CTR
-    CounTeR mode, defined in
+    `CounTeR mode <https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Counter_.28CTR.29>`_,
+    defined in
     `NIST SP 800-38A, section 6.5 and Appendix B <http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf>`_.
     It is another mode that leads to a stream cipher.
     The *keystream* is obtained by encrypting a
@@ -263,9 +271,12 @@ The state machine for a cipher object becomes:
 .. figure:: aead.png
     :align: center
     :figwidth: 80%
+    
+    Generic state diagram for a AEAD cipher mode
 
 MODE_CCM
-    Counter with CBC-MAC, defined in
+    `Counter with CBC-MAC <https://en.wikipedia.org/wiki/CCM_mode>`_,
+    defined in
     `RFC3610 <https://tools.ietf.org/html/rfc3610>`_ or
     `NIST SP 800-38C <http://csrc.nist.gov/publications/nistpubs/800-38C/SP800-38C.pdf>`_.
     It only works with ciphers having block size 128 bits (like AES).
@@ -308,8 +319,8 @@ MODE_EAX
     The cipher object has a read-only attribute :attr:`nonce`.
 
 MODE_GCM
-
-    Galois/Counter Mode, defined in
+    `Galois/Counter Mode <https://en.wikipedia.org/wiki/Galois/Counter_Mode>`_,
+    defined in
     `NIST SP 800-38D <http://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf>`_.
     It only works in combination with a 128 bits cipher like AES.
 
@@ -350,7 +361,7 @@ MODE_SIV
         >>> siv_cipher.update(b"builtin")
         >>> siv_cipher.update(b"securely")
 
-    is not equivalent to::
+    is **not** equivalent to::
 
         >>> siv_cipher.update(b"built")
         >>> siv_cipher.update(b"insecurely")
@@ -361,7 +372,8 @@ MODE_SIV
     The cipher object has a read-only attribute :attr:`nonce`.
 
 MODE_OCB
-    Offset CodeBook mode, a cipher designed by Rogaway and specified in
+    `Offset CodeBook mode <https://en.wikipedia.org/wiki/OCB_mode>`_,
+    a cipher designed by Rogaway and specified in
     `RFC7253 <http://www.rfc-editor.org/info/rfc7253>`_ (more specifically,
     this module implements the last variant, OCB3).
     It only works in combination with a 128 bits cipher like AES.

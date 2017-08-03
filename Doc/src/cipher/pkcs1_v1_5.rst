@@ -1,12 +1,12 @@
 PKCS#1 v1.5 encryption (RSA)
 ============================
 
+.. warning::
+    Use :doc:`oaep` instead. This module is provided only for legacy purposes.
+
 See RFC8017__ or the `original RSA Labs specification`__ .
 
 This scheme is more properly called ``RSAES-PKCS1-v1_5``.
-
-.. warning::
-    If you are designing a new protocol, consider using the more robust :doc:`oaep`.
 
 As an example, a sender may encrypt a message in this way::
 

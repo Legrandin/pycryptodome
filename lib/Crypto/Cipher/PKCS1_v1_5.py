@@ -187,7 +187,7 @@ def new(key, randfunc=None):
 
     :param randfunc:
       Function that return random bytes.
-      The default is `Crypto.Random.get_random_bytes`.
+      The default is :func:`Crypto.Random.get_random_bytes`.
     :type randfunc: callable
 
     :returns: A cipher object `PKCS115_Cipher`.
