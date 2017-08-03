@@ -36,7 +36,7 @@ from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString, DerObjectId
 
 class PKCS115_SigScheme:
     """A signature object for ``RSASSA-PKCS1-v1_5``.
-    Do not instatiate directly.
+    Do not instantiate directly.
     Use :func:`Crypto.Signature.pkcs1_15.new`.
     """
 
@@ -63,7 +63,7 @@ class PKCS115_SigScheme:
 
         :parameter msg_hash:
             This is an object from the :mod:`Crypto.Hash` package.
-            It has been used used to digest the message to sign.
+            It has been used to digest the message to sign.
         :type msg_hash: hash object
 
         :return: the signature encoded as a *byte string*.
@@ -94,7 +94,7 @@ class PKCS115_SigScheme:
 
         :parameter msg_hash:
             The hash that was carried out over the message. This is an object
-            belonging to the `Crypto.Hash` module.
+            belonging to the :mod:`Crypto.Hash` module.
         :type parameter: hash object
 
         :parameter signature:

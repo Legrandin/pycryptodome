@@ -28,42 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""RSA digital signature protocol with appendix according to PKCS#1 PSS.
-
-See RFC3447__ or the `original RSA Labs specification`__.
-
-This scheme is more properly called ``RSASSA-PSS``.
-
-The following example shows how the sender can create the signatue of
-a message using their private key:
-
-    >>> from Crypto.Signature import pss
-    >>> from Crypto.Hash import SHA256
-    >>> from Crypto.PublicKey import RSA
-    >>> from Crypto import Random
-    >>>
-    >>> message = 'To be signed'
-    >>> key = RSA.importKey(open('privkey.der').read())
-    >>> h = SHA256.new(message)
-    >>> signature = pss.new(key).sign(h)
-
-At the receiver side, verification can be done using the public RSA key:
-
-    >>> key = RSA.importKey(open('pubkey.der').read())
-    >>> h = SHA256.new(message)
-    >>> verifier = pss.new(key)
-    >>> try:
-    >>>     verifier.verify(h, signature):
-    >>>     print "The signature is authentic."
-    >>> except (ValueError, TypeError):
-    >>>     print "The signature is not authentic."
-
-:undocumented: __package__
-
-.. __: http://www.ietf.org/rfc/rfc3447.txt
-.. __: http://www.rsa.com/rsalabs/node.asp?id=2125
-"""
-
 from Crypto.Util.py3compat import b, bchr, bord
 import Crypto.Util.number
 from Crypto.Util.number import (ceil_div,
@@ -75,7 +39,10 @@ from Crypto import Random
 
 
 class PSS_SigScheme:
-    """An instance of the PKCS#1 PSS signature scheme for a specific RSA key."""
+    """A signature object for ``RSASSA-PSS``.
+    Do not instantiate directly.
+    Use :func:`Crypto.Signature.pss.new`.
+    """
 
     def __init__(self, key, mgfunc, saltLen, randfunc):
         """Initialize this PKCS#1 PSS signature scheme object.
@@ -101,31 +68,24 @@ class PSS_SigScheme:
         self._randfunc = randfunc
 
     def can_sign(self):
-        """Return True if this cipher object can be used
-        or signing messages."""
+        """Return ``True`` if this object can be used to sign messages."""
         return self._key.has_private()
 
     def sign(self, msg_hash):
-        """Produce the PKCS#1 PSS signature of a message.
+        """Create the PKCS#1 PSS signature of a message.
 
-        This function is named ``RSASSA-PSS-SIGN``, and is specified in
-        section 8.1.1 of RFC3447.
+        This function is named ``RSASSA-PSS-SIGN``;
+        it is specified in
+        `section 8.1.1 of RFC8017 <https://tools.ietf.org/html/rfc8017#section-8.1.1>`_.
 
-        :Parameters:
-          msg_hash : hash object
-            The hash that was carried out over the message. This is an object
-            belonging to the `Crypto.Hash` module.
+        :parameter msg_hash:
+            This is an object from the :mod:`Crypto.Hash` package.
+            It has been used to digest the message to sign.
+        :type msg_hash: hash object
 
-        :Return: The PSS signature encoded as a byte string.
-        :Raise ValueError:
-            If the RSA key length is not sufficiently long to deal
-            with the given hash algorithm.
-        :Raise TypeError:
-            If the RSA key has no private half.
-
-        :attention: Modify the salt length and the mask generation
-                    function only if you know what you are doing.
-                    The receiver must use the same parameters too.
+        :return: the signature encoded as a *byte string*.
+        :raise ValueError: if the RSA key is not long enough for the given hash algorithm.
+        :raise TypeError: if the RSA key has no private half.
         """
 
         # Set defaults for salt length and mask generation function
@@ -154,23 +114,22 @@ class PSS_SigScheme:
         return signature
 
     def verify(self, msg_hash, signature):
-        """Verify that a certain PKCS#1 PSS signature is authentic.
+        """Check if the  PKCS#1 PSS signature over a message is valid.
 
-        This function checks if the party holding the private half
-        of the given RSA key has really signed the message.
+        This function is named ``RSASSA-PSS-VERIFY``;
+        it is specified in
+        `section 8.1.2 of RFC8037 <https://tools.ietf.org/html/rfc8017#section-8.1.2>`_.
 
-        This function is called ``RSASSA-PSS-VERIFY``, and is specified
-        in section 8.1.2 of RFC3447.
+        :parameter msg_hash:
+            The hash that was carried out over the message. This is an object
+            belonging to the :mod:`Crypto.Hash` module.
+        :type parameter: hash object
 
-        :Parameters:
-          msg_hash : hash object
-            The cryptographic hash computed over the message.
-            This is an object belonging to the `Crypto.Hash` module.
-          signature : byte string
+        :parameter signature:
             The signature that needs to be validated.
+        :type signature: byte string
 
-        :Raise ValueError:
-            if the signature is incorrect.
+        :raise ValueError: if the signature is not valid.
         """
 
         # Set defaults for salt length and mask generation function
@@ -201,8 +160,24 @@ class PSS_SigScheme:
         _EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
 
 
-def MGF1(mgfSeed, maskLen, hash):
-    """Mask Generation Function, described in B.2.1"""
+def MGF1(mgfSeed, maskLen, hash_object):
+    """Mask Generation Function, described in `B.2.1 of RFC8017
+    <https://tools.ietf.org/html/rfc8017>`_.
+
+    :param mfgSeed:
+        seed from which the mask is generated
+    :type mfgSeed: byte string
+
+    :param maskLen:
+        intended length in bytes of the mask
+    :type maskLen: integer
+
+    :param hash_object:
+        A module from :mod:`Crypto.Hash`
+    :type hash_object:
+
+    :return: the mask, as a *byte string*
+    """
     T = b("")
     for counter in xrange(ceil_div(maskLen, hash.digest_size)):
         c = long_to_bytes(counter, 4)
@@ -351,26 +326,32 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
 
 
 def new(rsa_key, **kwargs):
-    """Return a signature scheme object `PSS_SigScheme` that
-    can be used to perform PKCS#1 PSS signature or verification.
+    """Create a signature object for creating
+    or verifying PKCS#1 PSS signatures.
 
-    :Parameters:
-      rsa_key : RSA key object
-        The key to use to sign or verify the message.
-        This is a `Crypto.PublicKey.RSA` object.
-        Signing is only possible if *key* is a private RSA key.
-    :Keywords:
-      mask_func : callable
-        A mask generation function that accepts two parameters: a string to
-        use as seed, and the length of the mask in bytes to generate.
-        If not specified, the standard MGF1 is used.
-      salt_bytes : int
-        Length of the salt, in bytes.
-        If not specified, it matches the output size of the hash function.
-        If zero, the signature scheme becomes deterministic.
-      rand_func : callable
-        A function that returns random bytes.
-        The default is `Crypto.Random.get_random_bytes`.
+    :parameter rsa_key:
+      The RSA key to use for signing or verifying the message.
+      This is a :class:`Crypto.PublicKey.RSA` object.
+      Signing is only possible when ``rsa_key`` is a **private** RSA key.
+    :type rsa_key: RSA object
+
+    :Keyword Arguments:
+
+        *   *mask_func* (``callable``) --
+            A mask generation function that accepts two parameters: a string to
+            use as seed, and the length of the mask in bytes to generate.
+            If not specified, the standard :func:`MGF1` is used.
+
+        *   *salt_bytes* (``integer``) --
+            Length of the salt, in bytes.
+            If not specified, it matches the output size of the hash function.
+            If zero, the signature scheme becomes deterministic.
+
+        *   *rand_func* (``callable``) --
+            A function that returns random bytes.
+            The default is :func:`Crypto.Random.get_random_bytes`.
+
+    :return: a :class:`PSS_SigScheme` signature object
     """
 
     mask_func = kwargs.pop("mask_func", None)

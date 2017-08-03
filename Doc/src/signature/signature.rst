@@ -40,7 +40,7 @@ Available mechanisms
 
 * :doc:`pkcs1_v1_5`
 
-* PKCS#1 PSS
+* :doc:`pkcs1_pss`
 
 * DSA
 
