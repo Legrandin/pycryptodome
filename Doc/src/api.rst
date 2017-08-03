@@ -6,7 +6,7 @@ each sub-package is dedicated to solving a specific class of problems.
 
 * The :doc:`cipher/cipher` contains modules for protecting **confidentility**
   that is, for encrypting and decrypting data (example: AES).
-* The :doc:`signature` contains modules for assuring **authenticity**,
+* The :doc:`signature/signature` contains modules for assuring **authenticity**,
   that is, for creating and verifying digital signatures of messages
   (example: PKCS#1 v1.5).
 * The :doc:`hash` contains modules for creating cryptographic **digests**

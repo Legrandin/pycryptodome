@@ -1,4 +1,0 @@
-`Crypto.Signature` package
-==========================
-
-Hello
