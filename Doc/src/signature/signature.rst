@@ -42,5 +42,5 @@ Available mechanisms
 
 * :doc:`pkcs1_pss`
 
-* DSA
+* :doc:`dsa`
 

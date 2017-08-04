@@ -74,7 +74,7 @@ class PSS_SigScheme:
     def sign(self, msg_hash):
         """Create the PKCS#1 PSS signature of a message.
 
-        This function is named ``RSASSA-PSS-SIGN``;
+        This function is also called ``RSASSA-PSS-SIGN`` and
         it is specified in
         `section 8.1.1 of RFC8017 <https://tools.ietf.org/html/rfc8017#section-8.1.1>`_.
 
@@ -116,7 +116,7 @@ class PSS_SigScheme:
     def verify(self, msg_hash, signature):
         """Check if the  PKCS#1 PSS signature over a message is valid.
 
-        This function is named ``RSASSA-PSS-VERIFY``;
+        This function is also called ``RSASSA-PSS-VERIFY`` and
         it is specified in
         `section 8.1.2 of RFC8037 <https://tools.ietf.org/html/rfc8017#section-8.1.2>`_.
 
@@ -348,7 +348,8 @@ def new(rsa_key, **kwargs):
             If zero, the signature scheme becomes deterministic.
 
         *   *rand_func* (``callable``) --
-            A function that returns random bytes.
+            A function that returns random *byte string*, given the desired
+            length.
             The default is :func:`Crypto.Random.get_random_bytes`.
 
     :return: a :class:`PSS_SigScheme` signature object

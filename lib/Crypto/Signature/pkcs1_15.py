@@ -57,7 +57,7 @@ class PKCS115_SigScheme:
     def sign(self, msg_hash):
         """Create the PKCS#1 v1.5 signature of a message.
 
-        This function is named ``RSASSA-PKCS1-V1_5-SIGN``;
+        This function is also called ``RSASSA-PKCS1-V1_5-SIGN`` and
         it is specified in
         `section 8.2.1 of RFC8017 <https://tools.ietf.org/html/rfc8017#page-36>`_.
 
@@ -88,7 +88,7 @@ class PKCS115_SigScheme:
     def verify(self, msg_hash, signature):
         """Check if the  PKCS#1 v1.5 signature over a message is valid.
 
-        This function is named ``RSASSA-PKCS1-V1_5-VERIFY``;
+        This function is also called ``RSASSA-PKCS1-V1_5-VERIFY`` and
         it is specified in
         `section 8.2.2 of RFC8037 <https://tools.ietf.org/html/rfc8017#page-37>`_.
 
