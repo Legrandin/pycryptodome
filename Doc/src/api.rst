@@ -9,7 +9,7 @@ each sub-package is dedicated to solving a specific class of problems.
 * The :doc:`signature/signature` contains modules for assuring **authenticity**,
   that is, for creating and verifying digital signatures of messages
   (example: PKCS#1 v1.5).
-* The :doc:`hash` contains modules for creating cryptographic **digests**
+* The :doc:`hash/hash` contains modules for creating cryptographic **digests**
   (example: SHA-256).
 * The :doc:`public_key` contains modules for generating, exporting or importing
   *public keys* (example: RSA or ECC).

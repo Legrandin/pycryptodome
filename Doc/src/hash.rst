@@ -1,4 +1,0 @@
-`Crypto.Hash` package
-=====================
-
-Hello

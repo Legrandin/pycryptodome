@@ -1,5 +1,5 @@
-`Crypto.Signature` package
-==========================
+:mod:`Crypto.Signature` package
+===============================
 
 The :mod:`Crypto.Signature` package contains algorithms for performing digital
 signatures, for the purpose of guaranteeing integrity and non-repudiation.

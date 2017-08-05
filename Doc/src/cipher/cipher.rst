@@ -1,4 +1,4 @@
-``Crypto.Cipher`` package
+:mod:`Crypto.Cipher` package
 =========================
 
 Introduction
