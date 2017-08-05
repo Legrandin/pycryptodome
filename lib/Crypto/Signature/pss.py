@@ -160,7 +160,7 @@ class PSS_SigScheme:
         _EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
 
 
-def MGF1(mgfSeed, maskLen, hash_object):
+def MGF1(mgfSeed, maskLen, hash_gen):
     """Mask Generation Function, described in `B.2.1 of RFC8017
     <https://tools.ietf.org/html/rfc8017>`_.
 
@@ -172,16 +172,16 @@ def MGF1(mgfSeed, maskLen, hash_object):
         intended length in bytes of the mask
     :type maskLen: integer
 
-    :param hash_object:
-        A module from :mod:`Crypto.Hash`
+    :param hash_gen:
+        A module or a hash object from :mod:`Crypto.Hash`
     :type hash_object:
 
     :return: the mask, as a *byte string*
     """
     T = b("")
-    for counter in xrange(ceil_div(maskLen, hash.digest_size)):
+    for counter in xrange(ceil_div(maskLen, hash_gen.digest_size)):
         c = long_to_bytes(counter, 4)
-        hobj = hash.new()
+        hobj = hash_gen.new()
         hobj.update(mgfSeed + c)
         T = T + hobj.digest()
     assert(len(T) >= maskLen)
