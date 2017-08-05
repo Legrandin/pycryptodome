@@ -4,22 +4,26 @@ API documentation
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
 
-* The :doc:`cipher/cipher` contains modules for protecting **confidentility**
-  that is, for encrypting and decrypting data (example: AES).
-* The :doc:`signature/signature` contains modules for assuring **authenticity**,
-  that is, for creating and verifying digital signatures of messages
-  (example: PKCS#1 v1.5).
-* The :doc:`hash/hash` contains modules for creating cryptographic **digests**
-  (example: SHA-256).
-* The :doc:`public_key` contains modules for generating, exporting or importing
-  *public keys* (example: RSA or ECC).
-* The :doc:`protocol` contains modules for faciliting secure communications
-  between parties, in most cases by leveraging cryptograpic primitives
-  from other modules (example: Shamir's Secret Sharing scheme).
-* The :doc:`io` contains modules for dealing with encodings commonly used
-  for cryptographic data (example: PEM).
-* The :doc:`util` contains general purpose routines (example: XOR for byte
-  strings).
+.. csv-table:: 
+    :header: Package, Description
+    :widths: 20, 80
+
+    :doc:`Crypto.Cipher <cipher/cipher>`, "Modules for protecting **confidentility**
+    that is, for encrypting and decrypting data (example: AES)."
+    :doc:`Crypto.Signature <signature/signature>`, "Modules for assuring **authenticity**,
+    that is, for creating and verifying digital signatures of messages
+    (example: PKCS#1 v1.5)."
+    :doc:`Crypto.Hash <hash/hash>`, "Modules for creating cryptographic **digests**
+    (example: SHA-256)."
+    :doc:`Crypto.PublicKey <public_key>`, "Modules for generating, exporting or importing
+    *public keys* (example: RSA or ECC)."
+    :doc:`Crypto.Protocol <protocol>`, "Modules for faciliting secure communications
+    between parties, in most cases by leveraging cryptograpic primitives
+    from other modules (example: Shamir's Secret Sharing scheme)."
+    :doc:`Crypto.IO <io>`, "Modules for dealing with encodings commonly used
+    for cryptographic data (example: PEM)."
+    :doc:`Crypto.Util <util>`, "General purpose routines (example: XOR for byte
+    strings)."
 
 In certain cases, there is some overlap between these categories.
 For instance, **authenticity** is also provided by *Message Authentication Codes*,
