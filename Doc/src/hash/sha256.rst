@@ -1,0 +1,18 @@
+SHA-256
+=======
+
+SHA-256 belongs to the SHA-2_ family of cryptographic hashes.
+It produces the 256 bit digest of a message.
+
+    >>> from Crypto.Hash import SHA256
+    >>>
+    >>> h = SHA256.new()
+    >>> h.update(b'Hello')
+    >>> print h.hexdigest()
+
+*SHA* stands for Secure Hash Algorithm.
+
+.. _SHA-2: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+
+.. automodule:: Crypto.Hash.SHA256
+    :members:
