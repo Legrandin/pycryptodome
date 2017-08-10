@@ -113,6 +113,8 @@ class SHA3_224_Hash(object):
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
     def new(self):
+        """Create a fresh SHA3-224 hash object."""
+
         return type(self)(None, self._update_after_digest)
 
 

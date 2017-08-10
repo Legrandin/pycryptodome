@@ -98,20 +98,22 @@ Modern hash algorithms
 - SHA-3 family
 
     - :doc:`sha3_224`
-    - SHA-3 256
-    - SHA-3 384
-    - SHA-3 512
-
-- Kekkak
-- SHAKE
-
-    - SHAKE-128
-    - SHAKE-256
+    - :doc:`sha3_256`
+    - :doc:`sha3_384`
+    - :doc:`sha3_512`
 
 - BLAKE2
 
-    - BLAKE2s
-    - BLAKE2b
+    - :doc:`blake2s`
+    - :doc:`blake2b`
+
+Extensible-Output Functions (XOF)
+---------------------------------
+
+- SHAKE (in the SHA-3 family)
+
+    - :doc:`shake128`
+    - :doc:`shake256`
 
 Message Authentication Code (MAC) algorithms
 --------------------------------------------
@@ -129,3 +131,4 @@ The following algorithm should not be used in new designs:
 - MD4
 - MD5
 - RIPEMD-160
+- Kekkak
