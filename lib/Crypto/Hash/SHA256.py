@@ -108,7 +108,7 @@ class SHA256Hash(object):
 
         :return: The hash digest, computed over the data processed so far.
                  Hexadecimal encoded.
-        :rtype: byte string
+        :rtype: string
         """
 
         return "".join(["%02x" % bord(x) for x in self.digest()])

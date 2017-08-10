@@ -2,20 +2,22 @@
 ==========================
 
 Cryptographic hash functions take arbitrary binary strings as input,
-and produce a random-like output (the *digest*).
+and produce a random-like fixed-length output (called *digest* or *hash value*).
 
-It should be practically infeasible to derive the original input data
-from the digest. In other words, the cryptographic hash function is *one-way*.
+It is practically infeasible to derive the original input data
+from the digest. In other words, the cryptographic hash function is *one-way*
+(*pre-image resistance*).
 
-It should also be practically infeasible to find a second piece of data
-(a *second pre-image*) whose digest is the same as the original message
+Given the digest of one message, it is also practically infeasible
+to find another message (*second pre-image*) with the same digest
 (*weak collision resistance*).
 
-Finally, it should be infeasible to find two arbitrary messages with the
+Finally, it is infeasible to find two arbitrary messages with the
 same digest (*strong collision resistance*).
 
-An *n* bits long digest is roughly as secure as a symmetric encryption
-algorithm keyed with  *n/2* bits (`birthday attack <https://en.wikipedia.org/wiki/Birthday_attack>`_).
+Regardless of the hash algorithm, an *n* bits long digest is at most
+as secure as a symmetric encryption algorithm keyed with  *n/2* bits
+(`birthday attack <https://en.wikipedia.org/wiki/Birthday_attack>`_).
 
 Hash functions can be simply used as integrity checks. In
 combination with a public-key algorithm, you can implement a
@@ -90,12 +92,12 @@ Modern hash algorithms
 
     - :doc:`sha224`
     - :doc:`sha256`
-    - SHA-384
-    - SHA-512
+    - :doc:`sha384`
+    - :doc:`sha512`
 
-- SHA-3
+- SHA-3 family
 
-    - SHA-3 224
+    - :doc:`sha3_224`
     - SHA-3 256
     - SHA-3 384
     - SHA-3 512
