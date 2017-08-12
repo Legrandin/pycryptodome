@@ -124,11 +124,10 @@ Message Authentication Code (MAC) algorithms
 Historich hash algorithms
 -------------------------
 
-The following algorithm should not be used in new designs:
+The following algorithms should not be used in new designs:
 
-- SHA-1
-- MD2
-- MD4
-- MD5
-- RIPEMD-160
-- Kekkak
+- :doc:`sha1`
+- :doc:`md2`
+- :doc:`md5`
+- :doc:`ripemd160`
+- :doc:`keccak`

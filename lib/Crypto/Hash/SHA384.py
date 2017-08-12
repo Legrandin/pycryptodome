@@ -132,6 +132,8 @@ class SHA384Hash(object):
         return clone
 
     def new(self, data=None):
+        """Create a fresh SHA-384 hash object."""
+
         return SHA384Hash(data)
 
 def new(data=None):

@@ -28,23 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""
-MD2 cryptographic hash algorithm.
-
-MD2 is specified in RFC1319_ and it produces the 128 bit digest of a message.
-
-    >>> from Crypto.Hash import MD2
-    >>>
-    >>> h = MD2.new()
-    >>> h.update(b'Hello')
-    >>> print h.hexdigest()
-
-MD2 stand for Message Digest version 2, and it was invented by Rivest in 1989.
-This algorithm is both slow and insecure. Do not use it for new designs.
-
-.. _RFC1319: http://tools.ietf.org/html/rfc1319
-"""
-
 from Crypto.Util.py3compat import bord
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -68,14 +51,25 @@ _raw_md2_lib = load_pycryptodome_raw_lib(
 
 
 class MD2Hash(object):
-    """Class that implements an MD2 hash
+    """An MD2 hash object.
+    Do not instantiate directly. Use the :func:`new` function.
+
+    :ivar oid: ASN.1 Object ID
+    :vartype oid: string
+
+    :ivar block_size: the size in bytes of the internal message block,
+                      input to the compression function
+    :vartype block_size: integer
+
+    :ivar digest_size: the size in bytes of the resulting hash
+    :vartype digest_size: integer
     """
 
-    #: The size of the resulting hash in bytes.
+    # The size of the resulting hash in bytes.
     digest_size = 16
-    #: The internal block size of the hash algorithm in bytes.
+    # The internal block size of the hash algorithm in bytes.
     block_size = 64
-    #: ASN.1 Object ID
+    # ASN.1 Object ID
     oid = "1.2.840.113549.2.2"
 
     def __init__(self, data=None):
@@ -92,18 +86,8 @@ class MD2Hash(object):
     def update(self, data):
         """Continue hashing of a message by consuming the next chunk of data.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        :Parameters:
-          data : byte string
-            The next chunk of the message being hashed.
+        Args:
+            data (byte string): The next chunk of the message being hashed.
         """
 
         expect_byte_string(data)
@@ -115,14 +99,11 @@ class MD2Hash(object):
                              % result)
 
     def digest(self):
-        """Return the **binary** (non-printable) digest of the message that
-        has been hashed so far.
+        """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-        You can continue updating the object after calling this function.
-
-        :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-         characters, including null bytes.
+        :return: The hash digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
         """
 
         bfr = create_string_buffer(self.digest_size)
@@ -135,13 +116,11 @@ class MD2Hash(object):
         return get_raw_buffer(bfr)
 
     def hexdigest(self):
-        """Return the **printable** digest of the message that has been
-        hashed so far.
+        """Return the **printable** digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-
-        :Return: A string of 2* `digest_size` characters. It contains only
-         hexadecimal ASCII digits.
+        :return: The hash digest, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
@@ -154,7 +133,7 @@ class MD2Hash(object):
         This can be used to efficiently compute the digests of strings that
         share a common initial substring.
 
-        :Return: A hash object of the same type
+        :return: A hash object of the same type
         """
 
         clone = MD2Hash()
@@ -169,20 +148,20 @@ class MD2Hash(object):
 
 
 def new(data=None):
-    """Return a fresh instance of the hash object.
+    """Create a new hash object.
 
-    :Parameters:
-       data : byte string
-        The very first chunk of the message to hash.
-        It is equivalent to an early call to `MD2Hash.update()`.
-        Optional.
+    :parameter data:
+        Optional. The very first chunk of the message to hash.
+        It is equivalent to an early call to :meth:`MD2Hash.update`.
+    :type data: byte string
 
-    :Return: A `MD2Hash` object
+    :Return: A :class:`MD2Hash` hash object
     """
+
     return MD2Hash().new(data)
 
-#: The size of the resulting hash in bytes.
+# The size of the resulting hash in bytes.
 digest_size = MD2Hash.digest_size
 
-#: The internal block size of the hash algorithm in bytes.
+# The internal block size of the hash algorithm in bytes.
 block_size = MD2Hash.block_size

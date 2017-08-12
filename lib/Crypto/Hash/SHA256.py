@@ -132,6 +132,8 @@ class SHA256Hash(object):
         return clone
 
     def new(self, data=None):
+        """Create a fresh SHA-256 hash object."""
+
         return SHA256Hash(data)
 
 def new(data=None):

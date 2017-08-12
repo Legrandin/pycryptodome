@@ -132,6 +132,8 @@ class SHA512Hash(object):
         return clone
 
     def new(self, data=None):
+        """Create a fresh SHA-512 hash object."""
+
         return SHA512Hash(data)
 
 def new(data=None):

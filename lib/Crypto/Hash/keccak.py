@@ -28,27 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Keccak family of cryptographic hash algorithms.
-
-`Keccak`_ is the winning algorithm of the SHA-3 competition organized by NIST.
-What eventually became SHA-3 is a variant incompatible to Keccak,
-even though the security principles and margins remain the same.
-
-If you are interested in writing SHA-3 compliant code, you must use
-the modules ``SHA3_224``, ``SHA3_256``, ``SHA3_384`` or ``SHA3_512``.
-
-This module implements the Keccak hash functions for the 64 bit word
-length (b=1600) and the fixed digest sizes of 224, 256, 384 and 512 bits.
-
-    >>> from Crypto.Hash import keccak
-    >>>
-    >>> keccak_hash = keccak.new(digest_bits=512)
-    >>> keccak_hash.update(b'Some data')
-    >>> print keccak_hash.hexdigest()
-
-.. _Keccak: http://www.keccak.noekeon.org/Keccak-specifications.pdf
-"""
-
 from Crypto.Util.py3compat import bord
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -73,11 +52,16 @@ _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         """)
 
 class Keccak_Hash(object):
-    """Class that implements a Keccak hash
+    """A Keccak hash object.
+    Do not instantiate directly.
+    Use the :func:`new` function.
+
+    :ivar digest_size: the size in bytes of the resulting hash
+    :vartype digest_size: integer
     """
 
     def __init__(self, data, digest_bytes, update_after_digest):
-        #: The size of the resulting hash in bytes.
+        # The size of the resulting hash in bytes.
         self.digest_size = digest_bytes
 
         self._update_after_digest = update_after_digest
@@ -97,18 +81,8 @@ class Keccak_Hash(object):
     def update(self, data):
         """Continue hashing of a message by consuming the next chunk of data.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        :Parameters:
-          data : byte string
-            The next chunk of the message being hashed.
+        Args:
+            data (byte string): The next chunk of the message being hashed.
         """
 
         if self._digest_done and not self._update_after_digest:
@@ -125,11 +99,9 @@ class Keccak_Hash(object):
     def digest(self):
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        You cannot update the hash anymore after the first call to ``digest``
-        (or ``hexdigest``).
-
-        :Return: A byte string of `digest_size` bytes.
-                 It may contain non-ASCII characters, including null bytes.
+        :return: The hash digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
         """
 
         self._digest_done = True
@@ -145,15 +117,15 @@ class Keccak_Hash(object):
     def hexdigest(self):
         """Return the **printable** digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-
-        :Return: A string of 2* `digest_size` characters. It contains only
-         hexadecimal ASCII digits.
+        :return: The hash digest, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
     def new(self, **kwargs):
+        """Create a fresh Keccak hash object."""
 
         if "digest_bytes" not in kwargs and "digest_bits" not in kwargs:
             kwargs["digest_bytes"] = self.digest_size
@@ -162,22 +134,21 @@ class Keccak_Hash(object):
 
 
 def new(**kwargs):
-    """Return a fresh instance of the hash object.
+    """Create a new hash object.
 
-    :Keywords:
-      data : byte string
-        Optional. The very first chunk of the message to hash.
-        It is equivalent to an early call to ``update()``.
-      digest_bytes : integer
-        The size of the digest, in bytes (28, 32, 48, 64).
-      digest_bits : integer
-        The size of the digest, in bits (224, 256, 384, 512).
-      update_after_digest : boolean
-        Optional. By default, a hash object cannot be updated anymore after
-        the digest is computed. When this flag is ``True``, such check
-        is no longer enforced.
+    Args:
+        data (byte string):
+            The very first chunk of the message to hash.
+            It is equivalent to an early call to :meth:`Keccak_Hash.update`.
+        digest_bytes (integer):
+            The size of the digest, in bytes (28, 32, 48, 64).
+        digest_bits (integer):
+            The size of the digest, in bits (224, 256, 384, 512).
+        update_after_digest (boolean):
+            Whether :meth:`Keccak.digest` can be followed by another
+            :meth:`Keccak.update` (default: ``False``).
 
-    :Return: A `Keccak_Hash` object
+    :Return: A :class:`Keccak_Hash` hash object
     """
 
     data = kwargs.pop("data", None)

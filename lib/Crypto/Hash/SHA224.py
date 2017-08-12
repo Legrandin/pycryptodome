@@ -133,6 +133,8 @@ class SHA224Hash(object):
         return clone
 
     def new(self, data=None):
+        """Create a fresh SHA-224 hash object."""
+
         return SHA224Hash(data)
 
 def new(data=None):
