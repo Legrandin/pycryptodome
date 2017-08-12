@@ -122,7 +122,7 @@ def new(data=None):
         It is equivalent to an early call to :meth:`update`.
         Optional.
 
-    :Return: A `SHAKE256_XOF` object
+    :Return: A :class:`SHAKE256_XOF` object
     """
 
     return SHAKE256_XOF(data=data)

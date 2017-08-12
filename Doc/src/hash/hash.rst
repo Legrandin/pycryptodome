@@ -118,8 +118,8 @@ Extensible-Output Functions (XOF)
 Message Authentication Code (MAC) algorithms
 --------------------------------------------
 
-- HMAC
-- CMAC
+- :doc:`hmac`
+- :doc:`cmac`
 
 Historich hash algorithms
 -------------------------

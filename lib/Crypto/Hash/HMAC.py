@@ -31,79 +31,27 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""HMAC (Hash-based Message Authentication Code) algorithm
-
-HMAC is a MAC defined in RFC2104_ and FIPS-198_ and constructed using
-a cryptograpic hash algorithm.
-It is usually named *HMAC-X*, where *X* is the hash algorithm; for
-instance *HMAC-SHA1* or *HMAC-MD5*.
-
-The strength of an HMAC depends on:
-
- - the strength of the hash algorithm
- - the length and entropy of the secret key
-
-This is an example showing how to *create* a MAC:
-
-    >>> from Crypto.Hash import HMAC
-    >>>
-    >>> secret = b'Swordfish'
-    >>> h = HMAC.new(secret)
-    >>> h.update(b'Hello')
-    >>> print h.hexdigest()
-
-This is an example showing how to *check* a MAC:
-
-    >>> from Crypto.Hash import HMAC
-    >>>
-    >>> # We have received a message 'msg' together
-    >>> # with its MAC 'mac'
-    >>>
-    >>> secret = b'Swordfish'
-    >>> h = HMAC.new(secret)
-    >>> h.update(msg)
-    >>> try:
-    >>>   h.verify(mac)
-    >>>   print "The message '%s' is authentic" % msg
-    >>> except ValueError:
-    >>>   print "The message or the key is wrong"
-
-.. _RFC2104: http://www.ietf.org/rfc/rfc2104.txt
-.. _FIPS-198: http://csrc.nist.gov/publications/fips/fips198/fips-198-1_final.pdf
-"""
-
-__all__ = ['new', 'HMAC']
-
 from Crypto.Util.py3compat import b, bchr, bord, tobytes
 
 from binascii import unhexlify
 
-import MD5, BLAKE2s
+import MD5
+import BLAKE2s
 from Crypto.Util.strxor import strxor
 from Crypto.Random import get_random_bytes
 
+__all__ = ['new', 'HMAC']
+
 
 class HMAC:
-    """Class that implements HMAC"""
+    """An HMAC hash object.
+    Do not instantiate directly. Use the :func:`new` function.
+
+    :ivar digest_size: the size in bytes of the resulting MAC tag
+    :vartype digest_size: integer
+    """
 
     def __init__(self, key, msg=b(""), digestmod=None):
-        """Create a new HMAC object.
-
-        :Parameters:
-          key : byte string
-            secret key for the MAC object.
-            It must be long enough to match the expected security level of the
-            MAC. However, there is no benefit in using keys longer than the
-            `digest_size` of the underlying hash algorithm.
-          msg : byte string
-            The very first chunk of the message to authenticate.
-            It is equivalent to an early call to `update()`. Optional.
-        :Parameter digestmod:
-            The hash algorithm the HMAC is based on.
-            Default is `Crypto.Hash.MD5`.
-        :Type digestmod:
-            A hash module or object instantiated from `Crypto.Hash`
-        """
 
         if digestmod is None:
             digestmod = MD5
@@ -111,7 +59,7 @@ class HMAC:
         if msg is None:
             msg = b("")
 
-        #: Size of the MAC tag
+        # Size of the MAC tag
         self.digest_size = digestmod.digest_size
 
         self._digestmod = digestmod
@@ -142,34 +90,23 @@ class HMAC:
         self._outer = digestmod.new(key_0_opad)
 
     def update(self, msg):
-        """Continue authentication of a message by consuming the next
-        chunk of data.
+        """Authenticate the next chunk of message.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        :Parameters:
-          msg : byte string
-            The next chunk of the message being authenticated
+        Args:
+            data (byte string): The next chunk of data
         """
 
         self._inner.update(msg)
 
     def copy(self):
-        """Return a copy ("clone") of the MAC object.
+        """Return a copy ("clone") of the HMAC object.
 
-        The copy will have the same internal state as the original MAC
+        The copy will have the same internal state as the original HMAC
         object.
-        This can be used to efficiently compute the MAC of strings that
-        share a common initial substring.
+        This can be used to efficiently compute the MAC tag of byte
+        strings that share a common initial substring.
 
-        :Returns: An `HMAC` object
+        :return: An :class:`HMAC`
         """
 
         new_hmac = HMAC(b("fake key"), digestmod=self._digestmod)
@@ -181,14 +118,12 @@ class HMAC:
         return new_hmac
 
     def digest(self):
-        """Return the **binary** (non-printable) MAC of the message that has
-        been authenticated so far.
+        """Return the **binary** (non-printable) MAC tag of the message
+        authenticated so far.
 
-        This method does not change the state of the MAC object.
-        You can continue updating the object after calling this function.
-
-        :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-            characters, including null bytes.
+        :return: The MAC tag digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
         """
 
         frozen_outer_hash = self._outer.copy()
@@ -199,12 +134,12 @@ class HMAC:
         """Verify that a given **binary** MAC (computed by another party)
         is valid.
 
-        :Parameters:
-          mac_tag : byte string
-            The expected MAC of the message.
-        :Raises ValueError:
-            if the MAC does not match. It means that the message
-            has been tampered with or that the MAC key is incorrect.
+        Args:
+          mac_tag (byte string): the expected MAC of the message.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
         """
 
         secret = get_random_bytes(16)
@@ -216,14 +151,13 @@ class HMAC:
             raise ValueError("MAC check failed")
 
     def hexdigest(self):
-        """Return the **printable** MAC of the message that has been
-        authenticated so far.
+        """Return the **printable** MAC tag of the message authenticated so far.
 
-        This method does not change the state of the MAC object.
-
-        :Return: A string of 2* `digest_size` bytes. It contains only
-         hexadecimal ASCII digits.
+        :return: The MAC tag, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
+
         return "".join(["%02x" % bord(x)
                         for x in tuple(self.digest())])
 
@@ -231,34 +165,35 @@ class HMAC:
         """Verify that a given **printable** MAC (computed by another party)
         is valid.
 
-        :Parameters:
-          hex_mac_tag : string
-            The expected MAC of the message, as a hexadecimal string.
-        :Raises ValueError:
-            if the MAC does not match. It means that the message
-            has been tampered with or that the MAC key is incorrect.
+        Args:
+            hex_mac_tag (string): the expected MAC of the message,
+                as a hexadecimal string.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
         """
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
 def new(key, msg=b(""), digestmod=None):
-    """Create a new HMAC object.
+    """Create a new MAC object.
 
-    :Parameters:
-      key : byte string
-        key for the MAC object.
-        It must be long enough to match the expected security level of the
-        MAC. However, there is no benefit in using keys longer than the
-        *digest_size* of the underlying hash algorithm.
-      msg : byte string
-        The very first chunk of the message to authenticate.
-        It is equivalent to an early call to `HMAC.update()`.
-        Optional.
-    :Parameter digestmod:
-        The hash to use to implement the HMAC. Default is `Crypto.Hash.MD5`.
-    :Type digestmod:
-        A hash module or instantiated object from `Crypto.Hash`
-    :Returns: An `HMAC` object
+    Args:
+        key (byte string):
+            key for the MAC object.
+            It must be long enough to match the expected security level of the
+            MAC.
+        msg (byte string):
+            Optional. The very first chunk of the message to authenticate.
+            It is equivalent to an early call to :meth:`HMAC.update`.
+        digestmod (module):
+            The hash to use to implement the HMAC.
+            Default is :mod:`Crypto.Hash.MD5`.
+
+    Returns:
+        An :class:`HMAC` object
     """
+
     return HMAC(key, msg, digestmod)
