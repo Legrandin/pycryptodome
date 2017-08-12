@@ -1,6 +1,13 @@
 API documentation
 -----------------
 
+.. toctree::
+    :hidden:
+
+    cipher/cipher
+    signature/signature
+    hash/hash
+
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
 
@@ -15,7 +22,7 @@ each sub-package is dedicated to solving a specific class of problems.
     (example: PKCS#1 v1.5)."
     :doc:`Crypto.Hash <hash/hash>`, "Modules for creating cryptographic **digests**
     (example: SHA-256)."
-    :doc:`Crypto.PublicKey <public_key>`, "Modules for generating, exporting or importing
+    :doc:`Crypto.PublicKey <public_key/public_key>`, "Modules for generating, exporting or importing
     *public keys* (example: RSA or ECC)."
     :doc:`Crypto.Protocol <protocol>`, "Modules for faciliting secure communications
     between parties, in most cases by leveraging cryptograpic primitives

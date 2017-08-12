@@ -35,7 +35,7 @@ MD5 stand for Message Digest version 5, and it was invented by Rivest in 1991.
 
 .. _RFC1321: http://tools.ietf.org/html/rfc1321
 
-.. py:function:: new(msg=None)
+.. py:function:: Crypto.MD5.new(msg=None)
 
     Create a new hash object.
 
@@ -46,7 +46,7 @@ MD5 stand for Message Digest version 5, and it was invented by Rivest in 1991.
    
     :returns: An :class:`MD5_Hash` hash object
 
-.. py:class:: MD5_Hash
+.. py:class:: Crypto.MD5.MD5_Hash
 
     An MD5 hash object.
     Do not instantiate directly.

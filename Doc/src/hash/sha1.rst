@@ -34,7 +34,7 @@ For example::
 
 .. _SHA-1: http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
 
-.. py:function:: new(msg=None)
+.. py:function:: Crypto.SHA1.new(msg=None)
 
     Create a new hash object.
 
@@ -45,7 +45,7 @@ For example::
    
     :returns: A :class:`SHA1_Hash` hash object
 
-.. py:class:: SHA1_Hash
+.. py:class:: Crypto.SHA1.SHA1_Hash
 
     A SHA-1 hash object.
     Do not instantiate directly.
