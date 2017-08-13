@@ -23,8 +23,14 @@ Hash functions can be simply used as integrity checks. In
 combination with a public-key algorithm, you can implement a
 digital signature.
 
-API
----
+API principles
+--------------
+
+.. figure:: hashing.png
+    :align: center
+    :figwidth: 50%
+
+    Generic state diagram for a hash object
 
 Every time you want to hash a message, you have to create a new hash object
 with the :func:`new` function in the relevant algorithm module (e.g.
@@ -46,7 +52,7 @@ as necessary, with other pieces of message::
     >>> hash_object.update(b'Second')
     >>> hash_object.update(b'Third')
 
-Which is equivalent to::
+The two steps above are equivalent to::
 
     >>> hash_object.update(b'SecondThird')
 
@@ -57,12 +63,6 @@ A the end, the digest can be retrieved with the methods :meth:`digest` or
     b'}\x96\xfd@\xb2$?O\xca\xc1a\x10\x15\x8c\x94\xe4\xb4\x085"\xd5"\xa8\xa4C\x9e+\x00\x859\xc7A'
     >>> print(hash_object.hexdigest())
     7d96fd40b2243f4fcac16110158c94e4b4083522d522a8a4439e2b008539c741
-
-.. figure:: hashing.png
-    :align: center
-    :figwidth: 50%
-
-    Generic state diagram for a hash object
 
 Attributes of hash objects
 --------------------------

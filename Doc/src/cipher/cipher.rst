@@ -27,6 +27,53 @@ There are three types of encryption algorithms:
    and a *symmetric* cipher (under that key) encrypts
    the actual message.
 
+API principles
+--------------
+
+.. figure:: simple_mode.png
+    :align: center
+    :figwidth: 50%
+
+    Generic state diagram for a cipher object
+
+The base API of a cipher is fairly simple:
+
+*   You instantiate a cipher object by calling the :func:`new`
+    function from the relevant cipher module (e.g. :func:`Crypto.Cipher.AES.new`).
+    The first parameter is always the *cryptographic key*;
+    its length depends on the particular cipher.
+    You can (and sometimes must) pass additional cipher- or mode-specific parameters
+    to :func:`new` (such as a *nonce* or a *mode of operation*).
+
+*   For encrypting, you call the :func:`encrypt` method of the cipher
+    object with the plaintext. The method returns the piece of ciphertext.
+    For most algorithms, you may call :func:`encrypt` multiple times
+    (i.e. once for each piece of plaintext).
+
+*   For decrypting, you call the :func:`decrypt` method of the cipher
+    object with the ciphertext. The method returns the piece of plaintext.
+    For most algorithms, you may call :func:`decrypt` multiple times
+    (i.e. once for each piece of ciphertext).
+
+.. note::
+
+    Plaintexts and ciphertexts (input/output) are all *byte strings*.
+    An error will occur with Python 3 strings, Python 2 Unicode strings, or byte arrays.
+
+Often, the sender has to deliver to the receiver other data in addition
+to ciphertext alone (e.g. **initialization vectors** or **nonces**, **MAC tags**, etc).
+
+This is a basic example::
+
+    >>> from Crypto.Cipher import Salsa20
+    >>>
+    >>> key = b'0123456789012345'
+    >>> cipher = Salsa20.new(key)
+    >>> ciphertext =  cipher.encrypt(b'The secret I want to send.')
+    >>> ciphertext += cipher.encrypt(b'The second part of the secret.')
+    >>> print cipher.nonce  # A byte string you must send to the receiver too
+
+
 Symmetric ciphers
 -----------------
 
@@ -44,51 +91,6 @@ There are two types of symmetric ciphers:
   a *mode of operation* . There are
   :doc:`classic modes <classic>` like CTR or
   :doc:`authenticated modes <modern>` like GCM.
-
-.. figure:: simple_mode.png
-    :align: center
-    :figwidth: 50%
-
-    Generic state diagram for a cipher object
-
-In either case, the base API of a cipher is fairly simple:
-
-*   You instantiate a symmetric cipher object by calling the :func:`new`
-    function from the relevant cipher module (e.g. :func:`Crypto.Cipher.AES.new`).
-    The first parameter is always the *cryptographic key*;
-    its length depends on the particular cipher.
-    You can (and sometimes must) pass additional cipher- or mode-specific parameters
-    to :func:`new` (such as a *nonce* or a *mode of operation*).
-
-*   For encrypting, you call the :func:`encrypt` method of the cipher
-    object, once for each piece of plaintext you want to encrypt.
-    The method returns the piece of ciphertext.
-    You can call :func:`encrypt` multiple times.
-
-*   For decrypting, you call the :func:`decrypt` method of the cipher
-    object, once for each piece of ciphertext you want to decrypt.
-    The method returns the piece of plaintext.
-    You can call :func:`decrypt` multiple times.
-
-.. note::
-
-    The cryptographic key, the plaintext and the ciphertext are
-    all encoded as *byte strings*. An error will occur with
-    Python 3 strings, Python 2 Unicode strings, or byte arrays.
-
-In all cases (with the exception of the ECB mode), the sender
-will deliver to the receiver an 
-**initialization vector** (or **nonce**) in addition to
-the **ciphertext**.
-
-This is a basic example::
-
-    >>> from Crypto.Cipher import Salsa20
-    >>>
-    >>> key = b'0123456789012345'
-    >>> cipher = Salsa20.new(key)
-    >>> ciphertext =  cipher.encrypt(b'The secret I want to send.')
-    >>> ciphertext += cipher.encrypt(b'The second part of the secret.')
 
 .. toctree::
     :hidden:

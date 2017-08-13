@@ -50,125 +50,132 @@ The state machine for a cipher object becomes:
     
     Generic state diagram for a AEAD cipher mode
 
-MODE_CCM
-    `Counter with CBC-MAC <https://en.wikipedia.org/wiki/CCM_mode>`_,
-    defined in
-    `RFC3610 <https://tools.ietf.org/html/rfc3610>`_ or
-    `NIST SP 800-38C <http://csrc.nist.gov/publications/nistpubs/800-38C/SP800-38C.pdf>`_.
-    It only works with ciphers having block size 128 bits (like AES).
+CCM mode
+--------
+Constant: ``Crypto.Cipher.<cipher>.MODE_CCM``.
+
+`Counter with CBC-MAC <https://en.wikipedia.org/wiki/CCM_mode>`_, defined in
+`RFC3610 <https://tools.ietf.org/html/rfc3610>`_ or
+`NIST SP 800-38C <http://csrc.nist.gov/publications/nistpubs/800-38C/SP800-38C.pdf>`_.
+It only works with ciphers having block size 128 bits (like AES).
     
-    The :func:`new` function expects the following extra parameters:
+The :func:`new` function expects the following extra parameters:
 
-    * ``nonce`` (*byte string*): a non-repeatable value,
-      of length between 7 and 13 bytes.
-      The longer the nonce, the smaller the allowed message size
-      (with a nonce of 13 bytes, the message cannot exceed 64KBi).
-      If not present, a random 11 bytes long *nonce* will be created
-      (the maximum message size is 8GBi).
+*   ``nonce`` (*byte string*): a non-repeatable value,
+    of length between 7 and 13 bytes.
+    The longer the nonce, the smaller the allowed message size
+    (with a nonce of 13 bytes, the message cannot exceed 64KBi).
+    If not present, a random 11 bytes long *nonce* will be created
+    (the maximum message size is 8GBi).
 
-    * ``mac_len`` (*integer*): the desired length of the 
-      MAC tag (default if not present: 16 bytes).
+*   ``mac_len`` (*integer*): the desired length of the 
+    MAC tag (default if not present: 16 bytes).
 
-    * ``msg_len`` (*integer*): pre-declaration of the length of the
-      message to encipher. If not specified, :func:`encrypt` and :func:`decrypt`
-      can only be called once.
+*   ``msg_len`` (*integer*): pre-declaration of the length of the
+    message to encipher. If not specified, :func:`encrypt` and :func:`decrypt`
+    can only be called once.
 
-    * ``assoc_len`` (*integer*): pre-declaration of the length of the
-      associated data. If not specified, some extra buffering will take place
-      internally.
+*   ``assoc_len`` (*integer*): pre-declaration of the length of the
+    associated data. If not specified, some extra buffering will take place
+    internally.
       
-    The cipher object has a read-only attribute :attr:`nonce`.
+The cipher object has a read-only attribute :attr:`nonce`.
 
-MODE_EAX
-    An AEAD mode designed for NIST by
-    `Bellare, Rogaway, and Wagner in 2003 <http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf>`_.
+EAX mode
+--------
+Constant: ``Crypto.Cipher.<cipher>.MODE_EAX``.
 
-    The :func:`new` function expects the following extra parameters:
+An AEAD mode designed for NIST by
+`Bellare, Rogaway, and Wagner in 2003 <http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf>`_.
 
-    * ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
-      If not present, a random *nonce* of the recommended length (16 bytes)
-      will be created.
+The :func:`new` function expects the following extra parameters:
+
+*   ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
+    If not present, a random *nonce* of the recommended length (16 bytes)
+    will be created.
     
-    * ``mac_len`` (*integer*): the desired length of the 
-      MAC tag (default if not present: 16 bytes).
+*   ``mac_len`` (*integer*): the desired length of the 
+    MAC tag (default if not present: 16 bytes).
 
-    The cipher object has a read-only attribute :attr:`nonce`.
+The cipher object has a read-only attribute :attr:`nonce`.
 
-MODE_GCM
-    `Galois/Counter Mode <https://en.wikipedia.org/wiki/Galois/Counter_Mode>`_,
-    defined in
-    `NIST SP 800-38D <http://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf>`_.
-    It only works in combination with a 128 bits cipher like AES.
+GCM mode
+--------
+Constant: ``Crypto.Cipher.<cipher>.MODE_GCM``.
 
-    The :func:`new` function expects the following extra parameters:
+`Galois/Counter Mode <https://en.wikipedia.org/wiki/Galois/Counter_Mode>`_,
+defined in `NIST SP 800-38D <http://csrc.nist.gov/publications/nistpubs/800-38D/SP-800-38D.pdf>`_.
+It only works in combination with a 128 bits cipher like AES.
 
-    * ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
-      If not present, a random *nonce* of the recommended length (16 bytes)
-      will be created.
+The :func:`new` function expects the following extra parameters:
+
+*   ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
+    If not present, a random *nonce* of the recommended length (16 bytes)
+    will be created.
     
-    * ``mac_len`` (*integer*): the desired length of the 
-      MAC tag (default if not present: 16 bytes).
+*   ``mac_len`` (*integer*): the desired length of the 
+    MAC tag (default if not present: 16 bytes).
 
-    The cipher object has a read-only attribute :attr:`nonce`.
+The cipher object has a read-only attribute :attr:`nonce`.
 
-MODE_SIV
-    Synthetic Initialization Vector (SIV), defined in
-    `RFC5297 <https://tools.ietf.org/html/rfc5297>`_.
-    It only works with ciphers having block size 128 bits (like AES).
+SIV mode
+--------
+Constant: ``Crypto.Cipher.<cipher>.MODE_SIV``.
 
-    Although less efficient, SIV is unlike all other AEAD modes
-    in that it is *nonce misuse-resistant*: the accidental reuse
-    of a nonce does not have catastrophic effects as for CCM, GCM, etc.
-    Instead, it will simply degrade into a **deterministic** cipher
-    and therefore allow an attacker to know whether two
-    ciphertexts contain the same message or not.
+Synthetic Initialization Vector (SIV), defined in `RFC5297 <https://tools.ietf.org/html/rfc5297>`_.
+It only works with ciphers having block size 128 bits (like AES).
 
-    The :func:`new` function expects the following extra parameters:
+Although less efficient, SIV is unlike all other AEAD modes
+in that it is *nonce misuse-resistant*: the accidental reuse
+of a nonce does not have catastrophic effects as for CCM, GCM, etc.
+Instead, it will simply degrade into a **deterministic** cipher
+and therefore allow an attacker to know whether two
+ciphertexts contain the same message or not.
 
-    * ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
-      If not present, the encryption will be **deterministic**.
+The :func:`new` function expects the following extra parameters:
 
-    The length of the key passed to :func:`new` must be twice
-    as required by the underlying block cipher (e.g. 32 bytes for AES-128).
+*   ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
+    If not present, the encryption will be **deterministic**.
+
+The length of the key passed to :func:`new` must be twice
+as required by the underlying block cipher (e.g. 32 bytes for AES-128).
     
-    Each call to the method :func:`update` consumes an individual piece
-    of associated data. That is, the sequence::
+Each call to the method :func:`update` consumes an individual piece
+of associated data. That is, the sequence::
 
-        >>> siv_cipher.update(b"builtin")
-        >>> siv_cipher.update(b"securely")
+    >>> siv_cipher.update(b"builtin")
+    >>> siv_cipher.update(b"securely")
 
-    is **not** equivalent to::
+is **not** equivalent to::
 
-        >>> siv_cipher.update(b"built")
-        >>> siv_cipher.update(b"insecurely")
+    >>> siv_cipher.update(b"built")
+    >>> siv_cipher.update(b"insecurely")
 
-    The methods :func:`encrypt` and :func:`decrypt` can only be called
-    **once**.
+The methods :func:`encrypt` and :func:`decrypt` can only be called **once**.
 
-    The cipher object has a read-only attribute :attr:`nonce`.
+The cipher object has a read-only attribute :attr:`nonce`.
 
-MODE_OCB
-    `Offset CodeBook mode <https://en.wikipedia.org/wiki/OCB_mode>`_,
-    a cipher designed by Rogaway and specified in
-    `RFC7253 <http://www.rfc-editor.org/info/rfc7253>`_ (more specifically,
-    this module implements the last variant, OCB3).
-    It only works in combination with a 128 bits cipher like AES.
+OCB mode
+--------
+Constant: ``Crypto.Cipher.<cipher>.MODE_OCB``.
 
-    OCB is patented in USA but
-    `free licenses <http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm>`_
-    exist for software implementations meant for non-military purposes
-    and open source.
+`Offset CodeBook mode <https://en.wikipedia.org/wiki/OCB_mode>`_,
+a cipher designed by Rogaway and specified in `RFC7253 <http://www.rfc-editor.org/info/rfc7253>`_
+(more specifically, this module implements the last variant, OCB3).
+It only works in combination with a 128 bits cipher like AES.
 
-    The :func:`new` function expects the following extra parameters:
+OCB is patented in USA but `free licenses <http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm>`_
+exist for software implementations meant for non-military purposes
+and open source.
 
-    * ``nonce`` (*byte string*): a non-repeatable value, of length between
-      1 and 15 bytes..
-      If not present, a random *nonce* of the recommended length (15 bytes)
-      will be created.
+The :func:`new` function expects the following extra parameters:
+
+*   ``nonce`` (*byte string*): a non-repeatable value, of length between
+    1 and 15 bytes..
+    If not present, a random *nonce* of the recommended length (15 bytes)
+    will be created.
     
-    * ``mac_len`` (*integer*): the desired length of the 
-      MAC tag (default if not present: 16 bytes).
+*   ``mac_len`` (*integer*): the desired length of the 
+    MAC tag (default if not present: 16 bytes).
 
-    The cipher object has a read-only attribute :attr:`nonce`.
-
-
+The cipher object has a read-only attribute :attr:`nonce`.
