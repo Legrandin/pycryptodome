@@ -49,7 +49,7 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 
 
 class RsaKey(object):
-    """Class defining an actual RSA key.
+    r"""Class defining an actual RSA key.
     Do not instantiate directly.
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
 
@@ -61,6 +61,15 @@ class RsaKey(object):
 
     :ivar d: RSA private exponent
     :vartype d: integer
+
+    :ivar p: First factor of the RSA modulus
+    :vartype p: integer
+
+    :ivar q: Second factor of the RSA modulus
+    :vartype q: integer
+
+    :ivar u: Chinese remainder component (:math:`p^{-1} \text{mod } q`)
+    :vartype q: integer
     """
 
     def __init__(self, **kwargs):
@@ -106,21 +115,18 @@ class RsaKey(object):
 
     @property
     def p(self):
-        """First factor of the modulus"""
         if not self.has_private():
             raise AttributeError("No CRT component 'p' available for public keys")
         return int(self._p)
 
     @property
     def q(self):
-        """Second factor of the modulus"""
         if not self.has_private():
             raise AttributeError("No CRT component 'q' available for public keys")
         return int(self._q)
 
     @property
     def u(self):
-        """Chinese remainder component (inverse of *p* modulo *q*)"""
         if not self.has_private():
             raise AttributeError("No CRT component 'u' available for public keys")
         return int(self._u)
@@ -166,15 +172,22 @@ class RsaKey(object):
         return result
 
     def has_private(self):
+        """Whether this is an RSA private key"""
+
         return hasattr(self, "_d")
 
-    def can_encrypt(self):
+    def can_encrypt(self):  # legacy
         return True
 
-    def can_sign(self):
+    def can_sign(self):     # legacy
         return True
 
     def publickey(self):
+        """A matching RSA public key.
+
+        Returns:
+            a new :class:`RsaKey` object
+        """
         return RsaKey(n=self._n, e=self._e)
 
     def __eq__(self, other):
@@ -216,8 +229,8 @@ class RsaKey(object):
                    protection=None, randfunc=None):
         """Export this RSA key.
 
-        :Parameters:
-          format : string
+        Args:
+          format (string):
             The format to use for wrapping the key:
 
             - *'DER'*. Binary encoding.
@@ -225,56 +238,55 @@ class RsaKey(object):
             - *'OpenSSH'*. Textual encoding, done according to OpenSSH specification.
               Only suitable for public keys (not private keys).
 
-          passphrase : string
-            For private keys only. The pass phrase used for deriving the encryption
-            key.
+          passphrase (string):
+            For private keys only. The pass phrase used for protecting the output.
 
-          pkcs : integer
-            For *DER* and *PEM* format only.
-            The PKCS standard to follow for assembling the components of the key.
-            You have two choices:
+          pkcs (integer):
+            With *'DER'* and *'PEM'* formats, the key is encoded in an ASN.1 DER
+            SEQUENCE. This parameters determines the type of ASN.1 SEQUENCE:
 
-            - **1** (default): the public key is embedded into
-              an X.509 ``SubjectPublicKeyInfo`` DER SEQUENCE.
-              The private key is embedded into a `PKCS#1`_
-              ``RSAPrivateKey`` DER SEQUENCE.
-            - **8**: the private key is embedded into a `PKCS#8`_
-              ``PrivateKeyInfo`` DER SEQUENCE. This value cannot be used
-              for public keys.
+            ===== ============================== ============================
+            Value Public key                     Private key
+            ===== ============================== ============================
+            1     X.509 ``SubjectPublicKeyInfo`` `PKCS#1`_ ``RSAPrivateKey``
+            8     n.a.                           `PKCS#8`_ ``PrivateKeyInfo``
+            ===== ============================== ============================
 
-          protection : string
+          protection (string):
             The encryption scheme to use for protecting the private key.
 
-            If ``None`` (default), the behavior depends on ``format``:
+            If ``None`` (default), the behavior depends on :attr:`format`:
 
-            - For *DER*, the *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
+            - For *'DER'*, the *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
               scheme is used. The following operations are performed:
 
                 1. A 16 byte Triple DES key is derived from the passphrase
-                   using `Crypto.Protocol.KDF.PBKDF2` with 8 bytes salt,
-                   and 1 000 iterations of `Crypto.Hash.HMAC`.
+                   using :func:`Crypto.Protocol.KDF.PBKDF2` with 8 bytes salt,
+                   and 1 000 iterations of :mod:`Crypto.Hash.HMAC`.
                 2. The private key is encrypted using CBC.
                 3. The encrypted key is encoded according to PKCS#8.
 
-            - For *PEM*, the obsolete PEM encryption scheme is used.
+            - For *'PEM'*, the obsolete PEM encryption scheme is used.
               It is based on MD5 for key derivation, and Triple DES for encryption.
 
-            Specifying a value for ``protection`` is only meaningful for PKCS#8
+            Specifying a value for :attr:`protection` is only meaningful for PKCS#8
             (that is, ``pkcs=8``) and only if a pass phrase is present too.
 
             The supported schemes for PKCS#8 are listed in the
-            `Crypto.IO.PKCS8` module (see ``wrap_algo`` parameter).
+            :mod:`Crypto.IO.PKCS8` module (see :attr:`wrap_algo` parameter).
 
-          randfunc : callable
+          randfunc (callable):
             A function that provides random bytes. Only used for PEM encoding.
-            The default is `Crypto.Random.get_random_bytes`.
+            The default is :func:`Crypto.Random.get_random_bytes`.
 
-        :Return: A byte string with the encoded public or private half
-          of the key.
-        :Raise ValueError:
-            When the format is unknown or when you try to encrypt a private
+        Returns:
+          byte string: the encoded key
+
+        Raises:
+          ValueError:when the format is unknown or when you try to encrypt a private
             key with *DER* format and PKCS#1.
-        :attention:
+
+        .. warning::
             If you don't provide a pass phrase, the private key will be
             exported in the clear!
 

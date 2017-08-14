@@ -19,3 +19,5 @@ store and retrieve public keys.
 .. toctree::
 
     rsa
+    dsa
+    ecc
