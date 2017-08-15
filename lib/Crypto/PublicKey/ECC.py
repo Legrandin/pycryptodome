@@ -59,6 +59,12 @@ _curve.oid = "1.2.840.10045.3.1.7"
 
 class EccPoint(object):
     """A class to abstract a point over an Elliptic Curve.
+
+    :ivar x: The X-coordinate of the ECC point
+    :vartype x: integer
+
+    :ivar y: The Y-coordinate of the ECC point
+    :vartype y: integer
     """
 
     def __init__(self, x, y):
@@ -96,20 +102,22 @@ class EccPoint(object):
 
     @property
     def x(self):
-        """The X-coordinate of the ECC point"""
         if self.is_point_at_infinity():
             raise ValueError("Point at infinity")
         return self._x
 
     @property
     def y(self):
-        """The Y-coordinate of the ECC point"""
         if self.is_point_at_infinity():
             raise ValueError("Point at infinity")
         return self._y
 
     def double(self):
-        """Double this point"""
+        """Double this point (in-place operation).
+
+        :Return:
+            :class:`EccPoint` : this same object (to enable chaining)
+        """
 
         if not self._y:
             return self.point_at_infinity()
@@ -295,7 +303,7 @@ class EccKey(object):
                (self.pointQ.x, self.pointQ.y, extra)
 
     def has_private(self):
-        """``True`` if this key can be used for making signatures or decrypting"""
+        """``True`` if this key can be used for making signatures or decrypting data."""
 
         return self._d is not None
 
@@ -440,22 +448,19 @@ class EccKey(object):
             The passphrase to use for protecting the private key.
 
           use_pkcs8 (boolean):
-            In case of a private key, whether the `PKCS#8`_ representation
-            should be (internally) used. By default it will.
+            If ``True`` (default and recommended), the `PKCS#8`_ representation
+            will be used.
 
-            Not using PKCS#8 when exporting a private key in
-            password-protected PEM_ form means that the much weaker and
-            unflexible `PEM encryption`_ mechanism will be used.
-            PKCS#8 is therefore always recommended.
+            If ``False``, the much weaker and `PEM encryption`_ mechanism will be used.
 
           protection (string):
-            In case of a private key being exported with password-protection
+            When a private key is exported with password-protection
             and PKCS#8 (both ``DER`` and ``PEM`` formats), this parameter MUST be
             present and be a valid algorithm supported by :mod:`Crypto.IO.PKCS8`.
             It is recommended to use ``PBKDF2WithHMAC-SHA1AndAES128-CBC``.
 
         .. warning::
-            If you don't provide a pass phrase, the private key will be
+            If you don't provide a passphrase, the private key will be
             exported in the clear!
 
         .. note::

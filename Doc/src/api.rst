@@ -7,6 +7,7 @@ API documentation
     cipher/cipher
     signature/signature
     hash/hash
+    public_key/public_key
 
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
