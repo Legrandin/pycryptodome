@@ -52,3 +52,14 @@ Available key types
 * :doc:`RSA keys <rsa>`
 * :doc:`DSA keys <dsa>`
 * :doc:`Elliptic Curve keys <ecc>`
+
+Obsolete key type
+-----------------
+
+.. toctree::
+    :hidden:
+
+    elgamal
+
+* :doc:`ElGamal keys <elgamal>`
+
