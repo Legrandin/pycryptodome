@@ -1,4 +1,0 @@
-`Crypto.Protocol` package
-=========================
-
-Hello

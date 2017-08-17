@@ -31,15 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""This file implements secret sharing protocols.
-
-In a *(k, n)* secret sharing protocol, a honest dealer breaks a secret
-into multiple shares that are distributed amongst *n* players.
-
-The protocol guarantees that nobody can learn anything about the
-secret, unless *k* players gather together to assemble their shares.
-"""
-
 from Crypto.Util.py3compat import *
 from Crypto.Util import number
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -166,7 +157,7 @@ class Shamir(object):
     This implementation is primarilly meant to protect AES128 keys.
     To that end, the secret is associated to a curve in
     the field GF(2^128) defined by the irreducible polynomial
-    *x^128 + x^7 + x^2 + x + 1* (the same used in AES-GCM).
+    :math:`x^{128} + x^7 + x^2 + x + 1` (the same used in AES-GCM).
     The shares are always 16 bytes long.
 
     Data produced by this implementation are compatible to the popular
@@ -175,53 +166,53 @@ class Shamir(object):
 
     As an example, the following code shows how to protect a file meant
     for 5 people, in such a way that 2 of the 5 are required to
-    reassemble it.
+    reassemble it::
 
-    >>> from binascii import hexlify
-    >>> from Crypto.Cipher import AES
-    >>> from Crypto.Random import get_random_bytes
-    >>> from Crypto.Protocol.secret_sharing import Shamir
-    >>>
-    >>> key = get_random_bytes(16)
-    >>> shares = Shamir.split(2, 5, key)
-    >>> for idx, share in shares:
-    >>>     print "Index #%d: %s" % (idx, hexlify(share))
-    >>>
-    >>> fi = open("clear_file.txt", "rb")
-    >>> fo = open("enc_file.txt", "wb")
-    >>>
-    >>> cipher = AES.new(key, AES.MODE_EAX)
-    >>> ct, tag = cipher.encrypt(fi.read()), cipher.digest()
-    >>> fo.write(nonce + tag + ct)
+        >>> from binascii import hexlify
+        >>> from Crypto.Cipher import AES
+        >>> from Crypto.Random import get_random_bytes
+        >>> from Crypto.Protocol.secret_sharing import Shamir
+        >>>
+        >>> key = get_random_bytes(16)
+        >>> shares = Shamir.split(2, 5, key)
+        >>> for idx, share in shares:
+        >>>     print "Index #%d: %s" % (idx, hexlify(share))
+        >>>
+        >>> fi = open("clear_file.txt", "rb")
+        >>> fo = open("enc_file.txt", "wb")
+        >>>
+        >>> cipher = AES.new(key, AES.MODE_EAX)
+        >>> ct, tag = cipher.encrypt(fi.read()), cipher.digest()
+        >>> fo.write(nonce + tag + ct)
 
     Each person can be given one share and the encrypted file.
 
     When 2 people gather together with their shares, the can
-    decrypt the file:
+    decrypt the file::
 
-    >>> from binascii import unhexlify
-    >>> from Crypto.Cipher import AES
-    >>> from Crypto.Protocol.secret_sharing import Shamir
-    >>>
-    >>> shares = []
-    >>> for x in range(2):
-    >>>     in_str = raw_input("Enter index and share separated by comma: ")
-    >>>     idx, share = [ strip(s) for s in in_str.split(",") ]
-    >>>     shares.append((idx, unhexlify(share)))
-    >>> key = Shamir.combine(shares)
-    >>>
-    >>> fi = open("enc_file.txt", "rb")
-    >>> nonce, tag = [ fi.read(16) for x in range(2) ]
-    >>> cipher = AES.new(key, AES.MODE_EAX, nonce)
-    >>> try:
-    >>>     result = cipher.decrypt(fi.read())
-    >>>     cipher.verify(tag)
-    >>>     with open("clear_file2.txt", "wb") as fo:
-    >>>         fo.write(result)
-    >>> except ValueError:
-    >>>     print "The shares were incorrect"
+        >>> from binascii import unhexlify
+        >>> from Crypto.Cipher import AES
+        >>> from Crypto.Protocol.secret_sharing import Shamir
+        >>>
+        >>> shares = []
+        >>> for x in range(2):
+        >>>     in_str = raw_input("Enter index and share separated by comma: ")
+        >>>     idx, share = [ strip(s) for s in in_str.split(",") ]
+        >>>     shares.append((idx, unhexlify(share)))
+        >>> key = Shamir.combine(shares)
+        >>>
+        >>> fi = open("enc_file.txt", "rb")
+        >>> nonce, tag = [ fi.read(16) for x in range(2) ]
+        >>> cipher = AES.new(key, AES.MODE_EAX, nonce)
+        >>> try:
+        >>>     result = cipher.decrypt(fi.read())
+        >>>     cipher.verify(tag)
+        >>>     with open("clear_file2.txt", "wb") as fo:
+        >>>         fo.write(result)
+        >>> except ValueError:
+        >>>     print "The shares were incorrect"
 
-    :attention:
+    .. attention::
         Reconstruction does not guarantee that the result is authentic.
         In particular, a malicious participant in the scheme has the
         ability to force an algebric transformation on the result by
@@ -246,15 +237,16 @@ class Shamir(object):
         Each share is associated to an index (starting from 1),
         which must be presented when the secret is recombined.
 
-        :Parameters:
-          k : integer
+        Args:
+          k (integer):
             The number of shares that must be present in order to reconstruct
             the secret.
-          n : integer
-            The total number of shares to create (>*k*).
-          secret : byte string
+          n (integer):
+            The total number of shares to create (larger than *k*).
+          secret (byte string):
             The 16 byte string (e.g. the AES128 key) to split.
-        :Return:
+
+        Return:
             *n* tuples, each containing the unique index (an integer) and
             the share (a byte string, 16 bytes long) meant for a
             participant.
@@ -287,12 +279,13 @@ class Shamir(object):
     def combine(shares):
         """Recombine a secret, if enough shares are presented.
 
-        :Parameters:
-          shares : tuples
+        Args:
+          shares (tuples):
             At least *k* tuples, each containin the index (an integer) and
             the share (a byte string, 16 bytes long) that were assigned to
             a participant.
-        :Return:
+
+        Return:
             The original secret, as a byte string (16 bytes long).
         """
 

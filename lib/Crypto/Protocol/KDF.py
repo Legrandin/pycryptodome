@@ -21,18 +21,7 @@
 # SOFTWARE.
 # ===================================================================
 
-"""This file contains a collection of standard key derivation functions.
-
-A key derivation function derives one or more secondary secret keys from
-one primary secret (a master key or a pass phrase).
-
-This is typically done to insulate the secondary keys from each other,
-to avoid that leakage of a secondary key compromises the security of the
-master key, or to thwart attacks on pass phrases (e.g. via rainbow tables).
-"""
-
 import struct
-from struct import unpack
 
 from Crypto.Util.py3compat import *
 
@@ -61,37 +50,42 @@ _raw_scrypt_lib = load_pycryptodome_raw_lib("Crypto.Protocol._scrypt",
 def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     """Derive one key from a password (or passphrase).
 
-    This function performs key derivation according an old version of
-    the PKCS#5 standard (v1.5).
+    This function performs key derivation according to an old version of
+    the PKCS#5 standard (v1.5) or `RFC2898
+    <https://www.ietf.org/rfc/rfc2898.txt>`_.
 
-    This algorithm is called ``PBKDF1``. Even though it is still described
-    in the latest version of the PKCS#5 standard (version 2, or RFC2898),
-    newer applications should use the more secure and versatile `PBKDF2` instead.
+    .. warning::
+        Newer applications should use the more secure and versatile :func:`PBKDF2`
+        instead.
 
-    :Parameters:
-     password : string
-        The secret password or pass phrase to generate the key from.
-     salt : byte string
+    Args:
+     password (string):
+        The secret password to generate the key from.
+     salt (byte string):
         An 8 byte string to use for better protection from dictionary attacks.
         This value does not need to be kept secret, but it should be randomly
         chosen for each derivation.
-     dkLen : integer
-        The length of the desired key. Default is 16 bytes, suitable for instance for `Crypto.Cipher.AES`.
-     count : integer
-        The number of iterations to carry out. It's recommended to use at least 1000.
-     hashAlgo : module
-        The hash algorithm to use, as a module or an object from the `Crypto.Hash` package.
+     dkLen (integer):
+        The length of the desired key. The default is 16 bytes, suitable for
+        instance for :mod:`Crypto.Cipher.AES`.
+     count (integer):
+        The number of iterations to carry out. The recommendation is 1000 or
+        more.
+     hashAlgo (module):
+        The hash algorithm to use, as a module or an object from the :mod:`Crypto.Hash` package.
         The digest length must be no shorter than ``dkLen``.
-        The default algorithm is `SHA1`.
+        The default algorithm is :mod:`Crypto.Hash.SHA1`.
 
-    :Return: A byte string of length `dkLen` that can be used as key.
+    Return:
+        A byte string of length ``dkLen`` that can be used as key.
     """
+
     if not hashAlgo:
         hashAlgo = SHA1
     password = tobytes(password)
     pHash = hashAlgo.new(password+salt)
     digest = pHash.digest_size
-    if dkLen>digest:
+    if dkLen > digest:
         raise TypeError("Selected hash algorithm has a too short digest (%d bytes)." % digest)
     if len(salt) != 8:
         raise ValueError("Salt is not 8 bytes long (%d bytes instead)." % len(salt))
@@ -99,30 +93,34 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
         pHash = pHash.new(pHash.digest())
     return pHash.digest()[:dkLen]
 
+
 def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
     """Derive one or more keys from a password (or passphrase).
 
     This function performs key derivation according to
-    the PKCS#5 standard (v2.0), by means of the ``PBKDF2`` algorithm.
+    the PKCS#5 standard (v2.0).
 
-    :Parameters:
-     password : string
-        The secret password or pass phrase to generate the key from.
-     salt : string
+    Args:
+     password (string):
+        The secret password to generate the key from.
+     salt (string):
         A string to use for better protection from dictionary attacks.
         This value does not need to be kept secret, but it should be randomly
         chosen for each derivation. It is recommended to be at least 8 bytes long.
-     dkLen : integer
-        The cumulative length of the desired keys. Default is 16 bytes, suitable for instance for `Crypto.Cipher.AES`.
-     count : integer
-        The number of iterations to carry out. It's recommended to use at least 1000.
-     prf : callable
+     dkLen (integer):
+        The cumulative length of the desired keys.
+     count (integer):
+        The number of iterations to carry out.
+     prf (callable):
         A pseudorandom function. It must be a function that returns a pseudorandom string
-        from two parameters: a secret and a salt. If not specified, HMAC-SHA1 is used.
+        from two parameters: a secret and a salt. If not specified,
+        **HMAC-SHA1** is used.
 
-    :Return: A byte string of length `dkLen` that can be used as key material.
+    Return:
+        A byte string of length ``dkLen`` that can be used as key material.
         If you wanted multiple keys, just break up this string into segments of the desired length.
-"""
+    """
+
     password = tobytes(password)
     if prf is None:
         prf = lambda p,s: HMAC.new(p,s,SHA1).digest()
@@ -240,33 +238,34 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     the HMAC-based KDF defined in RFC5869_.
 
     This KDF is not suitable for deriving keys from a password or for key
-    stretching. Use `PBKDF2` instead.
+    stretching. Use :func:`PBKDF2` instead.
 
     HKDF is a key derivation method approved by NIST in `SP 800 56C`__.
 
-    :Parameters:
-     master : byte string
+    Args:
+     master (byte string):
         The unguessable value used by the KDF to generate the other keys.
         It must be a high-entropy secret, though not necessarily uniform.
         It must not be a password.
-     salt : byte string
+     salt (byte string):
         A non-secret, reusable value that strengthens the randomness
         extraction step.
         Ideally, it is as long as the digest size of the chosen hash.
         If empty, a string of zeroes in used.
-     key_len : integer
+     key_len (integer):
         The length in bytes of every derived key.
-     hashmod : module
-        A cryptographic hash algorithm from `Crypto.Hash`.
-        `Crypto.Hash.SHA512` is a good choice.
-     num_keys : integer
-        The number of keys to derive. Every key is ``key_len`` bytes long.
+     hashmod (module):
+        A cryptographic hash algorithm from :mod:`Crypto.Hash`.
+        :mod:`Crypto.Hash.SHA512` is a good choice.
+     num_keys (integer):
+        The number of keys to derive. Every key is :data:`key_len` bytes long.
         The maximum cumulative length of all keys is
         255 times the digest size.
-     context : byte string
+     context (byte string):
         Optional identifier describing what the keys are used for.
 
-    :Return: A byte string or a tuple of byte strings.
+    Return:
+        A byte string or a tuple of byte strings.
 
     .. _RFC5869: http://tools.ietf.org/html/rfc5869
     .. __: http://csrc.nist.gov/publications/nistpubs/800-56C/SP-800-56C.pdf
@@ -310,28 +309,28 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     This implementation is based on `RFC7914`__.
 
-    :Parameters:
-     password : string
+    Args:
+     password (string):
         The secret pass phrase to generate the keys from.
-     salt : string
+     salt (string):
         A string to use for better protection from dictionary attacks.
         This value does not need to be kept secret,
         but it should be randomly chosen for each derivation.
         It is recommended to be at least 8 bytes long.
-     key_len : integer
+     key_len (integer):
         The length in bytes of every derived key.
-     N : integer
+     N (integer):
         CPU/Memory cost parameter. It must be a power of 2 and less
-        than ``2**32``.
-     r : integer
+        than :math:`2^{32}`.
+     r (integer):
         Block size parameter.
-     p : integer
+     p (integer):
         Parallelization parameter.
-        It must be no greater than ``(2**32-1)/(4r)``.
-     num_keys : integer
-        The number of keys to derive. Every key is ``key_len`` bytes long.
+        It must be no greater than :math:`(2^{32}-1)/(4r)`.
+     num_keys (integer):
+        The number of keys to derive. Every key is :data:`key_len` bytes long.
         By default, only 1 key is generated.
-        The maximum cumulative length of all keys is ``(2**32-1)*32``
+        The maximum cumulative length of all keys is :math:`(2^{32}-1)*32`
         (that is, 128TB).
 
     A good choice of parameters *(N, r , p)* was suggested
@@ -340,7 +339,8 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     - *(16384, 8, 1)* for interactive logins (<=100ms)
     - *(1048576, 8, 1)* for file encryption (<=5s)
 
-    :Return: A byte string or a tuple of byte strings.
+    Return:
+        A byte string or a tuple of byte strings.
 
     .. _scrypt: http://www.tarsnap.com/scrypt.html
     .. __: http://www.tarsnap.com/scrypt/scrypt.pdf

@@ -8,6 +8,7 @@ API documentation
     signature/signature
     hash/hash
     public_key/public_key
+    protocol/protocol
 
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
@@ -25,7 +26,7 @@ each sub-package is dedicated to solving a specific class of problems.
     (example: SHA-256)."
     :doc:`Crypto.PublicKey <public_key/public_key>`, "Modules for generating, exporting or importing
     *public keys* (example: RSA or ECC)."
-    :doc:`Crypto.Protocol <protocol>`, "Modules for faciliting secure communications
+    :doc:`Crypto.Protocol <protocol/protocol>`, "Modules for faciliting secure communications
     between parties, in most cases by leveraging cryptograpic primitives
     from other modules (example: Shamir's Secret Sharing scheme)."
     :doc:`Crypto.IO <io>`, "Modules for dealing with encodings commonly used
