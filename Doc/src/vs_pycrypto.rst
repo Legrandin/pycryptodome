@@ -3,7 +3,7 @@ Compatibility with PyCrypto
 
 PyCryptodome exposes *almost* the same API as the old `PyCrypto <https://www.dlitz.net/software/pycrypto>`_
 so that *most* applications will run unmodified.
-However, a very few breaks in compatibility exist had to be introduced
+However, a very few breaks in compatibility had to be introduced
 for those parts of the API that represented a security hazard or that
 were too hard to maintain.
 
@@ -22,7 +22,7 @@ Specifically, for public key cryptography:
   Applications should be updated to use instead:
 
   - :mod:`Crypto.Cipher.PKCS1_OAEP` for encrypting using RSA.
-  - :mod:`Crypto.Signature.pkcs1_15` or :mod:`Crypto.Signature.PKCS1_PSS` for signing using RSA.
+  - :mod:`Crypto.Signature.pkcs1_15` or :mod:`Crypto.Signature.pss` for signing using RSA.
   - :mod:`Crypto.Signature.DSS` for signing using DSA.
 * Method: :meth:`generate` for public key modules does not accept the ``progress_func`` parameter anymore.
 * Ambiguous method ``size`` from RSA, DSA and ElGamal key objects have bene removed.
@@ -41,7 +41,7 @@ For symmetric key cryptography:
   An expression like ``AES.new(key)`` will now fail. If ECB is the desired mode,
   one has to explicitly use ``AES.new(key, AES.MODE_ECB)``.
 * :mod:`Crypto.Cipher.DES3` does not allow keys that degenerate to Single DES.
-* Parameter :data:`segment_size`` cannot be 0 for the CFB mode.
+* Parameter :data:`segment_size` cannot be 0 for the CFB mode.
 * Parameters ``disabled_shortcut`` and ``overflow`` cannot be passed anymore to :mod:`Crypto.Util.Counter.new`.
   Parameter :data:`allow_wraparound` is ignored (counter block wraparound will **always** be checked).
 * The :data:`counter` parameter of a CTR mode cipher must be generated via
@@ -57,7 +57,7 @@ For randomness:
     - ``Crypto.Cipher.XOR``. If you just want to XOR data, use :mod:`Crypto.Util.strxor`.
     - ``Crypto.Protocol.AllOrNothing``
     - ``Crypto.Protocol.Chaffing``
-    - ``Crypto.Util.number.getRandomNumber``.
+    - ``Crypto.Util.number.getRandomNumber``
 
 Others:
 
