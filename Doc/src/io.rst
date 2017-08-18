@@ -1,4 +1,0 @@
-`Crypto.IO` package
-===================
-
-Hello

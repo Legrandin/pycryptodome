@@ -9,6 +9,7 @@ API documentation
     hash/hash
     public_key/public_key
     protocol/protocol
+    io/io
 
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
@@ -29,7 +30,7 @@ each sub-package is dedicated to solving a specific class of problems.
     :doc:`Crypto.Protocol <protocol/protocol>`, "Modules for faciliting secure communications
     between parties, in most cases by leveraging cryptograpic primitives
     from other modules (example: Shamir's Secret Sharing scheme)."
-    :doc:`Crypto.IO <io>`, "Modules for dealing with encodings commonly used
+    :doc:`Crypto.IO <io/io>`, "Modules for dealing with encodings commonly used
     for cryptographic data (example: PEM)."
     :doc:`Crypto.Util <util>`, "General purpose routines (example: XOR for byte
     strings)."

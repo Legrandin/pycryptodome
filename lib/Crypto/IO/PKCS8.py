@@ -31,35 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""
-Module for handling private keys wrapped according to `PKCS#8`_.
-
-PKCS8 is a standard for storing and transferring private key information.
-The wrapped key can either be clear or encrypted.
-
-All encryption algorithms are based on passphrase-based key derivation.
-The following mechanisms are fully supported:
-
-* *PBKDF2WithHMAC-SHA1AndAES128-CBC*
-* *PBKDF2WithHMAC-SHA1AndAES192-CBC*
-* *PBKDF2WithHMAC-SHA1AndAES256-CBC*
-* *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
-* *scryptAndAES128-CBC*
-* *scryptAndAES192-CBC*
-* *scryptAndAES256-CBC*
-
-The following mechanisms are only supported for importing keys.
-They are much weaker than the ones listed above, and they are provided
-for backward compatibility only:
-
-* *pbeWithMD5AndRC2-CBC*
-* *pbeWithMD5AndDES-CBC*
-* *pbeWithSHA1AndRC2-CBC*
-* *pbeWithSHA1AndDES-CBC*
-
-.. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
-
-"""
 
 from Crypto.Util.py3compat import *
 
@@ -80,25 +51,25 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
          prot_params=None, key_params=None, randfunc=None):
     """Wrap a private key into a PKCS#8 blob (clear or encrypted).
 
-    :Parameters:
+    Args:
 
-      private_key : byte string
+      private_key (byte string):
         The private key encoded in binary form. The actual encoding is
         algorithm specific. In most cases, it is DER.
 
-      key_oid : string
+      key_oid (string):
         The object identifier (OID) of the private key to wrap.
-        It is a dotted string, like "``1.2.840.113549.1.1.1``" (for RSA keys).
+        It is a dotted string, like ``1.2.840.113549.1.1.1`` (for RSA keys).
 
-      passphrase : (binary) string
+      passphrase (bytes string or string):
         The secret passphrase from which the wrapping key is derived.
         Set it only if encryption is required.
 
-      protection : string
+      protection (string):
         The identifier of the algorithm to use for securely wrapping the key.
-        The default value is '``PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC``'.
+        The default value is ``PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC``.
 
-      prot_params : dictionary
+      prot_params (dictionary):
         Parameters for the protection algorithm.
 
         +------------------+-----------------------------------------------+
@@ -107,9 +78,8 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
         | iteration_count  | The KDF algorithm is repeated several times to|
         |                  | slow down brute force attacks on passwords    |
         |                  | (called *N* or CPU/memory cost in scrypt).    |
-        |                  |                                               |
-        |                  | The default value for PBKDF2 is 1 000.        |
-        |                  | The default value for scrypt is 16 384.       |
+        |                  | The default value for PBKDF2 is 1000.         |
+        |                  | The default value for scrypt is 16384.        |
         +------------------+-----------------------------------------------+
         | salt_size        | Salt is used to thwart dictionary and rainbow |
         |                  | attacks on passwords. The default value is 8  |
@@ -122,19 +92,18 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
         |                  | value is 1.                                   |
         +------------------+-----------------------------------------------+
 
-      key_params : DER object
+      key_params (DER object):
         The algorithm parameters associated to the private key.
         It is required for algorithms like DSA, but not for others like RSA.
 
-      randfunc : callable
+      randfunc (callable):
         Random number generation function; it should accept a single integer
         N and return a string of random data, N bytes long.
         If not specified, a new RNG will be instantiated
-        from ``Crypto.Random``.
+        from :mod:`Crypto.Random`.
 
-    :Return:
-      The PKCS#8-wrapped private key (possibly encrypted),
-      as a binary string.
+    Return:
+      The PKCS#8-wrapped private key (possibly encrypted), as a byte string.
     """
 
     if key_params is None:
@@ -175,20 +144,21 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
 def unwrap(p8_private_key, passphrase=None):
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
-    :Parameters:
-      p8_private_key : byte string
+    Args:
+      p8_private_key (byte string):
         The private key wrapped into a PKCS#8 blob, DER encoded.
-      passphrase : (byte) string
+      passphrase (byte string or string):
         The passphrase to use to decrypt the blob (if it is encrypted).
-    :Return:
-      A tuple containing:
 
-      #. the algorithm identifier of the wrapped key (OID, dotted string)
-      #. the private key (byte string, DER encoded)
-      #. the associated parameters (byte string, DER encoded) or ``None``
+    Return:
+      A tuple containing
 
-    :Raises ValueError:
-      If decoding fails
+       #. the algorithm identifier of the wrapped key (OID, dotted string)
+       #. the private key (byte string, DER encoded)
+       #. the associated parameters (byte string, DER encoded) or ``None``
+
+    Raises:
+      ValueError : if decoding fails
     """
 
     if passphrase:

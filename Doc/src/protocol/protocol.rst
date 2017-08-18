@@ -1,7 +1,7 @@
 ``Crypto.Protocol`` package
 ===========================
 
-.. toctree:
+.. toctree::
     :hidden:
 
     kdf
