@@ -386,6 +386,10 @@ def long_to_bytes(n, blocksize=0):
     """long_to_bytes(n:long, blocksize:int) : string
     Convert a long integer to a byte string.
 
+    In Python 3.2+, use the native method instead::
+
+        >>>> n.to_bytes(blocksize, 'big')
+
     If optional blocksize is given and greater than zero, pad the front of the
     byte string with binary zeros so that the length is a multiple of
     blocksize.
@@ -415,6 +419,10 @@ def long_to_bytes(n, blocksize=0):
 def bytes_to_long(s):
     """bytes_to_long(string) : long
     Convert a byte string to a long integer (big endian).
+
+    In Python 3.2+, use the native method instead::
+
+        >>>> int.from_bytes(s, 'big')
 
     This is (essentially) the inverse of long_to_bytes().
     """
