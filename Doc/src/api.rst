@@ -10,6 +10,8 @@ API documentation
     public_key/public_key
     protocol/protocol
     io/io
+    random/random
+    util/util
 
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
@@ -32,7 +34,8 @@ each sub-package is dedicated to solving a specific class of problems.
     from other modules (example: Shamir's Secret Sharing scheme)."
     :doc:`Crypto.IO <io/io>`, "Modules for dealing with encodings commonly used
     for cryptographic data (example: PEM)."
-    :doc:`Crypto.Util <util>`, "General purpose routines (example: XOR for byte
+    :doc:`Crypto.Random <random/random>`, "Modules for generating random data."
+    :doc:`Crypto.Util <util/util>`, "General purpose routines (example: XOR for byte
     strings)."
 
 In certain cases, there is some overlap between these categories.

@@ -22,8 +22,6 @@
 # SOFTWARE.
 # ===================================================================
 
-"""A cryptographically strong version of Python's standard "random" module."""
-
 __all__ = ['StrongRandom', 'getrandbits', 'randrange', 'randint', 'choice', 'shuffle', 'sample']
 
 from Crypto import Random
@@ -40,7 +38,8 @@ class StrongRandom(object):
             raise ValueError("Cannot specify both 'rng' and 'randfunc'")
 
     def getrandbits(self, k):
-        """Return a python long integer with k random bits."""
+        """Return an integer with k random bits."""
+
         if self._randfunc is None:
             self._randfunc = Random.new().read
         mask = (1 << k) - 1

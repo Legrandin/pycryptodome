@@ -28,10 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""
-Fast XOR of byte strings.
-"""
-
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, c_size_t,
                                   create_string_buffer, get_raw_buffer,
                                   expect_byte_string)
@@ -49,8 +45,12 @@ _raw_strxor = load_pycryptodome_raw_lib("Crypto.Util._strxor",
 
 
 def strxor(term1, term2):
-    """Return term1 xored with term2.
-    The two byte strings must have equal length."""
+    """XOR of two byte strings.
+    They must have equal length.
+
+    Return:
+        A new byte string, :data:`term1` xored with :data:`term2`.
+    """
 
     expect_byte_string(term1)
     expect_byte_string(term2)
@@ -62,7 +62,11 @@ def strxor(term1, term2):
 
 
 def strxor_c(term, c):
-    """Return term xored with a sequence of characters c."""
+    """XOR of a byte string with a repeated sequence of characters.
+
+    Return:
+        A new byte string, :data:`term` with all its bytes xored with :data:`c`.
+    """
 
     expect_byte_string(term)
     if not 0 <= c < 256:
