@@ -5,7 +5,6 @@ Future releases will include:
 - Add alias 'segment_bits' to parameter 'segment_size' for CFB
 - Coverage testing
 - Add support for memoryview/buffer interface
-- Move API documentation from epydoc to sphinx
 - Implement AES with bitslicing
 - Add unit tests for PEM I/O
 - Move old ciphers into a Museum submodule
