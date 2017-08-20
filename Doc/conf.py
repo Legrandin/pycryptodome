@@ -14,8 +14,17 @@
 import sys, os
 
 # Modules to document with autodoc are in another directory
-#sys.path.insert(0, os.path.abspath('../lib'))
-#print sys.path
+sys.path.insert(0, os.path.abspath('../lib'))
+print sys.path
+
+# Mock existance of native modules
+from Crypto.Util import _raw_api
+
+class MockLib(object):
+    def have_aes_ni(self):
+        return True
+
+_raw_api.load_pycryptodome_raw_lib = lambda name, cdec: MockLib()
 
 # -- General configuration -----------------------------------------------------
 
