@@ -31,16 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Set of functions for encapsulating data according to the PEM format.
-
-PEM (Privacy Enhanced Mail) was an IETF standard for securing emails via a
-Public Key Infrastructure. It is specified in RFC 1421-1424.
-
-Even though it has been abandoned, the simple message encapsulation it defined
-is still widely used today for encoding *binary* cryptographic objects like
-keys and certificates into text.
-"""
-
 __all__ = ['encode', 'decode']
 
 from Crypto.Util.py3compat import b, hexlify, unhexlify, tobytes, tostr
@@ -58,24 +48,25 @@ from Crypto.Random import get_random_bytes
 def encode(data, marker, passphrase=None, randfunc=None):
     """Encode a piece of binary data into PEM format.
 
-    :Parameters:
-      data : byte string
+    Args:
+      data (byte string):
         The piece of binary data to encode.
-      marker : string
+      marker (string):
         The marker for the PEM block (e.g. "PUBLIC KEY").
         Note that there is no official master list for all allowed markers.
         Still, you can refer to the OpenSSL_ source code.
-      passphrase : byte string
+      passphrase (byte string):
         If given, the PEM block will be encrypted. The key is derived from
         the passphrase.
-      randfunc : callable
+      randfunc (callable):
         Random number generation function; it accepts an integer N and returns
         a byte string of random data, N bytes long. If not given, a new one is
         instantiated.
-    :Returns:
+
+    Returns:
       The PEM block, as a string.
 
-    .. _OpenSSL: http://cvs.openssl.org/fileview?f=openssl/crypto/pem/pem.h&v=1.66.2.1.4.2
+    .. _OpenSSL: https://github.com/openssl/openssl/blob/master/include/openssl/pem.h
     """
 
     if randfunc is None:
@@ -107,18 +98,20 @@ def encode(data, marker, passphrase=None, randfunc=None):
 def decode(pem_data, passphrase=None):
     """Decode a PEM block into binary.
 
-    :Parameters:
-      pem_data : string
+    Args:
+      pem_data (string):
         The PEM block.
-      passphrase : byte string
+      passphrase (byte string):
         If given and the PEM block is encrypted,
         the key will be derived from the passphrase.
-    :Returns:
+
+    Returns:
       A tuple with the binary data, the marker string, and a boolean to
       indicate if decryption was performed.
-    :Raises ValueError:
-      If decoding fails, if the PEM file is encrypted and no passphrase has
-      been provided or if the passphrase is incorrect.
+
+    Raises:
+      ValueError: if decoding fails, if the PEM file is encrypted and no passphrase has
+                  been provided or if the passphrase is incorrect.
     """
 
     # Verify Pre-Encapsulation Boundary

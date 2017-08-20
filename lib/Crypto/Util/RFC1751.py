@@ -24,9 +24,6 @@
 # SOFTWARE.
 # ===================================================================
 
-__revision__ = "$Id$"
-
-
 import binascii
 from Crypto.Util.py3compat import *
 
@@ -47,10 +44,21 @@ def _extract(key, start, length):
     return reduce(lambda x,y: x*2+ord(y)-48, k, 0)
 
 def key_to_english (key):
-    """key_to_english(key:string(2.x)/bytes(3.x)) : string
-    Transform an arbitrary key into a string containing English words.
-    The key length must be a multiple of 8.
+    """Transform an arbitrary key into a string containing English words.
+
+    Example::
+
+        >>> from Crypto.Util.RFC1751 import key_to_english
+        >>> key_to_english(b'66666666')
+        'RAM LOIS GOAD CREW CARE HIT'
+
+    Args:
+      key (byte string):
+        The key to convert. Its length must be a multiple of 8.
+    Return:
+      A string of English words.
     """
+
     english=''
     for index in range(0, len(key), 8): # Loop over 8-byte subkeys
         subkey=key[index:index+8]
@@ -65,10 +73,19 @@ def key_to_english (key):
     return english[:-1]                 # Remove the trailing space
 
 def english_to_key (s):
-    """english_to_key(string):string(2.x)/bytes(2.x)
-    Transform a string into a corresponding key.
-    The string must contain words separated by whitespace; the number
-    of words must be a multiple of 6.
+    """Transform a string into a corresponding key.
+
+    Example::
+
+        >>> from Crypto.Util.RFC1751 import english_to_key
+        >>> english_to_key('RAM LOIS GOAD CREW CARE HIT')
+        b'66666666'
+
+    Args:
+      s (string): the string with the words separated by whitespace;
+                  the number of words must be a multiple of 6.
+    Return:
+      A byte string.
     """
 
     L=s.upper().split() ; key=b('')

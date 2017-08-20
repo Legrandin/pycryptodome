@@ -28,42 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""
-Module to create PKCS#1 v1.5 RSA signatures
-
-See RFC3447__ or the `original RSA Labs specification`__.
-
-This scheme is more properly called ``RSASSA-PKCS1-v1_5``.
-
-For example, a sender can create the signature of a message using
-its private RSA key:
-
-        >>> from Crypto.Signature import pkcs1_15
-        >>> from Crypto.Hash import SHA256
-        >>> from Crypto.PublicKey import RSA
-        >>>
-        >>> message = 'To be signed'
-        >>> key = RSA.importKey(open('private_key.der').read())
-        >>> h = SHA256.new(message)
-        >>> signature = pkcs1_15.new(key).sign(h)
-
-At the other side, the receiver can verify the signature (and therefore
-the authenticity of the message) using the public RSA key:
-
-        >>> key = RSA.importKey(open('public_key.der').read())
-        >>> h = SHA.new(message)
-        >>> try:
-        >>>     pkcs1_15.new(key).verify(h, signature):
-        >>>     print "The signature is valid."
-        >>> except (ValueError, TypeError):
-        >>>    print "The signature is not valid."
-
-:undocumented: __package__
-
-.. __: http://www.ietf.org/rfc/rfc3447.txt
-.. __: http://www.rsa.com/rsalabs/node.asp?id=2125
-"""
-
 from Crypto.Util.py3compat import b, bchr
 
 import Crypto.Util.number
@@ -71,7 +35,10 @@ from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString, DerObjectId
 
 class PKCS115_SigScheme:
-    """An instance of the PKCS#1 v1.5 signature scheme for a specific RSA key."""
+    """A signature object for ``RSASSA-PKCS1-v1_5``.
+    Do not instantiate directly.
+    Use :func:`Crypto.Signature.pkcs1_15.new`.
+    """
 
     def __init__(self, rsa_key):
         """Initialize this PKCS#1 v1.5 signature scheme object.
@@ -84,26 +51,24 @@ class PKCS115_SigScheme:
         self._key = rsa_key
 
     def can_sign(self):
-        """Return True if this object can be used to sign messages."""
+        """Return ``True`` if this object can be used to sign messages."""
         return self._key.has_private()
 
     def sign(self, msg_hash):
-        """Produce the PKCS#1 v1.5 signature of a message.
+        """Create the PKCS#1 v1.5 signature of a message.
 
-        This function is named ``RSASSA-PKCS1-V1_5-SIGN``;
-        it is specified in section 8.2.1 of RFC3447.
+        This function is also called ``RSASSA-PKCS1-V1_5-SIGN`` and
+        it is specified in
+        `section 8.2.1 of RFC8017 <https://tools.ietf.org/html/rfc8017#page-36>`_.
 
-        :Parameters:
-          msg_hash : hash object
-            This is an object created with to the `Crypto.Hash` module.
-            It was used used to hash the message to sign.
+        :parameter msg_hash:
+            This is an object from the :mod:`Crypto.Hash` package.
+            It has been used to digest the message to sign.
+        :type msg_hash: hash object
 
-        :Return: The signature encoded as a byte string.
-        :Raise ValueError:
-            If the RSA key is not long enough when combined with the given
-            hash algorithm.
-        :Raise TypeError:
-            If the RSA key has no private half.
+        :return: the signature encoded as a *byte string*.
+        :raise ValueError: if the RSA key is not long enough for the given hash algorithm.
+        :raise TypeError: if the RSA key has no private half.
         """
 
         # See 8.2.1 in RFC3447
@@ -121,23 +86,22 @@ class PKCS115_SigScheme:
         return signature
 
     def verify(self, msg_hash, signature):
-        """Verify that a certain PKCS#1 v1.5 signature is valid.
+        """Check if the  PKCS#1 v1.5 signature over a message is valid.
 
-        This method checks if the message really originates from someone
-        that holds the RSA private key.
-        really signed the message.
+        This function is also called ``RSASSA-PKCS1-V1_5-VERIFY`` and
+        it is specified in
+        `section 8.2.2 of RFC8037 <https://tools.ietf.org/html/rfc8017#page-37>`_.
 
-        This function is named ``RSASSA-PKCS1-V1_5-VERIFY``;
-        it is specified in section 8.2.2 of RFC3447.
-
-        :Parameters:
-          msg_hash : hash object
+        :parameter msg_hash:
             The hash that was carried out over the message. This is an object
-            belonging to the `Crypto.Hash` module.
-          signature : byte string
+            belonging to the :mod:`Crypto.Hash` module.
+        :type parameter: hash object
+
+        :parameter signature:
             The signature that needs to be validated.
-        :Raise ValueError:
-            if the signature is not valid.
+        :type signature: byte string
+
+        :raise ValueError: if the signature is not valid.
         """
 
         # See 8.2.2 in RFC3447
@@ -245,15 +209,16 @@ def _EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):
     return b("\x00\x01") + PS + bchr(0x00) + digestInfo
 
 def new(rsa_key):
-    """Return a signature scheme object `PKCS115_SigScheme` that
-    can create or verify PKCS#1 v1.5 signatures.
+    """Create a signature object for creating
+    or verifying PKCS#1 v1.5 signatures.
 
-    :Parameters:
-     rsa_key : RSA key object
-      The RSA key to use to sign or verify the message.
-      This is a `Crypto.PublicKey.RSA` object.
-      Signing is only possible if ``rsa_key`` is a private RSA key.
+    :parameter rsa_key:
+      The RSA key to use for signing or verifying the message.
+      This is a :class:`Crypto.PublicKey.RSA` object.
+      Signing is only possible when ``rsa_key`` is a **private** RSA key.
+    :type rsa_key: RSA object
 
+    :return: a :class:`PKCS115_SigScheme` signature object
     """
     return PKCS115_SigScheme(rsa_key)
 

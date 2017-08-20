@@ -28,29 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""SHAKE128 extendable-output function (XOF).
-
-SHAKE128 belongs to the SHA-3 family, as specified in `FIPS 202`_.
-
-As a XOF, SHAKE128 is a generalization of a cryptographic hash function.
-Instead of having a fixed-length output (e.g. 32 bytes like SHA-2/256),
-the output length for a XOF is unlimited.
-
-The *128* in its name indicates its maximum security level (in bits),
-as described in Section A.2 of `FIPS 202`_.
-
-For instance:
-
-    >>> from Crypto.Hash import SHAKE128
-    >>> from binascii import hexlify
-    >>>
-    >>> shake = SHAKE128.new()
-    >>> shake.update(b'Some data')
-    >>> print hexlify(shake.read(26))
-
-.. _FIPS 202: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
-"""
-
 from Crypto.Util.py3compat import bord
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -62,10 +39,15 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 from Crypto.Hash.keccak import _raw_keccak_lib
 
 class SHAKE128_XOF(object):
-    """Class that implements a SHAKE128 XOF
+    """A SHAKE128 hash object.
+    Do not instantiate directly.
+    Use the :func:`new` function.
+
+    :ivar oid: ASN.1 Object ID
+    :vartype oid: string
     """
 
-    #: ASN.1 Object ID
+    # ASN.1 Object ID
     oid = "2.16.840.1.101.3.4.2.11"
 
     def __init__(self, data=None):
@@ -85,20 +67,8 @@ class SHAKE128_XOF(object):
     def update(self, data):
         """Continue hashing of a message by consuming the next chunk of data.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        You cannot use ``update`` anymore after the first call to ``read``.
-
-        :Parameters:
-          data : byte string
-            The next chunk of the message being hashed.
+        Args:
+            data (byte string): The next chunk of the message being hashed.
         """
 
         if self._is_squeezing:
@@ -114,12 +84,18 @@ class SHAKE128_XOF(object):
         return self
 
     def read(self, length):
-        """Return the next ``length`` bytes of **binary** (non-printable)
-        digest for the message.
+        """
+        Compute the next piece of XOF output.
 
-        You cannot use ``update`` anymore after the first call to ``read``.
+        .. note::
+            You cannot use :meth:`update` anymore after the first call to
+            :meth:`read`.
 
-        :Return: A byte string of `length` bytes.
+        Args:
+            length (integer): the amount of bytes this method must return
+
+        :return: the next piece of XOF output (of the given length)
+        :rtype: byte string
         """
 
         self._is_squeezing = True
@@ -143,9 +119,10 @@ def new(data=None):
     :Parameters:
        data : byte string
         The very first chunk of the message to hash.
-        It is equivalent to an early call to ``update()``.
+        It is equivalent to an early call to :meth:`update`.
         Optional.
 
-    :Return: A `SHAKE128_XOF` object
+    :Return: A :class:`SHAKE128_XOF` object
     """
+
     return SHAKE128_XOF(data=data)

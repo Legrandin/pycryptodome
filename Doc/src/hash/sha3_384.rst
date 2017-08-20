@@ -1,0 +1,20 @@
+SHA3-384
+=========
+
+SHA3-384 belongs to the SHA-3 family of cryptographic hashes, as specified
+in `FIPS 202`__.
+
+The hash function produces the 384 bit digest of a message::
+
+    >>> from Crypto.Hash import SHA3_384
+    >>>
+    >>> h_obj = SHA3_384.new()
+    >>> h_obj.update(b'Some data')
+    >>> print h_obj.hexdigest()
+
+.. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+
+*SHA* stands for Secure Hash Algorithm.
+
+.. automodule:: Crypto.Hash.SHA3_384
+    :members:

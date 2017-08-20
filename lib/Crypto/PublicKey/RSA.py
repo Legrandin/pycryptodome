@@ -28,47 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""RSA public-key cryptography algorithm (signature and encryption).
-
-RSA_ is the most widespread and used public key algorithm. Its security is
-based on the difficulty of factoring large integers. The algorithm has
-withstood attacks for 30 years, and it is therefore considered reasonably
-secure for new designs.
-
-The algorithm can be used for both confidentiality (encryption) and
-authentication (digital signature). It is worth noting that signing and
-decryption are significantly slower than verification and encryption.
-The cryptograhic strength is primarily linked to the length of the modulus *n*.
-In 2012, a sufficient length is deemed to be 2048 bits. For more information,
-see the most recent ECRYPT_ report.
-
-Both RSA ciphertext and RSA signature are as big as the modulus *n* (256
-bytes if *n* is 2048 bit long).
-
-This module provides facilities for generating fresh, new RSA keys,
-constructing them from known components, exporting them, and importing them.
-
-    >>> from Crypto.PublicKey import RSA
-    >>>
-    >>> key = RSA.generate(2048)
-    >>> f = open('mykey.pem','w')
-    >>> f.write(key.exportKey('PEM'))
-    >>> f.close()
-    ...
-    >>> f = open('mykey.pem','r')
-    >>> key = RSA.import_key(f.read())
-
-Even though you may choose to  directly use the methods of an RSA key object
-to perform the primitive cryptographic operations (e.g. `RsaKey._encrypt`),
-it is recommended to use one of the standardized schemes instead (like
-`Crypto.Cipher.PKCS1_v1_5` or `Crypto.Signature.PKCS1_v1_5`).
-
-.. _RSA: http://en.wikipedia.org/wiki/RSA_%28algorithm%29
-.. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
-
-:sort: generate,construct,import_key
-"""
-
 __all__ = ['generate', 'construct', 'import_key',
            'RsaKey', 'oid']
 
@@ -90,10 +49,27 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 
 
 class RsaKey(object):
-    """Class defining an actual RSA key.
+    r"""Class defining an actual RSA key.
+    Do not instantiate directly.
+    Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
 
-    :undocumented: __init__, __repr__, __getstate__, __eq__, __ne__, __str__,
-                   sign, verify, encrypt, decrypt, blind, unblind, size
+    :ivar n: RSA modulus
+    :vartype n: integer
+
+    :ivar e: RSA public exponent
+    :vartype e: integer
+
+    :ivar d: RSA private exponent
+    :vartype d: integer
+
+    :ivar p: First factor of the RSA modulus
+    :vartype p: integer
+
+    :ivar q: Second factor of the RSA modulus
+    :vartype q: integer
+
+    :ivar u: Chinese remainder component (:math:`p^{-1} \text{mod } q`)
+    :vartype q: integer
     """
 
     def __init__(self, **kwargs):
@@ -125,38 +101,32 @@ class RsaKey(object):
 
     @property
     def n(self):
-        """Modulus"""
         return int(self._n)
 
     @property
     def e(self):
-        """Public exponent"""
         return int(self._e)
 
     @property
     def d(self):
-        """Private exponent"""
         if not self.has_private():
             raise AttributeError("No private exponent available for public keys")
         return int(self._d)
 
     @property
     def p(self):
-        """First factor of the modulus"""
         if not self.has_private():
             raise AttributeError("No CRT component 'p' available for public keys")
         return int(self._p)
 
     @property
     def q(self):
-        """Second factor of the modulus"""
         if not self.has_private():
             raise AttributeError("No CRT component 'q' available for public keys")
         return int(self._q)
 
     @property
     def u(self):
-        """Chinese remainder component (inverse of *p* modulo *q*)"""
         if not self.has_private():
             raise AttributeError("No CRT component 'u' available for public keys")
         return int(self._u)
@@ -202,15 +172,22 @@ class RsaKey(object):
         return result
 
     def has_private(self):
+        """Whether this is an RSA private key"""
+
         return hasattr(self, "_d")
 
-    def can_encrypt(self):
+    def can_encrypt(self):  # legacy
         return True
 
-    def can_sign(self):
+    def can_sign(self):     # legacy
         return True
 
     def publickey(self):
+        """A matching RSA public key.
+
+        Returns:
+            a new :class:`RsaKey` object
+        """
         return RsaKey(n=self._n, e=self._e)
 
     def __eq__(self, other):
@@ -252,8 +229,8 @@ class RsaKey(object):
                    protection=None, randfunc=None):
         """Export this RSA key.
 
-        :Parameters:
-          format : string
+        Args:
+          format (string):
             The format to use for wrapping the key:
 
             - *'DER'*. Binary encoding.
@@ -261,56 +238,55 @@ class RsaKey(object):
             - *'OpenSSH'*. Textual encoding, done according to OpenSSH specification.
               Only suitable for public keys (not private keys).
 
-          passphrase : string
-            For private keys only. The pass phrase used for deriving the encryption
-            key.
+          passphrase (string):
+            For private keys only. The pass phrase used for protecting the output.
 
-          pkcs : integer
-            For *DER* and *PEM* format only.
-            The PKCS standard to follow for assembling the components of the key.
-            You have two choices:
+          pkcs (integer):
+            With *'DER'* and *'PEM'* formats, the key is encoded in an ASN.1 DER
+            SEQUENCE. This parameters determines the type of ASN.1 SEQUENCE:
 
-            - **1** (default): the public key is embedded into
-              an X.509 ``SubjectPublicKeyInfo`` DER SEQUENCE.
-              The private key is embedded into a `PKCS#1`_
-              ``RSAPrivateKey`` DER SEQUENCE.
-            - **8**: the private key is embedded into a `PKCS#8`_
-              ``PrivateKeyInfo`` DER SEQUENCE. This value cannot be used
-              for public keys.
+            ===== ============================== ============================
+            Value Public key                     Private key
+            ===== ============================== ============================
+            1     X.509 ``SubjectPublicKeyInfo`` `PKCS#1`_ ``RSAPrivateKey``
+            8     n.a.                           `PKCS#8`_ ``PrivateKeyInfo``
+            ===== ============================== ============================
 
-          protection : string
+          protection (string):
             The encryption scheme to use for protecting the private key.
 
-            If ``None`` (default), the behavior depends on ``format``:
+            If ``None`` (default), the behavior depends on :attr:`format`:
 
-            - For *DER*, the *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
+            - For *'DER'*, the *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
               scheme is used. The following operations are performed:
 
                 1. A 16 byte Triple DES key is derived from the passphrase
-                   using `Crypto.Protocol.KDF.PBKDF2` with 8 bytes salt,
-                   and 1 000 iterations of `Crypto.Hash.HMAC`.
+                   using :func:`Crypto.Protocol.KDF.PBKDF2` with 8 bytes salt,
+                   and 1 000 iterations of :mod:`Crypto.Hash.HMAC`.
                 2. The private key is encrypted using CBC.
                 3. The encrypted key is encoded according to PKCS#8.
 
-            - For *PEM*, the obsolete PEM encryption scheme is used.
+            - For *'PEM'*, the obsolete PEM encryption scheme is used.
               It is based on MD5 for key derivation, and Triple DES for encryption.
 
-            Specifying a value for ``protection`` is only meaningful for PKCS#8
+            Specifying a value for :attr:`protection` is only meaningful for PKCS#8
             (that is, ``pkcs=8``) and only if a pass phrase is present too.
 
             The supported schemes for PKCS#8 are listed in the
-            `Crypto.IO.PKCS8` module (see ``wrap_algo`` parameter).
+            :mod:`Crypto.IO.PKCS8` module (see :attr:`wrap_algo` parameter).
 
-          randfunc : callable
+          randfunc (callable):
             A function that provides random bytes. Only used for PEM encoding.
-            The default is `Crypto.Random.get_random_bytes`.
+            The default is :func:`Crypto.Random.get_random_bytes`.
 
-        :Return: A byte string with the encoded public or private half
-          of the key.
-        :Raise ValueError:
-            When the format is unknown or when you try to encrypt a private
+        Returns:
+          byte string: the encoded key
+
+        Raises:
+          ValueError:when the format is unknown or when you try to encrypt a private
             key with *DER* format and PKCS#1.
-        :attention:
+
+        .. warning::
             If you don't provide a pass phrase, the private key will be
             exported in the clear!
 
@@ -403,7 +379,7 @@ class RsaKey(object):
 
 
 def generate(bits, randfunc=None, e=65537):
-    """Create a new RSA key.
+    """Create a new RSA key pair.
 
     The algorithm closely follows NIST `FIPS 186-4`_ in its
     sections B.3.1 and B.3.3. The modulus is the product of
@@ -411,22 +387,22 @@ def generate(bits, randfunc=None, e=65537):
     Each prime passes a suitable number of Miller-Rabin tests
     with random bases and a single Lucas test.
 
-    :Parameters:
-      bits : integer
+    Args:
+      bits (integer):
         Key length, or size (in bits) of the RSA modulus.
-        It must be at least 1024.
+        It must be at least 1024, but **2048 is recommended.**
         The FIPS standard only defines 1024, 2048 and 3072.
-      randfunc : callable
+      randfunc (callable):
         Function that returns random bytes.
-        The default is `Crypto.Random.get_random_bytes`.
-      e : integer
+        The default is :func:`Crypto.Random.get_random_bytes`.
+      e (integer):
         Public RSA exponent. It must be an odd positive integer.
         It is typically a small number with very few ones in its
         binary representation.
         The FIPS standard requires the public exponent to be
         at least 65537 (the default).
 
-    :Return: An RSA key object (`RsaKey`).
+    Returns: an RSA key object (:class:`RsaKey`, with private key).
 
     .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
@@ -484,38 +460,44 @@ def generate(bits, randfunc=None, e=65537):
 
 
 def construct(rsa_components, consistency_check=True):
-    """Construct an RSA key from a tuple of valid RSA components.
+    r"""Construct an RSA key from a tuple of valid RSA components.
 
     The modulus **n** must be the product of two primes.
     The public exponent **e** must be odd and larger than 1.
 
     In case of a private key, the following equations must apply:
 
-    - e != 1
-    - p*q = n
-    - e*d = 1 mod lcm[(p-1)(q-1)]
-    - p*u = 1 mod q
+    .. math::
 
-    :Parameters:
-     rsa_components : tuple
-        A tuple of long integers, with at least 2 and no
-        more than 6 items. The items come in the following order:
+        \begin{align}
+        e &\ne 1 \\
+        p*q &= n \\
+        e*d &\equiv 1 ( \text{mod lcm} [(p-1)(q-1)]) \\
+        p*u &\equiv 1 ( \text{mod } q)
+        \end{align}
 
-            1. RSA modulus (*n*).
-            2. Public exponent (*e*).
-            3. Private exponent (*d*).
+    Args:
+        rsa_components (tuple):
+            A tuple of integers, with at least 2 and no
+            more than 6 items. The items come in the following order:
+
+            1. RSA modulus *n*.
+            2. Public exponent *e*.
+            3. Private exponent *d*.
                Only required if the key is private.
             4. First factor of *n* (*p*).
-               Optional, but factor q must also be present.
+               Optional, but the other factor *q* must also be present.
             5. Second factor of *n* (*q*). Optional.
-            6. CRT coefficient, *(1/p) mod q* (*u*). Optional.
-     consistency_check : boolean
-        If *True*, the library will verify that the provided components
-        fulfil the main RSA properties.
+            6. CRT coefficient *q*, that is :math:`p^{-1} \text{mod }q`. Optional.
 
-    :Raise ValueError:
-        When the key being imported fails the most basic RSA validity checks.
-    :Return: An RSA key object (`RsaKey`).
+        consistency_check (boolean):
+            If ``True``, the library will verify that the provided components
+            fulfil the main RSA properties.
+
+    Raises:
+        ValueError: when the key being imported fails the most basic RSA validity checks.
+
+    Returns: An RSA key object (:class:`RsaKey`).
     """
 
     class InputComps(object):
@@ -687,10 +669,11 @@ def import_key(extern_key, passphrase=None):
     """Import an RSA key (public or private half), encoded in standard
     form.
 
-    :Parameter extern_key:
-        The RSA key to import, encoded as a byte string.
+    Args:
+      extern_key (string or byte string):
+        The RSA key to import.
 
-        An RSA public key can be in any of the following formats:
+        The following formats are supported for an RSA **public key**:
 
         - X.509 certificate (binary or PEM format)
         - X.509 ``subjectPublicKeyInfo`` DER SEQUENCE (binary or PEM
@@ -698,7 +681,7 @@ def import_key(extern_key, passphrase=None):
         - `PKCS#1`_ ``RSAPublicKey`` DER SEQUENCE (binary or PEM encoding)
         - OpenSSH (textual public key only)
 
-        An RSA private key can be in any of the following formats:
+        The following formats are supported for an RSA **private key**:
 
         - PKCS#1 ``RSAPrivateKey`` DER SEQUENCE (binary or PEM encoding)
         - `PKCS#8`_ ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo``
@@ -709,16 +692,15 @@ def import_key(extern_key, passphrase=None):
 
         The private key may be encrypted by means of a certain pass phrase
         either at the PEM level or at the PKCS#8 level.
-    :Type extern_key: string
 
-    :Parameter passphrase:
+      passphrase (string):
         In case of an encrypted private key, this is the pass phrase from
         which the decryption key is derived.
-    :Type passphrase: string
 
-    :Return: An RSA key object (`RsaKey`).
+    Returns: An RSA key object (:class:`RsaKey`).
 
-    :Raise ValueError/IndexError/TypeError:
+    Raises:
+      ValueError/IndexError/TypeError:
         When the given key cannot be parsed (possibly because the pass
         phrase is wrong).
 
@@ -727,6 +709,7 @@ def import_key(extern_key, passphrase=None):
     .. _`PKCS#1`: http://www.ietf.org/rfc/rfc3447.txt
     .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
     """
+
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)

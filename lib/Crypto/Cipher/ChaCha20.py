@@ -28,25 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""ChaCha20 stream cipher
-
-`ChaCha20`_ is a stream cipher designed by Daniel J. Bernstein.
-
-The key is 256 bits long.
-
-As an example, encryption can be done as follows:
-
-    >>> from Crypto.Cipher import ChaCha20
-    >>>
-    >>> secret = b'*Thirty-two byte (256 bits) key*'
-    >>> cipher = ChaCha20.new(key=secret)
-    >>> msg = cipher.nonce + cipher.encrypt(b'Attack at dawn')
-
-:undocumented: __package__
-
-.. _ChaCha20: http://http://cr.yp.to/chacha.html
-"""
-
 from Crypto.Random import get_random_bytes
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -78,7 +59,11 @@ _raw_chacha20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._chacha20",
 
 
 class ChaCha20Cipher:
-    """ChaCha20 cipher object"""
+    """ChaCha20 cipher object. Do not create it directly. Use :py:func:`new` instead.
+
+    :var nonce: The nonce with length 8
+    :vartype nonce: byte string
+    """
 
     block_size = 1
 
@@ -108,11 +93,10 @@ class ChaCha20Cipher:
     def encrypt(self, plaintext):
         """Encrypt a piece of data.
 
-        :Parameters:
-          plaintext : byte string
-            The piece of data to encrypt. It can be of any size.
-        :Return: the encrypted data (byte string, as long as the
-          plaintext).
+        :param plaintext: The data to encrypt, of any size.
+        :type plaintext: byte string
+        :returns: the encrypted byte string, of equal length as the
+          plaintext.
         """
 
         if self.encrypt not in self._next:
@@ -137,11 +121,10 @@ class ChaCha20Cipher:
     def decrypt(self, ciphertext):
         """Decrypt a piece of data.
 
-        :Parameters:
-          ciphertext : byte string
-            The piece of data to decrypt. It can be of any size.
-        :Return: the decrypted data (byte string, as long as the
-          ciphertext).
+        :param ciphertext: The data to decrypt, of any size.
+        :type ciphertext: byte string
+        :returns: the decrypted byte string, of equal length as the
+          ciphertext.
         """
 
         if self.decrypt not in self._next:
@@ -154,10 +137,9 @@ class ChaCha20Cipher:
             raise ValueError(str(e).replace("enc", "dec"))
 
     def seek(self, position):
-        """Seek at a certain position in the key stream.
+        """Seek to a certain position in the key stream.
 
-        :Parameters:
-          position : integer
+        :param integer position:
             The absolute position within the key stream, in bytes.
         """
 
@@ -179,19 +161,18 @@ class ChaCha20Cipher:
 def new(**kwargs):
     """Create a new ChaCha20 cipher
 
-    :Keywords:
-      key : byte string
-        The secret key to use in the symmetric cipher.
-        It must be 32 bytes long.
+    :keyword key: The secret key to use. It must be 32 bytes long.
+    :type key: byte string
 
-      nonce : byte string
+    :keyword nonce:
         A mandatory value that must never be reused for any other encryption
         done with this key. It must be 8 bytes long.
 
         If not provided, a random byte string will be generated (you can read
-        it back via the ``nonce`` attribute).
+        it back via the ``nonce`` attribute of the returned object).
+    :type nonce: byte string
 
-    :Return: a `ChaCha20Cipher` object
+    :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Cipher` object
     """
 
     try:
@@ -213,8 +194,8 @@ def new(**kwargs):
 
     return ChaCha20Cipher(key, nonce)
 
-#: Size of a data block (in bytes)
+# Size of a data block (in bytes)
 block_size = 1
 
-#: Size of a key (in bytes)
+# Size of a key (in bytes)
 key_size = 32

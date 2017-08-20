@@ -22,68 +22,7 @@
 # SOFTWARE.
 # ===================================================================
 
-"""DSA public-key signature algorithm.
-
-DSA_ is a widespread public-key signature algorithm. Its security is
-based on the discrete logarithm problem (DLP_). Given a cyclic
-group, a generator *g*, and an element *h*, it is hard
-to find an integer *x* such that *g^x = h*. The problem is believed
-to be difficult, and it has been proved such (and therefore secure) for
-more than 30 years.
-
-The group is actually a sub-group over the integers modulo *p*, with *p* prime.
-The sub-group order is *q*, which is prime too; it always holds that *(p-1)* is a multiple of *q*.
-The cryptographic strength is linked to the magnitude of *p* and *q*.
-The signer holds a value *x* (*0<x<q-1*) as private key, and its public
-key (*y* where *y=g^x mod p*) is distributed.
-
-In 2012, a sufficient size is deemed to be 2048 bits for *p* and 256 bits for *q*.
-For more information, see the most recent ECRYPT_ report.
-
-DSA is reasonably secure for new designs.
-
-The algorithm can only be used for authentication (digital signature).
-DSA cannot be used for confidentiality (encryption).
-
-The values *(p,q,g)* are called *domain parameters*;
-they are not sensitive but must be shared by both parties (the signer and the verifier).
-Different signers can share the same domain parameters with no security
-concerns.
-
-The DSA signature is twice as big as the size of *q* (64 bytes if *q* is 256 bit
-long).
-
-This module provides facilities for generating new DSA keys and for constructing
-them from known components. DSA keys allows you to perform basic signing and
-verification.
-
-    >>> from Crypto.PublicKey import DSA
-    >>> from Crypto.Signature import DSS
-    >>> from Crypto.Hash import SHA256
-    >>>
-    >>> message = b"Hello"
-    >>> key = DSA.generate(2048)
-    >>> f = open("public_key.pem", "w")
-    >>> f.write(key.publickey().exportKey(key))
-    >>> hash_obj = SHA256.new(message)
-    >>> signer = DSS.new(key, 'fips-186-3')
-    >>> signature = key.sign(hash_obj)
-    >>> ...
-    >>> f = open("public_key.pem", "r")
-    >>> hash_obj = SHA256.new(message)
-    >>> pub_key = DSA.import_key(f.read())
-    >>> if pub_key.verify(hash_obj, signature):
-    >>>     print "OK"
-    >>> else:
-    >>>     print "Incorrect signature"
-
-.. _DSA: http://en.wikipedia.org/wiki/Digital_Signature_Algorithm
-.. _DLP: http://www.cosic.esat.kuleuven.be/publications/talk-78.pdf
-.. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
-"""
-
-__all__ = ['generate', 'construct', 'DSAImplementation',
-           'DsaKey', 'import_key' ]
+__all__ = ['generate', 'construct', 'DsaKey', 'import_key' ]
 
 import binascii
 import struct
@@ -137,24 +76,26 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 #
 
 class DsaKey(object):
-    """Class defining an actual DSA key.
+    r"""Class defining an actual DSA key.
+    Do not instantiate directly.
+    Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
 
-    :undocumented: __getstate__, __setstate__, __repr__, __getattr__,
-                   __init__, __eq__, __ne__, sign, verify, encrypt, decrypt,
-                   blind, unblind, size
+    :ivar p: DSA modulus
+    :vartype p: integer
+
+    :ivar q: Order of the subgroup
+    :vartype q: integer
+
+    :ivar g: Generator
+    :vartype g: integer
+
+    :ivar y: Public key
+    :vartype y: integer
+
+    :ivar x: Private key
+    :vartype x: integer
     """
-    #: Dictionary of DSA parameters.
-    #:
-    #: A public key will only have the following entries:
-    #:
-    #:  - **y**, the public key.
-    #:  - **g**, the generator.
-    #:  - **p**, the modulus.
-    #:  - **q**, the order of the sub-group.
-    #:
-    #: A private key will also have:
-    #:
-    #:  - **x**, the private key.
+
     _keydata = ['y', 'g', 'p', 'q', 'x']
 
     def __init__(self, key_dict):
@@ -198,15 +139,23 @@ class DsaKey(object):
         return v == r
 
     def has_private(self):
+        """Whether this is a DSA private key"""
+
         return 'x' in self._key
 
-    def can_encrypt(self):
+    def can_encrypt(self):  # legacy
         return False
 
-    def can_sign(self):
+    def can_sign(self):     # legacy
         return True
 
     def publickey(self):
+        """A matching DSA public key.
+
+        Returns:
+            a new :class:`DsaKey` object
+        """
+
         public_components = dict((k, self._key[k]) for k in ('y', 'g', 'p', 'q'))
         return DsaKey(public_components)
 
@@ -229,7 +178,11 @@ class DsaKey(object):
         raise PicklingError
 
     def domain(self):
-        """The DSA domain parameters: *p*, *q* and *g*. """
+        """The DSA domain parameters.
+
+        Returns
+            tuple : (p,q,g)
+        """
 
         return map(int, [self._key[comp] for comp in 'p', 'q', 'g'])
 
@@ -255,52 +208,52 @@ class DsaKey(object):
                   protection=None, randfunc=None):
         """Export this DSA key.
 
-        :Parameters:
-          format : string
-            The format to use for wrapping the key:
+        Args:
+          format (string):
+            The encoding for the output:
 
-            - *'DER'*. Binary encoding.
-            - *'PEM'*. Textual encoding, done according to `RFC1421`_/
-              `RFC1423`_ (default).
-            - *'OpenSSH'*. Textual encoding, one line of text, see `RFC4253`_.
-              Only suitable for public keys, not private keys.
+            - *'PEM'* (default). ASCII as per `RFC1421`_/ `RFC1423`_.
+            - *'DER'*. Binary ASN.1 encoding.
+            - *'OpenSSH'*. ASCII one-liner as per `RFC4253`_.
+              Only suitable for public keys, not for private keys.
 
-          passphrase : string
-            For private keys only. The pass phrase to use for deriving
-            the encryption key.
+          passphrase (string):
+            *Private keys only*. The pass phrase to protect the output.
 
-          pkcs8 : boolean
-            For private keys only. If ``True`` (default), the key is arranged
-            according to `PKCS#8`_ and if `False`, according to the custom
-            OpenSSL/OpenSSH encoding.
+          pkcs8 (boolean):
+            *Private keys only*. If ``True`` (default), the key is encoded
+            with `PKCS#8`_. If ``False``, it is encoded in the custom
+            OpenSSL/OpenSSH container.
 
-          protection : string
-            The encryption scheme to use for protecting the private key.
-            It is only meaningful when a pass phrase is present too.
+          protection (string):
+            *Only in combination with a pass phrase*.
+            The encryption scheme to use to protect the output.
 
-            If ``pkcs8`` takes value ``True``, ``protection`` is the PKCS#8
+            If :data:`pkcs8` takes value ``True``, this is the PKCS#8
             algorithm to use for deriving the secret and encrypting
             the private DSA key.
-            For a complete list of algorithms, see `Crypto.IO.PKCS8`.
+            For a complete list of algorithms, see :mod:`Crypto.IO.PKCS8`.
             The default is *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*.
 
-            If ``pkcs8`` is ``False``, the obsolete PEM encryption scheme is
+            If :data:`pkcs8` is ``False``, the obsolete PEM encryption scheme is
             used. It is based on MD5 for key derivation, and Triple DES for
-            encryption. Parameter ``protection`` is ignored.
+            encryption. Parameter :data:`protection` is then ignored.
 
             The combination ``format='DER'`` and ``pkcs8=False`` is not allowed
             if a passphrase is present.
 
-          randfunc : callable
+          randfunc (callable):
             A function that returns random bytes.
-            By default it is `Crypto.Random.get_random_bytes`.
+            By default it is :func:`Crypto.Random.get_random_bytes`.
 
-        :Return: A byte string with the encoded public or private half
-          of the key.
-        :Raise ValueError:
-            When the format is unknown or when you try to encrypt a private
+        Returns:
+          byte string : the encoded key
+
+        Raises:
+          ValueError : when the format is unknown or when you try to encrypt a private
             key with *DER* format and OpenSSL/OpenSSH.
-        :attention:
+
+        .. warning::
             If you don't provide a pass phrase, the private key will be
             exported in the clear!
 
@@ -459,25 +412,26 @@ def generate(bits, randfunc=None, domain=None):
     The algorithm follows Appendix A.1/A.2 and B.1 of `FIPS 186-4`_,
     respectively for domain generation and key pair generation.
 
-    :Parameters:
-      bits : integer
+    Args:
+      bits (integer):
         Key length, or size (in bits) of the DSA modulus *p*.
         It must be 1024, 2048 or 3072.
 
-      randfunc : callable
+      randfunc (callable):
         Random number generation function; it accepts a single integer N
         and return a string of random data N bytes long.
-        If not specified, the default from ``Crypto.Random`` is used.
+        If not specified, :func:`Crypto.Random.get_random_bytes` is used.
 
-      domain : list
+      domain (tuple):
         The DSA domain parameters *p*, *q* and *g* as a list of 3
         integers. Size of *p* and *q* must comply to `FIPS 186-4`_.
         If not specified, the parameters are created anew.
 
-    :Return: A DSA key object (`DsaKey`).
+    Returns:
+      :class:`DsaKey` : a new DSA key object
 
-    :Raise ValueError:
-        When **bits** is too little, too big, or not a multiple of 64.
+    Raises:
+      ValueError : when **bits** is too little, too big, or not a multiple of 64.
 
     .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
@@ -528,8 +482,8 @@ def generate(bits, randfunc=None, domain=None):
 def construct(tup, consistency_check=True):
     """Construct a DSA key from a tuple of valid DSA components.
 
-    :Parameters:
-     tup : tuple
+    Args:
+      tup (tuple):
         A tuple of long integers, with 4 or 5 items
         in the following order:
 
@@ -538,13 +492,16 @@ def construct(tup, consistency_check=True):
             3. Modulus, finite field order (*p*).
             4. Sub-group order (*q*).
             5. Private key (*x*). Optional.
-     consistency_check : boolean
-        If *True*, the library will verify that the provided components
+
+      consistency_check (boolean):
+        If ``True``, the library will verify that the provided components
         fulfil the main DSA properties.
 
-    :Raise PublicKey.ValueError:
-        When the key being imported fails the most basic DSA validity checks.
-    :Return: A DSA key object (`DsaKey`).
+    Raises:
+      ValueError: when the key being imported fails the most basic DSA validity checks.
+
+    Returns:
+      :class:`DsaKey` : a DSA key object
     """
 
     key_dict = dict(zip(('y', 'g', 'p', 'q', 'x'), map(Integer, tup)))
@@ -638,36 +595,37 @@ def _import_key_der(key_data, passphrase, params):
 
 
 def import_key(extern_key, passphrase=None):
-    """Import a DSA key (public or private).
+    """Import a DSA key.
 
-    :Parameters:
-      extern_key : (byte) string
+    Args:
+      extern_key (string or byte string):
         The DSA key to import.
 
-        An DSA *public* key can be in any of the following formats:
+        The following formats are supported for a DSA **public** key:
 
-        - X.509 certificate (binary or PEM format)
-        - X.509 ``subjectPublicKeyInfo`` (binary or PEM)
-        - OpenSSH (one line of text, see `RFC4253`_)
+        - X.509 certificate (binary DER or PEM)
+        - X.509 ``subjectPublicKeyInfo`` (binary DER or PEM)
+        - OpenSSH (ASCII one-liner, see `RFC4253`_)
 
-        A DSA *private* key can be in any of the following formats:
+        The following formats are supported for a DSA **private** key:
 
         - `PKCS#8`_ ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo``
-          DER SEQUENCE (binary or PEM encoding)
-        - OpenSSL/OpenSSH (binary or PEM)
+          DER SEQUENCE (binary or PEM)
+        - OpenSSL/OpenSSH custom format (binary or PEM)
 
         For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
 
-        The private key may be encrypted by means of a certain pass phrase
-        either at the PEM level or at the PKCS#8 level.
-
-      passphrase : string
+      passphrase (string):
         In case of an encrypted private key, this is the pass phrase
         from which the decryption key is derived.
 
-    :Return: A DSA key object (`DsaKey`).
-    :Raise ValueError:
-        When the given key cannot be parsed (possibly because
+        Encryption may be applied either at the `PKCS#8`_ or at the PEM level.
+
+    Returns:
+      :class:`DsaKey` : a DSA key object
+
+    Raises:
+      ValueError : when the given key cannot be parsed (possibly because
         the pass phrase is wrong).
 
     .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt

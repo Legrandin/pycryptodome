@@ -18,22 +18,6 @@
 # SOFTWARE.
 # ===================================================================
 
-"""SHA-384 cryptographic hash algorithm.
-
-SHA-384 belongs to the SHA-2_ family of cryptographic hashes.
-It produces the 384 bit digest of a message.
-
-    >>> from Crypto.Hash import SHA384
-    >>>
-    >>> h = SHA384.new()
-    >>> h.update(b'Hello')
-    >>> print h.hexdigest()
-
-*SHA* stands for Secure Hash Algorithm.
-
-.. _SHA-2: http://csrc.nist.gov/publications/fips/fips180-2/fips180-4.pdf
-"""
-
 from Crypto.Util.py3compat import *
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -55,14 +39,25 @@ _raw_sha384_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA384",
                         """)
 
 class SHA384Hash(object):
-    """Class that implements a SHA-384 hash
+    """A SHA-384 hash object.
+    Do not instantiate directly. Use the :func:`new` function.
+
+    :ivar oid: ASN.1 Object ID
+    :vartype oid: string
+
+    :ivar block_size: the size in bytes of the internal message block,
+                      input to the compression function
+    :vartype block_size: integer
+
+    :ivar digest_size: the size in bytes of the resulting hash
+    :vartype digest_size: integer
     """
 
-    #: The size of the resulting hash in bytes.
+    # The size of the resulting hash in bytes.
     digest_size = 48
-    #: The internal block size of the hash algorithm in bytes.
+    # The internal block size of the hash algorithm in bytes.
     block_size = 128
-    #: ASN.1 Object ID
+    # ASN.1 Object ID
     oid = '2.16.840.1.101.3.4.2.2'
 
     def __init__(self, data=None):
@@ -79,18 +74,8 @@ class SHA384Hash(object):
     def update(self, data):
         """Continue hashing of a message by consuming the next chunk of data.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        :Parameters:
-          data : byte string
-            The next chunk of the message being hashed.
+        Args:
+            data (byte string): The next chunk of the message being hashed.
         """
 
         expect_byte_string(data)
@@ -104,11 +89,9 @@ class SHA384Hash(object):
     def digest(self):
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-        You can continue updating the object after calling this function.
-
-        :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-         characters, including null bytes.
+        :return: The hash digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
         """
 
         bfr = create_string_buffer(self.digest_size)
@@ -123,10 +106,9 @@ class SHA384Hash(object):
     def hexdigest(self):
         """Return the **printable** digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-
-        :Return: A string of 2* `digest_size` characters. It contains only
-         hexadecimal ASCII digits.
+        :return: The hash digest, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
@@ -139,7 +121,7 @@ class SHA384Hash(object):
         This can be used to efficiently compute the digests of strings that
         share a common initial substring.
 
-        :Return: A hash object of the same type
+        :return: A hash object of the same type
         """
 
         clone = SHA384Hash()
@@ -150,24 +132,26 @@ class SHA384Hash(object):
         return clone
 
     def new(self, data=None):
+        """Create a fresh SHA-384 hash object."""
+
         return SHA384Hash(data)
 
 def new(data=None):
-    """Return a fresh instance of the hash object.
+    """Create a new hash object.
 
-    :Parameters:
-       data : byte string
-        The very first chunk of the message to hash.
-        It is equivalent to an early call to `SHA384Hash.update()`.
-        Optional.
+    :parameter data:
+        Optional. The very first chunk of the message to hash.
+        It is equivalent to an early call to :meth:`SHA384Hash.update`.
+    :type data: byte string
 
-    :Return: A `SHA384Hash` object
+    :Return: A :class:`SHA384Hash` hash object
     """
+
     return SHA384Hash().new(data)
 
-#: The size of the resulting hash in bytes.
+# The size of the resulting hash in bytes.
 digest_size = SHA384Hash.digest_size
 
-#: The internal block size of the hash algorithm in bytes.
+# The internal block size of the hash algorithm in bytes.
 block_size = SHA384Hash.block_size
 

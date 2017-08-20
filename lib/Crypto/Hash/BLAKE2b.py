@@ -28,34 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""BLAKE2b cryptographic hash algorithm.
-
-`BLAKE2b`_ is an optimized variant of BLAKE, one of the SHA-3 candidates that
-made it to the final round of the NIST hash competition.
-
-The algorithm uses 64 bit words, and it therefore works best on
-64-bit platforms. The digest size ranges from 8 to 512 bits.
-
-    >>> from Crypto.Hash import BLAKE2b
-    >>>
-    >>> h_obj = BLAKE2b.new(digest_bits=512)
-    >>> h_obj.update(b'Some data')
-    >>> print h_obj.hexdigest()
-
-Optionally, BLAKE2b can work as a cryptographic MAC when initialized
-with a secret key.
-
-    >>> from Crypto.Hash import BLAKE2b
-    >>>
-    >>> mac = BLAKE2b.new(digest_bits=256, key=b'secret')
-    >>> mac.update(b'Some data')
-    >>> print mac.hexdigest()
-
-:undocumented: __package__
-
-.. _BLAKE2b: https://blake2.net/
-"""
-
 from binascii import unhexlify
 
 from Crypto.Util.py3compat import b, bord, tobytes
@@ -84,24 +56,32 @@ _raw_blake2b_lib = load_pycryptodome_raw_lib("Crypto.Hash._BLAKE2b",
 
 
 class BLAKE2b_Hash(object):
-    """Class that implements a BLAKE2b hash
+    """A BLAKE2b hash object.
+    Do not instantiate directly. Use the :func:`new` function.
+
+    :ivar oid: ASN.1 Object ID
+    :vartype oid: string
+
+    :ivar block_size: the size in bytes of the internal message block,
+                      input to the compression function
+    :vartype block_size: integer
+
+    :ivar digest_size: the size in bytes of the resulting hash
+    :vartype digest_size: integer
     """
 
-    #: The internal block size of the hash algorithm in bytes.
+    # The internal block size of the hash algorithm in bytes.
     block_size = 64
 
     def __init__(self, data, key, digest_bytes, update_after_digest):
-        """
-        Initialize a BLAKE2b hash object.
-        """
 
-        #: The size of the resulting hash in bytes.
+        # The size of the resulting hash in bytes.
         self.digest_size = digest_bytes
 
         self._update_after_digest = update_after_digest
         self._digest_done = False
 
-        # See https://tools.ietf.org/html/draft-saarinen-blake2-02
+        # See https://tools.ietf.org/html/rfc7693
         if digest_bytes in (20, 32, 48, 64) and not key:
             self.oid = "1.3.6.1.4.1.1722.12.2.1." + str(digest_bytes)
 
@@ -120,21 +100,12 @@ class BLAKE2b_Hash(object):
         if data:
             self.update(data)
 
+
     def update(self, data):
         """Continue hashing of a message by consuming the next chunk of data.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        :Parameters:
-          data : byte string
-            The next chunk of the message being hashed.
+        Args:
+            data (byte string): The next chunk of the message being hashed.
         """
 
         if self._digest_done and not self._update_after_digest:
@@ -148,15 +119,13 @@ class BLAKE2b_Hash(object):
             raise ValueError("Error %d while hashing BLAKE2b data" % result)
         return self
 
+
     def digest(self):
-        """Return the **binary** (non-printable) digest of the message that
-        has been hashed so far.
+        """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        You cannot update the hash anymore after the first call to ``digest``
-        (or ``hexdigest``).
-
-        :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-         characters, including null bytes.
+        :return: The hash digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
         """
 
         bfr = create_string_buffer(64)
@@ -169,28 +138,28 @@ class BLAKE2b_Hash(object):
 
         return get_raw_buffer(bfr)[:self.digest_size]
 
+
     def hexdigest(self):
-        """Return the **printable** digest of the message that has been
-        hashed so far.
+        """Return the **printable** digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-
-        :Return: A string of 2* `digest_size` characters. It contains only
-         hexadecimal ASCII digits.
+        :return: The hash digest, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
 
         return "".join(["%02x" % bord(x) for x in tuple(self.digest())])
+
 
     def verify(self, mac_tag):
         """Verify that a given **binary** MAC (computed by another party)
         is valid.
 
-        :Parameters:
-          mac_tag : byte string
-            The expected MAC of the message.
-        :Raises ValueError:
-            if the MAC does not match. It means that the message
-            has been tampered with or that the MAC key is incorrect.
+        Args:
+          mac_tag (byte string): the expected MAC of the message.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
         """
 
         secret = get_random_bytes(16)
@@ -201,22 +170,26 @@ class BLAKE2b_Hash(object):
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
+
     def hexverify(self, hex_mac_tag):
         """Verify that a given **printable** MAC (computed by another party)
         is valid.
 
-        :Parameters:
-          hex_mac_tag : string
-            The expected MAC of the message, as a hexadecimal string.
-        :Raises ValueError:
-            if the MAC does not match. It means that the message
-            has been tampered with or that the MAC key is incorrect.
+        Args:
+            hex_mac_tag (string): the expected MAC of the message, as a hexadecimal string.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
         """
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
+
     def new(self, **kwargs):
-        """Return a new instance of a BLAKE2b hash object."""
+        """Return a new instance of a BLAKE2b hash object.
+        See :func:`new`.
+        """
 
         if "digest_bytes" not in kwargs and "digest_bits" not in kwargs:
             kwargs["digest_bytes"] = self.digest_size
@@ -225,24 +198,26 @@ class BLAKE2b_Hash(object):
 
 
 def new(**kwargs):
-    """Return a new instance of a BLAKE2b hash object.
+    """Create a new hash object.
 
-    :Keywords:
-      data : byte string
-        The very first chunk of the message to hash.
-        It is equivalent to an early call to `BLAKE2b_Hash.update()`.
-      digest_bytes : integer
-        The size of the digest, in bytes (1 to 64).
-      digest_bits : integer
-        The size of the digest, in bits (8 to 512, in steps of 8).
-      key : byte string
-        The key to use to compute the MAC (1 to 64 bytes).
-        If not specified, no key will be used.
-      update_after_digest : boolean
-        Optional. By default, a hash object cannot be updated anymore after
-        the digest is computed. When this flag is ``True``, such check
-        is no longer enforced.
-    :Return: A `BLAKE2b_Hash` object
+    Args:
+        data (byte string):
+            Optional. The very first chunk of the message to hash.
+            It is equivalent to an early call to :meth:`BLAKE2b_Hash.update`.
+        digest_bytes (integer):
+            The size of the digest, in bytes (1 to 64).
+        digest_bits (integer):
+            The size of the digest, in bits (8 to 512, in steps of 8).
+        key (byte string):
+            Optional. The key to use to compute the MAC (1 to 64 bytes).
+            If not specified, no key will be used.
+        update_after_digest (boolean):
+            Optional. By default, a hash object cannot be updated anymore after
+            the digest is computed. When this flag is ``True``, such check
+            is no longer enforced.
+
+    Returns:
+        A :class:`BLAKE2b_Hash` hash object
     """
 
     data = kwargs.pop("data", None)

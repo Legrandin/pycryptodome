@@ -23,87 +23,6 @@
 # SOFTWARE.
 # ===================================================================
 
-"""ElGamal public-key algorithm (randomized encryption and signature).
-
-Signature algorithm
--------------------
-The security of the ElGamal signature scheme is based (like DSA) on the discrete
-logarithm problem (DLP_). Given a cyclic group, a generator *g*,
-and an element *h*, it is hard to find an integer *x* such that *g^x = h*.
-
-The group is the largest multiplicative sub-group of the integers modulo *p*,
-with *p* prime.
-The signer holds a value *x* (*0<x<p-1*) as private key, and its public
-key (*y* where *y=g^x mod p*) is distributed.
-
-The ElGamal signature is twice as big as *p*.
-
-Encryption algorithm
---------------------
-The security of the ElGamal encryption scheme is based on the computational
-Diffie-Hellman problem (CDH_). Given a cyclic group, a generator *g*,
-and two integers *a* and *b*, it is difficult to find
-the element *g^{ab}* when only *g^a* and *g^b* are known, and not *a* and *b*.
-
-As before, the group is the largest multiplicative sub-group of the integers
-modulo *p*, with *p* prime.
-The receiver holds a value *a* (*0<a<p-1*) as private key, and its public key
-(*b* where *b*=g^a*) is given to the sender.
-
-The ElGamal ciphertext is twice as big as *p*.
-
-Domain parameters
------------------
-For both signature and encryption schemes, the values *(p,g)* are called
-*domain parameters*.
-They are not sensitive but must be distributed to all parties (senders and
-receivers).
-Different signers can share the same domain parameters, as can
-different recipients of encrypted messages.
-
-Security
---------
-Both DLP and CDH problem are believed to be difficult, and they have been proved
-such (and therefore secure) for more than 30 years.
-
-The cryptographic strength is linked to the magnitude of *p*.
-In 2012, a sufficient size for *p* is deemed to be 2048 bits.
-For more information, see the most recent ECRYPT_ report.
-
-Even though ElGamal algorithms are in theory reasonably secure for new designs,
-in practice there are no real good reasons for using them.
-The signature is four times larger than the equivalent DSA, and the ciphertext
-is two times larger than the equivalent RSA.
-
-Functionality
--------------
-This module provides facilities for generating new ElGamal keys and for constructing
-them from known components. ElGamal keys allows you to perform basic signing,
-verification, encryption, and decryption.
-
-    >>> from Crypto import Random
-    >>> from Crypto.PublicKey import ElGamal
-    >>> from Crypto.Hash import SHA
-    >>> from Crypto.Math import Numbers
-    >>>
-    >>> message = "Hello"
-    >>> key = ElGamal.generate(1024, Random.new().read)
-    >>> h = SHA.new(message).digest()
-    >>> while 1:
-    >>>     k = Numbers.random_range(min_inclusive=1, min_exclusive=key.p-1)
-    >>>     if k.gcd(key.p-1)==1: break
-    >>> sig = key.sign(h,k)
-    >>> ...
-    >>> if key.verify(h,sig):
-    >>>     print "OK"
-    >>> else:
-    >>>     print "Incorrect signature"
-
-.. _DLP: http://www.cosic.esat.kuleuven.be/publications/talk-78.pdf
-.. _CDH: http://en.wikipedia.org/wiki/Computational_Diffie%E2%80%93Hellman_assumption
-.. _ECRYPT: http://www.ecrypt.eu.org/documents/D.SPA.17.pdf
-"""
-
 __all__ = ['generate', 'construct', 'ElGamalKey']
 
 from Crypto import Random
@@ -118,25 +37,23 @@ def generate(bits, randfunc):
     The key will be safe for use for both encryption and signature
     (although it should be used for **only one** purpose).
 
-    :Parameters:
-        bits : int
-            Key length, or size (in bits) of the modulus *p*.
-            Recommended value is 2048.
-        randfunc : callable
-            Random number generation function; it should accept
-            a single integer N and return a string of random data
-            N bytes long.
+    Args:
+      bits (int):
+        Key length, or size (in bits) of the modulus *p*.
+        The recommended value is 2048.
+      randfunc (callable):
+        Random number generation function; it should accept
+        a single integer *N* and return a string of random
+        *N* random bytes.
 
-    :attention: You should always use a cryptographically secure random number generator,
-        such as the one defined in the ``Crypto.Random`` module; **don't** just use the
-        current time and the ``random`` module.
-
-    :Return: An ElGamal key object (`ElGamalKey`).
+    Return:
+        an :class:`ElGamalKey` object
     """
+
     obj=ElGamalKey()
+
     # Generate a safe prime p
     # See Algorithm 4.86 in Handbook of Applied Cryptography
-
     obj.p = generate_probable_safe_prime(exact_bits=bits, randfunc=randfunc)
     q = (obj.p - 1) >> 1
 
@@ -177,30 +94,35 @@ def generate(bits, randfunc):
     return obj
 
 def construct(tup):
-    """Construct an ElGamal key from a tuple of valid ElGamal components.
+    r"""Construct an ElGamal key from a tuple of valid ElGamal components.
 
     The modulus *p* must be a prime.
-
     The following conditions must apply:
 
-    - 1 < g < p-1
-    - g^{p-1} = 1 mod p
-    - 1 < x < p-1
-    - g^x = y mod p
+    .. math::
 
-    :Parameters:
-        tup : tuple
-            A tuple of long integers, with 3 or 4 items
-            in the following order:
+        \begin{align}
+        &1 < g < p-1 \\
+        &g^{p-1} = 1 \text{ mod } 1 \\
+        &1 < x < p-1 \\
+        &g^x = y \text{ mod } p
+        \end{align}
 
-            1. Modulus (*p*).
-            2. Generator (*g*).
-            3. Public key (*y*).
-            4. Private key (*x*). Optional.
+    Args:
+      tup (tuple):
+        A tuple with either 3 or 4 integers,
+        in the following order:
 
-    :Raise PublicKey.ValueError:
-        When the key being imported fails the most basic ElGamal validity checks.
-    :Return: An ElGamal key object (`ElGamalKey`).
+        1. Modulus (*p*).
+        2. Generator (*g*).
+        3. Public key (*y*).
+        4. Private key (*x*). Optional.
+
+    Raises:
+        ValueError: when the key being imported fails the most basic ElGamal validity checks.
+
+    Returns:
+        an :class:`ElGamalKey` object
     """
 
     obj=ElGamalKey()
@@ -224,9 +146,21 @@ def construct(tup):
     return obj
 
 class ElGamalKey(object):
-    """Class defining an ElGamal key.
+    r"""Class defining an ElGamal key.
+    Do not instantiate directly.
+    Use :func:`generate` or :func:`construct` instead.
 
-    :undocumented: __getstate__, __setstate__, __repr__, __getattr__
+    :ivar p: Modulus
+    :vartype d: integer
+
+    :ivar g: Generator
+    :vartype e: integer
+
+    :ivar y: Public key component
+    :vartype y: integer
+
+    :ivar x: Private key component
+    :vartype x: integer
     """
 
     #: Dictionary of ElGamal parameters.
@@ -289,6 +223,8 @@ class ElGamalKey(object):
         return 0
 
     def has_private(self):
+        """Whether this is an ElGamal private key"""
+
         if hasattr(self, 'x'):
             return 1
         else:
@@ -301,6 +237,11 @@ class ElGamalKey(object):
         return True
 
     def publickey(self):
+        """A matching ElGamal public key.
+
+        Returns:
+            a new :class:`ElGamalKey` object
+        """
         return construct((self.p, self.g, self.y))
 
     def __eq__(self, other):

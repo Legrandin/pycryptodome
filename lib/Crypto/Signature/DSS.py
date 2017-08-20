@@ -31,36 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""
-Digital Signature Standard (DSS), as specified in `FIPS PUB 186-3`__.
-
-A sender signs a message in the following way:
-
-        >>> from Crypto.Hash import SHA256
-        >>> from Crypto.PublicKey import ECC
-        >>> from Crypto.Signature import DSS
-        >>>
-        >>> message = b'I give my permission to order #4355'
-        >>> key = ECC.import_key(open('privkey.der').read())
-        >>> h = SHA256.new(message)
-        >>> signer = DSS.new(key, 'fips-186-3')
-        >>> signature = signer.sign(h)
-
-The receiver can verify authenticity of the message:
-
-        >>> key = ECC.import_key(open('pubkey.der').read())
-        >>> h = SHA256.new(received_message)
-        >>> verifier = DSS.new(key, 'fips-186-3')
-        >>> try:
-        >>>     verifier.verify(h, signature):
-        >>>     print "The message is authentic."
-        >>> except ValueError:
-        >>>     print "The message is not authentic."
-
-.. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
-
-"""
-
 __all__ = ['new', 'DssSigScheme']
 
 from Crypto.Util.py3compat import bchr, b
@@ -75,9 +45,9 @@ from Crypto.PublicKey.ECC import _curve, EccKey
 
 
 class DssSigScheme(object):
-    """This signature scheme can perform DSS signature or verification.
-
-    :undocumented: __init__
+    """A (EC)DSA signature object.
+    Do not instantiate directly.
+    Use :func:`Crypto.Signature.DSS.new`.
     """
 
     def __init__(self, key, encoding, order):
@@ -95,7 +65,7 @@ class DssSigScheme(object):
         self._order_bytes = (self._order_bits - 1) // 8 + 1
 
     def can_sign(self):
-        """Return True if this signature object can be used
+        """Return ``True`` if this signature object can be used
         for signing messages."""
 
         return self._key.has_private()
@@ -107,24 +77,22 @@ class DssSigScheme(object):
         raise NotImplementedError("To be provided by subclasses")
 
     def sign(self, msg_hash):
-        """Produce the DSS signature of a message.
+        """Produce the DSA/ECDSA signature of a message.
 
-        :Parameters:
-          msg_hash : hash object
+        :parameter msg_hash:
             The hash that was carried out over the message.
-            The object belongs to the `Crypto.Hash` package.
+            The object belongs to the :mod:`Crypto.Hash` package.
 
             Under mode *'fips-186-3'*, the hash must be a FIPS
             approved secure hash (SHA-1 or a member of the SHA-2 family),
             of cryptographic strength appropriate for the DSA key.
             For instance, a 3072/256 DSA key can only be used
             in combination with SHA-512.
+        :type msg_hash: hash object
 
-        :Return: The signature encoded as a byte string.
-        :Raise ValueError:
-            If the hash algorithm is incompatible to the DSA key.
-        :Raise TypeError:
-            If the DSA key has no private half.
+        :return: The signature as a *byte string*
+        :raise ValueError: if the hash algorithm is incompatible to the (EC)DSA key
+        :raise TypeError: if the (EC)DSA key has no private half
         """
 
         if not self._valid_hash(msg_hash):
@@ -151,27 +119,24 @@ class DssSigScheme(object):
         return output
 
     def verify(self, msg_hash, signature):
-        """Verify that a certain DSS signature is authentic.
+        """Check if a certain (EC)DSA signature is authentic.
 
-        This function checks if the party holding the private half of the key
-        really signed the message.
-
-        :Parameters:
-          msg_hash : hash object
+        :parameter msg_hash:
             The hash that was carried out over the message.
-            This is an object belonging to the `Crypto.Hash` module.
+            This is an object belonging to the :mod:`Crypto.Hash` module.
 
             Under mode *'fips-186-3'*, the hash must be a FIPS
             approved secure hash (SHA-1 or a member of the SHA-2 family),
             of cryptographic strength appropriate for the DSA key.
             For instance, a 3072/256 DSA key can only be used in
             combination with SHA-512.
+        :type msg_hash: hash object
 
-          signature : byte string
-            The signature that needs to be validated.
+        :parameter signature:
+            The signature that needs to be validated
+        :type signature: byte string
 
-        :Raise ValueError:
-            If the signature is not authentic.
+        :raise ValueError: if the signature is not authentic
         """
 
         if not self._valid_hash(msg_hash):
@@ -340,54 +305,67 @@ class FipsEcDsaSigScheme(DssSigScheme):
 
 
 def new(key, mode, encoding='binary', randfunc=None):
-    """Return a signature scheme object `DSS_SigScheme` that
-    can be used to perform DSS signature or verification.
+    """Create a signature object :class:`DSS_SigScheme` that
+    can perform (EC)DSA signature or verification.
 
-    :Parameters:
-      key : a `Crypto.PublicKey.DSA` or `Crypto.PublicKey.ECC` key object
-        If the key has got its private half, both signature and
-        verification are possible.
+    .. note::
+        Refer to `NIST SP 800 Part 1 Rev 4`_ (or newer release) for an
+        overview of the recommended key lengths.
 
-        If it only has the public half, verification is possible
-        but not signature generation.
+    :parameter key:
+        The key to use for computing the signature (*private* keys only)
+        or verifying one: it must be either
+        :class:`Crypto.PublicKey.DSA` or :class:`Crypto.PublicKey.ECC`.
 
-        For DSA keys, let *L* and *N* be the bit lengths of the modules *p*
-        and *q*: the combination *(L,N)* must appear in the following list,
-        in compliance to section 4.2 of `FIPS-186`__:
+        For DSA keys, let ``L`` and ``N`` be the bit lengths of the modulus ``p``
+        and of ``q``: the pair ``(L,N)`` must appear in the following list,
+        in compliance to section 4.2 of `FIPS 186-4`_:
 
-        - (1024, 160)
-        - (2048, 224)
+        - (1024, 160) *legacy only; do not create new signatures with this*
+        - (2048, 224) *deprecated; do not create new signatures with this*
         - (2048, 256)
         - (3072, 256)
 
-      mode : string
+        For ECC, only keys over P-256 are accepted.
+    :type key:
+        a key object
+
+    :parameter mode:
         The parameter can take these values:
 
-        - *'fips-186-3'*. The signature generation is carried out
-          according to `FIPS-186`__: the nonce *k* is taken from the RNG.
-        - *'deterministic-rfc6979'*. The signature generation
-          process does not rely on a random generator.
-          See RFC6979_.
+        - *'fips-186-3'*. The signature generation is randomized and carried out
+          according to `FIPS 186-3`_: the nonce ``k`` is taken from the RNG.
+        - *'deterministic-rfc6979'*. The signature generation is not
+          randomized. See RFC6979_.
+    :type mode:
+        string
 
-      encoding : string
+    :parameter encoding:
         How the signature is encoded. This value determines the output of
-        ``sign`` and the input of ``verify``.
+        :meth:`sign` and the input to :meth:`verify`.
 
         The following values are accepted:
 
         - *'binary'* (default), the signature is the raw concatenation
-          of *r* and *s*. The size in bytes of the signature is always
-          two times the size of *q*.
+          of ``r`` and ``s``.
+          For DSA, the size in bytes of the signature is ``N/4``
+          (e.g. 64 bytes for ``N=256``).
+          For ECDSA (over P-256), the signature is always 64 bytes long.
 
-        - *'der'*, the signature is a DER encoded SEQUENCE with two
-          INTEGERs, *r* and *s*. The size of the signature is variable.
+        - *'der'*, the signature is an ASN.1 SEQUENCE with two
+          INTEGERs (``r`` and ``s``) encoded with DER.
+          The size of the signature is variable.
+    :type encoding: string
 
-      randfunc : callable
-        The source of randomness. If ``None``, the internal RNG is used.
-        Only used for the *'fips-186-3'* mode.
+    :parameter randfunc:
+        A function that returns random *byte strings*, of a given length.
+        If omitted, the internal RNG is used.
+        Only applicable for the *'fips-186-3'* mode.
+    :type randfunc: callable
 
-    .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
-    .. __: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
+    .. _FIPS 186-3: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
+    .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+    .. _NIST SP 800 Part 1 Rev 4: http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
     .. _RFC6979: http://tools.ietf.org/html/rfc6979
     """
 

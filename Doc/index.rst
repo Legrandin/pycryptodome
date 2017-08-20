@@ -2,11 +2,12 @@ Welcome to PyCryptodome's documentation
 =======================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    
    src/introduction
    src/features
    src/installation
+   src/vs_pycrypto
    src/api
    src/examples
    src/contribute_support

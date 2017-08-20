@@ -28,16 +28,4 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Cryptographic protocols
-
-Implements various cryptographic protocols.  (Don't expect to find
-network protocols here.)
-
-Crypto.Protocol.KDF
- A collection of standard key derivation functions.
-
-Crypto.Protocol.SecretSharing
- Distribute a secret amongst a group of participants.
-"""
-
 __all__ = ['KDF', 'SecretSharing']

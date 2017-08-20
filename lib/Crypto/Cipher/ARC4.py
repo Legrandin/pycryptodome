@@ -19,46 +19,6 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 # ===================================================================
-"""ARC4 symmetric cipher
-
-ARC4_ (Alleged RC4) is an implementation of RC4 (Rivest's Cipher version 4),
-a symmetric stream cipher designed by Ron Rivest in 1987.
-
-The cipher started as a proprietary design, that was reverse engineered and
-anonymously posted on Usenet in 1994. The company that owns RC4 (RSA Data
-Inc.) never confirmed the correctness of the leaked algorithm.
-
-Unlike RC2, the company has never published the full specification of RC4,
-of whom it still holds the trademark.
-
-ARC4 keys can vary in length from 40 to 2048 bits.
-
-One problem of ARC4 is that it does not take a nonce or an IV.
-If it is required to encrypt multiple messages with the same long-term key, a
-distinct independent nonce must be created for each message, and a short-term
-key must be derived from the combination of the long-term key and the nonce.
-Due to the weak key scheduling algorithm of RC2, the combination must be
-carried out with a complex function (e.g. a cryptographic hash) and not by
-simply concatenating key and nonce.
-
-**Use ChaCha20, not ARC4. This module is only provided for legacy purposes.**
-
-As an example, encryption can be done as follows:
-
-    >>> from Crypto.Cipher import ARC4
-    >>> from Crypto.Hash import SHA
-    >>> from Crypto.Random import get_random_bytes
-    >>>
-    >>> key = b'Very long and confidential key'
-    >>> nonce = get_random_bytes(16)
-    >>> tempkey = SHA.new(key+nonce).digest()
-    >>> cipher = ARC4.new(tempkey)
-    >>> msg = nonce + cipher.encrypt(b'Open the pod bay doors, HAL')
-
-.. _ARC4: http://en.wikipedia.org/wiki/RC4
-
-:undocumented: __package__
-"""
 
 from Crypto.Util.py3compat import b
 
@@ -77,7 +37,9 @@ _raw_arc4_lib = load_pycryptodome_raw_lib("Crypto.Cipher._ARC4", """
 
 
 class ARC4Cipher:
-    """ARC4 cipher object"""
+    """ARC4 cipher object. Do not create it directly. Use
+    :func:`Crypto.Cipher.ARC4.new` instead.
+    """
 
     def __init__(self, key, *args, **kwargs):
         """Initialize an ARC4 cipher object
@@ -118,11 +80,10 @@ class ARC4Cipher:
     def encrypt(self, plaintext):
         """Encrypt a piece of data.
 
-        :Parameters:
-          plaintext : byte string
-            The piece of data to encrypt. It can be of any size.
-        :Return: the encrypted data (byte string, as long as the
-          plaintext).
+        :param plaintext: The data to encrypt, of any size.
+        :type plaintext: byte string
+        :returns: the encrypted byte string, of equal length as the
+          plaintext.
         """
 
         expect_byte_string(plaintext)
@@ -138,12 +99,12 @@ class ARC4Cipher:
     def decrypt(self, ciphertext):
         """Decrypt a piece of data.
 
-        :Parameters:
-          ciphertext : byte string
-            The piece of data to decrypt. It can be of any size.
-        :Return: the decrypted data (byte string, as long as the
-          ciphertext).
+        :param ciphertext: The data to decrypt, of any size.
+        :type ciphertext: byte string
+        :returns: the decrypted byte string, of equal length as the
+          ciphertext.
         """
+
         try:
             return self.encrypt(ciphertext)
         except ValueError, e:
@@ -151,21 +112,21 @@ class ARC4Cipher:
 
 
 def new(key, *args, **kwargs):
-    """Create a new ARC4 cipher
+    """Create a new ARC4 cipher.
 
-    :Parameters:
-      key : byte string
+    :param key:
         The secret key to use in the symmetric cipher.
         Its length must be in the range ``[5..256]``.
         The recommended length is 16 bytes.
+    :type key: byte string
 
-    :Keywords:
-      drop : integer
-        The amount of bytes to discard from the initial part of the keystream.
-        In fact, such part has been found to be distinguishable from random
-        data (while it shouldn't) and also correlated to key.
+    :Keyword Arguments:
+        *   *drop* (``integer``) --
+            The amount of bytes to discard from the initial part of the keystream.
+            In fact, such part has been found to be distinguishable from random
+            data (while it shouldn't) and also correlated to key.
 
-        The recommended value is 3072_ bytes. The default value is 0.
+            The recommended value is 3072_ bytes. The default value is 0.
 
     :Return: an `ARC4Cipher` object
 
@@ -173,7 +134,7 @@ def new(key, *args, **kwargs):
     """
     return ARC4Cipher(key, *args, **kwargs)
 
-#: Size of a data block (in bytes)
+# Size of a data block (in bytes)
 block_size = 1
-#: Size of a key (in bytes)
+# Size of a key (in bytes)
 key_size = xrange(5, 256+1)

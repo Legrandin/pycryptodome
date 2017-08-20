@@ -28,26 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""RIPEMD-160 cryptographic hash algorithm.
-
-RIPEMD-160_ produces the 160 bit digest of a message.
-
-    >>> from Crypto.Hash import RIPEMD160
-    >>>
-    >>> h = RIPEMD160.new()
-    >>> h.update(b'Hello')
-    >>> print h.hexdigest()
-
-RIPEMD-160 stands for RACE Integrity Primitives Evaluation Message Digest
-with a 160 bit digest. It was invented by Dobbertin, Bosselaers, and Preneel.
-
-This algorithm is considered secure, although it has not been scrutinized as
-extensively as SHA-1. Moreover, it provides an informal security level of just
-80bits.
-
-.. _RIPEMD-160: http://homes.esat.kuleuven.be/~bosselae/ripemd160.html
-"""
-
 from Crypto.Util.py3compat import bord
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -71,14 +51,26 @@ _raw_ripemd160_lib = load_pycryptodome_raw_lib(
 
 
 class RIPEMD160Hash(object):
-    """Class that implements a RIPEMD-160 hash
+    """A RIPEMD-160 hash object.
+    Do not instantiate directly.
+    Use the :func:`new` function.
+
+    :ivar oid: ASN.1 Object ID
+    :vartype oid: string
+
+    :ivar block_size: the size in bytes of the internal message block,
+                      input to the compression function
+    :vartype block_size: integer
+
+    :ivar digest_size: the size in bytes of the resulting hash
+    :vartype digest_size: integer
     """
 
-    #: The size of the resulting hash in bytes.
+    # The size of the resulting hash in bytes.
     digest_size = 20
-    #: The internal block size of the hash algorithm in bytes.
+    # The internal block size of the hash algorithm in bytes.
     block_size = 64
-    #: ASN.1 Object ID
+    # ASN.1 Object ID
     oid = "1.3.36.3.2.1"
 
     def __init__(self, data=None):
@@ -95,18 +87,8 @@ class RIPEMD160Hash(object):
     def update(self, data):
         """Continue hashing of a message by consuming the next chunk of data.
 
-        Repeated calls are equivalent to a single call with the concatenation
-        of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        :Parameters:
-          data : byte string
-            The next chunk of the message being hashed.
+        Args:
+            data (byte string): The next chunk of the message being hashed.
         """
 
         expect_byte_string(data)
@@ -118,14 +100,11 @@ class RIPEMD160Hash(object):
                              % result)
 
     def digest(self):
-        """Return the **binary** (non-printable) digest of the message that
-        has been hashed so far.
+        """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-        You can continue updating the object after calling this function.
-
-        :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-         characters, including null bytes.
+        :return: The hash digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
         """
 
         bfr = create_string_buffer(self.digest_size)
@@ -138,13 +117,11 @@ class RIPEMD160Hash(object):
         return get_raw_buffer(bfr)
 
     def hexdigest(self):
-        """Return the **printable** digest of the message that has been
-        hashed so far.
+        """Return the **printable** digest of the message that has been hashed so far.
 
-        This method does not change the state of the hash object.
-
-        :Return: A string of 2* `digest_size` characters. It contains only
-         hexadecimal ASCII digits.
+        :return: The hash digest, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
@@ -157,7 +134,7 @@ class RIPEMD160Hash(object):
         This can be used to efficiently compute the digests of strings that
         share a common initial substring.
 
-        :Return: A hash object of the same type
+        :return: A hash object of the same type
         """
 
         clone = RIPEMD160Hash()
@@ -168,24 +145,26 @@ class RIPEMD160Hash(object):
         return clone
 
     def new(self, data=None):
+        """Create a fresh RIPEMD-160 hash object."""
+
         return RIPEMD160Hash(data)
 
 
 def new(data=None):
-    """Return a fresh instance of the hash object.
+    """Create a new hash object.
 
-    :Parameters:
-       data : byte string
-        The very first chunk of the message to hash.
-        It is equivalent to an early call to `RIPEMD160Hash.update()`.
-        Optional.
+    :parameter data:
+        Optional. The very first chunk of the message to hash.
+        It is equivalent to an early call to :meth:`RIPEMD160Hash.update`.
+    :type data: byte string
 
-    :Return: A `RIPEMD160Hash` object
+    :Return: A :class:`RIPEMD160Hash` hash object
     """
+
     return RIPEMD160Hash().new(data)
 
-#: The size of the resulting hash in bytes.
+# The size of the resulting hash in bytes.
 digest_size = RIPEMD160Hash.digest_size
 
-#: The internal block size of the hash algorithm in bytes.
+# The internal block size of the hash algorithm in bytes.
 block_size = RIPEMD160Hash.block_size

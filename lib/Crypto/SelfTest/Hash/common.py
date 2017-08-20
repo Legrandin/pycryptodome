@@ -103,15 +103,6 @@ class HashTestOID(unittest.TestCase):
         h = self.hashmod.new()
         self.assertEqual(h.oid, self.oid)
 
-class HashDocStringTest(unittest.TestCase):
-    def __init__(self, hashmod):
-        unittest.TestCase.__init__(self)
-        self.hashmod = hashmod
-
-    def runTest(self):
-        docstring = self.hashmod.__doc__
-        self.assert_(hasattr(self.hashmod, '__doc__'))
-        self.assert_(isinstance(self.hashmod.__doc__, str))
 
 class GenericHashConstructorTest(unittest.TestCase):
     def __init__(self, hashmod):
@@ -215,7 +206,6 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
 
     if oid is not None:
         tests.append(HashTestOID(module, oid))
-    tests.append(HashDocStringTest(module))
 
     if getattr(module, 'name', None) is not None:
         tests.append(GenericHashConstructorTest(module))

@@ -1,0 +1,35 @@
+SHA-256
+=======
+
+SHA-256 belongs to the SHA-2_ family of cryptographic hashes.
+It produces the 256 bit digest of a message.
+
+    >>> from Crypto.Hash import SHA256
+    >>>
+    >>> h = SHA256.new()
+    >>> h.update(b'Hello')
+    >>> print h.hexdigest()
+
+*SHA* stands for Secure Hash Algorithm.
+
+.. warning::
+    SHA-256 is vulnerable to `length-extension attacks <https://crypto.stackexchange.com/questions/3978/understanding-the-length-extension-attack>`_,
+    which are relevant if you are computing the hash of a secret message.
+    
+    For instance, let's say you were planning to build a cheap MAC by concatenating a secret *key* to
+    a public message *m* (bad idea!):
+   
+    .. math::
+        h = \text{SHA-256}(m || k)
+    
+    By only knowing the digest *h* and the length of *m* and *k*, the attacker can easily compute a second digest *h'*:
+    
+    .. math::
+        h' = \text{SHA-256}(m || p || z)
+    
+    where *p* is a well-known bit string and the attacker can pick a bit string *z* at will.
+
+.. _SHA-2: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+
+.. automodule:: Crypto.Hash.SHA256
+    :members:

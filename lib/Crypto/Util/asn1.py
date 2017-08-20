@@ -19,14 +19,6 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 # ===================================================================
-""" ASN.1 DER encoding and decoding
-
-This module provides minimal support for encoding and decoding `ASN.1`_ DER
-objects.
-
-.. _`ASN.1`: ftp://ftp.rsasecurity.com/pub/pkcs/ascii/layman.asc
-
-"""
 
 from Crypto.Util.py3compat import byte_string, b, bchr, bord
 
@@ -199,22 +191,21 @@ class DerObject(object):
                         raise ValueError("Not a DER length tag (but still valid BER).")
                 return payloadLength
 
-        def decode(self, derEle):
+        def decode(self, der_encoded):
                 """Decode a complete DER element, and re-initializes this
                 object with it.
 
-                :Parameters:
-                  derEle : byte string
-                    A complete DER element.
+                Args:
+                  der_encoded (byte string): A complete DER element.
 
-                :Raise ValueError:
-                  In case of parsing errors.
+                Raises:
+                  ValueError: in case of parsing errors.
                 """
 
-                if not byte_string(derEle):
+                if not byte_string(der_encoded):
                     raise ValueError("Input is not a byte string")
 
-                s = BytesIO_EOF(derEle)
+                s = BytesIO_EOF(der_encoded)
                 self._decodeFromStream(s)
 
                 # There shouldn't be other bytes left
@@ -253,7 +244,7 @@ class DerObject(object):
 class DerInteger(DerObject):
         """Class to model a DER INTEGER.
 
-        An example of encoding is:
+        An example of encoding is::
 
           >>> from Crypto.Util.asn1 import DerInteger
           >>> from binascii import hexlify, unhexlify
@@ -262,7 +253,7 @@ class DerInteger(DerObject):
 
         which will show ``020109``, the DER encoding of 9.
 
-        And for decoding:
+        And for decoding::
 
           >>> s = unhexlify(b'020109')
           >>> try:
@@ -273,6 +264,9 @@ class DerInteger(DerObject):
           >>>   print "Not a valid DER INTEGER"
 
         the output will be ``9``.
+
+        :ivar value: The integer value
+        :vartype value: integer
         """
 
         def __init__(self, value=0, implicit=None, explicit=None):
@@ -289,7 +283,7 @@ class DerInteger(DerObject):
 
                 DerObject.__init__(self, 0x02, b(''), implicit,
                                    False, explicit)
-                self.value = value  #: The integer value
+                self.value = value  # The integer value
 
         def encode(self):
                 """Return the DER INTEGER, fully encoded as a
@@ -306,19 +300,18 @@ class DerInteger(DerObject):
                     number >>= 8
                 return DerObject.encode(self)
 
-        def decode(self, derEle):
+        def decode(self, der_encoded):
                 """Decode a complete DER INTEGER DER, and re-initializes this
                 object with it.
 
-                :Parameters:
-                  derEle : byte string
-                    A complete INTEGER DER element.
+                Args:
+                  der_encoded (byte string): A complete INTEGER DER element.
 
-                :Raise ValueError:
-                  In case of parsing errors.
+                Raises:
+                  ValueError: in case of parsing errors.
                 """
 
-                return DerObject.decode(self, derEle)
+                return DerObject.decode(self, der_encoded)
 
         def _decodeFromStream(self, s):
                 """Decode a complete DER INTEGER from a file."""
@@ -434,34 +427,34 @@ class DerSequence(DerObject):
                 """Return the number of items in this sequence that are
                 integers.
 
-                :Parameters:
-                  only_non_negative : boolean
-                    If True, negative integers are not counted in.
+                Args:
+                  only_non_negative (boolean):
+                    If ``True``, negative integers are not counted in.
                 """
                 def _is_number2(x):
                     return _is_number(x, only_non_negative)
                 return len(filter(_is_number2, self._seq))
 
         def hasOnlyInts(self, only_non_negative=True):
-                """Return True if all items in this sequence are integers
+                """Return ``True`` if all items in this sequence are integers
                 or non-negative integers.
 
                 This function returns False is the sequence is empty,
                 or at least one member is not an integer.
 
-                :Parameters:
-                  only_non_negative : boolean
-                    If True, the presence of negative integers
-                    causes the method to return False."""
+                Args:
+                  only_non_negative (boolean):
+                    If ``True``, the presence of negative integers
+                    causes the method to return ``False``."""
                 return self._seq and self.hasInts(only_non_negative) == len(self._seq)
 
         def encode(self):
                 """Return this DER SEQUENCE, fully encoded as a
                 binary string.
 
-                :Raises ValueError:
-                  If some elements in the sequence are neither integers
-                  nor byte strings.
+                Raises:
+                  ValueError: if some elements in the sequence are neither integers
+                              nor byte strings.
                 """
                 self.payload = b('')
                 for item in self._seq:
@@ -473,27 +466,27 @@ class DerSequence(DerObject):
                         self.payload += item.encode()
                 return DerObject.encode(self)
 
-        def decode(self, derEle, nr_elements=None, only_ints_expected=False):
+        def decode(self, der_encoded, nr_elements=None, only_ints_expected=False):
                 """Decode a complete DER SEQUENCE, and re-initializes this
                 object with it.
 
-                :Parameters:
-                  derEle : byte string
+                Args:
+                  der_encoded (byte string):
                     A complete SEQUENCE DER element.
-                  nr_elements : None, integer or list of integers
+                  nr_elements (None or integer or list of integers):
                     The number of members the SEQUENCE can have
-                  only_ints_expected : boolean
+                  only_ints_expected (boolean):
                     Whether the SEQUENCE is expected to contain only integers.
 
-                :Raise ValueError:
-                  In case of parsing errors.
+                Raises:
+                  ValueError: in case of parsing errors.
 
                 DER INTEGERs are decoded into Python integers. Any other DER
                 element is not decoded. Its validity is not checked.
                 """
 
                 self._nr_elements = nr_elements
-                result = DerObject.decode(self, derEle)
+                result = DerObject.decode(self, der_encoded)
 
                 if only_ints_expected and not self.hasOnlyInts():
                     raise ValueError("Some members are not INTEGERs")
@@ -561,6 +554,9 @@ class DerOctetString(DerObject):
     >>>   print "Not a valid DER OCTET STRING"
 
     the output will be ``aabb``.
+
+    :ivar payload: The content of the string
+    :vartype payload: byte string
     """
 
     def __init__(self, value=b(''), implicit=None):
@@ -612,6 +608,9 @@ class DerObjectId(DerObject):
     >>>   print "Not a valid DER OBJECT ID"
 
     the output will be ``1.2.840.113549.1.1.1``.
+
+    :ivar value: The Object ID (OID), a dot separated list of integers
+    :vartype value: string
     """
 
     def __init__(self, value='', implicit=None, explicit=None):
@@ -627,7 +626,7 @@ class DerObjectId(DerObject):
             The EXPLICIT tag to use for the encoded object.
         """
         DerObject.__init__(self, 0x06, b(''), implicit, False, explicit)
-        self.value = value  #: The Object ID, a dot separated list of integers
+        self.value = value
 
     def encode(self):
         """Return the DER OBJECT ID, fully encoded as a
@@ -646,19 +645,19 @@ class DerObjectId(DerObject):
             self.payload += b('').join(map(bchr, enc))
         return DerObject.encode(self)
 
-    def decode(self, derEle):
+    def decode(self, der_encoded):
         """Decode a complete DER OBJECT ID, and re-initializes this
         object with it.
 
-        :Parameters:
-            derEle : byte string
+        Args:
+            der_encoded (byte string):
                 A complete DER OBJECT ID.
 
-        :Raise ValueError:
-            In case of parsing errors.
+        Raises:
+            ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, derEle)
+        return DerObject.decode(self, der_encoded)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER OBJECT ID from a file."""
@@ -701,9 +700,12 @@ class DerBitString(DerObject):
     >>>   bs_der.decode(s)
     >>>   print hexlify(bs_der.value)
     >>> except ValueError:
-    >>>   print "Not a valid DER OCTET STRING"
+    >>>   print "Not a valid DER BIT STRING"
 
     the output will be ``aabb``.
+
+    :ivar value: The content of the string
+    :vartype value: byte string
     """
 
     def __init__(self, value=b(''), implicit=None, explicit=None):
@@ -735,19 +737,18 @@ class DerBitString(DerObject):
         self.payload = b('\x00') + self.value
         return DerObject.encode(self)
 
-    def decode(self, derEle):
+    def decode(self, der_encoded):
         """Decode a complete DER BIT STRING, and re-initializes this
         object with it.
 
-        :Parameters:
-            derEle : byte string
-                A complete DER BIT STRING.
+        Args:
+            der_encoded (byte string): a complete DER BIT STRING.
 
-        :Raise ValueError:
-            In case of parsing errors.
+        Raises:
+            ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, derEle)
+        return DerObject.decode(self, der_encoded)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER BIT STRING DER from a file."""
@@ -825,8 +826,8 @@ class DerSetOf(DerObject):
     def add(self, elem):
         """Add an element to the set.
 
-        :Parameters:
-            elem : byte string or integer
+        Args:
+            elem (byte string or integer):
               An element of the same type of objects already in the set.
               It can be an integer or a DER encoded object.
         """
@@ -846,22 +847,21 @@ class DerSetOf(DerObject):
         if elem not in self._seq:
             self._seq.append(elem)
 
-    def decode(self, derEle):
+    def decode(self, der_encoded):
         """Decode a complete SET OF DER element, and re-initializes this
         object with it.
 
         DER INTEGERs are decoded into Python integers. Any other DER
         element is left undecoded; its validity is not checked.
 
-        :Parameters:
-            derEle : byte string
-                A complete DER BIT SET OF.
+        Args:
+            der_encoded (byte string): a complete DER BIT SET OF.
 
-        :Raise ValueError:
-            In case of parsing errors.
+        Raises:
+            ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, derEle)
+        return DerObject.decode(self, der_encoded)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER SET OF from a file."""

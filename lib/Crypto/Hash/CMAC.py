@@ -20,55 +20,6 @@
 # SOFTWARE.
 # ===================================================================
 
-"""CMAC (Cipher-based Message Authentication Code) algorithm
-
-CMAC is a MAC defined in `NIST SP 800-38B`_ and in RFC4493_ (for AES only)
-and constructed using a block cipher. It was originally known as `OMAC1`_.
-
-The algorithm is sometimes named *X-CMAC* where *X* is the name
-of the cipher (e.g. AES-CMAC).
-
-This is an example showing how to *create* an AES-CMAC:
-
-    >>> from Crypto.Hash import CMAC
-    >>> from Crypto.Cipher import AES
-    >>>
-    >>> secret = b'Sixteen byte key'
-    >>> cobj = CMAC.new(secret, ciphermod=AES)
-    >>> cobj.update(b'Hello')
-    >>> print cobj.hexdigest()
-
-And this is an example showing how to *check* an AES-CMAC:
-
-    >>> from Crypto.Hash import CMAC
-    >>> from Crypto.Cipher import AES
-    >>>
-    >>> # We have received a message 'msg' together
-    >>> # with its MAC 'mac'
-    >>>
-    >>> secret = b'Sixteen byte key'
-    >>> cobj = CMAC.new(secret, ciphermod=AES)
-    >>> cobj.update(msg)
-    >>> try:
-    >>>   cobj.verify(mac)
-    >>>   print "The message '%s' is authentic" % msg
-    >>> except ValueError:
-    >>>   print "The message or the key is wrong"
-
-A cipher block size of 128 bits (like for AES) guarantees that the risk
-of MAC collisions remains negligeable even when the same CMAC key is
-used to authenticate a large amount of data (2^22 Gbytes).
-
-This implementation allows also usage of ciphers with a 64 bits block size
-(like TDES) for legacy purposes only.
-However, the risk is much higher and one CMAC key should be rotated
-after as little as 16 MBytes (in total) have been authenticated.
-
-.. _`NIST SP 800-38B`: http://csrc.nist.gov/publications/nistpubs/800-38B/SP_800-38B.pdf
-.. _RFC4493: http://www.ietf.org/rfc/rfc4493.txt
-.. _OMAC1: http://www.nuee.nagoya-u.ac.jp/labs/tiwata/omac/omac.html
-"""
-
 from Crypto.Util.py3compat import b, bchr, bord, tobytes
 
 from binascii import unhexlify
@@ -78,8 +29,9 @@ from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Random import get_random_bytes
 
-#: The size of the authentication tag produced by the MAC.
+# The size of the authentication tag produced by the MAC.
 digest_size = None
+
 
 def _shift_bytes(bs, xor_lsb=0):
     num = (bytes_to_long(bs) << 1) ^ xor_lsb
@@ -87,29 +39,16 @@ def _shift_bytes(bs, xor_lsb=0):
 
 
 class CMAC(object):
-    """Class that implements CMAC"""
+    """A CMAC hash object.
+    Do not instantiate directly. Use the :func:`new` function.
 
-    #: The size of the authentication tag produced by the MAC.
+    :ivar digest_size: the size in bytes of the resulting MAC tag
+    :vartype digest_size: integer
+    """
+
     digest_size = None
 
     def __init__(self, key, msg=None, ciphermod=None, cipher_params=None):
-        """Create a new CMAC object.
-
-        :Parameters:
-          key : byte string
-            secret key for the CMAC object.
-            The key must be valid for the underlying cipher algorithm.
-            For instance, it must be 16 bytes long for AES-128.
-          msg : byte string
-            The very first chunk of the message to authenticate.
-            It is equivalent to an early call to `update`. Optional.
-          ciphermod : module
-            A cipher module from `Crypto.Cipher`.
-            The cipher's block size has to be 128 bits.
-            It is recommended to use `Crypto.Cipher.AES`.
-          cipher_params : dictionary
-            Extra keywords to use when creating a new cipher.
-        """
 
         if ciphermod is None:
             raise TypeError("ciphermod must be specified (try AES)")
@@ -172,21 +111,10 @@ class CMAC(object):
             self.update(msg)
 
     def update(self, msg):
-        """Continue authentication of a message by consuming
-        the next chunk of data.
+        """Authenticate the next chunk of message.
 
-        Repeated calls are equivalent to a single call with
-        the concatenation of all the arguments. In other words:
-
-           >>> m.update(a); m.update(b)
-
-        is equivalent to:
-
-           >>> m.update(a+b)
-
-        :Parameters:
-          msg : byte string
-            The next chunk of the message being authenticated
+        Args:
+            data (byte string): The next chunk of data
         """
 
         self._data_size += len(msg)
@@ -214,6 +142,7 @@ class CMAC(object):
 
     def _update(self, data_block):
         """Update a block aligned to the block boundary"""
+
         if len(data_block) == 0:
             return
 
@@ -229,15 +158,16 @@ class CMAC(object):
         self._last_pt = data_block[-self.digest_size:]
 
     def copy(self):
-        """Return a copy ("clone") of the MAC object.
+        """Return a copy ("clone") of the CMAC object.
 
-        The copy will have the same internal state as the original MAC
+        The copy will have the same internal state as the original CMAC
         object.
-        This can be used to efficiently compute the MAC of strings that
-        share a common initial substring.
+        This can be used to efficiently compute the MAC tag of byte
+        strings that share a common initial substring.
 
-        :Returns: A `CMAC` object
+        :return: An :class:`CMAC`
         """
+
         obj = CMAC(self._key,
                    ciphermod=self._factory,
                    cipher_params=self._cipher_params)
@@ -252,14 +182,12 @@ class CMAC(object):
         return obj
 
     def digest(self):
-        """Return the **binary** (non-printable) MAC of the message that has
-        been authenticated so far.
+        """Return the **binary** (non-printable) MAC tag of the message
+        that has been authenticated so far.
 
-        This method does not change the state of the MAC object.
-        You can continue updating the object after calling this function.
-
-        :Return: A byte string of `digest_size` bytes. It may contain non-ASCII
-         characters, including null bytes.
+        :return: The MAC tag, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
         """
 
         if self._mac_tag is not None:
@@ -269,10 +197,10 @@ class CMAC(object):
             raise ValueError("MAC is unsafe for this message")
 
         if len(self._cache) == 0 and self._before_last_ct is not None:
-            ## Last block was full
+            # Last block was full
             pt = strxor(strxor(self._before_last_ct, self._k1), self._last_pt)
         else:
-            ## Last block is partial (or message length is zero)
+            # Last block is partial (or message length is zero)
             ext = self._cache + bchr(0x80) +\
                     bchr(0) * (self.digest_size - len(self._cache) - 1)
             pt = strxor(strxor(self._last_ct, self._k2), ext)
@@ -285,14 +213,13 @@ class CMAC(object):
         return self._mac_tag
 
     def hexdigest(self):
-        """Return the **printable** MAC of the message that has been
-        authenticated so far.
+        """Return the **printable** MAC tag of the message authenticated so far.
 
-        This method does not change the state of the MAC object.
-
-        :Return: A string of 2* `digest_size` bytes. It contains only
-         hexadecimal ASCII digits.
+        :return: The MAC tag, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
+
         return "".join(["%02x" % bord(x)
                         for x in tuple(self.digest())])
 
@@ -300,12 +227,12 @@ class CMAC(object):
         """Verify that a given **binary** MAC (computed by another party)
         is valid.
 
-        :Parameters:
-          mac_tag : byte string
-            The expected MAC of the message.
-        :Raises ValueError:
-            if the MAC does not match. It means that the message
-            has been tampered with or that the MAC key is incorrect.
+        Args:
+          mac_tag (byte string): the expected MAC of the message.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
         """
 
         secret = get_random_bytes(16)
@@ -317,36 +244,38 @@ class CMAC(object):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):
-        """Verify that a given **printable** MAC (computed by another party)
-        is valid.
+        """Return the **printable** MAC tag of the message authenticated so far.
 
-        :Parameters:
-          hex_mac_tag : string
-            The expected MAC of the message, as a hexadecimal string.
-        :Raises ValueError:
-            if the MAC does not match. It means that the message
-            has been tampered with or that the MAC key is incorrect.
+        :return: The MAC tag, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
         """
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
 def new(key, msg=None, ciphermod=None, cipher_params=None):
-    """Create a new CMAC object.
+    """Create a new MAC object.
 
-    :Parameters:
-        key : byte string
-            secret key for the CMAC object.
+    Args:
+        key (byte string):
+            key for the CMAC object.
             The key must be valid for the underlying cipher algorithm.
             For instance, it must be 16 bytes long for AES-128.
-        msg : byte string
-            The very first chunk of the message to authenticate.
-            It is equivalent to an early call to `CMAC.update`. Optional.
-        ciphermod : module
-            A cipher module from `Crypto.Cipher`.
+        ciphermod (module):
+            A cipher module from :mod:`Crypto.Cipher`.
             The cipher's block size has to be 128 bits,
-            like `Crypto.Cipher.AES`, to reduce the probability of collisions.
+            like :mod:`Crypto.Cipher.AES`, to reduce the probability
+            of collisions.
+        msg (byte string):
+            Optional. The very first chunk of the message to authenticate.
+            It is equivalent to an early call to `CMAC.update`. Optional.
+        cipher_params (dict):
+            Optional. A set of parameters to use when instantiating a cipher
+            object.
 
-    :Returns: A `CMAC` object
+    Returns:
+        A :class:`CMAC` object
     """
+
     return CMAC(key, msg, ciphermod, cipher_params)

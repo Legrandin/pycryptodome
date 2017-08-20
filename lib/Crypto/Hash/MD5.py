@@ -18,23 +18,6 @@
 # SOFTWARE.
 # ===================================================================
 
-"""MD5 cryptographic hash algorithm.
-
-MD5 is specified in RFC1321_ and produces the 128 bit digest of a message.
-
-    >>> from Crypto.Hash import MD5
-    >>>
-    >>> h = MD5.new()
-    >>> h.update(b'Hello')
-    >>> print h.hexdigest()
-
-MD5 stand for Message Digest version 5, and it was invented by Rivest in 1991.
-
-This algorithm is insecure. Do not use it for new designs.
-
-.. _RFC1321: http://tools.ietf.org/html/rfc1321
-"""
-
 __all__ = ['new', 'block_size', 'digest_size']
 
 from Crypto.Util.py3compat import *
@@ -79,8 +62,8 @@ def __make_constructor():
 new = __make_constructor()
 del __make_constructor
 
-#: The size of the resulting hash in bytes.
+# The size of the resulting hash in bytes.
 digest_size = new().digest_size
 
-#: The internal block size of the hash algorithm in bytes.
+# The internal block size of the hash algorithm in bytes.
 block_size = new().block_size
