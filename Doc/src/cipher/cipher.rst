@@ -87,7 +87,7 @@ There are two types of symmetric ciphers:
   of data. The most important block cipher is :doc:`aes`, which has
   a block size of 16 bytes.
   
-  A block ciphers is in general useful only in combination with
+  A block cipher is in general useful only in combination with
   a *mode of operation* . There are
   :doc:`classic modes <classic>` like CTR or
   :doc:`authenticated modes <modern>` like GCM.
@@ -101,8 +101,8 @@ There are two types of symmetric ciphers:
 Historic ciphers
 ----------------
 
-A number of ciphers are implemented purely for backward compatibility purposes,
-they are deprecated or even fully broken and should not be used in new designs.
+A number of ciphers are implemented in this library purely for backward compatibility purposes.
+They are deprecated or even fully broken and should not be used in new designs.
 
 * :doc:`des` and :doc:`des3` (block ciphers)
 * :doc:`arc2` (block cipher)

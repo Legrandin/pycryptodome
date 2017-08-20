@@ -121,6 +121,7 @@ The cipher object has a read-only attribute :attr:`nonce`.
 
 OpenPGP mode
 ------------
+Constant: ``Crypto.Cipher.<cipher>.MODE_OPENPGP``.
 
 OpenPGP (defined in `RFC4880 <https://tools.ietf.org/html/rfc4880>`_).
 A variant of CFB, with two differences:

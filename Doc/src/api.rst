@@ -20,7 +20,7 @@ each sub-package is dedicated to solving a specific class of problems.
     :header: Package, Description
     :widths: 20, 80
 
-    :doc:`Crypto.Cipher <cipher/cipher>`, "Modules for protecting **confidentility**
+    :doc:`Crypto.Cipher <cipher/cipher>`, "Modules for protecting **confidentiality**
     that is, for encrypting and decrypting data (example: AES)."
     :doc:`Crypto.Signature <signature/signature>`, "Modules for assuring **authenticity**,
     that is, for creating and verifying digital signatures of messages

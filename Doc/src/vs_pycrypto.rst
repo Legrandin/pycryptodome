@@ -48,20 +48,18 @@ For symmetric key cryptography:
   :mod:`Crypto.Util.Counter`. It cannot be a generic callable anymore.
 * Keys for :mod:`Crypto.Cipher.ARC2`, :mod:`Crypto.Cipher.ARC4` and :mod:`Crypto.Cipher.Blowfish` must be at least 40 bits long (still very weak).
 
-For randomness:
-
-* The following packages, modules and functions have been removed:
+The following packages, modules and functions have been removed:
 
     - ``Crypto.Random.OSRNG``, ``Crypto.Util.winrandom`` and ``Crypto.Random.randpool``.
       You should use :mod:`Crypto.Random` only.
     - ``Crypto.Cipher.XOR``. If you just want to XOR data, use :mod:`Crypto.Util.strxor`.
+    - ``Crypto.Hash.new``. Use :func:`Crypto.Hash.<algorithm>.new` instead.
     - ``Crypto.Protocol.AllOrNothing``
     - ``Crypto.Protocol.Chaffing``
     - ``Crypto.Util.number.getRandomNumber``
+    - ``Crypto.pct_warnings``
 
 Others:
 
-* Removed the ``Crypto.Hash.new`` function. Use :func:`Crypto.Hash.<algorithm>.new` instead.
-* Removed module ``Crypto.pct_warnings``.
 * Support for any Python version older than 2.4 is dropped.
   For Python 2.4 only, a dependency on the ``ctypes`` package is introduced.

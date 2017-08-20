@@ -24,9 +24,9 @@
 # ===================================================================
 #
 
-from warnings import warn as _warn
 import math
 import sys
+from Crypto import Random
 from Crypto.Util.py3compat import *
 
 # Backward compatibility
@@ -55,7 +55,6 @@ def getRandomInteger(N, randfunc=None):
     """
 
     if randfunc is None:
-        _import_Random()
         randfunc = Random.get_random_bytes
 
     S = randfunc(N>>3)
@@ -130,7 +129,6 @@ def getPrime(N, randfunc=None):
     If randfunc is omitted, then :meth:`Random.get_random_bytes` is used.
     """
     if randfunc is None:
-        _import_Random()
         randfunc = Random.get_random_bytes
 
     number=getRandomNBitInteger(N, randfunc) | 1
@@ -226,7 +224,6 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.17.2713&rep=rep1&type=pdf
 
     if randfunc is None:
-        _import_Random()
         randfunc = Random.get_random_bytes
 
     # Use the accelerator if available
@@ -340,7 +337,6 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
     """
 
     if randfunc is None:
-        _import_Random()
         randfunc = Random.get_random_bytes
 
     if _fastmath is not None:

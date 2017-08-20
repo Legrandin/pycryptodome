@@ -191,21 +191,21 @@ class DerObject(object):
                         raise ValueError("Not a DER length tag (but still valid BER).")
                 return payloadLength
 
-        def decode(self, derEle):
+        def decode(self, der_encoded):
                 """Decode a complete DER element, and re-initializes this
                 object with it.
 
                 Args:
-                  derEle (byte string): A complete DER element.
+                  der_encoded (byte string): A complete DER element.
 
                 Raises:
                   ValueError: in case of parsing errors.
                 """
 
-                if not byte_string(derEle):
+                if not byte_string(der_encoded):
                     raise ValueError("Input is not a byte string")
 
-                s = BytesIO_EOF(derEle)
+                s = BytesIO_EOF(der_encoded)
                 self._decodeFromStream(s)
 
                 # There shouldn't be other bytes left
@@ -300,18 +300,18 @@ class DerInteger(DerObject):
                     number >>= 8
                 return DerObject.encode(self)
 
-        def decode(self, derEle):
+        def decode(self, der_encoded):
                 """Decode a complete DER INTEGER DER, and re-initializes this
                 object with it.
 
                 Args:
-                  derEle (byte string): A complete INTEGER DER element.
+                  der_encoded (byte string): A complete INTEGER DER element.
 
                 Raises:
                   ValueError: in case of parsing errors.
                 """
 
-                return DerObject.decode(self, derEle)
+                return DerObject.decode(self, der_encoded)
 
         def _decodeFromStream(self, s):
                 """Decode a complete DER INTEGER from a file."""
@@ -466,12 +466,12 @@ class DerSequence(DerObject):
                         self.payload += item.encode()
                 return DerObject.encode(self)
 
-        def decode(self, derEle, nr_elements=None, only_ints_expected=False):
+        def decode(self, der_encoded, nr_elements=None, only_ints_expected=False):
                 """Decode a complete DER SEQUENCE, and re-initializes this
                 object with it.
 
                 Args:
-                  derEle (byte string):
+                  der_encoded (byte string):
                     A complete SEQUENCE DER element.
                   nr_elements (None or integer or list of integers):
                     The number of members the SEQUENCE can have
@@ -486,7 +486,7 @@ class DerSequence(DerObject):
                 """
 
                 self._nr_elements = nr_elements
-                result = DerObject.decode(self, derEle)
+                result = DerObject.decode(self, der_encoded)
 
                 if only_ints_expected and not self.hasOnlyInts():
                     raise ValueError("Some members are not INTEGERs")
@@ -645,19 +645,19 @@ class DerObjectId(DerObject):
             self.payload += b('').join(map(bchr, enc))
         return DerObject.encode(self)
 
-    def decode(self, derEle):
+    def decode(self, der_encoded):
         """Decode a complete DER OBJECT ID, and re-initializes this
         object with it.
 
         Args:
-            derEle (byte string):
+            der_encoded (byte string):
                 A complete DER OBJECT ID.
 
         Raises:
             ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, derEle)
+        return DerObject.decode(self, der_encoded)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER OBJECT ID from a file."""
@@ -737,18 +737,18 @@ class DerBitString(DerObject):
         self.payload = b('\x00') + self.value
         return DerObject.encode(self)
 
-    def decode(self, derEle):
+    def decode(self, der_encoded):
         """Decode a complete DER BIT STRING, and re-initializes this
         object with it.
 
         Args:
-            derEle (byte string): a complete DER BIT STRING.
+            der_encoded (byte string): a complete DER BIT STRING.
 
         Raises:
             ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, derEle)
+        return DerObject.decode(self, der_encoded)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER BIT STRING DER from a file."""
@@ -847,7 +847,7 @@ class DerSetOf(DerObject):
         if elem not in self._seq:
             self._seq.append(elem)
 
-    def decode(self, derEle):
+    def decode(self, der_encoded):
         """Decode a complete SET OF DER element, and re-initializes this
         object with it.
 
@@ -855,13 +855,13 @@ class DerSetOf(DerObject):
         element is left undecoded; its validity is not checked.
 
         Args:
-            derEle (byte string): a complete DER BIT SET OF.
+            der_encoded (byte string): a complete DER BIT SET OF.
 
         Raises:
             ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, derEle)
+        return DerObject.decode(self, der_encoded)
 
     def _decodeFromStream(self, s):
         """Decode a complete DER SET OF from a file."""

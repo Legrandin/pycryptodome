@@ -2,7 +2,7 @@
 ===============================
 
 The :mod:`Crypto.Signature` package contains algorithms for performing digital
-signatures, for the purpose of guaranteeing integrity and non-repudiation.
+signatures, used to guarantee integrity and non-repudiation.
 
 Digital signatures are based on public key cryptography: the party that signs a
 message holds the *private key*, the one that verifies the signature holds the
@@ -17,9 +17,10 @@ Signing a message
    obtained via the :mod:`Crypto.PublicKey` module.
 
 2. You instatiate a cryptographic hash (see :mod:`Crypto.Hash`) and digest
-   the message.
+   the message with it.
 
-3. You call :func:`sign` on the hash object. The output is the signature of the message.
+3. You call :func:`sign` on the hash object. The output is the signature of the message
+   (a byte string).
 
 Verifying a signature
 ---------------------
@@ -30,7 +31,7 @@ Verifying a signature
    obtained via the :mod:`Crypto.PublicKey` module.
 
 2. You instatiate a cryptographic hash (see :mod:`Crypto.Hash`) and digest
-   the message.
+   the message with it.
 
 3. You call :func:`verify` on the hash object and the incoming signature.
    If the message is not authentic, an :py:exc:`ValueError` is raised.
