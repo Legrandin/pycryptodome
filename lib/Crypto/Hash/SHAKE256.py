@@ -116,8 +116,8 @@ class SHAKE256_XOF(object):
 def new(data=None):
     """Return a fresh instance of a SHAKE256 object.
 
-    :Parameters:
-       data : byte string
+    Args:
+       data (byte string):
         The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`update`.
         Optional.

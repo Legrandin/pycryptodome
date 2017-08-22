@@ -470,7 +470,6 @@ def construct(rsa_components, consistency_check=True):
     .. math::
 
         \begin{align}
-        e &\ne 1 \\
         p*q &= n \\
         e*d &\equiv 1 ( \text{mod lcm} [(p-1)(q-1)]) \\
         p*u &\equiv 1 ( \text{mod } q)
