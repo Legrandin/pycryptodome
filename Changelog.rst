@@ -1,6 +1,20 @@
 Changelog
 =========
 
+3.4.7 (xx xxx 2017)
++++++++++++++++++++++++
+
+New features
+------------
+
+* API documentation is made with sphinx instead of epydoc.
+* Start using ``importlib`` instead of ``imp``` where available.
+
+Resolved issues
+---------------
+
+* GH#82. Fixed PEM header for RSA/DSA public keys.
+
 3.4.6 (18 May 2017)
 +++++++++++++++++++++++
 
