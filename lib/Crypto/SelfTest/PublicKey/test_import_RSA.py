@@ -94,10 +94,10 @@ CGqJGyiwBzrKebjgSm/KRd4C91XqcsysyH2kKPfT51MLAoD4xelOURBP
         ),
     )
 
-    rsaPublicKeyPEM = u'''-----BEGIN RSA PUBLIC KEY-----
+    rsaPublicKeyPEM = u'''-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
------END RSA PUBLIC KEY-----'''
+-----END PUBLIC KEY-----'''
 
     # Obtained using 'ssh-keygen -i -m PKCS8 -f rsaPublicKeyPEM'
     rsaPublicKeyOpenSSH = b('''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n''')

@@ -81,7 +81,7 @@ class ImportKeyTests(unittest.TestCase):
 
     # 2.
     pem_public="""\
------BEGIN DSA PUBLIC KEY-----
+-----BEGIN PUBLIC KEY-----
 MIIBtzCCASsGByqGSM44BAEwggEeAoGBAOdW7hcX9LZ5THwhRyShl2N0LEVXK0s/
 j/O0Tzvp9EzgOaJ1dpXskVaX2nTvkU/NGwVmDiQZx2HWOfRdLXm4AtvSPnq4uBtH
 mjgOHzCTJYS6KguVUDI0LryDy1ypBuew181v5lbOy0yLWncSOoxnUKSB47BgV6/2
@@ -92,7 +92,7 @@ rkP9MA2JJi5O/YmUP5mmUbA4iAOBhQACgYEAgzUqaaEy80hD0qDrmVv/Ti8IOnPw
 BJ0skeovDOQ9FEq9pIGZ5LADxXCor4MwPUUQX2BsXEjZJaQO2cJjDC+kzb+DhTne
 uaKfkZCF8gRjafYnyoSyyx4seUBWS2cPljqxFk1OLKK/b/058S9UiSi/TS0bXmmA
 tPG+TJKpGYb7pVk=
------END DSA PUBLIC KEY-----"""
+-----END PUBLIC KEY-----"""
 
     def testImportKey2(self):
         for pem in (self.pem_public, tostr(self.pem_public)):

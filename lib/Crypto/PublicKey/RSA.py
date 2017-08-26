@@ -233,26 +233,32 @@ class RsaKey(object):
           format (string):
             The format to use for wrapping the key:
 
+            - *'PEM'*. (*Default*) Text encoding, done according to `RFC1421`_/`RFC1423`_.
             - *'DER'*. Binary encoding.
-            - *'PEM'*. Textual encoding, done according to `RFC1421`_/`RFC1423`_.
             - *'OpenSSH'*. Textual encoding, done according to OpenSSH specification.
               Only suitable for public keys (not private keys).
 
           passphrase (string):
-            For private keys only. The pass phrase used for protecting the output.
+            (*For private keys only*) The pass phrase used for protecting the output.
 
           pkcs (integer):
-            With *'DER'* and *'PEM'* formats, the key is encoded in an ASN.1 DER
-            SEQUENCE. This parameters determines the type of ASN.1 SEQUENCE:
+            (*For private keys only*) The ASN.1 structure to use for
+            serializing the key. Note that even in case of PEM
+            encoding, there is an inner ASN.1 DER structure.
 
-            ===== ============================== ============================
-            Value Public key                     Private key
-            ===== ============================== ============================
-            1     X.509 ``SubjectPublicKeyInfo`` `PKCS#1`_ ``RSAPrivateKey``
-            8     n.a.                           `PKCS#8`_ ``PrivateKeyInfo``
-            ===== ============================== ============================
+            With ``pkcs=1`` (*default*), the private key is encoded in a
+            simple `PKCS#1`_ structure (``RSAPrivateKey``).
+
+            With ``pkcs=8``, the private key is encoded in a `PKCS#8`_ structure
+            (``PrivateKeyInfo``).
+
+            .. note::
+                This parameter is ignored for a public key.
+                For DER and PEM, an ASN.1 DER ``SubjectPublicKeyInfo``
+                structure is always used.
 
           protection (string):
+            (*For private keys only*)
             The encryption scheme to use for protecting the private key.
 
             If ``None`` (default), the behavior depends on :attr:`format`:
@@ -341,7 +347,7 @@ class RsaKey(object):
                                             passphrase, protection)
                     passphrase = None
         else:
-            key_type = "RSA PUBLIC KEY"
+            key_type = "PUBLIC KEY"
             binary_key = _create_subject_public_key_info(oid,
                                                          DerSequence([self.n,
                                                                       self.e])

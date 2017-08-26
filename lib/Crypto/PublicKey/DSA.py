@@ -317,7 +317,7 @@ class DsaKey(object):
 
             binary_key = _create_subject_public_key_info(oid,
                                 DerInteger(self.y), params)
-            key_type = "DSA PUBLIC"
+            key_type = "PUBLIC"
 
         if format == 'DER':
             return binary_key
