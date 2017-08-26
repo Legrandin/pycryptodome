@@ -567,37 +567,43 @@ def construct(rsa_components, consistency_check=True):
         # Build key object
         key = RsaKey(n=n, e=e, d=d, p=p, q=q, u=u)
 
-    # Very consistency of the key
-    fmt_error = False
+    # Verify consistency of the key
     if consistency_check:
+
         # Modulus and public exponent must be coprime
-        fmt_error = e <= 1 or e >= n
-        fmt_error |= Integer(n).gcd(e) != 1
+        if e <= 1 or e >= n:
+            raise ValueError("Invalid RSA public exponent")
+        if Integer(n).gcd(e) != 1:
+            raise ValueError("RSA public exponent is not coprime to modulus")
 
         # For RSA, modulus must be odd
-        fmt_error |= not n & 1
+        if not n & 1:
+            raise ValueError("RSA modulus is not odd")
 
-        if not fmt_error and key.has_private():
+        if key.has_private():
             # Modulus and private exponent must be coprime
-            fmt_error = d <= 1 or d >= n
-            fmt_error |= Integer(n).gcd(d) != 1
+            if d <= 1 or d >= n:
+                raise ValueError("Invalid RSA private exponent")
+            if Integer(n).gcd(d) != 1:
+                raise ValueError("RSA private exponent is not coprime to modulus")
             # Modulus must be product of 2 primes
-            fmt_error |= (p * q != n)
-            fmt_error |= test_probable_prime(p) == COMPOSITE
-            fmt_error |= test_probable_prime(q) == COMPOSITE
+            if p * q != n:
+                raise ValueError("RSA factors do not match modulus")
+            if test_probable_prime(p) == COMPOSITE:
+                raise ValueError("RSA factor p is composite")
+            if test_probable_prime(q) == COMPOSITE:
+                raise ValueError("RSA factor q is composite")
             # See Carmichael theorem
             phi = (p - 1) * (q - 1)
             lcm = phi // (p - 1).gcd(q - 1)
-            fmt_error |= (e * d % int(lcm)) != 1
+            if (e * d % int(lcm)) != 1:
+                raise ValueError("Invalid RSA condition")
             if hasattr(key, 'u'):
                 # CRT coefficient
-                fmt_error |= u <= 1 or u >= q
-                fmt_error |= (p * u % q) != 1
-            else:
-                fmt_error = True
-
-    if fmt_error:
-        raise ValueError("Invalid RSA key components")
+                if u <= 1 or u >= q:
+                    raise ValueError("Invalid RSA component u")
+                if (p * u % q) != 1:
+                    raise ValueError("Invalid RSA component u with p")
 
     return key
 

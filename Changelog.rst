@@ -8,7 +8,7 @@ New features
 ------------
 
 * API documentation is made with sphinx instead of epydoc.
-* Start using ``importlib`` instead of ``imp``` where available.
+* Start using ``importlib`` instead of ``imp`` where available.
 
 Resolved issues
 ---------------
