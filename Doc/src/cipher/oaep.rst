@@ -24,7 +24,7 @@ The recipient uses its own **private key** to decrypt the message.
 We assume the key is stored in a file called ``private.pem``::
 
         >>> key = RSA.importKey(open('private.pem').read())
-        >>> cipher = PKCS1_OAP.new(key)
+        >>> cipher = PKCS1_OAEP.new(key)
         >>> message = cipher.decrypt(ciphertext)
 
 .. warning::
