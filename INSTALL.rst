@@ -253,7 +253,7 @@ Documentation
 ~~~~~~~~~~~~~
 
 Project documentation is written in reStructuredText and it is stored under ``Doc/src``.
-To publish it as HTML files, you need to install `sphinx <http://www.sphinx-doc.org/en/stable/>` and
+To publish it as HTML files, you need to install `sphinx <http://www.sphinx-doc.org/en/stable/>`_ and
 use::
 
     > make -C Doc/ html
