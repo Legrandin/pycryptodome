@@ -14,7 +14,6 @@ Future releases will include:
     - Poly1305
     - Elliptic Curves (ECIES, ECDH)
     - Camellia, GOST
-    - Diffie-Hellman
     - bcrypt
     - argon2
     - SRP
