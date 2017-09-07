@@ -523,7 +523,7 @@ class DerSequence(DerObject):
                 while p.remaining_data() > 0:
                     p.set_bookmark()
 
-                    der = DerObject()
+                    der = BerObject()
                     der._decodeFromStream(p)
 
                     # Parse INTEGERs differently
