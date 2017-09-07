@@ -24,8 +24,8 @@ from Crypto.Util.py3compat import byte_string, b, bchr, bord
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
-__all__ = ['DerObject', 'DerInteger', 'DerOctetString', 'DerNull',
-           'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf']
+__all__ = ['DerObject', 'BerObject', 'DerInteger', 'DerOctetString', 'DerNull',
+           'DerSequence', 'BerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf']
 
 
 def _is_number(x, only_non_negative=False):
@@ -239,6 +239,23 @@ class DerObject(object):
                     # There shouldn't be other bytes left
                     if p.remaining_data() > 0:
                         raise ValueError("Unexpected extra data after the DER structure")
+
+
+
+class BerObject(DerObject):
+    def _decodeLen(self, s):
+        """Decode DER length octets from a file."""
+
+        length = s.read_byte()
+        if length <= 127:
+            return length
+
+        if length == 128:
+            return s.remaining_data()
+
+        payloadLength = bytes_to_long(s.read(length & 0x7F))
+
+        return payloadLength
 
 
 class DerInteger(DerObject):
@@ -527,6 +544,11 @@ class DerSequence(DerObject):
                 if not ok:
                     raise ValueError("Unexpected number of members (%d)"
                                      " in the sequence" % len(self._seq))
+
+
+
+class BerSequence(DerSequence):
+    _decodeLen = BerObject._decodeLen
 
 
 class DerOctetString(DerObject):
