@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.asn1 import BerSequence, DerObjectId, BerObject, DerSetOf, DerSequence, DerOctetString, DerNull
+from Crypto.Util.asn1 import BerSequence, DerObjectId, BerObject, DerSetOf, DerSequence, DerOctetString, DerNull, DerObject
 from Crypto.Util.py3compat import *
 from Crypto.Cipher import PKCS1_v1_5, AES
 
@@ -60,8 +60,13 @@ class Algorithm(object):
         return self
 
 
+    def encode(self):
+        pass
+
+
     def decrypt(self, key, message):
         pass
+
 
 
 class AlgorithmAesGcm(Algorithm):
@@ -70,18 +75,49 @@ class AlgorithmAesGcm(Algorithm):
         self._nonce = DerOctetString().decode(self._parameters[0])
         self._ivlen = self._parameters[1]
 
+
     def decrypt(self, key, message):
         aes = AES.new(key, AES.MODE_GCM, nonce=self._nonce.payload)
         return aes.decrypt(message)
 
 
+
 class AlgorithmAesCbc(Algorithm):
+    def __init__(self, **kwargs):
+        if not len(kwargs) == 0:
+            self._iv = kwargs['iv']
+        else:
+            self._iv = None
+
+
     def decode_parameters(self):
-        self._iv = DerOctetString().decode(self._algorithmIdentifier[1])
+        self._iv = DerOctetString().decode(self._algorithmIdentifier[1]).payload
+
+
+    def encode(self):
+        return DerSequence([
+            self.oid,
+            DerOctetString(value=self._iv)
+        ])
+
 
     def decrypt(self, key, message):
-        aes = AES.new(key, AES.MODE_CBC, iv=self._iv.payload)
+        aes = AES.new(key, AES.MODE_CBC, iv=self._iv)
         return aes.decrypt(message)
+
+
+    def encrypt(self, key, message):
+        aes = AES.new(key, AES.MODE_CBC, iv=self._iv)
+        print(repr(message))
+        result = aes.encrypt(message)
+        print("AES", result)
+        return result
+
+
+    @property
+    def oid(self):
+        return DerObjectId('2.16.840.1.101.3.4.1.2')
+
 
 
 class AlgorithmRsaEncryption(Algorithm):
@@ -94,10 +130,28 @@ class AlgorithmRsaEncryption(Algorithm):
         return pkcs1.decrypt(message, b'\0\0\0\0')
 
 
+    def encrypt(self, key, message):
+        pkcs1 = PKCS1_v1_5.new(key)
+        return pkcs1.encrypt(message)
+
+
+    def encode(self):
+        return DerSequence([
+            self.oid,
+            DerNull()
+        ])
+
+
+    @property
+    def oid(self):
+        return DerObjectId('1.2.840.113549.1.1.1')
+
+
+
 class PKCS7(object):
     """ Represents The (Encrypted) Content Info structure from PKCS7"""
-    def __init__(self):
-        pass
+    def __init__(self, encrypted=False):
+        self._encrypted = encrypted
 
 
     def decode_content(self):
@@ -105,6 +159,7 @@ class PKCS7(object):
 
 
     def decode(self, original_message, encrypted=False):
+        self._encrypted = encrypted
         self._contentInfo = BerSequence().decode(original_message)
         self._contentType = DerObjectId().decode(self._contentInfo[0])
         if encrypted == True:
@@ -117,13 +172,69 @@ class PKCS7(object):
         return self
 
 
+    def encode(self):
+        seq = []
+        seq.append(self.oid)
+
+        if self._encrypted:
+            print("Why, oh why!")
+            seq.append(self._algorithm.encode())
+
+        seq.append(self.encode_content().encode())
+
+        asn1 = DerSequence(seq)
+        return asn1.encode()
+
+
+    def encode_content(self):
+        pass
+
+
 class PKCS7Data(PKCS7):
+    def __init__(self, **kwargs):
+        PKCS7.__init__(self, **kwargs)
+        self._key = b'\0' * 16
+        self._data = b'a'
+
+
+
+    def _pad(self, original_message):
+        length = 16 - len(original_message) % 16
+        print("LENGTH", length)
+        return original_message + bchr(length) * length
+
+
+    def set_data(self, data):
+        self._data = data
+
+
+    @property
+    def data(self):
+        return self._data
+
+
     def decode_content(self):
         length = self._content.payload[1]
         print(length) # hack, needs proper BER support for a clean solution
-        self._data = DerOctetString().decode(self._content.payload[:length + 2])
-        print(myhexlify(self._content.payload))
-        print(myhexlify(self._data.payload))
+        self._data = DerOctetString().decode(self._content.payload[:length + 2]).payload
+        print(myhexlify(self._data))
+
+
+    def encode_content(self):
+        self.encrypt()
+#        return self._ciphertext
+#        self._ciphertext = self._algorithm.encrypt(self._key, self._data)
+#        print(DerObject(asn1Id=0x0, payload=self._ciphertext, implicit=0, constructed=False).encode())
+        return DerObject(asn1Id=0x0, payload=self._ciphertext, implicit=0, constructed=False)
+
+
+    def encrypt(self):
+        self._ciphertext = self._algorithm.encrypt(self._key, self._pad(self._data))
+
+
+    @property
+    def oid(self):
+        return DerObjectId('1.2.840.113549.1.7.1')
 
 
 class PKCS7SignedData(PKCS7):
@@ -133,14 +244,25 @@ class PKCS7SignedData(PKCS7):
 class PKCS7EnvelopedData(PKCS7):
     def __init__(self):
         self._recipients = set()
-
+        self._encrypted = False
+        self._encryptedContentInfo = PKCS7Data(encrypted=True)
+        self._encryptedContentInfo._algorithm = AlgorithmAesCbc(iv=b'\0' * 16)
 
 
     def set_key(self, key):
-        if not key.has_private():
-            print("ERROR")
-
         self._key = key
+
+
+    def _unpad(self, original_message):
+        length = original_message[-1]
+        padding = original_message[len(original_message) - length:]
+        message = original_message[:len(original_message) - length]
+
+        if padding != original_message[-1:] * length:
+            print("Error", message[-1:] * length)
+            return None
+
+        return message
 
 
     def decode_recipient_infos(self):
@@ -153,8 +275,30 @@ class PKCS7EnvelopedData(PKCS7):
             info['keyEncryptionAlgorithm'] = import_algorithm(recinfo[2])
 
             info['contentKey'] = info['keyEncryptionAlgorithm'].decrypt(self._key, info['encryptedKey'].payload)
-            pprint(info)
             self._info = info
+
+
+    def encode_recipient_infos(self):
+        encoded_infos = set()
+        encoded_infos.add(
+            DerSequence([
+                0,
+                DerSequence([
+                    DerSequence([
+                        DerSetOf([
+                            DerSequence([
+                                DerObjectId('2.5.4.3'),
+                                DerObject(asn1Id=0x13, payload=b"TEST")
+                            ])
+                        ])
+                    ]),
+                    1337
+                ]),
+                AlgorithmRsaEncryption().encode(),
+                DerOctetString(value=AlgorithmRsaEncryption().encrypt(self._key, b'\0' * 16))
+            ])
+        )
+        return DerSetOf(encoded_infos)
 
 
     def decode_content(self):
@@ -163,14 +307,30 @@ class PKCS7EnvelopedData(PKCS7):
         # RFC 2315 only has Version 0 for EnvelopedData
         assert(envelopedData[0] == 0)
         self._recipientInfos = DerSetOf().decode(envelopedData[1])
-        self.decode_recipient_infos()
         self._encryptedContentInfo = PKCS7Data().decode(envelopedData[2], True)
 
 
     def decrypt(self):
-        plaintext = self._encryptedContentInfo._algorithm.decrypt(self._info['contentKey'], self._encryptedContentInfo._data.payload)
-        print(plaintext)
-        return plaintext
+        self.decode_recipient_infos()
+        plaintext = self._encryptedContentInfo._algorithm.decrypt(self._info['contentKey'], self._encryptedContentInfo.data)
+        return self._unpad(plaintext)
+
+
+    def encode_content(self):
+        self._encryptedContentInfo.encrypt()
+        content = DerSequence(implicit=0)
+        content.append(DerSequence([
+            0,
+            self.encode_recipient_infos(),
+            self._encryptedContentInfo.encode()
+        ]))
+        return content
+
+
+
+    @property
+    def oid(self):
+        return DerObjectId('1.2.840.113549.1.7.3')
 
 
 
