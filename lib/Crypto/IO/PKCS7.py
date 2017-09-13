@@ -108,9 +108,7 @@ class AlgorithmAesCbc(Algorithm):
 
     def encrypt(self, key, message):
         aes = AES.new(key, AES.MODE_CBC, iv=self._iv)
-        print(repr(message))
         result = aes.encrypt(message)
-        print("AES", result)
         return result
 
 
@@ -177,7 +175,6 @@ class PKCS7(object):
         seq.append(self.oid)
 
         if self._encrypted:
-            print("Why, oh why!")
             seq.append(self._algorithm.encode())
 
         seq.append(self.encode_content().encode())
@@ -200,7 +197,6 @@ class PKCS7Data(PKCS7):
 
     def _pad(self, original_message):
         length = 16 - len(original_message) % 16
-        print("LENGTH", length)
         return original_message + bchr(length) * length
 
 
@@ -214,17 +210,16 @@ class PKCS7Data(PKCS7):
 
 
     def decode_content(self):
-        length = self._content.payload[1]
-        print(length) # hack, needs proper BER support for a clean solution
-        self._data = DerOctetString().decode(self._content.payload[:length + 2]).payload
-        print(myhexlify(self._data))
+        binary = self._content.payload
+        self._data = b('')
+        while b'\0\0' != binary[:2]: # hack, needs proper BER support for a clean solution
+            length = binary[1]
+            self._data = self._data + DerOctetString().decode(binary[:length + 2]).payload
+            binary = binary[length + 2:]
 
 
     def encode_content(self):
         self.encrypt()
-#        return self._ciphertext
-#        self._ciphertext = self._algorithm.encrypt(self._key, self._data)
-#        print(DerObject(asn1Id=0x0, payload=self._ciphertext, implicit=0, constructed=False).encode())
         return DerObject(asn1Id=0x0, payload=self._ciphertext, implicit=0, constructed=False)
 
 
@@ -362,8 +357,6 @@ def import_algorithm(external_message):
         if identifier[5:] == ('1', '1'):
             return AlgorithmRsaEncryption().decode(external_message)
 
-    print(identifier)
-
 
 def import_message(external_message):
     pkcs = PKCS7().decode(external_message)
@@ -379,6 +372,5 @@ def import_message(external_message):
         return
 
 
-    print(repr(identifier[6]))
     if int(identifier[6]) == 3:
         return PKCS7EnvelopedData().decode(external_message)
