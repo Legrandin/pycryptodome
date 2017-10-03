@@ -352,6 +352,14 @@ class DsaKey(object):
     def size(self):
         raise NotImplementedError
 
+    def size_in_bits(self):
+        """Size of the DSA modulus in bits"""
+        return len(bin(self.p)) - 2
+
+    def size_in_bytes(self):
+        """The minimal amount of bytes that can hold the DSA modulus"""
+        return (self.size_in_bits() - 1) // 8 + 1
+
 
 def _generate_domain(L, randfunc):
     """Generate a new set of DSA domain parameters"""

@@ -173,6 +173,11 @@ class DSATest(unittest.TestCase):
         self.failUnless(dsaObj._verify(m_hash, (r, s)))
         self.failIf(dsaObj._verify(m_hash + 1, (r, s)))
 
+    def test_size(self):
+        dsaObj = self.dsa.generate(1024)
+        self.assertEquals(dsaObj.size_in_bits(), 1024)
+        self.assertEquals(dsaObj.size_in_bytes(), 128)
+
 
 class DSADomainTest(unittest.TestCase):
 
