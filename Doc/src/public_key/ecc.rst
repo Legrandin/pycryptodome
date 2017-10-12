@@ -35,7 +35,7 @@ and subsequentely reload it back into the application::
     >>> f.close()
     ...
     >>> f = open('myprivatekey.pem','rt')
-    >>> key = RSA.import_key(f.read())
+    >>> key = ECC.import_key(f.read())
 
 The ECC key can be used to perform or verify ECDSA signatures, using the module
 :mod:`Crypto.Signature.DSS`.
