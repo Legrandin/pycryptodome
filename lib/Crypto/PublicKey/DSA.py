@@ -382,7 +382,7 @@ def _generate_domain(L, randfunc):
               for j in xrange(n + 1) ]
         V = [ Integer.from_bytes(v) for v in V ]
         W = sum([V[i] * (1 << (i * outlen)) for i in xrange(n)],
-                (V[n] & (1 << b_ - 1)) * (1 << (n * outlen)))
+                (V[n] & ((1 << b_) - 1)) * (1 << (n * outlen)))
 
         X = Integer(W + upper_bit) # 2^{L-1} < X < 2^{L}
         assert(X.size_in_bits() == L)
