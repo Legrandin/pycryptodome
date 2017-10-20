@@ -9,14 +9,22 @@ if [ x${PYTHON_INTP} = "x" ]; then
 	exit 1
 fi
 
+python --version
+python2 --version
+python3 --version
+pyenv global
+pyenv versions
+
 if [ ${PYTHON_INTP} = "pypy" ]; then
 	sudo add-apt-repository -y ppa:pypy/ppa
 	sudo apt-get -y update
 	sudo apt-get install -y --force-yes pypy pypy-dev
+elif [ ${PYTHON_INTP} = "python3.5" ]; then
+    pyenv global system 3.5
 elif [ x$(which ${PYTHON_INTP}) = "x" ]; then
 	
 	# Everything but Python 3.6
-	sudo add-apt-repository -y ppa:fkrull/deadsnakes
+	sudo add-apt-repository -y ppa:deadsnakes/ppa
 	
 	# Python 3.6 only
 	sudo add-apt-repository -y ppa:jonathonf/python-3.6
