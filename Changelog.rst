@@ -1,6 +1,16 @@
 Changelog
 =========
 
+X.X.X (...)
++++++++++++
+
+Resolved issues
+---------------
+
+* The DSA parameter 'p' prime was created with 255 bits cleared
+  (but still with the correct strength).
+
+
 3.4.7 (26 August 2017)
 ++++++++++++++++++++++
 
