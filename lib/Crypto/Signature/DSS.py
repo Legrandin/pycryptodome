@@ -155,7 +155,7 @@ class DssSigScheme(object):
                 raise ValueError("The signature is not authentic (DER)")
             if len(der_seq) != 2 or not der_seq.hasOnlyInts():
                 raise ValueError("The signature is not authentic (DER content)")
-            r_prime, s_prime = der_seq[0], der_seq[1]
+            r_prime, s_prime = Integer(der_seq[0]), Integer(der_seq[1])
 
         if not (0 < r_prime < self._order) or not (0 < s_prime < self._order):
             raise ValueError("The signature is not authentic (d)")
