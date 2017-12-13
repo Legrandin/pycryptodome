@@ -607,5 +607,10 @@ setup(
             include_dirs=['src/'],
             sources=['src/strxor.c']),
 
+        # Math
+        Extension("Crypto.Math._montgomery",
+            include_dirs=['src/'],
+            sources=['src/montgomery.c','src/multiply.c']),
+
         ]
 )
