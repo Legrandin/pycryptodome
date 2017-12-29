@@ -44,7 +44,14 @@ typedef unsigned __int64 uint64_t;
 #include <malloc.h>
 
 #else /** Not MSC **/
+
 #include <stdint.h>
+
+#if __STDC_VERSION__ >= 199901L
+#else
+#define restrict __restrict
+#endif
+
 #endif
 
 #include <stdlib.h>
