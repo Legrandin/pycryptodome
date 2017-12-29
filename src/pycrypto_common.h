@@ -39,6 +39,7 @@ typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 
 #define inline _inline
+#define restrict __restrict
 
 #include <malloc.h>
 

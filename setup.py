@@ -136,7 +136,7 @@ def PrintErr(*args, **kwd):
         w(kwd.get("end", "\n"))
 
 
-def test_compilation(program, extra_cc_options=None, extra_libraries=None):
+def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg=''):
     """Test if a certain C program can be compiled."""
 
     # Create a temporary file with the C program
@@ -152,7 +152,9 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
 
     debug = False
     # Mute the compiler and the linker
-    if not debug:
+    if msg:
+        PrintErr("Testing support for %s" % msg)
+    if not (debug or os.name=='nt'):
         old_stdout = os.dup(sys.stdout.fileno())
         old_stderr = os.dup(sys.stderr.fileno())
         dev_null = open(os.devnull, "w")
@@ -183,13 +185,19 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None):
             pass
 
     # Restore stdout and stderr
-    if not debug:
+    if not (debug or os.name=='nt'):
         if old_stdout is not None:
             os.dup2(old_stdout, sys.stdout.fileno())
         if old_stderr is not None:
             os.dup2(old_stderr, sys.stderr.fileno())
         if dev_null is not None:
             dev_null.close()
+    if msg:
+        if result:
+            x = ""
+        else:
+            x = " not"
+        PrintErr("Target does%s support %s" % (x, msg))
 
     return result
 
@@ -283,7 +291,7 @@ class PCTBuildExt (build_ext):
             return 0;
         }
         """
-        if test_compilation(source):
+        if test_compilation(source, msg="cpuid.h header"):
             self.compiler.define_macro("HAVE_CPUID_H")
             return True
         else:
@@ -300,7 +308,7 @@ class PCTBuildExt (build_ext):
             return 0;
         }
         """
-        if test_compilation(source):
+        if test_compilation(source, msg="intrin.h header"):
             self.compiler.define_macro("HAVE_INTRIN_H")
             return True
         else:
@@ -321,7 +329,7 @@ class PCTBuildExt (build_ext):
         aes_mods = [ x for x in self.extensions if x.name in self.aesni_mod_names ]
         result = test_compilation(source)
         if not result:
-            result = test_compilation(source, extra_cc_options=['-maes'])
+            result = test_compilation(source, extra_cc_options=['-maes'], msg='wmmintrin.h header')
             if result:
                 for x in aes_mods:
                     x.extra_compile_args += ['-maes']

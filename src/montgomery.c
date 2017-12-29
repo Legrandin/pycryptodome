@@ -31,8 +31,15 @@ DAMAGE.
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include "pycrypto_common.h"
+
+FAKE_INIT(montgomery)
 
 #include "multiply.h"
+
+#ifdef _MSC_VER
+#define posix_memalign(p, a, s) (((*(p)) = _aligned_malloc((s), (a))), *(p) ? 0 :errno)
+#endif
 
 /** Multiplication will be replaced by a look-up **/
 /** Do not change this value! **/
@@ -60,7 +67,7 @@ static void print_words_w(const uint8_t *str, const uint64_t *x, unsigned words)
  */
 static void bytes_to_words(uint64_t *x, const uint8_t *in, size_t len, size_t words)
 {
-    int i, j;
+    size_t i, j;
     size_t partial;
 
     if (words == 0 || len == 0) {
@@ -99,7 +106,7 @@ static void bytes_to_words(uint64_t *x, const uint8_t *in, size_t len, size_t wo
  */
 static void words_to_bytes(uint8_t *out, const uint64_t *x, size_t len, size_t words)
 {
-    int i, j;
+    size_t i, j;
     size_t partial;
 
     if (words == 0 || len == 0) {
@@ -115,7 +122,7 @@ static void words_to_bytes(uint8_t *out, const uint64_t *x, size_t len, size_t w
     }
 
     for (j=partial-1; j>=0; j--) {
-        *out++ = x[words-1] >> (8*j);
+        *out++ = (uint8_t)(x[words-1] >> (8*j));
     }
 
     if (words == 1) {

@@ -30,8 +30,6 @@ DAMAGE.
 #include <stdio.h>
 #include "multiply.h"
 
-typedef __uint128_t uint128_t;
-
 /**
  * Add a 64-bit value x to y/sum_mid/sum_hi
  */
