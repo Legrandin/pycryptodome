@@ -67,7 +67,7 @@ static void print_words_w(const uint8_t *str, const uint64_t *x, unsigned words)
  */
 static void bytes_to_words(uint64_t *x, const uint8_t *in, size_t len, size_t words)
 {
-    size_t i, j;
+    int i, j;
     size_t partial;
 
     if (words == 0 || len == 0) {
@@ -76,7 +76,7 @@ static void bytes_to_words(uint64_t *x, const uint8_t *in, size_t len, size_t wo
 
     assert(len<=words*8);
     assert(len>(words-1)*8);
- 
+
     memset(x, 0, words*8);
 
     partial = len % 8;
@@ -106,7 +106,7 @@ static void bytes_to_words(uint64_t *x, const uint8_t *in, size_t len, size_t wo
  */
 static void words_to_bytes(uint8_t *out, const uint64_t *x, size_t len, size_t words)
 {
-    size_t i, j;
+    int i, j;
     size_t partial;
 
     if (words == 0 || len == 0) {
@@ -115,7 +115,7 @@ static void words_to_bytes(uint8_t *out, const uint64_t *x, size_t len, size_t w
 
     assert(len<=words*8);
     assert(len>(words-1)*8);
-    
+
     partial = len % 8;
     if (partial == 0) {
         partial = 8;
