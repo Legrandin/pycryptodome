@@ -1,9 +1,9 @@
 #
-#  SelfTest/Math/__init__.py: Self-test for math module
+#  SelfTest/Math/test_modexp.py: Self-test for module exponentiation
 #
 # ===================================================================
 #
-# Copyright (c) 2014, Legrandin <helderijs@gmail.com>
+# Copyright (c) 2017, Helder Eijs <helderijs@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,19 +31,41 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Self-test for Math"""
+"""Self-test for the custom module exponentiation"""
+
+import unittest
+
+from Crypto.SelfTest.st_common import list_test_cases
+
+from Crypto.Util.py3compat import *
+
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  c_size_t, expect_byte_string)
+
+c_defs = """
+int monty_pow(const uint8_t *base,
+               const uint8_t *exp,
+               const uint8_t *modulus,
+               uint8_t       *out,
+               size_t len,
+               uint64_t seed)
+"""
+
+_raw_montgomery = load_pycryptodome_raw_lib("Crypto.Math._montgomery", c_defs)
+
+
+class TestModExp(unittest.TestCase):
+
+    def test_kat(self):
+        pass
+
 
 def get_tests(config={}):
     tests = []
-    from Crypto.SelfTest.Math import test_Numbers
-    from Crypto.SelfTest.Math import test_Primality
-    from Crypto.SelfTest.Math import test_modexp
-    tests += test_Numbers.get_tests(config=config)
-    tests += test_Primality.get_tests(config=config)
-    tests += test_modexp.get_tests(config=config)
+    tests += list_test_cases(TestModExp)
     return tests
 
+
 if __name__ == '__main__':
-    import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
