@@ -1,36 +1,50 @@
-language: c
+language: python
 dist: trusty
+python:
+ - "2.6"
+ - "2.7"
+ - "3.3"
+ - "3.4"
+ - "3.5"
+ - "3.6"
+ - "pypy"
+ - "pypy3"
 env:
- - PYTHON_INTP="python2.4"
- - PYTHON_INTP="python2.5"
- - PYTHON_INTP="python2.6" CFFI=no
- - PYTHON_INTP="python2.6" CFFI=yes
- - PYTHON_INTP="python2.7" CFFI=no
- - PYTHON_INTP="python2.7" CFFI=yes
- - PYTHON_INTP="python3.2" CFFI=no
- - PYTHON_INTP="python3.2" CFFI=yes
- - PYTHON_INTP="python3.3" CFFI=no
- - PYTHON_INTP="python3.3" CFFI=yes
- - PYTHON_INTP="python3.4" CFFI=no
- - PYTHON_INTP="python3.4" CFFI=yes
- - PYTHON_INTP="python3.5" CFFI=no
- - PYTHON_INTP="python3.5" CFFI=yes
- - PYTHON_INTP="python3.6" CFFI=no
- - PYTHON_INTP="python3.6" CFFI=yes
- - PYTHON_INTP="pypy" CFFI=yes
+ - CFFI=no
+ - CFFI=yes
+matrix:
+ exclude:
+ - python: pypy
+   env: CFFI=no
+ - python: pypy3
+   env: CFFI=no
+ include:
+ - python: 2.7
+   env: CFFI=no OLDPY=python2.4
+ - python: 2.7
+   env: CFFI=no OLDPY=python2.5
+ - python: 2.7
+ - python: 3.4
+   env: CFFI=no OLDPY=python3.2
+ - python: 3.4
+   env: CFFI=yes OLDPY=python3.2
 branches:
  except:
   - /^.*-wip$/
 install:
  - ./travis_install.sh
 script:
- - export PYTHONPATH=${PWD}/custom_packages
- - ${PYTHON_INTP} -c "import cffi" 2>/dev/null && echo CFFI is installed || true
- - if [ x${CFFI} = "xyes" ]; then ${PYTHON_INTP} -c"import cffi"; fi
- - if [ x${CFFI} != "xyes" ]; then ! ${PYTHON_INTP} -c"import cffi" 2>/dev/null; fi
- - major=$(${PYTHON_INTP} -V 2>&1 | cut -f2 -d' ' | cut -f1 -d'.')
- - if [ "$major" -ge 3 ]; then xflags="-bb" ; fi
- - ${PYTHON_INTP} -V
+ #- export PYTHONPATH=${PWD}/custom_packages
+ - if [ x${OLDPY} == x ]; then export PYTHON=python; else export PYTHON=${OLDPY} PYTHONPATH=${PWD}/custom_packages; fi
+ - echo ${PYTHON}
+ - PYVERSION=$(${PYTHON} -V 2>&1)
+ - echo ${PYVERSION}
+ - ${PYTHON} -c "import cffi" 2>/dev/null && echo CFFI is installed || true
+ - if [ x${CFFI} = "xyes" ]; then ${PYTHON} -c"import cffi"; fi
+ - if [ x${CFFI} != "xyes" ]; then ! ${PYTHON} -c"import cffi" 2>/dev/null; fi
+ - MAJOR=$(echo ${PYVERSION} | cut -f2 -d' ' | cut -f1 -d'.')
+ - if [ "${MAJOR}" -ge 3 ]; then xflags="$xflags -bb" ; fi
+ - if [[ ${PYVERSION} != *"PyPy"* ]] || [ "${MAJOR}" -lt 3 ]; then xflags="$xflags -tt"; fi
  - echo "Custom Python flags:" \"${xflags:-none}\"
- - ${PYTHON_INTP} -tt $xflags setup.py build
- - ${PYTHON_INTP} -tt $xflags setup.py test
+ - ${PYTHON} $xflags setup.py build
+ - ${PYTHON} $xflags setup.py test

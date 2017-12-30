@@ -4,68 +4,6 @@ set -x
 
 sudo apt-get install libgmp10
 
-if [ x${PYTHON_INTP} = "x" ]; then
-	echo "Undefined python implementation"
-	exit 1
-fi
-
-python --version
-python2 --version
-python3 --version
-pyenv global
-pyenv versions
-
-if [ ${PYTHON_INTP} = "pypy" ]; then
-	sudo add-apt-repository -y ppa:pypy/ppa
-	sudo apt-get -y update
-	sudo apt-get install -y --force-yes pypy pypy-dev
-elif [ ${PYTHON_INTP} = "python3.5" ]; then
-    pyenv global system 3.5
-elif [ x$(which ${PYTHON_INTP}) = "x" ]; then
-	
-	# Everything but Python 3.6
-	sudo add-apt-repository -y ppa:deadsnakes/ppa
-	
-	# Python 3.6 only
-	sudo add-apt-repository -y ppa:jonathonf/python-3.6
-	sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-
-	sudo apt-get -y update
-	sudo apt-get install ${PYTHON_INTP} ${PYTHON_INTP}-dev
-fi
-
-${PYTHON_INTP} -V
-
-PYV=$(${PYTHON_INTP} -V 2>&1 | head -1 | sed -n 's/\w\+ \([23]\)\.\([0-9]\).*/\1\2/p')
-
-export PYTHONPATH=${PWD}/custom_packages
-mkdir ${PYTHONPATH}
-
-# Use GCC 4.9 for building all extensions
-sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-sudo apt-get -y update
-sudo apt-get install gcc-4.9
-sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 60
-sudo update-alternatives --config gcc
-sudo ln -f $(which gcc) $(which x86_64-linux-gnu-gcc)
-
-# Ctypes was only included in python 2.5, so it needs to be installed if we target python 2.4.
-# We do not rely on pypi because it refers us to sourceforge, not the most available site around.
-# Instead, we mirror ctypes on github.
-if [ ${PYV} -eq 24 ]; then
-	(
-	cd /tmp
-	git clone https://github.com/Legrandin/ctypes
-	cd ctypes
-	${PYTHON_INTP} setup.py build
-	cp -r build/lib*/* ${PYTHONPATH}
-	)
-fi
-
-# Use GCC 4.9 for building all extensions
-sudo apt-get install gcc-4.9 g++-4.9
-
-# Why bother with pip/virtualenv complexity when we can just do this
 install_from_pypi() {
 	if [ "$2" = "latest" ]; then
 		target_version=".info.version"
@@ -85,12 +23,41 @@ install_from_pypi() {
 		tar -xzf "$FILENAME"
 	fi
 	cd /tmp/$1-*
-	${PYTHON_INTP} setup.py build
+	$3 setup.py build
 	cp -r build/lib*/* ${PYTHONPATH}
 	)
 }
 
-if [ x${CFFI} = "xyes" -a ${PYTHON_INTP} != "pypy" ]; then
-	install_from_pypi setuptools 19.4
-	install_from_pypi cffi latest
+install_ctypes_24() {
+	(
+	cd /tmp
+	git clone https://github.com/Legrandin/ctypes
+	cd ctypes
+	${PYTHON} setup.py build
+	cp -r build/lib*/* ${PYTHONPATH}
+	)
+}
+
+if [ x${OLDPY} != x ]; then
+	export PYTHON=${OLDPY}
+	sudo add-apt-repository -y ppa:deadsnakes/ppa
+	sudo apt-get -y update
+	sudo apt-get install ${PYTHON} ${PYTHON}-dev
+	mkdir ${PWD}/custom_packages
+	export PYTHONPATH=${PWD}/custom_packages
+	if [ x${PYTHON} == xpython2.4 ]; then
+		install_ctypes_24
+	else
+		install_from_pypi setuptools 19.4 ${PYTHON}
+	fi
+	if [ x${CFFI} == xyes ]; then
+		install_from_pypi cffi latest ${PYTHON}
+	fi
+else
+	export PYTHON=python
+	PYV=$(python --version)
+	pip install setuptools
+	if [ x${CFFI} == xyes ] && [[ ${PYV} != *"PyPy"* ]]; then
+		pip install cffi
+	fi
 fi
