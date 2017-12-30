@@ -53,7 +53,7 @@ int monty_pow(const uint8_t *base,
                const uint8_t *modulus,
                uint8_t       *out,
                size_t len,
-               uint64_t seed)
+               uint64_t seed);
 """
 
 
