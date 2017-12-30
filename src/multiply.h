@@ -25,7 +25,7 @@ __attribute__((optimize("-O3")))
 #endif
 ;
 
-uint64_t addmul128(uint64_t * restrict t, const uint64_t * restrict a, uint64_t b0, uint64_t b1, size_t words)
+uint64_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
 #ifdef __GNUC__
 __attribute__((optimize("-O3")))
 #endif

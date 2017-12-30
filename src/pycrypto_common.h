@@ -39,7 +39,7 @@ typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 
 #define inline _inline
-#define restrict __restrict
+#define RESTRICT __restrict
 
 #include <malloc.h>
 
@@ -48,8 +48,9 @@ typedef unsigned __int64 uint64_t;
 #include <stdint.h>
 
 #if __STDC_VERSION__ >= 199901L
+#define RESTRICT restrict
 #else
-#define restrict __restrict
+#define RESTRICT __restrict
 #endif
 
 #endif
