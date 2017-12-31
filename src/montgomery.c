@@ -372,7 +372,7 @@ static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words
     }
 }
 
-int monty_pow(const uint8_t *base,
+EXPORT_SYM int monty_pow(const uint8_t *base,
                const uint8_t *exp,
                const uint8_t *modulus,
                uint8_t       *out,
