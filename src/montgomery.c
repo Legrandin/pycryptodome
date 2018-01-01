@@ -35,8 +35,41 @@ FAKE_INIT(montgomery)
 
 #include "multiply.h"
 
+void *malloc_aligned(size_t size, size_t alignment);
+void free_aligned(void *ptr);
+
 #ifdef _MSC_VER
-#define posix_memalign(p, a, s) (((*(p)) = _aligned_malloc((s), (a))), *(p) ? 0 :errno)
+
+void *malloc_aligned(size_t size, size_t alignment)
+{
+    return _aligned_malloc(size, alignment);
+}
+
+void free_aligned(void *ptr)
+{
+    _aligned_free(ptr);
+}
+
+#else
+
+void *malloc_aligned(size_t size, size_t alignment)
+{
+    void *ptr;
+    int result;
+
+    result = posix_memalign(&ptr, alignment, size);
+    if (result) {
+        return NULL;
+    }
+    
+    return ptr;
+}
+
+void free_aligned(void *ptr)
+{
+    free(ptr);
+}
+
 #endif
 
 /** Multiplication will be replaced by a look-up **/
@@ -425,7 +458,8 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         allocate(powers[i], words);
     }
     allocate(powers_idx, words);
-    if (posix_memalign((void**)&prot, 64, (1<<WINDOW_SIZE)*words*8)) {
+    prot = malloc_aligned((1<<WINDOW_SIZE)*words*8, 64);
+    if (NULL == prot) {
         error = 3;
         goto cleanup;
     }
@@ -525,7 +559,7 @@ cleanup:
         free(powers[i]);
     }
     free(powers_idx);
-    free(prot);
+    free_aligned(prot);
 
     return error;
 }
