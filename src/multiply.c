@@ -44,7 +44,7 @@ uint64_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t 
 {
     uint64_t sum_low, sum_mid, sum_hi;
     uint64_t pr_low, pr_high, aim1;
-    int i;
+    size_t i;
 
     if (words == 0) {
         return 0;

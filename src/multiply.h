@@ -21,9 +21,9 @@
 
 uint64_t inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 {
-    uint32_t al = a;
+    uint32_t al = (uint32_t) a;
     uint32_t ah = a >> 32;
-    uint32_t bl = b;
+    uint32_t bl = (uint32_t) b;
     uint32_t bh = b >> 32;
 
     uint64_t sum0, sum1a, sum1b, sum2, sum3;
