@@ -335,7 +335,24 @@ class PCTBuildExt (build_ext):
                     x.extra_compile_args += ['-maes']
         return result
 
+    def check_uint128(self):
+        source = """
+        int main(void)
+        {
+            __uint128_t x;
+            return 0;
+        }
+        """
+        if test_compilation(source, msg="128-bit integer"):
+            self.compiler.define_macro("HAVE_UINT128")
+            return True
+        else:
+            return False
+
+
     def detect_modules (self):
+
+        self.check_uint128()
 
         # Detect compiler support for CPUID instruction and AESNI
         if (self.check_cpuid_h() or self.check_intrin_h()) and self.check_aesni():
