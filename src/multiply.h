@@ -19,7 +19,13 @@
 
 #else
 
-uint64_t inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
+uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
+#ifdef __GNUC__
+__attribute__((optimize("-O3")))
+#endif
+;
+
+uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 {
     uint32_t al = (uint32_t) a;
     uint32_t ah = a >> 32;
