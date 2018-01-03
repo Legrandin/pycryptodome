@@ -432,7 +432,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         return 1;
     }
     
-    /** Odd modulus only **/
+    /** Odd (and non-zero) modulus only **/
     if (!(modulus[len-1] & 1)) {
         return 2;
     }
@@ -501,7 +501,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         exp++;
     }
     if (exp_len == 0) {
-        memcpy(out, one, sizeof(uint64_t)*words);
+        words_to_bytes(out, one, len, words);
         return 0;
     }
     /** Total number of windows covering the exponent **/
