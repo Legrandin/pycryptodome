@@ -126,6 +126,20 @@ class TestModExp(unittest.TestCase):
         base = 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
         self.assertRaises(ExceptionModulus, monty_pow, base, exponent1, modulus1-1)
 
+    def test_several_lengths(self):
+        from Crypto.Hash import SHAKE128
+        from Crypto.Math.Numbers import Integer
+
+        prng = SHAKE128.new().update(b('Test'))
+        for length in range(1, 100):
+            base = Integer.from_bytes(prng.read(length))
+            modulus2 = Integer.from_bytes(prng.read(length)) | 1
+            exponent2 = Integer.from_bytes(prng.read(length))
+
+            expected = pow(base, exponent2, modulus2)
+            result = monty_pow(base, exponent2, modulus2)
+            self.assertEqual(result, expected)
+
 
 def get_tests(config={}):
     tests = []
