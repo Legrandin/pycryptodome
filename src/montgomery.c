@@ -405,6 +405,75 @@ static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words
     }
 }
 
+struct Montgomery {
+    uint64_t *base;
+    uint64_t *modulus;
+    uint64_t *r_square;
+    uint64_t *one;
+    uint64_t *x;
+    uint64_t *t;
+    uint64_t *powers[1 << WINDOW_SIZE];
+    uint64_t *power_idx;
+    uint32_t *prot;
+};
+
+/** Allocate space **/
+#define allocate(x, y) do {             \
+    x = calloc(y, sizeof(uint64_t));    \
+    if (x == NULL) {                    \
+        return 1;                       \
+    }} while(0)
+ 
+int allocate_montgomery(struct Montgomery *m, size_t words)
+{
+    int i;
+
+    memset(m, 0, sizeof *m);
+
+    allocate(m->base, words);
+    allocate(m->modulus, words);
+    allocate(m->r_square, words);
+    allocate(m->one, words);
+    allocate(m->x, words);
+    allocate(m->t, 2*words+1);
+    for (i=0; i<(1 << WINDOW_SIZE); i++) {
+        allocate(m->powers[i], words);
+    }
+    allocate(m->power_idx, words);
+    
+    m->prot = malloc_aligned((1<<WINDOW_SIZE)*words*8, 64);
+    if (NULL == m->prot) {
+        return 1;
+    }
+
+    return 0;
+}
+
+#undef allocate
+
+void deallocate_montgomery(struct Montgomery *m)
+{
+    int i;
+
+    free(m->base);
+    free(m->modulus);
+    free(m->r_square);
+    free(m->one);
+    free(m->x);
+    free(m->t);
+    for (i=0; i<(1 << WINDOW_SIZE); i++) {
+        free(m->powers[i]);
+    }
+    free(m->power_idx);
+    
+    if (m->prot) {
+        free_aligned(m->prot);
+    }
+    
+    memset(m, 0, sizeof *m);
+}
+
+
 EXPORT_SYM int monty_pow(const uint8_t *base,
                const uint8_t *exp,
                const uint8_t *modulus,
@@ -412,22 +481,14 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
                size_t len,
                uint64_t seed)
 {
-    uint64_t *a, *n, *r2, *one, *x, *t;
-    uint64_t *powers[1 << WINDOW_SIZE];
-    uint64_t *powers_idx;
-    uint32_t *prot;
     uint64_t m0;
     int i, j, scan_exp;
     size_t words;
     unsigned nr_windows, available, tg;
-    int error = 0;
     size_t exp_len;
 
-    /** All pointers are NULL **/
-    a = n = r2 = one = x = t = powers_idx = NULL;
-    prot = NULL;
-    memset(powers, 0, (1<<WINDOW_SIZE) *sizeof(uint64_t*));
-    
+    struct Montgomery monty;
+
     if (!base || !exp || !modulus || !out || len==0) {
         return 1;
     }
@@ -439,60 +500,40 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
 
     words = (len+7) / 8;
     memset(out, 0, len);
-
-    /** Allocate space **/
-    #define allocate(x, y) do {             \
-        x = calloc(y, sizeof(uint64_t));    \
-        if (x == NULL) {                    \
-            error = 3;                      \
-            goto cleanup;                   \
-        }} while(0)
     
-    allocate(a, words);
-    allocate(n, words);
-    allocate(one, words);
-    allocate(x, words);
-    allocate(r2, words);
-    allocate(t, 2*words+1);
-    for (i=0; i<(1 << WINDOW_SIZE); i++) {
-        allocate(powers[i], words);
+    if (allocate_montgomery(&monty, words)) {
+        deallocate_montgomery(&monty);
+        return 3;
     }
-    allocate(powers_idx, words);
-    prot = malloc_aligned((1<<WINDOW_SIZE)*words*8, 64);
-    if (NULL == prot) {
-        error = 3;
-        goto cleanup;
-    }
-    #undef allocate
 
     /** Take in numbers **/
-    bytes_to_words(a, base, len, words);
-    bytes_to_words(n, modulus, len, words);
+    bytes_to_words(monty.base, base, len, words);
+    bytes_to_words(monty.modulus, modulus, len, words);
 
     /** Set one **/
-    one[0] = 1;
+    monty.one[0] = 1;
 
     /** Pre-compute R^2 mod n **/
-    rsquare(r2, n, words);
+    rsquare(monty.r_square, monty.modulus, words);
 
     /** Pre-compute -n[0]^{-1} mod R **/
-    m0 = inverse64(-n[0]);
+    m0 = inverse64(-monty.modulus[0]);
 
     /** Convert base to Montgomery form **/
-    mont_mult(a, a, r2, n, m0, t, words);
+    mont_mult(monty.base, monty.base, monty.r_square, monty.modulus, m0, monty.t, words);
     
     /** Result is initially 1 in Montgomery form **/
-    x[0] = 1;
-    mont_mult(x, x, r2, n, m0, t, words);
+    monty.x[0] = 1;
+    mont_mult(monty.x, monty.x, monty.r_square, monty.modulus, m0, monty.t, words);
 
     /** Pre-compute powers a^0 mod n, a^1 mod n, a^2 mod n, ... a^(2^WINDOW_SIZE-1) mod n **/
-    memcpy(powers[0], x, sizeof(uint64_t)*words);
-    memcpy(powers[1], a, sizeof(uint64_t)*words);
+    memcpy(monty.powers[0], monty.x,    sizeof(uint64_t)*words);
+    memcpy(monty.powers[1], monty.base, sizeof(uint64_t)*words);
     for (i=1; i<(1 << (WINDOW_SIZE-1)); i++) {
-        mont_mult(powers[i*2], powers[i], powers[i], n, m0, t, words);
-        mont_mult(powers[i*2+1], powers[i*2], a, n, m0, t, words);
+        mont_mult(monty.powers[i*2],   monty.powers[i],   monty.powers[i], monty.modulus, m0, monty.t, words);
+        mont_mult(monty.powers[i*2+1], monty.powers[i*2], monty.base,      monty.modulus, m0, monty.t, words);
     }
-    scatter(prot, powers, words, seed);
+    scatter(monty.prot, monty.powers, words, seed);
 
     /** Ignore leading zero bytes in the exponent **/
     exp_len = len;
@@ -501,7 +542,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         exp++;
     }
     if (exp_len == 0) {
-        words_to_bytes(out, one, len, words);
+        words_to_bytes(out, monty.one, len, words);
         return 0;
     }
     /** Total number of windows covering the exponent **/
@@ -538,30 +579,19 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
 
         /** Left-to-right exponentiation with fixed window **/       
         for (j=0; j<WINDOW_SIZE; j++) {
-            mont_mult(x, x, x, n, m0, t, words);
+            mont_mult(monty.x, monty.x, monty.x, monty.modulus, m0, monty.t, words);
         }
-        gather(powers_idx, prot, index, words, seed);
-        mont_mult(x, x, powers_idx, n, m0, t, words);
+        gather(monty.power_idx, monty.prot, index, words, seed);
+        mont_mult(monty.x, monty.x, monty.power_idx, monty.modulus, m0, monty.t, words);
     }
 
     /** Transform result back in normal form **/    
-    mont_mult(x, x, one, n, m0, t, words);
-    words_to_bytes(out, x, len, words);
+    mont_mult(monty.x, monty.x, monty.one, monty.modulus, m0, monty.t, words);
+    words_to_bytes(out, monty.x, len, words);
 
-cleanup:
-    free(a);
-    free(n);
-    free(one);
-    free(x);
-    free(r2);
-    free(t);
-    for (i=0; i<(1 << WINDOW_SIZE); i++) {
-        free(powers[i]);
-    }
-    free(powers_idx);
-    free_aligned(prot);
+    deallocate_montgomery(&monty);
 
-    return error;
+    return 0;
 }
 
 #ifdef MAIN
@@ -571,8 +601,8 @@ cleanup:
 int main(void)
 {
     uint16_t length;
-    int i;
     uint8_t *base, *modulus, *exponent, *out;
+    int result;
 
     fread(&length, 2, 1, stdin);
 
@@ -586,7 +616,14 @@ int main(void)
     fread(exponent, 1, length, stdin);
     fread(out, 1, length, stdin);
 
-    return monty_pow(base, exponent, modulus, out, length, 12);
+    result = monty_pow(base, exponent, modulus, out, length, 12);
+    
+    free(base);
+    free(modulus);
+    free(exponent);
+    free(out);
+
+    return result;
 }
 
 #endif
