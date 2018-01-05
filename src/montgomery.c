@@ -570,16 +570,23 @@ cleanup:
 
 int main(void)
 {
+    uint16_t length;
     int i;
+    uint8_t *base, *modulus, *exponent, *out;
 
-    uint8_t a[BIT_SIZE/8], b[BIT_SIZE/8];
+    fread(&length, 2, 1, stdin);
 
-    for (i=0; i<(BIT_SIZE/8); i++) {
-        a[i] = i | 0x81;
-    }
+    base = malloc(length);
+    modulus = malloc(length);
+    exponent = malloc(length);
+    out = malloc(length);
 
-    for (i=0; i<100; i++) {
-        monty_pow(a, a, a, b, BIT_SIZE/8, 0xAAAA);
-    }
+    fread(base, 1, length, stdin);
+    fread(modulus, 1, length, stdin);
+    fread(exponent, 1, length, stdin);
+    fread(out, 1, length, stdin);
+
+    return monty_pow(base, exponent, modulus, out, length, 12);
 }
+
 #endif
