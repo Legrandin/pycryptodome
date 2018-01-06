@@ -140,7 +140,7 @@ class TestModExp(unittest.TestCase):
             self.assertEqual(result, expected)
 
     def test_stress_63(self):
-        prng = SHAKE128.new().update(b('Test'))
+        prng = SHAKE128.new().update(b('Test 63'))
         length = 63
         for _ in range(2000):
             base = Integer.from_bytes(prng.read(length))
@@ -152,7 +152,7 @@ class TestModExp(unittest.TestCase):
             self.assertEqual(result, expected)
 
     def test_stress_64(self):
-        prng = SHAKE128.new().update(b('Test'))
+        prng = SHAKE128.new().update(b('Test 64'))
         length = 64
         for _ in range(2000):
             base = Integer.from_bytes(prng.read(length))
@@ -164,7 +164,7 @@ class TestModExp(unittest.TestCase):
             self.assertEqual(result, expected)
 
     def test_stress_65(self):
-        prng = SHAKE128.new().update(b('Test'))
+        prng = SHAKE128.new().update(b('Test 65'))
         length = 65
         for _ in range(2000):
             base = Integer.from_bytes(prng.read(length))
