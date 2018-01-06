@@ -35,42 +35,7 @@ FAKE_INIT(montgomery)
 
 #include "multiply.h"
 
-void *malloc_aligned(size_t size, size_t alignment);
-void free_aligned(void *ptr);
-
-#ifdef _MSC_VER
-
-void *malloc_aligned(size_t size, size_t alignment)
-{
-    return _aligned_malloc(size, alignment);
-}
-
-void free_aligned(void *ptr)
-{
-    _aligned_free(ptr);
-}
-
-#else
-
-void *malloc_aligned(size_t size, size_t alignment)
-{
-    void *ptr;
-    int result;
-
-    result = posix_memalign(&ptr, alignment, size);
-    if (result) {
-        return NULL;
-    }
-    
-    return ptr;
-}
-
-void free_aligned(void *ptr)
-{
-    free(ptr);
-}
-
-#endif
+#define CACHE_LINE_SIZE 64
 
 /** Multiplication will be replaced by a look-up **/
 /** Do not change this value! **/
@@ -259,7 +224,7 @@ static void sub(uint64_t *a, const uint64_t *b, size_t words)
     int i;
     uint64_t borrow1 , borrow2;
 
-    borrow1 = borrow2 = 0;
+    borrow2 = 0;
     for (i=0; i<words; i++) {
         borrow1 = b[i] > a[i];
         a[i] -= b[i];
@@ -423,10 +388,12 @@ struct Montgomery {
     if (x == NULL) {                    \
         return 1;                       \
     }} while(0)
- 
+
+
 int allocate_montgomery(struct Montgomery *m, size_t words)
 {
     int i;
+    int result;
 
     memset(m, 0, sizeof *m);
 
@@ -441,12 +408,20 @@ int allocate_montgomery(struct Montgomery *m, size_t words)
     }
     allocate(m->power_idx, words);
     
-    m->prot = malloc_aligned((1<<WINDOW_SIZE)*words*8, 64);
+#ifdef _MSC_VER
+    m->prot = _aligned_malloc((1<<WINDOW_SIZE)*words*8, CACHE_LINE_SIZE);
+#else
+    result = posix_memalign((void**)&m->prot, CACHE_LINE_SIZE, (1<<WINDOW_SIZE)*words*8);
+    if (result) {
+        m->prot = NULL;
+    }
+#endif
     if (NULL == m->prot) {
         return 1;
     }
 
-    return 0;
+    result = 0;
+    return result;
 }
 
 #undef allocate
@@ -466,9 +441,13 @@ void deallocate_montgomery(struct Montgomery *m)
     }
     free(m->power_idx);
     
+#ifdef _MSC_VER
     if (m->prot) {
-        free_aligned(m->prot);
+        _aligned_free(m->prot);
     }
+#else
+    free(m->prot);
+#endif
     
     memset(m, 0, sizeof *m);
 }
@@ -595,8 +574,6 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
 }
 
 #ifdef MAIN
-
-#define BIT_SIZE 2048
 
 int main(void)
 {

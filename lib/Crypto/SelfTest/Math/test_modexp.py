@@ -46,6 +46,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer,
                                   c_size_t, expect_byte_string)
 
+from Crypto.Hash import SHAKE128
+from Crypto.Math.Numbers import Integer
 
 c_defs = """
 int monty_pow(const uint8_t *base,
@@ -127,11 +129,44 @@ class TestModExp(unittest.TestCase):
         self.assertRaises(ExceptionModulus, monty_pow, base, exponent1, modulus1-1)
 
     def test_several_lengths(self):
-        from Crypto.Hash import SHAKE128
-        from Crypto.Math.Numbers import Integer
-
         prng = SHAKE128.new().update(b('Test'))
         for length in range(1, 100):
+            base = Integer.from_bytes(prng.read(length))
+            modulus2 = Integer.from_bytes(prng.read(length)) | 1
+            exponent2 = Integer.from_bytes(prng.read(length))
+
+            expected = pow(base, exponent2, modulus2)
+            result = monty_pow(base, exponent2, modulus2)
+            self.assertEqual(result, expected)
+
+    def test_stress_63(self):
+        prng = SHAKE128.new().update(b('Test'))
+        length = 63
+        for _ in range(2000):
+            base = Integer.from_bytes(prng.read(length))
+            modulus2 = Integer.from_bytes(prng.read(length)) | 1
+            exponent2 = Integer.from_bytes(prng.read(length))
+
+            expected = pow(base, exponent2, modulus2)
+            result = monty_pow(base, exponent2, modulus2)
+            self.assertEqual(result, expected)
+
+    def test_stress_64(self):
+        prng = SHAKE128.new().update(b('Test'))
+        length = 64
+        for _ in range(2000):
+            base = Integer.from_bytes(prng.read(length))
+            modulus2 = Integer.from_bytes(prng.read(length)) | 1
+            exponent2 = Integer.from_bytes(prng.read(length))
+
+            expected = pow(base, exponent2, modulus2)
+            result = monty_pow(base, exponent2, modulus2)
+            self.assertEqual(result, expected)
+
+    def test_stress_65(self):
+        prng = SHAKE128.new().update(b('Test'))
+        length = 65
+        for _ in range(2000):
             base = Integer.from_bytes(prng.read(length))
             modulus2 = Integer.from_bytes(prng.read(length)) | 1
             exponent2 = Integer.from_bytes(prng.read(length))

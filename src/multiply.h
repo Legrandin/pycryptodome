@@ -20,7 +20,7 @@
 #else
 
 uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 __attribute__((optimize("-O3")))
 #endif
 ;
@@ -54,13 +54,13 @@ uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 #endif
 
 size_t square_w(uint64_t *t, const uint64_t *a, size_t words)
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 __attribute__((optimize("-O3")))
 #endif
 ;
 
 uint64_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 __attribute__((optimize("-O3")))
 #endif
 ;
