@@ -33,12 +33,26 @@ DAMAGE.
 /**
  * Add a 64-bit value x to y/sum_mid/sum_hi
  */
+#if defined(_MSC_VER)
+
+#include <intrin.h>
+#define ADD192(y, x) do {           \
+    unsigned char c = 0;            \
+    c = _addcarry_u64(c, x, y, &y); \
+    c = _addcarry_u64(c, 0, sum_mid, &sum_mid); \
+    _addcarry_u64(c, 0, sum_hi, &sum_hi);   \
+    } while (0)
+
+#else
+
 #define ADD192(y, x) do {       \
     uint64_t c;                 \
     y += x;                     \
     sum_mid += (c = (y < x));   \
     sum_hi += sum_mid < c;      \
     } while (0)
+
+#endif
 
 uint64_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
 {
