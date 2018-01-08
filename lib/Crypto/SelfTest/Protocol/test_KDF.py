@@ -392,7 +392,15 @@ class scrypt_Tests(unittest.TestCase):
     def test2(self):
 
         for tv in self.data:
-            output = scrypt(tv.P, tv.S, tv.dkLen, tv.N, tv.r, tv.p)
+            try:
+                output = scrypt(tv.P, tv.S, tv.dkLen, tv.N, tv.r, tv.p)
+            except ValueError, e:
+                if " 2 " in str(e) and tv.N >= 1048576:
+                    import warnings
+                    warnings.warn("Not enough memory to unit test scrypt() with N=1048576", RuntimeWarning)
+                    continue
+                else:
+                    raise e
             self.assertEqual(output, tv.output)
 
     def test3(self):
