@@ -438,10 +438,15 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v1.get_bit(1), 1)
         self.assertEqual(v1.get_bit(v3), 1)
         self.assertEqual(v1.get_bit(8), 1)
-        self.assertEqual(v2.get_bit(0), 1)
-        self.assertEqual(v2.get_bit(8), 1)
+        self.assertEqual(v1.get_bit(9), 0)
+
+        self.assertRaises(ValueError, v1.get_bit, -1)
+        self.assertEqual(v1.get_bit(2 ** 1000), 0)
+
         self.assertRaises(ValueError, v2.get_bit, -1)
-        self.assertRaises(ValueError, v2.get_bit, 2 ** 1000)
+        self.assertRaises(ValueError, v2.get_bit, 0)
+        self.assertRaises(ValueError, v2.get_bit, 1)
+        self.assertRaises(ValueError, v2.get_bit, 2 * 1000)
 
     def test_odd_even(self):
         v1, v2, v3, v4, v5 = self.Integers(0, 4, 17, -4, -17)

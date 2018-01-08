@@ -257,13 +257,20 @@ class Integer(object):
 
 
     def get_bit(self, n):
+        if self._value < 0:
+            raise ValueError("no bit representation for negative values")
         try:
             try:
-                return (self._value >> n._value) & 1
+                result = (self._value >> n._value) & 1
+                if n._value < 0:
+                    raise ValueError("negative bit count")
             except AttributeError:
-                return (self._value >> n) & 1
+                result = (self._value >> n) & 1
+                if n < 0:
+                    raise ValueError("negative bit count")
         except OverflowError:
-            raise ValueError("Incorrect bit position")
+            result = 0
+        return result
 
     # Extra
     def is_odd(self):
