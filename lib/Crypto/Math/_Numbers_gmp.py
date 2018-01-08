@@ -534,16 +534,26 @@ class Integer(object):
 
     def __rshift__(self, pos):
         result = Integer(0)
-        if not 0 <= pos < 65536:
-            raise ValueError("Incorrect shift count")
+        if pos < 0:
+            raise ValueError("negative shift count")
+        if pos > 65536:
+            if self < 0:
+                return -1
+            else:
+                return 0
         _gmp.mpz_tdiv_q_2exp(result._mpz_p,
                              self._mpz_p,
                              c_ulong(int(pos)))
         return result
 
     def __irshift__(self, pos):
-        if not 0 <= pos < 65536:
-            raise ValueError("Incorrect shift count")
+        if pos < 0:
+            raise ValueError("negative shift count")
+        if pos > 65536:
+            if self < 0:
+                return -1
+            else:
+                return 0
         _gmp.mpz_tdiv_q_2exp(self._mpz_p,
                              self._mpz_p,
                              c_ulong(int(pos)))

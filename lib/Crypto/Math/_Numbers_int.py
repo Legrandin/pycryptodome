@@ -224,7 +224,10 @@ class Integer(object):
             except AttributeError:
                 return Integer(self._value >> pos)
         except OverflowError:
-            raise ValueError("Incorrect shift count")
+            if self._value >= 0:
+                return 0
+            else:
+                return -1
 
     def __irshift__(self, pos):
         try:
@@ -233,7 +236,10 @@ class Integer(object):
             except AttributeError:
                 self._value >>= pos
         except OverflowError:
-            raise ValueError("Incorrect shift count")
+            if self._value >= 0:
+                return 0
+            else:
+                return -1
         return self
 
     def __lshift__(self, pos):

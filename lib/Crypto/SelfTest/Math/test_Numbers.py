@@ -379,9 +379,11 @@ class TestIntegerBase(unittest.TestCase):
         self.failUnless(isinstance(v1 >> v2, self.Integer))
         self.assertEqual(v1 >> v2, 0x08)
         self.assertEqual(v1 >> 1, 0x08)
-        self.assertEqual(v3 >> 1, -0x08)
         self.assertRaises(ValueError, lambda: v1 >> -1)
-        self.assertRaises(ValueError, lambda: v1 >> (2 ** 1000))
+        self.assertEqual(v1 >> (2 ** 1000), 0)
+        
+        self.assertEqual(v3 >> 1, -0x08)
+        self.assertEqual(v3 >> (2 ** 1000), -1)
 
     def test_in_place_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
