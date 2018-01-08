@@ -437,6 +437,7 @@ setup(
     author_email = "helderijs@gmail.com",
     url = "http://www.pycryptodome.org",
     platforms = 'Posix; MacOS X; Windows',
+    zip_safe = False,
     classifiers = [
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: BSD License',
