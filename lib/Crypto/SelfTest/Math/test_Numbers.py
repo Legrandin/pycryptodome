@@ -680,6 +680,21 @@ def get_tests(config={}):
     except (ImportError, OSError), e:
         import sys
         sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
+
+    try:
+        from Crypto.Math import _Numbers_custom as NumbersCustomModexp
+
+        class TestIntegerCustomModexp(TestIntegerBase):
+            def setUp(self):
+                self.Numbers = NumbersCustomModexp
+                self.Integer = NumbersCustomModexp.Integer
+                TestIntegerBase.setUp(self)
+
+        tests += list_test_cases(TestIntegerCustomModexp)
+    except (ImportError, OSError), e:
+        import sys
+        sys.stdout.write("Skipping custom modexp tests (%s)\n" % str(e) )
+
     tests += list_test_cases(TestIntegerGeneric)
     return tests
 

@@ -48,19 +48,14 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 from Crypto.Hash import SHAKE128
 from Crypto.Math.Numbers import Integer
+from Crypto.Math._Numbers_custom import _raw_montgomery
 
-c_defs = """
-int monty_pow(const uint8_t *base,
-               const uint8_t *exp,
-               const uint8_t *modulus,
-               uint8_t       *out,
-               size_t len,
-               uint64_t seed);
-"""
+from Crypto.Random.random import StrongRandom
 
 
-_raw_montgomery = load_pycryptodome_raw_lib("Crypto.Math._montgomery", c_defs)
-
+def create_rng(tag):
+    rng = StrongRandom(SHAKE128.new(data=tag))
+    return rng
 
 class ExceptionModulus(ValueError):
     pass
@@ -139,40 +134,58 @@ class TestModExp(unittest.TestCase):
             result = monty_pow(base, exponent2, modulus2)
             self.assertEqual(result, expected)
 
+    def test_variable_exponent(self):
+        prng = create_rng(b('Test variable exponent'))
+        for i in range(20):
+            for j in range(7):
+                base = prng.getrandbits(8*30)
+                modulus = prng.getrandbits(8*30) | 1
+                exponent = prng.getrandbits(i*8+j)
+
+                expected = pow(base, exponent, modulus)
+                result = monty_pow(base, exponent, modulus)
+                self.assertEqual(result, expected)
+
+                exponent ^= (1 << (i*8+j)) - 1
+
+                expected = pow(base, exponent, modulus)
+                result = monty_pow(base, exponent, modulus)
+                self.assertEqual(result, expected)
+
     def test_stress_63(self):
-        prng = SHAKE128.new().update(b('Test 63'))
+        prng = create_rng(b('Test 63'))
         length = 63
         for _ in range(2000):
-            base = Integer.from_bytes(prng.read(length))
-            modulus2 = Integer.from_bytes(prng.read(length)) | 1
-            exponent2 = Integer.from_bytes(prng.read(length))
+            base     = prng.getrandbits(8*length)
+            modulus  = prng.getrandbits(8*length) | 1
+            exponent = prng.getrandbits(8*length)
 
-            expected = pow(base, exponent2, modulus2)
-            result = monty_pow(base, exponent2, modulus2)
+            expected = pow(base, exponent, modulus)
+            result = monty_pow(base, exponent, modulus)
             self.assertEqual(result, expected)
 
     def test_stress_64(self):
-        prng = SHAKE128.new().update(b('Test 64'))
+        prng = create_rng(b('Test 64'))
         length = 64
         for _ in range(2000):
-            base = Integer.from_bytes(prng.read(length))
-            modulus2 = Integer.from_bytes(prng.read(length)) | 1
-            exponent2 = Integer.from_bytes(prng.read(length))
+            base     = prng.getrandbits(8*length)
+            modulus  = prng.getrandbits(8*length) | 1
+            exponent = prng.getrandbits(8*length)
 
-            expected = pow(base, exponent2, modulus2)
-            result = monty_pow(base, exponent2, modulus2)
+            expected = pow(base, exponent, modulus)
+            result = monty_pow(base, exponent, modulus)
             self.assertEqual(result, expected)
 
     def test_stress_65(self):
-        prng = SHAKE128.new().update(b('Test 65'))
-        length = 65
+        prng = create_rng(b('Test 65'))
+        length = 63
         for _ in range(2000):
-            base = Integer.from_bytes(prng.read(length))
-            modulus2 = Integer.from_bytes(prng.read(length)) | 1
-            exponent2 = Integer.from_bytes(prng.read(length))
+            base     = prng.getrandbits(8*length)
+            modulus  = prng.getrandbits(8*length) | 1
+            exponent = prng.getrandbits(8*length)
 
-            expected = pow(base, exponent2, modulus2)
-            result = monty_pow(base, exponent2, modulus2)
+            expected = pow(base, exponent, modulus)
+            result = monty_pow(base, exponent, modulus)
             self.assertEqual(result, expected)
 
 

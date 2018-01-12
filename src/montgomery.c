@@ -155,13 +155,13 @@ static uint64_t inverse64(uint64_t a)
 /**
  * Multiply a[] by k and add the result to t[].
  */
-static void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t words)
+static void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t a_words, size_t t_words)
 {
     size_t i;
     uint64_t carry;
 
     carry = 0;
-    for (i=0; i<words; i++) {
+    for (i=0; i<a_words; i++) {
         uint64_t pr_lo, pr_hi;
 
         DP_MULT(a[i], k, pr_lo, pr_hi);
@@ -172,13 +172,15 @@ static void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t words)
         t[i] += pr_lo;
         pr_hi += t[i] < pr_lo;
 
-        carry = pr_hi; 
+        carry = pr_hi;
     }
 
     for (; carry; i++) {
         t[i] += carry;
         carry = t[i] < carry;
     }
+
+    assert(i < t_words);
 }
 
 /**
@@ -195,7 +197,7 @@ static void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t wo
         }
 
         if (words & 1) {
-            addmul(&t[words-1], a, b[words-1], words);
+            addmul(&t[words-1], a, b[words-1], words, words+2);
         }
 }
 
@@ -284,20 +286,20 @@ static void rsquare(uint64_t *x, uint64_t *n, size_t words)
  *
  * https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
  */
-static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint64_t m0, uint64_t *t, size_t words)
+static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint64_t m0, uint64_t *t, size_t abn_words)
 {
     int i;
 
     if (a == b) {
-        square_w(t, a, words);
+        square_w(t, a, abn_words);
     } else {
-        product(t, a, b, words);
+        product(t, a, b, abn_words);
     }
 
-    t[2*words] = 0; /** MSW **/
+    t[2*abn_words] = 0; /** MSW **/
 
     /** Clear lower words (two at a time) **/
-    for (i=0; i<(words & ~1); i+=2) {
+    for (i=0; i<(abn_words & ~1); i+=2) {
         uint64_t k0, k1, ti1, pr_lo, pr_hi;
 
         /** Multiplier for n that will make t[i+0] go 0 **/
@@ -314,21 +316,21 @@ static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint
         /** Multiplier for n that will make t[i+1] go 0 **/
         k1 = ti1 * m0;
         
-        addmul128(&t[i], n, k0, k1, words);
+        addmul128(&t[i], n, k0, k1, abn_words);
     }
     
     /** One left for odd number of words **/
-    if (words & 1) {
-        addmul(&t[words-1], n, t[words-1]*m0, words);
+    if (abn_words & 1) {
+        addmul(&t[abn_words-1], n, t[abn_words-1]*m0, abn_words, abn_words+2);
     }
     
-    assert(t[2*words] <= 1); /** MSW **/
+    assert(t[2*abn_words] <= 1); /** MSW **/
 
     /** Divide by R and possibly subtract n **/
-    if (t[2*words] == 1 || ge(&t[words], n, words)) {
-        sub(&t[words], n, words);
+    if (t[2*abn_words] == 1 || ge(&t[abn_words], n, abn_words)) {
+        sub(&t[abn_words], n, abn_words);
     }
-    memcpy(out, &t[words], sizeof(uint64_t)*words);
+    memcpy(out, &t[abn_words], sizeof(uint64_t)*abn_words);
 }
 
 static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint64_t seed)

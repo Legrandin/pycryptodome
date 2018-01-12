@@ -42,8 +42,12 @@ try:
     from Crypto.Math._Numbers_gmp import Integer
     from Crypto.Math._Numbers_gmp import implementation as _implementation
 except (ImportError, OSError):
-    from Crypto.Math._Numbers_int import Integer
-    _implementation = { }
+    try:
+        from Crypto.Math._Numbers_custom import Integer
+        from Crypto.Math._Numbers_custom import implementation as _implementation
+    except (ImportError, OSError):
+        from Crypto.Math._Numbers_int import Integer
+        _implementation = { }
 
 
 def _random(**kwargs):

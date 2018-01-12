@@ -93,22 +93,22 @@ class Integer(object):
 
     # Arithmetic operations
     def __add__(self, term):
-        return Integer(self._value + int(term))
+        return self.__class__(self._value + int(term))
 
     def __sub__(self, term):
-        return Integer(self._value - int(term))
+        return self.__class__(self._value - int(term))
 
     def __mul__(self, factor):
-        return Integer(self._value * int(factor))
+        return self.__class__(self._value * int(factor))
 
     def __floordiv__(self, divisor):
-        return Integer(self._value // int(divisor))
+        return self.__class__(self._value // int(divisor))
 
     def __mod__(self, divisor):
         divisor_value = int(divisor)
         if divisor_value < 0:
             raise ValueError("Modulus must be positive")
-        return Integer(self._value % divisor_value)
+        return self.__class__(self._value % divisor_value)
 
     def inplace_pow(self, exponent, modulus=None):
         exp_value = int(exponent)
@@ -127,7 +127,7 @@ class Integer(object):
         return self
 
     def __pow__(self, exponent, modulus=None):
-        result = Integer(self)
+        result = self.__class__(self)
         return result.inplace_pow(exponent, modulus)
 
     def __abs__(self):
@@ -142,7 +142,7 @@ class Integer(object):
         while y < x:
             x = y
             y = (x + self._value // x) // 2
-        return Integer(x)
+        return self.__class__(x)
 
     def __iadd__(self, term):
         self._value += int(term)
@@ -167,14 +167,14 @@ class Integer(object):
 
     # Boolean/bit operations
     def __and__(self, term):
-        return Integer(self._value & int(term))
+        return self.__class__(self._value & int(term))
 
     def __or__(self, term):
-        return Integer(self._value | int(term))
+        return self.__class__(self._value | int(term))
 
     def __rshift__(self, pos):
         try:
-            return Integer(self._value >> int(pos))
+            return self.__class__(self._value >> int(pos))
         except OverflowError:
             if self._value >= 0:
                 return 0
@@ -193,7 +193,7 @@ class Integer(object):
 
     def __lshift__(self, pos):
         try:
-            return Integer(self._value << int(pos))
+            return self.__class__(self._value << int(pos))
         except OverflowError:
             raise ValueError("Incorrect shift count")
 
@@ -267,11 +267,7 @@ class Integer(object):
             raise ValueError("Value is composite")
 
     def multiply_accumulate(self, a, b):
-        if type(a) == Integer:
-            a = a._value
-        if type(b) == Integer:
-            b = b._value
-        self._value += a * b
+        self._value += int(a) * int(b)
         return self
 
     def set(self, source):
@@ -297,7 +293,7 @@ class Integer(object):
         return self
 
     def inverse(self, modulus):
-        result = Integer(self)
+        result = self.__class__(self)
         result.inplace_inverse(modulus)
         return result
 
@@ -306,13 +302,13 @@ class Integer(object):
         while r_n > 0:
             q = r_p // r_n
             r_p, r_n = r_n, r_p - q * r_n
-        return Integer(r_p)
+        return self.__class__(r_p)
 
     def lcm(self, term):
         term = int(term)
         if self._value == 0 or term == 0:
-            return Integer(0)
-        return Integer(abs((self._value * term) // self.gcd(term)._value))
+            return self.__class__(0)
+        return self.__class__(abs((self._value * term) // self.gcd(term)._value))
 
     @staticmethod
     def jacobi_symbol(a, n):
