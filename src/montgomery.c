@@ -221,13 +221,13 @@ static int ge(const uint64_t *x, const uint64_t *y, size_t words)
 /**
  * Subtract b[] from a[].
  */
-static void sub(uint64_t *a, const uint64_t *b, size_t words)
+static int sub(uint64_t *a, size_t a_words, const uint64_t *b, size_t b_words)
 {
     int i;
     uint64_t borrow1 , borrow2;
 
     borrow2 = 0;
-    for (i=0; i<words; i++) {
+    for (i=0; i<b_words; i++) {
         borrow1 = b[i] > a[i];
         a[i] -= b[i];
 
@@ -236,6 +236,14 @@ static void sub(uint64_t *a, const uint64_t *b, size_t words)
 
         borrow2 = borrow1;
     }
+
+    for (; borrow2>0 && i<a_words; i++) {
+        borrow1 = borrow2 > a[i];
+        a[i] -= borrow2;
+        borrow2 = borrow1;
+    }
+
+    return borrow2;
 }
 
 /*
@@ -269,7 +277,7 @@ static void rsquare(uint64_t *x, uint64_t *n, size_t words)
         
         /** Subtract n if the result exceeds it **/
         while (overflow || ge(x, n, words)) {
-            sub(x, n, words);
+            sub(x, words, n, words);
             overflow = 0;
         }
     }
@@ -328,7 +336,7 @@ static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint
 
     /** Divide by R and possibly subtract n **/
     if (t[2*abn_words] == 1 || ge(&t[abn_words], n, abn_words)) {
-        sub(&t[abn_words], n, abn_words);
+        sub(&t[abn_words], abn_words, n, abn_words);
     }
     memcpy(out, &t[abn_words], sizeof(uint64_t)*abn_words);
 }
@@ -605,4 +613,22 @@ int main(void)
     return result;
 }
 
+#endif
+
+#ifdef PROFILE
+int main(void)
+{
+    uint8_t base[256], exponent[256], modulus[256], out[256];
+    int length = 256, i, j;
+
+    for (i=0; i<256; i++) {
+        base[i] = i | 0x80 | 1;
+        exponent[i] = base[i] = modulus[i] = base[i];
+    }
+
+    for (j=0; j<50; j++) {
+    monty_pow(base, exponent, modulus, out, length, 12);
+    }
+
+}
 #endif

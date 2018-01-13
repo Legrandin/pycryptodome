@@ -82,6 +82,7 @@ class Integer(IntegerBase):
             return self
 
         max_len = len(long_to_bytes(max(self._value, exp_value, mod_value)))
+
         base_b    = long_to_bytes(self._value, max_len)
         exp_b     = long_to_bytes(exp_value, max_len)
         modulus_b = long_to_bytes(mod_value, max_len)
