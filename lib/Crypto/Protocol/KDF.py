@@ -122,6 +122,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
     """
 
     password = tobytes(password)
+    salt = tobytes(salt)
     if prf is None:
         prf = lambda p,s: HMAC.new(p,s,SHA1).digest()
 
