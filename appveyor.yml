@@ -74,7 +74,6 @@ install:
 #build: off
 
 build_script:
-  - "copy C:\\mpir\\mpir.dll lib\\Crypto\\Math"
   - "%WITH_COMPILER% python setup.py build"
 
 test_script:

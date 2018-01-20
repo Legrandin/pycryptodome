@@ -5,7 +5,6 @@
 $BASE_URL = "https://www.python.org/ftp/python/"
 $GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
 $GET_PIP_PATH = "C:\get-pip.py"
-$MPIR_GITHUB = "https://github.com/Legrandin/mpir-windows-builds/raw/master/"
 
 function DownloadPython ($python_version, $platform_suffix) {
     $webclient = New-Object System.Net.WebClient
@@ -87,19 +86,12 @@ function InstallMPIR ($python_version, $architecture, $target_dir) {
     } else {
       $vs = "VS2008"
     }
-    $download_uri = $MPIR_GITHUB + "mpir-2.6.0_" + $vs + "_" + $architecture + "/mpir.dll"
-    Write-Host "Downloading MPIR from " $download_uri
-    $webclient = New-Object System.Net.WebClient
-    $webclient.DownloadFile($download_uri, $target_dir + "\mpir.dll")
 }
 
 function main () {
     InstallPython $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     InstallPip $env:PYTHON
     InstallPackage $env:PYTHON wheel
-
-    New-Item -ItemType directory "C:\mpir"
-    InstallMPIR $env:PYTHON_VERSION $env:PYTHON_ARCH "C:\mpir"
 }
 
 main

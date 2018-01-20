@@ -35,14 +35,7 @@ from Crypto.Util._raw_api import (backend, load_lib,
                                   null_pointer, create_string_buffer,
                                   c_ulong, c_ulonglong, c_size_t)
 
-# GMP uses unsigned longs in several functions prototypes.
-# On a UNIX 64 bit platform that type takes 64 bits but in Windows 64
-# it is still 32 bits.
-# The intention of the MPIR developers is to maintain binary compatibility
-# so they probably assumed that that GMP would compile on Windows 64
-# by treating it as a UNIX platform.
-
-gmp_defs_common = """
+gmp_defs = """typedef unsigned long UNIX_ULONG;
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
         typedef UNIX_ULONG mp_bitcnt_t;
@@ -95,28 +88,8 @@ gmp_defs_common = """
         int __gmpz_divisible_ui_p (const mpz_t n, UNIX_ULONG d);
         """
 
-try:
-    gmp_defs = "typedef unsigned long UNIX_ULONG;" + gmp_defs_common
-    lib = load_lib("gmp", gmp_defs)
-    implementation = { "library":"gmp", "api":backend }
-except OSError:
-    import platform
-    bits, linkage = platform.architecture()
-    if bits.startswith("64") and linkage.startswith("Win"):
-        # MPIR uses unsigned long long where GMP uses unsigned long
-        # (LLP64 vs LP64)
-        gmp_defs = "typedef unsigned long long UNIX_ULONG;" + gmp_defs_common
-        c_ulong = c_ulonglong
-    # Try to load private MPIR lib first (wheel)
-    try:
-        from Crypto.Util._file_system import pycryptodome_filename
-
-        mpir_dll = pycryptodome_filename(("Crypto", "Math"), "mpir.dll")
-        lib = load_lib(mpir_dll, gmp_defs)
-    except OSError:
-        lib = load_lib("mpir", gmp_defs)
-
-    implementation = { "library":"mpir", "api":backend }
+lib = load_lib("gmp", gmp_defs)
+implementation = { "library":"gmp", "api":backend }
 
 # In order to create a function that returns a pointer to
 # a new MPZ structure, we need to break the abstraction
