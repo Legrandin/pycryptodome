@@ -635,8 +635,11 @@ setup(
         # Math
         Extension("Crypto.Math._montgomery",
             include_dirs=['src/'],
-            sources=['src/montgomery.c','src/multiply.c'],
-            undef_macros=['NDEBUG']),
+            sources=['src/montgomery.c','src/multiply_32.c'],
+            undef_macros=['NDEBUG'],
+            #extra_compile_args=['-msse4.1']
+            ),
+
 
         ]
 )
