@@ -40,6 +40,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   c_size_t, expect_byte_string)
 
 
+from Crypto.Random.random import getrandbits
+
 c_defs = """
 int monty_pow(const uint8_t *base,
                const uint8_t *exp,
@@ -95,14 +97,12 @@ class Integer(IntegerBase):
                     modulus_b,
                     out,
                     c_size_t(max_len),
-                    32
+                    getrandbits(64)
                     )
 
         if error:
             raise ValueError("monty_pow failed with error: %d" % error)
 
         result = bytes_to_long(get_raw_buffer(out))
-        #if result != pow(self._value, exp_value, mod_value):
-        #    print "%d != pow(%d,%d,%d)" % (result, self._value, exp_value, mod_value)
         self._value = result
         return self
