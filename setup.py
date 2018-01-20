@@ -29,7 +29,8 @@ from distutils.command.build import build
 from distutils.command.install_lib import install_lib
 from distutils.errors import CCompilerError
 import distutils
-import re, os, sys, shutil
+import platform
+import re, os, sys, shutil, struct
 
 use_separate_namespace = os.path.isfile(".separate_namespace")
 
@@ -121,6 +122,7 @@ except ImportError:
     # Python 2
     from distutils.command.build_py import build_py
 
+system_bits = 8 * struct.calcsize("P")
 
 # Work around the print / print() issue with Python 2.x and 3.x. We only need
 # to print at one point of the code, which makes this easy
@@ -314,6 +316,22 @@ class PCTBuildExt (build_ext):
         else:
             return False
 
+    def check_x86intrin_h(self):
+        source = """
+        #include <x86intrin.h>
+        int main(void)
+        {
+            __m128i r0;
+            r0 = _mm_set1_epi32(0);
+            return 0;
+        }
+        """
+        if test_compilation(source, extra_cc_options=['-msse2'], msg="x86intrin.h header"):
+            self.compiler.define_macro("HAVE_X86INTRIN_H")
+            return True
+        else:
+            return False
+
     def check_aesni(self):
 
         source = """
@@ -349,13 +367,14 @@ class PCTBuildExt (build_ext):
         else:
             return False
 
-
     def detect_modules (self):
 
         self.check_uint128()
+        self.check_x86intrin_h()
+        has_intrin_h = self.check_intrin_h()
 
         # Detect compiler support for CPUID instruction and AESNI
-        if (self.check_cpuid_h() or self.check_intrin_h()) and self.check_aesni():
+        if (self.check_cpuid_h() or has_intrin_h) and self.check_aesni():
             PrintErr("Compiling support for Intel AES instructions")
         else:
             PrintErr ("warning: no support for Intel AESNI instructions")
@@ -452,6 +471,14 @@ class TestCommand(Command):
 
     sub_commands = [ ('build', None) ]
 
+if system_bits == 32:
+    multiply_cmod = [ 'src/multiply_32.c' ]
+else:
+    multiply_cmod = [ 'src/multiply_64.c' ]
+
+extra_compile_args = None
+if platform.machine() == 'i686':
+    extra_compile_args = ['-msse2']
 
 setup(
     name = project_name,
@@ -635,11 +662,9 @@ setup(
         # Math
         Extension("Crypto.Math._montgomery",
             include_dirs=['src/'],
-            sources=['src/montgomery.c','src/multiply_32.c'],
-            undef_macros=['NDEBUG'],
-            #extra_compile_args=['-msse4.1']
+            sources=['src/montgomery.c'] + multiply_cmod,
+            extra_compile_args=extra_compile_args,
             ),
-
 
         ]
 )
