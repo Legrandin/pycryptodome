@@ -42,7 +42,10 @@ DAMAGE.
 #endif
 #endif
 
-int static inline addmul32(uint32_t* t, const uint32_t *a, uint32_t b, size_t words)
+static const int _bele = 1;
+#define BEBIT (((unsigned char*)&_bele)==0)
+
+int static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uint32_t b, size_t words)
 {
     uint32_t carry;
     int i;
@@ -66,7 +69,7 @@ int static inline addmul32(uint32_t* t, const uint32_t *a, uint32_t b, size_t wo
 
         r10 = _mm_shuffle_epi32(
                 _mm_castpd_si128(
-                    _mm_set_sd(*(double*)&a[i])
+                    _mm_set_sd(*(double*)&a[i^BEBIT])
                 ),
              _MM_SHUFFLE(2,1,2,0));     // { 0, a[i+1], 0, a[i] }
 
@@ -74,7 +77,7 @@ int static inline addmul32(uint32_t* t, const uint32_t *a, uint32_t b, size_t wo
 
         r12 = _mm_shuffle_epi32(
                 _mm_castpd_si128(
-                    _mm_set_sd(*(double*)&t[i])
+                    _mm_set_sd(*(double*)&t[(i+offset)^BEBIT])
                 ),
              _MM_SHUFFLE(2,1,2,0));     // { 0, t[i+1], 0, t[i] }
         r13 = _mm_add_epi64(r12, r1);   // { t[i+1],  t[i]+carry }
@@ -91,7 +94,7 @@ int static inline addmul32(uint32_t* t, const uint32_t *a, uint32_t b, size_t wo
         r17 = _mm_shuffle_epi32(r16, _MM_SHUFFLE(2,0,1,3));
                                         // { new t[i+1], new t[i], *, new carry }
 
-        _mm_storeh_pd((double*)&t[i],
+        _mm_storeh_pd((double*)&t[(i+offset)^BEBIT],
                       _mm_castsi128_pd(r17)); // Store upper 64 bit word (also t[i+1])
 
         r1 = _mm_castps_si128(_mm_move_ss(
@@ -111,12 +114,12 @@ int static inline addmul32(uint32_t* t, const uint32_t *a, uint32_t b, size_t wo
         prodh = (uint32_t)(prod >> 32);
 
         prodl += carry; prodh += prodl < carry;
-        t[i] += prodl; prodh += t[i] < prodl;
+        t[(i+offset)^BEBIT] += prodl; prodh += t[(i+offset)^BEBIT] < prodl;
         carry = prodh;
     }
 
     for (;carry; i++) {
-        t[i] += carry; carry = t[i] < carry;
+        t[(i+offset)^BEBIT] += carry; carry = t[(i+offset)^BEBIT] < carry;
     }
 
     return i;
@@ -137,12 +140,10 @@ uint64_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t 
     b1l = (uint32_t)b1;
     b1h = (uint32_t)(b1 >> 32);
 
-    // TODO: make it work for BE too
-
-    addmul32((uint32_t*)t+0, (uint32_t*)a, b0l, 2*words);
-    addmul32((uint32_t*)t+1, (uint32_t*)a, b0h, 2*words);
-    addmul32((uint32_t*)t+2, (uint32_t*)a, b1l, 2*words);
-    res = addmul32((uint32_t*)t+3, (uint32_t*)a, b1h, 2*words) + 3;
+    addmul32((uint32_t*)t, 0, (uint32_t*)a, b0l, 2*words);
+    addmul32((uint32_t*)t, 1, (uint32_t*)a, b0h, 2*words);
+    addmul32((uint32_t*)t, 2, (uint32_t*)a, b1l, 2*words);
+    res = addmul32((uint32_t*)t, 3, (uint32_t*)a, b1h, 2*words) + 3;
 
     return (res+1)/2;
 }
@@ -166,21 +167,21 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
             uint64_t prod;
             uint32_t suml, sumh;
 
-            prod = (uint64_t)a[j]*a[i];
+            prod = (uint64_t)a[j^BEBIT]*a[i^BEBIT];
             suml = (uint32_t)prod;
             sumh = (uint32_t)(prod >> 32);
 
             suml += carry;
             sumh += suml < carry;
 
-            t[i+j] += suml;
-            carry = sumh + (t[i+j] < suml);
+            t[(i+j)^BEBIT] += suml;
+            carry = sumh + (t[(i+j)^BEBIT] < suml);
         }
 
         /** Propagate carry **/
         for (j=i+words; carry>0; j++) {
-            t[j] += carry;
-            carry = t[j] < carry;
+            t[j^BEBIT] += carry;
+            carry = t[j^BEBIT] < carry;
         }
     }
 
@@ -190,22 +191,22 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
         uint64_t prod;
         uint32_t suml, sumh, tmp, tmp2;
 
-        prod = (uint64_t)a[i]*a[i];
+        prod = (uint64_t)a[i^BEBIT]*a[i^BEBIT];
         suml = (uint32_t)prod;
         sumh = (uint32_t)(prod >> 32);
 
         suml += carry;
         sumh += suml < carry;
 
-        sumh += (tmp = ((t[j+1] << 1) + (t[j] >> 31)));
-        carry = (t[j+1] >> 31) + (sumh < tmp);
+        sumh += (tmp = ((t[(j+1)^BEBIT] << 1) + (t[j^BEBIT] >> 31)));
+        carry = (t[(j+1)^BEBIT] >> 31) + (sumh < tmp);
 
-        suml += (tmp = (t[j] << 1));
+        suml += (tmp = (t[j^BEBIT] << 1));
         sumh += (tmp2 = (suml < tmp));
         carry += sumh < tmp2;
 
-        t[j] = suml;
-        t[j+1] = sumh;
+        t[j^BEBIT] = suml;
+        t[(j+1)^BEBIT] = sumh;
     }
     assert(carry == 0);
 
@@ -214,6 +215,5 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
 
 size_t square_w(uint64_t *t, const uint64_t *a, size_t words)
 {
-    // TODO: make it work for BE too
     return square_w_32((uint32_t*)t, (const uint32_t*)a, words*2)/2;
 }
