@@ -343,54 +343,81 @@ static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint
     memcpy(out, &t[abn_words], sizeof(uint64_t)*abn_words);
 }
 
-static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint64_t seed)
+/**
+ * Spread 16 multipliers in memory, to attempt to prevent an attacker from
+ * easily inferring which one is being accessed based on the cache side-channel.
+ *
+ * @out prot[]   An array of 16*8*words bytes (organized in 32-bit words),
+ *               aligned to the cache line boundary (64 bytes).
+ *               Multipliers will be scattered in here.
+ * @in  powers[] An array of 16 pointers to multipliers.
+ * @in  words    The number of 64-bit words in a multiplier.
+ * @in  seed     An array of 2*words bytes with the pseudorandom seed bytes.
+ *
+ * We assume a cache line is 64-bytes long. Every cache line will contain 16 32-bit
+ * words, each taken from a different multiplier.
+ * The word of each multiplier is 64-bits long though: one cache line therefore
+ * contains the lower halves and the following the higher halves.
+ *
+ * The relationship between multiplier and position within each cache line is
+ * randomized by means of the external seed.
+ */
+static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint8_t *seed)
 {
     size_t i, j;
-    uint32_t *x;
 
-    uint8_t alpha, beta;
+    /** Layout of prot[]
+     *
+     *  - 16 32-bit pieces; each piece is the lower half of word[0] for a multiplier.
+     *    Relation piece-to-multiplier depends on seed[0..1].
+     *  - 16 32-bit pieces; each piece is the higher half of word[0] for a multiplier.
+     *    Relation piece-to-multiplier depends on seed[0..1].
+     *  - 16 32-bit pieces; each piece is the lower half of word[1] for a multiplier.
+     *    Relation piece-to-multiplier depends on seed[2..3].
+     *  - 16 32-bit pieces; each piece is the higher half of word[1] for a multiplier.
+     *    Relation piece-to-multiplier depends on seed[2..3].
+     *  - and so on...
+     *
+     * **/
 
-    for (i=0; i<16; i++) {
-        memcpy(prot, powers[i], 8*words);
-        prot += 8*words/4;
-    }
-    return;
+    for (j=0; j<words; j++) {
+        uint8_t alpha, beta;
+    
+        alpha = seed[2*j] | 1;  /** Must be invertible modulo 2^8 **/
+        beta  = seed[2*j+1];
 
-    alpha = seed | 1;
-    beta = seed >> 8;
-
-    /** Each of the 16 multipliers is split into
-     * 32-bit words. Words are set 64 bytes apart
-     * in memory **/
-
-    for (i=0; i<16; i++) {
-        x = &prot[(alpha*i+beta) & 0xF];
-        for (j=0; j<words; j++, x+=32) {
-            *x      = (uint32_t) powers[i][j];
+        for (i=0; i<16; i++) {
+            uint32_t *x;
+        
+            x  = &prot[(alpha*i+beta) & 0xF];
+            *x = (uint32_t) powers[i][j];
             *(x+16) = powers[i][j] >> 32;
         }
+
+        prot += 32;     /** Two cache lines **/
     }
 }
 
-static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words, uint64_t seed)
+/**
+ * Does the opposite of scatter(), by collecting a specific multiplier.
+ *
+ * Note that idx contains 4 bits of the exponent and it is most likely a secret.
+ */
+static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words, uint8_t *seed)
 {
-    size_t j, i;
-    const uint32_t *x;
-
-    uint8_t alpha, beta;
-
-    for (i=0; i<idx; i++) {
-        prot += 8*words/4;
-    }
-    memcpy(out, prot, 8*words);
-    return;
-
-    alpha = seed | 1;
-    beta = seed >> 8;
-
-    x = &prot[(alpha*idx+beta) & 0xF];
-    for (j=0; j<words; j++, x+=32) {
+    size_t j;
+    
+    for (j=0; j<words; j++) {
+        uint8_t alpha, beta;
+        const uint32_t *x;
+    
+        alpha = seed[2*j] | 1;
+        beta  = seed[2*j+1];
+    
+        x = &prot[(alpha*idx+beta) & 0xF];
         out[j] = *x | ((uint64_t)*(x+16) << 32);
+
+        prot += 32;     /** Two cache lines **/
     }
 }
 
@@ -504,6 +531,8 @@ void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
         siphash(counter, 4, (const uint8_t*)&seed_in, buffer, SIPHASH_LEN);
         memcpy(seed_out, buffer, out_len);
     }
+
+#undef SIPHASH_LEN
 }
 
 EXPORT_SYM int monty_pow(const uint8_t *base,
@@ -568,7 +597,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         mont_mult(monty.powers[i*2],   monty.powers[i],   monty.powers[i], monty.modulus, m0, monty.t, words);
         mont_mult(monty.powers[i*2+1], monty.powers[i*2], monty.base,      monty.modulus, m0, monty.t, words);
     }
-    scatter(monty.prot, monty.powers, words, seed);
+    scatter(monty.prot, monty.powers, words, monty.seed);
 
     /** Ignore leading zero bytes in the exponent **/
     exp_len = len;
@@ -616,7 +645,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         for (j=0; j<WINDOW_SIZE; j++) {
             mont_mult(monty.x, monty.x, monty.x, monty.modulus, m0, monty.t, words);
         }
-        gather(monty.power_idx, monty.prot, index, words, seed);
+        gather(monty.power_idx, monty.prot, index, words, monty.seed);
         mont_mult(monty.x, monty.x, monty.power_idx, monty.modulus, m0, monty.t, words);
     }
 
