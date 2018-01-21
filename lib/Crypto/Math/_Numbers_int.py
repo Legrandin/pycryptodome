@@ -66,21 +66,15 @@ class Integer(object):
 
     # Relations
     def __eq__(self, term):
-        try:
-            result = self._value == term._value
-        except AttributeError:
-            result = self._value == term
-        return result
+        if term is None:
+            return False
+        return self._value == int(term)
 
     def __ne__(self, term):
         return not self.__eq__(term)
 
     def __lt__(self, term):
-        try:
-            result = self._value < term._value
-        except AttributeError:
-            result = self._value < term
-        return result
+        return self._value < int(term)
 
     def __le__(self, term):
         return self.__lt__(term) or self.__eq__(term)
@@ -99,57 +93,36 @@ class Integer(object):
 
     # Arithmetic operations
     def __add__(self, term):
-        try:
-            return Integer(self._value + term._value)
-        except AttributeError:
-            return Integer(self._value + term)
+        return Integer(self._value + int(term))
 
     def __sub__(self, term):
-        try:
-            diff = self._value - term._value
-        except AttributeError:
-            diff = self._value - term
-        return Integer(diff)
+        return Integer(self._value - int(term))
 
     def __mul__(self, factor):
-        try:
-            return Integer(self._value * factor._value)
-        except AttributeError:
-            return Integer(self._value * factor)
+        return Integer(self._value * int(factor))
 
     def __floordiv__(self, divisor):
-        try:
-            divisor_value = divisor._value
-        except AttributeError:
-            divisor_value = divisor
-        return Integer(self._value // divisor_value)
+        return Integer(self._value // int(divisor))
 
     def __mod__(self, divisor):
-        try:
-            divisor_value = divisor._value
-        except AttributeError:
-            divisor_value = divisor
+        divisor_value = int(divisor)
         if divisor_value < 0:
             raise ValueError("Modulus must be positive")
         return Integer(self._value % divisor_value)
 
     def inplace_pow(self, exponent, modulus=None):
-        try:
-            exp_value = exponent._value
-        except AttributeError:
-            exp_value = exponent
+        exp_value = int(exponent)
         if exp_value < 0:
             raise ValueError("Exponent must not be negative")
 
-        try:
-            mod_value = modulus._value
-        except AttributeError:
-            mod_value = modulus
-        if mod_value is not None:
+        if modulus is not None:
+            mod_value = int(modulus)
             if mod_value < 0:
                 raise ValueError("Modulus must be positive")
             if mod_value == 0:
                 raise ZeroDivisionError("Modulus cannot be zero")
+        else:
+            mod_value = None
         self._value = pow(self._value, exp_value, mod_value)
         return self
 
@@ -172,31 +145,19 @@ class Integer(object):
         return Integer(x)
 
     def __iadd__(self, term):
-        try:
-            self._value += term._value
-        except AttributeError:
-            self._value += term
+        self._value += int(term)
         return self
 
     def __isub__(self, term):
-        try:
-            self._value -= term._value
-        except AttributeError:
-            self._value -= term
+        self._value -= int(term)
         return self
 
     def __imul__(self, term):
-        try:
-            self._value *= term._value
-        except AttributeError:
-            self._value *= term
+        self._value *= int(term)
         return self
 
     def __imod__(self, term):
-        try:
-            modulus = term._value
-        except AttributeError:
-            modulus = term
+        modulus = int(term)
         if modulus == 0:
             raise ZeroDivisionError("Division by zero")
         if modulus < 0:
@@ -206,23 +167,14 @@ class Integer(object):
 
     # Boolean/bit operations
     def __and__(self, term):
-        try:
-            return Integer(self._value & term._value)
-        except AttributeError:
-            return Integer(self._value & term)
+        return Integer(self._value & int(term))
 
     def __or__(self, term):
-        try:
-            return Integer(self._value | term._value)
-        except AttributeError:
-            return Integer(self._value | term)
+        return Integer(self._value | int(term))
 
     def __rshift__(self, pos):
         try:
-            try:
-                return Integer(self._value >> pos._value)
-            except AttributeError:
-                return Integer(self._value >> pos)
+            return Integer(self._value >> int(pos))
         except OverflowError:
             if self._value >= 0:
                 return 0
@@ -231,10 +183,7 @@ class Integer(object):
 
     def __irshift__(self, pos):
         try:
-            try:
-                self._value >>= pos._value
-            except AttributeError:
-                self._value >>= pos
+            self._value >>= int(pos)
         except OverflowError:
             if self._value >= 0:
                 return 0
@@ -244,19 +193,13 @@ class Integer(object):
 
     def __lshift__(self, pos):
         try:
-            try:
-                return Integer(self._value << pos._value)
-            except AttributeError:
-                return Integer(self._value << pos)
+            return Integer(self._value << int(pos))
         except OverflowError:
             raise ValueError("Incorrect shift count")
 
     def __ilshift__(self, pos):
         try:
-            try:
-                self._value <<= pos._value
-            except AttributeError:
-                self._value <<= pos
+            self._value <<= int(pos)
         except OverflowError:
             raise ValueError("Incorrect shift count")
         return self
@@ -320,12 +263,8 @@ class Integer(object):
         return self._value == x ** 2
 
     def fail_if_divisible_by(self, small_prime):
-        try:
-            if (self._value % small_prime._value) == 0:
-                raise ValueError("Value is composite")
-        except AttributeError:
-            if (self._value % small_prime) == 0:
-                raise ValueError("Value is composite")
+        if (self._value % int(small_prime)) == 0:
+            raise ValueError("Value is composite")
 
     def multiply_accumulate(self, a, b):
         if type(a) == Integer:
@@ -336,16 +275,10 @@ class Integer(object):
         return self
 
     def set(self, source):
-        if type(source) == Integer:
-            self._value = source._value
-        else:
-            self._value = source
+        self._value = int(source)
 
     def inplace_inverse(self, modulus):
-        try:
-            modulus = modulus._value
-        except AttributeError:
-            pass
+        modulus = int(modulus)
         if modulus == 0:
             raise ZeroDivisionError("Modulus cannot be zero")
         if modulus < 0:
@@ -369,31 +302,22 @@ class Integer(object):
         return result
 
     def gcd(self, term):
-        try:
-            term = term._value
-        except AttributeError:
-            pass
-        r_p, r_n = abs(self._value), abs(term)
+        r_p, r_n = abs(self._value), abs(int(term))
         while r_n > 0:
             q = r_p // r_n
             r_p, r_n = r_n, r_p - q * r_n
         return Integer(r_p)
 
     def lcm(self, term):
-        try:
-            term = term._value
-        except AttributeError:
-            pass
+        term = int(term)
         if self._value == 0 or term == 0:
             return Integer(0)
         return Integer(abs((self._value * term) // self.gcd(term)._value))
 
     @staticmethod
     def jacobi_symbol(a, n):
-        if isinstance(a, Integer):
-            a = a._value
-        if isinstance(n, Integer):
-            n = n._value
+        a = int(a)
+        n = int(n)
 
         if (n & 1) == 0:
             raise ValueError("n must be even for the Jacobi symbol")
