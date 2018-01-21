@@ -15,9 +15,9 @@
    <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 #include <assert.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "pycrypto_common.h"
 
 /* default: SipHash-2-4 */
 #define cROUNDS 2
