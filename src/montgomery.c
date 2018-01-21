@@ -35,6 +35,8 @@ FAKE_INIT(montgomery)
 
 #include "multiply.h"
 
+int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k, uint8_t *out, const size_t outlen);
+
 #define CACHE_LINE_SIZE 64
 
 /** Multiplication will be replaced by a look-up **/
@@ -348,6 +350,12 @@ static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint64_t s
 
     uint8_t alpha, beta;
 
+    for (i=0; i<16; i++) {
+        memcpy(prot, powers[i], 8*words);
+        prot += 8*words/4;
+    }
+    return;
+
     alpha = seed | 1;
     beta = seed >> 8;
 
@@ -366,10 +374,16 @@ static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint64_t s
 
 static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words, uint64_t seed)
 {
-    size_t j;
+    size_t j, i;
     const uint32_t *x;
 
     uint8_t alpha, beta;
+
+    for (i=0; i<idx; i++) {
+        prot += 8*words/4;
+    }
+    memcpy(out, prot, 8*words);
+    return;
 
     alpha = seed | 1;
     beta = seed >> 8;
@@ -390,6 +404,7 @@ struct Montgomery {
     uint64_t *powers[1 << WINDOW_SIZE];
     uint64_t *power_idx;
     uint32_t *prot;
+    uint8_t  *seed;
 };
 
 /** Allocate space **/
@@ -430,6 +445,8 @@ int allocate_montgomery(struct Montgomery *m, size_t words)
         return 1;
     }
 
+    allocate(m->seed, 2*words);
+
     result = 0;
     return result;
 }
@@ -458,10 +475,36 @@ void deallocate_montgomery(struct Montgomery *m)
 #else
     free(m->prot);
 #endif
+
+    free(m->seed);
     
     memset(m, 0, sizeof *m);
 }
 
+void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
+{
+    uint8_t counter[4];
+    int i;
+
+#define SIPHASH_LEN 16
+    
+    for (i=0 ;; i++, out_len-=SIPHASH_LEN) {
+        counter[0] = i;
+        counter[1] = i>>8;
+        counter[2] = i>>16;
+        counter[3] = i>>24;
+        if (out_len<SIPHASH_LEN)
+            break;
+        siphash(counter, 4, (const uint8_t*)&seed_in, seed_out, SIPHASH_LEN);
+        seed_out += 16;
+    }
+
+    if (out_len>0) {
+        uint8_t buffer[SIPHASH_LEN];
+        siphash(counter, 4, (const uint8_t*)&seed_in, buffer, SIPHASH_LEN);
+        memcpy(seed_out, buffer, out_len);
+    }
+}
 
 EXPORT_SYM int monty_pow(const uint8_t *base,
                const uint8_t *exp,
@@ -494,6 +537,9 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         deallocate_montgomery(&monty);
         return 3;
     }
+
+    /** Compute full seed (2*words bytes) **/
+    expand_seed(seed, monty.seed, 2*words);
 
     /** Take in numbers **/
     bytes_to_words(monty.base, base, len, words);
