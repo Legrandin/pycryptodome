@@ -110,31 +110,6 @@ components freely made available by Microsoft.
 
    you clearly have Python 2.7 and it is a 32 bit application.
 
-#. **[Only once]** In order to speed up asymmetric key algorithms like RSA,
-   it is recommended to install the MPIR_ library (a fork of the popular
-   GMP_ library, more suitable for the Windows environment).
-   For convenience, I made available pre-compiled *mpir.dll* files to match
-   the various types of Python one may have:
-    
-     - Python 2.x, 3.1, 3.2 (VS2008 runtime)
-       
-       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2008_32/mpir.dll>`_
-       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2008_64/mpir.dll>`_
-     
-     - Python 3.3 and 3.4 (VS2010 runtime)
-       
-       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_32/mpir.dll>`_
-       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_64/mpir.dll>`_
-
-     - Python 3.5 (VS2015 runtime)
-
-       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2015_32/mpir.dll>`_
-       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2015_64/mpir.dll>`_
-
-   Download the correct *mpir.dll* and drop it into the Python interpreter
-   directory (for instance ``C:\Python34``). *Pycryptodome* will
-   automatically make use of it.
-
 #. **[Only once]** Install `Virtual Clone Drive`_.
 
 #. **[Only once]** Download the ISO image of the
@@ -180,31 +155,6 @@ components freely made available by Microsoft.
 
    you clearly have Python 2.7 and it is a 32 bit application.
 
-#. **[Only once]** In order to speed up asymmetric key algorithms like RSA,
-   it is recommended to install the MPIR_ library (a fork of the popular
-   GMP_ library, more suitable for the Windows environment).
-   For convenience, I made available pre-compiled *mpir.dll* files to match
-   the various types of Python one may have:
-    
-     - Python 2.x, 3.1, 3.2 (VS2008 runtime)
-       
-       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2008_32/mpir.dll>`_
-       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2008_64/mpir.dll>`_
-     
-     - Python 3.3 and 3.4 (VS2010 runtime)
-       
-       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_32/mpir.dll>`_
-       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2010_64/mpir.dll>`_
-
-     - Python 3.5 (VS2015 runtime)
-
-       - `32 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2015_32/mpir.dll>`_
-       - `64 bits <https://github.com/Legrandin/mpir-windows-builds/blob/master/mpir-2.6.0_VS2015_64/mpir.dll>`_
-
-   Download the correct *mpir.dll* and drop it into the Python interpreter
-   directory (for instance ``C:\Python34``). *Pycryptodome* will
-   automatically make use of it.
-
 #. **[Only once]** Install `Virtual Clone Drive <https://www.redfox.bz/virtual-clonedrive.html>`_.
 
 #. **[Only once]** Download the ISO image of the
@@ -237,7 +187,7 @@ Windows (from sources, Python 3.5 and newer)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Windows does not come with a C compiler like most Unix systems.
-The simplest way to compile the *Pycryptodome* extensions from
+The simplest way to compile the *PyCryptodome* extensions from
 source code is to install the minimum set of Visual Studio
 components freely made available by Microsoft.
 
@@ -319,5 +269,4 @@ They can be verified with the following PGP key::
 
 .. _pypi: https://pypi.python.org/pypi/pycryptodome
 .. _get-pip.py: https://bootstrap.pypa.io/get-pip.py
-.. _MPIR: http://mpir.org
 .. _GMP: http://gmplib.org

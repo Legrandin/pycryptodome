@@ -36,9 +36,7 @@ PyCryptodome can be used as:
    In this case, all modules are installed under the ``Cryptodome`` package.
    PyCrypto and PyCryptodome can coexist.
 
-For faster public key operations, you should have `GMP`_ installed in your system
-(except on Windows, as the wheel on PyPi already comes bundled with the equivalent
-`MPIR`_ library).
+For faster public key operations in Unix, you should install `GMP`_ in your system.
 
 PyCryptodome is a fork of PyCrypto. It brings the following enhancements
 with respect to the last official version of PyCrypto (2.6.1):
@@ -90,5 +88,4 @@ News
 
 .. _`homepage`: http://www.pycryptodome.org
 .. _`GMP`: https://gmplib.org
-.. _`MPIR`: http://mpir.org
 .. _GitHub: https://github.com/Legrandin/pycryptodome

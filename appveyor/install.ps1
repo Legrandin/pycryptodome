@@ -75,19 +75,6 @@ function InstallPackage ($python_home, $pkg) {
     & $pip_path install $pkg
 }
 
-function InstallMPIR ($python_version, $architecture, $target_dir) {
-    $pyver = $python_version.split(".")
-    if ($pyver[0] -gt 2) {
-	  if ($pyver[1] -gt 4 ) {
-		$vs = "VS2015"
-      } else {
-		$vs = "VS2010"
-	  }
-    } else {
-      $vs = "VS2008"
-    }
-}
-
 function main () {
     InstallPython $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     InstallPip $env:PYTHON

@@ -67,10 +67,3 @@ The OCB cipher mode is patended in US. The directory Doc/ocb contains three
 free licenses for implementors and users. As a general statement, OCB can be
 freely used for software not meant for military purposes. Contact your attorney
 for further information.
-
-MPIR license
-============
-
-When distributed as a Windows wheel, Pycryptodome bundles an unmodified,
-binary version of the MPIR library (https://www.mpir.org) which is licensed
-under the LGPLv3, a copy of which is available under Doc/mpir.
