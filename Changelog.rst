@@ -4,6 +4,16 @@ Changelog
 X.X.X (...)
 +++++++++++
 
+New features
+------------
+
+* Added a native extension in pure C for modular exponentiation, optimized for SSE2 on x86.
+  In the process, we drop support for the arbitrary arithmetic library MPIR
+  on Windows, which is painful to compile and deploy.
+  The custom  modular exponentiation is 130% (160%) slower on an Intel CPU in 32-bit (64-bit) mode,
+  compared to MPIR. Still, that is much faster that CPython's own `pow()` function which
+  is 900% (855%) slower than MPIR. Support for the GMP library on Unix remains.
+
 Resolved issues
 ---------------
 
