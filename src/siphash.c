@@ -19,6 +19,8 @@
 #include <string.h>
 #include "pycrypto_common.h"
 
+#include "siphash.h"
+
 /* default: SipHash-2-4 */
 #define cROUNDS 2
 #define dROUNDS 4

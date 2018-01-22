@@ -34,105 +34,13 @@ DAMAGE.
 FAKE_INIT(montgomery)
 
 #include "multiply.h"
-
-int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k, uint8_t *out, const size_t outlen);
+#include "montgomery_utils.h"
 
 #define CACHE_LINE_SIZE 64
 
 /** Multiplication will be replaced by a look-up **/
 /** Do not change this value! **/
 #define WINDOW_SIZE 4
-
-#if 0
-static void print_words_w(const uint8_t *str, const uint64_t *x, unsigned words)
-{
-    int i;
-    printf("%s = 0x", str);
-    for (i=words-1; i>=0; i--) {
-        printf("%016" PRIx64, x[i]);
-    }
-    printf("\n");
-}
-#endif
-
-/**
- * Convert a number in[], originally encoded as raw bytes (big endian)
- * into words x[] (little endian). The output array x[] must
- * be correctly sized.
- *
- * The length of the array in[] may not be a multiple of 8, in which
- * case the most significant word of x[] gets padded with zeroes.
- */
-static void bytes_to_words(uint64_t *x, const uint8_t *in, size_t len, size_t words)
-{
-    int i, j;
-    size_t partial;
-
-    if (words == 0 || len == 0) {
-        return;
-    }
-
-    assert(len<=words*8);
-    assert(len>(words-1)*8);
-
-    memset(x, 0, words*8);
-
-    partial = len % 8;
-    if (partial == 0) {
-        partial = 8;
-    }
-
-    for (j=0; j<partial; j++) {
-        x[words-1] = (x[words-1] << 8) | *in++;
-    }
-
-    if (words == 1) {
-        return;
-    }
-
-    for (i=words-2; i>=0; i--) {
-        for (j=0; j<8; j++) {
-            x[i] = (x[i] << 8) | *in++;
-        }
-    }
-}
-
-/**
- * Convert a number in[], originally encoded in words (little endian)
- * into bytes (big endian). The output array out[] must
- * have appropriate size.
- */
-static void words_to_bytes(uint8_t *out, const uint64_t *x, size_t len, size_t words)
-{
-    int i, j;
-    size_t partial;
-
-    if (words == 0 || len == 0) {
-        return;
-    }
-
-    assert(len<=words*8);
-    assert(len>(words-1)*8);
-
-    partial = len % 8;
-    if (partial == 0) {
-        partial = 8;
-    }
-
-    for (j=partial-1; j>=0; j--) {
-        *out++ = (uint8_t)(x[words-1] >> (8*j));
-    }
-
-    if (words == 1) {
-        return;
-    }
-
-    for (i=words-2; i>=0; i--) {
-        for (j=7; j>=0; j--) {
-            *out++ = x[i] >> (8*j);
-        }
-    }
-}
 
 /**
  * Compute inverse modulo 2**64
@@ -506,33 +414,6 @@ void deallocate_montgomery(struct Montgomery *m)
     free(m->seed);
     
     memset(m, 0, sizeof *m);
-}
-
-void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
-{
-    uint8_t counter[4];
-    int i;
-
-#define SIPHASH_LEN 16
-    
-    for (i=0 ;; i++, out_len-=SIPHASH_LEN) {
-        counter[0] = i;
-        counter[1] = i>>8;
-        counter[2] = i>>16;
-        counter[3] = i>>24;
-        if (out_len<SIPHASH_LEN)
-            break;
-        siphash(counter, 4, (const uint8_t*)&seed_in, seed_out, SIPHASH_LEN);
-        seed_out += 16;
-    }
-
-    if (out_len>0) {
-        uint8_t buffer[SIPHASH_LEN];
-        siphash(counter, 4, (const uint8_t*)&seed_in, buffer, SIPHASH_LEN);
-        memcpy(seed_out, buffer, out_len);
-    }
-
-#undef SIPHASH_LEN
 }
 
 EXPORT_SYM int monty_pow(const uint8_t *base,

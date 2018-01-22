@@ -662,7 +662,7 @@ setup(
         # Math
         Extension("Crypto.Math._montgomery",
             include_dirs=['src/'],
-            sources=['src/montgomery.c', 'src/siphash.c'] + multiply_cmod,
+            sources=['src/montgomery.c', 'src/siphash.c', 'src/montgomery_utils.c'] + multiply_cmod,
             extra_compile_args=extra_compile_args,
             ),
 
