@@ -25,4 +25,35 @@ void words_to_bytes(uint8_t *out, const uint64_t *x, size_t len, size_t words);
  */
 void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len);
 
+struct BitWindow {
+    /** Size of a window, in bits **/
+    int window_size;
+    
+    /** Total number of windows covering the exponent **/
+    int nr_windows;
+
+    /** Number of bits we miss for the next digit **/
+    int tg;
+    
+    /** Number of rightmost bits that have not been used yet **/
+    int available;
+    
+    /** Index to the byte in the big-endian exponent currently scanned **/
+    int scan_exp;
+
+    /** Exponent where we extract digits from **/
+    const uint8_t *exp;
+};
+
+/**
+ * Initialize the data structure we can use to read groups of bits (windows)
+ * from a big endian number.
+ */
+struct BitWindow init_bit_window(int window_size, const uint8_t *exp, int exp_len);
+
+/**
+ * Return the next window.
+ */
+int get_next_digit(struct BitWindow *bw);
+
 #endif

@@ -424,12 +424,12 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
                uint64_t seed)
 {
     uint64_t m0;
-    int i, j, scan_exp;
+    int i, j;
     size_t words;
-    unsigned nr_windows, available, tg;
     size_t exp_len;
 
     struct Montgomery monty;
+    struct BitWindow bit_window;
 
     if (!base || !exp || !modulus || !out || len==0) {
         return 1;
@@ -490,43 +490,20 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         words_to_bytes(out, monty.one, len, words);
         return 0;
     }
-    /** Total number of windows covering the exponent **/
-    nr_windows = (exp_len*8+WINDOW_SIZE-1)/WINDOW_SIZE;
-    /** Number of bits for the first (partial) digit (<=WINDOW_SIZE) **/
-    tg = (exp_len*8) % WINDOW_SIZE;
-    if (tg == 0) {
-        tg = WINDOW_SIZE;
-    }
-    /** Number of rightmost bits that can be used in the current byte **/
-    available = 8;
-    /** Index to the byte in the big-endian exponent currently scanned **/
-    scan_exp = 0;
-    for (i=0; i<nr_windows; i++, tg=WINDOW_SIZE) {
-        unsigned index, tc;
 
-        /** Scan the next byte **/
-        if (available == 0) {
-            available = 8;
-            scan_exp++;
-        }
-
-        /** Try to consume as much as possible from the current byte **/
-        tc = available > tg ? tg : available;
-        index = (exp[scan_exp] >> (available - tc)) & ((1 << tc) - 1);
-        available -= tc;
-        tg -= tc;
-        
-        /** A few bits (<8) might still be needed from the next byte **/
-        if (tg != 0) {
-            index = (index << tg) | (exp[++scan_exp] >> (8 - tg));
-            available = 8 - tg;
-        }
+    bit_window = init_bit_window(WINDOW_SIZE, exp, exp_len);
+    
+    for (i=0; i < bit_window.nr_windows; i++) {
+        unsigned index;
 
         /** Left-to-right exponentiation with fixed window **/       
         for (j=0; j<WINDOW_SIZE; j++) {
             mont_mult(monty.x, monty.x, monty.x, monty.modulus, m0, monty.t, words);
         }
+        
+        index = get_next_digit(&bit_window);
         gather(monty.power_idx, monty.prot, index, words, monty.seed);
+        
         mont_mult(monty.x, monty.x, monty.power_idx, monty.modulus, m0, monty.t, words);
     }
 
