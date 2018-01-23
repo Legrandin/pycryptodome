@@ -1,41 +1,20 @@
 language: python
 dist: trusty
-python:
- - "2.6"
- - "2.7"
- - "3.3"
- - "3.4"
- - "3.5"
- - "3.6"
- - "3.7-dev"
- - "pypy"
- - "pypy3"
-env:
- - CFFI=no
- - CFFI=yes
+sudo: required
+
 matrix:
- exclude:
- - python: pypy
-   env: CFFI=no
- - python: pypy3
-   env: CFFI=no
  include:
- - python: 2.7
-   env: CFFI=no OLDPY=python2.4
- - python: 2.7
-   env: CFFI=no OLDPY=python2.5
- - python: 2.7
- - python: 3.4
-   env: CFFI=no OLDPY=python3.2
- - python: 3.4
-   env: CFFI=yes OLDPY=python3.2
+  - python: 2.7
+    services: docker
+    env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64 CFFI=no
+
 branches:
  except:
   - /^.*-wip$/
 install:
- - ./travis_install.sh
+ - ./travis/travis_install.sh
+ - docker pull $DOCKER_IMAGE
 script:
- #- export PYTHONPATH=${PWD}/custom_packages
  - if [ x${OLDPY} == x ]; then export PYTHON=python; else export PYTHON=${OLDPY} PYTHONPATH=${PWD}/custom_packages; fi
  - echo ${PYTHON}
  - PYVERSION=$(${PYTHON} -V 2>&1)
@@ -49,3 +28,6 @@ script:
  - echo "Custom Python flags:" \"${xflags:-none}\"
  - ${PYTHON} $xflags setup.py build
  - ${PYTHON} $xflags setup.py test
+after_success:
+ - docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/travis/build-wheels.sh
+ - ls wheelhouse/
