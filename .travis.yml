@@ -37,5 +37,6 @@ deploy:
   file: wheelhouse/*
   skip_cleanup: true
   on:
+    all_branches: true
     repo: Legrandin/pycryptodome
 #    tags: true
