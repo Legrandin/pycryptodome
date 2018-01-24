@@ -30,13 +30,14 @@ after_success:
 - docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/travis/build-wheels.sh
 - ls wheelhouse/
 deploy:
-  provider: releases
-  api_key:
-    secure: DY1Xp8Yci0Mbap3NiEImqHApcN/Ql+/ITleh/KNrhTb0NM40Ki7oH6fEoT9j3aLofNFqz4xteThBv1252gKWVJYwWw8BVhzPb7CSKKDEUkURASxXGwmLRYugFAWmjTbIrbtNQZrvU1/a8hoNr8tx0l3AWStTsAhw3zGXQuVhQBI=
-  file_glob: true
-  file: wheelhouse/*
+  provider: s3
+  access_key_id: AKIAISG4H2IJZLISXOPQ
+  secret_access_key:
+    secure: DAuc3n+JLxlBmCLgQuLSXwIRHropTVK/TWj3jD99aB1+Bzy5CpmPtXyR3DGltGF2Bum52xcRM8dLFktinFkMqKF7UKZRGNwEey07Nhen94AGjkLomeEM0SRRjVP6T8RqLBK+buNcoRqiFTNM+JlW5ndY6Wy+kFaan+qk3UNz570=
+  bucket: pycryptodome-releases
+  local_dir: wheelhouse
   skip_cleanup: true
+  acl: public_read
   on:
     all_branches: true
     repo: Legrandin/pycryptodome
-#    tags: true
