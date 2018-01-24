@@ -5,29 +5,15 @@ matrix:
   include:
   - python: 2.7
     services: docker
-    env: DOCKER_IMAGE=quay.io/pypa/manylinux1_x86_64 CFFI=no
 branches:
   except:
   - "/^.*-wip$/"
 install:
-- ./travis/travis_install.sh
+- travis/travis_install.sh
 script:
-- if [ x${OLDPY} == x ]; then export PYTHON=python; else export PYTHON=${OLDPY} PYTHONPATH=${PWD}/custom_packages; fi
-- echo ${PYTHON}
-- PYVERSION=$(${PYTHON} -V 2>&1)
-- echo ${PYVERSION}
-- ${PYTHON} -c "import cffi" 2>/dev/null && echo CFFI is installed || true
-- if [ x${CFFI} = "xyes" ]; then ${PYTHON} -c"import cffi"; fi
-- if [ x${CFFI} != "xyes" ]; then ! ${PYTHON} -c"import cffi" 2>/dev/null; fi
-- MAJOR=$(echo ${PYVERSION} | cut -f2 -d' ' | cut -f1 -d'.')
-- if [ "${MAJOR}" -ge 3 ]; then xflags="$xflags -bb" ; fi
-- if [[ ${PYVERSION} != *"PyPy"* ]] || [ "${MAJOR}" -lt 3 ]; then xflags="$xflags -tt"; fi
-- echo "Custom Python flags:" \"${xflags:-none}\"
-- "${PYTHON} $xflags setup.py build"
-- "${PYTHON} $xflags setup.py test"
+- travis/travis_script.sh
 after_success:
-- docker pull $DOCKER_IMAGE
-- docker run --rm -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/travis/build-wheels.sh
+- travis/travis_after_success.sh
 - ls wheelhouse/
 deploy:
   provider: s3
