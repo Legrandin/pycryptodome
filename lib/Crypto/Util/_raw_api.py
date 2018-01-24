@@ -180,13 +180,15 @@ def load_pycryptodome_raw_lib(name, cdecl):
 
     split = name.split(".")
     dir_comps, basename = split[:-1], split[-1]
+    attempts = []
     for ext in extension_suffixes:
         try:
-            return load_lib(pycryptodome_filename(dir_comps, basename + ext),
+            filename = basename + ext
+            return load_lib(pycryptodome_filename(dir_comps, filename),
                             cdecl)
-        except OSError:
-            pass
-    raise OSError("Cannot load native module '%s'" % name)
+        except OSError, exp:
+            attempts.append("Trying '%s': %s" % (filename, str(exp)))
+    raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
 
 
 def expect_byte_string(data):
