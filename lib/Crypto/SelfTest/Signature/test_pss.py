@@ -81,6 +81,10 @@ class FIPS_PKCS1_Verify_Tests(unittest.TestCase):
         self.assertEqual(verifier.can_sign(), False)
 
 
+class FIPS_PKCS1_Verify_Tests_KAT(unittest.TestCase):
+    pass
+
+
 test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-PSS"),
                                  "SigVerPSS_186-3.rsp",
                                  "Signature Verification 186-3",
@@ -113,9 +117,9 @@ for count, tv in enumerate(test_vectors_verify):
         self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
     if tv.result == 'p':
-        setattr(FIPS_PKCS1_Verify_Tests, "test_positive_%d" % count, positive_test)
+        setattr(FIPS_PKCS1_Verify_Tests_KAT, "test_positive_%d" % count, positive_test)
     else:
-        setattr(FIPS_PKCS1_Verify_Tests, "test_negative_%d" % count, negative_test)
+        setattr(FIPS_PKCS1_Verify_Tests_KAT, "test_negative_%d" % count, negative_test)
 
 
 class FIPS_PKCS1_Sign_Tests(unittest.TestCase):
@@ -127,6 +131,11 @@ class FIPS_PKCS1_Sign_Tests(unittest.TestCase):
         test_private_key = RSA.generate(1024)
         signer = pss.new(test_private_key)
         self.assertEqual(signer.can_sign(), True)
+
+
+class FIPS_PKCS1_Sign_Tests_KAT(unittest.TestCase):
+    pass
+
 
 test_vectors_sign  = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-PSS"),
                                  "SigGenPSS_186-2.txt",
@@ -160,7 +169,7 @@ for count, tv in enumerate(test_vectors_sign):
         signature = signer.sign(hash_obj)
         self.assertEqual(signature, result)
 
-    setattr(FIPS_PKCS1_Sign_Tests, "test_%d" % count, new_test)
+    setattr(FIPS_PKCS1_Sign_Tests_KAT, "test_%d" % count, new_test)
 
 
 class PKCS1_Legacy_Module_Tests(unittest.TestCase):
@@ -216,6 +225,11 @@ def get_tests(config={}):
     tests += list_test_cases(FIPS_PKCS1_Sign_Tests)
     tests += list_test_cases(PKCS1_Legacy_Module_Tests)
     tests += list_test_cases(PKCS1_All_Hashes_Tests)
+
+    if config.get('slow_tests'):
+        tests += list_test_cases(FIPS_PKCS1_Verify_Tests_KAT)
+        tests += list_test_cases(FIPS_PKCS1_Sign_Tests_KAT)
+
     return tests
 
 if __name__ == '__main__':

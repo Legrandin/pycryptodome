@@ -149,6 +149,8 @@ class FIPS_DSA_Tests(unittest.TestCase):
         signer = DSS.new(self.key_pub, 'fips-186-3')
         self.failIf(signer.can_sign())
 
+class FIPS_DSA_Tests_KAT(unittest.TestCase):
+    pass
 
 test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
                                  "FIPS_186_3_SigVer.rsp",
@@ -180,9 +182,9 @@ for idx, tv in enumerate(test_vectors_verify):
         self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
     if tv.result == 'p':
-        setattr(FIPS_DSA_Tests, "test_verify_positive_%d" % idx, positive_test)
+        setattr(FIPS_DSA_Tests_KAT, "test_verify_positive_%d" % idx, positive_test)
     else:
-        setattr(FIPS_DSA_Tests, "test_verify_negative_%d" % idx, negative_test)
+        setattr(FIPS_DSA_Tests_KAT, "test_verify_negative_%d" % idx, negative_test)
 
 
 test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "DSA"),
@@ -210,7 +212,7 @@ for idx, tv in enumerate(test_vectors_sign):
 
     def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
         self.assertEqual(signer.sign(hash_obj), signature)
-    setattr(FIPS_DSA_Tests, "test_sign_%d" % idx, new_test)
+    setattr(FIPS_DSA_Tests_KAT, "test_sign_%d" % idx, new_test)
 
 
 class FIPS_ECDSA_Tests(unittest.TestCase):
@@ -251,6 +253,10 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
         self.failIf(signer.can_sign())
 
 
+class FIPS_ECDSA_Tests_KAT(unittest.TestCase):
+    pass
+
+
 test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "ECDSA"),
                                  "SigVer.rsp",
                                  "ECDSA Signature Verification 186-3",
@@ -279,9 +285,9 @@ for idx, tv in enumerate(test_vectors_verify):
         self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
     if tv.result.startswith('p'):
-        setattr(FIPS_ECDSA_Tests, "test_verify_positive_%d" % idx, positive_test)
+        setattr(FIPS_ECDSA_Tests_KAT, "test_verify_positive_%d" % idx, positive_test)
     else:
-        setattr(FIPS_ECDSA_Tests, "test_verify_negative_%d" % idx, negative_test)
+        setattr(FIPS_ECDSA_Tests_KAT, "test_verify_negative_%d" % idx, negative_test)
 
 
 test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "ECDSA"),
@@ -304,7 +310,7 @@ for idx, tv in enumerate(test_vectors_sign):
 
     def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
         self.assertEqual(signer.sign(hash_obj), signature)
-    setattr(FIPS_ECDSA_Tests, "test_sign_%d" % idx, new_test)
+    setattr(FIPS_ECDSA_Tests_KAT, "test_sign_%d" % idx, new_test)
 
 
 class Det_DSA_Tests(unittest.TestCase):
@@ -696,6 +702,11 @@ def get_tests(config={}):
     tests += list_test_cases(FIPS_ECDSA_Tests)
     tests += list_test_cases(Det_DSA_Tests)
     tests += list_test_cases(Det_ECDSA_Tests)
+
+    if config.get('slow_tests'):
+        tests += list_test_cases(FIPS_DSA_Tests_KAT)
+        tests += list_test_cases(FIPS_ECDSA_Tests_KAT)
+
     return tests
 
 
