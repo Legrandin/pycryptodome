@@ -23,4 +23,8 @@
 from Crypto import SelfTest
 import sys
 
-SelfTest.run(stream=sys.stdout, verbosity=1, config= {'slow_tests' : False })
+slow_tests = not "--skip-slow-tests" in sys.argv
+if not slow_tests:
+    print "Skipping slow tests"
+
+SelfTest.run(stream=sys.stdout, verbosity=1, config= {'slow_tests' : slow_tests })
