@@ -23,5 +23,5 @@ done
 # Install packages and test
 for PYBIN in /opt/python/*/bin/; do
     "${PYBIN}/pip" install pycryptodome --no-index -f ${WH}
-    "${PYBIN}/python" -m Crypto.SelfTest
+    "${PYBIN}/python" -m Crypto.SelfTest --skip-slow-tests
 done
