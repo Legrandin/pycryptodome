@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e -x
 
+# Left-overs from previous builds may be binary incompatible
+rm -fr /io/build
+
 # Install a system package required by our library
 yum install -y gmp
 
