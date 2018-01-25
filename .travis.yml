@@ -1,10 +1,36 @@
 language: python
 dist: trusty
 sudo: required
+python:
+ - "2.6"
+ - "2.7"
+ - "3.3"
+ - "3.4"
+ - "3.5"
+ - "3.6"
+ - "3.7-dev"
+ - "pypy"
+ - "pypy3"
+env:
+ - CFFI=no
+ - CFFI=yes
 matrix:
-  include:
-  - python: 2.7
-    services: docker
+ exclude:
+ - python: pypy
+   env: CFFI=no
+ - python: pypy3
+   env: CFFI=no
+ include:
+ - python: 2.7
+   env: CFFI=no OLDPY=python2.4
+ - python: 2.7
+   env: CFFI=no OLDPY=python2.5
+ - python: 3.4
+   env: CFFI=no OLDPY=python3.2
+ - python: 3.4
+   env: CFFI=yes OLDPY=python3.2
+services:
+ - docker
 branches:
   except:
   - "/^.*-wip$/"
@@ -14,7 +40,6 @@ script:
 - travis/travis_script.sh
 after_success:
 - travis/travis_after_success.sh
-- ls wheelhouse/
 deploy:
   provider: s3
   access_key_id: AKIAISG4H2IJZLISXOPQ
@@ -25,5 +50,6 @@ deploy:
   skip_cleanup: true
   acl: public_read
   on:
+    condition: -d wheelhouse
     all_branches: true
     repo: Legrandin/pycryptodome
