@@ -21,7 +21,14 @@ for whl in ${WH}/*.whl; do
 done
 
 # Install packages and test
+if [ -f /io/.separate_namespace ]; then
+    PKG_NAME=pycryptodomex
+    NAMESPACE=Cryptodome
+else
+    PKG_NAME=pycryptodome
+    NAMESPACE=Crypto
+fi
 for PYBIN in /opt/python/*/bin/; do
-    "${PYBIN}/pip" install pycryptodome --no-index -f ${WH}
-    "${PYBIN}/python" -m Crypto.SelfTest --skip-slow-tests
+    "${PYBIN}/pip" install ${PKG_NAME} --no-index -f ${WH}
+    "${PYBIN}/python" -m ${NAMESPACE}.SelfTest --skip-slow-tests
 done
