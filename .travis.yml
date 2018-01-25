@@ -53,3 +53,4 @@ deploy:
     condition: -d wheelhouse
     all_branches: true
     repo: Legrandin/pycryptodome
+    tags: true
