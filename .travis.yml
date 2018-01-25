@@ -1,5 +1,6 @@
 language: python
 dist: trusty
+sudo: required
 python:
  - "2.6"
  - "2.7"
@@ -24,28 +25,32 @@ matrix:
    env: CFFI=no OLDPY=python2.4
  - python: 2.7
    env: CFFI=no OLDPY=python2.5
- - python: 2.7
  - python: 3.4
    env: CFFI=no OLDPY=python3.2
  - python: 3.4
    env: CFFI=yes OLDPY=python3.2
+services:
+ - docker
 branches:
- except:
-  - /^.*-wip$/
+  except:
+  - "/^.*-wip$/"
 install:
- - ./travis_install.sh
+- travis/travis_install.sh
 script:
- #- export PYTHONPATH=${PWD}/custom_packages
- - if [ x${OLDPY} == x ]; then export PYTHON=python; else export PYTHON=${OLDPY} PYTHONPATH=${PWD}/custom_packages; fi
- - echo ${PYTHON}
- - PYVERSION=$(${PYTHON} -V 2>&1)
- - echo ${PYVERSION}
- - ${PYTHON} -c "import cffi" 2>/dev/null && echo CFFI is installed || true
- - if [ x${CFFI} = "xyes" ]; then ${PYTHON} -c"import cffi"; fi
- - if [ x${CFFI} != "xyes" ]; then ! ${PYTHON} -c"import cffi" 2>/dev/null; fi
- - MAJOR=$(echo ${PYVERSION} | cut -f2 -d' ' | cut -f1 -d'.')
- - if [ "${MAJOR}" -ge 3 ]; then xflags="$xflags -bb" ; fi
- - if [[ ${PYVERSION} != *"PyPy"* ]] || [ "${MAJOR}" -lt 3 ]; then xflags="$xflags -tt"; fi
- - echo "Custom Python flags:" \"${xflags:-none}\"
- - ${PYTHON} $xflags setup.py build
- - ${PYTHON} $xflags setup.py test
+- travis/travis_script.sh
+after_success:
+- travis/travis_after_success.sh
+deploy:
+  provider: s3
+  access_key_id: AKIAISG4H2IJZLISXOPQ
+  secret_access_key:
+    secure: DAuc3n+JLxlBmCLgQuLSXwIRHropTVK/TWj3jD99aB1+Bzy5CpmPtXyR3DGltGF2Bum52xcRM8dLFktinFkMqKF7UKZRGNwEey07Nhen94AGjkLomeEM0SRRjVP6T8RqLBK+buNcoRqiFTNM+JlW5ndY6Wy+kFaan+qk3UNz570=
+  bucket: pycryptodome-releases
+  local_dir: wheelhouse
+  skip_cleanup: true
+  acl: public_read
+  on:
+    condition: -d wheelhouse
+    all_branches: true
+    repo: Legrandin/pycryptodome
+    tags: true

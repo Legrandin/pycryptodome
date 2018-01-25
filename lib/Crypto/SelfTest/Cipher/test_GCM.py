@@ -649,7 +649,8 @@ def get_tests(config={}):
     tests += list_test_cases(GcmFSMTests)
     tests += [TestVectors()]
     tests += list_test_cases(TestVectorsGueronKrasnov)
-    tests += list_test_cases(NISTTestVectorsGCM)
+    if config.get('slow_tests'):
+        tests += list_test_cases(NISTTestVectorsGCM)
     return tests
 
 

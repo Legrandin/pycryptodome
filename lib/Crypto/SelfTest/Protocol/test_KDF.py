@@ -70,56 +70,50 @@ class PBKDF2_Tests(unittest.TestCase):
     #       Item #1: salt (encoded in hex)
     #       Item #2: output key length
     #       Item #3: iterations to use
-    #       Item #4: expected result (encoded in hex)
+    #       Item #4: hash module
+    #       Item #5: expected result (encoded in hex)
     _testData = (
             # From http://www.di-mgt.com.au/cryptoKDFs.html#examplespbkdf
-            ("password","78578E5A5D63CB06",24,2048,"BFDE6BE94DF7E11DD409BCE20A0255EC327CB936FFE93643"),
+            ("password","78578E5A5D63CB06",24,2048,     SHA1, "BFDE6BE94DF7E11DD409BCE20A0255EC327CB936FFE93643"),
             # From RFC 6050
-            ("password","73616c74", 20, 1,          "0c60c80f961f0e71f3a9b524af6012062fe037a6"),
-            ("password","73616c74", 20, 2,          "ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957"),
-            ("password","73616c74", 20, 4096,       "4b007901b765489abead49d926f721d065a429c1"),
+            ("password","73616c74", 20, 1,              SHA1, "0c60c80f961f0e71f3a9b524af6012062fe037a6"),
+            ("password","73616c74", 20, 2,              SHA1, "ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957"),
+            ("password","73616c74", 20, 4096,           SHA1, "4b007901b765489abead49d926f721d065a429c1"),
             ("passwordPASSWORDpassword","73616c7453414c5473616c7453414c5473616c7453414c5473616c7453414c5473616c74",
-                                    25, 4096,       "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038"),
-            ( 'pass\x00word',"7361006c74",16,4096,  "56fa6aa75548099dcc37d7f03425e0c3"),
-    )
+                                    25, 4096,           SHA1, "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038"),
+            ( 'pass\x00word',"7361006c74",16,4096,      SHA1, "56fa6aa75548099dcc37d7f03425e0c3"),
+            # From draft-josefsson-scrypt-kdf-01, Chapter 10
+            ( 'passwd', '73616c74', 64, 1,              SHA256, "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783"),
+            ( 'Password', '4e61436c', 64, 80000,        SHA256, "4ddcd8f60b98be21830cee5ef22701f9641a4418d04c0414aeff08876b34ab56a1d425a1225833549adb841b51c9b3176a272bdebba1d078478f62b397f33c8d"),
+        )
 
     def test1(self):
         # Test only for HMAC-SHA1 as PRF
 
-        def prf(p,s):
+        def prf_SHA1(p,s):
             return HMAC.new(p,s,SHA1).digest()
+
+        def prf_SHA256(p,s):
+            return HMAC.new(p,s,SHA256).digest()
 
         for i in xrange(len(self._testData)):
             v = self._testData[i]
-            res  = PBKDF2(v[0], t2b(v[1]), v[2], v[3])
-            res2 = PBKDF2(v[0], t2b(v[1]), v[2], v[3], prf)
-            self.assertEqual(res, t2b(v[4]))
-            self.assertEqual(res, res2)
+            password = v[0]
+            salt = t2b(v[1])
+            out_len = v[2]
+            iters = v[3]
+            hash_mod = v[4]
+            expected = t2b(v[5])
 
-    def test2(self):
-        """From draft-josefsson-scrypt-kdf-01, Chapter 10"""
+            if hash_mod is SHA1:
+                res = PBKDF2(password, salt, out_len, iters)
+                self.assertEqual(res, expected)
 
-        output_1 = t2b("""
-        55 ac 04 6e 56 e3 08 9f ec 16 91 c2 25 44 b6 05
-        f9 41 85 21 6d de 04 65 e6 8b 9d 57 c2 0d ac bc
-        49 ca 9c cc f1 79 b6 45 99 16 64 b3 9d 77 ef 31
-        7c 71 b8 45 b1 e3 0b d5 09 11 20 41 d3 a1 97 83
-        """)
-
-        output_2 = t2b("""
-        4d dc d8 f6 0b 98 be 21 83 0c ee 5e f2 27 01 f9
-        64 1a 44 18 d0 4c 04 14 ae ff 08 87 6b 34 ab 56
-        a1 d4 25 a1 22 58 33 54 9a db 84 1b 51 c9 b3 17
-        6a 27 2b de bb a1 d0 78 47 8f 62 b3 97 f3 3c 8d
-        """)
-
-        prf_hmac_sha256 = lambda p, s: HMAC.new(p, s, SHA256).digest()
-
-        output = PBKDF2(b("passwd"), b("salt"), 64, 1, prf=prf_hmac_sha256)
-        self.assertEqual(output, output_1)
-
-        output = PBKDF2(b("Password"), b("NaCl"), 64, 80000, prf=prf_hmac_sha256)
-        self.assertEqual(output, output_2)
+                res = PBKDF2(password, salt, out_len, iters, prf_SHA1)
+                self.assertEqual(res, expected)
+            else:
+                res = PBKDF2(password, salt, out_len, iters, prf_SHA256)
+                self.assertEqual(res, expected)
 
 
 class S2V_Tests(unittest.TestCase):
@@ -416,12 +410,18 @@ class scrypt_Tests(unittest.TestCase):
 
 
 def get_tests(config={}):
+
+    if not config.get('slow_tests'):
+        PBKDF2_Tests._testData = PBKDF2_Tests._testData[:3]
+        scrypt_Tests.data = scrypt_Tests.data[:3]
+
     tests = []
     tests += list_test_cases(PBKDF1_Tests)
     tests += list_test_cases(PBKDF2_Tests)
     tests += list_test_cases(S2V_Tests)
     tests += list_test_cases(HKDF_Tests)
     tests += list_test_cases(scrypt_Tests)
+
     return tests
 
 if __name__ == '__main__':

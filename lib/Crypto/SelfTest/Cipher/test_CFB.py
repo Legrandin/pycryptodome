@@ -391,7 +391,8 @@ class SP800TestVectors(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(CfbTests)
-    tests += list_test_cases(NistCfbVectors)
+    if config.get('slow_tests'):
+        tests += list_test_cases(NistCfbVectors)
     tests += list_test_cases(SP800TestVectors)
     return tests
 

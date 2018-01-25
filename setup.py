@@ -272,6 +272,10 @@ class PCTBuildExt (build_ext):
             PrintErr("Deleting directory %s" % crypto_dir)
             shutil.rmtree(crypto_dir)
 
+    # Avoid linking Python's dynamic library
+    def get_libraries(self, ext):
+        return []
+
     def build_extensions(self):
         # Disable any assembly in libtomcrypt files
         self.compiler.define_macro("LTC_NO_ASM")
