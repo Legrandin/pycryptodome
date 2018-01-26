@@ -256,7 +256,6 @@ def rename_crypto_dir(build_lib):
                 change_module_name(full_file_name_dst)
 
 
-
 class PCTBuildExt (build_ext):
 
     aesni_mod_names = "Crypto.Cipher._raw_aesni",
@@ -475,6 +474,26 @@ class TestCommand(Command):
 
     sub_commands = [ ('build', None) ]
 
+
+class InstallLibCommand(install_lib):
+
+    # Return the list of installed files
+    def get_outputs(self):
+        res = install_lib.get_outputs(self)
+
+        if not use_separate_namespace:
+            return res
+
+        res2 = []
+        for full_fn in res:
+            if full_fn.startswith(self.install_dir):
+                partial_fn = full_fn[len(self.install_dir):].replace("Crypto","Cryptodome")
+                res2.append(self.install_dir + partial_fn)
+            else:
+                res2.append(full_fn)
+        return res2
+
+
 if system_bits == 32:
     multiply_cmod = [ 'src/multiply_32.c' ]
 else:
@@ -558,7 +577,8 @@ setup(
     cmdclass = {
         'build_ext':PCTBuildExt,
         'build_py': PCTBuildPy,
-        'test': TestCommand
+        'test': TestCommand,
+        'install_lib' : InstallLibCommand,
         },
     ext_modules = [
         # Hash functions
