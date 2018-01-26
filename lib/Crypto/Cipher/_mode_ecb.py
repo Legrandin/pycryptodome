@@ -121,6 +121,8 @@ class EcbMode(object):
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
+            if result == 3:
+                raise ValueError("Data must be aligned to block boundary in ECB mode")
             raise ValueError("Error %d while encrypting in ECB mode" % result)
         return get_raw_buffer(ciphertext)
 
@@ -157,6 +159,8 @@ class EcbMode(object):
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:
+            if result == 3:
+                raise ValueError("Data must be aligned to block boundary in ECB mode")
             raise ValueError("Error %d while decrypting in ECB mode" % result)
         return get_raw_buffer(plaintext)
 

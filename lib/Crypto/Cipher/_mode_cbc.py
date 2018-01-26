@@ -164,6 +164,8 @@ class CbcMode(object):
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
+            if result == 3:
+                raise ValueError("Data must be padded to %d byte boundary in CBC mode" % self.block_size)
             raise ValueError("Error %d while encrypting in CBC mode" % result)
         return get_raw_buffer(ciphertext)
 
@@ -206,6 +208,8 @@ class CbcMode(object):
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:
+            if result == 3:
+                raise ValueError("Data must be padded to %d byte boundary in CBC mode" % self.block_size)
             raise ValueError("Error %d while decrypting in CBC mode" % result)
         return get_raw_buffer(plaintext)
 
