@@ -19,6 +19,8 @@ Resolved issues
 
 * The DSA parameter 'p' prime was created with 255 bits cleared
   (but still with the correct strength).
+* GH#109. ECDSA verification failed for DER encoded signatures.
+  Thanks to Alastair Houghton.
 
 
 3.4.7 (26 August 2017)
