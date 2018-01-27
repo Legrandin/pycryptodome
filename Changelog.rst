@@ -1,8 +1,8 @@
 Changelog
 =========
 
-X.X.X (...)
-+++++++++++
+3.4.8 (27 January 2018)
++++++++++++++++++++++++
 
 New features
 ------------
@@ -13,15 +13,19 @@ New features
   The custom  modular exponentiation is 130% (160%) slower on an Intel CPU in 32-bit (64-bit) mode,
   compared to MPIR. Still, that is much faster that CPython's own `pow()` function which
   is 900% (855%) slower than MPIR. Support for the GMP library on Unix remains.
+* Added support for *manylinux* wheels.
+* Support for Python 3.7.
 
 Resolved issues
 ---------------
 
 * The DSA parameter 'p' prime was created with 255 bits cleared
   (but still with the correct strength).
+* GH#106. Not all docs were included in the tar ball.
+  Thanks to Christopher Hoskin.
 * GH#109. ECDSA verification failed for DER encoded signatures.
   Thanks to Alastair Houghton.
-
+* Human-friendly messages for padding errors with ECB and CBC.
 
 3.4.7 (26 August 2017)
 ++++++++++++++++++++++
