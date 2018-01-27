@@ -1,10 +1,10 @@
 Installation
 ------------
 
-The installation procedure depends on the package you want the library in.
+The installation procedure depends on the package you want the library to be in.
 PyCryptodome can be used as:
 
- #. **a drop-in replacement for the old PyCrypto library**.
+ #. **an almost drop-in replacement for the old PyCrypto library**.
     You install it with::
 
         pip install pycryptodome
@@ -36,12 +36,12 @@ The procedures below go a bit more in detail, by explaining
 how to setup the environment for compiling the C extensions
 for each OS, and how to install the GMP library.
 
-All instructions to follow install PyCryptodome as the ``Cryptodome`` package
-(option #2). Change ``pycryptodomex`` to ``pycryptodome`` if you prefer
-option #1 (``Crypto`` package).
+Compiling in Linux Ubuntu
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Linux Ubuntu
-~~~~~~~~~~~~
+.. note::
+    If you want to install under the ``Crypto`` package, replace
+    below ``pycryptodomex`` with ``pycryptodome``.
 
 For Python 2.x::
 
@@ -61,8 +61,12 @@ For PyPy::
         $ pip install pycryptodomex
         $ pypy -m Cryptodome.SelfTest
 
-Linux Fedora
-~~~~~~~~~~~~
+Compiling in Linux Fedora
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+    If you want to install under the ``Crypto`` package, replace
+    below ``pycryptodomex`` with ``pycryptodome``.
 
 For Python 2.x::
 
@@ -82,19 +86,12 @@ For PyPy::
         $ pip install pycryptodomex
         $ pypy -m Cryptodome.SelfTest
 
-Windows (pre-compiled)
-~~~~~~~~~~~~~~~~~~~~~~
-
-#. Install PyCryptodome as a `wheel <http://pythonwheels.com/>`_::
-
-        > pip install pycryptodomex
-
-#. To make sure everything works fine, run the test suite::
-
-        > python -m Cryptodome.SelfTest
-
 Windows (from sources, Python 2.x, Python <=3.2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+    If you want to install under the ``Crypto`` package, replace
+    below ``pycryptodomex`` with ``pycryptodome``.
 
 Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *Pycryptodome* extensions from
@@ -141,6 +138,10 @@ components freely made available by Microsoft.
 Windows (from sources, Python 3.3 and 3.4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+    If you want to install under the ``Crypto`` package, replace
+    below ``pycryptodomex`` with ``pycryptodome``.
+
 Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *Pycryptodome* extensions from
 source code is to install the minimum set of Visual Studio
@@ -186,6 +187,10 @@ components freely made available by Microsoft.
 Windows (from sources, Python 3.5 and newer)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+    If you want to install under the ``Crypto`` package, replace
+    below ``pycryptodomex`` with ``pycryptodome``.
+
 Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *PyCryptodome* extensions from
 source code is to install the minimum set of Visual Studio
@@ -194,10 +199,13 @@ components freely made available by Microsoft.
 #. **[Once only]** Download `MS Visual Studio 2015 <https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx>`_
    (Community Edition) and install the C/C++ compilers and the redistributable only.
 
-#. Perform all steps from the section *Windows (pre-compiled)* but add the ``--no-use-wheel``
-   parameter when calling ``pip``::
+#. Compile and install PyCryptodome::
 
         > pip install pycryptodomex --no-use-wheel
+
+#. To make sure everything work fine, run the test suite::
+
+        > python -m Cryptodome.SelfTest
 
 Documentation
 ~~~~~~~~~~~~~

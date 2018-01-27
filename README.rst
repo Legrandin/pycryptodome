@@ -12,10 +12,10 @@ cryptographic primitives.
 
 It supports Python 2.4 or newer, all Python 3 versions and PyPy.
 
-The installation procedure depends on the package you want the library in.
+The installation procedure depends on the package you want the library to be in.
 PyCryptodome can be used as:
 
-#. **a drop-in replacement for the old PyCrypto library**.
+#. **an almost drop-in replacement for the old PyCrypto library**.
    You install it with::
 
        pip install pycryptodome
