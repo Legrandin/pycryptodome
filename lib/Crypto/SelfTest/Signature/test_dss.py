@@ -131,7 +131,7 @@ class FIPS_DSA_Tests(unittest.TestCase):
         signer = DSS.new(self.key_priv, 'fips-186-3', 'der')
         signature = signer.sign(hash_obj)
 
-        # Verify that output looks like a SEQUENCE
+        # Verify that output looks like a DER SEQUENCE
         self.assertEqual(bord(signature[0]), 48)
         signer.verify(hash_obj, signature)
 
@@ -251,6 +251,31 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
 
         signer = DSS.new(self.key_pub, 'fips-186-3')
         self.failIf(signer.can_sign())
+
+    def test_negative_unknown_modes_encodings(self):
+        """Verify that unknown modes/encodings are rejected"""
+
+        self.description = "Unknown mode test"
+        self.assertRaises(ValueError, DSS.new, self.key_priv, 'fips-186-0')
+
+        self.description = "Unknown encoding test"
+        self.assertRaises(ValueError, DSS.new, self.key_priv, 'fips-186-3', 'xml')
+
+    def test_asn1_encoding(self):
+        """Verify ASN.1 encoding"""
+
+        self.description = "ASN.1 encoding test"
+        hash_obj = SHA256.new()
+        signer = DSS.new(self.key_priv, 'fips-186-3', 'der')
+        signature = signer.sign(hash_obj)
+
+        # Verify that output looks like a DER SEQUENCE
+        self.assertEqual(bord(signature[0]), 48)
+        signer.verify(hash_obj, signature)
+
+        # Verify that ASN.1 parsing fails as expected
+        signature = bchr(7) + signature[1:]
+        self.assertRaises(ValueError, signer.verify, hash_obj, signature)
 
 
 class FIPS_ECDSA_Tests_KAT(unittest.TestCase):
