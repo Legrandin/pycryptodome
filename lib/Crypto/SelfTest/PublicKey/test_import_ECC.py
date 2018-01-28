@@ -380,6 +380,23 @@ class TestExport(unittest.TestCase):
         self.assertRaises(ValueError, ref_private.export_key, format="OpenSSH",
                                       passphrase="secret")
 
+    def test_unsupported_curve(self):
+
+        # openssl ecparam -name secp224r1 -genkey -noout -out strange-curve.pem -conv_form uncompressed
+        curve = """-----BEGIN EC PRIVATE KEY-----
+MGgCAQEEHEi7xTHW+5oT8wgpjoEKV7uwMuY8rt2YUZe4j1SgBwYFK4EEACGhPAM6
+AATJgfOG+Bnki8robpNM8MtArji43GU9up4B0x9sVhqB+fZP+hXgV9ITN7YX4E/k
+gVnJp9EBND/tHQ==
+-----END EC PRIVATE KEY-----"""
+
+        from Crypto.PublicKey.ECC import UnsupportedEccFeature
+        try:
+            ECC.import_key(curve)
+        except UnsupportedEccFeature, uef:
+            assert("1.3.132.0.33" in str(uef))
+        else:
+            assert(False)
+
 
 def get_tests(config={}):
     tests = []

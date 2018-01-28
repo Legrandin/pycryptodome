@@ -57,6 +57,10 @@ _curve.names = ("P-256", "prime256v1", "secp256r1")
 _curve.oid = "1.2.840.10045.3.1.7"
 
 
+class UnsupportedEccFeature(ValueError):
+    pass
+
+
 class EccPoint(object):
     """A class to abstract a point over an Elliptic Curve.
 
@@ -601,14 +605,14 @@ def _import_public_der(curve_name, publickey):
 
     # We only support P-256 named curves for now
     if curve_name != _curve.oid:
-        raise ValueError("Unsupport curve")
+        raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_name)
 
     # ECPoint ::= OCTET STRING
 
     # We support only uncompressed points
     order_bytes = _curve.order.size_in_bytes()
     if len(publickey) != (1 + 2 * order_bytes) or bord(publickey[0]) != 4:
-        raise ValueError("Only uncompressed points are supported")
+        raise UnsupportedEccFeature("Only uncompressed points are supported")
 
     point_x = Integer.from_bytes(publickey[1:order_bytes+1])
     point_y = Integer.from_bytes(publickey[order_bytes+1:])
@@ -625,7 +629,7 @@ def _import_subjectPublicKeyInfo(encoded, *kwargs):
     ecmqv_oid = "1.3.132.1.13"
 
     if oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid) or not params:
-        raise ValueError("Invalid ECC OID")
+        raise UnsupportedEccFeature("Unsupported ECC purpose (OID: %s)" % oid)
 
     # ECParameters ::= CHOICE {
     #   namedCurve         OBJECT IDENTIFIER
@@ -650,19 +654,19 @@ def _import_private_der(encoded, passphrase, curve_name=None):
     if private_key[0] != 1:
         raise ValueError("Incorrect ECC private key version")
 
-    scalar_bytes = DerOctetString().decode(private_key[1]).payload
-    order_bytes = _curve.order.size_in_bytes()
-    if len(scalar_bytes) != order_bytes:
-        raise ValueError("Private key is too small")
-    d = Integer.from_bytes(scalar_bytes)
-
     try:
         curve_name = DerObjectId(explicit=0).decode(private_key[2]).value
     except ValueError:
         pass
 
     if curve_name != _curve.oid:
-        raise ValueError("Unsupport curve")
+        raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_name)
+
+    scalar_bytes = DerOctetString().decode(private_key[1]).payload
+    order_bytes = _curve.order.size_in_bytes()
+    if len(scalar_bytes) != order_bytes:
+        raise ValueError("Private key is too small")
+    d = Integer.from_bytes(scalar_bytes)
 
     # Decode public key (if any, it must be P-256)
     if len(private_key) == 4:
@@ -694,7 +698,7 @@ def _import_pkcs8(encoded, passphrase):
     ecmqv_oid = "1.3.132.1.13"
 
     if algo_oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid):
-        raise ValueError("No PKCS#8 encoded ECC key")
+        raise UnsupportedEccFeature("Unsupported ECC purpose (OID: %s)" % oid)
 
     curve_name = DerObjectId().decode(params).value
 
@@ -719,6 +723,8 @@ def _import_der(encoded, passphrase):
     for decoding in decodings:
         try:
             return decoding(encoded, passphrase)
+        except UnsupportedEccFeature, uef:
+            raise uef
         except (ValueError, TypeError, IndexError):
             pass
 
@@ -789,7 +795,13 @@ def import_key(encoded, passphrase=None):
         der_encoded, marker, enc_flag = PEM.decode(tostr(encoded), passphrase)
         if enc_flag:
             passphrase = None
-        return _import_der(der_encoded, passphrase)
+        try:
+            result = _import_der(der_encoded, passphrase)
+        except UnsupportedEccFeature, uef:
+            raise uef
+        except ValueError:
+            raise ValueError("Invalid DER encoding inside the PEM file")
+        return result
 
     # OpenSSH
     if encoded.startswith(b('ecdsa-sha2-')):
