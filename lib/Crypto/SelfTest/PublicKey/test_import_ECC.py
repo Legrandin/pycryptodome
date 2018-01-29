@@ -397,6 +397,16 @@ gVnJp9EBND/tHQ==
         else:
             assert(False)
 
+    def test_compressed_curve(self):
+
+        # Compressed P-256 curve
+        curve = """-----BEGIN EC PRIVATE KEY-----
+        MFcCAQEEIHTuc09jC51xXomV6MVCDN+DpAAvSmaJWZPTEHM6D5H1oAoGCCqGSM49
+        AwEHoSQDIgACWFuGbHe8yJ43rir7PMTE9w8vHz0BSpXHq90Xi7/s+a0=
+        -----END EC PRIVATE KEY-----"""
+
+        ECC.import_key(curve)
+
 
 def get_tests(config={}):
     tests = []
