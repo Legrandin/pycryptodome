@@ -71,7 +71,8 @@ All the code can be downloaded from `GitHub`_.
 News
 ----
 
-* **27 Jan 2018 (NEW)**. Bugfix release 3.4.8.
+* **1 Feb 2018 (NEW)**. Bugfix release 3.4.9.
+* 27 Jan 2018. Bugfix release 3.4.8.
 * 26 Aug 2017. Bugfix release 3.4.7.
 * 17 May 2017. Bugfix release 3.4.6.
 * 6 Feb 2017. Bugfix release 3.4.5.

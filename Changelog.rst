@@ -1,8 +1,19 @@
 Changelog
 =========
 
-4.0.0 (???)
+3.4.9 (1 February 2018)
 +++++++++++++++++++++++
+
+New features
+------------
+* More meaningful error messages while importing an ECC key.
+
+Resolved issues
+---------------
+
+* GH#123 and #125. The SSE2 command line switch was not always passed on 32-bit x86 platforms.
+* GH#121. The record list (--record) was not always correctly filled for the
+  pycryptodomex package. Thanks to John W. O'Brien.
 
 3.4.8 (27 January 2018)
 +++++++++++++++++++++++
