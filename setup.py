@@ -122,8 +122,6 @@ except ImportError:
     # Python 2
     from distutils.command.build_py import build_py
 
-system_bits = 8 * struct.calcsize("P")
-
 # Work around the print / print() issue with Python 2.x and 3.x. We only need
 # to print at one point of the code, which makes this easy
 def PrintErr(*args, **kwd):
@@ -331,6 +329,8 @@ class PCTBuildExt (build_ext):
         """
         if test_compilation(source, extra_cc_options=['-msse2'], msg="x86intrin.h header"):
             self.compiler.define_macro("HAVE_X86INTRIN_H")
+            for x in self.extensions:
+                x.extra_compile_args += ['-msse2']
             return True
         else:
             return False
@@ -494,14 +494,11 @@ class InstallLibCommand(install_lib):
         return res2
 
 
+system_bits = 8 * struct.calcsize("P")
 if system_bits == 32:
     multiply_cmod = [ 'src/multiply_32.c' ]
 else:
     multiply_cmod = [ 'src/multiply_64.c' ]
-
-extra_compile_args = None
-if platform.machine() == 'i686':
-    extra_compile_args = ['-msse2']
 
 setup(
     name = project_name,
@@ -687,7 +684,6 @@ setup(
         Extension("Crypto.Math._montgomery",
             include_dirs=['src/'],
             sources=['src/montgomery.c', 'src/siphash.c', 'src/montgomery_utils.c'] + multiply_cmod,
-            extra_compile_args=extra_compile_args,
             ),
 
         ]
