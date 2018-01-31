@@ -484,6 +484,24 @@ class InstallLibCommand(install_lib):
         if not use_separate_namespace:
             return res
 
+        # On some older distutils, the compiled objects are not included
+        # if they don't exist on the filesystem (which is not a check
+        # get_outputs() should do)
+        def norm(filename):
+            return os.path.normcase(out_file)
+
+        pure_outputs = []
+        for out_file in res:
+            out_file_norm = norm(out_file)
+            if out_file_norm.endswith('.py'):
+                pure_outputs.append(out_file_norm)
+
+        if self.compile and not [ pyc for pyc in res if norm(out_file).endswith('.pyc') ]:
+            res.extend([ (pure_py + 'c') for pure_py in pure_outputs ])
+        if self.optimize > 0 and not [ pyo for pyo in res if norm(out_file).endswith('.pyo') ]:
+            res.extend([ (pure_py + 'o') for pure_py in pure_outputs ])
+        # ---- end of fix ----
+
         res2 = []
         for full_fn in res:
             if full_fn.startswith(self.install_dir):
