@@ -7,7 +7,15 @@ rm -fr /io/build
 # Install a system package required by our library
 yum install -y gmp
 
-WH=/io/wheelhouse/$(uname -p)
+if [ -f /io/.separate_namespace ]; then
+    PKG_NAME=pycryptodomex
+    NAMESPACE=Cryptodome
+else
+    PKG_NAME=pycryptodome
+    NAMESPACE=Crypto
+fi
+
+WH=/io/wheelhouse/${PACKAGE_NAME}/$(uname -p)
 
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
@@ -21,13 +29,6 @@ for whl in ${WH}/*.whl; do
 done
 
 # Install packages and test
-if [ -f /io/.separate_namespace ]; then
-    PKG_NAME=pycryptodomex
-    NAMESPACE=Cryptodome
-else
-    PKG_NAME=pycryptodome
-    NAMESPACE=Crypto
-fi
 for PYBIN in /opt/python/*/bin/; do
     "${PYBIN}/pip" install ${PKG_NAME} --no-index -f ${WH}
     "${PYBIN}/python" -m ${NAMESPACE}.SelfTest --skip-slow-tests
