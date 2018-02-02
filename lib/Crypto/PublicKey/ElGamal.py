@@ -58,33 +58,33 @@ def generate(bits, randfunc):
     q = (obj.p - 1) >> 1
 
     # Generate generator g
-    # See Algorithm 4.80 in Handbook of Applied Cryptography
-    # Note that the order of the group is n=p-1=2q, where q is prime
     while 1:
+        # Choose a square residue; it will generate a cyclic group of order q.
+        obj.g = pow(Integer.random_range(min_inclusive=2,
+                                     max_exclusive=obj.p,
+                                     randfunc=randfunc), 2, obj.p)
+
         # We must avoid g=2 because of Bleichenbacher's attack described
         # in "Generating ElGamal signatures without knowning the secret key",
         # 1996
-        #
-        obj.g = Integer.random_range(min_inclusive=3,
-                                     max_exclusive=obj.p,
-                                     randfunc=randfunc)
-        safe = 1
-        if pow(obj.g, 2, obj.p)==1:
-            safe=0
-        if safe and pow(obj.g, q, obj.p)==1:
-            safe=0
+        if obj.g in (1, 2):
+            continue
+
         # Discard g if it divides p-1 because of the attack described
         # in Note 11.67 (iii) in HAC
-        if safe and (obj.p-1) % obj.g == 0:
-            safe=0
+        if (obj.p - 1) % obj.g == 0:
+            continue
+
         # g^{-1} must not divide p-1 because of Khadir's attack
         # described in "Conditions of the generator for forging ElGamal
         # signature", 2011
         ginv = obj.g.inverse(obj.p)
-        if safe and (obj.p-1) % ginv == 0:
-            safe=0
-        if safe:
-            break
+        if (obj.p - 1) % ginv == 0:
+            continue
+
+        # Found
+        break
+
     # Generate private key x
     obj.x = Integer.random_range(min_inclusive=2,
                                  max_exclusive=obj.p-1,

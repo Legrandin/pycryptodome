@@ -1,6 +1,16 @@
 Changelog
 =========
 
+3.4.10 (2 February 2018)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* When creating ElGamal keys, the generator wasn't a square residue:
+  ElGamal encryption was not secure under the DDH assumption.
+  Thanks to Weikeng Chen.
+
 3.4.9 (1 February 2018)
 +++++++++++++++++++++++
 
