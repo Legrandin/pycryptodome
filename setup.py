@@ -26,11 +26,14 @@ except ImportError:
     from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
 from distutils.command.build import build
-from distutils.command.install_lib import install_lib
 from distutils.errors import CCompilerError
 import distutils
 import platform
-import re, os, sys, shutil, struct
+import re
+import os
+import sys
+import shutil
+import struct
 
 use_separate_namespace = os.path.isfile(".separate_namespace")
 
@@ -112,8 +115,8 @@ if version_tuple[2] is not None:
     version_string += str(version_tuple[2])
 
 if sys.version[0:1] == '1':
-    raise RuntimeError ("The Python Cryptography Toolkit requires "
-                         "Python 2.x or 3.x to build.")
+    raise RuntimeError("The Python Cryptography Toolkit requires "
+                       "Python 2.x or 3.x to build.")
 
 try:
     # Python 3
@@ -121,6 +124,7 @@ try:
 except ImportError:
     # Python 2
     from distutils.command.build_py import build_py
+
 
 # Work around the print / print() issue with Python 2.x and 3.x. We only need
 # to print at one point of the code, which makes this easy
@@ -154,7 +158,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
     # Mute the compiler and the linker
     if msg:
         PrintErr("Testing support for %s" % msg)
-    if not (debug or os.name=='nt'):
+    if not (debug or os.name == 'nt'):
         old_stdout = os.dup(sys.stdout.fileno())
         old_stderr = os.dup(sys.stderr.fileno())
         dev_null = open(os.devnull, "w")
@@ -201,73 +205,10 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
 
     return result
 
-def change_module_name(file_name):
-    """Change any occurrance of 'Crypto' to 'Cryptodome'."""
-
-    fd = open(file_name, "rt")
-    content = (fd.read().
-               replace("Crypto.", "Cryptodome.").
-               replace("Crypto ", "Cryptodome ").
-               replace("'Crypto'", "'Cryptodome'").
-               replace('"Crypto"', '"Cryptodome"'))
-    fd.close()
-
-    os.remove(file_name)
-
-    fd = open(file_name, "wt")
-    fd.write(content)
-    fd.close()
-
-
-def rename_crypto_dir(build_lib):
-    """Move all files from the 'Crypto' package to the
-    'Cryptodome' package in the given build directory"""
-
-    source = os.path.join(build_lib, "Crypto")
-    target = os.path.join(build_lib, "Cryptodome")
-
-    if not os.path.exists(target):
-        PrintErr("Creating directory %s" % target)
-        os.makedirs(target)
-    else:
-        PrintErr("Directory %s already exists" % target)
-
-    # Crypto package becomes Cryptodome
-    for root_src, dirs, files in os.walk(source):
-
-        root_dst, nr_repl = re.subn('Crypto', 'Cryptodome', root_src)
-        assert nr_repl == 1
-
-        for dir_name in dirs:
-            full_dir_name_dst = os.path.join(root_dst, dir_name)
-            if not os.path.exists(full_dir_name_dst):
-                os.makedirs(full_dir_name_dst)
-
-        for file_name in files:
-            full_file_name_src = os.path.join(root_src, file_name)
-            full_file_name_dst = os.path.join(root_dst, file_name)
-
-            PrintErr("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
-            shutil.copy2(full_file_name_src, full_file_name_dst)
-
-            if file_name.endswith(".py"):
-                change_module_name(full_file_name_dst)
-
 
 class PCTBuildExt (build_ext):
 
-    aesni_mod_names = "Crypto.Cipher._raw_aesni",
-
-    def run(self):
-        build_ext.run(self)
-
-        if use_separate_namespace:
-            rename_crypto_dir(self.build_lib)
-
-            # Clean-up (extensions are built last)
-            crypto_dir = os.path.join(self.build_lib, "Crypto")
-            PrintErr("Deleting directory %s" % crypto_dir)
-            shutil.rmtree(crypto_dir)
+    aesni_mod_names = package_root + ".Cipher._raw_aesni",
 
     # Avoid linking Python's dynamic library
     def get_libraries(self, ext):
@@ -402,11 +343,6 @@ class PCTBuildPy(build_py):
             retval.append(item)
         return retval
 
-    def run(self):
-        build_py.run(self)
-        if use_separate_namespace:
-            rename_crypto_dir(self.build_lib)
-
 
 class TestCommand(Command):
 
@@ -475,48 +411,220 @@ class TestCommand(Command):
     sub_commands = [ ('build', None) ]
 
 
-class InstallLibCommand(install_lib):
-
-    # Return the list of installed files
-    def get_outputs(self):
-        res = install_lib.get_outputs(self)
-
-        if not use_separate_namespace:
-            return res
-
-        # On some older distutils, the compiled objects are not included
-        # if they don't exist on the filesystem (which is not a check
-        # get_outputs() should do)
-        def norm(filename):
-            return os.path.normcase(out_file)
-
-        pure_outputs = []
-        for out_file in res:
-            out_file_norm = norm(out_file)
-            if out_file_norm.endswith('.py'):
-                pure_outputs.append(out_file_norm)
-
-        if self.compile and not [ pyc for pyc in res if norm(out_file).endswith('.pyc') ]:
-            res.extend([ (pure_py + 'c') for pure_py in pure_outputs ])
-        if self.optimize > 0 and not [ pyo for pyo in res if norm(out_file).endswith('.pyo') ]:
-            res.extend([ (pure_py + 'o') for pure_py in pure_outputs ])
-        # ---- end of fix ----
-
-        res2 = []
-        for full_fn in res:
-            if full_fn.startswith(self.install_dir):
-                partial_fn = full_fn[len(self.install_dir):].replace("Crypto","Cryptodome")
-                res2.append(self.install_dir + partial_fn)
-            else:
-                res2.append(full_fn)
-        return res2
-
+# Parameters for setup
+packages =  [
+    "Crypto",
+    "Crypto.Cipher",
+    "Crypto.Hash",
+    "Crypto.IO",
+    "Crypto.PublicKey",
+    "Crypto.Protocol",
+    "Crypto.Random",
+    "Crypto.Signature",
+    "Crypto.Util",
+    "Crypto.Math",
+    "Crypto.SelfTest",
+    "Crypto.SelfTest.Cipher",
+    "Crypto.SelfTest.Hash",
+    "Crypto.SelfTest.IO",
+    "Crypto.SelfTest.Protocol",
+    "Crypto.SelfTest.PublicKey",
+    "Crypto.SelfTest.Random",
+    "Crypto.SelfTest.Signature",
+    "Crypto.SelfTest.Util",
+    "Crypto.SelfTest.Math",
+]
+package_dir = { "Crypto": "lib/Crypto" }
+package_data = {
+    "Crypto.SelfTest.Cipher" : [
+        "test_vectors/AES/*.rsp",
+        "test_vectors/TDES/*.rsp",
+    ],
+    "Crypto.SelfTest.Hash" : [
+        "test_vectors/SHA3/*.txt",
+        "test_vectors/keccak/*.txt",
+        "test_vectors/BLAKE2s/*.txt",
+        "test_vectors/BLAKE2b/*.txt"
+    ],
+    "Crypto.SelfTest.Signature" : [
+        "test_vectors/DSA/*.*",
+        "test_vectors/ECDSA/*.*",
+        "test_vectors/PKCS1-v1.5/*.*",
+        "test_vectors/PKCS1-PSS/*.*"
+    ],
+    "Crypto.SelfTest.PublicKey" : [
+        "test_vectors/ECC/*.*",
+    ],
+    "Crypto.Math" : [ "mpir.dll" ],
+}
 
 system_bits = 8 * struct.calcsize("P")
 if system_bits == 32:
     multiply_cmod = [ 'src/multiply_32.c' ]
 else:
     multiply_cmod = [ 'src/multiply_64.c' ]
+
+ext_modules = [
+    # Hash functions
+    Extension("Crypto.Hash._MD2",
+        include_dirs=['src/'],
+        sources=["src/MD2.c"]),
+    Extension("Crypto.Hash._MD4",
+        include_dirs=['src/'],
+        sources=["src/MD4.c"]),
+    Extension("Crypto.Hash._SHA256",
+        include_dirs=['src/'],
+        sources=["src/SHA256.c"]),
+    Extension("Crypto.Hash._SHA224",
+        include_dirs=['src/'],
+        sources=["src/SHA224.c"]),
+    Extension("Crypto.Hash._SHA384",
+        include_dirs=['src/'],
+        sources=["src/SHA384.c"]),
+    Extension("Crypto.Hash._SHA512",
+        include_dirs=['src/'],
+        sources=["src/SHA512.c"]),
+    Extension("Crypto.Hash._RIPEMD160",
+        include_dirs=['src/'],
+        sources=["src/RIPEMD160.c"]),
+    Extension("Crypto.Hash._keccak",
+        include_dirs=['src/'],
+        sources=["src/keccak.c"]),
+    Extension("Crypto.Hash._BLAKE2b",
+        include_dirs=['src/'],
+        sources=["src/blake2b.c"]),
+    Extension("Crypto.Hash._BLAKE2s",
+        include_dirs=['src/'],
+        sources=["src/blake2s.c"]),
+
+    # Block encryption algorithms
+    Extension("Crypto.Cipher._raw_aes",
+        include_dirs=['src/'],
+        sources=["src/AES.c"]),
+    Extension("Crypto.Cipher._raw_aesni",
+        include_dirs=['src/'],
+        sources=["src/AESNI.c"]),
+    Extension("Crypto.Cipher._raw_arc2",
+        include_dirs=['src/'],
+        sources=["src/ARC2.c"]),
+    Extension("Crypto.Cipher._raw_blowfish",
+        include_dirs=['src/'],
+        sources=["src/Blowfish.c"]),
+    Extension("Crypto.Cipher._raw_cast",
+        include_dirs=['src/'],
+        sources=["src/CAST.c"]),
+    Extension("Crypto.Cipher._raw_des",
+        include_dirs=['src/', 'src/libtom/'],
+        sources=["src/DES.c"]),
+    Extension("Crypto.Cipher._raw_des3",
+        include_dirs=['src/', 'src/libtom/'],
+        sources=["src/DES3.c"]),
+    Extension("Crypto.Util._galois",
+        include_dirs=['src/'],
+        sources=['src/galois.c']),
+    Extension("Crypto.Util._cpuid",
+        include_dirs=['src/'],
+        sources=['src/cpuid.c']),
+
+    # Chaining modes
+    Extension("Crypto.Cipher._raw_ecb",
+        include_dirs=['src/'],
+        sources=["src/raw_ecb.c"]),
+    Extension("Crypto.Cipher._raw_cbc",
+        include_dirs=['src/'],
+        sources=["src/raw_cbc.c"]),
+    Extension("Crypto.Cipher._raw_cfb",
+        include_dirs=['src/'],
+        sources=["src/raw_cfb.c"]),
+    Extension("Crypto.Cipher._raw_ofb",
+        include_dirs=['src/'],
+        sources=["src/raw_ofb.c"]),
+    Extension("Crypto.Cipher._raw_ctr",
+        include_dirs=['src/'],
+        sources=["src/raw_ctr.c"]),
+    Extension("Crypto.Cipher._raw_ocb",
+        include_dirs=['src/'],
+        sources=["src/raw_ocb.c"]),
+
+    # Stream ciphers
+    Extension("Crypto.Cipher._ARC4",
+        include_dirs=['src/'],
+        sources=["src/ARC4.c"]),
+    Extension("Crypto.Cipher._Salsa20",
+        include_dirs=['src/', 'src/libtom/'],
+        sources=["src/Salsa20.c"]),
+    Extension("Crypto.Cipher._chacha20",
+        include_dirs=['src/'],
+        sources=["src/chacha20.c"]),
+
+    # Others
+    Extension("Crypto.Protocol._scrypt",
+        include_dirs=['src/'],
+        sources=["src/scrypt.c"]),
+
+    # Utility modules
+    Extension("Crypto.Util._strxor",
+        include_dirs=['src/'],
+        sources=['src/strxor.c']),
+
+    # Math
+    Extension("Crypto.Math._montgomery",
+        include_dirs=['src/'],
+        sources=['src/montgomery.c', 'src/siphash.c', 'src/montgomery_utils.c'] + multiply_cmod,
+        ),
+]
+
+
+if use_separate_namespace:
+
+    # Fix-up setup information
+    for i in range(len(packages)):
+        packages[i] = packages[i].replace("Crypto", "Cryptodome")
+    package_dir = { "Cryptodome": "lib/Cryptodome" }
+    new_package_data = {}
+    for k,v in package_data.items():
+        new_package_data[k.replace("Crypto", "Cryptodome")] = v
+    package_data = new_package_data
+    for ext in ext_modules:
+        ext.name = ext.name.replace("Crypto", "Cryptodome")
+
+    # Recreate lib/Cryptodome from scratch
+    try:
+        shutil.rmtree("lib/Cryptodome")
+    except OSError:
+        pass
+    for root_src, dirs, files in os.walk("lib/Crypto"):
+
+        root_dst, nr_repl = re.subn('Crypto', 'Cryptodome', root_src)
+        assert nr_repl == 1
+
+        for dir_name in dirs:
+            full_dir_name_dst = os.path.join(root_dst, dir_name)
+            if not os.path.exists(full_dir_name_dst):
+                os.makedirs(full_dir_name_dst)
+
+        for file_name in files:
+            full_file_name_src = os.path.join(root_src, file_name)
+            full_file_name_dst = os.path.join(root_dst, file_name)
+
+            PrintErr("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
+            shutil.copy2(full_file_name_src, full_file_name_dst)
+
+            if not full_file_name_dst.endswith(".py"):
+                continue
+
+            fd = open(full_file_name_dst, "rt")
+            content = (fd.read().
+               replace("Crypto.", "Cryptodome.").
+               replace("Crypto ", "Cryptodome ").
+               replace("'Crypto'", "'Cryptodome'").
+               replace('"Crypto"', '"Cryptodome"'))
+            fd.close()
+            os.remove(full_file_name_dst)
+            fd = open(full_file_name_dst, "wt")
+            fd.write(content)
+            fd.close()
+
 
 setup(
     name = project_name,
@@ -544,165 +652,13 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
     ],
-    packages =  [
-        "Crypto",
-        "Crypto.Cipher",
-        "Crypto.Hash",
-        "Crypto.IO",
-        "Crypto.PublicKey",
-        "Crypto.Protocol",
-        "Crypto.Random",
-        "Crypto.Signature",
-        "Crypto.Util",
-        "Crypto.Math",
-        "Crypto.SelfTest",
-        "Crypto.SelfTest.Cipher",
-        "Crypto.SelfTest.Hash",
-        "Crypto.SelfTest.IO",
-        "Crypto.SelfTest.Protocol",
-        "Crypto.SelfTest.PublicKey",
-        "Crypto.SelfTest.Random",
-        "Crypto.SelfTest.Signature",
-        "Crypto.SelfTest.Util",
-        "Crypto.SelfTest.Math",
-        ],
-    package_dir = { "Crypto": "lib/Crypto" },
-    package_data = {
-        "Crypto.SelfTest.Cipher" : [
-            "test_vectors/AES/*.rsp",
-            "test_vectors/TDES/*.rsp",
-            ],
-        "Crypto.SelfTest.Hash" : [
-            "test_vectors/SHA3/*.txt",
-            "test_vectors/keccak/*.txt",
-            "test_vectors/BLAKE2s/*.txt",
-            "test_vectors/BLAKE2b/*.txt"
-            ],
-        "Crypto.SelfTest.Signature" : [
-            "test_vectors/DSA/*.*",
-            "test_vectors/ECDSA/*.*",
-            "test_vectors/PKCS1-v1.5/*.*",
-            "test_vectors/PKCS1-PSS/*.*"
-            ],
-        "Crypto.SelfTest.PublicKey" : [
-            "test_vectors/ECC/*.*",
-            ],
-        "Crypto.Math" : [ "mpir.dll" ],
-        },
+    packages = packages,
+    package_dir = package_dir,
+    package_data = package_data,
     cmdclass = {
         'build_ext':PCTBuildExt,
         'build_py': PCTBuildPy,
         'test': TestCommand,
-        'install_lib' : InstallLibCommand,
         },
-    ext_modules = [
-        # Hash functions
-        Extension("Crypto.Hash._MD2",
-            include_dirs=['src/'],
-            sources=["src/MD2.c"]),
-        Extension("Crypto.Hash._MD4",
-            include_dirs=['src/'],
-            sources=["src/MD4.c"]),
-        Extension("Crypto.Hash._SHA256",
-            include_dirs=['src/'],
-            sources=["src/SHA256.c"]),
-        Extension("Crypto.Hash._SHA224",
-            include_dirs=['src/'],
-            sources=["src/SHA224.c"]),
-        Extension("Crypto.Hash._SHA384",
-            include_dirs=['src/'],
-            sources=["src/SHA384.c"]),
-        Extension("Crypto.Hash._SHA512",
-            include_dirs=['src/'],
-            sources=["src/SHA512.c"]),
-        Extension("Crypto.Hash._RIPEMD160",
-            include_dirs=['src/'],
-            sources=["src/RIPEMD160.c"]),
-        Extension("Crypto.Hash._keccak",
-            include_dirs=['src/'],
-            sources=["src/keccak.c"]),
-        Extension("Crypto.Hash._BLAKE2b",
-            include_dirs=['src/'],
-            sources=["src/blake2b.c"]),
-        Extension("Crypto.Hash._BLAKE2s",
-            include_dirs=['src/'],
-            sources=["src/blake2s.c"]),
-
-        # Block encryption algorithms
-        Extension("Crypto.Cipher._raw_aes",
-            include_dirs=['src/'],
-            sources=["src/AES.c"]),
-        Extension("Crypto.Cipher._raw_aesni",
-            include_dirs=['src/'],
-            sources=["src/AESNI.c"]),
-        Extension("Crypto.Cipher._raw_arc2",
-            include_dirs=['src/'],
-            sources=["src/ARC2.c"]),
-        Extension("Crypto.Cipher._raw_blowfish",
-            include_dirs=['src/'],
-            sources=["src/Blowfish.c"]),
-        Extension("Crypto.Cipher._raw_cast",
-            include_dirs=['src/'],
-            sources=["src/CAST.c"]),
-        Extension("Crypto.Cipher._raw_des",
-            include_dirs=['src/', 'src/libtom/'],
-            sources=["src/DES.c"]),
-        Extension("Crypto.Cipher._raw_des3",
-            include_dirs=['src/', 'src/libtom/'],
-            sources=["src/DES3.c"]),
-        Extension("Crypto.Util._galois",
-            include_dirs=['src/'],
-            sources=['src/galois.c']),
-        Extension("Crypto.Util._cpuid",
-            include_dirs=['src/'],
-            sources=['src/cpuid.c']),
-
-        # Chaining modes
-        Extension("Crypto.Cipher._raw_ecb",
-            include_dirs=['src/'],
-            sources=["src/raw_ecb.c"]),
-        Extension("Crypto.Cipher._raw_cbc",
-            include_dirs=['src/'],
-            sources=["src/raw_cbc.c"]),
-        Extension("Crypto.Cipher._raw_cfb",
-            include_dirs=['src/'],
-            sources=["src/raw_cfb.c"]),
-        Extension("Crypto.Cipher._raw_ofb",
-            include_dirs=['src/'],
-            sources=["src/raw_ofb.c"]),
-        Extension("Crypto.Cipher._raw_ctr",
-            include_dirs=['src/'],
-            sources=["src/raw_ctr.c"]),
-        Extension("Crypto.Cipher._raw_ocb",
-            include_dirs=['src/'],
-            sources=["src/raw_ocb.c"]),
-
-        # Stream ciphers
-        Extension("Crypto.Cipher._ARC4",
-            include_dirs=['src/'],
-            sources=["src/ARC4.c"]),
-        Extension("Crypto.Cipher._Salsa20",
-            include_dirs=['src/', 'src/libtom/'],
-            sources=["src/Salsa20.c"]),
-        Extension("Crypto.Cipher._chacha20",
-            include_dirs=['src/'],
-            sources=["src/chacha20.c"]),
-
-        # Others
-        Extension("Crypto.Protocol._scrypt",
-            include_dirs=['src/'],
-            sources=["src/scrypt.c"]),
-
-        # Utility modules
-        Extension("Crypto.Util._strxor",
-            include_dirs=['src/'],
-            sources=['src/strxor.c']),
-
-        # Math
-        Extension("Crypto.Math._montgomery",
-            include_dirs=['src/'],
-            sources=['src/montgomery.c', 'src/siphash.c', 'src/montgomery_utils.c'] + multiply_cmod,
-            ),
-
-        ]
+    ext_modules = ext_modules,
 )
