@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.4.12 (5 February 2018)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#129. pycryptodomex could only be installed via wheels.
+
 3.4.11 (5 February 2018)
 ++++++++++++++++++++++++
 

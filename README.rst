@@ -68,28 +68,6 @@ For more information, see the `homepage`_.
 
 All the code can be downloaded from `GitHub`_.
 
-News
-----
-
-* **5 Feb 2018 (NEW)**. Bugfix release 3.4.11.
-* 2 Feb 2018. Bugfix release 3.4.10.
-* 1 Feb 2018. Bugfix release 3.4.9.
-* 27 Jan 2018. Bugfix release 3.4.8.
-* 26 Aug 2017. Bugfix release 3.4.7.
-* 17 May 2017. Bugfix release 3.4.6.
-* 6 Feb 2017. Bugfix release 3.4.5.
-* 1 Feb 2017. Bugfix release 3.4.4.
-* 17 Oct 2016. Bugfix release 3.4.3.
-* 8 Mar 2016. Bugfix release 3.4.2.
-* 21 Feb 2016. Release 3.4.1.
-* 7 Feb 2016. Release 3.4.
-* Nov 2015. Release 3.3.1.
-* 29 Oct 2015. Release 3.3.
-* 9 Sep 2015. Minor release 3.2.1.
-* 6 Sep 2015. Release 3.2.
-* 15 Mar 2015. Release 3.1.
-* 24 Jun 2014. Release 3.0.
-
 .. _`homepage`: http://www.pycryptodome.org
 .. _`GMP`: https://gmplib.org
 .. _GitHub: https://github.com/Legrandin/pycryptodome
