@@ -4,8 +4,9 @@ include Doc/index.rst
 recursive-include Doc/src *
 include Doc/conf.py Doc/Makefile Doc/make.bat
 include Doc/python-3-changes.txt Doc/Changelog.pycrypto
-include Doc/epydoc-config
 graft Doc/LEGAL
 recursive-include src *.h *.c
 include .separate_namespace
-include *.py
+include setup.py pct-speedtest.py
+include appveyor.yml appveyor/get_wheels.sh appveyor/install.ps1 appveyor/run_with_env.cmd
+include .travis.yml travis/*.sh
