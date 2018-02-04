@@ -28,6 +28,7 @@ DAMAGE.
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <wmmintrin.h>
 #include "multiply.h"
 
 #if defined(HAVE_INTRIN_H)
