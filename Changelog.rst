@@ -1,6 +1,15 @@
 Changelog
 =========
 
+3.4.11 (5 February 2018)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#121. the record list was still not correct due to PEP3147
+  and __pycache__ directories. Thanks again to John O'Brien.
+
 3.4.10 (2 February 2018)
 ++++++++++++++++++++++++
 
@@ -8,8 +17,8 @@ Resolved issues
 ---------------
 
 * When creating ElGamal keys, the generator wasn't a square residue:
-  ElGamal encryption was not secure under the DDH assumption.
-  Thanks to Weikeng Chen.
+  ElGamal encryption done with those keys cannot be secure under
+  the DDH assumption. Thanks to Weikeng Chen.
 
 3.4.9 (1 February 2018)
 +++++++++++++++++++++++
