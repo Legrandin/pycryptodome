@@ -99,7 +99,7 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
     # Encrypt the data with the AES session key
     cipher_aes = AES.new(session_key, AES.MODE_EAX)
     ciphertext, tag = cipher_aes.encrypt_and_digest(data)
-    [ file_out.write(x) for x in (cipher.nonce, tag, ciphertext) ]
+    [ file_out.write(x) for x in (cipher_aes.nonce, tag, ciphertext) ]
 
 The receiver has the private RSA key. They will use it to decrypt the session key
 first, and with that the rest of the file:
@@ -122,7 +122,7 @@ first, and with that the rest of the file:
 
     # Decrypt the data with the AES session key
     cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
-    data = cipher.decrypt_and_verify(ciphertext, tag)
+    data = cipher_aes.decrypt_and_verify(ciphertext, tag)
 
 .. _EAX mode: http://en.wikipedia.org/wiki/EAX_mode
 .. _CCM: http://en.wikipedia.org/wiki/CCM_mode
