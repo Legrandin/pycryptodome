@@ -103,17 +103,6 @@ All the code can be downloaded from `GitHub`_.
     replace("OTHER_PROJECT", other_project).\
     replace("OTHER_ROOT", other_root)
 
-# By doing this we neeed to change version information in a single file
-for line in open(os.path.join("lib", package_root, "__init__.py")):
-    if line.startswith("version_info"):
-        version_tuple = eval(line.split("=")[1])
-
-version_string = "%d.%d" % version_tuple[:-1]
-if version_tuple[2] is not None:
-    if str(version_tuple[2]).isdigit():
-        version_string += "."
-    version_string += str(version_tuple[2])
-
 if sys.version[0:1] == '1':
     raise RuntimeError("The Python Cryptography Toolkit requires "
                        "Python 2.x or 3.x to build.")
@@ -411,6 +400,46 @@ class TestCommand(Command):
     sub_commands = [ ('build', None) ]
 
 
+def create_cryptodome_lib():
+    assert os.path.isdir("lib/Crypto")
+
+    try:
+        shutil.rmtree("lib/Cryptodome")
+    except OSError:
+        pass
+    for root_src, dirs, files in os.walk("lib/Crypto"):
+
+        root_dst, nr_repl = re.subn('Crypto', 'Cryptodome', root_src)
+        assert nr_repl == 1
+
+        for dir_name in dirs:
+            full_dir_name_dst = os.path.join(root_dst, dir_name)
+            if not os.path.exists(full_dir_name_dst):
+                os.makedirs(full_dir_name_dst)
+
+        for file_name in files:
+            full_file_name_src = os.path.join(root_src, file_name)
+            full_file_name_dst = os.path.join(root_dst, file_name)
+
+            PrintErr("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
+            shutil.copy2(full_file_name_src, full_file_name_dst)
+
+            if not full_file_name_dst.endswith(".py"):
+                continue
+
+            fd = open(full_file_name_dst, "rt")
+            content = (fd.read().
+               replace("Crypto.", "Cryptodome.").
+               replace("Crypto ", "Cryptodome ").
+               replace("'Crypto'", "'Cryptodome'").
+               replace('"Crypto"', '"Cryptodome"'))
+            fd.close()
+            os.remove(full_file_name_dst)
+            fd = open(full_file_name_dst, "wt")
+            fd.write(content)
+            fd.close()
+
+
 # Parameters for setup
 packages =  [
     "Crypto",
@@ -588,42 +617,22 @@ if use_separate_namespace:
     for ext in ext_modules:
         ext.name = ext.name.replace("Crypto", "Cryptodome")
 
-    # Recreate lib/Cryptodome from scratch
-    try:
-        shutil.rmtree("lib/Cryptodome")
-    except OSError:
-        pass
-    for root_src, dirs, files in os.walk("lib/Crypto"):
+    # Recreate lib/Cryptodome from scratch, unless it is the only
+    # directory available
+    if os.path.isdir("lib/Crypto"):
+        create_cryptodome_lib()
 
-        root_dst, nr_repl = re.subn('Crypto', 'Cryptodome', root_src)
-        assert nr_repl == 1
 
-        for dir_name in dirs:
-            full_dir_name_dst = os.path.join(root_dst, dir_name)
-            if not os.path.exists(full_dir_name_dst):
-                os.makedirs(full_dir_name_dst)
+# By doing this we neeed to change version information in a single file
+for line in open(os.path.join("lib", package_root, "__init__.py")):
+    if line.startswith("version_info"):
+        version_tuple = eval(line.split("=")[1])
 
-        for file_name in files:
-            full_file_name_src = os.path.join(root_src, file_name)
-            full_file_name_dst = os.path.join(root_dst, file_name)
-
-            PrintErr("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
-            shutil.copy2(full_file_name_src, full_file_name_dst)
-
-            if not full_file_name_dst.endswith(".py"):
-                continue
-
-            fd = open(full_file_name_dst, "rt")
-            content = (fd.read().
-               replace("Crypto.", "Cryptodome.").
-               replace("Crypto ", "Cryptodome ").
-               replace("'Crypto'", "'Cryptodome'").
-               replace('"Crypto"', '"Cryptodome"'))
-            fd.close()
-            os.remove(full_file_name_dst)
-            fd = open(full_file_name_dst, "wt")
-            fd.write(content)
-            fd.close()
+version_string = "%d.%d" % version_tuple[:-1]
+if version_tuple[2] is not None:
+    if str(version_tuple[2]).isdigit():
+        version_string += "."
+    version_string += str(version_tuple[2])
 
 
 setup(
