@@ -104,7 +104,7 @@ All the code can be downloaded from `GitHub`_.
     replace("OTHER_ROOT", other_root)
 
 # By doing this we neeed to change version information in a single file
-for line in open(os.path.join("lib", "Crypto", "__init__.py")):
+for line in open(os.path.join("lib", package_root, "__init__.py")):
     if line.startswith("version_info"):
         version_tuple = eval(line.split("=")[1])
 
