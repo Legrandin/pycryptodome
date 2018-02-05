@@ -2,9 +2,7 @@ El Gamal
 ========
 
 .. warning::
-    Even though ElGamal algorithms are in theory reasonably secure,
-    in practice there are no real good reasons to prefer them to :doc:`rsa`
-    instead.
+    This implementation of ElGamal is only secure if used for hybrid encryption.
 
 Signature algorithm
 -------------------
