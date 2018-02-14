@@ -133,16 +133,91 @@ class Integer(object):
     def __abs__(self):
         return abs(self._value)
 
-    def sqrt(self):
-        # http://stackoverflow.com/questions/15390807/integer-square-root-in-python
-        if self._value < 0:
-            raise ValueError("Square root of negative value")
-        x = self._value
-        y = (x + 1) // 2
-        while y < x:
-            x = y
-            y = (x + self._value // x) // 2
-        return self.__class__(x)
+    def sqrt(self, modulus=None):
+
+        value = self._value
+        if modulus is None:
+            if value < 0:
+                raise ValueError("Square root of negative value")
+            # http://stackoverflow.com/questions/15390807/integer-square-root-in-python
+
+            x = value
+            y = (x + 1) // 2
+            while y < x:
+                x = y
+                y = (x + value // x) // 2
+            result = x
+        else:
+            if modulus <= 0:
+                raise ValueError("Modulus must be positive")
+            result = self._tonelli_shanks(self.__class__(value % modulus), modulus)
+
+        return self.__class__(result)
+
+    @staticmethod
+    def _tonelli_shanks(n, p):
+        """Tonelli-shanks algorithm for computing the square root
+        of n modulo a prime p.
+
+        n must be in the range [0..p-1].
+        p must be at least even.
+
+        The return value r is the square root of modulo p. If non-zero,
+        another solution will also exist (p-r).
+
+        Note we cannot assume that p is really a prime: if it's not,
+        we can either raise an exception or return the correct value.
+        """
+
+        # See https://rosettacode.org/wiki/Tonelli-Shanks_algorithm
+
+        if n in (0, 1):
+            return n
+
+        if p % 4 == 3:
+            root = pow(n, (p + 1)/4, p)
+            if pow(root, 2, p) != n:
+                raise ValueError("Cannot compute square root")
+            return root
+
+        s = 1
+        q = (p - 1) / 2
+        while not (q & 1):
+            s += 1
+            q >>= 1
+
+        z = n.__class__(2)
+        while True:
+            euler = pow(z, (p - 1) / 2, p)
+            if euler == 1:
+                z += 1
+                continue
+            if euler == p - 1:
+                break
+            # Most probably p is not a prime
+            raise ValueError("Cannot compute square root")
+        
+        m = s
+        c = pow(z, q, p)
+        t = pow(n, q, p)
+        r = pow(n, (q + 1) / 2, p)
+        
+        while t != 1:
+            for i in xrange(0, m):
+                if pow(t, 2**i, p) == 1:
+                    break
+            if i == m:
+                raise ValueError("Cannot compute square root of %d mod %d" % (n, p))
+            b = pow(c, 2**(m - i - 1), p)
+            m = i
+            c = b**2 % p
+            t = (t * b**2) % p
+            r = (r * b) % p
+        
+        if pow(r, 2, p) != n:
+            raise ValueError("Cannot compute square root")
+
+        return r
 
     def __iadd__(self, term):
         self._value += int(term)

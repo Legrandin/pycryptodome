@@ -35,6 +35,8 @@ from Crypto.Util._raw_api import (backend, load_lib,
                                   null_pointer, create_string_buffer,
                                   c_ulong, c_ulonglong, c_size_t)
 
+from Crypto.Math._Numbers_int import Integer as SlowInteger
+
 gmp_defs = """typedef unsigned long UNIX_ULONG;
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
@@ -406,15 +408,22 @@ class Integer(object):
         _gmp.mpz_abs(result._mpz_p, self._mpz_p)
         return result
 
-    def sqrt(self):
+    def sqrt(self, modulus=None):
         """Return the largest Integer that does not
         exceed the square root"""
-
-        if self < 0:
-            raise ValueError("Square root of negative value")
-        result = Integer(0)
-        _gmp.mpz_sqrt(result._mpz_p,
-                      self._mpz_p)
+        
+        if modulus is None:
+            if self < 0:
+                raise ValueError("Square root of negative value")
+            result = Integer(0)
+            _gmp.mpz_sqrt(result._mpz_p,
+                          self._mpz_p)
+        else:
+            if modulus <= 0:
+                raise ValueError("Modulus must be positive")
+            modulus = int(modulus)
+            result = Integer(SlowInteger._tonelli_shanks(int(self) % modulus, modulus))
+        
         return result
 
     def __iadd__(self, term):

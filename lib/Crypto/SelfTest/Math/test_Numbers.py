@@ -305,6 +305,33 @@ class TestIntegerBase(unittest.TestCase):
         self.assertEqual(v3.sqrt(), 7)
         self.assertEqual(v4.sqrt(), 10**50)
 
+    def test_sqrt_module(self):
+
+        # Invalid modulus (non positive)
+        self.assertRaises(ValueError, self.Integer(5).sqrt, 0)
+        self.assertRaises(ValueError, self.Integer(5).sqrt, -1)
+
+        # Simple cases
+        assert self.Integer(0).sqrt(5) == 0
+        assert self.Integer(1).sqrt(5) in (1, 4)
+
+        # Test with all quadratic residues in several fields
+        for p in (11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53):
+            for i in xrange(0, p):
+                square = i**2 % p
+                res = self.Integer(square).sqrt(p)
+                assert res in (i, p - i)
+
+        # 2 is a non-quadratic reside in Z_11
+        self.assertRaises(ValueError, self.Integer(2).sqrt, 11)
+        
+        # 10 is not a prime
+        self.assertRaises(ValueError, self.Integer(4).sqrt, 10)
+
+        # 5 is square residue of 4 and 7
+        assert self.Integer(5 - 11).sqrt(11) in (4, 7)
+        assert self.Integer(5 + 11).sqrt(11) in (4, 7)
+
     def test_in_place_add(self):
         v1, v2 = self.Integers(10, 20)
 
