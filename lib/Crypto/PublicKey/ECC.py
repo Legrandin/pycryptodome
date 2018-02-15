@@ -601,44 +601,87 @@ def construct(**kwargs):
     return EccKey(**kwargs)
 
 
-def _import_public_der(curve_name, publickey):
+def _import_public_der(curve_oid, ec_point):
+    """Convert an encoded EC point into an EccKey object
+
+    curve_name: string with the OID of the curve
+    ec_point: byte string with the EC point (not DER encoded)
+
+    """
 
     # We only support P-256 named curves for now
-    if curve_name != _curve.oid:
+    if curve_oid != _curve.oid:
         raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_name)
 
-    # ECPoint ::= OCTET STRING
+    # See 2.2 in RFC5480 and 2.3.3 in SEC1
+    # The first byte is:
+    # - 0x02:   compressed, only X-coordinate, Y-coordinate is even
+    # - 0x03:   compressed, only X-coordinate, Y-coordinate is odd
+    # - 0x04:   uncompressed, X-coordinate is followed by Y-coordinate
+    #
+    # PAI is in theory encoded as 0x00.
 
-    # We support only uncompressed points
     order_bytes = _curve.order.size_in_bytes()
-    if len(publickey) != (1 + 2 * order_bytes) or bord(publickey[0]) != 4:
-        raise UnsupportedEccFeature("Only uncompressed points are supported")
+    point_type = bord(ec_point[0])
+    
+    # Uncompressed point
+    if point_type == 0x04:
+        if len(ec_point) != (1 + 2 * order_bytes):
+            raise ValueError("Incorrect EC point length")
+        x = Integer.from_bytes(ec_point[1:order_bytes+1])
+        y = Integer.from_bytes(ec_point[order_bytes+1:])
+    # Compressed point
+    elif point_type in (0x02, 0x3):
+        if len(ec_point) != (1 + order_bytes):
+            raise ValueError("Incorrect EC point length")
+        x = Integer.from_bytes(ec_point[1:])
+        y = (x**3 - x*3 + _curve.b).sqrt(_curve.p)    #  Short Weierstrass
+        if point_type == 0x02 and y.is_odd():
+            y = _curve.p - y
+        if point_type == 0x03 and y.is_even():
+            y = _curve.p - y
+    else:
+        raise ValueError("Incorrect EC point encoding")
 
-    point_x = Integer.from_bytes(publickey[1:order_bytes+1])
-    point_y = Integer.from_bytes(publickey[order_bytes+1:])
-    return construct(curve="P-256", point_x=point_x, point_y=point_y)
+    return construct(curve="P-256", point_x=x, point_y=y)
 
 
 def _import_subjectPublicKeyInfo(encoded, *kwargs):
-    oid, encoded_key, params = _expand_subject_public_key_info(encoded)
+    """Convert a subjectPublicKeyInfo into an EccKey object"""
+
+    # See RFC5480
+
+    # Parse the generic subjectPublicKeyInfo structure
+    oid, ec_point, params = _expand_subject_public_key_info(encoded)
+
+    # ec_point must be an encoded OCTET STRING
+    # params is encoded ECParameters
 
     # We accept id-ecPublicKey, id-ecDH, id-ecMQV without making any
     # distiction for now.
-    unrestricted_oid = "1.2.840.10045.2.1"
+    unrestricted_oid = "1.2.840.10045.2.1"  # Restrictions can be captured
+                                            # in the key usage certificate
+                                            # extension
     ecdh_oid = "1.3.132.1.12"
     ecmqv_oid = "1.3.132.1.13"
 
-    if oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid) or not params:
+    if oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid):
         raise UnsupportedEccFeature("Unsupported ECC purpose (OID: %s)" % oid)
+
+    # Parameters are mandatory for all three types
+    if not params:
+        raise ValueError("Missing ECC parameters")
 
     # ECParameters ::= CHOICE {
     #   namedCurve         OBJECT IDENTIFIER
     #   -- implicitCurve   NULL
     #   -- specifiedCurve  SpecifiedECDomain
     # }
-    curve_name = DerObjectId().decode(params).value
+    #
+    # implicitCurve and specifiedCurve are not supported (as per RFC)
+    curve_oid = DerObjectId().decode(params).value
 
-    return _import_public_der(curve_name, encoded_key)
+    return _import_public_der(curve_oid, ec_point)
 
 
 def _import_private_der(encoded, passphrase, curve_name=None):
@@ -713,20 +756,33 @@ def _import_x509_cert(encoded, *kwargs):
 
 def _import_der(encoded, passphrase):
 
-    decodings = (
-        _import_subjectPublicKeyInfo,
-        _import_x509_cert,
-        _import_private_der,
-        _import_pkcs8,
-        )
-
-    for decoding in decodings:
-        try:
-            return decoding(encoded, passphrase)
-        except UnsupportedEccFeature, uef:
-            raise uef
-        except (ValueError, TypeError, IndexError):
-            pass
+    try:
+        return _import_subjectPublicKeyInfo(encoded, passphrase)
+    except UnsupportedEccFeature, err:
+        raise err
+    except (ValueError, TypeError, IndexError):
+        pass
+    
+    try:
+        return _import_x509_cert(encoded, passphrase)
+    except UnsupportedEccFeature, err:
+        raise err
+    except (ValueError, TypeError, IndexError):
+        pass
+    
+    try:
+        return _import_private_der(encoded, passphrase)
+    except UnsupportedEccFeature, err:
+        raise err
+    except (ValueError, TypeError, IndexError):
+        pass
+    
+    try:
+        return _import_pkcs8(encoded, passphrase)
+    except UnsupportedEccFeature, err:
+        raise err
+    except (ValueError, TypeError, IndexError):
+        pass
 
     raise ValueError("Not an ECC DER key")
 

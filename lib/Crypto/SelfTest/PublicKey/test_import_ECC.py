@@ -399,13 +399,25 @@ gVnJp9EBND/tHQ==
 
     def test_compressed_curve(self):
 
-        # Compressed P-256 curve
-        curve = """-----BEGIN EC PRIVATE KEY-----
+        # Compressed P-256 curve (Y-point is even)
+        pem1 = """-----BEGIN EC PRIVATE KEY-----
         MFcCAQEEIHTuc09jC51xXomV6MVCDN+DpAAvSmaJWZPTEHM6D5H1oAoGCCqGSM49
         AwEHoSQDIgACWFuGbHe8yJ43rir7PMTE9w8vHz0BSpXHq90Xi7/s+a0=
         -----END EC PRIVATE KEY-----"""
 
-        ECC.import_key(curve)
+        # Compressed P-256 curve (Y-point is odd)
+        pem2 = """-----BEGIN EC PRIVATE KEY-----
+        MFcCAQEEIFggiPN9SQP+FAPTCPp08fRUz7rHp2qNBRcBJ1DXhb3ZoAoGCCqGSM49
+        AwEHoSQDIgADLpph1trTIlVfa8NJvlMUPyWvL+wP+pW3BJITUL/wj9A=
+        -----END EC PRIVATE KEY-----"""
+
+        key1 = ECC.import_key(pem1)
+        low16 = int(key1.pointQ.y % 65536)
+        self.assertEqual(low16, 0xA6FC)
+
+        key2 = ECC.import_key(pem2)
+        low16 = int(key2.pointQ.y % 65536)
+        self.assertEqual(low16, 0x6E57)
 
 
 def get_tests(config={}):
