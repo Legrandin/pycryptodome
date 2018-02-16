@@ -6,7 +6,7 @@ x.x.x (???)
 
 New features
 ------------
-* Import of ECC curves in compressed form.
+* Import and export of ECC curves in compressed form.
 
 3.4.12 (5 February 2018)
 ++++++++++++++++++++++++

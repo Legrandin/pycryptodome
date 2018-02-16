@@ -351,13 +351,26 @@ class EccKey(object):
 
         return EccKey(curve="P-256", point=self.pointQ)
 
-    def _export_subjectPublicKeyInfo(self):
+    def _export_subjectPublicKeyInfo(self, compress):
+    
+        # See 2.2 in RFC5480 and 2.3.3 in SEC1
+        # The first byte is:
+        # - 0x02:   compressed, only X-coordinate, Y-coordinate is even
+        # - 0x03:   compressed, only X-coordinate, Y-coordinate is odd
+        # - 0x04:   uncompressed, X-coordinate is followed by Y-coordinate
+        #
+        # PAI is in theory encoded as 0x00.
 
-        # Uncompressed form
         order_bytes = _curve.order.size_in_bytes()
-        public_key = (bchr(4) +
-                      self.pointQ.x.to_bytes(order_bytes) +
-                      self.pointQ.y.to_bytes(order_bytes))
+
+        if compress:
+            first_byte = 2 + self.pointQ.y.is_odd()
+            public_key = (bchr(first_byte) +
+                          self.pointQ.x.to_bytes(order_bytes))
+        else:
+            public_key = (bchr(4) +
+                          self.pointQ.x.to_bytes(order_bytes) +
+                          self.pointQ.y.to_bytes(order_bytes))
 
         unrestricted_oid = "1.2.840.10045.2.1"
         return _create_subject_public_key_info(unrestricted_oid,
@@ -402,8 +415,8 @@ class EccKey(object):
                             **kwargs)
         return result
 
-    def _export_public_pem(self):
-        encoded_der = self._export_subjectPublicKeyInfo()
+    def _export_public_pem(self, compress):
+        encoded_der = self._export_subjectPublicKeyInfo(compress)
         return PEM.encode(encoded_der, "PUBLIC KEY")
 
     def _export_private_pem(self, passphrase, **kwargs):
@@ -421,16 +434,21 @@ class EccKey(object):
         encoded_der = self._export_pkcs8(passphrase=passphrase, **kwargs)
         return PEM.encode(encoded_der, "ENCRYPTED PRIVATE KEY")
 
-    def _export_openssh(self):
-        assert not self.has_private()
+    def _export_openssh(self, compress):
+        if self.has_private():
+            raise ValueError("Cannot export OpenSSH private keys")
 
         desc = "ecdsa-sha2-nistp256"
-
-        # Uncompressed form
         order_bytes = _curve.order.size_in_bytes()
-        public_key = (bchr(4) +
-                      self.pointQ.x.to_bytes(order_bytes) +
-                      self.pointQ.y.to_bytes(order_bytes))
+        
+        if compress:
+            first_byte = 2 + self.pointQ.y.is_odd()
+            public_key = (bchr(first_byte) +
+                          self.pointQ.x.to_bytes(order_bytes))
+        else:
+            public_key = (bchr(4) +
+                          self.pointQ.x.to_bytes(order_bytes) +
+                          self.pointQ.y.to_bytes(order_bytes))
 
         comps = (tobytes(desc), b("nistp256"), public_key)
         blob = b("").join([ struct.pack(">I", len(x)) + x for x in comps])
@@ -468,6 +486,13 @@ class EccKey(object):
             present and be a valid algorithm supported by :mod:`Crypto.IO.PKCS8`.
             It is recommended to use ``PBKDF2WithHMAC-SHA1AndAES128-CBC``.
 
+          compress (boolean):
+            If ``True``, a more compact representation of the public key
+            (X-coordinate only) is used.
+
+            If ``False`` (default), the full public key (in both its
+            coordinates) will be exported.
+
         .. warning::
             If you don't provide a passphrase, the private key will be
             exported in the clear!
@@ -492,6 +517,8 @@ class EccKey(object):
         ext_format = args.pop("format")
         if ext_format not in ("PEM", "DER", "OpenSSH"):
             raise ValueError("Unknown format '%s'" % ext_format)
+        
+        compress = args.pop("compress", False)
 
         if self.has_private():
             passphrase = args.pop("passphrase", None)
@@ -522,11 +549,11 @@ class EccKey(object):
             if args:
                 raise ValueError("Unexpected parameters: '%s'" % args)
             if ext_format == "PEM":
-                return self._export_public_pem()
+                return self._export_public_pem(compress)
             elif ext_format == "DER":
-                return self._export_subjectPublicKeyInfo()
+                return self._export_subjectPublicKeyInfo(compress)
             else:
-                return self._export_openssh()
+                return self._export_openssh(compress)
 
 
 def generate(**kwargs):

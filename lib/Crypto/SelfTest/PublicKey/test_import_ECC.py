@@ -178,16 +178,19 @@ class TestImport(unittest.TestCase):
 
 class TestExport(unittest.TestCase):
 
-    def test_export_public_der(self):
+    def test_export_public_der_uncompressed(self):
         key_file = load_file("ecc_p256_public.der")
 
-        encoded = ref_public._export_subjectPublicKeyInfo()
+        encoded = ref_public._export_subjectPublicKeyInfo(False)
         self.assertEqual(key_file, encoded)
 
         # ---
 
         encoded = ref_public.export_key(format="DER")
         self.assertEqual(key_file, encoded)
+
+    def test_export_public_der_compressed(self):
+        raise NotImplementedError()
 
     def test_export_private_der(self):
         key_file = load_file("ecc_p256_private.der")
@@ -229,16 +232,19 @@ class TestExport(unittest.TestCase):
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(ref_private, decoded)
 
-    def test_export_public_pem(self):
+    def test_export_public_pem_uncompressed(self):
         key_file = load_file("ecc_p256_public.pem", "rt").strip()
 
-        encoded = ref_private._export_public_pem()
+        encoded = ref_private._export_public_pem(False)
         self.assertEqual(key_file, encoded)
 
         # ---
 
         encoded = ref_public.export_key(format="PEM")
         self.assertEqual(key_file, encoded)
+    
+    def test_export_public_pem_compressed(self):
+        raise NotImplementedError()
 
     def test_export_private_pem_clear(self):
         key_file = load_file("ecc_p256_private.pem", "rt").strip()
@@ -303,16 +309,19 @@ class TestExport(unittest.TestCase):
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(ref_private, decoded)
 
-    def test_export_openssh(self):
+    def test_export_openssh_uncompressed(self):
         key_file = load_file("ecc_p256_public_openssh.txt", "rt")
 
-        encoded = ref_public._export_openssh()
+        encoded = ref_public._export_openssh(False)
         self.assertEquals(key_file, encoded)
 
         # ---
 
         encoded = ref_public.export_key(format="OpenSSH")
         self.assertEquals(key_file, encoded)
+
+    def test_export_openssh_uncompressed(self):
+        raise NotImplementedError()
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
