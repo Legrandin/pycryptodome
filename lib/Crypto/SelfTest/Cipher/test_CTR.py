@@ -134,6 +134,28 @@ class CtrTests(unittest.TestCase):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR,
                           counter=self.ctr_128, initial_value=0)
 
+    def test_initial_value_bytes_parameter(self):
+        # Same result as when passing an integer
+        cipher1 = AES.new(self.key_128, AES.MODE_CTR,
+                          nonce=self.nonce_64,
+                          initial_value=b("\x00")*6+b("\xFF\xFF"))
+        cipher2 = AES.new(self.key_128, AES.MODE_CTR,
+                          nonce=self.nonce_64, initial_value=0xFFFF)
+        pt = get_tag_random("plaintext", 65536)
+        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+
+        # Fail if the iv is too large
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
+                          initial_value=b("5")*17)
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
+                          nonce=self.nonce_64, initial_value=b("5")*9)
+        
+        # Fail if the iv is too short
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
+                          initial_value=b("5")*15)
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
+                          nonce=self.nonce_64, initial_value=b("5")*7)
+
     def test_iv_with_matching_length(self):
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
                           counter=Counter.new(120))

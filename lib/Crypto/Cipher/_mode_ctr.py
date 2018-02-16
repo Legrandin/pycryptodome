@@ -31,7 +31,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   SmartPointer, c_size_t, expect_byte_string)
 
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import b, bchr
+from Crypto.Util.py3compat import b, bchr, byte_string
 from Crypto.Util.number import long_to_bytes
 
 raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
@@ -253,14 +253,14 @@ def _create_ctr_cipher(factory, **kwargs):
         same key and the same nonce.
 
         The nonce must be shorter than the block size (it can have
-        zero length).
+        zero length; the counter is then as long as the block).
 
         If this parameter is not present, a random nonce will be created with
         length equal to half the block size. No random nonce shorter than
         64 bits will be created though - you must really think through all
         security consequences of using such a short block size.
 
-      initial_value : posive integer
+      initial_value : posive integer or byte string
         The initial value for the counter. If not present, the cipher will
         start counting from 0. The value is incremented by one for each block.
         The counter number is encoded in big endian mode.
@@ -294,20 +294,27 @@ def _create_ctr_cipher(factory, **kwargs):
                 raise TypeError("Impossible to create a safe nonce for short"
                                 " block sizes")
             nonce = get_random_bytes(factory.block_size // 2)
+        else:
+            if len(nonce) >= factory.block_size:
+                raise ValueError("Nonce is too long")
+        
+        # What is not nonce is counter
+        counter_len = factory.block_size - len(nonce)
 
         if initial_value is None:
             initial_value = 0
 
-        if len(nonce) >= factory.block_size:
-            raise ValueError("Nonce is too long")
-
-        counter_len = factory.block_size - len(nonce)
-        if (1 << (counter_len * 8)) - 1 < initial_value:
-            raise ValueError("Initial counter value is too large")
+        if byte_string(initial_value):
+            if len(initial_value) != counter_len:
+                raise ValueError("Incorrect length for counter byte string (%d bytes, expected %d)" % (len(initial_value), counter_len))
+            initial_counter_block = nonce + initial_value
+        else:
+            if (1 << (counter_len * 8)) - 1 < initial_value:
+                raise ValueError("Initial counter value is too large")
+            initial_counter_block = nonce + long_to_bytes(initial_value, counter_len)
 
         return CtrMode(cipher_state,
-                       # initial_counter_block
-                       nonce + long_to_bytes(initial_value, counter_len),
+                       initial_counter_block,
                        len(nonce),                     # prefix
                        counter_len,
                        False)                          # little_endian
