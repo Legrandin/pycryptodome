@@ -175,20 +175,20 @@ class Integer(object):
             return n
 
         if p % 4 == 3:
-            root = pow(n, (p + 1)/4, p)
+            root = pow(n, (p + 1) // 4, p)
             if pow(root, 2, p) != n:
                 raise ValueError("Cannot compute square root")
             return root
 
         s = 1
-        q = (p - 1) / 2
+        q = (p - 1) // 2
         while not (q & 1):
             s += 1
             q >>= 1
 
         z = n.__class__(2)
         while True:
-            euler = pow(z, (p - 1) / 2, p)
+            euler = pow(z, (p - 1) // 2, p)
             if euler == 1:
                 z += 1
                 continue
@@ -196,12 +196,12 @@ class Integer(object):
                 break
             # Most probably p is not a prime
             raise ValueError("Cannot compute square root")
-        
+
         m = s
         c = pow(z, q, p)
         t = pow(n, q, p)
-        r = pow(n, (q + 1) / 2, p)
-        
+        r = pow(n, (q + 1) // 2, p)
+
         while t != 1:
             for i in xrange(0, m):
                 if pow(t, 2**i, p) == 1:
@@ -213,7 +213,7 @@ class Integer(object):
             c = b**2 % p
             t = (t * b**2) % p
             r = (r * b) % p
-        
+
         if pow(r, 2, p) != n:
             raise ValueError("Cannot compute square root")
 

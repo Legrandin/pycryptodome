@@ -184,13 +184,19 @@ class TestExport(unittest.TestCase):
         encoded = ref_public._export_subjectPublicKeyInfo(False)
         self.assertEqual(key_file, encoded)
 
-        # ---
-
         encoded = ref_public.export_key(format="DER")
         self.assertEqual(key_file, encoded)
 
+        encoded = ref_public.export_key(format="DER", compress=False)
+        self.assertEqual(key_file, encoded)
+
     def test_export_public_der_compressed(self):
-        raise NotImplementedError()
+        key_file = load_file("ecc_p256_public.der")
+        pub_key = ECC.import_key(key_file)
+        key_file_compressed = pub_key.export_key(format="DER", compress=True)
+
+        key_file_compressed_ref = load_file("ecc_p256_public_compressed.der")
+        self.assertEqual(key_file_compressed, key_file_compressed_ref)
 
     def test_export_private_der(self):
         key_file = load_file("ecc_p256_private.der")
@@ -242,9 +248,18 @@ class TestExport(unittest.TestCase):
 
         encoded = ref_public.export_key(format="PEM")
         self.assertEqual(key_file, encoded)
-    
+
+        encoded = ref_public.export_key(format="PEM", compress=False)
+        self.assertEqual(key_file, encoded)
+
     def test_export_public_pem_compressed(self):
-        raise NotImplementedError()
+        key_file = load_file("ecc_p256_public.pem", "rt").strip()
+        pub_key = ECC.import_key(key_file)
+
+        key_file_compressed = pub_key.export_key(format="PEM", compress=True)
+        key_file_compressed_ref = load_file("ecc_p256_public_compressed.pem", "rt").strip()
+
+        self.assertEqual(key_file_compressed, key_file_compressed_ref)
 
     def test_export_private_pem_clear(self):
         key_file = load_file("ecc_p256_private.pem", "rt").strip()
@@ -320,8 +335,16 @@ class TestExport(unittest.TestCase):
         encoded = ref_public.export_key(format="OpenSSH")
         self.assertEquals(key_file, encoded)
 
-    def test_export_openssh_uncompressed(self):
-        raise NotImplementedError()
+        encoded = ref_public.export_key(format="OpenSSH", compress=False)
+        self.assertEquals(key_file, encoded)
+
+    def test_export_openssh_compressed(self):
+        key_file = load_file("ecc_p256_public_openssh.txt", "rt")
+        pub_key = ECC.import_key(key_file)
+
+        key_file_compressed = pub_key.export_key(format="OpenSSH", compress=True)
+        assert len(key_file) > len(key_file_compressed)
+        self.assertEquals(pub_key, ECC.import_key(key_file_compressed))
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG

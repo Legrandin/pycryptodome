@@ -411,7 +411,7 @@ class Integer(object):
     def sqrt(self, modulus=None):
         """Return the largest Integer that does not
         exceed the square root"""
-        
+
         if modulus is None:
             if self < 0:
                 raise ValueError("Square root of negative value")
@@ -423,7 +423,7 @@ class Integer(object):
                 raise ValueError("Modulus must be positive")
             modulus = int(modulus)
             result = Integer(SlowInteger._tonelli_shanks(int(self) % modulus, modulus))
-        
+
         return result
 
     def __iadd__(self, term):
