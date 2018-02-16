@@ -150,7 +150,7 @@ class Integer(object):
         else:
             if modulus <= 0:
                 raise ValueError("Modulus must be positive")
-            result = self._tonelli_shanks(self.__class__(value % modulus), modulus)
+            result = self._tonelli_shanks(self % modulus, modulus)
 
         return self.__class__(result)
 
