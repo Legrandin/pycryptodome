@@ -7,6 +7,8 @@ x.x.x (???)
 New features
 ------------
 * Import and export of ECC curves in compressed form.
+* The initial counter for a cipher in CTR mode can be a byte string
+  (in addition to an integer).
 
 3.4.12 (5 February 2018)
 ++++++++++++++++++++++++
