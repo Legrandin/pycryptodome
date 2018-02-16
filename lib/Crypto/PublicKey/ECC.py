@@ -441,9 +441,14 @@ class EccKey(object):
 
         Args:
           format (string):
-            The format to use for wrapping the key:
+            The format to use for encoding the key:
 
-            - *'DER'*. The key will be encoded in an ASN.1 DER_ structure (binary).
+            - *'DER'*. The key will be encoded in ASN.1 DER format (binary).
+              For a public key, the ASN.1 ``subjectPublicKeyInfo`` structure
+              defined in `RFC5480`_ will be used.
+              For a private key, the ASN.1 ``ECPrivateKey`` structure defined
+              in `RFC5915`_ is used instead (possibly within a PKCS#8 envelope,
+              see the ``use_pkcs8`` flag below).
             - *'PEM'*. The key will be encoded in a PEM_ envelope (ASCII).
             - *'OpenSSH'*. The key will be encoded in the OpenSSH_ format
               (ASCII, public keys only).
@@ -455,7 +460,7 @@ class EccKey(object):
             If ``True`` (default and recommended), the `PKCS#8`_ representation
             will be used.
 
-            If ``False``, the much weaker and `PEM encryption`_ mechanism will be used.
+            If ``False``, the much weaker `PEM encryption`_ mechanism will be used.
 
           protection (string):
             When a private key is exported with password-protection
@@ -472,11 +477,12 @@ class EccKey(object):
             (both ``DER`` and ``PEM`` formats), any extra parameters
             is passed to :mod:`Crypto.IO.PKCS8`.
 
-        .. _DER:        http://www.ietf.org/rfc/rfc5915.txt
         .. _PEM:        http://www.ietf.org/rfc/rfc1421.txt
         .. _`PEM encryption`: http://www.ietf.org/rfc/rfc1423.txt
         .. _`PKCS#8`:   http://www.ietf.org/rfc/rfc5208.txt
         .. _OpenSSH:    http://www.openssh.com/txt/rfc5656.txt
+        .. _RFC5480:    https://tools.ietf.org/html/rfc5480
+        .. _RFC5915:    http://www.ietf.org/rfc/rfc5915.txt
 
         Returns:
             A multi-line string (for PEM and OpenSSH) or bytes (for DER) with the encoded key.
