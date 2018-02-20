@@ -32,6 +32,8 @@
 #include "pycrypto_common.h"
 #include <stdio.h>
 
+FAKE_INIT(SHA1)
+
 /**
  * SHA-1 as defined in FIPS 180-4 http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
  */
@@ -271,7 +273,7 @@ EXPORT_SYM int SHA1_update(hash_state *hs, const uint8_t *buf, size_t len)
     while (len>0) {
         int btc;
 
-        btc = MIN(BLOCK_SIZE - hs->curlen, len);
+        btc = MIN(BLOCK_SIZE - hs->curlen, (int)len);
         memcpy(&hs->buf[hs->curlen], buf, btc);
         buf += btc;
         hs->curlen += btc;
