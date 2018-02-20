@@ -345,7 +345,7 @@ def _create_ctr_cipher(factory, **kwargs):
     initial_counter_block = prefix + b("").join(words) + suffix
 
     if len(initial_counter_block) != factory.block_size:
-        raise ValueError("Size of the counter block (% bytes) must match"
+        raise ValueError("Size of the counter block (%d bytes) must match"
                          " block size (%d)" % (len(initial_counter_block),
                                                factory.block_size))
 
