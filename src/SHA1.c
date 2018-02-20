@@ -18,40 +18,52 @@
 #define Kz  0x8f1bbcdc  /** 40 <= t <= 59 **/
 #define Kw  0xca62c1d6  /** 60 <= t <= 79 **/
 
-#define ROUND_0_19(w) {                         \
+/** Compute and update W[t] for t>=16 **/
+#define SCHED(t)        (W[t&15]=ROTL1(W[(t-3)&15] ^ W[(t-8)&15] ^ W[(t-14)&15] ^ W[t&15]))
+
+#define ROUND_0_15(t) {                         \
     uint32_t T;                                 \
-    T = ROTL5(a) + CH(b,c,d) + e + Kx + W[w];   \
+    T = ROTL5(a) + CH(b,c,d) + e + Kx + W[t];   \
     e = d;                                      \
     d = c;                                      \
     c = ROTL30(b);                              \
     b = a;                                      \
     a = T; }
 
-#define ROUND_20_39(w) {                            \
+#define ROUND_16_19(t) {                                \
+    uint32_t T;                                         \
+    T = ROTL5(a) + CH(b,c,d) + e + Kx + SCHED(t);       \
+    e = d;                                              \
+    d = c;                                              \
+    c = ROTL30(b);                                      \
+    b = a;                                              \
+    a = T; }
+
+#define ROUND_20_39(t) {                                \
+    uint32_t T;                                         \
+    T = ROTL5(a) + PARITY(b,c,d) + e + Ky + SCHED(t); \
+    e = d;                                              \
+    d = c;                                              \
+    c = ROTL30(b);                                      \
+    b = a;                                              \
+    a = T; }
+
+#define ROUND_40_59(t) {                            \
     uint32_t T;                                     \
-    T = ROTL5(a) + PARITY(b,c,d) + e + Ky + W[w];   \
+    T = ROTL5(a) + MAJ(b,c,d) + e + Kz + SCHED(t);  \
     e = d;                                          \
     d = c;                                          \
     c = ROTL30(b);                                  \
     b = a;                                          \
     a = T; }
 
-#define ROUND_40_59(w) {                        \
-    uint32_t T;                                 \
-    T = ROTL5(a) + MAJ(b,c,d) + e + Kz + W[w];  \
-    e = d;                                      \
-    d = c;                                      \
-    c = ROTL30(b);                              \
-    b = a;                                      \
-    a = T; }
-
-#define ROUND_60_79(w) {                            \
-    uint32_t T;                                     \
-    T = ROTL5(a) + PARITY(b,c,d) + e + Kw + W[w];   \
-    e = d;                                          \
-    d = c;                                          \
-    c = ROTL30(b);                                  \
-    b = a;                                          \
+#define ROUND_60_79(t) {                                \
+    uint32_t T;                                         \
+    T = ROTL5(a) + PARITY(b,c,d) + e + Kw + SCHED(t);   \
+    e = d;                                              \
+    d = c;                                              \
+    c = ROTL30(b);                                      \
+    b = a;                                              \
     a = T; }
 
 #define BLOCK_SIZE 64
@@ -77,7 +89,7 @@ static int add_bits(hash_state *hs, unsigned bits)
 static void sha_compress(hash_state * hs)
 {
     uint32_t a, b, c, d, e;
-    uint32_t W[80];
+    uint32_t W[16];
     int i;
     uint8_t *p;
 
@@ -87,9 +99,6 @@ static void sha_compress(hash_state * hs)
         W[i] = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8)  | (uint32_t)p[3];
         p += 4;
     }
-    for (; i<80; i++) {
-        W[i] = ROTL1(W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16]);
-    }
 
     a = hs->h[0];
     b = hs->h[1];
@@ -97,27 +106,28 @@ static void sha_compress(hash_state * hs)
     d = hs->h[3];
     e = hs->h[4];
 
-    /** 0 <= t <= 19 **/
-    ROUND_0_19(0);
-    ROUND_0_19(1);
-    ROUND_0_19(2);
-    ROUND_0_19(3);
-    ROUND_0_19(4);
-    ROUND_0_19(5);
-    ROUND_0_19(6);
-    ROUND_0_19(7);
-    ROUND_0_19(8);
-    ROUND_0_19(9);
-    ROUND_0_19(10);
-    ROUND_0_19(11);
-    ROUND_0_19(12);
-    ROUND_0_19(13);
-    ROUND_0_19(14);
-    ROUND_0_19(15);
-    ROUND_0_19(16);
-    ROUND_0_19(17);
-    ROUND_0_19(18);
-    ROUND_0_19(19);
+    /** 0 <= t <= 15 **/
+    ROUND_0_15(0);
+    ROUND_0_15(1);
+    ROUND_0_15(2);
+    ROUND_0_15(3);
+    ROUND_0_15(4);
+    ROUND_0_15(5);
+    ROUND_0_15(6);
+    ROUND_0_15(7);
+    ROUND_0_15(8);
+    ROUND_0_15(9);
+    ROUND_0_15(10);
+    ROUND_0_15(11);
+    ROUND_0_15(12);
+    ROUND_0_15(13);
+    ROUND_0_15(14);
+    ROUND_0_15(15);
+    /** 16 <= t <= 19 **/
+    ROUND_16_19(16);
+    ROUND_16_19(17);
+    ROUND_16_19(18);
+    ROUND_16_19(19);
     /** 20 <= t <= 39 **/
     ROUND_20_39(20);
     ROUND_20_39(21);
