@@ -115,6 +115,27 @@ class PBKDF2_Tests(unittest.TestCase):
                 res = PBKDF2(password, salt, out_len, iters, prf_SHA256)
                 self.assertEqual(res, expected)
 
+    def test2(self):
+        # Verify that prf and hmac_hash_module are mutual exclusive
+        def prf_SHA1(p,s):
+            return HMAC.new(p,s,SHA1).digest()
+
+        self.assertRaises(ValueError, PBKDF2, b("xxx"), b("yyy"), 16, 100,
+                          prf=prf_SHA1, hmac_hash_module=SHA1)
+
+    def test3(self):
+        # Verify that hmac_hash_module works like prf
+
+        def prf_SHA256(p,s):
+            return HMAC.new(p,s,SHA256).digest()
+        
+        password = b("xxx")
+        salt = b("yyy")
+        
+        pr1 = PBKDF2(password, salt, 16, 100, prf=prf_SHA256)
+        pr2 = PBKDF2(password, salt, 16, 100, hmac_hash_module=SHA256)
+
+        self.assertEqual(pr1, pr2)
 
 class S2V_Tests(unittest.TestCase):
 

@@ -98,6 +98,18 @@ class HMAC:
 
         self._inner.update(msg)
 
+    def _update_and_digest(self, msg):
+        """Update and output digest without modifying the state of the hash
+        
+        This is only used by PBKDF2.
+        """
+
+        ic = self._inner.copy()
+        ic.update(msg)
+        oc = self._outer.copy()
+        oc.update(ic.digest())
+        return oc.digest()
+
     def copy(self):
         """Return a copy ("clone") of the HMAC object.
 

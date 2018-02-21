@@ -9,6 +9,9 @@ New features
 * Import and export of ECC curves in compressed form.
 * The initial counter for a cipher in CTR mode can be a byte string
   (in addition to an integer).
+* Faster PBKDF2 for HMAC-based PRFs (at least 2x for short passwords,
+  more for longer passwords). Thanks to Christian Heimes for pointing
+  out the implementation was under-optimized.
 
 3.4.12 (5 February 2018)
 ++++++++++++++++++++++++

@@ -94,7 +94,7 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     return pHash.digest()[:dkLen]
 
 
-def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
+def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None):
     """Derive one or more keys from a password (or passphrase).
 
     This function performs key derivation according to
@@ -115,6 +115,10 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
         A pseudorandom function. It must be a function that returns a pseudorandom string
         from two parameters: a secret and a salt. If not specified,
         **HMAC-SHA1** is used.
+     hmac_hash_module (module):
+        A module from `Crypto.Hash` implementing a Merkle-Damgard cryptographic
+        hash, which PBKDF2 must use in combination with HMAC.
+        This parameter is mutually exclusive with ``prf``.
 
     Return:
         A byte string of length ``dkLen`` that can be used as key material.
@@ -122,12 +126,24 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None):
     """
 
     password = tobytes(password)
-    if prf is None:
-        prf = lambda p,s: HMAC.new(p,s,SHA1).digest()
 
-    def link(s):
-        s[0], s[1] = s[1], prf(password, s[1])
-        return s[0]
+    if prf and hmac_hash_module:
+        raise ValueError("'prf' and 'hmac_hash_module' are mutually exlusive")
+ 
+    if prf is None:
+        if hmac_hash_module is None:
+            hmac_hash_module = SHA1
+        base = HMAC.new(password, b(""), hmac_hash_module)
+        prf = lambda p,s: HMAC.new(p, s, hmac_hash_module).digest()
+        def link(s):
+            s[0], s[1] = s[1], base._update_and_digest(s[1])
+            return s[0]
+    else:
+        # We can't tell if the PRF is HMAC-based, so we take the most
+        # general approach
+        def link(s):
+            s[0], s[1] = s[1], prf(password, s[1])
+            return s[0]
 
     key = b('')
     i = 1
