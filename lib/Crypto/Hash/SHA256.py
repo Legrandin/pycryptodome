@@ -36,6 +36,12 @@ _raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
                         int SHA256_digest(const void *shaState,
                                           uint8_t digest[32]);
                         int SHA256_copy(const void *src, void *dst);
+
+                        int SHA256_hmac_reduce(const void *src1,
+                                               const void *src2,
+                                               const uint8_t *msg,
+                                               size_t msglen,
+                                               uint8_t digest[32]);
                         """)
 
 class SHA256Hash(object):
@@ -154,4 +160,20 @@ digest_size = SHA256Hash.digest_size
 
 # The internal block size of the hash algorithm in bytes.
 block_size = SHA256Hash.block_size
+
+def _hmac_reduce(hash1, hash2, msg):
+    """Feed msg into hash1, then feed hash1's digest into hash2.
+    Return hash2's digest. The state of either hash is not modified.
+    
+    This function is only used by HMAC.
+    """
+    
+    bfr = create_string_buffer(digest_size)
+    result = _raw_sha256_lib.SHA256_hmac_reduce(hash1._state.get(),
+                                                hash2._state.get(),
+                                                msg,
+                                                len(msg),
+                                                bfr
+                                                )
+    return get_raw_buffer(bfr)
 

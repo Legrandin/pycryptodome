@@ -210,3 +210,23 @@ EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
     *dst = *src;
     return 0;
 }
+
+EXPORT_SYM int FUNC_NAME(_hmac_reduce)(const hash_state *src1, const hash_state *src2,
+                                       const uint8_t *msg, size_t msglen, uint8_t digest[DIGEST_SIZE])
+{
+    hash_state temp1, temp2;
+
+    if (NULL == src1 || NULL == src2 || NULL == msg || NULL == digest) {
+        return ERR_NULL;
+    }
+
+    temp1 = *src1;
+    temp2 = *src2;
+
+    FUNC_NAME(_update) (&temp1, msg, msglen);
+    sha_finalize(&temp1, digest);
+    FUNC_NAME(_update) (&temp2, digest, DIGEST_SIZE);
+    sha_finalize(&temp2, digest);
+
+    return 0;
+}

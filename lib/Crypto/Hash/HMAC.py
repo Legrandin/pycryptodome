@@ -104,11 +104,16 @@ class HMAC:
         This is only used by PBKDF2.
         """
 
-        ic = self._inner.copy()
-        ic.update(msg)
-        oc = self._outer.copy()
-        oc.update(ic.digest())
-        return oc.digest()
+        if hasattr(self._digestmod, "_hmac_reduce"):
+            result = self._digestmod._hmac_reduce(self._inner, self._outer, msg)
+        else:
+            ic = self._inner.copy()
+            ic.update(msg)
+            oc = self._outer.copy()
+            oc.update(ic.digest())
+            result = oc.digest()
+
+        return result
 
     def copy(self):
         """Return a copy ("clone") of the HMAC object.
