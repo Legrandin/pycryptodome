@@ -97,22 +97,16 @@ class HMAC:
         """
 
         self._inner.update(msg)
+        return self
 
-    def _update_and_digest(self, msg):
-        """Update and output digest without modifying the state of the hash
-        
-        This is only used by PBKDF2.
-        """
+    def _pbkdf2_hmac_assist(self, first_digest, iterations):
+        """Carry out the expensive inner loop for PBKDF2-HMAC"""
 
-        if hasattr(self._digestmod, "_hmac_reduce"):
-            result = self._digestmod._hmac_reduce(self._inner, self._outer, msg)
-        else:
-            ic = self._inner.copy()
-            ic.update(msg)
-            oc = self._outer.copy()
-            oc.update(ic.digest())
-            result = oc.digest()
-
+        result = self._digestmod._pbkdf2_hmac_assist(
+                                    self._inner,
+                                    self._outer,
+                                    first_digest,
+                                    iterations)
         return result
 
     def copy(self):
