@@ -470,6 +470,7 @@ package_data = {
         "test_vectors/TDES/*.rsp",
     ],
     "Crypto.SelfTest.Hash" : [
+        "test_vectors/SHA1/*.rsp",
         "test_vectors/SHA3/*.txt",
         "test_vectors/keccak/*.txt",
         "test_vectors/BLAKE2s/*.txt",

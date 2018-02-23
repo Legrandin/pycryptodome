@@ -25,10 +25,11 @@
 """Self-test suite for Crypto.Hash.SHA"""
 
 from Crypto.Util.py3compat import *
+from Crypto.SelfTest.loader import load_tests
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
-test_data = [
+test_data_various = [
     # FIPS PUB 180-2, A.1 - "One-Block Message"
     ('a9993e364706816aba3e25717850c26c9cd0d89d', 'abc'),
 
@@ -50,9 +51,29 @@ test_data = [
 def get_tests(config={}):
     from Crypto.Hash import SHA1
     from common import make_hash_tests
-    return make_hash_tests(SHA1, "SHA1", test_data,
-        digest_size=20,
-        oid="1.3.14.3.2.26")
+
+    tests = []
+
+    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA1"),
+                                "SHA1ShortMsg.rsp",
+                                "KAT SHA-1",
+                                { "len" : lambda x: int(x) } )
+
+    test_data = test_data_various[:]
+    for tv in test_vectors:
+        try:
+            if tv.startswith('['):
+                continue
+        except AttributeError:
+            pass
+        if tv.len == 0:
+            tv.msg = b("")
+        test_data.append((hexlify(tv.md), tv.msg, tv.desc))
+
+    tests = make_hash_tests(SHA1, "SHA1", test_data,
+                            digest_size=20,
+                            oid="1.3.14.3.2.26")
+    return tests
 
 if __name__ == '__main__':
     import unittest
