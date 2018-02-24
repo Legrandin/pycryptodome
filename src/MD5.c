@@ -342,6 +342,59 @@ EXPORT_SYM int MD5_copy(const hash_state *src, hash_state *dst)
     return 0;
 }
 
+/**
+ * This is a specialized function to efficiently perform the inner loop of PBKDF2-HMAC.
+ *
+ * - inner, the hash after the inner padded secret has been absorbed
+ * - outer, the hash after the outer padded secret has been absorbed
+ * - first_hmac, the output of the first HMAC iteration (with salt and counter)
+ * - result, the XOR of the HMACs from all iterations
+ * - iterations, the total number of PBKDF2 iterations (>0)
+ *
+ * This function does not change the state of either hash.
+ */
+EXPORT_SYM int MD5_pbkdf2_hmac_assist(const hash_state *inner, const hash_state *outer,
+                                             const uint8_t first_hmac[DIGEST_SIZE],
+                                             uint8_t result[DIGEST_SIZE],
+                                             size_t iterations)
+{
+    hash_state inner_temp, outer_temp;
+    size_t i;
+    uint8_t last_hmac[DIGEST_SIZE];
+
+    if (NULL == inner || NULL == outer || NULL == first_hmac || NULL == result) {
+        return ERR_NULL;
+    }
+
+    if (iterations == 0) {
+        return ERR_NR_ROUNDS;
+    }
+
+    memcpy(result, first_hmac, DIGEST_SIZE);
+    memcpy(last_hmac, first_hmac, DIGEST_SIZE);
+
+    for (i=1; i<iterations; i++) {
+        int j;
+
+        inner_temp = *inner;
+        outer_temp = *outer;
+
+        MD5_update(&inner_temp, last_hmac, DIGEST_SIZE);
+        md5_finalize(&inner_temp, last_hmac);
+
+        /** last_hmac is now the intermediate digest **/
+
+        MD5_update(&outer_temp, last_hmac, DIGEST_SIZE);
+        md5_finalize(&outer_temp, last_hmac);
+
+        for (j=0; j<DIGEST_SIZE; j++) {
+            result[j] ^= last_hmac[j];
+        }
+    }
+
+    return 0;
+}
+
 #ifdef MAIN
 int main(void)
 {

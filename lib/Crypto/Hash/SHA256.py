@@ -28,7 +28,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 _raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
                         """
-                        #define DIGEST_SIZE 32
+                        #define SHA256_DIGEST_SIZE 32
 
                         int SHA256_init(void **shaState);
                         int SHA256_destroy(void *shaState);
@@ -36,13 +36,13 @@ _raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
                                           const uint8_t *buf,
                                           size_t len);
                         int SHA256_digest(const void *shaState,
-                                          uint8_t digest[DIGEST_SIZE]);
+                                          uint8_t digest[SHA256_DIGEST_SIZE]);
                         int SHA256_copy(const void *src, void *dst);
 
                         int SHA256_pbkdf2_hmac_assist(const void *inner,
                                             const void *outer,
-                                            const uint8_t first_digest[DIGEST_SIZE],
-                                            uint8_t final_digest[DIGEST_SIZE],
+                                            const uint8_t first_digest[SHA256_DIGEST_SIZE],
+                                            uint8_t final_digest[SHA256_DIGEST_SIZE],
                                             size_t iterations);
                         """)
 
@@ -157,18 +157,20 @@ def new(data=None):
 
     return SHA256Hash().new(data)
 
+
 # The size of the resulting hash in bytes.
 digest_size = SHA256Hash.digest_size
 
 # The internal block size of the hash algorithm in bytes.
 block_size = SHA256Hash.block_size
 
+
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
     """Compute the expensive inner loop in PBKDF-HMAC."""
-    
+
     assert len(first_digest) == digest_size
     assert iterations > 0
-    
+
     bfr = create_string_buffer(digest_size);
     result = _raw_sha256_lib.SHA256_pbkdf2_hmac_assist(
                     inner._state.get(),
@@ -179,5 +181,5 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assis for SHA256" % result)
-    
+
     return get_raw_buffer(bfr)
