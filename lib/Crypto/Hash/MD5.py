@@ -26,7 +26,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, c_size_t,
                                   expect_byte_string)
 
-_raw_md5lib = load_pycryptodome_raw_lib("Crypto.Hash._MD5",
+_raw_md5_lib = load_pycryptodome_raw_lib("Crypto.Hash._MD5",
                         """
                         #define MD5_DIGEST_SIZE 16
 
@@ -38,6 +38,12 @@ _raw_md5lib = load_pycryptodome_raw_lib("Crypto.Hash._MD5",
                         int MD5_digest(const void *shaState,
                                           uint8_t digest[MD5_DIGEST_SIZE]);
                         int MD5_copy(const void *src, void *dst);
+
+                        int MD5_pbkdf2_hmac_assist(const void *inner,
+                                            const void *outer,
+                                            const uint8_t first_digest[MD5_DIGEST_SIZE],
+                                            uint8_t final_digest[MD5_DIGEST_SIZE],
+                                            size_t iterations);
                         """)
 
 class MD5Hash(object):
@@ -65,12 +71,12 @@ class MD5Hash(object):
 
     def __init__(self, data=None):
         state = VoidPointer()
-        result = _raw_md5lib.MD5_init(state.address_of())
+        result = _raw_md5_lib.MD5_init(state.address_of())
         if result:
             raise ValueError("Error %d while instantiating MD5"
                              % result)
         self._state = SmartPointer(state.get(),
-                                   _raw_md5lib.MD5_destroy)
+                                   _raw_md5_lib.MD5_destroy)
         if data:
             self.update(data)
 
@@ -82,7 +88,7 @@ class MD5Hash(object):
         """
 
         expect_byte_string(data)
-        result = _raw_md5lib.MD5_update(self._state.get(),
+        result = _raw_md5_lib.MD5_update(self._state.get(),
                                            data,
                                            c_size_t(len(data)))
         if result:
@@ -98,7 +104,7 @@ class MD5Hash(object):
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_md5lib.MD5_digest(self._state.get(),
+        result = _raw_md5_lib.MD5_digest(self._state.get(),
                                            bfr)
         if result:
             raise ValueError("Error %d while instantiating MD5"
@@ -128,7 +134,7 @@ class MD5Hash(object):
         """
 
         clone = MD5Hash()
-        result = _raw_md5lib.MD5_copy(self._state.get(),
+        result = _raw_md5_lib.MD5_copy(self._state.get(),
                                          clone._state.get())
         if result:
             raise ValueError("Error %d while copying MD5" % result)
@@ -157,3 +163,23 @@ digest_size = 16
 
 # The internal block size of the hash algorithm in bytes.
 block_size = 64
+
+
+def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
+    """Compute the expensive inner loop in PBKDF-HMAC."""
+
+    assert len(first_digest) == digest_size
+    assert iterations > 0
+
+    bfr = create_string_buffer(digest_size);
+    result = _raw_md5_lib.MD5_pbkdf2_hmac_assist(
+                    inner._state.get(),
+                    outer._state.get(),
+                    first_digest,
+                    bfr,
+                    c_size_t(iterations))
+
+    if result:
+        raise ValueError("Error %d with PBKDF2-HMAC assis for MD5" % result)
+
+    return get_raw_buffer(bfr)

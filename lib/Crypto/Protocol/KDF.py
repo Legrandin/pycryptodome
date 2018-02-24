@@ -129,28 +129,37 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
 
     if prf and hmac_hash_module:
         raise ValueError("'prf' and 'hmac_hash_module' are mutually exlusive")
- 
-    if prf is None:
-        if hmac_hash_module is None:
-            hmac_hash_module = SHA1
-        base = HMAC.new(password, b(""), hmac_hash_module)
-        prf = lambda p,s: HMAC.new(p, s, hmac_hash_module).digest()
-        def link(s):
-            s[0], s[1] = s[1], base._update_and_digest(s[1])
-            return s[0]
-    else:
-        # We can't tell if the PRF is HMAC-based, so we take the most
-        # general approach
+
+    if prf is None and hmac_hash_module is None:
+        hmac_hash_module = SHA1
+
+    if prf or not hasattr(hmac_hash_module, "_pbkdf2_hmac_assist"):
+        # Generic (and slow) implementation
+
+        if prf is None:
+            prf = lambda p,s: HMAC.new(p, s, hmac_hash_module).digest()
+        
         def link(s):
             s[0], s[1] = s[1], prf(password, s[1])
             return s[0]
+    
+        key = b('')
+        i = 1
+        while len(key)<dkLen:
+            s = [ prf(password, salt + struct.pack(">I", i)) ] * 2
+            key += reduce(strxor, (link(s) for j in range(count)) )
+            i += 1
 
-    key = b('')
-    i = 1
-    while len(key)<dkLen:
-        s = [ prf(password, salt + struct.pack(">I", i)) ] * 2
-        key += reduce(strxor, (link(s) for j in range(count)) )
-        i += 1
+    else:
+        # Optimized implementation
+        key = b('')
+        i = 1
+        while len(key)<dkLen:
+            base = HMAC.new(password, b(""), hmac_hash_module)
+            first_digest = base.copy().update(salt + struct.pack(">I", i)).digest()
+            key += base._pbkdf2_hmac_assist(first_digest, count)
+            i += 1
+    
     return key[:dkLen]
 
 

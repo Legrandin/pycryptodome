@@ -38,6 +38,12 @@ _raw_sha1_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA1",
                         int SHA1_digest(const void *shaState,
                                           uint8_t digest[SHA1_DIGEST_SIZE]);
                         int SHA1_copy(const void *src, void *dst);
+
+                        int SHA1_pbkdf2_hmac_assist(const void *inner,
+                                            const void *outer,
+                                            const uint8_t first_digest[SHA1_DIGEST_SIZE],
+                                            uint8_t final_digest[SHA1_DIGEST_SIZE],
+                                            size_t iterations);
                         """)
 
 class SHA1Hash(object):
@@ -139,6 +145,7 @@ class SHA1Hash(object):
 
         return SHA1Hash(data)
 
+
 def new(data=None):
     """Create a new hash object.
 
@@ -151,9 +158,29 @@ def new(data=None):
     """
     return SHA1Hash().new(data)
 
+
 # The size of the resulting hash in bytes.
 digest_size = SHA1Hash.digest_size
 
 # The internal block size of the hash algorithm in bytes.
 block_size = SHA1Hash.block_size
 
+
+def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
+    """Compute the expensive inner loop in PBKDF-HMAC."""
+
+    assert len(first_digest) == digest_size
+    assert iterations > 0
+
+    bfr = create_string_buffer(digest_size);
+    result = _raw_sha1_lib.SHA1_pbkdf2_hmac_assist(
+                    inner._state.get(),
+                    outer._state.get(),
+                    first_digest,
+                    bfr,
+                    c_size_t(iterations))
+
+    if result:
+        raise ValueError("Error %d with PBKDF2-HMAC assis for SHA1" % result)
+
+    return get_raw_buffer(bfr)

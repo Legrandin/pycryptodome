@@ -26,7 +26,7 @@ from binascii import unhexlify
 from Crypto.Util.py3compat import *
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Hash import SHA1, HMAC, SHA256
+from Crypto.Hash import SHA1, HMAC, SHA256, MD5, SHA224, SHA384, SHA512
 from Crypto.Cipher import AES, DES3
 
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, _S2V, HKDF, scrypt
@@ -126,16 +126,17 @@ class PBKDF2_Tests(unittest.TestCase):
     def test3(self):
         # Verify that hmac_hash_module works like prf
 
-        def prf_SHA256(p,s):
-            return HMAC.new(p,s,SHA256).digest()
-        
         password = b("xxx")
         salt = b("yyy")
-        
-        pr1 = PBKDF2(password, salt, 16, 100, prf=prf_SHA256)
-        pr2 = PBKDF2(password, salt, 16, 100, hmac_hash_module=SHA256)
 
-        self.assertEqual(pr1, pr2)
+        for hashmod in (MD5, SHA1, SHA224, SHA256, SHA384, SHA512):
+
+            pr1 = PBKDF2(password, salt, 16, 100,
+                         prf=lambda p, s: HMAC.new(p,s,hashmod).digest())
+            pr2 = PBKDF2(password, salt, 16, 100, hmac_hash_module=hashmod)
+
+            self.assertEqual(pr1, pr2)
+
 
 class S2V_Tests(unittest.TestCase):
 
