@@ -105,6 +105,25 @@ FAKE_INIT(SHA1)
 
 #define MIN(a,b) (a<b?a:b)
 
+static inline uint32_t get_be_32(const uint8_t *p)
+{
+    uint32_t result;
+
+    result =    p[3] |
+                ((uint32_t)p[2] << 8) |
+                ((uint32_t)p[1] << 16) |
+                ((uint32_t)p[0] << 24);
+    return result;
+}
+
+static inline void put_be_32(uint32_t number, uint8_t *p)
+{
+    p[3] = (uint8_t)(number);
+    p[2] = (uint8_t)(number >> 8);
+    p[1] = (uint8_t)(number >> 16);
+    p[0] = (uint8_t)(number >> 24);
+}
+
 typedef struct t_hash_state {
     uint32_t h[5];
     uint8_t buf[BLOCK_SIZE];    /** 64 bytes == 512 bits == sixteen 32-bit words **/
@@ -124,13 +143,10 @@ static void sha_compress(hash_state * hs)
     uint32_t a, b, c, d, e;
     uint32_t W[16];
     int i;
-    uint8_t *p;
 
     /** Words flow in in big-endian mode **/
-    p = &hs->buf[0];
     for (i=0; i<16; i++) {
-        W[i] = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8)  | (uint32_t)p[3];
-        p += 4;
+        W[i] = get_be_32(&hs->buf[i*4]);
     }
 
     a = hs->h[0];
@@ -318,19 +334,16 @@ static int sha_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
      **/
     left = BLOCK_SIZE - hs->curlen;
     memset(&hs->buf[hs->curlen], 0, left);
-    for (i=7; i>=0; i--) {
-        hs->buf[BLOCK_SIZE-i-1] = 0xFF & (hs->totbits >>  (i*8));
-    }
+    put_be_32((uint32_t)(hs->totbits >> 32), &hs->buf[BLOCK_SIZE-8]);
+    put_be_32((uint32_t)hs->totbits, &hs->buf[BLOCK_SIZE-4]);
 
     /** compress one last time **/
     sha_compress(hs);
 
     /** create final hash **/
     for (i=0; i<5; i++) {
-        *hash++ = hs->h[i] >> 24;
-        *hash++ = hs->h[i] >> 16;
-        *hash++ = hs->h[i] >> 8;
-        *hash++ = hs->h[i];
+        put_be_32(hs->h[i], hash);
+        hash += 4;
     }
 
     return 0;

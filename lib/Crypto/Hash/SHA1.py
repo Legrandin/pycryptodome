@@ -28,13 +28,15 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 _raw_sha1_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA1",
                         """
+                        #define SHA1_DIGEST_SIZE 20
+
                         int SHA1_init(void **shaState);
                         int SHA1_destroy(void *shaState);
                         int SHA1_update(void *hs,
                                           const uint8_t *buf,
                                           size_t len);
                         int SHA1_digest(const void *shaState,
-                                          uint8_t digest[16]);
+                                          uint8_t digest[SHA1_DIGEST_SIZE]);
                         int SHA1_copy(const void *src, void *dst);
                         """)
 
