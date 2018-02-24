@@ -137,6 +137,16 @@ class PBKDF2_Tests(unittest.TestCase):
 
             self.assertEqual(pr1, pr2)
 
+    def test4(self):
+        # Verify that PBKDF2 can take bytes or strings as password or salt
+        k1 = PBKDF2("xxx", b("yyy"), 16, 10)
+        k2 = PBKDF2(b("xxx"), b("yyy"), 16, 10)
+        self.assertEqual(k1, k2)
+
+        k1 = PBKDF2(b("xxx"), "yyy", 16, 10)
+        k2 = PBKDF2(b("xxx"), b("yyy"), 16, 10)
+        self.assertEqual(k1, k2)
+
 
 class S2V_Tests(unittest.TestCase):
 

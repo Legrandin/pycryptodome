@@ -12,6 +12,7 @@ New features
 * Faster PBKDF2 for HMAC-based PRFs (at least 20x for short passwords,
   more for longer passwords). Thanks to Christian Heimes for pointing
   out the implementation was under-optimized.
+* The salt for PBKDF2 can be either a string or bytes (GH#67).
 
 3.4.12 (5 February 2018)
 ++++++++++++++++++++++++

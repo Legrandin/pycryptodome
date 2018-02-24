@@ -101,10 +101,10 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
     the PKCS#5 standard (v2.0).
 
     Args:
-     password (string):
+     password (string or byte string):
         The secret password to generate the key from.
-     salt (string):
-        A string to use for better protection from dictionary attacks.
+     salt (string or byte string):
+        A (byte) string to use for better protection from dictionary attacks.
         This value does not need to be kept secret, but it should be randomly
         chosen for each derivation. It is recommended to be at least 8 bytes long.
      dkLen (integer):
@@ -126,6 +126,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
     """
 
     password = tobytes(password)
+    salt = tobytes(salt)
 
     if prf and hmac_hash_module:
         raise ValueError("'prf' and 'hmac_hash_module' are mutually exlusive")
@@ -138,11 +139,11 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
 
         if prf is None:
             prf = lambda p,s: HMAC.new(p, s, hmac_hash_module).digest()
-        
+
         def link(s):
             s[0], s[1] = s[1], prf(password, s[1])
             return s[0]
-    
+
         key = b('')
         i = 1
         while len(key)<dkLen:
@@ -159,7 +160,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
             first_digest = base.copy().update(salt + struct.pack(">I", i)).digest()
             key += base._pbkdf2_hmac_assist(first_digest, count)
             i += 1
-    
+
     return key[:dkLen]
 
 
