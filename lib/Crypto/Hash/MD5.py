@@ -18,52 +18,142 @@
 # SOFTWARE.
 # ===================================================================
 
-__all__ = ['new', 'block_size', 'digest_size']
-
 from Crypto.Util.py3compat import *
 
-def __make_constructor():
-    try:
-        # The md5 module is deprecated in Python 2.6, so use hashlib when possible.
-        from hashlib import md5 as _hash_new
-    except ImportError:
-        from md5 import new as _hash_new
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
+                                  VoidPointer, SmartPointer,
+                                  create_string_buffer,
+                                  get_raw_buffer, c_size_t,
+                                  expect_byte_string)
 
-    h = _hash_new()
-    if hasattr(h, 'new') and hasattr(h, 'name') and hasattr(h, 'digest_size') and hasattr(h, 'block_size'):
-        # The module from stdlib has the API that we need.  Just use it.
-        return _hash_new
-    else:
-        # Wrap the hash object in something that gives us the expected API.
-        _copy_sentinel = object()
-        class _MD5(object):
-            digest_size = 16
-            block_size = 64
-            oid = "1.2.840.113549.2.5"
-            def __init__(self, *args):
-                if args and args[0] is _copy_sentinel:
-                    self._h = args[1]
-                else:
-                    self._h = _hash_new(*args)
-            def copy(self):
-                return _MD5(_copy_sentinel, self._h.copy())
-            def update(self, *args):
-                f = self.update = self._h.update
-                f(*args)
-            def digest(self):
-                f = self.digest = self._h.digest
-                return f()
-            def hexdigest(self):
-                f = self.hexdigest = self._h.hexdigest
-                return f()
-        _MD5.new = _MD5
-        return _MD5
+_raw_md5lib = load_pycryptodome_raw_lib("Crypto.Hash._MD5",
+                        """
+                        #define MD5_DIGEST_SIZE 16
 
-new = __make_constructor()
-del __make_constructor
+                        int MD5_init(void **shaState);
+                        int MD5_destroy(void *shaState);
+                        int MD5_update(void *hs,
+                                          const uint8_t *buf,
+                                          size_t len);
+                        int MD5_digest(const void *shaState,
+                                          uint8_t digest[MD5_DIGEST_SIZE]);
+                        int MD5_copy(const void *src, void *dst);
+                        """)
+
+class MD5Hash(object):
+    """A MD5 hash object.
+    Do not instantiate directly.
+    Use the :func:`new` function.
+
+    :ivar oid: ASN.1 Object ID
+    :vartype oid: string
+
+    :ivar block_size: the size in bytes of the internal message block,
+                      input to the compression function
+    :vartype block_size: integer
+
+    :ivar digest_size: the size in bytes of the resulting hash
+    :vartype digest_size: integer
+    """
+
+    # The size of the resulting hash in bytes.
+    digest_size = 16
+    # The internal block size of the hash algorithm in bytes.
+    block_size = 64
+    # ASN.1 Object ID
+    oid = "1.2.840.113549.2.5"
+
+    def __init__(self, data=None):
+        state = VoidPointer()
+        result = _raw_md5lib.MD5_init(state.address_of())
+        if result:
+            raise ValueError("Error %d while instantiating MD5"
+                             % result)
+        self._state = SmartPointer(state.get(),
+                                   _raw_md5lib.MD5_destroy)
+        if data:
+            self.update(data)
+
+    def update(self, data):
+        """Continue hashing of a message by consuming the next chunk of data.
+
+        Args:
+            data (byte string): The next chunk of the message being hashed.
+        """
+
+        expect_byte_string(data)
+        result = _raw_md5lib.MD5_update(self._state.get(),
+                                           data,
+                                           c_size_t(len(data)))
+        if result:
+            raise ValueError("Error %d while instantiating MD5"
+                             % result)
+
+    def digest(self):
+        """Return the **binary** (non-printable) digest of the message that has been hashed so far.
+
+        :return: The hash digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
+        """
+
+        bfr = create_string_buffer(self.digest_size)
+        result = _raw_md5lib.MD5_digest(self._state.get(),
+                                           bfr)
+        if result:
+            raise ValueError("Error %d while instantiating MD5"
+                             % result)
+
+        return get_raw_buffer(bfr)
+
+    def hexdigest(self):
+        """Return the **printable** digest of the message that has been hashed so far.
+
+        :return: The hash digest, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
+        """
+
+        return "".join(["%02x" % bord(x) for x in self.digest()])
+
+    def copy(self):
+        """Return a copy ("clone") of the hash object.
+
+        The copy will have the same internal state as the original hash
+        object.
+        This can be used to efficiently compute the digests of strings that
+        share a common initial substring.
+
+        :return: A hash object of the same type
+        """
+
+        clone = MD5Hash()
+        result = _raw_md5lib.MD5_copy(self._state.get(),
+                                         clone._state.get())
+        if result:
+            raise ValueError("Error %d while copying MD5" % result)
+        return clone
+
+    def new(self, data=None):
+        """Create a fresh SHA-1 hash object."""
+
+        return MD5Hash(data)
+
+
+def new(data=None):
+    """Create a new hash object.
+
+    :parameter data:
+        Optional. The very first chunk of the message to hash.
+        It is equivalent to an early call to :meth:`MD5Hash.update`.
+    :type data: byte string
+
+    :Return: A :class:`MD5Hash` hash object
+    """
+    return MD5Hash().new(data)
 
 # The size of the resulting hash in bytes.
-digest_size = new().digest_size
+digest_size = 16
 
 # The internal block size of the hash algorithm in bytes.
-block_size = new().block_size
+block_size = 64
