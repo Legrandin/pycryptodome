@@ -55,7 +55,7 @@ class HashSelfTest(unittest.TestCase):
     def __init__(self, hashmod, description, expected, input):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
-        self.expected = expected
+        self.expected = expected.lower()
         self.input = input
         self.description = description
 

@@ -25,6 +25,11 @@
 """Self-test suite for Crypto.Hash.MD5"""
 
 from Crypto.Util.py3compat import *
+from Crypto.Hash import MD5
+from binascii import unhexlify
+import unittest
+from Crypto.SelfTest.st_common import list_test_cases
+
 
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
@@ -45,14 +50,41 @@ test_data = [
         '1234567890123456789012345678901234567890123456'
         + '7890123456789012345678901234567890',
         "'1234567890' * 8"),
+
+    # https://www.cosic.esat.kuleuven.be/nessie/testvectors/hash/md5/Md5-128.unverified.test-vectors
+    ('57EDF4A22BE3C955AC49DA2E2107B67A', '1234567890' * 8, 'Set 1, vector #7'),
+    ('7707D6AE4E027C70EEA2A935C2296F21', 'a'*1000000, 'Set 1, vector #8'),
 ]
 
+
+class Md5IterTest(unittest.TestCase):
+
+    def runTest(self):
+        message = b("\x00") * 16
+        result1 = "4AE71336E44BF9BF79D2752E234818A5"
+        result2 = "1A83F51285E4D89403D00C46EF8508FE"
+
+        h = MD5.new(message)
+        message = h.digest()
+        self.assertEqual(message, unhexlify(result1))
+
+        for _ in range(99999):
+            h = MD5.new(message)
+            message = h.digest()
+
+        self.assertEqual(message, unhexlify(result2))
+
+
 def get_tests(config={}):
-    from Crypto.Hash import MD5
     from common import make_hash_tests
-    return make_hash_tests(MD5, "MD5", test_data,
-        digest_size=16,
-        oid="1.2.840.113549.2.5")
+
+    tests =  make_hash_tests(MD5, "MD5", test_data,
+                            digest_size=16,
+                            oid="1.2.840.113549.2.5")
+    if config.get('slow_tests'):
+        tests += [ Md5IterTest() ]
+    return tests
+
 
 if __name__ == '__main__':
     import unittest
