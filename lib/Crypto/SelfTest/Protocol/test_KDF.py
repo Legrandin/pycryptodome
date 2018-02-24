@@ -126,9 +126,6 @@ class PBKDF2_Tests(unittest.TestCase):
     def test3(self):
         # Verify that hmac_hash_module works like prf
 
-        def prf_SHA256(p,s):
-            return HMAC.new(p,s,SHA256).digest()
-
         password = b("xxx")
         salt = b("yyy")
 
