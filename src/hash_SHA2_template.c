@@ -79,19 +79,10 @@ static const uint64_t K[SCHEDULE_SIZE] = {
 
 #define SCHEDULE(i) (sigma_1_256(W[i-2]) + W[i-7] + sigma_0_256(W[i-15]) + W[i-16])
 
-#define ROUND(t) do {                                       \
-    sha2_word_t T1, T2;                                     \
-    T1 = h + SIGMA_1_256(e) + CH(e,f,g) + K[t]  + W[t];     \
-    T2 = SIGMA_0_256(a) + MAJ(a,b,c);                       \
-    h = g;                                                  \
-    g = f;                                                  \
-    f = e;                                                  \
-    e = d + T1;                                             \
-    d = c;                                                  \
-    c = b;                                                  \
-    b = a;                                                  \
-    a = T1 + T2;                                            \
-    } while(0)
+#define CYCLE(a,b,c,d,e,f,g,h,t) \
+    h += SIGMA_1_256(e) + CH(e,f,g) + K[t]  + W[t]; \
+    d += h; \
+    h += SIGMA_0_256(a) + MAJ(a,b,c);
 
 #elif WORD_SIZE==8
 
@@ -132,19 +123,10 @@ static const uint64_t K[SCHEDULE_SIZE] = {
 
 #define SCHEDULE(i) (sigma_1_512(W[i-2]) + W[i-7] + sigma_0_512(W[i-15]) + W[i-16])
 
-#define ROUND(t) do {                                       \
-    sha2_word_t T1, T2;                                     \
-    T1 = h + SIGMA_1_512(e) + CH(e,f,g) + K[t]  + W[t];     \
-    T2 = SIGMA_0_512(a) + MAJ(a,b,c);                       \
-    h = g;                                                  \
-    g = f;                                                  \
-    f = e;                                                  \
-    e = d + T1;                                             \
-    d = c;                                                  \
-    c = b;                                                  \
-    b = a;                                                  \
-    a = T1 + T2;                                            \
-    } while(0)
+#define CYCLE(a,b,c,d,e,f,g,h,t) \
+    h += SIGMA_1_512(e) + CH(e,f,g) + K[t]  + W[t]; \
+    d += h; \
+    h += SIGMA_0_512(a) + MAJ(a,b,c);
 
 #else
 #error Invalid WORD_SIZE
@@ -220,87 +202,88 @@ static void sha_compress(hash_state * hs)
     g = hs->h[6];
     h = hs->h[7];
 
-    ROUND(0);
-    ROUND(1);
-    ROUND(2);
-    ROUND(3);
-    ROUND(4);
-    ROUND(5);
-    ROUND(6);
-    ROUND(7);
-    ROUND(8);
-    ROUND(9);
-    ROUND(10);
-    ROUND(11);
-    ROUND(12);
-    ROUND(13);
-    ROUND(14);
-    ROUND(15);
-    ROUND(16);
-    ROUND(17);
-    ROUND(18);
-    ROUND(19);
-    ROUND(20);
-    ROUND(21);
-    ROUND(22);
-    ROUND(23);
-    ROUND(24);
-    ROUND(25);
-    ROUND(26);
-    ROUND(27);
-    ROUND(28);
-    ROUND(29);
-    ROUND(30);
-    ROUND(31);
-    ROUND(32);
-    ROUND(33);
-    ROUND(34);
-    ROUND(35);
-    ROUND(36);
-    ROUND(37);
-    ROUND(38);
-    ROUND(39);
-    ROUND(40);
-    ROUND(41);
-    ROUND(42);
-    ROUND(43);
-    ROUND(44);
-    ROUND(45);
-    ROUND(46);
-    ROUND(47);
-    ROUND(48);
-    ROUND(49);
-    ROUND(50);
-    ROUND(51);
-    ROUND(52);
-    ROUND(53);
-    ROUND(54);
-    ROUND(55);
-    ROUND(56);
-    ROUND(57);
-    ROUND(58);
-    ROUND(59);
-    ROUND(60);
-    ROUND(61);
-    ROUND(62);
-    ROUND(63);
+    CYCLE(a,b,c,d,e,f,g,h, 0);
+    CYCLE(h,a,b,c,d,e,f,g, 1);
+    CYCLE(g,h,a,b,c,d,e,f, 2);
+    CYCLE(f,g,h,a,b,c,d,e, 3);
+    CYCLE(e,f,g,h,a,b,c,d, 4);
+    CYCLE(d,e,f,g,h,a,b,c, 5);
+    CYCLE(c,d,e,f,g,h,a,b, 6);
+    CYCLE(b,c,d,e,f,g,h,a, 7);
+    CYCLE(a,b,c,d,e,f,g,h, 8);
+    CYCLE(h,a,b,c,d,e,f,g, 9);
+    CYCLE(g,h,a,b,c,d,e,f, 10);
+    CYCLE(f,g,h,a,b,c,d,e, 11);
+    CYCLE(e,f,g,h,a,b,c,d, 12);
+    CYCLE(d,e,f,g,h,a,b,c, 13);
+    CYCLE(c,d,e,f,g,h,a,b, 14);
+    CYCLE(b,c,d,e,f,g,h,a, 15);
+    CYCLE(a,b,c,d,e,f,g,h, 16);
+    CYCLE(h,a,b,c,d,e,f,g, 17);
+    CYCLE(g,h,a,b,c,d,e,f, 18);
+    CYCLE(f,g,h,a,b,c,d,e, 19);
+    CYCLE(e,f,g,h,a,b,c,d, 20);
+    CYCLE(d,e,f,g,h,a,b,c, 21);
+    CYCLE(c,d,e,f,g,h,a,b, 22);
+    CYCLE(b,c,d,e,f,g,h,a, 23);
+    CYCLE(a,b,c,d,e,f,g,h, 24);
+    CYCLE(h,a,b,c,d,e,f,g, 25);
+    CYCLE(g,h,a,b,c,d,e,f, 26);
+    CYCLE(f,g,h,a,b,c,d,e, 27);
+    CYCLE(e,f,g,h,a,b,c,d, 28);
+    CYCLE(d,e,f,g,h,a,b,c, 29);
+    CYCLE(c,d,e,f,g,h,a,b, 30);
+    CYCLE(b,c,d,e,f,g,h,a, 31);
+    CYCLE(a,b,c,d,e,f,g,h, 32);
+    CYCLE(h,a,b,c,d,e,f,g, 33);
+    CYCLE(g,h,a,b,c,d,e,f, 34);
+    CYCLE(f,g,h,a,b,c,d,e, 35);
+    CYCLE(e,f,g,h,a,b,c,d, 36);
+    CYCLE(d,e,f,g,h,a,b,c, 37);
+    CYCLE(c,d,e,f,g,h,a,b, 38);
+    CYCLE(b,c,d,e,f,g,h,a, 39);
+    CYCLE(a,b,c,d,e,f,g,h, 40);
+    CYCLE(h,a,b,c,d,e,f,g, 41);
+    CYCLE(g,h,a,b,c,d,e,f, 42);
+    CYCLE(f,g,h,a,b,c,d,e, 43);
+    CYCLE(e,f,g,h,a,b,c,d, 44);
+    CYCLE(d,e,f,g,h,a,b,c, 45);
+    CYCLE(c,d,e,f,g,h,a,b, 46);
+    CYCLE(b,c,d,e,f,g,h,a, 47);
+    CYCLE(a,b,c,d,e,f,g,h, 48);
+    CYCLE(h,a,b,c,d,e,f,g, 49);
+    CYCLE(g,h,a,b,c,d,e,f, 50);
+    CYCLE(f,g,h,a,b,c,d,e, 51);
+    CYCLE(e,f,g,h,a,b,c,d, 52);
+    CYCLE(d,e,f,g,h,a,b,c, 53);
+    CYCLE(c,d,e,f,g,h,a,b, 54);
+    CYCLE(b,c,d,e,f,g,h,a, 55);
+    CYCLE(a,b,c,d,e,f,g,h, 56);
+    CYCLE(h,a,b,c,d,e,f,g, 57);
+    CYCLE(g,h,a,b,c,d,e,f, 58);
+    CYCLE(f,g,h,a,b,c,d,e, 59);
+    CYCLE(e,f,g,h,a,b,c,d, 60);
+    CYCLE(d,e,f,g,h,a,b,c, 61);
+    CYCLE(c,d,e,f,g,h,a,b, 62);
+    CYCLE(b,c,d,e,f,g,h,a, 63);
+
 #if SCHEDULE_SIZE==80
-    ROUND(64);
-    ROUND(65);
-    ROUND(66);
-    ROUND(67);
-    ROUND(68);
-    ROUND(69);
-    ROUND(70);
-    ROUND(71);
-    ROUND(72);
-    ROUND(73);
-    ROUND(74);
-    ROUND(75);
-    ROUND(76);
-    ROUND(77);
-    ROUND(78);
-    ROUND(79);
+    CYCLE(a,b,c,d,e,f,g,h, 64);
+    CYCLE(h,a,b,c,d,e,f,g, 65);
+    CYCLE(g,h,a,b,c,d,e,f, 66);
+    CYCLE(f,g,h,a,b,c,d,e, 67);
+    CYCLE(e,f,g,h,a,b,c,d, 68);
+    CYCLE(d,e,f,g,h,a,b,c, 69);
+    CYCLE(c,d,e,f,g,h,a,b, 70);
+    CYCLE(b,c,d,e,f,g,h,a, 71);
+    CYCLE(a,b,c,d,e,f,g,h, 72);
+    CYCLE(h,a,b,c,d,e,f,g, 73);
+    CYCLE(g,h,a,b,c,d,e,f, 74);
+    CYCLE(f,g,h,a,b,c,d,e, 75);
+    CYCLE(e,f,g,h,a,b,c,d, 76);
+    CYCLE(d,e,f,g,h,a,b,c, 77);
+    CYCLE(c,d,e,f,g,h,a,b, 78);
+    CYCLE(b,c,d,e,f,g,h,a, 79);
 #endif
 
     /** compute new intermediate hash **/
