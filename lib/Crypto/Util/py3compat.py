@@ -105,7 +105,7 @@ else:
     def tostr(bs):
         return bs.decode("latin-1")
     def byte_string(s):
-        return isinstance(s, bytes)
+        return isinstance(s, (bytes, bytearray))
 
     # With Python 3.[0-2], unhexlify only accepts bytes.
     # Starting from Python 3.3, strings can be passed too.
