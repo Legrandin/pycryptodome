@@ -27,6 +27,7 @@ except ImportError:
 from distutils.command.build_ext import build_ext
 from distutils.command.build import build
 from distutils.errors import CCompilerError
+from distutils import ccompiler
 import distutils
 import platform
 import re
@@ -156,7 +157,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
 
     objects = []
     try:
-        compiler = distutils.ccompiler.new_compiler()
+        compiler = ccompiler.new_compiler()
 
         if compiler.compiler_type in [ 'msvc' ]:
             # Force creation of the manifest file (http://bugs.python.org/issue16296)
