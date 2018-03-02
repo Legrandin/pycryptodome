@@ -12,6 +12,11 @@ counter = Count()
 def split64(long_int):
     """Split long_int into 64-bit words big-endian"""
 
+    assert(long_int >= 0)
+
+    if long_int == 0:
+        return [ "0" ]
+
     result = []
     while long_int:
         result += [ "0x%xULL" % (long_int & (2**64-1)) ]
@@ -19,6 +24,11 @@ def split64(long_int):
     return result
 
 def make_test(t, a, b0, b1):
+
+    if b0 == -1:
+        b0 = 0xFFFFFFFF
+    if b1 == -1:
+        b1 = 0xFFFFFFFF
 
     # What we expect the function to compute
     result = t + a*(b0 + (b1 << 64))
@@ -37,6 +47,7 @@ def make_test(t, a, b0, b1):
     for x in xrange(result_len - len(result)):
         result.append("0")
 
+    print ""
     print "void test_%d() {" % counter.next()
     print "    const uint64_t a[] = {" + ", ".join(a) + "};"
     print "    uint64_t t[] = {" + ", ".join(t_in) + ", 0xAA};"
@@ -65,7 +76,10 @@ print "#include <stdint.h>"
 print "#include <stdio.h>"
 print '#include "multiply.h"'
 
+make_test(0, 0, 0, 0)
+make_test(0, 1, 1, 0)
 make_test(0, 5, 5, 6)
+make_test(0, 0xFFFFFFFFFFFFFFFFFFF, -1, -1)
 make_test(32783243204234329232323, 9232922323, 39393938, 7393393)
 make_test(32783243204234329232323333333333333783839393,
           92329223233877777777777777777777777838333, 0x1000000, 7393393)
