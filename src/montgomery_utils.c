@@ -125,8 +125,6 @@ struct BitWindow init_bit_window(int window_size, const uint8_t *exp, int exp_le
     return bw;
 }
 
-#define MIN(a,b) (a<b?(a):(b))
-
 int get_next_digit(struct BitWindow *bw)
 {
     int tc, index;

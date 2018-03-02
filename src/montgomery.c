@@ -57,7 +57,7 @@ static uint64_t inverse64(uint64_t a)
     x += x - a*x*x;
     x += x - a*x*x;
     x += x - a*x*x;
-    assert((x*a & 0xFFFFFFFFFFFFFFFFUL) == 1);
+    assert((x*a & 0xFFFFFFFFFFFFFFFFULL) == 1);
     
     return x;
 }
@@ -90,11 +90,15 @@ static void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t a_words, s
         carry = t[i] < carry;
     }
 
-    assert(i < t_words);
+    assert(i <= t_words);
 }
 
 /**
  * Multiply a[] by b[] and store the result into t[].
+ *
+ * a[] and b[] must have the same length.
+ *
+ * t[] will be twice as long.
  */
 static void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t words)
 {
