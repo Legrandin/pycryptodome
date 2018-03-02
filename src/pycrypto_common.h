@@ -24,6 +24,14 @@
 #ifndef PYCRYPTO_COMMON_H
 #define PYCRYPTO_COMMON_H
 
+#ifndef MAX
+#define MAX(a,b) ((a)>(b)?(a):(b))
+#endif
+
+#ifndef MIN
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#endif
+
 #define _PASTE(x,y) x##y
 #define _PASTE2(x,y) _PASTE(x,y)
 
