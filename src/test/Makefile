@@ -2,12 +2,14 @@
 CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPY_' + sys.byteorder.upper() + '_ENDIAN'")
 
 test: all
-	./tests_addmul128
-	./tests_square_w
+	./tests_addmul128_32
+	./tests_square_w_32
+	./tests_addmul128_64
+	./tests_square_w_64
 	./tests_product
 	./tests_addmul
 
-all: tests_addmul128 tests_square_w tests_product tests_addmul
+all: tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul
 
 clean:
 	rm -f tests_addmul* tests_square_w* tests_product* montgomery*
@@ -24,10 +26,16 @@ tests_product.c: make_tests_product.py
 tests_addmul.c: make_tests_addmul.py
 	python $^ > $@
 
-tests_addmul128: tests_addmul128.c ../multiply_32.c
+tests_addmul128_32: tests_addmul128.c ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
-tests_square_w: tests_square_w.c ../multiply_32.c
+tests_square_w_32: tests_square_w.c ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+tests_addmul128_64: tests_addmul128.c ../multiply_64.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+tests_square_w_64: tests_square_w.c ../multiply_64.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 montgomery.o: ../montgomery.c
