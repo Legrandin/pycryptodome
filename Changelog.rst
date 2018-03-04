@@ -14,6 +14,11 @@ New features
   out the implementation was under-optimized.
 * The salt for PBKDF2 can be either a string or bytes (GH#67).
 
+Resolved issues
+---------------
+
+* Without libgmp, modular exponentiaion crashed on big-endian systems.
+
 3.4.12 (5 February 2018)
 ++++++++++++++++++++++++
 

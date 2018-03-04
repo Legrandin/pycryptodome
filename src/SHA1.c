@@ -103,8 +103,6 @@ FAKE_INIT(SHA1)
 
 #define DIGEST_SIZE (160/8)
 
-#define MIN(a,b) (a<b?a:b)
-
 static inline uint32_t get_be_32(const uint8_t *p)
 {
     uint32_t result;

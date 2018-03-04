@@ -156,18 +156,24 @@ uint64_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t 
         aim1 = a[i];
     }
 
-    /** MSW **/
+    /** MSW - 1 **/
     DP_MULT(a[i-1], b1, pr_low, pr_high);
     ADD192(sum_low, pr_low);
     sum_mid += pr_high;
     sum_hi += sum_mid < pr_high;
     ADD192(t[i], sum_low);
 
-    i++;
-    
     sum_low = sum_mid;
     sum_mid = sum_hi;
     sum_hi = 0;
+    i++;
+
+    /** MSW **/
+    ADD192(t[i], sum_low);
+    sum_low = sum_mid;
+    sum_mid = sum_hi;
+    sum_hi = 0;
+    i++;
  
     /** Extend carry indefinetly **/
     for (; sum_low || sum_mid; i++) {
