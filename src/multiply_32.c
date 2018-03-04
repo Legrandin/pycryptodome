@@ -149,7 +149,7 @@ size_t static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uin
     return i;
 }
 
-size_t static inline max(size_t a, size_t b)
+size_t static inline max_size_t(size_t a, size_t b)
 {
     return a>b ? a : b;
 }
@@ -178,13 +178,13 @@ size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0
     words32 = addmul32((uint32_t*)t, 0, (uint32_t*)a, b0l, 2*words);
     
     res = addmul32((uint32_t*)t, 1, (uint32_t*)a, b0h, 2*words);
-    words32 = max(words32, res + 1);
+    words32 = max_size_t(words32, res + 1);
     
     res = addmul32((uint32_t*)t, 2, (uint32_t*)a, b1l, 2*words);
-    words32 = max(words32, res + 2);
+    words32 = max_size_t(words32, res + 2);
     
     res = addmul32((uint32_t*)t, 3, (uint32_t*)a, b1h, 2*words);
-    words32 = max(words32, res + 3);
+    words32 = max_size_t(words32, res + 3);
 
     return (words32+1)/2;
 }
