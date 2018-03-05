@@ -165,6 +165,28 @@ class BlockChainingTests(unittest.TestCase):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
+    def test_bytearray(self):
+        data = b("1") * 16
+
+        # Encrypt
+        cipher1 = AES.new(self.key_128, self.aes_mode, self.iv_128)
+        ref1 = cipher1.encrypt(data)
+
+        cipher2 = AES.new(bytearray(self.key_128), self.aes_mode, bytearray(self.iv_128))
+        ref2 = cipher2.encrypt(bytearray(data))
+
+        self.assertEqual(ref1, ref2)
+        self.assertEqual(cipher1.iv, cipher2.iv)
+
+        # Decrypt
+        cipher3 = AES.new(self.key_128, self.aes_mode, self.iv_128)
+        ref3 = cipher3.decrypt(data)
+
+        cipher4 = AES.new(bytearray(self.key_128), self.aes_mode, bytearray(self.iv_128))
+        ref4 = cipher4.decrypt(bytearray(data))
+
+        self.assertEqual(ref3, ref4)
+
 
 class CbcTests(BlockChainingTests):
     aes_mode = AES.MODE_CBC

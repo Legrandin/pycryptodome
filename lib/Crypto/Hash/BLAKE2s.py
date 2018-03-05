@@ -37,7 +37,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  expect_byte_string)
+                                  c_char_ptr)
 
 _raw_blake2s_lib = load_pycryptodome_raw_lib("Crypto.Hash._BLAKE2s",
                         """
@@ -85,11 +85,9 @@ class BLAKE2s_Hash(object):
         if digest_bytes in (16, 20, 28, 32) and not key:
             self.oid = "1.3.6.1.4.1.1722.12.2.2." + str(digest_bytes)
 
-        expect_byte_string(key)
-
         state = VoidPointer()
         result = _raw_blake2s_lib.blake2s_init(state.address_of(),
-                                               key,
+                                               c_char_ptr(key),
                                                c_size_t(len(key)),
                                                c_size_t(digest_bytes)
                                                )
@@ -111,9 +109,8 @@ class BLAKE2s_Hash(object):
         if self._digest_done and not self._update_after_digest:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
-        expect_byte_string(data)
         result = _raw_blake2s_lib.blake2s_update(self._state.get(),
-                                                 data,
+                                                 c_char_ptr(data),
                                                  c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while hashing BLAKE2s data" % result)

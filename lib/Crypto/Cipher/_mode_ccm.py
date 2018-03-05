@@ -34,7 +34,7 @@ Counter with CBC-MAC (CCM) mode.
 
 __all__ = ['CcmMode']
 
-from Crypto.Util.py3compat import byte_string, b, bchr, bord, unhexlify
+from Crypto.Util.py3compat import byte_string, b, bchr, bord, unhexlify, bstr
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes
@@ -114,11 +114,11 @@ class CcmMode(object):
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = nonce
+        self.nonce = bstr(nonce)
         """The nonce used for this cipher instance"""
 
         self._factory = factory
-        self._key = key
+        self._key = bstr(key)
         self._mac_len = mac_len
         self._msg_len = msg_len
         self._assoc_len = assoc_len
@@ -186,7 +186,7 @@ class CcmMode(object):
         q = 15 - len(self.nonce)  # length of Q, the encoded message length
         flags = (64 * (self._assoc_len > 0) + 8 * ((self._mac_len - 2) // 2) +
                  (q - 1))
-        b_0 = bchr(flags) + self.nonce + long_to_bytes(self._msg_len, q)
+        b_0 = bchr(flags) + bstr(self.nonce) + long_to_bytes(self._msg_len, q)
 
         # Formatting associated data (A.2.2)
         # Encoded 'a' is concatenated with the associated data 'A'
@@ -215,7 +215,6 @@ class CcmMode(object):
     def _pad_cache_and_update(self):
 
         assert(self._mac_status != MacStatus.NOT_STARTED)
-        assert(byte_string(self._cache))
         assert(len(self._cache) < self.block_size)
 
         # Associated data is concatenated with the least number
@@ -268,10 +267,9 @@ class CcmMode(object):
            (without FSM checks)"""
 
         if self._mac_status == MacStatus.NOT_STARTED:
-            self._cache.append(assoc_data_pt)
+            self._cache.append(bstr(assoc_data_pt))
             return
 
-        assert(byte_string(self._cache))
         assert(len(self._cache) < self.block_size)
 
         if len(self._cache) > 0:

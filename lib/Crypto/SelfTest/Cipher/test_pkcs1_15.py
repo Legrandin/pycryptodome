@@ -159,6 +159,13 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                     pt2 = cipher.decrypt(ct, "---")
                     self.assertEqual(pt,pt2)
 
+        def testByteArray(self):
+            pt = b("XER")
+            cipher = PKCS.new(self.key1024)
+            ct = cipher.encrypt(bytearray(pt))
+            pt2 = cipher.decrypt(bytearray(ct), "---")
+            self.assertEqual(pt, pt2)
+
 
 def get_tests(config={}):
     tests = []

@@ -86,19 +86,17 @@ class CipherSelfTest(unittest.TestCase):
     def shortDescription(self):
         return self.description
 
-    def _new(self, do_decryption=0):
+    def _new(self):
         params = self.extra_params.copy()
+        key = a2b_hex(self.key)
 
-        if self.mode is None:
-            if self.iv is None:
-                return self.module.new(a2b_hex(self.key), **params)
-            else:
-                return self.module.new(a2b_hex(self.key), a2b_hex(self.iv), **params)
-        elif self.iv is None:
-            # Block cipher without iv
-            return self.module.new(a2b_hex(self.key), self.mode, **params)
-        else:
-            return self.module.new(a2b_hex(self.key), self.mode, a2b_hex(self.iv), **params)
+        old_style = []
+        if self.mode is not None:
+            old_style = [ self.mode ]
+        if self.iv is not None:
+            old_style += [ a2b_hex(self.iv) ]
+
+        return self.module.new(key, *old_style, **params)
 
     def isMode(self, name):
         if not hasattr(self.module, "MODE_"+name):
@@ -121,7 +119,7 @@ class CipherSelfTest(unittest.TestCase):
         #
         for i in xrange(2):
             cipher = self._new()
-            decipher = self._new(1)
+            decipher = self._new()
 
             # Only AEAD modes
             for comp in assoc_data:
@@ -216,6 +214,7 @@ class IVLengthTest(unittest.TestCase):
     def _dummy_counter(self):
         return "\0" * self.module.block_size
 
+
 class NoDefaultECBTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
@@ -226,9 +225,89 @@ class NoDefaultECBTest(unittest.TestCase):
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key))
 
 
+class ByteArrayTest(unittest.TestCase):
+    """Verify we can use bytearray's for encrypting and decrypting"""
+
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+
+        # Extract the parameters
+        params = params.copy()
+        self.description = _extract(params, 'description')
+        self.key = b(_extract(params, 'key'))
+        self.plaintext = b(_extract(params, 'plaintext'))
+        self.ciphertext = b(_extract(params, 'ciphertext'))
+        self.module_name = _extract(params, 'module_name', None)
+        self.assoc_data = _extract(params, 'assoc_data', None)
+        self.mac = _extract(params, 'mac', None)
+        if self.assoc_data:
+            self.mac = b(self.mac)
+
+        mode = _extract(params, 'mode', None)
+        self.mode_name = str(mode)
+
+        if mode is not None:
+            # Block cipher
+            self.mode = getattr(self.module, "MODE_" + mode)
+
+            self.iv = _extract(params, 'iv', None)
+            if self.iv is None:
+                self.iv = _extract(params, 'nonce', None)
+            if self.iv is not None:
+                self.iv = b(self.iv)
+        else:
+            # Stream cipher
+            self.mode = None
+            self.iv = _extract(params, 'iv', None)
+            if self.iv is not None:
+                self.iv = b(self.iv)
+
+        self.extra_params = params
+
+    def _new(self):
+        params = self.extra_params.copy()
+        key = a2b_hex(self.key)
+
+        old_style = []
+        if self.mode is not None:
+            old_style = [ self.mode ]
+        if self.iv is not None:
+            old_style += [ a2b_hex(self.iv) ]
+
+        return self.module.new(key, *old_style, **params)
+
+    def runTest(self):
+
+        plaintext = a2b_hex(self.plaintext)
+        ciphertext = a2b_hex(self.ciphertext)
+        assoc_data = []
+        if self.assoc_data:
+            assoc_data = [ bytearray(a2b_hex(b(x))) for x in self.assoc_data]
+
+        cipher = self._new()
+        decipher = self._new()
+
+        # Only AEAD modes
+        for comp in assoc_data:
+            cipher.update(comp)
+            decipher.update(comp)
+
+        ct = b2a_hex(cipher.encrypt(bytearray(plaintext)))
+        pt = b2a_hex(decipher.decrypt(bytearray(ciphertext)))
+
+        self.assertEqual(self.ciphertext, ct)  # encrypt
+        self.assertEqual(self.plaintext, pt)   # decrypt
+
+        if self.mac:
+            mac = b2a_hex(cipher.digest())
+            self.assertEqual(self.mac, mac)
+            decipher.verify(bytearray(a2b_hex(self.mac)))
+
+
 def make_block_tests(module, module_name, test_data, additional_params=dict()):
     tests = []
-    extra_tests_added = 0
+    extra_tests_added = False
     for i in range(len(test_data)):
         row = test_data[i]
 
@@ -278,8 +357,9 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
                 RoundtripTest(module, params),
                 IVLengthTest(module, params),
                 NoDefaultECBTest(module, params),
+                ByteArrayTest(module, params),
             ]
-            extra_tests_added = 1
+            extra_tests_added = True
 
         # Add the current test to the test suite
         tests.append(CipherSelfTest(module, params))
@@ -288,6 +368,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
 
 def make_stream_tests(module, module_name, test_data):
     tests = []
+    extra_tests_added = False
     for i in range(len(test_data)):
         row = test_data[i]
 
@@ -319,6 +400,13 @@ def make_stream_tests(module, module_name, test_data):
         name = "%s #%d: %s" % (module_name, i+1, description)
         params['description'] = name
         params['module_name'] = module_name
+
+        # Add extra test(s) to the test suite before the current test
+        if not extra_tests_added:
+            tests += [
+                ByteArrayTest(module, params),
+            ]
+            extra_tests_added = True
 
         # Add the test to the test suite
         tests.append(CipherSelfTest(module, params))

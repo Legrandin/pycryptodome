@@ -26,9 +26,10 @@ Counter Feedback (CFB) mode.
 
 __all__ = ['CfbMode']
 
+from Crypto.Util.py3compat import bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, expect_byte_string)
+                                  SmartPointer, c_size_t, c_char_ptr)
 
 from Crypto.Random import get_random_bytes
 
@@ -89,10 +90,9 @@ class CfbMode(object):
             The number of bytes the plaintext and ciphertext are segmented in.
         """
 
-        expect_byte_string(iv)
         self._state = VoidPointer()
         result = raw_cfb_lib.CFB_start_operation(block_cipher.get(),
-                                                 iv,
+                                                 c_char_ptr(iv),
                                                  c_size_t(len(iv)),
                                                  c_size_t(segment_size),
                                                  self._state.address_of())
@@ -111,11 +111,11 @@ class CfbMode(object):
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = iv
+        self.iv = bstr(iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 
-        self.IV = iv
+        self.IV = self.iv
         """Alias for `iv`"""
 
         self._next = [ self.encrypt, self.decrypt ]
@@ -153,10 +153,9 @@ class CfbMode(object):
             raise TypeError("encrypt() cannot be called after decrypt()")
         self._next = [ self.encrypt ]
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_cfb_lib.CFB_encrypt(self._state.get(),
-                                         plaintext,
+                                         c_char_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
@@ -195,10 +194,9 @@ class CfbMode(object):
             raise TypeError("decrypt() cannot be called after encrypt()")
         self._next = [ self.decrypt ]
 
-        expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_cfb_lib.CFB_decrypt(self._state.get(),
-                                         ciphertext,
+                                         c_char_ptr(ciphertext),
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:

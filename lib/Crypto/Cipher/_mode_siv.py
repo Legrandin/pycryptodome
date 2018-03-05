@@ -36,7 +36,7 @@ __all__ = ['SivMode']
 
 from binascii import hexlify
 
-from Crypto.Util.py3compat import byte_string, bord, unhexlify, b
+from Crypto.Util.py3compat import byte_string, bord, unhexlify, b, bstr
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Protocol.KDF import _S2V
@@ -100,13 +100,13 @@ class SivMode(object):
             raise ValueError("Incorrect key length (%d bytes)" % len(key))
 
         if nonce is not None:
-            if not byte_string(nonce):
+            if isinstance(nonce, unicode):
                 raise TypeError("When provided, the nonce must be a byte string")
 
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
 
-            self.nonce = nonce
+            self.nonce = bstr(nonce)
             """Public attribute is only available in case of non-deterministic
             encryption."""
 

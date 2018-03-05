@@ -37,7 +37,7 @@ from Crypto.Cipher import _create_cipher
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
-                                  c_size_t, expect_byte_string)
+                                  c_size_t, c_char_ptr)
 
 _raw_cast_lib = load_pycryptodome_raw_lib(
                     "Crypto.Cipher._raw_cast",
@@ -66,8 +66,6 @@ def _create_base_cipher(dict_parameters):
     except KeyError:
         raise TypeError("Missing 'key' parameter")
 
-    expect_byte_string(key)
-
     if len(key) not in key_size:
         raise ValueError("Incorrect CAST key length (%d bytes)" % len(key))
 
@@ -75,7 +73,7 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_cast_lib.CAST_stop_operation
 
     cipher = VoidPointer()
-    result = start_operation(key,
+    result = start_operation(c_char_ptr(key),
                              c_size_t(len(key)),
                              cipher.address_of())
     if result:

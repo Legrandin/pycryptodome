@@ -91,6 +91,15 @@ try:
         """Convert a C buffer into a Python byte sequence"""
         return ffi.buffer(buf)[:]
 
+    def c_char_ptr(data):
+        if byte_string(data) or isinstance(data, Array):
+            return data
+        elif isinstance(data, bytearray):
+            # This only works for cffi >= 1.7
+            return ffi.from_buffer(data)
+        else:
+            raise TypeError("Object type %s cannot be passed to C code" % type(data))
+
     class VoidPointer(object):
         """Model a newly allocated pointer to void"""
 
@@ -109,7 +118,7 @@ try:
 
 except ImportError:
     from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong, c_size_t,
-                        create_string_buffer)
+                        create_string_buffer, c_ubyte)
     from ctypes.util import find_library
     from _ctypes import Array
 
@@ -130,6 +139,15 @@ except ImportError:
 
     def get_raw_buffer(buf):
         return buf.raw
+
+    def c_char_ptr(data):
+        if byte_string(data) or isinstance(data, Array):
+            return data
+        elif isinstance(data, bytearray):
+            local_type = c_ubyte * len(data)
+            return local_type.from_buffer(data)
+        else:
+            raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
     class VoidPointer(object):
         """Model a newly allocated pointer to void"""
@@ -190,7 +208,5 @@ def load_pycryptodome_raw_lib(name, cdecl):
             attempts.append("Trying '%s': %s" % (filename, str(exp)))
     raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
 
-
 def expect_byte_string(data):
-    if not byte_string(data) and not isinstance(data, Array):
-        raise TypeError("Only byte strings can be passed to C code")
+    raise NotImplementedError("To be removed")

@@ -30,11 +30,12 @@
 
 from Crypto.Random import get_random_bytes
 
+from Crypto.Util.py3compat import bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
                                   SmartPointer, c_size_t,
-                                  expect_byte_string, c_ulong)
+                                  c_char_ptr, c_ulong)
 
 _raw_chacha20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._chacha20",
                     """
@@ -72,18 +73,15 @@ class ChaCha20Cipher:
 
         See also `new()` at the module level."""
 
-        expect_byte_string(key)
-        expect_byte_string(nonce)
-
-        self.nonce = nonce
+        self.nonce = bstr(nonce)
 
         self._next = ( self.encrypt, self.decrypt )
         self._state = VoidPointer()
         result = _raw_chacha20_lib.chacha20_init(
                         self._state.address_of(),
-                        key,
+                        c_char_ptr(key),
                         c_size_t(len(key)),
-                        nonce,
+                        self.nonce,
                         c_size_t(len(nonce)))
         if result:
             raise ValueError("Error %d instantiating a ChaCha20 cipher")
@@ -107,11 +105,10 @@ class ChaCha20Cipher:
     def _encrypt(self, plaintext):
         """Encrypt without FSM checks"""
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = _raw_chacha20_lib.chacha20_encrypt(
                                          self._state.get(),
-                                         plaintext,
+                                         c_char_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:

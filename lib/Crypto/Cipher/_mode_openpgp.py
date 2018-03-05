@@ -34,7 +34,7 @@ OpenPGP mode.
 
 __all__ = ['OpenPgpMode']
 
-from Crypto.Util.py3compat import bchr
+from Crypto.Util.py3compat import bchr, bstr
 from Crypto.Random import get_random_bytes
 
 class OpenPgpMode(object):
@@ -88,7 +88,7 @@ class OpenPgpMode(object):
                              " for MODE_OPENPGP"
                              % (self.block_size, self.block_size + 2))
 
-        self.iv = self.IV = iv
+        self.iv = self.IV = bstr(iv)
 
         # Instantiate the cipher for the real PGP data
         self._cipher = factory.new(

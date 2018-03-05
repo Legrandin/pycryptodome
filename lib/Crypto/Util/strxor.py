@@ -30,7 +30,7 @@
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, c_size_t,
                                   create_string_buffer, get_raw_buffer,
-                                  expect_byte_string)
+                                  c_char_ptr)
 
 _raw_strxor = load_pycryptodome_raw_lib("Crypto.Util._strxor",
                     """
@@ -52,12 +52,14 @@ def strxor(term1, term2):
         A new byte string, :data:`term1` xored with :data:`term2`.
     """
 
-    expect_byte_string(term1)
-    expect_byte_string(term2)
     if len(term1) != len(term2):
         raise ValueError("Only byte strings of equal length can be xored")
+    
     result = create_string_buffer(len(term1))
-    _raw_strxor.strxor(term1, term2, result, c_size_t(len(term1)))
+    _raw_strxor.strxor(c_char_ptr(term1),
+                       c_char_ptr(term2),
+                       result,
+                       c_size_t(len(term1)))
     return get_raw_buffer(result)
 
 
@@ -68,11 +70,10 @@ def strxor_c(term, c):
         A new byte string, :data:`term` with all its bytes xored with :data:`c`.
     """
 
-    expect_byte_string(term)
     if not 0 <= c < 256:
         raise ValueError("c must be in range(256)")
     result = create_string_buffer(len(term))
-    _raw_strxor.strxor_c(term, c, result, c_size_t(len(term)))
+    _raw_strxor.strxor_c(c_char_ptr(term), c, result, c_size_t(len(term)))
     return get_raw_buffer(result)
 
 def _strxor_direct(term1, term2, result):

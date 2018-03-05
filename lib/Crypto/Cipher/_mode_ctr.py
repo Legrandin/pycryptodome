@@ -28,10 +28,10 @@ __all__ = ['CtrMode']
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, expect_byte_string)
+                                  SmartPointer, c_size_t, c_char_ptr)
 
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import b, bchr, byte_string
+from Crypto.Util.py3compat import b, bchr, byte_string, bstr
 from Crypto.Util.number import long_to_bytes
 
 raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
@@ -116,13 +116,12 @@ class CtrMode(object):
         """
 
         if len(initial_counter_block) == prefix_len + counter_len:
-            self.nonce = initial_counter_block[:prefix_len]
+            self.nonce = bstr(initial_counter_block[:prefix_len])
             """Nonce; not available if there is a fixed suffix"""
 
-        expect_byte_string(initial_counter_block)
         self._state = VoidPointer()
         result = raw_ctr_lib.CTR_start_operation(block_cipher.get(),
-                                                 initial_counter_block,
+                                                 c_char_ptr(initial_counter_block),
                                                  c_size_t(len(initial_counter_block)),
                                                  c_size_t(prefix_len),
                                                  counter_len,
@@ -179,10 +178,9 @@ class CtrMode(object):
             raise TypeError("encrypt() cannot be called after decrypt()")
         self._next = [self.encrypt]
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_ctr_lib.CTR_encrypt(self._state.get(),
-                                         plaintext,
+                                         c_char_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
@@ -224,10 +222,9 @@ class CtrMode(object):
             raise TypeError("decrypt() cannot be called after encrypt()")
         self._next = [self.decrypt]
 
-        expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_ctr_lib.CTR_decrypt(self._state.get(),
-                                         ciphertext,
+                                         c_char_ptr(ciphertext),
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:
@@ -304,14 +301,14 @@ def _create_ctr_cipher(factory, **kwargs):
         if initial_value is None:
             initial_value = 0
 
-        if byte_string(initial_value):
-            if len(initial_value) != counter_len:
-                raise ValueError("Incorrect length for counter byte string (%d bytes, expected %d)" % (len(initial_value), counter_len))
-            initial_counter_block = nonce + initial_value
-        else:
+        if isinstance(initial_value, (int, long)):
             if (1 << (counter_len * 8)) - 1 < initial_value:
                 raise ValueError("Initial counter value is too large")
             initial_counter_block = nonce + long_to_bytes(initial_value, counter_len)
+        else:
+            if len(initial_value) != counter_len:
+                raise ValueError("Incorrect length for counter byte string (%d bytes, expected %d)" % (len(initial_value), counter_len))
+            initial_counter_block = nonce + initial_value
 
         return CtrMode(cipher_state,
                        initial_counter_block,

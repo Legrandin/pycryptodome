@@ -152,6 +152,40 @@ class SivTests(unittest.TestCase):
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.hexverify(mac_hex)
+    
+    def test_bytearray(self):
+        # Encrypt
+        cipher1 = AES.new(self.key_256,
+                          AES.MODE_SIV,
+                          nonce=self.nonce_96)
+        cipher1.update(self.data_128)
+        ref1 = cipher1.encrypt(self.data_128)
+
+        cipher2 = AES.new(bytearray(self.key_256),
+                          AES.MODE_SIV,
+                          nonce=bytearray(self.nonce_96))
+        cipher2.update(bytearray(self.data_128))
+        ref2 = cipher2.encrypt(bytearray(self.data_128))
+
+        self.assertEqual(ref1, ref2)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        tag = cipher1.digest()
+
+        # Decrypt
+        cipher3 = AES.new(self.key_256,
+                          AES.MODE_SIV,
+                          nonce=self.nonce_96)
+        cipher3.update(self.data_128)
+        ref3 = cipher3.decrypt_and_verify(ref1, tag)
+
+        cipher4 = AES.new(bytearray(self.key_256),
+                          AES.MODE_SIV,
+                          nonce=bytearray(self.nonce_96))
+        cipher4.update(bytearray(self.data_128))
+        ref4 = cipher4.decrypt_and_verify(bytearray(ref1), bytearray(tag))
+
+        self.assertEqual(ref3, ref4)
 
 
 class SivFSMTests(unittest.TestCase):

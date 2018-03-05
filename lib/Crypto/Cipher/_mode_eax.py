@@ -34,7 +34,7 @@ EAX mode.
 
 __all__ = ['EaxMode']
 
-from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify, b
+from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify, b, bstr
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -78,7 +78,7 @@ class EaxMode(object):
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = nonce
+        self.nonce = bstr(nonce)
         """The nonce originally used to create the object."""
 
         self._mac_len = mac_len
@@ -94,10 +94,10 @@ class EaxMode(object):
                              % self.block_size)
 
         # Nonce cannot be empty and must be a byte string
-        if len(nonce) == 0:
+        if len(self.nonce) == 0:
             raise ValueError("Nonce cannot be empty in EAX mode")
-        if not byte_string(nonce):
-            raise TypeError("Nonce must be a byte string")
+        if isinstance(nonce, unicode):
+            raise TypeError("nonce must be a byte string")
 
         self._omac = [
                 CMAC.new(key,
@@ -108,7 +108,7 @@ class EaxMode(object):
                 ]
 
         # Compute MAC of nonce
-        self._omac[0].update(nonce)
+        self._omac[0].update(self.nonce)
         self._signer = self._omac[1]
 
         # MAC of the nonce is also the initial counter for CTR encryption

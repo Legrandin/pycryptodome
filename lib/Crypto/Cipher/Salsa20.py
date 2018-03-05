@@ -22,11 +22,12 @@
 # SOFTWARE.
 # ===================================================================
 
+from Crypto.Util.py3compat import bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
                                   SmartPointer, c_size_t,
-                                  expect_byte_string)
+                                  c_char_ptr)
 
 from Crypto.Random import get_random_bytes
 
@@ -62,16 +63,13 @@ class Salsa20Cipher:
             raise ValueError("Incorrect nonce length for Salsa20 (%d bytes)" %
                              len(nonce))
 
-        self.nonce = nonce
-
-        expect_byte_string(key)
-        expect_byte_string(nonce)
+        self.nonce = bstr(nonce)
 
         self._state = VoidPointer()
         result = _raw_salsa20_lib.Salsa20_stream_init(
-                        key,
+                        c_char_ptr(key),
                         c_size_t(len(key)),
-                        nonce,
+                        c_char_ptr(nonce),
                         c_size_t(len(nonce)),
                         self._state.address_of())
         if result:
@@ -91,11 +89,10 @@ class Salsa20Cipher:
           plaintext.
         """
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = _raw_salsa20_lib.Salsa20_stream_encrypt(
                                          self._state.get(),
-                                         plaintext,
+                                         c_char_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
