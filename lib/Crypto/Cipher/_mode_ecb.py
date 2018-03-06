@@ -106,7 +106,7 @@ class EcbMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             The length must be multiple of the cipher block length.
         :Return:
@@ -142,7 +142,7 @@ class EcbMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             The length must be multiple of the cipher block length.
 

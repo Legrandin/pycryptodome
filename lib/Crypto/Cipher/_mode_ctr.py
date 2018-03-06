@@ -91,7 +91,7 @@ class CtrMode(object):
           block_cipher : C pointer
             A smart pointer to the low-level block cipher instance.
 
-          initial_counter_block : byte string
+          initial_counter_block : byte string/array
             The initial plaintext to use to generate the key stream.
 
             It is as large as the cipher block, and it embeds
@@ -166,7 +166,7 @@ class CtrMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -211,7 +211,7 @@ class CtrMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             It can be of any length.
 
@@ -243,7 +243,7 @@ def _create_ctr_cipher(factory, **kwargs):
         The underlying block cipher, a module from ``Crypto.Cipher``.
 
     :Keywords:
-      nonce : binary string
+      nonce : binary string/array
         The fixed part at the beginning of the counter block - the rest is
         the counter number that gets increased when processing the next block.
         The nonce must be such that no two messages are encrypted under the
@@ -257,7 +257,7 @@ def _create_ctr_cipher(factory, **kwargs):
         64 bits will be created though - you must really think through all
         security consequences of using such a short block size.
 
-      initial_value : posive integer or byte string
+      initial_value : posive integer or byte string/array
         The initial value for the counter. If not present, the cipher will
         start counting from 0. The value is incremented by one for each block.
         The counter number is encoded in big endian mode.

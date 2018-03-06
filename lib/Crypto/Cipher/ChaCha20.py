@@ -92,7 +92,7 @@ class ChaCha20Cipher:
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: byte string
+        :type plaintext: byte string/array
         :returns: the encrypted byte string, of equal length as the
           plaintext.
         """
@@ -119,7 +119,7 @@ class ChaCha20Cipher:
         """Decrypt a piece of data.
 
         :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: byte string
+        :type ciphertext: byte string/array
         :returns: the decrypted byte string, of equal length as the
           ciphertext.
         """
@@ -167,7 +167,7 @@ def new(**kwargs):
 
         If not provided, a random byte string will be generated (you can read
         it back via the ``nonce`` attribute of the returned object).
-    :type nonce: byte string
+    :type nonce: byte string/array
 
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Cipher` object
     """

@@ -227,7 +227,7 @@ class GcmMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string
+          assoc_data : byte string/array
             A piece of associated data. There are no restrictions on its size.
         """
 
@@ -296,7 +296,7 @@ class GcmMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -341,7 +341,7 @@ class GcmMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             It can be of any length.
 
@@ -457,7 +457,7 @@ class GcmMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -472,7 +472,7 @@ class GcmMode(object):
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
           received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
@@ -498,12 +498,12 @@ def _create_gcm_cipher(factory, **kwargs):
         GCM has been only defined for `Crypto.Cipher.AES`.
 
     :Keywords:
-      key : byte string
+      key : byte string/array
         The secret key to use in the symmetric cipher.
         It must be 16 (e.g. *AES-128*), 24 (e.g. *AES-192*)
         or 32 (e.g. *AES-256*) bytes long.
 
-      nonce : byte string
+      nonce : byte string/array
         A value that must never be reused for any other encryption.
 
         There are no restrictions on its length,

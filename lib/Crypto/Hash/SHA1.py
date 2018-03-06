@@ -84,7 +84,7 @@ class SHA1Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string): The next chunk of the message being hashed.
+            data (byte string/array): The next chunk of the message being hashed.
         """
 
         result = _raw_sha1_lib.SHA1_update(self._state.get(),
@@ -151,7 +151,7 @@ def new(data=None):
     :parameter data:
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`SHA1Hash.update`.
-    :type data: byte string
+    :type data: byte string/array
 
     :Return: A :class:`SHA1Hash` hash object
     """

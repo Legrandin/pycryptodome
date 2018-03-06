@@ -243,7 +243,7 @@ class CcmMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string
+          assoc_data : byte string/array
             A piece of associated data. There are no restrictions on its size.
         """
 
@@ -315,7 +315,7 @@ class CcmMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -384,7 +384,7 @@ class CcmMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             It can be of any length.
 
@@ -495,7 +495,7 @@ class CcmMode(object):
         tampered with while in transit.
 
         :Parameters:
-          received_mac_tag : byte string
+          received_mac_tag : byte string/array
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -535,7 +535,7 @@ class CcmMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -575,7 +575,7 @@ def _create_ccm_cipher(factory, **kwargs):
         `Crypto.Cipher.AES`).
 
     :Keywords:
-      key : byte string
+      key : byte string/array
         The secret key to use in the symmetric cipher.
 
       nonce : byte string

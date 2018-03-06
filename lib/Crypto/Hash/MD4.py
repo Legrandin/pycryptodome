@@ -100,7 +100,7 @@ class MD4Hash(object):
            >>> m.update(a+b)
 
         :Parameters:
-          data : byte string
+          data : byte string/array
             The next chunk of the message being hashed.
         """
 
@@ -169,7 +169,7 @@ def new(data=None):
     """Return a fresh instance of the hash object.
 
     :Parameters:
-       data : byte string
+       data : byte string/array
         The very first chunk of the message to hash.
         It is equivalent to an early call to `MD4Hash.update()`.
         Optional.

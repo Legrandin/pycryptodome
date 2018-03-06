@@ -84,7 +84,7 @@ class MD5Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string): The next chunk of the message being hashed.
+            data (byte string/array): The next chunk of the message being hashed.
         """
 
         result = _raw_md5_lib.MD5_update(self._state.get(),
@@ -151,7 +151,7 @@ def new(data=None):
     :parameter data:
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`MD5Hash.update`.
-    :type data: byte string
+    :type data: byte string/array
 
     :Return: A :class:`MD5Hash` hash object
     """

@@ -203,7 +203,7 @@ class OcbMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string
+          assoc_data : byte string/array
             A piece of associated data.
         """
 
@@ -297,7 +297,7 @@ class OcbMode(object):
         If possible, use the method `encrypt_and_digest` instead.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The next piece of data to encrypt or ``None`` to signify
             that encryption has finished and that any remaining ciphertext
             has to be produced.
@@ -326,7 +326,7 @@ class OcbMode(object):
         If possible, use the method `decrypt_and_verify` instead.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The next piece of data to decrypt or ``None`` to signify
             that decryption has finished and that any remaining plaintext
             has to be produced.
@@ -406,7 +406,7 @@ class OcbMode(object):
         to check if the message is authentic and valid.
 
         :Parameters:
-          received_mac_tag : byte string
+          received_mac_tag : byte string/array
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -449,7 +449,7 @@ class OcbMode(object):
         """Encrypt the message and create the MAC tag in one step.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The entire message to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -464,7 +464,7 @@ class OcbMode(object):
         """Decrypted the message and verify its authenticity in one step.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The entire message to decrypt.
           received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
@@ -489,7 +489,7 @@ def _create_ocb_cipher(factory, **kwargs):
         (like `Crypto.Cipher.AES`).
 
     :Keywords:
-      nonce : byte string
+      nonce : byte string/array
         A  value that must never be reused for any other encryption.
         Its length can vary from 1 to 15 bytes.
         If not specified, a random 15 bytes long nonce is generated.

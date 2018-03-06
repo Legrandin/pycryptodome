@@ -114,7 +114,7 @@ class CMAC(object):
         """Authenticate the next chunk of message.
 
         Args:
-            data (byte string): The next chunk of data
+            data (byte string/array): The next chunk of data
         """
 
         self._data_size += len(msg)
@@ -228,7 +228,7 @@ class CMAC(object):
         is valid.
 
         Args:
-          mac_tag (byte string): the expected MAC of the message.
+          mac_tag (byte string/array): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -258,7 +258,7 @@ def new(key, msg=None, ciphermod=None, cipher_params=None):
     """Create a new MAC object.
 
     Args:
-        key (byte string):
+        key (byte string/array):
             key for the CMAC object.
             The key must be valid for the underlying cipher algorithm.
             For instance, it must be 16 bytes long for AES-128.

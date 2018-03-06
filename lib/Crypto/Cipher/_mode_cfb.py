@@ -77,7 +77,7 @@ class CfbMode(object):
           block_cipher : C pointer
             A smart pointer to the low-level block cipher instance.
 
-          iv : byte string
+          iv : byte string/array
             The initialization vector to use for encryption or decryption.
             It is as long as the cipher block.
 
@@ -141,7 +141,7 @@ class CfbMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -183,7 +183,7 @@ class CfbMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             It can be of any length.
 
@@ -212,10 +212,10 @@ def _create_cfb_cipher(factory, **kwargs):
         The underlying block cipher, a module from ``Crypto.Cipher``.
 
     :Keywords:
-      iv : byte string
+      iv : byte string/array
         The IV to use for CFB.
 
-      IV : byte string
+      IV : byte string/array
         Alias for ``iv``.
 
       segment_size : integer
