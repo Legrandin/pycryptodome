@@ -26,9 +26,10 @@ Output Feedback (CFB) mode.
 
 __all__ = ['OfbMode']
 
+from Crypto.Util.py3compat import bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, expect_byte_string)
+                                  SmartPointer, c_size_t, c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
 
@@ -86,10 +87,9 @@ class OfbMode(object):
             compromises confidentiality.
         """
 
-        expect_byte_string(iv)
         self._state = VoidPointer()
         result = raw_ofb_lib.OFB_start_operation(block_cipher.get(),
-                                                 iv,
+                                                 c_uint8_ptr(iv),
                                                  c_size_t(len(iv)),
                                                  self._state.address_of())
         if result:
@@ -108,11 +108,11 @@ class OfbMode(object):
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = iv
+        self.iv = bstr(iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 
-        self.IV = iv
+        self.IV = self.iv
         """Alias for `iv`"""
 
         self._next = [ self.encrypt, self.decrypt ]
@@ -150,10 +150,9 @@ class OfbMode(object):
             raise TypeError("encrypt() cannot be called after decrypt()")
         self._next = [ self.encrypt ]
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_ofb_lib.OFB_encrypt(self._state.get(),
-                                         plaintext,
+                                         c_uint8_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
@@ -192,10 +191,9 @@ class OfbMode(object):
             raise TypeError("decrypt() cannot be called after encrypt()")
         self._next = [ self.decrypt ]
 
-        expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_ofb_lib.OFB_decrypt(self._state.get(),
-                                         ciphertext,
+                                         c_uint8_ptr(ciphertext),
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:

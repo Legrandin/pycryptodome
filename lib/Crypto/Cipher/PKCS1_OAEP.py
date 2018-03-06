@@ -48,7 +48,7 @@ class PKCS1OAEP_Cipher:
                 A mask generation function that accepts two parameters: a string to
                 use as seed, and the lenth of the mask to generate, in bytes.
                 If not specified, the standard MGF1 is used (a safe choice).
-         label : byte string
+         label : byte string/array
                 A label to apply to this particular encryption. If not specified,
                 an empty string is used. Specifying a label does not improve
                 security.
@@ -70,7 +70,7 @@ class PKCS1OAEP_Cipher:
         else:
             self._mgf = lambda x,y: MGF1(x,y,self._hashObj)
 
-        self._label = label
+        self._label = bstr(label)
         self._randfunc = randfunc
 
     def can_encrypt(self):
@@ -94,7 +94,7 @@ class PKCS1OAEP_Cipher:
             minus 2, minus twice the hash output size.
             For instance, if you use RSA 2048 and SHA-256, the longest message
             you can encrypt is 190 byte long.
-        :type message: byte string
+        :type message: byte string/array
 
         :returns: The ciphertext, as large as the RSA modulus.
         :rtype: byte string
@@ -144,7 +144,7 @@ class PKCS1OAEP_Cipher:
         """Decrypt a message with PKCS#1 OAEP.
 
         :param ciphertext: The encrypted message.
-        :type ciphertext: byte string
+        :type ciphertext: byte string/array
 
         :returns: The original message (plaintext).
         :rtype: byte string
@@ -167,7 +167,7 @@ class PKCS1OAEP_Cipher:
         if len(ciphertext) != k or k<hLen+2:
             raise ValueError("Ciphertext with incorrect length.")
         # Step 2a (O2SIP)
-        ct_int = bytes_to_long(ciphertext)
+        ct_int = bytes_to_long(bstr(ciphertext))
         # Step 2b (RSADP)
         m_int = self._key._decrypt(ct_int)
         # Complete step 2c (I2OSP)
@@ -227,7 +227,7 @@ def new(key, hashAlgo=None, mgfunc=None, label=b(''), randfunc=None):
       A label to apply to this particular encryption. If not specified,
       an empty string is used. Specifying a label does not improve
       security.
-    :type label: byte string
+    :type label: byte string/array
 
     :param randfunc:
       A function that returns random bytes.

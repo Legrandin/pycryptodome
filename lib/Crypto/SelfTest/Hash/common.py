@@ -123,6 +123,31 @@ class GenericHashConstructorTest(unittest.TestCase):
         self.assert_(isinstance(self.hashmod, obj5))
         self.assert_(isinstance(self.hashmod, obj6))
 
+
+class ByteArrayTest(unittest.TestCase):
+
+    def __init__(self, module):
+        unittest.TestCase.__init__(self)
+        self.module = module
+
+    def runTest(self):
+
+        data = b("\x00\x01\x02")
+        ba = bytearray(b("\x00\x01\x02"))
+
+        # Data can be a bytearray (during initialization)
+        h1 = self.module.new(data)
+        h2 = self.module.new(ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a bytearray (during operation)
+        h1 = self.module.new()
+        h2 = self.module.new()
+        h1.update(data)
+        h2.update(ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+
 class MACSelfTest(unittest.TestCase):
 
     def __init__(self, module, description, result, input, key, params):
@@ -190,6 +215,7 @@ class MACSelfTest(unittest.TestCase):
         self.assertEqual(expected, out4)
         self.assertEqual(expected, out5)
 
+
 def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     tests = []
     for i in range(len(test_data)):
@@ -210,7 +236,10 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
     if getattr(module, 'name', None) is not None:
         tests.append(GenericHashConstructorTest(module))
 
+    tests.append(ByteArrayTest(module))
+
     return tests
+
 
 def make_mac_tests(module, module_name, test_data):
     tests = []

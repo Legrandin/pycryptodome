@@ -228,6 +228,38 @@ class CtrTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
         cipher.decrypt(bchr(9) * 16 * 255)
         self.assertRaises(OverflowError, cipher.decrypt, bchr(9) * 16)
+    
+    def test_bytearray(self):
+        data = b("1") * 16
+        iv = b("\x00") * 6 + b("\xFF\xFF")
+
+        # Encrypt
+        cipher1 = AES.new(self.key_128, AES.MODE_CTR,
+                          nonce=self.nonce_64,
+                          initial_value=iv)
+        ref1 = cipher1.encrypt(data)
+
+        cipher2 = AES.new(self.key_128, AES.MODE_CTR,
+                          nonce=bytearray(self.nonce_64),
+                          initial_value=bytearray(iv))
+        ref2 = cipher2.encrypt(bytearray(data))
+
+        self.assertEqual(ref1, ref2)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        # Decrypt
+        cipher3 = AES.new(self.key_128, AES.MODE_CTR,
+                          nonce=self.nonce_64,
+                          initial_value=iv)
+        ref3 = cipher3.decrypt(data)
+
+        cipher4 = AES.new(self.key_128, AES.MODE_CTR,
+                          nonce=bytearray(self.nonce_64),
+                          initial_value=bytearray(iv))
+        ref4 = cipher4.decrypt(bytearray(data))
+
+        self.assertEqual(ref3, ref4)
+
 
 class SP800TestVectors(unittest.TestCase):
     """Class exercising the CTR test vectors found in Section F.3

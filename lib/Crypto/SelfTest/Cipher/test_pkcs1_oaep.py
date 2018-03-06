@@ -354,6 +354,14 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                 ct = cipher.encrypt(pt)
                 self.assertEqual(mgfcalls, 2)
                 self.assertEqual(cipher.decrypt(ct), pt)
+        
+        def testByteArray(self):
+            pt = b("XER")
+            cipher = PKCS.new(self.key1024)
+            ct = cipher.encrypt(bytearray(pt))
+            pt2 = cipher.decrypt(bytearray(ct))
+            self.assertEqual(pt, pt2)
+
 
 def get_tests(config={}):
     tests = []

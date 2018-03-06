@@ -29,7 +29,7 @@ __all__ = [ 'EcbMode' ]
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, create_string_buffer,
                                   get_raw_buffer, SmartPointer,
-                                  c_size_t, expect_byte_string)
+                                  c_size_t, c_uint8_ptr)
 
 raw_ecb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ecb", """
                     int ECB_start_operation(void *cipher,
@@ -106,7 +106,7 @@ class EcbMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             The length must be multiple of the cipher block length.
         :Return:
@@ -114,10 +114,9 @@ class EcbMode(object):
             It is as long as *plaintext*.
         """
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_ecb_lib.ECB_encrypt(self._state.get(),
-                                         plaintext,
+                                         c_uint8_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
@@ -143,7 +142,7 @@ class EcbMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             The length must be multiple of the cipher block length.
 
@@ -152,10 +151,9 @@ class EcbMode(object):
             It is as long as *ciphertext*.
         """
 
-        expect_byte_string(ciphertext)
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_ecb_lib.ECB_decrypt(self._state.get(),
-                                         ciphertext,
+                                         c_uint8_ptr(ciphertext),
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:

@@ -34,10 +34,10 @@ Module's constants for the modes of operation supported with Triple DES:
 import sys
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util.py3compat import byte_string, b, bchr, bord
+from Crypto.Util.py3compat import byte_string, b, bchr, bord, bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
-                                  c_size_t, expect_byte_string)
+                                  c_size_t)
 
 _raw_des3_lib = load_pycryptodome_raw_lib(
                     "Crypto.Cipher._raw_des3",
@@ -96,7 +96,7 @@ def _create_base_cipher(dict_parameters):
     except KeyError:
         raise TypeError("Missing 'key' parameter")
 
-    key = adjust_key_parity(key_in)
+    key = adjust_key_parity(bstr(key_in))
 
     start_operation = _raw_des3_lib.DES3_start_operation
     stop_operation = _raw_des3_lib.DES3_stop_operation

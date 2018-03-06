@@ -34,7 +34,7 @@ EAX mode.
 
 __all__ = ['EaxMode']
 
-from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify, b
+from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify, b, bstr
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -78,7 +78,7 @@ class EaxMode(object):
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = nonce
+        self.nonce = bstr(nonce)
         """The nonce originally used to create the object."""
 
         self._mac_len = mac_len
@@ -94,10 +94,10 @@ class EaxMode(object):
                              % self.block_size)
 
         # Nonce cannot be empty and must be a byte string
-        if len(nonce) == 0:
+        if len(self.nonce) == 0:
             raise ValueError("Nonce cannot be empty in EAX mode")
-        if not byte_string(nonce):
-            raise TypeError("Nonce must be a byte string")
+        if isinstance(nonce, unicode):
+            raise TypeError("nonce must be a byte string")
 
         self._omac = [
                 CMAC.new(key,
@@ -108,7 +108,7 @@ class EaxMode(object):
                 ]
 
         # Compute MAC of nonce
-        self._omac[0].update(nonce)
+        self._omac[0].update(self.nonce)
         self._signer = self._omac[1]
 
         # MAC of the nonce is also the initial counter for CTR encryption
@@ -136,7 +136,7 @@ class EaxMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string
+          assoc_data : byte string/array
             A piece of associated data. There are no restrictions on its size.
         """
 
@@ -170,7 +170,7 @@ class EaxMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -207,7 +207,7 @@ class EaxMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             It can be of any length.
 
@@ -264,7 +264,7 @@ class EaxMode(object):
         tampered with while in transit.
 
         :Parameters:
-          received_mac_tag : byte string
+          received_mac_tag : byte string/array
             This is the *binary* MAC, as received from the sender.
         :Raises MacMismatchError:
             if the MAC does not match. The message has been tampered with
@@ -309,7 +309,7 @@ class EaxMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -324,9 +324,9 @@ class EaxMode(object):
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
-          received_mac_tag : byte string
+          received_mac_tag : byte string/array
             This is the *binary* MAC, as received from the sender.
 
         :Return: the decrypted data (byte string).
@@ -349,10 +349,10 @@ def _create_eax_cipher(factory, **kwargs):
         `Crypto.Cipher.AES`).
 
     :Keywords:
-      key : byte string
+      key : byte string/array
         The secret key to use in the symmetric cipher.
 
-      nonce : byte string
+      nonce : byte string/array
         A value that must never be reused for any other encryption.
         There are no restrictions on its length, but it is recommended to use
         at least 16 bytes.

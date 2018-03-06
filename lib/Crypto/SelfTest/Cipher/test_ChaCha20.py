@@ -134,6 +134,36 @@ class ChaCha20Test(unittest.TestCase):
         self.assertEqual(expected_key_stream, ct)
 
 
+class ByteArrayTest(unittest.TestCase):
+    """Verify we can encrypt or decrypt bytearrays"""
+
+    def runTest(self):
+
+        # Encryption
+        data = b("0123")
+        key = b("9") * 32
+        nonce = b("t") * 8
+
+        cipher1 = ChaCha20.new(key=key, nonce=nonce)
+        ref1 = cipher1.encrypt(data)
+
+        cipher2 = ChaCha20.new(key=bytearray(key), nonce=bytearray(nonce))
+        ref2 = cipher2.encrypt(bytearray(data))
+
+        self.assertEqual(ref1, ref2)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        # Decryption
+
+        cipher3 = ChaCha20.new(key=key, nonce=nonce)
+        ref3 = cipher3.decrypt(data)
+
+        cipher4 = ChaCha20.new(key=bytearray(key), nonce=bytearray(nonce))
+        ref4 = cipher4.decrypt(bytearray(data))
+
+        self.assertEqual(ref3, ref4)
+
+
 class ChaCha20_AGL_NIR(unittest.TestCase):
 
     # From http://tools.ietf.org/html/draft-agl-tls-chacha20poly1305-04
@@ -201,10 +231,12 @@ class ChaCha20_AGL_NIR(unittest.TestCase):
             pt = b("\x00") * len(ct)
             self.assertEqual(c.encrypt(pt), ct)
 
+
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(ChaCha20Test)
     tests.append(ChaCha20_AGL_NIR())
+    tests.append(ByteArrayTest())
     return tests
 
 

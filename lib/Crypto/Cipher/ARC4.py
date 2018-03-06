@@ -24,7 +24,7 @@ from Crypto.Util.py3compat import b
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, expect_byte_string)
+                                  SmartPointer, c_size_t, c_uint8_ptr)
 
 
 _raw_arc4_lib = load_pycryptodome_raw_lib("Crypto.Cipher._ARC4", """
@@ -56,10 +56,8 @@ class ARC4Cipher:
             raise ValueError("Incorrect ARC4 key length (%d bytes)" %
                              len(key))
 
-        expect_byte_string(key)
-
         self._state = VoidPointer()
-        result = _raw_arc4_lib.ARC4_stream_init(key,
+        result = _raw_arc4_lib.ARC4_stream_init(c_uint8_ptr(key),
                                                 c_size_t(len(key)),
                                                 self._state.address_of())
         if result != 0:
@@ -86,10 +84,9 @@ class ARC4Cipher:
           plaintext.
         """
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = _raw_arc4_lib.ARC4_stream_encrypt(self._state.get(),
-                                                   plaintext,
+                                                   c_uint8_ptr(plaintext),
                                                    ciphertext,
                                                    c_size_t(len(plaintext)))
         if result:

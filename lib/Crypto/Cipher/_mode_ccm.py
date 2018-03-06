@@ -34,7 +34,7 @@ Counter with CBC-MAC (CCM) mode.
 
 __all__ = ['CcmMode']
 
-from Crypto.Util.py3compat import byte_string, b, bchr, bord, unhexlify
+from Crypto.Util.py3compat import byte_string, b, bchr, bord, unhexlify, bstr
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes
@@ -114,11 +114,11 @@ class CcmMode(object):
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = nonce
+        self.nonce = bstr(nonce)
         """The nonce used for this cipher instance"""
 
         self._factory = factory
-        self._key = key
+        self._key = bstr(key)
         self._mac_len = mac_len
         self._msg_len = msg_len
         self._assoc_len = assoc_len
@@ -186,7 +186,7 @@ class CcmMode(object):
         q = 15 - len(self.nonce)  # length of Q, the encoded message length
         flags = (64 * (self._assoc_len > 0) + 8 * ((self._mac_len - 2) // 2) +
                  (q - 1))
-        b_0 = bchr(flags) + self.nonce + long_to_bytes(self._msg_len, q)
+        b_0 = bchr(flags) + bstr(self.nonce) + long_to_bytes(self._msg_len, q)
 
         # Formatting associated data (A.2.2)
         # Encoded 'a' is concatenated with the associated data 'A'
@@ -215,7 +215,6 @@ class CcmMode(object):
     def _pad_cache_and_update(self):
 
         assert(self._mac_status != MacStatus.NOT_STARTED)
-        assert(byte_string(self._cache))
         assert(len(self._cache) < self.block_size)
 
         # Associated data is concatenated with the least number
@@ -244,7 +243,7 @@ class CcmMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string
+          assoc_data : byte string/array
             A piece of associated data. There are no restrictions on its size.
         """
 
@@ -268,10 +267,9 @@ class CcmMode(object):
            (without FSM checks)"""
 
         if self._mac_status == MacStatus.NOT_STARTED:
-            self._cache.append(assoc_data_pt)
+            self._cache.append(bstr(assoc_data_pt))
             return
 
-        assert(byte_string(self._cache))
         assert(len(self._cache) < self.block_size)
 
         if len(self._cache) > 0:
@@ -317,7 +315,7 @@ class CcmMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -386,7 +384,7 @@ class CcmMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             It can be of any length.
 
@@ -497,7 +495,7 @@ class CcmMode(object):
         tampered with while in transit.
 
         :Parameters:
-          received_mac_tag : byte string
+          received_mac_tag : byte string/array
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -537,7 +535,7 @@ class CcmMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -577,7 +575,7 @@ def _create_ccm_cipher(factory, **kwargs):
         `Crypto.Cipher.AES`).
 
     :Keywords:
-      key : byte string
+      key : byte string/array
         The secret key to use in the symmetric cipher.
 
       nonce : byte string

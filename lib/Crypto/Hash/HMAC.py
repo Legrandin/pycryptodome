@@ -146,7 +146,7 @@ class HMAC:
         is valid.
 
         Args:
-          mac_tag (byte string): the expected MAC of the message.
+          mac_tag (byte string/byte string): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -192,7 +192,7 @@ def new(key, msg=b(""), digestmod=None):
     """Create a new MAC object.
 
     Args:
-        key (byte string):
+        key (byte string/array):
             key for the MAC object.
             It must be long enough to match the expected security level of the
             MAC.

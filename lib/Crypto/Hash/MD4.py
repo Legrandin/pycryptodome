@@ -49,7 +49,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  expect_byte_string)
+                                  c_uint8_ptr)
 
 _raw_md4_lib = load_pycryptodome_raw_lib(
                         "Crypto.Hash._MD4",
@@ -100,13 +100,12 @@ class MD4Hash(object):
            >>> m.update(a+b)
 
         :Parameters:
-          data : byte string
+          data : byte string/array
             The next chunk of the message being hashed.
         """
 
-        expect_byte_string(data)
         result = _raw_md4_lib.md4_update(self._state.get(),
-                                         data,
+                                         c_uint8_ptr(data),
                                          c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while instantiating MD4"
@@ -170,7 +169,7 @@ def new(data=None):
     """Return a fresh instance of the hash object.
 
     :Parameters:
-       data : byte string
+       data : byte string/array
         The very first chunk of the message to hash.
         It is equivalent to an early call to `MD4Hash.update()`.
         Optional.

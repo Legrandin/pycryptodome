@@ -68,7 +68,7 @@ Example:
 .. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
 """
 
-from Crypto.Util.py3compat import b, bord, bchr, unhexlify
+from Crypto.Util.py3compat import b, bord, bchr, unhexlify, bstr
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.strxor import strxor
 
@@ -77,7 +77,7 @@ from Crypto.Random import get_random_bytes
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, expect_byte_string,
+                                  SmartPointer, c_size_t, c_uint8_ptr,
                                   )
 
 _raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
@@ -118,10 +118,12 @@ class OcbMode(object):
         self.block_size = 16
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = nonce
+        self.nonce = bstr(nonce)
         """Nonce used for this session."""
         if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
+        if isinstance(nonce, unicode):
+            raise TypeError("Nonce must be a byte string")
 
         self._mac_len = mac_len
         if not 8 <= mac_len <= 16:
@@ -178,9 +180,8 @@ class OcbMode(object):
         raw_cipher.release()
 
     def _update(self, assoc_data, assoc_data_len):
-        expect_byte_string(assoc_data)
         result = _raw_ocb_lib.OCB_update(self._state.get(),
-                                         assoc_data,
+                                         c_uint8_ptr(assoc_data),
                                          c_size_t(assoc_data_len))
         if result:
             raise ValueError("Error %d while MAC-ing in OCB mode" % result)
@@ -202,7 +203,7 @@ class OcbMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string
+          assoc_data : byte string/array
             A piece of associated data.
         """
 
@@ -215,7 +216,7 @@ class OcbMode(object):
 
         if len(self._cache_A) > 0:
             filler = min(16 - len(self._cache_A), len(assoc_data))
-            self._cache_A += assoc_data[:filler]
+            self._cache_A += bstr(assoc_data[:filler])
             assoc_data = assoc_data[filler:]
 
             if len(self._cache_A) < 16:
@@ -226,7 +227,7 @@ class OcbMode(object):
             self.update(seg)
 
         update_len = len(assoc_data) // 16 * 16
-        self._cache_A = assoc_data[update_len:]
+        self._cache_A = bstr(assoc_data[update_len:])
         self._update(assoc_data, update_len)
         return self
 
@@ -254,11 +255,10 @@ class OcbMode(object):
             return out_data
 
         # Try to fill up the cache, if it already contains something
-        expect_byte_string(in_data)
         prefix = b("")
         if len(self._cache_P) > 0:
             filler = min(16 - len(self._cache_P), len(in_data))
-            self._cache_P += in_data[:filler]
+            self._cache_P += bstr(in_data[:filler])
             in_data = in_data[filler:]
 
             if len(self._cache_P) < 16:
@@ -275,7 +275,7 @@ class OcbMode(object):
 
         # Process data in multiples of the block size
         trans_len = len(in_data) // 16 * 16
-        result = self._transcrypt_aligned(in_data,
+        result = self._transcrypt_aligned(c_uint8_ptr(in_data),
                                           trans_len,
                                           trans_func,
                                           trans_desc)
@@ -283,7 +283,7 @@ class OcbMode(object):
             result = prefix + result
 
         # Left-over
-        self._cache_P = in_data[trans_len:]
+        self._cache_P = bstr(in_data[trans_len:])
 
         return result
 
@@ -297,7 +297,7 @@ class OcbMode(object):
         If possible, use the method `encrypt_and_digest` instead.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The next piece of data to encrypt or ``None`` to signify
             that encryption has finished and that any remaining ciphertext
             has to be produced.
@@ -326,7 +326,7 @@ class OcbMode(object):
         If possible, use the method `decrypt_and_verify` instead.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The next piece of data to decrypt or ``None`` to signify
             that decryption has finished and that any remaining plaintext
             has to be produced.
@@ -406,7 +406,7 @@ class OcbMode(object):
         to check if the message is authentic and valid.
 
         :Parameters:
-          received_mac_tag : byte string
+          received_mac_tag : byte string/array
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -449,7 +449,7 @@ class OcbMode(object):
         """Encrypt the message and create the MAC tag in one step.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The entire message to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -464,7 +464,7 @@ class OcbMode(object):
         """Decrypted the message and verify its authenticity in one step.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The entire message to decrypt.
           received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
@@ -489,7 +489,7 @@ def _create_ocb_cipher(factory, **kwargs):
         (like `Crypto.Cipher.AES`).
 
     :Keywords:
-      nonce : byte string
+      nonce : byte string/array
         A  value that must never be reused for any other encryption.
         Its length can vary from 1 to 15 bytes.
         If not specified, a random 15 bytes long nonce is generated.

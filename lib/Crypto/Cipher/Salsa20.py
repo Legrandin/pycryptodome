@@ -22,11 +22,12 @@
 # SOFTWARE.
 # ===================================================================
 
+from Crypto.Util.py3compat import bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
                                   SmartPointer, c_size_t,
-                                  expect_byte_string)
+                                  c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
 
@@ -62,16 +63,13 @@ class Salsa20Cipher:
             raise ValueError("Incorrect nonce length for Salsa20 (%d bytes)" %
                              len(nonce))
 
-        self.nonce = nonce
-
-        expect_byte_string(key)
-        expect_byte_string(nonce)
+        self.nonce = bstr(nonce)
 
         self._state = VoidPointer()
         result = _raw_salsa20_lib.Salsa20_stream_init(
-                        key,
+                        c_uint8_ptr(key),
                         c_size_t(len(key)),
-                        nonce,
+                        c_uint8_ptr(nonce),
                         c_size_t(len(nonce)),
                         self._state.address_of())
         if result:
@@ -86,16 +84,15 @@ class Salsa20Cipher:
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: byte string
+        :type plaintext: byte string/array
         :returns: the encrypted byte string, of equal length as the
           plaintext.
         """
 
-        expect_byte_string(plaintext)
         ciphertext = create_string_buffer(len(plaintext))
         result = _raw_salsa20_lib.Salsa20_stream_encrypt(
                                          self._state.get(),
-                                         plaintext,
+                                         c_uint8_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
@@ -106,7 +103,7 @@ class Salsa20Cipher:
         """Decrypt a piece of data.
 
         :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: byte string
+        :type ciphertext: byte string/array
         :returns: the decrypted byte string, of equal length as the
           ciphertext.
         """
@@ -128,7 +125,7 @@ def new(key, nonce=None):
 
         If not provided, a random byte string will be generated (you can read
         it back via the ``nonce`` attribute of the returned object).
-    :type nonce: byte string
+    :type nonce: byte string/array
 
     :Return: a :class:`Crypto.Cipher.Salsa20.Salsa20Cipher` object
     """

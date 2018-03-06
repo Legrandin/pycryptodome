@@ -19,6 +19,11 @@ Resolved issues
 
 * Without libgmp, modular exponentiaion crashed on big-endian systems.
 
+Breaks in compatibility
+-----------------------
+
+* Removed support for Python < 2.6.
+
 3.4.12 (5 February 2018)
 ++++++++++++++++++++++++
 

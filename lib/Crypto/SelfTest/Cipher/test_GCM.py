@@ -204,6 +204,42 @@ class GcmTests(unittest.TestCase):
             self.assertEqual(ciphertext, ct2)
             self.assertEquals(cipher.digest(), ref_mac)
 
+    def test_bytearray(self):
+        # Encrypt
+        cipher1 = AES.new(self.key_128,
+                          AES.MODE_GCM,
+                          nonce=self.nonce_96)
+        cipher1.update(self.data_128)
+        ref1 = cipher1.encrypt(self.data_128)
+
+        cipher2 = AES.new(bytearray(self.key_128),
+                          AES.MODE_GCM,
+                          nonce=bytearray(self.nonce_96))
+        cipher2.update(bytearray(self.data_128))
+        ref2 = cipher2.encrypt(bytearray(self.data_128))
+
+        self.assertEqual(ref1, ref2)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        tag = cipher1.digest()
+
+        # Decrypt
+        cipher3 = AES.new(self.key_128,
+                          AES.MODE_GCM,
+                          nonce=self.nonce_96)
+        cipher3.update(self.data_128)
+        ref3 = cipher3.decrypt(ref1)
+
+        cipher4 = AES.new(bytearray(self.key_128),
+                          AES.MODE_GCM,
+                          nonce=bytearray(self.nonce_96))
+        cipher4.update(bytearray(self.data_128))
+        ref4 = cipher4.decrypt(bytearray(ref1))
+
+        self.assertEqual(ref3, ref4)
+
+        cipher3.verify(bytearray(tag))
+
 
 class GcmFSMTests(unittest.TestCase):
 

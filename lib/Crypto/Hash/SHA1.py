@@ -24,7 +24,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  expect_byte_string)
+                                  c_uint8_ptr)
 
 _raw_sha1_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA1",
                         """
@@ -84,12 +84,11 @@ class SHA1Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string): The next chunk of the message being hashed.
+            data (byte string/array): The next chunk of the message being hashed.
         """
 
-        expect_byte_string(data)
         result = _raw_sha1_lib.SHA1_update(self._state.get(),
-                                           data,
+                                           c_uint8_ptr(data),
                                            c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while instantiating SHA1"
@@ -152,7 +151,7 @@ def new(data=None):
     :parameter data:
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`SHA1Hash.update`.
-    :type data: byte string
+    :type data: byte string/array
 
     :Return: A :class:`SHA1Hash` hash object
     """

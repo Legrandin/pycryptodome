@@ -63,7 +63,7 @@ class PKCS115_Cipher:
         :param message:
             The message to encrypt, also known as plaintext. It can be of
             variable length, but not longer than the RSA modulus (in bytes) minus 11.
-        :type message: byte string
+        :type message: byte string/array
 
         :Returns: A byte string, the ciphertext in which the message is encrypted.
             It is as long as the RSA modulus (in bytes).
@@ -91,7 +91,7 @@ class PKCS115_Cipher:
         ps = b("").join(ps)
         assert(len(ps) == k - mLen - 3)
         # Step 2b
-        em = b('\x00\x02') + ps + bchr(0x00) + message
+        em = b('\x00\x02') + ps + bchr(0x00) + bstr(message)
         # Step 3a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 3b (RSAEP)
@@ -109,7 +109,7 @@ class PKCS115_Cipher:
 
         :param ciphertext:
             The ciphertext that contains the message to recover.
-        :type ciphertext: byte string
+        :type ciphertext: byte string/array
 
         :param sentinel:
             The object to return whenever an error is detected.
@@ -164,7 +164,7 @@ class PKCS115_Cipher:
         if len(ciphertext) != k:
             raise ValueError("Ciphertext with incorrect length.")
         # Step 2a (O2SIP)
-        ct_int = bytes_to_long(ciphertext)
+        ct_int = bytes_to_long(bstr(ciphertext))
         # Step 2b (RSADP)
         m_int = self._key._decrypt(ct_int)
         # Complete step 2c (I2OSP)

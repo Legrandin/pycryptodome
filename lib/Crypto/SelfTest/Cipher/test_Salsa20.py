@@ -32,6 +32,8 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Cipher import Salsa20
 
+from common import make_stream_tests
+
 # This is a list of (plaintext, ciphertext, key[, description[, params]])
 # tuples.
 test_data = [
@@ -224,7 +226,6 @@ class NonceTests(unittest.TestCase):
 
 
 def get_tests(config={}):
-    from common import make_stream_tests
     tests = make_stream_tests(Salsa20, "Salsa20", test_data)
     tests.append(KeyLength())
     tests += list_test_cases(NonceTests)

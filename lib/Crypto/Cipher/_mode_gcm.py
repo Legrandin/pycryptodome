@@ -34,7 +34,7 @@ Galois/Counter Mode (GCM).
 
 __all__ = ['GcmMode']
 
-from Crypto.Util.py3compat import b, bchr, byte_string, bord, unhexlify
+from Crypto.Util.py3compat import b, bchr, byte_string, bord, unhexlify, bstr
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Hash import BLAKE2s
@@ -42,7 +42,7 @@ from Crypto.Random import get_random_bytes
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, expect_byte_string)
+                                  SmartPointer, c_size_t, c_uint8_ptr)
 
 _raw_galois_lib = load_pycryptodome_raw_lib("Crypto.Util._galois",
                     """
@@ -72,9 +72,8 @@ class _GHASH(object):
     def __init__(self, subkey):
         assert len(subkey) == 16
 
-        expect_byte_string(subkey)
         self._exp_key = VoidPointer()
-        result = _raw_galois_lib.ghash_expand(subkey,
+        result = _raw_galois_lib.ghash_expand(c_uint8_ptr(subkey),
                                               self._exp_key.address_of())
         if result:
             raise ValueError("Error %d while expanding the GMAC key" % result)
@@ -88,9 +87,8 @@ class _GHASH(object):
     def update(self, block_data):
         assert len(block_data) % 16 == 0
 
-        expect_byte_string(block_data)
         result = _raw_galois_lib.ghash(self._last_y,
-                                       block_data,
+                                       c_uint8_ptr(block_data),
                                        c_size_t(len(block_data)),
                                        self._last_y,
                                        self._exp_key.get())
@@ -143,14 +141,14 @@ class GcmMode(object):
 
         if len(nonce) == 0:
             raise ValueError("Nonce cannot be empty")
-        if not byte_string(nonce):
+        if isinstance(nonce, unicode):
             raise TypeError("Nonce must be a byte string")
 
-        self.nonce = nonce
+        self.nonce = bstr(nonce)
         """Nonce"""
 
         self._factory = factory
-        self._key = key
+        self._key = bstr(key)
         self._tag = None  # Cache for MAC tag
 
         self._mac_len = mac_len
@@ -177,13 +175,13 @@ class GcmMode(object):
                                   ).encrypt(bchr(0) * 16)
 
         # Step 2 - Compute J0 (integer, not byte string!)
-        if len(nonce) == 12:
-            self._j0 = bytes_to_long(nonce + b("\x00\x00\x00\x01"))
+        if len(self.nonce) == 12:
+            self._j0 = bytes_to_long(self.nonce + b("\x00\x00\x00\x01"))
         else:
             fill = (16 - (len(nonce) % 16)) % 16 + 8
-            ghash_in = (nonce +
+            ghash_in = (self.nonce +
                         bchr(0) * fill +
-                        long_to_bytes(8 * len(nonce), 8))
+                        long_to_bytes(8 * len(self.nonce), 8))
             self._j0 = bytes_to_long(_GHASH(hash_subkey)
                                      .update(ghash_in)
                                      .digest())
@@ -229,7 +227,7 @@ class GcmMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string
+          assoc_data : byte string/array
             A piece of associated data. There are no restrictions on its size.
         """
 
@@ -298,7 +296,7 @@ class GcmMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -343,7 +341,7 @@ class GcmMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
             It can be of any length.
 
@@ -459,7 +457,7 @@ class GcmMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : byte string/array
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -474,7 +472,7 @@ class GcmMode(object):
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : byte string/array
             The piece of data to decrypt.
           received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
@@ -500,12 +498,12 @@ def _create_gcm_cipher(factory, **kwargs):
         GCM has been only defined for `Crypto.Cipher.AES`.
 
     :Keywords:
-      key : byte string
+      key : byte string/array
         The secret key to use in the symmetric cipher.
         It must be 16 (e.g. *AES-128*), 24 (e.g. *AES-192*)
         or 32 (e.g. *AES-256*) bytes long.
 
-      nonce : byte string
+      nonce : byte string/array
         A value that must never be reused for any other encryption.
 
         There are no restrictions on its length,

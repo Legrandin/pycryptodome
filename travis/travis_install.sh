@@ -28,16 +28,6 @@ install_from_pypi() {
 	)
 }
 
-install_ctypes_24() {
-	(
-	cd /tmp
-	git clone https://github.com/Legrandin/ctypes
-	cd ctypes
-	${PYTHON} setup.py build
-	cp -r build/lib*/* ${PYTHONPATH}
-	)
-}
-
 if [ x${OLDPY} != x ]; then
 	export PYTHON=${OLDPY}
 	sudo add-apt-repository -y ppa:deadsnakes/ppa
@@ -45,11 +35,7 @@ if [ x${OLDPY} != x ]; then
 	sudo apt-get install ${PYTHON} ${PYTHON}-dev
 	mkdir ${PWD}/custom_packages
 	export PYTHONPATH=${PWD}/custom_packages
-	if [ x${PYTHON} == xpython2.4 ]; then
-		install_ctypes_24
-	else
-		install_from_pypi setuptools 19.4 ${PYTHON}
-	fi
+	install_from_pypi setuptools 19.4 ${PYTHON}
 	if [ x${CFFI} == xyes ]; then
 		install_from_pypi cffi latest ${PYTHON}
 	fi
