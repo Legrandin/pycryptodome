@@ -61,5 +61,4 @@ The following packages, modules and functions have been removed:
 
 Others:
 
-* Support for any Python version older than 2.4 is dropped.
-  For Python 2.4 only, a dependency on the ``ctypes`` package is introduced.
+* Support for any Python version older than 2.6 is dropped.
