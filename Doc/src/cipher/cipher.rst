@@ -57,8 +57,8 @@ The base API of a cipher is fairly simple:
 
 .. note::
 
-    Plaintexts and ciphertexts (input/output) are all *byte strings*.
-    An error will occur with Python 3 strings, Python 2 Unicode strings, or byte arrays.
+    Plaintexts and ciphertexts (input/output) are all *byte strings* or *byte arrays*.
+    An error will occur with Python 3 strings or Python 2 Unicode strings.
 
 Often, the sender has to deliver to the receiver other data in addition
 to ciphertext alone (e.g. **initialization vectors** or **nonces**, **MAC tags**, etc).

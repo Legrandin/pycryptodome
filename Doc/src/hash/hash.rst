@@ -43,8 +43,8 @@ A first piece of message to hash can be passed to :func:`new` with the :attr:`da
     >> hash_object = SHA256.new(data=b'First')
 
 .. note::
-    You can only hash *byte strings* (no Python 2 Unicode strings, Python 3
-    strings or byte arrays).
+    You can only hash *byte strings* or *byte arrays* (no Python 2 Unicode strings
+    or Python 3 strings).
 
 Afterwards, the method :meth:`update` can be invoked any number of times
 as necessary, with other pieces of message::
