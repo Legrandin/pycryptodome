@@ -24,7 +24,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  expect_byte_string)
+                                  c_char_ptr)
 
 _raw_md5_lib = load_pycryptodome_raw_lib("Crypto.Hash._MD5",
                         """
@@ -87,10 +87,9 @@ class MD5Hash(object):
             data (byte string): The next chunk of the message being hashed.
         """
 
-        expect_byte_string(data)
         result = _raw_md5_lib.MD5_update(self._state.get(),
-                                           data,
-                                           c_size_t(len(data)))
+                                         c_char_ptr(data),
+                                         c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while instantiating MD5"
                              % result)

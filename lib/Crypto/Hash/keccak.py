@@ -34,7 +34,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  expect_byte_string)
+                                  c_char_ptr)
 
 _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         """
@@ -88,9 +88,8 @@ class Keccak_Hash(object):
         if self._digest_done and not self._update_after_digest:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
-        expect_byte_string(data)
         result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               data,
+                                               c_char_ptr(data),
                                                c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while updating keccak" % result)

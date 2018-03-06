@@ -34,7 +34,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  expect_byte_string)
+                                  c_char_ptr)
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 
@@ -74,9 +74,8 @@ class SHAKE256_XOF(object):
         if self._is_squeezing:
             raise TypeError("You cannot call 'update' after the first 'read'")
 
-        expect_byte_string(data)
         result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               data,
+                                               c_char_ptr(data),
                                                c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while updating SHAKE256 state"
