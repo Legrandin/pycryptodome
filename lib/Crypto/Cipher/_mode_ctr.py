@@ -28,7 +28,7 @@ __all__ = ['CtrMode']
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_char_ptr)
+                                  SmartPointer, c_size_t, c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
 from Crypto.Util.py3compat import b, bchr, byte_string, bstr
@@ -121,7 +121,7 @@ class CtrMode(object):
 
         self._state = VoidPointer()
         result = raw_ctr_lib.CTR_start_operation(block_cipher.get(),
-                                                 c_char_ptr(initial_counter_block),
+                                                 c_uint8_ptr(initial_counter_block),
                                                  c_size_t(len(initial_counter_block)),
                                                  c_size_t(prefix_len),
                                                  counter_len,
@@ -180,7 +180,7 @@ class CtrMode(object):
 
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_ctr_lib.CTR_encrypt(self._state.get(),
-                                         c_char_ptr(plaintext),
+                                         c_uint8_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
@@ -224,7 +224,7 @@ class CtrMode(object):
 
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_ctr_lib.CTR_decrypt(self._state.get(),
-                                         c_char_ptr(ciphertext),
+                                         c_uint8_ptr(ciphertext),
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:

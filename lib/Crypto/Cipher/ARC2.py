@@ -37,7 +37,7 @@ from Crypto.Cipher import _create_cipher
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
-                                  c_size_t, c_char_ptr)
+                                  c_size_t, c_uint8_ptr)
 
 _raw_arc2_lib = load_pycryptodome_raw_lib(
                         "Crypto.Cipher._raw_arc2",
@@ -81,7 +81,7 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_arc2_lib.ARC2_stop_operation
 
     cipher = VoidPointer()
-    result = start_operation(c_char_ptr(key),
+    result = start_operation(c_uint8_ptr(key),
                              c_size_t(len(key)),
                              c_size_t(effective_keylen),
                              cipher.address_of())

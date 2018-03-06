@@ -92,7 +92,7 @@ try:
         """Convert a C buffer into a Python byte sequence"""
         return ffi.buffer(buf)[:]
 
-    def c_char_ptr(data):
+    def c_uint8_ptr(data):
         if isinstance(data, bytearray):
             # This only works for cffi >= 1.7
             return ffi.cast(uint8_t_type, ffi.from_buffer(data))
@@ -141,7 +141,7 @@ except ImportError:
     def get_raw_buffer(buf):
         return buf.raw
 
-    def c_char_ptr(data):
+    def c_uint8_ptr(data):
         if byte_string(data) or isinstance(data, Array):
             return data
         elif isinstance(data, bytearray):

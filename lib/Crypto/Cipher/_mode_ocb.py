@@ -77,7 +77,7 @@ from Crypto.Random import get_random_bytes
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_char_ptr,
+                                  SmartPointer, c_size_t, c_uint8_ptr,
                                   )
 
 _raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
@@ -181,7 +181,7 @@ class OcbMode(object):
 
     def _update(self, assoc_data, assoc_data_len):
         result = _raw_ocb_lib.OCB_update(self._state.get(),
-                                         c_char_ptr(assoc_data),
+                                         c_uint8_ptr(assoc_data),
                                          c_size_t(assoc_data_len))
         if result:
             raise ValueError("Error %d while MAC-ing in OCB mode" % result)
@@ -275,7 +275,7 @@ class OcbMode(object):
 
         # Process data in multiples of the block size
         trans_len = len(in_data) // 16 * 16
-        result = self._transcrypt_aligned(c_char_ptr(in_data),
+        result = self._transcrypt_aligned(c_uint8_ptr(in_data),
                                           trans_len,
                                           trans_func,
                                           trans_desc)

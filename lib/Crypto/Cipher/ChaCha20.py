@@ -35,7 +35,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
                                   SmartPointer, c_size_t,
-                                  c_char_ptr, c_ulong)
+                                  c_uint8_ptr, c_ulong)
 
 _raw_chacha20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._chacha20",
                     """
@@ -79,7 +79,7 @@ class ChaCha20Cipher:
         self._state = VoidPointer()
         result = _raw_chacha20_lib.chacha20_init(
                         self._state.address_of(),
-                        c_char_ptr(key),
+                        c_uint8_ptr(key),
                         c_size_t(len(key)),
                         self.nonce,
                         c_size_t(len(nonce)))
@@ -108,7 +108,7 @@ class ChaCha20Cipher:
         ciphertext = create_string_buffer(len(plaintext))
         result = _raw_chacha20_lib.chacha20_encrypt(
                                          self._state.get(),
-                                         c_char_ptr(plaintext),
+                                         c_uint8_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:

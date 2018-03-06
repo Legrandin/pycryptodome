@@ -29,7 +29,7 @@ __all__ = ['CfbMode']
 from Crypto.Util.py3compat import bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_char_ptr)
+                                  SmartPointer, c_size_t, c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
 
@@ -92,7 +92,7 @@ class CfbMode(object):
 
         self._state = VoidPointer()
         result = raw_cfb_lib.CFB_start_operation(block_cipher.get(),
-                                                 c_char_ptr(iv),
+                                                 c_uint8_ptr(iv),
                                                  c_size_t(len(iv)),
                                                  c_size_t(segment_size),
                                                  self._state.address_of())
@@ -155,7 +155,7 @@ class CfbMode(object):
 
         ciphertext = create_string_buffer(len(plaintext))
         result = raw_cfb_lib.CFB_encrypt(self._state.get(),
-                                         c_char_ptr(plaintext),
+                                         c_uint8_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
@@ -196,7 +196,7 @@ class CfbMode(object):
 
         plaintext = create_string_buffer(len(ciphertext))
         result = raw_cfb_lib.CFB_decrypt(self._state.get(),
-                                         c_char_ptr(ciphertext),
+                                         c_uint8_ptr(ciphertext),
                                          plaintext,
                                          c_size_t(len(ciphertext)))
         if result:

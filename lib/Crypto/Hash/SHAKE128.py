@@ -34,7 +34,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_char_ptr)
+                                  c_uint8_ptr)
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 
@@ -75,7 +75,7 @@ class SHAKE128_XOF(object):
             raise TypeError("You cannot call 'update' after the first 'read'")
 
         result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               c_char_ptr(data),
+                                               c_uint8_ptr(data),
                                                c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while updating SHAKE128 state"

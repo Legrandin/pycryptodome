@@ -42,7 +42,7 @@ from Crypto.Random import get_random_bytes
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_char_ptr)
+                                  SmartPointer, c_size_t, c_uint8_ptr)
 
 _raw_galois_lib = load_pycryptodome_raw_lib("Crypto.Util._galois",
                     """
@@ -73,7 +73,7 @@ class _GHASH(object):
         assert len(subkey) == 16
 
         self._exp_key = VoidPointer()
-        result = _raw_galois_lib.ghash_expand(c_char_ptr(subkey),
+        result = _raw_galois_lib.ghash_expand(c_uint8_ptr(subkey),
                                               self._exp_key.address_of())
         if result:
             raise ValueError("Error %d while expanding the GMAC key" % result)
@@ -88,7 +88,7 @@ class _GHASH(object):
         assert len(block_data) % 16 == 0
 
         result = _raw_galois_lib.ghash(self._last_y,
-                                       c_char_ptr(block_data),
+                                       c_uint8_ptr(block_data),
                                        c_size_t(len(block_data)),
                                        self._last_y,
                                        self._exp_key.get())

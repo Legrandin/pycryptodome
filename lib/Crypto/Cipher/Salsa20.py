@@ -27,7 +27,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
                                   SmartPointer, c_size_t,
-                                  c_char_ptr)
+                                  c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
 
@@ -67,9 +67,9 @@ class Salsa20Cipher:
 
         self._state = VoidPointer()
         result = _raw_salsa20_lib.Salsa20_stream_init(
-                        c_char_ptr(key),
+                        c_uint8_ptr(key),
                         c_size_t(len(key)),
-                        c_char_ptr(nonce),
+                        c_uint8_ptr(nonce),
                         c_size_t(len(nonce)),
                         self._state.address_of())
         if result:
@@ -92,7 +92,7 @@ class Salsa20Cipher:
         ciphertext = create_string_buffer(len(plaintext))
         result = _raw_salsa20_lib.Salsa20_stream_encrypt(
                                          self._state.get(),
-                                         c_char_ptr(plaintext),
+                                         c_uint8_ptr(plaintext),
                                          ciphertext,
                                          c_size_t(len(plaintext)))
         if result:
