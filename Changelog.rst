@@ -13,6 +13,10 @@ New features
   more for longer passwords). Thanks to Christian Heimes for pointing
   out the implementation was under-optimized.
 * The salt for PBKDF2 can be either a string or bytes (GH#67).
+* Ciphers and hash functions accept data as `bytearray`, not just
+  binary strings.
+* The old SHA-1 and MD5 hash functions are available even when Python's
+  own `hashlib` does not include them.
 
 Resolved issues
 ---------------
