@@ -1,8 +1,8 @@
 Changelog
 =========
 
-x.x.x (???)
-++++++++++++++++++++++++
+3.5.0 (7 March 2018)
+++++++++++++++++++++
 
 New features
 ------------
@@ -17,7 +17,8 @@ New features
 Resolved issues
 ---------------
 
-* Without libgmp, modular exponentiaion crashed on big-endian systems.
+* Without libgmp, modular exponentiation (since v3.4.8) crashed
+  on 32-bit big-endian systems.
 
 Breaks in compatibility
 -----------------------

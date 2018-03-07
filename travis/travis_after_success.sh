@@ -7,6 +7,11 @@ if [[ !(${TRAVIS_PYTHON_VERSION} == 2.7 && ${CFFI} == yes && ${OLDPY}x == x) ]];
     exit 1
 fi
 
+# Only builds Linux wheels for tagged commits
+if [ "${TRAVIS_TAG}"x == x ]; then
+    exit 2
+fi
+
 DOCKER_IMAGE_1=quay.io/pypa/manylinux1_x86_64
 DOCKER_IMAGE_2=quay.io/pypa/manylinux1_i686
 
