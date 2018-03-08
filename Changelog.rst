@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.5.1 (8 March 2018)
+++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#142. Fix mismatch with declaration and definition of addmul128.
+
 3.5.0 (7 March 2018)
 ++++++++++++++++++++
 
