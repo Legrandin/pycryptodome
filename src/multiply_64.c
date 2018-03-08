@@ -54,7 +54,7 @@ DAMAGE.
 
 #endif
 
-uint64_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
+size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
 {
     uint64_t sum_low, sum_mid, sum_hi;
     uint64_t pr_low, pr_high, aim1;
