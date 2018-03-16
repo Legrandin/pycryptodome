@@ -25,6 +25,14 @@ matrix:
    env: CFFI=no OLDPY=python3.2
  - python: 3.4
    env: CFFI=yes OLDPY=python3.2
+ - os: osx
+   language: generic
+   install: pip2 install cibuildwheel==0.7.0
+   after_success: 
+   -  cibuildwheel --output-dir wheelhouse;
+      touch .separate_namespace;
+      cibuildwheel --output-dir wheelhouse;
+      ls wheelhouse;
 services:
  - docker
 branches:
