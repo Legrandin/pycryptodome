@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.5.2 (18 March 2018)
++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* Reintroduce Crypto.__version__ variable as in PyCrypto.
+
 3.5.1 (8 March 2018)
 ++++++++++++++++++++
 

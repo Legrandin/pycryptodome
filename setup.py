@@ -639,12 +639,7 @@ for line in open(os.path.join("lib", package_root, "__init__.py")):
     if line.startswith("version_info"):
         version_tuple = eval(line.split("=")[1])
 
-version_string = "%d.%d" % version_tuple[:-1]
-if version_tuple[2] is not None:
-    if str(version_tuple[2]).isdigit():
-        version_string += "."
-    version_string += str(version_tuple[2])
-
+version_string = ".".join([str(x) for x in version_tuple])
 
 setup(
     name = project_name,
