@@ -22,3 +22,6 @@ docker pull $DOCKER_IMAGE_2
 docker run --rm -v `pwd`:/io $DOCKER_IMAGE_2 linux32 /io/travis/build-wheels.sh
 
 ls wheelhouse/
+
+# Keep only manylinux files
+find wheelhouse -type f -name '*-linux_*' -delete
