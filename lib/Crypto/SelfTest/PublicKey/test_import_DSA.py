@@ -76,7 +76,7 @@ class ImportKeyTests(unittest.TestCase):
     def testExportKey1(self):
         tup = (self.y, self.g, self.p, self.q)
         key = DSA.construct(tup)
-        encoded = key.exportKey('DER')
+        encoded = key.export_key('DER')
         self.assertEqual(self.der_public, encoded)
 
     # 2.
@@ -106,7 +106,7 @@ tPG+TJKpGYb7pVk=
     def testExportKey2(self):
         tup = (self.y, self.g, self.p, self.q)
         key = DSA.construct(tup)
-        encoded = key.exportKey('PEM')
+        encoded = key.export_key('PEM')
         self.assertEqual(self.pem_public, encoded)
 
     # 3. OpenSSL/OpenSSH format
@@ -138,7 +138,7 @@ tPG+TJKpGYb7pVk=
     def testExportKey3(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        encoded = key.exportKey('DER', pkcs8=False)
+        encoded = key.export_key('DER', pkcs8=False)
         self.assertEqual(self.der_private, encoded)
 
     # 4.
@@ -169,7 +169,7 @@ ggadmEIJhrMUIVAldWBl
     def testExportKey4(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        encoded = key.exportKey('PEM', pkcs8=False)
+        encoded = key.export_key('PEM', pkcs8=False)
         self.assertEqual(self.pem_private, encoded)
 
     # 5. PKCS8 (unencrypted)
@@ -198,9 +198,9 @@ ggadmEIJhrMUIVAldWBl
     def testExportKey5(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        encoded = key.exportKey('DER')
+        encoded = key.export_key('DER')
         self.assertEqual(self.der_pkcs8, encoded)
-        encoded = key.exportKey('DER', pkcs8=True)
+        encoded = key.export_key('DER', pkcs8=True)
         self.assertEqual(self.der_pkcs8, encoded)
 
     # 6.
@@ -228,9 +228,9 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
     def testExportKey6(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        encoded = key.exportKey('PEM')
+        encoded = key.export_key('PEM')
         self.assertEqual(self.pem_pkcs8, encoded)
-        encoded = key.exportKey('PEM', pkcs8=True)
+        encoded = key.export_key('PEM', pkcs8=True)
         self.assertEqual(self.pem_pkcs8, encoded)
 
     # 7. OpenSSH/RFC4253
@@ -248,7 +248,7 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
     def testExportKey7(self):
         tup = (self.y, self.g, self.p, self.q)
         key = DSA.construct(tup)
-        encoded = key.exportKey('OpenSSH')
+        encoded = key.export_key('OpenSSH')
         self.assertEqual(self.ssh_pub, encoded)
 
     # 8. Encrypted OpenSSL/OpenSSH
@@ -282,7 +282,7 @@ xVJtxaV37m3aXxtCsPnbBg==
     def testExportKey8(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        encoded = key.exportKey('PEM', pkcs8=False, passphrase="PWDTEST")
+        encoded = key.export_key('PEM', pkcs8=False, passphrase="PWDTEST")
         key = DSA.importKey(encoded, "PWDTEST")
         self.assertEqual(self.y, key.y)
         self.assertEqual(self.p, key.p)
@@ -347,7 +347,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         randfunc = BytesIO(unhexlify(b("27A1C66C42AFEECE") + b("D725BF1B6B8239F4"))).read
-        encoded = key.exportKey('DER', pkcs8=True, passphrase="PWDTEST", randfunc=randfunc)
+        encoded = key.export_key('DER', pkcs8=True, passphrase="PWDTEST", randfunc=randfunc)
         self.assertEqual(self.der_pkcs8_encrypted, encoded)
 
     # ----
@@ -358,7 +358,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
     def testExportError2(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        self.assertRaises(ValueError, key.exportKey, 'DER', pkcs8=False, passphrase="PWDTEST")
+        self.assertRaises(ValueError, key.export_key, 'DER', pkcs8=False, passphrase="PWDTEST")
 
     def test_import_key(self):
         """Verify importKey is an alias to import_key"""
@@ -369,6 +369,11 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         self.assertEqual(self.p, key_obj.p)
         self.assertEqual(self.q, key_obj.q)
         self.assertEqual(self.g, key_obj.g)
+
+    def test_exportKey(self):
+        tup = (self.y, self.g, self.p, self.q, self.x)
+        key = DSA.construct(tup)
+        self.assertEquals(key.exportKey(), key.export_key())
 
 
 class ImportKeyFromX509Cert(unittest.TestCase):

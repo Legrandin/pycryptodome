@@ -204,7 +204,7 @@ class DsaKey(object):
         except KeyError:
             raise AttributeError(item)
 
-    def exportKey(self, format='PEM', pkcs8=None, passphrase=None,
+    def export_key(self, format='PEM', pkcs8=None, passphrase=None,
                   protection=None, randfunc=None):
         """Export this DSA key.
 
@@ -328,6 +328,9 @@ class DsaKey(object):
                             )
             return tobytes(pem_str)
         raise ValueError("Unknown key format '%s'. Cannot export the DSA key." % format)
+
+    # Backward-compatibility
+    exportKey = export_key
 
     # Methods defined in PyCrypto that we don't support anymore
 

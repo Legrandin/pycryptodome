@@ -225,7 +225,7 @@ class RsaKey(object):
             key_type = "Public"
         return "%s RSA key at 0x%X" % (key_type, id(self))
 
-    def exportKey(self, format='PEM', passphrase=None, pkcs=1,
+    def export_key(self, format='PEM', passphrase=None, pkcs=1,
                    protection=None, randfunc=None):
         """Export this RSA key.
 
@@ -360,6 +360,9 @@ class RsaKey(object):
             return tobytes(pem_str)
 
         raise ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
+
+    # Backward compatibility
+    exportKey = export_key
 
     # Methods defined in PyCrypto that we don't support anymore
     def sign(self, M, K):

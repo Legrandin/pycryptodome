@@ -34,7 +34,7 @@ A key object can be created in four ways:
 4. :meth:`publickey` at the object level (e.g. :meth:`Crypto.PublicKey.RSA.RsaKey.publickey`).
    The key will be the public key matching the given object.
 
-A key object can be serialized via its :meth:`exportKey` method.
+A key object can be serialized via its :meth:`export_key` method.
 
 Keys objects can be compared via the usual operators ``==`` and ``!=`` (note that the two halves of the same key,
 *private* and *public*, are considered as two different keys).

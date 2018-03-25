@@ -28,7 +28,7 @@ Specifically, for public key cryptography:
 * Ambiguous method ``size`` from RSA, DSA and ElGamal key objects have bene removed.
   Instead, use methods :meth:`size_in_bytes` and :meth:`size_in_bits` and check the documentation.
 * The 3 public key object types (RSA, DSA, ElGamal) are now unpickable.
-  You must use the :meth:`exportKey` method of each key object and select a good output format: for private
+  You must use the :meth:`export_key` method of each key object and select a good output format: for private
   keys that means a good password-based encryption scheme.
 * Removed attribute ``Crypto.PublicKey.RSA.algorithmIdentifier``.
 * Removed ``Crypto.PublicKey.RSA.RSAImplementation`` (which should have been private in the first place).

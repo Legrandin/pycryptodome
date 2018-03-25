@@ -48,13 +48,13 @@ At the end, the code prints our the RSA public key in ASCII/PEM format:
 
     secret_code = "Unguessable"
     key = RSA.generate(2048)
-    encrypted_key = key.exportKey(passphrase=secret_code, pkcs=8,
+    encrypted_key = key.export_key(passphrase=secret_code, pkcs=8,
                                   protection="scryptAndAES128-CBC")
     
     file_out = open("rsa_key.bin", "wb")
     file_out.write(encrypted_key)
 
-    print(key.publickey().exportKey())
+    print(key.publickey().export_key())
 
 The following code reads the private RSA key back in, and then prints again the public key:
 
@@ -66,7 +66,7 @@ The following code reads the private RSA key back in, and then prints again the 
     encoded_key = open("rsa_key.bin", "rb").read()
     key = RSA.import_key(encoded_key, passphrase=secret_code)
 
-    print(key.publickey().exportKey())
+    print(key.publickey().export_key())
 
 
 Generate public key and private key
@@ -79,11 +79,11 @@ The following code generates public key stored in ``receiver.pem`` and private k
     from Crypto.PublicKey import RSA
 
     key = RSA.generate(2048)
-    private_key = key.exportKey()
+    private_key = key.export_key()
     file_out = open("private.pem", "wb")
     file_out.write(private_key)
 
-    public_key = key.publickey().exportKey()
+    public_key = key.publickey().export_key()
     file_out = open("receiver.pem", "wb")
     file_out.write(public_key)
 

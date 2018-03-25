@@ -1,13 +1,19 @@
 Changelog
 =========
 
-3.5.2 (18 March 2018)
+3.5.2 (xx xxxxx 2018)
 +++++++++++++++++++++
+
+New features
+------------
+* Introduced `export_key` and deprecated `exportKey` for DSA and RSA key
+  objects.
 
 Resolved issues
 ---------------
 
 * Reintroduce Crypto.__version__ variable as in PyCrypto.
+* Fixed compilation problem with MinGW.
 
 3.5.1 (8 March 2018)
 ++++++++++++++++++++

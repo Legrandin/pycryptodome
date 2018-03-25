@@ -42,7 +42,7 @@ key in a file called ``public_key.pem``, sign a message (with
     >>> # Create a new DSA key
     >>> key = DSA.generate(2048)
     >>> f = open("public_key.pem", "w")
-    >>> f.write(key.publickey().exportKey(key))
+    >>> f.write(key.publickey().export_key(key))
     >>>
     >>> # Sign a message
     >>> message = b"Hello"
