@@ -148,6 +148,43 @@ class ByteArrayTest(unittest.TestCase):
         self.assertEqual(h1.digest(), h2.digest())
 
 
+class MemoryViewTest(unittest.TestCase):
+
+    def __init__(self, module):
+        unittest.TestCase.__init__(self)
+        self.module = module
+
+    def runTest(self):
+
+        data = b("\x00\x01\x02")
+        mv_ro = memoryview(b("\x00\x01\x02"))
+        mv_rw = memoryview(bytearray(b("\x00\x01\x02")))
+
+        # Data can be a memoryview-rw (during initialization)
+        h1 = self.module.new(data)
+        h2 = self.module.new(mv_rw)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a memoryview-rw (during operation)
+        h1 = self.module.new()
+        h2 = self.module.new()
+        h1.update(data)
+        h2.update(mv_rw)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a memoryview-ro (during initialization)
+        h1 = self.module.new(data)
+        h2 = self.module.new(mv_ro)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a memoryview-ro (during operation)
+        h1 = self.module.new()
+        h2 = self.module.new()
+        h1.update(data)
+        h2.update(mv_ro)
+        self.assertEqual(h1.digest(), h2.digest())
+
+
 class MACSelfTest(unittest.TestCase):
 
     def __init__(self, module, description, result, input, key, params):
@@ -237,6 +274,9 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
         tests.append(GenericHashConstructorTest(module))
 
     tests.append(ByteArrayTest(module))
+
+    if not (sys.version_info[0] == 2 and sys.version_info[1] < 7):
+        tests.append(MemoryViewTest(module))
 
     return tests
 
