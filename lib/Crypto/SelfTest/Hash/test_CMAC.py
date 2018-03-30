@@ -33,6 +33,7 @@
 
 """Self-test suite for Crypto.Hash.CMAC"""
 
+import sys
 import unittest
 
 from Crypto.Util.py3compat import tobytes
@@ -266,6 +267,54 @@ class MultipleUpdates(unittest.TestCase):
             self.assertEqual(ref_mac, mac.digest())
 
 
+class ByteArrayTests(unittest.TestCase):
+
+    def runTest(self):
+
+        key = b"0" * 16
+        data = b"\x00\x01\x02"
+
+        key_ba = bytearray(key)
+        data_ba = bytearray(data)
+
+        # Data and key can be a bytearray (during initialization)
+        h1 = CMAC.new(key, data, ciphermod=AES)
+        h2 = CMAC.new(key_ba, data_ba, ciphermod=AES)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a bytearray (during operation)
+        h1 = CMAC.new(key, ciphermod=AES)
+        h2 = CMAC.new(key, ciphermod=AES)
+        h1.update(data)
+        h2.update(data_ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+
+class MemoryViewTests(unittest.TestCase):
+
+    def runTest(self):
+
+        key = b"0" * 16
+        data = b"\x00\x01\x02"
+
+        mv_ro = [ memoryview(x) for x in (key, data) ]
+        mv_rw = [ memoryview(bytearray(x)) for x in (key, data) ]
+
+        for key_mv, data_mv in (mv_ro, mv_rw):
+
+            # Data and key can be a memoryview (during initialization)
+            h1 = CMAC.new(key, data, ciphermod=AES)
+            h2 = CMAC.new(key_mv, data_mv, ciphermod=AES)
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            h1 = CMAC.new(key, ciphermod=AES)
+            h2 = CMAC.new(key, ciphermod=AES)
+            h1.update(data)
+            h2.update(data_mv)
+            self.assertEqual(h1.digest(), h2.digest())
+
+
 def get_tests(config={}):
     global test_data
     from common import make_mac_tests
@@ -279,6 +328,9 @@ def get_tests(config={}):
 
     tests = make_mac_tests(CMAC, "CMAC", params_test_data)
     tests.append(MultipleUpdates())
+    tests.append(ByteArrayTests())
+    if not (sys.version_info[0] == 2 and sys.version_info[1] < 7):
+        tests.append(MemoryViewTests())
     return tests
 
 
