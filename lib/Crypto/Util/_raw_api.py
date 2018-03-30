@@ -62,6 +62,8 @@ try:
     null_pointer = ffi.NULL
     uint8_t_type = ffi.typeof(ffi.new("const uint8_t*"))
 
+    _Array = ffi.new("uint8_t[1]").__class__.__bases__
+
     def load_lib(name, cdecl):
         """Load a shared library and return a handle to it.
 
@@ -101,7 +103,7 @@ try:
         if isinstance(data, _buffer_type):
             # This only works for cffi >= 1.7
             return ffi.cast(uint8_t_type, ffi.from_buffer(data))
-        elif byte_string(data) or isinstance(data, Array):
+        elif byte_string(data) or isinstance(data, _Array):
             return data
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
@@ -117,8 +119,6 @@ try:
 
         def address_of(self):
             return self._pp
-
-    Array = ffi.new("uint8_t[1]").__class__.__bases__
 
     backend = "cffi"
 
