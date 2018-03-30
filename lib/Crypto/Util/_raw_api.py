@@ -150,10 +150,17 @@ except ImportError:
 
     # ---- Get raw pointer ---
 
-    _c_ssize_p = ctypes.POINTER(ctypes.c_ssize_t)
+    if sys.version_info[0] == 2 and sys.version_info[1] == 6:
+        # ctypes in 2.6 does not define c_ssize_t. Replacing it
+        # with c_size_t keeps the structure correctely laid out
+        _c_ssize_t = c_size_t
+    else:
+        _c_ssize_t = ctypes.c_ssize_t
+
     _PyBUF_SIMPLE = 0
     _PyObject_GetBuffer = ctypes.pythonapi.PyObject_GetBuffer
     _py_object = ctypes.py_object
+    _c_ssize_p = ctypes.POINTER(_c_ssize_t)
 
     # See Include/object.h for CPython
     # and https://github.com/pallets/click/blob/master/click/_winconsole.py
@@ -161,8 +168,8 @@ except ImportError:
         _fields_ = [
             ('buf',         c_void_p),
             ('obj',         ctypes.py_object),
-            ('len',         ctypes.c_ssize_t),
-            ('itemsize',    ctypes.c_ssize_t),
+            ('len',         _c_ssize_t),
+            ('itemsize',    _c_ssize_t),
             ('readonly',    ctypes.c_int),
             ('ndim',        ctypes.c_int),
             ('format',      ctypes.c_char_p),
@@ -173,8 +180,8 @@ except ImportError:
         ]
 
         # Extra field for CPython 2.6/2.7
-        if sys.version_info[0] == 2:
-            _fields_.insert(-1, ('smalltable', ctypes.c_ssize_t * 2))
+        if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 2):
+            _fields_.insert(-1, ('smalltable', _c_ssize_t * 2))
 
     def c_uint8_ptr(data):
         if byte_string(data) or isinstance(data, _Array):
