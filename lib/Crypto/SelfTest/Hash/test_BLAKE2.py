@@ -30,6 +30,7 @@
 
 import os
 import re
+import sys
 import unittest
 from binascii import unhexlify, hexlify
 
@@ -171,6 +172,56 @@ class Blake2Test(unittest.TestCase):
             if digest_bits in self.digest_bits_oid:
                 continue
             self.assertRaises(AttributeError, lambda: h.oid)
+
+    def test_bytearray(self):
+
+        data = b"\x00\x01\x02"
+        ba = bytearray(data)
+
+        # Data can be a bytearray (during initialization)
+        h1 = self.BLAKE2.new(data=data)
+        h2 = self.BLAKE2.new(data=ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Key can be a bytearray
+        h1 = self.BLAKE2.new(key=data)
+        h2 = self.BLAKE2.new(key=ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a bytearray (during operation)
+        h1 = self.BLAKE2.new()
+        h2 = self.BLAKE2.new()
+        h1.update(data)
+        h2.update(ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+    def test_memoryview(self):
+
+        data = b"\x00\x01\x02"
+        mv_ro = memoryview(data)
+        mv_rw = memoryview(bytearray(data))
+
+        for mv in (mv_ro, mv_rw):
+
+            # Data can be a memoryview (during initialization)
+            h1 = self.BLAKE2.new(data=data)
+            h2 = self.BLAKE2.new(data=mv)
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Key can be a memoryview
+            h1 = self.BLAKE2.new(key=data)
+            h2 = self.BLAKE2.new(key=mv)
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            h1 = self.BLAKE2.new()
+            h2 = self.BLAKE2.new()
+            h1.update(data)
+            h2.update(mv)
+            self.assertEqual(h1.digest(), h2.digest())
+
+    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+        del test_memoryview
 
 
 class Blake2bTest(Blake2Test):
