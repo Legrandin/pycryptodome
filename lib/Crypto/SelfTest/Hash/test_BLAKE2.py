@@ -67,8 +67,6 @@ class Blake2Test(unittest.TestCase):
 
     def test_new_negative(self):
 
-        self.assertRaises(TypeError, self.BLAKE2.new)
-
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
             self.assertRaises(TypeError, new_func,
@@ -87,6 +85,10 @@ class Blake2Test(unittest.TestCase):
             self.assertRaises(TypeError, new_func,
                               digest_bytes=self.max_bytes,
                               data=u"string")
+
+    def test_default_digest_size(self):
+        digest = self.BLAKE2.new(data=b'abc').digest()
+        self.assertEquals(len(digest), self.max_bytes)
 
     def test_update(self):
         pieces = [bchr(10) * 200, bchr(20) * 300]
