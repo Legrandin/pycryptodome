@@ -131,20 +131,26 @@ class ByteArrayTest(unittest.TestCase):
         self.module = module
 
     def runTest(self):
-
         data = b("\x00\x01\x02")
-        ba = bytearray(b("\x00\x01\x02"))
 
         # Data can be a bytearray (during initialization)
+        ba = bytearray(data)
+
         h1 = self.module.new(data)
         h2 = self.module.new(ba)
+        ba[:1] = b'\xFF'
         self.assertEqual(h1.digest(), h2.digest())
 
         # Data can be a bytearray (during operation)
+        ba = bytearray(data)
+
         h1 = self.module.new()
         h2 = self.module.new()
+
         h1.update(data)
         h2.update(ba)
+
+        ba[:1] = b'\xFF'
         self.assertEqual(h1.digest(), h2.digest())
 
 
@@ -156,33 +162,35 @@ class MemoryViewTest(unittest.TestCase):
 
     def runTest(self):
 
-        data = b("\x00\x01\x02")
-        mv_ro = memoryview(b("\x00\x01\x02"))
-        mv_rw = memoryview(bytearray(b("\x00\x01\x02")))
+        data = b"\x00\x01\x02"
 
-        # Data can be a memoryview-rw (during initialization)
-        h1 = self.module.new(data)
-        h2 = self.module.new(mv_rw)
-        self.assertEqual(h1.digest(), h2.digest())
+        def get_mv_ro(data):
+            return memoryview(data)
 
-        # Data can be a memoryview-rw (during operation)
-        h1 = self.module.new()
-        h2 = self.module.new()
-        h1.update(data)
-        h2.update(mv_rw)
-        self.assertEqual(h1.digest(), h2.digest())
+        def get_mv_rw(data):
+            return memoryview(bytearray(data))
 
-        # Data can be a memoryview-ro (during initialization)
-        h1 = self.module.new(data)
-        h2 = self.module.new(mv_ro)
-        self.assertEqual(h1.digest(), h2.digest())
+        for get_mv in get_mv_ro, get_mv_rw:
 
-        # Data can be a memoryview-ro (during operation)
-        h1 = self.module.new()
-        h2 = self.module.new()
-        h1.update(data)
-        h2.update(mv_ro)
-        self.assertEqual(h1.digest(), h2.digest())
+            # Data can be a memoryview (during initialization)
+            mv = get_mv(data)
+
+            h1 = self.module.new(data)
+            h2 = self.module.new(mv)
+            if not mv.readonly:
+                mv[:1] = b'\xFF'
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            mv = get_mv(data)
+
+            h1 = self.module.new()
+            h2 = self.module.new()
+            h1.update(data)
+            h2.update(mv)
+            if not mv.readonly:
+                mv[:1] = b'\xFF'
+            self.assertEqual(h1.digest(), h2.digest())
 
 
 class MACSelfTest(unittest.TestCase):

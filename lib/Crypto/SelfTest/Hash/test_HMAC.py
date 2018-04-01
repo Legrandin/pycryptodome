@@ -307,19 +307,25 @@ class ByteArrayTests(unittest.TestCase):
         key = b"0" * 16
         data = b"\x00\x01\x02"
 
+        # Data and key can be a bytearray (during initialization)
         key_ba = bytearray(key)
         data_ba = bytearray(data)
 
-        # Data and key can be a bytearray (during initialization)
         h1 = HMAC.new(key, data)
         h2 = HMAC.new(key_ba, data_ba)
+        key_ba[:1] = b'\xFF'
+        data_ba[:1] = b'\xFF'
         self.assertEqual(h1.digest(), h2.digest())
 
         # Data can be a bytearray (during operation)
+        key_ba = bytearray(key)
+        data_ba = bytearray(data)
+
         h1 = HMAC.new(key)
         h2 = HMAC.new(key)
         h1.update(data)
         h2.update(data_ba)
+        data_ba[:1] = b'\xFF'
         self.assertEqual(h1.digest(), h2.digest())
 
 
@@ -330,21 +336,34 @@ class MemoryViewTests(unittest.TestCase):
         key = b"0" * 16
         data = b"\x00\x01\x02"
 
-        mv_ro = [ memoryview(x) for x in (key, data) ]
-        mv_rw = [ memoryview(bytearray(x)) for x in (key, data) ]
+        def get_mv_ro(data):
+            return memoryview(data)
 
-        for key_mv, data_mv in (mv_ro, mv_rw):
+        def get_mv_rw(data):
+            return memoryview(bytearray(data))
+
+        for get_mv in (get_mv_ro, get_mv_rw):
 
             # Data and key can be a memoryview (during initialization)
+            key_mv = get_mv(key)
+            data_mv = get_mv(data)
+
             h1 = HMAC.new(key, data)
             h2 = HMAC.new(key_mv, data_mv)
+            if not data_mv.readonly:
+                key_mv[:1] = b'\xFF'
+                data_mv[:1] = b'\xFF'
             self.assertEqual(h1.digest(), h2.digest())
 
             # Data can be a memoryview (during operation)
+            data_mv = get_mv(data)
+
             h1 = HMAC.new(key)
             h2 = HMAC.new(key)
             h1.update(data)
             h2.update(data_mv)
+            if not data_mv.readonly:
+                data_mv[:1] = b'\xFF'
             self.assertEqual(h1.digest(), h2.digest())
 
 
