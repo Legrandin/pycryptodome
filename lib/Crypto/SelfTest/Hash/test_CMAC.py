@@ -33,10 +33,9 @@
 
 """Self-test suite for Crypto.Hash.CMAC"""
 
-import sys
 import unittest
 
-from Crypto.Util.py3compat import tobytes
+from Crypto.Util.py3compat import tobytes, _memoryview
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3
@@ -317,6 +316,7 @@ class MemoryViewTests(unittest.TestCase):
 
 def get_tests(config={}):
     global test_data
+    import types
     from common import make_mac_tests
 
     # Add new() parameters to the back of each test vector
@@ -329,7 +329,7 @@ def get_tests(config={}):
     tests = make_mac_tests(CMAC, "CMAC", params_test_data)
     tests.append(MultipleUpdates())
     tests.append(ByteArrayTests())
-    if not (sys.version_info[0] == 2 and sys.version_info[1] < 7):
+    if _memoryview is not types.NoneType:
         tests.append(MemoryViewTests())
     return tests
 

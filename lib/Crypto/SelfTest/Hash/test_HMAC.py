@@ -24,9 +24,10 @@
 
 """Self-test suite for Crypto.Hash.HMAC"""
 
+import sys
 import unittest
 from binascii import hexlify
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import _memoryview, tostr, tobytes
 
 from Crypto.Hash import HMAC, MD5, SHA1, SHA256
 hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256)
@@ -36,14 +37,13 @@ try:
     hash_modules.update(dict(SHA224=SHA224, SHA384=SHA384, SHA512=SHA512,
                              RIPEMD160=RIPEMD160))
 except ImportError:
-    import sys
     sys.stderr.write("SelfTest: warning: not testing HMAC-SHA224/384/512"
                      " (not available)\n")
 
 default_hash = None
 
 def xl(text):
-    return tostr(hexlify(b(text)))
+    return tostr(hexlify(tobytes(text)))
 
 # This is a list of (key, data, results, description) tuples.
 test_data = [
@@ -278,8 +278,8 @@ class HMAC_Module_and_Instance_Test(unittest.TestCase):
         return self.description
 
     def runTest(self):
-        key = b("\x90\x91\x92\x93") * 4
-        payload = b("\x00") * 100
+        key = b"\x90\x91\x92\x93" * 4
+        payload = b"\x00" * 100
 
         for hashname, hashmod in self.hashmods.items():
             if hashmod is None:
@@ -289,17 +289,68 @@ class HMAC_Module_and_Instance_Test(unittest.TestCase):
             two = HMAC.new(key, payload, hashmod.new()).digest()
             self.assertEqual(one, two)
 
+
 class HMAC_None(unittest.TestCase):
 
     def runTest(self):
 
-        key = bchr(4) * 20
-        one = HMAC.new(key, b(""), SHA1).digest()
+        key = b"\x04" * 20
+        one = HMAC.new(key, b"", SHA1).digest()
         two = HMAC.new(key, None, SHA1).digest()
         self.assertEqual(one, two)
 
+
+class ByteArrayTests(unittest.TestCase):
+
+    def runTest(self):
+
+        key = b"0" * 16
+        data = b"\x00\x01\x02"
+
+        key_ba = bytearray(key)
+        data_ba = bytearray(data)
+
+        # Data and key can be a bytearray (during initialization)
+        h1 = HMAC.new(key, data)
+        h2 = HMAC.new(key_ba, data_ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a bytearray (during operation)
+        h1 = HMAC.new(key)
+        h2 = HMAC.new(key)
+        h1.update(data)
+        h2.update(data_ba)
+        self.assertEqual(h1.digest(), h2.digest())
+
+
+class MemoryViewTests(unittest.TestCase):
+
+    def runTest(self):
+
+        key = b"0" * 16
+        data = b"\x00\x01\x02"
+
+        mv_ro = [ memoryview(x) for x in (key, data) ]
+        mv_rw = [ memoryview(bytearray(x)) for x in (key, data) ]
+
+        for key_mv, data_mv in (mv_ro, mv_rw):
+
+            # Data and key can be a memoryview (during initialization)
+            h1 = HMAC.new(key, data)
+            h2 = HMAC.new(key_mv, data_mv)
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            h1 = HMAC.new(key)
+            h2 = HMAC.new(key)
+            h1.update(data)
+            h2.update(data_mv)
+            self.assertEqual(h1.digest(), h2.digest())
+
+
 def get_tests(config={}):
     global test_data
+    import types
     from common import make_mac_tests
 
     # A test vector contains multiple results, each one for a
@@ -315,16 +366,19 @@ def get_tests(config={}):
                 t.append(dict(digestmod=globals()[modname]))
                 exp_test_data.append(t)
             except AttributeError:
-                import sys
                 sys.stderr.write("SelfTest: warning: not testing HMAC-%s"
                                  " (not available)\n" % modname)
     tests = make_mac_tests(HMAC, "HMAC", exp_test_data)
     tests.append(HMAC_Module_and_Instance_Test(hash_modules))
     tests.append(HMAC_None())
+
+    tests.append(ByteArrayTests())
+    if _memoryview is not types.NoneType:
+        tests.append(MemoryViewTests())
+
     return tests
+
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

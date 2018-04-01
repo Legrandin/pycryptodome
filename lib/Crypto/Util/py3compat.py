@@ -79,9 +79,17 @@ if sys.version_info[0] == 2:
     def byte_string(s):
         return isinstance(s, str)
     from binascii import hexlify, unhexlify
+
     # In Pyton 2.x, StringIO is a stand-alone module
     from StringIO import StringIO as BytesIO
+
     from sys import maxint
+
+    if sys.version_info[1] < 7:
+        import types
+        _memoryview = types.NoneType
+    else:
+        _memoryview = memoryview
 else:
     def b(s):
        return s.encode("latin-1") # utf-8 would cause some side-effects we don't want
@@ -122,5 +130,7 @@ else:
     # In Pyton 3.x, StringIO is a sub-module of io
     from io import BytesIO
     from sys import maxsize as maxint
+
+    _memoryview = memoryview
 
 del sys

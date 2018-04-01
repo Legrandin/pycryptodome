@@ -22,7 +22,7 @@
 
 import sys
 
-from Crypto.Util.py3compat import bord, tobytes
+from Crypto.Util.py3compat import bord, tobytes, _memoryview
 
 from binascii import unhexlify
 
@@ -33,12 +33,6 @@ from Crypto.Random import get_random_bytes
 
 # The size of the authentication tag produced by the MAC.
 digest_size = None
-
-
-if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-    _memoryview = None
-else:
-    _memoryview = memoryview
 
 
 def _shift_bytes(bs, xor_lsb=0):
