@@ -40,6 +40,16 @@ def _shift_bytes(bs, xor_lsb=0):
     return long_to_bytes(num, len(bs))[-len(bs):]
 
 
+def _copy_bytes(start, seq):
+    """Return a copy of a sequence (byte string, byte array, memoryview)
+    starting from a certain index"""
+
+    if isinstance(seq, _memoryview):
+        return seq[start:].tobytes()
+    else:
+        return seq[start:]
+
+
 class CMAC(object):
     """A CMAC hash object.
     Do not instantiate directly. Use the :func:`new` function.
@@ -55,7 +65,7 @@ class CMAC(object):
         if ciphermod is None:
             raise TypeError("ciphermod must be specified (try AES)")
 
-        self._key = key
+        self._key = _copy_bytes(0, key)
         self._factory = ciphermod
         if cipher_params is None:
             self._cipher_params = {}
@@ -116,8 +126,10 @@ class CMAC(object):
         """Authenticate the next chunk of message.
 
         Args:
-            data (byte string/array): The next chunk of data
+            data (byte string/byte array/memoryview): The next chunk of data
         """
+
+        # Mutable values must be copied if cached
 
         self._data_size += len(msg)
 
@@ -136,10 +148,7 @@ class CMAC(object):
         update_len *= self.digest_size
         if remain > 0:
             self._update(msg[:update_len])
-            if isinstance(msg, _memoryview):
-                self._cache = msg[update_len:].tobytes()
-            else:
-                self._cache = msg[update_len:]
+            self._cache = _copy_bytes(update_len, msg)
         else:
             self._update(msg)
             self._cache = b""
@@ -233,7 +242,7 @@ class CMAC(object):
         is valid.
 
         Args:
-          mac_tag (byte string/array): the expected MAC of the message.
+          mac_tag (byte string/byte array/memoryview): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -263,7 +272,7 @@ def new(key, msg=None, ciphermod=None, cipher_params=None):
     """Create a new MAC object.
 
     Args:
-        key (byte string/array):
+        key (byte string/byte array/memoryview):
             key for the CMAC object.
             The key must be valid for the underlying cipher algorithm.
             For instance, it must be 16 bytes long for AES-128.
@@ -272,7 +281,7 @@ def new(key, msg=None, ciphermod=None, cipher_params=None):
             The cipher's block size has to be 128 bits,
             like :mod:`Crypto.Cipher.AES`, to reduce the probability
             of collisions.
-        msg (byte string):
+        msg (byte string/byte array/memoryview):
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to `CMAC.update`. Optional.
         cipher_params (dict):
