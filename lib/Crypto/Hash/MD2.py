@@ -87,7 +87,7 @@ class MD2Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string/array): The next chunk of the message being hashed.
+            data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
         result = _raw_md2_lib.md2_update(self._state.get(),
@@ -152,7 +152,7 @@ def new(data=None):
     :parameter data:
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`MD2Hash.update`.
-    :type data: byte string/array
+    :type data: byte string/byte array/memoryview
 
     :Return: A :class:`MD2Hash` hash object
     """

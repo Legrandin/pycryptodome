@@ -96,7 +96,7 @@ class HMAC:
         """Authenticate the next chunk of message.
 
         Args:
-            data (byte string): The next chunk of data
+            data (byte string/byte array/memoryview): The next chunk of data
         """
 
         self._inner.update(msg)
@@ -149,7 +149,7 @@ class HMAC:
         is valid.
 
         Args:
-          mac_tag (byte string/byte string): the expected MAC of the message.
+          mac_tag (byte string/byte string/memoryview): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -195,11 +195,11 @@ def new(key, msg=b"", digestmod=None):
     """Create a new MAC object.
 
     Args:
-        key (byte string/array):
+        key (byte string/byte array/memoryview):
             key for the MAC object.
             It must be long enough to match the expected security level of the
             MAC.
-        msg (byte string):
+        msg (byte string/byte array/memoryview):
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to :meth:`HMAC.update`.
         digestmod (module):

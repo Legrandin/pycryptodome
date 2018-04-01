@@ -68,7 +68,7 @@ class SHAKE128_XOF(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string/array): The next chunk of the message being hashed.
+            data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
         if self._is_squeezing:
@@ -116,7 +116,7 @@ def new(data=None):
     """Return a fresh instance of a SHAKE128 object.
 
     Args:
-       data (byte string/array):
+       data (byte string/byte array/memoryview):
         The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`update`.
         Optional.

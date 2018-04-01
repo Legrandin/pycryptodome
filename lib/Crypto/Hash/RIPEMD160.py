@@ -88,7 +88,7 @@ class RIPEMD160Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string/array): The next chunk of the message being hashed.
+            data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
         result = _raw_ripemd160_lib.ripemd160_update(self._state.get(),
@@ -155,7 +155,7 @@ def new(data=None):
     :parameter data:
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`RIPEMD160Hash.update`.
-    :type data: byte string/array
+    :type data: byte string/byte array/memoryview
 
     :Return: A :class:`RIPEMD160Hash` hash object
     """
