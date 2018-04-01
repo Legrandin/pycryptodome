@@ -133,4 +133,15 @@ else:
 
     _memoryview = memoryview
 
+
+def _copy_bytes(start, seq):
+    """Return a copy of a sequence (byte string, byte array, memoryview)
+    starting from a certain index"""
+
+    if isinstance(seq, _memoryview):
+        return seq[start:].tobytes()
+    else:
+        return seq[start:]
+
+
 del sys

@@ -34,7 +34,7 @@ Ciphertext Block Chaining (CBC) mode.
 
 __all__ = ['CbcMode']
 
-from Crypto.Util.py3compat import bstr
+from Crypto.Util.py3compat import _copy_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
@@ -112,7 +112,7 @@ class CbcMode(object):
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = bstr(iv)
+        self.iv = _copy_bytes(0, iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 
