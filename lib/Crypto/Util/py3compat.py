@@ -134,14 +134,28 @@ else:
     _memoryview = memoryview
 
 
-def _copy_bytes(start, seq):
-    """Return a copy of a sequence (byte string, byte array, memoryview)
-    starting from a certain index"""
+def _copy_bytes(start, end, seq):
+    """Return an immutable copy of a sequence (byte string, byte array, memoryview)
+    in a certain interval [start:seq]"""
 
     if isinstance(seq, _memoryview):
-        return seq[start:].tobytes()
+        return seq[start:end].tobytes()
+    elif isinstance(seq, bytearray):
+        return bytes(seq[start:end])
     else:
-        return seq[start:]
+        return seq[start:end]
+
+
+def _is_immutable(data):
+    if byte_string(data):
+        return True
+    elif isinstance(data, _memoryview) and data.readonly:
+        return True
+    return False
+
+
+def _is_mutable(data):
+    return not _is_immutable(data)
 
 
 del sys

@@ -108,7 +108,7 @@ class OfbMode(object):
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = _copy_bytes(0, iv)
+        self.iv = _copy_bytes(None, None, iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 

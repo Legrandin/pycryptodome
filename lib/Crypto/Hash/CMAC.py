@@ -22,7 +22,7 @@
 
 import sys
 
-from Crypto.Util.py3compat import bord, tobytes, _memoryview
+from Crypto.Util.py3compat import bord, tobytes, _copy_bytes
 
 from binascii import unhexlify
 
@@ -40,16 +40,6 @@ def _shift_bytes(bs, xor_lsb=0):
     return long_to_bytes(num, len(bs))[-len(bs):]
 
 
-def _copy_bytes(start, seq):
-    """Return a copy of a sequence (byte string, byte array, memoryview)
-    starting from a certain index"""
-
-    if isinstance(seq, _memoryview):
-        return seq[start:].tobytes()
-    else:
-        return seq[start:]
-
-
 class CMAC(object):
     """A CMAC hash object.
     Do not instantiate directly. Use the :func:`new` function.
@@ -65,7 +55,7 @@ class CMAC(object):
         if ciphermod is None:
             raise TypeError("ciphermod must be specified (try AES)")
 
-        self._key = _copy_bytes(0, key)
+        self._key = _copy_bytes(None, None, key)
         self._factory = ciphermod
         if cipher_params is None:
             self._cipher_params = {}
@@ -148,7 +138,7 @@ class CMAC(object):
         update_len *= self.digest_size
         if remain > 0:
             self._update(msg[:update_len])
-            self._cache = _copy_bytes(update_len, msg)
+            self._cache = _copy_bytes(update_len, None, msg)
         else:
             self._update(msg)
             self._cache = b""
