@@ -31,7 +31,7 @@
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b
+from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 
@@ -224,40 +224,110 @@ class EaxTests(unittest.TestCase):
             self.assertEquals(cipher.digest(), ref_mac)
 
     def test_bytearray(self):
+
         # Encrypt
+        key_ba = bytearray(self.key_128)
+        nonce_ba = bytearray(self.nonce_96)
+        header_ba = bytearray(self.data_128)
+        data_ba = bytearray(self.data_128)
+
         cipher1 = AES.new(self.key_128,
                           AES.MODE_EAX,
                           nonce=self.nonce_96)
         cipher1.update(self.data_128)
-        ref1 = cipher1.encrypt(self.data_128)
-
-        cipher2 = AES.new(bytearray(self.key_128),
-                          AES.MODE_EAX,
-                          nonce=bytearray(self.nonce_96))
-        cipher2.update(bytearray(self.data_128))
-        ref2 = cipher2.encrypt(bytearray(self.data_128))
-
-        self.assertEqual(ref1, ref2)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
-
+        ct = cipher1.encrypt(self.data_128)
         tag = cipher1.digest()
 
+        cipher2 = AES.new(key_ba,
+                          AES.MODE_EAX,
+                          nonce=nonce_ba)
+        key_ba[:3] = b'\xFF\xFF\xFF'
+        nonce_ba[:3] = b'\xFF\xFF\xFF'
+        cipher2.update(header_ba)
+        header_ba[:3] = b'\xFF\xFF\xFF'
+        ct_test = cipher2.encrypt(data_ba)
+        data_ba[:3] = b'\x99\x99\x99'
+        tag_test = cipher2.digest()
+
+        self.assertEqual(ct, ct_test)
+        self.assertEqual(tag, tag_test)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
         # Decrypt
-        cipher3 = AES.new(self.key_128,
+        key_ba = bytearray(self.key_128)
+        nonce_ba = bytearray(self.nonce_96)
+        header_ba = bytearray(self.data_128)
+        ct_ba = bytearray(ct)
+        tag_ba = bytearray(tag)
+        del data_ba
+
+        cipher3 = AES.new(key_ba,
+                          AES.MODE_EAX,
+                          nonce=nonce_ba)
+        key_ba[:3] = b'\xFF\xFF\xFF'
+        nonce_ba[:3] = b'\xFF\xFF\xFF'
+        cipher3.update(header_ba)
+        header_ba[:3] = b'\xFF\xFF\xFF'
+        pt_test = cipher3.decrypt(ct_ba)
+        ct_ba[:3] = b'\xFF\xFF\xFF'
+        cipher3.verify(tag_ba)
+
+        self.assertEqual(pt_test, self.data_128)
+
+    def test_memoryview(self):
+
+        # Encrypt
+        key_mv = memoryview(bytearray(self.key_128))
+        nonce_mv = memoryview(bytearray(self.nonce_96))
+        header_mv = memoryview(bytearray(self.data_128))
+        data_mv = memoryview(bytearray(self.data_128))
+
+        cipher1 = AES.new(self.key_128,
                           AES.MODE_EAX,
                           nonce=self.nonce_96)
-        cipher3.update(self.data_128)
-        ref3 = cipher3.decrypt(ref1)
+        cipher1.update(self.data_128)
+        ct = cipher1.encrypt(self.data_128)
+        tag = cipher1.digest()
 
-        cipher4 = AES.new(bytearray(self.key_128),
+        cipher2 = AES.new(key_mv,
                           AES.MODE_EAX,
-                          nonce=bytearray(self.nonce_96))
-        cipher4.update(bytearray(self.data_128))
-        ref4 = cipher4.decrypt(bytearray(ref1))
+                          nonce=nonce_mv)
+        key_mv[:3] = b'\xFF\xFF\xFF'
+        nonce_mv[:3] = b'\xFF\xFF\xFF'
+        cipher2.update(header_mv)
+        header_mv[:3] = b'\xFF\xFF\xFF'
+        ct_test = cipher2.encrypt(data_mv)
+        data_mv[:3] = b'\x99\x99\x99'
+        tag_test = cipher2.digest()
 
-        self.assertEqual(ref3, ref4)
+        self.assertEqual(ct, ct_test)
+        self.assertEqual(tag, tag_test)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
 
-        cipher3.verify(bytearray(tag))
+        # Decrypt
+        key_mv = memoryview(bytearray(self.key_128))
+        nonce_mv = memoryview(bytearray(self.nonce_96))
+        header_mv = memoryview(bytearray(self.data_128))
+        ct_mv = memoryview(bytearray(ct))
+        tag_mv = memoryview(bytearray(tag))
+        del data_mv
+
+        cipher3 = AES.new(key_mv,
+                          AES.MODE_EAX,
+                          nonce=nonce_mv)
+        key_mv[:3] = b'\xFF\xFF\xFF'
+        nonce_mv[:3] = b'\xFF\xFF\xFF'
+        cipher3.update(header_mv)
+        header_mv[:3] = b'\xFF\xFF\xFF'
+        pt_test = cipher3.decrypt(ct_mv)
+        ct_mv[:3] = b'\x99\x99\x99'
+        cipher3.verify(tag_mv)
+
+        self.assertEqual(pt_test, self.data_128)
+
+    import types
+    if _memoryview is types.NoneType:
+        del test_memoryview
 
 
 class EaxFSMTests(unittest.TestCase):

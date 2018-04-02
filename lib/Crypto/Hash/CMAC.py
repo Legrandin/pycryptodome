@@ -159,7 +159,9 @@ class CMAC(object):
         else:
             self._before_last_ct = ct[-self.digest_size * 2:-self.digest_size]
         self._last_ct = ct[-self.digest_size:]
-        self._last_pt = data_block[-self.digest_size:]
+
+        # data_block can mutable
+        self._last_pt = _copy_bytes(-self.digest_size, None, data_block)
 
     def copy(self):
         """Return a copy ("clone") of the CMAC object.
