@@ -34,7 +34,7 @@ Galois/Counter Mode (GCM).
 
 __all__ = ['GcmMode']
 
-from Crypto.Util.py3compat import b, bchr, byte_string, bord, unhexlify, bstr
+from Crypto.Util.py3compat import byte_string, bord, unhexlify, _copy_bytes
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Hash import BLAKE2s
@@ -104,6 +104,7 @@ class _GHASH(object):
 def enum(**enums):
     return type('Enum', (), enums)
 
+
 MacStatus = enum(PROCESSING_AUTH_DATA=1, PROCESSING_CIPHERTEXT=2)
 
 
@@ -144,11 +145,11 @@ class GcmMode(object):
         if isinstance(nonce, unicode):
             raise TypeError("Nonce must be a byte string")
 
-        self.nonce = bstr(nonce)
+        self.nonce = _copy_bytes(None, None, nonce)
         """Nonce"""
 
         self._factory = factory
-        self._key = bstr(key)
+        self._key = _copy_bytes(None, None, key)
         self._tag = None  # Cache for MAC tag
 
         self._mac_len = mac_len
@@ -172,16 +173,16 @@ class GcmMode(object):
         hash_subkey = factory.new(key,
                                   self._factory.MODE_ECB,
                                   **cipher_params
-                                  ).encrypt(bchr(0) * 16)
+                                  ).encrypt(b'\x00' * 16)
 
         # Step 2 - Compute J0 (integer, not byte string!)
         if len(self.nonce) == 12:
-            self._j0 = bytes_to_long(self.nonce + b("\x00\x00\x00\x01"))
+            self._j0 = bytes_to_long(self.nonce + b"\x00\x00\x00\x01")
         else:
             fill = (16 - (len(nonce) % 16)) % 16 + 8
             ghash_in = (self.nonce +
-                        bchr(0) * fill +
-                        long_to_bytes(8 * len(self.nonce), 8))
+                        b'\x00' * fill +
+                        long_to_bytes(8 * len(nonce), 8))
             self._j0 = bytes_to_long(_GHASH(hash_subkey)
                                      .update(ghash_in)
                                      .digest())
@@ -190,7 +191,7 @@ class GcmMode(object):
         self._cipher = factory.new(key,
                                    self._factory.MODE_CTR,
                                    initial_value=self._j0 + 1,
-                                   nonce=b(""),
+                                   nonce=b"",
                                    **cipher_params)
 
         # Step 5 - Bootstrat GHASH
@@ -200,11 +201,11 @@ class GcmMode(object):
         self._tag_cipher = factory.new(key,
                                        self._factory.MODE_CTR,
                                        initial_value=self._j0,
-                                       nonce=b(""),
+                                       nonce=b"",
                                        **cipher_params)
 
         # Cache for data to authenticate
-        self._cache = b("")
+        self._cache = b""
 
         self._status = MacStatus.PROCESSING_AUTH_DATA
 
@@ -247,7 +248,7 @@ class GcmMode(object):
 
         if len(self._cache) > 0:
             filler = min(16 - len(self._cache), len(data))
-            self._cache += data[:filler]
+            self._cache += _copy_bytes(None, filler, data)
             data = data[filler:]
 
             if len(self._cache) < 16:
@@ -255,10 +256,10 @@ class GcmMode(object):
 
             # The cache is exactly one block
             self._signer.update(self._cache)
-            self._cache = b("")
+            self._cache = b""
 
         update_len = len(data) // 16 * 16
-        self._cache = data[update_len:]
+        self._cache = _copy_bytes(update_len, None, data)
         if update_len > 0:
             self._signer.update(data[:update_len])
 
@@ -273,7 +274,7 @@ class GcmMode(object):
         #   See step 6 in section 7.2
         len_cache = len(self._cache)
         if len_cache > 0:
-            self._update(bchr(0) * (16 - len_cache))
+            self._update(b'\x00' * (16 - len_cache))
 
     def encrypt(self, plaintext):
         """Encrypt data with the key and the parameters set at initialization.
