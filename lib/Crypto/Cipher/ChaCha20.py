@@ -30,7 +30,7 @@
 
 from Crypto.Random import get_random_bytes
 
-from Crypto.Util.py3compat import bstr
+from Crypto.Util.py3compat import _copy_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
@@ -73,7 +73,7 @@ class ChaCha20Cipher:
 
         See also `new()` at the module level."""
 
-        self.nonce = bstr(nonce)
+        self.nonce = _copy_bytes(None, None, nonce)
 
         self._next = ( self.encrypt, self.decrypt )
         self._state = VoidPointer()
