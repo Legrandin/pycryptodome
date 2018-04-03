@@ -32,7 +32,7 @@ import unittest
 
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, b, unhexlify
+from Crypto.Util.py3compat import tobytes, unhexlify, _memoryview
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -95,11 +95,11 @@ class BlockChainingTests(unittest.TestCase):
 
     def test_iv_with_matching_length(self):
         self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode,
-                          b(""))
+                          b"")
         self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode,
                           self.iv_128[:15])
         self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode,
-                          self.iv_128 + b("0"))
+                          self.iv_128 + b"0")
 
     def test_block_size_128(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
@@ -112,20 +112,20 @@ class BlockChainingTests(unittest.TestCase):
     def test_unaligned_data_128(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         for wrong_length in xrange(1,16):
-            self.assertRaises(ValueError, cipher.encrypt, b("5") * wrong_length)
+            self.assertRaises(ValueError, cipher.encrypt, b"5" * wrong_length)
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         for wrong_length in xrange(1,16):
-            self.assertRaises(ValueError, cipher.decrypt, b("5") * wrong_length)
+            self.assertRaises(ValueError, cipher.decrypt, b"5" * wrong_length)
 
     def test_unaligned_data_64(self):
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         for wrong_length in xrange(1,8):
-            self.assertRaises(ValueError, cipher.encrypt, b("5") * wrong_length)
+            self.assertRaises(ValueError, cipher.encrypt, b"5" * wrong_length)
 
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         for wrong_length in xrange(1,8):
-            self.assertRaises(ValueError, cipher.decrypt, b("5") * wrong_length)
+            self.assertRaises(ValueError, cipher.decrypt, b"5" * wrong_length)
 
     def test_IV_iv_attributes(self):
         data = get_tag_random("data", 16 * 100)
@@ -146,17 +146,17 @@ class BlockChainingTests(unittest.TestCase):
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
             cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-            result = getattr(cipher, func)(b(""))
-            self.assertEqual(result, b(""))
+            result = getattr(cipher, func)(b"")
+            self.assertEqual(result, b"")
 
     def test_either_encrypt_or_decrypt(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        cipher.encrypt(b(""))
-        self.assertRaises(TypeError, cipher.decrypt, b(""))
+        cipher.encrypt(b"")
+        self.assertRaises(TypeError, cipher.decrypt, b"")
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        cipher.decrypt(b(""))
-        self.assertRaises(TypeError, cipher.encrypt, b(""))
+        cipher.decrypt(b"")
+        self.assertRaises(TypeError, cipher.encrypt, b"")
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
@@ -166,26 +166,74 @@ class BlockChainingTests(unittest.TestCase):
         self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
     def test_bytearray(self):
-        data = b("1") * 16
+        data = b"1" * 16
+        data_ba = bytearray(data)
 
         # Encrypt
+        key_ba = bytearray(self.key_128)
+        iv_ba = bytearray(self.iv_128)
+
         cipher1 = AES.new(self.key_128, self.aes_mode, self.iv_128)
         ref1 = cipher1.encrypt(data)
 
-        cipher2 = AES.new(bytearray(self.key_128), self.aes_mode, bytearray(self.iv_128))
-        ref2 = cipher2.encrypt(bytearray(data))
+        cipher2 = AES.new(key_ba, self.aes_mode, iv_ba)
+        key_ba[:3] = b'\xFF\xFF\xFF'
+        iv_ba[:3] = b'\xFF\xFF\xFF'
+        ref2 = cipher2.encrypt(data_ba)
 
         self.assertEqual(ref1, ref2)
         self.assertEqual(cipher1.iv, cipher2.iv)
 
         # Decrypt
+        key_ba = bytearray(self.key_128)
+        iv_ba = bytearray(self.iv_128)
+
         cipher3 = AES.new(self.key_128, self.aes_mode, self.iv_128)
         ref3 = cipher3.decrypt(data)
 
-        cipher4 = AES.new(bytearray(self.key_128), self.aes_mode, bytearray(self.iv_128))
-        ref4 = cipher4.decrypt(bytearray(data))
+        cipher4 = AES.new(key_ba, self.aes_mode, iv_ba)
+        key_ba[:3] = b'\xFF\xFF\xFF'
+        iv_ba[:3] = b'\xFF\xFF\xFF'
+        ref4 = cipher4.decrypt(data_ba)
 
         self.assertEqual(ref3, ref4)
+
+    def test_memoryview(self):
+        data = b"1" * 16
+        data_mv = memoryview(bytearray(data))
+
+        # Encrypt
+        key_mv = memoryview(bytearray(self.key_128))
+        iv_mv = memoryview(bytearray(self.iv_128))
+
+        cipher1 = AES.new(self.key_128, self.aes_mode, self.iv_128)
+        ref1 = cipher1.encrypt(data)
+
+        cipher2 = AES.new(key_mv, self.aes_mode, iv_mv)
+        key_mv[:3] = b'\xFF\xFF\xFF'
+        iv_mv[:3] = b'\xFF\xFF\xFF'
+        ref2 = cipher2.encrypt(data_mv)
+
+        self.assertEqual(ref1, ref2)
+        self.assertEqual(cipher1.iv, cipher2.iv)
+
+        # Decrypt
+        key_mv = memoryview(bytearray(self.key_128))
+        iv_mv = memoryview(bytearray(self.iv_128))
+
+        cipher3 = AES.new(self.key_128, self.aes_mode, self.iv_128)
+        ref3 = cipher3.decrypt(data)
+
+        cipher4 = AES.new(key_mv, self.aes_mode, iv_mv)
+        key_mv[:3] = b'\xFF\xFF\xFF'
+        iv_mv[:3] = b'\xFF\xFF\xFF'
+        ref4 = cipher4.decrypt(data_mv)
+
+        self.assertEqual(ref3, ref4)
+
+    import types
+    if _memoryview is types.NoneType:
+        del test_memoryview
 
 
 class CbcTests(BlockChainingTests):

@@ -20,7 +20,9 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import b, bchr, bord, tobytes
+import sys
+
+from Crypto.Util.py3compat import bord, tobytes, _copy_bytes
 
 from binascii import unhexlify
 
@@ -53,7 +55,7 @@ class CMAC(object):
         if ciphermod is None:
             raise TypeError("ciphermod must be specified (try AES)")
 
-        self._key = key
+        self._key = _copy_bytes(None, None, key)
         self._factory = ciphermod
         if cipher_params is None:
             self._cipher_params = {}
@@ -77,7 +79,7 @@ class CMAC(object):
         self._mac_tag = None
 
         # Compute sub-keys
-        zero_block = bchr(0) * ciphermod.block_size
+        zero_block = b'\x00' * ciphermod.block_size
         cipher = ciphermod.new(key,
                                ciphermod.MODE_ECB,
                                **self._cipher_params)
@@ -98,7 +100,7 @@ class CMAC(object):
                                   **self._cipher_params)
 
         # Cache for outstanding data to authenticate
-        self._cache = b("")
+        self._cache = b""
 
         # Last two pieces of ciphertext produced
         self._last_ct = self._last_pt = zero_block
@@ -114,8 +116,10 @@ class CMAC(object):
         """Authenticate the next chunk of message.
 
         Args:
-            data (byte string/array): The next chunk of data
+            data (byte string/byte array/memoryview): The next chunk of data
         """
+
+        # Mutable values must be copied if cached
 
         self._data_size += len(msg)
 
@@ -128,16 +132,16 @@ class CMAC(object):
 
             msg = msg[filler:]
             self._update(self._cache)
-            self._cache = b("")
+            self._cache = b""
 
         update_len, remain = divmod(len(msg), self.digest_size)
         update_len *= self.digest_size
         if remain > 0:
             self._update(msg[:update_len])
-            self._cache = msg[update_len:]
+            self._cache = _copy_bytes(update_len, None, msg)
         else:
             self._update(msg)
-            self._cache = b("")
+            self._cache = b""
         return self
 
     def _update(self, data_block):
@@ -155,7 +159,9 @@ class CMAC(object):
         else:
             self._before_last_ct = ct[-self.digest_size * 2:-self.digest_size]
         self._last_ct = ct[-self.digest_size:]
-        self._last_pt = data_block[-self.digest_size:]
+
+        # data_block can mutable
+        self._last_pt = _copy_bytes(-self.digest_size, None, data_block)
 
     def copy(self):
         """Return a copy ("clone") of the CMAC object.
@@ -201,8 +207,8 @@ class CMAC(object):
             pt = strxor(strxor(self._before_last_ct, self._k1), self._last_pt)
         else:
             # Last block is partial (or message length is zero)
-            ext = self._cache + bchr(0x80) +\
-                    bchr(0) * (self.digest_size - len(self._cache) - 1)
+            ext = self._cache + b'\x80' +\
+                    b'\x00' * (self.digest_size - len(self._cache) - 1)
             pt = strxor(strxor(self._last_ct, self._k2), ext)
 
         cipher = self._factory.new(self._key,
@@ -228,7 +234,7 @@ class CMAC(object):
         is valid.
 
         Args:
-          mac_tag (byte string/array): the expected MAC of the message.
+          mac_tag (byte string/byte array/memoryview): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -258,7 +264,7 @@ def new(key, msg=None, ciphermod=None, cipher_params=None):
     """Create a new MAC object.
 
     Args:
-        key (byte string/array):
+        key (byte string/byte array/memoryview):
             key for the CMAC object.
             The key must be valid for the underlying cipher algorithm.
             For instance, it must be 16 bytes long for AES-128.
@@ -267,7 +273,7 @@ def new(key, msg=None, ciphermod=None, cipher_params=None):
             The cipher's block size has to be 128 bits,
             like :mod:`Crypto.Cipher.AES`, to reduce the probability
             of collisions.
-        msg (byte string):
+        msg (byte string/byte array/memoryview):
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to `CMAC.update`. Optional.
         cipher_params (dict):

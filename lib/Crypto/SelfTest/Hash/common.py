@@ -131,21 +131,66 @@ class ByteArrayTest(unittest.TestCase):
         self.module = module
 
     def runTest(self):
-
         data = b("\x00\x01\x02")
-        ba = bytearray(b("\x00\x01\x02"))
 
         # Data can be a bytearray (during initialization)
+        ba = bytearray(data)
+
         h1 = self.module.new(data)
         h2 = self.module.new(ba)
+        ba[:1] = b'\xFF'
         self.assertEqual(h1.digest(), h2.digest())
 
         # Data can be a bytearray (during operation)
+        ba = bytearray(data)
+
         h1 = self.module.new()
         h2 = self.module.new()
+
         h1.update(data)
         h2.update(ba)
+
+        ba[:1] = b'\xFF'
         self.assertEqual(h1.digest(), h2.digest())
+
+
+class MemoryViewTest(unittest.TestCase):
+
+    def __init__(self, module):
+        unittest.TestCase.__init__(self)
+        self.module = module
+
+    def runTest(self):
+
+        data = b"\x00\x01\x02"
+
+        def get_mv_ro(data):
+            return memoryview(data)
+
+        def get_mv_rw(data):
+            return memoryview(bytearray(data))
+
+        for get_mv in get_mv_ro, get_mv_rw:
+
+            # Data can be a memoryview (during initialization)
+            mv = get_mv(data)
+
+            h1 = self.module.new(data)
+            h2 = self.module.new(mv)
+            if not mv.readonly:
+                mv[:1] = b'\xFF'
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            mv = get_mv(data)
+
+            h1 = self.module.new()
+            h2 = self.module.new()
+            h1.update(data)
+            h2.update(mv)
+            if not mv.readonly:
+                mv[:1] = b'\xFF'
+            self.assertEqual(h1.digest(), h2.digest())
 
 
 class MACSelfTest(unittest.TestCase):
@@ -237,6 +282,9 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
         tests.append(GenericHashConstructorTest(module))
 
     tests.append(ByteArrayTest(module))
+
+    if not (sys.version_info[0] == 2 and sys.version_info[1] < 7):
+        tests.append(MemoryViewTest(module))
 
     return tests
 

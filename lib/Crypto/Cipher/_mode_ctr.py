@@ -26,12 +26,14 @@ Counter (CTR) mode.
 
 __all__ = ['CtrMode']
 
+import struct
+
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import b, bchr, byte_string, bstr
+from Crypto.Util.py3compat import byte_string, _copy_bytes
 from Crypto.Util.number import long_to_bytes
 
 raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
@@ -91,7 +93,7 @@ class CtrMode(object):
           block_cipher : C pointer
             A smart pointer to the low-level block cipher instance.
 
-          initial_counter_block : byte string/array
+          initial_counter_block : bytes/bytearray/memoryview
             The initial plaintext to use to generate the key stream.
 
             It is as large as the cipher block, and it embeds
@@ -116,7 +118,7 @@ class CtrMode(object):
         """
 
         if len(initial_counter_block) == prefix_len + counter_len:
-            self.nonce = bstr(initial_counter_block[:prefix_len])
+            self.nonce = _copy_bytes(None, prefix_len, initial_counter_block)
             """Nonce; not available if there is a fixed suffix"""
 
         self._state = VoidPointer()
@@ -166,7 +168,7 @@ class CtrMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -211,7 +213,7 @@ class CtrMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
 
@@ -243,7 +245,7 @@ def _create_ctr_cipher(factory, **kwargs):
         The underlying block cipher, a module from ``Crypto.Cipher``.
 
     :Keywords:
-      nonce : binary string/array
+      nonce : bytes/bytearray/memoryview
         The fixed part at the beginning of the counter block - the rest is
         the counter number that gets increased when processing the next block.
         The nonce must be such that no two messages are encrypted under the
@@ -257,7 +259,7 @@ def _create_ctr_cipher(factory, **kwargs):
         64 bits will be created though - you must really think through all
         security consequences of using such a short block size.
 
-      initial_value : posive integer or byte string/array
+      initial_value : posive integer or bytes/bytearray/memoryview
         The initial value for the counter. If not present, the cipher will
         start counting from 0. The value is incremented by one for each block.
         The counter number is encoded in big endian mode.
@@ -334,12 +336,12 @@ def _create_ctr_cipher(factory, **kwargs):
     # Compute initial counter block
     words = []
     while initial_value > 0:
-        words.append(bchr(initial_value & 255))
+        words.append(struct.pack('B', initial_value & 255))
         initial_value >>= 8
-    words += [bchr(0)] * max(0, counter_len - len(words))
+    words += [ b'\x00' ] * max(0, counter_len - len(words))
     if not little_endian:
         words.reverse()
-    initial_counter_block = prefix + b("").join(words) + suffix
+    initial_counter_block = prefix + b"".join(words) + suffix
 
     if len(initial_counter_block) != factory.block_size:
         raise ValueError("Size of the counter block (%d bytes) must match"

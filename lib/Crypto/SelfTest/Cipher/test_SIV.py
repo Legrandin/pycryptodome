@@ -31,7 +31,7 @@
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b
+from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
@@ -154,38 +154,102 @@ class SivTests(unittest.TestCase):
         cipher.hexverify(mac_hex)
     
     def test_bytearray(self):
+
         # Encrypt
+        key = bytearray(self.key_256)
+        nonce = bytearray(self.nonce_96)
+        data = bytearray(self.data_128)
+        header = bytearray(self.data_128)
+        
         cipher1 = AES.new(self.key_256,
                           AES.MODE_SIV,
                           nonce=self.nonce_96)
         cipher1.update(self.data_128)
-        ref1 = cipher1.encrypt(self.data_128)
+        ct, tag = cipher1.encrypt_and_digest(self.data_128)
 
-        cipher2 = AES.new(bytearray(self.key_256),
+        cipher2 = AES.new(key,
                           AES.MODE_SIV,
-                          nonce=bytearray(self.nonce_96))
-        cipher2.update(bytearray(self.data_128))
-        ref2 = cipher2.encrypt(bytearray(self.data_128))
+                          nonce=nonce)
+        key[:3] = b'\xFF\xFF\xFF'
+        nonce[:3] = b'\xFF\xFF\xFF'
+        cipher2.update(header)
+        header[:3] = b'\xFF\xFF\xFF'
+        ct_test = cipher2.encrypt(data)
+        data[:3] = b'\xFF\xFF\xFF'
+        tag_test = cipher2.digest()
 
-        self.assertEqual(ref1, ref2)
+        self.assertEqual(ct, ct_test)
+        self.assertEqual(tag, tag_test)
         self.assertEqual(cipher1.nonce, cipher2.nonce)
 
-        tag = cipher1.digest()
-
         # Decrypt
-        cipher3 = AES.new(self.key_256,
+        key = bytearray(self.key_256)
+        nonce = bytearray(self.nonce_96)
+        header = bytearray(self.data_128)
+        ct_ba = bytearray(ct)
+        tag_ba = bytearray(tag)
+        
+        cipher3 = AES.new(key,
+                          AES.MODE_SIV,
+                          nonce=nonce)
+        key[:3] = b'\xFF\xFF\xFF'
+        nonce[:3] = b'\xFF\xFF\xFF'
+        cipher3.update(header)
+        header[:3] = b'\xFF\xFF\xFF'
+        pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
+
+        self.assertEqual(self.data_128, pt_test)
+    
+    def test_memoryview(self):
+
+        # Encrypt
+        key = memoryview(bytearray(self.key_256))
+        nonce = memoryview(bytearray(self.nonce_96))
+        data = memoryview(bytearray(self.data_128))
+        header = memoryview(bytearray(self.data_128))
+        
+        cipher1 = AES.new(self.key_256,
                           AES.MODE_SIV,
                           nonce=self.nonce_96)
-        cipher3.update(self.data_128)
-        ref3 = cipher3.decrypt_and_verify(ref1, tag)
+        cipher1.update(self.data_128)
+        ct, tag = cipher1.encrypt_and_digest(self.data_128)
 
-        cipher4 = AES.new(bytearray(self.key_256),
+        cipher2 = AES.new(key,
                           AES.MODE_SIV,
-                          nonce=bytearray(self.nonce_96))
-        cipher4.update(bytearray(self.data_128))
-        ref4 = cipher4.decrypt_and_verify(bytearray(ref1), bytearray(tag))
+                          nonce=nonce)
+        key[:3] = b'\xFF\xFF\xFF'
+        nonce[:3] = b'\xFF\xFF\xFF'
+        cipher2.update(header)
+        header[:3] = b'\xFF\xFF\xFF'
+        ct_test = cipher2.encrypt(data)
+        data[:3] = b'\xFF\xFF\xFF'
+        tag_test = cipher2.digest()
 
-        self.assertEqual(ref3, ref4)
+        self.assertEqual(ct, ct_test)
+        self.assertEqual(tag, tag_test)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        # Decrypt
+        key = memoryview(bytearray(self.key_256))
+        nonce = memoryview(bytearray(self.nonce_96))
+        header = memoryview(bytearray(self.data_128))
+        ct_ba = memoryview(bytearray(ct))
+        tag_ba = memoryview(bytearray(tag))
+        
+        cipher3 = AES.new(key,
+                          AES.MODE_SIV,
+                          nonce=nonce)
+        key[:3] = b'\xFF\xFF\xFF'
+        nonce[:3] = b'\xFF\xFF\xFF'
+        cipher3.update(header)
+        header[:3] = b'\xFF\xFF\xFF'
+        pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
+
+        self.assertEqual(self.data_128, pt_test)
+
+    import types
+    if _memoryview is types.NoneType:
+        del test_memoryview
 
 
 class SivFSMTests(unittest.TestCase):

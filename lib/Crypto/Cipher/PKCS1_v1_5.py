@@ -23,7 +23,7 @@
 __all__ = [ 'new', 'PKCS115_Cipher' ]
 
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import bord, _copy_bytes
 import Crypto.Util.number
 from Crypto import Random
 
@@ -63,7 +63,7 @@ class PKCS115_Cipher:
         :param message:
             The message to encrypt, also known as plaintext. It can be of
             variable length, but not longer than the RSA modulus (in bytes) minus 11.
-        :type message: byte string/array
+        :type message: bytes/bytearray/memoryview
 
         :Returns: A byte string, the ciphertext in which the message is encrypted.
             It is as long as the RSA modulus (in bytes).
@@ -79,7 +79,7 @@ class PKCS115_Cipher:
         mLen = len(message)
 
         # Step 1
-        if mLen > k-11:
+        if mLen > k - 11:
             raise ValueError("Plaintext is too long.")
         # Step 2a
         ps = []
@@ -88,10 +88,10 @@ class PKCS115_Cipher:
             if bord(new_byte[0]) == 0x00:
                 continue
             ps.append(new_byte)
-        ps = b("").join(ps)
+        ps = b"".join(ps)
         assert(len(ps) == k - mLen - 3)
         # Step 2b
-        em = b('\x00\x02') + ps + bchr(0x00) + bstr(message)
+        em = b'\x00\x02' + ps + b'\x00' + _copy_bytes(None, None, message)
         # Step 3a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 3b (RSAEP)
@@ -109,7 +109,7 @@ class PKCS115_Cipher:
 
         :param ciphertext:
             The ciphertext that contains the message to recover.
-        :type ciphertext: byte string/array
+        :type ciphertext: bytes/bytearray/memoryview
 
         :param sentinel:
             The object to return whenever an error is detected.
@@ -164,17 +164,17 @@ class PKCS115_Cipher:
         if len(ciphertext) != k:
             raise ValueError("Ciphertext with incorrect length.")
         # Step 2a (O2SIP)
-        ct_int = bytes_to_long(bstr(ciphertext))
+        ct_int = bytes_to_long(ciphertext)
         # Step 2b (RSADP)
         m_int = self._key._decrypt(ct_int)
         # Complete step 2c (I2OSP)
         em = long_to_bytes(m_int, k)
         # Step 3
-        sep = em.find(bchr(0x00),2)
-        if  not em.startswith(b('\x00\x02')) or sep<10:
+        sep = em.find(b'\x00', 2)
+        if  not em.startswith(b'\x00\x02') or sep < 10:
             return sentinel
         # Step 4
-        return em[sep+1:]
+        return em[sep + 1:]
 
 
 def new(key, randfunc=None):

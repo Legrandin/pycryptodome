@@ -68,7 +68,9 @@ Example:
 .. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
 """
 
-from Crypto.Util.py3compat import b, bord, bchr, unhexlify, bstr
+import struct
+
+from Crypto.Util.py3compat import bord, unhexlify, _copy_bytes
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.strxor import strxor
 
@@ -118,7 +120,7 @@ class OcbMode(object):
         self.block_size = 16
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = bstr(nonce)
+        self.nonce = _copy_bytes(None, None, nonce)
         """Nonce used for this session."""
         if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
@@ -133,10 +135,10 @@ class OcbMode(object):
         self._mac_tag = None
 
         # Cache for unaligned associated data
-        self._cache_A = b("")
+        self._cache_A = b""
 
         # Cache for unaligned ciphertext/plaintext
-        self._cache_P = b("")
+        self._cache_P = b""
 
         # Allowed transitions after initialization
         self._next = [self.update, self.encrypt, self.decrypt,
@@ -145,16 +147,23 @@ class OcbMode(object):
         # Compute Offset_0
         params_without_key = dict(cipher_params)
         key = params_without_key.pop("key")
-        nonce = (bchr(self._mac_len << 4 & 0xFF) +
-                 bchr(0) * (14 - len(self.nonce)) +
-                 bchr(1) +
-                 self.nonce)
-        bottom = bord(nonce[15]) & 0x3F   # 6 bits, 0..63
-        ktop = factory.new(key, factory.MODE_ECB, **params_without_key)\
-                      .encrypt(nonce[:15] + bchr(bord(nonce[15]) & 0xC0))
+        nonce = (struct.pack('B', self._mac_len << 4 & 0xFF) +
+                 b'\x00' * (14 - len(nonce)) +
+                 b'\x01' + self.nonce)
+
+        bottom_bits = bord(nonce[15]) & 0x3F    # 6 bits, 0..63
+        top_bits = bord(nonce[15]) & 0xC0       # 2 bits
+
+        ktop_cipher = factory.new(key,
+                                  factory.MODE_ECB,
+                                  **params_without_key)
+        ktop = ktop_cipher.encrypt(struct.pack('15sB',
+                                               nonce[:15],
+                                               top_bits))
+
         stretch = ktop + strxor(ktop[:8], ktop[1:9])    # 192 bits
         offset_0 = long_to_bytes(bytes_to_long(stretch) >>
-                                 (64 - bottom), 24)[8:]
+                                 (64 - bottom_bits), 24)[8:]
 
         # Create low-level cipher instance
         raw_cipher = factory._create_base_cipher(cipher_params)
@@ -184,7 +193,7 @@ class OcbMode(object):
                                          c_uint8_ptr(assoc_data),
                                          c_size_t(assoc_data_len))
         if result:
-            raise ValueError("Error %d while MAC-ing in OCB mode" % result)
+            raise ValueError("Error %d while computing MAC in OCB mode" % result)
 
     def update(self, assoc_data):
         """Process the associated data.
@@ -203,7 +212,7 @@ class OcbMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string/array
+          assoc_data : bytes/bytearray/memoryview
             A piece of associated data.
         """
 
@@ -216,18 +225,18 @@ class OcbMode(object):
 
         if len(self._cache_A) > 0:
             filler = min(16 - len(self._cache_A), len(assoc_data))
-            self._cache_A += bstr(assoc_data[:filler])
+            self._cache_A += _copy_bytes(None, filler, assoc_data)
             assoc_data = assoc_data[filler:]
 
             if len(self._cache_A) < 16:
                 return self
 
             # Clear the cache, and proceeding with any other aligned data
-            self._cache_A, seg = b(""), self._cache_A
+            self._cache_A, seg = b"", self._cache_A
             self.update(seg)
 
         update_len = len(assoc_data) // 16 * 16
-        self._cache_A = bstr(assoc_data[update_len:])
+        self._cache_A = _copy_bytes(update_len, None, assoc_data)
         self._update(assoc_data, update_len)
         return self
 
@@ -251,27 +260,27 @@ class OcbMode(object):
                                                 len(self._cache_P),
                                                 trans_func,
                                                 trans_desc)
-            self._cache_P = b("")
+            self._cache_P = b""
             return out_data
 
         # Try to fill up the cache, if it already contains something
-        prefix = b("")
+        prefix = b""
         if len(self._cache_P) > 0:
             filler = min(16 - len(self._cache_P), len(in_data))
-            self._cache_P += bstr(in_data[:filler])
+            self._cache_P += _copy_bytes(None, filler, in_data)
             in_data = in_data[filler:]
 
             if len(self._cache_P) < 16:
                 # We could not manage to fill the cache, so there is certainly
                 # no output yet.
-                return b("")
+                return b""
 
             # Clear the cache, and proceeding with any other aligned data
             prefix = self._transcrypt_aligned(self._cache_P,
                                               len(self._cache_P),
                                               trans_func,
                                               trans_desc)
-            self._cache_P = b("")
+            self._cache_P = b""
 
         # Process data in multiples of the block size
         trans_len = len(in_data) // 16 * 16
@@ -283,7 +292,7 @@ class OcbMode(object):
             result = prefix + result
 
         # Left-over
-        self._cache_P = bstr(in_data[trans_len:])
+        self._cache_P = _copy_bytes(trans_len, None, in_data)
 
         return result
 
@@ -297,7 +306,7 @@ class OcbMode(object):
         If possible, use the method `encrypt_and_digest` instead.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The next piece of data to encrypt or ``None`` to signify
             that encryption has finished and that any remaining ciphertext
             has to be produced.
@@ -326,7 +335,7 @@ class OcbMode(object):
         If possible, use the method `decrypt_and_verify` instead.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The next piece of data to decrypt or ``None`` to signify
             that decryption has finished and that any remaining plaintext
             has to be produced.
@@ -354,7 +363,7 @@ class OcbMode(object):
 
         if self._cache_A:
             self._update(self._cache_A, len(self._cache_A))
-            self._cache_A = b("")
+            self._cache_A = b""
 
         mac_tag = create_string_buffer(16)
         result = _raw_ocb_lib.OCB_digest(self._state.get(),
@@ -406,7 +415,7 @@ class OcbMode(object):
         to check if the message is authentic and valid.
 
         :Parameters:
-          received_mac_tag : byte string/array
+          received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -449,7 +458,7 @@ class OcbMode(object):
         """Encrypt the message and create the MAC tag in one step.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The entire message to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -464,7 +473,7 @@ class OcbMode(object):
         """Decrypted the message and verify its authenticity in one step.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The entire message to decrypt.
           received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
@@ -489,7 +498,7 @@ def _create_ocb_cipher(factory, **kwargs):
         (like `Crypto.Cipher.AES`).
 
     :Keywords:
-      nonce : byte string/array
+      nonce : bytes/bytearray/memoryview
         A  value that must never be reused for any other encryption.
         Its length can vary from 1 to 15 bytes.
         If not specified, a random 15 bytes long nonce is generated.

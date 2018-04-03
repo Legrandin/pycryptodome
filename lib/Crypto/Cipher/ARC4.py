@@ -70,7 +70,7 @@ class ARC4Cipher:
             # This is OK even if the cipher is used for decryption,
             # since encrypt and decrypt are actually the same thing
             # with ARC4.
-            self.encrypt(b('\x00') * ndrop)
+            self.encrypt(b'\x00' * ndrop)
 
         self.block_size = 1
         self.key_size = len(key)
@@ -79,7 +79,7 @@ class ARC4Cipher:
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: byte string
+        :type plaintext: bytes, bytearray, memoryview
         :returns: the encrypted byte string, of equal length as the
           plaintext.
         """
@@ -97,7 +97,7 @@ class ARC4Cipher:
         """Decrypt a piece of data.
 
         :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: byte string
+        :type ciphertext: bytes, bytearray, memoryview
         :returns: the decrypted byte string, of equal length as the
           ciphertext.
         """
@@ -115,7 +115,7 @@ def new(key, *args, **kwargs):
         The secret key to use in the symmetric cipher.
         Its length must be in the range ``[5..256]``.
         The recommended length is 16 bytes.
-    :type key: byte string
+    :type key: bytes, bytearray, memoryview
 
     :Keyword Arguments:
         *   *drop* (``integer``) --

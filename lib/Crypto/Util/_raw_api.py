@@ -49,6 +49,11 @@ else:
     from importlib import machinery
     extension_suffixes = machinery.EXTENSION_SUFFIXES
 
+# Which types with buffer interface we support (apart from byte strings)
+if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+    _buffer_type = (bytearray)
+else:
+    _buffer_type = (bytearray, memoryview)
 
 try:
     from cffi import FFI
@@ -56,6 +61,8 @@ try:
     ffi = FFI()
     null_pointer = ffi.NULL
     uint8_t_type = ffi.typeof(ffi.new("const uint8_t*"))
+
+    _Array = ffi.new("uint8_t[1]").__class__.__bases__
 
     def load_lib(name, cdecl):
         """Load a shared library and return a handle to it.
@@ -93,10 +100,10 @@ try:
         return ffi.buffer(buf)[:]
 
     def c_uint8_ptr(data):
-        if isinstance(data, bytearray):
+        if isinstance(data, _buffer_type):
             # This only works for cffi >= 1.7
             return ffi.cast(uint8_t_type, ffi.from_buffer(data))
-        elif byte_string(data) or isinstance(data, Array):
+        elif byte_string(data) or isinstance(data, _Array):
             return data
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
@@ -113,15 +120,15 @@ try:
         def address_of(self):
             return self._pp
 
-    Array = ffi.new("uint8_t[1]").__class__.__bases__
-
     backend = "cffi"
 
 except ImportError:
+
+    import ctypes
     from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong, c_size_t,
                         create_string_buffer, c_ubyte)
     from ctypes.util import find_library
-    from _ctypes import Array
+    from _ctypes import Array as _Array
 
     null_pointer = None
 
@@ -141,14 +148,54 @@ except ImportError:
     def get_raw_buffer(buf):
         return buf.raw
 
+    # ---- Get raw pointer ---
+
+    if sys.version_info[0] == 2 and sys.version_info[1] == 6:
+        # ctypes in 2.6 does not define c_ssize_t. Replacing it
+        # with c_size_t keeps the structure correctely laid out
+        _c_ssize_t = c_size_t
+    else:
+        _c_ssize_t = ctypes.c_ssize_t
+
+    _PyBUF_SIMPLE = 0
+    _PyObject_GetBuffer = ctypes.pythonapi.PyObject_GetBuffer
+    _py_object = ctypes.py_object
+    _c_ssize_p = ctypes.POINTER(_c_ssize_t)
+
+    # See Include/object.h for CPython
+    # and https://github.com/pallets/click/blob/master/click/_winconsole.py
+    class _Py_buffer(ctypes.Structure):
+        _fields_ = [
+            ('buf',         c_void_p),
+            ('obj',         ctypes.py_object),
+            ('len',         _c_ssize_t),
+            ('itemsize',    _c_ssize_t),
+            ('readonly',    ctypes.c_int),
+            ('ndim',        ctypes.c_int),
+            ('format',      ctypes.c_char_p),
+            ('shape',       _c_ssize_p),
+            ('strides',     _c_ssize_p),
+            ('suboffsets',  _c_ssize_p),
+            ('internal',    c_void_p)
+        ]
+
+        # Extra field for CPython 2.6/2.7
+        if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 2):
+            _fields_.insert(-1, ('smalltable', _c_ssize_t * 2))
+
     def c_uint8_ptr(data):
-        if byte_string(data) or isinstance(data, Array):
+        if byte_string(data) or isinstance(data, _Array):
             return data
-        elif isinstance(data, bytearray):
-            local_type = c_ubyte * len(data)
-            return local_type.from_buffer(data)
+        elif isinstance(data, _buffer_type):
+            obj = _py_object(data)
+            buf = _Py_buffer()
+            _PyObject_GetBuffer(obj, byref(buf), _PyBUF_SIMPLE)
+            buffer_type = c_ubyte * buf.len
+            return buffer_type.from_address(buf.buf)
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
+
+    # ---
 
     class VoidPointer(object):
         """Model a newly allocated pointer to void"""
@@ -163,6 +210,7 @@ except ImportError:
             return byref(self._p)
 
     backend = "ctypes"
+    del ctypes
 
 
 class SmartPointer(object):

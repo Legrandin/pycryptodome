@@ -202,9 +202,11 @@ def new(**kwargs):
             Optional. The very first chunk of the message to hash.
             It is equivalent to an early call to :meth:`BLAKE2b_Hash.update`.
         digest_bytes (integer):
-            The size of the digest, in bytes (1 to 64).
+            Optional. The size of the digest, in bytes (1 to 64). Default is 64.
         digest_bits (integer):
+            Optional and alternative to ``digest_bytes``.
             The size of the digest, in bits (8 to 512, in steps of 8).
+            Default is 512.
         key (byte string):
             Optional. The key to use to compute the MAC (1 to 64 bytes).
             If not specified, no key will be used.
@@ -225,7 +227,7 @@ def new(**kwargs):
     if None not in (digest_bytes, digest_bits):
         raise TypeError("Only one digest parameter must be provided")
     if (None, None) == (digest_bytes, digest_bits):
-        raise TypeError("Digest size (bits, bytes) not provided")
+        digest_bytes = 64
     if digest_bytes is not None:
         if not (1 <= digest_bytes <= 64):
             raise ValueError("'digest_bytes' not in range 1..64")

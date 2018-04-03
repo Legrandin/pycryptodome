@@ -103,7 +103,7 @@ class BLAKE2s_Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string/array): The next chunk of the message being hashed.
+            data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
         if self._digest_done and not self._update_after_digest:
@@ -152,7 +152,7 @@ class BLAKE2s_Hash(object):
         is valid.
 
         Args:
-          mac_tag (byte string/array): the expected MAC of the message.
+          mac_tag (byte string/byte array/memoryview): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -198,13 +198,15 @@ def new(**kwargs):
     """Create a new hash object.
 
     Args:
-        data (byte string/array):
+        data (byte string/byte array/memoryview):
             Optional. The very first chunk of the message to hash.
             It is equivalent to an early call to :meth:`BLAKE2s_Hash.update`.
         digest_bytes (integer):
-            The size of the digest, in bytes (1 to 64).
+            Optional. The size of the digest, in bytes (1 to 32). Default is 32.
         digest_bits (integer):
-            The size of the digest, in bits (8 to 512, in steps of 8).
+            Optional and alternative to ``digest_bytes``.
+            The size of the digest, in bits (8 to 256, in steps of 8).
+            Default is 256.
         key (byte string):
             Optional. The key to use to compute the MAC (1 to 64 bytes).
             If not specified, no key will be used.
@@ -225,7 +227,7 @@ def new(**kwargs):
     if None not in (digest_bytes, digest_bits):
         raise TypeError("Only one digest parameter must be provided")
     if (None, None) == (digest_bytes, digest_bits):
-        raise TypeError("Digest size (bits, bytes) not provided")
+        digest_bytes = 32
     if digest_bytes is not None:
         if not (1 <= digest_bytes <= 32):
             raise ValueError("'digest_bytes' not in range 1..32")

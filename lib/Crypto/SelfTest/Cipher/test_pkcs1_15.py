@@ -26,7 +26,7 @@ from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import _memoryview, b
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 def rws(t):
@@ -160,11 +160,22 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                     self.assertEqual(pt,pt2)
 
         def testByteArray(self):
-            pt = b("XER")
+            pt = b"XER"
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(bytearray(pt))
             pt2 = cipher.decrypt(bytearray(ct), "---")
             self.assertEqual(pt, pt2)
+
+        def testMemoryview(self):
+            pt = b"XER"
+            cipher = PKCS.new(self.key1024)
+            ct = cipher.encrypt(memoryview(bytearray(pt)))
+            pt2 = cipher.decrypt(memoryview(bytearray(ct)), "---")
+            self.assertEqual(pt, pt2)
+
+        import types
+        if _memoryview is types.NoneType:
+            del testMemoryview
 
 
 def get_tests(config={}):

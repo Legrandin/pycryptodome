@@ -22,17 +22,17 @@
 """
 Module's constants for the modes of operation supported with AES:
 
-:var MODE_ECB: Electronic Code Book (ECB)
-:var MODE_CBC: Cipher-Block Chaining (CBC)
-:var MODE_CFB: Cipher FeedBack (CFB)
-:var MODE_OFB: Output FeedBack (OFB)
-:var MODE_CTR: CounTer Mode (CTR)
-:var MODE_OPENPGP:  OpenPGP Mode
-:var MODE_CCM: Counter with CBC-MAC (CCM) Mode
-:var MODE_EAX: EAX Mode
-:var MODE_SIV: Syntethic Initialization Vector (SIV)
-:var MODE_GCM: Galois Counter Mode (GCM)
-:var MODE_OCB: Offset Code Book (OCB)
+:var MODE_ECB: :ref:`Electronic Code Book (ECB) <ecb_mode>`
+:var MODE_CBC: :ref:`Cipher-Block Chaining (CBC) <cbc_mode>`
+:var MODE_CFB: :ref:`Cipher FeedBack (CFB) <cfb_mode>`
+:var MODE_OFB: :ref:`Output FeedBack (OFB) <ofb_mode>`
+:var MODE_CTR: :ref:`CounTer Mode (CTR) <ctr_mode>`
+:var MODE_OPENPGP:  :ref:`OpenPGP Mode <openpgp_mode>`
+:var MODE_CCM: :ref:`Counter with CBC-MAC (CCM) Mode <ccm_mode>`
+:var MODE_EAX: :ref:`EAX Mode <eax_mode>`
+:var MODE_GCM: :ref:`Galois Counter Mode (GCM) <gcm_mode>`
+:var MODE_SIV: :ref:`Syntethic Initialization Vector (SIV) <siv_mode>`
+:var MODE_OCB: :ref:`Offset Code Book (OCB) <ocb_mode>`
 """
 
 import sys
@@ -116,7 +116,7 @@ def new(key, mode, *args, **kwargs):
         *AES-192* or *AES-256*).
 
         For ``MODE_SIV`` only, it doubles to 32, 48, or 64 bytes.
-    :type key: byte string
+    :type key: bytes/bytearray/memoryview
 
     :param mode:
         The chaining mode to use for encryption or decryption.
@@ -124,7 +124,7 @@ def new(key, mode, *args, **kwargs):
     :type mode: One of the supported ``MODE_*`` constants
 
     :Keyword Arguments:
-        *   *iv* (``byte string``) --
+        *   **iv** (*bytes*, *bytearray*, *memoryview*) --
             (Only applicable for ``MODE_CBC``, ``MODE_CFB``, ``MODE_OFB``,
             and ``MODE_OPENPGP`` modes).
 
@@ -140,7 +140,7 @@ def new(key, mode, *args, **kwargs):
             If not provided, a random byte string is generated (you must then
             read its value with the :attr:`iv` attribute).
 
-        *   *nonce* (``byte string``) --
+        *   **nonce** (*bytes*, *bytearray*, *memoryview*) --
             (Only applicable for ``MODE_CCM``, ``MODE_EAX``, ``MODE_GCM``,
             ``MODE_SIV``, ``MODE_OCB``, and ``MODE_CTR``).
 
@@ -164,33 +164,33 @@ def new(key, mode, *args, **kwargs):
             length is used (you must then read its value with the :attr:`nonce`
             attribute).
 
-        *   *segment_size* (``integer``) --
+        *   **segment_size** (*integer*) --
             (Only ``MODE_CFB``).The number of **bits** the plaintext and ciphertext
             are segmented in. It must be a multiple of 8.
             If not specified, it will be assumed to be 8.
 
-        *   *mac_len* : (``integer``) --
+        *   **mac_len** : (*integer*) --
             (Only ``MODE_EAX``, ``MODE_GCM``, ``MODE_OCB``, ``MODE_CCM``)
             Length of the authentication tag, in bytes.
 
             It must be even and in the range **[4..16]**.
             The recommended value (and the default, if not specified) is **16**.
 
-        *   *msg_len* : (``integer``) --
+        *   **msg_len** : (*integer*) --
             (Only ``MODE_CCM``). Length of the message to (de)cipher.
             If not specified, ``encrypt`` must be called with the entire message.
             Similarly, ``decrypt`` can only be called once.
 
-        *   *assoc_len* : (``integer``) --
+        *   **assoc_len** : (*integer*) --
             (Only ``MODE_CCM``). Length of the associated data.
             If not specified, all associated data is buffered internally,
             which may represent a problem for very large messages.
 
-        *   *initial_value* : (``integer``) --
+        *   **initial_value** : (*integer*) --
             (Only ``MODE_CTR``). The initial value for the counter within
             the counter block. By default it is **0**.
 
-        *   *use_aesni* : (``boolean``) --
+        *   **use_aesni** : (*boolean*) --
             Use Intel AES-NI hardware extensions (default: use if available).
 
     :Return: an AES object, of the applicable mode.

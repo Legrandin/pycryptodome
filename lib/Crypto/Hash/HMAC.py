@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import b, bchr, bord, tobytes
+from Crypto.Util.py3compat import bord, tobytes, _memoryview
 
 from binascii import unhexlify
 
@@ -51,40 +51,43 @@ class HMAC:
     :vartype digest_size: integer
     """
 
-    def __init__(self, key, msg=b(""), digestmod=None):
+    def __init__(self, key, msg=b"", digestmod=None):
 
         if digestmod is None:
             digestmod = MD5
 
         if msg is None:
-            msg = b("")
+            msg = b""
 
         # Size of the MAC tag
         self.digest_size = digestmod.digest_size
 
         self._digestmod = digestmod
 
+        if isinstance(key, _memoryview):
+            key = key.tobytes()
+
         try:
             if len(key) <= digestmod.block_size:
                 # Step 1 or 2
-                key_0 = key + bchr(0) * (digestmod.block_size - len(key))
+                key_0 = key + b"\x00" * (digestmod.block_size - len(key))
             else:
                 # Step 3
                 hash_k = digestmod.new(key).digest()
-                key_0 = hash_k + bchr(0) * (digestmod.block_size - len(hash_k))
+                key_0 = hash_k + b"\x00" * (digestmod.block_size - len(hash_k))
         except AttributeError:
             # Not all hash types have "block_size"
             raise ValueError("Hash type incompatible to HMAC")
 
         # Step 4
-        key_0_ipad = strxor(key_0, bchr(0x36) * len(key_0))
+        key_0_ipad = strxor(key_0, b"\x36" * len(key_0))
 
         # Start step 5 and 6
         self._inner = digestmod.new(key_0_ipad)
         self._inner.update(msg)
 
         # Step 7
-        key_0_opad = strxor(key_0, bchr(0x5c) * len(key_0))
+        key_0_opad = strxor(key_0, b"\x5c" * len(key_0))
 
         # Start step 8 and 9
         self._outer = digestmod.new(key_0_opad)
@@ -93,7 +96,7 @@ class HMAC:
         """Authenticate the next chunk of message.
 
         Args:
-            data (byte string): The next chunk of data
+            data (byte string/byte array/memoryview): The next chunk of data
         """
 
         self._inner.update(msg)
@@ -120,7 +123,7 @@ class HMAC:
         :return: An :class:`HMAC`
         """
 
-        new_hmac = HMAC(b("fake key"), digestmod=self._digestmod)
+        new_hmac = HMAC(b"fake key", digestmod=self._digestmod)
 
         # Syncronize the state
         new_hmac._inner = self._inner.copy()
@@ -146,7 +149,7 @@ class HMAC:
         is valid.
 
         Args:
-          mac_tag (byte string/byte string): the expected MAC of the message.
+          mac_tag (byte string/byte string/memoryview): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -188,15 +191,15 @@ class HMAC:
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key, msg=b(""), digestmod=None):
+def new(key, msg=b"", digestmod=None):
     """Create a new MAC object.
 
     Args:
-        key (byte string/array):
+        key (byte string/byte array/memoryview):
             key for the MAC object.
             It must be long enough to match the expected security level of the
             MAC.
-        msg (byte string):
+        msg (byte string/byte array/memoryview):
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to :meth:`HMAC.update`.
         digestmod (module):

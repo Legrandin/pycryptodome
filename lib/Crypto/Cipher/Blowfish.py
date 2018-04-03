@@ -22,13 +22,13 @@
 """
 Module's constants for the modes of operation supported with Blowfish:
 
-:var MODE_ECB: Electronic Code Book (ECB)
-:var MODE_CBC: Cipher-Block Chaining (CBC)
-:var MODE_CFB: Cipher FeedBack (CFB)
-:var MODE_OFB: Output FeedBack (OFB)
-:var MODE_CTR: CounTer Mode (CTR)
-:var MODE_OPENPGP:  OpenPGP Mode
-:var MODE_EAX: EAX Mode
+:var MODE_ECB: :ref:`Electronic Code Book (ECB) <ecb_mode>`
+:var MODE_CBC: :ref:`Cipher-Block Chaining (CBC) <cbc_mode>`
+:var MODE_CFB: :ref:`Cipher FeedBack (CFB) <cfb_mode>`
+:var MODE_OFB: :ref:`Output FeedBack (OFB) <ofb_mode>`
+:var MODE_CTR: :ref:`CounTer Mode (CTR) <ctr_mode>`
+:var MODE_OPENPGP:  :ref:`OpenPGP Mode <openpgp_mode>`
+:var MODE_EAX: :ref:`EAX Mode <eax_mode>`
 """
 
 import sys
@@ -89,14 +89,14 @@ def new(key, mode, *args, **kwargs):
     :param key:
         The secret key to use in the symmetric cipher.
         Its length can vary from 5 to 56 bytes.
-    :type key: byte string
+    :type key: bytes, bytearray, memoryview
 
     :param mode:
         The chaining mode to use for encryption or decryption.
     :type mode: One of the supported ``MODE_*`` constants
 
     :Keyword Arguments:
-        *   *iv* (``byte string``) --
+        *   **iv** (*bytes*, *bytearray*, *memoryview*) --
             (Only applicable for ``MODE_CBC``, ``MODE_CFB``, ``MODE_OFB``,
             and ``MODE_OPENPGP`` modes).
 
@@ -112,7 +112,7 @@ def new(key, mode, *args, **kwargs):
             If not provided, a random byte string is generated (you must then
             read its value with the :attr:`iv` attribute).
 
-        *   *nonce* (``byte string``) --
+        *   **nonce** (*bytes*, *bytearray*, *memoryview*) --
             (Only applicable for ``MODE_EAX`` and ``MODE_CTR``).
 
             A value that must never be reused for any other encryption done
@@ -126,17 +126,17 @@ def new(key, mode, *args, **kwargs):
             If not provided for ``MODE_EAX``, a random byte string is generated (you
             can read it back via the ``nonce`` attribute).
 
-        *   *segment_size* (``integer``) --
+        *   **segment_size** (*integer*) --
             (Only ``MODE_CFB``).The number of **bits** the plaintext and ciphertext
             are segmented in. It must be a multiple of 8.
             If not specified, it will be assumed to be 8.
 
-        *   *mac_len* : (``integer``) --
+        *   **mac_len** : (*integer*) --
             (Only ``MODE_EAX``)
             Length of the authentication tag, in bytes.
             It must be no longer than 8 (default).
 
-        *   *initial_value* : (``integer``) --
+        *   **initial_value** : (*integer*) --
             (Only ``MODE_CTR``). The initial value for the counter within
             the counter block. By default it is **0**.
 

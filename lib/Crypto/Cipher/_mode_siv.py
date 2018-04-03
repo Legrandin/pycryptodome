@@ -36,7 +36,7 @@ __all__ = ['SivMode']
 
 from binascii import hexlify
 
-from Crypto.Util.py3compat import byte_string, bord, unhexlify, b, bstr
+from Crypto.Util.py3compat import byte_string, bord, unhexlify, _copy_bytes
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Protocol.KDF import _S2V
@@ -93,7 +93,6 @@ class SivMode(object):
 
         self._factory = factory
 
-        self._nonce = nonce
         self._cipher_params = kwargs
 
         if len(key) not in (32, 48, 64):
@@ -106,7 +105,7 @@ class SivMode(object):
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
 
-            self.nonce = bstr(nonce)
+            self.nonce = _copy_bytes(None, None, nonce)
             """Public attribute is only available in case of non-deterministic
             encryption."""
 
@@ -128,12 +127,12 @@ class SivMode(object):
     def _create_ctr_cipher(self, mac_tag):
         """Create a new CTR cipher from the MAC in SIV mode"""
 
-        tag_int = bytes_to_long(bstr(mac_tag))
+        tag_int = bytes_to_long(mac_tag)
         return self._factory.new(
                     self._subkey_cipher,
                     self._factory.MODE_CTR,
                     initial_value=tag_int ^ (tag_int & 0x8000000080000000L),
-                    nonce=b(""),
+                    nonce=b"",
                     **self._cipher_params)
 
     def update(self, component):
@@ -158,7 +157,7 @@ class SivMode(object):
         If there is no associated data, this method must not be called.
 
         :Parameters:
-          component : byte string/array
+          component : bytes/bytearray/memoryview
             The next associated data component. It must not be empty.
         """
 
@@ -186,7 +185,7 @@ class SivMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length, but it cannot be empty.
         :Return:
@@ -200,7 +199,7 @@ class SivMode(object):
 
         self._next = [self.digest]
 
-        if self._nonce:
+        if hasattr(self, 'nonce'):
             self._kdf.update(self.nonce)
         self._kdf.update(plaintext)
 
@@ -259,7 +258,7 @@ class SivMode(object):
         tampered with while in transit.
 
         :Parameters:
-          received_mac_tag : byte string/array
+          received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -301,7 +300,7 @@ class SivMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -325,10 +324,10 @@ class SivMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
-          mac_tag : byte string/array
+          mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
 
         :Return: the decrypted data (byte string).
@@ -347,7 +346,7 @@ class SivMode(object):
 
         plaintext = self._cipher.decrypt(ciphertext)
 
-        if self._nonce:
+        if hasattr(self, 'nonce'):
             self._kdf.update(self.nonce)
         if plaintext:
             self._kdf.update(plaintext)
@@ -368,13 +367,13 @@ def _create_siv_cipher(factory, **kwargs):
 
     :Keywords:
 
-      key : byte string/array
+      key : bytes/bytearray/memoryview
         The secret key to use in the symmetric cipher.
         It must be 32, 48 or 64 bytes long.
         If AES is the chosen cipher, the variants *AES-128*,
         *AES-192* and or *AES-256* will be used internally.
 
-      nonce : byte string/array
+      nonce : bytes/bytearray/memoryview
         For deterministic encryption, it is not present.
 
         Otherwise, it is a value that must never be reused

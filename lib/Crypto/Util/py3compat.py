@@ -79,9 +79,17 @@ if sys.version_info[0] == 2:
     def byte_string(s):
         return isinstance(s, str)
     from binascii import hexlify, unhexlify
+
     # In Pyton 2.x, StringIO is a stand-alone module
     from StringIO import StringIO as BytesIO
+
     from sys import maxint
+
+    if sys.version_info[1] < 7:
+        import types
+        _memoryview = types.NoneType
+    else:
+        _memoryview = memoryview
 else:
     def b(s):
        return s.encode("latin-1") # utf-8 would cause some side-effects we don't want
@@ -122,5 +130,32 @@ else:
     # In Pyton 3.x, StringIO is a sub-module of io
     from io import BytesIO
     from sys import maxsize as maxint
+
+    _memoryview = memoryview
+
+
+def _copy_bytes(start, end, seq):
+    """Return an immutable copy of a sequence (byte string, byte array, memoryview)
+    in a certain interval [start:seq]"""
+
+    if isinstance(seq, _memoryview):
+        return seq[start:end].tobytes()
+    elif isinstance(seq, bytearray):
+        return bytes(seq[start:end])
+    else:
+        return seq[start:end]
+
+
+def _is_immutable(data):
+    if byte_string(data):
+        return True
+    elif isinstance(data, _memoryview) and data.readonly:
+        return True
+    return False
+
+
+def _is_mutable(data):
+    return not _is_immutable(data)
+
 
 del sys

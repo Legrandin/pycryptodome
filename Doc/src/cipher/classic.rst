@@ -19,6 +19,8 @@ This is the list of all classic modes (more modern modes are
 described in :doc:`another section <modern>`).
 Mind the not all modes are available for all block ciphers.
 
+.. _ecb_mode:
+
 ECB mode
 --------
 Constant: ``Crypto.Cipher.<cipher>.MODE_ECB``.
@@ -34,6 +36,8 @@ and it exposes correlation between blocks.
 
 :func:`encrypt` and :func:`decrypt` methods only accept data
 having length multiple of the block size.
+
+.. _cbc_mode:
 
 CBC mode
 --------
@@ -57,6 +61,8 @@ use :mod:`Crypto.Util.Padding`.
 
 The cipher object has a read-only attribute :attr:`iv`.
 
+.. _cfb_mode:
+
 CFB mode
 --------
 Constant: ``Crypto.Cipher.<cipher>.MODE_CFB``.
@@ -79,6 +85,8 @@ The :func:`new` function expects the following extra parameters:
 
     The cipher object has a read-only attribute :attr:`iv`.
 
+.. _ofb_mode:
+
 OFB mode
 --------
 Constant: ``Crypto.Cipher.<cipher>.MODE_OFB``.
@@ -97,6 +105,8 @@ The :func:`new` function expects the following extra parameters:
     If not present, a random IV will be created.
 
 The cipher object has a read-only attribute :attr:`iv`.
+
+.. _ctr_mode:
 
 CTR mode
 --------
@@ -118,6 +128,8 @@ The :func:`new` function expects the following extra parameters:
     (default if not specified: 0).
 
 The cipher object has a read-only attribute :attr:`nonce`.
+
+.. _openpgp_mode:
 
 OpenPGP mode
 ------------

@@ -34,7 +34,7 @@ OpenPGP mode.
 
 __all__ = ['OpenPgpMode']
 
-from Crypto.Util.py3compat import bchr, bstr
+from Crypto.Util.py3compat import _copy_bytes
 from Crypto.Random import get_random_bytes
 
 class OpenPgpMode(object):
@@ -69,9 +69,11 @@ class OpenPgpMode(object):
         IV_cipher = factory.new(
                         key,
                         factory.MODE_CFB,
-                        IV=bchr(0) * self.block_size,
+                        IV=b'\x00' * self.block_size,
                         segment_size=self.block_size * 8,
                         **cipher_params)
+
+        iv = _copy_bytes(None, None, iv)
 
         # The cipher will be used for...
         if len(iv) == self.block_size:
@@ -88,7 +90,7 @@ class OpenPgpMode(object):
                              " for MODE_OPENPGP"
                              % (self.block_size, self.block_size + 2))
 
-        self.iv = self.IV = bstr(iv)
+        self.iv = self.IV = iv
 
         # Instantiate the cipher for the real PGP data
         self._cipher = factory.new(
@@ -119,7 +121,7 @@ class OpenPgpMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
 
         :Return:
@@ -156,7 +158,7 @@ class OpenPgpMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
 
         :Return: the decrypted data (byte string).
@@ -173,10 +175,10 @@ def _create_openpgp_cipher(factory, **kwargs):
         The module.
 
     :Keywords:
-      key : byte string/array
+      key : bytes/bytearray/memoryview
         The secret key to use in the symmetric cipher.
 
-      IV : byte string/array
+      IV : bytes/bytearray/memoryview
         The initialization vector to use for encryption or decryption.
 
         For encryption, the IV must be as long as the cipher block size.

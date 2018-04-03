@@ -27,7 +27,7 @@
 import unittest
 from binascii import a2b_hex, b2a_hex, hexlify
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b, _memoryview
 from Crypto.Util.strxor import strxor_c
 
 class _NoDefault: pass        # sentinel object
@@ -305,6 +305,86 @@ class ByteArrayTest(unittest.TestCase):
             decipher.verify(bytearray(a2b_hex(self.mac)))
 
 
+class MemoryviewTest(unittest.TestCase):
+    """Verify we can use memoryviews for encrypting and decrypting"""
+
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+
+        # Extract the parameters
+        params = params.copy()
+        self.description = _extract(params, 'description')
+        self.key = b(_extract(params, 'key'))
+        self.plaintext = b(_extract(params, 'plaintext'))
+        self.ciphertext = b(_extract(params, 'ciphertext'))
+        self.module_name = _extract(params, 'module_name', None)
+        self.assoc_data = _extract(params, 'assoc_data', None)
+        self.mac = _extract(params, 'mac', None)
+        if self.assoc_data:
+            self.mac = b(self.mac)
+
+        mode = _extract(params, 'mode', None)
+        self.mode_name = str(mode)
+
+        if mode is not None:
+            # Block cipher
+            self.mode = getattr(self.module, "MODE_" + mode)
+
+            self.iv = _extract(params, 'iv', None)
+            if self.iv is None:
+                self.iv = _extract(params, 'nonce', None)
+            if self.iv is not None:
+                self.iv = b(self.iv)
+        else:
+            # Stream cipher
+            self.mode = None
+            self.iv = _extract(params, 'iv', None)
+            if self.iv is not None:
+                self.iv = b(self.iv)
+
+        self.extra_params = params
+
+    def _new(self):
+        params = self.extra_params.copy()
+        key = a2b_hex(self.key)
+
+        old_style = []
+        if self.mode is not None:
+            old_style = [ self.mode ]
+        if self.iv is not None:
+            old_style += [ a2b_hex(self.iv) ]
+
+        return self.module.new(key, *old_style, **params)
+
+    def runTest(self):
+
+        plaintext = a2b_hex(self.plaintext)
+        ciphertext = a2b_hex(self.ciphertext)
+        assoc_data = []
+        if self.assoc_data:
+            assoc_data = [ memoryview(a2b_hex(b(x))) for x in self.assoc_data]
+
+        cipher = self._new()
+        decipher = self._new()
+
+        # Only AEAD modes
+        for comp in assoc_data:
+            cipher.update(comp)
+            decipher.update(comp)
+
+        ct = b2a_hex(cipher.encrypt(memoryview(plaintext)))
+        pt = b2a_hex(decipher.decrypt(memoryview(ciphertext)))
+
+        self.assertEqual(self.ciphertext, ct)  # encrypt
+        self.assertEqual(self.plaintext, pt)   # decrypt
+
+        if self.mac:
+            mac = b2a_hex(cipher.digest())
+            self.assertEqual(self.mac, mac)
+            decipher.verify(memoryview(a2b_hex(self.mac)))
+
+
 def make_block_tests(module, module_name, test_data, additional_params=dict()):
     tests = []
     extra_tests_added = False
@@ -406,6 +486,9 @@ def make_stream_tests(module, module_name, test_data):
             tests += [
                 ByteArrayTest(module, params),
             ]
+            import types
+            if _memoryview is not types.NoneType:
+                tests.append(MemoryviewTest(module, params))
             extra_tests_added = True
 
         # Add the test to the test suite

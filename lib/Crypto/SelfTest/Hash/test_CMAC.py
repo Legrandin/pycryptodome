@@ -35,7 +35,7 @@
 
 import unittest
 
-from Crypto.Util.py3compat import tobytes
+from Crypto.Util.py3compat import tobytes, _memoryview
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3
@@ -266,8 +266,76 @@ class MultipleUpdates(unittest.TestCase):
             self.assertEqual(ref_mac, mac.digest())
 
 
+class ByteArrayTests(unittest.TestCase):
+
+    def runTest(self):
+
+        key = b"0" * 16
+        data = b"\x00\x01\x02"
+
+        # Data and key can be a bytearray (during initialization)
+        key_ba = bytearray(key)
+        data_ba = bytearray(data)
+
+        h1 = CMAC.new(key, data, ciphermod=AES)
+        h2 = CMAC.new(key_ba, data_ba, ciphermod=AES)
+        key_ba[:1] = b'\xFF'
+        data_ba[:1] = b'\xFF'
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a bytearray (during operation)
+        key_ba = bytearray(key)
+        data_ba = bytearray(data)
+
+        h1 = CMAC.new(key, ciphermod=AES)
+        h2 = CMAC.new(key, ciphermod=AES)
+        h1.update(data)
+        h2.update(data_ba)
+        data_ba[:1] = b'\xFF'
+        self.assertEqual(h1.digest(), h2.digest())
+
+
+class MemoryViewTests(unittest.TestCase):
+
+    def runTest(self):
+
+        key = b"0" * 16
+        data = b"\x00\x01\x02"
+
+        def get_mv_ro(data):
+            return memoryview(data)
+
+        def get_mv_rw(data):
+            return memoryview(bytearray(data))
+
+        for get_mv in (get_mv_ro, get_mv_rw):
+
+            # Data and key can be a memoryview (during initialization)
+            key_mv = get_mv(key)
+            data_mv = get_mv(data)
+
+            h1 = CMAC.new(key, data, ciphermod=AES)
+            h2 = CMAC.new(key_mv, data_mv, ciphermod=AES)
+            if not data_mv.readonly:
+                key_mv[:1] = b'\xFF'
+                data_mv[:1] = b'\xFF'
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            data_mv = get_mv(data)
+
+            h1 = CMAC.new(key, ciphermod=AES)
+            h2 = CMAC.new(key, ciphermod=AES)
+            h1.update(data)
+            h2.update(data_mv)
+            if not data_mv.readonly:
+                data_mv[:1] = b'\xFF'
+            self.assertEqual(h1.digest(), h2.digest())
+
+
 def get_tests(config={}):
     global test_data
+    import types
     from common import make_mac_tests
 
     # Add new() parameters to the back of each test vector
@@ -279,6 +347,9 @@ def get_tests(config={}):
 
     tests = make_mac_tests(CMAC, "CMAC", params_test_data)
     tests.append(MultipleUpdates())
+    tests.append(ByteArrayTests())
+    if _memoryview is not types.NoneType:
+        tests.append(MemoryViewTests())
     return tests
 
 

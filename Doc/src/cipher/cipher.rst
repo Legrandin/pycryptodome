@@ -98,8 +98,8 @@ There are two types of symmetric ciphers:
     Classic modes of operation <classic>    
     Modern modes of operation <modern>
 
-Historic ciphers
-----------------
+Legacy ciphers
+--------------
 
 A number of ciphers are implemented in this library purely for backward compatibility purposes.
 They are deprecated or even fully broken and should not be used in new designs.

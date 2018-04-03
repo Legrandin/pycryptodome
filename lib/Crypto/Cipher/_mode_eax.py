@@ -34,7 +34,9 @@ EAX mode.
 
 __all__ = ['EaxMode']
 
-from Crypto.Util.py3compat import byte_string, bchr, bord, unhexlify, b, bstr
+import struct
+
+from Crypto.Util.py3compat import byte_string, bord, unhexlify, _copy_bytes
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -78,7 +80,7 @@ class EaxMode(object):
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = bstr(nonce)
+        self.nonce = _copy_bytes(None, None, nonce)
         """The nonce originally used to create the object."""
 
         self._mac_len = mac_len
@@ -101,7 +103,7 @@ class EaxMode(object):
 
         self._omac = [
                 CMAC.new(key,
-                         bchr(0) * (self.block_size - 1) + bchr(i),
+                         b'\x00' * (self.block_size - 1) + struct.pack('B', i),
                          ciphermod=factory,
                          cipher_params=cipher_params)
                 for i in xrange(0, 3)
@@ -116,7 +118,7 @@ class EaxMode(object):
         self._cipher = factory.new(key,
                                    factory.MODE_CTR,
                                    initial_value=counter_int,
-                                   nonce=b(""),
+                                   nonce=b"",
                                    **cipher_params)
 
     def update(self, assoc_data):
@@ -136,7 +138,7 @@ class EaxMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string/array
+          assoc_data : bytes/bytearray/memoryview
             A piece of associated data. There are no restrictions on its size.
         """
 
@@ -170,7 +172,7 @@ class EaxMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -207,7 +209,7 @@ class EaxMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
 
@@ -238,7 +240,7 @@ class EaxMode(object):
         self._next = [self.digest]
 
         if not self._mac_tag:
-            tag = bchr(0) * self.block_size
+            tag = b'\x00' * self.block_size
             for i in xrange(3):
                 tag = strxor(tag, self._omac[i].digest())
             self._mac_tag = tag[:self._mac_len]
@@ -264,7 +266,7 @@ class EaxMode(object):
         tampered with while in transit.
 
         :Parameters:
-          received_mac_tag : byte string/array
+          received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
         :Raises MacMismatchError:
             if the MAC does not match. The message has been tampered with
@@ -277,7 +279,7 @@ class EaxMode(object):
         self._next = [self.verify]
 
         if not self._mac_tag:
-            tag = bchr(0) * self.block_size
+            tag = b'\x00' * self.block_size
             for i in xrange(3):
                 tag = strxor(tag, self._omac[i].digest())
             self._mac_tag = tag[:self._mac_len]
@@ -309,7 +311,7 @@ class EaxMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -324,9 +326,9 @@ class EaxMode(object):
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
-          received_mac_tag : byte string/array
+          received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
 
         :Return: the decrypted data (byte string).
@@ -349,10 +351,10 @@ def _create_eax_cipher(factory, **kwargs):
         `Crypto.Cipher.AES`).
 
     :Keywords:
-      key : byte string/array
+      key : bytes/bytearray/memoryview
         The secret key to use in the symmetric cipher.
 
-      nonce : byte string/array
+      nonce : bytes/bytearray/memoryview
         A value that must never be reused for any other encryption.
         There are no restrictions on its length, but it is recommended to use
         at least 16 bytes.

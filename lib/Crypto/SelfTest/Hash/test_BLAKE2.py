@@ -28,12 +28,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import os
 import re
 import unittest
 from binascii import unhexlify, hexlify
 
-from Crypto.Util.py3compat import b, tobytes, bchr
+from Crypto.Util.py3compat import tobytes, _memoryview
 from Crypto.Util.strxor import strxor_c
 from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.SelfTest.st_common import list_test_cases
@@ -56,18 +55,16 @@ class Blake2Test(unittest.TestCase):
                 hobj = new_func(digest_bytes=dbytes)
                 self.assertEqual(hobj.digest_size, dbytes)
 
-            digest1 = new_func(data=b("\x90"), digest_bytes=self.max_bytes).digest()
-            digest2 = new_func(digest_bytes=self.max_bytes).update(b("\x90")).digest()
+            digest1 = new_func(data=b"\x90", digest_bytes=self.max_bytes).digest()
+            digest2 = new_func(digest_bytes=self.max_bytes).update(b"\x90").digest()
             self.assertEqual(digest1, digest2)
 
-            new_func(data=b("A"), key=b("5"), digest_bytes=self.max_bytes)
+            new_func(data=b"A", key=b"5", digest_bytes=self.max_bytes)
 
         hobj = h.new()
         self.assertEqual(hobj.digest_size, self.max_bytes)
 
     def test_new_negative(self):
-
-        self.assertRaises(TypeError, self.BLAKE2.new)
 
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
@@ -88,8 +85,12 @@ class Blake2Test(unittest.TestCase):
                               digest_bytes=self.max_bytes,
                               data=u"string")
 
+    def test_default_digest_size(self):
+        digest = self.BLAKE2.new(data=b'abc').digest()
+        self.assertEquals(len(digest), self.max_bytes)
+
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [b"\x0A" * 200, b"\x14" * 300]
         h = self.BLAKE2.new(digest_bytes=self.max_bytes)
         h.update(pieces[0]).update(pieces[1])
         digest = h.digest()
@@ -108,12 +109,10 @@ class Blake2Test(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.failUnless(isinstance(digest, type(b("digest"))))
+        self.failUnless(isinstance(digest, type(b"digest")))
 
     def test_update_after_digest(self):
-        msg=b("rrrrttt")
-
-        #import pdb; pdb.set_trace()
+        msg=b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
         h = self.BLAKE2.new(digest_bits=256, data=msg[:4])
@@ -142,14 +141,14 @@ class Blake2Test(unittest.TestCase):
         self.failUnless(isinstance(hexdigest, type("digest")))
 
     def test_verify(self):
-        h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b("4"))
+        h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"4")
         mac = h.digest()
         h.verify(mac)
         wrong_mac = strxor_c(mac, 255)
         self.assertRaises(ValueError, h.verify, wrong_mac)
 
     def test_hexverify(self):
-        h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b("4"))
+        h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"4")
         mac = h.hexdigest()
         h.hexverify(mac)
         self.assertRaises(ValueError, h.hexverify, "4556")
@@ -162,13 +161,81 @@ class Blake2Test(unittest.TestCase):
             h = self.BLAKE2.new(digest_bits=digest_bits)
             self.assertEqual(h.oid, prefix + str(digest_bits // 8))
 
-            h = self.BLAKE2.new(digest_bits=digest_bits, key=b("secret"))
+            h = self.BLAKE2.new(digest_bits=digest_bits, key=b"secret")
             self.assertRaises(AttributeError, lambda: h.oid)
 
         for digest_bits in (8, self.max_bits):
             if digest_bits in self.digest_bits_oid:
                 continue
             self.assertRaises(AttributeError, lambda: h.oid)
+
+    def test_bytearray(self):
+
+        key = b'0' * 16
+        data = b"\x00\x01\x02"
+
+        # Data and key can be a bytearray (during initialization)
+        key_ba = bytearray(key)
+        data_ba = bytearray(data)
+
+        h1 = self.BLAKE2.new(data=data, key=key)
+        h2 = self.BLAKE2.new(data=data_ba, key=key_ba)
+        key_ba[:1] = b'\xFF'
+        data_ba[:1] = b'\xFF'
+
+        self.assertEqual(h1.digest(), h2.digest())
+
+        # Data can be a bytearray (during operation)
+        data_ba = bytearray(data)
+
+        h1 = self.BLAKE2.new()
+        h2 = self.BLAKE2.new()
+        h1.update(data)
+        h2.update(data_ba)
+        data_ba[:1] = b'\xFF'
+
+        self.assertEqual(h1.digest(), h2.digest())
+
+    def test_memoryview(self):
+
+        key = b'0' * 16
+        data = b"\x00\x01\x02"
+
+        def get_mv_ro(data):
+            return memoryview(data)
+
+        def get_mv_rw(data):
+            return memoryview(bytearray(data))
+
+        for get_mv in (get_mv_ro, get_mv_rw):
+
+            # Data and key can be a memoryview (during initialization)
+            key_mv = get_mv(key)
+            data_mv = get_mv(data)
+
+            h1 = self.BLAKE2.new(data=data, key=key)
+            h2 = self.BLAKE2.new(data=data_mv, key=key_mv)
+            if not data_mv.readonly:
+                data_mv[:1] = b'\xFF'
+                key_mv[:1] = b'\xFF'
+
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            data_mv = get_mv(data)
+
+            h1 = self.BLAKE2.new()
+            h2 = self.BLAKE2.new()
+            h1.update(data)
+            h2.update(data_mv)
+            if not data_mv.readonly:
+                data_mv[:1] = b'\xFF'
+
+            self.assertEqual(h1.digest(), h2.digest())
+
+    import types
+    if _memoryview == types.NoneType:
+        del test_memoryview
 
 
 class Blake2bTest(Blake2Test):
@@ -220,7 +287,7 @@ class Blake2OfficialTestVector(unittest.TestCase):
             if res.group(1):
                 bin_value = unhexlify(tobytes(res.group(1)))
             else:
-                bin_value = b("")
+                bin_value = b""
             if expected == "in":
                 input_data = bin_value
                 expected = "key"
@@ -279,7 +346,7 @@ class Blake2TestVector1(unittest.TestCase):
 
         for tv in self.test_vectors:
             digest_bytes = len(tv)
-            next_data = b("")
+            next_data = b""
             for _ in xrange(100):
                 h = self.BLAKE2.new(digest_bytes=digest_bytes)
                 h.update(next_data)
@@ -324,10 +391,10 @@ class Blake2TestVector2(unittest.TestCase):
     def runTest(self):
 
         for key_size, result in self.test_vectors:
-            next_data = b("")
+            next_data = b""
             for _ in xrange(100):
                 h = self.BLAKE2.new(digest_bytes=self.max_bytes,
-                                    key=b("A" * key_size))
+                                    key=b"A" * key_size)
                 h.update(next_data)
                 next_data = h.digest() + next_data
             self.assertEqual(h.digest(), result)

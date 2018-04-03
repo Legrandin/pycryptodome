@@ -30,7 +30,7 @@
 
 from Crypto.Random import get_random_bytes
 
-from Crypto.Util.py3compat import bstr
+from Crypto.Util.py3compat import _copy_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
@@ -73,7 +73,7 @@ class ChaCha20Cipher:
 
         See also `new()` at the module level."""
 
-        self.nonce = bstr(nonce)
+        self.nonce = _copy_bytes(None, None, nonce)
 
         self._next = ( self.encrypt, self.decrypt )
         self._state = VoidPointer()
@@ -92,7 +92,7 @@ class ChaCha20Cipher:
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: byte string/array
+        :type plaintext: bytes, bytearray, memoryview
         :returns: the encrypted byte string, of equal length as the
           plaintext.
         """
@@ -119,7 +119,7 @@ class ChaCha20Cipher:
         """Decrypt a piece of data.
 
         :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: byte string/array
+        :type ciphertext: bytes, bytearray, memoryview
         :returns: the decrypted byte string, of equal length as the
           ciphertext.
         """
@@ -167,7 +167,7 @@ def new(**kwargs):
 
         If not provided, a random byte string will be generated (you can read
         it back via the ``nonce`` attribute of the returned object).
-    :type nonce: byte string/array
+    :type nonce: bytes, bytearray, memoryview
 
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Cipher` object
     """

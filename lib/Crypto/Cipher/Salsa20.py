@@ -22,7 +22,7 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bstr
+from Crypto.Util.py3compat import _copy_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
@@ -63,7 +63,7 @@ class Salsa20Cipher:
             raise ValueError("Incorrect nonce length for Salsa20 (%d bytes)" %
                              len(nonce))
 
-        self.nonce = bstr(nonce)
+        self.nonce = _copy_bytes(None, None, nonce)
 
         self._state = VoidPointer()
         result = _raw_salsa20_lib.Salsa20_stream_init(
@@ -84,7 +84,7 @@ class Salsa20Cipher:
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: byte string/array
+        :type plaintext: bytes/bytearray/memoryview
         :returns: the encrypted byte string, of equal length as the
           plaintext.
         """
@@ -103,7 +103,7 @@ class Salsa20Cipher:
         """Decrypt a piece of data.
 
         :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: byte string/array
+        :type ciphertext: bytes/bytearray/memoryview
         :returns: the decrypted byte string, of equal length as the
           ciphertext.
         """
@@ -117,7 +117,7 @@ def new(key, nonce=None):
     """Create a new Salsa20 cipher
 
     :keyword key: The secret key to use. It must be 16 or 32 bytes long.
-    :type key: byte string
+    :type key: bytes/bytearray/memoryview
 
     :keyword nonce:
         A value that must never be reused for any other encryption
@@ -125,7 +125,7 @@ def new(key, nonce=None):
 
         If not provided, a random byte string will be generated (you can read
         it back via the ``nonce`` attribute of the returned object).
-    :type nonce: byte string/array
+    :type nonce: bytes/bytearray/memoryview
 
     :Return: a :class:`Crypto.Cipher.Salsa20.Salsa20Cipher` object
     """

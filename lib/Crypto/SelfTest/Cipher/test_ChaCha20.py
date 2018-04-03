@@ -33,7 +33,7 @@ import re
 import unittest
 from binascii import unhexlify, hexlify
 
-from Crypto.Util.py3compat import b, tobytes, bchr
+from Crypto.Util.py3compat import b, tobytes, bchr, _memoryview
 from Crypto.Util.strxor import strxor_c
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -139,29 +139,75 @@ class ByteArrayTest(unittest.TestCase):
 
     def runTest(self):
 
+        data = b"0123"
+        key = b"9" * 32
+        nonce = b"t" * 8
+
         # Encryption
-        data = b("0123")
-        key = b("9") * 32
-        nonce = b("t") * 8
+        data_ba = bytearray(data)
+        key_ba = bytearray(key)
+        nonce_ba = bytearray(nonce)
 
         cipher1 = ChaCha20.new(key=key, nonce=nonce)
-        ref1 = cipher1.encrypt(data)
+        ct = cipher1.encrypt(data)
 
-        cipher2 = ChaCha20.new(key=bytearray(key), nonce=bytearray(nonce))
-        ref2 = cipher2.encrypt(bytearray(data))
+        cipher2 = ChaCha20.new(key=key_ba, nonce=nonce_ba)
+        key_ba[:1] = b'\xFF'
+        nonce_ba[:1] = b'\xFF'
+        ct_test = cipher2.encrypt(data_ba)
 
-        self.assertEqual(ref1, ref2)
+        self.assertEqual(ct, ct_test)
         self.assertEqual(cipher1.nonce, cipher2.nonce)
 
         # Decryption
+        key_ba = bytearray(key)
+        nonce_ba = bytearray(nonce)
+        ct_ba = bytearray(ct)
 
-        cipher3 = ChaCha20.new(key=key, nonce=nonce)
-        ref3 = cipher3.decrypt(data)
+        cipher3 = ChaCha20.new(key=key_ba, nonce=nonce_ba)
+        key_ba[:1] = b'\xFF'
+        nonce_ba[:1] = b'\xFF'
+        pt_test = cipher3.decrypt(ct_ba)
 
-        cipher4 = ChaCha20.new(key=bytearray(key), nonce=bytearray(nonce))
-        ref4 = cipher4.decrypt(bytearray(data))
+        self.assertEqual(data, pt_test)
 
-        self.assertEqual(ref3, ref4)
+
+class MemoryviewTest(unittest.TestCase):
+    """Verify we can encrypt or decrypt bytearrays"""
+
+    def runTest(self):
+
+        data = b"0123"
+        key = b"9" * 32
+        nonce = b"t" * 8
+
+        # Encryption
+        data_mv = memoryview(bytearray(data))
+        key_mv = memoryview(bytearray(key))
+        nonce_mv = memoryview(bytearray(nonce))
+
+        cipher1 = ChaCha20.new(key=key, nonce=nonce)
+        ct = cipher1.encrypt(data)
+
+        cipher2 = ChaCha20.new(key=key_mv, nonce=nonce_mv)
+        key_mv[:1] = b'\xFF'
+        nonce_mv[:1] = b'\xFF'
+        ct_test = cipher2.encrypt(data_mv)
+
+        self.assertEqual(ct, ct_test)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        # Decryption
+        key_mv = memoryview(bytearray(key))
+        nonce_mv = memoryview(bytearray(nonce))
+        ct_mv = memoryview(bytearray(ct))
+
+        cipher3 = ChaCha20.new(key=key_mv, nonce=nonce_mv)
+        key_mv[:1] = b'\xFF'
+        nonce_mv[:1] = b'\xFF'
+        pt_test = cipher3.decrypt(ct_mv)
+
+        self.assertEqual(data, pt_test)
 
 
 class ChaCha20_AGL_NIR(unittest.TestCase):
@@ -237,6 +283,11 @@ def get_tests(config={}):
     tests += list_test_cases(ChaCha20Test)
     tests.append(ChaCha20_AGL_NIR())
     tests.append(ByteArrayTest())
+
+    import types
+    if _memoryview != types.NoneType:
+        tests.append(MemoryviewTest())
+
     return tests
 
 

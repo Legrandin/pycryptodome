@@ -82,7 +82,7 @@ class Keccak_Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string/array): The next chunk of the message being hashed.
+            data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
         if self._digest_done and not self._update_after_digest:
@@ -136,7 +136,7 @@ def new(**kwargs):
     """Create a new hash object.
 
     Args:
-        data (byte string/array):
+        data (byte string/byte array/memoryview):
             The very first chunk of the message to hash.
             It is equivalent to an early call to :meth:`Keccak_Hash.update`.
         digest_bytes (integer):

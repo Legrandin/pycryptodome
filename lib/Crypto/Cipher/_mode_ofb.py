@@ -26,7 +26,7 @@ Output Feedback (CFB) mode.
 
 __all__ = ['OfbMode']
 
-from Crypto.Util.py3compat import bstr
+from Crypto.Util.py3compat import _copy_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
@@ -76,7 +76,7 @@ class OfbMode(object):
           block_cipher : C pointer
             A smart pointer to the low-level block cipher instance.
 
-          iv : byte string
+          iv : bytes/bytearray/memoryview
             The initialization vector to use for encryption or decryption.
             It is as long as the cipher block.
 
@@ -108,7 +108,7 @@ class OfbMode(object):
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = bstr(iv)
+        self.iv = _copy_bytes(None, None, iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 
@@ -138,7 +138,7 @@ class OfbMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -180,7 +180,7 @@ class OfbMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
 
@@ -209,10 +209,10 @@ def _create_ofb_cipher(factory, **kwargs):
         The underlying block cipher, a module from ``Crypto.Cipher``.
 
     :Keywords:
-      iv : byte string
+      iv : bytes/bytearray/memoryview
         The IV to use for OFB.
 
-      IV : byte string
+      IV : bytes/bytearray/memoryview
         Alias for ``iv``.
 
     Any other keyword will be passed to the underlying block cipher.
