@@ -26,7 +26,7 @@
 
 import unittest
 
-from Crypto.Util.py3compat import bchr
+from Crypto.Util.py3compat import bchr, _memoryview
 
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -225,10 +225,93 @@ class NonceTests(unittest.TestCase):
         self.assertNotEqual(cipher1.nonce, cipher2.nonce)
 
 
+class ByteArrayTest(unittest.TestCase):
+    """Verify we can encrypt or decrypt bytearrays"""
+
+    def runTest(self):
+
+        data = b"0123"
+        key = b"9" * 32
+        nonce = b"t" * 8
+
+        # Encryption
+        data_ba = bytearray(data)
+        key_ba = bytearray(key)
+        nonce_ba = bytearray(nonce)
+
+        cipher1 = Salsa20.new(key=key, nonce=nonce)
+        ct = cipher1.encrypt(data)
+
+        cipher2 = Salsa20.new(key=key_ba, nonce=nonce_ba)
+        key_ba[:1] = b'\xFF'
+        nonce_ba[:1] = b'\xFF'
+        ct_test = cipher2.encrypt(data_ba)
+
+        self.assertEqual(ct, ct_test)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        # Decryption
+        key_ba = bytearray(key)
+        nonce_ba = bytearray(nonce)
+        ct_ba = bytearray(ct)
+
+        cipher3 = Salsa20.new(key=key_ba, nonce=nonce_ba)
+        key_ba[:1] = b'\xFF'
+        nonce_ba[:1] = b'\xFF'
+        pt_test = cipher3.decrypt(ct_ba)
+
+        self.assertEqual(data, pt_test)
+
+
+class MemoryviewTest(unittest.TestCase):
+    """Verify we can encrypt or decrypt bytearrays"""
+
+    def runTest(self):
+
+        data = b"0123"
+        key = b"9" * 32
+        nonce = b"t" * 8
+
+        # Encryption
+        data_mv = memoryview(bytearray(data))
+        key_mv = memoryview(bytearray(key))
+        nonce_mv = memoryview(bytearray(nonce))
+
+        cipher1 = Salsa20.new(key=key, nonce=nonce)
+        ct = cipher1.encrypt(data)
+
+        cipher2 = Salsa20.new(key=key_mv, nonce=nonce_mv)
+        key_mv[:1] = b'\xFF'
+        nonce_mv[:1] = b'\xFF'
+        ct_test = cipher2.encrypt(data_mv)
+
+        self.assertEqual(ct, ct_test)
+        self.assertEqual(cipher1.nonce, cipher2.nonce)
+
+        # Decryption
+        key_mv = memoryview(bytearray(key))
+        nonce_mv = memoryview(bytearray(nonce))
+        ct_mv = memoryview(bytearray(ct))
+
+        cipher3 = Salsa20.new(key=key_mv, nonce=nonce_mv)
+        key_mv[:1] = b'\xFF'
+        nonce_mv[:1] = b'\xFF'
+        pt_test = cipher3.decrypt(ct_mv)
+
+        self.assertEqual(data, pt_test)
+
+
+
 def get_tests(config={}):
     tests = make_stream_tests(Salsa20, "Salsa20", test_data)
     tests.append(KeyLength())
     tests += list_test_cases(NonceTests)
+    tests.append(ByteArrayTest())
+
+    import types
+    if _memoryview != types.NoneType:
+        tests.append(MemoryviewTest())
+
     return tests
 
 

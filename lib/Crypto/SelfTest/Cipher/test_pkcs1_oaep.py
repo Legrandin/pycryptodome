@@ -24,7 +24,7 @@ import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b, _memoryview, bchr
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP as PKCS
 from Crypto.Hash import MD2,MD5,SHA1,SHA256,RIPEMD160
@@ -354,13 +354,24 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
                 ct = cipher.encrypt(pt)
                 self.assertEqual(mgfcalls, 2)
                 self.assertEqual(cipher.decrypt(ct), pt)
-        
+
         def testByteArray(self):
             pt = b("XER")
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(bytearray(pt))
             pt2 = cipher.decrypt(bytearray(ct))
             self.assertEqual(pt, pt2)
+
+        def testMemoryview(self):
+            pt = b("XER")
+            cipher = PKCS.new(self.key1024)
+            ct = cipher.encrypt(memoryview(bytearray(pt)))
+            pt2 = cipher.decrypt(memoryview(bytearray(ct)))
+            self.assertEqual(pt, pt2)
+
+        import types
+        if _memoryview is types.NoneType:
+            del testMemoryview
 
 
 def get_tests(config={}):
