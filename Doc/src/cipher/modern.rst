@@ -50,6 +50,8 @@ The state machine for a cipher object becomes:
     
     Generic state diagram for a AEAD cipher mode
 
+.. _ccm_mode:
+
 CCM mode
 --------
 Constant: ``Crypto.Cipher.<cipher>.MODE_CCM``.
@@ -81,6 +83,8 @@ The :func:`new` function expects the following extra parameters:
       
 The cipher object has a read-only attribute :attr:`nonce`.
 
+.. _eax_mode:
+
 EAX mode
 --------
 Constant: ``Crypto.Cipher.<cipher>.MODE_EAX``.
@@ -98,6 +102,8 @@ The :func:`new` function expects the following extra parameters:
     MAC tag (default if not present: 16 bytes).
 
 The cipher object has a read-only attribute :attr:`nonce`.
+
+.. _gcm_mode:
 
 GCM mode
 --------
@@ -117,6 +123,8 @@ The :func:`new` function expects the following extra parameters:
     MAC tag (default if not present: 16 bytes).
 
 The cipher object has a read-only attribute :attr:`nonce`.
+
+.. _siv_mode:
 
 SIV mode
 --------
@@ -154,6 +162,8 @@ is **not** equivalent to::
 The methods :func:`encrypt` and :func:`decrypt` can only be called **once**.
 
 The cipher object has a read-only attribute :attr:`nonce`.
+
+.. _ocb_mode:
 
 OCB mode
 --------

@@ -27,8 +27,9 @@ And this is how you would decrypt it:
 
     ``ChaCha20`` does not guarantee authenticity of the data you decrypt!
     In other words, an attacker may manipulate the data in transit.
-    In order to prevent it, you must couple it with a *Message Authentication
-    Code* (such as HMAC).
+    In order to prevent that, you must also use a *Message Authentication
+    Code* (such as :doc:`HMAC <../hash/hmac>`) to authenticate the ciphertext
+    (*encrypt-then-mac*).
 
 .. _ChaCha20: http://http://cr.yp.to/chacha.html
 
