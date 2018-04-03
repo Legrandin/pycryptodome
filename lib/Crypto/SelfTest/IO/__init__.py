@@ -35,6 +35,7 @@
 
 def get_tests(config={}):
     tests = []
+    from Crypto.SelfTest.IO import test_PKCS7;     tests += test_PKCS7.get_tests(config=config)
     from Crypto.SelfTest.IO import test_PKCS8;     tests += test_PKCS8.get_tests(config=config)
     from Crypto.SelfTest.IO import test_PBES;      tests += test_PBES.get_tests(config=config)
     return tests
