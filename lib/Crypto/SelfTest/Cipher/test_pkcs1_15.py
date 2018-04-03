@@ -160,14 +160,14 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                     self.assertEqual(pt,pt2)
 
         def testByteArray(self):
-            pt = b("XER")
+            pt = b"XER"
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(bytearray(pt))
             pt2 = cipher.decrypt(bytearray(ct), "---")
             self.assertEqual(pt, pt2)
 
         def testMemoryview(self):
-            pt = b("XER")
+            pt = b"XER"
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(memoryview(bytearray(pt)))
             pt2 = cipher.decrypt(memoryview(bytearray(ct)), "---")

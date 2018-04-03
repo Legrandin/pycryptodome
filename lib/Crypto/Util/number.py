@@ -26,6 +26,7 @@
 
 import math
 import sys
+import struct
 from Crypto import Random
 from Crypto.Util.py3compat import *
 
@@ -60,8 +61,8 @@ def getRandomInteger(N, randfunc=None):
     S = randfunc(N>>3)
     odd_bits = N % 8
     if odd_bits != 0:
-        char = ord(randfunc(1)) >> (8-odd_bits)
-        S = bchr(char) + S
+        rand_bits = ord(randfunc(1)) >> (8-odd_bits)
+        S = struct.pack('B', rand_bits) + S
     value = bytes_to_long(S)
     return value
 
@@ -380,7 +381,7 @@ def long_to_bytes(n, blocksize=0):
     be of minimal length.
     """
     # after much testing, this algorithm was deemed to be the fastest
-    s = b('')
+    s = b''
     n = int(n)
     pack = struct.pack
     while n > 0:
@@ -388,17 +389,17 @@ def long_to_bytes(n, blocksize=0):
         n = n >> 32
     # strip off leading zeros
     for i in range(len(s)):
-        if s[i] != b('\000')[0]:
+        if s[i] != b'\x00'[0]:
             break
     else:
         # only happens when n == 0
-        s = b('\000')
+        s = b'\x00'
         i = 0
     s = s[i:]
     # add back some pad bytes.  this could be done more efficiently w.r.t. the
     # de-padding being done above, but sigh...
     if blocksize > 0 and len(s) % blocksize:
-        s = (blocksize - len(s) % blocksize) * b('\000') + s
+        s = (blocksize - len(s) % blocksize) * b'\x00' + s
     return s
 
 def bytes_to_long(s):
@@ -416,11 +417,17 @@ def bytes_to_long(s):
     This is (essentially) the inverse of :func:`long_to_bytes`.
     """
     acc = 0
+
     unpack = struct.unpack
+    
+    # Up to Python 2.7.3, struct.unpack can't work with bytearrays
+    if sys.version_info[0] < 3 and isinstance(s, bytearray):
+        s = bytes(s)
+    
     length = len(s)
     if length % 4:
         extra = (4 - length % 4)
-        s = b('\000') * extra + s
+        s = b'\x00' * extra + s
         length = length + extra
     for i in range(0, length, 4):
         acc = (acc << 32) + unpack('>I', s[i:i+4])[0]

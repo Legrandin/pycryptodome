@@ -23,7 +23,7 @@
 from Crypto.Signature.pss import MGF1
 import Crypto.Hash.SHA1
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import bord, _copy_bytes
 import Crypto.Util.number
 from   Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from   Crypto.Util.strxor import strxor
@@ -70,7 +70,7 @@ class PKCS1OAEP_Cipher:
         else:
             self._mgf = lambda x,y: MGF1(x,y,self._hashObj)
 
-        self._label = bstr(label)
+        self._label = _copy_bytes(None, None, label)
         self._randfunc = randfunc
 
     def can_encrypt(self):
@@ -102,24 +102,23 @@ class PKCS1OAEP_Cipher:
         :raises ValueError:
             if the message is too long.
         """
-        # TODO: Verify the key is RSA
 
         # See 7.1.1 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits,8) # Convert from bits to bytes
+        k = ceil_div(modBits, 8) # Convert from bits to bytes
         hLen = self._hashObj.digest_size
         mLen = len(message)
 
         # Step 1b
-        ps_len = k-mLen-2*hLen-2
-        if ps_len<0:
+        ps_len = k - mLen - 2 * hLen - 2
+        if ps_len < 0:
             raise ValueError("Plaintext is too long.")
         # Step 2a
         lHash = self._hashObj.new(self._label).digest()
         # Step 2b
-        ps = bchr(0x00)*ps_len
+        ps = b'\x00' * ps_len
         # Step 2c
-        db = lHash + ps + bchr(0x01) + message
+        db = lHash + ps + b'\x01' + _copy_bytes(None, None, message)
         # Step 2d
         ros = self._randfunc(hLen)
         # Step 2e
@@ -131,7 +130,7 @@ class PKCS1OAEP_Cipher:
         # Step 2h
         maskedSeed = strxor(ros, seedMask)
         # Step 2i
-        em = bchr(0x00) + maskedSeed + maskedDB
+        em = b'\x00' + maskedSeed + maskedDB
         # Step 3a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 3b (RSAEP)
@@ -167,7 +166,7 @@ class PKCS1OAEP_Cipher:
         if len(ciphertext) != k or k<hLen+2:
             raise ValueError("Ciphertext with incorrect length.")
         # Step 2a (O2SIP)
-        ct_int = bytes_to_long(bstr(ciphertext))
+        ct_int = bytes_to_long(ciphertext)
         # Step 2b (RSADP)
         m_int = self._key._decrypt(ct_int)
         # Complete step 2c (I2OSP)
@@ -190,20 +189,20 @@ class PKCS1OAEP_Cipher:
         db = strxor(maskedDB, dbMask)
         # Step 3g
         valid = 1
-        one = db[hLen:].find(bchr(0x01))
+        one = db[hLen:].find(b'\x01')
         lHash1 = db[:hLen]
         if lHash1!=lHash:
             valid = 0
         if one<0:
             valid = 0
-        if bord(y)!=0:
+        if bord(y) != 0:
             valid = 0
         if not valid:
             raise ValueError("Incorrect decryption.")
         # Step 4
         return db[hLen+one+1:]
 
-def new(key, hashAlgo=None, mgfunc=None, label=b(''), randfunc=None):
+def new(key, hashAlgo=None, mgfunc=None, label=b'', randfunc=None):
     """Return a cipher object :class:`PKCS1OAEP_Cipher` that can be used to perform PKCS#1 OAEP encryption or decryption.
 
     :param key:
