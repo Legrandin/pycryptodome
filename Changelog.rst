@@ -6,13 +6,14 @@ Changelog
 
 New features
 ------------
-* Introduced `export_key` and deprecated `exportKey` for DSA and RSA key
+* Introduced ``export_key`` and deprecated ``exportKey`` for DSA and RSA key
   objects.
+* Ciphers and hash functions accept ``memoryview`` objects in input.
 
 Resolved issues
 ---------------
 
-* Reintroduce Crypto.__version__ variable as in PyCrypto.
+* Reintroduce `Crypto.__version__` variable as in PyCrypto.
 * Fixed compilation problem with MinGW.
 
 3.5.1 (8 March 2018)
