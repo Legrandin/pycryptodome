@@ -36,7 +36,7 @@ __all__ = ['SivMode']
 
 from binascii import hexlify
 
-from Crypto.Util.py3compat import byte_string, bord, unhexlify, b, bstr
+from Crypto.Util.py3compat import byte_string, bord, unhexlify, _copy_bytes
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Protocol.KDF import _S2V
@@ -93,7 +93,6 @@ class SivMode(object):
 
         self._factory = factory
 
-        self._nonce = nonce
         self._cipher_params = kwargs
 
         if len(key) not in (32, 48, 64):
@@ -106,7 +105,7 @@ class SivMode(object):
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
 
-            self.nonce = bstr(nonce)
+            self.nonce = _copy_bytes(None, None, nonce)
             """Public attribute is only available in case of non-deterministic
             encryption."""
 
@@ -128,12 +127,12 @@ class SivMode(object):
     def _create_ctr_cipher(self, mac_tag):
         """Create a new CTR cipher from the MAC in SIV mode"""
 
-        tag_int = bytes_to_long(bstr(mac_tag))
+        tag_int = bytes_to_long(mac_tag)
         return self._factory.new(
                     self._subkey_cipher,
                     self._factory.MODE_CTR,
                     initial_value=tag_int ^ (tag_int & 0x8000000080000000L),
-                    nonce=b(""),
+                    nonce=b"",
                     **self._cipher_params)
 
     def update(self, component):
@@ -200,7 +199,7 @@ class SivMode(object):
 
         self._next = [self.digest]
 
-        if self._nonce:
+        if hasattr(self, 'nonce'):
             self._kdf.update(self.nonce)
         self._kdf.update(plaintext)
 
@@ -347,7 +346,7 @@ class SivMode(object):
 
         plaintext = self._cipher.decrypt(ciphertext)
 
-        if self._nonce:
+        if hasattr(self, 'nonce'):
             self._kdf.update(self.nonce)
         if plaintext:
             self._kdf.update(plaintext)

@@ -23,7 +23,7 @@
 
 import struct
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import tobytes, bord, _copy_bytes
 
 from Crypto.Hash import SHA1, SHA256, HMAC, CMAC
 from Crypto.Util.strxor import strxor
@@ -144,7 +144,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
             s[0], s[1] = s[1], prf(password, s[1])
             return s[0]
 
-        key = b('')
+        key = b''
         i = 1
         while len(key)<dkLen:
             s = [ prf(password, salt + struct.pack(">I", i)) ] * 2
@@ -153,10 +153,10 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
 
     else:
         # Optimized implementation
-        key = b('')
+        key = b''
         i = 1
         while len(key)<dkLen:
-            base = HMAC.new(password, b(""), hmac_hash_module)
+            base = HMAC.new(password, b"", hmac_hash_module)
             first_digest = base.copy().update(salt + struct.pack(">I", i)).digest()
             key += base._pbkdf2_hmac_assist(first_digest, count)
             i += 1
@@ -186,10 +186,10 @@ class _S2V(object):
             A set of extra parameters to use to create a cipher instance.
         """
 
-        self._key = key
+        self._key = _copy_bytes(None, None, key)
         self._ciphermod = ciphermod
-        self._last_string = self._cache = bchr(0)*ciphermod.block_size
-        self._n_updates = ciphermod.block_size*8-1
+        self._last_string = self._cache = b'\x00' * ciphermod.block_size
+        self._n_updates = ciphermod.block_size * 8 - 1
         if cipher_params is None:
             self._cipher_params = {}
         else:
@@ -230,7 +230,7 @@ class _S2V(object):
         if not item:
             raise ValueError("A component cannot be empty")
 
-        if self._n_updates==0:
+        if self._n_updates == 0:
             raise TypeError("Too many components passed to S2V")
         self._n_updates -= 1
 
@@ -239,7 +239,7 @@ class _S2V(object):
                        ciphermod=self._ciphermod,
                        cipher_params=self._cipher_params)
         self._cache = strxor(self._double(self._cache), mac.digest())
-        self._last_string = item
+        self._last_string = _copy_bytes(None, None, item)
 
     def derive(self):
         """"Derive a secret from the vector of components.
@@ -247,10 +247,10 @@ class _S2V(object):
         :Return: a byte string, as long as the block length of the cipher.
         """
 
-        if len(self._last_string)>=16:
+        if len(self._last_string) >= 16:
             final = self._last_string[:-16] + strxor(self._last_string[-16:], self._cache)
         else:
-            padded = (self._last_string + bchr(0x80)+ bchr(0)*15)[:16]
+            padded = (self._last_string + b'\x80' + b'\x00' * 15)[:16]
             final = strxor(padded, self._double(self._cache))
         mac = CMAC.new(self._key,
                        msg=final,
@@ -301,24 +301,24 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     if output_len > (255 * hashmod.digest_size):
         raise ValueError("Too much secret data to derive")
     if not salt:
-        salt = bchr(0) * hashmod.digest_size
+        salt = b'\x00' * hashmod.digest_size
     if context is None:
-        context = b("")
+        context = b""
 
     # Step 1: extract
     hmac = HMAC.new(salt, master, digestmod=hashmod)
     prk = hmac.digest()
 
     # Step 2: expand
-    t = [b("")]
+    t = [ b"" ]
     n = 1
     tlen = 0
     while tlen < output_len:
-        hmac = HMAC.new(prk, t[-1] + context + bchr(n), digestmod=hashmod)
+        hmac = HMAC.new(prk, t[-1] + context + struct.pack('B', n), digestmod=hashmod)
         t.append(hmac.digest())
         tlen += hashmod.digest_size
         n += 1
-    derived_output = b("").join(t)
+    derived_output = b"".join(t)
     if num_keys == 1:
         return derived_output[:key_len]
     kol = [derived_output[idx:idx + key_len]
@@ -403,7 +403,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
         data_out += [ get_raw_buffer(buffer_out) ]
 
     dk = PBKDF2(password,
-                b("").join(data_out),
+                b"".join(data_out),
                 key_len * num_keys, 1,
                 prf=prf_hmac_sha256)
 
