@@ -48,7 +48,7 @@ class PKCS1OAEP_Cipher:
                 A mask generation function that accepts two parameters: a string to
                 use as seed, and the lenth of the mask to generate, in bytes.
                 If not specified, the standard MGF1 is used (a safe choice).
-         label : byte string/array
+         label : bytes/bytearray/memoryview
                 A label to apply to this particular encryption. If not specified,
                 an empty string is used. Specifying a label does not improve
                 security.
@@ -94,10 +94,10 @@ class PKCS1OAEP_Cipher:
             minus 2, minus twice the hash output size.
             For instance, if you use RSA 2048 and SHA-256, the longest message
             you can encrypt is 190 byte long.
-        :type message: byte string/array
+        :type message: bytes/bytearray/memoryview
 
         :returns: The ciphertext, as large as the RSA modulus.
-        :rtype: byte string
+        :rtype: bytes
 
         :raises ValueError:
             if the message is too long.
@@ -143,10 +143,10 @@ class PKCS1OAEP_Cipher:
         """Decrypt a message with PKCS#1 OAEP.
 
         :param ciphertext: The encrypted message.
-        :type ciphertext: byte string/array
+        :type ciphertext: bytes/bytearray/memoryview
 
         :returns: The original message (plaintext).
-        :rtype: byte string
+        :rtype: bytes
 
         :raises ValueError:
             if the ciphertext has the wrong length, or if decryption
@@ -226,7 +226,7 @@ def new(key, hashAlgo=None, mgfunc=None, label=b'', randfunc=None):
       A label to apply to this particular encryption. If not specified,
       an empty string is used. Specifying a label does not improve
       security.
-    :type label: byte string/array
+    :type label: bytes/bytearray/memoryview
 
     :param randfunc:
       A function that returns random bytes.

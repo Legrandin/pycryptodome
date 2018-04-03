@@ -124,7 +124,7 @@ def new(key, mode, *args, **kwargs):
     :type mode: One of the supported ``MODE_*`` constants
 
     :Keyword Arguments:
-        *   *iv* (``byte string``) --
+        *   *iv* (``bytes``, ``bytearray``, ``memoryview``) --
             (Only applicable for ``MODE_CBC``, ``MODE_CFB``, ``MODE_OFB``,
             and ``MODE_OPENPGP`` modes).
 
@@ -140,7 +140,7 @@ def new(key, mode, *args, **kwargs):
             If not provided, a random byte string is generated (you must then
             read its value with the :attr:`iv` attribute).
 
-        *   *nonce* (``byte string``) --
+        *   *nonce* (``bytes``, ``bytearray``, ``memoryview``) --
             (Only applicable for ``MODE_CCM``, ``MODE_EAX``, ``MODE_GCM``,
             ``MODE_SIV``, ``MODE_OCB``, and ``MODE_CTR``).
 

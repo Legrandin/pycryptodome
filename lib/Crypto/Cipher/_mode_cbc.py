@@ -81,7 +81,7 @@ class CbcMode(object):
           block_cipher : C pointer
             A smart pointer to the low-level block cipher instance.
 
-          iv : byte string/array
+          iv : bytes/bytearray/memoryview
             The initialization vector to use for encryption or decryption.
             It is as long as the cipher block.
 
@@ -145,7 +145,7 @@ class CbcMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             Its lenght must be multiple of the cipher block size.
         :Return:
@@ -189,7 +189,7 @@ class CbcMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             Its length must be multiple of the cipher block size.
 
@@ -220,10 +220,10 @@ def _create_cbc_cipher(factory, **kwargs):
         The underlying block cipher, a module from ``Crypto.Cipher``.
 
     :Keywords:
-      iv : byte string/array
+      iv : bytes/bytearray/memoryview
         The IV to use for CBC.
 
-      IV : byte string/array
+      IV : bytes/bytearray/memoryview
         Alias for ``iv``.
 
     Any other keyword will be passed to the underlying block cipher.

@@ -157,7 +157,7 @@ class SivMode(object):
         If there is no associated data, this method must not be called.
 
         :Parameters:
-          component : byte string/array
+          component : bytes/bytearray/memoryview
             The next associated data component. It must not be empty.
         """
 
@@ -185,7 +185,7 @@ class SivMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length, but it cannot be empty.
         :Return:
@@ -258,7 +258,7 @@ class SivMode(object):
         tampered with while in transit.
 
         :Parameters:
-          received_mac_tag : byte string/array
+          received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -300,7 +300,7 @@ class SivMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -324,10 +324,10 @@ class SivMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
-          mac_tag : byte string/array
+          mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
 
         :Return: the decrypted data (byte string).
@@ -367,13 +367,13 @@ def _create_siv_cipher(factory, **kwargs):
 
     :Keywords:
 
-      key : byte string/array
+      key : bytes/bytearray/memoryview
         The secret key to use in the symmetric cipher.
         It must be 32, 48 or 64 bytes long.
         If AES is the chosen cipher, the variants *AES-128*,
         *AES-192* and or *AES-256* will be used internally.
 
-      nonce : byte string/array
+      nonce : bytes/bytearray/memoryview
         For deterministic encryption, it is not present.
 
         Otherwise, it is a value that must never be reused

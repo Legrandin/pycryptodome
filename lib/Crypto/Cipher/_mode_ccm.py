@@ -246,7 +246,7 @@ class CcmMode(object):
         invoke this method multiple times, each time with the next segment.
 
         :Parameters:
-          assoc_data : byte string/array
+          assoc_data : bytes/bytearray/memoryview
             A piece of associated data. There are no restrictions on its size.
         """
 
@@ -322,7 +322,7 @@ class CcmMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length.
         :Return:
@@ -391,7 +391,7 @@ class CcmMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
 
@@ -502,7 +502,7 @@ class CcmMode(object):
         tampered with while in transit.
 
         :Parameters:
-          received_mac_tag : byte string/array
+          received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
@@ -542,7 +542,7 @@ class CcmMode(object):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
         :Return:
             a tuple with two byte strings:
@@ -557,9 +557,9 @@ class CcmMode(object):
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
-          ciphertext : byte string
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
-          received_mac_tag : byte string
+          received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
 
         :Return: the decrypted data (byte string).
@@ -582,10 +582,10 @@ def _create_ccm_cipher(factory, **kwargs):
         `Crypto.Cipher.AES`).
 
     :Keywords:
-      key : byte string/array
+      key : bytes/bytearray/memoryview
         The secret key to use in the symmetric cipher.
 
-      nonce : byte string
+      nonce : bytes/bytearray/memoryview
         A value that must never be reused for any other encryption.
 
         Its length must be in the range ``[7..13]``.

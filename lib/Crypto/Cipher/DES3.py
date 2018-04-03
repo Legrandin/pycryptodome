@@ -34,7 +34,7 @@ Module's constants for the modes of operation supported with Triple DES:
 import sys
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util.py3compat import byte_string, b, bchr, bord, bstr
+from Crypto.Util.py3compat import byte_string, bchr, bord, bstr
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   c_size_t)
@@ -79,7 +79,7 @@ def adjust_key_parity(key_in):
     if len(key_in) not in key_size:
         raise ValueError("Not a valid TDES key")
 
-    key_out = b("").join([ bchr(parity_byte(bord(x)) )for x in key_in ])
+    key_out = b"".join([ bchr(parity_byte(bord(x))) for x in key_in ])
 
     if key_out[:8] == key_out[8:16] or key_out[-16:-8] == key_out[-8:]:
         raise ValueError("Triple DES key degenerates to single DES")
@@ -117,14 +117,14 @@ def new(key, mode, *args, **kwargs):
     :param key:
         The secret key to use in the symmetric cipher.
         It must be 8 byte long. The parity bits will be ignored.
-    :type key: byte string
+    :type key: bytes/bytearray/memoryview
 
     :param mode:
         The chaining mode to use for encryption or decryption.
     :type mode: One of the supported ``MODE_*`` constants
 
     :Keyword Arguments:
-        *   *iv* (``byte string``) --
+        *   *iv* (``bytes``, ``bytearray``, ``memoryview``) --
             (Only applicable for ``MODE_CBC``, ``MODE_CFB``, ``MODE_OFB``,
             and ``MODE_OPENPGP`` modes).
 
@@ -140,7 +140,7 @@ def new(key, mode, *args, **kwargs):
             If not provided, a random byte string is generated (you must then
             read its value with the :attr:`iv` attribute).
 
-        *   *nonce* (``byte string``) --
+        *   *nonce* (``bytes``, ``bytearray``, ``memoryview``) --
             (Only applicable for ``MODE_EAX`` and ``MODE_CTR``).
 
             A value that must never be reused for any other encryption done

@@ -63,7 +63,7 @@ class PKCS115_Cipher:
         :param message:
             The message to encrypt, also known as plaintext. It can be of
             variable length, but not longer than the RSA modulus (in bytes) minus 11.
-        :type message: byte string/array
+        :type message: bytes/bytearray/memoryview
 
         :Returns: A byte string, the ciphertext in which the message is encrypted.
             It is as long as the RSA modulus (in bytes).
@@ -109,7 +109,7 @@ class PKCS115_Cipher:
 
         :param ciphertext:
             The ciphertext that contains the message to recover.
-        :type ciphertext: byte string/array
+        :type ciphertext: bytes/bytearray/memoryview
 
         :param sentinel:
             The object to return whenever an error is detected.

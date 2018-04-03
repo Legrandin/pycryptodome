@@ -98,14 +98,14 @@ def new(key, mode, *args, **kwargs):
     :param key:
         The secret key to use in the symmetric cipher.
         Its length can vary from 5 to 128 bytes.
-    :type key: byte string
+    :type key: bytes, bytearray, memoryview
 
     :param mode:
         The chaining mode to use for encryption or decryption.
     :type mode: One of the supported ``MODE_*`` constants
 
     :Keyword Arguments:
-        *   *iv* (``byte string``) --
+        *   *iv* (``bytes``, ``bytearray``, ``memoryview``) --
             (Only applicable for ``MODE_CBC``, ``MODE_CFB``, ``MODE_OFB``,
             and ``MODE_OPENPGP`` modes).
 
@@ -121,7 +121,7 @@ def new(key, mode, *args, **kwargs):
             If not provided, a random byte string is generated (you must then
             read its value with the :attr:`iv` attribute).
 
-        *   *nonce* (``byte string``) --
+        *   *nonce* (``bytes``, ``bytearray``, ``memoryview``) --
             (Only applicable for ``MODE_EAX`` and ``MODE_CTR``).
 
             A value that must never be reused for any other encryption done

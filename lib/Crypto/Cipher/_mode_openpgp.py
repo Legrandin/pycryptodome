@@ -121,7 +121,7 @@ class OpenPgpMode(object):
         This function does not add any padding to the plaintext.
 
         :Parameters:
-          plaintext : byte string/array
+          plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
 
         :Return:
@@ -158,7 +158,7 @@ class OpenPgpMode(object):
         This function does not remove any padding from the plaintext.
 
         :Parameters:
-          ciphertext : byte string/array
+          ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
 
         :Return: the decrypted data (byte string).
@@ -175,10 +175,10 @@ def _create_openpgp_cipher(factory, **kwargs):
         The module.
 
     :Keywords:
-      key : byte string/array
+      key : bytes/bytearray/memoryview
         The secret key to use in the symmetric cipher.
 
-      IV : byte string/array
+      IV : bytes/bytearray/memoryview
         The initialization vector to use for encryption or decryption.
 
         For encryption, the IV must be as long as the cipher block size.
