@@ -48,7 +48,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
-* SHA-3 (including SHAKE XOFs) and BLAKE2 hash algorithms
+* SHA-3 (including SHAKE XOFs), SHA-512/t and BLAKE2 hash algorithms
 * Salsa20 and ChaCha20 stream ciphers
 * scrypt and HKDF
 * Deterministic (EC)DSA

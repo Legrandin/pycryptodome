@@ -45,7 +45,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Cryptographic hashes:
 
   - SHA-1
-  - SHA-2 hashes (224, 256, 384, 512)
+  - SHA-2 hashes (224, 256, 384, 512, 512/224, 512/256)
   - SHA-3 hashes (224, 256, 384, 512) and XOFs (SHAKE128, SHAKE256)
   - Keccak (original submission to SHA-3)
   - BLAKE2b and BLAKE2s
