@@ -24,13 +24,14 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, c_ulong)
 
 _raw_sha512_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA512",
                         """
                         #define SHA512_DIGEST_SIZE 64
 
-                        int SHA512_init(void **shaState);
+                        int SHA512_init(void **shaState,
+                                        unsigned long variant);
                         int SHA512_destroy(void *shaState);
                         int SHA512_update(void *hs,
                                           const uint8_t *buf,
@@ -47,7 +48,8 @@ _raw_sha512_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA512",
                         """)
 
 class SHA512Hash(object):
-    """A SHA-512 hash object.
+    """A SHA-512 hash object (possibly in its truncated version SHA-512/224 or
+    SHA-512/256.
     Do not instantiate directly. Use the :func:`new` function.
 
     :ivar oid: ASN.1 Object ID
@@ -61,18 +63,29 @@ class SHA512Hash(object):
     :vartype digest_size: integer
     """
 
-    # The size of the resulting hash in bytes.
-    digest_size = 64
     # The internal block size of the hash algorithm in bytes.
     block_size = 128
-    # ASN.1 Object ID
-    oid = "2.16.840.1.101.3.4.2.3"
 
-    def __init__(self, data=None):
+    def __init__(self, data, truncate):
+        self._truncate = truncate
+
+        if truncate is None:
+            self.oid = "2.16.840.1.101.3.4.2.3"
+            self.digest_size = 64
+        elif truncate == "224":
+            self.oid = "2.16.840.1.101.3.4.2.5"
+            self.digest_size = 28
+        elif truncate == "256":
+            self.oid = "2.16.840.1.101.3.4.2.6"
+            self.digest_size = 32
+        else:
+            raise ValueError("Incorrect truncation length. It must be '224' or '256'.")
+
         state = VoidPointer()
-        result = _raw_sha512_lib.SHA512_init(state.address_of())
+        result = _raw_sha512_lib.SHA512_init(state.address_of(),
+                                             c_ulong(self.digest_size))
         if result:
-            raise ValueError("Error %d while instantiating SHA512"
+            raise ValueError("Error %d while instantiating SHA-512"
                              % result)
         self._state = SmartPointer(state.get(),
                                    _raw_sha512_lib.SHA512_destroy)
@@ -101,14 +114,14 @@ class SHA512Hash(object):
         :rtype: byte string
         """
 
-        bfr = create_string_buffer(self.digest_size)
+        bfr = create_string_buffer(64)  # Max digest size (vanilla SHA-512)
         result = _raw_sha512_lib.SHA512_digest(self._state.get(),
                                                bfr)
         if result:
             raise ValueError("Error %d while instantiating SHA512"
                              % result)
 
-        return get_raw_buffer(bfr)
+        return get_raw_buffer(bfr)[:self.digest_size]
 
     def hexdigest(self):
         """Return the **printable** digest of the message that has been hashed so far.
@@ -131,7 +144,7 @@ class SHA512Hash(object):
         :return: A hash object of the same type
         """
 
-        clone = SHA512Hash()
+        clone = SHA512Hash(None, self._truncate)
         result = _raw_sha512_lib.SHA512_copy(self._state.get(),
                                              clone._state.get())
         if result:
@@ -141,28 +154,33 @@ class SHA512Hash(object):
     def new(self, data=None):
         """Create a fresh SHA-512 hash object."""
 
-        return SHA512Hash(data)
+        return SHA512Hash(data, self._truncate)
 
 
-def new(data=None):
+def new(data=None, truncate=None):
     """Create a new hash object.
 
-    :parameter data:
+    Args:
+      data (bytes/bytearray/memoryview):
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`SHA512Hash.update`.
-    :type data: byte string/byte array/memoryview
+      truncate (string):
+        Optional. The desired length of the digest. It can be either "224" or
+        "256". If not present, the digest is 512 bits long.
+        Passing this parameter is **not** equivalent to simply truncating
+        the 512 bits output digest.
 
     :Return: A :class:`SHA512Hash` hash object
     """
 
-    return SHA512Hash().new(data)
+    return SHA512Hash(data, truncate)
 
 
-# The size of the resulting hash in bytes.
-digest_size = SHA512Hash.digest_size
+# The size of the full SHA-512 hash in bytes.
+digest_size = 64
 
 # The internal block size of the hash algorithm in bytes.
-block_size = SHA512Hash.block_size
+block_size = 128
 
 
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):

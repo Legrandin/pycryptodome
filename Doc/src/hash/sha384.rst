@@ -4,13 +4,23 @@ SHA-384
 SHA-384 belongs to the SHA-2_ family of cryptographic hashes.
 It produces the 384 bit digest of a message.
 
+SHA-384 is roughly 50% faster than SHA-224 and SHA-256 on 64-bit machines, even if its digest is longer.
+The speed-up is due to the internal computation being performed with 64-bit words,
+whereas the other two hash functions employ 32-bit words.
+
+SHA-512, SHA-512/224, and SHA-512/256 too are faster on 64-bit machines for the same reason.
+
+This is an example showing how to use SHA-384:
+
     >>> from Crypto.Hash import SHA384
     >>>
     >>> h = SHA384.new()
     >>> h.update(b'Hello')
-    >>> print h.hexdigest()
+    >>> print(h.hexdigest())
 
 *SHA* stands for Secure Hash Algorithm.
+
+SHA-384 is **not** vulnerable to `length-extension attacks <https://crypto.stackexchange.com/questions/3978/understanding-the-length-extension-attack>`_.
 
 .. _SHA-2: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
 

@@ -1,14 +1,32 @@
-SHA-512
-=======
+SHA-512, SHA-512/224, SHA-512/256
+=================================
 
-SHA-512 belongs to the SHA-2_ family of cryptographic hashes.
-It produces the 512 bit digest of a message.
+SHA-512 and its two truncated variants (SHA-512/224 and SHA-512/256) belong to the SHA-2_ family of cryptographic hashes.
+The three functions produce the digest of a message, respectively 512, 224 or 256 bits long.
+
+SHA-512 is roughly 50% faster than SHA-224 and SHA-256 on 64-bit machines, even if its digest is longer.
+The speed-up is due to the internal computation being performed with 64-bit words,
+whereas the other two hash functions employ 32-bit words.
+
+SHA-512/224, SHA-512/256, and SHA-384 too are faster on 64-bit machines for the same reason.
+
+This is an example showing how to use SHA-512:
 
     >>> from Crypto.Hash import SHA512
     >>>
     >>> h = SHA512.new()
     >>> h.update(b'Hello')
-    >>> print h.hexdigest()
+    >>> print(h.hexdigest())
+    cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e
+
+This is an example showing how to use SHA-512/256:
+
+    >>> from Crypto.Hash import SHA512
+    >>>
+    >>> h = SHA512.new(truncate="256")
+    >>> h.update(b'Hello')
+    >>> print(h.hexdigest())
+
 
 *SHA* stands for Secure Hash Algorithm.
 
@@ -28,6 +46,9 @@ It produces the 512 bit digest of a message.
         h' = \text{SHA-512}(m || p || z)
     
     where *p* is a well-known bit string and the attacker can pick a bit string *z* at will.
+
+    The two variants SHA-512/224 and SHA-512/256 are **not** vulnerable to
+    length-extension attacks.
 
 .. _SHA-2: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
 

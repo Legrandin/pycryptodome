@@ -295,9 +295,14 @@ static void sha_compress(hash_state * hs)
     hs->h[7] += h;
 }
 
-EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState)
+EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
+#if DIGEST_SIZE == (512/8)
+        , unsigned long digest_size
+#endif
+        )
 {
     hash_state *hs;
+    int i;
 
     if (NULL == shaState) {
         return ERR_NULL;
@@ -311,14 +316,25 @@ EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState)
     hs->totbits[0] = hs->totbits[1] = 0;
 
     /** Initial intermediate hash value **/
-    hs->h[0] = H[0];
-    hs->h[1] = H[1];
-    hs->h[2] = H[2];
-    hs->h[3] = H[3];
-    hs->h[4] = H[4];
-    hs->h[5] = H[5];
-    hs->h[6] = H[6];
-    hs->h[7] = H[7];
+#if DIGEST_SIZE == (512/8)
+    for (i=0; i<8; i++) {
+        size_t variant;
+
+        switch (digest_size) {
+            case 28: variant = 1;   /** SHA-512/224 **/
+                     break;
+            case 32: variant = 2;   /** SHA-512/256 **/
+                     break;
+            default:
+                     variant = 0;   /** Vanilla SHA-512 **/
+        }
+        hs->h[i] = H_SHA_512[variant][i];
+    }
+#else
+    for (i=0; i<8; i++) {
+        hs->h[i] = H[i];
+    }
+#endif
 
     return 0;
 }
@@ -476,6 +492,17 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
 }
 
 #ifdef MAIN
+
+void initialize(hash_state **hs)
+{
+#if DIGEST_SIZE == (512/8)
+    FUNC_NAME(_init)(hs, 512);
+#else
+    FUNC_NAME(_init)(hs);
+#endif
+ 
+}
+
 int main(void)
 {
     hash_state *hs;
@@ -483,7 +510,7 @@ int main(void)
     uint8_t result[DIGEST_SIZE];
     int i;
 
-    FUNC_NAME(_init)(&hs);
+    initialize(&hs);
     FUNC_NAME(_update)(hs, tv, sizeof tv - 1);
     FUNC_NAME(_digest)(hs, result);
     FUNC_NAME(_destroy)(hs);
@@ -493,7 +520,7 @@ int main(void)
     }
     printf("\n");
 
-    FUNC_NAME(_init)(&hs);
+    initialize(&hs);
     FUNC_NAME(_digest)(hs, result);
     FUNC_NAME(_destroy)(hs);
 
@@ -502,7 +529,7 @@ int main(void)
     }
     printf("\n");
 
-    FUNC_NAME(_init)(&hs);
+    initialize(&hs);
     for (i=0; i<10000000; i++) {
         FUNC_NAME(_update)(hs, tv, sizeof tv - 1);
     }

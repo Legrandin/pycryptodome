@@ -26,7 +26,7 @@
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
-test_data = [
+test_data_512 = [
 
     # RFC 4634: Section Page 8.4, "Test 1"
     ('ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f', 'abc'),
@@ -43,12 +43,15 @@ test_data = [
     ('af9ed2de700433b803240a552b41b5a472a6ef3fe1431a722b2063c75e9f07451f67a28e37d09cde769424c96aea6f8971389db9e1993d6c565c3c71b855723c', 'Franz jagt im komplett verwahrlosten Taxi quer durch Bayern'),
 ]
 
+
 def get_tests(config={}):
     from Crypto.Hash import SHA512
     from common import make_hash_tests
-    return make_hash_tests(SHA512, "SHA512", test_data,
-        digest_size=64,
-        oid="2.16.840.1.101.3.4.2.3")
+
+    tests = make_hash_tests(SHA512, "SHA512", test_data_512,
+                            digest_size=64,
+                            oid="2.16.840.1.101.3.4.2.3")
+    return tests
 
 if __name__ == '__main__':
     import unittest
