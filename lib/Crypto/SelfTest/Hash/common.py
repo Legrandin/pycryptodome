@@ -33,43 +33,46 @@ from Crypto.Util.strxor import strxor_c
 
 class HashDigestSizeSelfTest(unittest.TestCase):
 
-    def __init__(self, hashmod, description, expected):
+    def __init__(self, hashmod, description, expected, extra_params):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
         self.expected = expected
         self.description = description
+        self.extra_params = extra_params
 
     def shortDescription(self):
         return self.description
 
     def runTest(self):
-        self.failUnless(hasattr(self.hashmod, "digest_size"))
-        self.assertEquals(self.hashmod.digest_size, self.expected)
-        h = self.hashmod.new()
+        if "truncate" not in self.extra_params:
+            self.failUnless(hasattr(self.hashmod, "digest_size"))
+            self.assertEquals(self.hashmod.digest_size, self.expected)
+        h = self.hashmod.new(**self.extra_params)
         self.failUnless(hasattr(h, "digest_size"))
         self.assertEquals(h.digest_size, self.expected)
 
 
 class HashSelfTest(unittest.TestCase):
 
-    def __init__(self, hashmod, description, expected, input):
+    def __init__(self, hashmod, description, expected, input, extra_params):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
         self.expected = expected.lower()
         self.input = input
         self.description = description
+        self.extra_params = extra_params
 
     def shortDescription(self):
         return self.description
 
     def runTest(self):
-        h = self.hashmod.new()
+        h = self.hashmod.new(**self.extra_params)
         h.update(self.input)
 
         out1 = binascii.b2a_hex(h.digest())
         out2 = h.hexdigest()
 
-        h = self.hashmod.new(self.input)
+        h = self.hashmod.new(self.input, **self.extra_params)
 
         out3 = h.hexdigest()
         out4 = binascii.b2a_hex(h.digest())
@@ -93,42 +96,25 @@ class HashSelfTest(unittest.TestCase):
             out5 = binascii.b2a_hex(h2.digest())
             self.assertEqual(self.expected, out5)
 
+
 class HashTestOID(unittest.TestCase):
-    def __init__(self, hashmod, oid):
+    def __init__(self, hashmod, oid, extra_params):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
         self.oid = oid
+        self.extra_params = extra_params
 
     def runTest(self):
-        h = self.hashmod.new()
+        h = self.hashmod.new(**self.extra_params)
         self.assertEqual(h.oid, self.oid)
-
-
-class GenericHashConstructorTest(unittest.TestCase):
-    def __init__(self, hashmod):
-        unittest.TestCase.__init__(self)
-        self.hashmod = hashmod
-
-    def runTest(self):
-        obj1 = self.hashmod.new("foo")
-        obj2 = self.hashmod.new()
-        obj3 = Crypto.Hash.new(obj1.name, "foo")
-        obj4 = Crypto.Hash.new(obj1.name)
-        obj5 = Crypto.Hash.new(obj1, "foo")
-        obj6 = Crypto.Hash.new(obj1)
-        self.assert_(isinstance(self.hashmod, obj1))
-        self.assert_(isinstance(self.hashmod, obj2))
-        self.assert_(isinstance(self.hashmod, obj3))
-        self.assert_(isinstance(self.hashmod, obj4))
-        self.assert_(isinstance(self.hashmod, obj5))
-        self.assert_(isinstance(self.hashmod, obj6))
 
 
 class ByteArrayTest(unittest.TestCase):
 
-    def __init__(self, module):
+    def __init__(self, module, extra_params):
         unittest.TestCase.__init__(self)
         self.module = module
+        self.extra_params = extra_params
 
     def runTest(self):
         data = b("\x00\x01\x02")
@@ -136,16 +122,16 @@ class ByteArrayTest(unittest.TestCase):
         # Data can be a bytearray (during initialization)
         ba = bytearray(data)
 
-        h1 = self.module.new(data)
-        h2 = self.module.new(ba)
+        h1 = self.module.new(data, **self.extra_params)
+        h2 = self.module.new(ba, **self.extra_params)
         ba[:1] = b'\xFF'
         self.assertEqual(h1.digest(), h2.digest())
 
         # Data can be a bytearray (during operation)
         ba = bytearray(data)
 
-        h1 = self.module.new()
-        h2 = self.module.new()
+        h1 = self.module.new(**self.extra_params)
+        h2 = self.module.new(**self.extra_params)
 
         h1.update(data)
         h2.update(ba)
@@ -156,9 +142,10 @@ class ByteArrayTest(unittest.TestCase):
 
 class MemoryViewTest(unittest.TestCase):
 
-    def __init__(self, module):
+    def __init__(self, module, extra_params):
         unittest.TestCase.__init__(self)
         self.module = module
+        self.extra_params = extra_params
 
     def runTest(self):
 
@@ -175,8 +162,8 @@ class MemoryViewTest(unittest.TestCase):
             # Data can be a memoryview (during initialization)
             mv = get_mv(data)
 
-            h1 = self.module.new(data)
-            h2 = self.module.new(mv)
+            h1 = self.module.new(data, **self.extra_params)
+            h2 = self.module.new(mv, **self.extra_params)
             if not mv.readonly:
                 mv[:1] = b'\xFF'
             self.assertEqual(h1.digest(), h2.digest())
@@ -184,8 +171,8 @@ class MemoryViewTest(unittest.TestCase):
             # Data can be a memoryview (during operation)
             mv = get_mv(data)
 
-            h1 = self.module.new()
-            h2 = self.module.new()
+            h1 = self.module.new(**self.extra_params)
+            h2 = self.module.new(**self.extra_params)
             h1.update(data)
             h2.update(mv)
             if not mv.readonly:
@@ -261,7 +248,8 @@ class MACSelfTest(unittest.TestCase):
         self.assertEqual(expected, out5)
 
 
-def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
+def make_hash_tests(module, module_name, test_data, digest_size, oid=None,
+                    extra_params={}):
     tests = []
     for i in range(len(test_data)):
         row = test_data[i]
@@ -271,21 +259,18 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None):
         else:
             description = row[2]
         name = "%s #%d: %s" % (module_name, i+1, description)
-        tests.append(HashSelfTest(module, name, expected, input))
+        tests.append(HashSelfTest(module, name, expected, input, extra_params))
 
     name = "%s #%d: digest_size" % (module_name, i+1)
-    tests.append(HashDigestSizeSelfTest(module, name, digest_size))
+    tests.append(HashDigestSizeSelfTest(module, name, digest_size, extra_params))
 
     if oid is not None:
-        tests.append(HashTestOID(module, oid))
+        tests.append(HashTestOID(module, oid, extra_params))
 
-    if getattr(module, 'name', None) is not None:
-        tests.append(GenericHashConstructorTest(module))
-
-    tests.append(ByteArrayTest(module))
+    tests.append(ByteArrayTest(module, extra_params))
 
     if not (sys.version_info[0] == 2 and sys.version_info[1] < 7):
-        tests.append(MemoryViewTest(module))
+        tests.append(MemoryViewTest(module, extra_params))
 
     return tests
 
