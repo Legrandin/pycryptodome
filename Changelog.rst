@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.5.2 (xx xxxxx 2018)
+3.6.0 (xx xxxxx 2018)
 +++++++++++++++++++++
 
 New features

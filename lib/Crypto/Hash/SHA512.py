@@ -168,7 +168,7 @@ def new(data=None, truncate=None):
         Optional. The desired length of the digest. It can be either "224" or
         "256". If not present, the digest is 512 bits long.
         Passing this parameter is **not** equivalent to simply truncating
-        the 512 bits output digest.
+        the output digest.
 
     :Return: A :class:`SHA512Hash` hash object
     """

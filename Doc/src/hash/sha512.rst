@@ -26,6 +26,7 @@ This is an example showing how to use SHA-512/256:
     >>> h = SHA512.new(truncate="256")
     >>> h.update(b'Hello')
     >>> print(h.hexdigest())
+    7e75b18b88d2cb8be95b05ec611e54e2460408a2dcf858f945686446c9d07aac
 
 
 *SHA* stands for Secure Hash Algorithm.
