@@ -28,22 +28,22 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 _raw_sha224_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA224",
                         """
-                        #define SHA224_DIGEST_SIZE 28
-
                         int SHA224_init(void **shaState);
                         int SHA224_destroy(void *shaState);
                         int SHA224_update(void *hs,
                                           const uint8_t *buf,
                                           size_t len);
                         int SHA224_digest(const void *shaState,
-                                          uint8_t digest[SHA224_DIGEST_SIZE]);
+                                          uint8_t *digest,
+                                          size_t digest_size);
                         int SHA224_copy(const void *src, void *dst);
 
                         int SHA224_pbkdf2_hmac_assist(const void *inner,
                                             const void *outer,
-                                            const uint8_t first_digest[SHA224_DIGEST_SIZE],
-                                            uint8_t final_digest[SHA224_DIGEST_SIZE],
-                                            size_t iterations);
+                                            const uint8_t *first_digest,
+                                            uint8_t *final_digest,
+                                            size_t iterations,
+                                            size_t digest_size);
                         """)
 
 class SHA224Hash(object):
@@ -104,7 +104,8 @@ class SHA224Hash(object):
 
         bfr = create_string_buffer(self.digest_size)
         result = _raw_sha224_lib.SHA224_digest(self._state.get(),
-                                               bfr)
+                                               bfr,
+                                               c_size_t(self.digest_size))
         if result:
             raise ValueError("Error %d while instantiating SHA224"
                              % result)
@@ -168,16 +169,16 @@ block_size = SHA224Hash.block_size
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
     """Compute the expensive inner loop in PBKDF-HMAC."""
 
-    assert len(first_digest) == digest_size
     assert iterations > 0
 
-    bfr = create_string_buffer(digest_size);
+    bfr = create_string_buffer(len(first_digest));
     result = _raw_sha224_lib.SHA224_pbkdf2_hmac_assist(
                     inner._state.get(),
                     outer._state.get(),
                     first_digest,
                     bfr,
-                    c_size_t(iterations))
+                    c_size_t(iterations),
+                    c_size_t(len(first_digest)))
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assis for SHA224" % result)

@@ -159,6 +159,7 @@ typedef struct t_hash_state {
     uint8_t buf[BLOCK_SIZE];    /** 16 words **/
     int curlen;                 /** Useful message bytes in buf[] (leftmost) **/
     sha2_word_t totbits[2];     /** Total message length in bits **/
+    size_t digest_size;         /** Actual digest size in bytes **/
 } hash_state;
 
 static int add_bits(hash_state *hs, sha2_word_t bits)
@@ -297,12 +298,15 @@ static void sha_compress(hash_state * hs)
 
 EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
 #if DIGEST_SIZE == (512/8)
-        , unsigned long digest_size
+        , size_t digest_size
 #endif
         )
 {
     hash_state *hs;
     int i;
+#if DIGEST_SIZE == (512/8)
+    size_t variant;
+#endif
 
     if (NULL == shaState) {
         return ERR_NULL;
@@ -315,22 +319,23 @@ EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
     hs->curlen = 0;
     hs->totbits[0] = hs->totbits[1] = 0;
 
-    /** Initial intermediate hash value **/
+    /** Digest size and initial intermediate hash value **/
 #if DIGEST_SIZE == (512/8)
-    for (i=0; i<8; i++) {
-        size_t variant;
+    hs->digest_size = digest_size;
 
-        switch (digest_size) {
-            case 28: variant = 1;   /** SHA-512/224 **/
-                     break;
-            case 32: variant = 2;   /** SHA-512/256 **/
-                     break;
-            default:
-                     variant = 0;   /** Vanilla SHA-512 **/
-        }
+    switch (digest_size) {
+        case 28: variant = 1;   /** SHA-512/224 **/
+                 break;
+        case 32: variant = 2;   /** SHA-512/256 **/
+                 break;
+        default: variant = 0;   /** Vanilla SHA-512 **/
+    }
+    
+    for (i=0; i<8; i++) {
         hs->h[i] = H_SHA_512[variant][i];
     }
 #else
+    hs->digest_size = DIGEST_SIZE;
     for (i=0; i<8; i++) {
         hs->h[i] = H[i];
     }
@@ -372,10 +377,14 @@ EXPORT_SYM int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len
     return 0;
 }
 
-static int sha_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
+static int sha_finalize(hash_state *hs, uint8_t *hash, size_t digest_size)
 {
     int left, i;
     uint8_t hash_tmp[WORD_SIZE*8];
+
+    if (digest_size != hs->digest_size) {
+        return ERR_DIGEST_SIZE;
+    }
 
     /* remaining length of the message */
     if (add_bits(hs, hs->curlen*8)) {
@@ -410,12 +419,12 @@ static int sha_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
     for (i=0; i<8; i++) {
         put_be(hs->h[i], &hash_tmp[i*WORD_SIZE]);
     }
-    memcpy(hash, hash_tmp, DIGEST_SIZE);
+    memcpy(hash, hash_tmp, hs->digest_size);
 
     return 0;
 }
 
-EXPORT_SYM int FUNC_NAME(_digest)(const hash_state *shaState, uint8_t digest[DIGEST_SIZE])
+EXPORT_SYM int FUNC_NAME(_digest)(const hash_state *shaState, uint8_t *digest, size_t digest_size)
 {
     hash_state temp;
 
@@ -423,8 +432,12 @@ EXPORT_SYM int FUNC_NAME(_digest)(const hash_state *shaState, uint8_t digest[DIG
         return ERR_NULL;
     }
 
+    if (digest_size != shaState->digest_size) {
+        return ERR_DIGEST_SIZE;
+    }
+
     temp = *shaState;
-    sha_finalize(&temp, digest);
+    sha_finalize(&temp, digest, digest_size);
     return 0;
 }
 
@@ -450,13 +463,14 @@ EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
  * This function does not change the state of either hash.
  */
 EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const hash_state *outer,
-                                             const uint8_t first_hmac[DIGEST_SIZE],
-                                             uint8_t result[DIGEST_SIZE],
-                                             size_t iterations)
+                                             const uint8_t *first_hmac,
+                                             uint8_t *result,
+                                             size_t iterations,
+                                             size_t digest_size)
 {
     hash_state inner_temp, outer_temp;
     size_t i;
-    uint8_t last_hmac[DIGEST_SIZE];
+    uint8_t last_hmac[DIGEST_SIZE]; /** MAX DIGEST SIZE **/
 
     if (NULL == inner || NULL == outer || NULL == first_hmac || NULL == result) {
         return ERR_NULL;
@@ -466,8 +480,12 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
         return ERR_NR_ROUNDS;
     }
 
-    memcpy(result, first_hmac, DIGEST_SIZE);
-    memcpy(last_hmac, first_hmac, DIGEST_SIZE);
+    if (digest_size != inner->digest_size || digest_size != outer->digest_size) {
+        return ERR_DIGEST_SIZE;
+    }
+    
+    memcpy(result, first_hmac, digest_size);
+    memcpy(last_hmac, first_hmac, digest_size);
 
     for (i=1; i<iterations; i++) {
         int j;
@@ -475,15 +493,15 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
         inner_temp = *inner;
         outer_temp = *outer;
 
-        FUNC_NAME(_update)(&inner_temp, last_hmac, DIGEST_SIZE);
-        sha_finalize(&inner_temp, last_hmac);
+        FUNC_NAME(_update)(&inner_temp, last_hmac, digest_size);
+        sha_finalize(&inner_temp, last_hmac, digest_size);
 
         /** last_hmac is now the intermediate digest **/
 
-        FUNC_NAME(_update)(&outer_temp, last_hmac, DIGEST_SIZE);
-        sha_finalize(&outer_temp, last_hmac);
+        FUNC_NAME(_update)(&outer_temp, last_hmac, digest_size);
+        sha_finalize(&outer_temp, last_hmac, digest_size);
 
-        for (j=0; j<DIGEST_SIZE; j++) {
+        for (j=0; j<digest_size; j++) {
             result[j] ^= last_hmac[j];
         }
     }
@@ -515,7 +533,7 @@ int main(void)
     FUNC_NAME(_digest)(hs, result);
     FUNC_NAME(_destroy)(hs);
 
-    for (i=0; i<sizeof result; i++) {
+    for (i=0; i < hs->digest_size; i++) {
         printf("%02X", result[i]);
     }
     printf("\n");
@@ -524,7 +542,7 @@ int main(void)
     FUNC_NAME(_digest)(hs, result);
     FUNC_NAME(_destroy)(hs);
 
-    for (i=0; i<sizeof result; i++) {
+    for (i=0; i< hs->digest_size; i++) {
         printf("%02X", result[i]);
     }
     printf("\n");
