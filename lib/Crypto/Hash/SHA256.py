@@ -104,7 +104,7 @@ class SHA256Hash(object):
         bfr = create_string_buffer(self.digest_size)
         result = _raw_sha256_lib.SHA256_digest(self._state.get(),
                                                bfr,
-                                               self.digest_size)
+                                               c_size_t(self.digest_size))
         if result:
             raise ValueError("Error %d while making SHA256 digest"
                              % result)
