@@ -40,8 +40,8 @@ _raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
 
                         int SHA256_pbkdf2_hmac_assist(const void *inner,
                                             const void *outer,
-                                            const uint8_t first_digest,
-                                            uint8_t final_digest,
+                                            const uint8_t *first_digest,
+                                            uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
                         """)
