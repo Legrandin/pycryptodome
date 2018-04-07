@@ -18,7 +18,7 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import bord
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
