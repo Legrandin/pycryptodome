@@ -90,7 +90,7 @@ class SHA384Hash(object):
                                                c_uint8_ptr(data),
                                                c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating SHA384"
+            raise ValueError("Error %d while hashing data with SHA384"
                              % result)
 
     def digest(self):
@@ -106,7 +106,7 @@ class SHA384Hash(object):
                                                bfr,
                                                c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while instantiating SHA384"
+            raise ValueError("Error %d while making SHA384 digest"
                              % result)
 
         return get_raw_buffer(bfr)
@@ -181,6 +181,6 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
                     c_size_t(len(first_digest)))
 
     if result:
-        raise ValueError("Error %d with PBKDF2-HMAC assis for SHA384" % result)
+        raise ValueError("Error %d with PBKDF2-HMAC assist for SHA384" % result)
 
     return get_raw_buffer(bfr)

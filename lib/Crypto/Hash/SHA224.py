@@ -91,7 +91,7 @@ class SHA224Hash(object):
                                                c_uint8_ptr(data),
                                                c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating SHA224"
+            raise ValueError("Error %d while hashing data with SHA224"
                              % result)
 
     def digest(self):
@@ -107,7 +107,7 @@ class SHA224Hash(object):
                                                bfr,
                                                c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while instantiating SHA224"
+            raise ValueError("Error %d while making SHA224 digest"
                              % result)
 
         return get_raw_buffer(bfr)
@@ -181,6 +181,6 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
                     c_size_t(len(first_digest)))
 
     if result:
-        raise ValueError("Error %d with PBKDF2-HMAC assis for SHA224" % result)
+        raise ValueError("Error %d with PBKDF2-HMAC assist for SHA224" % result)
 
     return get_raw_buffer(bfr)

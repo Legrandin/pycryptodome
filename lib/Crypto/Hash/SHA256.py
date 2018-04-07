@@ -90,7 +90,7 @@ class SHA256Hash(object):
                                                c_uint8_ptr(data),
                                                c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating SHA256"
+            raise ValueError("Error %d while hashing data with SHA256"
                              % result)
 
     def digest(self):
@@ -106,7 +106,7 @@ class SHA256Hash(object):
                                                bfr,
                                                self.digest_size)
         if result:
-            raise ValueError("Error %d while instantiating SHA256"
+            raise ValueError("Error %d while making SHA256 digest"
                              % result)
 
         return get_raw_buffer(bfr)
@@ -180,6 +180,6 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
                     c_size_t(len(first_digest)))
 
     if result:
-        raise ValueError("Error %d with PBKDF2-HMAC assis for SHA256" % result)
+        raise ValueError("Error %d with PBKDF2-HMAC assist for SHA256" % result)
 
     return get_raw_buffer(bfr)
