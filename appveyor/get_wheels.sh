@@ -22,5 +22,5 @@ fi
 JOBS=$(echo ${LAST_JOB} | jq -r '.jobs[].jobId')
 for job_id in ${JOBS}; do
 	FILE=$(curl -s ${BASE}/buildjobs/${job_id}/artifacts | jq -r .[0].fileName)
-	wget ${BASE}/buildjobs/${job_id}/artifacts/${FILE}
+	wget ${BASE}/buildjobs/${job_id}/artifacts/${FILE} -P wheels
 done
