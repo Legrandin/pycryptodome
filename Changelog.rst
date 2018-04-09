@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.7.0 (xx xxxx 2018)
+++++++++++++++++++++
+
+New features
+------------
+* Wycheproof tests
+
 3.6.0 (8 April 2018)
 ++++++++++++++++++++
 

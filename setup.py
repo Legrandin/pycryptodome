@@ -466,6 +466,7 @@ package_data = {
     "Crypto.SelfTest.Cipher" : [
         "test_vectors/AES/*.rsp",
         "test_vectors/TDES/*.rsp",
+        "test_vectors/wycheproof/*.json",
     ],
     "Crypto.SelfTest.Hash" : [
         "test_vectors/SHA1/*.rsp",

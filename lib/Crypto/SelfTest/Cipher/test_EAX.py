@@ -28,12 +28,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import json
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
+
+from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.Util.strxor import strxor
 
 
 def get_tag_random(tag, length):
@@ -479,7 +483,7 @@ class EaxFSMTests(unittest.TestCase):
                               self.data_128)
 
 
-class TestVectors(unittest.TestCase):
+class TestVectorsPaper(unittest.TestCase):
     """Class exercising the EAX test vectors found in
        http://www.cs.ucdavis.edu/~rogaway/papers/eax.pdf"""
 
@@ -583,6 +587,76 @@ class TestVectors(unittest.TestCase):
             self.assertEqual(pt, pt2)
 
 
+class TestVectorsWycheproof(unittest.TestCase):
+
+    def setUp(self):
+        file_in = open(pycryptodome_filename(
+                        "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split("."),
+                        "aes_eax_test.json"), "rt")
+        tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        self.tv = []
+
+        for group in tv_tree['testGroups']:
+            tag_size = group['tagSize'] // 8
+            for test in group['tests']:
+                tv = TestVector()
+                tv.tag_size = tag_size
+
+                tv.id = test['tcId']
+                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def shortDescription(self):
+        return self.id
+
+    def test_encrypt(self, tv):
+        self.id = "Wycheproof Encrypt EAX Test #" + str(tv.id)
+        if len(tv.iv) == 0:
+            return
+        cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
+        cipher.update(tv.aad)
+        ct, tag = cipher.encrypt_and_digest(tv.msg)
+        if tv.valid:
+            self.assertEqual(ct, tv.ct)
+            self.assertEqual(tag, tv.tag)
+
+    def test_decrypt(self, tv):
+        self.id = "Wycheproof Decrypt EAX Test #" + str(tv.id)
+        if len(tv.iv) == 0:
+            return
+        cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
+        cipher.update(tv.aad)
+        try:
+            pt = cipher.decrypt_and_verify(tv.ct, tv.tag)
+        except ValueError:
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.assertEqual(pt, tv.msg)
+
+    def test_corrupt_decrypt(self, tv):
+        self.id = "Wycheproof Corrupt Decrypt EAX Test #" + str(tv.id)
+        if len(tv.iv) == 0 or len(tv.ct) < 1:
+            return
+        cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
+        cipher.update(tv.aad)
+        ct_corrupt = strxor(tv.ct, b"\x00" * (len(tv.ct) - 1) + b"\x01")
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct_corrupt, tv.tag)
+
+    def runTest(self):
+
+        for tv in self.tv:
+            self.test_encrypt(tv)
+            self.test_decrypt(tv)
+            self.test_corrupt_decrypt(tv)
+
+
 class TestOtherCiphers(unittest.TestCase):
 
     @classmethod
@@ -624,7 +698,8 @@ def get_tests(config={}):
     tests = []
     tests += list_test_cases(EaxTests)
     tests += list_test_cases(EaxFSMTests)
-    tests += [TestVectors()]
+    tests += [ TestVectorsPaper() ]
+    tests += [ TestVectorsWycheproof() ]
     tests += list_test_cases(TestOtherCiphers)
     return tests
 
