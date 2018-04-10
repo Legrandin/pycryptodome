@@ -188,10 +188,12 @@ class GcmMode(object):
                                      .digest())
 
         # Step 3 - Prepare GCTR cipher for encryption/decryption
+        nonce_ctr = long_to_bytes(self._j0 >> 32, 12)
+        iv_ctr = (self._j0 + 1) & 0xFFFFFFFF
         self._cipher = factory.new(key,
                                    self._factory.MODE_CTR,
-                                   initial_value=self._j0 + 1,
-                                   nonce=b"",
+                                   initial_value=iv_ctr,
+                                   nonce=nonce_ctr,
                                    **cipher_params)
 
         # Step 5 - Bootstrat GHASH
