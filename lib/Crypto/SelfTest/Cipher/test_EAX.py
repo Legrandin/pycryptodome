@@ -589,6 +589,10 @@ class TestVectorsPaper(unittest.TestCase):
 
 class TestVectorsWycheproof(unittest.TestCase):
 
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+
     def setUp(self):
         file_in = open(pycryptodome_filename(
                         "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split("."),
@@ -613,24 +617,38 @@ class TestVectorsWycheproof(unittest.TestCase):
                 self.tv.append(tv)
 
     def shortDescription(self):
-        return self.id
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: " + self._id)
 
     def test_encrypt(self, tv):
-        self.id = "Wycheproof Encrypt EAX Test #" + str(tv.id)
-        if len(tv.iv) == 0:
+        self._id = "Wycheproof Encrypt EAX Test #" + str(tv.id)
+        
+        try:
+            cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
+        except ValueError, e:
+            assert len(tv.iv) == 0 and "Nonce cannot be empty" in str(e)
             return
-        cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
+
         cipher.update(tv.aad)
         ct, tag = cipher.encrypt_and_digest(tv.msg)
         if tv.valid:
             self.assertEqual(ct, tv.ct)
             self.assertEqual(tag, tv.tag)
+            self.warn(tv)
 
     def test_decrypt(self, tv):
-        self.id = "Wycheproof Decrypt EAX Test #" + str(tv.id)
-        if len(tv.iv) == 0:
+        self._id = "Wycheproof Decrypt EAX Test #" + str(tv.id)
+        
+        try:
+            cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
+        except ValueError, e:
+            assert len(tv.iv) == 0 and "Nonce cannot be empty" in str(e)
             return
-        cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
+
         cipher.update(tv.aad)
         try:
             pt = cipher.decrypt_and_verify(tv.ct, tv.tag)
@@ -639,9 +657,10 @@ class TestVectorsWycheproof(unittest.TestCase):
         else:
             assert tv.valid
             self.assertEqual(pt, tv.msg)
+            self.warn(tv)
 
     def test_corrupt_decrypt(self, tv):
-        self.id = "Wycheproof Corrupt Decrypt EAX Test #" + str(tv.id)
+        self._id = "Wycheproof Corrupt Decrypt EAX Test #" + str(tv.id)
         if len(tv.iv) == 0 or len(tv.ct) < 1:
             return
         cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
@@ -695,11 +714,13 @@ for name, factory in (('DES', DES),
 
 
 def get_tests(config={}):
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(EaxTests)
     tests += list_test_cases(EaxFSMTests)
     tests += [ TestVectorsPaper() ]
-    tests += [ TestVectorsWycheproof() ]
+    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
     tests += list_test_cases(TestOtherCiphers)
     return tests
 
