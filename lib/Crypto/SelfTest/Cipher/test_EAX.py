@@ -610,6 +610,7 @@ class TestVectorsWycheproof(unittest.TestCase):
                 tv.tag_size = tag_size
 
                 tv.id = test['tcId']
+                tv.comment = test['comment']
                 for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
                     setattr(tv, attr, unhexlify(test[attr]))
                 tv.valid = test['result'] != "invalid"
@@ -622,7 +623,7 @@ class TestVectorsWycheproof(unittest.TestCase):
     def warn(self, tv):
         if tv.warning and self._wycheproof_warnings:
             import warnings
-            warnings.warn("Wycheproof warning: " + self._id)
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
     def test_encrypt(self, tv):
         self._id = "Wycheproof Encrypt EAX Test #" + str(tv.id)
