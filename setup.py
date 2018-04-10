@@ -476,7 +476,8 @@ package_data = {
         "test_vectors/SHA3/*.txt",
         "test_vectors/keccak/*.txt",
         "test_vectors/BLAKE2s/*.txt",
-        "test_vectors/BLAKE2b/*.txt"
+        "test_vectors/BLAKE2b/*.txt",
+        "test_vectors/wycheproof/*.json",
     ],
     "Crypto.SelfTest.Signature" : [
         "test_vectors/DSA/*.*",

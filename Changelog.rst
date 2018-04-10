@@ -6,7 +6,13 @@ Changelog
 
 New features
 ------------
-* Wycheproof tests
+* Added Google Wycheproof tests (https://github.com/google/wycheproof)
+* New parameter ``mac_len`` (length of MAC tag) for CMAC.
+
+Resolved issues
+---------------
+
+* In certain circumstances (counter wrapping) AES GCM produced wrong ciphertexts.
 
 3.6.0 (8 April 2018)
 ++++++++++++++++++++

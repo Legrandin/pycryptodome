@@ -33,13 +33,18 @@
 
 """Self-test suite for Crypto.Hash.CMAC"""
 
+import json
 import unittest
 
-from Crypto.Util.py3compat import tobytes, _memoryview
+from Crypto.Util.py3compat import tobytes, _memoryview, unhexlify
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
+
+from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.Util.strxor import strxor
+
 
 # This is a list of (key, data, result, description, module) tuples.
 test_data = [
@@ -333,10 +338,88 @@ class MemoryViewTests(unittest.TestCase):
             self.assertEqual(h1.digest(), h2.digest())
 
 
+class TestVectorsWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    def setUp(self):
+        file_in = open(pycryptodome_filename(
+                        "Crypto.SelfTest.Hash.test_vectors.wycheproof".split("."),
+                        "aes_cmac_test.json"), "rt")
+        tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        self.tv = []
+
+        for group in tv_tree['testGroups']:
+            tag_size = group['tagSize'] // 8
+            for test in group['tests']:
+                tv = TestVector()
+                tv.tag_size = tag_size
+
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'key', 'msg', 'tag':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_create_mac(self, tv):
+        self._id = "Wycheproof MAC creation Test #" + str(tv.id)
+        
+        try:
+            tag = CMAC.new(tv.key, tv.msg, ciphermod=AES, mac_len=tv.tag_size).digest()
+        except ValueError, e:
+            if len(tv.key) not in (16, 24, 32) and "key length" in str(e):
+                return
+            raise e
+        if tv.valid:
+            self.assertEqual(tag, tv.tag)
+            self.warn(tv)
+
+    def test_verify_mac(self, tv):
+        self._id = "Wycheproof MAC verification Test #" + str(tv.id)
+       
+        try:
+            mac = CMAC.new(tv.key, tv.msg, ciphermod=AES, mac_len=tv.tag_size)
+        except ValueError, e:
+            if len(tv.key) not in (16, 24, 32) and "key length" in str(e):
+                return
+            raise e
+        try:
+            mac.verify(tv.tag)
+        except ValueError:
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.warn(tv)
+
+    def runTest(self):
+
+        for tv in self.tv:
+            self.test_create_mac(tv)
+            self.test_verify_mac(tv)
+
+
 def get_tests(config={}):
     global test_data
     import types
     from common import make_mac_tests
+    
+    wycheproof_warnings = config.get('wycheproof_warnings')
 
     # Add new() parameters to the back of each test vector
     params_test_data = []
@@ -350,6 +433,7 @@ def get_tests(config={}):
     tests.append(ByteArrayTests())
     if _memoryview is not types.NoneType:
         tests.append(MemoryViewTests())
+    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
     return tests
 
 
