@@ -110,6 +110,8 @@ class DerObject(object):
                     return
                 asn1Id = self._convertTag(asn1Id)
 
+                self.payload = payload
+
                 # In a BER/DER identifier octet:
                 # * bits 4-0 contain the tag value
                 # * bit 5 is set if the type is 'constructed'
@@ -123,21 +125,20 @@ class DerObject(object):
                 # context-spec |   1      0 (default for IMPLICIT/EXPLICIT)
                 # private      |   1      1
                 #
-                if explicit is None:
-                    if implicit is None:
-                        self._tag_octet = asn1Id
-                    else:
-                        self._tag_octet = 0x80 | self._convertTag(implicit)
-                    self._tag_octet |= 0x20 * constructed
-                else:
-                    if implicit is None:
-                        self._tag_octet = 0xA0 | self._convertTag(explicit)
-                    else:
-                        raise ValueError("Explicit and implicit tags are"
-                                         " mutually exclusive")
-                    self._inner_tag_octet = asn1Id + 0x20 * constructed
+                if None not in (explicit, implicit):
+                    raise ValueError("Explicit and implicit tags are"
+                                     " mutually exclusive")
 
-                self.payload = payload
+                if implicit is not None:
+                    self._tag_octet = 0x80 | 0x20 * constructed | self._convertTag(implicit)
+                    return
+
+                if explicit is not None:
+                    self._tag_octet = 0xA0 | self._convertTag(explicit)
+                    self._inner_tag_octet = 0x20 * constructed | asn1Id
+                    return
+                
+                self._tag_octet = 0x20 * constructed | asn1Id
 
         def _convertTag(self, tag):
                 """Check if *tag* is a real DER tag.
