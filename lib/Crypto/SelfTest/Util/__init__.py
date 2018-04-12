@@ -34,6 +34,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Util import test_Counter; tests += test_Counter.get_tests(config=config)
     from Crypto.SelfTest.Util import test_Padding; tests += test_Padding.get_tests(config=config)
     from Crypto.SelfTest.Util import test_strxor; tests += test_strxor.get_tests(config=config)
+    from Crypto.SelfTest.Util import test_asn1; tests += test_asn1.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':
