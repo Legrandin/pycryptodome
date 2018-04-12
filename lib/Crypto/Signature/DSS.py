@@ -150,7 +150,7 @@ class DssSigScheme(object):
                                           signature[self._order_bytes:])]
         else:
             try:
-                der_seq = DerSequence().decode(signature)
+                der_seq = DerSequence().decode(signature, strict=True)
             except (ValueError, IndexError):
                 raise ValueError("The signature is not authentic (DER)")
             if len(der_seq) != 2 or not der_seq.hasOnlyInts():

@@ -483,7 +483,8 @@ package_data = {
         "test_vectors/DSA/*.*",
         "test_vectors/ECDSA/*.*",
         "test_vectors/PKCS1-v1.5/*.*",
-        "test_vectors/PKCS1-PSS/*.*"
+        "test_vectors/PKCS1-PSS/*.*",
+        "test_vectors/wycheproof/*.json",
     ],
     "Crypto.SelfTest.PublicKey" : [
         "test_vectors/ECC/*.*",
