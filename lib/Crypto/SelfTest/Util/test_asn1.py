@@ -147,13 +147,13 @@ class DerObjectTests(unittest.TestCase):
         # Decode explicit tag
         der = DerObject(0x10, explicit=5)
         der.decode(b("\xa5\x06\x10\x04xxll"))
-        self.assertEquals(der._tag_octet, 0x10)
+        self.assertEquals(der._inner_tag_octet, 0x10)
         self.assertEquals(der.payload, b('xxll'))
 
         # Explicit tag may be 0
         der = DerObject(0x10, explicit=0)
         der.decode(b("\xa0\x06\x10\x04xxll"))
-        self.assertEquals(der._tag_octet, 0x10)
+        self.assertEquals(der._inner_tag_octet, 0x10)
         self.assertEquals(der.payload, b('xxll'))
 
     def testObjDecode8(self):
