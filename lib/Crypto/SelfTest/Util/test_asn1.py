@@ -307,6 +307,16 @@ class DerIntegerTests(unittest.TestCase):
 
     ###
 
+    def testStrict1(self):
+        number = DerInteger()
+
+        number.decode(b'\x02\x02\x00\x01')
+        number.decode(b'\x02\x02\x00\x7F')
+        self.assertRaises(ValueError, number.decode, b'\x02\x02\x00\x01', strict=True)
+        self.assertRaises(ValueError, number.decode, b'\x02\x02\x00\x7F', strict=True)
+
+    ###
+
     def testErrDecode1(self):
         # Wide length field
         der = DerInteger()
