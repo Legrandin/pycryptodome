@@ -31,9 +31,7 @@
 import json
 import unittest
 
-from binascii import unhexlify
-
-from Crypto.Util.py3compat import b, bchr
+from Crypto.Util.py3compat import b, bchr, unhexlify
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
