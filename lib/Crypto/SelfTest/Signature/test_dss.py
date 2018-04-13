@@ -725,7 +725,7 @@ class Det_ECDSA_Tests(unittest.TestCase):
             self.assertEqual(r + s, result)
 
 
-class TestVectorsWycheproof(unittest.TestCase):
+class TestVectorsDSAWycheproof(unittest.TestCase):
 
     def __init__(self, wycheproof_warnings):
         unittest.TestCase.__init__(self)
@@ -796,6 +796,88 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.test_verify(tv)
 
 
+class TestVectorsECDSAWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    class TestVector(object):
+        pass
+
+    def add_tests(self, filename):
+        file_in = open(pycryptodome_filename(
+                        "Crypto.SelfTest.Signature.test_vectors.wycheproof".split("."),
+                        filename), "rt")
+        tv_tree = json.load(file_in)
+
+        for group in tv_tree['testGroups']:
+            
+            try:
+                key = ECC.import_key(group['keyPem'])
+            except ValueError:
+                continue
+            
+            hash_name = group['sha']
+            if hash_name == "SHA-256":
+                hash_module = SHA256
+            elif hash_name == "SHA-224":
+                hash_module = SHA224
+            elif hash_name == "SHA-1":
+                hash_module = SHA1
+            else:
+                assert False
+            assert group['type'] == "ECDSAVer"
+            
+            for test in group['tests']:
+                tv = TestVector()
+                
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'msg', 'sig':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.key = key
+                tv.hash_module = hash_module
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def setUp(self):
+        self.tv = []
+        self.add_tests("ecdsa_test.json")
+        self.add_tests("ecdsa_secp256r1_sha256_test.json")
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_verify(self, tv):
+        self._id = "Wycheproof ECDSA Test #%d (%s)" % (tv.id, tv.comment)
+
+        hashed_msg = tv.hash_module.new(tv.msg)
+        signer = DSS.new(tv.key, 'fips-186-3', encoding='der')
+        try:
+            signature = signer.verify(hashed_msg, tv.sig)
+        except ValueError, e:
+            if tv.warning:
+                return
+            if tv.comment == "k*G has a large x-coordinate":
+                return
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.warn(tv)
+
+    def runTest(self):
+        for tv in self.tv:
+            self.test_verify(tv)
+
+
 def get_tests(config={}):
     wycheproof_warnings = config.get('wycheproof_warnings')
 
@@ -809,7 +891,8 @@ def get_tests(config={}):
         tests += list_test_cases(FIPS_DSA_Tests_KAT)
         tests += list_test_cases(FIPS_ECDSA_Tests_KAT)
 
-    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
+    tests += [ TestVectorsDSAWycheproof(wycheproof_warnings) ]
+    tests += [ TestVectorsECDSAWycheproof(wycheproof_warnings) ]
 
     return tests
 

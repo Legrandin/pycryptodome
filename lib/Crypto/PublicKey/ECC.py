@@ -644,7 +644,7 @@ def _import_public_der(curve_oid, ec_point):
 
     # We only support P-256 named curves for now
     if curve_oid != _curve.oid:
-        raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_name)
+        raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_oid)
 
     # See 2.2 in RFC5480 and 2.3.3 in SEC1
     # The first byte is:
