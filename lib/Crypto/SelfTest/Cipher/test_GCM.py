@@ -36,7 +36,6 @@ from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
-
 from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
 

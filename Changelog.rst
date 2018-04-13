@@ -13,6 +13,8 @@ Resolved issues
 ---------------
 
 * In certain circumstances (counter wrapping) AES GCM produced wrong ciphertexts.
+* Method ``encrypt()`` of AES SIV cipher could be called, whereas only ``encrypt_and_digest()``
+  should have been allowed.
 
 3.6.0 (8 April 2018)
 ++++++++++++++++++++

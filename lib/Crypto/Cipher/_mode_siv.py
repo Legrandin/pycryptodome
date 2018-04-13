@@ -124,14 +124,15 @@ class SivMode(object):
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
-    def _create_ctr_cipher(self, mac_tag):
-        """Create a new CTR cipher from the MAC in SIV mode"""
+    def _create_ctr_cipher(self, v):
+        """Create a new CTR cipher from V in SIV mode"""
 
-        tag_int = bytes_to_long(mac_tag)
+        v_int = bytes_to_long(v)
+        q = v_int & 0xFFFFFFFFFFFFFFFF7FFFFFFF7FFFFFFF
         return self._factory.new(
                     self._subkey_cipher,
                     self._factory.MODE_CTR,
-                    initial_value=tag_int ^ (tag_int & 0x8000000080000000L),
+                    initial_value=q,
                     nonce=b"",
                     **self._cipher_params)
 
@@ -158,7 +159,7 @@ class SivMode(object):
 
         :Parameters:
           component : bytes/bytearray/memoryview
-            The next associated data component. It must not be empty.
+            The next associated data component.
         """
 
         if self.update not in self._next:
@@ -171,46 +172,18 @@ class SivMode(object):
         return self._kdf.update(component)
 
     def encrypt(self, plaintext):
-        """Encrypt data with the key and the parameters set at initialization.
+        """
+        For SIV, encryption and MAC authentication must take place at the same
+        point. This method shall not be used.
 
-        A cipher object is stateful: once you have encrypted a message
-        you cannot encrypt (or decrypt) another message using the same
-        object.
-
-        This method can be called only **once**.
-
-        You cannot reuse an object for encrypting
-        or decrypting other data with the same key.
-
-        This function does not add any padding to the plaintext.
-
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
-            It can be of any length, but it cannot be empty.
-        :Return:
-            the encrypted data, as a byte string.
-            It is as long as *plaintext*.
+        Use `encrypt_and_digest` instead.
         """
 
-        if self.encrypt not in self._next:
-            raise TypeError("encrypt() can only be called after"
-                            " initialization or an update()")
-
-        self._next = [self.digest]
-
-        if hasattr(self, 'nonce'):
-            self._kdf.update(self.nonce)
-        self._kdf.update(plaintext)
-
-        self._mac_tag = self._kdf.derive()
-        cipher = self._create_ctr_cipher(self._mac_tag)
-
-        return cipher.encrypt(plaintext)
+        raise TypeError("encrypt() not allowed for SIV mode."
+                        " Use encrypt_and_digest() instead.")
 
     def decrypt(self, ciphertext):
-        """Decrypt data with the key and the parameters set at initialization.
-
+        """
         For SIV, decryption and verification must take place at the same
         point. This method shall not be used.
 
@@ -308,8 +281,22 @@ class SivMode(object):
             - the encrypted data
             - the MAC
         """
+        
+        if self.encrypt not in self._next:
+            raise TypeError("encrypt() can only be called after"
+                            " initialization or an update()")
 
-        return self.encrypt(plaintext), self.digest()
+        self._next = [ self.digest ]
+
+        # Compute V (MAC)
+        if hasattr(self, 'nonce'):
+            self._kdf.update(self.nonce)
+        self._kdf.update(plaintext)
+        self._mac_tag = self._kdf.derive()
+        
+        cipher = self._create_ctr_cipher(self._mac_tag)
+
+        return cipher.encrypt(plaintext), self._mac_tag
 
     def decrypt_and_verify(self, ciphertext, mac_tag):
         """Perform decryption and verification in one step.
@@ -339,7 +326,7 @@ class SivMode(object):
         if self.decrypt not in self._next:
             raise TypeError("decrypt() can only be called"
                             " after initialization or an update()")
-        self._next = [self.verify]
+        self._next = [ self.verify ]
 
         # Take the MAC and start the cipher for decryption
         self._cipher = self._create_ctr_cipher(mac_tag)
@@ -348,10 +335,9 @@ class SivMode(object):
 
         if hasattr(self, 'nonce'):
             self._kdf.update(self.nonce)
-        if plaintext:
-            self._kdf.update(plaintext)
-
+        self._kdf.update(plaintext)
         self.verify(mac_tag)
+        
         return plaintext
 
 
