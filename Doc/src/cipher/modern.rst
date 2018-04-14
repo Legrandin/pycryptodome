@@ -131,25 +131,61 @@ SIV mode
 Constant: ``Crypto.Cipher.<cipher>.MODE_SIV``.
 
 Synthetic Initialization Vector (SIV), defined in `RFC5297 <https://tools.ietf.org/html/rfc5297>`_.
-It only works with ciphers having block size 128 bits (like AES).
+It only works with ciphers with a block size of 128 bits (like AES).
 
-Although less efficient, SIV is unlike all other AEAD modes
-in that it is *nonce misuse-resistant*: the accidental reuse
-of a nonce does not have catastrophic effects as for CCM, GCM, etc.
-Instead, it will simply degrade into a **deterministic** cipher
-and therefore allow an attacker to know whether two
-ciphertexts contain the same message or not.
+Although less efficient than other modes, SIV is *nonce misuse-resistant*:
+accidental reuse of the nonce does not jeopardize the security as it happens with CCM or GCM.
+As a matter of fact, operating **without** a nonce is not an error per se: the cipher
+simply becomes **deterministic**. In other words, a message gets always encrypted into
+the same ciphertext.
 
-The :func:`new` function expects the following extra parameters:
+Example of deterministic encryption with SIV::
 
-*   ``nonce`` (*byte string*): a non-repeatable value, of arbitrary length.
-    If not present, the encryption will be **deterministic**.
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
 
-The length of the key passed to :func:`new` must be twice
-as required by the underlying block cipher (e.g. 32 bytes for AES-128).
+    >>> key = get_random_bytes(32)
+    >>> header = b'Non sensitive information'
+    >>> plaintext = b'Secret message'
+    >>>
+    >>> cipher = AES.new(key, AES.MODE_SIV)
+    >>> cipher.update(header)
+    >>> ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+
+
+Example of deterministic decryption with SIV::
+
+    >>> from Crypto.Cipher import AES
+
+    >>> # ... acquire key and receive header, ciphertext and tag
+    >>>
+    >>> cipher = AES.new(key, AES.MODE_SIV)
+    >>> cipher.update(header)
+    >>> try:
+    >>>     plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+    >>> except ValueError:
+    >>>     print("Invalid message")
+
+One side-effect is that encryption (or decryption) must take place in one go
+with the method ``encrypt_and_digest()`` (or ``decrypt_and_verify()``).
+You cannot use ``encrypt()`` or ``decrypt()``. The state diagram is therefore:
+
+.. figure:: siv.png
+    :align: center
+    :figwidth: 60%
     
-Each call to the method :func:`update` consumes an individual piece
-of associated data. That is, the sequence::
+    State diagram for the SIV cipher mode
+
+The ``new()`` function accepts one optional parameter, in addition to key and mode:
+
+*   ``nonce`` (*bytes*, *bytearray*, *memoryview*): a non-repeatable value, of arbitrary length.
+    If not present, the encryption becomes deterministic.
+
+The length of the key passed to ``new()`` must be twice
+as required by the underlying block cipher (e.g. 32 bytes for AES-128).
+
+Each call to the method ``update()`` consumes an full piece of associated data.
+That is, the sequence::
 
     >>> siv_cipher.update(b"builtin")
     >>> siv_cipher.update(b"securely")
@@ -158,8 +194,6 @@ is **not** equivalent to::
 
     >>> siv_cipher.update(b"built")
     >>> siv_cipher.update(b"insecurely")
-
-The methods :func:`encrypt` and :func:`decrypt` can only be called **once**.
 
 The cipher object has a read-only attribute :attr:`nonce`.
 
