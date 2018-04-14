@@ -50,7 +50,7 @@ class CMAC(object):
 
     digest_size = None
 
-    def __init__(self, key, msg=None, ciphermod=None, cipher_params=None):
+    def __init__(self, key, msg, ciphermod, cipher_params, mac_len):
 
         if ciphermod is None:
             raise TypeError("ciphermod must be specified (try AES)")
@@ -61,6 +61,12 @@ class CMAC(object):
             self._cipher_params = {}
         else:
             self._cipher_params = dict(cipher_params)
+        self._mac_len = mac_len or ciphermod.block_size
+
+        if self._mac_len < 4:
+            raise ValueError("MAC tag length must be at least 4 bytes long")
+        if self._mac_len > ciphermod.block_size:
+            raise ValueError("MAC tag length cannot be larger than a cipher block (%d) bytes" % ciphermod.block_size)
 
         # Section 5.3 of NIST SP 800 38B and Appendix B
         if ciphermod.block_size == 8:
@@ -175,8 +181,10 @@ class CMAC(object):
         """
 
         obj = CMAC(self._key,
+                   b"",
                    ciphermod=self._factory,
-                   cipher_params=self._cipher_params)
+                   cipher_params=self._cipher_params,
+                   mac_len=self._mac_len)
 
         obj._cbc = self._factory.new(self._key,
                                      self._factory.MODE_CBC,
@@ -197,7 +205,7 @@ class CMAC(object):
         """
 
         if self._mac_tag is not None:
-            return self._mac_tag
+            return self._mac_tag[:self._mac_len]
 
         if self._data_size > self._max_size:
             raise ValueError("MAC is unsafe for this message")
@@ -216,7 +224,7 @@ class CMAC(object):
                                    **self._cipher_params)
         self._mac_tag = cipher.encrypt(pt)
 
-        return self._mac_tag
+        return self._mac_tag[:self._mac_len]
 
     def hexdigest(self):
         """Return the **printable** MAC tag of the message authenticated so far.
@@ -260,7 +268,7 @@ class CMAC(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key, msg=None, ciphermod=None, cipher_params=None):
+def new(key, msg=None, ciphermod=None, cipher_params=None, mac_len=None):
     """Create a new MAC object.
 
     Args:
@@ -279,9 +287,13 @@ def new(key, msg=None, ciphermod=None, cipher_params=None):
         cipher_params (dict):
             Optional. A set of parameters to use when instantiating a cipher
             object.
+        mac_len (integer):
+            Length of the MAC, in bytes.
+            It must be at least 4 bytes long.
+            The default (and recommended) length matches the size of a cipher block.
 
     Returns:
         A :class:`CMAC` object
     """
 
-    return CMAC(key, msg, ciphermod, cipher_params)
+    return CMAC(key, msg, ciphermod, cipher_params, mac_len)

@@ -144,6 +144,11 @@ class GcmMode(object):
             raise ValueError("Nonce cannot be empty")
         if isinstance(nonce, unicode):
             raise TypeError("Nonce must be a byte string")
+        
+        # See NIST SP 800 38D, 5.2.1.1
+        if len(nonce) > 2**64 - 1:
+            raise ValueError("Nonce exceeds maximum length")
+
 
         self.nonce = _copy_bytes(None, None, nonce)
         """Nonce"""
@@ -188,10 +193,12 @@ class GcmMode(object):
                                      .digest())
 
         # Step 3 - Prepare GCTR cipher for encryption/decryption
+        nonce_ctr = long_to_bytes(self._j0 >> 32, 12)
+        iv_ctr = (self._j0 + 1) & 0xFFFFFFFF
         self._cipher = factory.new(key,
                                    self._factory.MODE_CTR,
-                                   initial_value=self._j0 + 1,
-                                   nonce=b"",
+                                   initial_value=iv_ctr,
+                                   nonce=nonce_ctr,
                                    **cipher_params)
 
         # Step 5 - Bootstrat GHASH
@@ -241,6 +248,11 @@ class GcmMode(object):
 
         self._update(assoc_data)
         self._auth_len += len(assoc_data)
+
+        # See NIST SP 800 38D, 5.2.1.1
+        if self._auth_len > 2**64 - 1:
+            raise ValueError("Additional Authenticated Data exceeds maximum length")
+
         return self
 
     def _update(self, data):
@@ -318,6 +330,10 @@ class GcmMode(object):
 
         self._update(ciphertext)
         self._msg_len += len(plaintext)
+
+        # See NIST SP 800 38D, 5.2.1.1
+        if self._msg_len > 2**39 - 256:
+            raise ValueError("Plaintext exceeds maximum length")
 
         return ciphertext
 

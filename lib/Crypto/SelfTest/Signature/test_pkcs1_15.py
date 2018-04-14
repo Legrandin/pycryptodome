@@ -28,20 +28,22 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import json
 import unittest
 
-from binascii import unhexlify
-
-from Crypto.Util.py3compat import b, bchr
+from Crypto.Util.py3compat import b, bchr, unhexlify
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 
-from Crypto.Hash import SHA1
+from Crypto.Hash import SHA1, SHA224, SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Signature import PKCS1_v1_5
+
+from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.Util.strxor import strxor
 
 
 def load_hash_by_name(hash_name):
@@ -217,13 +219,87 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
             signer.sign(hashed_s)
 
 
+class TestVectorsWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    def setUp(self):
+        file_in = open(pycryptodome_filename(
+                        "Crypto.SelfTest.Signature.test_vectors.wycheproof".split("."),
+                        "rsa_signature_test.json"), "rt")
+        tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        self.tv = []
+
+        for group in tv_tree['testGroups']:
+            key = RSA.import_key(group['keyPem'])
+            hash_name = group['sha']
+            if hash_name == "SHA-256":
+                hash_module = SHA256
+            elif hash_name == "SHA-224":
+                hash_module = SHA224
+            elif hash_name == "SHA-1":
+                hash_module = SHA1
+            else:
+                assert False
+            assert group['type'] == "RSASigVer"
+            
+            for test in group['tests']:
+                tv = TestVector()
+                
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'msg', 'sig':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.key = key
+                tv.hash_module = hash_module
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_verify(self, tv):
+        self._id = "Wycheproof RSA PKCS$#1 Test #" + str(tv.id)
+        
+        hashed_msg = tv.hash_module.new(tv.msg)
+        signer = pkcs1_15.new(tv.key)
+        try:
+            signature = signer.verify(hashed_msg, tv.sig)
+        except ValueError, e:
+            if tv.warning:
+                return
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.warn(tv)
+
+    def runTest(self):
+        for tv in self.tv:
+            self.test_verify(tv)
+
+
 def get_tests(config={}):
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(FIPS_PKCS1_Verify_Tests)
     tests += list_test_cases(FIPS_PKCS1_Sign_Tests)
     tests += list_test_cases(PKCS1_15_NoParams)
     tests += list_test_cases(PKCS1_Legacy_Module_Tests)
     tests += list_test_cases(PKCS1_All_Hashes_Tests)
+    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
 
     if config.get('slow_tests'):
         tests += list_test_cases(FIPS_PKCS1_Verify_Tests_KAT)

@@ -28,12 +28,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import json
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
+
+from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.Util.strxor import strxor
 
 
 def get_tag_random(tag, length):
@@ -741,11 +745,106 @@ for idx, tv in enumerate(test_vectors_nist):
     setattr(NISTTestVectorsGCM, "test_%d" % idx, single_test)
 
 
+class TestVectorsWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+
+    def setUp(self):
+        file_in = open(pycryptodome_filename(
+                        "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split("."),
+                        "aes_gcm_test.json"), "rt")
+        tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        self.tv = []
+
+        for group in tv_tree['testGroups']:
+            tag_size = group['tagSize'] // 8
+            for test in group['tests']:
+                tv = TestVector()
+                tv.tag_size = tag_size
+
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_encrypt(self, tv):
+        self._id = "Wycheproof Encrypt GCM Test #" + str(tv.id)
+        
+        try:
+            cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size)
+        except ValueError, e:
+            if len(tv.iv) == 0 and "Nonce cannot be empty" in str(e):
+                return
+            raise e
+
+        cipher.update(tv.aad)
+        ct, tag = cipher.encrypt_and_digest(tv.msg)
+        if tv.valid:
+            self.assertEqual(ct, tv.ct)
+            self.assertEqual(tag, tv.tag)
+            self.warn(tv)
+
+    def test_decrypt(self, tv):
+        self._id = "Wycheproof Decrypt GCM Test #" + str(tv.id)
+        
+        try:
+            cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size)
+        except ValueError, e:
+            if len(tv.iv) == 0 and "Nonce cannot be empty" in str(e):
+                return
+            raise e
+
+        cipher.update(tv.aad)
+        try:
+            pt = cipher.decrypt_and_verify(tv.ct, tv.tag)
+        except ValueError:
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.assertEqual(pt, tv.msg)
+            self.warn(tv)
+
+    def test_corrupt_decrypt(self, tv):
+        self._id = "Wycheproof Corrupt Decrypt GCM Test #" + str(tv.id)
+        if len(tv.iv) == 0 or len(tv.ct) < 1:
+            return
+        cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size)
+        cipher.update(tv.aad)
+        ct_corrupt = strxor(tv.ct, b"\x00" * (len(tv.ct) - 1) + b"\x01")
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct_corrupt, tv.tag)
+
+    def runTest(self):
+
+        for tv in self.tv:
+            self.test_encrypt(tv)
+            self.test_decrypt(tv)
+            self.test_corrupt_decrypt(tv)
+
+
 def get_tests(config={}):
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(GcmTests)
     tests += list_test_cases(GcmFSMTests)
-    tests += [TestVectors()]
+    tests += [ TestVectors() ]
+    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
     tests += list_test_cases(TestVectorsGueronKrasnov)
     if config.get('slow_tests'):
         tests += list_test_cases(NISTTestVectorsGCM)

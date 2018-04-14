@@ -32,6 +32,7 @@
 # ===================================================================
 
 import re
+import json
 import unittest
 from binascii import hexlify
 from Crypto.Util.py3compat import b, tobytes, bord, bchr, unhexlify
@@ -42,6 +43,9 @@ from Crypto.PublicKey import DSA, ECC
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+
+from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.Util.strxor import strxor
 
 
 def t2b(hexstring):
@@ -83,11 +87,11 @@ class StrRNG:
 class FIPS_DSA_Tests(unittest.TestCase):
 
     # 1st 1024 bit key from SigGen.txt
-    P = 0xa8f9cd201e5e35d892f85f80e4db2599a5676a3b1d4f190330ed3256b26d0e80a0e49a8fffaaad2a24f472d2573241d4d6d6c7480c80b4c67bb4479c15ada7ea8424d2502fa01472e760241713dab025ae1b02e1703a1435f62ddf4ee4c1b664066eb22f2e3bf28bb70a2a76e4fd5ebe2d1229681b5b06439ac9c7e9d8bde283L
-    Q = 0xf85f0f83ac4df7ea0cdf8f469bfeeaea14156495L
-    G = 0x2b3152ff6c62f14622b8f48e59f8af46883b38e79b8c74deeae9df131f8b856e3ad6c8455dab87cc0da8ac973417ce4f7878557d6cdf40b35b4a0ca3eb310c6a95d68ce284ad4e25ea28591611ee08b8444bd64b25f3f7c572410ddfb39cc728b9c936f85f419129869929cdb909a6a3a99bbe089216368171bd0ba81de4fe33L
-    X = 0xc53eae6d45323164c7d07af5715703744a63fc3aL
-    Y = 0x313fd9ebca91574e1c2eebe1517c57e0c21b0209872140c5328761bbb2450b33f1b18b409ce9ab7c4cd8fda3391e8e34868357c199e16a6b2eba06d6749def791d79e95d3a4d09b24c392ad89dbf100995ae19c01062056bb14bce005e8731efde175f95b975089bdcdaea562b32786d96f5a31aedf75364008ad4fffebb970bL
+    P = 0xa8f9cd201e5e35d892f85f80e4db2599a5676a3b1d4f190330ed3256b26d0e80a0e49a8fffaaad2a24f472d2573241d4d6d6c7480c80b4c67bb4479c15ada7ea8424d2502fa01472e760241713dab025ae1b02e1703a1435f62ddf4ee4c1b664066eb22f2e3bf28bb70a2a76e4fd5ebe2d1229681b5b06439ac9c7e9d8bde283
+    Q = 0xf85f0f83ac4df7ea0cdf8f469bfeeaea14156495
+    G = 0x2b3152ff6c62f14622b8f48e59f8af46883b38e79b8c74deeae9df131f8b856e3ad6c8455dab87cc0da8ac973417ce4f7878557d6cdf40b35b4a0ca3eb310c6a95d68ce284ad4e25ea28591611ee08b8444bd64b25f3f7c572410ddfb39cc728b9c936f85f419129869929cdb909a6a3a99bbe089216368171bd0ba81de4fe33
+    X = 0xc53eae6d45323164c7d07af5715703744a63fc3a
+    Y = 0x313fd9ebca91574e1c2eebe1517c57e0c21b0209872140c5328761bbb2450b33f1b18b409ce9ab7c4cd8fda3391e8e34868357c199e16a6b2eba06d6749def791d79e95d3a4d09b24c392ad89dbf100995ae19c01062056bb14bce005e8731efde175f95b975089bdcdaea562b32786d96f5a31aedf75364008ad4fffebb970b
 
     key_pub = DSA.construct((Y, G, P, Q))
     key_priv = DSA.construct((Y, G, P, Q, X))
@@ -721,7 +725,162 @@ class Det_ECDSA_Tests(unittest.TestCase):
             self.assertEqual(r + s, result)
 
 
+class TestVectorsDSAWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    def setUp(self):
+        file_in = open(pycryptodome_filename(
+                        "Crypto.SelfTest.Signature.test_vectors.wycheproof".split("."),
+                        "dsa_test.json"), "rt")
+        tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        self.tv = []
+
+        for group in tv_tree['testGroups']:
+            key = DSA.import_key(group['keyPem'])
+            hash_name = group['sha']
+            if hash_name == "SHA-256":
+                hash_module = SHA256
+            elif hash_name == "SHA-224":
+                hash_module = SHA224
+            elif hash_name == "SHA-1":
+                hash_module = SHA1
+            else:
+                assert False
+            assert group['type'] == "DSAVer"
+            
+            for test in group['tests']:
+                tv = TestVector()
+                
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'msg', 'sig':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.key = key
+                tv.hash_module = hash_module
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_verify(self, tv):
+        self._id = "Wycheproof DSA Test #" + str(tv.id)
+        
+        hashed_msg = tv.hash_module.new(tv.msg)
+        signer = DSS.new(tv.key, 'fips-186-3', encoding='der')
+        try:
+            signature = signer.verify(hashed_msg, tv.sig)
+        except ValueError, e:
+            if tv.warning:
+                return
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.warn(tv)
+
+    def runTest(self):
+        for tv in self.tv:
+            self.test_verify(tv)
+
+
+class TestVectorsECDSAWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    class TestVector(object):
+        pass
+
+    def add_tests(self, filename):
+        file_in = open(pycryptodome_filename(
+                        "Crypto.SelfTest.Signature.test_vectors.wycheproof".split("."),
+                        filename), "rt")
+        tv_tree = json.load(file_in)
+
+        for group in tv_tree['testGroups']:
+            
+            try:
+                key = ECC.import_key(group['keyPem'])
+            except ValueError:
+                continue
+            
+            hash_name = group['sha']
+            if hash_name == "SHA-256":
+                hash_module = SHA256
+            elif hash_name == "SHA-224":
+                hash_module = SHA224
+            elif hash_name == "SHA-1":
+                hash_module = SHA1
+            else:
+                assert False
+            assert group['type'] == "ECDSAVer"
+            
+            for test in group['tests']:
+                tv = TestVector()
+                
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'msg', 'sig':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.key = key
+                tv.hash_module = hash_module
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def setUp(self):
+        self.tv = []
+        self.add_tests("ecdsa_test.json")
+        self.add_tests("ecdsa_secp256r1_sha256_test.json")
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_verify(self, tv):
+        self._id = "Wycheproof ECDSA Test #%d (%s)" % (tv.id, tv.comment)
+
+        hashed_msg = tv.hash_module.new(tv.msg)
+        signer = DSS.new(tv.key, 'fips-186-3', encoding='der')
+        try:
+            signature = signer.verify(hashed_msg, tv.sig)
+        except ValueError, e:
+            if tv.warning:
+                return
+            if tv.comment == "k*G has a large x-coordinate":
+                return
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.warn(tv)
+
+    def runTest(self):
+        for tv in self.tv:
+            self.test_verify(tv)
+
+
 def get_tests(config={}):
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(FIPS_DSA_Tests)
     tests += list_test_cases(FIPS_ECDSA_Tests)
@@ -731,6 +890,9 @@ def get_tests(config={}):
     if config.get('slow_tests'):
         tests += list_test_cases(FIPS_DSA_Tests_KAT)
         tests += list_test_cases(FIPS_ECDSA_Tests_KAT)
+
+    tests += [ TestVectorsDSAWycheproof(wycheproof_warnings) ]
+    tests += [ TestVectorsECDSAWycheproof(wycheproof_warnings) ]
 
     return tests
 

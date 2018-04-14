@@ -321,19 +321,21 @@ class TestCommand(Command):
 
     # Long option name, short option name, description
     user_options = [
-        ('skip-slow-tests', None,
-            'Skip slow tests'),
-        ('module=', 'm', 'Test a single module (e.g. Cipher, PublicKey)')
+        ('skip-slow-tests', None, 'Skip slow tests'),
+        ('wycheproof-warnings', None, 'Show warnings from wycheproof tests'),
+        ('module=', 'm', 'Test a single module (e.g. Cipher, PublicKey)'),
     ]
 
     def initialize_options(self):
         self.build_dir = None
         self.skip_slow_tests = None
+        self.wycheproof_warnings = None
         self.module = None
 
     def finalize_options(self):
         self.set_undefined_options('install', ('build_lib', 'build_dir'))
-        self.config = {'slow_tests': not self.skip_slow_tests}
+        self.config = { 'slow_tests': not self.skip_slow_tests,
+                        'wycheproof_warnings': self.wycheproof_warnings }
 
     def run(self):
         # Run sub commands
@@ -466,6 +468,7 @@ package_data = {
     "Crypto.SelfTest.Cipher" : [
         "test_vectors/AES/*.rsp",
         "test_vectors/TDES/*.rsp",
+        "test_vectors/wycheproof/*.json",
     ],
     "Crypto.SelfTest.Hash" : [
         "test_vectors/SHA1/*.rsp",
@@ -473,13 +476,15 @@ package_data = {
         "test_vectors/SHA3/*.txt",
         "test_vectors/keccak/*.txt",
         "test_vectors/BLAKE2s/*.txt",
-        "test_vectors/BLAKE2b/*.txt"
+        "test_vectors/BLAKE2b/*.txt",
+        "test_vectors/wycheproof/*.json",
     ],
     "Crypto.SelfTest.Signature" : [
         "test_vectors/DSA/*.*",
         "test_vectors/ECDSA/*.*",
         "test_vectors/PKCS1-v1.5/*.*",
-        "test_vectors/PKCS1-PSS/*.*"
+        "test_vectors/PKCS1-PSS/*.*",
+        "test_vectors/wycheproof/*.json",
     ],
     "Crypto.SelfTest.PublicKey" : [
         "test_vectors/ECC/*.*",

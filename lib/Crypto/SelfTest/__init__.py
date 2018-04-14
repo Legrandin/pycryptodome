@@ -52,6 +52,7 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
         Crypto.SelfTest.run(Crypto.SelfTest.Hash)
 
     """
+
     if config is None:
         config = {}
     suite = unittest.TestSuite()
