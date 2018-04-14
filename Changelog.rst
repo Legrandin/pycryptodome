@@ -1,20 +1,22 @@
 Changelog
 =========
 
-3.7.0 (xx xxxx 2018)
-++++++++++++++++++++
+3.6.1 (15 April 2018)
++++++++++++++++++++++
 
 New features
 ------------
 * Added Google Wycheproof tests (https://github.com/google/wycheproof)
+  for RSA, DSA, ECDSA, GCM, SIV, EAX, CMAC.
 * New parameter ``mac_len`` (length of MAC tag) for CMAC.
 
 Resolved issues
 ---------------
 
-* In certain circumstances (counter wrapping) AES GCM produced wrong ciphertexts.
-* Method ``encrypt()`` of AES SIV cipher could be called, whereas only ``encrypt_and_digest()``
-  should have been allowed.
+* In certain circumstances (at counter wrapping, which happens on average after
+  32 GBi) AES GCM produced wrong ciphertexts.
+* Method ``encrypt()`` of AES SIV cipher could be still called,
+  whereas only ``encrypt_and_digest()`` should be allowed.
 
 3.6.0 (8 April 2018)
 ++++++++++++++++++++
