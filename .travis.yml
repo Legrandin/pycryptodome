@@ -30,8 +30,6 @@ matrix:
    install: pip2 install cibuildwheel==0.7.1
    after_success: 
    -  cibuildwheel --output-dir wheelhouse;
-      touch .separate_namespace;
-      cibuildwheel --output-dir wheelhouse;
       ls wheelhouse;
 services:
  - docker
