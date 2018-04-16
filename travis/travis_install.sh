@@ -10,7 +10,7 @@ install_from_pypi() {
 	else
 		target_version=\"$2\"
 	fi
-	URL=$(curl -s https://pypi.python.org/pypi/$1/json | jq '.releases['$target_version']' | jq -r 'map(select(.python_version == "source"))[0].url')
+	URL=$(curl -s https://pypi.org/pypi/$1/json | jq '.releases['$target_version']' | jq -r 'map(select(.python_version == "source"))[0].url')
 	(
 	cd /tmp
 	wget -q "$URL"
