@@ -41,11 +41,11 @@ typedef uint8_t     u8;
 typedef uint16_t    u16;
 typedef uint32_t    u32;
 
-typedef struct {
+struct block_state {
 	u32 ek[ 4*(MAXNR+1) ];
 	u32 dk[ 4*(MAXNR+1) ];
 	int rounds;
-} block_state;
+};
 
 static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]);
 static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 pt[16]);
@@ -753,7 +753,7 @@ static const u32 rcon[] = {
  * @return	the number of rounds for the given cipher key size.
  */
 
-static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits) {
+static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], unsigned keyBits) {
    	int i = 0;
 	u32 temp;
 
@@ -839,7 +839,7 @@ static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int
  *
  * @return	the number of rounds for the given cipher key size.
  */
-static int rijndaelKeySetupDec(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits) {
+static int rijndaelKeySetupDec(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], unsigned keyBits) {
 	int Nr, i, j;
 	u32 temp;
 
@@ -1427,8 +1427,7 @@ static void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[
 
 #endif /* INTERMEDIATE_VALUE_KAT */
 
-static int block_init(block_state *state, unsigned char *key,
-		       int keylen)
+static int block_init(struct block_state *state, const uint8_t *key, size_t keylen)
 {
 	int Nr = 0;
 
@@ -1439,21 +1438,21 @@ static int block_init(block_state *state, unsigned char *key,
         default: return ERR_NR_ROUNDS;
 	}
 	state->rounds = Nr;
-	rijndaelKeySetupEnc(state->ek, key, keylen*8);
-	rijndaelKeySetupDec(state->dk, key, keylen*8);
+	rijndaelKeySetupEnc(state->ek, key, (unsigned)keylen*8);
+	rijndaelKeySetupDec(state->dk, key, (unsigned)keylen*8);
         return 0;
 }
 
-static void block_finalize(block_state* self)
+static void block_finalize(struct block_state* self)
 {
 }
 
-static void block_encrypt(block_state *self, u8 *in, u8 *out)
+static void block_encrypt(struct block_state *self, const uint8_t *in, uint8_t *out)
 {
 	rijndaelEncrypt(self->ek, self->rounds, in, out);
 }
 
-static void block_decrypt(block_state *self, u8 *in, u8 *out)
+static void block_decrypt(struct block_state *self, const uint8_t *in, uint8_t *out)
 {
 	rijndaelDecrypt(self->dk, self->rounds, in, out);
 }

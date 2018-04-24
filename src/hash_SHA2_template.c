@@ -61,7 +61,7 @@ typedef uint32_t sha2_word_t;
 #define sigma_0_256(x)    (ROTR32(7,x)  ^ ROTR32(18,x) ^ SHR(3,x))
 #define sigma_1_256(x)    (ROTR32(17,x) ^ ROTR32(19,x) ^ SHR(10,x))
 
-static const uint64_t K[SCHEDULE_SIZE] = {
+static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b,
     0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01,
     0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7,
@@ -98,7 +98,7 @@ typedef uint64_t sha2_word_t;
 #define sigma_0_512(x)    (ROTR64(1,x)  ^ ROTR64(8,x)  ^ SHR(7,x))
 #define sigma_1_512(x)    (ROTR64(19,x) ^ ROTR64(61,x) ^ SHR(6,x))
 
-static const uint64_t K[SCHEDULE_SIZE] = {
+static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL,
     0x3956c25bf348b538ULL, 0x59f111f1b605d019ULL, 0x923f82a4af194f9bULL, 0xab1c5ed5da6d8118ULL,
     0xd807aa98a3030242ULL, 0x12835b0145706fbeULL, 0x243185be4ee4b28cULL, 0x550c7dc3d5ffb4e2ULL,
@@ -150,14 +150,14 @@ static inline void put_be(sha2_word_t number, uint8_t *p)
     int i;
 
     for (i=0; i<WORD_SIZE; i++) {
-        p[WORD_SIZE-1-i] = number >> (i*8);
+        p[WORD_SIZE-1-i] = (uint8_t)(number >> (i*8));
     }
 }
 
 typedef struct t_hash_state {
     sha2_word_t h[8];
     uint8_t buf[BLOCK_SIZE];    /** 16 words **/
-    int curlen;                 /** Useful message bytes in buf[] (leftmost) **/
+    unsigned curlen;            /** Useful message bytes in buf[] (leftmost) **/
     sha2_word_t totbits[2];     /** Total message length in bits **/
     size_t digest_size;         /** Actual digest size in bytes **/
 } hash_state;
@@ -356,10 +356,13 @@ EXPORT_SYM int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len
         return ERR_NULL;
     }
 
-    while (len>0) {
-        int btc;
+    assert(hs->curlen < BLOCK_SIZE);
 
-        btc = MIN(BLOCK_SIZE - hs->curlen, (int)len);
+    while (len>0) {
+        unsigned btc, left;
+
+        left = BLOCK_SIZE - hs->curlen;
+        btc = (unsigned)MIN(left, len);
         memcpy(&hs->buf[hs->curlen], buf, btc);
         buf += btc;
         hs->curlen += btc;
@@ -379,7 +382,7 @@ EXPORT_SYM int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len
 
 static int sha_finalize(hash_state *hs, uint8_t *hash, size_t digest_size)
 {
-    int left, i;
+    unsigned left, i;
     uint8_t hash_tmp[WORD_SIZE*8];
 
     if (digest_size != hs->digest_size) {

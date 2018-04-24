@@ -8,8 +8,8 @@
 #define DP_MULT(a,b,ol,oh) do { \
     __uint128_t pr;             \
     pr = (__uint128_t)(a)*(b);  \
-    ol = (__uint128_t)pr;       \
-    oh = pr >> 64;              \
+    ol = (uint64_t)pr;          \
+    oh = (uint64_t)(pr >> 64);  \
     } while (0)
 
 #elif defined(_MSC_VER) && defined(_WIN64)
@@ -28,9 +28,9 @@ __attribute__((optimize("-O3")))
 uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 {
     uint32_t al = (uint32_t) a;
-    uint32_t ah = a >> 32;
+    uint32_t ah = (uint32_t)(a >> 32);
     uint32_t bl = (uint32_t) b;
-    uint32_t bh = b >> 32;
+    uint32_t bh = (uint32_t)(b >> 32);
 
     uint64_t sum0, sum1a, sum1b, sum2, sum3;
 

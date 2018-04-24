@@ -62,10 +62,6 @@ typedef struct {
     uint8_t buffer[0];
 } CtrModeState;
 
-static inline unsigned min_ab(unsigned a, unsigned b) {
-    return a < b ? a : b;
-}
-
 static void increment_le(uint8_t *pCounter, size_t counter_len) {
     size_t i;
 
@@ -101,6 +97,7 @@ EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
     }
 
     block_len = cipher->block_len;
+    assert(block_len < 256);
 
     if ((block_len != initialCounterBlock_len) ||
         (counter_len == 0) ||
@@ -112,11 +109,14 @@ EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
     if (NULL == ctrState) {
         return ERR_MEMORY;
     }
+
+    /** Original counter block **/
     memcpy(&ctrState->buffer[0], initialCounterBlock, block_len);
+    /** Current counter block **/
     memcpy(&ctrState->buffer[block_len], initialCounterBlock, block_len);
 
     ctrState->cipher = cipher;
-    ctrState->usedKeyStream = block_len;
+    ctrState->usedKeyStream = (uint8_t)block_len;   /** All key stream (in buffer) is invalid **/
     ctrState->counter = ctrState->buffer + block_len + prefix_len;
     ctrState->counter_len = counter_len;
     ctrState->increment = littleEndian ? &increment_le : &increment_be;
@@ -165,12 +165,12 @@ EXPORT_SYM int CTR_encrypt(CtrModeState *ctrState,
                 return ERR_CTR_REPEATED_KEY_STREAM;
         }
 
-        keyStreamToUse = min_ab(data_len, block_len - ctrState->usedKeyStream);
+        keyStreamToUse = MIN(data_len, block_len - ctrState->usedKeyStream);
         for (j=0; j<keyStreamToUse; j++)
             *out++ = *in++ ^ keyStream[j + ctrState->usedKeyStream];
 
         data_len -= keyStreamToUse;
-        ctrState->usedKeyStream += keyStreamToUse;
+        ctrState->usedKeyStream = (uint8_t)(ctrState->usedKeyStream  + keyStreamToUse);
     }
 
     return 0;

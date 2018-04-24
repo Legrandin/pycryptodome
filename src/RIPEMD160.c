@@ -58,7 +58,7 @@ typedef struct {
         uint32_t w[16];
         uint8_t b[64];
     } buf;
-    uint8_t bufpos;     /* number of bytes currently in the buffer */
+    unsigned bufpos;     /* number of bytes currently in the buffer */
 } hash_state;
 
 /* cyclic left-shift the 32-bit word n left by s bits */
@@ -321,8 +321,8 @@ EXPORT_SYM int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
         /* We do not have enough bytes to fill the internal buffer.
          * Copy what's there and return. */
         memcpy(&hs->buf.b[hs->bufpos], buf, len);
-        hs->bufpos += len;
-        hs->length += len * 8;    /* length is in bits */
+        hs->bufpos += (unsigned)len;
+        hs->length += (unsigned)(len * 8);    /* length is in bits */
         return 0;
     }
 

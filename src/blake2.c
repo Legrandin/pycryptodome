@@ -46,11 +46,6 @@ typedef struct {
 
 typedef enum { NON_FINAL_BLOCK, FINAL_BLOCK } block_type;
 
-static unsigned minAB(unsigned a, unsigned b)
-{
-    return a < b ? a : b;
-}
-
 static int little_endian(void) {
     int test = 1;
     return *((uint8_t*)&test) == 1;
@@ -80,7 +75,7 @@ EXPORT_SYM int blake2_init (hash_state **state,
     for (i=0; i<8; i++) {
         hs->h[i] = iv[i];
     }
-    hs->h[0] ^= 0x01010000 ^ (key_size << 8) ^ digest_size;
+    hs->h[0] = (blake2_word)(hs->h[0] ^ 0x01010000 ^ (key_size << 8) ^ digest_size);
 
     /** If the key is present, the first block is the key padded with zeroes **/
     if (key_size>0) {
@@ -184,7 +179,7 @@ static int blake2b_process_buffer(hash_state *hs,
             byteswap(hs->buf.w + i);
     }
 
-    hs->off_counter_low += new_data_added;
+    hs->off_counter_low = (blake2_word)(hs->off_counter_low + new_data_added);
     if (hs->off_counter_low < new_data_added) {
         if (0 == ++hs->off_counter_high)
             return ERR_MAX_DATA;
@@ -211,7 +206,7 @@ EXPORT_SYM int blake2_update(hash_state *hs,
         return ERR_NULL;
 
     while (len > 0) {
-        size_t consumed;
+        unsigned tc, left;
 
         if (hs->buf_occ == sizeof hs->buf) {
             int result;
@@ -222,11 +217,12 @@ EXPORT_SYM int blake2_update(hash_state *hs,
         }
 
         /** Consume input **/
-        consumed = minAB(len, sizeof hs->buf.b - hs->buf_occ);
-        memcpy(hs->buf.b + hs->buf_occ, in, consumed);
-        len -= consumed;
-        in += consumed;
-        hs->buf_occ += consumed;
+        left = (unsigned)(sizeof hs->buf.b - hs->buf_occ);
+        tc = (unsigned)MIN(len, left);
+        memcpy(hs->buf.b + hs->buf_occ, in, tc);
+        len -= tc;
+        in += tc;
+        hs->buf_occ += tc;
     }
 
     return 0;

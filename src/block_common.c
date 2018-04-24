@@ -41,7 +41,7 @@
 
 typedef struct {
     BlockBase  base_state;
-    block_state algo_state;
+    struct block_state algo_state;
 } CIPHER_STATE_TYPE;
 
 static int CIPHER_ENCRYPT

@@ -120,12 +120,12 @@ static void gcm_mult2(uint8_t out[16], const t_v_tables *key_tables, const uint8
     z[0] = z[1] = 0;
     bit_scan_128 = 0;
     for (i=0; i<16; i++) {
-        uint8_t xi;
+        unsigned xi;
         int j;
 
         xi = x[i];
         for (j=0; j<8; j++) {
-            int bit;
+            unsigned bit;
 
             bit = xi>>7 & 1; /** Constant time */
             z[0] ^= (*key_tables)[bit_scan_128][bit][0];
@@ -161,7 +161,7 @@ EXPORT_SYM int ghash(
         const t_exp_key *exp_key
         )
 {
-    unsigned int i;
+    unsigned i;
     const t_v_tables *v_tables;
 
     if (NULL==y_out || NULL==block_data || NULL==y_in || NULL==exp_key)
@@ -174,7 +174,7 @@ EXPORT_SYM int ghash(
 
     memcpy(y_out, y_in, 16);
     for (i=0; i<len; i+=16) {
-        int j;
+        unsigned j;
         uint8_t x[16];
 
         for (j=0; j<16; j++) {
@@ -200,7 +200,7 @@ EXPORT_SYM int ghash_expand(const uint8_t h[16], t_exp_key **ghash_tables)
     if (NULL == exp_key)
         return ERR_MEMORY;
     
-    exp_key->offset = ALIGNMENT - ((uintptr_t)exp_key->buffer & (ALIGNMENT-1));
+    exp_key->offset = ALIGNMENT - (int)((uintptr_t)exp_key->buffer & (ALIGNMENT-1));
     make_v_tables(h, (t_v_tables*)(exp_key->buffer + exp_key->offset));
     
     return 0;

@@ -125,7 +125,7 @@ static inline void put_be_32(uint32_t number, uint8_t *p)
 typedef struct t_hash_state {
     uint32_t h[5];
     uint8_t buf[BLOCK_SIZE];    /** 64 bytes == 512 bits == sixteen 32-bit words **/
-    int curlen;                 /** Useful message bytes in buf[] (leftmost) **/
+    unsigned curlen;            /** Useful message bytes in buf[] (leftmost) **/
     uint64_t totbits;           /** Total message length in bits **/
 } hash_state;
 
@@ -284,10 +284,13 @@ EXPORT_SYM int SHA1_update(hash_state *hs, const uint8_t *buf, size_t len)
         return ERR_NULL;
     }
 
-    while (len>0) {
-        int btc;
+    assert(hs->curlen < BLOCK_SIZE);
 
-        btc = MIN(BLOCK_SIZE - hs->curlen, (int)len);
+    while (len>0) {
+        unsigned btc, left;
+
+        left = BLOCK_SIZE - hs->curlen;
+        btc = (unsigned)MIN(left, len);
         memcpy(&hs->buf[hs->curlen], buf, btc);
         buf += btc;
         hs->curlen += btc;
@@ -307,7 +310,9 @@ EXPORT_SYM int SHA1_update(hash_state *hs, const uint8_t *buf, size_t len)
 
 static int sha_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
 {
-    int left, i;
+    unsigned left, i;
+
+    assert(hs->curlen < BLOCK_SIZE);
 
     /* remaining length of the message */
     if (add_bits(hs, hs->curlen*8)) {

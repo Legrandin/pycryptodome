@@ -43,7 +43,7 @@ typedef struct {
     /** How many bytes at the beginning of the key stream
       * have already been used.
       */
-    uint8_t usedKeyStream;
+    unsigned usedKeyStream;
 
     uint8_t keyStream[sizeof(uint32_t)*16];
 } stream_state;
@@ -77,10 +77,6 @@ static void fix_endianess(uint32_t h[16], unsigned start, unsigned end)
         return;
     for (i=start; i<end; i++)
         byteSwap(&h[i]);
-}
-
-static unsigned minAB(unsigned a, unsigned b) {
-    return a < b ? a : b;
 }
 
 #define ROTL(q, n)  (((q) << (n)) | ((q) >> (32 - (n))))
@@ -193,7 +189,7 @@ EXPORT_SYM int chacha20_encrypt(stream_state *state,
                 return result;
         }
 
-        keyStreamToUse = minAB(len, sizeof state->keyStream - state->usedKeyStream);
+        keyStreamToUse = (unsigned)MIN(len, sizeof state->keyStream - state->usedKeyStream);
         for (i=0; i<keyStreamToUse; i++)
             *out++ = *in++ ^ state->keyStream[i + state->usedKeyStream];
 
@@ -217,8 +213,8 @@ EXPORT_SYM int chacha20_seek(stream_state *state,
     if (offset >= sizeof state->keyStream)
         return ERR_MAX_OFFSET;
 
-    state->h[12] = block_low;
-    state->h[13] = block_high;
+    state->h[12] = (uint32_t)block_low;
+    state->h[13] = (uint32_t)block_high;
 
     result = chacha20_core(state);
     if (result)
