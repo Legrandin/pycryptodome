@@ -78,7 +78,12 @@ void words_to_bytes(uint8_t *out, const uint64_t *x, size_t len, size_t words)
 void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
 {
     uint8_t counter[4];
+    uint8_t seed_in_b[16];
     unsigned i;
+
+    for (i=0; i<8; i++) {
+        seed_in_b[2*i] = seed_in_b[2*i+1] = (uint8_t)(seed_in >> (i*8));
+    }
 
 #define SIPHASH_LEN 16
     
@@ -89,13 +94,13 @@ void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
         counter[3] = (uint8_t)(i>>24);
         if (out_len<SIPHASH_LEN)
             break;
-        siphash(counter, 4, (const uint8_t*)&seed_in, seed_out, SIPHASH_LEN);
-        seed_out += 16;
+        siphash(counter, 4, seed_in_b, seed_out, SIPHASH_LEN);
+        seed_out += SIPHASH_LEN;
     }
 
     if (out_len>0) {
         uint8_t buffer[SIPHASH_LEN];
-        siphash(counter, 4, (const uint8_t*)&seed_in, buffer, SIPHASH_LEN);
+        siphash(counter, 4, seed_in_b, buffer, SIPHASH_LEN);
         memcpy(seed_out, buffer, out_len);
     }
 
