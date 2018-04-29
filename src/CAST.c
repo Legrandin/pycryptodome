@@ -90,7 +90,9 @@ static uint32_t castfunc(uint32_t D, uint32_t Kmi, uint8_t Kri, unsigned type)
     }
 
     I &= 0xFFFFFFFF;
-    I = ( I << Kri ) | ( I >> ( 32-Kri ) );
+    if (Kri>0) {
+        I = ( I << Kri ) | ( I >> ( 32-Kri ) );
+    }
     Ia = ( I >> 24 ) & 0xFF;
     Ib = ( I >> 16 ) & 0xFF;
     Ic = ( I >>  8 ) & 0xFF;
