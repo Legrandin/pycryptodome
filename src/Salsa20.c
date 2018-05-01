@@ -35,31 +35,6 @@ FAKE_INIT(Salsa20)
 static const uint8_t sigma[16] = "expand 32-byte k";
 static const uint8_t tau[16]   = "expand 16-byte k";
 
-static inline void u32to8_little(uint8_t *p, const uint32_t *w)
-{
-#ifdef PY_LITTLE_ENDIAN
-    memcpy(p, w, 4);
-#else
-    p[0] = (uint8_t)*w;
-    p[1] = (uint8_t)(*w >> 8);
-    p[2] = (uint8_t)(*w >> 16);
-    p[3] = (uint8_t)(*w >> 24);
-#endif
-}
-
-static inline void u8to32_little(uint32_t *w, const uint8_t *p)
-{
-#ifdef PY_LITTLE_ENDIAN
-    memcpy(w, p, 4);
-#else
-    *w = (uint32_t)(p[0] + (p[1] << 8) + (p[2] << 16) + (p[3] << 24));
-#endif
-}
-
-#define U32TO8_LITTLE(p,w)  u32to8_little((p), &(w))
-#define U8TO32_LITTLE(w,p) u8to32_little(&(w), (p))
-
-
 #define ROTL32(v, c) (((v) << (c)) | ((v) >> (32 - (c))))
 #define XOR(v,w) ((v) ^ (w))
 
@@ -147,22 +122,22 @@ static void _salsa20_block(unsigned rounds, uint32_t *input, uint8_t *output)
     x14 = x14 + input[14];
     x15 = x15 + input[15];
     
-    U32TO8_LITTLE (output + 0, x0);
-    U32TO8_LITTLE (output + 4, x1);
-    U32TO8_LITTLE (output + 8, x2);
-    U32TO8_LITTLE (output + 12, x3);
-    U32TO8_LITTLE (output + 16, x4);
-    U32TO8_LITTLE (output + 20, x5);
-    U32TO8_LITTLE (output + 24, x6);
-    U32TO8_LITTLE (output + 28, x7);
-    U32TO8_LITTLE (output + 32, x8);
-    U32TO8_LITTLE (output + 36, x9);
-    U32TO8_LITTLE (output + 40, x10);
-    U32TO8_LITTLE (output + 44, x11);
-    U32TO8_LITTLE (output + 48, x12);
-    U32TO8_LITTLE (output + 52, x13);
-    U32TO8_LITTLE (output + 56, x14);
-    U32TO8_LITTLE (output + 60, x15);
+    STORE_U32_LITTLE (output + 0, x0);
+    STORE_U32_LITTLE (output + 4, x1);
+    STORE_U32_LITTLE (output + 8, x2);
+    STORE_U32_LITTLE (output + 12, x3);
+    STORE_U32_LITTLE (output + 16, x4);
+    STORE_U32_LITTLE (output + 20, x5);
+    STORE_U32_LITTLE (output + 24, x6);
+    STORE_U32_LITTLE (output + 28, x7);
+    STORE_U32_LITTLE (output + 32, x8);
+    STORE_U32_LITTLE (output + 36, x9);
+    STORE_U32_LITTLE (output + 40, x10);
+    STORE_U32_LITTLE (output + 44, x11);
+    STORE_U32_LITTLE (output + 48, x12);
+    STORE_U32_LITTLE (output + 52, x13);
+    STORE_U32_LITTLE (output + 56, x14);
+    STORE_U32_LITTLE (output + 60, x15);
     
     /* Increment block counter */
     input[8] = input[8] + 1;
@@ -190,8 +165,8 @@ EXPORT_SYM int Salsa20_8_core(const uint8_t *x, const uint8_t *y, uint8_t *out)
     for (i=0; i<16; i++) {
         uint32_t tmp;
 
-        U8TO32_LITTLE(tmp, &x[i*4]);
-        U8TO32_LITTLE(input_32[i], &y[i*4]);
+        tmp = LOAD_U32_LITTLE(&x[i*4]);
+        input_32[i] = LOAD_U32_LITTLE(&y[i*4]);
         input_32[i] ^= tmp;
     }
 
@@ -206,12 +181,14 @@ EXPORT_SYM int Salsa20_stream_init(uint8_t *key, size_t keylen,
     const uint8_t *constants;
     uint32_t *input;
     stream_state *salsaState;
+    unsigned i;
 
     if (NULL == pSalsaState || NULL == key || NULL == nonce)
         return ERR_NULL;
 
     if (keylen != 16 && keylen != 32)
         return ERR_KEY_SIZE;
+    constants = keylen == 32 ? sigma : tau;
 
     if (nonce_len != 8)
         return ERR_NONCE_SIZE;
@@ -221,35 +198,26 @@ EXPORT_SYM int Salsa20_stream_init(uint8_t *key, size_t keylen,
         return ERR_MEMORY;
 
     input = salsaState->input;
-    
-    U8TO32_LITTLE (input[1], key);
-    U8TO32_LITTLE (input[2], key + 4);
-    U8TO32_LITTLE (input[3], key + 8);
-    U8TO32_LITTLE (input[4], key + 12);
-    
-    if (keylen == 32) {
-        key += 16;
-        constants = sigma;
-    } else {
-        constants = tau;
-    }
 
-    U8TO32_LITTLE (input[11], key + 0);
-    U8TO32_LITTLE (input[12], key + 4);
-    U8TO32_LITTLE (input[13], key + 8);
-    U8TO32_LITTLE (input[14], key + 12);
-    U8TO32_LITTLE (input[0],  constants);
-    U8TO32_LITTLE (input[5],  constants + 4);
-    U8TO32_LITTLE (input[10], constants + 8);
-    U8TO32_LITTLE (input[15], constants + 12);
-    
-    /* nonce setup */
-    U8TO32_LITTLE (input[6], nonce);
-    U8TO32_LITTLE (input[7], nonce + 4);
-    
+    input[0] = LOAD_U32_LITTLE(constants + 0);
+    /** Set input[1..4] **/
+    for (i=0; i<4; i++)
+        input[i+1] = LOAD_U32_LITTLE(key + 4*i);
+    input[5] = LOAD_U32_LITTLE(constants + 4);
+    input[6] = LOAD_U32_LITTLE(nonce + 0);
+    input[7] = LOAD_U32_LITTLE(nonce + 4);
     /* Block counter setup*/
     input[8]  = 0;
     input[9]  = 0;
+    input[10] = LOAD_U32_LITTLE(constants + 8);
+    /** Set input[11..14] **/ 
+    if (keylen == 32) {
+        key += 16;
+    }
+    for (i=0; i<4; i++)
+        input[i+11] = LOAD_U32_LITTLE(key + 4*i);
+    input[15] = LOAD_U32_LITTLE(constants + 12);
+
     salsaState->blockindex = 64;
     return 0;
 }

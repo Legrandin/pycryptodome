@@ -90,25 +90,6 @@ FAKE_INIT(MD5)
 
 #define DIGEST_SIZE (128/8)
 
-static inline uint32_t get_le_32(const uint8_t *p)
-{
-    uint32_t result;
-
-    result =    p[0] |
-                ((uint32_t)p[1] << 8) |
-                ((uint32_t)p[2] << 16) |
-                ((uint32_t)p[3] << 24);
-    return result;
-}
-
-static inline void put_le_32(uint32_t number, uint8_t *p)
-{
-    p[0] = (uint8_t)(number);
-    p[1] = (uint8_t)(number >> 8);
-    p[2] = (uint8_t)(number >> 16);
-    p[3] = (uint8_t)(number >> 24);
-}
-
 typedef struct t_hash_state {
     uint32_t h[4];
     uint8_t buf[BLOCK_SIZE];    /** 64 bytes == 512 bits == sixteen 32-bit words **/
@@ -131,7 +112,7 @@ static void md5_compress(hash_state * hs)
 
     /** Words flow in in little-endian mode **/
     for (i=0; i<16; i++) {
-        x[i] = get_le_32(&hs->buf[i*4]);
+        x[i] = LOAD_U32_LITTLE(&hs->buf[i*4]);
     }
 
     a = hs->h[0];
@@ -307,16 +288,14 @@ static int md5_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
      **/
     left = BLOCK_SIZE - hs->curlen;
     memset(&hs->buf[hs->curlen], 0, left);
-    put_le_32((uint32_t)hs->totbits, &hs->buf[BLOCK_SIZE-8]);
-    put_le_32((uint32_t)(hs->totbits >> 32), &hs->buf[BLOCK_SIZE-4]);
+    STORE_U64_LITTLE(&hs->buf[BLOCK_SIZE-8], hs->totbits);
 
     /** compress one last time **/
     md5_compress(hs);
 
     /** create final hash **/
     for (i=0; i<4; i++) {
-        put_le_32(hs->h[i], hash);
-        hash += 4;
+        STORE_U32_LITTLE(&hash[i*4], hs->h[i]);
     }
 
     return 0;

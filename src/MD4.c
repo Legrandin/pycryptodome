@@ -101,14 +101,11 @@ EXPORT_SYM int md4_update(hash_state *hs, const uint8_t *buf, size_t len)
 
         if (hs->count==64)  {
             uint32_t X[16], A, B, C, D;
-            int i,j;
+            unsigned j;
             
             hs->count=0;
-            for(i=j=0; j<16; i+=4, j++) {
-                X[j]=((uint32_t)hs->buf[i]       +
-                                      ((uint32_t)hs->buf[i+1]<<8) +
-                      ((uint32_t)hs->buf[i+2]<<16) +
-                                      ((uint32_t)hs->buf[i+3]<<24));
+            for(j=0; j<16; j++) {
+                X[j] = LOAD_U32_LITTLE(&hs->buf[j*4]);
             }
 
             A=hs->A; B=hs->B; C=hs->C; D=hs->D;
@@ -181,7 +178,7 @@ EXPORT_SYM int md4_digest(const hash_state *hs, uint8_t digest[16])
     static uint8_t s[8];
     uint32_t padlen;
     hash_state temp;
-    unsigned i, j;
+    unsigned i;
     uint64_t bitlen;
 
     static const uint8_t padding[64] = {
@@ -209,15 +206,10 @@ EXPORT_SYM int md4_digest(const hash_state *hs, uint8_t digest[16])
         s[i] = (uint8_t)(bitlen >> (i*8));
     md4_update(&temp, s, 8);
 
-    j = 0;
-    for (i=0; i<4; i++, j++)
-        digest[j] = (uint8_t)(temp.A >> (i*8));
-    for (i=0; i<4; i++, j++)
-        digest[j] = (uint8_t)(temp.B >> (i*8));
-    for (i=0; i<4; i++, j++)
-        digest[j] = (uint8_t)(temp.C >> (i*8));
-    for (i=0; i<4; i++, j++)
-        digest[j] = (uint8_t)(temp.D >> (i*8));
+    STORE_U32_LITTLE(&digest[0], temp.A);
+    STORE_U32_LITTLE(&digest[4], temp.B);
+    STORE_U32_LITTLE(&digest[8], temp.C);
+    STORE_U32_LITTLE(&digest[12], temp.D);
 
     return 0;
 }

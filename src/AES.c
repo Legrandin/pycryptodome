@@ -737,16 +737,6 @@ static const u32 rcon[] = {
 	0x1B000000, 0x36000000, /* for 128-bit blocks, Rijndael never uses more than 10 rcon values */
 };
 
-#define SWAP(x) (_lrotl(x, 8) & 0x00ff00ff | _lrotr(x, 8) & 0xff00ff00)
-
-#ifdef _MSC_VER
-#define GETU32(p) SWAP(*((u32 *)(p)))
-#define PUTU32(ct, st) { *((u32 *)(ct)) = SWAP((st)); }
-#else
-#define GETU32(pt) (((u32)(pt)[0] << 24) ^ ((u32)(pt)[1] << 16) ^ ((u32)(pt)[2] <<  8) ^ ((u32)(pt)[3]))
-#define PUTU32(ct, st) { (ct)[0] = (u8)((st) >> 24); (ct)[1] = (u8)((st) >> 16); (ct)[2] = (u8)((st) >>  8); (ct)[3] = (u8)(st); }
-#endif
-
 /**
  * Expand the cipher key into the encryption key schedule.
  *
@@ -757,10 +747,10 @@ static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], uns
    	int i = 0;
 	u32 temp;
 
-	rk[0] = GETU32(cipherKey     );
-	rk[1] = GETU32(cipherKey +  4);
-	rk[2] = GETU32(cipherKey +  8);
-	rk[3] = GETU32(cipherKey + 12);
+	rk[0] = LOAD_U32_BIG(cipherKey     );
+	rk[1] = LOAD_U32_BIG(cipherKey +  4);
+	rk[2] = LOAD_U32_BIG(cipherKey +  8);
+	rk[3] = LOAD_U32_BIG(cipherKey + 12);
 	if (keyBits == 128) {
 		for (;;) {
 			temp  = rk[3];
@@ -779,8 +769,8 @@ static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], uns
 			rk += 4;
 		}
 	}
-	rk[4] = GETU32(cipherKey + 16);
-	rk[5] = GETU32(cipherKey + 20);
+	rk[4] = LOAD_U32_BIG(cipherKey + 16);
+	rk[5] = LOAD_U32_BIG(cipherKey + 20);
 	if (keyBits == 192) {
 		for (;;) {
 			temp = rk[ 5];
@@ -801,8 +791,8 @@ static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], uns
 			rk += 6;
 		}
 	}
-	rk[6] = GETU32(cipherKey + 24);
-	rk[7] = GETU32(cipherKey + 28);
+	rk[6] = LOAD_U32_BIG(cipherKey + 24);
+	rk[7] = LOAD_U32_BIG(cipherKey + 28);
 	if (keyBits == 256) {
 		for (;;) {
 			temp = rk[ 7];
@@ -889,10 +879,10 @@ static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 
 	 * map byte array block to cipher state
 	 * and add initial round key:
 	 */
-	s0 = GETU32(pt     ) ^ rk[0];
-	s1 = GETU32(pt +  4) ^ rk[1];
-	s2 = GETU32(pt +  8) ^ rk[2];
-	s3 = GETU32(pt + 12) ^ rk[3];
+	s0 = LOAD_U32_BIG(pt     ) ^ rk[0];
+	s1 = LOAD_U32_BIG(pt +  4) ^ rk[1];
+	s2 = LOAD_U32_BIG(pt +  8) ^ rk[2];
+	s3 = LOAD_U32_BIG(pt + 12) ^ rk[3];
 #ifdef FULL_UNROLL
 	/* round 1: */
    	t0 = Te0[s0 >> 24] ^ Te1[(s1 >> 16) & 0xff] ^ Te2[(s2 >>  8) & 0xff] ^ Te3[s3 & 0xff] ^ rk[ 4];
@@ -1036,28 +1026,28 @@ static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 
 		(Te4[(t2 >>  8) & 0xff] & 0x0000ff00) ^
 		(Te4[(t3      ) & 0xff] & 0x000000ff) ^
 		rk[0];
-	PUTU32(ct     , s0);
+	STORE_U32_BIG(ct     , s0);
 	s1 =
 		(Te4[(t1 >> 24)       ] & 0xff000000) ^
 		(Te4[(t2 >> 16) & 0xff] & 0x00ff0000) ^
 		(Te4[(t3 >>  8) & 0xff] & 0x0000ff00) ^
 		(Te4[(t0      ) & 0xff] & 0x000000ff) ^
 		rk[1];
-	PUTU32(ct +  4, s1);
+	STORE_U32_BIG(ct +  4, s1);
 	s2 =
 		(Te4[(t2 >> 24)       ] & 0xff000000) ^
 		(Te4[(t3 >> 16) & 0xff] & 0x00ff0000) ^
 		(Te4[(t0 >>  8) & 0xff] & 0x0000ff00) ^
 		(Te4[(t1      ) & 0xff] & 0x000000ff) ^
 		rk[2];
-	PUTU32(ct +  8, s2);
+	STORE_U32_BIG(ct +  8, s2);
 	s3 =
 		(Te4[(t3 >> 24)       ] & 0xff000000) ^
 		(Te4[(t0 >> 16) & 0xff] & 0x00ff0000) ^
 		(Te4[(t1 >>  8) & 0xff] & 0x0000ff00) ^
 		(Te4[(t2      ) & 0xff] & 0x000000ff) ^
 		rk[3];
-	PUTU32(ct + 12, s3);
+	STORE_U32_BIG(ct + 12, s3);
 }
 
 static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 pt[16]) {
@@ -1070,10 +1060,10 @@ static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 
 	 * map byte array block to cipher state
 	 * and add initial round key:
 	 */
-	s0 = GETU32(ct     ) ^ rk[0];
-	s1 = GETU32(ct +  4) ^ rk[1];
-	s2 = GETU32(ct +  8) ^ rk[2];
-	s3 = GETU32(ct + 12) ^ rk[3];
+	s0 = LOAD_U32_BIG(ct     ) ^ rk[0];
+	s1 = LOAD_U32_BIG(ct +  4) ^ rk[1];
+	s2 = LOAD_U32_BIG(ct +  8) ^ rk[2];
+	s3 = LOAD_U32_BIG(ct + 12) ^ rk[3];
 #ifdef FULL_UNROLL
 	/* round 1: */
 	t0 = Td0[s0 >> 24] ^ Td1[(s3 >> 16) & 0xff] ^ Td2[(s2 >>  8) & 0xff] ^ Td3[s1 & 0xff] ^ rk[ 4];
@@ -1217,28 +1207,28 @@ static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 
    		(Td4[(t2 >>  8) & 0xff] & 0x0000ff00) ^
    		(Td4[(t1      ) & 0xff] & 0x000000ff) ^
    		rk[0];
-	PUTU32(pt     , s0);
+	STORE_U32_BIG(pt     , s0);
    	s1 =
    		(Td4[(t1 >> 24)       ] & 0xff000000) ^
    		(Td4[(t0 >> 16) & 0xff] & 0x00ff0000) ^
    		(Td4[(t3 >>  8) & 0xff] & 0x0000ff00) ^
    		(Td4[(t2      ) & 0xff] & 0x000000ff) ^
    		rk[1];
-	PUTU32(pt +  4, s1);
+	STORE_U32_BIG(pt +  4, s1);
    	s2 =
    		(Td4[(t2 >> 24)       ] & 0xff000000) ^
    		(Td4[(t1 >> 16) & 0xff] & 0x00ff0000) ^
    		(Td4[(t0 >>  8) & 0xff] & 0x0000ff00) ^
    		(Td4[(t3      ) & 0xff] & 0x000000ff) ^
    		rk[2];
-	PUTU32(pt +  8, s2);
+	STORE_U32_BIG(pt +  8, s2);
    	s3 =
    		(Td4[(t3 >> 24)       ] & 0xff000000) ^
    		(Td4[(t2 >> 16) & 0xff] & 0x00ff0000) ^
    		(Td4[(t1 >>  8) & 0xff] & 0x0000ff00) ^
    		(Td4[(t0      ) & 0xff] & 0x000000ff) ^
    		rk[3];
-	PUTU32(pt + 12, s3);
+	STORE_U32_BIG(pt + 12, s3);
 }
 
 #ifdef INTERMEDIATE_VALUE_KAT
@@ -1251,10 +1241,10 @@ static void rijndaelEncryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[
 	 * map byte array block to cipher state
 	 * and add initial round key:
 	 */
-	s0 = GETU32(block     ) ^ rk[0];
-	s1 = GETU32(block +  4) ^ rk[1];
-	s2 = GETU32(block +  8) ^ rk[2];
-	s3 = GETU32(block + 12) ^ rk[3];
+	s0 = LOAD_U32_BIG(block     ) ^ rk[0];
+	s1 = LOAD_U32_BIG(block +  4) ^ rk[1];
+	s2 = LOAD_U32_BIG(block +  8) ^ rk[2];
+	s3 = LOAD_U32_BIG(block + 12) ^ rk[3];
 	rk += 4;
 
 	/*
@@ -1330,10 +1320,10 @@ static void rijndaelEncryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[
 		s3 = t3;
 	}
 
-	PUTU32(block     , s0);
-	PUTU32(block +  4, s1);
-	PUTU32(block +  8, s2);
-	PUTU32(block + 12, s3);
+	STORE_U32_BIG(block     , s0);
+	STORE_U32_BIG(block +  4, s1);
+	STORE_U32_BIG(block +  8, s2);
+	STORE_U32_BIG(block + 12, s3);
 }
 
 static void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds) {
@@ -1344,10 +1334,10 @@ static void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[
 	 * map byte array block to cipher state
 	 * and add initial round key:
 	 */
-	s0 = GETU32(block     ) ^ rk[0];
-	s1 = GETU32(block +  4) ^ rk[1];
-	s2 = GETU32(block +  8) ^ rk[2];
-	s3 = GETU32(block + 12) ^ rk[3];
+	s0 = LOAD_U32_BIG(block     ) ^ rk[0];
+	s1 = LOAD_U32_BIG(block +  4) ^ rk[1];
+	s2 = LOAD_U32_BIG(block +  8) ^ rk[2];
+	s3 = LOAD_U32_BIG(block + 12) ^ rk[3];
 	rk += 4;
 
 	/*
@@ -1419,10 +1409,10 @@ static void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[
 		t3 ^= rk[3];
 	}
 
-	PUTU32(block     , t0);
-	PUTU32(block +  4, t1);
-	PUTU32(block +  8, t2);
-	PUTU32(block + 12, t3);
+	STORE_U32_BIG(block     , t0);
+	STORE_U32_BIG(block +  4, t1);
+	STORE_U32_BIG(block +  8, t2);
+	STORE_U32_BIG(block + 12, t3);
 }
 
 #endif /* INTERMEDIATE_VALUE_KAT */

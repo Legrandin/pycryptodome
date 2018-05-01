@@ -63,18 +63,15 @@ struct block_state {
 /* these are the eight 32*256 S-boxes */
 #include "cast5.c"
 
-/* fetch a uint32_t from an array of uint8s (with a given offset) */
-static inline uint32_t fetch(const uint8_t *ptr, unsigned base)
-{
-    const uint8_t *p = ptr + base;
-    return (uint32_t)((p[0] << 24) + (p[1] << 16) + (p[2] << 8) + p[3]);
-}
-
 /* this is the round function f(D, Km, Kr) */
 static uint32_t castfunc(uint32_t D, uint32_t Kmi, uint8_t Kri, unsigned type)
 {
     uint32_t I, f;
-    unsigned Ia, Ib, Ic, Id;
+    uint8_t Ibe[4];
+    #define Ia Ibe[0]
+    #define Ib Ibe[1]
+    #define Ic Ibe[2]
+    #define Id Ibe[3]
 
     switch(type) {
     case 0:
@@ -89,14 +86,10 @@ static uint32_t castfunc(uint32_t D, uint32_t Kmi, uint8_t Kri, unsigned type)
         break;
     }
 
-    I &= 0xFFFFFFFF;
     if (Kri>0) {
         I = ( I << Kri ) | ( I >> ( 32-Kri ) );
     }
-    Ia = ( I >> 24 ) & 0xFF;
-    Ib = ( I >> 16 ) & 0xFF;
-    Ic = ( I >>  8 ) & 0xFF;
-    Id = ( I       ) & 0xFF;
+    STORE_U32_BIG(Ibe, I);
 
     switch(type) {
     case 0:
@@ -122,10 +115,9 @@ static void castcrypt(struct block_state *key, uint8_t *block, int decrypt)
     uint32_t Kmi;
     uint8_t  Kri;
     unsigned functype, round;
-    unsigned i, j;
 
-    L = fetch(block, 0);
-    R = fetch(block, 4);
+    L = LOAD_U32_BIG(block + 0);
+    R = LOAD_U32_BIG(block + 4);
 
     for(round = 0; round < key->rounds; round ++) {
 
@@ -146,11 +138,8 @@ static void castcrypt(struct block_state *key, uint8_t *block, int decrypt)
         R = tmp ^ f;
     }
 
-    j=0;
-    for (i=0; i<4; i++)
-        block[j++] = (uint8_t)(R >> (3-i)*8);
-    for (i=0; i<4; i++)
-        block[j++] = (uint8_t)(L >> (3-i)*8);
+    STORE_U32_BIG(block + 0, R);
+    STORE_U32_BIG(block + 4, L);
 }
 
 /* fetch a uint8_t from an array of uint32_ts */
@@ -246,10 +235,10 @@ static void castschedulekeys(struct block_state *schedule, const uint8_t *key, s
     else
         schedule->rounds = 16;
 
-    x[0] = fetch(paddedkey, 0);
-    x[1] = fetch(paddedkey, 4);
-    x[2] = fetch(paddedkey, 8);
-    x[3] = fetch(paddedkey, 12);
+    x[0] = LOAD_U32_BIG(paddedkey + 0);
+    x[1] = LOAD_U32_BIG(paddedkey + 4);
+    x[2] = LOAD_U32_BIG(paddedkey + 8);
+    x[3] = LOAD_U32_BIG(paddedkey + 12);
 
     schedulekeys_half(x, schedule->Km);
     schedulekeys_half(x, Kr_wide);

@@ -48,37 +48,6 @@ typedef struct {
     uint8_t keyStream[sizeof(uint32_t)*16];
 } stream_state;
 
-static int littleEndian(void) {
-    int test = 1;
-    return *((uint8_t*)&test) == 1;
-}
-
-static void byteSwap(uint32_t *v)
-{
-    union {
-        uint32_t w;
-        uint8_t b[4];
-    } x, y;
-
-    x.w = *v;
-    y.b[0] = x.b[3];
-    y.b[1] = x.b[2];
-    y.b[2] = x.b[1];
-    y.b[3] = x.b[0];
-    *v = y.w;
-}
-
-/** Convert status word from little endian to native and vice versa **/
-static void fix_endianess(uint32_t h[16], unsigned start, unsigned end)
-{
-    unsigned i;
-
-    if (littleEndian())
-        return;
-    for (i=start; i<end; i++)
-        byteSwap(&h[i]);
-}
-
 #define ROTL(q, n)  (((q) << (n)) | ((q) >> (32 - (n))))
 
 #define QR(a, b, c, d) {\
@@ -95,6 +64,7 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
                              size_t nonceSize)
 {
     stream_state *hs;
+    unsigned i;
 
     if (NULL == pState || NULL == nonce)
         return ERR_NULL;
@@ -113,12 +83,15 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
     hs->h[1] = 0x3320646e;
     hs->h[2] = 0x79622d32;
     hs->h[3] = 0x6b206574;
-
-    memcpy(&hs->h[4], key, KEY_SIZE);
-    fix_endianess(hs->h, 4, 12);
-
-    memcpy(&hs->h[14], nonce, NONCE_SIZE);
-    fix_endianess(hs->h, 14, 16);
+    
+    /** Move 256-bit/32-byte key into h[4..11] **/
+    for (i=0; i<32/4; i++) {
+        hs->h[4+i] = LOAD_U32_LITTLE(key + 4*i);
+    }
+    // h[12] remains 0 (offset)
+    // h[13] remains 0 (offset)
+    hs->h[14] = LOAD_U32_LITTLE(nonce + 0);
+    hs->h[15] = LOAD_U32_LITTLE(nonce + 4);
 
     hs->usedKeyStream = sizeof hs->keyStream;
 
@@ -156,8 +129,10 @@ static int chacha20_core(stream_state *state)
     for (i=0; i<16; i++)
         h[i] += state->h[i];
 
-    fix_endianess(h, 0, 16);
-    memcpy(state->keyStream, h, sizeof h);
+    for (i=0; i<16; i++) {
+        STORE_U32_LITTLE(state->keyStream + 4*i, h[i]);
+    }
+
     state->usedKeyStream = 0;
 
     if (++state->h[12] == 0) {

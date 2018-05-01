@@ -32,6 +32,8 @@
 #include "common.h"
 #include <stdio.h>
 
+#include <inttypes.h>
+
 FAKE_INIT(MODULE_NAME)
 
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
@@ -84,6 +86,9 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
     d += h; \
     h += SIGMA_0_256(a) + MAJ(a,b,c);
 
+#define LOAD_WORD_BIG(p)        LOAD_U32_BIG(p)
+#define STORE_WORD_BIG(p, w)    STORE_U32_BIG(p, w)
+
 #elif WORD_SIZE==8
 
 /** SHA-384, SHA-512 **/
@@ -128,22 +133,12 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
     d += h; \
     h += SIGMA_0_512(a) + MAJ(a,b,c);
 
+#define LOAD_WORD_BIG(p)        LOAD_U64_BIG(p)
+#define STORE_WORD_BIG(p, w)    STORE_U64_BIG(p, w)
+
 #else
 #error Invalid WORD_SIZE
 #endif
-
-static inline sha2_word_t get_be(const uint8_t *p)
-{
-    sha2_word_t result;
-    int i;
-
-    result = 0;
-    for (i=0; i<WORD_SIZE; i++) {
-        result = (result << 8) | p[i];
-    }
-    
-    return result;
-}
 
 static inline void put_be(sha2_word_t number, uint8_t *p)
 {
@@ -186,7 +181,7 @@ static void sha_compress(hash_state * hs)
 
     /** Words flow in in big-endian mode **/
     for (i=0; i<16; i++) {
-        W[i] = get_be(&hs->buf[i*WORD_SIZE]);
+        W[i] = LOAD_WORD_BIG(&hs->buf[i*WORD_SIZE]);
     }
     for (;i<SCHEDULE_SIZE; i++) {
         W[i] = SCHEDULE(i);
@@ -412,8 +407,8 @@ static int sha_finalize(hash_state *hs, uint8_t *hash, size_t digest_size)
      **/
     left = BLOCK_SIZE - hs->curlen;
     memset(&hs->buf[hs->curlen], 0, left);
-    put_be(hs->totbits[1], &hs->buf[BLOCK_SIZE-(2*WORD_SIZE)]);
-    put_be(hs->totbits[0], &hs->buf[BLOCK_SIZE-(  WORD_SIZE)]);
+    STORE_WORD_BIG(&hs->buf[BLOCK_SIZE-(2*WORD_SIZE)], hs->totbits[1]);
+    STORE_WORD_BIG(&hs->buf[BLOCK_SIZE-(  WORD_SIZE)], hs->totbits[0]);
 
     /** compress one last time **/
     sha_compress(hs);
