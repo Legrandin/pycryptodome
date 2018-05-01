@@ -25,7 +25,7 @@
  *
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(ARC4)
 

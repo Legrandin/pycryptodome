@@ -1,7 +1,7 @@
 #ifndef _MONTGOMERY_UTILS_H
 #define _MONTGOMERY_UTILS_H
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 /**
  * Convert a number in[], originally encoded as raw bytes (big endian)

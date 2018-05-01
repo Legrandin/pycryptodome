@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 #define NON_STANDARD_START_OPERATION
 #include "block_base.h"

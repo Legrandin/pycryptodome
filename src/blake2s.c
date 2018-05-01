@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 #define F_ROUNDS 10
 #define MAX_DIGEST_BYTES 32

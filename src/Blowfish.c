@@ -26,7 +26,7 @@
  * http://www.schneier.com/paper-blowfish-fse.html
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 
 FAKE_INIT(raw_blowfish)

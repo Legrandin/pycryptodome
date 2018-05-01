@@ -31,7 +31,7 @@
 #define DIGEST_SIZE (512/8)
 #define WORD_SIZE 8
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 /* Initial Values H for SHA-512, SHA-512/224 and SHA-512/256 */
 static const uint64_t H_SHA_512[3][8] = {

@@ -43,7 +43,7 @@
  *   "RIPEMD-160 is big-bit-endian, little-byte-endian, and left-justified."
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(RIPEMD160)
 

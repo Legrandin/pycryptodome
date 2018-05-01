@@ -31,7 +31,7 @@
 #define DIGEST_SIZE (224/8)
 #define WORD_SIZE 4
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 /* Initial Values H */
 static const uint32_t H[8] = {

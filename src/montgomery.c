@@ -29,7 +29,7 @@ DAMAGE.
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(montgomery)
 

@@ -22,7 +22,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 #include <wmmintrin.h>
 #include <stdlib.h>

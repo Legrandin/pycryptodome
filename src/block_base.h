@@ -1,7 +1,7 @@
 #ifndef _BLOCK_BASE
 #define _BLOCK_BASE
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 struct _BlockBase;
 

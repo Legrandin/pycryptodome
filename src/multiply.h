@@ -1,4 +1,4 @@
-#include "pycrypto_common.h"
+#include "common.h"
 
 /**
  * Double-precision multiplication

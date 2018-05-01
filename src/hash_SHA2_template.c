@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include <stdio.h>
 
 FAKE_INIT(MODULE_NAME)

@@ -24,7 +24,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 
 FAKE_INIT(raw_aes)

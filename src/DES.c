@@ -24,7 +24,7 @@
  * Country of origin: Canada
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 
 #ifndef PCT_DES3_MODULE

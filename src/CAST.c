@@ -42,7 +42,7 @@
 
 */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 
 FAKE_INIT(raw_cast)

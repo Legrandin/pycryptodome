@@ -17,7 +17,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "pycrypto_common.h"
+#include "common.h"
 
 #include "siphash.h"
 

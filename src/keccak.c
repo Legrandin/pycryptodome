@@ -26,7 +26,7 @@
  * ===================================================================
 */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include <string.h>
 #include <assert.h>
 
