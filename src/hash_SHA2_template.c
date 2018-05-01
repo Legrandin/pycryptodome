@@ -32,8 +32,6 @@
 #include "common.h"
 #include <stdio.h>
 
-#include <inttypes.h>
-
 FAKE_INIT(MODULE_NAME)
 
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
