@@ -50,25 +50,6 @@ struct block_state {
 static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]);
 static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 pt[16]);
 
-#ifdef INTERMEDIATE_VALUE_KAT
-static void rijndaelEncryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds);
-static void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds);
-#endif /* INTERMEDIATE_VALUE_KAT */
-
-/*
-Te0[x] = S [x].[02, 01, 01, 03];
-Te1[x] = S [x].[03, 02, 01, 01];
-Te2[x] = S [x].[01, 03, 02, 01];
-Te3[x] = S [x].[01, 01, 03, 02];
-Te4[x] = S [x].[01, 01, 01, 01];
-
-Td0[x] = Si[x].[0e, 09, 0d, 0b];
-Td1[x] = Si[x].[0b, 0e, 09, 0d];
-Td2[x] = Si[x].[0d, 0b, 0e, 09];
-Td3[x] = Si[x].[09, 0d, 0b, 0e];
-Td4[x] = Si[x].[01, 01, 01, 01];
-*/
-
 static const u32 Te0[256] = {
 	0xc66363a5U, 0xf87c7c84U, 0xee777799U, 0xf67b7b8dU,
 	0xfff2f20dU, 0xd66b6bbdU, 0xde6f6fb1U, 0x91c5c554U,
@@ -871,9 +852,6 @@ static int rijndaelKeySetupDec(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], uns
 
 static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]) {
 	u32 s0, s1, s2, s3, t0, t1, t2, t3;
-#ifndef FULL_UNROLL
-	int r;
-#endif /* ?FULL_UNROLL */
 
 	/*
 	 * map byte array block to cipher state
@@ -883,8 +861,8 @@ static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 
 	s1 = LOAD_U32_BIG(pt +  4) ^ rk[1];
 	s2 = LOAD_U32_BIG(pt +  8) ^ rk[2];
 	s3 = LOAD_U32_BIG(pt + 12) ^ rk[3];
-#ifdef FULL_UNROLL
-	/* round 1: */
+	
+    /* round 1: */
    	t0 = Te0[s0 >> 24] ^ Te1[(s1 >> 16) & 0xff] ^ Te2[(s2 >>  8) & 0xff] ^ Te3[s3 & 0xff] ^ rk[ 4];
    	t1 = Te0[s1 >> 24] ^ Te1[(s2 >> 16) & 0xff] ^ Te2[(s3 >>  8) & 0xff] ^ Te3[s0 & 0xff] ^ rk[ 5];
    	t2 = Te0[s2 >> 24] ^ Te1[(s3 >> 16) & 0xff] ^ Te2[(s0 >>  8) & 0xff] ^ Te3[s1 & 0xff] ^ rk[ 6];
@@ -954,69 +932,8 @@ static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 
 		}
 	}
 	rk += Nr << 2;
-#else  /* !FULL_UNROLL */
-	/*
-	 * Nr - 1 full rounds:
-	 */
-	r = Nr >> 1;
-	for (;;) {
-		t0 =
-			Te0[(s0 >> 24)       ] ^
-			Te1[(s1 >> 16) & 0xff] ^
-			Te2[(s2 >>  8) & 0xff] ^
-			Te3[(s3      ) & 0xff] ^
-			rk[4];
-		t1 =
-			Te0[(s1 >> 24)       ] ^
-			Te1[(s2 >> 16) & 0xff] ^
-			Te2[(s3 >>  8) & 0xff] ^
-			Te3[(s0      ) & 0xff] ^
-			rk[5];
-		t2 =
-			Te0[(s2 >> 24)       ] ^
-			Te1[(s3 >> 16) & 0xff] ^
-			Te2[(s0 >>  8) & 0xff] ^
-			Te3[(s1      ) & 0xff] ^
-			rk[6];
-		t3 =
-			Te0[(s3 >> 24)       ] ^
-			Te1[(s0 >> 16) & 0xff] ^
-			Te2[(s1 >>  8) & 0xff] ^
-			Te3[(s2      ) & 0xff] ^
-			rk[7];
-
-		rk += 8;
-		if (--r == 0) {
-			break;
-		}
-
-		s0 =
-			Te0[(t0 >> 24)       ] ^
-			Te1[(t1 >> 16) & 0xff] ^
-			Te2[(t2 >>  8) & 0xff] ^
-			Te3[(t3      ) & 0xff] ^
-			rk[0];
-		s1 =
-			Te0[(t1 >> 24)       ] ^
-			Te1[(t2 >> 16) & 0xff] ^
-			Te2[(t3 >>  8) & 0xff] ^
-			Te3[(t0      ) & 0xff] ^
-			rk[1];
-		s2 =
-			Te0[(t2 >> 24)       ] ^
-			Te1[(t3 >> 16) & 0xff] ^
-			Te2[(t0 >>  8) & 0xff] ^
-			Te3[(t1      ) & 0xff] ^
-			rk[2];
-		s3 =
-			Te0[(t3 >> 24)       ] ^
-			Te1[(t0 >> 16) & 0xff] ^
-			Te2[(t1 >>  8) & 0xff] ^
-			Te3[(t2      ) & 0xff] ^
-			rk[3];
-	}
-#endif /* ?FULL_UNROLL */
-	/*
+	
+    /*
 	 * apply last round and
 	 * map cipher state to byte array block:
 	 */
@@ -1052,9 +969,6 @@ static void rijndaelEncrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 
 
 static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 pt[16]) {
 	u32 s0, s1, s2, s3, t0, t1, t2, t3;
-#ifndef FULL_UNROLL
-	int r;
-#endif /* ?FULL_UNROLL */
 
 	/*
 	 * map byte array block to cipher state
@@ -1064,8 +978,8 @@ static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 
 	s1 = LOAD_U32_BIG(ct +  4) ^ rk[1];
 	s2 = LOAD_U32_BIG(ct +  8) ^ rk[2];
 	s3 = LOAD_U32_BIG(ct + 12) ^ rk[3];
-#ifdef FULL_UNROLL
-	/* round 1: */
+	
+    /* round 1: */
 	t0 = Td0[s0 >> 24] ^ Td1[(s3 >> 16) & 0xff] ^ Td2[(s2 >>  8) & 0xff] ^ Td3[s1 & 0xff] ^ rk[ 4];
 	t1 = Td0[s1 >> 24] ^ Td1[(s0 >> 16) & 0xff] ^ Td2[(s3 >>  8) & 0xff] ^ Td3[s2 & 0xff] ^ rk[ 5];
 	t2 = Td0[s2 >> 24] ^ Td1[(s1 >> 16) & 0xff] ^ Td2[(s0 >>  8) & 0xff] ^ Td3[s3 & 0xff] ^ rk[ 6];
@@ -1135,69 +1049,8 @@ static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 
 		}
 	}
 	rk += Nr << 2;
-#else  /* !FULL_UNROLL */
-	/*
-	 * Nr - 1 full rounds:
-	 */
-	r = Nr >> 1;
-	for (;;) {
-		t0 =
-			Td0[(s0 >> 24)       ] ^
-			Td1[(s3 >> 16) & 0xff] ^
-			Td2[(s2 >>  8) & 0xff] ^
-			Td3[(s1      ) & 0xff] ^
-			rk[4];
-		t1 =
-			Td0[(s1 >> 24)       ] ^
-			Td1[(s0 >> 16) & 0xff] ^
-			Td2[(s3 >>  8) & 0xff] ^
-			Td3[(s2      ) & 0xff] ^
-			rk[5];
-		t2 =
-			Td0[(s2 >> 24)       ] ^
-			Td1[(s1 >> 16) & 0xff] ^
-			Td2[(s0 >>  8) & 0xff] ^
-			Td3[(s3      ) & 0xff] ^
-			rk[6];
-		t3 =
-			Td0[(s3 >> 24)       ] ^
-			Td1[(s2 >> 16) & 0xff] ^
-			Td2[(s1 >>  8) & 0xff] ^
-			Td3[(s0      ) & 0xff] ^
-			rk[7];
-
-		rk += 8;
-		if (--r == 0) {
-			break;
-		}
-
-		s0 =
-			Td0[(t0 >> 24)       ] ^
-			Td1[(t3 >> 16) & 0xff] ^
-			Td2[(t2 >>  8) & 0xff] ^
-			Td3[(t1      ) & 0xff] ^
-			rk[0];
-		s1 =
-			Td0[(t1 >> 24)       ] ^
-			Td1[(t0 >> 16) & 0xff] ^
-			Td2[(t3 >>  8) & 0xff] ^
-			Td3[(t2      ) & 0xff] ^
-			rk[1];
-		s2 =
-			Td0[(t2 >> 24)       ] ^
-			Td1[(t1 >> 16) & 0xff] ^
-			Td2[(t0 >>  8) & 0xff] ^
-			Td3[(t3      ) & 0xff] ^
-			rk[2];
-		s3 =
-			Td0[(t3 >> 24)       ] ^
-			Td1[(t2 >> 16) & 0xff] ^
-			Td2[(t1 >>  8) & 0xff] ^
-			Td3[(t0      ) & 0xff] ^
-			rk[3];
-	}
-#endif /* ?FULL_UNROLL */
-	/*
+	
+    /*
 	 * apply last round and
 	 * map cipher state to byte array block:
 	 */
@@ -1231,192 +1084,6 @@ static void rijndaelDecrypt(u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 ct[16], u8 
 	STORE_U32_BIG(pt + 12, s3);
 }
 
-#ifdef INTERMEDIATE_VALUE_KAT
-
-static void rijndaelEncryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds) {
-	int r;
-	u32 s0, s1, s2, s3, t0, t1, t2, t3;
-
-	/*
-	 * map byte array block to cipher state
-	 * and add initial round key:
-	 */
-	s0 = LOAD_U32_BIG(block     ) ^ rk[0];
-	s1 = LOAD_U32_BIG(block +  4) ^ rk[1];
-	s2 = LOAD_U32_BIG(block +  8) ^ rk[2];
-	s3 = LOAD_U32_BIG(block + 12) ^ rk[3];
-	rk += 4;
-
-	/*
-	 * Nr - 1 full rounds:
-	 */
-	for (r = (rounds < Nr ? rounds : Nr - 1); r > 0; r--) {
-		t0 =
-			Te0[(s0 >> 24)       ] ^
-			Te1[(s1 >> 16) & 0xff] ^
-			Te2[(s2 >>  8) & 0xff] ^
-			Te3[(s3      ) & 0xff] ^
-			rk[0];
-		t1 =
-			Te0[(s1 >> 24)       ] ^
-			Te1[(s2 >> 16) & 0xff] ^
-			Te2[(s3 >>  8) & 0xff] ^
-			Te3[(s0      ) & 0xff] ^
-			rk[1];
-		t2 =
-			Te0[(s2 >> 24)       ] ^
-			Te1[(s3 >> 16) & 0xff] ^
-			Te2[(s0 >>  8) & 0xff] ^
-			Te3[(s1      ) & 0xff] ^
-			rk[2];
-		t3 =
-			Te0[(s3 >> 24)       ] ^
-			Te1[(s0 >> 16) & 0xff] ^
-			Te2[(s1 >>  8) & 0xff] ^
-			Te3[(s2      ) & 0xff] ^
-			rk[3];
-
-		s0 = t0;
-		s1 = t1;
-		s2 = t2;
-		s3 = t3;
-		rk += 4;
-
-	}
-
-	/*
-	 * apply last round and
-	 * map cipher state to byte array block:
-	 */
-	if (rounds == Nr) {
-		t0 =
-			(Te4[(s0 >> 24)       ] & 0xff000000) ^
-			(Te4[(s1 >> 16) & 0xff] & 0x00ff0000) ^
-			(Te4[(s2 >>  8) & 0xff] & 0x0000ff00) ^
-			(Te4[(s3      ) & 0xff] & 0x000000ff) ^
-			rk[0];
-		t1 =
-			(Te4[(s1 >> 24)       ] & 0xff000000) ^
-			(Te4[(s2 >> 16) & 0xff] & 0x00ff0000) ^
-			(Te4[(s3 >>  8) & 0xff] & 0x0000ff00) ^
-			(Te4[(s0      ) & 0xff] & 0x000000ff) ^
-			rk[1];
-		t2 =
-			(Te4[(s2 >> 24)       ] & 0xff000000) ^
-			(Te4[(s3 >> 16) & 0xff] & 0x00ff0000) ^
-			(Te4[(s0 >>  8) & 0xff] & 0x0000ff00) ^
-			(Te4[(s1      ) & 0xff] & 0x000000ff) ^
-			rk[2];
-		t3 =
-			(Te4[(s3 >> 24)       ] & 0xff000000) ^
-			(Te4[(s0 >> 16) & 0xff] & 0x00ff0000) ^
-			(Te4[(s1 >>  8) & 0xff] & 0x0000ff00) ^
-			(Te4[(s2      ) & 0xff] & 0x000000ff) ^
-			rk[3];
-
-		s0 = t0;
-		s1 = t1;
-		s2 = t2;
-		s3 = t3;
-	}
-
-	STORE_U32_BIG(block     , s0);
-	STORE_U32_BIG(block +  4, s1);
-	STORE_U32_BIG(block +  8, s2);
-	STORE_U32_BIG(block + 12, s3);
-}
-
-static void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds) {
-	int r;
-	u32 s0, s1, s2, s3, t0, t1, t2, t3;
-
-	/*
-	 * map byte array block to cipher state
-	 * and add initial round key:
-	 */
-	s0 = LOAD_U32_BIG(block     ) ^ rk[0];
-	s1 = LOAD_U32_BIG(block +  4) ^ rk[1];
-	s2 = LOAD_U32_BIG(block +  8) ^ rk[2];
-	s3 = LOAD_U32_BIG(block + 12) ^ rk[3];
-	rk += 4;
-
-	/*
-	 * Nr - 1 full rounds:
-	 */
-	for (r = (rounds < Nr ? rounds : Nr) - 1; r > 0; r--) {
-		t0 =
-			Td0[(s0 >> 24)       ] ^
-			Td1[(s3 >> 16) & 0xff] ^
-			Td2[(s2 >>  8) & 0xff] ^
-			Td3[(s1      ) & 0xff] ^
-			rk[0];
-		t1 =
-			Td0[(s1 >> 24)       ] ^
-			Td1[(s0 >> 16) & 0xff] ^
-			Td2[(s3 >>  8) & 0xff] ^
-			Td3[(s2      ) & 0xff] ^
-			rk[1];
-		t2 =
-			Td0[(s2 >> 24)       ] ^
-			Td1[(s1 >> 16) & 0xff] ^
-			Td2[(s0 >>  8) & 0xff] ^
-			Td3[(s3      ) & 0xff] ^
-			rk[2];
-		t3 =
-			Td0[(s3 >> 24)       ] ^
-			Td1[(s2 >> 16) & 0xff] ^
-			Td2[(s1 >>  8) & 0xff] ^
-			Td3[(s0      ) & 0xff] ^
-			rk[3];
-
-		s0 = t0;
-		s1 = t1;
-		s2 = t2;
-		s3 = t3;
-		rk += 4;
-
-	}
-
-	/*
-	 * complete the last round and
-	 * map cipher state to byte array block:
-	 */
-	t0 =
-		(Td4[(s0 >> 24)       ] & 0xff000000) ^
-		(Td4[(s3 >> 16) & 0xff] & 0x00ff0000) ^
-		(Td4[(s2 >>  8) & 0xff] & 0x0000ff00) ^
-		(Td4[(s1      ) & 0xff] & 0x000000ff);
-	t1 =
-		(Td4[(s1 >> 24)       ] & 0xff000000) ^
-		(Td4[(s0 >> 16) & 0xff] & 0x00ff0000) ^
-		(Td4[(s3 >>  8) & 0xff] & 0x0000ff00) ^
-		(Td4[(s2      ) & 0xff] & 0x000000ff);
-	t2 =
-		(Td4[(s2 >> 24)       ] & 0xff000000) ^
-		(Td4[(s1 >> 16) & 0xff] & 0x00ff0000) ^
-		(Td4[(s0 >>  8) & 0xff] & 0x0000ff00) ^
-		(Td4[(s3      ) & 0xff] & 0x000000ff);
-	t3 =
-		(Td4[(s3 >> 24)       ] & 0xff000000) ^
-		(Td4[(s2 >> 16) & 0xff] & 0x00ff0000) ^
-		(Td4[(s1 >>  8) & 0xff] & 0x0000ff00) ^
-		(Td4[(s0      ) & 0xff] & 0x000000ff);
-
-	if (rounds == Nr) {
-		t0 ^= rk[0];
-		t1 ^= rk[1];
-		t2 ^= rk[2];
-		t3 ^= rk[3];
-	}
-
-	STORE_U32_BIG(block     , t0);
-	STORE_U32_BIG(block +  4, t1);
-	STORE_U32_BIG(block +  8, t2);
-	STORE_U32_BIG(block + 12, t3);
-}
-
-#endif /* INTERMEDIATE_VALUE_KAT */
-
 static int block_init(struct block_state *state, const uint8_t *key, size_t keylen)
 {
 	int Nr = 0;
@@ -1430,7 +1097,7 @@ static int block_init(struct block_state *state, const uint8_t *key, size_t keyl
 	state->rounds = Nr;
 	rijndaelKeySetupEnc(state->ek, key, (unsigned)keylen*8);
 	rijndaelKeySetupDec(state->dk, key, (unsigned)keylen*8);
-        return 0;
+    return 0;
 }
 
 static void block_finalize(struct block_state* self)

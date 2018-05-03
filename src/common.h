@@ -107,7 +107,7 @@ typedef unsigned __int64 uint64_t;
 
 static inline void u32to8_little(uint8_t *p, const uint32_t *w)
 {
-#ifdef PY_LITTLE_ENDIAN
+#ifdef PYCRYPTO_LITTLE_ENDIAN
     memcpy(p, w, 4);
 #else
     p[0] = (uint8_t)*w;
@@ -119,7 +119,7 @@ static inline void u32to8_little(uint8_t *p, const uint32_t *w)
 
 static inline void u8to32_little(uint32_t *w, const uint8_t *p)
 {
-#ifdef PY_LITTLE_ENDIAN
+#ifdef PYCRYPTO_LITTLE_ENDIAN
     memcpy(w, p, 4);
 #else
     *w = (uint32_t)p[0] | (uint32_t)p[1]<<8 | (uint32_t)p[2]<<16 | (uint32_t)p[3]<<24;
@@ -128,7 +128,7 @@ static inline void u8to32_little(uint32_t *w, const uint8_t *p)
 
 static inline void u32to8_big(uint8_t *p, const uint32_t *w)
 {
-#ifdef PY_BIG_ENDIAN
+#ifdef PYCRYPTO_BIG_ENDIAN
     memcpy(p, w, 4);
 #else
     p[0] = (uint8_t)(*w >> 24);
@@ -140,7 +140,7 @@ static inline void u32to8_big(uint8_t *p, const uint32_t *w)
 
 static inline void u8to32_big(uint32_t *w, const uint8_t *p)
 {
-#ifdef PY_BIG_ENDIAN
+#ifdef PYCRYPTO_BIG_ENDIAN
     memcpy(w, p, 4);
 #else
     *w = (uint32_t)p[3] | (uint32_t)p[2]<<8 | (uint32_t)p[1]<<16 | (uint32_t)p[0]<<24;
@@ -171,7 +171,7 @@ static inline uint32_t load_u8to32_big(const uint8_t *p)
 
 static inline void u64to8_little(uint8_t *p, const uint64_t *w)
 {
-#ifdef PY_LITTLE_ENDIAN
+#ifdef PYCRYPTO_LITTLE_ENDIAN
     memcpy(p, w, 8);
 #else
     p[0] = (uint8_t)*w;
@@ -187,7 +187,7 @@ static inline void u64to8_little(uint8_t *p, const uint64_t *w)
 
 static inline void u8to64_little(uint64_t *w, const uint8_t *p)
 {
-#ifdef PY_LITTLE_ENDIAN
+#ifdef PYCRYPTO_LITTLE_ENDIAN
     memcpy(w, p, 8);
 #else
     *w = (uint64_t)p[0]       |
@@ -203,7 +203,7 @@ static inline void u8to64_little(uint64_t *w, const uint8_t *p)
 
 static inline void u64to8_big(uint8_t *p, const uint64_t *w)
 {
-#ifdef PY_BIG_ENDIAN
+#ifdef PYCRYPTO_BIG_ENDIAN
     memcpy(p, w, 8);
 #else
     p[0] = (uint8_t)(*w >> 56);
@@ -219,7 +219,7 @@ static inline void u64to8_big(uint8_t *p, const uint64_t *w)
 
 static inline void u8to64_big(uint64_t *w, const uint8_t *p)
 {
-#ifdef PY_BIG_ENDIAN
+#ifdef PYCRYPTO_BIG_ENDIAN
     memcpy(w, p, 8);
 #else
     *w = (uint64_t)p[0] << 56 |

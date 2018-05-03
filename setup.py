@@ -619,7 +619,7 @@ enable_gcc_sse2(ext_modules)
 
 # Define big/little endian flag
 for x in ext_modules:
-    x.define_macros += [ ("PY_" + sys.byteorder.upper() + "_ENDIAN", None) ]
+    x.define_macros += [ ("PYCRYPTO_" + sys.byteorder.upper() + "_ENDIAN", None) ]
 
 if use_separate_namespace:
 

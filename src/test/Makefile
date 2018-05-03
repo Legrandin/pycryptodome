@@ -1,5 +1,5 @@
 # CPPFLAGS = -DHAVE_X86INTRIN_H
-CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPY_' + sys.byteorder.upper() + '_ENDIAN'")
+CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN'")
 
 test: all
 	./tests_addmul128_32
