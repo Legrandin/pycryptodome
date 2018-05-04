@@ -138,7 +138,7 @@ static int ge(const uint64_t *x, const uint64_t *y, size_t words)
  */
 static uint64_t sub(uint64_t *a, size_t a_words, const uint64_t *b, size_t b_words)
 {
-    int i;
+    unsigned i;
     uint64_t borrow1 , borrow2;
 
     borrow2 = 0;
@@ -212,7 +212,7 @@ static void rsquare(uint64_t *x, uint64_t *n, size_t words)
  */
 static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint64_t m0, uint64_t *t, size_t abn_words)
 {
-    int i;
+    unsigned i;
 
     if (a == b) {
         square_w(t, a, abn_words);
@@ -430,7 +430,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
                uint64_t seed)
 {
     uint64_t m0;
-    int i, j;
+    unsigned i, j;
     size_t words;
     size_t exp_len;
 
@@ -468,7 +468,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
     rsquare(monty.r_square, monty.modulus, words);
 
     /** Pre-compute -n[0]^{-1} mod R **/
-    m0 = inverse64(-monty.modulus[0]);
+    m0 = inverse64(~monty.modulus[0]+1);
 
     /** Convert base to Montgomery form **/
     mont_mult(monty.base, monty.base, monty.r_square, monty.modulus, m0, monty.t, words);
