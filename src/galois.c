@@ -48,31 +48,6 @@ typedef struct {
 } t_exp_key;
 
 /**
- * Big Endian to word conversions
- */
-static uint64_t be_to_word(const uint8_t fb[8])
-{
-    uint64_t tmp;
-    int i;
-    tmp = 0;
-    for (i=0; i<8; i++)
-        tmp = tmp<<8 ^ *fb++;
-    return tmp;
-}
-
-/**
- *  Word to Big Endian conversions
- */
-static void word_to_be(uint8_t fb[8], uint64_t w)
-{
-    int i;
-    for (i=0; i<8; i++) {
-        fb[7-i] = (uint8_t) w;
-        w >>= 8;
-    }
-}
-
-/**
  * Create a V table. V[i] is the value H*x^i (i=0..127).
  * \param h         The 16 byte GHASH key
  * \param tables    A pointer to an allocated V table
@@ -86,8 +61,8 @@ static void make_v_tables(const uint8_t h[16], t_v_tables *tables)
 
     cur = &((*tables)[0][1]);
 
-    (*cur)[0] = be_to_word(&h[0]);
-    (*cur)[1] = be_to_word(&h[8]);
+    (*cur)[0] = LOAD_U64_BIG(&h[0]);
+    (*cur)[1] = LOAD_U64_BIG(&h[8]);
 
     for (i=1; i<128; i++) {
         uint64_t c;
@@ -136,10 +111,9 @@ static void gcm_mult2(uint8_t out[16], const t_v_tables *key_tables, const uint8
         }
     }
     
-    word_to_be(out,   z[0]);
-    word_to_be(out+8, z[1]);
+    STORE_U64_BIG(out,   z[0]);
+    STORE_U64_BIG(out+8, z[1]);
 }
-
 
 /**
  * Compute the GHASH of a piece of data given an arbitrary Y_0,

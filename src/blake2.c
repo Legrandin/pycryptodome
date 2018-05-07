@@ -38,18 +38,10 @@ typedef struct {
         blake2_word off_counter_low;
         blake2_word off_counter_high;
         size_t buf_occ;
-        union {
-            uint8_t  b[16*sizeof(blake2_word)];
-            blake2_word w[16];
-        } buf;
+        uint8_t  bufb[16*sizeof(blake2_word)];
 } hash_state;
 
 typedef enum { NON_FINAL_BLOCK, FINAL_BLOCK } block_type;
-
-static int little_endian(void) {
-    int test = 1;
-    return *((uint8_t*)&test) == 1;
-}
 
 EXPORT_SYM int blake2_init (hash_state **state,
                             const uint8_t *key,
@@ -79,8 +71,8 @@ EXPORT_SYM int blake2_init (hash_state **state,
 
     /** If the key is present, the first block is the key padded with zeroes **/
     if (key_size>0) {
-        memcpy(hs->buf.b, key, key_size);
-        hs->buf_occ = sizeof hs->buf;
+        memcpy(hs->bufb, key, key_size);
+        hs->buf_occ = sizeof hs->bufb;
     }
 
     return 0;
@@ -173,12 +165,13 @@ static int blake2b_process_buffer(hash_state *hs,
                                   size_t new_data_added,
                                   block_type bt)
 {
-    if (!little_endian()) {
-        unsigned i;
-        for (i=0; i<16; i++)
-            byteswap(hs->buf.w + i);
-    }
+    unsigned i;
+    blake2_word bufw[16];
 
+    for (i=0; i<16; i++) {
+        bufw[i] = LOAD_WORD_LITTLE(hs->bufb + i*sizeof(blake2_word));
+    }
+    
     hs->off_counter_low = (blake2_word)(hs->off_counter_low + new_data_added);
     if (hs->off_counter_low < new_data_added) {
         if (0 == ++hs->off_counter_high)
@@ -186,7 +179,7 @@ static int blake2b_process_buffer(hash_state *hs,
     }
 
     blake2b_compress(hs->h,
-                     hs->buf.w,
+                     bufw,
                      hs->off_counter_low,
                      hs->off_counter_high,
                      bt);
@@ -208,18 +201,18 @@ EXPORT_SYM int blake2_update(hash_state *hs,
     while (len > 0) {
         unsigned tc, left;
 
-        if (hs->buf_occ == sizeof hs->buf) {
+        if (hs->buf_occ == sizeof hs->bufb) {
             int result;
 
-            result = blake2b_process_buffer(hs, sizeof hs->buf.b, NON_FINAL_BLOCK);
+            result = blake2b_process_buffer(hs, sizeof hs->bufb, NON_FINAL_BLOCK);
             if (result)
                 return result;
         }
 
         /** Consume input **/
-        left = (unsigned)(sizeof hs->buf.b - hs->buf_occ);
+        left = (unsigned)(sizeof hs->bufb - hs->buf_occ);
         tc = (unsigned)MIN(len, left);
-        memcpy(hs->buf.b + hs->buf_occ, in, tc);
+        memcpy(hs->bufb + hs->buf_occ, in, tc);
         len -= tc;
         in += tc;
         hs->buf_occ += tc;
@@ -233,6 +226,7 @@ EXPORT_SYM int blake2_digest(const hash_state *hs,
 {
     hash_state temp_hs;
     int result;
+    unsigned i;
 
     if (NULL==hs || NULL==digest)
         return ERR_NULL;
@@ -240,9 +234,9 @@ EXPORT_SYM int blake2_digest(const hash_state *hs,
     temp_hs = *hs;
 
     /** Fill buffer with zeroes **/
-    memset(temp_hs.buf.b + temp_hs.buf_occ,
+    memset(temp_hs.bufb + temp_hs.buf_occ,
            0,
-           sizeof temp_hs.buf.b - temp_hs.buf_occ);
+           sizeof temp_hs.bufb - temp_hs.buf_occ);
 
     result = blake2b_process_buffer(&temp_hs,
                                     temp_hs.buf_occ,
@@ -250,11 +244,8 @@ EXPORT_SYM int blake2_digest(const hash_state *hs,
     if (result)
         return result;
 
-    if (!little_endian()) {
-        unsigned i;
-        for (i=0; i<8; i++)
-            byteswap(temp_hs.h + i);
+    for (i=0; i<8; i++) {
+        STORE_WORD_LITTLE(digest + i*sizeof(blake2_word), temp_hs.h[i]);
     }
-    memcpy(digest, temp_hs.h, MAX_DIGEST_BYTES);
     return 0;
 }

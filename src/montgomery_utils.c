@@ -79,7 +79,7 @@ void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
 {
     uint8_t counter[4];
     uint8_t seed_in_b[16];
-    unsigned i;
+    uint32_t i;
 
     for (i=0; i<8; i++) {
         seed_in_b[2*i] = seed_in_b[2*i+1] = (uint8_t)(seed_in >> (i*8));
@@ -88,10 +88,7 @@ void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
 #define SIPHASH_LEN 16
     
     for (i=0 ;; i++, out_len-=SIPHASH_LEN) {
-        counter[0] = (uint8_t)i;
-        counter[1] = (uint8_t)(i>>8);
-        counter[2] = (uint8_t)(i>>16);
-        counter[3] = (uint8_t)(i>>24);
+        STORE_U32_LITTLE(counter, i);
         if (out_len<SIPHASH_LEN)
             break;
         siphash(counter, 4, seed_in_b, seed_out, SIPHASH_LEN);

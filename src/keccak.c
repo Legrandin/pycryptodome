@@ -59,56 +59,6 @@ typedef struct
 #undef ROL64
 #define ROL64(x,y) ((((x) << (y)) | (x) >> (64-(y))) & 0xFFFFFFFFFFFFFFFFULL)
 
-static inline int little_endian(void) {
-    const int test = 1;
-    return *((uint8_t*)&test) == 1;
-}
-
-static inline uint64_t load64_le(const uint8_t p[])
-{
-    union {
-        uint64_t dw;
-        uint8_t b[8];
-    } result;
-
-    if (little_endian()) {
-        memcpy(&result, p, sizeof result);
-    } else {
-        result.b[0] = p[7];
-        result.b[1] = p[6];
-        result.b[2] = p[5];
-        result.b[3] = p[4];
-        result.b[4] = p[3];
-        result.b[5] = p[2];
-        result.b[6] = p[1];
-        result.b[7] = p[0];
-    }
-
-    return result.dw;
-}
-
-static inline void store64_le(uint8_t dest[], uint64_t src)
-{
-    union t {
-        int64_t dw;
-        uint8_t b[8];
-    } *result = (void*) &src;
-
-    if (little_endian()) {
-        memcpy(dest, &src, sizeof src);
-    } else {
-        dest[0] = result->b[7];
-        dest[1] = result->b[6];
-        dest[2] = result->b[5];
-        dest[3] = result->b[4];
-        dest[4] = result->b[3];
-        dest[5] = result->b[2];
-        dest[6] = result->b[1];
-        dest[7] = result->b[0];
-    }
-}
-
-
 static void keccak_function (uint64_t *state);
 
 static void keccak_absorb_internal (keccak_state *self)
@@ -117,7 +67,7 @@ static void keccak_absorb_internal (keccak_state *self)
     uint64_t d;
     
     for (i=j=0; j < self->rate; ++i, j += 8) {
-        d = load64_le(self->buf + j);
+        d = LOAD_U64_LITTLE(self->buf + j);
         self->state[i] ^= d;
     }
 }
@@ -128,7 +78,7 @@ keccak_squeeze_internal (keccak_state *self)
     unsigned i, j;
 
     for (i=j=0; j < self->rate; ++i, j += 8) {
-        store64_le(self->buf+j, self->state[i]);
+        STORE_U64_LITTLE(self->buf+j, self->state[i]);
     }
 }
 

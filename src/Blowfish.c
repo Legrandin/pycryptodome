@@ -54,21 +54,6 @@ struct block_state {
 /* The Blowfish round function F.  Everything is taken modulo 2**32 */
 #define F(a, b, c, d) (((a) + (b)) ^ (c)) + (d)
 
-static uint32_t bytes_to_word(const uint8_t *in)
-{
-    /* big endian */
-    return (uint32_t)((in[0] << 24) | (in[1] << 16) | (in[2] << 8) | in[3]);
-}
-
-static void word_to_bytes(uint32_t w, uint8_t *out)
-{
-    /* big endian */
-    out[0] = (uint8_t)(w >> 24);
-    out[1] = (uint8_t)(w >> 16);
-    out[2] = (uint8_t)(w >> 8);
-    out[3] = (uint8_t)w;
-}
-
 static void inline_encrypt(struct block_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
@@ -134,14 +119,14 @@ static void block_encrypt(struct block_state *self, const uint8_t *in, unsigned 
     uint32_t xL, xR;
 
     /* big endian */
-    xL = bytes_to_word(in);
-    xR = bytes_to_word(in+4);
+    xL = LOAD_U32_BIG(in);
+    xR = LOAD_U32_BIG(in+4);
 
     inline_encrypt(self, &xL, &xR);
 
     /* big endian */
-    word_to_bytes(xL, out);
-    word_to_bytes(xR, out+4);
+    STORE_U32_BIG(out, xL);
+    STORE_U32_BIG(out+4, xR);
 }
 
 static void block_decrypt(struct block_state *self, const uint8_t *in, unsigned char *out)
@@ -149,14 +134,14 @@ static void block_decrypt(struct block_state *self, const uint8_t *in, unsigned 
     uint32_t xL, xR;
 
     /* big endian */
-    xL = bytes_to_word(in);
-    xR = bytes_to_word(in+4);
+    xL = LOAD_U32_BIG(in);
+    xR = LOAD_U32_BIG(in+4);
 
     inline_decrypt(self, &xL, &xR);
 
     /* big endian */
-    word_to_bytes(xL, out);
-    word_to_bytes(xR, out+4);
+    STORE_U32_BIG(out, xL);
+    STORE_U32_BIG(out+4, xR);
 }
 
 static int block_init(struct block_state *self, const uint8_t *key, size_t keylen)

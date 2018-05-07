@@ -42,6 +42,9 @@
 
 typedef uint32_t blake2_word;
 
+#define LOAD_WORD_LITTLE    LOAD_U32_LITTLE
+#define STORE_WORD_LITTLE   STORE_U32_LITTLE
+
 static const uint32_t iv[8] = {
     0x6A09E667,
     0xBB67AE85,
@@ -52,21 +55,6 @@ static const uint32_t iv[8] = {
     0x1F83D9AB,
     0x5BE0CD19
 };
-
-static void byteswap(uint32_t *v)
-{
-    union {
-        uint32_t w;
-        uint8_t b[4];
-    } x, y;
-
-    x.w = *v;
-    y.b[0] = x.b[3];
-    y.b[1] = x.b[2];
-    y.b[2] = x.b[1];
-    y.b[3] = x.b[0];
-    *v = y.w;
-}
 
 #define blake2_init blake2s_init
 #define blake2_copy blake2s_copy

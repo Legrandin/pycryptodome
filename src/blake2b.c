@@ -42,6 +42,9 @@
 
 typedef uint64_t blake2_word;
 
+#define LOAD_WORD_LITTLE    LOAD_U64_LITTLE
+#define STORE_WORD_LITTLE   STORE_U64_LITTLE
+
 static const uint64_t iv[8] = {
     0x6A09E667F3BCC908ull,
     0xBB67AE8584CAA73Bull,
@@ -52,25 +55,6 @@ static const uint64_t iv[8] = {
     0x1F83D9ABFB41BD6Bull,
     0x5BE0CD19137E2179ull
 };
-
-static void byteswap(uint64_t *v)
-{
-    union {
-        uint64_t w;
-        uint8_t b[8];
-    } x, y;
-
-    x.w = *v;
-    y.b[0] = x.b[7];
-    y.b[1] = x.b[6];
-    y.b[2] = x.b[5];
-    y.b[3] = x.b[4];
-    y.b[4] = x.b[3];
-    y.b[5] = x.b[2];
-    y.b[6] = x.b[1];
-    y.b[7] = x.b[0];
-    *v = y.w;
-}
 
 #define blake2_init blake2b_init
 #define blake2_copy blake2b_copy
