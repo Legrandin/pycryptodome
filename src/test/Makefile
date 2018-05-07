@@ -8,11 +8,12 @@ test: all
 	./tests_square_w_64
 	./tests_product
 	./tests_addmul
+	./test_endianess
 
-all: tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul
+all: tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess
 
 clean:
-	rm -f tests_addmul* tests_square_w* tests_product* montgomery*
+	rm -f tests_addmul* tests_square_w* tests_product* montgomery* test_endianess
 
 tests_addmul128.c: make_tests_addmul128.py
 	python $^ > $@
@@ -49,3 +50,7 @@ tests_product: tests_product.c montgomery2.o ../multiply_32.c ../montgomery_util
 
 tests_addmul: tests_addmul.c montgomery2.o ../multiply_32.c ../montgomery_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+test_endianess: test_endianess.c ../common.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $<
+
