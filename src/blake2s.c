@@ -42,18 +42,18 @@
 
 typedef uint32_t blake2_word;
 
-#define LOAD_WORD_LITTLE    LOAD_U32_LITTLE
-#define STORE_WORD_LITTLE   STORE_U32_LITTLE
+#define STORE_WORD_LITTLE(p, w)     STORE_U32_LITTLE(p, w)
+#define LOAD_WORD_LITTLE(p)         LOAD_U32_LITTLE(p)
 
 static const uint32_t iv[8] = {
-    0x6A09E667,
-    0xBB67AE85,
-    0x3C6EF372,
-    0xA54FF53A,
-    0x510E527F,
-    0x9B05688C,
-    0x1F83D9AB,
-    0x5BE0CD19
+    0x6A09E667U,
+    0xBB67AE85U,
+    0x3C6EF372U,
+    0xA54FF53AU,
+    0x510E527FU,
+    0x9B05688CU,
+    0x1F83D9ABU,
+    0x5BE0CD19U
 };
 
 #define blake2_init blake2s_init
