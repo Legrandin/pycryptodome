@@ -323,8 +323,9 @@ EXPORT_SYM int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_D
     ripemd160_compress(&tmp);
 
     /* Copy the final state into the output buffer */
-    for (i=0; i<6; i++)
-        STORE_U32_LITTLE(&digest[i*4], tmp.h[i]);
+    assert(RIPEMD160_DIGEST_SIZE == sizeof tmp.h);
+    for (i=0; i<5; i++)
+        STORE_U32_LITTLE(digest + i*sizeof tmp.h[0], tmp.h[i]);
 
     return 0;
 }

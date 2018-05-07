@@ -244,6 +244,7 @@ EXPORT_SYM int blake2_digest(const hash_state *hs,
     if (result)
         return result;
 
+    assert(MAX_DIGEST_BYTES == 8*sizeof(blake2_word));
     for (i=0; i<8; i++) {
         STORE_WORD_LITTLE(digest + i*sizeof(blake2_word), temp_hs.h[i]);
     }

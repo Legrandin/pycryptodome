@@ -484,7 +484,7 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
     memcpy(last_hmac, first_hmac, digest_size);
 
     for (i=1; i<iterations; i++) {
-        int j;
+        unsigned j;
 
         inner_temp = *inner;
         outer_temp = *outer;
