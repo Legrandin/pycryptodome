@@ -1,6 +1,13 @@
 Changelog
 =========
 
+x.x.x (xx xxxxx 2018)
++++++++++++++++++++++
+
+New features
+------------
+* ChaCha20 accepts 96-bit nonces
+
 3.6.1 (15 April 2018)
 +++++++++++++++++++++
 
@@ -31,7 +38,7 @@ New features
 Resolved issues
 ---------------
 
-* Reintroduced `Crypto.__version__` variable as in PyCrypto.
+* Reintroduced ``Crypto.__version__`` variable as in PyCrypto.
 * Fixed compilation problem with MinGW.
 
 3.5.1 (8 March 2018)

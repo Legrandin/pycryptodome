@@ -34,11 +34,11 @@
 FAKE_INIT(chacha20)
 
 #define KEY_SIZE   32
-#define NONCE_SIZE 8
 
 typedef struct {
     /** Initial state for the next iteration **/
     uint32_t h[16];
+    size_t nonceSize;  /** in bytes **/
 
     /** How many bytes at the beginning of the key stream
       * have already been used.
@@ -72,7 +72,7 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
     if (NULL == key || keySize != KEY_SIZE)
         return ERR_KEY_SIZE;
 
-    if (NULL == nonce || nonceSize != NONCE_SIZE)
+    if (nonceSize != 8 && nonceSize != 12)
         return ERR_NONCE_SIZE;
 
     *pState = hs = (stream_state*) calloc(1, sizeof(stream_state));
@@ -89,10 +89,17 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
         hs->h[4+i] = LOAD_U32_LITTLE(key + 4*i);
     }
     // h[12] remains 0 (offset)
-    // h[13] remains 0 (offset)
-    hs->h[14] = LOAD_U32_LITTLE(nonce + 0);
-    hs->h[15] = LOAD_U32_LITTLE(nonce + 4);
+    if (nonceSize == 8) {
+        // h[13] remains 0 (offset)
+        hs->h[14] = LOAD_U32_LITTLE(nonce + 0);
+        hs->h[15] = LOAD_U32_LITTLE(nonce + 4);
+    } else {
+        hs->h[13] = LOAD_U32_LITTLE(nonce + 0);
+        hs->h[14] = LOAD_U32_LITTLE(nonce + 4);
+        hs->h[15] = LOAD_U32_LITTLE(nonce + 8);
+    }
 
+    hs->nonceSize = nonceSize;
     hs->usedKeyStream = sizeof hs->keyStream;
 
     return 0;
@@ -135,8 +142,16 @@ static int chacha20_core(stream_state *state)
 
     state->usedKeyStream = 0;
 
-    if (++state->h[12] == 0) {
-        if (++state->h[13] == 0) {
+    if (state->nonceSize == 8) {
+        /** Nonce is 64 bits, counter is two words **/
+        if (++state->h[12] == 0) {
+            if (++state->h[13] == 0) {
+                return ERR_MAX_DATA;
+            }
+        }
+    } else {
+        /** Nonce is 96 bits, counter is one word **/
+        if (++state->h[12] == 0) {
             return ERR_MAX_DATA;
         }
     }
@@ -188,8 +203,17 @@ EXPORT_SYM int chacha20_seek(stream_state *state,
     if (offset >= sizeof state->keyStream)
         return ERR_MAX_OFFSET;
 
-    state->h[12] = (uint32_t)block_low;
-    state->h[13] = (uint32_t)block_high;
+    if (state->nonceSize == 8) {
+        /** Nonce is 64 bits, counter is two words **/
+        state->h[12] = (uint32_t)block_low;
+        state->h[13] = (uint32_t)block_high;
+    } else {
+        /** Nonce is 96 bits, counter is one word **/
+        if (block_high > 0) {
+            return ERR_MAX_OFFSET;
+        }
+        state->h[12] = (uint32_t)block_low;
+    }
 
     result = chacha20_core(state);
     if (result)

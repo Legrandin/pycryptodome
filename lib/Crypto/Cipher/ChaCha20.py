@@ -62,7 +62,7 @@ _raw_chacha20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._chacha20",
 class ChaCha20Cipher:
     """ChaCha20 cipher object. Do not create it directly. Use :py:func:`new` instead.
 
-    :var nonce: The nonce with length 8
+    :var nonce: The nonce with length 8 or 12
     :vartype nonce: byte string
     """
 
@@ -140,8 +140,7 @@ class ChaCha20Cipher:
             The absolute position within the key stream, in bytes.
         """
 
-        offset = position & 0x3f
-        position >>= 6
+        position, offset = divmod(position, 64)
         block_low = position & 0xFFFFFFFF
         block_high = position >> 32
 
@@ -163,10 +162,10 @@ def new(**kwargs):
 
     :keyword nonce:
         A mandatory value that must never be reused for any other encryption
-        done with this key. It must be 8 bytes long.
+        done with this key. It must be 8 or 12 bytes long.
 
-        If not provided, a random byte string will be generated (you can read
-        it back via the ``nonce`` attribute of the returned object).
+        If not provided, a random 8-byte string will be generated
+        (you can read it back via the ``nonce`` attribute of the returned object).
     :type nonce: bytes, bytearray, memoryview
 
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Cipher` object
@@ -183,8 +182,8 @@ def new(**kwargs):
 
     if len(key) != 32:
         raise ValueError("ChaCha20 key must be 32 bytes long")
-    if len(nonce) != 8:
-        raise ValueError("ChaCha20 nonce must be 8 bytes long")
+    if len(nonce) not in (8, 12):
+        raise ValueError("ChaCha20 nonce must be 8 or 12 bytes long")
 
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
