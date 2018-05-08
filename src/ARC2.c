@@ -29,7 +29,9 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
+
+#define NON_STANDARD_START_OPERATION
 #include "block_base.h"
 
 FAKE_INIT(raw_arc2)
@@ -38,13 +40,12 @@ FAKE_INIT(raw_arc2)
 #define BLOCK_SIZE 8
 #define KEY_SIZE 0
 
-typedef struct
-{
-    uint16_t exp_key[64];
-} block_state;
+struct block_state {
+    unsigned exp_key[64];
+};
 
 static int
-block_init(block_state *self, const uint8_t *key, size_t t /* key_bytes */,
+block_init(struct block_state *self, const uint8_t *key, size_t t /* key_bytes */,
            size_t effective_key_bits)
 {
     uint8_t t8, tm;
@@ -81,11 +82,11 @@ block_init(block_state *self, const uint8_t *key, size_t t /* key_bytes */,
 
     memcpy(bkey, key, t);
 
-    t8 = (effective_key_bits + 7) / 8;
-    tm = (1 << (8 - (t8*8 - effective_key_bits))) - 1;
+    t8 = (uint8_t)((effective_key_bits + 7) / 8); /** 5..128 **/
+    tm = (uint8_t)((1 << (8 - (t8*8 - (int)effective_key_bits))) - 1);
 
-    for (i=t; i<128; i++)
-        bkey[i] = permute[(bkey[i-1] + bkey[i-t]) % 256];
+    for (i=(int)t; i<128; i++)
+        bkey[i] = permute[(bkey[i-1] + bkey[i-(int)t]) % 256];
     
     bkey[128-t8] = permute[bkey[128-t8] & tm];
 
@@ -93,15 +94,15 @@ block_init(block_state *self, const uint8_t *key, size_t t /* key_bytes */,
         bkey[i] = permute[bkey[i+1] ^ bkey[i+t8]];
 
     for (i=0; i<64; i++)
-        self->exp_key[i] = bkey[2*i] + 256*bkey[2*i+1];
+        self->exp_key[i] = bkey[2*i] + 256U*bkey[2*i+1];
 
     return 0;
 }
 
-#define ROL16(x, p) ((((x) << (p)) | ((x) >> (16-(p)))) & 0xFFFF)
-#define ROR16(x, p) ((((x) >> (p)) | ((x) << (16-(p)))) & 0xFFFF)
+#define ROL16(x, p) ((((x) << (p)) | ((uint16_t)(x) >> (16-(p)))))
+#define ROR16(x, p) ((((uint16_t)(x) >> (p)) | ((x) << (16-(p)))))
 
-static inline void mix_round(uint16_t *r, const uint16_t *k, size_t *j)
+static inline void mix_round(unsigned *r, const unsigned *k, size_t *j)
 {
     r[0] += k[(*j)++] + (r[3] & r[2]) + (~r[3] & r[1]);
     r[0] = ROL16(r[0], 1);
@@ -113,7 +114,7 @@ static inline void mix_round(uint16_t *r, const uint16_t *k, size_t *j)
     r[3] = ROL16(r[3], 5);
 }
 
-static inline void inv_mix_round(uint16_t *r, const uint16_t *k, size_t *j)
+static inline void inv_mix_round(unsigned *r, const unsigned *k, size_t *j)
 {
     r[3] = ROR16(r[3], 5);
     r[3] -= k[(*j)--] + (r[2] & r[1]) + (~r[2] & r[0]);
@@ -125,7 +126,7 @@ static inline void inv_mix_round(uint16_t *r, const uint16_t *k, size_t *j)
     r[0] -= k[(*j)--] + (r[3] & r[2]) + (~r[3] & r[1]);
 }
 
-static inline void mash_round(uint16_t *r, const uint16_t *k)
+static inline void mash_round(unsigned *r, const unsigned *k)
 {
     r[0] += k[r[3] & 63];
     r[1] += k[r[0] & 63];
@@ -133,7 +134,7 @@ static inline void mash_round(uint16_t *r, const uint16_t *k)
     r[3] += k[r[2] & 63];
 }
 
-static inline void inv_mash_round(uint16_t *r, const uint16_t *k)
+static inline void inv_mash_round(unsigned *r, const unsigned *k)
 {
     r[3] -= k[r[2] & 63];
     r[2] -= k[r[1] & 63];
@@ -141,17 +142,17 @@ static inline void inv_mash_round(uint16_t *r, const uint16_t *k)
     r[0] -= k[r[3] & 63];
 }
 
-static void block_encrypt(const block_state *self, const uint8_t *in, uint8_t *out)
+static void block_encrypt(struct block_state *self, const uint8_t *in, uint8_t *out)
 {
-    uint16_t r[4];
-    const uint16_t *k;
+    unsigned r[4];
+    const unsigned *k;
     size_t i, j;
 
     k = self->exp_key;
     j = 0;
 
     for (i=0; i<4; i++) {
-        r[i] = in[2*i] + 256*in[2*i+1];
+        r[i] = in[2*i] + 256U*in[2*i+1];
     }
 
     for (i=0; i<5; i++) mix_round(r, k, &j);
@@ -160,23 +161,22 @@ static void block_encrypt(const block_state *self, const uint8_t *in, uint8_t *o
     mash_round(r, k);
     for (i=0; i<5; i++) mix_round(r, k, &j);
     
-    
     for (i=0; i<4; i++) {
         out[2*i] = r[i] & 255;
-        out[2*i+1] = r[i] >> 8;
+        out[2*i+1] = (uint8_t)(r[i] >> 8);
     }
 }
 
-static void block_decrypt(const block_state *self, const uint8_t *in, uint8_t *out)
+static void block_decrypt(struct block_state *self, const uint8_t *in, uint8_t *out)
 {
-    uint16_t r[4];
-    const uint16_t *k;
+    unsigned r[4];
+    const unsigned *k;
     size_t i, j;
 
     k = self->exp_key;
 
     for (i=0; i<4; i++) {
-        r[i] = in[2*i] + 256*in[2*i+1];
+        r[i] = in[2*i] + 256U*in[2*i+1];
     }
 
     j = 63;
@@ -188,16 +188,15 @@ static void block_decrypt(const block_state *self, const uint8_t *in, uint8_t *o
     
     for (i=0; i<4; i++) {
         out[2*i] = r[i] & 255;
-        out[2*i+1] = r[i] >> 8;
+        out[2*i+1] = (uint8_t)(r[i] >> 8);
     }
 }
 
 static void
-block_finalize(block_state* self)
+block_finalize(struct block_state* self)
 {
 }
 
-#define NON_STANDARD_START_OPERATION
 #include "block_common.c"
 
 EXPORT_SYM int ARC2_start_operation(const uint8_t key[], size_t key_len, size_t effective_key_len, ARC2_State **pResult)

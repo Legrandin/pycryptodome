@@ -42,9 +42,9 @@ DAMAGE.
 #endif
 #endif
 
-#if defined(PY_LITTLE_ENDIAN)
+#if defined(PYCRYPTO_LITTLE_ENDIAN)
 #define INDEX(x, i) ((x) + (i))
-#elif defined(PY_BIG_ENDIAN) 
+#elif defined(PYCRYPTO_BIG_ENDIAN) 
 #define INDEX(x, i) (((x) + (i)) ^ 1)
 #else
 #error Undefined endianess
@@ -82,7 +82,7 @@ size_t static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uin
 
 #if defined(USE_SSE2)
 
-#ifndef PY_LITTLE_ENDIAN
+#ifndef PYCRYPTO_LITTLE_ENDIAN
 #error SSE2 only designed for little endian systems
 #endif
     r0 = _mm_set1_epi32(b);             // { b, b, b, b }

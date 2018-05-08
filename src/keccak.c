@@ -26,7 +26,7 @@
  * ===================================================================
 */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include <string.h>
 #include <assert.h>
 
@@ -46,12 +46,11 @@ typedef struct
      *  When squeezing, this is the remaining number of bytes
      *  that can be used as digest.
      */
-    size_t  valid_bytes;
+    unsigned valid_bytes;
 
     /* All values in bytes */
-    uint16_t security;
-    uint16_t capacity;
-    uint16_t rate;
+    unsigned capacity;
+    unsigned rate;
 
     uint8_t  squeezing;
     uint8_t  padding;
@@ -60,65 +59,15 @@ typedef struct
 #undef ROL64
 #define ROL64(x,y) ((((x) << (y)) | (x) >> (64-(y))) & 0xFFFFFFFFFFFFFFFFULL)
 
-static inline int little_endian(void) {
-    const int test = 1;
-    return *((uint8_t*)&test) == 1;
-}
-
-static inline uint64_t load64_le(const uint8_t p[])
-{
-    union {
-        int64_t dw;
-        uint8_t b[8];
-    } result;
-
-    if (little_endian()) {
-        memcpy(&result, p, sizeof result);
-    } else {
-        result.b[0] = p[7];
-        result.b[1] = p[6];
-        result.b[2] = p[5];
-        result.b[3] = p[4];
-        result.b[4] = p[3];
-        result.b[5] = p[2];
-        result.b[6] = p[1];
-        result.b[7] = p[0];
-    }
-
-    return result.dw;
-}
-
-static inline void store64_le(uint8_t dest[], uint64_t src)
-{
-    union t {
-        int64_t dw;
-        uint8_t b[8];
-    } *result = (void*) &src;
-
-    if (little_endian()) {
-        memcpy(dest, &src, sizeof src);
-    } else {
-        dest[0] = result->b[7];
-        dest[1] = result->b[6];
-        dest[2] = result->b[5];
-        dest[3] = result->b[4];
-        dest[4] = result->b[3];
-        dest[5] = result->b[2];
-        dest[6] = result->b[1];
-        dest[7] = result->b[0];
-    }
-}
-
-
 static void keccak_function (uint64_t *state);
 
 static void keccak_absorb_internal (keccak_state *self)
 {
-    short i,j;
+    unsigned i,j;
     uint64_t d;
     
-    for (i = j = 0; j < self->rate; ++i, j += 8) {
-        d = load64_le(self->buf + j);
+    for (i=j=0; j < self->rate; ++i, j += 8) {
+        d = LOAD_U64_LITTLE(self->buf + j);
         self->state[i] ^= d;
     }
 }
@@ -126,10 +75,10 @@ static void keccak_absorb_internal (keccak_state *self)
 static void
 keccak_squeeze_internal (keccak_state *self)
 {
-    short i, j;
+    unsigned i, j;
 
-    for (i = j = 0; j < self->rate; ++i, j += 8) {
-        store64_le(self->buf+j, self->state[i]);
+    for (i=j=0; j < self->rate; ++i, j += 8) {
+        STORE_U64_LITTLE(self->buf+j, self->state[i]);
     }
 }
 
@@ -147,10 +96,10 @@ EXPORT_SYM int keccak_init (keccak_state **state,
     if (NULL == ks)
         return ERR_MEMORY;
 
-    ks->capacity  = capacity_bytes;
-
-    if (ks->capacity >= 200)
+    if (capacity_bytes >= 200)
         return ERR_DIGEST_SIZE;
+
+    ks->capacity  = (unsigned)capacity_bytes;
 
     ks->rate      = 200 - ks->capacity;
     
@@ -166,30 +115,27 @@ EXPORT_SYM int keccak_destroy(keccak_state *state)
     return 0;
 }
 
-static inline unsigned minAB(unsigned a, unsigned b)
-{
-    return a<b ? a :b;
-}
-
 EXPORT_SYM int keccak_absorb (keccak_state *self,
                               const uint8_t *in,
                               size_t length)
 {
     if (NULL==self || NULL==in)
         return ERR_NULL;
-    
-    if (self->squeezing)
+
+    if (self->squeezing != 0)
         return ERR_UNKNOWN;
-    
+
     while (length > 0) {
-        unsigned bytestocopy;
-        
-        bytestocopy = minAB(length, self->rate - self->valid_bytes);
-        memcpy(self->buf + self->valid_bytes, in, bytestocopy);
-      
-        self->valid_bytes += bytestocopy;
-        in                += bytestocopy;  
-        length            -= bytestocopy;
+        unsigned tc;
+        unsigned left;
+
+        left = self->rate - self->valid_bytes;
+        tc = (unsigned) MIN(length, left);
+        memcpy(self->buf + self->valid_bytes, in, tc);
+
+        self->valid_bytes += tc;
+        in                += tc;
+        length            -= tc;
 
         if (self->valid_bytes == self->rate) {
             keccak_absorb_internal (self);
@@ -226,22 +172,23 @@ EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length)
     if ((NULL == self) || (NULL == out))
         return ERR_NULL;
 
-    if (!self->squeezing) {
+    if (self->squeezing == 0) {
         keccak_finish (self);
     }
 
+    assert(self->squeezing == 1);
     assert(self->valid_bytes > 0);
     assert(self->valid_bytes <= self->rate);
 
     while (length > 0) {
-        unsigned bytestocopy;
+        unsigned tc;
 
-        bytestocopy = minAB(self->valid_bytes, length);
-        memcpy(out, self->buf + (self->rate - self->valid_bytes), bytestocopy);
+        tc = (unsigned)MIN(self->valid_bytes, length);
+        memcpy(out, self->buf + (self->rate - self->valid_bytes), tc);
         
-        self->valid_bytes -= bytestocopy;
-        out               += bytestocopy;
-        length            -= bytestocopy;
+        self->valid_bytes -= tc;
+        out               += tc;
+        length            -= tc;
 
         if (self->valid_bytes == 0) {
             keccak_function (self->state);

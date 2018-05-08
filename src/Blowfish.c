@@ -26,7 +26,7 @@
  * http://www.schneier.com/paper-blowfish-fse.html
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 
 FAKE_INIT(raw_blowfish)
@@ -38,7 +38,7 @@ FAKE_INIT(raw_blowfish)
 #define KEY_SIZE 0      /* variable key size */
 
 #define BLOWFISH_MAGIC 0xf9d565deu
-typedef struct {
+struct block_state {
     uint32_t magic;
 
     /* P permutation */
@@ -49,27 +49,12 @@ typedef struct {
     uint32_t S2[256];
     uint32_t S3[256];
     uint32_t S4[256];
-} block_state;
+};
 
 /* The Blowfish round function F.  Everything is taken modulo 2**32 */
 #define F(a, b, c, d) (((a) + (b)) ^ (c)) + (d)
 
-static uint32_t bytes_to_word(const unsigned char *in)
-{
-    /* big endian */
-    return (in[0] << 24) | (in[1] << 16) | (in[2] << 8) | in[3];
-}
-
-static void word_to_bytes(uint32_t w, unsigned char *out)
-{
-    /* big endian */
-    out[0] = (w >> 24) & 0xff;
-    out[1] = (w >> 16) & 0xff;
-    out[2] = (w >> 8) & 0xff;
-    out[3] = w & 0xff;
-}
-
-static void inline_encrypt(block_state *self, uint32_t *pxL, uint32_t *pxR)
+static void inline_encrypt(struct block_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;
@@ -99,7 +84,7 @@ static void inline_encrypt(block_state *self, uint32_t *pxL, uint32_t *pxR)
     *pxR = xR;
 }
 
-static void inline_decrypt(block_state *self, uint32_t *pxL, uint32_t *pxR)
+static void inline_decrypt(struct block_state *self, uint32_t *pxL, uint32_t *pxR)
 {
     int i;
     uint32_t xL = *pxL;
@@ -129,40 +114,40 @@ static void inline_decrypt(block_state *self, uint32_t *pxL, uint32_t *pxR)
     *pxR = xR;
 }
 
-static void block_encrypt(block_state *self, const unsigned char *in, unsigned char *out)
+static void block_encrypt(struct block_state *self, const uint8_t *in, unsigned char *out)
 {
     uint32_t xL, xR;
 
     /* big endian */
-    xL = bytes_to_word(in);
-    xR = bytes_to_word(in+4);
+    xL = LOAD_U32_BIG(in);
+    xR = LOAD_U32_BIG(in+4);
 
     inline_encrypt(self, &xL, &xR);
 
     /* big endian */
-    word_to_bytes(xL, out);
-    word_to_bytes(xR, out+4);
+    STORE_U32_BIG(out, xL);
+    STORE_U32_BIG(out+4, xR);
 }
 
-static void block_decrypt(block_state *self, const unsigned char *in, unsigned char *out)
+static void block_decrypt(struct block_state *self, const uint8_t *in, unsigned char *out)
 {
     uint32_t xL, xR;
 
     /* big endian */
-    xL = bytes_to_word(in);
-    xR = bytes_to_word(in+4);
+    xL = LOAD_U32_BIG(in);
+    xR = LOAD_U32_BIG(in+4);
 
     inline_decrypt(self, &xL, &xR);
 
     /* big endian */
-    word_to_bytes(xL, out);
-    word_to_bytes(xR, out+4);
+    STORE_U32_BIG(out, xL);
+    STORE_U32_BIG(out+4, xR);
 }
 
-static int block_init(block_state *self, const unsigned char *key, int keylen)
+static int block_init(struct block_state *self, const uint8_t *key, size_t keylen)
 {
     uint32_t word;
-    int i;
+    unsigned i;
     uint32_t xL, xR;
 
     self->magic = 0;
@@ -221,7 +206,7 @@ static int block_init(block_state *self, const unsigned char *key, int keylen)
     return 0;
 }
 
-static void block_finalize(block_state *self)
+static void block_finalize(struct block_state *self)
 {
 }
 

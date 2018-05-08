@@ -25,46 +25,46 @@
  *
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(ARC4)
 
 typedef struct
 {
-    unsigned char state[256];
-    unsigned char x,y;
+    uint8_t state[256];
+    uint8_t x,y;
 } stream_state;
 
 EXPORT_SYM int ARC4_stream_encrypt(stream_state *rc4State, const uint8_t in[], uint8_t out[], size_t len)
 {
     unsigned i;
-    int x=rc4State->x, y=rc4State->y;
+    unsigned x=rc4State->x, y=rc4State->y;
 
     for (i=0; i<len; i++)
     {
         x = (x + 1) % 256;
         y = (y + rc4State->state[x]) % 256;
         {
-            int t;      /* Exchange state[x] and state[y] */
+            unsigned t;      /* Exchange state[x] and state[y] */
             t = rc4State->state[x];
             rc4State->state[x] = rc4State->state[y];
-            rc4State->state[y] = t;
+            rc4State->state[y] = (uint8_t)t;
         }
         {
-            int xorIndex;   /* XOR the data with the stream data */
+            unsigned xorIndex;   /* XOR the data with the stream data */
             xorIndex=(rc4State->state[x]+rc4State->state[y]) % 256;
             out[i] = in[i] ^ rc4State->state[xorIndex];
         }
     }
-    rc4State->x=x;
-    rc4State->y=y;
+    rc4State->x=(uint8_t)x;
+    rc4State->y=(uint8_t)y;
     return 0;
 }
 
 EXPORT_SYM int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4State)
 {
     unsigned i;
-    int index1, index2;
+    unsigned index1, index2;
     stream_state *rc4State;
 
     if (NULL == pRc4State || NULL == key)
@@ -75,7 +75,7 @@ EXPORT_SYM int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4
         return ERR_MEMORY;
 
     for(i=0; i<256; i++)
-        rc4State->state[i]=i;
+        rc4State->state[i]=(uint8_t)i;
 
     rc4State->x=0;
     rc4State->y=0;
@@ -84,12 +84,12 @@ EXPORT_SYM int ARC4_stream_init(uint8_t *key, size_t keylen, stream_state **pRc4
     index2=0;
     for(i=0; i<256; i++)
     {
-        int t;
-        index2 = ( key[index1] + rc4State->state[i] + index2) % 256;
+        unsigned t;
+        index2 = ( (unsigned)key[index1] + rc4State->state[i] + index2) % 256;
         t = rc4State->state[i];
         rc4State->state[i] = rc4State->state[index2];
-        rc4State->state[index2] = t;
-        index1 = (index1 + 1) % keylen;
+        rc4State->state[index2] = (uint8_t)t;
+        index1 = (index1 + 1) % (unsigned)keylen;
     }
     return 0;
 }

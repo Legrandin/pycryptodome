@@ -17,7 +17,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "pycrypto_common.h"
+#include "common.h"
 
 #include "siphash.h"
 
@@ -26,22 +26,6 @@
 #define dROUNDS 4
 
 #define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
-
-#define U32TO8_LE(p, v)                                                        \
-    (p)[0] = (uint8_t)((v));                                                   \
-    (p)[1] = (uint8_t)((v) >> 8);                                              \
-    (p)[2] = (uint8_t)((v) >> 16);                                             \
-    (p)[3] = (uint8_t)((v) >> 24);
-
-#define U64TO8_LE(p, v)                                                        \
-    U32TO8_LE((p), (uint32_t)((v)));                                           \
-    U32TO8_LE((p) + 4, (uint32_t)((v) >> 32));
-
-#define U8TO64_LE(p)                                                           \
-    (((uint64_t)((p)[0])) | ((uint64_t)((p)[1]) << 8) |                        \
-     ((uint64_t)((p)[2]) << 16) | ((uint64_t)((p)[3]) << 24) |                 \
-     ((uint64_t)((p)[4]) << 32) | ((uint64_t)((p)[5]) << 40) |                 \
-     ((uint64_t)((p)[6]) << 48) | ((uint64_t)((p)[7]) << 56))
 
 #define SIPROUND                                                               \
     do {                                                                       \
@@ -61,22 +45,6 @@
         v2 = ROTL(v2, 32);                                                     \
     } while (0)
 
-#ifdef DEBUG
-#define TRACE                                                                  \
-    do {                                                                       \
-        printf("(%3d) v0 %08x %08x\n", (int)inlen, (uint32_t)(v0 >> 32),       \
-               (uint32_t)v0);                                                  \
-        printf("(%3d) v1 %08x %08x\n", (int)inlen, (uint32_t)(v1 >> 32),       \
-               (uint32_t)v1);                                                  \
-        printf("(%3d) v2 %08x %08x\n", (int)inlen, (uint32_t)(v2 >> 32),       \
-               (uint32_t)v2);                                                  \
-        printf("(%3d) v3 %08x %08x\n", (int)inlen, (uint32_t)(v3 >> 32),       \
-               (uint32_t)v3);                                                  \
-    } while (0)
-#else
-#define TRACE
-#endif
-
 int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
             uint8_t *out, const size_t outlen) {
 
@@ -84,10 +52,9 @@ int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
     uint64_t v1 = 0x646f72616e646f6dULL;
     uint64_t v2 = 0x6c7967656e657261ULL;
     uint64_t v3 = 0x7465646279746573ULL;
-    uint64_t k0 = U8TO64_LE(k);
-    uint64_t k1 = U8TO64_LE(k + 8);
+    uint64_t k0 = LOAD_U64_LITTLE(k);
+    uint64_t k1 = LOAD_U64_LITTLE(k + 8);
     uint64_t m;
-    int i;
     const uint8_t *end = in + inlen - (inlen % sizeof(uint64_t));
     const int left = inlen & 7;
     uint64_t b = ((uint64_t)inlen) << 56;
@@ -103,12 +70,11 @@ int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
         v1 ^= 0xee;
 
     for (; in != end; in += 8) {
-        m = U8TO64_LE(in);
+        m = LOAD_U64_LITTLE(in);
         v3 ^= m;
 
-        TRACE;
-        for (i = 0; i < cROUNDS; ++i)
-            SIPROUND;
+        SIPROUND;
+        SIPROUND;
 
         v0 ^= m;
     }
@@ -135,35 +101,31 @@ int siphash(const uint8_t *in, const size_t inlen, const uint8_t *k,
 
     v3 ^= b;
 
-    TRACE;
-    for (i = 0; i < cROUNDS; ++i)
-        SIPROUND;
+    SIPROUND;
+    SIPROUND;
 
     v0 ^= b;
+    v2 ^= outlen == 16 ? 0xEE : 0xFF;
 
-    if (outlen == 16)
-        v2 ^= 0xee;
-    else
-        v2 ^= 0xff;
-
-    TRACE;
-    for (i = 0; i < dROUNDS; ++i)
-        SIPROUND;
+    SIPROUND;
+    SIPROUND;
+    SIPROUND;
+    SIPROUND;
 
     b = v0 ^ v1 ^ v2 ^ v3;
-    U64TO8_LE(out, b);
+    STORE_U64_LITTLE(out, b);
 
-    if (outlen == 8)
-        return 0;
+    if (outlen == 16) {
+        v1 ^= 0xdd;
 
-    v1 ^= 0xdd;
-
-    TRACE;
-    for (i = 0; i < dROUNDS; ++i)
+        SIPROUND;
+        SIPROUND;
+        SIPROUND;
         SIPROUND;
 
-    b = v0 ^ v1 ^ v2 ^ v3;
-    U64TO8_LE(out + 8, b);
+        b = v0 ^ v1 ^ v2 ^ v3;
+        STORE_U64_LITTLE(out + 8, b);
+    }
 
     return 0;
 }

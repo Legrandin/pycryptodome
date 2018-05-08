@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(raw_ocb)
 
@@ -68,15 +68,15 @@ static void double_L(DataBlock *out, DataBlock *in)
     for (i=BLOCK_SIZE-1; i>=0; i--) {
         unsigned t;
 
-        t = ((*in)[i] << 1) | carry;
+        t = ((unsigned)(*in)[i] << 1) | carry;
         carry = t >> 8;
-        (*out)[i] = t;
+        (*out)[i] = (uint8_t)t;
     }
     carry |= 0x100;
     carry |= carry << 1;
     carry |= carry << 2;
     carry |= carry << 4;
-    (*out)[BLOCK_SIZE-1] ^= carry & 0x87;
+    (*out)[BLOCK_SIZE-1] = (uint8_t)((*out)[BLOCK_SIZE-1] ^ (carry & 0x87));
 }
 
 static unsigned ntz(uint64_t counter)

@@ -24,7 +24,7 @@
  * Country of origin: Canada
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 
 #ifndef PCT_DES3_MODULE
@@ -41,11 +41,11 @@ FAKE_INIT(raw_des3)
 #define LTC_NO_PROTOTYPES
 #include "libtom/tomcrypt_des.c"
 
-typedef struct {
+struct block_state {
     symmetric_key sk;
-} block_state;
+};
 
-static int block_init(block_state *self, unsigned char *key, int keylen)
+static int block_init(struct block_state *self, const uint8_t *key, size_t keylen)
 {
     int rc;
 #ifdef PCT_DES3_MODULE
@@ -66,11 +66,11 @@ static int block_init(block_state *self, unsigned char *key, int keylen)
     return ERR_UNKNOWN;
 }
 
-static void block_finalize(block_state *self)
+static void block_finalize(struct block_state *self)
 {
 }
 
-static void block_encrypt(block_state *self, unsigned char *in, unsigned char *out)
+static void block_encrypt(struct block_state *self, const uint8_t *in, uint8_t *out)
 {
 #ifdef PCT_DES3_MODULE
     des3_ecb_encrypt(in, out, &self->sk);
@@ -79,7 +79,7 @@ static void block_encrypt(block_state *self, unsigned char *in, unsigned char *o
 #endif
 }
 
-static void block_decrypt(block_state *self, unsigned char *in, unsigned char *out)
+static void block_decrypt(struct block_state *self, const uint8_t *in, uint8_t *out)
 {
 #ifdef PCT_DES3_MODULE
     des3_ecb_decrypt(in, out, &self->sk);

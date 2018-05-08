@@ -22,7 +22,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include "block_base.h"
 #include <wmmintrin.h>
 #include <stdlib.h>
@@ -39,14 +39,14 @@ FAKE_INIT(raw_aesni)
 
 #define ALIGNMENT 16
 
-typedef struct {
+struct block_state {
     /** Both ek and dk points into the buffer and are aligned to the 16 byte boundary **/
     __m128i* ek;
     __m128i* dk;
-    int rounds;
+    unsigned rounds;
 
     uint8_t buffer[(MAXNR+1)*sizeof(__m128i)*2 + ALIGNMENT];
-} block_state;
+};
 
 /* Helper functions to expand keys */
 
@@ -88,7 +88,7 @@ static __m128i aes192_keyexpand_2(__m128i key, __m128i key2)
         1))
 
 /* Encryption key setup */
-static void aes_key_setup_enc(__m128i *rk, const uint8_t* cipherKey, int keylen)
+static void aes_key_setup_enc(__m128i *rk, const uint8_t* cipherKey, unsigned keylen)
 {
     switch (keylen) {
         case 16:
@@ -165,9 +165,9 @@ static void aes_key_setup_enc(__m128i *rk, const uint8_t* cipherKey, int keylen)
 }
 
 /* Decryption key setup */
-static void aes_key_setup_dec(__m128i *dk, const __m128i *ek, int rounds)
+static void aes_key_setup_dec(__m128i *dk, const __m128i *ek, unsigned rounds)
 {
-    int i;
+    unsigned i;
 
     dk[rounds] = ek[0];
     for (i = 1; i < rounds; ++i) {
@@ -176,9 +176,9 @@ static void aes_key_setup_dec(__m128i *dk, const __m128i *ek, int rounds)
     dk[0] = ek[rounds];
 }
 
-static int block_init(block_state* self, unsigned char* key, int keylen)
+static int block_init(struct block_state* self, const uint8_t* key, size_t keylen)
 {
-    int nr = 0;
+    unsigned nr = 0;
     int offset;
 
     switch (keylen) {
@@ -190,23 +190,23 @@ static int block_init(block_state* self, unsigned char* key, int keylen)
     }
 
     /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
-    offset = ALIGNMENT - ((uintptr_t)self->buffer & (ALIGNMENT-1));
+    offset = ALIGNMENT - (int)((uintptr_t)self->buffer & (ALIGNMENT-1));
     self->ek = (__m128i*)((uint8_t*)self->buffer + offset);
     self->dk = (__m128i*)((uint8_t*)self->ek + (MAXNR+1)*sizeof(__m128i));
 
     self->rounds = nr;
-    aes_key_setup_enc(self->ek, key, keylen);
+    aes_key_setup_enc(self->ek, key, (unsigned)keylen);
     aes_key_setup_dec(self->dk, self->ek, nr);
 
     return 0;
 }
 
-static void block_finalize(block_state* self)
+static void block_finalize(struct block_state* self)
 {
     memset(self, 0, sizeof(*self));
 }
 
-static void block_encrypt(block_state* self, const uint8_t* in, uint8_t* out)
+static void block_encrypt(struct block_state* self, const uint8_t* in, uint8_t* out)
 {
     __m128i m = _mm_loadu_si128((const __m128i*) in);
     /* first 9 rounds */
@@ -234,7 +234,7 @@ static void block_encrypt(block_state* self, const uint8_t* in, uint8_t* out)
     _mm_storeu_si128((__m128i*) out, m);
 }
 
-static void block_decrypt(block_state* self, const uint8_t* in, uint8_t* out)
+static void block_decrypt(struct block_state* self, const uint8_t* in, uint8_t* out)
 {
     __m128i m = _mm_loadu_si128((const __m128i*) in);
     /* first 9 rounds */

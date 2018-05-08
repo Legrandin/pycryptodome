@@ -1,7 +1,7 @@
 #ifndef _BLOCK_BASE
 #define _BLOCK_BASE
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 struct _BlockBase;
 
@@ -13,5 +13,16 @@ typedef struct _BlockBase {
     int (*destructor)(struct _BlockBase *state);
     size_t block_len;
 } BlockBase;
+
+struct block_state;
+
+#ifdef MODULE_NAME
+#ifndef NON_STANDARD_START_OPERATION
+static int block_init(struct block_state *state, const uint8_t *key, size_t keylen);
+#endif
+static void block_finalize(struct block_state* self);
+static void block_encrypt(struct block_state *self, const uint8_t *in, uint8_t *out);
+static void block_decrypt(struct block_state *self, const uint8_t *in, uint8_t *out);
+#endif
 
 #endif

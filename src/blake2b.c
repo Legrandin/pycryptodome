@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 #define F_ROUNDS 12
 #define MAX_DIGEST_BYTES 64
@@ -42,35 +42,19 @@
 
 typedef uint64_t blake2_word;
 
+#define STORE_WORD_LITTLE(p, w)     STORE_U64_LITTLE(p, w)
+#define LOAD_WORD_LITTLE(p)         LOAD_U64_LITTLE(p)
+
 static const uint64_t iv[8] = {
-    0x6A09E667F3BCC908ull,
-    0xBB67AE8584CAA73Bull,
-    0x3C6EF372FE94F82Bull,
-    0xA54FF53A5F1D36F1ull,
-    0x510E527FADE682D1ull,
-    0x9B05688C2B3E6C1Full,
-    0x1F83D9ABFB41BD6Bull,
-    0x5BE0CD19137E2179ull
+    0x6A09E667F3BCC908U,
+    0xBB67AE8584CAA73BU,
+    0x3C6EF372FE94F82BU,
+    0xA54FF53A5F1D36F1U,
+    0x510E527FADE682D1U,
+    0x9B05688C2B3E6C1FU,
+    0x1F83D9ABFB41BD6BU,
+    0x5BE0CD19137E2179U
 };
-
-static void byteswap(uint64_t *v)
-{
-    union {
-        uint64_t w;
-        uint8_t b[8];
-    } x, y;
-
-    x.w = *v;
-    y.b[0] = x.b[7];
-    y.b[1] = x.b[6];
-    y.b[2] = x.b[5];
-    y.b[3] = x.b[4];
-    y.b[4] = x.b[3];
-    y.b[5] = x.b[2];
-    y.b[6] = x.b[1];
-    y.b[7] = x.b[0];
-    *v = y.w;
-}
 
 #define blake2_init blake2b_init
 #define blake2_copy blake2b_copy

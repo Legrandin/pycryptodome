@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(raw_ofb)
 
@@ -49,10 +49,6 @@ typedef struct {
 
     uint8_t keyStream[0];
 } OfbModeState;
-
-static inline unsigned min_ab(unsigned a, unsigned b) {
-    return a < b ? a : b;
-}
 
 EXPORT_SYM int OFB_start_operation(BlockBase *cipher,
                                    const uint8_t iv[],
@@ -113,7 +109,7 @@ EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
             ofbState->usedKeyStream = 0;
         }
 
-        keyStreamToUse = min_ab(data_len, block_len - ofbState->usedKeyStream);
+        keyStreamToUse = MIN(data_len, block_len - ofbState->usedKeyStream);
         for (i=0; i<keyStreamToUse; i++)
             *out++ = *in++ ^ ofbState->keyStream[i + ofbState->usedKeyStream];
 

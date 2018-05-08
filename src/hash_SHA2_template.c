@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include <stdio.h>
 
 FAKE_INIT(MODULE_NAME)
@@ -61,7 +61,7 @@ typedef uint32_t sha2_word_t;
 #define sigma_0_256(x)    (ROTR32(7,x)  ^ ROTR32(18,x) ^ SHR(3,x))
 #define sigma_1_256(x)    (ROTR32(17,x) ^ ROTR32(19,x) ^ SHR(10,x))
 
-static const uint64_t K[SCHEDULE_SIZE] = {
+static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b,
     0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01,
     0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7,
@@ -84,6 +84,9 @@ static const uint64_t K[SCHEDULE_SIZE] = {
     d += h; \
     h += SIGMA_0_256(a) + MAJ(a,b,c);
 
+#define LOAD_WORD_BIG(p)        LOAD_U32_BIG(p)
+#define STORE_WORD_BIG(p, w)    STORE_U32_BIG(p, w)
+
 #elif WORD_SIZE==8
 
 /** SHA-384, SHA-512 **/
@@ -98,7 +101,7 @@ typedef uint64_t sha2_word_t;
 #define sigma_0_512(x)    (ROTR64(1,x)  ^ ROTR64(8,x)  ^ SHR(7,x))
 #define sigma_1_512(x)    (ROTR64(19,x) ^ ROTR64(61,x) ^ SHR(6,x))
 
-static const uint64_t K[SCHEDULE_SIZE] = {
+static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL,
     0x3956c25bf348b538ULL, 0x59f111f1b605d019ULL, 0x923f82a4af194f9bULL, 0xab1c5ed5da6d8118ULL,
     0xd807aa98a3030242ULL, 0x12835b0145706fbeULL, 0x243185be4ee4b28cULL, 0x550c7dc3d5ffb4e2ULL,
@@ -128,36 +131,26 @@ static const uint64_t K[SCHEDULE_SIZE] = {
     d += h; \
     h += SIGMA_0_512(a) + MAJ(a,b,c);
 
+#define LOAD_WORD_BIG(p)        LOAD_U64_BIG(p)
+#define STORE_WORD_BIG(p, w)    STORE_U64_BIG(p, w)
+
 #else
 #error Invalid WORD_SIZE
 #endif
-
-static inline sha2_word_t get_be(const uint8_t *p)
-{
-    sha2_word_t result;
-    int i;
-
-    result = 0;
-    for (i=0; i<WORD_SIZE; i++) {
-        result = (result << 8) | p[i];
-    }
-    
-    return result;
-}
 
 static inline void put_be(sha2_word_t number, uint8_t *p)
 {
     int i;
 
     for (i=0; i<WORD_SIZE; i++) {
-        p[WORD_SIZE-1-i] = number >> (i*8);
+        p[WORD_SIZE-1-i] = (uint8_t)(number >> (i*8));
     }
 }
 
 typedef struct t_hash_state {
     sha2_word_t h[8];
     uint8_t buf[BLOCK_SIZE];    /** 16 words **/
-    int curlen;                 /** Useful message bytes in buf[] (leftmost) **/
+    unsigned curlen;            /** Useful message bytes in buf[] (leftmost) **/
     sha2_word_t totbits[2];     /** Total message length in bits **/
     size_t digest_size;         /** Actual digest size in bytes **/
 } hash_state;
@@ -186,7 +179,7 @@ static void sha_compress(hash_state * hs)
 
     /** Words flow in in big-endian mode **/
     for (i=0; i<16; i++) {
-        W[i] = get_be(&hs->buf[i*WORD_SIZE]);
+        W[i] = LOAD_WORD_BIG(&hs->buf[i*WORD_SIZE]);
     }
     for (;i<SCHEDULE_SIZE; i++) {
         W[i] = SCHEDULE(i);
@@ -356,10 +349,13 @@ EXPORT_SYM int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len
         return ERR_NULL;
     }
 
-    while (len>0) {
-        int btc;
+    assert(hs->curlen < BLOCK_SIZE);
 
-        btc = MIN(BLOCK_SIZE - hs->curlen, (int)len);
+    while (len>0) {
+        unsigned btc, left;
+
+        left = BLOCK_SIZE - hs->curlen;
+        btc = (unsigned)MIN(left, len);
         memcpy(&hs->buf[hs->curlen], buf, btc);
         buf += btc;
         hs->curlen += btc;
@@ -379,7 +375,7 @@ EXPORT_SYM int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len
 
 static int sha_finalize(hash_state *hs, uint8_t *hash, size_t digest_size)
 {
-    int left, i;
+    unsigned left, i;
     uint8_t hash_tmp[WORD_SIZE*8];
 
     if (digest_size != hs->digest_size) {
@@ -409,8 +405,8 @@ static int sha_finalize(hash_state *hs, uint8_t *hash, size_t digest_size)
      **/
     left = BLOCK_SIZE - hs->curlen;
     memset(&hs->buf[hs->curlen], 0, left);
-    put_be(hs->totbits[1], &hs->buf[BLOCK_SIZE-(2*WORD_SIZE)]);
-    put_be(hs->totbits[0], &hs->buf[BLOCK_SIZE-(  WORD_SIZE)]);
+    STORE_WORD_BIG(&hs->buf[BLOCK_SIZE-(2*WORD_SIZE)], hs->totbits[1]);
+    STORE_WORD_BIG(&hs->buf[BLOCK_SIZE-(  WORD_SIZE)], hs->totbits[0]);
 
     /** compress one last time **/
     sha_compress(hs);
@@ -488,7 +484,7 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
     memcpy(last_hmac, first_hmac, digest_size);
 
     for (i=1; i<iterations; i++) {
-        int j;
+        unsigned j;
 
         inner_temp = *inner;
         outer_temp = *outer;

@@ -43,7 +43,7 @@
  *   "RIPEMD-160 is big-bit-endian, little-byte-endian, and left-justified."
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(RIPEMD160)
 
@@ -54,11 +54,8 @@ typedef struct {
     uint64_t length;    /* Total number of _bits_ (not bytes) added to the
                            hash.  This includes bits that have been buffered
                            but not not fed through the compression function yet. */
-    union {
-        uint32_t w[16];
-        uint8_t b[64];
-    } buf;
-    uint8_t bufpos;     /* number of bytes currently in the buffer */
+    uint8_t buf[64];
+    unsigned bufpos;     /* number of bytes currently in the buffer */
 } hash_state;
 
 /* cyclic left-shift the 32-bit word n left by s bits */
@@ -170,54 +167,17 @@ EXPORT_SYM int ripemd160_destroy(hash_state *hs)
     return 0;
 }
 
-static int little_endian(void) {
-    int test = 1;
-    return *((uint8_t*)&test) == 1;
-}
-
-static void byteswap32(uint32_t *v)
-{
-    union { uint32_t w; uint8_t b[4]; } x, y;
-
-    if (little_endian())
-        return;
-
-    x.w = *v;
-    y.b[0] = x.b[3];
-    y.b[1] = x.b[2];
-    y.b[2] = x.b[1];
-    y.b[3] = x.b[0];
-    *v = y.w;
-
-    /* Wipe temporary variables */
-    x.w = y.w = 0;
-}
-
-static void byteswap_digest(uint32_t *p)
-{
-    unsigned int i;
-
-    if (little_endian())
-        return;
-
-    for (i = 0; i < 4; i++) {
-        byteswap32(p++);
-        byteswap32(p++);
-        byteswap32(p++);
-        byteswap32(p++);
-    }
-}
-
 /* The RIPEMD160 compression function.  Operates on self->buf */
 static void ripemd160_compress(hash_state *self)
 {
-    uint8_t w, round;
+    unsigned w, round;
     uint32_t T;
     uint32_t AL, BL, CL, DL, EL;    /* left line */
     uint32_t AR, BR, CR, DR, ER;    /* right line */
+    uint32_t bufw[16];
 
-    /* Byte-swap the buffer if we're on a big-endian machine */
-    byteswap_digest(self->buf.w);
+    for (w=0; w<16; w++)
+        bufw[w] = LOAD_U32_LITTLE(&self->buf[w*4]);
 
     /* Load the left and right lines with the initial state */
     AL = AR = self->h[0];
@@ -229,55 +189,55 @@ static void ripemd160_compress(hash_state *self)
     /* Round 1 */
     round = 0;
     for (w = 0; w < 16; w++) { /* left line */
-        T = ROL(SL[round][w], AL + F1(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
+        T = ROL(SL[round][w], AL + F1(BL, CL, DL) + bufw[RL[round][w]] + KL[round]) + EL;
         AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
     }
     for (w = 0; w < 16; w++) { /* right line */
-        T = ROL(SR[round][w], AR + F5(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
+        T = ROL(SR[round][w], AR + F5(BR, CR, DR) + bufw[RR[round][w]] + KR[round]) + ER;
         AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
     }
 
     /* Round 2 */
     round++;
     for (w = 0; w < 16; w++) { /* left line */
-        T = ROL(SL[round][w], AL + F2(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
+        T = ROL(SL[round][w], AL + F2(BL, CL, DL) + bufw[RL[round][w]] + KL[round]) + EL;
         AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
     }
     for (w = 0; w < 16; w++) { /* right line */
-        T = ROL(SR[round][w], AR + F4(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
+        T = ROL(SR[round][w], AR + F4(BR, CR, DR) + bufw[RR[round][w]] + KR[round]) + ER;
         AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
     }
 
     /* Round 3 */
     round++;
     for (w = 0; w < 16; w++) { /* left line */
-        T = ROL(SL[round][w], AL + F3(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
+        T = ROL(SL[round][w], AL + F3(BL, CL, DL) + bufw[RL[round][w]] + KL[round]) + EL;
         AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
     }
     for (w = 0; w < 16; w++) { /* right line */
-        T = ROL(SR[round][w], AR + F3(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
+        T = ROL(SR[round][w], AR + F3(BR, CR, DR) + bufw[RR[round][w]] + KR[round]) + ER;
         AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
     }
 
     /* Round 4 */
     round++;
     for (w = 0; w < 16; w++) { /* left line */
-        T = ROL(SL[round][w], AL + F4(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
+        T = ROL(SL[round][w], AL + F4(BL, CL, DL) + bufw[RL[round][w]] + KL[round]) + EL;
         AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
     }
     for (w = 0; w < 16; w++) { /* right line */
-        T = ROL(SR[round][w], AR + F2(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
+        T = ROL(SR[round][w], AR + F2(BR, CR, DR) + bufw[RR[round][w]] + KR[round]) + ER;
         AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
     }
 
     /* Round 5 */
     round++;
     for (w = 0; w < 16; w++) { /* left line */
-        T = ROL(SL[round][w], AL + F5(BL, CL, DL) + self->buf.w[RL[round][w]] + KL[round]) + EL;
+        T = ROL(SL[round][w], AL + F5(BL, CL, DL) + bufw[RL[round][w]] + KL[round]) + EL;
         AL = EL; EL = DL; DL = ROL(10, CL); CL = BL; BL = T;
     }
     for (w = 0; w < 16; w++) { /* right line */
-        T = ROL(SR[round][w], AR + F1(BR, CR, DR) + self->buf.w[RR[round][w]] + KR[round]) + ER;
+        T = ROL(SR[round][w], AR + F1(BR, CR, DR) + bufw[RR[round][w]] + KR[round]) + ER;
         AR = ER; ER = DR; DR = ROL(10, CR); CR = BR; BR = T;
     }
 
@@ -295,11 +255,11 @@ static void ripemd160_compress(hash_state *self)
     self->bufpos = 0;
 }
 
-EXPORT_SYM int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
+EXPORT_SYM int ripemd160_update(hash_state *hs, const uint8_t *in, size_t len)
 {
     unsigned int bytes_needed;
 
-    if (NULL==hs || NULL==buf)
+    if (NULL==hs || NULL==in)
         return ERR_NULL;
 
     while (len > 0) {
@@ -309,10 +269,10 @@ EXPORT_SYM int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
         if (len >= bytes_needed) {
             /* We have enough bytes, so copy them into the internal buffer and run
              * the compression function. */
-            memcpy(&hs->buf.b[hs->bufpos], buf, bytes_needed);
+            memcpy(&hs->buf[hs->bufpos], in, bytes_needed);
             hs->bufpos += bytes_needed;
             hs->length += bytes_needed * 8;    /* length is in bits */
-            buf += bytes_needed;
+            in += bytes_needed;
             ripemd160_compress(hs);
             len -= bytes_needed;
             continue;
@@ -320,9 +280,9 @@ EXPORT_SYM int ripemd160_update(hash_state *hs, const uint8_t *buf, size_t len)
 
         /* We do not have enough bytes to fill the internal buffer.
          * Copy what's there and return. */
-        memcpy(&hs->buf.b[hs->bufpos], buf, len);
-        hs->bufpos += len;
-        hs->length += len * 8;    /* length is in bits */
+        memcpy(&hs->buf[hs->bufpos], in, len);
+        hs->bufpos += (unsigned)len;
+        hs->length += (unsigned)(len * 8);    /* length is in bits */
         return 0;
     }
 
@@ -342,6 +302,7 @@ EXPORT_SYM int ripemd160_copy(const hash_state *src, hash_state *dst)
 EXPORT_SYM int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_DIGEST_SIZE])
 {
     hash_state tmp;
+    unsigned i;
 
     if (NULL==hs || digest==NULL)
         return ERR_NULL;
@@ -349,7 +310,7 @@ EXPORT_SYM int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_D
     tmp = *hs;
 
     /* Append the padding */
-    tmp.buf.b[tmp.bufpos++] = 0x80;
+    tmp.buf[tmp.bufpos++] = 0x80;
 
     if (tmp.bufpos > 56) {
         tmp.bufpos = 64;
@@ -357,16 +318,14 @@ EXPORT_SYM int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_D
     }
 
     /* Append the length */
-    tmp.buf.w[14] = (uint32_t) (tmp.length & 0xFFFFffffu);
-    tmp.buf.w[15] = (uint32_t) ((tmp.length >> 32) & 0xFFFFffffu);
-    byteswap32(&tmp.buf.w[14]);
-    byteswap32(&tmp.buf.w[15]);
+    STORE_U64_LITTLE(&tmp.buf[sizeof tmp.buf - 8], tmp.length);
     tmp.bufpos = 64;
     ripemd160_compress(&tmp);
 
     /* Copy the final state into the output buffer */
-    byteswap_digest(tmp.h);
-    memcpy(digest, &tmp.h, RIPEMD160_DIGEST_SIZE);
+    assert(RIPEMD160_DIGEST_SIZE == sizeof tmp.h);
+    for (i=0; i<5; i++)
+        STORE_U32_LITTLE(digest + i*sizeof tmp.h[0], tmp.h[i]);
 
     return 0;
 }

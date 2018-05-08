@@ -29,32 +29,9 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(scrypt)
-
-static inline int little_endian(void) {
-    int test = 1;
-    return *((uint8_t*)&test) == 1;
-}
-
-static inline uint32_t load_le_uint32(const uint8_t *in)
-{
-    union {
-        uint32_t w;
-        uint8_t b[4];
-    } x, y;
-
-    memcpy(&x, in, 4);
-    y = x;
-    if (!little_endian()) {
-        y.b[0] = x.b[3];
-        y.b[1] = x.b[2];
-        y.b[2] = x.b[1];
-        y.b[3] = x.b[0];
-    }
-    return y.w;
-}
 
 /** Return 1 if the pointer is aligned to the 64-bit boundary **/
 static inline int aligned64(const uint8_t *p)
@@ -165,7 +142,7 @@ EXPORT_SYM int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
     for (i=0; i<N; i++) {
         uint32_t index;
 
-        index = load_le_uint32(&x[two_r - 1][0]) & (N - 1); /* Extract pseudo
+        index = LOAD_U32_LITTLE(&x[two_r - 1][0]) & (N - 1); /* Extract pseudo
                                                             random index
                                                             from last element
                                                             */

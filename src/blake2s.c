@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 #define F_ROUNDS 10
 #define MAX_DIGEST_BYTES 32
@@ -42,31 +42,19 @@
 
 typedef uint32_t blake2_word;
 
+#define STORE_WORD_LITTLE(p, w)     STORE_U32_LITTLE(p, w)
+#define LOAD_WORD_LITTLE(p)         LOAD_U32_LITTLE(p)
+
 static const uint32_t iv[8] = {
-    0x6A09E667,
-    0xBB67AE85,
-    0x3C6EF372,
-    0xA54FF53A,
-    0x510E527F,
-    0x9B05688C,
-    0x1F83D9AB,
-    0x5BE0CD19
+    0x6A09E667U,
+    0xBB67AE85U,
+    0x3C6EF372U,
+    0xA54FF53AU,
+    0x510E527FU,
+    0x9B05688CU,
+    0x1F83D9ABU,
+    0x5BE0CD19U
 };
-
-static void byteswap(uint32_t *v)
-{
-    union {
-        uint32_t w;
-        uint8_t b[4];
-    } x, y;
-
-    x.w = *v;
-    y.b[0] = x.b[3];
-    y.b[1] = x.b[2];
-    y.b[2] = x.b[1];
-    y.b[3] = x.b[0];
-    *v = y.w;
-}
 
 #define blake2_init blake2s_init
 #define blake2_copy blake2s_copy

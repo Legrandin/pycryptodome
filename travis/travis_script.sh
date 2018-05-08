@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e -x
 
+export CFLAGS="-Wconversion"
+
 if [ x${OLDPY} == x ]; then
 	PYTHON=python
 else

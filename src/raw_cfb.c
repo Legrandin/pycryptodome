@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(raw_cfb)
 
@@ -97,10 +97,6 @@ EXPORT_SYM int CFB_start_operation(BlockBase *cipher,
     return cipher->encrypt(state->cipher, iv, state->keyStream, iv_len);
 }
 
-static inline unsigned min_ab(unsigned a, unsigned b) {
-    return a < b ? a : b;
-}
-
 enum Direction { DirEncrypt, DirDecrypt };
 
 static int CFB_transcrypt(CfbModeState *cfbState,
@@ -145,7 +141,7 @@ static int CFB_transcrypt(CfbModeState *cfbState,
 
         keyStream = cfbState->keyStream + cfbState->usedKeyStream;
         segment = next_iv + block_len - segment_len + cfbState->usedKeyStream;
-        keyStreamToUse = min_ab(segment_len - cfbState->usedKeyStream, data_len);
+        keyStreamToUse = MIN(segment_len - cfbState->usedKeyStream, data_len);
 
         for (i=0; i<keyStreamToUse; i++, cfbState->usedKeyStream++) {
             *out++ = *keyStream++ ^ *in++;

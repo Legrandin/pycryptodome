@@ -29,7 +29,7 @@
  * ===================================================================
  */
 
-#include "pycrypto_common.h"
+#include "common.h"
 #include <stdio.h>
 
 FAKE_INIT(SHA1)
@@ -103,29 +103,10 @@ FAKE_INIT(SHA1)
 
 #define DIGEST_SIZE (160/8)
 
-static inline uint32_t get_be_32(const uint8_t *p)
-{
-    uint32_t result;
-
-    result =    p[3] |
-                ((uint32_t)p[2] << 8) |
-                ((uint32_t)p[1] << 16) |
-                ((uint32_t)p[0] << 24);
-    return result;
-}
-
-static inline void put_be_32(uint32_t number, uint8_t *p)
-{
-    p[3] = (uint8_t)(number);
-    p[2] = (uint8_t)(number >> 8);
-    p[1] = (uint8_t)(number >> 16);
-    p[0] = (uint8_t)(number >> 24);
-}
-
 typedef struct t_hash_state {
     uint32_t h[5];
     uint8_t buf[BLOCK_SIZE];    /** 64 bytes == 512 bits == sixteen 32-bit words **/
-    int curlen;                 /** Useful message bytes in buf[] (leftmost) **/
+    unsigned curlen;            /** Useful message bytes in buf[] (leftmost) **/
     uint64_t totbits;           /** Total message length in bits **/
 } hash_state;
 
@@ -144,7 +125,7 @@ static void sha_compress(hash_state * hs)
 
     /** Words flow in in big-endian mode **/
     for (i=0; i<16; i++) {
-        W[i] = get_be_32(&hs->buf[i*4]);
+        W[i] = LOAD_U32_BIG(&hs->buf[i*4]);
     }
 
     a = hs->h[0];
@@ -284,10 +265,13 @@ EXPORT_SYM int SHA1_update(hash_state *hs, const uint8_t *buf, size_t len)
         return ERR_NULL;
     }
 
-    while (len>0) {
-        int btc;
+    assert(hs->curlen < BLOCK_SIZE);
 
-        btc = MIN(BLOCK_SIZE - hs->curlen, (int)len);
+    while (len>0) {
+        unsigned btc, left;
+
+        left = BLOCK_SIZE - hs->curlen;
+        btc = (unsigned)MIN(left, len);
         memcpy(&hs->buf[hs->curlen], buf, btc);
         buf += btc;
         hs->curlen += btc;
@@ -307,7 +291,10 @@ EXPORT_SYM int SHA1_update(hash_state *hs, const uint8_t *buf, size_t len)
 
 static int sha_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
 {
-    int left, i;
+    unsigned left, i;
+    uint32_t lo, high;
+
+    assert(hs->curlen < BLOCK_SIZE);
 
     /* remaining length of the message */
     if (add_bits(hs, hs->curlen*8)) {
@@ -332,15 +319,17 @@ static int sha_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
      **/
     left = BLOCK_SIZE - hs->curlen;
     memset(&hs->buf[hs->curlen], 0, left);
-    put_be_32((uint32_t)(hs->totbits >> 32), &hs->buf[BLOCK_SIZE-8]);
-    put_be_32((uint32_t)hs->totbits, &hs->buf[BLOCK_SIZE-4]);
+    lo = (uint32_t)(hs->totbits >> 32);
+    high = (uint32_t)hs->totbits;
+    STORE_U32_BIG(&hs->buf[BLOCK_SIZE-8], lo);
+    STORE_U32_BIG(&hs->buf[BLOCK_SIZE-4], high);
 
     /** compress one last time **/
     sha_compress(hs);
 
     /** create final hash **/
     for (i=0; i<5; i++) {
-        put_be_32(hs->h[i], hash);
+        STORE_U32_BIG(hash, hs->h[i]);
         hash += 4;
     }
 

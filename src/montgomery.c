@@ -29,7 +29,7 @@ DAMAGE.
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "pycrypto_common.h"
+#include "common.h"
 
 FAKE_INIT(montgomery)
 
@@ -106,7 +106,7 @@ static void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t wo
 
         memset(t, 0, 2*sizeof(uint64_t)*words);
         
-        for (i=0; i<(words & ~1); i+=2) {
+        for (i=0; i<(words & ~1U); i+=2) {
             addmul128(&t[i], a, b[i], b[i+1], words);
         }
 
@@ -121,9 +121,10 @@ static void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t wo
  */
 static int ge(const uint64_t *x, const uint64_t *y, size_t words)
 {
-    int i;
+    size_t i, j;
 
-    for (i=words-1; i>=0; i--) {
+    i=words-1;
+    for (j=0; j<words; j++, i--) {
         if (x[i] == y[i]) {
             continue;
         }
@@ -135,9 +136,9 @@ static int ge(const uint64_t *x, const uint64_t *y, size_t words)
 /**
  * Subtract b[] from a[].
  */
-static int sub(uint64_t *a, size_t a_words, const uint64_t *b, size_t b_words)
+static uint64_t sub(uint64_t *a, size_t a_words, const uint64_t *b, size_t b_words)
 {
-    int i;
+    unsigned i;
     uint64_t borrow1 , borrow2;
 
     borrow2 = 0;
@@ -167,7 +168,7 @@ static int sub(uint64_t *a, size_t a_words, const uint64_t *b, size_t b_words)
  */
 static void rsquare(uint64_t *x, uint64_t *n, size_t words)
 {
-    int i, j;
+    size_t i;
     size_t elle;
 
     memset(x, 0, sizeof(uint64_t)*words);
@@ -179,10 +180,11 @@ static void rsquare(uint64_t *x, uint64_t *n, size_t words)
      */
     x[0] = 1;
     for (i=0; i<elle*2; i++) {
-        int overflow;
+        unsigned overflow;
+        size_t j;
         
         /** Double, by shifting left by one bit **/
-        overflow = x[words-1] >> 63;
+        overflow = (unsigned)(x[words-1] >> 63);
         for (j=words-1; j>0; j--) {
             x[j] = (x[j] << 1) + (x[j-1] >> 63);
         }
@@ -210,7 +212,7 @@ static void rsquare(uint64_t *x, uint64_t *n, size_t words)
  */
 static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint64_t m0, uint64_t *t, size_t abn_words)
 {
-    int i;
+    unsigned i;
 
     if (a == b) {
         square_w(t, a, abn_words);
@@ -221,7 +223,7 @@ static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint
     t[2*abn_words] = 0; /** MSW **/
 
     /** Clear lower words (two at a time) **/
-    for (i=0; i<(abn_words & ~1); i+=2) {
+    for (i=0; i<(abn_words & ~1U); i+=2) {
         uint64_t k0, k1, ti1, pr_lo, pr_hi;
 
         /** Multiplier for n that will make t[i+0] go 0 **/
@@ -303,7 +305,7 @@ static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint8_t *s
         
             x  = &prot[(alpha*i+beta) & 0xF];
             *x = (uint32_t) powers[i][j];
-            *(x+16) = powers[i][j] >> 32;
+            *(x+16) = (uint32_t)(powers[i][j] >> 32);
         }
 
         prot += 32;     /** Two cache lines **/
@@ -428,7 +430,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
                uint64_t seed)
 {
     uint64_t m0;
-    int i, j;
+    unsigned i, j;
     size_t words;
     size_t exp_len;
 
@@ -466,7 +468,7 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
     rsquare(monty.r_square, monty.modulus, words);
 
     /** Pre-compute -n[0]^{-1} mod R **/
-    m0 = inverse64(-monty.modulus[0]);
+    m0 = inverse64(~monty.modulus[0]+1);
 
     /** Convert base to Montgomery form **/
     mont_mult(monty.base, monty.base, monty.r_square, monty.modulus, m0, monty.t, words);
