@@ -31,9 +31,9 @@
 import os
 import re
 import unittest
-from binascii import unhexlify, hexlify
+from binascii import hexlify
 
-from Crypto.Util.py3compat import b, tobytes, bchr, _memoryview
+from Crypto.Util.py3compat import b, tobytes, bchr, _memoryview, unhexlify
 from Crypto.Util.strxor import strxor_c
 from Crypto.SelfTest.st_common import list_test_cases
 
