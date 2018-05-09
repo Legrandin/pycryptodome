@@ -4,7 +4,7 @@ ChaCha20
 `ChaCha20`_ is a stream cipher designed by Daniel J. Bernstein.
 The secret key is 256 bits long.
 
-This is an example of how ``ChaCha20`` can encrypt data:
+This is an example of how `ChaCha20`_ (`RFC7539`_) can encrypt data:
 
     >>> from Crypto.Cipher import ChaCha20
     >>>
@@ -32,6 +32,7 @@ And this is how you would decrypt it:
     (*encrypt-then-mac*).
 
 .. _ChaCha20: http://http://cr.yp.to/chacha.html
+.. _RFC7539: https://tools.ietf.org/html/rfc7539
 
 .. automodule:: Crypto.Cipher.ChaCha20
     :members:
