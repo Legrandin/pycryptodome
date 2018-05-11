@@ -1,24 +1,31 @@
-/*
- *  AESNI.c: AES using AES-NI instructions
+/* ===================================================================
  *
- * Written in 2013 by Sebastian Ramacher <sebastian@ramacher.at>
+ * Copyright (c) 2018, Helder Eijs <helderijs@gmail.com>
+ * All rights reserved.
  *
- * ===================================================================
- * The contents of this file are dedicated to the public domain.  To
- * the extent that dedication to the public domain is not available,
- * everyone is granted a worldwide, perpetual, royalty-free,
- * non-exclusive license to exercise all rights associated with the
- * contents of this file for any purpose whatsoever.
- * No rights are reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  * ===================================================================
  */
 
@@ -31,235 +38,197 @@ FAKE_INIT(raw_aesni)
 
 #define MODULE_NAME AESNI
 #define BLOCK_SIZE 16
-#define KEY_SIZE 0
-
-#define MAXKC (256/32)
-#define MAXKB (256/8)
-#define MAXNR 14
-
-#define ALIGNMENT 16
 
 struct block_state {
-    /** Both ek and dk points into the buffer and are aligned to the 16 byte boundary **/
-    __m128i* ek;
-    __m128i* dk;
+    __m128i *erk;   /** 11, 13 or 15 elements **/
+    __m128i *drk;
     unsigned rounds;
-
-    uint8_t buffer[(MAXNR+1)*sizeof(__m128i)*2 + ALIGNMENT];
 };
 
-/* Helper functions to expand keys */
+/*
+ * See https://www.cosic.esat.kuleuven.be/ecrypt/AESday/slides/Use_of_the_AES_Instruction_Set.pdf
+ */
 
-static __m128i aes128_keyexpand(__m128i key)
+enum SubType { OnlySub, SubRotXor };
+
+static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType subType)
 {
-    key = _mm_xor_si128(key, _mm_slli_si128(key, 4));
-    key = _mm_xor_si128(key, _mm_slli_si128(key, 4));
-    return _mm_xor_si128(key, _mm_slli_si128(key, 4));
-}
+    uint32_t result;
+    __m128i x, y, z;
 
-static __m128i aes192_keyexpand_2(__m128i key, __m128i key2)
-{
-    key = _mm_shuffle_epi32(key, 0xff);
-    key2 = _mm_xor_si128(key2, _mm_slli_si128(key2, 4));
-    return _mm_xor_si128(key, key2);
-}
+    assert((idx>=1) && (idx<=10));
 
-#define KEYEXP128_H(K1, K2, I, S) _mm_xor_si128(aes128_keyexpand(K1), \
-        _mm_shuffle_epi32(_mm_aeskeygenassist_si128(K2, I), S))
-
-#define KEYEXP128(K, I) KEYEXP128_H(K, K, I, 0xff)
-#define KEYEXP192(K1, K2, I) KEYEXP128_H(K1, K2, I, 0x55)
-#define KEYEXP192_2(K1, K2) aes192_keyexpand_2(K1, K2)
-#define KEYEXP256(K1, K2, I)  KEYEXP128_H(K1, K2, I, 0xff)
-#define KEYEXP256_2(K1, K2) KEYEXP128_H(K1, K2, 0x00, 0xaa)
-
-#define SHUFFLE128_0(a, b)      \
-    _mm_castpd_si128(           \
-      _mm_shuffle_pd(           \
-        _mm_castsi128_pd(a),    \
-        _mm_castsi128_pd(b),    \
-        0))
-
-#define SHUFFLE128_1(a, b)      \
-    _mm_castpd_si128(           \
-      _mm_shuffle_pd(           \
-        _mm_castsi128_pd(a),    \
-        _mm_castsi128_pd(b),    \
-        1))
-
-/* Encryption key setup */
-static void aes_key_setup_enc(__m128i *rk, const uint8_t* cipherKey, unsigned keylen)
-{
-    switch (keylen) {
-        case 16:
-        {
-            /* 128 bit key setup */
-            rk[0] = _mm_loadu_si128((const __m128i*) cipherKey);
-            rk[1] = KEYEXP128(rk[0], 0x01);
-            rk[2] = KEYEXP128(rk[1], 0x02);
-            rk[3] = KEYEXP128(rk[2], 0x04);
-            rk[4] = KEYEXP128(rk[3], 0x08);
-            rk[5] = KEYEXP128(rk[4], 0x10);
-            rk[6] = KEYEXP128(rk[5], 0x20);
-            rk[7] = KEYEXP128(rk[6], 0x40);
-            rk[8] = KEYEXP128(rk[7], 0x80);
-            rk[9] = KEYEXP128(rk[8], 0x1B);
-            rk[10] = KEYEXP128(rk[9], 0x36);
-            break;
-        }
-        case 24:
-        {
-            /* 192 bit key setup */
-            uint8_t key[24];
-
-            __m128i temp[2];
-            memcpy(key, cipherKey, 24);
-            rk[0] = _mm_loadu_si128((const __m128i*) key);
-            rk[1] = _mm_loadu_si128((const __m128i*) (key+16));
-            temp[0] = KEYEXP192(rk[0], rk[1], 0x01);
-            temp[1] = KEYEXP192_2(temp[0], rk[1]);
-            rk[1] = SHUFFLE128_0(rk[1], temp[0]);
-            rk[2] = SHUFFLE128_1(temp[0], temp[1]);
-            rk[3] = KEYEXP192(temp[0], temp[1], 0x02);
-            rk[4] = KEYEXP192_2(rk[3], temp[1]);
-            temp[0] = KEYEXP192(rk[3], rk[4], 0x04);
-            temp[1] = KEYEXP192_2(temp[0], rk[4]);
-            rk[4] = SHUFFLE128_0(rk[4], temp[0]);
-            rk[5] = SHUFFLE128_1(temp[0], temp[1]);
-            rk[6] = KEYEXP192(temp[0], temp[1], 0x08);
-            rk[7] = KEYEXP192_2(rk[6], temp[1]);
-            temp[0] = KEYEXP192(rk[6], rk[7], 0x10);
-            temp[1] = KEYEXP192_2(temp[0], rk[7]);
-            rk[7] = SHUFFLE128_0(rk[7], temp[0]);
-            rk[8] = SHUFFLE128_1(temp[0], temp[1]);
-            rk[9] = KEYEXP192(temp[0], temp[1], 0x20);
-            rk[10] = KEYEXP192_2(rk[9], temp[1]);
-            temp[0] = KEYEXP192(rk[9], rk[10], 0x40);
-            temp[1] = KEYEXP192_2(temp[0], rk[10]);
-            rk[10] = SHUFFLE128_0(rk[10], temp[0]);
-            rk[11] = SHUFFLE128_1(temp[0], temp[1]);
-            rk[12] = KEYEXP192(temp[0], temp[1], 0x80);
-            break;
-        }
-        case 32:
-        {
-            /* 256 bit key setup */
-            rk[0] = _mm_loadu_si128((const __m128i*) cipherKey);
-            rk[1] = _mm_loadu_si128((const __m128i*) (cipherKey+16));
-            rk[2] = KEYEXP256(rk[0], rk[1], 0x01);
-            rk[3] = KEYEXP256_2(rk[1], rk[2]);
-            rk[4] = KEYEXP256(rk[2], rk[3], 0x02);
-            rk[5] = KEYEXP256_2(rk[3], rk[4]);
-            rk[6] = KEYEXP256(rk[4], rk[5], 0x04);
-            rk[7] = KEYEXP256_2(rk[5], rk[6]);
-            rk[8] = KEYEXP256(rk[6], rk[7], 0x08);
-            rk[9] = KEYEXP256_2(rk[7], rk[8]);
-            rk[10] = KEYEXP256(rk[8], rk[9], 0x10);
-            rk[11] = KEYEXP256_2(rk[9], rk[10]);
-            rk[12] = KEYEXP256(rk[10], rk[11], 0x20);
-            rk[13] = KEYEXP256_2(rk[11], rk[12]);
-            rk[14] = KEYEXP256(rk[12], rk[13], 0x40);
-            break;
-        }
+    x = _mm_castps_si128(_mm_load1_ps((float const*)&w));   /* { W, W, W, W } */
+    
+    switch (idx) {
+    case 1:  y = _mm_aeskeygenassist_si128(x, 0x01); break;
+    case 2:  y = _mm_aeskeygenassist_si128(x, 0x02); break;
+    case 3:  y = _mm_aeskeygenassist_si128(x, 0x04); break;
+    case 4:  y = _mm_aeskeygenassist_si128(x, 0x08); break;
+    case 5:  y = _mm_aeskeygenassist_si128(x, 0x10); break;
+    case 6:  y = _mm_aeskeygenassist_si128(x, 0x20); break;
+    case 7:  y = _mm_aeskeygenassist_si128(x, 0x40); break;
+    case 8:  y = _mm_aeskeygenassist_si128(x, 0x80); break;
+    case 9:  y = _mm_aeskeygenassist_si128(x, 0x1b); break;
+    case 10: y = _mm_aeskeygenassist_si128(x, 0x36); break;
     }
+
+    /** Y0 contains SubWord(W) **/
+    /** Y1 contains RotWord(SubWord(W)) xor RCON **/
+    
+    z = y;
+    if (subType == SubRotXor) {
+        z = _mm_srli_si128(y, 4);
+    }
+    _mm_store_ss((float*)&result, _mm_castsi128_ps(z));
+    return result;
 }
 
-/* Decryption key setup */
-static void aes_key_setup_dec(__m128i *dk, const __m128i *ek, unsigned rounds)
+static int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned Nk, unsigned Nr)
 {
+    uint32_t rk[4*(14+2)];
+    unsigned tot_words;
     unsigned i;
 
-    dk[rounds] = ek[0];
-    for (i = 1; i < rounds; ++i) {
-        dk[rounds - i] = _mm_aesimc_si128(ek[i]);
-    }
-    dk[0] = ek[rounds];
-}
+    assert(
+            ((Nk==4) && (Nr==10)) ||    /** AES-128 **/
+            ((Nk==6) && (Nr==12)) ||    /** AES-192 **/
+            ((Nk==8) && (Nr==14))       /** AES-256 **/
+    );
 
-static int block_init(struct block_state* self, const uint8_t* key, size_t keylen)
-{
-    unsigned nr = 0;
-    int offset;
+    tot_words = 4*(Nr+1);
 
-    switch (keylen) {
-        case 16: nr = 10; break;
-        case 24: nr = 12; break;
-        case 32: nr = 14; break;
-        default:
-            return ERR_NR_ROUNDS;
+    for (i=0; i<Nk; i++) {
+        rk[i] = LOAD_U32_LITTLE(key);
+        key += 4;
     }
 
-    /* ensure that self->ek and self->dk are aligned to 16 byte boundaries */
-    offset = ALIGNMENT - (int)((uintptr_t)self->buffer & (ALIGNMENT-1));
-    self->ek = (__m128i*)((uint8_t*)self->buffer + offset);
-    self->dk = (__m128i*)((uint8_t*)self->ek + (MAXNR+1)*sizeof(__m128i));
+    for (i=Nk; i<tot_words; i++) {
+        uint32_t tmp;
 
-    self->rounds = nr;
-    aes_key_setup_enc(self->ek, key, (unsigned)keylen);
-    aes_key_setup_dec(self->dk, self->ek, nr);
+        tmp = rk[i-1];
+        if (i % Nk == 0) {
+            tmp = sub_rot(tmp, i/Nk, SubRotXor);
+        } else {
+            if ((i % Nk == 4) && (Nk == 8)) {  // AES-256 only
+                tmp = sub_rot(tmp, i/Nk, OnlySub);
+            }
+        }
+        rk[i] = rk[i-Nk] ^ tmp;
+    }
+
+    for (i=0; i<tot_words; i+=4) {
+        *erk++ = _mm_loadu_si128((__m128i*)&rk[i]);
+    }
+
+    erk--;  /** Point to the last round **/
+    *drk++ = *erk--;
+    for (i=0; i<Nr-1; i++) {
+        *drk++ = _mm_aesimc_si128(*erk--);
+    }
+    *drk = *erk;
 
     return 0;
 }
 
-static void block_finalize(struct block_state* self)
+static void block_finalize(struct block_state* state)
 {
-    memset(self, 0, sizeof(*self));
+    align_free(state->erk);
+    align_free(state->drk);
 }
 
-static void block_encrypt(struct block_state* self, const uint8_t* in, uint8_t* out)
+static int block_init(struct block_state* state, const uint8_t* key, size_t keylen)
 {
-    __m128i m = _mm_loadu_si128((const __m128i*) in);
-    /* first 9 rounds */
-    m = _mm_xor_si128(m, self->ek[0]);
-    m = _mm_aesenc_si128(m, self->ek[1]);
-    m = _mm_aesenc_si128(m, self->ek[2]);
-    m = _mm_aesenc_si128(m, self->ek[3]);
-    m = _mm_aesenc_si128(m, self->ek[4]);
-    m = _mm_aesenc_si128(m, self->ek[5]);
-    m = _mm_aesenc_si128(m, self->ek[6]);
-    m = _mm_aesenc_si128(m, self->ek[7]);
-    m = _mm_aesenc_si128(m, self->ek[8]);
-    m = _mm_aesenc_si128(m, self->ek[9]);
-    if (self->rounds != 10) {
-        /* two additional rounds for AES-192/256 */
-        m = _mm_aesenc_si128(m, self->ek[10]);
-        m = _mm_aesenc_si128(m, self->ek[11]);
-        if (self->rounds == 14) {
-            /* another two additional rounds for AES-256 */
-            m = _mm_aesenc_si128(m, self->ek[12]);
-            m = _mm_aesenc_si128(m, self->ek[13]);
-        }
+    unsigned Nr;
+    const unsigned Nb = 4;
+    int result;
+
+    switch (keylen) {
+        case 16: Nr = 10; break;
+        case 24: Nr = 12; break;
+        case 32: Nr = 14; break;
+        default: abort();
     }
-    m = _mm_aesenclast_si128(m, self->ek[self->rounds]);
-    _mm_storeu_si128((__m128i*) out, m);
+
+    state->rounds = Nr;
+    state->erk = align_alloc(Nb*(Nr+1)*sizeof(uint32_t), 16);
+    if (state->erk == NULL) {
+        result = ERR_MEMORY;
+        goto error;
+    }
+    
+    state->drk = align_alloc(Nb*(Nr+1)*sizeof(uint32_t), 16);
+    if (state->drk == NULL) {
+        result = ERR_MEMORY;
+        goto error;
+    }
+    
+    result = expand_key(state->erk, state->drk, key, (unsigned)keylen/4, Nr);
+    if (result) {
+        goto error;
+    }
+    return 0;
+
+error:
+    block_finalize(state);
+    return result;
 }
 
-static void block_decrypt(struct block_state* self, const uint8_t* in, uint8_t* out)
+static void block_encrypt(struct block_state* state, const uint8_t* in, uint8_t* out)
 {
-    __m128i m = _mm_loadu_si128((const __m128i*) in);
-    /* first 9 rounds */
-    m = _mm_xor_si128(m, self->dk[0]);
-    m = _mm_aesdec_si128(m, self->dk[1]);
-    m = _mm_aesdec_si128(m, self->dk[2]);
-    m = _mm_aesdec_si128(m, self->dk[3]);
-    m = _mm_aesdec_si128(m, self->dk[4]);
-    m = _mm_aesdec_si128(m, self->dk[5]);
-    m = _mm_aesdec_si128(m, self->dk[6]);
-    m = _mm_aesdec_si128(m, self->dk[7]);
-    m = _mm_aesdec_si128(m, self->dk[8]);
-    m = _mm_aesdec_si128(m, self->dk[9]);
-    if (self->rounds != 10) {
-        /* two additional rounds for AES-192/256 */
-        m = _mm_aesdec_si128(m, self->dk[10]);
-        m = _mm_aesdec_si128(m, self->dk[11]);
-        if (self->rounds == 14) {
-            /* another two additional rounds for AES-256 */
-            m = _mm_aesdec_si128(m, self->dk[12]);
-            m = _mm_aesdec_si128(m, self->dk[13]);
+    __m128i pt, data;
+    unsigned rounds = state->rounds;
+
+    pt = _mm_loadu_si128((__m128i*)in);
+    data = _mm_xor_si128(pt, state->erk[0]);
+    data = _mm_aesenc_si128(data, state->erk[1]);
+    data = _mm_aesenc_si128(data, state->erk[2]);
+    data = _mm_aesenc_si128(data, state->erk[3]);
+    data = _mm_aesenc_si128(data, state->erk[4]);
+    data = _mm_aesenc_si128(data, state->erk[5]);
+    data = _mm_aesenc_si128(data, state->erk[6]);
+    data = _mm_aesenc_si128(data, state->erk[7]);
+    data = _mm_aesenc_si128(data, state->erk[8]);
+    data = _mm_aesenc_si128(data, state->erk[9]);
+    if (rounds > 10) {
+        data = _mm_aesenc_si128(data, state->erk[10]);
+        data = _mm_aesenc_si128(data, state->erk[11]);
+        if (rounds > 12) {
+            data = _mm_aesenc_si128(data, state->erk[12]);
+            data = _mm_aesenc_si128(data, state->erk[13]);
         }
     }
-    m = _mm_aesdeclast_si128(m, self->dk[self->rounds]);
-    _mm_storeu_si128((__m128i*) out, m);
+    data = _mm_aesenclast_si128(data, state->erk[rounds]);
+    _mm_storeu_si128((__m128i*)out, data);
+}
+
+static void block_decrypt(struct block_state* state, const uint8_t* in, uint8_t* out)
+{
+    __m128i ct, data;
+    unsigned rounds;
+
+    rounds = state->rounds;
+    ct = _mm_loadu_si128((__m128i*)in);
+    data = _mm_xor_si128(ct, state->drk[0]);
+    data = _mm_aesdec_si128(data, state->drk[1]);
+    data = _mm_aesdec_si128(data, state->drk[2]);
+    data = _mm_aesdec_si128(data, state->drk[3]);
+    data = _mm_aesdec_si128(data, state->drk[4]);
+    data = _mm_aesdec_si128(data, state->drk[5]);
+    data = _mm_aesdec_si128(data, state->drk[6]);
+    data = _mm_aesdec_si128(data, state->drk[7]);
+    data = _mm_aesdec_si128(data, state->drk[8]);
+    data = _mm_aesdec_si128(data, state->drk[9]);
+    if (rounds > 10) {
+        data = _mm_aesdec_si128(data, state->drk[10]);
+        data = _mm_aesdec_si128(data, state->drk[11]);
+        if (rounds > 12) {
+            data = _mm_aesdec_si128(data, state->drk[12]);
+            data = _mm_aesdec_si128(data, state->drk[13]);
+        }
+    }
+    data = _mm_aesdeclast_si128(data, state->drk[rounds]);
+    _mm_storeu_si128((__m128i*)out, data);
 }
 
 #include "block_common.c"
