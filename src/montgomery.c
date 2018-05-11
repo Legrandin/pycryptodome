@@ -409,7 +409,7 @@ void deallocate_montgomery(struct Montgomery *m)
     }
     free(m->power_idx);
     
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
     if (m->prot) {
         _aligned_free(m->prot);
     }
