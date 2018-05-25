@@ -374,14 +374,7 @@ int allocate_montgomery(struct Montgomery *m, size_t words)
     }
     allocate(m->power_idx, words);
     
-#if defined(_MSC_VER) || defined(__MINGW32__)
-    m->prot = _aligned_malloc((1<<WINDOW_SIZE)*words*8, CACHE_LINE_SIZE);
-#else
-    result = posix_memalign((void**)&m->prot, CACHE_LINE_SIZE, (1<<WINDOW_SIZE)*words*8);
-    if (result) {
-        m->prot = NULL;
-    }
-#endif
+    m->prot = align_alloc((1<<WINDOW_SIZE)*words*8, CACHE_LINE_SIZE);
     if (NULL == m->prot) {
         return 1;
     }
@@ -408,14 +401,8 @@ void deallocate_montgomery(struct Montgomery *m)
         free(m->powers[i]);
     }
     free(m->power_idx);
-    
-#if defined(_MSC_VER) || defined(__MINGW32__)
-    if (m->prot) {
-        _aligned_free(m->prot);
-    }
-#else
-    free(m->prot);
-#endif
+   
+    align_free(m->prot); 
 
     free(m->seed);
     
