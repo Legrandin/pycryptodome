@@ -11,29 +11,29 @@ message holds the *private key*, the one that verifies the signature holds the
 Signing a message
 -----------------
 
-1. You instatiate a new signer object using the :func:`new` method
-   in the module of the desired algorithm.
-   The first parameter is always the key object (*private* key)
+1. Instantiate a new signer object for the desider algorithm,
+   for instance with :func:`Crypto.Signature.pkcs1_15.new`.
+   The first parameter is the key object (*private* key)
    obtained via the :mod:`Crypto.PublicKey` module.
 
-2. You instatiate a cryptographic hash (see :mod:`Crypto.Hash`) and digest
-   the message with it.
+2. Instantiate a cryptographic hash object, for instance with :func:`Crypto.Hash.SHA384.new`.
+   Then, process the message with its :func:`update` method.
 
-3. You call :func:`sign` on the hash object. The output is the signature of the message
-   (a byte string).
+3. Invoke the :func:`sign` method on the signer with the hash object as parameter.
+   The output is the signature of the message (a byte string).
 
 Verifying a signature
 ---------------------
 
-1. You instatiate a new verifier object using the :func:`new` method
-   in the module of the desired algorithm.
-   The first parameter is always the key object (*public* key)
+1. Instantiate a new verifier object for the desired algorithm,
+   for instance with :func:`Crypto.Signature.pkcs1_15.new`.
+   The first parameter is the key object (*public* key)
    obtained via the :mod:`Crypto.PublicKey` module.
 
-2. You instatiate a cryptographic hash (see :mod:`Crypto.Hash`) and digest
-   the message with it.
+2. Instantiate a cryptographic hash object, for instance with :func:`Crypto.Hash.SHA384.new`.
+   Then, process the message with its :func:`update` method.
 
-3. You call :func:`verify` on the verifier object, passing in the hash and incoming signature.
+3. Invoke the :func:`verify` method on the verifier, with the hash object and the incoming signature as parameters.
    If the message is not authentic, an :py:exc:`ValueError` is raised.
 
 Available mechanisms
