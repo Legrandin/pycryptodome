@@ -33,7 +33,7 @@ Verifying a signature
 2. You instatiate a cryptographic hash (see :mod:`Crypto.Hash`) and digest
    the message with it.
 
-3. You call :func:`verify` on the hash object and the incoming signature.
+3. You call :func:`verify` on the verifier object, passing in the hash and incoming signature.
    If the message is not authentic, an :py:exc:`ValueError` is raised.
 
 Available mechanisms
