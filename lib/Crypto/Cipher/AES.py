@@ -42,9 +42,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   c_size_t, c_uint8_ptr)
 
+from Crypto.Util import _cpuid
 
-_raw_cpuid_lib = load_pycryptodome_raw_lib("Crypto.Util._cpuid",
-                                           "int have_aes_ni(void);")
 
 _cproto = """
         int AES_start_operation(const uint8_t key[],
@@ -62,15 +61,18 @@ _cproto = """
         """
 
 
+# Load portable AES
 _raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes",
                                          _cproto)
 
-_raw_aesni_lib = None
+# Try to load AES with AES NI instructions
 try:
-    if _raw_cpuid_lib.have_aes_ni() == 1:
+    _raw_aesni_lib = None
+    if _cpuid.have_aes_ni():
         _raw_aesni_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aesni",
                                                    _cproto.replace("AES",
-                                                                  "AESNI"))
+                                                                   "AESNI"))
+# _raw_aesni may not have been compiled in
 except OSError:
     pass
 
@@ -198,6 +200,7 @@ def new(key, mode, *args, **kwargs):
 
     kwargs["add_aes_modes"] = True
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
+
 
 MODE_ECB = 1
 MODE_CBC = 2

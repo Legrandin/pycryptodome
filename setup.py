@@ -198,8 +198,6 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
 
 class PCTBuildExt (build_ext):
 
-    aesni_mod_names = package_root + ".Cipher._raw_aesni",
-
     # Avoid linking Python's dynamic library
     def get_libraries(self, ext):
         return []
@@ -214,24 +212,17 @@ class PCTBuildExt (build_ext):
         # Call the superclass's build_extensions method
         build_ext.build_extensions(self)
 
-    def check_cpuid_h(self):
-        # UNIX
+    def compiler_supports_uint128(self):
         source = """
-        #include <cpuid.h>
         int main(void)
         {
-            unsigned int eax, ebx, ecx, edx;
-            __get_cpuid(1, &eax, &ebx, &ecx, &edx);
+            __uint128_t x;
             return 0;
         }
         """
-        if test_compilation(source, msg="cpuid.h header"):
-            self.compiler.define_macro("HAVE_CPUID_H")
-            return True
-        else:
-            return False
+        return test_compilation(source, msg="128-bit integer")
 
-    def check_intrin_h(self):
+    def compiler_has_intrin_h(self):
         # Windows
         source = """
         #include <intrin.h>
@@ -242,14 +233,22 @@ class PCTBuildExt (build_ext):
             return 0;
         }
         """
-        if test_compilation(source, msg="intrin.h header"):
-            self.compiler.define_macro("HAVE_INTRIN_H")
-            return True
-        else:
-            return False
+        return test_compilation(source, msg="intrin.h header")
 
-    def check_aesni(self):
+    def compiler_has_cpuid_h(self):
+        # UNIX
+        source = """
+        #include <cpuid.h>
+        int main(void)
+        {
+            unsigned int eax, ebx, ecx, edx;
+            __get_cpuid(1, &eax, &ebx, &ecx, &edx);
+            return 0;
+        }
+        """
+        return test_compilation(source, msg="cpuid.h header")
 
+    def compiler_supports_aesni(self):
         source = """
         #include <wmmintrin.h>
         __m128i f(__m128i x, __m128i y) {
@@ -260,40 +259,71 @@ class PCTBuildExt (build_ext):
         }
         """
 
-        aes_mods = [ x for x in self.extensions if x.name in self.aesni_mod_names ]
-        result = test_compilation(source)
-        if not result:
-            result = test_compilation(source, extra_cc_options=['-maes'], msg='wmmintrin.h header')
-            if result:
-                for x in aes_mods:
-                    x.extra_compile_args += ['-maes']
-        return result
+        if test_compilation(source):
+            return {'extra_options':[]}
 
-    def check_uint128(self):
+        if test_compilation(source, extra_cc_options=['-maes'], msg='AESNI intrinsics'):
+            return {'extra_options':['-maes']}
+
+        return False
+
+    def compiler_supports_clmul(self):
         source = """
-        int main(void)
-        {
-            __uint128_t x;
+        #include <wmmintrin.h>
+        __m128i f(__m128i x, __m128i y) {
+            return _mm_clmulepi64_si128(x, y, 0x00);
+        }
+        int main(void) {
             return 0;
         }
         """
-        if test_compilation(source, msg="128-bit integer"):
-            self.compiler.define_macro("HAVE_UINT128")
-            return True
-        else:
-            return False
+
+        if test_compilation(source):
+            return {'extra_options':[]}
+
+        if test_compilation(source, extra_cc_options=['-mpclmul','-mssse3'], msg='CLMUL intrinsics'):
+            return {'extra_options':['-mpclmul', '-mssse3']}
+
+        return False
 
     def detect_modules (self):
 
-        self.check_uint128()
-        has_intrin_h = self.check_intrin_h()
+        if self.compiler_supports_uint128():
+            self.compiler.define_macro("HAVE_UINT128")
 
-        # Detect compiler support for CPUID instruction and AESNI
-        if (self.check_cpuid_h() or has_intrin_h) and self.check_aesni():
-            PrintErr("Compiling support for Intel AES instructions")
-        else:
-            PrintErr ("warning: no support for Intel AESNI instructions")
-            self.remove_extensions(self.aesni_mod_names)
+        intrin_h_present = self.compiler_has_intrin_h()
+        if intrin_h_present:
+            self.compiler.define_macro("HAVE_INTRIN_H")
+
+        cpuid_h_present = self.compiler_has_cpuid_h()
+        if cpuid_h_present:
+            self.compiler.define_macro("HAVE_CPUID_H")
+
+        # AESNI
+        if (cpuid_h_present or intrin_h_present):
+            aesni_result = self.compiler_supports_aesni()
+            aesni_mod_name = package_root + ".Cipher._raw_aesni"
+            if aesni_result:
+                PrintErr("Compiling support for AESNI instructions")
+                aes_mods = [ x for x in self.extensions if x.name == aesni_mod_name ]
+                for x in aes_mods:
+                    x.extra_compile_args += aesni_result['extra_options']
+            else:
+                PrintErr ("Warning: compiler does not support AESNI instructions")
+                self.remove_extensions(self.aesni_mod_name)
+
+        # CLMUL
+        if (cpuid_h_present or intrin_h_present):
+            clmul_result = self.compiler_supports_clmul()
+            clmul_mod_name = package_root + ".Hash._ghash_clmul"
+            if clmul_result:
+                PrintErr("Compiling support for CMUL instructions")
+                clmul_mods = [ x for x in self.extensions if x.name == clmul_mod_name ]
+                for x in clmul_mods:
+                    x.extra_compile_args += clmul_result['extra_options']
+            else:
+                PrintErr ("Warning: compiler does not support CMUL instructions")
+                self.remove_extensions(self.clmul_mod_name)
 
     def remove_extensions(self, names):
         """Remove the specified extension from the list of extensions
@@ -536,6 +566,12 @@ ext_modules = [
     Extension("Crypto.Hash._BLAKE2s",
         include_dirs=['src/'],
         sources=["src/blake2s.c"]),
+    Extension("Crypto.Hash._ghash_portable",
+        include_dirs=['src/'],
+        sources=['src/ghash_portable.c']),
+    Extension("Crypto.Hash._ghash_clmul",
+        include_dirs=['src/'],
+        sources=['src/ghash_clmul.c']),
 
     # Block encryption algorithms
     Extension("Crypto.Cipher._raw_aes",
@@ -559,10 +595,7 @@ ext_modules = [
     Extension("Crypto.Cipher._raw_des3",
         include_dirs=['src/', 'src/libtom/'],
         sources=["src/DES3.c"]),
-    Extension("Crypto.Util._galois",
-        include_dirs=['src/'],
-        sources=['src/galois.c']),
-    Extension("Crypto.Util._cpuid",
+    Extension("Crypto.Util._cpuid_c",
         include_dirs=['src/'],
         sources=['src/cpuid.c']),
 

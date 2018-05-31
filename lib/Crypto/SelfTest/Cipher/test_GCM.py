@@ -32,6 +32,8 @@ import json
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.loader import load_tests
+
 from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
@@ -705,11 +707,19 @@ class TestVectorsGueronKrasnov(unittest.TestCase):
         self.assertEqual(digest, digest2)
 
 
-from Crypto.SelfTest.loader import load_tests
-
 
 class NISTTestVectorsGCM(unittest.TestCase):
-    pass
+
+    def __init__(self, a):
+        self.use_clmul = True
+        unittest.TestCase.__init__(self, a)
+
+class NISTTestVectorsGCM_no_clmul(unittest.TestCase):
+
+    def __init__(self, a):
+        self.use_clmul = False
+        unittest.TestCase.__init__(self, a)
+
 
 test_vectors_nist = load_tests(
                         ("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
@@ -733,7 +743,7 @@ for idx, tv in enumerate(test_vectors_nist):
 
             self.description = tv.desc
             cipher = AES.new(tv.key, AES.MODE_GCM, nonce=tv.iv,
-                             mac_len=len(tv.tag))
+                             mac_len=len(tv.tag), use_clmul=self.use_clmul)
             cipher.update(tv.aad)
             if "FAIL" in tv.others:
                 self.assertRaises(ValueError, cipher.decrypt_and_verify,
@@ -743,13 +753,15 @@ for idx, tv in enumerate(test_vectors_nist):
                 self.assertEqual(pt, tv.pt)
 
     setattr(NISTTestVectorsGCM, "test_%d" % idx, single_test)
+    setattr(NISTTestVectorsGCM_no_clmul, "test_%d" % idx, single_test)
 
 
 class TestVectorsWycheproof(unittest.TestCase):
 
-    def __init__(self, wycheproof_warnings):
+    def __init__(self, wycheproof_warnings, **extra_params):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
+        self._extra_params = extra_params
 
     def setUp(self):
         file_in = open(pycryptodome_filename(
@@ -785,9 +797,10 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def test_encrypt(self, tv):
         self._id = "Wycheproof Encrypt GCM Test #" + str(tv.id)
-        
+
         try:
-            cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size)
+            cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size,
+                    **self._extra_params)
         except ValueError, e:
             if len(tv.iv) == 0 and "Nonce cannot be empty" in str(e):
                 return
@@ -802,9 +815,10 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def test_decrypt(self, tv):
         self._id = "Wycheproof Decrypt GCM Test #" + str(tv.id)
-        
+
         try:
-            cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size)
+            cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size,
+                    **self._extra_params)
         except ValueError, e:
             if len(tv.iv) == 0 and "Nonce cannot be empty" in str(e):
                 return
@@ -824,7 +838,8 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "Wycheproof Corrupt Decrypt GCM Test #" + str(tv.id)
         if len(tv.iv) == 0 or len(tv.ct) < 1:
             return
-        cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size)
+        cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size,
+                **self._extra_params)
         cipher.update(tv.aad)
         ct_corrupt = strxor(tv.ct, b"\x00" * (len(tv.ct) - 1) + b"\x01")
         self.assertRaises(ValueError, cipher.decrypt_and_verify, ct_corrupt, tv.tag)
@@ -838,6 +853,8 @@ class TestVectorsWycheproof(unittest.TestCase):
 
 
 def get_tests(config={}):
+    from Crypto.Util import _cpuid
+
     wycheproof_warnings = config.get('wycheproof_warnings')
 
     tests = []
@@ -848,6 +865,14 @@ def get_tests(config={}):
     tests += list_test_cases(TestVectorsGueronKrasnov)
     if config.get('slow_tests'):
         tests += list_test_cases(NISTTestVectorsGCM)
+
+    if _cpuid.have_clmul():
+        tests += [ TestVectorsWycheproof(wycheproof_warnings, use_clmul=False) ]
+        if config.get('slow_tests'):
+            tests += list_test_cases(NISTTestVectorsGCM_no_clmul)
+    else:
+        print "Skipping test of PCLMULDQD in AES GCM"
+
     return tests
 
 
