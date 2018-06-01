@@ -33,6 +33,8 @@
 
 FAKE_INIT(ghash_clmul)
 
+#include <wmmintrin.h>
+
 #if defined(HAVE_INTRIN_H)
 #include <intrin.h>
 #else
