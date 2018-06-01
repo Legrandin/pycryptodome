@@ -31,6 +31,8 @@
 
 #include "common.h"
 
+FAKE_INIT(ghash_clmul)
+
 #if defined(HAVE_INTRIN_H)
 #include <intrin.h>
 #else

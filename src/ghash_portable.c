@@ -22,7 +22,7 @@
 
 #include "common.h"
 
-FAKE_INIT(galois)
+FAKE_INIT(ghash_portable)
 
 #define ALIGNMENT 32
 

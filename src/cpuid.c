@@ -31,7 +31,7 @@
 
 #include "common.h"
 
-FAKE_INIT(cpuid)
+FAKE_INIT(cpuid_c)
 
 #if defined HAVE_CPUID_H
 #include <cpuid.h>
