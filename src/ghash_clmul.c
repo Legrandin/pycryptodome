@@ -133,7 +133,7 @@ static inline __m128i multx(__m128i a)
     t2 = _mm_unpacklo_epi64(t0, t1);        // Zero or XOR mask
 
     // Shift value a left by 1 bit
-    t3 = _mm_bslli_si128(a, 8);     // Shift a left by 64 bits (lower 64 bits are zero)
+    t3 = _mm_slli_si128(a, 8);     // Shift a left by 64 bits (lower 64 bits are zero)
     t4 = _mm_srli_epi64(t3, 63);    // Bit 64 is now a[63], all other bits are 0
     t5 = _mm_slli_epi64(a, 1);      // Shift left by 1 bit, but bit 64 is zero, not a[63]
     t6 = _mm_or_si128(t4, t5);      // Actual result of shift left by 1 bit
