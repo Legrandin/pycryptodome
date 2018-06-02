@@ -4,7 +4,6 @@ Future releases will include:
 - Make all hash objects non-copiable and immutable after the first digest
 - Add alias 'segment_bits' to parameter 'segment_size' for CFB
 - Coverage testing
-- Add support for memoryview/buffer interface
 - Implement AES with bitslicing
 - Add unit tests for PEM I/O
 - Move old ciphers into a Museum submodule
@@ -26,7 +25,6 @@ Future releases will include:
 - Add support for Format-Preserving Encryption
 - Remove dependency on libtomcrypto headers
 - Speed up (T)DES with a bitsliced implementation
-- Add support for PCLMULQDQ in AES-GCM
 - Run lint on the C code
 - Add (minimal) support for PGP
 - Add (minimal) support for PKIX / X.509
