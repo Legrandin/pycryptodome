@@ -317,12 +317,12 @@ class PCTBuildExt (build_ext):
             clmul_result = self.compiler_supports_clmul()
             clmul_mod_name = package_root + ".Hash._ghash_clmul"
             if clmul_result:
-                PrintErr("Compiling support for CMUL instructions")
+                PrintErr("Compiling support for CLMUL instructions")
                 clmul_mods = [ x for x in self.extensions if x.name == clmul_mod_name ]
                 for x in clmul_mods:
                     x.extra_compile_args += clmul_result['extra_options']
             else:
-                PrintErr ("Warning: compiler does not support CMUL instructions")
+                PrintErr ("Warning: compiler does not support CLMUL instructions")
                 self.remove_extensions(self.clmul_mod_name)
 
     def remove_extensions(self, names):
