@@ -44,17 +44,42 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
 
-_raw_galois_lib = load_pycryptodome_raw_lib("Crypto.Util._galois",
-                    """
-                    int ghash(  uint8_t y_out[16],
-                                const uint8_t block_data[],
-                                size_t len,
-                                const uint8_t y_in[16],
-                                const void *exp_key);
-                    int ghash_expand(const uint8_t h[16],
-                                     void **ghash_tables);
-                    int ghash_destroy(void *ghash_tables);
-                    """)
+from Crypto.Util import _cpuid
+
+# Load portable GHASH
+_ghash_api_portable = """
+    int ghash_portable(uint8_t y_out[16],
+                       const uint8_t block_data[],
+                       size_t len,
+                       const uint8_t y_in[16],
+                       const void *exp_key);
+    int ghash_expand_portable(const uint8_t h[16],
+                              void **ghash_tables);
+    int ghash_destroy_portable(void *ghash_tables);
+"""
+_raw_ghash_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_portable",
+                                                    _ghash_api_portable)
+
+class _GHASH_Portable(object):
+    pass
+_GHASH_Portable.ghash         = _raw_ghash_portable_lib.ghash_portable
+_GHASH_Portable.ghash_expand  = _raw_ghash_portable_lib.ghash_expand_portable
+_GHASH_Portable.ghash_destroy = _raw_ghash_portable_lib.ghash_destroy_portable
+
+# Try to load GHASH based on CMUL (it might not have been compiled)
+try:
+    _raw_ghash_clmul_lib = None
+    _ghash_api_clmul = _ghash_api_portable.replace("portable", "clmul")
+    if _cpuid.have_clmul():
+        _raw_ghash_clmul_lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_clmul",
+                                                        _ghash_api_clmul)
+    class _GHASH_CLMUL(object):
+        pass
+    _GHASH_CLMUL.ghash         = _raw_ghash_clmul_lib.ghash_clmul
+    _GHASH_CLMUL.ghash_expand  = _raw_ghash_clmul_lib.ghash_expand_clmul
+    _GHASH_CLMUL.ghash_destroy = _raw_ghash_clmul_lib.ghash_destroy_clmul
+except OSError:
+    pass
 
 
 class _GHASH(object):
@@ -69,17 +94,19 @@ class _GHASH(object):
     (x^128 + x^7 + x^2 + x + 1).
     """
 
-    def __init__(self, subkey):
+    def __init__(self, subkey, ghash_c):
         assert len(subkey) == 16
 
+        self.ghash_c = ghash_c
+
         self._exp_key = VoidPointer()
-        result = _raw_galois_lib.ghash_expand(c_uint8_ptr(subkey),
-                                              self._exp_key.address_of())
+        result = ghash_c.ghash_expand(c_uint8_ptr(subkey),
+                                      self._exp_key.address_of())
         if result:
-            raise ValueError("Error %d while expanding the GMAC key" % result)
+            raise ValueError("Error %d while expanding the GHASH key" % result)
 
         self._exp_key = SmartPointer(self._exp_key.get(),
-                                     _raw_galois_lib.ghash_destroy)
+                                     ghash_c.ghash_destroy)
 
         # create_string_buffer always returns a string of zeroes
         self._last_y = create_string_buffer(16)
@@ -87,13 +114,13 @@ class _GHASH(object):
     def update(self, block_data):
         assert len(block_data) % 16 == 0
 
-        result = _raw_galois_lib.ghash(self._last_y,
-                                       c_uint8_ptr(block_data),
-                                       c_size_t(len(block_data)),
-                                       self._last_y,
-                                       self._exp_key.get())
+        result = self.ghash_c.ghash(self._last_y,
+                                    c_uint8_ptr(block_data),
+                                    c_size_t(len(block_data)),
+                                    self._last_y,
+                                    self._exp_key.get())
         if result:
-            raise ValueError("Error %d while updating GMAC" % result)
+            raise ValueError("Error %d while updating GHASH" % result)
 
         return self
 
@@ -133,7 +160,7 @@ class GcmMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, factory, key, nonce, mac_len, cipher_params):
+    def __init__(self, factory, key, nonce, mac_len, cipher_params, ghash_c):
 
         self.block_size = factory.block_size
         if self.block_size != 16:
@@ -144,7 +171,7 @@ class GcmMode(object):
             raise ValueError("Nonce cannot be empty")
         if isinstance(nonce, unicode):
             raise TypeError("Nonce must be a byte string")
-        
+
         # See NIST SP 800 38D, 5.2.1.1
         if len(nonce) > 2**64 - 1:
             raise ValueError("Nonce exceeds maximum length")
@@ -188,7 +215,7 @@ class GcmMode(object):
             ghash_in = (self.nonce +
                         b'\x00' * fill +
                         long_to_bytes(8 * len(nonce), 8))
-            self._j0 = bytes_to_long(_GHASH(hash_subkey)
+            self._j0 = bytes_to_long(_GHASH(hash_subkey, ghash_c)
                                      .update(ghash_in)
                                      .digest())
 
@@ -202,7 +229,7 @@ class GcmMode(object):
                                    **cipher_params)
 
         # Step 5 - Bootstrat GHASH
-        self._signer = _GHASH(hash_subkey)
+        self._signer = _GHASH(hash_subkey, ghash_c)
 
         # Step 6 - Prepare GCTR cipher for GMAC
         self._tag_cipher = factory.new(key,
@@ -547,4 +574,11 @@ def _create_gcm_cipher(factory, **kwargs):
         nonce = get_random_bytes(16)
     mac_len = kwargs.pop("mac_len", 16)
 
-    return GcmMode(factory, key, nonce, mac_len, kwargs)
+    # Not documented - only used for testing
+    use_clmul = kwargs.pop("use_clmul", True)
+    if use_clmul and _raw_ghash_clmul_lib:
+        ghash_c = _GHASH_CLMUL
+    else:
+        ghash_c = _GHASH_Portable
+
+    return GcmMode(factory, key, nonce, mac_len, kwargs, ghash_c)

@@ -31,7 +31,7 @@
 
 #include "common.h"
 
-FAKE_INIT(cpuid)
+FAKE_INIT(cpuid_c)
 
 #if defined HAVE_CPUID_H
 #include <cpuid.h>
@@ -39,21 +39,37 @@ FAKE_INIT(cpuid)
 #include <intrin.h>
 #endif
 
-/** Return 1 if the CPU supports the AESNI extension **/
-EXPORT_SYM int have_aes_ni(void)
+/** Call X86 CPUID for Leaf 1: return CX **/
+static uint32_t leaf1_ecx(void)
 {
     uint32_t info[4];
 
     memset(info, 0, sizeof info);
-    
-    /* Call cpuid to retrieve x86 Processor Info and Feature bits.
-     * info[2] is ecx. If bit 25 is set, the CPU supports the
-     * AES-NI extension. */
-#if defined HAVE_CPUID_H
+ #if defined(HAVE_CPUID_H)
     __get_cpuid(1, info, info+1, info+2, info+3);
-#elif defined HAVE_INTRIN_H
+#elif defined(HAVE_INTRIN_H)
     __cpuidex(info, 1, 0);
 #endif
 
-    return (info[2] & ((int)1<<25)) ? 1 : 0;
+    return info[2];
+}
+
+
+/** Return 1 if the CPU supports the AESNI extension **/
+EXPORT_SYM int have_aes_ni(void)
+{
+    uint32_t ecx;
+
+    ecx = leaf1_ecx();
+    return (ecx & (1UL<<25)) ? 1 : 0;
+}
+
+/** Return non-zero if the CPU supports the PCLMULQDQ instruction (carry-less
+ * multiplication). **/
+EXPORT_SYM int have_clmul(void)
+{
+    uint32_t ecx;
+
+    ecx = leaf1_ecx();
+    return (ecx >> 1) & 1;
 }

@@ -7,6 +7,8 @@ x.x.x (xx xxxxx 2018)
 New features
 ------------
 * ChaCha20 accepts 96-bit nonces
+* Accelerate AES-GCM on x86 using PCLMULQDQ instruction.
+  GCM is now 3x faster on Broadwell.
 
 3.6.1 (15 April 2018)
 +++++++++++++++++++++

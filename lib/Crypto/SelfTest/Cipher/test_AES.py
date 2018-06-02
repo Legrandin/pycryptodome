@@ -1232,11 +1232,11 @@ test_data = [
 
 def get_tests(config={}):
     from Crypto.Cipher import AES
-    from Crypto.Cipher.AES import _raw_cpuid_lib
+    from Crypto.Util import _cpuid
     from common import make_block_tests
 
     tests = make_block_tests(AES, "AES", test_data, {'use_aesni': False})
-    if _raw_cpuid_lib.have_aes_ni():
+    if _cpuid.have_aes_ni():
         # Run tests with AES-NI instructions if they are available.
         tests += make_block_tests(AES, "AESNI", test_data, {'use_aesni': True})
     else:

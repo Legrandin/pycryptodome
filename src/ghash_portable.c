@@ -22,7 +22,7 @@
 
 #include "common.h"
 
-FAKE_INIT(galois)
+FAKE_INIT(ghash_portable)
 
 #define ALIGNMENT 32
 
@@ -127,7 +127,7 @@ static void gcm_mult2(uint8_t out[16], const t_v_tables *key_tables, const uint8
  *
  * y_out and y_int can point to the same buffer.
  */
-EXPORT_SYM int ghash(
+EXPORT_SYM int ghash_portable(
         uint8_t y_out[16],
         const uint8_t block_data[],
         size_t len,
@@ -163,7 +163,7 @@ EXPORT_SYM int ghash(
 /**
  * Expand the AES key into a Python (byte) string object.
  */ 
-EXPORT_SYM int ghash_expand(const uint8_t h[16], t_exp_key **ghash_tables)
+EXPORT_SYM int ghash_expand_portable(const uint8_t h[16], t_exp_key **ghash_tables)
 {
     t_exp_key *exp_key;
 
@@ -180,7 +180,7 @@ EXPORT_SYM int ghash_expand(const uint8_t h[16], t_exp_key **ghash_tables)
     return 0;
 }
 
-EXPORT_SYM int ghash_destroy(t_exp_key *ghash_tables)
+EXPORT_SYM int ghash_destroy_portable(t_exp_key *ghash_tables)
 {
     free(ghash_tables);
     return 0;
