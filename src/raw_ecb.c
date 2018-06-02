@@ -53,29 +53,10 @@ EXPORT_SYM int ECB_encrypt(EcbModeState *ecbState,
                            uint8_t *out,
                            size_t data_len)
 {
-    size_t block_len;
-
     if ((NULL == ecbState) || (NULL == in) || (NULL == out))
         return ERR_NULL;
 
-    block_len = ecbState->block_len;
-
-    while (data_len > 0) {
-        int result;
-
-        if (data_len < block_len)
-            return ERR_NOT_ENOUGH_DATA;
-
-        result = ecbState->encrypt((BlockBase*)ecbState, in, out, block_len);
-        if (result)
-            return result;
-
-        data_len -= block_len;
-        in += block_len;
-        out += block_len;
-    }
-
-    return 0;
+    return ecbState->encrypt((BlockBase*)ecbState, in, out, data_len);
 }
 
 EXPORT_SYM int ECB_decrypt(EcbModeState *ecbState,
@@ -83,29 +64,10 @@ EXPORT_SYM int ECB_decrypt(EcbModeState *ecbState,
                            uint8_t *out,
                            size_t data_len)
 {
-    size_t block_len;
-
     if ((NULL == ecbState) || (NULL == in) || (NULL == out))
         return ERR_NULL;
-
-    block_len = ecbState->block_len;
-
-    while (data_len > 0) {
-        int result;
-
-        if (data_len < block_len)
-            return ERR_NOT_ENOUGH_DATA;
-
-        result = ecbState->decrypt((BlockBase*)ecbState, in, out, block_len);
-        if (result)
-            return result;
-
-        data_len -= block_len;
-        in += block_len;
-        out += block_len;
-    }
-
-    return 0;
+    
+    return ecbState->decrypt((BlockBase*)ecbState, in, out, data_len);
 }
 
 
