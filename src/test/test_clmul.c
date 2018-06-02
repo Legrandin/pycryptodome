@@ -1,9 +1,28 @@
 #include "../common.h"
 #include <x86intrin.h>
 
+__m128i reduce(__m128i *prod_high, __m128i *prod_low);
 void clmult(__m128i *prod_high, __m128i *prod_low, __m128i *a, __m128i *b);
 __m128i multx(__m128i a);
 __m128i swap(__m128i a);
+
+void test_reduce_1(void)
+{
+    uint8_t prod_high[16] = { 0xB7, 0xD5, 0xA2, 0x4C, 0xC4, 0x84, 0xB3, 0x23, 0xA8, 0x70, 0x56, 0x4A, 0xD7, 0xEE, 0x79, 0x01 };
+    uint8_t prod_low[16]  = { 0xFB, 0x3A, 0xB9, 0x7E, 0xB2, 0x9E, 0xDF, 0xFC, 0x44, 0xE9, 0xCB, 0x94, 0xD8, 0x83, 0xD2, 0x8F };
+    uint8_t out[16];
+    uint8_t expected[16]  = { 0xFA, 0x4E, 0x14, 0xF6, 0xBE, 0x8D, 0xCD, 0x17, 0xCD, 0x00, 0xE3, 0x00, 0x12, 0x29, 0x45, 0x2A };
+    __m128i r1, r2, r3;
+    int result;
+
+    r1 = _mm_loadu_si128((__m128i*)prod_high);
+    r2 = _mm_loadu_si128((__m128i*)prod_low);
+    r3 = reduce(&r1, &r2);
+    _mm_storeu_si128((__m128i*)out, r3);
+    
+    result = memcmp(expected, out, 16);
+    assert(result == 0);
+}
 
 void test_multx_1(void)
 {
@@ -131,6 +150,8 @@ void test_clmul_2(void)
 
 int main(void)
 {
+    test_reduce_1();
+
     test_multx_1();
     test_multx_2();
     test_multx_3();

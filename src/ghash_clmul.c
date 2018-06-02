@@ -77,13 +77,13 @@ FAKE_INIT(ghash_clmul)
  *
  * See at the bottom for an explaination.
  */
-static inline __m128i reduce(__m128i prod_high, __m128i prod_low)
+static inline __m128i reduce(__m128i *prod_high, __m128i *prod_low)
 {
     const uint64_t c2 = 0xc200000000000000U;
     __m128i t1, t2, t3, t4, t7;
    
-    t1 = prod_high;     // U3:U2
-    t7 = prod_low;      // U1:U0
+    t1 = *prod_high;     // U3:U2
+    t7 = *prod_low;      // U1:U0
     t3 = _mm_loadl_epi64((__m128i*)&c2);
     t2 = _mm_clmulepi64_si128(t3, t7, 0x00);    // A
     t4 = _mm_shuffle_epi32(t7, _MM_SHUFFLE(1,0,3,2));   // U0:U1
@@ -92,7 +92,7 @@ static inline __m128i reduce(__m128i prod_high, __m128i prod_low)
     t4 = _mm_shuffle_epi32(t4, _MM_SHUFFLE(1,0,3,2));   // B0:B1
     t4 = _mm_xor_si128(t4, t2); // D
     t1 = _mm_xor_si128(t1, t4); // T
-    
+
     return t1;
 }
 
@@ -168,7 +168,7 @@ static inline __m128i ghash_mult(__m128i *a, __m128i *bx)
 
     a128 = swap(*a);
     clmult(&prod_hi, &prod_lo, &a128, bx);
-    result = reduce(prod_hi, prod_lo);
+    result = reduce(&prod_hi, &prod_lo);
     return swap(result);
 }
 

@@ -59,7 +59,7 @@ clmul.o: ../ghash_clmul.c
 	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $< -c
 
 clmul2.o: clmul.o
-	objcopy --globalize-symbol=multx --globalize-symbol=swap --globalize-symbol=clmult $^ $@
+	objcopy $(foreach x, multx swap clmult reduce, --globalize-symbol=$x) $^ $@
 
 test_clmul: test_clmul.c ../common.h clmul2.o
 	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $^
