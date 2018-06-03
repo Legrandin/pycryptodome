@@ -300,30 +300,28 @@ class PCTBuildExt (build_ext):
             self.compiler.define_macro("HAVE_CPUID_H")
 
         # AESNI
-        if (cpuid_h_present or intrin_h_present):
-            aesni_result = self.compiler_supports_aesni()
-            aesni_mod_name = package_root + ".Cipher._raw_aesni"
-            if aesni_result:
-                PrintErr("Compiling support for AESNI instructions")
-                aes_mods = [ x for x in self.extensions if x.name == aesni_mod_name ]
-                for x in aes_mods:
-                    x.extra_compile_args += aesni_result['extra_options']
-            else:
-                PrintErr ("Warning: compiler does not support AESNI instructions")
-                self.remove_extensions(self.aesni_mod_name)
+        aesni_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_aesni()
+        aesni_mod_name = package_root + ".Cipher._raw_aesni"
+        if aesni_result:
+            PrintErr("Compiling support for AESNI instructions")
+            aes_mods = [ x for x in self.extensions if x.name == aesni_mod_name ]
+            for x in aes_mods:
+                x.extra_compile_args += aesni_result['extra_options']
+        else:
+            PrintErr ("Warning: compiler does not support AESNI instructions")
+            self.remove_extensions(aesni_mod_name)
 
         # CLMUL
-        if (cpuid_h_present or intrin_h_present):
-            clmul_result = self.compiler_supports_clmul()
-            clmul_mod_name = package_root + ".Hash._ghash_clmul"
-            if clmul_result:
-                PrintErr("Compiling support for CLMUL instructions")
-                clmul_mods = [ x for x in self.extensions if x.name == clmul_mod_name ]
-                for x in clmul_mods:
-                    x.extra_compile_args += clmul_result['extra_options']
-            else:
-                PrintErr ("Warning: compiler does not support CLMUL instructions")
-                self.remove_extensions(self.clmul_mod_name)
+        clmul_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_clmul()
+        clmul_mod_name = package_root + ".Hash._ghash_clmul"
+        if clmul_result:
+            PrintErr("Compiling support for CLMUL instructions")
+            clmul_mods = [ x for x in self.extensions if x.name == clmul_mod_name ]
+            for x in clmul_mods:
+                x.extra_compile_args += clmul_result['extra_options']
+        else:
+            PrintErr ("Warning: compiler does not support CLMUL instructions")
+            self.remove_extensions(clmul_mod_name)
 
     def remove_extensions(self, names):
         """Remove the specified extension from the list of extensions
