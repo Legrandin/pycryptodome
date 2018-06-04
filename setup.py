@@ -35,6 +35,10 @@ import os
 import sys
 import shutil
 import struct
+if sys.version_info[0:2] == (2, 6):
+    from distutils import sysconfig
+else:
+    import sysconfig
 
 use_separate_namespace = os.path.isfile(".separate_namespace")
 
@@ -103,10 +107,6 @@ All the code can be downloaded from `GitHub`_.
     replace("THIS_ROOT", package_root).\
     replace("OTHER_PROJECT", other_project).\
     replace("OTHER_ROOT", other_root)
-
-if sys.version[0:1] == '1':
-    raise RuntimeError("The Python Cryptography Toolkit requires "
-                       "Python 2.x or 3.x to build.")
 
 try:
     # Python 3
@@ -452,7 +452,7 @@ def create_cryptodome_lib():
             fd.close()
 
 
-def enable_gcc_sse2(extensions):
+def compiler_supports_sse2():
     source = """
     #include <x86intrin.h>
     int main(void)
@@ -462,11 +462,26 @@ def enable_gcc_sse2(extensions):
         return 0;
     }
     """
-    if test_compilation(source, extra_cc_options=['-msse2'], msg="x86intrin.h header"):
-        for x in extensions:
-            x.extra_compile_args += ['-msse2']
-            x.define_macros += [ ("HAVE_X86INTRIN_H", None) ]
+    return test_compilation(source, extra_cc_options=['-msse2'], msg="x86intrin.h header")
 
+def enable_compiler_specific_options(extensions):
+
+    def check_compiler(compiler):
+        result = compiler in os.environ.get('CC', '')
+        builtin = sysconfig.get_config_vars('CC')[0]
+        result = result or (builtin and compiler in builtin)
+        return result
+
+    clang = check_compiler("clang")
+    gcc = check_compiler("gcc")
+
+    if clang or gcc:
+        sse2 = compiler_supports_sse2()
+        for x in extensions:
+            x.extra_compile_args += ['-O3']
+            if sse2:
+                x.extra_compile_args += ['-msse2']
+                x.define_macros += [ ("HAVE_X86INTRIN_H", None) ]
 
 # Parameters for setup
 packages =  [
@@ -645,8 +660,8 @@ ext_modules = [
         ),
 ]
 
-# Enable SSE2 for GCC
-enable_gcc_sse2(ext_modules)
+# Enable some optimization if we know the compiler
+enable_compiler_specific_options(ext_modules)
 
 # Define big/little endian flag
 for x in ext_modules:
