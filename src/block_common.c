@@ -47,13 +47,21 @@ typedef struct {
 static int CIPHER_ENCRYPT
            (const BlockBase *state, const uint8_t *in, uint8_t *out, size_t data_len)
 {
+    size_t block_len;
+
     if ((state == NULL) || (in == NULL) || (out == NULL))
         return ERR_NULL;
 
-    if (data_len != state->block_len)
-        return ERR_NOT_ENOUGH_DATA;
+    block_len = state->block_len;
 
-    block_encrypt(&((CIPHER_STATE_TYPE*)state)->algo_state, (uint8_t*)in, out);
+    for (; data_len>=block_len; data_len-=block_len) {
+        block_encrypt(&((CIPHER_STATE_TYPE*)state)->algo_state, (uint8_t*)in, out);
+        in += block_len;
+        out += block_len;
+    }
+
+    if (data_len)
+        return ERR_NOT_ENOUGH_DATA;
 
     return 0;
 }
@@ -61,13 +69,22 @@ static int CIPHER_ENCRYPT
 static int CIPHER_DECRYPT
            (const BlockBase *state, const uint8_t *in, uint8_t *out, size_t data_len)
 {
+    size_t block_len;
+
     if ((state == NULL) || (in == NULL) || (out == NULL))
         return ERR_NULL;
 
-    if (data_len != state->block_len)
-        return ERR_NOT_ENOUGH_DATA;
+    block_len = state->block_len;
 
-    block_decrypt(&((CIPHER_STATE_TYPE*)state)->algo_state, (uint8_t*)in, out);
+    for (; data_len>=block_len; data_len-=block_len) {
+        block_decrypt(&((CIPHER_STATE_TYPE*)state)->algo_state, (uint8_t*)in, out);
+        in += block_len;
+        out += block_len;
+    }
+
+    if (data_len)
+        return ERR_NOT_ENOUGH_DATA;
+    
     return 0;
 }
 

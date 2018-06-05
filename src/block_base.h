@@ -17,12 +17,18 @@ typedef struct _BlockBase {
 struct block_state;
 
 #ifdef MODULE_NAME
+
 #ifndef NON_STANDARD_START_OPERATION
 static int block_init(struct block_state *state, const uint8_t *key, size_t keylen);
 #endif
-static void block_finalize(struct block_state* self);
+
+#ifndef NON_STANDARD_ENCRYPT_OPERATION
 static void block_encrypt(struct block_state *self, const uint8_t *in, uint8_t *out);
+#endif
+
 static void block_decrypt(struct block_state *self, const uint8_t *in, uint8_t *out);
+static void block_finalize(struct block_state* self);
+
 #endif
 
 #endif

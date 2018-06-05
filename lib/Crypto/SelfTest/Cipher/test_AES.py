@@ -24,6 +24,9 @@
 
 """Self-test suite for Crypto.Cipher.AES"""
 
+import unittest
+from Crypto.Hash import SHA256
+from Crypto.Cipher import AES
 from Crypto.Util.py3compat import *
 from binascii import hexlify
 
@@ -1230,15 +1233,37 @@ test_data = [
 
 ]
 
+
+class TestMultipleBlocks(unittest.TestCase):
+
+    def __init__(self, use_aesni):
+        unittest.TestCase.__init__(self)
+        self.use_aesni = use_aesni
+
+    def runTest(self):
+        # Encrypt data which is 8*2+4 bytes long, so as to trigger (for the
+        # AESNI variant) both the path that parallelizes 8 lanes and the one
+        # that processes data serially
+
+        cipher = AES.new(b'a' * 16, AES.MODE_ECB, use_aesni=self.use_aesni)
+        h = SHA256.new()
+
+        expected = 'c0b27011eb15bf144d2fc9fae80ea16d4c231cb230416c5fac02e6835ad9d7d0'
+        pt = b"".join([ tobytes('{0:016x}'.format(x)) for x in range(20) ])
+        ct = cipher.encrypt(pt)
+        self.assertEqual(SHA256.new(ct).hexdigest(), expected)
+
+
 def get_tests(config={}):
-    from Crypto.Cipher import AES
     from Crypto.Util import _cpuid
     from common import make_block_tests
 
     tests = make_block_tests(AES, "AES", test_data, {'use_aesni': False})
+    tests += [ TestMultipleBlocks(False) ]
     if _cpuid.have_aes_ni():
         # Run tests with AES-NI instructions if they are available.
         tests += make_block_tests(AES, "AESNI", test_data, {'use_aesni': True})
+        tests += [ TestMultipleBlocks(True) ]
     else:
         print "Skipping AESNI tests"
     return tests
