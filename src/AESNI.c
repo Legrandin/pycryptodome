@@ -189,7 +189,6 @@ static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
         }
     
         for (; j<rounds; j++) {
-            assert(0);
             data[0] = _mm_aesenc_si128(data[0], r[j]);
             data[1] = _mm_aesenc_si128(data[1], r[j]);
             data[2] = _mm_aesenc_si128(data[2], r[j]);
@@ -296,7 +295,6 @@ static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
         }
     
         for (; j<rounds; j++) {
-            assert(0);
             data[0] = _mm_aesdec_si128(data[0], r[j]);
             data[1] = _mm_aesdec_si128(data[1], r[j]);
             data[2] = _mm_aesdec_si128(data[2], r[j]);
