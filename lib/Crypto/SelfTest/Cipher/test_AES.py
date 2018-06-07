@@ -1233,6 +1233,10 @@ test_data = [
 
 ]
 
+test_data_8_lanes = []
+for td in test_data:
+    test_data_8_lanes.append((td[0] * 8, td[1] * 8, td[2], td[3]))
+test_data += test_data_8_lanes
 
 class TestMultipleBlocks(unittest.TestCase):
 

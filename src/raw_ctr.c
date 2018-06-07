@@ -38,31 +38,37 @@ FAKE_INIT(raw_ctr)
 #define ERR_CTR_COUNTER_BLOCK_LEN   ((6 << 16) | 1)
 #define ERR_CTR_REPEATED_KEY_STREAM ((6 << 16) | 2)
 
+#define NR_BLOCKS 8
+
 typedef struct {
     BlockBase *cipher;
 
-    /** How many bytes at the beginning of the key stream
-      * have already been used.
-      */
-    uint8_t usedKeyStream;
-
     /**
-      * The counter is an area within the counter block.
+     *  A counter block is always as big as a cipher block.
+     *  It is made up by three areas:
+     *  1) Prefix  - immutable - can be empty
+     *  2) Counter - mutable (+1 per block) - at least 1 byte
+     *  3) Postfix - immutable - can be empty
       */
-    uint8_t *counter;
+    uint8_t *counter_blocks;    /** block_len * NR_BLOCKS bytes **/
+    
+    uint8_t *counter;           /** point to counter in 1st block within counter_blocks **/  
     size_t  counter_len;
+    unsigned little_endian;
 
-    void (*increment)(uint8_t *counter, size_t counter_len);
+    uint8_t *keystream; /** block_len * NR_BLOCKS bytes **/
+    size_t used_ks;     /** Bytes we already used in the key stream **/
 
-    /**
-      * originalCounterBlock - block_len bytes
-      * counterBlock - block_len bytes
-      * keyStream - block_len bytes
-      */
-    uint8_t buffer[0];
+    /** Number of bytes we have encrypted so far **/
+    uint64_t length_lo, length_hi;
+
+    /** Max number of blocks we may encrypt at most **/
+    uint64_t length_max_lo, length_max_hi;
 } CtrModeState;
 
-static void increment_le(uint8_t *pCounter, size_t counter_len) {
+typedef void (*Increment)(uint8_t *pCounter, size_t counter_len);
+
+static inline void increment_le(uint8_t *pCounter, size_t counter_len) {
     size_t i;
 
     for (i=0; i<counter_len; i++, pCounter++) {
@@ -71,7 +77,7 @@ static void increment_le(uint8_t *pCounter, size_t counter_len) {
     }
 }
 
-static void increment_be(uint8_t *pCounter, size_t counter_len) {
+static inline void increment_be(uint8_t *pCounter, size_t counter_len) {
     size_t i;
 
     pCounter += counter_len - 1;
@@ -81,114 +87,203 @@ static void increment_be(uint8_t *pCounter, size_t counter_len) {
     }
 }
 
+/*
+ * Create the initial sequence of counter blocks
+ */
+static uint8_t* create_counter_blocks(uint8_t *counter_block0, unsigned block_len, size_t prefix_len, unsigned counter_len, Increment increment)
+{
+    unsigned i;
+    uint8_t *counter_blocks, *current;
+
+    counter_blocks = current = calloc(1, block_len * NR_BLOCKS);
+    if (NULL == counter_blocks) {
+        return NULL;
+    }
+ 
+    memcpy(current, counter_block0, block_len);
+    current += block_len;
+
+    for (i=0; i<NR_BLOCKS-1; i++ ) {
+        memcpy(current, current - block_len, block_len);
+        increment(current + prefix_len, counter_len);
+        current += block_len;
+    }
+
+    return counter_blocks;
+}
+
+static uint8_t* create_keystream(BlockBase *cipher, uint8_t *counter_blocks, size_t block_len)
+{
+    uint8_t *keystream;
+
+    keystream = calloc(1, block_len * NR_BLOCKS);
+    if (NULL == keystream) {
+        return NULL;
+    }
+
+    cipher->encrypt(cipher,
+                    counter_blocks,
+                    keystream,
+                    cipher->block_len * NR_BLOCKS);
+
+    return keystream;
+}
+ 
 EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
-                                   uint8_t   initialCounterBlock[],
-                                   size_t    initialCounterBlock_len,
+                                   uint8_t   counter_block0[],
+                                   size_t    counter_block0_len,
                                    size_t    prefix_len,
                                    unsigned  counter_len,
-                                   unsigned  littleEndian,
+                                   unsigned  little_endian,
                                    CtrModeState **pResult)
 {
-    CtrModeState *ctrState = NULL;
+    CtrModeState *ctr_state;
     size_t block_len;
+    Increment increment = little_endian ? increment_le : increment_be;
 
-    if ((NULL == cipher) || (NULL == initialCounterBlock) || (NULL == pResult)) {
+    if (NULL == cipher || NULL == counter_block0 || NULL == pResult) {
         return ERR_NULL;
     }
 
     block_len = cipher->block_len;
-    assert(block_len < 256);
 
-    if ((block_len != initialCounterBlock_len) ||
-        (counter_len == 0) ||
-        (block_len < (prefix_len + counter_len))) {
+    if (block_len != counter_block0_len ||
+        counter_len == 0 || counter_len > block_len ||
+        block_len < (prefix_len + counter_len)) {
         return ERR_CTR_COUNTER_BLOCK_LEN;
     }
 
-    ctrState = calloc(1, sizeof(CtrModeState) + block_len*3);
-    if (NULL == ctrState) {
+    ctr_state = calloc(1, sizeof(CtrModeState));
+    if (NULL == ctr_state) {
         return ERR_MEMORY;
     }
 
-    /** Original counter block **/
-    memcpy(&ctrState->buffer[0], initialCounterBlock, block_len);
-    /** Current counter block **/
-    memcpy(&ctrState->buffer[block_len], initialCounterBlock, block_len);
+    ctr_state->cipher = cipher;
+    
+    ctr_state->counter_blocks = create_counter_blocks(counter_block0,
+                                                      block_len,
+                                                      prefix_len,
+                                                      counter_len,
+                                                      increment);
+    if (NULL == ctr_state->counter_blocks) {
+        goto error;
+    }
+    
+    ctr_state->counter = ctr_state->counter_blocks + prefix_len;
+    ctr_state->counter_len = counter_len;
+    ctr_state->little_endian = little_endian;
+    
+    ctr_state->keystream = create_keystream(cipher, ctr_state->counter_blocks, block_len);
+    if (NULL == ctr_state->keystream) {
+        goto error;
+    }
+    ctr_state->used_ks = 0;
 
-    ctrState->cipher = cipher;
-    ctrState->usedKeyStream = (uint8_t)block_len;   /** All key stream (in buffer) is invalid **/
-    ctrState->counter = ctrState->buffer + block_len + prefix_len;
-    ctrState->counter_len = counter_len;
-    ctrState->increment = littleEndian ? &increment_le : &increment_be;
+    ctr_state->length_lo = ctr_state->length_hi = 0;
 
-    *pResult = ctrState;
+    assert(block_len < 256);
+    ctr_state->length_max_lo = (uint64_t)block_len << (counter_len*8);
+    if (counter_len >= 8)
+        ctr_state->length_max_hi = (uint64_t)block_len << ((counter_len-8)*8);
+    else
+        ctr_state->length_max_hi = 0;
+
+    *pResult = ctr_state;
     return 0;
+
+error:
+    free(ctr_state->keystream);
+    free(ctr_state->counter_blocks);
+    free(ctr_state);
+    return ERR_MEMORY;
 }
 
-EXPORT_SYM int CTR_encrypt(CtrModeState *ctrState,
+static inline void update_keystream(CtrModeState *ctr_state)
+{
+    unsigned i;
+    uint8_t *counter;
+    size_t block_len;
+
+    counter = ctr_state->counter;
+    block_len = ctr_state->cipher->block_len;
+   
+   /** Update all consecutive counter blocks **/ 
+    if (ctr_state->little_endian) {
+        for (i=0; i<NR_BLOCKS; i++) {
+            increment_le(counter, ctr_state->counter_len);
+            counter += block_len;
+        }
+    } else {
+        for (i=0; i<NR_BLOCKS; i++) {
+            increment_be(counter, ctr_state->counter_len);
+            counter += block_len;
+        }
+    }
+    
+    ctr_state->cipher->encrypt(ctr_state->cipher,
+                               ctr_state->counter_blocks,
+                               ctr_state->keystream,
+                               ctr_state->cipher->block_len * NR_BLOCKS);
+    ctr_state->used_ks = 0;
+}
+
+EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
                            const uint8_t *in,
                            uint8_t *out,
                            size_t data_len)
 {
     size_t block_len;
-    uint8_t *keyStream;
-    uint8_t *counterBlock;
-    uint8_t *originalCounterBlock;
 
-    if ((NULL == ctrState) || (NULL == in) || (NULL == out))
+    if (NULL == ctr_state || NULL == in || NULL == out)
         return ERR_NULL;
 
-    block_len = ctrState->cipher->block_len;
-    originalCounterBlock = &ctrState->buffer[0];
-    counterBlock = &ctrState->buffer[block_len];
-    keyStream = &ctrState->buffer[2*block_len];
-
+    block_len = ctr_state->cipher->block_len;
     while (data_len > 0) {
+        size_t ks_to_use;
+        size_t ks_size;
         unsigned j;
-        size_t keyStreamToUse;
-
-        if (ctrState->usedKeyStream == block_len) {
-
-            ctrState->cipher->encrypt(ctrState->cipher,
-                                      counterBlock,
-                                      keyStream,
-                                      block_len);
-            ctrState->usedKeyStream = 0;
-
-            /* Prepare next counter block */
-            ctrState->increment(ctrState->counter, ctrState->counter_len);
-
-            /* Fail if key stream is ever reused **/
-            if (0 == memcmp(originalCounterBlock,
-                            counterBlock,
-                            block_len))
-                return ERR_CTR_REPEATED_KEY_STREAM;
+        
+        ks_size = block_len * NR_BLOCKS;
+        if (ctr_state->used_ks == ks_size)
+            update_keystream(ctr_state);
+    
+        ks_to_use = MIN(data_len, ks_size - ctr_state->used_ks);
+        for (j=0; j<ks_to_use; j++) {
+            *out++ = *in++ ^ ctr_state->keystream[j + ctr_state->used_ks];
         }
 
-        keyStreamToUse = MIN(data_len, block_len - ctrState->usedKeyStream);
-        for (j=0; j<keyStreamToUse; j++)
-            *out++ = *in++ ^ keyStream[j + ctrState->usedKeyStream];
+        data_len -= ks_to_use;
+        ctr_state->used_ks += ks_to_use;
 
-        data_len -= keyStreamToUse;
-        ctrState->usedKeyStream = (uint8_t)(ctrState->usedKeyStream  + keyStreamToUse);
+        ctr_state->length_lo += ks_to_use;
+        if (ctr_state->length_lo < ks_to_use)
+            ctr_state->length_hi++;
+
+        if (ctr_state->length_hi > ctr_state->length_max_hi)
+            return ERR_CTR_REPEATED_KEY_STREAM;
+        if (ctr_state->length_hi == ctr_state->length_max_hi)
+            if (ctr_state->length_lo > ctr_state->length_max_lo)
+                return ERR_CTR_REPEATED_KEY_STREAM;
     }
 
     return 0;
 }
 
-EXPORT_SYM int CTR_decrypt(CtrModeState *ctrState,
+EXPORT_SYM int CTR_decrypt(CtrModeState *ctr_state,
                            const uint8_t *in,
                            uint8_t *out,
                            size_t data_len)
 {
-    return CTR_encrypt(ctrState, in, out, data_len);
+    return CTR_encrypt(ctr_state, in, out, data_len);
 }
 
-EXPORT_SYM int CTR_stop_operation(CtrModeState *ctrState)
+EXPORT_SYM int CTR_stop_operation(CtrModeState *ctr_state)
 {
-    if (NULL == ctrState)
+    if (NULL == ctr_state)
         return ERR_NULL;
-    ctrState->cipher->destructor(ctrState->cipher);
-    free(ctrState);
+    ctr_state->cipher->destructor(ctr_state->cipher);
+    free(ctr_state->keystream);
+    free(ctr_state->counter_blocks);
+    free(ctr_state);
     return 0;
 }
