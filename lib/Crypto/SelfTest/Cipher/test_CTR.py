@@ -106,8 +106,9 @@ class CtrTests(unittest.TestCase):
         self.assertEqual(len(nonce1), 8)
 
         # Nonce can be zero-length
-        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=b(""))
-        self.assertEqual(b(""), cipher.nonce)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=b"")
+        self.assertEqual(b"", cipher.nonce)
+        cipher.encrypt(b'0'*300)
 
         # Nonce and Counter are mutually exclusive
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR,

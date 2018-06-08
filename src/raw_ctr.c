@@ -180,13 +180,16 @@ EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
     ctr_state->used_ks = 0;
 
     ctr_state->length_lo = ctr_state->length_hi = 0;
+    ctr_state->length_max_lo = ctr_state->length_max_hi = 0;
 
     assert(block_len < 256);
-    ctr_state->length_max_lo = (uint64_t)block_len << (counter_len*8);
-    if (counter_len >= 8)
+    assert(block_len > 0);
+    if (counter_len < 8) 
+        ctr_state->length_max_lo = (uint64_t)block_len << (counter_len*8);
+    if (counter_len >= 8 && counter_len < 16)
         ctr_state->length_max_hi = (uint64_t)block_len << ((counter_len-8)*8);
-    else
-        ctr_state->length_max_hi = 0;
+
+    /** length_max_hi and length_max_lo are both zero when counter_len is 16 **/
 
     *pResult = ctr_state;
     return 0;
@@ -233,11 +236,15 @@ EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
                            size_t data_len)
 {
     size_t block_len;
+    uint64_t max_hi, max_lo;
 
     if (NULL == ctr_state || NULL == in || NULL == out)
         return ERR_NULL;
 
     block_len = ctr_state->cipher->block_len;
+    max_hi = ctr_state->length_max_hi;
+    max_lo = ctr_state->length_max_lo;
+
     while (data_len > 0) {
         size_t ks_to_use;
         size_t ks_size;
@@ -246,8 +253,9 @@ EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
         ks_size = block_len * NR_BLOCKS;
         if (ctr_state->used_ks == ks_size)
             update_keystream(ctr_state);
-    
+        
         ks_to_use = MIN(data_len, ks_size - ctr_state->used_ks);
+        
         for (j=0; j<ks_to_use; j++) {
             *out++ = *in++ ^ ctr_state->keystream[j + ctr_state->used_ks];
         }
@@ -256,13 +264,20 @@ EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
         ctr_state->used_ks += ks_to_use;
 
         ctr_state->length_lo += ks_to_use;
-        if (ctr_state->length_lo < ks_to_use)
+        if (ctr_state->length_lo < ks_to_use) {
             ctr_state->length_hi++;
+            if (ctr_state->length_hi == 0)
+                return ERR_CTR_REPEATED_KEY_STREAM;
+        }
 
-        if (ctr_state->length_hi > ctr_state->length_max_hi)
+        /** 128-bit counter **/
+        if (0 == max_lo && 0 == max_hi)
+            continue;
+
+        if (ctr_state->length_hi > max_hi)
             return ERR_CTR_REPEATED_KEY_STREAM;
-        if (ctr_state->length_hi == ctr_state->length_max_hi)
-            if (ctr_state->length_lo > ctr_state->length_max_lo)
+        if (ctr_state->length_hi == max_hi &&
+            ctr_state->length_lo > max_lo)
                 return ERR_CTR_REPEATED_KEY_STREAM;
     }
 
