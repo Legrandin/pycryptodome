@@ -31,7 +31,7 @@
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, b, unhexlify, bchr
+from Crypto.Util.py3compat import tobytes, b, unhexlify, bchr, hexlify
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 from Crypto.Util import Counter
@@ -106,8 +106,9 @@ class CtrTests(unittest.TestCase):
         self.assertEqual(len(nonce1), 8)
 
         # Nonce can be zero-length
-        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=b(""))
-        self.assertEqual(b(""), cipher.nonce)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=b"")
+        self.assertEqual(b"", cipher.nonce)
+        cipher.encrypt(b'0'*300)
 
         # Nonce and Counter are mutually exclusive
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR,
@@ -149,7 +150,7 @@ class CtrTests(unittest.TestCase):
                           initial_value=b("5")*17)
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
                           nonce=self.nonce_64, initial_value=b("5")*9)
-        
+
         # Fail if the iv is too short
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR,
                           initial_value=b("5")*15)
@@ -219,16 +220,24 @@ class CtrTests(unittest.TestCase):
         self.assertRaises(TypeError, cipher.encrypt, b(""))
 
     def test_wrap_around(self):
+        # Counter is only 8 bits, so we can only encrypt/decrypt 256 blocks (=4096 bytes)
         counter = Counter.new(8, prefix=bchr(9) * 15)
+        max_bytes = 4096
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
-        cipher.encrypt(bchr(9) * 16 * 255)
-        self.assertRaises(OverflowError, cipher.encrypt, bchr(9) * 16)
+        cipher.encrypt(b'9' * max_bytes)
+        self.assertRaises(OverflowError, cipher.encrypt, b'9')
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
-        cipher.decrypt(bchr(9) * 16 * 255)
-        self.assertRaises(OverflowError, cipher.decrypt, bchr(9) * 16)
-    
+        self.assertRaises(OverflowError, cipher.encrypt, b'9' * (max_bytes + 1))
+
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        cipher.decrypt(b'9' * max_bytes)
+        self.assertRaises(OverflowError, cipher.decrypt, b'9')
+
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
+        self.assertRaises(OverflowError, cipher.decrypt, b'9' * (max_bytes + 1))
+
     def test_bytearray(self):
         data = b("1") * 16
         iv = b("\x00") * 6 + b("\xFF\xFF")
@@ -262,8 +271,8 @@ class CtrTests(unittest.TestCase):
 
 
 class SP800TestVectors(unittest.TestCase):
-    """Class exercising the CTR test vectors found in Section F.3
-    of NIST SP 800-3A"""
+    """Class exercising the CTR test vectors found in Section F.5
+    of NIST SP 800-38A"""
 
     def test_aes_128(self):
         plaintext =     '6bc1bee22e409f96e93d7e117393172a' +\
@@ -340,12 +349,12 @@ class RFC3686TestVectors(unittest.TestCase):
     # - plaintext
     # - ciphertext
     # - key (AES 128, 192 or 256 bits)
-    # - counter prefix
+    # - counter prefix (4 byte nonce + 8 byte nonce)
     data = (
             ('53696e676c6520626c6f636b206d7367',
              'e4095d4fb7a7b3792d6175a3261311b8',
              'ae6852f8121067cc4bf7a5765577f39e',
-             '00000030'+'0000000000000000'),
+             '000000300000000000000000'),
             ('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
              '5104a106168a72d9790d41ee8edad388eb2e1efc46da57c8fce630df9141be28',
              '7e24067817fae0d743d6ce1f32539163',
@@ -389,7 +398,7 @@ class RFC3686TestVectors(unittest.TestCase):
             counter = Counter.new(32, prefix=prefix)
             cipher = AES.new(key, AES.MODE_CTR, counter=counter)
             result = cipher.encrypt(pt)
-            self.assertEqual(ct, result)
+            self.assertEqual(hexlify(ct), hexlify(result))
 
 
 def get_tests(config={}):
