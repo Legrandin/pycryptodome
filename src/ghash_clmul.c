@@ -45,25 +45,37 @@ FAKE_INIT(ghash_clmul)
  * This module implement the basic GHASH multiplication, as described in
  * NIST SP 800-38D.
  *
- * Specifically, we perform the multiplication of two elements in GF(2^128)
- * represented as polynomials, modulo P(x) = x^128 + x^7 + x + 1.
+ * At the core, we perform a binary polynomial multiplication (carry-less)
+ * modulo P(x) = x^128 + x^7 + x + 1, that is a finite field multiplication in
+ * GF(2^128).
  *
- * The coefficients of the two polynomials are encoded little endian
- * byte wise, but big endian bit wise (within a byte).
+ * The GCM standard requires that coefficients of the two polynomials are encoded
+ * little-endian byte-wise but also (oddly enough) bit-wise (i.e. within a byte).
  *
- * In other words, the 16-bit byte string in memory:
+ * In other words, the unity element x is encoded in memory as:
  *
- *      0x40 0x01
+ * 0x80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 = (binary) 100000.....0
  *
- * represents the polynomial:
+ * Note how the least significant bit (LSB) is the leftmost one in the first byte.
  *
- *      x^15 + x^2 = 0x8002
+ * In order to use the native CPU instructions though, the conventional representation of
+ * bits within a byte (with leftmost bit being the most significant) must be in place.
  *
- * Of course, polynomials in this case have degree 127, not 15.
+ * To that end, instead of performing expensive bit-swapping, computing the
+ * multiplication, and then bit-swapping again, we can use an equivalent
+ * expression (see [2][3]) that operates directly on *bit-reflected* data.
+ * Such expression interprets the original encoding of the factors as if the
+ * rightmost bit was the most significant.
  *
- * Internally, we prefer to operate with the conventional representation of
- * bits within a byte (leftmost bit is LSB). To that end, as explained in [3],
- * it is possible to work with the *reflected* values.
+ * The new expression A * (B * x) * x^{-128} modulo p(x) = x^128 + x^127 + x^126 + x^121 + 1
+ *
+ * For instance, what used to be the unity element x for the original multiplication,
+ * is now the value x^127 for the equivalent expression. Within each byte, the
+ * leftmost bit is the most significant as desired.
+ *
+ * However, this also means that bytes end up encoded big-endian in memory. In
+ * order to use x86 arithmetic (and the XMM registers), data must be
+ * byte-swapped when loaded from or stored into memory.
  *
  * References:
  * [1] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.447.379&rep=rep1&type=pdf
@@ -71,19 +83,31 @@ FAKE_INIT(ghash_clmul)
  * [3] https://blog.quarkslab.com/reversing-a-finite-field-multiplication-optimization.html
  */
 
+struct exp_key {
+    /**
+     *  Powers of H (already swapped in byte endianess, and pre-multiplied by X)
+     *
+     *  h[0] is x*H   mod p(x)
+     *  h[1] is x*H^2 mod p(x)
+     *  h[2] is x*H^3 mod p(x)
+     *  h[3] is x*H^4 mod p(x)
+     */
+    __m128i h[4];
+};
+
 /**
  * Perform the Montgomery reduction on a polynomial of degree 255,
  * using basis x^128 and modulus p(x) = x^128 + x^127 + x^126 + x^121 + 1.
  *
- * See at the bottom for an explaination.
+ * See at the bottom for an explanation.
  */
-static inline __m128i reduce(__m128i *prod_high, __m128i *prod_low)
+static inline __m128i reduce(__m128i prod_high, __m128i prod_low)
 {
     const uint64_t c2 = 0xc200000000000000U;
     __m128i t1, t2, t3, t4, t7;
    
-    t1 = *prod_high;     // U3:U2
-    t7 = *prod_low;      // U1:U0
+    t1 = prod_high;     // U3:U2
+    t7 = prod_low;      // U1:U0
     t3 = _mm_loadl_epi64((__m128i*)&c2);
     t2 = _mm_clmulepi64_si128(t3, t7, 0x00);    // A
     t4 = _mm_shuffle_epi32(t7, _MM_SHUFFLE(1,0,3,2));   // U0:U1
@@ -99,14 +123,14 @@ static inline __m128i reduce(__m128i *prod_high, __m128i *prod_low)
 /**
  * Perform the carry-less multiplication of two polynomials of degree 127.
  */
-static inline void clmult(__m128i *prod_high, __m128i *prod_low, __m128i *a, __m128i *b)
+static inline void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m128i b)
 {
     __m128i c, d, e, f, g, h, i;
 
-    c = _mm_clmulepi64_si128(*a, *b, 0x00);   // A0*B0
-    d = _mm_clmulepi64_si128(*a, *b, 0x11);   // A1*B1
-    e = _mm_clmulepi64_si128(*a, *b, 0x10);   // A0*B1
-    f = _mm_clmulepi64_si128(*a, *b, 0x01);   // A1*B0
+    c = _mm_clmulepi64_si128(a, b, 0x00);   // A0*B0
+    d = _mm_clmulepi64_si128(a, b, 0x11);   // A1*B1
+    e = _mm_clmulepi64_si128(a, b, 0x10);   // A0*B1
+    f = _mm_clmulepi64_si128(a, b, 0x01);   // A1*B0
     g = _mm_xor_si128(e, f);                // E1+F1:E0+F0
     h = _mm_slli_si128(g, 8);               // E0+F0:0
     i = _mm_srli_si128(g, 8);               // 0:E1+F1
@@ -153,44 +177,32 @@ static inline __m128i swap(__m128i a)
     return _mm_shuffle_epi8(a, mask);
 }
 
-/**
- * Multiply two polynomials A and B in GF(2^128) modulo x^128 + x^7 + x + 1.
- *
- * b[] is actually pre-swapped and pre-multiplied by x.
- *
- * We use the fundamental result that the product is equivalent to:
- *
- *  A * (B * x) * x^{-128} modulo x^128 + x^127 + x^126 + x^121 + 1
- */
-static inline __m128i ghash_mult(__m128i *a, __m128i *bx)
-{
-    __m128i a128, prod_hi, prod_lo, result;
-
-    a128 = swap(*a);
-    clmult(&prod_hi, &prod_lo, &a128, bx);
-    result = reduce(&prod_hi, &prod_lo);
-    return swap(result);
-}
-
-EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], __m128i **expanded)
+EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], struct exp_key **expanded)
 {
     __m128i h128;
+    unsigned i;
 
     if (NULL==h || NULL==expanded)
         return ERR_NULL;
 
-    *expanded = align_alloc(16, 16);
+    *expanded = align_alloc(sizeof(struct exp_key), 16);
     if (NULL == *expanded)
         return ERR_MEMORY;
 
-    /** Pre-swap and pre-multiply h by x **/
     h128 = swap(_mm_loadu_si128((__m128i*)h));
-    **expanded = multx(h128);
+    (*expanded)->h[0] = multx(h128);    /** x*H **/
+    
+    for (i=1; i<4; i++) {
+        __m128i r0, r1;
+        
+        clmult(&r0, &r1, (*expanded)->h[i-1], (*expanded)->h[0]);
+        (*expanded)->h[i] = reduce(r0, r1);
+    }
 
     return 0;
 }
 
-EXPORT_SYM int ghash_destroy_clmul(__m128i *expanded)
+EXPORT_SYM int ghash_destroy_clmul(struct exp_key *expanded)
 {
     align_free(expanded);
     return 0;
@@ -201,11 +213,12 @@ EXPORT_SYM int ghash_clmul(
         const uint8_t block_data[],
         size_t len,
         const uint8_t y_in[16],
-        __m128i *expanded
+        struct exp_key *expanded
         )
 {
     unsigned i;
     __m128i y_temp;
+    size_t len16;
 
     if (NULL==y_out || NULL==block_data || NULL==y_in || NULL==expanded)
         return ERR_NULL;
@@ -213,15 +226,55 @@ EXPORT_SYM int ghash_clmul(
     if (len % 16)
         return ERR_NOT_ENOUGH_DATA;
 
-    y_temp = _mm_loadu_si128((__m128i*)y_in);
-    for (i=0; i<len; i+=16) {
-        __m128i x, data;
+    y_temp = swap(_mm_loadu_si128((__m128i*)y_in));
 
-        data = _mm_loadu_si128((__m128i*)&block_data[i]);
-        x = _mm_xor_si128(y_temp, data);
-        y_temp = ghash_mult(&x, expanded);
+    /** Authenticate 64 bytes per cycle **/
+    len16 = len ^ (len & 0x3F);
+    for (i=0; i<len16; i+=16*4) {
+        __m128i sum0, sum1;
+        __m128i xm3, xm2, xm1, x;
+        __m128i r0, r1, r2, r3, r4, r5, r6;
+
+        xm3 = swap(_mm_loadu_si128((__m128i*)&block_data[i]));
+        xm2 = swap(_mm_loadu_si128((__m128i*)&block_data[i+16]));
+        xm1 = swap(_mm_loadu_si128((__m128i*)&block_data[i+16*2]));
+        x = swap(_mm_loadu_si128((__m128i*)&block_data[i+16*3]));
+
+        /** (X_{i-3} + Y_{i-4}) * H^4 **/
+        r0 = _mm_xor_si128(xm3, y_temp);
+        clmult(&sum0, &sum1, r0, expanded->h[3]);
+        
+        /** X_{i-2} * H^3 **/
+        clmult(&r1, &r2, xm2, expanded->h[2]);
+        sum0 = _mm_xor_si128(sum0, r1);
+        sum1 = _mm_xor_si128(sum1, r2);
+        
+        /** X_{i-1} * H^2 **/
+        clmult(&r3, &r4, xm1, expanded->h[1]);
+        sum0 = _mm_xor_si128(sum0, r3);
+        sum1 = _mm_xor_si128(sum1, r4);
+
+        /** X_{i} * H **/
+        clmult(&r5, &r6, x, expanded->h[0]);
+        sum0 = _mm_xor_si128(sum0, r5);
+        sum1 = _mm_xor_si128(sum1, r6);
+
+        /** mod P **/
+        y_temp = reduce(sum0, sum1);
     }
 
+    /** Y_i = (X_i + Y_{i-1}) * H mod P **/
+    for (; i<len; i+=16) {
+        __m128i z, xi;
+        __m128i prod_hi, prod_lo;
+
+        xi = swap(_mm_loadu_si128((__m128i*)&block_data[i]));
+        z = _mm_xor_si128(y_temp, xi);
+        clmult(&prod_hi, &prod_lo, z, expanded->h[0]);
+        y_temp = reduce(prod_hi, prod_lo);
+    }
+
+    y_temp = swap(y_temp);
     _mm_storeu_si128((__m128i*)y_out, y_temp);
     return 0;
 }
