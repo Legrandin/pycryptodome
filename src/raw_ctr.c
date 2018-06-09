@@ -62,7 +62,7 @@ typedef struct {
     /** Number of bytes we have encrypted so far **/
     uint64_t length_lo, length_hi;
 
-    /** Max number of blocks we may encrypt at most **/
+    /** Max number of bytes we may encrypt at most **/
     uint64_t length_max_lo, length_max_hi;
 } CtrModeState;
 
@@ -95,7 +95,7 @@ static uint8_t* create_counter_blocks(uint8_t *counter_block0, unsigned block_le
     unsigned i;
     uint8_t *counter_blocks, *current;
 
-    counter_blocks = current = calloc(1, block_len * NR_BLOCKS);
+    counter_blocks = current = align_alloc(block_len * NR_BLOCKS, block_len);
     if (NULL == counter_blocks) {
         return NULL;
     }
@@ -116,7 +116,7 @@ static uint8_t* create_keystream(BlockBase *cipher, uint8_t *counter_blocks, siz
 {
     uint8_t *keystream;
 
-    keystream = calloc(1, block_len * NR_BLOCKS);
+    keystream = align_alloc(block_len * NR_BLOCKS, block_len);
     if (NULL == keystream) {
         return NULL;
     }
@@ -195,8 +195,8 @@ EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
     return 0;
 
 error:
-    free(ctr_state->keystream);
-    free(ctr_state->counter_blocks);
+    align_free(ctr_state->keystream);
+    align_free(ctr_state->counter_blocks);
     free(ctr_state);
     return ERR_MEMORY;
 }
@@ -297,8 +297,8 @@ EXPORT_SYM int CTR_stop_operation(CtrModeState *ctr_state)
     if (NULL == ctr_state)
         return ERR_NULL;
     ctr_state->cipher->destructor(ctr_state->cipher);
-    free(ctr_state->keystream);
-    free(ctr_state->counter_blocks);
+    align_free(ctr_state->keystream);
+    align_free(ctr_state->counter_blocks);
     free(ctr_state);
     return 0;
 }
