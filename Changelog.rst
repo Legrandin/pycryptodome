@@ -8,10 +8,10 @@ New features
 ------------
 * ChaCha20 accepts 96-bit nonces
 * Accelerate AES-GCM on x86 using PCLMULQDQ instruction.
-  GCM is now 3x faster on Broadwell.
-* Accelerate AES-ECB and AES-CTR by parallelizing AESNI instruction on x86.
-  CTR is now 2x faster on Broadwell.
-* As result of the two improvements above, AES-GCM is 6x faster on x86.
+* Accelerate AES-ECB and AES-CTR on x86 with AESNI pipelining.
+* As result of the two improvements above, on x86 (Broadwell):
+  - AES-ECB and AES-CTR are 3x faster
+  - AES-GCM is 9x faster
 
 3.6.1 (15 April 2018)
 +++++++++++++++++++++
