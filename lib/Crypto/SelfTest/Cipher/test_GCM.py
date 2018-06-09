@@ -36,7 +36,7 @@ from Crypto.SelfTest.loader import load_tests
 
 from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
 from Crypto.Cipher import AES
-from Crypto.Hash import SHAKE128
+from Crypto.Hash import SHAKE128, SHA256
 
 from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
@@ -852,6 +852,27 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.test_corrupt_decrypt(tv)
 
 
+class TestVariableLength(unittest.TestCase):
+
+    def __init__(self, **extra_params):
+        unittest.TestCase.__init__(self)
+        self._extra_params = extra_params
+
+    def runTest(self):
+        key = b'0' * 16
+        h = SHA256.new()
+
+        for length in range(160):
+            nonce = '{0:04d}'.format(length).encode('utf-8')
+            data = bchr(length) * length
+            cipher = AES.new(key, AES.MODE_GCM, nonce=nonce, **self._extra_params)
+            ct, tag = cipher.encrypt_and_digest(data)
+            h.update(ct)
+            h.update(tag)
+
+        self.assertEqual(h.hexdigest(), '1057d9559f55227fd4e36bab8716ebcfe6671b5603fdceb046a33591175ee5e4')
+
+
 def get_tests(config={}):
     from Crypto.Util import _cpuid
 
@@ -863,11 +884,13 @@ def get_tests(config={}):
     tests += [ TestVectors() ]
     tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
     tests += list_test_cases(TestVectorsGueronKrasnov)
+    tests += [ TestVariableLength() ]
     if config.get('slow_tests'):
         tests += list_test_cases(NISTTestVectorsGCM)
 
     if _cpuid.have_clmul():
         tests += [ TestVectorsWycheproof(wycheproof_warnings, use_clmul=False) ]
+        tests += [ TestVariableLength(use_clmul = False) ]
         if config.get('slow_tests'):
             tests += list_test_cases(NISTTestVectorsGCM_no_clmul)
     else:
