@@ -309,7 +309,7 @@ class PCTBuildExt (build_ext):
                 x.extra_compile_args += aesni_result['extra_options']
         else:
             PrintErr ("Warning: compiler does not support AESNI instructions")
-            self.remove_extensions(aesni_mod_name)
+            self.remove_extension(aesni_mod_name)
 
         # CLMUL
         clmul_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_clmul()
@@ -321,13 +321,13 @@ class PCTBuildExt (build_ext):
                 x.extra_compile_args += clmul_result['extra_options']
         else:
             PrintErr ("Warning: compiler does not support CLMUL instructions")
-            self.remove_extensions(clmul_mod_name)
+            self.remove_extension(clmul_mod_name)
 
-    def remove_extensions(self, names):
+    def remove_extension(self, name):
         """Remove the specified extension from the list of extensions
         to build"""
 
-        self.extensions = [ x for x in self.extensions if x.name not in names ]
+        self.extensions = [ x for x in self.extensions if x.name != name ]
 
 
 class PCTBuildPy(build_py):

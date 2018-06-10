@@ -57,30 +57,32 @@ _ghash_api_portable = """
                               void **ghash_tables);
     int ghash_destroy_portable(void *ghash_tables);
 """
+
 _raw_ghash_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_portable",
                                                     _ghash_api_portable)
 
+_funcs = ( "ghash", "ghash_expand", "ghash_destroy" )
 class _GHASH_Portable(object):
     pass
-_GHASH_Portable.ghash         = _raw_ghash_portable_lib.ghash_portable
-_GHASH_Portable.ghash_expand  = _raw_ghash_portable_lib.ghash_expand_portable
-_GHASH_Portable.ghash_destroy = _raw_ghash_portable_lib.ghash_destroy_portable
+for func in _funcs:
+    impl_func = getattr(_raw_ghash_portable_lib, func + "_portable")
+    setattr(_GHASH_Portable, func, impl_func)
 
 # Try to load GHASH based on CMUL (it might not have been compiled)
-try:
-    _raw_ghash_clmul_lib = None
-    _ghash_api_clmul = _ghash_api_portable.replace("portable", "clmul")
-    if _cpuid.have_clmul():
+_ghash_api_clmul = _ghash_api_portable.replace("portable", "clmul")
+_raw_ghash_clmul_lib = None
+if _cpuid.have_clmul():
+    try:
         _raw_ghash_clmul_lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_clmul",
-                                                        _ghash_api_clmul)
-    class _GHASH_CLMUL(object):
+                                                         _ghash_api_clmul)
+        class _GHASH_CLMUL(object):
+            pass
+        for func in _funcs:
+            impl_func = getattr(_raw_ghash_clmul_lib, func + "_clmul")
+            setattr(_GHASH_CLMUL, func, impl_func)
+    except OSError:
         pass
-    _GHASH_CLMUL.ghash         = _raw_ghash_clmul_lib.ghash_clmul
-    _GHASH_CLMUL.ghash_expand  = _raw_ghash_clmul_lib.ghash_expand_clmul
-    _GHASH_CLMUL.ghash_destroy = _raw_ghash_clmul_lib.ghash_destroy_clmul
-except OSError:
-    pass
-
+del _funcs
 
 class _GHASH(object):
     """GHASH function defined in NIST SP 800-38D, Algorithm 2.
