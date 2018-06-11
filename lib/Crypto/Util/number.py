@@ -425,7 +425,7 @@ def bytes_to_long(s):
     if sys.version_info[0:3] < (2, 7, 4):
         if isinstance(s, bytearray):
             s = bytes(s)
-        elif isinstance(s, memoryview):
+        elif isinstance(s, _memoryview):
             s = s.tobytes()
 
     length = len(s)
