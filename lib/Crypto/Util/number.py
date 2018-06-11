@@ -33,8 +33,19 @@ from Crypto.Util.py3compat import _memoryview
 # Backward compatibility
 _fastmath = None
 
-# New functions
-from _number_new import *
+
+def ceil_div(n, d):
+    """Return ceil(n/d), that is, the smallest integer r such that r*d >= n"""
+
+    if d == 0:
+        raise ZeroDivisionError()
+    if (n < 0) or (d < 0):
+        raise ValueError("Non positive values")
+    r, q = divmod(n, d)
+    if (n != 0) and (q != 0):
+        r += 1
+    return r
+
 
 def size (N):
     """Returns the size of the number N in bits."""

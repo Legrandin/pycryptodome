@@ -13,6 +13,13 @@ New features
   - AES-ECB and AES-CTR are 3x faster
   - AES-GCM is 9x faster
 
+  Breaks in compatibility
+-----------------------
+
+* In ``Crypto.Util.number``, remove functions ``floor_div`` and ``exact_div``.
+  Also, ``ceil_div`` is limited to non-negative terms only.
+
+
 3.6.1 (15 April 2018)
 +++++++++++++++++++++
 
