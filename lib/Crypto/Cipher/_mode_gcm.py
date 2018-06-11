@@ -46,43 +46,54 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
 
 from Crypto.Util import _cpuid
 
-# Load portable GHASH
-_ghash_api_portable = """
-    int ghash_portable(uint8_t y_out[16],
-                       const uint8_t block_data[],
-                       size_t len,
-                       const uint8_t y_in[16],
-                       const void *exp_key);
-    int ghash_expand_portable(const uint8_t h[16],
-                              void **ghash_tables);
-    int ghash_destroy_portable(void *ghash_tables);
+
+# C API by module implementing GHASH
+_ghash_api_template = """
+    int ghash_%imp%(uint8_t y_out[16],
+                    const uint8_t block_data[],
+                    size_t len,
+                    const uint8_t y_in[16],
+                    const void *exp_key);
+    int ghash_expand_%imp%(const uint8_t h[16],
+                           void **ghash_tables);
+    int ghash_destroy_%imp%(void *ghash_tables);
 """
 
-_raw_ghash_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_portable",
-                                                    _ghash_api_portable)
+def _build_impl(lib, postfix):
+    from collections import namedtuple
 
-_funcs = ( "ghash", "ghash_expand", "ghash_destroy" )
-class _GHASH_Portable(object):
-    pass
-for func in _funcs:
-    impl_func = getattr(_raw_ghash_portable_lib, func + "_portable")
-    setattr(_GHASH_Portable, func, impl_func)
-
-# Try to load GHASH based on CMUL (it might not have been compiled)
-_ghash_api_clmul = _ghash_api_portable.replace("portable", "clmul")
-_raw_ghash_clmul_lib = None
-if _cpuid.have_clmul():
+    funcs = ( "ghash", "ghash_expand", "ghash_destroy" )
+    GHASH_Imp = namedtuple('_GHash_Imp', funcs)
     try:
-        _raw_ghash_clmul_lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_clmul",
-                                                         _ghash_api_clmul)
-        class _GHASH_CLMUL(object):
-            pass
-        for func in _funcs:
-            impl_func = getattr(_raw_ghash_clmul_lib, func + "_clmul")
-            setattr(_GHASH_CLMUL, func, impl_func)
+        imp_funcs = [ getattr(lib, x + "_" + postfix) for x in funcs ]
+    except AttributeError:      # Make sphinx stop complaining with its mocklib
+        imp_funcs = [ None ] * 3
+    params = dict(zip(funcs, imp_funcs))
+    return GHASH_Imp(**params)
+
+
+def _get_ghash_portable():
+    api = _ghash_api_template.replace("%imp%", "template")
+    lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_portable", api)
+    result = _build_impl(lib, "portable")
+    return result
+_ghash_portable = _get_ghash_portable()
+
+
+def _get_ghash_clmul():
+    """Return None if CLMUL implementation is not available"""
+
+    if not _cpuid.have_clmul():
+        return None
+    try:
+        api = _ghash_api_template.replace("%imp%", "clmul")
+        lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_clmul", api)
+        result = _build_impl(lib, "clmul")
     except OSError:
-        pass
-del _funcs
+        result = None
+    return result
+_ghash_clmul = _get_ghash_clmul()
+
 
 class _GHASH(object):
     """GHASH function defined in NIST SP 800-38D, Algorithm 2.
@@ -578,9 +589,9 @@ def _create_gcm_cipher(factory, **kwargs):
 
     # Not documented - only used for testing
     use_clmul = kwargs.pop("use_clmul", True)
-    if use_clmul and _raw_ghash_clmul_lib:
-        ghash_c = _GHASH_CLMUL
+    if use_clmul and _ghash_clmul:
+        ghash_c = _ghash_clmul
     else:
-        ghash_c = _GHASH_Portable
+        ghash_c = _ghash_portable
 
     return GcmMode(factory, key, nonce, mac_len, kwargs, ghash_c)
