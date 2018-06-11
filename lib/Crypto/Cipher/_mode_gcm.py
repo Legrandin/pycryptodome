@@ -73,7 +73,7 @@ def _build_impl(lib, postfix):
 
 
 def _get_ghash_portable():
-    api = _ghash_api_template.replace("%imp%", "template")
+    api = _ghash_api_template.replace("%imp%", "portable")
     lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_portable", api)
     result = _build_impl(lib, "portable")
     return result
