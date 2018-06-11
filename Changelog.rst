@@ -6,19 +6,20 @@ x.x.x (xx xxxxx 2018)
 
 New features
 ------------
-* ChaCha20 accepts 96-bit nonces
+* ChaCha20 accepts 96 bit nonces (in addition to 64 bit nonces)
+  as defined in RFC7539.
 * Accelerate AES-GCM on x86 using PCLMULQDQ instruction.
-* Accelerate AES-ECB and AES-CTR on x86 with AESNI pipelining.
+* Accelerate AES-ECB and AES-CTR on x86 by pipelining AESNI instructions.
 * As result of the two improvements above, on x86 (Broadwell):
+
   - AES-ECB and AES-CTR are 3x faster
   - AES-GCM is 9x faster
 
-  Breaks in compatibility
+Breaks in compatibility
 -----------------------
 
-* In ``Crypto.Util.number``, remove functions ``floor_div`` and ``exact_div``.
-  Also, ``ceil_div`` is limited to non-negative terms only.
-
+* In ``Crypto.Util.number``, functions ``floor_div`` and ``exact_div``
+  have been removed. Also, ``ceil_div`` is limited to non-negative terms only.
 
 3.6.1 (15 April 2018)
 +++++++++++++++++++++
@@ -33,9 +34,9 @@ Resolved issues
 ---------------
 
 * In certain circumstances (at counter wrapping, which happens on average after
-  32 GBi) AES GCM produced wrong ciphertexts.
+  32 GB) AES GCM produced wrong ciphertexts.
 * Method ``encrypt()`` of AES SIV cipher could be still called,
-  whereas only ``encrypt_and_digest()`` should be allowed.
+  whereas only ``encrypt_and_digest()`` is allowed.
 
 3.6.0 (8 April 2018)
 ++++++++++++++++++++
