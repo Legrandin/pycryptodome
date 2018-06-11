@@ -419,11 +419,15 @@ def bytes_to_long(s):
     acc = 0
 
     unpack = struct.unpack
-    
-    # Up to Python 2.7.3, struct.unpack can't work with bytearrays
-    if sys.version_info[0] < 3 and isinstance(s, bytearray):
-        s = bytes(s)
-    
+
+    # Up to Python 2.7.4, struct.unpack can't work with bytearrays nor
+    # memoryviews
+    if sys.version_info[0:3] < (2, 7, 4):
+        if isinstance(s, bytearray):
+            s = bytes(s)
+        elif isinstance(s, memoryview):
+            s = s.tobytes()
+
     length = len(s)
     if length % 4:
         extra = (4 - length % 4)
