@@ -28,7 +28,7 @@ import math
 import sys
 import struct
 from Crypto import Random
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import _memoryview
 
 # Backward compatibility
 _fastmath = None
