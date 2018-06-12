@@ -382,7 +382,7 @@ class TestVectorsWycheproof(unittest.TestCase):
         
         try:
             tag = CMAC.new(tv.key, tv.msg, ciphermod=AES, mac_len=tv.tag_size).digest()
-        except ValueError, e:
+        except ValueError as e:
             if len(tv.key) not in (16, 24, 32) and "key length" in str(e):
                 return
             raise e
@@ -395,7 +395,7 @@ class TestVectorsWycheproof(unittest.TestCase):
        
         try:
             mac = CMAC.new(tv.key, tv.msg, ciphermod=AES, mac_len=tv.tag_size)
-        except ValueError, e:
+        except ValueError as e:
             if len(tv.key) not in (16, 24, 32) and "key length" in str(e):
                 return
             raise e

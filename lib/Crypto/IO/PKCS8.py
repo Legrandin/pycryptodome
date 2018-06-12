@@ -168,7 +168,7 @@ def unwrap(p8_private_key, passphrase=None):
         try:
             p8_private_key = PBES1.decrypt(p8_private_key, passphrase)
             found = True
-        except PbesError, e:
+        except PbesError as e:
             error_str = "PBES1[%s]" % str(e)
         except ValueError:
             error_str = "PBES1[Invalid]"
@@ -177,7 +177,7 @@ def unwrap(p8_private_key, passphrase=None):
             try:
                 p8_private_key = PBES2.decrypt(p8_private_key, passphrase)
                 found = True
-            except PbesError, e:
+            except PbesError as e:
                 error_str += ",PBES2[%s]" % str(e)
             except ValueError:
                 error_str += ",PBES2[Invalid]"

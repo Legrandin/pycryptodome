@@ -704,7 +704,7 @@ def get_tests(config={}):
                 TestIntegerBase.setUp(self)
 
         tests += list_test_cases(TestIntegerGMP)
-    except (ImportError, OSError), e:
+    except (ImportError, OSError) as e:
         import sys
         sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
 
@@ -718,7 +718,7 @@ def get_tests(config={}):
                 TestIntegerBase.setUp(self)
 
         tests += list_test_cases(TestIntegerCustomModexp)
-    except (ImportError, OSError), e:
+    except (ImportError, OSError) as e:
         import sys
         sys.stdout.write("Skipping custom modexp tests (%s)\n" % str(e) )
 

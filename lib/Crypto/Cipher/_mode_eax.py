@@ -375,7 +375,7 @@ def _create_eax_cipher(factory, **kwargs):
         if nonce is None:
             nonce = get_random_bytes(16)
         mac_len = kwargs.pop("mac_len", factory.block_size)
-    except KeyError, e:
+    except KeyError as e:
         raise TypeError("Missing parameter: " + str(e))
 
     return EaxMode(factory, key, nonce, mac_len, kwargs)

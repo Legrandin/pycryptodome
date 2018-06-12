@@ -277,7 +277,7 @@ class TestVectorsWycheproof(unittest.TestCase):
         signer = pkcs1_15.new(tv.key)
         try:
             signature = signer.verify(hashed_msg, tv.sig)
-        except ValueError, e:
+        except ValueError as e:
             if tv.warning:
                 return
             assert not tv.valid

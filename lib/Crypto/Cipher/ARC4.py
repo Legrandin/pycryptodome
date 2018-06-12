@@ -104,7 +104,7 @@ class ARC4Cipher:
 
         try:
             return self.encrypt(ciphertext)
-        except ValueError, e:
+        except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
 
 

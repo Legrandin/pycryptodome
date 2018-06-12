@@ -200,7 +200,7 @@ def _create_openpgp_cipher(factory, **kwargs):
 
     try:
         key = kwargs.pop("key")
-    except KeyError, e:
+    except KeyError as e:
         raise TypeError("Missing component: " + str(e))
 
     return OpenPgpMode(factory, key, iv, kwargs)

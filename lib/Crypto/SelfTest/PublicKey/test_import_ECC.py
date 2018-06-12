@@ -424,7 +424,7 @@ gVnJp9EBND/tHQ==
         from Crypto.PublicKey.ECC import UnsupportedEccFeature
         try:
             ECC.import_key(curve)
-        except UnsupportedEccFeature, uef:
+        except UnsupportedEccFeature as uef:
             assert("1.3.132.0.33" in str(uef))
         else:
             assert(False)

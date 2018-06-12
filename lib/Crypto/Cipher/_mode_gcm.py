@@ -579,7 +579,7 @@ def _create_gcm_cipher(factory, **kwargs):
 
     try:
         key = kwargs.pop("key")
-    except KeyError, e:
+    except KeyError as e:
         raise TypeError("Missing parameter:" + str(e))
 
     nonce = kwargs.pop("nonce", None)

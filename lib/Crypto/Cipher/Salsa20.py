@@ -110,7 +110,7 @@ class Salsa20Cipher:
 
         try:
             return self.encrypt(ciphertext)
-        except ValueError, e:
+        except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
 
 def new(key, nonce=None):

@@ -783,7 +783,7 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
         signer = DSS.new(tv.key, 'fips-186-3', encoding='der')
         try:
             signature = signer.verify(hashed_msg, tv.sig)
-        except ValueError, e:
+        except ValueError as e:
             if tv.warning:
                 return
             assert not tv.valid
@@ -863,7 +863,7 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         signer = DSS.new(tv.key, 'fips-186-3', encoding='der')
         try:
             signature = signer.verify(hashed_msg, tv.sig)
-        except ValueError, e:
+        except ValueError as e:
             if tv.warning:
                 return
             if tv.comment == "k*G has a large x-coordinate":

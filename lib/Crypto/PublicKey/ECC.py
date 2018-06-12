@@ -791,28 +791,28 @@ def _import_der(encoded, passphrase):
 
     try:
         return _import_subjectPublicKeyInfo(encoded, passphrase)
-    except UnsupportedEccFeature, err:
+    except UnsupportedEccFeature as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
     
     try:
         return _import_x509_cert(encoded, passphrase)
-    except UnsupportedEccFeature, err:
+    except UnsupportedEccFeature as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
     
     try:
         return _import_private_der(encoded, passphrase)
-    except UnsupportedEccFeature, err:
+    except UnsupportedEccFeature as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
     
     try:
         return _import_pkcs8(encoded, passphrase)
-    except UnsupportedEccFeature, err:
+    except UnsupportedEccFeature as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
@@ -886,7 +886,7 @@ def import_key(encoded, passphrase=None):
             passphrase = None
         try:
             result = _import_der(der_encoded, passphrase)
-        except UnsupportedEccFeature, uef:
+        except UnsupportedEccFeature as uef:
             raise uef
         except ValueError:
             raise ValueError("Invalid DER encoding inside the PEM file")

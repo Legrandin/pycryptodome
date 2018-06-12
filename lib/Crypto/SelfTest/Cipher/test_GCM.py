@@ -801,7 +801,7 @@ class TestVectorsWycheproof(unittest.TestCase):
         try:
             cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size,
                     **self._extra_params)
-        except ValueError, e:
+        except ValueError as e:
             if len(tv.iv) == 0 and "Nonce cannot be empty" in str(e):
                 return
             raise e
@@ -819,7 +819,7 @@ class TestVectorsWycheproof(unittest.TestCase):
         try:
             cipher = AES.new(tv.key, AES.MODE_GCM, tv.iv, mac_len=tv.tag_size,
                     **self._extra_params)
-        except ValueError, e:
+        except ValueError as e:
             if len(tv.iv) == 0 and "Nonce cannot be empty" in str(e):
                 return
             raise e

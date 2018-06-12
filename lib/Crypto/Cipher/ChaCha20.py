@@ -130,7 +130,7 @@ class ChaCha20Cipher:
 
         try:
             return self._encrypt(ciphertext)
-        except ValueError, e:
+        except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
 
     def seek(self, position):
@@ -173,7 +173,7 @@ def new(**kwargs):
 
     try:
         key = kwargs.pop("key")
-    except KeyError, e:
+    except KeyError as e:
         raise TypeError("Missing parameter %s" % e)
 
     nonce = kwargs.pop("nonce", None)

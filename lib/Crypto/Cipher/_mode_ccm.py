@@ -610,7 +610,7 @@ def _create_ccm_cipher(factory, **kwargs):
 
     try:
         key = key = kwargs.pop("key")
-    except KeyError, e:
+    except KeyError as e:
         raise TypeError("Missing parameter: " + str(e))
 
     nonce = kwargs.pop("nonce", None)  # N

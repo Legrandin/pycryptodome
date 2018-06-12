@@ -518,7 +518,7 @@ def _create_ocb_cipher(factory, **kwargs):
         if nonce is None:
             nonce = get_random_bytes(15)
         mac_len = kwargs.pop("mac_len", 16)
-    except KeyError, e:
+    except KeyError as e:
         raise TypeError("Keyword missing: " + str(e))
 
     return OcbMode(factory, nonce, mac_len, kwargs)
