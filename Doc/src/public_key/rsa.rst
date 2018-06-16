@@ -27,7 +27,7 @@ called ``mykey.pem``, and then read it back::
     >>>
     >>> key = RSA.generate(2048)
     >>> f = open('mykey.pem','w')
-    >>> f.write(key.export_key('PEM'))
+    >>> f.write( key.export_key('PEM').decode("utf-8") )
     >>> f.close()
     ...
     >>> f = open('mykey.pem','r')
