@@ -28,6 +28,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import sys
+
 from Crypto.Util.py3compat import tobytes, b, bchr
 
 from Crypto.Util._raw_api import (backend, load_lib,
@@ -92,6 +94,12 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
 
 lib = load_lib("gmp", gmp_defs)
 implementation = { "library":"gmp", "api":backend }
+
+if hasattr(lib, "__mpir_version"):
+    raise ImportError("MPIR library detected")
+
+if sys.platform == "win32":
+    raise ImportError("Not using GMP on Windows")
 
 # In order to create a function that returns a pointer to
 # a new MPZ structure, we need to break the abstraction
