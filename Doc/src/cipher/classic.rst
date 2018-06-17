@@ -56,7 +56,7 @@ In the following definition, ``<algorithm>`` could be ``AES``:
 
 .. function:: Crypto.Cipher.<algorithm>.new(key, mode)
 
-  Create a new CBC object, using <algorithm> as the base block cipher.
+  Create a new ECB object, using <algorithm> as the base block cipher.
   
   :param bytes key: the cryptographic key
   :param mode: the constant ``Crypto.Cipher.<algorithm>.MODE_ECB``

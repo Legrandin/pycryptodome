@@ -34,36 +34,61 @@ Fast XOR for byte strings.
 :mod:`Crypto.Util.Counter` module
 ---------------------------------
 
-Fast counter functions for CTR cipher modes.
+Richer counter functions for CTR cipher mode.
 
-CTR is a chaining mode for symmetric block encryption or decryption.
-Messages are divideded into blocks, and the cipher operation takes
-place on each block using the secret key and a unique *counter block*.
+:ref:`CTR <ctr_mode>` is a mode of operation for block ciphers.
 
-The most straightforward way to fulfil the uniqueness property is
-to start with an initial, random *counter block* value, and increment it as
-the next block is processed.
+The plaintext is broken up in blocks and each block is XOR-ed with a *keystream* to
+obtain the ciphertext.
+The *keystream* is produced by the encryption of a sequence of *counter blocks*, which
+all need to be different to avoid repetitions in the keystream. Counter blocks
+don't need to be secret.
 
-The block ciphers from :mod:`Crypto.Cipher` (when configured in *MODE_CTR* mode)
-invoke a callable object (the *counter* parameter) to get the next *counter block*.
-Unfortunately, the Python calling protocol leads to major performance degradations.
+The most straightforward approach is to include a counter field, and increment
+it by one within each subsequent counter block.
 
-The counter functions instantiated by this module will be invoked directly
-by the ciphers in :mod:`Crypto.Cipher`. The fact that the Python layer is bypassed
-lead to more efficient (and faster) execution of CTR cipher modes.
+The :func:`new` function at the module level under ``Crypto.Cipher`` instantiates
+a new CTR cipher object for the relevant base algorithm.
+Its parameters allow you define a counter block with a fixed structure:
 
-An example of usage is the following::
+* an optional, fixed prefix
+* the counter field encoded in big endian mode
 
-    >>> from Crypto.Cipher import AES
-    >>> from Crypto.Util import Counter
-    >>> from Crypto import Random
-    >>>
-    >>> nonce = Random.get_random_bytes(8)
-    >>> ctr = Counter.new(64, nonce)
-    >>> key = b'AES-128 symm key'
-    >>> plaintext = b'X'*1000000
-    >>> cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
-    >>> ciphertext = cipher.encrypt(plaintext)
+The length of the two components can vary, but together they must be as large
+as the block size (e.g. 16 bytes for AES).
+
+Alternatively, the ``counter`` parameter can be used to pass a counter block
+object (created in advance with the function :func:`Crypto.Util.Counter.new()`)
+for a more complex composition:
+
+* an optional, fixed prefix
+* the counter field, encoded in big endian or little endian mode
+* an optional, fixed suffix
+
+As before, the total length must match the block size.
+
+The counter blocks with a big endian counter will look like this:
+
+.. figure:: counter_be.png
+    :align: center
+
+The counter blocks with a little endian counter will look like this:
+
+.. figure:: counter_le.png
+    :align: center
+
+Example of AES-CTR encryption with custom counter::
+
+    from Crypto.Cipher import AES
+    from Crypto.Util import Counter
+    from Crypto import Random
+    
+    nonce = Random.get_random_bytes(4)
+    ctr = Counter.new(64, prefix=nonce, suffix=b'ABCD', little_endian=True, initial_value=10)
+    key = b'AES-128 symm key'
+    plaintext = b'X'*1000000
+    cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
+    ciphertext = cipher.encrypt(plaintext)
 
 .. automodule:: Crypto.Util.Counter
     :members:
