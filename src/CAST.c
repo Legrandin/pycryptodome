@@ -223,7 +223,7 @@ static void castschedulekeys(struct block_state *schedule, const uint8_t *key, s
     uint32_t x[4];
     uint8_t  paddedkey[16];
     uint32_t Kr_wide[16];
-    int i;
+    unsigned i;
 
     for(i = 0; i < keybytes; i++)
         paddedkey[i] = key[i];
