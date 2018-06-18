@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.6.2 (xx June 2018)
+3.6.2 (19 June 2018)
 +++++++++++++++++++++
 
 New features
