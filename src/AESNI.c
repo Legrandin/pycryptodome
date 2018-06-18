@@ -150,6 +150,9 @@ static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
     state = &((AESNI_State*)bb)->algo_state;
     rounds = state->rounds;
 
+    if (rounds > 14)
+        return ERR_NR_ROUNDS;
+
     for (k=0; k<=rounds; k++) {
         r[k] = state->erk[k];
     }
@@ -228,7 +231,7 @@ static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
         for (i=1; i<10; i++) {
             data = _mm_aesenc_si128(data, r[i]);
         }
-        for (; i<rounds; i+=2) {
+        for (i=10; i<rounds; i+=2) {
             data = _mm_aesenc_si128(data, r[i]);
             data = _mm_aesenc_si128(data, r[i+1]);
         }
@@ -255,6 +258,9 @@ static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
 
     state = &((AESNI_State*)bb)->algo_state;
     rounds = state->rounds;
+
+    if (rounds > 14)
+        return ERR_NR_ROUNDS;
 
     for (k=0; k<=rounds; k++) {
         r[k] = state->drk[k];
@@ -334,7 +340,7 @@ static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
         for (i=1; i<10; i++) {
             data = _mm_aesdec_si128(data, r[i]);
         }
-        for (; i<rounds; i+=2) {
+        for (i=10; i<rounds; i+=2) {
             data = _mm_aesdec_si128(data, r[i]);
             data = _mm_aesdec_si128(data, r[i+1]);
         }

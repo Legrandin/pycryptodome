@@ -90,12 +90,12 @@ static inline void increment_be(uint8_t *pCounter, size_t counter_len) {
 /*
  * Create the initial sequence of counter blocks
  */
-static uint8_t* create_counter_blocks(uint8_t *counter_block0, unsigned block_len, size_t prefix_len, unsigned counter_len, Increment increment)
+static uint8_t* create_counter_blocks(uint8_t *counter_block0, size_t block_len, size_t prefix_len, unsigned counter_len, Increment increment)
 {
     unsigned i;
     uint8_t *counter_blocks, *current;
 
-    counter_blocks = current = align_alloc(block_len * NR_BLOCKS, block_len);
+    counter_blocks = current = align_alloc(block_len * NR_BLOCKS, (unsigned)block_len);
     if (NULL == counter_blocks) {
         return NULL;
     }
@@ -116,7 +116,7 @@ static uint8_t* create_keystream(BlockBase *cipher, uint8_t *counter_blocks, siz
 {
     uint8_t *keystream;
 
-    keystream = align_alloc(block_len * NR_BLOCKS, block_len);
+    keystream = align_alloc(block_len * NR_BLOCKS, (unsigned)block_len);
     if (NULL == keystream) {
         return NULL;
     }
