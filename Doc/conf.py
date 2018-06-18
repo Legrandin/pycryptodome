@@ -21,8 +21,15 @@ print sys.path
 from Crypto.Util import _raw_api
 
 class MockLib(object):
+    ghash_portable = None
+    ghash_expand_portable = None
+    ghash_destroy_portable = None
+    ghash_clmul = None
+    ghash_expand_clmul = None
+    ghash_destroy_clmul = None
     def have_aes_ni(self):
         return True
+    have_clmul = have_aes_ni
 
 _raw_api.load_pycryptodome_raw_lib = lambda name, cdec: MockLib()
 
