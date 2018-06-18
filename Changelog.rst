@@ -1,7 +1,7 @@
 Changelog
 =========
 
-x.x.x (xx xxxxx 2018)
+3.6.2 (xx June 2018)
 +++++++++++++++++++++
 
 New features
@@ -15,6 +15,11 @@ New features
   - AES-ECB and AES-CTR are 3x faster
   - AES-GCM is 9x faster
 
+Resolved issues
+---------------
+
+* On Windows, MPIR library was stilled pulled in if renamed to ``gmp.dll``.
+ 
 Breaks in compatibility
 -----------------------
 
