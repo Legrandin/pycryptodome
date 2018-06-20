@@ -4,7 +4,7 @@ ChaCha20
 `ChaCha20`_ is a stream cipher designed by Daniel J. Bernstein.
 The secret key is 256 bits long.
 
-This is an example of how `ChaCha20`_ (`RFC7539`_) can encrypt data::
+This is an example of how `ChaCha20`_ can encrypt data::
 
     >>> import json
     >>> from base64 import b64encode
