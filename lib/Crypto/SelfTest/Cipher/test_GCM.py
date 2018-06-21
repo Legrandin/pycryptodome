@@ -870,7 +870,7 @@ class TestVariableLength(unittest.TestCase):
             h.update(ct)
             h.update(tag)
 
-        self.assertEqual(h.hexdigest(), '1057d9559f55227fd4e36bab8716ebcfe6671b5603fdceb046a33591175ee5e4')
+        self.assertEqual(h.hexdigest(), "7b7eb1ffbe67a2e53a912067c0ec8e62ebc7ce4d83490ea7426941349811bdf4")
 
 
 def get_tests(config={}):
