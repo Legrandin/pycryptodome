@@ -66,24 +66,24 @@ typedef struct {
     uint64_t length_max_lo, length_max_hi;
 } CtrModeState;
 
-typedef void (*Increment)(uint8_t *pCounter, size_t counter_len);
+typedef void (*Increment)(uint8_t *pCounter, size_t counter_len, unsigned amount);
 
-static inline void increment_le(uint8_t *pCounter, size_t counter_len) {
+static inline void increment_le(uint8_t *pCounter, size_t counter_len, unsigned amount) {
     size_t i;
 
-    for (i=0; i<counter_len; i++, pCounter++) {
-        if (++(*pCounter) != 0)
-            break;
+    for (i=0; i<counter_len && amount>0; i++, pCounter++) {
+        *pCounter = (uint8_t)(*pCounter + amount);
+        amount = *pCounter < amount;
     }
 }
 
-static inline void increment_be(uint8_t *pCounter, size_t counter_len) {
+static inline void increment_be(uint8_t *pCounter, size_t counter_len, unsigned amount) {
     size_t i;
 
     pCounter += counter_len - 1;
-    for (i=0; i<counter_len; i++, pCounter--) {
-        if (++(*pCounter) != 0)
-            break;
+    for (i=0; i<counter_len && amount>0; i++, pCounter--) {
+        *pCounter = (uint8_t)(*pCounter + amount);
+        amount = *pCounter < amount;
     }
 }
 
@@ -105,7 +105,7 @@ static uint8_t* create_counter_blocks(uint8_t *counter_block0, size_t block_len,
 
     for (i=0; i<NR_BLOCKS-1; i++ ) {
         memcpy(current, current - block_len, block_len);
-        increment(current + prefix_len, counter_len);
+        increment(current + prefix_len, counter_len, 1);
         current += block_len;
     }
 
@@ -120,7 +120,7 @@ static uint8_t* create_keystream(BlockBase *cipher, uint8_t *counter_blocks, siz
     if (NULL == keystream) {
         return NULL;
     }
-
+    
     cipher->encrypt(cipher,
                     counter_blocks,
                     keystream,
@@ -213,16 +213,16 @@ static inline void update_keystream(CtrModeState *ctr_state)
    /** Update all consecutive counter blocks **/ 
     if (ctr_state->little_endian) {
         for (i=0; i<NR_BLOCKS; i++) {
-            increment_le(counter, ctr_state->counter_len);
+            increment_le(counter, ctr_state->counter_len, NR_BLOCKS);
             counter += block_len;
         }
     } else {
         for (i=0; i<NR_BLOCKS; i++) {
-            increment_be(counter, ctr_state->counter_len);
+            increment_be(counter, ctr_state->counter_len, NR_BLOCKS);
             counter += block_len;
         }
     }
-    
+
     ctr_state->cipher->encrypt(ctr_state->cipher,
                                ctr_state->counter_blocks,
                                ctr_state->keystream,

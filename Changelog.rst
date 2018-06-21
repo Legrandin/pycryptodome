@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.6.3 (21 June 2018)
++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#175: Fixed incorrect results for CTR encryption/decryption with more than 8 blocks.
+
 3.6.2 (19 June 2018)
 +++++++++++++++++++++
 

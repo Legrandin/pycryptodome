@@ -33,7 +33,7 @@ import unittest
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, b, unhexlify, bchr, hexlify
 from Crypto.Cipher import AES, DES3
-from Crypto.Hash import SHAKE128
+from Crypto.Hash import SHAKE128, SHA256
 from Crypto.Util import Counter
 
 def get_tag_random(tag, length):
@@ -268,6 +268,12 @@ class CtrTests(unittest.TestCase):
         ref4 = cipher4.decrypt(bytearray(data))
 
         self.assertEqual(ref3, ref4)
+
+    def test_very_long_data(self):
+        cipher = AES.new(b'A' * 32, AES.MODE_CTR, nonce=b'')
+        ct = cipher.encrypt(b'B' * 1000000)
+        digest = SHA256.new(ct).hexdigest()
+        self.assertEqual(digest, "96204fc470476561a3a8f3b6fe6d24be85c87510b638142d1d0fb90989f8a6a6")
 
 
 class SP800TestVectors(unittest.TestCase):
