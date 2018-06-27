@@ -243,6 +243,10 @@ def _create_cbc_cipher(factory, **kwargs):
     else:
         iv = IV
 
+    if len(iv) != factory.block_size:
+        raise ValueError("Incorrect IV length (it must be %d bytes long)" %
+                factory.block_size)
+
     if kwargs:
         raise TypeError("Unknown parameters for CBC: %s" % str(kwargs))
 

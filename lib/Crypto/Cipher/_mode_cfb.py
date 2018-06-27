@@ -240,6 +240,10 @@ def _create_cfb_cipher(factory, **kwargs):
     else:
         iv = IV
 
+    if len(iv) != factory.block_size:
+        raise ValueError("Incorrect IV length (it must be %d bytes long)" %
+                factory.block_size)
+
     segment_size_bytes, rem = divmod(kwargs.pop("segment_size", 8), 8)
     if segment_size_bytes == 0 or rem != 0:
         raise ValueError("'segment_size' must be positive and multiple of 8 bits")
