@@ -35,7 +35,7 @@ from Crypto.Util._file_system import pycryptodome_filename
 #
 # List of file suffixes for Python extensions
 #
-if sys.version_info[0] <= 3 or \
+if sys.version_info[0] < 3 or \
    (sys.version_info[0] == 3 and sys.version_info[1] <= 3):
 
     import imp
