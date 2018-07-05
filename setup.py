@@ -286,12 +286,24 @@ class PCTBuildExt (build_ext):
 
         return False
 
+    def compiler_has_posix_memalign(self):
+        source = """
+        #include <stdlib.h>
+        int main(void) {
+            void *new_mem;
+            posix_memalign((void**)&new_mem, 16, 101);
+            return 0;
+        }
+        """
+        return test_compilation(source, msg="posix_memalign")
+
     def compiler_has_memalign(self):
         source = """
         #include <malloc.h>
         int main(void) {
             void *p;
             p = memalign(16, 101);
+            return 0;
         }
         """
         return test_compilation(source, msg="memalign")
@@ -309,7 +321,9 @@ class PCTBuildExt (build_ext):
         if cpuid_h_present:
             self.compiler.define_macro("HAVE_CPUID_H")
 
-        if self.compiler_has_memalign():
+        if self.compiler_has_posix_memalign():
+            self.compiler.define_macro("HAVE_POSIX_MEMALIGN")
+        elif self.compiler_has_memalign():
             self.compiler.define_macro("HAVE_MEMALIGN")
 
         # AESNI

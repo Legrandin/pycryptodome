@@ -128,7 +128,7 @@ static inline void align_free(void *mem)
     }
 }
 
-#elif _POSIX_C_SOURCE >= 200112L
+#elif defined(HAVE_POSIX_MEMALIGN)
 
 static inline void* align_alloc(size_t size, unsigned boundary)
 {
