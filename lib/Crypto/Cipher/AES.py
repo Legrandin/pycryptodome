@@ -42,7 +42,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   c_size_t, c_uint8_ptr)
 
-from Crypto.Util import _cpuid
+from Crypto.Util import _cpu_features
 
 
 _cproto = """
@@ -68,7 +68,7 @@ _raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes",
 # Try to load AES with AES NI instructions
 try:
     _raw_aesni_lib = None
-    if _cpuid.have_aes_ni():
+    if _cpu_features.have_aes_ni():
         _raw_aesni_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aesni",
                                                    _cproto.replace("AES",
                                                                    "AESNI"))

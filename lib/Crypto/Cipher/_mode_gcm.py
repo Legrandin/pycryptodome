@@ -44,7 +44,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
 
-from Crypto.Util import _cpuid
+from Crypto.Util import _cpu_features
 
 
 # C API by module implementing GHASH
@@ -83,7 +83,7 @@ _ghash_portable = _get_ghash_portable()
 def _get_ghash_clmul():
     """Return None if CLMUL implementation is not available"""
 
-    if not _cpuid.have_clmul():
+    if not _cpu_features.have_clmul():
         return None
     try:
         api = _ghash_api_template.replace("%imp%", "clmul")

@@ -874,7 +874,7 @@ class TestVariableLength(unittest.TestCase):
 
 
 def get_tests(config={}):
-    from Crypto.Util import _cpuid
+    from Crypto.Util import _cpu_features
 
     wycheproof_warnings = config.get('wycheproof_warnings')
 
@@ -888,7 +888,7 @@ def get_tests(config={}):
     if config.get('slow_tests'):
         tests += list_test_cases(NISTTestVectorsGCM)
 
-    if _cpuid.have_clmul():
+    if _cpu_features.have_clmul():
         tests += [ TestVectorsWycheproof(wycheproof_warnings, use_clmul=False) ]
         tests += [ TestVariableLength(use_clmul = False) ]
         if config.get('slow_tests'):

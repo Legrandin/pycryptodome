@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.6.4 (xx XXXX 2018)
++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#178: Rename ``_cpuid`` module to make upgrades more robust.
+
 3.6.3 (21 June 2018)
 +++++++++++++++++++++
 

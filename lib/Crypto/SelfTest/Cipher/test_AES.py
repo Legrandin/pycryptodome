@@ -1266,12 +1266,12 @@ class TestMultipleBlocks(unittest.TestCase):
 
 
 def get_tests(config={}):
-    from Crypto.Util import _cpuid
+    from Crypto.Util import _cpu_features
     from common import make_block_tests
 
     tests = make_block_tests(AES, "AES", test_data, {'use_aesni': False})
     tests += [ TestMultipleBlocks(False) ]
-    if _cpuid.have_aes_ni():
+    if _cpu_features.have_aes_ni():
         # Run tests with AES-NI instructions if they are available.
         tests += make_block_tests(AES, "AESNI", test_data, {'use_aesni': True})
         tests += [ TestMultipleBlocks(True) ]
