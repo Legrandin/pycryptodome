@@ -80,7 +80,7 @@ static void scryptBlockMix(const uint8_t in[][64], uint8_t out[][64], size_t two
     const uint8_t (*x)[64];
     size_t r = two_r / 2;
 
-    assert(in != out);
+    assert((void*)in != (void*)out);
 
     x = &in[two_r-1];   /* Last 64 byte block */
     for (i=0; i<two_r; i++) {
