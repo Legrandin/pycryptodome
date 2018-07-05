@@ -286,6 +286,16 @@ class PCTBuildExt (build_ext):
 
         return False
 
+    def compiler_has_memalign(self):
+        source = """
+        #include <malloc.h>
+        int main(void) {
+            void *p;
+            p = memalign(16, 101);
+        }
+        """
+        return test_compilation(source, msg="memalign")
+
     def detect_modules (self):
 
         if self.compiler_supports_uint128():
@@ -298,6 +308,9 @@ class PCTBuildExt (build_ext):
         cpuid_h_present = self.compiler_has_cpuid_h()
         if cpuid_h_present:
             self.compiler.define_macro("HAVE_CPUID_H")
+
+        if self.compiler_has_memalign():
+            self.compiler.define_macro("HAVE_MEMALIGN")
 
         # AESNI
         aesni_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_aesni()

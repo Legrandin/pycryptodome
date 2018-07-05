@@ -114,29 +114,52 @@ typedef unsigned __int64 uint64_t;
 /*
  * Platform specific routine for aligned allocation
  */
+#if defined(_MSC_VER) || defined(__MINGW32__)
 
 static inline void* align_alloc(size_t size, unsigned boundary)
 {
-#if defined(_MSC_VER) || defined(__MINGW32__)
     return _aligned_malloc(size, boundary);
-#else
-    int result;
-    void *new_mem;
-    result = posix_memalign((void**)&new_mem, boundary, size);
-    return result ? NULL : new_mem;
-#endif
 }
 
 static inline void align_free(void *mem)
 {
-#if defined(_MSC_VER) || defined(__MINGW32__)
     if (mem) {
         _aligned_free(mem);
     }
-#else
-    free(mem);
-#endif
 }
+
+#elif _POSIX_C_SOURCE >= 200112L
+
+static inline void* align_alloc(size_t size, unsigned boundary)
+{
+    int result;
+    void *new_mem;
+    result = posix_memalign((void**)&new_mem, boundary, size);
+    return result ? NULL : new_mem;
+}
+
+static inline void align_free(void *mem)
+{
+    free(mem);
+}
+
+#elif defined(HAVE_MEMALIGN)
+
+#include <malloc.h>
+
+static inline void* align_alloc(size_t size, unsigned boundary)
+{
+    return memalign(boundary, size);
+}
+
+static inline void align_free(void *mem)
+{
+    free(mem);
+}
+
+#else
+#error No routines for aligned memory
+#endif
 
 /*
  * Endianess convesion
