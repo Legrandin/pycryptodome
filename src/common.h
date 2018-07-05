@@ -67,7 +67,11 @@ typedef unsigned __int64 uint64_t;
 #if __STDC_VERSION__ >= 199901L
 #define RESTRICT restrict
 #else
+#ifdef __GNUC__
 #define RESTRICT __restrict
+#else
+#define RESTRICT
+#endif
 #endif
 
 #endif
