@@ -158,6 +158,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
     objects = []
     try:
         compiler = ccompiler.new_compiler()
+        distutils.sysconfig.customize_compiler(compiler)
 
         if compiler.compiler_type in [ 'msvc' ]:
             # Force creation of the manifest file (http://bugs.python.org/issue16296)
@@ -166,7 +167,10 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
         else:
             extra_linker_options = []
 
-        distutils.sysconfig.customize_compiler(compiler)
+        # In Unix, force the linker step to use CFLAGS and not CC alone (see GH#180)
+        if compiler.compiler_type in [ 'unix' ]:
+            compiler.set_executables(linker_exe=compiler.compiler)
+
         objects = compiler.compile([fname], extra_postargs=extra_cc_options)
         compiler.link_executable(objects, oname, libraries=extra_libraries, extra_preargs=extra_linker_options)
         result = True
