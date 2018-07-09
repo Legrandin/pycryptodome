@@ -32,6 +32,10 @@
 #define COMMON_H
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "errors.h"
 
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
@@ -69,24 +73,20 @@ typedef unsigned __int64 uint64_t;
 #else
 #ifdef __GNUC__
 #define RESTRICT __restrict
+#define inline __inline
 #else
 #define RESTRICT
+#define inline
 #endif
 #endif
 
 #endif
-
-#include <stdlib.h>
-#include <string.h>
 
 /** Force checking of assertions **/
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
 #include <assert.h>
-
-
-#include "errors.h"
 
 /*
  * On Windows, distutils expects that a CPython module always exports the symbol init${MODNAME}
