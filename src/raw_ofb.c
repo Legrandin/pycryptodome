@@ -47,7 +47,7 @@ typedef struct {
       */
     size_t usedKeyStream;
 
-    uint8_t keyStream[0];
+    uint8_t keyStream[MAX_BLOCK_LEN];
 } OfbModeState;
 
 EXPORT_SYM int OFB_start_operation(BlockBase *cipher,
@@ -55,18 +55,18 @@ EXPORT_SYM int OFB_start_operation(BlockBase *cipher,
                                    size_t iv_len,
                                    OfbModeState **pResult)
 {
-    if ((NULL == cipher) || (NULL == iv) || (NULL == pResult)) {
+    if ((NULL == cipher) || (NULL == iv) || (NULL == pResult))
         return ERR_NULL;
-    }
 
-    if (cipher->block_len != iv_len) {
+    if (cipher->block_len > MAX_BLOCK_LEN)
+        return ERR_BLOCK_SIZE;
+
+    if (cipher->block_len != iv_len)
         return ERR_OFB_IV_LEN;
-    }
 
-    *pResult = calloc(1, sizeof(OfbModeState) + iv_len);
-    if (NULL == *pResult) {
+    *pResult = calloc(1, sizeof(OfbModeState));
+    if (NULL == *pResult)
         return ERR_MEMORY;
-    }
 
     (*pResult)->cipher = cipher;
     (*pResult)->usedKeyStream = cipher->block_len;
@@ -87,9 +87,8 @@ EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
         return ERR_NULL;
 
     block_len = ofbState->cipher->block_len;
-    if (block_len > MAX_BLOCK_LEN) {
+    if (block_len > MAX_BLOCK_LEN)
         return ERR_BLOCK_SIZE;
-    }
 
     while (data_len > 0) {
         size_t i;

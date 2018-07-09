@@ -41,7 +41,7 @@ FAKE_INIT(raw_cbc)
 
 typedef struct {
     BlockBase *cipher;
-    uint8_t iv[0];
+    uint8_t iv[MAX_BLOCK_LEN];
 } CbcModeState;
 
 EXPORT_SYM int CBC_start_operation(BlockBase *cipher,
@@ -49,15 +49,16 @@ EXPORT_SYM int CBC_start_operation(BlockBase *cipher,
                                    size_t iv_len,
                                    CbcModeState **pResult)
 {
-    if ((NULL == cipher) || (NULL == iv) || (NULL == pResult)) {
+    if ((NULL == cipher) || (NULL == iv) || (NULL == pResult))
         return ERR_NULL;
-    }
 
-    if (cipher->block_len != iv_len) {
+    if (cipher->block_len > MAX_BLOCK_LEN)
+        return ERR_BLOCK_SIZE;
+
+    if (cipher->block_len != iv_len)
         return ERR_CBC_IV_LEN;
-    }
-
-    *pResult = calloc(1, sizeof(CbcModeState) + iv_len);
+    
+    *pResult = calloc(1, sizeof(CbcModeState));
     if (NULL == *pResult) {
         return ERR_MEMORY;
     }
@@ -81,9 +82,8 @@ EXPORT_SYM int CBC_encrypt(CbcModeState *cbcState,
         return ERR_NULL;
 
     block_len = cbcState->cipher->block_len;
-    if (block_len > MAX_BLOCK_LEN) {
+    if (block_len > MAX_BLOCK_LEN)
         return ERR_BLOCK_SIZE;
-    }
 
     memcpy(iv, cbcState->iv, block_len);
     while (data_len >= block_len) {
@@ -124,9 +124,8 @@ EXPORT_SYM int CBC_decrypt(CbcModeState *cbcState,
         return ERR_NULL;
 
     block_len = cbcState->cipher->block_len;
-    if (block_len > MAX_BLOCK_LEN) {
+    if (block_len > MAX_BLOCK_LEN)
         return ERR_BLOCK_SIZE;
-    }
 
     memcpy(iv, cbcState->iv, block_len);
     while (data_len >= block_len) {
