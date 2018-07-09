@@ -116,7 +116,7 @@ static int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned N
         if (i % Nk == 0) {
             tmp = sub_rot(tmp, i/Nk, SubRotXor);
         } else {
-            if ((i % Nk == 4) && (Nk == 8)) {  // AES-256 only
+            if ((i % Nk == 4) && (Nk == 8)) {  /* AES-256 only */
                 tmp = sub_rot(tmp, i/Nk, OnlySub);
             }
         }

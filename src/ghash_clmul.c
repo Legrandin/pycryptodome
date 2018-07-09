@@ -106,16 +106,16 @@ static inline __m128i reduce(__m128i prod_high, __m128i prod_low)
     const uint64_t c2 = 0xc200000000000000U;
     __m128i t1, t2, t3, t4, t7;
    
-    t1 = prod_high;     // U3:U2
-    t7 = prod_low;      // U1:U0
+    t1 = prod_high;                                     /* U3:U2 */
+    t7 = prod_low;                                      /* U1:U0 */
     t3 = _mm_loadl_epi64((__m128i*)&c2);
-    t2 = _mm_clmulepi64_si128(t3, t7, 0x00);    // A
-    t4 = _mm_shuffle_epi32(t7, _MM_SHUFFLE(1,0,3,2));   // U0:U1
-    t4 = _mm_xor_si128(t4, t2); // B
-    t2 = _mm_clmulepi64_si128(t3, t4, 0x00);    // C
-    t4 = _mm_shuffle_epi32(t4, _MM_SHUFFLE(1,0,3,2));   // B0:B1
-    t4 = _mm_xor_si128(t4, t2); // D
-    t1 = _mm_xor_si128(t1, t4); // T
+    t2 = _mm_clmulepi64_si128(t3, t7, 0x00);            /* A */
+    t4 = _mm_shuffle_epi32(t7, _MM_SHUFFLE(1,0,3,2));   /* U0:U1 */
+    t4 = _mm_xor_si128(t4, t2);                         /* B */
+    t2 = _mm_clmulepi64_si128(t3, t4, 0x00);            /* C */
+    t4 = _mm_shuffle_epi32(t4, _MM_SHUFFLE(1,0,3,2));   /* B0:B1 */
+    t4 = _mm_xor_si128(t4, t2);                         /* D */
+    t1 = _mm_xor_si128(t1, t4);                         /* T */
 
     return t1;
 }
@@ -127,13 +127,13 @@ static inline void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m1
 {
     __m128i c, d, e, f, g, h, i;
 
-    c = _mm_clmulepi64_si128(a, b, 0x00);   // A0*B0
-    d = _mm_clmulepi64_si128(a, b, 0x11);   // A1*B1
-    e = _mm_clmulepi64_si128(a, b, 0x10);   // A0*B1
-    f = _mm_clmulepi64_si128(a, b, 0x01);   // A1*B0
-    g = _mm_xor_si128(e, f);                // E1+F1:E0+F0
-    h = _mm_slli_si128(g, 8);               // E0+F0:0
-    i = _mm_srli_si128(g, 8);               // 0:E1+F1
+    c = _mm_clmulepi64_si128(a, b, 0x00);   /* A0*B0 */
+    d = _mm_clmulepi64_si128(a, b, 0x11);   /* A1*B1 */
+    e = _mm_clmulepi64_si128(a, b, 0x10);   /* A0*B1 */
+    f = _mm_clmulepi64_si128(a, b, 0x01);   /* A1*B0 */
+    g = _mm_xor_si128(e, f);                /* E1+F1:E0+F0 */
+    h = _mm_slli_si128(g, 8);               /* E0+F0:0 */
+    i = _mm_srli_si128(g, 8);               /* 0:E1+F1 */
     *prod_high = _mm_xor_si128(d, i);
     *prod_low  = _mm_xor_si128(c, h);
 }
@@ -148,21 +148,21 @@ static inline __m128i multx(__m128i a)
     uint64_t p0, p1;
     __m128i t0, t1, t2, t3, t4, t5, t6, t7;
 
-    msb = _mm_movemask_epi8(a) >> 15;       // Bit 0 is a[127]
-    r = (msb ^ 1) - 1;                      // Msb is copied in all 64 positions
-    p0 = (uint64_t)r & 0x0000000000000001U; // Zero or XOR mask (low)
-    p1 = (uint64_t)r & 0xc200000000000000U; // Zero or XOR mask (high)
+    msb = _mm_movemask_epi8(a) >> 15;       /* Bit 0 is a[127] */
+    r = (msb ^ 1) - 1;                      /* Msb is copied in all 64 positions */
+    p0 = (uint64_t)r & 0x0000000000000001U; /* Zero or XOR mask (low) */
+    p1 = (uint64_t)r & 0xc200000000000000U; /* Zero or XOR mask (high) */
     t0 = _mm_loadl_epi64((__m128i*)&p0);
     t1 = _mm_loadl_epi64((__m128i*)&p1);
-    t2 = _mm_unpacklo_epi64(t0, t1);        // Zero or XOR mask
+    t2 = _mm_unpacklo_epi64(t0, t1);        /* Zero or XOR mask */
 
-    // Shift value a left by 1 bit
-    t3 = _mm_slli_si128(a, 8);     // Shift a left by 64 bits (lower 64 bits are zero)
-    t4 = _mm_srli_epi64(t3, 63);    // Bit 64 is now a[63], all other bits are 0
-    t5 = _mm_slli_epi64(a, 1);      // Shift left by 1 bit, but bit 64 is zero, not a[63]
-    t6 = _mm_or_si128(t4, t5);      // Actual result of shift left by 1 bit
+    /* Shift value a left by 1 bit */
+    t3 = _mm_slli_si128(a, 8);      /* Shift a left by 64 bits (lower 64 bits are zero) */
+    t4 = _mm_srli_epi64(t3, 63);    /* Bit 64 is now a[63], all other bits are 0 */
+    t5 = _mm_slli_epi64(a, 1);      /* Shift left by 1 bit, but bit 64 is zero, not a[63] */
+    t6 = _mm_or_si128(t4, t5);      /* Actual result of shift left by 1 bit */
 
-    // XOR conditional mask
+    /* XOR conditional mask */
     t7 = _mm_xor_si128(t2, t6);
     
     return t7;

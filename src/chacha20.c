@@ -88,9 +88,9 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
     for (i=0; i<32/4; i++) {
         hs->h[4+i] = LOAD_U32_LITTLE(key + 4*i);
     }
-    // h[12] remains 0 (offset)
+    /** h[12] remains 0 (offset) **/
     if (nonceSize == 8) {
-        // h[13] remains 0 (offset)
+        /** h[13] remains 0 (offset) **/
         hs->h[14] = LOAD_U32_LITTLE(nonce + 0);
         hs->h[15] = LOAD_U32_LITTLE(nonce + 4);
     } else {
