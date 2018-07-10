@@ -1,20 +1,20 @@
 Changelog
 =========
 
-3.6.4 (xx XXXX 2018)
+3.6.4 (10 July 2018)
 +++++++++++++++++++++
 
 New features
 ------------
 
-* Build Python 3.7 wheels also on Linux and Mac.
+* Build Python 3.7 wheels on Linux, Windows and Mac.
 
 Resolved issues
 ---------------
 
 * GH#178: Rename ``_cpuid`` module to make upgrades more robust.
 * More meaningful exceptions in case of mismatch in IV length (CBC/OFB/CFB modes).
-* Fix compilation on Solaris 10/11.
+* Fix compilation issues on Solaris 10/11.
 
 3.6.3 (21 June 2018)
 +++++++++++++++++++++
