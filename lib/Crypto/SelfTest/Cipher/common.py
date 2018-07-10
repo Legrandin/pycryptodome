@@ -409,7 +409,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         else:
             raise AssertionError("Unsupported tuple size %d" % (len(row),))
 
-        if not params.has_key("mode"):
+        if not "mode" in params:
             params["mode"] = "ECB"
 
         # Build the display-name for the test
