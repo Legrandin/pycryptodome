@@ -136,7 +136,7 @@ def lucas_test(candidate):
     def alternate():
         sgn = 1
         value = 5
-        for x in xrange(10):
+        for x in xrange(20):
             yield sgn * value
             sgn, value = -sgn, value + 2
 
