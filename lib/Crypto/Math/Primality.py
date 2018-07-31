@@ -134,11 +134,14 @@ def lucas_test(candidate):
 
     # Step 2
     def alternate():
-        sgn = 1
         value = 5
-        for x in xrange(20):
-            yield sgn * value
-            sgn, value = -sgn, value + 2
+        while True:
+            yield value
+            if value > 0:
+                value += 2
+            else:
+                value -= 2
+            value = -value
 
     for D in alternate():
         js = Integer.jacobi_symbol(D, candidate)
@@ -146,8 +149,6 @@ def lucas_test(candidate):
             return COMPOSITE
         if js == -1:
             break
-    else:
-        return COMPOSITE
     # Found D. P=1 and Q=(1-D)/4 (note that Q is guaranteed to be an integer)
 
     # Step 3
