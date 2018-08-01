@@ -147,7 +147,7 @@ def new(key, mode, *args, **kwargs):
             ``MODE_SIV``, ``MODE_OCB``, and ``MODE_CTR``).
 
             A value that must never be reused for any other encryption done
-            with this key.
+            with this key (except possibly for ``MODE_SIV``, see below).
 
             For ``MODE_EAX``, ``MODE_GCM`` and ``MODE_SIV`` there are no
             restrictions on its length (recommended: **16** bytes).
@@ -161,10 +161,14 @@ def new(key, mode, *args, **kwargs):
 
             For ``MODE_CTR``, its length must be in the range **[0..15]**
             (recommended: **8**).
+            
+            For ``MODE_SIV``, the nonce is optional, if it is not specified,
+            then no nonce is being used, which renders the encryption
+            deterministic.
 
-            In not provided, a random byte string of the recommended
-            length is used (you must then read its value with the :attr:`nonce`
-            attribute).
+            If not provided, for modes other than ``MODE_SIV```, a random
+            byte string of the recommended length is used (you must then
+            read its value with the :attr:`nonce` attribute).
 
         *   **segment_size** (*integer*) --
             (Only ``MODE_CFB``).The number of **bits** the plaintext and ciphertext
