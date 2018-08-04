@@ -1,6 +1,15 @@
 Changelog
 =========
 
+3.6.5 (xx xxxxx 2018)
++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#188: In the Lucas probable prime test, do an exhaustive search for D values,
+  as opposed to trying only the first few.
+
 3.6.4 (10 July 2018)
 +++++++++++++++++++++
 
