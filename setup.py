@@ -40,6 +40,17 @@ if sys.version_info[0:2] == (2, 6):
 else:
     import sysconfig
 
+# Monkey patch for https://bugs.python.org/issue34108
+if sys.version_info[0:3] == (3, 7, 0) and os.name == 'nt':
+    import io
+    from lib2to3.refactor import RefactoringTool
+
+    def new_write_file(self, new_text, filename, old_text, encoding=None):
+        fp = io.open(filename, "w", encoding=encoding, newline='')
+        fp.write(new_text)
+        self.wrote = True
+    RefactoringTool.write_file = new_write_file
+
 use_separate_namespace = os.path.isfile(".separate_namespace")
 
 project_name = "pycryptodome"
