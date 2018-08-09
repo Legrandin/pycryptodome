@@ -38,14 +38,9 @@ from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import ECC
 
 def load_file(filename, mode="rb"):
-    fd = open(pycryptodome_filename([
-                                    "Crypto",
-                                    "SelfTest",
-                                    "PublicKey",
-                                    "test_vectors",
-                                    "ECC",
-                                    ], filename), mode)
-    return fd.read()
+    comps = [ "Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC" ]
+    with open(pycryptodome_filename(comps, filename), mode) as fd:
+        return fd.read()
 
 
 def compact(lines):

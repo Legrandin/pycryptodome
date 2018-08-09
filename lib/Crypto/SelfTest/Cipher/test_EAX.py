@@ -594,10 +594,9 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._wycheproof_warnings = wycheproof_warnings
 
     def setUp(self):
-        file_in = open(pycryptodome_filename(
-                        "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split("."),
-                        "aes_eax_test.json"), "rt")
-        tv_tree = json.load(file_in)
+        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, "aes_eax_test.json"), "rt") as file_in:
+            tv_tree = json.load(file_in)
 
         class TestVector(object):
             pass

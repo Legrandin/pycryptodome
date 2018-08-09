@@ -346,10 +346,9 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
-        file_in = open(pycryptodome_filename(
-                        "Crypto.SelfTest.Hash.test_vectors.wycheproof".split("."),
-                        "aes_cmac_test.json"), "rt")
-        tv_tree = json.load(file_in)
+        comps = "Crypto.SelfTest.Hash.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, "aes_cmac_test.json"), "rt") as file_in:
+            tv_tree = json.load(file_in)
 
         class TestVector(object):
             pass

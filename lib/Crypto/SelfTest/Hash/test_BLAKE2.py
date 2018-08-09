@@ -274,30 +274,31 @@ class Blake2OfficialTestVector(unittest.TestCase):
 
         expected = "in"
         self.test_vectors = []
-        for line_number, line in enumerate(open(test_vector_file, "rt")):
+        with open(test_vector_file, "rt") as test_vector_fd:
+            for line_number, line in enumerate(test_vector_fd):
 
-            if line.strip() == "" or line.startswith("#"):
-                continue
+                if line.strip() == "" or line.startswith("#"):
+                    continue
 
-            res = re.match("%s:\t([0-9A-Fa-f]*)" % expected, line)
-            if not res:
-                raise ValueError("Incorrect test vector format (line %d)"
-                                 % line_number)
+                res = re.match("%s:\t([0-9A-Fa-f]*)" % expected, line)
+                if not res:
+                    raise ValueError("Incorrect test vector format (line %d)"
+                                     % line_number)
 
-            if res.group(1):
-                bin_value = unhexlify(tobytes(res.group(1)))
-            else:
-                bin_value = b""
-            if expected == "in":
-                input_data = bin_value
-                expected = "key"
-            elif expected == "key":
-                key = bin_value
-                expected = "hash"
-            else:
-                result = bin_value
-                expected = "in"
-                self.test_vectors.append((input_data, key, result))
+                if res.group(1):
+                    bin_value = unhexlify(tobytes(res.group(1)))
+                else:
+                    bin_value = b""
+                if expected == "in":
+                    input_data = bin_value
+                    expected = "key"
+                elif expected == "key":
+                    key = bin_value
+                    expected = "hash"
+                else:
+                    result = bin_value
+                    expected = "in"
+                    self.test_vectors.append((input_data, key, result))
 
     def runTest(self):
         for (input_data, key, result) in self.test_vectors:
@@ -332,15 +333,16 @@ class Blake2TestVector1(unittest.TestCase):
                             "tv1.txt")
 
         self.test_vectors = []
-        for line_number, line in enumerate(open(test_vector_file, "rt")):
-            if line.strip() == "" or line.startswith("#"):
-                continue
-            res = re.match("digest: ([0-9A-Fa-f]*)", line)
-            if not res:
-                raise ValueError("Incorrect test vector format (line %d)"
-                                 % line_number)
+        with open(test_vector_file, "rt") as test_vector_fd:
+            for line_number, line in enumerate(test_vector_fd):
+                if line.strip() == "" or line.startswith("#"):
+                    continue
+                res = re.match("digest: ([0-9A-Fa-f]*)", line)
+                if not res:
+                    raise ValueError("Incorrect test vector format (line %d)"
+                                     % line_number)
 
-            self.test_vectors.append(unhexlify(tobytes(res.group(1))))
+                self.test_vectors.append(unhexlify(tobytes(res.group(1))))
 
     def runTest(self):
 
@@ -376,17 +378,18 @@ class Blake2TestVector2(unittest.TestCase):
                             "tv2.txt")
 
         self.test_vectors = []
-        for line_number, line in enumerate(open(test_vector_file, "rt")):
-            if line.strip() == "" or line.startswith("#"):
-                continue
-            res = re.match("digest\(([0-9]+)\): ([0-9A-Fa-f]*)", line)
-            if not res:
-                raise ValueError("Incorrect test vector format (line %d)"
-                                 % line_number)
+        with open(test_vector_file, "rt") as test_vector_fd:
+            for line_number, line in enumerate(test_vector_fd):
+                if line.strip() == "" or line.startswith("#"):
+                    continue
+                res = re.match(r"digest\(([0-9]+)\): ([0-9A-Fa-f]*)", line)
+                if not res:
+                    raise ValueError("Incorrect test vector format (line %d)"
+                                     % line_number)
 
-            key_size = int(res.group(1))
-            result = unhexlify(tobytes(res.group(2)))
-            self.test_vectors.append((key_size, result))
+                key_size = int(res.group(1))
+                result = unhexlify(tobytes(res.group(2)))
+                self.test_vectors.append((key_size, result))
 
     def runTest(self):
 

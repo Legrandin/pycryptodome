@@ -164,7 +164,7 @@ test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vecto
 for idx, tv in enumerate(test_vectors_verify):
 
     if isinstance(tv, basestring):
-        res = re.match("\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+        res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
         hash_name = res.group(3).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
         continue
@@ -199,7 +199,7 @@ test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors
 for idx, tv in enumerate(test_vectors_sign):
 
     if isinstance(tv, basestring):
-        res = re.match("\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+        res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
         hash_name = res.group(3).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
         continue
@@ -297,7 +297,7 @@ test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vecto
 for idx, tv in enumerate(test_vectors_verify):
 
     if isinstance(tv, basestring):
-        res = re.match("\[P-256,(SHA-[0-9]+)\]", tv)
+        res = re.match(r"\[P-256,(SHA-[0-9]+)\]", tv)
         assert res
         hash_name = res.group(1).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
@@ -327,7 +327,7 @@ test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors
 for idx, tv in enumerate(test_vectors_sign):
 
     if isinstance(tv, basestring):
-        res = re.match("\[P-256,(SHA-[0-9]+)\]", tv)
+        res = re.match(r"\[P-256,(SHA-[0-9]+)\]", tv)
         assert res
         hash_name = res.group(1).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
@@ -733,10 +733,9 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
-        file_in = open(pycryptodome_filename(
-                        "Crypto.SelfTest.Signature.test_vectors.wycheproof".split("."),
-                        "dsa_test.json"), "rt")
-        tv_tree = json.load(file_in)
+        comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, "dsa_test.json"), "rt") as file_in:
+            tv_tree = json.load(file_in)
 
         class TestVector(object):
             pass
@@ -807,10 +806,9 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         pass
 
     def add_tests(self, filename):
-        file_in = open(pycryptodome_filename(
-                        "Crypto.SelfTest.Signature.test_vectors.wycheproof".split("."),
-                        filename), "rt")
-        tv_tree = json.load(file_in)
+        comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
+            tv_tree = json.load(file_in)
 
         for group in tv_tree['testGroups']:
             

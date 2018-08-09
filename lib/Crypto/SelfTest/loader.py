@@ -36,7 +36,7 @@ from Crypto.Util.py3compat import unhexlify
 from Crypto.Util._file_system import pycryptodome_filename
 
 
-def load_tests(dir_comps, file_name, description, conversions):
+def _load_tests(dir_comps, file_in, description, conversions):
     """Load and parse a test vector file
 
     This function returnis a list of objects, one per group of adjacent
@@ -44,9 +44,6 @@ def load_tests(dir_comps, file_name, description, conversions):
 
     For a group of lines, the object has one attribute per line.
     """
-
-    file_in = open(pycryptodome_filename(dir_comps, file_name))
-    description = "%s test (%s)" % (description, file_name)
 
     line_number = 0
     results = []
@@ -105,4 +102,19 @@ def load_tests(dir_comps, file_name, description, conversions):
                 setattr(test_vector, token, conversion(data))
 
         # This line is ignored
+    return results
+
+def load_tests(dir_comps, file_name, description, conversions):
+    """Load and parse a test vector file
+
+    This function returnis a list of objects, one per group of adjacent
+    KV lines or for a single line in the form "[.*]".
+
+    For a group of lines, the object has one attribute per line.
+    """
+    
+    description = "%s test (%s)" % (description, file_name)
+
+    with open(pycryptodome_filename(dir_comps, file_name)) as file_in:
+        results = _load_tests(dir_comps, file_in, description, conversions)
     return results

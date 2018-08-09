@@ -729,9 +729,10 @@ if use_separate_namespace:
 
 
 # By doing this we neeed to change version information in a single file
-for line in open(os.path.join("lib", package_root, "__init__.py")):
-    if line.startswith("version_info"):
-        version_tuple = eval(line.split("=")[1])
+with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
+    for line in init_root:
+        if line.startswith("version_info"):
+            version_tuple = eval(line.split("=")[1])
 
 version_string = ".".join([str(x) for x in version_tuple])
 
