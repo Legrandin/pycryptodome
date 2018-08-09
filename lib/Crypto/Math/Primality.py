@@ -63,6 +63,9 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
 
+    if candidate in (1, 2, 3, 5):
+        return PROBABLY_PRIME
+    
     if candidate.is_even():
         return COMPOSITE
 
@@ -129,6 +132,8 @@ def lucas_test(candidate):
         candidate = Integer(candidate)
 
     # Step 1
+    if candidate in (1, 2, 3, 5):
+        return PROBABLY_PRIME
     if candidate.is_even() or candidate.is_perfect_square():
         return COMPOSITE
 
@@ -144,6 +149,8 @@ def lucas_test(candidate):
             value = -value
 
     for D in alternate():
+        if candidate in (D, -D):
+            continue
         js = Integer.jacobi_symbol(D, candidate)
         if js == 0:
             return COMPOSITE
@@ -206,7 +213,7 @@ def lucas_test(candidate):
 from Crypto.Util.number import sieve_base as _sieve_base
 ## The optimal number of small primes to use for the sieve
 ## is probably dependent on the platform and the candidate size
-_sieve_base = _sieve_base[:100]
+_sieve_base = set(_sieve_base[:100])
 
 
 def test_probable_prime(candidate, randfunc=None):
@@ -237,11 +244,13 @@ def test_probable_prime(candidate, randfunc=None):
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
 
-    # First,  check trial division by the smallest primes
+    # First, check trial division by the smallest primes
+    if int(candidate) in _sieve_base:
+        return PROBABLY_PRIME
     try:
         map(candidate.fail_if_divisible_by, _sieve_base)
     except ValueError:
-        return False
+        return COMPOSITE
 
     # These are the number of Miller-Rabin iterations s.t. p(k, t) < 1E-30,
     # with p(k, t) being the probability that a randomly chosen k-bit number
