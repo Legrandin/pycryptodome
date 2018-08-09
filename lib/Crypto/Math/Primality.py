@@ -63,6 +63,9 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
 
+    if candidate in (1, 2, 3, 5):
+        return PROBABLY_PRIME
+    
     if candidate.is_even():
         return COMPOSITE
 
@@ -129,25 +132,30 @@ def lucas_test(candidate):
         candidate = Integer(candidate)
 
     # Step 1
+    if candidate in (1, 2, 3, 5):
+        return PROBABLY_PRIME
     if candidate.is_even() or candidate.is_perfect_square():
         return COMPOSITE
 
     # Step 2
     def alternate():
-        sgn = 1
         value = 5
-        for x in xrange(20):
-            yield sgn * value
-            sgn, value = -sgn, value + 2
+        while True:
+            yield value
+            if value > 0:
+                value += 2
+            else:
+                value -= 2
+            value = -value
 
     for D in alternate():
+        if candidate in (D, -D):
+            continue
         js = Integer.jacobi_symbol(D, candidate)
         if js == 0:
             return COMPOSITE
         if js == -1:
             break
-    else:
-        return COMPOSITE
     # Found D. P=1 and Q=(1-D)/4 (note that Q is guaranteed to be an integer)
 
     # Step 3
@@ -205,7 +213,7 @@ def lucas_test(candidate):
 from Crypto.Util.number import sieve_base as _sieve_base
 ## The optimal number of small primes to use for the sieve
 ## is probably dependent on the platform and the candidate size
-_sieve_base = _sieve_base[:100]
+_sieve_base = set(_sieve_base[:100])
 
 
 def test_probable_prime(candidate, randfunc=None):
@@ -236,11 +244,13 @@ def test_probable_prime(candidate, randfunc=None):
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
 
-    # First,  check trial division by the smallest primes
+    # First, check trial division by the smallest primes
+    if int(candidate) in _sieve_base:
+        return PROBABLY_PRIME
     try:
         map(candidate.fail_if_divisible_by, _sieve_base)
     except ValueError:
-        return False
+        return COMPOSITE
 
     # These are the number of Miller-Rabin iterations s.t. p(k, t) < 1E-30,
     # with p(k, t) being the probability that a randomly chosen k-bit number
