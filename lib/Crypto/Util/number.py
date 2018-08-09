@@ -331,7 +331,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     return X
 
 def isPrime(N, false_positive_prob=1e-6, randfunc=None):
-    """Test if a number *N* is a prime.
+    r"""Test if a number *N* is a prime.
 
     Args:
         false_positive_prob (float):
