@@ -390,6 +390,9 @@ class Integer(object):
         a = int(a)
         n = int(n)
 
+        if n <= 0:
+            raise ValueError("n must be a positive integer")
+
         if (n & 1) == 0:
             raise ValueError("n must be even for the Jacobi symbol")
 
