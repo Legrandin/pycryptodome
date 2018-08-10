@@ -574,7 +574,6 @@ package_data = {
     "Crypto.SelfTest.PublicKey" : [
         "test_vectors/ECC/*.*",
     ],
-    "Crypto.Math" : [ "mpir.dll" ],
 }
 
 system_bits = 8 * struct.calcsize("P")
