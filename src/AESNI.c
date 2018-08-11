@@ -86,7 +86,7 @@ static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType 
     if (subType == SubRotXor) {
         z = _mm_srli_si128(y, 4);
     }
-    _mm_store_ss((float*)&result, _mm_castsi128_ps(z));
+    result = _mm_cvtsi128_si32(z);
     return result;
 }
 
