@@ -1,14 +1,18 @@
 Changelog
 =========
 
-3.6.5 (xx xxxxx 2018)
-+++++++++++++++++++++
+3.6.5 (12 August 2018)
+++++++++++++++++++++++
 
 Resolved issues
 ---------------
 
-* GH#188: In the Lucas probable prime test, do an exhaustive search for D values,
-  as opposed to trying only the first few.
+* GH#187: Fixed incorrect AES encryption/decryption with AES acceleration on x86
+  due to gcc's optimization and strict aliasing rules.
+* GH#188: More prime number candidates than necessary where discarded as composite
+  due to the limited way D values were searched in the Lucas test.
+* Fixed ResouceWarnings and DeprecationWarnings.
+* Workaround for Python 3.7.0 bug on Windows (https://bugs.python.org/issue34108).
 
 3.6.4 (10 July 2018)
 +++++++++++++++++++++
