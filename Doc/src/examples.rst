@@ -11,8 +11,8 @@ encryption modes`_ like `GCM`_, `CCM`_ or `SIV`_).
 
 .. code-block:: python
 
-    from Crypto.Cipher import AES
-    from Crypto.Random import get_random_bytes
+    from Cryptodome.Cipher import AES
+    from Cryptodome.Random import get_random_bytes
 
     key = get_random_bytes(16)
     cipher = AES.new(key, AES.MODE_EAX)
@@ -26,7 +26,7 @@ Note that the code generates a ``ValueError`` exception when tampering is detect
 
 .. code-block:: python
 
-    from Crypto.Cipher import AES
+    from Cryptodome.Cipher import AES
 
     file_in = open("encrypted.bin", "rb")
     nonce, tag, ciphertext = [ file_in.read(x) for x in (16, 16, -1) ]
@@ -44,7 +44,7 @@ At the end, the code prints our the RSA public key in ASCII/PEM format:
 
 .. code-block:: python
 
-    from Crypto.PublicKey import RSA
+    from Cryptodome.PublicKey import RSA
 
     secret_code = "Unguessable"
     key = RSA.generate(2048)
@@ -60,7 +60,7 @@ The following code reads the private RSA key back in, and then prints again the 
 
 .. code-block:: python
 
-    from Crypto.PublicKey import RSA
+    from Cryptodome.PublicKey import RSA
 
     secret_code = "Unguessable"
     encoded_key = open("rsa_key.bin", "rb").read()
@@ -101,9 +101,9 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
 
 .. code-block:: python
 
-    from Crypto.PublicKey import RSA
-    from Crypto.Random import get_random_bytes
-    from Crypto.Cipher import AES, PKCS1_OAEP
+    from Cryptodome.PublicKey import RSA
+    from Cryptodome.Random import get_random_bytes
+    from Cryptodome.Cipher import AES, PKCS1_OAEP
 
     data = "I met aliens in UFO. Here is the map.".encode("utf-8")
     file_out = open("encrypted_data.bin", "wb")
@@ -125,8 +125,8 @@ first, and with that the rest of the file:
 
 .. code-block:: python
 
-    from Crypto.PublicKey import RSA
-    from Crypto.Cipher import AES, PKCS1_OAEP
+    from Cryptodome.PublicKey import RSA
+    from Cryptodome.Cipher import AES, PKCS1_OAEP
 
     file_in = open("encrypted_data.bin", "rb")
 
