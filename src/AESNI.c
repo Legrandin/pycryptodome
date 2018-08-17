@@ -222,7 +222,7 @@ static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
     }
 
     /** There are 7 blocks or fewer left **/
-    for (;data_len>0; data_len-=16, in+=16, out+=16) {
+    for (;data_len>=BLOCK_SIZE; data_len-=BLOCK_SIZE, in+=BLOCK_SIZE, out+=BLOCK_SIZE) {
         __m128i pt, data;
         unsigned i;
 
@@ -331,7 +331,7 @@ static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
     }
 
     /** There are 7 blocks or fewer left **/
-    for (;data_len>0; data_len-=16, in+=16, out+=16) {
+    for (;data_len>=BLOCK_SIZE; data_len-=BLOCK_SIZE, in+=BLOCK_SIZE, out+=BLOCK_SIZE) {
         __m128i ct, data;
         unsigned i;
 

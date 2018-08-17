@@ -1265,16 +1265,39 @@ class TestMultipleBlocks(unittest.TestCase):
             self.assertEqual(SHA256.new(ct).hexdigest(), expected)
 
 
+class TestIncompleteBlocks(unittest.TestCase):
+
+    def __init__(self, use_aesni):
+        unittest.TestCase.__init__(self)
+        self.use_aesni = use_aesni
+
+    def runTest(self):
+        # Encrypt data with length not multiple of 16 bytes
+
+        cipher = AES.new(b'4'*16, AES.MODE_ECB, use_aesni=self.use_aesni)
+
+        for msg_len in range(1, 16):
+            self.assertRaises(ValueError, cipher.encrypt, b'1' * msg_len)
+            self.assertRaises(ValueError, cipher.encrypt, b'1' * (msg_len+16))
+            self.assertRaises(ValueError, cipher.decrypt, b'1' * msg_len)
+            self.assertRaises(ValueError, cipher.decrypt, b'1' * (msg_len+16))
+
+        self.assertEqual(cipher.encrypt(b''), b'')
+        self.assertEqual(cipher.decrypt(b''), b'')
+
+
 def get_tests(config={}):
     from Crypto.Util import _cpu_features
     from common import make_block_tests
 
     tests = make_block_tests(AES, "AES", test_data, {'use_aesni': False})
     tests += [ TestMultipleBlocks(False) ]
+    tests += [ TestIncompleteBlocks(False) ]
     if _cpu_features.have_aes_ni():
         # Run tests with AES-NI instructions if they are available.
         tests += make_block_tests(AES, "AESNI", test_data, {'use_aesni': True})
         tests += [ TestMultipleBlocks(True) ]
+        tests += [ TestIncompleteBlocks(True) ]
     else:
         print "Skipping AESNI tests"
     return tests
