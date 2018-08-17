@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.6.6 (17 August 2018)
+++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#198: Fix vulnerability on AESNI ECB with payloads smaller than 16 bytes.
+
 3.6.5 (12 August 2018)
 ++++++++++++++++++++++
 
