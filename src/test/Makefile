@@ -1,5 +1,8 @@
 # CPPFLAGS = -DHAVE_X86INTRIN_H
 CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN'")
+CPPFLAGS += -DHAVE_POSIX_MEMALIGN
+CFLAGS += -O3 -g -fkeep-static-functions -fkeep-inline-functions -fstrict-aliasing -Wall
+CFLAGS += -msse2
 
 test: all
 	./tests_addmul128_32
@@ -10,11 +13,16 @@ test: all
 	./tests_addmul
 	./test_endianess
 	./test_clmul
+	./test_poly1305_reduce
+	./test_poly1305_load_r
+	./test_poly1305_load_m
+	./test_poly1305_multiply
 
-all: tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess test_clmul
+all: tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess test_clmul\
+	 test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply
 
 clean:
-	rm -f tests_addmul* tests_square_w* tests_product* montgomery* test_endianess clmul* test_clmul
+	rm -f tests_addmul* tests_square_w* tests_product* montgomery* test_endianess clmul* test_clmul poly1305* test_poly*
 
 tests_addmul128.c: make_tests_addmul128.py
 	python $^ > $@
@@ -63,3 +71,32 @@ clmul2.o: clmul.o
 
 test_clmul: test_clmul.c ../common.h clmul2.o
 	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $^
+
+# Poly1305
+
+poly1305.o: ../poly1305.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -c
+
+test_poly1305_reduce.c: make_tests_poly1305_reduce.py
+	python $^ > $@
+
+test_poly1305_load_r.c: make_tests_poly1305_load_r.py
+	python $^ > $@
+
+test_poly1305_load_m.c: make_tests_poly1305_load_m.py
+	python $^ > $@
+
+test_poly1305_multiply.c: make_tests_poly1305_multiply.py
+	python $^ > $@
+
+test_poly1305_reduce: test_poly1305_reduce.c ../common.h poly1305.o
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+test_poly1305_load_r: test_poly1305_load_r.c ../common.h poly1305.o
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+test_poly1305_load_m: test_poly1305_load_m.c ../common.h poly1305.o
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+test_poly1305_multiply: test_poly1305_multiply.c ../common.h poly1305.o
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
