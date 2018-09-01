@@ -1,8 +1,8 @@
 #include "../common.h"
 #include <x86intrin.h>
 
-__m128i reduce(__m128i *prod_high, __m128i *prod_low);
-void clmult(__m128i *prod_high, __m128i *prod_low, __m128i *a, __m128i *b);
+__m128i reduce(__m128i prod_high, __m128i prod_low);
+void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m128i b);
 __m128i multx(__m128i a);
 __m128i swap(__m128i a);
 
@@ -15,10 +15,10 @@ void test_reduce_1(void)
     __m128i r1, r2, r3;
     int result;
 
-    r1 = _mm_loadu_si128((__m128i*)prod_high);
-    r2 = _mm_loadu_si128((__m128i*)prod_low);
-    r3 = reduce(&r1, &r2);
-    _mm_storeu_si128((__m128i*)out, r3);
+    memcpy(&r1, prod_high, 16);
+    memcpy(&r2, prod_low, 16);
+    r3 = reduce(r1, r2);
+    memcpy(out, &r3, 16);
     
     result = memcmp(expected, out, 16);
     assert(result == 0);
@@ -31,9 +31,10 @@ void test_multx_1(void)
     __m128i r1, r2;
     int result;
 
-    r1 = _mm_loadu_si128((__m128i*)zeroes);
+    memcpy(&r1, zeroes, 16);
     r2 = multx(r1);
-    _mm_storeu_si128((__m128i*)out, r2);
+    memcpy(out, &r2, 16);
+    
     result = memcmp(zeroes, out, 16);
     assert(result == 0);
 }
@@ -49,9 +50,10 @@ void test_multx_2(void)
     memset(in, 0x55, 16);
     memset(expected, 0xAA, 16);
 
-    r1 = _mm_loadu_si128((__m128i*)in);
+    memcpy(&r1, in, 16);
     r2 = multx(r1);
-    _mm_storeu_si128((__m128i*)out, r2);
+    memcpy(out, &r2, 16);
+    
     result = memcmp(expected, out, 16);
     assert(result == 0);
 }
@@ -64,9 +66,10 @@ void test_multx_3(void)
     __m128i r1, r2;
     int result;
 
-    r1 = _mm_loadu_si128((__m128i*)in);
+    memcpy(&r1, in, 16);
     r2 = multx(r1);
-    _mm_storeu_si128((__m128i*)out, r2);
+    memcpy(out, &r2, 16);
+    
     result = memcmp(expected, out, 16);
     assert(result == 0);
 }
@@ -79,9 +82,10 @@ void test_swap_1(void)
     __m128i r1, r2;
     int result;
 
-    r1 = _mm_loadu_si128((__m128i*)in);
+    memcpy(&r1, in, 16);
     r2 = swap(r1);
-    _mm_storeu_si128((__m128i*)out, r2);
+    memcpy(out, &r2, 16);
+
     result = memcmp(expected, out, 16);
     assert(result == 0);
 }
@@ -96,22 +100,25 @@ void test_clmul_1(void)
     __m128i r1, r2, r3, r4;
     int result;
 
-    r1 = _mm_loadu_si128((__m128i*)in_a);
-    r2 = _mm_loadu_si128((__m128i*)in_b);
-    
-    clmult(&r3, &r4, &r1, &r2);
-    _mm_storeu_si128((__m128i*)out_hi, r3);
-    _mm_storeu_si128((__m128i*)out_lo, r4);
+    memcpy(&r1, in_a, 16);
+    memcpy(&r2, in_b, 16);
+    clmult(&r3, &r4, r1, r2);
+    memcpy(out_hi, &r3, 16);
+    memcpy(out_lo, &r4, 16);
+
     result = memcmp(exp_lo, out_lo, 16);
     assert(result == 0);
+    
     result = memcmp(exp_hi, out_hi, 16);
     assert(result == 0);
     
-    clmult(&r3, &r4, &r2, &r1);
-    _mm_storeu_si128((__m128i*)out_hi, r3);
-    _mm_storeu_si128((__m128i*)out_lo, r4);
+    clmult(&r3, &r4, r2, r1);
+    memcpy(out_hi, &r3, 16);
+    memcpy(out_lo, &r4, 16);
+    
     result = memcmp(exp_lo, out_lo, 16);
     assert(result == 0);
+    
     result = memcmp(exp_hi, out_hi, 16);
     assert(result == 0);
 }
@@ -128,22 +135,26 @@ void test_clmul_2(void)
     __m128i r1, r2, r3, r4;
     int result;
 
-    r1 = _mm_loadu_si128((__m128i*)in_a);
-    r2 = _mm_loadu_si128((__m128i*)in_b);
+    memcpy(&r1, in_a, 16);
+    memcpy(&r2, in_b, 16);
     
-    clmult(&r3, &r4, &r1, &r2);
-    _mm_storeu_si128((__m128i*)out_hi, r3);
-    _mm_storeu_si128((__m128i*)out_lo, r4);
+    clmult(&r3, &r4, r1, r2);
+    memcpy(out_hi, &r3, 16);
+    memcpy(out_lo, &r4, 16);
+    
     result = memcmp(exp_lo, out_lo, 16);
     assert(result == 0);
+    
     result = memcmp(exp_hi, out_hi, 16);
     assert(result == 0);
     
-    clmult(&r3, &r4, &r2, &r1);
-    _mm_storeu_si128((__m128i*)out_hi, r3);
-    _mm_storeu_si128((__m128i*)out_lo, r4);
+    clmult(&r3, &r4, r2, r1);
+    memcpy(out_hi, &r3, 16);
+    memcpy(out_lo, &r4, 16);
+    
     result = memcmp(exp_lo, out_lo, 16);
     assert(result == 0);
+    
     result = memcmp(exp_hi, out_hi, 16);
     assert(result == 0);
 }
