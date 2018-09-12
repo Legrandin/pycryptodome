@@ -76,7 +76,7 @@ void poly1305_load_m(uint32_t m[5], const uint8_t data[], size_t len)
 {
     uint8_t copy[sizeof(uint32_t)*5];
 
-    assert(len<16);
+    assert(len<=16);
 
     memset(copy, 0, sizeof(copy));
     memcpy(copy, data, len);
