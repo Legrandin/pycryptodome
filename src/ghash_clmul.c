@@ -101,7 +101,7 @@ struct exp_key {
  *
  * See at the bottom for an explanation.
  */
-static inline __m128i reduce(__m128i prod_high, __m128i prod_low)
+STATIC __m128i reduce(__m128i prod_high, __m128i prod_low)
 {
     const uint64_t c2 = 0xc200000000000000U;
     __m128i t1, t2, t3, t4, t7;
@@ -123,7 +123,7 @@ static inline __m128i reduce(__m128i prod_high, __m128i prod_low)
 /**
  * Perform the carry-less multiplication of two polynomials of degree 127.
  */
-static inline void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m128i b)
+STATIC void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m128i b)
 {
     __m128i c, d, e, f, g, h, i;
 
@@ -141,7 +141,7 @@ static inline void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m1
 /**
  * Multiply a polynomial of degree 127 by x, modulo p(x) = x^128 + x^127 + x^126 + x^121 + 1
  */
-static inline __m128i multx(__m128i a)
+STATIC __m128i multx(__m128i a)
 {
     int msb;
     int64_t r;
@@ -169,7 +169,7 @@ static inline __m128i multx(__m128i a)
 }
 
 /** Swap bytes in an XMM register **/
-static inline __m128i swap(__m128i a)
+STATIC __m128i swap(__m128i a)
 {
     __m128i mask;
 

@@ -1,7 +1,8 @@
 # CPPFLAGS = -DHAVE_X86INTRIN_H
 CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN'")
 CPPFLAGS += -DHAVE_POSIX_MEMALIGN
-CFLAGS += -O3 -g -fkeep-static-functions -fkeep-inline-functions -fstrict-aliasing -Wall
+CPPFLAGS += -DSTATIC=""
+CFLAGS += -O3 -g -fstrict-aliasing -Wall
 CFLAGS += -msse2
 
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess test_clmul\
@@ -50,10 +51,7 @@ build/tests_product.c: make_tests_product.py
 build/montgomery.o: ../montgomery.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -c
 
-build/montgomery2.o: build/montgomery.o
-	objcopy --globalize-symbol=product --globalize-symbol=addmul $^ $@
-
-build/tests_product: build/tests_product.c build/montgomery2.o ../multiply_32.c ../montgomery_utils.c ../siphash.c
+build/tests_product: build/tests_product.c build/montgomery.o ../multiply_32.c ../montgomery_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # addmul
@@ -61,7 +59,7 @@ build/tests_product: build/tests_product.c build/montgomery2.o ../multiply_32.c 
 build/tests_addmul.c: make_tests_addmul.py
 	python $^ > $@
 
-build/tests_addmul: build/tests_addmul.c build/montgomery2.o ../multiply_32.c ../montgomery_utils.c ../siphash.c
+build/tests_addmul: build/tests_addmul.c build/montgomery.o ../multiply_32.c ../montgomery_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # endianess
@@ -74,10 +72,7 @@ build/test_endianess: test_endianess.c ../common.h
 build/clmul.o: ../ghash_clmul.c
 	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $< -c
 
-build/clmul2.o: build/clmul.o
-	objcopy $(foreach x, multx swap clmult reduce, --globalize-symbol=$x) $^ $@
-
-build/test_clmul: test_clmul.c ../common.h build/clmul2.o
+build/test_clmul: test_clmul.c ../common.h build/clmul.o
 	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $^
 
 # Poly1305

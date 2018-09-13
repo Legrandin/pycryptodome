@@ -37,6 +37,13 @@
 
 #include "errors.h"
 
+/*
+ * Define STATIC as an empty string to turn certain static functions public
+ */
+#ifndef STATIC
+#define STATIC static inline
+#endif
+
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
