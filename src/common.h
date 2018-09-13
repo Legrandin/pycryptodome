@@ -66,6 +66,10 @@ typedef unsigned __int32 uint32_t;
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 
+#ifndef UINT32_MAX
+#define UINT32_MAX 0xFFFFFFFFUL
+#endif
+
 #define inline _inline
 #define RESTRICT __restrict
 
