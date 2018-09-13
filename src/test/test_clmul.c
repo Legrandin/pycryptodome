@@ -171,4 +171,5 @@ int main(void)
 
     test_clmul_1();
     test_clmul_2();
+    return 0;
 }
