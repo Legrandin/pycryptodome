@@ -115,14 +115,14 @@ def decode(pem_data, passphrase=None):
     """
 
     # Verify Pre-Encapsulation Boundary
-    r = re.compile("\s*-----BEGIN (.*)-----\s+")
+    r = re.compile(r"\s*-----BEGIN (.*)-----\s+")
     m = r.match(pem_data)
     if not m:
         raise ValueError("Not a valid PEM pre boundary")
     marker = m.group(1)
 
     # Verify Post-Encapsulation Boundary
-    r = re.compile("-----END (.*)-----\s*$")
+    r = re.compile(r"-----END (.*)-----\s*$")
     m = r.search(pem_data)
     if not m or m.group(1) != marker:
         raise ValueError("Not a valid PEM post boundary")
