@@ -28,6 +28,9 @@ matrix:
  - python: 3.7
    env: CFFI=yes
    dist: xenial
+ - language: c
+   script: cd src/test && make
+   after_success: true
  - os: osx
    language: generic
    install: pip2 install cibuildwheel==0.9.2
