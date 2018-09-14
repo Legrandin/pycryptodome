@@ -1,35 +1,6 @@
 """Make unit test for poly1305_reduce()"""
 
-class Count(object):
-    def __init__(self):
-        self.count = 0
-
-
-    def next(self):
-        self.count += 1
-        return self.count
-counter = Count()
-
-
-def split32(value, nwords):
-    """Split value into 32-bit words little-endian"""
-
-    assert(value >= 0)
-
-    result = []
-    while value:
-        result += [ "0x%08xUL" % (value & (2**32-1)) ]
-        value >>= 32
-    result += [ "0" ] * (nwords - len(result))
-    return result
-
-
-def make_main():
-    print "int main(void) {"
-    for i in xrange(1, counter.next()):
-        print "    test_%d();" % i
-    print "    return 0;"
-    print "}"
+from common import counter, make_main, split32
 
 
 def make_test(value):
