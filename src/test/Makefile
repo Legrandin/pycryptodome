@@ -11,7 +11,7 @@ TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64
 TGTS:=$(foreach t,$(TAPPS),build/$t)
 
 test: build ${TGTS}
-	for t in ${TGTS}; do $$t; done
+	set -e && for t in ${TGTS}; do $$t; done
 
 build:
 	mkdir build
