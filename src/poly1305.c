@@ -296,16 +296,6 @@ EXPORT_SYM int poly1305_destroy(mac_state *state)
     return 0;
 }
 
-EXPORT_SYM int poly1305_copy(const mac_state *src, mac_state *dst)
-{
-    if (NULL == src || NULL == dst) {
-        return ERR_NULL;
-    }
-
-    *dst = *src;
-    return 0;
-}
-
 EXPORT_SYM int poly1305_update(mac_state *state,
                                const uint8_t *in,
                                size_t len)

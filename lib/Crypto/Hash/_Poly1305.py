@@ -39,7 +39,6 @@ _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._Poly1305",
                                           const uint8_t *key,
                                           size_t key_size);
                         int poly1305_destroy(void *state);
-                        int poly1305_copy(const void *src, void *dst);
                         int poly1305_update(void *state,
                                             const uint8_t *in,
                                             size_t len);
@@ -128,5 +127,8 @@ def new(key, msg):
     Returns:
         A :class:`_Poly1305` object
     """
+
+    if len(key) != 32:
+        raise ValueError("Poly1305 key must be 32 bytes long")
 
     return Poly1305(key, msg)
