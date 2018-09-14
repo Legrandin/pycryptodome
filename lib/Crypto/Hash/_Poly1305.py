@@ -32,8 +32,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, c_size_t,
                                   c_uint8_ptr)
 
-
-_raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._Poly1305",
+_raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
                         """
                         int poly1305_init(void **state,
                                           const uint8_t *key,
@@ -48,6 +47,8 @@ _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._Poly1305",
 
 
 class Poly1305(object):
+
+    digest_size = 16
 
     def __init__(self, key, data):
 
@@ -114,7 +115,7 @@ class Poly1305(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key, msg):
+def new(key, msg=None):
     """Create a new Poly1305 MAC object.
 
     Args:

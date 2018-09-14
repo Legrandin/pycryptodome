@@ -52,7 +52,7 @@ typedef struct mac_state_t {
  * Additionaly, reduce modulo 2^130-5 the value 2^130*r into rr[], which we can
  * reuse several times later during each multiplication.
  */
-void poly1305_load_r(uint32_t r[4], uint32_t rr[4], const uint8_t secret[16])
+STATIC void poly1305_load_r(uint32_t r[4], uint32_t rr[4], const uint8_t secret[16])
 {
     unsigned i;
     uint32_t mask;
@@ -72,7 +72,7 @@ void poly1305_load_r(uint32_t r[4], uint32_t rr[4], const uint8_t secret[16])
  * Convert a piece of the message (16 bytes, unless it is the last piece),
  * into an integer encoded into five 32-bit words.
  */
-void poly1305_load_m(uint32_t m[5], const uint8_t data[], size_t len)
+STATIC void poly1305_load_m(uint32_t m[5], const uint8_t data[], size_t len)
 {
     uint8_t copy[sizeof(uint32_t)*5];
 
@@ -97,7 +97,7 @@ void poly1305_load_m(uint32_t m[5], const uint8_t data[], size_t len)
  * The result is placed into h[] and it is guaranteed to
  * be smaller than 2^131 (not 2^130-5).
  */
-void poly1305_multiply(uint32_t h[5], const uint32_t r[4], const uint32_t rr[4])
+STATIC void poly1305_multiply(uint32_t h[5], const uint32_t r[4], const uint32_t rr[4])
 {
     uint64_t a0, a1, a2, a3;
     uint64_t aa0, aa1, aa2, aa3;
@@ -173,7 +173,7 @@ void poly1305_multiply(uint32_t h[5], const uint32_t r[4], const uint32_t rr[4])
  *
  * h[] must be smaller than 2^131.
  */
-void poly1305_reduce(uint32_t h[5])
+STATIC void poly1305_reduce(uint32_t h[5])
 {
     unsigned i;
 
@@ -199,7 +199,7 @@ void poly1305_reduce(uint32_t h[5])
     }
 }
 
-void poly1305_accumulate(uint32_t h[5], uint32_t m[5])
+STATIC void poly1305_accumulate(uint32_t h[5], const uint32_t m[5])
 {
 #if 0
     // 128-bit type exist and little-endian
@@ -237,7 +237,7 @@ void poly1305_accumulate(uint32_t h[5], uint32_t m[5])
 #endif
 }
 
-void poly1305_process(uint32_t h[5], uint32_t r[4], uint32_t rr[4], uint8_t msg[], size_t len)
+static void poly1305_process(uint32_t h[5], uint32_t r[4], uint32_t rr[4], uint8_t msg[], size_t len)
 {
     uint32_t m[5];
 
@@ -255,7 +255,7 @@ void poly1305_process(uint32_t h[5], uint32_t r[4], uint32_t rr[4], uint8_t msg[
  *
  * s[] is expected to be the result of an encryption done with AES or ChaCha20.
  */
-void poly1305_finalize(uint32_t h[5], const uint8_t s[16])
+static void poly1305_finalize(uint32_t h[5], const uint8_t s[16])
 {
     uint32_t m[5];
 

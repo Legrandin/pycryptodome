@@ -6,7 +6,7 @@ CFLAGS += -O3 -g -fstrict-aliasing -Wall
 CFLAGS += -msse2
 
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess test_clmul\
-       test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply
+       test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate
 
 TGTS:=$(foreach t,$(TAPPS),build/$t)
 
@@ -92,6 +92,9 @@ build/test_poly1305_load_m.c: make_tests_poly1305_load_m.py
 build/test_poly1305_multiply.c: make_tests_poly1305_multiply.py
 	python $^ > $@
 
+build/test_poly1305_accumulate.c: make_tests_poly1305_accumulate.py
+	python $^ > $@
+
 build/test_poly1305_reduce: build/test_poly1305_reduce.c ../common.h build/poly1305.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
@@ -102,4 +105,7 @@ build/test_poly1305_load_m: build/test_poly1305_load_m.c ../common.h build/poly1
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/test_poly1305_multiply: build/test_poly1305_multiply.c ../common.h build/poly1305.o
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/test_poly1305_accumulate: build/test_poly1305_accumulate.c ../common.h build/poly1305.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^

@@ -222,9 +222,13 @@ class MACSelfTest(unittest.TestCase):
         out4 = binascii.b2a_hex(h.digest())
 
         # Test .copy()
-        h2 = h.copy()
-        h.update(b("blah blah blah"))  # Corrupt the original hash object
-        out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
+        try:
+            h2 = h.copy()
+            h.update(b("blah blah blah"))  # Corrupt the original hash object
+            out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
+            self.assertEqual(expected, out5)
+        except NotImplementedError:
+            pass
 
         # PY3K: Check that hexdigest() returns str and digest() returns bytes
         if sys.version_info[0] > 2:
@@ -245,7 +249,6 @@ class MACSelfTest(unittest.TestCase):
             self.assertEqual(expected.decode(), out2)
             self.assertEqual(expected.decode(), out3)
         self.assertEqual(expected, out4)
-        self.assertEqual(expected, out5)
 
 
 def make_hash_tests(module, module_name, test_data, digest_size, oid=None,
