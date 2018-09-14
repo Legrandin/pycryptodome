@@ -31,6 +31,12 @@ matrix:
  - language: c
    script: cd src/test && make
    after_success: true
+ - language: c
+   script: cd src/test && CFLAGS="-m32" make
+   after_success: true
+ - language: c
+   script: cd src/test && CPPFLAGS="-DHAVE_X86INTRIN_H" make
+   after_success: true
  - os: osx
    language: generic
    install: pip2 install cibuildwheel==0.9.2
