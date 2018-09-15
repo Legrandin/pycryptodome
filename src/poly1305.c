@@ -89,6 +89,20 @@ STATIC void poly1305_load_m(uint32_t m[5], const uint8_t data[], size_t len)
     m[4] = LOAD_U32_LITTLE(copy+16);
 }
 
+/*
+ * Load 16 bytes as the secret s, which is the fixed term in the polynomial, modulo 2^130-5.
+ */
+static void poly1305_load_s(uint32_t m[5], const uint8_t s[], size_t len)
+{
+    assert(len==16);
+
+    m[0] = LOAD_U32_LITTLE(s);
+    m[1] = LOAD_U32_LITTLE(s+4);
+    m[2] = LOAD_U32_LITTLE(s+8);
+    m[3] = LOAD_U32_LITTLE(s+12);
+    m[4] = 0;
+}
+
 /**
  * Multiply by the secret r, "almost" modulo 2^130-5.
  *
@@ -259,7 +273,7 @@ static void poly1305_finalize(uint32_t h[5], const uint8_t s[16])
 {
     uint32_t m[5];
 
-    poly1305_load_m(m, s, 16);
+    poly1305_load_s(m, s, 16);
     poly1305_accumulate(h, m);
     poly1305_reduce(h);
 }

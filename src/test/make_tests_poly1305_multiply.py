@@ -2,6 +2,7 @@
 
 import struct
 from hashlib import sha1
+from binascii import unhexlify
 
 from common import counter, make_main, split32
 
@@ -87,5 +88,7 @@ for i in range(100):
         h = (h << 32) + struct.unpack('<I', prng[piece*4:(piece+1)*4])[0]
     secret = sha1(struct.pack('<II', 1, i)).digest()[:16]
     make_test(h, secret)
+
+make_test(2**128, unhexlify("746869032069730030322d0278746500"))
 
 make_main()

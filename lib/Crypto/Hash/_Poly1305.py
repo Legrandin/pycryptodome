@@ -120,7 +120,7 @@ def new(key, msg=None):
 
     Args:
         key (byte string/byte array/memoryview):
-            key for the Poly1305 object, 32 bytes.
+            key for the Poly1305 object, 32 bytes *(r, s)*.
         msg (byte string/byte array/memoryview):
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to `_Poly1305.update`. Optional.
