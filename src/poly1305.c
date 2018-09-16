@@ -34,8 +34,8 @@
 FAKE_INIT(poly1305)
 
 typedef struct mac_state_t {
-    uint32_t r[4], rr[4];   /** key **/
-    uint8_t s[16];          /** key **/
+    uint32_t r[4], rr[4];   /** key - variable in polynomial **/
+    uint32_t s[5];          /** key - fixed term in polynomial **/
     uint32_t h[5];          /** state **/
 
     uint8_t buffer[16];     /** temp input **/
@@ -92,10 +92,8 @@ STATIC void poly1305_load_m(uint32_t m[5], const uint8_t data[], size_t len)
 /*
  * Load 16 bytes as the secret s, which is the fixed term in the polynomial, modulo 2^130-5.
  */
-static void poly1305_load_s(uint32_t m[5], const uint8_t s[], size_t len)
+static void poly1305_load_s(uint32_t m[5], const uint8_t s[16])
 {
-    assert(len==16);
-
     m[0] = LOAD_U32_LITTLE(s);
     m[1] = LOAD_U32_LITTLE(s+4);
     m[2] = LOAD_U32_LITTLE(s+8);
@@ -269,12 +267,9 @@ static void poly1305_process(uint32_t h[5], uint32_t r[4], uint32_t rr[4], uint8
  *
  * s[] is expected to be the result of an encryption done with AES or ChaCha20.
  */
-static void poly1305_finalize(uint32_t h[5], const uint8_t s[16])
+static void poly1305_finalize(uint32_t h[5], const uint32_t s[5])
 {
-    uint32_t m[5];
-
-    poly1305_load_s(m, s, 16);
-    poly1305_accumulate(h, m);
+    poly1305_accumulate(h, s);
     poly1305_reduce(h);
 }
 
@@ -297,7 +292,7 @@ EXPORT_SYM int poly1305_init(mac_state **pState,
         return ERR_MEMORY;
 
     poly1305_load_r(ms->r, ms->rr, key);
-    memcpy(ms->s, key+16, 16);
+    poly1305_load_s(ms->s, key+16);
 
     return 0;
 }
