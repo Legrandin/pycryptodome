@@ -276,23 +276,20 @@ static void poly1305_finalize(uint32_t h[5], const uint32_t s[5])
 /* --------------------------------------------------------- */
 
 EXPORT_SYM int poly1305_init(mac_state **pState,
-                             const uint8_t *key,    /** r || s **/
-                             size_t keySize)
+                             const uint8_t r[16],
+                             const uint8_t s[16])
 {
     mac_state *ms;
 
-    if (NULL == pState || NULL == key)
+    if (NULL == pState || NULL == r || NULL == s)
         return ERR_NULL;
 
-    if (keySize != 32)
-        return ERR_KEY_SIZE;
-    
     *pState = ms = (mac_state*) calloc(1, sizeof(mac_state));
     if (NULL == ms)
         return ERR_MEMORY;
 
-    poly1305_load_r(ms->r, ms->rr, key);
-    poly1305_load_s(ms->s, key+16);
+    poly1305_load_r(ms->r, ms->rr, r);
+    poly1305_load_s(ms->s, s);
 
     return 0;
 }

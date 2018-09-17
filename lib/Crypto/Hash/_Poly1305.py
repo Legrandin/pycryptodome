@@ -35,8 +35,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
                         """
                         int poly1305_init(void **state,
-                                          const uint8_t *key,
-                                          size_t key_size);
+                                          const uint8_t r[16],
+                                          const uint8_t s[16]);
                         int poly1305_destroy(void *state);
                         int poly1305_update(void *state,
                                             const uint8_t *in,
@@ -50,14 +50,14 @@ class Poly1305(object):
 
     digest_size = 16
 
-    def __init__(self, key, data):
+    def __init__(self, r, s, data):
 
         self._mac_tag = None
 
         state = VoidPointer()
         result = _raw_poly1305.poly1305_init(state.address_of(),
-                                             c_uint8_ptr(key),
-                                             c_size_t(len(key))
+                                             c_uint8_ptr(r),
+                                             c_uint8_ptr(s)
                                              )
         if result:
             raise ValueError("Error %d while instantiating Poly1305" % result)
@@ -132,4 +132,4 @@ def new(key, msg=None):
     if len(key) != 32:
         raise ValueError("Poly1305 key must be 32 bytes long")
 
-    return Poly1305(key, msg)
+    return Poly1305(key[:16], key[16:], msg)
