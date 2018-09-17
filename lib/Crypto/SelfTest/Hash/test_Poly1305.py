@@ -36,9 +36,14 @@
 import json
 import unittest
 
+from common import make_mac_tests
+from Crypto.SelfTest.st_common import list_test_cases
+
 from Crypto.Util.py3compat import tobytes, _memoryview, unhexlify, hexlify
 
-from Crypto.Hash import _Poly1305
+from Crypto.Hash import _Poly1305 as Poly1305
+
+from Crypto.Util.strxor import strxor_c
 
 test_data = [
     (
@@ -62,17 +67,192 @@ test_data = [
         "https://tools.ietf.org/html/draft-agl-tls-chacha20poly1305-00#section-7 B",
         {}
     ),
+    (
+        "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
+        "",
+        "6b657920666f7220506f6c7931333035",
+        "Generated with pure Python",
+        {}
+    ),
+    (
+        "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
+        "FF",
+        "f7e4e0ef4c46d106219da3d1bdaeb3ff",
+        "Generated with pure Python",
+        {}
+    ),
+    (
+        "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
+        "FF00",
+        "7471eceeb22988fc936da1d6e838b70e",
+        "Generated with pure Python",
+        {}
+    ),
+    (
+        "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
+        "AA" * 17,
+        "32590bc07cb2afaccca3f67f122975fe",
+        "Generated with pure Python",
+        {}
+    ),
 ]
 
 
-def get_tests(config={}):
+class Poly1305Test(unittest.TestCase):
 
-    from common import make_mac_tests
-    tests = make_mac_tests(_Poly1305, "Poly1305", test_data)
+    key = b'\x11' * 32
+
+    def test_new_positive(self):
+
+        data = b'r' * 100
+
+        h1 = Poly1305.new(self.key)
+        self.assertEqual(h1.digest_size, 16)
+        d1 = h1.update(data).digest()
+        self.assertEqual(len(d1), 16)
+
+        h2 = Poly1305.new(self.key, data)
+        d2 = h2.digest()
+        self.assertEqual(d1, d2)
+
+    def test_new_negative(self):
+
+        self.assertRaises(ValueError, Poly1305.new, self.key[:31])
+        self.assertRaises(TypeError, Poly1305.new, u"2" * 32)
+        self.assertRaises(TypeError, Poly1305.new, self.key, u"2" * 100)
+
+    def test_update(self):
+        pieces = [b"\x0A" * 200, b"\x14" * 300]
+        h1 = Poly1305.new(self.key)
+        h1.update(pieces[0]).update(pieces[1])
+        d1 = h1.digest()
+
+        h2 = Poly1305.new(self.key)
+        h2.update(pieces[0] + pieces[1])
+        d2 = h2.digest()
+        self.assertEqual(d1, d2)
+
+    def test_update_negative(self):
+        h = Poly1305.new(self.key)
+        self.assertRaises(TypeError, h.update, u"string")
+
+    def test_digest(self):
+        h = Poly1305.new(self.key)
+        digest = h.digest()
+
+        # hexdigest does not change the state
+        self.assertEqual(h.digest(), digest)
+        # digest returns a byte string
+        self.failUnless(isinstance(digest, type(b"digest")))
+
+    def test_update_after_digest(self):
+        msg=b"rrrrttt"
+
+        # Normally, update() cannot be done after digest()
+        h = Poly1305.new(self.key, msg[:4])
+        h.digest()
+        self.assertRaises(TypeError, h.update, msg[4:])
+
+    def test_hex_digest(self):
+        mac = Poly1305.new(self.key)
+        digest = mac.digest()
+        hexdigest = mac.hexdigest()
+
+        # hexdigest is equivalent to digest
+        self.assertEqual(hexlify(digest), tobytes(hexdigest))
+        # hexdigest does not change the state
+        self.assertEqual(mac.hexdigest(), hexdigest)
+        # hexdigest returns a string
+        self.failUnless(isinstance(hexdigest, type("digest")))
+
+    def test_verify(self):
+        h = Poly1305.new(self.key)
+        mac = h.digest()
+        h.verify(mac)
+        wrong_mac = strxor_c(mac, 255)
+        self.assertRaises(ValueError, h.verify, wrong_mac)
+
+    def test_hexverify(self):
+        h = Poly1305.new(self.key)
+        mac = h.hexdigest()
+        h.hexverify(mac)
+        self.assertRaises(ValueError, h.hexverify, "4556")
+
+    def test_bytearray(self):
+
+        data = b"\x00\x01\x02"
+        d_ref = Poly1305.new(self.key, data).digest()
+
+        # Data and key can be a bytearray (during initialization)
+        key_ba = bytearray(self.key)
+        data_ba = bytearray(data)
+
+        h1 = Poly1305.new(self.key, data)
+        h2 = Poly1305.new(key_ba, data_ba)
+        key_ba[:1] = b'\xFF'
+        data_ba[:1] = b'\xEE'
+
+        self.assertEqual(h1.digest(), d_ref)
+        self.assertEqual(h2.digest(), d_ref)
+
+        # Data can be a bytearray (during operation)
+        data_ba = bytearray(data)
+
+        h1 = Poly1305.new(self.key)
+        h2 = Poly1305.new(self.key)
+        h1.update(data)
+        h2.update(data_ba)
+        data_ba[:1] = b'\xFF'
+
+        self.assertEqual(h1.digest(), h2.digest())
+
+    def test_memoryview(self):
+
+        data = b"\x00\x01\x02"
+
+        def get_mv_ro(data):
+            return memoryview(data)
+
+        def get_mv_rw(data):
+            return memoryview(bytearray(data))
+
+        for get_mv in (get_mv_ro, get_mv_rw):
+
+            # Data and key can be a memoryview (during initialization)
+            key_mv = get_mv(self.key)
+            data_mv = get_mv(data)
+
+            h1 = Poly1305.new(self.key, data)
+            h2 = Poly1305.new(key_mv, data_mv)
+            if not data_mv.readonly:
+                data_mv[:1] = b'\xFF'
+                key_mv[:1] = b'\xFF'
+
+            self.assertEqual(h1.digest(), h2.digest())
+
+            # Data can be a memoryview (during operation)
+            data_mv = get_mv(data)
+
+            h1 = Poly1305.new(self.key)
+            h2 = Poly1305.new(self.key)
+            h1.update(data)
+            h2.update(data_mv)
+            if not data_mv.readonly:
+                data_mv[:1] = b'\xFF'
+
+            self.assertEqual(h1.digest(), h2.digest())
+
+    import types
+    if _memoryview == types.NoneType:
+        del test_memoryview
+
+
+def get_tests(config={}):
+    tests = make_mac_tests(Poly1305, "Poly1305", test_data)
+    tests += list_test_cases(Poly1305Test)
     return tests
 
 
 if __name__ == '__main__':
-    import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
