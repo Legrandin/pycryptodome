@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Hash/_Poly1305.py - Implements the Poly1305 MAC
+# Hash/Poly1305.py - Implements the Poly1305 MAC
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -22,7 +22,7 @@
 
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import bord, tobytes
+from Crypto.Util.py3compat import bord, tobytes, _copy_bytes
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
@@ -46,7 +46,7 @@ _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
                         """)
 
 
-class Poly1305(object):
+class Poly1305_MAC(object):
 
     digest_size = 16
 
@@ -115,21 +115,46 @@ class Poly1305(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key, msg=None):
+def new(**kwargs):
     """Create a new Poly1305 MAC object.
 
     Args:
-        key (byte string/byte array/memoryview):
-            key for the Poly1305 object, 32 bytes *(r, s)*.
-        msg (byte string/byte array/memoryview):
+        key (bytes/bytearray/memoryview):
+            The 32-byte key for the Poly1305 object.
+        cipher (module from `Crypto.Cipher`):
+            The cipher algorithm to use for deriving the Poly1305
+            key pair *(r, s)*.
+            It can only be `Crypto.Cipher.AES` or `Crypto.Cipher.ChaCha20`.
+        nonce (bytes/bytearray/memoryview):
+            Optional. The non-repeatable value to use for the MAC of this
+            message.
+            It must be 16 bytes long for AES and 8 or 12 bytes for ChaCha20.
+            If not passed, a random nonce is created; you will find it in the
+            ``nonce`` attribute of the object.
+        data (bytes/bytearray/memoryview):
             Optional. The very first chunk of the message to authenticate.
-            It is equivalent to an early call to `_Poly1305.update`. Optional.
+            It is equivalent to an early call to ``update()``.
 
     Returns:
-        A :class:`_Poly1305` object
+        A :class:`Poly1305_MAC` object
     """
 
-    if len(key) != 32:
-        raise ValueError("Poly1305 key must be 32 bytes long")
+    cipher = kwargs.pop("cipher", None)
+    if not hasattr(cipher, '_derive_Poly1305_key_pair'):
+        raise TypeError("Parameter 'cipher' must be AES or ChaCha20")
 
-    return Poly1305(key[:16], key[16:], msg)
+    cipher_key = kwargs.pop("key", None)
+    if cipher_key is None:
+        raise TypeError("You must pass a parameter 'key'")
+
+    nonce = kwargs.pop("nonce", None)
+    data = kwargs.pop("data", None)
+    
+    if kwargs:
+        raise TypeError("Unknown parameters: " + str(kwargs))
+
+    r, s, nonce = cipher._derive_Poly1305_key_pair(cipher_key, nonce)
+    
+    new_mac = Poly1305_MAC(r, s, data)
+    new_mac.nonce = _copy_bytes(None, None, nonce)  # nonce may still be just a memoryview
+    return new_mac

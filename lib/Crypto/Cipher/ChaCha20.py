@@ -154,6 +154,33 @@ class ChaCha20Cipher:
             raise ValueError("Error %d while seeking with ChaCha20" % result)
 
 
+def _derive_Poly1305_key_pair(key, nonce):
+    """Derive a tuple (r, s, nonce) for a Poly1305 MAC.
+    
+    If nonce is ``None``, a new 12-byte nonce is generated.
+    """
+
+    if len(key) != 32:
+        raise ValueError("Poly1305 with ChaCha20 requires a 32-byte key")
+
+    if nonce is None:
+        nonce = get_random_bytes(12)
+    elif len(nonce) == 8:
+        # See RFC7538, 2.6: [...] ChaCha20 as specified here requires a 96-bit
+        # nonce.  So if the provided nonce is only 64-bit, then the first 32
+        # bits of the nonce will be set to a constant number.
+        # This will usually be zero, but for protocols with multiple senders it may be
+        # different for each sender, but should be the same for all
+        # invocations of the function with the same key by a particular
+        # sender.
+        nonce = b'\x00\x00\x00\x00' + nonce
+    elif len(nonce) != 12:
+        raise ValueError("Poly1305 with ChaCha20 requires an 8- or 12-byte nonce")
+
+    rs = new(key, nonce=nonce).encrypt(b'\x00' * 32)
+    return rs[16:], rs[:16], nonce
+
+
 def new(**kwargs):
     """Create a new ChaCha20 cipher
 

@@ -108,6 +108,24 @@ def _create_base_cipher(dict_parameters):
     return SmartPointer(cipher.get(), stop_operation)
 
 
+def _derive_Poly1305_key_pair(key, nonce):
+    """Derive a tuple (r, s, nonce) for a Poly1305 MAC.
+    
+    If nonce is ``None``, a new 16-byte nonce is generated.
+    """
+
+    if len(key) != 32:
+        raise ValueError("Poly1305 with AES requires a 32-byte key")
+
+    if nonce is None:
+        nonce = get_random_bytes(16)
+    elif len(nonce) != 16:
+        raise ValueError("Poly1305 with AES requires a 16-byte nonce")
+
+    s = new(key[:16], MODE_ECB).encrypt(nonce)
+    return key[16:], s, nonce
+
+
 def new(key, mode, *args, **kwargs):
     """Create a new AES cipher.
 

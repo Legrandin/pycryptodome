@@ -41,11 +41,13 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Util.py3compat import tobytes, _memoryview, unhexlify, hexlify
 
-from Crypto.Hash import _Poly1305 as Poly1305
+from Crypto.Hash import Poly1305
+from Crypto.Cipher import AES
 
 from Crypto.Util.strxor import strxor_c
 
-test_data = [
+# This is a list of (r+s keypair, data, result, description, keywords) tuples.
+test_data_basic = [
     (
         "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b",
         hexlify(b"Cryptographic Forum Research Group").decode(),
@@ -97,6 +99,41 @@ test_data = [
     ),
 ]
 
+# This is a list of (key(k+r), data, result, description, keywords) tuples.
+test_data_aes = [
+    (
+        "ec074c835580741701425b623235add6851fc40c3467ac0be05cc20404f3f700",
+        "f3f6",
+        "f4c633c3044fc145f84f335cb81953de",
+        "http://cr.yp.to/mac/poly1305-20050329.pdf",
+        { 'cipher':AES, 'nonce':unhexlify("fb447350c4e868c52ac3275cf9d4327e") }
+    ),
+    (
+        "75deaa25c09f208e1dc4ce6b5cad3fbfa0f3080000f46400d0c7e9076c834403",
+        "",
+        "dd3fab2251f11ac759f0887129cc2ee7",
+        "http://cr.yp.to/mac/poly1305-20050329.pdf",
+        { 'cipher':AES, 'nonce':unhexlify("61ee09218d29b0aaed7e154a2c5509cc") }
+    ),
+    (
+        "6acb5f61a7176dd320c5c1eb2edcdc7448443d0bb0d21109c89a100b5ce2c208",
+        "663cea190ffb83d89593f3f476b6bc24"
+        "d7e679107ea26adb8caf6652d0656136",
+        "0ee1c16bb73f0f4fd19881753c01cdbe",
+        "http://cr.yp.to/mac/poly1305-20050329.pdf",
+        { 'cipher':AES, 'nonce':unhexlify("ae212a55399729595dea458bc621ff0e") }
+    ),
+    (
+        "e1a5668a4d5b66a5f68cc5424ed5982d12976a08c4426d0ce8a82407c4f48207",
+        "ab0812724a7f1e342742cbed374d94d1"
+        "36c6b8795d45b3819830f2c04491faf0"
+        "990c62e48b8018b2c3e4a0fa3134cb67"
+        "fa83e158c994d961c4cb21095c1bf9",
+        "5154ad0d2cb26e01274fc51148491f1b",
+        "http://cr.yp.to/mac/poly1305-20050329.pdf",
+        { 'cipher':AES, 'nonce':unhexlify("9ae831e743978d3a23527c7128149e3a") }
+    ),
+]
 
 class Poly1305Test(unittest.TestCase):
 
@@ -247,9 +284,39 @@ class Poly1305Test(unittest.TestCase):
         del test_memoryview
 
 
+#
+# make_mac_tests() expect a new() function with signature new(key, data,
+# **kwargs), and we need to adapt Poly1305's, as it only uses keywords
+#
+class Poly1305_New(object):
+
+    @staticmethod
+    def new(key, *data, **kwds):
+        _kwds = dict(kwds)
+        if len(data) == 1:
+            _kwds['data'] = data[0]
+        _kwds['key'] = key
+        return Poly1305.new(**_kwds)
+
+
+class Poly1305_Basic(object):
+
+    @staticmethod
+    def new(key, *data, **kwds):
+        from Crypto.Hash.Poly1305 import Poly1305_MAC
+
+        if len(data) == 1:
+            msg = data[0]
+        else:
+            msg = None
+
+        return Poly1305_MAC(key[:16], key[16:], msg)
+
+
 def get_tests(config={}):
-    tests = make_mac_tests(Poly1305, "Poly1305", test_data)
-    tests += list_test_cases(Poly1305Test)
+    tests = make_mac_tests(Poly1305_Basic, "Poly1305", test_data_basic)
+    tests += make_mac_tests(Poly1305_New, "Poly1305", test_data_aes)
+    #tests += list_test_cases(Poly1305Test)
     return tests
 
 
