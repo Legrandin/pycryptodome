@@ -162,7 +162,7 @@ static inline void align_free(void *mem)
 #endif
 
 /*
- * Endianess convesion
+ * Endianness convesion
  */
 
 static inline void u32to8_little(uint8_t *p, const uint32_t *w)

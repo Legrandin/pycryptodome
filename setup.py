@@ -727,7 +727,7 @@ if use_separate_namespace:
         create_cryptodome_lib()
 
 
-# By doing this we neeed to change version information in a single file
+# By doing this we need to change version information in a single file
 with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
     for line in init_root:
         if line.startswith("version_info"):
