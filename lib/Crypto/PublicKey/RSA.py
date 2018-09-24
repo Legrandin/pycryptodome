@@ -92,8 +92,8 @@ class RsaKey(object):
         """
 
         input_set = set(kwargs.keys())
-        public_set = set(('n', 'e'))
-        private_set = public_set | set(('p', 'q', 'd', 'u'))
+        public_set = {'n', 'e'}
+        private_set = public_set | {'p', 'q', 'd', 'u'}
         if input_set not in (private_set, public_set):
             raise ValueError("Some RSA components are missing")
         for component, value in kwargs.items():
@@ -223,7 +223,7 @@ class RsaKey(object):
             key_type = "Private"
         else:
             key_type = "Public"
-        return "%s RSA key at 0x%X" % (key_type, id(self))
+        return "{} RSA key at 0x{:X}".format(key_type, id(self))
 
     def export_key(self, format='PEM', passphrase=None, pkcs=1,
                    protection=None, randfunc=None):

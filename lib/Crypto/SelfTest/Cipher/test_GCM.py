@@ -862,7 +862,7 @@ class TestVariableLength(unittest.TestCase):
         h = SHA256.new()
 
         for length in range(160):
-            nonce = '{0:04d}'.format(length).encode('utf-8')
+            nonce = '{:04d}'.format(length).encode('utf-8')
             data = bchr(length) * length
             cipher = AES.new(key, AES.MODE_GCM, nonce=nonce, **self._extra_params)
             ct, tag = cipher.encrypt_and_digest(data)

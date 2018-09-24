@@ -147,8 +147,8 @@ class CipherStreamingSelfTest(CipherSelfTest):
     def shortDescription(self):
         desc = self.module_name
         if self.mode is not None:
-            desc += " in %s mode" % (self.mode_name,)
-        return "%s should behave like a stream cipher" % (desc,)
+            desc += " in {} mode".format(self.mode_name)
+        return "{} should behave like a stream cipher".format(desc)
 
     def runTest(self):
         plaintext = a2b_hex(self.plaintext)
@@ -185,7 +185,7 @@ class RoundtripTest(unittest.TestCase):
         self.module_name = params.get('module_name', None)
 
     def shortDescription(self):
-        return """%s .decrypt() output of .encrypt() should not be garbled""" % (self.module_name,)
+        return """{} .decrypt() output of .encrypt() should not be garbled""".format(self.module_name)
 
     def runTest(self):
 
@@ -423,9 +423,9 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         if p_description is not None:
             description = p_description
         elif p_mode == 'ECB' and not p2:
-            description = "p=%s, k=%s" % (p_plaintext, p_key)
+            description = "p={}, k={}".format(p_plaintext, p_key)
         else:
-            description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
+            description = "p={}, k={}, {!r}".format(p_plaintext, p_key, p2)
         name = "%s #%d: %s" % (module_name, i+1, description)
         params['description'] = name
         params['module_name'] = module_name
@@ -474,9 +474,9 @@ def make_stream_tests(module, module_name, test_data):
         if p_description is not None:
             description = p_description
         elif not p2:
-            description = "p=%s, k=%s" % (p_plaintext, p_key)
+            description = "p={}, k={}".format(p_plaintext, p_key)
         else:
-            description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
+            description = "p={}, k={}, {!r}".format(p_plaintext, p_key, p2)
         name = "%s #%d: %s" % (module_name, i+1, description)
         params['description'] = name
         params['module_name'] = module_name

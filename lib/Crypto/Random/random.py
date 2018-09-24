@@ -70,7 +70,7 @@ class StrongRandom(object):
         if num_choices < 0:
             num_choices = 0
         if num_choices < 1:
-            raise ValueError("empty range for randrange(%r, %r, %r)" % (start, stop, step))
+            raise ValueError("empty range for randrange({!r}, {!r}, {!r})".format(start, stop, step))
 
         # Pick a random number in the range of possible numbers
         r = num_choices

@@ -245,8 +245,8 @@ def load_pycryptodome_raw_lib(name, cdecl):
             return load_lib(pycryptodome_filename(dir_comps, filename),
                             cdecl)
         except OSError as exp:
-            attempts.append("Trying '%s': %s" % (filename, str(exp)))
-    raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
+            attempts.append("Trying '{}': {}".format(filename, str(exp)))
+    raise OSError("Cannot load native module '{}': {}".format(name, ", ".join(attempts)))
 
 def expect_byte_string(data):
     raise NotImplementedError("To be removed")

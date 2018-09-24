@@ -201,7 +201,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
             x = ""
         else:
             x = " not"
-        PrintErr("Target does%s support %s" % (x, msg))
+        PrintErr("Target does{} support {}".format(x, msg))
 
     return result
 
@@ -470,7 +470,7 @@ def create_cryptodome_lib():
             full_file_name_src = os.path.join(root_src, file_name)
             full_file_name_dst = os.path.join(root_dst, file_name)
 
-            PrintErr("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
+            PrintErr("Copying file {} to {}".format(full_file_name_src, full_file_name_dst))
             shutil.copy2(full_file_name_src, full_file_name_dst)
 
             if not full_file_name_dst.endswith(".py"):
