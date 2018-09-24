@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.x.x (xx xxxxxx 2018)
+++++++++++++++++++++++
+
+Breaks in compatibility
+-----------------------
+
+* With the old Python 2.6, use only ``ctypes`` (and not ``cffi``) to interface to native code.
+
 3.6.6 (17 August 2018)
 ++++++++++++++++++++++
 
@@ -63,7 +71,7 @@ Resolved issues
 ---------------
 
 * On Windows, MPIR library was stilled pulled in if renamed to ``gmp.dll``.
- 
+
 Breaks in compatibility
 -----------------------
 
