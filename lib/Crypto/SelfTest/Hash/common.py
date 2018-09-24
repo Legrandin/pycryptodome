@@ -268,9 +268,7 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None,
         tests.append(HashTestOID(module, oid, extra_params))
 
     tests.append(ByteArrayTest(module, extra_params))
-
-    if not (sys.version_info[0] == 2 and sys.version_info[1] < 7):
-        tests.append(MemoryViewTest(module, extra_params))
+    tests.append(MemoryViewTest(module, extra_params))
 
     return tests
 

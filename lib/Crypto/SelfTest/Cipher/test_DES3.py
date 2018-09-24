@@ -71,7 +71,7 @@ for tdes_file in nist_tdes_mmt_files:
         test_data_item = (tostr(hexlify(tv.plaintext)),
                           tostr(hexlify(tv.ciphertext)),
                           tostr(hexlify(key)),
-                          "%s (%s)" % (tdes_file, index))
+                          "{} ({})".format(tdes_file, index))
         test_data.append(test_data_item)
 
 

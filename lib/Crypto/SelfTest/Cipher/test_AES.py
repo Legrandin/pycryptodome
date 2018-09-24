@@ -1260,7 +1260,7 @@ class TestMultipleBlocks(unittest.TestCase):
             cipher = AES.new(key, AES.MODE_ECB, use_aesni=self.use_aesni)
             h = SHA256.new()
 
-            pt = b"".join([ tobytes('{0:016x}'.format(x)) for x in range(20) ])
+            pt = b"".join([ tobytes('{:016x}'.format(x)) for x in range(20) ])
             ct = cipher.encrypt(pt)
             self.assertEqual(SHA256.new(ct).hexdigest(), expected)
 

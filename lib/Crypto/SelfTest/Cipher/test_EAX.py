@@ -622,7 +622,7 @@ class TestVectorsWycheproof(unittest.TestCase):
     def warn(self, tv):
         if tv.warning and self._wycheproof_warnings:
             import warnings
-            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+            warnings.warn("Wycheproof warning: {} ({})".format(self._id, tv.comment))
 
     def test_encrypt(self, tv):
         self._id = "Wycheproof Encrypt EAX Test #" + str(tv.id)
