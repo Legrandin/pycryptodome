@@ -366,7 +366,7 @@ New features
 ------------
 
 * Windows wheels bundle the MPIR library
-* Detection of faults occuring during secret RSA operations
+* Detection of faults occurring during secret RSA operations
 * Detection of non-prime (weak) q value in DSA domain parameters
 * Added original Keccak hash family (b=1600 only).
   In the process, simplified the C code base for SHA-3.

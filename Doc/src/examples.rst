@@ -72,7 +72,7 @@ The following code reads the private RSA key back in, and then prints again the 
 Generate public key and private key
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following code generates public key stored in ``receiver.pem`` and private key stored in ``private.pem``. These files will be used in the examples below. Everytime, it generates different public key and private key pair.
+The following code generates public key stored in ``receiver.pem`` and private key stored in ``private.pem``. These files will be used in the examples below. Every time, it generates different public key and private key pair.
 
 .. code-block:: python
 

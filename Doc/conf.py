@@ -17,7 +17,7 @@ import sys, os
 sys.path.insert(0, os.path.abspath('../lib'))
 print sys.path
 
-# Mock existance of native modules
+# Mock existence of native modules
 from Crypto.Util import _raw_api
 
 class MockLib(object):

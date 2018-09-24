@@ -85,7 +85,7 @@ FAKE_INIT(ghash_clmul)
 
 struct exp_key {
     /**
-     *  Powers of H (already swapped in byte endianess, and pre-multiplied by X)
+     *  Powers of H (already swapped in byte endianness, and pre-multiplied by X)
      *
      *  h[0] is x*H   mod p(x)
      *  h[1] is x*H^2 mod p(x)

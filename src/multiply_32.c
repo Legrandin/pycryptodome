@@ -47,19 +47,19 @@ DAMAGE.
 #elif defined(PYCRYPTO_BIG_ENDIAN) 
 #define INDEX(x, i) (((x) + (i)) ^ 1)
 #else
-#error Undefined endianess
+#error Undefined endianness
 #endif
 
 /*
  * Multiply a vector a[] by a scalar b. Add the result into vector t[],
  * starting from index offset.
  *
- * t[] and a[] are little-endian but words are interleaved in big endian systems.
- * In other words, while in little endian systems they are layed out as:
+ * t[] and a[] are little-endian but words are interleaved in big-endian systems.
+ * In other words, while in little-endian systems they are laid out as:
  *
  *   t[0], t[1], t[2], t[3], ...
  *
- * In a big endian system they are instead:
+ * In a big-endian system they are instead:
  *
  *   t[1], t[0], t[3], t[2], t[5], t[4], ...
  *
@@ -192,12 +192,12 @@ size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0
 /*
  * Square a vector a[] and store the result in t[].
  *
- * Words in t[] and a[] are interleaved in big endian systems.
- * In other words, while in little endian systems they are layed out as:
+ * Words in t[] and a[] are interleaved in big-endian systems.
+ * In other words, while in little-endian systems they are laid out as:
  *   
  *   t[0], t[1], t[2], t[3], ...
  *
- * In a big endian system they are instead:
+ * In a big-endian system they are instead:
  *
  *   t[1], t[0], t[3], t[2], t[5], t[4], ...
  *
