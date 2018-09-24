@@ -25,11 +25,9 @@ try:
 except ImportError:
     from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
-from distutils.command.build import build
 from distutils.errors import CCompilerError
 from distutils import ccompiler
 import distutils
-import platform
 import re
 import os
 import sys
@@ -69,7 +67,7 @@ PyCryptodome
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.6 or newer, all Python 3 versions and PyPy.
+It supports Python 2.6 and 2.7, Python 3.4 and newer, and PyPy.
 
 You can install it with::
 
@@ -736,16 +734,17 @@ with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
 version_string = ".".join([str(x) for x in version_tuple])
 
 setup(
-    name = project_name,
-    version = version_string,
-    description = "Cryptographic library for Python",
-    long_description = longdesc,
-    author = "Helder Eijs",
-    author_email = "helderijs@gmail.com",
-    url = "http://www.pycryptodome.org",
-    platforms = 'Posix; MacOS X; Windows',
-    zip_safe = False,
-    classifiers = [
+    name=project_name,
+    version=version_string,
+    description="Cryptographic library for Python",
+    long_description=longdesc,
+    author="Helder Eijs",
+    author_email="helderijs@gmail.com",
+    url="https://www.pycryptodome.org",
+    platforms='Posix; MacOS X; Windows',
+    zip_safe=False,
+    python_requires='>=2.6, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+    classifiers=[
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: BSD License',
         'License :: Public Domain',
@@ -758,14 +757,18 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
-    packages = packages,
-    package_dir = package_dir,
-    package_data = package_data,
-    cmdclass = {
+    packages=packages,
+    package_dir=package_dir,
+    package_data=package_data,
+    cmdclass={
         'build_ext':PCTBuildExt,
         'build_py': PCTBuildPy,
         'test': TestCommand,
         },
-    ext_modules = ext_modules,
+    ext_modules=ext_modules,
 )

@@ -4,7 +4,6 @@ sudo: required
 python:
  - "2.6"
  - "2.7"
- - "3.3"
  - "3.4"
  - "3.5"
  - "3.6"
@@ -20,10 +19,6 @@ matrix:
  - python: pypy3
    env: CFFI=no
  include:
- - python: 3.4
-   env: CFFI=no OLDPY=python3.2
- - python: 3.4
-   env: CFFI=yes OLDPY=python3.2
  - python: 3.7
    env: CFFI=no
    dist: xenial
