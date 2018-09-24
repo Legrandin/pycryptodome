@@ -85,11 +85,7 @@ if sys.version_info[0] == 2:
 
     from sys import maxint
 
-    if sys.version_info[1] < 7:
-        import types
-        _memoryview = types.NoneType
-    else:
-        _memoryview = memoryview
+    _memoryview = memoryview
 else:
     def b(s):
        return s.encode("latin-1") # utf-8 would cause some side-effects we don't want
@@ -115,19 +111,12 @@ else:
     def byte_string(s):
         return isinstance(s, bytes)
 
-    # With Python 3.[0-2], unhexlify only accepts bytes.
-    # Starting from Python 3.3, strings can be passed too.
     import binascii
     hexlify = binascii.hexlify
-    if sys.version_info[1] <= 2:
-        _unhexlify = binascii.unhexlify
-        def unhexlify(x):
-            return _unhexlify(tobytes(x))
-    else:
-        unhexlify = binascii.unhexlify
+    unhexlify = binascii.unhexlify
     del binascii
 
-    # In Pyton 3.x, StringIO is a sub-module of io
+    # In Python 3.x, StringIO is a sub-module of io
     from io import BytesIO
     from sys import maxsize as maxint
 

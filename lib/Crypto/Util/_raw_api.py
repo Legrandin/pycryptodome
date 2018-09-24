@@ -35,8 +35,7 @@ from Crypto.Util._file_system import pycryptodome_filename
 #
 # List of file suffixes for Python extensions
 #
-if sys.version_info[0] < 3 or \
-   (sys.version_info[0] == 3 and sys.version_info[1] <= 3):
+if sys.version_info.major == 2:
 
     import imp
     extension_suffixes = []
@@ -50,10 +49,7 @@ else:
     extension_suffixes = machinery.EXTENSION_SUFFIXES
 
 # Which types with buffer interface we support (apart from byte strings)
-if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-    _buffer_type = (bytearray)
-else:
-    _buffer_type = (bytearray, memoryview)
+_buffer_type = (bytearray, memoryview)
 
 try:
     from cffi import FFI
@@ -150,12 +146,7 @@ except ImportError:
 
     # ---- Get raw pointer ---
 
-    if sys.version_info[0] == 2 and sys.version_info[1] == 6:
-        # ctypes in 2.6 does not define c_ssize_t. Replacing it
-        # with c_size_t keeps the structure correctely laid out
-        _c_ssize_t = c_size_t
-    else:
-        _c_ssize_t = ctypes.c_ssize_t
+    _c_ssize_t = ctypes.c_ssize_t
 
     _PyBUF_SIMPLE = 0
     _PyObject_GetBuffer = ctypes.pythonapi.PyObject_GetBuffer
