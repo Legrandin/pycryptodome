@@ -29,9 +29,11 @@
 # ===================================================================
 
 import unittest
+from binascii import unhexlify
+
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._file_system import pycryptodome_filename
-from Crypto.Util.py3compat import b, unhexlify, bord, tostr
+from Crypto.Util.py3compat import bord, tostr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Hash import SHAKE128
 
@@ -44,7 +46,7 @@ def load_file(filename, mode="rb"):
 
 
 def compact(lines):
-    ext = b("").join(lines)
+    ext = b"".join(lines)
     return unhexlify(tostr(ext).replace(" ", "").replace(":", ""))
 
 
@@ -65,7 +67,7 @@ ref_private, ref_public = create_ref_keys()
 
 
 def get_fixed_prng():
-        return SHAKE128.new().update(b("SEED")).read
+        return SHAKE128.new().update(b"SEED").read
 
 
 class TestImport(unittest.TestCase):
@@ -152,7 +154,7 @@ class TestImport(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b("secret"))
+            key = ECC.import_key(tostr(key_file), b"secret")
             self.assertEqual(ref_private, key)
 
     def test_import_x509_pem(self):
@@ -268,7 +270,7 @@ class TestExport(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pem_encrypted(self):
-        encoded = ref_private._export_private_pem(passphrase=b("secret"))
+        encoded = ref_private._export_private_pem(passphrase=b"secret")
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -372,7 +374,7 @@ class TestExport(unittest.TestCase):
                                           randfunc=get_fixed_prng())
         encoded2 = ref_private.export_key(format="PEM",
                                           use_pkcs8=False,
-                                          passphrase=b("secret"),
+                                          passphrase=b"secret",
                                           randfunc=get_fixed_prng())
         self.assertEquals(encoded1, encoded2)
 

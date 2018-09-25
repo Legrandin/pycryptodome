@@ -29,9 +29,10 @@
 # ===================================================================
 
 import unittest
+from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, b, unhexlify
+from Crypto.Util.py3compat import tobytes
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -78,7 +79,7 @@ class OpenPGPTests(BlockChainingTests):
 
     def test_IV_iv_attributes(self):
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
-        eiv = cipher.encrypt(b(""))
+        eiv = cipher.encrypt(b"")
         self.assertEqual(cipher.iv, self.iv_128)
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, eiv)
@@ -86,35 +87,35 @@ class OpenPGPTests(BlockChainingTests):
 
     def test_null_encryption_decryption(self):
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
-        eiv = cipher.encrypt(b(""))
+        eiv = cipher.encrypt(b"")
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, eiv)
-        self.assertEqual(cipher.decrypt(b("")), b(""))
+        self.assertEqual(cipher.decrypt(b""), b"")
 
     def test_either_encrypt_or_decrypt(self):
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
-        eiv = cipher.encrypt(b(""))
-        self.assertRaises(TypeError, cipher.decrypt, b(""))
+        eiv = cipher.encrypt(b"")
+        self.assertRaises(TypeError, cipher.decrypt, b"")
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, eiv)
-        cipher.decrypt(b(""))
-        self.assertRaises(TypeError, cipher.encrypt, b(""))
+        cipher.decrypt(b"")
+        self.assertRaises(TypeError, cipher.encrypt, b"")
 
     def test_unaligned_data_128(self):
-        plaintexts = [ b("7777777") ] * 100
+        plaintexts = [ b"7777777" ] * 100
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
         ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
-        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
+        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
     def test_unaligned_data_64(self):
-        plaintexts = [ b("7777777") ] * 100
+        plaintexts = [ b"7777777" ] * 100
 
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
         ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
-        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
+        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
 
 class TestVectors(unittest.TestCase):

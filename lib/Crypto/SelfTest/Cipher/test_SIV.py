@@ -30,9 +30,10 @@
 
 import json
 import unittest
+from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
+from Crypto.Util.py3compat import tobytes, bchr, _memoryview
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
@@ -80,7 +81,7 @@ class SivTests(unittest.TestCase):
     def test_nonce_length(self):
         # nonce can be of any length (but not empty)
         self.assertRaises(ValueError, AES.new, self.key_256, AES.MODE_SIV,
-                          nonce=b(""))
+                          nonce=b"")
 
         for x in range(1, 128):
             cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=bchr(1) * x)
@@ -124,7 +125,7 @@ class SivTests(unittest.TestCase):
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.decrypt_and_verify,
-                          u'test1234567890-*', b("xxxx"))
+                          u'test1234567890-*', b"xxxx")
 
     def test_mac_len(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
@@ -255,13 +256,13 @@ class SivFSMTests(unittest.TestCase):
         # Path INIT->ENCRYPT fails
         cipher = AES.new(self.key_256, AES.MODE_SIV,
                          nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, b("xxx"))
+        self.assertRaises(TypeError, cipher.encrypt, b"xxx")
 
     def test_invalid_init_decrypt(self):
         # Path INIT->DECRYPT fails
         cipher = AES.new(self.key_256, AES.MODE_SIV,
                          nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, b("xxx"))
+        self.assertRaises(TypeError, cipher.decrypt, b"xxx")
 
     def test_valid_init_update_digest_verify(self):
         # No plaintext, fixed authenticated data

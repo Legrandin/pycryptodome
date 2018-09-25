@@ -32,7 +32,6 @@ import re
 import sys
 import binascii
 
-from Crypto.Util.py3compat import unhexlify
 from Crypto.Util._file_system import pycryptodome_filename
 
 
@@ -97,7 +96,7 @@ def _load_tests(dir_comps, file_in, description, conversions):
             if conversion is None:
                 if len(data) % 2 != 0:
                     data = "0" + data
-                setattr(test_vector, token, unhexlify(data))
+                setattr(test_vector, token, binascii.unhexlify(data))
             else:
                 setattr(test_vector, token, conversion(data))
 

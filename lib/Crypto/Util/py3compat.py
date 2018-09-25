@@ -78,7 +78,6 @@ if sys.version_info[0] == 2:
         return bs
     def byte_string(s):
         return isinstance(s, str)
-    from binascii import hexlify, unhexlify
 
     # In Pyton 2.x, StringIO is a stand-alone module
     from StringIO import StringIO as BytesIO
@@ -114,11 +113,6 @@ else:
         return bs.decode("latin-1")
     def byte_string(s):
         return isinstance(s, bytes)
-
-    import binascii
-    hexlify = binascii.hexlify
-    unhexlify = binascii.unhexlify
-    del binascii
 
     # In Python 3.x, StringIO is a sub-module of io
     from io import BytesIO

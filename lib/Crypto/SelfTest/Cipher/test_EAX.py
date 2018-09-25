@@ -30,9 +30,10 @@
 
 import json
 import unittest
+from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import unhexlify, tobytes, bchr, b, _memoryview
+from Crypto.Util.py3compat import tobytes, bchr, _memoryview
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 
@@ -91,7 +92,7 @@ class EaxTests(unittest.TestCase):
     def test_nonce_length(self):
         # nonce can be of any length (but not empty)
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX,
-                          nonce=b(""))
+                          nonce=b"")
 
         for x in range(1, 128):
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=bchr(1) * x)
@@ -129,17 +130,17 @@ class EaxTests(unittest.TestCase):
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-            result = getattr(cipher, func)(b(""))
-            self.assertEqual(result, b(""))
+            result = getattr(cipher, func)(b"")
+            self.assertEqual(result, b"")
 
     def test_either_encrypt_or_decrypt(self):
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        cipher.encrypt(b(""))
-        self.assertRaises(TypeError, cipher.decrypt, b(""))
+        cipher.encrypt(b"")
+        self.assertRaises(TypeError, cipher.decrypt, b"")
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        cipher.decrypt(b(""))
-        self.assertRaises(TypeError, cipher.encrypt, b(""))
+        cipher.decrypt(b"")
+        self.assertRaises(TypeError, cipher.encrypt, b"")
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
@@ -208,7 +209,7 @@ class EaxTests(unittest.TestCase):
 
             for chunk in break_up(auth_data, chunk_length):
                 cipher.update(chunk)
-            pt2 = b("")
+            pt2 = b""
             for chunk in break_up(ciphertext, chunk_length):
                 pt2 += cipher.decrypt(chunk)
             self.assertEqual(plaintext, pt2)
@@ -221,7 +222,7 @@ class EaxTests(unittest.TestCase):
 
             for chunk in break_up(auth_data, chunk_length):
                 cipher.update(chunk)
-            ct2 = b("")
+            ct2 = b""
             for chunk in break_up(plaintext, chunk_length):
                 ct2 += cipher.encrypt(chunk)
             self.assertEqual(ciphertext, ct2)
@@ -399,8 +400,8 @@ class EaxFSMTests(unittest.TestCase):
 
     def test_valid_multiple_encrypt_or_decrypt(self):
         for method_name in "encrypt", "decrypt":
-            for auth_data in (None, b("333"), self.data_128,
-                              self.data_128 + b("3")):
+            for auth_data in (None, b"333", self.data_128,
+                              self.data_128 + b"3"):
                 if auth_data is None:
                     assoc_len = None
                 else:
@@ -684,15 +685,15 @@ class TestOtherCiphers(unittest.TestCase):
         def test_template(self, factory=factory, key_size=key_size):
             cipher = factory.new(get_tag_random("cipher", key_size),
                                  factory.MODE_EAX,
-                                 nonce=b("nonce"))
-            ct, mac = cipher.encrypt_and_digest(b("plaintext"))
+                                 nonce=b"nonce")
+            ct, mac = cipher.encrypt_and_digest(b"plaintext")
 
             cipher = factory.new(get_tag_random("cipher", key_size),
                                  factory.MODE_EAX,
-                                 nonce=b("nonce"))
+                                 nonce=b"nonce")
             pt2 = cipher.decrypt_and_verify(ct, mac)
 
-            self.assertEqual(b("plaintext"), pt2)
+            self.assertEqual(b"plaintext", pt2)
 
         setattr(cls, "test_" + name, test_template)
 

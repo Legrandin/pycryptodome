@@ -34,8 +34,9 @@
 import re
 import json
 import unittest
-from binascii import hexlify
-from Crypto.Util.py3compat import b, tobytes, bord, bchr, unhexlify
+from binascii import hexlify, unhexlify
+
+from Crypto.Util.py3compat import tobytes, bord, bchr
 
 from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Signature import DSS
@@ -100,7 +101,7 @@ class FIPS_DSA_Tests(unittest.TestCase):
         return "FIPS DSA Tests"
 
     def test_loopback(self):
-        hashed_msg = SHA512.new(b("test"))
+        hashed_msg = SHA512.new(b"test")
         signer = DSS.new(self.key_priv, 'fips-186-3')
         signature = signer.sign(hashed_msg)
 
@@ -116,7 +117,7 @@ class FIPS_DSA_Tests(unittest.TestCase):
         hash_obj = RIPEMD160.new()
         signer = DSS.new(self.key_priv, 'fips-186-3')
         self.assertRaises(ValueError, signer.sign, hash_obj)
-        self.assertRaises(ValueError, signer.verify, hash_obj, b("\x00") * 40)
+        self.assertRaises(ValueError, signer.verify, hash_obj, b"\x00" * 40)
 
     def test_negative_unknown_modes_encodings(self):
         """Verify that unknown modes/encodings are rejected"""
@@ -228,7 +229,7 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
         return "FIPS ECDSA Tests"
 
     def test_loopback(self):
-        hashed_msg = SHA512.new(b("test"))
+        hashed_msg = SHA512.new(b"test")
         signer = DSS.new(self.key_priv, 'fips-186-3')
         signature = signer.sign(hashed_msg)
 
@@ -244,7 +245,7 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
         hash_obj = SHA1.new()
         signer = DSS.new(self.key_priv, 'fips-186-3')
         self.assertRaises(ValueError, signer.sign, hash_obj)
-        self.assertRaises(ValueError, signer.verify, hash_obj, b("\x00") * 40)
+        self.assertRaises(ValueError, signer.verify, hash_obj, b"\x00" * 40)
 
     def test_sign_verify(self):
         """Verify public/private method"""
@@ -581,7 +582,7 @@ class Det_DSA_Tests(unittest.TestCase):
         new_signatures = []
         for tv in self.signatures:
             new_tv = TestVector()
-            new_tv.message = b(tv[0])      # message
+            new_tv.message = tobytes(tv[0])      # message
             new_tv.nonce = t2l(tv[1])
             new_tv.result = t2b(tv[2]) + t2b(tv[3])
             new_tv.module = tv[4]
@@ -599,14 +600,12 @@ class Det_DSA_Tests(unittest.TestCase):
 
         # Test _int2octets
         self.assertEqual(hexlify(signer._int2octets(x)),
-            b("009a4d6792295a7f730fc3f2b49cbc0f"
-              "62e862272f"))
+            b'009a4d6792295a7f730fc3f2b49cbc0f62e862272f')
 
         # Test _bits2octets
-        h1 = SHA256.new(b("sample")).digest()
+        h1 = SHA256.new(b"sample").digest()
         self.assertEqual(hexlify(signer._bits2octets(h1)),
-            b("01795edf0d54db760f156d0dac04c032"
-              "2b3a204224"))
+            b'01795edf0d54db760f156d0dac04c0322b3a204224')
 
     def test2(self):
 
@@ -710,7 +709,7 @@ class Det_ECDSA_Tests(unittest.TestCase):
         return "Deterministic ECDSA Tests"
 
     def test_loopback(self):
-        hashed_msg = SHA512.new(b("test"))
+        hashed_msg = SHA512.new(b"test")
         signer = DSS.new(self.key_priv, 'deterministic-rfc6979')
         signature = signer.sign(hashed_msg)
 

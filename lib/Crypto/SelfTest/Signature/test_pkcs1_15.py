@@ -30,8 +30,9 @@
 
 import json
 import unittest
+from binascii import unhexlify
 
-from Crypto.Util.py3compat import b, bchr, unhexlify
+from Crypto.Util.py3compat import bchr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
@@ -157,14 +158,14 @@ class PKCS1_15_NoParams(unittest.TestCase):
             n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
             -----END RSA PRIVATE KEY-----"""
 
-    msg = b("This is a test\x0a")
+    msg = b"This is a test\x0a"
 
     # PKCS1 v1.5 signature of the message computed using SHA-1.
     # The digestAlgorithm SEQUENCE does NOT contain the NULL parameter.
     signature = "a287a13517f716e72fb14eea8e33a8db4a4643314607e7ca3e3e28"\
                 "1893db74013dda8b855fd99f6fecedcb25fcb7a434f35cd0a101f8"\
                 "b19348e0bd7b6f152dfc"
-    signature = unhexlify(b(signature))
+    signature = unhexlify(signature)
 
     def runTest(self):
         verifier = pkcs1_15.new(RSA.importKey(self.rsakey))
@@ -182,7 +183,7 @@ class PKCS1_Legacy_Module_Tests(unittest.TestCase):
 
     def runTest(self):
         key = RSA.importKey(PKCS1_15_NoParams.rsakey)
-        hashed = SHA1.new(b("Test"))
+        hashed = SHA1.new(b"Test")
         good_signature = PKCS1_v1_5.new(key).sign(hashed)
         verifier = PKCS1_v1_5.new(key.publickey())
 
@@ -207,15 +208,15 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
                       "SHA3_224", "SHA3_256", "SHA3_384", "SHA3_512")
 
         for name in hash_names:
-            hashed = load_hash_by_name(name).new(b("Test"))
+            hashed = load_hash_by_name(name).new(b"Test")
             signer.sign(hashed)
 
         from Crypto.Hash import BLAKE2b, BLAKE2s
         for hash_size in (20, 32, 48, 64):
-            hashed_b = BLAKE2b.new(digest_bytes=hash_size, data=b("Test"))
+            hashed_b = BLAKE2b.new(digest_bytes=hash_size, data=b"Test")
             signer.sign(hashed_b)
         for hash_size in (16, 20, 28, 32):
-            hashed_s = BLAKE2s.new(digest_bytes=hash_size, data=b("Test"))
+            hashed_s = BLAKE2s.new(digest_bytes=hash_size, data=b"Test")
             signer.sign(hashed_s)
 
 

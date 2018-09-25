@@ -29,10 +29,11 @@
 # ===================================================================
 
 import unittest
+from binascii import unhexlify
 
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, unhexlify, _memoryview
+from Crypto.Util.py3compat import tobytes, _memoryview
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 

@@ -25,12 +25,12 @@
 """Self-test suite for Crypto.Cipher.DES3"""
 
 import unittest
-from binascii import hexlify
+from binascii import hexlify, unhexlify
 
 from Crypto.Cipher import DES3
 
 from Crypto.Util.strxor import strxor_c
-from Crypto.Util.py3compat import bchr, unhexlify, tostr
+from Crypto.Util.py3compat import bchr, tostr
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 

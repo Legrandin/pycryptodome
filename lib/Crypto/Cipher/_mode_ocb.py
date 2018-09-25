@@ -69,8 +69,9 @@ Example:
 """
 
 import struct
+from binascii import unhexlify
 
-from Crypto.Util.py3compat import bord, unhexlify, _copy_bytes
+from Crypto.Util.py3compat import bord, _copy_bytes
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.strxor import strxor
 

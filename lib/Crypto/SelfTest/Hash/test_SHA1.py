@@ -24,7 +24,8 @@
 
 """Self-test suite for Crypto.Hash.SHA"""
 
-from Crypto.Util.py3compat import *
+from binascii import hexlify
+
 from Crypto.SelfTest.loader import load_tests
 
 # Test vectors from various sources
@@ -67,7 +68,7 @@ def get_tests(config={}):
         except AttributeError:
             pass
         if tv.len == 0:
-            tv.msg = b("")
+            tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
 
     tests = make_hash_tests(SHA1, "SHA1", test_data,

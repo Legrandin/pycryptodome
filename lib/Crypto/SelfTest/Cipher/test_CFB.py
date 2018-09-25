@@ -29,10 +29,11 @@
 # ===================================================================
 
 import unittest
+from binascii import unhexlify
 
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, b, unhexlify
+from Crypto.Util.py3compat import tobytes
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -50,29 +51,29 @@ class CfbTests(BlockChainingTests):
     # Redefine test_unaligned_data_128/64
 
     def test_unaligned_data_128(self):
-        plaintexts = [ b("7777777") ] * 100
+        plaintexts = [ b"7777777" ] * 100
 
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
         ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
-        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
+        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
         ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
-        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
+        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
     def test_unaligned_data_64(self):
-        plaintexts = [ b("7777777") ] * 100
+        plaintexts = [ b"7777777" ] * 100
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
         ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
-        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
+        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
         ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
-        self.assertEqual(b("").join(ciphertexts), cipher.encrypt(b("").join(plaintexts)))
+        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
     # Extra
 

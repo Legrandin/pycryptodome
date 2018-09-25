@@ -35,8 +35,9 @@
 
 import json
 import unittest
+from binascii import unhexlify
 
-from Crypto.Util.py3compat import tobytes, _memoryview, unhexlify
+from Crypto.Util.py3compat import tobytes, _memoryview
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3
