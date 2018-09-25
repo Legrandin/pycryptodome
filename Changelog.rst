@@ -7,6 +7,7 @@ Changelog
 Breaks in compatibility
 -----------------------
 
+* Drop support for Python 3.3.
 * With the old Python 2.6, use only ``ctypes`` (and not ``cffi``) to interface to native code.
 
 3.6.6 (17 August 2018)
