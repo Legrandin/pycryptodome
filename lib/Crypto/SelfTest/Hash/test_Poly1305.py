@@ -35,11 +35,12 @@
 
 import json
 import unittest
+from binascii import unhexlify, hexlify
 
 from common import make_mac_tests
 from Crypto.SelfTest.st_common import list_test_cases
 
-from Crypto.Util.py3compat import tobytes, _memoryview, unhexlify, hexlify
+from Crypto.Util.py3compat import tobytes, _memoryview
 
 from Crypto.Hash import Poly1305
 from Crypto.Cipher import AES
