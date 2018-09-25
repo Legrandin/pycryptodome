@@ -59,12 +59,6 @@ try:
 except ImportError: # Some builds/versions of Python don't have a hashlib module
     hashlib = hmac = None
 
-# os.urandom() is less noisy when profiling, but it doesn't exist in Python < 2.4
-try:
-    urandom = os.urandom
-except AttributeError:
-    urandom = get_random_bytes
-
 from Crypto.Random import random as pycrypto_random
 import random as stdlib_random
 
@@ -125,7 +119,7 @@ class Benchmark:
             return self.__random_data
 
     def _random_bytes(self, b):
-        return urandom(b)
+        return os.urandom(b)
 
     def announce_start(self, test_name):
         sys.stdout.write("%s: " % (test_name,))

@@ -35,8 +35,7 @@ from Crypto.Util._file_system import pycryptodome_filename
 #
 # List of file suffixes for Python extensions
 #
-if sys.version_info[0] < 3 or \
-   (sys.version_info[0] == 3 and sys.version_info[1] <= 3):
+if sys.version_info[0] < 3:
 
     import imp
     extension_suffixes = []
@@ -183,7 +182,7 @@ except ImportError:
         ]
 
         # Extra field for CPython 2.6/2.7
-        if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] <= 2):
+        if sys.version_info[0] == 2:
             _fields_.insert(-1, ('smalltable', _c_ssize_t * 2))
 
     def c_uint8_ptr(data):
