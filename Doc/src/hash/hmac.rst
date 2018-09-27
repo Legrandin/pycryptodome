@@ -30,13 +30,13 @@ This is an example showing how to validate the MAC::
     >>> # with its MAC 'mac'
     >>>
     >>> secret = b'Swordfish'
-    >>> h = HMAC.new(secret, digestmode=SHA256)
+    >>> h = HMAC.new(secret, digestmod=SHA256)
     >>> h.update(msg)
     >>> try:
-    >>>   h.verify(mac)
-    >>>   print "The message '%s' is authentic" % msg
+    >>>   h.hexverify(mac)
+    >>>   print("The message '%s' is authentic" % msg)
     >>> except ValueError:
-    >>>   print "The message or the key is wrong"
+    >>>   print("The message or the key is wrong")
 
 .. _RFC2104: http://www.ietf.org/rfc/rfc2104.txt
 .. _FIPS-198: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.198-1.pdf
