@@ -43,7 +43,7 @@ from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, _memoryview
 
 from Crypto.Hash import Poly1305
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, ChaCha20
 
 from Crypto.Util.strxor import strxor_c
 
@@ -98,6 +98,143 @@ test_data_basic = [
         "Generated with pure Python",
         {}
     ),
+    (
+        "00" * 32,
+        "00" * 64,
+        "00" * 16,
+        "RFC7539 A.3 #1",
+        {}
+    ),
+    (
+        "0000000000000000000000000000000036e5f6b5c5e06070f0efca96227a863e",
+        hexlify(
+        "Any submission t"
+        "o the IETF inten"
+        "ded by the Contr"
+        "ibutor for publi"
+        "cation as all or"
+        " part of an IETF"
+        " Internet-Draft "
+        "or RFC and any s"
+        "tatement made wi"
+        "thin the context"
+        " of an IETF acti"
+        "vity is consider"
+        "ed an \"IETF Cont"
+        "ribution\". Such "
+        "statements inclu"
+        "de oral statemen"
+        "ts in IETF sessi"
+        "ons, as well as "
+        "written and elec"
+        "tronic communica"
+        "tions made at an"
+        "y time or place,"
+        " which are addre"
+        "ssed to"),
+        "36e5f6b5c5e06070f0efca96227a863e",
+        "RFC7539 A.3 #2",
+        {}
+    ),
+    (
+        "36e5f6b5c5e06070f0efca96227a863e00000000000000000000000000000000",
+        hexlify(
+        "Any submission t"
+        "o the IETF inten"
+        "ded by the Contr"
+        "ibutor for publi"
+        "cation as all or"
+        " part of an IETF"
+        " Internet-Draft "
+        "or RFC and any s"
+        "tatement made wi"
+        "thin the context"
+        " of an IETF acti"
+        "vity is consider"
+        "ed an \"IETF Cont"
+        "ribution\". Such "
+        "statements inclu"
+        "de oral statemen"
+        "ts in IETF sessi"
+        "ons, as well as "
+        "written and elec"
+        "tronic communica"
+        "tions made at an"
+        "y time or place,"
+        " which are addre"
+        "ssed to"),
+        "f3477e7cd95417af89a6b8794c310cf0",
+        "RFC7539 A.3 #3",
+        {}
+    ),
+    (
+        "1c9240a5eb55d38af333888604f6b5f0473917c1402b80099dca5cbc207075c0",
+        "2754776173206272696c6c69672c2061"
+        "6e642074686520736c6974687920746f"
+        "7665730a446964206779726520616e64"
+        "2067696d626c6520696e207468652077"
+        "6162653a0a416c6c206d696d73792077"
+        "6572652074686520626f726f676f7665"
+        "732c0a416e6420746865206d6f6d6520"
+        "7261746873206f757467726162652e",
+        "4541669a7eaaee61e708dc7cbcc5eb62",
+        "RFC7539 A.3 #4",
+        {}
+    ),
+    (
+        "02" + "00" * 31,
+        "FF" * 16,
+        "03" + "00" * 15,
+        "RFC7539 A.3 #5",
+        {}
+    ),
+    (
+        "02" + "00" * 15 + "FF" * 16,
+        "02" + "00" * 15,
+        "03" + "00" * 15,
+        "RFC7539 A.3 #6",
+        {}
+    ),
+    (
+        "01" + "00" * 31,
+        "FF" * 15 + "F0" + "FF" * 15 + "11" + "00" * 15,
+        "05" + "00" * 15,
+        "RFC7539 A.3 #7",
+        {}
+    ),
+    (
+        "01" + "00" * 31,
+        "FF" * 16 + "FB" + "FE" * 15 + "01" * 16,
+        "00" * 16,
+        "RFC7539 A.3 #8",
+        {}
+    ),
+    (
+        "02" + "00" * 31,
+        "FD" + "FF" * 15,
+        "FA" + "FF" * 15,
+        "RFC7539 A.3 #9",
+        {}
+    ),
+    (
+        "01" + "00" * 7 + "04" + "00" * 15,
+        "E3 35 94 D7 50 5E 43 B9 00 00 00 00 00 00 00 00"
+        "33 94 D7 50 5E 43 79 CD 01 00 00 00 00 00 00 00"
+        "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+        "01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+        "14 00 00 00 00 00 00 00 55 00 00 00 00 00 00 00",
+        "RFC7539 A.3 #10",
+        {}
+    ),
+    (
+        "01" + "00" * 7 + "04" + "00" * 15,
+        "E3 35 94 D7 50 5E 43 B9 00 00 00 00 00 00 00 00"
+        "33 94 D7 50 5E 43 79 CD 01 00 00 00 00 00 00 00"
+        "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+        "13" + "00" * 15,
+        "RFC7539 A.3 #11",
+        {}
+    ),
 ]
 
 # This is a list of (key(k+r), data, result, description, keywords) tuples.
@@ -135,6 +272,7 @@ test_data_aes = [
         { 'cipher':AES, 'nonce':unhexlify("9ae831e743978d3a23527c7128149e3a") }
     ),
 ]
+
 
 class Poly1305Test(unittest.TestCase):
 
