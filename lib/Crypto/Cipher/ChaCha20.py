@@ -177,8 +177,8 @@ def _derive_Poly1305_key_pair(key, nonce):
     elif len(nonce) != 12:
         raise ValueError("Poly1305 with ChaCha20 requires an 8- or 12-byte nonce")
 
-    rs = new(key, nonce=nonce).encrypt(b'\x00' * 32)
-    return rs[16:], rs[:16], nonce
+    rs = new(key=key, nonce=nonce).encrypt(b'\x00' * 32)
+    return rs[:16], rs[16:], nonce
 
 
 def new(**kwargs):
