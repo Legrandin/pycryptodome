@@ -20,6 +20,8 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import print_function
+
 try:
     from setuptools import Extension, Command, setup
 except ImportError:
@@ -125,20 +127,6 @@ except ImportError:
     from distutils.command.build_py import build_py
 
 
-# Work around the print / print() issue with Python 2.x and 3.x. We only need
-# to print at one point of the code, which makes this easy
-def PrintErr(*args, **kwd):
-    fout = kwd.get("file", sys.stderr)
-    w = fout.write
-    if args:
-        w(str(args[0]))
-        sep = kwd.get("sep", " ")
-        for a in args[1:]:
-            w(sep)
-            w(str(a))
-        w(kwd.get("end", "\n"))
-
-
 def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg=''):
     """Test if a certain C program can be compiled."""
 
@@ -156,7 +144,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
     debug = False
     # Mute the compiler and the linker
     if msg:
-        PrintErr("Testing support for %s" % msg)
+        print("Testing support for %s" % msg)
     if not (debug or os.name == 'nt'):
         old_stdout = os.dup(sys.stdout.fileno())
         old_stderr = os.dup(sys.stderr.fileno())
@@ -204,7 +192,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg='
             x = ""
         else:
             x = " not"
-        PrintErr("Target does%s support %s" % (x, msg))
+        print("Target does%s support %s" % (x, msg))
 
     return result
 
@@ -343,24 +331,24 @@ class PCTBuildExt (build_ext):
         aesni_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_aesni()
         aesni_mod_name = package_root + ".Cipher._raw_aesni"
         if aesni_result:
-            PrintErr("Compiling support for AESNI instructions")
+            print("Compiling support for AESNI instructions")
             aes_mods = [ x for x in self.extensions if x.name == aesni_mod_name ]
             for x in aes_mods:
                 x.extra_compile_args += aesni_result['extra_options']
         else:
-            PrintErr ("Warning: compiler does not support AESNI instructions")
+            print ("Warning: compiler does not support AESNI instructions")
             self.remove_extension(aesni_mod_name)
 
         # CLMUL
         clmul_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_clmul()
         clmul_mod_name = package_root + ".Hash._ghash_clmul"
         if clmul_result:
-            PrintErr("Compiling support for CLMUL instructions")
+            print("Compiling support for CLMUL instructions")
             clmul_mods = [ x for x in self.extensions if x.name == clmul_mod_name ]
             for x in clmul_mods:
                 x.extra_compile_args += clmul_result['extra_options']
         else:
-            PrintErr ("Warning: compiler does not support CLMUL instructions")
+            print ("Warning: compiler does not support CLMUL instructions")
             self.remove_extension(clmul_mod_name)
 
     def remove_extension(self, name):
@@ -438,7 +426,7 @@ class TestCommand(Command):
                 # Import sub-package or module
                 moduleObj = __import__( full_module, globals(), locals(), module_name )
 
-            PrintErr(package_root + ".Math implementation:",
+            print(package_root + ".Math implementation:",
                      str(Numbers._implementation))
 
             SelfTest.run(module=moduleObj, verbosity=self.verbose, stream=sys.stdout, config=self.config)
@@ -473,7 +461,7 @@ def create_cryptodome_lib():
             full_file_name_src = os.path.join(root_src, file_name)
             full_file_name_dst = os.path.join(root_dst, file_name)
 
-            PrintErr("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
+            print("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
             shutil.copy2(full_file_name_src, full_file_name_dst)
 
             if not full_file_name_dst.endswith(".py"):
