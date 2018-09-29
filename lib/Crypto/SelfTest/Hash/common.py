@@ -195,8 +195,19 @@ class MACSelfTest(unittest.TestCase):
         return self.description
 
     def runTest(self):
-        key = binascii.a2b_hex(b(self.key.replace(" ","")))
-        data = binascii.a2b_hex(b(self.input.replace(" ","")))
+        
+        if isinstance(self.key, str):
+            self.key = self.key.replace(" ", "")
+        else:
+            self.key = self.key.replace(b" ", b"")
+        
+        if isinstance(self.input, str):
+            self.input = self.input.replace(" ", "")
+        else:
+            self.input = self.input.replace(b" ", b"")
+
+        key = binascii.a2b_hex(self.key)
+        data = binascii.a2b_hex(self.input)
 
         # Strip whitespace from the expected string (force lower case)
         expected = b("".join(self.result.lower().split()))
