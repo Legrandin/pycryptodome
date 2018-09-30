@@ -1,0 +1,9 @@
+from typing import Union
+from Crypto.common import SmartPointer
+
+__all__ = [ 'EcbMode' ]
+
+class EcbMode(object):
+    def __init__(self, block_cipher: SmartPointer) -> None: ...
+    def encrypt(self, plaintext: Union[bytes, bytearray, memoryview]) -> bytes: ...
+    def decrypt(self, ciphertext: Union[bytes, bytearray, memoryview]) -> bytes: ...
