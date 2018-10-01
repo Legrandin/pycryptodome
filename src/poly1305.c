@@ -269,8 +269,9 @@ static void poly1305_process(uint32_t h[5], uint32_t r[4], uint32_t rr[4], uint8
  */
 static void poly1305_finalize(uint32_t h[5], const uint32_t s[5])
 {
-    poly1305_accumulate(h, s);
     poly1305_reduce(h);
+    poly1305_accumulate(h, s);
+    h[4] = 0;   /** modulo 2**128 **/
 }
 
 /* --------------------------------------------------------- */

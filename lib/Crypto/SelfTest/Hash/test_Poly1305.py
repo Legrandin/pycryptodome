@@ -505,10 +505,29 @@ class Poly1305_Basic(object):
         return Poly1305_MAC(key[:16], key[16:], msg)
 
 
+class Poly1305AES_MC(unittest.TestCase):
+
+    def runTest(self):
+        tag = unhexlify(b"fb447350c4e868c52ac3275cf9d4327e")
+
+        msg = b''
+        for msg_len in range(5000 + 1):
+            key = tag + strxor_c(tag, 0xFF)
+            nonce = tag[::-1]
+            if msg_len > 0:
+                msg = msg + tag[0]
+            auth = Poly1305.new(key=key, nonce=nonce, cipher=AES, data=msg)
+            tag = auth.digest()
+
+        # Compare against output of original DJB's poly1305aes-20050218
+        self.assertEqual("CDFA436DDD629C7DC20E1128530BAED2", auth.hexdigest().upper())
+
+
 def get_tests(config={}):
     tests = make_mac_tests(Poly1305_Basic, "Poly1305", test_data_basic)
     tests += make_mac_tests(Poly1305_New, "Poly1305", test_data_aes)
     tests += make_mac_tests(Poly1305_New, "Poly1305", test_data_chacha20)
+    tests += [ Poly1305AES_MC() ]
     #tests += list_test_cases(Poly1305Test)
     return tests
 
