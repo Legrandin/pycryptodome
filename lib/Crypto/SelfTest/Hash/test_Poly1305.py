@@ -515,7 +515,7 @@ class Poly1305AES_MC(unittest.TestCase):
             key = tag + strxor_c(tag, 0xFF)
             nonce = tag[::-1]
             if msg_len > 0:
-                msg = msg + tag[0]
+                msg = msg + tobytes(tag[0])
             auth = Poly1305.new(key=key, nonce=nonce, cipher=AES, data=msg)
             tag = auth.digest()
 
