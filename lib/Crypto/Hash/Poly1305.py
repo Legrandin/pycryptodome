@@ -35,14 +35,17 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
                         """
                         int poly1305_init(void **state,
-                                          const uint8_t r[16],
-                                          const uint8_t s[16]);
+                                          const uint8_t *r,
+                                          size_t r_len,
+                                          const uint8_t *s,
+                                          size_t s_len);
                         int poly1305_destroy(void *state);
                         int poly1305_update(void *state,
                                             const uint8_t *in,
                                             size_t len);
                         int poly1305_digest(const void *state,
-                                            uint8_t digest[16]);
+                                            uint8_t *digest,
+                                            size_t len);
                         """)
 
 
@@ -62,7 +65,9 @@ class Poly1305_MAC(object):
         state = VoidPointer()
         result = _raw_poly1305.poly1305_init(state.address_of(),
                                              c_uint8_ptr(r),
-                                             c_uint8_ptr(s)
+                                             c_size_t(len(r)),
+                                             c_uint8_ptr(s),
+                                             c_size_t(len(s))
                                              )
         if result:
             raise ValueError("Error %d while instantiating Poly1305" % result)
@@ -93,7 +98,8 @@ class Poly1305_MAC(object):
         
         bfr = create_string_buffer(16)
         result = _raw_poly1305.poly1305_digest(self._state.get(),
-                                               bfr)
+                                               bfr,
+                                               c_size_t(len(bfr)))
         if result:
             raise ValueError("Error %d while creating Poly1305 digest" % result)
 
