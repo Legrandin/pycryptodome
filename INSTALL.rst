@@ -45,19 +45,19 @@ Compiling in Linux Ubuntu
 
 For Python 2.x::
 
-        $ sudo apt-get install build-essential libgmp3-dev python-dev
+        $ sudo apt-get install build-essential python-dev
         $ pip install pycryptodomex
         $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 
-        $ sudo apt-get install build-essential libgmp3-dev python3-dev
+        $ sudo apt-get install build-essential python3-dev
         $ pip install pycryptodomex
         $ python3 -m Cryptodome.SelfTest
 
 For PyPy::
 
-        $ sudo apt-get install build-essential libgmp3-dev pypy-dev
+        $ sudo apt-get install build-essential pypy-dev
         $ pip install pycryptodomex
         $ pypy -m Cryptodome.SelfTest
 
@@ -70,7 +70,7 @@ Compiling in Linux Fedora
 
 For Python 2.x::
 
-        $ sudo yum install gcc gmp python-devel 
+        $ sudo yum install gcc gmp python-devel
         $ pip install pycryptodomex
         $ python -m Cryptodome.SelfTest
 
@@ -85,6 +85,7 @@ For PyPy::
         $ sudo yum install gcc gmp pypy-devel
         $ pip install pycryptodomex
         $ pypy -m Cryptodome.SelfTest
+
 
 Windows (from sources, Python 2.x, Python <=3.2)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

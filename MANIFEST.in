@@ -10,3 +10,5 @@ include .separate_namespace
 include setup.py pct-speedtest.py
 include appveyor.yml appveyor/get_wheels.sh appveyor/install.ps1 appveyor/run_with_env.cmd
 include .travis.yml travis/*.sh
+graft src/test
+prune src/test/build

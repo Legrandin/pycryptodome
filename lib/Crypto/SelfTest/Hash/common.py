@@ -195,11 +195,22 @@ class MACSelfTest(unittest.TestCase):
         return self.description
 
     def runTest(self):
-        key = binascii.a2b_hex(b(self.key))
-        data = binascii.a2b_hex(b(self.input))
+        
+        if isinstance(self.key, str):
+            self.key = self.key.replace(" ", "")
+        else:
+            self.key = self.key.replace(b" ", b"")
+        
+        if isinstance(self.input, str):
+            self.input = self.input.replace(" ", "")
+        else:
+            self.input = self.input.replace(b" ", b"")
 
-        # Strip whitespace from the expected string (which should be in lowercase-hex)
-        expected = b("".join(self.result.split()))
+        key = binascii.a2b_hex(self.key)
+        data = binascii.a2b_hex(self.input)
+
+        # Strip whitespace from the expected string (force lower case)
+        expected = b("".join(self.result.lower().split()))
 
         h = self.module.new(key, **self.params)
         h.update(data)
@@ -222,9 +233,13 @@ class MACSelfTest(unittest.TestCase):
         out4 = binascii.b2a_hex(h.digest())
 
         # Test .copy()
-        h2 = h.copy()
-        h.update(b("blah blah blah"))  # Corrupt the original hash object
-        out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
+        try:
+            h2 = h.copy()
+            h.update(b("blah blah blah"))  # Corrupt the original hash object
+            out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
+            self.assertEqual(expected, out5)
+        except NotImplementedError:
+            pass
 
         # PY3K: Check that hexdigest() returns str and digest() returns bytes
         if sys.version_info[0] > 2:
@@ -245,7 +260,6 @@ class MACSelfTest(unittest.TestCase):
             self.assertEqual(expected.decode(), out2)
             self.assertEqual(expected.decode(), out3)
         self.assertEqual(expected, out4)
-        self.assertEqual(expected, out5)
 
 
 def make_hash_tests(module, module_name, test_data, digest_size, oid=None,

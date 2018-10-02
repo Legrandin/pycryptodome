@@ -613,6 +613,11 @@ ext_modules = [
         include_dirs=['src/'],
         sources=['src/ghash_clmul.c']),
 
+    # MACs
+    Extension("Crypto.Hash._poly1305",
+        include_dirs=['src/'],
+        sources=["src/poly1305.c"]),
+
     # Block encryption algorithms
     Extension("Crypto.Cipher._raw_aes",
         include_dirs=['src/'],

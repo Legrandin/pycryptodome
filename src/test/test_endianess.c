@@ -123,4 +123,5 @@ int main(void)
     test_big_32();
     test_little_64();
     test_big_64();
+    return 0;
 }

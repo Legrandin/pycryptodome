@@ -41,9 +41,9 @@ And this is how you decrypt it::
 
 The examples above implicitly use a 64 bit (8 byte) nonce. In order to have
 a `RFC7539`_-compliant  cipher,
-you need generate and pass a 96 bit (12 byte) ``nonce`` parameter to ``new()``::
+you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter to ``new()``::
 
-    nonce_rfc7539 = get_random_bytes
+    nonce_rfc7539 = get_random_bytes(12)
     cipher = ChaCha20.new(key=key, nonce=nonce_rfc7539)
 
 .. warning::

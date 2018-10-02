@@ -120,6 +120,7 @@ Message Authentication Code (MAC) algorithms
 
 - :doc:`hmac`
 - :doc:`cmac`
+- :doc:`poly1305`
 
 Historich hash algorithms
 -------------------------

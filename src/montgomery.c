@@ -65,7 +65,7 @@ static uint64_t inverse64(uint64_t a)
 /**
  * Multiply a[] by k and add the result to t[].
  */
-static void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t a_words, size_t t_words)
+STATIC void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t a_words, size_t t_words)
 {
     size_t i;
     uint64_t carry;
@@ -100,7 +100,7 @@ static void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t a_words, s
  *
  * t[] will be twice as long.
  */
-static void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t words)
+STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t words)
 {
         size_t i;
 

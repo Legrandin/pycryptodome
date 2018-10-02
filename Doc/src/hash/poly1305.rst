@@ -1,0 +1,42 @@
+Poly1305
+========
+
+Poly1305 is a fast Carter-Wegman MAC algorithm created by Daniel J. Bernstein.
+It requires a 32-byte secret key, a 16-byte nonce, and a symmetric cipher.
+The MAC tag is always 16 bytes long.
+
+Originally, Poly1305 was defined_ in combination with :doc:`../cipher/aes`, but it is now most frequently seen used in combination with :doc:`../cipher/chacha20`.
+
+This is an example showing how to generate a MAC tag (note how the nonce is automatically generated at random)::
+
+    >>> from Crypto.Hash import Poly1305
+    >>> from Crypto.Cipher import AES
+    >>>
+    >>> secret = b'Thirtytwo very very secret bytes'
+    >>> mac = Poly1305.new(key=secret, cipher=AES)
+    >>> mac.update(b'Hello')
+    >>> print("Nonce: ", mac.nonce.hex())
+    >>> print("MAC:   ", mac.hexdigest())
+
+This is an example showing how to validate the MAC above::
+
+    >>> from Crypto.Hash import Poly1305
+    >>> from Crypto.Cipher import AES
+    >>> from binascii import unhexlify
+    >>>
+    >>> # We have received a message 'msg' together
+    >>> # with its MAC 'mac_tag_hex' and the nonce 'nonce_hex'
+    >>>
+    >>> secret = b'Thirtytwo very very secret bytes'
+    >>> nonce = unhexlify(nonce_hex)
+    >>> mac = Poly1305.new(key=secret, nonce=nonce, cipher=AES, data=msg)
+    >>> try:
+    >>>   mac.hexverify(mac_tag_hex)
+    >>>   print("The message '%s' is authentic" % msg)
+    >>> except ValueError:
+    >>>   print("The message or the key is wrong")
+
+.. _defined: https://cr.yp.to/mac/poly1305-20050329.pdf
+
+.. automodule:: Crypto.Hash.Poly1305
+    :members:
