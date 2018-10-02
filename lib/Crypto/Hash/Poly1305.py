@@ -132,16 +132,15 @@ def new(**kwargs):
     Args:
         key (bytes/bytearray/memoryview):
             The 32-byte key for the Poly1305 object.
-        cipher (module from `Crypto.Cipher`):
+        cipher (module from ``Crypto.Cipher``):
             The cipher algorithm to use for deriving the Poly1305
             key pair *(r, s)*.
-            It can only be `Crypto.Cipher.AES` or `Crypto.Cipher.ChaCha20`.
+            It can only be ``Crypto.Cipher.AES`` or ``Crypto.Cipher.ChaCha20``.
         nonce (bytes/bytearray/memoryview):
-            Optional. The non-repeatable value to use for the MAC of this
-            message.
-            It must be 16 bytes long for AES and 8 or 12 bytes for ChaCha20.
+            Optional. The non-repeatable value to use for the MAC of this message.
+            It must be 16 bytes long for ``AES`` and 8 or 12 bytes for ``ChaCha20``.
             If not passed, a random nonce is created; you will find it in the
-            ``nonce`` attribute of the object.
+            ``nonce`` attribute of the new object.
         data (bytes/bytearray/memoryview):
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to ``update()``.
