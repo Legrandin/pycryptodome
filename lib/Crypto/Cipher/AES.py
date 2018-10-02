@@ -43,6 +43,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   c_size_t, c_uint8_ptr)
 
 from Crypto.Util import _cpu_features
+from Crypto.Random import get_random_bytes
 
 
 _cproto = """

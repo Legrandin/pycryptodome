@@ -151,7 +151,7 @@ def new(**kwargs):
 
     cipher = kwargs.pop("cipher", None)
     if not hasattr(cipher, '_derive_Poly1305_key_pair'):
-        raise TypeError("Parameter 'cipher' must be AES or ChaCha20")
+        raise ValueError("Parameter 'cipher' must be AES or ChaCha20")
 
     cipher_key = kwargs.pop("key", None)
     if cipher_key is None:
