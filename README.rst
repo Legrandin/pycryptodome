@@ -50,6 +50,7 @@ with respect to the last official version of PyCrypto (2.6.1):
   and more)
 * SHA-3 (including SHAKE XOFs), SHA-512/t and BLAKE2 hash algorithms
 * Salsa20 and ChaCha20 stream ciphers
+* Poly1305 MAC
 * scrypt and HKDF
 * Deterministic (EC)DSA
 * Password-protected PKCS#8 key containers
