@@ -4,6 +4,11 @@ Changelog
 3.x.x (xx xxxxxx 2018)
 ++++++++++++++++++++++
 
+New features
+------------
+
+* Added support for Poly1305 MAC (with AES and ChaCha20 ciphers).
+
 Breaks in compatibility
 -----------------------
 
