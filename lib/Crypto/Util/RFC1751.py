@@ -70,7 +70,7 @@ def key_to_english (key):
         for i in range(0, 64, 11):
             english=english+wordlist[_extract(skbin, i, 11)]+' '
 
-    return english[:-1]                 # Remove the trailing space
+    return english.strip()
 
 def english_to_key (s):
     """Transform a string into a corresponding key.
