@@ -475,7 +475,7 @@ class DerSequence(DerObject):
                         self.payload += item.encode()
                 return DerObject.encode(self)
 
-        def decode(self, der_encoded, nr_elements=None, only_ints_expected=False, strict=False):
+        def decode(self, der_encoded, strict=False, nr_elements=None, only_ints_expected=False):
                 """Decode a complete DER SEQUENCE, and re-initializes this
                 object with it.
 
@@ -486,7 +486,7 @@ class DerSequence(DerObject):
                     The number of members the SEQUENCE can have
                   only_ints_expected (boolean):
                     Whether the SEQUENCE is expected to contain only integers.
-                  struct (boolean):
+                  strict (boolean):
                     Whether decoding must check for strict DER compliancy.
 
                 Raises:
@@ -658,19 +658,21 @@ class DerObjectId(DerObject):
             self.payload += b('').join(map(bchr, enc))
         return DerObject.encode(self)
 
-    def decode(self, der_encoded):
+    def decode(self, der_encoded, strict=False):
         """Decode a complete DER OBJECT ID, and re-initializes this
         object with it.
 
         Args:
             der_encoded (byte string):
                 A complete DER OBJECT ID.
+            strict (boolean):
+                Whether decoding must check for strict DER compliancy.
 
         Raises:
             ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, der_encoded)
+        return DerObject.decode(self, der_encoded, strict)
 
     def _decodeFromStream(self, s, strict):
         """Decode a complete DER OBJECT ID from a file."""
@@ -750,18 +752,20 @@ class DerBitString(DerObject):
         self.payload = b('\x00') + self.value
         return DerObject.encode(self)
 
-    def decode(self, der_encoded):
+    def decode(self, der_encoded, strict=False):
         """Decode a complete DER BIT STRING, and re-initializes this
         object with it.
 
         Args:
             der_encoded (byte string): a complete DER BIT STRING.
+            strict (boolean):
+                Whether decoding must check for strict DER compliancy.
 
         Raises:
             ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, der_encoded)
+        return DerObject.decode(self, der_encoded, strict)
 
     def _decodeFromStream(self, s, strict):
         """Decode a complete DER BIT STRING DER from a file."""
@@ -860,7 +864,7 @@ class DerSetOf(DerObject):
         if elem not in self._seq:
             self._seq.append(elem)
 
-    def decode(self, der_encoded):
+    def decode(self, der_encoded, strict=False):
         """Decode a complete SET OF DER element, and re-initializes this
         object with it.
 
@@ -869,12 +873,14 @@ class DerSetOf(DerObject):
 
         Args:
             der_encoded (byte string): a complete DER BIT SET OF.
+            strict (boolean):
+                Whether decoding must check for strict DER compliancy.
 
         Raises:
             ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, der_encoded)
+        return DerObject.decode(self, der_encoded, strict)
 
     def _decodeFromStream(self, s, strict):
         """Decode a complete DER SET OF from a file."""
