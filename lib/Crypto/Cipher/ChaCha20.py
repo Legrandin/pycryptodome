@@ -59,7 +59,7 @@ _raw_chacha20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._chacha20",
                     """)
 
 
-class ChaCha20Cipher:
+class ChaCha20Cipher(object):
     """ChaCha20 cipher object. Do not create it directly. Use :py:func:`new` instead.
 
     :var nonce: The nonce with length 8 or 12
