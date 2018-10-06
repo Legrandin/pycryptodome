@@ -265,7 +265,7 @@ def new(**kwargs):
 
     :keyword nonce:
         A value that must never be reused for any other encryption
-        done with this key. It must be 12 bytes long.
+        done with this key. It must be 8 or 12 bytes long.
 
         If not provided, a random 12-byte string will be generated
         (you can read it back via the ``nonce`` attribute of the

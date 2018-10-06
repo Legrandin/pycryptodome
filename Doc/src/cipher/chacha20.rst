@@ -4,6 +4,13 @@ ChaCha20
 `ChaCha20`_ is a stream cipher designed by Daniel J. Bernstein.
 The secret key is 256 bits long.
 
+The algorithm requires a nonce of either 8 bytes (original definition of ChaCha20)
+or 12 bytes (newer definition published in `RFC7539`_).
+A nonce value must never be reused across encryptions performed with the same key.
+
+Using a 12 bytes implies that no more than 256GB can be encrypted with a key.
+No practical limitation exists when the nonce is 8 bytes long.
+
 This is an example of how `ChaCha20`_ can encrypt data::
 
     >>> import json
@@ -15,7 +22,7 @@ This is an example of how `ChaCha20`_ can encrypt data::
     >>> key = get_random_bytes(32)
     >>> cipher = ChaCha20.new(key=key)
     >>> ciphertext = cipher.encrypt(plaintext)
-    >>> 
+    >>>
     >>> nonce = b64encode(cipher.nonce).decode('utf-8')
     >>> ct = b64encode(ciphertext).decode('utf-8')
     >>> result = json.dumps({'nonce':nonce, 'ciphertext':ct})
@@ -39,8 +46,9 @@ And this is how you decrypt it::
     >>> except ValueError, KeyError:
     >>>     print("Incorrect decryption")
 
-The examples above implicitly use a 64 bit (8 byte) nonce. In order to have
-a `RFC7539`_-compliant  cipher,
+The examples above implicitly use a 64 bit (8 byte) nonce.
+
+In order to have a `RFC7539`_-compliant ChaCha20 cipher,
 you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter to ``new()``::
 
     nonce_rfc7539 = get_random_bytes(12)
