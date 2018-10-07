@@ -324,7 +324,7 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         self.assertEqual(pt_test, self.data_128)
 
     import types
-    if isinstance(_memoryview, types.NoneType):
+    if _memoryview is types.NoneType:
         del test_memoryview
 
 
