@@ -52,7 +52,7 @@ class ChaCha20Poly1305Cipher(object):
     """ChaCha20-Poly1305 cipher object.
     Do not create it directly. Use :py:func:`new` instead.
 
-    :var nonce: The nonce with length 8 or 12
+    :var nonce: The nonce with length 8 or 12 bytes
     :vartype nonce: byte string
     """
 
@@ -223,30 +223,26 @@ class ChaCha20Poly1305Cipher(object):
         self.verify(unhexlify(hex_mac_tag))
 
     def encrypt_and_digest(self, plaintext):
-        """Perform encrypt() and digest() in one step.
+        """Perform ``encrypt()`` and ``digest()`` in one step.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
-        :Return:
-            a tuple with two byte strings:
+        :param plaintext: The data to encrypt, of any size.
+        :type plaintext: bytes, bytearray, memoryview
+        :returns: a tuple with two ``bytes`` objects:
 
-            - the encrypted data
-            - the MAC
+            - the encrypted data, of equal length as the plaintext
+            - the MAC tag
         """
 
         return self.encrypt(plaintext), self.digest()
 
     def decrypt_and_verify(self, ciphertext, received_mac_tag):
-        """Perform decrypt() and verify() in one step.
+        """Perform ``decrypt()`` and ``verify()`` in one step.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The piece of data to decrypt.
-          received_mac_tag : byte string
-            This is the *binary* MAC, as received from the sender.
-
-        :Return: the decrypted data (byte string).
+        :param ciphertext: The piece of data to decrypt.
+        :type ciphertext: bytes/bytearray/memoryview
+        :param received_mac_tag: This is the *binary* MAC, as received from the sender.
+        :type received_mac_tag: bytes
+        :returns: the decrypted data (as ``bytes``)
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
             or the key is incorrect.
