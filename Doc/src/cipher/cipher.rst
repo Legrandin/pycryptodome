@@ -79,23 +79,31 @@ Symmetric ciphers
 
 There are two types of symmetric ciphers:
 
-* **Stream ciphers**: the most natural kind of ciphers;
-  they encrypt any piece of data by preserving its length:
-  see :doc:`chacha20`, :doc:`salsa20`.
+* **Stream ciphers**: the most natural kind of ciphers:
+  they encrypt data one byte at a time.
+  See :doc:`chacha20` and :doc:`salsa20`.
 
 * **Block ciphers**: ciphers that can only operate on a fixed amount
   of data. The most important block cipher is :doc:`aes`, which has
-  a block size of 16 bytes.
-  
-  A block cipher is in general useful only in combination with
-  a *mode of operation* . There are
-  :doc:`classic modes <classic>` like CTR or
-  :doc:`authenticated modes <modern>` like GCM.
+  a block size of 128 bits (16 bytes).
+
+  In general, a block cipher is mostly useful only together with
+  a :doc:`mode of operation <classic>`, which allows one to encrypt
+  a variable amount of data. Some modes (like CTR) effectively turn
+  a block cipher into a stream cipher.
+
+The widespread consensus is that ciphers that provide
+only confidentiality, without any form of authentication, are undesireable.
+Instead, primitives have been defined to integrate symmetric encryption and
+authentication (MAC). For instance:
+
+* :doc:`Modern modes of operation <modern>` for block ciphers (like GCM).
+* Stream ciphers paired with a MAC function, like :doc:`chacha20_poly1305`.
 
 .. toctree::
     :hidden:
 
-    Classic modes of operation <classic>    
+    Classic modes of operation <classic>
     Modern modes of operation <modern>
 
 Legacy ciphers

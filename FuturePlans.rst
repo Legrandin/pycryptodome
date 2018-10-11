@@ -10,7 +10,6 @@ Future releases will include:
 - Add more ECC curves
 - Import/export of ECC keys with compressed points
 - Add algorithms:
-    - Poly1305
     - Elliptic Curves (ECIES, ECDH)
     - Camellia, GOST
     - Diffie-Hellman

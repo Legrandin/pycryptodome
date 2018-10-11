@@ -7,7 +7,8 @@ Changelog
 New features
 ------------
 
-* Added support for Poly1305 MAC (with AES and ChaCha20 ciphers).
+* Added support for Poly1305 MAC (with AES and ChaCha20 ciphers for key derivation).
+* Added support for ChaCha20-Poly1305 AEAD cipher.
 
 Breaks in compatibility
 -----------------------

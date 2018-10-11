@@ -77,7 +77,7 @@ class Poly1305_MAC(object):
             self.update(data)
 
     def update(self, data):
-        
+
         if self._mac_tag:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
