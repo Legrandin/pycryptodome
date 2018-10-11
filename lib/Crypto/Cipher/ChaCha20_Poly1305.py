@@ -77,6 +77,20 @@ class ChaCha20Poly1305Cipher(object):
         self._status = _CipherStatus.PROCESSING_AUTH_DATA
 
     def update(self, data):
+        """Protect the associated data.
+
+        Associated data (also known as *additional authenticated data* - AAD)
+        is the piece of the message that must stay in the clear, while
+        still allowing the receiver to verify its integrity.
+        An example is packet headers.
+
+        The associated data (possibly split into multiple segments) is
+        fed into :meth:`update` before any call to :meth:`decrypt` or :meth:`encrypt`.
+        If there is no associated data, :meth:`update` is not called.
+
+        :param bytes/bytearray/memoryview assoc_data:
+            A piece of associated data. There are no restrictions on its size.
+        """
 
         if self.update not in self._next:
             raise TypeError("update() method cannot be called")
@@ -95,9 +109,9 @@ class ChaCha20Poly1305Cipher(object):
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: bytes, bytearray, memoryview
-        :returns: the encrypted byte string, of equal length as the
-          plaintext.
+        :type plaintext: bytes/bytearray/memoryview
+        :returns: the ciphertext (as ``bytes``),
+                  of equal length as the plaintext.
         """
 
         if self.encrypt not in self._next:
@@ -118,8 +132,8 @@ class ChaCha20Poly1305Cipher(object):
 
         :param ciphertext: The data to decrypt, of any size.
         :type ciphertext: bytes, bytearray, memoryview
-        :returns: the decrypted byte string, of equal length as the
-          ciphertext.
+        :returns: the plaintext (as ``bytes``),
+                  of equal length as the ciphertext.
         """
         
         if self.decrypt not in self._next:
@@ -135,7 +149,7 @@ class ChaCha20Poly1305Cipher(object):
         return self._cipher.decrypt(ciphertext)
     
     def _compute_mac(self):
-        """Finalize the cipher (if not done already and return the MAC"""
+        """Finalize the cipher (if not done already) and return the MAC."""
 
         if self._mac_tag:
             assert(self._status == _CipherStatus.PROCESSING_DONE)
@@ -157,7 +171,11 @@ class ChaCha20Poly1305Cipher(object):
         return self._mac_tag
  
     def digest(self):
+        """Compute the *binary* authentication tag (MAC).
 
+        :Return: the MAC tag, as 16 ``bytes``.
+        """
+ 
         if self.digest not in self._next:
             raise TypeError("digest() method cannot be called")
         self._next = (self.digest,)
@@ -165,26 +183,23 @@ class ChaCha20Poly1305Cipher(object):
         return self._compute_mac()
     
     def hexdigest(self):
-        """Compute the *printable* MAC tag.
+        """Compute the *printable* authentication tag (MAC).
 
-        This method is like `digest`.
+        This method is like :meth:`digest`.
 
-        :Return: the MAC, as a hexadecimal string.
+        :Return: the MAC tag, as a hexadecimal string.
         """
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
     def verify(self, received_mac_tag):
-        """Validate the *binary* MAC tag.
+        """Validate the *binary* authentication tag (MAC).
 
-        The caller invokes this function at the very end.
+        The receiver invokes this method at the very end, to
+        check if the associated data (if any) and the decrypted
+        messages are valid.
 
-        This method checks if the decrypted message is indeed valid
-        (that is, if the key is correct) and it has not been
-        tampered with while in transit.
-
-        :Parameters:
-          received_mac_tag : bytes/bytearray/memoryview
-            This is the *binary* MAC, as received from the sender.
+        :param bytes/bytearray/memoryview received_mac_tag:
+            This is the 16-byte *binary* MAC, as received from the sender.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
             or the key is incorrect.
@@ -208,13 +223,12 @@ class ChaCha20Poly1305Cipher(object):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):
-        """Validate the *printable* MAC tag.
+        """Validate the *printable* authentication tag (MAC).
 
-        This method is like `verify`.
+        This method is like :meth:`verify`.
 
-        :Parameters:
-          hex_mac_tag : string
-            This is the *printable* MAC, as received from the sender.
+        :param string hex_mac_tag:
+            This is the *printable* MAC.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
             or the key is incorrect.
@@ -223,27 +237,27 @@ class ChaCha20Poly1305Cipher(object):
         self.verify(unhexlify(hex_mac_tag))
 
     def encrypt_and_digest(self, plaintext):
-        """Perform ``encrypt()`` and ``digest()`` in one step.
+        """Perform :meth:`encrypt` and :meth:`digest` in one step.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: bytes, bytearray, memoryview
-        :returns: a tuple with two ``bytes`` objects:
+        :type plaintext: bytes/bytearray/memoryview
+        :return: a tuple with two ``bytes`` objects:
 
-            - the encrypted data, of equal length as the plaintext
-            - the MAC tag
+            - the ciphertext, of equal length as the plaintext
+            - the 16-byte MAC tag
         """
 
         return self.encrypt(plaintext), self.digest()
 
     def decrypt_and_verify(self, ciphertext, received_mac_tag):
-        """Perform ``decrypt()`` and ``verify()`` in one step.
+        """Perform :meth:`decrypt` and :meth:`verify` in one step.
 
         :param ciphertext: The piece of data to decrypt.
         :type ciphertext: bytes/bytearray/memoryview
-        :param received_mac_tag: This is the *binary* MAC, as received from the sender.
-        :type received_mac_tag: bytes
-        :returns: the decrypted data (as ``bytes``)
-        :Raises ValueError:
+        :param bytes received_mac_tag:
+            This is the 16-byte *binary* MAC, as received from the sender.
+        :return: the decrypted data (as ``bytes``)
+        :raises ValueError:
             if the MAC does not match. The message has been tampered with
             or the key is incorrect.
         """
@@ -254,7 +268,7 @@ class ChaCha20Poly1305Cipher(object):
 
 
 def new(**kwargs):
-    """Create a new ChaCha20-Poly1305 AEAD cipher
+    """Create a new ChaCha20-Poly1305 AEAD cipher.
 
     :keyword key: The secret key to use. It must be 32 bytes long.
     :type key: byte string
@@ -263,9 +277,8 @@ def new(**kwargs):
         A value that must never be reused for any other encryption
         done with this key. It must be 8 or 12 bytes long.
 
-        If not provided, a random 12-byte string will be generated
-        (you can read it back via the ``nonce`` attribute of the
-        returned object).
+        If not provided, 12 ``bytes`` will be generated randomly
+        (you can find them back in the ``nonce`` attribute).
     :type nonce: bytes, bytearray, memoryview
 
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Poly1305Cipher` object

@@ -8,8 +8,10 @@ The algorithm requires a nonce of either 8 bytes (original definition of ChaCha2
 or 12 bytes (newer definition published in `RFC7539`_).
 A nonce value must never be reused across encryptions performed with the same key.
 
-Using a 12 bytes implies that no more than 256GB can be encrypted with a key.
+Using a 12 bytes nonce limits the amount of data that can be encrypted to 256BG only.
 No practical limitation exists when the nonce is 8 bytes long.
+
+You create a new cipher by calling :meth:`Crypto.Cipher.ChaCha20.new`.
 
 This is an example of how `ChaCha20`_ can encrypt data::
 
@@ -46,7 +48,7 @@ And this is how you decrypt it::
     >>> except ValueError, KeyError:
     >>>     print("Incorrect decryption")
 
-The examples above implicitly use a 64 bit (8 byte) nonce.
+The examples above implicitly generate a 64 bit (8 byte) nonce.
 
 In order to have a `RFC7539`_-compliant ChaCha20 cipher,
 you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter to ``new()``::
@@ -60,7 +62,7 @@ you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter 
     In other words, an attacker may manipulate the data in transit.
     In order to prevent that, you must also use a *Message Authentication
     Code* (such as :doc:`HMAC <../hash/hmac>`) to authenticate the ciphertext
-    (*encrypt-then-mac*).
+    (*encrypt-then-mac*). Alternatively, you can use :doc:`ChaCha20_Poly1305 <chacha20_poly1305>`.
 
 .. _ChaCha20: http://http://cr.yp.to/chacha.html
 .. _RFC7539: https://tools.ietf.org/html/rfc7539

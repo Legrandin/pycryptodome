@@ -63,7 +63,7 @@ class ChaCha20Cipher(object):
     """ChaCha20 cipher object. Do not create it directly. Use :py:func:`new` instead.
 
     :var nonce: The nonce with length 8 or 12
-    :vartype nonce: byte string
+    :vartype nonce: bytes
     """
 
     block_size = 1
@@ -92,9 +92,9 @@ class ChaCha20Cipher(object):
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
-        :type plaintext: bytes, bytearray, memoryview
-        :returns: the encrypted byte string, of equal length as the
-          plaintext.
+        :type plaintext: bytes/bytearray/memoryview
+        :returns: the ciphertext (as ``bytes``),
+                  of equal length as the plaintext.
         """
 
         if self.encrypt not in self._next:
@@ -119,9 +119,9 @@ class ChaCha20Cipher(object):
         """Decrypt a piece of data.
 
         :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: bytes, bytearray, memoryview
-        :returns: the decrypted byte string, of equal length as the
-          ciphertext.
+        :type ciphertext: bytes/bytearray/memoryview
+        :returns: the plaintext (as ``bytes``),
+                  of equal length as the ciphertext.
         """
 
         if self.decrypt not in self._next:
@@ -187,15 +187,15 @@ def new(**kwargs):
     """Create a new ChaCha20 cipher
 
     :keyword key: The secret key to use. It must be 32 bytes long.
-    :type key: byte string
+    :type key: bytes/bytearray/memoryview
 
     :keyword nonce:
         A mandatory value that must never be reused for any other encryption
         done with this key. It must be 8 or 12 bytes long.
 
-        If not provided, a random 8-byte string will be generated
-        (you can read it back via the ``nonce`` attribute of the returned object).
-    :type nonce: bytes, bytearray, memoryview
+        If not provided, 8 ``bytes`` will be randomly generated
+        (you can find them back in the ``nonce`` attribute).
+    :type nonce: bytes/bytearray/memoryview
 
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Cipher` object
     """
