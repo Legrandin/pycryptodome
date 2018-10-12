@@ -28,6 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from Crypto.Util.py3compat import _is_immutable
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, c_size_t,
                                   create_string_buffer, get_raw_buffer,
                                   c_uint8_ptr)
@@ -44,37 +45,93 @@ _raw_strxor = load_pycryptodome_raw_lib("Crypto.Util._strxor",
                     """)
 
 
-def strxor(term1, term2):
-    """XOR of two byte strings.
-    They must have equal length.
+def strxor(term1, term2, output=None):
+    """XOR two byte strings.
+
+    Args:
+        term1: bytes/bytearray/memoryview
+            The first term of the XOR operation.
+        term2: bytes/bytearray/memoryview
+            The second term of the XOR operation.
+            It must be as long as ``term1``.
+        output: None or bytearray/memoryview
+            If not ``None``, the location where the result is stored into.
 
     Return:
-        A new byte string, :data:`term1` xored with :data:`term2`.
+        If ``output`` is ``None``, a new ``bytes`` string with the result.
+        Otherwise ``None``.
     """
 
     if len(term1) != len(term2):
         raise ValueError("Only byte strings of equal length can be xored")
     
-    result = create_string_buffer(len(term1))
+    if output is None:
+        result = create_string_buffer(len(term1))
+    else:
+        # Note: output may overlap with either input
+        result = output
+        
+        if _is_immutable(output):
+            raise TypeError("output must be a bytearray or a writeable memoryview")
+        
+        if len(term1) != len(output):
+            raise ValueError("output must have the same length as the input"
+                             "  (%d bytes)" % len(term1))
+
     _raw_strxor.strxor(c_uint8_ptr(term1),
                        c_uint8_ptr(term2),
-                       result,
+                       c_uint8_ptr(result),
                        c_size_t(len(term1)))
-    return get_raw_buffer(result)
+
+    if output is None:
+        return get_raw_buffer(result)
+    else:
+        return None
 
 
-def strxor_c(term, c):
-    """XOR of a byte string with a repeated sequence of characters.
+def strxor_c(term, c, output=None):
+    """XOR a byte string with a repeated sequence of characters.
+
+    Args:
+        term : bytes/bytearray/memoryview
+            The first term of the XOR operation.
+        c : byte
+            The byte that makes up the second term of the XOR operation.
+        output: None or bytearray/memoryview
+            If not ``None``, the location where the result is stored into.
 
     Return:
-        A new byte string, :data:`term` with all its bytes xored with :data:`c`.
+        If ``output`` is ``None``, a new ``bytes`` string with the result.
+        Otherwise ``None``.
     """
 
     if not 0 <= c < 256:
         raise ValueError("c must be in range(256)")
-    result = create_string_buffer(len(term))
-    _raw_strxor.strxor_c(c_uint8_ptr(term), c, result, c_size_t(len(term)))
-    return get_raw_buffer(result)
+    
+    if output is None:
+        result = create_string_buffer(len(term))
+    else:
+        # Note: output may overlap with either input
+        result = output
+        
+        if _is_immutable(output):
+            raise TypeError("output must be a bytearray or a writeable memoryview")
+        
+        if len(term) != len(output):
+            raise ValueError("output must have the same length as the input"
+                             "  (%d bytes)" % len(term))
+
+    _raw_strxor.strxor_c(c_uint8_ptr(term),
+                         c,
+                         c_uint8_ptr(result),
+                         c_size_t(len(term))
+                         )
+
+    if output is None:
+        return get_raw_buffer(result)
+    else:
+        return None
+
 
 def _strxor_direct(term1, term2, result):
     """Very fast XOR - check conditions!"""

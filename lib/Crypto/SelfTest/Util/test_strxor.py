@@ -78,9 +78,99 @@ class StrxorTests(unittest.TestCase):
 
         self.assertEqual(strxor(term1_mv, term2), result)
 
+    def test_output_bytearray(self):
+        """Verify result can be stored in pre-allocated memory"""
+        
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        term2 = unhexlify(b"383d4ba020573314395b")
+        original_term1 = term1[:]
+        original_term2 = term2[:]
+        expected_xor = unhexlify(b"c70ed123c59a7fcb6f12")
+        output = bytearray(len(term1))
+        
+        result = strxor(term1, term2, output=output)
+        
+        self.assertEqual(result, None)
+        self.assertEqual(output, expected_xor)
+        self.assertEqual(term1, original_term1)
+        self.assertEqual(term2, original_term2)
+
+    def test_output_memoryview(self):
+        """Verify result can be stored in pre-allocated memory"""
+        
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        term2 = unhexlify(b"383d4ba020573314395b")
+        original_term1 = term1[:]
+        original_term2 = term2[:]
+        expected_xor = unhexlify(b"c70ed123c59a7fcb6f12")
+        output = memoryview(bytearray(len(term1)))
+        
+        result = strxor(term1, term2, output=output)
+        
+        self.assertEqual(result, None)
+        self.assertEqual(output, expected_xor)
+        self.assertEqual(term1, original_term1)
+        self.assertEqual(term2, original_term2)
+
+    def test_output_overlapping_bytearray(self):
+        """Verify result can be stored in overlapping memory"""
+
+        term1 = bytearray(unhexlify(b"ff339a83e5cd4cdf5649"))
+        term2 = unhexlify(b"383d4ba020573314395b")
+        original_term2 = term2[:]
+        expected_xor = unhexlify(b"c70ed123c59a7fcb6f12")
+        
+        result = strxor(term1, term2, output=term1)
+        
+        self.assertEqual(result, None)
+        self.assertEqual(term1, expected_xor)
+        self.assertEqual(term2, original_term2)
+
+    def test_output_overlapping_memoryview(self):
+        """Verify result can be stored in overlapping memory"""
+
+        term1 = memoryview(bytearray(unhexlify(b"ff339a83e5cd4cdf5649")))
+        term2 = unhexlify(b"383d4ba020573314395b")
+        original_term2 = term2[:]
+        expected_xor = unhexlify(b"c70ed123c59a7fcb6f12")
+        
+        result = strxor(term1, term2, output=term1)
+        
+        self.assertEqual(result, None)
+        self.assertEqual(term1, expected_xor)
+        self.assertEqual(term2, original_term2)
+
+    def test_output_ro_bytes(self):
+        """Verify result cannot be stored in read-only memory"""
+        
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        term2 = unhexlify(b"383d4ba020573314395b")
+        
+        self.assertRaises(TypeError, strxor, term1, term2, output=term1)
+    
+    def test_output_ro_memoryview(self):
+        """Verify result cannot be stored in read-only memory"""
+        
+        term1 = memoryview(unhexlify(b"ff339a83e5cd4cdf5649"))
+        term2 = unhexlify(b"383d4ba020573314395b")
+        
+        self.assertRaises(TypeError, strxor, term1, term2, output=term1)
+
+    def test_output_incorrect_length(self):
+        """Verify result cannot be stored in memory of incorrect length"""
+
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        term2 = unhexlify(b"383d4ba020573314395b")
+        output = bytearray(len(term1) - 1)
+        
+        self.assertRaises(ValueError, strxor, term1, term2, output=output)
+
     import types
     if _memoryview is types.NoneType:
         del test_memoryview
+        del test_output_memoryview
+        del test_output_overlapping_memoryview
+        del test_output_ro_memoryview
 
 
 class Strxor_cTests(unittest.TestCase):
@@ -116,9 +206,82 @@ class Strxor_cTests(unittest.TestCase):
 
         self.assertEqual(strxor_c(term1_mv, 65), result)
 
+    def test_output_bytearray(self):
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        original_term1 = term1[:]
+        expected_result = unhexlify(b"be72dbc2a48c0d9e1708")
+        output = bytearray(len(term1))
+
+        result = strxor_c(term1, 65, output=output)
+
+        self.assertEqual(result, None)
+        self.assertEqual(output, expected_result)
+        self.assertEqual(term1, original_term1)
+
+    def test_output_memoryview(self):
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        original_term1 = term1[:]
+        expected_result = unhexlify(b"be72dbc2a48c0d9e1708")
+        output = memoryview(bytearray(len(term1)))
+
+        result = strxor_c(term1, 65, output=output)
+
+        self.assertEqual(result, None)
+        self.assertEqual(output, expected_result)
+        self.assertEqual(term1, original_term1)
+    
+    def test_output_overlapping_bytearray(self):
+        """Verify result can be stored in overlapping memory"""
+
+        term1 = bytearray(unhexlify(b"ff339a83e5cd4cdf5649"))
+        expected_xor = unhexlify(b"be72dbc2a48c0d9e1708")
+        
+        result = strxor_c(term1, 65, output=term1)
+        
+        self.assertEqual(result, None)
+        self.assertEqual(term1, expected_xor)
+
+    def test_output_overlapping_memoryview(self):
+        """Verify result can be stored in overlapping memory"""
+
+        term1 = memoryview(bytearray(unhexlify(b"ff339a83e5cd4cdf5649")))
+        expected_xor = unhexlify(b"be72dbc2a48c0d9e1708")
+        
+        result = strxor_c(term1, 65, output=term1)
+        
+        self.assertEqual(result, None)
+        self.assertEqual(term1, expected_xor)
+
+    def test_output_ro_bytes(self):
+        """Verify result cannot be stored in read-only memory"""
+        
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        
+        self.assertRaises(TypeError, strxor_c, term1, 65, output=term1)
+    
+    def test_output_ro_memoryview(self):
+        """Verify result cannot be stored in read-only memory"""
+        
+        term1 = memoryview(unhexlify(b"ff339a83e5cd4cdf5649"))
+        term2 = unhexlify(b"383d4ba020573314395b")
+        
+        self.assertRaises(TypeError, strxor_c, term1, 65, output=term1)
+
+    def test_output_incorrect_length(self):
+        """Verify result cannot be stored in memory of incorrect length"""
+
+        term1 = unhexlify(b"ff339a83e5cd4cdf5649")
+        output = bytearray(len(term1) - 1)
+        
+        self.assertRaises(ValueError, strxor_c, term1, 65, output=output)
+
+
     import types
     if _memoryview is types.NoneType:
         del test_memoryview
+        del test_output_memoryview
+        del test_output_overlapping_memoryview
+        del test_output_ro_memoryview
 
 
 def get_tests(config={}):
