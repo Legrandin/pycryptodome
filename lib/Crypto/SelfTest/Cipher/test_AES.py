@@ -1288,6 +1288,46 @@ class TestIncompleteBlocks(unittest.TestCase):
         self.assertEqual(cipher.decrypt(b''), b'')
 
 
+class TestOutput(unittest.TestCase):
+
+    def __init__(self, use_aesni):
+        unittest.TestCase.__init__(self)
+        self.use_aesni = use_aesni
+
+    def runTest(self):
+        # Encrypt/Decrypt data and test output parameter
+
+        cipher = AES.new(b'4'*16, AES.MODE_ECB, use_aesni=self.use_aesni)
+
+        pt = b'5' * 16
+        ct = cipher.encrypt(pt)
+
+        output = bytearray(16)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+        import sys
+        if sys.version[:3] != '2.6':
+            output = memoryview(bytearray(16))
+            cipher.encrypt(pt, output=output)
+            self.assertEqual(ct, output)
+        
+            cipher.decrypt(ct, output=output)
+            self.assertEqual(pt, output)
+
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+
+        shorter_output = bytearray(15)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
+
 def get_tests(config={}):
     from Crypto.Util import _cpu_features
     from .common import make_block_tests
@@ -1300,6 +1340,7 @@ def get_tests(config={}):
         tests += make_block_tests(AES, "AESNI", test_data, {'use_aesni': True})
         tests += [ TestMultipleBlocks(True) ]
         tests += [ TestIncompleteBlocks(True) ]
+        tests += [ TestOutput(True) ]
     else:
         print("Skipping AESNI tests")
     return tests
