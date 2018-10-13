@@ -396,7 +396,7 @@ def long_to_bytes(n, blocksize=0):
     n = int(n)
     pack = struct.pack
     while n > 0:
-        s = pack('>I', n & 0xffffffffL) + s
+        s = pack('>I', n & 0xffffffff) + s
         n = n >> 32
     # strip off leading zeros
     for i in range(len(s)):

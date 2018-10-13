@@ -177,7 +177,8 @@ for idx, tv in enumerate(test_vectors_verify):
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    key = DSA.construct([bytes_to_long(x) for x in tv.y, generator, modulus, suborder], False)
+    key = DSA.construct([bytes_to_long(x) for x in (tv.y, generator, modulus,
+                                                    suborder)], False)
     verifier = DSS.new(key, 'fips-186-3')
 
     def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
@@ -212,7 +213,8 @@ for idx, tv in enumerate(test_vectors_sign):
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    key = DSA.construct([bytes_to_long(x) for x in tv.y, generator, modulus, suborder, tv.x], False)
+    key = DSA.construct([bytes_to_long(x) for x in (tv.y, generator, modulus,
+                                                    suborder, tv.x)], False)
     signer = DSS.new(key, 'fips-186-3', randfunc=StrRNG(tv.k))
 
     def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
@@ -591,11 +593,11 @@ class Det_DSA_Tests(unittest.TestCase):
         self.signatures = new_signatures
 
     def test1(self):
-        q = 0x4000000000000000000020108A2E0CC0D99F8A5EFL
-        x = 0x09A4D6792295A7F730FC3F2B49CBC0F62E862272FL
+        q = 0x4000000000000000000020108A2E0CC0D99F8A5EF
+        x = 0x09A4D6792295A7F730FC3F2B49CBC0F62E862272F
         p = 2 * q + 1
         y = pow(2, x, p)
-        key = DSA.construct([pow(y, 2, p), 2L, p, q, x], False)
+        key = DSA.construct([pow(y, 2, p), 2, p, q, x], False)
         signer = DSS.new(key, 'deterministic-rfc6979')
 
         # Test _int2octets

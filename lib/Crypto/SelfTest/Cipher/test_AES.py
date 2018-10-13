@@ -24,6 +24,8 @@
 
 """Self-test suite for Crypto.Cipher.AES"""
 
+from __future__ import print_function
+
 import unittest
 from Crypto.Hash import SHA256
 from Crypto.Cipher import AES
@@ -1299,7 +1301,7 @@ def get_tests(config={}):
         tests += [ TestMultipleBlocks(True) ]
         tests += [ TestIncompleteBlocks(True) ]
     else:
-        print "Skipping AESNI tests"
+        print("Skipping AESNI tests")
     return tests
 
 if __name__ == '__main__':

@@ -110,7 +110,7 @@ try:
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
-    class VoidPointer(object):
+    class VoidPointer_cffi(object):
         """Model a newly allocated pointer to void"""
 
         def __init__(self):
@@ -121,6 +121,8 @@ try:
 
         def address_of(self):
             return self._pp
+
+    VoidPointer = VoidPointer_cffi
 
     backend = "cffi"
 
@@ -199,7 +201,7 @@ except ImportError:
 
     # ---
 
-    class VoidPointer(object):
+    class VoidPointer_ctypes(object):
         """Model a newly allocated pointer to void"""
 
         def __init__(self):
@@ -210,6 +212,8 @@ except ImportError:
 
         def address_of(self):
             return byref(self._p)
+
+    VoidPointer = VoidPointer_ctypes
 
     backend = "ctypes"
     del ctypes

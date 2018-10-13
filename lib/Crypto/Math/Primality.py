@@ -312,7 +312,7 @@ def generate_probable_prime(**kwargs):
     randfunc = kwargs.pop("randfunc", None)
     prime_filter = kwargs.pop("prime_filter", lambda x: True)
     if kwargs:
-        print "Unknown parameters:", kwargs.keys()
+        raise ValueError("Unknown parameters: " + kwargs.keys())
 
     if exact_bits is None:
         raise ValueError("Missing exact_bits parameter")
@@ -351,7 +351,7 @@ def generate_probable_safe_prime(**kwargs):
     exact_bits = kwargs.pop("exact_bits", None)
     randfunc = kwargs.pop("randfunc", None)
     if kwargs:
-        print "Unknown parameters:", kwargs.keys()
+        raise ValueError("Unknown parameters: " + kwargs.keys())
 
     if randfunc is None:
         randfunc = Random.new().read

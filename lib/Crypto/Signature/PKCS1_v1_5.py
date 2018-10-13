@@ -41,7 +41,7 @@ from Crypto.Signature import pkcs1_15
 def _pycrypto_verify(self, hash_object, signature):
     try:
         self._verify(hash_object, signature)
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         return False
     return True
 

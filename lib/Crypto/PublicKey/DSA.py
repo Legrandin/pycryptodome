@@ -184,7 +184,7 @@ class DsaKey(object):
             tuple : (p,q,g)
         """
 
-        return map(int, [self._key[comp] for comp in 'p', 'q', 'g'])
+        return [int(self._key[comp]) for comp in ('p', 'q', 'g')]
 
     def __repr__(self):
         attrs = []
@@ -270,7 +270,7 @@ class DsaKey(object):
             randfunc = Random.get_random_bytes
 
         if format == 'OpenSSH':
-            tup1 = [self._key[x].to_bytes() for x in 'p', 'q', 'g', 'y']
+            tup1 = [self._key[x].to_bytes() for x in ('p', 'q', 'g', 'y')]
 
             def func(x):
                 if (bord(x[0]) & 0x80):

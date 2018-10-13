@@ -28,6 +28,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import print_function
+
 import json
 import unittest
 from binascii import unhexlify
@@ -894,7 +896,7 @@ def get_tests(config={}):
         if config.get('slow_tests'):
             tests += list_test_cases(NISTTestVectorsGCM_no_clmul)
     else:
-        print "Skipping test of PCLMULDQD in AES GCM"
+        print("Skipping test of PCLMULDQD in AES GCM")
 
     return tests
 

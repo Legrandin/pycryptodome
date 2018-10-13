@@ -77,7 +77,7 @@ class RSATest(unittest.TestCase):
         e2 53 72 98 ca 2a 8f 59 46 f8 e5 fd 09 1d bd cb
     """
 
-    e = 0x11L    # public exponent
+    e = 0x11    # public exponent
 
     prime_factor = """
         c9 7f b1 f0 27 f4 53 f6 34 12 33 ea aa d1 d9 35
@@ -161,7 +161,7 @@ class RSATest(unittest.TestCase):
         self._check_decryption(rsaObj)
 
     def test_construct_bad_key2(self):
-        tup = (self.n, 1L)
+        tup = (self.n, 1)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
         # An even modulus is wrong
@@ -179,11 +179,11 @@ class RSATest(unittest.TestCase):
         tup = (self.p*self.p, self.e, self.p, self.p)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
-        tup = (self.p*self.p, 3L, self.p, self.q)
+        tup = (self.p*self.p, 3, self.p, self.q)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
     def test_construct_bad_key6(self):
-        tup = (self.n, self.e, self.d, self.p, self.q, 10L)
+        tup = (self.n, self.e, self.d, self.p, self.q, 10)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
         from Crypto.Util.number import inverse

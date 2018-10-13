@@ -110,7 +110,7 @@ class DSATest(unittest.TestCase):
         tup = (y, g, p, q+1)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
-        tup = (y, 1L, p, q)
+        tup = (y, 1, p, q)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
     def test_construct_bad_key5(self):

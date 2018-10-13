@@ -20,6 +20,8 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import print_function
+
 import unittest
 
 from Crypto.PublicKey import RSA
@@ -39,7 +41,6 @@ def t2b(t):
     """Convert a text string with bytes in hex form to a byte string"""
     clean = b(rws(t))
     if len(clean)%2 == 1:
-        print clean
         raise ValueError("Even number of characters expected")
     return a2b_hex(clean)
 

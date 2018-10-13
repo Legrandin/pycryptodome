@@ -60,8 +60,8 @@ class GF2_Tests(TestCase):
         self.assertEqual(y, 17)     # (x+1)^4 = x^4 + 1
 
         # Prove linearity works
-        comps = [1, 4, 128, 2L**34]
-        sum_comps = 1+4+128+2L**34
+        comps = [1, 4, 128, 2**34]
+        sum_comps = 1+4+128+2**34
         y = 908
         z = _mult_gf2(sum_comps, y)
         w = 0
@@ -115,7 +115,7 @@ class Element_Tests(TestCase):
         x = _Element(6) * one
         self.assertEqual(int(x), 6)
 
-        x = _Element(2L**127) * two
+        x = _Element(2**127) * two
         self.assertEqual(int(x), 1 + 2 + 4 + 128)
 
     def test4(self):

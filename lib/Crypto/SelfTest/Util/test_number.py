@@ -89,20 +89,20 @@ class MiscTests(unittest.TestCase):
         bits = 512
         x = number.getStrongPrime(bits)
         self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1L << bits-1)-1, 1)
-        self.assertEqual(x < (1L << bits), 1)
+        self.assertEqual(x > (1 << bits-1)-1, 1)
+        self.assertEqual(x < (1 << bits), 1)
         e = 2**16+1
         x = number.getStrongPrime(bits, e)
         self.assertEqual(number.GCD(x-1, e), 1)
         self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1L << bits-1)-1, 1)
-        self.assertEqual(x < (1L << bits), 1)
+        self.assertEqual(x > (1 << bits-1)-1, 1)
+        self.assertEqual(x < (1 << bits), 1)
         e = 2**16+2
         x = number.getStrongPrime(bits, e)
         self.assertEqual(number.GCD((x-1)>>1, e), 1)
         self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1L << bits-1)-1, 1)
-        self.assertEqual(x < (1L << bits), 1)
+        self.assertEqual(x > (1 << bits-1)-1, 1)
+        self.assertEqual(x < (1 << bits), 1)
 
     def test_isPrime(self):
         """Util.number.isPrime"""
@@ -112,15 +112,15 @@ class MiscTests(unittest.TestCase):
         self.assertEqual(number.isPrime(2), True)
         self.assertEqual(number.isPrime(3), True)
         self.assertEqual(number.isPrime(4), False)
-        self.assertEqual(number.isPrime(2L**1279-1), True)
-        self.assertEqual(number.isPrime(-(2L**1279-1)), False)     # Regression test: negative numbers should not be prime
+        self.assertEqual(number.isPrime(2**1279-1), True)
+        self.assertEqual(number.isPrime(-(2**1279-1)), False)     # Regression test: negative numbers should not be prime
         # test some known gmp pseudo-primes taken from
         # http://www.trnicely.net/misc/mpzspsp.html
         for composite in (43 * 127 * 211, 61 * 151 * 211, 15259 * 30517,
-                          346141L * 692281L, 1007119L * 2014237L, 3589477L * 7178953L,
-                          4859419L * 9718837L, 2730439L * 5460877L,
-                          245127919L * 490255837L, 963939391L * 1927878781L,
-                          4186358431L * 8372716861L, 1576820467L * 3153640933L):
+                          346141 * 692281, 1007119 * 2014237, 3589477 * 7178953,
+                          4859419 * 9718837, 2730439 * 5460877,
+                          245127919 * 490255837, 963939391 * 1927878781,
+                          4186358431 * 8372716861, 1576820467 * 3153640933):
             self.assertEqual(number.isPrime(long(composite)), False)
 
     def test_size(self):
@@ -128,7 +128,7 @@ class MiscTests(unittest.TestCase):
         self.assertEqual(number.size(3),2)
         self.assertEqual(number.size(0xa2),8)
         self.assertEqual(number.size(0xa2ba40),8*3)
-        self.assertEqual(number.size(0xa2ba40ee07e3b2bd2f02ce227f36a195024486e49c19cb41bbbdfbba98b22b0e577c2eeaffa20d883a76e65e394c69d4b3c05a1e8fadda27edb2a42bc000fe888b9b32c22d15add0cd76b3e7936e19955b220dd17d4ea904b1ec102b2e4de7751222aa99151024c7cb41cc5ea21d00eeb41f7c800834d2c6e06bce3bce7ea9a5L), 1024)
+        self.assertEqual(number.size(0xa2ba40ee07e3b2bd2f02ce227f36a195024486e49c19cb41bbbdfbba98b22b0e577c2eeaffa20d883a76e65e394c69d4b3c05a1e8fadda27edb2a42bc000fe888b9b32c22d15add0cd76b3e7936e19955b220dd17d4ea904b1ec102b2e4de7751222aa99151024c7cb41cc5ea21d00eeb41f7c800834d2c6e06bce3bce7ea9a5), 1024)
 
 
 def get_tests(config={}):

@@ -198,7 +198,7 @@ class CcmMode(object):
         if self._assoc_len > 0:
             if self._assoc_len < (2 ** 16 - 2 ** 8):
                 enc_size = 2
-            elif self._assoc_len < (2L ** 32):
+            elif self._assoc_len < (2 ** 32):
                 assoc_len_encoded = b'\xFF\xFE'
                 enc_size = 4
             else:
