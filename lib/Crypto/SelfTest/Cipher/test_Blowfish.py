@@ -112,7 +112,7 @@ class KeyLength(unittest.TestCase):
                           Blowfish.MODE_ECB)
 
 def get_tests(config={}):
-    from common import make_block_tests
+    from .common import make_block_tests
     tests = make_block_tests(Blowfish, "Blowfish", test_data)
     tests.append(KeyLength())
     return tests

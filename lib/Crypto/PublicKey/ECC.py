@@ -28,8 +28,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import print_function
+
 import struct
 import binascii
+from collections import namedtuple
 
 from Crypto.Util.py3compat import bord, tobytes, b, tostr, bchr
 
@@ -42,19 +45,6 @@ from Crypto.IO import PKCS8, PEM
 from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _create_subject_public_key_info,
                               _extract_subject_public_key_info)
-
-
-class _Curve(object):
-    pass
-
-_curve = _Curve()
-_curve.p = Integer(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff)
-_curve.b = Integer(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b)
-_curve.order = Integer(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551)
-_curve.Gx = Integer(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)
-_curve.Gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
-_curve.names = ("P-256", "prime256v1", "secp256r1")
-_curve.oid = "1.2.840.10045.3.1.7"
 
 
 class UnsupportedEccFeature(ValueError):
@@ -243,7 +233,22 @@ class EccPoint(object):
         return r[0]
 
 
-_curve.G = EccPoint(_curve.Gx, _curve.Gy)
+_Curve = namedtuple("_Curve", "p b order Gx Gy G names oid")
+
+_curve_gx = Integer(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)
+_curve_gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
+
+_curve = _Curve(
+    Integer(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff),
+    Integer(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b),
+    Integer(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551),
+    _curve_gx,
+    _curve_gy,
+    EccPoint(_curve_gx, _curve_gy),
+    ("P-256", "prime256v1", "secp256r1"),
+    "1.2.840.10045.3.1.7",
+)
+del namedtuple
 
 
 class EccKey(object):
@@ -904,12 +909,14 @@ def import_key(encoded, passphrase=None):
 
 
 if __name__ == "__main__":
+    
     import time
+
     d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
 
     point = generate(curve="P-256").pointQ
     start = time.time()
     count = 30
-    for x in xrange(count):
+    for x in range(count):
         _ = point * d
-    print (time.time() - start) / count * 1000, "ms"
+    print((time.time() - start) / count * 1000, "ms")

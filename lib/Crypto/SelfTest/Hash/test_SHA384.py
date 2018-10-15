@@ -48,7 +48,7 @@ test_data = [
 
 def get_tests(config={}):
     from Crypto.Hash import SHA384
-    from common import make_hash_tests
+    from .common import make_hash_tests
     return make_hash_tests(SHA384, "SHA384", test_data,
         digest_size=48,
         oid='2.16.840.1.101.3.4.2.2')

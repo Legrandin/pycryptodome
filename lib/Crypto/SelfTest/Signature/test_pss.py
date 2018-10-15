@@ -93,7 +93,7 @@ test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vecto
 
 
 for count, tv in enumerate(test_vectors_verify):
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         continue
     if hasattr(tv, "n"):
         modulus = tv.n
@@ -148,7 +148,7 @@ test_vectors_sign += load_tests(("Crypto", "SelfTest", "Signature", "test_vector
                                  { 'shaalg' : lambda x: x })
 
 for count, tv in enumerate(test_vectors_sign):
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         continue
     if hasattr(tv, "n"):
         modulus = tv.n

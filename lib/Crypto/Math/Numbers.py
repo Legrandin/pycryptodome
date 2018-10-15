@@ -39,14 +39,14 @@ from Crypto.Util.py3compat import *
 from Crypto import Random
 
 try:
-    from Crypto.Math._Numbers_gmp import Integer
+    from Crypto.Math._Numbers_gmp import Integer # type: ignore
     from Crypto.Math._Numbers_gmp import implementation as _implementation
 except (ImportError, OSError, AttributeError):
     try:
-        from Crypto.Math._Numbers_custom import Integer
+        from Crypto.Math._Numbers_custom import Integer # type: ignore
         from Crypto.Math._Numbers_custom import implementation as _implementation
     except (ImportError, OSError):
-        from Crypto.Math._Numbers_int import Integer
+        from Crypto.Math._Numbers_int import Integer # type: ignore
         _implementation = { }
 
 
@@ -145,5 +145,5 @@ def _random_range(**kwargs):
                                 )
     return norm_candidate + min_inclusive
 
-Integer.random = staticmethod(_random)
-Integer.random_range = staticmethod(_random_range)
+setattr(Integer, "random", staticmethod(_random))
+setattr(Integer, "random_range", staticmethod(_random_range))

@@ -371,16 +371,15 @@ if __name__=='__main__':
              'TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL')
            ]
 
-    for key, words in data:
-        print('Trying key', key)
-        key=binascii.a2b_hex(key)
-        w2=key_to_english(key)
+    for key_hex, words in data:
+        print('Trying key', key_hex)
+        key_bin=binascii.a2b_hex(key_hex)
+        w2=key_to_english(key_bin)
         if w2!=words:
-            print('key_to_english fails on key', repr(key), ', producing',
-                  str(w2))
+            print('key_to_english fails on key', key_hex, ', producing', w2)
         k2=english_to_key(words)
-        if k2!=key:
-            print('english_to_key fails on key', repr(key), ', producing',
+        if k2!=key_bin:
+            print('english_to_key fails on key', key_hex, ', producing',
                   repr(k2))
 
 

@@ -325,7 +325,7 @@ class RonRivestTest(unittest.TestCase):
 
 def get_tests(config={}):
     from Crypto.Cipher import DES
-    from common import make_block_tests
+    from .common import make_block_tests
     return make_block_tests(DES, "DES", test_data) + [RonRivestTest()]
 
 if __name__ == '__main__':

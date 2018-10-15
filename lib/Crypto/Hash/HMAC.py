@@ -35,8 +35,8 @@ from Crypto.Util.py3compat import bord, tobytes, _memoryview
 
 from binascii import unhexlify
 
-import MD5
-import BLAKE2s
+from Crypto.Hash import MD5
+from Crypto.Hash import BLAKE2s
 from Crypto.Util.strxor import strxor
 from Crypto.Random import get_random_bytes
 

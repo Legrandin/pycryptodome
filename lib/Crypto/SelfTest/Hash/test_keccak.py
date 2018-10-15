@@ -36,7 +36,6 @@ from binascii import hexlify, unhexlify
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 
-from StringIO import StringIO
 from Crypto.Hash import keccak
 from Crypto.Util.py3compat import b, tobytes, bchr
 

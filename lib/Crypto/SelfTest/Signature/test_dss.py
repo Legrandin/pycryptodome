@@ -63,14 +63,6 @@ def load_hash_by_name(hash_name):
     return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
 
-class TestKey(object):
-    pass
-
-
-class TestVector(object):
-    pass
-
-
 class StrRNG:
 
     def __init__(self, randomness):
@@ -164,8 +156,9 @@ test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vecto
 
 for idx, tv in enumerate(test_vectors_verify):
 
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+        assert(res)
         hash_name = res.group(3).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
         continue
@@ -200,8 +193,9 @@ test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors
 
 for idx, tv in enumerate(test_vectors_sign):
 
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+        assert(res)
         hash_name = res.group(3).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
         continue
@@ -299,7 +293,7 @@ test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vecto
 
 for idx, tv in enumerate(test_vectors_verify):
 
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         res = re.match(r"\[P-256,(SHA-[0-9]+)\]", tv)
         assert res
         hash_name = res.group(1).replace("-", "")
@@ -329,7 +323,7 @@ test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors
 
 for idx, tv in enumerate(test_vectors_sign):
 
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         res = re.match(r"\[P-256,(SHA-[0-9]+)\]", tv)
         assert res
         hash_name = res.group(1).replace("-", "")
@@ -348,30 +342,30 @@ for idx, tv in enumerate(test_vectors_sign):
 class Det_DSA_Tests(unittest.TestCase):
     """Tests from rfc6979"""
 
-    keys = {}
-    key = TestKey()
-
-    key.p = """
+    # Each key is (p, q, g, x, y, desc)
+    keys = [
+            (
+            """
             86F5CA03DCFEB225063FF830A0C769B9DD9D6153AD91D7CE27F787C43278B447
             E6533B86B18BED6E8A48B784A14C252C5BE0DBF60B86D6385BD2F12FB763ED88
             73ABFD3F5BA2E0A8C0A59082EAC056935E529DAF7C610467899C77ADEDFC846C
-            881870B7B19B2B58F9BE0521A17002E3BDD6B86685EE90B3D9A1B02B782B1779"""
-    key.q = "996F967F6C8E388D9E28D01E205FBA957A5698B1"
-    key.g = """
+            881870B7B19B2B58F9BE0521A17002E3BDD6B86685EE90B3D9A1B02B782B1779""",
+            "996F967F6C8E388D9E28D01E205FBA957A5698B1",
+            """
             07B0F92546150B62514BB771E2A0C0CE387F03BDA6C56B505209FF25FD3C133D
             89BBCD97E904E09114D9A7DEFDEADFC9078EA544D2E401AEECC40BB9FBBF78FD
             87995A10A1C27CB7789B594BA7EFB5C4326A9FE59A070E136DB77175464ADCA4
-            17BE5DCE2F40D10A46A3A3943F26AB7FD9C0398FF8C76EE0A56826A8A88F1DBD"""
-    key.x = "411602CB19A6CCC34494D79D98EF1E7ED5AF25F7"
-    key.y = """
+            17BE5DCE2F40D10A46A3A3943F26AB7FD9C0398FF8C76EE0A56826A8A88F1DBD""",
+            "411602CB19A6CCC34494D79D98EF1E7ED5AF25F7",
+            """
             5DF5E01DED31D0297E274E1691C192FE5868FEF9E19A84776454B100CF16F653
             92195A38B90523E2542EE61871C0440CB87C322FC4B4D2EC5E1E7EC766E1BE8D
             4CE935437DC11C3C8FD426338933EBFE739CB3465F4D3668C5E473508253B1E6
-            82F65CBDC4FAE93C2EA212390E54905A86E2223170B44EAA7DA5DD9FFCFB7F3B"""
-    keys['DSA1024'] = key
-
-    key = TestKey()
-    key.p = """
+            82F65CBDC4FAE93C2EA212390E54905A86E2223170B44EAA7DA5DD9FFCFB7F3B""",
+            "DSA1024"
+            ),
+            (
+            """
             9DB6FB5951B66BB6FE1E140F1D2CE5502374161FD6538DF1648218642F0B5C48
             C8F7A41AADFA187324B87674FA1822B00F1ECF8136943D7C55757264E5A1A44F
             FE012E9936E00C1D3E9310B01C7D179805D3058B2A9F4BB6F9716BFE6117C6B5
@@ -379,9 +373,9 @@ class Det_DSA_Tests(unittest.TestCase):
             35567E1B34C3D6A5C0CEAA1A0F368213C3D19843D0B4B09DCB9FC72D39C8DE41
             F1BF14D4BB4563CA28371621CAD3324B6A2D392145BEBFAC748805236F5CA2FE
             92B871CD8F9C36D3292B5509CA8CAA77A2ADFC7BFD77DDA6F71125A7456FEA15
-            3E433256A2261C6A06ED3693797E7995FAD5AABBCFBE3EDA2741E375404AE25B"""
-    key.q = "F2C3119374CE76C9356990B465374A17F23F9ED35089BD969F61C6DDE9998C1F"
-    key.g = """
+            3E433256A2261C6A06ED3693797E7995FAD5AABBCFBE3EDA2741E375404AE25B""",
+            "F2C3119374CE76C9356990B465374A17F23F9ED35089BD969F61C6DDE9998C1F",
+            """
             5C7FF6B06F8F143FE8288433493E4769C4D988ACE5BE25A0E24809670716C613
             D7B0CEE6932F8FAA7C44D2CB24523DA53FBE4F6EC3595892D1AA58C4328A06C4
             6A15662E7EAA703A1DECF8BBB2D05DBE2EB956C142A338661D10461C0D135472
@@ -389,9 +383,9 @@ class Det_DSA_Tests(unittest.TestCase):
             AA61782F52ABEB8BD6432C4DD097BC5423B285DAFB60DC364E8161F4A2A35ACA
             3A10B1C4D203CC76A470A33AFDCBDD92959859ABD8B56E1725252D78EAC66E71
             BA9AE3F1DD2487199874393CD4D832186800654760E1E34C09E4D155179F9EC0
-            DC4473F996BDCE6EED1CABED8B6F116F7AD9CF505DF0F998E34AB27514B0FFE7"""
-    key.x = "69C7548C21D0DFEA6B9A51C9EAD4E27C33D3B3F180316E5BCAB92C933F0E4DBC"
-    key.y = """
+            DC4473F996BDCE6EED1CABED8B6F116F7AD9CF505DF0F998E34AB27514B0FFE7""",
+            "69C7548C21D0DFEA6B9A51C9EAD4E27C33D3B3F180316E5BCAB92C933F0E4DBC",
+            """
             667098C654426C78D7F8201EAC6C203EF030D43605032C2F1FA937E5237DBD94
             9F34A0A2564FE126DC8B715C5141802CE0979C8246463C40E6B6BDAA2513FA61
             1728716C2E4FD53BC95B89E69949D96512E873B9C8F8DFD499CC312882561ADE
@@ -399,8 +393,10 @@ class Det_DSA_Tests(unittest.TestCase):
             5126E9B8BF21E8358EE0E0A30EF13FD6A664C0DCE3731F7FB49A4845A4FD8254
             687972A2D382599C9BAC4E0ED7998193078913032558134976410B89D2C171D1
             23AC35FD977219597AA7D15C1A9A428E59194F75C721EBCBCFAE44696A499AFA
-            74E04299F132026601638CB87AB79190D4A0986315DA8EEC6561C938996BEADF"""
-    keys['DSA2048'] = key
+            74E04299F132026601638CB87AB79190D4A0986315DA8EEC6561C938996BEADF""",
+            "DSA2048"
+            ),
+           ]
 
     # This is a sequence of items:
     # message, k, r, s, hash module
@@ -569,27 +565,29 @@ class Det_DSA_Tests(unittest.TestCase):
 
     def setUp(self):
         # Convert DSA key components from hex strings to integers
+        # Each key is (p, q, g, x, y, desc)
+
+        from collections import namedtuple
+
+        TestKey = namedtuple('TestKey', 'p q g x y')
         new_keys = {}
-        for tag, test_key in self.keys.items():
-            new_test_key = TestKey()
-            new_test_key.p = t2l(test_key.p)
-            new_test_key.q = t2l(test_key.q)
-            new_test_key.g = t2l(test_key.g)
-            new_test_key.x = t2l(test_key.x)
-            new_test_key.y = t2l(test_key.y)
-            new_keys[tag] = new_test_key
+        for k in self.keys:
+            tk = TestKey(*[ t2l(y) for y in k[:-1] ])
+            new_keys[k[-1]] = tk
         self.keys = new_keys
 
         # Convert signature encoding
+        TestSig = namedtuple('TestSig', 'message nonce result module test_key')
         new_signatures = []
-        for tv in self.signatures:
-            new_tv = TestVector()
-            new_tv.message = tobytes(tv[0])      # message
-            new_tv.nonce = t2l(tv[1])
-            new_tv.result = t2b(tv[2]) + t2b(tv[3])
-            new_tv.module = tv[4]
-            new_tv.test_key = self.keys[tv[5]]
-            new_signatures.append(new_tv)
+        for message, nonce, r, s, module, test_key in self.signatures:
+            tsig = TestSig(
+                tobytes(message),
+                t2l(nonce),
+                t2b(r) + t2b(s),
+                module,
+                self.keys[test_key]
+            )
+            new_signatures.append(tsig)
         self.signatures = new_signatures
 
     def test1(self):
@@ -738,8 +736,6 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
         with open(pycryptodome_filename(comps, "dsa_test.json"), "rt") as file_in:
             tv_tree = json.load(file_in)
 
-        class TestVector(object):
-            pass
         self.tv = []
 
         for group in tv_tree['testGroups']:
@@ -755,17 +751,20 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
                 assert False
             assert group['type'] == "DSAVer"
             
+            from collections import namedtuple
+            TestVector = namedtuple('TestVector', 'id comment msg sig key hash_module valid warning')
+
             for test in group['tests']:
-                tv = TestVector()
-                
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'msg', 'sig':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.key = key
-                tv.hash_module = hash_module
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
+                tv = TestVector(
+                    test['tcId'],
+                    test['comment'],
+                    unhexlify(test['msg']),
+                    unhexlify(test['sig']),
+                    key,
+                    hash_module,
+                    test['result'] != "invalid",
+                    test['result'] == "acceptable"
+                )
                 self.tv.append(tv)
 
     def shortDescription(self):
@@ -803,9 +802,6 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         self._wycheproof_warnings = wycheproof_warnings
         self._id = "None"
 
-    class TestVector(object):
-        pass
-
     def add_tests(self, filename):
         comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
         with open(pycryptodome_filename(comps, filename), "rt") as file_in:
@@ -828,18 +824,21 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
             else:
                 assert False
             assert group['type'] == "ECDSAVer"
-            
+           
+            from collections import namedtuple
+            TestVector = namedtuple('TestVector', 'id comment msg sig key hash_module valid warning')
+
             for test in group['tests']:
-                tv = TestVector()
-                
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'msg', 'sig':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.key = key
-                tv.hash_module = hash_module
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
+                tv = TestVector(
+                    test['tcId'],
+                    test['comment'],
+                    unhexlify(test['msg']),
+                    unhexlify(test['sig']),
+                    key,
+                    hash_module,
+                    test['result'] != "invalid",
+                    test['result'] == "acceptable"
+                )
                 self.tv.append(tv)
 
     def setUp(self):

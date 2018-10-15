@@ -58,7 +58,7 @@ test_data = [
 
 def get_tests(config={}):
     from Crypto.Hash import RIPEMD160
-    from common import make_hash_tests
+    from .common import make_hash_tests
     return make_hash_tests(RIPEMD160, "RIPEMD160", test_data,
         digest_size=20,
         oid="1.3.36.3.2.1")

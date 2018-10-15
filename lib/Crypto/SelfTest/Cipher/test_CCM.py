@@ -369,8 +369,8 @@ class CcmTests(unittest.TestCase):
 
         self.assertEqual(self.data_128, pt_test)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 
@@ -568,7 +568,7 @@ class TestVectors(unittest.TestCase):
     # - MAC
     # - AES key
     # - nonce
-    test_vectors = [
+    test_vectors_hex = [
         # NIST SP 800 38C
         ( '0001020304050607',
           '20212223',
@@ -588,7 +588,7 @@ class TestVectors(unittest.TestCase):
           '484392fbc1b09951',
           '404142434445464748494a4b4c4d4e4f',
           '101112131415161718191a1b'),
-        ( (''.join(["%02X" % (x*16+y) for x in xrange(0,16) for y in xrange(0,16)]))*256,
+        ( (''.join(["%02X" % (x*16+y) for x in range(0,16) for y in range(0,16)]))*256,
           '202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f',
           '69915dad1e84c6376a68c2967e4dab615ae0fd1faec44cc484828529463ccf72',
           'b4ac6bec93e8598e7f0dadbcea5b',
@@ -742,8 +742,7 @@ class TestVectors(unittest.TestCase):
           '008d493b30ae8b3c9696766cfa'),
     ]
 
-    for index, tv in enumerate(test_vectors):
-        test_vectors[index] = (unhexlify(x) for x in tv)
+    test_vectors = [[unhexlify(x) for x in tv] for tv in test_vectors_hex]
 
     def runTest(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:

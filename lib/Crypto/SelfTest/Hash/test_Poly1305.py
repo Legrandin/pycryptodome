@@ -37,14 +37,13 @@ import json
 import unittest
 from binascii import unhexlify, hexlify
 
-from common import make_mac_tests
+from .common import make_mac_tests
 from Crypto.SelfTest.st_common import list_test_cases
-
-from Crypto.Util.py3compat import tobytes, _memoryview
 
 from Crypto.Hash import Poly1305
 from Crypto.Cipher import AES, ChaCha20
 
+from Crypto.Util.py3compat import tobytes
 from Crypto.Util.strxor import strxor_c
 
 # This is a list of (r+s keypair, data, result, description, keywords) tuples.
@@ -53,57 +52,49 @@ test_data_basic = [
         "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b",
         hexlify(b"Cryptographic Forum Research Group").decode(),
         "a8061dc1305136c6c22b8baf0c0127a9",
-        "RFC7539",
-        {}
+        "RFC7539"
     ),
     (
         "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
         "0000000000000000000000000000000000000000000000000000000000000000",
         "49ec78090e481ec6c26b33b91ccc0307",
         "https://tools.ietf.org/html/draft-agl-tls-chacha20poly1305-00#section-7 A",
-        {}
     ),
     (
         "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
         "48656c6c6f20776f726c6421",
         "a6f745008f81c916a20dcc74eef2b2f0",
         "https://tools.ietf.org/html/draft-agl-tls-chacha20poly1305-00#section-7 B",
-        {}
     ),
     (
         "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
         "",
         "6b657920666f7220506f6c7931333035",
         "Generated with pure Python",
-        {}
     ),
     (
         "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
         "FF",
         "f7e4e0ef4c46d106219da3d1bdaeb3ff",
         "Generated with pure Python",
-        {}
     ),
     (
         "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
         "FF00",
         "7471eceeb22988fc936da1d6e838b70e",
         "Generated with pure Python",
-        {}
     ),
     (
         "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
         "AA" * 17,
         "32590bc07cb2afaccca3f67f122975fe",
         "Generated with pure Python",
-        {}
     ),
     (
         "00" * 32,
         "00" * 64,
         "00" * 16,
         "RFC7539 A.3 #1",
-        {}
     ),
     (
         "0000000000000000000000000000000036e5f6b5c5e06070f0efca96227a863e",
@@ -131,10 +122,9 @@ test_data_basic = [
         b"tions made at an"
         b"y time or place,"
         b" which are addre"
-        b"ssed to"),
+        b"ssed to").decode(),
         "36e5f6b5c5e06070f0efca96227a863e",
         "RFC7539 A.3 #2",
-        {}
     ),
     (
         "36e5f6b5c5e06070f0efca96227a863e00000000000000000000000000000000",
@@ -162,10 +152,9 @@ test_data_basic = [
         b"tions made at an"
         b"y time or place,"
         b" which are addre"
-        b"ssed to"),
+        b"ssed to").decode(),
         "f3477e7cd95417af89a6b8794c310cf0",
         "RFC7539 A.3 #3",
-        {}
     ),
     (
         "1c9240a5eb55d38af333888604f6b5f0473917c1402b80099dca5cbc207075c0",
@@ -179,42 +168,36 @@ test_data_basic = [
         "7261746873206f757467726162652e",
         "4541669a7eaaee61e708dc7cbcc5eb62",
         "RFC7539 A.3 #4",
-        {}
     ),
     (
         "02" + "00" * 31,
         "FF" * 16,
         "03" + "00" * 15,
         "RFC7539 A.3 #5",
-        {}
     ),
     (
         "02" + "00" * 15 + "FF" * 16,
         "02" + "00" * 15,
         "03" + "00" * 15,
         "RFC7539 A.3 #6",
-        {}
     ),
     (
         "01" + "00" * 31,
         "FF" * 16 + "F0" + "FF" * 15 + "11" + "00" * 15,
         "05" + "00" * 15,
         "RFC7539 A.3 #7",
-        {}
     ),
     (
         "01" + "00" * 31,
         "FF" * 16 + "FB" + "FE" * 15 + "01" * 16,
         "00" * 16,
         "RFC7539 A.3 #8",
-        {}
     ),
     (
         "02" + "00" * 31,
         "FD" + "FF" * 15,
         "FA" + "FF" * 15,
         "RFC7539 A.3 #9",
-        {}
     ),
     (
         "01 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00"
@@ -225,7 +208,6 @@ test_data_basic = [
         "01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
         "14 00 00 00 00 00 00 00 55 00 00 00 00 00 00 00",
         "RFC7539 A.3 #10",
-        {}
     ),
     (
         "01 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00"
@@ -235,7 +217,6 @@ test_data_basic = [
         "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
         "13" + "00" * 15,
         "RFC7539 A.3 #11",
-        {}
     ),
 ]
 
@@ -478,8 +459,8 @@ class Poly1305Test_AES(unittest.TestCase):
 
             self.assertEqual(h1.digest(), h2.digest())
 
-    import types
-    if _memoryview == types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 

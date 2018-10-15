@@ -449,7 +449,7 @@ class KeyLength(unittest.TestCase):
         self.assertRaises(ValueError, ARC4.new, bchr(0) * 257)
 
 def get_tests(config={}):
-    from common import make_stream_tests
+    from .common import make_stream_tests
     tests = make_stream_tests(ARC4, "ARC4", test_data)
     tests += list_test_cases(RFC6229_Tests)
     tests += list_test_cases(Drop_Tests)

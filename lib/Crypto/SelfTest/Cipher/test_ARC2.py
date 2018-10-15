@@ -114,7 +114,7 @@ class KeyLength(unittest.TestCase):
 
 def get_tests(config={}):
     from Crypto.Cipher import ARC2
-    from common import make_block_tests
+    from .common import make_block_tests
 
     tests = make_block_tests(ARC2, "ARC2", test_data)
     tests.append(BufferOverflowTest())

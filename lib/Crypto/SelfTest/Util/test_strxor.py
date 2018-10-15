@@ -34,7 +34,6 @@
 import unittest
 from binascii import unhexlify, hexlify
 
-from Crypto.Util.py3compat import _memoryview
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.strxor import strxor, strxor_c
 
@@ -165,8 +164,8 @@ class StrxorTests(unittest.TestCase):
         
         self.assertRaises(ValueError, strxor, term1, term2, output=output)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
         del test_output_memoryview
         del test_output_overlapping_memoryview
@@ -276,8 +275,8 @@ class Strxor_cTests(unittest.TestCase):
         self.assertRaises(ValueError, strxor_c, term1, 65, output=output)
 
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
         del test_output_memoryview
         del test_output_overlapping_memoryview

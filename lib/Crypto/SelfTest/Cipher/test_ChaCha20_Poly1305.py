@@ -323,8 +323,8 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
 
         self.assertEqual(pt_test, self.data_128)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 
@@ -500,7 +500,7 @@ class TestVectorsRFC(unittest.TestCase):
     """Test cases from RFC7539"""
 
     # AAD, PT, CT, MAC, KEY, NONCE
-    test_vectors = [
+    test_vectors_hex = [
         ( '50 51 52 53 c0 c1 c2 c3 c4 c5 c6 c7',
           '4c 61 64 69 65 73 20 61 6e 64 20 47 65 6e 74 6c'
           '65 6d 65 6e 20 6f 66 20 74 68 65 20 63 6c 61 73'
@@ -565,8 +565,7 @@ class TestVectorsRFC(unittest.TestCase):
         )
     ]
 
-    for index, tv in enumerate(test_vectors):
-        test_vectors[index] = (compact(x) for x in tv)
+    test_vectors = [[unhexlify(x.replace(" ","").replace(":","")) for x in tv] for tv in test_vectors_hex]
 
     def runTest(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:

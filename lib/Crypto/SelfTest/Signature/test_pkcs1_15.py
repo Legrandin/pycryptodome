@@ -75,7 +75,7 @@ test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vecto
 
 
 for count, tv in enumerate(test_vectors_verify):
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         continue
     if hasattr(tv, "n"):
         modulus = tv.n
@@ -124,7 +124,7 @@ test_vectors_sign += load_tests(("Crypto", "SelfTest", "Signature", "test_vector
                                  { 'shaalg' : lambda x: x })
 
 for count, tv in enumerate(test_vectors_sign):
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         continue
     if hasattr(tv, "n"):
         modulus = tv.n
@@ -163,10 +163,10 @@ class PKCS1_15_NoParams(unittest.TestCase):
 
     # PKCS1 v1.5 signature of the message computed using SHA-1.
     # The digestAlgorithm SEQUENCE does NOT contain the NULL parameter.
-    signature = "a287a13517f716e72fb14eea8e33a8db4a4643314607e7ca3e3e28"\
-                "1893db74013dda8b855fd99f6fecedcb25fcb7a434f35cd0a101f8"\
-                "b19348e0bd7b6f152dfc"
-    signature = unhexlify(signature)
+    sig_str = "a287a13517f716e72fb14eea8e33a8db4a4643314607e7ca3e3e28"\
+              "1893db74013dda8b855fd99f6fecedcb25fcb7a434f35cd0a101f8"\
+              "b19348e0bd7b6f152dfc"
+    signature = unhexlify(sig_str)
 
     def runTest(self):
         verifier = pkcs1_15.new(RSA.importKey(self.rsakey))

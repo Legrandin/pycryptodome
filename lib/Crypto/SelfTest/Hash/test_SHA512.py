@@ -27,7 +27,7 @@
 from binascii import hexlify
 
 from Crypto.Hash import SHA512
-from common import make_hash_tests
+from .common import make_hash_tests
 from Crypto.SelfTest.loader import load_tests
 
 # Test vectors from various sources

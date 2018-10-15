@@ -165,4 +165,4 @@ MODE_EAX = 9
 # Size of a data block (in bytes)
 block_size = 8
 # Size of a key (in bytes)
-key_size = xrange(5, 128 + 1)
+key_size = range(5, 128 + 1)

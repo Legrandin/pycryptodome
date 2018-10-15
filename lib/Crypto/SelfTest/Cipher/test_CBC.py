@@ -232,8 +232,8 @@ class BlockChainingTests(unittest.TestCase):
 
         self.assertEqual(ref3, ref4)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 

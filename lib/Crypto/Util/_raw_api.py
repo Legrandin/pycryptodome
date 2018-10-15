@@ -28,6 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import abc
 import sys
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._file_system import pycryptodome_filename
@@ -53,6 +54,19 @@ if sys.version_info[0] == 2 and sys.version_info[1] < 7:
     _buffer_type = (bytearray)
 else:
     _buffer_type = (bytearray, memoryview)
+
+
+class _VoidPointer(object):
+    @abc.abstractmethod
+    def get(self):
+        """Return the memory location we point to"""
+        return
+
+    @abc.abstractmethod
+    def address_of(self):
+        """Return a raw pointer to this pointer"""
+        return
+
 
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
@@ -89,9 +103,18 @@ try:
         """Convert a Python integer to size_t"""
         return x
 
-    def create_string_buffer(size):
+    def create_string_buffer(init_or_size, size=None):
         """Allocate the given amount of bytes (initially set to 0)"""
-        return ffi.new("uint8_t[]", size)
+
+        if isinstance(init_or_size, bytes):
+            size = max(len(init_or_size) + 1, size)
+            result = ffi.new("uint8_t[]", size)
+            result[:] = init_or_size
+        else:
+            if size:
+                raise ValueError("Size must be specified once only")
+            result = ffi.new("uint8_t[]", init_or_size)
+        return result
 
     def get_c_string(c_string):
         """Convert a C string into a Python byte sequence"""
@@ -110,7 +133,7 @@ try:
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
-    class VoidPointer_cffi(object):
+    class VoidPointer_cffi(_VoidPointer):
         """Model a newly allocated pointer to void"""
 
         def __init__(self):
@@ -122,7 +145,8 @@ try:
         def address_of(self):
             return self._pp
 
-    VoidPointer = VoidPointer_cffi
+    def VoidPointer():
+        return VoidPointer_cffi()
 
     backend = "cffi"
 
@@ -132,7 +156,7 @@ except ImportError:
     from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong, c_size_t,
                         create_string_buffer, c_ubyte)
     from ctypes.util import find_library
-    from _ctypes import Array as _Array
+    from ctypes import Array as _Array
 
     null_pointer = None
 
@@ -201,7 +225,7 @@ except ImportError:
 
     # ---
 
-    class VoidPointer_ctypes(object):
+    class VoidPointer_ctypes(_VoidPointer):
         """Model a newly allocated pointer to void"""
 
         def __init__(self):
@@ -213,7 +237,8 @@ except ImportError:
         def address_of(self):
             return byref(self._p)
 
-    VoidPointer = VoidPointer_ctypes
+    def VoidPointer():
+        return VoidPointer_ctypes()
 
     backend = "ctypes"
     del ctypes

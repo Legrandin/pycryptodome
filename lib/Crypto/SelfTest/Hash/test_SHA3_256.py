@@ -27,7 +27,6 @@ from binascii import hexlify
 
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
-from StringIO import StringIO
 from Crypto.Hash import SHA3_256 as SHA3
 from Crypto.Util.py3compat import b
 
@@ -53,7 +52,7 @@ class APITest(unittest.TestCase):
 
 
 def get_tests(config={}):
-    from common import make_hash_tests
+    from .common import make_hash_tests
 
     tests = []
 

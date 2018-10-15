@@ -24,7 +24,7 @@ import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 
-from Crypto.Util.py3compat import b, _memoryview, bchr
+from Crypto.Util.py3compat import b, bchr
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP as PKCS
 from Crypto.Hash import MD2,MD5,SHA1,SHA256,RIPEMD160
@@ -369,8 +369,8 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             pt2 = cipher.decrypt(memoryview(bytearray(ct)))
             self.assertEqual(pt, pt2)
 
-        import types
-        if _memoryview is types.NoneType:
+        import sys
+        if sys.version[:3] == "2.6":
             del testMemoryview
 
 

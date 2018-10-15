@@ -1290,7 +1290,7 @@ class TestIncompleteBlocks(unittest.TestCase):
 
 def get_tests(config={}):
     from Crypto.Util import _cpu_features
-    from common import make_block_tests
+    from .common import make_block_tests
 
     tests = make_block_tests(AES, "AES", test_data, {'use_aesni': False})
     tests += [ TestMultipleBlocks(False) ]

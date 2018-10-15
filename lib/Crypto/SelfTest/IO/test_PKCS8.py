@@ -131,7 +131,7 @@ c8f7d9b94c3bb377d17a3fa204b601526317824b142ff6bc843fa7815ece89c0
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
 wrapped_enc_keys.append((
--1,                 # pbeWithMD5AndDES-CBC, only decoding is supported
+'skip encryption',                 # pbeWithMD5AndDES-CBC, only decoding is supported
 -1,
 "",
 "",
@@ -161,7 +161,7 @@ a50e96a2264490aeabdc07c6e78e5dbf4fe3388726d0e2a228346bf3c2907d68
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
 wrapped_enc_keys.append((
--1,                 # pbeWithSHA1AndRC2-CBC, only decoding is supported
+'skip encryption',                 # pbeWithSHA1AndRC2-CBC, only decoding is supported
 -1,
 "",
 "",
@@ -190,7 +190,7 @@ d7ab2e971de495cddbc86d38444fee9f0ac097b00adaf7802dabe0cff5b43b45
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
 wrapped_enc_keys.append((
--1,                 # pbeWithMD5AndRC2-CBC, only decoding is supported
+'skip encryption',                 # pbeWithMD5AndRC2-CBC, only decoding is supported
 -1,
 "",
 "",
@@ -219,7 +219,7 @@ b77d1db287b3a6264c466805be5a4fe85cfbca180699859280f2dd8e2c2c10b5
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
 wrapped_enc_keys.append((
--1,                 # pbeWithSHA1AndDES-CBC, only decoding is supported
+'skip encryption',                 # pbeWithSHA1AndDES-CBC, only decoding is supported
 -1,
 "",
 "",
@@ -397,7 +397,7 @@ class PKCS8_Decrypt(unittest.TestCase):
         """Verify wrapping with encryption"""
 
         for t in self.wrapped_enc_keys:
-            if t[0]==-1:
+            if t[0] == 'skip encryption':
                 continue
             rng = Rng(t[2]+t[3])
             params = { 'iteration_count':t[1] }

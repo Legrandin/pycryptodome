@@ -417,7 +417,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 def get_tests(config={}):
     global test_data
     import types
-    from common import make_mac_tests
+    from .common import make_mac_tests
     
     wycheproof_warnings = config.get('wycheproof_warnings')
 

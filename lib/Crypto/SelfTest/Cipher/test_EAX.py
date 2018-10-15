@@ -330,8 +330,8 @@ class EaxTests(unittest.TestCase):
 
         self.assertEqual(pt_test, self.data_128)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 
@@ -488,7 +488,7 @@ class TestVectorsPaper(unittest.TestCase):
     """Class exercising the EAX test vectors found in
        http://www.cs.ucdavis.edu/~rogaway/papers/eax.pdf"""
 
-    test_vectors = [
+    test_vectors_hex = [
         ( '6bfb914fd07eae6b',
           '',
           '',
@@ -569,8 +569,7 @@ class TestVectorsPaper(unittest.TestCase):
         ),
     ]
 
-    for index, tv in enumerate(test_vectors):
-        test_vectors[index] = (unhexlify(x) for x in tv)
+    test_vectors = [[unhexlify(x) for x in tv] for tv in test_vectors_hex]
 
     def runTest(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:
@@ -700,18 +699,15 @@ class TestOtherCiphers(unittest.TestCase):
 
 from Crypto.Cipher import DES, DES3, ARC2, CAST, Blowfish
 
-for name, factory in (('DES', DES),
-                      ('DES3', DES3),
-                      ('ARC2', ARC2),
-                      ('CAST', CAST),
-                      ('Blowfish', Blowfish)):
-    key_sizes = []
-    try:
-        key_sizes += factory.key_size
-    except TypeError:
-        key_sizes = [factory.key_size]
-    for ks in key_sizes:
-        TestOtherCiphers.create_test(name + "_" + str(ks), factory, ks)
+TestOtherCiphers.create_test("DES_" + str(DES.key_size), DES, DES.key_size)
+for ks in DES3.key_size:
+    TestOtherCiphers.create_test("DES3_" + str(ks), DES3, ks)
+for ks in ARC2.key_size:
+    TestOtherCiphers.create_test("ARC2_" + str(ks), ARC2, ks)
+for ks in CAST.key_size:
+    TestOtherCiphers.create_test("CAST_" + str(ks), CAST, ks)
+for ks in Blowfish.key_size:
+    TestOtherCiphers.create_test("Blowfish_" + str(ks), Blowfish, ks)
 
 
 def get_tests(config={}):

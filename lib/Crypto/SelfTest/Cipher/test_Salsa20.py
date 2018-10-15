@@ -32,7 +32,7 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Cipher import Salsa20
 
-from common import make_stream_tests
+from .common import make_stream_tests
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]])
 # tuples.

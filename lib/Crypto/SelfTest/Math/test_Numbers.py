@@ -426,10 +426,16 @@ class TestIntegerBase(unittest.TestCase):
             v4 = self.Integer(0x90)
             v4 >>= -1
         self.assertRaises(ValueError, l)
-        def m():
+        def m1():
             v4 = self.Integer(0x90)
             v4 >>= 2 ** 1000
-        self.assertRaises(ValueError, m)
+            return v4
+        self.assertEqual(0, m1())
+        def m2():
+            v4 = self.Integer(-1)
+            v4 >>= 2 ** 1000
+            return v4
+        self.assertEqual(-1, m2())
 
     def test_left_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
@@ -441,7 +447,7 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, lambda: v1 << -1)
         self.assertRaises(ValueError, lambda: v1 << (2 ** 1000))
 
-    def test_in_place_right_shift(self):
+    def test_in_place_left_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         v1 <<= 0
         self.assertEqual(v1, 0x10)

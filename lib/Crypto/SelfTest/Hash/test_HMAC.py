@@ -370,7 +370,7 @@ class MemoryViewTests(unittest.TestCase):
 def get_tests(config={}):
     global test_data
     import types
-    from common import make_mac_tests
+    from .common import make_mac_tests
 
     # A test vector contains multiple results, each one for a
     # different hash algorithm.

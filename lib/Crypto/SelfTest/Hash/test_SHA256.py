@@ -76,7 +76,7 @@ def get_tests(config={}):
     ]
 
     from Crypto.Hash import SHA256
-    from common import make_hash_tests
+    from .common import make_hash_tests
     tests = make_hash_tests(SHA256, "SHA256", test_data,
         digest_size=32,
         oid="2.16.840.1.101.3.4.2.1")

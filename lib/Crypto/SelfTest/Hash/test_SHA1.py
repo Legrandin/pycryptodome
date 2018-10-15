@@ -51,7 +51,7 @@ test_data_various = [
 
 def get_tests(config={}):
     from Crypto.Hash import SHA1
-    from common import make_hash_tests
+    from .common import make_hash_tests
 
     tests = []
 

@@ -55,7 +55,7 @@ class KeyLength(unittest.TestCase):
 
 
 def get_tests(config={}):
-    from common import make_block_tests
+    from .common import make_block_tests
 
     tests = make_block_tests(CAST, "CAST", test_data)
     tests.append(KeyLength())

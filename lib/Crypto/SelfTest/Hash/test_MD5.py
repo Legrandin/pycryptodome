@@ -76,7 +76,7 @@ class Md5IterTest(unittest.TestCase):
 
 
 def get_tests(config={}):
-    from common import make_hash_tests
+    from .common import make_hash_tests
 
     tests =  make_hash_tests(MD5, "MD5", test_data,
                             digest_size=16,

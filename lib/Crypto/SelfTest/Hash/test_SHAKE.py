@@ -36,7 +36,6 @@ from binascii import hexlify, unhexlify
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
 
-from StringIO import StringIO
 from Crypto.Hash import SHAKE128, SHAKE256
 from Crypto.Util.py3compat import b, bchr, bord, tobytes
 

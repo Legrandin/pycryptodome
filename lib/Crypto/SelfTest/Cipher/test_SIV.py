@@ -33,7 +33,7 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, bchr, _memoryview
+from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
@@ -241,8 +241,8 @@ class SivTests(unittest.TestCase):
 
         self.assertEqual(self.data_128, pt_test)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 
@@ -331,6 +331,17 @@ class SivFSMTests(unittest.TestCase):
         self.assertRaises(TypeError, cipher.decrypt_and_verify, ct, tag)
 
 
+def transform(tv):
+    new_tv = [[unhexlify(x) for x in tv[0].split("-")]]
+    new_tv += [ unhexlify(x) for x in tv[1:5]]
+    if tv[5]:
+        nonce = unhexlify(tv[5])
+    else:
+        nonce = None
+    new_tv += [ nonce ]
+    return new_tv
+
+
 class TestVectors(unittest.TestCase):
     """Class exercising the SIV test vectors found in RFC5297"""
 
@@ -345,7 +356,7 @@ class TestVectors(unittest.TestCase):
     #
     #  A "Header" is a dash ('-') separated sequece of components.
     #
-    test_vectors = [
+    test_vectors_hex = [
       (
         '101112131415161718191a1b1c1d1e1f2021222324252627',
         '112233445566778899aabbccddee',
@@ -367,14 +378,7 @@ class TestVectors(unittest.TestCase):
       ),
     ]
 
-    for index, tv in enumerate(test_vectors):
-        test_vectors[index] = [[unhexlify(x) for x in tv[0].split("-")]]
-        test_vectors[index] += [unhexlify(x) for x in tv[1:5]]
-        if tv[5]:
-            nonce = unhexlify(tv[5])
-        else:
-            nonce = None
-        test_vectors[index].append(nonce)
+    test_vectors = [ transform(tv) for tv in test_vectors_hex ]
 
     def runTest(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:

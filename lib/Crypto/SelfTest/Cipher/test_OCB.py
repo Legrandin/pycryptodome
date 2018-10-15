@@ -315,8 +315,8 @@ class OcbTests(unittest.TestCase):
 
         self.assertEqual(self.data_128, pt_test)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 

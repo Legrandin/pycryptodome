@@ -64,7 +64,7 @@ for tdes_file in nist_tdes_mmt_files:
     for index, tv in enumerate(test_vectors):
 
         # The test vector file contains some directive lines
-        if isinstance(tv, basestring):
+        if isinstance(tv, str):
             continue
 
         key = tv.key1 + tv.key2 + tv.key3
@@ -138,7 +138,7 @@ class DegenerateToDESTest(unittest.TestCase):
 
 
 def get_tests(config={}):
-    from common import make_block_tests
+    from .common import make_block_tests
 
     tests = []
     tests = make_block_tests(DES3, "DES3", test_data)

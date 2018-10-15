@@ -210,10 +210,10 @@ def lucas_test(candidate):
     return COMPOSITE
 
 
-from Crypto.Util.number import sieve_base as _sieve_base
+from Crypto.Util.number import sieve_base as _sieve_base_large
 ## The optimal number of small primes to use for the sieve
 ## is probably dependent on the platform and the candidate size
-_sieve_base = set(_sieve_base[:100])
+_sieve_base = set(_sieve_base_large[:100])
 
 
 def test_probable_prime(candidate, randfunc=None):

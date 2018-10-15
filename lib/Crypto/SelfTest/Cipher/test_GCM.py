@@ -307,8 +307,8 @@ class GcmTests(unittest.TestCase):
 
         self.assertEqual(self.data_128, pt_test)
 
-    import types
-    if _memoryview is types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 
@@ -472,7 +472,7 @@ class TestVectors(unittest.TestCase):
     # - MAC
     # - AES key
     # - nonce
-    test_vectors = [
+    test_vectors_hex = [
         (
             '',
             '',
@@ -648,8 +648,7 @@ class TestVectors(unittest.TestCase):
         )
     ]
 
-    for index, tv in enumerate(test_vectors):
-        test_vectors[index] = (unhexlify(x) for x in tv)
+    test_vectors = [[unhexlify(x) for x in tv] for tv in test_vectors_hex]
 
     def runTest(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:
@@ -739,7 +738,7 @@ test_vectors_nist += load_tests(
 for idx, tv in enumerate(test_vectors_nist):
 
     # The test vector file contains some directive lines
-    if isinstance(tv, basestring):
+    if isinstance(tv, str):
         continue
 
     def single_test(self, tv=tv):

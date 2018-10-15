@@ -32,7 +32,7 @@ import re
 import unittest
 from binascii import unhexlify, hexlify
 
-from Crypto.Util.py3compat import tobytes, _memoryview
+from Crypto.Util.py3compat import tobytes
 from Crypto.Util.strxor import strxor_c
 from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.SelfTest.st_common import list_test_cases
@@ -233,8 +233,8 @@ class Blake2Test(unittest.TestCase):
 
             self.assertEqual(h1.digest(), h2.digest())
 
-    import types
-    if _memoryview == types.NoneType:
+    import sys
+    if sys.version[:3] == "2.6":
         del test_memoryview
 
 
