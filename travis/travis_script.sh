@@ -3,26 +3,17 @@ set -e -x
 
 export CFLAGS="-Wconversion"
 
-if [ x${OLDPY} == x ]; then
-	PYTHON=python
-else
-	PYTHON=${OLDPY}
-	export PYTHONPATH=${PWD}/custom_packages
-fi
-
-echo ${PYTHON}
-
-PYVERSION=$(${PYTHON} -V 2>&1)
+PYVERSION=$(python -V 2>&1)
 echo ${PYVERSION}
 
-${PYTHON} -c "import cffi" 2>/dev/null && echo CFFI is installed || true
+python -c "import cffi" 2>/dev/null && echo CFFI is installed || true
 
 if [ x${CFFI} = "xyes" ]; then
-	${PYTHON} -c"import cffi"
+	python -c"import cffi"
 fi
 
 if [ x${CFFI} != "xyes" ]; then
-	! ${PYTHON} -c"import cffi" 2>/dev/null
+	! python -c"import cffi" 2>/dev/null
 fi
 
 MAJOR=$(echo ${PYVERSION} | cut -f2 -d' ' | cut -f1 -d'.')
@@ -37,5 +28,5 @@ fi
 
 echo "Custom Python flags:" \"${xflags:-none}\"
 
-${PYTHON} $xflags setup.py build
-${PYTHON} $xflags setup.py test
+python $xflags setup.py build
+python $xflags setup.py test

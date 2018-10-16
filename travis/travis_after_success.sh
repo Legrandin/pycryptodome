@@ -3,7 +3,7 @@ set -e -x
 
 printenv
 
-if [[ !(${TRAVIS_PYTHON_VERSION} == 2.7 && ${CFFI} == yes && ${OLDPY}x == x) ]]; then
+if [[ !(${TRAVIS_PYTHON_VERSION} == 2.7 && ${CFFI} == yes) ]]; then
     exit 1
 fi
 
