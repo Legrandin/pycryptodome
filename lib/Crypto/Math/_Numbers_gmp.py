@@ -123,59 +123,21 @@ else:
         return ffi.new("MPZ*")
 
 
-# Unfortunately, all symbols exported by the GMP library start with "__"
-# and have no trailing underscore.
-# You cannot directly refer to them as members of the ctypes' library
-# object from within any class because Python will replace the double
-# underscore with "_classname_".
-
-
+# Lazy creation of GMP methods
 class _GMP(object):
-    pass
-_gmp = _GMP()
+
+    def __getattr__(self, name):
+        if name.startswith("mpz_"):
+            func_name = "__gmpz_" + name[4:]
+        elif name.startswith("gmp_"):
+            func_name = "__gmp_" + name[4:]
+        else:
+            raise AttributeError("Attribute %s is invalid" % name)
+        func = getattr(lib, func_name)
+        setattr(self, name, func)
+        return func
 
 _gmp = _GMP()
-_gmp.mpz_init = lib.__gmpz_init
-_gmp.mpz_init_set = lib.__gmpz_init_set
-_gmp.mpz_init_set_ui = lib.__gmpz_init_set_ui
-_gmp.mpz_set = lib.__gmpz_set
-_gmp.gmp_snprintf = lib.__gmp_snprintf
-_gmp.gmp_sscanf = lib.__gmp_sscanf
-_gmp.mpz_add = lib.__gmpz_add
-_gmp.mpz_add_ui = lib.__gmpz_add_ui
-_gmp.mpz_sub_ui = lib.__gmpz_sub_ui
-_gmp.mpz_addmul = lib.__gmpz_addmul
-_gmp.mpz_addmul_ui = lib.__gmpz_addmul_ui
-_gmp.mpz_submul_ui = lib.__gmpz_submul_ui
-_gmp.mpz_import = lib.__gmpz_import
-_gmp.mpz_export = lib.__gmpz_export
-_gmp.mpz_sizeinbase = lib.__gmpz_sizeinbase
-_gmp.mpz_sub = lib.__gmpz_sub
-_gmp.mpz_mul = lib.__gmpz_mul
-_gmp.mpz_mul_ui = lib.__gmpz_mul_ui
-_gmp.mpz_cmp = lib.__gmpz_cmp
-_gmp.mpz_powm = lib.__gmpz_powm
-_gmp.mpz_powm_ui = lib.__gmpz_powm_ui
-_gmp.mpz_pow_ui = lib.__gmpz_pow_ui
-_gmp.mpz_sqrt = lib.__gmpz_sqrt
-_gmp.mpz_mod = lib.__gmpz_mod
-_gmp.mpz_neg = lib.__gmpz_neg
-_gmp.mpz_abs = lib.__gmpz_abs
-_gmp.mpz_and = lib.__gmpz_and
-_gmp.mpz_ior = lib.__gmpz_ior
-_gmp.mpz_clear = lib.__gmpz_clear
-_gmp.mpz_tdiv_q_2exp = lib.__gmpz_tdiv_q_2exp
-_gmp.mpz_fdiv_q = lib.__gmpz_fdiv_q
-_gmp.mpz_mul_2exp = lib.__gmpz_mul_2exp
-_gmp.mpz_tstbit = lib.__gmpz_tstbit
-_gmp.mpz_perfect_square_p = lib.__gmpz_perfect_square_p
-_gmp.mpz_jacobi = lib.__gmpz_jacobi
-_gmp.mpz_gcd = lib.__gmpz_gcd
-_gmp.mpz_gcd_ui = lib.__gmpz_gcd_ui
-_gmp.mpz_lcm = lib.__gmpz_lcm
-_gmp.mpz_invert = lib.__gmpz_invert
-_gmp.mpz_divisible_p = lib.__gmpz_divisible_p
-_gmp.mpz_divisible_ui_p = lib.__gmpz_divisible_ui_p
 
 
 class Integer(object):
