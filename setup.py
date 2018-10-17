@@ -448,8 +448,9 @@ def create_cryptodome_lib():
             print("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
             shutil.copy2(full_file_name_src, full_file_name_dst)
 
-            if not full_file_name_dst.endswith(".py"):
-                continue
+            if full_file_name_src.split(".")[-1] not in ("py", "pyi"):
+                if full_file_name_src != "py.typed":
+                    continue
 
             with open(full_file_name_dst, "rt") as fd:
                 content = (fd.read().
@@ -540,6 +541,11 @@ packages =  [
 ]
 package_dir = { "Crypto": "lib/Crypto" }
 package_data = {
+    "Crypto" : [ "py.typed", "*.pyi" ],
+    "Crypto.Cipher" : [ "*.pyi" ],
+    "Crypto.Hash" : [ "*.pyi" ],
+    "Crypto.PublicKey" : [ "*.pyi" ],
+    "Crypto.Random" : [ "*.pyi" ],
     "Crypto.SelfTest.Cipher" : [
         "test_vectors/AES/*.rsp",
         "test_vectors/TDES/*.rsp",
