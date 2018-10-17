@@ -467,17 +467,15 @@ def create_cryptodome_lib():
             if not full_file_name_dst.endswith(".py"):
                 continue
 
-            fd = open(full_file_name_dst, "rt")
-            content = (fd.read().
-               replace("Crypto.", "Cryptodome.").
-               replace("Crypto ", "Cryptodome ").
-               replace("'Crypto'", "'Cryptodome'").
-               replace('"Crypto"', '"Cryptodome"'))
-            fd.close()
+            with open(full_file_name_dst, "rt") as fd:
+                content = (fd.read().
+                    replace("Crypto.", "Cryptodome.").
+                    replace("Crypto ", "Cryptodome ").
+                    replace("'Crypto'", "'Cryptodome'").
+                    replace('"Crypto"', '"Cryptodome"'))
             os.remove(full_file_name_dst)
-            fd = open(full_file_name_dst, "wt")
-            fd.write(content)
-            fd.close()
+            with open(full_file_name_dst, "wt") as fd:
+                fd.write(content)
 
 
 def compiler_supports_sse2():
