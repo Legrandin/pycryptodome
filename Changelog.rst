@@ -29,7 +29,7 @@ Breaks in compatibility
 Resolved issues
 ---------------
 
-* GH#198: Fix vulnerability on AESNI ECB with payloads smaller than 16 bytes.
+* GH#198: Fix vulnerability on AESNI ECB with payloads smaller than 16 bytes (CVE-2018-15560).
 
 3.6.5 (12 August 2018)
 ++++++++++++++++++++++
