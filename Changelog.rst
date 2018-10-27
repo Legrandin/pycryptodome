@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.6.7 (27 October 2018)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#226: AES-GCM was limited to 4GB on x86 with PCLMULQDQ instruction.
+
 3.6.6 (17 August 2018)
 ++++++++++++++++++++++
 

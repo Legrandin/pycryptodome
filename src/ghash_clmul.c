@@ -216,7 +216,7 @@ EXPORT_SYM int ghash_clmul(
         struct exp_key *expanded
         )
 {
-    unsigned i;
+    size_t i;
     __m128i y_temp;
     size_t len16;
 
