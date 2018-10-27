@@ -117,6 +117,15 @@ class OpenPGPTests(BlockChainingTests):
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
         self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
+    def test_output_param(self):
+        pass
+
+    def test_output_param_memoryview(self):
+        pass
+
+    def test_output_param_neg(self):
+        pass
+
 
 class TestVectors(unittest.TestCase):
 
