@@ -64,7 +64,7 @@ available for classic modes of operation, several other methods are present:
     :raise ValueError: if the MAC tag is not valid, that is, if the entire message
                        should not be trusted.
  
-.. method:: verify(mac_tag_hex)
+.. method:: hexverify(mac_tag_hex)
 
     Same as ``verify()`` but accepts the MAC tag encoded as an hexadecimal
     string.
@@ -73,18 +73,28 @@ available for classic modes of operation, several other methods are present:
     :raise ValueError: if the MAC tag is not valid, that is, if the entire message
                        should not be trusted.
 
-.. method:: encrypt_and_digest(plaintext)
+.. method:: encrypt_and_digest(plaintext, output=None)
 
     Perform ``encrypt()`` and ``digest()`` in one go.
 
     :param bytes plaintext: the last piece of plaintext to encrypt
-    :return bytes: the MAC tag
+    :keyword bytes/bytearray/memoryview output: the pre-allocated buffer
+      where the ciphertext must be stored (as opposed to being returned).
+    :return: a tuple with two items
+      
+      - the ciphertext, as ``bytes``
+      - the MAC tag, as ``bytes``
 
-.. method:: decrypt_and_verify(ciphertext, mac_tag)
+      The first item becomes ``None`` when the ``output`` parameter
+      specified a location for the result.
+
+.. method:: decrypt_and_verify(ciphertext, mac_tag, output=None)
 
     Perform ``decrypt()`` and ``verify()`` in one go.
     
     :param bytes ciphertext: the last piece of ciphertext to decrypt
+    :keyword bytes/bytearray/memoryview output: the pre-allocated buffer
+      where the plaintext must be stored (as opposed to being returned).
     :raise ValueError: if the MAC tag is not valid, that is, if the entire message
                        should not be trusted.
 

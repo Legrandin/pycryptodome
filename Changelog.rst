@@ -10,10 +10,11 @@ New features
 * Added support for Poly1305 MAC (with AES and ChaCha20 ciphers for key derivation).
 * Added support for ChaCha20-Poly1305 AEAD cipher.
 * New parameter ``output`` for ``Crypto.Util.strxor.strxor``, ``Crypto.Util.strxor.strxor_c``,
-  ``encrypt`` and ``decrypt`` methods in symmetric ciphers (``Crypto.Cipher``).
-  When specified, the result is stored into the provided buffer (e.g. a ``bytearray``):
-  this requires less memory or fewer copy coperations for very large payloads or a large
-  number of small payloads.
+  ``encrypt`` and ``decrypt`` methods in symmetric ciphers (``Crypto.Cipher`` package).
+  ``output`` is a pre-allocated buffer (a ``bytearray`` or a writeable ``memoryview``)
+  where the result must be stored.
+  This requires less memory for very large payloads; it is also more efficient when
+  encrypting (or decrypting) several small payloads.
 
 Resolved issues
 ---------------
@@ -23,7 +24,8 @@ Resolved issues
 Breaks in compatibility
 -----------------------
 
-* Drop support for Python 3.3, ``Crypto.Util.py3compat.unhexlify`` and ``Crypto.Util.py3compat.hexlify``.
+* Drop support for Python 3.3.
+* Remove ``Crypto.Util.py3compat.unhexlify`` and ``Crypto.Util.py3compat.hexlify``.
 * With the old Python 2.6, use only ``ctypes`` (and not ``cffi``) to interface to native code.
 
 3.6.6 (17 August 2018)
