@@ -562,10 +562,6 @@ class CcmMode(object):
             The location where the ciphertext must be written to.
             If ``None``, the ciphertext is returned.
         :Return:
-          If ``output`` is ``None``, the ciphertext as ``bytes``.
-          Otherwise, ``None``.
- 
-        :Return:
             a tuple with two items:
 
             - the ciphertext, as ``bytes``
