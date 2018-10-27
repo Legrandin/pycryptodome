@@ -330,7 +330,7 @@ class GcmMode(object):
         if len_cache > 0:
             self._update(b'\x00' * (16 - len_cache))
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, output=None):
         """Encrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -354,9 +354,13 @@ class GcmMode(object):
           plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length.
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-            the encrypted data, as a byte string.
-            It is as long as *plaintext*.
+          If ``output`` is ``None``, the ciphertext as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.encrypt not in self._next:
@@ -364,13 +368,13 @@ class GcmMode(object):
                             " initialization or an update()")
         self._next = [self.encrypt, self.digest]
 
-        ciphertext = self._cipher.encrypt(plaintext)
+        ciphertext = self._cipher.encrypt(plaintext, output=output)
 
         if self._status == MacStatus.PROCESSING_AUTH_DATA:
             self._pad_cache_and_update()
             self._status = MacStatus.PROCESSING_CIPHERTEXT
 
-        self._update(ciphertext)
+        self._update(ciphertext if output is None else output)
         self._msg_len += len(plaintext)
 
         # See NIST SP 800 38D, 5.2.1.1
@@ -379,7 +383,7 @@ class GcmMode(object):
 
         return ciphertext
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext, output=None):
         """Decrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have decrypted a message
@@ -403,8 +407,13 @@ class GcmMode(object):
           ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
-
-        :Return: the decrypted data (byte string).
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
+        :Return:
+          If ``output`` is ``None``, the plaintext as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.decrypt not in self._next:
@@ -419,7 +428,7 @@ class GcmMode(object):
         self._update(ciphertext)
         self._msg_len += len(ciphertext)
 
-        return self._cipher.decrypt(ciphertext)
+        return self._cipher.decrypt(ciphertext, output=output)
 
     def digest(self):
         """Compute the *binary* MAC tag in an AEAD mode.
@@ -512,22 +521,29 @@ class GcmMode(object):
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext):
+    def encrypt_and_digest(self, plaintext, output=None):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
           plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-            a tuple with two byte strings:
+            a tuple with two items:
 
-            - the encrypted data
-            - the MAC
+            - the ciphertext, as ``bytes``
+            - the MAC tag, as ``bytes``
+
+            The first item becomes ``None`` when the ``output`` parameter
+            specified a location for the result.
         """
 
-        return self.encrypt(plaintext), self.digest()
+        return self.encrypt(plaintext, output=output), self.digest()
 
-    def decrypt_and_verify(self, ciphertext, received_mac_tag):
+    def decrypt_and_verify(self, ciphertext, received_mac_tag, output=None):
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
@@ -535,14 +551,18 @@ class GcmMode(object):
             The piece of data to decrypt.
           received_mac_tag : byte string
             This is the *binary* MAC, as received from the sender.
-
-        :Return: the decrypted data (byte string).
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
+        :Return: the plaintext as ``bytes`` or ``None`` when the ``output``
+            parameter specified a location for the result.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
             or the key is incorrect.
         """
 
-        plaintext = self.decrypt(ciphertext)
+        plaintext = self.decrypt(ciphertext, output=output)
         self.verify(received_mac_tag)
         return plaintext
 
