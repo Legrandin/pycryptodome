@@ -298,7 +298,7 @@ class CcmMode(object):
         if update_len > 0:
             self._t = self._mac.encrypt(assoc_data_pt[:update_len])[-16:]
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, output=None):
         """Encrypt data with the key set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -326,9 +326,13 @@ class CcmMode(object):
           plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length.
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-            the encrypted data, as a byte string.
-            It is as long as *plaintext*.
+          If ``output`` is ``None``, the ciphertext as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.encrypt not in self._next:
@@ -365,9 +369,9 @@ class CcmMode(object):
             self._mac_status = MacStatus.PROCESSING_PLAINTEXT
 
         self._update(plaintext)
-        return self._cipher.encrypt(plaintext)
+        return self._cipher.encrypt(plaintext, output=output)
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext, output=None):
         """Decrypt data with the key set at initialization.
 
         A cipher object is stateful: once you have decrypted a message
@@ -395,8 +399,13 @@ class CcmMode(object):
           ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
-
-        :Return: the decrypted data (byte string).
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
+        :Return:
+          If ``output`` is ``None``, the plaintext as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.decrypt not in self._next:
@@ -433,8 +442,11 @@ class CcmMode(object):
             self._mac_status = MacStatus.PROCESSING_PLAINTEXT
 
         # Encrypt is equivalent to decrypt with the CTR mode
-        plaintext = self._cipher.encrypt(ciphertext)
-        self._update(plaintext)
+        plaintext = self._cipher.encrypt(ciphertext, output=output)
+        if output is None:
+            self._update(plaintext)
+        else:
+            self._update(output)
         return plaintext
 
     def digest(self):
@@ -539,22 +551,33 @@ class CcmMode(object):
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext):
+    def encrypt_and_digest(self, plaintext, output=None):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
           plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-            a tuple with two byte strings:
+          If ``output`` is ``None``, the ciphertext as ``bytes``.
+          Otherwise, ``None``.
+ 
+        :Return:
+            a tuple with two items:
 
-            - the encrypted data
-            - the MAC
+            - the ciphertext, as ``bytes``
+            - the MAC tag, as ``bytes``
+
+            The first item becomes ``None`` when the ``output`` parameter
+            specified a location for the result.
         """
 
-        return self.encrypt(plaintext), self.digest()
+        return self.encrypt(plaintext, output=output), self.digest()
 
-    def decrypt_and_verify(self, ciphertext, received_mac_tag):
+    def decrypt_and_verify(self, ciphertext, received_mac_tag, output=None):
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
@@ -562,14 +585,18 @@ class CcmMode(object):
             The piece of data to decrypt.
           received_mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
-
-        :Return: the decrypted data (byte string).
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
+        :Return: the plaintext as ``bytes`` or ``None`` when the ``output``
+            parameter specified a location for the result.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
             or the key is incorrect.
         """
 
-        plaintext = self.decrypt(ciphertext)
+        plaintext = self.decrypt(ciphertext, output=output)
         self.verify(received_mac_tag)
         return plaintext
 
