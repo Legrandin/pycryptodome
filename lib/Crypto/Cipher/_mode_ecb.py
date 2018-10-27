@@ -26,6 +26,7 @@ Electronic Code Book (ECB) mode.
 
 __all__ = [ 'EcbMode' ]
 
+from Crypto.Util.py3compat import _is_immutable
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, create_string_buffer,
                                   get_raw_buffer, SmartPointer,
@@ -89,7 +90,7 @@ class EcbMode(object):
         # by the cipher mode
         block_cipher.release()
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, output=None):
         """Encrypt data with the key set at initialization.
 
         The data to encrypt can be broken up in two or
@@ -109,23 +110,42 @@ class EcbMode(object):
           plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             The length must be multiple of the cipher block length.
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-            the encrypted data, as a byte string.
-            It is as long as *plaintext*.
+          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
-        ciphertext = create_string_buffer(len(plaintext))
+        if output is None:
+            ciphertext = create_string_buffer(len(plaintext))
+        else:
+            ciphertext = output
+            
+            if _is_immutable(output):
+                raise TypeError("output must be a bytearray or a writeable memoryview")
+        
+            if len(plaintext) != len(output):
+                raise ValueError("output must have the same length as the input"
+                                 "  (%d bytes)" % len(plaintext))
+
         result = raw_ecb_lib.ECB_encrypt(self._state.get(),
                                          c_uint8_ptr(plaintext),
-                                         ciphertext,
+                                         c_uint8_ptr(ciphertext),
                                          c_size_t(len(plaintext)))
         if result:
             if result == 3:
                 raise ValueError("Data must be aligned to block boundary in ECB mode")
             raise ValueError("Error %d while encrypting in ECB mode" % result)
-        return get_raw_buffer(ciphertext)
+        
+        if output is None:
+            return get_raw_buffer(ciphertext)
+        else:
+            return None
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext, output=None):
         """Decrypt data with the key set at initialization.
 
         The data to decrypt can be broken up in two or
@@ -145,22 +165,40 @@ class EcbMode(object):
           ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             The length must be multiple of the cipher block length.
-
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
         :Return:
-            the decrypted data (byte string).
-            It is as long as *ciphertext*.
+          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
+        
+        if output is None:
+            plaintext = create_string_buffer(len(ciphertext))
+        else:
+            plaintext = output
 
-        plaintext = create_string_buffer(len(ciphertext))
+            if _is_immutable(output):
+                raise TypeError("output must be a bytearray or a writeable memoryview")
+            
+            if len(ciphertext) != len(output):
+                raise ValueError("output must have the same length as the input"
+                                 "  (%d bytes)" % len(plaintext))
+
         result = raw_ecb_lib.ECB_decrypt(self._state.get(),
                                          c_uint8_ptr(ciphertext),
-                                         plaintext,
+                                         c_uint8_ptr(plaintext),
                                          c_size_t(len(ciphertext)))
         if result:
             if result == 3:
                 raise ValueError("Data must be aligned to block boundary in ECB mode")
             raise ValueError("Error %d while decrypting in ECB mode" % result)
-        return get_raw_buffer(plaintext)
+
+        if output is None:
+            return get_raw_buffer(plaintext)
+        else:
+            return None
 
 
 def _create_ecb_cipher(factory, **kwargs):

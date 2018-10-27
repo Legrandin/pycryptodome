@@ -276,6 +276,60 @@ class CtrTests(unittest.TestCase):
         digest = SHA256.new(ct).hexdigest()
         self.assertEqual(digest, "96204fc470476561a3a8f3b6fe6d24be85c87510b638142d1d0fb90989f8a6a6")
 
+    def test_output_param(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        ct = cipher.encrypt(pt)
+
+        output = bytearray(16)
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+    def test_output_param_memoryview(self):
+        
+        pt = b'5' * 16
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        ct = cipher.encrypt(pt)
+
+        output = memoryview(bytearray(16))
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+
+    def test_output_param_neg(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        ct = cipher.encrypt(pt)
+
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+
+        shorter_output = bytearray(15)
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
+    import sys
+    if sys.version[:3] == "2.6":
+        del test_output_param_memoryview
+
 
 class SP800TestVectors(unittest.TestCase):
     """Class exercising the CTR test vectors found in Section F.5

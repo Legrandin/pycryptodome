@@ -301,6 +301,54 @@ class MemoryviewTest(unittest.TestCase):
         self.assertEqual(data, pt_test)
 
 
+class TestOutput(unittest.TestCase):
+
+    def runTest(self):
+        # Encrypt/Decrypt data and test output parameter
+
+        key = b'4' * 32
+        nonce = b'5' * 8
+        cipher = Salsa20.new(key=key, nonce=nonce)
+
+        pt = b'5' * 16
+        ct = cipher.encrypt(pt)
+
+        output = bytearray(16)
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+        import sys
+        if sys.version[:3] != '2.6':
+            output = memoryview(bytearray(16))
+            cipher = Salsa20.new(key=key, nonce=nonce)
+            cipher.encrypt(pt, output=output)
+            self.assertEqual(ct, output)
+        
+            cipher = Salsa20.new(key=key, nonce=nonce)
+            cipher.decrypt(ct, output=output)
+            self.assertEqual(pt, output)
+
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+
+        shorter_output = bytearray(7)
+        
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
 
 def get_tests(config={}):
     tests = make_stream_tests(Salsa20, "Salsa20", test_data)
@@ -311,6 +359,8 @@ def get_tests(config={}):
     import types
     if _memoryview != types.NoneType:
         tests.append(MemoryviewTest())
+
+    tests.append(TestOutput())
 
     return tests
 

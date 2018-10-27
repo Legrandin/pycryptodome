@@ -269,17 +269,24 @@ class SivMode(object):
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext):
+    def encrypt_and_digest(self, plaintext, output=None):
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
           plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-            a tuple with two byte strings:
+            a tuple with two items:
 
-            - the encrypted data
-            - the MAC
+            - the ciphertext, as ``bytes``
+            - the MAC tag, as ``bytes``
+
+            The first item becomes ``None`` when the ``output`` parameter
+            specified a location for the result.
         """
         
         if self.encrypt not in self._next:
@@ -296,9 +303,9 @@ class SivMode(object):
         
         cipher = self._create_ctr_cipher(self._mac_tag)
 
-        return cipher.encrypt(plaintext), self._mac_tag
+        return cipher.encrypt(plaintext, output=output), self._mac_tag
 
-    def decrypt_and_verify(self, ciphertext, mac_tag):
+    def decrypt_and_verify(self, ciphertext, mac_tag, output=None):
         """Perform decryption and verification in one step.
 
         A cipher object is stateful: once you have decrypted a message
@@ -316,8 +323,12 @@ class SivMode(object):
             It can be of any length.
           mac_tag : bytes/bytearray/memoryview
             This is the *binary* MAC, as received from the sender.
-
-        :Return: the decrypted data (byte string).
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
+        :Return: the plaintext as ``bytes`` or ``None`` when the ``output``
+            parameter specified a location for the result.
         :Raises ValueError:
             if the MAC does not match. The message has been tampered with
             or the key is incorrect.
@@ -331,11 +342,11 @@ class SivMode(object):
         # Take the MAC and start the cipher for decryption
         self._cipher = self._create_ctr_cipher(mac_tag)
 
-        plaintext = self._cipher.decrypt(ciphertext)
+        plaintext = self._cipher.decrypt(ciphertext, output=output)
 
         if hasattr(self, 'nonce'):
             self._kdf.update(self.nonce)
-        self._kdf.update(plaintext)
+        self._kdf.update(plaintext if output is None else output)
         self.verify(mac_tag)
         
         return plaintext

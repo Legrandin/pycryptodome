@@ -45,20 +45,27 @@ The base API of a cipher is fairly simple:
     You can (and sometimes must) pass additional cipher- or mode-specific parameters
     to :func:`new` (such as a *nonce* or a *mode of operation*).
 
-*   For encrypting, you call the :func:`encrypt` method of the cipher
+*   For encrypting data, you call the :func:`encrypt` method of the cipher
     object with the plaintext. The method returns the piece of ciphertext.
+    Alternatively, with the ``output`` parameter you can specify
+    a pre-allocated buffer for the result.
+
     For most algorithms, you may call :func:`encrypt` multiple times
     (i.e. once for each piece of plaintext).
 
-*   For decrypting, you call the :func:`decrypt` method of the cipher
+*   For decrypting data, you call the :func:`decrypt` method of the cipher
     object with the ciphertext. The method returns the piece of plaintext.
-    For most algorithms, you may call :func:`decrypt` multiple times
+    The ``output`` parameter can be passed here too.
+    
+  For most algorithms, you may call :func:`decrypt` multiple times
     (i.e. once for each piece of ciphertext).
 
 .. note::
 
-    Plaintexts and ciphertexts (input/output) are all *byte strings* or *byte arrays*.
-    An error will occur with Python 3 strings or Python 2 Unicode strings.
+    Plaintexts and ciphertexts (input/output) can only be ``bytes``,
+    ``bytearray`` or ``memoryview``.
+    In Python 3, you cannot pass strings.
+    In Python 2, you cannot pass Unicode strings.
 
 Often, the sender has to deliver to the receiver other data in addition
 to ciphertext alone (e.g. **initialization vectors** or **nonces**, **MAC tags**, etc).

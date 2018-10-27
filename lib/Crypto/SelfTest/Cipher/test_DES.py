@@ -24,8 +24,9 @@
 
 """Self-test suite for Crypto.Cipher.DES"""
 
-from Crypto.Util.py3compat import *
 import unittest
+
+from Crypto.Cipher import DES
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
 SP800_17_B1_KEY = '01' * 8
@@ -307,11 +308,10 @@ class RonRivestTest(unittest.TestCase):
     errors described herein.
     """
     def runTest(self):
-        from Crypto.Cipher import DES
         from binascii import b2a_hex
 
         X = []
-        X[0:] = [b('\x94\x74\xB8\xE8\xC7\x3B\xCA\x7D')]
+        X[0:] = [b'\x94\x74\xB8\xE8\xC7\x3B\xCA\x7D']
 
         for i in range(16):
             c = DES.new(X[i],DES.MODE_ECB)
@@ -321,12 +321,52 @@ class RonRivestTest(unittest.TestCase):
                 X[i+1:] = [c.decrypt(X[i])] # odd
 
         self.assertEqual(b2a_hex(X[16]),
-            b2a_hex(b('\x1B\x1A\x2D\xDB\x4C\x64\x24\x38')))
+            b2a_hex(b'\x1B\x1A\x2D\xDB\x4C\x64\x24\x38'))
+
+
+class TestOutput(unittest.TestCase):
+
+    def runTest(self):
+        # Encrypt/Decrypt data and test output parameter
+
+        cipher = DES.new(b'4'*8, DES.MODE_ECB)
+
+        pt = b'5' * 8
+        ct = cipher.encrypt(pt)
+
+        output = bytearray(8)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+        import sys
+        if sys.version[:3] != '2.6':
+            output = memoryview(bytearray(8))
+            cipher.encrypt(pt, output=output)
+            self.assertEqual(ct, output)
+        
+            cipher.decrypt(ct, output=output)
+            self.assertEqual(pt, output)
+
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*8)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*8)
+
+        shorter_output = bytearray(7)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
 
 def get_tests(config={}):
-    from Crypto.Cipher import DES
     from .common import make_block_tests
-    return make_block_tests(DES, "DES", test_data) + [RonRivestTest()]
+    tests = make_block_tests(DES, "DES", test_data)
+    tests += [RonRivestTest()]
+    tests += [TestOutput()]
+    return tests
+
 
 if __name__ == '__main__':
     import unittest

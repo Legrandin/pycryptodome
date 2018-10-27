@@ -111,10 +111,48 @@ class KeyLength(unittest.TestCase):
         self.assertRaises(ValueError, Blowfish.new, bchr(0) * 57,
                           Blowfish.MODE_ECB)
 
+
+class TestOutput(unittest.TestCase):
+
+    def runTest(self):
+        # Encrypt/Decrypt data and test output parameter
+
+        cipher = Blowfish.new(b'4'*16, Blowfish.MODE_ECB)
+
+        pt = b'5' * 16
+        ct = cipher.encrypt(pt)
+
+        output = bytearray(16)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+        import sys
+        if sys.version[:3] != '2.6':
+            output = memoryview(bytearray(16))
+            cipher.encrypt(pt, output=output)
+            self.assertEqual(ct, output)
+        
+            cipher.decrypt(ct, output=output)
+            self.assertEqual(pt, output)
+
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+
+        shorter_output = bytearray(7)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
+
 def get_tests(config={}):
     from .common import make_block_tests
     tests = make_block_tests(Blowfish, "Blowfish", test_data)
     tests.append(KeyLength())
+    tests += [TestOutput()]
     return tests
 
 

@@ -33,7 +33,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import byte_string, _copy_bytes
+from Crypto.Util.py3compat import byte_string, _copy_bytes, _is_immutable
 from Crypto.Util.number import long_to_bytes
 
 raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
@@ -147,7 +147,7 @@ class CtrMode(object):
 
         self._next = [self.encrypt, self.decrypt]
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, output=None):
         """Encrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -171,28 +171,47 @@ class CtrMode(object):
           plaintext : bytes/bytearray/memoryview
             The piece of data to encrypt.
             It can be of any length.
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-            the encrypted data, as a byte string.
-            It is as long as *plaintext*.
+          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.encrypt not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
         self._next = [self.encrypt]
+        
+        if output is None:
+            ciphertext = create_string_buffer(len(plaintext))
+        else:
+            ciphertext = output
+            
+            if _is_immutable(output):
+                raise TypeError("output must be a bytearray or a writeable memoryview")
+        
+            if len(plaintext) != len(output):
+                raise ValueError("output must have the same length as the input"
+                                 "  (%d bytes)" % len(plaintext))
 
-        ciphertext = create_string_buffer(len(plaintext))
         result = raw_ctr_lib.CTR_encrypt(self._state.get(),
                                          c_uint8_ptr(plaintext),
-                                         ciphertext,
+                                         c_uint8_ptr(ciphertext),
                                          c_size_t(len(plaintext)))
         if result:
             if result == 0x60002:
                 raise OverflowError("The counter has wrapped around in"
                                     " CTR mode")
             raise ValueError("Error %X while encrypting in CTR mode" % result)
-        return get_raw_buffer(ciphertext)
+        
+        if output is None:
+            return get_raw_buffer(ciphertext)
+        else:
+            return None
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext, output=None):
         """Decrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have decrypted a message
@@ -216,25 +235,46 @@ class CtrMode(object):
           ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
-
-        :Return: the decrypted data (byte string).
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
+        :Return:
+          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.decrypt not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
         self._next = [self.decrypt]
+        
+        if output is None:
+            plaintext = create_string_buffer(len(ciphertext))
+        else:
+            plaintext = output
 
-        plaintext = create_string_buffer(len(ciphertext))
+            if _is_immutable(output):
+                raise TypeError("output must be a bytearray or a writeable memoryview")
+            
+            if len(ciphertext) != len(output):
+                raise ValueError("output must have the same length as the input"
+                                 "  (%d bytes)" % len(plaintext))
+
+
         result = raw_ctr_lib.CTR_decrypt(self._state.get(),
                                          c_uint8_ptr(ciphertext),
-                                         plaintext,
+                                         c_uint8_ptr(plaintext),
                                          c_size_t(len(ciphertext)))
         if result:
             if result == 0x60002:
                 raise OverflowError("The counter has wrapped around in"
                                     " CTR mode")
             raise ValueError("Error %X while decrypting in CTR mode" % result)
-        return get_raw_buffer(plaintext)
+        
+        if output is None:
+            return get_raw_buffer(plaintext)
+        else:
+            return None
 
 
 def _create_ctr_cipher(factory, **kwargs):

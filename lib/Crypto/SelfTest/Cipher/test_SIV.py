@@ -240,10 +240,63 @@ class SivTests(unittest.TestCase):
         pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
 
         self.assertEqual(self.data_128, pt_test)
+    
+    def test_output_param(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        ct, tag = cipher.encrypt_and_digest(pt)
+
+        output = bytearray(16)
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        res, tag_out = cipher.encrypt_and_digest(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        self.assertEqual(tag, tag_out)
+        
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        res = cipher.decrypt_and_verify(ct, tag, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+    def test_output_param_memoryview(self):
+        
+        pt = b'5' * 16
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        ct, tag = cipher.encrypt_and_digest(pt)
+
+        output = memoryview(bytearray(16))
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        cipher.encrypt_and_digest(pt, output=output)
+        self.assertEqual(ct, output)
+        
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        cipher.decrypt_and_verify(ct, tag, output=output)
+        self.assertEqual(pt, output)
+
+    def test_output_param_neg(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        ct, tag = cipher.encrypt_and_digest(pt)
+
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        self.assertRaises(TypeError, cipher.encrypt_and_digest, pt, output=b'0'*16)
+        
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        self.assertRaises(TypeError, cipher.decrypt_and_verify, ct, tag, output=b'0'*16)
+
+        shorter_output = bytearray(15)
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        self.assertRaises(ValueError, cipher.encrypt_and_digest, pt, output=shorter_output)
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, tag, output=shorter_output)
+
 
     import sys
     if sys.version[:3] == "2.6":
         del test_memoryview
+        del test_output_param_memoryview
 
 
 class SivFSMTests(unittest.TestCase):

@@ -306,10 +306,74 @@ class GcmTests(unittest.TestCase):
         pt_test = cipher4.decrypt_and_verify(memoryview(ct_test), memoryview(tag_test))
 
         self.assertEqual(self.data_128, pt_test)
+    
+    def test_output_param(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        ct = cipher.encrypt(pt)
+        tag = cipher.digest()
+
+        output = bytearray(16)
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+        
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        res, tag_out = cipher.encrypt_and_digest(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        self.assertEqual(tag, tag_out)
+        
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        res = cipher.decrypt_and_verify(ct, tag, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+    def test_output_param_memoryview(self):
+        
+        pt = b'5' * 16
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        ct = cipher.encrypt(pt)
+
+        output = memoryview(bytearray(16))
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+
+    def test_output_param_neg(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        ct = cipher.encrypt(pt)
+
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+
+        shorter_output = bytearray(15)
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
 
     import sys
     if sys.version[:3] == "2.6":
         del test_memoryview
+        del test_output_param_memoryview
 
 
 class GcmFSMTests(unittest.TestCase):

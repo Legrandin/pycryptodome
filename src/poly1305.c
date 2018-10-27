@@ -415,3 +415,27 @@ EXPORT_SYM int poly1305_digest(const mac_state *state,
 
     return 0;
 }
+
+#ifdef PROFILE
+int main(void)
+{
+    const unsigned data_size = 1024*1024;
+    mac_state *state;
+    const uint8_t r[16] = "1234567890123456";
+    const uint8_t s[16] = "1234567890123456";
+    uint8_t *data;
+
+    data = malloc(data_size);
+    for (int i=0; i<data_size; i++) {
+        data[i] = (uint8_t) i;
+    }
+
+    poly1305_init(&state, r, 16, s, 16);
+
+    for (int i=0; i<1024; i++)
+        poly1305_update(state, data, 1024*1024);
+
+    poly1305_destroy(state);
+    free(data);
+}
+#endif

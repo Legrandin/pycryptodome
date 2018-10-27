@@ -231,10 +231,62 @@ class BlockChainingTests(unittest.TestCase):
         ref4 = cipher4.decrypt(data_mv)
 
         self.assertEqual(ref3, ref4)
+    
+    def test_output_param(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        ct = cipher.encrypt(pt)
+
+        output = bytearray(16)
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+    def test_output_param_memoryview(self):
+        
+        pt = b'5' * 16
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        ct = cipher.encrypt(pt)
+
+        output = memoryview(bytearray(16))
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+
+    def test_output_param_neg(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        ct = cipher.encrypt(pt)
+
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+
+        shorter_output = bytearray(15)
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
 
     import sys
     if sys.version[:3] == "2.6":
         del test_memoryview
+        del test_output_param_memoryview
 
 
 class CbcTests(BlockChainingTests):

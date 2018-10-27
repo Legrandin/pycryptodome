@@ -222,3 +222,27 @@ EXPORT_SYM int chacha20_seek(stream_state *state,
 
     return 0;
 }
+
+#ifdef PROFILE
+int main(void)
+{
+    const unsigned data_size = 1024*1024;
+    const uint8_t key[32] = "12345678901234561234567890123456";
+    const uint8_t nonce[8] = "12345678";
+    stream_state *state;
+    uint8_t *data;
+
+    data = malloc(data_size);
+    for (int i=0; i<data_size; i++) {
+        data[i] = (uint8_t) i;
+    }
+
+    chacha20_init(&state, key, 32, nonce, 8);
+
+    for (int i=0; i<1024; i++)
+        chacha20_encrypt(state, data, data, data_size);
+    
+    chacha20_destroy(state);
+    free(data);
+}
+#endif
