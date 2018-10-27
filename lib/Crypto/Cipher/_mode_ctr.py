@@ -173,7 +173,7 @@ class CtrMode(object):
             It can be of any length.
         :Keywords:
           output : bytearray/memoryview
-            The location where the ciphertext is written to.
+            The location where the ciphertext must be written to.
             If ``None``, the ciphertext is returned.
         :Return:
           If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
@@ -235,8 +235,13 @@ class CtrMode(object):
           ciphertext : bytes/bytearray/memoryview
             The piece of data to decrypt.
             It can be of any length.
-
-        :Return: the decrypted data (byte string).
+        :Keywords:
+          output : bytearray/memoryview
+            The location where the plaintext must be written to.
+            If ``None``, the plaintext is returned.
+        :Return:
+          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.decrypt not in self._next:

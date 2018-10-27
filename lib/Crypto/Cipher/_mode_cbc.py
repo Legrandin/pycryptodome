@@ -150,10 +150,10 @@ class CbcMode(object):
             Its lenght must be multiple of the cipher block size.
         :Keywords:
           output : bytearray/memoryview
-            The location where the plaintext is written to.
-            If ``None``, the plaintext is returned.
+            The location where the ciphertext must be written to.
+            If ``None``, the ciphertext is returned.
         :Return:
-          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
           Otherwise, ``None``.
         """
 
@@ -213,7 +213,7 @@ class CbcMode(object):
             Its length must be multiple of the cipher block size.
         :Keywords:
           output : bytearray/memoryview
-            The location where the plaintext is written to.
+            The location where the plaintext must be written to.
             If ``None``, the plaintext is returned.
         :Return:
           If ``output`` is ``None``, the plaintext is returned as ``bytes``.

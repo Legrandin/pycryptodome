@@ -112,7 +112,7 @@ class EcbMode(object):
             The length must be multiple of the cipher block length.
         :Keywords:
           output : bytearray/memoryview
-            The location where the ciphertext is written to.
+            The location where the ciphertext must be written to.
             If ``None``, the ciphertext is returned.
         :Return:
           If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
@@ -167,7 +167,7 @@ class EcbMode(object):
             The length must be multiple of the cipher block length.
         :Keywords:
           output : bytearray/memoryview
-            The location where the plaintext is written to.
+            The location where the plaintext must be written to.
             If ``None``, the plaintext is returned.
         :Return:
           If ``output`` is ``None``, the plaintext is returned as ``bytes``.
