@@ -15,9 +15,9 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Symmetric ciphers:
 
   - AES
-  - Single and Triple DES
-  - CAST-128
-  - RC2
+  - Single and Triple DES (legacy)
+  - CAST-128 (legacy)
+  - RC2 (legacy)
 
 * Traditional modes of operations for symmetric ciphers:
 
@@ -28,19 +28,20 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - CTR
   - OpenPGP (a variant of CFB, RFC4880)
 
-* AEAD modes of operations for symmetric ciphers:
+* Authenticated Encryption:
   
   - CCM (AES only)
   - EAX
   - GCM (AES only)
   - SIV (AES only)
   - OCB (AES only)
+  - ChaCha20-Poly1305
 
 * Stream ciphers:
 
   - Salsa20
   - ChaCha20
-  - RC4
+  - RC4 (legacy)
 
 * Cryptographic hashes:
 
@@ -49,20 +50,21 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - SHA-3 hashes (224, 256, 384, 512) and XOFs (SHAKE128, SHAKE256)
   - Keccak (original submission to SHA-3)
   - BLAKE2b and BLAKE2s
-  - RIPE-MD160
-  - MD5
+  - RIPE-MD160 (legacy)
+  - MD5 (legacy)
 
 * Message Authentication Codes (MAC):
   
   - HMAC
   - CMAC
+  - Poly1305
 
 * Asymmetric key generation:
   
   - RSA
-  - DSA
   - ECC (NIST P-256 curve only)
-  - ElGamal
+  - DSA
+  - ElGamal (legacy)
 
 * Export and import format for asymmetric keys:
   
@@ -91,10 +93,10 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 
 * Key derivation:
  
-  - PBKDF1
   - PBKDF2
   - scrypt
   - HKDF
+  - PBKDF1 (legacy)
 
 * Other cryptographic protocols:
  
