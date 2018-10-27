@@ -1,8 +1,8 @@
 Changelog
 =========
 
-3.x.x (xx xxxxxx 2018)
-++++++++++++++++++++++
+3.7.0 (27 October 2018)
++++++++++++++++++++++++
 
 New features
 ------------
@@ -10,7 +10,12 @@ New features
 * Added support for Poly1305 MAC (with AES and ChaCha20 ciphers for key derivation).
 * Added support for ChaCha20-Poly1305 AEAD cipher.
 * New parameter ``output`` for ``Crypto.Util.strxor.strxor`` and ``Crypto.Util.strxor.strxor_c``
-  to have the result put into a pre-allocated buffer (e.g. a ``bytearray``).
+  to have the result stored into a pre-allocated buffer (e.g. a ``bytearray``).
+
+Resolved issues
+---------------
+
+* GH#266: AES-GCM hangs when processing more than 4GB at a time on x86 with PCLMULQDQ instruction.
 
 Breaks in compatibility
 -----------------------
