@@ -9,8 +9,11 @@ New features
 
 * Added support for Poly1305 MAC (with AES and ChaCha20 ciphers for key derivation).
 * Added support for ChaCha20-Poly1305 AEAD cipher.
-* New parameter ``output`` for ``Crypto.Util.strxor.strxor`` and ``Crypto.Util.strxor.strxor_c``
-  to have the result stored into a pre-allocated buffer (e.g. a ``bytearray``).
+* New parameter ``output`` for ``Crypto.Util.strxor.strxor``, ``Crypto.Util.strxor.strxor_c``,
+  ``encrypt`` and ``decrypt`` methods in symmetric ciphers (``Crypto.Cipher``).
+  When specified, the result is stored into the provided buffer (e.g. a ``bytearray``):
+  this requires less memory or fewer copy coperations for very large payloads or a large
+  number of small payloads.
 
 Resolved issues
 ---------------
