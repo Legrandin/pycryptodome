@@ -30,7 +30,7 @@
 
 from Crypto.Random import get_random_bytes
 
-from Crypto.Util.py3compat import _copy_bytes
+from Crypto.Util.py3compat import _copy_bytes, _is_immutable
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
@@ -88,40 +88,63 @@ class ChaCha20Cipher(object):
         self._state = SmartPointer(self._state.get(),
                                    _raw_chacha20_lib.chacha20_destroy)
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, output=None):
         """Encrypt a piece of data.
 
-        :param plaintext: The data to encrypt, of any size.
-        :type plaintext: bytes/bytearray/memoryview
-        :returns: the ciphertext (as ``bytes``),
-                  of equal length as the plaintext.
+        Args:
+          plaintext(bytes/bytearray/memoryview): The data to encrypt, of any size.
+        Keyword Args:
+          output(bytes/bytearray/memoryview): The location where the ciphertext
+            is written to. If ``None``, the ciphertext is returned.
+        Returns:
+          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.encrypt not in self._next:
             raise TypeError("Cipher object can only be used for decryption")
         self._next = ( self.encrypt, )
-        return self._encrypt(plaintext)
+        return self._encrypt(plaintext, output)
 
-    def _encrypt(self, plaintext):
+    def _encrypt(self, plaintext, output):
         """Encrypt without FSM checks"""
+        
+        if output is None:
+            ciphertext = create_string_buffer(len(plaintext))
+        else:
+            ciphertext = output
+            
+            if _is_immutable(output):
+                raise TypeError("output must be a bytearray or a writeable memoryview")
+        
+            if len(plaintext) != len(output):
+                raise ValueError("output must have the same length as the input"
+                                 "  (%d bytes)" % len(plaintext))
 
-        ciphertext = create_string_buffer(len(plaintext))
         result = _raw_chacha20_lib.chacha20_encrypt(
                                          self._state.get(),
                                          c_uint8_ptr(plaintext),
-                                         ciphertext,
+                                         c_uint8_ptr(ciphertext),
                                          c_size_t(len(plaintext)))
         if result:
             raise ValueError("Error %d while encrypting with ChaCha20" % result)
-        return get_raw_buffer(ciphertext)
+        
+        if output is None:
+            return get_raw_buffer(ciphertext)
+        else:
+            return None
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext, output=None):
         """Decrypt a piece of data.
-
-        :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: bytes/bytearray/memoryview
-        :returns: the plaintext (as ``bytes``),
-                  of equal length as the ciphertext.
+        
+        Args:
+          ciphertext(bytes/bytearray/memoryview): The data to decrypt, of any size.
+        Keyword Args:
+          output(bytes/bytearray/memoryview): The location where the plaintext
+            is written to. If ``None``, the plaintext is returned.
+        Returns:
+          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.decrypt not in self._next:
@@ -129,14 +152,15 @@ class ChaCha20Cipher(object):
         self._next = ( self.decrypt, )
 
         try:
-            return self._encrypt(ciphertext)
+            return self._encrypt(ciphertext, output)
         except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
 
     def seek(self, position):
         """Seek to a certain position in the key stream.
 
-        :param integer position:
+        Args:
+          position (integer):
             The absolute position within the key stream, in bytes.
         """
 
@@ -186,16 +210,15 @@ def _derive_Poly1305_key_pair(key, nonce):
 def new(**kwargs):
     """Create a new ChaCha20 cipher
 
-    :keyword key: The secret key to use. It must be 32 bytes long.
-    :type key: bytes/bytearray/memoryview
+    Keyword Args:
+        key (bytes/bytearray/memoryview): The secret key to use.
+            It must be 32 bytes long.
+        nonce (bytes/bytearray/memoryview): A mandatory value that
+            must never be reused for any other encryption
+            done with this key. It must be 8 or 12 bytes long.
 
-    :keyword nonce:
-        A mandatory value that must never be reused for any other encryption
-        done with this key. It must be 8 or 12 bytes long.
-
-        If not provided, 8 ``bytes`` will be randomly generated
-        (you can find them back in the ``nonce`` attribute).
-    :type nonce: bytes/bytearray/memoryview
+            If not provided, 8 bytes will be randomly generated
+            (you can find them back in the ``nonce`` attribute).
 
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Cipher` object
     """

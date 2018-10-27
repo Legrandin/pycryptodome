@@ -22,7 +22,7 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import _copy_bytes
+from Crypto.Util.py3compat import _copy_bytes, _is_immutable
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, VoidPointer,
@@ -80,38 +80,62 @@ class Salsa20Cipher:
         self.block_size = 1
         self.key_size = len(key)
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, output=None):
         """Encrypt a piece of data.
 
-        :param plaintext: The data to encrypt, of any size.
-        :type plaintext: bytes/bytearray/memoryview
-        :returns: the encrypted byte string, of equal length as the
-          plaintext.
+        Args:
+          plaintext(bytes/bytearray/memoryview): The data to encrypt, of any size.
+        Keyword Args:
+          output(bytes/bytearray/memoryview): The location where the ciphertext
+            is written to. If ``None``, the ciphertext is returned.
+        Returns:
+          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
+        
+        if output is None:
+            ciphertext = create_string_buffer(len(plaintext))
+        else:
+            ciphertext = output
+            
+            if _is_immutable(output):
+                raise TypeError("output must be a bytearray or a writeable memoryview")
+        
+            if len(plaintext) != len(output):
+                raise ValueError("output must have the same length as the input"
+                                 "  (%d bytes)" % len(plaintext))
 
-        ciphertext = create_string_buffer(len(plaintext))
         result = _raw_salsa20_lib.Salsa20_stream_encrypt(
                                          self._state.get(),
                                          c_uint8_ptr(plaintext),
-                                         ciphertext,
+                                         c_uint8_ptr(ciphertext),
                                          c_size_t(len(plaintext)))
         if result:
             raise ValueError("Error %d while encrypting with Salsa20" % result)
-        return get_raw_buffer(ciphertext)
 
-    def decrypt(self, ciphertext):
+        if output is None:
+            return get_raw_buffer(ciphertext)
+        else:
+            return None
+
+    def decrypt(self, ciphertext, output=None):
         """Decrypt a piece of data.
-
-        :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: bytes/bytearray/memoryview
-        :returns: the decrypted byte string, of equal length as the
-          ciphertext.
+        
+        Args:
+          ciphertext(bytes/bytearray/memoryview): The data to decrypt, of any size.
+        Keyword Args:
+          output(bytes/bytearray/memoryview): The location where the plaintext
+            is written to. If ``None``, the plaintext is returned.
+        Returns:
+          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
         try:
-            return self.encrypt(ciphertext)
+            return self.encrypt(ciphertext, output=output)
         except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
+
 
 def new(key, nonce=None):
     """Create a new Salsa20 cipher

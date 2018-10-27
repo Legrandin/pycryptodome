@@ -442,11 +442,13 @@ class Drop_Tests(unittest.TestCase):
         pt = self.cipher.decrypt(self.data)[256:256+16]
         self.assertEquals(pt_drop, pt)
 
+
 class KeyLength(unittest.TestCase):
 
     def runTest(self):
         self.assertRaises(ValueError, ARC4.new, bchr(0) * 4)
         self.assertRaises(ValueError, ARC4.new, bchr(0) * 257)
+
 
 def get_tests(config={}):
     from .common import make_stream_tests

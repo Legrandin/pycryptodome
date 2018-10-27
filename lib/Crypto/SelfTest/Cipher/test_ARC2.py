@@ -112,6 +112,43 @@ class KeyLength(unittest.TestCase):
         self.assertRaises(ValueError, ARC2.new, bchr(0) * 16, ARC2.MODE_ECB,
                           effective_keylen=1025)
 
+
+class TestOutput(unittest.TestCase):
+
+    def runTest(self):
+        # Encrypt/Decrypt data and test output parameter
+
+        cipher = ARC2.new(b'4'*16, ARC2.MODE_ECB)
+
+        pt = b'5' * 16
+        ct = cipher.encrypt(pt)
+
+        output = bytearray(16)
+        res = cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+        self.assertEqual(res, None)
+        
+        res = cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
+        self.assertEqual(res, None)
+
+        import sys
+        if sys.version[:3] != '2.6':
+            output = memoryview(bytearray(16))
+            cipher.encrypt(pt, output=output)
+            self.assertEqual(ct, output)
+        
+            cipher.decrypt(ct, output=output)
+            self.assertEqual(pt, output)
+
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+
+        shorter_output = bytearray(7)
+        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
+
 def get_tests(config={}):
     from Crypto.Cipher import ARC2
     from .common import make_block_tests
@@ -119,6 +156,7 @@ def get_tests(config={}):
     tests = make_block_tests(ARC2, "ARC2", test_data)
     tests.append(BufferOverflowTest())
     tests.append(KeyLength())
+    tests += [TestOutput()]
 
     return tests
 

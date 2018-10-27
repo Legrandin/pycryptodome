@@ -105,13 +105,17 @@ class ChaCha20Poly1305Cipher(object):
             self._authenticator.update(b'\x00' * (16 - (self._len_aad & 0x0F)))
         self._status = _CipherStatus.PROCESSING_CIPHERTEXT
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, output=None):
         """Encrypt a piece of data.
 
-        :param plaintext: The data to encrypt, of any size.
-        :type plaintext: bytes/bytearray/memoryview
-        :returns: the ciphertext (as ``bytes``),
-                  of equal length as the plaintext.
+        Args:
+          plaintext(bytes/bytearray/memoryview): The data to encrypt, of any size.
+        Keyword Args:
+          output(bytes/bytearray/memoryview): The location where the ciphertext
+            is written to. If ``None``, the ciphertext is returned.
+        Returns:
+          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
 
         if self.encrypt not in self._next:
@@ -122,18 +126,25 @@ class ChaCha20Poly1305Cipher(object):
 
         self._next = (self.encrypt, self.digest)
 
-        result = self._cipher.encrypt(plaintext)
-        self._len_ct += len(result)
-        self._authenticator.update(result)
+        result = self._cipher.encrypt(plaintext, output=output)
+        self._len_ct += len(plaintext)
+        if output is None:
+            self._authenticator.update(result)
+        else:
+            self._authenticator.update(output)
         return result
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext, output=None):
         """Decrypt a piece of data.
-
-        :param ciphertext: The data to decrypt, of any size.
-        :type ciphertext: bytes, bytearray, memoryview
-        :returns: the plaintext (as ``bytes``),
-                  of equal length as the ciphertext.
+        
+        Args:
+          ciphertext(bytes/bytearray/memoryview): The data to decrypt, of any size.
+        Keyword Args:
+          output(bytes/bytearray/memoryview): The location where the plaintext
+            is written to. If ``None``, the plaintext is returned.
+        Returns:
+          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          Otherwise, ``None``.
         """
         
         if self.decrypt not in self._next:
@@ -146,7 +157,7 @@ class ChaCha20Poly1305Cipher(object):
 
         self._len_ct += len(ciphertext)
         self._authenticator.update(ciphertext)
-        return self._cipher.decrypt(ciphertext)
+        return self._cipher.decrypt(ciphertext, output=output)
     
     def _compute_mac(self):
         """Finalize the cipher (if not done already) and return the MAC."""
