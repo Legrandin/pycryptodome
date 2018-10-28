@@ -262,8 +262,8 @@ class EccKey(object):
     :ivar pointQ: an ECC point representating the public component
     :vartype pointQ: :class:`EccPoint`
 
-    :ivar q: A scalar representating the private component
-    :vartype q: integer
+    :ivar d: A scalar representating the private component
+    :vartype d: integer
     """
 
     def __init__(self, **kwargs):
