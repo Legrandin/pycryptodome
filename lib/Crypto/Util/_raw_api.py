@@ -71,6 +71,8 @@ class _VoidPointer(object):
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
         raise ImportError("CFFI is only supported with Python 2.7+")
+    if sys.flags.optimize == 2:
+        raise ImportError("CFFI with optimize=2 fails due to pycparser bug.")
 
     from cffi import FFI
 
