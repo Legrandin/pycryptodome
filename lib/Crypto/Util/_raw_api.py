@@ -30,6 +30,7 @@
 
 import abc
 import sys
+import platform
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._file_system import pycryptodome_filename
 
@@ -71,7 +72,14 @@ class _VoidPointer(object):
 try:
     if sys.version_info[0] == 2 and sys.version_info[1] < 7:
         raise ImportError("CFFI is only supported with Python 2.7+")
-    if sys.flags.optimize == 2:
+
+    # Starting from v2.18, pycparser (used by cffi for in-line ABI mode)
+    # stops working correctly when PYOPTIMIZE==2 or the parameter -OO is
+    # passed. In that case, we fall back to ctypes.
+    # Note that PyPy ships with an old version of pycparser so we can keep
+    # using cffi there.
+    # See https://github.com/Legrandin/pycryptodome/issues/228
+    if platform.python_implementation() != "PyPy" and sys.flags.optimize == 2:
         raise ImportError("CFFI with optimize=2 fails due to pycparser bug.")
 
     from cffi import FFI
@@ -289,6 +297,7 @@ def load_pycryptodome_raw_lib(name, cdecl):
         except OSError as exp:
             attempts.append("Trying '%s': %s" % (filename, str(exp)))
     raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
+
 
 def expect_byte_string(data):
     raise NotImplementedError("To be removed")
