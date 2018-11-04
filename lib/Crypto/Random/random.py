@@ -26,6 +26,8 @@ __all__ = ['StrongRandom', 'getrandbits', 'randrange', 'randint', 'choice', 'shu
 
 from Crypto import Random
 
+from Crypto.Util.py3compat import is_native_int
+
 class StrongRandom(object):
     def __init__(self, rng=None, randfunc=None):
         if randfunc is None and rng is None:
@@ -59,9 +61,8 @@ class StrongRandom(object):
             step = 1
         else:
             raise TypeError("randrange expected at most 3 arguments, got %d" % (len(args),))
-        if (not isinstance(start, (int, long))
-                or not isinstance(stop, (int, long))
-                or not isinstance(step, (int, long))):
+        if (not is_native_int(start) or not is_native_int(stop) or not
+                is_native_int(step)):
             raise TypeError("randrange requires integer arguments")
         if step == 0:
             raise ValueError("randrange step argument must not be zero")
@@ -81,7 +82,7 @@ class StrongRandom(object):
 
     def randint(self, a, b):
         """Return a random integer N such that a <= N <= b."""
-        if not isinstance(a, (int, long)) or not isinstance(b, (int, long)):
+        if not is_native_int(a) or not is_native_int(b):
             raise TypeError("randint requires integer arguments")
         N = self.randrange(a, b+1)
         assert a <= N <= b
@@ -102,7 +103,7 @@ class StrongRandom(object):
         # See http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
         # Working backwards from the end of the array, we choose a random item
         # from the remaining items until all items have been chosen.
-        for i in xrange(len(x)-1, 0, -1):   # iterate from len(x)-1 downto 1
+        for i in range(len(x)-1, 0, -1):   # iterate from len(x)-1 downto 1
             j = self.randrange(0, i+1)      # choose random j such that 0 <= j <= i
             x[i], x[j] = x[j], x[i]         # exchange x[i] and x[j]
 
@@ -115,7 +116,7 @@ class StrongRandom(object):
 
         retval = []
         selected = {}  # we emulate a set using a dict here
-        for i in xrange(k):
+        for i in range(k):
             r = None
             while r is None or r in selected:
                 r = self.randrange(num_choices)

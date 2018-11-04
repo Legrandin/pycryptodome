@@ -30,7 +30,7 @@
 
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import b, bord, tobytes
+from Crypto.Util.py3compat import bord, tobytes
 
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -237,7 +237,7 @@ def new(**kwargs):
                              "with steps of 8")
         digest_bytes = digest_bits // 8
 
-    key = kwargs.pop("key", b(""))
+    key = kwargs.pop("key", b"")
     if len(key) > 64:
         raise ValueError("BLAKE2s key cannot exceed 64 bytes")
 

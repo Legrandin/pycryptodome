@@ -117,7 +117,7 @@ class CipherSelfTest(unittest.TestCase):
         # Repeat the same encryption or decryption twice and verify
         # that the result is always the same
         #
-        for i in xrange(2):
+        for i in range(2):
             cipher = self._new()
             decipher = self._new()
 
@@ -486,8 +486,9 @@ def make_stream_tests(module, module_name, test_data):
             tests += [
                 ByteArrayTest(module, params),
             ]
-            import types
-            if _memoryview is not types.NoneType:
+
+            import sys
+            if sys.version[:3] != '2.6':
                 tests.append(MemoryviewTest(module, params))
             extra_tests_added = True
 

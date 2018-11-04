@@ -442,8 +442,8 @@ def get_tests(config={}):
     tests.append(ChaCha20_AGL_NIR())
     tests.append(ByteArrayTest())
 
-    import types
-    if _memoryview != types.NoneType:
+    import sys
+    if sys.version[:3] != "2.6":
         tests.append(MemoryviewTest())
 
     tests.append(TestOutput())

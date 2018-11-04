@@ -142,7 +142,7 @@ class GcmTests(unittest.TestCase):
                           nonce=self.nonce_96, mac_len=16+1)
 
         # Valid MAC length
-        for mac_len in xrange(5, 16 + 1):
+        for mac_len in range(5, 16 + 1):
             cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96,
                              mac_len=mac_len)
             _, mac = cipher.encrypt_and_digest(self.data_128)
@@ -462,13 +462,13 @@ class GcmFSMTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
         cipher.update(self.data_128)
         first_mac = cipher.digest()
-        for x in xrange(4):
+        for x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
         cipher.update(self.data_128)
-        for x in xrange(5):
+        for x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):

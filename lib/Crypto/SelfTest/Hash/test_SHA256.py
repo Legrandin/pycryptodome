@@ -34,13 +34,13 @@ class LargeSHA256Test(unittest.TestCase):
         zeros = bchr(0x00) * (1024*1024)
 
         h = SHA256.new(zeros)
-        for i in xrange(511):
+        for i in range(511):
             h.update(zeros)
 
         # This test vector is from PyCrypto's old testdata.py file.
         self.assertEqual('9acca8e8c22201155389f65abbf6bc9723edc7384ead80503839f49dcc56d767', h.hexdigest()) # 512 MiB
 
-        for i in xrange(8):
+        for i in range(8):
             h.update(zeros)
 
         # This test vector is from PyCrypto's old testdata.py file.

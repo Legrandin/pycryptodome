@@ -22,8 +22,9 @@
 # ===================================================================
 
 import struct
+from functools import reduce
 
-from Crypto.Util.py3compat import tobytes, bord, _copy_bytes
+from Crypto.Util.py3compat import tobytes, bord, _copy_bytes, iter_range
 
 from Crypto.Hash import SHA1, SHA256, HMAC, CMAC
 from Crypto.Util.strxor import strxor
@@ -89,7 +90,7 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
         raise TypeError("Selected hash algorithm has a too short digest (%d bytes)." % digest)
     if len(salt) != 8:
         raise ValueError("Salt is not 8 bytes long (%d bytes instead)." % len(salt))
-    for i in xrange(count-1):
+    for i in iter_range(count-1):
         pHash = pHash.new(pHash.digest())
     return pHash.digest()[:dkLen]
 
@@ -146,7 +147,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
 
         key = b''
         i = 1
-        while len(key)<dkLen:
+        while len(key) < dkLen:
             s = [ prf(password, salt + struct.pack(">I", i)) ] * 2
             key += reduce(strxor, (link(s) for j in range(count)) )
             i += 1
@@ -323,7 +324,7 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     if num_keys == 1:
         return derived_output[:key_len]
     kol = [derived_output[idx:idx + key_len]
-           for idx in xrange(0, output_len, key_len)]
+           for idx in iter_range(0, output_len, key_len)]
     return list(kol[:num_keys])
 
 
@@ -391,7 +392,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     # Parallelize into p flows
     data_out = []
-    for flow in xrange(p):
+    for flow in iter_range(p):
         idx = flow * 128 * r
         buffer_out = create_string_buffer(128 * r)
         result = scryptROMix(stage_1[idx : idx + 128 * r],
@@ -412,5 +413,5 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
         return dk
 
     kol = [dk[idx:idx + key_len]
-           for idx in xrange(0, key_len * num_keys, key_len)]
+           for idx in iter_range(0, key_len * num_keys, key_len)]
     return kol

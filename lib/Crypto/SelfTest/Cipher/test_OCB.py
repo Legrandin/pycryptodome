@@ -81,7 +81,7 @@ class OcbTests(unittest.TestCase):
                           nonce=b(""))
 
         # nonce can be up to 15 bytes long
-        for length in xrange(1, 16):
+        for length in range(1, 16):
             AES.new(self.key_128, AES.MODE_OCB, nonce=self.data_128[:length])
 
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_OCB,
@@ -148,7 +148,7 @@ class OcbTests(unittest.TestCase):
                           nonce=self.nonce_96, mac_len=16+1)
 
         # Valid MAC length
-        for mac_len in xrange(8, 16 + 1):
+        for mac_len in range(8, 16 + 1):
             cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96,
                              mac_len=mac_len)
             _, mac = cipher.encrypt_and_digest(self.data_128)
@@ -441,13 +441,13 @@ class OcbFSMTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
         cipher.update(self.data_128)
         first_mac = cipher.digest()
-        for x in xrange(4):
+        for x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
         cipher.update(self.data_128)
-        for x in xrange(5):
+        for x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):
@@ -708,7 +708,7 @@ class OcbRfc7253Test(unittest.TestCase):
             key = bchr(0) * (keylen // 8 - 1) + bchr(taglen)
             C = b("")
 
-            for i in xrange(128):
+            for i in range(128):
                 S = bchr(0) * i
 
                 N = long_to_bytes(3 * i + 1, 12)

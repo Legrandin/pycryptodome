@@ -99,7 +99,7 @@ class TestPrimality(unittest.TestCase):
         def ending_with_one(number):
             return number % 10 == 1
 
-        for x in xrange(20):
+        for x in range(20):
             q = generate_probable_prime(exact_bits=160,
                     prime_filter=ending_with_one)
             self.assertEqual(q % 10, 1)

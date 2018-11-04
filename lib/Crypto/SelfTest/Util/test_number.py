@@ -121,7 +121,7 @@ class MiscTests(unittest.TestCase):
                           4859419 * 9718837, 2730439 * 5460877,
                           245127919 * 490255837, 963939391 * 1927878781,
                           4186358431 * 8372716861, 1576820467 * 3153640933):
-            self.assertEqual(number.isPrime(long(composite)), False)
+            self.assertEqual(number.isPrime(int(composite)), False)
 
     def test_size(self):
         self.assertEqual(number.size(2),2)

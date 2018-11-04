@@ -33,7 +33,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
 
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import byte_string, _copy_bytes, _is_immutable
+from Crypto.Util.py3compat import byte_string, _copy_bytes, _is_immutable, is_native_int
 from Crypto.Util.number import long_to_bytes
 
 raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
@@ -343,7 +343,7 @@ def _create_ctr_cipher(factory, **kwargs):
         if initial_value is None:
             initial_value = 0
 
-        if isinstance(initial_value, (int, long)):
+        if is_native_int(initial_value):
             if (1 << (counter_len * 8)) - 1 < initial_value:
                 raise ValueError("Initial counter value is too large")
             initial_counter_block = nonce + long_to_bytes(initial_value, counter_len)

@@ -77,7 +77,7 @@ class DerObject(object):
         This class should never be directly instantiated.
         """
 
-        def __init__(self, asn1Id=None, payload=b(''), implicit=None,
+        def __init__(self, asn1Id=None, payload=b'', implicit=None,
                      constructed=False, explicit=None):
                 """Initialize the DER object according to a specific ASN.1 type.
 
@@ -284,7 +284,7 @@ class DerInteger(DerObject):
                     It overrides the universal tag for INTEGER (2).
                 """
 
-                DerObject.__init__(self, 0x02, b(''), implicit,
+                DerObject.__init__(self, 0x02, b'', implicit,
                                    False, explicit)
                 self.value = value  # The integer value
 
@@ -293,7 +293,7 @@ class DerInteger(DerObject):
                 binary string."""
 
                 number = self.value
-                self.payload = b('')
+                self.payload = b''
                 while True:
                     self.payload = bchr(int(number & 255)) + self.payload
                     if 128 <= number <= 255:
@@ -395,7 +395,7 @@ class DerSequence(DerObject):
                     It overrides the universal tag for SEQUENCE (16).
                 """
 
-                DerObject.__init__(self, 0x10, b(''), implicit, True)
+                DerObject.__init__(self, 0x10, b'', implicit, True)
                 if startSeq is None:
                     self._seq = []
                 else:
@@ -440,9 +440,9 @@ class DerSequence(DerObject):
                   only_non_negative (boolean):
                     If ``True``, negative integers are not counted in.
                 """
-                def _is_number2(x):
-                    return _is_number(x, only_non_negative)
-                return len(filter(_is_number2, self._seq))
+                
+                items = [x for x in self._seq if _is_number(x, only_non_negative)]
+                return len(items)
 
         def hasOnlyInts(self, only_non_negative=True):
                 """Return ``True`` if all items in this sequence are integers
@@ -465,7 +465,7 @@ class DerSequence(DerObject):
                   ValueError: if some elements in the sequence are neither integers
                               nor byte strings.
                 """
-                self.payload = b('')
+                self.payload = b''
                 for item in self._seq:
                     if byte_string(item):
                         self.payload += item
@@ -572,7 +572,7 @@ class DerOctetString(DerObject):
     :vartype payload: byte string
     """
 
-    def __init__(self, value=b(''), implicit=None):
+    def __init__(self, value=b'', implicit=None):
         """Initialize the DER object as an OCTET STRING.
 
         :Parameters:
@@ -593,7 +593,7 @@ class DerNull(DerObject):
     def __init__(self):
         """Initialize the DER object as a NULL."""
 
-        DerObject.__init__(self, 0x05, b(''), None, False)
+        DerObject.__init__(self, 0x05, b'', None, False)
 
 
 class DerObjectId(DerObject):
@@ -638,14 +638,14 @@ class DerObjectId(DerObject):
           explicit : integer
             The EXPLICIT tag to use for the encoded object.
         """
-        DerObject.__init__(self, 0x06, b(''), implicit, False, explicit)
+        DerObject.__init__(self, 0x06, b'', implicit, False, explicit)
         self.value = value
 
     def encode(self):
         """Return the DER OBJECT ID, fully encoded as a
         binary string."""
 
-        comps = map(int, self.value.split("."))
+        comps = [int(x) for x in self.value.split(".")]
         if len(comps) < 2:
             raise ValueError("Not a valid Object Identifier string")
         self.payload = bchr(40*comps[0]+comps[1])
@@ -655,7 +655,7 @@ class DerObjectId(DerObject):
                 enc.insert(0, (v & 0x7F) | 0x80)
                 v >>= 7
             enc[-1] &= 0x7F
-            self.payload += b('').join(map(bchr, enc))
+            self.payload += b''.join([bchr(x) for x in enc])
         return DerObject.encode(self)
 
     def decode(self, der_encoded):
@@ -680,7 +680,7 @@ class DerObjectId(DerObject):
 
         # Derive self.value from self.payload
         p = BytesIO_EOF(self.payload)
-        comps = list(map(str, divmod(p.read_byte(), 40)))
+        comps = [str(x) for x in divmod(p.read_byte(), 40)]
         v = 0
         while p.remaining_data():
             c = p.read_byte()
@@ -721,7 +721,7 @@ class DerBitString(DerObject):
     :vartype value: byte string
     """
 
-    def __init__(self, value=b(''), implicit=None, explicit=None):
+    def __init__(self, value=b'', implicit=None, explicit=None):
         """Initialize the DER object as a BIT STRING.
 
         :Parameters:
@@ -734,7 +734,7 @@ class DerBitString(DerObject):
           explicit : integer
             The EXPLICIT tag to use for the encoded object.
         """
-        DerObject.__init__(self, 0x03, b(''), implicit, False, explicit)
+        DerObject.__init__(self, 0x03, b'', implicit, False, explicit)
 
         # The bitstring value (packed)
         if isinstance(value, DerObject):
@@ -747,7 +747,7 @@ class DerBitString(DerObject):
         binary string."""
 
         # Add padding count byte
-        self.payload = b('\x00') + self.value
+        self.payload = b'\x00' + self.value
         return DerObject.encode(self)
 
     def decode(self, der_encoded):
@@ -773,7 +773,7 @@ class DerBitString(DerObject):
             raise ValueError("Not a valid BIT STRING")
 
         # Fill-up self.value
-        self.value = b('')
+        self.value = b''
         # Remove padding count byte
         if self.payload:
             self.value = self.payload[1:]
@@ -816,7 +816,7 @@ class DerSetOf(DerObject):
             The IMPLICIT tag to use for the encoded object.
             It overrides the universal tag for SET OF (17).
         """
-        DerObject.__init__(self, 0x11, b(''), implicit, True)
+        DerObject.__init__(self, 0x11, b'', implicit, True)
         self._seq = []
 
         # All elements must be of the same type (and therefore have the
@@ -925,5 +925,5 @@ class DerSetOf(DerObject):
                 bys = item
             ordered.append(bys)
         ordered.sort()
-        self.payload = b('').join(ordered)
+        self.payload = b''.join(ordered)
         return DerObject.encode(self)

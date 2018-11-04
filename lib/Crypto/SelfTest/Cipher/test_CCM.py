@@ -134,12 +134,12 @@ class CcmTests(unittest.TestCase):
 
     def test_mac_len(self):
         # Invalid MAC length
-        for mac_len in xrange(3, 17 + 1, 2):
+        for mac_len in range(3, 17 + 1, 2):
             self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CCM,
                               nonce=self.nonce_96, mac_len=mac_len)
 
         # Valid MAC length
-        for mac_len in xrange(4, 16 + 1, 2):
+        for mac_len in range(4, 16 + 1, 2):
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
                              mac_len=mac_len)
             _, mac = cipher.encrypt_and_digest(self.data_128)
@@ -545,13 +545,13 @@ class CcmFSMTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         cipher.update(self.data_128)
         first_mac = cipher.digest()
-        for x in xrange(4):
+        for x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         cipher.update(self.data_128)
-        for x in xrange(5):
+        for x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):

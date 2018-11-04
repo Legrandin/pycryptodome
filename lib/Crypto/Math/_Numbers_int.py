@@ -29,7 +29,7 @@
 # ===================================================================
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
-from Crypto.Util.py3compat import maxint
+from Crypto.Util.py3compat import maxint, iter_range
 
 class Integer(object):
     """A class to model a natural integer (including zero)"""
@@ -87,6 +87,7 @@ class Integer(object):
 
     def __nonzero__(self):
         return self._value != 0
+    __bool__ = __nonzero__
 
     def is_negative(self):
         return self._value < 0
@@ -203,7 +204,7 @@ class Integer(object):
         r = pow(n, (q + 1) // 2, p)
 
         while t != 1:
-            for i in xrange(0, m):
+            for i in iter_range(0, m):
                 if pow(t, 2**i, p) == 1:
                     break
             if i == m:

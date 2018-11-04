@@ -153,7 +153,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
         def testEncryptVerify1(self):
                 # Encrypt/Verify messages of length [0..RSAlen-11]
                 # and therefore padding [8..117]
-                for pt_len in xrange(0,128-11+1):
+                for pt_len in range(0,128-11+1):
                     pt = self.rng(pt_len)
                     cipher = PKCS.new(self.key1024)
                     ct = cipher.encrypt(pt)

@@ -71,7 +71,7 @@ Example:
 import struct
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import bord, _copy_bytes
+from Crypto.Util.py3compat import bord, _copy_bytes, is_binary
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.strxor import strxor
 
@@ -125,7 +125,7 @@ class OcbMode(object):
         """Nonce used for this session."""
         if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
-        if isinstance(nonce, unicode):
+        if not is_binary(nonce):
             raise TypeError("Nonce must be a byte string")
 
         self._mac_len = mac_len

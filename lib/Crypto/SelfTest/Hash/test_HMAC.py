@@ -392,7 +392,8 @@ def get_tests(config={}):
     tests.append(HMAC_None())
 
     tests.append(ByteArrayTests())
-    if _memoryview is not types.NoneType:
+    import sys
+    if sys.version[:3] != "2.6":
         tests.append(MemoryViewTests())
 
     return tests

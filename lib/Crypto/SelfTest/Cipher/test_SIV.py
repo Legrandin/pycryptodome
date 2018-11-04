@@ -349,13 +349,13 @@ class SivFSMTests(unittest.TestCase):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.update(self.data_128)
         first_mac = cipher.digest()
-        for x in xrange(4):
+        for x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.update(self.data_128)
-        for x in xrange(5):
+        for x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):

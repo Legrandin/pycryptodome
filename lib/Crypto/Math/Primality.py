@@ -33,8 +33,10 @@
 :undocumented: __package__
 """
 
-from Crypto.Math.Numbers import Integer
 from Crypto import Random
+from Crypto.Math.Numbers import Integer
+
+from Crypto.Util.py3compat import iter_range
 
 COMPOSITE = 0
 PROBABLY_PRIME = 1
@@ -85,7 +87,7 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     # Skip step 3
 
     # Step 4
-    for i in xrange(iterations):
+    for i in iter_range(iterations):
 
         # Step 4.1-2
         base = 1
@@ -100,7 +102,7 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
             continue
 
         # Step 4.5
-        for j in xrange(1, a):
+        for j in iter_range(1, a):
             z = pow(z, 2, candidate)
             if z == minus_one:
                 break
@@ -170,7 +172,7 @@ def lucas_test(candidate):
     U_temp = Integer(0)
     V_temp = Integer(0)
     # Step 6
-    for i in xrange(r - 1, -1, -1):
+    for i in iter_range(r - 1, -1, -1):
         # Square
         # U_temp = U_i * V_i % candidate
         U_temp.set(U_i)

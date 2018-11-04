@@ -56,7 +56,7 @@ def t2b(hexstring):
 
 def t2l(hexstring):
     ws = hexstring.replace(" ", "").replace("\n", "")
-    return long(ws, 16)
+    return int(ws, 16)
 
 
 def load_hash_by_name(hash_name):

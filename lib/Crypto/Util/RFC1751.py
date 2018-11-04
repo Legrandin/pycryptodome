@@ -43,8 +43,11 @@ def _key2bin(s):
 def _extract(key, start, length):
     """Extract a bitstring(2.x)/bytestring(2.x) from a string of binary digits, and return its
     numeric value."""
-    k=key[start:start+length]
-    return reduce(lambda x,y: x*2+ord(y)-48, k, 0)
+    
+    result = 0
+    for y in key[start:start+length]:
+        result = result * 2 + ord(y) - 48
+    return result
 
 def key_to_english (key):
     """Transform an arbitrary key into a string containing English words.
@@ -91,7 +94,7 @@ def english_to_key (s):
       A byte string.
     """
 
-    L=s.upper().split() ; key=b('')
+    L=s.upper().split() ; key=b''
     for index in range(0, len(L), 6):
         sublist=L[index:index+6] ; char=9*[0] ; bits=0
         for i in sublist:
@@ -108,7 +111,10 @@ def english_to_key (s):
                 char[(bits>>3)+1] = char[(bits>>3)+1] | cr
             else: char[bits>>3] = char[bits>>3] | cr
             bits=bits+11
-        subkey=reduce(lambda x,y:x+bchr(y), char, b(''))
+
+        subkey = b''
+        for y in char:
+            subkey = subkey + bchr(y)
 
         # Check the parity of the resulting key
         skbin=_key2bin(subkey)

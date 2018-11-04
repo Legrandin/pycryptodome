@@ -184,7 +184,7 @@ class ElGamalKey(object):
     def _encrypt(self, M, K):
         a=pow(self.g, K, self.p)
         b=( pow(self.y, K, self.p)*M ) % self.p
-        return map(int, ( a,b ))
+        return [int(a), int(b)]
 
     def _decrypt(self, M):
         if (not hasattr(self, 'x')):
@@ -209,10 +209,10 @@ class ElGamalKey(object):
         t=(Integer(M)-self.x*a) % p1
         while t<0: t=t+p1
         b=(t*K.inverse(p1)) % p1
-        return map(int, (a, b))
+        return [int(a), int(b)]
 
     def _verify(self, M, sig):
-        sig = map(Integer, sig)
+        sig = [Integer(x) for x in sig]
         if sig[0]<1 or sig[0]>self.p-1:
             return 0
         v1=pow(self.y, sig[0], self.p)

@@ -28,7 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import b, bchr, bord
+from Crypto.Util.py3compat import bchr, bord, iter_range
 import Crypto.Util.number
 from Crypto.Util.number import (ceil_div,
                                 long_to_bytes,
@@ -178,8 +178,9 @@ def MGF1(mgfSeed, maskLen, hash_gen):
 
     :return: the mask, as a *byte string*
     """
-    T = b("")
-    for counter in xrange(ceil_div(maskLen, hash_gen.digest_size)):
+    
+    T = b""
+    for counter in iter_range(ceil_div(maskLen, hash_gen.digest_size)):
         c = long_to_bytes(counter, 4)
         hobj = hash_gen.new()
         hobj.update(mgfSeed + c)
@@ -222,7 +223,7 @@ def _EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
 
     # Bitmask of digits that fill up
     lmask = 0
-    for i in xrange(8*emLen-emBits):
+    for i in iter_range(8*emLen-emBits):
         lmask = lmask >> 1 | 0x80
 
     # Step 1 and 2 have been already done
@@ -284,7 +285,7 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
 
     # Bitmask of digits that fill up
     lmask = 0
-    for i in xrange(8*emLen-emBits):
+    for i in iter_range(8*emLen-emBits):
         lmask = lmask >> 1 | 0x80
 
     # Step 1 and 2 have been already done
@@ -313,7 +314,7 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     if sLen > 0:
         salt = db[-sLen:]
     else:
-        salt = b("")
+        salt = b""
     # Step 12
     m_prime = bchr(0)*8 + mhash.digest() + salt
     # Step 13

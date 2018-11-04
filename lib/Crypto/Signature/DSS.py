@@ -33,8 +33,6 @@
 
 __all__ = ['new', 'DssSigScheme']
 
-from Crypto.Util.py3compat import bchr, b
-
 
 from Crypto.Util.asn1 import DerSequence
 from Crypto.Util.number import long_to_bytes
@@ -107,7 +105,7 @@ class DssSigScheme(object):
 
         # Encode the signature into a single byte string
         if self._encoding == 'binary':
-            output = b("").join([long_to_bytes(x, self._order_bytes)
+            output = b"".join([long_to_bytes(x, self._order_bytes)
                                  for x in sig_pair])
         else:
             # Dss-sig  ::=  SEQUENCE  {
@@ -208,14 +206,14 @@ class DeterministicDsaSigScheme(DssSigScheme):
         # Step a
         h1 = mhash.digest()
         # Step b
-        mask_v = bchr(1) * mhash.digest_size
+        mask_v = b'\x01' * mhash.digest_size
         # Step c
-        nonce_k = bchr(0) * mhash.digest_size
+        nonce_k = b'\x00' * mhash.digest_size
 
-        for int_oct in 0, 1:
+        for int_oct in (b'\x00', b'\x01'):
             # Step d/f
             nonce_k = HMAC.new(nonce_k,
-                               mask_v + bchr(int_oct) +
+                               mask_v + int_oct +
                                self._int2octets(self._private_key) +
                                self._bits2octets(h1), mhash).digest()
             # Step e/g
@@ -225,12 +223,12 @@ class DeterministicDsaSigScheme(DssSigScheme):
         while not (0 < nonce < self._order):
             # Step h.C (second part)
             if nonce != -1:
-                nonce_k = HMAC.new(nonce_k, mask_v + bchr(0),
+                nonce_k = HMAC.new(nonce_k, mask_v + b'\x00',
                                    mhash).digest()
                 mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
 
             # Step h.A
-            mask_t = b("")
+            mask_t = b""
 
             # Step h.B
             while len(mask_t) < self._order_bytes:

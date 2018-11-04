@@ -33,7 +33,7 @@ from binascii import unhexlify
 
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, _memoryview
+from Crypto.Util.py3compat import tobytes, _memoryview, is_string
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -112,20 +112,20 @@ class BlockChainingTests(unittest.TestCase):
 
     def test_unaligned_data_128(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        for wrong_length in xrange(1,16):
+        for wrong_length in range(1,16):
             self.assertRaises(ValueError, cipher.encrypt, b"5" * wrong_length)
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        for wrong_length in xrange(1,16):
+        for wrong_length in range(1,16):
             self.assertRaises(ValueError, cipher.decrypt, b"5" * wrong_length)
 
     def test_unaligned_data_64(self):
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
-        for wrong_length in xrange(1,8):
+        for wrong_length in range(1,8):
             self.assertRaises(ValueError, cipher.encrypt, b"5" * wrong_length)
 
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
-        for wrong_length in xrange(1,8):
+        for wrong_length in range(1,8):
             self.assertRaises(ValueError, cipher.decrypt, b"5" * wrong_length)
 
     def test_IV_iv_attributes(self):
@@ -307,7 +307,7 @@ class NistBlockChainingVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if isinstance(tv, basestring):
+            if is_string(tv):
                 direction = tv
                 continue
 
@@ -333,7 +333,7 @@ class NistBlockChainingVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if isinstance(tv, basestring):
+            if is_string(tv):
                 direction = tv
                 continue
 
@@ -342,13 +342,13 @@ class NistBlockChainingVectors(unittest.TestCase):
 
             if direction == '[ENCRYPT]':
                 cts = [ tv.iv ]
-                for count in xrange(1000):
+                for count in range(1000):
                     cts.append(cipher.encrypt(tv.plaintext))
                     tv.plaintext = cts[-2]
                 self.assertEqual(cts[-1], tv.ciphertext)
             elif direction == '[DECRYPT]':
                 pts = [ tv.iv]
-                for count in xrange(1000):
+                for count in range(1000):
                     pts.append(cipher.decrypt(tv.ciphertext))
                     tv.ciphertext = pts[-2]
                 self.assertEqual(pts[-1], tv.plaintext)
@@ -366,7 +366,7 @@ class NistBlockChainingVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if isinstance(tv, basestring):
+            if is_string(tv):
                 direction = tv
                 continue
 

@@ -22,9 +22,7 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import *
-
-def new(nbits, prefix=b(""), suffix=b(""), initial_value=1, little_endian=False, allow_wraparound=False):
+def new(nbits, prefix=b"", suffix=b"", initial_value=1, little_endian=False, allow_wraparound=False):
     """Create a stateful counter block function suitable for CTR encryption modes.
 
     Each call to the function returns the next counter block.

@@ -96,7 +96,7 @@ class PBKDF2_Tests(unittest.TestCase):
         def prf_SHA256(p,s):
             return HMAC.new(p,s,SHA256).digest()
 
-        for i in xrange(len(self._testData)):
+        for i in range(len(self._testData)):
             v = self._testData[i]
             password = v[0]
             salt = t2b(v[1])
@@ -200,7 +200,7 @@ class S2V_Tests(unittest.TestCase):
         for module in (AES, DES3):
             s2v = _S2V.new(key, module)
             max_comps = module.block_size*8-1
-            for i in xrange(max_comps):
+            for i in range(max_comps):
                 s2v.update(b("XX"))
             self.assertRaises(TypeError, s2v.update, b("YY"))
 

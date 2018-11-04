@@ -28,7 +28,7 @@ import binascii
 import struct
 import itertools
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import bchr, bord, tobytes, tostr, iter_range
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
@@ -278,12 +278,12 @@ class DsaKey(object):
                 else:
                     return x
 
-            tup2 = map(func, tup1)
-            keyparts = [b('ssh-dss')] + tup2
-            keystring = b('').join(
+            tup2 = [func(x) for x in tup1]
+            keyparts = [b'ssh-dss'] + tup2
+            keystring = b''.join(
                             [struct.pack(">I", len(kp)) + kp for kp in keyparts]
                             )
-            return b('ssh-dss ') + binascii.b2a_base64(keystring)[:-1]
+            return b'ssh-dss ' + binascii.b2a_base64(keystring)[:-1]
 
         # DER format is always used, even in case of PEM, which simply
         # encodes it into BASE64.
@@ -382,9 +382,9 @@ def _generate_domain(L, randfunc):
     upper_bit = 1 << (L - 1)
     while True:
         V = [ SHA256.new(seed + Integer(offset + j).to_bytes()).digest()
-              for j in xrange(n + 1) ]
+              for j in iter_range(n + 1) ]
         V = [ Integer.from_bytes(v) for v in V ]
-        W = sum([V[i] * (1 << (i * outlen)) for i in xrange(n)],
+        W = sum([V[i] * (1 << (i * outlen)) for i in iter_range(n)],
                 (V[n] & ((1 << b_) - 1)) * (1 << (n * outlen)))
 
         X = Integer(W + upper_bit) # 2^{L-1} < X < 2^{L}
@@ -400,7 +400,7 @@ def _generate_domain(L, randfunc):
     # Generate g (A.2.3, index=1)
     e = (p - 1) // q
     for count in itertools.count(1):
-        U = seed + b("ggen") + bchr(1) + Integer(count).to_bytes()
+        U = seed + b"ggen" + bchr(1) + Integer(count).to_bytes()
         W = Integer.from_bytes(SHA256.new(U).digest())
         g = pow(W, e, p)
         if g != 1:
@@ -641,22 +641,22 @@ def import_key(extern_key, passphrase=None):
     if passphrase is not None:
         passphrase = tobytes(passphrase)
 
-    if extern_key.startswith(b('-----')):
+    if extern_key.startswith(b'-----'):
         # This is probably a PEM encoded key
         (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
         if enc_flag:
             passphrase = None
         return _import_key_der(der, passphrase, None)
 
-    if extern_key.startswith(b('ssh-dss ')):
+    if extern_key.startswith(b'ssh-dss '):
         # This is probably a public OpenSSH key
-        keystring = binascii.a2b_base64(extern_key.split(b(' '))[1])
+        keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
         keyparts = []
         while len(keystring) > 4:
             length = struct.unpack(">I", keystring[:4])[0]
             keyparts.append(keystring[4:4 + length])
             keystring = keystring[4 + length:]
-        if keyparts[0] == b("ssh-dss"):
+        if keyparts[0] == b"ssh-dss":
             tup = [Integer.from_bytes(keyparts[x]) for x in (4, 3, 1, 2)]
             return construct(tup)
 

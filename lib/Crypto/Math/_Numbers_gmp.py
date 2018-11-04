@@ -30,7 +30,7 @@
 
 import sys
 
-from Crypto.Util.py3compat import tobytes, b, bchr
+from Crypto.Util.py3compat import tobytes, is_native_int
 
 from Crypto.Util._raw_api import (backend, load_lib,
                                   get_raw_buffer, get_c_string,
@@ -156,9 +156,10 @@ class Integer(object):
             raise ValueError("A floating point type is not a natural number")
 
         self._initialized = True
-        if isinstance(value, (int, long)):
+        
+        if is_native_int(value):
             _gmp.mpz_init(self._mpz_p)
-            result = _gmp.gmp_sscanf(tobytes(str(value)), b("%Zd"), self._mpz_p)
+            result = _gmp.gmp_sscanf(tobytes(str(value)), b"%Zd", self._mpz_p)
             if result != 1:
                 raise ValueError("Error converting '%d'" % value)
         else:
@@ -172,7 +173,7 @@ class Integer(object):
         buf_len = _gmp.mpz_sizeinbase(self._mpz_p, 2) // 3 + 3
         buf = create_string_buffer(buf_len)
 
-        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b("%Zd"), self._mpz_p)
+        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b"%Zd", self._mpz_p)
         return int(get_c_string(buf))
 
     def __str__(self):
@@ -217,7 +218,7 @@ class Integer(object):
                 c_size_t(0),   # No nails
                 self._mpz_p)
 
-        return bchr(0) * max(0, block_size - buf_len) + get_raw_buffer(buf)
+        return b'\x00' * max(0, block_size - buf_len) + get_raw_buffer(buf)
 
     @staticmethod
     def from_bytes(byte_string):
@@ -248,12 +249,12 @@ class Integer(object):
         return func(self._mpz_p, term._mpz_p)
 
     def __eq__(self, term):
-        if not isinstance(term, (Integer, int, long)):
+        if not (isinstance(term, Integer) or is_native_int(term)):
             return False
         return self._apply_and_return(_gmp.mpz_cmp, term) == 0
 
     def __ne__(self, term):
-        if not isinstance(term, (Integer, int, long)):
+        if not (isinstance(term, Integer) or is_native_int(term)):
             return True
         return self._apply_and_return(_gmp.mpz_cmp, term) != 0
 
@@ -271,6 +272,7 @@ class Integer(object):
 
     def __nonzero__(self):
         return _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) != 0
+    __bool__ = __nonzero__
 
     def is_negative(self):
         return _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) < 0
@@ -351,7 +353,7 @@ class Integer(object):
                 raise ZeroDivisionError("Division by zero")
             if modulus.is_negative():
                 raise ValueError("Modulus must be positive")
-            if isinstance(exponent, (int, long)):
+            if is_native_int(exponent):
                 if exponent < 0:
                     raise ValueError("Exponent must not be negative")
                 if exponent < 65536:
@@ -397,7 +399,7 @@ class Integer(object):
         return result
 
     def __iadd__(self, term):
-        if isinstance(term, (int, long)):
+        if is_native_int(term):
             if 0 <= term < 65536:
                 _gmp.mpz_add_ui(self._mpz_p,
                                 self._mpz_p,
@@ -415,7 +417,7 @@ class Integer(object):
         return self
 
     def __isub__(self, term):
-        if isinstance(term, (int, long)):
+        if is_native_int(term):
             if 0 <= term < 65536:
                 _gmp.mpz_sub_ui(self._mpz_p,
                                 self._mpz_p,
@@ -433,7 +435,7 @@ class Integer(object):
         return self
 
     def __imul__(self, term):
-        if isinstance(term, (int, long)):
+        if is_native_int(term):
             if 0 <= term < 65536:
                 _gmp.mpz_mul_ui(self._mpz_p,
                                 self._mpz_p,
@@ -565,7 +567,7 @@ class Integer(object):
     def fail_if_divisible_by(self, small_prime):
         """Raise an exception if the small prime is a divisor."""
 
-        if isinstance(small_prime, (int, long)):
+        if is_native_int(small_prime):
             if 0 < small_prime < 65536:
                 if _gmp.mpz_divisible_ui_p(self._mpz_p,
                                            c_ulong(small_prime)):
@@ -581,7 +583,7 @@ class Integer(object):
 
         if not isinstance(a, Integer):
             a = Integer(a)
-        if isinstance(b, (int, long)):
+        if is_native_int(b):
             if 0 < b < 65536:
                 _gmp.mpz_addmul_ui(self._mpz_p,
                                    a._mpz_p,
@@ -641,7 +643,7 @@ class Integer(object):
         number and another term."""
 
         result = Integer(0)
-        if isinstance(term, (int, long)):
+        if is_native_int(term):
             if 0 < term < 65535:
                 _gmp.mpz_gcd_ui(result._mpz_p,
                                 self._mpz_p,

@@ -72,7 +72,7 @@ def adjust_key_parity(key_in):
 
     def parity_byte(key_byte):
         parity = 1
-        for i in xrange(1, 8):
+        for i in range(1, 8):
             parity ^= (key_byte >> i) & 1
         return (key_byte & 0xFE) | parity
 

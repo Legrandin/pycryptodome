@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import is_native_int
 from Crypto.Util import number
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Random import get_random_bytes as rng
@@ -87,7 +87,7 @@ class _Element(object):
         coefficient. The LSB is the constant coefficient.
         """
 
-        if isinstance(encoded_value, (int, long)):
+        if is_native_int(encoded_value):
             self._value = encoded_value
         elif len(encoded_value) == 16:
             self._value = bytes_to_long(encoded_value)
@@ -260,7 +260,7 @@ class Shamir(object):
         # c_0 is the encoded secret
         #
 
-        coeffs = [_Element(rng(16)) for i in xrange(k - 1)]
+        coeffs = [_Element(rng(16)) for i in range(k - 1)]
         coeffs.insert(0, _Element(secret))
 
         # Each share is y_i = p(x_i) where x_i is the public index
@@ -273,7 +273,7 @@ class Shamir(object):
                 x *= idx
             return share.encode()
 
-        return [(i, make_share(i, coeffs)) for i in xrange(1, n + 1)]
+        return [(i, make_share(i, coeffs)) for i in range(1, n + 1)]
 
     @staticmethod
     def combine(shares):
@@ -307,7 +307,7 @@ class Shamir(object):
 
         result = _Element(0)
         k = len(shares)
-        for j in xrange(k):
+        for j in range(k):
             x_j, y_j = shares[j]
 
             coeff_0_l = _Element(0)
@@ -315,7 +315,7 @@ class Shamir(object):
                 coeff_0_l = _Element(rng(16))
             inv = coeff_0_l.inverse()
 
-            for m in xrange(k):
+            for m in range(k):
                 x_m = shares[m][0]
                 if m != j:
                     t = x_m * (x_j + x_m).inverse()

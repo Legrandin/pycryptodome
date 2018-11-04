@@ -36,7 +36,7 @@ import struct
 
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
-from Crypto.Util.py3compat import tobytes, bord, bchr, b, tostr
+from Crypto.Util.py3compat import tobytes, bord, tostr
 from Crypto.Util.asn1 import DerSequence
 
 from Crypto.Math.Numbers import Integer
@@ -311,12 +311,12 @@ class RsaKey(object):
         if format == 'OpenSSH':
             e_bytes, n_bytes = [x.to_bytes() for x in (self._e, self._n)]
             if bord(e_bytes[0]) & 0x80:
-                e_bytes = bchr(0) + e_bytes
+                e_bytes = b'\x00' + e_bytes
             if bord(n_bytes[0]) & 0x80:
-                n_bytes = bchr(0) + n_bytes
-            keyparts = [b('ssh-rsa'), e_bytes, n_bytes]
-            keystring = b('').join([struct.pack(">I", len(kp)) + kp for kp in keyparts])
-            return b('ssh-rsa ') + binascii.b2a_base64(keystring)[:-1]
+                n_bytes = b'\x00' + n_bytes
+            keyparts = [b'ssh-rsa', e_bytes, n_bytes]
+            keystring = b''.join([struct.pack(">I", len(kp)) + kp for kp in keyparts])
+            return b'ssh-rsa ' + binascii.b2a_base64(keystring)[:-1]
 
         # DER format is always used, even in case of PEM, which simply
         # encodes it into BASE64.
@@ -728,16 +728,16 @@ def import_key(extern_key, passphrase=None):
     if passphrase is not None:
         passphrase = tobytes(passphrase)
 
-    if extern_key.startswith(b('-----')):
+    if extern_key.startswith(b'-----'):
         # This is probably a PEM encoded key.
         (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
         if enc_flag:
             passphrase = None
         return _import_keyDER(der, passphrase)
 
-    if extern_key.startswith(b('ssh-rsa ')):
+    if extern_key.startswith(b'ssh-rsa '):
             # This is probably an OpenSSH key
-            keystring = binascii.a2b_base64(extern_key.split(b(' '))[1])
+            keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
             keyparts = []
             while len(keystring) > 4:
                 l = struct.unpack(">I", keystring[:4])[0]

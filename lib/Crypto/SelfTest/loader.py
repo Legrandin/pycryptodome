@@ -38,7 +38,7 @@ from Crypto.Util._file_system import pycryptodome_filename
 def _load_tests(dir_comps, file_in, description, conversions):
     """Load and parse a test vector file
 
-    This function returnis a list of objects, one per group of adjacent
+    Return a list of objects, one per group of adjacent
     KV lines or for a single line in the form "[.*]".
 
     For a group of lines, the object has one attribute per line.

@@ -135,7 +135,7 @@ class Shamir_Tests(TestCase):
         # Test splitting
         shares = Shamir.split(2, 3, bchr(90)*16)
         self.assertEqual(len(shares), 3)
-        for index in xrange(3):
+        for index in range(3):
             self.assertEqual(shares[index][0], index+1)
             self.assertEqual(len(shares[index][1]), 16)
 

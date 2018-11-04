@@ -47,11 +47,11 @@ class Blake2Test(unittest.TestCase):
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
 
-            for dbits in xrange(8, self.max_bits + 1, 8):
+            for dbits in range(8, self.max_bits + 1, 8):
                 hobj = new_func(digest_bits=dbits)
                 self.assertEqual(hobj.digest_size, dbits // 8)
 
-            for dbytes in xrange(1, self.max_bytes + 1):
+            for dbytes in range(1, self.max_bytes + 1):
                 hobj = new_func(digest_bytes=dbytes)
                 self.assertEqual(hobj.digest_size, dbytes)
 
@@ -349,7 +349,7 @@ class Blake2TestVector1(unittest.TestCase):
         for tv in self.test_vectors:
             digest_bytes = len(tv)
             next_data = b""
-            for _ in xrange(100):
+            for _ in range(100):
                 h = self.BLAKE2.new(digest_bytes=digest_bytes)
                 h.update(next_data)
                 next_data = h.digest() + next_data
@@ -395,7 +395,7 @@ class Blake2TestVector2(unittest.TestCase):
 
         for key_size, result in self.test_vectors:
             next_data = b""
-            for _ in xrange(100):
+            for _ in range(100):
                 h = self.BLAKE2.new(digest_bytes=self.max_bytes,
                                     key=b"A" * key_size)
                 h.update(next_data)

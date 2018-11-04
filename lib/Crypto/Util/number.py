@@ -28,7 +28,7 @@ import math
 import sys
 import struct
 from Crypto import Random
-from Crypto.Util.py3compat import _memoryview
+from Crypto.Util.py3compat import _memoryview, iter_range
 
 # Backward compatibility
 _fastmath = None
@@ -122,7 +122,7 @@ def GCD(x,y):
 def inverse(u, v):
     """The inverse of :data:`u` *mod* :data:`v`."""
 
-    u3, v3 = long(u), long(v)
+    u3, v3 = u, v
     u1, v1 = 1, 0
     while v3 > 0:
         q = u3 // v3
@@ -175,7 +175,7 @@ def _rabinMillerTest(n, rounds, randfunc=None):
 
     tested = []
     # we need to do at most n-2 rounds.
-    for i in xrange (min (rounds, n-2)):
+    for i in iter_range (min (rounds, n-2)):
         # randomly choose a < n and make sure it hasn't been tested yet
         a = getRandomRange (2, n, randfunc)
         while a in tested:
@@ -186,7 +186,7 @@ def _rabinMillerTest(n, rounds, randfunc=None):
         if z == 1 or z == n_1:
             continue
         composite = 1
-        for r in xrange (b):
+        for r in iter_range(b):
             z = (z * z) % n
             if z == 1:
                 return 0
@@ -269,7 +269,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
         # sieve the field
         for prime in sieve_base:
             offset = y % prime
-            for j in xrange ((prime - offset) % prime, len (field), prime):
+            for j in iter_range((prime - offset) % prime, len (field), prime):
                 field[j] = 1
 
         # look for suitable p[i] starting at y

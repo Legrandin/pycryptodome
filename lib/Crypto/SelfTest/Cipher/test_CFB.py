@@ -33,7 +33,7 @@ from binascii import unhexlify
 
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes
+from Crypto.Util.py3compat import tobytes, is_string
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -78,7 +78,7 @@ class CfbTests(BlockChainingTests):
     # Extra
 
     def test_segment_size_128(self):
-        for bits in xrange(8, 129, 8):
+        for bits in range(8, 129, 8):
             cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128,
                              segment_size=bits)
 
@@ -88,7 +88,7 @@ class CfbTests(BlockChainingTests):
                               segment_size=bits)
 
     def test_segment_size_64(self):
-        for bits in xrange(8, 65, 8):
+        for bits in range(8, 65, 8):
             cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64,
                               segment_size=bits)
 
@@ -111,7 +111,7 @@ class NistCfbVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if isinstance(tv, basestring):
+            if is_string(tv):
                 direction = tv
                 continue
 
@@ -138,7 +138,7 @@ class NistCfbVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if isinstance(tv, basestring):
+            if is_string(tv):
                 direction = tv
                 continue
 
@@ -161,13 +161,13 @@ class NistCfbVectors(unittest.TestCase):
 
             if direction == '[ENCRYPT]':
                 cts = []
-                for j in xrange(1000):
+                for j in range(1000):
                     plaintext = get_input(tv.plaintext, cts, j)
                     cts.append(cipher.encrypt(plaintext))
                 self.assertEqual(cts[-1], tv.ciphertext)
             elif direction == '[DECRYPT]':
                 pts = []
-                for j in xrange(1000):
+                for j in range(1000):
                     ciphertext = get_input(tv.ciphertext, pts, j)
                     pts.append(cipher.decrypt(ciphertext))
                 self.assertEqual(pts[-1], tv.plaintext)
@@ -185,7 +185,7 @@ class NistCfbVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if isinstance(tv, basestring):
+            if is_string(tv):
                 direction = tv
                 continue
 

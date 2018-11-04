@@ -89,6 +89,22 @@ if sys.version_info[0] == 2:
         _memoryview = types.NoneType
     else:
         _memoryview = memoryview
+    
+    iter_range = xrange
+
+    def is_native_int(x):
+        return isinstance(x, (int, long))
+
+    if sys.version_info[1] < 7:
+        def is_binary(x):
+            return isinstance(x, (str, bytearray))
+    else:
+        def is_binary(x):
+            return isinstance(x, (str, bytearray, memoryview))
+
+    def is_string(x):
+        return isinstance(x, basestring)
+
 else:
     def b(s):
        return s.encode("latin-1") # utf-8 would cause some side-effects we don't want
@@ -120,6 +136,16 @@ else:
 
     _memoryview = memoryview
 
+    iter_range = range
+
+    def is_native_int(x):
+        return isinstance(x, int)
+    
+    def is_binary(x):
+        return isinstance(x, (bytes, bytearray, memoryview))
+
+    def is_string(x):
+        return isinstance(x, str)
 
 def _copy_bytes(start, end, seq):
     """Return an immutable copy of a sequence (byte string, byte array, memoryview)

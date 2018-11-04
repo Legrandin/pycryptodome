@@ -28,8 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import b, bchr
-
 import Crypto.Util.number
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString, DerObjectId
@@ -205,8 +203,8 @@ def _EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):
     # at least 8 bytes of padding).
     if emLen<len(digestInfo)+11:
         raise TypeError("Selected hash algorith has a too long digest (%d bytes)." % len(digest))
-    PS = bchr(0xFF) * (emLen - len(digestInfo) - 3)
-    return b("\x00\x01") + PS + bchr(0x00) + digestInfo
+    PS = b'\xFF' * (emLen - len(digestInfo) - 3)
+    return b'\x00\x01' + PS + b'\x00' + digestInfo
 
 def new(rsa_key):
     """Create a signature object for creating

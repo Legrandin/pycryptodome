@@ -34,7 +34,7 @@ import struct
 import binascii
 from collections import namedtuple
 
-from Crypto.Util.py3compat import bord, tobytes, b, tostr, bchr
+from Crypto.Util.py3compat import bord, tobytes, tostr, bchr, is_string
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Random import get_random_bytes
@@ -373,7 +373,7 @@ class EccKey(object):
             public_key = (bchr(first_byte) +
                           self.pointQ.x.to_bytes(order_bytes))
         else:
-            public_key = (bchr(4) +
+            public_key = (b'\x04' +
                           self.pointQ.x.to_bytes(order_bytes) +
                           self.pointQ.y.to_bytes(order_bytes))
 
@@ -395,7 +395,7 @@ class EccKey(object):
 
         # Public key - uncompressed form
         order_bytes = _curve.order.size_in_bytes()
-        public_key = (bchr(4) +
+        public_key = (b'\x04' +
                       self.pointQ.x.to_bytes(order_bytes) +
                       self.pointQ.y.to_bytes(order_bytes))
 
@@ -451,12 +451,12 @@ class EccKey(object):
             public_key = (bchr(first_byte) +
                           self.pointQ.x.to_bytes(order_bytes))
         else:
-            public_key = (bchr(4) +
+            public_key = (b'\x04' +
                           self.pointQ.x.to_bytes(order_bytes) +
                           self.pointQ.y.to_bytes(order_bytes))
 
-        comps = (tobytes(desc), b("nistp256"), public_key)
-        blob = b("").join([ struct.pack(">I", len(x)) + x for x in comps])
+        comps = (tobytes(desc), b"nistp256", public_key)
+        blob = b"".join([ struct.pack(">I", len(x)) + x for x in comps])
         return desc + " " + tostr(binascii.b2a_base64(blob))
 
     def export_key(self, **kwargs):
@@ -527,7 +527,7 @@ class EccKey(object):
 
         if self.has_private():
             passphrase = args.pop("passphrase", None)
-            if isinstance(passphrase, basestring):
+            if is_string(passphrase):
                 passphrase = tobytes(passphrase)
                 if not passphrase:
                     raise ValueError("Empty passphrase")
@@ -826,7 +826,7 @@ def _import_der(encoded, passphrase):
 
 
 def _import_openssh(encoded):
-    keystring = binascii.a2b_base64(encoded.split(b(' '))[1])
+    keystring = binascii.a2b_base64(encoded.split(b' ')[1])
 
     keyparts = []
     while len(keystring) > 4:
@@ -834,7 +834,7 @@ def _import_openssh(encoded):
         keyparts.append(keystring[4:4 + l])
         keystring = keystring[4 + l:]
 
-    if keyparts[1] != b("nistp256"):
+    if keyparts[1] != b"nistp256":
         raise ValueError("Unsupported ECC curve")
 
     return _import_public_der(_curve.oid, keyparts[2])
@@ -885,7 +885,7 @@ def import_key(encoded, passphrase=None):
         passphrase = tobytes(passphrase)
 
     # PEM
-    if encoded.startswith(b('-----')):
+    if encoded.startswith(b'-----'):
         der_encoded, marker, enc_flag = PEM.decode(tostr(encoded), passphrase)
         if enc_flag:
             passphrase = None
@@ -898,7 +898,7 @@ def import_key(encoded, passphrase=None):
         return result
 
     # OpenSSH
-    if encoded.startswith(b('ecdsa-sha2-')):
+    if encoded.startswith(b'ecdsa-sha2-'):
         return _import_openssh(encoded)
 
     # DER

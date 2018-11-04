@@ -36,7 +36,7 @@ from Crypto.Hash import Poly1305, BLAKE2s
 from Crypto.Random import get_random_bytes
 
 from Crypto.Util.number import long_to_bytes
-from Crypto.Util.py3compat import _copy_bytes, bord
+from Crypto.Util.py3compat import _copy_bytes, bord, is_binary
 
 
 def _enum(**enums):
@@ -312,7 +312,7 @@ def new(**kwargs):
     if len(nonce) not in (8, 12):
         raise ValueError("Nonce must be 8 or 12 bytes long")
 
-    if isinstance(nonce, unicode):
+    if not is_binary(nonce):
         raise TypeError("nonce must be a byte string")
 
     if kwargs:

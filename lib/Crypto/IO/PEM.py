@@ -41,7 +41,7 @@ from Crypto.Util.Padding import pad, unpad
 from Crypto.Cipher import DES, DES3, AES
 from Crypto.Protocol.KDF import PBKDF1
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import b, tobytes, tostr
+from Crypto.Util.py3compat import tobytes, tostr
 
 
 def encode(data, marker, passphrase=None, randfunc=None):
@@ -157,7 +157,7 @@ def decode(pem_data, passphrase=None):
         objdec = None
 
     # Decode body
-    data = a2b_base64(b(''.join(lines[1:-1])))
+    data = a2b_base64(''.join(lines[1:-1]))
     enc_flag = False
     if objdec:
         data = unpad(objdec.decrypt(data), objdec.block_size)

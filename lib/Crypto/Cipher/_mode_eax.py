@@ -37,7 +37,7 @@ __all__ = ['EaxMode']
 import struct
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import byte_string, bord, _copy_bytes
+from Crypto.Util.py3compat import byte_string, bord, _copy_bytes, is_binary
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -99,7 +99,7 @@ class EaxMode(object):
         # Nonce cannot be empty and must be a byte string
         if len(self.nonce) == 0:
             raise ValueError("Nonce cannot be empty in EAX mode")
-        if isinstance(nonce, unicode):
+        if not is_binary(nonce):
             raise TypeError("nonce must be a byte string")
 
         self._omac = [
@@ -107,7 +107,7 @@ class EaxMode(object):
                          b'\x00' * (self.block_size - 1) + struct.pack('B', i),
                          ciphermod=factory,
                          cipher_params=cipher_params)
-                for i in xrange(0, 3)
+                for i in range(0, 3)
                 ]
 
         # Compute MAC of nonce
@@ -254,7 +254,7 @@ class EaxMode(object):
 
         if not self._mac_tag:
             tag = b'\x00' * self.block_size
-            for i in xrange(3):
+            for i in range(3):
                 tag = strxor(tag, self._omac[i].digest())
             self._mac_tag = tag[:self._mac_len]
 
@@ -293,7 +293,7 @@ class EaxMode(object):
 
         if not self._mac_tag:
             tag = b'\x00' * self.block_size
-            for i in xrange(3):
+            for i in range(3):
                 tag = strxor(tag, self._omac[i].digest())
             self._mac_tag = tag[:self._mac_len]
 
