@@ -28,10 +28,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import _is_immutable
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, c_size_t,
                                   create_string_buffer, get_raw_buffer,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, is_writeable_buffer)
 
 _raw_strxor = load_pycryptodome_raw_lib("Crypto.Util._strxor",
                     """
@@ -70,7 +69,7 @@ def strxor(term1, term2, output=None):
         # Note: output may overlap with either input
         result = output
         
-        if _is_immutable(output):
+        if not is_writeable_buffer(output):
             raise TypeError("output must be a bytearray or a writeable memoryview")
         
         if len(term1) != len(output):
@@ -112,8 +111,8 @@ def strxor_c(term, c, output=None):
     else:
         # Note: output may overlap with either input
         result = output
-        
-        if _is_immutable(output):
+       
+        if not is_writeable_buffer(output):
             raise TypeError("output must be a bytearray or a writeable memoryview")
         
         if len(term) != len(output):

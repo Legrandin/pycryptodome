@@ -26,11 +26,11 @@ Electronic Code Book (ECB) mode.
 
 __all__ = [ 'EcbMode' ]
 
-from Crypto.Util.py3compat import _is_immutable
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, create_string_buffer,
                                   get_raw_buffer, SmartPointer,
-                                  c_size_t, c_uint8_ptr)
+                                  c_size_t, c_uint8_ptr,
+                                  is_writeable_buffer)
 
 raw_ecb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ecb", """
                     int ECB_start_operation(void *cipher,
@@ -124,7 +124,7 @@ class EcbMode(object):
         else:
             ciphertext = output
             
-            if _is_immutable(output):
+            if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
         
             if len(plaintext) != len(output):
@@ -179,7 +179,7 @@ class EcbMode(object):
         else:
             plaintext = output
 
-            if _is_immutable(output):
+            if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
             
             if len(ciphertext) != len(output):

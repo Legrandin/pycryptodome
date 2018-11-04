@@ -34,10 +34,11 @@ Ciphertext Block Chaining (CBC) mode.
 
 __all__ = ['CbcMode']
 
-from Crypto.Util.py3compat import _copy_bytes, _is_immutable
+from Crypto.Util.py3compat import _copy_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_uint8_ptr)
+                                  SmartPointer, c_size_t, c_uint8_ptr,
+                                  is_writeable_buffer)
 
 from Crypto.Random import get_random_bytes
 
@@ -166,7 +167,7 @@ class CbcMode(object):
         else:
             ciphertext = output
             
-            if _is_immutable(output):
+            if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
         
             if len(plaintext) != len(output):
@@ -229,7 +230,7 @@ class CbcMode(object):
         else:
             plaintext = output
 
-            if _is_immutable(output):
+            if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
             
             if len(ciphertext) != len(output):

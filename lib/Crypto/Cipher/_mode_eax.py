@@ -37,7 +37,9 @@ __all__ = ['EaxMode']
 import struct
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import byte_string, bord, _copy_bytes, is_binary
+from Crypto.Util.py3compat import byte_string, bord, _copy_bytes
+
+from Crypto.Util._raw_api import is_buffer
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -99,8 +101,8 @@ class EaxMode(object):
         # Nonce cannot be empty and must be a byte string
         if len(self.nonce) == 0:
             raise ValueError("Nonce cannot be empty in EAX mode")
-        if not is_binary(nonce):
-            raise TypeError("nonce must be a byte string")
+        if not is_buffer(nonce):
+            raise TypeError("nonce must be bytes, bytearray or memoryview")
 
         self._omac = [
                 CMAC.new(key,

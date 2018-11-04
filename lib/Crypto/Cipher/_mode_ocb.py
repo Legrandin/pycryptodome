@@ -71,7 +71,7 @@ Example:
 import struct
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import bord, _copy_bytes, is_binary
+from Crypto.Util.py3compat import bord, _copy_bytes
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.strxor import strxor
 
@@ -81,7 +81,7 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr,
-                                  )
+                                  is_buffer)
 
 _raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
                                     int OCB_start_operation(void *cipher,
@@ -125,8 +125,8 @@ class OcbMode(object):
         """Nonce used for this session."""
         if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
-        if not is_binary(nonce):
-            raise TypeError("Nonce must be a byte string")
+        if not is_buffer(nonce):
+            raise TypeError("Nonce must be bytes, bytearray or memoryview")
 
         self._mac_len = mac_len
         if not 8 <= mac_len <= 16:

@@ -36,7 +36,9 @@ __all__ = ['GcmMode']
 
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import byte_string, bord, _copy_bytes, is_binary
+from Crypto.Util.py3compat import bord, _copy_bytes
+
+from Crypto.Util._raw_api import is_buffer
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Hash import BLAKE2s
@@ -185,8 +187,8 @@ class GcmMode(object):
         if len(nonce) == 0:
             raise ValueError("Nonce cannot be empty")
         
-        if not is_binary(nonce):
-            raise TypeError("Nonce must be a byte string")
+        if not is_buffer(nonce):
+            raise TypeError("Nonce must be bytes, bytearray or memoryview")
 
         # See NIST SP 800 38D, 5.2.1.1
         if len(nonce) > 2**64 - 1:

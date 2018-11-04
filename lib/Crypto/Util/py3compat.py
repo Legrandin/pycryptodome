@@ -95,13 +95,6 @@ if sys.version_info[0] == 2:
     def is_native_int(x):
         return isinstance(x, (int, long))
 
-    if sys.version_info[1] < 7:
-        def is_binary(x):
-            return isinstance(x, (str, bytearray))
-    else:
-        def is_binary(x):
-            return isinstance(x, (str, bytearray, memoryview))
-
     def is_string(x):
         return isinstance(x, basestring)
 
@@ -140,9 +133,6 @@ else:
 
     def is_native_int(x):
         return isinstance(x, int)
-    
-    def is_binary(x):
-        return isinstance(x, (bytes, bytearray, memoryview))
 
     def is_string(x):
         return isinstance(x, str)
@@ -157,18 +147,6 @@ def _copy_bytes(start, end, seq):
         return bytes(seq[start:end])
     else:
         return seq[start:end]
-
-
-def _is_immutable(data):
-    if byte_string(data):
-        return True
-    elif isinstance(data, _memoryview) and data.readonly:
-        return True
-    return False
-
-
-def _is_mutable(data):
-    return not _is_immutable(data)
 
 
 del sys

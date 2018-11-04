@@ -38,7 +38,8 @@ import struct
 from binascii import unhexlify
 
 from Crypto.Util.py3compat import (byte_string, bord,
-                                   _copy_bytes, _is_mutable)
+                                   _copy_bytes)
+from Crypto.Util._raw_api import is_writeable_buffer
 
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes
@@ -273,7 +274,7 @@ class CcmMode(object):
         # If MAC has not started yet, we just park the data into a list.
         # If the data is mutable, we create a copy and store that instead.
         if self._mac_status == MacStatus.NOT_STARTED:
-            if _is_mutable(assoc_data_pt):
+            if is_writeable_buffer(assoc_data_pt):
                 assoc_data_pt = _copy_bytes(None, None, assoc_data_pt)
             self._cache.append(assoc_data_pt)
             return

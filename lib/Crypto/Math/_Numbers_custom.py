@@ -37,8 +37,7 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, backend,
-                                  c_size_t, expect_byte_string,
-                                  c_ulonglong)
+                                  c_size_t, c_ulonglong)
 
 
 from Crypto.Random.random import getrandbits

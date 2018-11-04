@@ -44,7 +44,7 @@ from Crypto.Util.py3compat import *
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer,
-                                  c_size_t, expect_byte_string,
+                                  c_size_t,
                                   c_ulonglong)
 
 from Crypto.Hash import SHAKE128

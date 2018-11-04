@@ -30,10 +30,11 @@ import struct
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_uint8_ptr)
+                                  SmartPointer, c_size_t, c_uint8_ptr,
+                                  is_writeable_buffer)
 
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import byte_string, _copy_bytes, _is_immutable, is_native_int
+from Crypto.Util.py3compat import _copy_bytes, is_native_int
 from Crypto.Util.number import long_to_bytes
 
 raw_ctr_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ctr", """
@@ -189,7 +190,7 @@ class CtrMode(object):
         else:
             ciphertext = output
             
-            if _is_immutable(output):
+            if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
         
             if len(plaintext) != len(output):
@@ -253,7 +254,7 @@ class CtrMode(object):
         else:
             plaintext = output
 
-            if _is_immutable(output):
+            if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
             
             if len(ciphertext) != len(output):

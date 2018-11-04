@@ -299,5 +299,20 @@ def load_pycryptodome_raw_lib(name, cdecl):
     raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
 
 
-def expect_byte_string(data):
-    raise NotImplementedError("To be removed")
+if sys.version_info[:2] != (2, 6):
+    
+    def is_buffer(x):
+        """Return True if object x supports the buffer interface"""
+        return isinstance(x, (bytes, bytearray, memoryview))
+
+    def is_writeable_buffer(x):
+        return (isinstance(x, bytearray) or
+                (isinstance(x, memoryview) and not x.readonly))
+
+else:
+
+    def is_buffer(x):
+        return isinstance(x, (bytes, bytearray))
+
+    def is_writeable_buffer(x):
+        return isinstance(x, bytearray)
