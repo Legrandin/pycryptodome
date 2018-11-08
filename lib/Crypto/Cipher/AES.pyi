@@ -22,7 +22,16 @@ MODE_SIV: AESMode
 MODE_GCM: AESMode
 MODE_OCB: AESMode
 
-def new(key: Union[bytes, bytearray, memoryview], mode: AESMode, *args: Any, **kwargs: Any) -> \
+def new(__key: Union[bytes, bytearray, memoryview],
+        __mode: AESMode,
+        iv : Optional[bytes, bytearray, memoryview],
+        nonce : Optional[bytes, bytearray, memoryview],
+        segment_size : Optional[int],
+        mac_len : Optional[int],
+        msg_len : Optional[int],
+        assoc_len : Optional[int],
+        initial_value : Optional[int],
+        use_aesni : Optional[bool]) -> \
         Union[CtrMode, CbcMode, EaxMode, EcbMode, OfbMode, CfbMode, OpenPgpMode]: ...
 
 block_size: int
