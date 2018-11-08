@@ -40,7 +40,7 @@ matrix:
    after_success: true
  - python: 3.6
    install: pip install mypy
-   script: mypy lib/ --py2 --ignore-missing-imports
+   script: mypy lib/ --ignore-missing-imports
    after_success: true
  - os: osx
    language: generic

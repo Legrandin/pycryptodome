@@ -28,10 +28,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.number import long_to_bytes, bytes_to_long
-from Crypto.Util.py3compat import maxint, iter_range
+from ._IntegerBase import IntegerBase
 
-class Integer(object):
+from Crypto.Util.number import long_to_bytes, bytes_to_long
+
+
+class IntegerNative(IntegerBase):
     """A class to model a natural integer (including zero)"""
 
     def __init__(self, value):
@@ -60,9 +62,9 @@ class Integer(object):
             raise ValueError("Value too large to encode")
         return result
 
-    @staticmethod
-    def from_bytes(byte_string):
-        return Integer(bytes_to_long(byte_string))
+    @classmethod
+    def from_bytes(cls, byte_string):
+        return cls(bytes_to_long(byte_string))
 
     # Relations
     def __eq__(self, term):
@@ -155,71 +157,6 @@ class Integer(object):
 
         return self.__class__(result)
 
-    @staticmethod
-    def _tonelli_shanks(n, p):
-        """Tonelli-shanks algorithm for computing the square root
-        of n modulo a prime p.
-
-        n must be in the range [0..p-1].
-        p must be at least even.
-
-        The return value r is the square root of modulo p. If non-zero,
-        another solution will also exist (p-r).
-
-        Note we cannot assume that p is really a prime: if it's not,
-        we can either raise an exception or return the correct value.
-        """
-
-        # See https://rosettacode.org/wiki/Tonelli-Shanks_algorithm
-
-        if n in (0, 1):
-            return n
-
-        if p % 4 == 3:
-            root = pow(n, (p + 1) // 4, p)
-            if pow(root, 2, p) != n:
-                raise ValueError("Cannot compute square root")
-            return root
-
-        s = 1
-        q = (p - 1) // 2
-        while not (q & 1):
-            s += 1
-            q >>= 1
-
-        z = n.__class__(2)
-        while True:
-            euler = pow(z, (p - 1) // 2, p)
-            if euler == 1:
-                z += 1
-                continue
-            if euler == p - 1:
-                break
-            # Most probably p is not a prime
-            raise ValueError("Cannot compute square root")
-
-        m = s
-        c = pow(z, q, p)
-        t = pow(n, q, p)
-        r = pow(n, (q + 1) // 2, p)
-
-        while t != 1:
-            for i in iter_range(0, m):
-                if pow(t, 2**i, p) == 1:
-                    break
-            if i == m:
-                raise ValueError("Cannot compute square root of %d mod %d" % (n, p))
-            b = pow(c, 2**(m - i - 1), p)
-            m = i
-            c = b**2 % p
-            t = (t * b**2) % p
-            r = (r * b) % p
-
-        if pow(r, 2, p) != n:
-            raise ValueError("Cannot compute square root")
-
-        return r
-
     def __iadd__(self, term):
         self._value += int(term)
         return self
@@ -279,7 +216,6 @@ class Integer(object):
         except OverflowError:
             raise ValueError("Incorrect shift count")
         return self
-
 
     def get_bit(self, n):
         if self._value < 0:
@@ -424,4 +360,4 @@ class Integer(object):
         # Step 7
         n1 = n % a1
         # Step 8
-        return s * Integer.jacobi_symbol(n1, a1)
+        return s * IntegerNative.jacobi_symbol(n1, a1)

@@ -1,4 +1,4 @@
-from typing import Any, Union, Tuple
+from typing import Any, Union, Tuple, Optional
 
 from Crypto.Cipher._mode_cbc import CbcMode
 from Crypto.Cipher._mode_cfb import CfbMode
@@ -24,8 +24,8 @@ MODE_OCB: AESMode
 
 def new(__key: Union[bytes, bytearray, memoryview],
         __mode: AESMode,
-        iv : Optional[bytes, bytearray, memoryview],
-        nonce : Optional[bytes, bytearray, memoryview],
+        iv : Optional[Union[bytes, bytearray, memoryview]],
+        nonce : Optional[Union[bytes, bytearray, memoryview]],
         segment_size : Optional[int],
         mac_len : Optional[int],
         msg_len : Optional[int],

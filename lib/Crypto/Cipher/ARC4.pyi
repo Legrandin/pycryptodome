@@ -1,5 +1,4 @@
-from typing import Any
-from typing import Union
+from typing import Any, Union, Iterable
 
 
 class ARC4Cipher:
@@ -13,4 +12,4 @@ class ARC4Cipher:
 def new(key: Union[bytes, bytearray, memoryview], *args: Any, **kwargs: Any) -> ARC4Cipher: ...
 
 block_size: int
-key_size: range
+key_size: Iterable[int]

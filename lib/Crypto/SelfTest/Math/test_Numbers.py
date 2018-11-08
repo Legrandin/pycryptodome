@@ -39,16 +39,13 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Util.py3compat import *
 
-from Crypto.Math.Numbers import Integer as IntegerGeneric
-from Crypto.Math import _Numbers_int as NumbersInt
+from Crypto.Math._IntegerNative import IntegerNative
 
 
 class TestIntegerBase(unittest.TestCase):
 
     def setUp(self):
-        if not hasattr(self, "Integer"):
-            from Crypto.Math.Numbers import Integer as IntegerDefault
-            self.Integer = IntegerDefault
+        pass
 
     def Integers(self, *arg):
         return map(self.Integer, arg)
@@ -675,22 +672,21 @@ class TestIntegerBase(unittest.TestCase):
 class TestIntegerInt(TestIntegerBase):
 
     def setUp(self):
-        self.Numbers = NumbersInt
-        self.Integer = NumbersInt.Integer
+        self.Integer = IntegerNative
         TestIntegerBase.setUp(self)
 
 
-class TestIntegerGeneric(unittest.TestCase):
+class testIntegerRandom(unittest.TestCase):
 
     def test_random_exact_bits(self):
 
         for _ in range(1000):
-            a = IntegerGeneric.random(exact_bits=8)
+            a = IntegerNative.random(exact_bits=8)
             self.failIf(a < 128)
             self.failIf(a >= 256)
 
         for bits_value in range(1024, 1024 + 8):
-            a = IntegerGeneric.random(exact_bits=bits_value)
+            a = IntegerNative.random(exact_bits=bits_value)
             self.failIf(a < 2**(bits_value - 1))
             self.failIf(a >= 2**bits_value)
 
@@ -698,13 +694,13 @@ class TestIntegerGeneric(unittest.TestCase):
 
         flag = False
         for _ in range(1000):
-            a = IntegerGeneric.random(max_bits=8)
+            a = IntegerNative.random(max_bits=8)
             flag = flag or a < 128
             self.failIf(a>=256)
         self.failUnless(flag)
 
         for bits_value in range(1024, 1024 + 8):
-            a = IntegerGeneric.random(max_bits=bits_value)
+            a = IntegerNative.random(max_bits=bits_value)
             self.failIf(a >= 2**bits_value)
 
     def test_random_bits_custom_rng(self):
@@ -718,12 +714,12 @@ class TestIntegerGeneric(unittest.TestCase):
                 return bchr(0) * size
 
         custom_rng = CustomRNG()
-        a = IntegerGeneric.random(exact_bits=32, randfunc=custom_rng)
+        a = IntegerNative.random(exact_bits=32, randfunc=custom_rng)
         self.assertEqual(custom_rng.counter, 4)
 
     def test_random_range(self):
 
-        func = IntegerGeneric.random_range
+        func = IntegerNative.random_range
 
         for x in range(200):
             a = func(min_inclusive=1, max_inclusive=15)
@@ -740,14 +736,13 @@ class TestIntegerGeneric(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestIntegerInt)
-
+    
     try:
-        from Crypto.Math import _Numbers_gmp as NumbersGMP
+        from Crypto.Math._IntegerGMP import IntegerGMP
 
         class TestIntegerGMP(TestIntegerBase):
             def setUp(self):
-                self.Numbers = NumbersGMP
-                self.Integer = NumbersGMP.Integer
+                self.Integer = IntegerGMP
                 TestIntegerBase.setUp(self)
 
         tests += list_test_cases(TestIntegerGMP)
@@ -756,12 +751,11 @@ def get_tests(config={}):
         sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
 
     try:
-        from Crypto.Math import _Numbers_custom as NumbersCustomModexp
+        from Crypto.Math._IntegerCustom import IntegerCustom
 
         class TestIntegerCustomModexp(TestIntegerBase):
             def setUp(self):
-                self.Numbers = NumbersCustomModexp
-                self.Integer = NumbersCustomModexp.Integer
+                self.Integer = IntegerCustom
                 TestIntegerBase.setUp(self)
 
         tests += list_test_cases(TestIntegerCustomModexp)
@@ -769,7 +763,7 @@ def get_tests(config={}):
         import sys
         sys.stdout.write("Skipping custom modexp tests (%s)\n" % str(e) )
 
-    tests += list_test_cases(TestIntegerGeneric)
+    tests += list_test_cases(testIntegerRandom)
     return tests
 
 if __name__ == '__main__':

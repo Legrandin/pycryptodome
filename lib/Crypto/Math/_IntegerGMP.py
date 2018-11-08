@@ -35,9 +35,9 @@ from Crypto.Util.py3compat import tobytes, is_native_int
 from Crypto.Util._raw_api import (backend, load_lib,
                                   get_raw_buffer, get_c_string,
                                   null_pointer, create_string_buffer,
-                                  c_ulong, c_ulonglong, c_size_t)
+                                  c_ulong, c_size_t)
 
-from Crypto.Math._Numbers_int import Integer as SlowInteger
+from ._IntegerBase import IntegerBase
 
 gmp_defs = """typedef unsigned long UNIX_ULONG;
         typedef struct { int a; int b; void *c; } MPZ;
@@ -93,7 +93,7 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         """
 
 lib = load_lib("gmp", gmp_defs)
-implementation = { "library":"gmp", "api":backend }
+implementation = {"library": "gmp", "api": backend}
 
 if hasattr(lib, "__mpir_version"):
     raise ImportError("MPIR library detected")
@@ -137,10 +137,11 @@ class _GMP(object):
         setattr(self, name, func)
         return func
 
+
 _gmp = _GMP()
 
 
-class Integer(object):
+class IntegerGMP(IntegerBase):
     """A fast, arbitrary precision integer"""
 
     _zero_mpz_p = new_mpz()
@@ -231,7 +232,7 @@ class Integer(object):
         :Return:
           The ``Integer`` object carrying the same value as the input.
         """
-        result = Integer(0)
+        result = IntegerGMP(0)
         _gmp.mpz_import(
                         result._mpz_p,
                         c_size_t(len(byte_string)),  # Amount of words to read
@@ -244,17 +245,17 @@ class Integer(object):
 
     # Relations
     def _apply_and_return(self, func, term):
-        if not isinstance(term, Integer):
-            term = Integer(term)
+        if not isinstance(term, IntegerGMP):
+            term = IntegerGMP(term)
         return func(self._mpz_p, term._mpz_p)
 
     def __eq__(self, term):
-        if not (isinstance(term, Integer) or is_native_int(term)):
+        if not (isinstance(term, IntegerGMP) or is_native_int(term)):
             return False
         return self._apply_and_return(_gmp.mpz_cmp, term) == 0
 
     def __ne__(self, term):
-        if not (isinstance(term, Integer) or is_native_int(term)):
+        if not (isinstance(term, IntegerGMP) or is_native_int(term)):
             return True
         return self._apply_and_return(_gmp.mpz_cmp, term) != 0
 
@@ -279,54 +280,54 @@ class Integer(object):
 
     # Arithmetic operations
     def __add__(self, term):
-        result = Integer(0)
-        if not isinstance(term, Integer):
-            term = Integer(term)
+        result = IntegerGMP(0)
+        if not isinstance(term, IntegerGMP):
+            term = IntegerGMP(term)
         _gmp.mpz_add(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
         return result
 
     def __sub__(self, term):
-        result = Integer(0)
-        if not isinstance(term, Integer):
-            term = Integer(term)
+        result = IntegerGMP(0)
+        if not isinstance(term, IntegerGMP):
+            term = IntegerGMP(term)
         _gmp.mpz_sub(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
         return result
 
     def __mul__(self, term):
-        result = Integer(0)
-        if not isinstance(term, Integer):
-            term = Integer(term)
+        result = IntegerGMP(0)
+        if not isinstance(term, IntegerGMP):
+            term = IntegerGMP(term)
         _gmp.mpz_mul(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
         return result
 
     def __floordiv__(self, divisor):
-        if not isinstance(divisor, Integer):
-            divisor = Integer(divisor)
+        if not isinstance(divisor, IntegerGMP):
+            divisor = IntegerGMP(divisor)
         if _gmp.mpz_cmp(divisor._mpz_p,
                         self._zero_mpz_p) == 0:
             raise ZeroDivisionError("Division by zero")
-        result = Integer(0)
+        result = IntegerGMP(0)
         _gmp.mpz_fdiv_q(result._mpz_p,
                         self._mpz_p,
                         divisor._mpz_p)
         return result
 
     def __mod__(self, divisor):
-        if not isinstance(divisor, Integer):
-            divisor = Integer(divisor)
+        if not isinstance(divisor, IntegerGMP):
+            divisor = IntegerGMP(divisor)
         comp = _gmp.mpz_cmp(divisor._mpz_p,
                             self._zero_mpz_p)
         if comp == 0:
             raise ZeroDivisionError("Division by zero")
         if comp < 0:
             raise ValueError("Modulus must be positive")
-        result = Integer(0)
+        result = IntegerGMP(0)
         _gmp.mpz_mod(result._mpz_p,
                      self._mpz_p,
                      divisor._mpz_p)
@@ -347,8 +348,8 @@ class Integer(object):
                             )
         else:
             # Modular exponentiation
-            if not isinstance(modulus, Integer):
-                modulus = Integer(modulus)
+            if not isinstance(modulus, IntegerGMP):
+                modulus = IntegerGMP(modulus)
             if not modulus:
                 raise ZeroDivisionError("Division by zero")
             if modulus.is_negative():
@@ -362,7 +363,7 @@ class Integer(object):
                                      c_ulong(exponent),
                                      modulus._mpz_p)
                     return self
-                exponent = Integer(exponent)
+                exponent = IntegerGMP(exponent)
             elif exponent.is_negative():
                 raise ValueError("Exponent must not be negative")
             _gmp.mpz_powm(self._mpz_p,
@@ -372,11 +373,11 @@ class Integer(object):
         return self
 
     def __pow__(self, exponent, modulus=None):
-        result = Integer(self)
+        result = IntegerGMP(self)
         return result.inplace_pow(exponent, modulus)
 
     def __abs__(self):
-        result = Integer(0)
+        result = IntegerGMP(0)
         _gmp.mpz_abs(result._mpz_p, self._mpz_p)
         return result
 
@@ -387,14 +388,14 @@ class Integer(object):
         if modulus is None:
             if self < 0:
                 raise ValueError("Square root of negative value")
-            result = Integer(0)
+            result = IntegerGMP(0)
             _gmp.mpz_sqrt(result._mpz_p,
                           self._mpz_p)
         else:
             if modulus <= 0:
                 raise ValueError("Modulus must be positive")
             modulus = int(modulus)
-            result = Integer(SlowInteger._tonelli_shanks(int(self) % modulus, modulus))
+            result = IntegerGMP(self._tonelli_shanks(int(self) % modulus, modulus))
 
         return result
 
@@ -410,7 +411,7 @@ class Integer(object):
                                 self._mpz_p,
                                 c_ulong(-term))
                 return self
-            term = Integer(term)
+            term = IntegerGMP(term)
         _gmp.mpz_add(self._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
@@ -428,7 +429,7 @@ class Integer(object):
                                 self._mpz_p,
                                 c_ulong(-term))
                 return self
-            term = Integer(term)
+            term = IntegerGMP(term)
         _gmp.mpz_sub(self._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
@@ -447,15 +448,15 @@ class Integer(object):
                                 c_ulong(-term))
                 _gmp.mpz_neg(self._mpz_p, self._mpz_p)
                 return self
-            term = Integer(term)
+            term = IntegerGMP(term)
         _gmp.mpz_mul(self._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
         return self
 
     def __imod__(self, divisor):
-        if not isinstance(divisor, Integer):
-            divisor = Integer(divisor)
+        if not isinstance(divisor, IntegerGMP):
+            divisor = IntegerGMP(divisor)
         comp = _gmp.mpz_cmp(divisor._mpz_p,
                             divisor._zero_mpz_p)
         if comp == 0:
@@ -469,25 +470,25 @@ class Integer(object):
 
     # Boolean/bit operations
     def __and__(self, term):
-        result = Integer(0)
-        if not isinstance(term, Integer):
-            term = Integer(term)
+        result = IntegerGMP(0)
+        if not isinstance(term, IntegerGMP):
+            term = IntegerGMP(term)
         _gmp.mpz_and(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
         return result
 
     def __or__(self, term):
-        result = Integer(0)
-        if not isinstance(term, Integer):
-            term = Integer(term)
+        result = IntegerGMP(0)
+        if not isinstance(term, IntegerGMP):
+            term = IntegerGMP(term)
         _gmp.mpz_ior(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
         return result
 
     def __rshift__(self, pos):
-        result = Integer(0)
+        result = IntegerGMP(0)
         if pos < 0:
             raise ValueError("negative shift count")
         if pos > 65536:
@@ -514,7 +515,7 @@ class Integer(object):
         return self
 
     def __lshift__(self, pos):
-        result = Integer(0)
+        result = IntegerGMP(0)
         if not 0 <= pos < 65536:
             raise ValueError("Incorrect shift count")
         _gmp.mpz_mul_2exp(result._mpz_p,
@@ -573,7 +574,7 @@ class Integer(object):
                                            c_ulong(small_prime)):
                     raise ValueError("The value is composite")
                 return
-            small_prime = Integer(small_prime)
+            small_prime = IntegerGMP(small_prime)
         if _gmp.mpz_divisible_p(self._mpz_p,
                                 small_prime._mpz_p):
             raise ValueError("The value is composite")
@@ -581,8 +582,8 @@ class Integer(object):
     def multiply_accumulate(self, a, b):
         """Increment the number by the product of a and b."""
 
-        if not isinstance(a, Integer):
-            a = Integer(a)
+        if not isinstance(a, IntegerGMP):
+            a = IntegerGMP(a)
         if is_native_int(b):
             if 0 < b < 65536:
                 _gmp.mpz_addmul_ui(self._mpz_p,
@@ -594,7 +595,7 @@ class Integer(object):
                                    a._mpz_p,
                                    c_ulong(-b))
                 return self
-            b = Integer(b)
+            b = IntegerGMP(b)
         _gmp.mpz_addmul(self._mpz_p,
                         a._mpz_p,
                         b._mpz_p)
@@ -603,8 +604,8 @@ class Integer(object):
     def set(self, source):
         """Set the Integer to have the given value"""
 
-        if not isinstance(source, Integer):
-            source = Integer(source)
+        if not isinstance(source, IntegerGMP):
+            source = IntegerGMP(source)
         _gmp.mpz_set(self._mpz_p,
                      source._mpz_p)
         return self
@@ -616,8 +617,8 @@ class Integer(object):
         Raise an exception if no inverse exists.
         """
 
-        if not isinstance(modulus, Integer):
-            modulus = Integer(modulus)
+        if not isinstance(modulus, IntegerGMP):
+            modulus = IntegerGMP(modulus)
 
         comp = _gmp.mpz_cmp(modulus._mpz_p,
                             self._zero_mpz_p)
@@ -634,7 +635,7 @@ class Integer(object):
         return self
 
     def inverse(self, modulus):
-        result = Integer(self)
+        result = IntegerGMP(self)
         result.inplace_inverse(modulus)
         return result
 
@@ -642,14 +643,14 @@ class Integer(object):
         """Compute the greatest common denominator between this
         number and another term."""
 
-        result = Integer(0)
+        result = IntegerGMP(0)
         if is_native_int(term):
             if 0 < term < 65535:
                 _gmp.mpz_gcd_ui(result._mpz_p,
                                 self._mpz_p,
                                 c_ulong(term))
                 return result
-            term = Integer(term)
+            term = IntegerGMP(term)
         _gmp.mpz_gcd(result._mpz_p, self._mpz_p, term._mpz_p)
         return result
 
@@ -657,9 +658,9 @@ class Integer(object):
         """Compute the least common multiplier between this
         number and another term."""
 
-        result = Integer(0)
-        if not isinstance(term, Integer):
-            term = Integer(term)
+        result = IntegerGMP(0)
+        if not isinstance(term, IntegerGMP):
+            term = IntegerGMP(term)
         _gmp.mpz_lcm(result._mpz_p, self._mpz_p, term._mpz_p)
         return result
 
@@ -667,10 +668,10 @@ class Integer(object):
     def jacobi_symbol(a, n):
         """Compute the Jacobi symbol"""
 
-        if not isinstance(a, Integer):
-            a = Integer(a)
-        if not isinstance(n, Integer):
-            n = Integer(n)
+        if not isinstance(a, IntegerGMP):
+            a = IntegerGMP(a)
+        if not isinstance(n, IntegerGMP):
+            n = IntegerGMP(n)
         if n <= 0 or n.is_even():
             raise ValueError("n must be positive even for the Jacobi symbol")
         return _gmp.mpz_jacobi(a._mpz_p, n._mpz_p)

@@ -170,8 +170,9 @@ for idx, tv in enumerate(test_vectors_verify):
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    key = DSA.construct([bytes_to_long(x) for x in (tv.y, generator, modulus,
-                                                    suborder)], False)
+   
+    comps = [bytes_to_long(x) for x in (tv.y, generator, modulus, suborder)]
+    key = DSA.construct(comps, False) # type: ignore
     verifier = DSS.new(key, 'fips-186-3')
 
     def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
@@ -207,8 +208,8 @@ for idx, tv in enumerate(test_vectors_sign):
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    key = DSA.construct([bytes_to_long(x) for x in (tv.y, generator, modulus,
-                                                    suborder, tv.x)], False)
+    comps_dsa = [bytes_to_long(x) for x in (tv.y, generator, modulus, suborder, tv.x)]
+    key = DSA.construct(comps_dsa, False) # type: ignore
     signer = DSS.new(key, 'fips-186-3', randfunc=StrRNG(tv.k))
 
     def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
@@ -301,8 +302,8 @@ for idx, tv in enumerate(test_vectors_verify):
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    key = ECC.construct(curve="P-256", point_x=tv.qx, point_y=tv.qy)
-    verifier = DSS.new(key, 'fips-186-3')
+    ecc_key = ECC.construct(curve="P-256", point_x=tv.qx, point_y=tv.qy)
+    verifier = DSS.new(ecc_key, 'fips-186-3')
 
     def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
         verifier.verify(hash_obj, signature)
@@ -331,8 +332,8 @@ for idx, tv in enumerate(test_vectors_sign):
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    key = ECC.construct(curve="P-256", d=tv.d)
-    signer = DSS.new(key, 'fips-186-3', randfunc=StrRNG(tv.k))
+    ecc_key = ECC.construct(curve="P-256", d=tv.d)
+    signer = DSS.new(ecc_key, 'fips-186-3', randfunc=StrRNG(tv.k))
 
     def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
         self.assertEqual(signer.sign(hash_obj), signature)

@@ -1,5 +1,7 @@
 from typing import Union, List, Tuple
 
+def _mult_gf2(f1: int, f2: int) -> int : ...
+def _div_gf2(a: int, b: int) -> int : ...
 
 class _Element(object):
     irr_poly: int

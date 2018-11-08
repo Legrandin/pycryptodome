@@ -1,12 +1,10 @@
 from types import ModuleType
-from typing import Union, Callable, Optional
+from typing import Union, Callable, Optional, Any
 
 from Crypto.PublicKey.RSA import RsaKey
-from Crypto.common import HashAlgorithm
-
 
 class PKCS1OAEP_Cipher:
-    def __init__(self, key: RsaKey, hashAlgo: Optional[Union[ModuleType, HashAlgorithm]]=None,
+    def __init__(self, key: RsaKey, hashAlgo: Optional[Any]=None,
                  mgfunc: Optional[Callable]=None, label: Union[bytes, bytearray, memoryview]=b"",
                  randfunc: Optional[Callable]=None) -> None: ...
     def can_encrypt(self) -> bool: ...
@@ -14,4 +12,4 @@ class PKCS1OAEP_Cipher:
     def encrypt(self, message: Union[bytes, bytearray, memoryview]) -> bytes: ...
     def decrypt(self, ciphertext: Union[bytes, bytearray, memoryview]) -> bytes: ...
 
-def new(key, hashAlgo: Optional[Union[ModuleType, HashAlgorithm]]=..., mgfunc: Optional[Callable]=..., label: Optional[bytes]=..., randfunc: Optional[Callable]=...) -> PKCS1OAEP_Cipher: ...
+def new(key, hashAlgo: Optional[Any]=..., mgfunc: Optional[Callable]=..., label: Optional[bytes]=..., randfunc: Optional[Callable]=...) -> PKCS1OAEP_Cipher: ...

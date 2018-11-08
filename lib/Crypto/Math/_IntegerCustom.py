@@ -28,9 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import tobytes, b, bchr
-
-from Crypto.Math._Numbers_int import Integer as IntegerBase
+from ._IntegerNative import IntegerNative
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -53,13 +51,14 @@ int monty_pow(const uint8_t *base,
 
 
 _raw_montgomery = load_pycryptodome_raw_lib("Crypto.Math._montgomery", c_defs)
-implementation = { "library":"custom", "api":backend }
+implementation = {"library": "custom", "api": backend}
 
-class Integer(IntegerBase):
+
+class IntegerCustom(IntegerNative):
 
     @staticmethod
     def from_bytes(byte_string):
-        return Integer(bytes_to_long(byte_string))
+        return IntegerCustom(bytes_to_long(byte_string))
 
     def inplace_pow(self, exponent, modulus=None):
         exp_value = int(exponent)
@@ -85,8 +84,8 @@ class Integer(IntegerBase):
 
         max_len = len(long_to_bytes(max(self._value, exp_value, mod_value)))
 
-        base_b    = long_to_bytes(self._value, max_len)
-        exp_b     = long_to_bytes(exp_value, max_len)
+        base_b = long_to_bytes(self._value, max_len)
+        exp_b = long_to_bytes(exp_value, max_len)
         modulus_b = long_to_bytes(mod_value, max_len)
 
         out = create_string_buffer(max_len)

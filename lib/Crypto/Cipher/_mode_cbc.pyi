@@ -1,5 +1,6 @@
-from Crypto.common import SmartPointer
 from typing import Union
+
+from Crypto.Util._raw_api import SmartPointer
 
 __all__ = ['CbcMode']
 

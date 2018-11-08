@@ -1,6 +1,6 @@
 from typing import Union
 
-from Crypto.common import SmartPointer
+from Crypto.Util._raw_api import SmartPointer
 
 __all__ = ['CfbMode']
 

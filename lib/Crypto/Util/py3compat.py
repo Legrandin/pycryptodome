@@ -59,6 +59,8 @@ tobytes(s)
 """
 
 import sys
+import abc
+
 
 if sys.version_info[0] == 2:
     def b(s):
@@ -97,6 +99,8 @@ if sys.version_info[0] == 2:
 
     def is_string(x):
         return isinstance(x, basestring)
+
+    ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 
 else:
     def b(s):
@@ -137,6 +141,9 @@ else:
     def is_string(x):
         return isinstance(x, str)
 
+    from abc import ABC
+
+
 def _copy_bytes(start, end, seq):
     """Return an immutable copy of a sequence (byte string, byte array, memoryview)
     in a certain interval [start:seq]"""
@@ -148,5 +155,5 @@ def _copy_bytes(start, end, seq):
     else:
         return seq[start:end]
 
-
 del sys
+del abc

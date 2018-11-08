@@ -544,8 +544,11 @@ package_data = {
     "Crypto" : [ "py.typed", "*.pyi" ],
     "Crypto.Cipher" : [ "*.pyi" ],
     "Crypto.Hash" : [ "*.pyi" ],
+    "Crypto.Math" : [ "*.pyi" ],
+    "Crypto.Protocol" : [ "*.pyi" ],
     "Crypto.PublicKey" : [ "*.pyi" ],
     "Crypto.Random" : [ "*.pyi" ],
+    "Crypto.Signature" : [ "*.pyi" ],
     "Crypto.SelfTest.Cipher" : [
         "test_vectors/AES/*.rsp",
         "test_vectors/TDES/*.rsp",

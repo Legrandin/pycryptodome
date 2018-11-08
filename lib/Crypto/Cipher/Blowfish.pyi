@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any, Union, Iterable
 
 from Crypto.Cipher._mode_cbc import CbcMode
 from Crypto.Cipher._mode_cfb import CfbMode
@@ -21,4 +21,4 @@ MODE_EAX: BlowfishMode
 def new(key: Union[bytes, bytearray, memoryview], mode: BlowfishMode, *args: Any, **kwargs: Any) -> Union[CtrMode, EaxMode, OpenPgpMode, CbcMode, CfbMode, OfbMode, EcbMode]: ...
 
 block_size: int
-key_size: range
+key_size: Iterable[int]
