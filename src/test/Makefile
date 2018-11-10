@@ -2,12 +2,19 @@ CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPYCRYPTO_' + sys.byteor
 CPPFLAGS += -DHAVE_POSIX_MEMALIGN
 CPPFLAGS += -DSTATIC=""
 CFLAGS += -O3 -g -fstrict-aliasing -Wall
-CFLAGS += -msse2
 
-# TODO: Filter out tests based on the local architecture
-CPPFLAGS += -DHAVE_X86INTRIN_H
-TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess test_clmul\
+TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess\
        test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate
+
+ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
+CPPFLAGS += -DHAVE_X86INTRIN_H
+CFLAGS += -msse2
+TAPPS += test_clmul
+endif
+
+ifeq (64bit, $(shell python -c "import platform; print platform.architecture()[0]"))
+CPPFLAGS += -DHAVE_UINT128
+endif
 
 TGTS:=$(foreach t,$(TAPPS),build/$t)
 
