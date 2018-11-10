@@ -474,24 +474,46 @@ def compiler_supports_sse2():
     """
     return test_compilation(source, extra_cc_options=['-msse2'], msg="x86intrin.h header")
 
+
+def compiler_is_clang(extra_cc_options):
+    source = """
+    #if !defined(__clang__)
+    #error Not clang
+    #endif
+    int main(void)
+    {
+        return 0;
+    }
+    """
+    return test_compilation(source, extra_cc_options=extra_cc_options, msg="clang")
+
+
+def compiler_is_gcc(extra_cc_options):
+    source = """
+    #if defined(__clang__) || !defined(__GNUC__)
+    #error Not GCC
+    #endif
+    int main(void)
+    {
+        return 0;
+    }"""
+    return test_compilation(source, extra_cc_options=extra_cc_options, msg="gcc")
+
+
 def enable_compiler_specific_options(extensions):
 
-    def check_compiler(compiler):
-        result = compiler in os.environ.get('CC', '')
-        builtin = sysconfig.get_config_vars('CC')[0]
-        result = result or (builtin and compiler in builtin)
-        return result
+    extra_cc_options = ['-O3']
+    if compiler_supports_sse2():
+        extra_cc_options.append('-msse2')
 
-    clang = check_compiler("clang")
-    gcc = check_compiler("gcc")
+    clang = compiler_is_clang(extra_cc_options)
+    gcc = compiler_is_gcc(extra_cc_options)
 
     if clang or gcc:
-        sse2 = compiler_supports_sse2()
         for x in extensions:
-            x.extra_compile_args += ['-O3']
-            if sse2:
-                x.extra_compile_args += ['-msse2']
-                x.define_macros += [ ("HAVE_X86INTRIN_H", None) ]
+            x.extra_compile_args += extra_cc_options
+            x.define_macros += [ ("HAVE_X86INTRIN_H", None) ]
+
 
 # Parameters for setup
 packages =  [
