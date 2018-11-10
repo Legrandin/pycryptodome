@@ -59,7 +59,6 @@ enum SubType { OnlySub, SubRotXor };
 
 static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType subType)
 {
-    uint32_t result;
     __m128i x, y, z;
 
     assert((idx>=1) && (idx<=10));
@@ -86,8 +85,7 @@ static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType 
     if (subType == SubRotXor) {
         z = _mm_srli_si128(y, 4);
     }
-    result = _mm_cvtsi128_si32(z);
-    return result;
+    return (uint32_t)_mm_cvtsi128_si32(z);
 }
 
 static int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned Nk, unsigned Nr)
