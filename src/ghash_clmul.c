@@ -41,6 +41,8 @@ FAKE_INIT(ghash_clmul)
 #error Either intrin.h or x86intrin.h header files must be available
 #endif
 
+#include <wmmintrin.h>
+
 /**
  * This module implement the basic GHASH multiplication, as described in
  * NIST SP 800-38D.
