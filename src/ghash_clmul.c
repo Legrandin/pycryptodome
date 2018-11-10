@@ -33,13 +33,15 @@
 
 FAKE_INIT(ghash_clmul)
 
-#include <wmmintrin.h>
-
 #if defined(HAVE_INTRIN_H)
 #include <intrin.h>
-#else
+#elif defined(HAVE_X86INTRIN_H)
 #include <x86intrin.h>
+#else
+#error Either intrin.h or x86intrin.h header files must be available
 #endif
+
+#include <wmmintrin.h>
 
 /**
  * This module implement the basic GHASH multiplication, as described in

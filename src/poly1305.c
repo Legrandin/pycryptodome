@@ -193,7 +193,7 @@ STATIC void poly1305_multiply(uint32_t h[5], const uint32_t r[4], const uint32_t
     /** Reduce x4 to 32 bits and store into h4 **/
     x4 += carry;    /** < 2^3 **/
     assert(x4 < 8);
-    h[4] = x4;
+    h[4] = (uint32_t)x4;
 }
 
 /*

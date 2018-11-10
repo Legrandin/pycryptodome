@@ -1,6 +1,18 @@
 Changelog
 =========
 
+3.7.1 (xx xxxxx 2018)
++++++++++++++++++++++++
+
+New features
+------------
+
+Resolved issues
+---------------
+
+* GH#232: Fixed problem with gcc 4.x when compiling ``ghash_clmul.c``.
+
+
 3.7.0 (27 October 2018)
 +++++++++++++++++++++++
 

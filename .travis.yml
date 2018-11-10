@@ -33,7 +33,7 @@ matrix:
    after_success: true
  - language: c
    install: sudo apt-get install libc6-dev-i386
-   script: cd src/test && CFLAGS="-m32" make
+   script: cd src/test && CFLAGS="-m32" UNDEFS="-UHAVE_UINT128" make
    after_success: true
  - language: c
    script: cd src/test && CPPFLAGS="-DHAVE_X86INTRIN_H" make
