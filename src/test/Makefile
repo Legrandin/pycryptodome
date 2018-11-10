@@ -16,6 +16,8 @@ ifeq (64bit, $(shell python -c "import platform; print platform.architecture()[0
 CPPFLAGS += -DHAVE_UINT128
 endif
 
+CPPFLAGS += $(UNDEFS)
+
 TGTS:=$(foreach t,$(TAPPS),build/$t)
 
 test: build ${TGTS}
