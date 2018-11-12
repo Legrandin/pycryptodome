@@ -17,7 +17,7 @@ This is an example showing how to use SHA-512:
     >>> h = SHA512.new()
     >>> h.update(b'Hello')
     >>> print(h.hexdigest())
-    cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e
+    3615f80c9d293ed7402687f94b22d58e529b8cc7916f8fac7fddf7fbd5af4cf777d3d795a7a00a16bf7e7f3fb9561ee9baae480da9fe7a18769e71886b03f315
 
 This is an example showing how to use SHA-512/256:
 
