@@ -24,12 +24,19 @@
 
 """Self-testing for PyCrypto hash modules"""
 
+import re
 import sys
 import unittest
 import binascii
 import Crypto.Hash
+from binascii import hexlify, unhexlify
 from Crypto.Util.py3compat import b, tobytes
 from Crypto.Util.strxor import strxor_c
+
+def t2b(hex_string):
+    shorter = re.sub(b'\s+', b'', tobytes(hex_string))
+    return unhexlify(shorter)
+
 
 class HashDigestSizeSelfTest(unittest.TestCase):
 
@@ -182,12 +189,12 @@ class MemoryViewTest(unittest.TestCase):
 
 class MACSelfTest(unittest.TestCase):
 
-    def __init__(self, module, description, result, input, key, params):
+    def __init__(self, module, description, result, data, key, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.result = result
-        self.input = input
-        self.key = key
+        self.result = t2b(result)
+        self.data = t2b(data)
+        self.key = t2b(key)
         self.params = params
         self.description = description
 
@@ -195,71 +202,52 @@ class MACSelfTest(unittest.TestCase):
         return self.description
 
     def runTest(self):
-        
-        if isinstance(self.key, str):
-            self.key = self.key.replace(" ", "")
-        else:
-            self.key = self.key.replace(b" ", b"")
-        
-        if isinstance(self.input, str):
-            self.input = self.input.replace(" ", "")
-        else:
-            self.input = self.input.replace(b" ", b"")
 
-        key = binascii.a2b_hex(self.key)
-        data = binascii.a2b_hex(self.input)
+        result_hex = hexlify(self.result)
 
-        # Strip whitespace from the expected string (force lower case)
-        expected = b("".join(self.result.lower().split()))
-
-        h = self.module.new(key, **self.params)
-        h.update(data)
-        out1_bin = h.digest()
-        out1 = binascii.b2a_hex(h.digest())
-        out2 = h.hexdigest()
+        # Verify result
+        h = self.module.new(self.key, **self.params)
+        h.update(self.data)
+        self.assertEqual(self.result, h.digest())
+        self.assertEqual(hexlify(self.result).decode('ascii'), h.hexdigest())
 
         # Verify that correct MAC does not raise any exception
-        h.hexverify(out1)
-        h.verify(out1_bin)
+        h.verify(self.result)
+        h.hexverify(result_hex)
 
         # Verify that incorrect MAC does raise ValueError exception
-        wrong_mac = strxor_c(out1_bin, 255)
+        wrong_mac = strxor_c(self.result, 255)
         self.assertRaises(ValueError, h.verify, wrong_mac)
         self.assertRaises(ValueError, h.hexverify, "4556")
 
-        h = self.module.new(key, data, **self.params)
-
-        out3 = h.hexdigest()
-        out4 = binascii.b2a_hex(h.digest())
+        # Verify again, with data passed to new()
+        h = self.module.new(self.key, self.data, **self.params)
+        self.assertEqual(self.result, h.digest())
+        self.assertEqual(hexlify(self.result).decode('ascii'), h.hexdigest())
 
         # Test .copy()
         try:
+            h = self.module.new(self.key, self.data, **self.params)
             h2 = h.copy()
-            h.update(b("blah blah blah"))  # Corrupt the original hash object
-            out5 = binascii.b2a_hex(h2.digest())    # The copied hash object should return the correct result
-            self.assertEqual(expected, out5)
+            h3 = h.copy()
+
+            # Verify that changing the copy does not change the original
+            h2.update(b"bla")
+            self.assertEqual(h3.digest(), self.result)
+
+            # Verify that both can reach the same state
+            h.update(b"bla")
+            self.assertEqual(h.digest(), h2.digest())
         except NotImplementedError:
             pass
 
         # PY3K: Check that hexdigest() returns str and digest() returns bytes
-        if sys.version_info[0] > 2:
-            self.assertTrue(isinstance(h.digest(), type(b(""))))
-            self.assertTrue(isinstance(h.hexdigest(), type("")))
+        self.assertTrue(isinstance(h.digest(), type(b"")))
+        self.assertTrue(isinstance(h.hexdigest(), type("")))
 
         # PY3K: Check that .hexverify() accepts bytes or str
-        if sys.version_info[0] > 2:
-            h.hexverify(h.hexdigest())
-            h.hexverify(h.hexdigest().encode('ascii'))
-
-        # PY3K: hexdigest() should return str, and digest() should return bytes
-        self.assertEqual(expected, out1)
-        if sys.version_info[0] == 2:
-            self.assertEqual(expected, out2)
-            self.assertEqual(expected, out3)
-        else:
-            self.assertEqual(expected.decode(), out2)
-            self.assertEqual(expected.decode(), out3)
-        self.assertEqual(expected, out4)
+        h.hexverify(h.hexdigest())
+        h.hexverify(h.hexdigest().encode('ascii'))
 
 
 def make_hash_tests(module, module_name, test_data, digest_size, oid=None,

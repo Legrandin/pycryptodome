@@ -11,6 +11,7 @@ Resolved issues
 ---------------
 
 * GH#232: Fixed problem with gcc 4.x when compiling ``ghash_clmul.c``.
+* GH#238: Incorrect digest value produced by CMAC after cloning the object.
 
 
 3.7.0 (27 October 2018)
