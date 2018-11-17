@@ -24,6 +24,7 @@
 
 """Self-testing for PyCrypto hash modules"""
 
+import re
 import sys
 import unittest
 import binascii
@@ -31,6 +32,11 @@ import Crypto.Hash
 from binascii import hexlify, unhexlify
 from Crypto.Util.py3compat import b, tobytes
 from Crypto.Util.strxor import strxor_c
+
+def t2b(hex_string):
+    shorter = re.sub(b'\s+', b'', tobytes(hex_string))
+    return unhexlify(shorter)
+
 
 class HashDigestSizeSelfTest(unittest.TestCase):
 
@@ -186,9 +192,9 @@ class MACSelfTest(unittest.TestCase):
     def __init__(self, module, description, result, data, key, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.result = unhexlify(tobytes(result).replace(b" ", b""))
-        self.data = unhexlify(tobytes(data).replace(b" ", b""))
-        self.key = unhexlify(tobytes(key).replace(b" ", b""))
+        self.result = t2b(result)
+        self.data = t2b(data)
+        self.key = t2b(key)
         self.params = params
         self.description = description
 
@@ -223,10 +229,11 @@ class MACSelfTest(unittest.TestCase):
         try:
             h = self.module.new(self.key, self.data, **self.params)
             h2 = h.copy()
+            h3 = h.copy()
 
             # Verify that changing the copy does not change the original
             h2.update(b"bla")
-            self.assertEqual(h.digest(), self.result)
+            self.assertEqual(h3.digest(), self.result)
 
             # Verify that both can reach the same state
             h.update(b"bla")
