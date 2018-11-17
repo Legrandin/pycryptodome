@@ -152,10 +152,8 @@ class CMAC(object):
         ct = self._cbc.encrypt(data_block)
         if len(data_block) == bs:
             second_last = self._last_ct
-            assert len(second_last) == bs
         else:
             second_last = ct[-bs*2:-bs]
-            assert len(second_last) == bs
         self._last_ct = ct[-bs:]
         self._last_pt = strxor(second_last, data_block[-bs:])
 
