@@ -1,4 +1,4 @@
-from typing import Any, Union, Tuple, Optional, Dict, overload
+from typing import Union, Tuple, Optional, Dict
 
 from Crypto.Cipher._mode_ecb import EcbMode
 from Crypto.Cipher._mode_cbc import CbcMode
@@ -28,65 +28,20 @@ MODE_OCB: AESMode
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-        use_aesni : Optional[bool]) -> EcbMode: ...
-
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-        __iv : Optional[Buffer],
-        segment_size : Optional[int],
-        use_aesni : Optional[bool]) -> \
-        Union[CbcMode, CfbMode, OfbMode, OpenPgpMode]: ...
-
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-        iv : Optional[Buffer],
-        segment_size : Optional[int],
-        use_aesni : Optional[bool]) -> \
-        Union[CbcMode, CfbMode, OfbMode, OpenPgpMode]: ...
-
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-        IV : Optional[Buffer],
-        segment_size : Optional[int],
-        use_aesni : Optional[bool]) -> \
-        Union[CbcMode, CfbMode, OfbMode, OpenPgpMode]: ...
-
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-        nonce : Optional[Buffer],
-        initial_value : Optional[Union[int, Buffer]],
-        use_aesni : Optional[bool]) -> CtrMode: ...
-
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-	counter : Dict,
-        use_aesni : Optional[bool]) -> CtrMode: ...
-
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-        nonce : Optional[Buffer],
-        mac_len : Optional[int],
-        msg_len : Optional[int],
-        assoc_len : Optional[int],
-        use_aesni : Optional[bool]) -> \
-        Union[CcmMode]: ...
-
-@overload
-def new(__key: Buffer,
-        __mode: AESMode,
-        nonce : Optional[Buffer],
-        mac_len : Optional[int],
-        use_aesni : Optional[bool]) -> \
-        Union[EaxMode, GcmMode, SivMode]: ...
+def new(key: Buffer,
+        mode: AESMode,
+        iv : Buffer = ...,
+        IV : Buffer = ...,
+        nonce : Buffer = ...,
+        segment_size : int = ...,
+        mac_len : int = ...,
+        assoc_len : int = ...,
+        initial_value : Union[int, Buffer] = ...,
+        counter : Dict = ...,
+        use_aesni : bool = ...) -> \
+        Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode,
+              OpenPgpMode, CcmMode, EaxMode, GcmMode,
+              SivMode, OcbMode]: ...
 
 block_size: int
 key_size: Tuple[int, int, int]
