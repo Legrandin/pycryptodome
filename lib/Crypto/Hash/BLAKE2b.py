@@ -103,7 +103,7 @@ class BLAKE2b_Hash(object):
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
-            data (byte string/array): The next chunk of the message being hashed.
+            data (bytes/bytearray/memoryview): The next chunk of the message being hashed.
         """
 
         if self._digest_done and not self._update_after_digest:
@@ -152,7 +152,7 @@ class BLAKE2b_Hash(object):
         is valid.
 
         Args:
-          mac_tag (byte string/array): the expected MAC of the message.
+          mac_tag (bytes/bytearray/memoryview): the expected MAC of the message.
 
         Raises:
             ValueError: if the MAC does not match. It means that the message
@@ -198,7 +198,7 @@ def new(**kwargs):
     """Create a new hash object.
 
     Args:
-        data (byte string/array):
+        data (bytes/bytearray/memoryview):
             Optional. The very first chunk of the message to hash.
             It is equivalent to an early call to :meth:`BLAKE2b_Hash.update`.
         digest_bytes (integer):
@@ -207,7 +207,7 @@ def new(**kwargs):
             Optional and alternative to ``digest_bytes``.
             The size of the digest, in bits (8 to 512, in steps of 8).
             Default is 512.
-        key (byte string):
+        key (bytes/bytearray/memoryview):
             Optional. The key to use to compute the MAC (1 to 64 bytes).
             If not specified, no key will be used.
         update_after_digest (boolean):
