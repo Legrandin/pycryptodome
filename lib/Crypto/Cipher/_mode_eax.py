@@ -152,7 +152,8 @@ class EaxMode(object):
         self._next = [self.update, self.encrypt, self.decrypt,
                       self.digest, self.verify]
 
-        return self._signer.update(assoc_data)
+        self._signer.update(assoc_data)
+        return self
 
     def encrypt(self, plaintext, output=None):
         """Encrypt data with the key and the parameters set at initialization.
