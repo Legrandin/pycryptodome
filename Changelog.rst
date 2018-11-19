@@ -14,6 +14,8 @@ Resolved issues
 * GH#238: Incorrect digest value produced by CMAC after cloning the object.
 * Method ``update()`` of an EAX cipher object was returning the underlying CMAC object,
   instead of the EAX object itself.
+* Method ``update()`` of a CMAC object was not throwing an exception after the digest
+  was computed (with ``digest()`` or ``verify()``).
 
 3.7.0 (27 October 2018)
 +++++++++++++++++++++++

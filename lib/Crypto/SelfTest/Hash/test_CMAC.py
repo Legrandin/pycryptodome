@@ -46,6 +46,7 @@ from Crypto.Hash import SHAKE128
 from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
 
+from Crypto.SelfTest.st_common import list_test_cases
 
 # This is a list of (key, data, result, description, module) tuples.
 test_data = [
@@ -250,10 +251,10 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class MultipleUpdates(unittest.TestCase):
-    """Verify that internal caching is implemented correctly"""
+class TestCMAC(unittest.TestCase):
 
-    def runTest(self):
+    def test_internal_caching(self):
+        """Verify that internal caching is implemented correctly"""
 
         data_to_mac = get_tag_random("data_to_mac", 128)
         key = get_tag_random("key", 16)
@@ -270,6 +271,24 @@ class MultipleUpdates(unittest.TestCase):
             for chunk in chunks:
                 mac.update(chunk)
             self.assertEqual(ref_mac, mac.digest())
+
+    def test_update_after_digest(self):
+        msg = b"rrrrttt"
+        key = b"4" * 16
+
+        # Normally, update() cannot be done after digest()
+        h = CMAC.new(key, msg[:4], ciphermod=AES)
+        dig1 = h.digest()
+        self.assertRaises(TypeError, h.update, msg[4:])
+        dig2 = CMAC.new(key, msg, ciphermod=AES).digest()
+
+        # With the proper flag, it is allowed
+        #h2 = CMAC.new(key, msg[:4], update_after_digest=True)
+        #self.assertEquals(h2.digest(), dig1)
+        # ... and the subsequent digest applies to the entire message
+        # up to that point
+        #h2.update(msg[4:])
+        #self.assertEquals(h2.digest(), dig2)
 
 
 class ByteArrayTests(unittest.TestCase):
@@ -429,8 +448,8 @@ def get_tests(config={}):
         params_test_data.append(t)
 
     tests = make_mac_tests(CMAC, "CMAC", params_test_data)
-    tests.append(MultipleUpdates())
     tests.append(ByteArrayTests())
+    tests.append(list_test_cases(TestCMAC))
     
     import sys
     if sys.version[:3] != "2.6":

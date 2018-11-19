@@ -116,6 +116,9 @@ class CMAC(object):
             data (byte string/byte array/memoryview): The next chunk of data
         """
 
+        if self._mac_tag is not None:
+            raise TypeError("update() cannot be called after digest() or verify()")
+
         self._data_size += len(msg)
         bs = self._block_size
 
