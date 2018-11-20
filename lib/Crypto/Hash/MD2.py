@@ -152,7 +152,7 @@ def new(data=None):
     :parameter data:
         Optional. The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`MD2Hash.update`.
-    :type data: byte string/byte array/memoryview
+    :type data: bytes/bytearray/memoryview
 
     :Return: A :class:`MD2Hash` hash object
     """

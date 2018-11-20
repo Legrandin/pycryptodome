@@ -136,7 +136,7 @@ def new(**kwargs):
     """Create a new hash object.
 
     Args:
-        data (byte string/byte array/memoryview):
+        data (bytes/bytearray/memoryview):
             The very first chunk of the message to hash.
             It is equivalent to an early call to :meth:`Keccak_Hash.update`.
         digest_bytes (integer):
