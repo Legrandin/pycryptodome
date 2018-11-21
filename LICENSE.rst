@@ -63,10 +63,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OCB license
 ===========
 
-The OCB cipher mode is patended in US. The directory Doc/ocb contains three
-free licenses for implementors and users. As a general statement, OCB can be
-freely used for software not meant for military purposes. Contact your attorney
-for further information.
+The OCB cipher mode is patented in the US under patent numbers 7,949,129 and 
+8,321,675. The directory Doc/ocb contains three free licenses for implementors 
+and users. As a general statement, OCB can be freely used for software not meant 
+for military purposes. Contact your attorney for further information.
 
 Apache 2.0 license (Wycheproof)
 ===============================
