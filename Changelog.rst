@@ -8,6 +8,7 @@ New features
 ------------
 
 * Added type stubs to enable static type checking with mypy. Thanks to Michael Nix.
+* New ``update_after_digest`` flag for CMAC.
 
 Resolved issues
 ---------------

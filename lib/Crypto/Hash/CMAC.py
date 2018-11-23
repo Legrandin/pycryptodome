@@ -51,7 +51,8 @@ class CMAC(object):
 
     digest_size = None
 
-    def __init__(self, key, msg, ciphermod, cipher_params, mac_len):
+    def __init__(self, key, msg, ciphermod, cipher_params, mac_len,
+                 update_after_digest):
 
         self.digest_size = mac_len
 
@@ -60,6 +61,7 @@ class CMAC(object):
         self._cipher_params = cipher_params
         self._block_size = bs = ciphermod.block_size
         self._mac_tag = None
+        self._update_after_digest = update_after_digest
 
         # Section 5.3 of NIST SP 800 38B and Appendix B
         if bs == 8:
@@ -116,7 +118,7 @@ class CMAC(object):
             data (byte string/byte array/memoryview): The next chunk of data
         """
 
-        if self._mac_tag is not None:
+        if self._mac_tag is not None and not self._update_after_digest:
             raise TypeError("update() cannot be called after digest() or verify()")
 
         self._data_size += len(msg)
@@ -192,7 +194,7 @@ class CMAC(object):
 
         bs = self._block_size
 
-        if self._mac_tag is not None:
+        if self._mac_tag is not None and not self._update_after_digest:
             return self._mac_tag
 
         if self._data_size > self._max_size:
@@ -203,8 +205,9 @@ class CMAC(object):
             pt = strxor(self._last_pt, self._k1)
         else:
             # Last block is partial (or message length is zero)
-            self._cache[self._cache_n:] = b'\x80' + b'\x00' * (bs - self._cache_n - 1)
-            pt = strxor(strxor(self._last_ct, self._cache), self._k2)
+            partial = self._cache[:]
+            partial[self._cache_n:] = b'\x80' + b'\x00' * (bs - self._cache_n - 1)
+            pt = strxor(strxor(self._last_ct, partial), self._k2)
 
         self._mac_tag = self._ecb.encrypt(pt)[:self.digest_size]
 
@@ -252,7 +255,8 @@ class CMAC(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key, msg=None, ciphermod=None, cipher_params=None, mac_len=None):
+def new(key, msg=None, ciphermod=None, cipher_params=None, mac_len=None,
+        update_after_digest=False):
     """Create a new MAC object.
 
     Args:
@@ -275,7 +279,10 @@ def new(key, msg=None, ciphermod=None, cipher_params=None, mac_len=None):
             Length of the MAC, in bytes.
             It must be at least 4 bytes long.
             The default (and recommended) length matches the size of a cipher block.
-
+        update_after_digest (boolean):
+            Optional. By default, a hash object cannot be updated anymore after
+            the digest is computed. When this flag is ``True``, such check
+            is no longer enforced.
     Returns:
         A :class:`CMAC` object
     """
@@ -294,4 +301,5 @@ def new(key, msg=None, ciphermod=None, cipher_params=None, mac_len=None):
     if mac_len > ciphermod.block_size:
         raise ValueError("MAC tag length cannot be larger than a cipher block (%d) bytes" % ciphermod.block_size)
 
-    return CMAC(key, msg, ciphermod, cipher_params, mac_len)
+    return CMAC(key, msg, ciphermod, cipher_params, mac_len,
+                update_after_digest)
