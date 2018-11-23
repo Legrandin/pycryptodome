@@ -7,6 +7,8 @@ Changelog
 New features
 ------------
 
+* Added type stubs to enable static type checking with mypy. Thanks to Michael Nix.
+
 Resolved issues
 ---------------
 

@@ -211,9 +211,16 @@ def new(key, mode, *args, **kwargs):
             If not specified, all associated data is buffered internally,
             which may represent a problem for very large messages.
 
-        *   **initial_value** : (*integer*) --
-            (Only ``MODE_CTR``). The initial value for the counter within
-            the counter block. By default it is **0**.
+        *   **initial_value** : (*integer* or *bytes/bytearray/memoryview*) --
+            (Only ``MODE_CTR``).
+            The initial value for the counter. If not present, the cipher will
+            start counting from 0. The value is incremented by one for each block.
+            The counter number is encoded in big endian mode.
+
+        *   **counter** : (*object*) --
+            Instance of ``Crypto.Util.Counter``, which allows full customization
+            of the counter block. This parameter is incompatible to both ``nonce``
+            and ``initial_value``.
 
         *   **use_aesni** : (*boolean*) --
             Use Intel AES-NI hardware extensions (default: use if available).

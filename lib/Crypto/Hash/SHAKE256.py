@@ -116,7 +116,7 @@ def new(data=None):
     """Return a fresh instance of a SHAKE256 object.
 
     Args:
-       data (byte string/byte array/memoryview):
+       data (bytes/bytearray/memoryview):
         The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`update`.
         Optional.

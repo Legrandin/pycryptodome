@@ -12,7 +12,7 @@ Contribute and support
   However, the preferred approach is to:
 
   * Clone the main repository on `GitHub`_.
-  * Create a branch and modify the code. 
+  * Create a branch and modify the code.
   * Send a `pull request`_ upstream with a meaningful description.
 
 - Provide tests (in ``Crypto.SelfTest``) along with code. If you fix a bug
@@ -20,6 +20,8 @@ Contribute and support
 - If your change breaks backward compatibility, highlight it and include
   a justification.
 - Ensure that your code complies to `PEP8`_ and `PEP257`_.
+- If you add or modify a public interface, make sure the relevant type stubs
+  remain up to date.
 - Ensure that your code does not use constructs or includes modules not
   present in `Python 2.6`_.
 - Add a short summary of the change to the file ``Changelog.rst``.

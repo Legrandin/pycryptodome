@@ -195,11 +195,11 @@ def new(key, msg=b"", digestmod=None):
     """Create a new MAC object.
 
     Args:
-        key (byte string/byte array/memoryview):
+        key (bytes/bytearray/memoryview):
             key for the MAC object.
             It must be long enough to match the expected security level of the
             MAC.
-        msg (byte string/byte array/memoryview):
+        msg (bytes/bytearray/memoryview):
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to :meth:`HMAC.update`.
         digestmod (module):

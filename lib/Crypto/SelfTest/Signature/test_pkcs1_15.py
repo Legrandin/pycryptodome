@@ -83,7 +83,7 @@ for count, tv in enumerate(test_vectors_verify):
 
     hash_module = load_hash_by_name(tv.shaalg.upper())
     hash_obj = hash_module.new(tv.msg)
-    public_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e)])
+    public_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e)]) # type: ignore
     verifier = pkcs1_15.new(public_key)
 
     def positive_test(self, hash_obj=hash_obj, verifier=verifier, signature=tv.s):
@@ -130,8 +130,7 @@ for count, tv in enumerate(test_vectors_sign):
         modulus = tv.n
         continue
     if hasattr(tv, "e"):
-        private_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e,
-                                                                tv.d)])
+        private_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e, tv.d)]) # type: ignore
         signer = pkcs1_15.new(private_key)
         continue
 

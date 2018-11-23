@@ -49,7 +49,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 from Crypto.Hash import SHAKE128
 from Crypto.Math.Numbers import Integer
-from Crypto.Math._Numbers_custom import _raw_montgomery
+from Crypto.Math._IntegerCustom import _raw_montgomery
 
 from Crypto.Random.random import StrongRandom
 
