@@ -768,6 +768,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
+    license="BSD, Public Domain",
     packages=packages,
     package_dir=package_dir,
     package_data=package_data,
