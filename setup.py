@@ -421,9 +421,6 @@ ext_modules = [
         ),
 ]
 
-# Add compiler specific options.
-set_compiler_options(package_root, ext_modules)
-
 if use_separate_namespace:
 
     # Fix-up setup information
@@ -442,6 +439,8 @@ if use_separate_namespace:
     if os.path.isdir("lib/Crypto"):
         create_cryptodome_lib()
 
+# Add compiler specific options.
+set_compiler_options(package_root, ext_modules)
 
 # By doing this we need to change version information in a single file
 with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
