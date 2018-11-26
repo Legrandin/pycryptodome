@@ -249,7 +249,7 @@ def compiler_is_gcc():
     return test_compilation(source, msg="gcc")
 
 
-def compiler_supports_sse2_and_has_x86intrin():
+def compiler_supports_sse2_with_x86intrin_h():
     source = """
     #include <x86intrin.h>
     int main(void)
@@ -261,6 +261,19 @@ def compiler_supports_sse2_and_has_x86intrin():
     """
     return test_compilation(source, extra_cc_options=['-msse2'],
                             msg="x86intrin.h header")
+
+
+def compiler_supports_sse2_with_intrin_h():
+    source = """
+    #include <intrin.h>
+    int main(void)
+    {
+        __m128i r0;
+        r0 = _mm_set1_epi32(0);
+        return 0;
+    }
+    """
+    return test_compilation(source, msg="SSE2")
 
 
 def remove_extension(extensions, name):
@@ -317,9 +330,12 @@ def set_compiler_options(package_root, extensions):
     # Options specific to GCC and CLANG
     if clang or gcc:
         extra_cc_options.append('-O3')
-        if compiler_supports_sse2_and_has_x86intrin():
+        if compiler_supports_sse2_with_x86intrin_h():
             extra_cc_options.append('-msse2')
             extra_macros.append(("HAVE_X86INTRIN_H", None))
+            extra_macros.append(("USE_SSE2", None))
+    elif compiler_supports_sse2_with_intrin_h():
+        extra_macros.append(("USE_SSE2", None))
     
     # Module-specific options
 
