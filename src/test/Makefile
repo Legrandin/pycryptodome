@@ -1,5 +1,5 @@
 CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN'")
-CPPFLAGS += -DHAVE_POSIX_MEMALIGN
+CPPFLAGS += -DHAVE_POSIX_MEMALIGN -DHAVE_STDINT_H
 CPPFLAGS += -DSTATIC=""
 CFLAGS += -O3 -g -fstrict-aliasing -Wall
 

@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.7.2 (26 November 2018)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#242: Fixed compilation problem on ARM platforms.
+
 3.7.1 (25 November 2018)
 ++++++++++++++++++++++++
 

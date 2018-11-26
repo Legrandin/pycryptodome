@@ -32,14 +32,10 @@ DAMAGE.
 
 #if defined(HAVE_INTRIN_H)
 #include <intrin.h>
-#define USE_SSE2
 #endif
 
 #if defined(HAVE_X86INTRIN_H)
 #include <x86intrin.h>
-#ifndef USE_SSE2
-#define USE_SSE2
-#endif
 #endif
 
 #if defined(PYCRYPTO_LITTLE_ENDIAN)

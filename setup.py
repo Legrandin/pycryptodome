@@ -28,18 +28,14 @@ except ImportError:
     from distutils.core import Extension, Command, setup
 from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
-from distutils.errors import CCompilerError
-from distutils import ccompiler
-import distutils
 import re
 import os
 import sys
 import shutil
 import struct
-if sys.version_info[0:2] == (2, 6):
-    from distutils import sysconfig
-else:
-    import sysconfig
+
+from compiler_opt import set_compiler_options
+
 
 use_separate_namespace = os.path.isfile(".separate_namespace")
 
@@ -110,242 +106,17 @@ All the code can be downloaded from `GitHub`_.
     replace("OTHER_ROOT", other_root)
 
 
-
-def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg=''):
-    """Test if a certain C program can be compiled."""
-
-    # Create a temporary file with the C program
-    if not os.path.exists("build"):
-        os.makedirs("build")
-    fname = os.path.join("build", "test1.c")
-    f = open(fname, 'w')
-    f.write(program)
-    f.close()
-
-    # Name for the temporary executable
-    oname = os.path.join("build", "test1.out")
-
-    debug = False
-    # Mute the compiler and the linker
-    if msg:
-        print("Testing support for %s" % msg)
-    if not (debug or os.name == 'nt'):
-        old_stdout = os.dup(sys.stdout.fileno())
-        old_stderr = os.dup(sys.stderr.fileno())
-        dev_null = open(os.devnull, "w")
-        os.dup2(dev_null.fileno(), sys.stdout.fileno())
-        os.dup2(dev_null.fileno(), sys.stderr.fileno())
-
-    objects = []
-    try:
-        compiler = ccompiler.new_compiler()
-        distutils.sysconfig.customize_compiler(compiler)
-
-        if compiler.compiler_type in [ 'msvc' ]:
-            # Force creation of the manifest file (http://bugs.python.org/issue16296)
-            # as needed by VS2010
-            extra_linker_options = [ "/MANIFEST" ]
-        else:
-            extra_linker_options = []
-
-        # In Unix, force the linker step to use CFLAGS and not CC alone (see GH#180)
-        if compiler.compiler_type in [ 'unix' ]:
-            compiler.set_executables(linker_exe=compiler.compiler)
-
-        objects = compiler.compile([fname], extra_postargs=extra_cc_options)
-        compiler.link_executable(objects, oname, libraries=extra_libraries, extra_preargs=extra_linker_options)
-        result = True
-    except CCompilerError:
-        result = False
-    for f in objects + [fname, oname]:
-        try:
-            os.remove(f)
-        except OSError:
-            pass
-
-    # Restore stdout and stderr
-    if not (debug or os.name=='nt'):
-        if old_stdout is not None:
-            os.dup2(old_stdout, sys.stdout.fileno())
-        if old_stderr is not None:
-            os.dup2(old_stderr, sys.stderr.fileno())
-        if dev_null is not None:
-            dev_null.close()
-    if msg:
-        if result:
-            x = ""
-        else:
-            x = " not"
-        print("Target does%s support %s" % (x, msg))
-
-    return result
-
-
 class PCTBuildExt (build_ext):
 
     # Avoid linking Python's dynamic library
     def get_libraries(self, ext):
         return []
 
-    def build_extensions(self):
-        # Disable any assembly in libtomcrypt files
-        self.compiler.define_macro("LTC_NO_ASM")
-
-        # Detect which modules should be compiled
-        self.detect_modules()
-
-        # Call the superclass's build_extensions method
-        build_ext.build_extensions(self)
-
-    def compiler_supports_uint128(self):
-        source = """
-        int main(void)
-        {
-            __uint128_t x;
-            return 0;
-        }
-        """
-        return test_compilation(source, msg="128-bit integer")
-
-    def compiler_has_intrin_h(self):
-        # Windows
-        source = """
-        #include <intrin.h>
-        int main(void)
-        {
-            int a, b[4];
-            __cpuid(b, a);
-            return 0;
-        }
-        """
-        return test_compilation(source, msg="intrin.h header")
-
-    def compiler_has_cpuid_h(self):
-        # UNIX
-        source = """
-        #include <cpuid.h>
-        int main(void)
-        {
-            unsigned int eax, ebx, ecx, edx;
-            __get_cpuid(1, &eax, &ebx, &ecx, &edx);
-            return 0;
-        }
-        """
-        return test_compilation(source, msg="cpuid.h header")
-
-    def compiler_supports_aesni(self):
-        source = """
-        #include <wmmintrin.h>
-        __m128i f(__m128i x, __m128i y) {
-            return _mm_aesenc_si128(x, y);
-        }
-        int main(void) {
-            return 0;
-        }
-        """
-
-        if test_compilation(source):
-            return {'extra_options':[]}
-
-        if test_compilation(source, extra_cc_options=['-maes'], msg='AESNI intrinsics'):
-            return {'extra_options':['-maes']}
-
-        return False
-
-    def compiler_supports_clmul(self):
-        source = """
-        #include <wmmintrin.h>
-        __m128i f(__m128i x, __m128i y) {
-            return _mm_clmulepi64_si128(x, y, 0x00);
-        }
-        int main(void) {
-            return 0;
-        }
-        """
-
-        if test_compilation(source):
-            return {'extra_options':[]}
-
-        if test_compilation(source, extra_cc_options=['-mpclmul','-mssse3'], msg='CLMUL intrinsics'):
-            return {'extra_options':['-mpclmul', '-mssse3']}
-
-        return False
-
-    def compiler_has_posix_memalign(self):
-        source = """
-        #include <stdlib.h>
-        int main(void) {
-            void *new_mem;
-            posix_memalign((void**)&new_mem, 16, 101);
-            return 0;
-        }
-        """
-        return test_compilation(source, msg="posix_memalign")
-
-    def compiler_has_memalign(self):
-        source = """
-        #include <malloc.h>
-        int main(void) {
-            void *p;
-            p = memalign(16, 101);
-            return 0;
-        }
-        """
-        return test_compilation(source, msg="memalign")
-
-    def detect_modules (self):
-
-        if self.compiler_supports_uint128():
-            self.compiler.define_macro("HAVE_UINT128")
-
-        intrin_h_present = self.compiler_has_intrin_h()
-        if intrin_h_present:
-            self.compiler.define_macro("HAVE_INTRIN_H")
-
-        cpuid_h_present = self.compiler_has_cpuid_h()
-        if cpuid_h_present:
-            self.compiler.define_macro("HAVE_CPUID_H")
-
-        if self.compiler_has_posix_memalign():
-            self.compiler.define_macro("HAVE_POSIX_MEMALIGN")
-        elif self.compiler_has_memalign():
-            self.compiler.define_macro("HAVE_MEMALIGN")
-
-        # AESNI
-        aesni_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_aesni()
-        aesni_mod_name = package_root + ".Cipher._raw_aesni"
-        if aesni_result:
-            print("Compiling support for AESNI instructions")
-            aes_mods = [ x for x in self.extensions if x.name == aesni_mod_name ]
-            for x in aes_mods:
-                x.extra_compile_args += aesni_result['extra_options']
-        else:
-            print ("Warning: compiler does not support AESNI instructions")
-            self.remove_extension(aesni_mod_name)
-
-        # CLMUL
-        clmul_result = (cpuid_h_present or intrin_h_present) and self.compiler_supports_clmul()
-        clmul_mod_name = package_root + ".Hash._ghash_clmul"
-        if clmul_result:
-            print("Compiling support for CLMUL instructions")
-            clmul_mods = [ x for x in self.extensions if x.name == clmul_mod_name ]
-            for x in clmul_mods:
-                x.extra_compile_args += clmul_result['extra_options']
-        else:
-            print ("Warning: compiler does not support CLMUL instructions")
-            self.remove_extension(clmul_mod_name)
-
-    def remove_extension(self, name):
-        """Remove the specified extension from the list of extensions
-        to build"""
-
-        self.extensions = [ x for x in self.extensions if x.name != name ]
-
 
 class PCTBuildPy(build_py):
     def find_package_modules(self, package, package_dir, *args, **kwargs):
         modules = build_py.find_package_modules(self, package, package_dir,
-            *args, **kwargs)
+                                                *args, **kwargs)
 
         # Exclude certain modules
         retval = []
@@ -356,8 +127,7 @@ class PCTBuildPy(build_py):
 
 
 class TestCommand(Command):
-
-    description = "Run self-test"
+    "Run self-test"
 
     # Long option name, short option name, description
     user_options = [
@@ -374,8 +144,8 @@ class TestCommand(Command):
 
     def finalize_options(self):
         self.set_undefined_options('install', ('build_lib', 'build_dir'))
-        self.config = { 'slow_tests': not self.skip_slow_tests,
-                        'wycheproof_warnings': self.wycheproof_warnings }
+        self.config = {'slow_tests': not self.skip_slow_tests,
+                       'wycheproof_warnings': self.wycheproof_warnings}
 
     def run(self):
         # Run sub commands
@@ -397,7 +167,7 @@ class TestCommand(Command):
 
             moduleObj = None
             if self.module:
-                if self.module.count('.')==0:
+                if self.module.count('.') == 0:
                     # Test a whole a sub-package
                     full_module = package_root + ".SelfTest." + self.module
                     module_name = self.module
@@ -408,7 +178,7 @@ class TestCommand(Command):
                     module_name = "test_" + comps[1]
                     full_module = package_root + ".SelfTest." + comps[0] + "." + module_name
                 # Import sub-package or module
-                moduleObj = __import__( full_module, globals(), locals(), module_name )
+                moduleObj = __import__(full_module, globals(), locals(), module_name)
 
             print(package_root + ".Math implementation:",
                      str(Numbers._implementation))
@@ -421,7 +191,7 @@ class TestCommand(Command):
         # Run slower self-tests
         self.announce("running extended self-tests")
 
-    sub_commands = [ ('build', None) ]
+    sub_commands = [('build', None)]
 
 
 def create_cryptodome_lib():
@@ -454,66 +224,13 @@ def create_cryptodome_lib():
 
             with open(full_file_name_dst, "rt") as fd:
                 content = (fd.read().
-                    replace("Crypto.", "Cryptodome.").
-                    replace("Crypto ", "Cryptodome ").
-                    replace("'Crypto'", "'Cryptodome'").
-                    replace('"Crypto"', '"Cryptodome"'))
+                           replace("Crypto.", "Cryptodome.").
+                           replace("Crypto ", "Cryptodome ").
+                           replace("'Crypto'", "'Cryptodome'").
+                           replace('"Crypto"', '"Cryptodome"'))
             os.remove(full_file_name_dst)
             with open(full_file_name_dst, "wt") as fd:
                 fd.write(content)
-
-
-def compiler_supports_sse2():
-    source = """
-    #include <x86intrin.h>
-    int main(void)
-    {
-        __m128i r0;
-        r0 = _mm_set1_epi32(0);
-        return 0;
-    }
-    """
-    return test_compilation(source, extra_cc_options=['-msse2'], msg="x86intrin.h header")
-
-
-def compiler_is_clang(extra_cc_options):
-    source = """
-    #if !defined(__clang__)
-    #error Not clang
-    #endif
-    int main(void)
-    {
-        return 0;
-    }
-    """
-    return test_compilation(source, extra_cc_options=extra_cc_options, msg="clang")
-
-
-def compiler_is_gcc(extra_cc_options):
-    source = """
-    #if defined(__clang__) || !defined(__GNUC__)
-    #error Not GCC
-    #endif
-    int main(void)
-    {
-        return 0;
-    }"""
-    return test_compilation(source, extra_cc_options=extra_cc_options, msg="gcc")
-
-
-def enable_compiler_specific_options(extensions):
-
-    extra_cc_options = ['-O3']
-    if compiler_supports_sse2():
-        extra_cc_options.append('-msse2')
-
-    clang = compiler_is_clang(extra_cc_options)
-    gcc = compiler_is_gcc(extra_cc_options)
-
-    if clang or gcc:
-        for x in extensions:
-            x.extra_compile_args += extra_cc_options
-            x.define_macros += [ ("HAVE_X86INTRIN_H", None) ]
 
 
 # Parameters for setup
@@ -539,7 +256,7 @@ packages =  [
     "Crypto.SelfTest.Util",
     "Crypto.SelfTest.Math",
 ]
-package_dir = { "Crypto": "lib/Crypto" }
+package_dir = {"Crypto": "lib/Crypto"}
 package_data = {
     "Crypto" : [ "py.typed", "*.pyi" ],
     "Crypto.Cipher" : [ "*.pyi" ],
@@ -674,7 +391,6 @@ ext_modules = [
         include_dirs=['src/'],
         sources=["src/raw_ctr.c"]),
     Extension("Crypto.Cipher._raw_ocb",
-        include_dirs=['src/'],
         sources=["src/raw_ocb.c"]),
 
     # Stream ciphers
@@ -705,21 +421,17 @@ ext_modules = [
         ),
 ]
 
-# Enable some optimization if we know the compiler
-enable_compiler_specific_options(ext_modules)
-
-# Define big/little endian flag
-for x in ext_modules:
-    x.define_macros += [ ("PYCRYPTO_" + sys.byteorder.upper() + "_ENDIAN", None) ]
+# Add compiler specific options.
+set_compiler_options(package_root, ext_modules)
 
 if use_separate_namespace:
 
     # Fix-up setup information
     for i in range(len(packages)):
         packages[i] = packages[i].replace("Crypto", "Cryptodome")
-    package_dir = { "Cryptodome": "lib/Cryptodome" }
+    package_dir = {"Cryptodome": "lib/Cryptodome"}
     new_package_data = {}
-    for k,v in package_data.items():
+    for k, v in package_data.items():
         new_package_data[k.replace("Crypto", "Cryptodome")] = v
     package_data = new_package_data
     for ext in ext_modules:
@@ -773,7 +485,7 @@ setup(
     package_dir=package_dir,
     package_data=package_data,
     cmdclass={
-        'build_ext':PCTBuildExt,
+        'build_ext': PCTBuildExt,
         'build_py': PCTBuildPy,
         'test': TestCommand,
         },
