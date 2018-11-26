@@ -286,8 +286,9 @@ def remove_extension(extensions, name):
 def set_compiler_options(package_root, extensions):
     """Environment specific settings for extension modules.
 
-    This function modifies how each module
-    Also, it removes known platform-specific modules such as:
+    This function modifies how each module gets compiled, to
+    match the capabilities of the platform.
+    Also, it removes existing modules when not supported, such as:
       - AESNI
       - CLMUL
     """
