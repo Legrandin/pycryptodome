@@ -55,7 +55,9 @@
 #define _PASTE(x,y) x##y
 #define _PASTE2(x,y) _PASTE(x,y)
 
-#ifdef _MSC_VER
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#else
 
 typedef __int8 int8_t;
 typedef unsigned __int8 uint8_t;
@@ -70,14 +72,16 @@ typedef unsigned __int64 uint64_t;
 #define UINT32_MAX 0xFFFFFFFFUL
 #endif
 
+#endif /* HAVE_STDINT_H */
+
+#ifdef _MSC_VER
+
 #define inline _inline
 #define RESTRICT __restrict
 
 #include <malloc.h>
 
 #else /** Not MSC **/
-
-#include <stdint.h>
 
 #if __STDC_VERSION__ >= 199901L
 #define RESTRICT restrict

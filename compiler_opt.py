@@ -108,6 +108,18 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None,
     return result
 
 
+def has_stdint_h():
+    source = """
+    #include <stdint.h>
+    int main(void) {
+        uint32_t u;
+        u = 0;
+        return u + 2;
+    }
+    """
+    return test_compilation(source, msg="stdint.h header")
+
+
 def compiler_supports_uint128():
     source = """
     int main(void)
@@ -272,6 +284,9 @@ def set_compiler_options(package_root, extensions):
     
     clang = compiler_is_clang()
     gcc = compiler_is_gcc()
+
+    if has_stdint_h():
+        extra_macros.append(("HAVE_STDINT_H", None))
 
     # Endianess
     extra_macros.append(("PYCRYPTO_" + sys.byteorder.upper() + "_ENDIAN", None))
