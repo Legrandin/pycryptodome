@@ -111,12 +111,6 @@ class PCTBuildExt (build_ext):
     # Avoid linking Python's dynamic library
     def get_libraries(self, ext):
         return []
-    
-    def remove_extension(self, name):
-        """Remove the specified extension from the list of extensions
-        to build"""
-
-        self.extensions = [x for x in self.extensions if x.name != name]
 
 
 class PCTBuildPy(build_py):
