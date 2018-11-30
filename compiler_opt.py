@@ -51,7 +51,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None,
     # Name for the temporary executable
     oname = os.path.join("build", "test1.out")
 
-    debug = False
+    debug = bool(os.environ['PYCRYPTODOME_DEBUG'])
     # Mute the compiler and the linker
     if msg:
         print("Testing support for %s" % msg)
@@ -153,7 +153,7 @@ def compiler_has_cpuid_h():
     {
         unsigned int eax, ebx, ecx, edx;
         __get_cpuid(1, &eax, &ebx, &ecx, &edx);
-            return 0;
+        return 0;
     }
     """
     return test_compilation(source, msg="cpuid.h header")
@@ -205,8 +205,9 @@ def compiler_has_posix_memalign():
     #include <stdlib.h>
     int main(void) {
         void *new_mem;
-        posix_memalign((void**)&new_mem, 16, 101);
-        return 0;
+        int res;
+        res = posix_memalign((void**)&new_mem, 16, 101);
+        return res == 0;
     }
     """
     return test_compilation(source, msg="posix_memalign")
@@ -218,7 +219,7 @@ def compiler_has_memalign():
     int main(void) {
         void *p;
         p = memalign(16, 101);
-        return 0;
+        return p != (void*)0;
     }
     """
     return test_compilation(source, msg="memalign")
@@ -255,12 +256,14 @@ def compiler_supports_sse2_with_x86intrin_h():
     int main(void)
     {
         __m128i r0;
+        int mask;
         r0 = _mm_set1_epi32(0);
-        return 0;
+        mask = _mm_movemask_epi8(r0);
+        return mask;
     }
     """
     return test_compilation(source, extra_cc_options=['-msse2'],
-                            msg="x86intrin.h header")
+                            msg="SSE2 (x86intrin.h)")
 
 
 def compiler_supports_sse2_with_intrin_h():
@@ -270,10 +273,11 @@ def compiler_supports_sse2_with_intrin_h():
     {
         __m128i r0;
         r0 = _mm_set1_epi32(0);
-        return 0;
+        mask = _mm_movemask_epi8(r0);
+        return mask;
     }
     """
-    return test_compilation(source, msg="SSE2")
+    return test_compilation(source, msg="SSE2 (intrin.h)")
 
 
 def remove_extension(extensions, name):
@@ -335,7 +339,7 @@ def set_compiler_options(package_root, extensions):
             extra_cc_options.append('-msse2')
             extra_macros.append(("HAVE_X86INTRIN_H", None))
             extra_macros.append(("USE_SSE2", None))
-    elif compiler_supports_sse2_with_intrin_h():
+    elif intrin_h_present and compiler_supports_sse2_with_intrin_h():
         extra_macros.append(("USE_SSE2", None))
     
     # Module-specific options
