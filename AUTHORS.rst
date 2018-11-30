@@ -23,7 +23,7 @@ Piers Lauder
 Legrandin
 M.-A. Lemburg
 Wim Lewis
-Dwayne C. Litzenberger
+Darsey C. Litzenberger
 Richard Mitchell
 Mark Moraes
 Lim Chee Siang
