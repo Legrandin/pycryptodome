@@ -51,7 +51,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None,
     # Name for the temporary executable
     oname = os.path.join("build", "test1.out")
 
-    debug = bool(os.environ['PYCRYPTODOME_DEBUG'])
+    debug = bool(os.environ.get('PYCRYPTODOME_DEBUG', None))
     # Mute the compiler and the linker
     if msg:
         print("Testing support for %s" % msg)
