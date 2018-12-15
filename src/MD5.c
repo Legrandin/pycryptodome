@@ -29,8 +29,9 @@
  * ===================================================================
  */
 
-#include "common.h"
 #include <stdio.h>
+#include "common.h"
+#include "endianess.h"
 
 FAKE_INIT(MD5)
 

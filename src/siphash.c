@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "common.h"
+#include "endianess.h"
 
 #include "siphash.h"
 

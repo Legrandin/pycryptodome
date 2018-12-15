@@ -26,6 +26,7 @@
  */
 
 #include "common.h"
+#include "endianess.h"
 
 FAKE_INIT(MD4)
 

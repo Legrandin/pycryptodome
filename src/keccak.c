@@ -26,9 +26,10 @@
  * ===================================================================
 */
 
-#include "common.h"
 #include <string.h>
 #include <assert.h>
+#include "common.h"
+#include "endianess.h"
 
 FAKE_INIT(keccak)
 
