@@ -65,14 +65,6 @@ build/modexp.o: ../modexp.c
 build/tests_product: build/tests_product.c build/modexp.o ../multiply_32.c ../modexp_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
-# addmul
-
-build/tests_addmul.c: make_tests_addmul.py
-	python $^ > $@
-
-build/tests_addmul: build/tests_addmul.c build/modexp.o ../multiply_32.c ../modexp_utils.c ../siphash.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
-
 # endianess
 
 build/test_endianess: test_endianess.c ../common.h
@@ -129,3 +121,8 @@ build/mont.o: ../mont.c
 build/test_mont: test_mont.c ../common.h build/mont.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
+build/tests_addmul.c: make_tests_addmul.py
+	python $^ > $@
+
+build/tests_addmul: build/tests_addmul.c build/mont.o ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^

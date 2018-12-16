@@ -1,4 +1,4 @@
-"""Make unit test for addmul() in modexp.c"""
+"""Make unit test for addmul() in mont.c"""
 
 from common import counter, make_main, split64
 
@@ -34,7 +34,7 @@ def make_test(t, a, k):
     print "    uint64_t t[] = {" + ", ".join(t_in) + ", 0xAAAAAAAAAAAAAAAAULL};"
     print "    const uint64_t expected_t[] = {" + ", ".join(result) + "};"
     print ""
-    print "    addmul(t, a, 0x%x, %d, %d);" % (k, len(a), result_len)
+    print "    addmul(t, %d, a, %d, 0x%x);" % (result_len, len(a), k)
     print "    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len
     print "    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len
     print "}"
@@ -46,7 +46,7 @@ print "#include <string.h>"
 print "#include <stdint.h>"
 print "#include <stdio.h>"
 print ""
-print "void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t a_words, size_t t_words);"
+print "void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_t k);"
 
 make_test(0, 0, 0)
 make_test(0, 1, 1)

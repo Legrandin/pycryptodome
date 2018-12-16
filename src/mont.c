@@ -33,6 +33,7 @@
 
 #include "common.h"
 #include "endianess.h"
+#include "multiply.h"
 
 typedef struct mont_context {
     unsigned words;
@@ -84,7 +85,7 @@ STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
 }
 
 /*
- * Subtract integer a from integer b, leaving the difference in a.
+ * Subtract integer b from a, leaving the difference in a.
  *
  * @param a     Number to subtract from
  * @param b     Number to subtract
@@ -149,6 +150,45 @@ STATIC void rsquare(uint64_t *r2, uint64_t *n, size_t nw)
             overflow = 0;
         }
     }
+}
+
+/*
+ * Multiply a big integer a by a 64-bit scalar k and add the result to big
+ * integer t.
+ *
+ * @param t     The big integer the result of the
+ *              multiplication will be added to
+ * @param tw    The number of words that make up t
+ * @param a     The big integer to multiply with the scalar
+ * @param aw    The number of words that make up a
+ * @param k     The 64-bit scalar multiplier
+ */
+STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_t k)
+{
+    size_t i;
+    uint64_t carry;
+
+    carry = 0;
+    for (i=0; i<aw; i++) {
+        uint64_t prod_lo, prod_hi;
+
+        DP_MULT(a[i], k, prod_lo, prod_hi);
+    
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+
+        t[i] += prod_lo;
+        prod_hi += t[i] < prod_lo;
+
+        carry = prod_hi;
+    }
+
+    for (; carry; i++) {
+        t[i] += carry;
+        carry = t[i] < carry;
+    }
+
+    assert(i <= tw);
 }
 
 /*
