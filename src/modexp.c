@@ -37,10 +37,10 @@
 #include "common.h"
 #include "endianess.h"
 
-FAKE_INIT(montgomery)
+FAKE_INIT(_modexp)
 
 #include "multiply.h"
-#include "montgomery_utils.h"
+#include "modexp_utils.h"
 
 #define CACHE_LINE_SIZE 64
 

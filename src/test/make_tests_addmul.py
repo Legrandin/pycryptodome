@@ -1,4 +1,4 @@
-"""Make unit test for addmul() in montgomery.c"""
+"""Make unit test for addmul() in modexp.c"""
 
 from common import counter, make_main, split64
 

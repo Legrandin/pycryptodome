@@ -58,10 +58,10 @@ build/tests_square_w_64: build/tests_square_w.c ../multiply_64.c
 build/tests_product.c: make_tests_product.py
 	python $^ > $@
 
-build/montgomery.o: ../montgomery.c
+build/modexp.o: ../modexp.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -c
 
-build/tests_product: build/tests_product.c build/montgomery.o ../multiply_32.c ../montgomery_utils.c ../siphash.c
+build/tests_product: build/tests_product.c build/modexp.o ../multiply_32.c ../modexp_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # addmul
@@ -69,7 +69,7 @@ build/tests_product: build/tests_product.c build/montgomery.o ../multiply_32.c .
 build/tests_addmul.c: make_tests_addmul.py
 	python $^ > $@
 
-build/tests_addmul: build/tests_addmul.c build/montgomery.o ../multiply_32.c ../montgomery_utils.c ../siphash.c
+build/tests_addmul: build/tests_addmul.c build/modexp.o ../multiply_32.c ../modexp_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # endianess

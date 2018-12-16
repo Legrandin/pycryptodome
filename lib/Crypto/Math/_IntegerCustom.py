@@ -50,7 +50,7 @@ int monty_pow(const uint8_t *base,
 """
 
 
-_raw_montgomery = load_pycryptodome_raw_lib("Crypto.Math._montgomery", c_defs)
+_raw_montgomery = load_pycryptodome_raw_lib("Crypto.Math._modexp", c_defs)
 implementation = {"library": "custom", "api": backend}
 
 
