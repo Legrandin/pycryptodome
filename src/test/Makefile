@@ -1,10 +1,11 @@
 CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN'")
 CPPFLAGS += -DHAVE_POSIX_MEMALIGN -DHAVE_STDINT_H
 CPPFLAGS += -DSTATIC=""
-CFLAGS += -O3 -g -fstrict-aliasing -Wall
+CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
 
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess\
-       test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate
+       test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate\
+	   test_mont
 
 ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
 CPPFLAGS += -DHAVE_X86INTRIN_H
@@ -119,3 +120,12 @@ build/test_poly1305_multiply: build/test_poly1305_multiply.c ../common.h build/p
 
 build/test_poly1305_accumulate: build/test_poly1305_accumulate.c ../common.h build/poly1305.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+# Montgomery
+
+build/mont.o: ../mont.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
+
+build/test_mont: test_mont.c ../common.h build/mont.o
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
