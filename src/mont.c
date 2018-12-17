@@ -225,16 +225,20 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
 }
 
 /*
- * Montgomery modular multiplication.
+ * Montgomery modular multiplication, that is a*b*R mod N.
  *
  * @param out   The location where the result is stored
- * @param a     The first term (already in Montgomery form)
- * @param b     The second term (already in Montgomery form)
+ * @param a     The first term (already in Montgomery form, a*R mod N)
+ * @param b     The second term (already in Montgomery form, b*R mod N)
+ * @param b     The modulus (in normal form), such that R>N
  * @param m0    Least-significant word of the oppossite of the inverse of n modulo R, that is, inv(-n[0], R)
  * @param t     Temporary scratchpad with 2*nw+1 words
- * @param nw    Number of words making up integers out, a, and b
+ * @param nw    Number of words making up the 3 integers: out, a, and b.
+ *              It also defines R as 2^(64*nw).
+ *
+ * Useful read: https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
  */
-STATIC void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
     unsigned i;
 
@@ -266,7 +270,7 @@ STATIC void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint
         
         addmul128(&t[i], n, k0, k1, nw);
     }
-    
+
     /** One left for odd number of words **/
     if (is_odd(nw)) {
         addmul(&t[nw-1], nw+2, n, nw, t[nw-1]*m0);
