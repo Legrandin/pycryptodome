@@ -37,7 +37,7 @@
 #include "common.h"
 #include "endianess.h"
 
-FAKE_INIT(_modexp)
+FAKE_INIT(modexp)
 
 #include "multiply.h"
 #include "modexp_utils.h"
