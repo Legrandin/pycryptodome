@@ -32,7 +32,7 @@ all: ${$TGTS}
 clean:
 	rm -fr build
 
-# addmul
+# addmul128
 
 build/tests_addmul128.c: make_tests_addmul128.py
 	python $^ > $@
@@ -52,17 +52,6 @@ build/tests_square_w_32: build/tests_square_w.c ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/tests_square_w_64: build/tests_square_w.c ../multiply_64.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
-
-# product
-
-build/tests_product.c: make_tests_product.py
-	python $^ > $@
-
-build/modexp.o: ../modexp.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -c
-
-build/tests_product: build/tests_product.c build/modexp.o ../multiply_32.c ../modexp_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # endianess
@@ -116,9 +105,9 @@ build/test_poly1305_accumulate: build/test_poly1305_accumulate.c ../common.h bui
 # Montgomery
 
 build/mont.o: ../mont.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
-build/test_mont: test_mont.c ../common.h build/mont.o
+build/test_mont: test_mont.c ../common.h build/mont.o ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/tests_addmul.c: make_tests_addmul.py
@@ -126,3 +115,11 @@ build/tests_addmul.c: make_tests_addmul.py
 
 build/tests_addmul: build/tests_addmul.c build/mont.o ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/tests_product.c: make_tests_product.py
+	python $^ > $@
+
+build/tests_product: build/tests_product.c build/mont.o ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+

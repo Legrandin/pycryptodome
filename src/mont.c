@@ -42,6 +42,16 @@ typedef struct mont_context {
     uint64_t m0;
 } MontContext;
 
+static inline unsigned is_odd(uint64_t x)
+{
+    return 1 == (x & 1);
+}
+
+static inline unsigned is_even(uint64_t x)
+{
+    return !is_odd(x);
+}
+
 /**
  * Compute the inverse modulo 2^64 of a 64-bit odd integer.
  *
@@ -191,6 +201,86 @@ STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_
     assert(i <= tw);
 }
 
+/**
+ * Multiply two big integers.
+ *
+ * @param t Where to store the result. Array of  2*nw words.
+ * @param a The first term, array of nw words.
+ * @param a The first term, array of nw words.
+ *
+ */
+STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
+{
+        size_t i;
+
+        memset(t, 0, 2*sizeof(uint64_t)*nw);
+        
+        for (i=0; i<(nw ^ (nw & 1)); i+=2) {
+            addmul128(&t[i], a, b[i], b[i+1], nw);
+        }
+
+        if (is_odd(nw)) {
+            addmul(&t[nw-1], nw+2, a, nw, b[nw-1]);
+        }
+}
+
+/*
+ * Montgomery modular multiplication.
+ *
+ * @param out   The location where the result is stored
+ * @param a     The first term (already in Montgomery form)
+ * @param b     The second term (already in Montgomery form)
+ * @param m0    Least-significant word of the oppossite of the inverse of n modulo R, that is, inv(-n[0], R)
+ * @param t     Temporary scratchpad with 2*nw+1 words
+ * @param nw    Number of words making up integers out, a, and b
+ */
+STATIC void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+{
+    unsigned i;
+
+    if (a == b) {
+        square_w(t, a, nw);
+    } else {
+        product(t, a, b, nw);
+    }
+
+    t[2*nw] = 0; /** MSW **/
+
+    /** Clear lower words (two at a time) **/
+    for (i=0; i<(nw ^ (nw & 1)); i+=2) {
+        uint64_t k0, k1, ti1, prod_lo, prod_hi;
+
+        /** Multiplier for n that will make t[i+0] go 0 **/
+        k0 = t[i] * m0;
+        
+        /** Simulate Muladd for digit 0 **/
+        DP_MULT(k0, n[0], prod_lo, prod_hi);
+        prod_lo += t[i];
+        prod_hi += prod_lo < t[i];
+
+        /** Expected digit 1 **/
+        ti1 = t[i+1] + n[1]*k0 + prod_hi;
+        
+        /** Multiplier for n that will make t[i+1] go 0 **/
+        k1 = ti1 * m0;
+        
+        addmul128(&t[i], n, k0, k1, nw);
+    }
+    
+    /** One left for odd number of words **/
+    if (is_odd(nw)) {
+        addmul(&t[nw-1], nw+2, n, nw, t[nw-1]*m0);
+    }
+    
+    assert(t[2*nw] <= 1); /** MSW **/
+
+    /** Divide by R and possibly subtract n **/
+    if (t[2*nw] == 1 || ge(&t[nw], n, nw)) {
+        sub(&t[nw], n, nw);
+    }
+    memcpy(out, &t[nw], sizeof(uint64_t)*nw);
+}
+
 /*
  * Create a new context for Montgomery form in the given odd modulus.
  *
@@ -207,7 +297,7 @@ int mont_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     if (NULL == modulus || NULL == out)
         return ERR_NULL;
 
-    if (0 == mod_len || 0 == (modulus[mod_len-1] & 1))
+    if (0 == mod_len || is_even(modulus[mod_len-1]))
         return ERR_VALUE;
 
     *out = ctx = (MontContext*)calloc(1, sizeof(MontContext));
