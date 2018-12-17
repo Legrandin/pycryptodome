@@ -30,7 +30,7 @@ build:
 all: ${$TGTS}
 
 clean:
-	rm -fr build
+	rm -fr build common.pyc
 
 # addmul128
 
