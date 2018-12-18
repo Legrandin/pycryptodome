@@ -28,7 +28,7 @@ The receiver can use the matching *public* key to verify authenticity of the rec
         >>> h = SHA256.new(received_message)
         >>> verifier = DSS.new(key, 'fips-186-3')
         >>> try:
-        >>>     verifier.verify(h, signature):
+        >>>     verifier.verify(h, signature)
         >>>     print "The message is authentic."
         >>> except ValueError:
         >>>     print "The message is not authentic."
