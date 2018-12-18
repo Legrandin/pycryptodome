@@ -34,15 +34,7 @@
 #include "common.h"
 #include "endianess.h"
 #include "multiply.h"
-
-typedef struct mont_context {
-    unsigned words;
-    unsigned bytes;
-    uint64_t *modulus;
-    uint64_t *r2_mod_n;     /* R^2 mod N */ 
-    uint64_t *one_mont;     /* 1*R mod N */ 
-    uint64_t m0;
-} MontContext;
+#include "mont.h"
 
 static inline unsigned is_odd(uint64_t x)
 {
@@ -293,7 +285,7 @@ void mont_context_free(MontContext *ctx)
 {
     if (NULL == ctx)
         return;
-    free(ctx->one_mont);
+    free(ctx->one);
     free(ctx->r2_mod_n);
     free(ctx->modulus);
     free(ctx);
@@ -318,8 +310,6 @@ size_t mont_bytes(MontContext *ctx)
 int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 {
     MontContext *ctx;
-    uint64_t *tmp1 = NULL;
-    uint64_t *tmp2 = NULL;
     int res;
 
     if (NULL == out || NULL == modulus)
@@ -339,9 +329,6 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     ctx->words = (mod_len + 7) / 8;
     ctx->bytes = ctx->words * sizeof(uint64_t);
 
-    /** Pre-compute -n[0]^{-1} mod R **/
-    ctx->m0 = inverse64(~ctx->modulus[0]+1);
-
     /** Load modulus N **/
     ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
     if (0 == ctx->modulus) {
@@ -358,23 +345,16 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     }
     rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
 
-    /** Pre-compute R mod N **/
-    ctx->one_mont = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    tmp2 = (uint64_t*)calloc(ctx->words, 2*sizeof(uint64_t)+1);
-    if (NULL == ctx->one_mont || NULL == tmp1 || NULL == tmp2) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    tmp1[0] = 1;
-    mont_mult(ctx->one_mont, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
-    free(tmp1);
+    /** Pre-compute -n[0]^{-1} mod R **/
+    ctx->m0 = inverse64(~ctx->modulus[0]+1);
+
+    /** Prepare 1 **/
+    ctx->one = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    ctx->one[0] = 1;
 
     return 0;
 
 cleanup:
-    free(tmp2);
-    free(tmp1);
     mont_context_free(ctx);
     return res;
 }
@@ -458,7 +438,7 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
     uint64_t *tmp1 = NULL;
     uint64_t *tmp2 = NULL;
 
-    if (NULL == number || NULL == ctx || NULL == number)
+    if (NULL == number || NULL == ctx || NULL == mont_number)
         return ERR_NULL;
     
    /** number in normal form, but still in words **/
@@ -473,7 +453,7 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
         return ERR_MEMORY;
     }
  
-    mont_mult(tmp1, mont_number, ctx->one_mont, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, tmp2, ctx->words);
     words_to_bytes(number, ctx->bytes, tmp1, ctx->words);
 
     free(tmp2);
