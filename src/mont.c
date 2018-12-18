@@ -37,8 +37,10 @@
 
 typedef struct mont_context {
     unsigned words;
+    unsigned bytes;
     uint64_t *modulus;
-    uint64_t *r2;   /* R^2 mod N */ 
+    uint64_t *r2_mod_n;     /* R^2 mod N */ 
+    uint64_t *one_mont;     /* 1*R mod N */ 
     uint64_t m0;
 } MontContext;
 
@@ -125,38 +127,38 @@ STATIC uint64_t sub(uint64_t *a, const uint64_t *b, size_t nw)
  * Compute R^2 mod N, where R is the smallest power of 2^64
  * which is larger than N.
  *
- * @param r2    Where the result is stored to
- * @param n     The modulus N
- * @param nw    The number of 64-bit words that make up r2 and n
+ * @param r2_mod_n  Where the result is stored to
+ * @param n         The modulus N
+ * @param nw        The number of 64-bit words that make up r2_mod_n and n
  */
-STATIC void rsquare(uint64_t *r2, uint64_t *n, size_t nw)
+STATIC void rsquare(uint64_t *r2_mod_n, uint64_t *n, size_t nw)
 {
     size_t i;
     size_t R_bits;
 
-    memset(r2, 0, sizeof(uint64_t)*nw);
+    memset(r2_mod_n, 0, sizeof(uint64_t)*nw);
 
     /**
      * Start with R2=1, double 2*bitlen(R) times,
      * and reduce it as soon as it exceeds n
      */
-    r2[0] = 1;
+    r2_mod_n[0] = 1;
     R_bits = nw * sizeof(uint64_t) * 8;
     for (i=0; i<R_bits*2; i++) {
         unsigned overflow;
         size_t j;
         
         /** Double, by shifting left by one bit **/
-        overflow = (unsigned)(r2[nw-1] >> 63);
+        overflow = (unsigned)(r2_mod_n[nw-1] >> 63);
         for (j=nw-1; j>0; j--) {
-            r2[j] = (r2[j] << 1) + (r2[j-1] >> 63);
+            r2_mod_n[j] = (r2_mod_n[j] << 1) + (r2_mod_n[j-1] >> 63);
         }
         /** Fill-in with zeroes **/
-        r2[0] <<= 1;
+        r2_mod_n[0] <<= 1;
         
         /** Subtract n if the result exceeds it **/
-        while (overflow || ge(r2, n, nw)) {
-            sub(r2, n, nw);
+        while (overflow || ge(r2_mod_n, n, nw)) {
+            sub(r2_mod_n, n, nw);
             overflow = 0;
         }
     }
@@ -285,6 +287,25 @@ STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const
     memcpy(out, &t[nw], sizeof(uint64_t)*nw);
 }
 
+/* ---- PUBLIC FUNCTION ---- */
+
+void mont_context_free(MontContext *ctx)
+{
+    if (NULL == ctx)
+        return;
+    free(ctx->one_mont);
+    free(ctx->r2_mod_n);
+    free(ctx->modulus);
+    free(ctx);
+}
+
+size_t mont_bytes(MontContext *ctx)
+{
+    if (NULL == ctx)
+        return 0;
+    return ctx->bytes;
+}
+
 /*
  * Create a new context for Montgomery form in the given odd modulus.
  *
@@ -294,14 +315,21 @@ STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const
  * @param mod_len   The length of the modulus.
  * @return          0 for success, the appropriate code otherwise.
  */
-int mont_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
+int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 {
     MontContext *ctx;
+    uint64_t *tmp1 = NULL;
+    uint64_t *tmp2 = NULL;
+    int res;
 
-    if (NULL == modulus || NULL == out)
+    if (NULL == out || NULL == modulus)
         return ERR_NULL;
 
-    if (0 == mod_len || is_even(modulus[mod_len-1]))
+    if (0 == mod_len)
+        return ERR_NOT_ENOUGH_DATA;
+
+    /** Ensure modulus is odd, otherwise we can't compute its inverse over B **/
+    if (is_even(modulus[mod_len-1]))
         return ERR_VALUE;
 
     *out = ctx = (MontContext*)calloc(1, sizeof(MontContext));
@@ -309,18 +337,146 @@ int mont_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         return ERR_MEMORY;
 
     ctx->words = (mod_len + 7) / 8;
-
-    /** Load modulus N **/
-    ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    bytes_to_words(ctx->modulus, ctx->words, modulus, mod_len);
-   
-    /** Pre-compute R^2 mod N **/
-    ctx->r2 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    rsquare(ctx->r2, ctx->modulus, ctx->words);
+    ctx->bytes = ctx->words * sizeof(uint64_t);
 
     /** Pre-compute -n[0]^{-1} mod R **/
     ctx->m0 = inverse64(~ctx->modulus[0]+1);
 
+    /** Load modulus N **/
+    ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (0 == ctx->modulus) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    bytes_to_words(ctx->modulus, ctx->words, modulus, mod_len);
+   
+    /** Pre-compute R^2 mod N **/
+    ctx->r2_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (0 == ctx->r2_mod_n) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
+
+    /** Pre-compute R mod N **/
+    ctx->one_mont = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    tmp2 = (uint64_t*)calloc(ctx->words, 2*sizeof(uint64_t)+1);
+    if (NULL == ctx->one_mont || NULL == tmp1 || NULL == tmp2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    tmp1[0] = 1;
+    mont_mult(ctx->one_mont, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    free(tmp1);
+
     return 0;
+
+cleanup:
+    free(tmp2);
+    free(tmp1);
+    mont_context_free(ctx);
+    return res;
 }
 
+/*
+ * Transform a big endian-encoded number into Montgomery form, by performing memory allocation.
+ *
+ * @param out       The memory area where the pointer to the newly allocated number in Montgomery form will be put.
+ *                  The caller is responsible for deallocating this memory.
+ * @param ctx       Montgomery context, as created by mont_context_init()
+ * @param number    The big endian-encoded number to transform, strictly smaller than the modulus
+ * @param len       The length of the big-endian number in bytes
+ * @return          0 in case of success, the relevant error code otherwise
+ */
+int mont_from_bytes(uint64_t **out, const MontContext *ctx, const uint8_t *number, size_t len)
+{
+    uint64_t *encoded = NULL;
+    uint64_t *tmp1 = NULL;
+    uint64_t *tmp2 = NULL;
+    int res = 0;
+
+    if (NULL == out || NULL == ctx || NULL == number)
+        return ERR_NULL;
+
+    if (0 == len)
+        return ERR_NOT_ENOUGH_DATA;
+
+    if (ctx->bytes < len)
+        return ERR_VALUE;
+
+    /** The caller will deallocate this memory **/
+    *out = encoded = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == encoded)
+        return ERR_MEMORY;
+
+    /** Input number, loaded in words **/
+    tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == tmp1) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    bytes_to_words(tmp1, ctx->words, number, len);
+
+    /** Make sure number<modulus **/
+    if (ge(tmp1, ctx->modulus, ctx->words)) {
+        res = ERR_VALUE;
+        goto cleanup;
+    }
+
+    /** Scratchpad **/
+    tmp2 = (uint64_t*)calloc(ctx->words*2+1, sizeof(uint64_t));
+    if (NULL == tmp2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    mont_mult(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    free(tmp2);
+    free(tmp1);
+    return 0;
+
+cleanup:
+    free(tmp2);
+    free(tmp1);
+    free(encoded);
+    return res;
+}
+
+/*
+ * Transform a number from Montgomery representation to big endian-encoding.
+ *
+ * @param number        The memory area where the pointer to the big endian-encoded number is stored.
+ *                      It must be contain mont_bytes(ctx) bytes.
+ *                      The number will be padded with zeroes on the left.
+ * @param ctx           The address of the Montgomery context.
+ * @param mont_number   The array of words that make up the number in Montgomery form.
+ *
+ */
+int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_number)
+{
+    uint64_t *tmp1 = NULL;
+    uint64_t *tmp2 = NULL;
+
+    if (NULL == number || NULL == ctx || NULL == number)
+        return ERR_NULL;
+    
+   /** number in normal form, but still in words **/
+    tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == tmp1)
+        return ERR_MEMORY;
+
+    /** scratchpad **/
+    tmp2 = (uint64_t*)calloc(ctx->words*2+1, sizeof(uint64_t));
+    if (NULL == tmp2) {
+        free(tmp1);
+        return ERR_MEMORY;
+    }
+ 
+    mont_mult(tmp1, mont_number, ctx->one_mont, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    words_to_bytes(number, ctx->bytes, tmp1, ctx->words);
+
+    free(tmp2);
+    free(tmp1);
+    return 0;
+}
