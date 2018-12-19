@@ -122,16 +122,93 @@ void test_mont_to_bytes(void)
 
     res = mont_to_bytes(NULL, ctx, number_mont);
     assert(res == ERR_NULL);
-    
     res = mont_to_bytes(number, NULL, number_mont);
     assert(res == ERR_NULL);
-    
     res = mont_to_bytes(number, ctx, NULL);
     assert(res == ERR_NULL);
 
     res = mont_to_bytes(number, ctx, number_mont);
     assert(res == 0);
     assert(0 == memcmp(number, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x02", 16));
+}
+
+void test_mont_add(void)
+{
+    int res;
+    MontContext *ctx;
+    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
+    uint64_t a[2] = { -1, -1 };
+    uint64_t b[2] = { 1, 0 };
+    uint64_t out[2];
+
+    mont_context_init(&ctx, modulus, 16);
+    
+    res = mont_add(NULL, a, b, ctx);
+    assert(res == ERR_NULL);
+    res = mont_add(out, NULL, b, ctx);
+    assert(res == ERR_NULL);
+    res = mont_add(out, a, NULL, ctx);
+    assert(res == ERR_NULL);
+    res = mont_add(out, a, b, NULL);
+    assert(res == ERR_NULL);
+
+    res = mont_add(out, a, b, ctx);
+    assert(res == 0);
+    assert(out[0] == 0);
+    assert(out[1] == 0);
+}
+
+void test_mont_mult_scalar(void)
+{
+    int res;
+    MontContext *ctx;
+    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
+    uint64_t a[2] = { 0x0102030405060708UL, 0x0102030405060708 };
+    uint64_t out[3];
+
+    mont_context_init(&ctx, modulus, 16);
+
+    res = mont_mult_scalar(NULL, a, 999, ctx);
+    assert(res == ERR_NULL);
+    res = mont_mult_scalar(out, NULL, 999, ctx);
+    assert(res == ERR_NULL);
+    res = mont_mult_scalar(out, a, 999, NULL);
+    assert(res == ERR_NULL);
+
+    out[2] = -1;
+    res = mont_mult_scalar(out, a, 999, ctx);
+    assert(res == 0);
+    assert(out[0] == 0xeed9c4af9a857038UL);
+    assert(out[1] == 0xeed9c4af9a85703bUL);
+    assert(out[2] == -1);
+}
+
+void test_mont_sub(void)
+{
+    int res;
+    MontContext *ctx;
+    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
+    uint64_t a[2] = { 0, 0 };
+    uint64_t b[2] = { 1, 0 };
+    uint64_t out[3];
+
+    mont_context_init(&ctx, modulus, 16);
+    
+    res = mont_sub(NULL, a, b, ctx);
+    assert(res == ERR_NULL);
+    res = mont_sub(out, NULL, b, ctx);
+    assert(res == ERR_NULL);
+    res = mont_sub(out, a, NULL, ctx);
+    assert(res == ERR_NULL);
+    res = mont_sub(out, a, b, NULL);
+    assert(res == ERR_NULL);
+
+    out[2] = 0xA;
+    res = mont_sub(out, a, b, ctx);
+    assert(res == 0);
+    assert(out[0] == -1);
+    assert(out[1] == -1);
+    assert(out[2] == 0xA);
 }
 
 int main(void) {
@@ -141,5 +218,8 @@ int main(void) {
     test_mont_context_init();
     test_mont_from_bytes();
     test_mont_to_bytes();
+    test_mont_add();
+    test_mont_mult_scalar();
+    test_mont_sub();
     return 0;
 }

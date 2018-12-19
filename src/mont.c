@@ -98,7 +98,7 @@ STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
  */
 STATIC uint64_t sub(uint64_t *a, const uint64_t *b, size_t nw)
 {
-    unsigned i;
+    size_t i;
     uint64_t borrow1 , borrow2;
 
     borrow2 = 0;
@@ -279,7 +279,7 @@ STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const
     memcpy(out, &t[nw], sizeof(uint64_t)*nw);
 }
 
-/* ---- PUBLIC FUNCTION ---- */
+/* ---- PUBLIC FUNCTIONS ---- */
 
 void mont_context_free(MontContext *ctx)
 {
@@ -440,7 +440,7 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
 
     if (NULL == number || NULL == ctx || NULL == mont_number)
         return ERR_NULL;
-    
+
    /** number in normal form, but still in words **/
     tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
     if (NULL == tmp1)
@@ -452,11 +452,99 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
         free(tmp1);
         return ERR_MEMORY;
     }
- 
+
     mont_mult(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, tmp2, ctx->words);
     words_to_bytes(number, ctx->bytes, tmp1, ctx->words);
 
     free(tmp2);
     free(tmp1);
+    return 0;
+}
+
+/*
+ * Add two numbers in Montgomery representation.
+ *
+ * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
+ * @param a     First term
+ * @param b     Second term
+ * @param ctx   Montgomery context
+ * @return      0 for success, the relevant error code otherwise
+ */
+int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, const MontContext *ctx)
+{
+    size_t i;
+    unsigned carry;
+
+    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
+        return ERR_NULL;
+
+    for (i=0, carry=0; i<ctx->words; i++) {
+        out[i] = a[i] + carry;
+        carry = out[i] < carry;
+        out[i] += b[i];
+        carry += out[i] < b[i];
+    }
+
+    return 0;
+}
+
+/*
+ * Multiply a number in Montgomery representation with a scalar.
+ *
+ * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
+ * @param a     First term
+ * @param k     Second term (scalar)
+ * @param ctx   Montgomery context
+ * @return      0 for success, the relevant error code otherwise
+ */
+int mont_mult_scalar(uint64_t* out, const uint64_t* a, uint64_t k, const MontContext *ctx)
+{
+    size_t i;
+    unsigned carry;
+
+    if (NULL == out || NULL == a || NULL == ctx)
+        return ERR_NULL;
+
+    for (i=0, carry=0; i<ctx->words; i++) {
+        uint64_t prod_lo, prod_hi;
+
+        DP_MULT(a[i], k, prod_lo, prod_hi);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        out[i] = prod_lo;
+        carry = prod_hi;
+    }
+
+    return 0;
+}
+
+/*
+ * Subtract integer b from a.
+ *
+ * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
+ * @param a     Number to subtract from
+ * @param b     Number to subtract
+ * @param ctx   Montgomery context
+ * @return      0 for success, the relevant error code otherwise
+ */
+int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, MontContext *ctx)
+{
+    size_t i;
+    uint64_t borrow1 , borrow2;
+
+    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
+        return ERR_NULL;
+
+    borrow2 = 0;
+    for (i=0; i<ctx->words; i++) {
+        borrow1 = b[i] > a[i];
+        out[i] = a[i] - b[i];
+
+        borrow1 |= borrow2 > out[i];
+        out[i] -= borrow2;
+
+        borrow2 = borrow1;
+    }
+
     return 0;
 }

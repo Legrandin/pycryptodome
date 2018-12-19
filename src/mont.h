@@ -16,5 +16,8 @@ size_t mont_bytes(MontContext *ctx);
 int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len);
 int mont_from_bytes(uint64_t **out, const MontContext *ctx, const uint8_t *number, size_t len);
 int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_number);
+int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, const MontContext *ctx);
+int mont_mult_scalar(uint64_t* out, const uint64_t* a, uint64_t k, const MontContext *ctx);
+int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, MontContext *ctx);
 
 #endif

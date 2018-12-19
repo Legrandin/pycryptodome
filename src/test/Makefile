@@ -65,7 +65,7 @@ build/clmul.o: ../ghash_clmul.c
 	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $< -c
 
 build/test_clmul: test_clmul.c ../common.h build/clmul.o
-	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -mssse3 -mpclmul $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 # Poly1305
 
@@ -88,19 +88,19 @@ build/test_poly1305_accumulate.c: make_tests_poly1305_accumulate.py
 	python $^ > $@
 
 build/test_poly1305_reduce: build/test_poly1305_reduce.c ../common.h build/poly1305.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/test_poly1305_load_r: build/test_poly1305_load_r.c ../common.h build/poly1305.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/test_poly1305_load_m: build/test_poly1305_load_m.c ../common.h build/poly1305.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/test_poly1305_multiply: build/test_poly1305_multiply.c ../common.h build/poly1305.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/test_poly1305_accumulate: build/test_poly1305_accumulate.c ../common.h build/poly1305.o
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 # Montgomery
 
@@ -108,7 +108,7 @@ build/mont.o: ../mont.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/test_mont: test_mont.c ../common.h build/mont.o ../multiply_32.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/tests_addmul.c: make_tests_addmul.py
 	python $^ > $@
