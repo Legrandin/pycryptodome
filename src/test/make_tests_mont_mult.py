@@ -43,7 +43,7 @@ def make_test(a, b, modulus):
     print "    const uint64_t n[] = {" + ", ".join(modulus_s) + "};"
     print "    const uint64_t expected[] = {" + ", ".join(result_m_s) + "};"
     print "    uint64_t out[%d];" % (nw+1)
-    print "    uint64_t scratch[%d];" % (2*nw+1)
+    print "    uint64_t scratch[%d];" % (3*nw+1)
     print ""
     print "    memset(out, 0xAA, sizeof out);"
     print "    mont_mult(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)

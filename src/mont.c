@@ -76,16 +76,21 @@ STATIC uint64_t inverse64(uint64_t a)
  */
 STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
 {
+    unsigned mask = -1;
+    unsigned result = 0;
     size_t i, j;
 
-    i = nw-1;
+    i = nw - 1;
     for (j=0; j<nw; j++, i--) {
-        if (x[i] == y[i]) {
-            continue;
-        }
-        return x[i] > y[i];
+        unsigned greater, lower;
+
+        greater = x[i] > y[i];
+        lower = x[i] < y[i];
+        result |= mask & (greater | (lower << 1));
+        mask &= (greater ^ lower) - 1;
     }
-    return 1;
+
+    return result<2;
 }
 
 /*
@@ -227,7 +232,7 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
  * @param b     The second term (already in Montgomery form, b*R mod N)
  * @param b     The modulus (in normal form), such that R>N
  * @param m0    Least-significant word of the oppossite of the inverse of n modulo R, that is, inv(-n[0], R)
- * @param t     Temporary scratchpad with 2*nw+1 words
+ * @param t     Temporary scratchpad with 3*nw+1 words
  * @param nw    Number of words making up the 3 integers: out, a, and b.
  *              It also defines R as 2^(64*nw).
  *
@@ -235,7 +240,10 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
  */
 STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
-    unsigned i;
+    size_t i;
+    uint64_t *t2, mask;
+
+    t2 = &t[2*nw+1];    /** Point to last nw words **/
 
     if (a == b) {
         square_w(t, a, nw);
@@ -273,11 +281,14 @@ STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const
     
     assert(t[2*nw] <= 1); /** MSW **/
 
+    /** t[0..nw-1] == 0 **/
+    
     /** Divide by R and possibly subtract n **/
-    if (t[2*nw] == 1 || ge(&t[nw], n, nw)) {
-        sub(&t[nw], &t[nw], n, nw);
+    sub(t2, &t[nw], n, nw);
+    mask = (t[2*nw] == 1 || ge(&t[nw], n, nw)) - 1;
+    for (i=0; i<nw; i++) {
+        out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
     }
-    memcpy(out, &t[nw], sizeof(uint64_t)*nw);
 }
 
 /* ---- PUBLIC FUNCTIONS ---- */
@@ -406,7 +417,7 @@ int mont_from_bytes(uint64_t **out, const MontContext *ctx, const uint8_t *numbe
     }
 
     /** Scratchpad **/
-    tmp2 = (uint64_t*)calloc(ctx->words*2+1, sizeof(uint64_t));
+    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
     if (NULL == tmp2) {
         res = ERR_MEMORY;
         goto cleanup;
@@ -448,7 +459,7 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
         return ERR_MEMORY;
 
     /** scratchpad **/
-    tmp2 = (uint64_t*)calloc(ctx->words*2+1, sizeof(uint64_t));
+    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
     if (NULL == tmp2) {
         free(tmp1);
         return ERR_MEMORY;
