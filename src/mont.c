@@ -91,12 +91,13 @@ STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
 /*
  * Subtract integer b from a, leaving the difference in a.
  *
+ * @param out   Where to store the result
  * @param a     Number to subtract from
  * @param b     Number to subtract
  * @param nw    The number of words that make up both a and b
  * @result      0 if there is no borrow, 1 otherwise
  */
-STATIC uint64_t sub(uint64_t *a, const uint64_t *b, size_t nw)
+STATIC uint64_t sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw)
 {
     size_t i;
     uint64_t borrow1 , borrow2;
@@ -104,10 +105,10 @@ STATIC uint64_t sub(uint64_t *a, const uint64_t *b, size_t nw)
     borrow2 = 0;
     for (i=0; i<nw; i++) {
         borrow1 = b[i] > a[i];
-        a[i] -= b[i];
+        out[i] = a[i] - b[i];
 
-        borrow1 |= borrow2 > a[i];
-        a[i] -= borrow2;
+        borrow1 |= borrow2 > out[i];
+        out[i] -= borrow2;
 
         borrow2 = borrow1;
     }
@@ -150,7 +151,7 @@ STATIC void rsquare(uint64_t *r2_mod_n, uint64_t *n, size_t nw)
         
         /** Subtract n if the result exceeds it **/
         while (overflow || ge(r2_mod_n, n, nw)) {
-            sub(r2_mod_n, n, nw);
+            sub(r2_mod_n, r2_mod_n, n, nw);
             overflow = 0;
         }
     }
@@ -274,7 +275,7 @@ STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const
 
     /** Divide by R and possibly subtract n **/
     if (t[2*nw] == 1 || ge(&t[nw], n, nw)) {
-        sub(&t[nw], n, nw);
+        sub(&t[nw], &t[nw], n, nw);
     }
     memcpy(out, &t[nw], sizeof(uint64_t)*nw);
 }

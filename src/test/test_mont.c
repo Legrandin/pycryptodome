@@ -3,7 +3,7 @@
 #include "mont.h"
 
 int ge(const uint64_t *x, const uint64_t *y, size_t nw);
-uint64_t sub(uint64_t *a, const uint64_t *b, size_t nw);
+uint64_t sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw);
 void rsquare(uint64_t *r2, uint64_t *n, size_t nw);
 
 void test_ge(void)
@@ -25,22 +25,26 @@ void test_sub(void)
     uint64_t res;
     uint64_t x[2] = { 1, 2 };
     uint64_t y[2] = { 2, 1 };
+    uint64_t out[2];
 
-    res = sub(x, x, 2);
+    memset(out, 0xFF, sizeof out);
+    res = sub(out, x, x, 2);
     assert(res == 0);
-    assert(x[0] == 0 && x[1] == 0);
+    assert(out[0] == 0 && out[1] == 0);
 
+    memset(out, 0xFF, sizeof out);
     x[0] = 1; x[1] = 2;
-    res = sub(x, y, 2);
+    res = sub(out, x, y, 2);
     assert(res == 0);
-    assert(x[0] == 0xFFFFFFFFFFFFFFFFUL);
-    assert(x[1] == 0);
+    assert(out[0] == 0xFFFFFFFFFFFFFFFFUL);
+    assert(out[1] == 0);
     
+    memset(out, 0xFF, sizeof out);
     x[0] = 1; x[1] = 2;
-    res = sub(y, x, 2);
+    res = sub(out, y, x, 2);
     assert(res == 1);
-    assert(y[0] == 1);
-    assert(y[1] == 0xFFFFFFFFFFFFFFFFUL);
+    assert(out[0] == 1);
+    assert(out[1] == 0xFFFFFFFFFFFFFFFFUL);
 }
 
 void test_rsquare(void)
