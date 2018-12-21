@@ -238,7 +238,7 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
  *
  * Useful read: https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
  */
-STATIC void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
     size_t i;
     uint64_t *t2, mask;
@@ -384,7 +384,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         res = ERR_MEMORY;
         goto cleanup;
     }
-    mont_mult(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
 
     /** Pre-compute modulus - 2 **/
     /** Modulus is guaranteed to be >= 3 **/
@@ -457,7 +457,7 @@ int mont_from_bytes(uint64_t **out, const MontContext *ctx, const uint8_t *numbe
         goto cleanup;
     }
 
-    mont_mult(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult_internal(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
     res = 0;
 
 cleanup:
@@ -498,7 +498,7 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
         return ERR_MEMORY;
     }
 
-    mont_mult(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult_internal(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, tmp2, ctx->words);
     words_to_bytes(number, ctx->bytes, tmp1, ctx->words);
 
     free(tmp2);
@@ -530,6 +530,32 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, const MontCont
         carry += out[i] < b[i];
     }
 
+    return 0;
+}
+
+/*
+ * Multiply two numbers in Montgomery representation.
+ *
+ * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
+ * @param a     First term
+ * @param k     Second term
+ * @param ctx   Montgomery context
+ * @return      0 for success, the relevant error code otherwise
+ */
+int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, const MontContext *ctx)
+{
+    uint64_t *t = NULL;
+
+    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
+        return ERR_NULL;
+
+    t = (uint64_t*)calloc(3*ctx->words+1, sizeof(uint64_t));
+    if (NULL == t)
+        return ERR_MEMORY;
+
+    mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, t, ctx->words);
+
+    free(t);
     return 0;
 }
 
@@ -647,9 +673,9 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, MontContext *ctx)
     /** Left-to-right exponentiation **/
     for (;;) {
         for (;;) {
-            mont_mult(tmp1, out, out, ctx->modulus, ctx->m0, tmp2, ctx->words);
+            mont_mult_internal(tmp1, out, out, ctx->modulus, ctx->m0, tmp2, ctx->words);
             if (exponent[idx_word] & bit) {
-                mont_mult(out, tmp1, a, ctx->modulus, ctx->m0, tmp2, ctx->words);
+                mont_mult_internal(out, tmp1, a, ctx->modulus, ctx->m0, tmp2, ctx->words);
             } else {
                 memcpy(out, tmp1, ctx->bytes);
             }

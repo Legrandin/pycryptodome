@@ -1,4 +1,4 @@
-"""Make unit test for mont_mult() in mont.c"""
+"""Make unit test for mont_mult() and mont_mult_internal() in mont.c"""
 
 from common import counter, make_main, split64, inverse
 
@@ -35,6 +35,12 @@ def make_test(a, b, modulus):
     for ds in (a_m_s, b_m_s, modulus_s, result_m_s):
         ds += [0] * (nw - len(ds))
 
+    # Modulus also byte encoded, big endian
+    modulus_b = []
+    while modulus > 0:
+        modulus_b.insert(0, hex(modulus % 256))
+        modulus >>= 8
+
     test_nr = counter.next()
     print ""
     print "void test_%d() {" % test_nr
@@ -46,19 +52,44 @@ def make_test(a, b, modulus):
     print "    uint64_t scratch[%d];" % (3*nw+1)
     print ""
     print "    memset(out, 0xAA, sizeof out);"
-    print "    mont_mult(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)
+    print "    mont_mult_internal(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)
     print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
     print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw
     print "}"
     print ""
+
+    test_nr = counter.next()
+    print ""
+    print "void test_%d() {" % test_nr
+    print "    const uint64_t a[] = {" + ", ".join(a_m_s) + "};"
+    print "    const uint64_t b[] = {" + ", ".join(b_m_s) + "};"
+    print "    const uint8_t modulus[] = {" + ", ".join(modulus_b) + "};"
+    print "    const uint64_t expected[] = {" + ", ".join(result_m_s) + "};"
+    print "    uint64_t out[%d];" % (nw+1)
+    print "    MontContext *ctx;"
+    print "    int res;"
+    print ""
+    print 
+    print "    res = mont_context_init(&ctx, modulus, sizeof modulus);"
+    print "    assert(res == 0);"
+    print "    memset(out, 0xAA, sizeof out);"
+    print "    res = mont_mult(out, a, b, ctx);"
+    print "    assert(res == 0);"
+    print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
+    print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw
+    print "    free(ctx);"
+    print "}"
+    print ""
+
 
 
 print "#include <assert.h>"
 print "#include <string.h>"
 print "#include <stdint.h>"
 print "#include <stdio.h>"
+print '#include "mont.h"'
 print ""
-print "void mont_mult(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);"
+print "void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);"
 
 make_test(2, 3, 255)
 make_test(2, 240, 255)
