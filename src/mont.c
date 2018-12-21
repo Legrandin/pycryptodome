@@ -312,97 +312,14 @@ size_t mont_bytes(MontContext *ctx)
     return ctx->bytes;
 }
 
-/*
- * Create a new context for Montgomery form in the given odd modulus.
- *
- * @param out       The memory area where the pointer to the new Montgomery context
- *                  structure is writter into.
- * @param modulus   The modulus encoded in big endian form.
- * @param mod_len   The length of the modulus in bytes.
- * @return          0 for success, the appropriate code otherwise.
- */
-int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
+int mont_number(uint64_t **out, unsigned count, const MontContext *ctx)
 {
-    MontContext *ctx;
-    uint64_t *tmp2 = NULL;
-    int res;
-
-    if (NULL == out || NULL == modulus)
+    if (NULL == out || NULL == ctx)
         return ERR_NULL;
-
-    if (0 == mod_len)
-        return ERR_NOT_ENOUGH_DATA;
-
-    /** Ensure modulus is odd and at least 3, otherwise we can't compute its inverse over B **/
-    if (is_even(modulus[mod_len-1]))
-        return ERR_VALUE;
-    if (modulus[0] < 3) {
-        size_t i;
-        for (i=1; i<mod_len && modulus[i]; i++);
-        if (i == mod_len)
-            return ERR_VALUE; 
-    }
-
-    *out = ctx = (MontContext*)calloc(1, sizeof(MontContext));
-    if (NULL == ctx)
+    *out = (uint64_t*)calloc(count * ctx->words, sizeof(uint64_t));
+    if (NULL == *out)
         return ERR_MEMORY;
-
-    ctx->words = (mod_len + 7) / 8;
-    ctx->bytes = ctx->words * sizeof(uint64_t);
-
-    /** Load modulus N **/
-    ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (0 == ctx->modulus) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    bytes_to_words(ctx->modulus, ctx->words, modulus, mod_len);
-   
-    /** Pre-compute R^2 mod N **/
-    ctx->r2_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (0 == ctx->r2_mod_n) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
-    
-    /** Pre-compute -n[0]^{-1} mod R **/
-    ctx->m0 = inverse64(~ctx->modulus[0]+1);
-
-    /** Prepare 1 **/
-    ctx->one = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    ctx->one[0] = 1;
-    
-    /** Pre-compute R mod N **/
-    ctx->r_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (NULL == ctx->r_mod_n) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
-    if (NULL == tmp2) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
-
-    /** Pre-compute modulus - 2 **/
-    /** Modulus is guaranteed to be >= 3 **/
-    ctx->modulus_min_2 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (NULL == ctx->modulus_min_2) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    sub(ctx->modulus_min_2, ctx->modulus, ctx->one, ctx->words);
-    sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
-
-    res = 0;
-
-cleanup:
-    free(tmp2);
-    if (res != 0)
-        mont_context_free(ctx);
-    return res;
+    return 0;
 }
 
 /*
@@ -509,25 +426,51 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
 /*
  * Add two numbers in Montgomery representation.
  *
- * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
+ * @param out   Where to store the result; it must have been created with mont_number(&p,1,ctx)
  * @param a     First term
  * @param b     Second term
+ * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx)
  * @param ctx   Montgomery context
  * @return      0 for success, the relevant error code otherwise
  */
-int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, const MontContext *ctx)
+int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp, const MontContext *ctx)
 {
-    size_t i;
-    unsigned carry;
+    unsigned i;
+    unsigned carry, borrow1, borrow2;
+    uint64_t overflow, mask;
+    uint64_t *tmp2;
 
-    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
+    if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
+    tmp2 = tmp + ctx->words;
+
+    /*
+     * Compute sum in tmp[], and subtract modulus[]
+     * from tmp[] into tmp2[].
+     */
+    borrow2 = 0;
     for (i=0, carry=0; i<ctx->words; i++) {
-        out[i] = a[i] + carry;
-        carry = out[i] < carry;
-        out[i] += b[i];
-        carry += out[i] < b[i];
+        tmp[i] = a[i] + carry;
+        carry = tmp[i] < carry;
+        tmp[i] += b[i];
+        carry += tmp[i] < b[i];
+
+        borrow1 = ctx->modulus[i] > tmp[i];
+        tmp2[i] = tmp[i] - ctx->modulus[i];
+        borrow1 |= borrow2 > tmp2[i];
+        tmp2[i] -= borrow2;
+        borrow2 = borrow1;
+    }
+
+    /*
+     * If there is no borrow or if there is carry,
+     * tmp[] is larger than modulus, so we must return tmp2[].
+     */
+    overflow = carry | (borrow2 ^ 1);
+    mask = !overflow - 1;
+    for (i=0; i<ctx->words; i++) {
+        out[i] = (tmp[i] & ~mask) | (tmp2[i] & mask);
     }
 
     return 0;
@@ -536,7 +479,7 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, const MontCont
 /*
  * Multiply two numbers in Montgomery representation.
  *
- * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
+ * @param out   Where to store the result; it must have been created with mont_number(&p,1,ctx)
  * @param a     First term
  * @param k     Second term
  * @param ctx   Montgomery context
@@ -560,61 +503,52 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, const MontCon
 }
 
 /*
- * Multiply a number in Montgomery representation with a scalar.
- *
- * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
- * @param a     First term
- * @param k     Second term (scalar)
- * @param ctx   Montgomery context
- * @return      0 for success, the relevant error code otherwise
- */
-int mont_mult_scalar(uint64_t* out, const uint64_t* a, uint64_t k, const MontContext *ctx)
-{
-    size_t i;
-    unsigned carry;
-
-    if (NULL == out || NULL == a || NULL == ctx)
-        return ERR_NULL;
-
-    for (i=0, carry=0; i<ctx->words; i++) {
-        uint64_t prod_lo, prod_hi;
-
-        DP_MULT(a[i], k, prod_lo, prod_hi);
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        out[i] = prod_lo;
-        carry = prod_hi;
-    }
-
-    return 0;
-}
-
-/*
  * Subtract integer b from a.
  *
- * @param out   Where to store the result; it must have space for mont_bytes(ctx) bytes
+ * @param out   Where to store the result; it must have been created with mont_number(&p,1,ctx)
  * @param a     Number to subtract from
  * @param b     Number to subtract
+ * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx)
  * @param ctx   Montgomery context
  * @return      0 for success, the relevant error code otherwise
  */
-int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, MontContext *ctx)
+int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx)
 {
-    size_t i;
-    uint64_t borrow1 , borrow2;
+    unsigned i;
+    unsigned carry, borrow1 , borrow2;
+    uint64_t *tmp2;
+    uint64_t mask;
 
-    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
+    if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
+    tmp2 = tmp + ctx->words;
+
+    /*
+     * Compute difference in tmp[], and add modulus[]
+     * to tmp[] into tmp2[].
+     */
     borrow2 = 0;
+    carry = 0;
     for (i=0; i<ctx->words; i++) {
         borrow1 = b[i] > a[i];
-        out[i] = a[i] - b[i];
-
-        borrow1 |= borrow2 > out[i];
-        out[i] -= borrow2;
-
+        tmp[i] = a[i] - b[i];
+        borrow1 |= borrow2 > tmp[i];
+        tmp[i] -= borrow2;
         borrow2 = borrow1;
+
+        tmp2[i] = tmp[i] + carry;
+        carry = tmp2[i] < carry;
+        tmp2[i] += ctx->modulus[i];
+        carry += tmp2[i] < ctx->modulus[i];
+    }
+
+    /*
+     * If there is no borrow, tmp[] is smaller than modulus.
+     */
+    mask = (uint64_t)borrow2 - 1;
+    for (i=0; i<ctx->words; i++) {
+        out[i] = (tmp[i] & mask) | (tmp2[i] & ~mask);
     }
 
     return 0;
@@ -631,7 +565,7 @@ int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, MontContext *ctx)
  * @param ctx   Montgomery context
  * @return      0 for success, the relevant error code otherwise
  */
-int mont_inv_prime(uint64_t *out, uint64_t *a, MontContext *ctx)
+int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
 {
     unsigned idx_word;
     uint64_t bit;
@@ -661,9 +595,8 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, MontContext *ctx)
     for (;;) {
         if (exponent[idx_word] != 0)
             break;
-        if (idx_word == 0)
+        if (idx_word-- == 0)
             break;
-        idx_word--;
     }
     for (bit = (uint64_t)1 << 63; 0 == (exponent[idx_word] & bit); bit--);
 
@@ -672,21 +605,18 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, MontContext *ctx)
 
     /** Left-to-right exponentiation **/
     for (;;) {
-        for (;;) {
+        while (bit > 0) {
             mont_mult_internal(tmp1, out, out, ctx->modulus, ctx->m0, tmp2, ctx->words);
             if (exponent[idx_word] & bit) {
                 mont_mult_internal(out, tmp1, a, ctx->modulus, ctx->m0, tmp2, ctx->words);
             } else {
                 memcpy(out, tmp1, ctx->bytes);
             }
-            if (bit == 1)
-                break;
             bit >>= 1;
         }
-        if (idx_word == 0)
+        if (idx_word-- == 0)
             break;
-        idx_word--;
-        bit = 1UL << 63;
+        bit = (uint64_t)1 << 63;
     }
     res = 0;
 
@@ -695,3 +625,106 @@ cleanup:
     free(tmp2);
     return res;
 }
+
+/*
+ * Create a new context for Montgomery form in the given odd modulus.
+ *
+ * @param out       The memory area where the pointer to the new Montgomery context
+ *                  structure is writter into.
+ * @param modulus   The modulus encoded in big endian form.
+ * @param mod_len   The length of the modulus in bytes.
+ * @return          0 for success, the appropriate code otherwise.
+ */
+int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
+{
+    MontContext *ctx;
+    uint64_t *tmp2 = NULL;
+    int res;
+
+    if (NULL == out || NULL == modulus)
+        return ERR_NULL;
+
+    if (0 == mod_len)
+        return ERR_NOT_ENOUGH_DATA;
+
+    /** Ensure modulus is odd and at least 3, otherwise we can't compute its inverse over B **/
+    if (is_even(modulus[mod_len-1]))
+        return ERR_VALUE;
+    if (modulus[0] < 3) {
+        size_t i;
+        for (i=1; i<mod_len && modulus[i]; i++);
+        if (i == mod_len)
+            return ERR_VALUE; 
+    }
+
+    *out = ctx = (MontContext*)calloc(1, sizeof(MontContext));
+    if (NULL == ctx)
+        return ERR_MEMORY;
+
+    ctx->words = (mod_len + 7) / 8;
+    ctx->bytes = ctx->words * sizeof(uint64_t);
+
+    /** Load modulus N **/
+    ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (0 == ctx->modulus) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    bytes_to_words(ctx->modulus, ctx->words, modulus, mod_len);
+   
+    /** Pre-compute R^2 mod N **/
+    ctx->r2_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (0 == ctx->r2_mod_n) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
+    
+    /** Pre-compute -n[0]^{-1} mod R **/
+    ctx->m0 = inverse64(~ctx->modulus[0]+1);
+
+    /** Prepare 1 **/
+    ctx->one = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    ctx->one[0] = 1;
+    
+    /** Pre-compute R mod N **/
+    ctx->r_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == ctx->r_mod_n) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
+    if (NULL == tmp2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+
+    /** Pre-compute modulus - 2 **/
+    /** Modulus is guaranteed to be >= 3 **/
+    ctx->modulus_min_2 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == ctx->modulus_min_2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    sub(ctx->modulus_min_2, ctx->modulus, ctx->one, ctx->words);
+    sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
+
+    ctx->mont_number = mont_number;
+    ctx->mont_from_bytes = mont_from_bytes;
+    ctx->mont_to_bytes = mont_to_bytes;
+    ctx->mont_add = mont_add;
+    ctx->mont_mult = mont_mult;
+    ctx->mont_sub = mont_sub;
+    ctx->mont_inv_prime = mont_inv_prime;
+
+    res = 0;
+
+cleanup:
+    free(tmp2);
+    if (res != 0)
+        mont_context_free(ctx);
+    return res;
+}
+
+
