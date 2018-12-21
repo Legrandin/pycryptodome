@@ -78,6 +78,8 @@ void test_mont_context_init(void)
 
     res = mont_context_init(&ctx, modulus, 4);
     assert(res == 0);
+
+    mont_context_free(ctx);
 }
 
 void test_mont_from_bytes(void)
@@ -108,6 +110,9 @@ void test_mont_from_bytes(void)
     assert(output != NULL);
     assert(output[0] == 18446744073709420033UL);
     assert(output[1] == 71492449356218367L);
+    free(output);
+    
+    mont_context_free(ctx);
 }
 
 void test_mont_to_bytes(void)
@@ -134,6 +139,8 @@ void test_mont_to_bytes(void)
     res = mont_to_bytes(number, ctx, number_mont);
     assert(res == 0);
     assert(0 == memcmp(number, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x02", 16));
+    
+    mont_context_free(ctx);
 }
 
 void test_mont_add(void)
@@ -160,6 +167,8 @@ void test_mont_add(void)
     assert(res == 0);
     assert(out[0] == 0);
     assert(out[1] == 0);
+
+    mont_context_free(ctx);
 }
 
 void test_mont_mult_scalar(void)
@@ -185,6 +194,8 @@ void test_mont_mult_scalar(void)
     assert(out[0] == 0xeed9c4af9a857038UL);
     assert(out[1] == 0xeed9c4af9a85703bUL);
     assert(out[2] == -1);
+
+    mont_context_free(ctx);
 }
 
 void test_mont_sub(void)
@@ -213,6 +224,60 @@ void test_mont_sub(void)
     assert(out[0] == -1);
     assert(out[1] == -1);
     assert(out[2] == 0xA);
+
+    mont_context_free(ctx);
+}
+
+void test_mont_inv_prime(void)
+{
+    int res;
+    MontContext *ctx;
+    uint8_t modulus_f6[9] = { 1, 0, 0, 0, 0, 0, 0, 0, 1 }; // F6 = 2^64 + 1
+    uint64_t a[2] = { 1, 0 };
+    uint64_t out[2];
+    uint64_t *p;
+    uint8_t buf[16];
+
+    res = mont_context_init(&ctx, modulus_f6, sizeof modulus_f6);
+    assert(res == 0);
+
+    res = mont_inv_prime(NULL, a, ctx);
+    assert(res == ERR_NULL);
+    res = mont_inv_prime(out, NULL, ctx);
+    assert(res == ERR_NULL);
+    res = mont_inv_prime(out, a, NULL);
+    assert(res == ERR_NULL);
+
+    /* 1 == R mod N when N = F6 */
+    a[0] = 1;   a[1] = 0;
+    out[0] = 1; out[1] = 0;
+    res = mont_inv_prime(out, a, ctx);
+    assert(res == 0);
+    assert(out[0] == 1);
+    assert(out[1] == 0);
+
+    assert(sizeof buf == mont_bytes(ctx));
+
+    /* 2^{-1} mod N = 0x8000000000000001 */
+    res = mont_from_bytes(&p, ctx, (uint8_t*)"\x00\x02", 2);
+    assert(res == 0);
+    res = mont_inv_prime(out, p, ctx);
+    assert(res == 0);
+    res = mont_to_bytes(buf, ctx, out);
+    assert(res == 0);
+    assert(0 == memcmp(buf, (uint8_t*)"\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x01", 16));
+
+    /* 3^{-1} mod N = 0x287cbedc41008ca6 */
+    res = mont_from_bytes(&p, ctx, (uint8_t*)"\x00\x03", 2);
+    assert(res == 0);
+    res = mont_inv_prime(out, p, ctx);
+    assert(res == 0);
+    res = mont_to_bytes(buf, ctx, out);
+    assert(res == 0);
+    assert(0 == memcmp(buf, (uint8_t*)"\x00\x00\x00\x00\x00\x00\x00\x00\x28\x7c\xbe\xdc\x41\x00\x8c\xa6", 16));
+
+    free(p);
+    mont_context_free(ctx);
 }
 
 int main(void) {
@@ -225,5 +290,6 @@ int main(void) {
     test_mont_add();
     test_mont_mult_scalar();
     test_mont_sub();
+    test_mont_inv_prime();
     return 0;
 }

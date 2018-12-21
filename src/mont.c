@@ -299,7 +299,9 @@ void mont_context_free(MontContext *ctx)
         return;
     free(ctx->one);
     free(ctx->r2_mod_n);
+    free(ctx->r_mod_n);
     free(ctx->modulus);
+    free(ctx->modulus_min_2);
     free(ctx);
 }
 
@@ -316,12 +318,13 @@ size_t mont_bytes(MontContext *ctx)
  * @param out       The memory area where the pointer to the new Montgomery context
  *                  structure is writter into.
  * @param modulus   The modulus encoded in big endian form.
- * @param mod_len   The length of the modulus.
+ * @param mod_len   The length of the modulus in bytes.
  * @return          0 for success, the appropriate code otherwise.
  */
 int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 {
     MontContext *ctx;
+    uint64_t *tmp2 = NULL;
     int res;
 
     if (NULL == out || NULL == modulus)
@@ -330,9 +333,15 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     if (0 == mod_len)
         return ERR_NOT_ENOUGH_DATA;
 
-    /** Ensure modulus is odd, otherwise we can't compute its inverse over B **/
+    /** Ensure modulus is odd and at least 3, otherwise we can't compute its inverse over B **/
     if (is_even(modulus[mod_len-1]))
         return ERR_VALUE;
+    if (modulus[0] < 3) {
+        size_t i;
+        for (i=1; i<mod_len && modulus[i]; i++);
+        if (i == mod_len)
+            return ERR_VALUE; 
+    }
 
     *out = ctx = (MontContext*)calloc(1, sizeof(MontContext));
     if (NULL == ctx)
@@ -356,18 +365,43 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         goto cleanup;
     }
     rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
-
+    
     /** Pre-compute -n[0]^{-1} mod R **/
     ctx->m0 = inverse64(~ctx->modulus[0]+1);
 
     /** Prepare 1 **/
     ctx->one = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
     ctx->one[0] = 1;
+    
+    /** Pre-compute R mod N **/
+    ctx->r_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == ctx->r_mod_n) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
+    if (NULL == tmp2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    mont_mult(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
 
-    return 0;
+    /** Pre-compute modulus - 2 **/
+    /** Modulus is guaranteed to be >= 3 **/
+    ctx->modulus_min_2 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == ctx->modulus_min_2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    sub(ctx->modulus_min_2, ctx->modulus, ctx->one, ctx->words);
+    sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
+
+    res = 0;
 
 cleanup:
-    mont_context_free(ctx);
+    free(tmp2);
+    if (res != 0)
+        mont_context_free(ctx);
     return res;
 }
 
@@ -424,14 +458,13 @@ int mont_from_bytes(uint64_t **out, const MontContext *ctx, const uint8_t *numbe
     }
 
     mont_mult(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
-    free(tmp2);
-    free(tmp1);
-    return 0;
+    res = 0;
 
 cleanup:
     free(tmp2);
     free(tmp1);
-    free(encoded);
+    if (res != 0)
+        free(encoded);
     return res;
 }
 
@@ -559,4 +592,80 @@ int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, MontContext *ctx)
     }
 
     return 0;
+}
+
+/*
+ * Compute the modular inverse of an integer in Montgomery form.
+ *
+ * Condition: the modulus defining the Montgomery context MUST BE a non-secret prime number.
+ *
+ * @param out   Where the inverse will be stored (in Montgomery form); it must have
+ *              space for mont_bytes(ctx) bytes.
+ * @param a     The number to compute the modular inverse of, already in Montgomery form
+ * @param ctx   Montgomery context
+ * @return      0 for success, the relevant error code otherwise
+ */
+int mont_inv_prime(uint64_t *out, uint64_t *a, MontContext *ctx)
+{
+    unsigned idx_word;
+    uint64_t bit;
+    uint64_t *tmp1 = NULL;
+    uint64_t *tmp2 = NULL;
+    uint64_t *exponent = NULL;
+    int res;
+
+    if (NULL == out || NULL == a || NULL == ctx)
+        return ERR_NULL;
+
+    tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == tmp1)
+        return ERR_MEMORY;
+    
+    tmp2 = (uint64_t*)calloc(3*ctx->words+1, sizeof(uint64_t));
+    if (NULL == tmp2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+   
+    /** Exponent is guaranteed to be >0 **/ 
+    exponent = ctx->modulus_min_2;
+
+    /* Find most significant bit */
+    idx_word = ctx->words-1;
+    for (;;) {
+        if (exponent[idx_word] != 0)
+            break;
+        if (idx_word == 0)
+            break;
+        idx_word--;
+    }
+    for (bit = (uint64_t)1 << 63; 0 == (exponent[idx_word] & bit); bit--);
+
+    /* Start from 1 (in Montgomery form, which is R mod N) */
+    memcpy(out, ctx->r_mod_n, ctx->bytes);
+
+    /** Left-to-right exponentiation **/
+    for (;;) {
+        for (;;) {
+            mont_mult(tmp1, out, out, ctx->modulus, ctx->m0, tmp2, ctx->words);
+            if (exponent[idx_word] & bit) {
+                mont_mult(out, tmp1, a, ctx->modulus, ctx->m0, tmp2, ctx->words);
+            } else {
+                memcpy(out, tmp1, ctx->bytes);
+            }
+            if (bit == 1)
+                break;
+            bit >>= 1;
+        }
+        if (idx_word == 0)
+            break;
+        idx_word--;
+        bit = 1UL << 63;
+    }
+    res = 0;
+
+cleanup:
+    free(tmp1);
+    free(tmp2);
+    return res;
 }
