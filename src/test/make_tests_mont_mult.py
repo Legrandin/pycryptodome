@@ -68,12 +68,13 @@ def make_test(a, b, modulus):
     print "    uint64_t out[%d];" % (nw+1)
     print "    MontContext *ctx;"
     print "    int res;"
+    print "    uint64_t scratch[%d];" % (3*nw+1)
     print ""
     print 
     print "    res = mont_context_init(&ctx, modulus, sizeof modulus);"
     print "    assert(res == 0);"
     print "    memset(out, 0xAA, sizeof out);"
-    print "    res = mont_mult(out, a, b, ctx);"
+    print "    res = mont_mult(out, a, b, scratch, ctx);"
     print "    assert(res == 0);"
     print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
     print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw

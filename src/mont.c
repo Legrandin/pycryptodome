@@ -308,7 +308,7 @@ void mont_context_free(MontContext *ctx)
 /*
  * Return how many bytes a big endian-encoded number takes in memory.
  */
-size_t mont_bytes(MontContext *ctx)
+size_t mont_bytes(const MontContext *ctx)
 {
     if (NULL == ctx)
         return 0;
@@ -499,24 +499,18 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp,
  *
  * @param out   The location where the result will be stored at; it must have been created with mont_number(&p,1,ctx)
  * @param a     The first term.
- * @param k     The second term.
+ * @param b     The second term.
+ * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,3,ctx).
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
-int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, const MontContext *ctx)
+int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx)
 {
-    uint64_t *t = NULL;
-
-    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
+    if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
-    t = (uint64_t*)calloc(3*ctx->words+1, sizeof(uint64_t));
-    if (NULL == t)
-        return ERR_MEMORY;
+    mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
 
-    mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, t, ctx->words);
-
-    free(t);
     return 0;
 }
 
@@ -530,7 +524,7 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, const MontCon
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
-int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx)
+int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx)
 {
     unsigned i;
     unsigned carry, borrow1 , borrow2;
