@@ -93,19 +93,19 @@ void test_mont_from_bytes(void)
     res = mont_context_init(&ctx, modulus, 16);
     assert(res == 0);
 
-    res = mont_from_bytes(NULL, ctx, number, 2);
+    res = mont_from_bytes(NULL, number, 2, ctx);
     assert(res == ERR_NULL);
     
-    res = mont_from_bytes(&output, NULL, number, 2);
+    res = mont_from_bytes(&output, NULL, 2, ctx);
     assert(res == ERR_NULL);
     
-    res = mont_from_bytes(&output, ctx, NULL, 2);
+    res = mont_from_bytes(&output, number, 2, NULL);
     assert(res == ERR_NULL);
     
-    res = mont_from_bytes(&output, ctx, number, 0);
+    res = mont_from_bytes(&output, number, 0, ctx);
     assert(res == ERR_NOT_ENOUGH_DATA);
     
-    res = mont_from_bytes(&output, ctx, number, 2);
+    res = mont_from_bytes(&output, number, 2, ctx);
     assert(res == 0);
     assert(output != NULL);
     assert(output[0] == 18446744073709420033UL);
@@ -129,14 +129,14 @@ void test_mont_to_bytes(void)
     assert(res == 0);
     assert(mont_bytes(ctx) == 16);
 
-    res = mont_to_bytes(NULL, ctx, number_mont);
+    res = mont_to_bytes(NULL, number_mont, ctx);
     assert(res == ERR_NULL);
-    res = mont_to_bytes(number, NULL, number_mont);
+    res = mont_to_bytes(number, NULL, ctx);
     assert(res == ERR_NULL);
-    res = mont_to_bytes(number, ctx, NULL);
+    res = mont_to_bytes(number, number_mont, NULL);
     assert(res == ERR_NULL);
 
-    res = mont_to_bytes(number, ctx, number_mont);
+    res = mont_to_bytes(number, number_mont, ctx);
     assert(res == 0);
     assert(0 == memcmp(number, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x02", 16));
     
@@ -289,21 +289,21 @@ void test_mont_inv_prime(void)
     assert(sizeof buf == mont_bytes(ctx));
 
     /* 2^{-1} mod N = 0x8000000000000001 */
-    res = mont_from_bytes(&p, ctx, (uint8_t*)"\x00\x02", 2);
+    res = mont_from_bytes(&p, (uint8_t*)"\x00\x02", 2, ctx);
     assert(res == 0);
     res = mont_inv_prime(out, p, ctx);
     assert(res == 0);
-    res = mont_to_bytes(buf, ctx, out);
+    res = mont_to_bytes(buf, out, ctx);
     assert(res == 0);
     assert(0 == memcmp(buf, (uint8_t*)"\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x01", 16));
     free(p);
 
     /* 3^{-1} mod N = 0x287cbedc41008ca6 */
-    res = mont_from_bytes(&p, ctx, (uint8_t*)"\x00\x03", 2);
+    res = mont_from_bytes(&p, (uint8_t*)"\x00\x03", 2, ctx);
     assert(res == 0);
     res = mont_inv_prime(out, p, ctx);
     assert(res == 0);
-    res = mont_to_bytes(buf, ctx, out);
+    res = mont_to_bytes(buf, out, ctx);
     assert(res == 0);
     assert(0 == memcmp(buf, (uint8_t*)"\x00\x00\x00\x00\x00\x00\x00\x00\x28\x7c\xbe\xdc\x41\x00\x8c\xa6", 16));
     free(p);

@@ -350,7 +350,7 @@ int mont_number(uint64_t **out, unsigned count, const MontContext *ctx)
  *                  smaller than the output of mont_bytes(ctx)).
  * @return          0 in case of success, the relevant error code otherwise.
  */
-int mont_from_bytes(uint64_t **out, const MontContext *ctx, const uint8_t *number, size_t len)
+int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const MontContext *ctx)
 {
     uint64_t *encoded = NULL;
     uint64_t *tmp1 = NULL;
@@ -413,7 +413,7 @@ cleanup:
  * @param mont_number   The number in Montgomery form to transform.
  * @return              0 if successful, the relevant error code otherwise.
  */
-int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_number)
+int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContext *ctx)
 {
     uint64_t *tmp1 = NULL;
     uint64_t *tmp2 = NULL;
