@@ -206,7 +206,7 @@ STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_
  *
  * @param t Where to store the result. Array of  2*nw words.
  * @param a The first term, array of nw words.
- * @param a The first term, array of nw words.
+ * @param b The second term, array of nw words.
  *
  */
 STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
@@ -230,7 +230,7 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
  * @param out   The location where the result is stored
  * @param a     The first term (already in Montgomery form, a*R mod N)
  * @param b     The second term (already in Montgomery form, b*R mod N)
- * @param b     The modulus (in normal form), such that R>N
+ * @param n     The modulus (in normal form), such that R>N
  * @param m0    Least-significant word of the oppossite of the inverse of n modulo R, that is, inv(-n[0], R)
  * @param t     Temporary scratchpad with 3*nw+1 words
  * @param nw    Number of words making up the 3 integers: out, a, and b.
@@ -305,6 +305,9 @@ void mont_context_free(MontContext *ctx)
     free(ctx);
 }
 
+/*
+ * Return how many bytes a big endian-encoded number takes in memory.
+ */
 size_t mont_bytes(MontContext *ctx)
 {
     if (NULL == ctx)
@@ -312,25 +315,40 @@ size_t mont_bytes(MontContext *ctx)
     return ctx->bytes;
 }
 
+/*
+ * Allocate memory for an array of numbers in Montgomery form.
+ *
+ * @param out   The location where the address of the newly allocated
+ *              array will be placed in.
+ *              The caller is responsible for deallocating the memory.
+ * @param count How many numbers the array contains.
+ * @param ctx   The Montgomery context.
+ * @return      0 if successful, the relevant error code otherwise.
+ *
+ */
 int mont_number(uint64_t **out, unsigned count, const MontContext *ctx)
 {
     if (NULL == out || NULL == ctx)
         return ERR_NULL;
+
     *out = (uint64_t*)calloc(count * ctx->words, sizeof(uint64_t));
     if (NULL == *out)
         return ERR_MEMORY;
+
     return 0;
 }
 
 /*
  * Transform a big endian-encoded number into Montgomery form, by performing memory allocation.
  *
- * @param out       The memory area where the pointer to the newly allocated number in Montgomery form will be put.
- *                  The caller is responsible for deallocating this memory.
- * @param ctx       Montgomery context, as created by mont_context_init()
- * @param number    The big endian-encoded number to transform, strictly smaller than the modulus
- * @param len       The length of the big-endian number in bytes
- * @return          0 in case of success, the relevant error code otherwise
+ * @param out       The location where the pointer to the newly allocated memory will be put in.
+ *                  The memory will contain the number encoded in Montgomery form.
+ *                  The caller is responsible for deallocating the memory.
+ * @param ctx       Montgomery context, as created by mont_context_init().
+ * @param number    The big endian-encoded number to transform, strictly smaller than the modulus.
+ * @param len       The length of the big-endian number in bytes (this may be
+ *                  smaller than the output of mont_bytes(ctx)).
+ * @return          0 in case of success, the relevant error code otherwise.
  */
 int mont_from_bytes(uint64_t **out, const MontContext *ctx, const uint8_t *number, size_t len)
 {
@@ -388,12 +406,12 @@ cleanup:
 /*
  * Transform a number from Montgomery representation to big endian-encoding.
  *
- * @param number        The memory area where the pointer to the big endian-encoded number is stored.
- *                      It must be contain mont_bytes(ctx) bytes.
- *                      The number will be padded with zeroes on the left.
+ * @param number        The location where the number will be put in, encoded
+ *                      in big-endian form and with zero padding on the left.
+ *                      It must have been allocated with mont_number(&p, 1, ctx).
  * @param ctx           The address of the Montgomery context.
- * @param mont_number   The array of words that make up the number in Montgomery form.
- *
+ * @param mont_number   The number in Montgomery form to transform.
+ * @return              0 if successful, the relevant error code otherwise.
  */
 int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_number)
 {
@@ -426,12 +444,12 @@ int mont_to_bytes(uint8_t *number, const MontContext *ctx, const uint64_t* mont_
 /*
  * Add two numbers in Montgomery representation.
  *
- * @param out   Where to store the result; it must have been created with mont_number(&p,1,ctx)
- * @param a     First term
- * @param b     Second term
- * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx)
- * @param ctx   Montgomery context
- * @return      0 for success, the relevant error code otherwise
+ * @param out   The location where the result will be stored; it must have been created with mont_number(&p,1,ctx).
+ * @param a     The first term.
+ * @param b     The second term.
+ * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx).
+ * @param ctx   The Montgomery context.
+ * @return      0 for success, the relevant error code otherwise.
  */
 int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp, const MontContext *ctx)
 {
@@ -479,11 +497,11 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp,
 /*
  * Multiply two numbers in Montgomery representation.
  *
- * @param out   Where to store the result; it must have been created with mont_number(&p,1,ctx)
- * @param a     First term
- * @param k     Second term
- * @param ctx   Montgomery context
- * @return      0 for success, the relevant error code otherwise
+ * @param out   The location where the result will be stored at; it must have been created with mont_number(&p,1,ctx)
+ * @param a     The first term.
+ * @param k     The second term.
+ * @param ctx   The Montgomery context.
+ * @return      0 for success, the relevant error code otherwise.
  */
 int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, const MontContext *ctx)
 {
@@ -505,12 +523,12 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, const MontCon
 /*
  * Subtract integer b from a.
  *
- * @param out   Where to store the result; it must have been created with mont_number(&p,1,ctx)
- * @param a     Number to subtract from
- * @param b     Number to subtract
- * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx)
- * @param ctx   Montgomery context
- * @return      0 for success, the relevant error code otherwise
+ * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
+ * @param a     The number it will be subtracted from.
+ * @param b     The number to subtract.
+ * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx).
+ * @param ctx   The Montgomery context.
+ * @return      0 for success, the relevant error code otherwise.
  */
 int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx)
 {
@@ -559,11 +577,11 @@ int mont_sub(uint64_t *out, uint64_t *a, const uint64_t *b, uint64_t *tmp, const
  *
  * Condition: the modulus defining the Montgomery context MUST BE a non-secret prime number.
  *
- * @param out   Where the inverse will be stored (in Montgomery form); it must have
- *              space for mont_bytes(ctx) bytes.
- * @param a     The number to compute the modular inverse of, already in Montgomery form
- * @param ctx   Montgomery context
- * @return      0 for success, the relevant error code otherwise
+ * @param out   The location where the result will be stored at; it must have
+ *              been allocated with mont_number(&p, 1, ctx).
+ * @param a     The number to compute the modular inverse of, already in Montgomery form.
+ * @param ctx   The Montgomery context.
+ * @return      0 for success, the relevant error code otherwise.
  */
 int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
 {
@@ -627,10 +645,10 @@ cleanup:
 }
 
 /*
- * Create a new context for Montgomery form in the given odd modulus.
+ * Create a new context for the Montgomery and the given odd modulus.
  *
- * @param out       The memory area where the pointer to the new Montgomery context
- *                  structure is writter into.
+ * @param out       The locate where the pointer to the newly allocated data will be stored at.
+ *                  The memory will contain the new Montgomery context.
  * @param modulus   The modulus encoded in big endian form.
  * @param mod_len   The length of the modulus in bytes.
  * @return          0 for success, the appropriate code otherwise.
