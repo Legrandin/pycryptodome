@@ -228,7 +228,7 @@ static void sha_compress(hash_state * hs)
     hs->h[4] += e;
 }
 
-EXPORT_SYM int SHA1_init(hash_state **shaState)
+EXPORT_SYM int SHA1_init(hash_state **shaState, const uint8_t *cloned_state, size_t cloned_len)
 {
     hash_state *hs;
 
@@ -240,15 +240,29 @@ EXPORT_SYM int SHA1_init(hash_state **shaState)
     if (NULL == hs)
         return ERR_MEMORY;
 
-    hs->curlen = 0;
-    hs->totbits = 0;
+    if (NULL == cloned_state) {
+        hs->curlen = 0;
+        hs->totbits = 0;
 
-    /** Initial intermediate hash value **/
-    hs->h[0] = 0x67452301;
-    hs->h[1] = 0xefcdab89;
-    hs->h[2] = 0x98badcfe;
-    hs->h[3] = 0x10325476;
-    hs->h[4] = 0xc3d2e1f0;
+        /** Initial intermediate hash value **/
+        hs->h[0] = 0x67452301;
+        hs->h[1] = 0xefcdab89;
+        hs->h[2] = 0x98badcfe;
+        hs->h[3] = 0x10325476;
+        hs->h[4] = 0xc3d2e1f0;
+    } else {
+        unsigned i;
+
+        if (cloned_len % BLOCK_SIZE)
+            return ERR_NOT_ENOUGH_DATA;
+        
+        hs->curlen = 0;
+        hs->totbits = cloned_len*8;
+
+        for (i=0; i<5; i++) {
+            hs->h[i] = LOAD_U32_BIG(cloned_state + 4*i);
+        }
+    }
 
     return 0;
 }

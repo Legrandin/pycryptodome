@@ -24,14 +24,15 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, null_pointer)
 
 _raw_sha1_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA1",
                         """
                         #define SHA1_DIGEST_SIZE 20
 
-                        int SHA1_init(void **shaState);
+                        int SHA1_init(void **shaState, const uint8_t *cloned_state, size_t cloned_len);
                         int SHA1_destroy(void *shaState);
+
                         int SHA1_update(void *hs,
                                           const uint8_t *buf,
                                           size_t len);
@@ -69,9 +70,18 @@ class SHA1Hash(object):
     # ASN.1 Object ID
     oid = "1.3.14.3.2.26"
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, cloned_state=None):
+
+        if cloned_state is None:
+            cloned_digest = null_pointer
+            cloned_len = 0
+        else:
+            cloned_digest, cloned_len = cloned_state
+
         state = VoidPointer()
-        result = _raw_sha1_lib.SHA1_init(state.address_of())
+        result = _raw_sha1_lib.SHA1_init(state.address_of(),
+                                         cloned_digest,
+                                         c_size_t(cloned_len))
         if result:
             raise ValueError("Error %d while instantiating SHA1"
                              % result)
@@ -139,13 +149,13 @@ class SHA1Hash(object):
             raise ValueError("Error %d while copying SHA1" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data=None, cloned_state=None):
         """Create a fresh SHA-1 hash object."""
 
-        return SHA1Hash(data)
+        return SHA1Hash(data, cloned_state)
 
 
-def new(data=None):
+def new(data=None, cloned_state=None):
     """Create a new hash object.
 
     :parameter data:
@@ -153,9 +163,21 @@ def new(data=None):
         It is equivalent to an early call to :meth:`SHA1Hash.update`.
     :type data: byte string/byte array/memoryview
 
+    :parameter cloned_state:
+        Optional. A tuple with an array of 20 bytes (the state of the SHA-1 hash to clone)
+        and the amount of data that was hashed to lead that state (multiple of 64 bytes).
+    :type data: tuple (byte string/byte array/memoryview, integer)
+
     :Return: A :class:`SHA1Hash` hash object
     """
-    return SHA1Hash().new(data)
+
+    if cloned_state:
+        if  len(cloned_state[0]) != 20:
+            raise ValueError("Length of SHA-1 state must be 20 bytes")
+        if cloned_state[1] % SHA1Hash.block_size:
+            raise ValueError("Data length must be a multiple of 64 bytes")
+
+    return SHA1Hash().new(data, cloned_state)
 
 
 # The size of the resulting hash in bytes.
