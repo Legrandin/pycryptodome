@@ -48,7 +48,7 @@ key in a file called ``public_key.pem``, sign a message (with
     >>> message = b"Hello"
     >>> hash_obj = SHA256.new(message)
     >>> signer = DSS.new(key, 'fips-186-3')
-    >>> signature = key.sign(hash_obj)
+    >>> signature = signer.sign(hash_obj)
     >>> 
     >>> # Load the public key
     >>> f = open("public_key.pem", "r")
