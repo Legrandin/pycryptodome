@@ -26,7 +26,7 @@ authenticity of the incoming message::
     >>> h = SHA256.new(message)
     >>> verifier = pss.new(key)
     >>> try:
-    >>>     verifier.verify(h, signature):
+    >>>     verifier.verify(h, signature)
     >>>     print "The signature is authentic."
     >>> except (ValueError, TypeError):
     >>>     print "The signature is not authentic."
