@@ -24,7 +24,7 @@ the authenticity of the message) using the matching *public* RSA key::
         >>> key = RSA.import_key(open('public_key.der').read())
         >>> h = SHA.new(message)
         >>> try:
-        >>>     pkcs1_15.new(key).verify(h, signature):
+        >>>     pkcs1_15.new(key).verify(h, signature)
         >>>     print "The signature is valid."
         >>> except (ValueError, TypeError):
         >>>    print "The signature is not valid."
