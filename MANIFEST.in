@@ -1,14 +1,13 @@
 include MANIFEST.in
+recursive-include lib *.txt
 include *.rst
-include Doc/index.rst
-recursive-include Doc/src *
-include Doc/conf.py Doc/Makefile Doc/make.bat
-include Doc/python-3-changes.txt Doc/Changelog.pycrypto
-graft Doc/LEGAL
-recursive-include src *.h *.c
 include .separate_namespace
 include setup.py pct-speedtest.py compiler_opt.py
+graft Doc
+prune Doc/_build
 include appveyor.yml appveyor/get_wheels.sh appveyor/install.ps1 appveyor/run_with_env.cmd
 include .travis.yml travis/*.sh
+recursive-include src *.h *.c
 graft src/test
+recursive-exclude src *.pyc
 prune src/test/build
