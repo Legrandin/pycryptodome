@@ -266,6 +266,8 @@ package_data = {
     "Crypto.PublicKey" : [ "*.pyi" ],
     "Crypto.Random" : [ "*.pyi" ],
     "Crypto.Signature" : [ "*.pyi" ],
+    "Crypto.IO" : [ "*.pyi" ],
+    "Crypto.Util" : [ "*.pyi" ],
     "Crypto.SelfTest.Cipher" : [
         "test_vectors/AES/*.rsp",
         "test_vectors/TDES/*.rsp",
