@@ -606,10 +606,10 @@ def _create_gcm_cipher(factory, **kwargs):
         key = kwargs.pop("key")
     except KeyError as e:
         raise TypeError("Missing parameter:" + str(e))
-
+    
     nonce = kwargs.pop("nonce", None)
     if nonce is None:
-        nonce = get_random_bytes(16)
+        nonce = get_random_bytes(12)
     mac_len = kwargs.pop("mac_len", 16)
 
     # Not documented - only used for testing
