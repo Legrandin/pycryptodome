@@ -250,9 +250,10 @@ static inline int words_to_bytes(uint8_t *out, size_t len, const uint64_t *x, si
     /* Shorten the input, so that the rightmost word is
      * the most significant one (and non-zero)
      */
-    for(msw = &x[words-1]; 0 == *msw && words > 0; msw--, words--);
-    if (0 == words)
+    for (; words>0 && x[words-1]==0; words--);
+    if (words == 0)
         return 0;
+    msw = &x[words-1];
 
     /* Find how many non-zero bytes there are in the most-significant word */
     STORE_U64_BIG(buf8, *msw);

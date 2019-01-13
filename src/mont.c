@@ -408,7 +408,7 @@ cleanup:
  *
  * @param number        The location where the number will be put in, encoded
  *                      in big-endian form and with zero padding on the left.
- *                      It must have been allocated with mont_number(&p, 1, ctx).
+ *                      Its size is given by mont_bytes(ctx).
  * @param ctx           The address of the Montgomery context.
  * @param mont_number   The number in Montgomery form to transform.
  * @return              0 if successful, the relevant error code otherwise.
@@ -421,12 +421,12 @@ int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContex
     if (NULL == number || NULL == ctx || NULL == mont_number)
         return ERR_NULL;
 
-   /** number in normal form, but still in words **/
+    /** Number in normal form, but still in words **/
     tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
     if (NULL == tmp1)
         return ERR_MEMORY;
 
-    /** scratchpad **/
+    /** Scratchpad **/
     tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
     if (NULL == tmp2) {
         free(tmp1);
@@ -518,6 +518,7 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
  * Subtract integer b from a.
  *
  * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
+ *              It can be the same as either a or b.
  * @param a     The number it will be subtracted from.
  * @param b     The number to subtract.
  * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx).
@@ -639,6 +640,31 @@ cleanup:
 }
 
 /*
+ * Assign a value to a number in Montgomer form.
+ *
+ * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
+ * @param x     The value to set.
+ * @param tmp   Temporary scratchpad with 4*nw+1 words (it can be created with mont_number(&p,5,ctx).
+ * @param ctx   The Montgomery context.
+ * @return      0 for success, the relevant error code otherwise.
+ */
+int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
+{
+    uint64_t *tmp2;
+
+    if (NULL == out || NULL == tmp || NULL == ctx)
+        return ERR_NULL;
+
+    memset(tmp, 0, ctx->bytes);
+    tmp[0] = x;
+
+    tmp2 = &tmp[ctx->words];
+
+    mont_mult_internal(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    return 0;
+}
+
+/*
  * Create a new context for the Montgomery and the given odd modulus.
  *
  * @param out       The locate where the pointer to the newly allocated data will be stored at.
@@ -737,6 +763,64 @@ cleanup:
     if (res != 0)
         mont_context_free(ctx);
     return res;
+}
+
+int mont_is_zero(const uint64_t *a, const MontContext *ctx)
+{
+    unsigned i;
+    uint64_t sum = 0;
+
+    if (NULL == a || NULL == ctx)
+        return -1;
+
+    for (i=0; i<ctx->words; i++) {
+        sum |= *a++;
+    }
+
+    return (sum == 0);
+}
+
+int mont_is_equal(const uint64_t *a, const uint64_t *b, const MontContext *ctx)
+{
+    unsigned i;
+    int result = 0;
+
+    if (NULL == a || NULL == b || NULL == ctx)
+        return -1;
+
+    for (i=0; i<ctx->words; i++) {
+        result |= *a++ ^ *b++;
+    }
+
+    return (result == 0);
+}
+
+int mont_copy(uint64_t *out, const uint64_t *a, const MontContext *ctx)
+{
+    unsigned i;
+
+    if (NULL == out || NULL == a || NULL == ctx)
+        return ERR_NULL;
+
+    for (i=0; i<ctx->words; i++) {
+        *out++ = *a++;
+    }
+
+    return 0;
+}
+
+int mont_clear(uint64_t *out, const MontContext *ctx)
+{
+    unsigned i;
+
+    if (NULL == out || NULL == ctx)
+        return ERR_NULL;
+
+    for (i=0; i<ctx->words; i++) {
+        *out++ = 0;
+    }
+
+    return 0;
 }
 
 
