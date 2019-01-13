@@ -12,7 +12,6 @@ Future releases will include:
 - Add algorithms:
     - Elliptic Curves (ECIES, ECDH)
     - Camellia, GOST
-    - Diffie-Hellman
     - bcrypt
     - argon2
     - SRP

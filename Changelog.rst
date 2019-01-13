@@ -1,5 +1,12 @@
 Changelog
 =========
+3.4.8 (5 September 2017)
+++++++++++++++++++++++
+
+New features
+------------
+
+* Added Diffie-Hellman Support
 
 3.7.2 (26 November 2018)
 ++++++++++++++++++++++++
