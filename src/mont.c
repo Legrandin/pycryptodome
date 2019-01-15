@@ -47,7 +47,7 @@ static inline unsigned is_even(uint64_t x)
 }
 
 /**
- * Compute the inverse modulo 2^64 of a 64-bit odd integer.
+ * Compute the inverse modulo 2⁶⁴ of a 64-bit odd integer.
  *
  * See https://crypto.stackexchange.com/questions/47493/how-to-determine-the-multiplicative-inverse-modulo-64-or-other-power-of-two
  */
@@ -67,11 +67,11 @@ STATIC uint64_t inverse64(uint64_t a)
 }
 
 /**
- * Check if big integer x is greater or equal to y.
+ * Check if a big integer x is greater than or equal to y.
  *
  * @param x     The first term
  * @param y     The second term
- * @param nw    The number of words that make up both x and y
+ * @param nw    The number of words that make up x and y
  * @return      1 if x>=y, 0 if x<y
  */
 STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
@@ -94,7 +94,7 @@ STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
 }
 
 /*
- * Subtract integer b from a, leaving the difference in a.
+ * Subtract a big integer b from a.
  *
  * @param out   Where to store the result
  * @param a     Number to subtract from
@@ -122,10 +122,9 @@ STATIC uint64_t sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t 
 }
 
 /*
- * Compute R^2 mod N, where R is the smallest power of 2^64
- * which is larger than N.
+ * Compute R² mod N, where R is the smallest power of 2⁶⁴ larger than N.
  *
- * @param r2_mod_n  Where the result is stored to
+ * @param r2_mod_n  Where the result is stored at
  * @param n         The modulus N
  * @param nw        The number of 64-bit words that make up r2_mod_n and n
  */
@@ -163,8 +162,8 @@ STATIC void rsquare(uint64_t *r2_mod_n, uint64_t *n, size_t nw)
 }
 
 /*
- * Multiply a big integer a by a 64-bit scalar k and add the result to big
- * integer t.
+ * Multiply a big integer a by a 64-bit scalar k and
+ * then add the result to big integer t.
  *
  * @param t     The big integer the result of the
  *              multiplication will be added to
@@ -204,24 +203,25 @@ STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_
 /**
  * Multiply two big integers.
  *
- * @param t Where to store the result. Array of  2*nw words.
- * @param a The first term, array of nw words.
- * @param b The second term, array of nw words.
+ * @param t     Where to store the result. Array of  2*nw words.
+ * @param a     The first term, array of nw words.
+ * @param b     The second term, array of nw words.
+ * @param nw    The number of words that make up a and b.
  *
  */
 STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
 {
-        size_t i;
+    size_t i;
 
-        memset(t, 0, 2*sizeof(uint64_t)*nw);
-        
-        for (i=0; i<(nw ^ (nw & 1)); i+=2) {
-            addmul128(&t[i], a, b[i], b[i+1], nw);
-        }
+    memset(t, 0, 2*sizeof(uint64_t)*nw);
+    
+    for (i=0; i<(nw ^ (nw & 1)); i+=2) {
+        addmul128(&t[i], a, b[i], b[i+1], nw);
+    }
 
-        if (is_odd(nw)) {
-            addmul(&t[nw-1], nw+2, a, nw, b[nw-1]);
-        }
+    if (is_odd(nw)) {
+        addmul(&t[nw-1], nw+2, a, nw, b[nw-1]);
+    }
 }
 
 /*
@@ -231,7 +231,7 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
  * @param a     The first term (already in Montgomery form, a*R mod N)
  * @param b     The second term (already in Montgomery form, b*R mod N)
  * @param n     The modulus (in normal form), such that R>N
- * @param m0    Least-significant word of the oppossite of the inverse of n modulo R, that is, inv(-n[0], R)
+ * @param m0    Least-significant word of the opposite of the inverse of n modulo R, that is, inv(-n[0], R)
  * @param t     Temporary scratchpad with 3*nw+1 words
  * @param nw    Number of words making up the 3 integers: out, a, and b.
  *              It also defines R as 2^(64*nw).
@@ -317,10 +317,12 @@ size_t mont_bytes(const MontContext *ctx)
 
 /*
  * Allocate memory for an array of numbers in Montgomery form.
+ * Initialize to 0.
  *
  * @param out   The location where the address of the newly allocated
  *              array will be placed in.
- *              The caller is responsible for deallocating the memory.
+ *              The caller is responsible for deallocating the memory
+ *              using free().
  * @param count How many numbers the array contains.
  * @param ctx   The Montgomery context.
  * @return      0 if successful, the relevant error code otherwise.
@@ -354,7 +356,7 @@ int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const Mon
 {
     uint64_t *encoded = NULL;
     uint64_t *tmp1 = NULL;
-    uint64_t *tmp2 = NULL;
+    uint64_t *scratchpad = NULL;
     int res = 0;
 
     if (NULL == out || NULL == ctx || NULL == number)
@@ -386,17 +388,17 @@ int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const Mon
     }
 
     /** Scratchpad **/
-    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
-    if (NULL == tmp2) {
+    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
+    if (NULL == scratchpad) {
         res = ERR_MEMORY;
         goto cleanup;
     }
 
-    mont_mult_internal(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult_internal(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     res = 0;
 
 cleanup:
-    free(tmp2);
+    free(scratchpad);
     free(tmp1);
     if (res != 0)
         free(encoded);
@@ -416,7 +418,7 @@ cleanup:
 int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContext *ctx)
 {
     uint64_t *tmp1 = NULL;
-    uint64_t *tmp2 = NULL;
+    uint64_t *scratchpad = NULL;
 
     if (NULL == number || NULL == ctx || NULL == mont_number)
         return ERR_NULL;
@@ -427,16 +429,16 @@ int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContex
         return ERR_MEMORY;
 
     /** Scratchpad **/
-    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
-    if (NULL == tmp2) {
+    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
+    if (NULL == scratchpad) {
         free(tmp1);
         return ERR_MEMORY;
     }
 
-    mont_mult_internal(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult_internal(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     words_to_bytes(number, ctx->bytes, tmp1, ctx->words);
 
-    free(tmp2);
+    free(scratchpad);
     free(tmp1);
     return 0;
 }
@@ -455,17 +457,16 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp,
 {
     unsigned i;
     unsigned carry, borrow1, borrow2;
-    uint64_t overflow, mask;
-    uint64_t *tmp2;
+    uint64_t *scratchpad;
 
     if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
-    tmp2 = tmp + ctx->words;
+    scratchpad = tmp + ctx->words;
 
     /*
      * Compute sum in tmp[], and subtract modulus[]
-     * from tmp[] into tmp2[].
+     * from tmp[] into scratchpad[].
      */
     borrow2 = 0;
     for (i=0, carry=0; i<ctx->words; i++) {
@@ -475,21 +476,17 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp,
         carry += tmp[i] < b[i];
 
         borrow1 = ctx->modulus[i] > tmp[i];
-        tmp2[i] = tmp[i] - ctx->modulus[i];
-        borrow1 |= borrow2 > tmp2[i];
-        tmp2[i] -= borrow2;
+        scratchpad[i] = tmp[i] - ctx->modulus[i];
+        borrow1 |= borrow2 > scratchpad[i];
+        scratchpad[i] -= borrow2;
         borrow2 = borrow1;
     }
 
     /*
      * If there is no borrow or if there is carry,
-     * tmp[] is larger than modulus, so we must return tmp2[].
+     * tmp[] is larger than modulus, so we must return scratchpad[].
      */
-    overflow = carry | (borrow2 ^ 1);
-    mask = !overflow - 1;
-    for (i=0; i<ctx->words; i++) {
-        out[i] = (tmp[i] & ~mask) | (tmp2[i] & mask);
-    }
+    mont_select(out, scratchpad, tmp, carry | (borrow2 ^ 1), ctx);
 
     return 0;
 }
@@ -529,17 +526,16 @@ int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp,
 {
     unsigned i;
     unsigned carry, borrow1 , borrow2;
-    uint64_t *tmp2;
-    uint64_t mask;
+    uint64_t *scratchpad;
 
     if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
-    tmp2 = tmp + ctx->words;
+    scratchpad = tmp + ctx->words;
 
     /*
      * Compute difference in tmp[], and add modulus[]
-     * to tmp[] into tmp2[].
+     * to tmp[] into scratchpad[].
      */
     borrow2 = 0;
     carry = 0;
@@ -550,19 +546,16 @@ int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp,
         tmp[i] -= borrow2;
         borrow2 = borrow1;
 
-        tmp2[i] = tmp[i] + carry;
-        carry = tmp2[i] < carry;
-        tmp2[i] += ctx->modulus[i];
-        carry += tmp2[i] < ctx->modulus[i];
+        scratchpad[i] = tmp[i] + carry;
+        carry = scratchpad[i] < carry;
+        scratchpad[i] += ctx->modulus[i];
+        carry += scratchpad[i] < ctx->modulus[i];
     }
 
     /*
      * If there is no borrow, tmp[] is smaller than modulus.
      */
-    mask = (uint64_t)borrow2 - 1;
-    for (i=0; i<ctx->words; i++) {
-        out[i] = (tmp[i] & mask) | (tmp2[i] & ~mask);
-    }
+    mont_select(out, scratchpad, tmp, borrow2, ctx);
 
     return 0;
 }
@@ -583,7 +576,7 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
     unsigned idx_word;
     uint64_t bit;
     uint64_t *tmp1 = NULL;
-    uint64_t *tmp2 = NULL;
+    uint64_t *scratchpad = NULL;
     uint64_t *exponent = NULL;
     int res;
 
@@ -594,8 +587,8 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
     if (NULL == tmp1)
         return ERR_MEMORY;
     
-    tmp2 = (uint64_t*)calloc(3*ctx->words+1, sizeof(uint64_t));
-    if (NULL == tmp2) {
+    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
+    if (NULL == scratchpad) {
         res = ERR_MEMORY;
         goto cleanup;
     }
@@ -619,9 +612,9 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
     /** Left-to-right exponentiation **/
     for (;;) {
         while (bit > 0) {
-            mont_mult_internal(tmp1, out, out, ctx->modulus, ctx->m0, tmp2, ctx->words);
+            mont_mult_internal(tmp1, out, out, ctx->modulus, ctx->m0, scratchpad, ctx->words);
             if (exponent[idx_word] & bit) {
-                mont_mult_internal(out, tmp1, a, ctx->modulus, ctx->m0, tmp2, ctx->words);
+                mont_mult_internal(out, tmp1, a, ctx->modulus, ctx->m0, scratchpad, ctx->words);
             } else {
                 memcpy(out, tmp1, ctx->bytes);
             }
@@ -635,7 +628,7 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
 
 cleanup:
     free(tmp1);
-    free(tmp2);
+    free(scratchpad);
     return res;
 }
 
@@ -645,22 +638,31 @@ cleanup:
  * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
  * @param x     The value to set.
  * @param tmp   Temporary scratchpad with 4*nw+1 words (it can be created with mont_number(&p,5,ctx).
+ *              It is ignored for x=1.
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
 int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
 {
-    uint64_t *tmp2;
+    uint64_t *scratchpad;
 
-    if (NULL == out || NULL == tmp || NULL == ctx)
+    if (NULL == out || NULL == ctx)
+        return ERR_NULL;
+
+    if (x == 1) {
+        mont_copy(out, ctx->r_mod_n, ctx);
+        return 0;
+    }
+
+    if (NULL == tmp)
         return ERR_NULL;
 
     memset(tmp, 0, ctx->bytes);
     tmp[0] = x;
 
-    tmp2 = &tmp[ctx->words];
+    scratchpad = &tmp[ctx->words];
 
-    mont_mult_internal(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult_internal(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     return 0;
 }
 
@@ -676,7 +678,7 @@ int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
 int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 {
     MontContext *ctx;
-    uint64_t *tmp2 = NULL;
+    uint64_t *scratchpad = NULL;
     int res;
 
     if (NULL == out || NULL == modulus)
@@ -692,7 +694,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         size_t i;
         for (i=1; i<mod_len && modulus[i]; i++);
         if (i == mod_len)
-            return ERR_VALUE; 
+            return ERR_VALUE;
     }
 
     *out = ctx = (MontContext*)calloc(1, sizeof(MontContext));
@@ -710,7 +712,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     }
     bytes_to_words(ctx->modulus, ctx->words, modulus, mod_len);
    
-    /** Pre-compute R^2 mod N **/
+    /** Pre-compute R² mod N **/
     ctx->r2_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
     if (0 == ctx->r2_mod_n) {
         res = ERR_MEMORY;
@@ -718,7 +720,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     }
     rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
     
-    /** Pre-compute -n[0]^{-1} mod R **/
+    /** Pre-compute -n[0]⁻¹ mod R **/
     ctx->m0 = inverse64(~ctx->modulus[0]+1);
 
     /** Prepare 1 **/
@@ -731,12 +733,12 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         res = ERR_MEMORY;
         goto cleanup;
     }
-    tmp2 = (uint64_t*)calloc(ctx->words*3+1, sizeof(uint64_t));
-    if (NULL == tmp2) {
+    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
+    if (NULL == scratchpad) {
         res = ERR_MEMORY;
         goto cleanup;
     }
-    mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, tmp2, ctx->words);
+    mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
 
     /** Pre-compute modulus - 2 **/
     /** Modulus is guaranteed to be >= 3 **/
@@ -748,20 +750,13 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     sub(ctx->modulus_min_2, ctx->modulus, ctx->one, ctx->words);
     sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
 
-    ctx->mont_number = mont_number;
-    ctx->mont_from_bytes = mont_from_bytes;
-    ctx->mont_to_bytes = mont_to_bytes;
-    ctx->mont_add = mont_add;
-    ctx->mont_mult = mont_mult;
-    ctx->mont_sub = mont_sub;
-    ctx->mont_inv_prime = mont_inv_prime;
-
     res = 0;
 
 cleanup:
-    free(tmp2);
-    if (res != 0)
+    free(scratchpad);
+    if (res != 0) {
         mont_context_free(ctx);
+    }
     return res;
 }
 
@@ -775,6 +770,21 @@ int mont_is_zero(const uint64_t *a, const MontContext *ctx)
 
     for (i=0; i<ctx->words; i++) {
         sum |= *a++;
+    }
+
+    return (sum == 0);
+}
+
+int mont_is_one(const uint64_t *a, const MontContext *ctx)
+{
+    unsigned i;
+    uint64_t sum = 0;
+
+    if (NULL == a || NULL == ctx)
+        return -1;
+
+    for (i=0; i<ctx->words; i++) {
+        sum |= a[i] ^ ctx->r_mod_n[i];
     }
 
     return (sum == 0);
@@ -809,6 +819,32 @@ int mont_copy(uint64_t *out, const uint64_t *a, const MontContext *ctx)
     return 0;
 }
 
+/*
+ * Select a number out of two, in constant time.
+ *
+ * @param out   Where to store the result
+ * @param a     The first choice, selected if cond is true (non-zero)
+ * @param b     The second choice, selected if cond is false (zero)
+ * @param cond  The flag that drives the selection
+ * @return      0 for success, the appropriate code otherwise.
+ */
+int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, const MontContext *ctx)
+{
+    unsigned i;
+    uint64_t mask;
+
+    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
+        return ERR_NULL;
+
+    mask = (cond != 0) - 1;
+
+    for (i=0; i<ctx->words; i++) {
+        *out++ = (*b++ & mask) ^ (*a++ & ~mask);
+    }
+
+    return 0;
+}
+
 int mont_clear(uint64_t *out, const MontContext *ctx)
 {
     unsigned i;
@@ -822,5 +858,3 @@ int mont_clear(uint64_t *out, const MontContext *ctx)
 
     return 0;
 }
-
-

@@ -343,6 +343,44 @@ void test_mont_set(void)
     mont_context_free(ctx);
 }
 
+void test_mont_select()
+{
+    int res;
+    MontContext *ctx;
+    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
+    uint64_t a[2] = { 0xFFFFFFFFFFFFFFFFU, 0xFFFFFFFFFFFFFFFFU };
+    uint64_t b[2] = { 1, 1 };
+    uint64_t c[2];
+
+    mont_context_init(&ctx, modulus, 16);
+
+    res = mont_select(NULL, a, b, 1, ctx);
+    assert(res == ERR_NULL);
+    res = mont_select(c, NULL, b, 1, ctx);
+    assert(res == ERR_NULL);
+    res = mont_select(c, a, NULL, 1, ctx);
+    assert(res == ERR_NULL);
+    res = mont_select(c, a, b, 1, NULL);
+    assert(res == ERR_NULL);
+
+    memset(c, 0, sizeof c);
+    res = mont_select(c, a, b, 1, ctx);
+    assert(res == 0);
+    assert(memcmp(a, c, sizeof c) == 0);
+
+    memset(c, 0, sizeof c);
+    res = mont_select(c, a, b, 10, ctx);
+    assert(res == 0);
+    assert(memcmp(a, c, sizeof c) == 0);
+
+    memset(c, 0, sizeof c);
+    res = mont_select(c, a, b, 0, ctx);
+    assert(res == 0);
+    assert(memcmp(b, c, sizeof c) == 0);
+
+    mont_context_free(ctx);
+}
+
 int main(void) {
     test_ge();
     test_sub();
@@ -354,5 +392,6 @@ int main(void) {
     test_mont_sub();
     test_mont_inv_prime();
     test_mont_set();
+    test_mont_select();
     return 0;
 }
