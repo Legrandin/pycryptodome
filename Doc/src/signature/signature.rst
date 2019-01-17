@@ -11,7 +11,7 @@ message holds the *private key*, the one that verifies the signature holds the
 Signing a message
 -----------------
 
-1. Instantiate a new signer object for the desider algorithm,
+1. Instantiate a new signer object for the desired algorithm,
    for instance with :func:`Crypto.Signature.pkcs1_15.new`.
    The first parameter is the key object (*private* key)
    obtained via the :mod:`Crypto.PublicKey` module.
