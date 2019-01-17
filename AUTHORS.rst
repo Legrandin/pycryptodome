@@ -46,3 +46,4 @@ Kevin M. Turner
 Barry A. Warsaw
 Eric Young
 Hannes van Niekerk
+Stefan Seering
