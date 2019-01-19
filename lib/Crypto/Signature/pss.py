@@ -127,7 +127,7 @@ class PSS_SigScheme:
 
         :parameter signature:
             The signature that needs to be validated.
-        :type signature: byte string
+        :type signature: bytes
 
         :raise ValueError: if the signature is not valid.
         """
@@ -327,8 +327,7 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
 
 
 def new(rsa_key, **kwargs):
-    """Create a signature object for creating
-    or verifying PKCS#1 PSS signatures.
+    """Create an object for making or verifying PKCS#1 PSS signatures.
 
     :parameter rsa_key:
       The RSA key to use for signing or verifying the message.
@@ -339,18 +338,19 @@ def new(rsa_key, **kwargs):
     :Keyword Arguments:
 
         *   *mask_func* (``callable``) --
-            A mask generation function that accepts two parameters: a string to
-            use as seed, and the length of the mask in bytes to generate.
-            If not specified, the standard :func:`MGF1` is used.
+            A mask generation function that accepts two parameters: ``bytes`` to
+            use as seed, and the amount of ``bytes`` to return (i.e. the mask).
+            If not specified, the standard :func:`MGF1` function is used,
+            based on the same hash algorithm applied to the message.
 
         *   *salt_bytes* (``integer``) --
             Length of the salt, in bytes.
-            If not specified, it matches the output size of the hash function.
+            If not specified, it matches the digest of the hash algorithm
+            applied to the message.
             If zero, the signature scheme becomes deterministic.
 
         *   *rand_func* (``callable``) --
-            A function that returns random *byte string*, given the desired
-            length.
+            A function that returns random ``bytes``, of the desired length.
             The default is :func:`Crypto.Random.get_random_bytes`.
 
     :return: a :class:`PSS_SigScheme` signature object
