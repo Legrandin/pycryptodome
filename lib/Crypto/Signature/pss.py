@@ -291,7 +291,7 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     # Step 1 and 2 have been already done
     # Step 3
     if emLen < mhash.digest_size+sLen+2:
-        return False
+        raise ValueError("Incorrect signature")
     # Step 4
     if ord(em[-1:]) != 0xBC:
         raise ValueError("Incorrect signature")
