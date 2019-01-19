@@ -1,6 +1,15 @@
 Changelog
 =========
 
+3.7.3 (19 January 2019)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#258: False positive on PSS signatures when externally provided salt is too long.
+* Include type stub files for ``Crypto.IO`` and ``Crypto.Util``.
+
 3.7.2 (26 November 2018)
 ++++++++++++++++++++++++
 
