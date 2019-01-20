@@ -1,5 +1,4 @@
 include MANIFEST.in
-recursive-include lib *.txt
 include *.rst
 include .separate_namespace
 include setup.py pct-speedtest.py compiler_opt.py
