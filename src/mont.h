@@ -40,6 +40,5 @@ int mont_is_one(const uint64_t *a, const MontContext *ctx);
 int mont_is_equal(const uint64_t *a, const uint64_t *b, const MontContext *ctx);
 int mont_copy(uint64_t *out, const uint64_t *a, const MontContext *ctx);
 int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, const MontContext *ctx);
-int mont_clear(uint64_t *out, const MontContext *ctx);
 
 #endif

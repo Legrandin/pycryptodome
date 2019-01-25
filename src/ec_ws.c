@@ -33,14 +33,12 @@
 
 #include "common.h"
 #include "mont.h"
+#include "ec.h"
 
-typedef struct {
-    uint64_t *a, *b, *c, *d, *e, *f, *g, *h;
-    uint64_t *scratch;
-} Workplace;
+FAKE_INIT(modexp)
 
 #ifdef MAIN
-static void print_x(const char *s, const uint64_t *number, const MontContext *ctx)
+STATIC void print_x(const char *s, const uint64_t *number, const MontContext *ctx)
 {
     unsigned i;
     size_t size;
@@ -62,7 +60,7 @@ static void print_x(const char *s, const uint64_t *number, const MontContext *ct
 }
 #endif
 
-static Workplace *new_workplace(const MontContext *ctx)
+STATIC Workplace *new_workplace(const MontContext *ctx)
 {
     Workplace *wp;
     int res;
@@ -104,7 +102,7 @@ cleanup:
     return NULL;
 }
 
-static void free_workplace(Workplace *wp)
+STATIC void free_workplace(Workplace *wp)
 {
     if (NULL == wp)
         return;
@@ -123,7 +121,7 @@ static void free_workplace(Workplace *wp)
 /*
  * Convert jacobian coordinates to affine.
  */
-static void ec_ws_normalize(uint64_t *x3, uint64_t *y3,
+STATIC void ec_ws_normalize(uint64_t *x3, uint64_t *y3,
                          const uint64_t *x1, uint64_t *y1, uint64_t *z1,
                          Workplace *tmp,
                          const MontContext *ctx)
@@ -134,8 +132,8 @@ static void ec_ws_normalize(uint64_t *x3, uint64_t *y3,
     uint64_t *s = tmp->scratch;
 
     if (mont_is_zero(z1, ctx)) {
-        mont_clear(x3, ctx);
-        mont_clear(y3, ctx);
+        mont_set(x3, 0, NULL, ctx);
+        mont_set(y3, 0, NULL, ctx);
         return;
     }
 
@@ -147,11 +145,11 @@ static void ec_ws_normalize(uint64_t *x3, uint64_t *y3,
 }
 
 /*
- * Double an EC point on a short Weierstrass curve of equation y²=x²-3x+b.
+ * Double an EC point on a short Weierstrass curve of equation y²=x³-3x+b.
  * Jacobian coordinates.
  * Input and output points can match.
  */
-static void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                            const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                            Workplace *tmp, const MontContext *ctx)
 {
@@ -163,13 +161,13 @@ static void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *s = tmp->scratch;
 
     if (mont_is_zero(z1, ctx)) {
-        mont_set(x3, 1, tmp->scratch, ctx);
-        mont_set(y3, 1, tmp->scratch, ctx);
-        mont_clear(z3, ctx);
+        mont_set(x3, 1, NULL, ctx);
+        mont_set(y3, 1, NULL, ctx);
+        mont_set(z3, 0, NULL, ctx);
         return;
     }
 
-    /* No need to explicitly handle the case y1=0 (for x1±0).
+    /* No need to explicitly handle the case y1=0 (for x1≠0).
      * The following code will already produce the point at infinity (t²,t³,0).
      */
 
@@ -205,12 +203,12 @@ static void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 }
 
 /*
- * Add two EC points on a short Weierstrass curve of equation y²=x²-3x+b.
+ * Add two EC points on a short Weierstrass curve of equation y²=x³-3x+b.
  * One input point has affine coordinates.
  * The other input and the the output points have Jacobian coordinates.
  * Input and output points can match.
  */
-static void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                        const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                        const uint64_t *x2, const uint64_t *y2,
                        Workplace *tmp,
@@ -237,6 +235,7 @@ static void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
         mont_copy(x3, x1, ctx);
         mont_copy(y3, y1, ctx);
         mont_copy(z3, z1, ctx);
+        return;
     }
 
     mont_mult(a, z1, z1, s, ctx);       /* a = Z1Z1 = Z1² */
@@ -251,9 +250,9 @@ static void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
             ec_full_double(x3, y3, z3, x1, y1, z1, tmp, ctx);
             return;
         } else {
-            mont_set(x3, 1, tmp->scratch, ctx);
-            mont_set(y3, 1, tmp->scratch, ctx);
-            mont_clear(z3, ctx);
+            mont_set(x3, 1, NULL, ctx);
+            mont_set(y3, 1, NULL, ctx);
+            mont_set(z3, 0, NULL, ctx);
             return;
         }
     }
@@ -286,11 +285,11 @@ static void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 }
 
 /*
- * Add two EC points on a short Weierstrass curve of equation y²=x²-3x+b.
+ * Add two EC points on a short Weierstrass curve of equation y²=x³-3x+b.
  * All points have Jacobian coordinates.
  * Input and output points can match.
  */
-static void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                         const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                         const uint64_t *x2, const uint64_t *y2, const uint64_t *z2,
                         Workplace *tmp,
@@ -336,9 +335,9 @@ static void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
         if (mont_is_equal(e, f, ctx)) {
             ec_full_double(x3, y3, z3, x1, y1, z1, tmp, ctx);
         } else {
-            mont_set(x3, 1, tmp->scratch, ctx);
-            mont_set(y3, 1, tmp->scratch, ctx);
-            mont_clear(z3, ctx);
+            mont_set(x3, 1, NULL, ctx);
+            mont_set(y3, 1, NULL, ctx);
+            mont_set(z3, 0, NULL, ctx);
         }
         return;
     }
@@ -373,7 +372,7 @@ static void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * Compute the scalar multiplication of an EC point.
  * Jacobian coordinates as output, affine an input.
  */
-static void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                    const uint8_t *exp, size_t exp_size,
                    Workplace *wp1,
@@ -392,9 +391,9 @@ static void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     z1_is_one = mont_is_one(z1, ctx);
 
     /** Start from PAI **/
-    mont_set(x3, 1, wp1->scratch, ctx);
-    mont_set(y3, 1, wp1->scratch, ctx);
-    mont_clear(z3, ctx);
+    mont_set(xa, 1, NULL, ctx);
+    mont_set(ya, 1, NULL, ctx);
+    mont_set(za, 0, NULL, ctx);
 
     /** Find first non-zero bit **/
     for (; exp_size && *exp==0; exp++, exp_size--);
@@ -402,81 +401,54 @@ static void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     /** Left-to-right exponentiation **/
     for (; exp_size; exp++, exp_size--) {
-        while (bit) {
-            ec_full_double(xa, ya, za, x3, y3, z3, wp1, ctx);
+       while (bit) {
+            ec_full_double(xa, ya, za, xa, ya, za, wp1, ctx);
             if (z1_is_one)
                 ec_mix_add(xb, yb, zb, xa, ya, za, x1, y1, wp1, ctx);
             else
                 ec_full_add(xb, yb, zb, xa, ya, za, x1, y1, z1, wp1, ctx);
-            
             /* If bit is set, choose 2*P+Q, otherwise 2*P  */
-            mont_select(x3, xb, xa, bit & *exp, ctx);
-            mont_select(y3, yb, ya, bit & *exp, ctx);
-            mont_select(z3, zb, za, bit & *exp, ctx);
+            mont_select(xa, xb, xa, bit & *exp, ctx);
+            mont_select(ya, yb, ya, bit & *exp, ctx);
+            mont_select(za, zb, za, bit & *exp, ctx);
 
             bit>>=1;
         }
         bit = 0x80;
     }
+    mont_copy(x3, xa, ctx);
+    mont_copy(y3, ya, ctx);
+    mont_copy(z3, za, ctx);
 }
-
-/*
- * The description of a short Weierstrass curve, with y²=x³-3x+b
- */
-typedef struct _EcContext {
-    MontContext *mont_ctx;
-    uint64_t *Gx;
-    uint64_t *Gy;
-    uint64_t *b;
-} EcContext;
-
-/*
- * An EC point in Jacobian coordinates
- */
-typedef struct _EcPoint {
-    const EcContext *ec_ctx;
-    uint64_t *x;
-    uint64_t *y;
-    uint64_t *z;
-} EcPoint;
 
 /*
  * Create an Elliptic Curve context for Weierstress curves y²=x³+ax+b with a=-3
  *
- * @param ctx       The memory area where the pointer to the newly allocated
+ * @param pec_ctx   The memory area where the pointer to the newly allocated
  *                  EC context will be stored.
  * @param modulus   The prime modulus for the curve, big-endian encoded
- * @param Gx        The affine X-coordinate of the generator, big-endian encoded
- * @param Gy        The affine Y-coordinate of the generator, big-endian encoded
  * @param b         The constant b, big-endian encoded
- * @param len       The length in bytes of modulus, Gx, Gy, and b
+ * @param len       The length in bytes of modulus and b
  * @return          0 for success, the appopriate error code otherwise
  */
-int ec_ws_new_context(EcContext **ctx,
+int ec_ws_new_context(EcContext **pec_ctx,
                       const uint8_t *modulus,
-                      const uint8_t *Gx,
-                      const uint8_t *Gy,
                       const uint8_t *b,
                       size_t len)
 {
     EcContext *ec_ctx = NULL;
     int res;
 
-    if (NULL == ctx || NULL == modulus || NULL == Gx || NULL == Gy || NULL == b)
+    if (NULL == pec_ctx || NULL == modulus || NULL == b)
         return ERR_NULL;
     if (len == 0)
         return ERR_NOT_ENOUGH_DATA;
 
-    *ctx = ec_ctx = (EcContext*)calloc(1, sizeof(EcContext));
+    *pec_ctx = ec_ctx = (EcContext*)calloc(1, sizeof(EcContext));
     if (NULL == ec_ctx)
         return ERR_MEMORY;
 
     res = mont_context_init(&ec_ctx->mont_ctx, modulus, len);
-    if (res) goto cleanup;
-
-    res = mont_from_bytes(&ec_ctx->Gx, Gx, len, ec_ctx->mont_ctx);
-    if (res) goto cleanup;
-    res = mont_from_bytes(&ec_ctx->Gy, Gy, len, ec_ctx->mont_ctx);
     if (res) goto cleanup;
     res = mont_from_bytes(&ec_ctx->b, b, len, ec_ctx->mont_ctx);
     if (res) goto cleanup;
@@ -485,30 +457,37 @@ int ec_ws_new_context(EcContext **ctx,
 
 cleanup:
     free(ec_ctx->b);
-    free(ec_ctx->Gy);
-    free(ec_ctx->Gx);
     mont_context_free(ec_ctx->mont_ctx);
     free(ec_ctx);
-    *ctx = NULL;
+    *pec_ctx = NULL;
     return res;
 }
 
+void ec_free_context(EcContext *ec_ctx)
+{
+    if (NULL == ec_ctx)
+        return;
+
+    free(ec_ctx->b);
+    mont_context_free(ec_ctx->mont_ctx);
+    free(ec_ctx);
+}
+
 /*
- * Create a new EC point for the given EC curve.
+ * Create a new EC point on the given EC curve.
  *
- *  @param ecp      The memory area where the pointer to the newly allocated EC
+ *  @param pecp     The memory area where the pointer to the newly allocated EC
  *                  point will be stored. Use ec_free_point() for deallocating it.
  *  @param x        The X-coordinate (affine, big-endian)
- *  @param xlen     The length of the big-endian number encoding X
  *  @param y        The Y-coordinate (affine, big-endian)
- *  @param ylen     The length of the big-endian number encoding Y
+ *  @param len      The length of x and y in bytes
  *  @param ec_ctx   The EC context
  *  @return         0 for success, the appopriate error code otherwise
  */
-int ec_ws_new_point(EcPoint **pecp, uint8_t *x, size_t xlen, uint8_t *y, size_t ylen, const EcContext *ec_ctx)
+int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y, size_t len, const EcContext *ec_ctx)
 {
     int res;
-    Workplace *wp;
+    Workplace *wp = NULL;
     EcPoint *ecp;
     MontContext *ctx;
     
@@ -516,10 +495,7 @@ int ec_ws_new_point(EcPoint **pecp, uint8_t *x, size_t xlen, uint8_t *y, size_t 
         return ERR_NULL;
     ctx = ec_ctx->mont_ctx;
 
-    if (xlen != ctx->bytes)
-        return ERR_VALUE;
-
-    if (ylen != ctx->bytes)
+    if (len != ctx->bytes)
         return ERR_VALUE;
 
     *pecp = ecp = (EcPoint*)calloc(1, sizeof(EcPoint));
@@ -527,27 +503,36 @@ int ec_ws_new_point(EcPoint **pecp, uint8_t *x, size_t xlen, uint8_t *y, size_t 
         return ERR_MEMORY;
 
     ecp->ec_ctx = ec_ctx;
-    res = mont_from_bytes(&ecp->x, x, xlen, ctx);
+    res = mont_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
-    res = mont_from_bytes(&ecp->y, y, ylen, ctx);
+    res = mont_from_bytes(&ecp->y, y, len, ctx);
     if (res) goto cleanup;
     res = mont_number(&ecp->z, 1, ctx);
     if (res) goto cleanup;
     mont_set(ecp->z, 1, NULL, ctx);
 
-    /** Verify the point is on the curve */
-    wp = new_workplace(ctx);
-    mont_mult(wp->a, ecp->y, ecp->y, wp->scratch, ctx);
-    mont_mult(wp->c, ecp->x, ecp->x, wp->scratch, ctx);
-    mont_sub(wp->c, wp->c, ecp->x, wp->scratch, ctx);
-    mont_sub(wp->c, wp->c, ecp->x, wp->scratch, ctx);
-    mont_sub(wp->c, wp->c, ecp->x, wp->scratch, ctx);
-    mont_add(wp->c, wp->c, ec_ctx->b, wp->scratch, ctx);
-    free(wp);
+    /** Convert (0, 0) to (1, 1, 0) */
+    /** Verify the point is on the curve, if not point-at-infinity */
+    if (mont_is_zero(ecp->x, ctx) && mont_is_zero(ecp->y, ctx)) {
+        mont_set(ecp->x, 1, NULL, ctx);
+        mont_set(ecp->y, 1, NULL, ctx);
+        mont_set(ecp->z, 0, NULL, ctx);
+    } else {
+        wp = new_workplace(ctx);
+        mont_mult(wp->a, ecp->y, ecp->y, wp->scratch, ctx);
+        mont_mult(wp->c, ecp->x, ecp->x, wp->scratch, ctx);
+        mont_mult(wp->c, wp->c, ecp->x, wp->scratch, ctx);
+        mont_sub(wp->c, wp->c, ecp->x, wp->scratch, ctx);
+        mont_sub(wp->c, wp->c, ecp->x, wp->scratch, ctx);
+        mont_sub(wp->c, wp->c, ecp->x, wp->scratch, ctx);
+        mont_add(wp->c, wp->c, ec_ctx->b, wp->scratch, ctx);
+        res = !mont_is_equal(wp->a, wp->c, ctx);
+        free_workplace(wp);
 
-    if (!mont_is_equal(wp->a, wp->b, ctx)) {
-        res = ERR_EC_POINT;
-        goto cleanup;
+        if (res) {
+            res = ERR_EC_POINT;
+            goto cleanup;
+        }
     }
     return 0;
 
@@ -556,6 +541,7 @@ cleanup:
     free(ecp->y);
     free(ecp->z);
     free(ecp);
+    *pecp = NULL;
     return res;
 }
 
@@ -573,8 +559,14 @@ void ec_free_point(EcPoint *ecp)
 
 /*
  * Encode the affine coordinates of an EC point.
+ *
+ * @param x     The location where the affine X-coordinate will be store in big-endian mode
+ * @param y     The location where the affine Y-coordinate will be store in big-endian mode
+ * @param len   The memory available for x and y in bytes.
+ *              It must be as long as the prime modulus of the curve field.
+ * @param ecp   The EC point to encode.
  */
-int ec_ws_get_xy(uint8_t *x, size_t xlen, uint8_t *y, size_t ylen, const EcPoint *ecp)
+int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp)
 {
     uint64_t *xw=NULL, *yw=NULL;
     Workplace *wp;
@@ -585,8 +577,8 @@ int ec_ws_get_xy(uint8_t *x, size_t xlen, uint8_t *y, size_t ylen, const EcPoint
         return ERR_NULL;
     ctx = ecp->ec_ctx->mont_ctx;
 
-    if (xlen < mont_bytes(ctx) || ylen < mont_bytes(ctx))
-        return ERR_NOT_ENOUGH_DATA;
+    if (len != mont_bytes(ctx))
+        return ERR_VALUE;
 
     wp = new_workplace(ctx);
     if (NULL == wp)
@@ -598,14 +590,15 @@ int ec_ws_get_xy(uint8_t *x, size_t xlen, uint8_t *y, size_t ylen, const EcPoint
     if (res) goto cleanup;
 
     ec_ws_normalize(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
-    res = mont_to_bytes(x, ecp->x, ctx);
+    res = mont_to_bytes(x, xw, ctx);
     if (res) goto cleanup;
-    res = mont_to_bytes(y, ecp->y, ctx);
+    res = mont_to_bytes(y, yw, ctx);
     if (res) goto cleanup;
 
     res = 0;
 
 cleanup:
+    free_workplace(wp);
     free(xw);
     free(yw);
     return res;
@@ -628,22 +621,24 @@ int ec_ws_double(EcPoint *p)
         return ERR_MEMORY;
 
     ec_full_double(p->x, p->y, p->z, p->x, p->y, p->z, wp, ctx);
-    free_workplace(wp);
 
+    free_workplace(wp);
     return 0;
 }
 
 /*
  * Add an EC point to another
  */
-int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb, const EcContext *ec_ctx)
+int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 {
     Workplace *wp;
     MontContext *ctx;
 
-    if (NULL == ecpa || NULL == ecpb || NULL == ec_ctx)
+    if (NULL == ecpa || NULL == ecpb)
         return ERR_NULL;
-    ctx = ec_ctx->mont_ctx;
+    if (ecpa->ec_ctx != ecpb->ec_ctx)
+        return ERR_EC_CURVE;
+    ctx = ecpa->ec_ctx->mont_ctx;
 
     wp = new_workplace(ctx);
     if (NULL == wp)
@@ -653,7 +648,7 @@ int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb, const EcContext *ec_ctx)
                 ecpa->x, ecpa->y, ecpa->z,
                 ecpb->x, ecpb->y, ecpb->z,
                 wp, ctx);
-
+ 
     free_workplace(wp);
     return 0;
 }
@@ -661,14 +656,14 @@ int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb, const EcContext *ec_ctx)
 /*
  * Multiply an EC point by a scalar
  */
-int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, const EcContext *ec_ctx)
+int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len)
 {
     Workplace *wp1, *wp2;
     MontContext *ctx;
 
-    if (NULL == ecp || NULL == k || NULL == ec_ctx)
+    if (NULL == ecp || NULL == k)
         return ERR_NULL;
-    ctx = ec_ctx->mont_ctx;
+    ctx = ecp->ec_ctx->mont_ctx;
 
     wp1 = new_workplace(ctx);
     if (NULL == wp1)
@@ -676,7 +671,7 @@ int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, const EcCo
 
     wp2 = new_workplace(ctx);
     if (NULL == wp2) {
-        free(wp1);
+        free_workplace(wp1);
         return ERR_MEMORY;
     }
 
@@ -684,8 +679,88 @@ int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, const EcCo
            ecp->x, ecp->y, ecp->z,
            k, len, wp1, wp2, ctx);
 
-    free(wp1);
-    free(wp2);
+    free_workplace(wp1);
+    free_workplace(wp2);
+    return 0;
+}
+
+int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
+{
+    int res;
+    EcPoint *ecp2;
+    MontContext *ctx;
+
+    if (NULL == pecp2 || NULL == ecp)
+        return ERR_NULL;
+    ctx = ecp->ec_ctx->mont_ctx;
+
+    *pecp2 = ecp2 = (EcPoint*)calloc(1, sizeof(EcPoint));
+    if (NULL == ecp2)
+        return ERR_MEMORY;
+
+    ecp2->ec_ctx = ecp->ec_ctx;
+
+    res = mont_number(&ecp2->x, 1, ctx);
+    if (res) goto cleanup;
+    mont_copy(ecp2->x, ecp->x, ctx);
+    
+    res = mont_number(&ecp2->y, 1, ctx);
+    if (res) goto cleanup;
+    mont_copy(ecp2->y, ecp->y, ctx);
+    
+    res = mont_number(&ecp2->z, 1, ctx);
+    if (res) goto cleanup;
+    mont_copy(ecp2->z, ecp->z, ctx);
+
+    return 0;
+
+cleanup:
+    free(ecp2->x);
+    free(ecp2->y);
+    free(ecp2->z);
+    free(ecp2);
+    *pecp2 = NULL;
+    return res;
+}
+
+int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
+{
+    MontContext *ctx;
+
+    if (NULL == ecp1 || NULL == ecp2)
+        return ERR_NULL;
+
+    if (ecp1->ec_ctx != ecp2->ec_ctx)
+        return ERR_EC_CURVE;
+    ctx = ecp1->ec_ctx->mont_ctx;
+
+    if (!mont_is_equal(ecp1->z, ecp2->z, ctx))
+        return -1;
+    if (mont_is_zero(ecp1->z, ctx))
+        return 0;
+    if (!mont_is_equal(ecp1->x, ecp2->x, ctx))
+        return -1;
+    if (!mont_is_equal(ecp1->y, ecp2->y, ctx))
+        return -1;
+    return 0;
+}
+
+int ec_ws_neg(EcPoint *p)
+{
+    MontContext *ctx;
+    uint64_t *tmp;
+    int res;
+
+    if (NULL == p)
+        return ERR_NULL;
+    ctx = p->ec_ctx->mont_ctx;
+
+    res = mont_number(&tmp, SCRATCHPAD_NR, ctx);
+    if (res)
+        return res;
+
+    mont_sub(p->y, ctx->modulus, p->y, tmp, ctx);
+    free(tmp);
     return 0;
 }
 

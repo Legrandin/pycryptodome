@@ -202,7 +202,7 @@ static inline int bytes_to_words(uint64_t *x, size_t words, const uint8_t *in, s
     memset(x, 0, words*sizeof(uint64_t));
 
     /** Shorten the input **/
-    for (; 0 == *in && len > 0; in++, len--);
+    for (; len > 0 && 0 == *in; in++, len--);
     if (0 == len)
         return 0;
 
@@ -225,7 +225,6 @@ static inline int bytes_to_words(uint64_t *x, size_t words, const uint8_t *in, s
     /** Do the other words **/
     for (i=0; i<words_used-1; i++, in += 8)
         x[words_used-2-i] = LOAD_U64_BIG(in);
-
     return 0;
 }
 

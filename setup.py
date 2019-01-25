@@ -416,6 +416,12 @@ ext_modules = [
         include_dirs=['src/'],
         sources=['src/strxor.c']),
 
+    # ECC
+    Extension("Crypto.PublicKey._ec_ws",
+        include_dirs=['src/'],
+        sources=['src/ec_ws.c', 'src/mont.c'] + multiply_cmod,
+        ),
+
     # Math
     Extension("Crypto.Math._modexp",
         include_dirs=['src/'],

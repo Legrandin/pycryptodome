@@ -111,6 +111,15 @@ void test_mont_from_bytes(void)
     assert(output[0] == 18446744073709420033UL);
     assert(output[1] == 71492449356218367L);
     free(output);
+
+    number[0] = 0;
+    number[1] = 0;
+    res = mont_from_bytes(&output, number, 2, ctx);
+    assert(res == 0);
+    assert(output != NULL);
+    assert(output[0] == 0);
+    assert(output[1] == 0);
+    free(output);
     
     mont_context_free(ctx);
 }

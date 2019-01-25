@@ -638,7 +638,7 @@ cleanup:
  * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
  * @param x     The value to set.
  * @param tmp   Temporary scratchpad with 4*nw+1 words (it can be created with mont_number(&p,5,ctx).
- *              It is ignored for x=1.
+ *              It is ignored for x=0 and x=1.
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
@@ -649,6 +649,10 @@ int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
     if (NULL == out || NULL == ctx)
         return ERR_NULL;
 
+    if (x == 0) {
+        memset(out, 0, ctx->bytes);
+        return 0;
+    }
     if (x == 1) {
         mont_copy(out, ctx->r_mod_n, ctx);
         return 0;
@@ -840,20 +844,6 @@ int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned co
 
     for (i=0; i<ctx->words; i++) {
         *out++ = (*b++ & mask) ^ (*a++ & ~mask);
-    }
-
-    return 0;
-}
-
-int mont_clear(uint64_t *out, const MontContext *ctx)
-{
-    unsigned i;
-
-    if (NULL == out || NULL == ctx)
-        return ERR_NULL;
-
-    for (i=0; i<ctx->words; i++) {
-        *out++ = 0;
     }
 
     return 0;

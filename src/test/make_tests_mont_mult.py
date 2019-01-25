@@ -78,7 +78,7 @@ def make_test(a, b, modulus):
     print "    assert(res == 0);"
     print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
     print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw
-    print "    free(ctx);"
+    print "    mont_context_free(ctx);"
     print "}"
     print ""
 

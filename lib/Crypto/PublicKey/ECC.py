@@ -35,6 +35,7 @@ import binascii
 from collections import namedtuple
 
 from Crypto.Util.py3compat import bord, tobytes, tostr, bchr, is_string
+from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Random import get_random_bytes
@@ -45,6 +46,44 @@ from Crypto.IO import PKCS8, PEM
 from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _create_subject_public_key_info,
                               _extract_subject_public_key_info)
+
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
+                                  SmartPointer, c_size_t, c_uint8_ptr)
+
+_ec_lib = load_pycryptodome_raw_lib("Crypto.PublicKey._ec_ws", """
+typedef void EcContext;
+typedef void EcPoint;
+int ec_ws_new_context(EcContext **pec_ctx,
+                      const uint8_t *modulus,
+                      const uint8_t *b,
+                      size_t len);
+void ec_free_context(EcContext *ec_ctx);
+int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y,
+                    size_t len, const EcContext *ec_ctx);
+void ec_free_point(EcPoint *ecp);
+int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp);
+int ec_ws_double(EcPoint *p);
+int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb);
+int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len);
+int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp);
+int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2);
+int ec_ws_neg(EcPoint *p);
+""")
+
+p256_modulus = long_to_bytes(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff, 32)
+p256_b = long_to_bytes(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b, 32)
+assert(len(p256_modulus) == 32)
+assert(len(p256_b) == 32)
+
+_ec_p256_context = VoidPointer()
+result = _ec_lib.ec_ws_new_context(_ec_p256_context.address_of(),
+                                   c_uint8_ptr(p256_modulus),
+                                   c_uint8_ptr(p256_b),
+                                   c_size_t(len(p256_modulus)))
+if result:
+    raise ImportError("Error %d initializing P256 context" % result)
+_ec_p256_context = SmartPointer(_ec_p256_context.get(),
+                                _ec_lib.ec_free_context)
 
 
 class UnsupportedEccFeature(ValueError):
@@ -62,33 +101,53 @@ class EccPoint(object):
     """
 
     def __init__(self, x, y):
-        self._x = Integer(x)
-        self._y = Integer(y)
+        xb = long_to_bytes(x, 32)
+        yb = long_to_bytes(y, 32)
+        assert(len(xb) == 32)
+        assert(len(yb) == 32)
 
-        # Buffers
-        self._common = Integer(0)
-        self._tmp1 = Integer(0)
-        self._x3 = Integer(0)
-        self._y3 = Integer(0)
+        self._point = VoidPointer()
+        result = _ec_lib.ec_ws_new_point(self._point.address_of(),
+                                         c_uint8_ptr(xb),
+                                         c_uint8_ptr(yb),
+                                         c_size_t(len(xb)),
+                                         _ec_p256_context.get())
+        if result:
+            raise ValueError("Error %d while instantiating an EC point" % result)
+
+        # Ensure that object disposal of this Python object will (eventually)
+        # free the memory allocated by the raw library for the EC point
+        self._point = SmartPointer(self._point.get(),
+                                   _ec_lib.ec_free_point)
 
     def set(self, point):
-        self._x = Integer(point._x)
-        self._y = Integer(point._y)
+        self._point = VoidPointer()
+        result = _ec_lib.ec_ws_clone(self._point.address_of(),
+                                     point._point.get())
+        if result:
+            raise ValueError("Error %d while cloning an EC point" % result)
+
+        self._point = SmartPointer(self._point.get(),
+                                   _ec_lib.ec_free_point)
         return self
 
     def __eq__(self, point):
-        return self._x == point._x and self._y == point._y
+        return 0 == _ec_lib.ec_ws_cmp(self._point.get(), point._point.get())
 
     def __neg__(self):
-        if self.is_point_at_infinity():
-            return self.point_at_infinity()
-        return EccPoint(self._x, _curve.p - self._y)
+        np = self.copy()
+        result = _ec_lib.ec_ws_neg(np._point_get())
+        if result:
+            raise ValueError("Error %d while negating an EC point" % result)
+        return np
 
     def copy(self):
-        return EccPoint(self._x, self._y)
+        x, y = self.xy
+        np = EccPoint(x, y)
+        return np
 
     def is_point_at_infinity(self):
-        return not (self._x or self._y)
+        return self.xy == (0, 0)
 
     @staticmethod
     def point_at_infinity():
@@ -96,15 +155,24 @@ class EccPoint(object):
 
     @property
     def x(self):
-        if self.is_point_at_infinity():
-            raise ValueError("Point at infinity")
-        return self._x
+        return self.xy[0]
 
     @property
     def y(self):
-        if self.is_point_at_infinity():
-            raise ValueError("Point at infinity")
-        return self._y
+        return self.xy[1]
+
+    @property
+    def xy(self):
+        xb = bytearray(32)
+        yb = bytearray(32)
+        result = _ec_lib.ec_ws_get_xy(c_uint8_ptr(xb),
+                                      c_uint8_ptr(yb),
+                                      c_size_t(len(xb)),
+                                      self._point.get())
+        if result:
+            raise ValueError("Error %d while encoding an EC point" % result)
+
+        return bytes_to_long(xb), bytes_to_long(yb)
 
     def double(self):
         """Double this point (in-place operation).
@@ -113,124 +181,39 @@ class EccPoint(object):
             :class:`EccPoint` : this same object (to enable chaining)
         """
 
-        if not self._y:
-            return self.point_at_infinity()
-
-        common = self._common
-        tmp1 = self._tmp1
-        x3 = self._x3
-        y3 = self._y3
-
-        # common = (pow(self._x, 2, _curve.p) * 3 - 3) * (self._y << 1).inverse(_curve.p) % _curve.p
-        common.set(self._x)
-        common.inplace_pow(2, _curve.p)
-        common *= 3
-        common -= 3
-        tmp1.set(self._y)
-        tmp1 <<= 1
-        tmp1.inplace_inverse(_curve.p)
-        common *= tmp1
-        common %= _curve.p
-
-        # x3 = (pow(common, 2, _curve.p) - 2 * self._x) % _curve.p
-        x3.set(common)
-        x3.inplace_pow(2, _curve.p)
-        x3 -= self._x
-        x3 -= self._x
-        while x3.is_negative():
-            x3 += _curve.p
-
-        # y3 = ((self._x - x3) * common - self._y) % _curve.p
-        y3.set(self._x)
-        y3 -= x3
-        y3 *= common
-        y3 -= self._y
-        y3 %= _curve.p
-
-        self._x.set(x3)
-        self._y.set(y3)
+        result = _ec_lib.ec_ws_double(self._point.get())
+        if result:
+            raise ValueError("Error %d while doubling an EC point" % result)
         return self
 
     def __iadd__(self, point):
         """Add a second point to this one"""
 
-        if self.is_point_at_infinity():
-            return self.set(point)
-
-        if point.is_point_at_infinity():
-            return self
-
-        if self == point:
-            return self.double()
-
-        if self._x == point._x:
-            return self.set(self.point_at_infinity())
-
-        common = self._common
-        tmp1 = self._tmp1
-        x3 = self._x3
-        y3 = self._y3
-
-        # common = (point._y - self._y) * (point._x - self._x).inverse(_curve.p) % _curve.p
-        common.set(point._y)
-        common -= self._y
-        tmp1.set(point._x)
-        tmp1 -= self._x
-        tmp1.inplace_inverse(_curve.p)
-        common *= tmp1
-        common %= _curve.p
-
-        # x3 = (pow(common, 2, _curve.p) - self._x - point._x) % _curve.p
-        x3.set(common)
-        x3.inplace_pow(2, _curve.p)
-        x3 -= self._x
-        x3 -= point._x
-        while x3.is_negative():
-            x3 += _curve.p
-
-        # y3 = ((self._x - x3) * common - self._y) % _curve.p
-        y3.set(self._x)
-        y3 -= x3
-        y3 *= common
-        y3 -= self._y
-        y3 %= _curve.p
-
-        self._x.set(x3)
-        self._y.set(y3)
+        result = _ec_lib.ec_ws_add(self._point.get(), point._point.get())
+        if result:
+            raise ValueError("Error %d while adding two EC points" % result)
         return self
 
     def __add__(self, point):
         """Return a new point, the addition of this one and another"""
 
-        result = self.copy()
-        result += point
-        return result
+        np = self.copy()
+        np += point
+        return np
 
     def __mul__(self, scalar):
         """Return a new point, the scalar product of this one"""
 
         if scalar < 0:
-            raise ValueError("Scalar multiplication only defined for non-negative integers")
-
-        # Trivial results
-        if scalar == 0 or self.is_point_at_infinity():
-            return self.point_at_infinity()
-        elif scalar == 1:
-            return self.copy()
-
-        # Scalar randomization
-        scalar_blind = Integer.random(exact_bits=64) * _curve.order + scalar
-
-        # Montgomery key ladder
-        r = [self.point_at_infinity().copy(), self.copy()]
-        bit_size = int(scalar_blind.size_in_bits())
-        scalar_int = int(scalar_blind)
-        for i in range(bit_size, -1, -1):
-            di = scalar_int >> i & 1
-            r[di ^ 1] += r[di]
-            r[di].double()
-
-        return r[0]
+            raise ValueError("Scalar multiplication is only defined for non-negative integers")
+        sb = long_to_bytes(scalar)
+        np = self.copy()
+        result = _ec_lib.ec_ws_scalar_multiply(np._point.get(),
+                                               c_uint8_ptr(sb),
+                                               c_size_t(len(sb)))
+        if result:
+            raise ValueError("Error %d during scalar multiplication" % result)
+        return np
 
 
 _Curve = namedtuple("_Curve", "p b order Gx Gy G names oid")
@@ -325,7 +308,7 @@ class EccKey(object):
         blind_d = self._d * blind
         inv_blind_k = (blind * k).inverse(_curve.order)
 
-        r = (_curve.G * k).x % _curve.order
+        r = Integer((_curve.G * k).x) % _curve.order
         s = inv_blind_k * (blind * z + blind_d * r) % _curve.order
         return (r, s)
 
@@ -357,7 +340,7 @@ class EccKey(object):
         return EccKey(curve="P-256", point=self.pointQ)
 
     def _export_subjectPublicKeyInfo(self, compress):
-    
+
         # See 2.2 in RFC5480 and 2.3.3 in SEC1
         # The first byte is:
         # - 0x02:   compressed, only X-coordinate, Y-coordinate is even
@@ -445,7 +428,7 @@ class EccKey(object):
 
         desc = "ecdsa-sha2-nistp256"
         order_bytes = _curve.order.size_in_bytes()
-        
+
         if compress:
             first_byte = 2 + self.pointQ.y.is_odd()
             public_key = (bchr(first_byte) +
@@ -456,7 +439,7 @@ class EccKey(object):
                           self.pointQ.y.to_bytes(order_bytes))
 
         comps = (tobytes(desc), b"nistp256", public_key)
-        blob = b"".join([ struct.pack(">I", len(x)) + x for x in comps])
+        blob = b"".join([struct.pack(">I", len(x)) + x for x in comps])
         return desc + " " + tostr(binascii.b2a_base64(blob))
 
     def export_key(self, **kwargs):
@@ -522,7 +505,7 @@ class EccKey(object):
         ext_format = args.pop("format")
         if ext_format not in ("PEM", "DER", "OpenSSH"):
             raise ValueError("Unknown format '%s'" % ext_format)
-        
+
         compress = args.pop("compress", False)
 
         if self.has_private():
@@ -661,7 +644,7 @@ def _import_public_der(curve_oid, ec_point):
 
     order_bytes = _curve.order.size_in_bytes()
     point_type = bord(ec_point[0])
-    
+
     # Uncompressed point
     if point_type == 0x04:
         if len(ec_point) != (1 + 2 * order_bytes):
@@ -673,7 +656,7 @@ def _import_public_der(curve_oid, ec_point):
         if len(ec_point) != (1 + order_bytes):
             raise ValueError("Incorrect EC point length")
         x = Integer.from_bytes(ec_point[1:])
-        y = (x**3 - x*3 + _curve.b).sqrt(_curve.p)    #  Short Weierstrass
+        y = (x**3 - x*3 + _curve.b).sqrt(_curve.p)    # Short Weierstrass
         if point_type == 0x02 and y.is_odd():
             y = _curve.p - y
         if point_type == 0x03 and y.is_even():
@@ -697,9 +680,10 @@ def _import_subjectPublicKeyInfo(encoded, *kwargs):
 
     # We accept id-ecPublicKey, id-ecDH, id-ecMQV without making any
     # distiction for now.
-    unrestricted_oid = "1.2.840.10045.2.1"  # Restrictions can be captured
-                                            # in the key usage certificate
-                                            # extension
+
+    # Restrictions can be captured in the key usage certificate
+    # extension
+    unrestricted_oid = "1.2.840.10045.2.1"
     ecdh_oid = "1.3.132.1.12"
     ecmqv_oid = "1.3.132.1.13"
 
@@ -779,7 +763,7 @@ def _import_pkcs8(encoded, passphrase):
     ecmqv_oid = "1.3.132.1.13"
 
     if algo_oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid):
-        raise UnsupportedEccFeature("Unsupported ECC purpose (OID: %s)" % oid)
+        raise UnsupportedEccFeature("Unsupported ECC purpose (OID: %s)" % algo_oid)
 
     curve_name = DerObjectId().decode(params).value
 
@@ -800,21 +784,21 @@ def _import_der(encoded, passphrase):
         raise err
     except (ValueError, TypeError, IndexError):
         pass
-    
+
     try:
         return _import_x509_cert(encoded, passphrase)
     except UnsupportedEccFeature as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
-    
+
     try:
         return _import_private_der(encoded, passphrase)
     except UnsupportedEccFeature as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
-    
+
     try:
         return _import_pkcs8(encoded, passphrase)
     except UnsupportedEccFeature as err:
@@ -830,9 +814,9 @@ def _import_openssh(encoded):
 
     keyparts = []
     while len(keystring) > 4:
-        l = struct.unpack(">I", keystring[:4])[0]
-        keyparts.append(keystring[4:4 + l])
-        keystring = keystring[4 + l:]
+        lk = struct.unpack(">I", keystring[:4])[0]
+        keyparts.append(keystring[4:4 + lk])
+        keystring = keystring[4 + lk:]
 
     if keyparts[1] != b"nistp256":
         raise ValueError("Unsupported ECC curve")
@@ -909,7 +893,7 @@ def import_key(encoded, passphrase=None):
 
 
 if __name__ == "__main__":
-    
+
     import time
 
     d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd

@@ -17,6 +17,7 @@
 #define ERR_TAG_SIZE            13
 #define ERR_VALUE               14
 #define ERR_EC_POINT            15
+#define ERR_EC_CURVE            16
 #define ERR_UNKNOWN             32
 
 #endif

@@ -1,7 +1,7 @@
 include MANIFEST.in
 include *.rst
 include .separate_namespace
-include setup.py pct-speedtest.py compiler_opt.py
+include setup.py pct-speedtest.py compiler_opt.py setup.cfg
 graft Doc
 prune Doc/_build
 include appveyor.yml appveyor/get_wheels.sh appveyor/install.ps1 appveyor/run_with_env.cmd

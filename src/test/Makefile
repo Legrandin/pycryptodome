@@ -1,11 +1,11 @@
-CPPFLAGS += -I.. $(shell python -c "import sys; print '-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN'")
+CPPFLAGS += -I.. $(shell python -c "from __future__ import print_function; import sys; print('-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN')")
 CPPFLAGS += -DHAVE_POSIX_MEMALIGN -DHAVE_STDINT_H
 CPPFLAGS += -DSTATIC=""
 CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
 
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess\
        test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate\
-	   test_mont tests_mont_mult
+	   test_mont tests_mont_mult tests_ec_ws
 
 ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
 CPPFLAGS += -DHAVE_X86INTRIN_H
@@ -13,7 +13,7 @@ CFLAGS += -msse2
 TAPPS += test_clmul
 endif
 
-ifeq (64bit, $(shell python -c "import platform; print platform.architecture()[0]"))
+ifeq (64bit, $(shell python -c "from __future__ import print_function; import platform; print(platform.architecture()[0])"))
 CPPFLAGS += -DHAVE_UINT128
 endif
 
@@ -31,6 +31,11 @@ all: ${$TGTS}
 
 clean:
 	rm -fr build common.pyc
+
+# ECC
+
+build/tests_ec_ws: test_ec_ws.c ../ec_ws.c ../multiply_32.c ../mont.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # addmul128
 
