@@ -35,7 +35,7 @@
 #include "mont.h"
 #include "ec.h"
 
-FAKE_INIT(modexp)
+FAKE_INIT(ec_ws)
 
 #ifdef MAIN
 STATIC void print_x(const char *s, const uint64_t *number, const MontContext *ctx)
@@ -793,7 +793,7 @@ int main(void)
 
     printf("----------------------------\n");
 
-    for (i=0; i<1000; i++)
+    for (i=0; i<=5000; i++)
         ec_exp(Qx, Qy, Qz, Gx, Gy, Gz, (uint8_t*)"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8, wp1, wp2, ctx);
 
     print_x("Qx", Qx, ctx);
