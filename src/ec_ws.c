@@ -431,10 +431,10 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * @param len       The length in bytes of modulus and b
  * @return          0 for success, the appopriate error code otherwise
  */
-int ec_ws_new_context(EcContext **pec_ctx,
-                      const uint8_t *modulus,
-                      const uint8_t *b,
-                      size_t len)
+EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
+                                 const uint8_t *modulus,
+                                 const uint8_t *b,
+                                 size_t len)
 {
     EcContext *ec_ctx = NULL;
     int res;
@@ -463,7 +463,7 @@ cleanup:
     return res;
 }
 
-void ec_free_context(EcContext *ec_ctx)
+EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
 {
     if (NULL == ec_ctx)
         return;
@@ -484,7 +484,7 @@ void ec_free_context(EcContext *ec_ctx)
  *  @param ec_ctx   The EC context
  *  @return         0 for success, the appopriate error code otherwise
  */
-int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y, size_t len, const EcContext *ec_ctx)
+EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y, size_t len, const EcContext *ec_ctx)
 {
     int res;
     Workplace *wp = NULL;
@@ -545,7 +545,7 @@ cleanup:
     return res;
 }
 
-void ec_free_point(EcPoint *ecp)
+EXPORT_SYM void ec_free_point(EcPoint *ecp)
 {
     if (NULL == ecp)
         return;
@@ -566,7 +566,7 @@ void ec_free_point(EcPoint *ecp)
  *              It must be as long as the prime modulus of the curve field.
  * @param ecp   The EC point to encode.
  */
-int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp)
+EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp)
 {
     uint64_t *xw=NULL, *yw=NULL;
     Workplace *wp;
@@ -607,7 +607,7 @@ cleanup:
 /*
  * Double an EC point
  */
-int ec_ws_double(EcPoint *p)
+EXPORT_SYM int ec_ws_double(EcPoint *p)
 {
     Workplace *wp;
     MontContext *ctx;
@@ -629,7 +629,7 @@ int ec_ws_double(EcPoint *p)
 /*
  * Add an EC point to another
  */
-int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
+EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 {
     Workplace *wp;
     MontContext *ctx;
@@ -648,7 +648,7 @@ int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
                 ecpa->x, ecpa->y, ecpa->z,
                 ecpb->x, ecpb->y, ecpb->z,
                 wp, ctx);
- 
+
     free_workplace(wp);
     return 0;
 }
@@ -656,7 +656,7 @@ int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 /*
  * Multiply an EC point by a scalar
  */
-int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len)
+EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len)
 {
     Workplace *wp1, *wp2;
     MontContext *ctx;
@@ -684,7 +684,7 @@ int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len)
     return 0;
 }
 
-int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
+EXPORT_SYM int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
 {
     int res;
     EcPoint *ecp2;
@@ -703,11 +703,11 @@ int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
     res = mont_number(&ecp2->x, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->x, ecp->x, ctx);
-    
+
     res = mont_number(&ecp2->y, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->y, ecp->y, ctx);
-    
+
     res = mont_number(&ecp2->z, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->z, ecp->z, ctx);
@@ -723,7 +723,7 @@ cleanup:
     return res;
 }
 
-int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
+EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
 {
     MontContext *ctx;
 
@@ -745,7 +745,7 @@ int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
     return 0;
 }
 
-int ec_ws_neg(EcPoint *p)
+EXPORT_SYM int ec_ws_neg(EcPoint *p)
 {
     MontContext *ctx;
     uint64_t *tmp;
