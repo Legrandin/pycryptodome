@@ -725,6 +725,7 @@ cleanup:
 
 EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
 {
+    Workplace *wp;
     MontContext *ctx;
 
     if (NULL == ecp1 || NULL == ecp2)
@@ -734,14 +735,38 @@ EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
         return ERR_EC_CURVE;
     ctx = ecp1->ec_ctx->mont_ctx;
 
-    if (!mont_is_equal(ecp1->z, ecp2->z, ctx))
-        return -1;
-    if (mont_is_zero(ecp1->z, ctx))
+    /* Check for point-at-infinity */
+    if (mont_is_zero(ecp1->z, ctx) && mont_is_zero(ecp2->z, ctx))
         return 0;
-    if (!mont_is_equal(ecp1->x, ecp2->x, ctx))
+
+    /* Check when Z1=Z2 */
+    if (mont_is_equal(ecp1->z, ecp2->z, ctx)) {
+        return !mont_is_equal(ecp1->x, ecp2->x, ctx) || !mont_is_equal(ecp1->y, ecp2->y, ctx);
+    }
+
+    /** Normalize to have Z1=Z2 */
+    wp = new_workplace(ctx);
+    if (NULL == wp)
+        return ERR_MEMORY;
+
+    mont_mult(wp->a, ecp1->z, ecp1->z, wp->scratch, ctx);
+    mont_mult(wp->b, ecp1->x, wp->a, wp->scratch, ctx);      /* B = X1*Z1² */
+
+    mont_mult(wp->c, ecp2->z, ecp2->z, wp->scratch, ctx);
+    mont_mult(wp->d, ecp2->x, wp->c, wp->scratch, ctx);      /* C = X2*Z2² */
+
+    if (!mont_is_equal(wp->b, wp->c, ctx))
         return -1;
-    if (!mont_is_equal(ecp1->y, ecp2->y, ctx))
+
+    mont_mult(wp->a, ecp1->z, wp->a, wp->scratch, ctx);
+    mont_mult(wp->e, ecp1->y, wp->a, wp->scratch, ctx);      /* E = Y1*Z1³ */
+
+    mont_mult(wp->c, ecp2->z, wp->c, wp->scratch, ctx);
+    mont_mult(wp->f, ecp2->y, wp->c, wp->scratch, ctx);      /* F = Y2*Z2³ */
+
+    if (!mont_is_equal(wp->e, wp->f, ctx))
         return -1;
+
     return 0;
 }
 
