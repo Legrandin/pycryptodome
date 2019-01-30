@@ -201,18 +201,24 @@ class EccPoint(object):
         np += point
         return np
 
-    def __mul__(self, scalar):
-        """Return a new point, the scalar product of this one"""
+    def __imul__(self, scalar):
+        """Multiply this point by a scalar"""
 
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
         sb = long_to_bytes(scalar)
-        np = self.copy()
-        result = _ec_lib.ec_ws_scalar_multiply(np._point.get(),
+        result = _ec_lib.ec_ws_scalar_multiply(self._point.get(),
                                                c_uint8_ptr(sb),
                                                c_size_t(len(sb)))
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
+        return self
+
+    def __mul__(self, scalar):
+        """Return a new point, the scalar product of this one"""
+
+        np = self.copy()
+        np *= scalar
         return np
 
 
@@ -899,8 +905,16 @@ if __name__ == "__main__":
     d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
 
     point = generate(curve="P-256").pointQ
+    count = 3000
+
     start = time.time()
-    count = 30
     for x in range(count):
         _ = point * d
-    print((time.time() - start) / count * 1000, "ms")
+    print("(mul)", (time.time() - start) / count * 1000, "ms")
+
+    start = time.time()
+    for x in range(count):
+        _ = point * d
+    print("(imul)", (time.time() - start) / count * 1000, "ms")
+
+
