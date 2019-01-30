@@ -172,7 +172,7 @@ class EccPoint(object):
         if result:
             raise ValueError("Error %d while encoding an EC point" % result)
 
-        return bytes_to_long(xb), bytes_to_long(yb)
+        return [Integer(bytes_to_long(c)) for c in (xb, yb)]
 
     def double(self):
         """Double this point (in-place operation).
@@ -308,7 +308,7 @@ class EccKey(object):
         blind_d = self._d * blind
         inv_blind_k = (blind * k).inverse(_curve.order)
 
-        r = Integer((_curve.G * k).x) % _curve.order
+        r = (_curve.G * k).x % _curve.order
         s = inv_blind_k * (blind * z + blind_d * r) % _curve.order
         return (r, s)
 
