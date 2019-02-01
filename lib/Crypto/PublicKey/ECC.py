@@ -909,12 +909,12 @@ if __name__ == "__main__":
 
     start = time.time()
     for x in range(count):
-        _ = point * d
+        point = point * d
     print("(mul)", (time.time() - start) / count * 1000, "ms")
 
     start = time.time()
     for x in range(count):
-        _ = point * d
+        point *= d
     print("(imul)", (time.time() - start) / count * 1000, "ms")
 
 
