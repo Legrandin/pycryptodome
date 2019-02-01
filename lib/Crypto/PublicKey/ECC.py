@@ -113,6 +113,8 @@ class EccPoint(object):
                                          c_size_t(len(xb)),
                                          _ec_p256_context.get())
         if result:
+            if result == 15:
+                raise ValueError("The EC point does not belong to the curve")
             raise ValueError("Error %d while instantiating an EC point" % result)
 
         # Ensure that object disposal of this Python object will (eventually)
@@ -191,6 +193,8 @@ class EccPoint(object):
 
         result = _ec_lib.ec_ws_add(self._point.get(), point._point.get())
         if result:
+            if result == 16:
+                raise ValueError("Trying to add two EC point that are not on the same curve")
             raise ValueError("Error %d while adding two EC points" % result)
         return self
 
