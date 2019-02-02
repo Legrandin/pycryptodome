@@ -39,7 +39,7 @@
 
 FAKE_INIT(modexp)
 
-#include "multiply.h"
+#include "mont.h"
 #include "modexp_utils.h"
 
 #define CACHE_LINE_SIZE 64
@@ -47,221 +47,6 @@ FAKE_INIT(modexp)
 /** Multiplication will be replaced by a look-up **/
 /** Do not change this value! **/
 #define WINDOW_SIZE 4
-
-/**
- * Compute inverse modulo 2**64
- *
- * See https://crypto.stackexchange.com/questions/47493/how-to-determine-the-multiplicative-inverse-modulo-64-or-other-power-of-two
- */
-static uint64_t inverse64(uint64_t a)
-{
-    uint64_t x;
-
-    assert(1 & a);
-    x = ((a << 1 ^ a) & 4) << 1 ^ a;
-    x += x - a*x*x;
-    x += x - a*x*x;
-    x += x - a*x*x;
-    x += x - a*x*x;
-    assert((x*a & 0xFFFFFFFFFFFFFFFFULL) == 1);
-    
-    return x;
-}
-
-/**
- * Multiply a[] by k and add the result to t[].
- */
-STATIC void addmul(uint64_t *t, const uint64_t *a, uint64_t k, size_t a_words, size_t t_words)
-{
-    size_t i;
-    uint64_t carry;
-
-    carry = 0;
-    for (i=0; i<a_words; i++) {
-        uint64_t pr_lo, pr_hi;
-
-        DP_MULT(a[i], k, pr_lo, pr_hi);
-    
-        pr_lo += carry;
-        pr_hi += pr_lo < carry;
-
-        t[i] += pr_lo;
-        pr_hi += t[i] < pr_lo;
-
-        carry = pr_hi;
-    }
-
-    for (; carry; i++) {
-        t[i] += carry;
-        carry = t[i] < carry;
-    }
-
-    assert(i <= t_words);
-}
-
-/**
- * Multiply a[] by b[] and store the result into t[].
- *
- * a[] and b[] must have the same length.
- *
- * t[] will be twice as long.
- */
-STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t words)
-{
-        size_t i;
-
-        memset(t, 0, 2*sizeof(uint64_t)*words);
-        
-        for (i=0; i<(words & ~1U); i+=2) {
-            addmul128(&t[i], a, b[i], b[i+1], words);
-        }
-
-        if (words & 1) {
-            addmul(&t[words-1], a, b[words-1], words, words+2);
-        }
-}
-
-/**
- * Compare two integers.
- * Return 1 is x>=y, 0 if x<y.
- */
-static int ge(const uint64_t *x, const uint64_t *y, size_t words)
-{
-    size_t i, j;
-
-    i=words-1;
-    for (j=0; j<words; j++, i--) {
-        if (x[i] == y[i]) {
-            continue;
-        }
-        return x[i] > y[i];
-    }
-    return 1;
-}
-
-/**
- * Subtract b[] from a[].
- */
-static uint64_t sub(uint64_t *a, size_t a_words, const uint64_t *b, size_t b_words)
-{
-    unsigned i;
-    uint64_t borrow1 , borrow2;
-
-    borrow2 = 0;
-    for (i=0; i<b_words; i++) {
-        borrow1 = b[i] > a[i];
-        a[i] -= b[i];
-
-        borrow1 |= borrow2 > a[i];
-        a[i] -= borrow2;
-
-        borrow2 = borrow1;
-    }
-
-    for (; borrow2>0 && i<a_words; i++) {
-        borrow1 = borrow2 > a[i];
-        a[i] -= borrow2;
-        borrow2 = borrow1;
-    }
-
-    return borrow2;
-}
-
-/*
- * If n[] is L=words*64 bit long, let R be 2^L.
- * Then n < R.
- * This function computes R^2 mod n.
- */
-static void rsquare(uint64_t *x, uint64_t *n, size_t words)
-{
-    size_t i;
-    size_t elle;
-
-    memset(x, 0, sizeof(uint64_t)*words);
-    elle = words * sizeof(uint64_t) * 8;
-
-    /**
-     * Start with 1, double 2*L times,
-     * and reduce it as soon as it exceeds n
-     */
-    x[0] = 1;
-    for (i=0; i<elle*2; i++) {
-        unsigned overflow;
-        size_t j;
-        
-        /** Double, by shifting left by one bit **/
-        overflow = (unsigned)(x[words-1] >> 63);
-        for (j=words-1; j>0; j--) {
-            x[j] = (x[j] << 1) + (x[j-1] >> 63);
-        }
-        /** Fill-in with zeroes **/
-        x[0] <<= 1;
-        
-        /** Subtract n if the result exceeds it **/
-        while (overflow || ge(x, n, words)) {
-            sub(x, words, n, words);
-            overflow = 0;
-        }
-    }
-}
-
-/**
- * Montgomery multiplicaton.
- * Input:
- * - a[], 1st term, in Montgomery form
- * - b[], 2nd term, in Montgomery form
- * - n[], modulus
- * - m0, LSW of the opposite of the inverse of n modulo R, a single word
- * - t[], temp buffer, 2*words+1
- *
- * https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
- */
-static void mont_mult(uint64_t *out, uint64_t *a, uint64_t *b, uint64_t *n, uint64_t m0, uint64_t *t, size_t abn_words)
-{
-    unsigned i;
-
-    if (a == b) {
-        square_w(t, a, abn_words);
-    } else {
-        product(t, a, b, abn_words);
-    }
-
-    t[2*abn_words] = 0; /** MSW **/
-
-    /** Clear lower words (two at a time) **/
-    for (i=0; i<(abn_words & ~1U); i+=2) {
-        uint64_t k0, k1, ti1, pr_lo, pr_hi;
-
-        /** Multiplier for n that will make t[i+0] go 0 **/
-        k0 = t[i] * m0;
-        
-        /** Simulate Muladd for digit 0 **/
-        DP_MULT(k0, n[0], pr_lo, pr_hi);
-        pr_lo += t[i];
-        pr_hi += pr_lo < t[i];
-
-        /** Expected digit 1 **/
-        ti1 = t[i+1] + n[1]*k0 + pr_hi;
-        
-        /** Multiplier for n that will make t[i+1] go 0 **/
-        k1 = ti1 * m0;
-        
-        addmul128(&t[i], n, k0, k1, abn_words);
-    }
-    
-    /** One left for odd number of words **/
-    if (abn_words & 1) {
-        addmul(&t[abn_words-1], n, t[abn_words-1]*m0, abn_words, abn_words+2);
-    }
-    
-    assert(t[2*abn_words] <= 1); /** MSW **/
-
-    /** Divide by R and possibly subtract n **/
-    if (t[2*abn_words] == 1 || ge(&t[abn_words], n, abn_words)) {
-        sub(&t[abn_words], abn_words, n, abn_words);
-    }
-    memcpy(out, &t[abn_words], sizeof(uint64_t)*abn_words);
-}
 
 /**
  * Spread 16 multipliers in memory, to attempt to prevent an attacker from
@@ -341,147 +126,84 @@ static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words
     }
 }
 
-struct Montgomery {
-    uint64_t *base;
-    uint64_t *modulus;
-    uint64_t *r_square;
-    uint64_t *one;
-    uint64_t *x;
-    uint64_t *t;
-    uint64_t *powers[1 << WINDOW_SIZE];
-    uint64_t *power_idx;
-    uint32_t *prot;
-    uint8_t  *seed;
-};
-
-/** Allocate space **/
-#define allocate(x, y) do {             \
-    x = calloc(y, sizeof(uint64_t));    \
-    if (x == NULL) {                    \
-        return 1;                       \
-    }} while(0)
-
-
-int allocate_montgomery(struct Montgomery *m, size_t words)
-{
-    int i;
-    int result;
-
-    memset(m, 0, sizeof *m);
-
-    allocate(m->base, words);
-    allocate(m->modulus, words);
-    allocate(m->r_square, words);
-    allocate(m->one, words);
-    allocate(m->x, words);
-    allocate(m->t, 2*words+1);
-    for (i=0; i<(1 << WINDOW_SIZE); i++) {
-        allocate(m->powers[i], words);
-    }
-    allocate(m->power_idx, words);
-    
-    m->prot = align_alloc((1<<WINDOW_SIZE)*words*8, CACHE_LINE_SIZE);
-    if (NULL == m->prot) {
-        return 1;
-    }
-
-    allocate(m->seed, 2*words);
-
-    result = 0;
-    return result;
-}
-
-#undef allocate
-
-void deallocate_montgomery(struct Montgomery *m)
-{
-    int i;
-
-    free(m->base);
-    free(m->modulus);
-    free(m->r_square);
-    free(m->one);
-    free(m->x);
-    free(m->t);
-    for (i=0; i<(1 << WINDOW_SIZE); i++) {
-        free(m->powers[i]);
-    }
-    free(m->power_idx);
-   
-    align_free(m->prot); 
-
-    free(m->seed);
-    
-    memset(m, 0, sizeof *m);
-}
-
-EXPORT_SYM int monty_pow(const uint8_t *base,
+EXPORT_SYM int monty_pow(const uint8_t *base_in,
                const uint8_t *exp,
                const uint8_t *modulus,
                uint8_t       *out,
                size_t len,
                uint64_t seed)
 {
-    uint64_t m0;
     unsigned i, j;
     size_t words;
     size_t exp_len;
     int res;
 
+    MontContext *ctx = NULL;
+    uint8_t *monty_seed = NULL;
+    uint64_t *powers[1 << WINDOW_SIZE] = { NULL };
+    uint64_t *power_idx = NULL;
+    uint32_t *prot = NULL;
+    uint64_t *base = NULL;
+    uint64_t *x = NULL;
+    uint64_t *scratchpad = NULL;
 
-    struct Montgomery monty;
     struct BitWindow bit_window;
 
-    if (!base || !exp || !modulus || !out || len==0) {
-        return 1;
-    }
-    
-    /** Odd (and non-zero) modulus only **/
-    if (!(modulus[len-1] & 1)) {
-        return 2;
+    if (!base_in || !exp || !modulus || !out)
+        return ERR_NULL;
+
+    if (len == 0)
+        return ERR_NOT_ENOUGH_DATA;
+
+    /* Allocations **/
+    res = mont_context_init(&ctx, modulus, len);
+    if (res)
+        return res;
+    words = ctx->words;
+
+    monty_seed = (uint8_t*)calloc(2*words, sizeof(uint64_t));
+    if (NULL == monty_seed) {
+        res = ERR_MEMORY;
+        goto cleanup;
     }
 
-    words = (len+7) / 8;
-    memset(out, 0, len);
-    
-    if (allocate_montgomery(&monty, words)) {
-        deallocate_montgomery(&monty);
-        return 3;
+    for (i=0; i<(1 << WINDOW_SIZE); i++) {
+        res = mont_number(powers+i, 1, ctx);
+        if (res) goto cleanup;
     }
+
+    res = mont_number(&power_idx, 1, ctx);
+    if (res) goto cleanup;
+
+    prot = align_alloc((1<<WINDOW_SIZE)*words*8, CACHE_LINE_SIZE);
+    if (NULL == prot) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    res = mont_from_bytes(&base, base_in, len, ctx);
+    if (res) goto cleanup;
+
+    res = mont_number(&x, 1, ctx);
+    if (res) goto cleanup;
+
+    res = mont_number(&scratchpad, SCRATCHPAD_NR, ctx);
+    if (res) goto cleanup;
 
     /** Compute full seed (2*words bytes) **/
-    expand_seed(seed, monty.seed, 2*words);
+    expand_seed(seed, monty_seed, 2*words);
 
-    /** Take in numbers **/
-    res = bytes_to_words(monty.base, words, base, len);
-    assert(res == 0);
-    res = bytes_to_words(monty.modulus, words, modulus, len);
-    assert(res == 0);
-
-    /** Set one **/
-    monty.one[0] = 1;
-
-    /** Pre-compute R^2 mod n **/
-    rsquare(monty.r_square, monty.modulus, words);
-
-    /** Pre-compute -n[0]^{-1} mod R **/
-    m0 = inverse64(~monty.modulus[0]+1);
-
-    /** Convert base to Montgomery form **/
-    mont_mult(monty.base, monty.base, monty.r_square, monty.modulus, m0, monty.t, words);
-    
     /** Result is initially 1 in Montgomery form **/
-    monty.x[0] = 1;
-    mont_mult(monty.x, monty.x, monty.r_square, monty.modulus, m0, monty.t, words);
+    mont_set(x, 1, NULL, ctx);
 
     /** Pre-compute powers a^0 mod n, a^1 mod n, a^2 mod n, ... a^(2^WINDOW_SIZE-1) mod n **/
-    memcpy(monty.powers[0], monty.x,    sizeof(uint64_t)*words);
-    memcpy(monty.powers[1], monty.base, sizeof(uint64_t)*words);
+    mont_copy(powers[0], x, ctx);
+    mont_copy(powers[1], base, ctx);
     for (i=1; i<(1 << (WINDOW_SIZE-1)); i++) {
-        mont_mult(monty.powers[i*2],   monty.powers[i],   monty.powers[i], monty.modulus, m0, monty.t, words);
-        mont_mult(monty.powers[i*2+1], monty.powers[i*2], monty.base,      monty.modulus, m0, monty.t, words);
+        mont_mult(powers[i*2],   powers[i],   powers[i], scratchpad, ctx);
+        mont_mult(powers[i*2+1], powers[i*2], base,      scratchpad, ctx);
     }
-    scatter(monty.prot, monty.powers, words, monty.seed);
+    scatter(prot, powers, words, monty_seed);
 
     /** Ignore leading zero bytes in the exponent **/
     exp_len = len;
@@ -490,9 +212,9 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
         exp++;
     }
     if (exp_len == 0) {
-        res = words_to_bytes(out, len, monty.one, words);
-        assert(res == 0);
-        return 0;
+        mont_to_bytes(out, x, ctx);
+        res = 0;
+        goto cleanup;
     }
 
     bit_window = init_bit_window(WINDOW_SIZE, exp, exp_len);
@@ -502,23 +224,32 @@ EXPORT_SYM int monty_pow(const uint8_t *base,
 
         /** Left-to-right exponentiation with fixed window **/       
         for (j=0; j<WINDOW_SIZE; j++) {
-            mont_mult(monty.x, monty.x, monty.x, monty.modulus, m0, monty.t, words);
+            mont_mult(x, x, x, scratchpad, ctx);
         }
         
         index = get_next_digit(&bit_window);
-        gather(monty.power_idx, monty.prot, index, words, monty.seed);
+        gather(power_idx, prot, index, words, monty_seed);
         
-        mont_mult(monty.x, monty.x, monty.power_idx, monty.modulus, m0, monty.t, words);
+        mont_mult(x, x, power_idx, scratchpad, ctx);
     }
 
     /** Transform result back in normal form **/    
-    mont_mult(monty.x, monty.x, monty.one, monty.modulus, m0, monty.t, words);
-    words_to_bytes(out, len, monty.x, words);
-    assert(res == 0);
+    mont_to_bytes(out, x, ctx);
+    res = 0;
 
-    deallocate_montgomery(&monty);
+cleanup:
+    mont_context_free(ctx);
+    free(monty_seed);
+    for (i=0; i<(1 << WINDOW_SIZE); i++) {
+        free(powers[i]);
+    }
+    free(power_idx);
+    align_free(prot);
+    free(base);
+    free(x);
+    free(scratchpad);
 
-    return 0;
+    return res;
 }
 
 #ifdef MAIN
@@ -563,6 +294,7 @@ int main(void)
         base[i] = i | 0x80 | 1;
         exponent[i] = base[i] = modulus[i] = base[i];
     }
+    base[0] = 0x7F;
 
     for (j=0; j<50; j++) {
     monty_pow(base, exponent, modulus, out, length, 12);

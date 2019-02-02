@@ -402,6 +402,7 @@ cleanup:
     free(tmp1);
     if (res != 0)
         free(encoded);
+    *out = NULL;
     return res;
 }
 
@@ -449,7 +450,7 @@ int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContex
  * @param out   The location where the result will be stored; it must have been created with mont_number(&p,1,ctx).
  * @param a     The first term.
  * @param b     The second term.
- * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx).
+ * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,SCRATCHPAD_NR,ctx).
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
@@ -497,7 +498,7 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp,
  * @param out   The location where the result will be stored at; it must have been created with mont_number(&p,1,ctx)
  * @param a     The first term.
  * @param b     The second term.
- * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,3,ctx).
+ * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,SCRATCHPAD_NR,ctx).
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */

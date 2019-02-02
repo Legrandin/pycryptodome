@@ -21,6 +21,7 @@ typedef struct mont_context {
     uint64_t *one;
 } MontContext;
 
+int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len);
 void mont_context_free(MontContext *ctx);
 size_t mont_bytes(const MontContext *ctx);
 
@@ -33,7 +34,6 @@ int mont_shift_left(uint64_t* out, const uint64_t* a, uint64_t k, const MontCont
 int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx);
 int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx);
 int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx);
-int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len);
 
 int mont_is_zero(const uint64_t *a, const MontContext *ctx);
 int mont_is_one(const uint64_t *a, const MontContext *ctx);

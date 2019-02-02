@@ -425,7 +425,8 @@ ext_modules = [
     # Math
     Extension("Crypto.Math._modexp",
         include_dirs=['src/'],
-        sources=['src/modexp.c', 'src/siphash.c', 'src/modexp_utils.c'] + multiply_cmod,
+        sources=['src/modexp.c', 'src/siphash.c', 'src/modexp_utils.c',
+                 'src/mont.c'] + multiply_cmod,
         ),
 ]
 
