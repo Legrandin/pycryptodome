@@ -82,6 +82,10 @@ class IntegerCustom(IntegerNative):
             self._value = pow(self._value, exp_value, mod_value)
             return self
 
+        # C extension only works with bases smaller than modulus
+        if self._value >= mod_value:
+            self._value %= mod_value
+
         max_len = len(long_to_bytes(max(self._value, exp_value, mod_value)))
 
         base_b = long_to_bytes(self._value, max_len)
