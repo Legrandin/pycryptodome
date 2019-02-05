@@ -690,17 +690,13 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         return ERR_NULL;
 
     if (0 == mod_len)
-        return ERR_NOT_ENOUGH_DATA;
+        return ERR_MODULUS;
 
     /** Ensure modulus is odd and at least 3, otherwise we can't compute its inverse over B **/
     if (is_even(modulus[mod_len-1]))
-        return ERR_VALUE;
-    if (modulus[0] < 3) {
-        size_t i;
-        for (i=1; i<mod_len && modulus[i]; i++);
-        if (i == mod_len)
-            return ERR_VALUE;
-    }
+        return ERR_MODULUS;
+    if (mod_len==1 && modulus[0]==1)
+        return ERR_MODULUS;
 
     *out = ctx = (MontContext*)calloc(1, sizeof(MontContext));
     if (NULL == ctx)

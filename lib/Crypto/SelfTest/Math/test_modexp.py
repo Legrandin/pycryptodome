@@ -77,7 +77,7 @@ def monty_pow(base, exp, modulus):
                 c_ulonglong(32)
                 )
 
-    if error == 2:
+    if error == 17:
         raise ExceptionModulus()
     if error:
         raise ValueError("monty_pow failed with error: %d" % error)

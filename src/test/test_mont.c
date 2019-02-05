@@ -71,10 +71,10 @@ void test_mont_context_init(void)
     assert(res == ERR_NULL);
     
     res = mont_context_init(&ctx, modulus, 0);
-    assert(res == ERR_NOT_ENOUGH_DATA);
+    assert(res == ERR_MODULUS);
     
     res = mont_context_init(&ctx, modulus_even, 4);
-    assert(res == ERR_VALUE);
+    assert(res == ERR_MODULUS);
 
     res = mont_context_init(&ctx, modulus, 4);
     assert(res == 0);
