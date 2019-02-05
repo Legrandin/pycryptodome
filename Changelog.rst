@@ -1,6 +1,19 @@
 Changelog
 =========
 
+3.8.0 (xx xxxxxxx 2019)
++++++++++++++++++++++++
+
+New features
+------------
+
+* Speed-up ECC performance.
+
+Resolved issues
+---------------
+
+* xxxxx
+
 3.7.3 (19 January 2019)
 +++++++++++++++++++++++
 
