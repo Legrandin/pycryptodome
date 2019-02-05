@@ -362,8 +362,15 @@ int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const Mon
     if (NULL == out || NULL == ctx || NULL == number)
         return ERR_NULL;
 
+    *out = NULL;
+
+    /** Removing leading zeroes but avoid a zero-length string **/
     if (0 == len)
         return ERR_NOT_ENOUGH_DATA;
+    while (len>1 && *number==0) {
+        len--;
+        number++;
+    }
 
     if (ctx->bytes < len)
         return ERR_VALUE;
@@ -400,9 +407,10 @@ int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const Mon
 cleanup:
     free(scratchpad);
     free(tmp1);
-    if (res != 0)
+    if (res != 0) {
         free(encoded);
-    *out = NULL;
+        *out = NULL;
+    }
     return res;
 }
 
@@ -689,6 +697,11 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     if (NULL == out || NULL == modulus)
         return ERR_NULL;
 
+    /** Consume leading zeros **/
+    while (mod_len>0 && *modulus==0) {
+        modulus++;
+        mod_len--;
+    }
     if (0 == mod_len)
         return ERR_MODULUS;
 
