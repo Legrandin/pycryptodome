@@ -69,10 +69,10 @@ def monty_pow(base, exp, modulus):
 
     out = create_string_buffer(max_len)
     error = _raw_montgomery.monty_pow(
+                out,
                 base_b,
                 exp_b,
                 modulus_b,
-                out,
                 c_size_t(max_len),
                 c_ulonglong(32)
                 )
