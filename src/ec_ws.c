@@ -47,7 +47,6 @@ STATIC void print_x(const char *s, const uint64_t *number, const MontContext *ct
 
     size = mont_bytes(ctx);
     encoded = calloc(1, size);
-    assert(size == 32);
     res = mont_to_bytes(encoded, number, ctx);
     assert(res == 0);
 
