@@ -440,6 +440,9 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
 
     if (NULL == pec_ctx || NULL == modulus || NULL == b)
         return ERR_NULL;
+
+    *pec_ctx = NULL;
+
     if (len == 0)
         return ERR_NOT_ENOUGH_DATA;
 
@@ -458,7 +461,6 @@ cleanup:
     free(ec_ctx->b);
     mont_context_free(ec_ctx->mont_ctx);
     free(ec_ctx);
-    *pec_ctx = NULL;
     return res;
 }
 
