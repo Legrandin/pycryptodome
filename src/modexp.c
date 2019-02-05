@@ -126,6 +126,20 @@ static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words
     }
 }
 
+/*
+ * Modular exponentiation. All numbers are
+ * encoded in big endian form, possibly with
+ * zero padding on the left.
+ *
+ * @param out     The memory area where to store the result
+ * @param base    Base number, strictly smaller than the modulus
+ * @param exp     Exponent
+ * @param modulus Modulus, it must be odd
+ * @param len     Size in bytes of out, base, exp, and modulus
+ * @param seed    A random seed, used for avoiding side-channel
+ *                attacks
+ * @return        0 in case of success, the appropriate error code otherwise
+ */
 EXPORT_SYM int monty_pow(
                uint8_t       *out,
                const uint8_t *base,
@@ -219,6 +233,8 @@ EXPORT_SYM int monty_pow(
         exp_len--;
         exp++;
     }
+
+    /* If exponent is 0, the result is always 1 */
     if (exp_len == 0) {
         memset(out, 0, len);
         out[len-1] = 1;
@@ -228,10 +244,10 @@ EXPORT_SYM int monty_pow(
 
     bit_window = init_bit_window(WINDOW_SIZE, exp, exp_len);
     
+    /** Left-to-right exponentiation with fixed window **/
     for (i=0; i < bit_window.nr_windows; i++) {
         unsigned index;
 
-        /** Left-to-right exponentiation with fixed window **/
         for (j=0; j<WINDOW_SIZE; j++) {
             mont_mult(x, x, x, scratchpad, ctx);
         }
