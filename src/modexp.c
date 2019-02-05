@@ -231,7 +231,7 @@ EXPORT_SYM int monty_pow(
     for (i=0; i < bit_window.nr_windows; i++) {
         unsigned index;
 
-        /** Left-to-right exponentiation with fixed window **/       
+        /** Left-to-right exponentiation with fixed window **/
         for (j=0; j<WINDOW_SIZE; j++) {
             mont_mult(x, x, x, scratchpad, ctx);
         }
@@ -240,7 +240,6 @@ EXPORT_SYM int monty_pow(
         gather(power_idx, prot, index, words, mont_seed);
         
         mont_mult(x, x, power_idx, scratchpad, ctx);
-
     }
 
     /** Transform result back into big-endian, byte form **/
