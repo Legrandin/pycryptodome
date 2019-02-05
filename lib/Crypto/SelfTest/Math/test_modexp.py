@@ -69,15 +69,15 @@ def monty_pow(base, exp, modulus):
 
     out = create_string_buffer(max_len)
     error = _raw_montgomery.monty_pow(
+                out,
                 base_b,
                 exp_b,
                 modulus_b,
-                out,
                 c_size_t(max_len),
                 c_ulonglong(32)
                 )
 
-    if error == 2:
+    if error == 17:
         raise ExceptionModulus()
     if error:
         raise ValueError("monty_pow failed with error: %d" % error)
@@ -110,25 +110,25 @@ class TestModExp(unittest.TestCase):
         self.assertEqual(result, 0)
 
     def test_zero_modulus(self):
-        base = 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+        base = 0xfffffffffffffffffffffffffffffffffffffffffffffffff
         self.assertRaises(ExceptionModulus, monty_pow, base, exponent1, 0)
         self.assertRaises(ExceptionModulus, monty_pow, 0, 0, 0)
 
     def test_larger_exponent(self):
-        base = 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
-        expected = pow(base, modulus1 << 64, modulus1)
-        result = monty_pow(base, modulus1 << 64, modulus1)
+        base = modulus1 - 0xFFFFFFF
+        expected = pow(base, modulus1<<64, modulus1)
+        result = monty_pow(base, modulus1<<64, modulus1)
         self.assertEqual(result, expected)
 
     def test_even_modulus(self):
-        base = 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+        base = modulus1 >> 4
         self.assertRaises(ExceptionModulus, monty_pow, base, exponent1, modulus1-1)
 
     def test_several_lengths(self):
         prng = SHAKE128.new().update(b('Test'))
         for length in range(1, 100):
-            base = Integer.from_bytes(prng.read(length))
             modulus2 = Integer.from_bytes(prng.read(length)) | 1
+            base = Integer.from_bytes(prng.read(length)) % modulus2
             exponent2 = Integer.from_bytes(prng.read(length))
 
             expected = pow(base, exponent2, modulus2)
@@ -139,8 +139,8 @@ class TestModExp(unittest.TestCase):
         prng = create_rng(b('Test variable exponent'))
         for i in range(20):
             for j in range(7):
-                base = prng.getrandbits(8*30)
                 modulus = prng.getrandbits(8*30) | 1
+                base = prng.getrandbits(8*30) % modulus
                 exponent = prng.getrandbits(i*8+j)
 
                 expected = pow(base, exponent, modulus)
@@ -157,8 +157,8 @@ class TestModExp(unittest.TestCase):
         prng = create_rng(b('Test 63'))
         length = 63
         for _ in range(2000):
-            base     = prng.getrandbits(8*length)
             modulus  = prng.getrandbits(8*length) | 1
+            base     = prng.getrandbits(8*length) % modulus
             exponent = prng.getrandbits(8*length)
 
             expected = pow(base, exponent, modulus)
@@ -169,8 +169,8 @@ class TestModExp(unittest.TestCase):
         prng = create_rng(b('Test 64'))
         length = 64
         for _ in range(2000):
-            base     = prng.getrandbits(8*length)
             modulus  = prng.getrandbits(8*length) | 1
+            base     = prng.getrandbits(8*length) % modulus
             exponent = prng.getrandbits(8*length)
 
             expected = pow(base, exponent, modulus)
@@ -179,10 +179,10 @@ class TestModExp(unittest.TestCase):
 
     def test_stress_65(self):
         prng = create_rng(b('Test 65'))
-        length = 63
+        length = 65
         for _ in range(2000):
-            base     = prng.getrandbits(8*length)
             modulus  = prng.getrandbits(8*length) | 1
+            base     = prng.getrandbits(8*length) % modulus
             exponent = prng.getrandbits(8*length)
 
             expected = pow(base, exponent, modulus)

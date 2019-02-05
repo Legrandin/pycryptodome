@@ -30,6 +30,7 @@
  */
 
 #include "common.h"
+#include "endianess.h"
 
 FAKE_INIT(chacha20)
 

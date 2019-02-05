@@ -21,6 +21,7 @@
  */
 
 #include "common.h"
+#include "endianess.h"
 
 FAKE_INIT(ghash_portable)
 

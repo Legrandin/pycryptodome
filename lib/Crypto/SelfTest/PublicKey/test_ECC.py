@@ -151,6 +151,8 @@ class TestEccPoint_NIST(unittest.TestCase):
         pointRx = 0xd867b4679221009234939221b8046245efcf58413daacbeff857b8588341f6b8
         pointRy = 0xf2504055c03cede12d22720dad69c745106b6607ec7e50dd35d54bd80f615275
 
+        t = self.pointS * d
+
         pointR = self.pointS * d + self.pointT * e
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)

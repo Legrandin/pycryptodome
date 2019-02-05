@@ -1,4 +1,4 @@
-"""Make unit test for product() in montgomery.c"""
+"""Make unit test for product() in modexp.c"""
 
 
 from common import counter, make_main, split64

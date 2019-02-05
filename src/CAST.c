@@ -43,6 +43,7 @@
 */
 
 #include "common.h"
+#include "endianess.h"
 #include "block_base.h"
 
 FAKE_INIT(raw_cast)

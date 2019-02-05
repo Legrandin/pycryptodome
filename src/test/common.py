@@ -34,6 +34,23 @@ def split64(long_int):
         long_int >>= 64
     return result
 
+def inverse(x, modulus):
+    if modulus == 0:
+        raise ZeroDivisionError("Modulus cannot be zero")
+    if modulus < 0:
+        raise ValueError("Modulus cannot be negative")
+    r_p, r_n = x, modulus
+    s_p, s_n = 1, 0
+    while r_n > 0:
+        q = r_p // r_n
+        r_p, r_n = r_n, r_p - q * r_n
+        s_p, s_n = s_n, s_p - q * s_n
+    if r_p != 1:
+        raise ValueError("No inverse value can be computed" + str(r_p))
+    while s_p < 0:
+        s_p += modulus
+    return s_p
+
 
 def make_main():
     print "int main(void) {"

@@ -29,9 +29,9 @@
  * ===================================================================
  */
 
-#include "common.h"
-
 #include <stdio.h>
+#include "common.h"
+#include "endianess.h"
 
 #define WORDS_IN_BLOCK 16
 #define WORDS_IN_STATE 8

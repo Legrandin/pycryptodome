@@ -416,10 +416,17 @@ ext_modules = [
         include_dirs=['src/'],
         sources=['src/strxor.c']),
 
-    # Math
-    Extension("Crypto.Math._montgomery",
+    # ECC
+    Extension("Crypto.PublicKey._ec_ws",
         include_dirs=['src/'],
-        sources=['src/montgomery.c', 'src/siphash.c', 'src/montgomery_utils.c'] + multiply_cmod,
+        sources=['src/ec_ws.c', 'src/mont.c'] + multiply_cmod,
+        ),
+
+    # Math
+    Extension("Crypto.Math._modexp",
+        include_dirs=['src/'],
+        sources=['src/modexp.c', 'src/siphash.c', 'src/modexp_utils.c',
+                 'src/mont.c'] + multiply_cmod,
         ),
 ]
 

@@ -29,11 +29,12 @@
  * ===================================================================
  */
 
-#include "common.h"
-#include "block_base.h"
-#include <wmmintrin.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <wmmintrin.h>
+#include "common.h"
+#include "endianess.h"
+#include "block_base.h"
 
 FAKE_INIT(raw_aesni)
 

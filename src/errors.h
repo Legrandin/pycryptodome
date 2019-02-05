@@ -15,6 +15,10 @@
 #define ERR_MAX_OFFSET          11
 #define ERR_BLOCK_SIZE          12
 #define ERR_TAG_SIZE            13
+#define ERR_VALUE               14
+#define ERR_EC_POINT            15
+#define ERR_EC_CURVE            16
+#define ERR_MODULUS             17
 #define ERR_UNKNOWN             32
 
 #endif
