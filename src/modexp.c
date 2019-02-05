@@ -147,6 +147,7 @@ EXPORT_SYM int monty_pow(
     uint64_t *mont_base = NULL;
     uint64_t *x = NULL;
     uint64_t *scratchpad = NULL;
+    uint8_t *buf_out = NULL;
 
     struct BitWindow bit_window;
 
@@ -219,7 +220,8 @@ EXPORT_SYM int monty_pow(
         exp++;
     }
     if (exp_len == 0) {
-        mont_to_bytes(out, x, ctx);
+        memset(out, 0, len);
+        out[len-1] = 1;
         res = 0;
         goto cleanup;
     }
@@ -238,11 +240,16 @@ EXPORT_SYM int monty_pow(
         gather(power_idx, prot, index, words, mont_seed);
         
         mont_mult(x, x, power_idx, scratchpad, ctx);
+
     }
 
-    /** Transform result back in normal form **/    
-    mont_to_bytes(out, x, ctx);
-    res = 0;
+    /** Transform result back into big-endian, byte form **/
+    mont_to_bytes(buf_out, x, ctx);
+    memset(out, 0, len);
+    if (mont_bytes(ctx)>len)
+        memcpy(out, buf_out+(mont_bytes(ctx)-len), len);
+    else
+        memcpy(out+(len-mont_bytes(ctx)), buf_out, mont_bytes(ctx));
 
 cleanup:
     mont_context_free(ctx);
@@ -255,6 +262,7 @@ cleanup:
     free(mont_base);
     free(x);
     free(scratchpad);
+    free(buf_out);
 
     return res;
 }
