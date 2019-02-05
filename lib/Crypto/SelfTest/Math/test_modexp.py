@@ -179,7 +179,7 @@ class TestModExp(unittest.TestCase):
 
     def test_stress_65(self):
         prng = create_rng(b('Test 65'))
-        length = 63
+        length = 65
         for _ in range(2000):
             modulus  = prng.getrandbits(8*length) | 1
             base     = prng.getrandbits(8*length) % modulus
