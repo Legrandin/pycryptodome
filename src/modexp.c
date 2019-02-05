@@ -67,7 +67,7 @@ FAKE_INIT(modexp)
  * The relationship between multiplier and position within each cache line is
  * randomized by means of the external seed.
  */
-static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint8_t *seed)
+static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, const uint8_t *seed)
 {
     size_t i, j;
 
@@ -108,7 +108,7 @@ static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, uint8_t *s
  *
  * Note that idx contains 4 bits of the exponent and it is most likely a secret.
  */
-static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words, uint8_t *seed)
+static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words, const uint8_t *seed)
 {
     size_t j;
     
@@ -140,17 +140,17 @@ EXPORT_SYM int monty_pow(
     int res;
 
     MontContext *ctx = NULL;
-    uint8_t *monty_seed = NULL;
+    uint8_t *mont_seed = NULL;
     uint64_t *powers[1 << WINDOW_SIZE] = { NULL };
     uint64_t *power_idx = NULL;
     uint32_t *prot = NULL;
-    uint64_t *base = NULL;
+    uint64_t *mont_base = NULL;
     uint64_t *x = NULL;
     uint64_t *scratchpad = NULL;
 
     struct BitWindow bit_window;
 
-    if (!base_in || !exp || !modulus || !out)
+    if (!base || !exp || !modulus || !out)
         return ERR_NULL;
 
     if (len == 0)
@@ -162,8 +162,8 @@ EXPORT_SYM int monty_pow(
         return res;
     words = ctx->words;
 
-    monty_seed = (uint8_t*)calloc(2*words, sizeof(uint64_t));
-    if (NULL == monty_seed) {
+    mont_seed = (uint8_t*)calloc(2*words, sizeof(uint64_t));
+    if (NULL == mont_seed) {
         res = ERR_MEMORY;
         goto cleanup;
     }
@@ -182,7 +182,7 @@ EXPORT_SYM int monty_pow(
         goto cleanup;
     }
 
-    res = mont_from_bytes(&base, base_in, len, ctx);
+    res = mont_from_bytes(&mont_base, base, len, ctx);
     if (res) goto cleanup;
 
     res = mont_number(&x, 1, ctx);
@@ -191,20 +191,26 @@ EXPORT_SYM int monty_pow(
     res = mont_number(&scratchpad, SCRATCHPAD_NR, ctx);
     if (res) goto cleanup;
 
+    buf_out = (uint8_t*)calloc(1, mont_bytes(ctx));
+    if (NULL == buf_out) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
     /** Compute full seed (2*words bytes) **/
-    expand_seed(seed, monty_seed, 2*words);
+    expand_seed(seed, mont_seed, 2*words);
 
     /** Result is initially 1 in Montgomery form **/
     mont_set(x, 1, NULL, ctx);
 
     /** Pre-compute powers a^0 mod n, a^1 mod n, a^2 mod n, ... a^(2^WINDOW_SIZE-1) mod n **/
     mont_copy(powers[0], x, ctx);
-    mont_copy(powers[1], base, ctx);
+    mont_copy(powers[1], mont_base, ctx);
     for (i=1; i<(1 << (WINDOW_SIZE-1)); i++) {
         mont_mult(powers[i*2],   powers[i],   powers[i], scratchpad, ctx);
-        mont_mult(powers[i*2+1], powers[i*2], base,      scratchpad, ctx);
+        mont_mult(powers[i*2+1], powers[i*2], mont_base,      scratchpad, ctx);
     }
-    scatter(prot, powers, words, monty_seed);
+    scatter(prot, powers, words, mont_seed);
 
     /** Ignore leading zero bytes in the exponent **/
     exp_len = len;
@@ -229,7 +235,7 @@ EXPORT_SYM int monty_pow(
         }
         
         index = get_next_digit(&bit_window);
-        gather(power_idx, prot, index, words, monty_seed);
+        gather(power_idx, prot, index, words, mont_seed);
         
         mont_mult(x, x, power_idx, scratchpad, ctx);
     }
@@ -240,13 +246,13 @@ EXPORT_SYM int monty_pow(
 
 cleanup:
     mont_context_free(ctx);
-    free(monty_seed);
+    free(mont_seed);
     for (i=0; i<(1 << WINDOW_SIZE); i++) {
         free(powers[i]);
     }
     free(power_idx);
     align_free(prot);
-    free(base);
+    free(mont_base);
     free(x);
     free(scratchpad);
 
@@ -275,7 +281,7 @@ int main(void)
 
     result = monty_pow(out, base, exponent, modulus, length, 12);
     
-    free(base);
+    free(mont_base);
     free(modulus);
     free(exponent);
     free(out);
