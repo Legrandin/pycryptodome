@@ -177,6 +177,16 @@ static inline void align_free(void *mem)
 #endif
 
 /*
- * Endianness conversion
+ * Find first character in a string which is not c.
  */
+static inline const uint8_t* memchr_not(const uint8_t* s, int c, size_t n)
+{
+    size_t i;
+
+    for (i=0; i<n; i++, s++)
+        if (*s != c)
+            return s;
+    return NULL;
+}
+
 #endif

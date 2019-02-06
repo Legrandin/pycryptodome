@@ -1,6 +1,8 @@
 """Make unit test for mont_mult() and mont_mult_internal() in mont.c"""
 
-from common import counter, make_main, split64, inverse
+from common import counter, make_main, split64, inverse, bin2int
+from hashlib import sha256
+import struct
 
 def make_test(a, b, modulus):
 
@@ -33,7 +35,7 @@ def make_test(a, b, modulus):
 
     # Everything must have nw words
     for ds in (a_m_s, b_m_s, modulus_s, result_m_s):
-        ds += [0] * (nw - len(ds))
+        ds += ["0"] * (nw - len(ds))
 
     # Modulus also byte encoded, big endian
     modulus_b = []
@@ -76,8 +78,8 @@ def make_test(a, b, modulus):
     print "    memset(out, 0xAA, sizeof out);"
     print "    res = mont_mult(out, a, b, scratch, ctx);"
     print "    assert(res == 0);"
-    print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
     print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw
+    print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
     print "    mont_context_free(ctx);"
     print "}"
     print ""
@@ -92,10 +94,25 @@ print '#include "mont.h"'
 print ""
 print "void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);"
 
+p256 = 115792089210356248762697446949407573530086143415290314195533631308867097853951
+
 make_test(2, 3, 255)
 make_test(2, 240, 255)
 make_test(189, 240, 255)
 make_test(189, 240, 32984723984723984723847)
 make_test(189000000, 7878787878, 32984723984723984723847)
 make_test(1890000003439483948394839843434, 78787878780003984834673498384734, 3298472398472398472384798743287438734875384758435834539400000033988787)
+
+for x in range(100):
+    modulus_len = x//10 + 5 # 40 bit .. 112 bits
+    modulus = bin2int(sha256(b"modulus" + struct.pack(">I", x)).digest()[:-modulus_len]) |  1
+    a = bin2int(sha256(b"a" + struct.pack(">I", x)).digest()) % modulus
+    b = bin2int(sha256(b"b" + struct.pack(">I", x)).digest()) % modulus
+    make_test(a, b, modulus)
+
+for x in range(100):
+    a = bin2int(sha256(b"a" + struct.pack(">I", x)).digest()) % p256
+    b = bin2int(sha256(b"b" + struct.pack(">I", x)).digest()) % p256
+    make_test(a, b, p256)
+
 make_main()

@@ -1,3 +1,5 @@
+import struct
+
 class Count(object):
     def __init__(self):
         self.count = 0
@@ -50,6 +52,14 @@ def inverse(x, modulus):
     while s_p < 0:
         s_p += modulus
     return s_p
+
+
+def bin2int(bs):
+    res = 0
+    while len(bs) > 0:
+        res = res*256 + struct.unpack("B", bs[:1])[0]
+        bs = bs[1:]
+    return res
 
 
 def make_main():

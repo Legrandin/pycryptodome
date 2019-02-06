@@ -132,4 +132,3 @@ build/tests_mont_mult.c: make_tests_mont_mult.py
 
 build/tests_mont_mult: build/tests_mont_mult.c build/mont.o ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
-

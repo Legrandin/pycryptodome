@@ -452,6 +452,7 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
 
     res = mont_context_init(&ec_ctx->mont_ctx, modulus, len);
     if (res) goto cleanup;
+
     res = mont_from_bytes(&ec_ctx->b, b, len, ec_ctx->mont_ctx);
     if (res) goto cleanup;
 
