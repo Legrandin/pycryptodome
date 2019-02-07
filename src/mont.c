@@ -285,7 +285,7 @@ STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t 
     
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
-    mask = (t[2*nw] == 1 || ge(&t[nw], n, nw)) - 1;
+    mask = (t[2*nw] | ge(&t[nw], n, nw)) - 1;
     for (i=0; i<nw; i++) {
         out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
     }
@@ -354,7 +354,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
-    mask = (t[2*nw] == 1 || ge(&t[nw], n, nw)) - 1;
+    mask = (t[2*nw] | ge(&t[nw], n, nw)) - 1;
     for (i=0; i<nw; i++) {
         out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
     }
