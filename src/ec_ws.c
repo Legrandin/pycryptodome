@@ -695,7 +695,7 @@ static int blind_scalar_factor(uint8_t **blind_scalar,
     int res = ERR_MEMORY;
 
     scalar_words = (scalar_len+7)/8;
-    blind_scalar_words = MAX(order_words+1, scalar_words+1);
+    blind_scalar_words = MAX(order_words+2, scalar_words+2);
     *blind_scalar_len = blind_scalar_words*sizeof(uint64_t);
 
     *blind_scalar = (uint8_t*)calloc(*blind_scalar_len, 1);
