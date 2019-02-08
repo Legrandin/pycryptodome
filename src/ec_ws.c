@@ -499,7 +499,7 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
  *  @param ec_ctx   The EC context
  *  @return         0 for success, the appopriate error code otherwise
  */
-EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y, size_t len, const EcContext *ec_ctx)
+EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, const uint8_t *x, const uint8_t *y, size_t len, const EcContext *ec_ctx)
 {
     int res;
     Workplace *wp = NULL;

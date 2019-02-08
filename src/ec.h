@@ -30,7 +30,7 @@ typedef struct _EcPoint {
 
 EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx, const uint8_t *modulus, const uint8_t *b, const uint8_t *order, size_t len);
 EXPORT_SYM void ec_free_context(EcContext *ec_ctx);
-EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y, size_t len, const EcContext *ec_ctx);
+EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, const uint8_t *x, const uint8_t *y, size_t len, const EcContext *ec_ctx);
 EXPORT_SYM void ec_free_point(EcPoint *ecp);
 EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp);
 EXPORT_SYM int ec_ws_double(EcPoint *p);
