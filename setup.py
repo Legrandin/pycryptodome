@@ -419,7 +419,7 @@ ext_modules = [
     # ECC
     Extension("Crypto.PublicKey._ec_ws",
         include_dirs=['src/'],
-        sources=['src/ec_ws.c', 'src/mont.c'] + multiply_cmod,
+        sources=['src/modexp_utils.c', 'src/siphash.c', 'src/ec_ws.c', 'src/mont.c'] + multiply_cmod,
         ),
 
     # Math

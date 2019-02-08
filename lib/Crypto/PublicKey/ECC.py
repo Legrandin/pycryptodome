@@ -48,7 +48,10 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _extract_subject_public_key_info)
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
-                                  SmartPointer, c_size_t, c_uint8_ptr)
+                                  SmartPointer, c_size_t, c_uint8_ptr,
+                                  c_ulonglong)
+
+from Crypto.Random.random import getrandbits
 
 _ec_lib = load_pycryptodome_raw_lib("Crypto.PublicKey._ec_ws", """
 typedef void EcContext;
@@ -64,7 +67,7 @@ void ec_free_point(EcPoint *ecp);
 int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp);
 int ec_ws_double(EcPoint *p);
 int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb);
-int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len);
+int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed);
 int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp);
 int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2);
 int ec_ws_neg(EcPoint *p);
@@ -213,7 +216,8 @@ class EccPoint(object):
         sb = long_to_bytes(scalar)
         result = _ec_lib.ec_ws_scalar_multiply(self._point.get(),
                                                c_uint8_ptr(sb),
-                                               c_size_t(len(sb)))
+                                               c_size_t(len(sb)),
+                                               c_ulonglong(getrandbits(64)))
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self

@@ -34,6 +34,7 @@
 #include "common.h"
 #include "mont.h"
 #include "ec.h"
+#include "modexp_utils.h"
 
 FAKE_INIT(ec_ws)
 
@@ -657,33 +658,65 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 
 /*
  * Multiply an EC point by a scalar
+ *
+ * @param ecp   The EC point to multiply
+ * @param k     The scalar, encoded in big endian mode
+ * @param len   The length of the scalar, in bytes
+ * @param seed  The 64-bit to drive the randomizations against SCAs
+ * @return      0 in case of success, the appropriate error code otherwise
  */
-EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len)
+EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed)
 {
-    Workplace *wp1, *wp2;
+    Workplace *wp1=NULL, *wp2=NULL;
     MontContext *ctx;
+    uint64_t *factor=NULL;
+    uint64_t *factor_pow=NULL;
+    int res;
 
     if (NULL == ecp || NULL == k)
         return ERR_NULL;
     ctx = ecp->ec_ctx->mont_ctx;
 
     wp1 = new_workplace(ctx);
-    if (NULL == wp1)
-        return ERR_MEMORY;
+    if (NULL == wp1) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
 
     wp2 = new_workplace(ctx);
     if (NULL == wp2) {
-        free_workplace(wp1);
-        return ERR_MEMORY;
+        res = ERR_MEMORY;
+        goto cleanup;
     }
+
+    /* Create the blinding factor for the base point */
+    res = mont_number(&factor, 2, ctx);
+    if (res) goto cleanup;
+    expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
+    factor_pow = &factor[ctx->words];
+
+   /* Blind the base point */
+    mont_mult(ecp->z, ecp->z, factor, wp1->scratch, ctx);
+
+    mont_mult(factor_pow, factor, factor, wp1->scratch, ctx);
+    mont_mult(ecp->x, ecp->x, factor_pow, wp1->scratch, ctx);
+
+    mont_mult(factor_pow, factor_pow, factor, wp1->scratch, ctx);
+    mont_mult(ecp->y, ecp->y, factor_pow, wp1->scratch, ctx);
+
+    /* Blind the exponent */
 
     ec_exp(ecp->x, ecp->y, ecp->z,
            ecp->x, ecp->y, ecp->z,
            k, len, wp1, wp2, ctx);
 
+    res = 0;
+
+cleanup:
     free_workplace(wp1);
     free_workplace(wp2);
-    return 0;
+    free(factor);
+    return res;
 }
 
 EXPORT_SYM int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
