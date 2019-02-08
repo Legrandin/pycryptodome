@@ -751,23 +751,23 @@ EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
     if (NULL == wp)
         return ERR_MEMORY;
 
-    mont_mult(wp->a, ecp1->z, ecp1->z, wp->scratch, ctx);
-    mont_mult(wp->b, ecp1->x, wp->a, wp->scratch, ctx);      /* B = X1*Z1² */
+    mont_mult(wp->a, ecp2->z, ecp2->z, wp->scratch, ctx);
+    mont_mult(wp->b, ecp1->x, wp->a, wp->scratch, ctx);      /* B = X1*Z2² */
 
-    mont_mult(wp->c, ecp2->z, ecp2->z, wp->scratch, ctx);
-    mont_mult(wp->d, ecp2->x, wp->c, wp->scratch, ctx);      /* C = X2*Z2² */
+    mont_mult(wp->c, ecp1->z, ecp1->z, wp->scratch, ctx);
+    mont_mult(wp->d, ecp2->x, wp->c, wp->scratch, ctx);      /* C = X2*Z1² */
 
-    if (!mont_is_equal(wp->b, wp->c, ctx))
+    if (!mont_is_equal(wp->b, wp->d, ctx))
         return -1;
 
-    mont_mult(wp->a, ecp1->z, wp->a, wp->scratch, ctx);
-    mont_mult(wp->e, ecp1->y, wp->a, wp->scratch, ctx);      /* E = Y1*Z1³ */
+    mont_mult(wp->a, ecp2->z, wp->a, wp->scratch, ctx);
+    mont_mult(wp->e, ecp1->y, wp->a, wp->scratch, ctx);      /* E = Y1*Z2³ */
 
-    mont_mult(wp->c, ecp2->z, wp->c, wp->scratch, ctx);
-    mont_mult(wp->f, ecp2->y, wp->c, wp->scratch, ctx);      /* F = Y2*Z2³ */
+    mont_mult(wp->c, ecp1->z, wp->c, wp->scratch, ctx);
+    mont_mult(wp->f, ecp2->y, wp->c, wp->scratch, ctx);      /* F = Y2*Z1³ */
 
     if (!mont_is_equal(wp->e, wp->f, ctx))
-        return -1;
+        return -2;
 
     return 0;
 }
