@@ -730,10 +730,6 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
 {
     Workplace *wp1=NULL, *wp2=NULL;
     MontContext *ctx;
-    uint64_t *factor=NULL;
-    uint64_t *factor_pow=NULL;
-    uint8_t *blind_scalar=NULL;
-    size_t blind_scalar_len;
     int res;
 
     if (NULL == ecp || NULL == k)
@@ -756,42 +752,57 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
         goto cleanup;
     }
 
-    /* Create the blinding factor for the base point */
-    res = mont_number(&factor, 2, ctx);
-    if (res)
-        goto cleanup;
-    expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
-    factor_pow = &factor[ctx->words];
+    if (seed != 0) {
+        uint8_t *blind_scalar=NULL;
+        size_t blind_scalar_len;
+        uint64_t *factor=NULL;
+        uint64_t *factor_pow=NULL;
 
-   /* Blind the base point */
-    mont_mult(ecp->z, ecp->z, factor, wp1->scratch, ctx);
-    mont_mult(factor_pow, factor, factor, wp1->scratch, ctx);
-    mont_mult(ecp->x, ecp->x, factor_pow, wp1->scratch, ctx);
-    mont_mult(factor_pow, factor_pow, factor, wp1->scratch, ctx);
-    mont_mult(ecp->y, ecp->y, factor_pow, wp1->scratch, ctx);
+        /* Create the blinding factor for the base point */
+        res = mont_number(&factor, 2, ctx);
+        if (res)
+            goto cleanup;
+        expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
+        factor_pow = &factor[ctx->words];
 
-    /* Blind the scalar, by adding R*order where R is at least 32 bits */
-    res = blind_scalar_factor(&blind_scalar,
-                              &blind_scalar_len,
-                              k, len,
-                              (uint32_t)seed,
-                              ecp->ec_ctx->order,
-                              ctx->words);
-    if (res)
-        goto cleanup;
+        /* Blind the base point */
+        mont_mult(ecp->z, ecp->z, factor, wp1->scratch, ctx);
+        mont_mult(factor_pow, factor, factor, wp1->scratch, ctx);
+        mont_mult(ecp->x, ecp->x, factor_pow, wp1->scratch, ctx);
+        mont_mult(factor_pow, factor_pow, factor, wp1->scratch, ctx);
+        mont_mult(ecp->y, ecp->y, factor_pow, wp1->scratch, ctx);
 
-    ec_exp(ecp->x, ecp->y, ecp->z,
-           ecp->x, ecp->y, ecp->z,
-           blind_scalar, blind_scalar_len,
-           wp1, wp2, ctx);
+        free(factor);
+
+        /* Blind the scalar, by adding R*order where R is at least 32 bits */
+        res = blind_scalar_factor(&blind_scalar,
+                                  &blind_scalar_len,
+                                  k, len,
+                                  (uint32_t)seed,
+                                  ecp->ec_ctx->order,
+                                  ctx->words);
+        if (res)
+            goto cleanup;
+
+        ec_exp(ecp->x, ecp->y, ecp->z,
+               ecp->x, ecp->y, ecp->z,
+               blind_scalar, blind_scalar_len,
+               wp1, wp2, ctx);
+
+        free(blind_scalar);
+    } else {
+
+        ec_exp(ecp->x, ecp->y, ecp->z,
+               ecp->x, ecp->y, ecp->z,
+               k, len,
+               wp1, wp2, ctx);
+    }
 
     res = 0;
 
 cleanup:
     free_workplace(wp1);
     free_workplace(wp2);
-    free(factor);
-    free(blind_scalar);
     return res;
 }
 
