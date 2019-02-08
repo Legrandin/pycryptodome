@@ -34,7 +34,7 @@ clean:
 
 # ECC
 
-build/tests_ec_ws: test_ec_ws.c ../ec_ws.c ../multiply_32.c ../mont.c
+build/tests_ec_ws: test_ec_ws.c ../ec_ws.c ../multiply_32.c ../mont.c ../modexp_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # addmul128

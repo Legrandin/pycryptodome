@@ -14,7 +14,8 @@ typedef struct {
  */
 typedef struct _EcContext {
     MontContext *mont_ctx;
-    uint64_t *b;
+    uint64_t *b;        /* encoded in Montgomery form */
+    uint64_t *order;    /* plain form */
 } EcContext;
 
 /*
@@ -27,7 +28,7 @@ typedef struct _EcPoint {
     uint64_t *z;
 } EcPoint;
 
-EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx, const uint8_t *modulus, const uint8_t *b, size_t len);
+EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx, const uint8_t *modulus, const uint8_t *b, const uint8_t *order, size_t len);
 EXPORT_SYM void ec_free_context(EcContext *ec_ctx);
 EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y, size_t len, const EcContext *ec_ctx);
 EXPORT_SYM void ec_free_point(EcPoint *ecp);

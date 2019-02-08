@@ -32,6 +32,8 @@
 #include <assert.h>
 
 #include "common.h"
+#include "endianess.h"
+#include "multiply.h"
 #include "mont.h"
 #include "ec.h"
 #include "modexp_utils.h"
@@ -428,15 +430,18 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  *                  EC context will be stored.
  * @param modulus   The prime modulus for the curve, big-endian encoded
  * @param b         The constant b, big-endian encoded
- * @param len       The length in bytes of modulus and b
+ * @param order     The order of the EC curve
+ * @param len       The length in bytes of modulus, b, and order
  * @return          0 for success, the appopriate error code otherwise
  */
 EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
                                  const uint8_t *modulus,
                                  const uint8_t *b,
+                                 const uint8_t *order,
                                  size_t len)
 {
     EcContext *ec_ctx = NULL;
+    unsigned order_words;
     int res;
 
     if (NULL == pec_ctx || NULL == modulus || NULL == b)
@@ -457,10 +462,16 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     res = mont_from_bytes(&ec_ctx->b, b, len, ec_ctx->mont_ctx);
     if (res) goto cleanup;
 
+    order_words = (len+7)/8;
+    ec_ctx->order = (uint64_t*)calloc(order_words, sizeof(uint64_t));
+    if (NULL == ec_ctx->order) goto cleanup;
+    bytes_to_words(ec_ctx->order, order_words, order, len);
+
     return 0;
 
 cleanup:
     free(ec_ctx->b);
+    free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
     free(ec_ctx);
     return res;
@@ -472,6 +483,7 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
         return;
 
     free(ec_ctx->b);
+    free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
     free(ec_ctx);
 }
@@ -657,6 +669,55 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 }
 
 /*
+ * Blind the scalar factor to be used in an EC multiplication
+ *
+ * @param blind_scalar      The area of memory where the pointer to a newly
+ *                          allocated blind scalar is stored, in big endian mode.
+ *                          The caller must deallocate this memory.
+ * @param blind_scalar_len  The area where the length of the blind scalar in bytes will be written to.
+ * @param scalar            The (secret) scalar to blind.
+ * @param scalar_len        The length of the secret scalar in bytes.
+ * @param R_seed            The 32-bit factor to use to blind the scalar.
+ * @param order             The order of the EC curve, big-endian mode, 64 bit words
+ * @param order_words       The number of words making up the order
+ */
+static int blind_scalar_factor(uint8_t **blind_scalar,
+                        size_t *blind_scalar_len,
+                        const uint8_t *scalar,
+                        size_t scalar_len,
+                        uint32_t R_seed,
+                        uint64_t *order,
+                        size_t order_words)
+{
+    size_t scalar_words;
+    size_t blind_scalar_words;
+    uint64_t *output_u64 = NULL;
+    int res = ERR_MEMORY;
+
+    scalar_words = (scalar_len+7)/8;
+    blind_scalar_words = MAX(order_words+1, scalar_words+1);
+    *blind_scalar_len = blind_scalar_words*sizeof(uint64_t);
+
+    *blind_scalar = (uint8_t*)calloc(*blind_scalar_len, 1);
+    if (NULL == *blind_scalar)
+        goto cleanup;
+
+    output_u64 = (uint64_t*)calloc(blind_scalar_words, sizeof(uint64_t));
+    if (NULL == output_u64)
+        goto cleanup;
+
+    bytes_to_words(output_u64, blind_scalar_words, scalar, scalar_len);
+    addmul128(output_u64, order, R_seed, 0, order_words);
+    words_to_bytes(*blind_scalar, *blind_scalar_len, output_u64, blind_scalar_words);
+
+    res = 0;
+
+cleanup:
+    free(output_u64);
+    return res;
+}
+
+/*
  * Multiply an EC point by a scalar
  *
  * @param ecp   The EC point to multiply
@@ -671,11 +732,17 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
     MontContext *ctx;
     uint64_t *factor=NULL;
     uint64_t *factor_pow=NULL;
+    uint8_t *blind_scalar=NULL;
+    size_t blind_scalar_len;
     int res;
 
     if (NULL == ecp || NULL == k)
         return ERR_NULL;
     ctx = ecp->ec_ctx->mont_ctx;
+
+    if (len == 0) {
+        return ERR_NOT_ENOUGH_DATA;
+    }
 
     wp1 = new_workplace(ctx);
     if (NULL == wp1) {
@@ -691,24 +758,32 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
 
     /* Create the blinding factor for the base point */
     res = mont_number(&factor, 2, ctx);
-    if (res) goto cleanup;
+    if (res)
+        goto cleanup;
     expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
     factor_pow = &factor[ctx->words];
 
    /* Blind the base point */
     mont_mult(ecp->z, ecp->z, factor, wp1->scratch, ctx);
-
     mont_mult(factor_pow, factor, factor, wp1->scratch, ctx);
     mont_mult(ecp->x, ecp->x, factor_pow, wp1->scratch, ctx);
-
     mont_mult(factor_pow, factor_pow, factor, wp1->scratch, ctx);
     mont_mult(ecp->y, ecp->y, factor_pow, wp1->scratch, ctx);
 
-    /* Blind the exponent */
+    /* Blind the scalar, by adding R*order where R is at least 32 bits */
+    res = blind_scalar_factor(&blind_scalar,
+                              &blind_scalar_len,
+                              k, len,
+                              (uint32_t)seed,
+                              ecp->ec_ctx->order,
+                              ctx->words);
+    if (res)
+        goto cleanup;
 
     ec_exp(ecp->x, ecp->y, ecp->z,
            ecp->x, ecp->y, ecp->z,
-           k, len, wp1, wp2, ctx);
+           blind_scalar, blind_scalar_len,
+           wp1, wp2, ctx);
 
     res = 0;
 
@@ -716,6 +791,7 @@ cleanup:
     free_workplace(wp1);
     free_workplace(wp2);
     free(factor);
+    free(blind_scalar);
     return res;
 }
 

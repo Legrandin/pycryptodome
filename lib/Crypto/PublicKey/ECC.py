@@ -59,6 +59,7 @@ typedef void EcPoint;
 int ec_ws_new_context(EcContext **pec_ctx,
                       const uint8_t *modulus,
                       const uint8_t *b,
+                      const uint8_t *order,
                       size_t len);
 void ec_free_context(EcContext *ec_ctx);
 int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y,
@@ -75,13 +76,16 @@ int ec_ws_neg(EcPoint *p);
 
 p256_modulus = long_to_bytes(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff, 32)
 p256_b = long_to_bytes(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b, 32)
+p256_order = long_to_bytes(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551, 32)
 assert(len(p256_modulus) == 32)
 assert(len(p256_b) == 32)
+assert(len(p256_order) == 32)
 
 _ec_p256_context = VoidPointer()
 result = _ec_lib.ec_ws_new_context(_ec_p256_context.address_of(),
                                    c_uint8_ptr(p256_modulus),
                                    c_uint8_ptr(p256_b),
+                                   c_uint8_ptr(p256_order),
                                    c_size_t(len(p256_modulus)))
 if result:
     raise ImportError("Error %d initializing P256 context" % result)
