@@ -787,7 +787,6 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
         ec_exp(ecp->x, ecp->y, ecp->z,
                ecp->x, ecp->y, ecp->z,
                blind_scalar, blind_scalar_len,
-               //k, len,
                wp1, wp2, ctx);
 
         free(blind_scalar);
