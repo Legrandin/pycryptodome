@@ -381,46 +381,77 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    Workplace *wp2,
                    const MontContext *ctx)
 {
-    unsigned bit;
     unsigned z1_is_one;
-    uint64_t *xa = wp2->a;
-    uint64_t *ya = wp2->b;
-    uint64_t *za = wp2->c;
-    uint64_t *xb = wp2->d;
-    uint64_t *yb = wp2->e;
-    uint64_t *zb = wp2->f;
+    int i;
+
+    struct {
+        uint64_t *x, *y, *z;
+    } window[16];
 
     z1_is_one = mont_is_one(z1, ctx);
 
-    /** Start from PAI **/
-    mont_set(xa, 1, NULL, ctx);
-    mont_set(ya, 1, NULL, ctx);
-    mont_set(za, 0, NULL, ctx);
-
-    /** Find first non-zero bit **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
-    for (bit=0x80; exp_size && (*exp & bit)==0; bit>>=1);
-
-    /** Left-to-right exponentiation **/
-    for (; exp_size; exp++, exp_size--) {
-       while (bit) {
-            ec_full_double(xa, ya, za, xa, ya, za, wp1, ctx);
-            if (z1_is_one)
-                ec_mix_add(xb, yb, zb, xa, ya, za, x1, y1, wp1, ctx);
-            else
-                ec_full_add(xb, yb, zb, xa, ya, za, x1, y1, z1, wp1, ctx);
-            /* If bit is set, choose 2*P+Q, otherwise 2*P  */
-            mont_select(xa, xb, xa, bit & *exp, ctx);
-            mont_select(ya, yb, ya, bit & *exp, ctx);
-            mont_select(za, zb, za, bit & *exp, ctx);
-
-            bit>>=1;
-        }
-        bit = 0x80;
+    /** Create window O, P, P² .. P¹⁵ **/
+    memset(window, 0, sizeof window);
+    for (i=0; i<16; i++) {
+        window[i].x = calloc(ctx->words, 8);
+        window[i].y = calloc(ctx->words, 8);
+        window[i].z = calloc(ctx->words, 8);
     }
-    mont_copy(x3, xa, ctx);
-    mont_copy(y3, ya, ctx);
-    mont_copy(z3, za, ctx);
+
+    mont_set(window[0].x, 1, NULL, ctx);
+    mont_set(window[0].y, 1, NULL, ctx);
+
+    mont_copy(window[1].x, x1, ctx);
+    mont_copy(window[1].y, y1, ctx);
+    mont_copy(window[1].z, z1, ctx);
+
+    for (i=2; i<16; i++) {
+        if (z1_is_one)
+            ec_mix_add(window[i].x, window[i].y, window[i].z,
+                       window[i-1].x, window[i-1].y, window[i-1].z,
+                       x1, y1,
+                       wp1, ctx);
+        else
+            ec_full_add(window[i].x, window[i].y, window[i].z,
+                        window[i-1].x, window[i-1].y, window[i-1].z,
+                        x1, y1, z1,
+                        wp1, ctx);
+    }
+
+    /** Start from PAI **/
+    mont_set(x3, 1, NULL, ctx);
+    mont_set(y3, 1, NULL, ctx);
+    mont_set(z3, 0, NULL, ctx);
+
+    /** Find first non-zero byte in exponent **/
+    for (; exp_size && *exp==0; exp++, exp_size--);
+
+    /** For every nibble, double 16 times and add window value **/
+    for (;exp_size; exp++, exp_size--) {
+        uint8_t nibble;
+
+        nibble = *exp >> 4;
+        for (i=0; i<2; i++) {
+            int j;
+            uint64_t *xw, *yw, *zw;
+
+            xw = window[nibble].x;
+            yw = window[nibble].y;
+            zw = window[nibble].z;
+
+            for (j=0; j<4; j++)
+                ec_full_double(x3, y3, z3, x3, y3, z3, wp1, ctx);
+            ec_full_add(x3, y3, z3, x3, y3, z3, xw, yw, zw, wp1, ctx);
+
+            nibble = *exp & 0x0F;
+        }
+    }
+
+    for (i=0; i<16; i++) {
+        free(window[i].x);
+        free(window[i].y);
+        free(window[i].z);
+    }
 }
 
 /*
