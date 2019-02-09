@@ -787,6 +787,7 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
         ec_exp(ecp->x, ecp->y, ecp->z,
                ecp->x, ecp->y, ecp->z,
                blind_scalar, blind_scalar_len,
+               //k, len,
                wp1, wp2, ctx);
 
         free(blind_scalar);
@@ -911,7 +912,7 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
     return 0;
 }
 
-#ifdef MAIN
+#ifdef MAIN2
 int main(void)
 {
     MontContext *ctx;
@@ -967,7 +968,7 @@ int main(void)
 }
 #endif
 
-#ifdef MAIN2
+#ifdef MAIN
 int main(void)
 {
     const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
@@ -975,15 +976,18 @@ int main(void)
     const uint8_t order[32] = "\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51";
     const uint8_t p256_Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
     const uint8_t p256_Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+    uint8_t exp[32];
     EcContext *ec_ctx;
     EcPoint *ecp = NULL;
     int i;
 
+    memset(exp, 0xFF, 32);
+
     ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
     ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx);
 
-    for (i=0; i<=500; i++)
-        ec_ws_scalar_multiply(ecp, (uint8_t*)"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8, 0xFFFF);
+    for (i=0; i<=5000; i++)
+        ec_ws_scalar_multiply(ecp, exp, 32, 0xFFF);
 
     ec_free_point(ecp);
     ec_free_context(ec_ctx);
