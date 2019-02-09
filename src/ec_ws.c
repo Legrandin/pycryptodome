@@ -975,6 +975,7 @@ int main(void)
     const uint8_t order[32] = "\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51";
     const uint8_t p256_Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
     const uint8_t p256_Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+    uint8_t x[32], y[32];
     uint8_t exp[32];
     EcContext *ec_ctx;
     EcPoint *ecp = NULL;
@@ -987,6 +988,17 @@ int main(void)
 
     for (i=0; i<=5000; i++)
         ec_ws_scalar_multiply(ecp, exp, 32, 0xFFF);
+
+    ec_ws_get_xy(x, y, 32, ecp);
+    printf("X: ");
+    for (i=0; i<32; i++)
+        printf("%02X", x[i]);
+    printf("\n");
+    printf("Y: ");
+    for (i=0; i<32; i++)
+        printf("%02X", y[i]);
+    printf("\n");
+
 
     ec_free_point(ecp);
     ec_free_context(ec_ctx);
