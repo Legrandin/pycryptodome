@@ -31,6 +31,7 @@
 
 import os
 import sys
+import struct
 import distutils
 from distutils import ccompiler
 from distutils.errors import CCompilerError
@@ -299,7 +300,7 @@ def set_compiler_options(package_root, extensions):
 
     extra_cc_options = []
     extra_macros = []
-    
+
     clang = compiler_is_clang()
     gcc = compiler_is_gcc()
 
@@ -309,9 +310,13 @@ def set_compiler_options(package_root, extensions):
     # Endianess
     extra_macros.append(("PYCRYPTO_" + sys.byteorder.upper() + "_ENDIAN", None))
 
+    # System
+    system_bits = 8 * struct.calcsize("P")
+    extra_macros.append(("SYS_BITS", str(system_bits)))
+
     # Disable any assembly in libtomcrypt files
     extra_macros.append(("LTC_NO_ASM", None))
-   
+
     # Native 128-bit integer
     if compiler_supports_uint128():
         extra_macros.append(("HAVE_UINT128", None))
@@ -341,7 +346,7 @@ def set_compiler_options(package_root, extensions):
             extra_macros.append(("USE_SSE2", None))
     elif intrin_h_present and compiler_supports_sse2_with_intrin_h():
         extra_macros.append(("USE_SSE2", None))
-    
+
     # Module-specific options
 
     # AESNI

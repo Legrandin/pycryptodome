@@ -294,12 +294,6 @@ package_data = {
     ],
 }
 
-system_bits = 8 * struct.calcsize("P")
-if system_bits == 32:
-    multiply_cmod = [ 'src/multiply_32.c' ]
-else:
-    multiply_cmod = [ 'src/multiply_64.c' ]
-
 ext_modules = [
     # Hash functions
     Extension("Crypto.Hash._MD2",
@@ -419,14 +413,13 @@ ext_modules = [
     # ECC
     Extension("Crypto.PublicKey._ec_ws",
         include_dirs=['src/'],
-        sources=['src/modexp_utils.c', 'src/siphash.c', 'src/ec_ws.c', 'src/mont.c'] + multiply_cmod,
+        sources=['src/modexp_utils.c', 'src/siphash.c', 'src/ec_ws.c', 'src/mont.c'],
         ),
 
     # Math
     Extension("Crypto.Math._modexp",
         include_dirs=['src/'],
-        sources=['src/modexp.c', 'src/siphash.c', 'src/modexp_utils.c',
-                 'src/mont.c'] + multiply_cmod,
+        sources=['src/modexp.c', 'src/siphash.c', 'src/modexp_utils.c', 'src/mont.c'],
         ),
 ]
 

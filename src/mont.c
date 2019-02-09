@@ -36,6 +36,16 @@
 #include "multiply.h"
 #include "mont.h"
 
+#if SYS_BITS == 32
+#include "multiply_32.c"
+#else
+#if SYS_BITS == 64
+#include "multiply_64.c"
+#else
+#error You must define macro SYS_BITS
+#endif
+#endif
+
 static inline unsigned is_odd(uint64_t x)
 {
     return 1 == (x & 1);

@@ -54,7 +54,7 @@ DAMAGE.
 
 #endif
 
-size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
+size_t inline addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
 {
     uint64_t sum_low, sum_mid, sum_hi;
     uint64_t pr_low, pr_high, aim1;
@@ -188,7 +188,7 @@ size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0
 }
 
 
-size_t square_w(uint64_t *t, const uint64_t *a, size_t words)
+size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
 {
     size_t i, j;
     uint64_t carry;

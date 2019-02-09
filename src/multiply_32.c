@@ -157,7 +157,7 @@ size_t static inline max_size_t(size_t a, size_t b)
  * t[] and a[] are little-endian.
  * Return the number of 64-bit words that we wrote into t[]
  */
-size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
+size_t inline addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
 {
     uint32_t b0l, b0h, b1l, b1h;
     size_t words32, res;
@@ -263,7 +263,7 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
     return 2*words;
 }
 
-size_t square_w(uint64_t *t, const uint64_t *a, size_t words)
+size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
 {
     return square_w_32((uint32_t*)t, (const uint32_t*)a, words*2)/2;
 }
