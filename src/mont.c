@@ -323,7 +323,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
         prod_hi += t[i+0] < prod_lo;
         carry = prod_hi;
 
-        /* n[0] = 2³² - 1 */
+        /* n[1] = 2³² - 1 */
         DP_MULT(n[1], k, prod_lo, prod_hi);
         prod_lo += carry;
         prod_hi += prod_lo < carry;
@@ -335,6 +335,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
         t[i+2] += carry;
         carry = t[i+2] < carry;
 
+        /* n[3] = 2⁶⁴ - 2³² + 1 */
         DP_MULT(n[3], k, prod_lo, prod_hi);
         prod_lo += carry;
         prod_hi += prod_lo < carry;
