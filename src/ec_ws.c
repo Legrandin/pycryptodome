@@ -370,6 +370,9 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_mult(z3, z3, d, s, ctx);       /* z3 = ((Z1+Z2)²-Z1Z1-Z2Z2)*H */
 }
 
+#define WINDOW_SIZE_BITS 4
+#define WINDOW_SIZE_ITEMS (1<<WINDOW_SIZE_BITS)
+
 /*
  * Compute the scalar multiplication of an EC point.
  * Jacobian coordinates as output, affine an input.
@@ -386,13 +389,15 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     struct {
         uint64_t *x, *y, *z;
-    } window[16];
+    } window[WINDOW_SIZE_ITEMS];
+
+    struct BitWindow bw;
 
     z1_is_one = mont_is_one(z1, ctx);
 
     /** Create window O, P, P² .. P¹⁵ **/
     memset(window, 0, sizeof window);
-    for (i=0; i<16; i++) {
+    for (i=0; i<WINDOW_SIZE_ITEMS; i++) {
         window[i].x = calloc(ctx->words, 8);
         window[i].y = calloc(ctx->words, 8);
         window[i].z = calloc(ctx->words, 8);
@@ -405,7 +410,7 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_copy(window[1].y, y1, ctx);
     mont_copy(window[1].z, z1, ctx);
 
-    for (i=2; i<16; i++) {
+    for (i=2; i<WINDOW_SIZE_ITEMS; i++) {
         if (z1_is_one)
             ec_mix_add(window[i].x, window[i].y, window[i].z,
                        window[i-1].x, window[i-1].y, window[i-1].z,
@@ -425,29 +430,26 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     /** Find first non-zero byte in exponent **/
     for (; exp_size && *exp==0; exp++, exp_size--);
+    bw = init_bit_window(WINDOW_SIZE_BITS, exp, exp_size);
 
     /** For every nibble, double 16 times and add window value **/
-    for (;exp_size; exp++, exp_size--) {
-        uint8_t nibble;
+    for (i=0; i < bw.nr_windows; i++) {
+        unsigned index;
+        int j;
+        uint64_t *xw, *yw, *zw;
 
-        nibble = *exp >> 4;
-        for (i=0; i<2; i++) {
-            int j;
-            uint64_t *xw, *yw, *zw;
+        index = get_next_digit(&bw);
 
-            xw = window[nibble].x;
-            yw = window[nibble].y;
-            zw = window[nibble].z;
+        xw = window[index].x;
+        yw = window[index].y;
+        zw = window[index].z;
 
-            for (j=0; j<4; j++)
-                ec_full_double(x3, y3, z3, x3, y3, z3, wp1, ctx);
-            ec_full_add(x3, y3, z3, x3, y3, z3, xw, yw, zw, wp1, ctx);
-
-            nibble = *exp & 0x0F;
-        }
+        for (j=0; j<WINDOW_SIZE_BITS; j++)
+            ec_full_double(x3, y3, z3, x3, y3, z3, wp1, ctx);
+        ec_full_add(x3, y3, z3, x3, y3, z3, xw, yw, zw, wp1, ctx);
     }
 
-    for (i=0; i<16; i++) {
+    for (i=0; i<WINDOW_SIZE_ITEMS; i++) {
         free(window[i].x);
         free(window[i].y);
         free(window[i].z);
