@@ -306,6 +306,7 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *g = tmp->g;
     uint64_t *h = tmp->h;
     uint64_t *s = tmp->scratch;
+    unsigned p2_is_pai;
 
     /* First term may be point at infinity */
     if (mont_is_zero(z1, ctx)) {
@@ -315,13 +316,12 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
         return;
     }
 
-    /* Second term may be point at infinity */
-    if (mont_is_zero(z2, ctx)) {
-        mont_copy(x3, x1, ctx);
-        mont_copy(y3, y1, ctx);
-        mont_copy(z3, z1, ctx);
-        return;
-    }
+    /* Second term may be point at infinity,
+     * if so we still go ahead with all computations
+     * and only at the end copy over point 1 as result,
+     * to limit timing leakages.
+     */
+    p2_is_pai = mont_is_zero(z2, ctx);
 
     mont_mult(a, z1, z1, s, ctx);       /* a = Z1Z1 = Z1² */
     mont_mult(b, z2, z2, s, ctx);       /* b = Z2Z2 = Z2² */
@@ -352,22 +352,28 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_add(f, f, f, s, ctx);          /* f = r = 2*(S2-S1) */
     mont_mult(c, c, g, s, ctx);         /* c = V = U1*I */
 
-    mont_mult(x3, f, f, s, ctx);
-    mont_sub(x3, x3, h, s, ctx);
-    mont_sub(x3, x3, c, s, ctx);
-    mont_sub(x3, x3, c, s, ctx);        /* x3 = r²-J-2*V */
+    mont_mult(g, f, f, s, ctx);
+    mont_sub(g, g, h, s, ctx);
+    mont_sub(g, g, c, s, ctx);
+    mont_sub(g, g, c, s, ctx);          /* x3 = g = r²-J-2*V */
 
-    mont_sub(y3, c, x3, s, ctx);
-    mont_mult(y3, f, y3, s, ctx);
-    mont_mult(g, e, h, s, ctx);
-    mont_add(g, g, g, s, ctx);
-    mont_sub(y3, y3, g, s, ctx);        /* y3 = r*(V-X3)-2*S1*J */
+    mont_select(x3, x1, g, p2_is_pai, ctx);
 
-    mont_add(z3, z1, z2, s, ctx);
-    mont_mult(z3, z3, z3, s, ctx);
-    mont_sub(z3, z3, a, s, ctx);
-    mont_sub(z3, z3, b, s, ctx);
-    mont_mult(z3, z3, d, s, ctx);       /* z3 = ((Z1+Z2)²-Z1Z1-Z2Z2)*H */
+    mont_sub(g, c, g, s, ctx);
+    mont_mult(g, f, g, s, ctx);
+    mont_mult(c, e, h, s, ctx);
+    mont_add(c, c, c, s, ctx);
+    mont_sub(g, g, c, s, ctx);        /* y3 = r*(V-X3)-2*S1*J */
+
+    mont_select(y3, y1, g, p2_is_pai, ctx);
+
+    mont_add(g, z1, z2, s, ctx);
+    mont_mult(g, g, g, s, ctx);
+    mont_sub(g, g, a, s, ctx);
+    mont_sub(g, g, b, s, ctx);
+    mont_mult(g, g, d, s, ctx);       /* z3 = ((Z1+Z2)²-Z1Z1-Z2Z2)*H */
+
+    mont_select(z3, z1, g, p2_is_pai, ctx);
 }
 
 #define WINDOW_SIZE_BITS 4
