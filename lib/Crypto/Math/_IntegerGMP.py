@@ -183,8 +183,13 @@ class IntegerGMP(IntegerBase):
     def __repr__(self):
         return "Integer(%s)" % str(self)
 
+    # Only Python 2.x
     def __hex__(self):
         return hex(int(self))
+
+    # Only Python 3.x
+    def __index__(self):
+        return int(self)
 
     def to_bytes(self, block_size=0):
         """Convert the number into a byte string.

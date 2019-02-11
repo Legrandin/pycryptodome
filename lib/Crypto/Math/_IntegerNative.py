@@ -54,8 +54,13 @@ class IntegerNative(IntegerBase):
     def __repr__(self):
         return "Integer(%s)" % str(self)
 
+    # Only Python 2.x
     def __hex__(self):
         return hex(self._value)
+
+    # Only Python 3.x
+    def __index__(self):
+        return int(self._value)
 
     def to_bytes(self, block_size=0):
         if self._value < 0:
