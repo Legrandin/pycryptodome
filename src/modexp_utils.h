@@ -39,4 +39,14 @@ struct BitWindow init_bit_window(unsigned window_size, const uint8_t *exp, size_
  */
 unsigned get_next_digit(struct BitWindow *bw);
 
+typedef struct _ProtMemory {
+    void *scattered;
+    unsigned nr_arrays;
+    unsigned array_len;
+} ProtMemory;
+
+int scatter(ProtMemory** pprot, void *arrays[], unsigned nr_arrays, size_t array_len, const uint8_t *seed);
+void gather(void *out, const ProtMemory *prot, unsigned index);
+void free_scattered(ProtMemory *prot);
+
 #endif

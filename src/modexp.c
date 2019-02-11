@@ -48,84 +48,6 @@ FAKE_INIT(modexp)
 /** Do not change this value! **/
 #define WINDOW_SIZE 4
 
-/**
- * Spread 16 multipliers in memory, to attempt to prevent an attacker from
- * easily inferring which one is being accessed based on the cache side-channel.
- *
- * @out prot[]   An array of 16*8*words bytes (organized in 32-bit words),
- *               aligned to the cache line boundary (64 bytes).
- *               Multipliers will be scattered in here.
- * @in  powers[] An array of 16 pointers to multipliers.
- * @in  words    The number of 64-bit words in a multiplier.
- * @in  seed     An array of 2*words bytes with the pseudorandom seed bytes.
- *
- * We assume a cache line is 64-bytes long. Every cache line will contain 16 32-bit
- * words, each taken from a different multiplier.
- * The word of each multiplier is 64-bits long though: one cache line therefore
- * contains the lower halves and the following the higher halves.
- *
- * The relationship between multiplier and position within each cache line is
- * randomized by means of the external seed.
- */
-static void scatter(uint32_t *prot, uint64_t *powers[], size_t words, const uint8_t *seed)
-{
-    size_t i, j;
-
-    /** Layout of prot[]
-     *
-     *  - 16 32-bit pieces; each piece is the lower half of word[0] for a multiplier.
-     *    Relation piece-to-multiplier depends on seed[0..1].
-     *  - 16 32-bit pieces; each piece is the higher half of word[0] for a multiplier.
-     *    Relation piece-to-multiplier depends on seed[0..1].
-     *  - 16 32-bit pieces; each piece is the lower half of word[1] for a multiplier.
-     *    Relation piece-to-multiplier depends on seed[2..3].
-     *  - 16 32-bit pieces; each piece is the higher half of word[1] for a multiplier.
-     *    Relation piece-to-multiplier depends on seed[2..3].
-     *  - and so on...
-     *
-     * **/
-
-    for (j=0; j<words; j++) {
-        uint8_t alpha, beta;
-    
-        alpha = seed[2*j] | 1;  /** Must be invertible modulo 2^8 **/
-        beta  = seed[2*j+1];
-
-        for (i=0; i<16; i++) {
-            uint32_t *x;
-        
-            x  = &prot[(alpha*i+beta) & 0xF];
-            *x = (uint32_t) powers[i][j];
-            *(x+16) = (uint32_t)(powers[i][j] >> 32);
-        }
-
-        prot += 32;     /** Two cache lines **/
-    }
-}
-
-/**
- * Does the opposite of scatter(), by collecting a specific multiplier.
- *
- * Note that idx contains 4 bits of the exponent and it is most likely a secret.
- */
-static void gather(uint64_t *out, const uint32_t *prot, size_t idx, size_t words, const uint8_t *seed)
-{
-    size_t j;
-    
-    for (j=0; j<words; j++) {
-        uint8_t alpha, beta;
-        const uint32_t *x;
-    
-        alpha = seed[2*j] | 1;
-        beta  = seed[2*j+1];
-    
-        x = &prot[(alpha*idx+beta) & 0xF];
-        out[j] = *x | ((uint64_t)*(x+16) << 32);
-
-        prot += 32;     /** Two cache lines **/
-    }
-}
-
 /*
  * Modular exponentiation. All numbers are
  * encoded in big endian form, possibly with
@@ -157,7 +79,7 @@ EXPORT_SYM int monty_pow(
     uint8_t *mont_seed = NULL;
     uint64_t *powers[1 << WINDOW_SIZE] = { NULL };
     uint64_t *power_idx = NULL;
-    uint32_t *prot = NULL;
+    ProtMemory *prot = NULL;
     uint64_t *mont_base = NULL;
     uint64_t *x = NULL;
     uint64_t *scratchpad = NULL;
@@ -191,12 +113,6 @@ EXPORT_SYM int monty_pow(
     res = mont_number(&power_idx, 1, ctx);
     if (res) goto cleanup;
 
-    prot = align_alloc((1<<WINDOW_SIZE)*words*8, CACHE_LINE_SIZE);
-    if (NULL == prot) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-
     res = mont_from_bytes(&mont_base, base, len, ctx);
     if (res) goto cleanup;
 
@@ -225,7 +141,9 @@ EXPORT_SYM int monty_pow(
         mont_mult(powers[i*2],   powers[i],   powers[i], scratchpad, ctx);
         mont_mult(powers[i*2+1], powers[i*2], mont_base,      scratchpad, ctx);
     }
-    scatter(prot, powers, words, mont_seed);
+
+    res = scatter(&prot, (void**)powers, 1<<WINDOW_SIZE, mont_bytes(ctx), mont_seed);
+    if (res) goto cleanup;
 
     /** Ignore leading zero bytes in the exponent **/
     exp_len = len;
@@ -253,8 +171,7 @@ EXPORT_SYM int monty_pow(
         }
         
         index = get_next_digit(&bit_window);
-        gather(power_idx, prot, index, words, mont_seed);
-        
+        gather(power_idx, prot, index);
         mont_mult(x, x, power_idx, scratchpad, ctx);
     }
 
@@ -273,7 +190,7 @@ cleanup:
         free(powers[i]);
     }
     free(power_idx);
-    align_free(prot);
+    free_scattered(prot);
     free(mont_base);
     free(x);
     free(scratchpad);
@@ -283,7 +200,6 @@ cleanup:
 }
 
 #ifdef MAIN
-
 int main(void)
 {
     uint16_t length;
@@ -304,7 +220,7 @@ int main(void)
 
     result = monty_pow(out, base, exponent, modulus, length, 12);
     
-    free(mont_base);
+    free(base);
     free(modulus);
     free(exponent);
     free(out);
