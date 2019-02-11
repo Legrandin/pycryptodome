@@ -45,7 +45,7 @@ from Crypto.Math._IntegerNative import IntegerNative
 class TestIntegerBase(unittest.TestCase):
 
     def setUp(self):
-        pass
+        raise NotImplementedError("To be implemented")
 
     def Integers(self, *arg):
         return map(self.Integer, arg)
@@ -667,13 +667,16 @@ class TestIntegerBase(unittest.TestCase):
         for n, kj in tv:
             for k, j in kj:
                 self.assertEqual(js(k, n), j)
+    
+    def test_hex(self):
+        v1, = self.Integers(0x10)
+        self.assertEqual(hex(v1), "0x10")
 
 
 class TestIntegerInt(TestIntegerBase):
 
     def setUp(self):
         self.Integer = IntegerNative
-        TestIntegerBase.setUp(self)
 
 
 class testIntegerRandom(unittest.TestCase):
@@ -743,7 +746,6 @@ def get_tests(config={}):
         class TestIntegerGMP(TestIntegerBase):
             def setUp(self):
                 self.Integer = IntegerGMP
-                TestIntegerBase.setUp(self)
 
         tests += list_test_cases(TestIntegerGMP)
     except (ImportError, OSError) as e:
@@ -756,7 +758,6 @@ def get_tests(config={}):
         class TestIntegerCustomModexp(TestIntegerBase):
             def setUp(self):
                 self.Integer = IntegerCustom
-                TestIntegerBase.setUp(self)
 
         tests += list_test_cases(TestIntegerCustomModexp)
     except (ImportError, OSError) as e:

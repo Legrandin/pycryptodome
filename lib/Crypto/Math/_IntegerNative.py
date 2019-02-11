@@ -54,6 +54,9 @@ class IntegerNative(IntegerBase):
     def __repr__(self):
         return "Integer(%s)" % str(self)
 
+    def __hex__(self):
+        return hex(self._value)
+
     def to_bytes(self, block_size=0):
         if self._value < 0:
             raise ValueError("Conversion only valid for non-negative numbers")

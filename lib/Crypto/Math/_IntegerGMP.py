@@ -183,6 +183,9 @@ class IntegerGMP(IntegerBase):
     def __repr__(self):
         return "Integer(%s)" % str(self)
 
+    def __hex__(self):
+        return hex(int(self))
+
     def to_bytes(self, block_size=0):
         """Convert the number into a byte string.
 
