@@ -19,7 +19,7 @@ void expand_seed(uint64_t seed_in, void* seed_out, size_t out_len)
         if (out_len<SIPHASH_LEN)
             break;
         siphash(counter, 4, seed_in_b, seed_out, SIPHASH_LEN);
-        seed_out += SIPHASH_LEN;
+        seed_out = (uint8_t*)seed_out + SIPHASH_LEN;
     }
 
     if (out_len>0) {
