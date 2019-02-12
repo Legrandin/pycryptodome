@@ -42,8 +42,6 @@ FAKE_INIT(modexp)
 #include "mont.h"
 #include "modexp_utils.h"
 
-#define CACHE_LINE_SIZE 64
-
 /** Multiplication will be replaced by a look-up **/
 /** Do not change this value! **/
 #define WINDOW_SIZE 4
