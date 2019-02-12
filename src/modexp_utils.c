@@ -2,7 +2,7 @@
 #include "siphash.h"
 #include "endianess.h"
 
-void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len)
+void expand_seed(uint64_t seed_in, void* seed_out, size_t out_len)
 {
     uint8_t counter[4];
     uint8_t seed_in_b[16];
@@ -95,7 +95,7 @@ unsigned get_next_digit(struct BitWindow *bw)
  *
  * nr_array is a power of 2, <=64
  */
-int scatter(ProtMemory** pprot, void *arrays[], unsigned nr_arrays, size_t array_len, const uint8_t *seed)
+int scatter(ProtMemory** pprot, void *arrays[], unsigned nr_arrays, size_t array_len, uint64_t seed)
 {
     ProtMemory *prot;
     unsigned piece_len;
@@ -113,8 +113,16 @@ int scatter(ProtMemory** pprot, void *arrays[], unsigned nr_arrays, size_t array
     if (NULL == prot)
         return ERR_MEMORY;
 
+    prot->scramble = (uint16_t*)calloc(cache_lines, sizeof(prot->scramble[0]));
+    if (NULL == prot->scramble) {
+        free(prot);
+        return ERR_MEMORY;
+    }
+    expand_seed(seed, prot->scramble, cache_lines*sizeof(prot->scramble[0]));
+
     prot->scattered = (uint8_t*)align_alloc(cache_lines*CACHE_LINE_SIZE, CACHE_LINE_SIZE);
     if (NULL == prot->scattered) {
+        free(prot->scramble);
         free(prot);
         return ERR_MEMORY;
     }
@@ -171,7 +179,9 @@ void gather(void *out, const ProtMemory *prot, unsigned index)
 
 void free_scattered(ProtMemory *prot)
 {
-    if (prot)
+    if (prot) {
+        free(prot->scramble);
         align_free(prot->scattered);
+    }
     free(prot);
 }

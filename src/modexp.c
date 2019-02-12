@@ -71,12 +71,10 @@ EXPORT_SYM int monty_pow(
                uint64_t      seed)
 {
     unsigned i, j;
-    size_t words;
     size_t exp_len;
     int res;
 
     MontContext *ctx = NULL;
-    uint8_t *mont_seed = NULL;
     uint64_t *powers[1 << WINDOW_SIZE] = { NULL };
     uint64_t *power_idx = NULL;
     ProtMemory *prot = NULL;
@@ -97,13 +95,6 @@ EXPORT_SYM int monty_pow(
     res = mont_context_init(&ctx, modulus, len);
     if (res)
         return res;
-    words = ctx->words;
-
-    mont_seed = (uint8_t*)calloc(2*words, sizeof(uint64_t));
-    if (NULL == mont_seed) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
 
     for (i=0; i<(1 << WINDOW_SIZE); i++) {
         res = mont_number(powers+i, 1, ctx);
@@ -128,9 +119,6 @@ EXPORT_SYM int monty_pow(
         goto cleanup;
     }
 
-    /** Compute full seed (2*words bytes) **/
-    expand_seed(seed, mont_seed, 2*words);
-
     /** Result is initially 1 in Montgomery form **/
     mont_set(x, 1, NULL, ctx);
 
@@ -142,7 +130,7 @@ EXPORT_SYM int monty_pow(
         mont_mult(powers[i*2+1], powers[i*2], mont_base,      scratchpad, ctx);
     }
 
-    res = scatter(&prot, (void**)powers, 1<<WINDOW_SIZE, mont_bytes(ctx), mont_seed);
+    res = scatter(&prot, (void**)powers, 1<<WINDOW_SIZE, mont_bytes(ctx), seed);
     if (res) goto cleanup;
 
     /** Ignore leading zero bytes in the exponent **/
@@ -185,7 +173,6 @@ EXPORT_SYM int monty_pow(
 
 cleanup:
     mont_context_free(ctx);
-    free(mont_seed);
     for (i=0; i<(1 << WINDOW_SIZE); i++) {
         free(powers[i]);
     }
