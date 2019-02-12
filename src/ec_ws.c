@@ -383,51 +383,73 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * Compute the scalar multiplication of an EC point.
  * Jacobian coordinates as output, affine an input.
  */
-STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+STATIC int ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
-                   const uint8_t *exp, size_t exp_size,
+                   const uint8_t *exp, size_t exp_size, uint64_t seed,
                    Workplace *wp1,
                    Workplace *wp2,
                    const MontContext *ctx)
 {
     unsigned z1_is_one;
     int i;
-
-    struct {
-        uint64_t *x, *y, *z;
-    } window[WINDOW_SIZE_ITEMS];
+    int res;
+    uint64_t *window_x[WINDOW_SIZE_ITEMS],
+             *window_y[WINDOW_SIZE_ITEMS],
+             *window_z[WINDOW_SIZE_ITEMS];
+    uint64_t *xw=NULL, *yw=NULL, *zw=NULL;
+    ProtMemory *prot_x=NULL, *prot_y=NULL, *prot_z=NULL;
 
     struct BitWindow bw;
 
     z1_is_one = mont_is_one(z1, ctx);
+    res = ERR_MEMORY;
+
+    #define alloc(n) n=calloc(ctx->words, 8); if (NULL == n) goto cleanup;
+
+    alloc(xw);
+    alloc(yw);
+    alloc(zw);
 
     /** Create window O, P, P² .. P¹⁵ **/
-    memset(window, 0, sizeof window);
+    memset(window_x, 0, sizeof window_x);
+    memset(window_y, 0, sizeof window_y);
+    memset(window_z, 0, sizeof window_z);
+
     for (i=0; i<WINDOW_SIZE_ITEMS; i++) {
-        window[i].x = calloc(ctx->words, 8);
-        window[i].y = calloc(ctx->words, 8);
-        window[i].z = calloc(ctx->words, 8);
+        alloc(window_x[i]);
+        alloc(window_y[i]);
+        alloc(window_z[i]);
     }
 
-    mont_set(window[0].x, 1, NULL, ctx);
-    mont_set(window[0].y, 1, NULL, ctx);
+    #undef alloc
 
-    mont_copy(window[1].x, x1, ctx);
-    mont_copy(window[1].y, y1, ctx);
-    mont_copy(window[1].z, z1, ctx);
+    mont_set(window_x[0], 1, NULL, ctx);
+    mont_set(window_y[0], 1, NULL, ctx);
+    mont_set(window_z[0], 0, NULL, ctx);
+
+    mont_copy(window_x[1], x1, ctx);
+    mont_copy(window_y[1], y1, ctx);
+    mont_copy(window_z[1], z1, ctx);
 
     for (i=2; i<WINDOW_SIZE_ITEMS; i++) {
         if (z1_is_one)
-            ec_mix_add(window[i].x, window[i].y, window[i].z,
-                       window[i-1].x, window[i-1].y, window[i-1].z,
+            ec_mix_add(window_x[i],   window_y[i],   window_z[i],
+                       window_x[i-1], window_y[i-1], window_z[i-1],
                        x1, y1,
                        wp1, ctx);
         else
-            ec_full_add(window[i].x, window[i].y, window[i].z,
-                        window[i-1].x, window[i-1].y, window[i-1].z,
+            ec_full_add(window_x[i],   window_y[i],   window_z[i],
+                        window_x[i-1], window_y[i-1], window_z[i-1],
                         x1, y1, z1,
                         wp1, ctx);
     }
+
+    res = scatter(&prot_x, (void**)window_x, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    if (res) goto cleanup;
+    res = scatter(&prot_y, (void**)window_y, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    if (res) goto cleanup;
+    res = scatter(&prot_z, (void**)window_z, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    if (res) goto cleanup;
 
     /** Start from PAI **/
     mont_set(x3, 1, NULL, ctx);
@@ -442,24 +464,32 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     for (i=0; i < bw.nr_windows; i++) {
         unsigned index;
         int j;
-        uint64_t *xw, *yw, *zw;
 
         index = get_next_digit(&bw);
-
-        xw = window[index].x;
-        yw = window[index].y;
-        zw = window[index].z;
-
+        gather(xw, prot_x, index);
+        gather(yw, prot_y, index);
+        gather(zw, prot_z, index);
         for (j=0; j<WINDOW_SIZE_BITS; j++)
             ec_full_double(x3, y3, z3, x3, y3, z3, wp1, ctx);
         ec_full_add(x3, y3, z3, x3, y3, z3, xw, yw, zw, wp1, ctx);
     }
 
+    res = 0;
+
+cleanup:
+    free(xw);
+    free(yw);
+    free(zw);
     for (i=0; i<WINDOW_SIZE_ITEMS; i++) {
-        free(window[i].x);
-        free(window[i].y);
-        free(window[i].z);
+        free(window_x[i]);
+        free(window_y[i]);
+        free(window_z[i]);
     }
+    free_scattered(prot_x);
+    free_scattered(prot_y);
+    free_scattered(prot_z);
+
+    return res;
 }
 
 /*
@@ -820,21 +850,22 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
                                   (uint32_t)seed,
                                   ecp->ec_ctx->order,
                                   ctx->words);
-        if (res)
-            goto cleanup;
-
-        ec_exp(ecp->x, ecp->y, ecp->z,
-               ecp->x, ecp->y, ecp->z,
-               blind_scalar, blind_scalar_len,
-               wp1, wp2, ctx);
+        if (res) goto cleanup;
+        res = ec_exp(ecp->x, ecp->y, ecp->z,
+                     ecp->x, ecp->y, ecp->z,
+                     blind_scalar, blind_scalar_len,
+                     seed + 1,
+                     wp1, wp2, ctx);
 
         free(blind_scalar);
+        if (res) goto cleanup;
     } else {
-
-        ec_exp(ecp->x, ecp->y, ecp->z,
-               ecp->x, ecp->y, ecp->z,
-               k, len,
-               wp1, wp2, ctx);
+        res = ec_exp(ecp->x, ecp->y, ecp->z,
+                     ecp->x, ecp->y, ecp->z,
+                     k, len,
+                     seed + 1,
+                     wp1, wp2, ctx);
+        if (res) goto cleanup;
     }
 
     res = 0;
