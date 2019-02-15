@@ -623,7 +623,7 @@ def construct(**kwargs):
     d = kwargs.get("d", None)
     if d is not None and "point" in kwargs:
         pub_key = _curve.G * d
-        if pub_key.x != point_x or pub_key.y != point_y:
+        if pub_key.xy != (point_x, point_y):
             raise ValueError("Private and public ECC keys do not match")
 
     return EccKey(**kwargs)
