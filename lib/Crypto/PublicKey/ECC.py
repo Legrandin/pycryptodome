@@ -616,19 +616,8 @@ def construct(**kwargs):
         raise TypeError("Unknown keyword: point")
 
     if None not in (point_x, point_y):
+        # ValueError is raised if the point is not on the curve
         kwargs["point"] = EccPoint(point_x, point_y)
-
-        # Validate that the point is on the P-256 curve
-        eq1 = pow(Integer(point_y), 2, _curve.p)
-        x = Integer(point_x)
-        eq2 = pow(x, 3, _curve.p)
-        x *= -3
-        eq2 += x
-        eq2 += _curve.b
-        eq2 %= _curve.p
-
-        if eq1 != eq2:
-            raise ValueError("The point is not on the curve")
 
     # Validate that the private key matches the public one
     d = kwargs.get("d", None)
