@@ -32,8 +32,11 @@
 #include <assert.h>
 
 #include "common.h"
+#include "endianess.h"
+#include "multiply.h"
 #include "mont.h"
 #include "ec.h"
+#include "modexp_utils.h"
 
 FAKE_INIT(ec_ws)
 
@@ -303,6 +306,7 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *g = tmp->g;
     uint64_t *h = tmp->h;
     uint64_t *s = tmp->scratch;
+    unsigned p2_is_pai;
 
     /* First term may be point at infinity */
     if (mont_is_zero(z1, ctx)) {
@@ -312,13 +316,12 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
         return;
     }
 
-    /* Second term may be point at infinity */
-    if (mont_is_zero(z2, ctx)) {
-        mont_copy(x3, x1, ctx);
-        mont_copy(y3, y1, ctx);
-        mont_copy(z3, z1, ctx);
-        return;
-    }
+    /* Second term may be point at infinity,
+     * if so we still go ahead with all computations
+     * and only at the end copy over point 1 as result,
+     * to limit timing leakages.
+     */
+    p2_is_pai = mont_is_zero(z2, ctx);
 
     mont_mult(a, z1, z1, s, ctx);       /* a = Z1Z1 = Z1² */
     mont_mult(b, z2, z2, s, ctx);       /* b = Z2Z2 = Z2² */
@@ -349,75 +352,144 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_add(f, f, f, s, ctx);          /* f = r = 2*(S2-S1) */
     mont_mult(c, c, g, s, ctx);         /* c = V = U1*I */
 
-    mont_mult(x3, f, f, s, ctx);
-    mont_sub(x3, x3, h, s, ctx);
-    mont_sub(x3, x3, c, s, ctx);
-    mont_sub(x3, x3, c, s, ctx);        /* x3 = r²-J-2*V */
+    mont_mult(g, f, f, s, ctx);
+    mont_sub(g, g, h, s, ctx);
+    mont_sub(g, g, c, s, ctx);
+    mont_sub(g, g, c, s, ctx);          /* x3 = g = r²-J-2*V */
 
-    mont_sub(y3, c, x3, s, ctx);
-    mont_mult(y3, f, y3, s, ctx);
-    mont_mult(g, e, h, s, ctx);
-    mont_add(g, g, g, s, ctx);
-    mont_sub(y3, y3, g, s, ctx);        /* y3 = r*(V-X3)-2*S1*J */
+    mont_select(x3, x1, g, p2_is_pai, ctx);
 
-    mont_add(z3, z1, z2, s, ctx);
-    mont_mult(z3, z3, z3, s, ctx);
-    mont_sub(z3, z3, a, s, ctx);
-    mont_sub(z3, z3, b, s, ctx);
-    mont_mult(z3, z3, d, s, ctx);       /* z3 = ((Z1+Z2)²-Z1Z1-Z2Z2)*H */
+    mont_sub(g, c, g, s, ctx);
+    mont_mult(g, f, g, s, ctx);
+    mont_mult(c, e, h, s, ctx);
+    mont_add(c, c, c, s, ctx);
+    mont_sub(g, g, c, s, ctx);        /* y3 = r*(V-X3)-2*S1*J */
+
+    mont_select(y3, y1, g, p2_is_pai, ctx);
+
+    mont_add(g, z1, z2, s, ctx);
+    mont_mult(g, g, g, s, ctx);
+    mont_sub(g, g, a, s, ctx);
+    mont_sub(g, g, b, s, ctx);
+    mont_mult(g, g, d, s, ctx);       /* z3 = ((Z1+Z2)²-Z1Z1-Z2Z2)*H */
+
+    mont_select(z3, z1, g, p2_is_pai, ctx);
 }
+
+#define WINDOW_SIZE_BITS 4
+#define WINDOW_SIZE_ITEMS (1<<WINDOW_SIZE_BITS)
 
 /*
  * Compute the scalar multiplication of an EC point.
  * Jacobian coordinates as output, affine an input.
  */
-STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+STATIC int ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
-                   const uint8_t *exp, size_t exp_size,
+                   const uint8_t *exp, size_t exp_size, uint64_t seed,
                    Workplace *wp1,
                    Workplace *wp2,
                    const MontContext *ctx)
 {
-    unsigned bit;
     unsigned z1_is_one;
-    uint64_t *xa = wp2->a;
-    uint64_t *ya = wp2->b;
-    uint64_t *za = wp2->c;
-    uint64_t *xb = wp2->d;
-    uint64_t *yb = wp2->e;
-    uint64_t *zb = wp2->f;
+    int i;
+    int res;
+    uint64_t *window_x[WINDOW_SIZE_ITEMS],
+             *window_y[WINDOW_SIZE_ITEMS],
+             *window_z[WINDOW_SIZE_ITEMS];
+    uint64_t *xw=NULL, *yw=NULL, *zw=NULL;
+    ProtMemory *prot_x=NULL, *prot_y=NULL, *prot_z=NULL;
+
+    struct BitWindow bw;
 
     z1_is_one = mont_is_one(z1, ctx);
+    res = ERR_MEMORY;
+
+    #define alloc(n) n=calloc(ctx->words, 8); if (NULL == n) goto cleanup;
+
+    alloc(xw);
+    alloc(yw);
+    alloc(zw);
+
+    /** Create window O, P, P² .. P¹⁵ **/
+    memset(window_x, 0, sizeof window_x);
+    memset(window_y, 0, sizeof window_y);
+    memset(window_z, 0, sizeof window_z);
+
+    for (i=0; i<WINDOW_SIZE_ITEMS; i++) {
+        alloc(window_x[i]);
+        alloc(window_y[i]);
+        alloc(window_z[i]);
+    }
+
+    #undef alloc
+
+    mont_set(window_x[0], 1, NULL, ctx);
+    mont_set(window_y[0], 1, NULL, ctx);
+    mont_set(window_z[0], 0, NULL, ctx);
+
+    mont_copy(window_x[1], x1, ctx);
+    mont_copy(window_y[1], y1, ctx);
+    mont_copy(window_z[1], z1, ctx);
+
+    for (i=2; i<WINDOW_SIZE_ITEMS; i++) {
+        if (z1_is_one)
+            ec_mix_add(window_x[i],   window_y[i],   window_z[i],
+                       window_x[i-1], window_y[i-1], window_z[i-1],
+                       x1, y1,
+                       wp1, ctx);
+        else
+            ec_full_add(window_x[i],   window_y[i],   window_z[i],
+                        window_x[i-1], window_y[i-1], window_z[i-1],
+                        x1, y1, z1,
+                        wp1, ctx);
+    }
+
+    res = scatter(&prot_x, (void**)window_x, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    if (res) goto cleanup;
+    res = scatter(&prot_y, (void**)window_y, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    if (res) goto cleanup;
+    res = scatter(&prot_z, (void**)window_z, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    if (res) goto cleanup;
 
     /** Start from PAI **/
-    mont_set(xa, 1, NULL, ctx);
-    mont_set(ya, 1, NULL, ctx);
-    mont_set(za, 0, NULL, ctx);
+    mont_set(x3, 1, NULL, ctx);
+    mont_set(y3, 1, NULL, ctx);
+    mont_set(z3, 0, NULL, ctx);
 
-    /** Find first non-zero bit **/
+    /** Find first non-zero byte in exponent **/
     for (; exp_size && *exp==0; exp++, exp_size--);
-    for (bit=0x80; exp_size && (*exp & bit)==0; bit>>=1);
+    bw = init_bit_window(WINDOW_SIZE_BITS, exp, exp_size);
 
-    /** Left-to-right exponentiation **/
-    for (; exp_size; exp++, exp_size--) {
-       while (bit) {
-            ec_full_double(xa, ya, za, xa, ya, za, wp1, ctx);
-            if (z1_is_one)
-                ec_mix_add(xb, yb, zb, xa, ya, za, x1, y1, wp1, ctx);
-            else
-                ec_full_add(xb, yb, zb, xa, ya, za, x1, y1, z1, wp1, ctx);
-            /* If bit is set, choose 2*P+Q, otherwise 2*P  */
-            mont_select(xa, xb, xa, bit & *exp, ctx);
-            mont_select(ya, yb, ya, bit & *exp, ctx);
-            mont_select(za, zb, za, bit & *exp, ctx);
+    /** For every nibble, double 16 times and add window value **/
+    for (i=0; i < bw.nr_windows; i++) {
+        unsigned index;
+        int j;
 
-            bit>>=1;
-        }
-        bit = 0x80;
+        index = get_next_digit(&bw);
+        gather(xw, prot_x, index);
+        gather(yw, prot_y, index);
+        gather(zw, prot_z, index);
+        for (j=0; j<WINDOW_SIZE_BITS; j++)
+            ec_full_double(x3, y3, z3, x3, y3, z3, wp1, ctx);
+        ec_full_add(x3, y3, z3, x3, y3, z3, xw, yw, zw, wp1, ctx);
     }
-    mont_copy(x3, xa, ctx);
-    mont_copy(y3, ya, ctx);
-    mont_copy(z3, za, ctx);
+
+    res = 0;
+
+cleanup:
+    free(xw);
+    free(yw);
+    free(zw);
+    for (i=0; i<WINDOW_SIZE_ITEMS; i++) {
+        free(window_x[i]);
+        free(window_y[i]);
+        free(window_z[i]);
+    }
+    free_scattered(prot_x);
+    free_scattered(prot_y);
+    free_scattered(prot_z);
+
+    return res;
 }
 
 /*
@@ -427,19 +499,25 @@ STATIC void ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  *                  EC context will be stored.
  * @param modulus   The prime modulus for the curve, big-endian encoded
  * @param b         The constant b, big-endian encoded
- * @param len       The length in bytes of modulus and b
+ * @param order     The order of the EC curve
+ * @param len       The length in bytes of modulus, b, and order
  * @return          0 for success, the appopriate error code otherwise
  */
 EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
                                  const uint8_t *modulus,
                                  const uint8_t *b,
+                                 const uint8_t *order,
                                  size_t len)
 {
     EcContext *ec_ctx = NULL;
+    unsigned order_words;
     int res;
 
     if (NULL == pec_ctx || NULL == modulus || NULL == b)
         return ERR_NULL;
+
+    *pec_ctx = NULL;
+
     if (len == 0)
         return ERR_NOT_ENOUGH_DATA;
 
@@ -449,16 +527,22 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
 
     res = mont_context_init(&ec_ctx->mont_ctx, modulus, len);
     if (res) goto cleanup;
+
     res = mont_from_bytes(&ec_ctx->b, b, len, ec_ctx->mont_ctx);
     if (res) goto cleanup;
+
+    order_words = (len+7)/8;
+    ec_ctx->order = (uint64_t*)calloc(order_words, sizeof(uint64_t));
+    if (NULL == ec_ctx->order) goto cleanup;
+    bytes_to_words(ec_ctx->order, order_words, order, len);
 
     return 0;
 
 cleanup:
     free(ec_ctx->b);
+    free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
     free(ec_ctx);
-    *pec_ctx = NULL;
     return res;
 }
 
@@ -468,6 +552,7 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
         return;
 
     free(ec_ctx->b);
+    free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
     free(ec_ctx);
 }
@@ -483,7 +568,7 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
  *  @param ec_ctx   The EC context
  *  @return         0 for success, the appopriate error code otherwise
  */
-EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, uint8_t *x, uint8_t *y, size_t len, const EcContext *ec_ctx)
+EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, const uint8_t *x, const uint8_t *y, size_t len, const EcContext *ec_ctx)
 {
     int res;
     Workplace *wp = NULL;
@@ -653,34 +738,142 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 }
 
 /*
- * Multiply an EC point by a scalar
+ * Blind the scalar factor to be used in an EC multiplication
+ *
+ * @param blind_scalar      The area of memory where the pointer to a newly
+ *                          allocated blind scalar is stored, in big endian mode.
+ *                          The caller must deallocate this memory.
+ * @param blind_scalar_len  The area where the length of the blind scalar in bytes will be written to.
+ * @param scalar            The (secret) scalar to blind.
+ * @param scalar_len        The length of the secret scalar in bytes.
+ * @param R_seed            The 32-bit factor to use to blind the scalar.
+ * @param order             The order of the EC curve, big-endian mode, 64 bit words
+ * @param order_words       The number of words making up the order
  */
-EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len)
+static int blind_scalar_factor(uint8_t **blind_scalar,
+                        size_t *blind_scalar_len,
+                        const uint8_t *scalar,
+                        size_t scalar_len,
+                        uint32_t R_seed,
+                        uint64_t *order,
+                        size_t order_words)
 {
-    Workplace *wp1, *wp2;
+    size_t scalar_words;
+    size_t blind_scalar_words;
+    uint64_t *output_u64 = NULL;
+    int res = ERR_MEMORY;
+
+    scalar_words = (scalar_len+7)/8;
+    blind_scalar_words = MAX(order_words+2, scalar_words+2);
+    *blind_scalar_len = blind_scalar_words*sizeof(uint64_t);
+
+    *blind_scalar = (uint8_t*)calloc(*blind_scalar_len, 1);
+    if (NULL == *blind_scalar)
+        goto cleanup;
+
+    output_u64 = (uint64_t*)calloc(blind_scalar_words, sizeof(uint64_t));
+    if (NULL == output_u64)
+        goto cleanup;
+
+    bytes_to_words(output_u64, blind_scalar_words, scalar, scalar_len);
+    addmul128(output_u64, order, R_seed, 0, order_words);
+    words_to_bytes(*blind_scalar, *blind_scalar_len, output_u64, blind_scalar_words);
+
+    res = 0;
+
+cleanup:
+    free(output_u64);
+    return res;
+}
+
+/*
+ * Multiply an EC point by a scalar
+ *
+ * @param ecp   The EC point to multiply
+ * @param k     The scalar, encoded in big endian mode
+ * @param len   The length of the scalar, in bytes
+ * @param seed  The 64-bit to drive the randomizations against SCAs
+ * @return      0 in case of success, the appropriate error code otherwise
+ */
+EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed)
+{
+    Workplace *wp1=NULL, *wp2=NULL;
     MontContext *ctx;
+    int res;
 
     if (NULL == ecp || NULL == k)
         return ERR_NULL;
     ctx = ecp->ec_ctx->mont_ctx;
 
+    if (len == 0) {
+        return ERR_NOT_ENOUGH_DATA;
+    }
+
     wp1 = new_workplace(ctx);
-    if (NULL == wp1)
-        return ERR_MEMORY;
+    if (NULL == wp1) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
 
     wp2 = new_workplace(ctx);
     if (NULL == wp2) {
-        free_workplace(wp1);
-        return ERR_MEMORY;
+        res = ERR_MEMORY;
+        goto cleanup;
     }
 
-    ec_exp(ecp->x, ecp->y, ecp->z,
-           ecp->x, ecp->y, ecp->z,
-           k, len, wp1, wp2, ctx);
+    if (seed != 0) {
+        uint8_t *blind_scalar=NULL;
+        size_t blind_scalar_len;
+        uint64_t *factor=NULL;
+        uint64_t *factor_pow=NULL;
 
+        /* Create the blinding factor for the base point */
+        res = mont_number(&factor, 2, ctx);
+        if (res)
+            goto cleanup;
+        expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
+        factor_pow = &factor[ctx->words];
+
+        /* Blind the base point */
+        mont_mult(ecp->z, ecp->z, factor, wp1->scratch, ctx);
+        mont_mult(factor_pow, factor, factor, wp1->scratch, ctx);
+        mont_mult(ecp->x, ecp->x, factor_pow, wp1->scratch, ctx);
+        mont_mult(factor_pow, factor_pow, factor, wp1->scratch, ctx);
+        mont_mult(ecp->y, ecp->y, factor_pow, wp1->scratch, ctx);
+
+        free(factor);
+
+        /* Blind the scalar, by adding R*order where R is at least 32 bits */
+        res = blind_scalar_factor(&blind_scalar,
+                                  &blind_scalar_len,
+                                  k, len,
+                                  (uint32_t)seed,
+                                  ecp->ec_ctx->order,
+                                  ctx->words);
+        if (res) goto cleanup;
+        res = ec_exp(ecp->x, ecp->y, ecp->z,
+                     ecp->x, ecp->y, ecp->z,
+                     blind_scalar, blind_scalar_len,
+                     seed + 1,
+                     wp1, wp2, ctx);
+
+        free(blind_scalar);
+        if (res) goto cleanup;
+    } else {
+        res = ec_exp(ecp->x, ecp->y, ecp->z,
+                     ecp->x, ecp->y, ecp->z,
+                     k, len,
+                     seed + 1,
+                     wp1, wp2, ctx);
+        if (res) goto cleanup;
+    }
+
+    res = 0;
+
+cleanup:
     free_workplace(wp1);
     free_workplace(wp2);
-    return 0;
+    return res;
 }
 
 EXPORT_SYM int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
@@ -748,23 +941,23 @@ EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
     if (NULL == wp)
         return ERR_MEMORY;
 
-    mont_mult(wp->a, ecp1->z, ecp1->z, wp->scratch, ctx);
-    mont_mult(wp->b, ecp1->x, wp->a, wp->scratch, ctx);      /* B = X1*Z1² */
+    mont_mult(wp->a, ecp2->z, ecp2->z, wp->scratch, ctx);
+    mont_mult(wp->b, ecp1->x, wp->a, wp->scratch, ctx);      /* B = X1*Z2² */
 
-    mont_mult(wp->c, ecp2->z, ecp2->z, wp->scratch, ctx);
-    mont_mult(wp->d, ecp2->x, wp->c, wp->scratch, ctx);      /* C = X2*Z2² */
+    mont_mult(wp->c, ecp1->z, ecp1->z, wp->scratch, ctx);
+    mont_mult(wp->d, ecp2->x, wp->c, wp->scratch, ctx);      /* C = X2*Z1² */
 
-    if (!mont_is_equal(wp->b, wp->c, ctx))
+    if (!mont_is_equal(wp->b, wp->d, ctx))
         return -1;
 
-    mont_mult(wp->a, ecp1->z, wp->a, wp->scratch, ctx);
-    mont_mult(wp->e, ecp1->y, wp->a, wp->scratch, ctx);      /* E = Y1*Z1³ */
+    mont_mult(wp->a, ecp2->z, wp->a, wp->scratch, ctx);
+    mont_mult(wp->e, ecp1->y, wp->a, wp->scratch, ctx);      /* E = Y1*Z2³ */
 
-    mont_mult(wp->c, ecp2->z, wp->c, wp->scratch, ctx);
-    mont_mult(wp->f, ecp2->y, wp->c, wp->scratch, ctx);      /* F = Y2*Z2³ */
+    mont_mult(wp->c, ecp1->z, wp->c, wp->scratch, ctx);
+    mont_mult(wp->f, ecp2->y, wp->c, wp->scratch, ctx);      /* F = Y2*Z1³ */
 
     if (!mont_is_equal(wp->e, wp->f, ctx))
-        return -1;
+        return -2;
 
     return 0;
 }
@@ -788,7 +981,7 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
     return 0;
 }
 
-#ifdef MAIN
+#ifdef MAIN2
 int main(void)
 {
     MontContext *ctx;
@@ -839,6 +1032,46 @@ int main(void)
     free_workplace(wp1);
     free_workplace(wp2);
     mont_context_free(ctx);
+
+    return 0;
+}
+#endif
+
+#ifdef MAIN
+int main(void)
+{
+    const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    const uint8_t  b[32] = "\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b";
+    const uint8_t order[32] = "\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51";
+    const uint8_t p256_Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
+    const uint8_t p256_Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+    uint8_t x[32], y[32];
+    uint8_t exp[32];
+    EcContext *ec_ctx;
+    EcPoint *ecp = NULL;
+    int i;
+
+    memset(exp, 0xFF, 32);
+
+    ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
+    ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx);
+
+    for (i=0; i<=5000; i++)
+        ec_ws_scalar_multiply(ecp, exp, 32, 0xFFF);
+
+    ec_ws_get_xy(x, y, 32, ecp);
+    printf("X: ");
+    for (i=0; i<32; i++)
+        printf("%02X", x[i]);
+    printf("\n");
+    printf("Y: ");
+    for (i=0; i<32; i++)
+        printf("%02X", y[i]);
+    printf("\n");
+
+
+    ec_free_point(ecp);
+    ec_free_context(ec_ctx);
 
     return 0;
 }

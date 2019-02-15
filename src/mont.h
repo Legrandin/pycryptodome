@@ -10,6 +10,8 @@
  */
 #define SCRATCHPAD_NR 5
 
+typedef enum _ModulusType { ModulusGeneric, ModulusP256 } ModulusType;
+
 typedef struct mont_context {
     unsigned words;
     unsigned bytes;
@@ -19,6 +21,7 @@ typedef struct mont_context {
     uint64_t *r_mod_n;      /* R mod N */
     uint64_t m0;
     uint64_t *one;
+    ModulusType modulus_type;
 } MontContext;
 
 int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len);

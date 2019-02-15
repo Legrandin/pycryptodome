@@ -34,7 +34,7 @@ clean:
 
 # ECC
 
-build/tests_ec_ws: test_ec_ws.c ../ec_ws.c ../multiply_32.c ../mont.c
+build/tests_ec_ws: test_ec_ws.c ../ec_ws.c build/mont_64.o ../modexp_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # addmul128
@@ -109,27 +109,29 @@ build/test_poly1305_accumulate: build/test_poly1305_accumulate.c ../common.h bui
 
 # Montgomery
 
-build/mont.o: ../mont.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
+build/mont_32.o: ../mont.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=32
 
-build/test_mont: test_mont.c ../common.h build/mont.o ../multiply_32.c
+build/mont_64.o: ../mont.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64
+
+build/test_mont: test_mont.c ../common.h build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/tests_addmul.c: make_tests_addmul.py
 	python $^ > $@
 
-build/tests_addmul: build/tests_addmul.c build/mont.o ../multiply_32.c
+build/tests_addmul: build/tests_addmul.c build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/tests_product.c: make_tests_product.py
 	python $^ > $@
 
-build/tests_product: build/tests_product.c build/mont.o ../multiply_32.c
+build/tests_product: build/tests_product.c build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/tests_mont_mult.c: make_tests_mont_mult.py
 	python $^ > $@
 
-build/tests_mont_mult: build/tests_mont_mult.c build/mont.o ../multiply_32.c
+build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
-

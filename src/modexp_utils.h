@@ -3,10 +3,7 @@
 
 #include "common.h"
 
-/**
- * Expand a fixed-size seed
- */
-void expand_seed(uint64_t seed_in, uint8_t* seed_out, size_t out_len);
+void expand_seed(uint64_t seed_in, void* seed_out, size_t out_len);
 
 struct BitWindow {
     /** Size of a window, in bits **/
@@ -38,5 +35,16 @@ struct BitWindow init_bit_window(unsigned window_size, const uint8_t *exp, size_
  * Return the next window.
  */
 unsigned get_next_digit(struct BitWindow *bw);
+
+typedef struct _ProtMemory {
+    void *scattered;
+    uint16_t *scramble;
+    unsigned nr_arrays;
+    unsigned array_len;
+} ProtMemory;
+
+int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_len, uint64_t seed);
+void gather(void *out, const ProtMemory *prot, unsigned index);
+void free_scattered(ProtMemory *prot);
 
 #endif

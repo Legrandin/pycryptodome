@@ -36,6 +36,16 @@
 #include "multiply.h"
 #include "mont.h"
 
+#if SYS_BITS == 32
+#include "multiply_32.c"
+#else
+#if SYS_BITS == 64
+#include "multiply_64.c"
+#else
+#error You must define macro SYS_BITS
+#endif
+#endif
+
 static inline unsigned is_odd(uint64_t x)
 {
     return 1 == (x & 1);
@@ -285,11 +295,82 @@ STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t 
     
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
-    mask = (t[2*nw] == 1 || ge(&t[nw], n, nw)) - 1;
+    mask = (t[2*nw] | ge(&t[nw], n, nw)) - 1;
     for (i=0; i<nw; i++) {
         out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
     }
 }
+
+STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+{
+    unsigned i;
+    uint64_t *t2, mask;
+
+    assert(nw == 4);
+    assert(m0 == 1);
+
+    t2 = &t[2*nw+1];    /** Point to last nw words **/
+
+    if (a == b) {
+        square_w(t, a, nw);
+    } else {
+        product(t, a, b, nw);
+    }
+
+    t[2*nw] = 0; /** MSW **/
+
+    for (i=0; i<4; i++) {
+        unsigned j;
+        uint64_t carry, k;
+        uint64_t prod_lo, prod_hi;
+
+        k = t[i];
+
+        /* n[0] = 2⁶⁴ - 1 */
+        prod_lo = -k;
+        prod_hi = k - (k!=0);
+        t[i+0] += prod_lo;
+        prod_hi += t[i+0] < prod_lo;
+        carry = prod_hi;
+
+        /* n[1] = 2³² - 1 */
+        DP_MULT(n[1], k, prod_lo, prod_hi);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+1] += prod_lo;
+        prod_hi += t[i+1] < prod_lo;
+        carry = prod_hi;
+
+        /* n[2] = 0 */
+        t[i+2] += carry;
+        carry = t[i+2] < carry;
+
+        /* n[3] = 2⁶⁴ - 2³² + 1 */
+        DP_MULT(n[3], k, prod_lo, prod_hi);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+3] += prod_lo;
+        prod_hi += t[i+3] < prod_lo;
+        carry = prod_hi;
+
+        for (j=4; carry; j++) {
+            t[i+j] += carry;
+            carry = t[i+j] < carry;
+        }
+    }
+
+    assert(t[2*nw] <= 1); /** MSW **/
+
+    /** t[0..nw-1] == 0 **/
+    
+    /** Divide by R and possibly subtract n **/
+    sub(t2, &t[nw], n, nw);
+    mask = (t[2*nw] | ge(&t[nw], n, nw)) - 1;
+    for (i=0; i<nw; i++) {
+        out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
+    }
+}
+
 
 /* ---- PUBLIC FUNCTIONS ---- */
 
@@ -515,7 +596,10 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
     if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
-    mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+    if (ctx->modulus_type == ModulusP256)
+        mont_mult_p256(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+    else
+        mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
 
     return 0;
 }
@@ -679,6 +763,26 @@ int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
     return 0;
 }
 
+static int cmp_modulus(const uint8_t *mod1, size_t mod1_len, const uint8_t *mod2, size_t mod2_len)
+{
+    size_t diff;
+
+    if (mod1_len > mod2_len) {
+        diff = mod1_len - mod2_len;
+        if (0 != memcmp(mod1+diff, mod2, mod2_len))
+            return -1;
+        if (NULL != memchr_not(mod1, 0, diff))
+            return -1;
+    } else {
+        diff = mod2_len - mod1_len;
+        if (0 != memcmp(mod2+diff, mod1, mod1_len))
+            return -1;
+        if (NULL != memchr_not(mod2, 0, diff))
+            return -1;
+    }
+    return 0;
+}
+
 /*
  * Create a new context for the Montgomery and the given odd modulus.
  *
@@ -690,6 +794,7 @@ int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
  */
 int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 {
+    const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     MontContext *ctx;
     uint64_t *scratchpad = NULL;
     int res;
@@ -763,6 +868,13 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     }
     sub(ctx->modulus_min_2, ctx->modulus, ctx->one, ctx->words);
     sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
+
+    /* Check if the modulus has a special form */
+    if (0 == cmp_modulus(modulus, mod_len, p256_mod, 32)) {
+        ctx->modulus_type = ModulusP256;
+    } else {
+        ctx->modulus_type = ModulusGeneric;
+    }
 
     res = 0;
 

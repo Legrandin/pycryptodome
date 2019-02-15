@@ -1,3 +1,6 @@
+#ifndef _MULTIPLY_H
+#define _MULTIPLY_H
+
 #include "common.h"
 
 /**
@@ -52,3 +55,4 @@ uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 size_t square_w(uint64_t *t, const uint64_t *a, size_t words);
 
 size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words);
+#endif
