@@ -305,6 +305,9 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 {
     unsigned i;
     uint64_t *t2, mask;
+#if SYS_BITS == 32
+    uint32_t t32[18];
+#endif
 
     assert(nw == 4);
     assert(m0 == 1);
@@ -318,6 +321,63 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     }
 
     t[2*nw] = 0; /** MSW **/
+
+#if SYS_BITS == 32
+    for (i=0; i<9; i++) {
+        t32[2*i] = (uint32_t)t[i];
+        t32[2*i+1] = t[i] >> 32;
+    }
+
+    for (i=0; i<8; i++) {
+        uint32_t k, carry;
+        uint64_t prod, k2;
+        unsigned j;
+
+        k = t32[i];
+        k2 = ((uint64_t)k<<32) - k;
+
+        /* p[0] = 2³²-1 */
+        prod = k2 + t32[i+0];
+        t32[i+0] = prod;
+        carry = prod >> 32;
+        /* p[1] = 2³²-1 */
+        prod = k2 + t32[i+1] + carry;
+        t32[i+1] = prod;
+        carry = prod >> 32;
+        /* p[2] = 2³²-1 */
+        prod = k2 + t32[i+2] + carry;
+        t32[i+2] = prod;
+        carry = prod >> 32;
+        /* p[3] = 0 */
+        t32[i+3] += carry;
+        carry = t32[i+3] < carry;
+        /* p[4] = 0 */
+        t32[i+4] += carry;
+        carry = t32[i+4] < carry;
+        /* p[5] = 0 */
+        t32[i+5] += carry;
+        carry = t32[i+5] < carry;
+        /* p[6] = 1 */
+        t32[i+6] += carry;
+        carry = t32[i+6] < carry;
+        t32[i+6] += k;
+        carry |= t32[i+6] < k;
+        /* p[7] = 2³²-1 */
+        prod = k2 + t32[i+7] + carry;
+        t32[i+7] = prod;
+        carry = prod >> 32;
+
+        for (j=8; carry; j++) {
+            t32[i+j] += carry;
+            carry = t32[i+j] < carry;
+        }
+    }
+
+    for (i=0; i<9; i++) {
+        t[i] = ((uint64_t)t32[2*i+1]<<32) + t32[2*i];
+    }
+
+#elif SYS_BITS == 64
 
     for (i=0; i<4; i++) {
         unsigned j;
@@ -358,11 +418,14 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
             carry = t[i+j] < carry;
         }
     }
+#else
+#error You must define the SYS_BITS macro
+#endif
 
     assert(t[2*nw] <= 1); /** MSW **/
 
     /** t[0..nw-1] == 0 **/
-    
+
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
     mask = (t[2*nw] | ge(&t[nw], n, nw)) - 1;

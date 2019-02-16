@@ -5,7 +5,7 @@ CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
 
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess\
        test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate\
-	   test_mont tests_mont_mult tests_ec_ws
+	   test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32
 
 ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
 CPPFLAGS += -DHAVE_X86INTRIN_H
@@ -34,8 +34,11 @@ clean:
 
 # ECC
 
-build/tests_ec_ws: test_ec_ws.c ../ec_ws.c build/mont_64.o ../modexp_utils.c ../siphash.c
+build/tests_ec_ws_64: test_ec_ws.c ../ec_ws.c build/mont_64.o ../modexp_utils.c ../siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o ../modexp_utils.c ../siphash.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=32 -UHAVE_UINT128
 
 # addmul128
 
@@ -110,7 +113,7 @@ build/test_poly1305_accumulate: build/test_poly1305_accumulate.c ../common.h bui
 # Montgomery
 
 build/mont_32.o: ../mont.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=32
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=32 -UHAVE_UINT128
 
 build/mont_64.o: ../mont.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64

@@ -1056,8 +1056,9 @@ int main(void)
     ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
     ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx);
 
-    for (i=0; i<=5000; i++)
+    for (i=0; i<=5000; i++) {
         ec_ws_scalar_multiply(ecp, exp, 32, 0xFFF);
+    }
 
     ec_ws_get_xy(x, y, 32, ecp);
     printf("X: ");
