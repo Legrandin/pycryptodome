@@ -190,18 +190,24 @@ int main(void)
     uint16_t length;
     uint8_t *base, *modulus, *exponent, *out;
     int result;
+    size_t res;
 
-    fread(&length, 2, 1, stdin);
+    res = fread(&length, 2, 1, stdin);
+    assert(res == 2);
 
     base = malloc(length);
     modulus = malloc(length);
     exponent = malloc(length);
     out = malloc(length);
 
-    fread(base, 1, length, stdin);
-    fread(modulus, 1, length, stdin);
-    fread(exponent, 1, length, stdin);
-    fread(out, 1, length, stdin);
+    res = fread(base, 1, length, stdin);
+    assert(res == length);
+    res = fread(modulus, 1, length, stdin);
+    assert(res == length);
+    res = fread(exponent, 1, length, stdin);
+    assert(res == length);
+    assert(res == length);
+    res = fread(out, 1, length, stdin);
 
     result = monty_pow(out, base, exponent, modulus, length, 12);
     
