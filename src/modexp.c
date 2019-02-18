@@ -81,7 +81,7 @@ EXPORT_SYM int monty_pow(
     uint64_t *scratchpad = NULL;
     uint8_t *buf_out = NULL;
 
-    struct BitWindow bit_window;
+    struct BitWindow_LR bit_window;
 
     if (!base || !exp || !modulus || !out)
         return ERR_NULL;
@@ -146,7 +146,7 @@ EXPORT_SYM int monty_pow(
         goto cleanup;
     }
 
-    bit_window = init_bit_window(WINDOW_SIZE, exp, exp_len);
+    bit_window = init_bit_window_lr(WINDOW_SIZE, exp, exp_len);
     
     /** Left-to-right exponentiation with fixed window **/
     for (i=0; i < bit_window.nr_windows; i++) {
@@ -156,7 +156,7 @@ EXPORT_SYM int monty_pow(
             mont_mult(x, x, x, scratchpad, ctx);
         }
         
-        index = get_next_digit(&bit_window);
+        index = get_next_digit_lr(&bit_window);
         gather(power_idx, prot, index);
         mont_mult(x, x, power_idx, scratchpad, ctx);
     }

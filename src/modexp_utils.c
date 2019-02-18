@@ -31,9 +31,9 @@ void expand_seed(uint64_t seed_in, void* seed_out, size_t out_len)
 #undef SIPHASH_LEN
 }
 
-struct BitWindow init_bit_window(unsigned window_size, const uint8_t *exp, size_t exp_len)
+struct BitWindow_LR init_bit_window_lr(unsigned window_size, const uint8_t *exp, size_t exp_len)
 {
-    struct BitWindow bw;
+    struct BitWindow_LR bw;
 
     bw.window_size = window_size;
     bw.nr_windows = (unsigned)((exp_len*8+window_size-1)/window_size);
@@ -50,7 +50,7 @@ struct BitWindow init_bit_window(unsigned window_size, const uint8_t *exp, size_
     return bw;
 }
 
-unsigned get_next_digit(struct BitWindow *bw)
+unsigned get_next_digit_lr(struct BitWindow_LR *bw)
 {
     unsigned tc, index;
 

@@ -5,7 +5,7 @@
 
 void expand_seed(uint64_t seed_in, void* seed_out, size_t out_len);
 
-struct BitWindow {
+struct BitWindow_LR {
     /** Size of a window, in bits **/
     unsigned window_size;
     
@@ -29,12 +29,12 @@ struct BitWindow {
  * Initialize the data structure we can use to read groups of bits (windows)
  * from a big endian number.
  */
-struct BitWindow init_bit_window(unsigned window_size, const uint8_t *exp, size_t exp_len);
+struct BitWindow_LR init_bit_window_lr(unsigned window_size, const uint8_t *exp, size_t exp_len);
 
 /**
  * Return the next window.
  */
-unsigned get_next_digit(struct BitWindow *bw);
+unsigned get_next_digit_lr(struct BitWindow_LR *bw);
 
 typedef struct _ProtMemory {
     void *scattered;

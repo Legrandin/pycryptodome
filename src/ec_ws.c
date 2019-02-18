@@ -403,7 +403,7 @@ STATIC int ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *xw=NULL, *yw=NULL, *zw=NULL;
     ProtMemory *prot_x=NULL, *prot_y=NULL, *prot_z=NULL;
 
-    struct BitWindow bw;
+    struct BitWindow_LR bw;
 
     z1_is_one = mont_is_one(z1, ctx);
     res = ERR_MEMORY;
@@ -462,14 +462,14 @@ STATIC int ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     /** Find first non-zero byte in exponent **/
     for (; exp_size && *exp==0; exp++, exp_size--);
-    bw = init_bit_window(WINDOW_SIZE_BITS, exp, exp_size);
+    bw = init_bit_window_lr(WINDOW_SIZE_BITS, exp, exp_size);
 
     /** For every nibble, double 16 times and add window value **/
     for (i=0; i < bw.nr_windows; i++) {
         unsigned index;
         int j;
 
-        index = get_next_digit(&bw);
+        index = get_next_digit_lr(&bw);
         gather(xw, prot_x, index);
         gather(yw, prot_y, index);
         gather(zw, prot_z, index);
