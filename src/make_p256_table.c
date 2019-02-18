@@ -41,7 +41,7 @@ int main(void)
 
     for (i=0; i<n_tables; i++) {
 
-        printf(" { /* Table #%d */ \n", i);
+        printf(" { /* Table #%d */\n", i);
         for (j=0; j<points_per_table; j++) {
             uint8_t x[32], y[32];
             uint64_t xw[4], yw[4];
@@ -50,20 +50,20 @@ int main(void)
             bytes_to_words(xw, 4, x, sizeof(x));
             bytes_to_words(yw, 4, y, sizeof(y));
 
-            printf("  { /* Point #%d */ \n", j);
+            printf("  { /* Point #%d */\n", j);
             printf("    { ");
             for (k=0; k<4; k++) {
-                printf("0x%016lX%c", xw[k], k==3 ? ' ' : ',');
+                printf("0x%016lX%s", xw[k], k==3 ? "" : ",");
             }
             printf(" },\n");
             printf("    { ");
             for (k=0; k<4; k++) {
-                printf("0x%016lX%c", yw[k], k==3 ? ' ' : ',');
+                printf("0x%016lX%s", yw[k], k==3 ? "" : ",");
             }
             printf(" }\n");
-            printf("  }%c\n", j==points_per_table-1 ? ' ' : ',');
+            printf("  }%s\n", j==points_per_table-1 ? "" : ",");
         }
-        printf(" }%c\n", i==n_tables-1 ? ' ' : ',');
+        printf(" }%s\n", i==n_tables-1 ? "" : ",");
 
         /* Multiply G by 2^window_size */
         for (j=0; j<window_size; j++)
