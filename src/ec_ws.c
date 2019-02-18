@@ -38,6 +38,10 @@
 #include "ec.h"
 #include "modexp_utils.h"
 
+#ifndef MAKE_TABLE
+#include "p256_table.c"
+#endif
+
 FAKE_INIT(ec_ws)
 
 #ifdef MAIN
