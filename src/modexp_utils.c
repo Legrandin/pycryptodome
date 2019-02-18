@@ -50,6 +50,20 @@ struct BitWindow_LR init_bit_window_lr(unsigned window_size, const uint8_t *exp,
     return bw;
 }
 
+struct BitWindow_RL init_bit_window_rl(unsigned window_size, const uint8_t *exp, size_t exp_len)
+{
+    struct BitWindow_RL bw;
+
+    bw.window_size = window_size;
+    bw.nr_windows = (unsigned)((exp_len*8+window_size-1)/window_size);
+
+    bw.bytes_left = exp_len;
+    bw.bits_left = 8;
+    bw.cursor = exp + (exp_len-1);
+
+    return bw;
+}
+
 unsigned get_next_digit_lr(struct BitWindow_LR *bw)
 {
     unsigned tc, index;
@@ -78,6 +92,36 @@ unsigned get_next_digit_lr(struct BitWindow_LR *bw)
     bw->tg = bw->window_size;
 
     return index;
+}
+
+unsigned get_next_digit_rl(struct BitWindow_RL *bw)
+{
+    unsigned res, tg, bits_used;
+
+    if (bw->bytes_left == 0)
+        return 0;
+
+    assert(bw->bits_left > 0);
+
+    res = (*(bw->cursor) >> (8 - bw->bits_left)) & ((1<<bw->window_size) - 1);
+    bits_used = MIN(bw->bits_left, bw->window_size);
+
+    tg = bw->window_size - bits_used;
+    bw->bits_left -= bits_used;
+
+    if (bw->bits_left == 0) {
+        bw->bits_left = 8;
+        if (--bw->bytes_left == 0)
+            return res;
+        bw->cursor--;
+    }
+
+    if (tg>0) {
+        res |= (*(bw->cursor) & ((1<<tg) - 1)) << bits_used;
+        bw->bits_left -= tg;
+    }
+
+    return res;
 }
 
 #define CACHE_LINE_SIZE 64

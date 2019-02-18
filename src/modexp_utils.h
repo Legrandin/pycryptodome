@@ -25,16 +25,26 @@ struct BitWindow_LR {
     const uint8_t *exp;
 };
 
+struct BitWindow_RL {
+    unsigned window_size;
+    unsigned nr_windows;
+    unsigned bytes_left;
+    unsigned bits_left;
+    const uint8_t *cursor;
+};
+
 /**
  * Initialize the data structure we can use to read groups of bits (windows)
  * from a big endian number.
  */
 struct BitWindow_LR init_bit_window_lr(unsigned window_size, const uint8_t *exp, size_t exp_len);
+struct BitWindow_RL init_bit_window_rl(unsigned window_size, const uint8_t *exp, size_t exp_len);
 
 /**
  * Return the next window.
  */
 unsigned get_next_digit_lr(struct BitWindow_LR *bw);
+unsigned get_next_digit_rl(struct BitWindow_RL *bw);
 
 typedef struct _ProtMemory {
     void *scattered;
