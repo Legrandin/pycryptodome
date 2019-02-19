@@ -127,7 +127,7 @@ STATIC void free_workplace(Workplace *wp)
 /*
  * Convert jacobian coordinates to affine.
  */
-STATIC void ec_ws_normalize(uint64_t *x3, uint64_t *y3,
+STATIC void ec_projective_to_affine(uint64_t *x3, uint64_t *y3,
                          const uint64_t *x1, uint64_t *y1, uint64_t *z1,
                          Workplace *tmp,
                          const MontContext *ctx)
@@ -496,6 +496,45 @@ cleanup:
     return res;
 }
 
+#ifndef MAKE_TABLE
+STATIC int ec_exp_generator_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                                 const uint8_t *exp, size_t exp_size,
+                                 uint64_t seed,
+                                 Workplace *wp1,
+                                 Workplace *wp2,
+                                 const MontContext *ctx)
+{
+    int i;
+    struct BitWindow_RL bw;
+
+    /** Start from PAI **/
+    mont_set(x3, 1, NULL, ctx);
+    mont_set(y3, 1, NULL, ctx);
+    mont_set(z3, 0, NULL, ctx);
+
+    /** Find first non-zero byte in exponent **/
+    for (; exp_size && *exp==0; exp++, exp_size--);
+    bw = init_bit_window_rl(p256_window_size, exp, exp_size);
+
+    for (i=0; i < bw.nr_windows; i++) {
+        unsigned index;
+        uint64_t *xw, *yw;
+
+        xw = wp2->a;
+        yw = wp2->b;
+        index = get_next_digit_rl(&bw);
+        memcpy(xw, p256_tables[i][index][0], sizeof(uint64_t)*4);
+        memcpy(yw, p256_tables[i][index][1], sizeof(uint64_t)*4);
+        ec_mix_add(x3, y3, z3,
+                   x3, y3, z3,
+                   xw, yw,
+                   wp1, ctx);
+    }
+
+    return 0;
+}
+#endif
+
 /*
  * Create an Elliptic Curve context for Weierstress curves y²=x³+ax+b with a=-3
  *
@@ -564,15 +603,21 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
 /*
  * Create a new EC point on the given EC curve.
  *
- *  @param pecp     The memory area where the pointer to the newly allocated EC
- *                  point will be stored. Use ec_free_point() for deallocating it.
- *  @param x        The X-coordinate (affine, big-endian)
- *  @param y        The Y-coordinate (affine, big-endian)
- *  @param len      The length of x and y in bytes
- *  @param ec_ctx   The EC context
- *  @return         0 for success, the appopriate error code otherwise
+ *  @param pecp         The memory area where the pointer to the newly allocated EC
+ *                      point will be stored. Use ec_free_point() for deallocating it.
+ *  @param x            The X-coordinate (affine, big-endian)
+ *  @param y            The Y-coordinate (affine, big-endian)
+ *  @param len          The length of x and y in bytes
+ *  @param ec_ctx       The EC context
+ *  @param is_generator 1 if the point is the generator for the curve, 0 otherwise
+ *  @return             0 for success, the appopriate error code otherwise
  */
-EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, const uint8_t *x, const uint8_t *y, size_t len, const EcContext *ec_ctx)
+EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
+                               const uint8_t *x,
+                               const uint8_t *y,
+                               size_t len,
+                               const EcContext *ec_ctx,
+                               unsigned is_generator)
 {
     int res;
     Workplace *wp = NULL;
@@ -591,6 +636,8 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp, const uint8_t *x, const uint8_t *
         return ERR_MEMORY;
 
     ecp->ec_ctx = ec_ctx;
+    ecp->is_generator = is_generator;
+
     res = mont_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
     res = mont_from_bytes(&ecp->y, y, len, ctx);
@@ -677,7 +724,7 @@ EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *e
     res = mont_number(&yw, 1, ctx);
     if (res) goto cleanup;
 
-    ec_ws_normalize(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
+    ec_projective_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
     res = mont_to_bytes(x, xw, ctx);
     if (res) goto cleanup;
     res = mont_to_bytes(y, yw, ctx);
@@ -708,6 +755,7 @@ EXPORT_SYM int ec_ws_double(EcPoint *p)
     if (NULL == wp)
         return ERR_MEMORY;
 
+    p->is_generator = FALSE;
     ec_full_double(p->x, p->y, p->z, p->x, p->y, p->z, wp, ctx);
 
     free_workplace(wp);
@@ -732,6 +780,7 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
     if (NULL == wp)
         return ERR_MEMORY;
 
+    ecpa->is_generator = FALSE;
     ec_full_add(ecpa->x, ecpa->y, ecpa->z,
                 ecpa->x, ecpa->y, ecpa->z,
                 ecpb->x, ecpb->y, ecpb->z,
@@ -739,6 +788,42 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 
     free_workplace(wp);
     return 0;
+}
+
+/*
+ * Normalize the projective representation of a point
+ * so that Z=1 or Z=0.
+ */
+EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
+{
+    MontContext *ctx;
+    Workplace *wp = NULL;
+
+    if (NULL == ecp)
+        return ERR_NULL;
+    ctx = ecp->ec_ctx->mont_ctx;
+
+    wp = new_workplace(ctx);
+    if (NULL == wp)
+        return ERR_MEMORY;
+
+    if (!mont_is_zero(ecp->z, ctx)) {
+        ec_projective_to_affine(ecp->x, ecp->y,
+                                ecp->x, ecp->y, ecp->z,
+                                wp, ctx);
+        mont_set(ecp->z, 1, NULL, ctx);
+    }
+
+    free_workplace(wp);
+    return 0;
+}
+
+EXPORT_SYM int ec_ws_is_pai(EcPoint *ecp)
+{
+    if (NULL == ecp)
+        return FALSE;
+
+    return mont_is_zero(ecp->z, ecp->ec_ctx->mont_ctx);
 }
 
 /*
@@ -825,6 +910,21 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
         goto cleanup;
     }
 
+#ifndef MAKE_TABLE
+    if (ecp->is_generator) {
+        ec_exp_generator_p256(ecp->x, ecp->y, ecp->z,
+                              k, len,
+                              seed,
+                              wp1, wp2,
+                              ctx);
+        ecp->is_generator = FALSE;
+        res = 0;
+        goto cleanup;
+    }
+#endif
+
+    ecp->is_generator = FALSE;
+
     if (seed != 0) {
         uint8_t *blind_scalar=NULL;
         size_t blind_scalar_len;
@@ -895,6 +995,7 @@ EXPORT_SYM int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
         return ERR_MEMORY;
 
     ecp2->ec_ctx = ecp->ec_ctx;
+    ecp2->is_generator = ecp->is_generator;
 
     res = mont_number(&ecp2->x, 1, ctx);
     if (res) goto cleanup;
@@ -975,6 +1076,8 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
     if (NULL == p)
         return ERR_NULL;
     ctx = p->ec_ctx->mont_ctx;
+    
+    p->is_generator = FALSE;
 
     res = mont_number(&tmp, SCRATCHPAD_NR, ctx);
     if (res)
@@ -1023,7 +1126,7 @@ int main(void)
 
     printf("----------------------------\n");
 
-    ec_ws_normalize(Qx, Qy, Qx, Qy, Qz, wp1, ctx);
+    ec_projective_to_affine(Qx, Qy, Qx, Qy, Qz, wp1, ctx);
 
     print_x("Qx", Qx, ctx);
     print_x("Qy", Qy, ctx);
@@ -1058,7 +1161,7 @@ int main(void)
     memset(exp, 0xFF, 32);
 
     ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
-    ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx);
+    ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx, TRUE);
 
     for (i=0; i<=5000; i++) {
         ec_ws_scalar_multiply(ecp, exp, 32, 0xFFF);

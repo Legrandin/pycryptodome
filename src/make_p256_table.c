@@ -1,5 +1,10 @@
+#include "common.h"
 #include "ec.h"
 #include "endianess.h"
+
+#define BITS    256
+#define BYTES   BITS/8
+#define WORDS   BITS/64
 
 int main(void)
 {
@@ -16,7 +21,7 @@ int main(void)
     unsigned n_tables, points_per_table, window_size;
 
     ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
-    ec_ws_new_point(&g, p256_Gx, p256_Gy, 32, ec_ctx);
+    ec_ws_new_point(&g, p256_Gx, p256_Gy, 32, ec_ctx, FALSE);
 
     /** TODO: accept this as input **/
     window_size = 5;
@@ -26,7 +31,7 @@ int main(void)
 
     /** Create table with points 0, G, 2G, 3G, .. (2**window_size-1)G **/
     base_window = (EcPoint**)calloc(points_per_table, sizeof(EcPoint*));
-    ec_ws_new_point(&base_window[0], xz, yz, 32, ec_ctx);
+    ec_ws_new_point(&base_window[0], xz, yz, 32, ec_ctx, FALSE);
     for (i=1; i<points_per_table; i++) {
         ec_ws_clone(&base_window[i], base_window[i-1]);
         ec_ws_add(base_window[i], g);
@@ -37,18 +42,23 @@ int main(void)
     printf("static const unsigned p256_n_tables = %d;\n", n_tables);
     printf("static const unsigned p256_window_size = %d;\n", window_size);
     printf("static const unsigned p256_points_per_table = %d;\n", points_per_table);
+    printf("/* Affine coordinates in Montgomery form */\n");
     printf("static const uint64_t p256_tables[%d][%d][2][4] = {\n", n_tables, points_per_table);
 
     for (i=0; i<n_tables; i++) {
 
         printf(" { /* Table #%d */\n", i);
         for (j=0; j<points_per_table; j++) {
-            uint8_t x[32], y[32];
             uint64_t xw[4], yw[4];
 
-            ec_ws_get_xy(x, y, sizeof(x), base_window[j]);
-            bytes_to_words(xw, 4, x, sizeof(x));
-            bytes_to_words(yw, 4, y, sizeof(y));
+            ec_ws_normalize(base_window[j]);
+            if (ec_ws_is_pai(base_window[j])) {
+                memset(xw, 0, sizeof xw);
+                memset(yw, 0, sizeof yw);
+            } else {
+                memcpy(xw, base_window[j]->x, sizeof xw);
+                memcpy(yw, base_window[j]->y, sizeof yw);
+            }
 
             printf("  { /* Point #%d */\n", j);
             printf("    { ");
@@ -81,7 +91,6 @@ int main(void)
     free(base_window);
     ec_free_point(g);
     ec_free_context(ec_ctx);
-
 
     return 0;
 }
