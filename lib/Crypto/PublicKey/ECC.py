@@ -72,7 +72,7 @@ void ec_free_point(EcPoint *ecp);
 int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp);
 int ec_ws_double(EcPoint *p);
 int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb);
-int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed);
+int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed);
 int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp);
 int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2);
 int ec_ws_neg(EcPoint *p);
@@ -223,10 +223,10 @@ class EccPoint(object):
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
         sb = long_to_bytes(scalar)
-        result = _ec_lib.ec_ws_scalar_multiply(self._point.get(),
-                                               c_uint8_ptr(sb),
-                                               c_size_t(len(sb)),
-                                               c_ulonglong(getrandbits(64)))
+        result = _ec_lib.ec_ws_scalar(self._point.get(),
+                                      c_uint8_ptr(sb),
+                                      c_size_t(len(sb)),
+                                      c_ulonglong(getrandbits(64)))
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self

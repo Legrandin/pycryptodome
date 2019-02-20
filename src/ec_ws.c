@@ -884,7 +884,7 @@ cleanup:
  * @param seed  The 64-bit to drive the randomizations against SCAs
  * @return      0 in case of success, the appropriate error code otherwise
  */
-EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed)
+EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed)
 {
     Workplace *wp1=NULL, *wp2=NULL;
     MontContext *ctx;
@@ -1164,7 +1164,7 @@ int main(void)
     ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx, TRUE);
 
     for (i=0; i<=5000; i++) {
-        ec_ws_scalar_multiply(ecp, exp, 32, 0xFFF);
+        ec_ws_scalar(ecp, exp, 32, 0xFFF);
     }
 
     ec_ws_get_xy(x, y, 32, ecp);

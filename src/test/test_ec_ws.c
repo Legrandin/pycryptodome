@@ -478,7 +478,7 @@ void test_ec_ws_add(void)
     ec_free_context(ec_ctx);
 }
 
-void test_ec_ws_scalar_multiply(void)
+void test_ec_ws_scalar(void)
 {
     EcContext *ec_ctx;
     EcPoint *ecp;
@@ -493,12 +493,12 @@ void test_ec_ws_scalar_multiply(void)
     ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
     ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx, FALSE);
 
-    res = ec_ws_scalar_multiply(NULL, (uint8_t*)"\xFF\xFF", 2, 0xFFFF);
+    res = ec_ws_scalar(NULL, (uint8_t*)"\xFF\xFF", 2, 0xFFFF);
     assert(res == ERR_NULL);
-    res = ec_ws_scalar_multiply(ecp, NULL, 2, 0xFFFF);
+    res = ec_ws_scalar(ecp, NULL, 2, 0xFFFF);
     assert(res == ERR_NULL);
 
-    res = ec_ws_scalar_multiply(ecp, (uint8_t*)"\xFF\xFF", 2, 0xFFFF);
+    res = ec_ws_scalar(ecp, (uint8_t*)"\xFF\xFF", 2, 0xFFFF);
     assert(res == 0);
     ec_ws_get_xy(bufx, bufy, 32, ecp);
     assert(0 == memcmp(bufx, "\xf2\x49\x10\x4d\x0e\x6f\x8f\x29\xe6\x01\x62\x77\x78\x0c\xda\x84\xdc\x84\xb8\x3b\xc3\xd8\x99\xdf\xb7\x36\xca\x08\x31\xfb\xe8\xcf", 32));
@@ -547,7 +547,7 @@ int main(void) {
     test_ec_ws_get_xy();
     test_ec_ws_double();
     test_ec_ws_add();
-    test_ec_ws_scalar_multiply();
+    test_ec_ws_scalar();
     test_ec_ws_neg();
     return 0;
 }
