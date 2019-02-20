@@ -387,12 +387,12 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * Compute the scalar multiplication of an EC point.
  * Jacobian coordinates as output, affine an input.
  */
-STATIC int ec_exp(uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                   const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
-                   const uint8_t *exp, size_t exp_size, uint64_t seed,
-                   Workplace *wp1,
-                   Workplace *wp2,
-                   const MontContext *ctx)
+STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                     const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                     const uint8_t *exp, size_t exp_size, uint64_t seed,
+                     Workplace *wp1,
+                     Workplace *wp2,
+                     const MontContext *ctx)
 {
     unsigned z1_is_one;
     int i;
@@ -497,12 +497,12 @@ cleanup:
 }
 
 #ifndef MAKE_TABLE
-STATIC int ec_exp_generator_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                                 const uint8_t *exp, size_t exp_size,
-                                 uint64_t seed,
-                                 Workplace *wp1,
-                                 Workplace *wp2,
-                                 const MontContext *ctx)
+STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                            const uint8_t *exp, size_t exp_size,
+                            uint64_t seed,
+                            Workplace *wp1,
+                            Workplace *wp2,
+                            const MontContext *ctx)
 {
     int i;
     struct BitWindow_RL bw;
@@ -912,11 +912,11 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
 
 #ifndef MAKE_TABLE
     if (ecp->is_generator) {
-        ec_exp_generator_p256(ecp->x, ecp->y, ecp->z,
-                              k, len,
-                              seed,
-                              wp1, wp2,
-                              ctx);
+        ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
+                         k, len,
+                         seed,
+                         wp1, wp2,
+                         ctx);
         ecp->is_generator = FALSE;
         res = 0;
         goto cleanup;
@@ -955,7 +955,7 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
                                   ecp->ec_ctx->order,
                                   ctx->words);
         if (res) goto cleanup;
-        res = ec_exp(ecp->x, ecp->y, ecp->z,
+        res = ec_scalar(ecp->x, ecp->y, ecp->z,
                      ecp->x, ecp->y, ecp->z,
                      blind_scalar, blind_scalar_len,
                      seed + 1,
@@ -964,7 +964,7 @@ EXPORT_SYM int ec_ws_scalar_multiply(EcPoint *ecp, const uint8_t *k, size_t len,
         free(blind_scalar);
         if (res) goto cleanup;
     } else {
-        res = ec_exp(ecp->x, ecp->y, ecp->z,
+        res = ec_scalar(ecp->x, ecp->y, ecp->z,
                      ecp->x, ecp->y, ecp->z,
                      k, len,
                      seed + 1,
@@ -1118,7 +1118,7 @@ int main(void)
     printf("----------------------------\n");
 
     for (i=0; i<=5000; i++)
-        ec_exp(Qx, Qy, Qz, Gx, Gy, Gz, (uint8_t*)"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8, wp1, wp2, ctx);
+        ec_scalar(Qx, Qy, Qz, Gx, Gy, Gz, (uint8_t*)"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8, wp1, wp2, ctx);
 
     print_x("Qx", Qx, ctx);
     print_x("Qy", Qy, ctx);
