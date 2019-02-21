@@ -128,9 +128,9 @@ STATIC void free_workplace(Workplace *wp)
  * Convert jacobian coordinates to affine.
  */
 STATIC void ec_projective_to_affine(uint64_t *x3, uint64_t *y3,
-                         const uint64_t *x1, uint64_t *y1, uint64_t *z1,
-                         Workplace *tmp,
-                         const MontContext *ctx)
+                                    const uint64_t *x1, uint64_t *y1, uint64_t *z1,
+                                    Workplace *tmp,
+                                    const MontContext *ctx)
 {
     uint64_t *a = tmp->a;
     uint64_t *b = tmp->b;
@@ -228,19 +228,25 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *f = tmp->f;
     uint64_t *s = tmp->scratch;
 
-    /* First term may be point at infinity */
-    if (mont_is_zero(z1, ctx)) {
-        mont_copy(x3, x2, ctx);
-        mont_copy(y3, y2, ctx);
-        mont_set(z3, 1, tmp->scratch, ctx);
-        return;
-    }
+    unsigned p1_is_pai;
+    unsigned p2_is_pai;
+
+    p1_is_pai = mont_is_zero(z1, ctx);
+    p2_is_pai = mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx);
 
     /* Second term may be point at infinity */
-    if (mont_is_zero(x2, ctx) && mont_is_zero(y2, ctx)) {
+    if (p2_is_pai) {
         mont_copy(x3, x1, ctx);
         mont_copy(y3, y1, ctx);
         mont_copy(z3, z1, ctx);
+        return;
+    }
+
+    /* First term may be point at infinity */
+    if (p1_is_pai) {
+        mont_copy(x3, x2, ctx);
+        mont_copy(y3, y2, ctx);
+        mont_set(z3, 1, tmp->scratch, ctx);
         return;
     }
 
@@ -497,12 +503,12 @@ cleanup:
 }
 
 #ifndef MAKE_TABLE
-STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                            const uint8_t *exp, size_t exp_size,
-                            uint64_t seed,
-                            Workplace *wp1,
-                            Workplace *wp2,
-                            const MontContext *ctx)
+STATIC void ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                             const uint8_t *exp, size_t exp_size,
+                             uint64_t seed,
+                             Workplace *wp1,
+                             Workplace *wp2,
+                             const MontContext *ctx)
 {
     int i;
     struct BitWindow_RL bw;
@@ -530,8 +536,6 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    xw, yw,
                    wp1, ctx);
     }
-
-    return 0;
 }
 #endif
 
@@ -1018,6 +1022,23 @@ cleanup:
     free(ecp2);
     *pecp2 = NULL;
     return res;
+}
+
+EXPORT_SYM int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2)
+{
+    MontContext *ctx;
+
+    if (NULL == ecp1 || NULL == ecp2)
+        return ERR_NULL;
+    ctx = ecp2->ec_ctx->mont_ctx;
+
+    ecp1->ec_ctx = ecp2->ec_ctx;
+    ecp1->is_generator = ecp2->is_generator;
+    mont_copy(ecp1->x, ecp2->x, ctx);
+    mont_copy(ecp1->y, ecp2->y, ctx);
+    mont_copy(ecp1->z, ecp2->z, ctx);
+
+    return 0;
 }
 
 EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)

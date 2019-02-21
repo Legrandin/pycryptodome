@@ -16,7 +16,7 @@ int main(void)
     uint8_t xz[32] = { 0 }, yz[32] = { 0 };
     EcContext *ec_ctx;
     EcPoint *g = NULL;
-    EcPoint **base_window = NULL;
+    EcPoint **window = NULL;
     int i, j, k;
     unsigned n_tables, points_per_table, window_size;
 
@@ -30,11 +30,11 @@ int main(void)
     n_tables = (256+window_size-1)/window_size;
 
     /** Create table with points 0, G, 2G, 3G, .. (2**window_size-1)G **/
-    base_window = (EcPoint**)calloc(points_per_table, sizeof(EcPoint*));
-    ec_ws_new_point(&base_window[0], xz, yz, 32, ec_ctx, FALSE);
+    window = (EcPoint**)calloc(points_per_table, sizeof(EcPoint*));
+    ec_ws_new_point(&window[0], xz, yz, 32, ec_ctx, FALSE);
     for (i=1; i<points_per_table; i++) {
-        ec_ws_clone(&base_window[i], base_window[i-1]);
-        ec_ws_add(base_window[i], g);
+        ec_ws_clone(&window[i], window[i-1]);
+        ec_ws_add(window[i], g);
     }
 
     printf("/* This file was automatically generated, do not edit */\n");
@@ -51,13 +51,13 @@ int main(void)
         for (j=0; j<points_per_table; j++) {
             uint64_t xw[4], yw[4];
 
-            ec_ws_normalize(base_window[j]);
-            if (ec_ws_is_pai(base_window[j])) {
-                memset(xw, 0, sizeof xw);
-                memset(yw, 0, sizeof yw);
+            if (j == 0) {
+                memcpy(xw, xz, sizeof xw);
+                memcpy(yw, yz, sizeof yw);
             } else {
-                memcpy(xw, base_window[j]->x, sizeof xw);
-                memcpy(yw, base_window[j]->y, sizeof yw);
+                ec_ws_normalize(window[j]);
+                memcpy(xw, window[j]->x, sizeof xw);
+                memcpy(yw, window[j]->y, sizeof yw);
             }
 
             printf("  { /* Point #%d */\n", j);
@@ -75,20 +75,22 @@ int main(void)
         }
         printf(" }%s\n", i==n_tables-1 ? "" : ",");
 
-        /* Multiply G by 2^window_size */
+        /* Move from G to G*2^{w} */
         for (j=0; j<window_size; j++)
             ec_ws_double(g);
 
-        for (j=0; j<points_per_table; j++)
-            ec_ws_add(base_window[j], g);
+        for (j=1; j<points_per_table; j++) {
+            ec_ws_copy(window[j], window[j-1]);
+            ec_ws_add(window[j], g);
+        }
     }
 
     printf("};\n");
 
     for (i=0; i<points_per_table; i++) {
-        ec_free_point(base_window[i]);
+        ec_free_point(window[i]);
     }
-    free(base_window);
+    free(window);
     ec_free_point(g);
     ec_free_context(ec_ctx);
 

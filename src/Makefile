@@ -1,4 +1,5 @@
 CPPFLAGS=-DHAVE_STDINT_H -DHAVE_POSIX_MEMALIGN -DPYCRYPTO_LITTLE_ENDIAN -DHAVE_UINT128
+CPPFLAGS += -DSTATIC=""
 CFLAGS=-Werror -Wall -O3 -g -Wno-unused-const-variable
 
 all:: modexp ec_ws

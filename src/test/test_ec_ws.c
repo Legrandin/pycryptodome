@@ -33,6 +33,13 @@ void ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    Workplace *wp2,
                    const MontContext *ctx);
 
+void ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                      const uint8_t *exp, size_t exp_size,
+                      uint64_t seed,
+                      Workplace *wp1,
+                      Workplace *wp2,
+                      const MontContext *ctx);
+
 void test_ec_projective_to_affine(void)
 {
     Workplace *wp;
@@ -338,6 +345,88 @@ void test_ec_scalar(void)
     mont_context_free(ctx);
 }
 
+void test_ec_scalar_g_p256(void)
+{
+    Workplace *wp1, *wp2;
+    MontContext *ctx;
+    const uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    const uint8_t Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
+    const uint8_t Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+
+    uint64_t *x1, *y1, *z1;
+    uint64_t *xw, *yw;
+    uint64_t *Gx_mont, *Gy_mont;
+    uint8_t buffer[32];
+
+    mont_context_init(&ctx, modulus, sizeof(modulus));
+    wp1 = new_workplace(ctx);
+    wp2 = new_workplace(ctx);
+
+    mont_from_bytes(&Gx_mont, Gx, sizeof Gx, ctx);
+    mont_from_bytes(&Gy_mont, Gy, sizeof Gy, ctx);
+    mont_number(&xw, 1, ctx);
+    mont_number(&yw, 1, ctx);
+
+    /* 1*G */
+    mont_number(&x1, 1, ctx);
+    mont_number(&y1, 1, ctx);
+    mont_number(&z1, 1, ctx);
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x01", 1, 0x4545, wp1, wp2, ctx);
+    ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
+    assert(mont_is_equal(xw, Gx_mont, ctx));
+    assert(mont_is_equal(yw, Gy_mont, ctx));
+
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x00\x01", 2, 0x4545, wp1, wp2, ctx);
+    ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
+    assert(mont_is_equal(xw, Gx_mont, ctx));
+    assert(mont_is_equal(yw, Gy_mont, ctx));
+
+    /* 0*G */
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x00", 1, 0x4545, wp1, wp2, ctx);
+    assert(mont_is_zero(z1, ctx));
+
+    /* 31*G */
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x1F", 1, 0x4545, wp1, wp2, ctx);
+    ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
+    mont_to_bytes(buffer, xw, ctx);
+    assert(0 == memcmp(buffer, "\x30\x1d\x9e\x50\x2d\xc7\xe0\x5d\xa8\x5d\xa0\x26\xa7\xae\x9a\xa0\xfa\xc9\xdb\x7d\x52\xa9\x5b\x3e\x3e\x3f\x9a\xa0\xa1\xb4\x5b\x8b", 32));
+    mont_to_bytes(buffer, yw, ctx);
+    assert(0 == memcmp(buffer, "\x65\x51\xb6\xf6\xb3\x06\x12\x23\xe0\xd2\x3c\x02\x6b\x01\x7d\x72\x29\x8d\x9a\xe4\x68\x87\xca\x61\xd5\x8d\xb6\xae\xa1\x7e\xe2\x67", 32));
+
+    /* 32*G */
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x20", 1, 0x4545, wp1, wp2, ctx);
+    ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
+    mont_to_bytes(buffer, xw, ctx);
+    assert(0 == memcmp(buffer, "\x23\x77\xc7\xd6\x90\xa2\x42\xca\x6c\x45\x07\x4e\x8e\xa5\xbe\xef\xaa\x55\x7f\xd5\xb6\x83\x71\xd9\xd1\x47\x5b\xd5\x2a\x7e\xd0\xe1", 32));
+    mont_to_bytes(buffer, yw, ctx);
+    assert(0 == memcmp(buffer, "\x47\xa1\x3f\xb9\x84\x13\xa4\x39\x3f\x8d\x90\xe9\xbf\x90\x1b\x7e\x66\x58\xa6\xcd\xec\xf4\x67\x16\xe7\xc0\x67\xb1\xdd\xb8\xd2\xb2", 32));
+
+    /* (order+1)*G */
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x52", 32, 0x4545, wp1, wp2, ctx);
+    ec_projective_to_affine(x1, y1, x1, y1, z1, wp1, ctx);
+    mont_to_bytes(buffer, x1, ctx);
+    assert(0 == memcmp(buffer, "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96", 32));
+    mont_to_bytes(buffer, y1, ctx);
+    assert(0 == memcmp(buffer, "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5", 32));
+
+    /* order*G */
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51", 32, 0x4545, wp1, wp2, ctx);
+    assert(mont_is_zero(z1, ctx));
+
+    free(x1);
+    free(y1);
+    free(z1);
+    free(xw);
+    free(yw);
+    free(Gx_mont);
+    free(Gy_mont);
+    free_workplace(wp1);
+    free_workplace(wp2);
+    mont_context_free(ctx);
+
+}
+
+
 void test_ec_ws_new_point(void)
 {
     EcContext *ec_ctx;
@@ -543,6 +632,7 @@ int main(void) {
     test_ec_mix_add();
     test_ec_full_add();
     test_ec_scalar();
+    test_ec_scalar_g_p256();
     test_ec_ws_new_point();
     test_ec_ws_get_xy();
     test_ec_ws_double();
