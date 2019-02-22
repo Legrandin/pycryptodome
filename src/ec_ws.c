@@ -127,7 +127,7 @@ STATIC void free_workplace(Workplace *wp)
 /*
  * Convert jacobian coordinates to affine.
  */
-STATIC void ec_projective_to_affine(uint64_t *x3, uint64_t *y3,
+STATIC void ec_jacobian_to_affine(uint64_t *x3, uint64_t *y3,
                                     const uint64_t *x1, uint64_t *y1, uint64_t *z1,
                                     Workplace *tmp,
                                     const MontContext *ctx)
@@ -739,7 +739,7 @@ EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *e
     res = mont_number(&yw, 1, ctx);
     if (res) goto cleanup;
 
-    ec_projective_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
+    ec_jacobian_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
     res = mont_to_bytes(x, xw, ctx);
     if (res) goto cleanup;
     res = mont_to_bytes(y, yw, ctx);
@@ -806,7 +806,7 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 }
 
 /*
- * Normalize the projective representation of a point
+ * Normalize the Jacobian representation of a point
  * so that Z=1 or Z=0.
  */
 EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
@@ -823,7 +823,7 @@ EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
         return ERR_MEMORY;
 
     if (!mont_is_zero(ecp->z, ctx)) {
-        ec_projective_to_affine(ecp->x, ecp->y,
+        ec_jacobian_to_affine(ecp->x, ecp->y,
                                 ecp->x, ecp->y, ecp->z,
                                 wp, ctx);
         mont_set(ecp->z, 1, NULL, ctx);
@@ -1156,7 +1156,7 @@ int main(void)
 
     printf("----------------------------\n");
 
-    ec_projective_to_affine(Qx, Qy, Qx, Qy, Qz, wp1, ctx);
+    ec_jacobian_to_affine(Qx, Qy, Qx, Qy, Qz, wp1, ctx);
 
     print_x("Qx", Qx, ctx);
     print_x("Qy", Qy, ctx);
