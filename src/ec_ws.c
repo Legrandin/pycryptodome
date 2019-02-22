@@ -503,7 +503,7 @@ cleanup:
 }
 
 #ifndef MAKE_TABLE
-STATIC void ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                              const uint8_t *exp, size_t exp_size,
                              uint64_t seed,
                              Workplace *wp1,
@@ -522,6 +522,9 @@ STATIC void ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     for (; exp_size && *exp==0; exp++, exp_size--);
     bw = init_bit_window_rl(p256_window_size, exp, exp_size);
 
+    if (bw.nr_windows > p256_n_tables)
+        return ERR_VALUE;
+
     for (i=0; i < bw.nr_windows; i++) {
         unsigned index;
         uint64_t *xw, *yw;
@@ -536,6 +539,8 @@ STATIC void ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    xw, yw,
                    wp1, ctx);
     }
+
+    return 0;
 }
 #endif
 
@@ -916,13 +921,11 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
 
 #ifndef MAKE_TABLE
     if (ecp->is_generator) {
-        ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
-                         k, len,
-                         seed,
-                         wp1, wp2,
-                         ctx);
-        ecp->is_generator = FALSE;
-        res = 0;
+        res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
+                               k, len,
+                               seed,
+                               wp1, wp2,
+                               ctx);
         goto cleanup;
     }
 #endif
