@@ -186,7 +186,7 @@ class EccPoint(object):
         if result:
             raise ValueError("Error %d while encoding an EC point" % result)
 
-        return [Integer(bytes_to_long(c)) for c in (xb, yb)]
+        return (Integer(bytes_to_long(xb)), Integer(bytes_to_long(yb)))
 
     def double(self):
         """Double this point (in-place operation).
