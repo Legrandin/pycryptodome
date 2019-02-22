@@ -456,26 +456,26 @@ void test_ec_ws_new_point(void)
 
     res = ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
     assert(res == 0);
-    res = ec_ws_new_point(NULL, Gx, Gy, 32, ec_ctx, FALSE);
+    res = ec_ws_new_point(NULL, Gx, Gy, 32, ec_ctx);
     assert(res == ERR_NULL);
-    res = ec_ws_new_point(&ecp, NULL, Gy, 32, ec_ctx, FALSE);
+    res = ec_ws_new_point(&ecp, NULL, Gy, 32, ec_ctx);
     assert(res == ERR_NULL);
-    res = ec_ws_new_point(&ecp, Gx, NULL, 32, ec_ctx, FALSE);
+    res = ec_ws_new_point(&ecp, Gx, NULL, 32, ec_ctx);
     assert(res == ERR_NULL);
-    res = ec_ws_new_point(&ecp, Gx, Gy, 32, NULL, FALSE);
+    res = ec_ws_new_point(&ecp, Gx, Gy, 32, NULL);
     assert(res == ERR_NULL);
 
-    res = ec_ws_new_point(&ecp, Gx, Gy, 0, ec_ctx, FALSE);
+    res = ec_ws_new_point(&ecp, Gx, Gy, 0, ec_ctx);
     assert(res == ERR_VALUE);
 
-    res = ec_ws_new_point(&ecp, Gx_wrong, Gy, 32, ec_ctx, FALSE);
+    res = ec_ws_new_point(&ecp, Gx_wrong, Gy, 32, ec_ctx);
     assert(res == ERR_EC_POINT);
 
-    res = ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx, FALSE);
+    res = ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
     assert(res == 0);
 
     ec_free_point(ecp);
-    res = ec_ws_new_point(&ecp, zero, zero, 32, ec_ctx, FALSE);
+    res = ec_ws_new_point(&ecp, zero, zero, 32, ec_ctx);
     assert(res == 0);
 
     ec_free_point(ecp);
@@ -496,7 +496,7 @@ void test_ec_ws_get_xy(void)
 
     res = ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
     assert(res == 0);
-    res = ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx, FALSE);
+    res = ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
     assert(res == 0);
     assert(ecp != NULL);
 
@@ -533,7 +533,7 @@ void test_ec_ws_double(void)
     uint8_t bufx[32], bufy[32];
 
     ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
-    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx, FALSE);
+    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
 
     res = ec_ws_double(NULL);
     assert(res == ERR_NULL);
@@ -561,8 +561,8 @@ void test_ec_ws_add(void)
     uint8_t bufx[32], bufy[32];
 
     ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
-    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx, FALSE);
-    ec_ws_new_point(&ecp2, Gx, Gy, 32, ec_ctx, FALSE);
+    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
+    ec_ws_new_point(&ecp2, Gx, Gy, 32, ec_ctx);
     ec_ws_double(ecp2);
 
     res = ec_ws_add(NULL, ecp);
@@ -594,7 +594,7 @@ void test_ec_ws_scalar(void)
     uint8_t bufx[32], bufy[32];
 
     ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
-    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx, FALSE);
+    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
 
     res = ec_ws_scalar(NULL, (uint8_t*)"\xFF\xFF", 2, 0xFFFF);
     assert(res == ERR_NULL);
@@ -624,7 +624,7 @@ void test_ec_ws_neg(void)
     uint8_t bufx[32], bufy[32];
 
     ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
-    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx, FALSE);
+    ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
 
     res = ec_ws_neg(NULL);
     assert(res == ERR_NULL);

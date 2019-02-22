@@ -66,8 +66,7 @@ int ec_ws_new_point(EcPoint **pecp,
                     uint8_t *x,
                     uint8_t *y,
                     size_t len,
-                    const EcContext *ec_ctx,
-                    unsigned is_generator);
+                    const EcContext *ec_ctx);
 void ec_free_point(EcPoint *ecp);
 int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp);
 int ec_ws_double(EcPoint *p);
@@ -111,7 +110,7 @@ class EccPoint(object):
     :vartype y: integer
     """
 
-    def __init__(self, x, y, is_generator=False):
+    def __init__(self, x, y):
         xb = long_to_bytes(x, 32)
         yb = long_to_bytes(y, 32)
         assert(len(xb) == 32)
@@ -122,8 +121,7 @@ class EccPoint(object):
                                          c_uint8_ptr(xb),
                                          c_uint8_ptr(yb),
                                          c_size_t(len(xb)),
-                                         _ec_p256_context.get(),
-                                         c_uint(is_generator))
+                                         _ec_p256_context.get())
         if result:
             if result == 15:
                 raise ValueError("The EC point does not belong to the curve")
@@ -250,7 +248,7 @@ _curve = _Curve(
     Integer(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551),
     _curve_gx,
     _curve_gy,
-    EccPoint(_curve_gx, _curve_gy, is_generator=True),
+    EccPoint(_curve_gx, _curve_gy),
     ("P-256", "prime256v1", "secp256r1"),
     "1.2.840.10045.3.1.7",
 )

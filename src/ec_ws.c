@@ -625,8 +625,7 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
                                const uint8_t *x,
                                const uint8_t *y,
                                size_t len,
-                               const EcContext *ec_ctx,
-                               unsigned is_generator)
+                               const EcContext *ec_ctx)
 {
     int res;
     Workplace *wp = NULL;
@@ -645,7 +644,14 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
         return ERR_MEMORY;
 
     ecp->ec_ctx = ec_ctx;
-    ecp->is_generator = is_generator;
+    
+    ecp->is_generator = FALSE;
+    if (ec_ctx->mont_ctx->modulus_type == ModulusP256) {
+        const uint8_t Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
+        const uint8_t Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+
+        ecp->is_generator = (0 == memcmp(Gx, x, 32)) && (0 == memcmp(Gy, y, 32));
+    }
 
     res = mont_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
@@ -1185,7 +1191,9 @@ int main(void)
     memset(exp, 0xFF, 32);
 
     ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
-    ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx, TRUE);
+    ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx);
+
+    //ec_ws_double(ecp);
 
     for (i=0; i<=5000; i++) {
         ec_ws_scalar(ecp, exp, 32, 0xFFF);

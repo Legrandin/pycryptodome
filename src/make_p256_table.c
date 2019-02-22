@@ -21,7 +21,7 @@ int main(void)
     unsigned n_tables, points_per_table, window_size;
 
     ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
-    ec_ws_new_point(&g, p256_Gx, p256_Gy, 32, ec_ctx, FALSE);
+    ec_ws_new_point(&g, p256_Gx, p256_Gy, 32, ec_ctx);
 
     /** TODO: accept this as input **/
     window_size = 5;
@@ -31,7 +31,7 @@ int main(void)
 
     /** Create table with points 0, G, 2G, 3G, .. (2**window_size-1)G **/
     window = (EcPoint**)calloc(points_per_table, sizeof(EcPoint*));
-    ec_ws_new_point(&window[0], xz, yz, 32, ec_ctx, FALSE);
+    ec_ws_new_point(&window[0], xz, yz, 32, ec_ctx);
     for (i=1; i<points_per_table; i++) {
         ec_ws_clone(&window[i], window[i-1]);
         ec_ws_add(window[i], g);
