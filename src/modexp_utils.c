@@ -57,7 +57,7 @@ struct BitWindow_RL init_bit_window_rl(unsigned window_size, const uint8_t *exp,
     bw.window_size = window_size;
     bw.nr_windows = (unsigned)((exp_len*8+window_size-1)/window_size);
 
-    bw.bytes_left = exp_len;
+    bw.bytes_left = (unsigned)exp_len;
     bw.bits_left = 8;
     bw.cursor = exp + (exp_len-1);
 
@@ -103,7 +103,7 @@ unsigned get_next_digit_rl(struct BitWindow_RL *bw)
 
     assert(bw->bits_left > 0);
 
-    res = (*(bw->cursor) >> (8 - bw->bits_left)) & ((1<<bw->window_size) - 1);
+    res = (unsigned)(*(bw->cursor) >> (8 - bw->bits_left)) & (unsigned)((1U<<bw->window_size) - 1);
     bits_used = MIN(bw->bits_left, bw->window_size);
 
     tg = bw->window_size - bits_used;
@@ -117,14 +117,14 @@ unsigned get_next_digit_rl(struct BitWindow_RL *bw)
     }
 
     if (tg>0) {
-        res |= (*(bw->cursor) & ((1<<tg) - 1)) << bits_used;
+        res |= (*(bw->cursor) & ((1U<<tg) - 1)) << bits_used;
         bw->bits_left -= tg;
     }
 
     return res;
 }
 
-#define CACHE_LINE_SIZE 64
+#define CACHE_LINE_SIZE 64U
 
 /**
  * Spread a number of equally-sized arrays in memory, to minimize cache
@@ -156,7 +156,7 @@ int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_
         return ERR_VALUE;
 
     piece_len = CACHE_LINE_SIZE / nr_arrays;
-    cache_lines = (array_len + piece_len - 1) / piece_len;
+    cache_lines = ((unsigned)array_len + piece_len - 1) / piece_len;
 
     *pprot = prot = (ProtMemory*)calloc(1, sizeof(ProtMemory));
     if (NULL == prot)
@@ -177,10 +177,10 @@ int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_
     }
 
     prot->nr_arrays = nr_arrays;
-    prot->array_len = array_len;
+    prot->array_len = (unsigned)array_len;
 
-    remaining = array_len;
-    mask = nr_arrays - 1;
+    remaining = (unsigned)array_len;
+    mask = (unsigned)(nr_arrays - 1);
 
     for (i=0; i<cache_lines; i++) {
         uint8_t *cache_line;

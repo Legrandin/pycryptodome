@@ -231,8 +231,8 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     unsigned p1_is_pai;
     unsigned p2_is_pai;
 
-    p1_is_pai = mont_is_zero(z1, ctx);
-    p2_is_pai = mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx);
+    p1_is_pai = (unsigned)mont_is_zero(z1, ctx);
+    p2_is_pai = (unsigned)(mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx));
 
     /* Second term may be point at infinity */
     if (p2_is_pai) {
@@ -331,7 +331,7 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
      * and only at the end copy over point 1 as result,
      * to limit timing leakages.
      */
-    p2_is_pai = mont_is_zero(z2, ctx);
+    p2_is_pai = (unsigned)mont_is_zero(z2, ctx);
 
     mont_mult(a, z1, z1, s, ctx);       /* a = Z1Z1 = Z1² */
     mont_mult(b, z2, z2, s, ctx);       /* b = Z2Z2 = Z2² */
@@ -411,7 +411,7 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     struct BitWindow_LR bw;
 
-    z1_is_one = mont_is_one(z1, ctx);
+    z1_is_one = (unsigned)mont_is_one(z1, ctx);
     res = ERR_MEMORY;
 
     #define alloc(n) n=calloc(ctx->words, 8); if (NULL == n) goto cleanup;
@@ -583,7 +583,7 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     res = mont_from_bytes(&ec_ctx->b, b, len, ec_ctx->mont_ctx);
     if (res) goto cleanup;
 
-    order_words = (len+7)/8;
+    order_words = ((unsigned)len+7)/8;
     ec_ctx->order = (uint64_t*)calloc(order_words, sizeof(uint64_t));
     if (NULL == ec_ctx->order) goto cleanup;
     bytes_to_words(ec_ctx->order, order_words, order, len);

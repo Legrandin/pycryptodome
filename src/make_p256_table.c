@@ -26,7 +26,7 @@ int main(void)
     /** TODO: accept this as input **/
     window_size = 5;
 
-    points_per_table = 1 << window_size;
+    points_per_table = 1U << window_size;
     n_tables = (256+window_size-1)/window_size;
 
     /** Create table with points 0, G, 2G, 3G, .. (2**window_size-1)G **/

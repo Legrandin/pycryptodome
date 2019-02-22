@@ -86,7 +86,7 @@ STATIC uint64_t inverse64(uint64_t a)
  */
 STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
 {
-    unsigned mask = -1;
+    unsigned mask = (unsigned)-1;
     unsigned result = 0;
     size_t i, j;
 
@@ -295,7 +295,7 @@ STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t 
     
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
-    mask = (t[2*nw] | ge(&t[nw], n, nw)) - 1;
+    mask = (uint64_t)((t[2*nw] | (uint64_t)ge(&t[nw], n, nw)) - 1);
     for (i=0; i<nw; i++) {
         out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
     }
@@ -428,7 +428,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
-    mask = (t[2*nw] | ge(&t[nw], n, nw)) - 1;
+    mask = (uint64_t)((t[2*nw] | (uint64_t)ge(&t[nw], n, nw)) - 1);
     for (i=0; i<nw; i++) {
         out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
     }
@@ -883,8 +883,8 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     if (NULL == ctx)
         return ERR_MEMORY;
 
-    ctx->words = (mod_len + 7) / 8;
-    ctx->bytes = ctx->words * sizeof(uint64_t);
+    ctx->words = ((unsigned)mod_len + 7) / 8;
+    ctx->bytes = (unsigned)(ctx->words * sizeof(uint64_t));
 
     /** Load modulus N **/
     ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
@@ -982,7 +982,7 @@ int mont_is_one(const uint64_t *a, const MontContext *ctx)
 int mont_is_equal(const uint64_t *a, const uint64_t *b, const MontContext *ctx)
 {
     unsigned i;
-    int result = 0;
+    uint64_t result = 0;
 
     if (NULL == a || NULL == b || NULL == ctx)
         return -1;
@@ -1025,7 +1025,7 @@ int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned co
     if (NULL == out || NULL == a || NULL == b || NULL == ctx)
         return ERR_NULL;
 
-    mask = (cond != 0) - 1;
+    mask = (uint64_t)((cond != 0) - 1);
 
     for (i=0; i<ctx->words; i++) {
         *out++ = (*b++ & mask) ^ (*a++ & ~mask);
