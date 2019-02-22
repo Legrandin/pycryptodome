@@ -33,7 +33,7 @@ void ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                    Workplace *wp2,
                    const MontContext *ctx);
 
-void ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                       const uint8_t *exp, size_t exp_size,
                       uint64_t seed,
                       Workplace *wp1,
@@ -352,6 +352,7 @@ void test_ec_scalar_g_p256(void)
     const uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     const uint8_t Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
     const uint8_t Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+    int res;
 
     uint64_t *x1, *y1, *z1;
     uint64_t *xw, *yw;
@@ -371,7 +372,8 @@ void test_ec_scalar_g_p256(void)
     mont_number(&x1, 1, ctx);
     mont_number(&y1, 1, ctx);
     mont_number(&z1, 1, ctx);
-    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x01", 1, 0x4545, wp1, wp2, ctx);
+    res = ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x01", 1, 0x4545, wp1, wp2, ctx);
+    assert(res == 0);
     ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
     assert(mont_is_equal(xw, Gx_mont, ctx));
     assert(mont_is_equal(yw, Gy_mont, ctx));
@@ -412,6 +414,18 @@ void test_ec_scalar_g_p256(void)
     /* order*G */
     ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51", 32, 0x4545, wp1, wp2, ctx);
     assert(mont_is_zero(z1, ctx));
+
+    /* arbirtrary */
+    ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\x73\x87\x34\x34\x3F\xF8\x93\x87", 8, 0x6776, wp1, wp2, ctx);
+    ec_projective_to_affine(x1, y1, x1, y1, z1, wp1, ctx);
+    mont_to_bytes(buffer, x1, ctx);
+    assert(0 == memcmp(buffer, "\xfc\x85\x6a\x26\x35\x51\x2a\x83\x44\x35\x55\x97\xbd\xbf\xa9\x3d\x33\x70\x2a\x48\xb0\x9d\x02\xbd\x1d\xc4\xfd\x4b\x5a\x4c\x6c\x09", 32));
+    mont_to_bytes(buffer, y1, ctx);
+    assert(0 == memcmp(buffer, "\xcf\x0d\xc7\x68\x18\x61\xa0\xb7\x29\x22\xa9\xce\x17\xf1\x58\x22\x31\x1a\xab\x2a\x14\xc4\xbd\xb0\xc4\x32\xea\xfe\x93\x9a\x4a\x47", 32));
+
+    /* exponent is too long */
+    res = ec_scalar_g_p256(x1, y1, z1, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x52\xFF", 33, 0x4545, wp1, wp2, ctx);
+    assert(res == ERR_VALUE);
 
     free(x1);
     free(y1);
