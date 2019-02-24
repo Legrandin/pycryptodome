@@ -125,16 +125,14 @@ STATIC void free_workplace(Workplace *wp)
 }
 
 /*
- * Convert jacobian coordinates to affine.
+ * Convert projective coordinates of an EC point to affine
  */
-STATIC void ec_jacobian_to_affine(uint64_t *x3, uint64_t *y3,
+STATIC void ec_projective_to_affine(uint64_t *x3, uint64_t *y3,
                                     const uint64_t *x1, uint64_t *y1, uint64_t *z1,
                                     Workplace *tmp,
                                     const MontContext *ctx)
 {
     uint64_t *a = tmp->a;
-    uint64_t *b = tmp->b;
-    uint64_t *c = tmp->c;
     uint64_t *s = tmp->scratch;
 
     if (mont_is_zero(z1, ctx)) {
@@ -144,246 +142,252 @@ STATIC void ec_jacobian_to_affine(uint64_t *x3, uint64_t *y3,
     }
 
     mont_inv_prime(a, z1, ctx);
-    mont_mult(b, a, a, s, ctx);
-    mont_mult(c, b, a, s, ctx);
-    mont_mult(x3, x1, b, s, ctx);     /* X/Z² */
-    mont_mult(y3, y1, c, s, ctx);     /* Y/Z³ */
+    mont_mult(x3, x1, a, s, ctx);     /* X/Z */
+    mont_mult(y3, y1, a, s, ctx);     /* Y/Z */
 }
 
 /*
  * Double an EC point on a short Weierstrass curve of equation y²=x³-3x+b.
- * Jacobian coordinates.
+ * Projective coordinates.
  * Input and output points can match.
+ *
+ * Algorithm 6 in "Complete addition formulas for prime order elliptic curves", Renes et al.
  */
 STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                            const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                           const uint64_t *b,
                            Workplace *tmp, const MontContext *ctx)
 {
-    uint64_t *a = tmp->a;
-    uint64_t *b = tmp->b;
-    uint64_t *c = tmp->c;
-    uint64_t *d = tmp->d;
-    uint64_t *e = tmp->e;
+    uint64_t *t0 = tmp->a;
+    uint64_t *t1 = tmp->b;
+    uint64_t *t2 = tmp->c;
+    uint64_t *t3 = tmp->d;
+    uint64_t *x  = tmp->e;
+    uint64_t *y  = tmp->f;
+    uint64_t *z  = tmp->g;
     uint64_t *s = tmp->scratch;
 
-    if (mont_is_zero(z1, ctx)) {
-        mont_set(x3, 1, NULL, ctx);
-        mont_set(y3, 1, NULL, ctx);
-        mont_set(z3, 0, NULL, ctx);
-        return;
-    }
+    memcpy(x, x1, ctx->bytes);
+    memcpy(y, y1, ctx->bytes);
+    memcpy(z, z1, ctx->bytes);
 
-    /* No need to explicitly handle the case y1=0 (for x1≠0).
-     * The following code will already produce the point at infinity (t²,t³,0).
-     */
+    mont_mult(t0, x, x, s, ctx);    /* 1 */
+    mont_mult(t1, y, y, s, ctx);
+    mont_mult(t2, z, z, s, ctx);
 
-    mont_mult(a, z1, z1, s, ctx);       /* a = delta = Z1² */
-    mont_mult(b, y1, y1, s, ctx);       /* b = gamma = Y1² */
-    mont_mult(c, x1, b, s, ctx);        /* c = beta = X1*gamma */
-    mont_sub(d, x1, a, s, ctx);
-    mont_add(e, x1, a, s, ctx);
-    mont_mult(d, d, e, s, ctx);
-    mont_add(e, d, d, s, ctx);
-    mont_add(d, d, e, s, ctx);          /* d = alpha = 3*(X1-delta)*(X1+delta) */
+    mont_mult(t3, x, y, s, ctx);    /* 4 */
+    mont_add(t3, t3, t3, s, ctx);
+    mont_mult(z3, x, z, s, ctx);
 
-    mont_add(z3, y1, z1, s, ctx);
-    mont_mult(z3, z3, z3, s, ctx);
-    mont_sub(z3, z3, b, s, ctx);
-    mont_sub(z3, z3, a, s, ctx);        /* Z3 = (Y1+Z1)²-gamma-delta */
+    mont_add(z3, z3, z3, s, ctx);   /* 7 */
+    mont_mult(y3, b, t2, s, ctx);
+    mont_sub(y3, y3, z3, s, ctx);
 
-    mont_mult(x3, d, d, s, ctx);
-    mont_add(e, c, c, s, ctx);
-    mont_add(e, e, e, s, ctx);
-    mont_add(e, e, e, s, ctx);
-    mont_sub(x3, x3, e, s, ctx);        /* X3 = alpha²-8*beta */
+    mont_add(x3, y3, y3, s, ctx);   /* 10 */
+    mont_add(y3, x3, y3, s, ctx);
+    mont_sub(x3, t1, y3, s, ctx);
 
-    mont_add(e, c, c, s, ctx);
-    mont_add(y3, e, e, s, ctx);
-    mont_sub(y3, y3, x3, s, ctx);
-    mont_mult(y3, d, y3, s, ctx);
-    mont_mult(e, b, b, s, ctx);
-    mont_add(e, e, e, s, ctx);
-    mont_add(e, e, e, s, ctx);
-    mont_add(e, e, e, s, ctx);
-    mont_sub(y3, y3, e, s, ctx);        /* Y3 = alpha*(4*beta-X3)-8*gamma² */
+    mont_add(y3, t1, y3, s, ctx);   /* 13 */
+    mont_mult(y3, x3, y3, s, ctx);
+    mont_mult(x3, x3, t3, s, ctx);
+
+    mont_add(t3, t2, t2, s, ctx);   /* 16 */
+    mont_add(t2, t2, t3, s, ctx);
+    mont_mult(z3, b, z3, s, ctx);
+
+    mont_sub(z3, z3, t2, s, ctx);   /* 19 */
+    mont_sub(z3, z3, t0, s, ctx);
+    mont_add(t3, z3, z3, s, ctx);
+
+    mont_add(z3, z3, t3, s, ctx);   /* 22 */
+    mont_add(t3, t0, t0, s, ctx);
+    mont_add(t0, t3, t0, s, ctx);
+
+    mont_sub(t0, t0, t2, s, ctx);   /* 25 */
+    mont_mult(t0, t0, z3, s, ctx);
+    mont_add(y3, y3, t0, s, ctx);
+
+    mont_mult(t0, y, z, s, ctx);    /* 28 */
+    mont_add(t0, t0, t0, s, ctx);
+    mont_mult(z3, t0, z3, s, ctx);
+
+    mont_sub(x3, x3, z3, s, ctx);   /* 31 */
+    mont_mult(z3, t0, t1, s, ctx);
+    mont_add(z3, z3, z3, s, ctx);
+
+    mont_add(z3, z3, z3, s, ctx);   /* 34 */
 }
 
 /*
  * Add two EC points on a short Weierstrass curve of equation y²=x³-3x+b.
  * One input point has affine coordinates.
- * The other input and the the output points have Jacobian coordinates.
- * Input and output points can match.
+ * The other input and the the output points have projective coordinates.
+ * Projective input and output points can match.
+ *
+ * Algorithm 5 in "Complete addition formulas for prime order elliptic curves", Renes et al.
  */
 STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                       const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                       const uint64_t *x13, const uint64_t *y13, const uint64_t *z13,
                        const uint64_t *x2, const uint64_t *y2,
+                       const uint64_t *b,
                        Workplace *tmp,
                        const MontContext *ctx)
 {
-    uint64_t *a = tmp->a;
-    uint64_t *b = tmp->b;
-    uint64_t *c = tmp->c;
-    uint64_t *d = tmp->d;
-    uint64_t *e = tmp->e;
-    uint64_t *f = tmp->f;
+    uint64_t *t0 = tmp->a;
+    uint64_t *t1 = tmp->b;
+    uint64_t *t2 = tmp->c;
+    uint64_t *t3 = tmp->d;
+    uint64_t *t4 = tmp->e;
+    uint64_t *x1 = tmp->f;
+    uint64_t *y1 = tmp->g;
+    uint64_t *z1 = tmp->h;
     uint64_t *s = tmp->scratch;
 
-    unsigned p1_is_pai;
-    unsigned p2_is_pai;
-
-    p1_is_pai = (unsigned)mont_is_zero(z1, ctx);
-    p2_is_pai = (unsigned)(mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx));
-
-    /* Second term may be point at infinity */
-    if (p2_is_pai) {
-        mont_copy(x3, x1, ctx);
-        mont_copy(y3, y1, ctx);
-        mont_copy(z3, z1, ctx);
+    if (mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx)) {
+        mont_copy(x3, x13, ctx);
+        mont_copy(y3, y13, ctx);
+        mont_copy(z3, z13, ctx);
         return;
     }
 
-    /* First term may be point at infinity */
-    if (p1_is_pai) {
-        mont_copy(x3, x2, ctx);
-        mont_copy(y3, y2, ctx);
-        mont_set(z3, 1, tmp->scratch, ctx);
-        return;
-    }
+    memcpy(x1, x13, ctx->bytes);
+    memcpy(y1, y13, ctx->bytes);
+    memcpy(z1, z13, ctx->bytes);
 
-    mont_mult(a, z1, z1, s, ctx);       /* a = Z1Z1 = Z1² */
-    mont_mult(b, x2, a, s, ctx);        /* b = U2 = X2*Z1Z1 */
-    mont_mult(c, y2, z1, s, ctx);
-    mont_mult(c, c, a, s, ctx);         /* c = S2 = Y2*Z1*Z1Z1 */
+    mont_mult(t0, x1, x2, s, ctx);      /* 1 */
+    mont_mult(t1, y1, y2, s, ctx);
+    mont_add(t3, x2, y2, s, ctx);
 
-    /* Now that affine (x2, y2) is converted to Jacobian (U2, S2, Z1)
-     * we can check if P1 is ±P2 and handle such special case */
-    if (mont_is_equal(x1, b, ctx)) {
-        if (mont_is_equal(y1, c, ctx)) {
-            ec_full_double(x3, y3, z3, x1, y1, z1, tmp, ctx);
-            return;
-        } else {
-            mont_set(x3, 1, NULL, ctx);
-            mont_set(y3, 1, NULL, ctx);
-            mont_set(z3, 0, NULL, ctx);
-            return;
-        }
-    }
+    mont_add(t4, x1, y1, s, ctx);       /* 4 */
+    mont_mult(t3, t3, t4, s, ctx);
+    mont_add(t4, t0, t1, s, ctx);
 
-    mont_sub(b, b, x1, s, ctx);         /* b = H = U2-X1 */
-    mont_mult(d, b, b, s, ctx);         /* d = HH = H² */
-    mont_add(e, d, d, s, ctx);
-    mont_add(e, e, e, s, ctx);          /* e = I = 4*HH */
-    mont_mult(f, b, e, s, ctx);         /* f = J = H*I */
+    mont_sub(t3, t3, t4, s, ctx);       /* 7 */
+    mont_mult(t4, y2, z1, s, ctx);
+    mont_add(t4, t4, y1, s, ctx);
 
-    mont_sub(c, c, y1, s, ctx);
-    mont_add(c, c, c, s, ctx);          /* c = r = 2*(S2-Y1) */
-    mont_mult(e, x1, e, s, ctx);        /* e = V = X1*I */
+    mont_mult(y3, x2, z1, s, ctx);      /* 10 */
+    mont_add(y3, y3, x1, s, ctx);
+    mont_mult(z3, b, z1, s, ctx);
 
-    mont_mult(x3, c, c, s, ctx);
-    mont_sub(x3, x3, f, s, ctx);
-    mont_sub(x3, x3, e, s, ctx);
-    mont_sub(x3, x3, e, s, ctx);        /* X3 = r²-J-2*V */
+    mont_sub(x3, y3, z3, s, ctx);       /* 13 */
+    mont_add(z3, x3, x3, s, ctx);
+    mont_add(x3, x3, z3, s, ctx);
 
-    mont_mult(f, y1, f, s, ctx);
-    mont_add(f, f, f, s, ctx);
-    mont_sub(y3, e, x3, s, ctx);
-    mont_mult(y3, c, y3, s, ctx);
-    mont_sub(y3, y3, f, s, ctx);        /* Y3 = r*(V-X3)-2*Y1*J */
+    mont_sub(z3, t1, x3, s, ctx);       /* 16 */
+    mont_add(x3, t1, x3, s, ctx);
+    mont_mult(y3, b, y3, s, ctx);
 
-    mont_add(z3, z1, b, s, ctx);
-    mont_mult(z3, z3, z3, s, ctx);
-    mont_sub(z3, z3, a, s, ctx);
-    mont_sub(z3, z3, d, s, ctx);        /* Z3 = (Z1+H)²-Z1Z1-HH **/
+    mont_add(t1, z1, z1, s, ctx);       /* 19 */
+    mont_add(t2, t1, z1, s, ctx);
+    mont_sub(y3, y3, t2, s, ctx);
+
+    mont_sub(y3, y3, t0, s, ctx);       /* 22 */
+    mont_add(t1, y3, y3, s, ctx);
+    mont_add(y3, t1, y3, s, ctx);
+
+    mont_add(t1, t0, t0, s, ctx);       /* 25 */
+    mont_add(t0, t1, t0, s, ctx);
+    mont_sub(t0, t0, t2, s, ctx);
+
+    mont_mult(t1, t4, y3, s, ctx);      /* 28 */
+    mont_mult(t2, t0, y3, s, ctx);
+    mont_mult(y3, x3, z3, s, ctx);
+
+    mont_add(y3, y3, t2, s, ctx);       /* 31 */
+    mont_mult(x3, t3, x3, s, ctx);
+    mont_sub(x3, x3, t1, s, ctx);
+
+    mont_mult(z3, t4, z3, s, ctx);      /* 34 */
+    mont_mult(t1, t3, t0, s, ctx);
+    mont_add(z3, z3, t1, s, ctx);
 }
 
 /*
  * Add two EC points on a short Weierstrass curve of equation y²=x³-3x+b.
- * All points have Jacobian coordinates.
- * Input and output points can match.
+ * All points have projective coordinates.
+ * First input and output points can match.
+ *
+ * Algorithm 4 in "Complete addition formulas for prime order elliptic curves", Renes et al.
  */
 STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                        const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                        const uint64_t *x13, const uint64_t *y13, const uint64_t *z13,
                         const uint64_t *x2, const uint64_t *y2, const uint64_t *z2,
+                        const uint64_t *b,
                         Workplace *tmp,
                         const MontContext *ctx)
 {
-    uint64_t *a = tmp->a;
-    uint64_t *b = tmp->b;
-    uint64_t *c = tmp->c;
-    uint64_t *d = tmp->d;
-    uint64_t *e = tmp->e;
-    uint64_t *f = tmp->f;
-    uint64_t *g = tmp->g;
-    uint64_t *h = tmp->h;
+    uint64_t *t0 = tmp->a;
+    uint64_t *t1 = tmp->b;
+    uint64_t *t2 = tmp->c;
+    uint64_t *t3 = tmp->d;
+    uint64_t *t4 = tmp->e;
+    uint64_t *x1 = tmp->f;
+    uint64_t *y1 = tmp->g;
+    uint64_t *z1 = tmp->h;
     uint64_t *s = tmp->scratch;
-    unsigned p2_is_pai;
 
-    /* First term may be point at infinity */
-    if (mont_is_zero(z1, ctx)) {
-        mont_copy(x3, x2, ctx);
-        mont_copy(y3, y2, ctx);
-        mont_copy(z3, z2, ctx);
-        return;
-    }
+    memcpy(x1, x13, ctx->bytes);
+    memcpy(y1, y13, ctx->bytes);
+    memcpy(z1, z13, ctx->bytes);
 
-    /* Second term may be point at infinity,
-     * if so we still go ahead with all computations
-     * and only at the end copy over point 1 as result,
-     * to limit timing leakages.
-     */
-    p2_is_pai = (unsigned)mont_is_zero(z2, ctx);
+    mont_mult(t0, x1, x2, s, ctx);  /* 1 */
+    mont_mult(t1, y1, y2, s, ctx);
+    mont_mult(t2, z1, z2, s, ctx);
 
-    mont_mult(a, z1, z1, s, ctx);       /* a = Z1Z1 = Z1² */
-    mont_mult(b, z2, z2, s, ctx);       /* b = Z2Z2 = Z2² */
-    mont_mult(c, x1, b, s, ctx);        /* c = U1 = X1*Z2Z2 */
-    mont_mult(d, x2, a, s, ctx);        /* d = U2 = X2*Z1Z1 */
-    mont_mult(e, y1, z2, s, ctx);
-    mont_mult(e, e, b, s, ctx);         /* e = S1 = Y1*Z2*Z2Z2 */
-    mont_mult(f, y2, z1, s, ctx);
-    mont_mult(f, f, a, s, ctx);         /* f = S2 = Y2*Z1*Z1Z1 */
+    mont_add(t3, x1, y1, s, ctx);   /* 4 */
+    mont_add(t4, x2, y2, s, ctx);
+    mont_mult(t3, t3, t4, s, ctx);
 
-    /* We can check if P1 is ±P2 and handle such special case */
-    if (mont_is_equal(c, d, ctx)) {
-        if (mont_is_equal(e, f, ctx)) {
-            ec_full_double(x3, y3, z3, x1, y1, z1, tmp, ctx);
-        } else {
-            mont_set(x3, 1, NULL, ctx);
-            mont_set(y3, 1, NULL, ctx);
-            mont_set(z3, 0, NULL, ctx);
-        }
-        return;
-    }
+    mont_add(t4, t0, t1, s, ctx);   /* 7 */
+    mont_sub(t3, t3, t4, s, ctx);
+    mont_add(t4, y1, z1, s, ctx);
 
-    mont_sub(d, d, c, s, ctx);          /* d = H = U2-U1 */
-    mont_add(g, d, d, s, ctx);
-    mont_mult(g, g, g, s, ctx);         /* g = I = (2*H)² */
-    mont_mult(h, d, g, s, ctx);         /* h = J = H*I */
-    mont_sub(f, f, e, s, ctx);
-    mont_add(f, f, f, s, ctx);          /* f = r = 2*(S2-S1) */
-    mont_mult(c, c, g, s, ctx);         /* c = V = U1*I */
+    mont_add(x3, y2, z2, s, ctx);   /* 10 */
+    mont_mult(t4, t4, x3, s, ctx);
+    mont_add(x3, t1, t2, s, ctx);
 
-    mont_mult(g, f, f, s, ctx);
-    mont_sub(g, g, h, s, ctx);
-    mont_sub(g, g, c, s, ctx);
-    mont_sub(g, g, c, s, ctx);          /* x3 = g = r²-J-2*V */
+    mont_sub(t4, t4, x3, s, ctx);   /* 13 */
+    mont_add(x3, x1, z1, s, ctx);
+    mont_add(y3, x2, z2, s, ctx);
 
-    mont_select(x3, x1, g, p2_is_pai, ctx);
+    mont_mult(x3, x3, y3, s, ctx);  /* 16 */
+    mont_add(y3, t0, t2, s, ctx);
+    mont_sub(y3, x3, y3, s, ctx);
 
-    mont_sub(g, c, g, s, ctx);
-    mont_mult(g, f, g, s, ctx);
-    mont_mult(c, e, h, s, ctx);
-    mont_add(c, c, c, s, ctx);
-    mont_sub(g, g, c, s, ctx);        /* y3 = r*(V-X3)-2*S1*J */
+    mont_mult(z3, b, t2, s, ctx);   /* 19 */
+    mont_sub(x3, y3, z3, s, ctx);
+    mont_add(z3, x3, x3, s, ctx);
 
-    mont_select(y3, y1, g, p2_is_pai, ctx);
+    mont_add(x3, x3, z3, s, ctx);   /* 22 */
+    mont_sub(z3, t1, x3, s, ctx);
+    mont_add(x3, t1, x3, s, ctx);
 
-    mont_add(g, z1, z2, s, ctx);
-    mont_mult(g, g, g, s, ctx);
-    mont_sub(g, g, a, s, ctx);
-    mont_sub(g, g, b, s, ctx);
-    mont_mult(g, g, d, s, ctx);       /* z3 = ((Z1+Z2)²-Z1Z1-Z2Z2)*H */
+    mont_mult(y3, b, y3, s, ctx);   /* 25 */
+    mont_add(t1, t2, t2, s, ctx);
+    mont_add(t2, t1, t2, s, ctx);
 
-    mont_select(z3, z1, g, p2_is_pai, ctx);
+    mont_sub(y3, y3, t2, s, ctx);   /* 28 */
+    mont_sub(y3, y3, t0, s, ctx);
+    mont_add(t1, y3, y3, s, ctx);
+
+    mont_add(y3, t1, y3, s, ctx);   /* 31 */
+    mont_add(t1, t0, t0, s, ctx);
+    mont_add(t0, t1, t0, s, ctx);
+
+    mont_sub(t0, t0, t2, s, ctx);   /* 34 */
+    mont_mult(t1, t4, y3, s, ctx);
+    mont_mult(t2, t0, y3, s, ctx);
+
+    mont_mult(y3, x3, z3, s, ctx);  /* 37 */
+    mont_add(y3, y3, t2, s, ctx);
+    mont_mult(x3, t3, x3, s, ctx);
+
+    mont_sub(x3, x3, t1, s, ctx);   /* 40 */
+    mont_mult(z3, t4, z3, s, ctx);
+    mont_mult(t1, t3, t0, s, ctx);
+
+    mont_add(z3, z3, t1, s, ctx);   /* 43 */
 }
 
 #define WINDOW_SIZE_BITS 4
@@ -395,6 +399,7 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  */
 STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                      const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                     const uint64_t *b,
                      const uint8_t *exp, size_t exp_size, uint64_t seed,
                      Workplace *wp1,
                      Workplace *wp2,
@@ -433,7 +438,7 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     #undef alloc
 
-    mont_set(window_x[0], 1, NULL, ctx);
+    mont_set(window_x[0], 0, NULL, ctx);
     mont_set(window_y[0], 1, NULL, ctx);
     mont_set(window_z[0], 0, NULL, ctx);
 
@@ -446,11 +451,13 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
             ec_mix_add(window_x[i],   window_y[i],   window_z[i],
                        window_x[i-1], window_y[i-1], window_z[i-1],
                        x1, y1,
+                       b,
                        wp1, ctx);
         else
             ec_full_add(window_x[i],   window_y[i],   window_z[i],
                         window_x[i-1], window_y[i-1], window_z[i-1],
                         x1, y1, z1,
+                        b,
                         wp1, ctx);
     }
 
@@ -462,7 +469,7 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     if (res) goto cleanup;
 
     /** Start from PAI **/
-    mont_set(x3, 1, NULL, ctx);
+    mont_set(x3, 0, NULL, ctx);
     mont_set(y3, 1, NULL, ctx);
     mont_set(z3, 0, NULL, ctx);
 
@@ -480,8 +487,8 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
         gather(yw, prot_y, index);
         gather(zw, prot_z, index);
         for (j=0; j<WINDOW_SIZE_BITS; j++)
-            ec_full_double(x3, y3, z3, x3, y3, z3, wp1, ctx);
-        ec_full_add(x3, y3, z3, x3, y3, z3, xw, yw, zw, wp1, ctx);
+            ec_full_double(x3, y3, z3, x3, y3, z3, b, wp1, ctx);
+        ec_full_add(x3, y3, z3, x3, y3, z3, xw, yw, zw, b, wp1, ctx);
     }
 
     res = 0;
@@ -504,17 +511,18 @@ cleanup:
 
 #ifndef MAKE_TABLE
 STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                             const uint8_t *exp, size_t exp_size,
-                             uint64_t seed,
-                             Workplace *wp1,
-                             Workplace *wp2,
-                             const MontContext *ctx)
+                            const uint64_t *b,
+                            const uint8_t *exp, size_t exp_size,
+                            uint64_t seed,
+                            Workplace *wp1,
+                            Workplace *wp2,
+                            const MontContext *ctx)
 {
     int i;
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
-    mont_set(x3, 1, NULL, ctx);
+    mont_set(x3, 0, NULL, ctx);
     mont_set(y3, 1, NULL, ctx);
     mont_set(z3, 0, NULL, ctx);
 
@@ -537,6 +545,7 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
         ec_mix_add(x3, y3, z3,
                    x3, y3, z3,
                    xw, yw,
+                   b,
                    wp1, ctx);
     }
 
@@ -661,10 +670,10 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
     if (res) goto cleanup;
     mont_set(ecp->z, 1, NULL, ctx);
 
-    /** Convert (0, 0) to (1, 1, 0) */
+    /** Convert (0, 0) to (0, 1, 0) */
     /** Verify the point is on the curve, if not point-at-infinity */
     if (mont_is_zero(ecp->x, ctx) && mont_is_zero(ecp->y, ctx)) {
-        mont_set(ecp->x, 1, NULL, ctx);
+        mont_set(ecp->x, 0, NULL, ctx);
         mont_set(ecp->y, 1, NULL, ctx);
         mont_set(ecp->z, 0, NULL, ctx);
     } else {
@@ -739,7 +748,7 @@ EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *e
     res = mont_number(&yw, 1, ctx);
     if (res) goto cleanup;
 
-    ec_jacobian_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
+    ec_projective_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
     res = mont_to_bytes(x, xw, ctx);
     if (res) goto cleanup;
     res = mont_to_bytes(y, yw, ctx);
@@ -771,7 +780,7 @@ EXPORT_SYM int ec_ws_double(EcPoint *p)
         return ERR_MEMORY;
 
     p->is_generator = FALSE;
-    ec_full_double(p->x, p->y, p->z, p->x, p->y, p->z, wp, ctx);
+    ec_full_double(p->x, p->y, p->z, p->x, p->y, p->z, p->ec_ctx->b, wp, ctx);
 
     free_workplace(wp);
     return 0;
@@ -799,6 +808,7 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
     ec_full_add(ecpa->x, ecpa->y, ecpa->z,
                 ecpa->x, ecpa->y, ecpa->z,
                 ecpb->x, ecpb->y, ecpb->z,
+                ecpa->ec_ctx->b,
                 wp, ctx);
 
     free_workplace(wp);
@@ -823,7 +833,7 @@ EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
         return ERR_MEMORY;
 
     if (!mont_is_zero(ecp->z, ctx)) {
-        ec_jacobian_to_affine(ecp->x, ecp->y,
+        ec_projective_to_affine(ecp->x, ecp->y,
                                 ecp->x, ecp->y, ecp->z,
                                 wp, ctx);
         mont_set(ecp->z, 1, NULL, ctx);
@@ -928,6 +938,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
 #ifndef MAKE_TABLE
     if (ecp->is_generator) {
         res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
+                               ecp->ec_ctx->b,
                                k, len,
                                seed,
                                wp1, wp2,
@@ -942,21 +953,17 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         uint8_t *blind_scalar=NULL;
         size_t blind_scalar_len;
         uint64_t *factor=NULL;
-        uint64_t *factor_pow=NULL;
 
         /* Create the blinding factor for the base point */
-        res = mont_number(&factor, 2, ctx);
+        res = mont_number(&factor, 1, ctx);
         if (res)
             goto cleanup;
         expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
-        factor_pow = &factor[ctx->words];
 
         /* Blind the base point */
+        mont_mult(ecp->x, ecp->x, factor, wp1->scratch, ctx);
+        mont_mult(ecp->y, ecp->y, factor, wp1->scratch, ctx);
         mont_mult(ecp->z, ecp->z, factor, wp1->scratch, ctx);
-        mont_mult(factor_pow, factor, factor, wp1->scratch, ctx);
-        mont_mult(ecp->x, ecp->x, factor_pow, wp1->scratch, ctx);
-        mont_mult(factor_pow, factor_pow, factor, wp1->scratch, ctx);
-        mont_mult(ecp->y, ecp->y, factor_pow, wp1->scratch, ctx);
 
         free(factor);
 
@@ -970,6 +977,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         if (res) goto cleanup;
         res = ec_scalar(ecp->x, ecp->y, ecp->z,
                      ecp->x, ecp->y, ecp->z,
+                     ecp->ec_ctx->b,
                      blind_scalar, blind_scalar_len,
                      seed + 1,
                      wp1, wp2, ctx);
@@ -979,6 +987,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
     } else {
         res = ec_scalar(ecp->x, ecp->y, ecp->z,
                      ecp->x, ecp->y, ecp->z,
+                     ecp->ec_ctx->b,
                      k, len,
                      seed + 1,
                      wp1, wp2, ctx);
@@ -1076,20 +1085,14 @@ EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
     if (NULL == wp)
         return ERR_MEMORY;
 
-    mont_mult(wp->a, ecp2->z, ecp2->z, wp->scratch, ctx);
-    mont_mult(wp->b, ecp1->x, wp->a, wp->scratch, ctx);      /* B = X1*Z2² */
-
-    mont_mult(wp->c, ecp1->z, ecp1->z, wp->scratch, ctx);
-    mont_mult(wp->d, ecp2->x, wp->c, wp->scratch, ctx);      /* C = X2*Z1² */
+    mont_mult(wp->b, ecp1->x, ecp2->z, wp->scratch, ctx);   /* B = X1*Z2 */
+    mont_mult(wp->d, ecp2->x, ecp1->z, wp->scratch, ctx);   /* D = X2*Z1 */
 
     if (!mont_is_equal(wp->b, wp->d, ctx))
         return -1;
 
-    mont_mult(wp->a, ecp2->z, wp->a, wp->scratch, ctx);
-    mont_mult(wp->e, ecp1->y, wp->a, wp->scratch, ctx);      /* E = Y1*Z2³ */
-
-    mont_mult(wp->c, ecp1->z, wp->c, wp->scratch, ctx);
-    mont_mult(wp->f, ecp2->y, wp->c, wp->scratch, ctx);      /* F = Y2*Z1³ */
+    mont_mult(wp->e, ecp1->y, ecp2->z, wp->scratch, ctx);   /* E = Y1*Z2 */
+    mont_mult(wp->f, ecp2->y, ecp1->z, wp->scratch, ctx);   /* F = Y2*Z1 */
 
     if (!mont_is_equal(wp->e, wp->f, ctx))
         return -2;
