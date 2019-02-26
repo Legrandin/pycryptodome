@@ -91,6 +91,12 @@ STATIC Workplace *new_workplace(const MontContext *ctx)
     if (res) goto cleanup;
     res = mont_number(&wp->h, 1, ctx);
     if (res) goto cleanup;
+    res = mont_number(&wp->i, 1, ctx);
+    if (res) goto cleanup;
+    res = mont_number(&wp->j, 1, ctx);
+    if (res) goto cleanup;
+    res = mont_number(&wp->k, 1, ctx);
+    if (res) goto cleanup;
     res = mont_number(&wp->scratch, SCRATCHPAD_NR, ctx);
     if (res) goto cleanup;
     return wp;
@@ -104,6 +110,9 @@ cleanup:
     free(wp->f);
     free(wp->g);
     free(wp->h);
+    free(wp->i);
+    free(wp->j);
+    free(wp->k);
     free(wp->scratch);
     return NULL;
 }
@@ -120,6 +129,9 @@ STATIC void free_workplace(Workplace *wp)
     free(wp->f);
     free(wp->g);
     free(wp->h);
+    free(wp->i);
+    free(wp->j);
+    free(wp->k);
     free(wp->scratch);
     free(wp);
 }
@@ -148,10 +160,18 @@ STATIC void ec_projective_to_affine(uint64_t *x3, uint64_t *y3,
 
 /*
  * Double an EC point on a short Weierstrass curve of equation y²=x³-3x+b.
- * Projective coordinates.
- * Input and output points can match.
  *
- * Algorithm 6 in "Complete addition formulas for prime order elliptic curves", Renes et al.
+ * @param x3    Projective X coordinate of the output point, in Montgomery form
+ * @param y3    Projective Y coordinate of the output point, in Montgomery form
+ * @param z3    Projective Z coordinate of the output point, in Montgomery form
+ * @param x1    Projective X coordinate of the input point, in Montgomery form
+ * @param y1    Projective Y coordinate of the input point, in Montgomery form
+ * @param z1    Projective Z coordinate of the input point, in Montgomery form
+ * @param b     Parameter b in the equation, in Montgomery form
+ * @param tmp   Workplace for temporary variables
+ * @param ctx   The Mongtgomery context
+ *
+ * Input and output points can match. The input can be the point-at-infinity.
  */
 STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                            const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
@@ -166,6 +186,10 @@ STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *y  = tmp->f;
     uint64_t *z  = tmp->g;
     uint64_t *s = tmp->scratch;
+
+    /*
+    * Algorithm 6 in "Complete addition formulas for prime order elliptic curves", Renes et al.
+    */
 
     memcpy(x, x1, ctx->bytes);
     memcpy(y, y1, ctx->bytes);
@@ -220,11 +244,24 @@ STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
 /*
  * Add two EC points on a short Weierstrass curve of equation y²=x³-3x+b.
- * One input point has affine coordinates.
- * The other input and the the output points have projective coordinates.
- * Projective input and output points can match.
  *
- * Algorithm 5 in "Complete addition formulas for prime order elliptic curves", Renes et al.
+ * @param x3    Projective X coordinate of the output point, in Montgomery form
+ * @param y3    Projective Y coordinate of the output point, in Montgomery form
+ * @param z3    Projective Z coordinate of the output point, in Montgomery form
+ * @param x1    Projective X coordinate of the first input point, in Montgomery form
+ * @param y1    Projective Y coordinate of the first input point, in Montgomery form
+ * @param z1    Projective Z coordinate of the first input point, in Montgomery form
+ * @param x2    Affine X coordinate of the second input point, in Montgomery form
+ * @param y2    Affine Y coordinate of the second input point, in Montgomery form
+ * @param b     Parameter b in the equation, in Montgomery form
+ * @param tmp   Workplace for temporary variables
+ * @param ctx   The Mongtgomery context
+ *
+ * Input and output points can match. The correct is produced if both or either
+ * input points are at infinity.
+ *
+ * @warning The function is regular (constant-time) only if the second point (affine)
+ * is NOT the point-at-infinity.
  */
 STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                        const uint64_t *x13, const uint64_t *y13, const uint64_t *z13,
@@ -243,6 +280,10 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *z1 = tmp->h;
     uint64_t *s = tmp->scratch;
 
+    /*
+    * Algorithm 5 in "Complete addition formulas for prime order elliptic curves", Renes et al.
+    */
+    
     if (mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx)) {
         mont_copy(x3, x13, ctx);
         mont_copy(y3, y13, ctx);
@@ -305,14 +346,23 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
 /*
  * Add two EC points on a short Weierstrass curve of equation y²=x³-3x+b.
- * All points have projective coordinates.
- * First input and output points can match.
  *
- * Algorithm 4 in "Complete addition formulas for prime order elliptic curves", Renes et al.
+ * @param x3    Projective X coordinate of the output point, in Montgomery form
+ * @param y3    Projective Y coordinate of the output point, in Montgomery form
+ * @param z3    Projective Z coordinate of the output point, in Montgomery form
+ * @param x1    Projective X coordinate of the first input point, in Montgomery form
+ * @param y1    Projective Y coordinate of the first input point, in Montgomery form
+ * @param z1    Projective Z coordinate of the first input point, in Montgomery form
+ * @param x2    Projective X coordinate of the second input point, in Montgomery form
+ * @param y2    Projective Y coordinate of the second input point, in Montgomery form
+ * @param z2    Projective Z coordinate of the second input point, in Montgomery form
+ * @param b     Parameter b in the equation, in Montgomery form
+ * @param tmp   Workplace for temporary variables
+ * @param ctx   The Mongtgomery context
  */
 STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                         const uint64_t *x13, const uint64_t *y13, const uint64_t *z13,
-                        const uint64_t *x2, const uint64_t *y2, const uint64_t *z2,
+                        const uint64_t *x12, const uint64_t *y12, const uint64_t *z12,
                         const uint64_t *b,
                         Workplace *tmp,
                         const MontContext *ctx)
@@ -325,11 +375,22 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *x1 = tmp->f;
     uint64_t *y1 = tmp->g;
     uint64_t *z1 = tmp->h;
+    uint64_t *x2 = tmp->i;
+    uint64_t *y2 = tmp->j;
+    uint64_t *z2 = tmp->k;
     uint64_t *s = tmp->scratch;
+
+    /*
+    * Algorithm 4 in "Complete addition formulas for prime order elliptic curves", Renes et al.
+    */
 
     memcpy(x1, x13, ctx->bytes);
     memcpy(y1, y13, ctx->bytes);
     memcpy(z1, z13, ctx->bytes);
+
+    memcpy(x2, x12, ctx->bytes);
+    memcpy(y2, y12, ctx->bytes);
+    memcpy(z2, z12, ctx->bytes);
 
     mont_mult(t0, x1, x2, s, ctx);  /* 1 */
     mont_mult(t1, y1, y2, s, ctx);
@@ -395,7 +456,7 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
 /*
  * Compute the scalar multiplication of an EC point.
- * Jacobian coordinates as output, affine an input.
+ * Projective coordinates as output and input.
  */
 STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                      const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
@@ -670,7 +731,7 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
     if (res) goto cleanup;
     mont_set(ecp->z, 1, NULL, ctx);
 
-    /** Convert (0, 0) to (0, 1, 0) */
+    /** Convert PAI: (0, 0) to (0, 1, 0) */
     /** Verify the point is on the curve, if not point-at-infinity */
     if (mont_is_zero(ecp->x, ctx) && mont_is_zero(ecp->y, ctx)) {
         mont_set(ecp->x, 0, NULL, ctx);
@@ -816,7 +877,7 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 }
 
 /*
- * Normalize the Jacobian representation of a point
+ * Normalize the projective representation of a point
  * so that Z=1 or Z=0.
  */
 EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
@@ -1059,10 +1120,16 @@ EXPORT_SYM int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2)
     return 0;
 }
 
+/*
+ * Compare two EC points and return 0 if they match
+ */
 EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
 {
     Workplace *wp;
     MontContext *ctx;
+    int p1_is_pai;
+    int p2_is_pai;
+    int result;
 
     if (NULL == ecp1 || NULL == ecp2)
         return ERR_NULL;
@@ -1071,33 +1138,28 @@ EXPORT_SYM int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2)
         return ERR_EC_CURVE;
     ctx = ecp1->ec_ctx->mont_ctx;
 
-    /* Check for point-at-infinity */
-    if (mont_is_zero(ecp1->z, ctx) && mont_is_zero(ecp2->z, ctx))
-        return 0;
+    p1_is_pai = mont_is_zero(ecp1->z, ctx);
+    p2_is_pai = mont_is_zero(ecp2->z, ctx);
 
-    /* Check when Z1=Z2 */
-    if (mont_is_equal(ecp1->z, ecp2->z, ctx)) {
-        return !mont_is_equal(ecp1->x, ecp2->x, ctx) || !mont_is_equal(ecp1->y, ecp2->y, ctx);
+    /* Check for point-at-infinity */
+    if (p1_is_pai | p2_is_pai) {
+        return (p1_is_pai & p2_is_pai) ? 0 : ERR_VALUE;
     }
 
-    /** Normalize to have Z1=Z2 */
+    /** Normalize to have the same Z coordinate */
     wp = new_workplace(ctx);
     if (NULL == wp)
         return ERR_MEMORY;
 
     mont_mult(wp->b, ecp1->x, ecp2->z, wp->scratch, ctx);   /* B = X1*Z2 */
     mont_mult(wp->d, ecp2->x, ecp1->z, wp->scratch, ctx);   /* D = X2*Z1 */
-
-    if (!mont_is_equal(wp->b, wp->d, ctx))
-        return -1;
-
     mont_mult(wp->e, ecp1->y, ecp2->z, wp->scratch, ctx);   /* E = Y1*Z2 */
     mont_mult(wp->f, ecp2->y, ecp1->z, wp->scratch, ctx);   /* F = Y2*Z1 */
+    result = (mont_is_equal(wp->b, wp->d, ctx) & mont_is_equal(wp->e, wp->f, ctx)) ? 0 : ERR_VALUE;
 
-    if (!mont_is_equal(wp->e, wp->f, ctx))
-        return -2;
+    free_workplace(wp);
 
-    return 0;
+    return result;
 }
 
 EXPORT_SYM int ec_ws_neg(EcPoint *p)

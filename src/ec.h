@@ -5,7 +5,7 @@
 #include "mont.h"
 
 typedef struct {
-    uint64_t *a, *b, *c, *d, *e, *f, *g, *h;
+    uint64_t *a, *b, *c, *d, *e, *f, *g, *h, *i, *j, *k;
     uint64_t *scratch;
 } Workplace;
 
