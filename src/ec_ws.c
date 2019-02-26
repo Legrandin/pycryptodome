@@ -710,21 +710,26 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
 
     order_words = ((unsigned)len+7)/8;
     ec_ctx->order = (uint64_t*)calloc(order_words, sizeof(uint64_t));
-    if (NULL == ec_ctx->order) goto cleanup;
+    if (NULL == ec_ctx->order) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
     bytes_to_words(ec_ctx->order, order_words, order, len);
 
 #ifndef MAKE_TABLE
     /* Scramble lookup table for P-256 generator */
     if (ctx->modulus_type == ModulusP256) {
         ec_ctx->prot_g = ec_scramble_g_p256(ec_ctx->mont_ctx, seed);
-        if (NULL == ec_ctx->prot_g) goto cleanup;
+        if (NULL == ec_ctx->prot_g) {
+            res = ERR_MEMORY;
+            goto cleanup;
+        }
     }
 #endif
 
     return 0;
 
 cleanup:
-    free(ec_ctx->prot_g);
     free(ec_ctx->b);
     free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
@@ -754,7 +759,6 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
  *  @param y            The Y-coordinate (affine, big-endian)
  *  @param len          The length of x and y in bytes
  *  @param ec_ctx       The EC context
- *  @param is_generator 1 if the point is the generator for the curve, 0 otherwise
  *  @return             0 for success, the appopriate error code otherwise
  */
 EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
@@ -780,15 +784,7 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
         return ERR_MEMORY;
 
     ecp->ec_ctx = ec_ctx;
-    
-    ecp->is_generator = FALSE;
-    if (ec_ctx->mont_ctx->modulus_type == ModulusP256) {
-        const uint8_t Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
-        const uint8_t Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
-
-        ecp->is_generator = (0 == memcmp(Gx, x, 32)) && (0 == memcmp(Gy, y, 32));
-    }
-
+   
     res = mont_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
     res = mont_from_bytes(&ecp->y, y, len, ctx);
@@ -906,7 +902,6 @@ EXPORT_SYM int ec_ws_double(EcPoint *p)
     if (NULL == wp)
         return ERR_MEMORY;
 
-    p->is_generator = FALSE;
     ec_full_double(p->x, p->y, p->z, p->x, p->y, p->z, p->ec_ctx->b, wp, ctx);
 
     free_workplace(wp);
@@ -931,7 +926,6 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
     if (NULL == wp)
         return ERR_MEMORY;
 
-    ecpa->is_generator = FALSE;
     ec_full_add(ecpa->x, ecpa->y, ecpa->z,
                 ecpa->x, ecpa->y, ecpa->z,
                 ecpb->x, ecpb->y, ecpb->z,
@@ -1063,19 +1057,27 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
     }
 
 #ifndef MAKE_TABLE
-    if (ecp->is_generator) {
-        res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
-                               ecp->ec_ctx->b,
-                               k, len,
-                               seed,
-                               wp1, wp2,
-                               ecp->ec_ctx->prot_g,
-                               ctx);
-        goto cleanup;
+    if (ctx->modulus_type == ModulusP256) {
+        const uint8_t Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
+        const uint8_t Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+        unsigned is_generator;
+
+        is_generator = (0 == memcmp(Gx, ecp->x, 32)) &
+                       (0 == memcmp(Gy, ecp->y, 32)) &
+                       mont_is_one(ecp->z, ctx);
+
+        if (is_generator) {
+            res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
+                                   ecp->ec_ctx->b,
+                                   k, len,
+                                   seed + 2,
+                                   wp1, wp2,
+                                   ecp->ec_ctx->prot_g,
+                                   ctx);
+            goto cleanup;
+        }
     }
 #endif
-
-    ecp->is_generator = FALSE;
 
     if (seed != 0) {
         uint8_t *blind_scalar=NULL;
@@ -1113,6 +1115,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         free(blind_scalar);
         if (res) goto cleanup;
     } else {
+        /* No blinding */
         res = ec_scalar(ecp->x, ecp->y, ecp->z,
                      ecp->x, ecp->y, ecp->z,
                      ecp->ec_ctx->b,
@@ -1145,7 +1148,6 @@ EXPORT_SYM int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
         return ERR_MEMORY;
 
     ecp2->ec_ctx = ecp->ec_ctx;
-    ecp2->is_generator = ecp->is_generator;
 
     res = mont_number(&ecp2->x, 1, ctx);
     if (res) goto cleanup;
@@ -1179,7 +1181,6 @@ EXPORT_SYM int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2)
     ctx = ecp2->ec_ctx->mont_ctx;
 
     ecp1->ec_ctx = ecp2->ec_ctx;
-    ecp1->is_generator = ecp2->is_generator;
     mont_copy(ecp1->x, ecp2->x, ctx);
     mont_copy(ecp1->y, ecp2->y, ctx);
     mont_copy(ecp1->z, ecp2->z, ctx);
@@ -1239,8 +1240,6 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
         return ERR_NULL;
     ctx = p->ec_ctx->mont_ctx;
     
-    p->is_generator = FALSE;
-
     res = mont_number(&tmp, SCRATCHPAD_NR, ctx);
     if (res)
         return res;

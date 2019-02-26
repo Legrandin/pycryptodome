@@ -25,7 +25,6 @@ typedef struct _EcContext {
  */
 typedef struct _EcPoint {
     const EcContext *ec_ctx;
-    unsigned is_generator;
     uint64_t *x;
     uint64_t *y;
     uint64_t *z;
