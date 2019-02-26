@@ -31,9 +31,9 @@ void expand_seed(uint64_t seed_in, void* seed_out, size_t out_len)
 #undef SIPHASH_LEN
 }
 
-struct BitWindow init_bit_window(unsigned window_size, const uint8_t *exp, size_t exp_len)
+struct BitWindow_LR init_bit_window_lr(unsigned window_size, const uint8_t *exp, size_t exp_len)
 {
-    struct BitWindow bw;
+    struct BitWindow_LR bw;
 
     bw.window_size = window_size;
     bw.nr_windows = (unsigned)((exp_len*8+window_size-1)/window_size);
@@ -50,7 +50,21 @@ struct BitWindow init_bit_window(unsigned window_size, const uint8_t *exp, size_
     return bw;
 }
 
-unsigned get_next_digit(struct BitWindow *bw)
+struct BitWindow_RL init_bit_window_rl(unsigned window_size, const uint8_t *exp, size_t exp_len)
+{
+    struct BitWindow_RL bw;
+
+    bw.window_size = window_size;
+    bw.nr_windows = (unsigned)((exp_len*8+window_size-1)/window_size);
+
+    bw.bytes_left = (unsigned)exp_len;
+    bw.bits_left = 8;
+    bw.cursor = exp + (exp_len-1);
+
+    return bw;
+}
+
+unsigned get_next_digit_lr(struct BitWindow_LR *bw)
 {
     unsigned tc, index;
 
@@ -80,7 +94,37 @@ unsigned get_next_digit(struct BitWindow *bw)
     return index;
 }
 
-#define CACHE_LINE_SIZE 64
+unsigned get_next_digit_rl(struct BitWindow_RL *bw)
+{
+    unsigned res, tg, bits_used;
+
+    if (bw->bytes_left == 0)
+        return 0;
+
+    assert(bw->bits_left > 0);
+
+    res = (unsigned)(*(bw->cursor) >> (8 - bw->bits_left)) & (unsigned)((1U<<bw->window_size) - 1);
+    bits_used = MIN(bw->bits_left, bw->window_size);
+
+    tg = bw->window_size - bits_used;
+    bw->bits_left -= bits_used;
+
+    if (bw->bits_left == 0) {
+        bw->bits_left = 8;
+        if (--bw->bytes_left == 0)
+            return res;
+        bw->cursor--;
+    }
+
+    if (tg>0) {
+        res |= (*(bw->cursor) & ((1U<<tg) - 1)) << bits_used;
+        bw->bits_left -= tg;
+    }
+
+    return res;
+}
+
+#define CACHE_LINE_SIZE 64U
 
 /**
  * Spread a number of equally-sized arrays in memory, to minimize cache
@@ -93,9 +137,9 @@ unsigned get_next_digit(struct BitWindow *bw)
  * We assume that access to a byte in the cache line can be performed without
  * leaking its position.
  *
- * nr_array is a power of two, 128 at most
+ * nr_array is a power of two, 64 at most
  */
-int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_len, uint64_t seed)
+int scatter(ProtMemory** pprot, const void *arrays[], uint8_t nr_arrays, size_t array_len, uint64_t seed)
 {
     ProtMemory *prot;
     unsigned piece_len;
@@ -112,7 +156,7 @@ int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_
         return ERR_VALUE;
 
     piece_len = CACHE_LINE_SIZE / nr_arrays;
-    cache_lines = (array_len + piece_len - 1) / piece_len;
+    cache_lines = ((unsigned)array_len + piece_len - 1) / piece_len;
 
     *pprot = prot = (ProtMemory*)calloc(1, sizeof(ProtMemory));
     if (NULL == prot)
@@ -133,10 +177,10 @@ int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_
     }
 
     prot->nr_arrays = nr_arrays;
-    prot->array_len = array_len;
+    prot->array_len = (unsigned)array_len;
 
-    remaining = array_len;
-    mask = nr_arrays - 1;
+    remaining = (unsigned)array_len;
+    mask = (unsigned)(nr_arrays - 1);
 
     for (i=0; i<cache_lines; i++) {
         uint8_t *cache_line;
@@ -148,11 +192,14 @@ int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_
         for (j=0; j<nr_arrays; j++) {
             unsigned s;
             unsigned obf;
+            uint8_t *dst, *src;
 
             obf = (j*((prot->scramble[i] >> 8) | 1) + (prot->scramble[i] & 0xFF)) & mask;
 
             s = MIN(piece_len, remaining);
-            memcpy(cache_line + piece_len*obf, (uint8_t*)arrays[j] + offset, s);
+            dst = cache_line + piece_len*obf;
+            src = (uint8_t*)arrays[j] + offset;
+            memcpy(dst, src, s);
         }
 
         remaining -= piece_len;

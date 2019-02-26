@@ -44,6 +44,9 @@
 #define STATIC static inline
 #endif
 
+#define TRUE    1
+#define FALSE   0
+
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
