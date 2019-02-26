@@ -128,7 +128,7 @@ EXPORT_SYM int monty_pow(
         mont_mult(powers[i*2+1], powers[i*2], mont_base,      scratchpad, ctx);
     }
 
-    res = scatter(&prot, (void**)powers, 1<<WINDOW_SIZE, mont_bytes(ctx), seed);
+    res = scatter(&prot, (const void**)powers, 1<<WINDOW_SIZE, mont_bytes(ctx), seed);
     if (res) goto cleanup;
 
     /** Ignore leading zero bytes in the exponent **/

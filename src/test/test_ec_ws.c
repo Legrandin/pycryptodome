@@ -3,6 +3,7 @@
 #include "mont.h"
 #include "ec.h"
 #include "endianess.h"
+#include "modexp_utils.h"
 
 void print_x(const char *s, const uint64_t *number, const MontContext *ctx);
 Workplace *new_workplace(const MontContext *ctx);
@@ -43,7 +44,10 @@ int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                       uint64_t seed,
                       Workplace *wp1,
                       Workplace *wp2,
+                      ProtMemory **prot_g,
                       const MontContext *ctx);
+ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed);
+void free_g_p256(ProtMemory **prot_g);
 
 static int matches(const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                    const uint64_t *x2, const uint64_t *y2, const uint64_t *z2,
@@ -447,11 +451,13 @@ void test_ec_scalar_g_p256(void)
     uint64_t *xw, *yw;
     uint64_t *Gx_mont, *Gy_mont;
     uint8_t buffer[32];
+    ProtMemory **prot_g;
 
     mont_context_init(&ctx, modulus, sizeof(modulus));
     wp1 = new_workplace(ctx);
     wp2 = new_workplace(ctx);
     mont_from_bytes(&b, (uint8_t*)"\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b", 32, ctx);
+    prot_g = ec_scramble_g_p256(ctx, 0x1010);
 
     mont_from_bytes(&Gx_mont, Gx, sizeof Gx, ctx);
     mont_from_bytes(&Gy_mont, Gy, sizeof Gy, ctx);
@@ -462,23 +468,23 @@ void test_ec_scalar_g_p256(void)
     mont_number(&x1, 1, ctx);
     mont_number(&y1, 1, ctx);
     mont_number(&z1, 1, ctx);
-    res = ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x01", 1, 0x4545, wp1, wp2, ctx);
+    res = ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x01", 1, 0x4545, wp1, wp2, prot_g, ctx);
     assert(res == 0);
     ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
     assert(mont_is_equal(xw, Gx_mont, ctx));
     assert(mont_is_equal(yw, Gy_mont, ctx));
 
-    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x00\x01", 2, 0x4545, wp1, wp2, ctx);
+    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x00\x01", 2, 0x4545, wp1, wp2, prot_g, ctx);
     ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
     assert(mont_is_equal(xw, Gx_mont, ctx));
     assert(mont_is_equal(yw, Gy_mont, ctx));
 
     /* 0*G */
-    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x00", 1, 0x4545, wp1, wp2, ctx);
+    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x00", 1, 0x4545, wp1, wp2, prot_g, ctx);
     assert(mont_is_zero(z1, ctx));
 
     /* 31*G */
-    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x1F", 1, 0x4545, wp1, wp2, ctx);
+    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x1F", 1, 0x4545, wp1, wp2, prot_g, ctx);
     ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
     mont_to_bytes(buffer, xw, ctx);
     assert(0 == memcmp(buffer, "\x30\x1d\x9e\x50\x2d\xc7\xe0\x5d\xa8\x5d\xa0\x26\xa7\xae\x9a\xa0\xfa\xc9\xdb\x7d\x52\xa9\x5b\x3e\x3e\x3f\x9a\xa0\xa1\xb4\x5b\x8b", 32));
@@ -486,7 +492,7 @@ void test_ec_scalar_g_p256(void)
     assert(0 == memcmp(buffer, "\x65\x51\xb6\xf6\xb3\x06\x12\x23\xe0\xd2\x3c\x02\x6b\x01\x7d\x72\x29\x8d\x9a\xe4\x68\x87\xca\x61\xd5\x8d\xb6\xae\xa1\x7e\xe2\x67", 32));
 
     /* 32*G */
-    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x20", 1, 0x4545, wp1, wp2, ctx);
+    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x20", 1, 0x4545, wp1, wp2, prot_g, ctx);
     ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);
     mont_to_bytes(buffer, xw, ctx);
     assert(0 == memcmp(buffer, "\x23\x77\xc7\xd6\x90\xa2\x42\xca\x6c\x45\x07\x4e\x8e\xa5\xbe\xef\xaa\x55\x7f\xd5\xb6\x83\x71\xd9\xd1\x47\x5b\xd5\x2a\x7e\xd0\xe1", 32));
@@ -494,7 +500,7 @@ void test_ec_scalar_g_p256(void)
     assert(0 == memcmp(buffer, "\x47\xa1\x3f\xb9\x84\x13\xa4\x39\x3f\x8d\x90\xe9\xbf\x90\x1b\x7e\x66\x58\xa6\xcd\xec\xf4\x67\x16\xe7\xc0\x67\xb1\xdd\xb8\xd2\xb2", 32));
 
     /* (order+1)*G */
-    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x52", 32, 0x4545, wp1, wp2, ctx);
+    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x52", 32, 0x4545, wp1, wp2, prot_g, ctx);
     ec_projective_to_affine(x1, y1, x1, y1, z1, wp1, ctx);
     mont_to_bytes(buffer, x1, ctx);
     assert(0 == memcmp(buffer, "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96", 32));
@@ -502,11 +508,11 @@ void test_ec_scalar_g_p256(void)
     assert(0 == memcmp(buffer, "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5", 32));
 
     /* order*G */
-    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51", 32, 0x4545, wp1, wp2, ctx);
+    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51", 32, 0x4545, wp1, wp2, prot_g, ctx);
     assert(mont_is_zero(z1, ctx));
 
     /* arbirtrary */
-    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x73\x87\x34\x34\x3F\xF8\x93\x87", 8, 0x6776, wp1, wp2, ctx);
+    ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x73\x87\x34\x34\x3F\xF8\x93\x87", 8, 0x6776, wp1, wp2, prot_g, ctx);
     ec_projective_to_affine(x1, y1, x1, y1, z1, wp1, ctx);
     mont_to_bytes(buffer, x1, ctx);
     assert(0 == memcmp(buffer, "\xfc\x85\x6a\x26\x35\x51\x2a\x83\x44\x35\x55\x97\xbd\xbf\xa9\x3d\x33\x70\x2a\x48\xb0\x9d\x02\xbd\x1d\xc4\xfd\x4b\x5a\x4c\x6c\x09", 32));
@@ -514,9 +520,10 @@ void test_ec_scalar_g_p256(void)
     assert(0 == memcmp(buffer, "\xcf\x0d\xc7\x68\x18\x61\xa0\xb7\x29\x22\xa9\xce\x17\xf1\x58\x22\x31\x1a\xab\x2a\x14\xc4\xbd\xb0\xc4\x32\xea\xfe\x93\x9a\x4a\x47", 32));
 
     /* exponent is too long */
-    res = ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x52\xFF", 33, 0x4545, wp1, wp2, ctx);
+    res = ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x52\xFF", 33, 0x4545, wp1, wp2, prot_g, ctx);
     assert(res == ERR_VALUE);
 
+    free_g_p256(prot_g);
     free(b);
     free(x1);
     free(y1);
@@ -545,7 +552,7 @@ void test_ec_ws_new_point(void)
     uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint8_t zero[32] = { 0 };
 
-    res = ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
+    res = ec_ws_new_context(&ec_ctx, modulus, b, order, 32, 0);
     assert(res == 0);
     res = ec_ws_new_point(NULL, Gx, Gy, 32, ec_ctx);
     assert(res == ERR_NULL);
@@ -585,7 +592,7 @@ void test_ec_ws_get_xy(void)
     uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint8_t bufx[32], bufy[32];
 
-    res = ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
+    res = ec_ws_new_context(&ec_ctx, modulus, b, order, 32, 0);
     assert(res == 0);
     res = ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
     assert(res == 0);
@@ -623,7 +630,7 @@ void test_ec_ws_double(void)
     uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint8_t bufx[32], bufy[32];
 
-    ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
+    ec_ws_new_context(&ec_ctx, modulus, b, order, 32, 0);
     ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
 
     res = ec_ws_double(NULL);
@@ -651,7 +658,7 @@ void test_ec_ws_add(void)
     uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint8_t bufx[32], bufy[32];
 
-    ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
+    ec_ws_new_context(&ec_ctx, modulus, b, order, 32, 0);
     ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
     ec_ws_new_point(&ecp2, Gx, Gy, 32, ec_ctx);
     ec_ws_double(ecp2);
@@ -684,7 +691,7 @@ void test_ec_ws_scalar(void)
     uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint8_t bufx[32], bufy[32];
 
-    ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
+    ec_ws_new_context(&ec_ctx, modulus, b, order, 32, 0x5EED);
     ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
 
     res = ec_ws_scalar(NULL, (uint8_t*)"\xFF\xFF", 2, 0xFFFF);
@@ -714,7 +721,7 @@ void test_ec_ws_neg(void)
     uint8_t modulus[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint8_t bufx[32], bufy[32];
 
-    ec_ws_new_context(&ec_ctx, modulus, b, order, 32);
+    ec_ws_new_context(&ec_ctx, modulus, b, order, 32, 0);
     ec_ws_new_point(&ecp, Gx, Gy, 32, ec_ctx);
 
     res = ec_ws_neg(NULL);

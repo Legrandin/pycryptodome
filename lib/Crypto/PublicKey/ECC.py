@@ -60,7 +60,8 @@ int ec_ws_new_context(EcContext **pec_ctx,
                       const uint8_t *modulus,
                       const uint8_t *b,
                       const uint8_t *order,
-                      size_t len);
+                      size_t len,
+                      uint64_t seed);
 void ec_free_context(EcContext *ec_ctx);
 int ec_ws_new_point(EcPoint **pecp,
                     uint8_t *x,
@@ -89,7 +90,9 @@ result = _ec_lib.ec_ws_new_context(_ec_p256_context.address_of(),
                                    c_uint8_ptr(p256_modulus),
                                    c_uint8_ptr(p256_b),
                                    c_uint8_ptr(p256_order),
-                                   c_size_t(len(p256_modulus)))
+                                   c_size_t(len(p256_modulus)),
+                                   c_ulonglong(getrandbits(64))
+                                   )
 if result:
     raise ImportError("Error %d initializing P256 context" % result)
 _ec_p256_context = SmartPointer(_ec_p256_context.get(),

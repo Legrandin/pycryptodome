@@ -20,7 +20,7 @@ int main(void)
     int i, j, k;
     unsigned n_tables, points_per_table, window_size;
 
-    ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
+    ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32, 0);
     ec_ws_new_point(&g, p256_Gx, p256_Gy, 32, ec_ctx);
 
     /** TODO: accept this as input **/

@@ -53,7 +53,7 @@ typedef struct _ProtMemory {
     unsigned array_len;
 } ProtMemory;
 
-int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_len, uint64_t seed);
+int scatter(ProtMemory** pprot, const void *arrays[], uint8_t nr_arrays, size_t array_len, uint64_t seed);
 void gather(void *out, const ProtMemory *prot, unsigned index);
 void free_scattered(ProtMemory *prot);
 

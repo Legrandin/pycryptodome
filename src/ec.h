@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "mont.h"
+#include "modexp_utils.h"
 
 typedef struct {
     uint64_t *a, *b, *c, *d, *e, *f, *g, *h, *i, *j, *k;
@@ -14,8 +15,9 @@ typedef struct {
  */
 typedef struct _EcContext {
     MontContext *mont_ctx;
-    uint64_t *b;        /* encoded in Montgomery form */
-    uint64_t *order;    /* plain form */
+    uint64_t *b;                    /* encoded in Montgomery form */
+    uint64_t *order;                /* big-endian plain form */
+    ProtMemory **prot_g;            /* optional pre-computed tables for generator */
 } EcContext;
 
 /*
@@ -29,7 +31,12 @@ typedef struct _EcPoint {
     uint64_t *z;
 } EcPoint;
 
-EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx, const uint8_t *modulus, const uint8_t *b, const uint8_t *order, size_t len);
+EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
+                                 const uint8_t *modulus,
+                                 const uint8_t *b,
+                                 const uint8_t *order,
+                                 size_t len,
+                                 uint64_t seed);
 EXPORT_SYM void ec_free_context(EcContext *ec_ctx);
 EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
                                const uint8_t *x,

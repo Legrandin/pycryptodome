@@ -137,9 +137,9 @@ unsigned get_next_digit_rl(struct BitWindow_RL *bw)
  * We assume that access to a byte in the cache line can be performed without
  * leaking its position.
  *
- * nr_array is a power of two, 128 at most
+ * nr_array is a power of two, 64 at most
  */
-int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_len, uint64_t seed)
+int scatter(ProtMemory** pprot, const void *arrays[], uint8_t nr_arrays, size_t array_len, uint64_t seed)
 {
     ProtMemory *prot;
     unsigned piece_len;
@@ -192,11 +192,14 @@ int scatter(ProtMemory** pprot, void *arrays[], uint8_t nr_arrays, size_t array_
         for (j=0; j<nr_arrays; j++) {
             unsigned s;
             unsigned obf;
+            uint8_t *dst, *src;
 
             obf = (j*((prot->scramble[i] >> 8) | 1) + (prot->scramble[i] & 0xFF)) & mask;
 
             s = MIN(piece_len, remaining);
-            memcpy(cache_line + piece_len*obf, (uint8_t*)arrays[j] + offset, s);
+            dst = cache_line + piece_len*obf;
+            src = (uint8_t*)arrays[j] + offset;
+            memcpy(dst, src, s);
         }
 
         remaining -= piece_len;

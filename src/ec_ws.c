@@ -461,7 +461,8 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                      const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                      const uint64_t *b,
-                     const uint8_t *exp, size_t exp_size, uint64_t seed,
+                     const uint8_t *exp, size_t exp_size,
+                     uint64_t seed,
                      Workplace *wp1,
                      Workplace *wp2,
                      const MontContext *ctx)
@@ -522,11 +523,11 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                         wp1, ctx);
     }
 
-    res = scatter(&prot_x, (void**)window_x, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    res = scatter(&prot_x, (const void**)window_x, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
     if (res) goto cleanup;
-    res = scatter(&prot_y, (void**)window_y, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    res = scatter(&prot_y, (const void**)window_y, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
     if (res) goto cleanup;
-    res = scatter(&prot_z, (void**)window_z, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
+    res = scatter(&prot_z, (const void**)window_z, WINDOW_SIZE_ITEMS, mont_bytes(ctx), seed);
     if (res) goto cleanup;
 
     /** Start from PAI **/
@@ -571,12 +572,63 @@ cleanup:
 }
 
 #ifndef MAKE_TABLE
+STATIC void free_g_p256(ProtMemory **prot_g)
+{
+    unsigned i;
+
+    if (prot_g) {
+        for (i=0; i<p256_n_tables; i++)
+            align_free(prot_g[i]);
+        free(prot_g);
+    }
+}
+
+/*
+ * Fill the pre-computed table for the generator point in the P-256 EC context.
+ */
+STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
+{
+    const void **tables_ptrs;
+    ProtMemory **prot_g;
+    unsigned i;
+    int res;
+
+    tables_ptrs = (const void**)calloc(p256_points_per_table, sizeof(void*));
+    if (NULL == tables_ptrs)
+        return NULL;
+
+    prot_g = (ProtMemory**)calloc(p256_n_tables, sizeof(ProtMemory*));
+    if (NULL == prot_g) {
+        free(tables_ptrs);
+        return NULL;
+    }
+
+    res = 0;
+    for (i=0; res==0 && i<p256_n_tables; i++) {
+        unsigned j;
+
+        for (j=0; j<p256_points_per_table; j++) {
+            tables_ptrs[j] = &p256_tables[i][j];
+        }
+        res = scatter(&prot_g[i], tables_ptrs, (uint8_t)p256_points_per_table, 2*mont_bytes(ctx), seed);
+    }
+
+    if (res) {
+        free_g_p256(prot_g);
+        prot_g = NULL;
+    }
+
+    free(tables_ptrs);
+    return prot_g;
+}
+
 STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                             const uint64_t *b,
                             const uint8_t *exp, size_t exp_size,
                             uint64_t seed,
                             Workplace *wp1,
                             Workplace *wp2,
+                            ProtMemory **prot_g,
                             const MontContext *ctx)
 {
     int i;
@@ -596,13 +648,13 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     for (i=0; i < bw.nr_windows; i++) {
         unsigned index;
+        uint64_t buffer[4*2];   /* X and Y affine coordinates **/
         uint64_t *xw, *yw;
 
-        xw = wp2->a;
-        yw = wp2->b;
         index = get_next_digit_rl(&bw);
-        memcpy(xw, p256_tables[i][index][0], sizeof(uint64_t)*4);
-        memcpy(yw, p256_tables[i][index][1], sizeof(uint64_t)*4);
+        gather(buffer, prot_g[i], index);
+        xw = &buffer[0];
+        yw = &buffer[4];
         ec_mix_add(x3, y3, z3,
                    x3, y3, z3,
                    xw, yw,
@@ -629,11 +681,13 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
                                  const uint8_t *modulus,
                                  const uint8_t *b,
                                  const uint8_t *order,
-                                 size_t len)
+                                 size_t len,
+                                 uint64_t seed)
 {
     EcContext *ec_ctx = NULL;
     unsigned order_words;
     int res;
+    MontContext *ctx;
 
     if (NULL == pec_ctx || NULL == modulus || NULL == b)
         return ERR_NULL;
@@ -649,8 +703,9 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
 
     res = mont_context_init(&ec_ctx->mont_ctx, modulus, len);
     if (res) goto cleanup;
+    ctx = ec_ctx->mont_ctx;
 
-    res = mont_from_bytes(&ec_ctx->b, b, len, ec_ctx->mont_ctx);
+    res = mont_from_bytes(&ec_ctx->b, b, len, ctx);
     if (res) goto cleanup;
 
     order_words = ((unsigned)len+7)/8;
@@ -658,9 +713,18 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     if (NULL == ec_ctx->order) goto cleanup;
     bytes_to_words(ec_ctx->order, order_words, order, len);
 
+#ifndef MAKE_TABLE
+    /* Scramble lookup table for P-256 generator */
+    if (ctx->modulus_type == ModulusP256) {
+        ec_ctx->prot_g = ec_scramble_g_p256(ec_ctx->mont_ctx, seed);
+        if (NULL == ec_ctx->prot_g) goto cleanup;
+    }
+#endif
+
     return 0;
 
 cleanup:
+    free(ec_ctx->prot_g);
     free(ec_ctx->b);
     free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
@@ -672,7 +736,9 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
 {
     if (NULL == ec_ctx)
         return;
-
+#ifndef MAKE_TABLE
+    free_g_p256(ec_ctx->prot_g);
+#endif
     free(ec_ctx->b);
     free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
@@ -1003,6 +1069,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
                                k, len,
                                seed,
                                wp1, wp2,
+                               ecp->ec_ctx->prot_g,
                                ctx);
         goto cleanup;
     }
@@ -1255,7 +1322,7 @@ int main(void)
 
     memset(exp, 0xFF, 32);
 
-    ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32);
+    ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32, /* seed */ 4);
     ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx);
 
     //ec_ws_double(ecp);
