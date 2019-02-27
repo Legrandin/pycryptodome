@@ -578,7 +578,7 @@ STATIC void free_g_p256(ProtMemory **prot_g)
 
     if (prot_g) {
         for (i=0; i<p256_n_tables; i++)
-            align_free(prot_g[i]);
+            free_scattered(prot_g[i]);
         free(prot_g);
     }
 }
