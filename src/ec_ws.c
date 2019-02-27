@@ -1253,62 +1253,6 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
     return 0;
 }
 
-#ifdef MAIN2
-int main(void)
-{
-    MontContext *ctx;
-    Workplace *wp1, *wp2;
-    const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    const uint8_t p256_Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
-    const uint8_t p256_Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
-
-    uint64_t *Gx, *Gy, *Gz;
-    uint64_t *Qx, *Qy, *Qz;
-    unsigned i;
-
-    mont_context_init(&ctx, p256_mod, sizeof(p256_mod));
-    wp1 = new_workplace(ctx);
-    wp2 = new_workplace(ctx);
-
-    mont_from_bytes(&Gx, p256_Gx, sizeof(p256_Gx), ctx);
-    mont_from_bytes(&Gy, p256_Gy, sizeof(p256_Gy), ctx);
-    mont_number(&Gz, 1, ctx);
-    mont_set(Gz, 1, NULL, ctx);
-
-    /* Create point in Jacobian coordinates */
-    mont_number(&Qx, 1, ctx);
-    mont_number(&Qy, 1, ctx);
-    mont_number(&Qz, 1, ctx);
-
-    printf("----------------------------\n");
-
-    for (i=0; i<=5000; i++)
-        ec_scalar(Qx, Qy, Qz, Gx, Gy, Gz, (uint8_t*)"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8, wp1, wp2, ctx);
-
-    print_x("Qx", Qx, ctx);
-    print_x("Qy", Qy, ctx);
-    print_x("Qz", Qz, ctx);
-
-    printf("----------------------------\n");
-
-    ec_jacobian_to_affine(Qx, Qy, Qx, Qy, Qz, wp1, ctx);
-
-    print_x("Qx", Qx, ctx);
-    print_x("Qy", Qy, ctx);
-
-    free(Gx);
-    free(Gy);
-    free(Qx);
-    free(Qy);
-    free(Qz);
-    free_workplace(wp1);
-    free_workplace(wp2);
-    mont_context_free(ctx);
-
-    return 0;
-}
-#endif
-
 #ifdef MAIN
 int main(void)
 {
@@ -1343,7 +1287,6 @@ int main(void)
     for (i=0; i<32; i++)
         printf("%02X", y[i]);
     printf("\n");
-
 
     ec_free_point(ecp);
     ec_free_context(ec_ctx);
