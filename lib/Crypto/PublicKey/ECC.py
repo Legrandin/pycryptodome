@@ -920,17 +920,16 @@ if __name__ == "__main__":
 
     d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
 
-    point = generate(curve="P-256").pointQ
+    point = _curve.G.copy()
     count = 3000
 
     start = time.time()
     for x in range(count):
-        point = point * d
-    print("(mul)", (time.time() - start) / count * 1000, "ms")
+        pointX = point * d
+    print("(P-256 G)", (time.time() - start) / count * 1000, "ms")
 
     start = time.time()
     for x in range(count):
-        point *= d
-    print("(imul)", (time.time() - start) / count * 1000, "ms")
-
+        pointX = pointX * d
+    print("(P-256 arbitrary point)", (time.time() - start) / count * 1000, "ms")
 

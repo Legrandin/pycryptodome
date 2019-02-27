@@ -1058,13 +1058,17 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
 
 #ifndef MAKE_TABLE
     if (ctx->modulus_type == ModulusP256) {
-        const uint8_t Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
-        const uint8_t Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
+        const uint64_t mont_Gx[4] = { 0x79E730D418A9143CU, 0x75BA95FC5FEDB601U, 0x79FB732B77622510U, 0x18905F76A53755C6U };
+        const uint64_t mont_Gy[4] = { 0xDDF25357CE95560AU, 0x8B4AB8E4BA19E45CU, 0xD2E88688DD21F325U, 0x8571FF1825885D85U };
         unsigned is_generator;
+        unsigned i;
 
-        is_generator = (0 == memcmp(Gx, ecp->x, 32)) &
-                       (0 == memcmp(Gy, ecp->y, 32)) &
-                       mont_is_one(ecp->z, ctx);
+        is_generator = 1;
+        for (i=0; i<4; i++) {
+            is_generator &= (mont_Gx[i] == ecp->x[i]);
+            is_generator &= (mont_Gy[i] == ecp->y[i]);
+        }
+        is_generator &= mont_is_one(ecp->z, ctx);
 
         if (is_generator) {
             res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
