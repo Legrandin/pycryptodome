@@ -64,18 +64,27 @@ int ec_ws_new_context(EcContext **pec_ctx,
                       uint64_t seed);
 void ec_free_context(EcContext *ec_ctx);
 int ec_ws_new_point(EcPoint **pecp,
-                    uint8_t *x,
-                    uint8_t *y,
+                    const uint8_t *x,
+                    const uint8_t *y,
                     size_t len,
                     const EcContext *ec_ctx);
 void ec_free_point(EcPoint *ecp);
-int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *ecp);
+int ec_ws_get_xy(uint8_t *x,
+                 uint8_t *y,
+                 size_t len,
+                 const EcPoint *ecp);
 int ec_ws_double(EcPoint *p);
 int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb);
-int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t seed);
+int ec_ws_scalar(EcPoint *ecp,
+                 const uint8_t *k,
+                 size_t len,
+                 uint64_t seed);
 int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp);
+int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2);
 int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2);
 int ec_ws_neg(EcPoint *p);
+int ec_ws_normalize(EcPoint *ecp);
+int ec_ws_is_pai(EcPoint *ecp);
 """)
 
 p256_modulus = long_to_bytes(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff, 32)
