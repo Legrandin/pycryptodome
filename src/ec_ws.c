@@ -1068,7 +1068,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             is_generator &= (mont_Gx[i] == ecp->x[i]);
             is_generator &= (mont_Gy[i] == ecp->y[i]);
         }
-        is_generator &= mont_is_one(ecp->z, ctx);
+        is_generator &= (unsigned)mont_is_one(ecp->z, ctx);
 
         if (is_generator) {
             res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,

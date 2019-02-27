@@ -1,5 +1,5 @@
 /* This file was automatically generated, do not edit */
-#include <stdint.h>
+#include "common.h"
 static const unsigned p256_n_tables = 52;
 static const unsigned p256_window_size = 5;
 static const unsigned p256_points_per_table = 32;

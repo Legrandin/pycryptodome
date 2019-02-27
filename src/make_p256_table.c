@@ -38,7 +38,7 @@ int main(void)
     }
 
     printf("/* This file was automatically generated, do not edit */\n");
-    printf("#include <stdint.h>\n");
+    printf("#include \"common.h\"\n");
     printf("static const unsigned p256_n_tables = %d;\n", n_tables);
     printf("static const unsigned p256_window_size = %d;\n", window_size);
     printf("static const unsigned p256_points_per_table = %d;\n", points_per_table);
