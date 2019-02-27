@@ -468,7 +468,7 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                      const MontContext *ctx)
 {
     unsigned z1_is_one;
-    int i;
+    unsigned i;
     int res;
     uint64_t *window_x[WINDOW_SIZE_ITEMS],
              *window_y[WINDOW_SIZE_ITEMS],
@@ -631,7 +631,7 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                             ProtMemory **prot_g,
                             const MontContext *ctx)
 {
-    int i;
+    unsigned i;
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
