@@ -1254,6 +1254,8 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
 }
 
 #ifdef MAIN
+#include <sys/time.h>
+
 int main(void)
 {
     const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
@@ -1265,18 +1267,33 @@ int main(void)
     uint8_t exp[32];
     EcContext *ec_ctx;
     EcPoint *ecp = NULL;
-    int i;
+    EcPoint *gp = NULL;
+    unsigned i;
+    struct timeval start, stop;
+    double duration_ms, rate;
 
-    memset(exp, 0xFF, 32);
+#define ITERATIONS 5000U
+
+    /* Make almost-worst case exponent */
+    for (i=0; i<32; i++) {
+        exp[i] = (uint8_t)(0xFF - i);
+    }
 
     ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32, /* seed */ 4);
-    ec_ws_new_point(&ecp, p256_Gx, p256_Gy, 32, ec_ctx);
 
-    //ec_ws_double(ecp);
+    ec_ws_new_point(&gp, p256_Gx, p256_Gy, 32, ec_ctx);
+    ec_ws_clone(&ecp, gp);
 
-    for (i=0; i<=5000; i++) {
+    /** Scalar multiplications by G **/
+    gettimeofday(&start, NULL);
+    for (i=0; i<ITERATIONS; i++) {
+        ec_ws_copy(ecp, gp);
         ec_ws_scalar(ecp, exp, 32, 0xFFF);
     }
+    gettimeofday(&stop, NULL);
+    duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
+    rate = ITERATIONS / (duration_ms/1000);
+    printf("Speed (scalar mult by G) = %.0f op/s\n", rate);
 
     ec_ws_get_xy(x, y, 32, ecp);
     printf("X: ");
@@ -1288,6 +1305,28 @@ int main(void)
         printf("%02X", y[i]);
     printf("\n");
 
+    /** Scalar multiplications by arbitrary point **/
+    gettimeofday(&start, NULL);
+    ec_ws_double(ecp);
+    for (i=0; i<=5000; i++) {
+        ec_ws_scalar(ecp, exp, 32, 0xFFF);
+    }
+    gettimeofday(&stop, NULL);
+    duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
+    rate = ITERATIONS / (duration_ms/1000);
+    printf("Speed (scalar mult by P) = %.0f op/s\n", rate);
+
+    ec_ws_get_xy(x, y, 32, ecp);
+    printf("X: ");
+    for (i=0; i<32; i++)
+        printf("%02X", x[i]);
+    printf("\n");
+    printf("Y: ");
+    for (i=0; i<32; i++)
+        printf("%02X", y[i]);
+    printf("\n");
+
+    ec_free_point(gp);
     ec_free_point(ecp);
     ec_free_context(ec_ctx);
 
