@@ -8,7 +8,7 @@ TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64
 	   test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32
 
 ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
-CPPFLAGS += -DHAVE_X86INTRIN_H
+CPPFLAGS += -DHAVE_X86INTRIN_H -DUSE_SSE2
 CFLAGS += -msse2
 TAPPS += test_clmul
 endif

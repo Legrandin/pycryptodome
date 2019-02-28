@@ -5,6 +5,7 @@
 int ge(const uint64_t *x, const uint64_t *y, size_t nw);
 uint64_t sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw);
 void rsquare(uint64_t *r2, uint64_t *n, size_t nw);
+int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, unsigned words);
 
 void test_ge(void)
 {
@@ -356,38 +357,47 @@ void test_mont_select()
 {
     int res;
     MontContext *ctx;
-    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
+    uint8_t modulusA[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };      // 0x01000001000000000000000000000001
+    uint8_t modulusB[17] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3 };   // 0x0301000001000000000000000000000001
     uint64_t a[2] = { 0xFFFFFFFFFFFFFFFFU, 0xFFFFFFFFFFFFFFFFU };
     uint64_t b[2] = { 1, 1 };
     uint64_t c[2];
+    uint64_t d[3] = { 0xFFFFFFFFFFFFFFFFU, 0xFFFFFFFFFFFFFFFFU, 3 };
+    uint64_t e[3] = { 1, 1, 3 };
+    uint64_t f[3];
 
-    mont_context_init(&ctx, modulus, 16);
-
-    res = mont_select(NULL, a, b, 1, ctx);
-    assert(res == ERR_NULL);
-    res = mont_select(c, NULL, b, 1, ctx);
-    assert(res == ERR_NULL);
-    res = mont_select(c, a, NULL, 1, ctx);
-    assert(res == ERR_NULL);
-    res = mont_select(c, a, b, 1, NULL);
-    assert(res == ERR_NULL);
+    mont_context_init(&ctx, modulusA, 16);
 
     memset(c, 0, sizeof c);
-    res = mont_select(c, a, b, 1, ctx);
+    res = mont_select(c, a, b, 1, ctx->words);
     assert(res == 0);
     assert(memcmp(a, c, sizeof c) == 0);
 
     memset(c, 0, sizeof c);
-    res = mont_select(c, a, b, 10, ctx);
+    res = mont_select(c, a, b, 10, ctx->words);
     assert(res == 0);
     assert(memcmp(a, c, sizeof c) == 0);
 
     memset(c, 0, sizeof c);
-    res = mont_select(c, a, b, 0, ctx);
+    res = mont_select(c, a, b, 0, ctx->words);
     assert(res == 0);
     assert(memcmp(b, c, sizeof c) == 0);
 
     mont_context_free(ctx);
+
+    /* --- */
+
+    mont_context_init(&ctx, modulusB, 17);
+
+    memset(f, 0, sizeof f);
+    res = mont_select(f, d, e, 1, ctx->words);
+    assert(res == 0);
+    assert(memcmp(d, f, sizeof f) == 0);
+
+    memset(f, 0, sizeof f);
+    res = mont_select(f, d, e, 0, ctx->words);
+    assert(res == 0);
+    assert(memcmp(e, f, sizeof f) == 0);
 }
 
 int main(void) {

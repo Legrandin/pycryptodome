@@ -1305,6 +1305,7 @@ int main(void)
         printf("%02X", y[i]);
     printf("\n");
 
+#if 1
     /** Scalar multiplications by arbitrary point **/
     gettimeofday(&start, NULL);
     ec_ws_double(ecp);
@@ -1325,6 +1326,7 @@ int main(void)
     for (i=0; i<32; i++)
         printf("%02X", y[i]);
     printf("\n");
+#endif
 
     ec_free_point(gp);
     ec_free_point(ecp);

@@ -46,6 +46,14 @@
 #endif
 #endif
 
+#if defined(HAVE_INTRIN_H)
+#include <intrin.h>
+#endif
+
+#if defined(HAVE_X86INTRIN_H)
+#include <x86intrin.h>
+#endif
+
 static inline unsigned is_odd(uint64_t x)
 {
     return 1 == (x & 1);
@@ -235,6 +243,51 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
 }
 
 /*
+ * Select a number out of two, in constant time.
+ *
+ * @param out   Where to store the result
+ * @param a     The first choice, selected if cond is true (non-zero)
+ * @param b     The second choice, selected if cond is false (zero)
+ * @param cond  The flag that drives the selection
+ * @param words The number of words that make up a, b, and out
+ * @return      0 for success, the appropriate code otherwise.
+ */
+STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, unsigned words)
+{
+    uint64_t mask;
+#if defined(USE_SSE2)
+    unsigned pairs, i;
+    __m128i r0, r1, r2, r3, r4, r5;
+
+    pairs = words / 2;
+    mask = (uint64_t)((cond != 0) - 1); /* 0 for a, 1s for b */
+   
+    r0 = _mm_set1_epi64((__m64)mask);
+    for (i=0; i<pairs; i++, a+=2, b+=2, out+=2) {
+        r1 = _mm_loadu_si128((__m128i const*)b);
+        r2 = _mm_loadu_si128((__m128i const*)a);
+        r3 = _mm_and_si128(r0, r1);
+        r4 = _mm_andnot_si128(r0, r2);
+        r5 = _mm_or_si128(r3, r4);
+        _mm_storeu_si128((__m128i*)out, r5);
+    }
+
+    if (words & 1) {
+        *out = (*b & mask) ^ (*a & ~mask);
+    }
+#else
+    unsigned i;
+
+    mask = (uint64_t)((cond != 0) - 1);
+    for (i=0; i<words; i++) {
+        *out++ = (*b++ & mask) ^ (*a++ & ~mask);
+    }
+#endif
+
+    return 0;
+}
+
+/*
  * Montgomery modular multiplication, that is a*b*R mod N.
  *
  * @param out   The location where the result is stored
@@ -251,7 +304,8 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
 STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
     size_t i;
-    uint64_t *t2, mask;
+    uint64_t *t2;
+    unsigned cond;
 
     t2 = &t[2*nw+1];    /** Point to last nw words **/
 
@@ -295,16 +349,15 @@ STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t 
     
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
-    mask = (uint64_t)((t[2*nw] | (uint64_t)ge(&t[nw], n, nw)) - 1);
-    for (i=0; i<nw; i++) {
-        out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
-    }
+    cond = (unsigned)(t[2*nw] | (uint64_t)ge(&t[nw], n, nw));
+    mont_select(out, t2, &t[nw], cond, (unsigned)nw);
 }
 
 STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
     unsigned i;
-    uint64_t *t2, mask;
+    uint64_t *t2;
+    unsigned cond;
 #if SYS_BITS == 32
     uint32_t t32[18];
 #endif
@@ -428,12 +481,9 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
-    mask = (uint64_t)((t[2*nw] | (uint64_t)ge(&t[nw], n, nw)) - 1);
-    for (i=0; i<nw; i++) {
-        out[i] = (t[nw+i] & mask) ^ (t2[i] & ~mask);
-    }
+    cond = (unsigned)(t[2*4] | (uint64_t)ge(&t[4], n, 4));
+    mont_select(out, t2, &t[4], cond, 4);
 }
-
 
 /* ---- PUBLIC FUNCTIONS ---- */
 
@@ -639,7 +689,7 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp,
      * If there is no borrow or if there is carry,
      * tmp[] is larger than modulus, so we must return scratchpad[].
      */
-    mont_select(out, scratchpad, tmp, carry | (borrow2 ^ 1), ctx);
+    mont_select(out, scratchpad, tmp, carry | (borrow2 ^ 1), ctx->words);
 
     return 0;
 }
@@ -711,7 +761,7 @@ int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp,
     /*
      * If there is no borrow, tmp[] is smaller than modulus.
      */
-    mont_select(out, scratchpad, tmp, borrow2, ctx);
+    mont_select(out, scratchpad, tmp, borrow2, ctx->words);
 
     return 0;
 }
@@ -1008,28 +1058,4 @@ int mont_copy(uint64_t *out, const uint64_t *a, const MontContext *ctx)
     return 0;
 }
 
-/*
- * Select a number out of two, in constant time.
- *
- * @param out   Where to store the result
- * @param a     The first choice, selected if cond is true (non-zero)
- * @param b     The second choice, selected if cond is false (zero)
- * @param cond  The flag that drives the selection
- * @return      0 for success, the appropriate code otherwise.
- */
-int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, const MontContext *ctx)
-{
-    unsigned i;
-    uint64_t mask;
 
-    if (NULL == out || NULL == a || NULL == b || NULL == ctx)
-        return ERR_NULL;
-
-    mask = (uint64_t)((cond != 0) - 1);
-
-    for (i=0; i<ctx->words; i++) {
-        *out++ = (*b++ & mask) ^ (*a++ & ~mask);
-    }
-
-    return 0;
-}
