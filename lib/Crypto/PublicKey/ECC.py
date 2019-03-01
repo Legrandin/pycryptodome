@@ -87,25 +87,48 @@ int ec_ws_normalize(EcPoint *ecp);
 int ec_ws_is_pai(EcPoint *ecp);
 """)
 
-p256_modulus = long_to_bytes(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff, 32)
-p256_b = long_to_bytes(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b, 32)
-p256_order = long_to_bytes(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551, 32)
-assert(len(p256_modulus) == 32)
-assert(len(p256_b) == 32)
-assert(len(p256_order) == 32)
+_Curve = namedtuple("_Curve", "p b order Gx Gy G oid context desc")
+_curves = {}
 
-_ec_p256_context = VoidPointer()
-result = _ec_lib.ec_ws_new_context(_ec_p256_context.address_of(),
-                                   c_uint8_ptr(p256_modulus),
-                                   c_uint8_ptr(p256_b),
-                                   c_uint8_ptr(p256_order),
-                                   c_size_t(len(p256_modulus)),
-                                   c_ulonglong(getrandbits(64))
-                                   )
-if result:
-    raise ImportError("Error %d initializing P256 context" % result)
-_ec_p256_context = SmartPointer(_ec_p256_context.get(),
-                                _ec_lib.ec_free_context)
+
+p256_names = ["p256", "NIST P-256", "P-256", "prime256v1", "secp256r1"]
+def init_p256():
+    p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
+    b = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b
+    order = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
+    Gx = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296
+    Gy = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5
+
+    p256_modulus = long_to_bytes(p, 32)
+    p256_b = long_to_bytes(b, 32)
+    p256_order = long_to_bytes(order, 32)
+
+    ec_p256_context = VoidPointer()
+    result = _ec_lib.ec_ws_new_context(ec_p256_context.address_of(),
+                                       c_uint8_ptr(p256_modulus),
+                                       c_uint8_ptr(p256_b),
+                                       c_uint8_ptr(p256_order),
+                                       c_size_t(len(p256_modulus)),
+                                       c_ulonglong(getrandbits(64))
+                                       )
+    if result:
+        raise ImportError("Error %d initializing P256 context" % result)
+
+    context = SmartPointer(ec_p256_context.get(), _ec_lib.ec_free_context)
+    p256 = _Curve(Integer(p),
+                  Integer(b),
+                  Integer(order),
+                  Integer(Gx),
+                  Integer(Gy),
+                  None,
+                  "1.2.840.10045.3.1.7",
+                  context,
+                  "NIST P-256")
+    _curves.update(dict.fromkeys(p256_names, p256))
+
+
+init_p256()
+del init_p256
 
 
 class UnsupportedEccFeature(ValueError):
@@ -128,12 +151,14 @@ class EccPoint(object):
         assert(len(xb) == 32)
         assert(len(yb) == 32)
 
+        context = _curves["p256"].context
+
         self._point = VoidPointer()
         result = _ec_lib.ec_ws_new_point(self._point.address_of(),
                                          c_uint8_ptr(xb),
                                          c_uint8_ptr(yb),
                                          c_size_t(len(xb)),
-                                         _ec_p256_context.get())
+                                         context.get())
         if result:
             if result == 15:
                 raise ValueError("The EC point does not belong to the curve")
@@ -249,22 +274,11 @@ class EccPoint(object):
         return np
 
 
-_Curve = namedtuple("_Curve", "p b order Gx Gy G names oid")
-
-_curve_gx = Integer(0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296)
-_curve_gy = Integer(0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5)
-
-_curve = _Curve(
-    Integer(0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff),
-    Integer(0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b),
-    Integer(0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551),
-    _curve_gx,
-    _curve_gy,
-    EccPoint(_curve_gx, _curve_gy),
-    ("P-256", "prime256v1", "secp256r1"),
-    "1.2.840.10045.3.1.7",
-)
-del namedtuple
+# Last piece of initialization
+p256_G = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
+p256 = _curves['p256']._replace(G=p256_G)
+_curves.update(dict.fromkeys(p256_names, p256))
+del p256_G, p256, p256_names
 
 
 class EccKey(object):
@@ -287,7 +301,7 @@ class EccKey(object):
 
         Keywords:
           curve : string
-            It must be *"P-256"*, *"prime256v1"* or *"secp256r1"*.
+            It must be *"p256"*, *"P-256"*, *"prime256v1"* or *"secp256r1"*.
           d : integer
             Only for a private key. It must be in the range ``[1..order-1]``.
           point : EccPoint
@@ -296,36 +310,39 @@ class EccKey(object):
         """
 
         kwargs_ = dict(kwargs)
-        self.curve = kwargs_.pop("curve", None)
+        curve_name = kwargs_.pop("curve", None)
         self._d = kwargs_.pop("d", None)
         self._point = kwargs_.pop("point", None)
         if kwargs_:
             raise TypeError("Unknown parameters: " + str(kwargs_))
 
-        if self.curve not in _curve.names:
-            raise ValueError("Unsupported curve (%s)", self.curve)
+        if curve_name not in _curves:
+            raise ValueError("Unsupported curve (%s)", curve_name)
+        self._curve = _curves[curve_name]
 
         if self._d is None:
             if self._point is None:
-                raise ValueError("Either private or public ECC component must be specified")
+                raise ValueError("Either private or public ECC component must be specified, not both")
         else:
             self._d = Integer(self._d)
-            if not 1 <= self._d < _curve.order:
+            if not 1 <= self._d < self._curve.order:
                 raise ValueError("Invalid ECC private component")
+
+        self.curve = self._curve.desc
 
     def __eq__(self, other):
         if other.has_private() != self.has_private():
             return False
 
-        return (other.pointQ.x == self.pointQ.x) and (other.pointQ.y == self.pointQ.y)
+        return other.pointQ == self.pointQ
 
     def __repr__(self):
         if self.has_private():
             extra = ", d=%d" % int(self._d)
         else:
             extra = ""
-        return "EccKey(curve='P-256', x=%d, y=%d%s)" %\
-               (self.pointQ.x, self.pointQ.y, extra)
+        x, y = self.pointQ.xy
+        return "EccKey(curve='%s', x=%d, y=%d%s)" % (self.desc, x, y, extra)
 
     def has_private(self):
         """``True`` if this key can be used for making signatures or decrypting data."""
@@ -333,22 +350,24 @@ class EccKey(object):
         return self._d is not None
 
     def _sign(self, z, k):
-        assert 0 < k < _curve.order
+        assert 0 < k < self._curve.order
 
+        order = self._curve.order
         blind = Integer.random_range(min_inclusive=1,
-                                     max_exclusive=_curve.order)
+                                     max_exclusive=order)
 
         blind_d = self._d * blind
-        inv_blind_k = (blind * k).inverse(_curve.order)
+        inv_blind_k = (blind * k).inverse(order)
 
-        r = (_curve.G * k).x % _curve.order
-        s = inv_blind_k * (blind * z + blind_d * r) % _curve.order
+        r = (self._curve.G * k).x % order
+        s = inv_blind_k * (blind * z + blind_d * r) % order
         return (r, s)
 
     def _verify(self, z, rs):
-        sinv = rs[1].inverse(_curve.order)
-        point1 = _curve.G * ((sinv * z) % _curve.order)
-        point2 = self.pointQ * ((sinv * rs[0]) % _curve.order)
+        order = self._curve.order
+        sinv = rs[1].inverse(order)
+        point1 = self._curve.G * ((sinv * z) % order)
+        point2 = self.pointQ * ((sinv * rs[0]) % order)
         return (point1 + point2).x == rs[0]
 
     @property
@@ -360,7 +379,7 @@ class EccKey(object):
     @property
     def pointQ(self):
         if self._point is None:
-            self._point = _curve.G * self._d
+            self._point = self._curve.G * self._d
         return self._point
 
     def public_key(self):
@@ -370,7 +389,7 @@ class EccKey(object):
             a new :class:`EccKey` object
         """
 
-        return EccKey(curve="P-256", point=self.pointQ)
+        return EccKey(curve=self._curve.desc, point=self.pointQ)
 
     def _export_subjectPublicKeyInfo(self, compress):
 
@@ -382,7 +401,7 @@ class EccKey(object):
         #
         # PAI is in theory encoded as 0x00.
 
-        order_bytes = _curve.order.size_in_bytes()
+        order_bytes = self._curve.order.size_in_bytes()
 
         if compress:
             first_byte = 2 + self.pointQ.y.is_odd()
@@ -396,7 +415,7 @@ class EccKey(object):
         unrestricted_oid = "1.2.840.10045.2.1"
         return _create_subject_public_key_info(unrestricted_oid,
                                                public_key,
-                                               DerObjectId(_curve.oid))
+                                               DerObjectId(self._curve.oid))
 
     def _export_private_der(self, include_ec_params=True):
 
@@ -410,14 +429,14 @@ class EccKey(object):
         #    }
 
         # Public key - uncompressed form
-        order_bytes = _curve.order.size_in_bytes()
+        order_bytes = self._curve.order.size_in_bytes()
         public_key = (b'\x04' +
                       self.pointQ.x.to_bytes(order_bytes) +
                       self.pointQ.y.to_bytes(order_bytes))
 
         seq = [1,
                DerOctetString(self.d.to_bytes(order_bytes)),
-               DerObjectId(_curve.oid, explicit=0),
+               DerObjectId(self._curve.oid, explicit=0),
                DerBitString(public_key, explicit=1)]
 
         if not include_ec_params:
@@ -428,11 +447,12 @@ class EccKey(object):
     def _export_pkcs8(self, **kwargs):
         if kwargs.get('passphrase', None) is not None and 'protection' not in kwargs:
             raise ValueError("At least the 'protection' parameter should be present")
+
         unrestricted_oid = "1.2.840.10045.2.1"
         private_key = self._export_private_der(include_ec_params=False)
         result = PKCS8.wrap(private_key,
                             unrestricted_oid,
-                            key_params=DerObjectId(_curve.oid),
+                            key_params=DerObjectId(self._curve.oid),
                             **kwargs)
         return result
 
@@ -460,7 +480,7 @@ class EccKey(object):
             raise ValueError("Cannot export OpenSSH private keys")
 
         desc = "ecdsa-sha2-nistp256"
-        order_bytes = _curve.order.size_in_bytes()
+        order_bytes = self._curve.order.size_in_bytes()
 
         if compress:
             first_byte = 2 + self.pointQ.y.is_odd()
@@ -583,23 +603,24 @@ def generate(**kwargs):
     Args:
 
       curve (string):
-        Mandatory. It must be "P-256", "prime256v1" or "secp256r1".
+        Mandatory. It must be "p256", "P-256", "prime256v1" or "secp256r1".
 
       randfunc (callable):
         Optional. The RNG to read randomness from.
         If ``None``, :func:`Crypto.Random.get_random_bytes` is used.
     """
 
-    curve = kwargs.pop("curve")
+    curve_name = kwargs.pop("curve")
+    curve = _curves[curve_name]
     randfunc = kwargs.pop("randfunc", get_random_bytes)
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
     d = Integer.random_range(min_inclusive=1,
-                             max_exclusive=_curve.order,
+                             max_exclusive=curve.order,
                              randfunc=randfunc)
 
-    return EccKey(curve=curve, d=d)
+    return EccKey(curve=curve_name, d=d)
 
 
 def construct(**kwargs):
@@ -609,7 +630,7 @@ def construct(**kwargs):
     Args:
 
       curve (string):
-        Mandatory. It must be "P-256", "prime256v1" or "secp256r1".
+        Mandatory. It must be "p256", "P-256", "prime256v1" or "secp256r1".
 
       d (integer):
         Only for a private key. It must be in the range ``[1..order-1]``.
@@ -624,6 +645,8 @@ def construct(**kwargs):
       :class:`EccKey` : a new ECC key object
     """
 
+    curve_name = kwargs["curve"]
+    curve = _curves[curve_name]
     point_x = kwargs.pop("point_x", None)
     point_y = kwargs.pop("point_y", None)
 
@@ -637,7 +660,7 @@ def construct(**kwargs):
     # Validate that the private key matches the public one
     d = kwargs.get("d", None)
     if d is not None and "point" in kwargs:
-        pub_key = _curve.G * d
+        pub_key = curve.G * d
         if pub_key.xy != (point_x, point_y):
             raise ValueError("Private and public ECC keys do not match")
 
@@ -652,8 +675,10 @@ def _import_public_der(curve_oid, ec_point):
 
     """
 
-    # We only support P-256 named curves for now
-    if curve_oid != _curve.oid:
+    for curve_name, curve in _curves.items():
+        if curve.oid == curve_oid:
+            break
+    else:
         raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_oid)
 
     # See 2.2 in RFC5480 and 2.3.3 in SEC1
@@ -664,7 +689,7 @@ def _import_public_der(curve_oid, ec_point):
     #
     # PAI is in theory encoded as 0x00.
 
-    order_bytes = _curve.order.size_in_bytes()
+    order_bytes = curve.order.size_in_bytes()
     point_type = bord(ec_point[0])
 
     # Uncompressed point
@@ -678,15 +703,15 @@ def _import_public_der(curve_oid, ec_point):
         if len(ec_point) != (1 + order_bytes):
             raise ValueError("Incorrect EC point length")
         x = Integer.from_bytes(ec_point[1:])
-        y = (x**3 - x*3 + _curve.b).sqrt(_curve.p)    # Short Weierstrass
+        y = (x**3 - x*3 + curve.b).sqrt(curve.p)    # Short Weierstrass
         if point_type == 0x02 and y.is_odd():
-            y = _curve.p - y
+            y = curve.p - y
         if point_type == 0x03 and y.is_even():
-            y = _curve.p - y
+            y = curve.p - y
     else:
         raise ValueError("Incorrect EC point encoding")
 
-    return construct(curve="P-256", point_x=x, point_y=y)
+    return construct(curve=curve_name, point_x=x, point_y=y)
 
 
 def _import_subjectPublicKeyInfo(encoded, *kwargs):
@@ -742,15 +767,19 @@ def _import_private_der(encoded, passphrase, curve_name=None):
         raise ValueError("Incorrect ECC private key version")
 
     try:
-        curve_name = DerObjectId(explicit=0).decode(private_key[2]).value
+        curve_oid = DerObjectId(explicit=0).decode(private_key[2]).value
     except ValueError:
-        pass
+        # TODO: choose a better default
+        curve_oid = _curves['p256'].oid
 
-    if curve_name != _curve.oid:
-        raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_name)
+    for curve_name, curve in _curves.items():
+        if curve.oid == curve_oid:
+            break
+    else:
+        raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_oid)
 
     scalar_bytes = DerOctetString().decode(private_key[1]).payload
-    order_bytes = _curve.order.size_in_bytes()
+    order_bytes = curve.order.size_in_bytes()
     if len(scalar_bytes) != order_bytes:
         raise ValueError("Private key is too small")
     d = Integer.from_bytes(scalar_bytes)
@@ -758,13 +787,13 @@ def _import_private_der(encoded, passphrase, curve_name=None):
     # Decode public key (if any, it must be P-256)
     if len(private_key) == 4:
         public_key_enc = DerBitString(explicit=1).decode(private_key[3]).value
-        public_key = _import_public_der(curve_name, public_key_enc)
+        public_key = _import_public_der(curve_oid, public_key_enc)
         point_x = public_key.pointQ.x
         point_y = public_key.pointQ.y
     else:
         point_x = point_y = None
 
-    return construct(curve="P-256", d=d, point_x=point_x, point_y=point_y)
+    return construct(curve=curve_name, d=d, point_x=point_x, point_y=point_y)
 
 
 def _import_pkcs8(encoded, passphrase):
@@ -843,7 +872,7 @@ def _import_openssh(encoded):
     if keyparts[1] != b"nistp256":
         raise ValueError("Unsupported ECC curve")
 
-    return _import_public_der(_curve.oid, keyparts[2])
+    return _import_public_der(_curves["p256"].oid, keyparts[2])
 
 
 def import_key(encoded, passphrase=None):

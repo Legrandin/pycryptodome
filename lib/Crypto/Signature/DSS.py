@@ -39,7 +39,7 @@ from Crypto.Util.number import long_to_bytes
 from Crypto.Math.Numbers import Integer
 
 from Crypto.Hash import HMAC
-from Crypto.PublicKey.ECC import _curve, EccKey
+from Crypto.PublicKey.ECC import EccKey
 
 
 class DssSigScheme(object):
@@ -285,7 +285,7 @@ class FipsEcDsaSigScheme(DssSigScheme):
 
     def _compute_nonce(self, msg_hash):
         return Integer.random_range(min_inclusive=1,
-                                    max_exclusive=_curve.order,
+                                    max_exclusive=self._key._curve.order,
                                     randfunc=self._randfunc)
 
     def _valid_hash(self, msg_hash):
@@ -377,7 +377,7 @@ def new(key, mode, encoding='binary', randfunc=None):
         raise ValueError("Unknown encoding '%s'" % encoding)
 
     if isinstance(key, EccKey):
-        order = _curve.order
+        order = key._curve.order
         private_key_attr = 'd'
     else:
         order = Integer(key.q)

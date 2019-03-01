@@ -34,7 +34,7 @@ from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 
 from Crypto.PublicKey import ECC
-from Crypto.PublicKey.ECC import EccPoint, _curve, EccKey
+from Crypto.PublicKey.ECC import EccPoint, _curves, EccKey
 
 class TestEccPoint_NIST(unittest.TestCase):
     """Tests defined in section 4.3 of https://www.nsa.gov/ia/_files/nist-routines.pdf"""
@@ -161,7 +161,7 @@ class TestEccPoint_NIST(unittest.TestCase):
 class TestEccPoint_PAI(unittest.TestCase):
     """Test vectors from http://point-at-infinity.org/ecc/nisttv"""
 
-    pointG = EccPoint(_curve.Gx, _curve.Gy)
+    pointG = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
 
 
 tv_pai = load_tests(("Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC"),
@@ -186,10 +186,10 @@ class TestEccKey(unittest.TestCase):
         key = EccKey(curve="P-256", d=1)
         self.assertEqual(key.d, 1)
         self.failUnless(key.has_private())
-        self.assertEqual(key.pointQ.x, _curve.Gx)
-        self.assertEqual(key.pointQ.y, _curve.Gy)
+        self.assertEqual(key.pointQ.x, _curves['p256'].Gx)
+        self.assertEqual(key.pointQ.y, _curves['p256'].Gy)
 
-        point = EccPoint(_curve.Gx, _curve.Gy)
+        point = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
         key = EccKey(curve="P-256", d=1, point=point)
         self.assertEqual(key.d, 1)
         self.failUnless(key.has_private())
@@ -201,7 +201,7 @@ class TestEccKey(unittest.TestCase):
 
     def test_public_key(self):
 
-        point = EccPoint(_curve.Gx, _curve.Gy)
+        point = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
         key = EccKey(curve="P-256", point=point)
         self.failIf(key.has_private())
         self.assertEqual(key.pointQ, point)
@@ -218,7 +218,7 @@ class TestEccKey(unittest.TestCase):
 
     def test_invalid_d(self):
         self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=0))
-        self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=_curve.order))
+        self.assertRaises(ValueError, lambda: EccKey(curve="P-256", d=_curves['p256'].order))
 
     def test_equality(self):
 
@@ -245,7 +245,7 @@ class TestEccModule(unittest.TestCase):
 
         key = ECC.generate(curve="P-256")
         self.failUnless(key.has_private())
-        self.assertEqual(key.pointQ, EccPoint(_curve.Gx, _curve.Gy) * key.d)
+        self.assertEqual(key.pointQ, EccPoint(_curves['p256'].Gx, _curves['p256'].Gy) * key.d)
 
         # Other names
         ECC.generate(curve="secp256r1")
@@ -255,11 +255,11 @@ class TestEccModule(unittest.TestCase):
 
         key = ECC.construct(curve="P-256", d=1)
         self.failUnless(key.has_private())
-        self.assertEqual(key.pointQ, _curve.G)
+        self.assertEqual(key.pointQ, _curves['p256'].G)
 
-        key = ECC.construct(curve="P-256", point_x=_curve.Gx, point_y=_curve.Gy)
+        key = ECC.construct(curve="P-256", point_x=_curves['p256'].Gx, point_y=_curves['p256'].Gy)
         self.failIf(key.has_private())
-        self.assertEqual(key.pointQ, _curve.G)
+        self.assertEqual(key.pointQ, _curves['p256'].G)
 
         # Other names
         ECC.construct(curve="secp256r1", d=1)
@@ -267,7 +267,7 @@ class TestEccModule(unittest.TestCase):
 
     def test_negative_construct(self):
         coord = dict(point_x=10, point_y=4)
-        coordG = dict(point_x=_curve.Gx, point_y=_curve.Gy)
+        coordG = dict(point_x=_curves['p256'].Gx, point_y=_curves['p256'].Gy)
 
         self.assertRaises(ValueError, ECC.construct, curve="P-256", **coord)
         self.assertRaises(ValueError, ECC.construct, curve="P-256", d=2, **coordG)
