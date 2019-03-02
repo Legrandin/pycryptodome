@@ -44,7 +44,7 @@ matrix:
    after_success: true
  - os: osx
    language: generic
-   install: pip2 install cibuildwheel==0.9.2
+   install: pip2 install cibuildwheel==0.10.1
    after_success: travis/travis_after_success_osx.sh
 services:
  - docker
