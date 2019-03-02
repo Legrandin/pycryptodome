@@ -161,7 +161,8 @@ class TestEccPoint_NIST(unittest.TestCase):
 class TestEccPoint_PAI(unittest.TestCase):
     """Test vectors from http://point-at-infinity.org/ecc/nisttv"""
 
-    pointG = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
+    curve = _curves['p256']
+    pointG = EccPoint(curve.Gx, curve.Gy)
 
 
 tv_pai = load_tests(("Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC"),

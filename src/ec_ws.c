@@ -38,10 +38,6 @@
 #include "ec.h"
 #include "modexp_utils.h"
 
-#ifndef MAKE_TABLE
-#include "p256_table.c"
-#endif
-
 FAKE_INIT(ec_ws)
 
 #ifdef MAIN
@@ -169,7 +165,7 @@ STATIC void ec_projective_to_affine(uint64_t *x3, uint64_t *y3,
  * @param z1    Projective Z coordinate of the input point, in Montgomery form
  * @param b     Parameter b in the equation, in Montgomery form
  * @param tmp   Workplace for temporary variables
- * @param ctx   The Mongtgomery context
+ * @param ctx   The Montgomery context
  *
  * Input and output points can match. The input can be the point-at-infinity.
  */
@@ -255,7 +251,7 @@ STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * @param y2    Affine Y coordinate of the second input point, in Montgomery form
  * @param b     Parameter b in the equation, in Montgomery form
  * @param tmp   Workplace for temporary variables
- * @param ctx   The Mongtgomery context
+ * @param ctx   The Montgomery context
  *
  * Input and output points can match. The correct is produced if both or either
  * input points are at infinity.
@@ -358,7 +354,7 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * @param z2    Projective Z coordinate of the second input point, in Montgomery form
  * @param b     Parameter b in the equation, in Montgomery form
  * @param tmp   Workplace for temporary variables
- * @param ctx   The Mongtgomery context
+ * @param ctx   The Montgomery context
  */
 STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                         const uint64_t *x13, const uint64_t *y13, const uint64_t *z13,
@@ -572,6 +568,8 @@ cleanup:
 }
 
 #ifndef MAKE_TABLE
+#include "p256_table.c"
+
 STATIC void free_g_p256(ProtMemory **prot_g)
 {
     unsigned i;

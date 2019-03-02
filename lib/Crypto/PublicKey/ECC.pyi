@@ -1,4 +1,4 @@
-from typing import Union, Callable, Optional, NamedTuple, List, Tuple
+from typing import Union, Callable, Optional, NamedTuple, List, Tuple, Dict, NamedTuple, Any
 
 from Crypto.Math.Numbers import Integer
 
@@ -37,17 +37,19 @@ class EccKey(object):
     def public_key(self) -> EccKey: ...
     def export_key(self, **kwargs: Union[str, bytes, bool]) -> str: ...
 
-_Curve = NamedTuple("_Curve", [	('p', Integer),
-				('b', Integer),
-				('order', Integer),
-				('Gx', Integer),
-				('Gy', Integer),
-				('G', EccPoint),
-				('names', List[str]),
-				('oid', str)
-				])
 
-_curve : _Curve
+_Curve = NamedTuple("_Curve", [('p', Integer),
+                               ('order', Integer),
+                               ('b', Integer),
+                               ('Gx', Integer),
+                               ('Gy', Integer),
+                               ('G', EccPoint),
+                               ('oid', str),
+                               ('context', Any),
+                               ('desc', str)])
+
+_curves : Dict[str, _Curve]
+
 
 def generate(**kwargs: Union[str, Callable]) -> EccKey: ...
 def construct(**kwargs: Union[str, int]) -> EccKey: ...
