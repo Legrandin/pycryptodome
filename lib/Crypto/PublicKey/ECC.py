@@ -753,8 +753,10 @@ def _import_subjectPublicKeyInfo(encoded, *kwargs):
     return _import_public_der(curve_oid, ec_point)
 
 
-def _import_private_der(encoded, passphrase, curve_name=None):
+def _import_private_der(encoded, passphrase, curve_oid=None):
 
+    # See RFC5915 https://tools.ietf.org/html/rfc5915
+    #
     # ECPrivateKey ::= SEQUENCE {
     #           version        INTEGER { ecPrivkeyVer1(1) } (ecPrivkeyVer1),
     #           privateKey     OCTET STRING,
@@ -767,10 +769,15 @@ def _import_private_der(encoded, passphrase, curve_name=None):
         raise ValueError("Incorrect ECC private key version")
 
     try:
-        curve_oid = DerObjectId(explicit=0).decode(private_key[2]).value
+        parameters = DerObjectId(explicit=0).decode(private_key[2]).value
+        if curve_oid is not None and parameters != curve_oid:
+            raise ValueError("Curve mismatch")
+        curve_oid = parameters
     except ValueError:
-        # TODO: choose a better default
-        curve_oid = _curves['p256'].oid
+        pass
+
+    if curve_oid is None:
+        raise ValueError("No curve found")
 
     for curve_name, curve in _curves.items():
         if curve.oid == curve_oid:
@@ -784,7 +791,7 @@ def _import_private_der(encoded, passphrase, curve_name=None):
         raise ValueError("Private key is too small")
     d = Integer.from_bytes(scalar_bytes)
 
-    # Decode public key (if any, it must be P-256)
+    # Decode public key (if any)
     if len(private_key) == 4:
         public_key_enc = DerBitString(explicit=1).decode(private_key[3]).value
         public_key = _import_public_der(curve_oid, public_key_enc)
@@ -816,9 +823,9 @@ def _import_pkcs8(encoded, passphrase):
     if algo_oid not in (unrestricted_oid, ecdh_oid, ecmqv_oid):
         raise UnsupportedEccFeature("Unsupported ECC purpose (OID: %s)" % algo_oid)
 
-    curve_name = DerObjectId().decode(params).value
+    curve_oid = DerObjectId().decode(params).value
 
-    return _import_private_der(private_key, passphrase, curve_name)
+    return _import_private_der(private_key, passphrase, curve_oid)
 
 
 def _import_x509_cert(encoded, *kwargs):
