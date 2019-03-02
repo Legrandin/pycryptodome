@@ -87,7 +87,7 @@ int ec_ws_normalize(EcPoint *ecp);
 int ec_ws_is_pai(EcPoint *ecp);
 """)
 
-_Curve = namedtuple("_Curve", "p b order Gx Gy G oid context desc")
+_Curve = namedtuple("_Curve", "p b order Gx Gy G oid context desc openssh")
 _curves = {}
 
 
@@ -123,7 +123,8 @@ def init_p256():
                   None,
                   "1.2.840.10045.3.1.7",    # ANSI X9.62
                   context,
-                  "NIST P-256")
+                  "NIST P-256",
+                  "ecdsa-sha2-nistp256")
     _curves.update(dict.fromkeys(p256_names, p256))
 
 
@@ -163,7 +164,8 @@ def init_p384():
                   None,
                   "1.3.132.0.34",   # SEC 2
                   context,
-                  "NIST P-384")
+                  "NIST P-384",
+                  "ecdsa-sha2-nistp384")
     _curves.update(dict.fromkeys(p384_names, p384))
 
 
@@ -203,7 +205,8 @@ def init_p521():
                   None,
                   "1.3.132.0.35",   # SEC 2
                   context,
-                  "NIST P-521")
+                  "NIST P-521",
+                  "ecdsa-sha2-nistp521")
     _curves.update(dict.fromkeys(p521_names, p521))
 
 
@@ -574,7 +577,7 @@ class EccKey(object):
         if self.has_private():
             raise ValueError("Cannot export OpenSSH private keys")
 
-        desc = "ecdsa-sha2-nistp256"
+        desc = self._curve.openssh
         order_bytes = self._curve.order.size_in_bytes()
 
         if compress:
@@ -586,7 +589,8 @@ class EccKey(object):
                           self.pointQ.x.to_bytes(order_bytes) +
                           self.pointQ.y.to_bytes(order_bytes))
 
-        comps = (tobytes(desc), b"nistp256", public_key)
+        middle = desc.split("-")[2]
+        comps = (tobytes(desc), tobytes(middle), public_key)
         blob = b"".join([struct.pack(">I", len(x)) + x for x in comps])
         return desc + " " + tostr(binascii.b2a_base64(blob))
 
@@ -971,10 +975,14 @@ def _import_openssh(encoded):
         keyparts.append(keystring[4:4 + lk])
         keystring = keystring[4 + lk:]
 
-    if keyparts[1] != b"nistp256":
+    for curve_name, curve in _curves.items():
+        middle = tobytes(curve.openssh.split("-")[2])
+        if keyparts[1] == middle:
+            break
+    else:
         raise ValueError("Unsupported ECC curve")
 
-    return _import_public_der(_curves["p256"].oid, keyparts[2])
+    return _import_public_der(curve.oid, keyparts[2])
 
 
 def import_key(encoded, passphrase=None):
