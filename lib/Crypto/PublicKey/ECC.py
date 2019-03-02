@@ -112,7 +112,7 @@ def init_p256():
                                        c_ulonglong(getrandbits(64))
                                        )
     if result:
-        raise ImportError("Error %d initializing P256 context" % result)
+        raise ImportError("Error %d initializing P-256 context" % result)
 
     context = SmartPointer(ec_p256_context.get(), _ec_lib.ec_free_context)
     p256 = _Curve(Integer(p),
@@ -121,7 +121,7 @@ def init_p256():
                   Integer(Gx),
                   Integer(Gy),
                   None,
-                  "1.2.840.10045.3.1.7",
+                  "1.2.840.10045.3.1.7",    # ANSI X9.62
                   context,
                   "NIST P-256")
     _curves.update(dict.fromkeys(p256_names, p256))
@@ -129,6 +129,86 @@ def init_p256():
 
 init_p256()
 del init_p256
+
+
+p384_names = ["p384", "NIST P-384", "P-384", "prime384v1", "secp384r1"]
+def init_p384():
+    p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff
+    b = 0xb3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875ac656398d8a2ed19d2a85c8edd3ec2aef
+    order = 0xffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973
+    Gx = 0xaa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760aB7
+    Gy = 0x3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5F
+
+    p384_modulus = long_to_bytes(p, 48)
+    p384_b = long_to_bytes(b, 48)
+    p384_order = long_to_bytes(order, 48)
+
+    ec_p384_context = VoidPointer()
+    result = _ec_lib.ec_ws_new_context(ec_p384_context.address_of(),
+                                       c_uint8_ptr(p384_modulus),
+                                       c_uint8_ptr(p384_b),
+                                       c_uint8_ptr(p384_order),
+                                       c_size_t(len(p384_modulus)),
+                                       c_ulonglong(getrandbits(64))
+                                       )
+    if result:
+        raise ImportError("Error %d initializing P-384 context" % result)
+
+    context = SmartPointer(ec_p384_context.get(), _ec_lib.ec_free_context)
+    p384 = _Curve(Integer(p),
+                  Integer(b),
+                  Integer(order),
+                  Integer(Gx),
+                  Integer(Gy),
+                  None,
+                  "1.3.132.0.34",   # SEC 2
+                  context,
+                  "NIST P-384")
+    _curves.update(dict.fromkeys(p384_names, p384))
+
+
+init_p384()
+del init_p384
+
+
+p521_names = ["p521", "NIST P-521", "P-521", "prime521v1", "secp521r1"]
+def init_p521():
+    p = 0x000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    b = 0x00000051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b503f00
+    order = 0x000001fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e91386409
+    Gx = 0x000000c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5bd66
+    Gy = 0x0000011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650
+
+    p521_modulus = long_to_bytes(p, 66)
+    p521_b = long_to_bytes(b, 66)
+    p521_order = long_to_bytes(order, 66)
+
+    ec_p521_context = VoidPointer()
+    result = _ec_lib.ec_ws_new_context(ec_p521_context.address_of(),
+                                       c_uint8_ptr(p521_modulus),
+                                       c_uint8_ptr(p521_b),
+                                       c_uint8_ptr(p521_order),
+                                       c_size_t(len(p521_modulus)),
+                                       c_ulonglong(getrandbits(64))
+                                       )
+    if result:
+        raise ImportError("Error %d initializing P-521 context" % result)
+
+    context = SmartPointer(ec_p521_context.get(), _ec_lib.ec_free_context)
+    p521 = _Curve(Integer(p),
+                  Integer(b),
+                  Integer(order),
+                  Integer(Gx),
+                  Integer(Gy),
+                  None,
+                  "1.3.132.0.35",   # SEC 2
+                  context,
+                  "NIST P-521")
+    _curves.update(dict.fromkeys(p521_names, p521))
+
+
+init_p521()
+del init_p521
 
 
 class UnsupportedEccFeature(ValueError):
@@ -145,13 +225,17 @@ class EccPoint(object):
     :vartype y: integer
     """
 
-    def __init__(self, x, y):
-        xb = long_to_bytes(x, 32)
-        yb = long_to_bytes(y, 32)
-        assert(len(xb) == 32)
-        assert(len(yb) == 32)
+    def __init__(self, x, y, curve="p256"):
 
-        context = _curves["p256"].context
+        self._curve = _curves[curve]
+
+        order_bytes = self._curve.order.size_in_bytes()
+        context = self._curve.context
+
+        xb = long_to_bytes(x, order_bytes)
+        yb = long_to_bytes(y, order_bytes)
+        if len(xb) != order_bytes or len(yb) != order_bytes:
+            raise ValueError("Incorrect coordinate length")
 
         self._point = VoidPointer()
         result = _ec_lib.ec_ws_new_point(self._point.address_of(),
@@ -212,8 +296,9 @@ class EccPoint(object):
 
     @property
     def xy(self):
-        xb = bytearray(32)
-        yb = bytearray(32)
+        order_bytes = self._curve.order.size_in_bytes()
+        xb = bytearray(order_bytes)
+        yb = bytearray(order_bytes)
         result = _ec_lib.ec_ws_get_xy(c_uint8_ptr(xb),
                                       c_uint8_ptr(yb),
                                       c_size_t(len(xb)),
@@ -275,10 +360,20 @@ class EccPoint(object):
 
 
 # Last piece of initialization
-p256_G = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
+p256_G = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy, "p256")
 p256 = _curves['p256']._replace(G=p256_G)
 _curves.update(dict.fromkeys(p256_names, p256))
 del p256_G, p256, p256_names
+
+p384_G = EccPoint(_curves['p384'].Gx, _curves['p384'].Gy, "p384")
+p384 = _curves['p384']._replace(G=p384_G)
+_curves.update(dict.fromkeys(p384_names, p384))
+del p384_G, p384, p384_names
+
+p521_G = EccPoint(_curves['p521'].Gx, _curves['p521'].Gy, "p521")
+p521 = _curves['p521']._replace(G=p521_G)
+_curves.update(dict.fromkeys(p521_names, p521))
+del p521_G, p521, p521_names
 
 
 class EccKey(object):

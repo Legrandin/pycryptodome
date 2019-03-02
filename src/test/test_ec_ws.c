@@ -564,7 +564,7 @@ void test_ec_ws_new_point(void)
     assert(res == ERR_NULL);
 
     res = ec_ws_new_point(&ecp, Gx, Gy, 0, ec_ctx);
-    assert(res == ERR_VALUE);
+    assert(res == ERR_NOT_ENOUGH_DATA);
 
     res = ec_ws_new_point(&ecp, Gx_wrong, Gy, 32, ec_ctx);
     assert(res == ERR_EC_POINT);

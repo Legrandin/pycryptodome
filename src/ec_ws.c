@@ -774,7 +774,10 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
         return ERR_NULL;
     ctx = ec_ctx->mont_ctx;
 
-    if (len != ctx->bytes)
+    if (len == 0)
+        return ERR_NOT_ENOUGH_DATA;
+
+    if (len > ctx->bytes)
         return ERR_VALUE;
 
     *pecp = ecp = (EcPoint*)calloc(1, sizeof(EcPoint));
