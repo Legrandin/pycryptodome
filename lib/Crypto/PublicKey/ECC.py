@@ -231,6 +231,7 @@ class EccPoint(object):
     def __init__(self, x, y, curve="p256"):
 
         self._curve = _curves[curve]
+        self._curve_name = curve
 
         order_bytes = self._curve.order.size_in_bytes()
         context = self._curve.context
@@ -279,15 +280,14 @@ class EccPoint(object):
 
     def copy(self):
         x, y = self.xy
-        np = EccPoint(x, y)
+        np = EccPoint(x, y, self._curve_name)
         return np
 
     def is_point_at_infinity(self):
         return self.xy == (0, 0)
 
-    @staticmethod
-    def point_at_infinity():
-        return EccPoint(0, 0)
+    def point_at_infinity(self):
+        return EccPoint(0, 0, self._curve_name)
 
     @property
     def x(self):
@@ -754,7 +754,7 @@ def construct(**kwargs):
 
     if None not in (point_x, point_y):
         # ValueError is raised if the point is not on the curve
-        kwargs["point"] = EccPoint(point_x, point_y)
+        kwargs["point"] = EccPoint(point_x, point_y, curve_name)
 
     # Validate that the private key matches the public one
     d = kwargs.get("d", None)

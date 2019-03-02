@@ -14,6 +14,11 @@ Resolved issues
 
 * xxxxx
 
+  Breaks in compatibility
+-----------------------
+
+* ``point_at_infinity()`` becomes an instance method for ``Crypto.PublicKey.ECC.EccKey``, from a static one.
+
 3.7.3 (19 January 2019)
 +++++++++++++++++++++++
 
