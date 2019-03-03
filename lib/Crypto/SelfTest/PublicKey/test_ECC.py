@@ -311,7 +311,6 @@ class TestEccPoint_NIST_P521(unittest.TestCase):
         pointRx = 0x000001264ae115ba9cbc2ee56e6f0059e24b52c8046321602c59a339cfb757c89a59c358a9a8e1f86d384b3f3b255ea3f73670c6dc9f45d46b6a196dc37bbe0f6b2dd9e9
         pointRy = 0x00000062a9c72b8f9f88a271690bfa017a6466c31b9cadc2fc544744aeb817072349cfddc5ad0e81b03f1897bd9c8c6efbdf68237dc3bb00445979fb373b20c9a967ac55
 
-        import pdb; pdb.set_trace()
         pointR = self.pointS + self.pointT
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
@@ -360,7 +359,6 @@ class TestEccPoint_NIST_P521(unittest.TestCase):
         pointRx = 0x0000012879442f2450c119e7119a5f738be1f1eba9e9d7c6cf41b325d9ce6d643106e9d61124a91a96bcf201305a9dee55fa79136dc700831e54c3ca4ff2646bd3c36bc6
         pointRy = 0x0000019864a8b8855c2479cbefe375ae553e2393271ed36fadfc4494fc0583f6bd03598896f39854abeae5f9a6515a021e2c0eef139e71de610143f53382f4104dccb543
 
-        import pdb; pdb.set_trace()
         pointR = self.pointS.copy()
         pointR.double()
         self.assertEqual(pointR.x, pointRx)
@@ -403,7 +401,6 @@ class TestEccPoint_NIST_P521(unittest.TestCase):
 
         t = self.pointS * d
 
-        import pdb; pdb.set_trace()
         pointR = self.pointS * d
         pointR += self.pointT * e
         self.assertEqual(pointR.x, pointRx)
