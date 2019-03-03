@@ -814,7 +814,7 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
         if (idx_word-- == 0)
             break;
     }
-    for (bit = (uint64_t)1 << 63; 0 == (exponent[idx_word] & bit); bit--);
+    for (bit = (uint64_t)1U << 63; 0 == (exponent[idx_word] & bit); bit>>=1);
 
     /* Start from 1 (in Montgomery form, which is R mod N) */
     memcpy(out, ctx->r_mod_n, ctx->bytes);
