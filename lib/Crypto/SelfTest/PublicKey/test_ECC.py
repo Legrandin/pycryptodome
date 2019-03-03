@@ -172,7 +172,7 @@ class TestEccPoint_NIST_P384(unittest.TestCase):
                 "p384")
 
     def test_set(self):
-        pointW = EccPoint(0, 0)
+        pointW = EccPoint(0, 0, "p384")
         pointW.set(self.pointS)
         self.assertEqual(pointW, self.pointS)
 
@@ -278,6 +278,134 @@ class TestEccPoint_NIST_P384(unittest.TestCase):
         t = self.pointS * d
 
         pointR = self.pointS * d + self.pointT * e
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+
+class TestEccPoint_NIST_P521(unittest.TestCase):
+    """Tests defined in section 4.5 of https://www.nsa.gov/ia/_files/nist-routines.pdf"""
+
+    pointS = EccPoint(
+                0x000001d5c693f66c08ed03ad0f031f937443458f601fd098d3d0227b4bf62873af50740b0bb84aa157fc847bcf8dc16a8b2b8bfd8e2d0a7d39af04b089930ef6dad5c1b4,
+                0x00000144b7770963c63a39248865ff36b074151eac33549b224af5c8664c54012b818ed037b2b7c1a63ac89ebaa11e07db89fcee5b556e49764ee3fa66ea7ae61ac01823,
+                "p521")
+
+    pointT = EccPoint(
+                0x000000f411f2ac2eb971a267b80297ba67c322dba4bb21cec8b70073bf88fc1ca5fde3ba09e5df6d39acb2c0762c03d7bc224a3e197feaf760d6324006fe3be9a548c7d5,
+                0x000001fdf842769c707c93c630df6d02eff399a06f1b36fb9684f0b373ed064889629abb92b1ae328fdb45534268384943f0e9222afe03259b32274d35d1b9584c65e305,
+                "p521")
+
+    def test_set(self):
+        pointW = EccPoint(0, 0)
+        pointW.set(self.pointS)
+        self.assertEqual(pointW, self.pointS)
+
+    def test_copy(self):
+        pointW = self.pointS.copy()
+        self.assertEqual(pointW, self.pointS)
+        pointW.set(self.pointT)
+        self.assertEqual(pointW, self.pointT)
+        self.assertNotEqual(self.pointS, self.pointT)
+
+    def _test_addition(self):
+        pointRx = 0x000001264ae115ba9cbc2ee56e6f0059e24b52c8046321602c59a339cfb757c89a59c358a9a8e1f86d384b3f3b255ea3f73670c6dc9f45d46b6a196dc37bbe0f6b2dd9e9
+        pointRy = 0x00000062a9c72b8f9f88a271690bfa017a6466c31b9cadc2fc544744aeb817072349cfddc5ad0e81b03f1897bd9c8c6efbdf68237dc3bb00445979fb373b20c9a967ac55
+
+        import pdb; pdb.set_trace()
+        pointR = self.pointS + self.pointT
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pai = pointR.point_at_infinity()
+
+        # S + 0
+        pointR = self.pointS + pai
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + S
+        pointR = pai + self.pointS
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + 0
+        pointR = pai + pai
+        self.assertEqual(pointR, pai)
+
+    def _test_inplace_addition(self):
+        pointRx = 0x000001264ae115ba9cbc2ee56e6f0059e24b52c8046321602c59a339cfb757c89a59c358a9a8e1f86d384b3f3b255ea3f73670c6dc9f45d46b6a196dc37bbe0f6b2dd9e9
+        pointRy = 0x00000062a9c72b8f9f88a271690bfa017a6466c31b9cadc2fc544744aeb817072349cfddc5ad0e81b03f1897bd9c8c6efbdf68237dc3bb00445979fb373b20c9a967ac55
+
+        pointR = self.pointS.copy()
+        pointR += self.pointT
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pai = pointR.point_at_infinity()
+
+        # S + 0
+        pointR = self.pointS.copy()
+        pointR += pai
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + S
+        pointR = pai.copy()
+        pointR += self.pointS
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + 0
+        pointR = pai.copy()
+        pointR += pai
+        self.assertEqual(pointR, pai)
+
+    def test_doubling(self):
+        pointRx = 0x0000012879442f2450c119e7119a5f738be1f1eba9e9d7c6cf41b325d9ce6d643106e9d61124a91a96bcf201305a9dee55fa79136dc700831e54c3ca4ff2646bd3c36bc6
+        pointRy = 0x0000019864a8b8855c2479cbefe375ae553e2393271ed36fadfc4494fc0583f6bd03598896f39854abeae5f9a6515a021e2c0eef139e71de610143f53382f4104dccb543
+
+        import pdb; pdb.set_trace()
+        pointR = self.pointS.copy()
+        pointR.double()
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        # 2*0
+        pai = self.pointS.point_at_infinity()
+        pointR = pai.copy()
+        pointR.double()
+        self.assertEqual(pointR, pai)
+
+        # S + S
+        pointR = self.pointS.copy()
+        pointR += pointR
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+    def _test_scalar_multiply(self):
+        d = 0x000001eb7f81785c9629f136a7e8f8c674957109735554111a2a866fa5a166699419bfa9936c78b62653964df0d6da940a695c7294d41b2d6600de6dfcf0edcfc89fdcb1
+        pointRx = 0x00000091b15d09d0ca0353f8f96b93cdb13497b0a4bb582ae9ebefa35eee61bf7b7d041b8ec34c6c00c0c0671c4ae063318fb75be87af4fe859608c95f0ab4774f8c95bb
+        pointRy = 0x00000130f8f8b5e1abb4dd94f6baaf654a2d5810411e77b7423965e0c7fd79ec1ae563c207bd255ee9828eb7a03fed565240d2cc80ddd2cecbb2eb50f0951f75ad87977f
+
+        pointR = self.pointS * d
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        # 0*S
+        pai = self.pointS.point_at_infinity()
+        pointR = self.pointS * 0
+        self.assertEqual(pointR, pai)
+
+        # -1*S
+        self.assertRaises(ValueError, lambda: self.pointS * -1)
+
+    def _test_joing_scalar_multiply(self):
+        d = 0x000001eb7f81785c9629f136a7e8f8c674957109735554111a2a866fa5a166699419bfa9936c78b62653964df0d6da940a695c7294d41b2d6600de6dfcf0edcfc89fdcb1
+        e = 0x00000137e6b73d38f153c3a7575615812608f2bab3229c92e21c0d1c83cfad9261dbb17bb77a63682000031b9122c2f0cdab2af72314be95254de4291a8f85f7c70412e3
+        pointRx = 0x0000009d3802642b3bea152beb9e05fba247790f7fc168072d363340133402f2585588dc1385d40ebcb8552f8db02b23d687cae46185b27528adb1bf9729716e4eba653d
+        pointRy = 0x0000000fe44344e79da6f49d87c1063744e5957d9ac0a505bafa8281c9ce9ff25ad53f8da084a2deb0923e46501de5797850c61b229023dd9cf7fc7f04cd35ebb026d89d
+
+        t = self.pointS * d
+
+        import pdb; pdb.set_trace()
+        pointR = self.pointS * d
+        pointR += self.pointT * e
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
@@ -527,6 +655,7 @@ def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestEccPoint_NIST_P256)
     tests += list_test_cases(TestEccPoint_NIST_P384)
+    tests += list_test_cases(TestEccPoint_NIST_P521)
     tests += list_test_cases(TestEccPoint_PAI_P256)
     tests += list_test_cases(TestEccPoint_PAI_P384)
     tests += list_test_cases(TestEccKey_P256)

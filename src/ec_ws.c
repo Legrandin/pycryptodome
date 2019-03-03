@@ -873,6 +873,7 @@ EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *e
     if (res) goto cleanup;
 
     ec_projective_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
+
     res = mont_to_bytes(x, len, xw, ctx);
     if (res) goto cleanup;
     res = mont_to_bytes(y, len, yw, ctx);
