@@ -816,7 +816,11 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
                 continue
             
             hash_name = group['sha']
-            if hash_name == "SHA-256":
+            if hash_name == "SHA-512":
+                hash_module = SHA512
+            elif hash_name == "SHA-384":
+                hash_module = SHA384
+            elif hash_name == "SHA-256":
                 hash_module = SHA256
             elif hash_name == "SHA-224":
                 hash_module = SHA224
