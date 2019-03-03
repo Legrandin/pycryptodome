@@ -50,7 +50,7 @@ STATIC void print_x(const char *s, const uint64_t *number, const MontContext *ct
 
     size = mont_bytes(ctx);
     encoded = calloc(1, size);
-    res = mont_to_bytes(encoded, number, ctx);
+    res = mont_to_bytes(encoded, size, number, ctx);
     assert(res == 0);
 
     printf("%s: ", s);
@@ -860,8 +860,8 @@ EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *e
         return ERR_NULL;
     ctx = ecp->ec_ctx->mont_ctx;
 
-    if (len != mont_bytes(ctx))
-        return ERR_VALUE;
+    if (len < ctx->modulus_len)
+        return ERR_NOT_ENOUGH_DATA;
 
     wp = new_workplace(ctx);
     if (NULL == wp)
@@ -873,9 +873,9 @@ EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *e
     if (res) goto cleanup;
 
     ec_projective_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
-    res = mont_to_bytes(x, xw, ctx);
+    res = mont_to_bytes(x, len, xw, ctx);
     if (res) goto cleanup;
-    res = mont_to_bytes(y, yw, ctx);
+    res = mont_to_bytes(y, len, yw, ctx);
     if (res) goto cleanup;
 
     res = 0;

@@ -13,8 +13,9 @@
 typedef enum _ModulusType { ModulusGeneric, ModulusP256 } ModulusType;
 
 typedef struct mont_context {
-    unsigned words;
-    unsigned bytes;
+    unsigned words;         /* Number of words allocated to hold the number */
+    unsigned bytes;         /* Number of bytes allocated to hold the number */
+    unsigned modulus_len;   /* Max bytes taken by an affine coordinate */
     uint64_t *modulus;
     uint64_t *modulus_min_2;
     uint64_t *r2_mod_n;     /* R^2 mod N */
@@ -30,7 +31,7 @@ size_t mont_bytes(const MontContext *ctx);
 
 int mont_number(uint64_t **out, unsigned count, const struct mont_context *ctx);
 int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const MontContext *ctx);
-int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContext *ctx);
+int mont_to_bytes(uint8_t *number, size_t len, const uint64_t* mont_number, const MontContext *ctx);
 int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp, const MontContext *ctx);
 int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx);
 int mont_shift_left(uint64_t* out, const uint64_t* a, uint64_t k, const MontContext *ctx);

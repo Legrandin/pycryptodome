@@ -162,12 +162,7 @@ EXPORT_SYM int monty_pow(
     }
 
     /** Transform result back into big-endian, byte form **/
-    mont_to_bytes(buf_out, x, ctx);
-    memset(out, 0, len);
-    if (mont_bytes(ctx)>len)
-        memcpy(out, buf_out+(mont_bytes(ctx)-len), len);
-    else
-        memcpy(out+(len-mont_bytes(ctx)), buf_out, mont_bytes(ctx));
+    res = mont_to_bytes(out, len, x, ctx);
 
 cleanup:
     mont_context_free(ctx);

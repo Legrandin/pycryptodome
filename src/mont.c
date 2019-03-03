@@ -613,18 +613,22 @@ cleanup:
  *
  * @param number        The location where the number will be put in, encoded
  *                      in big-endian form and with zero padding on the left.
- *                      Its size is given by mont_bytes(ctx).
+ * @param len           Space allocate at number, at least ctx->modulus_len bytes.
  * @param ctx           The address of the Montgomery context.
  * @param mont_number   The number in Montgomery form to transform.
  * @return              0 if successful, the relevant error code otherwise.
  */
-int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContext *ctx)
+int mont_to_bytes(uint8_t *number, size_t len, const uint64_t* mont_number, const MontContext *ctx)
 {
     uint64_t *tmp1 = NULL;
     uint64_t *scratchpad = NULL;
+    int res;
 
     if (NULL == number || NULL == ctx || NULL == mont_number)
         return ERR_NULL;
+
+    if (len < ctx->modulus_len)
+        return ERR_NOT_ENOUGH_DATA;
 
     /** Number in normal form, but still in words **/
     tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
@@ -639,11 +643,11 @@ int mont_to_bytes(uint8_t *number, const uint64_t* mont_number, const MontContex
     }
 
     mont_mult_internal(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, scratchpad, ctx->words);
-    words_to_bytes(number, ctx->bytes, tmp1, ctx->words);
+    res = words_to_bytes(number, len, tmp1, ctx->words);
 
     free(scratchpad);
     free(tmp1);
-    return 0;
+    return res;
 }
 
 /*
@@ -935,6 +939,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 
     ctx->words = ((unsigned)mod_len + 7) / 8;
     ctx->bytes = (unsigned)(ctx->words * sizeof(uint64_t));
+    ctx->modulus_len = mod_len;
 
     /** Load modulus N **/
     ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
