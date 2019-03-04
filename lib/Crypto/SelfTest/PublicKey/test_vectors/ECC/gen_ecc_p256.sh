@@ -23,6 +23,8 @@ openssl ec -in ecc_p256_private.pem -aes-256-gcm -out ecc_p256_private_enc_aes25
 # Public key
 openssl ec -in ecc_p256_private.pem -pubout -out ecc_p256_public.pem
 openssl ec -pubin -in ecc_p256_public.pem -outform DER -out ecc_p256_public.der
+openssl ec -pubin -in ecc_p256_public.pem -outform DER -conv_form compressed -out ecc_p256_public_compressed.der
+openssl ec -pubin -in ecc_p256_public.pem -outform PEM -conv_form compressed -out ecc_p256_public_compressed.pem
 
 # X.509 cert
 openssl req -new -key ecc_p256_private.pem -days 365 -x509 -out ecc_p256_x509.pem -subj '/C=GB/CN=example.com'
