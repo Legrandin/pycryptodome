@@ -40,7 +40,7 @@ from Crypto.Util.asn1 import (
             )
 
 from Crypto.Util.Padding import pad, unpad
-from Crypto.Hash import MD5, SHA1
+from Crypto.Hash import MD5, SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Cipher import DES, ARC2, DES3, AES
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
 
@@ -320,18 +320,31 @@ class PBES2(object):
         kdf_info = DerSequence().decode(pbes2_params[0], nr_elements=2)
         kdf_oid = DerObjectId().decode(kdf_info[0]).value
 
+        kdf_key_length = None
+
         # We only support PBKDF2 or scrypt
         if kdf_oid == "1.2.840.113549.1.5.12":
 
             pbkdf2_params = DerSequence().decode(kdf_info[1], nr_elements=(2, 3, 4))
             salt = DerOctetString().decode(pbkdf2_params[0]).payload
             iteration_count = pbkdf2_params[1]
-            if len(pbkdf2_params) > 2:
-                kdf_key_length = pbkdf2_params[2]
-            else:
-                kdf_key_length = None
-            if len(pbkdf2_params) > 3:
-                raise PbesError("Unsupported PRF for PBKDF2")
+
+            left = len(pbkdf2_params) - 2
+            idx = 2
+
+            if left > 0:
+                try:
+                    kdf_key_length = pbkdf2_params[idx] - 0
+                    left -= 1
+                    idx += 1
+                except TypeError:
+                    pass
+
+            # Default is HMAC-SHA1
+            pbkdf2_prf_oid = "1.2.840.113549.2.7"
+            if left > 0:
+                pbkdf2_prf_algo_id = DerSequence().decode(pbkdf2_params[idx])
+                pbkdf2_prf_oid = DerObjectId().decode(pbkdf2_prf_algo_id[0]).value
 
         elif kdf_oid == "1.3.6.1.4.1.11591.4.11":
 
@@ -377,7 +390,21 @@ class PBES2(object):
 
         # Create cipher
         if kdf_oid == "1.2.840.113549.1.5.12": # PBKDF2
-            key = PBKDF2(passphrase, salt, key_size, iteration_count)
+            if pbkdf2_prf_oid == "1.2.840.113549.2.7":
+                hmac_hash_module = SHA1
+            elif pbkdf2_prf_oid == "1.2.840.113549.2.8":
+                hmac_hash_module = SHA224
+            elif pbkdf2_prf_oid == "1.2.840.113549.2.9":
+                hmac_hash_module = SHA256
+            elif pbkdf2_prf_oid == "1.2.840.113549.2.10":
+                hmac_hash_module = SHA384
+            elif pbkdf2_prf_oid == "1.2.840.113549.2.11":
+                hmac_hash_module = SHA512
+            else:
+                raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
+
+            key = PBKDF2(passphrase, salt, key_size, iteration_count,
+                         hmac_hash_module=hmac_hash_module)
         else:
             key = scrypt(passphrase, salt, key_size, iteration_count,
                          scrypt_r, scrypt_p)
