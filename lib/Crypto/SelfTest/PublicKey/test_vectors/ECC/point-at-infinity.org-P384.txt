@@ -1,5 +1,5 @@
 #
-# Test vectors for NIST P-256 curve found in http://point-at-infinity.org/ecc/nisttv
+# Test vectors for NIST P-384 curve found in http://point-at-infinity.org/ecc/nisttv
 # on 2 Mar 2019.
 #
 
