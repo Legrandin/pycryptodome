@@ -650,11 +650,14 @@ class DerObjectId(DerObject):
             raise ValueError("Not a valid Object Identifier string")
         self.payload = bchr(40*comps[0]+comps[1])
         for v in comps[2:]:
-            enc = []
-            while v:
-                enc.insert(0, (v & 0x7F) | 0x80)
-                v >>= 7
-            enc[-1] &= 0x7F
+            if v == 0:
+                enc = [0]
+            else:
+                enc = []
+                while v:
+                    enc.insert(0, (v & 0x7F) | 0x80)
+                    v >>= 7
+                enc[-1] &= 0x7F
             self.payload += b''.join([bchr(x) for x in enc])
         return DerObject.encode(self)
 
