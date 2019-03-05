@@ -638,6 +638,11 @@ class DerObjectIdTests(unittest.TestCase):
         self.assertEquals(der,
                 der.decode(b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01')))
 
+    def testDecode3(self):
+        der = DerObjectId()
+        der.decode(b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x00\x01'))
+        self.assertEquals(der.value, '1.2.840.113549.1.0.1')
+
 
 class DerBitStringTests(unittest.TestCase):
 
