@@ -31,8 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import *
-
 from Crypto import Random
 from Crypto.Util.asn1 import (
             DerSequence, DerOctetString,
@@ -43,6 +41,28 @@ from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import MD5, SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Cipher import DES, ARC2, DES3, AES
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
+
+_OID_PBE_WITH_MD5_AND_DES_CBC = "1.2.840.113549.1.5.3"
+_OID_PBE_WITH_MD5_AND_RC2_CBC = "1.2.840.113549.1.5.6"
+_OID_PBE_WITH_SHA1_AND_DES_CBC = "1.2.840.113549.1.5.10"
+_OID_PBE_WITH_SHA1_AND_RC2_CBC = "1.2.840.113549.1.5.11"
+
+_OID_PBES2 = "1.2.840.113549.1.5.13"
+
+_OID_PBKDF2 = "1.2.840.113549.1.5.12"
+_OID_SCRYPT = "1.3.6.1.4.1.11591.4.11"
+
+_OID_HMAC_SHA1 = "1.2.840.113549.2.7"
+_OID_HMAC_SHA224 = "1.2.840.113549.2.8"
+_OID_HMAC_SHA256 = "1.2.840.113549.2.9"
+_OID_HMAC_SHA384 = "1.2.840.113549.2.10"
+_OID_HMAC_SHA384 = "1.2.840.113549.2.11"
+
+_OID_DES_EDE3_CBC = "1.2.840.113549.3.7"
+_OID_AES128_CBC = "2.16.840.1.101.3.4.1.2"
+_OID_AES192_CBC = "2.16.840.1.101.3.4.1.22"
+_OID_AES256_CBC = "2.16.840.1.101.3.4.1.42"
+
 
 class PbesError(ValueError):
     pass
@@ -119,20 +139,20 @@ class PBES1(object):
 
         pbe_oid = DerObjectId().decode(encrypted_algorithm[0]).value
         cipher_params = {}
-        if pbe_oid == "1.2.840.113549.1.5.3":
+        if pbe_oid == _OID_PBE_WITH_MD5_AND_DES_CBC:
             # PBE_MD5_DES_CBC
             hashmod = MD5
             ciphermod = DES
-        elif pbe_oid == "1.2.840.113549.1.5.6":
+        elif pbe_oid == _OID_PBE_WITH_MD5_AND_RC2_CBC:
             # PBE_MD5_RC2_CBC
             hashmod = MD5
             ciphermod = ARC2
             cipher_params['effective_keylen'] = 64
-        elif pbe_oid == "1.2.840.113549.1.5.10":
+        elif pbe_oid == _OID_PBE_WITH_SHA1_AND_DES_CBC:
             # PBE_SHA1_DES_CBC
             hashmod = SHA1
             ciphermod = DES
-        elif pbe_oid == "1.2.840.113549.1.5.11":
+        elif pbe_oid == _OID_PBE_WITH_SHA1_AND_RC2_CBC:
             # PBE_SHA1_RC2_CBC
             hashmod = SHA1
             ciphermod = ARC2
@@ -215,25 +235,25 @@ class PBES2(object):
             key_size = 24
             module = DES3
             cipher_mode = DES3.MODE_CBC
-            enc_oid = "1.2.840.113549.3.7"
+            enc_oid = _OID_DES_EDE3_CBC
         elif protection in ('PBKDF2WithHMAC-SHA1AndAES128-CBC',
                 'scryptAndAES128-CBC'):
             key_size = 16
             module = AES
             cipher_mode = AES.MODE_CBC
-            enc_oid = "2.16.840.1.101.3.4.1.2"
+            enc_oid = _OID_AES128_CBC
         elif protection in ('PBKDF2WithHMAC-SHA1AndAES192-CBC',
                 'scryptAndAES192-CBC'):
             key_size = 24
             module = AES
             cipher_mode = AES.MODE_CBC
-            enc_oid = "2.16.840.1.101.3.4.1.22"
+            enc_oid = _OID_AES192_CBC
         elif protection in ('PBKDF2WithHMAC-SHA1AndAES256-CBC',
                 'scryptAndAES256-CBC'):
             key_size = 32
             module = AES
             cipher_mode = AES.MODE_CBC
-            enc_oid = "2.16.840.1.101.3.4.1.42"
+            enc_oid = _OID_AES256_CBC
         else:
             raise ValueError("Unknown PBES2 mode")
 
@@ -246,7 +266,7 @@ class PBES2(object):
             count = prot_params.get("iteration_count", 1000)
             key = PBKDF2(passphrase, salt, key_size, count)
             kdf_info = DerSequence([
-                    DerObjectId("1.2.840.113549.1.5.12"),   # PBKDF2
+                    DerObjectId(_OID_PBKDF2),   # PBKDF2
                     DerSequence([
                         DerOctetString(salt),
                         DerInteger(count)
@@ -260,7 +280,7 @@ class PBES2(object):
             key = scrypt(passphrase, salt, key_size,
                          count, scrypt_r, scrypt_p)
             kdf_info = DerSequence([
-                    DerObjectId("1.3.6.1.4.1.11591.4.11"),  # scrypt
+                    DerObjectId(_OID_SCRYPT),  # scrypt
                     DerSequence([
                         DerOctetString(salt),
                         DerInteger(count),
@@ -281,7 +301,7 @@ class PBES2(object):
         enc_private_key_info = DerSequence([
             # encryptionAlgorithm
             DerSequence([
-                DerObjectId("1.2.840.113549.1.5.13"),   # PBES2
+                DerObjectId(_OID_PBES2),
                 DerSequence([
                     kdf_info,
                     enc_info
@@ -311,7 +331,7 @@ class PBES2(object):
         encrypted_data = DerOctetString().decode(enc_private_key_info[1]).payload
 
         pbe_oid = DerObjectId().decode(enc_algo[0]).value
-        if pbe_oid != "1.2.840.113549.1.5.13":
+        if pbe_oid != _OID_PBES2:
             raise PbesError("Not a PBES2 object")
 
         pbes2_params = DerSequence().decode(enc_algo[1], nr_elements=2)
@@ -323,7 +343,7 @@ class PBES2(object):
         kdf_key_length = None
 
         # We only support PBKDF2 or scrypt
-        if kdf_oid == "1.2.840.113549.1.5.12":
+        if kdf_oid == _OID_PBKDF2:
 
             pbkdf2_params = DerSequence().decode(kdf_info[1], nr_elements=(2, 3, 4))
             salt = DerOctetString().decode(pbkdf2_params[0]).payload
@@ -346,7 +366,7 @@ class PBES2(object):
                 pbkdf2_prf_algo_id = DerSequence().decode(pbkdf2_params[idx])
                 pbkdf2_prf_oid = DerObjectId().decode(pbkdf2_prf_algo_id[0]).value
 
-        elif kdf_oid == "1.3.6.1.4.1.11591.4.11":
+        elif kdf_oid == _OID_SCRYPT:
 
             scrypt_params = DerSequence().decode(kdf_info[1], nr_elements=(4, 5))
             salt = DerOctetString().decode(scrypt_params[0]).payload
@@ -363,19 +383,19 @@ class PBES2(object):
         enc_info = DerSequence().decode(pbes2_params[1])
         enc_oid = DerObjectId().decode(enc_info[0]).value
 
-        if enc_oid == "1.2.840.113549.3.7":
+        if enc_oid == _OID_DES_EDE3_CBC:
             # DES_EDE3_CBC
             ciphermod = DES3
             key_size = 24
-        elif enc_oid == "2.16.840.1.101.3.4.1.2":
+        elif enc_oid == _OID_AES128_CBC:
             # AES128_CBC
             ciphermod = AES
             key_size = 16
-        elif enc_oid == "2.16.840.1.101.3.4.1.22":
+        elif enc_oid == _OID_AES192_CBC:
             # AES192_CBC
             ciphermod = AES
             key_size = 24
-        elif enc_oid == "2.16.840.1.101.3.4.1.42":
+        elif enc_oid == _OID_AES256_CBC:
             # AES256_CBC
             ciphermod = AES
             key_size = 32
@@ -389,16 +409,16 @@ class PBES2(object):
         IV = DerOctetString().decode(enc_info[1]).payload
 
         # Create cipher
-        if kdf_oid == "1.2.840.113549.1.5.12": # PBKDF2
-            if pbkdf2_prf_oid == "1.2.840.113549.2.7":
+        if kdf_oid == _OID_PBKDF2:
+            if pbkdf2_prf_oid == _OID_HMAC_SHA1:
                 hmac_hash_module = SHA1
-            elif pbkdf2_prf_oid == "1.2.840.113549.2.8":
+            elif pbkdf2_prf_oid == _OID_HMAC_SHA224:
                 hmac_hash_module = SHA224
-            elif pbkdf2_prf_oid == "1.2.840.113549.2.9":
+            elif pbkdf2_prf_oid == _OID_HMAC_SHA256:
                 hmac_hash_module = SHA256
-            elif pbkdf2_prf_oid == "1.2.840.113549.2.10":
+            elif pbkdf2_prf_oid == _OID_HMAC_SHA384:
                 hmac_hash_module = SHA384
-            elif pbkdf2_prf_oid == "1.2.840.113549.2.11":
+            elif pbkdf2_prf_oid == _OID_HMAC_SHA512:
                 hmac_hash_module = SHA512
             else:
                 raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
