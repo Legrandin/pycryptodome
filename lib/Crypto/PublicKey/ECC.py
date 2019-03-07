@@ -87,7 +87,7 @@ int ec_ws_normalize(EcPoint *ecp);
 int ec_ws_is_pai(EcPoint *ecp);
 """)
 
-_Curve = namedtuple("_Curve", "p b order Gx Gy G oid context desc openssh")
+_Curve = namedtuple("_Curve", "p b order Gx Gy G modulus_bits oid context desc openssh")
 _curves = {}
 
 
@@ -121,6 +121,7 @@ def init_p256():
                   Integer(Gx),
                   Integer(Gy),
                   None,
+                  256,
                   "1.2.840.10045.3.1.7",    # ANSI X9.62
                   context,
                   "NIST P-256",
@@ -162,6 +163,7 @@ def init_p384():
                   Integer(Gx),
                   Integer(Gy),
                   None,
+                  384,
                   "1.3.132.0.34",   # SEC 2
                   context,
                   "NIST P-384",
@@ -203,6 +205,7 @@ def init_p521():
                   Integer(Gx),
                   Integer(Gy),
                   None,
+                  521,
                   "1.3.132.0.35",   # SEC 2
                   context,
                   "NIST P-521",
@@ -233,19 +236,19 @@ class EccPoint(object):
         self._curve = _curves[curve]
         self._curve_name = curve
 
-        order_bytes = self._curve.order.size_in_bytes()
+        modulus_bytes = self.size_in_bytes()
         context = self._curve.context
 
-        xb = long_to_bytes(x, order_bytes)
-        yb = long_to_bytes(y, order_bytes)
-        if len(xb) != order_bytes or len(yb) != order_bytes:
+        xb = long_to_bytes(x, modulus_bytes)
+        yb = long_to_bytes(y, modulus_bytes)
+        if len(xb) != modulus_bytes or len(yb) != modulus_bytes:
             raise ValueError("Incorrect coordinate length")
 
         self._point = VoidPointer()
         result = _ec_lib.ec_ws_new_point(self._point.address_of(),
                                          c_uint8_ptr(xb),
                                          c_uint8_ptr(yb),
-                                         c_size_t(len(xb)),
+                                         c_size_t(modulus_bytes),
                                          context.get())
         if result:
             if result == 15:
@@ -299,17 +302,25 @@ class EccPoint(object):
 
     @property
     def xy(self):
-        order_bytes = self._curve.order.size_in_bytes()
-        xb = bytearray(order_bytes)
-        yb = bytearray(order_bytes)
+        modulus_bytes = self.size_in_bytes()
+        xb = bytearray(modulus_bytes)
+        yb = bytearray(modulus_bytes)
         result = _ec_lib.ec_ws_get_xy(c_uint8_ptr(xb),
                                       c_uint8_ptr(yb),
-                                      c_size_t(len(xb)),
+                                      c_size_t(modulus_bytes),
                                       self._point.get())
         if result:
             raise ValueError("Error %d while encoding an EC point" % result)
 
         return (Integer(bytes_to_long(xb)), Integer(bytes_to_long(yb)))
+    
+    def size_in_bytes(self):
+        """Size of each coordinate, in bytes"""
+        return (self.size_in_bits() + 7) // 8
+
+    def size_in_bits(self):
+        """Size of each coordinate, in bits"""
+        return self._curve.modulus_bits
 
     def double(self):
         """Double this point (in-place operation).
@@ -499,16 +510,16 @@ class EccKey(object):
         #
         # PAI is in theory encoded as 0x00.
 
-        order_bytes = self._curve.order.size_in_bytes()
+        modulus_bytes = self.pointQ.size_in_bytes()
 
         if compress:
             first_byte = 2 + self.pointQ.y.is_odd()
             public_key = (bchr(first_byte) +
-                          self.pointQ.x.to_bytes(order_bytes))
+                          self.pointQ.x.to_bytes(modulus_bytes))
         else:
             public_key = (b'\x04' +
-                          self.pointQ.x.to_bytes(order_bytes) +
-                          self.pointQ.y.to_bytes(order_bytes))
+                          self.pointQ.x.to_bytes(modulus_bytes) +
+                          self.pointQ.y.to_bytes(modulus_bytes))
 
         unrestricted_oid = "1.2.840.10045.2.1"
         return _create_subject_public_key_info(unrestricted_oid,
@@ -527,13 +538,13 @@ class EccKey(object):
         #    }
 
         # Public key - uncompressed form
-        order_bytes = self._curve.order.size_in_bytes()
+        modulus_bytes = self.pointQ.size_in_bytes()
         public_key = (b'\x04' +
-                      self.pointQ.x.to_bytes(order_bytes) +
-                      self.pointQ.y.to_bytes(order_bytes))
+                      self.pointQ.x.to_bytes(modulus_bytes) +
+                      self.pointQ.y.to_bytes(modulus_bytes))
 
         seq = [1,
-               DerOctetString(self.d.to_bytes(order_bytes)),
+               DerOctetString(self.d.to_bytes(modulus_bytes)),
                DerObjectId(self._curve.oid, explicit=0),
                DerBitString(public_key, explicit=1)]
 
@@ -578,16 +589,16 @@ class EccKey(object):
             raise ValueError("Cannot export OpenSSH private keys")
 
         desc = self._curve.openssh
-        order_bytes = self._curve.order.size_in_bytes()
+        modulus_bytes = self.pointQ.size_in_bytes()
 
         if compress:
             first_byte = 2 + self.pointQ.y.is_odd()
             public_key = (bchr(first_byte) +
-                          self.pointQ.x.to_bytes(order_bytes))
+                          self.pointQ.x.to_bytes(modulus_bytes))
         else:
             public_key = (b'\x04' +
-                          self.pointQ.x.to_bytes(order_bytes) +
-                          self.pointQ.y.to_bytes(order_bytes))
+                          self.pointQ.x.to_bytes(modulus_bytes) +
+                          self.pointQ.y.to_bytes(modulus_bytes))
 
         middle = desc.split("-")[2]
         comps = (tobytes(desc), tobytes(middle), public_key)
@@ -788,18 +799,18 @@ def _import_public_der(curve_oid, ec_point):
     #
     # PAI is in theory encoded as 0x00.
 
-    order_bytes = curve.order.size_in_bytes()
+    modulus_bytes = curve.p.size_in_bytes()
     point_type = bord(ec_point[0])
 
     # Uncompressed point
     if point_type == 0x04:
-        if len(ec_point) != (1 + 2 * order_bytes):
+        if len(ec_point) != (1 + 2 * modulus_bytes):
             raise ValueError("Incorrect EC point length")
-        x = Integer.from_bytes(ec_point[1:order_bytes+1])
-        y = Integer.from_bytes(ec_point[order_bytes+1:])
+        x = Integer.from_bytes(ec_point[1:modulus_bytes+1])
+        y = Integer.from_bytes(ec_point[modulus_bytes+1:])
     # Compressed point
     elif point_type in (0x02, 0x3):
-        if len(ec_point) != (1 + order_bytes):
+        if len(ec_point) != (1 + modulus_bytes):
             raise ValueError("Incorrect EC point length")
         x = Integer.from_bytes(ec_point[1:])
         y = (x**3 - x*3 + curve.b).sqrt(curve.p)    # Short Weierstrass
@@ -885,8 +896,8 @@ def _import_private_der(encoded, passphrase, curve_oid=None):
         raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_oid)
 
     scalar_bytes = DerOctetString().decode(private_key[1]).payload
-    order_bytes = curve.order.size_in_bytes()
-    if len(scalar_bytes) != order_bytes:
+    modulus_bytes = curve.p.size_in_bytes()
+    if len(scalar_bytes) != modulus_bytes:
         raise ValueError("Private key is too small")
     d = Integer.from_bytes(scalar_bytes)
 

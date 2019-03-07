@@ -290,16 +290,21 @@ class FipsEcDsaSigScheme(DssSigScheme):
 
     def _valid_hash(self, msg_hash):
         """Verify that SHA-[23] (256|384|512) bits are used to
-        match the 128-bit security of P-256"""
+        match the security of P-256 (128 bits), P-384 (192 bits)
+        or P-521 (256 bits)"""
 
-        approved = ("2.16.840.1.101.3.4.2.1",
-                    "2.16.840.1.101.3.4.2.2",
-                    "2.16.840.1.101.3.4.2.3",
-                    "2.16.840.1.101.3.4.2.8",
-                    "2.16.840.1.101.3.4.2.9",
-                    "2.16.840.1.101.3.4.2.10")
+        modulus_bits = self._key.pointQ.size_in_bits()
 
-        return msg_hash.oid in approved
+        sha256 = ( "2.16.840.1.101.3.4.2.1", "2.16.840.1.101.3.4.2.8" )
+        sha384 = ( "2.16.840.1.101.3.4.2.2", "2.16.840.1.101.3.4.2.9" )
+        sha512 = ( "2.16.840.1.101.3.4.2.3", "2.16.840.1.101.3.4.2.10")
+
+        if msg_hash.oid in sha256:
+            return modulus_bits <= 256
+        elif msg_hash.oid in sha384:
+            return modulus_bits <= 384
+        else:
+            return msg_hash.oid in sha512
 
 
 def new(key, mode, encoding='binary', randfunc=None):
@@ -324,7 +329,7 @@ def new(key, mode, encoding='binary', randfunc=None):
         - (2048, 256)
         - (3072, 256)
 
-        For ECC, only keys over P-256 are accepted.
+        For ECC, only keys over P-256, P384, and P-521 are accepted.
     :type key:
         a key object
 
@@ -346,9 +351,12 @@ def new(key, mode, encoding='binary', randfunc=None):
 
         - *'binary'* (default), the signature is the raw concatenation
           of ``r`` and ``s``.
+
           For DSA, the size in bytes of the signature is ``N/4``
           (e.g. 64 bytes for ``N=256``).
-          For ECDSA (over P-256), the signature is always 64 bytes long.
+
+          For ECDSA, the signature is always twice the length of a point
+          coordinate (e.g. 64 bytes for P-256).
 
         - *'der'*, the signature is an ASN.1 SEQUENCE with two
           INTEGERs (``r`` and ``s``) encoded with DER.
