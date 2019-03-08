@@ -912,8 +912,9 @@ static int cmp_modulus(const uint8_t *mod1, size_t mod1_len, const uint8_t *mod2
 int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 {
     const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    MontContext *ctx;
+    const uint8_t p384_mod[48] = "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff";
     uint64_t *scratchpad = NULL;
+    MontContext *ctx;
     int res;
 
     if (NULL == out || NULL == modulus)
@@ -939,7 +940,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 
     ctx->words = ((unsigned)mod_len + 7) / 8;
     ctx->bytes = (unsigned)(ctx->words * sizeof(uint64_t));
-    ctx->modulus_len = mod_len;
+    ctx->modulus_len = (unsigned)mod_len;
 
     /** Load modulus N **/
     ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
@@ -988,10 +989,14 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
 
     /* Check if the modulus has a special form */
-    if (0 == cmp_modulus(modulus, mod_len, p256_mod, 32)) {
+    if (32 == mod_len && 0 == cmp_modulus(modulus, mod_len, p256_mod, 32)) {
         ctx->modulus_type = ModulusP256;
     } else {
-        ctx->modulus_type = ModulusGeneric;
+        if (48 == mod_len && 0 == cmp_modulus(modulus, mod_len, p384_mod, 48)) {
+            ctx->modulus_type = ModulusP384;
+        } else {
+            ctx->modulus_type = ModulusGeneric;
+        }
     }
 
     res = 0;

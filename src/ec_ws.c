@@ -569,6 +569,7 @@ cleanup:
 
 #ifndef MAKE_TABLE
 #include "p256_table.c"
+#include "p384_table.c"
 
 STATIC void free_g_p256(ProtMemory **prot_g)
 {
@@ -576,6 +577,17 @@ STATIC void free_g_p256(ProtMemory **prot_g)
 
     if (prot_g) {
         for (i=0; i<p256_n_tables; i++)
+            free_scattered(prot_g[i]);
+        free(prot_g);
+    }
+}
+
+STATIC void free_g_p384(ProtMemory **prot_g)
+{
+    unsigned i;
+
+    if (prot_g) {
+        for (i=0; i<p384_n_tables; i++)
             free_scattered(prot_g[i]);
         free(prot_g);
     }
@@ -613,6 +625,45 @@ STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
 
     if (res) {
         free_g_p256(prot_g);
+        prot_g = NULL;
+    }
+
+    free(tables_ptrs);
+    return prot_g;
+}
+
+/*
+ * Fill the pre-computed table for the generator point in the P-384 EC context.
+ */
+STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
+{
+    const void **tables_ptrs;
+    ProtMemory **prot_g;
+    unsigned i;
+    int res;
+
+    tables_ptrs = (const void**)calloc(p384_points_per_table, sizeof(void*));
+    if (NULL == tables_ptrs)
+        return NULL;
+
+    prot_g = (ProtMemory**)calloc(p384_n_tables, sizeof(ProtMemory*));
+    if (NULL == prot_g) {
+        free(tables_ptrs);
+        return NULL;
+    }
+
+    res = 0;
+    for (i=0; res==0 && i<p384_n_tables; i++) {
+        unsigned j;
+
+        for (j=0; j<p384_points_per_table; j++) {
+            tables_ptrs[j] = &p384_tables[i][j];
+        }
+        res = scatter(&prot_g[i], tables_ptrs, (uint8_t)p384_points_per_table, 2*mont_bytes(ctx), seed);
+    }
+
+    if (res) {
+        free_g_p384(prot_g);
         prot_g = NULL;
     }
 
@@ -662,6 +713,51 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     return 0;
 }
+
+STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                            const uint64_t *b,
+                            const uint8_t *exp, size_t exp_size,
+                            uint64_t seed,
+                            Workplace *wp1,
+                            Workplace *wp2,
+                            ProtMemory **prot_g,
+                            const MontContext *ctx)
+{
+    unsigned i;
+    struct BitWindow_RL bw;
+
+    /** Start from PAI **/
+    mont_set(x3, 0, NULL, ctx);
+    mont_set(y3, 1, NULL, ctx);
+    mont_set(z3, 0, NULL, ctx);
+
+    /** Find first non-zero byte in exponent **/
+    for (; exp_size && *exp==0; exp++, exp_size--);
+    bw = init_bit_window_rl(p384_window_size, exp, exp_size);
+
+    if (bw.nr_windows > p384_n_tables)
+        return ERR_VALUE;
+
+    for (i=0; i < bw.nr_windows; i++) {
+        unsigned index;
+        uint64_t buffer[6*2];   /* X and Y affine coordinates **/
+        uint64_t *xw, *yw;
+
+        index = get_next_digit_rl(&bw);
+        gather(buffer, prot_g[i], index);
+        xw = &buffer[0];
+        yw = &buffer[6];
+
+        ec_mix_add(x3, y3, z3,
+                   x3, y3, z3,
+                   xw, yw,
+                   b,
+                   wp1, ctx);
+    }
+
+    return 0;
+}
+
 #endif
 
 /*
@@ -715,13 +811,26 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     bytes_to_words(ec_ctx->order, order_words, order, len);
 
 #ifndef MAKE_TABLE
-    /* Scramble lookup table for P-256 generator */
-    if (ctx->modulus_type == ModulusP256) {
-        ec_ctx->prot_g = ec_scramble_g_p256(ec_ctx->mont_ctx, seed);
-        if (NULL == ec_ctx->prot_g) {
-            res = ERR_MEMORY;
-            goto cleanup;
+    /* Scramble lookup table for special generators */
+    switch (ctx->modulus_type) {
+        case ModulusP256: {
+            ec_ctx->prot_g = ec_scramble_g_p256(ec_ctx->mont_ctx, seed);
+            if (NULL == ec_ctx->prot_g) {
+                res = ERR_MEMORY;
+                goto cleanup;
+            }
+            break;
         }
+        case ModulusP384: {
+            ec_ctx->prot_g = ec_scramble_g_p384(ec_ctx->mont_ctx, seed);
+            if (NULL == ec_ctx->prot_g) {
+                res = ERR_MEMORY;
+                goto cleanup;
+            }
+            break;
+        }
+        case ModulusGeneric:
+            break;
     }
 #endif
 
@@ -740,7 +849,16 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
     if (NULL == ec_ctx)
         return;
 #ifndef MAKE_TABLE
-    free_g_p256(ec_ctx->prot_g);
+    switch (ec_ctx->mont_ctx->modulus_type) {
+        case ModulusP256:
+            free_g_p256(ec_ctx->prot_g);
+            break;
+        case ModulusP384:
+            free_g_p384(ec_ctx->prot_g);
+            break;
+        case ModulusGeneric:
+            break;
+    }
 #endif
     free(ec_ctx->b);
     free(ec_ctx->order);
@@ -1059,29 +1177,61 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
     }
 
 #ifndef MAKE_TABLE
-    if (ctx->modulus_type == ModulusP256) {
-        const uint64_t mont_Gx[4] = { 0x79E730D418A9143CU, 0x75BA95FC5FEDB601U, 0x79FB732B77622510U, 0x18905F76A53755C6U };
-        const uint64_t mont_Gy[4] = { 0xDDF25357CE95560AU, 0x8B4AB8E4BA19E45CU, 0xD2E88688DD21F325U, 0x8571FF1825885D85U };
-        unsigned is_generator;
-        unsigned i;
+    switch (ctx->modulus_type) {
+        case ModulusP256: {
+            /** Coordinates in Montgomery form **/
+            const uint64_t mont_Gx[4] = { 0x79E730D418A9143CU, 0x75BA95FC5FEDB601U, 0x79FB732B77622510U, 0x18905F76A53755C6U };
+            const uint64_t mont_Gy[4] = { 0xDDF25357CE95560AU, 0x8B4AB8E4BA19E45CU, 0xD2E88688DD21F325U, 0x8571FF1825885D85U };
+            unsigned is_generator;
+            unsigned i;
 
-        is_generator = 1;
-        for (i=0; i<4; i++) {
-            is_generator &= (mont_Gx[i] == ecp->x[i]);
-            is_generator &= (mont_Gy[i] == ecp->y[i]);
-        }
-        is_generator &= (unsigned)mont_is_one(ecp->z, ctx);
+            is_generator = 1;
+            for (i=0; i<4; i++) {
+                is_generator &= (mont_Gx[i] == ecp->x[i]);
+                is_generator &= (mont_Gy[i] == ecp->y[i]);
+            }
+            is_generator &= (unsigned)mont_is_one(ecp->z, ctx);
 
-        if (is_generator) {
-            res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
-                                   ecp->ec_ctx->b,
-                                   k, len,
-                                   seed + 2,
-                                   wp1, wp2,
-                                   ecp->ec_ctx->prot_g,
-                                   ctx);
-            goto cleanup;
+            if (is_generator) {
+                res = ec_scalar_g_p256(ecp->x, ecp->y, ecp->z,
+                                       ecp->ec_ctx->b,
+                                       k, len,
+                                       seed + 2,
+                                       wp1, wp2,
+                                       ecp->ec_ctx->prot_g,
+                                       ctx);
+                goto cleanup;
+            }
+            break;
         }
+        case ModulusP384: {
+            /** Coordinates in Montgomery form **/
+            const uint64_t mont_Gx[6] = { 0x3DD0756649C0B528, 0x20E378E2A0D6CE38, 0x879C3AFC541B4D6E, 0x6454868459A30EFF, 0x812FF723614EDE2B, 0x4D3AADC2299E1513 };
+            const uint64_t mont_Gy[6] = { 0x23043DAD4B03A4FE, 0xA1BFA8BF7BB4A9AC, 0x8BADE7562E83B050, 0xC6C3521968F4FFD9, 0xDD8002263969A840, 0x2B78ABC25A15C5E9 };
+            unsigned is_generator;
+            unsigned i;
+
+            is_generator = 1;
+            for (i=0; i<6; i++) {
+                is_generator &= (mont_Gx[i] == ecp->x[i]);
+                is_generator &= (mont_Gy[i] == ecp->y[i]);
+            }
+            is_generator &= (unsigned)mont_is_one(ecp->z, ctx);
+
+            if (is_generator) {
+                res = ec_scalar_g_p384(ecp->x, ecp->y, ecp->z,
+                                       ecp->ec_ctx->b,
+                                       k, len,
+                                       seed + 2,
+                                       wp1, wp2,
+                                       ecp->ec_ctx->prot_g,
+                                       ctx);
+                goto cleanup;
+            }
+            break;
+        }
+        case ModulusGeneric:
+            break;
     }
 #endif
 
@@ -1255,85 +1405,3 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
     return 0;
 }
 
-#ifdef MAIN
-#include <sys/time.h>
-
-int main(void)
-{
-    const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    const uint8_t  b[32] = "\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b";
-    const uint8_t order[32] = "\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51";
-    const uint8_t p256_Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
-    const uint8_t p256_Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
-    uint8_t x[32], y[32];
-    uint8_t exp[32];
-    EcContext *ec_ctx;
-    EcPoint *ecp = NULL;
-    EcPoint *gp = NULL;
-    unsigned i;
-    struct timeval start, stop;
-    double duration_ms, rate;
-
-#define ITERATIONS 5000U
-
-    /* Make almost-worst case exponent */
-    for (i=0; i<32; i++) {
-        exp[i] = (uint8_t)(0xFF - i);
-    }
-
-    ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32, /* seed */ 4);
-
-    ec_ws_new_point(&gp, p256_Gx, p256_Gy, 32, ec_ctx);
-    ec_ws_clone(&ecp, gp);
-
-    /** Scalar multiplications by G **/
-    gettimeofday(&start, NULL);
-    for (i=0; i<ITERATIONS; i++) {
-        ec_ws_copy(ecp, gp);
-        ec_ws_scalar(ecp, exp, 32, 0xFFF);
-    }
-    gettimeofday(&stop, NULL);
-    duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
-    rate = ITERATIONS / (duration_ms/1000);
-    printf("Speed (scalar mult by G) = %.0f op/s\n", rate);
-
-    ec_ws_get_xy(x, y, 32, ecp);
-    printf("X: ");
-    for (i=0; i<32; i++)
-        printf("%02X", x[i]);
-    printf("\n");
-    printf("Y: ");
-    for (i=0; i<32; i++)
-        printf("%02X", y[i]);
-    printf("\n");
-
-#if 1
-    /** Scalar multiplications by arbitrary point **/
-    gettimeofday(&start, NULL);
-    ec_ws_double(ecp);
-    for (i=0; i<=5000; i++) {
-        ec_ws_scalar(ecp, exp, 32, 0xFFF);
-    }
-    gettimeofday(&stop, NULL);
-    duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
-    rate = ITERATIONS / (duration_ms/1000);
-    printf("Speed (scalar mult by P) = %.0f op/s\n", rate);
-
-    ec_ws_get_xy(x, y, 32, ecp);
-    printf("X: ");
-    for (i=0; i<32; i++)
-        printf("%02X", x[i]);
-    printf("\n");
-    printf("Y: ");
-    for (i=0; i<32; i++)
-        printf("%02X", y[i]);
-    printf("\n");
-#endif
-
-    ec_free_point(gp);
-    ec_free_point(ecp);
-    ec_free_context(ec_ctx);
-
-    return 0;
-}
-#endif
