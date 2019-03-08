@@ -83,7 +83,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None,
         compiler.link_executable(objects, oname, libraries=extra_libraries,
                                  extra_preargs=extra_linker_options)
         result = True
-    except CCompilerError:
+    except (CCompilerError, OSError):
         result = False
     for f in objects + [fname, oname]:
         try:
