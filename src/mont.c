@@ -485,6 +485,94 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     mont_select(out, t2, &t[4], cond, 4);
 }
 
+STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+{
+    size_t i;
+    uint64_t *t2;
+    unsigned cond;
+
+    assert(nw == 6);
+    assert(m0 == 0x0000000100000001U);
+
+    t2 = &t[2*nw+1];    /** Point to last nw words **/
+
+    if (a == b) {
+        square_w(t, a, nw);
+    } else {
+        product(t, a, b, nw);
+    }
+
+    t[2*nw] = 0; /** MSW **/
+
+    for (i=0; i<6; i++) {
+        unsigned j;
+        uint64_t carry;
+        uint64_t k;
+        uint64_t prod_lo, prod_hi;
+
+        k = t[i] + (t[i] << 32);
+
+        /* n[0] = 2³² - 1 */
+        DP_MULT(n[0], k, prod_lo, prod_hi);
+        t[i+0] += prod_lo;
+        prod_hi += t[i+0] < prod_lo;
+        carry = prod_hi;
+        /* n[1] = 2⁶⁴ - 2³² */
+        DP_MULT(n[1], k, prod_lo, prod_hi);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+1] += prod_lo;
+        prod_hi += t[i+1] < prod_lo;
+        carry = prod_hi;
+        /* n[2] = 2⁶⁴ - 2 */
+        DP_MULT(n[2], k, prod_lo, prod_hi);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+2] += prod_lo;
+        prod_hi += t[i+2] < prod_lo;
+        carry = prod_hi;
+        /* n[3] = 2⁶⁴ - 1 */
+        prod_lo = -k;
+        prod_hi = k - (k!=0);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+3] += prod_lo;
+        prod_hi += t[i+3] < prod_lo;
+        carry = prod_hi;
+        /* n[4] = 2⁶⁴ - 1 */
+        prod_lo = -k;
+        prod_hi = k - (k!=0);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+4] += prod_lo;
+        prod_hi += t[i+4] < prod_lo;
+        carry = prod_hi;
+        /* n[5] = 2⁶⁴ - 1 */
+        prod_lo = -k;
+        prod_hi = k - (k!=0);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+5] += prod_lo;
+        prod_hi += t[i+5] < prod_lo;
+        carry = prod_hi;
+
+        for (j=6; carry; j++) {
+            t[i+j] += carry;
+            carry = t[i+j] < carry;
+        }
+    }
+
+    assert(t[2*nw] <= 1); /** MSW **/
+
+    /** t[0..nw-1] == 0 **/
+    
+    /** Divide by R and possibly subtract n **/
+    sub(t2, &t[nw], n, nw);
+    cond = (unsigned)(t[2*nw] | (uint64_t)ge(&t[nw], n, nw));
+    mont_select(out, t2, &t[nw], cond, (unsigned)nw);
+
+}
+
 /* ---- PUBLIC FUNCTIONS ---- */
 
 void mont_context_free(MontContext *ctx)
@@ -713,10 +801,17 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
     if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
-    if (ctx->modulus_type == ModulusP256)
-        mont_mult_p256(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
-    else
-        mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+    switch (ctx->modulus_type) {
+        case ModulusP256:
+            mont_mult_p256(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+            break;
+        case ModulusP384:
+            mont_mult_p384(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+            break;
+        case ModulusGeneric:
+            mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+            break;
+    }
 
     return 0;
 }
