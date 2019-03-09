@@ -138,7 +138,7 @@ class DssSigScheme(object):
         """
 
         if not self._valid_hash(msg_hash):
-            raise ValueError("Hash does not belong to SHS")
+            raise ValueError("Hash is not sufficiently strong")
 
         if self._encoding == 'binary':
             if len(signature) != (2 * self._order_bytes):

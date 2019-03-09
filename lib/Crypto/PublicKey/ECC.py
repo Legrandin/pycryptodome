@@ -233,7 +233,10 @@ class EccPoint(object):
 
     def __init__(self, x, y, curve="p256"):
 
-        self._curve = _curves[curve]
+        try:
+            self._curve = _curves[curve]
+        except KeyError:
+            raise ValueError("Unknown curve name %s" % str(curve))
         self._curve_name = curve
 
         modulus_bytes = self.size_in_bytes()

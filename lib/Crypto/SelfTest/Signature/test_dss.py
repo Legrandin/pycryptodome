@@ -295,14 +295,15 @@ test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vecto
 for idx, tv in enumerate(test_vectors_verify):
 
     if isinstance(tv, str):
-        res = re.match(r"\[P-256,(SHA-[0-9]+)\]", tv)
+        res = re.match(r"\[(P-[0-9]+),(SHA-[0-9]+)\]", tv)
         assert res
-        hash_name = res.group(1).replace("-", "")
+        curve_name = res.group(1)
+        hash_name = res.group(2).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    ecc_key = ECC.construct(curve="P-256", point_x=tv.qx, point_y=tv.qy)
+    ecc_key = ECC.construct(curve=curve_name, point_x=tv.qx, point_y=tv.qy)
     verifier = DSS.new(ecc_key, 'fips-186-3')
 
     def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r+tv.s):
@@ -325,19 +326,20 @@ test_vectors_sign = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors
 for idx, tv in enumerate(test_vectors_sign):
 
     if isinstance(tv, str):
-        res = re.match(r"\[P-256,(SHA-[0-9]+)\]", tv)
+        res = re.match(r"\[(P-[0-9]+),(SHA-[0-9]+)\]", tv)
         assert res
-        hash_name = res.group(1).replace("-", "")
+        curve_name = res.group(1)
+        hash_name = res.group(2).replace("-", "")
         hash_module = load_hash_by_name(hash_name)
         continue
 
     hash_obj = hash_module.new(tv.msg)
-    ecc_key = ECC.construct(curve="P-256", d=tv.d)
+    ecc_key = ECC.construct(curve=curve_name, d=tv.d)
     signer = DSS.new(ecc_key, 'fips-186-3', randfunc=StrRNG(tv.k))
 
-    def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
+    def sign_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r+tv.s):
         self.assertEqual(signer.sign(hash_obj), signature)
-    setattr(FIPS_ECDSA_Tests_KAT, "test_sign_%d" % idx, new_test)
+    setattr(FIPS_ECDSA_Tests_KAT, "test_sign_%d" % idx, sign_test)
 
 
 class Det_DSA_Tests(unittest.TestCase):
