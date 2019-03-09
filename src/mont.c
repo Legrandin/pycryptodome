@@ -490,6 +490,9 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     size_t i;
     uint64_t *t2;
     unsigned cond;
+#if SYS_BITS == 32
+    uint32_t t32[2*13];
+#endif
 
     assert(nw == 6);
     assert(m0 == 0x0000000100000001U);
@@ -503,6 +506,82 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     }
 
     t[2*nw] = 0; /** MSW **/
+
+#if SYS_BITS == 32
+    for (i=0; i<13; i++) {
+        t32[2*i] = (uint32_t)t[i];
+        t32[2*i+1] = (uint32_t)(t[i] >> 32);
+    }
+
+    for (i=0; i<12; i++) {
+        uint32_t k, carry;
+        uint64_t prod, k2, k3;
+        unsigned j;
+
+        k = t32[i];
+        k2 = ((uint64_t)k<<32) - k;
+        k3 = k2 - k;
+
+        /* n32[0] = 2³² - 1 */
+        prod = k2 + t32[i+0];
+        t32[i+0] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[1] = 0 */
+        prod = (uint64_t)t32[i+1] + carry;
+        t32[i+1] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[2] = 0 */
+        prod = (uint64_t)t32[i+2] + carry;
+        t32[i+2] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[3] = 2³² - 1 */
+        prod = k2 + t32[i+3] + carry;
+        t32[i+3] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[4] = 2³² - 2 */
+        prod = k3 + t32[i+4] + carry;
+        t32[i+4] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[5] = 2³² - 1 */
+        prod = k2 + t32[i+5] + carry;
+        t32[i+5] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[6] = 2³² - 1 */
+        prod = k2 + t32[i+6] + carry;
+        t32[i+6] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[7] = 2³² - 1 */
+        prod = k2 + t32[i+7] + carry;
+        t32[i+7] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[8] = 2³² - 1 */
+        prod = k2 + t32[i+8] + carry;
+        t32[i+8] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[9] = 2³² - 1 */
+        prod = k2 + t32[i+9] + carry;
+        t32[i+9] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[10] = 2³² - 1 */
+        prod = k2 + t32[i+10] + carry;
+        t32[i+10] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n32[11] = 2³² - 1 */
+        prod = k2 + t32[i+11] + carry;
+        t32[i+11] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+
+        for (j=12; carry; j++) {
+            t32[i+j] += carry;
+            carry = t32[i+j] < carry;
+        }
+    }
+
+    for (i=0; i<13; i++) {
+        t[i] = ((uint64_t)t32[2*i+1]<<32) + t32[2*i];
+    }
+
+#elif SYS_BITS == 64
 
     for (i=0; i<6; i++) {
         unsigned j;
@@ -561,6 +640,9 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
             carry = t[i+j] < carry;
         }
     }
+#else
+#error You must define the SYS_BITS macro
+#endif
 
     assert(t[2*nw] <= 1); /** MSW **/
 
