@@ -6,6 +6,20 @@
 #define BYTES   BITS/8
 #define WORDS   BITS/64
 
+static void print_64bit_array(uint64_t *x, unsigned len)
+{
+    unsigned i, j;
+
+    for (i=0; i<len; i++) {
+        printf("0x");
+        for (j=0; j<8; j++) {
+            printf("%02X", (uint8_t)(x[i] >> ((7-j)*8)));
+        }
+        if (i!=(len-1))
+            printf(",");
+    }
+}
+
 int main(void)
 {
     const uint8_t p384_mod[BYTES] = "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff";
@@ -17,7 +31,7 @@ int main(void)
     EcContext *ec_ctx;
     EcPoint *g = NULL;
     EcPoint **window = NULL;
-    int i, j, k;
+    int i, j;
     unsigned n_tables, points_per_table, window_size;
 
     ec_ws_new_context(&ec_ctx, p384_mod, b, order, BYTES, 0);
@@ -62,14 +76,10 @@ int main(void)
 
             printf("  { /* Point #%d */\n", j);
             printf("    { ");
-            for (k=0; k<WORDS; k++) {
-                printf("0x%016lX%s", xw[k], k==(WORDS-1) ? "" : ",");
-            }
+            print_64bit_array(xw, 6);
             printf(" },\n");
             printf("    { ");
-            for (k=0; k<WORDS; k++) {
-                printf("0x%016lX%s", yw[k], k==(WORDS-1) ? "" : ",");
-            }
+            print_64bit_array(yw, 6);
             printf(" }\n");
             printf("  }%s\n", j==points_per_table-1 ? "" : ",");
         }

@@ -378,7 +378,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 #if SYS_BITS == 32
     for (i=0; i<9; i++) {
         t32[2*i] = (uint32_t)t[i];
-        t32[2*i+1] = t[i] >> 32;
+        t32[2*i+1] = (uint32_t)(t[i] >> 32);
     }
 
     for (i=0; i<8; i++) {
@@ -392,15 +392,15 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
         /* p[0] = 2³²-1 */
         prod = k2 + t32[i+0];
         t32[i+0] = (uint32_t)prod;
-        carry = prod >> 32;
+        carry = (uint32_t)(prod >> 32);
         /* p[1] = 2³²-1 */
         prod = k2 + t32[i+1] + carry;
         t32[i+1] = (uint32_t)prod;
-        carry = prod >> 32;
+        carry = (uint32_t)(prod >> 32);
         /* p[2] = 2³²-1 */
         prod = k2 + t32[i+2] + carry;
         t32[i+2] = (uint32_t)prod;
-        carry = prod >> 32;
+        carry = (uint32_t)(prod >> 32);
         /* p[3] = 0 */
         t32[i+3] += carry;
         carry = t32[i+3] < carry;
@@ -418,7 +418,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
         /* p[7] = 2³²-1 */
         prod = k2 + t32[i+7] + carry;
         t32[i+7] = (uint32_t)prod;
-        carry = prod >> 32;
+        carry = (uint32_t)(prod >> 32);
 
         for (j=8; carry; j++) {
             t32[i+j] += carry;
