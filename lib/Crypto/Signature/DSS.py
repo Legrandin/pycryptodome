@@ -180,6 +180,7 @@ class DeterministicDsaSigScheme(DssSigScheme):
         q_len = self._order.size_in_bits()
         b_len = len(bstr) * 8
         if b_len > q_len:
+            # Only keep leftmost q_len bits
             result >>= (b_len - q_len)
         return result
 
