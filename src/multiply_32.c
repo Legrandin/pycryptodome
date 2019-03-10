@@ -81,10 +81,10 @@ size_t static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uin
 #ifndef PYCRYPTO_LITTLE_ENDIAN
 #error SSE2 only designed for little endian systems
 #endif
-    r0 = _mm_set1_epi32(b);             // { b, b, b, b }
-    r1 = _mm_cvtsi32_si128(carry);      // { 0, 0, 0, carry }
+    r0 = _mm_set1_epi32((int)b);             // { b, b, b, b }
+    r1 = _mm_cvtsi32_si128((int)carry);      // { 0, 0, 0, carry }
 
-    for (i=0; i<(words & ~1); i+=2) {
+    for (i=0; i<(words ^ (words & 1U)); i+=2) {
         __m128i r10, r11, r12, r13, r14, r15, r16, r17;
 
         r10 = _mm_shuffle_epi32(
@@ -122,7 +122,7 @@ size_t static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uin
                 _mm_castsi128_ps(r17)
                 ));
     }
-    carry = _mm_cvtsi128_si32(r1);
+    carry = (uint32_t)_mm_cvtsi128_si32(r1);
 #endif
 
     for (; i<words; i++) {

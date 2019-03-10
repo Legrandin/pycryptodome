@@ -2,7 +2,7 @@
 #include "ec.h"
 #include "endianess.h"
 
-#define BITS    256
+#define BITS    384
 #define BYTES   BITS/8
 #define WORDS   BITS/64
 
@@ -22,30 +22,30 @@ static void print_64bit_array(uint64_t *x, unsigned len)
 
 int main(void)
 {
-    const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
-    const uint8_t  b[32] = "\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b";
-    const uint8_t order[32] = "\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xbc\xe6\xfa\xad\xa7\x17\x9e\x84\xf3\xb9\xca\xc2\xfc\x63\x25\x51";
-    const uint8_t p256_Gx[32] = "\x6b\x17\xd1\xf2\xe1\x2c\x42\x47\xf8\xbc\xe6\xe5\x63\xa4\x40\xf2\x77\x03\x7d\x81\x2d\xeb\x33\xa0\xf4\xa1\x39\x45\xd8\x98\xc2\x96";
-    const uint8_t p256_Gy[32] = "\x4f\xe3\x42\xe2\xfe\x1a\x7f\x9b\x8e\xe7\xeb\x4a\x7c\x0f\x9e\x16\x2b\xce\x33\x57\x6b\x31\x5e\xce\xcb\xb6\x40\x68\x37\xbf\x51\xf5";
-    uint8_t xz[32] = { 0 }, yz[32] = { 0 };
+    const uint8_t p384_mod[BYTES] = "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff";
+    const uint8_t  b[BYTES] = "\xb3\x31\x2f\xa7\xe2\x3e\xe7\xe4\x98\x8e\x05\x6b\xe3\xf8\x2d\x19\x18\x1d\x9c\x6e\xfe\x81\x41\x12\x03\x14\x08\x8f\x50\x13\x87\x5a\xc6\x56\x39\x8d\x8a\x2e\xd1\x9d\x2a\x85\xc8\xed\xd3\xec\x2a\xef";
+    const uint8_t order[BYTES] = "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xc7\x63\x4d\x81\xf4\x37\x2d\xdf\x58\x1a\x0d\xb2\x48\xb0\xa7\x7a\xec\xec\x19\x6a\xcc\xc5\x29\x73";
+    const uint8_t p384_Gx[BYTES] = "\xaa\x87\xca\x22\xbe\x8b\x05\x37\x8e\xb1\xc7\x1e\xf3\x20\xad\x74\x6e\x1d\x3b\x62\x8b\xa7\x9b\x98\x59\xf7\x41\xe0\x82\x54\x2a\x38\x55\x02\xf2\x5d\xbf\x55\x29\x6c\x3a\x54\x5e\x38\x72\x76\x0a\xb7";
+    const uint8_t p384_Gy[BYTES] = "\x36\x17\xde\x4a\x96\x26\x2c\x6f\x5d\x9e\x98\xbf\x92\x92\xdc\x29\xf8\xf4\x1d\xbd\x28\x9a\x14\x7c\xe9\xda\x31\x13\xb5\xf0\xb8\xc0\x0a\x60\xb1\xce\x1d\x7e\x81\x9d\x7a\x43\x1d\x7c\x90\xea\x0e\x5f";
+    uint8_t xz[BYTES] = { 0 }, yz[BYTES] = { 0 };
     EcContext *ec_ctx;
     EcPoint *g = NULL;
     EcPoint **window = NULL;
     int i, j;
     unsigned n_tables, points_per_table, window_size;
 
-    ec_ws_new_context(&ec_ctx, p256_mod, b, order, 32, 0);
-    ec_ws_new_point(&g, p256_Gx, p256_Gy, 32, ec_ctx);
+    ec_ws_new_context(&ec_ctx, p384_mod, b, order, BYTES, 0);
+    ec_ws_new_point(&g, p384_Gx, p384_Gy, BYTES, ec_ctx);
 
     /** TODO: accept this as input **/
     window_size = 5;
 
     points_per_table = 1U << window_size;
-    n_tables = (256+window_size-1)/window_size;
+    n_tables = (BITS+window_size-1)/window_size;
 
     /** Create table with points 0, G, 2G, 3G, .. (2**window_size-1)G **/
     window = (EcPoint**)calloc(points_per_table, sizeof(EcPoint*));
-    ec_ws_new_point(&window[0], xz, yz, 32, ec_ctx);
+    ec_ws_new_point(&window[0], xz, yz, BYTES, ec_ctx);
     for (i=1; i<points_per_table; i++) {
         ec_ws_clone(&window[i], window[i-1]);
         ec_ws_add(window[i], g);
@@ -53,18 +53,18 @@ int main(void)
 
     printf("/* This file was automatically generated, do not edit */\n");
     printf("#include \"common.h\"\n");
-    printf("static const unsigned p256_n_tables = %d;\n", n_tables);
-    printf("static const unsigned p256_window_size = %d;\n", window_size);
-    printf("static const unsigned p256_points_per_table = %d;\n", points_per_table);
+    printf("static const unsigned p384_n_tables = %d;\n", n_tables);
+    printf("static const unsigned p384_window_size = %d;\n", window_size);
+    printf("static const unsigned p384_points_per_table = %d;\n", points_per_table);
     printf("/* Affine coordinates in Montgomery form */\n");
     printf("/* Table size: %u kbytes */\n", (unsigned)(n_tables*points_per_table*2*WORDS*sizeof(uint64_t)));
-    printf("static const uint64_t p256_tables[%d][%d][2][4] = {\n", n_tables, points_per_table);
+    printf("static const uint64_t p384_tables[%d][%d][2][%d] = {\n", n_tables, points_per_table, WORDS);
 
     for (i=0; i<n_tables; i++) {
 
         printf(" { /* Table #%u */\n", i);
         for (j=0; j<points_per_table; j++) {
-            uint64_t xw[4], yw[4];
+            uint64_t xw[WORDS], yw[WORDS];
 
             if (j == 0) {
                 memcpy(xw, xz, sizeof xw);
@@ -77,10 +77,10 @@ int main(void)
 
             printf("  { /* Point #%d */\n", j);
             printf("    { ");
-            print_64bit_array(xw, 4);
+            print_64bit_array(xw, 6);
             printf(" },\n");
             printf("    { ");
-            print_64bit_array(yw, 4);
+            print_64bit_array(yw, 6);
             printf(" }\n");
             printf("  }%s\n", j==points_per_table-1 ? "" : ",");
         }

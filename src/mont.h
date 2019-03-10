@@ -10,7 +10,7 @@
  */
 #define SCRATCHPAD_NR 5
 
-typedef enum _ModulusType { ModulusGeneric, ModulusP256 } ModulusType;
+typedef enum _ModulusType { ModulusGeneric, ModulusP256, ModulusP384 } ModulusType;
 
 typedef struct mont_context {
     unsigned words;         /* Number of words allocated to hold the number */
