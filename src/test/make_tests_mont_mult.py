@@ -95,6 +95,7 @@ print ""
 print "void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);"
 
 p256 = 115792089210356248762697446949407573530086143415290314195533631308867097853951
+p384 = 39402006196394479212279040100143613805079739270465446667948293404245721771496870329047266088258938001861606973112319
 
 make_test(2, 3, 255)
 make_test(2, 240, 255)
@@ -114,5 +115,10 @@ for x in range(100):
     a = bin2int(sha256(b"a" + struct.pack(">I", x)).digest()) % p256
     b = bin2int(sha256(b"b" + struct.pack(">I", x)).digest()) % p256
     make_test(a, b, p256)
+
+for x in range(100):
+    a = bin2int(sha256(b"a" + struct.pack(">I", x)).digest()) % p384
+    b = bin2int(sha256(b"b" + struct.pack(">I", x)).digest()) % p384
+    make_test(a, b, p384)
 
 make_main()
