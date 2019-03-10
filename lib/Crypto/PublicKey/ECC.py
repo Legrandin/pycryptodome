@@ -343,7 +343,7 @@ class EccPoint(object):
         result = _ec_lib.ec_ws_add(self._point.get(), point._point.get())
         if result:
             if result == 16:
-                raise ValueError("Trying to add two EC point that are not on the same curve")
+                raise ValueError("EC points are not on the same curve")
             raise ValueError("Error %d while adding two EC points" % result)
         return self
 

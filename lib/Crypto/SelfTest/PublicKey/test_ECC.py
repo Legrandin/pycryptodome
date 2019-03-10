@@ -36,6 +36,27 @@ from Crypto.SelfTest.loader import load_tests
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccPoint, _curves, EccKey
 
+
+class TestEccPoint(unittest.TestCase):
+
+    def test_mix(self):
+
+        p1 = ECC.generate(curve='P-256').pointQ
+        p2 = ECC.generate(curve='P-384').pointQ
+
+        try:
+            p1 + p2
+            assert(False)
+        except ValueError as e:
+            assert "not on the same curve" in str(e)
+
+        try:
+            p1 += p2
+            assert(False)
+        except ValueError as e:
+            assert "not on the same curve" in str(e)
+
+
 class TestEccPoint_NIST_P256(unittest.TestCase):
     """Tests defined in section 4.3 of https://www.nsa.gov/ia/_files/nist-routines.pdf"""
 
@@ -157,6 +178,9 @@ class TestEccPoint_NIST_P256(unittest.TestCase):
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
+    def test_sizes(self):
+        self.assertEqual(self.pointS.size_in_bits(), 256)
+        self.assertEqual(self.pointS.size_in_bytes(), 32)
 
 class TestEccPoint_NIST_P384(unittest.TestCase):
     """Tests defined in section 4.4 of https://www.nsa.gov/ia/_files/nist-routines.pdf"""
@@ -280,6 +304,10 @@ class TestEccPoint_NIST_P384(unittest.TestCase):
         pointR = self.pointS * d + self.pointT * e
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
+
+    def test_sizes(self):
+        self.assertEqual(self.pointS.size_in_bits(), 384)
+        self.assertEqual(self.pointS.size_in_bytes(), 48)
 
 
 class TestEccPoint_NIST_P521(unittest.TestCase):
@@ -405,6 +433,10 @@ class TestEccPoint_NIST_P521(unittest.TestCase):
         pointR += self.pointT * e
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
+
+    def test_sizes(self):
+        self.assertEqual(self.pointS.size_in_bits(), 521)
+        self.assertEqual(self.pointS.size_in_bytes(), 66)
 
 
 class TestEccPoint_PAI_P256(unittest.TestCase):
@@ -777,6 +809,7 @@ class TestEccModule_P521(unittest.TestCase):
 
 def get_tests(config={}):
     tests = []
+    tests += list_test_cases(TestEccPoint)
     tests += list_test_cases(TestEccPoint_NIST_P256)
     tests += list_test_cases(TestEccPoint_NIST_P384)
     tests += list_test_cases(TestEccPoint_NIST_P521)
