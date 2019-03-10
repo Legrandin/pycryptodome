@@ -911,6 +911,7 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
         case ModulusP384:
             mont_mult_p384(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
+        case ModulusP521:
         case ModulusGeneric:
             mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
@@ -1111,6 +1112,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
 {
     const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     const uint8_t p384_mod[48] = "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff";
+    const uint8_t p521_mod[66] = "\x01\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint64_t *scratchpad = NULL;
     MontContext *ctx;
     int res;
@@ -1187,14 +1189,23 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
 
     /* Check if the modulus has a special form */
-    if (32 == mod_len && 0 == cmp_modulus(modulus, mod_len, p256_mod, 32)) {
-        ctx->modulus_type = ModulusP256;
-    } else {
-        if (48 == mod_len && 0 == cmp_modulus(modulus, mod_len, p384_mod, 48)) {
-            ctx->modulus_type = ModulusP384;
-        } else {
-            ctx->modulus_type = ModulusGeneric;
-        }
+    ctx->modulus_type = ModulusGeneric;
+    switch (mod_len) {
+        case sizeof(p256_mod):
+            if (0 == cmp_modulus(modulus, mod_len, p256_mod, sizeof(p256_mod))) {
+                ctx->modulus_type = ModulusP256;
+            }
+            break;
+        case sizeof(p384_mod):
+            if (0 == cmp_modulus(modulus, mod_len, p384_mod, sizeof(p384_mod))) {
+                ctx->modulus_type = ModulusP384;
+            }
+            break;
+        case sizeof(p521_mod):
+            if (0 == cmp_modulus(modulus, mod_len, p521_mod, sizeof(p521_mod))) {
+                ctx->modulus_type = ModulusP521;
+            }
+            break;
     }
 
     res = 0;

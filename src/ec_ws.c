@@ -570,6 +570,7 @@ cleanup:
 #ifndef MAKE_TABLE
 #include "p256_table.c"
 #include "p384_table.c"
+#include "p521_table.c"
 
 STATIC void free_g_p256(ProtMemory **prot_g)
 {
@@ -588,6 +589,17 @@ STATIC void free_g_p384(ProtMemory **prot_g)
 
     if (prot_g) {
         for (i=0; i<p384_n_tables; i++)
+            free_scattered(prot_g[i]);
+        free(prot_g);
+    }
+}
+
+STATIC void free_g_p521(ProtMemory **prot_g)
+{
+    unsigned i;
+
+    if (prot_g) {
+        for (i=0; i<p521_n_tables; i++)
             free_scattered(prot_g[i]);
         free(prot_g);
     }
@@ -664,6 +676,45 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
 
     if (res) {
         free_g_p384(prot_g);
+        prot_g = NULL;
+    }
+
+    free(tables_ptrs);
+    return prot_g;
+}
+
+/*
+ * Fill the pre-computed table for the generator point in the P-521 EC context.
+ */
+STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
+{
+    const void **tables_ptrs;
+    ProtMemory **prot_g;
+    unsigned i;
+    int res;
+
+    tables_ptrs = (const void**)calloc(p521_points_per_table, sizeof(void*));
+    if (NULL == tables_ptrs)
+        return NULL;
+
+    prot_g = (ProtMemory**)calloc(p521_n_tables, sizeof(ProtMemory*));
+    if (NULL == prot_g) {
+        free(tables_ptrs);
+        return NULL;
+    }
+
+    res = 0;
+    for (i=0; res==0 && i<p521_n_tables; i++) {
+        unsigned j;
+
+        for (j=0; j<p521_points_per_table; j++) {
+            tables_ptrs[j] = &p521_tables[i][j];
+        }
+        res = scatter(&prot_g[i], tables_ptrs, (uint8_t)p521_points_per_table, 2*mont_bytes(ctx), seed);
+    }
+
+    if (res) {
+        free_g_p521(prot_g);
         prot_g = NULL;
     }
 
@@ -758,6 +809,68 @@ STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     return 0;
 }
 
+STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                            const uint64_t *b,
+                            const uint8_t *exp, size_t exp_size,
+                            uint64_t seed,
+                            Workplace *wp1,
+                            Workplace *wp2,
+                            ProtMemory **prot_g,
+                            const MontContext *ctx)
+{
+    unsigned i;
+    struct BitWindow_RL bw;
+
+    /** Start from PAI **/
+    mont_set(x3, 0, NULL, ctx);
+    mont_set(y3, 1, NULL, ctx);
+    mont_set(z3, 0, NULL, ctx);
+
+    /** Find first non-zero byte in exponent **/
+    for (; exp_size && *exp==0; exp++, exp_size--);
+    bw = init_bit_window_rl(p521_window_size, exp, exp_size);
+
+    if (exp_size == 66) {
+        if (exp[0] >> 1) {
+            return ERR_VALUE;
+        }
+        switch (p521_window_size) {
+            case 1: bw.nr_windows -= 7; break;
+            case 2: bw.nr_windows -= 3; break;
+            case 3: bw.nr_windows -= 2; break;
+            case 4:
+            case 5:
+            case 6:
+            case 7: bw.nr_windows -= 1; break;
+        }
+    }
+
+    if (exp_size > 66)
+        return ERR_VALUE;
+
+    if (bw.nr_windows > p521_n_tables)
+        return ERR_VALUE;
+
+    for (i=0; i < bw.nr_windows; i++) {
+        unsigned index;
+        uint64_t buffer[9*2];   /* X and Y affine coordinates **/
+        uint64_t *xw, *yw;
+
+        index = get_next_digit_rl(&bw);
+        gather(buffer, prot_g[i], index);
+        xw = &buffer[0];
+        yw = &buffer[9];
+
+        ec_mix_add(x3, y3, z3,
+                   x3, y3, z3,
+                   xw, yw,
+                   b,
+                   wp1, ctx);
+    }
+
+    return 0;
+}
+
 #endif
 
 /*
@@ -829,6 +942,14 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
             }
             break;
         }
+        case ModulusP521: {
+            ec_ctx->prot_g = ec_scramble_g_p521(ec_ctx->mont_ctx, seed);
+            if (NULL == ec_ctx->prot_g) {
+                res = ERR_MEMORY;
+                goto cleanup;
+            }
+            break;
+        }
         case ModulusGeneric:
             break;
     }
@@ -855,6 +976,9 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
             break;
         case ModulusP384:
             free_g_p384(ec_ctx->prot_g);
+            break;
+        case ModulusP521:
+            free_g_p521(ec_ctx->prot_g);
             break;
         case ModulusGeneric:
             break;
@@ -1220,6 +1344,32 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
 
             if (is_generator) {
                 res = ec_scalar_g_p384(ecp->x, ecp->y, ecp->z,
+                                       ecp->ec_ctx->b,
+                                       k, len,
+                                       seed + 2,
+                                       wp1, wp2,
+                                       ecp->ec_ctx->prot_g,
+                                       ctx);
+                goto cleanup;
+            }
+            break;
+        }
+        case ModulusP521: {
+            /** Coordinates in Montgomery form **/
+            const uint64_t mont_Gx[9] = { 0xB331A16381ADC101, 0x4DFCBF3F18E172DE, 0x6F19A459E0C2B521, 0x947F0EE093D17FD4, 0xDD50A5AF3BF7F3AC, 0x90FC1457B035A69E, 0x214E32409C829FDA, 0xE6CF1F65B311CADA, 0x0000000000000074 };
+            const uint64_t mont_Gy[9] = { 0x28460E4A5A9E268E, 0x20445F4A3B4FE8B3, 0xB09A9E3843513961, 0x2062A85C809FD683, 0x164BF7394CAF7A13, 0x340BD7DE8B939F33, 0xECCC7AA224ABCDA2, 0x022E452FDA163E8D, 0x00000000000001E0 };
+            unsigned is_generator;
+            unsigned i;
+
+            is_generator = 1;
+            for (i=0; i<9; i++) {
+                is_generator &= (mont_Gx[i] == ecp->x[i]);
+                is_generator &= (mont_Gy[i] == ecp->y[i]);
+            }
+            is_generator &= (unsigned)mont_is_one(ecp->z, ctx);
+
+            if (is_generator) {
+                res = ec_scalar_g_p521(ecp->x, ecp->y, ecp->z,
                                        ecp->ec_ctx->b,
                                        k, len,
                                        seed + 2,
