@@ -676,6 +676,232 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 #undef PREDIV_WORDS_32
 }
 
+STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+{
+    size_t i;
+    uint64_t *t2;
+    unsigned cond;
+#define WORDS_64        9U
+#define PREDIV_WORDS_64 (2*WORDS_64+1)      /** Size of the number to divide by R **/
+#define WORDS_32        (WORDS_64*2)
+#define PREDIV_WORDS_32 (2*PREDIV_WORDS_64)
+
+#if SYS_BITS == 32
+    uint32_t t32[PREDIV_WORDS_32];
+#endif
+
+    assert(nw == WORDS_64);
+    assert(m0 == 1);
+
+    t2 = &t[PREDIV_WORDS_64];    /** Point to last WORDS_64 words **/
+
+    if (a == b) {
+        square_w(t, a, WORDS_64);
+    } else {
+        product(t, a, b, WORDS_64);
+    }
+
+    t[PREDIV_WORDS_64-1] = 0; /** MSW **/
+
+#if SYS_BITS == 32
+    for (i=0; i<PREDIV_WORDS_64; i++) {
+        t32[2*i] = (uint32_t)t[i];
+        t32[2*i+1] = (uint32_t)(t[i] >> 32);
+    }
+
+    for (i=0; i<WORDS_32; i++) {
+        uint32_t k, carry;
+        uint64_t prod, k2;
+        unsigned j;
+
+        k = t32[i];
+        k2 = ((uint64_t)k<<32) - k;
+
+        /* n[0] = 2³² - 1 */
+        prod = k2 + t32[i+0];
+        t32[i+0] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[1] = 2³² - 1 */
+        prod = k2 + t32[i+1] + carry;
+        t32[i+1] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[2] = 2³² - 1 */
+        prod = k2 + t32[i+2] + carry;
+        t32[i+2] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[3] = 2³² - 1 */
+        prod = k2 + t32[i+3] + carry;
+        t32[i+3] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[4] = 2³² - 1 */
+        prod = k2 + t32[i+4] + carry;
+        t32[i+4] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[5] = 2³² - 1 */
+        prod = k2 + t32[i+5] + carry;
+        t32[i+5] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[6] = 2³² - 1 */
+        prod = k2 + t32[i+6] + carry;
+        t32[i+6] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[7] = 2³² - 1 */
+        prod = k2 + t32[i+7] + carry;
+        t32[i+7] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[8] = 2³² - 1 */
+        prod = k2 + t32[i+8] + carry;
+        t32[i+8] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[9] = 2³² - 1 */
+        prod = k2 + t32[i+9] + carry;
+        t32[i+9] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[10] = 2³² - 1 */
+        prod = k2 + t32[i+10] + carry;
+        t32[i+10] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[11] = 2³² - 1 */
+        prod = k2 + t32[i+11] + carry;
+        t32[i+11] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[12] = 2³² - 1 */
+        prod = k2 + t32[i+12] + carry;
+        t32[i+12] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[13] = 2³² - 1 */
+        prod = k2 + t32[i+13] + carry;
+        t32[i+13] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[14] = 2³² - 1 */
+        prod = k2 + t32[i+14] + carry;
+        t32[i+14] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[15] = 2³² - 1 */
+        prod = k2 + t32[i+15] + carry;
+        t32[i+15] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+        /* n[16] = 0x1FF */
+        prod = (uint64_t)0x1FFU*k + t32[i+16] + carry;
+        t32[i+16] = (uint32_t)prod;
+        carry = (uint32_t)(prod >> 32);
+
+        /* n[17] = 0 */
+        for (j=17; carry; j++) {
+            t32[i+j] += carry;
+            carry = t32[i+j] < carry;
+        }
+    }
+
+    for (i=0; i<PREDIV_WORDS_64; i++) {
+        t[i] = ((uint64_t)t32[2*i+1]<<32) + t32[2*i];
+    }
+
+#elif SYS_BITS == 64
+    for (i=0; i<WORDS_64; i++) {
+        unsigned j;
+        uint64_t carry;
+        uint64_t k, k2_lo, k2_hi;
+        uint64_t prod_lo, prod_hi;
+
+        k = t[i];
+        k2_lo = -k;
+        k2_hi = k - (k!=0);
+
+        /* n[0] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        t[i+0] += prod_lo;
+        prod_hi += t[i+0] < prod_lo;
+        carry = prod_hi;
+        /* n[1] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+1] += prod_lo;
+        prod_hi += t[i+1] < prod_lo;
+        carry = prod_hi;
+        /* n[2] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+2] += prod_lo;
+        prod_hi += t[i+2] < prod_lo;
+        carry = prod_hi;
+        /* n[3] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+3] += prod_lo;
+        prod_hi += t[i+3] < prod_lo;
+        carry = prod_hi;
+        /* n[4] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+4] += prod_lo;
+        prod_hi += t[i+4] < prod_lo;
+        carry = prod_hi;
+        /* n[5] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+5] += prod_lo;
+        prod_hi += t[i+5] < prod_lo;
+        carry = prod_hi;
+        /* n[6] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+6] += prod_lo;
+        prod_hi += t[i+6] < prod_lo;
+        carry = prod_hi;
+        /* n[7] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+7] += prod_lo;
+        prod_hi += t[i+7] < prod_lo;
+        carry = prod_hi;
+        /* n[8] = 0x1FF */
+        DP_MULT(n[8], k, prod_lo, prod_hi);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+8] += prod_lo;
+        prod_hi += t[i+8] < prod_lo;
+        carry = prod_hi;
+
+        for (j=WORDS_64; carry; j++) {
+            t[i+j] += carry;
+            carry = t[i+j] < carry;
+        }
+    }
+#else
+#error You must define the SYS_BITS macro
+#endif
+
+    assert(t[PREDIV_WORDS_64-1] <= 1); /** MSW **/
+
+    /** Words t[0..WORDS_64-1] have all been set to zero **/
+
+    /** Divide by R and possibly subtract n **/
+    sub(t2, &t[WORDS_64], n, WORDS_64);
+    cond = (unsigned)(t[PREDIV_WORDS_64-1] | (uint64_t)ge(&t[WORDS_64], n, WORDS_64));
+    mont_select(out, t2, &t[WORDS_64], cond, WORDS_64);
+
+#undef WORDS_64
+#undef PREDIV_WORDS_64
+#undef WORDS_32
+#undef PREDIV_WORDS_32
+}
+
 /* ---- PUBLIC FUNCTIONS ---- */
 
 void mont_context_free(MontContext *ctx)
@@ -912,6 +1138,8 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
             mont_mult_p384(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
         case ModulusP521:
+            mont_mult_p521(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+            break;
         case ModulusGeneric:
             mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;

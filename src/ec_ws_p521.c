@@ -61,7 +61,7 @@ int main(void)
     struct timeval start, stop;
     double duration_ms, rate;
 
-#define ITERATIONS 2000U
+#define ITERATIONS 500U
 
     /* Make almost-worst case exponent */
     for (i=0; i<BYTES; i++) {
