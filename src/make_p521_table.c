@@ -56,7 +56,7 @@ int main(void)
     printf("static const unsigned p521_n_tables = %d;\n", n_tables);
     printf("static const unsigned p521_window_size = %d;\n", window_size);
     printf("static const unsigned p521_points_per_table = %d;\n", points_per_table);
-    printf("/* Affine coordinates in Montgomery form */\n");
+    printf("/* Affine coordinates in plain form (not Montgomery) */\n");
     printf("/* Table size: %u kbytes */\n", (unsigned)(n_tables*points_per_table*2*WORDS*sizeof(uint64_t)));
     printf("static const uint64_t p521_tables[%d][%d][2][%d] = {\n", n_tables, points_per_table, WORDS);
 
