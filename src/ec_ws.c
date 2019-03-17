@@ -36,7 +36,6 @@
 #include "multiply.h"
 #include "mont.h"
 #include "ec.h"
-#include "modexp_utils.h"
 
 FAKE_INIT(ec_ws)
 
@@ -1355,9 +1354,9 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             break;
         }
         case ModulusP521: {
-            /** Coordinates in Montgomery form **/
-            const uint64_t mont_Gx[9] = { 0xB331A16381ADC101, 0x4DFCBF3F18E172DE, 0x6F19A459E0C2B521, 0x947F0EE093D17FD4, 0xDD50A5AF3BF7F3AC, 0x90FC1457B035A69E, 0x214E32409C829FDA, 0xE6CF1F65B311CADA, 0x0000000000000074 };
-            const uint64_t mont_Gy[9] = { 0x28460E4A5A9E268E, 0x20445F4A3B4FE8B3, 0xB09A9E3843513961, 0x2062A85C809FD683, 0x164BF7394CAF7A13, 0x340BD7DE8B939F33, 0xECCC7AA224ABCDA2, 0x022E452FDA163E8D, 0x00000000000001E0 };
+            /** Coordinates in normal form **/
+            const uint64_t mont_Gx[9] = { 0xF97E7E31C2E5BD66, 0x3348B3C1856A429B, 0xFE1DC127A2FFA8DE, 0xA14B5E77EFE75928, 0xF828AF606B4D3DBA, 0x9C648139053FB521, 0x9E3ECB662395B442, 0x858E06B70404E9CD, 0x00000000000000C6 };
+            const uint64_t mont_Gy[9] = { 0x88BE94769FD16650, 0x353C7086A272C240, 0xC550B9013FAD0761, 0x97EE72995EF42640, 0x17AFBD17273E662C, 0x98F54449579B4468, 0x5C8A5FB42C7D1BD9, 0x39296A789A3BC004, 0x0000000000000118 };
             unsigned is_generator;
             unsigned i;
 
@@ -1391,10 +1390,9 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         uint64_t *factor=NULL;
 
         /* Create the blinding factor for the base point */
-        res = mont_number(&factor, 1, ctx);
+        res = mont_random_number(&factor, 1, seed, ctx);
         if (res)
             goto cleanup;
-        expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
 
         /* Blind the base point */
         mont_mult(ecp->x, ecp->x, factor, wp1->scratch, ctx);

@@ -34,6 +34,7 @@
 #include "common.h"
 #include "endianess.h"
 #include "multiply.h"
+#include "modexp_utils.h"
 #include "mont.h"
 
 #if SYS_BITS == 32
@@ -80,7 +81,7 @@ STATIC uint64_t inverse64(uint64_t a)
     x += x - a*x*x;
     x += x - a*x*x;
     assert((x*a & 0xFFFFFFFFFFFFFFFFULL) == 1);
-    
+
     return x;
 }
 
@@ -252,14 +253,14 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
  * @param words The number of words that make up a, b, and out
  * @return      0 for success, the appropriate code otherwise.
  */
-STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, unsigned words)
+STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, size_t words)
 {
     uint64_t mask;
 #if defined(USE_SSE2)
     unsigned pairs, i;
     __m128i r0, r1, r2, r3, r4, r5;
 
-    pairs = words / 2;
+    pairs = (unsigned)words / 2;
     mask = (uint64_t)((cond != 0) - 1); /* 0 for a, 1s for b */
    
     r0 = _mm_set1_epi64((__m64)mask);
@@ -288,6 +289,47 @@ STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsi
 }
 
 /*
+ * Add two numbers with modulo arithmetic.
+ *
+ * @param out       The area of memory where to store the result (nw words)
+ * @param a         The first term (nw words)
+ * @param b         The second term (nw words)
+ * @param modulus   The modulus (nw words)
+ * @param tmp1      A temporary area (nw words)
+ * @param tmp2      A temporary area (nw words)
+ * @param nw        The number of 64-bit words in all parameters
+ */
+void add_mod(uint64_t* out, const uint64_t* a, const uint64_t* b, const uint64_t *modulus, uint64_t *tmp1, uint64_t *tmp2, size_t nw)
+{
+    unsigned i;
+    unsigned carry, borrow1, borrow2;
+
+    /*
+     * Compute sum in tmp1[], and subtract modulus[]
+     * from tmp1[] into tmp2[].
+     */
+    borrow2 = 0;
+    for (i=0, carry=0; i<nw; i++) {
+        tmp1[i] = a[i] + carry;
+        carry = tmp1[i] < carry;
+        tmp1[i] += b[i];
+        carry += tmp1[i] < b[i];
+
+        borrow1 = modulus[i] > tmp1[i];
+        tmp2[i] = tmp1[i] - modulus[i];
+        borrow1 |= borrow2 > tmp2[i];
+        tmp2[i] -= borrow2;
+        borrow2 = borrow1;
+    }
+
+    /*
+     * If there is no borrow or if there is carry,
+     * tmp1[] is larger than modulus, so we must return tmp2[].
+     */
+    mont_select(out, tmp2, tmp1, carry | (borrow2 ^ 1), nw);
+}
+
+/*
  * Montgomery modular multiplication, that is a*b*R mod N.
  *
  * @param out   The location where the result is stored
@@ -295,12 +337,15 @@ STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsi
  * @param b     The second term (already in Montgomery form, b*R mod N)
  * @param n     The modulus (in normal form), such that R>N
  * @param m0    Least-significant word of the opposite of the inverse of n modulo R, that is, inv(-n[0], R)
- * @param t     Temporary scratchpad with 3*nw+1 words
+ * @param t     Temporary, internal result; it must have been created with mont_number(&p,SCRATCHPAD_NR,ctx).
  * @param nw    Number of words making up the 3 integers: out, a, and b.
  *              It also defines R as 2^(64*nw).
  *
  * Useful read: https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
  */
+#if SCRATCHPAD_NR < 4
+#error Scratchpad is too small
+#endif
 STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
     size_t i;
@@ -678,228 +723,54 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 
 STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
-    size_t i;
-    uint64_t *t2;
-    unsigned cond;
-#define WORDS_64        9U
-#define PREDIV_WORDS_64 (2*WORDS_64+1)      /** Size of the number to divide by R **/
-#define WORDS_32        (WORDS_64*2)
-#define PREDIV_WORDS_32 (2*PREDIV_WORDS_64)
+    uint64_t *s, *tmp1, *tmp2;
 
-#if SYS_BITS == 32
-    uint32_t t32[PREDIV_WORDS_32];
-#endif
-
-    assert(nw == WORDS_64);
+    assert(nw == 9);
     assert(m0 == 1);
 
-    t2 = &t[PREDIV_WORDS_64];    /** Point to last WORDS_64 words **/
+    assert(a[8] < 0x200);
+    assert(b[8] < 0x200);
+
+    /*
+     * A number in the form:
+     *      x*2⁵²¹ + y
+     * is congruent modulo 2⁵²¹-1 to:
+     *      x + y
+     */
+
+    /* This is how we use the scratchpad:
+     *  1) The first 2 numbers hold the result of the multiplication,
+     *     and the first number also the first term of the addition
+     *  3) The third holds the second term of the addition
+     *  2) The fourth and fourth number are temporaries for add()
+     */
+
+    s = t + (9*2);
+    tmp1 = t + (9*3);
+    tmp2 = t + (9*4);
 
     if (a == b) {
-        square_w(t, a, WORDS_64);
+        square_w(t, a, 9);
     } else {
-        product(t, a, b, WORDS_64);
+        product(t, a, b, 9);
     }
 
-    t[PREDIV_WORDS_64-1] = 0; /** MSW **/
+    /* t is a 1042-bit number, occupying 17 words (of the total 18); the MSW (t[16]) only has 18 bits */
+    assert(t[16] < 0x40000);
+    assert(t[17] == 0);
 
-#if SYS_BITS == 32
-    for (i=0; i<PREDIV_WORDS_64; i++) {
-        t32[2*i] = (uint32_t)t[i];
-        t32[2*i+1] = (uint32_t)(t[i] >> 32);
-    }
+    s[0] = (t[8] >> 9)  | (t[9] << 55);     t[8] &= 0x1FF;
+    s[1] = (t[9] >> 9)  | (t[10] << 55);
+    s[2] = (t[10] >> 9) | (t[11] << 55);
+    s[3] = (t[11] >> 9) | (t[12] << 55);
+    s[4] = (t[12] >> 9) | (t[13] << 55);
+    s[5] = (t[13] >> 9) | (t[14] << 55);
+    s[6] = (t[14] >> 9) | (t[15] << 55);
+    s[7] = (t[15] >> 9) | (t[16] << 55);
+    s[8] = t[16] >> 9;
 
-    for (i=0; i<WORDS_32; i++) {
-        uint32_t k, carry;
-        uint64_t prod, k2;
-        unsigned j;
-
-        k = t32[i];
-        k2 = ((uint64_t)k<<32) - k;
-
-        /* n[0] = 2³² - 1 */
-        prod = k2 + t32[i+0];
-        t32[i+0] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[1] = 2³² - 1 */
-        prod = k2 + t32[i+1] + carry;
-        t32[i+1] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[2] = 2³² - 1 */
-        prod = k2 + t32[i+2] + carry;
-        t32[i+2] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[3] = 2³² - 1 */
-        prod = k2 + t32[i+3] + carry;
-        t32[i+3] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[4] = 2³² - 1 */
-        prod = k2 + t32[i+4] + carry;
-        t32[i+4] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[5] = 2³² - 1 */
-        prod = k2 + t32[i+5] + carry;
-        t32[i+5] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[6] = 2³² - 1 */
-        prod = k2 + t32[i+6] + carry;
-        t32[i+6] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[7] = 2³² - 1 */
-        prod = k2 + t32[i+7] + carry;
-        t32[i+7] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[8] = 2³² - 1 */
-        prod = k2 + t32[i+8] + carry;
-        t32[i+8] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[9] = 2³² - 1 */
-        prod = k2 + t32[i+9] + carry;
-        t32[i+9] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[10] = 2³² - 1 */
-        prod = k2 + t32[i+10] + carry;
-        t32[i+10] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[11] = 2³² - 1 */
-        prod = k2 + t32[i+11] + carry;
-        t32[i+11] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[12] = 2³² - 1 */
-        prod = k2 + t32[i+12] + carry;
-        t32[i+12] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[13] = 2³² - 1 */
-        prod = k2 + t32[i+13] + carry;
-        t32[i+13] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[14] = 2³² - 1 */
-        prod = k2 + t32[i+14] + carry;
-        t32[i+14] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[15] = 2³² - 1 */
-        prod = k2 + t32[i+15] + carry;
-        t32[i+15] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-        /* n[16] = 0x1FF */
-        prod = (uint64_t)0x1FFU*k + t32[i+16] + carry;
-        t32[i+16] = (uint32_t)prod;
-        carry = (uint32_t)(prod >> 32);
-
-        /* n[17] = 0 */
-        for (j=17; carry; j++) {
-            t32[i+j] += carry;
-            carry = t32[i+j] < carry;
-        }
-    }
-
-    for (i=0; i<PREDIV_WORDS_64; i++) {
-        t[i] = ((uint64_t)t32[2*i+1]<<32) + t32[2*i];
-    }
-
-#elif SYS_BITS == 64
-    for (i=0; i<WORDS_64; i++) {
-        unsigned j;
-        uint64_t carry;
-        uint64_t k, k2_lo, k2_hi;
-        uint64_t prod_lo, prod_hi;
-
-        k = t[i];
-        k2_lo = -k;
-        k2_hi = k - (k!=0);
-
-        /* n[0] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        t[i+0] += prod_lo;
-        prod_hi += t[i+0] < prod_lo;
-        carry = prod_hi;
-        /* n[1] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+1] += prod_lo;
-        prod_hi += t[i+1] < prod_lo;
-        carry = prod_hi;
-        /* n[2] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+2] += prod_lo;
-        prod_hi += t[i+2] < prod_lo;
-        carry = prod_hi;
-        /* n[3] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+3] += prod_lo;
-        prod_hi += t[i+3] < prod_lo;
-        carry = prod_hi;
-        /* n[4] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+4] += prod_lo;
-        prod_hi += t[i+4] < prod_lo;
-        carry = prod_hi;
-        /* n[5] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+5] += prod_lo;
-        prod_hi += t[i+5] < prod_lo;
-        carry = prod_hi;
-        /* n[6] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+6] += prod_lo;
-        prod_hi += t[i+6] < prod_lo;
-        carry = prod_hi;
-        /* n[7] = 2⁶⁴ - 1 */
-        prod_lo = k2_lo;
-        prod_hi = k2_hi;
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+7] += prod_lo;
-        prod_hi += t[i+7] < prod_lo;
-        carry = prod_hi;
-        /* n[8] = 0x1FF */
-        DP_MULT(n[8], k, prod_lo, prod_hi);
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-        t[i+8] += prod_lo;
-        prod_hi += t[i+8] < prod_lo;
-        carry = prod_hi;
-
-        for (j=WORDS_64; carry; j++) {
-            t[i+j] += carry;
-            carry = t[i+j] < carry;
-        }
-    }
-#else
-#error You must define the SYS_BITS macro
-#endif
-
-    assert(t[PREDIV_WORDS_64-1] <= 1); /** MSW **/
-
-    /** Words t[0..WORDS_64-1] have all been set to zero **/
-
-    /** Divide by R and possibly subtract n **/
-    sub(t2, &t[WORDS_64], n, WORDS_64);
-    cond = (unsigned)(t[PREDIV_WORDS_64-1] | (uint64_t)ge(&t[WORDS_64], n, WORDS_64));
-    mont_select(out, t2, &t[WORDS_64], cond, WORDS_64);
-
-#undef WORDS_64
-#undef PREDIV_WORDS_64
-#undef WORDS_32
-#undef PREDIV_WORDS_32
+    add_mod(out, t, s, n, tmp1, tmp2, nw);
+    assert(out[8] < 0x200);
 }
 
 /* ---- PUBLIC FUNCTIONS ---- */
@@ -948,6 +819,24 @@ int mont_number(uint64_t **out, unsigned count, const MontContext *ctx)
     if (NULL == *out)
         return ERR_MEMORY;
 
+    return 0;
+}
+
+int mont_random_number(uint64_t **out, unsigned count, uint64_t seed, const MontContext *ctx)
+{
+    int res;
+    unsigned i;
+    uint64_t *number;
+
+    res = mont_number(out, count, ctx);
+    if (res)
+        return res;
+
+    number = *out;
+    expand_seed(seed, (uint8_t*)number, count * ctx->bytes);
+    for (i=0; i<count; i++, number += ctx->words) {
+        number[ctx->words-1] = 0;
+    }
     return 0;
 }
 
@@ -1012,7 +901,10 @@ int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const Mon
         goto cleanup;
     }
 
-    mont_mult_internal(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+    if (ctx->modulus_type != ModulusP521)
+        mont_mult_internal(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+    else
+        mont_copy(encoded, tmp1, ctx);
     res = 0;
 
 cleanup:
@@ -1059,7 +951,10 @@ int mont_to_bytes(uint8_t *number, size_t len, const uint64_t* mont_number, cons
         return ERR_MEMORY;
     }
 
-    mont_mult_internal(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+    if (ctx->modulus_type != ModulusP521)
+        mont_mult_internal(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+    else
+        mont_copy(tmp1, mont_number, ctx);
     res = words_to_bytes(number, len, tmp1, ctx->words);
 
     free(scratchpad);
@@ -1079,39 +974,9 @@ int mont_to_bytes(uint8_t *number, size_t len, const uint64_t* mont_number, cons
  */
 int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp, const MontContext *ctx)
 {
-    unsigned i;
-    unsigned carry, borrow1, borrow2;
-    uint64_t *scratchpad;
-
     if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
-
-    scratchpad = tmp + ctx->words;
-
-    /*
-     * Compute sum in tmp[], and subtract modulus[]
-     * from tmp[] into scratchpad[].
-     */
-    borrow2 = 0;
-    for (i=0, carry=0; i<ctx->words; i++) {
-        tmp[i] = a[i] + carry;
-        carry = tmp[i] < carry;
-        tmp[i] += b[i];
-        carry += tmp[i] < b[i];
-
-        borrow1 = ctx->modulus[i] > tmp[i];
-        scratchpad[i] = tmp[i] - ctx->modulus[i];
-        borrow1 |= borrow2 > scratchpad[i];
-        scratchpad[i] -= borrow2;
-        borrow2 = borrow1;
-    }
-
-    /*
-     * If there is no borrow or if there is carry,
-     * tmp[] is larger than modulus, so we must return scratchpad[].
-     */
-    mont_select(out, scratchpad, tmp, carry | (borrow2 ^ 1), ctx->words);
-
+    add_mod(out, a, b, ctx->modulus, tmp, tmp + ctx->words, ctx->words);
     return 0;
 }
 
@@ -1141,6 +1006,7 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
             mont_mult_p521(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
         case ModulusGeneric:
+            assert(0);
             mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
     }
@@ -1223,14 +1089,14 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
     tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
     if (NULL == tmp1)
         return ERR_MEMORY;
-    
+
     scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
     if (NULL == scratchpad) {
         res = ERR_MEMORY;
         goto cleanup;
     }
-   
-    /** Exponent is guaranteed to be >0 **/ 
+
+    /** Exponent is guaranteed to be >0 **/
     exponent = ctx->modulus_min_2;
 
     /* Find most significant bit */
@@ -1249,9 +1115,9 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
     /** Left-to-right exponentiation **/
     for (;;) {
         while (bit > 0) {
-            mont_mult_internal(tmp1, out, out, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+            mont_mult(tmp1, out, out, scratchpad, ctx);
             if (exponent[idx_word] & bit) {
-                mont_mult_internal(out, tmp1, a, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+                mont_mult(out, tmp1, a, scratchpad, ctx);
             } else {
                 memcpy(out, tmp1, ctx->bytes);
             }
@@ -1303,7 +1169,10 @@ int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
 
     scratchpad = &tmp[ctx->words];
 
-    mont_mult_internal(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+    if (ctx->modulus_type != ModulusP521)
+        mont_mult_internal(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+    else
+        mont_copy(out, tmp, ctx);
     return 0;
 }
 
@@ -1366,57 +1235,10 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     if (NULL == ctx)
         return ERR_MEMORY;
 
-    ctx->words = ((unsigned)mod_len + 7) / 8;
-    ctx->bytes = (unsigned)(ctx->words * sizeof(uint64_t));
-    ctx->modulus_len = (unsigned)mod_len;
-
-    /** Load modulus N **/
-    ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (0 == ctx->modulus) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    bytes_to_words(ctx->modulus, ctx->words, modulus, mod_len);
-   
-    /** Pre-compute R² mod N **/
-    ctx->r2_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (0 == ctx->r2_mod_n) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
-    
-    /** Pre-compute -n[0]⁻¹ mod R **/
-    ctx->m0 = inverse64(~ctx->modulus[0]+1);
-
-    /** Prepare 1 **/
-    ctx->one = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    ctx->one[0] = 1;
-    
-    /** Pre-compute R mod N **/
-    ctx->r_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (NULL == ctx->r_mod_n) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
-    if (NULL == scratchpad) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
-
-    /** Pre-compute modulus - 2 **/
-    /** Modulus is guaranteed to be >= 3 **/
-    ctx->modulus_min_2 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (NULL == ctx->modulus_min_2) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-    sub(ctx->modulus_min_2, ctx->modulus, ctx->one, ctx->words);
-    sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
-
     /* Check if the modulus has a special form */
+    /* For P-521, modulo reduction is very simple so the Montgomery
+     * representation is not actually used.
+     */
     ctx->modulus_type = ModulusGeneric;
     switch (mod_len) {
         case sizeof(p256_mod):
@@ -1435,6 +1257,67 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
             }
             break;
     }
+
+    ctx->words = ((unsigned)mod_len + 7) / 8;
+    ctx->bytes = (unsigned)(ctx->words * sizeof(uint64_t));
+    ctx->modulus_len = (unsigned)mod_len;
+
+    /** Load modulus N **/
+    ctx->modulus = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (0 == ctx->modulus) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    bytes_to_words(ctx->modulus, ctx->words, modulus, mod_len);
+
+    /** Prepare 1 **/
+    ctx->one = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == ctx->one) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    ctx->one[0] = 1;
+
+    /** Pre-compute R² mod N **/
+    /** Pre-compute -n[0]⁻¹ mod R **/
+    ctx->r2_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (0 == ctx->r2_mod_n) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    if (ctx->modulus_type != ModulusP521) {
+        rsquare(ctx->r2_mod_n, ctx->modulus, ctx->words);
+        ctx->m0 = inverse64(~ctx->modulus[0]+1);
+    } else {
+        memcpy(ctx->r2_mod_n, ctx->one, ctx->words * sizeof(uint64_t));
+        ctx->m0 = 1U;
+    }
+
+    /** Pre-compute R mod N **/
+    ctx->r_mod_n = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == ctx->r_mod_n) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
+    if (NULL == scratchpad) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    if (ctx->modulus_type != ModulusP521)
+        mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+    else
+        memcpy(ctx->r_mod_n, ctx->one, ctx->words * sizeof(uint64_t));
+
+    /** Pre-compute modulus - 2 **/
+    /** Modulus is guaranteed to be >= 3 **/
+    ctx->modulus_min_2 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == ctx->modulus_min_2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+    sub(ctx->modulus_min_2, ctx->modulus, ctx->one, ctx->words);
+    sub(ctx->modulus_min_2, ctx->modulus_min_2, ctx->one, ctx->words);
 
     res = 0;
 
@@ -1504,5 +1387,3 @@ int mont_copy(uint64_t *out, const uint64_t *a, const MontContext *ctx)
 
     return 0;
 }
-
-
