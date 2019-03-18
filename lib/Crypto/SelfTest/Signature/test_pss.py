@@ -290,7 +290,9 @@ class TestVectorsPSSWycheproof(unittest.TestCase):
             assert group['mgf'] == "MGF1"
 
             mgf1_hash =  get_hash_module(group['mgfSha'])
-            mgf = lambda x, y: MGF1(x, y, mgf1_hash)
+
+            def mgf(x, y, mh=mgf1_hash):
+                return MGF1(x, y, mh)
 
             from collections import namedtuple
             TestVector = namedtuple('TestVector', 'id comment msg sig key mgf sLen hash_module valid warning')
