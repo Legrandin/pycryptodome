@@ -228,8 +228,20 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
+        self.tv = []
+        self.add_tests("rsa_signature_test.json")
+        self.add_tests("rsa_signature_2048_sha224_test.json")
+        self.add_tests("rsa_signature_2048_sha256_test.json")
+        self.add_tests("rsa_signature_2048_sha512_test.json")
+        self.add_tests("rsa_signature_3072_sha256_test.json")
+        self.add_tests("rsa_signature_3072_sha384_test.json")
+        self.add_tests("rsa_signature_3072_sha512_test.json")
+        self.add_tests("rsa_signature_4096_sha384_test.json")
+        self.add_tests("rsa_signature_4096_sha512_test.json")
+
+    def add_tests(self, filename):
         comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "rsa_signature_test.json"), "rt") as file_in:
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
             tv_tree = json.load(file_in)
 
         class TestVector(object):
