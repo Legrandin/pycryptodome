@@ -21,6 +21,8 @@ CPPFLAGS += $(UNDEFS)
 
 TGTS:=$(foreach t,$(TAPPS),build/$t)
 
+UTILS=build/modexp_utils.o build/siphash.o
+
 test: build ${TGTS}
 	set -e && for t in ${TGTS}; do $$t; done
 
@@ -32,12 +34,20 @@ all: ${$TGTS}
 clean:
 	rm -fr build common.pyc
 
+# utils
+
+build/siphash.o: ../siphash.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/modexp_utils.o: ../modexp_utils.c
+	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
 # ECC
 
-build/tests_ec_ws_64: test_ec_ws.c ../ec_ws.c build/mont_64.o ../modexp_utils.c ../siphash.c
+build/tests_ec_ws_64: test_ec_ws.c ../ec_ws.c build/mont_64.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
-build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o ../modexp_utils.c ../siphash.c
+build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=32 -UHAVE_UINT128
 
 # addmul128
@@ -118,23 +128,23 @@ build/mont_32.o: ../mont.c
 build/mont_64.o: ../mont.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64
 
-build/test_mont: test_mont.c ../common.h build/mont_32.o
+build/test_mont: test_mont.c ../common.h build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/tests_addmul.c: make_tests_addmul.py
 	python $^ > $@
 
-build/tests_addmul: build/tests_addmul.c build/mont_32.o
+build/tests_addmul: build/tests_addmul.c build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/tests_product.c: make_tests_product.py
 	python $^ > $@
 
-build/tests_product: build/tests_product.c build/mont_32.o
+build/tests_product: build/tests_product.c build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 build/tests_mont_mult.c: make_tests_mont_mult.py
 	python $^ > $@
 
-build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o
+build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
