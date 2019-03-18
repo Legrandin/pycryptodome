@@ -1045,6 +1045,9 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         self.add_tests("ecdsa_test.json")
         self.add_tests("ecdsa_secp256r1_sha256_test.json")
         self.add_tests("ecdsa_secp256r1_sha512_test.json")
+        self.add_tests("ecdsa_secp384r1_sha384_test.json")
+        self.add_tests("ecdsa_secp384r1_sha512_test.json")
+        self.add_tests("ecdsa_secp521r1_sha512_test.json")
 
     def shortDescription(self):
         return self._id
