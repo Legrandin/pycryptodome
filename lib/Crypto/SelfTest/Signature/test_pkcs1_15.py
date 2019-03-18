@@ -38,7 +38,7 @@ from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 
-from Crypto.Hash import SHA1, SHA224, SHA256
+from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Signature import PKCS1_v1_5
@@ -228,8 +228,20 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
+        self.tv = []
+        self.add_tests("rsa_signature_test.json")
+        self.add_tests("rsa_signature_2048_sha224_test.json")
+        self.add_tests("rsa_signature_2048_sha256_test.json")
+        self.add_tests("rsa_signature_2048_sha512_test.json")
+        self.add_tests("rsa_signature_3072_sha256_test.json")
+        self.add_tests("rsa_signature_3072_sha384_test.json")
+        self.add_tests("rsa_signature_3072_sha512_test.json")
+        self.add_tests("rsa_signature_4096_sha384_test.json")
+        self.add_tests("rsa_signature_4096_sha512_test.json")
+
+    def add_tests(self, filename):
         comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "rsa_signature_test.json"), "rt") as file_in:
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
             tv_tree = json.load(file_in)
 
         class TestVector(object):
@@ -239,14 +251,18 @@ class TestVectorsWycheproof(unittest.TestCase):
         for group in tv_tree['testGroups']:
             key = RSA.import_key(group['keyPem'])
             hash_name = group['sha']
-            if hash_name == "SHA-256":
+            if hash_name == "SHA-512":
+                hash_module = SHA512
+            elif hash_name == "SHA-384":
+                hash_module = SHA384
+            elif hash_name == "SHA-256":
                 hash_module = SHA256
             elif hash_name == "SHA-224":
                 hash_module = SHA224
             elif hash_name == "SHA-1":
                 hash_module = SHA1
             else:
-                assert False
+                raise ValueError("Unknown hash algorithm: " + hash_name)
             assert group['type'] == "RSASigVer"
             
             for test in group['tests']:

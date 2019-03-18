@@ -28,7 +28,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import json
 import unittest
+from binascii import unhexlify
 
 from Crypto.Util.py3compat import b, bchr
 from Crypto.Util.number import bytes_to_long
@@ -36,10 +38,14 @@ from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 
-from Crypto.Hash import SHA1, SHA256
+from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pss
 from Crypto.Signature import PKCS1_PSS
+
+from Crypto.Signature.pss import MGF1
+
+from Crypto.Util._file_system import pycryptodome_filename
 
 
 def load_hash_by_name(hash_name):
@@ -246,7 +252,107 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
             signer.sign(hashed_s)
 
 
+def get_hash_module(hash_name):
+    if hash_name == "SHA-512":
+        hash_module = SHA512
+    elif hash_name == "SHA-384":
+        hash_module = SHA384
+    elif hash_name == "SHA-256":
+        hash_module = SHA256
+    elif hash_name == "SHA-224":
+        hash_module = SHA224
+    elif hash_name == "SHA-1":
+        hash_module = SHA1
+    else:
+        raise ValueError("Unknown hash algorithm: " + hash_name)
+    return hash_module
+
+
+class TestVectorsPSSWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    def add_tests(self, filename):
+        comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
+            tv_tree = json.load(file_in)
+
+        for group in tv_tree['testGroups']:
+
+            key = RSA.import_key(group['keyPem'])
+            hash_module = get_hash_module(group['sha'])
+            sLen = group['sLen']
+
+            assert group['type'] == "RSASigVer"
+            assert group['mgf'] == "MGF1"
+
+            mgf1_hash =  get_hash_module(group['mgfSha'])
+
+            def mgf(x, y, mh=mgf1_hash):
+                return MGF1(x, y, mh)
+
+            from collections import namedtuple
+            TestVector = namedtuple('TestVector', 'id comment msg sig key mgf sLen hash_module valid warning')
+
+            for test in group['tests']:
+                tv = TestVector(
+                    test['tcId'],
+                    test['comment'],
+                    unhexlify(test['msg']),
+                    unhexlify(test['sig']),
+                    key,
+                    mgf,
+                    sLen,
+                    hash_module,
+                    test['result'] != "invalid",
+                    test['result'] == "acceptable"
+                )
+                self.tv.append(tv)
+
+    def setUp(self):
+        self.tv = []
+        self.add_tests("rsa_pss_2048_sha1_mgf1_20_test.json")
+        self.add_tests("rsa_pss_2048_sha256_mgf1_0_test.json")
+        self.add_tests("rsa_pss_2048_sha256_mgf1_32_test.json")
+        self.add_tests("rsa_pss_3072_sha256_mgf1_32_test.json")
+        self.add_tests("rsa_pss_4096_sha256_mgf1_32_test.json")
+        self.add_tests("rsa_pss_4096_sha512_mgf1_32_test.json")
+        self.add_tests("rsa_pss_misc_test.json")
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_verify(self, tv):
+        self._id = "Wycheproof RSA PSS Test #%d (%s)" % (tv.id, tv.comment)
+
+        hashed_msg = tv.hash_module.new(tv.msg)
+        signer = pss.new(tv.key, mask_func=tv.mgf, salt_bytes=tv.sLen)
+        try:
+            signature = signer.verify(hashed_msg, tv.sig)
+        except ValueError as e:
+            if tv.warning:
+                return
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.warn(tv)
+
+    def runTest(self):
+        for tv in self.tv:
+            self.test_verify(tv)
+
+
 def get_tests(config={}):
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(PSS_Tests)
     tests += list_test_cases(FIPS_PKCS1_Verify_Tests)
@@ -257,6 +363,8 @@ def get_tests(config={}):
     if config.get('slow_tests'):
         tests += list_test_cases(FIPS_PKCS1_Verify_Tests_KAT)
         tests += list_test_cases(FIPS_PKCS1_Sign_Tests_KAT)
+
+    tests += [ TestVectorsPSSWycheproof(wycheproof_warnings) ]
 
     return tests
 
