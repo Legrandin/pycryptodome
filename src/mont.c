@@ -1006,7 +1006,6 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
             mont_mult_p521(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
         case ModulusGeneric:
-            assert(0);
             mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
     }
