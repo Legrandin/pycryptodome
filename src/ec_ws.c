@@ -36,7 +36,6 @@
 #include "multiply.h"
 #include "mont.h"
 #include "ec.h"
-#include "modexp_utils.h"
 
 FAKE_INIT(ec_ws)
 
@@ -570,6 +569,7 @@ cleanup:
 #ifndef MAKE_TABLE
 #include "p256_table.c"
 #include "p384_table.c"
+#include "p521_table.c"
 
 STATIC void free_g_p256(ProtMemory **prot_g)
 {
@@ -588,6 +588,17 @@ STATIC void free_g_p384(ProtMemory **prot_g)
 
     if (prot_g) {
         for (i=0; i<p384_n_tables; i++)
+            free_scattered(prot_g[i]);
+        free(prot_g);
+    }
+}
+
+STATIC void free_g_p521(ProtMemory **prot_g)
+{
+    unsigned i;
+
+    if (prot_g) {
+        for (i=0; i<p521_n_tables; i++)
             free_scattered(prot_g[i]);
         free(prot_g);
     }
@@ -664,6 +675,45 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
 
     if (res) {
         free_g_p384(prot_g);
+        prot_g = NULL;
+    }
+
+    free(tables_ptrs);
+    return prot_g;
+}
+
+/*
+ * Fill the pre-computed table for the generator point in the P-521 EC context.
+ */
+STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
+{
+    const void **tables_ptrs;
+    ProtMemory **prot_g;
+    unsigned i;
+    int res;
+
+    tables_ptrs = (const void**)calloc(p521_points_per_table, sizeof(void*));
+    if (NULL == tables_ptrs)
+        return NULL;
+
+    prot_g = (ProtMemory**)calloc(p521_n_tables, sizeof(ProtMemory*));
+    if (NULL == prot_g) {
+        free(tables_ptrs);
+        return NULL;
+    }
+
+    res = 0;
+    for (i=0; res==0 && i<p521_n_tables; i++) {
+        unsigned j;
+
+        for (j=0; j<p521_points_per_table; j++) {
+            tables_ptrs[j] = &p521_tables[i][j];
+        }
+        res = scatter(&prot_g[i], tables_ptrs, (uint8_t)p521_points_per_table, 2*mont_bytes(ctx), seed);
+    }
+
+    if (res) {
+        free_g_p521(prot_g);
         prot_g = NULL;
     }
 
@@ -758,6 +808,68 @@ STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     return 0;
 }
 
+STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                            const uint64_t *b,
+                            const uint8_t *exp, size_t exp_size,
+                            uint64_t seed,
+                            Workplace *wp1,
+                            Workplace *wp2,
+                            ProtMemory **prot_g,
+                            const MontContext *ctx)
+{
+    unsigned i;
+    struct BitWindow_RL bw;
+
+    /** Start from PAI **/
+    mont_set(x3, 0, NULL, ctx);
+    mont_set(y3, 1, NULL, ctx);
+    mont_set(z3, 0, NULL, ctx);
+
+    /** Find first non-zero byte in exponent **/
+    for (; exp_size && *exp==0; exp++, exp_size--);
+    bw = init_bit_window_rl(p521_window_size, exp, exp_size);
+
+    if (exp_size == 66) {
+        if (exp[0] >> 1) {
+            return ERR_VALUE;
+        }
+        switch (p521_window_size) {
+            case 1: bw.nr_windows -= 7; break;
+            case 2: bw.nr_windows -= 3; break;
+            case 3: bw.nr_windows -= 2; break;
+            case 4:
+            case 5:
+            case 6:
+            case 7: bw.nr_windows -= 1; break;
+        }
+    }
+
+    if (exp_size > 66)
+        return ERR_VALUE;
+
+    if (bw.nr_windows > p521_n_tables)
+        return ERR_VALUE;
+
+    for (i=0; i < bw.nr_windows; i++) {
+        unsigned index;
+        uint64_t buffer[9*2];   /* X and Y affine coordinates **/
+        uint64_t *xw, *yw;
+
+        index = get_next_digit_rl(&bw);
+        gather(buffer, prot_g[i], index);
+        xw = &buffer[0];
+        yw = &buffer[9];
+
+        ec_mix_add(x3, y3, z3,
+                   x3, y3, z3,
+                   xw, yw,
+                   b,
+                   wp1, ctx);
+    }
+
+    return 0;
+}
+
 #endif
 
 /*
@@ -829,6 +941,14 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
             }
             break;
         }
+        case ModulusP521: {
+            ec_ctx->prot_g = ec_scramble_g_p521(ec_ctx->mont_ctx, seed);
+            if (NULL == ec_ctx->prot_g) {
+                res = ERR_MEMORY;
+                goto cleanup;
+            }
+            break;
+        }
         case ModulusGeneric:
             break;
     }
@@ -855,6 +975,9 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
             break;
         case ModulusP384:
             free_g_p384(ec_ctx->prot_g);
+            break;
+        case ModulusP521:
+            free_g_p521(ec_ctx->prot_g);
             break;
         case ModulusGeneric:
             break;
@@ -1230,6 +1353,32 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             }
             break;
         }
+        case ModulusP521: {
+            /** Coordinates in normal form **/
+            const uint64_t mont_Gx[9] = { 0xF97E7E31C2E5BD66, 0x3348B3C1856A429B, 0xFE1DC127A2FFA8DE, 0xA14B5E77EFE75928, 0xF828AF606B4D3DBA, 0x9C648139053FB521, 0x9E3ECB662395B442, 0x858E06B70404E9CD, 0x00000000000000C6 };
+            const uint64_t mont_Gy[9] = { 0x88BE94769FD16650, 0x353C7086A272C240, 0xC550B9013FAD0761, 0x97EE72995EF42640, 0x17AFBD17273E662C, 0x98F54449579B4468, 0x5C8A5FB42C7D1BD9, 0x39296A789A3BC004, 0x0000000000000118 };
+            unsigned is_generator;
+            unsigned i;
+
+            is_generator = 1;
+            for (i=0; i<9; i++) {
+                is_generator &= (mont_Gx[i] == ecp->x[i]);
+                is_generator &= (mont_Gy[i] == ecp->y[i]);
+            }
+            is_generator &= (unsigned)mont_is_one(ecp->z, ctx);
+
+            if (is_generator) {
+                res = ec_scalar_g_p521(ecp->x, ecp->y, ecp->z,
+                                       ecp->ec_ctx->b,
+                                       k, len,
+                                       seed + 2,
+                                       wp1, wp2,
+                                       ecp->ec_ctx->prot_g,
+                                       ctx);
+                goto cleanup;
+            }
+            break;
+        }
         case ModulusGeneric:
             break;
     }
@@ -1241,10 +1390,9 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         uint64_t *factor=NULL;
 
         /* Create the blinding factor for the base point */
-        res = mont_number(&factor, 1, ctx);
+        res = mont_random_number(&factor, 1, seed, ctx);
         if (res)
             goto cleanup;
-        expand_seed(seed, (uint8_t*)factor, mont_bytes(ctx));
 
         /* Blind the base point */
         mont_mult(ecp->x, ecp->x, factor, wp1->scratch, ctx);

@@ -8,6 +8,7 @@ New features
 ------------
 
 * Speed-up ECC performance.
+* Added support for NIST P-384 and P-521 curves.
 
 Resolved issues
 ---------------

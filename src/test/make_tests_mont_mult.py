@@ -4,7 +4,7 @@ from common import counter, make_main, split64, inverse, bin2int
 from hashlib import sha256
 import struct
 
-def make_test(a, b, modulus):
+def make_test(a, b, modulus, use_mont=True):
 
     assert(0 <= a < modulus)
     assert(0 <= b < modulus)
@@ -16,6 +16,9 @@ def make_test(a, b, modulus):
     while modulus >= R:
         R <<= 64
         nw += 1
+
+    if not use_mont:
+        R = 1
 
     n0 = modulus & (B-1)
     m0 = -inverse(n0, B) % B
@@ -43,22 +46,23 @@ def make_test(a, b, modulus):
         modulus_b.insert(0, hex(modulus % 256))
         modulus >>= 8
 
-    test_nr = counter.next()
-    print ""
-    print "void test_%d() {" % test_nr
-    print "    const uint64_t a[] = {" + ", ".join(a_m_s) + "};"
-    print "    const uint64_t b[] = {" + ", ".join(b_m_s) + "};"
-    print "    const uint64_t n[] = {" + ", ".join(modulus_s) + "};"
-    print "    const uint64_t expected[] = {" + ", ".join(result_m_s) + "};"
-    print "    uint64_t out[%d];" % (nw+1)
-    print "    uint64_t scratch[%d];" % (3*nw+1)
-    print ""
-    print "    memset(out, 0xAA, sizeof out);"
-    print "    mont_mult_internal(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)
-    print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
-    print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw
-    print "}"
-    print ""
+    if use_mont:
+        test_nr = counter.next()
+        print ""
+        print "void test_%d() {" % test_nr
+        print "    const uint64_t a[] = {" + ", ".join(a_m_s) + "};"
+        print "    const uint64_t b[] = {" + ", ".join(b_m_s) + "};"
+        print "    const uint64_t n[] = {" + ", ".join(modulus_s) + "};"
+        print "    const uint64_t expected[] = {" + ", ".join(result_m_s) + "};"
+        print "    uint64_t out[%d];" % (nw+1)
+        print "    uint64_t scratch[%d];" % (5*nw)
+        print ""
+        print "    memset(out, 0xAA, sizeof out);"
+        print "    mont_mult_internal(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)
+        print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
+        print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw
+        print "}"
+        print ""
 
     test_nr = counter.next()
     print ""
@@ -70,9 +74,9 @@ def make_test(a, b, modulus):
     print "    uint64_t out[%d];" % (nw+1)
     print "    MontContext *ctx;"
     print "    int res;"
-    print "    uint64_t scratch[%d];" % (3*nw+1)
+    print "    uint64_t scratch[%d];" % (5*nw)
     print ""
-    print 
+    print
     print "    res = mont_context_init(&ctx, modulus, sizeof modulus);"
     print "    assert(res == 0);"
     print "    memset(out, 0xAA, sizeof out);"
@@ -96,6 +100,7 @@ print "void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t 
 
 p256 = 115792089210356248762697446949407573530086143415290314195533631308867097853951
 p384 = 39402006196394479212279040100143613805079739270465446667948293404245721771496870329047266088258938001861606973112319
+p521 = 0x000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 
 make_test(2, 3, 255)
 make_test(2, 240, 255)
@@ -120,5 +125,10 @@ for x in range(100):
     a = bin2int(sha256(b"a" + struct.pack(">I", x)).digest()) % p384
     b = bin2int(sha256(b"b" + struct.pack(">I", x)).digest()) % p384
     make_test(a, b, p384)
+
+for x in range(100):
+    a = bin2int(sha256(b"a" + struct.pack(">I", x)).digest()) % p521
+    b = bin2int(sha256(b"b" + struct.pack(">I", x)).digest()) % p521
+    make_test(a, b, p521, use_mont=False)
 
 make_main()
