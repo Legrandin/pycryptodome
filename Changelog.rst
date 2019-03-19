@@ -15,7 +15,7 @@ Resolved issues
 
 * xxxxx
 
-  Breaks in compatibility
+Breaks in compatibility
 -----------------------
 
 * ``point_at_infinity()`` becomes an instance method for ``Crypto.PublicKey.ECC.EccKey``, from a static one.

@@ -62,7 +62,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Asymmetric key generation:
   
   - RSA
-  - ECC (NIST P-256 curve only)
+  - ECC (NIST P-256, P-384 and P-521 curve only)
   - DSA
   - ElGamal (legacy)
 
