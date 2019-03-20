@@ -58,7 +58,7 @@ int main(void)
     struct timeval start, stop;
     double duration_ms, rate;
 
-#define ITERATIONS 5000U
+#define ITERATIONS 1000U
 
     /* Make almost-worst case exponent */
     for (i=0; i<32; i++) {
@@ -75,6 +75,7 @@ int main(void)
     for (i=0; i<ITERATIONS; i++) {
         ec_ws_copy(ecp, gp);
         ec_ws_scalar(ecp, exp, 32, 0xFFF);
+        ec_ws_get_xy(x, y, 32, ecp);
     }
     gettimeofday(&stop, NULL);
     duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
@@ -93,10 +94,11 @@ int main(void)
 
 #if 1
     /** Scalar multiplications by arbitrary point **/
-    gettimeofday(&start, NULL);
     ec_ws_double(ecp);
-    for (i=0; i<=5000; i++) {
+    gettimeofday(&start, NULL);
+    for (i=0; i<ITERATIONS; i++) {
         ec_ws_scalar(ecp, exp, 32, 0xFFF);
+        ec_ws_get_xy(x, y, 32, ecp);
     }
     gettimeofday(&stop, NULL);
     duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
