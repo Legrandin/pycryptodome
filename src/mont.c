@@ -43,7 +43,7 @@
 #if SYS_BITS == 64
 #include "multiply_64.c"
 #else
-#error You must define macro SYS_BITS
+#error You must define the macro SYS_BITS
 #endif
 #endif
 
@@ -86,7 +86,7 @@ STATIC uint64_t inverse64(uint64_t a)
 }
 
 /**
- * Check if a big integer x is greater than or equal to y.
+ * Check if a multi-word integer x is greater than or equal to y.
  *
  * @param x     The first term
  * @param y     The second term
@@ -113,18 +113,18 @@ STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
 }
 
 /*
- * Subtract a big integer b from a.
+ * Subtract a multi-word integer b from a.
  *
- * @param out   Where to store the result
+ * @param out   The location where the multi-word result is stored
  * @param a     Number to subtract from
  * @param b     Number to subtract
- * @param nw    The number of words that make up both a and b
+ * @param nw    The number of words of both a and b
  * @result      0 if there is no borrow, 1 otherwise
  */
-STATIC uint64_t sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw)
+STATIC unsigned sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw)
 {
     size_t i;
-    uint64_t borrow1 , borrow2;
+    unsigned borrow1 , borrow2;
 
     borrow2 = 0;
     for (i=0; i<nw; i++) {
@@ -143,9 +143,9 @@ STATIC uint64_t sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t 
 /*
  * Compute R² mod N, where R is the smallest power of 2⁶⁴ larger than N.
  *
- * @param r2_mod_n  Where the result is stored at
+ * @param r2_mod_n  The location where the result is stored at
  * @param n         The modulus N
- * @param nw        The number of 64-bit words that make up r2_mod_n and n
+ * @param nw        The number of 64-bit words of both r2_mod_n and n
  */
 STATIC void rsquare(uint64_t *r2_mod_n, uint64_t *n, size_t nw)
 {
@@ -181,14 +181,13 @@ STATIC void rsquare(uint64_t *r2_mod_n, uint64_t *n, size_t nw)
 }
 
 /*
- * Multiply a big integer a by a 64-bit scalar k and
- * then add the result to big integer t.
+ * Multiply a multi-word integer a by a 64-bit scalar k and
+ * then add the result to the multi-word integer t.
  *
- * @param t     The big integer the result of the
- *              multiplication will be added to
- * @param tw    The number of words that make up t
- * @param a     The big integer to multiply with the scalar
- * @param aw    The number of words that make up a
+ * @param t     The multi-word integer accumulator
+ * @param tw    The number of words of t
+ * @param a     The multi-word integer to multiply with the scalar
+ * @param aw    The number of words of a
  * @param k     The 64-bit scalar multiplier
  */
 STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_t k)
@@ -220,12 +219,13 @@ STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_
 }
 
 /**
- * Multiply two big integers.
+ * Multiply two multi-word integers.
  *
- * @param t     Where to store the result. Array of  2*nw words.
+ * @param t     The location where the result is stored. It is twice as big as
+ *              either a or b (it is an array of  2*nw words).
  * @param a     The first term, array of nw words.
  * @param b     The second term, array of nw words.
- * @param nw    The number of words that make up a and b.
+ * @param nw    The number of words of both a and b.
  *
  */
 STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
@@ -246,11 +246,11 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
 /*
  * Select a number out of two, in constant time.
  *
- * @param out   Where to store the result
+ * @param out   The location where the multi-word result is stored
  * @param a     The first choice, selected if cond is true (non-zero)
  * @param b     The second choice, selected if cond is false (zero)
  * @param cond  The flag that drives the selection
- * @param words The number of words that make up a, b, and out
+ * @param words The number of words of a, b, and out
  * @return      0 for success, the appropriate code otherwise.
  */
 STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, size_t words)
@@ -289,9 +289,9 @@ STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsi
 }
 
 /*
- * Add two numbers with modulo arithmetic.
+ * Add two multi-word numbers with modulo arithmetic.
  *
- * @param out       The area of memory where to store the result (nw words)
+ * @param out       The locaton where the multi-word result (nw words) is stored
  * @param a         The first term (nw words)
  * @param b         The second term (nw words)
  * @param modulus   The modulus (nw words)
@@ -336,7 +336,7 @@ void add_mod(uint64_t* out, const uint64_t* a, const uint64_t* b, const uint64_t
  * @param a     The first term (already in Montgomery form, a*R mod N)
  * @param b     The second term (already in Montgomery form, b*R mod N)
  * @param n     The modulus (in normal form), such that R>N
- * @param m0    Least-significant word of the opposite of the inverse of n modulo R, that is, inv(-n[0], R)
+ * @param m0    Least-significant word of the opposite of the inverse of n modulo R, that is, -n[0]⁻¹ mod R
  * @param t     Temporary, internal result; it must have been created with mont_number(&p,SCRATCHPAD_NR,ctx).
  * @param nw    Number of words making up the 3 integers: out, a, and b.
  *              It also defines R as 2^(64*nw).
@@ -346,7 +346,7 @@ void add_mod(uint64_t* out, const uint64_t* a, const uint64_t* b, const uint64_t
 #if SCRATCHPAD_NR < 4
 #error Scratchpad is too small
 #endif
-STATIC void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
 {
     size_t i;
     uint64_t *t2;
@@ -728,9 +728,6 @@ STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     assert(nw == 9);
     assert(m0 == 1);
 
-    assert(a[8] < 0x200);
-    assert(b[8] < 0x200);
-
     /*
      * A number in the form:
      *      x*2⁵²¹ + y
@@ -756,9 +753,6 @@ STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     }
 
     /* t is a 1042-bit number, occupying 17 words (of the total 18); the MSW (t[16]) only has 18 bits */
-    assert(t[16] < 0x40000);
-    assert(t[17] == 0);
-
     s[0] = (t[8] >> 9)  | (t[9] << 55);     t[8] &= 0x1FF;
     s[1] = (t[9] >> 9)  | (t[10] << 55);
     s[2] = (t[10] >> 9) | (t[11] << 55);
@@ -770,7 +764,6 @@ STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     s[8] = t[16] >> 9;
 
     add_mod(out, t, s, n, tmp1, tmp2, nw);
-    assert(out[8] < 0x200);
 }
 
 /* ---- PUBLIC FUNCTIONS ---- */
@@ -788,7 +781,7 @@ void mont_context_free(MontContext *ctx)
 }
 
 /*
- * Return how many bytes a big endian-encoded number takes in memory.
+ * Return how many bytes a big endian multi-word number takes in memory.
  */
 size_t mont_bytes(const MontContext *ctx)
 {
@@ -798,8 +791,8 @@ size_t mont_bytes(const MontContext *ctx)
 }
 
 /*
- * Allocate memory for an array of numbers in Montgomery form.
- * Initialize to 0.
+ * Allocate memory for an array of numbers in Montgomery form
+ * and initialize it to 0.
  *
  * @param out   The location where the address of the newly allocated
  *              array will be placed in.
@@ -902,7 +895,7 @@ int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const Mon
     }
 
     if (ctx->modulus_type != ModulusP521)
-        mont_mult_internal(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+        mont_mult_generic(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     else
         mont_copy(encoded, tmp1, ctx);
     res = 0;
@@ -952,7 +945,7 @@ int mont_to_bytes(uint8_t *number, size_t len, const uint64_t* mont_number, cons
     }
 
     if (ctx->modulus_type != ModulusP521)
-        mont_mult_internal(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+        mont_mult_generic(tmp1, mont_number, ctx->one, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     else
         mont_copy(tmp1, mont_number, ctx);
     res = words_to_bytes(number, len, tmp1, ctx->words);
@@ -1006,7 +999,7 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
             mont_mult_p521(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
         case ModulusGeneric:
-            mont_mult_internal(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+            mont_mult_generic(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
     }
 
@@ -1169,7 +1162,7 @@ int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
     scratchpad = &tmp[ctx->words];
 
     if (ctx->modulus_type != ModulusP521)
-        mont_mult_internal(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+        mont_mult_generic(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     else
         mont_copy(out, tmp, ctx);
     return 0;
@@ -1304,7 +1297,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         goto cleanup;
     }
     if (ctx->modulus_type != ModulusP521)
-        mont_mult_internal(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
+        mont_mult_generic(ctx->r_mod_n, ctx->one, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     else
         memcpy(ctx->r_mod_n, ctx->one, ctx->words * sizeof(uint64_t));
 

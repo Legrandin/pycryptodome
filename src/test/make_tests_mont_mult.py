@@ -1,4 +1,4 @@
-"""Make unit test for mont_mult() and mont_mult_internal() in mont.c"""
+"""Make unit test for mont_mult() and mont_mult_generic() in mont.c"""
 
 from common import counter, make_main, split64, inverse, bin2int
 from hashlib import sha256
@@ -58,7 +58,7 @@ def make_test(a, b, modulus, use_mont=True):
         print "    uint64_t scratch[%d];" % (5*nw)
         print ""
         print "    memset(out, 0xAA, sizeof out);"
-        print "    mont_mult_internal(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)
+        print "    mont_mult_generic(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)
         print "    assert(memcmp(out, expected, 8*%d) == 0);" % nw
         print "    assert(out[%d] == 0xAAAAAAAAAAAAAAAAUL);" % nw
         print "}"
@@ -96,7 +96,7 @@ print "#include <stdint.h>"
 print "#include <stdio.h>"
 print '#include "mont.h"'
 print ""
-print "void mont_mult_internal(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);"
+print "void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);"
 
 p256 = 115792089210356248762697446949407573530086143415290314195533631308867097853951
 p384 = 39402006196394479212279040100143613805079739270465446667948293404245721771496870329047266088258938001861606973112319
