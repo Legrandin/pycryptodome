@@ -193,6 +193,7 @@ static inline int bytes_to_words(uint64_t *x, size_t words, const uint8_t *in, s
 {
     uint8_t buf8[8];
     size_t words_used, bytes_in_msw, i;
+    uint64_t *xp;
 
     if (0 == words || 0 == len)
         return ERR_NOT_ENOUGH_DATA;
@@ -219,12 +220,15 @@ static inline int bytes_to_words(uint64_t *x, size_t words, const uint8_t *in, s
     /** Do most significant word **/
     memset(buf8, 0, 8);
     memcpy(buf8 + (8 - bytes_in_msw), in, bytes_in_msw);
-    x[words_used-1] = LOAD_U64_BIG(buf8);
+    xp = &x[words_used-1];
+    *xp = LOAD_U64_BIG(buf8);
     in += bytes_in_msw;
 
     /** Do the other words **/
-    for (i=0; i<words_used-1; i++, in += 8)
-        x[words_used-2-i] = LOAD_U64_BIG(in);
+    for (i=0; i<words_used-1; i++, in += 8) {
+        xp--;
+        *xp = LOAD_U64_BIG(in);
+    }
     return 0;
 }
 
