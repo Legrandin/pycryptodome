@@ -1073,7 +1073,7 @@ if __name__ == "__main__":
 
     d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd
 
-    point = _curve.G.copy()
+    point = _curves['p256'].G.copy()
     count = 3000
 
     start = time.time()
