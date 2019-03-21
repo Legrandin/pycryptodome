@@ -3,7 +3,7 @@
 #include "mont.h"
 
 int ge(const uint64_t *x, const uint64_t *y, size_t nw);
-uint64_t sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw);
+unsigned sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw);
 void rsquare(uint64_t *r2, uint64_t *n, size_t nw);
 int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, unsigned words);
 
