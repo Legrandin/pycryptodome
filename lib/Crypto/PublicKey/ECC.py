@@ -224,11 +224,22 @@ class UnsupportedEccFeature(ValueError):
 class EccPoint(object):
     """A class to abstract a point over an Elliptic Curve.
 
-    :ivar x: The X-coordinate of the ECC point
+    The class support specials methods for
+
+    * Adding two points: ``R = S + T``
+    * In-place addition: ``S += T``
+    * Negating a point: ``R = -T``
+    * Comparing two points: ``if S == T: ...``
+    * Multiplying a point by a scalar: ``R = S*k``
+    * In-place multiplication by a scalar: ``T *= k``
+
+    :ivar x: The affine X-coordinate of the ECC point
     :vartype x: integer
 
-    :ivar y: The Y-coordinate of the ECC point
+    :ivar y: The affine Y-coordinate of the ECC point
     :vartype y: integer
+
+    :ivar xy: The tuple with X- and Y- coordinates
     """
 
     def __init__(self, x, y, curve="p256"):
@@ -285,14 +296,17 @@ class EccPoint(object):
         return np
 
     def copy(self):
+        """Return a copy of this point."""
         x, y = self.xy
         np = EccPoint(x, y, self._curve_name)
         return np
 
     def is_point_at_infinity(self):
+        """``True`` if this is the point-at-infinity."""
         return self.xy == (0, 0)
 
     def point_at_infinity(self):
+        """Return the point-at-infinity for the curve this point is on."""
         return EccPoint(0, 0, self._curve_name)
 
     @property
@@ -318,11 +332,11 @@ class EccPoint(object):
         return (Integer(bytes_to_long(xb)), Integer(bytes_to_long(yb)))
     
     def size_in_bytes(self):
-        """Size of each coordinate, in bytes"""
+        """Size of each coordinate, in bytes."""
         return (self.size_in_bits() + 7) // 8
 
     def size_in_bits(self):
-        """Size of each coordinate, in bits"""
+        """Size of each coordinate, in bits."""
         return self._curve.modulus_bits
 
     def double(self):
@@ -615,20 +629,22 @@ class EccKey(object):
           format (string):
             The format to use for encoding the key:
 
-            - *'DER'*. The key will be encoded in ASN.1 DER format (binary).
+            - ``'DER'``. The key will be encoded in ASN.1 DER format (binary).
               For a public key, the ASN.1 ``subjectPublicKeyInfo`` structure
               defined in `RFC5480`_ will be used.
               For a private key, the ASN.1 ``ECPrivateKey`` structure defined
               in `RFC5915`_ is used instead (possibly within a PKCS#8 envelope,
               see the ``use_pkcs8`` flag below).
-            - *'PEM'*. The key will be encoded in a PEM_ envelope (ASCII).
-            - *'OpenSSH'*. The key will be encoded in the OpenSSH_ format
+            - ``'PEM'``. The key will be encoded in a PEM_ envelope (ASCII).
+            - ``'OpenSSH'``. The key will be encoded in the OpenSSH_ format
               (ASCII, public keys only).
 
           passphrase (byte string or string):
             The passphrase to use for protecting the private key.
 
           use_pkcs8 (boolean):
+            Only relevant for private keys.
+
             If ``True`` (default and recommended), the `PKCS#8`_ representation
             will be used.
 
@@ -642,10 +658,9 @@ class EccKey(object):
 
           compress (boolean):
             If ``True``, a more compact representation of the public key
-            (X-coordinate only) is used.
+            with the X-coordinate only is used.
 
-            If ``False`` (default), the full public key (in both its
-            coordinates) will be exported.
+            If ``False`` (default), the full public key will be exported.
 
         .. warning::
             If you don't provide a passphrase, the private key will be
@@ -654,7 +669,7 @@ class EccKey(object):
         .. note::
             When exporting a private key with password-protection and `PKCS#8`_
             (both ``DER`` and ``PEM`` formats), any extra parameters
-            is passed to :mod:`Crypto.IO.PKCS8`.
+            to ``export_key()`` will be passed to :mod:`Crypto.IO.PKCS8`.
 
         .. _PEM:        http://www.ietf.org/rfc/rfc1421.txt
         .. _`PEM encryption`: http://www.ietf.org/rfc/rfc1423.txt
@@ -716,7 +731,7 @@ def generate(**kwargs):
     Args:
 
       curve (string):
-        Mandatory. It must be "p256", "P-256", "prime256v1" or "secp256r1".
+        Mandatory. It must be a curve name define in the :doc:`ecc` module.
 
       randfunc (callable):
         Optional. The RNG to read randomness from.
@@ -743,7 +758,7 @@ def construct(**kwargs):
     Args:
 
       curve (string):
-        Mandatory. It must be "p256", "P-256", "prime256v1" or "secp256r1".
+        Mandatory. It must be a curve name define in the :doc:`ecc` module.
 
       d (integer):
         Only for a private key. It must be in the range ``[1..order-1]``.

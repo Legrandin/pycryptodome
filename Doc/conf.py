@@ -30,6 +30,10 @@ class MockLib(object):
     def have_aes_ni(self):
         return True
     have_clmul = have_aes_ni
+    ec_ws_new_context = lambda *x: 0
+    ec_free_context = lambda *x: None
+    ec_ws_new_point = lambda *x: 0
+    ec_free_point = lambda *x: None
 
 _raw_api.load_pycryptodome_raw_lib = lambda name, cdec: MockLib()
 

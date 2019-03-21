@@ -5,23 +5,27 @@ ECC_ (Elliptic Curve Cryptography) is a modern and efficient type of public key 
 Its security is based on the difficulty to solve discrete logarithms
 on the field defined by specific equations computed over a curve.
 
-ECC can be used to create digital signatures or encrypting data.
+ECC can be used to create digital signatures or to perform a key exchange.
 
-The main benefit of ECC is that the size of a key is significantly smaller
-than with more traditional algorithms like RSA or DSA.
+Compared to traditional algorithms like RSA, an ECC key
+is significantly smaller at the same security level.
+For instance, a 3072-bit RSA key takes 768 bytes whereas the equally strong NIST P-256 key
+only takes 32 bytes (that is, 256 bits).
 
-For instance, consider the security level equivalent to AES128: an RSA
-key of similar strength must have a modulus of 3072 bits (therefore the total size
-is 768 bytes, comprising modulus and private exponent).
-An ECC private needs as little as 256 bits (32 bytes).
+This module provides mechanisms for generating new ECC keys, exporting and importing them
+using widely supported formats like PEM or DER.
 
-This module provides mechanisms for generating new ECC keys, exporting them
-using widely supported formats like PEM or DER and importing them back.
+.. _curve_names:
 
-.. note::
-    This module currently supports only ECC keys defined over the standard
-    **NIST P-256 curve** (see `FIPS 186-4`_, Section D.1.2.3).
-    More curves will be added in the future.
+.. csv-table::
+   :header: Curve, Possible names
+   :widths: 20, 80
+
+   "NIST P-256", "``'NIST P-256'``, ``'p256'``, ``'P-256'``, ``'prime256v1'``, ``'secp256r1'``"
+   "NIST P-384", "``'NIST P-384'``, ``'p384'``, ``'P-384'``, ``'prime384v1'``, ``'secp384r1'``"
+   "NIST P-521", "``'NIST P-521'``, ``'p521'``, ``'P-521'``, ``'prime521v1'``, ``'secp521r1'``"
+
+For more information see `FIPS 186-4`_, Section D.1.2.3.
 
 The following example demonstrates how to generate a new key, export it,
 and subsequentely reload it back into the application::
@@ -31,7 +35,7 @@ and subsequentely reload it back into the application::
     >>> key = ECC.generate(curve='P-256')
     >>>
     >>> f = open('myprivatekey.pem','wt')
-    >>> f.write(key.export_key(format='PEM'))
+    >>> f.write(key.export_key()
     >>> f.close()
     ...
     >>> f = open('myprivatekey.pem','rt')
