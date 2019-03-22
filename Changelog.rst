@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.8.0 (xx xxxxxxx 2019)
+3.8.0 (23 March 2019)
 +++++++++++++++++++++++
 
 New features
