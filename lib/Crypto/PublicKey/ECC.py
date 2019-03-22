@@ -224,7 +224,7 @@ class UnsupportedEccFeature(ValueError):
 class EccPoint(object):
     """A class to abstract a point over an Elliptic Curve.
 
-    The class support specials methods for
+    The class support special methods for:
 
     * Adding two points: ``R = S + T``
     * In-place addition: ``S += T``
