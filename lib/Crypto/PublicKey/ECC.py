@@ -412,7 +412,7 @@ class EccKey(object):
     Do not instantiate directly.
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
 
-    :ivar curve: The name of the ECC curve
+    :ivar curve: The name of the ECC as defined in :numref:`curve_names`.
     :vartype curve: string
 
     :ivar pointQ: an ECC point representating the public component
@@ -731,7 +731,7 @@ def generate(**kwargs):
     Args:
 
       curve (string):
-        Mandatory. It must be a curve name define in the :doc:`ecc` module.
+        Mandatory. It must be a curve name defined in :numref:`curve_names`.
 
       randfunc (callable):
         Optional. The RNG to read randomness from.
@@ -758,7 +758,7 @@ def construct(**kwargs):
     Args:
 
       curve (string):
-        Mandatory. It must be a curve name define in the :doc:`ecc` module.
+        Mandatory. It must be a curve name defined in :numref:`curve_names`.
 
       d (integer):
         Only for a private key. It must be in the range ``[1..order-1]``.

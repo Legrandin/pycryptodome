@@ -112,6 +112,8 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
+# If True, tables and code-blocks are automatically numbered if they have a caption. The numref role is enabled.
+numfig = True
 
 # -- Options for HTML output ---------------------------------------------------
 
