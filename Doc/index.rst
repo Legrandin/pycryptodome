@@ -10,6 +10,7 @@ Welcome to PyCryptodome's documentation
    src/vs_pycrypto
    src/api
    src/examples
+   src/faq
    src/contribute_support
    src/future
    src/changelog
