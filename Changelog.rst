@@ -7,13 +7,17 @@ Changelog
 New features
 ------------
 
-* Speed-up ECC performance.
+* Speed-up ECC performance. ECDSA is 33 times faster on the NIST P-256 curve.
 * Added support for NIST P-384 and P-521 curves.
+* ``EccKey`` has new methods ``size_in_bits()`` and ``size_in_bytes()``.
+* Support HMAC-SHA224, HMAC-SHA256, HMAC-SHA384, and HMAC-SHA512 in PBE2/PBKDF2.
 
 Resolved issues
 ---------------
 
-* xxxxx
+* DER objects were not rejected if their length field had a leading zero.
+* Allow legacy RC2 ciphers to have 40-bit keys.
+* ASN.1 Object IDs did not allow the value 0 in the path.
 
 Breaks in compatibility
 -----------------------
