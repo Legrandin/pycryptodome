@@ -73,7 +73,7 @@ for instance:
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST P-256 curve only)
+* Elliptic curves cryptography (NIST P-256, P-384 and P-521 curves only)
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
