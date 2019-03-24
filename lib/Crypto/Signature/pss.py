@@ -338,16 +338,36 @@ def new(rsa_key, **kwargs):
     :Keyword Arguments:
 
         *   *mask_func* (``callable``) --
-            A mask generation function that accepts two parameters: ``bytes`` to
-            use as seed, and the amount of ``bytes`` to return (i.e. the mask).
-            If not specified, the standard :func:`MGF1` function is used,
-            based on the same hash algorithm applied to the message.
+            A function that returns the mask (as `bytes`).
+            It must accept two parameters: a seed (as `bytes`)
+            and the length of the data to return.
+
+            If not specified, it will be the function :func:`MGF1` defined in
+            `RFC8017 <https://tools.ietf.org/html/rfc8017#page-67>`_ and
+            combined with the same hash algorithm applied to the
+            message to sign or verify.
+
+            If you want to use a different function, for instance still :func:`MGF1`
+            but together with another hash, you can do::
+
+                from Crypto.Hash import SHA256
+                from Crypto.Signature.pss import MGF1
+                mgf = lambda x, y: MGF1(x, y, SHA256)
 
         *   *salt_bytes* (``integer``) --
             Length of the salt, in bytes.
-            If not specified, it matches the digest of the hash algorithm
-            applied to the message.
-            If zero, the signature scheme becomes deterministic.
+            It is a value between 0 and ``emLen - hLen - 2``, where ``emLen``
+            is the size of the RSA modulus and ``hLen`` is the size of the digest
+            applied to the message to sign or verify.
+
+            The salt is generated internally, you don't need to provide it.
+
+            If not specified, the salt length will be ``hLen``.
+            If it is zero, the signature scheme becomes deterministic.
+
+            Note that in some implementations such as OpenSSL the default
+            salt length is ``emLen - hLen - 2`` (even though it is not more
+            secure than ``hLen``).
 
         *   *rand_func* (``callable``) --
             A function that returns random ``bytes``, of the desired length.
