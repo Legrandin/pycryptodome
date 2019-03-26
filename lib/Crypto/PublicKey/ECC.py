@@ -468,7 +468,7 @@ class EccKey(object):
         else:
             extra = ""
         x, y = self.pointQ.xy
-        return "EccKey(curve='%s', x=%d, y=%d%s)" % (self.desc, x, y, extra)
+        return "EccKey(curve='%s', point_x=%d, point_y=%d%s)" % (self._curve.desc, x, y, extra)
 
     def has_private(self):
         """``True`` if this key can be used for making signatures or decrypting data."""
