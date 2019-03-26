@@ -48,3 +48,25 @@ In PyCryptodome, you maximize the salt length with::
    salt_bytes = key.size_in_bytes() - h.digest_size - 2
    signature = pss.new(key, salt_bytes=salt_bytes).sign(h)
 
+Why do I get the error ``No module named Crypto`` on Windows?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Check the directory where Python packages are installed, like::
+
+        /path/to/python/Lib/site-packages/
+
+You might find a directory named ``crypto``, with all the PyCryptodome files in it.
+
+The most likely cause is described `here <https://github.com/dlitz/pycrypto/issues/156>`_ and you can fix the problem with::
+
+        pip uninstall crypto
+        pip uninstall pycryptodome
+        pip install pycryptodome
+
+The root cause is that, in the past, you most likely have installed an unrelated but similarly named package called `crypto <https://pypi.org/project/crypto/>`_,
+which happens to operate under the namespace ``crypto``.
+
+The Windows filesystem is **case-insensitive** so ``crypto`` and ``Crypto`` are effectively considered the same thing.
+When you subsequently install ``pycryptodome``, ``pip`` finds that a directory named with the target namespace already exists (under the rules of the underlying filesystem),
+and therefore installs all the sub-packages of ``pycryptodome`` in it.
+This is probably a reasonable behavior, if it wansn't that `pip does not issue any warning even if it could detect the issue <https://github.com/pypa/pip/issues/3309>`_.
