@@ -94,6 +94,15 @@ def encode(data, marker, passphrase=None, randfunc=None):
     return out
 
 
+def _EVP_BytesToKey(data, salt, key_len):
+    d = [ b'' ]
+    m = (key_len + 15 ) // 16
+    for _ in range(m):
+        nd = MD5.new(d[-1] + data + salt).digest()
+        d.append(nd)
+    return b"".join(d)[:key_len]
+
+
 def decode(pem_data, passphrase=None):
     """Decode a PEM block into binary.
 
@@ -138,18 +147,25 @@ def decode(pem_data, passphrase=None):
             raise ValueError("PEM encryption format not supported.")
         algo, salt = DEK[1].split(',')
         salt = unhexlify(tobytes(salt))
+
+        padding = True
+
         if algo == "DES-CBC":
-            # This is EVP_BytesToKey in OpenSSL
-            key = PBKDF1(passphrase, salt, 8, 1, MD5)
+            key = _EVP_BytesToKey(passphrase, salt, 8)
             objdec = DES.new(key, DES.MODE_CBC, salt)
         elif algo == "DES-EDE3-CBC":
-            # Note that EVP_BytesToKey is note exactly the same as PBKDF1
-            key = PBKDF1(passphrase, salt, 16, 1, MD5)
-            key += PBKDF1(key + passphrase, salt, 8, 1, MD5)
+            key = _EVP_BytesToKey(passphrase, salt, 24)
             objdec = DES3.new(key, DES3.MODE_CBC, salt)
         elif algo == "AES-128-CBC":
-            key = PBKDF1(passphrase, salt[:8], 16, 1, MD5)
+            key = _EVP_BytesToKey(passphrase, salt[:8], 16)
             objdec = AES.new(key, AES.MODE_CBC, salt)
+        elif algo == "AES-192-CBC":
+            key = _EVP_BytesToKey(passphrase, salt[:8], 24)
+            objdec = AES.new(key, AES.MODE_CBC, salt)
+        elif algo.lower() == "id-aes256-gcm":
+            key = _EVP_BytesToKey(passphrase, salt[:8], 32)
+            objdec = AES.new(key, AES.MODE_GCM, nonce=salt)
+            padding = False
         else:
             raise ValueError("Unsupport PEM encryption algorithm (%s)." % algo)
         lines = lines[2:]
@@ -160,7 +176,10 @@ def decode(pem_data, passphrase=None):
     data = a2b_base64(''.join(lines[1:-1]))
     enc_flag = False
     if objdec:
-        data = unpad(objdec.decrypt(data), objdec.block_size)
+        if padding:
+            data = unpad(objdec.decrypt(data), objdec.block_size)
+        else:
+            data = objdec.decrypt(data)
         enc_flag = True
 
     return (data, marker, enc_flag)
