@@ -95,6 +95,12 @@ def get_fixed_prng():
         return SHAKE128.new().update(b"SEED").read
 
 
+class TestImport(unittest.TestCase):
+
+    def test_empty(self):
+        self.assertRaises(ValueError, ECC.import_key, b"")
+
+
 class TestImport_P256(unittest.TestCase):
 
     ref_private, ref_public = create_ref_keys_p256()
@@ -1226,6 +1232,7 @@ vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
 
 def get_tests(config={}):
     tests = []
+    tests += list_test_cases(TestImport)
     tests += list_test_cases(TestImport_P256)
     tests += list_test_cases(TestImport_P384)
     tests += list_test_cases(TestImport_P521)

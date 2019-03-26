@@ -275,6 +275,9 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.p, self.p)
         self.assertEqual(key.q, self.q)
 
+    def test_import_empty(self):
+        self.assertRaises(ValueError, RSA.import_key, b"")
+
     ###
     def testExportKey1(self):
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])

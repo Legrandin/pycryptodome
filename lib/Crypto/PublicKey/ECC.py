@@ -1076,7 +1076,7 @@ def import_key(encoded, passphrase=None):
         return _import_openssh(encoded)
 
     # DER
-    if bord(encoded[0]) == 0x30:
+    if len(encoded) > 0 and bord(encoded[0]) == 0x30:
         return _import_der(encoded, passphrase)
 
     raise ValueError("ECC key format is not supported")

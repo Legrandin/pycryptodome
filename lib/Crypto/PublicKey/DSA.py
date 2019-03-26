@@ -660,7 +660,7 @@ def import_key(extern_key, passphrase=None):
             tup = [Integer.from_bytes(keyparts[x]) for x in (4, 3, 1, 2)]
             return construct(tup)
 
-    if bord(extern_key[0]) == 0x30:
+    if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
         # This is probably a DER encoded key
         return _import_key_der(extern_key, passphrase, None)
 

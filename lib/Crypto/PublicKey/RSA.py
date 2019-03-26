@@ -747,7 +747,7 @@ def import_key(extern_key, passphrase=None):
             n = Integer.from_bytes(keyparts[2])
             return construct([n, e])
 
-    if bord(extern_key[0]) == 0x30:
+    if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
             # This is probably a DER encoded key
             return _import_keyDER(extern_key, passphrase)
 

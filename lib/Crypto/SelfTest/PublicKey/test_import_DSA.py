@@ -376,6 +376,10 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         self.assertEquals(key.exportKey(), key.export_key())
 
 
+    def test_import_empty(self):
+        self.assertRaises(ValueError, DSA.import_key, b'')
+
+
 class ImportKeyFromX509Cert(unittest.TestCase):
 
     def test_x509v1(self):
