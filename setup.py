@@ -256,7 +256,6 @@ packages =  [
     "Crypto.SelfTest.Util",
     "Crypto.SelfTest.Math",
 ]
-package_dir = {"Crypto": "lib/Crypto"}
 package_data = {
     "Crypto" : [ "py.typed", "*.pyi" ],
     "Crypto.Cipher" : [ "*.pyi" ],
@@ -428,7 +427,6 @@ if use_separate_namespace:
     # Fix-up setup information
     for i in range(len(packages)):
         packages[i] = packages[i].replace("Crypto", "Cryptodome")
-    package_dir = {"Cryptodome": "lib/Cryptodome"}
     new_package_data = {}
     for k, v in package_data.items():
         new_package_data[k.replace("Crypto", "Cryptodome")] = v
@@ -483,7 +481,7 @@ setup(
     ],
     license="BSD, Public Domain",
     packages=packages,
-    package_dir=package_dir,
+    package_dir={"": "lib"},
     package_data=package_data,
     cmdclass={
         'build_ext': PCTBuildExt,
