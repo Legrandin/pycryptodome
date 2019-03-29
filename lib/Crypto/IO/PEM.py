@@ -179,6 +179,7 @@ def decode(pem_data, passphrase=None):
         if padding:
             data = unpad(objdec.decrypt(data), objdec.block_size)
         else:
+            # There is no tag, so we don't use decrypt_and_verify
             data = objdec.decrypt(data)
         enc_flag = True
 

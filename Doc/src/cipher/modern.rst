@@ -260,7 +260,7 @@ a new GCM cipher object for the relevant base algorithm.
     It must be unique for the combination message/key.
     If not present, the library creates a random nonce (16 bytes long for AES).
   :param integer mac_len: the desired length of the 
-    MAC tag (default if not present: the cipher's block size, 16 bytes for AES).
+    MAC tag, from 4 to 16 bytes (default: 16).
   :return: a GCM cipher object
       
 The cipher object has a read-only attribute :attr:`nonce`.
