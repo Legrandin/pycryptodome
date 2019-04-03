@@ -182,7 +182,7 @@ class TestImport_P256(unittest.TestCase):
         self.assertEqual(self.ref_private, key)
 
     def test_import_private_pem_with_ecparams(self):
-        if sys.version_info == (2, 6):
+        if sys.version_info[:2] == (2, 6):
             return
         key_file = load_file("ecc_p256_private_ecparams.pem")
         key = ECC.import_key(key_file)

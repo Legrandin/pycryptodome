@@ -1076,7 +1076,7 @@ def import_key(encoded, passphrase=None):
 
         # Remove any EC PARAMETERS section
         # Ignore its content because the curve type must be already given in the key
-        if sys.version_info != (2, 6):
+        if sys.version_info[:2] != (2, 6):
             ecparams_start = "-----BEGIN EC PARAMETERS-----"
             ecparams_end = "-----END EC PARAMETERS-----"
             text_encoded = re.sub(ecparams_start + ".*?" + ecparams_end, "",
