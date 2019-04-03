@@ -153,7 +153,7 @@ static int block_init(struct block_state *self, const uint8_t *key, size_t keyle
 
     self->magic = 0;
 
-    if (keylen < 1) {
+    if (keylen < 3) {
         return ERR_KEY_SIZE;
     } else if (keylen > 56) {
         return ERR_KEY_SIZE;
