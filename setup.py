@@ -464,6 +464,7 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: Apache Software License',
         'License :: Public Domain',
         'Intended Audience :: Developers',
         'Operating System :: Unix',
@@ -479,7 +480,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    license="BSD, Public Domain",
+    license="BSD, Public Domain, Apache",
     packages=packages,
     package_dir={"": "lib"},
     package_data=package_data,
