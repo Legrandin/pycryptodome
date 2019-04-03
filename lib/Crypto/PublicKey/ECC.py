@@ -31,6 +31,7 @@
 from __future__ import print_function
 
 import re
+import sys
 import struct
 import binascii
 from collections import namedtuple
@@ -50,7 +51,7 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   SmartPointer, c_size_t, c_uint8_ptr,
-                                  c_ulonglong, c_uint)
+                                  c_ulonglong)
 
 from Crypto.Random.random import getrandbits
 
@@ -1062,14 +1063,16 @@ def import_key(encoded, passphrase=None):
     # PEM
     if encoded.startswith(b'-----'):
 
+        text_encoded = tostr(encoded)
+
         # Remove any EC PARAMETERS section
         # Ignore its content because the curve type must be already given in the key
-        text_encoded = tostr(encoded)
-        ecparams_start = "-----BEGIN EC PARAMETERS-----"
-        ecparams_end = "-----END EC PARAMETERS-----"
-        text_encoded = re.sub(ecparams_start + ".*?" + ecparams_end, "",
-                              text_encoded,
-                              flags=re.DOTALL)
+        if sys.version_info != (2, 6):
+            ecparams_start = "-----BEGIN EC PARAMETERS-----"
+            ecparams_end = "-----END EC PARAMETERS-----"
+            text_encoded = re.sub(ecparams_start + ".*?" + ecparams_end, "",
+                                  text_encoded,
+                                  flags=re.DOTALL)
 
         der_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
         if enc_flag:
