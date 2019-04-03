@@ -1,6 +1,23 @@
 Changelog
 =========
 
+3.8.1 (4 April 2019)
++++++++++++++++++++++++
+
+New features
+------------
+
+* Add support for loading PEM files encrypted with AES192-CBC, AES256-CBC, and AES256-GCM.
+* When importing ECC keys, ignore EC PARAMS section that was included by some openssl commands.
+
+Resolved issues
+---------------
+
+* repr() did not work for ``ECC.EccKey``.
+* Fix installation in development mode.
+* Minimal length for Blowfish cipher is 32 bits, not 40 bits.
+* Various updates to docs.
+
 3.8.0 (23 March 2019)
 +++++++++++++++++++++++
 
