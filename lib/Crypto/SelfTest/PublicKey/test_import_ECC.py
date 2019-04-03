@@ -180,6 +180,12 @@ class TestImport_P256(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_private, key)
 
+    def test_import_private_pem_with_ecparams(self):
+        key_file = load_file("ecc_p256_private_ecparams.pem")
+
+        key = ECC.import_key(key_file)
+        # We just check if the import succeeds
+
     def test_import_private_pem_encrypted(self):
         for algo in "des3", "aes128", "aes192", "aes256_gcm":
             key_file = load_file("ecc_p256_private_enc_%s.pem" % algo)

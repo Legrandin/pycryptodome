@@ -33,3 +33,6 @@ openssl x509 -in ecc_p256_x509.pem -out ecc_p256_x509.der -outform DER
 # OpenSSH
 chmod 600 ecc_p256_private.pem
 ssh-keygen -f ecc_p256_private.pem -y > ecc_p256_public_openssh.txt
+
+# Legacy OpenSSL format with ECPARAMs
+openssl ecparam -name prime256v1 -genkey -out ecc_p256_private_ecparams.pem

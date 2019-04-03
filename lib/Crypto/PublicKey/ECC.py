@@ -30,6 +30,7 @@
 
 from __future__ import print_function
 
+import re
 import struct
 import binascii
 from collections import namedtuple
@@ -1060,7 +1061,17 @@ def import_key(encoded, passphrase=None):
 
     # PEM
     if encoded.startswith(b'-----'):
-        der_encoded, marker, enc_flag = PEM.decode(tostr(encoded), passphrase)
+
+        # Remove any EC PARAMETERS section
+        # Ignore its content because the curve type must be already given in the key
+        text_encoded = tostr(encoded)
+        ecparams_start = "-----BEGIN EC PARAMETERS-----"
+        ecparams_end = "-----END EC PARAMETERS-----"
+        text_encoded = re.sub(ecparams_start + ".*?" + ecparams_end, "",
+                              text_encoded,
+                              flags=re.DOTALL)
+
+        der_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
         if enc_flag:
             passphrase = None
         try:
