@@ -183,7 +183,7 @@ class TestImport_P256(unittest.TestCase):
 
     def test_import_private_pem_with_ecparams(self):
         if sys.version_info == (2, 6):
-            continue
+            return
         key_file = load_file("ecc_p256_private_ecparams.pem")
         key = ECC.import_key(key_file)
         # We just check if the import succeeds
