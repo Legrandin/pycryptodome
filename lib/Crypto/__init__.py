@@ -1,6 +1,6 @@
 __all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util', 'Signature',
            'IO', 'Math']
 
-version_info = (3, 8, '1')
+version_info = (3, 9, '0a0')
 
 __version__ = ".".join([str(x) for x in version_info])
