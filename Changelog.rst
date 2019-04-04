@@ -8,13 +8,13 @@ New features
 ------------
 
 * Add support for loading PEM files encrypted with AES192-CBC, AES256-CBC, and AES256-GCM.
-* When importing ECC keys, ignore EC PARAMS section that was included by some openssl commands.
+* When importing ECC keys in PEM format, ignore the redundant EC PARAMS section that was included by certain openssl commands.
 
 Resolved issues
 ---------------
 
-* repr() did not work for ``ECC.EccKey``.
-* Fix installation in development mode.
+* `repr()` did not work for ``ECC.EccKey`` objects.
+* Fix installation in development mode (``setup install develop`` or ``pip install -e .``).
 * Minimal length for Blowfish cipher is 32 bits, not 40 bits.
 * Various updates to docs.
 
