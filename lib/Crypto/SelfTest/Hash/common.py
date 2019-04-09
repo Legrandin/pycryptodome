@@ -34,7 +34,7 @@ from Crypto.Util.py3compat import b, tobytes
 from Crypto.Util.strxor import strxor_c
 
 def t2b(hex_string):
-    shorter = re.sub(b'\s+', b'', tobytes(hex_string))
+    shorter = re.sub(br'\s+', b'', tobytes(hex_string))
     return unhexlify(shorter)
 
 
