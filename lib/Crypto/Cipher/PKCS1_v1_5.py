@@ -101,7 +101,7 @@ class PKCS115_Cipher:
         return c
 
     def decrypt(self, ciphertext, sentinel):
-        """Decrypt a PKCS#1 v1.5 ciphertext.
+        r"""Decrypt a PKCS#1 v1.5 ciphertext.
 
         This function is named ``RSAES-PKCS1-V1_5-DECRYPT``, and is specified in
         `section 7.2.2 of RFC8017

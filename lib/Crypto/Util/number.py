@@ -198,7 +198,7 @@ def _rabinMillerTest(n, rounds, randfunc=None):
     return 1
 
 def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
-    """
+    r"""
     Return a random strong *N*-bit prime number.
     In this context, *p* is a strong prime if *p-1* and *p+1* have at
     least one large prime factor.

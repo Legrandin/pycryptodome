@@ -190,7 +190,7 @@ def MGF1(mgfSeed, maskLen, hash_gen):
 
 
 def _EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
-    """
+    r"""
     Implement the ``EMSA-PSS-ENCODE`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.1.1).
 
