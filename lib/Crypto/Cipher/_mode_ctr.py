@@ -131,7 +131,7 @@ class CtrMode(object):
                                                  little_endian,
                                                  self._state.address_of())
         if result:
-            raise ValueError("Error %X while instatiating the CTR mode"
+            raise ValueError("Error %X while instantiating the CTR mode"
                              % result)
 
         # Ensure that object disposal of this Python object will (eventually)

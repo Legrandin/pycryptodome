@@ -98,7 +98,7 @@ class CfbMode(object):
                                                  c_size_t(segment_size),
                                                  self._state.address_of())
         if result:
-            raise ValueError("Error %d while instatiating the CFB mode" % result)
+            raise ValueError("Error %d while instantiating the CFB mode" % result)
 
         # Ensure that object disposal of this Python object will (eventually)
         # free the memory allocated by the raw library for the cipher mode
