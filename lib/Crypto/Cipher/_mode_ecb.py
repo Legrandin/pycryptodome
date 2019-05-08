@@ -77,7 +77,7 @@ class EcbMode(object):
         result = raw_ecb_lib.ECB_start_operation(block_cipher.get(),
                                                  self._state.address_of())
         if result:
-            raise ValueError("Error %d while instatiating the ECB mode"
+            raise ValueError("Error %d while instantiating the ECB mode"
                              % result)
 
         # Ensure that object disposal of this Python object will (eventually)

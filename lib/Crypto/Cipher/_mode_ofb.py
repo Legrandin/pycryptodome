@@ -94,7 +94,7 @@ class OfbMode(object):
                                                  c_size_t(len(iv)),
                                                  self._state.address_of())
         if result:
-            raise ValueError("Error %d while instatiating the OFB mode"
+            raise ValueError("Error %d while instantiating the OFB mode"
                              % result)
 
         # Ensure that object disposal of this Python object will (eventually)
