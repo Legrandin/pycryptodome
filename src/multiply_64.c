@@ -54,14 +54,16 @@ DAMAGE.
 
 #endif
 
-size_t inline addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words)
+void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_words)
 {
     uint64_t sum_low, sum_mid, sum_hi;
     uint64_t pr_low, pr_high, aim1;
     size_t i;
 
-    if (words == 0) {
-        return 0;
+    assert(t_words >= a_words + 2);
+
+    if (a_words == 0) {
+        return;
     }
 
     /** LSW **/
@@ -75,7 +77,7 @@ size_t inline addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint
     sum_hi = 0;
 
     aim1 = a[0];
-    for (i=1; i<(words-1)/4*4+1;) {
+    for (i=1; i<(a_words-1)/4*4+1;) {
         /** I **/
         DP_MULT(aim1, b1, pr_low, pr_high);
         ADD192(sum_low, pr_low);
@@ -139,7 +141,7 @@ size_t inline addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint
     }
    
     /** Execute 0 to 3 times **/ 
-    for (; i<words; i++) {
+    for (; i<a_words; i++) {
 
         DP_MULT(aim1, b1, pr_low, pr_high);
         ADD192(sum_low, pr_low);
@@ -174,17 +176,17 @@ size_t inline addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint
     sum_mid = sum_hi;
     sum_hi = 0;
     i++;
+
+    /* i == a_words + 2 */
  
     /** Extend carry indefinetly **/
-    for (; sum_low || sum_mid; i++) {
+    for (; i<t_words; i++) {
         ADD192(t[i], sum_low);
 
         sum_low = sum_mid;
         sum_mid = sum_hi;
         sum_hi = 0;
     }
-    
-    return i;
 }
 
 

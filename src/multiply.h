@@ -52,7 +52,25 @@ uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 
 #endif
 
+/*
+ * Square an integer a[].
+ *
+ * @param t     Location where the result is stored
+ * @param a     Integer (array) that will be squared
+ * @param words Size of the integer a[], in 64-bit words. The integer t[] is
+ *              twice that size.
+ */
 size_t square_w(uint64_t *t, const uint64_t *a, size_t words);
 
-size_t addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint64_t b0, uint64_t b1, size_t words);
+/*
+ * Multiply an integer a[] by a 128-bit scalar, and add the result to integer t[].
+ *
+ * @param t         Integer (array) where the result of the multiplication is added to
+ * @param a         Integer (array) to multiply by a scalar
+ * @param b0        Lower 64 bits of the scalar
+ * @param b1        Higher 64 bits of the scalar
+ * @param t_words   Size of integer t[], in 64-bit words. It must be at least a_words+2
+ * @param a_words   Size of integer a[], in 64-bit words
+ */
+void addmul128(uint64_t *t, const uint64_t * a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_words);
 #endif

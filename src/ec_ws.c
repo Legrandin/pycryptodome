@@ -1254,7 +1254,7 @@ static int blind_scalar_factor(uint8_t **blind_scalar,
         goto cleanup;
 
     bytes_to_words(output_u64, blind_scalar_words, scalar, scalar_len);
-    addmul128(output_u64, order, R_seed, 0, order_words);
+    addmul128(output_u64, order, R_seed, 0, blind_scalar_words, order_words);
     words_to_bytes(*blind_scalar, *blind_scalar_len, output_u64, blind_scalar_words);
 
     res = 0;

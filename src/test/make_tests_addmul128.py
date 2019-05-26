@@ -31,12 +31,10 @@ def make_test(t, a, b0, b1):
     print "    const uint64_t a[] = {" + ", ".join(a) + "};"
     print "    uint64_t t[] = {" + ", ".join(t_in) + ", 0xAAAAAAAAAAAAAAAAULL};"
     print "    const uint64_t expected_t[] = {" + ", ".join(result) + "};"
-    print "    size_t result;"
     print ""
-    print "    result = addmul128(t, a, 0x%x, 0x%x, %d);" % (b0, b1, len(a))
+    print "    addmul128(t, a, 0x%x, 0x%x, %d, %d);" % (b0, b1, len(t_in), len(a))
     print "    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len
     print "    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len
-    print "    assert(result == %d);" % result_len
     print "}"
     print ""
 

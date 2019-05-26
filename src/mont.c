@@ -235,7 +235,7 @@ STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw
     memset(t, 0, 2*sizeof(uint64_t)*nw);
     
     for (i=0; i<(nw ^ (nw & 1)); i+=2) {
-        addmul128(&t[i], a, b[i], b[i+1], nw);
+        addmul128(&t[i], a, b[i], b[i+1], 2*nw-i, nw);
     }
 
     if (is_odd(nw)) {
@@ -380,7 +380,7 @@ STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *
         /** Multiplier for n that will make t[i+1] go 0 **/
         k1 = ti1 * m0;
         
-        addmul128(&t[i], n, k0, k1, nw);
+        addmul128(&t[i], n, k0, k1, 2*nw+1-i, nw);
     }
 
     /** One left for odd number of words **/
