@@ -187,16 +187,6 @@ size_t inline addmul128(uint64_t * RESTRICT t, const uint64_t * RESTRICT a, uint
 
 /*
  * Square a vector a[] and store the result in t[].
- *
- * Words in t[] and a[] are interleaved in big-endian systems.
- * In other words, while in little-endian systems they are laid out as:
- *   
- *   t[0], t[1], t[2], t[3], ...
- *
- * In a big-endian system they are instead:
- *
- *   t[1], t[0], t[3], t[2], t[5], t[4], ...
- *
  */
 size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
 {
@@ -217,21 +207,21 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
             uint64_t prod;
             uint32_t suml, sumh;
 
-            prod = (uint64_t)a[INDEX(j, 0)]*a[INDEX(i, 0)];
+            prod = (uint64_t)a[j]*a[i];
             suml = (uint32_t)prod;
             sumh = (uint32_t)(prod >> 32);
 
             suml += carry;
             sumh += suml < carry;
 
-            t[INDEX(i+j, 0)] += suml;
-            carry = sumh + (t[INDEX(i+j, 0)] < suml);
+            t[i+j] += suml;
+            carry = sumh + (t[i+j] < suml);
         }
 
         /** Propagate carry **/
         for (j=i+words; carry>0; j++) {
-            t[INDEX(j, 0)] += carry;
-            carry = t[INDEX(j, 0)] < carry;
+            t[j] += carry;
+            carry = t[j] < carry;
         }
     }
 
@@ -241,22 +231,22 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
         uint64_t prod;
         uint32_t suml, sumh, tmp, tmp2;
 
-        prod = (uint64_t)a[INDEX(i, 0)]*a[INDEX(i, 0)];
+        prod = (uint64_t)a[i]*a[i];
         suml = (uint32_t)prod;
         sumh = (uint32_t)(prod >> 32);
 
         suml += carry;
         sumh += suml < carry;
 
-        sumh += (tmp = ((t[INDEX(j+1, 0)] << 1) + (t[INDEX(j, 0)] >> 31)));
-        carry = (t[INDEX(j+1, 0)] >> 31) + (sumh < tmp);
+        sumh += (tmp = ((t[j+1] << 1) + (t[j] >> 31)));
+        carry = (t[j+1] >> 31) + (sumh < tmp);
 
-        suml += (tmp = (t[INDEX(j, 0)] << 1));
+        suml += (tmp = (t[j] << 1));
         sumh += (tmp2 = (suml < tmp));
         carry += sumh < tmp2;
 
-        t[INDEX(j, 0)] = suml;
-        t[INDEX(j+1, 0)] = sumh;
+        t[j] = suml;
+        t[j+1] = sumh;
     }
     assert(carry == 0);
 
@@ -265,5 +255,24 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
 
 size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
 {
-    return square_w_32((uint32_t*)t, (const uint32_t*)a, words*2)/2;
+    uint32_t *t32, *a32;
+    size_t i, res;
+
+    t32 = (uint32_t*)calloc(4*words, sizeof(uint32_t));
+    a32 = (uint32_t*)calloc(2*words, sizeof(uint32_t));
+
+    for (i=0; i<words; i++) {
+        a32[2*i] = (uint32_t)a[i];
+        a32[2*i+1] = (uint32_t)(a[i] >> 32);
+    }
+
+    res = square_w_32(t32, a32, words*2)/2;
+
+    for (i=0; i<2*words; i++) {
+        t[i] = (uint64_t)t32[2*i] + ((uint64_t)t32[2*i+1] << 32);
+    }
+
+    free(t32);
+    free(a32);
+    return res;
 }
