@@ -220,10 +220,10 @@ int main(void)
 int main(void)
 {
     uint8_t base[256], exponent[256], modulus[256], out[256];
-    int length = 256, i, j;
+    unsigned length = 256, i, j;
 
     for (i=0; i<256; i++) {
-        base[i] = i | 0x80 | 1;
+        base[i] = (uint8_t)i | 0x80 | 1;
         exponent[i] = base[i] = modulus[i] = base[i];
     }
     base[0] = 0x7F;
