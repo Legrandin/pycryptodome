@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.8.2 (X May 2019)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+
+* GH#291: fix strict aliasing problem, emerged with GCC 9.1.
+
 3.8.1 (4 April 2019)
 +++++++++++++++++++++++
 
