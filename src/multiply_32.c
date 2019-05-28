@@ -128,7 +128,9 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
 {
     uint32_t b0l, b0h, b1l, b1h;
     uint32_t *t32, *a32;
+#ifndef PYCRYPTO_LITTLE_ENDIAN
     size_t i;
+#endif
 
     assert(t_words >= a_words + 2);
 
@@ -144,6 +146,10 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
     t32 = (uint32_t*)calloc(t_words*2, sizeof(uint32_t));
     a32 = (uint32_t*)calloc(a_words*2, sizeof(uint32_t));
 
+#ifdef PYCRYPTO_LITTLE_ENDIAN
+    memcpy(t32, t, sizeof(uint64_t)*t_words);
+    memcpy(a32, a, sizeof(uint64_t)*a_words);
+#else
     for (i=0; i<t_words; i++) {
         t32[2*i] = (uint32_t)t[i];
         t32[2*i+1] = (uint32_t)(t[i] >> 32);
@@ -152,15 +158,20 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
         a32[2*i] = (uint32_t)a[i];
         a32[2*i+1] = (uint32_t)(a[i] >> 32);
     }
+#endif
 
     addmul32(t32, 0, a32, b0l, 2*t_words, 2*a_words);
     addmul32(t32, 1, a32, b0h, 2*t_words, 2*a_words);
     addmul32(t32, 2, a32, b1l, 2*t_words, 2*a_words);
     addmul32(t32, 3, a32, b1h, 2*t_words, 2*a_words);
 
+#ifdef PYCRYPTO_LITTLE_ENDIAN
+    memcpy(t, t32, sizeof(uint64_t)*t_words);
+#else
     for (i=0; i<t_words; i++) {
         t[i] = (uint64_t)t32[2*i] + ((uint64_t)t32[2*i+1] << 32);
     }
+#endif
 
     free(t32);
     free(a32);
@@ -235,21 +246,30 @@ void static inline square_32(uint32_t *t, const uint32_t *a, size_t words)
 void inline square(uint64_t *t, const uint64_t *a, size_t words)
 {
     uint32_t *t32, *a32;
+#ifndef PYCRYPTO_LITTLE_ENDIAN
     size_t i;
+#endif
 
     t32 = (uint32_t*)calloc(4*words, sizeof(uint32_t));
     a32 = (uint32_t*)calloc(2*words, sizeof(uint32_t));
 
+#ifdef PYCRYPTO_LITTLE_ENDIAN
+    memcpy(a32, a, sizeof(uint64_t)*words);
+#else
     for (i=0; i<words; i++) {
         a32[2*i] = (uint32_t)a[i];
         a32[2*i+1] = (uint32_t)(a[i] >> 32);
     }
+#endif
 
     square_32(t32, a32, words*2);
 
+#ifdef PYCRYPTO_LITTLE_ENDIAN
+    memcpy(t, t32, 2*sizeof(uint64_t)*words);
+#else
     for (i=0; i<2*words; i++) {
         t[i] = (uint64_t)t32[2*i] + ((uint64_t)t32[2*i+1] << 32);
     }
-
+#endif
     free(t32);
 }

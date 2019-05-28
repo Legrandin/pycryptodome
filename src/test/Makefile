@@ -3,7 +3,7 @@ CPPFLAGS += -DHAVE_POSIX_MEMALIGN -DHAVE_STDINT_H
 CPPFLAGS += -DSTATIC=""
 CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
 
-TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_w_32 tests_square_w_64 tests_product tests_addmul test_endianess\
+TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_32 tests_square_64 tests_product tests_addmul test_endianess\
        test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate\
 	   test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32
 
@@ -61,15 +61,15 @@ build/tests_addmul128_32: build/tests_addmul128.c ../multiply_32.c
 build/tests_addmul128_64: build/tests_addmul128.c ../multiply_64.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
-# square_w
+# square
 
-build/tests_square_w.c: make_tests_square_w.py
+build/tests_square.c: make_tests_square.py
 	python $^ > $@
 
-build/tests_square_w_32: build/tests_square_w.c ../multiply_32.c
+build/tests_square_32: build/tests_square.c ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
-build/tests_square_w_64: build/tests_square_w.c ../multiply_64.c
+build/tests_square_64: build/tests_square.c ../multiply_64.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # endianess
