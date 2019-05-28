@@ -190,13 +190,13 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
 }
 
 
-size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
+void inline square(uint64_t *t, const uint64_t *a, size_t words)
 {
     size_t i, j;
     uint64_t carry;
 
     if (words == 0) {
-        return 0;
+        return;
     }
 
     memset(t, 0, 2*sizeof(uint64_t)*words);
@@ -204,7 +204,7 @@ size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
     /** Compute all mix-products without doubling **/
     for (i=0; i<words; i++) {
         carry = 0;
-        
+
         for (j=i+1; j<words; j++) {
             uint64_t sum_lo, sum_hi;
 
@@ -240,12 +240,10 @@ size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
         sum_lo += (tmp = (t[j] << 1));
         sum_hi += (tmp2 = (sum_lo < tmp));
         carry += sum_hi < tmp2;
- 
+
         t[j] = sum_lo;
         t[j+1] = sum_hi;
     }
     assert(carry == 0);
-
-    return 2*words;
 }
 

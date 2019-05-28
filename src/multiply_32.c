@@ -169,13 +169,13 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
 /*
  * Square a vector a[] and store the result in t[].
  */
-size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
+void static inline square_32(uint32_t *t, const uint32_t *a, size_t words)
 {
     size_t i, j;
     uint32_t carry;
 
     if (words == 0) {
-        return 0;
+        return;
     }
 
     memset(t, 0, 2*sizeof(t[0])*words);
@@ -230,14 +230,12 @@ size_t static inline square_w_32(uint32_t *t, const uint32_t *a, size_t words)
         t[j+1] = sumh;
     }
     assert(carry == 0);
-
-    return 2*words;
 }
 
-size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
+void inline square(uint64_t *t, const uint64_t *a, size_t words)
 {
     uint32_t *t32, *a32;
-    size_t i, res;
+    size_t i;
 
     t32 = (uint32_t*)calloc(4*words, sizeof(uint32_t));
     a32 = (uint32_t*)calloc(2*words, sizeof(uint32_t));
@@ -247,13 +245,11 @@ size_t inline square_w(uint64_t *t, const uint64_t *a, size_t words)
         a32[2*i+1] = (uint32_t)(a[i] >> 32);
     }
 
-    res = square_w_32(t32, a32, words*2)/2;
+    square_32(t32, a32, words*2);
 
     for (i=0; i<2*words; i++) {
         t[i] = (uint64_t)t32[2*i] + ((uint64_t)t32[2*i+1] << 32);
     }
 
     free(t32);
-    free(a32);
-    return res;
 }

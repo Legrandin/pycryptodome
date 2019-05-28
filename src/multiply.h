@@ -60,7 +60,7 @@ uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
  * @param words Size of the integer a[], in 64-bit words. The integer t[] is
  *              twice that size.
  */
-size_t square_w(uint64_t *t, const uint64_t *a, size_t words);
+void square(uint64_t *t, const uint64_t *a, size_t words);
 
 /*
  * Multiply an integer a[] by a 128-bit scalar, and add the result to integer t[].

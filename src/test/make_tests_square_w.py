@@ -25,13 +25,11 @@ def make_test(a):
     print "    const uint64_t a[] = {" + ", ".join(a) + "};"
     print "    uint64_t t[] = {" + ", ".join(t) + ", 0xAAAAAAAAAAAAAAAAULL};"
     print "    const uint64_t expected_t[] = {" + ", ".join(result) + "};"
-    print "    size_t result;"
     print ""
-    print "    result = square_w(t, a, %d);" % len(a)
+    print "    square(t, a, %d);" % len(a)
     print "    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len
     #print '    printf("t[{0}]=0x%016lX\\n", t[{0}]);'.format(result_len)
     print "    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len
-    print "    assert(result == %d);" % result_len
     print "}"
     print ""
 

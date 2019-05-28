@@ -355,7 +355,7 @@ STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *
     t2 = &t[2*nw+1];    /** Point to last nw words **/
 
     if (a == b) {
-        square_w(t, a, nw);
+        square(t, a, nw);
     } else {
         product(t, a, b, nw);
     }
@@ -418,7 +418,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     t2 = &t[PREDIV_WORDS_64];    /** Point to last WORDS_64 words **/
 
     if (a == b) {
-        square_w(t, a, WORDS_64);
+        square(t, a, WORDS_64);
     } else {
         product(t, a, b, WORDS_64);
     }
@@ -560,7 +560,7 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     t2 = &t[PREDIV_WORDS_64];    /** Point to last WORDS_64 words **/
 
     if (a == b) {
-        square_w(t, a, WORDS_64);
+        square(t, a, WORDS_64);
     } else {
         product(t, a, b, WORDS_64);
     }
@@ -747,7 +747,7 @@ STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     tmp2 = t + (9*4);
 
     if (a == b) {
-        square_w(t, a, 9);
+        square(t, a, 9);
     } else {
         product(t, a, b, 9);
     }
