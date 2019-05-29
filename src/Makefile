@@ -13,8 +13,11 @@ ec_ws_p384: ec_ws_p384.c mont.c modexp_utils.c siphash.c p256_table.c p384_table
 ec_ws_p521: ec_ws_p521.c mont.c modexp_utils.c siphash.c p256_table.c p384_table.c p521_table.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
 
-modexp: modexp.c mont.c modexp_utils.c siphash.c
+modexp_in: modexp.c mont.c modexp_utils.c siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
+
+modexp: modexp.c mont.c modexp_utils.c siphash.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
 
 p256_table.c: make_p256_table
 	./make_p256_table > $@

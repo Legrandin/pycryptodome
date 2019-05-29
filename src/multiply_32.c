@@ -144,7 +144,9 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
     b1h = (uint32_t)(b1 >> 32);
 
     t32 = (uint32_t*)calloc(t_words*2, sizeof(uint32_t));
+    assert(t32);
     a32 = (uint32_t*)calloc(a_words*2, sizeof(uint32_t));
+    assert(a32);
 
 #ifdef PYCRYPTO_LITTLE_ENDIAN
     memcpy(t32, t, sizeof(uint64_t)*t_words);
@@ -251,7 +253,9 @@ void inline square(uint64_t *t, const uint64_t *a, size_t words)
 #endif
 
     t32 = (uint32_t*)calloc(4*words, sizeof(uint32_t));
+    assert(t32);
     a32 = (uint32_t*)calloc(2*words, sizeof(uint32_t));
+    assert(a32);
 
 #ifdef PYCRYPTO_LITTLE_ENDIAN
     memcpy(a32, a, sizeof(uint64_t)*words);
