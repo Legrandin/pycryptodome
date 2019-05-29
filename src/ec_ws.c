@@ -620,7 +620,7 @@ STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
 
     prot_g = (ProtMemory**)calloc(p256_n_tables, sizeof(ProtMemory*));
     if (NULL == prot_g) {
-        free(tables_ptrs);
+        free((void*)tables_ptrs);
         return NULL;
     }
 
@@ -639,7 +639,7 @@ STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
         prot_g = NULL;
     }
 
-    free(tables_ptrs);
+    free((void*)tables_ptrs);
     return prot_g;
 }
 
@@ -659,7 +659,7 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
 
     prot_g = (ProtMemory**)calloc(p384_n_tables, sizeof(ProtMemory*));
     if (NULL == prot_g) {
-        free(tables_ptrs);
+        free((void*)tables_ptrs);
         return NULL;
     }
 
@@ -678,7 +678,7 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
         prot_g = NULL;
     }
 
-    free(tables_ptrs);
+    free((void*)tables_ptrs);
     return prot_g;
 }
 
@@ -698,7 +698,7 @@ STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
 
     prot_g = (ProtMemory**)calloc(p521_n_tables, sizeof(ProtMemory*));
     if (NULL == prot_g) {
-        free(tables_ptrs);
+        free((void*)tables_ptrs);
         return NULL;
     }
 
@@ -717,7 +717,7 @@ STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
         prot_g = NULL;
     }
 
-    free(tables_ptrs);
+    free((void*)tables_ptrs);
     return prot_g;
 }
 
