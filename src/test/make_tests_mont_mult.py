@@ -55,7 +55,7 @@ def make_test(a, b, modulus, use_mont=True):
         print "    const uint64_t n[] = {" + ", ".join(modulus_s) + "};"
         print "    const uint64_t expected[] = {" + ", ".join(result_m_s) + "};"
         print "    uint64_t out[%d];" % (nw+1)
-        print "    uint64_t scratch[%d];" % (5*nw)
+        print "    uint64_t scratch[%d];" % (7*nw)
         print ""
         print "    memset(out, 0xAA, sizeof out);"
         print "    mont_mult_generic(out, a, b, n, %dUL, scratch, %d);" % (m0, nw)
@@ -74,7 +74,7 @@ def make_test(a, b, modulus, use_mont=True):
     print "    uint64_t out[%d];" % (nw+1)
     print "    MontContext *ctx;"
     print "    int res;"
-    print "    uint64_t scratch[%d];" % (5*nw)
+    print "    uint64_t scratch[%d];" % (7*nw)
     print ""
     print
     print "    res = mont_context_init(&ctx, modulus, sizeof modulus);"

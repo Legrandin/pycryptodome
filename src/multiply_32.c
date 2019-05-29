@@ -124,7 +124,7 @@ void static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uint3
  * t[] and a[] are little-endian.
  * Return the number of 64-bit words that we wrote into t[]
  */
-void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_words)
+void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_words)
 {
     uint32_t b0l, b0h, b1l, b1h;
     uint32_t *t32, *a32;
@@ -143,10 +143,8 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
     b1l = (uint32_t)b1;
     b1h = (uint32_t)(b1 >> 32);
 
-    t32 = (uint32_t*)calloc(t_words*2, sizeof(uint32_t));
-    assert(t32);
-    a32 = (uint32_t*)calloc(a_words*2, sizeof(uint32_t));
-    assert(a32);
+    t32 = (uint32_t*)scratchpad;
+    a32 = (uint32_t*)(scratchpad + t_words);
 
 #ifdef PYCRYPTO_LITTLE_ENDIAN
     memcpy(t32, t, sizeof(uint64_t)*t_words);
@@ -174,9 +172,6 @@ void inline addmul128(uint64_t *t, const uint64_t *a, uint64_t b0, uint64_t b1, 
         t[i] = (uint64_t)t32[2*i] + ((uint64_t)t32[2*i+1] << 32);
     }
 #endif
-
-    free(t32);
-    free(a32);
 }
 
 /*

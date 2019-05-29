@@ -118,7 +118,7 @@ EXPORT_SYM int monty_pow(
     }
 
     /** Result is initially 1 in Montgomery form **/
-    mont_set(x, 1, NULL, ctx);
+    mont_set(x, 1, ctx);
 
     /** Pre-compute powers a^0 mod n, a^1 mod n, a^2 mod n, ... a^(2^WINDOW_SIZE-1) mod n **/
     mont_copy(powers[0], x, ctx);
