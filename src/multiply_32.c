@@ -124,7 +124,7 @@ void static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uint3
  * t[] and a[] are little-endian.
  * Return the number of 64-bit words that we wrote into t[]
  */
-void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_words)
+void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint64_t b0, uint64_t b1, size_t t_nw, size_t a_nw)
 {
     uint32_t b0l, b0h, b1l, b1h;
     uint32_t *t32, *a32;
@@ -132,9 +132,9 @@ void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint
     size_t i;
 #endif
 
-    assert(t_words >= a_words + 2);
+    assert(t_nw >= a_nw + 2);
 
-    if (a_words == 0) {
+    if (a_nw == 0) {
         return;
     }
 
@@ -144,31 +144,31 @@ void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint
     b1h = (uint32_t)(b1 >> 32);
 
     t32 = (uint32_t*)scratchpad;
-    a32 = (uint32_t*)(scratchpad + t_words);
+    a32 = (uint32_t*)(scratchpad + t_nw);
 
 #ifdef PYCRYPTO_LITTLE_ENDIAN
-    memcpy(t32, t, sizeof(uint64_t)*t_words);
-    memcpy(a32, a, sizeof(uint64_t)*a_words);
+    memcpy(t32, t, sizeof(uint64_t)*t_nw);
+    memcpy(a32, a, sizeof(uint64_t)*a_nw);
 #else
-    for (i=0; i<t_words; i++) {
+    for (i=0; i<t_nw; i++) {
         t32[2*i] = (uint32_t)t[i];
         t32[2*i+1] = (uint32_t)(t[i] >> 32);
     }
-    for (i=0; i<a_words; i++) {
+    for (i=0; i<a_nw; i++) {
         a32[2*i] = (uint32_t)a[i];
         a32[2*i+1] = (uint32_t)(a[i] >> 32);
     }
 #endif
 
-    addmul32(t32, 0, a32, b0l, 2*t_words, 2*a_words);
-    addmul32(t32, 1, a32, b0h, 2*t_words, 2*a_words);
-    addmul32(t32, 2, a32, b1l, 2*t_words, 2*a_words);
-    addmul32(t32, 3, a32, b1h, 2*t_words, 2*a_words);
+    addmul32(t32, 0, a32, b0l, 2*t_nw, 2*a_nw);
+    addmul32(t32, 1, a32, b0h, 2*t_nw, 2*a_nw);
+    addmul32(t32, 2, a32, b1l, 2*t_nw, 2*a_nw);
+    addmul32(t32, 3, a32, b1h, 2*t_nw, 2*a_nw);
 
 #ifdef PYCRYPTO_LITTLE_ENDIAN
-    memcpy(t, t32, sizeof(uint64_t)*t_words);
+    memcpy(t, t32, sizeof(uint64_t)*t_nw);
 #else
-    for (i=0; i<t_words; i++) {
+    for (i=0; i<t_nw; i++) {
         t[i] = (uint64_t)t32[2*i] + ((uint64_t)t32[2*i+1] << 32);
     }
 #endif
@@ -177,22 +177,22 @@ void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint
 /*
  * Square a vector a[] and store the result in t[].
  */
-void static inline square_32(uint32_t *t, const uint32_t *a, size_t words)
+void static inline square_32(uint32_t *t, const uint32_t *a, size_t nw)
 {
     size_t i, j;
     uint32_t carry;
 
-    if (words == 0) {
+    if (nw == 0) {
         return;
     }
 
-    memset(t, 0, 2*sizeof(t[0])*words);
+    memset(t, 0, 2*sizeof(uint32_t)*nw);
 
     /** Compute all mix-products without doubling **/
-    for (i=0; i<words; i++) {
+    for (i=0; i<nw; i++) {
         carry = 0;
 
-        for (j=i+1; j<words; j++) {
+        for (j=i+1; j<nw; j++) {
             uint64_t prod;
             uint32_t suml, sumh;
 
@@ -208,7 +208,7 @@ void static inline square_32(uint32_t *t, const uint32_t *a, size_t words)
         }
 
         /** Propagate carry **/
-        for (j=i+words; carry>0; j++) {
+        for (j=i+nw; carry>0; j++) {
             t[j] += carry;
             carry = t[j] < carry;
         }
@@ -216,7 +216,7 @@ void static inline square_32(uint32_t *t, const uint32_t *a, size_t words)
 
     /** Double mix-products and add squares **/
     carry = 0;
-    for (i=0, j=0; i<words; i++, j+=2) {
+    for (i=0, j=0; i<nw; i++, j+=2) {
         uint64_t prod;
         uint32_t suml, sumh, tmp, tmp2;
 
@@ -237,38 +237,36 @@ void static inline square_32(uint32_t *t, const uint32_t *a, size_t words)
         t[j] = suml;
         t[j+1] = sumh;
     }
+
     assert(carry == 0);
 }
 
-void inline square(uint64_t *t, const uint64_t *a, size_t words)
+void inline square(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, size_t nw)
 {
     uint32_t *t32, *a32;
 #ifndef PYCRYPTO_LITTLE_ENDIAN
     size_t i;
 #endif
 
-    t32 = (uint32_t*)calloc(4*words, sizeof(uint32_t));
-    assert(t32);
-    a32 = (uint32_t*)calloc(2*words, sizeof(uint32_t));
-    assert(a32);
+    t32 = (uint32_t*)scratchpad;
+    a32 = (uint32_t*)(scratchpad + 2*nw);
 
 #ifdef PYCRYPTO_LITTLE_ENDIAN
-    memcpy(a32, a, sizeof(uint64_t)*words);
+    memcpy(a32, a, sizeof(uint64_t)*nw);
 #else
-    for (i=0; i<words; i++) {
+    for (i=0; i<nw; i++) {
         a32[2*i] = (uint32_t)a[i];
         a32[2*i+1] = (uint32_t)(a[i] >> 32);
     }
 #endif
 
-    square_32(t32, a32, words*2);
+    square_32(t32, a32, nw*2);
 
 #ifdef PYCRYPTO_LITTLE_ENDIAN
-    memcpy(t, t32, 2*sizeof(uint64_t)*words);
+    memcpy(t, t32, 2*sizeof(uint64_t)*nw);
 #else
-    for (i=0; i<2*words; i++) {
+    for (i=0; i<2*nw; i++) {
         t[i] = (uint64_t)t32[2*i] + ((uint64_t)t32[2*i+1] << 32);
     }
 #endif
-    free(t32);
 }

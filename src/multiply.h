@@ -55,23 +55,24 @@ uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 /*
  * Square an integer a[].
  *
- * @param t     Location where the result is stored
- * @param a     Integer (array) that will be squared
- * @param words Size of the integer a[], in 64-bit words. The integer t[] is
- *              twice that size.
+ * @param t          Location where the result is stored
+ * @param scratchpad Temporary space, with 3*nw 64-bit words
+ * @param a          Integer (array) that will be squared
+ * @param nw         Size of the integer a[], in 64-bit words.
+ *                   The integer t[] is twice that size.
  */
-void square(uint64_t *t, const uint64_t *a, size_t words);
+void square(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, size_t nw);
 
 /*
  * Multiply an integer a[] by a 128-bit scalar, and add the result to integer t[].
  *
  * @param t          Integer (array) where the result of the multiplication is added to
- * @param scratchpad Temporary space, with t_words+a_words 64-bit words
+ * @param scratchpad Temporary space, with t_nw+a_nw 64-bit words
  * @param a          Integer (array) to multiply by a scalar
  * @param b0         Lower 64 bits of the scalar
  * @param b1         Higher 64 bits of the scalar
- * @param t_words    Size of integer t[], in 64-bit words. It must be at least a_words+2
- * @param a_words    Size of integer a[], in 64-bit words
+ * @param t_nw       Size of integer t[], in 64-bit words. It must be at least a_nw+2
+ * @param a_nw       Size of integer a[], in 64-bit words
  */
-void addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t * a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_words);
+void addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t * a, uint64_t b0, uint64_t b1, size_t t_nw, size_t a_nw);
 #endif

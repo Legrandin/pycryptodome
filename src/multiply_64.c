@@ -54,15 +54,15 @@ DAMAGE.
 
 #endif
 
-void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_words)
+void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint64_t b0, uint64_t b1, size_t t_words, size_t a_nw)
 {
     uint64_t sum_low, sum_mid, sum_hi;
     uint64_t pr_low, pr_high, aim1;
     size_t i;
 
-    assert(t_words >= a_words + 2);
+    assert(t_words >= a_nw + 2);
 
-    if (a_words == 0) {
+    if (a_nw == 0) {
         return;
     }
 
@@ -77,7 +77,7 @@ void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint
     sum_hi = 0;
 
     aim1 = a[0];
-    for (i=1; i<(a_words-1)/4*4+1;) {
+    for (i=1; i<(a_nw-1)/4*4+1;) {
         /** I **/
         DP_MULT(aim1, b1, pr_low, pr_high);
         ADD192(sum_low, pr_low);
@@ -141,7 +141,7 @@ void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint
     }
    
     /** Execute 0 to 3 times **/ 
-    for (; i<a_words; i++) {
+    for (; i<a_nw; i++) {
 
         DP_MULT(aim1, b1, pr_low, pr_high);
         ADD192(sum_low, pr_low);
@@ -177,8 +177,8 @@ void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint
     sum_hi = 0;
     i++;
 
-    /* i == a_words + 2 */
- 
+    /* i == a_nw + 2 */
+
     /** Extend carry indefinetly **/
     for (; i<t_words; i++) {
         ADD192(t[i], sum_low);
@@ -190,22 +190,22 @@ void inline addmul128(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, uint
 }
 
 
-void inline square(uint64_t *t, const uint64_t *a, size_t words)
+void inline square(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, size_t nw)
 {
     size_t i, j;
     uint64_t carry;
 
-    if (words == 0) {
+    if (nw == 0) {
         return;
     }
 
-    memset(t, 0, 2*sizeof(uint64_t)*words);
+    memset(t, 0, 2*sizeof(uint64_t)*nw);
 
     /** Compute all mix-products without doubling **/
-    for (i=0; i<words; i++) {
+    for (i=0; i<nw; i++) {
         carry = 0;
 
-        for (j=i+1; j<words; j++) {
+        for (j=i+1; j<nw; j++) {
             uint64_t sum_lo, sum_hi;
 
             DP_MULT(a[j], a[i], sum_lo, sum_hi);
@@ -218,7 +218,7 @@ void inline square(uint64_t *t, const uint64_t *a, size_t words)
         }
 
         /** Propagate carry **/
-        for (j=i+words; carry>0; j++) {
+        for (j=i+nw; carry>0; j++) {
             t[j] += (uint64_t)carry;
             carry = t[j] < carry;
         }
@@ -226,7 +226,7 @@ void inline square(uint64_t *t, const uint64_t *a, size_t words)
 
     /** Double mix-products and add squares **/
     carry = 0;
-    for (i=0, j=0; i<words; i++, j+=2) {
+    for (i=0, j=0; i<nw; i++, j+=2) {
         uint64_t sum_lo, sum_hi, tmp, tmp2;
 
         DP_MULT(a[i], a[i], sum_lo, sum_hi);

@@ -24,9 +24,10 @@ def make_test(a):
     print "void test_%d() {" % counter.next()
     print "    const uint64_t a[] = {" + ", ".join(a) + "};"
     print "    uint64_t t[] = {" + ", ".join(t) + ", 0xAAAAAAAAAAAAAAAAULL};"
+    print "    uint64_t scratchpad[%d];" %  (3*len(a))
     print "    const uint64_t expected_t[] = {" + ", ".join(result) + "};"
     print ""
-    print "    square(t, a, %d);" % len(a)
+    print "    square(t, scratchpad, a, %d);" % len(a)
     print "    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len
     #print '    printf("t[{0}]=0x%016lX\\n", t[{0}]);'.format(result_len)
     print "    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len

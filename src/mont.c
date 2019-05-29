@@ -365,7 +365,7 @@ STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *
     t2 = scratchpad + 3*nw;
 
     if (a == b) {
-        square(t, a, nw);
+        square(t, scratchpad, a, nw);
     } else {
         product(t, scratchpad, a, b, nw);
     }
@@ -430,7 +430,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     t2 = scratchpad + 3*nw;
 
     if (a == b) {
-        square(t, a, WORDS_64);
+        square(t, scratchpad, a, WORDS_64);
     } else {
         product(t, scratchpad, a, b, WORDS_64);
     }
@@ -574,7 +574,7 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     t2 = scratchpad + 3*nw;
 
     if (a == b) {
-        square(t, a, WORDS_64);
+        square(t, scratchpad, a, WORDS_64);
     } else {
         product(t, scratchpad, a, b, WORDS_64);
     }
@@ -764,7 +764,7 @@ STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     tmp2 = scratchpad + nw;
 
     if (a == b) {
-        square(t, a, 9);
+        square(t, scratchpad, a, 9);
     } else {
         product(t, scratchpad, a, b, 9);
     }
