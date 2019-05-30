@@ -46,7 +46,7 @@ As an example, encryption can be done as follows::
     >>>
     >>> cipher = DES3.new(key, DES3.MODE_CFB)
     >>> plaintext = b'We are no longer the knights who say ni!'
-    >>> msg = cipher.nonce + cipher.encrypt(plaintext)
+    >>> msg = cipher.iv + cipher.encrypt(plaintext)
 
 .. __: http://en.wikipedia.org/wiki/Triple_DES
 .. _deprecate: https://beta.csrc.nist.gov/News/2017/Update-to-Current-Use-and-Deprecation-of-TDEA
