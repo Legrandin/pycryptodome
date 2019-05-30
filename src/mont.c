@@ -221,21 +221,22 @@ STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_
 /**
  * Multiply two multi-word integers.
  *
- * @param t     The location where the result is stored. It is twice as big as
- *              either a or b (it is an array of  2*nw words).
- * @param a     The first term, array of nw words.
- * @param b     The second term, array of nw words.
- * @param nw    The number of words of both a and b.
+ * @param t          The location where the result is stored. It is twice as big as
+ *                   either a (or b). It is an array of  2*nw words).
+ * @param scratchpad Temporary area. It is an array of 3*nw words.
+ * @param a          The first term, array of nw words.
+ * @param b          The second term, array of nw words.
+ * @param nw         The number of words of both a and b.
  *
  */
-STATIC void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
+STATIC void product(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, const uint64_t *b, size_t nw)
 {
     size_t i;
 
     memset(t, 0, 2*sizeof(uint64_t)*nw);
     
     for (i=0; i<(nw ^ (nw & 1)); i+=2) {
-        addmul128(&t[i], a, b[i], b[i+1], nw);
+        addmul128(&t[i], scratchpad, a, b[i], b[i+1], 2*nw-i, nw);
     }
 
     if (is_odd(nw)) {
@@ -343,21 +344,30 @@ void add_mod(uint64_t* out, const uint64_t* a, const uint64_t* b, const uint64_t
  *
  * Useful read: https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
  */
-#if SCRATCHPAD_NR < 4
+#if SCRATCHPAD_NR < 7
 #error Scratchpad is too small
 #endif
-STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *tmp, size_t nw)
 {
     size_t i;
-    uint64_t *t2;
+    uint64_t *t, *scratchpad, *t2;
     unsigned cond;
 
-    t2 = &t[2*nw+1];    /** Point to last nw words **/
+    /*
+     * tmp is an array of SCRATCHPAD*nw words
+     * We carve out 3 values in it:
+     * - 3*nw words, the value a*b + m*n (we only use 2*nw+1 words)
+     * - 3*nw words, temporary area for computing the product
+     * - nw words, the reduced value with a final subtraction by n
+     */
+    t = tmp;
+    scratchpad = tmp + 3*nw;
+    t2 = scratchpad + 3*nw;
 
     if (a == b) {
-        square_w(t, a, nw);
+        square(t, scratchpad, a, nw);
     } else {
-        product(t, a, b, nw);
+        product(t, scratchpad, a, b, nw);
     }
 
     t[2*nw] = 0; /** MSW **/
@@ -380,7 +390,7 @@ STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *
         /** Multiplier for n that will make t[i+1] go 0 **/
         k1 = ti1 * m0;
         
-        addmul128(&t[i], n, k0, k1, nw);
+        addmul128(&t[i], scratchpad, n, k0, k1, 2*nw+1-i, nw);
     }
 
     /** One left for odd number of words **/
@@ -398,10 +408,10 @@ STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *
     mont_select(out, t2, &t[nw], cond, (unsigned)nw);
 }
 
-STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *tmp, size_t nw)
 {
     unsigned i;
-    uint64_t *t2;
+    uint64_t *t, *scratchpad, *t2;
     unsigned cond;
 #define WORDS_64        4U
 #define PREDIV_WORDS_64 (2*WORDS_64+1)      /** Size of the number to divide by R **/
@@ -415,12 +425,14 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     assert(nw == 4);
     assert(m0 == 1);
 
-    t2 = &t[PREDIV_WORDS_64];    /** Point to last WORDS_64 words **/
+    t = tmp;
+    scratchpad = tmp + 3*nw;
+    t2 = scratchpad + 3*nw;
 
     if (a == b) {
-        square_w(t, a, WORDS_64);
+        square(t, scratchpad, a, WORDS_64);
     } else {
-        product(t, a, b, WORDS_64);
+        product(t, scratchpad, a, b, WORDS_64);
     }
 
     t[PREDIV_WORDS_64-1] = 0; /** MSW **/
@@ -540,10 +552,10 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 #undef PREDIV_WORDS_32
 }
 
-STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *tmp, size_t nw)
 {
     size_t i;
-    uint64_t *t2;
+    uint64_t *t, *scratchpad, *t2;
     unsigned cond;
 #define WORDS_64        6U
 #define PREDIV_WORDS_64 (2*WORDS_64+1)      /** Size of the number to divide by R **/
@@ -557,12 +569,14 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     assert(nw == WORDS_64);
     assert(m0 == 0x0000000100000001U);
 
-    t2 = &t[PREDIV_WORDS_64];    /** Point to last WORDS_64 words **/
+    t = tmp;
+    scratchpad = tmp + 3*nw;
+    t2 = scratchpad + 3*nw;
 
     if (a == b) {
-        square_w(t, a, WORDS_64);
+        square(t, scratchpad, a, WORDS_64);
     } else {
-        product(t, a, b, WORDS_64);
+        product(t, scratchpad, a, b, WORDS_64);
     }
 
     t[PREDIV_WORDS_64-1] = 0; /** MSW **/
@@ -721,9 +735,9 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 #undef PREDIV_WORDS_32
 }
 
-STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw)
+STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *tmp, size_t nw)
 {
-    uint64_t *s, *tmp1, *tmp2;
+    uint64_t *t, *scratchpad, *s, *tmp1, *tmp2;
 
     assert(nw == 9);
     assert(m0 == 1);
@@ -735,21 +749,24 @@ STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, 
      *      x + y
      */
 
-    /* This is how we use the scratchpad:
-     *  1) The first 2 numbers hold the result of the multiplication,
-     *     and the first number also the first term of the addition
-     *  3) The third holds the second term of the addition
-     *  2) The fourth and fourth number are temporaries for add()
+    /*
+     * tmp is an array of SCRATCHPAD*nw words
+     * We carve out 3 values in it:
+     * - 2*nw words, the value a*b
+     * - 3*nw words, temporary area for computing the product
+     * - nw words, the second term of the addition
      */
 
-    s = t + (9*2);
-    tmp1 = t + (9*3);
-    tmp2 = t + (9*4);
+    t = tmp;
+    scratchpad = t + 2*nw;
+    s = scratchpad + 3*nw;
+    tmp1 = scratchpad;
+    tmp2 = scratchpad + nw;
 
     if (a == b) {
-        square_w(t, a, 9);
+        square(t, scratchpad, a, 9);
     } else {
-        product(t, a, b, 9);
+        product(t, scratchpad, a, b, 9);
     }
 
     /* t is a 1042-bit number, occupying 17 words (of the total 18); the MSW (t[16]) only has 18 bits */
@@ -1132,14 +1149,12 @@ cleanup:
  *
  * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
  * @param x     The value to set.
- * @param tmp   Temporary scratchpad with 4*nw+1 words (it can be created with mont_number(&p,5,ctx).
- *              It is ignored for x=0 and x=1.
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
-int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
+int mont_set(uint64_t *out, uint64_t x, const MontContext *ctx)
 {
-    uint64_t *scratchpad;
+    uint64_t *tmp, *scratchpad;
 
     if (NULL == out || NULL == ctx)
         return ERR_NULL;
@@ -1153,18 +1168,25 @@ int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx)
         return 0;
     }
 
+    tmp = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
     if (NULL == tmp)
-        return ERR_NULL;
-
-    memset(tmp, 0, ctx->bytes);
+        return ERR_MEMORY;
     tmp[0] = x;
 
-    scratchpad = &tmp[ctx->words];
+    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
+    if (NULL == scratchpad) {
+        free(tmp);
+        return ERR_MEMORY;
+    }
 
     if (ctx->modulus_type != ModulusP521)
         mont_mult_generic(out, tmp, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     else
         mont_copy(out, tmp, ctx);
+
+    free(tmp);
+    free(scratchpad);
+
     return 0;
 }
 

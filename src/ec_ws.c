@@ -143,8 +143,8 @@ STATIC void ec_projective_to_affine(uint64_t *x3, uint64_t *y3,
     uint64_t *s = tmp->scratch;
 
     if (mont_is_zero(z1, ctx)) {
-        mont_set(x3, 0, NULL, ctx);
-        mont_set(y3, 0, NULL, ctx);
+        mont_set(x3, 0, ctx);
+        mont_set(y3, 0, ctx);
         return;
     }
 
@@ -495,9 +495,9 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
 
     #undef alloc
 
-    mont_set(window_x[0], 0, NULL, ctx);
-    mont_set(window_y[0], 1, NULL, ctx);
-    mont_set(window_z[0], 0, NULL, ctx);
+    mont_set(window_x[0], 0, ctx);
+    mont_set(window_y[0], 1, ctx);
+    mont_set(window_z[0], 0, ctx);
 
     mont_copy(window_x[1], x1, ctx);
     mont_copy(window_y[1], y1, ctx);
@@ -526,9 +526,9 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     if (res) goto cleanup;
 
     /** Start from PAI **/
-    mont_set(x3, 0, NULL, ctx);
-    mont_set(y3, 1, NULL, ctx);
-    mont_set(z3, 0, NULL, ctx);
+    mont_set(x3, 0, ctx);
+    mont_set(y3, 1, ctx);
+    mont_set(z3, 0, ctx);
 
     /** Find first non-zero byte in exponent **/
     for (; exp_size && *exp==0; exp++, exp_size--);
@@ -620,7 +620,7 @@ STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
 
     prot_g = (ProtMemory**)calloc(p256_n_tables, sizeof(ProtMemory*));
     if (NULL == prot_g) {
-        free(tables_ptrs);
+        free((void*)tables_ptrs);
         return NULL;
     }
 
@@ -639,7 +639,7 @@ STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
         prot_g = NULL;
     }
 
-    free(tables_ptrs);
+    free((void*)tables_ptrs);
     return prot_g;
 }
 
@@ -659,7 +659,7 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
 
     prot_g = (ProtMemory**)calloc(p384_n_tables, sizeof(ProtMemory*));
     if (NULL == prot_g) {
-        free(tables_ptrs);
+        free((void*)tables_ptrs);
         return NULL;
     }
 
@@ -678,7 +678,7 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
         prot_g = NULL;
     }
 
-    free(tables_ptrs);
+    free((void*)tables_ptrs);
     return prot_g;
 }
 
@@ -698,7 +698,7 @@ STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
 
     prot_g = (ProtMemory**)calloc(p521_n_tables, sizeof(ProtMemory*));
     if (NULL == prot_g) {
-        free(tables_ptrs);
+        free((void*)tables_ptrs);
         return NULL;
     }
 
@@ -717,7 +717,7 @@ STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
         prot_g = NULL;
     }
 
-    free(tables_ptrs);
+    free((void*)tables_ptrs);
     return prot_g;
 }
 
@@ -734,9 +734,9 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
-    mont_set(x3, 0, NULL, ctx);
-    mont_set(y3, 1, NULL, ctx);
-    mont_set(z3, 0, NULL, ctx);
+    mont_set(x3, 0, ctx);
+    mont_set(y3, 1, ctx);
+    mont_set(z3, 0, ctx);
 
     /** Find first non-zero byte in exponent **/
     for (; exp_size && *exp==0; exp++, exp_size--);
@@ -777,9 +777,9 @@ STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
-    mont_set(x3, 0, NULL, ctx);
-    mont_set(y3, 1, NULL, ctx);
-    mont_set(z3, 0, NULL, ctx);
+    mont_set(x3, 0, ctx);
+    mont_set(y3, 1, ctx);
+    mont_set(z3, 0, ctx);
 
     /** Find first non-zero byte in exponent **/
     for (; exp_size && *exp==0; exp++, exp_size--);
@@ -821,9 +821,9 @@ STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
-    mont_set(x3, 0, NULL, ctx);
-    mont_set(y3, 1, NULL, ctx);
-    mont_set(z3, 0, NULL, ctx);
+    mont_set(x3, 0, ctx);
+    mont_set(y3, 1, ctx);
+    mont_set(z3, 0, ctx);
 
     /** Find first non-zero byte in exponent **/
     for (; exp_size && *exp==0; exp++, exp_size--);
@@ -1033,14 +1033,14 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
     if (res) goto cleanup;
     res = mont_number(&ecp->z, 1, ctx);
     if (res) goto cleanup;
-    mont_set(ecp->z, 1, NULL, ctx);
+    mont_set(ecp->z, 1, ctx);
 
     /** Convert PAI: (0, 0) to (0, 1, 0) */
     /** Verify the point is on the curve, if not point-at-infinity */
     if (mont_is_zero(ecp->x, ctx) && mont_is_zero(ecp->y, ctx)) {
-        mont_set(ecp->x, 0, NULL, ctx);
-        mont_set(ecp->y, 1, NULL, ctx);
-        mont_set(ecp->z, 0, NULL, ctx);
+        mont_set(ecp->x, 0, ctx);
+        mont_set(ecp->y, 1, ctx);
+        mont_set(ecp->z, 0, ctx);
     } else {
         wp = new_workplace(ctx);
         mont_mult(wp->a, ecp->y, ecp->y, wp->scratch, ctx);
@@ -1200,7 +1200,7 @@ EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
         ec_projective_to_affine(ecp->x, ecp->y,
                                 ecp->x, ecp->y, ecp->z,
                                 wp, ctx);
-        mont_set(ecp->z, 1, NULL, ctx);
+        mont_set(ecp->z, 1, ctx);
     }
 
     free_workplace(wp);
@@ -1239,6 +1239,7 @@ static int blind_scalar_factor(uint8_t **blind_scalar,
     size_t scalar_words;
     size_t blind_scalar_words;
     uint64_t *output_u64 = NULL;
+    uint64_t *scratchpad = NULL;
     int res = ERR_MEMORY;
 
     scalar_words = (scalar_len+7)/8;
@@ -1253,14 +1254,19 @@ static int blind_scalar_factor(uint8_t **blind_scalar,
     if (NULL == output_u64)
         goto cleanup;
 
+    scratchpad = (uint64_t*)calloc(blind_scalar_words + order_words, sizeof(uint64_t));
+    if (NULL == scratchpad)
+        goto cleanup;
+
     bytes_to_words(output_u64, blind_scalar_words, scalar, scalar_len);
-    addmul128(output_u64, order, R_seed, 0, order_words);
+    addmul128(output_u64, scratchpad, order, R_seed, 0, blind_scalar_words, order_words);
     words_to_bytes(*blind_scalar, *blind_scalar_len, output_u64, blind_scalar_words);
 
     res = 0;
 
 cleanup:
     free(output_u64);
+    free(scratchpad);
     return res;
 }
 

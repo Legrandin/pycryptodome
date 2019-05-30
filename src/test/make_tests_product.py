@@ -29,9 +29,10 @@ def make_test(a, b):
     print "    const uint64_t a[] = {" + ", ".join(a) + "};"
     print "    const uint64_t b[] = {" + ", ".join(b) + "};"
     print "    uint64_t t[] = {" + ", ".join(t) + ", 0xAAAAAAAAAAAAAAAAULL};"
+    print "    uint64_t scratchpad[%d];" % (3*len(a))
     print "    const uint64_t expected_t[] = {" + ", ".join(result) + "};"
     print ""
-    print "    product(t, a, b, %d);" % len(a)
+    print "    product(t, scratchpad, a, b, %d);" % len(a)
     print "    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len
     #print '    printf("t[{0}]=0x%016lX\\n", t[{0}]);'.format(result_len)
     print "    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len
@@ -44,7 +45,7 @@ print "#include <string.h>"
 print "#include <stdint.h>"
 print "#include <stdio.h>"
 print ""
-print "void product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t words);"
+print "void product(uint64_t *t, uint64_t *product, const uint64_t *a, const uint64_t *b, size_t words);"
 
 make_test(0, 0)
 make_test(1, 0)

@@ -118,7 +118,7 @@ EXPORT_SYM int monty_pow(
     }
 
     /** Result is initially 1 in Montgomery form **/
-    mont_set(x, 1, NULL, ctx);
+    mont_set(x, 1, ctx);
 
     /** Pre-compute powers a^0 mod n, a^1 mod n, a^2 mod n, ... a^(2^WINDOW_SIZE-1) mod n **/
     mont_copy(powers[0], x, ctx);
@@ -220,10 +220,10 @@ int main(void)
 int main(void)
 {
     uint8_t base[256], exponent[256], modulus[256], out[256];
-    int length = 256, i, j;
+    unsigned length = 256, i, j;
 
     for (i=0; i<256; i++) {
-        base[i] = i | 0x80 | 1;
+        base[i] = (uint8_t)i | 0x80 | 1;
         exponent[i] = base[i] = modulus[i] = base[i];
     }
     base[0] = 0x7F;

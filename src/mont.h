@@ -6,7 +6,7 @@
 /*
  * How many numbers in Montgomery form a temporary scratchpad should contain.
  */
-#define SCRATCHPAD_NR 5
+#define SCRATCHPAD_NR 7
 
 typedef enum _ModulusType { ModulusGeneric, ModulusP256, ModulusP384, ModulusP521 } ModulusType;
 
@@ -37,7 +37,7 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
 int mont_shift_left(uint64_t* out, const uint64_t* a, uint64_t k, const MontContext *ctx);
 int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx);
 int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx);
-int mont_set(uint64_t *out, uint64_t x, uint64_t* tmp, const MontContext *ctx);
+int mont_set(uint64_t *out, uint64_t x, const MontContext *ctx);
 
 int mont_is_zero(const uint64_t *a, const MontContext *ctx);
 int mont_is_one(const uint64_t *a, const MontContext *ctx);

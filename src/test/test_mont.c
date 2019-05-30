@@ -348,31 +348,26 @@ void test_mont_set(void)
 {
     int res;
     MontContext *ctx;
-    uint64_t *tmp;
     uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
     uint64_t out[2];
 
     mont_context_init(&ctx, modulus, 16);
-    mont_number(&tmp, 5, ctx);
     
-    res = mont_set(NULL, 0x1000, tmp, ctx);
+    res = mont_set(NULL, 0x1000, ctx);
     assert(res == ERR_NULL);
-    res = mont_set(out, 0x1000, NULL, ctx);
-    assert(res == ERR_NULL);
-    res = mont_set(out, 0x1000, tmp, NULL);
+    res = mont_set(out, 0x1000, NULL);
     assert(res == ERR_NULL);
 
-    res = mont_set(out, 0, tmp, ctx);
+    res = mont_set(out, 0, ctx);
     assert(res == 0);
     assert(out[0] == 0);
     assert(out[1] == 0);
     
-    res = mont_set(out, 0x1000, tmp, ctx);
+    res = mont_set(out, 0x1000, ctx);
     assert(res == 0);
     assert(out[0] == 0xfffffffffff00001UL);
     assert(out[1] == 0xf00000ffffffffUL);
 
-    free(tmp);
     mont_context_free(ctx);
 }
 
