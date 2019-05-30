@@ -162,6 +162,9 @@ def decode(pem_data, passphrase=None):
         elif algo == "AES-192-CBC":
             key = _EVP_BytesToKey(passphrase, salt[:8], 24)
             objdec = AES.new(key, AES.MODE_CBC, salt)
+        elif algo == "AES-256-CBC":
+            key = _EVP_BytesToKey(passphrase, salt[:8], 32)
+            objdec = AES.new(key, AES.MODE_CBC, salt)
         elif algo.lower() == "id-aes256-gcm":
             key = _EVP_BytesToKey(passphrase, salt[:8], 32)
             objdec = AES.new(key, AES.MODE_GCM, nonce=salt)

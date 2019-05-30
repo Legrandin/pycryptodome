@@ -189,7 +189,7 @@ class TestImport_P256(unittest.TestCase):
         # We just check if the import succeeds
 
     def test_import_private_pem_encrypted(self):
-        for algo in "des3", "aes128", "aes192", "aes256_gcm":
+        for algo in "des3", "aes128", "aes192", "aes256", "aes256_gcm":
             key_file = load_file("ecc_p256_private_enc_%s.pem" % algo)
 
             key = ECC.import_key(key_file, "secret")
@@ -294,7 +294,7 @@ class TestImport_P384(unittest.TestCase):
         self.assertEqual(self.ref_private, key)
 
     def test_import_private_pem_encrypted(self):
-        for algo in "des3", "aes128", "aes192", "aes256_gcm":
+        for algo in "des3", "aes128", "aes192", "aes256", "aes256_gcm":
             key_file = load_file("ecc_p384_private_enc_%s.pem" % algo)
 
             key = ECC.import_key(key_file, "secret")
@@ -399,7 +399,7 @@ class TestImport_P521(unittest.TestCase):
         self.assertEqual(self.ref_private, key)
 
     def test_import_private_pem_encrypted(self):
-        for algo in "des3", "aes128", "aes192", "aes256_gcm":
+        for algo in "des3", "aes128", "aes192", "aes256", "aes256_gcm":
             key_file = load_file("ecc_p521_private_enc_%s.pem" % algo)
 
             key = ECC.import_key(key_file, "secret")

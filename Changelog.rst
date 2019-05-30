@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.9.0 (xx xxxxx 2019)
++++++++++++++++++++++++
+
+New features
+------------
+
+* Add support for loading PEM files encrypted with AES256-CBC.
+
 3.8.2 (30 May 2019)
 +++++++++++++++++++++++
 
@@ -15,7 +23,7 @@ Resolved issues
 New features
 ------------
 
-* Add support for loading PEM files encrypted with AES192-CBC, AES256-CBC, and AES256-GCM.
+* Add support for loading PEM files encrypted with AES192-CBC and AES256-GCM.
 * When importing ECC keys in PEM format, ignore the redundant EC PARAMS section that was included by certain openssl commands.
 
 Resolved issues

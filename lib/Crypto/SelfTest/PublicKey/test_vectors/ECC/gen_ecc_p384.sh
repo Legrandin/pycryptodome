@@ -18,6 +18,7 @@ openssl pkcs8 -in ecc_p384_private.der -inform DER -passout 'pass:secret' -out e
 openssl ec -in ecc_p384_private.pem -des3 -out ecc_p384_private_enc_des3.pem -passout 'pass:secret' -outform PEM
 openssl ec -in ecc_p384_private.pem -aes128 -out ecc_p384_private_enc_aes128.pem -passout 'pass:secret' -outform PEM
 openssl ec -in ecc_p384_private.pem -aes192 -out ecc_p384_private_enc_aes192.pem -passout 'pass:secret' -outform PEM
+openssl ec -in ecc_p384_private.pem -aes256 -out ecc_p384_private_enc_aes256.pem -passout 'pass:secret' -outform PEM
 openssl ec -in ecc_p384_private.pem -aes-256-gcm -out ecc_p384_private_enc_aes256_gcm.pem -passout 'pass:secret' -outform PEM
 
 # Public key
