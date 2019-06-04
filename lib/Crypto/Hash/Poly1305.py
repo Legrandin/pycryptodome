@@ -56,7 +56,7 @@ class Poly1305_MAC(object):
     def __init__(self, r, s, data):
 
         if len(r) != 16:
-            raise ValueError("Paramater r is not 16 bytes long")
+            raise ValueError("Parameter r is not 16 bytes long")
         if len(s) != 16:
             raise ValueError("Parameter s is not 16 bytes long")
 

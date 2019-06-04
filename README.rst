@@ -49,9 +49,9 @@ with respect to the last official version of PyCrypto (2.6.1):
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
 * SHA-3 (including SHAKE XOFs), truncated SHA-512 and BLAKE2 hash algorithms
-* Salsa20 and ChaCha20 stream ciphers
+* Salsa20 and ChaCha20/XChaCha20 stream ciphers
 * Poly1305 MAC
-* ChaCha20-Poly1305 authenticated cipher
+* ChaCha20-Poly1305 and XChaCha20-Poly1305 authenticated ciphers
 * scrypt and HKDF
 * Deterministic (EC)DSA
 * Password-protected PKCS#8 key containers
