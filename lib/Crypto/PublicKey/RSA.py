@@ -88,7 +88,7 @@ class RsaKey(object):
             The second factor of the modulus. Only required for private keys.
           u : integer
             The CRT coefficient (inverse of p modulo q). Only required for
-            privta keys.
+            private keys.
         """
 
         input_set = set(kwargs.keys())
