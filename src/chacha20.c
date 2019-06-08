@@ -90,9 +90,17 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
         hs->h[4+i] = LOAD_U32_LITTLE(key + 4*i);
     }
 
-
     switch (nonceSize) {
     case 8: {
+                /*
+                cccccccc  cccccccc  cccccccc  cccccccc
+                kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
+                kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
+                bbbbbbbb  bbbbbbbb  nnnnnnnn  nnnnnnnn
+
+                c=constant k=key b=blockcount n=nonce
+                */
+
                 /** h[12] remains 0 (offset) **/
                 /** h[13] remains 0 (offset) **/
                 hs->h[14] = LOAD_U32_LITTLE(nonce + 0);
@@ -100,6 +108,15 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
                 break;
                 }
     case 12: {
+                /*
+                cccccccc  cccccccc  cccccccc  cccccccc
+                kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
+                kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
+                bbbbbbbb  nnnnnnnn  nnnnnnnn  nnnnnnnn
+
+                c=constant k=key b=blockcount n=nonce
+                */
+
                 /** h[12] remains 0 (offset) **/
                 hs->h[13] = LOAD_U32_LITTLE(nonce + 0);
                 hs->h[14] = LOAD_U32_LITTLE(nonce + 4);
@@ -107,12 +124,23 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
                 break;
             }
     case 16: {
+                /*
+                cccccccc  cccccccc  cccccccc  cccccccc
+                kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
+                kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
+                nnnnnnnn  nnnnnnnn  nnnnnnnn  nnnnnnnn
+
+                c=constant k=key n=nonce
+                */
+
                 hs->h[12] = LOAD_U32_LITTLE(nonce + 0);
                 hs->h[13] = LOAD_U32_LITTLE(nonce + 4);
                 hs->h[14] = LOAD_U32_LITTLE(nonce + 8);
                 hs->h[15] = LOAD_U32_LITTLE(nonce + 12);
                 break;
             }
+    default:
+             return ERR_NONCE_SIZE;
     }
 
     hs->nonceSize = nonceSize;
@@ -175,7 +203,8 @@ static int chacha20_core(stream_state *state, uint32_t h[16])
                 break;
             }
     case 16: {
-                 /** Nonce is 128 bits, there is no counter (HChaCha20) **/
+                 /** Nonce is 192 bits, there is no counter as this is intended
+                  * to be run once only (HChaCha20) **/
                  break;
             }
     }
@@ -190,6 +219,9 @@ EXPORT_SYM int chacha20_encrypt(stream_state *state,
 {
     if (NULL == state || NULL == in || NULL == out)
         return ERR_NULL;
+
+    if ((state->nonceSize != 8) && (state->nonceSize != 12))
+        return ERR_NONCE_SIZE;
 
     while (len>0) {
         unsigned keyStreamToUse;
@@ -225,6 +257,9 @@ EXPORT_SYM int chacha20_seek(stream_state *state,
 
     if (NULL == state)
         return ERR_NULL;
+
+    if ((state->nonceSize != 8) && (state->nonceSize != 12))
+        return ERR_NONCE_SIZE;
 
     if (offset >= sizeof state->keyStream)
         return ERR_MAX_OFFSET;

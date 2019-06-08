@@ -51,10 +51,10 @@ _CipherStatus = _enum(PROCESSING_AUTH_DATA=1,
 
 
 class ChaCha20Poly1305Cipher(object):
-    """ChaCha20-Poly1305 cipher object.
+    """ChaCha20-Poly1305 and XChaCha20-Poly1305 cipher object.
     Do not create it directly. Use :py:func:`new` instead.
 
-    :var nonce: The nonce with length 8 or 12 bytes
+    :var nonce: The nonce with length 8, 12 or 24 bytes
     :vartype nonce: byte string
     """
 
@@ -291,6 +291,7 @@ def new(**kwargs):
         done with this key.
 
         For ChaCha20-Poly1305, it must be 8 or 12 bytes long.
+
         For XChaCha20-Poly1305, it must be 24 bytes long.
 
         If not provided, 12 ``bytes`` will be generated randomly

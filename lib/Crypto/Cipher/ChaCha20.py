@@ -80,9 +80,10 @@ def _HChaCha20(key, nonce):
 
 
 class ChaCha20Cipher(object):
-    """ChaCha20 cipher object. Do not create it directly. Use :py:func:`new` instead.
+    """ChaCha20 (or XChaCha20) cipher object.
+    Do not create it directly. Use :py:func:`new` instead.
 
-    :var nonce: The nonce with length 8 or 12
+    :var nonce: The nonce with length 8, 12 or 24 bytes
     :vartype nonce: bytes
     """
 
@@ -247,7 +248,9 @@ def new(**kwargs):
         nonce (bytes/bytearray/memoryview): A mandatory value that
             must never be reused for any other encryption
             done with this key.
+
             For ChaCha20, it must be 8 or 12 bytes long.
+
             For XChaCha20, it must be 24 bytes long.
 
             If not provided, 8 bytes will be randomly generated
