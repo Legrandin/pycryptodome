@@ -96,9 +96,9 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
                 cccccccc  cccccccc  cccccccc  cccccccc
                 kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
                 kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk
-                bbbbbbbb  bbbbbbbb  nnnnnnnn  nnnnnnnn
+                bbbbbbbb  BBBBBBBB  nnnnnnnn  nnnnnnnn
 
-                c=constant k=key b=blockcount n=nonce
+                c=constant k=key b=blockcount(low) B=blockcount(high) n=nonce
                 */
 
                 /** h[12] remains 0 (offset) **/
