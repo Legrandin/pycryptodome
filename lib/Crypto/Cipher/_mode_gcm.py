@@ -227,19 +227,17 @@ class GcmMode(object):
 
         # Step 2 - Compute J0 (integer, not byte string!)
         if len(self.nonce) == 12:
-            self._j0 = bytes_to_long(self.nonce + b"\x00\x00\x00\x01")
+            j0 = self.nonce + b"\x00\x00\x00\x01"
         else:
             fill = (16 - (len(nonce) % 16)) % 16 + 8
             ghash_in = (self.nonce +
                         b'\x00' * fill +
                         long_to_bytes(8 * len(nonce), 8))
-            self._j0 = bytes_to_long(_GHASH(hash_subkey, ghash_c)
-                                     .update(ghash_in)
-                                     .digest())
+            j0 = _GHASH(hash_subkey, ghash_c).update(ghash_in).digest()
 
         # Step 3 - Prepare GCTR cipher for encryption/decryption
-        nonce_ctr = long_to_bytes(self._j0 >> 32, 12)
-        iv_ctr = (self._j0 + 1) & 0xFFFFFFFF
+        nonce_ctr = j0[:12]
+        iv_ctr = (bytes_to_long(j0) + 1) & 0xFFFFFFFF
         self._cipher = factory.new(key,
                                    self._factory.MODE_CTR,
                                    initial_value=iv_ctr,
@@ -252,7 +250,7 @@ class GcmMode(object):
         # Step 6 - Prepare GCTR cipher for GMAC
         self._tag_cipher = factory.new(key,
                                        self._factory.MODE_CTR,
-                                       initial_value=self._j0,
+                                       initial_value=j0,
                                        nonce=b"",
                                        **cipher_params)
 
