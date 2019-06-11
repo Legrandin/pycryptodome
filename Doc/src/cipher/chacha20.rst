@@ -1,19 +1,24 @@
-ChaCha20
-========
+ChaCha20 and XChaCha20
+======================
 
 `ChaCha20`_ is a stream cipher designed by Daniel J. Bernstein.
-The secret key is 256 bits long.
+The secret key is 256 bits long (32 bytes).
+The cipher requires a nonce, which **must not** be reused
+across encryptions performed with the same key.
 
-The algorithm requires a nonce of either 8 bytes (original definition of ChaCha20)
-or 12 bytes (newer definition published in `RFC7539`_).
-A nonce value must never be reused across encryptions performed with the same key.
+There are three variants, defined by the length of the nonce:
 
-Using a 12 bytes nonce limits the amount of data that can be encrypted to 256BG only.
-No practical limitation exists when the nonce is 8 bytes long.
+.. csv-table::
+    :header: Nonce length, Description, Max data, If random nonce and same key
+    :widths: 5, 50, 20, 20
 
-You create a new cipher by calling :meth:`Crypto.Cipher.ChaCha20.new`.
+    "8 bytes (default)", "The original ChaCha20 designed by Bernstein.", "No limitations", "Max 200 000 messages"
+    "12 bytes", "The TLS ChaCha20 as defined in `RFC7539`_.", "256 GB", "Max 13 billions messages"
+    "24 bytes", "XChaCha20, still in `draft stage <https://tools.ietf.org/html/draft-arciszewski-xchacha-03>`_.", "256 GB", "No limitations"
 
-This is an example of how `ChaCha20`_ can encrypt data::
+.. see probability p=10⁻⁶ in table https://en.wikipedia.org/wiki/Birthday_problem#Probability_table
+
+This is an example of how `ChaCha20`_ (Bernstein's version) can encrypt data::
 
     >>> import json
     >>> from base64 import b64encode
@@ -47,8 +52,6 @@ And this is how you decrypt it::
     >>>     print("The message was " + plaintext)
     >>> except ValueError, KeyError:
     >>>     print("Incorrect decryption")
-
-The examples above implicitly generate a 64 bit (8 byte) nonce.
 
 In order to have a `RFC7539`_-compliant ChaCha20 cipher,
 you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter to ``new()``::

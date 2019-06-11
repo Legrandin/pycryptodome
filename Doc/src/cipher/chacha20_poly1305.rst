@@ -1,19 +1,26 @@
-ChaCha20-Poly1305
-=================
+ChaCha20-Poly1305 and XChaCha20-Poly1305
+========================================
 
-ChaCha20-Poly1305 is an authenticated cipher with associated data (AEAD) defined in `RFC7539`_.
-Its API and finite state machine are the same as for the :doc:`modern modes of operation of block ciphers <modern>`.
+ChaCha20-Poly1305 is an authenticated cipher with associated data (AEAD).
+It works with a 32 bytes secret key and a nonce
+which **must never** be reused across encryptions performed under the same key.
+The cipher produces a 16 byte tag that the receiver must use to validate the message.
 
-The secret key is 256 bits (32 bytes) long.
+There are three variants of the algorithm, defined by the length of the nonce:
 
-The algorithm requires a nonce of either 8 bytes or 12 bytes.
-A nonce value must never be reused across encryptions performed with the same key.
+.. csv-table::
+    :header: Nonce length, Description, Max plaintext, If random nonce as same key
+    :widths: 5, 50, 20, 20
 
-An ChaCha20-Poly1305 cipher can only encrypt up to 256GB (no matter how long the nonce is).
+    "8 bytes", "Based on Bernstein's original ChaCha20.", "No limitations", "Max 200 000 messages"
+    "12 bytes (default)", "Version used in TLS and specified in `RFC7539`_.", "256 GB", "Max 13 billions messages"
+    "24 bytes", "XChaCha20-Poly1305, still in `draft stage <https://tools.ietf.org/html/draft-arciszewski-xchacha-03>`_.", "256 GB", "No limitations"
+
+The API of the cipher and its finite state machine are the same as for the :doc:`modern modes of operation of block ciphers <modern>`.
 
 You create a new cipher by calling :meth:`Crypto.Cipher.ChaCha20_Poly1305.new`.
 
-This is an example of how `ChaCha20-Poly1305`_ can encrypt and authenticate data::
+This is an example of how ChaCha20-Poly1305 (TLS version) can encrypt and authenticate data::
 
     >>> import json
     >>> from base64 import b64encode

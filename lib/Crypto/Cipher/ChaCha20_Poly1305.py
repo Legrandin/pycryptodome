@@ -31,6 +31,7 @@
 from binascii import unhexlify
 
 from Crypto.Cipher import ChaCha20
+from Crypto.Cipher.ChaCha20 import _HChaCha20
 from Crypto.Hash import Poly1305, BLAKE2s
 
 from Crypto.Random import get_random_bytes
@@ -50,10 +51,10 @@ _CipherStatus = _enum(PROCESSING_AUTH_DATA=1,
 
 
 class ChaCha20Poly1305Cipher(object):
-    """ChaCha20-Poly1305 cipher object.
+    """ChaCha20-Poly1305 and XChaCha20-Poly1305 cipher object.
     Do not create it directly. Use :py:func:`new` instead.
 
-    :var nonce: The nonce with length 8 or 12 bytes
+    :var nonce: The nonce with length 8, 12 or 24 bytes
     :vartype nonce: byte string
     """
 
@@ -68,7 +69,7 @@ class ChaCha20Poly1305Cipher(object):
                       self.verify)
 
         self._authenticator = Poly1305.new(key=key, nonce=nonce, cipher=ChaCha20)
-        
+
         self._cipher = ChaCha20.new(key=key, nonce=nonce)
         self._cipher.seek(64)   # Block counter starts at 1
 
@@ -137,7 +138,7 @@ class ChaCha20Poly1305Cipher(object):
 
     def decrypt(self, ciphertext, output=None):
         """Decrypt a piece of data.
-        
+
         Args:
           ciphertext(bytes/bytearray/memoryview): The data to decrypt, of any size.
         Keyword Args:
@@ -147,10 +148,10 @@ class ChaCha20Poly1305Cipher(object):
           If ``output`` is ``None``, the plaintext is returned as ``bytes``.
           Otherwise, ``None``.
         """
-        
+
         if self.decrypt not in self._next:
             raise TypeError("decrypt() method cannot be called")
-        
+
         if self._status == _CipherStatus.PROCESSING_AUTH_DATA:
             self._pad_aad()
 
@@ -159,7 +160,7 @@ class ChaCha20Poly1305Cipher(object):
         self._len_ct += len(ciphertext)
         self._authenticator.update(ciphertext)
         return self._cipher.decrypt(ciphertext, output=output)
-    
+
     def _compute_mac(self):
         """Finalize the cipher (if not done already) and return the MAC."""
 
@@ -168,32 +169,32 @@ class ChaCha20Poly1305Cipher(object):
             return self._mac_tag
 
         assert(self._status != _CipherStatus.PROCESSING_DONE)
-        
+
         if self._status == _CipherStatus.PROCESSING_AUTH_DATA:
             self._pad_aad()
 
         if self._len_ct & 0x0F:
             self._authenticator.update(b'\x00' * (16 - (self._len_ct & 0x0F)))
-        
+
         self._status = _CipherStatus.PROCESSING_DONE
-        
+
         self._authenticator.update(long_to_bytes(self._len_aad, 8)[::-1])
         self._authenticator.update(long_to_bytes(self._len_ct, 8)[::-1])
         self._mac_tag = self._authenticator.digest()
         return self._mac_tag
- 
+
     def digest(self):
         """Compute the *binary* authentication tag (MAC).
 
         :Return: the MAC tag, as 16 ``bytes``.
         """
- 
+
         if self.digest not in self._next:
             raise TypeError("digest() method cannot be called")
         self._next = (self.digest,)
-        
+
         return self._compute_mac()
-    
+
     def hexdigest(self):
         """Compute the *printable* authentication tag (MAC).
 
@@ -280,14 +281,18 @@ class ChaCha20Poly1305Cipher(object):
 
 
 def new(**kwargs):
-    """Create a new ChaCha20-Poly1305 AEAD cipher.
+    """Create a new ChaCha20-Poly1305 or XChaCha20-Poly1305 AEAD cipher.
 
     :keyword key: The secret key to use. It must be 32 bytes long.
     :type key: byte string
 
     :keyword nonce:
         A value that must never be reused for any other encryption
-        done with this key. It must be 8 or 12 bytes long.
+        done with this key.
+
+        For ChaCha20-Poly1305, it must be 8 or 12 bytes long.
+
+        For XChaCha20-Poly1305, it must be 24 bytes long.
 
         If not provided, 12 ``bytes`` will be generated randomly
         (you can find them back in the ``nonce`` attribute).
@@ -302,7 +307,7 @@ def new(**kwargs):
         raise TypeError("Missing parameter %s" % e)
 
         self._len_ct += len(plaintext)
-    
+
     if len(key) != 32:
         raise ValueError("Key must be 32 bytes long")
 
@@ -310,8 +315,13 @@ def new(**kwargs):
     if nonce is None:
         nonce = get_random_bytes(12)
 
-    if len(nonce) not in (8, 12):
-        raise ValueError("Nonce must be 8 or 12 bytes long")
+    if len(nonce) in (8, 12):
+        pass
+    elif len(nonce) == 24:
+        key = _HChaCha20(key, nonce[:16])
+        nonce = b'\x00\x00\x00\x00' + nonce[16:]
+    else:
+        raise ValueError("Nonce must be 8, 12 or 24 bytes long")
 
     if not is_buffer(nonce):
         raise TypeError("nonce must be bytes, bytearray or memoryview")

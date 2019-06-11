@@ -2,6 +2,8 @@ from typing import Union, overload
 
 Buffer = Union[bytes, bytearray, memoryview]
 
+def _HChaCha20(key: Buffer, nonce: Buffer) -> bytearray: ...
+
 class ChaCha20Cipher:
     block_size: int
     nonce: bytes
