@@ -225,7 +225,7 @@ class GcmMode(object):
                                   **cipher_params
                                   ).encrypt(b'\x00' * 16)
 
-        # Step 2 - Compute J0 (integer, not byte string!)
+        # Step 2 - Compute J0
         if len(self.nonce) == 12:
             j0 = self.nonce + b"\x00\x00\x00\x01"
         else:
