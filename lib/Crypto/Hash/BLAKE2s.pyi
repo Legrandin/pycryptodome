@@ -24,3 +24,5 @@ def new(data: Buffer = ...,
 	digest_bits: int = ...,
 	key: Buffer = ...,
 	update_after_digest: bool = ...) -> BLAKE2s_Hash: ...
+block_size: int
+digest_size: int

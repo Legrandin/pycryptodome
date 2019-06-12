@@ -183,6 +183,26 @@ class BLAKE2s_Hash(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
+    def copy(self):
+        """Return a copy ("clone") of the hash object.
+
+        The copy will have the same internal state as the original hash object.
+        This can be used to efficiently compute the digests of strings that
+        share a common prefix.
+
+        :return: A hash object of the same type
+        """
+        clone = BLAKE2s_Hash(data=b'', key=b'',
+                digest_bytes=self.digest_size,
+                update_after_digest=self._update_after_digest)
+        result = _raw_blake2s_lib.blake2s_copy(
+                self._state.get(),
+                clone._state.get())
+        if result:
+            raise ValueError("Error %d while copying BLAKE2s" % result)
+        return clone
+
+
     def new(self, **kwargs):
         """Return a new instance of a BLAKE2s hash object.
         See :func:`new`.
@@ -194,7 +214,7 @@ class BLAKE2s_Hash(object):
         return new(**kwargs)
 
 
-def new(**kwargs):
+def new(*args, **kwargs):
     """Create a new hash object.
 
     Args:
@@ -219,7 +239,7 @@ def new(**kwargs):
         A :class:`BLAKE2s_Hash` hash object
     """
 
-    data = kwargs.pop("data", None)
+    data = kwargs.pop("data", None) or (args[0] if args else None)
     update_after_digest = kwargs.pop("update_after_digest", False)
 
     digest_bytes = kwargs.pop("digest_bytes", None)
@@ -245,3 +265,10 @@ def new(**kwargs):
         raise TypeError("Unknown parameters: " + str(kwargs))
 
     return BLAKE2s_Hash(data, key, digest_bytes, update_after_digest)
+
+
+# The size of the resulting hash in bytes.
+digest_size = 32
+
+# The internal block size of the hash algorithm in bytes.
+block_size = 64
