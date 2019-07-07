@@ -207,7 +207,7 @@ class CMAC(object):
             # Last block is partial (or message length is zero)
             partial = self._cache[:]
             partial[self._cache_n:] = b'\x80' + b'\x00' * (bs - self._cache_n - 1)
-            pt = strxor(strxor(self._last_ct, partial), self._k2)
+            pt = strxor(strxor(self._last_ct, bytes(partial), self._k2)
 
         self._mac_tag = self._ecb.encrypt(pt)[:self.digest_size]
 
