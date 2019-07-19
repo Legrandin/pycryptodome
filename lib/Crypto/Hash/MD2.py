@@ -68,7 +68,7 @@ class MD2Hash(object):
     # The size of the resulting hash in bytes.
     digest_size = 16
     # The internal block size of the hash algorithm in bytes.
-    block_size = 64
+    block_size = 16
     # ASN.1 Object ID
     oid = "1.2.840.113549.2.2"
 
