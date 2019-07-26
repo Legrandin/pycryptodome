@@ -152,12 +152,10 @@ class EaxTests(unittest.TestCase):
     def test_mac_len(self):
         # Invalid MAC length
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX,
-                          nonce=self.nonce_96, mac_len=3)
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX,
                           nonce=self.nonce_96, mac_len=16+1)
 
         # Valid MAC length
-        for mac_len in range(5, 16 + 1):
+        for mac_len in range(16 + 1):
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96,
                              mac_len=mac_len)
             _, mac = cipher.encrypt_and_digest(self.data_128)

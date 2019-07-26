@@ -10,6 +10,11 @@ New features
 * Add support for loading PEM files encrypted with AES256-CBC.
 * Add support for XChaCha20 and XChaCha20-Poly1305.
 
+Resolved Issues
+---------------
+
+* Fix minimum tag length on EAX cipher
+
 3.8.2 (30 May 2019)
 +++++++++++++++++++++++
 

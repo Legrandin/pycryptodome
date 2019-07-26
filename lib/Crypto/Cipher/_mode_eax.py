@@ -94,7 +94,7 @@ class EaxMode(object):
                       self.digest, self.verify]
 
         # MAC tag length
-        if not (4 <= self._mac_len <= self.block_size):
+        if not (0 <= self._mac_len <= self.block_size):
             raise ValueError("Parameter 'mac_len' must not be larger than %d"
                              % self.block_size)
 
@@ -294,7 +294,7 @@ class EaxMode(object):
                                 " when encrypting a message")
         self._next = [self.verify]
 
-        if not self._mac_tag:
+        if not self._mac_tag or self._mac_len == 0:
             tag = b'\x00' * self.block_size
             for i in range(3):
                 tag = strxor(tag, self._omac[i].digest())
