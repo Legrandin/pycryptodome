@@ -87,6 +87,11 @@ class TestEccPoint_NIST_P256(unittest.TestCase):
         self.assertEqual(pointW, self.pointT)
         self.assertNotEqual(self.pointS, self.pointT)
 
+    def test_negate(self):
+        negS = -self.pointS
+        sum = self.pointS + negS
+        self.assertEqual(sum, self.pointS.point_at_infinity())
+
     def test_addition(self):
         pointRx = 0x72b13dd4354b6b81745195e98cc5ba6970349191ac476bd4553cf35a545a067e
         pointRy = 0x8d585cbb2e1327d75241a8a122d7620dc33b13315aa5c9d46d013011744ac264
@@ -213,6 +218,11 @@ class TestEccPoint_NIST_P384(unittest.TestCase):
         pointW.set(self.pointT)
         self.assertEqual(pointW, self.pointT)
         self.assertNotEqual(self.pointS, self.pointT)
+
+    def test_negate(self):
+        negS = -self.pointS
+        sum = self.pointS + negS
+        self.assertEqual(sum, self.pointS.point_at_infinity())
 
     def test_addition(self):
         pointRx = 0x12dc5ce7acdfc5844d939f40b4df012e68f865b89c3213ba97090a247a2fc009075cf471cd2e85c489979b65ee0b5eed
@@ -341,6 +351,11 @@ class TestEccPoint_NIST_P521(unittest.TestCase):
         pointW.set(self.pointT)
         self.assertEqual(pointW, self.pointT)
         self.assertNotEqual(self.pointS, self.pointT)
+
+    def test_negate(self):
+        negS = -self.pointS
+        sum = self.pointS + negS
+        self.assertEqual(sum, self.pointS.point_at_infinity())
 
     def test_addition(self):
         pointRx = 0x000001264ae115ba9cbc2ee56e6f0059e24b52c8046321602c59a339cfb757c89a59c358a9a8e1f86d384b3f3b255ea3f73670c6dc9f45d46b6a196dc37bbe0f6b2dd9e9

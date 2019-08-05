@@ -301,9 +301,9 @@ class EccPoint(object):
 
     def __neg__(self):
         np = self.copy()
-        result = _ec_lib.ec_ws_neg(np._point_get())
+        result = _ec_lib.ec_ws_neg(np._point.get())
         if result:
-            raise ValueError("Error %d while negating an EC point" % result)
+            raise ValueError("Error %d while inverting an EC point" % result)
         return np
 
     def copy(self):
