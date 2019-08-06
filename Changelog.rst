@@ -10,6 +10,12 @@ New features
 * Add support for loading PEM files encrypted with AES256-CBC.
 * Add support for XChaCha20 and XChaCha20-Poly1305.
 
+Resolved issues
+---------------
+
+* GH#312: it was not possible to invert an EC point anymore
+
+
 3.8.2 (30 May 2019)
 +++++++++++++++++++++++
 
