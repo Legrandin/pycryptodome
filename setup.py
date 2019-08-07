@@ -355,7 +355,7 @@ ext_modules = [
         sources=["src/ARC2.c"]),
     Extension("Crypto.Cipher._raw_blowfish",
         include_dirs=['src/'],
-        sources=["src/Blowfish.c"]),
+        sources=["src/blowfish.c"]),
     Extension("Crypto.Cipher._raw_cast",
         include_dirs=['src/'],
         sources=["src/CAST.c"]),
