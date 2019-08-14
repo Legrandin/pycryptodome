@@ -21,13 +21,16 @@
 # SOFTWARE.
 # ===================================================================
 
+import re
 import struct
 from functools import reduce
 
-from Crypto.Util.py3compat import tobytes, bord, _copy_bytes, iter_range
+from Crypto.Util.py3compat import (tobytes, bord, _copy_bytes, iter_range,
+                                  tostr, bchr, bstr)
 
-from Crypto.Hash import SHA1, SHA256, HMAC, CMAC
+from Crypto.Hash import SHA1, SHA256, HMAC, CMAC, BLAKE2s
 from Crypto.Util.strxor import strxor
+from Crypto.Random import get_random_bytes
 from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -328,6 +331,7 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     return list(kol[:num_keys])
 
 
+
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     """Derive one or more keys from a passphrase.
 
@@ -415,3 +419,153 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     kol = [dk[idx:idx + key_len]
            for idx in iter_range(0, key_len * num_keys, key_len)]
     return kol
+
+
+def _bcrypt_encode(data):
+    s = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+    bits = []
+    for c in data:
+        bits_c = bin(bord(c))[2:].zfill(8)
+        bits.append(bstr(bits_c))
+    bits = b"".join(bits)
+
+    bits6 = [ bits[idx:idx+6] for idx in range(0, len(bits), 6) ]
+
+    result = []
+    for g in bits6[:-1]:
+        idx = int(g, 2)
+        result.append(s[idx])
+
+    g = bits6[-1]
+    idx = int(g, 2) << (6 - len(g))
+    result.append(s[idx])
+    result = "".join(result)
+
+    return tobytes(result)
+
+
+def _bcrypt_decode(data):
+    s = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+    bits = []
+    for c in tostr(data):
+        idx = s.find(c)
+        bits6 = bin(idx)[2:].zfill(6)
+        bits.append(bits6)
+    bits = "".join(bits)
+
+    modulo4 = len(data) % 4
+    if modulo4 == 1:
+        raise ValueError("Incorrect length")
+    elif modulo4 == 2:
+        bits = bits[:-4]
+    elif modulo4 == 3:
+        bits = bits[:-2]
+
+    bits8 = [ bits[idx:idx+8] for idx in range(0, len(bits), 8) ]
+
+    result = []
+    for g in bits8:
+        result.append(bchr(int(g, 2)))
+    result = b"".join(result)
+
+    return result
+
+
+def bcrypt(password, cost, salt=None):
+    """Hash a password into a key, using the OpenBSD bcrypt protocol.
+
+    Args:
+      password (byte string or string):
+        The secret password or pass phrase.
+        It must be at most 72 bytes long.
+        Unicode strings will be encoded as UTF-8.
+      cost (integer):
+        The exponential factor that makes it slower to compute the hash.
+        It must be in the range 4 to 31.
+      salt (byte string):
+        Optional. Random byte string to thwarts dictionary and rainbow table
+        attacks. It must be 16 bytes long.
+        If not passed, a random value is generated.
+
+    Return (byte string):
+        The bcrypt hash
+    """
+
+    from Crypto.Cipher import _EKSBlowfish
+
+    password = tobytes(password, "utf-8")
+
+    if len(password) < 72:
+        password += b"\x00"
+    if len(password) > 72:
+        raise ValueError("The password is too long. It must be 72 bytes at most.")
+
+    if salt is None:
+        salt = get_random_bytes(16)
+
+    if len(salt) != 16:
+        raise ValueError("bcrypt salt must be 16 bytes long")
+
+    if not (4 <= cost <= 31):
+        raise ValueError("bcrypt cost factor must be in the range 4..31")
+
+    cipher = _EKSBlowfish.new(password, _EKSBlowfish.MODE_ECB, salt, cost)
+    ctext = b"OrpheanBeholderScryDoubt"
+    for _ in range(64):
+        ctext = cipher.encrypt(ctext)
+
+    cost_enc = b"$" + bstr(str(cost).zfill(2))
+    salt_enc = b"$" + _bcrypt_encode(salt)
+
+    # Only use 23 bytes, not 24
+    hash_enc = _bcrypt_encode(ctext[:-1])
+
+    result = b"$2a" + cost_enc + salt_enc + hash_enc
+
+    return result
+
+
+def bcrypt_check(password, bcrypt_hash):
+    """Verify if the provided password matches the given bcrypt hash.
+
+    Args:
+      password (byte string or string):
+        The secret password or pass phrase to test.
+        It must be at most 72 bytes long.
+        Unicode strings will be encoded as UTF-8.
+      bcrypt_hash (byte string):
+        The reference bcrypt hash the password needs to be checked against.
+
+    Raises:
+        ValueError: if password is invalid
+    """
+
+    bcrypt_hash = tobytes(bcrypt_hash)
+
+    if len(bcrypt_hash) != 60:
+        raise ValueError("Incorrect length of the bcrypt hash: %d bytes instead of 60" % len(bcrypt_hash))
+
+    if bcrypt_hash[:4] != b'$2a$':
+        raise ValueError("Unsupported prefix")
+
+    p = re.compile(b'\$2a\$([0-9][0-9])\$([A-Za-z0-9./]{22,22})([A-Za-z0-9./]{31,31})')
+    r = p.match(bcrypt_hash)
+    if not r:
+        raise ValueError("Incorrect bcrypt hash format")
+
+    cost = int(r.group(1))
+    if not (4 <= cost <= 31):
+        raise ValueError("Incorrect cost")
+
+    salt = _bcrypt_decode(r.group(2))
+
+    bcrypt_hash2  = bcrypt(password, cost, salt)
+
+    secret = get_random_bytes(16)
+
+    mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=bcrypt_hash).digest()
+    mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=bcrypt_hash2).digest()
+    if mac1 != mac2:
+        raise ValueError("Incorrect bcrypt hash")

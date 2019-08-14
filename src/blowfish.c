@@ -37,7 +37,13 @@
 
 FAKE_INIT(raw_blowfish)
 
+#ifdef EKS
+#define NON_STANDARD_START_OPERATION
+#define MODULE_NAME EKSBlowfish
+#else
 #define MODULE_NAME Blowfish
+#endif
+
 #define BLOCK_SIZE  8
 #define KEY_SIZE    0
 
@@ -116,13 +122,11 @@ static void bf_decrypt(const struct block_state *state, uint32_t *Lx, uint32_t *
     *Rx = R;
 }
 
-static int xorkey(uint32_t P[18], const uint8_t *key, size_t keylength)
+static inline void xorP(uint32_t P[18], const uint8_t *key, size_t keylength)
 {
     uint8_t P_buf[4*18];
     size_t P_idx;
     unsigned i;
-
-    assert(keylength > 0);
 
     P_idx = 0;
     while (P_idx < sizeof(P_buf)) {
@@ -139,24 +143,14 @@ static int xorkey(uint32_t P[18], const uint8_t *key, size_t keylength)
         P[i] ^= LOAD_U32_BIG(P_buf + P_idx);
         P_idx += 4;
     }
-
-    return 0;
 }
 
-static int block_init(struct block_state *state, const uint8_t *key, size_t keylength)
+static inline void encryptState(struct block_state *state, const uint8_t *key, size_t keylength)
 {
     unsigned i, j;
     uint32_t L, R;
 
-    /* Allowed key length: 32 to 448 bits */
-    if (keylength < 4 || keylength > 56) {
-        return ERR_KEY_SIZE;
-    }
-
-    memcpy(state->S, S_init, sizeof S_init);
-    memcpy(state->P, P_init, sizeof P_init);
-
-    xorkey(state->P, key, keylength);
+    xorP(state->P, key, keylength);
 
     L = R = 0;
     for (i=0; i<18; i+=2) {
@@ -171,9 +165,98 @@ static int block_init(struct block_state *state, const uint8_t *key, size_t keyl
             state->S[j][i+1] = R;
         }
     }
+}
+
+#ifndef EKS
+
+static int block_init(struct block_state *state, const uint8_t *key, size_t keylength)
+{
+    /* Allowed key length: 32 to 448 bits */
+    if (keylength < 4 || keylength > 56) {
+        return ERR_KEY_SIZE;
+    }
+
+    memcpy(state->S, S_init, sizeof S_init);
+    memcpy(state->P, P_init, sizeof P_init);
+
+    encryptState(state, key, keylength);
 
     return 0;
 }
+
+#else
+
+static void encryptStateWithSalt(struct block_state *state, const uint8_t *key, size_t keylength, const uint8_t salt[16])
+{
+    uint32_t S1, S2, S3, S4;
+    uint32_t L, R;
+    unsigned i, j;
+
+    xorP(state->P, key, keylength);
+
+    S1 = LOAD_U32_BIG(salt);
+    S2 = LOAD_U32_BIG(salt+4);
+    S3 = LOAD_U32_BIG(salt+8);
+    S4 = LOAD_U32_BIG(salt+12);
+
+    L = R = 0;
+    for (i=0;;) {
+        L ^= S1;
+        R ^= S2;
+        bf_encrypt(state, &L, &R);
+        state->P[i++] = L;
+        state->P[i++] = R;
+
+        if (i == 18) break;
+
+        L ^= S3;
+        R ^= S4;
+        bf_encrypt(state, &L, &R);
+        state->P[i++] = L;
+        state->P[i++] = R;
+    }
+
+    for (j=0; j<4; j++) {
+        for (i=0; i<256;) {
+            L ^= S3;
+            R ^= S4;
+            bf_encrypt(state, &L, &R);
+            state->S[j][i++] = L;
+            state->S[j][i++] = R;
+
+            L ^= S1;
+            R ^= S2;
+            bf_encrypt(state, &L, &R);
+            state->S[j][i++] = L;
+            state->S[j][i++] = R;
+        }
+    }
+}
+
+static int block_init(struct block_state *state, const uint8_t *key, size_t keylength, const uint8_t salt[16], unsigned cost)
+{
+    unsigned i;
+
+    /* Allowed key length: 32 to 448 bits */
+    if (keylength < 4 || keylength > 56) {
+        return ERR_KEY_SIZE;
+    }
+
+    /* InitState */
+    memcpy(state->S, S_init, sizeof S_init);
+    memcpy(state->P, P_init, sizeof P_init);
+
+    encryptStateWithSalt(state, key, keylength, salt);
+
+    for (i=0; i<(1 << cost); i++) {
+        encryptState(state, key, keylength);
+        encryptState(state, salt, 16);
+    }
+
+    return 0;
+}
+
+#endif
 
 static void block_finalize(struct block_state* state)
 {
@@ -202,3 +285,25 @@ static inline void block_decrypt(struct block_state *state, const uint8_t *in, u
 }
 
 #include "block_common.c"
+
+#ifdef EKS
+EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, const uint8_t salt[16], unsigned cost, CIPHER_STATE_TYPE **pResult)
+{
+    BlockBase *block_base;
+
+    if ((key == NULL) || (pResult == NULL))
+        return ERR_NULL;
+
+    *pResult = calloc(1, sizeof(CIPHER_STATE_TYPE));
+    if (NULL == *pResult)
+        return ERR_MEMORY;
+
+    block_base = &((*pResult)->base_state);
+    block_base->encrypt = &CIPHER_ENCRYPT;
+    block_base->decrypt = &CIPHER_DECRYPT;
+    block_base->destructor = &CIPHER_STOP_OPERATION;
+    block_base->block_len = BLOCK_SIZE;
+
+    return block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len, salt, cost);
+}
+#endif
