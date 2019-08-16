@@ -1,6 +1,6 @@
 /* ===================================================================
  *
- * Copyright (c) 2018, Helder Eijs <helderijs@gmail.com>
+ * Copyright (c) 2019, Helder Eijs <helderijs@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -290,7 +290,7 @@ EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, const
 {
     BlockBase *block_base;
 
-    if ((key == NULL) || (pResult == NULL))
+    if ((key == NULL) || (salt == NULL) || (pResult == NULL))
         return ERR_NULL;
 
     *pResult = calloc(1, sizeof(CIPHER_STATE_TYPE));
