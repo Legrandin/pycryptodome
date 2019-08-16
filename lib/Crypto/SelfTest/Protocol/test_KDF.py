@@ -453,6 +453,7 @@ class bcrypt_Tests(unittest.TestCase):
         self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"")
         self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"1")
         self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"1" * 17)
+        self.assertRaises(ValueError, bcrypt, b"1\x00" * 10, 4)
 
     def test_bytearray_mismatch(self):
         ref = bcrypt("pwd", 4)

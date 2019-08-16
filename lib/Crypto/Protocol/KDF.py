@@ -480,6 +480,7 @@ def bcrypt(password, cost, salt=None):
       password (byte string or string):
         The secret password or pass phrase.
         It must be at most 72 bytes long.
+        It must not contain the zero byte.
         Unicode strings will be encoded as UTF-8.
       cost (integer):
         The exponential factor that makes it slower to compute the hash.
@@ -491,11 +492,31 @@ def bcrypt(password, cost, salt=None):
 
     Return (byte string):
         The bcrypt hash
+
+    Raises:
+        ValueError: if password is longer than 72 bytes or if it contains the
+        zero byte
+
+    Note:
+        If you want to hash passwords with no restrictions on their length, it
+        is common practice to apply a cryptographic hash and then BASE64-encode
+        the result. For instance::
+
+            from base64 import b64encode
+            from Crypto.Hash import SHA256
+            from Crypto.Protocol.KDF import bcrypt
+
+            password = b"test"
+            b64pwd = b64encode(SHA256.new(password).digest())
+            bcrypt_hash = bcrypt(b64pwd, 10)
     """
 
     from Crypto.Cipher import _EKSBlowfish
 
     password = tobytes(password, "utf-8")
+
+    if password.find(bchr(0)[0]) != -1:
+        raise ValueError("The password contains the zero byte")
 
     if len(password) < 72:
         password += b"\x00"
@@ -534,12 +555,29 @@ def bcrypt_check(password, bcrypt_hash):
       password (byte string or string):
         The secret password or pass phrase to test.
         It must be at most 72 bytes long.
+        It must not contain the zero byte.
         Unicode strings will be encoded as UTF-8.
       bcrypt_hash (byte string, bytearray):
         The reference bcrypt hash the password needs to be checked against.
 
     Raises:
-        ValueError: if password is invalid
+        ValueError: if the password does not match
+
+    Note:
+        If you want to hash passwords with no restrictions on their length, it
+        is common practice to apply a cryptographic hash and then BASE64-encode
+        the result. For instance::
+
+            from base64 import b64encode
+            from Crypto.Hash import SHA256
+            from Crypto.Protocol.KDF import bcrypt
+
+            password_to_test = b"test"
+            try:
+                b64pwd = b64encode(SHA256.new(password).digest())
+                bcrypt_check(b64pwd, bcrypt_hash)
+            except ValueError:
+                print("Incorrect password")
     """
 
     bcrypt_hash = tobytes(bcrypt_hash)
