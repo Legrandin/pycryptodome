@@ -535,7 +535,7 @@ def bcrypt_check(password, bcrypt_hash):
         The secret password or pass phrase to test.
         It must be at most 72 bytes long.
         Unicode strings will be encoded as UTF-8.
-      bcrypt_hash (byte string):
+      bcrypt_hash (byte string, bytearray):
         The reference bcrypt hash the password needs to be checked against.
 
     Raises:

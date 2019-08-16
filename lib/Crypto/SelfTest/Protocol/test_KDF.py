@@ -446,6 +446,26 @@ class scrypt_Tests(unittest.TestCase):
 
 class bcrypt_Tests(unittest.TestCase):
 
+    def test_negative_cases(self):
+        self.assertRaises(ValueError, bcrypt, b"1" * 73, 10)
+        self.assertRaises(ValueError, bcrypt, b"1" * 10, 3)
+        self.assertRaises(ValueError, bcrypt, b"1" * 10, 32)
+        self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"")
+        self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"1")
+        self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"1" * 17)
+
+    def test_bytearray_mismatch(self):
+        ref = bcrypt("pwd", 4)
+        bcrypt_check("pwd", ref)
+        bref = bytearray(ref)
+        bcrypt_check("pwd", bref)
+        
+        wrong = ref[:-1] + bchr(bref[-1] ^ 0x01)
+        self.assertRaises(ValueError, bcrypt_check, "pwd", wrong)
+
+        wrong = b"x" + ref[1:]
+        self.assertRaises(ValueError, bcrypt_check, "pwd", wrong)
+
     # https://github.com/patrickfav/bcrypt/wiki/Published-Test-Vectors
 
     def test_empty_password(self):
