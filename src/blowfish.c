@@ -35,13 +35,13 @@
 
 #include "blowfish_init.c"
 
-FAKE_INIT(raw_blowfish)
-
 #ifdef EKS
 #define NON_STANDARD_START_OPERATION
 #define MODULE_NAME EKSBlowfish
+FAKE_INIT(raw_eksblowfish)
 #else
 #define MODULE_NAME Blowfish
+FAKE_INIT(raw_blowfish)
 #endif
 
 #define BLOCK_SIZE  8
