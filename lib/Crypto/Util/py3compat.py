@@ -71,9 +71,13 @@ if sys.version_info[0] == 2:
         return str(s)
     def bord(s):
         return ord(s)
-    def tobytes(s):
+    def tobytes(s, encoding="latin-1"):
         if isinstance(s, unicode):
-            return s.encode("latin-1")
+            return s.encode(encoding)
+        elif isinstance(s, str):
+            return s
+        elif isinstance(s, bytearray):
+            return bytes(s)
         else:
             return ''.join(s)
     def tostr(bs):
@@ -114,14 +118,15 @@ else:
             return bytes(s)
     def bord(s):
         return s
-    def tobytes(s):
-        if isinstance(s,bytes):
+    def tobytes(s, encoding="latin-1"):
+        if isinstance(s, bytes):
             return s
+        elif isinstance(s, bytearray):
+            return bytes(s)
+        elif isinstance(s,str):
+            return s.encode(encoding)
         else:
-            if isinstance(s,str):
-                return s.encode("latin-1")
-            else:
-                return bytes([s])
+            return bytes([s])
     def tostr(bs):
         return bs.decode("latin-1")
     def byte_string(s):

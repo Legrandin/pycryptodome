@@ -43,7 +43,7 @@ from Crypto.Random import get_random_bytes
 __all__ = ['new', 'HMAC']
 
 
-class HMAC:
+class HMAC(object):
     """An HMAC hash object.
     Do not instantiate directly. Use the :func:`new` function.
 

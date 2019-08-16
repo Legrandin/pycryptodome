@@ -11,4 +11,4 @@ to avoid that leakage of a secondary key compromises the security of the
 master key, or to thwart attacks on pass phrases (e.g. via rainbow tables).
 
 .. automodule:: Crypto.Protocol.KDF
-    :members:
+        :members:
