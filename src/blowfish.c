@@ -237,8 +237,7 @@ static int block_init(struct block_state *state, const uint8_t *key, size_t keyl
 {
     unsigned i;
 
-    /* Allowed key length: 32 to 448 bits */
-    if (keylength < 4 || keylength > 56) {
+    if (keylength > 72) {
         return ERR_KEY_SIZE;
     }
 
@@ -248,7 +247,7 @@ static int block_init(struct block_state *state, const uint8_t *key, size_t keyl
 
     encryptStateWithSalt(state, key, keylength, salt);
 
-    for (i=0; i<(1 << cost); i++) {
+    for (i=0; i<(1U << cost); i++) {
         encryptState(state, key, keylength);
         encryptState(state, salt, 16);
     }
