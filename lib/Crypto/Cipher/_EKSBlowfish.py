@@ -96,7 +96,7 @@ def new(key, mode, salt, cost):
 
       key (bytes, bytearray, memoryview):
         The secret key to use in the symmetric cipher.
-        Its length can vary from 5 to 56 bytes.
+        Its length can vary from 0 to 72 bytes.
 
       mode (one of the supported ``MODE_*`` constants):
         The chaining mode to use for encryption or decryption.
