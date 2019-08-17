@@ -190,7 +190,8 @@ class DsaKey(object):
         attrs = []
         for k in self._keydata:
             if k == 'p':
-                attrs.append("p(%d)" % (self.size()+1,))
+                bits = Integer(self.p).size_in_bits()
+                attrs.append("p(%d)" % (bits,))
             elif hasattr(self, k):
                 attrs.append(k)
         if self.has_private():

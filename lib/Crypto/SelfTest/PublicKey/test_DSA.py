@@ -173,6 +173,11 @@ class DSATest(unittest.TestCase):
         self.failUnless(dsaObj._verify(m_hash, (r, s)))
         self.failIf(dsaObj._verify(m_hash + 1, (r, s)))
 
+    def test_repr(self):
+        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
+        dsaObj = self.dsa.construct((y, g, p, q))
+        repr(dsaObj)
+
 
 class DSADomainTest(unittest.TestCase):
 
