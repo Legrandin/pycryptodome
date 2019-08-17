@@ -34,3 +34,4 @@ openssl x509 -in ecc_p521_x509.pem -out ecc_p521_x509.der -outform DER
 # OpenSSH
 chmod 600 ecc_p521_private.pem
 ssh-keygen -f ecc_p521_private.pem -y > ecc_p521_public_openssh.txt
+ssh-keygen -t ecdsa -b 521 -f ecc_p521_private_openssh.pem -P ""

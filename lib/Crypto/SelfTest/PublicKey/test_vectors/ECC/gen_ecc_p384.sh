@@ -34,3 +34,4 @@ openssl x509 -in ecc_p384_x509.pem -out ecc_p384_x509.der -outform DER
 # OpenSSH
 chmod 600 ecc_p384_private.pem
 ssh-keygen -f ecc_p384_private.pem -y > ecc_p384_public_openssh.txt
+ssh-keygen -t ecdsa -b 384 -f ecc_p384_private_openssh.pem -P ""

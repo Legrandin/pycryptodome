@@ -93,7 +93,8 @@ _Curve = namedtuple("_Curve", "p b order Gx Gy G modulus_bits oid context desc o
 _curves = {}
 
 
-p256_names = ["p256", "NIST P-256", "P-256", "prime256v1", "secp256r1"]
+p256_names = ["p256", "NIST P-256", "P-256", "prime256v1", "secp256r1",
+              "nistp256"]
 
 
 def init_p256():
@@ -138,7 +139,8 @@ init_p256()
 del init_p256
 
 
-p384_names = ["p384", "NIST P-384", "P-384", "prime384v1", "secp384r1"]
+p384_names = ["p384", "NIST P-384", "P-384", "prime384v1", "secp384r1",
+              "nistp384"]
 
 
 def init_p384():
@@ -183,7 +185,8 @@ init_p384()
 del init_p384
 
 
-p521_names = ["p521", "NIST P-521", "P-521", "prime521v1", "secp521r1"]
+p521_names = ["p521", "NIST P-521", "P-521", "prime521v1", "secp521r1",
+              "nistp521"]
 
 
 def init_p521():
@@ -1009,7 +1012,7 @@ def _import_der(encoded, passphrase):
     raise ValueError("Not an ECC DER key")
 
 
-def _import_openssh(encoded):
+def _import_openssh_public(encoded):
     keystring = binascii.a2b_base64(encoded.split(b' ')[1])
 
     keyparts = []
@@ -1026,6 +1029,76 @@ def _import_openssh(encoded):
         raise ValueError("Unsupported ECC curve")
 
     return _import_public_der(curve.oid, keyparts[2])
+
+
+def _import_openssh_private(data, password):
+    # https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
+    # https://github.com/openssh/openssh-portable/blob/master/sshkey.c
+    # https://coolaj86.com/articles/the-openssh-private-key-format/
+    # https://coolaj86.com/articles/the-ssh-public-key-format/
+
+    def read_int4(data):
+        if len(data) < 4:
+            raise ValueError("Insufficient data")
+        value = struct.unpack(">I", data[:4])[0]
+        return value, data[4:]
+
+    def read_bytes(data):
+        size, data = read_int4(data)
+        if len(data) < size:
+            raise ValueError("Insufficient data (V)")
+        return data[:size], data[size:]
+
+    def read_string(data):
+        s, d = read_bytes(data)
+        return tostr(s), d
+
+    if not data.startswith(b'openssh-key-v1\x00'):
+        raise ValueError("Incorrect magic value")
+    data = data[15:]
+
+    ciphername, data = read_string(data)
+    kdfname, data = read_string(data)
+    kdfoptions, data = read_bytes(data)
+    number_of_keys, data = read_int4(data)
+
+    if number_of_keys != 1:
+        raise ValueError("We only handle 1 key at a time")
+
+    _, data = read_string(data)             # Public key
+    encrypted, data = read_bytes(data)
+    if data:
+        raise ValueError("Too much data")
+
+    # Decrypt if necessary
+    decrypted = encrypted
+
+    checkint1, decrypted = read_int4(decrypted)
+    checkint2, decrypted = read_int4(decrypted)
+    if checkint1 != checkint2:
+        raise ValueError("Incorrect checksum")
+    _, decrypted = read_string(decrypted)   # First name
+
+    name, decrypted = read_string(decrypted)
+    if name not in _curves:
+        raise UnsupportedEccFeature("Unsupported ECC curve %s" % name)
+    curve = _curves[name]
+    modulus_bytes = curve.modulus_bits // 8
+
+    public_key, decrypted = read_bytes(decrypted)
+    if bord(public_key[0]) != 4:
+        raise ValueError("Only uncompressed OpenSSH EC keys are supported")
+    if len(public_key) != 2 * modulus_bytes + 1:
+        raise ValueError("Incorrect public key length")
+    point_x = Integer.from_bytes(public_key[1:1+modulus_bytes])
+    point_y = Integer.from_bytes(public_key[1+modulus_bytes:])
+    point = EccPoint(point_x, point_y, curve=name)
+
+    private_key, decrypted = read_bytes(decrypted)
+    d = Integer.from_bytes(private_key)
+
+    _, padded = read_string(decrypted)  # Comment
+    return EccKey(curve=name, d=d, point=point)
 
 
 def import_key(encoded, passphrase=None):
@@ -1073,7 +1146,13 @@ def import_key(encoded, passphrase=None):
         passphrase = tobytes(passphrase)
 
     # PEM
-    if encoded.startswith(b'-----'):
+    if encoded.startswith(b'-----BEGIN OPENSSH PRIVATE KEY'):
+        text_encoded = tostr(encoded)
+        openssh_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
+        result = _import_openssh_private(openssh_encoded, passphrase)
+        return result
+
+    elif encoded.startswith(b'-----'):
 
         text_encoded = tostr(encoded)
 
@@ -1099,7 +1178,7 @@ def import_key(encoded, passphrase=None):
 
     # OpenSSH
     if encoded.startswith(b'ecdsa-sha2-'):
-        return _import_openssh(encoded)
+        return _import_openssh_public(encoded)
 
     # DER
     if len(encoded) > 0 and bord(encoded[0]) == 0x30:

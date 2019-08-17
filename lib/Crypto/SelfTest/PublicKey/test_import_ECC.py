@@ -204,14 +204,24 @@ class TestImport_P256(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
 
-    def test_import_openssh(self):
+    def test_import_openssh_public(self):
         key_file = load_file("ecc_p256_public_openssh.txt")
 
-        key = ECC._import_openssh(key_file)
+        key = ECC._import_openssh_public(key_file)
         self.assertEqual(self.ref_public, key)
 
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
+
+    def test_import_openssh_private_clear(self):
+        key_file = load_file("ecc_p256_private_openssh.pem")
+        key_file_old = load_file("ecc_p256_private_openssh_old.pem")
+
+        key = ECC.import_key(key_file)
+        key_old = ECC.import_key(key_file_old)
+        self.assertEqual(key, key_old)
+
+        key_file_pwd = load_file("ecc_p256_private_openssh_password.pem")
 
 
 class TestImport_P384(unittest.TestCase):
@@ -309,10 +319,10 @@ class TestImport_P384(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
 
-    def test_import_openssh(self):
+    def test_import_openssh_public(self):
         key_file = load_file("ecc_p384_public_openssh.txt")
 
-        key = ECC._import_openssh(key_file)
+        key = ECC._import_openssh_public(key_file)
         self.assertEqual(self.ref_public, key)
 
         key = ECC.import_key(key_file)
@@ -414,10 +424,10 @@ class TestImport_P521(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
 
-    def test_import_openssh(self):
+    def test_import_openssh_public(self):
         key_file = load_file("ecc_p521_public_openssh.txt")
 
-        key = ECC._import_openssh(key_file)
+        key = ECC._import_openssh_public(key_file)
         self.assertEqual(self.ref_public, key)
 
         key = ECC.import_key(key_file)
