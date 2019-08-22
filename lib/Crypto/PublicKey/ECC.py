@@ -40,7 +40,6 @@ from Crypto.Util.py3compat import bord, tobytes, tostr, bchr, is_string
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 from Crypto.Math.Numbers import Integer
-from Crypto.Random import get_random_bytes
 from Crypto.Util.asn1 import (DerObjectId, DerOctetString, DerSequence,
                               DerBitString)
 
@@ -53,7 +52,13 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   SmartPointer, c_size_t, c_uint8_ptr,
                                   c_ulonglong)
 
+from Crypto.Random import get_random_bytes
 from Crypto.Random.random import getrandbits
+
+from Crypto.Cipher import AES
+from Crypto.Hash import SHA512
+from Crypto.Protocol.KDF import _bcrypt_hash
+from Crypto.Util.strxor import strxor
 
 _ec_lib = load_pycryptodome_raw_lib("Crypto.PublicKey._ec_ws", """
 typedef void EcContext;
@@ -1071,7 +1076,41 @@ def _import_openssh_private(data, password):
         raise ValueError("Too much data")
 
     # Decrypt if necessary
-    decrypted = encrypted
+    if ciphername == 'none':
+        decrypted = encrypted
+    else:
+        if (ciphername, kdfname) != ('aes256-ctr', 'bcrypt'):
+            raise ValueError("Unsupported encryption scheme %s/%s" % (ciphername, kdfname))
+        salt, kdfoptions = read_bytes(kdfoptions)
+        iterations, kdfoptions = read_int4(kdfoptions)
+
+        if len(salt) != 16:
+            raise ValueError("Incorrect salt length")
+        if kdfoptions:
+            raise ValueError("Too much data in kdfoptions")
+
+        pwd_sha512 = SHA512.new(password).digest()
+        # We need 32+16 = 48 bytes, therefore 2 bcrypt outputs are sufficient
+        stripes = []
+        constant = b"OxychromaticBlowfishSwatDynamite"
+        for count in range(1, 3):
+            salt_sha512 = SHA512.new(salt + struct.pack(">I", count)).digest()
+            out_le = _bcrypt_hash(pwd_sha512, 6, salt_sha512, constant, False)
+            out = struct.pack("<IIIIIIII", *struct.unpack(">IIIIIIII", out_le))
+            acc = bytearray(out)
+            for _ in range(1, iterations):
+                out_le = _bcrypt_hash(pwd_sha512, 6, SHA512.new(out).digest(), constant, False)
+                out = struct.pack("<IIIIIIII", *struct.unpack(">IIIIIIII", out_le))
+                strxor(acc, out, output=acc)
+            stripes.append(acc[:24])
+
+        result = b"".join([bchr(a)+bchr(b) for (a, b) in zip(*stripes)])
+
+        cipher = AES.new(result[:32],
+                         AES.MODE_CTR,
+                         nonce=b"",
+                         initial_value=result[32:32+16])
+        decrypted = cipher.decrypt(encrypted)
 
     checkint1, decrypted = read_int4(decrypted)
     checkint2, decrypted = read_int4(decrypted)
@@ -1086,10 +1125,12 @@ def _import_openssh_private(data, password):
     modulus_bytes = curve.modulus_bits // 8
 
     public_key, decrypted = read_bytes(decrypted)
+
     if bord(public_key[0]) != 4:
         raise ValueError("Only uncompressed OpenSSH EC keys are supported")
     if len(public_key) != 2 * modulus_bytes + 1:
         raise ValueError("Incorrect public key length")
+
     point_x = Integer.from_bytes(public_key[1:1+modulus_bytes])
     point_y = Integer.from_bytes(public_key[1+modulus_bytes:])
     point = EccPoint(point_x, point_y, curve=name)

@@ -186,56 +186,56 @@ static int block_init(struct block_state *state, const uint8_t *key, size_t keyl
 
 #else
 
-static void encryptStateWithSalt(struct block_state *state, const uint8_t *key, size_t keylength, const uint8_t salt[16])
+static inline uint32_t read_u32_circ(const uint8_t *base, size_t len, size_t *idx)
 {
-    uint32_t S1, S2, S3, S4;
+    uint8_t buf[4];
+    unsigned i;
+
+    for (i=0; i<4; i++) {
+        buf[i] = base[*idx];
+        (*idx)++;
+        if (len == *idx)
+            *idx = 0;
+    }
+
+    return LOAD_U32_BIG(buf);
+}
+
+static int encryptStateWithSalt(struct block_state *state, const uint8_t *key, size_t keylength, const uint8_t *salt, size_t saltlength)
+{
     uint32_t L, R;
     unsigned i, j;
+    size_t idx;
 
     xorP(state->P, key, keylength);
 
-    S1 = LOAD_U32_BIG(salt);
-    S2 = LOAD_U32_BIG(salt+4);
-    S3 = LOAD_U32_BIG(salt+8);
-    S4 = LOAD_U32_BIG(salt+12);
-
     L = R = 0;
-    for (i=0;;) {
-        L ^= S1;
-        R ^= S2;
+    idx = 0;
+    for (i=0; i<18; i+=2) {
+        L ^= read_u32_circ(salt, saltlength, &idx);
+        R ^= read_u32_circ(salt, saltlength, &idx);
         bf_encrypt(state, &L, &R);
-        state->P[i++] = L;
-        state->P[i++] = R;
-
-        if (i == 18) break;
-
-        L ^= S3;
-        R ^= S4;
-        bf_encrypt(state, &L, &R);
-        state->P[i++] = L;
-        state->P[i++] = R;
+        state->P[i] = L;
+        state->P[i+1] = R;
     }
 
     for (j=0; j<4; j++) {
-        for (i=0; i<256;) {
-            L ^= S3;
-            R ^= S4;
+        for (i=0; i<256; i+=2) {
+            L ^= read_u32_circ(salt, saltlength, &idx);
+            R ^= read_u32_circ(salt, saltlength, &idx);
             bf_encrypt(state, &L, &R);
-            state->S[j][i++] = L;
-            state->S[j][i++] = R;
-
-            L ^= S1;
-            R ^= S2;
-            bf_encrypt(state, &L, &R);
-            state->S[j][i++] = L;
-            state->S[j][i++] = R;
+            state->S[j][i] = L;
+            state->S[j][i+1] = R;
         }
     }
+
+    return 0;
 }
 
-static int block_init(struct block_state *state, const uint8_t *key, size_t keylength, const uint8_t salt[16], unsigned cost)
+static int block_init(struct block_state *state, const uint8_t *key, size_t keylength, const uint8_t *salt, size_t saltlength, unsigned cost, unsigned invert)
 {
     unsigned i;
+    unsigned iterations;
 
     if (keylength > 72) {
         return ERR_KEY_SIZE;
@@ -245,11 +245,19 @@ static int block_init(struct block_state *state, const uint8_t *key, size_t keyl
     memcpy(state->S, S_init, sizeof S_init);
     memcpy(state->P, P_init, sizeof P_init);
 
-    encryptStateWithSalt(state, key, keylength, salt);
+    encryptStateWithSalt(state, key, keylength, salt, saltlength);
 
-    for (i=0; i<(1U << cost); i++) {
-        encryptState(state, key, keylength);
-        encryptState(state, salt, 16);
+    iterations = 1U << cost;
+    if (!invert) {
+        for (i=0; i<iterations; i++) {
+            encryptState(state, salt, saltlength);
+            encryptState(state, key, keylength);
+        }
+    } else {
+        for (i=0; i<iterations; i++) {
+            encryptState(state, key, keylength);
+            encryptState(state, salt, saltlength);
+        }
     }
 
     return 0;
@@ -286,7 +294,7 @@ static inline void block_decrypt(struct block_state *state, const uint8_t *in, u
 #include "block_common.c"
 
 #ifdef EKS
-EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, const uint8_t salt[16], unsigned cost, CIPHER_STATE_TYPE **pResult)
+EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, const uint8_t salt[], size_t salt_len, unsigned cost, unsigned invert, CIPHER_STATE_TYPE **pResult)
 {
     BlockBase *block_base;
 
@@ -303,6 +311,6 @@ EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, const
     block_base->destructor = &CIPHER_STOP_OPERATION;
     block_base->block_len = BLOCK_SIZE;
 
-    return block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len, salt, cost);
+    return block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len, salt, salt_len, cost, invert);
 }
 #endif
