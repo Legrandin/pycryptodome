@@ -1122,7 +1122,7 @@ def _import_openssh_private(data, password):
     if name not in _curves:
         raise UnsupportedEccFeature("Unsupported ECC curve %s" % name)
     curve = _curves[name]
-    modulus_bytes = curve.modulus_bits // 8
+    modulus_bytes = (curve.modulus_bits + 7) // 8
 
     public_key, decrypted = read_bytes(decrypted)
 

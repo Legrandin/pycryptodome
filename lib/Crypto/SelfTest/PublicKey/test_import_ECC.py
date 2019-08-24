@@ -221,7 +221,7 @@ class TestImport_P256(unittest.TestCase):
         key_old = ECC.import_key(key_file_old)
         self.assertEqual(key, key_old)
 
-    def test_import_openssh_private_clear(self):
+    def test_import_openssh_private_password(self):
         key_file = load_file("ecc_p256_private_openssh_pwd.pem")
         key_file_old = load_file("ecc_p256_private_openssh_pwd_old.pem")
 
@@ -334,6 +334,22 @@ class TestImport_P384(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
 
+    def test_import_openssh_private_clear(self):
+        key_file = load_file("ecc_p384_private_openssh.pem")
+        key_file_old = load_file("ecc_p384_private_openssh_old.pem")
+
+        key = ECC.import_key(key_file)
+        key_old = ECC.import_key(key_file_old)
+        self.assertEqual(key, key_old)
+
+    def test_import_openssh_private_password(self):
+        key_file = load_file("ecc_p384_private_openssh_pwd.pem")
+        key_file_old = load_file("ecc_p384_private_openssh_pwd_old.pem")
+
+        key = ECC.import_key(key_file, b"password")
+        key_old = ECC.import_key(key_file_old)
+        self.assertEqual(key, key_old)
+
 
 class TestImport_P521(unittest.TestCase):
 
@@ -438,6 +454,22 @@ class TestImport_P521(unittest.TestCase):
 
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
+
+    def test_import_openssh_private_clear(self):
+        key_file = load_file("ecc_p521_private_openssh.pem")
+        key_file_old = load_file("ecc_p521_private_openssh_old.pem")
+
+        key = ECC.import_key(key_file)
+        key_old = ECC.import_key(key_file_old)
+        self.assertEqual(key, key_old)
+
+    def test_import_openssh_private_password(self):
+        key_file = load_file("ecc_p521_private_openssh_pwd.pem")
+        key_file_old = load_file("ecc_p521_private_openssh_pwd_old.pem")
+
+        key = ECC.import_key(key_file, b"password")
+        key_old = ECC.import_key(key_file_old)
+        self.assertEqual(key, key_old)
 
 
 class TestExport_P256(unittest.TestCase):
