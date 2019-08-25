@@ -1035,9 +1035,9 @@ def _import_openssh_public(encoded):
 def _import_openssh_private_ecc(data, password):
 
     from ._openssh import (import_openssh_private_generic,
-                           read_bytes, read_string)
+                           read_bytes, read_string, check_padding)
 
-    decrypted = import_openssh_private_generic(data, password)
+    ssh_name, decrypted = import_openssh_private_generic(data, password)
 
     name, decrypted = read_string(decrypted)
     if name not in _curves:
@@ -1060,6 +1060,8 @@ def _import_openssh_private_ecc(data, password):
     d = Integer.from_bytes(private_key)
 
     _, padded = read_string(decrypted)  # Comment
+    check_padding(padded)
+
     return EccKey(curve=name, d=d, point=point)
 
 

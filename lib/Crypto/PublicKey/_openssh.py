@@ -34,7 +34,7 @@ from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
 from Crypto.Protocol.KDF import _bcrypt_hash
 from Crypto.Util.strxor import strxor
-from Crypto.Util.py3compat import tostr, bchr
+from Crypto.Util.py3compat import tostr, bchr, bord
 
 
 def read_int4(data):
@@ -54,6 +54,12 @@ def read_bytes(data):
 def read_string(data):
     s, d = read_bytes(data)
     return tostr(s), d
+
+
+def check_padding(pad):
+    for v, x in enumerate(pad):
+        if bord(x) != ((v + 1) & 0xFF):
+            raise ValueError("Incorrect padding")
 
 
 def import_openssh_private_generic(data, password):
@@ -79,12 +85,16 @@ def import_openssh_private_generic(data, password):
     if data:
         raise ValueError("Too much data")
 
+    if len(encrypted) % 8 != 0:
+        raise ValueError("Incorrect payload length")
+
     # Decrypt if necessary
     if ciphername == 'none':
         decrypted = encrypted
     else:
         if (ciphername, kdfname) != ('aes256-ctr', 'bcrypt'):
             raise ValueError("Unsupported encryption scheme %s/%s" % (ciphername, kdfname))
+
         salt, kdfoptions = read_bytes(kdfoptions)
         iterations, kdfoptions = read_int4(kdfoptions)
 
@@ -120,6 +130,6 @@ def import_openssh_private_generic(data, password):
     checkint2, decrypted = read_int4(decrypted)
     if checkint1 != checkint2:
         raise ValueError("Incorrect checksum")
-    _, decrypted = read_string(decrypted)   # First name
+    ssh_name, decrypted = read_string(decrypted)
 
-    return decrypted
+    return ssh_name, decrypted

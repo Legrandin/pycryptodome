@@ -290,6 +290,7 @@ package_data = {
     ],
     "Crypto.SelfTest.PublicKey" : [
         "test_vectors/ECC/*.*",
+        "test_vectors/RSA/*.*",
     ],
 }
 
