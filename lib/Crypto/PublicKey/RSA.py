@@ -696,13 +696,12 @@ def _import_openssh_private_rsa(data, password):
     _, padded = read_string(decrypted)  # Comment
     check_padding(padded)
 
-    build = [ Integer.from_bytes(x) for x in (n, e, d, q, p, iqmp) ]
+    build = [Integer.from_bytes(x) for x in (n, e, d, q, p, iqmp)]
     return construct(build)
 
 
 def import_key(extern_key, passphrase=None):
-    """Import an RSA key (public or private half), encoded in standard
-    form.
+    """Import an RSA key (public or private).
 
     Args:
       extern_key (string or byte string):
@@ -714,23 +713,19 @@ def import_key(extern_key, passphrase=None):
         - X.509 ``subjectPublicKeyInfo`` DER SEQUENCE (binary or PEM
           encoding)
         - `PKCS#1`_ ``RSAPublicKey`` DER SEQUENCE (binary or PEM encoding)
-        - OpenSSH (textual public key only)
+        - An OpenSSH line (e.g. the content of ``~/.ssh/id_ecdsa``, ASCII)
 
         The following formats are supported for an RSA **private key**:
 
         - PKCS#1 ``RSAPrivateKey`` DER SEQUENCE (binary or PEM encoding)
         - `PKCS#8`_ ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo``
           DER SEQUENCE (binary or PEM encoding)
-        - OpenSSH (textual public key only)
+        - OpenSSH (text format, introduced in `OpenSSH 6.5`_)
 
         For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
 
-        The private key may be encrypted by means of a certain pass phrase
-        either at the PEM level or at the PKCS#8 level.
-
-      passphrase (string):
-        In case of an encrypted private key, this is the pass phrase from
-        which the decryption key is derived.
+      passphrase (string or byte string):
+        For private keys only, the pass phrase that encrypts the key.
 
     Returns: An RSA key object (:class:`RsaKey`).
 
@@ -743,6 +738,7 @@ def import_key(extern_key, passphrase=None):
     .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
     .. _`PKCS#1`: http://www.ietf.org/rfc/rfc3447.txt
     .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
+    .. _`OpenSSH 6.5`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     """
 
     extern_key = tobytes(extern_key)
@@ -767,9 +763,9 @@ def import_key(extern_key, passphrase=None):
         keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
         keyparts = []
         while len(keystring) > 4:
-            l = struct.unpack(">I", keystring[:4])[0]
-            keyparts.append(keystring[4:4 + l])
-            keystring = keystring[4 + l:]
+            length = struct.unpack(">I", keystring[:4])[0]
+            keyparts.append(keystring[4:4 + length])
+            keystring = keystring[4 + length:]
         e = Integer.from_bytes(keyparts[1])
         n = Integer.from_bytes(keyparts[2])
         return construct([n, e])
@@ -779,6 +775,7 @@ def import_key(extern_key, passphrase=None):
         return _import_keyDER(extern_key, passphrase)
 
     raise ValueError("RSA key format is not supported")
+
 
 # Backward compatibility
 importKey = import_key

@@ -1081,7 +1081,7 @@ def import_key(encoded, passphrase=None):
         An ECC **private** key can be:
 
         - In binary format (DER, see section 3 of `RFC5915`_ or `PKCS#8`_)
-        - In ASCII format (PEM or OpenSSH)
+        - In ASCII format (PEM or `OpenSSH 6.5+`_)
 
         Private keys can be in the clear or password-protected.
 
@@ -1103,6 +1103,7 @@ def import_key(encoded, passphrase=None):
     .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
     .. _RFC5915: http://www.ietf.org/rfc/rfc5915.txt
     .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
+    .. _`OpenSSH 6.5+`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     """
 
     encoded = tobytes(encoded)
