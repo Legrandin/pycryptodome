@@ -122,7 +122,7 @@ Message Authentication Code (MAC) algorithms
 - :doc:`cmac`
 - :doc:`poly1305`
 
-Historich hash algorithms
+Historic hash algorithms
 -------------------------
 
 The following algorithms should not be used in new designs:
