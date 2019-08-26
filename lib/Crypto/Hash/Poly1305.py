@@ -32,6 +32,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, c_size_t,
                                   c_uint8_ptr)
 
+
 _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
                         """
                         int poly1305_init(void **state,
@@ -50,6 +51,12 @@ _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
 
 
 class Poly1305_MAC(object):
+    """An Poly1305 MAC object.
+    Do not instantiate directly. Use the :func:`new` function.
+
+    :ivar digest_size: the size in bytes of the resulting MAC tag
+    :vartype digest_size: integer
+    """
 
     digest_size = 16
 
@@ -77,6 +84,11 @@ class Poly1305_MAC(object):
             self.update(data)
 
     def update(self, data):
+        """Authenticate the next chunk of message.
+
+        Args:
+            data (byte string/byte array/memoryview): The next chunk of data
+        """
 
         if self._mac_tag:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
@@ -92,6 +104,13 @@ class Poly1305_MAC(object):
         raise NotImplementedError()
 
     def digest(self):
+        """Return the **binary** (non-printable) MAC tag of the message
+        authenticated so far.
+
+        :return: The MAC tag digest, computed over the data processed so far.
+                 Binary form.
+        :rtype: byte string
+        """
 
         if self._mac_tag:
             return self._mac_tag
@@ -107,11 +126,27 @@ class Poly1305_MAC(object):
         return self._mac_tag
 
     def hexdigest(self):
+        """Return the **printable** MAC tag of the message authenticated so far.
+
+        :return: The MAC tag, computed over the data processed so far.
+                 Hexadecimal encoded.
+        :rtype: string
+        """
 
         return "".join(["%02x" % bord(x)
                         for x in tuple(self.digest())])
 
     def verify(self, mac_tag):
+        """Verify that a given **binary** MAC (computed by another party)
+        is valid.
+
+        Args:
+          mac_tag (byte string/byte string/memoryview): the expected MAC of the message.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
+        """
 
         secret = get_random_bytes(16)
 
@@ -122,8 +157,20 @@ class Poly1305_MAC(object):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):
+        """Verify that a given **printable** MAC (computed by another party)
+        is valid.
+
+        Args:
+            hex_mac_tag (string): the expected MAC of the message,
+                as a hexadecimal string.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
+        """
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
+
 
 
 def new(**kwargs):
