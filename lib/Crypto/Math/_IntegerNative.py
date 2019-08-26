@@ -104,13 +104,22 @@ class IntegerNative(IntegerBase):
 
     # Arithmetic operations
     def __add__(self, term):
-        return self.__class__(self._value + int(term))
+        try:
+            return self.__class__(self._value + int(term))
+        except (ValueError, AttributeError, TypeError):
+            return NotImplemented
 
     def __sub__(self, term):
-        return self.__class__(self._value - int(term))
+        try:
+            return self.__class__(self._value - int(term))
+        except (ValueError, AttributeError, TypeError):
+            return NotImplemented
 
     def __mul__(self, factor):
-        return self.__class__(self._value * int(factor))
+        try:
+            return self.__class__(self._value * int(factor))
+        except (ValueError, AttributeError, TypeError):
+            return NotImplemented
 
     def __floordiv__(self, divisor):
         return self.__class__(self._value // int(divisor))

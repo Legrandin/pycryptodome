@@ -36,6 +36,7 @@ from Crypto.SelfTest.loader import load_tests
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccPoint, _curves, EccKey
 
+from Crypto.Math.Numbers import Integer
 
 class TestEccPoint(unittest.TestCase):
 
@@ -177,6 +178,16 @@ class TestEccPoint_NIST_P256(unittest.TestCase):
 
         # -1*S
         self.assertRaises(ValueError, lambda: self.pointS * -1)
+
+        # Reverse order
+        pointR = d * self.pointS
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pointR = Integer(d) * self.pointS
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
 
     def test_joing_scalar_multiply(self):
         d = 0xc51e4753afdec1e6b6c6a5b992f43f8dd0c7a8933072708b6522468b2ffb06fd

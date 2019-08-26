@@ -400,6 +400,9 @@ class EccPoint(object):
         np *= scalar
         return np
 
+    def __rmul__(self, left_hand):
+        return self.__mul__(left_hand)
+
 
 # Last piece of initialization
 p256_G = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy, "p256")

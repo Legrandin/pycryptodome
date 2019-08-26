@@ -10,6 +10,7 @@ New features
 * Add support for loading PEM files encrypted with AES256-CBC.
 * Add support for XChaCha20 and XChaCha20-Poly1305.
 * Add support for bcrypt
+* Add support for left multiplication of an EC point by a scalar
 
 Resolved issues
 ---------------
