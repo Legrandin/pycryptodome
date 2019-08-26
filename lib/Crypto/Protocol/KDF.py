@@ -473,6 +473,22 @@ def _bcrypt_decode(data):
     return result
 
 
+def _bcrypt_hash(password, cost, salt, constant, invert):
+    from Crypto.Cipher import _EKSBlowfish
+
+    if len(password) > 72:
+        raise ValueError("The password is too long. It must be 72 bytes at most.")
+
+    if not (4 <= cost <= 31):
+        raise ValueError("bcrypt cost factor must be in the range 4..31")
+
+    cipher = _EKSBlowfish.new(password, _EKSBlowfish.MODE_ECB, salt, cost, invert)
+    ctext = constant
+    for _ in range(64):
+        ctext = cipher.encrypt(ctext)
+    return ctext
+
+
 def bcrypt(password, cost, salt=None):
     """Hash a password into a key, using the OpenBSD bcrypt protocol.
 
@@ -511,8 +527,6 @@ def bcrypt(password, cost, salt=None):
             bcrypt_hash = bcrypt(b64pwd, 10)
     """
 
-    from Crypto.Cipher import _EKSBlowfish
-
     password = tobytes(password, "utf-8")
 
     if password.find(bchr(0)[0]) != -1:
@@ -520,32 +534,18 @@ def bcrypt(password, cost, salt=None):
 
     if len(password) < 72:
         password += b"\x00"
-    if len(password) > 72:
-        raise ValueError("The password is too long. It must be 72 bytes at most.")
 
     if salt is None:
         salt = get_random_bytes(16)
-
     if len(salt) != 16:
         raise ValueError("bcrypt salt must be 16 bytes long")
 
-    if not (4 <= cost <= 31):
-        raise ValueError("bcrypt cost factor must be in the range 4..31")
-
-    cipher = _EKSBlowfish.new(password, _EKSBlowfish.MODE_ECB, salt, cost)
-    ctext = b"OrpheanBeholderScryDoubt"
-    for _ in range(64):
-        ctext = cipher.encrypt(ctext)
+    ctext = _bcrypt_hash(password, cost, salt, b"OrpheanBeholderScryDoubt", True)
 
     cost_enc = b"$" + bstr(str(cost).zfill(2))
     salt_enc = b"$" + _bcrypt_encode(salt)
-
-    # Only use 23 bytes, not 24
-    hash_enc = _bcrypt_encode(ctext[:-1])
-
-    result = b"$2a" + cost_enc + salt_enc + hash_enc
-
-    return result
+    hash_enc = _bcrypt_encode(ctext[:-1])     # only use 23 bytes, not 24
+    return b"$2a" + cost_enc + salt_enc + hash_enc
 
 
 def bcrypt_check(password, bcrypt_hash):

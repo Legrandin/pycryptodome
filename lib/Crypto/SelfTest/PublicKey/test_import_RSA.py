@@ -29,6 +29,15 @@ from Crypto.Util.py3compat import *
 from Crypto.Util.number import inverse
 from Crypto.Util import asn1
 
+from Crypto.Util._file_system import pycryptodome_filename
+
+
+def load_file(filename, mode="rb"):
+    comps = [ "Crypto", "SelfTest", "PublicKey", "test_vectors", "RSA" ]
+    with open(pycryptodome_filename(comps, filename), mode) as fd:
+        return fd.read()
+
+
 def der2pem(der, text='PUBLIC'):
     import binascii
     chunks = [ binascii.b2a_base64(der[i:i+48]) for i in range(0, len(der), 48) ]
@@ -492,14 +501,45 @@ d6:fa:d8:36:42:d4:97:29:17
         self.failIf(key.has_private())
 
 
+class TestImport_2048(unittest.TestCase):
+
+    def test_import_openssh_public(self):
+        key_file_ref = load_file("rsa2048_private.pem")
+        key_file = load_file("rsa2048_public_openssh.txt")
+
+        key_ref = RSA.import_key(key_file_ref).publickey()
+        key = RSA.import_key(key_file)
+        self.assertEqual(key_ref, key)
+
+    def test_import_openssh_private_clear(self):
+        key_file = load_file("rsa2048_private_openssh.pem")
+        key_file_old = load_file("rsa2048_private_openssh_old.pem")
+
+        key = RSA.import_key(key_file)
+        key_old = RSA.import_key(key_file_old)
+
+        self.assertEqual(key, key_old)
+
+    def test_import_openssh_private_password(self):
+        key_file = load_file("rsa2048_private_openssh_pwd.pem")
+        key_file_old = load_file("rsa2048_private_openssh_pwd_old.pem")
+
+        key = RSA.import_key(key_file, b"password")
+        key_old = RSA.import_key(key_file_old)
+        self.assertEqual(key, key_old)
+
+
 if __name__ == '__main__':
     unittest.main()
+
 
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(ImportKeyTests)
     tests += list_test_cases(ImportKeyFromX509Cert)
+    tests += list_test_cases(TestImport_2048)
     return tests
+
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
