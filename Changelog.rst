@@ -11,6 +11,7 @@ New features
 * Add support for XChaCha20 and XChaCha20-Poly1305.
 * Add support for bcrypt
 * Add support for left multiplication of an EC point by a scalar
+* Add support for importing ECC and RSA keys in the new OpenSSH format
 
 Resolved issues
 ---------------
@@ -38,7 +39,7 @@ New features
 Resolved issues
 ---------------
 
-* `repr()` did not work for ``ECC.EccKey`` objects.
+* ``repr()`` did not work for ``ECC.EccKey`` objects.
 * Fix installation in development mode (``setup install develop`` or ``pip install -e .``).
 * Minimal length for Blowfish cipher is 32 bits, not 40 bits.
 * Various updates to docs.
