@@ -1,25 +1,25 @@
 Changelog
 =========
 
-3.9.0 (xx xxxxx 2019)
+3.9.0 (27 August 2019)
 +++++++++++++++++++++++
 
 New features
 ------------
 
 * Add support for loading PEM files encrypted with AES256-CBC.
-* Add support for XChaCha20 and XChaCha20-Poly1305.
-* Add support for bcrypt
-* Add support for left multiplication of an EC point by a scalar
-* Add support for importing ECC and RSA keys in the new OpenSSH format
+* Add support for XChaCha20 and XChaCha20-Poly1305 ciphers.
+* Add support for bcrypt key derivation function (`Crypto.Protocol.KDF.bcrypt`).
+* Add support for left multiplication of an EC point by a scalar.
+* Add support for importing ECC and RSA keys in the new OpenSSH format.
 
 Resolved issues
 ---------------
 
-* GH#312: it was not possible to invert an EC point anymore
-* GH#316: fix printing of DSA keys
-* GH#317: `DSA.generate()` was not always using the `randfunc` input
-* GH#285: the MD2 hash had block size of 64 bytes instead of 16; as result the HMAC construction gave incorrect results
+* GH#312: it was not possible to invert an EC point anymore.
+* GH#316: fix printing of DSA keys.
+* GH#317: `DSA.generate()` was not always using the `randfunc` input.
+* GH#285: the MD2 hash had block size of 64 bytes instead of 16; as result the HMAC construction gave incorrect results.
 
 3.8.2 (30 May 2019)
 +++++++++++++++++++++++
