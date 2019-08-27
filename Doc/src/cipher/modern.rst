@@ -296,14 +296,25 @@ Example (decryption)::
     >>> try:
     >>>     b64 = json.loads(json_input)
     >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}    
-    >>>     
+    >>>     jv = {k:b64decode(b64[k]) for k in json_k}
+    >>>
     >>>     cipher = AES.new(key, AES.MODE_GCM, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext)
     >>> except ValueError, KeyError:
     >>>     print("Incorrect decryption")
+
+.. note::
+  GCM is most commonly used with 96-bit (12-byte) nonces, which is also the length recommended by NIST SP 800-38D.
+
+  If interoperability is important, one should take into account that the library default
+  of a 128-bit random nonce may not be (easily) supported by other implementations.
+  A 96-bit nonce can be explicitly generated for a new encryption cipher::
+
+    >>> key = get_random_bytes(16)
+    >>> nonce = get_random_bytes(12)
+    >>> cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
 
 .. _siv_mode:
 
