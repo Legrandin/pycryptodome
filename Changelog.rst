@@ -18,6 +18,7 @@ Resolved issues
 
 * GH#312: it was not possible to invert an EC point anymore
 * GH#316: fix printing of DSA keys
+* GH#317: `DSA.generate()` was not always using the `randfunc` input
 
 3.8.2 (30 May 2019)
 +++++++++++++++++++++++

@@ -475,7 +475,7 @@ def generate(bits, randfunc=None, domain=None):
         raise ValueError("Incorrent DSA generator")
 
     # B.1.1
-    c = Integer.random(exact_bits=N + 64)
+    c = Integer.random(exact_bits=N + 64, randfunc=randfunc)
     x = c % (q - 1) + 1 # 1 <= x <= q-1
     y = pow(g, x, p)
 
