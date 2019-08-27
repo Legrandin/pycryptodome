@@ -35,7 +35,7 @@ This is an example of how ChaCha20-Poly1305 (TLS version) can encrypt and authen
     >>> ciphertext, tag = cipher.encrypt_and_digest(plaintext)
     >>>
     >>> jk = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>> jv = [ b64encode(x).decode('utf-8') for x in cipher.nonce, header, ciphertext, tag ]
+    >>> jv = [ b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
     >>> result = json.dumps(dict(zip(jk, jv)))
     >>> print(result)
     {"nonce": "4EE/9uqhoZ3mQXmm", "header": "aGVhZGVy", "ciphertext": "Wmmo4Vzn+eS3tUPv2a8=", "tag": "/FgVbM8qhzssPRY80T0iVA=="}
