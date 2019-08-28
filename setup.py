@@ -222,14 +222,18 @@ def create_cryptodome_lib():
                 if full_file_name_src != "py.typed":
                     continue
 
-            with open(full_file_name_dst, "rt") as fd:
+            if sys.version_info[0] > 2:
+                extra_param = { "encoding": "utf-8" }
+            else:
+                extra_param = {}
+            with open(full_file_name_dst, "rt", **extra_param) as fd:
                 content = (fd.read().
                            replace("Crypto.", "Cryptodome.").
                            replace("Crypto ", "Cryptodome ").
                            replace("'Crypto'", "'Cryptodome'").
                            replace('"Crypto"', '"Cryptodome"'))
             os.remove(full_file_name_dst)
-            with open(full_file_name_dst, "wt") as fd:
+            with open(full_file_name_dst, "wt", **extra_param) as fd:
                 fd.write(content)
 
 
