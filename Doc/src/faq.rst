@@ -79,4 +79,4 @@ Most probably you have installed both the ``pycryptodome`` and the old ``pycrypt
 Run ``pip uninstall pycrypto`` and try again.
 
 The old PyCrypto shipped with a ``strxor`` module written as a native library (``.so`` or ``.dll`` file).
-If you install `pycryptodome``, the old native module will still take priority over the new Python extension that comes in the latter.
+If you install ``pycryptodome``, the old native module will still take priority over the new Python extension that comes in the latter.

@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 #  KDF.py : a collection of Key Derivation Functions
 #
@@ -493,6 +494,7 @@ def bcrypt(password, cost, salt=None):
       cost (integer):
         The exponential factor that makes it slower to compute the hash.
         It must be in the range 4 to 31.
+        A value of at least 12 is recommended.
       salt (byte string):
         Optional. Random byte string to thwarts dictionary and rainbow table
         attacks. It must be 16 bytes long.

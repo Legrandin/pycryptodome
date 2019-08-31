@@ -80,7 +80,7 @@ For instance::
 
     password = b"test"
     b64pwd = b64encode(SHA256.new(password).digest())
-    bcrypt_hash = bcrypt(b64pwd, 10)
+    bcrypt_hash = bcrypt(b64pwd, 12)
 
 and to check them::
 
