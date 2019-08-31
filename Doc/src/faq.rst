@@ -70,3 +70,13 @@ The Windows filesystem is **case-insensitive** so ``crypto`` and ``Crypto`` are 
 When you subsequently install ``pycryptodome``, ``pip`` finds that a directory named with the target namespace already exists (under the rules of the underlying filesystem),
 and therefore installs all the sub-packages of ``pycryptodome`` in it.
 This is probably a reasonable behavior, if it wansn't that `pip does not issue any warning even if it could detect the issue <https://github.com/pypa/pip/issues/3309>`_.
+
+Why does ``strxor`` raise ``TypeError: argument 2 must be bytes, not bytearray``?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Most probably you have installed both the ``pycryptodome`` and the old ``pycrypto`` packages.
+
+Run ``pip uninstall pycrypto`` and try again.
+
+The old PyCrypto shipped with a ``strxor`` module written as a native library (``.so`` or ``.dll`` file).
+If you install `pycryptodome``, the old native module will still take priority over the new Python extension that comes in the latter.

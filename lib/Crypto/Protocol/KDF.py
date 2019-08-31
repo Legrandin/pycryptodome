@@ -58,10 +58,6 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     the PKCS#5 standard (v1.5) or `RFC2898
     <https://www.ietf.org/rfc/rfc2898.txt>`_.
 
-    .. warning::
-        Newer applications should use the more secure and versatile :func:`PBKDF2`
-        instead.
-
     Args:
      password (string):
         The secret password to generate the key from.
@@ -101,8 +97,7 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
 def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None):
     """Derive one or more keys from a password (or passphrase).
 
-    This function performs key derivation according to
-    the PKCS#5 standard (v2.0).
+    This function performs key derivation according to the PKCS#5 standard (v2.0).
 
     Args:
      password (string or byte string):
@@ -110,23 +105,35 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
      salt (string or byte string):
         A (byte) string to use for better protection from dictionary attacks.
         This value does not need to be kept secret, but it should be randomly
-        chosen for each derivation. It is recommended to be at least 8 bytes long.
+        chosen for each derivation. It is recommended to use at least 16 bytes.
      dkLen (integer):
-        The cumulative length of the desired keys.
+        The cumulative length of the keys to produce.
+
+        Due to a flaw in the PBKDF2 design, you should not request more bytes
+        than the ``prf`` can output. For instance, ``dkLen`` should not exceed
+        20 bytes in combination with ``HMAC-SHA1``.
      count (integer):
-        The number of iterations to carry out.
+        The number of iterations to carry out. The higher the value, the slower
+        and the more secure the function becomes.
+
+        You should find the maximum number of iterations that keeps the
+        key derivation still acceptable on the slowest hardware you must support.
+
+        Although the default value is 1000, **it is recommended to use at least
+        1000000 (1 million) iterations**.
      prf (callable):
-        A pseudorandom function. It must be a function that returns a pseudorandom string
-        from two parameters: a secret and a salt. If not specified,
-        **HMAC-SHA1** is used.
+        A pseudorandom function. It must be a function that returns a
+        pseudorandom byte string from two parameters: a secret and a salt.
+        The slower the algorithm, the more secure the derivation function.
+        If not specified, **HMAC-SHA1** is used.
      hmac_hash_module (module):
-        A module from `Crypto.Hash` implementing a Merkle-Damgard cryptographic
+        A module from ``Crypto.Hash`` implementing a Merkle-Damgard cryptographic
         hash, which PBKDF2 must use in combination with HMAC.
         This parameter is mutually exclusive with ``prf``.
 
     Return:
         A byte string of length ``dkLen`` that can be used as key material.
-        If you wanted multiple keys, just break up this string into segments of the desired length.
+        If you want multiple keys, just break up this string into segments of the desired length.
     """
 
     password = tobytes(password)
@@ -268,11 +275,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     """Derive one or more keys from a master secret using
     the HMAC-based KDF defined in RFC5869_.
 
-    This KDF is not suitable for deriving keys from a password or for key
-    stretching. Use :func:`PBKDF2` instead.
-
-    HKDF is a key derivation method approved by NIST in `SP 800 56C`__.
-
     Args:
      master (byte string):
         The unguessable value used by the KDF to generate the other keys.
@@ -299,7 +301,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
         A byte string or a tuple of byte strings.
 
     .. _RFC5869: http://tools.ietf.org/html/rfc5869
-    .. __: http://csrc.nist.gov/publications/nistpubs/800-56C/SP-800-56C.pdf
     """
 
     output_len = key_len * num_keys
@@ -335,12 +336,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     """Derive one or more keys from a passphrase.
 
-    This function performs key derivation according to
-    the `scrypt`_ algorithm, introduced in Percival's paper
-    `"Stronger key derivation via sequential memory-hard functions"`__.
-
-    This implementation is based on `RFC7914`__.
-
     Args:
      password (string):
         The secret pass phrase to generate the keys from.
@@ -348,7 +343,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
         A string to use for better protection from dictionary attacks.
         This value does not need to be kept secret,
         but it should be randomly chosen for each derivation.
-        It is recommended to be at least 8 bytes long.
+        It is recommended to be at least 16 bytes long.
      key_len (integer):
         The length in bytes of every derived key.
      N (integer):
@@ -368,15 +363,12 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     A good choice of parameters *(N, r , p)* was suggested
     by Colin Percival in his `presentation in 2009`__:
 
-    - *(16384, 8, 1)* for interactive logins (<=100ms)
-    - *(1048576, 8, 1)* for file encryption (<=5s)
+    - *( 2¹⁴, 8, 1 )* for interactive logins (≤100ms)
+    - *( 2²⁰, 8, 1 )* for file encryption (≤5s)
 
     Return:
         A byte string or a tuple of byte strings.
 
-    .. _scrypt: http://www.tarsnap.com/scrypt.html
-    .. __: http://www.tarsnap.com/scrypt/scrypt.pdf
-    .. __: https://tools.ietf.org/html/rfc7914
     .. __: http://www.tarsnap.com/scrypt/scrypt-slides.pdf
     """
 
@@ -510,22 +502,9 @@ def bcrypt(password, cost, salt=None):
         The bcrypt hash
 
     Raises:
-        ValueError: if password is longer than 72 bytes or if it contains the
-        zero byte
+        ValueError: if password is longer than 72 bytes or if it contains the zero byte
 
-    Note:
-        If you want to hash passwords with no restrictions on their length, it
-        is common practice to apply a cryptographic hash and then BASE64-encode
-        the result. For instance::
-
-            from base64 import b64encode
-            from Crypto.Hash import SHA256
-            from Crypto.Protocol.KDF import bcrypt
-
-            password = b"test"
-            b64pwd = b64encode(SHA256.new(password).digest())
-            bcrypt_hash = bcrypt(b64pwd, 10)
-    """
+   """
 
     password = tobytes(password, "utf-8")
 
@@ -562,22 +541,6 @@ def bcrypt_check(password, bcrypt_hash):
 
     Raises:
         ValueError: if the password does not match
-
-    Note:
-        If you want to hash passwords with no restrictions on their length, it
-        is common practice to apply a cryptographic hash and then BASE64-encode
-        the result. For instance::
-
-            from base64 import b64encode
-            from Crypto.Hash import SHA256
-            from Crypto.Protocol.KDF import bcrypt
-
-            password_to_test = b"test"
-            try:
-                b64pwd = b64encode(SHA256.new(password).digest())
-                bcrypt_check(b64pwd, bcrypt_hash)
-            except ValueError:
-                print("Incorrect password")
     """
 
     bcrypt_hash = tobytes(bcrypt_hash)
