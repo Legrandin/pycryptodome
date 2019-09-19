@@ -553,7 +553,7 @@ def bcrypt_check(password, bcrypt_hash):
     if bcrypt_hash[:4] != b'$2a$':
         raise ValueError("Unsupported prefix")
 
-    p = re.compile(b'\$2a\$([0-9][0-9])\$([A-Za-z0-9./]{22,22})([A-Za-z0-9./]{31,31})')
+    p = re.compile(br'\$2a\$([0-9][0-9])\$([A-Za-z0-9./]{22,22})([A-Za-z0-9./]{31,31})')
     r = p.match(bcrypt_hash)
     if not r:
         raise ValueError("Incorrect bcrypt hash format")
