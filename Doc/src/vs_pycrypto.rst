@@ -25,7 +25,7 @@ Specifically, for public key cryptography:
   - :mod:`Crypto.Signature.pkcs1_15` or :mod:`Crypto.Signature.pss` for signing using RSA.
   - :mod:`Crypto.Signature.DSS` for signing using DSA.
 * Method: :meth:`generate` for public key modules does not accept the ``progress_func`` parameter anymore.
-* Ambiguous method ``size`` from RSA, DSA and ElGamal key objects have bene removed.
+* Ambiguous method ``size`` from RSA, DSA and ElGamal key objects have been removed.
   Instead, use methods :meth:`size_in_bytes` and :meth:`size_in_bits` and check the documentation.
 * The 3 public key object types (RSA, DSA, ElGamal) are now unpickable.
   You must use the :meth:`export_key` method of each key object and select a good output format: for private

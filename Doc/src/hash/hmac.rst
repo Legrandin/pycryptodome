@@ -2,7 +2,7 @@ HMAC
 ====
 
 HMAC (Hash-based Message Authentication Code) is a MAC defined
-in RFC2104_ and FIPS-198_ and constructed using a cryptograpic
+in RFC2104_ and FIPS-198_ and constructed using a cryptographic
 hash algorithm.
 
 It is usually named *HMAC-X*, where *X* is the hash algorithm; for

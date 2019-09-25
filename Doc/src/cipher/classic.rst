@@ -363,7 +363,7 @@ Constant: ``Crypto.Cipher.<cipher>.MODE_OPENPGP``.
 OpenPGP (defined in `RFC4880 <https://tools.ietf.org/html/rfc4880>`_).
 A variant of CFB, with two differences:
 
-1.  The first invokation to the :func:`encrypt` method
+1.  The first invocation to the :func:`encrypt` method
     returns the encrypted IV concatenated to the first chunk
     on ciphertext (as opposed to the ciphertext only).
     The encrypted IV is as long as the block size plus 2 more bytes.

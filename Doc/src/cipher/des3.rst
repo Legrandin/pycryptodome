@@ -12,7 +12,7 @@ though they will `deprecate`_ it soon.
 TDES has a fixed data block size of 8 bytes.
 It consists of the cascade of 3 :doc:`des` ciphers
 (EDE: Encryption - Decryption - Encryption), where each stage uses an
-indipendent DES sub-key.
+independent DES sub-key.
 
 The standard defines 3 *Keying Options*:
 

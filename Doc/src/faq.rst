@@ -69,7 +69,7 @@ which happens to operate under the namespace ``crypto``.
 The Windows filesystem is **case-insensitive** so ``crypto`` and ``Crypto`` are effectively considered the same thing.
 When you subsequently install ``pycryptodome``, ``pip`` finds that a directory named with the target namespace already exists (under the rules of the underlying filesystem),
 and therefore installs all the sub-packages of ``pycryptodome`` in it.
-This is probably a reasonable behavior, if it wansn't that `pip does not issue any warning even if it could detect the issue <https://github.com/pypa/pip/issues/3309>`_.
+This is probably a reasonable behavior, if it wasn't that `pip does not issue any warning even if it could detect the issue <https://github.com/pypa/pip/issues/3309>`_.
 
 Why does ``strxor`` raise ``TypeError: argument 2 must be bytes, not bytearray``?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

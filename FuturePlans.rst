@@ -1,7 +1,7 @@
 Future releases will include:
 
 - Update `Crypto.Signature.DSS` to FIPS 186-4
-- Make all hash objects non-copiable and immutable after the first digest
+- Make all hash objects non-copyable and immutable after the first digest
 - Add alias 'segment_bits' to parameter 'segment_size' for CFB
 - Coverage testing
 - Implement AES with bitslicing

@@ -6,7 +6,7 @@ Single DES
 
 DES `(Data Encryption Standard)`__ is a symmetric block cipher standardized
 in `FIPS 46-3 <http://csrc.nist.gov/publications/fips/fips46-3/fips46-3.pdf>`_
-(now withdran).
+(now withdrawn).
 It has a fixed data block size of 8 bytes.
 
 Its keys are 64 bits long, even though 8 bits were used for integrity (now they
