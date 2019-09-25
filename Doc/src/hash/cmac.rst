@@ -36,7 +36,7 @@ And this is an example showing how to validate the AES-CMAC::
     >>>   print "The message or the key is wrong"
 
 A cipher block size of 128 bits (like for AES) guarantees that the risk
-of MAC collisions remains negligeable even when the same CMAC key is
+of MAC collisions remains negligible even when the same CMAC key is
 used to authenticate a large amount of data.
 
 This implementation allows also usage of ciphers with a 64 bits block size

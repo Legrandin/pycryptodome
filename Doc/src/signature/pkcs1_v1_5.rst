@@ -6,7 +6,7 @@ An old but still solid digital signature scheme based on RSA.
 It is more formally called ``RSASSA-PKCS1-v1_5``
 in `Section 8.2 of RFC8017`__.
 
-The following example shows how the a *private* RSA key (loaded from a file)
+The following example shows how a *private* RSA key (loaded from a file)
 can be used to compute the signature of a message::
 
         >>> from Crypto.Signature import pkcs1_15

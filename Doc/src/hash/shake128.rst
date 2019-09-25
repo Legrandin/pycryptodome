@@ -5,7 +5,7 @@ SHAKE128 is an *extendable-output function* (XOF) in the SHA-3 family, as specif
 
 As a XOF, SHAKE128 is a generalization of a cryptographic hash function.
 Instead of creating a fixed-length digest (e.g. 32 bytes like SHA-2/256),
-it can produce outputs of any desidered length.
+it can produce outputs of any desired length.
 
 Output bits do **not** depend of the output length.
 

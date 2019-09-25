@@ -56,7 +56,7 @@ The two steps above are equivalent to::
 
     >>> hash_object.update(b'SecondThird')
 
-A the end, the digest can be retrieved with the methods :meth:`digest` or
+At the end, the digest can be retrieved with the methods :meth:`digest` or
 :meth:`hexdigest`::
 
     >>> print(hash_object.digest())
