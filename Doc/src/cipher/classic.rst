@@ -280,7 +280,7 @@ Example (decryption)::
     >>> # We assume that the key was securely shared beforehand
     >>> try:
     >>>     b64 = json.loads(json_input)
-    >>>     nonce = b64decode(b64['nonce'])
+    >>>     iv = b64decode(b64['iv'])
     >>>     ct = b64decode(b64['ciphertext'])
     >>>     cipher = AES.new(key, AES.MODE_CFB, iv=iv)
     >>>     pt = cipher.decrypt(ct)
@@ -346,7 +346,7 @@ Example (decryption)::
     >>> # We assume that the key was securely shared beforehand
     >>> try:
     >>>     b64 = json.loads(json_input)
-    >>>     nonce = b64decode(b64['nonce'])
+    >>>     iv = b64decode(b64['iv'])
     >>>     ct = b64decode(b64['ciphertext'])
     >>>     cipher = AES.new(key, AES.MODE_OFB, iv=iv)
     >>>     pt = cipher.decrypt(ct)
