@@ -27,6 +27,7 @@ matrix:
    script: cd src/test && make
    after_success: true
  - language: c
+   dist: trusty
    install: sudo apt-get install libc6-dev-i386
    script: cd src/test && CFLAGS="-m32" UNDEFS="-UHAVE_UINT128" make
    after_success: true
