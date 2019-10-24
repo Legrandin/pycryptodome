@@ -1,11 +1,11 @@
 language: python
-dist: trusty
-sudo: required
 python:
  - "2.7"
  - "3.4"
  - "3.5"
  - "3.6"
+ - "3.7"
+ - "3.8"
 env:
  - CFFI=no
  - CFFI=yes
@@ -18,16 +18,11 @@ matrix:
  include:
  - python: 2.6
    env: CFFI=no
+   dist: trusty
  - python: pypy
    env: CFFI=yes
  - python: pypy3
    env: CFFI=yes
- - python: 3.7
-   env: CFFI=no
-   dist: xenial
- - python: 3.7
-   env: CFFI=yes
-   dist: xenial
  - language: c
    script: cd src/test && make
    after_success: true
@@ -38,7 +33,7 @@ matrix:
  - language: c
    script: cd src/test && CPPFLAGS="-DHAVE_X86INTRIN_H" make
    after_success: true
- - python: 3.6
+ - python: 3.8
    install: pip install mypy
    script: mypy lib/
    after_success: true
