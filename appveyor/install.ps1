@@ -45,7 +45,7 @@ function InstallPython ($python_version, $architecture, $python_home) {
     if ($architecture -eq "32") {
         $platform_suffix = ""
     } else {
-        $platform_suffix = ".amd64"
+        $platform_suffix = "-amd64"
     }
     $filepath = DownloadPython $python_version $platform_suffix
     Write-Host "Installing" $filepath "to" $python_home
