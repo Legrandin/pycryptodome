@@ -8,7 +8,7 @@ $GET_PIP_PATH = "C:\get-pip.py"
 
 function DownloadPython ($python_version, $platform_suffix) {
     $webclient = New-Object System.Net.WebClient
-    $filename = "python-" + $python_version + $platform_suffix + ".msi"
+    $filename = "python-" + $python_version + $platform_suffix + ".exe"
     $url = $BASE_URL + $python_version + "/" + $filename
 
     $basedir = $pwd.Path + "\"
@@ -27,6 +27,7 @@ function DownloadPython ($python_version, $platform_suffix) {
             break
         }
         Catch [Exception]{
+            Write-Host $_.Exception.ToString()
             Start-Sleep 1
         }
    }
@@ -48,9 +49,12 @@ function InstallPython ($python_version, $architecture, $python_home) {
     }
     $filepath = DownloadPython $python_version $platform_suffix
     Write-Host "Installing" $filepath "to" $python_home
-    $args = "/qn /i $filepath TARGETDIR=$python_home"
-    Write-Host "msiexec.exe" $args
-    Start-Process -FilePath "msiexec.exe" -ArgumentList $args -Wait -Passthru
+    #$args = "/qn /i $filepath TARGETDIR=$python_home"
+    #Write-Host "msiexec.exe" $args
+    #Start-Process -FilePath "msiexec.exe" -ArgumentList $args -Wait -Passthru
+    $args = "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir=$python_home"
+    Write-Host $filepath $args
+    Start-Process -FilePath $filepath -ArgumentList $args -Wait -Passthru
     Write-Host "Python $python_version ($architecture) installation complete"
     return $true
 }
