@@ -35,7 +35,6 @@ import binascii
 import struct
 
 from Crypto import Random
-from Crypto.IO import PKCS8, PEM
 from Crypto.Util.py3compat import tobytes, bord, tostr
 from Crypto.Util.asn1 import DerSequence
 
@@ -333,6 +332,8 @@ class RsaKey(object):
                 if format == 'DER' and passphrase:
                     raise ValueError("PKCS#1 private key cannot be encrypted")
             else:  # PKCS#8
+                from Crypto.IO import PKCS8
+
                 if format == 'PEM' and protection is None:
                     key_type = 'PRIVATE KEY'
                     binary_key = PKCS8.wrap(binary_key, oid, None)
@@ -353,6 +354,8 @@ class RsaKey(object):
         if format == 'DER':
             return binary_key
         if format == 'PEM':
+            from Crypto.IO import PEM
+
             pem_str = PEM.encode(binary_key, key_type, passphrase, randfunc)
             return tobytes(pem_str)
 
@@ -652,6 +655,8 @@ def _import_x509_cert(encoded, *kwargs):
 
 
 def _import_pkcs8(encoded, passphrase):
+    from Crypto.IO import PKCS8
+
     k = PKCS8.unwrap(encoded, passphrase)
     if k[0] != oid:
         raise ValueError("No PKCS#8 encoded RSA key")
@@ -740,6 +745,8 @@ def import_key(extern_key, passphrase=None):
     .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
     .. _`OpenSSH 6.5`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     """
+
+    from Crypto.IO import PEM
 
     extern_key = tobytes(extern_key)
     if passphrase is not None:

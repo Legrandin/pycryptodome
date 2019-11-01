@@ -30,7 +30,6 @@
 
 import abc
 import sys
-import platform
 from Crypto.Util.py3compat import byte_string
 from Crypto.Util._file_system import pycryptodome_filename
 
@@ -79,7 +78,7 @@ try:
     # Note that PyPy ships with an old version of pycparser so we can keep
     # using cffi there.
     # See https://github.com/Legrandin/pycryptodome/issues/228
-    if platform.python_implementation() != "PyPy" and sys.flags.optimize == 2:
+    if '__pypy__' not in sys.builtin_module_names and sys.flags.optimize == 2:
         raise ImportError("CFFI with optimize=2 fails due to pycparser bug.")
 
     from cffi import FFI

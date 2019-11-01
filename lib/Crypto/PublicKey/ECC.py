@@ -43,7 +43,6 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Util.asn1 import (DerObjectId, DerOctetString, DerSequence,
                               DerBitString)
 
-from Crypto.IO import PKCS8, PEM
 from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _create_subject_public_key_info,
                               _extract_subject_public_key_info)
@@ -589,6 +588,8 @@ class EccKey(object):
         return DerSequence(seq).encode()
 
     def _export_pkcs8(self, **kwargs):
+        from Crypto.IO import PKCS8
+
         if kwargs.get('passphrase', None) is not None and 'protection' not in kwargs:
             raise ValueError("At least the 'protection' parameter should be present")
 
@@ -601,18 +602,26 @@ class EccKey(object):
         return result
 
     def _export_public_pem(self, compress):
+        from Crypto.IO import PEM
+
         encoded_der = self._export_subjectPublicKeyInfo(compress)
         return PEM.encode(encoded_der, "PUBLIC KEY")
 
     def _export_private_pem(self, passphrase, **kwargs):
+        from Crypto.IO import PEM
+
         encoded_der = self._export_private_der()
         return PEM.encode(encoded_der, "EC PRIVATE KEY", passphrase, **kwargs)
 
     def _export_private_clear_pkcs8_in_clear_pem(self):
+        from Crypto.IO import PEM
+
         encoded_der = self._export_pkcs8()
         return PEM.encode(encoded_der, "PRIVATE KEY")
 
     def _export_private_encrypted_pkcs8_in_clear_pem(self, passphrase, **kwargs):
+        from Crypto.IO import PEM
+
         assert passphrase
         if 'protection' not in kwargs:
             raise ValueError("At least the 'protection' parameter should be present")
@@ -950,6 +959,7 @@ def _import_private_der(encoded, passphrase, curve_oid=None):
 
 
 def _import_pkcs8(encoded, passphrase):
+    from Crypto.IO import PKCS8
 
     # From RFC5915, Section 1:
     #
@@ -1105,6 +1115,8 @@ def import_key(encoded, passphrase=None):
     .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
     .. _`OpenSSH 6.5+`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     """
+
+    from Crypto.IO import PEM
 
     encoded = tobytes(encoded)
     if passphrase is not None:
