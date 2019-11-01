@@ -1,6 +1,18 @@
 Changelog
 =========
 
+3.9.1 (1 November 2019)
+++++++++++++++++++++++++
+
+New features
+------------
+* Add Python 3.8 wheels for Linux and Windows.
+
+Resolved issues
+---------------
+
+* GH#328: minor speed-up when importing RSA.
+
 3.9.0 (27 August 2019)
 +++++++++++++++++++++++
 
