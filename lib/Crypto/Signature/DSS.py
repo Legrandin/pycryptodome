@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-__all__ = ['new', 'DssSigScheme']
+__all__ = ['new']
 
 
 from Crypto.Util.asn1 import DerSequence
