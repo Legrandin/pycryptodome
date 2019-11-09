@@ -181,22 +181,34 @@ def compiler_supports_aesni():
 
 
 def compiler_supports_clmul():
+    result = {'extra_cc_options': [], 'extra_macros' : ['HAVE_WMMINTRIN_H', 'HAVE_TMMINTRIN_H']}
+
     source = """
     #include <wmmintrin.h>
+    #include <tmmintrin.h>
+
     __m128i f(__m128i x, __m128i y) {
         return _mm_clmulepi64_si128(x, y, 0x00);
     }
+
+    __m128i g(__m128i a) {
+        __m128i mask;
+
+        mask = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+        return _mm_shuffle_epi8(a, mask);
+    }
+
     int main(void) {
         return 0;
     }
     """
 
     if test_compilation(source):
-        return {'extra_cc_options': [], 'extra_macros' : ['HAVE_WMMINTRIN_H']}
+        return result
 
-    if test_compilation(source, extra_cc_options=['-mpclmul', '-mssse3'],
-                        msg='CLMUL intrinsics'):
-        return {'extra_cc_options': ['-mpclmul', '-mssse3'], 'extra_macros': ['HAVE_WMMINTRIN_H']}
+    if test_compilation(source, extra_cc_options=['-mpclmul', '-mssse3'], msg='CLMUL intrinsics'):
+        result['extra_cc_options'].extend(['-mpclmul', '-mssse3'])
+        return result
 
     return False
 

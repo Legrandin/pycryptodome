@@ -44,10 +44,11 @@ FAKE_INIT(ghash_clmul)
 #error No SSE2 headers available
 #endif
 
-#if defined(HAVE_WMMINTRIN_H)
+#if defined(HAVE_WMMINTRIN_H) && defined(HAVE_TMMINTRIN_H)
 #include <wmmintrin.h>
+#include <tmmintrin.h>
 #else
-#error No CLMUL header available
+#error No CLMUL headers available
 #endif
 
 /**
