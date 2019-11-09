@@ -570,7 +570,7 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 #endif
 
     assert(nw == WORDS_64);
-    assert(m0 == 0x0000000100000001U);
+    assert(m0 == 0x0000000100000001ULL);
 
     t = tmp;
     scratchpad = tmp + 3*nw;

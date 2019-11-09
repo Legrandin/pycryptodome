@@ -72,7 +72,7 @@ static void make_v_tables(const uint8_t h[16], t_v_tables *tables)
         next = &((*tables)[i][1]);
 
         /** v = (v&1)*0xE1000000000000000000000000000000L ^ (v>>1) **/
-        c = (*cur)[1]&1 ? 0xE100000000000000 : 0;
+        c = (*cur)[1]&1 ? 0xE100000000000000ULL : 0;
         (*next)[1] = (*cur)[1]>>1 | (*cur)[0]<<63;
         (*next)[0] = (*cur)[0]>>1 ^ c;
 
