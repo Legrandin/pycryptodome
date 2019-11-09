@@ -64,7 +64,7 @@ static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType 
 
     assert((idx>=1) && (idx<=10));
 
-    x = _mm_set1_epi32(w); // { w, w, w, w }
+    x = _mm_set1_epi32((int)w); // { w, w, w, w }
     y = _mm_set1_epi32(0);
 
     switch (idx) {

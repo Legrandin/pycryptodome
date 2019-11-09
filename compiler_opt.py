@@ -265,6 +265,20 @@ def compiler_is_gcc():
 
 def compiler_supports_sse2():
     source = """
+    #include <intrin.h>
+    int main(void)
+    {
+        __m128i r0;
+        int mask;
+        r0 = _mm_set1_epi32(0);
+        mask = _mm_movemask_epi8(r0);
+        return mask;
+    }
+    """
+    if test_compilation(source, msg="SSE2(intrin.h)"):
+        return {'extra_cc_options': [], 'extra_macros': ['HAVE_INTRIN_H', 'USE_SSE2']}
+
+    source = """
     #include <x86intrin.h>
     int main(void)
     {
@@ -292,19 +306,6 @@ def compiler_supports_sse2():
     """
     if test_compilation(source, extra_cc_options=['-msse2'], msg="SSE2(emmintrin.h)"):
         return {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_EMMINTRIN_H', 'USE_SSE2']}
-
-    source = """
-    #include <intrin.h>
-    int main(void)
-    {
-        __m128i r0;
-        r0 = _mm_set1_epi32(0);
-        mask = _mm_movemask_epi8(r0);
-        return mask;
-    }
-    """
-    if test_compilation(source, msg="SSE2(intrin.h)"):
-        return {'extra_cc_options': [], 'extra_macros': ['HAVE_INTRIN_H', 'USE_SSE2']}
 
     return False
 

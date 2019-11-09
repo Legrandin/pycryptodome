@@ -266,8 +266,13 @@ STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsi
 
     pairs = (unsigned)words / 2;
     mask = (uint64_t)((cond != 0) - 1); /* 0 for a, 1s for b */
-   
-    r0 = _mm_set1_epi64((__m64)mask);
+
+#if SYSBITS == 64
+    r0 = _mm_set1_epi64x(mask);
+#else
+    r0 = _mm_loadl_epi64((__m128i*)&mask);
+    r0 = _mm_unpacklo_epi64(r0, r0);
+#endif
     for (i=0; i<pairs; i++, a+=2, b+=2, out+=2) {
         r1 = _mm_loadu_si128((__m128i const*)b);
         r2 = _mm_loadu_si128((__m128i const*)a);
