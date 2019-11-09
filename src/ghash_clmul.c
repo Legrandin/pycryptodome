@@ -37,11 +37,18 @@ FAKE_INIT(ghash_clmul)
 #include <intrin.h>
 #elif defined(HAVE_X86INTRIN_H)
 #include <x86intrin.h>
+#elif defined(HAVE_EMMINTRIN_H)
+#include <xmmintrin.h>
+#include <emmintrin.h>
 #else
-#error Either intrin.h or x86intrin.h header files must be available
+#error No SSE2 headers available
 #endif
 
+#if defined(HAVE_WMMINTRIN_H)
 #include <wmmintrin.h>
+#else
+#error No CLMUL header available
+#endif
 
 /**
  * This module implement the basic GHASH multiplication, as described in

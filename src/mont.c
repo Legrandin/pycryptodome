@@ -47,12 +47,15 @@
 #endif
 #endif
 
+#if defined(USE_SSE2)
 #if defined(HAVE_INTRIN_H)
 #include <intrin.h>
-#endif
-
-#if defined(HAVE_X86INTRIN_H)
+#elif defined(HAVE_X86INTRIN_H)
 #include <x86intrin.h>
+#elif defined(HAVE_EMMINTRIN_H)
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#endif
 #endif
 
 static inline unsigned is_odd(uint64_t x)
