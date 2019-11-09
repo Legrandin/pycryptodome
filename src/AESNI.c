@@ -64,8 +64,9 @@ static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType 
 
     assert((idx>=1) && (idx<=10));
 
-    x = _mm_castps_si128(_mm_load1_ps((float const*)&w));   /* { W, W, W, W } */
-    
+    x = _mm_set1_epi32(w); // { w, w, w, w }
+    y = _mm_set1_epi32(0);
+
     switch (idx) {
     case 1:  y = _mm_aeskeygenassist_si128(x, 0x01); break;
     case 2:  y = _mm_aeskeygenassist_si128(x, 0x02); break;
