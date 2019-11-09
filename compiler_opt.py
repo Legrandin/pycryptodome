@@ -370,10 +370,6 @@ def set_compiler_options(package_root, extensions):
         for macro in sse2_result['extra_macros']:
             extra_macros.append((macro, None))
 
-    # Options specific to GCC and CLANG
-    if clang or gcc:
-        extra_cc_options.append('-O3')
-
     # Module-specific options
 
     # AESNI
