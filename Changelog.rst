@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.9.2 (XX November 2019)
+3.9.2 (10 November 2019)
 ++++++++++++++++++++++++
 
 New features
@@ -12,7 +12,7 @@ Resolved issues
 ---------------
 * GH#308: Avoid allocating arrays of ``__m128i`` on the stack, to cope with buggy compilers.
 * GH#322: Remove blanket ``-O3`` optimization for gcc and clang, to cope with buggy compilers.
-* GH#337: Fix typing stubs for signatures
+* GH#337: Fix typing stubs for signatures.
 * GH#338: Deal with gcc installations that don't have ``x86intrin.h``.
 
 3.9.1 (1 November 2019)
