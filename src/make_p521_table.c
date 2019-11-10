@@ -15,6 +15,7 @@ static void print_64bit_array(uint64_t *x, unsigned len)
         for (j=0; j<8; j++) {
             printf("%02X", (uint8_t)(x[i] >> ((7-j)*8)));
         }
+        printf("ULL");
         if (i!=(len-1))
             printf(",");
     }

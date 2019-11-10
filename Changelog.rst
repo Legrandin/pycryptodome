@@ -1,6 +1,20 @@
 Changelog
 =========
 
+3.9.2 (XX November 2019)
+++++++++++++++++++++++++
+
+New features
+------------
+* Add Python 3.8 wheels for Mac.
+
+Resolved issues
+---------------
+
+* GH#338: Deal with gcc installations that don't have ``x86intrin.h``.
+* GH#322: Remove blanket ``-O3`` optimization for gcc and clang, to cope with buggy compilers.
+* GH#308: Avoid allocating arrays of ``__m128i`` on the stack, to cope with buggy compilers.
+
 3.9.1 (1 November 2019)
 ++++++++++++++++++++++++
 

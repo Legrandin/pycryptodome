@@ -37,11 +37,19 @@ FAKE_INIT(ghash_clmul)
 #include <intrin.h>
 #elif defined(HAVE_X86INTRIN_H)
 #include <x86intrin.h>
+#elif defined(HAVE_EMMINTRIN_H)
+#include <xmmintrin.h>
+#include <emmintrin.h>
 #else
-#error Either intrin.h or x86intrin.h header files must be available
+#error No SSE2 headers available
 #endif
 
+#if defined(HAVE_WMMINTRIN_H) && defined(HAVE_TMMINTRIN_H)
 #include <wmmintrin.h>
+#include <tmmintrin.h>
+#else
+#error No CLMUL headers available
+#endif
 
 /**
  * This module implement the basic GHASH multiplication, as described in
@@ -105,7 +113,7 @@ struct exp_key {
  */
 STATIC __m128i reduce(__m128i prod_high, __m128i prod_low)
 {
-    const uint64_t c2 = 0xc200000000000000U;
+    const uint64_t c2 = (uint64_t)0xc2 << 56;
     __m128i t1, t2, t3, t4, t7;
    
     t1 = prod_high;                                     /* U3:U2 */
@@ -150,10 +158,10 @@ STATIC __m128i multx(__m128i a)
     uint64_t p0, p1;
     __m128i t0, t1, t2, t3, t4, t5, t6, t7;
 
-    msb = _mm_movemask_epi8(a) >> 15;       /* Bit 0 is a[127] */
-    r = (msb ^ 1) - 1;                      /* Msb is copied in all 64 positions */
-    p0 = (uint64_t)r & 0x0000000000000001U; /* Zero or XOR mask (low) */
-    p1 = (uint64_t)r & 0xc200000000000000U; /* Zero or XOR mask (high) */
+    msb = _mm_movemask_epi8(a) >> 15;           /* Bit 0 is a[127] */
+    r = (msb ^ 1) - 1;                          /* MSB is copied into all 64 positions */
+    p0 = (uint64_t)r & 0x0000000000000001U;     /* Zero or XOR mask (low) */
+    p1 = (uint64_t)r & ((uint64_t)0xc2 << 56);  /* Zero or XOR mask (high) */
     t0 = _mm_loadl_epi64((__m128i*)&p0);
     t1 = _mm_loadl_epi64((__m128i*)&p1);
     t2 = _mm_unpacklo_epi64(t0, t1);        /* Zero or XOR mask */

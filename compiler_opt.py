@@ -172,31 +172,43 @@ def compiler_supports_aesni():
     """
 
     if test_compilation(source):
-        return {'extra_options': []}
+        return {'extra_cc_options': [], 'extra_macros': []}
 
     if test_compilation(source, extra_cc_options=['-maes'], msg='AESNI intrinsics'):
-        return {'extra_options': ['-maes']}
+        return {'extra_cc_options': ['-maes'], 'extra_macros': []}
 
     return False
 
 
 def compiler_supports_clmul():
+    result = {'extra_cc_options': [], 'extra_macros' : ['HAVE_WMMINTRIN_H', 'HAVE_TMMINTRIN_H']}
+
     source = """
     #include <wmmintrin.h>
+    #include <tmmintrin.h>
+
     __m128i f(__m128i x, __m128i y) {
         return _mm_clmulepi64_si128(x, y, 0x00);
     }
+
+    __m128i g(__m128i a) {
+        __m128i mask;
+
+        mask = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+        return _mm_shuffle_epi8(a, mask);
+    }
+
     int main(void) {
         return 0;
     }
     """
 
     if test_compilation(source):
-        return {'extra_options': []}
+        return result
 
-    if test_compilation(source, extra_cc_options=['-mpclmul', '-mssse3'],
-                        msg='CLMUL intrinsics'):
-        return {'extra_options': ['-mpclmul', '-mssse3']}
+    if test_compilation(source, extra_cc_options=['-mpclmul', '-mssse3'], msg='CLMUL intrinsics'):
+        result['extra_cc_options'].extend(['-mpclmul', '-mssse3'])
+        return result
 
     return False
 
@@ -251,7 +263,21 @@ def compiler_is_gcc():
     return test_compilation(source, msg="gcc")
 
 
-def compiler_supports_sse2_with_x86intrin_h():
+def compiler_supports_sse2():
+    source = """
+    #include <intrin.h>
+    int main(void)
+    {
+        __m128i r0;
+        int mask;
+        r0 = _mm_set1_epi32(0);
+        mask = _mm_movemask_epi8(r0);
+        return mask;
+    }
+    """
+    if test_compilation(source, msg="SSE2(intrin.h)"):
+        return {'extra_cc_options': [], 'extra_macros': ['HAVE_INTRIN_H', 'USE_SSE2']}
+
     source = """
     #include <x86intrin.h>
     int main(void)
@@ -263,22 +289,25 @@ def compiler_supports_sse2_with_x86intrin_h():
         return mask;
     }
     """
-    return test_compilation(source, extra_cc_options=['-msse2'],
-                            msg="SSE2 (x86intrin.h)")
+    if test_compilation(source, extra_cc_options=['-msse2'], msg="SSE2(x86intrin.h)"):
+        return {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_X86INTRIN_H', 'USE_SSE2']}
 
-
-def compiler_supports_sse2_with_intrin_h():
     source = """
-    #include <intrin.h>
+    #include <xmmintrin.h>
+    #include <emmintrin.h>
     int main(void)
     {
         __m128i r0;
+        int mask;
         r0 = _mm_set1_epi32(0);
         mask = _mm_movemask_epi8(r0);
         return mask;
     }
     """
-    return test_compilation(source, msg="SSE2 (intrin.h)")
+    if test_compilation(source, extra_cc_options=['-msse2'], msg="SSE2(emmintrin.h)"):
+        return {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_EMMINTRIN_H', 'USE_SSE2']}
+
+    return False
 
 
 def remove_extension(extensions, name):
@@ -321,15 +350,13 @@ def set_compiler_options(package_root, extensions):
     if compiler_supports_uint128():
         extra_macros.append(("HAVE_UINT128", None))
 
-    # Compiler intrinsics (esp. for MSVC)
-    intrin_h_present = compiler_has_intrin_h()
-    if intrin_h_present:
-        extra_macros.append(("HAVE_INTRIN_H", None))
-
     # Auto-detecting CPU features
     cpuid_h_present = compiler_has_cpuid_h()
     if cpuid_h_present:
         extra_macros.append(("HAVE_CPUID_H", None))
+    intrin_h_present = compiler_has_intrin_h()
+    if intrin_h_present:
+        extra_macros.append(("HAVE_INTRIN_H", None))
 
     # Platform-specific call for getting a block of aligned memory
     if compiler_has_posix_memalign():
@@ -337,15 +364,12 @@ def set_compiler_options(package_root, extensions):
     elif compiler_has_memalign():
         extra_macros.append(("HAVE_MEMALIGN", None))
 
-    # Options specific to GCC and CLANG
-    if clang or gcc:
-        extra_cc_options.append('-O3')
-        if compiler_supports_sse2_with_x86intrin_h():
-            extra_cc_options.append('-msse2')
-            extra_macros.append(("HAVE_X86INTRIN_H", None))
-            extra_macros.append(("USE_SSE2", None))
-    elif intrin_h_present and compiler_supports_sse2_with_intrin_h():
-        extra_macros.append(("USE_SSE2", None))
+    # SSE2
+    sse2_result = compiler_supports_sse2()
+    if sse2_result:
+        extra_cc_options.extend(sse2_result['extra_cc_options'])
+        for macro in sse2_result['extra_macros']:
+            extra_macros.append((macro, None))
 
     # Module-specific options
 
@@ -356,7 +380,9 @@ def set_compiler_options(package_root, extensions):
         print("Compiling support for AESNI instructions")
         aes_mods = [x for x in extensions if x.name == aesni_mod_name]
         for x in aes_mods:
-            x.extra_compile_args += aesni_result['extra_options']
+            x.extra_compile_args.extend(aesni_result['extra_cc_options'])
+            for macro in aesni_result['extra_macros']:
+                x.define_macros.append((macro, None))
     else:
         print("Warning: compiler does not support AESNI instructions")
         remove_extension(extensions, aesni_mod_name)
@@ -368,11 +394,13 @@ def set_compiler_options(package_root, extensions):
         print("Compiling support for CLMUL instructions")
         clmul_mods = [x for x in extensions if x.name == clmul_mod_name]
         for x in clmul_mods:
-            x.extra_compile_args += clmul_result['extra_options']
+            x.extra_compile_args.extend(clmul_result['extra_cc_options'])
+            for macro in clmul_result['extra_macros']:
+                x.define_macros.append((macro, None))
     else:
         print("Warning: compiler does not support CLMUL instructions")
         remove_extension(extensions, clmul_mod_name)
 
     for x in extensions:
-        x.extra_compile_args += extra_cc_options
-        x.define_macros += extra_macros
+        x.extra_compile_args.extend(extra_cc_options)
+        x.define_macros.extend(extra_macros)
