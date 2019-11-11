@@ -42,9 +42,8 @@ FAKE_INIT(raw_aesni)
 #define BLOCK_SIZE 16
 
 struct block_state {
-    __m128i *erk;       /** Round keys for encryption (11, 13 or 15 elements) **/
-    __m128i *drk;       /** Round keys for decryption **/
-    __m128i *tmp_rk;
+    __m128i *erk;   /** Round keys for encryption (11, 13 or 15 elements) **/
+    __m128i *drk;   /** Round keys for decryption **/
     unsigned rounds;
 };
 
@@ -141,17 +140,15 @@ static FUNC_SSE2 int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, 
 static FUNC_SSE2 int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
 {
     unsigned rounds;
+    __m128i r[14+1];
     const struct block_state *state;
     unsigned k;
-    __m128i *r;
 
     if ((bb == NULL) || (in == NULL) || (out == NULL))
         return ERR_NULL;
 
     state = &((AESNI_State*)bb)->algo_state;
     rounds = state->rounds;
-
-    r = state->tmp_rk;
 
     if (rounds > 14)
         return ERR_NR_ROUNDS;
@@ -252,9 +249,9 @@ static FUNC_SSE2 int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8
 static FUNC_SSE2 int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
 {
     unsigned rounds;
+    __m128i r[14+1];
     const struct block_state *state;
     unsigned k;
-    __m128i *r;
 
     if ((bb == NULL) || (in == NULL) || (out == NULL))
         return ERR_NULL;
@@ -264,8 +261,6 @@ static FUNC_SSE2 int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8
 
     if (rounds > 14)
         return ERR_NR_ROUNDS;
-
-    r = state->tmp_rk;
 
     for (k=0; k<=rounds; k++) {
         r[k] = state->drk[k];
@@ -416,12 +411,6 @@ EXPORT_SYM int AESNI_start_operation(const uint8_t key[], size_t key_len, AESNI_
         goto error;
     }
     
-    state->tmp_rk = align_alloc(Nb*(Nr+1)*sizeof(uint32_t), 16);
-    if (state->tmp_rk == NULL) {
-        result = ERR_MEMORY;
-        goto error;
-    }
-    
     result = expand_key(state->erk, state->drk, key, (unsigned)key_len/4, Nr);
     if (result) {
         goto error;
@@ -431,7 +420,6 @@ EXPORT_SYM int AESNI_start_operation(const uint8_t key[], size_t key_len, AESNI_
 error:
     align_free(state->erk);
     align_free(state->drk);
-    align_free(state->tmp_rk);
     free(*pResult);
     return result;
 }
