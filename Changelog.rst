@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.9.3 (12 November 2019)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#308: Align stack of functions using SSE2 intrinsics to avoid crashes,
+  when compiled with gcc on 32-bit x86 platforms.
+
 3.9.2 (10 November 2019)
 ++++++++++++++++++++++++
 
