@@ -257,7 +257,7 @@ STATIC void product(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, const 
  * @param words The number of words of a, b, and out
  * @return      0 for success, the appropriate code otherwise.
  */
-STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, size_t words)
+STATIC FUNC_SSE2 int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, size_t words)
 {
     uint64_t mask;
 #if defined(USE_SSE2)

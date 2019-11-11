@@ -263,6 +263,14 @@ def compiler_is_gcc():
     return test_compilation(source, msg="gcc")
 
 
+def support_gcc_realign():
+    source = """
+    void __attribute__((force_align_arg_pointer)) a(void) {}
+    int main(void) { return 0; }
+    """
+    return test_compilation(source, msg="gcc")
+
+
 def compiler_supports_sse2():
     source = """
     #include <intrin.h>
@@ -370,6 +378,15 @@ def set_compiler_options(package_root, extensions):
         extra_cc_options.extend(sse2_result['extra_cc_options'])
         for macro in sse2_result['extra_macros']:
             extra_macros.append((macro, None))
+
+    # Compiler specific settings
+    if gcc:
+        # On 32-bit x86 platforms, gcc assumes the stack to be aligned to 16
+        # bytes, but the caller may actually only align it to 4 bytes, which
+        # make functions crash if they use SSE2 intrinsics.
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
+        if system_bits == 32 and support_gcc_realign():
+            extra_macros.append(("GCC_REALIGN", None))
 
     # Module-specific options
 
