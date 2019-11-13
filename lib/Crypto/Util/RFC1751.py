@@ -64,6 +64,8 @@ def key_to_english (key):
     Return:
       A string of English words.
     """
+    if len(key)%8 != 0:
+      raise ValueError('The length of key must be a multiple of 8.')
 
     english=''
     for index in range(0, len(key), 8): # Loop over 8-byte subkeys
