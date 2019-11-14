@@ -383,23 +383,4 @@ wordlist = [
    "WISE", "WISH", "WITH", "WOLF", "WONT", "WOOD", "WOOL", "WORD",
    "WORE", "WORK", "WORM", "WORN", "WOVE", "WRIT", "WYNN", "YALE",
    "YANG", "YANK", "YARD", "YARN", "YAWL", "YAWN", "YEAH", "YEAR",
-   "YELL", "YOGA", "YOKE"]
-
-
-if __name__ == '__main__':
-
-    data = [('EB33F77EE73D4053', 'TIDE ITCH SLOW REIN RULE MOT'),
-            ('CCAC2AED591056BE4F90FD441C534766',
-             'RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE'),
-            ('EFF81F9BFBC65350920CDD7416DE8009',
-             'TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL')]
-
-    for key_hex, words in data:
-        print('Trying key', key_hex)
-        key_bin = binascii.a2b_hex(key_hex)
-        w2 = key_to_english(key_bin)
-        if w2 != words:
-            print('key_to_english fails on key', key_hex, ', producing', w2)
-        k2 = english_to_key(words)
-        if k2 != key_bin:
-            print('english_to_key fails on key', key_hex, ', producing', repr(k2))
+   "YELL", "YOGA", "YOKE" ]
