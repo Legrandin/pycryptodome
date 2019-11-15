@@ -24,7 +24,6 @@ class RFC1751_Tests(unittest.TestCase):
 
     def test_error_key_to_english(self):
 
-        self.assertRaises(ValueError, key_to_english, b'')
         self.assertRaises(ValueError, key_to_english, b'0' * 7)
 
 
