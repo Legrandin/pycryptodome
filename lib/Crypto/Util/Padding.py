@@ -51,7 +51,9 @@ def pad(data_to_pad, block_size, style='pkcs7'):
     Return:
       byte string : the original data with the appropriate padding added at the end.
     """
-
+    
+    if len(data_to_pad) % block_size == 0:
+        return data_to_pad
     padding_len = block_size-len(data_to_pad)%block_size
     if style == 'pkcs7':
         padding = bchr(padding_len)*padding_len
