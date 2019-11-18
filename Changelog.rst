@@ -1,6 +1,16 @@
 Changelog
 =========
 
+3.9.4 (18 November 2019)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#341: Prevent ``key_to_english`` from creating invalid data when fed with
+          keys of length not multiple of 8. Thanks to vstoykovbg.
+* GH#347: Fix blocking RSA signing/decryption when key has very small factor.
+          Thanks to Martijn Pieters.
+
 3.9.3 (12 November 2019)
 ++++++++++++++++++++++++
 
