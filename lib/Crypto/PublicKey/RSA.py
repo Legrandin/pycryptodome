@@ -158,10 +158,7 @@ class RsaKey(object):
         # Step 3: Compute m' = c'**d mod n       (ordinary RSA decryption)
         m1 = pow(cp, self._d % (self._p - 1), self._p)
         m2 = pow(cp, self._d % (self._q - 1), self._q)
-        h = m2 - m1
-        while h < 0:
-            h += self._q
-        h = (h * self._u) % self._q
+        h = ((m2 - m1) * self._u) % self._q
         mp = h * self._p + m1
         # Step 4: Compute m = m**(r-1) mod n
         result = (r.inverse(self._n) * mp) % self._n
