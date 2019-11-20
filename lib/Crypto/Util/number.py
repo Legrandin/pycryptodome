@@ -132,6 +132,51 @@ def inverse(u, v):
         u1 = u1 + v
     return u1
 
+def modular_sqrt(n, p):
+    """The modular square root of :data:`n` *mod* :data:`p`."""
+
+    if not isPrime(p):
+        return ValueError("The modulus must be a prime number.")
+
+    legendre = lambda n,p: pow(n,(p-1)//2,p)
+    if legendre(n,p) != 1:
+        if legendre(n,p) == 0:
+            return 0
+        else:
+            return ValueError("Not a quadratic residue.")
+
+    q = p-1
+    s = 0
+    while q%2 == 0:
+        q //= 2
+        s += 1
+
+    if s == 1:
+        return pow(n,(p+1)//4,p)
+
+    for z in range(2,p):
+        if legendre(z,p) == -1:
+            break
+
+    m = s
+    c = pow(z,q,p)
+    t = pow(n,q,p)
+    r = pow(n,(q+1)//2,p)
+
+    while True:
+        if t == 0:
+            return 0
+        if t == 1:
+            return r
+        for i in range(1,m):
+            if pow(t,2**i,p) == 1:
+                break
+        b = pow(c,2**(m-i-1),p)
+        m = i
+        c = (b*b)%p
+        t = (t*b*b)%p
+        r = (r*b)%p
+
 # Given a number of bits to generate and a random generation function,
 # find a prime number of the appropriate size.
 
