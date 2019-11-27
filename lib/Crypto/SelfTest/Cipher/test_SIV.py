@@ -456,6 +456,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def __init__(self):
         unittest.TestCase.__init__(self)
+        self._id = "None"
 
     def setUp(self):
         comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
