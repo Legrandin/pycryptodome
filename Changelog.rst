@@ -7,9 +7,9 @@ Changelog
 Resolved issues
 ---------------
 * GH#341: Prevent ``key_to_english`` from creating invalid data when fed with
-          keys of length not multiple of 8. Thanks to vstoykovbg.
+  keys of length not multiple of 8. Thanks to vstoykovbg.
 * GH#347: Fix blocking RSA signing/decryption when key has very small factor.
-          Thanks to Martijn Pieters.
+  Thanks to Martijn Pieters.
 
 3.9.3 (12 November 2019)
 ++++++++++++++++++++++++
@@ -53,7 +53,7 @@ New features
 
 * Add support for loading PEM files encrypted with AES256-CBC.
 * Add support for XChaCha20 and XChaCha20-Poly1305 ciphers.
-* Add support for bcrypt key derivation function (`Crypto.Protocol.KDF.bcrypt`).
+* Add support for bcrypt key derivation function (``Crypto.Protocol.KDF.bcrypt``).
 * Add support for left multiplication of an EC point by a scalar.
 * Add support for importing ECC and RSA keys in the new OpenSSH format.
 
@@ -62,7 +62,7 @@ Resolved issues
 
 * GH#312: it was not possible to invert an EC point anymore.
 * GH#316: fix printing of DSA keys.
-* GH#317: `DSA.generate()` was not always using the `randfunc` input.
+* GH#317: ``DSA.generate()`` was not always using the ``randfunc`` input.
 * GH#285: the MD2 hash had block size of 64 bytes instead of 16; as result the HMAC construction gave incorrect results.
 
 3.8.2 (30 May 2019)
