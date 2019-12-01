@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ===================================================================
 #
 # Copyright (c) 2016, Legrandin <helderijs@gmail.com>
@@ -97,6 +98,9 @@ class RsaKey(object):
             raise ValueError("Some RSA components are missing")
         for component, value in kwargs.items():
             setattr(self, "_" + component, value)
+        if input_set == private_set:
+            self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
+            self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)
 
     @property
     def n(self):
@@ -155,9 +159,9 @@ class RsaKey(object):
         r = Integer.random_range(min_inclusive=1, max_exclusive=self._n)
         # Step 2: Compute c' = c * r**e mod n
         cp = Integer(ciphertext) * pow(r, self._e, self._n) % self._n
-        # Step 3: Compute m' = c'**d mod n       (ordinary RSA decryption)
-        m1 = pow(cp, self._d % (self._p - 1), self._p)
-        m2 = pow(cp, self._d % (self._q - 1), self._q)
+        # Step 3: Compute m' = c'**d mod n       (normal RSA decryption)
+        m1 = pow(cp, self._dp, self._p)
+        m2 = pow(cp, self._dq, self._q)
         h = ((m2 - m1) * self._u) % self._q
         mp = h * self._p + m1
         # Step 4: Compute m = m**(r-1) mod n
