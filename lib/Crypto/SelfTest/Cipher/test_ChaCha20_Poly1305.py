@@ -628,14 +628,14 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._wycheproof_warnings = wycheproof_warnings
         self._id = "None"
 
-    def setUp(self):
+    def load_tests(self, filename):
         comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "chacha20_poly1305_test.json"), "rt") as file_in:
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
             tv_tree = json.load(file_in)
 
         class TestVector(object):
             pass
-        self.tv = []
+        result = []
 
         for group in tv_tree['testGroups']:
             tag_size = group['tagSize'] // 8
@@ -649,7 +649,15 @@ class TestVectorsWycheproof(unittest.TestCase):
                     setattr(tv, attr, unhexlify(test[attr]))
                 tv.valid = test['result'] != "invalid"
                 tv.warning = test['result'] == "acceptable"
-                self.tv.append(tv)
+                tv.algo = tv_tree['algorithm']
+
+                result.append(tv)
+        return result
+
+    def setUp(self):
+        self.tv = []
+        self.tv.extend(self.load_tests("chacha20_poly1305_test.json"))
+        self.tv.extend(self.load_tests("xchacha20_poly1305_test.json"))
 
     def shortDescription(self):
         return self._id
@@ -660,7 +668,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
     def test_encrypt(self, tv):
-        self._id = "Wycheproof Encrypt ChaCha20-Poly1305 Test #" + str(tv.id)
+        self._id = "Wycheproof Encrypt %s Test #%s" % (tv.algo, tv.id)
         
         try:
             cipher = ChaCha20_Poly1305.new(key=tv.key, nonce=tv.iv)
@@ -676,7 +684,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.warn(tv)
 
     def test_decrypt(self, tv):
-        self._id = "Wycheproof Decrypt ChaCha20-Poly1305 Test #" + str(tv.id)
+        self._id = "Wycheproof Decrypt %s Test #%s" % (tv.algo, tv.id)
         
         try:
             cipher = ChaCha20_Poly1305.new(key=tv.key, nonce=tv.iv)
