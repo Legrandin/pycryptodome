@@ -509,6 +509,64 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.test_decrypt(tv)
 
 
+class TestVectorsWycheproof2(unittest.TestCase):
+
+    def __init__(self):
+        unittest.TestCase.__init__(self)
+        self._id = "None"
+
+    def setUp(self):
+        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, "aead_aes_siv_cmac_test.json"), "rt") as file_in:
+            tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        self.tv = []
+
+        for group in tv_tree['testGroups']:
+            for test in group['tests']:
+                tv = TestVector()
+
+                tv.id = test['tcId']
+                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.valid = test['result'] != "invalid"
+                self.tv.append(tv)
+
+    def shortDescription(self):
+        return self._id
+
+    def test_encrypt(self, tv):
+        self._id = "Wycheproof Encrypt AEAD-AES-SIV Test #" + str(tv.id)
+
+        cipher = AES.new(tv.key, AES.MODE_SIV, nonce=tv.iv)
+        cipher.update(tv.aad)
+        ct, tag = cipher.encrypt_and_digest(tv.msg)
+        if tv.valid:
+            self.assertEqual(ct, tv.ct)
+            self.assertEqual(tag, tv.tag)
+
+    def test_decrypt(self, tv):
+        self._id = "Wycheproof Decrypt AEAD-AES-SIV Test #" + str(tv.id)
+
+        cipher = AES.new(tv.key, AES.MODE_SIV, nonce=tv.iv)
+        cipher.update(tv.aad)
+        try:
+            pt = cipher.decrypt_and_verify(tv.ct, tv.tag)
+        except ValueError:
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.assertEqual(pt, tv.msg)
+
+    def runTest(self):
+
+        for tv in self.tv:
+            self.test_encrypt(tv)
+            self.test_decrypt(tv)
+
+
 def get_tests(config={}):
     wycheproof_warnings = config.get('wycheproof_warnings')
 
@@ -517,6 +575,7 @@ def get_tests(config={}):
     tests += list_test_cases(SivFSMTests)
     tests += [ TestVectors() ]
     tests += [ TestVectorsWycheproof() ]
+    tests += [ TestVectorsWycheproof2() ]
     return tests
 
 
