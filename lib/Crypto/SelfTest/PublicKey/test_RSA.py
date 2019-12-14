@@ -209,15 +209,15 @@ class RSATest(unittest.TestCase):
         self.assertRaises(PicklingError, pickle.dumps, rsa_key)
 
     def test_raw_rsa_boundary(self):
-        # The argument of every RSA raw operation (encrypt/decrypt) must be positive
-        # and no larger than the modulus
+        # The argument of every RSA raw operation (encrypt/decrypt) must be
+        # non-negative and no larger than the modulus
         rsa_obj = self.rsa.generate(1024)
 
         self.assertRaises(ValueError, rsa_obj._decrypt, rsa_obj.n)
         self.assertRaises(ValueError, rsa_obj._encrypt, rsa_obj.n)
 
-        self.assertRaises(ValueError, rsa_obj._decrypt, 0)
-        self.assertRaises(ValueError, rsa_obj._encrypt, 0)
+        self.assertRaises(ValueError, rsa_obj._decrypt, -1)
+        self.assertRaises(ValueError, rsa_obj._encrypt, -1)
 
     def test_size(self):
         pub = self.rsa.construct((self.n, self.e))

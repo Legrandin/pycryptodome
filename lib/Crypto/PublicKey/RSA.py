@@ -139,12 +139,12 @@ class RsaKey(object):
         return (self._n.size_in_bits() - 1) // 8 + 1
 
     def _encrypt(self, plaintext):
-        if not 0 < plaintext < self._n:
+        if not 0 <= plaintext < self._n:
             raise ValueError("Plaintext too large")
         return int(pow(Integer(plaintext), self._e, self._n))
 
     def _decrypt(self, ciphertext):
-        if not 0 < ciphertext < self._n:
+        if not 0 <= ciphertext < self._n:
             raise ValueError("Ciphertext too large")
         if not self.has_private():
             raise TypeError("This is not a private key")
