@@ -238,11 +238,11 @@ class TestVectorsWycheproof(unittest.TestCase):
 
         cipher = PKCS.new(tv.rsa_key)
         try:
-            pt = cipher.decrypt(tv.ct, sentinel='---')
+            pt = cipher.decrypt(tv.ct, sentinel=b'---')
         except ValueError:
             assert not tv.valid
         else:
-            if pt == '---':
+            if pt == b'---':
                 assert not tv.valid
             else:
                 assert tv.valid
