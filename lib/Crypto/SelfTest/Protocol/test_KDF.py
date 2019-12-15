@@ -20,6 +20,7 @@
 # SOFTWARE.
 # ===================================================================
 
+import json
 import unittest
 from binascii import unhexlify
 
@@ -33,6 +34,7 @@ from Crypto.Protocol.KDF import (PBKDF1, PBKDF2, _S2V, HKDF, scrypt,
                                  bcrypt, bcrypt_check)
 
 from Crypto.Protocol.KDF import _bcrypt_decode
+from Crypto.Util._file_system import pycryptodome_filename
 
 
 def t2b(t):
@@ -640,7 +642,87 @@ class bcrypt_Tests(unittest.TestCase):
             bcrypt_check(password, result)
 
 
+class TestVectorsHKDFWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    def add_tests(self, filename):
+        comps = "Crypto.SelfTest.Protocol.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
+            tv_tree = json.load(file_in)
+
+        algo_name = tv_tree['algorithm']
+        if algo_name == "HKDF-SHA-1":
+            hash_module = SHA1
+        elif algo_name == "HKDF-SHA-256":
+            hash_module = SHA256
+        elif algo_name == "HKDF-SHA-384":
+            hash_module = SHA384
+        elif algo_name == "HKDF-SHA-512":
+            hash_module = SHA512
+        else:
+            raise ValueError("Unknown algorithm " + algo_name)
+
+        for group in tv_tree['testGroups']:
+
+            from collections import namedtuple
+            TestVector = namedtuple('TestVector', 'id comment ikm salt info size okm hash_module valid warning filename')
+
+            for test in group['tests']:
+                tv = TestVector(
+                    test['tcId'],
+                    test['comment'],
+                    unhexlify(test['ikm']),
+                    unhexlify(test['salt']),
+                    unhexlify(test['info']),
+                    int(test['size']),
+                    unhexlify(test['okm']),
+                    hash_module,
+                    test['result'] != "invalid",
+                    test['result'] == "acceptable",
+                    filename
+                )
+                self.tv.append(tv)
+
+    def setUp(self):
+        self.tv = []
+        self.add_tests("hkdf_sha1_test.json")
+        self.add_tests("hkdf_sha256_test.json")
+        self.add_tests("hkdf_sha384_test.json")
+        self.add_tests("hkdf_sha512_test.json")
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_verify(self, tv):
+        self._id = "Wycheproof HKDF Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
+
+        try:
+            key = HKDF(tv.ikm, tv.size, tv.salt, tv.hash_module, 1, tv.info)
+        except ValueError:
+            assert not tv.valid
+        else:
+            if key != tv.okm:
+                assert not tv.valid
+            else:
+                assert tv.valid
+                self.warn(tv)
+
+    def runTest(self):
+        for tv in self.tv:
+            self.test_verify(tv)
+
+
 def get_tests(config={}):
+    wycheproof_warnings = config.get('wycheproof_warnings')
 
     if not config.get('slow_tests'):
         PBKDF2_Tests._testData = PBKDF2_Tests._testData[:3]
@@ -651,10 +733,12 @@ def get_tests(config={}):
     tests += list_test_cases(PBKDF2_Tests)
     tests += list_test_cases(S2V_Tests)
     tests += list_test_cases(HKDF_Tests)
+    tests += [ TestVectorsHKDFWycheproof(wycheproof_warnings) ]
     tests += list_test_cases(scrypt_Tests)
     tests += list_test_cases(bcrypt_Tests)
 
     return tests
+
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
