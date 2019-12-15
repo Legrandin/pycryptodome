@@ -286,7 +286,7 @@ class TestVectorsPSSWycheproof(unittest.TestCase):
             hash_module = get_hash_module(group['sha'])
             sLen = group['sLen']
 
-            assert group['type'] == "RSASigVer"
+            assert group['type'] == "RsassaPssVerify"
             assert group['mgf'] == "MGF1"
 
             mgf1_hash =  get_hash_module(group['mgfSha'])

@@ -944,7 +944,7 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
                 hash_module = SHA1
             else:
                 assert False
-            assert group['type'] == "DSAVer"
+            assert group['type'] == "DsaVerify"
             
             from collections import namedtuple
             TestVector = namedtuple('TestVector', 'id comment msg sig key hash_module valid warning')
@@ -1022,7 +1022,7 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
                 hash_module = SHA1
             else:
                 assert False
-            assert group['type'] == "ECDSAVer"
+            assert group['type'] == "EcdsaVerify"
            
             from collections import namedtuple
             TestVector = namedtuple('TestVector', 'id comment msg sig key hash_module valid warning')

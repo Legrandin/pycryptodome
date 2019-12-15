@@ -263,7 +263,7 @@ class TestVectorsWycheproof(unittest.TestCase):
                 hash_module = SHA1
             else:
                 raise ValueError("Unknown hash algorithm: " + hash_name)
-            assert group['type'] == "RSASigVer"
+            assert group['type'] == "RsassaPkcs1Verify"
             
             for test in group['tests']:
                 tv = TestVector()
