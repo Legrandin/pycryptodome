@@ -1058,6 +1058,15 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
 
     def setUp(self):
         self.tv = []
+        self.add_tests("ecdsa_secp224r1_sha224_p1363_test.json")
+        self.add_tests("ecdsa_secp224r1_sha224_test.json")
+        self.add_tests("ecdsa_secp224r1_sha256_p1363_test.json")
+        self.add_tests("ecdsa_secp224r1_sha256_test.json")
+        self.add_tests("ecdsa_secp224r1_sha3_224_test.json")
+        self.add_tests("ecdsa_secp224r1_sha3_256_test.json")
+        self.add_tests("ecdsa_secp224r1_sha3_512_test.json")
+        self.add_tests("ecdsa_secp224r1_sha512_p1363_test.json")
+        self.add_tests("ecdsa_secp224r1_sha512_test.json")
         self.add_tests("ecdsa_secp256r1_sha256_p1363_test.json")
         self.add_tests("ecdsa_secp256r1_sha256_test.json")
         self.add_tests("ecdsa_secp256r1_sha3_256_test.json")
