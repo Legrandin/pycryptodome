@@ -296,6 +296,9 @@ package_data = {
         "test_vectors/ECC/*.*",
         "test_vectors/RSA/*.*",
     ],
+    "Crypto.SelfTest.Protocol" : [
+        "test_vectors/wycheproof/*.*",
+    ],
 }
 
 ext_modules = [

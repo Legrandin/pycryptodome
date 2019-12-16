@@ -1,6 +1,17 @@
 Changelog
 =========
 
+3.9.5 (XXX)
+++++++++++++++++++++++++
+
+New features
+------------
+* Updated Wycheproof test vectors to version 0.8r12.
+
+  Resolved issues
+---------------
+* RSA OAEP decryption was not verifying that all ``PS`` bytes are zero.
+
 3.9.4 (18 November 2019)
 ++++++++++++++++++++++++
 

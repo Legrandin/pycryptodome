@@ -20,15 +20,20 @@
 # SOFTWARE.
 # ===================================================================
 
+import json
 import unittest
+from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
 
-from Crypto.Util.py3compat import b, bchr
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP as PKCS
-from Crypto.Hash import MD2,MD5,SHA1,SHA256,RIPEMD160
+from Crypto.Hash import MD2, MD5, SHA1, SHA256, RIPEMD160, SHA224, SHA384, SHA512
 from Crypto import Random
+from Crypto.Signature.pss import MGF1
+
+from Crypto.Util.py3compat import b, bchr
+from Crypto.Util._file_system import pycryptodome_filename
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
@@ -374,9 +379,128 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             del testMemoryview
 
 
+class TestVectorsWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings, skip_slow_tests):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._skip_slow_tests = skip_slow_tests
+        self._id = "None"
+
+    def load_tests(self, filename):
+        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
+            tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        result = []
+
+        for group in tv_tree['testGroups']:
+
+            rsa_key = RSA.import_key(group['privateKeyPem'])
+            if group['sha'] == "SHA-1":
+                hash_mod = SHA1
+            elif group['sha'] == "SHA-224":
+                hash_mod = SHA224
+            elif group['sha'] == "SHA-256":
+                hash_mod = SHA256
+            elif group['sha'] == "SHA-384":
+                hash_mod = SHA384
+            elif group['sha'] == "SHA-512":
+                hash_mod = SHA512
+            else:
+                raise ValueError("Unknown sha " + group['sha'])
+
+            if group['mgfSha'] == "SHA-1":
+                mgf = lambda x,y: MGF1(x, y, SHA1)
+            elif group['mgfSha'] == "SHA-224":
+                mgf = lambda x,y: MGF1(x, y, SHA224)
+            elif group['mgfSha'] == "SHA-256":
+                mgf = lambda x,y: MGF1(x, y, SHA256)
+            elif group['mgfSha'] == "SHA-384":
+                mgf = lambda x,y: MGF1(x, y, SHA384)
+            elif group['mgfSha'] == "SHA-512":
+                mgf = lambda x,y: MGF1(x, y, SHA512)
+            else:
+                raise ValueError("Unknown mgf/sha " + group['mgfSha'])
+        
+            for test in group['tests']:
+                tv = TestVector()
+
+                tv.rsa_key = rsa_key
+                tv.hash_mod = hash_mod
+                tv.mgf = mgf
+                tv.algo = "%s with MGF1/%s" % (group['sha'], group['mgfSha'])
+
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'msg', 'ct', 'label':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+
+                result.append(tv)
+        return result
+
+    def setUp(self):
+        self.tv = []
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha1_mgf1sha1_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha224_mgf1sha1_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha224_mgf1sha224_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha256_mgf1sha1_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha256_mgf1sha256_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha384_mgf1sha1_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha384_mgf1sha384_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha512_mgf1sha1_test.json"))
+        self.tv.extend(self.load_tests("rsa_oaep_2048_sha512_mgf1sha512_test.json"))
+        if not self._skip_slow_tests:
+            self.tv.extend(self.load_tests("rsa_oaep_3072_sha256_mgf1sha1_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_3072_sha256_mgf1sha256_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_3072_sha512_mgf1sha1_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_3072_sha512_mgf1sha512_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_4096_sha256_mgf1sha1_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_4096_sha256_mgf1sha256_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_4096_sha512_mgf1sha1_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_4096_sha512_mgf1sha512_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_4096_sha512_mgf1sha512_test.json"))
+            self.tv.extend(self.load_tests("rsa_oaep_misc_test.json"))
+
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_decrypt(self, tv):
+        self._id = "Wycheproof Decrypt %s Test #%s" % (tv.algo, tv.id)
+
+        cipher = PKCS.new(tv.rsa_key, hashAlgo=tv.hash_mod, mgfunc=tv.mgf, label=tv.label)
+        try:
+            pt = cipher.decrypt(tv.ct)
+        except ValueError:
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.assertEqual(pt, tv.msg)
+            self.warn(tv)
+
+    def runTest(self):
+
+        for tv in self.tv:
+            self.test_decrypt(tv)
+
+
 def get_tests(config={}):
+    skip_slow_tests = not config.get('slow_tests')
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(PKCS1_OAEP_Tests)
+    tests += [TestVectorsWycheproof(wycheproof_warnings, skip_slow_tests)]
     return tests
 
 if __name__ == '__main__':

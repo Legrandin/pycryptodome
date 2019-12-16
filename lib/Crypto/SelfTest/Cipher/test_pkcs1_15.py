@@ -22,7 +22,9 @@
 
 from __future__ import print_function
 
+import json
 import unittest
+from binascii import unhexlify
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
@@ -30,6 +32,7 @@ from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
 from Crypto.Util.py3compat import b
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Util._file_system import pycryptodome_filename
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
@@ -179,9 +182,86 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
             del testMemoryview
 
 
+class TestVectorsWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings, skip_slow_tests):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._skip_slow_tests = skip_slow_tests
+        self._id = "None"
+
+    def load_tests(self, filename):
+        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
+            tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        result = []
+
+        for group in tv_tree['testGroups']:
+
+            rsa_key = RSA.import_key(group['privateKeyPem'])
+        
+            for test in group['tests']:
+                tv = TestVector()
+
+                tv.rsa_key = rsa_key
+
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'msg', 'ct':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+
+                result.append(tv)
+        return result
+
+    def setUp(self):
+        self.tv = []
+        self.tv.extend(self.load_tests("rsa_pkcs1_2048_test.json"))
+        if not self._skip_slow_tests:
+            self.tv.extend(self.load_tests("rsa_pkcs1_3072_test.json"))
+            self.tv.extend(self.load_tests("rsa_pkcs1_4096_test.json"))
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_decrypt(self, tv):
+        self._id = "Wycheproof Decrypt PKCS#1v1.5 Test #%s" % tv.id
+
+        cipher = PKCS.new(tv.rsa_key)
+        try:
+            pt = cipher.decrypt(tv.ct, sentinel=b'---')
+        except ValueError:
+            assert not tv.valid
+        else:
+            if pt == b'---':
+                assert not tv.valid
+            else:
+                assert tv.valid
+                self.assertEqual(pt, tv.msg)
+                self.warn(tv)
+
+    def runTest(self):
+
+        for tv in self.tv:
+            self.test_decrypt(tv)
+
+
 def get_tests(config={}):
+    skip_slow_tests = not config.get('slow_tests')
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(PKCS1_15_Tests)
+    tests += [TestVectorsWycheproof(wycheproof_warnings, skip_slow_tests)]
     return tests
 
 if __name__ == '__main__':

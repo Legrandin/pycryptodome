@@ -38,7 +38,8 @@ from binascii import hexlify, unhexlify
 
 from Crypto.Util.py3compat import tobytes, bord, bchr
 
-from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512, SHA3_256,
+                         SHA3_384, SHA3_512)
 from Crypto.Signature import DSS
 from Crypto.PublicKey import DSA, ECC
 from Crypto.SelfTest.st_common import list_test_cases
@@ -921,9 +922,10 @@ class Det_ECDSA_Tests(unittest.TestCase):
 
 class TestVectorsDSAWycheproof(unittest.TestCase):
 
-    def __init__(self, wycheproof_warnings):
+    def __init__(self, wycheproof_warnings, slow_tests):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
+        self._slow_tests = slow_tests
         self._id = "None"
 
     def setUp(self):
@@ -944,7 +946,7 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
                 hash_module = SHA1
             else:
                 assert False
-            assert group['type'] == "DSAVer"
+            assert group['type'] == "DsaVerify"
             
             from collections import namedtuple
             TestVector = namedtuple('TestVector', 'id comment msg sig key hash_module valid warning')
@@ -992,9 +994,10 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
 
 class TestVectorsECDSAWycheproof(unittest.TestCase):
 
-    def __init__(self, wycheproof_warnings):
+    def __init__(self, wycheproof_warnings, slow_tests):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
+        self._slow_tests = slow_tests
         self._id = "None"
 
     def add_tests(self, filename):
@@ -1012,42 +1015,80 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
             hash_name = group['sha']
             if hash_name == "SHA-512":
                 hash_module = SHA512
+            elif hash_name == "SHA3-512":
+                hash_module = SHA3_512
             elif hash_name == "SHA-384":
                 hash_module = SHA384
+            elif hash_name == "SHA3-384":
+                hash_module = SHA3_384
             elif hash_name == "SHA-256":
                 hash_module = SHA256
+            elif hash_name == "SHA3-256":
+                hash_module = SHA3_256
             elif hash_name == "SHA-224":
                 hash_module = SHA224
             elif hash_name == "SHA-1":
                 hash_module = SHA1
             else:
-                assert False
-            assert group['type'] == "ECDSAVer"
-           
+                raise ValueError("Unknown hash type " + hash_name)
+
+            encoding_name = group['type']
+            if encoding_name == "EcdsaVerify":
+                encoding = "der"
+            elif encoding_name == "EcdsaP1363Verify":
+                encoding = "binary"
+            else:
+                raise ValueError("Unknown signature type " + encoding_name)
+
             from collections import namedtuple
-            TestVector = namedtuple('TestVector', 'id comment msg sig key hash_module valid warning')
+            TestVector = namedtuple('TestVector', 'id comment msg encoding sig key hash_module valid warning filename')
 
             for test in group['tests']:
                 tv = TestVector(
                     test['tcId'],
                     test['comment'],
                     unhexlify(test['msg']),
+                    encoding,
                     unhexlify(test['sig']),
                     key,
                     hash_module,
                     test['result'] != "invalid",
-                    test['result'] == "acceptable"
+                    test['result'] == "acceptable",
+                    filename
                 )
                 self.tv.append(tv)
 
     def setUp(self):
         self.tv = []
-        self.add_tests("ecdsa_test.json")
-        self.add_tests("ecdsa_secp256r1_sha256_test.json")
+        self.add_tests("ecdsa_secp224r1_sha224_p1363_test.json")
+        self.add_tests("ecdsa_secp224r1_sha224_test.json")
+        if self._slow_tests:
+            self.add_tests("ecdsa_secp224r1_sha256_p1363_test.json")
+            self.add_tests("ecdsa_secp224r1_sha256_test.json")
+            self.add_tests("ecdsa_secp224r1_sha3_224_test.json")
+            self.add_tests("ecdsa_secp224r1_sha3_256_test.json")
+            self.add_tests("ecdsa_secp224r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp224r1_sha512_p1363_test.json")
+            self.add_tests("ecdsa_secp224r1_sha512_test.json")
+            self.add_tests("ecdsa_secp256r1_sha256_p1363_test.json")
+            self.add_tests("ecdsa_secp256r1_sha256_test.json")
+            self.add_tests("ecdsa_secp256r1_sha3_256_test.json")
+            self.add_tests("ecdsa_secp256r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp256r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp256r1_sha512_test.json")
-        self.add_tests("ecdsa_secp384r1_sha384_test.json")
+        if self._slow_tests:
+            self.add_tests("ecdsa_secp384r1_sha3_384_test.json")
+            self.add_tests("ecdsa_secp384r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp384r1_sha384_p1363_test.json")
+            self.add_tests("ecdsa_secp384r1_sha384_test.json")
+            self.add_tests("ecdsa_secp384r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp384r1_sha512_test.json")
+        if self._slow_tests:
+            self.add_tests("ecdsa_secp521r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp521r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp521r1_sha512_test.json")
+        self.add_tests("ecdsa_test.json")
+        self.add_tests("ecdsa_webcrypto_test.json")
 
     def shortDescription(self):
         return self._id
@@ -1058,10 +1099,10 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
     def test_verify(self, tv):
-        self._id = "Wycheproof ECDSA Test #%d (%s)" % (tv.id, tv.comment)
+        self._id = "Wycheproof ECDSA Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
 
         hashed_msg = tv.hash_module.new(tv.msg)
-        signer = DSS.new(tv.key, 'fips-186-3', encoding='der')
+        signer = DSS.new(tv.key, 'fips-186-3', encoding=tv.encoding)
         try:
             signature = signer.verify(hashed_msg, tv.sig)
         except ValueError as e:
@@ -1088,12 +1129,13 @@ def get_tests(config={}):
     tests += list_test_cases(Det_DSA_Tests)
     tests += list_test_cases(Det_ECDSA_Tests)
 
-    if config.get('slow_tests'):
+    slow_tests = not config.get('slow_tests')
+    if slow_tests:
         tests += list_test_cases(FIPS_DSA_Tests_KAT)
         tests += list_test_cases(FIPS_ECDSA_Tests_KAT)
 
-    tests += [ TestVectorsDSAWycheproof(wycheproof_warnings) ]
-    tests += [ TestVectorsECDSAWycheproof(wycheproof_warnings) ]
+    tests += [ TestVectorsDSAWycheproof(wycheproof_warnings, slow_tests) ]
+    tests += [ TestVectorsECDSAWycheproof(wycheproof_warnings, slow_tests) ]
 
     return tests
 

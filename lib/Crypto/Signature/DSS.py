@@ -351,7 +351,7 @@ def new(key, mode, encoding='binary', randfunc=None):
         The following values are accepted:
 
         - *'binary'* (default), the signature is the raw concatenation
-          of ``r`` and ``s``.
+          of ``r`` and ``s``. It is defined in the IEEE P.1363 standard.
 
           For DSA, the size in bytes of the signature is ``N/4``
           (e.g. 64 bytes for ``N=256``).

@@ -255,6 +255,10 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
 def get_hash_module(hash_name):
     if hash_name == "SHA-512":
         hash_module = SHA512
+    elif hash_name == "SHA-512/224":
+        hash_module = SHA512.new(truncate="224")
+    elif hash_name == "SHA-512/256":
+        hash_module = SHA512.new(truncate="256")
     elif hash_name == "SHA-384":
         hash_module = SHA384
     elif hash_name == "SHA-256":
@@ -286,7 +290,7 @@ class TestVectorsPSSWycheproof(unittest.TestCase):
             hash_module = get_hash_module(group['sha'])
             sLen = group['sLen']
 
-            assert group['type'] == "RSASigVer"
+            assert group['type'] == "RsassaPssVerify"
             assert group['mgf'] == "MGF1"
 
             mgf1_hash =  get_hash_module(group['mgfSha'])
@@ -317,6 +321,8 @@ class TestVectorsPSSWycheproof(unittest.TestCase):
         self.add_tests("rsa_pss_2048_sha1_mgf1_20_test.json")
         self.add_tests("rsa_pss_2048_sha256_mgf1_0_test.json")
         self.add_tests("rsa_pss_2048_sha256_mgf1_32_test.json")
+        self.add_tests("rsa_pss_2048_sha512_256_mgf1_28_test.json")
+        self.add_tests("rsa_pss_2048_sha512_256_mgf1_32_test.json")
         self.add_tests("rsa_pss_3072_sha256_mgf1_32_test.json")
         self.add_tests("rsa_pss_4096_sha256_mgf1_32_test.json")
         self.add_tests("rsa_pss_4096_sha512_mgf1_32_test.json")

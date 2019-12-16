@@ -28,6 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import json
 import unittest
 from binascii import unhexlify
 
@@ -36,6 +37,8 @@ from Crypto.Util.py3compat import tobytes, bchr, _memoryview
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
+from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.Util.strxor import strxor
 
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
@@ -824,11 +827,119 @@ class TestVectors(unittest.TestCase):
             self.assertEqual(pt, pt2)
 
 
+class TestVectorsWycheproof(unittest.TestCase):
+
+    def __init__(self, wycheproof_warnings, **extra_params):
+        unittest.TestCase.__init__(self)
+        self._wycheproof_warnings = wycheproof_warnings
+        self._extra_params = extra_params
+        self._id = "None"
+
+    def setUp(self):
+        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
+        with open(pycryptodome_filename(comps, "aes_ccm_test.json"), "rt") as file_in:
+            tv_tree = json.load(file_in)
+
+        class TestVector(object):
+            pass
+        self.tv = []
+
+        for group in tv_tree['testGroups']:
+            tag_size = group['tagSize'] // 8
+            for test in group['tests']:
+                tv = TestVector()
+                tv.tag_size = tag_size
+
+                tv.id = test['tcId']
+                tv.comment = test['comment']
+                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
+                    setattr(tv, attr, unhexlify(test[attr]))
+                tv.valid = test['result'] != "invalid"
+                tv.warning = test['result'] == "acceptable"
+                self.tv.append(tv)
+
+    def shortDescription(self):
+        return self._id
+
+    def warn(self, tv):
+        if tv.warning and self._wycheproof_warnings:
+            import warnings
+            warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
+
+    def test_encrypt(self, tv):
+        self._id = "Wycheproof Encrypt CCM Test #" + str(tv.id)
+
+        try:
+            cipher = AES.new(tv.key, AES.MODE_CCM, tv.iv, mac_len=tv.tag_size,
+                    **self._extra_params)
+        except ValueError as e:
+            if len(tv.iv) not in range(7, 13 + 1, 2) and "Length of parameter 'nonce'" in str(e):
+                assert not tv.valid
+                return
+            if tv.tag_size not in range(4, 16 + 1, 2) and "Parameter 'mac_len'" in str(e):
+                assert not tv.valid
+                return
+            raise e
+
+        cipher.update(tv.aad)
+        ct, tag = cipher.encrypt_and_digest(tv.msg)
+        if tv.valid:
+            self.assertEqual(ct, tv.ct)
+            self.assertEqual(tag, tv.tag)
+            self.warn(tv)
+
+    def test_decrypt(self, tv):
+        self._id = "Wycheproof Decrypt CCM Test #" + str(tv.id)
+
+        try:
+            cipher = AES.new(tv.key, AES.MODE_CCM, tv.iv, mac_len=tv.tag_size,
+                    **self._extra_params)
+        except ValueError as e:
+            if len(tv.iv) not in range(7, 13 + 1, 2) and "Length of parameter 'nonce'" in str(e):
+                assert not tv.valid
+                return
+            if tv.tag_size not in range(4, 16 + 1, 2) and "Parameter 'mac_len'" in str(e):
+                assert not tv.valid
+                return
+            raise e
+
+        cipher.update(tv.aad)
+        try:
+            pt = cipher.decrypt_and_verify(tv.ct, tv.tag)
+        except ValueError:
+            assert not tv.valid
+        else:
+            assert tv.valid
+            self.assertEqual(pt, tv.msg)
+            self.warn(tv)
+
+    def test_corrupt_decrypt(self, tv):
+        self._id = "Wycheproof Corrupt Decrypt CCM Test #" + str(tv.id)
+        if len(tv.iv) not in range(7, 13 + 1, 2) or len(tv.ct) == 0:
+            return
+        cipher = AES.new(tv.key, AES.MODE_CCM, tv.iv, mac_len=tv.tag_size,
+                **self._extra_params)
+        cipher.update(tv.aad)
+        ct_corrupt = strxor(tv.ct, b"\x00" * (len(tv.ct) - 1) + b"\x01")
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct_corrupt, tv.tag)
+
+    def runTest(self):
+
+        for tv in self.tv:
+            self.test_encrypt(tv)
+            self.test_decrypt(tv)
+            self.test_corrupt_decrypt(tv)
+
+
 def get_tests(config={}):
+    wycheproof_warnings = config.get('wycheproof_warnings')
+
     tests = []
     tests += list_test_cases(CcmTests)
     tests += list_test_cases(CcmFSMTests)
     tests += [TestVectors()]
+    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
+ 
     return tests
 
 
