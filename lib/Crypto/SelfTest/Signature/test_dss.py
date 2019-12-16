@@ -922,9 +922,10 @@ class Det_ECDSA_Tests(unittest.TestCase):
 
 class TestVectorsDSAWycheproof(unittest.TestCase):
 
-    def __init__(self, wycheproof_warnings):
+    def __init__(self, wycheproof_warnings, slow_tests):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
+        self._slow_tests = slow_tests
         self._id = "None"
 
     def setUp(self):
@@ -993,9 +994,10 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
 
 class TestVectorsECDSAWycheproof(unittest.TestCase):
 
-    def __init__(self, wycheproof_warnings):
+    def __init__(self, wycheproof_warnings, slow_tests):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
+        self._slow_tests = slow_tests
         self._id = "None"
 
     def add_tests(self, filename):
@@ -1060,27 +1062,30 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         self.tv = []
         self.add_tests("ecdsa_secp224r1_sha224_p1363_test.json")
         self.add_tests("ecdsa_secp224r1_sha224_test.json")
-        self.add_tests("ecdsa_secp224r1_sha256_p1363_test.json")
-        self.add_tests("ecdsa_secp224r1_sha256_test.json")
-        self.add_tests("ecdsa_secp224r1_sha3_224_test.json")
-        self.add_tests("ecdsa_secp224r1_sha3_256_test.json")
-        self.add_tests("ecdsa_secp224r1_sha3_512_test.json")
-        self.add_tests("ecdsa_secp224r1_sha512_p1363_test.json")
-        self.add_tests("ecdsa_secp224r1_sha512_test.json")
-        self.add_tests("ecdsa_secp256r1_sha256_p1363_test.json")
-        self.add_tests("ecdsa_secp256r1_sha256_test.json")
-        self.add_tests("ecdsa_secp256r1_sha3_256_test.json")
-        self.add_tests("ecdsa_secp256r1_sha3_512_test.json")
-        self.add_tests("ecdsa_secp256r1_sha512_p1363_test.json")
+        if self._slow_tests:
+            self.add_tests("ecdsa_secp224r1_sha256_p1363_test.json")
+            self.add_tests("ecdsa_secp224r1_sha256_test.json")
+            self.add_tests("ecdsa_secp224r1_sha3_224_test.json")
+            self.add_tests("ecdsa_secp224r1_sha3_256_test.json")
+            self.add_tests("ecdsa_secp224r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp224r1_sha512_p1363_test.json")
+            self.add_tests("ecdsa_secp224r1_sha512_test.json")
+            self.add_tests("ecdsa_secp256r1_sha256_p1363_test.json")
+            self.add_tests("ecdsa_secp256r1_sha256_test.json")
+            self.add_tests("ecdsa_secp256r1_sha3_256_test.json")
+            self.add_tests("ecdsa_secp256r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp256r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp256r1_sha512_test.json")
-        self.add_tests("ecdsa_secp384r1_sha3_384_test.json")
-        self.add_tests("ecdsa_secp384r1_sha3_512_test.json")
-        self.add_tests("ecdsa_secp384r1_sha384_p1363_test.json")
-        self.add_tests("ecdsa_secp384r1_sha384_test.json")
-        self.add_tests("ecdsa_secp384r1_sha512_p1363_test.json")
+        if self._slow_tests:
+            self.add_tests("ecdsa_secp384r1_sha3_384_test.json")
+            self.add_tests("ecdsa_secp384r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp384r1_sha384_p1363_test.json")
+            self.add_tests("ecdsa_secp384r1_sha384_test.json")
+            self.add_tests("ecdsa_secp384r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp384r1_sha512_test.json")
-        self.add_tests("ecdsa_secp521r1_sha3_512_test.json")
-        self.add_tests("ecdsa_secp521r1_sha512_p1363_test.json")
+        if self._slow_tests:
+            self.add_tests("ecdsa_secp521r1_sha3_512_test.json")
+            self.add_tests("ecdsa_secp521r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp521r1_sha512_test.json")
         self.add_tests("ecdsa_test.json")
         self.add_tests("ecdsa_webcrypto_test.json")
@@ -1124,12 +1129,13 @@ def get_tests(config={}):
     tests += list_test_cases(Det_DSA_Tests)
     tests += list_test_cases(Det_ECDSA_Tests)
 
-    if config.get('slow_tests'):
+    slow_tests = not config.get('slow_tests')
+    if slow_tests:
         tests += list_test_cases(FIPS_DSA_Tests_KAT)
         tests += list_test_cases(FIPS_ECDSA_Tests_KAT)
 
-    tests += [ TestVectorsDSAWycheproof(wycheproof_warnings) ]
-    tests += [ TestVectorsECDSAWycheproof(wycheproof_warnings) ]
+    tests += [ TestVectorsDSAWycheproof(wycheproof_warnings, slow_tests) ]
+    tests += [ TestVectorsECDSAWycheproof(wycheproof_warnings, slow_tests) ]
 
     return tests
 
