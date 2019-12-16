@@ -38,7 +38,8 @@ from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 
-from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512, SHA3_384,
+                         SHA3_224, SHA3_256, SHA3_512)
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Signature import PKCS1_v1_5
@@ -229,15 +230,28 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def setUp(self):
         self.tv = []
-        self.add_tests("rsa_signature_test.json")
+        self.add_tests("rsa_sig_gen_misc_test.json")
         self.add_tests("rsa_signature_2048_sha224_test.json")
         self.add_tests("rsa_signature_2048_sha256_test.json")
+        self.add_tests("rsa_signature_2048_sha384_test.json")
+        self.add_tests("rsa_signature_2048_sha3_224_test.json")
+        self.add_tests("rsa_signature_2048_sha3_256_test.json")
+        self.add_tests("rsa_signature_2048_sha3_384_test.json")
+        self.add_tests("rsa_signature_2048_sha3_512_test.json")
         self.add_tests("rsa_signature_2048_sha512_test.json")
+        self.add_tests("rsa_signature_2048_sha512_224_test.json")
+        self.add_tests("rsa_signature_2048_sha512_256_test.json")
         self.add_tests("rsa_signature_3072_sha256_test.json")
         self.add_tests("rsa_signature_3072_sha384_test.json")
+        self.add_tests("rsa_signature_3072_sha3_256_test.json")
+        self.add_tests("rsa_signature_3072_sha3_384_test.json")
+        self.add_tests("rsa_signature_3072_sha3_512_test.json")
         self.add_tests("rsa_signature_3072_sha512_test.json")
+        self.add_tests("rsa_signature_3072_sha512_256_test.json")
         self.add_tests("rsa_signature_4096_sha384_test.json")
         self.add_tests("rsa_signature_4096_sha512_test.json")
+        self.add_tests("rsa_signature_4096_sha512_256_test.json")
+        self.add_tests("rsa_signature_test.json")
 
     def add_tests(self, filename):
         comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
@@ -250,20 +264,36 @@ class TestVectorsWycheproof(unittest.TestCase):
 
         for group in tv_tree['testGroups']:
             key = RSA.import_key(group['keyPem'])
+
             hash_name = group['sha']
             if hash_name == "SHA-512":
                 hash_module = SHA512
+            elif hash_name == "SHA-512/224":
+                hash_module = SHA512.new(truncate="224")
+            elif hash_name == "SHA-512/256":
+                hash_module = SHA512.new(truncate="256")
+            elif hash_name == "SHA3-512":
+                hash_module = SHA3_512
             elif hash_name == "SHA-384":
                 hash_module = SHA384
+            elif hash_name == "SHA3-384":
+                hash_module = SHA3_384
             elif hash_name == "SHA-256":
                 hash_module = SHA256
+            elif hash_name == "SHA3-256":
+                hash_module = SHA3_256
             elif hash_name == "SHA-224":
                 hash_module = SHA224
+            elif hash_name == "SHA3-224":
+                hash_module = SHA3_224
             elif hash_name == "SHA-1":
                 hash_module = SHA1
             else:
                 raise ValueError("Unknown hash algorithm: " + hash_name)
-            assert group['type'] == "RsassaPkcs1Verify"
+            
+            type_name = group['type']
+            if type_name not in ("RsassaPkcs1Verify", "RsassaPkcs1Generate"):
+                raise ValueError("Unknown type name " + type_name)
             
             for test in group['tests']:
                 tv = TestVector()
