@@ -20,7 +20,7 @@ The counter will wrap around only after 2¹²⁸ blocks.
 You can replicate the same keystream in PyCryptodome with::
 
    ivSpec = b'\x00' * 16
-   ctr = AES.new(keySpec, AES.MODE_CTR, initial_value=ivSpec)
+   ctr = AES.new(keySpec, AES.MODE_CTR, initial_value=ivSpec, nonce=b'')
 
 Are RSASSA-PSS signatures compatible with Java or OpenSSL?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
