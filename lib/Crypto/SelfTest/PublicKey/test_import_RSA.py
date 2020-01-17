@@ -289,7 +289,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 
     ###
     def testExportKey1(self):
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         derKey = key.export_key("DER")
         self.assertEqual(derKey, self.rsaKeyDER)
 
@@ -299,7 +299,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(derKey, self.rsaPublicKeyDER)
 
     def testExportKey3(self):
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         pemKey = key.export_key("PEM")
         self.assertEqual(pemKey, b(self.rsaKeyPEM))
 
@@ -316,23 +316,23 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(openssh_1[1], openssh_2[1])
 
     def testExportKey7(self):
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         derKey = key.export_key("DER", pkcs=8)
         self.assertEqual(derKey, self.rsaKeyDER8)
 
     def testExportKey8(self):
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         pemKey = key.export_key("PEM", pkcs=8)
         self.assertEqual(pemKey, b(self.rsaKeyPEM8))
 
     def testExportKey9(self):
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         self.assertRaises(ValueError, key.export_key, "invalid-format")
 
     def testExportKey10(self):
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#1, old PEM encryption
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         outkey = key.export_key('PEM', 'test')
         self.failUnless(tostr(outkey).find('4,ENCRYPTED')!=-1)
         self.failUnless(tostr(outkey).find('BEGIN RSA PRIVATE KEY')!=-1)
@@ -344,7 +344,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testExportKey11(self):
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#1, old PEM encryption
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         outkey = key.export_key('PEM', 'test', pkcs=1)
         self.failUnless(tostr(outkey).find('4,ENCRYPTED')!=-1)
         self.failUnless(tostr(outkey).find('BEGIN RSA PRIVATE KEY')!=-1)
@@ -356,7 +356,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testExportKey12(self):
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#8, old PEM encryption
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         outkey = key.export_key('PEM', 'test', pkcs=8)
         self.failUnless(tostr(outkey).find('4,ENCRYPTED')!=-1)
         self.failUnless(tostr(outkey).find('BEGIN PRIVATE KEY')!=-1)
@@ -368,7 +368,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testExportKey13(self):
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#8, PKCS#8 encryption
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         outkey = key.export_key('PEM', 'test', pkcs=8,
                 protection='PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC')
         self.failUnless(tostr(outkey).find('4,ENCRYPTED')==-1)
@@ -381,7 +381,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testExportKey14(self):
         # Export and re-import the encrypted key. It must match.
         # DER envelope, PKCS#8, PKCS#8 encryption
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         outkey = key.export_key('DER', 'test', pkcs=8)
         inkey = RSA.importKey(outkey, 'test')
         self.assertEqual(key.n, inkey.n)
@@ -391,7 +391,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testExportKey15(self):
         # Verify that that error an condition is detected when trying to
         # use a password with DER encoding and PKCS#1.
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         self.assertRaises(ValueError, key.export_key, 'DER', 'test', 1)
 
     def test_import_key(self):
@@ -402,7 +402,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         self.assertEqual(key.e, self.e)
 
     def test_exportKey(self):
-        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.qInv])
         self.assertEqual(key.export_key(), key.exportKey())
 
 
