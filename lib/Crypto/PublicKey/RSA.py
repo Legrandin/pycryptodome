@@ -629,7 +629,7 @@ def _import_pkcs1_private(encoded, *kwargs):
     der = DerSequence().decode(encoded, nr_elements=9, only_ints_expected=True)
     if der[0] != 0:
         raise ValueError("No PKCS#1 encoding of an RSA private key")
-    return construct(der[1:6] + [Integer(der[4]).inverse(der[5])])
+    return construct(der[1:6] + [Integer(der[5]).inverse(der[4])])
 
 
 def _import_pkcs1_public(encoded, *kwargs):
