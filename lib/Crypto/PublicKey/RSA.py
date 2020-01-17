@@ -702,7 +702,7 @@ def _import_openssh_private_rsa(data, password):
     _, padded = read_string(decrypted)  # Comment
     check_padding(padded)
 
-    build = [Integer.from_bytes(x) for x in (n, e, d, q, p, iqmp)]
+    build = [Integer.from_bytes(x) for x in (n, e, d, p, q, iqmp)]
     return construct(build)
 
 
