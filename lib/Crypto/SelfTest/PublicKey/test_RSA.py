@@ -97,7 +97,7 @@ class RSATest(unittest.TestCase):
         # Compute q, d, and u from n, e, and p
         self.q = self.n // self.p
         self.d = inverse(self.e, (self.p-1)*(self.q-1))
-        self.u = inverse(self.p, self.q)    # u = e**-1 (mod q)
+        self.u = inverse(self.q, self.p)    # u = q**-1 (mod p)
 
         self.rsa = RSA
 
@@ -187,7 +187,7 @@ class RSATest(unittest.TestCase):
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
         from Crypto.Util.number import inverse
-        tup = (self.n, self.e, self.d, self.p, self.q, inverse(self.q, self.p))
+        tup = (self.n, self.e, self.d, self.p, self.q, inverse(self.p, self.q))
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
     def test_factoring(self):
@@ -234,7 +234,7 @@ class RSATest(unittest.TestCase):
         self.assertEqual(rsaObj.n, rsaObj.p * rsaObj.q)     # n = pq
         lcm = int(Integer(rsaObj.p-1).lcm(rsaObj.q-1))
         self.assertEqual(1, rsaObj.d * rsaObj.e % lcm) # ed = 1 (mod LCM(p-1, q-1))
-        self.assertEqual(1, rsaObj.p * rsaObj.u % rsaObj.q) # pu = 1 (mod q)
+        self.assertEqual(1, rsaObj.q * rsaObj.u % rsaObj.p) # qu = 1 (mod p)
         self.assertEqual(1, rsaObj.p > 1)   # p > 1
         self.assertEqual(1, rsaObj.q > 1)   # q > 1
         self.assertEqual(1, rsaObj.e > 1)   # e > 1
