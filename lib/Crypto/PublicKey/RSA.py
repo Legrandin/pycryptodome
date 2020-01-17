@@ -87,7 +87,7 @@ class RsaKey(object):
           q : integer
             The second factor of the modulus. Only required for private keys.
           u : integer
-            The CRT coefficient (inverse of p modulo q). Only required for
+            The CRT coefficient (inverse of q modulo p). Only required for
             private keys.
         """
 
@@ -162,8 +162,8 @@ class RsaKey(object):
         # Step 3: Compute m' = c'**d mod n       (normal RSA decryption)
         m1 = pow(cp, self._dp, self._p)
         m2 = pow(cp, self._dq, self._q)
-        h = ((m2 - m1) * self._u) % self._q
-        mp = h * self._p + m1
+        h = ((m1 - m2) * self._u) % self._p
+        mp = h * self._q + m2
         # Step 4: Compute m = m**(r-1) mod n
         result = (r.inverse(self._n) * mp) % self._n
         # Verify no faults occured
@@ -464,7 +464,7 @@ def generate(bits, randfunc=None, e=65537):
     if p > q:
         p, q = q, p
 
-    u = p.inverse(q)
+    u = q.inverse(p)
 
     return RsaKey(n=n, e=e, d=d, p=p, q=q, u=u)
 
@@ -497,7 +497,7 @@ def construct(rsa_components, consistency_check=True):
             4. First factor of *n* (*p*).
                Optional, but the other factor *q* must also be present.
             5. Second factor of *n* (*q*). Optional.
-            6. CRT coefficient *q*, that is :math:`p^{-1} \text{mod }q`. Optional.
+            6. CRT coefficient *u*, that is :math:`q^{-1} \text{mod }p`. Optional.
 
         consistency_check (boolean):
             If ``True``, the library will verify that the provided components
@@ -566,7 +566,7 @@ def construct(rsa_components, consistency_check=True):
         if hasattr(input_comps, 'u'):
             u = input_comps.u
         else:
-            u = p.inverse(q)
+            u = q.inverse(p)
 
         # Build key object
         key = RsaKey(n=n, e=e, d=d, p=p, q=q, u=u)
@@ -604,9 +604,9 @@ def construct(rsa_components, consistency_check=True):
                 raise ValueError("Invalid RSA condition")
             if hasattr(key, 'u'):
                 # CRT coefficient
-                if u <= 1 or u >= q:
+                if u <= 1 or u >= p:
                     raise ValueError("Invalid RSA component u")
-                if (p * u % q) != 1:
+                if (q * u % p) != 1:
                     raise ValueError("Invalid RSA component u with p")
 
     return key
