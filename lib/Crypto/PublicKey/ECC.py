@@ -89,7 +89,7 @@ int ec_ws_normalize(EcPoint *ecp);
 int ec_ws_is_pai(EcPoint *ecp);
 """)
 
-_Curve = namedtuple("_Curve", "p b order Gx Gy G modulus_bits oid context desc openssh")
+_Curve = namedtuple("_Curve", "p a b order Gx Gy G modulus_bits oid context desc openssh")
 _curves = {}
 
 
@@ -99,6 +99,7 @@ p256_names = ["p256", "NIST P-256", "P-256", "prime256v1", "secp256r1",
 
 def init_p256():
     p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
+    a = p - 3
     b = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b
     order = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
     Gx = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296
@@ -121,6 +122,7 @@ def init_p256():
 
     context = SmartPointer(ec_p256_context.get(), _ec_lib.ec_free_context)
     p256 = _Curve(Integer(p),
+                  Integer(a),
                   Integer(b),
                   Integer(order),
                   Integer(Gx),
@@ -145,6 +147,7 @@ p384_names = ["p384", "NIST P-384", "P-384", "prime384v1", "secp384r1",
 
 def init_p384():
     p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff
+    a = p - 3
     b = 0xb3312fa7e23ee7e4988e056be3f82d19181d9c6efe8141120314088f5013875ac656398d8a2ed19d2a85c8edd3ec2aef
     order = 0xffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973
     Gx = 0xaa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760aB7
@@ -167,6 +170,7 @@ def init_p384():
 
     context = SmartPointer(ec_p384_context.get(), _ec_lib.ec_free_context)
     p384 = _Curve(Integer(p),
+                  Integer(a),
                   Integer(b),
                   Integer(order),
                   Integer(Gx),
@@ -191,6 +195,7 @@ p521_names = ["p521", "NIST P-521", "P-521", "prime521v1", "secp521r1",
 
 def init_p521():
     p = 0x000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    a = p - 3
     b = 0x00000051953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b503f00
     order = 0x000001fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa51868783bf2f966b7fcc0148f709a5d03bb5c9b8899c47aebb6fb71e91386409
     Gx = 0x000000c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5bd66
@@ -213,6 +218,7 @@ def init_p521():
 
     context = SmartPointer(ec_p521_context.get(), _ec_lib.ec_free_context)
     p521 = _Curve(Integer(p),
+                  Integer(a),
                   Integer(b),
                   Integer(order),
                   Integer(Gx),
@@ -560,7 +566,7 @@ class EccKey(object):
                                                public_key,
                                                DerObjectId(self._curve.oid))
 
-    def _export_private_der(self, include_ec_params=True):
+    def _export_private_der(self, **kwargs):
 
         assert self.has_private()
 
@@ -572,12 +578,35 @@ class EccKey(object):
         #    }
 
         # Public key - uncompressed form
+        args = kwargs.copy()
+        include_ec_params = args.pop("include_ec_params", True)
+        params_enc_explicit = args.pop("params_enc_explicit", False)
         modulus_bytes = self.pointQ.size_in_bytes()
         public_key = (b'\x04' +
                       self.pointQ.x.to_bytes(modulus_bytes) +
                       self.pointQ.y.to_bytes(modulus_bytes))
 
-        seq = [1,
+        if params_enc_explicit:
+            order = int(self._curve.order)
+            p = int(self._curve.p)
+            generator = (b'\x04' +
+                      self._curve.G.x.to_bytes(modulus_bytes) +
+                      self._curve.G.y.to_bytes(modulus_bytes))
+            field_parameters =  DerSequence([DerObjectId("1.2.840.10045.1.1"), p])
+            parameters = [DerSequence([1, field_parameters,
+                        DerSequence([
+                            DerOctetString(self._curve.a.to_bytes(modulus_bytes)),
+                            DerOctetString(self._curve.b.to_bytes(modulus_bytes))]),
+                        DerOctetString(generator),
+                    order,
+                1
+            ])]
+            seq = [1,
+                DerOctetString(self.d.to_bytes(modulus_bytes)),
+                DerSequence(parameters, implicit=0),
+                DerBitString(public_key, explicit=1)]
+        else:
+            seq = [1,
                DerOctetString(self.d.to_bytes(modulus_bytes)),
                DerObjectId(self._curve.oid, explicit=0),
                DerBitString(public_key, explicit=1)]
@@ -610,7 +639,7 @@ class EccKey(object):
     def _export_private_pem(self, passphrase, **kwargs):
         from Crypto.IO import PEM
 
-        encoded_der = self._export_private_der()
+        encoded_der = self._export_private_der(**kwargs)
         return PEM.encode(encoded_der, "EC PRIVATE KEY", passphrase, **kwargs)
 
     def _export_private_clear_pkcs8_in_clear_pem(self):
@@ -650,6 +679,7 @@ class EccKey(object):
         return desc + " " + tostr(binascii.b2a_base64(blob))
 
     def export_key(self, **kwargs):
+
         """Export this ECC key.
 
         Args:
@@ -688,6 +718,9 @@ class EccKey(object):
             with the X-coordinate only is used.
 
             If ``False`` (default), the full public key will be exported.
+
+          params_enc_explicit (boolean):
+            If ``True``, stores the curve parameters with the keys.
 
         .. warning::
             If you don't provide a passphrase, the private key will be
@@ -738,7 +771,7 @@ class EccKey(object):
                 if use_pkcs8:
                     return self._export_pkcs8(passphrase=passphrase, **args)
                 else:
-                    return self._export_private_der()
+                    return self._export_private_der(**args)
             else:
                 raise ValueError("Private keys cannot be exported in OpenSSH format")
         else:  # Public key

@@ -506,6 +506,13 @@ class TestExport_P256(unittest.TestCase):
 
         encoded = self.ref_private.export_key(format="DER", use_pkcs8=False)
         self.assertEqual(key_file, encoded)
+    
+    def test_export_private_explicit_params_der(self):
+        key_file = load_file("ecc_p256_private_explicit_params.der")
+        key = ECC.construct(curve='P-256', d=0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
+
+        encoded = key._export_private_der(params_enc_explicit = True)
+        self.assertEqual(key_file, encoded)
 
     def test_export_private_pkcs8_clear(self):
         key_file = load_file("ecc_p256_private_p8_clear.der")

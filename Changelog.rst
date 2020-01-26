@@ -7,6 +7,7 @@ Changelog
 New features
 ------------
 * Updated Wycheproof test vectors to version 0.8r12.
+* Export explicitly ECC curve parameters in key file. 
 
   Resolved issues
 ---------------
