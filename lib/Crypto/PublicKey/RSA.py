@@ -166,7 +166,7 @@ class RsaKey(object):
         mp = h * self._p + m1
         # Step 4: Compute m = m**(r-1) mod n
         result = (r.inverse(self._n) * mp) % self._n
-        # Verify no faults occured
+        # Verify no faults occurred
         if ciphertext != pow(result, self._e, self._n):
             raise ValueError("Fault detected in RSA decryption")
         return result
