@@ -152,9 +152,9 @@ def getPrime(N, randfunc=None):
 def _rabinMillerTest(n, rounds, randfunc=None):
     """_rabinMillerTest(n:long, rounds:int, randfunc:callable):int
     Tests if n is prime.
-    Returns 0 when n is definitly composite.
+    Returns 0 when n is definitely composite.
     Returns 1 when n is probably prime.
-    Returns 2 when n is definitly prime.
+    Returns 2 when n is definitely prime.
 
     If randfunc is omitted, then Random.new().read is used.
 
