@@ -4,6 +4,10 @@ Changelog
 3.9.5 (XXX)
 ++++++++++++++++++++++++
 
+Resolved issues
+---------------
+* GH#372: Fix memory leak for operations that use memoryviews when `cffi` is not installed.
+
 New features
 ------------
 * Updated Wycheproof test vectors to version 0.8r12.
