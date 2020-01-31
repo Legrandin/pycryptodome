@@ -1,20 +1,18 @@
 Changelog
 =========
 
-3.9.5 (XXX)
+3.9.5 (1 February 2020)
 ++++++++++++++++++++++++
 
 Resolved issues
 ---------------
-* GH#372: Fix memory leak for operations that use memoryviews when `cffi` is not installed.
+* RSA OAEP decryption was not verifying that all ``PS`` bytes are zero.
+* GH#372: fixed memory leak for operations that use memoryviews when `cffi` is not installed.
+* Fixed wrong ASN.1 OID for HMAC-SHA512 in PBE2.
 
 New features
 ------------
 * Updated Wycheproof test vectors to version 0.8r12.
-
-  Resolved issues
----------------
-* RSA OAEP decryption was not verifying that all ``PS`` bytes are zero.
 
 3.9.4 (18 November 2019)
 ++++++++++++++++++++++++
