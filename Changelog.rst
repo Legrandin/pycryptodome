@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.9.6 (2 February 2020)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Fix building of wheels for OSX by explicitly setting `sysroot` location.
+
 3.9.5 (1 February 2020)
 ++++++++++++++++++++++++
 
