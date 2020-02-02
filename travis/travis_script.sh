@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-export CFLAGS="-Wconversion"
+export CFLAGS+=" -Wconversion"
 
 PYVERSION=$(python -V 2>&1)
 echo ${PYVERSION}
