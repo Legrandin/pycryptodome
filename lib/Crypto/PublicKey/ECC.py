@@ -580,36 +580,15 @@ class EccKey(object):
         # Public key - uncompressed form
         args = kwargs.copy()
         include_ec_params = args.pop("include_ec_params", True)
-        params_enc_explicit = args.pop("params_enc_explicit", False)
         modulus_bytes = self.pointQ.size_in_bytes()
         public_key = (b'\x04' +
                       self.pointQ.x.to_bytes(modulus_bytes) +
                       self.pointQ.y.to_bytes(modulus_bytes))
 
-        if params_enc_explicit:
-            order = int(self._curve.order)
-            p = int(self._curve.p)
-            generator = (b'\x04' +
-                      self._curve.G.x.to_bytes(modulus_bytes) +
-                      self._curve.G.y.to_bytes(modulus_bytes))
-            field_parameters =  DerSequence([DerObjectId("1.2.840.10045.1.1"), p])
-            parameters = [DerSequence([1, field_parameters,
-                        DerSequence([
-                            DerOctetString(self._curve.a.to_bytes(modulus_bytes)),
-                            DerOctetString(self._curve.b.to_bytes(modulus_bytes))]),
-                        DerOctetString(generator),
-                    order,
-                1
-            ])]
-            seq = [1,
-                DerOctetString(self.d.to_bytes(modulus_bytes)),
-                DerSequence(parameters, implicit=0),
-                DerBitString(public_key, explicit=1)]
-        else:
-            seq = [1,
-               DerOctetString(self.d.to_bytes(modulus_bytes)),
-               DerObjectId(self._curve.oid, explicit=0),
-               DerBitString(public_key, explicit=1)]
+        seq = [1,
+            DerOctetString(self.d.to_bytes(modulus_bytes)),
+            DerObjectId(self._curve.oid, explicit=0),
+            DerBitString(public_key, explicit=1)]
 
         if not include_ec_params:
             del seq[2]
@@ -718,9 +697,6 @@ class EccKey(object):
             with the X-coordinate only is used.
 
             If ``False`` (default), the full public key will be exported.
-
-          params_enc_explicit (boolean):
-            If ``True``, stores the curve parameters with the keys.
 
         .. warning::
             If you don't provide a passphrase, the private key will be
