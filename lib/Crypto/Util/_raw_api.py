@@ -197,6 +197,7 @@ except ImportError:
 
     _PyBUF_SIMPLE = 0
     _PyObject_GetBuffer = ctypes.pythonapi.PyObject_GetBuffer
+    _PyBuffer_Release = ctypes.pythonapi.PyBuffer_Release
     _py_object = ctypes.py_object
     _c_ssize_p = ctypes.POINTER(_c_ssize_t)
 
@@ -228,8 +229,11 @@ except ImportError:
             obj = _py_object(data)
             buf = _Py_buffer()
             _PyObject_GetBuffer(obj, byref(buf), _PyBUF_SIMPLE)
-            buffer_type = c_ubyte * buf.len
-            return buffer_type.from_address(buf.buf)
+            try:
+                buffer_type = c_ubyte * buf.len
+                return buffer_type.from_address(buf.buf)
+            finally:
+                _PyBuffer_Release(byref(buf))
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
