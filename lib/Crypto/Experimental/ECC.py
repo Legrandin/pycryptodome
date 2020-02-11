@@ -40,7 +40,7 @@ class EccKeyExplicit(EccKey):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        EccKey.__init__(self, **kwargs)
 
     def _export_private_der(self, **kwargs):
 
