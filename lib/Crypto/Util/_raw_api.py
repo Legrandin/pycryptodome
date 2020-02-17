@@ -169,10 +169,15 @@ except ImportError:
     from ctypes import Array as _Array
 
     null_pointer = None
+    cached_architecture = []
 
     def load_lib(name, cdecl):
-        import platform
-        bits, linkage = platform.architecture()
+        if not cached_architecture:
+            # platform.architecture() creates a subprocess, so caching the
+            # result makes successive imports faster.
+            import platform
+            cached_architecture[:] = platform.architecture()
+        bits, linkage = cached_architecture
         if "." not in name and not linkage.startswith("Win"):
             full_name = find_library(name)
             if full_name is None:
