@@ -40,7 +40,7 @@ matrix:
    after_success: true
  - os: osx
    env: PYCRYPTODOME_DEBUG=1
-   env: CFLAGS=" -isysroot $(xcrun --show-sdk-path)"
+   env: CFLAGS=" -isysroot $(xcrun --sdk macosx --show-sdk-path)"
    language: generic
    install: pip2 install cibuildwheel==1.1.0
    after_success: travis/travis_after_success_osx.sh
