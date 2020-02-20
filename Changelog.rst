@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.9.6 (20 February 2020)
+3.9.7 (20 February 2020)
 ++++++++++++++++++++++++
 
 Resolved issues
