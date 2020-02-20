@@ -1,12 +1,20 @@
 Changelog
 =========
 
+3.9.6 (20 February 2020)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#381: Make notarization possible again on OS X when using wheels.
+  Thanks to Colin Atkinson.
+
 3.9.6 (2 February 2020)
 ++++++++++++++++++++++++
 
 Resolved issues
 ---------------
-* Fix building of wheels for OSX by explicitly setting `sysroot` location.
+* Fix building of wheels for OS X by explicitly setting `sysroot` location.
 
 3.9.5 (1 February 2020)
 ++++++++++++++++++++++++
