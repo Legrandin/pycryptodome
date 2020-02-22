@@ -566,7 +566,6 @@ cleanup:
     return res;
 }
 
-#ifndef MAKE_TABLE
 #include "p256_table.c"
 #include "p384_table.c"
 #include "p521_table.c"
@@ -870,8 +869,6 @@ STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     return 0;
 }
 
-#endif
-
 /*
  * Create an Elliptic Curve context for Weierstress curves y²=x³+ax+b with a=-3
  *
@@ -922,7 +919,6 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     }
     bytes_to_words(ec_ctx->order, order_words, order, len);
 
-#ifndef MAKE_TABLE
     /* Scramble lookup table for special generators */
     switch (ctx->modulus_type) {
         case ModulusP256: {
@@ -952,7 +948,6 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
         case ModulusGeneric:
             break;
     }
-#endif
 
     return 0;
 
@@ -968,7 +963,6 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
 {
     if (NULL == ec_ctx)
         return;
-#ifndef MAKE_TABLE
     switch (ec_ctx->mont_ctx->modulus_type) {
         case ModulusP256:
             free_g_p256(ec_ctx->prot_g);
@@ -982,7 +976,6 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
         case ModulusGeneric:
             break;
     }
-#endif
     free(ec_ctx->b);
     free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
@@ -1305,7 +1298,6 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         goto cleanup;
     }
 
-#ifndef MAKE_TABLE
     switch (ctx->modulus_type) {
         case ModulusP256: {
             /** Coordinates in Montgomery form **/
@@ -1388,7 +1380,6 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         case ModulusGeneric:
             break;
     }
-#endif
 
     if (seed != 0) {
         uint8_t *blind_scalar=NULL;

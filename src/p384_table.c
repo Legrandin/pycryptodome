@@ -4,7 +4,7 @@ static const unsigned p384_n_tables = 77;
 static const unsigned p384_window_size = 5;
 static const unsigned p384_points_per_table = 32;
 /* Affine coordinates in Montgomery form */
-/* Table size: 236544 kbytes */
+/* Table size: 231 kbytes */
 static const uint64_t p384_tables[77][32][2][6] = {
  { /* Table #0 */
   { /* Point #0 */

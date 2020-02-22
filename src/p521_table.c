@@ -4,7 +4,7 @@ static const unsigned p521_n_tables = 131;
 static const unsigned p521_window_size = 4;
 static const unsigned p521_points_per_table = 16;
 /* Affine coordinates in plain form (not Montgomery) */
-/* Table size: 301824 kbytes */
+/* Table size: 262 kbytes */
 static const uint64_t p521_tables[131][16][2][9] = {
  { /* Table #0 */
   { /* Point #0 */
