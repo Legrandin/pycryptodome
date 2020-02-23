@@ -1,11 +1,11 @@
 /* This file was automatically generated, do not edit */
 #include "common.h"
-static const unsigned p384_n_tables = 77;
-static const unsigned p384_window_size = 5;
-static const unsigned p384_points_per_table = 32;
+const unsigned p384_n_tables = 77;
+const unsigned p384_window_size = 5;
+const unsigned p384_points_per_table = 32;
 /* Affine coordinates in Montgomery form */
 /* Table size: 231 kbytes */
-static const uint64_t p384_tables[77][32][2][6] = {
+const uint64_t p384_tables[77][32][2][6] = {
  { /* Table #0 */
   { /* Point #0 */
     { 0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL },

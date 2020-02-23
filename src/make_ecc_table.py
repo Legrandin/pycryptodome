@@ -2,15 +2,24 @@
 
 import argparse
 
-header = """\
+declaration = """\
 /* This file was automatically generated, do not edit */
 #include "common.h"
-static const unsigned {0}_n_tables = {1};
-static const unsigned {0}_window_size = {2};
-static const unsigned {0}_points_per_table = {3};
+extern const unsigned {0}_n_tables;
+extern const unsigned {0}_window_size;
+extern const unsigned {0}_points_per_table;
+extern const uint64_t {0}_tables[{1}][{2}][2][{3}];
+"""
+
+definition = """\
+/* This file was automatically generated, do not edit */
+#include "common.h"
+const unsigned {0}_n_tables = {1};
+const unsigned {0}_window_size = {2};
+const unsigned {0}_points_per_table = {3};
 /* {4} */
 /* Table size: {5} kbytes */
-static const uint64_t {0}_tables[{1}][{3}][2][{6}] = {{\
+const uint64_t {0}_tables[{1}][{3}][2][{6}] = {{\
 """
 
 point = """\
@@ -23,6 +32,7 @@ point = """\
 parser = argparse.ArgumentParser()
 parser.add_argument("curve")
 parser.add_argument("window_size", type=int)
+parser.add_argument("basename")
 args = parser.parse_args()
 
 if args.curve == "p256":
@@ -46,6 +56,9 @@ elif args.curve == "p521":
 else:
     raise ValueError("Unsupported curve: " + args.curve)
 
+
+c_file = open(args.basename + ".c", "wt")
+h_file = open(args.basename + ".h", "wt")
 
 words = (bits + 63) // 64
 window_size = args.window_size
@@ -126,16 +139,18 @@ for _ in range(points_per_table - 1):
     new_point = add(*window[-1], *G)
     window.append(new_point)
 
-print(header.format(args.curve, n_tables, window_size, points_per_table, msg,
-                    byte_size, words))
+print(declaration.format(args.curve, n_tables, points_per_table, words), file=h_file)
+print(definition.format(args.curve, n_tables, window_size, points_per_table, msg,
+                    byte_size, words), file=c_file)
 
 for i in range(n_tables):
-    print(" { /* Table #%u */" % i)
+    print(" { /* Table #%u */" % i, file=c_file)
     for j, w in enumerate(window):
         endc = "" if (j == points_per_table - 1) else ","
-        print(point.format(j, get64(w[0], words), get64(w[1], words), endc))
+        print(point.format(j, get64(w[0], words), get64(w[1], words), endc),
+              file=c_file)
     endc = "" if (i == n_tables - 1) else ","
-    print(" }%s" % endc)
+    print(" }%s" % endc, file=c_file)
 
     # Move from G to G*2^{w}
     for j in range(window_size):
@@ -145,4 +160,4 @@ for i in range(n_tables):
     for j in range(1, points_per_table):
         window[j] = add(*window[j-1], *G)
 
-print("};")
+print("};", file=c_file)
