@@ -160,7 +160,7 @@ class CMAC(object):
         else:
             second_last = ct[-bs*2:-bs]
         self._last_ct = ct[-bs:]
-        self._last_pt = strxor(second_last, data_block[-bs:])
+        self._last_pt = strxor(second_last, bytes(data_block[-bs:]))
 
     def copy(self):
         """Return a copy ("clone") of the CMAC object.
@@ -202,7 +202,7 @@ class CMAC(object):
 
         if self._cache_n == 0 and self._data_size > 0:
             # Last block was full
-            pt = strxor(self._last_pt, self._k1)
+            pt = strxor(self._last_pt, bytes(self._k1))
         else:
             # Last block is partial (or message length is zero)
             partial = self._cache[:]
