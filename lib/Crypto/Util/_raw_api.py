@@ -99,7 +99,7 @@ try:
         """
 
         lib = ffi.dlopen(name)
-        ffi.cdef(cdecl)
+        ffi.cdef(cdecl, override=True)
         return lib
 
     def c_ulong(x):
