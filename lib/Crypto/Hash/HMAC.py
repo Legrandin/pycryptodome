@@ -80,14 +80,14 @@ class HMAC(object):
             raise ValueError("Hash type incompatible to HMAC")
 
         # Step 4
-        key_0_ipad = strxor(key_0, b"\x36" * len(key_0))
+        key_0_ipad = strxor(bytes(key_0), b"\x36" * len(key_0))
 
         # Start step 5 and 6
         self._inner = digestmod.new(key_0_ipad)
         self._inner.update(msg)
 
         # Step 7
-        key_0_opad = strxor(key_0, b"\x5c" * len(key_0))
+        key_0_opad = strxor(bytes(key_0), b"\x5c" * len(key_0))
 
         # Start step 8 and 9
         self._outer = digestmod.new(key_0_opad)
