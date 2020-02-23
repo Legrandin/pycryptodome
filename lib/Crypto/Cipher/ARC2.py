@@ -97,7 +97,8 @@ def new(key, mode, *args, **kwargs):
 
     :param key:
         The secret key to use in the symmetric cipher.
-        Its length can vary from 5 to 128 bytes.
+        Its length can vary from 5 to 128 bytes; the actual search space
+        (and the cipher strength) can be reduced with the ``effective_keylen`` parameter.
     :type key: bytes, bytearray, memoryview
 
     :param mode:
@@ -134,6 +135,12 @@ def new(key, mode, *args, **kwargs):
 
             If not provided for ``MODE_EAX``, a random byte string is generated (you
             can read it back via the ``nonce`` attribute).
+
+        *   **effective_keylen** (*integer*) --
+            Optional. Maximum strength in bits of the actual key used by the ARC2 algorithm.
+            If the supplied ``key`` parameter is longer (in bits) of the value specified
+            here, it will be weakened to match it.
+            If not specified, no limitation is applied.
 
         *   **segment_size** (*integer*) --
             (Only ``MODE_CFB``).The number of **bits** the plaintext and ciphertext
