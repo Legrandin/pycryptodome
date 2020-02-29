@@ -1,11 +1,11 @@
 /* This file was automatically generated, do not edit */
 #include "common.h"
-static const unsigned p521_n_tables = 131;
-static const unsigned p521_window_size = 4;
-static const unsigned p521_points_per_table = 16;
+const unsigned p521_n_tables = 131;
+const unsigned p521_window_size = 4;
+const unsigned p521_points_per_table = 16;
 /* Affine coordinates in plain form (not Montgomery) */
-/* Table size: 301824 kbytes */
-static const uint64_t p521_tables[131][16][2][9] = {
+/* Table size: 262 kbytes */
+const uint64_t p521_tables[131][16][2][9] = {
  { /* Table #0 */
   { /* Point #0 */
     { 0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL,0x0000000000000000ULL },

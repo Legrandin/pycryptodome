@@ -44,10 +44,21 @@ build/modexp_utils.o: ../modexp_utils.c
 
 # ECC
 
-build/tests_ec_ws_64: test_ec_ws.c ../ec_ws.c build/mont_64.o $(UTILS)
+TABLES = build/p256_table.o build/p384_table.o build/p521_table.o
+
+build/p256_table.o: ../p256_table.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
+
+build/p384_table.o: ../p384_table.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
+
+build/p521_table.o: ../p521_table.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $^
+
+build/tests_ec_ws_64: test_ec_ws.c ../ec_ws.c build/mont_64.o $(TABLES) $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
-build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o $(UTILS)
+build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o $(TABLES) $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=32 -UHAVE_UINT128
 
 # addmul128

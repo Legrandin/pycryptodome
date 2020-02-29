@@ -19,23 +19,14 @@ modexp_in: modexp.c mont.c modexp_utils.c siphash.c
 modexp: modexp.c mont.c modexp_utils.c siphash.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
 
-p256_table.c: make_p256_table
-	./make_p256_table > $@
+p256_table.c: make_ecc_table.py
+	python make_ecc_table.py p256 5 p256_table
 
-p384_table.c: make_p384_table
-	./make_p384_table > $@
+p384_table.c: make_ecc_table.py
+	python make_ecc_table.py p384 5 p384_table
 
-p521_table.c: make_p521_table
-	./make_p521_table > $@
-
-make_p256_table: make_p256_table.c ec_ws.c mont.c modexp_utils.c siphash.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAKE_TABLE
-
-make_p384_table: make_p384_table.c ec_ws.c mont.c modexp_utils.c siphash.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAKE_TABLE
-
-make_p521_table: make_p521_table.c ec_ws.c mont.c modexp_utils.c siphash.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAKE_TABLE
+p521_table.c: make_ecc_table.py
+	python make_ecc_table.py p521 4 p521_table
 
 clean::
-	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp make_p256_table make_p384_table make_p521_table
+	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp
