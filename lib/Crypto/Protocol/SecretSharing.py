@@ -171,7 +171,7 @@ class Shamir(object):
         >>> from binascii import hexlify
         >>> from Crypto.Cipher import AES
         >>> from Crypto.Random import get_random_bytes
-        >>> from Crypto.Protocol.secret_sharing import Shamir
+        >>> from Crypto.Protocol.SecretSharing import Shamir
         >>>
         >>> key = get_random_bytes(16)
         >>> shares = Shamir.split(2, 5, key)
@@ -192,7 +192,7 @@ class Shamir(object):
 
         >>> from binascii import unhexlify
         >>> from Crypto.Cipher import AES
-        >>> from Crypto.Protocol.secret_sharing import Shamir
+        >>> from Crypto.Protocol.SecretSharing import Shamir
         >>>
         >>> shares = []
         >>> for x in range(2):
