@@ -261,16 +261,16 @@ class Shamir(object):
         #
 
         coeffs = [_Element(rng(16)) for i in range(k - 1)]
-        coeffs.insert(0, _Element(secret))
+        coeffs.append(_Element(secret))
 
         # Each share is y_i = p(x_i) where x_i is the public index
         # associated to each of the n users.
 
         def make_share(user, coeffs):
-            share, x, idx = [_Element(p) for p in (0, 1, user)]
+            idx = _Element(user)
+            share = _Element(0)
             for coeff in coeffs:
-                share += coeff * x
-                x *= idx
+                share = idx * share + coeff
             return share.encode()
 
         return [(i, make_share(i, coeffs)) for i in range(1, n + 1)]
@@ -310,15 +310,12 @@ class Shamir(object):
         for j in range(k):
             x_j, y_j = shares[j]
 
-            coeff_0_l = _Element(0)
-            while not int(coeff_0_l):
-                coeff_0_l = _Element(rng(16))
-            inv = coeff_0_l.inverse()
-
+            numerator = _Element(1)
+            denominator = _Element(1)
             for m in range(k):
                 x_m = shares[m][0]
                 if m != j:
-                    t = x_m * (x_j + x_m).inverse()
-                    coeff_0_l *= t
-            result += y_j * coeff_0_l * inv
+                    numerator *= x_m
+                    denominator *= x_j + x_m
+            result += y_j * numerator * denominator.inverse()
         return result.encode()
