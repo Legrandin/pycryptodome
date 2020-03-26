@@ -114,7 +114,7 @@ This KDF is not suitable for deriving keys from a password or for key stretching
 
 Example, for deriving two AES256 keys::
 
-    from Crypto.Protocol import HKDF
+    from Crypto.Protocol.KDF import HKDF
     from Crypto.Hash import SHA512
     from Crypto.Random import get_random_bytes
 
