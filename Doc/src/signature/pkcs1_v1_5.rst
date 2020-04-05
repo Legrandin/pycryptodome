@@ -22,7 +22,7 @@ At the other end, the receiver can verify the signature (and therefore
 the authenticity of the message) using the matching *public* RSA key::
 
         >>> key = RSA.import_key(open('public_key.der').read())
-        >>> h = SHA.new(message)
+        >>> h = SHA256.new(message)
         >>> try:
         >>>     pkcs1_15.new(key).verify(h, signature)
         >>>     print "The signature is valid."
