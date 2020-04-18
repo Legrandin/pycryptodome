@@ -357,14 +357,14 @@ def new(key, mode, encoding='binary', randfunc=None):
         - *'binary'* (default), the signature is the raw concatenation
           of ``r`` and ``s``. It is defined in the IEEE P.1363 standard.
 
-          For DSA, the size in bytes of the signature is ``N/4``
-          (e.g. 64 bytes for ``N=256``).
+          For DSA, the size in bytes of the signature is ``N/4`` bytes
+          (e.g. 64 for ``N=256``).
 
           For ECDSA, the signature is always twice the length of a point
           coordinate (e.g. 64 bytes for P-256).
 
-        - *'der'*, the signature is an ASN.1 SEQUENCE with two
-          INTEGERs (``r`` and ``s``) encoded with DER.
+        - *'der'*, the signature is a ASN.1 DER SEQUENCE
+          with two INTEGERs (``r`` and ``s``). It is defined in RFC3279_.
           The size of the signature is variable.
     :type encoding: string
 
@@ -378,6 +378,7 @@ def new(key, mode, encoding='binary', randfunc=None):
     .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     .. _NIST SP 800 Part 1 Rev 4: http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
     .. _RFC6979: http://tools.ietf.org/html/rfc6979
+    .. _RFC3279: https://tools.ietf.org/html/rfc3279#section-2.2.2
     """
 
     # The goal of the 'mode' parameter is to avoid to
