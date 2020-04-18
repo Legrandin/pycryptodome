@@ -109,8 +109,12 @@ class DssSigScheme(object):
                                  for x in sig_pair])
         else:
             # Dss-sig  ::=  SEQUENCE  {
-            #               r       OCTET STRING,
-            #               s       OCTET STRING
+            #   r   INTEGER,
+            #   s   INTEGER
+            # }
+            # Ecdsa-Sig-Value  ::=  SEQUENCE  {
+            #   r   INTEGER,
+            #   s   INTEGER
             # }
             output = DerSequence(sig_pair).encode()
 
