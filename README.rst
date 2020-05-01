@@ -70,6 +70,6 @@ For more information, see the `homepage`_.
 
 All the code can be downloaded from `GitHub`_.
 
-.. _`homepage`: http://www.pycryptodome.org
+.. _`homepage`: https://www.pycryptodome.org
 .. _`GMP`: https://gmplib.org
 .. _GitHub: https://github.com/Legrandin/pycryptodome
