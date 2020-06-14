@@ -92,14 +92,14 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         int __gmpz_divisible_ui_p (const mpz_t n, UNIX_ULONG d);
         """
 
+if sys.platform == "win32":
+    raise ImportError("Not using GMP on Windows")
+
 lib = load_lib("gmp", gmp_defs)
 implementation = {"library": "gmp", "api": backend}
 
 if hasattr(lib, "__mpir_version"):
     raise ImportError("MPIR library detected")
-
-if sys.platform == "win32":
-    raise ImportError("Not using GMP on Windows")
 
 # In order to create a function that returns a pointer to
 # a new MPZ structure, we need to break the abstraction

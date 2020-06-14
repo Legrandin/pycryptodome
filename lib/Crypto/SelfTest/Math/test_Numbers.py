@@ -33,6 +33,7 @@
 
 """Self-test for Math.Numbers"""
 
+import sys
 import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
@@ -749,8 +750,10 @@ def get_tests(config={}):
 
         tests += list_test_cases(TestIntegerGMP)
     except (ImportError, OSError) as e:
-        import sys
-        sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
+        if sys.platform == "win32":
+            sys.stdout.write("Skipping GMP tests on Windows\n")
+        else:
+            sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
 
     try:
         from Crypto.Math._IntegerCustom import IntegerCustom
@@ -761,7 +764,6 @@ def get_tests(config={}):
 
         tests += list_test_cases(TestIntegerCustomModexp)
     except (ImportError, OSError) as e:
-        import sys
         sys.stdout.write("Skipping custom modexp tests (%s)\n" % str(e) )
 
     tests += list_test_cases(testIntegerRandom)
