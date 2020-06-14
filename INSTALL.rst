@@ -197,12 +197,12 @@ The simplest way to compile the *PyCryptodome* extensions from
 source code is to install the minimum set of Visual Studio
 components freely made available by Microsoft.
 
-#. **[Once only]** Download `MS Visual Studio 2015 <https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx>`_
-   (Community Edition) and install the C/C++ compilers and the redistributable only.
+#. **[Once only]** Download `Build Tools for Visual Studio 2019 <https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019>`_.
+   In the installer, select the *C++ build tools*, the *Windows 10 SDK*, and the latest version of *MSVC v142 x64/x86 build tools*.
 
 #. Compile and install PyCryptodome::
 
-        > pip install pycryptodomex --no-use-wheel
+        > pip install pycryptodomex --no-binary :all:
 
 #. To make sure everything work fine, run the test suite::
 
