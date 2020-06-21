@@ -141,21 +141,89 @@ class Shamir_Tests(TestCase):
 
     def test2(self):
         # Test recombine
+        from itertools import permutations
 
-        # These shares were obtained with ssss v0.5:
-        # ssss-split -t 2 -n 3 -s 128 -D -x
-        secret = b("000102030405060708090a0b0c0d0e0f")
-        shares = (
-            (1,"0b8cbb92e2a750defa563537d72942a2"),
-            (2,"171a7120c941abb4ecb77472ba459753"),
-            (3,"1c97c8b12fe3fd6d1ee84b4e6161dbfe")
-            )
+        test_vectors = (
+            (2, "d9fe73909bae28b3757854c0af7ad405",
+             "1-594ae8964294174d95c33756d2504170",
+             "2-d897459d29da574eb40e93ec552ffe6e",
+             "3-5823de9bf0e068b054b5f07a28056b1b",
+             "4-db2c1f8bff46d748f795da995bd080cb"),
+            (2, "bf4f902d9a7efafd1f3ffd9291fd5de9",
+             "1-557bd3b0748064b533469722d1cc7935",
+             "2-6b2717164783c66d47cd28f2119f14d0",
+             "3-8113548ba97d58256bb4424251ae300c",
+             "4-179e9e5a218483ddaeda57539139cf04"),
+            (3, "ec96aa5c14c9faa699354cf1da74e904",
+             "1-64579fbf1908d66f7239bf6e2b4e41e1",
+             "2-6cd9428df8017b52322561e8c672ae3e",
+             "3-e418776ef5c0579bd9299277374806dd",
+             "4-ab3f77a0107398d23b323e581bb43f5d",
+             "5-23fe42431db2b41bd03ecdc7ea8e97ac"),
+            (3, "44cf249b68b80fcdc27b47be60c2c145",
+             "1-d6515a3905cd755119b86e311c801e31",
+             "2-16693d9ac9f10c254036ced5f8917fa3",
+             "3-84f74338a48476b99bf5e75a84d3a0d1",
+             "4-3fe8878dc4a5d35811cf3cbcd33dbe52",
+             "5-ad76f92fa9d0a9c4ca0c1533af7f6132"),
+            (5, "5398717c982db935d968eebe53a47f5a",
+             "1-be7be2dd4c068e7ef576aaa1b1c11b01",
+             "2-f821f5848441cb98b3eb467e2733ee21",
+             "3-25ee52f53e203f6e29a0297b5ab486b5",
+             "4-fc9fb58ef74dab947fbf9acd9d5d83cd",
+             "5-b1949cce46d81552e65f248d3f74cc5c",
+             "6-d64797f59977c4d4a7956ad916da7699",
+             "7-ab608a6546a8b9af8820ff832b1135c7"),
+            (5, "4a78db90fbf35da5545d2fb728e87596",
+             "1-08daf9a25d8aa184cfbf02b30a0ed6a0",
+             "2-dda28261e36f0b14168c2cf153fb734e",
+             "3-e9fdec5505d674a57f9836c417c1ecaa",
+             "4-4dce5636ae06dee42d2c82e65f06c735",
+             "5-3963dc118afc2ba798fa1d452b28ef00",
+             "6-6dfe6ff5b09e94d2f84c382b12f42424",
+             "7-6faea9d4d4a4e201bf6c90b9000630c3"),
+            (10, "eccbf6d66d680b49b073c4f1ddf804aa",
+             "01-7d8ac32fe4ae209ead1f3220fda34466",
+             "02-f9144e76988aad647d2e61353a6e96d5",
+             "03-b14c3b80179203363922d60760271c98",
+             "04-770bb2a8c28f6cee89e00f4d5cc7f861",
+             "05-6e3d7073ea368334ef67467871c66799",
+             "06-248792bc74a98ce024477c13c8fb5f8d",
+             "07-fcea4640d2db820c0604851e293d2487",
+             "08-2776c36fb714bb1f8525a0be36fc7dba",
+             "09-6ee7ac8be773e473a4bf75ee5f065762",
+             "10-33657fc073354cf91d4a68c735aacfc8",
+             "11-7645c65094a5868bf225c516fdee2d0c",
+             "12-840485aacb8226631ecd9c70e3018086"),
+            (10, "377e63bdbb5f7d4dc58a483d035212bb",
+             "01-32c53260103be431c843b1a633afe3bd",
+             "02-0107eb16cb8695084d452d2cc50bc7d6",
+             "03-df1e5c66cd755287fb0446faccd72a06",
+             "04-361bbcd5d40797f49dfa1898652da197",
+             "05-160d3ad1512f7dec7fd9344aed318591",
+             "06-659af6d95df4f25beca4fb9bfee3b7e8",
+             "07-37f3b208977bad50b3724566b72bfa9d",
+             "08-6c1de2dfc69c2986142c26a8248eb316",
+             "09-5e19220837a396bd4bc8cd685ff314c3",
+             "10-86e7b864fb0f3d628e46d50c1ba92f1c",
+             "11-065d0082c80b1aea18f4abe0c49df72e",
+             "12-84a09430c1d20ea9f388f3123c3733a3"),
+        )
 
-        bin_shares = []
-        for share in shares:
-            bin_shares.append((share[0], unhexlify(b(share[1]))))
-        result = Shamir.combine(bin_shares)
-        self.assertEqual(hexlify(result), secret)
+        def get_share(p):
+            pos = p.find('-')
+            return int(p[:pos]), unhexlify(p[pos + 1:])
+
+        for tv in test_vectors:
+            k = tv[0]
+            secret = unhexlify(tv[1])
+            max_perms = 10
+            for perm, shares_idx in enumerate(permutations(range(2, len(tv)), k)):
+                if perm > max_perms:
+                    break
+                shares = [ get_share(tv[x]) for x in shares_idx ]
+                result = Shamir.combine(shares, True)
+                self.assertEqual(secret, result)
 
     def test3(self):
         # Loopback split/recombine
@@ -169,8 +237,21 @@ class Shamir_Tests(TestCase):
         secret3 = Shamir.combine([ shares[0], shares[2] ])
         self.assertEqual(secret, secret3)
 
-        secret4 = Shamir.combine(shares)
-        self.assertEqual(secret, secret4) # One share too many
+    def test4(self):
+        # Loopback split/recombine (SSSS)
+        secret = unhexlify(b("000102030405060708090a0b0c0d0e0f"))
+
+        shares = Shamir.split(2, 3, secret, ssss=True)
+
+        secret2 = Shamir.combine(shares[:2], ssss=True)
+        self.assertEqual(secret, secret2)
+
+    def test5(self):
+        # Detect duplicate shares
+        secret = unhexlify(b("000102030405060708090a0b0c0d0e0f"))
+
+        shares = Shamir.split(2, 3, secret)
+        self.assertRaises(ValueError, Shamir.combine, (shares[0], shares[0]))
 
 
 def get_tests(config={}):

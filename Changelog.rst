@@ -1,6 +1,14 @@
 Changelog
 =========
 
+3.9.8 (xx June 2020)
+++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#426: The Shamir's secret sharing implementation is not actually compatible with ``ssss``.
+  Added an optional parameter to enable interoperability.
+
 3.9.7 (20 February 2020)
 ++++++++++++++++++++++++
 

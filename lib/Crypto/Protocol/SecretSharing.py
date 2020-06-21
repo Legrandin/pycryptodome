@@ -36,6 +36,7 @@ from Crypto.Util import number
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Random import get_random_bytes as rng
 
+
 def _mult_gf2(f1, f2):
     """Multiply two polynomials in GF(2)"""
 
@@ -94,14 +95,15 @@ class _Element(object):
         else:
             raise ValueError("The encoded value must be an integer or a 16 byte string")
 
+    def __eq__(self, other):
+        return self._value == other._value
+
     def __int__(self):
         """Return the field element, encoded as a 128-bit integer."""
-
         return self._value
 
     def encode(self):
         """Return the field element, encoded as a 16 byte string."""
-
         return long_to_bytes(self._value, 16)
 
     def __mul__(self, factor):
@@ -135,6 +137,9 @@ class _Element(object):
         # We use the Extended GCD algorithm
         # http://en.wikipedia.org/wiki/Polynomial_greatest_common_divisor
 
+        if self._value == 0:
+            raise ValueError("Inversion of zero")
+
         r0, r1 = self._value, self.irr_poly
         s0, s1 = 1, 0
         while r1 > 0:
@@ -143,113 +148,47 @@ class _Element(object):
             s0, s1 = s1, s0 ^ _mult_gf2(q, s1)
         return _Element(s0)
 
+    def __pow__(self, exponent):
+        result = _Element(self._value)
+        for _ in range(exponent - 1):
+            result = result * self
+        return result
+
 
 class Shamir(object):
     """Shamir's secret sharing scheme.
 
-    This class implements the Shamir's secret sharing protocol
-    described in his original paper `"How to share a secret"`__.
-
-    All shares are points over a 2-dimensional curve. At least
-    *k* points (that is, shares) are required to reconstruct the curve,
-    and therefore the secret.
-
-    This implementation is primarilly meant to protect AES128 keys.
-    To that end, the secret is associated to a curve in
-    the field GF(2^128) defined by the irreducible polynomial
-    :math:`x^{128} + x^7 + x^2 + x + 1` (the same used in AES-GCM).
-    The shares are always 16 bytes long.
-
-    Data produced by this implementation are compatible to the popular
-    `ssss`_ tool if used with 128 bit security (parameter *"-s 128"*)
-    and no dispersion (parameter *"-D"*).
-
-    As an example, the following code shows how to protect a file meant
-    for 5 people, in such a way that 2 of the 5 are required to
-    reassemble it::
-
-        >>> from binascii import hexlify
-        >>> from Crypto.Cipher import AES
-        >>> from Crypto.Random import get_random_bytes
-        >>> from Crypto.Protocol.secret_sharing import Shamir
-        >>>
-        >>> key = get_random_bytes(16)
-        >>> shares = Shamir.split(2, 5, key)
-        >>> for idx, share in shares:
-        >>>     print "Index #%d: %s" % (idx, hexlify(share))
-        >>>
-        >>> fi = open("clear_file.txt", "rb")
-        >>> fo = open("enc_file.txt", "wb")
-        >>>
-        >>> cipher = AES.new(key, AES.MODE_EAX)
-        >>> ct, tag = cipher.encrypt(fi.read()), cipher.digest()
-        >>> fo.write(nonce + tag + ct)
-
-    Each person can be given one share and the encrypted file.
-
-    When 2 people gather together with their shares, the can
-    decrypt the file::
-
-        >>> from binascii import unhexlify
-        >>> from Crypto.Cipher import AES
-        >>> from Crypto.Protocol.secret_sharing import Shamir
-        >>>
-        >>> shares = []
-        >>> for x in range(2):
-        >>>     in_str = raw_input("Enter index and share separated by comma: ")
-        >>>     idx, share = [ strip(s) for s in in_str.split(",") ]
-        >>>     shares.append((idx, unhexlify(share)))
-        >>> key = Shamir.combine(shares)
-        >>>
-        >>> fi = open("enc_file.txt", "rb")
-        >>> nonce, tag = [ fi.read(16) for x in range(2) ]
-        >>> cipher = AES.new(key, AES.MODE_EAX, nonce)
-        >>> try:
-        >>>     result = cipher.decrypt(fi.read())
-        >>>     cipher.verify(tag)
-        >>>     with open("clear_file2.txt", "wb") as fo:
-        >>>         fo.write(result)
-        >>> except ValueError:
-        >>>     print "The shares were incorrect"
-
-    .. attention::
-        Reconstruction does not guarantee that the result is authentic.
-        In particular, a malicious participant in the scheme has the
-        ability to force an algebric transformation on the result by
-        manipulating her share.
-
-        It is important to use the scheme in combination with an
-        authentication mechanism (the EAX cipher mode in the example).
-
-    .. __: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.80.8910&rep=rep1&type=pdf
-    .. _ssss: http://point-at-infinity.org/ssss/
+    A secret is split into ``n`` shares, and it is sufficient to collect
+    ``k`` of them to reconstruct the secret.
     """
 
     @staticmethod
-    def split(k, n, secret):
-        """Split a secret into *n* shares.
+    def split(k, n, secret, ssss=False):
+        """Split a secret into ``n`` shares.
 
-        The secret can be reconstructed later when *k* shares
-        out of the original *n* are recombined. Each share
-        must be kept confidential to the person it was
+        The secret can be reconstructed later using just ``k`` shares
+        out of the original ``n``.
+        Each share must be kept confidential to the person it was
         assigned to.
 
-        Each share is associated to an index (starting from 1),
-        which must be presented when the secret is recombined.
+        Each share is associated to an index (starting from 1).
 
         Args:
           k (integer):
-            The number of shares that must be present in order to reconstruct
-            the secret.
+            The sufficient number of shares to reconstruct the secret (``k < n``).
           n (integer):
-            The total number of shares to create (larger than *k*).
+            The number of shares that this method will create.
           secret (byte string):
-            The 16 byte string (e.g. the AES128 key) to split.
+            Up to 16 bytes (e.g. the AES 128 key).
+          ssss (bool):
+            If ``True``, the shares can be used with the ``ssss`` utility.
+            Default: ``False``.
 
-        Return:
-            *n* tuples, each containing the unique index (an integer) and
-            the share (a byte string, 16 bytes long) meant for a
-            participant.
+        Return (tuples):
+            ``n`` tuples. A tuple is meant for each participant and it contains two items:
+
+            1. the unique index (an integer)
+            2. the share (a byte string, 16 bytes)
         """
 
         #
@@ -266,24 +205,29 @@ class Shamir(object):
         # Each share is y_i = p(x_i) where x_i is the public index
         # associated to each of the n users.
 
-        def make_share(user, coeffs):
+        def make_share(user, coeffs, ssss):
             share, x, idx = [_Element(p) for p in (0, 1, user)]
             for coeff in coeffs:
                 share += coeff * x
                 x *= idx
+            if ssss:
+                share += _Element(user) ** len(coeffs)
             return share.encode()
 
-        return [(i, make_share(i, coeffs)) for i in range(1, n + 1)]
+        return [(i, make_share(i, coeffs, ssss)) for i in range(1, n + 1)]
 
     @staticmethod
-    def combine(shares):
+    def combine(shares, ssss=False):
         """Recombine a secret, if enough shares are presented.
 
         Args:
           shares (tuples):
-            At least *k* tuples, each containin the index (an integer) and
+            The *k* tuples, each containin the index (an integer) and
             the share (a byte string, 16 bytes long) that were assigned to
             a participant.
+          ssss (bool):
+            If ``True``, the shares were produced by the ``ssss`` utility.
+            Default: ``False``.
 
         Return:
             The original secret, as a byte string (16 bytes long).
@@ -299,16 +243,25 @@ class Shamir(object):
         # l_j(x) = \prod_{ \overset{0 \le m \le k-1}{m \ne j} }
         #          \frac{x - x_m}{x_j - x_m}
         #
-        # However, in this case we are purely intersted in the constant
+        # However, in this case we are purely interested in the constant
         # coefficient of L(x).
         #
 
-        shares = [[_Element(y) for y in x] for x in shares]
+        k = len(shares)
+
+        gf_shares = []
+        for x in shares:
+            idx = _Element(x[0])
+            value = _Element(x[1])
+            if any(y[0] == idx for y in gf_shares):
+                raise ValueError("Duplicate share")
+            if ssss:
+                value += idx ** k
+            gf_shares.append((idx, value))
 
         result = _Element(0)
-        k = len(shares)
         for j in range(k):
-            x_j, y_j = shares[j]
+            x_j, y_j = gf_shares[j]
 
             coeff_0_l = _Element(0)
             while not int(coeff_0_l):
@@ -316,7 +269,7 @@ class Shamir(object):
             inv = coeff_0_l.inverse()
 
             for m in range(k):
-                x_m = shares[m][0]
+                x_m = gf_shares[m][0]
                 if m != j:
                     t = x_m * (x_j + x_m).inverse()
                     coeff_0_l *= t
