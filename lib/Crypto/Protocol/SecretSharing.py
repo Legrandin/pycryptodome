@@ -179,7 +179,7 @@ class Shamir(object):
           n (integer):
             The number of shares that this method will create.
           secret (byte string):
-            Up to 16 bytes (e.g. the AES 128 key).
+            A byte string of 16 bytes (e.g. the AES 128 key).
           ssss (bool):
             If ``True``, the shares can be used with the ``ssss`` utility.
             Default: ``False``.
@@ -200,16 +200,16 @@ class Shamir(object):
         #
 
         coeffs = [_Element(rng(16)) for i in range(k - 1)]
-        coeffs.insert(0, _Element(secret))
+        coeffs.append(_Element(secret))
 
         # Each share is y_i = p(x_i) where x_i is the public index
         # associated to each of the n users.
 
         def make_share(user, coeffs, ssss):
-            share, x, idx = [_Element(p) for p in (0, 1, user)]
+            idx = _Element(user)
+            share = _Element(0)
             for coeff in coeffs:
-                share += coeff * x
-                x *= idx
+                share = idx * share + coeff
             if ssss:
                 share += _Element(user) ** len(coeffs)
             return share.encode()
@@ -268,10 +268,12 @@ class Shamir(object):
                 coeff_0_l = _Element(rng(16))
             inv = coeff_0_l.inverse()
 
+            denominator = _Element(1)
+
             for m in range(k):
                 x_m = gf_shares[m][0]
                 if m != j:
-                    t = x_m * (x_j + x_m).inverse()
-                    coeff_0_l *= t
-            result += y_j * coeff_0_l * inv
+                    coeff_0_l *= x_m
+                    denominator *= x_j + x_m
+            result += y_j * coeff_0_l * denominator.inverse() * inv
         return result.encode()

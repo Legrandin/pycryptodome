@@ -9,6 +9,10 @@ Resolved issues
 * GH#426: The Shamir's secret sharing implementation is not actually compatible with ``ssss``.
   Added an optional parameter to enable interoperability.
 
+New features
+------------
+* Speed up Shamir's secret sharing routines. Thanks to ncarve.
+
 3.9.7 (20 February 2020)
 ++++++++++++++++++++++++
 

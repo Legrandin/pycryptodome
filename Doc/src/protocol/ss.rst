@@ -24,8 +24,8 @@ but unique number assigned to the share's recipient and :math:`y_i=q(x_i)`.
 
 This implementation has the following properties:
 
-* The secret is a byte string with a maximum length of 16 bytes (e.g. an AES 128 key).
-* Each share has a fixed length of 16 bytes.
+* The secret is a byte string of 16 bytes (e.g. an AES 128 key).
+* Each share is a byte string of 16 bytes.
 * The recipients of the shares are assigned an integer starting from 1 (share number :math:`x_i`).
 * The polynomial :math:`q(x)` is defined over the field GF(:math:`2^{128}`) with
   the same irriducible polynomial as used in AES-GCM: :math:`1 + x + x^2 + x^7 + x^{128}`.
@@ -47,7 +47,7 @@ reassemble it::
     >>> from binascii import hexlify
     >>> from Crypto.Cipher import AES
     >>> from Crypto.Random import get_random_bytes
-    >>> from Crypto.Protocol.secret_sharing import Shamir
+    >>> from Crypto.Protocol.SecretSharing import Shamir
     >>>
     >>> key = get_random_bytes(16)
     >>> shares = Shamir.split(2, 5, key)
@@ -66,7 +66,7 @@ decrypt the file::
 
     >>> from binascii import unhexlify
     >>> from Crypto.Cipher import AES
-    >>> from Crypto.Protocol.secret_sharing import Shamir
+    >>> from Crypto.Protocol.SecretSharing import Shamir
     >>>
     >>> shares = []
     >>> for x in range(2):
