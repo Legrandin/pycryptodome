@@ -8,6 +8,7 @@ Resolved issues
 ---------------
 * GH#426: The Shamir's secret sharing implementation is not actually compatible with ``ssss``.
   Added an optional parameter to enable interoperability.
+* GH#427: Skip altogether loading of ``gmp.dll`` on Windows.
 
 New features
 ------------
