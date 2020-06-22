@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.9.8 (xx June 2020)
+3.9.8 (23 June 2020)
 ++++++++++++++++++++
 
 Resolved issues
@@ -9,6 +9,7 @@ Resolved issues
 * GH#426: The Shamir's secret sharing implementation is not actually compatible with ``ssss``.
   Added an optional parameter to enable interoperability.
 * GH#427: Skip altogether loading of ``gmp.dll`` on Windows.
+* GH#420: Fix incorrect CFB decryption when the input and the output are the same buffer.
 
 New features
 ------------
