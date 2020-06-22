@@ -117,14 +117,17 @@ class _Element(object):
 
         if self.irr_poly in (f1, f2):
             return _Element(0)
+
         mask1 = 2 ** 128
         v, z = f1, 0
         while f2:
-            if f2 & 1:
-                z ^= v
+            # if f2 ^ 1: z ^= v
+            mask2 = int(bin(f2 & 1)[2:] * 128, base=2)
+            z = (mask2 & (z ^ v)) | ((mask1 - mask2 - 1) & z)
             v <<= 1
-            if v & mask1:
-                v ^= self.irr_poly
+            # if v & mask1: v ^= self.irr_poly
+            mask3 = int(bin((v >> 128) & 1)[2:] * 128, base=2)
+            v = (mask3 & (v ^ self.irr_poly)) | ((mask1 - mask3 - 1) & v)
             f2 >>= 1
         return _Element(z)
 
@@ -263,17 +266,13 @@ class Shamir(object):
         for j in range(k):
             x_j, y_j = gf_shares[j]
 
-            coeff_0_l = _Element(0)
-            while not int(coeff_0_l):
-                coeff_0_l = _Element(rng(16))
-            inv = coeff_0_l.inverse()
-
+            numerator = _Element(1)
             denominator = _Element(1)
 
             for m in range(k):
                 x_m = gf_shares[m][0]
                 if m != j:
-                    coeff_0_l *= x_m
+                    numerator *= x_m
                     denominator *= x_j + x_m
-            result += y_j * coeff_0_l * denominator.inverse() * inv
+            result += y_j * numerator * denominator.inverse()
         return result.encode()
