@@ -120,6 +120,9 @@ class OpenPGPTests(BlockChainingTests):
     def test_output_param(self):
         pass
 
+    def test_output_param_same_buffer(self):
+        pass
+
     def test_output_param_memoryview(self):
         pass
 

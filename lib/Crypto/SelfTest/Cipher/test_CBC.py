@@ -249,6 +249,26 @@ class BlockChainingTests(unittest.TestCase):
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
+
+    def test_output_param_same_buffer(self):
+
+        pt = b'5' * 16
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        ct = cipher.encrypt(pt)
+
+        pt_ba = bytearray(pt)
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        res = cipher.encrypt(pt_ba, output=pt_ba)
+        self.assertEqual(ct, pt_ba)
+        self.assertEqual(res, None)
+        
+        ct_ba = bytearray(ct)
+        cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
+        res = cipher.decrypt(ct_ba, output=ct_ba)
+        self.assertEqual(pt, ct_ba)
+        self.assertEqual(res, None)
+
+
     def test_output_param_memoryview(self):
         
         pt = b'5' * 16
