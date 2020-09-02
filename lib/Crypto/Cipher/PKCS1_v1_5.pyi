@@ -1,8 +1,10 @@
-from typing import Callable, Union, Any, Optional
+from typing import Callable, Union, Any, Optional, TypeVar
 
 from Crypto.PublicKey.RSA import RsaKey
 
 Buffer = Union[bytes, bytearray, memoryview]
+T = TypeVar('T')
+
 
 class PKCS115_Cipher:
     def __init__(self,
@@ -11,7 +13,7 @@ class PKCS115_Cipher:
     def can_encrypt(self) -> bool: ...
     def can_decrypt(self) -> bool: ...
     def encrypt(self, message: Buffer) -> bytes: ...
-    def decrypt(self, ciphertext: Buffer) -> bytes: ...
+    def decrypt(self, ciphertext: Buffer, sentinel: T) -> Union[bytes, T]: ...
 
 def new(key: Buffer,
         randfunc: Optional[Callable[[int], bytes]] = ...) -> PKCS115_Cipher: ...
