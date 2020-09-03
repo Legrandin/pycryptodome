@@ -1,4 +1,7 @@
 language: python
+arch:
+ - amd64
+ - arm64
 python:
  - "2.7"
  - "3.4"
@@ -16,22 +19,35 @@ matrix:
  - python: pypy3
    env: CFFI=no
  include:
+ - language: c
+   arch: arm64
+   script: cd src/test && make
+   after_success: true
+ - python: 3.8
+   arch: arm64
+   install: pip install mypy
+   script: mypy lib/
+   after_success: true
  - python: 2.6
    env: CFFI=no
    dist: trusty
  - python: pypy
+   arch: amd64
    env: CFFI=yes
  - python: pypy3
+   arch: amd64
    env: CFFI=yes
  - language: c
    script: cd src/test && make
    after_success: true
  - language: c
    dist: trusty
+   arch: amd64
    install: sudo apt-get install libc6-dev-i386
    script: cd src/test && CFLAGS="-m32" UNDEFS="-UHAVE_UINT128" make
    after_success: true
  - language: c
+   arch: amd64
    script: cd src/test && CPPFLAGS="-DHAVE_X86INTRIN_H" make
    after_success: true
  - python: 3.8
