@@ -4,10 +4,12 @@ set -e -x
 printenv
 ARCH=`uname -m`
 
+# On Arm64, only build wheels in the Python 3.8 job
 if [[ "$ARCH" = "aarch64" ]]; then
 	if [[ !(${TRAVIS_PYTHON_VERSION} == 3.8 && ${CFFI} == yes) ]]; then
 		exit 1;
 	fi
+# On Arm64, only build wheels in the Python 2.7 job
 elif [[ "$ARCH" = "x86_64" ]]; then
 	if [[ !(${TRAVIS_PYTHON_VERSION} == 2.7 && ${CFFI} == yes) ]]; then
 		exit 1

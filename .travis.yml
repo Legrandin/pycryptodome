@@ -19,15 +19,6 @@ matrix:
  - python: pypy3
    env: CFFI=no
  include:
- - language: c
-   arch: arm64
-   script: cd src/test && make
-   after_success: true
- - python: 3.8
-   arch: arm64
-   install: pip install mypy
-   script: mypy lib/
-   after_success: true
  - python: 2.6
    env: CFFI=no
    dist: trusty
@@ -51,6 +42,7 @@ matrix:
    script: cd src/test && CPPFLAGS="-DHAVE_X86INTRIN_H" make
    after_success: true
  - python: 3.8
+   arch: amd64
    install: pip install mypy
    script: mypy lib/
    after_success: true
