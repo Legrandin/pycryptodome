@@ -2,6 +2,7 @@
 set -e -x
 
 export CFLAGS+=" -Wconversion"
+ARCH=`uname -m`
 
 PYVERSION=$(python -V 2>&1)
 echo ${PYVERSION}
@@ -26,7 +27,11 @@ if [[ ${PYVERSION} != *"PyPy"* ]] || [ "${MAJOR}" -lt 3 ]; then
 	xflags="$xflags -tt"
 fi
 
+if [[ "$ARCH" = "aarch64" ]]; then
+	testflags="$testflags --skip-slow-tests"
+fi
+
 echo "Custom Python flags:" \"${xflags:-none}\"
 
 python $xflags setup.py build
-python $xflags setup.py test
+python $xflags setup.py test $testflags
