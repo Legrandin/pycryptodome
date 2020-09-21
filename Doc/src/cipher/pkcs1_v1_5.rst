@@ -24,7 +24,7 @@ As an example, a sender may encrypt a message in this way::
 At the receiver side, decryption can be done using the private part of
 the RSA key::
 
-        >>> From Crypto.Hash import SHA
+        >>> from Crypto.Hash import SHA
         >>> from Crypto import Random
         >>>
         >>> key = RSA.importKey(open('privkey.der').read())
