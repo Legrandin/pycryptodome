@@ -50,6 +50,9 @@ def ceil_div(n, d):
 def size (N):
     """Returns the size of the number N in bits."""
 
+    if N < 0:
+        raise ValueError("Size in bits only avialable for non-negative numbers")
+
     bits = 0
     while N >> bits:
         bits += 1
