@@ -1,6 +1,17 @@
 Changelog
 =========
 
+3.9.9 (2 November 2020)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#435: Fixed ``Crypto.Util.number.size`` for negative numbers.
+
+New features
+------------
+* Build Python 3.9 wheels on Windows.
+
 3.9.8 (23 June 2020)
 ++++++++++++++++++++
 
