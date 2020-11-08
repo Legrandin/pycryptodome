@@ -4,16 +4,19 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8, 3.9 ]
         cffi: [ yes, no ]
+        os: [ ubuntu-latest, macos-latest ]
         include:
           - python-version: pypy2
             cffi: no
+            os: ubuntu-latest
           - python-version: pypy3
             cffi: no
+            os: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
