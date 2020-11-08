@@ -31,3 +31,34 @@ jobs:
         xflags="-bb"
         if [ ${{ matrix.python-version}} != pypy3 ]; then xflags+=" -tt"; fi
         python $xflags setup.py test --skip-slow-tests
+
+  test_c:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Test
+      run: |
+        cd src/test
+        make
+
+  test_c_i386:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        sudo apt-get install libc6-dev-i386
+    - name: Test
+      run: |
+        cd src/test
+        CFLAGS="-m32" UNDEFS="-UHAVE_UINT128" make
+
+  test_c_sse2:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Test
+      run: |
+        cd src/test
+        CPPFLAGS="-DHAVE_X86INTRIN_H" make
+
