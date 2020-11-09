@@ -13,6 +13,8 @@ jobs:
       matrix:
         os: [ubuntu-18.04, windows-latest, macos-latest]
 
+    if: github.actor == 'Legrandin'
+
     steps:
       - uses: actions/checkout@v2
 
