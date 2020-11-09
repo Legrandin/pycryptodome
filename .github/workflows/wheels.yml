@@ -1,6 +1,9 @@
 name: Wheels
 
-on: [push, pull_request]
+on:
+  push:
+    tags:
+    - '*'
 
 jobs:
   build_wheels:
