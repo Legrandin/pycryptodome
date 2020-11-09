@@ -17,6 +17,11 @@ jobs:
           - python-version: pypy3
             cffi: no
             os: ubuntu-latest
+            env:
+              PYTHON_FLAGS: "-bb"
+    env:
+      CFLAGS: "-Wconversion"
+      PYTHON_FLAGS: "-bb -tt"
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -30,10 +35,7 @@ jobs:
       run: pip install cffi
     - name: Test
       run: |
-        export CFLAGS+=" -Wconversion"
-        xflags="-bb"
-        if [ ${{ matrix.python-version}} != pypy3 ]; then xflags+=" -tt"; fi
-        python $xflags setup.py test --skip-slow-tests
+        python $PYTHON_FLAGS setup.py test --skip-slow-tests
 
   mypy:
     runs-on: ubuntu-latest
