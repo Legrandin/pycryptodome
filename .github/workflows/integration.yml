@@ -1,15 +1,15 @@
 name: Integration test
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8, 3.9 ]
+        python-version: [ 2.7, 3.5, 3.9 ]
         cffi: [ yes, no ]
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
         include:
           - python-version: pypy2
             cffi: no
@@ -26,8 +26,8 @@ jobs:
     - name: Display Python version
       run: python -c "from __future__ import print_function; import sys; print(sys.version)"
     - name: Install dependencies
-      run: |
-        if [ ${{ matrix.cffi}} == yes ]; then pip install cffi; fi
+      if: ${{ matrix.cffi }} == yes }}
+      run: pip install cffi
     - name: Test
       run: |
         export CFLAGS+=" -Wconversion"
