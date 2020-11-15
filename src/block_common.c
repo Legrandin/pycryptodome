@@ -120,6 +120,7 @@ EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHE
     res = block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
     if (res) {
         free(*pResult);
+        *pResult = NULL;
     }
 
     return res;
