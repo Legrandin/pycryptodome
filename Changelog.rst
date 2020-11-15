@@ -1,5 +1,11 @@
 Changelog
 =========
+3.9.X (X XXX 2020)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Fixed potential memory leak when initializing block ciphers.
 
 3.9.9 (2 November 2020)
 +++++++++++++++++++++++
