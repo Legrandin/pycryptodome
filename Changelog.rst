@@ -6,8 +6,10 @@ Changelog
 Resolved issues
 ---------------
 * Fixed potential memory leak when initializing block ciphers.
-* RSA objects have now method ``public_key()`` like ECC objects.
+* GH#469: RSA objects have now method ``public_key()`` like ECC objects.
   The old method ``publickey()`` is still available for backward compatibility.
+* GH#476: ``Crypto.Util.Padding.unpad()`` was raising the incorrect exception
+  in case of zero-length inputs. Thanks to Captainowie.
 
 3.9.9 (2 November 2020)
 +++++++++++++++++++++++
