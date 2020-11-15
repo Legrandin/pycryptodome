@@ -6,6 +6,8 @@ Changelog
 Resolved issues
 ---------------
 * Fixed potential memory leak when initializing block ciphers.
+* RSA objects have now method ``public_key()`` like ECC objects.
+  The old method ``publickey()`` is still available for backward compatibility.
 
 3.9.9 (2 November 2020)
 +++++++++++++++++++++++

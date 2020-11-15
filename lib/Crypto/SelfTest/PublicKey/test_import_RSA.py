@@ -507,7 +507,7 @@ class TestImport_2048(unittest.TestCase):
         key_file_ref = load_file("rsa2048_private.pem")
         key_file = load_file("rsa2048_public_openssh.txt")
 
-        key_ref = RSA.import_key(key_file_ref).publickey()
+        key_ref = RSA.import_key(key_file_ref).public_key()
         key = RSA.import_key(key_file)
         self.assertEqual(key_ref, key)
 

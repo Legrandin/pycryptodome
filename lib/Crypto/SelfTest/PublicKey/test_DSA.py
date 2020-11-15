@@ -79,14 +79,14 @@ class DSATest(unittest.TestCase):
         """DSA (default implementation) generated key (1 argument)"""
         dsaObj = self.dsa.generate(1024)
         self._check_private_key(dsaObj)
-        pub = dsaObj.publickey()
+        pub = dsaObj.public_key()
         self._check_public_key(pub)
 
     def test_generate_2arg(self):
         """DSA (default implementation) generated key (2 arguments)"""
         dsaObj = self.dsa.generate(1024, Random.new().read)
         self._check_private_key(dsaObj)
-        pub = dsaObj.publickey()
+        pub = dsaObj.public_key()
         self._check_public_key(pub)
 
     def test_construct_4tuple(self):
@@ -155,8 +155,10 @@ class DSATest(unittest.TestCase):
         self.assertRaises(TypeError, dsaObj._sign, m_hash, k)
 
         # Check __eq__ and __ne__
-        self.assertEqual(dsaObj.publickey() == dsaObj.publickey(),True) # assert_
-        self.assertEqual(dsaObj.publickey() != dsaObj.publickey(),False) # failIf
+        self.assertEqual(dsaObj.public_key() == dsaObj.public_key(),True) # assert_
+        self.assertEqual(dsaObj.public_key() != dsaObj.public_key(),False) # failIf
+
+        self.assertEqual(dsaObj.public_key(), dsaObj.publickey()) 
 
     def _test_signing(self, dsaObj):
         k = bytes_to_long(a2b_hex(self.k))

@@ -70,6 +70,8 @@ class RsaKey(object):
 
     :ivar u: Chinese remainder component (:math:`p^{-1} \text{mod } q`)
     :vartype q: integer
+
+    :undocumented: exportKey, publickey
     """
 
     def __init__(self, **kwargs):
@@ -182,7 +184,7 @@ class RsaKey(object):
     def can_sign(self):     # legacy
         return True
 
-    def publickey(self):
+    def public_key(self):
         """A matching RSA public key.
 
         Returns:
@@ -364,6 +366,7 @@ class RsaKey(object):
 
     # Backward compatibility
     exportKey = export_key
+    publickey = public_key
 
     # Methods defined in PyCrypto that we don't support anymore
     def sign(self, M, K):

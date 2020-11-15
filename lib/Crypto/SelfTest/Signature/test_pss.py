@@ -109,7 +109,7 @@ class FIPS_PKCS1_Verify_Tests(unittest.TestCase):
         self.assertRaises(ValueError, verifier.verify, hashed, signature)
 
     def test_can_sign(self):
-        test_public_key = RSA.generate(1024).publickey()
+        test_public_key = RSA.generate(1024).public_key()
         verifier = pss.new(test_public_key)
         self.assertEqual(verifier.can_sign(), False)
 
@@ -217,7 +217,7 @@ class PKCS1_Legacy_Module_Tests(unittest.TestCase):
         key = RSA.generate(1024)
         hashed = SHA1.new(b("Test"))
         good_signature = PKCS1_PSS.new(key).sign(hashed)
-        verifier = PKCS1_PSS.new(key.publickey())
+        verifier = PKCS1_PSS.new(key.public_key())
 
         self.assertEqual(verifier.verify(hashed, good_signature), True)
 
