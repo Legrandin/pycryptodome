@@ -95,7 +95,7 @@ def new(key, mode, *args, **kwargs):
     :type mode: One of the supported ``MODE_*`` constants
 
     :Keyword Arguments:
-        *   **iv** (*byte string*) --
+        *   **IV** (*byte string*) --
             (Only applicable for ``MODE_CBC``, ``MODE_CFB``, ``MODE_OFB``,
             and ``MODE_OPENPGP`` modes).
 
