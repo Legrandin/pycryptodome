@@ -202,7 +202,7 @@ def _EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):
     # We need at least 11 bytes for the remaining data: 3 fixed bytes and
     # at least 8 bytes of padding).
     if emLen<len(digestInfo)+11:
-        raise TypeError("Selected hash algorith has a too long digest (%d bytes)." % len(digest))
+        raise TypeError("Selected hash algorithm has a too long digest (%d bytes)." % len(digest))
     PS = b'\xFF' * (emLen - len(digestInfo) - 3)
     return b'\x00\x01' + PS + b'\x00' + digestInfo
 
