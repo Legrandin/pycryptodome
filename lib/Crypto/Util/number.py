@@ -116,7 +116,7 @@ def GCD(x,y):
 
     if hasattr(math, 'gcd'):
         # the fast way
-	return math.gcd(x, y)
+        return math.gcd(x, y)
 
     x = abs(x) ; y = abs(y)
     while x > 0:
@@ -128,7 +128,7 @@ def inverse(u, v):
 
     if sys.version_info[0:2] >= (3, 8):
         # the fast way
-	return pow(u, -1, v)
+        return pow(u, -1, v)
 
     u3, v3 = u, v
     u1, v1 = 1, 0
