@@ -33,7 +33,7 @@ import re
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.Util.py3compat import b, tobytes, bchr, _memoryview
+from Crypto.Util.py3compat import b, tobytes, bchr
 from Crypto.Util.strxor import strxor_c
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -470,16 +470,14 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        import sys
-        if sys.version[:3] != '2.6':
-            output = memoryview(bytearray(16))
-            cipher = ChaCha20.new(key=key, nonce=nonce)
-            cipher.encrypt(pt, output=output)
-            self.assertEqual(ct, output)
+        output = memoryview(bytearray(16))
+        cipher = ChaCha20.new(key=key, nonce=nonce)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
         
-            cipher = ChaCha20.new(key=key, nonce=nonce)
-            cipher.decrypt(ct, output=output)
-            self.assertEqual(pt, output)
+        cipher = ChaCha20.new(key=key, nonce=nonce)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
 
         cipher = ChaCha20.new(key=key, nonce=nonce)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
@@ -502,11 +500,7 @@ def get_tests(config={}):
     tests += list_test_cases(XChaCha20Test)
     tests.append(ChaCha20_AGL_NIR())
     tests.append(ByteArrayTest())
-
-    import sys
-    if sys.version[:3] != "2.6":
-        tests.append(MemoryviewTest())
-
+    tests.append(MemoryviewTest())
     tests.append(TestOutput())
 
     return tests

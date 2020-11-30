@@ -27,7 +27,7 @@
 import sys
 import unittest
 from binascii import hexlify
-from Crypto.Util.py3compat import _memoryview, tostr, tobytes
+from Crypto.Util.py3compat import tostr, tobytes
 
 from Crypto.Hash import HMAC, MD5, SHA1, SHA256
 hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256)
@@ -392,9 +392,7 @@ def get_tests(config={}):
     tests.append(HMAC_None())
 
     tests.append(ByteArrayTests())
-    import sys
-    if sys.version[:3] != "2.6":
-        tests.append(MemoryViewTests())
+    tests.append(MemoryViewTests())
 
     return tests
 

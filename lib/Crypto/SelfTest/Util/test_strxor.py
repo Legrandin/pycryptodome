@@ -164,13 +164,6 @@ class StrxorTests(unittest.TestCase):
         
         self.assertRaises(ValueError, strxor, term1, term2, output=output)
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_memoryview
-        del test_output_overlapping_memoryview
-        del test_output_ro_memoryview
-
 
 class Strxor_cTests(unittest.TestCase):
 
@@ -273,14 +266,6 @@ class Strxor_cTests(unittest.TestCase):
         output = bytearray(len(term1) - 1)
         
         self.assertRaises(ValueError, strxor_c, term1, 65, output=output)
-
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_memoryview
-        del test_output_overlapping_memoryview
-        del test_output_ro_memoryview
 
 
 def get_tests(config={}):

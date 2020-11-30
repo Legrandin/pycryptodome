@@ -26,7 +26,7 @@
 
 import unittest
 
-from Crypto.Util.py3compat import bchr, _memoryview
+from Crypto.Util.py3compat import bchr
 
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -324,16 +324,14 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        import sys
-        if sys.version[:3] != '2.6':
-            output = memoryview(bytearray(16))
-            cipher = Salsa20.new(key=key, nonce=nonce)
-            cipher.encrypt(pt, output=output)
-            self.assertEqual(ct, output)
+        output = memoryview(bytearray(16))
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
         
-            cipher = Salsa20.new(key=key, nonce=nonce)
-            cipher.decrypt(ct, output=output)
-            self.assertEqual(pt, output)
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
 
         cipher = Salsa20.new(key=key, nonce=nonce)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
@@ -355,11 +353,7 @@ def get_tests(config={}):
     tests.append(KeyLength())
     tests += list_test_cases(NonceTests)
     tests.append(ByteArrayTest())
-
-    import sys
-    if sys.version[:3] != "2.6":
-        tests.append(MemoryviewTest())
-
+    tests.append(MemoryviewTest())
     tests.append(TestOutput())
 
     return tests

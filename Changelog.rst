@@ -11,6 +11,11 @@ Resolved issues
 * GH#476: ``Crypto.Util.Padding.unpad()`` was raising the incorrect exception
   in case of zero-length inputs. Thanks to Captainowie.
 
+Breaks in compatibility
+-----------------------
+
+* Drop support for Python 2.6 and 3.4
+
 3.9.9 (2 November 2020)
 +++++++++++++++++++++++
 

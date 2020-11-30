@@ -90,12 +90,6 @@ if sys.version_info[0] == 2:
 
     from sys import maxint
 
-    if sys.version_info[1] < 7:
-        import types
-        _memoryview = types.NoneType
-    else:
-        _memoryview = memoryview
-    
     iter_range = xrange
 
     def is_native_int(x):
@@ -136,8 +130,6 @@ else:
     from io import BytesIO
     from sys import maxsize as maxint
 
-    _memoryview = memoryview
-
     iter_range = range
 
     def is_native_int(x):
@@ -153,7 +145,7 @@ def _copy_bytes(start, end, seq):
     """Return an immutable copy of a sequence (byte string, byte array, memoryview)
     in a certain interval [start:seq]"""
 
-    if isinstance(seq, _memoryview):
+    if isinstance(seq, memoryview):
         return seq[start:end].tobytes()
     elif isinstance(seq, bytearray):
         return bytes(seq[start:end])

@@ -28,7 +28,7 @@ import math
 import sys
 import struct
 from Crypto import Random
-from Crypto.Util.py3compat import _memoryview, iter_range
+from Crypto.Util.py3compat import iter_range
 
 # Backward compatibility
 _fastmath = None
@@ -439,7 +439,7 @@ def bytes_to_long(s):
     if sys.version_info[0:3] < (2, 7, 4):
         if isinstance(s, bytearray):
             s = bytes(s)
-        elif isinstance(s, _memoryview):
+        elif isinstance(s, memoryview):
             s = s.tobytes()
 
     length = len(s)

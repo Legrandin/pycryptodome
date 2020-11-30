@@ -33,7 +33,7 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, _memoryview
+from Crypto.Util.py3compat import tobytes
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Hash import SHAKE128
 
@@ -322,10 +322,6 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         cipher3.verify(tag_mv)
 
         self.assertEqual(pt_test, self.data_128)
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
 
 
 class XChaCha20Poly1305Tests(unittest.TestCase):
@@ -742,16 +738,14 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        import sys
-        if sys.version[:3] != '2.6':
-            output = memoryview(bytearray(16))
-            cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-            cipher.encrypt(pt, output=output)
-            self.assertEqual(ct, output)
+        output = memoryview(bytearray(16))
+        cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
         
-            cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-            cipher.decrypt(ct, output=output)
-            self.assertEqual(pt, output)
+        cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)

@@ -233,10 +233,6 @@ class Blake2Test(unittest.TestCase):
 
             self.assertEqual(h1.digest(), h2.digest())
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-
 
 class Blake2bTest(Blake2Test):
     #: Module

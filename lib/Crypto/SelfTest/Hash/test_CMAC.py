@@ -37,7 +37,7 @@ import json
 import unittest
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import tobytes, _memoryview
+from Crypto.Util.py3compat import tobytes
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3
@@ -450,11 +450,7 @@ def get_tests(config={}):
     tests = make_mac_tests(CMAC, "CMAC", params_test_data)
     tests.append(ByteArrayTests())
     tests.append(list_test_cases(TestCMAC))
-    
-    import sys
-    if sys.version[:3] != "2.6":
-        tests.append(MemoryViewTests())
-    
+    tests.append(MemoryViewTests())
     tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
     return tests
 

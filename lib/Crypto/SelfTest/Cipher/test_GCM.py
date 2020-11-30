@@ -37,7 +37,7 @@ from binascii import unhexlify
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_tests
 
-from Crypto.Util.py3compat import tobytes, bchr, _memoryview
+from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128, SHA256
 
@@ -368,12 +368,6 @@ class GcmTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
-
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_param_memoryview
 
 
 class GcmFSMTests(unittest.TestCase):

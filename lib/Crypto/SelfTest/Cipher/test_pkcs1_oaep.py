@@ -374,10 +374,6 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             pt2 = cipher.decrypt(memoryview(bytearray(ct)))
             self.assertEqual(pt, pt2)
 
-        import sys
-        if sys.version[:3] == "2.6":
-            del testMemoryview
-
 
 class TestVectorsWycheproof(unittest.TestCase):
 

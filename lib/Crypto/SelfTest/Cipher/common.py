@@ -27,7 +27,7 @@
 import unittest
 from binascii import a2b_hex, b2a_hex, hexlify
 
-from Crypto.Util.py3compat import b, _memoryview
+from Crypto.Util.py3compat import b
 from Crypto.Util.strxor import strxor_c
 
 class _NoDefault: pass        # sentinel object

@@ -50,10 +50,7 @@ else:
     extension_suffixes = machinery.EXTENSION_SUFFIXES
 
 # Which types with buffer interface we support (apart from byte strings)
-if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-    _buffer_type = (bytearray)
-else:
-    _buffer_type = (bytearray, memoryview)
+_buffer_type = (bytearray, memoryview)
 
 
 class _VoidPointer(object):
@@ -69,9 +66,6 @@ class _VoidPointer(object):
 
 
 try:
-    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-        raise ImportError("CFFI is only supported with Python 2.7+")
-
     # Starting from v2.18, pycparser (used by cffi for in-line ABI mode)
     # stops working correctly when PYOPTIMIZE==2 or the parameter -OO is
     # passed. In that case, we fall back to ctypes.
@@ -193,12 +187,7 @@ except ImportError:
 
     # ---- Get raw pointer ---
 
-    if sys.version_info[0] == 2 and sys.version_info[1] == 6:
-        # ctypes in 2.6 does not define c_ssize_t. Replacing it
-        # with c_size_t keeps the structure correctely laid out
-        _c_ssize_t = c_size_t
-    else:
-        _c_ssize_t = ctypes.c_ssize_t
+    _c_ssize_t = ctypes.c_ssize_t
 
     _PyBUF_SIMPLE = 0
     _PyObject_GetBuffer = ctypes.pythonapi.PyObject_GetBuffer
@@ -308,20 +297,11 @@ def load_pycryptodome_raw_lib(name, cdecl):
     raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
 
 
-if sys.version_info[:2] != (2, 6):
-    
-    def is_buffer(x):
-        """Return True if object x supports the buffer interface"""
-        return isinstance(x, (bytes, bytearray, memoryview))
+def is_buffer(x):
+    """Return True if object x supports the buffer interface"""
+    return isinstance(x, (bytes, bytearray, memoryview))
 
-    def is_writeable_buffer(x):
-        return (isinstance(x, bytearray) or
-                (isinstance(x, memoryview) and not x.readonly))
 
-else:
-
-    def is_buffer(x):
-        return isinstance(x, (bytes, bytearray))
-
-    def is_writeable_buffer(x):
-        return isinstance(x, bytearray)
+def is_writeable_buffer(x):
+    return (isinstance(x, bytearray) or
+            (isinstance(x, memoryview) and not x.readonly))

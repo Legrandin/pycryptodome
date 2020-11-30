@@ -20,16 +20,8 @@ if sys.version_info[0] == 2:
     from sys import maxint
     iter_range = xrange
 
-    if sys.version_info[1] < 7:
-        import types
-        _memoryview = types.NoneType
-    else:
-        _memoryview = memoryview
-
 else:
     from sys import maxsize as maxint
     iter_range = range
-
-    _memoryview = memoryview
 
 def _copy_bytes(start: Optional[int], end: Optional[int], seq: Buffer) -> bytes: ...

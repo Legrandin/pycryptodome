@@ -177,10 +177,6 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
             pt2 = cipher.decrypt(memoryview(bytearray(ct)), "---")
             self.assertEqual(pt, pt2)
 
-        import sys
-        if sys.version[:3] == "2.6":
-            del testMemoryview
-
 
 class TestVectorsWycheproof(unittest.TestCase):
 

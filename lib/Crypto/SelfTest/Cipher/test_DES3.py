@@ -156,14 +156,12 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        import sys
-        if sys.version[:3] != '2.6':
-            output = memoryview(bytearray(16))
-            cipher.encrypt(pt, output=output)
-            self.assertEqual(ct, output)
+        output = memoryview(bytearray(16))
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
         
-            cipher.decrypt(ct, output=output)
-            self.assertEqual(pt, output)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
 
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
         self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)

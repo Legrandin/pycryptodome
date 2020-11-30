@@ -33,7 +33,7 @@ import re
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.Util.py3compat import b, tobytes, bchr, _memoryview
+from Crypto.Util.py3compat import b, tobytes, bchr
 from Crypto.Util.strxor import strxor_c
 from Crypto.Util.number import long_to_bytes
 from Crypto.SelfTest.st_common import list_test_cases
@@ -314,10 +314,6 @@ class OcbTests(unittest.TestCase):
         pt_test = cipher4.decrypt_and_verify(memoryview(ct_test), memoryview(tag_test))
 
         self.assertEqual(self.data_128, pt_test)
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
 
 
 class OcbFSMTests(unittest.TestCase):

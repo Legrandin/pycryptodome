@@ -293,12 +293,6 @@ class SivTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, tag, output=shorter_output)
 
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_param_memoryview
-
-
 class SivFSMTests(unittest.TestCase):
 
     key_256 = get_tag_random("key_256", 32)

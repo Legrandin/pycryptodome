@@ -33,7 +33,7 @@ from binascii import unhexlify
 
 from Crypto.SelfTest.loader import load_tests
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, _memoryview, is_string
+from Crypto.Util.py3compat import tobytes, is_string
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -301,12 +301,6 @@ class BlockChainingTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
-
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_param_memoryview
 
 
 class CbcTests(BlockChainingTests):
