@@ -53,10 +53,7 @@ def size (N):
     if N < 0:
         raise ValueError("Size in bits only avialable for non-negative numbers")
 
-    bits = 0
-    while N >> bits:
-        bits += 1
-    return bits
+    return N.bit_length()
 
 
 def getRandomInteger(N, randfunc=None):
@@ -117,6 +114,10 @@ def GCD(x,y):
     """Greatest Common Denominator of :data:`x` and :data:`y`.
     """
 
+    if hasattr(math, 'gcd'):
+        # the fast way
+	return math.gcd(x, y)
+
     x = abs(x) ; y = abs(y)
     while x > 0:
         x, y = y % x, x
@@ -124,6 +125,10 @@ def GCD(x,y):
 
 def inverse(u, v):
     """The inverse of :data:`u` *mod* :data:`v`."""
+
+    if sys.version_info[0:2] >= (3, 8):
+        # the fast way
+	return pow(u, -1, v)
 
     u3, v3 = u, v
     u1, v1 = 1, 0
