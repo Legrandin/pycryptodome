@@ -53,10 +53,7 @@ def size (N):
     if N < 0:
         raise ValueError("Size in bits only avialable for non-negative numbers")
 
-    bits = 0
-    while N >> bits:
-        bits += 1
-    return bits
+    return N.bit_length()
 
 
 def getRandomInteger(N, randfunc=None):
