@@ -29,6 +29,7 @@ import sys
 import struct
 from Crypto import Random
 from Crypto.Util.py3compat import _memoryview, iter_range
+from operator import methodcaller
 
 # Backward compatibility
 _fastmath = None
@@ -47,16 +48,15 @@ def ceil_div(n, d):
     return r
 
 
-def size (N):
-    """Returns the size of the number N in bits."""
+if sys.version_info[0:2] >= (2,7):
+    size = methodcaller("bit_length")
 
-    if N < 0:
-        raise ValueError("Size in bits only avialable for non-negative numbers")
+else:
+    def size(N):
+        """Returns the size of the number N in bits.
+        This slow version for Python < 2.7
+        """
 
-    try:
-        return N.bit_length()
-    except AttributeError:
-        # we have a very old python, use the slow way
         bits = 0
         while N >> bits:
             bits += 1
@@ -117,35 +117,40 @@ def getRandomNBitInteger(N, randfunc=None):
     assert size(value) >= N
     return value
 
-def GCD(x,y):
-    """Greatest Common Denominator of :data:`x` and :data:`y`.
-    """
 
-    if hasattr(math, 'gcd'):
-        # the fast way
-        return math.gcd(x, y)
+if sys.version_info[:2] >= (3,5):
+    GCD = math.gcd
+else:
+    def GCD(x, y):
+        """Greatest common divisor."""
+        x = abs(x) ; y = abs(y)
+        while x > 0:
+            x, y = y % x, x
+        return y
 
-    x = abs(x) ; y = abs(y)
-    while x > 0:
-        x, y = y % x, x
-    return y
 
-def inverse(u, v):
-    """The inverse of :data:`u` *mod* :data:`v`."""
+if sys.version_info[:2] >= (3,8):
+    def inverse(u, v):
+        """The inverse of :data:`u` *mod* :data:`v`."""
 
-    if sys.version_info[0:2] >= (3, 8):
         # the fast way
         return pow(u, -1, v)
 
-    u3, v3 = u, v
-    u1, v1 = 1, 0
-    while v3 > 0:
-        q = u3 // v3
-        u1, v1 = v1, u1 - v1*q
-        u3, v3 = v3, u3 - v3*q
-    while u1<0:
-        u1 = u1 + v
-    return u1
+else:
+    def inverse(u, v):
+        """The inverse of :data:`u` *mod* :data:`v`.
+        Slow version for old Python.
+        """
+        u3, v3 = u, v
+        u1, v1 = 1, 0
+        while v3 > 0:
+            q = u3 // v3
+            u1, v1 = v1, u1 - v1*q
+            u3, v3 = v3, u3 - v3*q
+        while u1<0:
+            u1 = u1 + v
+        return u1
+
 
 # Given a number of bits to generate and a random generation function,
 # find a prime number of the appropriate size.
