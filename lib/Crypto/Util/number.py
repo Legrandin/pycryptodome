@@ -57,6 +57,7 @@ else:
         This slow version for Python < 2.7
         """
 
+        N = abs(N)
         bits = 0
         while N >> bits:
             bits += 1
