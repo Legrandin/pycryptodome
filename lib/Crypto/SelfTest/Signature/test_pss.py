@@ -28,15 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import json
 import unittest
-from binascii import unhexlify
 
 from Crypto.Util.py3compat import b, bchr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
 
 from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import RSA
@@ -44,8 +42,6 @@ from Crypto.Signature import pss
 from Crypto.Signature import PKCS1_PSS
 
 from Crypto.Signature.pss import MGF1
-
-from Crypto.Util._file_system import pycryptodome_filename
 
 
 def load_hash_by_name(hash_name):
@@ -118,11 +114,11 @@ class FIPS_PKCS1_Verify_Tests_KAT(unittest.TestCase):
     pass
 
 
-test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-PSS"),
-                                 "SigVerPSS_186-3.rsp",
-                                 "Signature Verification 186-3",
-                                 { 'shaalg' : lambda x: x,
-                                   'result' : lambda x: x })
+test_vectors_verify = load_test_vectors(("Signature", "PKCS1-PSS"),
+                                            "SigVerPSS_186-3.rsp",
+                                            "Signature Verification 186-3",
+                                            {'shaalg': lambda x: x,
+                                            'result': lambda x: x}) or []
 
 
 for count, tv in enumerate(test_vectors_verify):
@@ -136,7 +132,7 @@ for count, tv in enumerate(test_vectors_verify):
 
     hash_module = load_hash_by_name(tv.shaalg.upper())
     hash_obj = hash_module.new(tv.msg)
-    public_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e)]) # type: ignore
+    public_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e)])  # type: ignore
     if tv.saltval != b("\x00"):
         prng = PRNG(tv.saltval)
         verifier = pss.new(public_key, salt_bytes=len(tv.saltval), rand_func=prng)
@@ -170,15 +166,15 @@ class FIPS_PKCS1_Sign_Tests_KAT(unittest.TestCase):
     pass
 
 
-test_vectors_sign  = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-PSS"),
-                                 "SigGenPSS_186-2.txt",
-                                 "Signature Generation 186-2",
-                                 { 'shaalg' : lambda x: x })
+test_vectors_sign = load_test_vectors(("Signature", "PKCS1-PSS"),
+                                        "SigGenPSS_186-2.txt",
+                                        "Signature Generation 186-2",
+                                        {'shaalg': lambda x: x}) or []
 
-test_vectors_sign += load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-PSS"),
-                                 "SigGenPSS_186-3.txt",
-                                 "Signature Generation 186-3",
-                                 { 'shaalg' : lambda x: x })
+test_vectors_sign += load_test_vectors(("Signature", "PKCS1-PSS"),
+                                        "SigGenPSS_186-3.txt",
+                                        "Signature Generation 186-3",
+                                        {'shaalg': lambda x: x}) or []
 
 for count, tv in enumerate(test_vectors_sign):
     if isinstance(tv, str):
@@ -187,7 +183,7 @@ for count, tv in enumerate(test_vectors_sign):
         modulus = tv.n
         continue
     if hasattr(tv, "e"):
-        private_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e, tv.d)]) # type: ignore
+        private_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e, tv.d)])  # type: ignore
         continue
 
     hash_module = load_hash_by_name(tv.shaalg.upper())
@@ -280,41 +276,41 @@ class TestVectorsPSSWycheproof(unittest.TestCase):
         self._id = "None"
 
     def add_tests(self, filename):
-        comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
-            tv_tree = json.load(file_in)
 
-        for group in tv_tree['testGroups']:
+        def filter_rsa(group):
+            return RSA.import_key(group['keyPem'])
 
-            key = RSA.import_key(group['keyPem'])
-            hash_module = get_hash_module(group['sha'])
-            sLen = group['sLen']
+        def filter_sha(group):
+            return get_hash_module(group['sha'])
 
-            assert group['type'] == "RsassaPssVerify"
-            assert group['mgf'] == "MGF1"
+        def filter_type(group):
+            type_name = group['type']
+            if type_name not in ("RsassaPssVerify", ):
+                raise ValueError("Unknown type name " + type_name)
 
-            mgf1_hash =  get_hash_module(group['mgfSha'])
+        def filter_slen(group):
+            return group['sLen']
+
+        def filter_mgf(group):
+            mgf = group['mgf']
+            if mgf not in ("MGF1", ):
+                raise ValueError("Unknown MGF " + mgf)
+            mgf1_hash = get_hash_module(group['mgfSha'])
 
             def mgf(x, y, mh=mgf1_hash):
                 return MGF1(x, y, mh)
 
-            from collections import namedtuple
-            TestVector = namedtuple('TestVector', 'id comment msg sig key mgf sLen hash_module valid warning')
+            return mgf
 
-            for test in group['tests']:
-                tv = TestVector(
-                    test['tcId'],
-                    test['comment'],
-                    unhexlify(test['msg']),
-                    unhexlify(test['sig']),
-                    key,
-                    mgf,
-                    sLen,
-                    hash_module,
-                    test['result'] != "invalid",
-                    test['result'] == "acceptable"
-                )
-                self.tv.append(tv)
+        result = load_test_vectors_wycheproof(("Signature", "wycheproof"),
+                                              filename,
+                                              "Wycheproof PSS signature (%s)" % filename,
+                                              group_tag={'key': filter_rsa,
+                                                         'hash_module': filter_sha,
+                                                         'sLen': filter_slen,
+                                                         'mgf': filter_mgf,
+                                                         'type': filter_type})
+        return result
 
     def setUp(self):
         self.tv = []
@@ -370,10 +366,12 @@ def get_tests(config={}):
         tests += list_test_cases(FIPS_PKCS1_Verify_Tests_KAT)
         tests += list_test_cases(FIPS_PKCS1_Sign_Tests_KAT)
 
-    tests += [ TestVectorsPSSWycheproof(wycheproof_warnings) ]
+    tests += [TestVectorsPSSWycheproof(wycheproof_warnings)]
 
     return tests
 
+
 if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
+    def suite():
+        return unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')

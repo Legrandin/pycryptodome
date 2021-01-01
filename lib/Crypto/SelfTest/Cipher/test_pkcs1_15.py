@@ -32,7 +32,8 @@ from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
 from Crypto.Util.py3compat import b
 from Crypto.Util.number import bytes_to_long, long_to_bytes
-from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+
 
 def rws(t):
     """Remove white spaces, tabs, and new lines from a string"""
@@ -187,31 +188,15 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def load_tests(self, filename):
-        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
-            tv_tree = json.load(file_in)
 
-        class TestVector(object):
-            pass
-        result = []
+        def filter_rsa(group):
+            return RSA.import_key(group['privateKeyPem'])
 
-        for group in tv_tree['testGroups']:
-
-            rsa_key = RSA.import_key(group['privateKeyPem'])
-        
-            for test in group['tests']:
-                tv = TestVector()
-
-                tv.rsa_key = rsa_key
-
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'msg', 'ct':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
-
-                result.append(tv)
+        result = load_test_vectors_wycheproof(("Cipher", "wycheproof"),
+                                              filename,
+                                              "Wycheproof PKCS#1v1.5 (%s)" % filename,
+                                              group_tag={'rsa_key': filter_rsa}
+                                              )
         return result
 
     def setUp(self):

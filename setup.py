@@ -271,34 +271,6 @@ package_data = {
     "Crypto.Signature" : [ "*.pyi" ],
     "Crypto.IO" : [ "*.pyi" ],
     "Crypto.Util" : [ "*.pyi" ],
-    "Crypto.SelfTest.Cipher" : [
-        "test_vectors/AES/*.*",
-        "test_vectors/TDES/*.*",
-        "test_vectors/wycheproof/*.*",
-    ],
-    "Crypto.SelfTest.Hash" : [
-        "test_vectors/SHA1/*.*",
-        "test_vectors/SHA2/*.*",
-        "test_vectors/SHA3/*.*",
-        "test_vectors/keccak/*.*",
-        "test_vectors/BLAKE2s/*.*",
-        "test_vectors/BLAKE2b/*.*",
-        "test_vectors/wycheproof/*.*",
-    ],
-    "Crypto.SelfTest.Signature" : [
-        "test_vectors/DSA/*.*",
-        "test_vectors/ECDSA/*.*",
-        "test_vectors/PKCS1-v1.5/*.*",
-        "test_vectors/PKCS1-PSS/*.*",
-        "test_vectors/wycheproof/*.*",
-    ],
-    "Crypto.SelfTest.PublicKey" : [
-        "test_vectors/ECC/*.*",
-        "test_vectors/RSA/*.*",
-    ],
-    "Crypto.SelfTest.Protocol" : [
-        "test_vectors/wycheproof/*.*",
-    ],
 }
 
 ext_modules = [
@@ -494,7 +466,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
-    license="BSD, Public Domain, Apache",
+    license="BSD, Public Domain",
     packages=packages,
     package_dir={"": "lib"},
     package_data=package_data,

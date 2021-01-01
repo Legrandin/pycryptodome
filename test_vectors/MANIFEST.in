@@ -1,0 +1,4 @@
+include MANIFEST.in
+include setup.py
+graft pycryptodome_test_vectors
+global-exclude __pycache__ *.pyc

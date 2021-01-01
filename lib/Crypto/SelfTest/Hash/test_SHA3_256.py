@@ -25,7 +25,7 @@
 import unittest
 from binascii import hexlify
 
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Hash import SHA3_256 as SHA3
 from Crypto.Util.py3compat import b
@@ -56,10 +56,10 @@ def get_tests(config={}):
 
     tests = []
 
-    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA3"),
+    test_vectors = load_test_vectors(("Hash", "SHA3"),
                                 "ShortMsgKAT_SHA3-256.txt",
                                 "KAT SHA-3 256",
-                                { "len" : lambda x: int(x) } )
+                                { "len" : lambda x: int(x) } ) or []
 
     test_data = []
     for tv in test_vectors:

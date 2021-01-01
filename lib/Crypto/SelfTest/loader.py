@@ -28,11 +28,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import os
 import re
-import sys
+import json
+import errno
 import binascii
+import warnings
+from binascii import unhexlify
 
-from Crypto.Util._file_system import pycryptodome_filename
+try:
+    import pycryptodome_test_vectors  # type: ignore
+    test_vectors_available = True
+except ImportError:
+    test_vectors_available = False
 
 
 def _load_tests(dir_comps, file_in, description, conversions):
@@ -103,17 +111,94 @@ def _load_tests(dir_comps, file_in, description, conversions):
         # This line is ignored
     return results
 
-def load_tests(dir_comps, file_name, description, conversions):
+
+def load_test_vectors(dir_comps, file_name, description, conversions):
     """Load and parse a test vector file
 
-    This function returnis a list of objects, one per group of adjacent
+    This function returns a list of objects, one per group of adjacent
     KV lines or for a single line in the form "[.*]".
 
     For a group of lines, the object has one attribute per line.
     """
-    
-    description = "%s test (%s)" % (description, file_name)
 
-    with open(pycryptodome_filename(dir_comps, file_name)) as file_in:
-        results = _load_tests(dir_comps, file_in, description, conversions)
+    results = None
+
+    try:
+        if not test_vectors_available:
+            raise FileNotFoundError(errno.ENOENT,
+                                    os.strerror(errno.ENOENT),
+                                    file_name)
+
+        description = "%s test (%s)" % (description, file_name)
+
+        init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        with open(full_file_name) as file_in:
+            results = _load_tests(dir_comps, file_in, description, conversions)
+
+    except FileNotFoundError:
+        warnings.warn("Warning: skipping extended tests for " + description,
+                      UserWarning,
+                      stacklevel=2)
+
     return results
+
+
+def load_test_vectors_wycheproof(dir_comps, file_name, description,
+                                 root_tag={}, group_tag={}, unit_tag={}):
+
+    result = []
+    try:
+        if not test_vectors_available:
+            raise FileNotFoundError(errno.ENOENT,
+                                    os.strerror(errno.ENOENT),
+                                    file_name)
+
+        init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        with open(full_file_name) as file_in:
+            tv_tree = json.load(file_in)
+
+    except FileNotFoundError:
+        warnings.warn("Warning: skipping extended tests for " + description,
+                      UserWarning,
+                      stacklevel=2)
+        return result
+
+    class TestVector(object):
+        pass
+
+    common_root = {}
+    for k, v in root_tag.items():
+        common_root[k] = v(tv_tree)
+
+    for group in tv_tree['testGroups']:
+
+        common_group = {}
+        for k, v in group_tag.items():
+            common_group[k] = v(group)
+
+        for test in group['tests']:
+            tv = TestVector()
+
+            for k, v in common_root.items():
+                setattr(tv, k, v)
+            for k, v in common_group.items():
+                setattr(tv, k, v)
+
+            tv.id = test['tcId']
+            tv.comment = test['comment']
+            for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag', 'label', 'ikm', 'salt', 'info', 'okm', 'sig':
+                if attr in test:
+                    setattr(tv, attr, unhexlify(test[attr]))
+            tv.filename = file_name
+
+            for k, v in unit_tag.items():
+                setattr(tv, k, v(test))
+
+            tv.valid = test['result'] != "invalid"
+            tv.warning = test['result'] == "acceptable"
+            result.append(tv)
+
+    return result
+

@@ -20,31 +20,56 @@
 # SOFTWARE.
 # ===================================================================
 
-import unittest
+import os
 import re
+import errno
+import warnings
+import unittest
 
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.st_common import *
-from Crypto.Util.py3compat import *
+from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
+from Crypto.Util.py3compat import b, tostr
 from Crypto.Util.number import inverse
 from Crypto.Util import asn1
 
-from Crypto.Util._file_system import pycryptodome_filename
+try:
+    import pycryptodome_test_vectors  # type: ignore
+    test_vectors_available = True
+except ImportError:
+    test_vectors_available = False
 
 
-def load_file(filename, mode="rb"):
-    comps = [ "Crypto", "SelfTest", "PublicKey", "test_vectors", "RSA" ]
-    with open(pycryptodome_filename(comps, filename), mode) as fd:
-        return fd.read()
+def load_file(file_name, mode="rb"):
+    results = None
+
+    try:
+        if not test_vectors_available:
+            raise FileNotFoundError(errno.ENOENT,
+                                    os.strerror(errno.ENOENT),
+                                    file_name)
+
+        dir_comps = ("PublicKey", "RSA")
+        init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        with open(full_file_name, mode) as file_in:
+            results = file_in.read()
+
+    except FileNotFoundError:
+        warnings.warn("Warning: skipping extended tests for RSA",
+                      UserWarning,
+                      stacklevel=2)
+
+    return results
 
 
 def der2pem(der, text='PUBLIC'):
     import binascii
-    chunks = [ binascii.b2a_base64(der[i:i+48]) for i in range(0, len(der), 48) ]
-    pem  = b('-----BEGIN %s KEY-----\n' % text)
+    chunks = [binascii.b2a_base64(der[i:i+48]) for i in range(0, len(der), 48)]
+    pem = b('-----BEGIN %s KEY-----\n' % text)
     pem += b('').join(chunks)
     pem += b('-----END %s KEY-----' % text)
     return pem
+
 
 class ImportKeyTests(unittest.TestCase):
     # 512-bit RSA key generated with openssl
@@ -71,7 +96,7 @@ BX85JB8zqwHB
 -----END PRIVATE KEY-----'''
 
     # The same RSA private key as in rsaKeyPEM, but now encrypted
-    rsaKeyEncryptedPEM=(
+    rsaKeyEncryptedPEM = (
 
         # PEM encryption
         # With DES and passphrase 'test'
@@ -507,6 +532,10 @@ class TestImport_2048(unittest.TestCase):
         key_file_ref = load_file("rsa2048_private.pem")
         key_file = load_file("rsa2048_public_openssh.txt")
 
+        # Skip test if test vectors are not installed
+        if None in (key_file_ref, key_file):
+            return
+
         key_ref = RSA.import_key(key_file_ref).public_key()
         key = RSA.import_key(key_file)
         self.assertEqual(key_ref, key)
@@ -514,6 +543,10 @@ class TestImport_2048(unittest.TestCase):
     def test_import_openssh_private_clear(self):
         key_file = load_file("rsa2048_private_openssh.pem")
         key_file_old = load_file("rsa2048_private_openssh_old.pem")
+
+        # Skip test if test vectors are not installed
+        if None in (key_file_old, key_file):
+            return
 
         key = RSA.import_key(key_file)
         key_old = RSA.import_key(key_file_old)
@@ -523,6 +556,10 @@ class TestImport_2048(unittest.TestCase):
     def test_import_openssh_private_password(self):
         key_file = load_file("rsa2048_private_openssh_pwd.pem")
         key_file_old = load_file("rsa2048_private_openssh_pwd_old.pem")
+
+        # Skip test if test vectors are not installed
+        if None in (key_file_old, key_file):
+            return
 
         key = RSA.import_key(key_file, b"password")
         key_old = RSA.import_key(key_file_old)

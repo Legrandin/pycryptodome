@@ -20,13 +20,13 @@
 # SOFTWARE.
 # ===================================================================
 
-import json
 import unittest
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import *
+from Crypto.Util.py3compat import b, bchr
 
 from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
 from Crypto.Hash import SHA1, HMAC, SHA256, MD5, SHA224, SHA384, SHA512
 from Crypto.Cipher import AES, DES3
 
@@ -34,7 +34,6 @@ from Crypto.Protocol.KDF import (PBKDF1, PBKDF2, _S2V, HKDF, scrypt,
                                  bcrypt, bcrypt_check)
 
 from Crypto.Protocol.KDF import _bcrypt_decode
-from Crypto.Util._file_system import pycryptodome_filename
 
 
 def t2b(t):
@@ -59,13 +58,14 @@ class PBKDF1_Tests(unittest.TestCase):
     #       Item #4: expected result (encoded in hex)
     _testData = (
             # From http://www.di-mgt.com.au/cryptoKDFs.html#examplespbkdf
-            ("password","78578E5A5D63CB06",16,1000,"DC19847E05C64D2FAF10EBFB4A3D2A20"),
+            ("password", "78578E5A5D63CB06", 16, 1000, "DC19847E05C64D2FAF10EBFB4A3D2A20"),
     )
 
     def test1(self):
         v = self._testData[0]
         res = PBKDF1(v[0], t2b(v[1]), v[2], v[3], SHA1)
         self.assertEqual(res, t2b(v[4]))
+
 
 class PBKDF2_Tests(unittest.TestCase):
 
@@ -462,7 +462,7 @@ class bcrypt_Tests(unittest.TestCase):
         bcrypt_check("pwd", ref)
         bref = bytearray(ref)
         bcrypt_check("pwd", bref)
-        
+
         wrong = ref[:-1] + bchr(bref[-1] ^ 0x01)
         self.assertRaises(ValueError, bcrypt_check, "pwd", wrong)
 
@@ -650,42 +650,29 @@ class TestVectorsHKDFWycheproof(unittest.TestCase):
         self._id = "None"
 
     def add_tests(self, filename):
-        comps = "Crypto.SelfTest.Protocol.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
-            tv_tree = json.load(file_in)
 
-        algo_name = tv_tree['algorithm']
-        if algo_name == "HKDF-SHA-1":
-            hash_module = SHA1
-        elif algo_name == "HKDF-SHA-256":
-            hash_module = SHA256
-        elif algo_name == "HKDF-SHA-384":
-            hash_module = SHA384
-        elif algo_name == "HKDF-SHA-512":
-            hash_module = SHA512
-        else:
-            raise ValueError("Unknown algorithm " + algo_name)
+        def filter_algo(root):
+            algo_name = root['algorithm']
+            if algo_name == "HKDF-SHA-1":
+                return SHA1
+            elif algo_name == "HKDF-SHA-256":
+                return SHA256
+            elif algo_name == "HKDF-SHA-384":
+                return SHA384
+            elif algo_name == "HKDF-SHA-512":
+                return SHA512
+            else:
+                raise ValueError("Unknown algorithm " + algo_name)
 
-        for group in tv_tree['testGroups']:
+        def filter_size(unit):
+            return int(unit['size'])
 
-            from collections import namedtuple
-            TestVector = namedtuple('TestVector', 'id comment ikm salt info size okm hash_module valid warning filename')
-
-            for test in group['tests']:
-                tv = TestVector(
-                    test['tcId'],
-                    test['comment'],
-                    unhexlify(test['ikm']),
-                    unhexlify(test['salt']),
-                    unhexlify(test['info']),
-                    int(test['size']),
-                    unhexlify(test['okm']),
-                    hash_module,
-                    test['result'] != "invalid",
-                    test['result'] == "acceptable",
-                    filename
-                )
-                self.tv.append(tv)
+        result = load_test_vectors_wycheproof(("Protocol", "wycheproof"),
+                                              filename,
+                                              "Wycheproof HMAC (%s)" % filename,
+                                              root_tag={'hash_module': filter_algo},
+                                              unit_tag={'size': filter_size})
+        return result
 
     def setUp(self):
         self.tv = []
@@ -733,7 +720,7 @@ def get_tests(config={}):
     tests += list_test_cases(PBKDF2_Tests)
     tests += list_test_cases(S2V_Tests)
     tests += list_test_cases(HKDF_Tests)
-    tests += [ TestVectorsHKDFWycheproof(wycheproof_warnings) ]
+    tests += [TestVectorsHKDFWycheproof(wycheproof_warnings)]
     tests += list_test_cases(scrypt_Tests)
     tests += list_test_cases(bcrypt_Tests)
 
