@@ -132,7 +132,7 @@ def load_test_vectors(dir_comps, file_name, description, conversions):
         description = "%s test (%s)" % (description, file_name)
 
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
-        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         with open(full_file_name) as file_in:
             results = _load_tests(dir_comps, file_in, description, conversions)
 
@@ -155,7 +155,7 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
                                     file_name)
 
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
-        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         with open(full_file_name) as file_in:
             tv_tree = json.load(file_in)
 

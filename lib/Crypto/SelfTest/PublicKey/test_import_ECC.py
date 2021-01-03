@@ -63,7 +63,7 @@ def load_file(file_name, mode="rb"):
 
         dir_comps = ("PublicKey", "ECC")
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
-        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         with open(full_file_name, mode) as file_in:
             results = file_in.read()
 

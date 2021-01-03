@@ -308,7 +308,7 @@ class Blake2OfficialTestVector(unittest.TestCase):
             return
 
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
-        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         self.test_vectors = self._load_tests(full_file_name)
 
     def runTest(self):
@@ -366,7 +366,7 @@ class Blake2TestVector1(unittest.TestCase):
             return
 
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
-        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         self.test_vectors = self._load_tests(full_file_name)
 
     def runTest(self):
@@ -426,7 +426,7 @@ class Blake2TestVector2(unittest.TestCase):
             return
 
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
-        full_file_name = os.path.join(init_dir, *dir_comps, file_name)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         self.test_vectors = self._load_tests(full_file_name)
 
     def runTest(self):
