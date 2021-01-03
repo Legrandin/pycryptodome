@@ -60,8 +60,13 @@ jobs:
       if: matrix.os == 'windows-latest' && matrix.python-version == '2.7'
       run: choco install vcpython27
 
+    - name: Install dependencies
+      run: |
+        pip install pycryptodome-test-vectors
+
     - name: Test
-      run: python -bb setup.py test
+      run: |
+        python -bb setup.py test
 
   mypy:
     runs-on: ubuntu-latest
@@ -73,7 +78,7 @@ jobs:
         python-version: 3.9
     - name: Install dependencies
       run: |
-        pip install mypy
+        pip install mypy pycryptodome-test-vectors
     - name: Test
       run: |
         mypy lib/

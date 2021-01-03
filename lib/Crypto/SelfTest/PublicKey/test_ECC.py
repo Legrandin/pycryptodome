@@ -31,7 +31,7 @@
 import unittest
 import time
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccPoint, _curves, EccKey
@@ -479,13 +479,12 @@ class TestEccPoint_PAI_P256(unittest.TestCase):
     pointG = EccPoint(curve.Gx, curve.Gy, "p256")
 
 
-tv_pai = load_tests(("Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC"),
+tv_pai = load_test_vectors(("PublicKey", "ECC"),
                     "point-at-infinity.org-P256.txt",
                     "P-256 tests from point-at-infinity.org",
-                    { "k" : lambda k: int(k),
-                      "x" : lambda x: int(x, 16),
-                      "y" : lambda y: int(y, 16)} )
-assert(tv_pai)
+                    {"k": lambda k: int(k),
+                     "x": lambda x: int(x, 16),
+                     "y": lambda y: int(y, 16)}) or []
 for tv in tv_pai:
     def new_test(self, scalar=tv.k, x=tv.x, y=tv.y):
         result = self.pointG * scalar
@@ -501,13 +500,12 @@ class TestEccPoint_PAI_P384(unittest.TestCase):
     pointG = EccPoint(curve.Gx, curve.Gy, "p384")
 
 
-tv_pai = load_tests(("Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC"),
+tv_pai = load_test_vectors(("PublicKey", "ECC"),
                     "point-at-infinity.org-P384.txt",
                     "P-384 tests from point-at-infinity.org",
-                    { "k" : lambda k: int(k),
-                      "x" : lambda x: int(x, 16),
-                      "y" : lambda y: int(y, 16)} )
-assert(tv_pai)
+                    {"k" : lambda k: int(k),
+                     "x" : lambda x: int(x, 16),
+                     "y" : lambda y: int(y, 16)}) or []
 for tv in tv_pai:
     def new_test(self, scalar=tv.k, x=tv.x, y=tv.y):
         result = self.pointG * scalar
@@ -523,13 +521,12 @@ class TestEccPoint_PAI_P521(unittest.TestCase):
     pointG = EccPoint(curve.Gx, curve.Gy, "p521")
 
 
-tv_pai = load_tests(("Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC"),
+tv_pai = load_test_vectors(("PublicKey", "ECC"),
                     "point-at-infinity.org-P521.txt",
                     "P-521 tests from point-at-infinity.org",
-                    { "k" : lambda k: int(k),
-                      "x" : lambda x: int(x, 16),
-                      "y" : lambda y: int(y, 16)} )
-assert(tv_pai)
+                    {"k": lambda k: int(k),
+                     "x": lambda x: int(x, 16),
+                     "y": lambda y: int(y, 16)}) or []
 for tv in tv_pai:
     def new_test(self, scalar=tv.k, x=tv.x, y=tv.y):
         result = self.pointG * scalar

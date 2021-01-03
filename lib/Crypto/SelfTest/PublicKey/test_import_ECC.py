@@ -28,21 +28,54 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import os
+import errno
+import warnings
 import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.py3compat import bord, tostr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Hash import SHAKE128
 
 from Crypto.PublicKey import ECC
 
-def load_file(filename, mode="rb"):
-    comps = [ "Crypto", "SelfTest", "PublicKey", "test_vectors", "ECC" ]
-    with open(pycryptodome_filename(comps, filename), mode) as fd:
-        return fd.read()
+try:
+    import pycryptodome_test_vectors  # type: ignore
+    test_vectors_available = True
+except ImportError:
+    test_vectors_available = False
+
+
+class MissingTestVectorException(ValueError):
+    pass
+
+
+def load_file(file_name, mode="rb"):
+    results = None
+
+    try:
+        if not test_vectors_available:
+            raise FileNotFoundError(errno.ENOENT,
+                                    os.strerror(errno.ENOENT),
+                                    file_name)
+
+        dir_comps = ("PublicKey", "ECC")
+        init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
+        with open(full_file_name, mode) as file_in:
+            results = file_in.read()
+
+    except FileNotFoundError:
+        warnings.warn("Warning: skipping extended tests for ECC",
+                      UserWarning,
+                      stacklevel=2)
+
+    if results is None:
+        raise MissingTestVectorException("Missing %s" % file_name)
+
+    return results
 
 
 def compact(lines):
@@ -86,13 +119,11 @@ def create_ref_keys_p521():
     return (ECC.construct(curve="P-521", d=private_key_d),
             ECC.construct(curve="P-521", point_x=public_key_x, point_y=public_key_y))
 
-
 # Create reference key pair
 # ref_private, ref_public = create_ref_keys_p521()
 
-
 def get_fixed_prng():
-        return SHAKE128.new().update(b"SEED").read
+    return SHAKE128.new().update(b"SEED").read
 
 
 class TestImport(unittest.TestCase):
@@ -103,7 +134,9 @@ class TestImport(unittest.TestCase):
 
 class TestImport_P256(unittest.TestCase):
 
-    ref_private, ref_public = create_ref_keys_p256()
+    def __init__(self, *args, **kwargs):
+        super(TestImport_P256, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_p256()
 
     def test_import_public_der(self):
         key_file = load_file("ecc_p256_public.der")
@@ -229,7 +262,9 @@ class TestImport_P256(unittest.TestCase):
 
 class TestImport_P384(unittest.TestCase):
 
-    ref_private, ref_public = create_ref_keys_p384()
+    def __init__(self, *args, **kwargs):
+        super(TestImport_P384, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_p384()
 
     def test_import_public_der(self):
         key_file = load_file("ecc_p384_public.der")
@@ -350,7 +385,9 @@ class TestImport_P384(unittest.TestCase):
 
 class TestImport_P521(unittest.TestCase):
 
-    ref_private, ref_public = create_ref_keys_p521()
+    def __init__(self, *args, **kwargs):
+        super(TestImport_P521, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_p521()
 
     def test_import_public_der(self):
         key_file = load_file("ecc_p521_public.der")
@@ -471,7 +508,9 @@ class TestImport_P521(unittest.TestCase):
 
 class TestExport_P256(unittest.TestCase):
 
-    ref_private, ref_public = create_ref_keys_p256()
+    def __init__(self, *args, **kwargs):
+        super(TestExport_P256, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_p256()
 
     def test_export_public_der_uncompressed(self):
         key_file = load_file("ecc_p256_public.der")
@@ -517,7 +556,7 @@ class TestExport_P256(unittest.TestCase):
 
     def test_export_private_pkcs8_encrypted(self):
         encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+                                                    protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -528,8 +567,8 @@ class TestExport_P256(unittest.TestCase):
         # ---
 
         encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+                                                passphrase="secret",
+                                                protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -749,7 +788,9 @@ gVnJp9EBND/tHQ==
 
 class TestExport_P384(unittest.TestCase):
 
-    ref_private, ref_public = create_ref_keys_p384()
+    def __init__(self, *args, **kwargs):
+        super(TestExport_P384, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_p384()
 
     def test_export_public_der_uncompressed(self):
         key_file = load_file("ecc_p384_public.der")
@@ -1016,7 +1057,9 @@ YC46ZRsnKNayw3wATdPjgja7L/DSII3nZK0G6KOOVwJBznT/e+zudUJYhZKaBLRx
 
 class TestExport_P521(unittest.TestCase):
 
-    ref_private, ref_public = create_ref_keys_p521()
+    def __init__(self, *args, **kwargs):
+        super(TestExport_P521, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_p521()
 
     def test_export_public_der_uncompressed(self):
         key_file = load_file("ecc_p521_public.der")
@@ -1286,13 +1329,17 @@ vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestImport)
-    tests += list_test_cases(TestImport_P256)
-    tests += list_test_cases(TestImport_P384)
-    tests += list_test_cases(TestImport_P521)
-    tests += list_test_cases(TestExport_P256)
-    tests += list_test_cases(TestExport_P384)
-    tests += list_test_cases(TestExport_P521)
+    try:
+        tests += list_test_cases(TestImport_P256)
+        tests += list_test_cases(TestImport_P384)
+        tests += list_test_cases(TestImport_P521)
+        tests += list_test_cases(TestExport_P256)
+        tests += list_test_cases(TestExport_P384)
+        tests += list_test_cases(TestExport_P521)
+    except MissingTestVectorException:
+        pass
     return tests
+
 
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())

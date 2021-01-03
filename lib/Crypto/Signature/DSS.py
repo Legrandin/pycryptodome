@@ -40,6 +40,7 @@ from Crypto.Math.Numbers import Integer
 
 from Crypto.Hash import HMAC
 from Crypto.PublicKey.ECC import EccKey
+from Crypto.PublicKey.DSA import DsaKey
 
 
 class DssSigScheme(object):
@@ -393,9 +394,11 @@ def new(key, mode, encoding='binary', randfunc=None):
     if isinstance(key, EccKey):
         order = key._curve.order
         private_key_attr = 'd'
-    else:
+    elif isinstance(key, DsaKey):
         order = Integer(key.q)
         private_key_attr = 'x'
+    else:
+        raise ValueError("Unsupported key type " + str(type(key)))
 
     if key.has_private():
         private_key = getattr(key, private_key_attr)
