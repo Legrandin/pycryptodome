@@ -1,6 +1,6 @@
 Changelog
 =========
-3.9.X (X XXX 2020)
+3.9.X (X XXX 2021)
 +++++++++++++++++++++++
 
 Resolved issues
@@ -10,6 +10,11 @@ Resolved issues
   The old method ``publickey()`` is still available for backward compatibility.
 * GH#476: ``Crypto.Util.Padding.unpad()`` was raising the incorrect exception
   in case of zero-length inputs. Thanks to Captainowie.
+
+New features
+------------
+* The bulk of the test vectors have been moved to the separate
+  package ``pycryptodome-test-vectors``.
 
 Breaks in compatibility
 -----------------------
