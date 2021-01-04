@@ -13,7 +13,7 @@ can be used to compute the signature of a message::
         >>> from Crypto.Hash import SHA256
         >>> from Crypto.PublicKey import RSA
         >>>
-        >>> message = 'To be signed'
+        >>> message = b'To be signed'
         >>> key = RSA.import_key(open('private_key.der').read())
         >>> h = SHA256.new(message)
         >>> signature = pkcs1_15.new(key).sign(h)
