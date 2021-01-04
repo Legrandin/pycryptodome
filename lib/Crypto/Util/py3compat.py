@@ -100,8 +100,7 @@ if sys.version_info[0] == 2:
 
     ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 
-    class FileNotFoundError(IOError):
-        pass
+    FileNotFoundError = IOError
 
 else:
     def b(s):
