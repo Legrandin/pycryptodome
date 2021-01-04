@@ -100,6 +100,9 @@ if sys.version_info[0] == 2:
 
     ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 
+    class FileNotFoundError(IOError):
+        pass
+
 else:
     def b(s):
        return s.encode("latin-1") # utf-8 would cause some side-effects we don't want
@@ -139,6 +142,8 @@ else:
         return isinstance(x, str)
 
     from abc import ABC
+
+    FileNotFoundError = FileNotFoundError
 
 
 def _copy_bytes(start, end, seq):

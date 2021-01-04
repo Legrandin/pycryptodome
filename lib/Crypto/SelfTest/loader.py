@@ -35,6 +35,8 @@ import errno
 import binascii
 import warnings
 from binascii import unhexlify
+from Crypto.Util.py3compat import FileNotFoundError
+
 
 try:
     import pycryptodome_test_vectors  # type: ignore

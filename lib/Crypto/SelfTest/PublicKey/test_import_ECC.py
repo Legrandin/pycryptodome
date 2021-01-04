@@ -35,7 +35,7 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import bord, tostr
+from Crypto.Util.py3compat import bord, tostr, FileNotFoundError
 from Crypto.Util.number import bytes_to_long
 from Crypto.Hash import SHAKE128
 

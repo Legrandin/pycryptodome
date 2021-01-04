@@ -28,7 +28,7 @@ import unittest
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
-from Crypto.Util.py3compat import b, tostr
+from Crypto.Util.py3compat import b, tostr, FileNotFoundError
 from Crypto.Util.number import inverse
 from Crypto.Util import asn1
 
