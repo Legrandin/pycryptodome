@@ -24,4 +24,8 @@ else:
     from sys import maxsize as maxint
     iter_range = range
 
+class FileNotFoundError:
+    def __init__(self, err: int, msg: str, filename: str) -> None:
+        pass
+
 def _copy_bytes(start: Optional[int], end: Optional[int], seq: Buffer) -> bytes: ...
