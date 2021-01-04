@@ -10,6 +10,8 @@ Resolved issues
   The old method ``publickey()`` is still available for backward compatibility.
 * GH#476: ``Crypto.Util.Padding.unpad()`` was raising the incorrect exception
   in case of zero-length inputs. Thanks to Captainowie.
+* GH#466: ``Crypto.Math.miller_rabin_test()`` was using the system random source
+  and not the provided one.
 
 New features
 ------------
