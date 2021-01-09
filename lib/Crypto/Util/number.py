@@ -394,27 +394,40 @@ def long_to_bytes(n, blocksize=0):
     If :data:`blocksize` is zero or not provided, the byte string will
     be of minimal length.
     """
-    # after much testing, this algorithm was deemed to be the fastest
-    s = b''
-    n = int(n)
+
+    if n < 0 or blocksize < 0:
+        raise ValueError("Values must be non-negative")
+
+    result = []
     pack = struct.pack
-    while n > 0:
-        s = pack('>I', n & 0xffffffff) + s
+
+    while blocksize >= 8:
+        result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
+        n = n >> 64
+        blocksize -= 8
+
+    while blocksize >= 4:
+        result.insert(0, pack('>I', n & 0xFFFFFFFF))
         n = n >> 32
-    # strip off leading zeros
-    for i in range(len(s)):
-        if s[i] != b'\x00'[0]:
-            break
+        blocksize -= 4
+
+    while blocksize > 0:
+        result.insert(0, pack('>B', n & 0xFF))
+        n = n >> 8
+        blocksize -= 1
+
+    if n == 0:
+        if len(result) == 0:
+            result = [ b'\x00' ]
     else:
-        # only happens when n == 0
-        s = b'\x00'
-        i = 0
-    s = s[i:]
-    # add back some pad bytes.  this could be done more efficiently w.r.t. the
-    # de-padding being done above, but sigh...
-    if blocksize > 0 and len(s) % blocksize:
-        s = (blocksize - len(s) % blocksize) * b'\x00' + s
-    return s
+        # The encoded number may exceed the block size
+        while n > 0:
+            result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
+            n = n >> 64
+        result[0] = result[0].lstrip(b'\x00')
+
+    return b''.join(result)
+
 
 def bytes_to_long(s):
     """Convert a byte string to a long integer (big endian).

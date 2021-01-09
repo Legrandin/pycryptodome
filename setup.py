@@ -378,6 +378,11 @@ ext_modules = [
         sources=['src/cpuid.c'],
         py_limited_api=True),
 
+    Extension("Crypto.Cipher._pkcs1_decode",
+        include_dirs=['src/'],
+        sources=['src/pkcs1_decode.c'],
+        py_limited_api=True),
+
     # Chaining modes
     Extension("Crypto.Cipher._raw_ecb",
         include_dirs=['src/'],

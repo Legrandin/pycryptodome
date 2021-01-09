@@ -7,6 +7,7 @@ X.X.X (X XXX 2021)
 Resolved issues
 ---------------
 * GH#376: Fixed symbol conflict between different versions of libgmp.
+* GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
 
 New features
 ------------

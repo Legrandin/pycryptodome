@@ -78,6 +78,8 @@ if sys.version_info[0] == 2:
             return s
         elif isinstance(s, bytearray):
             return bytes(s)
+        elif isinstance(s, memoryview):
+            return s[start:end].tobytes()
         else:
             return ''.join(s)
     def tostr(bs):
@@ -97,6 +99,11 @@ if sys.version_info[0] == 2:
 
     def is_string(x):
         return isinstance(x, basestring)
+
+    def is_bytes(x):
+        return isinstance(x, basestring) or \
+                isinstance(x, bytearray) or \
+                isinstance(x, memoryview)
 
     ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 
@@ -121,6 +128,8 @@ else:
             return bytes(s)
         elif isinstance(s,str):
             return s.encode(encoding)
+        elif isinstance(s, memoryview):
+            return s[start:end].tobytes()
         else:
             return bytes([s])
     def tostr(bs):
@@ -139,6 +148,11 @@ else:
 
     def is_string(x):
         return isinstance(x, str)
+
+    def is_bytes(x):
+        return isinstance(x, bytes) or \
+                isinstance(x, bytearray) or \
+                isinstance(x, memoryview)
 
     from abc import ABC
 

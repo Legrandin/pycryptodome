@@ -20,12 +20,37 @@
 # SOFTWARE.
 # ===================================================================
 
-__all__ = [ 'new', 'PKCS115_Cipher' ]
+__all__ = ['new', 'PKCS115_Cipher']
 
-from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
-from Crypto.Util.py3compat import bord, _copy_bytes
-import Crypto.Util.number
 from Crypto import Random
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Util.py3compat import bord, is_bytes, _copy_bytes
+
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, c_size_t,
+                                  c_uint8_ptr)
+
+
+_raw_pkcs1_decode = load_pycryptodome_raw_lib("Crypto.Cipher._pkcs1_decode",
+                        """
+                        int pkcs1_decode(const uint8_t *em, size_t len_em,
+                                         const uint8_t *sentinel, size_t len_sentinel,
+                                         size_t expected_pt_len,
+                                         uint8_t *output);
+                        """)
+
+
+def _pkcs1_decode(em, sentinel, expected_pt_len, output):
+    if len(em) != len(output):
+        raise ValueError("Incorrect output length")
+
+    ret = _raw_pkcs1_decode.pkcs1_decode(c_uint8_ptr(em),
+                                         c_size_t(len(em)),
+                                         c_uint8_ptr(sentinel),
+                                         c_size_t(len(sentinel)),
+                                         c_size_t(expected_pt_len),
+                                         c_uint8_ptr(output))
+    return ret
+
 
 class PKCS115_Cipher:
     """This cipher can perform PKCS#1 v1.5 RSA encryption or decryption.
@@ -74,8 +99,7 @@ class PKCS115_Cipher:
         """
 
         # See 7.2.1 in RFC8017
-        modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits,8) # Convert from bits to bytes
+        k = self._key.size_in_bytes()
         mLen = len(message)
 
         # Step 1
@@ -100,81 +124,76 @@ class PKCS115_Cipher:
         c = long_to_bytes(m_int, k)
         return c
 
-    def decrypt(self, ciphertext, sentinel):
+    def decrypt(self, ciphertext, sentinel, expected_pt_len=0):
         r"""Decrypt a PKCS#1 v1.5 ciphertext.
 
-        This function is named ``RSAES-PKCS1-V1_5-DECRYPT``, and is specified in
+        This is the function ``RSAES-PKCS1-V1_5-DECRYPT`` specified in
         `section 7.2.2 of RFC8017
         <https://tools.ietf.org/html/rfc8017#page-29>`_.
 
-        :param ciphertext:
+        Args:
+          ciphertext (bytes/bytearray/memoryview):
             The ciphertext that contains the message to recover.
-        :type ciphertext: bytes/bytearray/memoryview
-
-        :param sentinel:
+          sentinel (any type):
             The object to return whenever an error is detected.
-        :type sentinel: any type
+          expected_pt_len (integer):
+            The length the plaintext is known to have, or 0 if unknown.
 
-        :Returns: A byte string. It is either the original message or the ``sentinel`` (in case of an error).
-
-        :Raises ValueError:
-            If the ciphertext length is incorrect
-        :Raises TypeError:
-            If the RSA key has no private half (i.e. it cannot be used for
-            decyption).
+        Returns (byte string):
+            It is either the original message or the ``sentinel`` (in case of an error).
 
         .. warning::
-            You should **never** let the party who submitted the ciphertext know that
-            this function returned the ``sentinel`` value.
-            Armed with such knowledge (for a fair amount of carefully crafted but invalid ciphertexts),
-            an attacker is able to recontruct the plaintext of any other encryption that were carried out
-            with the same RSA public key (see `Bleichenbacher's`__ attack).
+            PKCS#1 v1.5 decryption is intrinsically vulnerable to timing
+            attacks (see `Bleichenbacher's`__ attack).
+            **Use PKCS#1 OAEP instead**.
 
-            In general, it should not be possible for the other party to distinguish
-            whether processing at the server side failed because the value returned
-            was a ``sentinel`` as opposed to a random, invalid message.
+            This implementation attempts to mitigate the risk
+            with some constant-time constructs.
+            However, they are not sufficient by themselves: the type of protocol you
+            implement and the way you handle errors make a big difference.
 
-            In fact, the second option is not that unlikely: encryption done according to PKCS#1 v1.5
-            embeds no good integrity check. There is roughly one chance
-            in 2\ :sup:`16` for a random ciphertext to be returned as a valid message
-            (although random looking).
+            Specifically, you should make it very hard for the (malicious)
+            party that submitted the ciphertext to quickly understand if decryption
+            succeeded or not.
 
-            It is therefore advisabled to:
-
-            1. Select as ``sentinel`` a value that resembles a plausable random, invalid message.
-            2. Not report back an error as soon as you detect a ``sentinel`` value.
-               Put differently, you should not explicitly check if the returned value is the ``sentinel`` or not.
-            3. Cover all possible errors with a single, generic error indicator.
-            4. Embed into the definition of ``message`` (at the protocol level) a digest (e.g. ``SHA-1``).
-               It is recommended for it to be the rightmost part ``message``.
-            5. Where possible, monitor the number of errors due to ciphertexts originating from the same party,
-               and slow down the rate of the requests from such party (or even blacklist it altogether).
-
-            **If you are designing a new protocol, consider using the more robust PKCS#1 OAEP.**
+            To this end, it is recommended that your protocol only encrypts
+            plaintexts of fixed length (``expected_pt_len``),
+            that ``sentinel`` is a random byte string of the same length,
+            and that processing continues for as long
+            as possible even if ``sentinel`` is returned (i.e. in case of
+            incorrect decryption).
 
             .. __: http://www.bell-labs.com/user/bleichen/papers/pkcs.ps
-
         """
 
-        # See 7.2.1 in RFC3447
-        modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits,8) # Convert from bits to bytes
+        # See 7.2.2 in RFC8017
+        k = self._key.size_in_bytes()
 
         # Step 1
         if len(ciphertext) != k:
-            raise ValueError("Ciphertext with incorrect length.")
+            raise ValueError("Ciphertext with incorrect length (not %d bytes)" % k)
+
         # Step 2a (O2SIP)
         ct_int = bytes_to_long(ciphertext)
+
         # Step 2b (RSADP)
         m_int = self._key._decrypt(ct_int)
+
         # Complete step 2c (I2OSP)
         em = long_to_bytes(m_int, k)
-        # Step 3
-        sep = em.find(b'\x00', 2)
-        if  not em.startswith(b'\x00\x02') or sep < 10:
-            return sentinel
-        # Step 4
-        return em[sep + 1:]
+
+        # Step 3 (not constant time when the sentinel is not a byte string)
+        output = bytearray(k)
+        if not is_bytes(sentinel) or len(sentinel) > k:
+            size = _pkcs1_decode(em, b'', expected_pt_len, output)
+            if size < 0:
+                return sentinel
+            else:
+                return output[size:]
+
+        # Step 3 (somewhat constant time)
+        size = _pkcs1_decode(em, sentinel, expected_pt_len, output)
+        return output[size:]
 
 
 def new(key, randfunc=None):
@@ -196,4 +215,3 @@ def new(key, randfunc=None):
     if randfunc is None:
         randfunc = Random.get_random_bytes
     return PKCS115_Cipher(key, randfunc)
-
