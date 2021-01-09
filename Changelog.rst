@@ -1,27 +1,32 @@
 Changelog
 =========
-3.9.X (X XXX 2021)
+3.10.0 (X XXX 2021)
 +++++++++++++++++++++++
 
 Resolved issues
 ---------------
 * Fixed potential memory leak when initializing block ciphers.
-* GH#469: RSA objects have now method ``public_key()`` like ECC objects.
+* GH#466: ``Crypto.Math.miller_rabin_test()`` was using the system random source
+  and not the provided one.
+* GH#469: RSA objects have now the method ``public_key()`` like ECC objects.
   The old method ``publickey()`` is still available for backward compatibility.
 * GH#476: ``Crypto.Util.Padding.unpad()`` was raising the incorrect exception
   in case of zero-length inputs. Thanks to Captainowie.
-* GH#466: ``Crypto.Math.miller_rabin_test()`` was using the system random source
-  and not the provided one.
+* GH#491: better exception message when ``Counter.new()`` is provided an integer
+  ``initial_value`` than doesn't fit into ``nbits`` bits.
+* GH#496: added missing ``block_size`` member for ECB cipher objects. Thanks to willem.
 
-New features
-------------
+Other changes
+-------------
 * The bulk of the test vectors have been moved to the separate
-  package ``pycryptodome-test-vectors``.
+  package ``pycryptodome-test-vectors``. As result, packages ``pycryptodome`` and
+  ``pycryptodomex`` become significantly smaller.
+* Moved CI tests and build service from Travis CI to GitHub Actions.
 
 Breaks in compatibility
 -----------------------
 
-* Drop support for Python 2.6 and 3.4
+* Drop support for Python 2.6 and 3.4.
 
 3.9.9 (2 November 2020)
 +++++++++++++++++++++++
