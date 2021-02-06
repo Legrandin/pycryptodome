@@ -15,6 +15,7 @@ Resolved issues
 * GH#491: better exception message when ``Counter.new()`` is provided an integer
   ``initial_value`` than doesn't fit into ``nbits`` bits.
 * GH#496: added missing ``block_size`` member for ECB cipher objects. Thanks to willem.
+* GH#500: ``nonce`` member of an XChaCha20 cipher object was not matching the original nonce.
 
 Other changes
 -------------

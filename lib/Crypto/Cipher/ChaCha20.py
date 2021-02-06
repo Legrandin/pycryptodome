@@ -94,6 +94,8 @@ class ChaCha20Cipher(object):
 
         See also `new()` at the module level."""
 
+        self.nonce = _copy_bytes(None, None, nonce)
+
         # XChaCha20 requires a key derivation with HChaCha20
         # See 2.3 in https://tools.ietf.org/html/draft-arciszewski-xchacha-03
         if len(nonce) == 24:
@@ -102,8 +104,7 @@ class ChaCha20Cipher(object):
             self._name = "XChaCha20"
         else:
             self._name = "ChaCha20"
-
-        self.nonce = _copy_bytes(None, None, nonce)
+            nonce = self.nonce
 
         self._next = ( self.encrypt, self.decrypt )
 
@@ -112,7 +113,7 @@ class ChaCha20Cipher(object):
                         self._state.address_of(),
                         c_uint8_ptr(key),
                         c_size_t(len(key)),
-                        self.nonce,
+                        nonce,
                         c_size_t(len(nonce)))
         if result:
             raise ValueError("Error %d instantiating a %s cipher" % (result,
