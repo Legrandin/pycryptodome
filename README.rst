@@ -1,9 +1,6 @@
 .. image:: https://github.com/Legrandin/pycryptodome/workflows/Integration%20test/badge.svg?branch=master
    :target: https://github.com/Legrandin/pycryptodome/actions
 
-.. image:: https://ci.appveyor.com/api/projects/status/mbxyqdodw9ylfib9/branch/master?svg=true
-   :target: https://ci.appveyor.com/project/Legrandin/pycryptodome
-
 PyCryptodome
 ============
 
