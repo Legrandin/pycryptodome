@@ -52,22 +52,35 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-18.04, windows-latest, macos-latest]
-        python: ['2.7', '3.6', '3.7', '3.8', '3.9', 'pypy-2.7', 'pypy-3.6']
+        python-version: ['2.7', '3.6', '3.7', '3.8', '3.9', 'pypy-2.7', 'pypy-3.6']
 
     if: github.actor == 'Legrandin'
 
     steps:
       - uses: actions/checkout@v2
 
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Display Python version
+        run: python -c "from __future__ import print_function; import sys; print(sys.version)"
+
       - uses: actions/download-artifact@v2
         with:
           name: wheels
           path: wheels/
 
-      - name: Install wheels
+      - name: Install pycryptodome wheel
+        if: endsWith(github.ref, 'x') == false
         run: |
-          # TODO: pycryptodomex
           pip install pycryptodome --no-index -f wheels/
+
+      - name: Install pycryptodomex wheel
+        if: endsWith(github.ref, 'x') == true
+        run: |
+          pip install pycryptodomex --no-index -f wheels/
 
       - name: Test wheels
         run: |
