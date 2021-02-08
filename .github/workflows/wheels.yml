@@ -42,4 +42,33 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: wheels
           path: ./wheelhouse/*.whl
+
+  test_wheels:
+    name: Test wheels on ${{ matrix.os }}
+    needs: build_wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, windows-latest, macos-latest]
+        python: ['2.7', '3.6', '3.7', '3.8', '3.9', 'pypy-2.7', 'pypy-3.6']
+
+    if: github.actor == 'Legrandin'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: wheels/
+
+      - name: Install wheels
+        run: |
+          # TODO: pycryptodomex
+          pip install pycryptodome --no-index -f wheels/
+
+      - name: Test wheels
+        run: |
+          python -m Crypto.SelfTest --skip-slow-tests
