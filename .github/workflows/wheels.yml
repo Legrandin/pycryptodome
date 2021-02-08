@@ -9,6 +9,10 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      # Build api3 only once and test separately
+      CIBW_BUILD: "cp27-* cp35-* pp27-* pp36-*"
+      CIBW_TEST_SKIP: "*"
     strategy:
       matrix:
         os: [ubuntu-18.04, windows-latest, macos-latest]
