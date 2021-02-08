@@ -65,6 +65,8 @@ are implemented as C extensions.
 
 For more information, see the `homepage`_.
 
+For security issues, please send an email to security@pycryptodome.org.
+
 All the code can be downloaded from `GitHub`_.
 
 .. _`homepage`: https://www.pycryptodome.org
