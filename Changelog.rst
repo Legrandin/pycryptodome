@@ -1,5 +1,14 @@
 Changelog
 =========
+
+3.10.1 (X February 2021)
+++++++++++++++++++++++++
+
+Other changes
+-------------
+* Python 3 wheels use ``abi3`` ABI tag.
+* Remove Appveyor CI.
+
 3.10.0 (6 February 2021)
 ++++++++++++++++++++++++
 
