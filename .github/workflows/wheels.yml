@@ -72,16 +72,14 @@ jobs:
           name: wheels
           path: wheels/
 
-      - name: Install pycryptodome wheel
+      - name: Install and test pycryptodome wheel
         if: endsWith(github.ref, 'x') == false
         run: |
           pip install pycryptodome --no-index -f wheels/
+          python -m Crypto.SelfTest --skip-slow-tests
 
       - name: Install pycryptodomex wheel
         if: endsWith(github.ref, 'x') == true
         run: |
           pip install pycryptodomex --no-index -f wheels/
-
-      - name: Test wheels
-        run: |
-          python -m Crypto.SelfTest --skip-slow-tests
+          python -m Cryptodome.SelfTest --skip-slow-tests
