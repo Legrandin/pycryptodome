@@ -359,8 +359,7 @@ ext_modules = [
         py_limited_api=True),
     Extension("Crypto.Cipher._raw_eksblowfish",
         include_dirs=['src/'],
-        define_macros=[('EKS',None),],
-        sources=["src/blowfish.c"],
+        sources=["src/blowfish_eks.c"],
         py_limited_api=True),
     Extension("Crypto.Cipher._raw_cast",
         include_dirs=['src/'],
@@ -442,7 +441,8 @@ ext_modules = [
     # Math
     Extension("Crypto.Math._modexp",
         include_dirs=['src/'],
-        sources=['src/modexp.c', 'src/siphash.c', 'src/modexp_utils.c', 'src/mont.c'],
+        sources=['src/modexp.c', 'src/siphash_math.c',
+                 'src/modexp_utils_math.c', 'src/mont_math.c'],
         py_limited_api=True,
         ),
 ]
