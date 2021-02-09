@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.10.1 (X February 2021)
+3.10.1 (9 February 2021)
 ++++++++++++++++++++++++
 
 Other changes
