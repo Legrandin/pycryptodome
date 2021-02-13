@@ -1,5 +1,5 @@
 from types import ModuleType
-from typing import Union, Dict
+from typing import Union, Dict, Any
 
 Buffer = Union[bytes, bytearray, memoryview]
 
@@ -12,7 +12,7 @@ class CMAC(object):
 		 key: Buffer,
                  msg: Buffer,
 		 ciphermod: ModuleType,
-		 cipher_params: dict,
+		 cipher_params: Dict[str, Any],
                  mac_len: int, update_after_digest: bool) -> None: ...
     def update(self, data: Buffer) -> CMAC: ...
     def copy(self) -> CMAC: ...
@@ -25,6 +25,6 @@ class CMAC(object):
 def new(key: Buffer,
         msg: Buffer = ...,
 	ciphermod: ModuleType = ...,
-	cipher_params: Dict = ...,
+	cipher_params: Dict[str, Any] = ...,
 	mac_len: int = ...,
         update_after_digest: bool = ...) -> CMAC: ...

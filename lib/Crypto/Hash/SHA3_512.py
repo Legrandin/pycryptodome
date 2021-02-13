@@ -46,6 +46,9 @@ class SHA3_512_Hash(object):
     # ASN.1 Object ID
     oid = "2.16.840.1.101.3.4.2.10"
 
+    # Input block size for HMAC
+    block_size = 72
+
     def __init__(self, data, update_after_digest):
         self._update_after_digest = update_after_digest
         self._digest_done = False
@@ -112,10 +115,28 @@ class SHA3_512_Hash(object):
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
-    def new(self):
-        """Create a fresh SHA3-512 hash object."""
+    def copy(self):
+        """Return a copy ("clone") of the hash object.
 
-        return type(self)(None, self._update_after_digest)
+        The copy will have the same internal state as the original hash
+        object.
+        This can be used to efficiently compute the digests of strings that
+        share a common initial substring.
+
+        :return: A hash object of the same type
+        """
+
+        clone = self.new()
+        result = _raw_keccak_lib.keccak_copy(self._state.get(),
+                                             clone._state.get())
+        if result:
+            raise ValueError("Error %d while copying SHA3-512" % result)
+        return clone
+
+    def new(self, data=None):
+        """Create a fresh SHA3-521 hash object."""
+
+        return type(self)(data, self._update_after_digest)
 
 
 def new(*args, **kwargs):
@@ -146,3 +167,6 @@ def new(*args, **kwargs):
 
 # The size of the resulting hash in bytes.
 digest_size = SHA3_512_Hash.digest_size
+
+# Input block size for HMAC
+block_size = 72
