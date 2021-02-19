@@ -24,21 +24,21 @@
 
 """Self-test suite for Crypto.Hash.HMAC"""
 
-import sys
 import unittest
 from binascii import hexlify
 from Crypto.Util.py3compat import tostr, tobytes
 
-from Crypto.Hash import HMAC, MD5, SHA1, SHA256
-hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256)
+from Crypto.Hash import (HMAC, MD5, SHA1, SHA256,
+                         SHA224, SHA384, SHA512,
+                         RIPEMD160,
+                         SHA3_224, SHA3_256, SHA3_384, SHA3_512)
 
-try:
-    from Crypto.Hash import SHA224, SHA384, SHA512, RIPEMD160
-    hash_modules.update(dict(SHA224=SHA224, SHA384=SHA384, SHA512=SHA512,
-                             RIPEMD160=RIPEMD160))
-except ImportError:
-    sys.stderr.write("SelfTest: warning: not testing HMAC-SHA224/384/512"
-                     " (not available)\n")
+
+hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256,
+                    SHA224=SHA224, SHA384=SHA384, SHA512=SHA512,
+                    RIPEMD160=RIPEMD160,
+                    SHA3_224=SHA3_224, SHA3_256=SHA3_256,
+                    SHA3_384=SHA3_384, SHA3_512=SHA3_512)
 
 default_hash = None
 
@@ -255,6 +255,156 @@ test_data = [
      dict(RIPEMD160='69ea60798d71616cce5fd0871e23754cd75d5a0a'),
      'RFC 2286 #7 (HMAC-RIPEMD)'),
 
+    # From https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/HMAC_SHA3-224.pdf
+    (
+        '000102030405060708090a0b0c0d0e0f'
+        '101112131415161718191a1b',
+        xl('Sample message for keylen<blocklen'),
+        dict(SHA3_224='332cfd59347fdb8e576e77260be4aba2d6dc53117b3bfb52c6d18c04'),
+        'NIST CSRC Sample #1 (SHA3-224)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '404142434445464748494a4b4c4d4e4f'\
+        '505152535455565758595a5b5c5d5e5f'\
+        '606162636465666768696a6b6c6d6e6f'\
+        '707172737475767778797a7b7c7d7e7f'\
+        '808182838485868788898a8b8c8d8e8f',
+        xl('Sample message for keylen=blocklen'),
+        dict(SHA3_224='d8b733bcf66c644a12323d564e24dcf3fc75f231f3b67968359100c7'),
+        'NIST CSRC Sample #2 (SHA3-224)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '404142434445464748494a4b4c4d4e4f'\
+        '505152535455565758595a5b5c5d5e5f'\
+        '606162636465666768696a6b6c6d6e6f'\
+        '707172737475767778797a7b7c7d7e7f'\
+        '808182838485868788898a8b8c8d8e8f'\
+        '909192939495969798999a9b9c9d9e9f'\
+        'a0a1a2a3a4a5a6a7a8a9aaab',
+        xl('Sample message for keylen>blocklen'),
+        dict(SHA3_224='078695eecc227c636ad31d063a15dd05a7e819a66ec6d8de1e193e59'),
+        'NIST CSRC Sample #3 (SHA3-224)'
+    ),
+
+    # From https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/HMAC_SHA3-256.pdf
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f',
+        xl('Sample message for keylen<blocklen'),
+        dict(SHA3_256='4fe8e202c4f058e8dddc23d8c34e467343e23555e24fc2f025d598f558f67205'),
+        'NIST CSRC Sample #1 (SHA3-256)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '404142434445464748494a4b4c4d4e4f'\
+        '505152535455565758595a5b5c5d5e5f'\
+        '606162636465666768696a6b6c6d6e6f'\
+        '707172737475767778797a7b7c7d7e7f'\
+        '8081828384858687',
+        xl('Sample message for keylen=blocklen'),
+        dict(SHA3_256='68b94e2e538a9be4103bebb5aa016d47961d4d1aa906061313b557f8af2c3faa'),
+        'NIST CSRC Sample #2 (SHA3-256)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '404142434445464748494a4b4c4d4e4f'\
+        '505152535455565758595a5b5c5d5e5f'\
+        '606162636465666768696a6b6c6d6e6f'\
+        '707172737475767778797a7b7c7d7e7f'\
+        '808182838485868788898a8b8c8d8e8f'\
+        '909192939495969798999a9b9c9d9e9f'\
+        'a0a1a2a3a4a5a6a7',
+        xl('Sample message for keylen>blocklen'),
+        dict(SHA3_256='9bcf2c238e235c3ce88404e813bd2f3a97185ac6f238c63d6229a00b07974258'),
+        'NIST CSRC Sample #3 (SHA3-256)'
+    ),
+
+    # From https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/HMAC_SHA3-384.pdf
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'
+        '202122232425262728292a2b2c2d2e2f',
+        xl('Sample message for keylen<blocklen'),
+        dict(SHA3_384='d588a3c51f3f2d906e8298c1199aa8ff6296218127f6b38a90b6afe2c5617725bc99987f79b22a557b6520db710b7f42'),
+        'NIST CSRC Sample #1 (SHA3-384)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '404142434445464748494a4b4c4d4e4f'\
+        '505152535455565758595a5b5c5d5e5f'\
+        '6061626364656667',
+        xl('Sample message for keylen=blocklen'),
+        dict(SHA3_384='a27d24b592e8c8cbf6d4ce6fc5bf62d8fc98bf2d486640d9eb8099e24047837f5f3bffbe92dcce90b4ed5b1e7e44fa90'),
+        'NIST CSRC Sample #2 (SHA3-384)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '404142434445464748494a4b4c4d4e4f'\
+        '505152535455565758595a5b5c5d5e5f'\
+        '606162636465666768696a6b6c6d6e6f'\
+        '707172737475767778797a7b7c7d7e7f'\
+        '808182838485868788898a8b8c8d8e8f'\
+        '9091929394959697',
+        xl('Sample message for keylen>blocklen'),
+        dict(SHA3_384='e5ae4c739f455279368ebf36d4f5354c95aa184c899d3870e460ebc288ef1f9470053f73f7c6da2a71bcaec38ce7d6ac'),
+        'NIST CSRC Sample #3 (SHA3-384)'
+    ),
+
+    # From https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/HMAC_SHA3-512.pdf
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f',
+        xl('Sample message for keylen<blocklen'),
+        dict(SHA3_512='4efd629d6c71bf86162658f29943b1c308ce27cdfa6db0d9c3ce81763f9cbce5f7ebe9868031db1a8f8eb7b6b95e5c5e3f657a8996c86a2f6527e307f0213196'),
+        'NIST CSRC Sample #1 (SHA3-512)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '4041424344454647',
+        xl('Sample message for keylen=blocklen'),
+        dict(SHA3_512='544e257ea2a3e5ea19a590e6a24b724ce6327757723fe2751b75bf007d80f6b360744bf1b7a88ea585f9765b47911976d3191cf83c039f5ffab0d29cc9d9b6da'),
+        'NIST CSRC Sample #2 (SHA3-512)'
+    ),
+    (
+        '000102030405060708090a0b0c0d0e0f'\
+        '101112131415161718191a1b1c1d1e1f'\
+        '202122232425262728292a2b2c2d2e2f'\
+        '303132333435363738393a3b3c3d3e3f'\
+        '404142434445464748494a4b4c4d4e4f'\
+        '505152535455565758595a5b5c5d5e5f'\
+        '606162636465666768696a6b6c6d6e6f'\
+        '707172737475767778797a7b7c7d7e7f'\
+        '8081828384858687',
+        xl('Sample message for keylen>blocklen'),
+        dict(SHA3_512='5f464f5e5b7848e3885e49b2c385f0694985d0e38966242dc4a5fe3fea4b37d46b65ceced5dcf59438dd840bab22269f0ba7febdb9fcf74602a35666b2a32915'),
+        'NIST CSRC Sample #3 (SHA3-512)'
+    ),
+
 ]
 
 
@@ -381,12 +531,8 @@ def get_tests(config={}):
         for modname in row[2].keys():
             t = list(row)
             t[2] = row[2][modname]
-            try:
-                t.append(dict(digestmod=globals()[modname]))
-                exp_test_data.append(t)
-            except AttributeError:
-                sys.stderr.write("SelfTest: warning: not testing HMAC-%s"
-                                 " (not available)\n" % modname)
+            t.append(dict(digestmod=globals()[modname]))
+            exp_test_data.append(t)
     tests = make_mac_tests(HMAC, "HMAC", exp_test_data)
     tests.append(HMAC_Module_and_Instance_Test(hash_modules))
     tests.append(HMAC_None())

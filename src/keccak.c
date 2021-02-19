@@ -215,6 +215,16 @@ EXPORT_SYM int keccak_digest(keccak_state *state, uint8_t *digest, size_t len)
     return keccak_squeeze(&tmp, digest, len);
 }
 
+EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
+{
+    if (NULL == src || NULL == dst) {
+        return ERR_NULL;
+    }
+
+    *dst = *src;
+    return 0;
+}
+
 /* Keccak core function */
 
 #define KECCAK_ROUNDS 24
