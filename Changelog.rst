@@ -1,6 +1,13 @@
 Changelog
 =========
 
+X.X.X (X XXX 2021)
+++++++++++++++++++++++++
+
+New features
+------------
+* Added support for SHA-3 hash functions to HMAC.
+
 3.10.1 (9 February 2021)
 ++++++++++++++++++++++++
 
