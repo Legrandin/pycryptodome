@@ -4,6 +4,10 @@ Changelog
 X.X.X (X XXX 2021)
 ++++++++++++++++++++++++
 
+Resolved issues
+---------------
+* GH#376: Fixed symbol conflict between different versions of libgmp.
+
 New features
 ------------
 * Added support for SHA-3 hash functions to HMAC.

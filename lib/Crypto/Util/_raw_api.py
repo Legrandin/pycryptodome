@@ -92,7 +92,10 @@ try:
         @cdecl, the C function declarations.
         """
 
-        lib = ffi.dlopen(name)
+        if hasattr(ffi, "RTLD_DEEPBIND"):
+            lib = ffi.dlopen(name, ffi.RTLD_DEEPBIND)
+        else:
+            lib = ffi.dlopen(name)
         ffi.cdef(cdecl)
         return lib
 
