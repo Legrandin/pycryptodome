@@ -37,8 +37,8 @@ from binascii import hexlify, unhexlify
 
 from Crypto.Util.py3compat import tobytes, bord, bchr
 
-from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512, SHA3_256,
-                         SHA3_384, SHA3_512)
+from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512,
+                         SHA3_224, SHA3_256, SHA3_384, SHA3_512)
 from Crypto.Signature import DSS
 from Crypto.PublicKey import DSA, ECC
 from Crypto.SelfTest.st_common import list_test_cases
@@ -933,6 +933,14 @@ def get_hash_module(hash_name):
         hash_module = SHA224
     elif hash_name == "SHA-1":
         hash_module = SHA1
+    elif hash_name == "SHA3-224":
+        hash_module = SHA3_224
+    elif hash_name == "SHA3-256":
+        hash_module = SHA3_256
+    elif hash_name == "SHA3-384":
+        hash_module = SHA3_384
+    elif hash_name == "SHA3-512":
+        hash_module = SHA3_512
     else:
         raise ValueError("Unknown hash algorithm: " + hash_name)
     return hash_module
@@ -1115,7 +1123,7 @@ def get_tests(config={}):
     tests += list_test_cases(Det_DSA_Tests)
     tests += list_test_cases(Det_ECDSA_Tests)
 
-    slow_tests = not config.get('slow_tests')
+    slow_tests = config.get('slow_tests')
     if slow_tests:
         tests += list_test_cases(FIPS_DSA_Tests_KAT)
         tests += list_test_cases(FIPS_ECDSA_Tests_KAT)
