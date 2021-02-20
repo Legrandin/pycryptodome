@@ -85,8 +85,8 @@ if sys.version_info[0] == 2:
     def byte_string(s):
         return isinstance(s, str)
 
-    # In Pyton 2.x, StringIO is a stand-alone module
-    from StringIO import StringIO as BytesIO
+    from StringIO import StringIO
+    BytesIO = StringIO
 
     from sys import maxint
 
@@ -128,8 +128,8 @@ else:
     def byte_string(s):
         return isinstance(s, bytes)
 
-    # In Python 3.x, StringIO is a sub-module of io
     from io import BytesIO
+    from io import StringIO
     from sys import maxsize as maxint
 
     iter_range = range
