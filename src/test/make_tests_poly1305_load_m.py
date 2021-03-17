@@ -12,28 +12,28 @@ def make_test(secret):
     split = struct.unpack('<IIIII', padded)
     m_out = [ "0x%08xUL" % x for x in split ]
 
-    print ""
-    print "void test_%d() {" % counter.next()
-    print "    uint8_t secret[%d] = {" % len(secret),
-    print      ",".join([str(ord(x)) for x in secret]) + "};"
-    print "    uint32_t m[5] = { 0 };"
-    print "    const uint32_t expected_m[5] = {" + ", ".join(m_out) + "};"
-    print ""
-    print "    poly1305_load_m(m, secret, %d);" % len(secret)
-    print "    assert(memcmp(m, expected_m, sizeof(m)) == 0);"
-    print "}"
-    print ""
+    print("")
+    print("void test_%d() {" % next(counter))
+    print("    uint8_t secret[%d] = {" % len(secret), end=' ')
+    print(",".join([str(x) for x in secret]) + "};")
+    print("    uint32_t m[5] = { 0 };")
+    print("    const uint32_t expected_m[5] = {" + ", ".join(m_out) + "};")
+    print("")
+    print("    poly1305_load_m(m, secret, %d);" % len(secret))
+    print("    assert(memcmp(m, expected_m, sizeof(m)) == 0);")
+    print("}")
+    print("")
 
 
-print "#ifdef NDEBUG"
-print "#undef NDEBUG"
-print "#endif"
-print "#include <assert.h>"
-print "#include <string.h>"
-print "#include <stdint.h>"
-print "#include <stdio.h>"
-print
-print "void poly1305_load_m(uint32_t r[5], const uint8_t data[], size_t len);"
+print("#ifdef NDEBUG")
+print("#undef NDEBUG")
+print("#endif")
+print("#include <assert.h>")
+print("#include <string.h>")
+print("#include <stdint.h>")
+print("#include <stdio.h>")
+print()
+print("void poly1305_load_m(uint32_t r[5], const uint8_t data[], size_t len);")
 
 for len_secret in range(16+1):
     make_test(b"\xaa" * len_secret)
