@@ -151,9 +151,10 @@ def getPrime(N, randfunc=None):
         raise ValueError("N must be larger than 1")
 
     number = getRandomNBitInteger(N, randfunc) | 1
-    mask = (1 << N) - 1
     while (not isPrime(number, randfunc=randfunc)):
-        number = number + 2 & mask
+        number = number + 2
+        if number >= 1 << N:
+            number = (1 << N - 1) | 1
     return number
 
 
