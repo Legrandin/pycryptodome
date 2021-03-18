@@ -5,7 +5,7 @@ CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
 
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_32 tests_square_64 tests_product tests_addmul test_endianess\
        test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate\
-	   test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32
+       test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32 test_pkcs1
 
 ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
 CPPFLAGS += -DHAVE_X86INTRIN_H -DUSE_SSE2 -DHAVE_WMMINTRIN_H -DHAVE_TMMINTRIN_H
@@ -158,4 +158,8 @@ build/tests_mont_mult.c: make_tests_mont_mult.py
 	python $^ > $@
 
 build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o $(UTILS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+# pkcs1
+build/test_pkcs1: test_pkcs1.c ../common.h ../pkcs1_decode.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^

@@ -105,6 +105,7 @@ try:
 
     c_ulonglong = c_ulong
     c_uint = c_ulong
+    c_ubyte = c_ulong
 
     def c_size_t(x):
         """Convert a Python integer to size_t"""
@@ -168,6 +169,11 @@ except ImportError:
     null_pointer = None
     cached_architecture = []
 
+    def c_ubyte(c):
+        if not (0 <= c < 256):
+            raise OverflowError()
+        return ctypes.c_ubyte(c)
+
     def load_lib(name, cdecl):
         if not cached_architecture:
             # platform.architecture() creates a subprocess, so caching the
@@ -199,7 +205,7 @@ except ImportError:
     _c_ssize_p = ctypes.POINTER(_c_ssize_t)
 
     # See Include/object.h for CPython
-    # and https://github.com/pallets/click/blob/master/click/_winconsole.py
+    # and https://github.com/pallets/click/blob/master/src/click/_winconsole.py
     class _Py_buffer(ctypes.Structure):
         _fields_ = [
             ('buf',         c_void_p),
@@ -227,7 +233,7 @@ except ImportError:
             buf = _Py_buffer()
             _PyObject_GetBuffer(obj, byref(buf), _PyBUF_SIMPLE)
             try:
-                buffer_type = c_ubyte * buf.len
+                buffer_type = ctypes.c_ubyte * buf.len
                 return buffer_type.from_address(buf.buf)
             finally:
                 _PyBuffer_Release(byref(buf))
@@ -252,7 +258,6 @@ except ImportError:
         return VoidPointer_ctypes()
 
     backend = "ctypes"
-    del ctypes
 
 
 class SmartPointer(object):

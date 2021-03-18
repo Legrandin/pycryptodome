@@ -8,38 +8,31 @@ See RFC8017__ or the `original RSA Labs specification`__ .
 
 This scheme is more properly called ``RSAES-PKCS1-v1_5``.
 
-As an example, a sender may encrypt a message in this way::
+As an example, a sender may encrypt a secret AES key in this way::
 
         >>> from Crypto.Cipher import PKCS1_v1_5
         >>> from Crypto.PublicKey import RSA
-        >>> from Crypto.Hash import SHA
+        >>> from Crypto.Random import get_random_bytes
         >>>
-        >>> message = b'To be encrypted'
-        >>> h = SHA.new(message)
+        >>> aes_key = get_random_bytes(16)
         >>>
-        >>> key = RSA.importKey(open('pubkey.der').read())
-        >>> cipher = PKCS1_v1_5.new(key)
-        >>> ciphertext = cipher.encrypt(message+h.digest())
+        >>> rsa_key = RSA.importKey(open('pubkey.der').read())
+        >>> cipher = PKCS1_v1_5.new(rsa_key)
+        >>> ciphertext = cipher.encrypt(aes_key)
 
 At the receiver side, decryption can be done using the private part of
 the RSA key::
 
-        >>> from Crypto.Hash import SHA
-        >>> from Crypto import Random
+        >>> from Crypto.Random import get_random_bytes
         >>>
-        >>> key = RSA.importKey(open('privkey.der').read())
+        >>> rsa_key = RSA.importKey(open('privkey.der').read())
         >>>
-        >>> dsize = SHA.digest_size
-        >>> sentinel = Random.new().read(15+dsize)      # Let's assume that average data length is 15
+        >>> sentinel = get_random_bytes(16)
         >>>
-        >>> cipher = PKCS1_v1_5.new(key)
-        >>> message = cipher.decrypt(ciphertext, sentinel)
+        >>> cipher = PKCS1_v1_5.new(rsa_key)
+        >>> aes_key = cipher.decrypt(ciphertext, sentinel, expected_pt_len=16)
         >>>
-        >>> digest = SHA.new(message[:-dsize]).digest()
-        >>> if digest==message[-dsize:]:                # Note how we DO NOT look for the sentinel
-        >>>     print "Encryption was correct."
-        >>> else:
-        >>>     print "Encryption was not correct."
+        >>> # The AES key is the random sentinel in case of error
 
 .. __: https://tools.ietf.org/html/rfc8017
 .. __: http://www.rsa.com/rsalabs/node.asp?id=2125.
