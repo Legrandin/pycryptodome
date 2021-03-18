@@ -141,14 +141,19 @@ def inverse(u, v):
 def getPrime(N, randfunc=None):
     """Return a random N-bit prime number.
 
+    N must be an integer larger than 1.
     If randfunc is omitted, then :meth:`Random.get_random_bytes` is used.
     """
     if randfunc is None:
         randfunc = Random.get_random_bytes
 
-    number=getRandomNBitInteger(N, randfunc) | 1
+    if N < 2:
+        raise ValueError("N must be larger than 1")
+
+    number = getRandomNBitInteger(N, randfunc) | 1
+    mask = (1 << N) - 1
     while (not isPrime(number, randfunc=randfunc)):
-        number=number+2
+        number = number + 2 & mask
     return number
 
 

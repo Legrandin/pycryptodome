@@ -7,6 +7,8 @@ X.X.X (X XXX 2021)
 Resolved issues
 ---------------
 * GH#376: Fixed symbol conflict between different versions of libgmp.
+* Fixed the issue ``Crypto.Util.number.getPrime`` may occasionally generate prime
+  larger than given bit size.
 
 New features
 ------------
