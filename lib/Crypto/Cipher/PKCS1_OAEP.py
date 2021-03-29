@@ -188,9 +188,9 @@ class PKCS1OAEP_Cipher:
         # Step 3f
         db = strxor(maskedDB, dbMask)
         # Step 3g
-        one_pos = db[hLen:].find(b'\x01')
+        one_pos = hLen + db[hLen:].find(b'\x01')
         lHash1 = db[:hLen]
-        invalid = bord(y) | int(one_pos < 0)
+        invalid = bord(y) | int(one_pos < hLen)
         hash_compare = strxor(lHash1, lHash)
         for x in hash_compare:
             invalid |= bord(x)
@@ -199,7 +199,7 @@ class PKCS1OAEP_Cipher:
         if invalid != 0:
             raise ValueError("Incorrect decryption.")
         # Step 4
-        return db[hLen + one_pos + 1:]
+        return db[one_pos + 1:]
 
 def new(key, hashAlgo=None, mgfunc=None, label=b'', randfunc=None):
     """Return a cipher object :class:`PKCS1OAEP_Cipher` that can be used to perform PKCS#1 OAEP encryption or decryption.
