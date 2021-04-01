@@ -8,6 +8,7 @@ Resolved issues
 ---------------
 * GH#376: Fixed symbol conflict between different versions of libgmp.
 * GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
+* GH#517: Fix RSAES-OAEP, as it didn't always fail when zero padding was incorrect.
 * Fixed the issue ``Crypto.Util.number.getPrime`` may occasionally generate prime
   larger than given bit size.
 
