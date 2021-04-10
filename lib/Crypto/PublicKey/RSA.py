@@ -69,7 +69,7 @@ class RsaKey(object):
     :vartype q: integer
 
     :ivar u: Chinese remainder component (:math:`p^{-1} \text{mod } q`)
-    :vartype q: integer
+    :vartype u: integer
 
     :undocumented: exportKey, publickey
     """
