@@ -33,7 +33,7 @@ class LamportKey(object):
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
     """
 
-    def __init__(self, key, is_private, onewayfunc="2.16.840.1.101.3.4.2.8"):
+    def __init__(self, key, is_private, onewayfunc="2.16.840.1.101.3.4.2.8", used=False):
         """Build a Lamport key.
         """
         h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
@@ -42,16 +42,18 @@ class LamportKey(object):
             raise ValueError("Malformed Lamport key.")
         self._key = key
         self._is_private = is_private
+        self._used = used
         self._h = h
         self._size = size
         self._onewayfunc = onewayfunc
 
 
     def __repr__(self):
-        return "LamportKey(key=%s, is_private=%s, onewayfunc=%s)" % (
+        return "LamportKey(key=%s, is_private=%s, onewayfunc=%s, used=%s)" % (
             repr(self._key),
             repr(self._is_private),
-            repr(self._onewayfunc if self._onewayfunc not in onewayfuncs.values() else onewayfuncs[next(oid for oid, f in onewayfuncs.items() if f == self._onewayfunc)])
+            repr(self._onewayfunc if self._onewayfunc not in onewayfuncs.values() else onewayfuncs[next(oid for oid, f in onewayfuncs.items() if f == self._onewayfunc)]),
+            repr(self._used),
         )
 
 
@@ -60,7 +62,11 @@ class LamportKey(object):
             raise ValueError("Message to be signed must be %i bits long." % self._size)
         if not self._is_private:
             raise ValueError("This is not a private key")
-        return tuple(privpair[bit] for bit, privpair in zip(_iterbits(message), self._key))
+        if self._used:
+            raise RuntimeError("This key has already been used!")
+        signature = tuple(privpair[bit] for bit, privpair in zip(_iterbits(message), self._key))
+        self._used = True
+        return signature
 
 
     def sign(self, message):
