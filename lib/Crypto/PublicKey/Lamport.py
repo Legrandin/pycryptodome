@@ -86,7 +86,7 @@ class LamportKey(object):
 
 
 def generate(size):
-    """Create a new RSA key pair.
+    """Create a new Lamport key.
 
     The algorithm closely follows the `Wikipedia page`_.
 
