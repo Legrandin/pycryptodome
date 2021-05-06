@@ -74,7 +74,7 @@ class LamportKey(object):
     def _verify(self, message, signature):
         expected = tuple(pubpair[bit] for bit, pubpair in zip(_iterbits(message), self.publickey()._key))
         actual = tuple(map(self._h, signature))
-        return expected == actual
+        return (expected == actual)
 
 
     def verify(self, message, signature):
