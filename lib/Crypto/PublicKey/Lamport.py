@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # ===================================================================
 #
-# Copyright (c) 2020, James Edington <james@ishygddt.xyz>
+# Copyright (c) 2021, James Edington <james@ishygddt.xyz>
 # No rights reserved.
 #
 # To the extent possible under law, the author has waived all
