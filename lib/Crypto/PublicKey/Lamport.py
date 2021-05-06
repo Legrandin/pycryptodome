@@ -67,7 +67,7 @@ class LamportKey(object):
         if not self._is_private:
             raise ValueError("This is not a private key")
         if self._used:
-            raise RuntimeError("This key has already been used!")
+            raise RuntimeError("This one-time key has already been used!")
         signature = tuple(privpair[bit] for bit, privpair in zip(_iterbits(message), self._key))
         self._used = True
         return signature
@@ -95,7 +95,7 @@ class LamportKey(object):
         return LamportKey(key=_s2p(self._h, self._key) if self._is_private else self._key, is_private=False, h=self._h)
 
 
-def generate(size, onewayfunc="2.16.840.1.101.3.4.2.8"):
+def generate(size, onewayfunc=None):
     """Create a new Lamport key.
 
     The algorithm closely follows the `Wikipedia page`_.
@@ -104,7 +104,7 @@ def generate(size, onewayfunc="2.16.840.1.101.3.4.2.8"):
     """
 
     try:
-        h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
+        h = onewayfuncs[onewayfunc_bits[size] if not onewayfunc else onewayfunc] if not callable(onewayfunc) else onewayfunc
     except KeyError as e:
         raise ValueError("Unsupported signature size for generation. Supported sizes are %s." % repr(list(onewayfunc_bits.keys()))) from e
     if size is None:
@@ -115,7 +115,7 @@ def generate(size, onewayfunc="2.16.840.1.101.3.4.2.8"):
     return LamportKey(key=sk, is_private=True, h=h, used=False)
 
 
-def construct(key, is_private, onewayfunc="2.16.840.1.101.3.4.2.8", used=False):
+def construct(key, is_private, onewayfunc, used=False):
      h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
      return LamportKey(key=key, is_private=is_private, h=h, used=used)
 
