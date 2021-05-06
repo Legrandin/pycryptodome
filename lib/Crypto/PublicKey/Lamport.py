@@ -33,26 +33,24 @@ class LamportKey(object):
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
     """
 
-    def __init__(self, key, is_private, onewayfunc="2.16.840.1.101.3.4.2.8", used=False):
+    def __init__(self, key, is_private, h, used=False):
         """Build a Lamport key.
         """
-        h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
         size = len(h(b'')) * 8
-        if size != len(key) or not all(len(pair) == 2 for pair in key):
+        if size != len(key) or not all(len(pair) == 2 and all(len(item) * 8 == size for item in pair) for pair in key):
             raise ValueError("Malformed Lamport key.")
         self._key = key
         self._is_private = is_private
         self._used = used
         self._h = h
         self._size = size
-        self._onewayfunc = onewayfunc
 
 
     def __repr__(self):
-        return "LamportKey(key=%s, is_private=%s, onewayfunc=%s, used=%s)" % (
+        return "LamportKey(key=%s, is_private=%s, h=%s, used=%s)" % (
             repr(self._key),
             repr(self._is_private),
-            repr(self._onewayfunc if self._onewayfunc not in onewayfuncs.values() else onewayfuncs[next(oid for oid, f in onewayfuncs.items() if f == self._onewayfunc)]),
+            repr(self._h if self._h not in onewayfuncs.values() else onewayfuncs[next(oid for oid, f in onewayfuncs.items() if f == self._h)]),
             repr(self._used),
         )
 
@@ -88,10 +86,10 @@ class LamportKey(object):
 
 
     def publickey(self):
-        return LamportKey(key=_s2p(self._h, self._key) if self._is_private else self._key, is_private=False, onewayfunc=self._onewayfunc)
+        return LamportKey(key=_s2p(self._h, self._key) if self._is_private else self._key, is_private=False, h=self._h)
 
 
-def generate(size):
+def generate(size, onewayfunc="2.16.840.1.101.3.4.2.8"):
     """Create a new Lamport key.
 
     The algorithm closely follows the `Wikipedia page`_.
@@ -100,13 +98,20 @@ def generate(size):
     """
 
     try:
-        onewayfunc = onewayfunc_bits[size]
+        h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
     except (KeyError, ValueError) as e:
-        raise ValueError("Unsupported signature size for generation. Supported sizes are %s" % repr(onewayfunc_bits.keys())) from e
-    if not size % 8 == 0:
-        raise ValueError("Signature size must be a multiple of 8.")
+        raise ValueError("Unsupported signature size for generation. Supported sizes are %s." % repr(onewayfunc_bits.keys())) from e
+    if size is None:
+        size = len(h(b'')) * 8
+    elif len(h(b'')) * 8 != size:
+        raise ValueError("Passed size=%i was inappropriate for passed hash function. (Pass size=None to automatically select the correct size.)" % (size,))
     sk = tuple(tuple(get_random_bytes(size // 8) for size in repeat(size, 2)) for size in repeat(size, size))
-    return LamportKey(sk, is_private=True, onewayfunc=onewayfunc)
+    return LamportKey(key=sk, is_private=True, h=h, used=False)
+
+
+def construct(key, is_private, onewayfunc="2.16.840.1.101.3.4.2.8", used=False):
+        h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
+        return LamportKey(key=key, is_private=is_private, h=h, used=used)
 
 
 def _s2p(h, key):
