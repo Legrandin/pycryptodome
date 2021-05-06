@@ -55,6 +55,12 @@ class LamportKey(object):
         )
 
 
+    def __eq__(self, other):
+        if self._is_private != other._is_private:
+            return False
+        return (self._key == other._key)
+
+
     def _sign(self, message):
         if len(message) * 8 != self._size:
             raise ValueError("Message to be signed must be %i bits long." % self._size)
