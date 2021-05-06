@@ -23,7 +23,7 @@
 
 from Crypto.Random import get_random_bytes
 from Crypto.Random.random import getrandbits
-from Crypto.Hash import SHA1, SHA224, SHA256, SHA3_224, SHA3_256, SHA3_384, SHA3_512
+from Crypto.Hash import SHA1, SHA224, SHA256, SHA384, SHA512, SHA3_224, SHA3_256, SHA3_384, SHA3_512
 from itertools import repeat
 
 
@@ -94,13 +94,13 @@ def generate(size, onewayfunc="2.16.840.1.101.3.4.2.8"):
 
     The algorithm closely follows the `Wikipedia page`_.
 
-    .. _The wikipedia page: https://en.wikipedia.org/wiki/Lamport_signature
+    .. _Wikipedia page: https://en.wikipedia.org/wiki/Lamport_signature
     """
 
     try:
         h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
-    except (KeyError, ValueError) as e:
-        raise ValueError("Unsupported signature size for generation. Supported sizes are %s." % repr(onewayfunc_bits.keys())) from e
+    except KeyError as e:
+        raise ValueError("Unsupported signature size for generation. Supported sizes are %s." % repr(list(onewayfunc_bits.keys()))) from e
     if size is None:
         size = len(h(b'')) * 8
     elif len(h(b'')) * 8 != size:
@@ -110,8 +110,8 @@ def generate(size, onewayfunc="2.16.840.1.101.3.4.2.8"):
 
 
 def construct(key, is_private, onewayfunc="2.16.840.1.101.3.4.2.8", used=False):
-        h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
-        return LamportKey(key=key, is_private=is_private, h=h, used=used)
+     h = onewayfuncs[onewayfunc] if not callable(onewayfunc) else onewayfunc
+     return LamportKey(key=key, is_private=is_private, h=h, used=used)
 
 
 def _s2p(h, key):
@@ -122,7 +122,7 @@ def _iterbits(data):
     yield from (((byte & (0b1 << k)) >> k) for k in range(8 - 1, -1, -1) for byte in data)
 
 
-onewayfunc_bits = {
+onewayfunc_bits = { # defaults to SHA3
     224: "2.16.840.1.101.3.4.2.7",
     256: "2.16.840.1.101.3.4.2.8",
     384: "2.16.840.1.101.3.4.2.9",
@@ -133,8 +133,9 @@ onewayfunc_bits = {
 onewayfuncs = {
     "1.3.14.3.2.26": lambda m: SHA1.new(m).digest(),
     "2.16.840.1.101.3.4.2.4": lambda m: SHA224.new(m).digest(),
-    "2.16.840.1.101.3.4.2.3": lambda m: SHA256.new(m).digest(),
+    "2.16.840.1.101.3.4.2.1": lambda m: SHA256.new(m).digest(),
     "2.16.840.1.101.3.4.2.2": lambda m: SHA384.new(m).digest(),
+    "2.16.840.1.101.3.4.2.3": lambda m: SHA512.new(m).digest(),
     "2.16.840.1.101.3.4.2.7": lambda m: SHA3_224.new(m).digest(),
     "2.16.840.1.101.3.4.2.8": lambda m: SHA3_256.new(m).digest(),
     "2.16.840.1.101.3.4.2.9": lambda m: SHA3_384.new(m).digest(),
