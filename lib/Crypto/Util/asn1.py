@@ -26,8 +26,8 @@ from Crypto.Util.py3compat import byte_string, b, bchr, bord
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
-__all__ = ['DerObject', 'DerInteger', 'DerOctetString', 'DerNull',
-           'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf']
+__all__ = ['DerObject', 'DerInteger', 'DerBoolean', 'DerOctetString',
+           'DerNull', 'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf']
 
 
 def _is_number(x, only_non_negative=False):
@@ -339,6 +339,96 @@ class DerInteger(DerObject):
                     bits <<= 8
                 if self.payload and bord(self.payload[0]) & 0x80:
                     self.value -= bits
+
+class DerBoolean(DerObject):
+        """Class to model a DER BOOLEAN.
+
+        An example of encoding is::
+
+          >>> from Crypto.Util.asn1 import DerBoolean
+          >>> from binascii import hexlify, unhexlify
+          >>> bool_der = DerBoolean(True)
+          >>> print hexlify(bool_der.encode())
+
+        which will show ``0101ff``, the DER encoding of True.
+
+        And for decoding::
+
+          >>> s = unhexlify(b'0101ff')
+          >>> try:
+          >>>   bool_der = DerBoolean()
+          >>>   bool_der.decode(s)
+          >>>   print bool_der.value
+          >>> except ValueError:
+          >>>   print "Not a valid DER BOOLEAN"
+
+        the output will be ``True``.
+
+        :ivar value: The boolean value
+        :vartype value: boolean
+        """
+
+        def __init__(self, value=False, implicit=None, explicit=None):
+                """Initialize the DER object as a BOOLEAN.
+
+                :Parameters:
+                  value : boolean
+                    The value of the boolean.
+
+                  implicit : integer
+                    The IMPLICIT tag to use for the encoded object.
+                    It overrides the universal tag for BOOLEAN (1).
+                """
+
+                DerObject.__init__(self, 0x01, b'', implicit,
+                                   False, explicit)
+                self.value = bool(value)  # The boolean value
+
+        def encode(self):
+                """Return the DER BOOLEAN, fully encoded as a
+                binary string."""
+
+                self.payload = b'\xFF' if self.value else b'\x00'
+                return DerObject.encode(self)
+
+        def decode(self, der_encoded, strict=False):
+                """Decode a complete DER BOOLEAN DER, and re-initializes this
+                object with it.
+
+                Args:
+                  der_encoded (byte string): A complete BOOLEAN DER element.
+
+                Raises:
+                  ValueError: in case of parsing errors.
+                """
+
+                return DerObject.decode(self, der_encoded, strict=strict)
+
+        def _decodeFromStream(self, s, strict):
+                """Decode a complete DER BOOLEAN from a file."""
+
+                # Fill up self.payload
+                DerObject._decodeFromStream(self, s, strict)
+
+                if strict:
+                    if len(self.payload) == 0:
+                        raise ValueError("Invalid encoding for DER BOOLEAN: empty payload")
+                    if len(self.payload) >= 2 and struct.unpack('>H', self.payload[:2])[0] < 0x80:
+                        raise ValueError("Invalid encoding for DER BOOLEAN: leading zero")
+
+                # Derive self.value from self.payload
+                value = 0
+                bits = 1
+                for i in self.payload:
+                    value *= 256
+                    value += bord(i)
+                    bits <<= 8
+                if self.payload and bord(self.payload[0]) & 0x80:
+                    value -= bits
+                if strict:
+                    if value not in {-1, 0}:
+                        raise ValueError("Invalid encoding for DER BOOLEAN: content must either be single-octet zero or single-octet all-ones")
+                self.value = bool(value)
 
 
 class DerSequence(DerObject):
