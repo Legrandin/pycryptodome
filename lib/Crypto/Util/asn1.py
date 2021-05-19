@@ -826,7 +826,7 @@ class DerBitString(DerObject):
             If not specified, the bit string is empty.
           implicit : integer
             The IMPLICIT tag to use for the encoded object.
-            It overrides the universal tag for OCTET STRING (3).
+            It overrides the universal tag for BIT STRING (3).
           explicit : integer
             The EXPLICIT tag to use for the encoded object.
         """
