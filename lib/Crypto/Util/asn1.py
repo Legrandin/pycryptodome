@@ -382,7 +382,7 @@ class DerBoolean(DerObject):
 
                 DerObject.__init__(self, 0x01, b'', implicit,
                                    False, explicit)
-                self.value = bool(value)  # The boolean value
+                self.value = value  # The boolean value
 
         def encode(self):
                 """Return the DER BOOLEAN, fully encoded as a
