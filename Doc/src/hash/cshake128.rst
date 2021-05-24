@@ -1,29 +1,36 @@
-SHAKE128
+cSHAKE128
 ========
 
-SHAKE128 is an *extendable-output function* (XOF) in the SHA-3 family, as specified in `FIPS 202`_.
+cSHAKE128 is an *extendable-output function* (XOF) in the SHA-3 family, as specified in `SP 800-185`_.
 
-As a XOF, SHAKE128 is a generalization of a cryptographic hash function.
+As a XOF, cSHAKE128 is a generalization of a cryptographic hash function.
 Instead of creating a fixed-length digest (e.g. 32 bytes like SHA-2/256),
 it can produce outputs of any desired length.
 
-Output bits do **not** depend of the output length.
+Output bits do **not** depend on the output length.
 
 The *128* in its name indicates its maximum security level (in bits),
-as described in Sections A.1 and A.2 of `FIPS 202`_.
+as described in Section 3.1 `SP 800-185`_.
+
+cSHAKE128 is a customizable version of SHAKE128 and allows for additional domain separation via the two customization strings *function* and *custom*.
+If both strings are empty, cSHAKE128 defaults back to SHAKE128.
+
+Note that *function* is reserved for function names defined by NIST.
+Hence, user-specific customization should only be done via the *custom* string.
+See also Section 3.3 `SP 800-185`_.
 
 In the following example, the output is 26 bytes (208 bits) long::
 
-    >>> from Crypto.Hash import SHAKE128
+    >>> from Crypto.Hash import cSHAKE128
     >>> from binascii import hexlify
     >>>
-    >>> shake = SHAKE128.new()
+    >>> shake = cSHAKE128.new(function=b'', custom=b'Email Signature')
     >>> shake.update(b'Some data')
     >>> print hexlify(shake.read(26))
 
-.. _FIPS 202: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+.. _SP 800-185: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
 
 .. _SHA-2: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
 
-.. automodule:: Crypto.Hash.SHAKE128
+.. automodule:: Crypto.Hash.cSHAKE128
     :members:
