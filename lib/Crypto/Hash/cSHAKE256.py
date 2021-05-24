@@ -28,100 +28,38 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
+from Crypto.Util._raw_api import c_size_t
+from Crypto.Hash.cSHAKE128 import cSHAKE128_XOF
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
 
-from Crypto.Hash.keccak import _raw_keccak_lib
-
-class SHAKE256_XOF(object):
-    """A SHAKE256 hash object.
+# Reuse implementation from cSHAKE128 and
+# change a few parameters.
+class cSHAKE256_XOF(cSHAKE128_XOF):
+    """A cSHAKE256 hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
-
-    :ivar oid: ASN.1 Object ID
-    :vartype oid: string
     """
 
-    # ASN.1 Object ID
-    oid = "2.16.840.1.101.3.4.2.12"
-
-    def __init__(self, data=None):
-        state = VoidPointer()
-        result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(64),
-                                             0x1F)
-        if result:
-            raise ValueError("Error %d while instantiating SHAKE256"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_keccak_lib.keccak_destroy)
-        self._is_squeezing = False
-        if data:
-            self.update(data)
-
-    def update(self, data):
-        """Continue hashing of a message by consuming the next chunk of data.
-
-        Args:
-            data (byte string/byte array/memoryview): The next chunk of the message being hashed.
-        """
-
-        if self._is_squeezing:
-            raise TypeError("You cannot call 'update' after the first 'read'")
-
-        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
-        if result:
-            raise ValueError("Error %d while updating SHAKE256 state"
-                             % result)
-        return self
-
-    def read(self, length):
-        """
-        Compute the next piece of XOF output.
-
-        .. note::
-            You cannot use :meth:`update` anymore after the first call to
-            :meth:`read`.
-
-        Args:
-            length (integer): the amount of bytes this method must return
-
-        :return: the next piece of XOF output (of the given length)
-        :rtype: byte string
-        """
-
-        self._is_squeezing = True
-        bfr = create_string_buffer(length)
-        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
-                                                bfr,
-                                                c_size_t(length))
-        if result:
-            raise ValueError("Error %d while extracting from SHAKE256"
-                             % result)
-
-        return get_raw_buffer(bfr)
-
-    def new(self, data=None):
-        return type(self)(data=data)
+    # Parameters
+    name = "cSHAKE256"
+    prefix_alignment = 136
+    keccak_capacity = c_size_t(64)
 
 
-def new(data=None):
-    """Return a fresh instance of a SHAKE256 object.
+def new(data=None, function=None, custom=None):
+    """Return a fresh instance of a cSHAKE256 object.
 
     Args:
        data (bytes/bytearray/memoryview):
         The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`update`.
         Optional.
+       function (bytes):
+        Optional function bytestring.
+       custom (bytes):
+        Optional customization bytestring.
 
-    :Return: A :class:`SHAKE256_XOF` object
+    :Return: A :class:`cSHAKE256_XOF` object
     """
 
-    return SHAKE256_XOF(data=data)
+    return cSHAKE256_XOF(data=data, function=function, custom=custom)
