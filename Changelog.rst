@@ -13,6 +13,7 @@ Resolved issues
 New features
 ------------
 * Added support for SHA-3 hash functions to HMAC.
+* Added cSHAKE128 and cSHAKE256 (of SHA-3 family).
 
 3.10.1 (9 February 2021)
 ++++++++++++++++++++++++

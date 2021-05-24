@@ -7,7 +7,7 @@ As a XOF, SHAKE128 is a generalization of a cryptographic hash function.
 Instead of creating a fixed-length digest (e.g. 32 bytes like SHA-2/256),
 it can produce outputs of any desired length.
 
-Output bits do **not** depend of the output length.
+Output bits do **not** depend on the output length.
 
 The *128* in its name indicates its maximum security level (in bits),
 as described in Sections A.1 and A.2 of `FIPS 202`_.
