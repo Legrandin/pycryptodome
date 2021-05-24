@@ -28,24 +28,67 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Self-test suite for Crypto.Hash.SHAKE128 and SHAKE256"""
+"""Self-test suite for Crypto.Hash.cSHAKE128 and cSHAKE256"""
 
 import unittest
-from binascii import hexlify, unhexlify
 
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
-from Crypto.Hash import SHAKE128, SHAKE256
-from Crypto.Util.py3compat import b, bchr, bord, tobytes
+from Crypto.Hash import cSHAKE128, cSHAKE256
+from Crypto.Util.py3compat import b, bchr, tobytes
 
-class SHAKETest(unittest.TestCase):
+
+class cSHAKETest(unittest.TestCase):
 
     def test_new_positive(self):
 
-        xof1 = self.shake.new()
-        xof2 = self.shake.new(data=b("90"))
-        xof3 = self.shake.new().update(b("90"))
+        xof1 = self.cshake.new()
+        xof2 = self.cshake.new(data=b("90"))
+        xof3 = self.cshake.new().update(b("90"))
+
+        self.assertNotEqual(xof1.read(10), xof2.read(10))
+        xof3.read(10)
+        self.assertEqual(xof2.read(10), xof3.read(10))
+
+        xof1 = self.cshake.new()
+        ref = xof1.read(10)
+        xof2 = self.cshake.new(function=b(""))
+        xof3 = self.cshake.new(custom=b(""))
+        xof4 = self.cshake.new(custom=b(""), function=b(""))
+        xof5 = self.cshake.new(custom=b("foo"))
+        xof6 = self.cshake.new(function=b("foo"))
+
+        self.assertEqual(ref, xof2.read(10))
+        self.assertEqual(ref, xof3.read(10))
+        self.assertEqual(ref, xof4.read(10))
+        self.assertNotEqual(ref, xof5.read(10))
+        self.assertNotEqual(ref, xof6.read(10))
+
+        xof1 = self.cshake.new(custom=b("foo"))
+        xof2 = self.cshake.new(function=b("foo"))
+
+        self.assertNotEqual(xof1.read(10), xof2.read(10))
+
+        xof1 = self.cshake.new(function=b("foo"))
+        xof2 = self.cshake.new(function=b("foo"), data=b("90"))
+        xof3 = self.cshake.new(function=b("foo")).update(b("90"))
+
+        self.assertNotEqual(xof1.read(10), xof2.read(10))
+        xof3.read(10)
+        self.assertEqual(xof2.read(10), xof3.read(10))
+
+        xof1 = self.cshake.new(custom=b("foo"))
+        xof2 = self.cshake.new(custom=b("foo"), data=b("90"))
+        xof3 = self.cshake.new(custom=b("foo")).update(b("90"))
+
+        self.assertNotEqual(xof1.read(10), xof2.read(10))
+        xof3.read(10)
+        self.assertEqual(xof2.read(10), xof3.read(10))
+
+        xof1 = self.cshake.new(function=b("foo"), custom=b("bar"))
+        xof2 = self.cshake.new(function=b("foo"), custom=b("bar"), data=b("90"))
+        xof3 = self.cshake.new(function=b("foo"), custom=b("bar")).update(b("90"))
 
         self.assertNotEqual(xof1.read(10), xof2.read(10))
         xof3.read(10)
@@ -53,19 +96,19 @@ class SHAKETest(unittest.TestCase):
 
     def test_update(self):
         pieces = [bchr(10) * 200, bchr(20) * 300]
-        h = self.shake.new()
+        h = self.cshake.new()
         h.update(pieces[0]).update(pieces[1])
         digest = h.read(10)
-        h = self.shake.new()
+        h = self.cshake.new()
         h.update(pieces[0] + pieces[1])
         self.assertEqual(h.read(10), digest)
 
     def test_update_negative(self):
-        h = self.shake.new()
+        h = self.cshake.new()
         self.assertRaises(TypeError, h.update, u"string")
 
     def test_digest(self):
-        h = self.shake.new()
+        h = self.cshake.new()
         digest = h.read(90)
 
         # read returns a byte string of the right length
@@ -73,67 +116,68 @@ class SHAKETest(unittest.TestCase):
         self.assertEqual(len(digest), 90)
 
     def test_update_after_read(self):
-        mac = self.shake.new()
+        mac = self.cshake.new()
         mac.update(b("rrrr"))
         mac.read(90)
         self.assertRaises(TypeError, mac.update, b("ttt"))
 
 
-class SHAKE128Test(SHAKETest):
-        shake = SHAKE128
+class cSHAKE128Test(cSHAKETest):
+    cshake = cSHAKE128
 
 
-class SHAKE256Test(SHAKETest):
-        shake = SHAKE256
+class cSHAKE256Test(cSHAKETest):
+    cshake = cSHAKE256
 
 
-class SHAKEVectors(unittest.TestCase):
+class cSHAKEVectors(unittest.TestCase):
     pass
 
 
-test_vectors_128 = load_test_vectors(("Hash", "SHA3"),
-                               "ShortMsgKAT_SHAKE128.txt",
-                               "Short Messages KAT SHAKE128",
-                               { "len" : lambda x: int(x) } ) or []
+# cSHAKE defaults to SHAKE if customization strings are empty,
+# hence we reuse the SHAKE testvectors here as well.
+vector_files = [("ShortMsgKAT_SHAKE128.txt", "Short Messages KAT SHAKE128", "128_shake", cSHAKE128),
+                ("ShortMsgKAT_SHAKE256.txt", "Short Messages KAT SHAKE256", "256_shake", cSHAKE256),
+                ("ShortMsgSamples_cSHAKE128.txt", "Short Message Samples cSHAKE128", "128_cshake", cSHAKE128),
+                ("ShortMsgSamples_cSHAKE256.txt", "Short Message Samples cSHAKE256", "256_cshake", cSHAKE256)]
 
-for idx, tv in enumerate(test_vectors_128):
-    if tv.len == 0:
-        data = b("")
-    else:
-        data = tobytes(tv.msg)
+for file, descr, tag, test_class in vector_files:
 
-    def new_test(self, data=data, result=tv.md):
-        hobj = SHAKE128.new(data=data)
-        digest = hobj.read(len(result))
-        self.assertEqual(digest, result)
+    test_vectors = load_test_vectors(("Hash", "SHA3"), file, descr,
+                                     {"len": lambda x: int(x),
+                                      "nlen": lambda x: int(x),
+                                      "slen": lambda x: int(x)}) or []
 
-    setattr(SHAKEVectors, "test_128_%d" % idx, new_test)
+    for idx, tv in enumerate(test_vectors):
+        if getattr(tv, "len", 0) == 0:
+            data = b("")
+        else:
+            data = tobytes(tv.msg)
+            assert(tv.len == len(tv.msg)*8)
+        if getattr(tv, "nlen", 0) == 0:
+            function = b("")
+        else:
+            function = tobytes(tv.n)
+            assert(tv.nlen == len(tv.n)*8)
+        if getattr(tv, "slen", 0) == 0:
+            custom = b("")
+        else:
+            custom = tobytes(tv.s)
+            assert(tv.slen == len(tv.s)*8)
 
+        def new_test(self, data=data, result=tv.md, function=function, custom=custom, test_class=test_class):
+            hobj = test_class.new(data=data, function=function, custom=custom)
+            digest = hobj.read(len(result))
+            self.assertEqual(digest, result)
 
-test_vectors_256 = load_test_vectors(("Hash", "SHA3"),
-                               "ShortMsgKAT_SHAKE256.txt",
-                               "Short Messages KAT SHAKE256",
-                               { "len" : lambda x: int(x) } ) or []
-
-for idx, tv in enumerate(test_vectors_256):
-    if tv.len == 0:
-        data = b("")
-    else:
-        data = tobytes(tv.msg)
-
-    def new_test(self, data=data, result=tv.md):
-        hobj = SHAKE256.new(data=data)
-        digest = hobj.read(len(result))
-        self.assertEqual(digest, result)
-
-    setattr(SHAKEVectors, "test_256_%d" % idx, new_test)
+        setattr(cSHAKEVectors, "test_%s_%d" % (tag, idx), new_test)
 
 
 def get_tests(config={}):
     tests = []
-    tests += list_test_cases(SHAKE128Test)
-    tests += list_test_cases(SHAKE256Test)
-    tests += list_test_cases(SHAKEVectors)
+    tests += list_test_cases(cSHAKE128Test)
+    tests += list_test_cases(cSHAKE256Test)
+    tests += list_test_cases(cSHAKEVectors)
     return tests
 
 
