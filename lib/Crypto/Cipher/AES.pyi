@@ -1,5 +1,5 @@
 import sys
-from typing import Union, Tuple, Optional, Dict, overload
+from typing import ByteString, Dict, Optional, Tuple, Union, overload
 
 from Crypto.Cipher._mode_ecb import EcbMode
 from Crypto.Cipher._mode_cbc import CbcMode
@@ -224,6 +224,6 @@ else:
                   OpenPgpMode, CcmMode, EaxMode, GcmMode,
                   SivMode, OcbMode]: ...
 
-Buffer = Union[bytes, bytearray, memoryview]
+Buffer = ByteString
 block_size: int
 key_size: Tuple[int, int, int]
