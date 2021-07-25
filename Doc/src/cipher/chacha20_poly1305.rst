@@ -9,7 +9,7 @@ The cipher produces a 16 byte tag that the receiver must use to validate the mes
 There are three variants of the algorithm, defined by the length of the nonce:
 
 .. csv-table::
-    :header: Nonce length, Description, Max plaintext, If random nonce as same key
+    :header: Nonce length, Description, Max plaintext, If random nonce and same key
     :widths: 5, 50, 20, 20
 
     "8 bytes", "Based on Bernstein's original ChaCha20.", "No limitations", "Max 200 000 messages"
