@@ -35,7 +35,7 @@
 
 import sys
 import unittest
-
+import platform
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Util.py3compat import *
@@ -750,6 +750,9 @@ def get_tests(config={}):
     tests += list_test_cases(TestIntegerInt)
 
     try:
+        if platform.machine() == 'arm64':
+        #Check release notes https://gmplib.org/gmp6.2
+            raise OSError('Platform not yet fully compatible with GMP')    
         from Crypto.Math._IntegerGMP import IntegerGMP
 
         class TestIntegerGMP(TestIntegerBase):
@@ -760,6 +763,8 @@ def get_tests(config={}):
     except (ImportError, OSError) as e:
         if sys.platform == "win32":
             sys.stdout.write("Skipping GMP tests on Windows\n")
+        elif platform.machine() == 'arm64':
+                sys.stdout.write("Skipping GMP tests on Apple silicon\n")
         else:
             sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
 
