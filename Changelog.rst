@@ -1,6 +1,17 @@
 Changelog
 =========
 
+3.10.3 (22 September 2021)
+++++++++++++++++++++++++++
+
+Resolved issues 
+---------------
+* GH#506 Solve segmentation error which might occur on apple silicon when using GMP, 
+  the work around was to raise a new exception in Numbers module, if ARM64 is detected as the platform,
+  so that Numbers would export IntegerCustom or IntegerNative instead of IntegerGMP. 
+* GH#509 This might be fixed as well, as it's related to GH#506   
+
+
 3.10.2 (22 September 2021)
 ++++++++++++++++++++++++++
 
