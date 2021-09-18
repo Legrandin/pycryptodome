@@ -28,6 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import os
 import abc
 import sys
 from Crypto.Util.py3compat import byte_string
@@ -298,10 +299,13 @@ def load_pycryptodome_raw_lib(name, cdecl):
     for ext in extension_suffixes:
         try:
             filename = basename + ext
-            return load_lib(pycryptodome_filename(dir_comps, filename),
-                            cdecl)
+            full_name = pycryptodome_filename(dir_comps, filename)
+            if not os.path.isfile(full_name):
+                attempts.append("Not found '%s'" % filename)
+                continue
+            return load_lib(full_name, cdecl)
         except OSError as exp:
-            attempts.append("Trying '%s': %s" % (filename, str(exp)))
+            attempts.append("Cannot load '%s': %s" % (filename, str(exp)))
     raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
 
 
