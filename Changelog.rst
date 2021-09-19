@@ -1,18 +1,26 @@
 Changelog
 =========
 
-X.X.X (X XXX 2021)
-++++++++++++++++++++++++
+3.10.2 (X September 2021)
+++++++++++++++++++++++++++
 
 Resolved issues
 ---------------
-* GH#376: Fixed symbol conflict between different versions of libgmp.
+* GH#376: Fixed symbol conflict between different versions of `libgmp`.
 * GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
+* GH#510: Workaround for `cffi` calling `ctypes.util.find_library()`, which
+          invokes `gcc` and `ld` on Linux, considerably slowing down all imports.
+          On certain configurations, that may also leave temporary files behind.
 * GH#517: Fix RSAES-OAEP, as it didn't always fail when zero padding was incorrect.
 
 New features
 ------------
 * Added support for SHA-3 hash functions to HMAC.
+
+Other changes
+-------------
+* Install VC9 directly for Python 2.7 on Windows, as `vcpython27` has been pulled
+  from choco's repos in April.
 
 3.10.1 (9 February 2021)
 ++++++++++++++++++++++++
