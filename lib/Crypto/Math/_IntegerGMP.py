@@ -196,7 +196,7 @@ class IntegerGMP(IntegerBase):
             slot = slot + 1
         if self < 0:
             value = -value
-        return value
+        return int(value)
 
     def __str__(self):
         return str(int(self))
