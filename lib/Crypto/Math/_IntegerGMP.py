@@ -46,9 +46,9 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         void __gmpz_init (mpz_t x);
         void __gmpz_init_set (mpz_t rop, const mpz_t op);
         void __gmpz_init_set_ui (mpz_t rop, UNIX_ULONG op);
-        int __gmp_sscanf (const char *s, const char *fmt, ...);
+        UNIX_ULONG __gmpz_get_ui (const mpz_t op);
         void __gmpz_set (mpz_t rop, const mpz_t op);
-        int __gmp_snprintf (uint8_t *buf, size_t size, const char *fmt, ...);
+        void __gmpz_set_ui (mpz_t rop, UNIX_ULONG op);
         void __gmpz_add (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_add_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
         void __gmpz_sub_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
@@ -157,12 +157,27 @@ class IntegerGMP(IntegerBase):
             raise ValueError("A floating point type is not a natural number")
 
         self._initialized = True
-        
+
         if is_native_int(value):
             _gmp.mpz_init(self._mpz_p)
-            result = _gmp.gmp_sscanf(tobytes(str(value)), b"%Zd", self._mpz_p)
-            if result != 1:
-                raise ValueError("Error converting '%d'" % value)
+            if value == 0:
+                return
+
+            tmp = new_mpz()
+            _gmp.mpz_init(tmp)
+            positive = value >= 0
+            reduce = abs(value)
+            slots = (reduce.bit_length() - 1) // 32 + 1
+
+            while slots > 0:
+                slots = slots - 1
+                _gmp.mpz_set_ui(tmp,
+                                c_ulong(0xFFFFFFFF & (reduce >> (slots * 32))))
+                _gmp.mpz_mul_2exp(tmp, tmp, c_ulong(slots * 32))
+                _gmp.mpz_add(self._mpz_p, self._mpz_p, tmp)
+
+            if not positive:
+                _gmp.mpz_neg(self._mpz_p, self._mpz_p)
         elif isinstance(value, IntegerGMP):
             _gmp.mpz_init_set(self._mpz_p, value._mpz_p)
         else:
@@ -170,14 +185,18 @@ class IntegerGMP(IntegerBase):
 
     # Conversions
     def __int__(self):
-        # buf will contain the integer encoded in decimal plus the trailing
-        # zero, and possibly the negative sign.
-        # dig10(x) < log10(x) + 1 = log2(x)/log2(10) + 1 < log2(x)/3 + 1
-        buf_len = _gmp.mpz_sizeinbase(self._mpz_p, 2) // 3 + 3
-        buf = create_string_buffer(buf_len)
-
-        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b"%Zd", self._mpz_p)
-        return int(get_c_string(buf))
+        tmp = new_mpz()
+        _gmp.mpz_init_set(tmp, self._mpz_p)
+        value = 0
+        slot = 0
+        while _gmp.mpz_cmp(tmp, self._zero_mpz_p) != 0:
+            lsb = _gmp.mpz_get_ui(tmp) & 0xFFFFFFFF
+            value |= lsb << (slot * 32)
+            _gmp.mpz_tdiv_q_2exp(tmp, tmp, c_ulong(32))
+            slot = slot + 1
+        if self < 0:
+            value = -value
+        return value
 
     def __str__(self):
         return str(int(self))
@@ -217,7 +236,7 @@ class IntegerGMP(IntegerBase):
         buf_len = (_gmp.mpz_sizeinbase(self._mpz_p, 2) + 7) // 8
         if buf_len > block_size > 0:
             raise ValueError("Number is too big to convert to byte string"
-                             "of prescribed length")
+                             " of prescribed length")
         buf = create_string_buffer(buf_len)
 
         _gmp.mpz_export(
