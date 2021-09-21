@@ -8,9 +8,12 @@ Resolved issues
 ---------------
 * GH#376: Fixed symbol conflict between different versions of `libgmp`.
 * GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
+* GH#505 and GH509: Fix segmentation faults on Apple M1 and other Aarch64 SoCs,
+  when the GMP library is available via `ctypes`. Do not use GMP's own sscanf
+  and snprintf routines: instead, use simpler conversion routines.
 * GH#510: Workaround for `cffi` calling `ctypes.util.find_library()`, which
-          invokes `gcc` and `ld` on Linux, considerably slowing down all imports.
-          On certain configurations, that may also leave temporary files behind.
+  invokes `gcc` and `ld` on Linux, considerably slowing down all imports.
+  On certain configurations, that may also leave temporary files behind.
 * GH#517: Fix RSAES-OAEP, as it didn't always fail when zero padding was incorrect.
 
 New features
