@@ -1,15 +1,15 @@
 Changelog
 =========
 
-3.10.2 (X September 2021)
+3.10.2 (22 September 2021)
 ++++++++++++++++++++++++++
 
 Resolved issues
 ---------------
 * GH#376: Fixed symbol conflict between different versions of `libgmp`.
 * GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
-* GH#505 and GH509: Fix segmentation faults on Apple M1 and other Aarch64 SoCs,
-  when the GMP library is available via `ctypes`. Do not use GMP's own sscanf
+* GH#505 and GH509: Fixed segmentation faults on Apple M1 and other Aarch64 SoCs,
+  when the GMP library add accessed via `ctypes`. Do not use GMP's own sscanf
   and snprintf routines: instead, use simpler conversion routines.
 * GH#510: Workaround for `cffi` calling `ctypes.util.find_library()`, which
   invokes `gcc` and `ld` on Linux, considerably slowing down all imports.
