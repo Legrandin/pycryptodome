@@ -750,7 +750,7 @@ def get_tests(config={}):
     tests += list_test_cases(TestIntegerInt)
 
     try:
-        if platform.machine() == 'arm64':
+        if platform.machine() == 'arm64' and sys.platform == 'darwin':
         #Check release notes https://gmplib.org/gmp6.2
             raise OSError('Platform not yet fully compatible with GMP')    
         from Crypto.Math._IntegerGMP import IntegerGMP
@@ -763,7 +763,7 @@ def get_tests(config={}):
     except (ImportError, OSError) as e:
         if sys.platform == "win32":
             sys.stdout.write("Skipping GMP tests on Windows\n")
-        elif platform.machine() == 'arm64':
+        elif platform.machine() == 'arm64' and sys.platform == 'darwin':
                 sys.stdout.write("Skipping GMP tests on Apple silicon\n")
         else:
             sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )

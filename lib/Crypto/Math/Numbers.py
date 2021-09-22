@@ -28,10 +28,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 import platform
+import sys
 __all__ = ["Integer"]
 
 try:
-    if platform.machine() == 'arm64':
+    if platform.machine() == 'arm64' and  sys.platform == 'darwin':
         #Check release notes https://gmplib.org/gmp6.2 
         raise OSError('Platform not yet fully compatible with GMP')
     from Crypto.Math._IntegerGMP import IntegerGMP as Integer
