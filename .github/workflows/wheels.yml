@@ -32,11 +32,11 @@ jobs:
           python -m pip install cibuildwheel==1.6.4
 
       - name: Install MSVC
-        if: matrix.os == 'windows-latest' && matrix.python-version == '2.7'
+        if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@f456b805b3f63911738cb71d4f255e4e129c7e7a
 
       - name: Prepare environmental variables
-        if: matrix.os == 'windows-latest' && matrix.python-version == '2.7'
+        if: runner.os == 'Windows'
         shell: bash
         run: |
           echo "DISTUTILS_USE_SDK=1" >> $GITHUB_ENV
