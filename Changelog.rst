@@ -6,13 +6,13 @@ Changelog
 
 Resolved issues
 ---------------
-* GH#376: Fixed symbol conflict between different versions of `libgmp`.
+* GH#376: Fixed symbol conflict between different versions of ``libgmp``.
 * GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
 * GH#506 and GH#509: Fixed segmentation faults on Apple M1 and other Aarch64 SoCs,
-  when the GMP library add accessed via `ctypes`. Do not use GMP's own sscanf
+  when the GMP library add accessed via ``ctypes``. Do not use GMP's own sscanf
   and snprintf routines: instead, use simpler conversion routines.
-* GH#510: Workaround for `cffi` calling `ctypes.util.find_library()`, which
-  invokes `gcc` and `ld` on Linux, considerably slowing down all imports.
+* GH#510: Workaround for ``cffi`` calling ``ctypes.util.find_library()``, which
+  invokes ``gcc`` and ``ld`` on Linux, considerably slowing down all imports.
   On certain configurations, that may also leave temporary files behind.
 * GH#517: Fix RSAES-OAEP, as it didn't always fail when zero padding was incorrect.
 
@@ -22,7 +22,7 @@ New features
 
 Other changes
 -------------
-* Install VC9 directly for Python 2.7 on Windows, as `vcpython27` has been pulled
+* Install VC9 directly for Python 2.7 on Windows, as ``vcpython27`` has been pulled
   from choco's repos in April.
 
 3.10.1 (9 February 2021)
