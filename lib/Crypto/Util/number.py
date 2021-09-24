@@ -405,32 +405,41 @@ def long_to_bytes(n, blocksize=0):
     result = []
     pack = struct.pack
 
-    while blocksize >= 8:
+    # Fill the first block independently from the value of n
+    bsr = blocksize
+    while bsr >= 8:
         result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
         n = n >> 64
-        blocksize -= 8
+        bsr -= 8
 
-    while blocksize >= 4:
+    while bsr >= 4:
         result.insert(0, pack('>I', n & 0xFFFFFFFF))
         n = n >> 32
-        blocksize -= 4
+        bsr -= 4
 
-    while blocksize > 0:
+    while bsr > 0:
         result.insert(0, pack('>B', n & 0xFF))
         n = n >> 8
-        blocksize -= 1
+        bsr -= 1
 
     if n == 0:
         if len(result) == 0:
-            result = [ b'\x00' ]
+            bresult = b'\x00'
+        else:
+            bresult = b''.join(result)
     else:
-        # The encoded number may exceed the block size
+        # The encoded number exceeds the block size
         while n > 0:
             result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
             n = n >> 64
         result[0] = result[0].lstrip(b'\x00')
+        bresult = b''.join(result)
+        # bresult has minimum length here
+        if blocksize > 0:
+            target_len = ((len(bresult) - 1) // blocksize + 1) * blocksize
+            bresult = b'\x00' * (target_len - len(bresult)) + bresult
 
-    return b''.join(result)
+    return bresult
 
 
 def bytes_to_long(s):
