@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.10.4 (25 September 2021)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Output of ``Crypto.Util.number.long_to_bytes()`` was not always a multiple of ``blocksize``.
+
 3.10.3 (22 September 2021)
 ++++++++++++++++++++++++++
 

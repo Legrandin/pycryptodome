@@ -375,24 +375,28 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
 import struct
 
 def long_to_bytes(n, blocksize=0):
-    """Convert an integer to a byte string.
+    """Convert a positive integer to a byte string using big endian encoding.
 
-    In Python 3.2+, use the native method instead::
-
-        >>> n.to_bytes(blocksize, 'big')
-
-    For instance::
-
-        >>> n = 80
-        >>> n.to_bytes(2, 'big')
-        b'\x00P'
-
-    If the optional :data:`blocksize` is provided and greater than zero,
-    the byte string is padded with binary zeros (on the front) so that
-    the total length of the output is a multiple of blocksize.
-
-    If :data:`blocksize` is zero or not provided, the byte string will
+    If :data:`blocksize` is absent or zero, the byte string will
     be of minimal length.
+
+    Otherwise, the length of the byte string is guaranteed to be a multiple
+    of :data:`blocksize`. If necessary, zeroes (``\\x00``) are added at the left.
+
+    .. note::
+        In Python 3, if you are sure that :data:`n` can fit into
+        :data:`blocksize` bytes, you can simply use the native method instead::
+
+            >>> n.to_bytes(blocksize, 'big')
+
+        For instance::
+
+            >>> n = 80
+            >>> n.to_bytes(2, 'big')
+            b'\\x00P'
+
+        However, and unlike this ``long_to_bytes()`` function,
+        an ``OverflowError`` exception is raised if :data:`n` does not fit.
     """
 
     if n < 0 or blocksize < 0:
