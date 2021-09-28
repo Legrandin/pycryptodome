@@ -33,7 +33,7 @@ import re
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.Util.py3compat import b, tobytes, bchr, _memoryview
+from Crypto.Util.py3compat import b, tobytes, bchr
 from Crypto.Util.strxor import strxor_c
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -60,6 +60,17 @@ class ChaCha20Test(unittest.TestCase):
         cipher2 = ChaCha20.new(key=bchr(1) * 32)
         self.assertEquals(len(cipher1.nonce), 8)
         self.assertNotEqual(cipher1.nonce, cipher2.nonce)
+
+    def test_nonce(self):
+        key = b'A' * 32
+
+        nonce1 = b'P' * 8
+        cipher1 = ChaCha20.new(key=key, nonce=nonce1)
+        self.assertEqual(nonce1, cipher1.nonce)
+
+        nonce2 = b'Q' * 12
+        cipher2 = ChaCha20.new(key=key, nonce=nonce2)
+        self.assertEqual(nonce2, cipher2.nonce)
 
     def test_eiter_encrypt_or_decrypt(self):
         """Verify that a cipher cannot be used for both decrypting and encrypting"""
@@ -265,6 +276,12 @@ class XChaCha20Test(unittest.TestCase):
 
         self.assertEqual(subkey, expected)
 
+    def test_nonce(self):
+        key = b'A' * 32
+        nonce = b'P' * 24
+        cipher = ChaCha20.new(key=key, nonce=nonce)
+        self.assertEqual(nonce, cipher.nonce)
+
     def test_encrypt(self):
         # Section A.3.2
 
@@ -464,34 +481,32 @@ class TestOutput(unittest.TestCase):
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         cipher = ChaCha20.new(key=key, nonce=nonce)
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        import sys
-        if sys.version[:3] != '2.6':
-            output = memoryview(bytearray(16))
-            cipher = ChaCha20.new(key=key, nonce=nonce)
-            cipher.encrypt(pt, output=output)
-            self.assertEqual(ct, output)
-        
-            cipher = ChaCha20.new(key=key, nonce=nonce)
-            cipher.decrypt(ct, output=output)
-            self.assertEqual(pt, output)
+        output = memoryview(bytearray(16))
+        cipher = ChaCha20.new(key=key, nonce=nonce)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+
+        cipher = ChaCha20.new(key=key, nonce=nonce)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
 
         cipher = ChaCha20.new(key=key, nonce=nonce)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
-        
+
         cipher = ChaCha20.new(key=key, nonce=nonce)
         self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
 
         shorter_output = bytearray(7)
-        
+
         cipher = ChaCha20.new(key=key, nonce=nonce)
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
-        
+
         cipher = ChaCha20.new(key=key, nonce=nonce)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
@@ -502,11 +517,7 @@ def get_tests(config={}):
     tests += list_test_cases(XChaCha20Test)
     tests.append(ChaCha20_AGL_NIR())
     tests.append(ByteArrayTest())
-
-    import sys
-    if sys.version[:3] != "2.6":
-        tests.append(MemoryviewTest())
-
+    tests.append(MemoryviewTest())
     tests.append(TestOutput())
 
     return tests

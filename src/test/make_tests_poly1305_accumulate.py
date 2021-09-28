@@ -16,27 +16,27 @@ def make_test(term1, term2):
     t2_split = split32(term2, 5)
     res_split = split32(term1 + term2, 5)
 
-    print ""
-    print "void test_%d() {" % counter.next()
-    print "    uint32_t h[5] = {" + ",".join(t1_split) + "};"
-    print "    uint32_t m[5] = {" + ",".join(t2_split) + "};"
-    print "    uint32_t w[5] = {" + ",".join(res_split) + "};"
+    print("")
+    print("void test_%d() {" % next(counter))
+    print("    uint32_t h[5] = {" + ",".join(t1_split) + "};")
+    print("    uint32_t m[5] = {" + ",".join(t2_split) + "};")
+    print("    uint32_t w[5] = {" + ",".join(res_split) + "};")
 
-    print "    poly1305_accumulate(h, m);"
-    print "    assert(0 == memcmp(h, w, sizeof(h)));"
-    print "}"
-    print ""
+    print("    poly1305_accumulate(h, m);")
+    print("    assert(0 == memcmp(h, w, sizeof(h)));")
+    print("}")
+    print("")
 
 
-print "#ifdef NDEBUG"
-print "#undef NDEBUG"
-print "#endif"
-print "#include <assert.h>"
-print "#include <string.h>"
-print "#include <stdint.h>"
-print "#include <stdio.h>"
-print
-print "void poly1305_accumulate(uint32_t h[5], const uint32_t m[5]);"
+print("#ifdef NDEBUG")
+print("#undef NDEBUG")
+print("#endif")
+print("#include <assert.h>")
+print("#include <string.h>")
+print("#include <stdint.h>")
+print("#include <stdio.h>")
+print()
+print("void poly1305_accumulate(uint32_t h[5], const uint32_t m[5]);")
 
 make_test(0, 0xFFFFFFFFFFFFFFFFFFF)
 make_test(0xFFFFFFFFFFFFFFFFFFF, 0)

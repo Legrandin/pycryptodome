@@ -106,7 +106,7 @@ class RSATest(unittest.TestCase):
         rsaObj = self.rsa.generate(1024)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
-        pub = rsaObj.publickey()
+        pub = rsaObj.public_key()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
@@ -115,7 +115,7 @@ class RSATest(unittest.TestCase):
         rsaObj = self.rsa.generate(1024, Random.new().read)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
-        pub = rsaObj.publickey()
+        pub = rsaObj.public_key()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
@@ -123,7 +123,7 @@ class RSATest(unittest.TestCase):
         rsaObj = self.rsa.generate(1024, Random.new().read,e=65537)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
-        pub = rsaObj.publickey()
+        pub = rsaObj.public_key()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
         self.assertEqual(65537,rsaObj.e)
@@ -264,8 +264,10 @@ class RSATest(unittest.TestCase):
                 bytes_to_long(ciphertext))
 
         # Check __eq__ and __ne__
-        self.assertEqual(rsaObj.publickey() == rsaObj.publickey(),True) # assert_
-        self.assertEqual(rsaObj.publickey() != rsaObj.publickey(),False) # failIf
+        self.assertEqual(rsaObj.public_key() == rsaObj.public_key(),True) # assert_
+        self.assertEqual(rsaObj.public_key() != rsaObj.public_key(),False) # failIf
+
+        self.assertEqual(rsaObj.publickey(), rsaObj.public_key())
 
     def _exercise_primitive(self, rsaObj):
         # Since we're using a randomly-generated key, we can't check the test

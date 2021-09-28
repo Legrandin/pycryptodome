@@ -20,7 +20,6 @@
 # SOFTWARE.
 # ===================================================================
 
-import sys
 from binascii import unhexlify
 
 from Crypto.Hash import BLAKE2s
@@ -29,8 +28,6 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.py3compat import bord, tobytes, _copy_bytes
 from Crypto.Random import get_random_bytes
 
-if sys.version_info[:2] == (2, 6):
-    memoryview = bytes
 
 # The size of the authentication tag produced by the MAC.
 digest_size = None

@@ -37,16 +37,16 @@ import json
 import unittest
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import tobytes, _memoryview
+from Crypto.Util.py3compat import tobytes
 
 from Crypto.Hash import CMAC
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 
-from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
 
 from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
 
 # This is a list of (key, data, result, description, module) tuples.
 test_data = [
@@ -366,27 +366,14 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
-        comps = "Crypto.SelfTest.Hash.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "aes_cmac_test.json"), "rt") as file_in:
-            tv_tree = json.load(file_in)
 
-        class TestVector(object):
-            pass
-        self.tv = []
+        def filter_tag(group):
+            return group['tagSize'] // 8
 
-        for group in tv_tree['testGroups']:
-            tag_size = group['tagSize'] // 8
-            for test in group['tests']:
-                tv = TestVector()
-                tv.tag_size = tag_size
-
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'key', 'msg', 'tag':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
-                self.tv.append(tv)
+        self.tv = load_test_vectors_wycheproof(("Hash", "wycheproof"),
+                                               "aes_cmac_test.json",
+                                               "Wycheproof CMAC",
+                                               group_tag={'tag_size': filter_tag})
 
     def shortDescription(self):
         return self._id
@@ -398,7 +385,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def test_create_mac(self, tv):
         self._id = "Wycheproof MAC creation Test #" + str(tv.id)
-        
+
         try:
             tag = CMAC.new(tv.key, tv.msg, ciphermod=AES, mac_len=tv.tag_size).digest()
         except ValueError as e:
@@ -411,7 +398,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def test_verify_mac(self, tv):
         self._id = "Wycheproof MAC verification Test #" + str(tv.id)
-       
+
         try:
             mac = CMAC.new(tv.key, tv.msg, ciphermod=AES, mac_len=tv.tag_size)
         except ValueError as e:
@@ -437,7 +424,7 @@ def get_tests(config={}):
     global test_data
     import types
     from .common import make_mac_tests
-    
+
     wycheproof_warnings = config.get('wycheproof_warnings')
 
     # Add new() parameters to the back of each test vector
@@ -450,11 +437,7 @@ def get_tests(config={}):
     tests = make_mac_tests(CMAC, "CMAC", params_test_data)
     tests.append(ByteArrayTests())
     tests.append(list_test_cases(TestCMAC))
-    
-    import sys
-    if sys.version[:3] != "2.6":
-        tests.append(MemoryViewTests())
-    
+    tests.append(MemoryViewTests())
     tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
     return tests
 

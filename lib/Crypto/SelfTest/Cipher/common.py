@@ -27,7 +27,7 @@
 import unittest
 from binascii import a2b_hex, b2a_hex, hexlify
 
-from Crypto.Util.py3compat import b, _memoryview
+from Crypto.Util.py3compat import b
 from Crypto.Util.strxor import strxor_c
 
 class _NoDefault: pass        # sentinel object
@@ -223,6 +223,17 @@ class NoDefaultECBTest(unittest.TestCase):
 
     def runTest(self):
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key))
+
+
+class BlockSizeTest(unittest.TestCase):
+    def __init__(self, module, params):
+        unittest.TestCase.__init__(self)
+        self.module = module
+        self.key = a2b_hex(b(params['key']))
+
+    def runTest(self):
+        cipher = self.module.new(self.key, self.module.MODE_ECB)
+        self.assertEqual(cipher.block_size, self.module.block_size)
 
 
 class ByteArrayTest(unittest.TestCase):
@@ -438,6 +449,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
                 IVLengthTest(module, params),
                 NoDefaultECBTest(module, params),
                 ByteArrayTest(module, params),
+                BlockSizeTest(module, params),
             ]
             extra_tests_added = True
 

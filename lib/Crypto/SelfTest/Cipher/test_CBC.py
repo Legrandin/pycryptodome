@@ -31,11 +31,12 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, _memoryview, is_string
+from Crypto.Util.py3compat import tobytes, is_string
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
+
 
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
@@ -303,12 +304,6 @@ class BlockChainingTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_param_memoryview
-
-
 class CbcTests(BlockChainingTests):
     aes_mode = AES.MODE_CBC
     des3_mode = DES3.MODE_CBC
@@ -317,11 +312,13 @@ class CbcTests(BlockChainingTests):
 class NistBlockChainingVectors(unittest.TestCase):
 
     def _do_kat_aes_test(self, file_name):
-        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
-                                  file_name,
-                                  "AES KAT",
-                                  { "count" : lambda x: int(x) } )
-        assert(test_vectors)
+
+        test_vectors = load_test_vectors(("Cipher", "AES"),
+                            file_name,
+                            "AES CBC KAT",
+                            { "count" : lambda x: int(x) } )
+        if test_vectors is None:
+            return
 
         direction = None
         for tv in test_vectors:
@@ -343,11 +340,13 @@ class NistBlockChainingVectors(unittest.TestCase):
 
     # See Section 6.4.2 in AESAVS
     def _do_mct_aes_test(self, file_name):
-        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
-                                  file_name,
-                                  "AES Montecarlo",
-                                  { "count" : lambda x: int(x) } )
-        assert(test_vectors)
+
+        test_vectors = load_test_vectors(("Cipher", "AES"),
+                            file_name,
+                            "AES CBC Montecarlo",
+                            { "count" : lambda x: int(x) } )
+        if test_vectors is None:
+            return
 
         direction = None
         for tv in test_vectors:
@@ -376,11 +375,13 @@ class NistBlockChainingVectors(unittest.TestCase):
                 assert False
 
     def _do_tdes_test(self, file_name):
-        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "TDES"),
-                                  file_name,
-                                  "TDES CBC KAT",
-                                  { "count" : lambda x: int(x) } )
-        assert(test_vectors)
+
+        test_vectors = load_test_vectors(("Cipher", "TDES"),
+                            file_name,
+                            "TDES CBC KAT",
+                            { "count" : lambda x: int(x) } )
+        if test_vectors is None:
+            return
 
         direction = None
         for tv in test_vectors:

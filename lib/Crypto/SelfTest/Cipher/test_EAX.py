@@ -28,16 +28,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import json
 import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, bchr, _memoryview
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 
-from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
 
 
@@ -342,25 +341,25 @@ class EaxTests(unittest.TestCase):
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         res, tag_out = cipher.encrypt_and_digest(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
         self.assertEqual(tag, tag_out)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         res = cipher.decrypt_and_verify(ct, tag, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
     def test_output_param_memoryview(self):
-        
+
         pt = b'5' * 16
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
@@ -369,7 +368,7 @@ class EaxTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
@@ -382,7 +381,7 @@ class EaxTests(unittest.TestCase):
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
 
@@ -391,12 +390,6 @@ class EaxTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
-
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_param_memoryview
 
 
 class EaxFSMTests(unittest.TestCase):
@@ -659,27 +652,14 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
-        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "aes_eax_test.json"), "rt") as file_in:
-            tv_tree = json.load(file_in)
 
-        class TestVector(object):
-            pass
-        self.tv = []
+        def filter_tag(group):
+            return group['tagSize'] // 8
 
-        for group in tv_tree['testGroups']:
-            tag_size = group['tagSize'] // 8
-            for test in group['tests']:
-                tv = TestVector()
-                tv.tag_size = tag_size
-
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
-                self.tv.append(tv)
+        self.tv = load_test_vectors_wycheproof(("Cipher", "wycheproof"),
+                                               "aes_eax_test.json",
+                                               "Wycheproof EAX",
+                                               group_tag={'tag_size': filter_tag})
 
     def shortDescription(self):
         return self._id
@@ -691,7 +671,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def test_encrypt(self, tv):
         self._id = "Wycheproof Encrypt EAX Test #" + str(tv.id)
-        
+
         try:
             cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
         except ValueError as e:
@@ -707,7 +687,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def test_decrypt(self, tv):
         self._id = "Wycheproof Decrypt EAX Test #" + str(tv.id)
-        
+
         try:
             cipher = AES.new(tv.key, AES.MODE_EAX, tv.iv, mac_len=tv.tag_size)
         except ValueError as e:

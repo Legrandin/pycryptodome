@@ -459,10 +459,6 @@ class Poly1305Test_AES(unittest.TestCase):
 
             self.assertEqual(h1.digest(), h2.digest())
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-
 
 class Poly1305Test_ChaCha20(unittest.TestCase):
 

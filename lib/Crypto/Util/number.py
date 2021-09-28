@@ -28,7 +28,7 @@ import math
 import sys
 import struct
 from Crypto import Random
-from Crypto.Util.py3compat import _memoryview, iter_range
+from Crypto.Util.py3compat import iter_range
 
 # Backward compatibility
 _fastmath = None
@@ -49,6 +49,9 @@ def ceil_div(n, d):
 
 def size (N):
     """Returns the size of the number N in bits."""
+
+    if N < 0:
+        raise ValueError("Size in bits only avialable for non-negative numbers")
 
     bits = 0
     while N >> bits:
@@ -372,46 +375,72 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
 import struct
 
 def long_to_bytes(n, blocksize=0):
-    """Convert an integer to a byte string.
+    """Convert a positive integer to a byte string using big endian encoding.
 
-    In Python 3.2+, use the native method instead::
-
-        >>> n.to_bytes(blocksize, 'big')
-
-    For instance::
-
-        >>> n = 80
-        >>> n.to_bytes(2, 'big')
-        b'\x00P'
-
-    If the optional :data:`blocksize` is provided and greater than zero,
-    the byte string is padded with binary zeros (on the front) so that
-    the total length of the output is a multiple of blocksize.
-
-    If :data:`blocksize` is zero or not provided, the byte string will
+    If :data:`blocksize` is absent or zero, the byte string will
     be of minimal length.
+
+    Otherwise, the length of the byte string is guaranteed to be a multiple
+    of :data:`blocksize`. If necessary, zeroes (``\\x00``) are added at the left.
+
+    .. note::
+        In Python 3, if you are sure that :data:`n` can fit into
+        :data:`blocksize` bytes, you can simply use the native method instead::
+
+            >>> n.to_bytes(blocksize, 'big')
+
+        For instance::
+
+            >>> n = 80
+            >>> n.to_bytes(2, 'big')
+            b'\\x00P'
+
+        However, and unlike this ``long_to_bytes()`` function,
+        an ``OverflowError`` exception is raised if :data:`n` does not fit.
     """
-    # after much testing, this algorithm was deemed to be the fastest
-    s = b''
-    n = int(n)
+
+    if n < 0 or blocksize < 0:
+        raise ValueError("Values must be non-negative")
+
+    result = []
     pack = struct.pack
-    while n > 0:
-        s = pack('>I', n & 0xffffffff) + s
+
+    # Fill the first block independently from the value of n
+    bsr = blocksize
+    while bsr >= 8:
+        result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
+        n = n >> 64
+        bsr -= 8
+
+    while bsr >= 4:
+        result.insert(0, pack('>I', n & 0xFFFFFFFF))
         n = n >> 32
-    # strip off leading zeros
-    for i in range(len(s)):
-        if s[i] != b'\x00'[0]:
-            break
+        bsr -= 4
+
+    while bsr > 0:
+        result.insert(0, pack('>B', n & 0xFF))
+        n = n >> 8
+        bsr -= 1
+
+    if n == 0:
+        if len(result) == 0:
+            bresult = b'\x00'
+        else:
+            bresult = b''.join(result)
     else:
-        # only happens when n == 0
-        s = b'\x00'
-        i = 0
-    s = s[i:]
-    # add back some pad bytes.  this could be done more efficiently w.r.t. the
-    # de-padding being done above, but sigh...
-    if blocksize > 0 and len(s) % blocksize:
-        s = (blocksize - len(s) % blocksize) * b'\x00' + s
-    return s
+        # The encoded number exceeds the block size
+        while n > 0:
+            result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
+            n = n >> 64
+        result[0] = result[0].lstrip(b'\x00')
+        bresult = b''.join(result)
+        # bresult has minimum length here
+        if blocksize > 0:
+            target_len = ((len(bresult) - 1) // blocksize + 1) * blocksize
+            bresult = b'\x00' * (target_len - len(bresult)) + bresult
+
+    return bresult
+
 
 def bytes_to_long(s):
     """Convert a byte string to a long integer (big endian).
@@ -436,7 +465,7 @@ def bytes_to_long(s):
     if sys.version_info[0:3] < (2, 7, 4):
         if isinstance(s, bytearray):
             s = bytes(s)
-        elif isinstance(s, _memoryview):
+        elif isinstance(s, memoryview):
             s = s.tobytes()
 
     length = len(s)

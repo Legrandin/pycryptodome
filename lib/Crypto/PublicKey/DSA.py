@@ -94,6 +94,8 @@ class DsaKey(object):
 
     :ivar x: Private key
     :vartype x: integer
+
+    :undocumented: exportKey, publickey
     """
 
     _keydata = ['y', 'g', 'p', 'q', 'x']
@@ -149,7 +151,7 @@ class DsaKey(object):
     def can_sign(self):     # legacy
         return True
 
-    def publickey(self):
+    def public_key(self):
         """A matching DSA public key.
 
         Returns:
@@ -332,6 +334,7 @@ class DsaKey(object):
 
     # Backward-compatibility
     exportKey = export_key
+    publickey = public_key
 
     # Methods defined in PyCrypto that we don't support anymore
 

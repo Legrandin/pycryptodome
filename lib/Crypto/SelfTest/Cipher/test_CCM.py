@@ -28,17 +28,17 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import json
 import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, bchr, _memoryview
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
-from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
+
 
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
@@ -371,7 +371,7 @@ class CcmTests(unittest.TestCase):
         pt_test = cipher4.decrypt_and_verify(memoryview(ct_test), memoryview(tag_test))
 
         self.assertEqual(self.data_128, pt_test)
-    
+
     def test_output_param(self):
 
         pt = b'5' * 16
@@ -384,25 +384,25 @@ class CcmTests(unittest.TestCase):
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         res, tag_out = cipher.encrypt_and_digest(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
         self.assertEqual(tag, tag_out)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         res = cipher.decrypt_and_verify(ct, tag, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
     def test_output_param_memoryview(self):
-        
+
         pt = b'5' * 16
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
@@ -411,7 +411,7 @@ class CcmTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
@@ -424,7 +424,7 @@ class CcmTests(unittest.TestCase):
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
-        
+
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
 
@@ -433,12 +433,6 @@ class CcmTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
-
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_param_memoryview
 
 
 class CcmFSMTests(unittest.TestCase):
@@ -836,27 +830,14 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
-        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "aes_ccm_test.json"), "rt") as file_in:
-            tv_tree = json.load(file_in)
 
-        class TestVector(object):
-            pass
-        self.tv = []
+        def filter_tag(group):
+            return group['tagSize'] // 8
 
-        for group in tv_tree['testGroups']:
-            tag_size = group['tagSize'] // 8
-            for test in group['tests']:
-                tv = TestVector()
-                tv.tag_size = tag_size
-
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
-                self.tv.append(tv)
+        self.tv = load_test_vectors_wycheproof(("Cipher", "wycheproof"),
+                                               "aes_ccm_test.json",
+                                               "Wycheproof AES CCM",
+                                               group_tag={'tag_size': filter_tag})
 
     def shortDescription(self):
         return self._id
@@ -871,7 +852,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
         try:
             cipher = AES.new(tv.key, AES.MODE_CCM, tv.iv, mac_len=tv.tag_size,
-                    **self._extra_params)
+                                **self._extra_params)
         except ValueError as e:
             if len(tv.iv) not in range(7, 13 + 1, 2) and "Length of parameter 'nonce'" in str(e):
                 assert not tv.valid
@@ -893,7 +874,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
         try:
             cipher = AES.new(tv.key, AES.MODE_CCM, tv.iv, mac_len=tv.tag_size,
-                    **self._extra_params)
+                                **self._extra_params)
         except ValueError as e:
             if len(tv.iv) not in range(7, 13 + 1, 2) and "Length of parameter 'nonce'" in str(e):
                 assert not tv.valid
@@ -918,7 +899,7 @@ class TestVectorsWycheproof(unittest.TestCase):
         if len(tv.iv) not in range(7, 13 + 1, 2) or len(tv.ct) == 0:
             return
         cipher = AES.new(tv.key, AES.MODE_CCM, tv.iv, mac_len=tv.tag_size,
-                **self._extra_params)
+                            **self._extra_params)
         cipher.update(tv.aad)
         ct_corrupt = strxor(tv.ct, b"\x00" * (len(tv.ct) - 1) + b"\x01")
         self.assertRaises(ValueError, cipher.decrypt_and_verify, ct_corrupt, tv.tag)
@@ -938,11 +919,12 @@ def get_tests(config={}):
     tests += list_test_cases(CcmTests)
     tests += list_test_cases(CcmFSMTests)
     tests += [TestVectors()]
-    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
- 
+    tests += [TestVectorsWycheproof(wycheproof_warnings)]
+
     return tests
 
 
 if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
+    def suite():
+        unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')

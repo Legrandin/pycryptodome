@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord, tobytes, _memoryview
+from Crypto.Util.py3compat import bord, tobytes
 
 from binascii import unhexlify
 
@@ -64,7 +64,7 @@ class HMAC(object):
 
         self._digestmod = digestmod
 
-        if isinstance(key, _memoryview):
+        if isinstance(key, memoryview):
             key = key.tobytes()
 
         try:

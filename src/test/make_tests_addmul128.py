@@ -21,30 +21,30 @@ def make_test(t, a, b0, b1):
     result_len = max(len(result), 2 + len(a))
    
     # Pad the output vector with as many padding zeroes as needed
-    for x in xrange(result_len - len(t_in)):
+    for x in range(result_len - len(t_in)):
         t_in.append("0")
-    for x in xrange(result_len - len(result)):
+    for x in range(result_len - len(result)):
         result.append("0")
 
-    print ""
-    print "void test_%d() {" % counter.next()
-    print "    const uint64_t a[] = {" + ", ".join(a) + "};"
-    print "    uint64_t t[] = {" + ", ".join(t_in) + ", 0xAAAAAAAAAAAAAAAAULL};"
-    print "    uint64_t scratchpad[%d];" % (len(t_in) + len(a))
-    print "    const uint64_t expected_t[] = {" + ", ".join(result) + "};"
-    print ""
-    print "    addmul128(t, scratchpad, a, 0x%x, 0x%x, %d, %d);" % (b0, b1, len(t_in), len(a))
-    print "    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len
-    print "    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len
-    print "}"
-    print ""
+    print("")
+    print("void test_%d() {" % next(counter))
+    print("    const uint64_t a[] = {" + ", ".join(a) + "};")
+    print("    uint64_t t[] = {" + ", ".join(t_in) + ", 0xAAAAAAAAAAAAAAAAULL};")
+    print("    uint64_t scratchpad[%d];" % (len(t_in) + len(a)))
+    print("    const uint64_t expected_t[] = {" + ", ".join(result) + "};")
+    print("")
+    print("    addmul128(t, scratchpad, a, 0x%x, 0x%x, %d, %d);" % (b0, b1, len(t_in), len(a)))
+    print("    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len)
+    print("    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len)
+    print("}")
+    print("")
 
 
-print "#include <assert.h>"
-print "#include <string.h>"
-print "#include <stdint.h>"
-print "#include <stdio.h>"
-print '#include "multiply.h"'
+print("#include <assert.h>")
+print("#include <string.h>")
+print("#include <stdint.h>")
+print("#include <stdio.h>")
+print('#include "multiply.h"')
 
 make_test(0, 0, 0, 0)
 make_test(0, 1, 1, 0)

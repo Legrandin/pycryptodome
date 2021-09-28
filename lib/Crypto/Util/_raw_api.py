@@ -28,6 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import os
 import abc
 import sys
 from Crypto.Util.py3compat import byte_string
@@ -50,10 +51,7 @@ else:
     extension_suffixes = machinery.EXTENSION_SUFFIXES
 
 # Which types with buffer interface we support (apart from byte strings)
-if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-    _buffer_type = (bytearray)
-else:
-    _buffer_type = (bytearray, memoryview)
+_buffer_type = (bytearray, memoryview)
 
 
 class _VoidPointer(object):
@@ -69,9 +67,6 @@ class _VoidPointer(object):
 
 
 try:
-    if sys.version_info[0] == 2 and sys.version_info[1] < 7:
-        raise ImportError("CFFI is only supported with Python 2.7+")
-
     # Starting from v2.18, pycparser (used by cffi for in-line ABI mode)
     # stops working correctly when PYOPTIMIZE==2 or the parameter -OO is
     # passed. In that case, we fall back to ctypes.
@@ -98,7 +93,10 @@ try:
         @cdecl, the C function declarations.
         """
 
-        lib = ffi.dlopen(name)
+        if hasattr(ffi, "RTLD_DEEPBIND"):
+            lib = ffi.dlopen(name, ffi.RTLD_DEEPBIND)
+        else:
+            lib = ffi.dlopen(name)
         ffi.cdef(cdecl)
         return lib
 
@@ -108,6 +106,7 @@ try:
 
     c_ulonglong = c_ulong
     c_uint = c_ulong
+    c_ubyte = c_ulong
 
     def c_size_t(x):
         """Convert a Python integer to size_t"""
@@ -171,6 +170,11 @@ except ImportError:
     null_pointer = None
     cached_architecture = []
 
+    def c_ubyte(c):
+        if not (0 <= c < 256):
+            raise OverflowError()
+        return ctypes.c_ubyte(c)
+
     def load_lib(name, cdecl):
         if not cached_architecture:
             # platform.architecture() creates a subprocess, so caching the
@@ -193,12 +197,7 @@ except ImportError:
 
     # ---- Get raw pointer ---
 
-    if sys.version_info[0] == 2 and sys.version_info[1] == 6:
-        # ctypes in 2.6 does not define c_ssize_t. Replacing it
-        # with c_size_t keeps the structure correctely laid out
-        _c_ssize_t = c_size_t
-    else:
-        _c_ssize_t = ctypes.c_ssize_t
+    _c_ssize_t = ctypes.c_ssize_t
 
     _PyBUF_SIMPLE = 0
     _PyObject_GetBuffer = ctypes.pythonapi.PyObject_GetBuffer
@@ -207,7 +206,7 @@ except ImportError:
     _c_ssize_p = ctypes.POINTER(_c_ssize_t)
 
     # See Include/object.h for CPython
-    # and https://github.com/pallets/click/blob/master/click/_winconsole.py
+    # and https://github.com/pallets/click/blob/master/src/click/_winconsole.py
     class _Py_buffer(ctypes.Structure):
         _fields_ = [
             ('buf',         c_void_p),
@@ -235,7 +234,7 @@ except ImportError:
             buf = _Py_buffer()
             _PyObject_GetBuffer(obj, byref(buf), _PyBUF_SIMPLE)
             try:
-                buffer_type = c_ubyte * buf.len
+                buffer_type = ctypes.c_ubyte * buf.len
                 return buffer_type.from_address(buf.buf)
             finally:
                 _PyBuffer_Release(byref(buf))
@@ -260,7 +259,6 @@ except ImportError:
         return VoidPointer_ctypes()
 
     backend = "ctypes"
-    del ctypes
 
 
 class SmartPointer(object):
@@ -301,27 +299,21 @@ def load_pycryptodome_raw_lib(name, cdecl):
     for ext in extension_suffixes:
         try:
             filename = basename + ext
-            return load_lib(pycryptodome_filename(dir_comps, filename),
-                            cdecl)
+            full_name = pycryptodome_filename(dir_comps, filename)
+            if not os.path.isfile(full_name):
+                attempts.append("Not found '%s'" % filename)
+                continue
+            return load_lib(full_name, cdecl)
         except OSError as exp:
-            attempts.append("Trying '%s': %s" % (filename, str(exp)))
+            attempts.append("Cannot load '%s': %s" % (filename, str(exp)))
     raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
 
 
-if sys.version_info[:2] != (2, 6):
-    
-    def is_buffer(x):
-        """Return True if object x supports the buffer interface"""
-        return isinstance(x, (bytes, bytearray, memoryview))
+def is_buffer(x):
+    """Return True if object x supports the buffer interface"""
+    return isinstance(x, (bytes, bytearray, memoryview))
 
-    def is_writeable_buffer(x):
-        return (isinstance(x, bytearray) or
-                (isinstance(x, memoryview) and not x.readonly))
 
-else:
-
-    def is_buffer(x):
-        return isinstance(x, (bytes, bytearray))
-
-    def is_writeable_buffer(x):
-        return isinstance(x, bytearray)
+def is_writeable_buffer(x):
+    return (isinstance(x, bytearray) or
+            (isinstance(x, memoryview) and not x.readonly))

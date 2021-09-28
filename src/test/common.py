@@ -4,7 +4,7 @@ class Count(object):
     def __init__(self):
         self.count = 0
 
-    def next(self):
+    def __next__(self):
         self.count += 1
         return self.count
 counter = Count()
@@ -63,10 +63,10 @@ def bin2int(bs):
 
 
 def make_main():
-    print "int main(void) {"
-    for i in xrange(1, counter.next()):
-        print "    test_%d();" % i
-    print "    return 0;"
-    print "}"
+    print("int main(void) {")
+    for i in range(1, next(counter)):
+        print("    test_%d();" % i)
+    print("    return 0;")
+    print("}")
 
 

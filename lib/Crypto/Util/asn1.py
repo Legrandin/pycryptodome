@@ -61,7 +61,7 @@ class BytesIO_EOF(object):
     def read(self, length):
         new_index = self._index + length
         if new_index > len(self._buffer):
-            raise ValueError
+            raise ValueError("Not enough data for DER decoding: expected %d bytes and found %d" % (new_index, len(self._buffer)))
 
         result = self._buffer[self._index:new_index]
         self._index = new_index

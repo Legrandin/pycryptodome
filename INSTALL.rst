@@ -12,7 +12,8 @@ PyCryptodome can be used as:
     In this case, all modules are installed under the ``Crypto`` package.
     You can test everything is right with::
 		
-         python -m Crypto.SelfTest
+        pip install pycryptodome-test-vectors
+        python -m Crypto.SelfTest
    
     One must avoid having both PyCrypto and PyCryptodome installed
     at the same time, as they will interfere with each other.
@@ -27,6 +28,7 @@ PyCryptodome can be used as:
    
     You can test everything is right with::
 		
+        pip install pycryptodome-test-vectors
         python -m Cryptodome.SelfTest
   
     In this case, all modules are installed under the ``Cryptodome`` package.
@@ -47,18 +49,21 @@ For Python 2.x::
 
         $ sudo apt-get install build-essential python-dev
         $ pip install pycryptodomex
+        $ pip install pycryptodome-test-vectors
         $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 
         $ sudo apt-get install build-essential python3-dev
         $ pip install pycryptodomex
+        $ pip install pycryptodome-test-vectors
         $ python3 -m Cryptodome.SelfTest
 
 For PyPy::
 
         $ sudo apt-get install build-essential pypy-dev
         $ pip install pycryptodomex
+        $ pip install pycryptodome-test-vectors
         $ pypy -m Cryptodome.SelfTest
 
 Compiling in Linux Fedora
@@ -72,22 +77,25 @@ For Python 2.x::
 
         $ sudo yum install gcc gmp python-devel
         $ pip install pycryptodomex
+        $ pip install pycryptodome-test-vectors
         $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 
         $ sudo yum install gcc gmp python3-devel
         $ pip install pycryptodomex
+        $ pip install pycryptodome-test-vectors
         $ python3 -m Cryptodome.SelfTest
 
 For PyPy::
 
         $ sudo yum install gcc gmp pypy-devel
         $ pip install pycryptodomex
+        $ pip install pycryptodome-test-vectors
         $ pypy -m Cryptodome.SelfTest
 
 
-Windows (from sources, Python 2.x, Python <=3.2)
+Windows (from sources, Python 2.7)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note::
@@ -134,55 +142,7 @@ components freely made available by Microsoft.
 
 #. To make sure everything work fine, run the test suite::
 
-        > python -m Cryptodome.SelfTest
-
-Windows (from sources, Python 3.3 and 3.4)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. note::
-    If you want to install under the ``Crypto`` package, replace
-    below ``pycryptodomex`` with ``pycryptodome``.
-
-Windows does not come with a C compiler like most Unix systems.
-The simplest way to compile the *Pycryptodome* extensions from
-source code is to install the minimum set of Visual Studio
-components freely made available by Microsoft.
-
-#. Run Python from the command line and note down its version
-   and whether it is a 32 bit or a 64 bit application.
-
-   For instance, if you see::
-
-        Python 2.7.2+ ... [MSC v.1500 32 bit (Intel)] on win32
-
-   you clearly have Python 2.7 and it is a 32 bit application.
-
-#. **[Only once]** Install `Virtual Clone Drive <https://www.redfox.bz/virtual-clonedrive.html>`_.
-
-#. **[Only once]** Download the ISO image of the
-   `MS SDK for Windows 7 and . NET Framework 4 <https://www.microsoft.com/en-us/download/details.aspx?id=8442>`_.
-   It contains the Visual C++ 2010 compiler.
-   
-   There are three ISO images available: you will need ``GRMSDK_EN_DVD.iso`` if your
-   Windows OS is 32 bits or ``GRMSDKX_EN_DVD.iso`` if 64 bits.
-
-   Mount the ISO with *Virtual Clone Drive* and install the C/C++ compilers and the
-   redistributable only.
-
-#. If your Python is a 64 bit application, open a command prompt and perform the following steps::
-
-        > cd "C:\Program Files\Microsoft SDKs\Windows\v7.1"
-        > cmd /V:ON /K Bin\SetEnv.Cmd /x64 /release
-        > set DISTUTILS_USE_SDK=1
-   
-   Replace ``/x64`` with ``/x86`` if your Python is a 32 bit application.
-
-#. Compile and install PyCryptodome::
-
-        > pip install pycryptodomex --no-use-wheel
-
-#. To make sure everything work fine, run the test suite::
-
+        > pip install pycryptodome-test-vectors
         > python -m Cryptodome.SelfTest
 
 Windows (from sources, Python 3.5 and newer)
@@ -206,6 +166,7 @@ components freely made available by Microsoft.
 
 #. To make sure everything work fine, run the test suite::
 
+        > pip install pycryptodome-test-vectors
         > python -m Cryptodome.SelfTest
 
 Documentation

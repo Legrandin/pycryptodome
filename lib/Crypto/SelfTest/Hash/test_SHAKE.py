@@ -33,7 +33,7 @@
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import SHAKE128, SHAKE256
@@ -91,10 +91,10 @@ class SHAKEVectors(unittest.TestCase):
     pass
 
 
-test_vectors_128 = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA3"),
+test_vectors_128 = load_test_vectors(("Hash", "SHA3"),
                                "ShortMsgKAT_SHAKE128.txt",
                                "Short Messages KAT SHAKE128",
-                               { "len" : lambda x: int(x) } )
+                               { "len" : lambda x: int(x) } ) or []
 
 for idx, tv in enumerate(test_vectors_128):
     if tv.len == 0:
@@ -110,10 +110,10 @@ for idx, tv in enumerate(test_vectors_128):
     setattr(SHAKEVectors, "test_128_%d" % idx, new_test)
 
 
-test_vectors_256 = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA3"),
+test_vectors_256 = load_test_vectors(("Hash", "SHA3"),
                                "ShortMsgKAT_SHAKE256.txt",
                                "Short Messages KAT SHAKE256",
-                               { "len" : lambda x: int(x) } )
+                               { "len" : lambda x: int(x) } ) or []
 
 for idx, tv in enumerate(test_vectors_256):
     if tv.len == 0:

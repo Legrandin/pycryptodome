@@ -1,6 +1,85 @@
 Changelog
 =========
 
+3.10.4 (25 September 2021)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Output of ``Crypto.Util.number.long_to_bytes()`` was not always a multiple of ``blocksize``.
+
+3.10.3 (22 September 2021)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#376: Fixed symbol conflict between different versions of ``libgmp``.
+* GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
+* GH#506 and GH#509: Fixed segmentation faults on Apple M1 and other Aarch64 SoCs,
+  when the GMP library add accessed via ``ctypes``. Do not use GMP's own sscanf
+  and snprintf routines: instead, use simpler conversion routines.
+* GH#510: Workaround for ``cffi`` calling ``ctypes.util.find_library()``, which
+  invokes ``gcc`` and ``ld`` on Linux, considerably slowing down all imports.
+  On certain configurations, that may also leave temporary files behind.
+* GH#517: Fix RSAES-OAEP, as it didn't always fail when zero padding was incorrect.
+
+New features
+------------
+* Added support for SHA-3 hash functions to HMAC.
+
+Other changes
+-------------
+* Install VC9 directly for Python 2.7 on Windows, as ``vcpython27`` has been pulled
+  from choco's repos in April.
+
+3.10.1 (9 February 2021)
+++++++++++++++++++++++++
+
+Other changes
+-------------
+* Python 3 wheels use ``abi3`` ABI tag.
+* Remove Appveyor CI.
+
+3.10.0 (6 February 2021)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Fixed a potential memory leak when initializing block ciphers.
+* GH#466: ``Crypto.Math.miller_rabin_test()`` was still using the system random
+  source and not the one provided as parameter.
+* GH#469: RSA objects have the method ``public_key()`` like ECC objects.
+  The old method ``publickey()`` is still available for backward compatibility.
+* GH#476: ``Crypto.Util.Padding.unpad()`` was raising an incorrect exception
+  in case of zero-length inputs. Thanks to Captainowie.
+* GH#491: better exception message when ``Counter.new()`` is called with an integer
+  ``initial_value`` than doesn't fit into ``nbits`` bits.
+* GH#496: added missing ``block_size`` member for ECB cipher objects. Thanks to willem.
+* GH#500: ``nonce`` member of an XChaCha20 cipher object was not matching the original nonce.
+  Thanks to Charles Machalow.
+
+Other changes
+-------------
+* The bulk of the test vectors have been moved to the separate
+  package ``pycryptodome-test-vectors``. As result, packages ``pycryptodome`` and
+  ``pycryptodomex`` become significantly smaller (from 14MB to 3MB).
+* Moved CI tests and build service from Travis CI to GitHub Actions.
+
+Breaks in compatibility
+-----------------------
+* Drop support for Python 2.6 and 3.4.
+
+3.9.9 (2 November 2020)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#435: Fixed ``Crypto.Util.number.size`` for negative numbers.
+
+New features
+------------
+* Build Python 3.9 wheels on Windows.
+
 3.9.8 (23 June 2020)
 ++++++++++++++++++++
 

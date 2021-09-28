@@ -71,6 +71,7 @@ class PKCS7_Tests(unittest.TestCase):
 
     def testn2(self):
         self.assertRaises(ValueError, unpad, b("\0\0\0"), 4)
+        self.assertRaises(ValueError, unpad, b(""), 4)
 
     def testn3(self):
         self.assertRaises(ValueError, unpad, b("123456\x02"), 4)
@@ -107,6 +108,7 @@ class X923_Tests(unittest.TestCase):
         self.assertRaises(ValueError, unpad, b("123456\x02"), 4, 'x923')
         self.assertRaises(ValueError, unpad, b("123456\x00"), 4, 'x923')
         self.assertRaises(ValueError, unpad, b("123456\x00\x00\x00\x00\x05"), 4, 'x923')
+        self.assertRaises(ValueError, unpad, b(""), 4, 'x923')
 
 class ISO7816_Tests(unittest.TestCase):
 
@@ -137,6 +139,7 @@ class ISO7816_Tests(unittest.TestCase):
 
     def testn1(self):
         self.assertRaises(ValueError, unpad, b("123456\x81"), 4, 'iso7816')
+        self.assertRaises(ValueError, unpad, b(""), 4, 'iso7816')
 
 def get_tests(config={}):
     tests = []

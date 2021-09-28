@@ -15,21 +15,18 @@ def is_native_int(s: Any) -> bool: ...
 def is_string(x: Any) -> bool: ...
 
 def BytesIO(b: bytes) -> IO[bytes]: ...
+def StringIO(s: str) -> IO[str]: ...
 
 if sys.version_info[0] == 2:
     from sys import maxint
     iter_range = xrange
 
-    if sys.version_info[1] < 7:
-        import types
-        _memoryview = types.NoneType
-    else:
-        _memoryview = memoryview
-
 else:
     from sys import maxsize as maxint
     iter_range = range
 
-    _memoryview = memoryview
+class FileNotFoundError:
+    def __init__(self, err: int, msg: str, filename: str) -> None:
+        pass
 
 def _copy_bytes(start: Optional[int], end: Optional[int], seq: Buffer) -> bytes: ...

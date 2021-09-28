@@ -28,7 +28,7 @@ from binascii import hexlify
 
 from Crypto.Hash import SHA512
 from .common import make_hash_tests
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
@@ -52,10 +52,10 @@ test_data_512_other = [
 
 def get_tests_SHA512():
 
-    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA2"),
+    test_vectors = load_test_vectors(("Hash", "SHA2"),
                                 "SHA512ShortMsg.rsp",
                                 "KAT SHA-512",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
     test_data = test_data_512_other[:]
     for tv in test_vectors:
@@ -76,10 +76,10 @@ def get_tests_SHA512():
 
 def get_tests_SHA512_224():
 
-    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA2"),
+    test_vectors = load_test_vectors(("Hash", "SHA2"),
                                 "SHA512_224ShortMsg.rsp",
                                 "KAT SHA-512/224",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
     test_data = []
     for tv in test_vectors:
@@ -101,10 +101,10 @@ def get_tests_SHA512_224():
 
 def get_tests_SHA512_256():
 
-    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA2"),
+    test_vectors = load_test_vectors(("Hash", "SHA2"),
                                 "SHA512_256ShortMsg.rsp",
                                 "KAT SHA-512/256",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
     test_data = []
     for tv in test_vectors:

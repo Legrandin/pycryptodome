@@ -33,11 +33,12 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+
 from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
-from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
 
 
@@ -150,7 +151,7 @@ class SivTests(unittest.TestCase):
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.hexverify(mac_hex)
-    
+
     def test_bytearray(self):
 
         # Encrypt
@@ -158,7 +159,7 @@ class SivTests(unittest.TestCase):
         nonce = bytearray(self.nonce_96)
         data = bytearray(self.data_128)
         header = bytearray(self.data_128)
-        
+
         cipher1 = AES.new(self.key_256,
                           AES.MODE_SIV,
                           nonce=self.nonce_96)
@@ -184,7 +185,7 @@ class SivTests(unittest.TestCase):
         header = bytearray(self.data_128)
         ct_ba = bytearray(ct)
         tag_ba = bytearray(tag)
-        
+
         cipher3 = AES.new(key,
                           AES.MODE_SIV,
                           nonce=nonce)
@@ -195,7 +196,7 @@ class SivTests(unittest.TestCase):
         pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
 
         self.assertEqual(self.data_128, pt_test)
-    
+
     def test_memoryview(self):
 
         # Encrypt
@@ -203,7 +204,7 @@ class SivTests(unittest.TestCase):
         nonce = memoryview(bytearray(self.nonce_96))
         data = memoryview(bytearray(self.data_128))
         header = memoryview(bytearray(self.data_128))
-        
+
         cipher1 = AES.new(self.key_256,
                           AES.MODE_SIV,
                           nonce=self.nonce_96)
@@ -229,7 +230,7 @@ class SivTests(unittest.TestCase):
         header = memoryview(bytearray(self.data_128))
         ct_ba = memoryview(bytearray(ct))
         tag_ba = memoryview(bytearray(tag))
-        
+
         cipher3 = AES.new(key,
                           AES.MODE_SIV,
                           nonce=nonce)
@@ -240,7 +241,7 @@ class SivTests(unittest.TestCase):
         pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
 
         self.assertEqual(self.data_128, pt_test)
-    
+
     def test_output_param(self):
 
         pt = b'5' * 16
@@ -253,14 +254,14 @@ class SivTests(unittest.TestCase):
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
         self.assertEqual(tag, tag_out)
-        
+
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         res = cipher.decrypt_and_verify(ct, tag, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
     def test_output_param_memoryview(self):
-        
+
         pt = b'5' * 16
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct, tag = cipher.encrypt_and_digest(pt)
@@ -269,7 +270,7 @@ class SivTests(unittest.TestCase):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.encrypt_and_digest(pt, output=output)
         self.assertEqual(ct, output)
-        
+
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.decrypt_and_verify(ct, tag, output=output)
         self.assertEqual(pt, output)
@@ -282,7 +283,7 @@ class SivTests(unittest.TestCase):
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.encrypt_and_digest, pt, output=b'0'*16)
-        
+
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.decrypt_and_verify, ct, tag, output=b'0'*16)
 
@@ -293,18 +294,12 @@ class SivTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, tag, output=shorter_output)
 
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-        del test_output_param_memoryview
-
-
 class SivFSMTests(unittest.TestCase):
 
     key_256 = get_tag_random("key_256", 32)
     nonce_96 = get_tag_random("nonce_96", 12)
     data_128 = get_tag_random("data_128", 16)
-    
+
     def test_invalid_init_encrypt(self):
         # Path INIT->ENCRYPT fails
         cipher = AES.new(self.key_256, AES.MODE_SIV,
@@ -459,23 +454,9 @@ class TestVectorsWycheproof(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
-        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "aes_siv_cmac_test.json"), "rt") as file_in:
-            tv_tree = json.load(file_in)
-
-        class TestVector(object):
-            pass
-        self.tv = []
-
-        for group in tv_tree['testGroups']:
-            for test in group['tests']:
-                tv = TestVector()
-
-                tv.id = test['tcId']
-                for attr in 'key', 'aad', 'msg', 'ct':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.valid = test['result'] != "invalid"
-                self.tv.append(tv)
+        self.tv = load_test_vectors_wycheproof(("Cipher", "wycheproof"),
+                                               "aes_siv_cmac_test.json",
+                                               "Wycheproof AES SIV")
 
     def shortDescription(self):
         return self._id
@@ -516,23 +497,9 @@ class TestVectorsWycheproof2(unittest.TestCase):
         self._id = "None"
 
     def setUp(self):
-        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "aead_aes_siv_cmac_test.json"), "rt") as file_in:
-            tv_tree = json.load(file_in)
-
-        class TestVector(object):
-            pass
-        self.tv = []
-
-        for group in tv_tree['testGroups']:
-            for test in group['tests']:
-                tv = TestVector()
-
-                tv.id = test['tcId']
-                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.valid = test['result'] != "invalid"
-                self.tv.append(tv)
+        self.tv = load_test_vectors_wycheproof(("Cipher", "wycheproof"),
+                                               "aead_aes_siv_cmac_test.json",
+                                               "Wycheproof AEAD SIV")
 
     def shortDescription(self):
         return self._id

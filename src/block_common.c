@@ -102,6 +102,7 @@ EXPORT_SYM int CIPHER_STOP_OPERATION(BlockBase *state)
 EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHER_STATE_TYPE **pResult)
 {
     BlockBase *block_base;
+    int res;
 
     if ((key == NULL) || (pResult == NULL))
         return ERR_NULL;
@@ -116,6 +117,12 @@ EXPORT_SYM int CIPHER_START_OPERATION(const uint8_t key[], size_t key_len, CIPHE
     block_base->destructor = &CIPHER_STOP_OPERATION;
     block_base->block_len = BLOCK_SIZE;
 
-    return block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
+    res = block_init(&(*pResult)->algo_state, (unsigned char*)key, key_len);
+    if (res) {
+        free(*pResult);
+        *pResult = NULL;
+    }
+
+    return res;
 }
 #endif

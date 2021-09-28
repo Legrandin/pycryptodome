@@ -36,7 +36,7 @@ from Crypto.Util.py3compat import bchr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
 
 from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512, SHA3_384,
                          SHA3_224, SHA3_256, SHA3_512)
@@ -58,7 +58,7 @@ class FIPS_PKCS1_Verify_Tests(unittest.TestCase):
         return "FIPS PKCS1 Tests (Verify)"
 
     def test_can_sign(self):
-        test_public_key = RSA.generate(1024).publickey()
+        test_public_key = RSA.generate(1024).public_key()
         verifier = pkcs1_15.new(test_public_key)
         self.assertEqual(verifier.can_sign(), False)
 
@@ -67,12 +67,12 @@ class FIPS_PKCS1_Verify_Tests_KAT(unittest.TestCase):
     pass
 
 
-test_vectors_verify = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-v1.5"),
+test_vectors_verify = load_test_vectors(("Signature", "PKCS1-v1.5"),
                                  "SigVer15_186-3.rsp",
                                  "Signature Verification 186-3",
-                                 { 'shaalg' : lambda x: x,
-                                   'd' : lambda x: int(x),
-                                   'result' : lambda x: x })
+                                 {'shaalg': lambda x: x,
+                                  'd': lambda x: int(x),
+                                  'result': lambda x: x}) or []
 
 
 for count, tv in enumerate(test_vectors_verify):
@@ -114,15 +114,15 @@ class FIPS_PKCS1_Sign_Tests_KAT(unittest.TestCase):
     pass
 
 
-test_vectors_sign  = load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-v1.5"),
-                                 "SigGen15_186-2.txt",
-                                 "Signature Generation 186-2",
-                                 { 'shaalg' : lambda x: x })
+test_vectors_sign  = load_test_vectors(("Signature", "PKCS1-v1.5"),
+                                        "SigGen15_186-2.txt",
+                                        "Signature Generation 186-2",
+                                        {'shaalg': lambda x: x}) or []
 
-test_vectors_sign += load_tests(("Crypto", "SelfTest", "Signature", "test_vectors", "PKCS1-v1.5"),
-                                 "SigGen15_186-3.txt",
-                                 "Signature Generation 186-3",
-                                 { 'shaalg' : lambda x: x })
+test_vectors_sign += load_test_vectors(("Signature", "PKCS1-v1.5"),
+                                        "SigGen15_186-3.txt",
+                                        "Signature Generation 186-3",
+                                        {'shaalg': lambda x: x}) or []
 
 for count, tv in enumerate(test_vectors_sign):
     if isinstance(tv, str):
@@ -186,7 +186,7 @@ class PKCS1_Legacy_Module_Tests(unittest.TestCase):
         key = RSA.importKey(PKCS1_15_NoParams.rsakey)
         hashed = SHA1.new(b"Test")
         good_signature = PKCS1_v1_5.new(key).sign(hashed)
-        verifier = PKCS1_v1_5.new(key.publickey())
+        verifier = PKCS1_v1_5.new(key.public_key())
 
         self.assertEqual(verifier.verify(hashed, good_signature), True)
 
@@ -254,59 +254,49 @@ class TestVectorsWycheproof(unittest.TestCase):
         self.add_tests("rsa_signature_test.json")
 
     def add_tests(self, filename):
-        comps = "Crypto.SelfTest.Signature.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, filename), "rt") as file_in:
-            tv_tree = json.load(file_in)
 
-        class TestVector(object):
-            pass
-        self.tv = []
+        def filter_rsa(group):
+            return RSA.import_key(group['keyPem'])
 
-        for group in tv_tree['testGroups']:
-            key = RSA.import_key(group['keyPem'])
-
+        def filter_sha(group):
             hash_name = group['sha']
             if hash_name == "SHA-512":
-                hash_module = SHA512
+                return SHA512
             elif hash_name == "SHA-512/224":
-                hash_module = SHA512.new(truncate="224")
+                return SHA512.new(truncate="224")
             elif hash_name == "SHA-512/256":
-                hash_module = SHA512.new(truncate="256")
+                return SHA512.new(truncate="256")
             elif hash_name == "SHA3-512":
-                hash_module = SHA3_512
+                return SHA3_512
             elif hash_name == "SHA-384":
-                hash_module = SHA384
+                return SHA384
             elif hash_name == "SHA3-384":
-                hash_module = SHA3_384
+                return SHA3_384
             elif hash_name == "SHA-256":
-                hash_module = SHA256
+                return SHA256
             elif hash_name == "SHA3-256":
-                hash_module = SHA3_256
+                return SHA3_256
             elif hash_name == "SHA-224":
-                hash_module = SHA224
+                return SHA224
             elif hash_name == "SHA3-224":
-                hash_module = SHA3_224
+                return SHA3_224
             elif hash_name == "SHA-1":
-                hash_module = SHA1
+                return SHA1
             else:
                 raise ValueError("Unknown hash algorithm: " + hash_name)
-            
+
+        def filter_type(group):
             type_name = group['type']
             if type_name not in ("RsassaPkcs1Verify", "RsassaPkcs1Generate"):
                 raise ValueError("Unknown type name " + type_name)
-            
-            for test in group['tests']:
-                tv = TestVector()
-                
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'msg', 'sig':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.key = key
-                tv.hash_module = hash_module
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
-                self.tv.append(tv)
+
+        result = load_test_vectors_wycheproof(("Signature", "wycheproof"),
+                                              filename,
+                                              "Wycheproof PKCS#1v1.5 signature (%s)" % filename,
+                                              group_tag={'rsa_key': filter_rsa,
+                                                         'hash_mod': filter_sha,
+                                                         'type': filter_type})
+        return result
 
     def shortDescription(self):
         return self._id
@@ -318,7 +308,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def test_verify(self, tv):
         self._id = "Wycheproof RSA PKCS$#1 Test #" + str(tv.id)
-        
+
         hashed_msg = tv.hash_module.new(tv.msg)
         signer = pkcs1_15.new(tv.key)
         try:

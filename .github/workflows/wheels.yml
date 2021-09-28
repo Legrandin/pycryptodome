@@ -1,0 +1,109 @@
+name: Wheels
+
+on:
+  push:
+    tags:
+    - '*'
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    env:
+      # Build api3 only once and test separately
+      CIBW_TEST_SKIP: "*"
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, windows-latest, macos-latest]
+
+    if: github.actor == 'Legrandin'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.9'
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==1.12.0
+
+      - name: Install MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@f456b805b3f63911738cb71d4f255e4e129c7e7a
+
+      - name: Build the wheel (not Windows)
+        if: runner.os != 'Windows'
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BUILD: "cp27-* cp35-* pp27-* pp36-*"
+
+      - name: Build a 64-bit wheel (Windows)
+        if: runner.os == 'Windows'
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BUILD: "cp27-win_amd64 cp35-win_amd64"
+          DISTUTILS_USE_SDK: 1
+          MSSdk: 1
+
+      - name: Install MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@f456b805b3f63911738cb71d4f255e4e129c7e7a
+        with:
+          arch: x86
+
+      - name: Build a 32-bit wheel (Windows)
+        if: runner.os == 'Windows'
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BUILD: "cp27-win32 cp35-win32 pp27-win32 pp36-win32"
+          DISTUTILS_USE_SDK: 1
+          MSSdk: 1
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./wheelhouse/*.whl
+
+  test_wheels:
+    name: Test wheels on ${{ matrix.os }}
+    needs: build_wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, windows-latest, macos-latest]
+        python-version: ['2.7', '3.6', '3.7', '3.8', '3.9', 'pypy-2.7', 'pypy-3.6']
+        exclude:
+          - {os: "windows-latest", python-version: "pypy-2.7"}
+
+    if: github.actor == 'Legrandin'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Display Python version
+        run: python -c "from __future__ import print_function; import sys; print(sys.version)"
+
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+          path: wheels/
+
+      - name: Install and test pycryptodome wheel
+        if: endsWith(github.ref, 'x') == false
+        run: |
+          pip install pycryptodome --no-index -f wheels/
+          python -m Crypto.SelfTest --skip-slow-tests
+
+      - name: Install pycryptodomex wheel
+        if: endsWith(github.ref, 'x') == true
+        run: |
+          pip install pycryptodomex --no-index -f wheels/
+          python -m Cryptodome.SelfTest --skip-slow-tests

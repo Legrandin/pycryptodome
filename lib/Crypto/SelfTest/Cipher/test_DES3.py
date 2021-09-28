@@ -31,7 +31,7 @@ from Crypto.Cipher import DES3
 
 from Crypto.Util.strxor import strxor_c
 from Crypto.Util.py3compat import bchr, tostr
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
@@ -56,11 +56,13 @@ test_data = [
 nist_tdes_mmt_files = ("TECBMMT2.rsp", "TECBMMT3.rsp")
 
 for tdes_file in nist_tdes_mmt_files:
-    test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "TDES"),
-                                  tdes_file,
-                                  "TDES ECB (%s)" % tdes_file,
-                                  { "count" : lambda x: int(x) } )
-    assert(test_vectors)
+
+    test_vectors = load_test_vectors(
+                        ("Cipher", "TDES"),
+                        tdes_file,
+                        "TDES ECB (%s)" % tdes_file,
+                        {"count": lambda x: int(x)}) or []
+
     for index, tv in enumerate(test_vectors):
 
         # The test vector file contains some directive lines
@@ -107,7 +109,7 @@ class CheckParity(unittest.TestCase):
 
         # K1 == K2 (with different parity)
         self.assertRaises(ValueError, DES3.adjust_key_parity,
-                          sub_key1  + strxor_c(sub_key1, 1) + sub_key2)
+                          sub_key1 + strxor_c(sub_key1, 1) + sub_key2)
 
 
 class DegenerateToDESTest(unittest.TestCase):
@@ -128,7 +130,7 @@ class DegenerateToDESTest(unittest.TestCase):
 
         # K1 == K2 == K3
         self.assertRaises(ValueError, DES3.new,
-                          sub_key1 *3,
+                          sub_key1 * 3,
                           DES3.MODE_ECB)
 
         # K2 == K3 (parity is ignored)
@@ -151,19 +153,17 @@ class TestOutput(unittest.TestCase):
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        import sys
-        if sys.version[:3] != '2.6':
-            output = memoryview(bytearray(16))
-            cipher.encrypt(pt, output=output)
-            self.assertEqual(ct, output)
-        
-            cipher.decrypt(ct, output=output)
-            self.assertEqual(pt, output)
+        output = memoryview(bytearray(16))
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
 
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
         self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
@@ -186,7 +186,10 @@ def get_tests(config={}):
 
 if __name__ == '__main__':
     import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
+
+    def suite():
+        unittest.TestSuite(get_tests())
+
     unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

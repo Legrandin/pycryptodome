@@ -326,10 +326,6 @@ class CtrTests(unittest.TestCase):
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_output_param_memoryview
-
 
 class SP800TestVectors(unittest.TestCase):
     """Class exercising the CTR test vectors found in Section F.5

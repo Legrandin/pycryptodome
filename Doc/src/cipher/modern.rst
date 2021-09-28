@@ -280,7 +280,7 @@ Example (encryption)::
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
     >>>
     >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>> json_v = [ b64encode(x).decode('utf-8') for x in cipher.nonce, header, ciphertext, tag ] 
+    >>> json_v = [ b64encode(x).decode('utf-8') for x in [cipher.nonce, header, ciphertext, tag ]] 
     >>> result = json.dumps(dict(zip(json_k, json_v)))
     >>> print(result)
     {"nonce": "DpOK8NIOuSOQlTq+BphKWw==", "header": "aGVhZGVy", "ciphertext": "CZVqyacc", "tag": "B2tBgICbyw+Wji9KpLVa8w=="}

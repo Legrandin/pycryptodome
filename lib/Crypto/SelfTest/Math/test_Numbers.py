@@ -61,20 +61,28 @@ class TestIntegerBase(unittest.TestCase):
 
         v4 = Integer(10**10)
         v5 = Integer(-10**10)
+
+        v6 = Integer(0xFFFF)
+        v7 = Integer(0xFFFFFFFF)
+        v8 = Integer(0xFFFFFFFFFFFFFFFF)
+
         self.assertEqual(v1, v1)
         self.assertEqual(v1, 23)
         self.assertEqual(v1, v2)
         self.assertEqual(v3, -9)
         self.assertEqual(v4, 10 ** 10)
         self.assertEqual(v5, -10 ** 10)
+        self.assertEqual(v6, 0xFFFF)
+        self.assertEqual(v7, 0xFFFFFFFF)
+        self.assertEqual(v8, 0xFFFFFFFFFFFFFFFF)
 
-        self.failIf(v1 == v4)
+        self.assertFalse(v1 == v4)
 
         # Init and comparison between Integer's
         v6 = Integer(v1)
         self.assertEqual(v1, v6)
 
-        self.failIf(Integer(0) == None)
+        self.assertFalse(Integer(0) == None)
 
     def test_conversion_to_int(self):
         v1, v2 = self.Integers(-23, 2 ** 1000)
@@ -83,17 +91,17 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_equality_with_ints(self):
         v1, v2, v3 = self.Integers(23, -89, 2 ** 1000)
-        self.failUnless(v1 == 23)
-        self.failUnless(v2 == -89)
-        self.failIf(v1 == 24)
-        self.failUnless(v3 == 2 ** 1000)
+        self.assertTrue(v1 == 23)
+        self.assertTrue(v2 == -89)
+        self.assertFalse(v1 == 24)
+        self.assertTrue(v3 == 2 ** 1000)
 
     def test_conversion_to_str(self):
         v1, v2, v3, v4 = self.Integers(20, 0, -20, 2 ** 1000)
-        self.failUnless(str(v1) == "20")
-        self.failUnless(str(v2) == "0")
-        self.failUnless(str(v3) == "-20")
-        self.failUnless(str(v4) == "10715086071862673209484250490600018105614048117055336074437503883703510511249361224931983788156958581275946729175531468251871452856923140435984577574698574803934567774824230985421074605062371141877954182153046474983581941267398767559165543946077062914571196477686542167660429831652624386837205668069376")
+        self.assertTrue(str(v1) == "20")
+        self.assertTrue(str(v2) == "0")
+        self.assertTrue(str(v3) == "-20")
+        self.assertTrue(str(v4) == "10715086071862673209484250490600018105614048117055336074437503883703510511249361224931983788156958581275946729175531468251871452856923140435984577574698574803934567774824230985421074605062371141877954182153046474983581941267398767559165543946077062914571196477686542167660429831652624386837205668069376")
 
     def test_repr(self):
         v1, v2 = self.Integers(-1, 2**80)
@@ -118,7 +126,7 @@ class TestIntegerBase(unittest.TestCase):
         Integer = self.Integer
 
         v1 = Integer.from_bytes(b("\x00"))
-        self.failUnless(isinstance(v1, Integer))
+        self.assertTrue(isinstance(v1, Integer))
         self.assertEqual(0, v1)
 
         v2 = Integer.from_bytes(b("\x00\x00"))
@@ -130,81 +138,81 @@ class TestIntegerBase(unittest.TestCase):
     def test_inequality(self):
         # Test Integer!=Integer and Integer!=int
         v1, v2, v3, v4 = self.Integers(89, 89, 90, -8)
-        self.failUnless(v1 != v3)
-        self.failUnless(v1 != 90)
-        self.failIf(v1 != v2)
-        self.failIf(v1 != 89)
-        self.failUnless(v1 != v4)
-        self.failUnless(v4 != v1)
-        self.failUnless(self.Integer(0) != None)
+        self.assertTrue(v1 != v3)
+        self.assertTrue(v1 != 90)
+        self.assertFalse(v1 != v2)
+        self.assertFalse(v1 != 89)
+        self.assertTrue(v1 != v4)
+        self.assertTrue(v4 != v1)
+        self.assertTrue(self.Integer(0) != None)
 
     def test_less_than(self):
         # Test Integer<Integer and Integer<int
         v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2 ** 10)
-        self.failUnless(v1 < v3)
-        self.failUnless(v1 < 14)
-        self.failIf(v1 < v2)
-        self.failIf(v1 < 13)
-        self.failUnless(v4 < v1)
-        self.failIf(v1 < v4)
-        self.failUnless(v1 < v5)
-        self.failIf(v5 < v1)
+        self.assertTrue(v1 < v3)
+        self.assertTrue(v1 < 14)
+        self.assertFalse(v1 < v2)
+        self.assertFalse(v1 < 13)
+        self.assertTrue(v4 < v1)
+        self.assertFalse(v1 < v4)
+        self.assertTrue(v1 < v5)
+        self.assertFalse(v5 < v1)
 
     def test_less_than_or_equal(self):
         # Test Integer<=Integer and Integer<=int
         v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -4, 2 ** 10)
-        self.failUnless(v1 <= v1)
-        self.failUnless(v1 <= 13)
-        self.failUnless(v1 <= v2)
-        self.failUnless(v1 <= 14)
-        self.failUnless(v1 <= v3)
-        self.failIf(v1 <= v4)
-        self.failUnless(v1 <= v5)
-        self.failIf(v5 <= v1)
+        self.assertTrue(v1 <= v1)
+        self.assertTrue(v1 <= 13)
+        self.assertTrue(v1 <= v2)
+        self.assertTrue(v1 <= 14)
+        self.assertTrue(v1 <= v3)
+        self.assertFalse(v1 <= v4)
+        self.assertTrue(v1 <= v5)
+        self.assertFalse(v5 <= v1)
 
     def test_more_than(self):
         # Test Integer>Integer and Integer>int
         v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2 ** 10)
-        self.failUnless(v3 > v1)
-        self.failUnless(v3 > 13)
-        self.failIf(v1 > v1)
-        self.failIf(v1 > v2)
-        self.failIf(v1 > 13)
-        self.failUnless(v1 > v4)
-        self.failIf(v4 > v1)
-        self.failUnless(v5 > v1)
-        self.failIf(v1 > v5)
+        self.assertTrue(v3 > v1)
+        self.assertTrue(v3 > 13)
+        self.assertFalse(v1 > v1)
+        self.assertFalse(v1 > v2)
+        self.assertFalse(v1 > 13)
+        self.assertTrue(v1 > v4)
+        self.assertFalse(v4 > v1)
+        self.assertTrue(v5 > v1)
+        self.assertFalse(v1 > v5)
 
     def test_more_than_or_equal(self):
         # Test Integer>=Integer and Integer>=int
         v1, v2, v3, v4 = self.Integers(13, 13, 14, -4)
-        self.failUnless(v3 >= v1)
-        self.failUnless(v3 >= 13)
-        self.failUnless(v1 >= v2)
-        self.failUnless(v1 >= v1)
-        self.failUnless(v1 >= 13)
-        self.failIf(v4 >= v1)
+        self.assertTrue(v3 >= v1)
+        self.assertTrue(v3 >= 13)
+        self.assertTrue(v1 >= v2)
+        self.assertTrue(v1 >= v1)
+        self.assertTrue(v1 >= 13)
+        self.assertFalse(v4 >= v1)
 
     def test_bool(self):
         v1, v2, v3, v4 = self.Integers(0, 10, -9, 2 ** 10)
         self.assertFalse(v1)
         self.assertFalse(bool(v1))
-        self.failUnless(v2)
-        self.failUnless(bool(v2))
-        self.failUnless(v3)
-        self.failUnless(v4)
+        self.assertTrue(v2)
+        self.assertTrue(bool(v2))
+        self.assertTrue(v3)
+        self.assertTrue(v4)
 
     def test_is_negative(self):
         v1, v2, v3, v4, v5 = self.Integers(-3 ** 100, -3, 0, 3, 3**100)
-        self.failUnless(v1.is_negative())
-        self.failUnless(v2.is_negative())
-        self.failIf(v4.is_negative())
-        self.failIf(v5.is_negative())
+        self.assertTrue(v1.is_negative())
+        self.assertTrue(v2.is_negative())
+        self.assertFalse(v4.is_negative())
+        self.assertFalse(v5.is_negative())
 
     def test_addition(self):
         # Test Integer+Integer and Integer+int
         v1, v2, v3 = self.Integers(7, 90, -7)
-        self.failUnless(isinstance(v1 + v2, self.Integer))
+        self.assertTrue(isinstance(v1 + v2, self.Integer))
         self.assertEqual(v1 + v2, 97)
         self.assertEqual(v1 + 90, 97)
         self.assertEqual(v1 + v3, 0)
@@ -214,7 +222,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_subtraction(self):
         # Test Integer-Integer and Integer-int
         v1, v2, v3 = self.Integers(7, 90, -7)
-        self.failUnless(isinstance(v1 - v2, self.Integer))
+        self.assertTrue(isinstance(v1 - v2, self.Integer))
         self.assertEqual(v2 - v1, 83)
         self.assertEqual(v2 - 7, 83)
         self.assertEqual(v2 - v3, 97)
@@ -224,7 +232,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_multiplication(self):
         # Test Integer-Integer and Integer-int
         v1, v2, v3, v4 = self.Integers(4, 5, -2, 2 ** 10)
-        self.failUnless(isinstance(v1 * v2, self.Integer))
+        self.assertTrue(isinstance(v1 * v2, self.Integer))
         self.assertEqual(v1 * v2, 20)
         self.assertEqual(v1 * 5, 20)
         self.assertEqual(v1 * -2, -8)
@@ -232,7 +240,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_floor_div(self):
         v1, v2, v3 = self.Integers(3, 8, 2 ** 80)
-        self.failUnless(isinstance(v1 // v2, self.Integer))
+        self.assertTrue(isinstance(v1 // v2, self.Integer))
         self.assertEqual(v2 // v1, 2)
         self.assertEqual(v2 // 3, 2)
         self.assertEqual(v2 // -3, -3)
@@ -242,7 +250,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_remainder(self):
         # Test Integer%Integer and Integer%int
         v1, v2, v3 = self.Integers(23, 5, -4)
-        self.failUnless(isinstance(v1 % v2, self.Integer))
+        self.assertTrue(isinstance(v1 % v2, self.Integer))
         self.assertEqual(v1 % v2, 3)
         self.assertEqual(v1 % 5, 3)
         self.assertEqual(v3 % 5, 1)
@@ -252,7 +260,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_simple_exponentiation(self):
         v1, v2, v3 = self.Integers(4, 3, -2)
-        self.failUnless(isinstance(v1 ** v2, self.Integer))
+        self.assertTrue(isinstance(v1 ** v2, self.Integer))
         self.assertEqual(v1 ** v2, 64)
         self.assertEqual(pow(v1, v2), 64)
         self.assertEqual(v1 ** 3, 64)
@@ -265,7 +273,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_modular_exponentiation(self):
         v1, v2, v3 = self.Integers(23, 5, 17)
 
-        self.failUnless(isinstance(pow(v1, v2, v3), self.Integer))
+        self.assertTrue(isinstance(pow(v1, v2, v3), self.Integer))
         self.assertEqual(pow(v1, v2, v3), 7)
         self.assertEqual(pow(v1, 5,  v3), 7)
         self.assertEqual(pow(v1, v2, 17), 7)
@@ -322,7 +330,7 @@ class TestIntegerBase(unittest.TestCase):
 
         # 2 is a non-quadratic reside in Z_11
         self.assertRaises(ValueError, self.Integer(2).sqrt, 11)
-        
+
         # 10 is not a prime
         self.assertRaises(ValueError, self.Integer(4).sqrt, 10)
 
@@ -382,7 +390,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_and(self):
         v1, v2, v3 = self.Integers(0xF4, 0x31, -0xF)
-        self.failUnless(isinstance(v1 & v2, self.Integer))
+        self.assertTrue(isinstance(v1 & v2, self.Integer))
         self.assertEqual(v1 & v2, 0x30)
         self.assertEqual(v1 & 0x31, 0x30)
         self.assertEqual(v1 & v3, 0xF0)
@@ -392,7 +400,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_or(self):
         v1, v2, v3 = self.Integers(0x40, 0x82, -0xF)
-        self.failUnless(isinstance(v1 | v2, self.Integer))
+        self.assertTrue(isinstance(v1 | v2, self.Integer))
         self.assertEqual(v1 | v2, 0xC2)
         self.assertEqual(v1 | 0x82, 0xC2)
         self.assertEqual(v2 | v3, -0xD)
@@ -401,12 +409,12 @@ class TestIntegerBase(unittest.TestCase):
     def test_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         self.assertEqual(v1 >> 0, v1)
-        self.failUnless(isinstance(v1 >> v2, self.Integer))
+        self.assertTrue(isinstance(v1 >> v2, self.Integer))
         self.assertEqual(v1 >> v2, 0x08)
         self.assertEqual(v1 >> 1, 0x08)
         self.assertRaises(ValueError, lambda: v1 >> -1)
         self.assertEqual(v1 >> (2 ** 1000), 0)
-        
+
         self.assertEqual(v3 >> 1, -0x08)
         self.assertEqual(v3 >> (2 ** 1000), -1)
 
@@ -438,7 +446,7 @@ class TestIntegerBase(unittest.TestCase):
     def _test_left_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         self.assertEqual(v1 << 0, v1)
-        self.failUnless(isinstance(v1 << v2, self.Integer))
+        self.assertTrue(isinstance(v1 << v2, self.Integer))
         self.assertEqual(v1 << v2, 0x20)
         self.assertEqual(v1 << 1, 0x20)
         self.assertEqual(v3 << 1, -0x20)
@@ -484,17 +492,17 @@ class TestIntegerBase(unittest.TestCase):
     def test_odd_even(self):
         v1, v2, v3, v4, v5 = self.Integers(0, 4, 17, -4, -17)
 
-        self.failUnless(v1.is_even())
-        self.failUnless(v2.is_even())
-        self.failIf(v3.is_even())
-        self.failUnless(v4.is_even())
-        self.failIf(v5.is_even())
+        self.assertTrue(v1.is_even())
+        self.assertTrue(v2.is_even())
+        self.assertFalse(v3.is_even())
+        self.assertTrue(v4.is_even())
+        self.assertFalse(v5.is_even())
 
-        self.failIf(v1.is_odd())
-        self.failIf(v2.is_odd())
-        self.failUnless(v3.is_odd())
-        self.failIf(v4.is_odd())
-        self.failUnless(v5.is_odd())
+        self.assertFalse(v1.is_odd())
+        self.assertFalse(v2.is_odd())
+        self.assertTrue(v3.is_odd())
+        self.assertFalse(v4.is_odd())
+        self.assertTrue(v5.is_odd())
 
     def test_size_in_bits(self):
         v1, v2, v3, v4 = self.Integers(0, 1, 0x100, -90)
@@ -514,18 +522,18 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_perfect_square(self):
 
-        self.failIf(self.Integer(-9).is_perfect_square())
-        self.failUnless(self.Integer(0).is_perfect_square())
-        self.failUnless(self.Integer(1).is_perfect_square())
-        self.failIf(self.Integer(2).is_perfect_square())
-        self.failIf(self.Integer(3).is_perfect_square())
-        self.failUnless(self.Integer(4).is_perfect_square())
-        self.failUnless(self.Integer(39*39).is_perfect_square())
-        self.failIf(self.Integer(39*39+1).is_perfect_square())
+        self.assertFalse(self.Integer(-9).is_perfect_square())
+        self.assertTrue(self.Integer(0).is_perfect_square())
+        self.assertTrue(self.Integer(1).is_perfect_square())
+        self.assertFalse(self.Integer(2).is_perfect_square())
+        self.assertFalse(self.Integer(3).is_perfect_square())
+        self.assertTrue(self.Integer(4).is_perfect_square())
+        self.assertTrue(self.Integer(39*39).is_perfect_square())
+        self.assertFalse(self.Integer(39*39+1).is_perfect_square())
 
         for x in range(100, 1000):
-            self.failIf(self.Integer(x**2+1).is_perfect_square())
-            self.failUnless(self.Integer(x**2).is_perfect_square())
+            self.assertFalse(self.Integer(x**2+1).is_perfect_square())
+            self.assertTrue(self.Integer(x**2).is_perfect_square())
 
     def test_fail_if_divisible_by(self):
         v1, v2, v3 = self.Integers(12, -12, 4)
@@ -570,7 +578,7 @@ class TestIntegerBase(unittest.TestCase):
     def test_inverse(self):
         v1, v2, v3, v4, v5, v6 = self.Integers(2, 5, -3, 0, 723872, 3433)
 
-        self.failUnless(isinstance(v1.inverse(v2), self.Integer))
+        self.assertTrue(isinstance(v1.inverse(v2), self.Integer))
         self.assertEqual(v1.inverse(v2), 3)
         self.assertEqual(v1.inverse(5), 3)
         self.assertEqual(v3.inverse(5), 3)
@@ -590,7 +598,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_gcd(self):
         v1, v2, v3, v4 = self.Integers(6, 10, 17, -2)
-        self.failUnless(isinstance(v1.gcd(v2), self.Integer))
+        self.assertTrue(isinstance(v1.gcd(v2), self.Integer))
         self.assertEqual(v1.gcd(v2), 2)
         self.assertEqual(v1.gcd(10), 2)
         self.assertEqual(v1.gcd(v3), 1)
@@ -599,7 +607,7 @@ class TestIntegerBase(unittest.TestCase):
 
     def test_lcm(self):
         v1, v2, v3, v4, v5 = self.Integers(6, 10, 17, -2, 0)
-        self.failUnless(isinstance(v1.lcm(v2), self.Integer))
+        self.assertTrue(isinstance(v1.lcm(v2), self.Integer))
         self.assertEqual(v1.lcm(v2), 30)
         self.assertEqual(v1.lcm(10), 30)
         self.assertEqual(v1.lcm(v3), 102)
@@ -668,7 +676,7 @@ class TestIntegerBase(unittest.TestCase):
         for n, kj in tv:
             for k, j in kj:
                 self.assertEqual(js(k, n), j)
-    
+
     def test_hex(self):
         v1, = self.Integers(0x10)
         self.assertEqual(hex(v1), "0x10")
@@ -686,13 +694,13 @@ class testIntegerRandom(unittest.TestCase):
 
         for _ in range(1000):
             a = IntegerNative.random(exact_bits=8)
-            self.failIf(a < 128)
-            self.failIf(a >= 256)
+            self.assertFalse(a < 128)
+            self.assertFalse(a >= 256)
 
         for bits_value in range(1024, 1024 + 8):
             a = IntegerNative.random(exact_bits=bits_value)
-            self.failIf(a < 2**(bits_value - 1))
-            self.failIf(a >= 2**bits_value)
+            self.assertFalse(a < 2**(bits_value - 1))
+            self.assertFalse(a >= 2**bits_value)
 
     def test_random_max_bits(self):
 
@@ -700,12 +708,12 @@ class testIntegerRandom(unittest.TestCase):
         for _ in range(1000):
             a = IntegerNative.random(max_bits=8)
             flag = flag or a < 128
-            self.failIf(a>=256)
-        self.failUnless(flag)
+            self.assertFalse(a>=256)
+        self.assertTrue(flag)
 
         for bits_value in range(1024, 1024 + 8):
             a = IntegerNative.random(max_bits=bits_value)
-            self.failIf(a >= 2**bits_value)
+            self.assertFalse(a >= 2**bits_value)
 
     def test_random_bits_custom_rng(self):
 
@@ -727,11 +735,11 @@ class testIntegerRandom(unittest.TestCase):
 
         for x in range(200):
             a = func(min_inclusive=1, max_inclusive=15)
-            self.failUnless(1 <= a <= 15)
+            self.assertTrue(1 <= a <= 15)
 
         for x in range(200):
             a = func(min_inclusive=1, max_exclusive=15)
-            self.failUnless(1 <= a < 15)
+            self.assertTrue(1 <= a < 15)
 
         self.assertRaises(ValueError, func, min_inclusive=1, max_inclusive=2,
                                             max_exclusive=3)
@@ -740,7 +748,7 @@ class testIntegerRandom(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestIntegerInt)
-    
+
     try:
         from Crypto.Math._IntegerGMP import IntegerGMP
 

@@ -1,8 +1,5 @@
-.. image:: https://travis-ci.org/Legrandin/pycryptodome.svg?branch=master
-   :target: https://travis-ci.org/Legrandin/pycryptodome
-
-.. image:: https://ci.appveyor.com/api/projects/status/mbxyqdodw9ylfib9/branch/master?svg=true
-   :target: https://ci.appveyor.com/project/Legrandin/pycryptodome
+.. image:: https://github.com/Legrandin/pycryptodome/workflows/Integration%20test/badge.svg?branch=master
+   :target: https://github.com/Legrandin/pycryptodome/actions
 
 PyCryptodome
 ============
@@ -10,7 +7,7 @@ PyCryptodome
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.6 and 2.7, Python 3.4 and newer, and PyPy.
+It supports Python 2.7, Python 3.5 and newer, and PyPy.
 
 The installation procedure depends on the package you want the library to be in.
 PyCryptodome can be used as:
@@ -67,6 +64,8 @@ Only the pieces that are extremely critical to performance (e.g. block ciphers)
 are implemented as C extensions.
 
 For more information, see the `homepage`_.
+
+For security issues, please send an email to security@pycryptodome.org.
 
 All the code can be downloaded from `GitHub`_.
 

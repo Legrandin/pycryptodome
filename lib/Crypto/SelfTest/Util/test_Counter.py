@@ -54,6 +54,7 @@ class CounterTests(unittest.TestCase):
 
     def test_iv(self):
         c = Counter.new(128, initial_value=2)
+        self.assertRaises(ValueError, Counter.new, 16, initial_value=0x1FFFF)
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
