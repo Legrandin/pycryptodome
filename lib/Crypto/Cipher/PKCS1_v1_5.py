@@ -163,7 +163,7 @@ class PKCS115_Cipher:
             as possible even if ``sentinel`` is returned (i.e. in case of
             incorrect decryption).
 
-            .. __: http://www.bell-labs.com/user/bleichen/papers/pkcs.ps
+            .. __: https://dx.doi.org/10.1007/BFb0055716
         """
 
         # See 7.2.2 in RFC8017
