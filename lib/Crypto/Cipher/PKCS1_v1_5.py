@@ -163,7 +163,7 @@ class PKCS115_Cipher:
             as possible even if ``sentinel`` is returned (i.e. in case of
             incorrect decryption).
 
-            .. __: http://www.bell-labs.com/user/bleichen/papers/pkcs.ps
+            .. __: https://dx.doi.org/10.1007/BFb0055716
         """
 
         # See 7.2.2 in RFC8017
@@ -183,7 +183,7 @@ class PKCS115_Cipher:
         em = long_to_bytes(m_int, k)
 
         # Step 3 (not constant time when the sentinel is not a byte string)
-        output = bytearray(k)
+        output = bytes(bytearray(k))
         if not is_bytes(sentinel) or len(sentinel) > k:
             size = _pkcs1_decode(em, b'', expected_pt_len, output)
             if size < 0:

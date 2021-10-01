@@ -199,6 +199,14 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
             pt2 = cipher.decrypt(memoryview(bytearray(ct)), b'\xFF' * len(pt))
             self.assertEqual(pt, pt2)
 
+        def test_return_type(self):
+            pt = b"XYZ"
+            cipher = PKCS.new(self.key1024)
+            ct = cipher.encrypt(pt)
+            self.assertTrue(isinstance(ct, bytes))
+            pt2 = cipher.decrypt(ct, b'\xAA' * 3)
+            self.assertTrue(isinstance(pt2, bytes))
+
 
 class TestVectorsWycheproof(unittest.TestCase):
 
