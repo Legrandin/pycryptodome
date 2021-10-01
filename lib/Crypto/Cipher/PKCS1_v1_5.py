@@ -183,7 +183,7 @@ class PKCS115_Cipher:
         em = long_to_bytes(m_int, k)
 
         # Step 3 (not constant time when the sentinel is not a byte string)
-        output = bytearray(k)
+        output = bytes(bytearray(k))
         if not is_bytes(sentinel) or len(sentinel) > k:
             size = _pkcs1_decode(em, b'', expected_pt_len, output)
             if size < 0:
