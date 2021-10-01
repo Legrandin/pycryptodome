@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.10.5 (XX October 2021)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#555: ``decrypt()`` method of a PKCS#1v1.5 cipher returned a ``bytearray`` instead of ``bytes``.
+
 3.10.4 (25 September 2021)
 ++++++++++++++++++++++++++
 
