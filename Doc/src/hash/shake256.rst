@@ -15,11 +15,10 @@ as described in Sections A.1 and A.2 of `FIPS 202`_.
 In the following example, the output is 26 bytes (208 bits) long::
 
     >>> from Crypto.Hash import SHAKE256
-    >>> from binascii import hexlify
     >>>
     >>> shake = SHAKE256.new()
     >>> shake.update(b'Some data')
-    >>> print hexlify(shake.read(26))
+    >>> print(shake.read(26).hex())
 
 .. _FIPS 202: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
 

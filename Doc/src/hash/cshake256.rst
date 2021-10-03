@@ -1,32 +1,38 @@
 cSHAKE256
-========
+=========
 
 cSHAKE256 is an *extendable-output function* (XOF) in the SHA-3 family, as specified in `SP 800-185`_.
 
 As a XOF, cSHAKE256 is a generalization of a cryptographic hash function.
-Instead of creating a fixed-length digest (e.g. 32 bytes like SHA-2/256),
+Instead of creating a fixed-length digest (e.g. 32 bytes like SHA-256),
 it can produce outputs of any desired length.
 
 Output bits do **not** depend on the output length.
 
 The *256* in its name indicates its maximum security level (in bits),
-as described in Section 3.1 `SP 800-185`_.
+as described in Section 3.1 of `SP 800-185`_.
 
-cSHAKE256 is a customizable version of SHAKE256 and allows for additional domain separation via the two customization strings *function* and *custom*.
-If both strings are empty, cSHAKE256 defaults back to SHAKE256.
+cSHAKE256 is a customizable version of SHAKE256 and allows for additional domain separation
+via a customization string (``custom`` parameter to :func:`Crypto.Hash.cSHAKE256.new`).
 
-Note that *function* is reserved for function names defined by NIST.
-Hence, user-specific customization should only be done via the *custom* string.
-See also Section 3.3 `SP 800-185`_.
+.. hint::
 
-In the following example, the output is 26 bytes (208 bits) long::
+  For instance, if you are using cSHAKE256 in two applications,
+  by picking different customization strings you can ensure
+  that they will never end up using the same digest in practice.
+  The important factor is that the strings are different;
+  what the strings say does not matter.
+
+If the customization string is empty, cSHAKE256 defaults back to :doc:`shake128`.
+See also Section 3.3 of `SP 800-185`_.
+
+In the following example, we extract 26 bytes (208 bits) from the XOF::
 
     >>> from Crypto.Hash import cSHAKE256
-    >>> from binascii import hexlify
     >>>
-    >>> shake = cSHAKE256.new(function=b'', custom=b'Email Signature')
+    >>> shake = cSHAKE256.new(custom=b'Email Signature')
     >>> shake.update(b'Some data')
-    >>> print hexlify(shake.read(26))
+    >>> print(shake.read(26).hex())
 
 .. _SP 800-185: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
 

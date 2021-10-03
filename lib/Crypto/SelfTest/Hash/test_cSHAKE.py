@@ -1,8 +1,4 @@
 # ===================================================================
-#
-# Copyright (c) 2015, Legrandin <helderijs@gmail.com>
-# All rights reserved.
-#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -35,11 +31,28 @@ import unittest
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
-from Crypto.Hash import cSHAKE128, cSHAKE256
+from Crypto.Hash import cSHAKE128, cSHAKE256, SHAKE128, SHAKE256
 from Crypto.Util.py3compat import b, bchr, tobytes
 
 
 class cSHAKETest(unittest.TestCase):
+
+    def test_left_encode(self):
+        from Crypto.Hash.cSHAKE128 import _left_encode
+        self.assertEqual(_left_encode(0), b'\x01\x00')
+        self.assertEqual(_left_encode(1), b'\x01\x01')
+        self.assertEqual(_left_encode(256), b'\x02\x00\x01')
+
+    def test_bytepad(self):
+        from Crypto.Hash.cSHAKE128 import _bytepad
+        self.assertEqual(_bytepad(b'', 4), b'\x01\x04\x00\x00')
+        self.assertEqual(_bytepad(b'A', 4), b'\x01\x04A\x00')
+        self.assertEqual(_bytepad(b'AA', 4), b'\x01\x04AA')
+        self.assertEqual(_bytepad(b'AAA', 4), b'\x01\x04AAA\x00\x00\x00')
+        self.assertEqual(_bytepad(b'AAAA', 4), b'\x01\x04AAAA\x00\x00')
+        self.assertEqual(_bytepad(b'AAAAA', 4), b'\x01\x04AAAAA\x00')
+        self.assertEqual(_bytepad(b'AAAAAA', 4), b'\x01\x04AAAAAA')
+        self.assertEqual(_bytepad(b'AAAAAAA', 4), b'\x01\x04AAAAAAA\x00\x00\x00')
 
     def test_new_positive(self):
 
@@ -53,42 +66,15 @@ class cSHAKETest(unittest.TestCase):
 
         xof1 = self.cshake.new()
         ref = xof1.read(10)
-        xof2 = self.cshake.new(function=b(""))
-        xof3 = self.cshake.new(custom=b(""))
-        xof4 = self.cshake.new(custom=b(""), function=b(""))
-        xof5 = self.cshake.new(custom=b("foo"))
-        xof6 = self.cshake.new(function=b("foo"))
+        xof2 = self.cshake.new(custom=b(""))
+        xof3 = self.cshake.new(custom=b("foo"))
 
         self.assertEqual(ref, xof2.read(10))
-        self.assertEqual(ref, xof3.read(10))
-        self.assertEqual(ref, xof4.read(10))
-        self.assertNotEqual(ref, xof5.read(10))
-        self.assertNotEqual(ref, xof6.read(10))
-
-        xof1 = self.cshake.new(custom=b("foo"))
-        xof2 = self.cshake.new(function=b("foo"))
-
-        self.assertNotEqual(xof1.read(10), xof2.read(10))
-
-        xof1 = self.cshake.new(function=b("foo"))
-        xof2 = self.cshake.new(function=b("foo"), data=b("90"))
-        xof3 = self.cshake.new(function=b("foo")).update(b("90"))
-
-        self.assertNotEqual(xof1.read(10), xof2.read(10))
-        xof3.read(10)
-        self.assertEqual(xof2.read(10), xof3.read(10))
+        self.assertNotEqual(ref, xof3.read(10))
 
         xof1 = self.cshake.new(custom=b("foo"))
         xof2 = self.cshake.new(custom=b("foo"), data=b("90"))
         xof3 = self.cshake.new(custom=b("foo")).update(b("90"))
-
-        self.assertNotEqual(xof1.read(10), xof2.read(10))
-        xof3.read(10)
-        self.assertEqual(xof2.read(10), xof3.read(10))
-
-        xof1 = self.cshake.new(function=b("foo"), custom=b("bar"))
-        xof2 = self.cshake.new(function=b("foo"), custom=b("bar"), data=b("90"))
-        xof3 = self.cshake.new(function=b("foo"), custom=b("bar")).update(b("90"))
 
         self.assertNotEqual(xof1.read(10), xof2.read(10))
         xof3.read(10)
@@ -121,24 +107,29 @@ class cSHAKETest(unittest.TestCase):
         mac.read(90)
         self.assertRaises(TypeError, mac.update, b("ttt"))
 
+    def test_shake(self):
+        # When no customization string is passed, results must match SHAKE
+        for digest_len in range(64):
+            xof1 = self.cshake.new(b'TEST')
+            xof2 = self.shake.new(b'TEST')
+            self.assertEqual(xof1.read(digest_len), xof2.read(digest_len))
+
 
 class cSHAKE128Test(cSHAKETest):
     cshake = cSHAKE128
+    shake = SHAKE128
 
 
 class cSHAKE256Test(cSHAKETest):
     cshake = cSHAKE256
+    shake = SHAKE256
 
 
 class cSHAKEVectors(unittest.TestCase):
     pass
 
 
-# cSHAKE defaults to SHAKE if customization strings are empty,
-# hence we reuse the SHAKE testvectors here as well.
-vector_files = [("ShortMsgKAT_SHAKE128.txt", "Short Messages KAT SHAKE128", "128_shake", cSHAKE128),
-                ("ShortMsgKAT_SHAKE256.txt", "Short Messages KAT SHAKE256", "256_shake", cSHAKE256),
-                ("ShortMsgSamples_cSHAKE128.txt", "Short Message Samples cSHAKE128", "128_cshake", cSHAKE128),
+vector_files = [("ShortMsgSamples_cSHAKE128.txt", "Short Message Samples cSHAKE128", "128_cshake", cSHAKE128),
                 ("ShortMsgSamples_cSHAKE256.txt", "Short Message Samples cSHAKE256", "256_cshake", cSHAKE256)]
 
 for file, descr, tag, test_class in vector_files:
@@ -154,19 +145,16 @@ for file, descr, tag, test_class in vector_files:
         else:
             data = tobytes(tv.msg)
             assert(tv.len == len(tv.msg)*8)
-        if getattr(tv, "nlen", 0) == 0:
-            function = b("")
-        else:
-            function = tobytes(tv.n)
-            assert(tv.nlen == len(tv.n)*8)
+        if getattr(tv, "nlen", 0) != 0:
+            raise ValueError("Unsupported cSHAKE test vector")
         if getattr(tv, "slen", 0) == 0:
             custom = b("")
         else:
             custom = tobytes(tv.s)
             assert(tv.slen == len(tv.s)*8)
 
-        def new_test(self, data=data, result=tv.md, function=function, custom=custom, test_class=test_class):
-            hobj = test_class.new(data=data, function=function, custom=custom)
+        def new_test(self, data=data, result=tv.md, custom=custom, test_class=test_class):
+            hobj = test_class.new(data=data, custom=custom)
             digest = hobj.read(len(result))
             self.assertEqual(digest, result)
 

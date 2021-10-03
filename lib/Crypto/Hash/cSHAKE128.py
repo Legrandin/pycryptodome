@@ -1,8 +1,4 @@
 # ===================================================================
-#
-# Copyright (c) 2015, Legrandin <helderijs@gmail.com>
-# All rights reserved.
-#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
@@ -38,7 +34,7 @@ from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
 from Crypto.Hash.keccak import _raw_keccak_lib
 
 
-def left_encode(x: int):
+def _left_encode(x):
     """Left encode function as defined in NIST SP 800-185"""
 
     assert (x < (1 << 2040) and x >= 0)
@@ -56,65 +52,51 @@ def left_encode(x: int):
     return enc
 
 
-def encode_str(x: bytes):
+def _encode_str(x):
     """Encode string function as defined in NIST SP 800-185"""
 
-    if x is None:
-        return left_encode(0)
-    else:
-        bitlen = len(x) * 8
+    bitlen = len(x) * 8
+    if bitlen >= (1 << 2040):
+        raise ValueError("String too large to encode in cSHAKE")
 
-        if bitlen >= (1 << 2040):
-            raise ValueError("String too large to encode in cSHAKE128")
-
-        return left_encode(bitlen) + x
+    return _left_encode(bitlen) + x
 
 
-def byte_align(x: bytes, length: int):
+def _bytepad(x, length):
     """Zero pad byte string as defined in NIST SP 800-185"""
 
-    x = left_encode(length) + x
+    to_pad = _left_encode(length) + x
 
     # Note: this implementation works with byte aligned strings,
     # hence no additional bit padding is needed at this point.
-    npad = (length - len(x) % length) % length
-    while npad:
-        x += bchr(0x00)
-        npad -= 1
+    npad = (length - len(to_pad) % length) % length
 
-    return x
+    return to_pad + b'\x00' * npad
 
 
-class cSHAKE128_XOF(object):
-    """A cSHAKE128 hash object.
+class cSHAKE_XOF(object):
+    """A cSHAKE hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
     """
 
-    # Parameters
-    name = "cSHAKE128"
-    prefix_alignment = 168
-    keccak_capacity = c_size_t(32)
-
-    def __init__(self, data=None, function=None, custom=None):
+    def __init__(self, data, custom, capacity):
         state = VoidPointer()
 
-        self.function = function
-        self.custom = custom
-
-        prefix = None
-        pad = 0x1F  # default to SHAKE
-        if function or custom:
-            prefix = encode_str(function) + encode_str(custom)
-            prefix = byte_align(prefix, self.prefix_alignment)
-            pad = 0x04  # for cSHAKE
+        if custom:
+            prefix_unpad = _encode_str(b'') + _encode_str(custom)
+            prefix = _bytepad(prefix_unpad, (1600 - capacity)//8)
+            pad = 0x04
+        else:
+            prefix = None
+            pad = 0x1F  # for SHAKE
 
         result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             self.keccak_capacity,
+                                             c_size_t(capacity//8),
                                              pad)
         if result:
-            raise ValueError("Error %d while instantiating %s"
-                             % (result, self.name))
+            raise ValueError("Error %d while instantiating cSHAKE"
+                             % result)
         self._state = SmartPointer(state.get(),
                                    _raw_keccak_lib.keccak_destroy)
         self._is_squeezing = False
@@ -169,24 +151,21 @@ class cSHAKE128_XOF(object):
 
         return get_raw_buffer(bfr)
 
-    def new(self, data=None, function=None, custom=None):
-        return type(self)(data=data, function=function, custom=custom)
 
-
-def new(data=None, function=None, custom=None):
+def new(data=None, custom=b''):
     """Return a fresh instance of a cSHAKE128 object.
 
     Args:
        data (bytes/bytearray/memoryview):
+        Optional.
         The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`update`.
-        Optional.
-       function (bytes):
-        Optional function bytestring.
        custom (bytes):
-        Optional customization bytestring.
+        Optional.
+        A customization bytestring (``S`` in SP 800-185).
 
-    :Return: A :class:`cSHAKE128_XOF` object
+    :Return: A :class:`cSHAKE_XOF` object
     """
 
-    return cSHAKE128_XOF(data=data, function=function, custom=custom)
+    # Use Keccak[256]
+    return cSHAKE_XOF(data, custom, 256)

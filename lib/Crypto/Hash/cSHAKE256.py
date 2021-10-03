@@ -29,24 +29,10 @@
 # ===================================================================
 
 from Crypto.Util._raw_api import c_size_t
-from Crypto.Hash.cSHAKE128 import cSHAKE128_XOF
+from Crypto.Hash.cSHAKE128 import cSHAKE_XOF
 
 
-# Reuse implementation from cSHAKE128 and
-# change a few parameters.
-class cSHAKE256_XOF(cSHAKE128_XOF):
-    """A cSHAKE256 hash object.
-    Do not instantiate directly.
-    Use the :func:`new` function.
-    """
-
-    # Parameters
-    name = "cSHAKE256"
-    prefix_alignment = 136
-    keccak_capacity = c_size_t(64)
-
-
-def new(data=None, function=None, custom=None):
+def new(data=None, custom=b''):
     """Return a fresh instance of a cSHAKE256 object.
 
     Args:
@@ -54,12 +40,12 @@ def new(data=None, function=None, custom=None):
         The very first chunk of the message to hash.
         It is equivalent to an early call to :meth:`update`.
         Optional.
-       function (bytes):
-        Optional function bytestring.
        custom (bytes):
-        Optional customization bytestring.
+        Optional.
+        A customization bytestring (``S`` in SP 800-185).
 
-    :Return: A :class:`cSHAKE256_XOF` object
+    :Return: A :class:`cSHAKE_XOF` object
     """
 
-    return cSHAKE256_XOF(data=data, function=function, custom=custom)
+    # Use Keccak[512]
+    return cSHAKE_XOF(data, custom, 512)

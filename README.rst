@@ -16,9 +16,9 @@ PyCryptodome can be used as:
    You install it with::
 
        pip install pycryptodome
-   
+
    In this case, all modules are installed under the ``Crypto`` package.
-    
+
    One must avoid having both PyCrypto and PyCryptodome installed
    at the same time, as they will interfere with each other.
 
@@ -29,7 +29,7 @@ PyCryptodome can be used as:
    You install it with::
 
        pip install pycryptodomex
-   
+
    In this case, all modules are installed under the ``Cryptodome`` package.
    PyCrypto and PyCryptodome can coexist.
 
