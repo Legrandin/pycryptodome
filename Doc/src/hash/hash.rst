@@ -110,10 +110,12 @@ Modern hash algorithms
 Extensible-Output Functions (XOF)
 ---------------------------------
 
-- SHAKE (in the SHA-3 family)
+- SHAKE and cSHAKE (in the SHA-3 family)
 
     - :doc:`shake128`
     - :doc:`shake256`
+    - :doc:`cshake128`
+    - :doc:`cshake256`
 
 Message Authentication Code (MAC) algorithms
 --------------------------------------------

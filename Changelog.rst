@@ -9,6 +9,10 @@ Resolved issues
 * GH#552: Correct typing annotations for ``PKCS115_Cipher.decrypt()``.
 * GH#555: ``decrypt()`` method of a PKCS#1v1.5 cipher returned a ``bytearray`` instead of ``bytes``.
 
+New features
+------------
+* Added cSHAKE128 and cSHAKE256 (of SHA-3 family). Thanks to Michael Schaffner.
+
 3.10.4 (25 September 2021)
 ++++++++++++++++++++++++++
 

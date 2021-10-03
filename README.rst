@@ -16,9 +16,9 @@ PyCryptodome can be used as:
    You install it with::
 
        pip install pycryptodome
-   
+
    In this case, all modules are installed under the ``Crypto`` package.
-    
+
    One must avoid having both PyCrypto and PyCryptodome installed
    at the same time, as they will interfere with each other.
 
@@ -29,7 +29,7 @@ PyCryptodome can be used as:
    You install it with::
 
        pip install pycryptodomex
-   
+
    In this case, all modules are installed under the ``Cryptodome`` package.
    PyCrypto and PyCryptodome can coexist.
 
@@ -45,7 +45,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
-* SHA-3 (including SHAKE XOFs), truncated SHA-512 and BLAKE2 hash algorithms
+* SHA-3 (including SHAKE and cSHAKE XOFs), truncated SHA-512 and BLAKE2 hash algorithms
 * Salsa20 and ChaCha20/XChaCha20 stream ciphers
 * Poly1305 MAC
 * ChaCha20-Poly1305 and XChaCha20-Poly1305 authenticated ciphers
