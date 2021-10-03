@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.10.5 (XX October 2021)
+3.11.0 (XX October 2021)
 ++++++++++++++++++++++++++
 
 Resolved issues
