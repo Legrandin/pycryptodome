@@ -47,3 +47,4 @@ Barry A. Warsaw
 Eric Young
 Hannes van Niekerk
 Stefan Seering
+Koki Takahashi
