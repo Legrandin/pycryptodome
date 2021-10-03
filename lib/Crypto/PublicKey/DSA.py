@@ -452,7 +452,7 @@ def generate(bits, randfunc=None, domain=None):
         ## Perform consistency check on domain parameters
         # P and Q must be prime
         fmt_error = test_probable_prime(p) == COMPOSITE
-        fmt_error = test_probable_prime(q) == COMPOSITE
+        fmt_error |= test_probable_prime(q) == COMPOSITE
         # Verify Lagrange's theorem for sub-group
         fmt_error |= ((p - 1) % q) != 0
         fmt_error |= g <= 1 or g >= p
@@ -518,7 +518,7 @@ def construct(tup, consistency_check=True):
     if consistency_check:
         # P and Q must be prime
         fmt_error = test_probable_prime(key.p) == COMPOSITE
-        fmt_error = test_probable_prime(key.q) == COMPOSITE
+        fmt_error |= test_probable_prime(key.q) == COMPOSITE
         # Verify Lagrange's theorem for sub-group
         fmt_error |= ((key.p - 1) % key.q) != 0
         fmt_error |= key.g <= 1 or key.g >= key.p
