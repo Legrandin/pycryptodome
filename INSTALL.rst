@@ -4,7 +4,7 @@ Installation
 The installation procedure depends on the package you want the library to be in.
 PyCryptodome can be used as:
 
- #. **an almost drop-in replacement for the old PyCrypto library**.
+ #. **An almost drop-in replacement for the old PyCrypto library**.
     You install it with::
 
         pip install pycryptodome
@@ -17,11 +17,10 @@ PyCryptodome can be used as:
    
     One must avoid having both PyCrypto and PyCryptodome installed
     at the same time, as they will interfere with each other.
-
     This option is therefore recommended only when you are sure that
     the whole application is deployed in a ``virtualenv``.
 
- #. **a library independent of the old PyCrypto**.
+ #. **A library independent of the old PyCrypto**.
     You install it with::
 
         pip install pycryptodomex
@@ -32,7 +31,13 @@ PyCryptodome can be used as:
         python -m Cryptodome.SelfTest
   
     In this case, all modules are installed under the ``Cryptodome`` package.
-    PyCrypto and PyCryptodome can coexist.
+    The old PyCrypto and PyCryptodome can coexist.
+
+.. note::
+
+  If you intend to run PyCryptodome with Python 2.7 under Windows, you must first install
+  the `Microsoft Visual C++ 2015 Redistributable <https://www.microsoft.com/en-us/download/details.aspx?id=52685>`_.
+  That is not necessary if you use Python 3.
 
 The procedures below go a bit more in detail, by explaining
 how to setup the environment for compiling the C extensions
@@ -95,57 +100,7 @@ For PyPy::
         $ pypy -m Cryptodome.SelfTest
 
 
-Windows (from sources, Python 2.7)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. note::
-    If you want to install under the ``Crypto`` package, replace
-    below ``pycryptodomex`` with ``pycryptodome``.
-
-Windows does not come with a C compiler like most Unix systems.
-The simplest way to compile the *Pycryptodome* extensions from
-source code is to install the minimum set of Visual Studio
-components freely made available by Microsoft.
-
-#. Run Python from the command line and note down its version
-   and whether it is a 32 bit or a 64 bit application.
-
-   For instance, if you see::
-
-        Python 2.7.2+ ... [MSC v.1500 32 bit (Intel)] on win32
-
-   you clearly have Python 2.7 and it is a 32 bit application.
-
-#. **[Only once]** Install `Virtual Clone Drive`_.
-
-#. **[Only once]** Download the ISO image of the
-   `MS SDK for Windows 7 and . NET Framework 3.5 SP1 <http://www.microsoft.com/en-us/download/details.aspx?id=18950>`_.
-   It contains the Visual C++ 2008 compiler.
-   
-   There are three ISO images available: you will need ``GRMSDK_EN_DVD.iso`` if your
-   Windows OS is 32 bits or ``GRMSDKX_EN_DVD.iso`` if 64 bits.
-
-   Mount the ISO with *Virtual Clone Drive* and install the C/C++ compilers and the
-   redistributable only.
-
-#. If your Python is a 64 bit application, open a command prompt and perform the following steps::
-
-        > cd "C:\Program Files\Microsoft SDKs\Windows\v7.0"
-        > cmd /V:ON /K Bin\SetEnv.Cmd /x64 /release
-        > set DISTUTILS_USE_SDK=1
-   
-   Replace ``/x64`` with ``/x86`` if your Python is a 32 bit application.
-
-#. Compile and install PyCryptodome::
-
-        > pip install pycryptodomex --no-use-wheel
-
-#. To make sure everything work fine, run the test suite::
-
-        > pip install pycryptodome-test-vectors
-        > python -m Cryptodome.SelfTest
-
-Windows (from sources, Python 3.5 and newer)
+Windows (from sources)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note::

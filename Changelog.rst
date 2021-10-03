@@ -46,8 +46,9 @@ New features
 
 Other changes
 -------------
-* Install VC9 directly for Python 2.7 on Windows, as ``vcpython27`` has been pulled
-  from choco's repos in April.
+* The Windows wheels of Python 2.7 now require the VS2015 runtime to be installed in the system,
+  because Microsoft stopped distributing the VS2008 compiler in April 2021.
+  VS2008 was used to compile the Python 2.7 extensions.
 
 3.10.1 (9 February 2021)
 ++++++++++++++++++++++++
