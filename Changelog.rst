@@ -8,6 +8,9 @@ Resolved issues
 ---------------
 * GH#552: Correct typing annotations for ``PKCS115_Cipher.decrypt()``.
 * GH#555: ``decrypt()`` method of a PKCS#1v1.5 cipher returned a ``bytearray`` instead of ``bytes``.
+* GH#557: External DSA domain parameters were accepted even when the modulus (``p``) was not prime.
+  This affected ``Crypto.PublicKey.DSA.generate()`` and ``Crypto.PublicKey.DSA.construct()``.
+  Thanks to Koki Takahashi.
 
 New features
 ------------
