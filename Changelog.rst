@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.11.0 (XX October 2021)
+3.11.0 (8 October 2021)
 ++++++++++++++++++++++++++
 
 Resolved issues
@@ -18,7 +18,7 @@ New features
 ------------
 * Added cSHAKE128 and cSHAKE256 (of SHA-3 family). Thanks to Michael Schaffner.
 * GH#558: The flag RTLD_DEEPBIND passed to ``dlopen()`` is not well supported by
-  `address sanitizers <https://github.com/google/sanitizers/issues/611`_.
+  `address sanitizers <https://github.com/google/sanitizers/issues/611>`_.
   It is now possible to set the environment variable ``PYCRYPTDOME_DISABLE_DEEPBIND``
   to drop that flag and allow security testing.
 
