@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.12.0 (XX October 2021)
+++++++++++++++++++++++++++
+
+New features
+------------
+* ECC keys in the SEC1 format can be exported and imported.
+
 3.11.0 (8 October 2021)
 ++++++++++++++++++++++++++
 

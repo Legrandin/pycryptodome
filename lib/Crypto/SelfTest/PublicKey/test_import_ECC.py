@@ -36,6 +36,7 @@ from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import bord, tostr, FileNotFoundError
+from Crypto.Util.asn1 import DerSequence, DerBitString
 from Crypto.Util.number import bytes_to_long
 from Crypto.Hash import SHAKE128
 
@@ -126,6 +127,14 @@ def get_fixed_prng():
     return SHAKE128.new().update(b"SEED").read
 
 
+def extract_bitstring_from_spki(data):
+        seq = DerSequence()
+        seq.decode(data)
+        bs = DerBitString()
+        bs.decode(seq[1])
+        return bs.value
+
+
 class TestImport(unittest.TestCase):
 
     def test_empty(self):
@@ -148,6 +157,18 @@ class TestImport_P256(unittest.TestCase):
         self.assertEqual(self.ref_public, key)
 
         key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_sec1_uncompressed(self):
+        key_file = load_file("ecc_p256_public.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P256')
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_sec1_compressed(self):
+        key_file = load_file("ecc_p256_public_compressed.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P256')
         self.assertEqual(self.ref_public, key)
 
     def test_import_private_der(self):
@@ -278,6 +299,18 @@ class TestImport_P384(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
 
+    def test_import_sec1_uncompressed(self):
+        key_file = load_file("ecc_p384_public.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P384')
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_sec1_compressed(self):
+        key_file = load_file("ecc_p384_public_compressed.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P384')
+        self.assertEqual(self.ref_public, key)
+
     def test_import_private_der(self):
         key_file = load_file("ecc_p384_private.der")
 
@@ -399,6 +432,18 @@ class TestImport_P521(unittest.TestCase):
         self.assertEqual(self.ref_public, key)
 
         key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_sec1_uncompressed(self):
+        key_file = load_file("ecc_p521_public.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P521')
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_sec1_compressed(self):
+        key_file = load_file("ecc_p521_public_compressed.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P521')
         self.assertEqual(self.ref_public, key)
 
     def test_import_private_der(self):
@@ -531,6 +576,21 @@ class TestExport_P256(unittest.TestCase):
 
         key_file_compressed_ref = load_file("ecc_p256_public_compressed.der")
         self.assertEqual(key_file_compressed, key_file_compressed_ref)
+
+    def test_export_public_sec1_uncompressed(self):
+        key_file = load_file("ecc_p256_public.der")
+        value = extract_bitstring_from_spki(key_file)
+
+        encoded = self.ref_public.export_key(format="SEC1")
+        self.assertEqual(value, encoded)
+
+    def test_export_public_sec1_compressed(self):
+        key_file = load_file("ecc_p256_public.der")
+        encoded = self.ref_public.export_key(format="SEC1", compress=True)
+
+        key_file_compressed_ref = load_file("ecc_p256_public_compressed.der")
+        value = extract_bitstring_from_spki(key_file_compressed_ref)
+        self.assertEqual(value, encoded)
 
     def test_export_private_der(self):
         key_file = load_file("ecc_p256_private.der")
@@ -812,6 +872,21 @@ class TestExport_P384(unittest.TestCase):
         key_file_compressed_ref = load_file("ecc_p384_public_compressed.der")
         self.assertEqual(key_file_compressed, key_file_compressed_ref)
 
+    def test_export_public_sec1_uncompressed(self):
+        key_file = load_file("ecc_p384_public.der")
+        value = extract_bitstring_from_spki(key_file)
+
+        encoded = self.ref_public.export_key(format="SEC1")
+        self.assertEqual(value, encoded)
+
+    def test_export_public_sec1_compressed(self):
+        key_file = load_file("ecc_p384_public.der")
+        encoded = self.ref_public.export_key(format="SEC1", compress=True)
+
+        key_file_compressed_ref = load_file("ecc_p384_public_compressed.der")
+        value = extract_bitstring_from_spki(key_file_compressed_ref)
+        self.assertEqual(value, encoded)
+
     def test_export_private_der(self):
         key_file = load_file("ecc_p384_private.der")
 
@@ -1080,6 +1155,21 @@ class TestExport_P521(unittest.TestCase):
 
         key_file_compressed_ref = load_file("ecc_p521_public_compressed.der")
         self.assertEqual(key_file_compressed, key_file_compressed_ref)
+
+    def test_export_public_sec1_uncompressed(self):
+        key_file = load_file("ecc_p521_public.der")
+        value = extract_bitstring_from_spki(key_file)
+
+        encoded = self.ref_public.export_key(format="SEC1")
+        self.assertEqual(value, encoded)
+
+    def test_export_public_sec1_compressed(self):
+        key_file = load_file("ecc_p521_public.der")
+        encoded = self.ref_public.export_key(format="SEC1", compress=True)
+
+        key_file_compressed_ref = load_file("ecc_p521_public_compressed.der")
+        value = extract_bitstring_from_spki(key_file_compressed_ref)
+        self.assertEqual(value, encoded)
 
     def test_export_private_der(self):
         key_file = load_file("ecc_p521_private.der")
