@@ -73,7 +73,7 @@ class GF2_Tests(TestCase):
         from Crypto.Util.number import size as deg
 
         x, y = _div_gf2(567, 7)
-        self.failUnless(deg(y) < deg(7))
+        self.assertTrue(deg(y) < deg(7))
 
         w = _mult_gf2(x, 7) ^ y
         self.assertEqual(567, w)

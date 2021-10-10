@@ -69,7 +69,7 @@ class OcbTests(unittest.TestCase):
         ct = cipher.encrypt(self.data_128)
 
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        self.assertEquals(ct, cipher.encrypt(self.data_128))
+        self.assertEqual(ct, cipher.encrypt(self.data_128))
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_OCB,
@@ -219,7 +219,7 @@ class OcbTests(unittest.TestCase):
                 ct2 += cipher.encrypt(chunk)
             ct2 += cipher.encrypt()
             self.assertEqual(ciphertext, ct2)
-            self.assertEquals(cipher.digest(), ref_mac)
+            self.assertEqual(cipher.digest(), ref_mac)
 
     def test_bytearray(self):
 
@@ -671,13 +671,13 @@ class OcbRfc7253Test(unittest.TestCase):
             cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
             cipher.update(aad)
             ct2 = cipher.encrypt(pt) + cipher.encrypt()
-            self.assertEquals(ct, ct2)
-            self.assertEquals(mac_tag, cipher.digest())
+            self.assertEqual(ct, ct2)
+            self.assertEqual(mac_tag, cipher.digest())
 
             cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
             cipher.update(aad)
             pt2 = cipher.decrypt(ct) + cipher.decrypt()
-            self.assertEquals(pt, pt2)
+            self.assertEqual(pt, pt2)
             cipher.verify(mac_tag)
 
     def test2(self):
@@ -688,13 +688,13 @@ class OcbRfc7253Test(unittest.TestCase):
         cipher = AES.new(key, AES.MODE_OCB, nonce=nonce, mac_len=12)
         cipher.update(aad)
         ct2 = cipher.encrypt(pt) + cipher.encrypt()
-        self.assertEquals(ct, ct2)
-        self.assertEquals(mac_tag, cipher.digest())
+        self.assertEqual(ct, ct2)
+        self.assertEqual(mac_tag, cipher.digest())
 
         cipher = AES.new(key, AES.MODE_OCB, nonce=nonce, mac_len=12)
         cipher.update(aad)
         pt2 = cipher.decrypt(ct) + cipher.decrypt()
-        self.assertEquals(pt, pt2)
+        self.assertEqual(pt, pt2)
         cipher.verify(mac_tag)
 
     def test3(self):
@@ -725,7 +725,7 @@ class OcbRfc7253Test(unittest.TestCase):
             cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
             cipher.update(C)
             result2 = cipher.encrypt() + cipher.digest()
-            self.assertEquals(unhexlify(b(result)), result2)
+            self.assertEqual(unhexlify(b(result)), result2)
 
 
 def get_tests(config={}):

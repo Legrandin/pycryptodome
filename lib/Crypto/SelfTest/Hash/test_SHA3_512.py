@@ -44,11 +44,11 @@ class APITest(unittest.TestCase):
 
         # With the proper flag, it is allowed
         h = SHA3.new(data=msg[:4], update_after_digest=True)
-        self.assertEquals(h.digest(), dig1)
+        self.assertEqual(h.digest(), dig1)
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEquals(h.digest(), dig2)
+        self.assertEqual(h.digest(), dig2)
 
 
 def get_tests(config={}):

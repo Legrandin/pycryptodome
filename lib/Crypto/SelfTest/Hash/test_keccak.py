@@ -103,7 +103,7 @@ class KeccakTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.failUnless(isinstance(digest, type(b("digest"))))
+        self.assertTrue(isinstance(digest, type(b("digest"))))
 
     def test_hex_digest(self):
         mac = keccak.new(digest_bits=512)
@@ -115,7 +115,7 @@ class KeccakTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.failUnless(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, type("digest")))
 
     def test_update_after_digest(self):
         msg=b("rrrrttt")
@@ -128,11 +128,11 @@ class KeccakTest(unittest.TestCase):
 
         # With the proper flag, it is allowed
         h = keccak.new(digest_bits=512, data=msg[:4], update_after_digest=True)
-        self.assertEquals(h.digest(), dig1)
+        self.assertEqual(h.digest(), dig1)
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEquals(h.digest(), dig2)
+        self.assertEqual(h.digest(), dig2)
 
 
 class KeccakVectors(unittest.TestCase):

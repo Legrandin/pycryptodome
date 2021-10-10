@@ -52,11 +52,11 @@ class HashDigestSizeSelfTest(unittest.TestCase):
 
     def runTest(self):
         if "truncate" not in self.extra_params:
-            self.failUnless(hasattr(self.hashmod, "digest_size"))
-            self.assertEquals(self.hashmod.digest_size, self.expected)
+            self.assertTrue(hasattr(self.hashmod, "digest_size"))
+            self.assertEqual(self.hashmod.digest_size, self.expected)
         h = self.hashmod.new(**self.extra_params)
-        self.failUnless(hasattr(h, "digest_size"))
-        self.assertEquals(h.digest_size, self.expected)
+        self.assertTrue(hasattr(h, "digest_size"))
+        self.assertEqual(h.digest_size, self.expected)
 
 
 class HashSelfTest(unittest.TestCase):

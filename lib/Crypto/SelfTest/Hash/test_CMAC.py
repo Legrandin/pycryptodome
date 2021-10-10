@@ -284,11 +284,11 @@ class TestCMAC(unittest.TestCase):
 
         # With the proper flag, it is allowed
         h2 = CMAC.new(key, msg[:4], ciphermod=AES, update_after_digest=True)
-        self.assertEquals(h2.digest(), dig1)
+        self.assertEqual(h2.digest(), dig1)
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h2.update(msg[4:])
-        self.assertEquals(h2.digest(), dig2)
+        self.assertEqual(h2.digest(), dig2)
 
 
 class ByteArrayTests(unittest.TestCase):

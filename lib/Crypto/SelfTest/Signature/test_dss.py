@@ -138,10 +138,10 @@ class FIPS_DSA_Tests(unittest.TestCase):
 
         self.description = "can_sign() test"
         signer = DSS.new(self.key_priv, 'fips-186-3')
-        self.failUnless(signer.can_sign())
+        self.assertTrue(signer.can_sign())
 
         signer = DSS.new(self.key_pub, 'fips-186-3')
-        self.failIf(signer.can_sign())
+        self.assertFalse(signer.can_sign())
 
 
 class FIPS_DSA_Tests_KAT(unittest.TestCase):
@@ -248,10 +248,10 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
 
         self.description = "can_sign() test"
         signer = DSS.new(self.key_priv, 'fips-186-3')
-        self.failUnless(signer.can_sign())
+        self.assertTrue(signer.can_sign())
 
         signer = DSS.new(self.key_pub, 'fips-186-3')
-        self.failIf(signer.can_sign())
+        self.assertFalse(signer.can_sign())
 
     def test_negative_unknown_modes_encodings(self):
         """Verify that unknown modes/encodings are rejected"""

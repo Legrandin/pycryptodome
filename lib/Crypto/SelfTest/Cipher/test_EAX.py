@@ -82,7 +82,7 @@ class EaxTests(unittest.TestCase):
         ct = cipher.encrypt(self.data_128)
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertEquals(ct, cipher.encrypt(self.data_128))
+        self.assertEqual(ct, cipher.encrypt(self.data_128))
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX,
@@ -225,7 +225,7 @@ class EaxTests(unittest.TestCase):
             for chunk in break_up(plaintext, chunk_length):
                 ct2 += cipher.encrypt(chunk)
             self.assertEqual(ciphertext, ct2)
-            self.assertEquals(cipher.digest(), ref_mac)
+            self.assertEqual(cipher.digest(), ref_mac)
 
     def test_bytearray(self):
 

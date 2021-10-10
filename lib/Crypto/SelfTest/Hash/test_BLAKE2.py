@@ -88,7 +88,7 @@ class Blake2Test(unittest.TestCase):
 
     def test_default_digest_size(self):
         digest = self.BLAKE2.new(data=b'abc').digest()
-        self.assertEquals(len(digest), self.max_bytes)
+        self.assertEqual(len(digest), self.max_bytes)
 
     def test_update(self):
         pieces = [b"\x0A" * 200, b"\x14" * 300]
@@ -110,7 +110,7 @@ class Blake2Test(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.failUnless(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, type(b"digest")))
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -123,11 +123,11 @@ class Blake2Test(unittest.TestCase):
 
         # With the proper flag, it is allowed
         h = self.BLAKE2.new(digest_bits=256, data=msg[:4], update_after_digest=True)
-        self.assertEquals(h.digest(), dig1)
+        self.assertEqual(h.digest(), dig1)
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEquals(h.digest(), dig2)
+        self.assertEqual(h.digest(), dig2)
 
     def test_hex_digest(self):
         mac = self.BLAKE2.new(digest_bits=self.max_bits)
@@ -139,7 +139,7 @@ class Blake2Test(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.failUnless(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, type("digest")))
 
     def test_verify(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"4")

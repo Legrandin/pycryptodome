@@ -86,7 +86,7 @@ class CtrTests(unittest.TestCase):
         # Nonce attribute is not defined if suffix is used in Counter
         counter = Counter.new(64, prefix=self.nonce_32, suffix=self.nonce_32)
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
-        self.failIf(hasattr(cipher, "nonce"))
+        self.assertFalse(hasattr(cipher, "nonce"))
 
     def test_nonce_parameter(self):
         # Nonce parameter becomes nonce attribute

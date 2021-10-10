@@ -419,7 +419,7 @@ class RFC6229_Tests(unittest.TestCase):
                 expected = tv[1].get(offset)
                 if expected:
                     expected = unhexlify(b(expected.replace(" ",'')))
-                    self.assertEquals(ct, expected)
+                    self.assertEqual(ct, expected)
                     count += 1
             self.assertEqual(count, len(tv[1]))
 
@@ -434,13 +434,13 @@ class Drop_Tests(unittest.TestCase):
         cipher_drop = ARC4.new(self.key, 256)
         ct_drop = cipher_drop.encrypt(self.data[:16])
         ct = self.cipher.encrypt(self.data)[256:256+16]
-        self.assertEquals(ct_drop, ct)
+        self.assertEqual(ct_drop, ct)
 
     def test_drop256_decrypt(self):
         cipher_drop = ARC4.new(self.key, 256)
         pt_drop = cipher_drop.decrypt(self.data[:16])
         pt = self.cipher.decrypt(self.data)[256:256+16]
-        self.assertEquals(pt_drop, pt)
+        self.assertEqual(pt_drop, pt)
 
 
 class KeyLength(unittest.TestCase):

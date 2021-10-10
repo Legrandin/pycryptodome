@@ -73,7 +73,7 @@ class SivTests(unittest.TestCase):
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct2, tag2 = cipher.encrypt_and_digest(self.data_128)
-        self.assertEquals(ct1 + tag1, ct2 + tag2)
+        self.assertEqual(ct1 + tag1, ct2 + tag2)
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_256, AES.MODE_SIV,
@@ -97,7 +97,7 @@ class SivTests(unittest.TestCase):
         self.assertEqual(cipher.nonce, self.nonce_96)
 
         # By default, no nonce is randomly generated
-        self.failIf(hasattr(AES.new(self.key_256, AES.MODE_SIV), "nonce"))
+        self.assertFalse(hasattr(AES.new(self.key_256, AES.MODE_SIV), "nonce"))
 
     def test_unknown_parameters(self):
         self.assertRaises(TypeError, AES.new, self.key_256, AES.MODE_SIV,
