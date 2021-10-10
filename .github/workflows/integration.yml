@@ -7,7 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8, 3.9 ]
+        python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8, 3.9, "3.10" ]
         cffi: [ yes, no ]
         os: [ ubuntu-latest ]
         include:
@@ -17,7 +17,7 @@ jobs:
           - python-version: 2.7
             cffi: yes
             os: macos-latest
-          - python-version: 3.9
+          - python-version: "3.10"
             cffi: yes
             os: macos-latest
           - python-version: 2.7
@@ -26,10 +26,10 @@ jobs:
           - python-version: 2.7
             cffi: yes
             os: windows-latest
-          - python-version: 3.9
+          - python-version: "3.10"
             cffi: no
             os: windows-latest
-          - python-version: 3.9
+          - python-version: "3.10"
             cffi: yes
             os: windows-latest
           - python-version: pypy2
@@ -79,10 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v2
       with:
-        python-version: 3.9
+        python-version: "3.10"
     - name: Install dependencies
       run: |
         pip install mypy pycryptodome-test-vectors
