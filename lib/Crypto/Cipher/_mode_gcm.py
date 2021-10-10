@@ -229,10 +229,10 @@ class GcmMode(object):
         if len(self.nonce) == 12:
             j0 = self.nonce + b"\x00\x00\x00\x01"
         else:
-            fill = (16 - (len(nonce) % 16)) % 16 + 8
+            fill = (16 - (len(self.nonce) % 16)) % 16 + 8
             ghash_in = (self.nonce +
                         b'\x00' * fill +
-                        long_to_bytes(8 * len(nonce), 8))
+                        long_to_bytes(8 * len(self.nonce), 8))
             j0 = _GHASH(hash_subkey, ghash_c).update(ghash_in).digest()
 
         # Step 3 - Prepare GCTR cipher for encryption/decryption
