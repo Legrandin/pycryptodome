@@ -662,15 +662,15 @@ class TestExport_P256(unittest.TestCase):
         key_file = load_file("ecc_p256_public_openssh.txt", "rt")
 
         encoded = self.ref_public._export_openssh(False)
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
         # ---
 
         encoded = self.ref_public.export_key(format="OpenSSH")
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
         encoded = self.ref_public.export_key(format="OpenSSH", compress=False)
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
     def test_export_openssh_compressed(self):
         key_file = load_file("ecc_p256_public_openssh.txt", "rt")
@@ -678,7 +678,7 @@ class TestExport_P256(unittest.TestCase):
 
         key_file_compressed = pub_key.export_key(format="OpenSSH", compress=True)
         assert len(key_file) > len(key_file_compressed)
-        self.assertEquals(pub_key, ECC.import_key(key_file_compressed))
+        self.assertEqual(pub_key, ECC.import_key(key_file_compressed))
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
@@ -690,7 +690,7 @@ class TestExport_P256(unittest.TestCase):
                                           passphrase="secret",
                                           protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
         # ---
 
@@ -702,7 +702,7 @@ class TestExport_P256(unittest.TestCase):
                                           use_pkcs8=False,
                                           passphrase="secret",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
         encoded1 = self.ref_private.export_key(format="PEM",
@@ -713,7 +713,7 @@ class TestExport_P256(unittest.TestCase):
                                           use_pkcs8=False,
                                           passphrase=b"secret",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
         # Unknown format
@@ -942,15 +942,15 @@ class TestExport_P384(unittest.TestCase):
         key_file = load_file("ecc_p384_public_openssh.txt", "rt")
 
         encoded = self.ref_public._export_openssh(False)
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
         # ---
 
         encoded = self.ref_public.export_key(format="OpenSSH")
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
         encoded = self.ref_public.export_key(format="OpenSSH", compress=False)
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
     def test_export_openssh_compressed(self):
         key_file = load_file("ecc_p384_public_openssh.txt", "rt")
@@ -958,7 +958,7 @@ class TestExport_P384(unittest.TestCase):
 
         key_file_compressed = pub_key.export_key(format="OpenSSH", compress=True)
         assert len(key_file) > len(key_file_compressed)
-        self.assertEquals(pub_key, ECC.import_key(key_file_compressed))
+        self.assertEqual(pub_key, ECC.import_key(key_file_compressed))
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
@@ -970,7 +970,7 @@ class TestExport_P384(unittest.TestCase):
                                           passphrase="secret",
                                           protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
         # ---
 
@@ -982,7 +982,7 @@ class TestExport_P384(unittest.TestCase):
                                           use_pkcs8=False,
                                           passphrase="secret",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
         encoded1 = self.ref_private.export_key(format="PEM",
@@ -993,7 +993,7 @@ class TestExport_P384(unittest.TestCase):
                                           use_pkcs8=False,
                                           passphrase=b"secret",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
         # Unknown format
@@ -1211,15 +1211,15 @@ class TestExport_P521(unittest.TestCase):
         key_file = load_file("ecc_p521_public_openssh.txt", "rt")
 
         encoded = self.ref_public._export_openssh(False)
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
         # ---
 
         encoded = self.ref_public.export_key(format="OpenSSH")
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
         encoded = self.ref_public.export_key(format="OpenSSH", compress=False)
-        self.assertEquals(key_file, encoded)
+        self.assertEqual(key_file, encoded)
 
     def test_export_openssh_compressed(self):
         key_file = load_file("ecc_p521_public_openssh.txt", "rt")
@@ -1227,7 +1227,7 @@ class TestExport_P521(unittest.TestCase):
 
         key_file_compressed = pub_key.export_key(format="OpenSSH", compress=True)
         assert len(key_file) > len(key_file_compressed)
-        self.assertEquals(pub_key, ECC.import_key(key_file_compressed))
+        self.assertEqual(pub_key, ECC.import_key(key_file_compressed))
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
@@ -1239,7 +1239,7 @@ class TestExport_P521(unittest.TestCase):
                                           passphrase="secret",
                                           protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
         # ---
 
@@ -1251,7 +1251,7 @@ class TestExport_P521(unittest.TestCase):
                                           use_pkcs8=False,
                                           passphrase="secret",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
         encoded1 = self.ref_private.export_key(format="PEM",
@@ -1262,7 +1262,7 @@ class TestExport_P521(unittest.TestCase):
                                           use_pkcs8=False,
                                           passphrase=b"secret",
                                           randfunc=get_fixed_prng())
-        self.assertEquals(encoded1, encoded2)
+        self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
         # Unknown format

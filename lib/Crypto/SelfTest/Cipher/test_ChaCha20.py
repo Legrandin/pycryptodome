@@ -58,7 +58,7 @@ class ChaCha20Test(unittest.TestCase):
     def test_default_nonce(self):
         cipher1 = ChaCha20.new(key=bchr(1) * 32)
         cipher2 = ChaCha20.new(key=bchr(1) * 32)
-        self.assertEquals(len(cipher1.nonce), 8)
+        self.assertEqual(len(cipher1.nonce), 8)
         self.assertNotEqual(cipher1.nonce, cipher2.nonce)
 
     def test_nonce(self):
@@ -128,7 +128,7 @@ class ChaCha20Test(unittest.TestCase):
         cipher2.seek(offset)
         ct2 = cipher2.encrypt(pt)
 
-        self.assertEquals(ct1, ct2)
+        self.assertEqual(ct1, ct2)
 
     def test_seek_tv(self):
         # Test Vector #4, A.1 from

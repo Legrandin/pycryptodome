@@ -67,7 +67,7 @@ class ImportKeyTests(unittest.TestCase):
 
     def testImportKey1(self):
         key_obj = DSA.importKey(self.der_public)
-        self.failIf(key_obj.has_private())
+        self.assertFalse(key_obj.has_private())
         self.assertEqual(self.y, key_obj.y)
         self.assertEqual(self.p, key_obj.p)
         self.assertEqual(self.q, key_obj.q)
@@ -97,7 +97,7 @@ tPG+TJKpGYb7pVk=
     def testImportKey2(self):
         for pem in (self.pem_public, tostr(self.pem_public)):
             key_obj = DSA.importKey(pem)
-            self.failIf(key_obj.has_private())
+            self.assertFalse(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
             self.assertEqual(self.p, key_obj.p)
             self.assertEqual(self.q, key_obj.q)
@@ -128,7 +128,7 @@ tPG+TJKpGYb7pVk=
 
     def testImportKey3(self):
         key_obj = DSA.importKey(self.der_private)
-        self.failUnless(key_obj.has_private())
+        self.assertTrue(key_obj.has_private())
         self.assertEqual(self.y, key_obj.y)
         self.assertEqual(self.p, key_obj.p)
         self.assertEqual(self.q, key_obj.q)
@@ -159,7 +159,7 @@ ggadmEIJhrMUIVAldWBl
     def testImportKey4(self):
         for pem in (self.pem_private, tostr(self.pem_private)):
             key_obj = DSA.importKey(pem)
-            self.failUnless(key_obj.has_private())
+            self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
             self.assertEqual(self.p, key_obj.p)
             self.assertEqual(self.q, key_obj.q)
@@ -188,7 +188,7 @@ ggadmEIJhrMUIVAldWBl
 
     def testImportKey5(self):
         key_obj = DSA.importKey(self.der_pkcs8)
-        self.failUnless(key_obj.has_private())
+        self.assertTrue(key_obj.has_private())
         self.assertEqual(self.y, key_obj.y)
         self.assertEqual(self.p, key_obj.p)
         self.assertEqual(self.q, key_obj.q)
@@ -218,7 +218,7 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
     def testImportKey6(self):
         for pem in (self.pem_pkcs8, tostr(self.pem_pkcs8)):
             key_obj = DSA.importKey(pem)
-            self.failUnless(key_obj.has_private())
+            self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
             self.assertEqual(self.p, key_obj.p)
             self.assertEqual(self.q, key_obj.q)
@@ -239,7 +239,7 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
     def testImportKey7(self):
         for ssh in (self.ssh_pub, tostr(self.ssh_pub)):
             key_obj = DSA.importKey(ssh)
-            self.failIf(key_obj.has_private())
+            self.assertFalse(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
             self.assertEqual(self.p, key_obj.p)
             self.assertEqual(self.q, key_obj.q)
@@ -272,7 +272,7 @@ xVJtxaV37m3aXxtCsPnbBg==
     def testImportKey8(self):
         for pem in (self.pem_private_encrypted, tostr(self.pem_private_encrypted)):
             key_obj = DSA.importKey(pem, "PWDTEST")
-            self.failUnless(key_obj.has_private())
+            self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
             self.assertEqual(self.p, key_obj.p)
             self.assertEqual(self.q, key_obj.q)
@@ -307,7 +307,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
     def testImportKey9(self):
         for pem in (self.pem_pkcs8_encrypted, tostr(self.pem_pkcs8_encrypted)):
             key_obj = DSA.importKey(pem, "PWDTEST")
-            self.failUnless(key_obj.has_private())
+            self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
             self.assertEqual(self.p, key_obj.p)
             self.assertEqual(self.q, key_obj.q)
@@ -336,7 +336,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
 
     def testImportKey10(self):
         key_obj = DSA.importKey(self.der_pkcs8_encrypted, "PWDTEST")
-        self.failUnless(key_obj.has_private())
+        self.assertTrue(key_obj.has_private())
         self.assertEqual(self.y, key_obj.y)
         self.assertEqual(self.p, key_obj.p)
         self.assertEqual(self.q, key_obj.q)
@@ -364,7 +364,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         """Verify importKey is an alias to import_key"""
 
         key_obj = DSA.import_key(self.der_public)
-        self.failIf(key_obj.has_private())
+        self.assertFalse(key_obj.has_private())
         self.assertEqual(self.y, key_obj.y)
         self.assertEqual(self.p, key_obj.p)
         self.assertEqual(self.q, key_obj.q)
@@ -373,7 +373,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
     def test_exportKey(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        self.assertEquals(key.exportKey(), key.export_key())
+        self.assertEqual(key.exportKey(), key.export_key())
 
 
     def test_import_empty(self):
@@ -452,7 +452,7 @@ a1:e4:20:fa:55:a8:a7:5c:d2:f0:ea:9a:0c:2e:da:
             comp_str = locals()[comp_name + "_str"]
             comp = int(re.sub("[^0-9a-f]", "", comp_str), 16)
             self.assertEqual(getattr(key, comp_name), comp)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
 
     def test_x509v3(self):
 
@@ -536,7 +536,7 @@ c4:ee:bd:e3:82:e5:9a:2e:3e:b5:e8:01:b5:1d:63:
             comp_str = locals()[comp_name + "_str"]
             comp = int(re.sub("[^0-9a-f]", "", comp_str), 16)
             self.assertEqual(getattr(key, comp_name), comp)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
 
 
 if __name__ == '__main__':

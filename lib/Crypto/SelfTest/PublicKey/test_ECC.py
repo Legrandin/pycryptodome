@@ -541,14 +541,14 @@ class TestEccKey_P256(unittest.TestCase):
 
         key = EccKey(curve="P-256", d=1)
         self.assertEqual(key.d, 1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ.x, _curves['p256'].Gx)
         self.assertEqual(key.pointQ.y, _curves['p256'].Gy)
 
         point = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
         key = EccKey(curve="P-256", d=1, point=point)
         self.assertEqual(key.d, 1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, point)
 
         # Other names
@@ -559,14 +559,14 @@ class TestEccKey_P256(unittest.TestCase):
 
         point = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy)
         key = EccKey(curve="P-256", point=point)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
         self.assertEqual(key.pointQ, point)
 
     def test_public_key_derived(self):
 
         priv_key = EccKey(curve="P-256", d=3)
         pub_key = priv_key.public_key()
-        self.failIf(pub_key.has_private())
+        self.assertFalse(pub_key.has_private())
         self.assertEqual(priv_key.pointQ, pub_key.pointQ)
 
     def test_invalid_curve(self):
@@ -603,14 +603,14 @@ class TestEccKey_P384(unittest.TestCase):
 
         key = EccKey(curve="P-384", d=1)
         self.assertEqual(key.d, 1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ.x, p384.Gx)
         self.assertEqual(key.pointQ.y, p384.Gy)
 
         point = EccPoint(p384.Gx, p384.Gy, "p384")
         key = EccKey(curve="P-384", d=1, point=point)
         self.assertEqual(key.d, 1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, point)
 
         # Other names
@@ -623,14 +623,14 @@ class TestEccKey_P384(unittest.TestCase):
         p384 = _curves['p384']
         point = EccPoint(p384.Gx, p384.Gy, 'p384')
         key = EccKey(curve="P-384", point=point)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
         self.assertEqual(key.pointQ, point)
 
     def test_public_key_derived(self):
 
         priv_key = EccKey(curve="P-384", d=3)
         pub_key = priv_key.public_key()
-        self.failIf(pub_key.has_private())
+        self.assertFalse(pub_key.has_private())
         self.assertEqual(priv_key.pointQ, pub_key.pointQ)
 
     def test_invalid_curve(self):
@@ -668,14 +668,14 @@ class TestEccKey_P521(unittest.TestCase):
 
         key = EccKey(curve="P-521", d=1)
         self.assertEqual(key.d, 1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ.x, p521.Gx)
         self.assertEqual(key.pointQ.y, p521.Gy)
 
         point = EccPoint(p521.Gx, p521.Gy, "p521")
         key = EccKey(curve="P-521", d=1, point=point)
         self.assertEqual(key.d, 1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, point)
 
         # Other names
@@ -688,14 +688,14 @@ class TestEccKey_P521(unittest.TestCase):
         p521 = _curves['p521']
         point = EccPoint(p521.Gx, p521.Gy, 'p521')
         key = EccKey(curve="P-384", point=point)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
         self.assertEqual(key.pointQ, point)
 
     def test_public_key_derived(self):
 
         priv_key = EccKey(curve="P-521", d=3)
         pub_key = priv_key.public_key()
-        self.failIf(pub_key.has_private())
+        self.assertFalse(pub_key.has_private())
         self.assertEqual(priv_key.pointQ, pub_key.pointQ)
 
     def test_invalid_curve(self):
@@ -730,7 +730,7 @@ class TestEccModule_P256(unittest.TestCase):
     def test_generate(self):
 
         key = ECC.generate(curve="P-256")
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, EccPoint(_curves['p256'].Gx,
                                               _curves['p256'].Gy) * key.d,
                                               "p256")
@@ -742,12 +742,12 @@ class TestEccModule_P256(unittest.TestCase):
     def test_construct(self):
 
         key = ECC.construct(curve="P-256", d=1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, _curves['p256'].G)
 
         key = ECC.construct(curve="P-256", point_x=_curves['p256'].Gx,
                             point_y=_curves['p256'].Gy)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
         self.assertEqual(key.pointQ, _curves['p256'].G)
 
         # Other names
@@ -769,7 +769,7 @@ class TestEccModule_P384(unittest.TestCase):
 
         curve = _curves['p384']
         key = ECC.generate(curve="P-384")
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, EccPoint(curve.Gx, curve.Gy, "p384") * key.d)
 
         # Other names
@@ -780,11 +780,11 @@ class TestEccModule_P384(unittest.TestCase):
 
         curve = _curves['p384']
         key = ECC.construct(curve="P-384", d=1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, _curves['p384'].G)
 
         key = ECC.construct(curve="P-384", point_x=curve.Gx, point_y=curve.Gy)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
         self.assertEqual(key.pointQ, curve.G)
 
         # Other names
@@ -806,7 +806,7 @@ class TestEccModule_P521(unittest.TestCase):
 
         curve = _curves['p521']
         key = ECC.generate(curve="P-521")
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, EccPoint(curve.Gx, curve.Gy, "p521") * key.d)
 
         # Other names
@@ -817,11 +817,11 @@ class TestEccModule_P521(unittest.TestCase):
 
         curve = _curves['p521']
         key = ECC.construct(curve="P-521", d=1)
-        self.failUnless(key.has_private())
+        self.assertTrue(key.has_private())
         self.assertEqual(key.pointQ, _curves['p521'].G)
 
         key = ECC.construct(curve="P-521", point_x=curve.Gx, point_y=curve.Gy)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
         self.assertEqual(key.pointQ, curve.G)
 
         # Other names

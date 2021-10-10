@@ -358,7 +358,7 @@ class Poly1305Test_AES(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.failUnless(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, type(b"digest")))
 
     def test_update_after_digest(self):
         msg=b"rrrrttt"
@@ -378,7 +378,7 @@ class Poly1305Test_AES(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.failUnless(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, type("digest")))
 
     def test_verify(self):
         h = Poly1305.new(key=self.key, cipher=AES)

@@ -156,7 +156,7 @@ class DSATest(unittest.TestCase):
 
         # Check __eq__ and __ne__
         self.assertEqual(dsaObj.public_key() == dsaObj.public_key(),True) # assert_
-        self.assertEqual(dsaObj.public_key() != dsaObj.public_key(),False) # failIf
+        self.assertEqual(dsaObj.public_key() != dsaObj.public_key(),False) # assertFalse
 
         self.assertEqual(dsaObj.public_key(), dsaObj.publickey()) 
 
@@ -172,8 +172,8 @@ class DSATest(unittest.TestCase):
         m_hash = bytes_to_long(a2b_hex(self.m_hash))
         r = bytes_to_long(a2b_hex(self.r))
         s = bytes_to_long(a2b_hex(self.s))
-        self.failUnless(dsaObj._verify(m_hash, (r, s)))
-        self.failIf(dsaObj._verify(m_hash + 1, (r, s)))
+        self.assertTrue(dsaObj._verify(m_hash, (r, s)))
+        self.assertFalse(dsaObj._verify(m_hash + 1, (r, s)))
 
     def test_repr(self):
         (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]

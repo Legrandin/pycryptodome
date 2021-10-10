@@ -81,10 +81,10 @@ class BlockChainingTests(unittest.TestCase):
         ct = cipher.encrypt(self.data_128)
 
         cipher = AES.new(self.key_128, self.aes_mode, iv=self.iv_128)
-        self.assertEquals(ct, cipher.encrypt(self.data_128))
+        self.assertEqual(ct, cipher.encrypt(self.data_128))
 
         cipher = AES.new(self.key_128, self.aes_mode, IV=self.iv_128)
-        self.assertEquals(ct, cipher.encrypt(self.data_128))
+        self.assertEqual(ct, cipher.encrypt(self.data_128))
 
     def test_iv_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,

@@ -98,7 +98,7 @@ class cSHAKETest(unittest.TestCase):
         digest = h.read(90)
 
         # read returns a byte string of the right length
-        self.failUnless(isinstance(digest, type(b("digest"))))
+        self.assertTrue(isinstance(digest, type(b("digest"))))
         self.assertEqual(len(digest), 90)
 
     def test_update_after_read(self):

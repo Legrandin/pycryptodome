@@ -54,40 +54,40 @@ class DerObjectTests(unittest.TestCase):
     def testObjEncode1(self):
         # No payload
         der = DerObject(b('\x02'))
-        self.assertEquals(der.encode(), b('\x02\x00'))
+        self.assertEqual(der.encode(), b('\x02\x00'))
         # Small payload (primitive)
         der.payload = b('\x45')
-        self.assertEquals(der.encode(), b('\x02\x01\x45'))
+        self.assertEqual(der.encode(), b('\x02\x01\x45'))
         # Invariant
-        self.assertEquals(der.encode(), b('\x02\x01\x45'))
+        self.assertEqual(der.encode(), b('\x02\x01\x45'))
         # Initialize with numerical tag
         der = DerObject(0x04)
         der.payload = b('\x45')
-        self.assertEquals(der.encode(), b('\x04\x01\x45'))
+        self.assertEqual(der.encode(), b('\x04\x01\x45'))
         # Initialize with constructed type
         der = DerObject(b('\x10'), constructed=True)
-        self.assertEquals(der.encode(), b('\x30\x00'))
+        self.assertEqual(der.encode(), b('\x30\x00'))
 
     def testObjEncode2(self):
         # Initialize with payload
         der = DerObject(0x03, b('\x12\x12'))
-        self.assertEquals(der.encode(), b('\x03\x02\x12\x12'))
+        self.assertEqual(der.encode(), b('\x03\x02\x12\x12'))
 
     def testObjEncode3(self):
         # Long payload
         der = DerObject(b('\x10'))
         der.payload = b("0")*128
-        self.assertEquals(der.encode(), b('\x10\x81\x80' + "0"*128))
+        self.assertEqual(der.encode(), b('\x10\x81\x80' + "0"*128))
 
     def testObjEncode4(self):
         # Implicit tags (constructed)
         der = DerObject(0x10, implicit=1, constructed=True)
         der.payload = b('ppll')
-        self.assertEquals(der.encode(), b('\xa1\x04ppll'))
+        self.assertEqual(der.encode(), b('\xa1\x04ppll'))
         # Implicit tags (primitive)
         der = DerObject(0x02, implicit=0x1E, constructed=False)
         der.payload = b('ppll')
-        self.assertEquals(der.encode(), b('\x9E\x04ppll'))
+        self.assertEqual(der.encode(), b('\x9E\x04ppll'))
 
     def testObjEncode5(self):
         # Encode type with explicit tag
@@ -101,15 +101,15 @@ class DerObjectTests(unittest.TestCase):
         # Decode short payload
         der = DerObject(0x02)
         der.decode(b('\x02\x02\x01\x02'))
-        self.assertEquals(der.payload, b("\x01\x02"))
-        self.assertEquals(der._tag_octet, 0x02)
+        self.assertEqual(der.payload, b("\x01\x02"))
+        self.assertEqual(der._tag_octet, 0x02)
 
     def testObjDecode2(self):
         # Decode long payload
         der = DerObject(0x02)
         der.decode(b('\x02\x81\x80' + "1"*128))
-        self.assertEquals(der.payload, b("1")*128)
-        self.assertEquals(der._tag_octet, 0x02)
+        self.assertEqual(der.payload, b("1")*128)
+        self.assertEqual(der._tag_octet, 0x02)
 
     def testObjDecode3(self):
         # Decode payload with too much data gives error
@@ -124,12 +124,12 @@ class DerObjectTests(unittest.TestCase):
         der = DerObject(0x02, constructed=False, implicit=0xF)
         self.assertRaises(ValueError, der.decode, b('\x02\x02\x01\x02'))
         der.decode(b('\x8F\x01\x00'))
-        self.assertEquals(der.payload, b('\x00'))
+        self.assertEqual(der.payload, b('\x00'))
         # Decode implicit tag (constructed)
         der = DerObject(0x02, constructed=True, implicit=0xF)
         self.assertRaises(ValueError, der.decode, b('\x02\x02\x01\x02'))
         der.decode(b('\xAF\x01\x00'))
-        self.assertEquals(der.payload, b('\x00'))
+        self.assertEqual(der.payload, b('\x00'))
 
     def testObjDecode5(self):
         # Decode payload with unexpected tag gives error
@@ -140,21 +140,21 @@ class DerObjectTests(unittest.TestCase):
         # Arbitrary DER object
         der = DerObject()
         der.decode(b('\x65\x01\x88'))
-        self.assertEquals(der._tag_octet, 0x65)
-        self.assertEquals(der.payload, b('\x88'))
+        self.assertEqual(der._tag_octet, 0x65)
+        self.assertEqual(der.payload, b('\x88'))
 
     def testObjDecode7(self):
         # Decode explicit tag
         der = DerObject(0x10, explicit=5)
         der.decode(b("\xa5\x06\x10\x04xxll"))
-        self.assertEquals(der._inner_tag_octet, 0x10)
-        self.assertEquals(der.payload, b('xxll'))
+        self.assertEqual(der._inner_tag_octet, 0x10)
+        self.assertEqual(der.payload, b('xxll'))
 
         # Explicit tag may be 0
         der = DerObject(0x10, explicit=0)
         der.decode(b("\xa0\x06\x10\x04xxll"))
-        self.assertEquals(der._inner_tag_octet, 0x10)
-        self.assertEquals(der.payload, b('xxll'))
+        self.assertEqual(der._inner_tag_octet, 0x10)
+        self.assertEqual(der.payload, b('xxll'))
 
     def testObjDecode8(self):
         # Verify that decode returns the object
@@ -165,31 +165,31 @@ class DerIntegerTests(unittest.TestCase):
 
     def testInit1(self):
         der = DerInteger(1)
-        self.assertEquals(der.encode(), b('\x02\x01\x01'))
+        self.assertEqual(der.encode(), b('\x02\x01\x01'))
 
     def testEncode1(self):
         # Single-byte integers
         # Value 0
         der = DerInteger(0)
-        self.assertEquals(der.encode(), b('\x02\x01\x00'))
+        self.assertEqual(der.encode(), b('\x02\x01\x00'))
         # Value 1
         der = DerInteger(1)
-        self.assertEquals(der.encode(), b('\x02\x01\x01'))
+        self.assertEqual(der.encode(), b('\x02\x01\x01'))
         # Value 127
         der = DerInteger(127)
-        self.assertEquals(der.encode(), b('\x02\x01\x7F'))
+        self.assertEqual(der.encode(), b('\x02\x01\x7F'))
 
     def testEncode2(self):
         # Multi-byte integers
         # Value 128
         der = DerInteger(128)
-        self.assertEquals(der.encode(), b('\x02\x02\x00\x80'))
+        self.assertEqual(der.encode(), b('\x02\x02\x00\x80'))
         # Value 0x180
         der = DerInteger(0x180)
-        self.assertEquals(der.encode(), b('\x02\x02\x01\x80'))
+        self.assertEqual(der.encode(), b('\x02\x02\x01\x80'))
         # One very long integer
         der = DerInteger(2**2048)
-        self.assertEquals(der.encode(),
+        self.assertEqual(der.encode(),
         b('\x02\x82\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
@@ -214,18 +214,18 @@ class DerIntegerTests(unittest.TestCase):
         # Negative integers
         # Value -1
         der = DerInteger(-1)
-        self.assertEquals(der.encode(), b('\x02\x01\xFF'))
+        self.assertEqual(der.encode(), b('\x02\x01\xFF'))
         # Value -128
         der = DerInteger(-128)
-        self.assertEquals(der.encode(), b('\x02\x01\x80'))
+        self.assertEqual(der.encode(), b('\x02\x01\x80'))
         # Value
         der = DerInteger(-87873)
-        self.assertEquals(der.encode(), b('\x02\x03\xFE\xA8\xBF'))
+        self.assertEqual(der.encode(), b('\x02\x03\xFE\xA8\xBF'))
 
     def testEncode4(self):
         # Explicit encoding
         number = DerInteger(0x34, explicit=3)
-        self.assertEquals(number.encode(), b('\xa3\x03\x02\x01\x34'))
+        self.assertEqual(number.encode(), b('\xa3\x03\x02\x01\x34'))
 
     # -----
 
@@ -234,20 +234,20 @@ class DerIntegerTests(unittest.TestCase):
         der = DerInteger()
         # Value 0
         der.decode(b('\x02\x01\x00'))
-        self.assertEquals(der.value, 0)
+        self.assertEqual(der.value, 0)
         # Value 1
         der.decode(b('\x02\x01\x01'))
-        self.assertEquals(der.value, 1)
+        self.assertEqual(der.value, 1)
         # Value 127
         der.decode(b('\x02\x01\x7F'))
-        self.assertEquals(der.value, 127)
+        self.assertEqual(der.value, 127)
 
     def testDecode2(self):
         # Multi-byte integer
         der = DerInteger()
         # Value 0x180L
         der.decode(b('\x02\x02\x01\x80'))
-        self.assertEquals(der.value,0x180)
+        self.assertEqual(der.value,0x180)
         # One very long integer
         der.decode(
         b('\x02\x82\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
@@ -269,41 +269,41 @@ class DerIntegerTests(unittest.TestCase):
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00'))
-        self.assertEquals(der.value,2**2048)
+        self.assertEqual(der.value,2**2048)
 
     def testDecode3(self):
         # Negative integer
         der = DerInteger()
         # Value -1
         der.decode(b('\x02\x01\xFF'))
-        self.assertEquals(der.value, -1)
+        self.assertEqual(der.value, -1)
         # Value -32768
         der.decode(b('\x02\x02\x80\x00'))
-        self.assertEquals(der.value, -32768)
+        self.assertEqual(der.value, -32768)
 
     def testDecode5(self):
         # We still accept BER integer format
         der = DerInteger()
         # Redundant leading zeroes
         der.decode(b('\x02\x02\x00\x01'))
-        self.assertEquals(der.value, 1)
+        self.assertEqual(der.value, 1)
         # Redundant leading 0xFF
         der.decode(b('\x02\x02\xFF\xFF'))
-        self.assertEquals(der.value, -1)
+        self.assertEqual(der.value, -1)
         # Empty payload
         der.decode(b('\x02\x00'))
-        self.assertEquals(der.value, 0)
+        self.assertEqual(der.value, 0)
 
     def testDecode6(self):
         # Explicit encoding
         number = DerInteger(explicit=3)
         number.decode(b('\xa3\x03\x02\x01\x34'))
-        self.assertEquals(number.value, 0x34)
+        self.assertEqual(number.value, 0x34)
 
     def testDecode7(self):
         # Verify decode returns the DerInteger
         der = DerInteger()
-        self.assertEquals(der, der.decode(b('\x02\x01\x7F')))
+        self.assertEqual(der, der.decode(b('\x02\x01\x7F')))
 
     ###
 
@@ -327,49 +327,49 @@ class DerSequenceTests(unittest.TestCase):
 
     def testInit1(self):
         der = DerSequence([1, DerInteger(2), b('0\x00')])
-        self.assertEquals(der.encode(), b('0\x08\x02\x01\x01\x02\x01\x020\x00'))
+        self.assertEqual(der.encode(), b('0\x08\x02\x01\x01\x02\x01\x020\x00'))
 
     def testEncode1(self):
         # Empty sequence
         der = DerSequence()
-        self.assertEquals(der.encode(), b('0\x00'))
-        self.failIf(der.hasOnlyInts())
+        self.assertEqual(der.encode(), b('0\x00'))
+        self.assertFalse(der.hasOnlyInts())
         # One single-byte integer (zero)
         der.append(0)
-        self.assertEquals(der.encode(), b('0\x03\x02\x01\x00'))
-        self.assertEquals(der.hasInts(),1)
-        self.assertEquals(der.hasInts(False),1)
-        self.failUnless(der.hasOnlyInts())
-        self.failUnless(der.hasOnlyInts(False))
+        self.assertEqual(der.encode(), b('0\x03\x02\x01\x00'))
+        self.assertEqual(der.hasInts(),1)
+        self.assertEqual(der.hasInts(False),1)
+        self.assertTrue(der.hasOnlyInts())
+        self.assertTrue(der.hasOnlyInts(False))
         # Invariant
-        self.assertEquals(der.encode(), b('0\x03\x02\x01\x00'))
+        self.assertEqual(der.encode(), b('0\x03\x02\x01\x00'))
 
     def testEncode2(self):
         # Indexing
         der = DerSequence()
         der.append(0)
         der[0] = 1
-        self.assertEquals(len(der),1)
-        self.assertEquals(der[0],1)
-        self.assertEquals(der[-1],1)
-        self.assertEquals(der.encode(), b('0\x03\x02\x01\x01'))
+        self.assertEqual(len(der),1)
+        self.assertEqual(der[0],1)
+        self.assertEqual(der[-1],1)
+        self.assertEqual(der.encode(), b('0\x03\x02\x01\x01'))
         #
         der[:] = [1]
-        self.assertEquals(len(der),1)
-        self.assertEquals(der[0],1)
-        self.assertEquals(der.encode(), b('0\x03\x02\x01\x01'))
+        self.assertEqual(len(der),1)
+        self.assertEqual(der[0],1)
+        self.assertEqual(der.encode(), b('0\x03\x02\x01\x01'))
 
     def testEncode3(self):
         # One multi-byte integer (non-zero)
         der = DerSequence()
         der.append(0x180)
-        self.assertEquals(der.encode(), b('0\x04\x02\x02\x01\x80'))
+        self.assertEqual(der.encode(), b('0\x04\x02\x02\x01\x80'))
 
     def testEncode4(self):
         # One very long integer
         der = DerSequence()
         der.append(2**2048)
-        self.assertEquals(der.encode(), b('0\x82\x01\x05')+
+        self.assertEqual(der.encode(), b('0\x82\x01\x05')+
         b('\x02\x82\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
@@ -394,48 +394,48 @@ class DerSequenceTests(unittest.TestCase):
         der = DerSequence()
         der += 1
         der += b('\x30\x00')
-        self.assertEquals(der.encode(), b('\x30\x05\x02\x01\x01\x30\x00'))
+        self.assertEqual(der.encode(), b('\x30\x05\x02\x01\x01\x30\x00'))
 
     def testEncode6(self):
         # Two positive integers
         der = DerSequence()
         der.append(0x180)
         der.append(0xFF)
-        self.assertEquals(der.encode(), b('0\x08\x02\x02\x01\x80\x02\x02\x00\xff'))
-        self.failUnless(der.hasOnlyInts())
-        self.failUnless(der.hasOnlyInts(False))
+        self.assertEqual(der.encode(), b('0\x08\x02\x02\x01\x80\x02\x02\x00\xff'))
+        self.assertTrue(der.hasOnlyInts())
+        self.assertTrue(der.hasOnlyInts(False))
         # Two mixed integers
         der = DerSequence()
         der.append(2)
         der.append(-2)
-        self.assertEquals(der.encode(), b('0\x06\x02\x01\x02\x02\x01\xFE'))
-        self.assertEquals(der.hasInts(), 1)
-        self.assertEquals(der.hasInts(False), 2)
-        self.failIf(der.hasOnlyInts())
-        self.failUnless(der.hasOnlyInts(False))
+        self.assertEqual(der.encode(), b('0\x06\x02\x01\x02\x02\x01\xFE'))
+        self.assertEqual(der.hasInts(), 1)
+        self.assertEqual(der.hasInts(False), 2)
+        self.assertFalse(der.hasOnlyInts())
+        self.assertTrue(der.hasOnlyInts(False))
         #
         der.append(0x01)
         der[1:] = [9,8]
-        self.assertEquals(len(der),3)
+        self.assertEqual(len(der),3)
         self.assertEqual(der[1:],[9,8])
         self.assertEqual(der[1:-1],[9])
-        self.assertEquals(der.encode(), b('0\x09\x02\x01\x02\x02\x01\x09\x02\x01\x08'))
+        self.assertEqual(der.encode(), b('0\x09\x02\x01\x02\x02\x01\x09\x02\x01\x08'))
 
     def testEncode7(self):
         # One integer and another type (already encoded)
         der = DerSequence()
         der.append(0x180)
         der.append(b('0\x03\x02\x01\x05'))
-        self.assertEquals(der.encode(), b('0\x09\x02\x02\x01\x800\x03\x02\x01\x05'))
-        self.failIf(der.hasOnlyInts())
+        self.assertEqual(der.encode(), b('0\x09\x02\x02\x01\x800\x03\x02\x01\x05'))
+        self.assertFalse(der.hasOnlyInts())
 
     def testEncode8(self):
         # One integer and another type (yet to encode)
         der = DerSequence()
         der.append(0x180)
         der.append(DerSequence([5]))
-        self.assertEquals(der.encode(), b('0\x09\x02\x02\x01\x800\x03\x02\x01\x05'))
-        self.failIf(der.hasOnlyInts())
+        self.assertEqual(der.encode(), b('0\x09\x02\x02\x01\x800\x03\x02\x01\x05'))
+        self.assertFalse(der.hasOnlyInts())
 
     ####
 
@@ -443,22 +443,22 @@ class DerSequenceTests(unittest.TestCase):
         # Empty sequence
         der = DerSequence()
         der.decode(b('0\x00'))
-        self.assertEquals(len(der),0)
+        self.assertEqual(len(der),0)
         # One single-byte integer (zero)
         der.decode(b('0\x03\x02\x01\x00'))
-        self.assertEquals(len(der),1)
-        self.assertEquals(der[0],0)
+        self.assertEqual(len(der),1)
+        self.assertEqual(der[0],0)
         # Invariant
         der.decode(b('0\x03\x02\x01\x00'))
-        self.assertEquals(len(der),1)
-        self.assertEquals(der[0],0)
+        self.assertEqual(len(der),1)
+        self.assertEqual(der[0],0)
 
     def testDecode2(self):
         # One single-byte integer (non-zero)
         der = DerSequence()
         der.decode(b('0\x03\x02\x01\x7f'))
-        self.assertEquals(len(der),1)
-        self.assertEquals(der[0],127)
+        self.assertEqual(len(der),1)
+        self.assertEqual(der[0],127)
 
     def testDecode4(self):
         # One very long integer
@@ -483,37 +483,37 @@ class DerSequenceTests(unittest.TestCase):
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')+
         b('\x00\x00\x00\x00\x00\x00\x00\x00\x00'))
-        self.assertEquals(len(der),1)
-        self.assertEquals(der[0],2**2048)
+        self.assertEqual(len(der),1)
+        self.assertEqual(der[0],2**2048)
 
     def testDecode6(self):
         # Two integers
         der = DerSequence()
         der.decode(b('0\x08\x02\x02\x01\x80\x02\x02\x00\xff'))
-        self.assertEquals(len(der),2)
-        self.assertEquals(der[0],0x180)
-        self.assertEquals(der[1],0xFF)
+        self.assertEqual(len(der),2)
+        self.assertEqual(der[0],0x180)
+        self.assertEqual(der[1],0xFF)
 
     def testDecode7(self):
         # One integer and 2 other types
         der = DerSequence()
         der.decode(b('0\x0A\x02\x02\x01\x80\x24\x02\xb6\x63\x12\x00'))
-        self.assertEquals(len(der),3)
-        self.assertEquals(der[0],0x180)
-        self.assertEquals(der[1],b('\x24\x02\xb6\x63'))
-        self.assertEquals(der[2],b('\x12\x00'))
+        self.assertEqual(len(der),3)
+        self.assertEqual(der[0],0x180)
+        self.assertEqual(der[1],b('\x24\x02\xb6\x63'))
+        self.assertEqual(der[2],b('\x12\x00'))
 
     def testDecode8(self):
         # Only 2 other types
         der = DerSequence()
         der.decode(b('0\x06\x24\x02\xb6\x63\x12\x00'))
-        self.assertEquals(len(der),2)
-        self.assertEquals(der[0],b('\x24\x02\xb6\x63'))
-        self.assertEquals(der[1],b('\x12\x00'))
-        self.assertEquals(der.hasInts(), 0)
-        self.assertEquals(der.hasInts(False), 0)
-        self.failIf(der.hasOnlyInts())
-        self.failIf(der.hasOnlyInts(False))
+        self.assertEqual(len(der),2)
+        self.assertEqual(der[0],b('\x24\x02\xb6\x63'))
+        self.assertEqual(der[1],b('\x12\x00'))
+        self.assertEqual(der.hasInts(), 0)
+        self.assertEqual(der.hasInts(False), 0)
+        self.assertFalse(der.hasOnlyInts())
+        self.assertFalse(der.hasOnlyInts(False))
 
     def testDecode9(self):
         # Verify that decode returns itself
@@ -566,15 +566,15 @@ class DerOctetStringTests(unittest.TestCase):
 
     def testInit1(self):
         der = DerOctetString(b('\xFF'))
-        self.assertEquals(der.encode(), b('\x04\x01\xFF'))
+        self.assertEqual(der.encode(), b('\x04\x01\xFF'))
 
     def testEncode1(self):
         # Empty sequence
         der = DerOctetString()
-        self.assertEquals(der.encode(), b('\x04\x00'))
+        self.assertEqual(der.encode(), b('\x04\x00'))
         # Small payload
         der.payload = b('\x01\x02')
-        self.assertEquals(der.encode(), b('\x04\x02\x01\x02'))
+        self.assertEqual(der.encode(), b('\x04\x02\x01\x02'))
 
     ####
 
@@ -582,10 +582,10 @@ class DerOctetStringTests(unittest.TestCase):
         # Empty sequence
         der = DerOctetString()
         der.decode(b('\x04\x00'))
-        self.assertEquals(der.payload, b(''))
+        self.assertEqual(der.payload, b(''))
         # Small payload
         der.decode(b('\x04\x02\x01\x02'))
-        self.assertEquals(der.payload, b('\x01\x02'))
+        self.assertEqual(der.payload, b('\x01\x02'))
 
     def testDecode2(self):
         # Verify that decode returns the object
@@ -601,28 +601,28 @@ class DerNullTests(unittest.TestCase):
 
     def testEncode1(self):
         der = DerNull()
-        self.assertEquals(der.encode(), b('\x05\x00'))
+        self.assertEqual(der.encode(), b('\x05\x00'))
 
     ####
 
     def testDecode1(self):
         # Empty sequence
         der = DerNull()
-        self.assertEquals(der, der.decode(b('\x05\x00')))
+        self.assertEqual(der, der.decode(b('\x05\x00')))
 
 class DerObjectIdTests(unittest.TestCase):
 
     def testInit1(self):
         der = DerObjectId("1.1")
-        self.assertEquals(der.encode(), b('\x06\x01)'))
+        self.assertEqual(der.encode(), b('\x06\x01)'))
 
     def testEncode1(self):
         der = DerObjectId('1.2.840.113549.1.1.1')
-        self.assertEquals(der.encode(), b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'))
+        self.assertEqual(der.encode(), b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'))
         #
         der = DerObjectId()
         der.value = '1.2.840.113549.1.1.1'
-        self.assertEquals(der.encode(), b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'))
+        self.assertEqual(der.encode(), b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'))
 
     ####
 
@@ -630,41 +630,41 @@ class DerObjectIdTests(unittest.TestCase):
         # Empty sequence
         der = DerObjectId()
         der.decode(b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01'))
-        self.assertEquals(der.value, '1.2.840.113549.1.1.1')
+        self.assertEqual(der.value, '1.2.840.113549.1.1.1')
 
     def testDecode2(self):
         # Verify that decode returns the object
         der = DerObjectId()
-        self.assertEquals(der,
+        self.assertEqual(der,
                 der.decode(b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01')))
 
     def testDecode3(self):
         der = DerObjectId()
         der.decode(b('\x06\x09\x2A\x86\x48\x86\xF7\x0D\x01\x00\x01'))
-        self.assertEquals(der.value, '1.2.840.113549.1.0.1')
+        self.assertEqual(der.value, '1.2.840.113549.1.0.1')
 
 
 class DerBitStringTests(unittest.TestCase):
 
     def testInit1(self):
         der = DerBitString(b("\xFF"))
-        self.assertEquals(der.encode(), b('\x03\x02\x00\xFF'))
+        self.assertEqual(der.encode(), b('\x03\x02\x00\xFF'))
 
     def testInit2(self):
         der = DerBitString(DerInteger(1))
-        self.assertEquals(der.encode(), b('\x03\x04\x00\x02\x01\x01'))
+        self.assertEqual(der.encode(), b('\x03\x04\x00\x02\x01\x01'))
 
     def testEncode1(self):
         # Empty sequence
         der = DerBitString()
-        self.assertEquals(der.encode(), b('\x03\x01\x00'))
+        self.assertEqual(der.encode(), b('\x03\x01\x00'))
         # Small payload
         der = DerBitString(b('\x01\x02'))
-        self.assertEquals(der.encode(), b('\x03\x03\x00\x01\x02'))
+        self.assertEqual(der.encode(), b('\x03\x03\x00\x01\x02'))
         # Small payload
         der = DerBitString()
         der.value = b('\x01\x02')
-        self.assertEquals(der.encode(), b('\x03\x03\x00\x01\x02'))
+        self.assertEqual(der.encode(), b('\x03\x03\x00\x01\x02'))
 
     ####
 
@@ -672,42 +672,42 @@ class DerBitStringTests(unittest.TestCase):
         # Empty sequence
         der = DerBitString()
         der.decode(b('\x03\x00'))
-        self.assertEquals(der.value, b(''))
+        self.assertEqual(der.value, b(''))
         # Small payload
         der.decode(b('\x03\x03\x00\x01\x02'))
-        self.assertEquals(der.value, b('\x01\x02'))
+        self.assertEqual(der.value, b('\x01\x02'))
 
     def testDecode2(self):
         # Verify that decode returns the object
         der = DerBitString()
-        self.assertEquals(der, der.decode(b('\x03\x00')))
+        self.assertEqual(der, der.decode(b('\x03\x00')))
 
 
 class DerSetOfTests(unittest.TestCase):
 
     def testInit1(self):
         der = DerSetOf([DerInteger(1), DerInteger(2)])
-        self.assertEquals(der.encode(), b('1\x06\x02\x01\x01\x02\x01\x02'))
+        self.assertEqual(der.encode(), b('1\x06\x02\x01\x01\x02\x01\x02'))
 
     def testEncode1(self):
         # Empty set
         der = DerSetOf()
-        self.assertEquals(der.encode(), b('1\x00'))
+        self.assertEqual(der.encode(), b('1\x00'))
         # One single-byte integer (zero)
         der.add(0)
-        self.assertEquals(der.encode(), b('1\x03\x02\x01\x00'))
+        self.assertEqual(der.encode(), b('1\x03\x02\x01\x00'))
         # Invariant
-        self.assertEquals(der.encode(), b('1\x03\x02\x01\x00'))
+        self.assertEqual(der.encode(), b('1\x03\x02\x01\x00'))
 
     def testEncode2(self):
         # Two integers
         der = DerSetOf()
         der.add(0x180)
         der.add(0xFF)
-        self.assertEquals(der.encode(), b('1\x08\x02\x02\x00\xff\x02\x02\x01\x80'))
+        self.assertEqual(der.encode(), b('1\x08\x02\x02\x00\xff\x02\x02\x01\x80'))
         # Initialize with integers
         der = DerSetOf([0x180, 0xFF])
-        self.assertEquals(der.encode(), b('1\x08\x02\x02\x00\xff\x02\x02\x01\x80'))
+        self.assertEqual(der.encode(), b('1\x08\x02\x02\x00\xff\x02\x02\x01\x80'))
 
     def testEncode3(self):
         # One integer and another type (no matter what it is)
@@ -720,7 +720,7 @@ class DerSetOfTests(unittest.TestCase):
         der = DerSetOf()
         der.add(b('\x01\x00'))
         der.add(b('\x01\x01\x01'))
-        self.assertEquals(der.encode(), b('1\x05\x01\x00\x01\x01\x01'))
+        self.assertEqual(der.encode(), b('1\x05\x01\x00\x01\x01\x01'))
 
     ####
 
@@ -728,20 +728,20 @@ class DerSetOfTests(unittest.TestCase):
         # Empty sequence
         der = DerSetOf()
         der.decode(b('1\x00'))
-        self.assertEquals(len(der),0)
+        self.assertEqual(len(der),0)
         # One single-byte integer (zero)
         der.decode(b('1\x03\x02\x01\x00'))
-        self.assertEquals(len(der),1)
-        self.assertEquals(list(der),[0])
+        self.assertEqual(len(der),1)
+        self.assertEqual(list(der),[0])
 
     def testDecode2(self):
         # Two integers
         der = DerSetOf()
         der.decode(b('1\x08\x02\x02\x01\x80\x02\x02\x00\xff'))
-        self.assertEquals(len(der),2)
+        self.assertEqual(len(der),2)
         l = list(der)
-        self.failUnless(0x180 in l)
-        self.failUnless(0xFF in l)
+        self.assertTrue(0x180 in l)
+        self.assertTrue(0xFF in l)
 
     def testDecode3(self):
         # One integer and 2 other types
@@ -753,7 +753,7 @@ class DerSetOfTests(unittest.TestCase):
     def testDecode4(self):
         # Verify that decode returns the object
         der = DerSetOf()
-        self.assertEquals(der,
+        self.assertEqual(der,
                 der.decode(b('1\x08\x02\x02\x01\x80\x02\x02\x00\xff')))
 
     ###
