@@ -59,7 +59,7 @@ This is how you decrypt the data and check its authenticity::
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext)
-    >>> except ValueError, KeyError:
+    >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
 .. _RFC7539: https://tools.ietf.org/html/rfc7539

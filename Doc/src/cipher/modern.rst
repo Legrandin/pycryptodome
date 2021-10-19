@@ -172,7 +172,7 @@ Example (decryption)::
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext)
-    >>> except ValueError, KeyError:
+    >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
 .. _eax_mode:
@@ -236,7 +236,7 @@ Example (decryption)::
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext)
-    >>> except ValueError, KeyError:
+    >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
 .. _gcm_mode:
@@ -302,7 +302,7 @@ Example (decryption)::
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext)
-    >>> except ValueError, KeyError:
+    >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
 .. note::
@@ -385,7 +385,7 @@ Example (decryption)::
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext)
-    >>> except ValueError, KeyError:
+    >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
 One side-effect is that encryption (or decryption) must take place in one go
@@ -480,5 +480,5 @@ Example (decryption)::
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext)
-    >>> except ValueError, KeyError:
+    >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
