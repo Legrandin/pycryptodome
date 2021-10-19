@@ -50,7 +50,7 @@ And this is how you decrypt it::
     >>>     cipher = ChaCha20.new(key=key, nonce=nonce)
     >>>     plaintext = cipher.decrypt(ciphertext)
     >>>     print("The message was " + plaintext)
-    >>> except ValueError, KeyError:
+    >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
 In order to have a `RFC7539`_-compliant ChaCha20 cipher,
