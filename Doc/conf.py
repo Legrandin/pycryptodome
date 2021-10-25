@@ -15,7 +15,7 @@ import sys, os
 
 # Modules to document with autodoc are in another directory
 sys.path.insert(0, os.path.abspath('../lib'))
-print sys.path
+print(sys.path)
 
 # Mock existence of native modules
 from Crypto.Util import _raw_api
@@ -155,7 +155,7 @@ html_static_path = ['_static']
 # Ensure that text wrapping works in a table, by overring some CSS.
 # See https://github.com/rtfd/sphinx_rtd_theme/issues/117
 def setup(app):
-    app.add_stylesheet('theme_overrides.css')
+    app.add_css_file('theme_overrides.css')
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
