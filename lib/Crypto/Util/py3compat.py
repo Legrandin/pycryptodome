@@ -129,7 +129,7 @@ else:
         elif isinstance(s,str):
             return s.encode(encoding)
         elif isinstance(s, memoryview):
-            return s[start:end].tobytes()
+            return s.tobytes()
         else:
             return bytes([s])
     def tostr(bs):

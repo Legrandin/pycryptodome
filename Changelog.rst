@@ -10,6 +10,7 @@ New features
 
 Resolved issues
 ---------------
+* GH#563: An asymmetric key could not be imported as a ``memoryview``.
 * GH#566: cSHAKE128/256 generated a wrong output for customization strings
   longer than 255 bytes.
 
