@@ -35,6 +35,8 @@ from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
                                   get_raw_buffer, c_size_t,
                                   c_uint8_ptr)
 
+from Crypto.Util.number import long_to_bytes
+
 from Crypto.Hash.keccak import _raw_keccak_lib
 
 
@@ -45,15 +47,8 @@ def _left_encode(x):
 
     # Get number of bytes needed to represent this integer.
     num = 1 if x == 0 else (x.bit_length() + 7) // 8
-    # Chop off least significant byte of integer.
-    enc = bchr(num) + bchr(x & 0xFF)
-    x >>= 8
-    # Chop off remaining bytes if needed.
-    while x > 0:
-        enc = enc + bchr(x & 0xFF)
-        x >>= 8
 
-    return enc
+    return bchr(num) + long_to_bytes(x)
 
 
 def _encode_str(x):
