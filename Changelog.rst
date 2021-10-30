@@ -8,6 +8,11 @@ New features
 ------------
 * ECC keys in the SEC1 format can be exported and imported.
 
+Resolved issues
+---------------
+* GH#566: cSHAKE128/256 generated a wrong output for customization strings
+  longer than 255 bytes.
+
 3.11.0 (8 October 2021)
 ++++++++++++++++++++++++++
 
