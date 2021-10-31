@@ -59,11 +59,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-OCB license
-===========
-
-The OCB cipher mode is patented in the US under patent numbers 7,949,129 and 
-8,321,675. The directory Doc/ocb contains three free licenses for implementors 
-and users. As a general statement, OCB can be freely used for software not meant 
-for military purposes. Contact your attorney for further information.
