@@ -148,16 +148,19 @@ for file, descr, tag, test_class in vector_files:
         else:
             data = tobytes(tv.msg)
             assert(tv.len == len(tv.msg)*8)
-        if getattr(tv, "nlen", 0) != 0:
-            raise ValueError("Unsupported cSHAKE test vector")
+        if getattr(tv, "nlen", 0) == 0:
+            functionname = b("")
+        else:
+            functionname = tobytes(tv.n)
+            assert(tv.nlen == len(tv.n)*8)
         if getattr(tv, "slen", 0) == 0:
             custom = b("")
         else:
             custom = tobytes(tv.s)
             assert(tv.slen == len(tv.s)*8)
 
-        def new_test(self, data=data, result=tv.md, custom=custom, test_class=test_class):
-            hobj = test_class.new(data=data, custom=custom)
+        def new_test(self, data=data, result=tv.md, custom=custom, functionname=functionname, test_class=test_class):
+            hobj = test_class.new(data=data, custom=custom, functionname=functionname)
             digest = hobj.read(len(result))
             self.assertEqual(digest, result)
 
