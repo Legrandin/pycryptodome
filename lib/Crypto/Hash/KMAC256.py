@@ -28,29 +28,47 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util._raw_api import c_size_t
-from Crypto.Hash.cSHAKE128 import cSHAKE_XOF
+from Crypto.Util.py3compat import is_bytes
+
+from .KMAC128 import KMAC_Hash
+from . import cSHAKE256
 
 
-def _new(data, custom, function):
-    # Use Keccak[512]
-    return cSHAKE_XOF(data, custom, 512, function)
-
-
-def new(data=None, custom=b''):
-    """Return a fresh instance of a cSHAKE256 object.
+def new(**kwargs):
+    """Create a new KMAC256 object.
 
     Args:
-       data (bytes/bytearray/memoryview):
-        The very first chunk of the message to hash.
-        It is equivalent to an early call to :meth:`update`.
-        Optional.
-       custom (bytes):
-        Optional.
-        A customization bytestring (``S`` in SP 800-185).
+        key (bytes/bytearray/memoryview):
+            The key to use to compute the MAC.
+            It must be at least 256 bits long (32 bytes).
+        data (bytes/bytearray/memoryview):
+            Optional. The very first chunk of the message to authenticate.
+            It is equivalent to an early call to :meth:`KMAC_Hash.update`.
+        mac_len (integer):
+            Optional. The size of the authentication tag, in bytes.
+            Default is 64. Minimum is 8.
+        custom (bytes/bytearray/memoryview):
+            Optional. A customization byte string (``S`` in SP 800-185).
 
-    :Return: A :class:`cSHAKE_XOF` object
+    Returns:
+        A :class:`KMAC_Hash` hash object
     """
 
-    # Use Keccak[512]
-    return cSHAKE_XOF(data, custom, 512, b'')
+    key = kwargs.pop("key", None)
+    if not is_bytes(key):
+        raise TypeError("You must pass a key to KMAC256")
+    if len(key) < 32:
+        raise ValueError("The key must be at least 256 bits long (32 bytes)")
+
+    data = kwargs.pop("data", None)
+
+    mac_len = kwargs.pop("mac_len", 64)
+    if mac_len < 8:
+        raise ValueError("'mac_len' must be 8 bytes or more")
+
+    custom = kwargs.pop("custom", b"")
+
+    if kwargs:
+        raise TypeError("Unknown parameters: " + str(kwargs))
+
+    return KMAC_Hash(data, key, mac_len, custom, "20", cSHAKE256, 136)

@@ -79,11 +79,11 @@ class cSHAKE_XOF(object):
     Use the :func:`new` function.
     """
 
-    def __init__(self, data, custom, capacity):
+    def __init__(self, data, custom, capacity, function):
         state = VoidPointer()
 
-        if custom:
-            prefix_unpad = _encode_str(b'') + _encode_str(custom)
+        if custom or function:
+            prefix_unpad = _encode_str(function) + _encode_str(custom)
             prefix = _bytepad(prefix_unpad, (1600 - capacity)//8)
             pad = 0x04
         else:
@@ -151,6 +151,11 @@ class cSHAKE_XOF(object):
         return get_raw_buffer(bfr)
 
 
+def _new(data, custom, function):
+    # Use Keccak[256]
+    return cSHAKE_XOF(data, custom, 256, function)
+
+
 def new(data=None, custom=b''):
     """Return a fresh instance of a cSHAKE128 object.
 
@@ -167,4 +172,4 @@ def new(data=None, custom=b''):
     """
 
     # Use Keccak[256]
-    return cSHAKE_XOF(data, custom, 256)
+    return cSHAKE_XOF(data, custom, 256, b'')

@@ -1,12 +1,13 @@
 Changelog
 =========
 
-3.12.0 (XX October 2021)
+3.12.0 (XX November 2021)
 ++++++++++++++++++++++++++
 
 New features
 ------------
 * ECC keys in the SEC1 format can be exported and imported.
+* Add support for KMAC128 and KMAC256.
 
 Resolved issues
 ---------------
