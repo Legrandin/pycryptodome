@@ -6,6 +6,5 @@ Buffer = Union[bytes, bytearray, memoryview]
 
 def new(key: Buffer,
         data: Buffer = ...,
-	    digest_bytes: int = ...,
-	    digest_bits: int = ...,
+	    mac_len: int = ...,
         custom: Buffer = ...) -> KMAC_Hash: ...

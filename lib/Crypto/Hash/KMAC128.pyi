@@ -8,7 +8,7 @@ class KMAC_Hash(object):
     def __init__(self,
                  data: Buffer,
                  key: Buffer,
-                 digest_bytes: int,
+                 mac_len: int,
                  custom: Buffer,
                  oid_variant: str,
                  cshake: ModuleType,
@@ -22,14 +22,12 @@ class KMAC_Hash(object):
     def hexverify(self, hex_mac_tag: str) -> None: ...
     def new(self,
             data: Buffer = ...,
-    	    digest_bytes: int = ...,
-	        digest_bits: int = ...,
+	        mac_len: int = ...,
 	        key: Buffer = ...,
             custom: Buffer = ...) -> KMAC_Hash: ...
 
 
 def new(key: Buffer,
         data: Buffer = ...,
-	    digest_bytes: int = ...,
-	    digest_bits: int = ...,
+	    mac_len: int = ...,
         custom: Buffer = ...) -> KMAC_Hash: ...
