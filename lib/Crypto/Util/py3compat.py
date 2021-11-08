@@ -101,7 +101,7 @@ if sys.version_info[0] == 2:
         return isinstance(x, basestring)
 
     def is_bytes(x):
-        return isinstance(x, basestring) or \
+        return isinstance(x, str) or \
                 isinstance(x, bytearray) or \
                 isinstance(x, memoryview)
 

@@ -55,53 +55,52 @@ class KMAC_Hash(object):
     Use the :func:`new` function.
     """
 
-    def __init__(self, data, key, digest_bytes, custom,
+    def __init__(self, data, key, mac_len, custom,
                  oid_variant, cshake, rate):
 
         # See https://tools.ietf.org/html/rfc8702
         self.oid = "2.16.840.1.101.3.4.2." + oid_variant
-        self.digest_size = digest_bytes
+        self.digest_size = mac_len
 
-        self._digest = None
+        self._mac = None
 
-        partial_newX = _bytepad(_encode_str(key), rate)
+        partial_newX = _bytepad(_encode_str(tobytes(key)), rate)
         self._cshake = cshake._new(partial_newX, custom, b"KMAC")
 
         if data:
             self._cshake.update(data)
 
     def update(self, data):
-        """Continue hashing of a message by consuming the next chunk of data.
+        """Authenticate the next chunk of message.
 
         Args:
-            data (bytes/bytearray/memoryview): The next chunk of the message being hashed.
+            data (bytes/bytearray/memoryview): The next chunk of the message to
+            authenticate.
         """
 
-        if self._digest:
+        if self._mac:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
         self._cshake.update(data)
         return self
 
     def digest(self):
-        """Return the **binary** (non-printable) digest of the message that has been hashed so far.
+        """Return the **binary** (non-printable) MAC tag of the message.
 
-        :return: The hash digest, computed over the data processed so far.
-                 Binary form.
+        :return: The MAC tag. Binary form.
         :rtype: byte string
         """
 
-        if not self._digest:
+        if not self._mac:
             self._cshake.update(_right_encode(self.digest_size * 8))
-            self._digest = self._cshake.read(self.digest_size)
+            self._mac = self._cshake.read(self.digest_size)
 
-        return self._digest
+        return self._mac
 
     def hexdigest(self):
-        """Return the **printable** digest of the message that has been hashed so far.
+        """Return the **printable** MAC tag of the message.
 
-        :return: The hash digest, computed over the data processed so far.
-                 Hexadecimal encoded.
+        :return: The MAC tag. Hexadecimal encoded.
         :rtype: string
         """
 
@@ -146,8 +145,8 @@ class KMAC_Hash(object):
         See :func:`new`.
         """
 
-        if "digest_bytes" not in kwargs and "digest_bits" not in kwargs:
-            kwargs["digest_bytes"] = self.digest_size
+        if "mac_len" not in kwargs:
+            kwargs["mac_len"] = self.digest_size
 
         return new(**kwargs)
 
@@ -160,17 +159,13 @@ def new(**kwargs):
             The key to use to compute the MAC.
             It must be at least 128 bits long (16 bytes).
         data (bytes/bytearray/memoryview):
-            Optional. The very first chunk of the message to hash.
-            It is equivalent to an early call to :meth:`KMAC128_Hash.update`.
-        digest_bytes (integer):
-            Optional. The size of the digest, in bytes.
+            Optional. The very first chunk of the message to authenticate.
+            It is equivalent to an early call to :meth:`KMAC_Hash.update`.
+        mac_len (integer):
+            Optional. The size of the authentication tag, in bytes.
             Default is 64. Minimum is 8.
-        digest_bits (integer):
-            Optional and alternative to ``digest_bytes``.
-            The size of the digest, in bits, multiple of 8.
-            Default is 512. Minimum is 64.
         custom (bytes/bytearray/memoryview):
-            Optional. A customization bytestring (``S`` in SP 800-185).
+            Optional. A customization byte string (``S`` in SP 800-185).
 
     Returns:
         A :class:`KMAC_Hash` hash object
@@ -184,23 +179,13 @@ def new(**kwargs):
 
     data = kwargs.pop("data", None)
 
-    digest_bytes = kwargs.pop("digest_bytes", None)
-    digest_bits = kwargs.pop("digest_bits", None)
-    if None not in (digest_bytes, digest_bits):
-        raise TypeError("Only one digest parameter must be provided")
-    if (None, None) == (digest_bytes, digest_bits):
-        digest_bytes = 64
-    if digest_bytes is not None:
-        if (digest_bytes < 8):
-            raise ValueError("Incorrect 'digest_bytes' value")
-    else:
-        if (digest_bits < 64) or (digest_bits % 8):
-            raise ValueError("Incorrect 'digest_bits' value")
-        digest_bytes = digest_bits // 8
+    mac_len = kwargs.pop("mac_len", 64)
+    if mac_len < 8:
+        raise ValueError("'mac_len' must be 8 bytes or more")
 
     custom = kwargs.pop("custom", b"")
 
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
-    return KMAC_Hash(data, key, digest_bytes, custom, "19", cSHAKE128, 168)
+    return KMAC_Hash(data, key, mac_len, custom, "19", cSHAKE128, 168)

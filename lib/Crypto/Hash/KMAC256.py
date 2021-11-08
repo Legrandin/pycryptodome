@@ -42,20 +42,16 @@ def new(**kwargs):
             The key to use to compute the MAC.
             It must be at least 256 bits long (32 bytes).
         data (bytes/bytearray/memoryview):
-            Optional. The very first chunk of the message to hash.
-            It is equivalent to an early call to :meth:`KMAC128_Hash.update`.
-        digest_bytes (integer):
-            Optional. The size of the digest, in bytes.
+            Optional. The very first chunk of the message to authenticate.
+            It is equivalent to an early call to :meth:`KMAC_Hash.update`.
+        mac_len (integer):
+            Optional. The size of the authentication tag, in bytes.
             Default is 64. Minimum is 8.
-        digest_bits (integer):
-            Optional and alternative to ``digest_bytes``.
-            The size of the digest, in bits, multiple of 8.
-            Default is 512. Minimum is 64.
         custom (bytes/bytearray/memoryview):
-            Optional. A customization bytestring (``S`` in SP 800-185).
+            Optional. A customization byte string (``S`` in SP 800-185).
 
     Returns:
-        A :class:`KMAC128_Hash` hash object
+        A :class:`KMAC_Hash` hash object
     """
 
     key = kwargs.pop("key", None)
@@ -66,23 +62,13 @@ def new(**kwargs):
 
     data = kwargs.pop("data", None)
 
-    digest_bytes = kwargs.pop("digest_bytes", None)
-    digest_bits = kwargs.pop("digest_bits", None)
-    if None not in (digest_bytes, digest_bits):
-        raise TypeError("Only one digest parameter must be provided")
-    if (None, None) == (digest_bytes, digest_bits):
-        digest_bytes = 64
-    if digest_bytes is not None:
-        if (digest_bytes < 8):
-            raise ValueError("Incorrect 'digest_bytes' value")
-    else:
-        if (digest_bits < 64) or (digest_bits % 8):
-            raise ValueError("Incorrect 'digest_bits' value")
-        digest_bytes = digest_bits // 8
+    mac_len = kwargs.pop("mac_len", 64)
+    if mac_len < 8:
+        raise ValueError("'mac_len' must be 8 bytes or more")
 
     custom = kwargs.pop("custom", b"")
 
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
-    return KMAC_Hash(data, key, digest_bytes, custom, "20", cSHAKE256, 136)
+    return KMAC_Hash(data, key, mac_len, custom, "20", cSHAKE256, 136)

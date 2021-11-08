@@ -20,12 +20,8 @@ class KMACTest(unittest.TestCase):
         h = self.new()
         for new_func in self.KMAC.new, h.new:
 
-            for dbits in range(self.minimum_bits, 1024 + 1, 8):
-                hobj = new_func(key=key, digest_bits=dbits)
-                self.assertEqual(hobj.digest_size, dbits // 8)
-
             for dbytes in range(self.minimum_bytes, 128 + 1):
-                hobj = new_func(key=key, digest_bytes=dbytes)
+                hobj = new_func(key=key, mac_len=dbytes)
                 self.assertEqual(hobj.digest_size, dbytes)
 
             digest1 = new_func(key=key, data=b"\x90").digest()
@@ -41,15 +37,10 @@ class KMACTest(unittest.TestCase):
 
         h = self.new()
         for new_func in self.KMAC.new, h.new:
-            self.assertRaises(TypeError, new_func, key=b'X'*32,
-                              digest_bytes=self.default_bytes,
-                              digest_bits=self.default_bits)
             self.assertRaises(ValueError, new_func, key=b'X'*32,
-                              digest_bytes=0)
+                              mac_len=0)
             self.assertRaises(ValueError, new_func, key=b'X'*32,
-                              digest_bits=self.minimum_bits - 1)
-            self.assertRaises(ValueError, new_func, key=b'X'*32,
-                              digest_bytes=self.minimum_bytes - 1)
+                              mac_len=self.minimum_bytes - 1)
             self.assertRaises(TypeError, new_func,
                               key=u"string")
             self.assertRaises(TypeError, new_func,
@@ -85,7 +76,7 @@ class KMACTest(unittest.TestCase):
         msg = b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
-        h = self.new(digest_bits=256, data=msg[:4])
+        h = self.new(mac_len=32, data=msg[:4])
         dig1 = h.digest()
         self.assertRaises(TypeError, h.update, dig1)
 
@@ -191,9 +182,6 @@ class KMAC128Test(KMACTest):
 
     minimum_key_bits = 128
 
-    minimum_bits = 64
-    default_bits = 512
-
     minimum_bytes = 8
     default_bytes = 64
 
@@ -205,9 +193,6 @@ class KMAC256Test(KMACTest):
     KMAC = KMAC256
 
     minimum_key_bits = 256
-
-    minimum_bits = 64
-    default_bits = 512
 
     minimum_bytes = 8
     default_bytes = 64
@@ -340,7 +325,7 @@ class NISTExampleTestVectors(unittest.TestCase):
     def runTest(self):
 
         for key, data, custom, mac, text, module in self.test_data:
-            h = module.new(data=data, key=key, custom=custom, digest_bytes=len(mac))
+            h = module.new(data=data, key=key, custom=custom, mac_len=len(mac))
             mac_tag = h.digest()
             self.assertEqual(mac_tag, mac, msg=text)
 
