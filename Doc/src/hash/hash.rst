@@ -110,6 +110,21 @@ Modern hash algorithms
 Extensible-Output Functions (XOF)
 ---------------------------------
 
+A XOF is similar to a conventional cryptographic hash: it is
+a one-way function that maps a piece of data of arbitrary size to
+a random-like output. It provides some guarantees over
+collision resistance, pre-image resistance, and second pre-image resistance.
+
+Unlike a conventional hash, an application using a XOF can choose the length of the output.
+For this reason, a XOF does not have a ``digest()`` method.
+Instead, it has a ``read(N)`` method to extract the next ``N`` bytes of the output.
+
+ .. figure:: xof.png
+    :align: center
+    :figwidth: 50%
+
+    Generic state diagram for a XOF object
+
 - SHAKE and cSHAKE (in the SHA-3 family)
 
     - :doc:`shake128`
@@ -123,6 +138,8 @@ Message Authentication Code (MAC) algorithms
 - :doc:`hmac`
 - :doc:`cmac`
 - :doc:`poly1305`
+- :doc:`kmac128`
+- :doc:`kmac256`
 
 Historic hash algorithms
 -------------------------
