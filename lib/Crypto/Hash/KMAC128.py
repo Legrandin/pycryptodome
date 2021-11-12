@@ -30,23 +30,11 @@
 
 from binascii import unhexlify
 
-from Crypto.Util.number import long_to_bytes
-from Crypto.Util.py3compat import bchr, bord, tobytes, is_bytes
+from Crypto.Util.py3compat import bord, tobytes, is_bytes
 from Crypto.Random import get_random_bytes
 
 from . import cSHAKE128, SHA3_256
-from .cSHAKE128 import _bytepad, _encode_str
-
-
-def _right_encode(x):
-    """Right encode function as defined in NIST SP 800-185"""
-
-    assert (x < (1 << 2040) and x >= 0)
-
-    # Get number of bytes needed to represent this integer.
-    num = 1 if x == 0 else (x.bit_length() + 7) // 8
-
-    return long_to_bytes(x) + bchr(num)
+from .cSHAKE128 import _bytepad, _encode_str, _right_encode
 
 
 class KMAC_Hash(object):

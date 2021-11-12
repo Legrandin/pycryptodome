@@ -1,7 +1,7 @@
 KMAC128
 =======
 
-KMAC128 is a Message Authenticated Code (MAC) derived from SHA-3
+KMAC128 is a variable-length Message Authenticated Code (MAC) derived from SHA-3
 and standardized in `NIST SP 800-185 <https://nvlpubs.nist.gov/nistpubs/specialpublications/nist.sp.800-185.pdf>`_.
 
 KMAC128 provides a security strength of 128 bits.
@@ -33,7 +33,7 @@ And this is an example showing how to validate the KMAC128 tag::
     >>> except ValueError:
     >>>   print("The message or the key is wrong")
 
-An application can select how long the MAC tag is using the initialization parameter ``mac_len``.
+An application can select the length of the MAC tag by means of the initialization parameter ``mac_len``.
 For instance, while the traditional HMAC-SHA256 can only produce 32-byte tags,
 with KMAC128 you can produce 16-byte tags (see the examples above) but also a 33-byte tag::
 

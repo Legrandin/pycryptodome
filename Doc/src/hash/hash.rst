@@ -101,6 +101,8 @@ Modern hash algorithms
     - :doc:`sha3_256`
     - :doc:`sha3_384`
     - :doc:`sha3_512`
+    - :doc:`tuplehash128`
+    - :doc:`tuplehash256`
 
 - BLAKE2
 

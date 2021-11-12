@@ -1,4 +1,5 @@
 from typing import Any, Union
+from types import ModuleType
 
 Buffer = Union[bytes, bytearray, memoryview]
 

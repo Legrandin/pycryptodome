@@ -51,6 +51,17 @@ def _left_encode(x):
     return bchr(num) + long_to_bytes(x)
 
 
+def _right_encode(x):
+    """Right encode function as defined in NIST SP 800-185"""
+
+    assert (x < (1 << 2040) and x >= 0)
+
+    # Get number of bytes needed to represent this integer.
+    num = 1 if x == 0 else (x.bit_length() + 7) // 8
+
+    return long_to_bytes(x) + bchr(num)
+
+
 def _encode_str(x):
     """Encode string function as defined in NIST SP 800-185"""
 
