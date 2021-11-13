@@ -33,7 +33,7 @@ from Crypto.Util.py3compat import bchr
 from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, c_ubyte)
 
 from Crypto.Util.number import long_to_bytes
 
@@ -96,15 +96,14 @@ class cSHAKE_XOF(object):
         if custom or function:
             prefix_unpad = _encode_str(function) + _encode_str(custom)
             prefix = _bytepad(prefix_unpad, (1600 - capacity)//8)
-            pad = 0x04
+            self._padding = 0x04
         else:
             prefix = None
-            pad = 0x1F  # for SHAKE
+            self._padding = 0x1F  # for SHAKE
 
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(capacity//8),
-                                             pad,
-                                             24)
+                                             c_ubyte(24))
         if result:
             raise ValueError("Error %d while instantiating cSHAKE"
                              % result)
@@ -155,7 +154,8 @@ class cSHAKE_XOF(object):
         bfr = create_string_buffer(length)
         result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
                                                 bfr,
-                                                c_size_t(length))
+                                                c_size_t(length),
+                                                c_ubyte(self._padding))
         if result:
             raise ValueError("Error %d while extracting from %s"
                              % (result, self.name))

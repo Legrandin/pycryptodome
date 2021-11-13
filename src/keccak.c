@@ -54,7 +54,6 @@ typedef struct
     unsigned rate;
 
     uint8_t  squeezing;
-    uint8_t  padding;
     uint8_t  rounds;
 } keccak_state;
 
@@ -86,7 +85,6 @@ keccak_squeeze_internal (keccak_state *self)
 
 EXPORT_SYM int keccak_init (keccak_state **state,
                             size_t capacity_bytes,
-                            uint8_t padding,
                             uint8_t rounds)
 {
     keccak_state *ks;
@@ -110,7 +108,6 @@ EXPORT_SYM int keccak_init (keccak_state **state,
     ks->rate      = 200 - ks->capacity;
 
     ks->squeezing = 0;
-    ks->padding   = padding;
     ks->rounds    = rounds;
 
     return 0;
@@ -154,14 +151,14 @@ EXPORT_SYM int keccak_absorb (keccak_state *self,
     return 0;
 }
 
-static void keccak_finish (keccak_state *self)
+static void keccak_finish (keccak_state *self, uint8_t padding)
 {
     assert(self->squeezing == 0);
     assert(self->valid_bytes < self->rate);
 
     /* Padding */
     memset(self->buf + self->valid_bytes, 0, self->rate - self->valid_bytes);
-    self->buf[self->valid_bytes] = self->padding;
+    self->buf[self->valid_bytes] = padding;
     self->buf[self->rate-1] |= 0x80;
 
     /* Final absorb */
@@ -174,13 +171,13 @@ static void keccak_finish (keccak_state *self)
     self->valid_bytes = self->rate;
 }
 
-EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length)
+EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length, uint8_t padding)
 {
     if ((NULL == self) || (NULL == out))
         return ERR_NULL;
 
     if (self->squeezing == 0) {
-        keccak_finish (self);
+        keccak_finish (self, padding);
     }
 
     assert(self->squeezing == 1);
@@ -207,7 +204,7 @@ EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length)
     return 0;
 }
 
-EXPORT_SYM int keccak_digest(keccak_state *state, uint8_t *digest, size_t len)
+EXPORT_SYM int keccak_digest(keccak_state *state, uint8_t *digest, size_t len, uint8_t padding)
 {
     keccak_state tmp;
 
@@ -218,7 +215,7 @@ EXPORT_SYM int keccak_digest(keccak_state *state, uint8_t *digest, size_t len)
         return ERR_UNKNOWN;
 
     tmp = *state;
-    return keccak_squeeze(&tmp, digest, len);
+    return keccak_squeeze(&tmp, digest, len, padding);
 }
 
 EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)

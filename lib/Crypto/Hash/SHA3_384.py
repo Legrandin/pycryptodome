@@ -24,7 +24,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, c_ubyte)
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 
@@ -52,12 +52,12 @@ class SHA3_384_Hash(object):
     def __init__(self, data, update_after_digest):
         self._update_after_digest = update_after_digest
         self._digest_done = False
+        self._padding = 0x06
 
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(self.digest_size * 2),
-                                             0x06,
-                                             24)
+                                             c_ubyte(24))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/384"
                              % result)
@@ -97,7 +97,8 @@ class SHA3_384_Hash(object):
         bfr = create_string_buffer(self.digest_size)
         result = _raw_keccak_lib.keccak_digest(self._state.get(),
                                                bfr,
-                                               c_size_t(self.digest_size))
+                                               c_size_t(self.digest_size),
+                                               c_ubyte(self._padding))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/384"
                              % result)

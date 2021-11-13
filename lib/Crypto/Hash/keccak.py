@@ -34,13 +34,12 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, c_ubyte)
 
 _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         """
                         int keccak_init(void **state,
                                         size_t capacity_bytes,
-                                        uint8_t padding_byte,
                                         uint8_t rounds);
                         int keccak_destroy(void *state);
                         int keccak_absorb(void *state,
@@ -48,8 +47,12 @@ _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                                           size_t len);
                         int keccak_squeeze(const void *state,
                                            uint8_t *out,
-                                           size_t len);
-                        int keccak_digest(void *state, uint8_t *digest, size_t len);
+                                           size_t len,
+                                           uint8_t padding);
+                        int keccak_digest(void *state,
+                                          uint8_t *digest,
+                                          size_t len,
+                                          uint8_t padding);
                         int keccak_copy(const void *src, void *dst);
                         """)
 
@@ -68,12 +71,12 @@ class Keccak_Hash(object):
 
         self._update_after_digest = update_after_digest
         self._digest_done = False
+        self._padding = 0x01
 
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(self.digest_size * 2),
-                                             0x01,
-                                             24)
+                                             c_ubyte(24))
         if result:
             raise ValueError("Error %d while instantiating keccak" % result)
         self._state = SmartPointer(state.get(),
@@ -110,7 +113,8 @@ class Keccak_Hash(object):
         bfr = create_string_buffer(self.digest_size)
         result = _raw_keccak_lib.keccak_digest(self._state.get(),
                                                bfr,
-                                               c_size_t(self.digest_size))
+                                               c_size_t(self.digest_size),
+                                               c_ubyte(self._padding))
         if result:
             raise ValueError("Error %d while squeezing keccak" % result)
 
