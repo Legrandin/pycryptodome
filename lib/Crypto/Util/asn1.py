@@ -137,7 +137,7 @@ class DerObject(object):
                     self._tag_octet = 0xA0 | self._convertTag(explicit)
                     self._inner_tag_octet = 0x20 * constructed | asn1Id
                     return
-                
+
                 self._tag_octet = 0x20 * constructed | asn1Id
 
         def _convertTag(self, tag):
@@ -442,7 +442,7 @@ class DerSequence(DerObject):
                   only_non_negative (boolean):
                     If ``True``, negative integers are not counted in.
                 """
-                
+
                 items = [x for x in self._seq if _is_number(x, only_non_negative)]
                 return len(items)
 
@@ -704,21 +704,20 @@ class DerBitString(DerObject):
     An example of encoding is:
 
     >>> from Crypto.Util.asn1 import DerBitString
-    >>> from binascii import hexlify, unhexlify
-    >>> bs_der = DerBitString(b'\\xaa')
-    >>> bs_der.value += b'\\xbb'
-    >>> print hexlify(bs_der.encode())
+    >>> bs_der = DerBitString(b'\\xAA')
+    >>> bs_der.value += b'\\xBB'
+    >>> print(bs_der.encode().hex())
 
-    which will show ``040300aabb``, the DER encoding for the bit string
+    which will show ``030300aabb``, the DER encoding for the bit string
     ``b'\\xAA\\xBB'``.
 
     For decoding:
 
-    >>> s = unhexlify(b'040300aabb')
+    >>> s = bytes.fromhex('030300aabb')
     >>> try:
     >>>   bs_der = DerBitString()
     >>>   bs_der.decode(s)
-    >>>   print hexlify(bs_der.value)
+    >>>   print(bs_der.value.hex())
     >>> except ValueError:
     >>>   print "Not a valid DER BIT STRING"
 
@@ -751,7 +750,7 @@ class DerBitString(DerObject):
 
     def encode(self):
         """Return the DER BIT STRING, fully encoded as a
-        binary string."""
+        byte string."""
 
         # Add padding count byte
         self.payload = b'\x00' + self.value
