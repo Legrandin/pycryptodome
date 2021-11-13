@@ -25,11 +25,12 @@ from __future__ import print_function
 try:
     from setuptools import Extension, Command, setup
     from setuptools.command.build_ext import build_ext
+    from setuptools.command.build_py import build_py
 except ImportError:
     from distutils.core import Extension, Command, setup
     from distutils.command.build_ext import build_ext
+    from distutils.command.build_py import build_py
 
-from distutils.command.build_py import build_py
 import re
 import os
 import sys
