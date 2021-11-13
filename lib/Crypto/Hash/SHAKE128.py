@@ -54,7 +54,8 @@ class SHAKE128_XOF(object):
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(32),
-                                             0x1F)
+                                             0x1F,
+                                             24)
         if result:
             raise ValueError("Error %d while instantiating SHAKE128"
                              % result)

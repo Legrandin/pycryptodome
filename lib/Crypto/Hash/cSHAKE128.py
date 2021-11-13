@@ -103,7 +103,8 @@ class cSHAKE_XOF(object):
 
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(capacity//8),
-                                             pad)
+                                             pad,
+                                             24)
         if result:
             raise ValueError("Error %d while instantiating cSHAKE"
                              % result)

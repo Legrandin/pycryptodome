@@ -40,7 +40,8 @@ _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         """
                         int keccak_init(void **state,
                                         size_t capacity_bytes,
-                                        uint8_t padding_byte);
+                                        uint8_t padding_byte,
+                                        uint8_t rounds);
                         int keccak_destroy(void *state);
                         int keccak_absorb(void *state,
                                           const uint8_t *in,
@@ -71,7 +72,8 @@ class Keccak_Hash(object):
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(self.digest_size * 2),
-                                             0x01)
+                                             0x01,
+                                             24)
         if result:
             raise ValueError("Error %d while instantiating keccak" % result)
         self._state = SmartPointer(state.get(),

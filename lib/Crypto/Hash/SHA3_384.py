@@ -56,7 +56,8 @@ class SHA3_384_Hash(object):
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(self.digest_size * 2),
-                                             0x06)
+                                             0x06,
+                                             24)
         if result:
             raise ValueError("Error %d while instantiating SHA-3/384"
                              % result)
