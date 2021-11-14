@@ -1,4 +1,5 @@
-CPPFLAGS += -I.. $(shell python -c "from __future__ import print_function; import sys; print('-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN')")
+PYTHON ?= python
+CPPFLAGS += -I.. $(shell $(PYTHON) -c "from __future__ import print_function; import sys; print('-DPYCRYPTO_' + sys.byteorder.upper() + '_ENDIAN')")
 CPPFLAGS += -DHAVE_POSIX_MEMALIGN -DHAVE_STDINT_H
 CPPFLAGS += -DSTATIC=""
 CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
@@ -13,7 +14,7 @@ CFLAGS += -msse2
 TAPPS += test_clmul
 endif
 
-ifeq (64bit, $(shell python -c "from __future__ import print_function; import platform; print(platform.architecture()[0])"))
+ifeq (64bit, $(shell $(PYTHON) -c "from __future__ import print_function; import platform; print(platform.architecture()[0])"))
 CPPFLAGS += -DHAVE_UINT128
 endif
 
@@ -64,7 +65,7 @@ build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o $(TABLES) $(UTILS)
 # addmul128
 
 build/tests_addmul128.c: make_tests_addmul128.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/tests_addmul128_32: build/tests_addmul128.c ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
@@ -75,7 +76,7 @@ build/tests_addmul128_64: build/tests_addmul128.c ../multiply_64.c
 # square
 
 build/tests_square.c: make_tests_square.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/tests_square_32: build/tests_square.c ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
@@ -102,19 +103,19 @@ build/poly1305.o: ../poly1305.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -c
 
 build/test_poly1305_reduce.c: make_tests_poly1305_reduce.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/test_poly1305_load_r.c: make_tests_poly1305_load_r.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/test_poly1305_load_m.c: make_tests_poly1305_load_m.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/test_poly1305_multiply.c: make_tests_poly1305_multiply.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/test_poly1305_accumulate.c: make_tests_poly1305_accumulate.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/test_poly1305_reduce: build/test_poly1305_reduce.c ../common.h build/poly1305.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $(filter %.c %.o, $^)
@@ -143,19 +144,19 @@ build/test_mont: test_mont.c ../common.h build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/tests_addmul.c: make_tests_addmul.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/tests_addmul: build/tests_addmul.c build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
 
 build/tests_product.c: make_tests_product.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/tests_product: build/tests_product.c build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
 
 build/tests_mont_mult.c: make_tests_mont_mult.py
-	python $^ > $@
+	$(PYTHON) $^ > $@
 
 build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o $(UTILS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
