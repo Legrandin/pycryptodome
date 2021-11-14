@@ -50,6 +50,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Hash import test_cSHAKE;     tests += test_cSHAKE.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_KMAC;       tests += test_KMAC.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_TupleHash;  tests += test_TupleHash.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_KangarooTwelve;  tests += test_KangarooTwelve.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

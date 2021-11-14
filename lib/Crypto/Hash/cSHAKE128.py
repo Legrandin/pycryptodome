@@ -168,7 +168,7 @@ def _new(data, custom, function):
     return cSHAKE_XOF(data, custom, 256, function)
 
 
-def new(data=None, custom=b''):
+def new(data=None, custom=None):
     """Return a fresh instance of a cSHAKE128 object.
 
     Args:

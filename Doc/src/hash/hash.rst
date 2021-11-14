@@ -88,14 +88,14 @@ Every hash object has the following attributes:
 Modern hash algorithms
 ----------------------
 
-- SHA-2 family
+- SHA-2 family (FIPS 180-4)
 
     - :doc:`sha224`
     - :doc:`sha256`
     - :doc:`sha384`
     - :doc:`sha512`
 
-- SHA-3 family
+- SHA-3 family (FIPS 202)
 
     - :doc:`sha3_224`
     - :doc:`sha3_256`
@@ -127,12 +127,17 @@ Instead, it has a ``read(N)`` method to extract the next ``N`` bytes of the outp
 
     Generic state diagram for a XOF object
 
-- SHAKE and cSHAKE (in the SHA-3 family)
+- SHA-3 family (FIPS 202)
 
     - :doc:`shake128`
     - :doc:`shake256`
+
+- SHA-3 derived functions (NIST SP 800-185)
+
     - :doc:`cshake128`
     - :doc:`cshake256`
+
+- :doc:`k12`
 
 Message Authentication Code (MAC) algorithms
 --------------------------------------------
@@ -140,8 +145,11 @@ Message Authentication Code (MAC) algorithms
 - :doc:`hmac`
 - :doc:`cmac`
 - :doc:`poly1305`
-- :doc:`kmac128`
-- :doc:`kmac256`
+
+- SHA-3 derived functions (NIST SP 800-185)
+
+    - :doc:`kmac128`
+    - :doc:`kmac256`
 
 Historic hash algorithms
 -------------------------

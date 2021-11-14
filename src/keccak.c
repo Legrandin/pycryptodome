@@ -33,6 +33,8 @@
 
 FAKE_INIT(keccak)
 
+#define KECCAK_F1600_STATE 200
+
 typedef struct
 {
     uint64_t state[25];
@@ -40,7 +42,7 @@ typedef struct
     /*  The buffer is as long as the state,
      *  but only 'rate' bytes will be used.
      */
-    uint8_t  buf[200];
+    uint8_t  buf[KECCAK_F1600_STATE];
 
     /*  When absorbing, this is the number of bytes in buf that
      *  are coming from the message and outstanding.
@@ -61,6 +63,19 @@ typedef struct
 #define ROL64(x,y) ((((x) << (y)) | (x) >> (64-(y))) & 0xFFFFFFFFFFFFFFFFULL)
 
 static void keccak_function (uint64_t *state, unsigned rounds);
+
+EXPORT_SYM int keccak_reset(keccak_state *state)
+{
+    if (NULL == state)
+        return ERR_NULL;
+
+    memset(state->state, 0, sizeof(state->state));
+    memset(state->buf, 0, sizeof(state->buf));
+    state->valid_bytes = 0;
+    state->squeezing = 0;
+
+    return 0;
+}
 
 static void keccak_absorb_internal (keccak_state *self)
 {
@@ -97,7 +112,7 @@ EXPORT_SYM int keccak_init (keccak_state **state,
     if (NULL == ks)
         return ERR_MEMORY;
 
-    if (capacity_bytes >= 200)
+    if (capacity_bytes >= KECCAK_F1600_STATE)
         return ERR_DIGEST_SIZE;
 
     if ((rounds != 12) && (rounds != 24))
@@ -105,7 +120,7 @@ EXPORT_SYM int keccak_init (keccak_state **state,
 
     ks->capacity  = (unsigned)capacity_bytes;
 
-    ks->rate      = 200 - ks->capacity;
+    ks->rate      = KECCAK_F1600_STATE - ks->capacity;
 
     ks->squeezing = 0;
     ks->rounds    = rounds;

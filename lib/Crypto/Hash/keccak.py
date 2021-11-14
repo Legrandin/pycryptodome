@@ -54,6 +54,7 @@ _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                                           size_t len,
                                           uint8_t padding);
                         int keccak_copy(const void *src, void *dst);
+                        int keccak_reset(void *state);
                         """)
 
 class Keccak_Hash(object):

@@ -45,9 +45,14 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
-* SHA-3 digests
-* SHA-3 derived functions such as SHAKE XOFs, cSHAKE XOFs, KMAC128, KMAC256, TupleHash128, TupleHash256
-* Truncated SHA-512 and BLAKE2 hash algorithms
+* SHA-3 hash algorithms (FIPS 202) and derived functions (NIST SP-800 185):
+  - SHAKE128 and SHA256 XOFs
+  - cSHAKE128 and cSHAKE256 XOFs
+  - KMAC128 and KMAC256
+  - TupleHash128 and TupleHash256
+* KangarooTwelve XOF (derived from Keccak)
+* Truncated hash algorithms SHA-512/224 and SHA-512/256 (FIPS 180-4)
+* BLAKE2b and BLAKE2s hash algorithms
 * Salsa20 and ChaCha20/XChaCha20 stream ciphers
 * Poly1305 MAC
 * ChaCha20-Poly1305 and XChaCha20-Poly1305 authenticated ciphers

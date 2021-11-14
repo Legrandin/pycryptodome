@@ -4,8 +4,8 @@ cSHAKE128
 cSHAKE128 is an *extendable-output function* (XOF) in the SHA-3 family, as specified in `SP 800-185`_.
 
 As a XOF, cSHAKE128 is a generalization of a cryptographic hash function.
-Instead of creating a fixed-length digest (e.g. 32 bytes like SHA-256),
-it can produce outputs of any desired length.
+It is not limited to creating fixed-length digests (e.g., SHA-256 will always output exactly 32 bytes):
+it produces digests of any length, and it can be used as a Pseudo Random Generator (PRG).
 
 Output bits do **not** depend on the output length.
 

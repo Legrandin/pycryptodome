@@ -7,7 +7,8 @@ Changelog
 New features
 ------------
 * ECC keys in the SEC1 format can be exported and imported.
-* Add support for KMAC128, KMAC256, TupleHash128, and TupleHash256.
+* Add support for KMAC128, KMAC256, TupleHash128, and TupleHash256 (NIST SP-800 185).
+* Add support for KangarooTwelve.
 
 Resolved issues
 ---------------
