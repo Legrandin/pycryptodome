@@ -35,7 +35,7 @@ print("#include <stdio.h>")
 print()
 print("void poly1305_load_m(uint32_t r[5], const uint8_t data[], size_t len);")
 
-for len_secret in range(16+1):
+for len_secret in range(1, 16+1):
     make_test(b"\xaa" * len_secret)
 make_test(b"\xcc" * 16)
 make_test(b"\xff" * 16)
