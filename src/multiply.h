@@ -15,7 +15,7 @@
     oh = (uint64_t)(pr >> 64);  \
     } while (0)
 
-#elif defined(_MSC_VER) && defined(_WIN64)
+#elif defined(_MSC_VER) && defined(_M_X64)
 
 #include <windows.h>
 #define DP_MULT(a,b,ol,oh) do { ol = UnsignedMultiply128(a,b,&oh); } while (0)
