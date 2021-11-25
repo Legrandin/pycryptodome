@@ -38,7 +38,7 @@
 /**
  * Add a 64-bit value x to y/sum_mid/sum_hi
  */
-#if defined(_M_X64) && (_MSC_VER>=1900)
+#if (_MSC_VER>=1900) && (defined(_M_X64) || defined(__x86_64__))
 
 #include <intrin.h>
 #define ADD192(y, x) do {           \
