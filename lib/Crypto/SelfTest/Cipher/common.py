@@ -499,9 +499,7 @@ def make_stream_tests(module, module_name, test_data):
                 ByteArrayTest(module, params),
             ]
 
-            import sys
-            if sys.version[:3] != '2.6':
-                tests.append(MemoryviewTest(module, params))
+            tests.append(MemoryviewTest(module, params))
             extra_tests_added = True
 
         # Add the test to the test suite

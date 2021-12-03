@@ -168,7 +168,7 @@ class BlockChainingTests(unittest.TestCase):
         self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
 
     def test_bytearray(self):
-        data = b"1" * 16
+        data = b"1" * 128
         data_ba = bytearray(data)
 
         # Encrypt
@@ -201,7 +201,7 @@ class BlockChainingTests(unittest.TestCase):
         self.assertEqual(ref3, ref4)
 
     def test_memoryview(self):
-        data = b"1" * 16
+        data = b"1" * 128
         data_mv = memoryview(bytearray(data))
 
         # Encrypt
@@ -232,19 +232,19 @@ class BlockChainingTests(unittest.TestCase):
         ref4 = cipher4.decrypt(data_mv)
 
         self.assertEqual(ref3, ref4)
-    
+
     def test_output_param(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
 
-        output = bytearray(16)
+        output = bytearray(128)
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
@@ -253,7 +253,7 @@ class BlockChainingTests(unittest.TestCase):
 
     def test_output_param_same_buffer(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
 
@@ -262,7 +262,7 @@ class BlockChainingTests(unittest.TestCase):
         res = cipher.encrypt(pt_ba, output=pt_ba)
         self.assertEqual(ct, pt_ba)
         self.assertEqual(res, None)
-        
+
         ct_ba = bytearray(ct)
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         res = cipher.decrypt(ct_ba, output=ct_ba)
@@ -271,29 +271,29 @@ class BlockChainingTests(unittest.TestCase):
 
 
     def test_output_param_memoryview(self):
-        
-        pt = b'5' * 16
+
+        pt = b'5' * 128
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
 
-        output = memoryview(bytearray(16))
+        output = memoryview(bytearray(128))
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
-        
+
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
 
     def test_output_param_neg(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
-        
+
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
 
