@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.12.0 (XX November 2021)
+3.12.0 (XX December 2021)
 ++++++++++++++++++++++++++
 
 New features
@@ -15,6 +15,7 @@ Resolved issues
 * GH#563: An asymmetric key could not be imported as a ``memoryview``.
 * GH#566: cSHAKE128/256 generated a wrong output for customization strings
   longer than 255 bytes.
+* GH#582: CBC decryption generated the wrong plaintext when the input and the output were the same buffer.
 
 3.11.0 (8 October 2021)
 ++++++++++++++++++++++++++
