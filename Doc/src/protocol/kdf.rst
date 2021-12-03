@@ -104,6 +104,8 @@ and to check them::
 .. autofunction:: Crypto.Protocol.KDF.bcrypt
 .. autofunction:: Crypto.Protocol.KDF.bcrypt_check
 
+.. _hkdf:
+
 HKDF
 +++++
 
@@ -123,8 +125,10 @@ Example, for deriving two AES256 keys::
 
 .. autofunction:: Crypto.Protocol.KDF.HKDF
 
-Counter Mode
-++++++++++++
+.. _sp800-180-counter:
+
+SP 800-180 Counter Mode
+++++++++++++++++++++++++
 
 A KDF can be generically constructed with a pseudorandom function (PRF).
 If the PRF has a fixed-length output,

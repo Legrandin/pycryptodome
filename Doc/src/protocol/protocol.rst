@@ -6,7 +6,9 @@
 
     kdf
     ss
+    dh
 
 * :doc:`kdf`
 * :doc:`ss`
+* :doc:`dh`
 

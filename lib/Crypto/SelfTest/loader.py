@@ -219,7 +219,8 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
 
             tv.id = test['tcId']
             tv.comment = test['comment']
-            for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag', 'label', 'ikm', 'salt', 'info', 'okm', 'sig':
+            for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag', 'label', \
+                        'ikm', 'salt', 'info', 'okm', 'sig', 'public', 'shared':
                 if attr in test:
                     setattr(tv, attr, unhexlify(test[attr]))
             tv.filename = file_name
@@ -229,6 +230,9 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
 
             tv.valid = test['result'] != "invalid"
             tv.warning = test['result'] == "acceptable"
+
+            tv.filename = file_name
+
             result.append(tv)
 
     return result

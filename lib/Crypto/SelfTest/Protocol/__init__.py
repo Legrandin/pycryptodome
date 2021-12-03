@@ -28,8 +28,9 @@ __revision__ = "$Id$"
 
 def get_tests(config={}):
     tests = []
-    from Crypto.SelfTest.Protocol import test_rfc1751;        tests += test_rfc1751.get_tests(config=config)
-    from Crypto.SelfTest.Protocol import test_KDF;        tests += test_KDF.get_tests(config=config)
+    from Crypto.SelfTest.Protocol import test_rfc1751;  tests += test_rfc1751.get_tests(config=config)
+    from Crypto.SelfTest.Protocol import test_KDF;      tests += test_KDF.get_tests(config=config)
+    from Crypto.SelfTest.Protocol import test_ecdh;     tests += test_ecdh.get_tests(config=config)
 
     from Crypto.SelfTest.Protocol import test_SecretSharing;
     tests += test_SecretSharing.get_tests(config=config)

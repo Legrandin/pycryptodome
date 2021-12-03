@@ -116,7 +116,7 @@ jobs:
         pip install mypy pycryptodome-test-vectors
     - name: Test
       run: |
-        mypy lib/
+        mypy --enable-incomplete-feature=Unpack lib/
 
   test_c_linux:
     runs-on: ubuntu-latest
