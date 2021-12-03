@@ -50,7 +50,7 @@ class OcbTests(unittest.TestCase):
 
     key_128 = get_tag_random("key_128", 16)
     nonce_96 = get_tag_random("nonce_128", 12)
-    data_128 = get_tag_random("data_128", 16)
+    data = get_tag_random("data", 128)
 
     def test_loopback_128(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
@@ -66,10 +66,10 @@ class OcbTests(unittest.TestCase):
         AES.new(self.key_128, AES.MODE_OCB)
 
         cipher = AES.new(self.key_128, AES.MODE_OCB, self.nonce_96)
-        ct = cipher.encrypt(self.data_128)
+        ct = cipher.encrypt(self.data)
 
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        self.assertEqual(ct, cipher.encrypt(self.data_128))
+        self.assertEqual(ct, cipher.encrypt(self.data))
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_OCB,
@@ -82,10 +82,10 @@ class OcbTests(unittest.TestCase):
 
         # nonce can be up to 15 bytes long
         for length in range(1, 16):
-            AES.new(self.key_128, AES.MODE_OCB, nonce=self.data_128[:length])
+            AES.new(self.key_128, AES.MODE_OCB, nonce=self.data[:length])
 
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_OCB,
-                          nonce=self.data_128)
+                          nonce=self.data)
 
     def test_block_size_128(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
@@ -151,18 +151,18 @@ class OcbTests(unittest.TestCase):
         for mac_len in range(8, 16 + 1):
             cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96,
                              mac_len=mac_len)
-            _, mac = cipher.encrypt_and_digest(self.data_128)
+            _, mac = cipher.encrypt_and_digest(self.data)
             self.assertEqual(len(mac), mac_len)
 
         # Default MAC length
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        _, mac = cipher.encrypt_and_digest(self.data_128)
+        _, mac = cipher.encrypt_and_digest(self.data)
         self.assertEqual(len(mac), 16)
 
     def test_invalid_mac(self):
         from Crypto.Util.strxor import strxor_c
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        ct, mac = cipher.encrypt_and_digest(self.data_128)
+        ct, mac = cipher.encrypt_and_digest(self.data)
 
         invalid_mac = strxor_c(mac, 0x01)
 
@@ -226,14 +226,14 @@ class OcbTests(unittest.TestCase):
         # Encrypt
         key_ba = bytearray(self.key_128)
         nonce_ba = bytearray(self.nonce_96)
-        header_ba = bytearray(self.data_128)
-        data_ba = bytearray(self.data_128)
+        header_ba = bytearray(self.data)
+        data_ba = bytearray(self.data)
 
         cipher1 = AES.new(self.key_128,
                           AES.MODE_OCB,
                           nonce=self.nonce_96)
-        cipher1.update(self.data_128)
-        ct = cipher1.encrypt(self.data_128) + cipher1.encrypt()
+        cipher1.update(self.data)
+        ct = cipher1.encrypt(self.data) + cipher1.encrypt()
         tag = cipher1.digest()
 
         cipher2 = AES.new(key_ba,
@@ -254,7 +254,7 @@ class OcbTests(unittest.TestCase):
         # Decrypt
         key_ba = bytearray(self.key_128)
         nonce_ba = bytearray(self.nonce_96)
-        header_ba = bytearray(self.data_128)
+        header_ba = bytearray(self.data)
         del data_ba
 
         cipher4 = AES.new(key_ba,
@@ -266,21 +266,21 @@ class OcbTests(unittest.TestCase):
         header_ba[:3] = b"\xFF\xFF\xFF"
         pt_test = cipher4.decrypt_and_verify(bytearray(ct_test), bytearray(tag_test))
 
-        self.assertEqual(self.data_128, pt_test)
+        self.assertEqual(self.data, pt_test)
 
     def test_memoryview(self):
 
         # Encrypt
         key_mv = memoryview(bytearray(self.key_128))
         nonce_mv = memoryview(bytearray(self.nonce_96))
-        header_mv = memoryview(bytearray(self.data_128))
-        data_mv = memoryview(bytearray(self.data_128))
+        header_mv = memoryview(bytearray(self.data))
+        data_mv = memoryview(bytearray(self.data))
 
         cipher1 = AES.new(self.key_128,
                           AES.MODE_OCB,
                           nonce=self.nonce_96)
-        cipher1.update(self.data_128)
-        ct = cipher1.encrypt(self.data_128) + cipher1.encrypt()
+        cipher1.update(self.data)
+        ct = cipher1.encrypt(self.data) + cipher1.encrypt()
         tag = cipher1.digest()
 
         cipher2 = AES.new(key_mv,
@@ -301,7 +301,7 @@ class OcbTests(unittest.TestCase):
         # Decrypt
         key_mv = memoryview(bytearray(self.key_128))
         nonce_mv = memoryview(bytearray(self.nonce_96))
-        header_mv = memoryview(bytearray(self.data_128))
+        header_mv = memoryview(bytearray(self.data))
         del data_mv
 
         cipher4 = AES.new(key_mv,
@@ -313,21 +313,21 @@ class OcbTests(unittest.TestCase):
         header_mv[:3] = b"\xFF\xFF\xFF"
         pt_test = cipher4.decrypt_and_verify(memoryview(ct_test), memoryview(tag_test))
 
-        self.assertEqual(self.data_128, pt_test)
+        self.assertEqual(self.data, pt_test)
 
 
 class OcbFSMTests(unittest.TestCase):
 
     key_128 = get_tag_random("key_128", 16)
     nonce_96 = get_tag_random("nonce_128", 12)
-    data_128 = get_tag_random("data_128", 16)
+    data = get_tag_random("data", 128)
 
     def test_valid_init_encrypt_decrypt_digest_verify(self):
         # No authenticated data, fixed plaintext
         # Verify path INIT->ENCRYPT->ENCRYPT(NONE)->DIGEST
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        ct = cipher.encrypt(self.data_128)
+        ct = cipher.encrypt(self.data)
         ct += cipher.encrypt()
         mac = cipher.digest()
 
@@ -343,7 +343,7 @@ class OcbFSMTests(unittest.TestCase):
         # Verify path INIT->ENCRYPT->DIGEST
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        ct = cipher.encrypt(self.data_128)
+        ct = cipher.encrypt(self.data)
         self.assertRaises(TypeError, cipher.digest)
 
         # Verify path INIT->DECRYPT->VERIFY
@@ -357,13 +357,13 @@ class OcbFSMTests(unittest.TestCase):
         # Verify path INIT->UPDATE->DIGEST
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         mac = cipher.digest()
 
         # Verify path INIT->UPDATE->VERIFY
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         cipher.verify(mac)
 
     def test_valid_full_path(self):
@@ -371,15 +371,15 @@ class OcbFSMTests(unittest.TestCase):
         # Verify path INIT->UPDATE->ENCRYPT->ENCRYPT(NONE)->DIGEST
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
-        ct = cipher.encrypt(self.data_128)
+        cipher.update(self.data)
+        ct = cipher.encrypt(self.data)
         ct += cipher.encrypt()
         mac = cipher.digest()
 
         # Verify path INIT->UPDATE->DECRYPT->DECRYPT(NONE)->VERIFY
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         cipher.decrypt(ct)
         cipher.decrypt()
         cipher.verify(mac)
@@ -387,18 +387,18 @@ class OcbFSMTests(unittest.TestCase):
     def test_invalid_encrypt_after_final(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
-        cipher.encrypt(self.data_128)
+        cipher.update(self.data)
+        cipher.encrypt(self.data)
         cipher.encrypt()
-        self.assertRaises(TypeError, cipher.encrypt, self.data_128)
+        self.assertRaises(TypeError, cipher.encrypt, self.data)
 
     def test_invalid_decrypt_after_final(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
-        cipher.decrypt(self.data_128)
+        cipher.update(self.data)
+        cipher.decrypt(self.data)
         cipher.decrypt()
-        self.assertRaises(TypeError, cipher.decrypt, self.data_128)
+        self.assertRaises(TypeError, cipher.decrypt, self.data)
 
     def test_valid_init_digest(self):
         # Verify path INIT->DIGEST
@@ -415,8 +415,8 @@ class OcbFSMTests(unittest.TestCase):
 
     def test_valid_multiple_encrypt_or_decrypt(self):
         for method_name in "encrypt", "decrypt":
-            for auth_data in (None, b("333"), self.data_128,
-                              self.data_128 + b("3")):
+            for auth_data in (None, b("333"), self.data,
+                              self.data + b("3")):
                 if auth_data is None:
                     assoc_len = None
                 else:
@@ -426,37 +426,37 @@ class OcbFSMTests(unittest.TestCase):
                 if auth_data is not None:
                     cipher.update(auth_data)
                 method = getattr(cipher, method_name)
-                method(self.data_128)
-                method(self.data_128)
-                method(self.data_128)
-                method(self.data_128)
+                method(self.data)
+                method(self.data)
+                method(self.data)
+                method(self.data)
                 method()
 
     def test_valid_multiple_digest_or_verify(self):
         # Multiple calls to digest
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         first_mac = cipher.digest()
         for x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         for x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):
         # encrypt_and_digest
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        cipher.update(self.data_128)
-        ct, mac = cipher.encrypt_and_digest(self.data_128)
+        cipher.update(self.data)
+        ct, mac = cipher.encrypt_and_digest(self.data)
 
         # decrypt_and_verify
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         pt = cipher.decrypt_and_verify(ct, mac)
-        self.assertEqual(self.data_128, pt)
+        self.assertEqual(self.data, pt)
 
     def test_invalid_mixing_encrypt_decrypt(self):
         # Once per method, with or without assoc. data
@@ -466,26 +466,26 @@ class OcbFSMTests(unittest.TestCase):
                 cipher = AES.new(self.key_128, AES.MODE_OCB,
                                  nonce=self.nonce_96)
                 if assoc_data_present:
-                    cipher.update(self.data_128)
-                getattr(cipher, method1_name)(self.data_128)
+                    cipher.update(self.data)
+                getattr(cipher, method1_name)(self.data)
                 self.assertRaises(TypeError, getattr(cipher, method2_name),
-                                  self.data_128)
+                                  self.data)
 
     def test_invalid_encrypt_or_update_after_digest(self):
         for method_name in "encrypt", "update":
             cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-            cipher.encrypt(self.data_128)
+            cipher.encrypt(self.data)
             cipher.encrypt()
             cipher.digest()
             self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+                              self.data)
 
             cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-            cipher.encrypt_and_digest(self.data_128)
+            cipher.encrypt_and_digest(self.data)
 
     def test_invalid_decrypt_or_update_after_verify(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        ct = cipher.encrypt(self.data_128)
+        ct = cipher.encrypt(self.data)
         ct += cipher.encrypt()
         mac = cipher.digest()
 
@@ -495,12 +495,12 @@ class OcbFSMTests(unittest.TestCase):
             cipher.decrypt()
             cipher.verify(mac)
             self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+                              self.data)
 
             cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
             cipher.decrypt_and_verify(ct, mac)
             self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+                              self.data)
 
 
 class OcbRfc7253Test(unittest.TestCase):

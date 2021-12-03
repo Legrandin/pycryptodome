@@ -52,7 +52,7 @@ class SivTests(unittest.TestCase):
     key_384 = get_tag_random("key_384", 48)
     key_512 = get_tag_random("key_512", 64)
     nonce_96 = get_tag_random("nonce_128", 12)
-    data_128 = get_tag_random("data_128", 16)
+    data = get_tag_random("data", 128)
 
     def test_loopback_128(self):
         for key in self.key_256, self.key_384, self.key_512:
@@ -69,10 +69,10 @@ class SivTests(unittest.TestCase):
         AES.new(self.key_256, AES.MODE_SIV)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, self.nonce_96)
-        ct1, tag1 = cipher.encrypt_and_digest(self.data_128)
+        ct1, tag1 = cipher.encrypt_and_digest(self.data)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        ct2, tag2 = cipher.encrypt_and_digest(self.data_128)
+        ct2, tag2 = cipher.encrypt_and_digest(self.data)
         self.assertEqual(ct1 + tag1, ct2 + tag2)
 
     def test_nonce_must_be_bytes(self):
@@ -112,13 +112,13 @@ class SivTests(unittest.TestCase):
 
     def test_encrypt_excludes_decrypt(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        cipher.encrypt_and_digest(self.data_128)
-        self.assertRaises(TypeError, cipher.decrypt, self.data_128)
+        cipher.encrypt_and_digest(self.data)
+        self.assertRaises(TypeError, cipher.decrypt, self.data)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        cipher.encrypt_and_digest(self.data_128)
+        cipher.encrypt_and_digest(self.data)
         self.assertRaises(TypeError, cipher.decrypt_and_verify,
-                          self.data_128, self.data_128)
+                          self.data, self.data)
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
@@ -130,13 +130,13 @@ class SivTests(unittest.TestCase):
 
     def test_mac_len(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        _, mac = cipher.encrypt_and_digest(self.data_128)
+        _, mac = cipher.encrypt_and_digest(self.data)
         self.assertEqual(len(mac), 16)
 
     def test_invalid_mac(self):
         from Crypto.Util.strxor import strxor_c
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        ct, mac = cipher.encrypt_and_digest(self.data_128)
+        ct, mac = cipher.encrypt_and_digest(self.data)
 
         invalid_mac = strxor_c(mac, 0x01)
 
@@ -157,14 +157,14 @@ class SivTests(unittest.TestCase):
         # Encrypt
         key = bytearray(self.key_256)
         nonce = bytearray(self.nonce_96)
-        data = bytearray(self.data_128)
-        header = bytearray(self.data_128)
+        data = bytearray(self.data)
+        header = bytearray(self.data)
 
         cipher1 = AES.new(self.key_256,
                           AES.MODE_SIV,
                           nonce=self.nonce_96)
-        cipher1.update(self.data_128)
-        ct, tag = cipher1.encrypt_and_digest(self.data_128)
+        cipher1.update(self.data)
+        ct, tag = cipher1.encrypt_and_digest(self.data)
 
         cipher2 = AES.new(key,
                           AES.MODE_SIV,
@@ -182,7 +182,7 @@ class SivTests(unittest.TestCase):
         # Decrypt
         key = bytearray(self.key_256)
         nonce = bytearray(self.nonce_96)
-        header = bytearray(self.data_128)
+        header = bytearray(self.data)
         ct_ba = bytearray(ct)
         tag_ba = bytearray(tag)
 
@@ -195,21 +195,21 @@ class SivTests(unittest.TestCase):
         header[:3] = b'\xFF\xFF\xFF'
         pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
 
-        self.assertEqual(self.data_128, pt_test)
+        self.assertEqual(self.data, pt_test)
 
     def test_memoryview(self):
 
         # Encrypt
         key = memoryview(bytearray(self.key_256))
         nonce = memoryview(bytearray(self.nonce_96))
-        data = memoryview(bytearray(self.data_128))
-        header = memoryview(bytearray(self.data_128))
+        data = memoryview(bytearray(self.data))
+        header = memoryview(bytearray(self.data))
 
         cipher1 = AES.new(self.key_256,
                           AES.MODE_SIV,
                           nonce=self.nonce_96)
-        cipher1.update(self.data_128)
-        ct, tag = cipher1.encrypt_and_digest(self.data_128)
+        cipher1.update(self.data)
+        ct, tag = cipher1.encrypt_and_digest(self.data)
 
         cipher2 = AES.new(key,
                           AES.MODE_SIV,
@@ -227,7 +227,7 @@ class SivTests(unittest.TestCase):
         # Decrypt
         key = memoryview(bytearray(self.key_256))
         nonce = memoryview(bytearray(self.nonce_96))
-        header = memoryview(bytearray(self.data_128))
+        header = memoryview(bytearray(self.data))
         ct_ba = memoryview(bytearray(ct))
         tag_ba = memoryview(bytearray(tag))
 
@@ -240,15 +240,15 @@ class SivTests(unittest.TestCase):
         header[:3] = b'\xFF\xFF\xFF'
         pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
 
-        self.assertEqual(self.data_128, pt_test)
+        self.assertEqual(self.data, pt_test)
 
     def test_output_param(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct, tag = cipher.encrypt_and_digest(pt)
 
-        output = bytearray(16)
+        output = bytearray(128)
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         res, tag_out = cipher.encrypt_and_digest(pt, output=output)
         self.assertEqual(ct, output)
@@ -262,11 +262,11 @@ class SivTests(unittest.TestCase):
 
     def test_output_param_memoryview(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct, tag = cipher.encrypt_and_digest(pt)
 
-        output = memoryview(bytearray(16))
+        output = memoryview(bytearray(128))
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.encrypt_and_digest(pt, output=output)
         self.assertEqual(ct, output)
@@ -276,18 +276,19 @@ class SivTests(unittest.TestCase):
         self.assertEqual(pt, output)
 
     def test_output_param_neg(self):
+        LEN_PT = 128
 
-        pt = b'5' * 16
+        pt = b'5' * LEN_PT
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct, tag = cipher.encrypt_and_digest(pt)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt_and_digest, pt, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.encrypt_and_digest, pt, output=b'0' * LEN_PT)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt_and_verify, ct, tag, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.decrypt_and_verify, ct, tag, output=b'0' * LEN_PT)
 
-        shorter_output = bytearray(15)
+        shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.encrypt_and_digest, pt, output=shorter_output)
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
@@ -298,7 +299,7 @@ class SivFSMTests(unittest.TestCase):
 
     key_256 = get_tag_random("key_256", 32)
     nonce_96 = get_tag_random("nonce_96", 12)
-    data_128 = get_tag_random("data_128", 16)
+    data = get_tag_random("data", 128)
 
     def test_invalid_init_encrypt(self):
         # Path INIT->ENCRYPT fails
@@ -317,13 +318,13 @@ class SivFSMTests(unittest.TestCase):
         # Verify path INIT->UPDATE->DIGEST
         cipher = AES.new(self.key_256, AES.MODE_SIV,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         mac = cipher.digest()
 
         # Verify path INIT->UPDATE->VERIFY
         cipher = AES.new(self.key_256, AES.MODE_SIV,
                          nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         cipher.verify(mac)
 
     def test_valid_init_digest(self):
@@ -342,37 +343,37 @@ class SivFSMTests(unittest.TestCase):
     def test_valid_multiple_digest_or_verify(self):
         # Multiple calls to digest
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         first_mac = cipher.digest()
         for x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         for x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):
         # encrypt_and_digest
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        cipher.update(self.data_128)
-        ct, mac = cipher.encrypt_and_digest(self.data_128)
+        cipher.update(self.data)
+        ct, mac = cipher.encrypt_and_digest(self.data)
 
         # decrypt_and_verify
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         pt = cipher.decrypt_and_verify(ct, mac)
-        self.assertEqual(self.data_128, pt)
+        self.assertEqual(self.data, pt)
 
     def test_invalid_multiple_encrypt_and_digest(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        ct, tag = cipher.encrypt_and_digest(self.data_128)
+        ct, tag = cipher.encrypt_and_digest(self.data)
         self.assertRaises(TypeError, cipher.encrypt_and_digest, b'')
 
     def test_invalid_multiple_decrypt_and_verify(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        ct, tag = cipher.encrypt_and_digest(self.data_128)
+        ct, tag = cipher.encrypt_and_digest(self.data)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.decrypt_and_verify(ct, tag)

@@ -473,10 +473,10 @@ class TestOutput(unittest.TestCase):
         nonce = b'5' * 8
         cipher = ChaCha20.new(key=key, nonce=nonce)
 
-        pt = b'5' * 16
+        pt = b'5' * 300
         ct = cipher.encrypt(pt)
 
-        output = bytearray(16)
+        output = bytearray(len(pt))
         cipher = ChaCha20.new(key=key, nonce=nonce)
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
@@ -487,7 +487,7 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        output = memoryview(bytearray(16))
+        output = memoryview(bytearray(len(pt)))
         cipher = ChaCha20.new(key=key, nonce=nonce)
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
@@ -497,12 +497,12 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(pt, output)
 
         cipher = ChaCha20.new(key=key, nonce=nonce)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*len(pt))
 
         cipher = ChaCha20.new(key=key, nonce=nonce)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*len(pt))
 
-        shorter_output = bytearray(7)
+        shorter_output = bytearray(len(pt) - 1)
 
         cipher = ChaCha20.new(key=key, nonce=nonce)
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)

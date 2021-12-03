@@ -286,18 +286,19 @@ class BlockChainingTests(unittest.TestCase):
         self.assertEqual(pt, output)
 
     def test_output_param_neg(self):
+        LEN_PT = 128
 
-        pt = b'5' * 128
+        pt = b'5' * LEN_PT
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0' * LEN_PT)
 
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0' * LEN_PT)
 
-        shorter_output = bytearray(15)
+        shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(b'4'*16, self.aes_mode, iv=self.iv_128)

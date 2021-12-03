@@ -278,49 +278,50 @@ class CtrTests(unittest.TestCase):
 
     def test_output_param(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         ct = cipher.encrypt(pt)
 
-        output = bytearray(16)
+        output = bytearray(128)
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
     def test_output_param_memoryview(self):
-        
-        pt = b'5' * 16
+
+        pt = b'5' * 128
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         ct = cipher.encrypt(pt)
 
-        output = memoryview(bytearray(16))
+        output = memoryview(bytearray(128))
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
-        
+
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
 
     def test_output_param_neg(self):
+        LEN_PT = 128
 
-        pt = b'5' * 16
+        pt = b'5' * LEN_PT
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
-        
-        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0' * LEN_PT)
 
-        shorter_output = bytearray(15)
+        cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0' * LEN_PT)
+
+        shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(b'4'*16, AES.MODE_CTR, nonce=self.nonce_64)

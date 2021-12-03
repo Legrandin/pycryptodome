@@ -48,7 +48,7 @@ class CcmTests(unittest.TestCase):
 
     key_128 = get_tag_random("key_128", 16)
     nonce_96 = get_tag_random("nonce_128", 12)
-    data_128 = get_tag_random("data_128", 16)
+    data = get_tag_random("data", 128)
 
     def test_loopback_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
@@ -69,10 +69,10 @@ class CcmTests(unittest.TestCase):
         self.assertNotEqual(nonce1, nonce2)
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, self.nonce_96)
-        ct = cipher.encrypt(self.data_128)
+        ct = cipher.encrypt(self.data)
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        self.assertEqual(ct, cipher.encrypt(self.data_128))
+        self.assertEqual(ct, cipher.encrypt(self.data))
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CCM,
@@ -145,18 +145,18 @@ class CcmTests(unittest.TestCase):
         for mac_len in range(4, 16 + 1, 2):
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
                              mac_len=mac_len)
-            _, mac = cipher.encrypt_and_digest(self.data_128)
+            _, mac = cipher.encrypt_and_digest(self.data)
             self.assertEqual(len(mac), mac_len)
 
         # Default MAC length
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        _, mac = cipher.encrypt_and_digest(self.data_128)
+        _, mac = cipher.encrypt_and_digest(self.data)
         self.assertEqual(len(mac), 16)
 
     def test_invalid_mac(self):
         from Crypto.Util.strxor import strxor_c
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        ct, mac = cipher.encrypt_and_digest(self.data_128)
+        ct, mac = cipher.encrypt_and_digest(self.data)
 
         invalid_mac = strxor_c(mac, 0x01)
 
@@ -181,58 +181,64 @@ class CcmTests(unittest.TestCase):
         # Too large
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
                          assoc_len=15)
-        self.assertRaises(ValueError, cipher.update, self.data_128)
+        self.assertRaises(ValueError, cipher.update, self.data)
 
     def test_shorter_assoc_data_than_expected(self):
+        DATA_LEN = len(self.data)
+
         # With plaintext
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         assoc_len=17)
-        cipher.update(self.data_128)
-        self.assertRaises(ValueError, cipher.encrypt, self.data_128)
+                         assoc_len=DATA_LEN + 1)
+        cipher.update(self.data)
+        self.assertRaises(ValueError, cipher.encrypt, self.data)
 
         # With empty plaintext
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         assoc_len=17)
-        cipher.update(self.data_128)
+                         assoc_len=DATA_LEN + 1)
+        cipher.update(self.data)
         self.assertRaises(ValueError, cipher.digest)
 
         # With ciphertext
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         assoc_len=17)
-        cipher.update(self.data_128)
-        self.assertRaises(ValueError, cipher.decrypt, self.data_128)
+                         assoc_len=DATA_LEN + 1)
+        cipher.update(self.data)
+        self.assertRaises(ValueError, cipher.decrypt, self.data)
 
         # With empty ciphertext
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         mac = cipher.digest()
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         assoc_len=17)
-        cipher.update(self.data_128)
+                         assoc_len=DATA_LEN + 1)
+        cipher.update(self.data)
         self.assertRaises(ValueError, cipher.verify, mac)
 
     def test_shorter_and_longer_plaintext_than_declared(self):
+        DATA_LEN = len(self.data)
+
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         msg_len=17)
-        cipher.encrypt(self.data_128)
+                         msg_len=DATA_LEN + 1)
+        cipher.encrypt(self.data)
         self.assertRaises(ValueError, cipher.digest)
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         msg_len=15)
-        self.assertRaises(ValueError, cipher.encrypt, self.data_128)
+                         msg_len=DATA_LEN - 1)
+        self.assertRaises(ValueError, cipher.encrypt, self.data)
 
     def test_shorter_ciphertext_than_declared(self):
+        DATA_LEN = len(self.data)
+
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        ct, mac = cipher.encrypt_and_digest(self.data_128)
+        ct, mac = cipher.encrypt_and_digest(self.data)
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         msg_len=17)
+                         msg_len=DATA_LEN + 1)
         cipher.decrypt(ct)
         self.assertRaises(ValueError, cipher.verify, mac)
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96,
-                         msg_len=15)
+                         msg_len=DATA_LEN - 1)
         self.assertRaises(ValueError, cipher.decrypt, ct)
 
     def test_message_chunks(self):
@@ -283,14 +289,14 @@ class CcmTests(unittest.TestCase):
         # Encrypt
         key_ba = bytearray(self.key_128)
         nonce_ba = bytearray(self.nonce_96)
-        header_ba = bytearray(self.data_128)
-        data_ba = bytearray(self.data_128)
+        header_ba = bytearray(self.data)
+        data_ba = bytearray(self.data)
 
         cipher1 = AES.new(self.key_128,
                           AES.MODE_CCM,
                           nonce=self.nonce_96)
-        cipher1.update(self.data_128)
-        ct = cipher1.encrypt(self.data_128)
+        cipher1.update(self.data)
+        ct = cipher1.encrypt(self.data)
         tag = cipher1.digest()
 
         cipher2 = AES.new(key_ba,
@@ -311,7 +317,7 @@ class CcmTests(unittest.TestCase):
         # Decrypt
         key_ba = bytearray(self.key_128)
         nonce_ba = bytearray(self.nonce_96)
-        header_ba = bytearray(self.data_128)
+        header_ba = bytearray(self.data)
         del data_ba
 
         cipher4 = AES.new(key_ba,
@@ -323,21 +329,21 @@ class CcmTests(unittest.TestCase):
         header_ba[:3] = b"\xFF\xFF\xFF"
         pt_test = cipher4.decrypt_and_verify(bytearray(ct_test), bytearray(tag_test))
 
-        self.assertEqual(self.data_128, pt_test)
+        self.assertEqual(self.data, pt_test)
 
     def test_memoryview(self):
 
         # Encrypt
         key_mv = memoryview(bytearray(self.key_128))
         nonce_mv = memoryview(bytearray(self.nonce_96))
-        header_mv = memoryview(bytearray(self.data_128))
-        data_mv = memoryview(bytearray(self.data_128))
+        header_mv = memoryview(bytearray(self.data))
+        data_mv = memoryview(bytearray(self.data))
 
         cipher1 = AES.new(self.key_128,
                           AES.MODE_CCM,
                           nonce=self.nonce_96)
-        cipher1.update(self.data_128)
-        ct = cipher1.encrypt(self.data_128)
+        cipher1.update(self.data)
+        ct = cipher1.encrypt(self.data)
         tag = cipher1.digest()
 
         cipher2 = AES.new(key_mv,
@@ -358,7 +364,7 @@ class CcmTests(unittest.TestCase):
         # Decrypt
         key_mv = memoryview(bytearray(self.key_128))
         nonce_mv = memoryview(bytearray(self.nonce_96))
-        header_mv = memoryview(bytearray(self.data_128))
+        header_mv = memoryview(bytearray(self.data))
         del data_mv
 
         cipher4 = AES.new(key_mv,
@@ -370,16 +376,16 @@ class CcmTests(unittest.TestCase):
         header_mv[:3] = b"\xFF\xFF\xFF"
         pt_test = cipher4.decrypt_and_verify(memoryview(ct_test), memoryview(tag_test))
 
-        self.assertEqual(self.data_128, pt_test)
+        self.assertEqual(self.data, pt_test)
 
     def test_output_param(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
         tag = cipher.digest()
 
-        output = bytearray(16)
+        output = bytearray(128)
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
@@ -403,11 +409,11 @@ class CcmTests(unittest.TestCase):
 
     def test_output_param_memoryview(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
 
-        output = memoryview(bytearray(16))
+        output = memoryview(bytearray(128))
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
@@ -439,18 +445,18 @@ class CcmFSMTests(unittest.TestCase):
 
     key_128 = get_tag_random("key_128", 16)
     nonce_96 = get_tag_random("nonce_128", 12)
-    data_128 = get_tag_random("data_128", 16)
+    data = get_tag_random("data", 16)
 
     def test_valid_init_encrypt_decrypt_digest_verify(self):
         # No authenticated data, fixed plaintext
         for assoc_len in (None, 0):
-            for msg_len in (None, len(self.data_128)):
+            for msg_len in (None, len(self.data)):
                 # Verify path INIT->ENCRYPT->DIGEST
                 cipher = AES.new(self.key_128, AES.MODE_CCM,
                                  nonce=self.nonce_96,
                                  assoc_len=assoc_len,
                                  msg_len=msg_len)
-                ct = cipher.encrypt(self.data_128)
+                ct = cipher.encrypt(self.data)
                 mac = cipher.digest()
 
                 # Verify path INIT->DECRYPT->VERIFY
@@ -463,14 +469,14 @@ class CcmFSMTests(unittest.TestCase):
 
     def test_valid_init_update_digest_verify(self):
         # No plaintext, fixed authenticated data
-        for assoc_len in (None, len(self.data_128)):
+        for assoc_len in (None, len(self.data)):
             for msg_len in (None, 0):
                 # Verify path INIT->UPDATE->DIGEST
                 cipher = AES.new(self.key_128, AES.MODE_CCM,
                                  nonce=self.nonce_96,
                                  assoc_len=assoc_len,
                                  msg_len=msg_len)
-                cipher.update(self.data_128)
+                cipher.update(self.data)
                 mac = cipher.digest()
 
                 # Verify path INIT->UPDATE->VERIFY
@@ -478,20 +484,20 @@ class CcmFSMTests(unittest.TestCase):
                                  nonce=self.nonce_96,
                                  assoc_len=assoc_len,
                                  msg_len=msg_len)
-                cipher.update(self.data_128)
+                cipher.update(self.data)
                 cipher.verify(mac)
 
     def test_valid_full_path(self):
         # Fixed authenticated data, fixed plaintext
-        for assoc_len in (None, len(self.data_128)):
-            for msg_len in (None, len(self.data_128)):
+        for assoc_len in (None, len(self.data)):
+            for msg_len in (None, len(self.data)):
                 # Verify path INIT->UPDATE->ENCRYPT->DIGEST
                 cipher = AES.new(self.key_128, AES.MODE_CCM,
                                  nonce=self.nonce_96,
                                  assoc_len=assoc_len,
                                  msg_len=msg_len)
-                cipher.update(self.data_128)
-                ct = cipher.encrypt(self.data_128)
+                cipher.update(self.data)
+                ct = cipher.encrypt(self.data)
                 mac = cipher.digest()
 
                 # Verify path INIT->UPDATE->DECRYPT->VERIFY
@@ -499,7 +505,7 @@ class CcmFSMTests(unittest.TestCase):
                                  nonce=self.nonce_96,
                                  assoc_len=assoc_len,
                                  msg_len=msg_len)
-                cipher.update(self.data_128)
+                cipher.update(self.data)
                 cipher.decrypt(ct)
                 cipher.verify(mac)
 
@@ -519,8 +525,8 @@ class CcmFSMTests(unittest.TestCase):
     def test_valid_multiple_encrypt_or_decrypt(self):
         # Only possible if msg_len is declared in advance
         for method_name in "encrypt", "decrypt":
-            for auth_data in (None, b"333", self.data_128,
-                              self.data_128 + b"3"):
+            for auth_data in (None, b"333", self.data,
+                              self.data + b"3"):
                 if auth_data is None:
                     assoc_len = None
                 else:
@@ -532,36 +538,36 @@ class CcmFSMTests(unittest.TestCase):
                 if auth_data is not None:
                     cipher.update(auth_data)
                 method = getattr(cipher, method_name)
-                method(self.data_128)
-                method(self.data_128)
-                method(self.data_128)
-                method(self.data_128)
+                method(self.data)
+                method(self.data)
+                method(self.data)
+                method(self.data)
 
     def test_valid_multiple_digest_or_verify(self):
         # Multiple calls to digest
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         first_mac = cipher.digest()
         for x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         for x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):
         # encrypt_and_digest
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        cipher.update(self.data_128)
-        ct, mac = cipher.encrypt_and_digest(self.data_128)
+        cipher.update(self.data)
+        ct, mac = cipher.encrypt_and_digest(self.data)
 
         # decrypt_and_verify
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        cipher.update(self.data_128)
+        cipher.update(self.data)
         pt = cipher.decrypt_and_verify(ct, mac)
-        self.assertEqual(self.data_128, pt)
+        self.assertEqual(self.data, pt)
 
     def test_invalid_multiple_encrypt_decrypt_without_msg_len(self):
         # Once per method, with or without assoc. data
@@ -570,10 +576,10 @@ class CcmFSMTests(unittest.TestCase):
                 cipher = AES.new(self.key_128, AES.MODE_CCM,
                                  nonce=self.nonce_96)
                 if assoc_data_present:
-                    cipher.update(self.data_128)
+                    cipher.update(self.data)
                 method = getattr(cipher, method_name)
-                method(self.data_128)
-                self.assertRaises(TypeError, method, self.data_128)
+                method(self.data)
+                self.assertRaises(TypeError, method, self.data)
 
     def test_invalid_mixing_encrypt_decrypt(self):
         # Once per method, with or without assoc. data
@@ -584,25 +590,25 @@ class CcmFSMTests(unittest.TestCase):
                                  nonce=self.nonce_96,
                                  msg_len=32)
                 if assoc_data_present:
-                    cipher.update(self.data_128)
-                getattr(cipher, method1_name)(self.data_128)
+                    cipher.update(self.data)
+                getattr(cipher, method1_name)(self.data)
                 self.assertRaises(TypeError, getattr(cipher, method2_name),
-                                  self.data_128)
+                                  self.data)
 
     def test_invalid_encrypt_or_update_after_digest(self):
         for method_name in "encrypt", "update":
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-            cipher.encrypt(self.data_128)
+            cipher.encrypt(self.data)
             cipher.digest()
             self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+                              self.data)
 
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-            cipher.encrypt_and_digest(self.data_128)
+            cipher.encrypt_and_digest(self.data)
 
     def test_invalid_decrypt_or_update_after_verify(self):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        ct = cipher.encrypt(self.data_128)
+        ct = cipher.encrypt(self.data)
         mac = cipher.digest()
 
         for method_name in "decrypt", "update":
@@ -610,12 +616,12 @@ class CcmFSMTests(unittest.TestCase):
             cipher.decrypt(ct)
             cipher.verify(mac)
             self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+                              self.data)
 
             cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
             cipher.decrypt_and_verify(ct, mac)
             self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+                              self.data)
 
 
 class TestVectors(unittest.TestCase):

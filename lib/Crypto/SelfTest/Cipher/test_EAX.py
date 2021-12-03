@@ -331,12 +331,12 @@ class EaxTests(unittest.TestCase):
 
     def test_output_param(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
         tag = cipher.digest()
 
-        output = bytearray(16)
+        output = bytearray(128)
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
@@ -360,11 +360,11 @@ class EaxTests(unittest.TestCase):
 
     def test_output_param_memoryview(self):
 
-        pt = b'5' * 16
+        pt = b'5' * 128
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
 
-        output = memoryview(bytearray(16))
+        output = memoryview(bytearray(128))
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
@@ -374,18 +374,19 @@ class EaxTests(unittest.TestCase):
         self.assertEqual(pt, output)
 
     def test_output_param_neg(self):
+        LEN_PT = 16
 
-        pt = b'5' * 16
+        pt = b'5' * LEN_PT
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0' * LEN_PT)
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0' * LEN_PT)
 
-        shorter_output = bytearray(15)
+        shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
