@@ -43,14 +43,6 @@ if sys.version_info >= (3, 8):
     @overload
     def new(key: Buffer,
             mode: MODE_ECB,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
-            nonce : Buffer = ...,
-            segment_size : int = ...,
-            mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             EcbMode: ...
 
@@ -59,12 +51,6 @@ if sys.version_info >= (3, 8):
             mode: MODE_CBC,
             iv : Buffer = ...,
             IV : Buffer = ...,
-            nonce : Buffer = ...,
-            segment_size : int = ...,
-            mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             CbcMode: ...
 
@@ -75,10 +61,6 @@ if sys.version_info >= (3, 8):
             IV : Buffer = ...,
             nonce : Buffer = ...,
             segment_size : int = ...,
-            mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             CfbMode: ...
 
@@ -87,24 +69,13 @@ if sys.version_info >= (3, 8):
             mode: MODE_OFB,
             iv : Buffer = ...,
             IV : Buffer = ...,
-            nonce : Buffer = ...,
-            segment_size : int = ...,
-            mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             OfbMode: ...
 
     @overload
     def new(key: Buffer,
             mode: MODE_CTR,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
             nonce : Buffer = ...,
-            segment_size : int = ...,
-            mac_len : int = ...,
-            assoc_len : int = ...,
             initial_value : Union[int, Buffer] = ...,
             counter : Dict = ...,
             use_aesni : bool = ...) -> \
@@ -115,82 +86,46 @@ if sys.version_info >= (3, 8):
             mode: MODE_OPENPGP,
             iv : Buffer = ...,
             IV : Buffer = ...,
-            nonce : Buffer = ...,
-            segment_size : int = ...,
-            mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             OpenPgpMode: ...
 
     @overload
     def new(key: Buffer,
             mode: MODE_CCM,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
             nonce : Buffer = ...,
-            segment_size : int = ...,
             mac_len : int = ...,
             assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             CcmMode: ...
 
     @overload
     def new(key: Buffer,
             mode: MODE_EAX,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
             nonce : Buffer = ...,
-            segment_size : int = ...,
             mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             EaxMode: ...
 
     @overload
     def new(key: Buffer,
             mode: MODE_SIV,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
             nonce : Buffer = ...,
-            segment_size : int = ...,
-            mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             SivMode: ...
 
     @overload
     def new(key: Buffer,
             mode: MODE_GCM,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
             nonce : Buffer = ...,
-            segment_size : int = ...,
             mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             GcmMode: ...
 
     @overload
     def new(key: Buffer,
             mode: MODE_OCB,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
             nonce : Buffer = ...,
-            segment_size : int = ...,
             mac_len : int = ...,
-            assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
-            counter : Dict = ...,
             use_aesni : bool = ...) -> \
             OcbMode: ...
 
