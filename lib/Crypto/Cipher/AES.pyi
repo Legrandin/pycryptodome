@@ -59,7 +59,6 @@ if sys.version_info >= (3, 8):
             mode: MODE_CFB,
             iv : Buffer = ...,
             IV : Buffer = ...,
-            nonce : Buffer = ...,
             segment_size : int = ...,
             use_aesni : bool = ...) -> \
             CfbMode: ...
