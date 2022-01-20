@@ -36,6 +36,7 @@ from Crypto.Util import number
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Random import get_random_bytes as rng
 
+SHAMIR_BLOCK_SIZE = 16
 
 def _mult_gf2(f1, f2):
     """Multiply two polynomials in GF(2)"""
@@ -276,3 +277,44 @@ class Shamir(object):
                     denominator *= x_j + x_m
             result += y_j * numerator * denominator.inverse()
         return result.encode()
+
+    @staticmethod
+    def split_large(k, n, secret, ssss=False):
+        """
+        Wrapper for Shamir.split()
+        when len(key) > SHAMIR_BLOCK_SIZE (16)
+        """
+        if isinstance(secret, bytes) is not True:
+            raise TypeError("Secret must be bytes")
+        if len(secret) % 16 != 0:
+            raise ValueError("Secret size must be in 16 byte increments")
+
+        blocks = len(secret) // SHAMIR_BLOCK_SIZE
+        shares = [b'' for _ in range(n)]
+        for i in range(blocks):
+            block_shares = Shamir.split(k, n,
+                    secret[i*SHAMIR_BLOCK_SIZE:(i+1)*SHAMIR_BLOCK_SIZE], ssss)
+            for j in range(n):
+                shares[j] += block_shares[j][1]
+        return [(i+1,shares[i]) for i in range(n)]
+
+    @staticmethod
+    def combine_large(shares, ssss=False):
+        """
+        Wrapper for Shamir.combine()
+        when len(key) > SHAMIR_BLOCK_SIZE (16)
+        """
+        share_len = len(shares[0][1])
+        for share in shares:
+            if len(share[1]) % 16 != 0:
+                raise ValueError(f"Share #{share[0]} is not in 16 byte increments")
+            if len(share[1]) != share_len:
+                raise ValueError("Share sizes are inconsistant")
+        blocks = share_len // SHAMIR_BLOCK_SIZE
+        result = b''
+        for i in range(blocks):
+            block_shares = [
+                    (int(idx), share[i*SHAMIR_BLOCK_SIZE:(i+1)*SHAMIR_BLOCK_SIZE]) 
+                for idx, share in shares]
+            result += Shamir.combine(block_shares, ssss)
+        return result
