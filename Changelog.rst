@@ -1,6 +1,13 @@
 Changelog
 =========
 
+In progress
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#590: Fixed typing info for ``Crypto.PublicKey.ECC``.
+
 3.12.0 (4 December 2021)
 ++++++++++++++++++++++++++
 
