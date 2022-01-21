@@ -91,6 +91,51 @@ int ec_ws_is_pai(EcPoint *ecp);
 _Curve = namedtuple("_Curve", "p b order Gx Gy G modulus_bits oid context desc openssh")
 _curves = {}
 
+p224_names = ["p224", "NIST P-224", "P-224", "prime224v1", "secp224r1",
+              "nistp224"]
+
+
+def init_p224():
+    p = 0xffffffffffffffffffffffffffffffff000000000000000000000001
+    b = 0xb4050a850c04b3abf54132565044b0b7d7bfd8ba270b39432355ffb4
+    order = 0xffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d
+    Gx = 0xb70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21
+    Gy = 0xbd376388b5f723fb4c22dfe6cd4375a05a07476444d5819985007e34
+
+    p224_modulus = long_to_bytes(p, 28)
+    p224_b = long_to_bytes(b, 28)
+    p224_order = long_to_bytes(order, 28)
+
+    ec_p224_context = VoidPointer()
+    result = _ec_lib.ec_ws_new_context(ec_p224_context.address_of(),
+                                       c_uint8_ptr(p224_modulus),
+                                       c_uint8_ptr(p224_b),
+                                       c_uint8_ptr(p224_order),
+                                       c_size_t(len(p224_modulus)),
+                                       c_ulonglong(getrandbits(64))
+                                       )
+    if result:
+        raise ImportError("Error %d initializing P-224 context" % result)
+
+    context = SmartPointer(ec_p224_context.get(), _ec_lib.ec_free_context)
+    p224 = _Curve(Integer(p),
+                  Integer(b),
+                  Integer(order),
+                  Integer(Gx),
+                  Integer(Gy),
+                  None,
+                  224,
+                  "1.3.132.0.33",    # SEC 2
+                  context,
+                  "NIST P-224",
+                  "ecdsa-sha2-nistp224")
+    global p224_names
+    _curves.update(dict.fromkeys(p224_names, p224))
+
+
+init_p224()
+del init_p224
+
 
 p256_names = ["p256", "NIST P-256", "P-256", "prime256v1", "secp256r1",
               "nistp256"]
@@ -407,6 +452,11 @@ class EccPoint(object):
 
 
 # Last piece of initialization
+p224_G = EccPoint(_curves['p224'].Gx, _curves['p224'].Gy, "p224")
+p224 = _curves['p224']._replace(G=p224_G)
+_curves.update(dict.fromkeys(p224_names, p224))
+del p224_G, p224, p224_names
+
 p256_G = EccPoint(_curves['p256'].Gx, _curves['p256'].Gy, "p256")
 p256 = _curves['p256']._replace(G=p256_G)
 _curves.update(dict.fromkeys(p256_names, p256))

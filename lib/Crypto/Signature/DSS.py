@@ -291,22 +291,26 @@ class FipsEcDsaSigScheme(DssSigScheme):
                                     randfunc=self._randfunc)
 
     def _valid_hash(self, msg_hash):
-        """Verify that SHA-[23] (256|384|512) bits are used to
-        match the security of P-256 (128 bits), P-384 (192 bits)
-        or P-521 (256 bits)"""
+        """Verify that the strength of the hash matches or exceeds
+        the strength of the EC. We fail if the hash is too weak."""
 
         modulus_bits = self._key.pointQ.size_in_bits()
 
+        sha224 = ("2.16.840.1.101.3.4.2.4", "2.16.840.1.101.3.4.2.7")
         sha256 = ("2.16.840.1.101.3.4.2.1", "2.16.840.1.101.3.4.2.8")
         sha384 = ("2.16.840.1.101.3.4.2.2", "2.16.840.1.101.3.4.2.9")
         sha512 = ("2.16.840.1.101.3.4.2.3", "2.16.840.1.101.3.4.2.10")
 
-        if msg_hash.oid in sha256:
-            return modulus_bits <= 256
+        if msg_hash.oid in sha224:
+            result = modulus_bits <= 224
+        elif msg_hash.oid in sha256:
+            result = modulus_bits <= 256
         elif msg_hash.oid in sha384:
-            return modulus_bits <= 384
+            result = modulus_bits <= 384
         else:
-            return msg_hash.oid in sha512
+            result = msg_hash.oid in sha512
+
+        return result
 
 
 def new(key, mode, encoding='binary', randfunc=None):

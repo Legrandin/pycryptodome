@@ -84,6 +84,19 @@ def compact(lines):
     return unhexlify(tostr(ext).replace(" ", "").replace(":", ""))
 
 
+def create_ref_keys_p224():
+    key_len = 28
+    key_lines = load_file("ecc_p224.txt").splitlines()
+    private_key_d = bytes_to_long(compact(key_lines[2:4]))
+    public_key_xy = compact(key_lines[5:9])
+    assert bord(public_key_xy[0]) == 4  # Uncompressed
+    public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
+    public_key_y = bytes_to_long(public_key_xy[key_len+1:])
+
+    return (ECC.construct(curve="P-224", d=private_key_d),
+            ECC.construct(curve="P-224", point_x=public_key_x, point_y=public_key_y))
+
+
 def create_ref_keys_p256():
     key_len = 32
     key_lines = load_file("ecc_p256.txt").splitlines()
@@ -96,6 +109,7 @@ def create_ref_keys_p256():
     return (ECC.construct(curve="P-256", d=private_key_d),
             ECC.construct(curve="P-256", point_x=public_key_x, point_y=public_key_y))
 
+
 def create_ref_keys_p384():
     key_len = 48
     key_lines = load_file("ecc_p384.txt").splitlines()
@@ -107,6 +121,7 @@ def create_ref_keys_p384():
 
     return (ECC.construct(curve="P-384", d=private_key_d),
             ECC.construct(curve="P-384", point_x=public_key_x, point_y=public_key_y))
+
 
 def create_ref_keys_p521():
     key_len = 66
@@ -139,6 +154,116 @@ class TestImport(unittest.TestCase):
 
     def test_empty(self):
         self.assertRaises(ValueError, ECC.import_key, b"")
+
+
+class TestImport_P224(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(TestImport_P224, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_p224()
+
+    def test_import_public_der(self):
+        key_file = load_file("ecc_p224_public.der")
+
+        key = ECC._import_subjectPublicKeyInfo(key_file)
+        self.assertEqual(self.ref_public, key)
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(self.ref_public, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_sec1_uncompressed(self):
+        key_file = load_file("ecc_p224_public.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P224')
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_sec1_compressed(self):
+        key_file = load_file("ecc_p224_public_compressed.der")
+        value = extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name='P224')
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_private_der(self):
+        key_file = load_file("ecc_p224_private.der")
+
+        key = ECC._import_private_der(key_file, None)
+        self.assertEqual(self.ref_private, key)
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(self.ref_private, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pkcs8_clear(self):
+        key_file = load_file("ecc_p224_private_p8_clear.der")
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(self.ref_private, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pkcs8_in_pem_clear(self):
+        key_file = load_file("ecc_p224_private_p8_clear.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pkcs8_encrypted_1(self):
+        key_file = load_file("ecc_p224_private_p8.der")
+
+        key = ECC._import_der(key_file, "secret")
+        self.assertEqual(self.ref_private, key)
+
+        key = ECC.import_key(key_file, "secret")
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pkcs8_encrypted_2(self):
+        key_file = load_file("ecc_p224_private_p8.pem")
+
+        key = ECC.import_key(key_file, "secret")
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_x509_der(self):
+        key_file = load_file("ecc_p224_x509.der")
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(self.ref_public, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_public_pem(self):
+        key_file = load_file("ecc_p224_public.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_private_pem(self):
+        key_file = load_file("ecc_p224_private.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pem_encrypted(self):
+        for algo in "des3", "aes128", "aes192", "aes256", "aes256_gcm":
+            key_file = load_file("ecc_p224_private_enc_%s.pem" % algo)
+
+            key = ECC.import_key(key_file, "secret")
+            self.assertEqual(self.ref_private, key)
+
+            key = ECC.import_key(tostr(key_file), b"secret")
+            self.assertEqual(self.ref_private, key)
+
+    def test_import_x509_pem(self):
+        key_file = load_file("ecc_p224_x509.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
 
 
 class TestImport_P256(unittest.TestCase):
@@ -806,22 +931,6 @@ class TestExport_P256(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH",
                                       passphrase="secret")
 
-    def test_unsupported_curve(self):
-
-        # openssl ecparam -name secp224r1 -genkey -noout -out strange-curve.pem -conv_form uncompressed
-        curve = """-----BEGIN EC PRIVATE KEY-----
-MGgCAQEEHEi7xTHW+5oT8wgpjoEKV7uwMuY8rt2YUZe4j1SgBwYFK4EEACGhPAM6
-AATJgfOG+Bnki8robpNM8MtArji43GU9up4B0x9sVhqB+fZP+hXgV9ITN7YX4E/k
-gVnJp9EBND/tHQ==
------END EC PRIVATE KEY-----"""
-
-        from Crypto.PublicKey.ECC import UnsupportedEccFeature
-        try:
-            ECC.import_key(curve)
-        except UnsupportedEccFeature as uef:
-            assert("1.3.132.0.33" in str(uef))
-        else:
-            assert(False)
 
     def test_compressed_curve(self):
 
@@ -1420,6 +1529,7 @@ def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestImport)
     try:
+        tests += list_test_cases(TestImport_P224)
         tests += list_test_cases(TestImport_P256)
         tests += list_test_cases(TestImport_P384)
         tests += list_test_cases(TestImport_P521)

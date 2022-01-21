@@ -623,6 +623,9 @@ class Det_DSA_Tests(unittest.TestCase):
 
 class Det_ECDSA_Tests(unittest.TestCase):
 
+    key_priv_p224 = ECC.construct(curve="P-224", d=0xF220266E1105BFE3083E03EC7A3A654651F45E37167E88600BF257C1)
+    key_pub_p224 = key_priv_p224.public_key()
+
     key_priv_p256 = ECC.construct(curve="P-256", d=0xC9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721)
     key_pub_p256 = key_priv_p256.public_key()
 
@@ -635,6 +638,79 @@ class Det_ECDSA_Tests(unittest.TestCase):
     # This is a sequence of items:
     # message, k, r, s, hash module
     # taken from RFC6979
+    signatures_p224_ = (
+        (
+            "sample",
+            "7EEFADD91110D8DE6C2C470831387C50D3357F7F4D477054B8B426BC",
+            "22226F9D40A96E19C4A301CE5B74B115303C0F3A4FD30FC257FB57AC",
+            "66D1CDD83E3AF75605DD6E2FEFF196D30AA7ED7A2EDF7AF475403D69",
+            SHA1
+        ),
+        (
+            "sample",
+            "C1D1F2F10881088301880506805FEB4825FE09ACB6816C36991AA06D",
+            "1CDFE6662DDE1E4A1EC4CDEDF6A1F5A2FB7FBD9145C12113E6ABFD3E",
+            "A6694FD7718A21053F225D3F46197CA699D45006C06F871808F43EBC",
+            SHA224
+        ),
+        (
+            "sample",
+            "AD3029E0278F80643DE33917CE6908C70A8FF50A411F06E41DEDFCDC",
+            "61AA3DA010E8E8406C656BC477A7A7189895E7E840CDFE8FF42307BA",
+            "BC814050DAB5D23770879494F9E0A680DC1AF7161991BDE692B10101",
+            SHA256
+        ),
+        (
+            "sample",
+            "52B40F5A9D3D13040F494E83D3906C6079F29981035C7BD51E5CAC40",
+            "0B115E5E36F0F9EC81F1325A5952878D745E19D7BB3EABFABA77E953",
+            "830F34CCDFE826CCFDC81EB4129772E20E122348A2BBD889A1B1AF1D",
+            SHA384
+        ),
+        (
+            "sample",
+            "9DB103FFEDEDF9CFDBA05184F925400C1653B8501BAB89CEA0FBEC14",
+            "074BD1D979D5F32BF958DDC61E4FB4872ADCAFEB2256497CDAC30397",
+            "A4CECA196C3D5A1FF31027B33185DC8EE43F288B21AB342E5D8EB084",
+            SHA512
+        ),
+        (
+            "test",
+            "2519178F82C3F0E4F87ED5883A4E114E5B7A6E374043D8EFD329C253",
+            "DEAA646EC2AF2EA8AD53ED66B2E2DDAA49A12EFD8356561451F3E21C",
+            "95987796F6CF2062AB8135271DE56AE55366C045F6D9593F53787BD2",
+            SHA1
+        ),
+        (
+            "test",
+            "DF8B38D40DCA3E077D0AC520BF56B6D565134D9B5F2EAE0D34900524",
+            "C441CE8E261DED634E4CF84910E4C5D1D22C5CF3B732BB204DBEF019",
+            "902F42847A63BDC5F6046ADA114953120F99442D76510150F372A3F4",
+            SHA224
+        ),
+        (
+            "test",
+            "FF86F57924DA248D6E44E8154EB69F0AE2AEBAEE9931D0B5A969F904",
+            "AD04DDE87B84747A243A631EA47A1BA6D1FAA059149AD2440DE6FBA6",
+            "178D49B1AE90E3D8B629BE3DB5683915F4E8C99FDF6E666CF37ADCFD",
+            SHA256
+        ),
+        (
+            "test",
+            "7046742B839478C1B5BD31DB2E862AD868E1A45C863585B5F22BDC2D",
+            "389B92682E399B26518A95506B52C03BC9379A9DADF3391A21FB0EA4",
+            "414A718ED3249FF6DBC5B50C27F71F01F070944DA22AB1F78F559AAB",
+            SHA384
+        ),
+        (
+            "test",
+            "E39C2AA4EA6BE2306C72126D40ED77BF9739BB4D6EF2BBB1DCB6169D",
+            "049F050477C5ADD858CAC56208394B5A55BAEBBE887FDF765047C17C",
+            "077EB13E7005929CEFA3CD0403C7CDCC077ADF4E44F3C41B2F60ECFF",
+            SHA512
+        )
+    )
+
     signatures_p256_ = (
         (
             "sample",
@@ -854,6 +930,11 @@ class Det_ECDSA_Tests(unittest.TestCase):
         ),
     )
 
+    signatures_p224 = []
+    for a, b, c, d, e in signatures_p224_:
+        new_tv = (tobytes(a), unhexlify(b), unhexlify(c), unhexlify(d), e)
+        signatures_p224.append(new_tv)
+
     signatures_p256 = []
     for a, b, c, d, e in signatures_p256_:
         new_tv = (tobytes(a), unhexlify(b), unhexlify(c), unhexlify(d), e)
@@ -871,6 +952,14 @@ class Det_ECDSA_Tests(unittest.TestCase):
 
     def shortDescription(self):
         return "Deterministic ECDSA Tests"
+
+    def test_loopback_p224(self):
+        hashed_msg = SHA512.new(b"test")
+        signer = DSS.new(self.key_priv_p224, 'deterministic-rfc6979')
+        signature = signer.sign(hashed_msg)
+
+        verifier = DSS.new(self.key_pub_p224, 'deterministic-rfc6979')
+        verifier.verify(hashed_msg, signature)
 
     def test_loopback_p256(self):
         hashed_msg = SHA512.new(b"test")
@@ -895,6 +984,13 @@ class Det_ECDSA_Tests(unittest.TestCase):
 
         verifier = DSS.new(self.key_pub_p521, 'deterministic-rfc6979')
         verifier.verify(hashed_msg, signature)
+
+    def test_data_rfc6979_p224(self):
+        signer = DSS.new(self.key_priv_p224, 'deterministic-rfc6979')
+        for message, k, r, s, module in self.signatures_p224:
+            hash_obj = module.new(message)
+            result = signer.sign(hash_obj)
+            self.assertEqual(r + s, result)
 
     def test_data_rfc6979_p256(self):
         signer = DSS.new(self.key_priv_p256, 'deterministic-rfc6979')
@@ -1017,7 +1113,7 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
 
         def filter_ecc(group):
             # These are the only curves we accept to skip
-            if group['key']['curve'] in ('secp224r1', 'secp224k1', 'secp256k1',
+            if group['key']['curve'] in ('secp224k1', 'secp256k1',
                                          'brainpoolP224r1', 'brainpoolP224t1',
                                          'brainpoolP256r1', 'brainpoolP256t1',
                                          'brainpoolP320r1', 'brainpoolP320t1',

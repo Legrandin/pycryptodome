@@ -4,6 +4,10 @@ Changelog
 In progress
 ++++++++++++++++++++++++++
 
+New features
+------------
+* Add support for curve NIST P-224.
+
 Resolved issues
 ---------------
 * GH#590: Fixed typing info for ``Crypto.PublicKey.ECC``.
