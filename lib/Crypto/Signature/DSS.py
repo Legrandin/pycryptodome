@@ -89,6 +89,9 @@ class DssSigScheme(object):
         :raise TypeError: if the (EC)DSA key has no private half
         """
 
+        if not self._key.has_private():
+            raise TypeError("Private key is needed to sign")
+
         if not self._valid_hash(msg_hash):
             raise ValueError("Hash is not sufficiently strong")
 

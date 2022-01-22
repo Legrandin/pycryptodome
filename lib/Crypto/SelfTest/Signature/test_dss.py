@@ -143,6 +143,14 @@ class FIPS_DSA_Tests(unittest.TestCase):
         signer = DSS.new(self.key_pub, 'fips-186-3')
         self.assertFalse(signer.can_sign())
 
+        try:
+            signer.sign(SHA256.new(b'xyz'))
+        except TypeError as e:
+            msg = str(e)
+        else:
+            msg = ""
+        self.assertTrue("Private key is needed" in msg)
+
 
 class FIPS_DSA_Tests_KAT(unittest.TestCase):
     pass
@@ -252,6 +260,15 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
 
         signer = DSS.new(self.key_pub, 'fips-186-3')
         self.assertFalse(signer.can_sign())
+        self.assertRaises(TypeError, signer.sign, SHA256.new(b'xyz'))
+
+        try:
+            signer.sign(SHA256.new(b'xyz'))
+        except TypeError as e:
+            msg = str(e)
+        else:
+            msg = ""
+        self.assertTrue("Private key is needed" in msg)
 
     def test_negative_unknown_modes_encodings(self):
         """Verify that unknown modes/encodings are rejected"""
