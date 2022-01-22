@@ -82,10 +82,7 @@ class DssSigScheme(object):
             The hash that was carried out over the message.
             The object belongs to the :mod:`Crypto.Hash` package.
             Under mode ``'fips-186-3'``, the hash must be a FIPS
-            approved secure hash (SHA-1 or a member of the SHA-2/SHA-3 families),
-            of cryptographic strength appropriate for the (EC)DSA key.
-            For instance, a P-521 ECC key can only be used
-            in combination with SHA2-512.
+            approved secure hash (SHA-2 or SHA-3).
 
         :return: The signature as ``bytes``
         :raise ValueError: if the hash algorithm is incompatible to the (EC)DSA key
@@ -127,10 +124,7 @@ class DssSigScheme(object):
             The hash that was carried out over the message.
             This is an object belonging to the :mod:`Crypto.Hash` module.
             Under mode ``'fips-186-3'``, the hash must be a FIPS
-            approved secure hash (SHA-1 or a member of the SHA-2 family),
-            of cryptographic strength appropriate for the (EC)DSA key.
-            For instance, a P-521 ECC key can only be used
-            in combination with SHA2-512.
+            approved secure hash (SHA-2 or SHA-3).
 
           signature (``bytes``):
             The signature that needs to be validated.
@@ -296,20 +290,17 @@ class FipsEcDsaSigScheme(DssSigScheme):
 
         modulus_bits = self._key.pointQ.size_in_bits()
 
+        # SHS: SHA-2 and SHA-3
         sha224 = ("2.16.840.1.101.3.4.2.4", "2.16.840.1.101.3.4.2.7")
         sha256 = ("2.16.840.1.101.3.4.2.1", "2.16.840.1.101.3.4.2.8")
         sha384 = ("2.16.840.1.101.3.4.2.2", "2.16.840.1.101.3.4.2.9")
         sha512 = ("2.16.840.1.101.3.4.2.3", "2.16.840.1.101.3.4.2.10")
+        shs = sha224 + sha256 + sha384 + sha512
 
-        if msg_hash.oid in sha224:
-            result = modulus_bits <= 224
-        elif msg_hash.oid in sha256:
-            result = modulus_bits <= 256
-        elif msg_hash.oid in sha384:
-            result = modulus_bits <= 384
-        else:
-            result = msg_hash.oid in sha512
-
+        try:
+            result = msg_hash.oid in shs
+        except AttributeError:
+            result = False
         return result
 
 
@@ -334,7 +325,7 @@ def new(key, mode, encoding='binary', randfunc=None):
             - (2048, 256)
             - (3072, 256)
 
-            For ECC, only keys over P-256, P-384, and P-521 are accepted.
+            For ECC, only keys over P-224, P-256, P-384, and P-521 are accepted.
 
         mode (string):
             The parameter can take these values:
