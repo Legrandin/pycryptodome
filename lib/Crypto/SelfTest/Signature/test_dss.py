@@ -307,6 +307,14 @@ test_vectors_verify = load_test_vectors(("Signature", "ECDSA"),
                                          'qx': lambda x: int(x, 16),
                                          'qy': lambda x: int(x, 16),
                                         }) or []
+test_vectors_verify += load_test_vectors(("Signature", "ECDSA"),
+                                        "SigVer_TruncatedSHAs.rsp",
+                                        "ECDSA Signature Verification 186-3",
+                                        {'result': lambda x: x,
+                                         'qx': lambda x: int(x, 16),
+                                         'qy': lambda x: int(x, 16),
+                                        }) or []
+
 
 for idx, tv in enumerate(test_vectors_verify):
 
@@ -315,10 +323,18 @@ for idx, tv in enumerate(test_vectors_verify):
         assert res
         curve_name = res.group(1)
         hash_name = res.group(2).replace("-", "")
+        if hash_name in ("SHA512224", "SHA512256"):
+            truncate = hash_name[-3:]
+            hash_name = hash_name[:-3]
+        else:
+            truncate = None
         hash_module = load_hash_by_name(hash_name)
         continue
 
-    hash_obj = hash_module.new(tv.msg)
+    if truncate is None:
+        hash_obj = hash_module.new(tv.msg)
+    else:
+        hash_obj = hash_module.new(tv.msg, truncate=truncate)
     ecc_key = ECC.construct(curve=curve_name, point_x=tv.qx, point_y=tv.qy)
     verifier = DSS.new(ecc_key, 'fips-186-3')
 
