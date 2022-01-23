@@ -1,7 +1,7 @@
 Changelog
 =========
 
-In progress
+3.13.0 (23 January 2022)
 ++++++++++++++++++++++++++
 
 New features
@@ -14,7 +14,7 @@ Resolved issues
 
 Other changes
 -------------
-* Relax ECDSA requirements for FIPS 186 signatures and accept any SHA-2 or SHA-3 hash.
+* Relaxed ECDSA requirements for FIPS 186 signatures and accept any SHA-2 or SHA-3 hash.
   ``sign()`` and ``verify()`` will be performed even if the hash is stronger than the ECC key.
 
 3.12.0 (4 December 2021)
