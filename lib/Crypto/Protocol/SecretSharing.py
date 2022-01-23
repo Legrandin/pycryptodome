@@ -284,10 +284,10 @@ class Shamir(object):
         Wrapper for Shamir.split()
         when len(key) > SHAMIR_BLOCK_SIZE (16)
         """
-        if isinstance(secret, bytes) is not True:
+     if not isinstance(secret, bytes):
             raise TypeError("Secret must be bytes")
-        if len(secret) % 16 != 0:
-            raise ValueError("Secret size must be in 16 byte increments")
+        if len(secret) % SHAMIR_BLOCK_SIZE != 0:
+            raise ValueError(f"Secret size must be a multiple of {SHAMIR_BLOCK_SIZE}")
 
         blocks = len(secret) // SHAMIR_BLOCK_SIZE
         shares = [b'' for _ in range(n)]
@@ -306,10 +306,10 @@ class Shamir(object):
         """
         share_len = len(shares[0][1])
         for share in shares:
-            if len(share[1]) % 16 != 0:
-                raise ValueError(f"Share #{share[0]} is not in 16 byte increments")
+            if len(share[1]) % SHAMIR_BLOCK_SIZE:
+                raise ValueError(f"Share #{share[0]} is not a multiple of {SHAMIR_BLOCK_SIZE}")
             if len(share[1]) != share_len:
-                raise ValueError("Share sizes are inconsistant")
+                raise ValueError("Share sizes are inconsistent")
         blocks = share_len // SHAMIR_BLOCK_SIZE
         result = b''
         for i in range(blocks):
