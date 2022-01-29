@@ -284,7 +284,7 @@ class Shamir(object):
         Wrapper for Shamir.split()
         when len(key) > SHAMIR_BLOCK_SIZE (16)
         """
-     if not isinstance(secret, bytes):
+        if not isinstance(secret, bytes):
             raise TypeError("Secret must be bytes")
         if len(secret) % SHAMIR_BLOCK_SIZE != 0:
             raise ValueError(f"Secret size must be a multiple of {SHAMIR_BLOCK_SIZE}")
