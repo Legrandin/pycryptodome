@@ -1,6 +1,13 @@
 Changelog
 =========
 
+IN PROGRESS
+++++++++++++++++++++++++++
+
+New features
+------------
+* Add support for curve NIST P-192.
+
 3.13.0 (23 January 2022)
 ++++++++++++++++++++++++++
 

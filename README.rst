@@ -41,7 +41,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST P-224, P-256, P-384 and P-521 curves only)
+* Elliptic curves cryptography (NIST curves P-192, P-224, P-256, P-384 and P-521)
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)

@@ -91,6 +91,53 @@ int ec_ws_is_pai(EcPoint *ecp);
 _Curve = namedtuple("_Curve", "p b order Gx Gy G modulus_bits oid context desc openssh")
 _curves = {}
 
+
+p192_names = ["p192", "NIST P-192", "P-192", "prime192v1", "secp192r1",
+              "nistp192"]
+
+
+def init_p192():
+    p = 0xfffffffffffffffffffffffffffffffeffffffffffffffff
+    b = 0x64210519e59c80e70fa7e9ab72243049feb8deecc146b9b1
+    order = 0xffffffffffffffffffffffff99def836146bc9b1b4d22831
+    Gx = 0x188da80eb03090f67cbf20eb43a18800f4ff0afd82ff1012
+    Gy = 0x07192b95ffc8da78631011ed6b24cdd573f977a11e794811
+
+    p192_modulus = long_to_bytes(p, 24)
+    p192_b = long_to_bytes(b, 24)
+    p192_order = long_to_bytes(order, 24)
+
+    ec_p192_context = VoidPointer()
+    result = _ec_lib.ec_ws_new_context(ec_p192_context.address_of(),
+                                       c_uint8_ptr(p192_modulus),
+                                       c_uint8_ptr(p192_b),
+                                       c_uint8_ptr(p192_order),
+                                       c_size_t(len(p192_modulus)),
+                                       c_ulonglong(getrandbits(64))
+                                       )
+    if result:
+        raise ImportError("Error %d initializing P-192 context" % result)
+
+    context = SmartPointer(ec_p192_context.get(), _ec_lib.ec_free_context)
+    p192 = _Curve(Integer(p),
+                  Integer(b),
+                  Integer(order),
+                  Integer(Gx),
+                  Integer(Gy),
+                  None,
+                  192,
+                  "1.2.840.10045.3.1.1",    # ANSI X9.62 / SEC2
+                  context,
+                  "NIST P-192",
+                  "ecdsa-sha2-nistp192")
+    global p192_names
+    _curves.update(dict.fromkeys(p192_names, p192))
+
+
+init_p192()
+del init_p192
+
+
 p224_names = ["p224", "NIST P-224", "P-224", "prime224v1", "secp224r1",
               "nistp224"]
 
@@ -171,7 +218,7 @@ def init_p256():
                   Integer(Gy),
                   None,
                   256,
-                  "1.2.840.10045.3.1.7",    # ANSI X9.62
+                  "1.2.840.10045.3.1.7",    # ANSI X9.62 / SEC2
                   context,
                   "NIST P-256",
                   "ecdsa-sha2-nistp256")
@@ -452,6 +499,11 @@ class EccPoint(object):
 
 
 # Last piece of initialization
+p192_G = EccPoint(_curves['p192'].Gx, _curves['p192'].Gy, "p192")
+p192 = _curves['p192']._replace(G=p192_G)
+_curves.update(dict.fromkeys(p192_names, p192))
+del p192_G, p192, p192_names
+
 p224_G = EccPoint(_curves['p224'].Gx, _curves['p224'].Gy, "p224")
 p224 = _curves['p224']._replace(G=p224_G)
 _curves.update(dict.fromkeys(p224_names, p224))

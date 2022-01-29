@@ -65,6 +65,146 @@ class TestEccPoint(unittest.TestCase):
         self.assertEqual(repr(p1), "EccKey(curve='NIST P-256', point_x=20573031766139722500939782666697015100983491952082159880539639074939225934381, point_y=108863130203210779921520632367477406025152638284581252625277850513266505911389, d=75467964919405407085864614198393977741148485328036093939970922195112333446269)")
 
 
+class TestEccPoint_NIST_P192(unittest.TestCase):
+    """Tests defined in section 4.1 of https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.204.9073&rep=rep1&type=pdf"""
+
+    pointS = EccPoint(
+                0xd458e7d127ae671b0c330266d246769353a012073e97acf8,
+                0x325930500d851f336bddc050cf7fb11b5673a1645086df3b,
+                curve='p192')
+
+    pointT = EccPoint(
+                0xf22c4395213e9ebe67ddecdd87fdbd01be16fb059b9753a4,
+                0x264424096af2b3597796db48f8dfb41fa9cecc97691a9c79,
+                curve='p192')
+
+    def test_set(self):
+        pointW = EccPoint(0, 0)
+        pointW.set(self.pointS)
+        self.assertEqual(pointW, self.pointS)
+
+    def test_copy(self):
+        pointW = self.pointS.copy()
+        self.assertEqual(pointW, self.pointS)
+        pointW.set(self.pointT)
+        self.assertEqual(pointW, self.pointT)
+        self.assertNotEqual(self.pointS, self.pointT)
+
+    def test_negate(self):
+        negS = -self.pointS
+        sum = self.pointS + negS
+        self.assertEqual(sum, self.pointS.point_at_infinity())
+
+    def test_addition(self):
+        pointRx = 0x48e1e4096b9b8e5ca9d0f1f077b8abf58e843894de4d0290
+        pointRy = 0x408fa77c797cd7dbfb16aa48a3648d3d63c94117d7b6aa4b
+
+        pointR = self.pointS + self.pointT
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pai = pointR.point_at_infinity()
+
+        # S + 0
+        pointR = self.pointS + pai
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + S
+        pointR = pai + self.pointS
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + 0
+        pointR = pai + pai
+        self.assertEqual(pointR, pai)
+
+    def test_inplace_addition(self):
+        pointRx = 0x48e1e4096b9b8e5ca9d0f1f077b8abf58e843894de4d0290
+        pointRy = 0x408fa77c797cd7dbfb16aa48a3648d3d63c94117d7b6aa4b
+
+        pointR = self.pointS.copy()
+        pointR += self.pointT
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pai = pointR.point_at_infinity()
+
+        # S + 0
+        pointR = self.pointS.copy()
+        pointR += pai
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + S
+        pointR = pai.copy()
+        pointR += self.pointS
+        self.assertEqual(pointR, self.pointS)
+
+        # 0 + 0
+        pointR = pai.copy()
+        pointR += pai
+        self.assertEqual(pointR, pai)
+
+    def test_doubling(self):
+        pointRx = 0x30c5bc6b8c7da25354b373dc14dd8a0eba42d25a3f6e6962
+        pointRy = 0x0dde14bc4249a721c407aedbf011e2ddbbcb2968c9d889cf
+
+        pointR = self.pointS.copy()
+        pointR.double()
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        # 2*0
+        pai = self.pointS.point_at_infinity()
+        pointR = pai.copy()
+        pointR.double()
+        self.assertEqual(pointR, pai)
+
+        # S + S
+        pointR = self.pointS.copy()
+        pointR += pointR
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+    def test_scalar_multiply(self):
+        d = 0xa78a236d60baec0c5dd41b33a542463a8255391af64c74ee
+        pointRx = 0x1faee4205a4f669d2d0a8f25e3bcec9a62a6952965bf6d31
+        pointRy = 0x5ff2cdfa508a2581892367087c696f179e7a4d7e8260fb06
+
+        pointR = self.pointS * d
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        # 0*S
+        pai = self.pointS.point_at_infinity()
+        pointR = self.pointS * 0
+        self.assertEqual(pointR, pai)
+
+        # -1*S
+        self.assertRaises(ValueError, lambda: self.pointS * -1)
+
+        # Reverse order
+        pointR = d * self.pointS
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+        pointR = Integer(d) * self.pointS
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+    def test_joing_scalar_multiply(self):
+        d = 0xa78a236d60baec0c5dd41b33a542463a8255391af64c74ee
+        e = 0xc4be3d53ec3089e71e4de8ceab7cce889bc393cd85b972bc
+        pointRx = 0x019f64eed8fa9b72b7dfea82c17c9bfa60ecb9e1778b5bde
+        pointRy = 0x16590c5fcd8655fa4ced33fb800e2a7e3c61f35d83503644
+
+        pointR = self.pointS * d + self.pointT * e
+        self.assertEqual(pointR.x, pointRx)
+        self.assertEqual(pointR.y, pointRy)
+
+    def test_sizes(self):
+        self.assertEqual(self.pointS.size_in_bits(), 192)
+        self.assertEqual(self.pointS.size_in_bytes(), 24)
+
+
 class TestEccPoint_NIST_P224(unittest.TestCase):
     """Tests defined in section 4.2 of https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.204.9073&rep=rep1&type=pdf"""
 
@@ -606,6 +746,27 @@ class TestEccPoint_NIST_P521(unittest.TestCase):
         self.assertEqual(self.pointS.size_in_bytes(), 66)
 
 
+class TestEccPoint_PAI_P192(unittest.TestCase):
+    """Test vectors from http://point-at-infinity.org/ecc/nisttv"""
+
+    curve = _curves['p192']
+    pointG = EccPoint(curve.Gx, curve.Gy, "p192")
+
+
+tv_pai = load_test_vectors(("PublicKey", "ECC"),
+                    "point-at-infinity.org-P192.txt",
+                    "P-192 tests from point-at-infinity.org",
+                    {"k": lambda k: int(k),
+                     "x": lambda x: int(x, 16),
+                     "y": lambda y: int(y, 16)}) or []
+for tv in tv_pai:
+    def new_test(self, scalar=tv.k, x=tv.x, y=tv.y):
+        result = self.pointG * scalar
+        self.assertEqual(result.x, x)
+        self.assertEqual(result.y, y)
+    setattr(TestEccPoint_PAI_P192, "test_%d" % tv.count, new_test)
+
+
 class TestEccPoint_PAI_P224(unittest.TestCase):
     """Test vectors from http://point-at-infinity.org/ecc/nisttv"""
 
@@ -688,6 +849,67 @@ for tv in tv_pai:
         self.assertEqual(result.x, x)
         self.assertEqual(result.y, y)
     setattr(TestEccPoint_PAI_P521, "test_%d" % tv.count, new_test)
+
+
+class TestEccKey_P192(unittest.TestCase):
+
+    def test_private_key(self):
+
+        key = EccKey(curve="P-192", d=1)
+        self.assertEqual(key.d, 1)
+        self.assertTrue(key.has_private())
+        self.assertEqual(key.pointQ.x, _curves['p192'].Gx)
+        self.assertEqual(key.pointQ.y, _curves['p192'].Gy)
+
+        point = EccPoint(_curves['p192'].Gx, _curves['p192'].Gy, curve='P-192')
+        key = EccKey(curve="P-192", d=1, point=point)
+        self.assertEqual(key.d, 1)
+        self.assertTrue(key.has_private())
+        self.assertEqual(key.pointQ, point)
+
+        # Other names
+        key = EccKey(curve="secp192r1", d=1)
+        key = EccKey(curve="prime192v1", d=1)
+
+    def test_public_key(self):
+
+        point = EccPoint(_curves['p192'].Gx, _curves['p192'].Gy, curve='P-192')
+        key = EccKey(curve="P-192", point=point)
+        self.assertFalse(key.has_private())
+        self.assertEqual(key.pointQ, point)
+
+    def test_public_key_derived(self):
+
+        priv_key = EccKey(curve="P-192", d=3)
+        pub_key = priv_key.public_key()
+        self.assertFalse(pub_key.has_private())
+        self.assertEqual(priv_key.pointQ, pub_key.pointQ)
+
+    def test_invalid_curve(self):
+        self.assertRaises(ValueError, lambda: EccKey(curve="P-193", d=1))
+
+    def test_invalid_d(self):
+        self.assertRaises(ValueError, lambda: EccKey(curve="P-192", d=0))
+        self.assertRaises(ValueError, lambda: EccKey(curve="P-192",
+                                                     d=_curves['p192'].order))
+
+    def test_equality(self):
+
+        private_key = ECC.construct(d=3, curve="P-192")
+        private_key2 = ECC.construct(d=3, curve="P-192")
+        private_key3 = ECC.construct(d=4, curve="P-192")
+
+        public_key = private_key.public_key()
+        public_key2 = private_key2.public_key()
+        public_key3 = private_key3.public_key()
+
+        self.assertEqual(private_key, private_key2)
+        self.assertNotEqual(private_key, private_key3)
+
+        self.assertEqual(public_key, public_key2)
+        self.assertNotEqual(public_key, public_key3)
+
+        self.assertNotEqual(public_key, private_key)
 
 
 class TestEccKey_P224(unittest.TestCase):
@@ -941,6 +1163,45 @@ class TestEccKey_P521(unittest.TestCase):
         self.assertNotEqual(public_key, private_key)
 
 
+class TestEccModule_P192(unittest.TestCase):
+
+    def test_generate(self):
+
+        key = ECC.generate(curve="P-192")
+        self.assertTrue(key.has_private())
+        self.assertEqual(key.pointQ, EccPoint(_curves['p192'].Gx,
+                                              _curves['p192'].Gy,
+                                              "P-192") * key.d,
+                                              "p192")
+
+        # Other names
+        ECC.generate(curve="secp192r1")
+        ECC.generate(curve="prime192v1")
+
+    def test_construct(self):
+
+        key = ECC.construct(curve="P-192", d=1)
+        self.assertTrue(key.has_private())
+        self.assertEqual(key.pointQ, _curves['p192'].G)
+
+        key = ECC.construct(curve="P-192", point_x=_curves['p192'].Gx,
+                            point_y=_curves['p192'].Gy)
+        self.assertFalse(key.has_private())
+        self.assertEqual(key.pointQ, _curves['p192'].G)
+
+        # Other names
+        ECC.construct(curve="p192", d=1)
+        ECC.construct(curve="secp192r1", d=1)
+        ECC.construct(curve="prime192v1", d=1)
+
+    def test_negative_construct(self):
+        coord = dict(point_x=10, point_y=4)
+        coordG = dict(point_x=_curves['p192'].Gx, point_y=_curves['p192'].Gy)
+
+        self.assertRaises(ValueError, ECC.construct, curve="P-192", **coord)
+        self.assertRaises(ValueError, ECC.construct, curve="P-192", d=2, **coordG)
+
+
 class TestEccModule_P224(unittest.TestCase):
 
     def test_generate(self):
@@ -1095,18 +1356,22 @@ class TestEccModule_P521(unittest.TestCase):
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestEccPoint)
+    tests += list_test_cases(TestEccPoint_NIST_P192)
     tests += list_test_cases(TestEccPoint_NIST_P224)
     tests += list_test_cases(TestEccPoint_NIST_P256)
     tests += list_test_cases(TestEccPoint_NIST_P384)
     tests += list_test_cases(TestEccPoint_NIST_P521)
+    tests += list_test_cases(TestEccPoint_PAI_P192)
     tests += list_test_cases(TestEccPoint_PAI_P224)
     tests += list_test_cases(TestEccPoint_PAI_P256)
     tests += list_test_cases(TestEccPoint_PAI_P384)
     tests += list_test_cases(TestEccPoint_PAI_P521)
+    tests += list_test_cases(TestEccKey_P192)
     tests += list_test_cases(TestEccKey_P224)
     tests += list_test_cases(TestEccKey_P256)
     tests += list_test_cases(TestEccKey_P384)
     tests += list_test_cases(TestEccKey_P521)
+    tests += list_test_cases(TestEccModule_P192)
     tests += list_test_cases(TestEccModule_P224)
     tests += list_test_cases(TestEccModule_P256)
     tests += list_test_cases(TestEccModule_P384)

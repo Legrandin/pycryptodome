@@ -656,6 +656,9 @@ class Det_DSA_Tests(unittest.TestCase):
 
 class Det_ECDSA_Tests(unittest.TestCase):
 
+    key_priv_p192 = ECC.construct(curve="P-192", d=0x6FAB034934E4C0FC9AE67F5B5659A9D7D1FEFD187EE09FD4)
+    key_pub_p192 = key_priv_p192.public_key()
+
     key_priv_p224 = ECC.construct(curve="P-224", d=0xF220266E1105BFE3083E03EC7A3A654651F45E37167E88600BF257C1)
     key_pub_p224 = key_priv_p224.public_key()
 
@@ -671,6 +674,79 @@ class Det_ECDSA_Tests(unittest.TestCase):
     # This is a sequence of items:
     # message, k, r, s, hash module
     # taken from RFC6979
+    signatures_p192_ = (
+        (
+            "sample",
+            "37D7CA00D2C7B0E5E412AC03BD44BA837FDD5B28CD3B0021",
+            "98C6BD12B23EAF5E2A2045132086BE3EB8EBD62ABF6698FF",
+            "57A22B07DEA9530F8DE9471B1DC6624472E8E2844BC25B64",
+            SHA1
+        ),
+        (
+            "sample",
+            "4381526B3FC1E7128F202E194505592F01D5FF4C5AF015D8",
+            "A1F00DAD97AEEC91C95585F36200C65F3C01812AA60378F5",
+            "E07EC1304C7C6C9DEBBE980B9692668F81D4DE7922A0F97A",
+            SHA224
+        ),
+        (
+            "sample",
+            "32B1B6D7D42A05CB449065727A84804FB1A3E34D8F261496",
+            "4B0B8CE98A92866A2820E20AA6B75B56382E0F9BFD5ECB55",
+            "CCDB006926EA9565CBADC840829D8C384E06DE1F1E381B85",
+            SHA256
+        ),
+        (
+            "sample",
+            "4730005C4FCB01834C063A7B6760096DBE284B8252EF4311",
+            "DA63BF0B9ABCF948FBB1E9167F136145F7A20426DCC287D5",
+            "C3AA2C960972BD7A2003A57E1C4C77F0578F8AE95E31EC5E",
+            SHA384
+        ),
+        (
+            "sample",
+            "A2AC7AB055E4F20692D49209544C203A7D1F2C0BFBC75DB1",
+            "4D60C5AB1996BD848343B31C00850205E2EA6922DAC2E4B8",
+            "3F6E837448F027A1BF4B34E796E32A811CBB4050908D8F67",
+            SHA512
+        ),
+        (
+            "test",
+            "D9CF9C3D3297D3260773A1DA7418DB5537AB8DD93DE7FA25",
+            "0F2141A0EBBC44D2E1AF90A50EBCFCE5E197B3B7D4DE036D",
+            "EB18BC9E1F3D7387500CB99CF5F7C157070A8961E38700B7",
+            SHA1
+        ),
+        (
+            "test",
+            "F5DC805F76EF851800700CCE82E7B98D8911B7D510059FBE",
+            "6945A1C1D1B2206B8145548F633BB61CEF04891BAF26ED34",
+            "B7FB7FDFC339C0B9BD61A9F5A8EAF9BE58FC5CBA2CB15293",
+            SHA224
+        ),
+        (
+            "test",
+            "5C4CE89CF56D9E7C77C8585339B006B97B5F0680B4306C6C",
+            "3A718BD8B4926C3B52EE6BBE67EF79B18CB6EB62B1AD97AE",
+            "5662E6848A4A19B1F1AE2F72ACD4B8BBE50F1EAC65D9124F",
+            SHA256
+        ),
+        (
+            "test",
+            "5AFEFB5D3393261B828DB6C91FBC68C230727B030C975693",
+            "B234B60B4DB75A733E19280A7A6034BD6B1EE88AF5332367",
+            "7994090B2D59BB782BE57E74A44C9A1C700413F8ABEFE77A",
+            SHA384
+        ),
+        (
+            "test",
+            "0758753A5254759C7CFBAD2E2D9B0792EEE44136C9480527",
+            "FE4F4AE86A58B6507946715934FE2D8FF9D95B6B098FE739",
+            "74CF5605C98FBA0E1EF34D4B5A1577A7DCF59457CAE52290",
+            SHA512
+        )
+    )
+
     signatures_p224_ = (
         (
             "sample",
@@ -963,6 +1039,11 @@ class Det_ECDSA_Tests(unittest.TestCase):
         ),
     )
 
+    signatures_p192 = []
+    for a, b, c, d, e in signatures_p192_:
+        new_tv = (tobytes(a), unhexlify(b), unhexlify(c), unhexlify(d), e)
+        signatures_p192.append(new_tv)
+
     signatures_p224 = []
     for a, b, c, d, e in signatures_p224_:
         new_tv = (tobytes(a), unhexlify(b), unhexlify(c), unhexlify(d), e)
@@ -985,6 +1066,14 @@ class Det_ECDSA_Tests(unittest.TestCase):
 
     def shortDescription(self):
         return "Deterministic ECDSA Tests"
+
+    def test_loopback_p192(self):
+        hashed_msg = SHA512.new(b"test")
+        signer = DSS.new(self.key_priv_p192, 'deterministic-rfc6979')
+        signature = signer.sign(hashed_msg)
+
+        verifier = DSS.new(self.key_pub_p192, 'deterministic-rfc6979')
+        verifier.verify(hashed_msg, signature)
 
     def test_loopback_p224(self):
         hashed_msg = SHA512.new(b"test")
@@ -1017,6 +1106,13 @@ class Det_ECDSA_Tests(unittest.TestCase):
 
         verifier = DSS.new(self.key_pub_p521, 'deterministic-rfc6979')
         verifier.verify(hashed_msg, signature)
+
+    def test_data_rfc6979_p192(self):
+        signer = DSS.new(self.key_priv_p192, 'deterministic-rfc6979')
+        for message, k, r, s, module in self.signatures_p192:
+            hash_obj = module.new(message)
+            result = signer.sign(hash_obj)
+            self.assertEqual(r + s, result)
 
     def test_data_rfc6979_p224(self):
         signer = DSS.new(self.key_priv_p224, 'deterministic-rfc6979')
