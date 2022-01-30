@@ -13,13 +13,13 @@ jobs:
         include:
           - python-version: 2.7
             cffi: no
-            os: macos-latest
+            os: macos-10.15
           - python-version: 2.7
             cffi: yes
-            os: macos-latest
+            os: macos-10.15
           - python-version: "3.10"
             cffi: yes
-            os: macos-latest
+            os: macos-10.15
           - python-version: 2.7
             cffi: no
             os: windows-latest
