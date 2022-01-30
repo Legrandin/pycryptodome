@@ -20,6 +20,7 @@ using widely supported formats like PEM or DER.
    :header: Curve, Possible identifiers
    :widths: 20, 80
 
+   "NIST P-192", "``'NIST P-192'``, ``'p192'``, ``'P-192'``, ``'prime192v1'``, ``'secp192r1'``"
    "NIST P-224", "``'NIST P-224'``, ``'p224'``, ``'P-224'``, ``'prime224v1'``, ``'secp224r1'``"
    "NIST P-256", "``'NIST P-256'``, ``'p256'``, ``'P-256'``, ``'prime256v1'``, ``'secp256r1'``"
    "NIST P-384", "``'NIST P-384'``, ``'p384'``, ``'P-384'``, ``'prime384v1'``, ``'secp384r1'``"
