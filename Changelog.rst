@@ -1,7 +1,7 @@
 Changelog
 =========
 
-IN PROGRESS
+3.14.0 (30 January 2022)
 ++++++++++++++++++++++++++
 
 New features
