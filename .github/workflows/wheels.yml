@@ -38,7 +38,7 @@ jobs:
         if: runner.os != 'Windows'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BUILD: "cp27-* cp35-* pp27-* pp36-* pp37-* pp38-*"
+          CIBW_BUILD: "cp27-* cp35-* pp27-* pp36-* pp37-*"
 
       - name: Build a 64-bit wheel (Windows)
         if: runner.os == 'Windows'
@@ -74,7 +74,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, windows-latest, macos-10.15]
-        python-version: ['2.7', '3.6', '3.7', '3.8', '3.9', '3.10', 'pypy-2.7', 'pypy-3.6', 'pypy-3.7', 'pypy-3.8']
+        python-version: ['2.7', '3.6', '3.7', '3.8', '3.9', '3.10', 'pypy-2.7', 'pypy-3.6', 'pypy-3.7']
         exclude:
           - {os: "windows-latest", python-version: "pypy-2.7"}
 
