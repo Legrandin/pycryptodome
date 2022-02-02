@@ -35,7 +35,13 @@ jobs:
           - python-version: pypy2
             cffi: no
             os: ubuntu-latest
-          - python-version: pypy3
+          - python-version: pypy-3.6
+            cffi: no
+            os: ubuntu-latest
+          - python-version: pypy-3.7
+            cffi: no
+            os: ubuntu-latest
+          - python-version: pypy-3.8
             cffi: no
             os: ubuntu-latest
     env:
