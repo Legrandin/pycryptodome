@@ -43,9 +43,12 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
         typedef UNIX_ULONG mp_bitcnt_t;
+
         void __gmpz_init (mpz_t x);
         void __gmpz_init_set (mpz_t rop, const mpz_t op);
         void __gmpz_init_set_ui (mpz_t rop, UNIX_ULONG op);
+        void mpz_clear (mpz_t x);
+
         UNIX_ULONG __gmpz_get_ui (const mpz_t op);
         void __gmpz_set (mpz_t rop, const mpz_t op);
         void __gmpz_set_ui (mpz_t rop, UNIX_ULONG op);
@@ -156,44 +159,55 @@ class IntegerGMP(IntegerBase):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
 
-        self._initialized = True
-
         if is_native_int(value):
             _gmp.mpz_init(self._mpz_p)
+            self._initialized = True
             if value == 0:
                 return
 
             tmp = new_mpz()
             _gmp.mpz_init(tmp)
-            positive = value >= 0
-            reduce = abs(value)
-            slots = (reduce.bit_length() - 1) // 32 + 1
 
-            while slots > 0:
-                slots = slots - 1
-                _gmp.mpz_set_ui(tmp,
-                                c_ulong(0xFFFFFFFF & (reduce >> (slots * 32))))
-                _gmp.mpz_mul_2exp(tmp, tmp, c_ulong(slots * 32))
-                _gmp.mpz_add(self._mpz_p, self._mpz_p, tmp)
+            try:
+                positive = value >= 0
+                reduce = abs(value)
+                slots = (reduce.bit_length() - 1) // 32 + 1
+
+                while slots > 0:
+                    slots = slots - 1
+                    _gmp.mpz_set_ui(tmp,
+                                    c_ulong(0xFFFFFFFF & (reduce >> (slots * 32))))
+                    _gmp.mpz_mul_2exp(tmp, tmp, c_ulong(slots * 32))
+                    _gmp.mpz_add(self._mpz_p, self._mpz_p, tmp)
+            finally:
+                _gmp.mpz_clear(tmp)
 
             if not positive:
                 _gmp.mpz_neg(self._mpz_p, self._mpz_p)
+
         elif isinstance(value, IntegerGMP):
             _gmp.mpz_init_set(self._mpz_p, value._mpz_p)
+            self._initialized = True
         else:
             raise NotImplementedError
+
 
     # Conversions
     def __int__(self):
         tmp = new_mpz()
         _gmp.mpz_init_set(tmp, self._mpz_p)
-        value = 0
-        slot = 0
-        while _gmp.mpz_cmp(tmp, self._zero_mpz_p) != 0:
-            lsb = _gmp.mpz_get_ui(tmp) & 0xFFFFFFFF
-            value |= lsb << (slot * 32)
-            _gmp.mpz_tdiv_q_2exp(tmp, tmp, c_ulong(32))
-            slot = slot + 1
+
+        try:
+            value = 0
+            slot = 0
+            while _gmp.mpz_cmp(tmp, self._zero_mpz_p) != 0:
+                lsb = _gmp.mpz_get_ui(tmp) & 0xFFFFFFFF
+                value |= lsb << (slot * 32)
+                _gmp.mpz_tdiv_q_2exp(tmp, tmp, c_ulong(32))
+                slot = slot + 1
+        finally:
+            _gmp.mpz_clear(tmp)
+
         if self < 0:
             value = -value
         return int(value)
