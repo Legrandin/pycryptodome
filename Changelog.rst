@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.14.1 (IN PROGRESS)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#595: Fixed memory leak for GMP integers.
+
 3.14.0 (30 January 2022)
 ++++++++++++++++++++++++++
 
