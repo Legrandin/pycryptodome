@@ -80,3 +80,16 @@ Run ``pip uninstall pycrypto`` and try again.
 
 The old PyCrypto shipped with a ``strxor`` module written as a native library (``.so`` or ``.dll`` file).
 If you install ``pycryptodome``, the old native module will still take priority over the new Python extension that comes in the latter.
+
+Why do I get a ``translation_unit_or_empty undefined`` error with ``pycparser``?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Unfortunately,``pycparser`` does not work with optimzed (``-O``) Python builds,
+which strips out the docstrings, causing this error.
+This is a [known issue](https://github.com/eliben/pycparser/issues/291) and it will not be fixed.
+
+The possible workarounds are:
+
+* Do not run Python iwth ``-O``
+* Remove `cffi` and ``cparser``. PyCryptodome will fall back to ``ctypes`` for interfacing with the native modules.
+* Use an earlier version of ``cparser`` (2.14)
