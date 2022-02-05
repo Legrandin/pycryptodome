@@ -47,7 +47,6 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         void __gmpz_init (mpz_t x);
         void __gmpz_init_set (mpz_t rop, const mpz_t op);
         void __gmpz_init_set_ui (mpz_t rop, UNIX_ULONG op);
-        void mpz_clear (mpz_t x);
 
         UNIX_ULONG __gmpz_get_ui (const mpz_t op);
         void __gmpz_set (mpz_t rop, const mpz_t op);
