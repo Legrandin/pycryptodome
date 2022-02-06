@@ -123,7 +123,10 @@ def GCD(x,y):
     return y
 
 def inverse(u, v):
-    """The inverse of :data:`u` *mod* :data:`v`."""
+    """The inverse of :data:`u` *mod* :data:`v`.
+    
+    The base `u` and modulus `v` must be coprime
+    """
 
     u3, v3 = u, v
     u1, v1 = 1, 0
@@ -131,7 +134,9 @@ def inverse(u, v):
         q = u3 // v3
         u1, v1 = v1, u1 - v1*q
         u3, v3 = v3, u3 - v3*q
-    while u1<0:
+    if u3 > 1:
+        raise ValueError("base is not invertible for the given modulus")
+    while u1 < 0:
         u1 = u1 + v
     return u1
 
