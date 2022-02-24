@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.14.2 (23 February 2022)
+++++++++++++++++++++++++++
+
+New features
+------------
+* Added support for Format Preserving Encryption (FF3-1 NIST 800-38G)
+
 3.14.1 (5 February 2022)
 ++++++++++++++++++++++++++
 
