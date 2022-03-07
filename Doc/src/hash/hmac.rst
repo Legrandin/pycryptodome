@@ -20,7 +20,7 @@ This is an example showing how to generate a MAC (with *HMAC-SHA256*)::
     >>> secret = b'Swordfish'
     >>> h = HMAC.new(secret, digestmod=SHA256)
     >>> h.update(b'Hello')
-    >>> print h.hexdigest()
+    >>> print(h.hexdigest())
 
 This is an example showing how to validate the MAC::
 
