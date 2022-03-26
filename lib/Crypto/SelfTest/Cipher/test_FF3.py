@@ -30,41 +30,52 @@
 
 import unittest
 import json
+import os
+import warnings
+
 from Crypto.Cipher.FF3 import FF3, RadixOutOfRangeError, AlphabetValueError, \
     AlphabetOutOfRangeError
 from Crypto.SelfTest.st_common import list_test_cases
 
-
-ACVP_test_dir = "../../../../test_vectors/pycryptodome_test_vectors/Cipher/ACVP/FF3/"
-
 class NIST_ACVP_Samples(unittest.TestCase):
 
+    def setUp(self):
+        try:
+            import pycryptodome_test_vectors
+            init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+            ACVP_test_dir = os.path.join(init_dir, "Cipher/ACVP/FF3/")
+            print(ACVP_test_dir)
+            with open(ACVP_test_dir + 'prompt.json', 'r', encoding='utf-8') as tests_f:
+                self.tests = json.load(tests_f)
+            with open(ACVP_test_dir + 'expectedResults.json', 'r', encoding='utf-8') as results_f:
+                self.results = json.load(results_f)
+        except:
+            warnings.warn("Warning: skipping extended tests for %s" % self.name,
+                           UserWarning)
+            self.tests = None
+            self.results = None
 
     def test_ff3_sample_vectors(self):
         # Open test cases
-        with open(ACVP_test_dir + 'prompt.json', 'r', encoding='utf-8') as tests_f:
-            tests = json.load(tests_f)
-        # Open expected results
-        with open(ACVP_test_dir + 'expectedResults.json', 'r', encoding='utf-8') as results_f:
-            results = json.load(results_f)
-        testGroupID = 0
-        while (testGroupID < len(tests['testGroups'])):
-            testgroup = tests['testGroups'][testGroupID]
-            result_testGroup = results['testGroups'][testGroupID]
-            testID = 0
-            while (testID < len(testgroup['tests'])):
-                test = testgroup['tests'][testID]
-                result = result_testGroup['tests'][testID]
-                fpe = FF3(int(testgroup['radix']), testgroup['alphabet'], \
-                    bytes.fromhex(test['key']))
-                if (testgroup['direction'] == "encrypt"):
-                    ct = fpe.encrypt(test['pt'], bytes.fromhex(test['tweak']))
-                    self.assertEqual(ct, result['ct'])
-                if (testgroup['direction'] == "decrypt"):
-                    pt = fpe.decrypt(test['ct'], bytes.fromhex(test['tweak']))
-                    self.assertEqual(pt, result['pt'])
-                testID += 1
-            testGroupID += 1
+        if(self.tests):
+            testGroupID = 0
+            while (testGroupID < len(self.tests['testGroups'])):
+                testgroup = self.tests['testGroups'][testGroupID]
+                result_testGroup = self.results['testGroups'][testGroupID]
+                testID = 0
+                while (testID < len(testgroup['tests'])):
+                    test = testgroup['tests'][testID]
+                    result = result_testGroup['tests'][testID]
+                    fpe = FF3(int(testgroup['radix']), testgroup['alphabet'], \
+                        bytes.fromhex(test['key']))
+                    if (testgroup['direction'] == "encrypt"):
+                        ct = fpe.encrypt(test['pt'], bytes.fromhex(test['tweak']))
+                        self.assertEqual(ct, result['ct'])
+                    if (testgroup['direction'] == "decrypt"):
+                        pt = fpe.decrypt(test['ct'], bytes.fromhex(test['tweak']))
+                        self.assertEqual(pt, result['pt'])
+                    testID += 1
+                testGroupID += 1
 
 
 class FF3BadInput(unittest.TestCase):
@@ -147,4 +158,7 @@ def get_tests(config={}):
     return tests
 
 if __name__ == '__main__':
-    unittest.main(verbosity=1)
+    import unittest
+    def suite():
+        return unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')
