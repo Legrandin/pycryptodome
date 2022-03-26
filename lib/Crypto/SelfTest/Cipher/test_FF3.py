@@ -41,7 +41,7 @@ class NIST_ACVP_Samples(unittest.TestCase):
 
     def setUp(self):
         try:
-            import pycryptodome_test_vectors
+            import pycryptodome_test_vectors # type: ignore
             init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
             ACVP_test_dir = os.path.join(init_dir, "Cipher/ACVP/FF3/")
             print(ACVP_test_dir)
