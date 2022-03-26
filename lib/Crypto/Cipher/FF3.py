@@ -28,6 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import absolute_import
 
 import math
 
@@ -354,19 +355,3 @@ class AlphabetOutOfRangeError(ValueError):
 
 class AlphabetValueError(ValueError):
     pass
-
-
-if __name__ == "__main__":
-    tweak_56 = bytes.fromhex("0123456789abcd")
-    radix = 10
-    alphabet = "0123456789"
-    key = bytes.fromhex("67CF126EB1746B2591ECFC85941FAB04")
-
-    fpe = FF3(radix, alphabet, key)
-    tweak_64 = fpe._convert_tweak(tweak_56)
-    print("Tweak 64: {}".format(binascii.hexlify(tweak_64)))
-    ct = fpe.encrypt("3650741439", bytes.fromhex("DDE226BEB3BDB7"))
-    print("Ciphertext: {}".format(ct))
-
-    pt = fpe.decrypt(ct, bytes.fromhex("DDE226BEB3BDB7"))
-    print("Plaintext: {}".format(pt))
