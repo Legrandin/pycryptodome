@@ -50,7 +50,7 @@ class NIST_ACVP_Samples(unittest.TestCase):
             with open(ACVP_test_dir + 'expectedResults.json', 'r', encoding='utf-8') as results_f:
                 self.results = json.load(results_f)
         except:
-            warnings.warn("Warning: skipping extended tests for FF3",
+            warnings.warn("Warning: skipping NIST ACVP tests for FF3",
                            UserWarning)
             self.tests = None
             self.results = None
