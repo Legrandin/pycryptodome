@@ -57,15 +57,11 @@ class NIST_ACVP_Samples(unittest.TestCase):
 
     def test_ff3_sample_vectors(self):
         # Open test cases
-        if(self.tests):
-            testGroupID = 0
-            while (testGroupID < len(self.tests['testGroups'])):
-                testgroup = self.tests['testGroups'][testGroupID]
-                result_testGroup = self.results['testGroups'][testGroupID]
-                testID = 0
-                while (testID < len(testgroup['tests'])):
+        for testgroupID, testgroup in enumerate(self.tests['testGroups']):
+                result_testgroup = self.results['testGroups'][testgroupID]
+                for testID, test in enumerate(testgroup['tests']):
                     test = testgroup['tests'][testID]
-                    result = result_testGroup['tests'][testID]
+                    result = result_testgroup['tests'][testID]
                     fpe = FF3(int(testgroup['radix']), testgroup['alphabet'], \
                         bytes.fromhex(test['key']))
                     if (testgroup['direction'] == "encrypt"):
@@ -74,8 +70,6 @@ class NIST_ACVP_Samples(unittest.TestCase):
                     if (testgroup['direction'] == "decrypt"):
                         pt = fpe.decrypt(test['ct'], bytes.fromhex(test['tweak']))
                         self.assertEqual(pt, result['pt'])
-                    testID += 1
-                testGroupID += 1
 
 
 class FF3BadInput(unittest.TestCase):
