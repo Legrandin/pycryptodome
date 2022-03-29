@@ -56,8 +56,8 @@ class NIST_ACVP_Samples(unittest.TestCase):
             self.results = None
 
     def test_ff3_sample_vectors(self):
-        # Open test cases
-        for testgroupID, testgroup in enumerate(self.tests['testGroups']):
+        if(self.tests):
+            for testgroupID, testgroup in enumerate(self.tests['testGroups']):
                 result_testgroup = self.results['testGroups'][testgroupID]
                 for testID, test in enumerate(testgroup['tests']):
                     test = testgroup['tests'][testID]
