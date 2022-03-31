@@ -252,6 +252,7 @@ packages =  [
     "Crypto.Signature",
     "Crypto.Util",
     "Crypto.Math",
+    "Crypto.Experimental",
     "Crypto.SelfTest",
     "Crypto.SelfTest.Cipher",
     "Crypto.SelfTest.Hash",
@@ -262,6 +263,7 @@ packages =  [
     "Crypto.SelfTest.Signature",
     "Crypto.SelfTest.Util",
     "Crypto.SelfTest.Math",
+    "Crypto.SelfTest.Experimental",
 ]
 package_data = {
     "Crypto" : [ "py.typed", "*.pyi" ],

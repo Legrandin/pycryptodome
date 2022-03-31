@@ -29,6 +29,7 @@ Mark Moraes
 Lim Chee Siang
 Bryan Olson
 Wallace Owen
+Sylvain Pelissier
 Colin Plumb
 Robey Pointer
 Lorenz Quack

@@ -88,6 +88,7 @@ def get_tests(config={}):
     from Crypto.SelfTest import Signature;   tests += Signature.get_tests(config=config)
     from Crypto.SelfTest import IO;   tests += IO.get_tests(config=config)
     from Crypto.SelfTest import Math;   tests += Math.get_tests(config=config)
+    from Crypto.SelfTest import Experimental;   tests += Experimental.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

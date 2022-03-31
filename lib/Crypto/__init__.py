@@ -1,5 +1,5 @@
 __all__ = ['Cipher', 'Hash', 'Protocol', 'PublicKey', 'Util', 'Signature',
-           'IO', 'Math']
+           'IO', 'Math', 'Experimental']
 
 version_info = (3, 15, '0', 'dev')
 
