@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.14.2 (13 January 2022)
+++++++++++++++++++++++++++
+
+New features
+---------------
+* Add zeropadding style for function pad and unpad
+
 3.14.1 (5 February 2022)
 ++++++++++++++++++++++++++
 
