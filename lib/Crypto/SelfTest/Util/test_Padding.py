@@ -141,6 +141,37 @@ class ISO7816_Tests(unittest.TestCase):
         self.assertRaises(ValueError, unpad, b("123456\x81"), 4, 'iso7816')
         self.assertRaises(ValueError, unpad, b(""), 4, 'iso7816')
 
+class ZERO_Tests(unittest.TestCase):
+
+    def test1(self):
+        padded = pad(b(""), 4, 'zero')
+        self.failUnless(padded == b("\x00\x00\x00\x00"))
+        back = unpad(padded, 4, 'zero')
+        self.failUnless(back == b(""))
+
+    def test2(self):
+        padded = pad(b("1234"), 4, 'zero')
+        self.failUnless(padded == b("1234\x00\x00\x00\x00"))
+        back = unpad(padded, 4, 'zero')
+        self.failUnless(back == b("1234"))
+
+    def test3(self):
+        padded = pad(b("123456"), 4, 'zero')
+        self.failUnless(padded == b("123456\x00\x00"))
+        back = unpad(padded, 4, 'zero')
+        self.failUnless(back == b("123456"))
+
+    def test4(self):
+        padded = pad(b("12345678"), 4, 'zero')
+        self.failUnless(padded == b("12345678\x00\x00\x00\x00"))
+        back = unpad(padded, 4, 'zero')
+        self.failUnless(back == b("12345678"))
+
+    def testn1(self):
+        self.assertRaises(ValueError, unpad, b("1234\x02"), 4, 'zero')
+        self.assertRaises(ValueError, unpad, b("1234\x00"), 4, 'zero')
+        self.assertRaises(ValueError, unpad, b(""), 4, 'zero')
+
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(PKCS7_Tests)
