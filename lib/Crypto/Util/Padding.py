@@ -46,7 +46,7 @@ def pad(data_to_pad, block_size, style='pkcs7'):
         The block boundary to use for padding. The output length is guaranteed
         to be a multiple of :data:`block_size`.
       style (string):
-        Padding algorithm. It can be *'pkcs7'* (default), *'iso7816'* or *'x923'*.
+        Padding algorithm. It can be *'pkcs7'* (default), *'iso7816'* or *'x923'* or *'zero'*.
 
     Return:
       byte string : the original data with the appropriate padding added at the end.
@@ -59,6 +59,8 @@ def pad(data_to_pad, block_size, style='pkcs7'):
         padding = bchr(0)*(padding_len-1) + bchr(padding_len)
     elif style == 'iso7816':
         padding = bchr(128) + bchr(0)*(padding_len-1)
+    elif style == 'zero':
+        padding = bchr(0)*padding_len
     else:
         raise ValueError("Unknown padding style")
     return data_to_pad + padding
@@ -74,7 +76,7 @@ def unpad(padded_data, block_size, style='pkcs7'):
         The block boundary to use for padding. The input length
         must be a multiple of :data:`block_size`.
       style (string):
-        Padding algorithm. It can be *'pkcs7'* (default), *'iso7816'* or *'x923'*.
+        Padding algorithm. It can be *'pkcs7'* (default), *'iso7816'* or *'x923'* or *'zero'*.
     Return:
         byte string : data without padding.
     Raises:
@@ -102,6 +104,10 @@ def unpad(padded_data, block_size, style='pkcs7'):
             raise ValueError("Padding is incorrect.")
         if padding_len>1 and padded_data[1-padding_len:]!=bchr(0)*(padding_len-1):
             raise ValueError("ISO 7816-4 padding is incorrect.")
+    elif style == 'zero':
+        padding_len = pdata_len - padded_data.find(bchr(0))
+        if padded_data[-padding_len:]!=bchr(0)*padding_len:
+            raise ValueError("ZERO padding is incorrect.")
     else:
         raise ValueError("Unknown padding style")
     return padded_data[:-padding_len]
