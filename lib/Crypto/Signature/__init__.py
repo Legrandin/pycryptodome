@@ -33,4 +33,4 @@
 A collection of standardized protocols to carry out digital signatures.
 """
 
-__all__ = ['PKCS1_v1_5', 'PKCS1_PSS', 'DSS', 'pkcs1_15', 'pss']
+__all__ = ['PKCS1_v1_5', 'PKCS1_PSS', 'DSS', 'pkcs1_15', 'pss', 'eddsa']

@@ -28,5 +28,8 @@ p384_table.c: make_ecc_table.py
 p521_table.c: make_ecc_table.py
 	python make_ecc_table.py p521 4 p521_table
 
+x25519: x25519.c multiply_64.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
+
 clean::
-	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp
+	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp x25519

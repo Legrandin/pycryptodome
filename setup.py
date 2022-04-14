@@ -443,6 +443,14 @@ ext_modules = [
                  'src/p521_table.c'],
         py_limited_api=True,
         ),
+    Extension("Crypto.PublicKey._x255219",
+        include_dirs=['src/'],
+        sources=['src/x25519.c']
+        ),
+    Extension("Crypto.PublicKey._ed25519",
+        include_dirs=['src/'],
+        sources=['src/ed25519.c']
+        ),
 
     # Math
     Extension("Crypto.Math._modexp",

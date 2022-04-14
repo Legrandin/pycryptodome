@@ -148,6 +148,14 @@ def create_ref_keys_p521():
     return (ECC.construct(curve="P-521", d=private_key_d),
             ECC.construct(curve="P-521", point_x=public_key_x, point_y=public_key_y))
 
+
+def create_ref_keys_ed25519():
+    key_lines = load_file("ecc_ed25519.txt").splitlines()
+    seed = compact(key_lines[5:8])
+    key = ECC.construct(curve="Ed25519", seed=seed)
+    return (key, key.public_key())
+
+
 # Create reference key pair
 # ref_private, ref_public = create_ref_keys_p521()
 
@@ -199,10 +207,10 @@ class TestImport_P192(unittest.TestCase):
         key = ECC.import_key(key_file, curve_name='P192')
         self.assertEqual(self.ref_public, key)
 
-    def test_import_private_der(self):
+    def test_import_rfc5915_der(self):
         key_file = load_file("ecc_p192_private.der")
 
-        key = ECC._import_private_der(key_file, None)
+        key = ECC._import_rfc5915_der(key_file, None)
         self.assertEqual(self.ref_private, key)
 
         key = ECC._import_der(key_file, None)
@@ -309,10 +317,10 @@ class TestImport_P224(unittest.TestCase):
         key = ECC.import_key(key_file, curve_name='P224')
         self.assertEqual(self.ref_public, key)
 
-    def test_import_private_der(self):
+    def test_import_rfc5915_der(self):
         key_file = load_file("ecc_p224_private.der")
 
-        key = ECC._import_private_der(key_file, None)
+        key = ECC._import_rfc5915_der(key_file, None)
         self.assertEqual(self.ref_private, key)
 
         key = ECC._import_der(key_file, None)
@@ -419,10 +427,10 @@ class TestImport_P256(unittest.TestCase):
         key = ECC.import_key(key_file, curve_name='P256')
         self.assertEqual(self.ref_public, key)
 
-    def test_import_private_der(self):
+    def test_import_rfc5915_der(self):
         key_file = load_file("ecc_p256_private.der")
 
-        key = ECC._import_private_der(key_file, None)
+        key = ECC._import_rfc5915_der(key_file, None)
         self.assertEqual(self.ref_private, key)
 
         key = ECC._import_der(key_file, None)
@@ -559,10 +567,10 @@ class TestImport_P384(unittest.TestCase):
         key = ECC.import_key(key_file, curve_name='P384')
         self.assertEqual(self.ref_public, key)
 
-    def test_import_private_der(self):
+    def test_import_rfc5915_der(self):
         key_file = load_file("ecc_p384_private.der")
 
-        key = ECC._import_private_der(key_file, None)
+        key = ECC._import_rfc5915_der(key_file, None)
         self.assertEqual(self.ref_private, key)
 
         key = ECC._import_der(key_file, None)
@@ -694,10 +702,10 @@ class TestImport_P521(unittest.TestCase):
         key = ECC.import_key(key_file, curve_name='P521')
         self.assertEqual(self.ref_public, key)
 
-    def test_import_private_der(self):
+    def test_import_rfc5915_der(self):
         key_file = load_file("ecc_p521_private.der")
 
-        key = ECC._import_private_der(key_file, None)
+        key = ECC._import_rfc5915_der(key_file, None)
         self.assertEqual(self.ref_private, key)
 
         key = ECC._import_der(key_file, None)
@@ -840,10 +848,10 @@ class TestExport_P192(unittest.TestCase):
         value = extract_bitstring_from_spki(key_file_compressed_ref)
         self.assertEqual(value, encoded)
 
-    def test_export_private_der(self):
+    def test_export_rfc5915_private_der(self):
         key_file = load_file("ecc_p192_private.der")
 
-        encoded = self.ref_private._export_private_der()
+        encoded = self.ref_private._export_rfc5915_private_der()
         self.assertEqual(key_file, encoded)
 
         # ---
@@ -1094,10 +1102,10 @@ class TestExport_P224(unittest.TestCase):
         value = extract_bitstring_from_spki(key_file_compressed_ref)
         self.assertEqual(value, encoded)
 
-    def test_export_private_der(self):
+    def test_export_rfc5915_private_der(self):
         key_file = load_file("ecc_p224_private.der")
 
-        encoded = self.ref_private._export_private_der()
+        encoded = self.ref_private._export_rfc5915_private_der()
         self.assertEqual(key_file, encoded)
 
         # ---
@@ -1348,10 +1356,10 @@ class TestExport_P256(unittest.TestCase):
         value = extract_bitstring_from_spki(key_file_compressed_ref)
         self.assertEqual(value, encoded)
 
-    def test_export_private_der(self):
+    def test_export_rfc5915_private_der(self):
         key_file = load_file("ecc_p256_private.der")
 
-        encoded = self.ref_private._export_private_der()
+        encoded = self.ref_private._export_rfc5915_private_der()
         self.assertEqual(key_file, encoded)
 
         # ---
@@ -1627,10 +1635,10 @@ class TestExport_P384(unittest.TestCase):
         value = extract_bitstring_from_spki(key_file_compressed_ref)
         self.assertEqual(value, encoded)
 
-    def test_export_private_der(self):
+    def test_export_rfc5915_private_der(self):
         key_file = load_file("ecc_p384_private.der")
 
-        encoded = self.ref_private._export_private_der()
+        encoded = self.ref_private._export_rfc5915_private_der()
         self.assertEqual(key_file, encoded)
 
         # ---
@@ -1911,10 +1919,10 @@ class TestExport_P521(unittest.TestCase):
         value = extract_bitstring_from_spki(key_file_compressed_ref)
         self.assertEqual(value, encoded)
 
-    def test_export_private_der(self):
+    def test_export_rfc5915_private_der(self):
         key_file = load_file("ecc_p521_private.der")
 
-        encoded = self.ref_private._export_private_der()
+        encoded = self.ref_private._export_rfc5915_private_der()
         self.assertEqual(key_file, encoded)
 
         # ---
@@ -2156,6 +2164,231 @@ vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
         self.assertEqual(low16, 0x9643)
 
 
+class TestImport_Ed25519(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(TestImport_Ed25519, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_ed25519()
+
+    def test_import_public_der(self):
+        key_file = load_file("ecc_ed25519_public.der")
+
+        key = ECC._import_subjectPublicKeyInfo(key_file)
+        self.assertEqual(self.ref_public, key)
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(self.ref_public, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_pkcs8_der(self):
+        key_file = load_file("ecc_ed25519_private.der")
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(self.ref_private, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pkcs8_encrypted_1(self):
+        key_file = load_file("ecc_ed25519_private_p8.der")
+
+        key = ECC._import_der(key_file, "secret")
+        self.assertEqual(self.ref_private, key)
+
+        key = ECC.import_key(key_file, "secret")
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pkcs8_encrypted_2(self):
+        key_file = load_file("ecc_ed25519_private_p8.pem")
+
+        key = ECC.import_key(key_file, "secret")
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_x509_der(self):
+        key_file = load_file("ecc_ed25519_x509.der")
+
+        key = ECC._import_der(key_file, None)
+        self.assertEqual(self.ref_public, key)
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_public_pem(self):
+        key_file = load_file("ecc_ed25519_public.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_private_pem(self):
+        key_file = load_file("ecc_ed25519_private.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_private, key)
+
+    def test_import_private_pem_encrypted(self):
+        for algo in "des3", "aes128", "aes192", "aes256":
+            key_file = load_file("ecc_ed25519_private_enc_%s.pem" % algo)
+
+            key = ECC.import_key(key_file, "secret")
+            self.assertEqual(self.ref_private, key)
+
+            key = ECC.import_key(tostr(key_file), b"secret")
+            self.assertEqual(self.ref_private, key)
+
+    def test_import_x509_pem(self):
+        key_file = load_file("ecc_ed25519_x509.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_openssh_public(self):
+        key_file = load_file("ecc_ed25519_public_openssh.txt")
+        key = ECC._import_openssh_public(key_file)
+        self.failIf(key.has_private())
+        key = ECC.import_key(key_file)
+        self.failIf(key.has_private())
+
+    def test_import_openssh_private_clear(self):
+        key_file = load_file("ecc_ed25519_private_openssh.pem")
+        key = ECC.import_key(key_file)
+
+    def test_import_openssh_private_password(self):
+        key_file = load_file("ecc_p521_private_openssh_pwd.pem")
+        key = ECC.import_key(key_file, b"password")
+
+
+class TestExport_Ed25519(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(TestExport_Ed25519, self).__init__(*args, **kwargs)
+        self.ref_private, self.ref_public = create_ref_keys_ed25519()
+
+    def test_export_public_der(self):
+        key_file = load_file("ecc_ed25519_public.der")
+
+        encoded = self.ref_public._export_subjectPublicKeyInfo(True)
+        self.assertEqual(key_file, encoded)
+
+        encoded = self.ref_public.export_key(format="DER")
+        self.assertEqual(key_file, encoded)
+
+        encoded = self.ref_public.export_key(format="DER", compress=False)
+        self.assertEqual(key_file, encoded)
+
+    def test_export_public_sec1(self):
+        self.assertRaises(ValueError, self.ref_public.export_key, format="SEC1")
+
+    def test_export_private_pkcs8_clear(self):
+        key_file = load_file("ecc_ed25519_private.der")
+
+        encoded = self.ref_private._export_pkcs8()
+        self.assertEqual(key_file, encoded)
+
+        # ---
+
+        encoded = self.ref_private.export_key(format="DER")
+        self.assertEqual(key_file, encoded)
+
+        self.assertRaises(ValueError, self.ref_private.export_key,
+                          format="DER", use_pkcs8=False)
+
+    def test_export_private_pkcs8_encrypted(self):
+        encoded = self.ref_private._export_pkcs8(passphrase="secret",
+                                            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+
+        # This should prove that the output is password-protected
+        self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
+
+        decoded = ECC._import_pkcs8(encoded, "secret")
+        self.assertEqual(self.ref_private, decoded)
+
+        # ---
+
+        encoded = self.ref_private.export_key(format="DER",
+                                         passphrase="secret",
+                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        decoded = ECC.import_key(encoded, "secret")
+        self.assertEqual(self.ref_private, decoded)
+
+    def test_export_public_pem(self):
+        key_file_ref = load_file("ecc_ed25519_public.pem", "rt").strip()
+        key_file = self.ref_public.export_key(format="PEM").strip()
+        self.assertEqual(key_file_ref, key_file)
+
+    def test_export_private_pem_clear(self):
+        key_file = load_file("ecc_ed25519_private.pem", "rt").strip()
+        encoded = self.ref_private.export_key(format="PEM").strip()
+        self.assertEqual(key_file, encoded)
+
+    def test_export_private_pem_encrypted(self):
+        encoded = self.ref_private.export_key(format="PEM",
+                                              passphrase=b"secret",
+                                               protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+
+        # This should prove that the output is password-protected
+        self.assertRaises(ValueError, ECC.import_key, encoded)
+
+        assert "ENCRYPTED PRIVATE KEY" in encoded
+
+        decoded = ECC.import_key(encoded, "secret")
+        self.assertEqual(self.ref_private, decoded)
+
+    def test_export_openssh(self):
+        key_file = load_file("ecc_ed25519_public_openssh.txt", "rt")
+        public_key = ECC.import_key(key_file)
+        key_file = " ".join(key_file.split(' ')[:2])    # remove comment
+
+        encoded = public_key._export_openssh(False)
+        self.assertEqual(key_file, encoded.strip())
+
+        encoded = public_key.export_key(format="OpenSSH")
+        self.assertEqual(key_file, encoded.strip())
+
+    def test_prng(self):
+        # Test that password-protected containers use the provided PRNG
+        encoded1 = self.ref_private.export_key(format="PEM",
+                                          passphrase="secret",
+                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+                                          randfunc=get_fixed_prng())
+        encoded2 = self.ref_private.export_key(format="PEM",
+                                          passphrase="secret",
+                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+                                          randfunc=get_fixed_prng())
+        self.assertEqual(encoded1, encoded2)
+
+    def test_byte_or_string_passphrase(self):
+        encoded1 = self.ref_private.export_key(format="PEM",
+                                          passphrase="secret",
+                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+                                          randfunc=get_fixed_prng())
+        encoded2 = self.ref_private.export_key(format="PEM",
+                                          passphrase=b"secret",
+                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+                                          randfunc=get_fixed_prng())
+        self.assertEqual(encoded1, encoded2)
+
+    def test_error_params1(self):
+        # Unknown format
+        self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
+
+        # Missing 'protection' parameter when PKCS#8 is used
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
+                                      passphrase="secret")
+
+        # Empty password
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
+                                      passphrase="", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
+                                      passphrase="",
+                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+
+        # No private keys with OpenSSH
+        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH",
+                                      passphrase="secret")
+
+
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(TestImport)
@@ -2165,12 +2398,15 @@ def get_tests(config={}):
         tests += list_test_cases(TestImport_P256)
         tests += list_test_cases(TestImport_P384)
         tests += list_test_cases(TestImport_P521)
+        tests += list_test_cases(TestImport_Ed25519)
 
         tests += list_test_cases(TestExport_P192)
         tests += list_test_cases(TestExport_P224)
         tests += list_test_cases(TestExport_P256)
         tests += list_test_cases(TestExport_P384)
         tests += list_test_cases(TestExport_P521)
+        tests += list_test_cases(TestExport_Ed25519)
+
     except MissingTestVectorException:
         pass
     return tests

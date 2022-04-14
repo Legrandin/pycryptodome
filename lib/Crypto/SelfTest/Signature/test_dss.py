@@ -251,6 +251,10 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
         self.assertRaises(ValueError, signer.sign, hash_obj)
         self.assertRaises(ValueError, signer.verify, hash_obj, b"\x00" * 40)
 
+    def test_negative_eddsa_key(self):
+        key = ECC.generate(curve="ed25519")
+        self.assertRaises(ValueError, DSS.new, key, 'fips-186-3')
+
     def test_sign_verify(self):
         """Verify public/private method"""
 

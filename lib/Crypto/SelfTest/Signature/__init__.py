@@ -22,18 +22,20 @@
 
 """Self-test for signature modules"""
 
-import os
+import unittest
+from . import test_pkcs1_15, test_pss, test_dss, test_eddsa
+
 
 def get_tests(config={}):
     tests = []
-    from . import test_pkcs1_15; tests += test_pkcs1_15.get_tests(config=config)
-    from . import test_pss; tests += test_pss.get_tests(config=config)
-    from . import test_dss; tests += test_dss.get_tests(config=config)
+    tests += test_pkcs1_15.get_tests(config=config)
+    tests += test_pss.get_tests(config=config)
+    tests += test_dss.get_tests(config=config)
+    tests += test_eddsa.get_tests(config=config)
     return tests
 
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
 
-# vim:set ts=4 sw=4 sts=4 expandtab:
+if __name__ == '__main__':
+    def suite():
+        return unittest.TestSuite(get_tests())
+    unittest.main(defaultTest='suite')

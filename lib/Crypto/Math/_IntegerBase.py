@@ -51,12 +51,12 @@ class IntegerBase(ABC):
         pass
 
     @abc.abstractmethod
-    def to_bytes(self, block_size=0):
+    def to_bytes(self, block_size=0, byteorder='big'):
         pass
 
     @staticmethod
     @abc.abstractmethod
-    def from_bytes(byte_string):
+    def from_bytes(byte_string, byteorder='big'):
         pass
 
     # Relations
@@ -228,7 +228,7 @@ class IntegerBase(ABC):
     @abc.abstractmethod
     def jacobi_symbol(a, n):
         pass
-    
+
     @staticmethod
     def _tonelli_shanks(n, p):
         """Tonelli-shanks algorithm for computing the square root

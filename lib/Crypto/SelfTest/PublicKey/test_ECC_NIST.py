@@ -29,6 +29,8 @@
 # ===================================================================
 
 import unittest
+from binascii import unhexlify
+
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_test_vectors
 
@@ -190,7 +192,7 @@ class TestEccPoint_NIST_P192(unittest.TestCase):
         self.assertEqual(pointR.x, pointRx)
         self.assertEqual(pointR.y, pointRy)
 
-    def test_joing_scalar_multiply(self):
+    def test_joint_scalar_multiply(self):
         d = 0xa78a236d60baec0c5dd41b33a542463a8255391af64c74ee
         e = 0xc4be3d53ec3089e71e4de8ceab7cce889bc393cd85b972bc
         pointRx = 0x019f64eed8fa9b72b7dfea82c17c9bfa60ecb9e1778b5bde
@@ -992,6 +994,9 @@ class TestEccKey_P256(unittest.TestCase):
         # Other names
         key = EccKey(curve="secp256r1", d=1)
         key = EccKey(curve="prime256v1", d=1)
+
+        # Must not accept d parameter
+        self.assertRaises(ValueError, EccKey, curve="p256", seed=b'H'*32)
 
     def test_public_key(self):
 
