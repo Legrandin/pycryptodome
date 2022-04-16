@@ -166,7 +166,7 @@ class RsaKey(object):
         m2 = pow(cp, self._dq, self._q)
         h = ((m2 - m1) * self._u) % self._q
         mp = h * self._p + m1
-        # Step 4: Compute m = m**(r-1) mod n
+        # Step 4: Compute m = m*(r**(-1)) mod n
         result = (r.inverse(self._n) * mp) % self._n
         # Verify no faults occurred
         if ciphertext != pow(result, self._e, self._n):
