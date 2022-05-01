@@ -150,12 +150,10 @@ def getPrime(N, randfunc=None):
     if N < 2:
         raise ValueError("N must be larger than 1")
 
-    number = getRandomNBitInteger(N, randfunc) | 1
-    while (not isPrime(number, randfunc=randfunc)):
-        number = number + 2
-        if number >= 1 << N:
-            number = (1 << N - 1) | 1
-    return number
+    while True:
+        number = getRandomNBitInteger(N, randfunc) | 1
+        if isPrime(number, randfunc=randfunc):
+            return number
 
 
 def _rabinMillerTest(n, rounds, randfunc=None):
