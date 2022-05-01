@@ -348,7 +348,7 @@ class IntegerNative(IntegerBase):
             raise ValueError("n must be a positive integer")
 
         if (n & 1) == 0:
-            raise ValueError("n must be even for the Jacobi symbol")
+            raise ValueError("n must be odd for the Jacobi symbol")
 
         # Step 1
         a = a % n
