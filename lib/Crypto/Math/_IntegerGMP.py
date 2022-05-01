@@ -746,7 +746,7 @@ class IntegerGMP(IntegerBase):
         if not isinstance(n, IntegerGMP):
             n = IntegerGMP(n)
         if n <= 0 or n.is_even():
-            raise ValueError("n must be positive even for the Jacobi symbol")
+            raise ValueError("n must be positive odd for the Jacobi symbol")
         return _gmp.mpz_jacobi(a._mpz_p, n._mpz_p)
 
     # Clean-up
