@@ -27,30 +27,30 @@ import time
 import os
 import sys
 
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
-from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
-from Crypto.Cipher import (AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
+from Cryptodome.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
+from Cryptodome.Cipher import (AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,
                            Salsa20, ChaCha20)
-from Crypto.Hash import (HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,
+from Cryptodome.Hash import (HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,
                          CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512,
                          BLAKE2b, BLAKE2s)
-from Crypto.Random import get_random_bytes
-import Crypto.Util.Counter
-from Crypto.Util.number import bytes_to_long
+from Cryptodome.Random import get_random_bytes
+import Cryptodome.Util.Counter
+from Cryptodome.Util.number import bytes_to_long
 try:
-    from Crypto.Hash import SHA1
+    from Cryptodome.Hash import SHA1
 except ImportError:
     # Maybe it's called SHA
-    from Crypto.Hash import SHA as SHA1
+    from Cryptodome.Hash import SHA as SHA1
 try:
-    from Crypto.Hash import RIPEMD160
+    from Cryptodome.Hash import RIPEMD160
 except ImportError:
     # Maybe it's called RIPEMD
     try:
-        from Crypto.Hash import RIPEMD as RIPEMD160
+        from Cryptodome.Hash import RIPEMD as RIPEMD160
     except ImportError:
-        # Some builds of PyCrypto don't have the RIPEMD module
+        # Some builds of PyCryptodome don't have the RIPEMD module
         RIPEMD160 = None
 
 try:
@@ -59,7 +59,7 @@ try:
 except ImportError: # Some builds/versions of Python don't have a hashlib module
     hashlib = hmac = None
 
-from Crypto.Random import random as pycrypto_random
+from Cryptodome.Random import random as pycrypto_random
 import random as stdlib_random
 
 class BLAKE2b_512(object):
@@ -132,10 +132,10 @@ class Benchmark:
     def test_random_module(self, module_name, module):
         self.announce_start("%s.choice" % (module_name,))
         alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-        t0 = time.time()
+        t0 = time.perf_counter()
         for i in range(5000):
             module.choice(alphabet)
-        t = time.time()
+        t = time.perf_counter()
         invocations_per_second = 5000 / (t - t0)
         self.announce_result(invocations_per_second, "invocations/sec")
 
@@ -143,10 +143,10 @@ class Benchmark:
         self.announce_start("%s pubkey setup" % (pubkey_name,))
         keys = self.random_keys(key_bytes)[:5]
 
-        t0 = time.time()
+        t0 = time.perf_counter()
         for k in keys:
             module.generate(key_bytes*8)
-        t = time.time()
+        t = time.perf_counter()
         pubkey_setups_per_second = len(keys) / (t - t0)
         self.announce_result(pubkey_setups_per_second, "Keys/sec")
 
@@ -154,10 +154,10 @@ class Benchmark:
         self.generate_cipher(module, key_bytes, params)
         self.announce_start("%s key setup" % (cipher_name,))
 
-        for x in xrange(5000):
-            t0 = time.time()
+        for x in range(5000):
+            t0 = time.perf_counter()
             self.generate_cipher(module, key_bytes, params)
-            t = time.time()
+            t = time.perf_counter()
 
         key_setups_per_second = 5000 / (t - t0)
         self.announce_result(key_setups_per_second/1000, "kKeys/sec")
@@ -165,14 +165,21 @@ class Benchmark:
     def test_encryption(self, cipher_name, module, key_bytes, params):
         self.announce_start("%s encryption" % (cipher_name,))
 
-        pt_size = 16384000L
+        pt_size = 16384000
         pt = rng(pt_size)
         cipher = self.generate_cipher(module, key_bytes, params)
 
+        params_dict = dict([param.split('=') for param in params.split()])
+
         # Perform encryption
-        t0 = time.time()
-        cipher.encrypt(pt)
-        t = time.time()
+        if params_dict.get('mode') == 'MODE_SIV':
+            t0 = time.perf_counter()
+            cipher.encrypt_and_digest(pt)
+            t = time.perf_counter()
+        else:
+            t0 = time.perf_counter()
+            cipher.encrypt(pt)
+            t = time.perf_counter()
 
         encryption_speed = pt_size / (t - t0)
         self.announce_result(encryption_speed / 10**6, "MBps")
@@ -183,10 +190,10 @@ class Benchmark:
         blocks = self.random_blocks(digest_size, 10000)
 
         # Initialize hashes
-        t0 = time.time()
+        t0 = time.perf_counter()
         for b in blocks:
             hash_constructor(b).digest()
-        t = time.time()
+        t = time.perf_counter()
 
         hashes_per_second = len(blocks) / (t - t0)
         self.announce_result(hashes_per_second / 1000, "kHashes/sec")
@@ -197,12 +204,12 @@ class Benchmark:
         blocks = self.random_blocks(16384, 10000)
 
         # Perform hashing
-        t0 = time.time()
+        t0 = time.perf_counter()
         h = hash_constructor()
         for b in blocks:
             h.update(b)
         h.digest()
-        t = time.time()
+        t = time.perf_counter()
 
         hash_speed = len(blocks) * len(blocks[0]) / (t - t0)
         self.announce_result(hash_speed / 10**6, "MBps")
@@ -247,10 +254,10 @@ class Benchmark:
             hashes.append(hash_constructor(b))
 
         # Perform signing
-        t0 = time.time()
+        t0 = time.perf_counter()
         for h in hashes:
             sigscheme.sign(h)
-        t = time.time()
+        t = time.perf_counter()
 
         speed = len(hashes) / (t - t0)
         self.announce_result(speed, "sigs/sec")
@@ -278,10 +285,10 @@ class Benchmark:
         signatures = signatures + signatures
 
         # Perform verification
-        t0 = time.time()
+        t0 = time.perf_counter()
         for h, s in zip(hashes, signatures):
             sigscheme.verify(h, s)
-        t = time.time()
+        t = time.perf_counter()
 
         speed = len(hashes) / (t - t0)
         self.announce_result(speed, "sigs/sec")
@@ -331,7 +338,7 @@ class Benchmark:
 
             # Remove iv from parameters
             gen_tuple = gen_tuple[:-1]
-            ctr = Crypto.Util.Counter.new(module.block_size*8,
+            ctr = Cryptodome.Util.Counter.new(module.block_size*8,
                                           initial_value=bytes_to_long(iv),
                                           little_endian=le,
                                           allow_wraparound=True)
@@ -410,14 +417,14 @@ class Benchmark:
         # stdlib random
         self.test_random_module("stdlib random", stdlib_random)
 
-        # Crypto.Random.random
-        self.test_random_module("Crypto.Random.random", pycrypto_random)
+        # Cryptodome.Random.random
+        self.test_random_module("Cryptodome.Random.random", pycrypto_random)
 
-        # Crypto.PublicKey
+        # Cryptodome.PublicKey
         for pubkey_name, module, key_bytes in pubkey_specs:
             self.test_pubkey_setup(pubkey_name, module, key_bytes)
 
-        # Crypto.Cipher (block ciphers)
+        # Cryptodome.Cipher (block ciphers)
         for cipher_name, module, key_bytes in block_specs:
 
             # Benchmark each cipher in each of the various modes (CBC, etc)
@@ -431,7 +438,7 @@ class Benchmark:
                 except ModeNotAvailable as e:
                     pass
 
-        # Crypto.Cipher (stream ciphers)
+        # Cryptodome.Cipher (stream ciphers)
         for cipher_name, module, key_bytes, nonce_bytes in stream_specs:
             params = ""
             if nonce_bytes:
@@ -439,7 +446,7 @@ class Benchmark:
             self.test_key_setup(cipher_name, module, key_bytes, params)
             self.test_encryption(cipher_name, module, key_bytes, params)
 
-        # Crypto.Hash
+        # Cryptodome.Hash
         for hash_name, module in hash_specs:
             self.test_hash_small(hash_name, module.new, module.digest_size)
             self.test_hash_large(hash_name, module.new, module.digest_size)
@@ -449,7 +456,7 @@ class Benchmark:
             self.test_hash_small(hash_name, func, func().digest_size)
             self.test_hash_large(hash_name, func, func().digest_size)
 
-        # PyCrypto HMAC
+        # PyCryptodome HMAC
         for hash_name, module in hash_specs:
             if not hasattr(module, "block_size"):
                 continue
@@ -468,19 +475,19 @@ class Benchmark:
             self.test_cmac_small(cipher_name+"-CMAC", CMAC.new, module, key_size)
             self.test_cmac_large(cipher_name+"-CMAC", CMAC.new, module, key_size)
 
-        # PKCS1_v1_5 (sign) + Crypto.Hash
+        # PKCS1_v1_5 (sign) + Cryptodome.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_sign("PKCS#1-v1.5", RSASSA_PKCS1_v1_5.new, hash_name, module.new, module.digest_size)
 
-        # PKCS1_PSS (sign) + Crypto.Hash
+        # PKCS1_PSS (sign) + Cryptodome.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_sign("PKCS#1-PSS", PKCS1_PSS.new, hash_name, module.new, module.digest_size)
 
-        # PKCS1_v1_5 (verify) + Crypto.Hash
+        # PKCS1_v1_5 (verify) + Cryptodome.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_verify("PKCS#1-v1.5", RSASSA_PKCS1_v1_5.new, hash_name, module.new, module.digest_size)
 
-        # PKCS1_PSS (verify) + Crypto.Hash
+        # PKCS1_PSS (verify) + Cryptodome.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_verify("PKCS#1-PSS", PKCS1_PSS.new, hash_name, module.new, module.digest_size)
 
