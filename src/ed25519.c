@@ -165,7 +165,7 @@ STATIC void ed25519_scalar_internal(Point *Pout,
 
 /* ---- */
 
-int ed25519_new_point(Point **out,
+EXPORT_SYM int ed25519_new_point(Point **out,
                       uint8_t x[32], uint8_t y[32],
                       size_t modsize, void *context)
 {
@@ -211,7 +211,7 @@ int ed25519_new_point(Point **out,
     return 0;
 }
 
-int ed25519_clone(Point **P, const Point *Q)
+EXPORT_SYM int ed25519_clone(Point **P, const Point *Q)
 {
     if ((NULL == P) || (NULL == Q))
         return ERR_NULL;
@@ -224,13 +224,13 @@ int ed25519_clone(Point **P, const Point *Q)
     return 0;
 }
 
-void ed25519_free_point(Point *p)
+EXPORT_SYM void ed25519_free_point(Point *p)
 {
     if (p)
         free(p);
 }
 
-int ed25519_cmp(const Point *p1, const Point *p2)
+EXPORT_SYM int ed25519_cmp(const Point *p1, const Point *p2)
 {
     uint32_t tmp[10];
     uint8_t bin1[32], bin2[32];
@@ -255,7 +255,7 @@ int ed25519_cmp(const Point *p1, const Point *p2)
     return res;
 }
 
-int ed25519_neg(Point *p)
+EXPORT_SYM int ed25519_neg(Point *p)
 {
     const uint32_t zero[10] = { 0 };
 
@@ -264,7 +264,7 @@ int ed25519_neg(Point *p)
     return 0;
 }
 
-int ed25519_get_xy(uint8_t *xb, uint8_t *yb, size_t modsize, Point *p)
+EXPORT_SYM int ed25519_get_xy(uint8_t *xb, uint8_t *yb, size_t modsize, Point *p)
 {
     uint32_t invz[10], tmp[10];
 
@@ -282,7 +282,7 @@ int ed25519_get_xy(uint8_t *xb, uint8_t *yb, size_t modsize, Point *p)
     return 0;
 }
 
-int ed25519_double(Point *p)
+EXPORT_SYM int ed25519_double(Point *p)
 {
     if (NULL == p)
         return ERR_NULL;
@@ -290,7 +290,7 @@ int ed25519_double(Point *p)
     return 0;
 }
 
-int ed25519_add(Point *P1, const Point *P2)
+EXPORT_SYM int ed25519_add(Point *P1, const Point *P2)
 {
     if ((NULL == P1) || (NULL == P2))
         return ERR_NULL;
@@ -298,7 +298,7 @@ int ed25519_add(Point *P1, const Point *P2)
     return 0;
 }
 
-int ed25519_scalar(Point *P, uint8_t *scalar, size_t scalar_len, uint64_t seed)
+EXPORT_SYM int ed25519_scalar(Point *P, uint8_t *scalar, size_t scalar_len, uint64_t seed)
 {
     if ((NULL == P) || (NULL == scalar))
         return ERR_NULL;
@@ -306,5 +306,3 @@ int ed25519_scalar(Point *P, uint8_t *scalar, size_t scalar_len, uint64_t seed)
     ed25519_scalar_internal(P, scalar, scalar_len, P);
     return 0;
 }
-
-
