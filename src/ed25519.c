@@ -15,6 +15,8 @@
 #include "common.h"
 #include "endianess.h"
 
+FAKE_INIT(ed25519)
+
 #include "mod25519.c"
 
 typedef struct Point {
