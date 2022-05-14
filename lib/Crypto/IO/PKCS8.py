@@ -48,7 +48,7 @@ __all__ = ['wrap', 'unwrap']
 
 
 def wrap(private_key, key_oid, passphrase=None, protection=None,
-         prot_params=None, key_params=None, randfunc=None):
+         prot_params=None, key_params=DerNull(), randfunc=None):
     """Wrap a private key into a PKCS#8 blob (clear or encrypted).
 
     Args:
@@ -92,9 +92,10 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
         |                  | value is 1.                                   |
         +------------------+-----------------------------------------------+
 
-      key_params (DER object or Null):
-        The algorithm parameters associated to the private key.
-        It is required for algorithms like DSA, but not for others like RSA.
+      key_params (DER object or None):
+        The ``parameters`` field to use in the ``AlgorithmIdentifier``
+        SEQUENCE. If ``None``, no ``parameters`` field will be added.
+        By default, the ASN.1 type ``NULL`` is used.
 
       randfunc (callable):
         Random number generation function; it should accept a single integer
