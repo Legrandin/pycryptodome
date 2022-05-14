@@ -76,14 +76,14 @@ for instance:
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST P-256, P-384 and P-521 curves only)
+* Elliptic curves cryptography (NIST P-curves; Ed25519)
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
 * SHA-3 (including SHAKE XOFs) and BLAKE2 hash algorithms
 * Salsa20 and ChaCha20 stream ciphers
 * scrypt and HKDF
-* Deterministic (EC)DSA
+* Deterministic (EC)DSA and EdDSA
 * Password-protected PKCS#8 key containers
 * Shamir's Secret Sharing scheme
 * Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
@@ -441,6 +441,16 @@ ext_modules = [
         sources=['src/modexp_utils.c', 'src/siphash.c', 'src/ec_ws.c',
                  'src/mont.c', 'src/p256_table.c', 'src/p384_table.c',
                  'src/p521_table.c'],
+        py_limited_api=True,
+        ),
+    Extension("Crypto.PublicKey._x25519",
+        include_dirs=['src/'],
+        sources=['src/x25519.c'],
+        py_limited_api=True,
+        ),
+    Extension("Crypto.PublicKey._ed25519",
+        include_dirs=['src/'],
+        sources=['src/ed25519.c'],
         py_limited_api=True,
         ),
 

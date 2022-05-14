@@ -36,6 +36,9 @@
 #include "multiply.h"
 #include "mont.h"
 #include "ec.h"
+#include "p256_table.h"
+#include "p384_table.h"
+#include "p521_table.h"
 
 #include "p256_table.h"
 #include "p384_table.h"
@@ -986,7 +989,7 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
  * Create a new EC point on the given EC curve.
  *
  *  @param pecp         The memory area where the pointer to the newly allocated EC
- *                      point will be stored. Use ec_free_point() for deallocating it.
+ *                      point will be stored. Use ec_ws_free_point() for deallocating it.
  *  @param x            The X-coordinate (affine, big-endian)
  *  @param y            The Y-coordinate (affine, big-endian)
  *  @param len          The length of x and y in bytes
@@ -1062,7 +1065,7 @@ cleanup:
     return res;
 }
 
-EXPORT_SYM void ec_free_point(EcPoint *ecp)
+EXPORT_SYM void ec_ws_free_point(EcPoint *ecp)
 {
     if (NULL == ecp)
         return;
@@ -1170,42 +1173,6 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 
     free_workplace(wp);
     return 0;
-}
-
-/*
- * Normalize the projective representation of a point
- * so that Z=1 or Z=0.
- */
-EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
-{
-    MontContext *ctx;
-    Workplace *wp = NULL;
-
-    if (NULL == ecp)
-        return ERR_NULL;
-    ctx = ecp->ec_ctx->mont_ctx;
-
-    wp = new_workplace(ctx);
-    if (NULL == wp)
-        return ERR_MEMORY;
-
-    if (!mont_is_zero(ecp->z, ctx)) {
-        ec_projective_to_affine(ecp->x, ecp->y,
-                                ecp->x, ecp->y, ecp->z,
-                                wp, ctx);
-        mont_set(ecp->z, 1, ctx);
-    }
-
-    free_workplace(wp);
-    return 0;
-}
-
-EXPORT_SYM int ec_ws_is_pai(EcPoint *ecp)
-{
-    if (NULL == ecp)
-        return FALSE;
-
-    return mont_is_zero(ecp->z, ecp->ec_ctx->mont_ctx);
 }
 
 /*
@@ -1473,22 +1440,6 @@ cleanup:
     return res;
 }
 
-EXPORT_SYM int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2)
-{
-    MontContext *ctx;
-
-    if (NULL == ecp1 || NULL == ecp2)
-        return ERR_NULL;
-    ctx = ecp2->ec_ctx->mont_ctx;
-
-    ecp1->ec_ctx = ecp2->ec_ctx;
-    mont_copy(ecp1->x, ecp2->x, ctx);
-    mont_copy(ecp1->y, ecp2->y, ctx);
-    mont_copy(ecp1->z, ecp2->z, ctx);
-
-    return 0;
-}
-
 /*
  * Compare two EC points and return 0 if they match
  */
@@ -1550,3 +1501,18 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
     return 0;
 }
 
+EXPORT_SYM int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2)
+{
+    MontContext *ctx;
+
+    if (NULL == ecp1 || NULL == ecp2)
+        return ERR_NULL;
+    ctx = ecp2->ec_ctx->mont_ctx;
+
+    ecp1->ec_ctx = ecp2->ec_ctx;
+    mont_copy(ecp1->x, ecp2->x, ctx);
+    mont_copy(ecp1->y, ecp2->y, ctx);
+    mont_copy(ecp1->z, ecp2->z, ctx);
+
+    return 0;
+}

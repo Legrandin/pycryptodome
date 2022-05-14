@@ -6,7 +6,8 @@ CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
 
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_32 tests_square_64 tests_product tests_addmul test_endianess\
        test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate\
-       test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32 test_pkcs1
+       test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32 test_pkcs1\
+       test_mod25519 test_x25519 tests_mul_25519 tests_ladder_step test_ed25519
 
 ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
 CPPFLAGS += -DHAVE_X86INTRIN_H -DUSE_SSE2 -DHAVE_WMMINTRIN_H -DHAVE_TMMINTRIN_H
@@ -33,7 +34,7 @@ build:
 all: ${$TGTS}
 
 clean:
-	rm -fr build common.pyc
+	rm -fr build common.pyc __pycache__
 
 # utils
 
@@ -44,7 +45,6 @@ build/modexp_utils.o: ../modexp_utils.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # ECC
-
 TABLES = build/p256_table.o build/p384_table.o build/p521_table.o
 
 build/p256_table.o: ../p256_table.c
@@ -164,3 +164,25 @@ build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o $(UTILS)
 # pkcs1
 build/test_pkcs1: test_pkcs1.c ../common.h ../pkcs1_decode.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
+
+# Curve25519
+build/test_mod25519: test_mod25519.c ../mod25519.c ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/tests_mul_25519.c: make_tests_mul_25519.py
+	$(PYTHON) $^ > $@
+
+build/tests_mul_25519: build/tests_mul_25519.c ../mod25519.c ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/test_x25519: test_x25519.c ../x25519.c ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/tests_ladder_step.c: make_tests_ladder_step.py
+	$(PYTHON) $^ > $@
+
+build/tests_ladder_step: build/tests_ladder_step.c ../x25519.c ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+build/test_ed25519: test_ed25519.c ../ed25519.c ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
