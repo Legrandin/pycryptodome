@@ -956,6 +956,10 @@ class EccKey(object):
             - ``'SEC1'``. The public key (i.e., the EC point) will be encoded
               into ``bytes`` according to Section 2.3.3 of `SEC1`_
               (which is a subset of the older X9.62 ITU standard).
+              Only for NIST P-curves.
+            - ``'raw'``. The public key will be encoded as ``byte``,
+              without metadata. For NIST P-curves: equivalent to ``'SEC1'``.
+              For EdDSA curves: ``bytes`` in the format defined in `RFC8032`_.
 
           passphrase (byte string or string):
             The passphrase to use for protecting the private key.
@@ -964,7 +968,7 @@ class EccKey(object):
             Only relevant for private keys.
 
             If ``True`` (default and recommended), the `PKCS#8`_ representation
-            will be used. Ignored for EdDSA curves, for which PKCS#8 is always used.
+            will be used. It must be ``True`` for EdDSA curves.
 
           protection (string):
             When a private key is exported with password-protection
@@ -997,13 +1001,13 @@ class EccKey(object):
         .. _SEC1:       https://www.secg.org/sec1-v2.pdf
 
         Returns:
-            A multi-line string (for PEM and OpenSSH) or
-            ``bytes`` (for DER and SEC1) with the encoded key.
+            A multi-line string (for ``'PEM'`` and ``'OpenSSH'``) or
+            ``bytes`` (for ``'DER'``, ``'SEC1'``, and ``'raw'``) with the encoded key.
         """
 
         args = kwargs.copy()
         ext_format = args.pop("format")
-        if ext_format not in ("PEM", "DER", "OpenSSH", "SEC1"):
+        if ext_format not in ("PEM", "DER", "OpenSSH", "SEC1", "raw"):
             raise ValueError("Unknown format '%s'" % ext_format)
 
         compress = args.pop("compress", False)
@@ -1047,6 +1051,11 @@ class EccKey(object):
                 return self._export_subjectPublicKeyInfo(compress)
             elif ext_format == "SEC1":
                 return self._export_SEC1(compress)
+            elif ext_format == "raw":
+                if self._curve.name == 'ed25519':
+                    return self._export_ed25519()
+                else:
+                    return self._export_SEC1(compress)
             else:
                 return self._export_openssh(compress)
 

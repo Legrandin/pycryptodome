@@ -1911,12 +1911,18 @@ class TestExport_P521(unittest.TestCase):
         encoded = self.ref_public.export_key(format="SEC1")
         self.assertEqual(value, encoded)
 
+        encoded = self.ref_public.export_key(format="raw")
+        self.assertEqual(value, encoded)
+
     def test_export_public_sec1_compressed(self):
         key_file = load_file("ecc_p521_public.der")
         encoded = self.ref_public.export_key(format="SEC1", compress=True)
 
         key_file_compressed_ref = load_file("ecc_p521_public_compressed.der")
         value = extract_bitstring_from_spki(key_file_compressed_ref)
+        self.assertEqual(value, encoded)
+
+        encoded = self.ref_public.export_key(format="raw", compress=True)
         self.assertEqual(value, encoded)
 
     def test_export_rfc5915_private_der(self):
@@ -2345,6 +2351,10 @@ class TestExport_Ed25519(unittest.TestCase):
 
         encoded = public_key.export_key(format="OpenSSH")
         self.assertEqual(key_file, encoded.strip())
+
+    def test_export_raw(self):
+        encoded = self.ref_public.export_key(format='raw')
+        self.assertEqual(encoded, unhexlify(b'bc85b8cf585d20a4de47e84d1cb6183f63d9ba96223fcbc886e363ffdea20cff'))
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
