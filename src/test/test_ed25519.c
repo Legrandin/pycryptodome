@@ -1,24 +1,13 @@
 #include "endianess.h"
 #include <assert.h>
+#include "ed25519.h"
 
-typedef struct Point {
-    uint32_t X[10];
-    uint32_t Y[10];
-    uint32_t Z[10];
-    uint32_t T[10];
-} Point;
-
-void ed25519_add_internal(Point *P3, const Point *P1, const Point *P2);
-void ed25519_double_internal(Point *P3, const Point *P1);
 void mul_25519(uint32_t out[10], const uint32_t f[10], const uint32_t g[10]);
 void invert_25519(uint32_t out[10], const uint32_t x[10]);
 int convert_behex_to_le25p5(uint32_t out[10], const char *in);
 int convert_le25p5_to_behex(char **out, uint32_t in[10]);
 void convert_le25p5_to_le8(uint8_t out[32], const uint32_t in[10]);
 void convert_le8_to_le25p5(uint32_t out[10], const uint8_t in[32]);
-void ed25519_scalar_internal(Point *Pout,
-                            const uint8_t *k, size_t len,
-                            const Point *Pin);
 
 void test_point_add(void)
 {
@@ -38,7 +27,9 @@ void test_point_add(void)
     G.Z[0] = 1;
     mul_25519(G.T, G.X, G.Y);
 
-    ed25519_add_internal(&G2, &G, &G);
+    G2 = G;
+
+    ed25519_add(&G2, &G);
     invert_25519(invz, G2.Z);
 
     /* Check X */
@@ -72,7 +63,9 @@ void test_point_double(void)
     G.Z[0] = 1;
     mul_25519(G.T, G.X, G.Y);
 
-    ed25519_double_internal(&G2, &G);
+    G2 = G;
+
+    ed25519_double(&G2);
     invert_25519(invz, G2.Z);
 
     /* Check X */
@@ -122,40 +115,40 @@ void test_scalar_mult(void)
     uint8_t G5y[32] = "\xED\xC8\x76\xD6\x83\x1F\xD2\x10\x5D\x0B\x43\x89\xCA\x2E\x28\x31\x66\x46\x92\x89\x14\x6E\x2C\xE0\x6F\xAE\xFE\x98\xB2\x25\x48\x5F";
     uint8_t Gry[32] = "\xC9\x72\x8D\x51\x1D\xF5\xB3\x05\x12\xD4\x81\xCC\x41\xDE\x72\x0E\x73\x90\xF1\x53\xFE\xF6\xF0\x59\xDC\xF4\xB8\xAF\xEE\x92\x77\x16";
 
-    Point P, Q;
+    Point Q;
 
     /* 0 */
-    from_affine(&P, Gx, Gy);
-    ed25519_scalar_internal(&Q, (uint8_t*)"\x00", 1, &P);
+    from_affine(&Q, Gx, Gy);
+    ed25519_scalar(&Q, (uint8_t*)"\x00", 1, 0);
     to_affine(xout, yout, &Q);
     assert(0 == memcmp(G0x, xout, sizeof G0x));
     assert(0 == memcmp(G0y, yout, sizeof G0y));
 
     /* 1 */
-    from_affine(&P, Gx, Gy);
-    ed25519_scalar_internal(&Q, (uint8_t*)"\x01", 1, &P);
+    from_affine(&Q, Gx, Gy);
+    ed25519_scalar(&Q, (uint8_t*)"\x01", 1, 0);
     to_affine(xout, yout, &Q);
     assert(0 == memcmp(Gx, xout, sizeof Gx));
     assert(0 == memcmp(Gy, yout, sizeof Gy));
 
     /* 2 */
-    from_affine(&P, Gx, Gy);
-    ed25519_scalar_internal(&Q, (uint8_t*)"\x02", 1, &P);
+    from_affine(&Q, Gx, Gy);
+    ed25519_scalar(&Q, (uint8_t*)"\x02", 1, 0);
     to_affine(xout, yout, &Q);
     assert(0 == memcmp(G2x, xout, sizeof G2x));
     assert(0 == memcmp(G2y, yout, sizeof G2y));
 
     /* 5 */
-    from_affine(&P, Gx, Gy);
-    ed25519_scalar_internal(&Q, (uint8_t*)"\x05", 1, &P);
+    from_affine(&Q, Gx, Gy);
+    ed25519_scalar(&Q, (uint8_t*)"\x05", 1, 0);
     to_affine(xout, yout, &Q);
     assert(0 == memcmp(G5y, yout, sizeof G5y));
 
     /* random */
     uint8_t r[32] = "\x08\x68\xba\x7a\x34\x73\x4f\x3e\x93\xdd\x24\x26\x32\x7f\x0f\x34\x14\x5c\xd9\x43\x02\xe4\xd5\xdd\x95\x00\xee\x1b\x57\x11\x39\xdd";
 
-    from_affine(&P, Gx, Gy);
-    ed25519_scalar_internal(&Q, r, 32, &P);
+    from_affine(&Q, Gx, Gy);
+    ed25519_scalar(&Q, r, 32, 0);
     to_affine(xout, yout, &Q);
     assert(0 == memcmp(Gry, yout, sizeof Gry));
 }

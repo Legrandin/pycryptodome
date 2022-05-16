@@ -1,0 +1,15 @@
+-----BEGIN PRIVATE KEY-----
+MEcCAQAwBQYDK2VxBDsEOVB7c26YC5DyDU2Fdpae7i48PVGZpOc+WeG3PP3KOUzO
+WHuSe1IArHW5oDwk7nk1PH1HwgNeSehGNw==
+-----END PRIVATE KEY-----
+ED448 Private-Key:
+priv:
+    50:7b:73:6e:98:0b:90:f2:0d:4d:85:76:96:9e:ee:
+    2e:3c:3d:51:99:a4:e7:3e:59:e1:b7:3c:fd:ca:39:
+    4c:ce:58:7b:92:7b:52:00:ac:75:b9:a0:3c:24:ee:
+    79:35:3c:7d:47:c2:03:5e:49:e8:46:37
+pub:
+    89:90:14:dd:c0:a0:e1:26:0c:fc:10:85:af:df:95:
+    20:19:e9:fd:63:37:2e:3e:36:6e:26:da:d3:2b:17:
+    66:24:88:43:30:a1:46:17:23:7e:30:81:fe:bd:9d:
+    1a:15:06:9e:74:99:43:3d:2f:55:dd:80

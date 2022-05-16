@@ -154,8 +154,8 @@ static int hex2bin(char in)
 static char bin2hex(uint8_t b)
 {
     if (b < 10)
-        return '0' + b;
-    return 'a' + b - 10;
+        return (char)('0' + b);
+    return (char)('a' + b - 10);
 }
 
 /*
@@ -186,7 +186,7 @@ STATIC int convert_behex_to_le25p5(uint32_t out[10], const char *in)
         if ((c1 < 0) || (c2 < 0))
             return ERR_VALUE;
 
-        bin[i/2] = c2 * 16 + c1;
+        bin[i/2] = (uint8_t)(c2 * 16 + c1);
     }
 
     convert_le8_to_le25p5(out, bin);
