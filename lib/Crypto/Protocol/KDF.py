@@ -112,7 +112,10 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
 
         Due to a flaw in the PBKDF2 design, you should not request more bytes
         than the ``prf`` can output. For instance, ``dkLen`` should not exceed
-        20 bytes in combination with ``HMAC-SHA1``.
+        20 bytes in combination with ``HMAC-SHA1``. (The attacker only needs
+        to compute the first 20 bytes from the output of the PBKDF2 if the
+        ``HMAC-SHA1`` was used, but the legitimate user will waste resources to
+        compute more.)
      count (integer):
         The number of iterations to carry out. The higher the value, the slower
         and the more secure the function becomes.
