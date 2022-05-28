@@ -105,7 +105,7 @@ Windows (from sources)
 
 .. note::
     If you want to install under the ``Crypto`` package, replace
-    below ``pycryptodomex`` with ``pycryptodome``.
+    below ``pycryptodomex`` with ``pycryptodome``. That being the case and if you want to run the test, instead of ``Cryptodome.SelfTest``, run ``Crypto.SelfTest``.
 
 Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *PyCryptodome* extensions from
