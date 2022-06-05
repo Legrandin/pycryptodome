@@ -1,3 +1,34 @@
+/* ===================================================================
+ *
+ * Copyright (c) 2022, Helder Eijs <helderijs@gmail.com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * ===================================================================
+ */
+
 /*
  * Twisted Edward curve with equation:
  *
@@ -14,17 +45,11 @@
 
 #include "common.h"
 #include "endianess.h"
+#include "ed25519.h"
 
 FAKE_INIT(ed25519)
 
 #include "mod25519.c"
-
-typedef struct Point {
-    uint32_t X[10];
-    uint32_t Y[10];
-    uint32_t Z[10];
-    uint32_t T[10];
-} Point;
 
 /*
  * P3 can be P1 or P2
@@ -115,7 +140,6 @@ static void print_point_le8(const Point *p)
  * @param[in]   xin     The X-coordinate of the input point B.
  * @param[in]   yin     The Y-coordinate of the input point B.
  */
-
 STATIC void ed25519_scalar_internal(Point *Pout,
                                     const uint8_t *k, size_t len,
                                     const Point *Pin)
@@ -166,7 +190,7 @@ STATIC void ed25519_scalar_internal(Point *Pout,
 /* ---- */
 
 EXPORT_SYM int ed25519_new_point(Point **out,
-                      uint8_t x[32], uint8_t y[32],
+                      const uint8_t x[32], const uint8_t y[32],
                       size_t modsize, void *context)
 {
     uint32_t A[10], B[10], C[10];

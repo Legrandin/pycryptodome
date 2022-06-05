@@ -76,7 +76,7 @@ for instance:
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST P-curves; Ed25519)
+* Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448)
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
@@ -438,7 +438,7 @@ ext_modules = [
     # ECC
     Extension("Crypto.PublicKey._ec_ws",
         include_dirs=['src/'],
-        sources=['src/modexp_utils.c', 'src/siphash.c', 'src/ec_ws.c',
+        sources=['src/ec_ws.c',
                  'src/mont.c', 'src/p256_table.c', 'src/p384_table.c',
                  'src/p521_table.c'],
         py_limited_api=True,
@@ -453,12 +453,16 @@ ext_modules = [
         sources=['src/ed25519.c'],
         py_limited_api=True,
         ),
+    Extension("Crypto.PublicKey._ed448",
+        include_dirs=['src/'],
+        sources=['src/ed448.c', 'src/mont1.c'],
+        py_limited_api=True,
+        ),
 
     # Math
     Extension("Crypto.Math._modexp",
         include_dirs=['src/'],
-        sources=['src/modexp.c', 'src/siphash_math.c',
-                 'src/modexp_utils_math.c', 'src/mont_math.c'],
+        sources=['src/modexp.c', 'src/mont2.c'],
         py_limited_api=True,
         ),
 ]

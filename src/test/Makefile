@@ -7,7 +7,7 @@ CFLAGS += -O3 -g -fstrict-aliasing -Wall -Werror
 TAPPS:=tests_addmul128_32 tests_addmul128_64 tests_square_32 tests_square_64 tests_product tests_addmul test_endianess\
        test_poly1305_reduce test_poly1305_load_r test_poly1305_load_m test_poly1305_multiply test_poly1305_accumulate\
        test_mont tests_mont_mult tests_ec_ws_64 tests_ec_ws_32 test_pkcs1\
-       test_mod25519 test_x25519 tests_mul_25519 tests_ladder_step test_ed25519
+       test_mod25519 test_x25519 tests_mul_25519 tests_ladder_step test_ed25519 test_ed448
 
 ifneq (,$(filter $(shell uname -m),x86_64 i386 i686))
 CPPFLAGS += -DHAVE_X86INTRIN_H -DUSE_SSE2 -DHAVE_WMMINTRIN_H -DHAVE_TMMINTRIN_H
@@ -23,8 +23,6 @@ CPPFLAGS += $(UNDEFS)
 
 TGTS:=$(foreach t,$(TAPPS),build/$t)
 
-UTILS=build/modexp_utils.o build/siphash.o
-
 test: build ${TGTS}
 	set -e && for t in ${TGTS}; do $$t; done
 
@@ -35,14 +33,6 @@ all: ${$TGTS}
 
 clean:
 	rm -fr build common.pyc __pycache__
-
-# utils
-
-build/siphash.o: ../siphash.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
-
-build/modexp_utils.o: ../modexp_utils.c
-	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
 # ECC
 TABLES = build/p256_table.o build/p384_table.o build/p521_table.o
@@ -56,10 +46,10 @@ build/p384_table.o: ../p384_table.c
 build/p521_table.o: ../p521_table.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $^
 
-build/tests_ec_ws_64: test_ec_ws.c ../ec_ws.c build/mont_64.o $(TABLES) $(UTILS)
+build/tests_ec_ws_64: test_ec_ws.c ../ec_ws.c build/mont_64.o $(TABLES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
 
-build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o $(TABLES) $(UTILS)
+build/tests_ec_ws_32: test_ec_ws.c ../ec_ws.c build/mont_32.o $(TABLES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^ -DSYS_BITS=32 -UHAVE_UINT128
 
 # addmul128
@@ -140,25 +130,25 @@ build/mont_32.o: ../mont.c
 build/mont_64.o: ../mont.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^ -DSYS_BITS=64
 
-build/test_mont: test_mont.c ../common.h build/mont_32.o $(UTILS)
+build/test_mont: test_mont.c ../common.h build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $(filter %.c %.o, $^)
 
 build/tests_addmul.c: make_tests_addmul.py
 	$(PYTHON) $^ > $@
 
-build/tests_addmul: build/tests_addmul.c build/mont_32.o $(UTILS)
+build/tests_addmul: build/tests_addmul.c build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
 
 build/tests_product.c: make_tests_product.py
 	$(PYTHON) $^ > $@
 
-build/tests_product: build/tests_product.c build/mont_32.o $(UTILS)
+build/tests_product: build/tests_product.c build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
 
 build/tests_mont_mult.c: make_tests_mont_mult.py
 	$(PYTHON) $^ > $@
 
-build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o $(UTILS)
+build/tests_mont_mult: build/tests_mont_mult.c build/mont_32.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $^
 
 # pkcs1
@@ -184,5 +174,10 @@ build/tests_ladder_step.c: make_tests_ladder_step.py
 build/tests_ladder_step: build/tests_ladder_step.c ../x25519.c ../multiply_32.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
 
+# Ed25519
 build/test_ed25519: test_ed25519.c ../ed25519.c ../multiply_32.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^
+
+# Ed448
+build/test_ed448: test_ed448.c ../ed448.c build/mont_64.o
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^

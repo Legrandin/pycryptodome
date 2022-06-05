@@ -2,21 +2,27 @@ CPPFLAGS=-DHAVE_STDINT_H -DHAVE_POSIX_MEMALIGN -DPYCRYPTO_LITTLE_ENDIAN -DHAVE_X
 CPPFLAGS += -DSTATIC=""
 CFLAGS=-Werror -Wall -O3 -g -Wno-unused-const-variable -Wconversion -Wsign-conversion # -m32 -msse2
 
-all:: modexp ec_ws_p256 ec_ws_p384 ec_ws_p521
+all:: modexp ec_ws_p256 ec_ws_p384 ec_ws_p521 ed25519_perf ed448_perf
 
-ec_ws_p256: ec_ws_p256.c mont.c modexp_utils.c siphash.c p256_table.c p384_table.c p521_table.c
+ec_ws_p256: ec_ws_p256.c mont.c p256_table.c p384_table.c p521_table.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
 
-ec_ws_p384: ec_ws_p384.c mont.c modexp_utils.c siphash.c p256_table.c p384_table.c p521_table.c
+ec_ws_p384: ec_ws_p384.c mont.c p256_table.c p384_table.c p521_table.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
 
-ec_ws_p521: ec_ws_p521.c mont.c modexp_utils.c siphash.c p256_table.c p384_table.c p521_table.c
+ec_ws_p521: ec_ws_p521.c mont.c p256_table.c p384_table.c p521_table.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
 
-modexp_in: modexp.c mont.c modexp_utils.c siphash.c
+ed25519_perf: ed25519_perf.c multiply_64.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
 
-modexp: modexp.c mont.c modexp_utils.c siphash.c
+ed448_perf: ed448_perf.c mont.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
+
+modexp_in: modexp.c mont.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
+
+modexp: modexp.c mont.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
 
 p256_table.c: make_ecc_table.py
@@ -32,4 +38,4 @@ x25519: x25519.c multiply_64.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
 
 clean::
-	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp x25519
+	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp x25519 ed25519_perf ed448_perf

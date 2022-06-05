@@ -34,7 +34,6 @@
 #include "common.h"
 #include "endianess.h"
 #include "multiply.h"
-#include "modexp_utils.h"
 #include "mont.h"
 
 #if SYS_BITS == 32
@@ -58,7 +57,27 @@
 #endif
 #endif
 
+#include "modexp_utils.c"
 #include "bignum.c"
+
+void mont_printf(const char *prefix, const uint64_t *mont_number, const MontContext *ctx)
+{
+    uint8_t* number;
+    unsigned i;
+
+    number = (uint8_t*)calloc(1, ctx->modulus_len);
+
+    if (NULL == mont_number || NULL == ctx || NULL == number)
+        return;
+
+    mont_to_bytes(number, ctx->modulus_len, mont_number, ctx);
+    printf("%s", prefix);
+    for (i=0; i<ctx->modulus_len; i++) {
+        printf("%02X", number[i]);
+    }
+    printf("\n");
+    free(number);
+}
 
 /**
  * Compute the inverse modulo 2⁶⁴ of a 64-bit odd integer.
@@ -808,6 +827,8 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
         case ModulusGeneric:
             mont_mult_generic(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
+        default:
+            return ERR_MODULUS;
     }
 
     return 0;
