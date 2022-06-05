@@ -1630,7 +1630,7 @@ def _import_ed448_public_key(encoded):
     d = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffffffffffffff6756
 
     y = encoded[:56]
-    x_lsb = encoded[56] >> 7
+    x_lsb = bord(encoded[56]) >> 7
     point_y = Integer.from_bytes(y, byteorder='little')
     if point_y >= p:
         raise ValueError("Invalid Ed448 key (y)")
