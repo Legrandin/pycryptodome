@@ -948,6 +948,7 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
             }
             break;
         }
+        case ModulusEd448:
         case ModulusGeneric:
             break;
     }
@@ -976,6 +977,7 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
         case ModulusP521:
             free_g_p521(ec_ctx->prot_g);
             break;
+        case ModulusEd448:
         case ModulusGeneric:
             break;
     }
@@ -1344,6 +1346,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             }
             break;
         }
+        case ModulusEd448:
         case ModulusGeneric:
             break;
     }

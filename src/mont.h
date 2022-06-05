@@ -8,7 +8,7 @@
  */
 #define SCRATCHPAD_NR 7
 
-typedef enum _ModulusType { ModulusGeneric, ModulusP256, ModulusP384, ModulusP521 } ModulusType;
+typedef enum _ModulusType { ModulusGeneric, ModulusP256, ModulusP384, ModulusP521, ModulusEd448 } ModulusType;
 
 typedef struct mont_context {
     ModulusType modulus_type;
