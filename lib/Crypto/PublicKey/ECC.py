@@ -702,7 +702,7 @@ class EccKey(object):
     Do not instantiate directly.
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
 
-    :ivar curve: The name of the ECC as defined in :numref:`curve_names`.
+    :ivar curve: The name of the curve as defined in the `ECC table`_.
     :vartype curve: string
 
     :ivar point: an ECC point representating the public component
@@ -1155,7 +1155,7 @@ def generate(**kwargs):
     Args:
 
       curve (string):
-        Mandatory. It must be a curve name defined in :numref:`curve_names`.
+        Mandatory. It must be a curve name defined in the `ECC table`_.
 
       randfunc (callable):
         Optional. The RNG to read randomness from.
@@ -1193,7 +1193,7 @@ def construct(**kwargs):
 
     Args:
       curve (string):
-        Mandatory. The name of the elliptic curve, from the list :numref:`curve_names`.
+        Mandatory. The name of the elliptic curve, as defined in the `ECC table`_.
 
       d (integer):
         Mandatory for a private key on a NIST P-curve (e.g., P-256):
@@ -1662,18 +1662,19 @@ def import_key(encoded, passphrase=None, curve_name=None):
 
         Supported formats for an ECC **public** key:
 
-        - X.509 certificate: binary (DER) or ASCII (PEM).
-        - X.509 ``subjectPublicKeyInfo``: binary (DER) or ASCII (PEM).
-        - SEC1_ (or X9.62), as ``bytes``. NIST P curves only. You must also provide the ``curve_name``.
-        - OpenSSH line, defined in RFC5656_ and RFC8709_ (ASCII).
+        * X.509 certificate: binary (DER) or ASCII (PEM).
+        * X.509 ``subjectPublicKeyInfo``: binary (DER) or ASCII (PEM).
+        * SEC1_ (or X9.62), as ``bytes``. NIST P curves only.
+          You must also provide the ``curve_name`` (with a value from the `ECC table`_)
+        * OpenSSH line, defined in RFC5656_ and RFC8709_ (ASCII).
           This is normally the content of files like ``~/.ssh/id_ecdsa.pub``.
 
         Supported formats for an ECC **private** key:
 
-        - A binary ``ECPrivateKey`` structure, as defined in `RFC5915`_ (DER).
+        * A binary ``ECPrivateKey`` structure, as defined in `RFC5915`_ (DER).
           NIST P curves only.
-        - A `PKCS#8`_ structure (or the more recent Asymmetric Key Package, RFC5958_): binary (DER) or ASCII (PEM).
-        - `OpenSSH 6.5`_ and newer versions (ASCII).
+        * A `PKCS#8`_ structure (or the more recent Asymmetric Key Package, RFC5958_): binary (DER) or ASCII (PEM).
+        * `OpenSSH 6.5`_ and newer versions (ASCII).
 
         Private keys can be in the clear or password-protected.
 
@@ -1686,8 +1687,8 @@ def import_key(encoded, passphrase=None, curve_name=None):
         This parameter is ignored if the key in input is not encrypted.
 
       curve_name (string):
-        For a SEC1 encoding only. This is the name of the ECC curve,
-        as defined in :numref:`curve_names`.
+        For a SEC1 encoding only. This is the name of the curve,
+        as defined in the `ECC table`_.
 
     To import EdDSA private and public keys, when encoded as raw ``bytes``,
     use :func:`Crypto.Signature.eddsa.import_public_key`

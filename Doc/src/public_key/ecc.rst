@@ -15,7 +15,7 @@ private key only takes 32 bytes (that is, 256 bits).
 This module provides mechanisms for generating new ECC keys, exporting and importing them
 using widely supported formats like PEM or DER.
 
-.. _curve_names:
+.. _ECC table:
 .. csv-table::
    :header: Curve, Strings accepted for the ``curve`` API parameter
    :widths: 20, 80

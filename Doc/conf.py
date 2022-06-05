@@ -15,7 +15,7 @@ import sys, os
 
 # Modules to document with autodoc are in another directory
 sys.path.insert(0, os.path.abspath('../lib'))
-print sys.path
+print(sys.path)
 
 # Mock existence of native modules
 from Crypto.Util import _raw_api
@@ -37,6 +37,10 @@ class MockLib(object):
     ed25519_new_point = lambda *x: 0
     ed25519_free_point = lambda *x: None
     ed25519_new_point = lambda *x: 0
+    ed448_new_context = lambda *x: 0
+    ed448_free_context = lambda *x: 0
+    ed448_new_point = lambda *x: 0
+    ed448_free_point = lambda *x: 0
 
 _raw_api.load_pycryptodome_raw_lib = lambda name, cdec: MockLib()
 
@@ -64,7 +68,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'PyCryptodome'
-copyright = u'2017, Helder Eijs'
+copyright = u'2022, Helder Eijs'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -158,7 +162,7 @@ html_static_path = ['_static']
 # Ensure that text wrapping works in a table, by overring some CSS.
 # See https://github.com/rtfd/sphinx_rtd_theme/issues/117
 def setup(app):
-    app.add_stylesheet('theme_overrides.css')
+    app.add_css_file('theme_overrides.css')
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
