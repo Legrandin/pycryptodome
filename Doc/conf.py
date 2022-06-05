@@ -67,8 +67,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'PyCryptodome'
-copyright = u'2022, Helder Eijs'
+project = 'PyCryptodome'
+copyright = '2022, Helder Eijs'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -231,8 +231,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'PyCryptodome.tex', u'PyCryptodome Documentation',
-   u'Legrandin', 'manual'),
+  ('index', 'PyCryptodome.tex', 'PyCryptodome Documentation',
+   'Legrandin', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -261,8 +261,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'pycryptodome', u'PyCryptodome Documentation',
-     [u'Legrandin'], 1)
+    ('index', 'pycryptodome', 'PyCryptodome Documentation',
+     ['Legrandin'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -275,8 +275,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'PyCryptodome', u'PyCryptodome Documentation',
-   u'Legrandin', 'PyCryptodome', 'One line description of project.',
+  ('index', 'PyCryptodome', 'PyCryptodome Documentation',
+   'Legrandin', 'PyCryptodome', 'One line description of project.',
    'Miscellaneous'),
 ]
 
