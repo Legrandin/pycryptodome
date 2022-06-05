@@ -1483,6 +1483,8 @@ def _import_openssh_public(encoded):
         if parts[0].startswith(b"ecdsa-sha2-"):
 
             for curve_name, curve in _curves.items():
+                if curve.openssh is None:
+                    continue
                 if not curve.openssh.startswith("ecdsa-sha2"):
                     continue
                 middle = tobytes(curve.openssh.split("-")[2])
