@@ -6,7 +6,7 @@ Changelog
 
 New features
 ------------
-* Add support for curve Ed25519, including export and import of keys.
+* Add support for curves Ed25519 and Ed448, including export and import of keys.
 * Add support for EdDSA signatures.
 
 3.14.1 (5 February 2022)
