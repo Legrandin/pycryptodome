@@ -9,6 +9,11 @@ New features
 * Add support for curves Ed25519 and Ed448, including export and import of keys.
 * Add support for EdDSA signatures.
 
+Resolved issues
+---------------
+* GH#620: for ``Crypto.Util.number.getPrime`` , do not sequentially
+  scan numbers searching for a prime.
+
 3.14.1 (5 February 2022)
 ++++++++++++++++++++++++++
 
