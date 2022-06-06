@@ -32,7 +32,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, c_size_t,
                                   create_string_buffer, get_raw_buffer,
                                   c_uint8_ptr, is_writeable_buffer)
 
-_raw_strxor = load_pycryptodome_raw_lib("Crypto.Util._strxor",
+_raw_strxor = load_pycryptodome_raw_lib(
+                    "Crypto.Util._strxor",
                     """
                     void strxor(const uint8_t *in1,
                                 const uint8_t *in2,
@@ -45,33 +46,38 @@ _raw_strxor = load_pycryptodome_raw_lib("Crypto.Util._strxor",
 
 
 def strxor(term1, term2, output=None):
-    """XOR two byte strings.
-    
+    """From two byte strings of equal length,
+    create a third one which is the byte-by-byte XOR of the two.
+
     Args:
       term1 (bytes/bytearray/memoryview):
-        The first term of the XOR operation.
+        The first byte string to XOR.
       term2 (bytes/bytearray/memoryview):
-        The second term of the XOR operation.
+        The second byte string to XOR.
       output (bytearray/memoryview):
-        The location where the result must be written to.
+        The location where the result will be written to.
+        It must have the same length as ``term1`` and ``term2``.
         If ``None``, the result is returned.
     :Return:
-        If ``output`` is ``None``, a new ``bytes`` string with the result.
+        If ``output`` is ``None``, a new byte string with the result.
         Otherwise ``None``.
+
+    .. note::
+        ``term1`` and ``term2`` must have the same length.
     """
 
     if len(term1) != len(term2):
         raise ValueError("Only byte strings of equal length can be xored")
-    
+
     if output is None:
         result = create_string_buffer(len(term1))
     else:
         # Note: output may overlap with either input
         result = output
-        
+
         if not is_writeable_buffer(output):
             raise TypeError("output must be a bytearray or a writeable memoryview")
-        
+
         if len(term1) != len(output):
             raise ValueError("output must have the same length as the input"
                              "  (%d bytes)" % len(term1))
@@ -88,15 +94,19 @@ def strxor(term1, term2, output=None):
 
 
 def strxor_c(term, c, output=None):
-    """XOR a byte string with a repeated sequence of characters.
+    """From a byte string, create a second one of equal length
+    where each byte is XOR-red with the same value.
 
     Args:
-        term(bytes/bytearray/memoryview):
-            The first term of the XOR operation.
-        c (bytes):
-            The byte that makes up the second term of the XOR operation.
-        output (None or bytearray/memoryview):
-            If not ``None``, the location where the result is stored into.
+      term(bytes/bytearray/memoryview):
+        The byte string to XOR.
+      c (int):
+        Every byte in the string will be XOR-ed with this value.
+        It must be between 0 and 255 (included).
+      output (None or bytearray/memoryview):
+        The location where the result will be written to.
+        It must have the same length as ``term``.
+        If ``None``, the result is returned.
 
     Return:
         If ``output`` is ``None``, a new ``bytes`` string with the result.
@@ -105,16 +115,16 @@ def strxor_c(term, c, output=None):
 
     if not 0 <= c < 256:
         raise ValueError("c must be in range(256)")
-    
+
     if output is None:
         result = create_string_buffer(len(term))
     else:
         # Note: output may overlap with either input
         result = output
-       
+
         if not is_writeable_buffer(output):
             raise TypeError("output must be a bytearray or a writeable memoryview")
-        
+
         if len(term) != len(output):
             raise ValueError("output must have the same length as the input"
                              "  (%d bytes)" % len(term))
@@ -134,4 +144,3 @@ def strxor_c(term, c, output=None):
 def _strxor_direct(term1, term2, result):
     """Very fast XOR - check conditions!"""
     _raw_strxor.strxor(term1, term2, result, c_size_t(len(term1)))
-
