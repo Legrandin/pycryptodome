@@ -49,19 +49,24 @@ int main(void)
     uint8_t exp[56];
     PointEd448 *gp = NULL;
     unsigned i;
+    int res;
+    EcContext *ec_ctx;
     struct timeval start, stop;
     double duration_ms, rate;
     const uint8_t Gx[COORD_LEN] = "\x4f\x19\x70\xc6\x6b\xed\x0d\xed\x22\x1d\x15\xa6\x22\xbf\x36\xda\x9e\x14\x65\x70\x47\x0f\x17\x67\xea\x6d\xe3\x24\xa3\xd3\xa4\x64\x12\xae\x1a\xf7\x2a\xb6\x65\x11\x43\x3b\x80\xe1\x8b\x00\x93\x8e\x26\x26\xa8\x2b\xc7\x0c\xc0\x5e";
     const uint8_t Gy[COORD_LEN] = "\x69\x3f\x46\x71\x6e\xb6\xbc\x24\x88\x76\x20\x37\x56\xc9\xc7\x62\x4b\xea\x73\x73\x6c\xa3\x98\x40\x87\x78\x9c\x1e\x05\xa0\xc2\xd7\x3a\xd3\xff\x1c\xe6\x7c\x39\xc4\xfd\xbd\x13\x2c\x4e\xd7\xc8\xad\x98\x08\x79\x5b\xf2\x30\xfa\x14";
 
-#define ITERATIONS 1000U
+#define ITERATIONS 5000U
 
     /* Make almost-worst case exponent */
     for (i=0; i<sizeof(exp); i++) {
         exp[i] = (uint8_t)(0xFF - i);
     }
 
-    ed448_new_point(&gp, Gx, Gy, COORD_LEN, NULL);
+    res = ed448_new_context(&ec_ctx);
+    assert(res == 0);
+    res = ed448_new_point(&gp, Gx, Gy, COORD_LEN, ec_ctx);
+    assert(res == 0);
 
     /** Scalar multiplications by arbitrary point **/
     gettimeofday(&start, NULL);
@@ -84,6 +89,7 @@ int main(void)
     printf("\n");
 
     ed448_free_point(gp);
+    ed448_free_context(ec_ctx);
 
     return 0;
 }
