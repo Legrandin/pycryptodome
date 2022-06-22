@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.15.0 (under development)
+3.15.0 (22 June 2022)
 ++++++++++++++++++++++++++
 
 New features
