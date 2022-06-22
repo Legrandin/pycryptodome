@@ -461,9 +461,9 @@ class UnsupportedEccFeature(ValueError):
 
 
 class EccPoint(object):
-    """A class to abstract a point over an Elliptic Curve.
+    """A class to model a point on an Elliptic Curve.
 
-    The class support special methods for:
+    The class supports operators for:
 
     * Adding two points: ``R = S + T``
     * In-place addition: ``S += T``
@@ -559,14 +559,16 @@ class EccPoint(object):
         return self._curve.name in ("ed25519", "ed448")
 
     def is_point_at_infinity(self):
-        """``True`` if this is the point-at-infinity."""
+        """``True`` if this is the *point-at-infinity*."""
+
         if self._is_eddsa():
             return self.x == 0
         else:
             return self.xy == (0, 0)
 
     def point_at_infinity(self):
-        """Return the point-at-infinity for the curve this point is on."""
+        """Return the *point-at-infinity* for the curve."""
+
         if self._is_eddsa():
             return EccPoint(0, 1, self._curve_name)
         else:
@@ -606,8 +608,8 @@ class EccPoint(object):
     def double(self):
         """Double this point (in-place operation).
 
-        :Return:
-            :class:`EccPoint` : this same object (to enable chaining)
+        Returns:
+            This same object (to enable chaining).
         """
 
         double_func = lib_func(self, "double")
@@ -705,15 +707,17 @@ class EccKey(object):
     :ivar curve: The name of the curve as defined in the `ECC table`_.
     :vartype curve: string
 
-    :ivar point: an ECC point representating the public component
-    :vartype point: :class:`EccPoint`
+    :ivar pointQ: an ECC point representating the public component.
+    :vartype pointQ: :class:`EccPoint`
 
-    :ivar d: A scalar representating the private component.
-             Only for NIST P curves.
+    :ivar d: A scalar that represents the private component
+             in NIST P curves. It is smaller than the
+             order of the generator point.
     :vartype d: integer
 
-    :ivar seed: A seed representating the private component.
-                Only for Ed25519 (32 bytes) or Ed448 (57 bytes) curves.
+    :ivar seed: A seed that representats the private component
+                in EdDSA curves
+                (Ed25519, 32 bytes; Ed448, 57 bytes).
     :vartype seed: bytes
     """
 
@@ -1046,9 +1050,11 @@ class EccKey(object):
               into ``bytes`` according to Section 2.3.3 of `SEC1`_
               (which is a subset of the older X9.62 ITU standard).
               Only for NIST P-curves.
-            - ``'raw'``. The public key will be encoded as ``byte``,
-              without metadata. For NIST P-curves: equivalent to ``'SEC1'``.
-              For EdDSA curves: ``bytes`` in the format defined in `RFC8032`_.
+            - ``'raw'``. The public key will be encoded as ``bytes``,
+              without any metadata.
+
+              * For NIST P-curves: equivalent to ``'SEC1'``.
+              * For EdDSA curves: ``bytes`` in the format defined in `RFC8032`_.
 
           passphrase (byte string or string):
             The passphrase to use for protecting the private key.
@@ -1196,11 +1202,11 @@ def construct(**kwargs):
         Mandatory. The name of the elliptic curve, as defined in the `ECC table`_.
 
       d (integer):
-        Mandatory for a private key on a NIST P-curve (e.g., P-256):
+        Mandatory for a private key and a NIST P-curve (e.g., P-256):
         the integer in the range ``[1..order-1]`` that represents the key.
 
       seed (bytes):
-        Mandatory for a private key on an EdDSA curve.
+        Mandatory for a private key and an EdDSA curve.
         It must be 32 bytes for Ed25519, and 57 bytes for Ed448.
 
       point_x (integer):
@@ -1690,9 +1696,12 @@ def import_key(encoded, passphrase=None, curve_name=None):
         For a SEC1 encoding only. This is the name of the curve,
         as defined in the `ECC table`_.
 
-    To import EdDSA private and public keys, when encoded as raw ``bytes``,
-    use :func:`Crypto.Signature.eddsa.import_public_key`
-    and :func:`Crypto.Signature.eddsa.import_private_key`.
+    .. note::
+
+        To import EdDSA private and public keys, when encoded as raw ``bytes``, use:
+
+        * :func:`Crypto.Signature.eddsa.import_public_key`, or
+        * :func:`Crypto.Signature.eddsa.import_private_key`.
 
     Returns:
       :class:`EccKey` : a new ECC key object

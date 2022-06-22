@@ -45,7 +45,7 @@ def import_public_key(encoded):
     Args:
       encoded (bytes):
         The EdDSA public key to import.
-        It must be 32 bytes long for Ed25519, and 57 for Ed448.
+        It must be 32 bytes for Ed25519, and 57 bytes for Ed448.
 
     Returns:
       :class:`Crypto.PublicKey.EccKey` : a new ECC key object.
@@ -72,7 +72,7 @@ def import_private_key(encoded):
     Args:
       encoded (bytes):
         The EdDSA private key to import.
-        It must be 32 bytes long for Ed25519, and 57 for Ed448.
+        It must be 32 bytes for Ed25519, and 57 bytes for Ed448.
 
     Returns:
       :class:`Crypto.PublicKey.EccKey` : a new ECC key object.
@@ -123,13 +123,13 @@ class EdDSASigScheme(object):
 
         Args:
           msg_or_hash (bytes or a hash object):
-            The message to verify (*PureEdDSA*) or
-            the hash that was carried out over the message (*HashEdDSA*).
+            The message to sign (``bytes``, in case of *PureEdDSA*) or
+            the hash that was carried out over the message (hash object, for *HashEdDSA*).
 
-            The hash object is :class:`Crypto.Hash.SHA512` object) for Ed25519,
-            and :class:`Crypto.Hash.SHAKE256` object) for Ed448.
+            The hash object must be :class:`Crypto.Hash.SHA512` for Ed25519,
+            and :class:`Crypto.Hash.SHAKE256` object for Ed448.
 
-        :return: The signature as ``bytes``
+        :return: The signature as ``bytes``. It is always 64 bytes for Ed25519, and 114 bytes for Ed448.
         :raise TypeError: if the EdDSA key has no private half
         """
 
@@ -209,14 +209,15 @@ class EdDSASigScheme(object):
 
         Args:
           msg_or_hash (bytes or a hash object):
-            The message to verify (*PureEdDSA*) or
-            the hash that was carried out over the message (*HashEdDSA*).
+            The message to verify (``bytes``, in case of *PureEdDSA*) or
+            the hash that was carried out over the message (hash object, for *HashEdDSA*).
 
-            The hash object is :class:`Crypto.Hash.SHA512` object) for Ed25519,
-            and :class:`Crypto.Hash.SHAKE256` object) for Ed448.
+            The hash object must be :class:`Crypto.Hash.SHA512` object for Ed25519,
+            and :class:`Crypto.Hash.SHAKE256` for Ed448.
 
           signature (``bytes``):
             The signature that needs to be validated.
+            It must be 64 bytes for Ed25519, and 114 bytes for Ed448.
 
         :raise ValueError: if the signature is not authentic
         """
@@ -312,9 +313,10 @@ def new(key, mode, context=None):
     can perform or verify an EdDSA signature.
 
     Args:
-        key (:class:`Crypto.PublicKey.ECC` on curve ``Ed25519`` or ``Ed448``):
+        key (:class:`Crypto.PublicKey.ECC` object:
             The key to use for computing the signature (*private* keys only)
             or for verifying one.
+            The key must be on the curve ``Ed25519`` or ``Ed448``.
 
         mode (string):
             This parameter must be ``'rfc8032'``.
@@ -322,8 +324,7 @@ def new(key, mode, context=None):
         context (bytes):
             Up to 255 bytes of `context <https://datatracker.ietf.org/doc/html/rfc8032#page-41>`_,
             which is a constant byte string to segregate different protocols or
-            uses of the same key.
-            Do not specify a context, if you want a Pure EdDSA signature.
+            different applications of the same key.
     """
 
     if not isinstance(key, EccKey) or not key._is_eddsa():

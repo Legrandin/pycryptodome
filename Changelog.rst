@@ -8,6 +8,7 @@ New features
 ------------
 * Add support for curves Ed25519 and Ed448, including export and import of keys.
 * Add support for EdDSA signatures.
+* Add support for Asymmetric Key Packages (RFC5958) to import private keys.
 
 Resolved issues
 ---------------
