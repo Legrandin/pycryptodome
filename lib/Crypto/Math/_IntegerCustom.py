@@ -57,7 +57,14 @@ implementation = {"library": "custom", "api": backend}
 class IntegerCustom(IntegerNative):
 
     @staticmethod
-    def from_bytes(byte_string):
+    def from_bytes(byte_string, byteorder='big'):
+        if byteorder == 'big':
+            pass
+        elif byteorder == 'little':
+            byte_string = bytearray(byte_string)
+            byte_string.reverse()
+        else:
+            raise ValueError("Incorrect byteorder")
         return IntegerCustom(bytes_to_long(byte_string))
 
     def inplace_pow(self, exponent, modulus=None):

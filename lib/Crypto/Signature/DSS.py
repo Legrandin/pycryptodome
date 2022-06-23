@@ -379,6 +379,8 @@ def new(key, mode, encoding='binary', randfunc=None):
     if isinstance(key, EccKey):
         order = key._curve.order
         private_key_attr = 'd'
+        if key._curve.name == "ed25519":
+            raise ValueError("ECC key is not on a NIST P curve")
     elif isinstance(key, DsaKey):
         order = Integer(key.q)
         private_key_attr = 'x'

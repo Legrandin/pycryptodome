@@ -114,26 +114,41 @@ class TestIntegerBase(unittest.TestCase):
         v1 = Integer(0x17)
         self.assertEqual(b("\x17"), v1.to_bytes())
 
-        v2 = Integer(0xFFFF)
-        self.assertEqual(b("\xFF\xFF"), v2.to_bytes())
-        self.assertEqual(b("\x00\xFF\xFF"), v2.to_bytes(3))
+        v2 = Integer(0xFFFE)
+        self.assertEqual(b("\xFF\xFE"), v2.to_bytes())
+        self.assertEqual(b("\x00\xFF\xFE"), v2.to_bytes(3))
         self.assertRaises(ValueError, v2.to_bytes, 1)
+
+        self.assertEqual(b("\xFE\xFF"), v2.to_bytes(byteorder='little'))
+        self.assertEqual(b("\xFE\xFF\x00"), v2.to_bytes(3, byteorder='little'))
 
         v3 = Integer(-90)
         self.assertRaises(ValueError, v3.to_bytes)
+        self.assertRaises(ValueError, v3.to_bytes, byteorder='bittle')
 
     def test_conversion_from_bytes(self):
         Integer = self.Integer
 
-        v1 = Integer.from_bytes(b("\x00"))
+        v1 = Integer.from_bytes(b"\x00")
         self.assertTrue(isinstance(v1, Integer))
         self.assertEqual(0, v1)
 
-        v2 = Integer.from_bytes(b("\x00\x00"))
-        self.assertEqual(0, v2)
+        v2 = Integer.from_bytes(b"\x00\x01")
+        self.assertEqual(1, v2)
 
-        v3 = Integer.from_bytes(b("\xFF\xFF"))
+        v3 = Integer.from_bytes(b"\xFF\xFF")
         self.assertEqual(0xFFFF, v3)
+
+        v4 = Integer.from_bytes(b"\x00\x01", 'big')
+        self.assertEqual(1, v4)
+
+        v5 = Integer.from_bytes(b"\x00\x01", byteorder='big')
+        self.assertEqual(1, v5)
+
+        v6 = Integer.from_bytes(b"\x00\x01", byteorder='little')
+        self.assertEqual(0x0100, v6)
+
+        self.assertRaises(ValueError, Integer.from_bytes, b'\x09', 'bittle')
 
     def test_inequality(self):
         # Test Integer!=Integer and Integer!=int

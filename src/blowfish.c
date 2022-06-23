@@ -66,10 +66,10 @@ static inline uint32_t F(const struct block_state *ctx, uint32_t x)
     uint8_t a, b, c, d;
     uint32_t res;
 
-    a = (x >> 24) & 0xFF;
-    b = (x >> 16) & 0xFF;
-    c = (x >> 8)  & 0xFF;
-    d = (x >> 0)  & 0xFF;
+    a = (uint8_t)(x >> 24);
+    b = (uint8_t)(x >> 16);
+    c = (uint8_t)(x >> 8);
+    d = (uint8_t)(x >> 0);
 
     res =  ctx->S[0][a] + ctx->S[1][b];
     res ^= ctx->S[2][c];

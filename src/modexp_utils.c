@@ -2,6 +2,8 @@
 #include "siphash.h"
 #include "endianess.h"
 
+#include "siphash.c"
+
 void expand_seed(uint64_t seed_in, void* seed_out, size_t out_len)
 {
     uint8_t counter[4];

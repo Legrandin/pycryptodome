@@ -29,7 +29,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - OpenPGP (a variant of CFB, RFC4880)
 
 * Authenticated Encryption:
-  
+
   - CCM (AES only)
   - EAX
   - GCM (AES only)
@@ -65,7 +65,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Asymmetric key generation:
   
   - RSA
-  - ECC (NIST curves P-192, P-224, P-256, P-384 and P-521)
+  - ECC (NIST P-curves; Ed25519, Ed448)
   - DSA
   - ElGamal (legacy)
 
@@ -93,6 +93,8 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
     
     - Nonce-based (FIPS 186-3)
     - Deterministic (RFC6979)
+
+  - EdDSA
 
 * Key derivation:
  
