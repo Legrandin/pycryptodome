@@ -48,7 +48,7 @@ __all__ = ['wrap', 'unwrap']
 
 
 def wrap(private_key, key_oid, passphrase=None, protection=None,
-         prot_params=None, key_params=None, randfunc=None):
+         prot_params=None, key_params=DerNull(), randfunc=None):
     """Wrap a private key into a PKCS#8 blob (clear or encrypted).
 
     Args:
@@ -92,9 +92,10 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
         |                  | value is 1.                                   |
         +------------------+-----------------------------------------------+
 
-      key_params (DER object):
-        The algorithm parameters associated to the private key.
-        It is required for algorithms like DSA, but not for others like RSA.
+      key_params (DER object or None):
+        The ``parameters`` field to use in the ``AlgorithmIdentifier``
+        SEQUENCE. If ``None``, no ``parameters`` field will be added.
+        By default, the ASN.1 type ``NULL`` is used.
 
       randfunc (callable):
         Random number generation function; it should accept a single integer
@@ -106,9 +107,6 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
       The PKCS#8-wrapped private key (possibly encrypted), as a byte string.
     """
 
-    if key_params is None:
-        key_params = DerNull()
-
     #
     #   PrivateKeyInfo ::= SEQUENCE {
     #       version                 Version,
@@ -117,12 +115,14 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
     #       attributes              [0]  IMPLICIT Attributes OPTIONAL
     #   }
     #
+    if key_params is None:
+        algorithm = DerSequence([DerObjectId(key_oid)])
+    else:
+        algorithm = DerSequence([DerObjectId(key_oid), key_params])
+
     pk_info = DerSequence([
                 0,
-                DerSequence([
-                    DerObjectId(key_oid),
-                    key_params
-                ]),
+                algorithm,
                 DerOctetString(private_key)
             ])
     pk_info_der = pk_info.encode()
@@ -185,11 +185,12 @@ def unwrap(p8_private_key, passphrase=None):
         if not found:
             raise ValueError("Error decoding PKCS#8 (%s)" % error_str)
 
-    pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4))
+    pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4, 5))
     if len(pk_info) == 2 and not passphrase:
         raise ValueError("Not a valid clear PKCS#8 structure "
                          "(maybe it is encrypted?)")
 
+    # RFC5208, PKCS#8, version is v1(0)
     #
     #   PrivateKeyInfo ::= SEQUENCE {
     #       version                 Version,
@@ -197,22 +198,27 @@ def unwrap(p8_private_key, passphrase=None):
     #       privateKey              PrivateKey,
     #       attributes              [0]  IMPLICIT Attributes OPTIONAL
     #   }
-    #   Version ::= INTEGER
-    if pk_info[0] != 0:
-        raise ValueError("Not a valid PrivateKeyInfo SEQUENCE")
-
-    # PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
     #
-    #   EncryptedPrivateKeyInfo ::= SEQUENCE {
-    #       encryptionAlgorithm  EncryptionAlgorithmIdentifier,
-    #       encryptedData        EncryptedData
+    # RFC5915, Asymmetric Key Package, version is v2(1)
+    #
+    #   OneAsymmetricKey ::= SEQUENCE {
+    #       version                   Version,
+    #       privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+    #       privateKey                PrivateKey,
+    #       attributes            [0] Attributes OPTIONAL,
+    #       ...,
+    #       [[2: publicKey        [1] PublicKey OPTIONAL ]],
+    #       ...
     #   }
-    #   EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
 
-    #   AlgorithmIdentifier  ::=  SEQUENCE  {
-    #       algorithm   OBJECT IDENTIFIER,
-    #       parameters  ANY DEFINED BY algorithm OPTIONAL
-    #   }
+    if pk_info[0] == 0:
+        if len(pk_info) not in (3, 4):
+            raise ValueError("Not a valid PrivateKeyInfo SEQUENCE")
+    elif pk_info[0] == 1:
+        if len(pk_info) not in (3, 4, 5):
+            raise ValueError("Not a valid PrivateKeyInfo SEQUENCE")
+    else:
+        raise ValueError("Not a valid PrivateKeyInfo SEQUENCE")
 
     algo = DerSequence().decode(pk_info[1], nr_elements=(1, 2))
     algo_oid = DerObjectId().decode(algo[0]).value
@@ -225,7 +231,9 @@ def unwrap(p8_private_key, passphrase=None):
         except:
             algo_params = algo[1]
 
-    #   EncryptedData ::= OCTET STRING
+    # PrivateKey ::= OCTET STRING
     private_key = DerOctetString().decode(pk_info[2]).payload
+
+    # We ignore attributes and (for v2 only) publickey
 
     return (algo_oid, private_key, algo_params)

@@ -1,12 +1,23 @@
 Changelog
 =========
 
-3.14.2 (23 February 2022)
+<<<<<<< HEAD
+3.15.0 (22 June 2022)
+>>>>>>> 9a84371eb0edc0bcd667c1bb63a643593a9b6065
 ++++++++++++++++++++++++++
 
 New features
 ------------
-* Added support for Format Preserving Encryption (FF3-1 NIST 800-38G)
+<<<<<<< HEAD
+* Add support for curves Ed25519 and Ed448, including export and import of keys.
+* Add support for EdDSA signatures.
+* Add support for Asymmetric Key Packages (RFC5958) to import private keys.
+
+Resolved issues
+---------------
+* GH#620: for ``Crypto.Util.number.getPrime`` , do not sequentially
+  scan numbers searching for a prime.
+>>>>>>> 9a84371eb0edc0bcd667c1bb63a643593a9b6065
 
 3.14.1 (5 February 2022)
 ++++++++++++++++++++++++++

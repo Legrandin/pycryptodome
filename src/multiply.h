@@ -22,9 +22,9 @@
 
 #else
 
-uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh);
+static inline uint64_t dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh);
 
-uint64_t static inline dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
+static inline uint64_t dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
 {
     uint32_t al = (uint32_t) a;
     uint32_t ah = (uint32_t)(a >> 32);

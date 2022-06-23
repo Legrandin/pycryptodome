@@ -35,7 +35,7 @@ from Crypto.Util.py3compat import tobytes, is_native_int
 from Crypto.Util._raw_api import (backend, load_lib,
                                   get_raw_buffer, get_c_string,
                                   null_pointer, create_string_buffer,
-                                  c_ulong, c_size_t)
+                                  c_ulong, c_size_t, c_uint8_ptr)
 
 from ._IntegerBase import IntegerBase
 
@@ -225,7 +225,7 @@ class IntegerGMP(IntegerBase):
     def __index__(self):
         return int(self)
 
-    def to_bytes(self, block_size=0):
+    def to_bytes(self, block_size=0, byteorder='big'):
         """Convert the number into a byte string.
 
         This method encodes the number in network order and prepends
@@ -236,6 +236,8 @@ class IntegerGMP(IntegerBase):
           block_size : integer
             The exact size the output byte string must have.
             If zero, the string has the minimal length.
+          byteorder : string
+            'big' for big-endian integers (default), 'little' for litte-endian.
         :Returns:
           A byte string.
         :Raise ValueError:
@@ -252,6 +254,7 @@ class IntegerGMP(IntegerBase):
                              " of prescribed length")
         buf = create_string_buffer(buf_len)
 
+
         _gmp.mpz_export(
                 buf,
                 null_pointer,  # Ignore countp
@@ -261,20 +264,39 @@ class IntegerGMP(IntegerBase):
                 c_size_t(0),   # No nails
                 self._mpz_p)
 
-        return b'\x00' * max(0, block_size - buf_len) + get_raw_buffer(buf)
+        result = b'\x00' * max(0, block_size - buf_len) + get_raw_buffer(buf)
+        if byteorder == 'big':
+            pass
+        elif byteorder == 'little':
+            result = bytearray(result)
+            result.reverse()
+            result = bytes(result)
+        else:
+            raise ValueError("Incorrect byteorder")
+        return result
 
     @staticmethod
-    def from_bytes(byte_string):
+    def from_bytes(byte_string, byteorder='big'):
         """Convert a byte string into a number.
 
         :Parameters:
           byte_string : byte string
             The input number, encoded in network order.
             It can only be non-negative.
+          byteorder : string
+            'big' for big-endian integers (default), 'little' for litte-endian.
+
         :Return:
           The ``Integer`` object carrying the same value as the input.
         """
         result = IntegerGMP(0)
+        if byteorder == 'big':
+            pass
+        elif byteorder == 'little':
+            byte_string = bytearray(byte_string)
+            byte_string.reverse()
+        else:
+            raise ValueError("Incorrect byteorder")
         _gmp.mpz_import(
                         result._mpz_p,
                         c_size_t(len(byte_string)),  # Amount of words to read
@@ -282,7 +304,7 @@ class IntegerGMP(IntegerBase):
                         c_size_t(1),  # Each word is 1 byte long
                         0,            # Endianess within a word - not relevant
                         c_size_t(0),  # No nails
-                        byte_string)
+                        c_uint8_ptr(byte_string))
         return result
 
     # Relations
@@ -724,7 +746,7 @@ class IntegerGMP(IntegerBase):
         if not isinstance(n, IntegerGMP):
             n = IntegerGMP(n)
         if n <= 0 or n.is_even():
-            raise ValueError("n must be positive even for the Jacobi symbol")
+            raise ValueError("n must be positive odd for the Jacobi symbol")
         return _gmp.mpz_jacobi(a._mpz_p, n._mpz_p)
 
     # Clean-up

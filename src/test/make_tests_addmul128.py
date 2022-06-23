@@ -19,7 +19,7 @@ def make_test(t, a, b0, b1):
 
     # Computation does not depend on zero terms
     result_len = max(len(result), 2 + len(a))
-   
+
     # Pad the output vector with as many padding zeroes as needed
     for x in range(result_len - len(t_in)):
         t_in.append("0")

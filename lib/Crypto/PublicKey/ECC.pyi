@@ -51,7 +51,7 @@ _Curve = NamedTuple("_Curve", [('p', Integer),
                                ('oid', str),
                                ('context', Any),
                                ('desc', str),
-                               ('openssh', str),
+                               ('openssh', Union[str, None]),
                                ])
 
 _curves : Dict[str, _Curve]
@@ -62,3 +62,5 @@ def construct(**kwargs: Union[str, int]) -> EccKey: ...
 def import_key(encoded: Union[bytes, str],
                passphrase: Optional[str]=None,
                curve_name:Optional[str]=None) -> EccKey: ...
+def _import_ed25519_public_key(encoded: bytes) -> EccKey: ...
+def _import_ed448_public_key(encoded: bytes) -> EccKey: ...

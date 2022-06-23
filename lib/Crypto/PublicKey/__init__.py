@@ -60,17 +60,16 @@ def _expand_subject_public_key_info(encoded):
     return algo_oid.value, spk, algo_params
 
 
-def _create_subject_public_key_info(algo_oid, secret_key, params=None):
+def _create_subject_public_key_info(algo_oid, public_key, params):
 
     if params is None:
-        params = DerNull()
+        algorithm = DerSequence([DerObjectId(algo_oid)])
+    else:
+        algorithm = DerSequence([DerObjectId(algo_oid), params])
 
-    spki = DerSequence([
-                DerSequence([
-                    DerObjectId(algo_oid),
-                    params]),
-                DerBitString(secret_key)
-                ])
+    spki = DerSequence([algorithm,
+                        DerBitString(public_key)
+                        ])
     return spki.encode()
 
 

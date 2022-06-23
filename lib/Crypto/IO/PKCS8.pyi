@@ -7,7 +7,7 @@ def wrap(private_key: bytes,
 	 passphrase: Union[bytes, str] = ...,
 	 protection: str = ...,
          prot_params: Dict = ...,
-	 key_params: DerObject = ...,
+	 key_params: Optional[DerObject] = ...,
 	 randfunc: Optional[Callable[[int],str]]  = ...) -> bytes: ...
 
 

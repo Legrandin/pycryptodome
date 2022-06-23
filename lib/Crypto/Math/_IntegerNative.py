@@ -62,16 +62,31 @@ class IntegerNative(IntegerBase):
     def __index__(self):
         return int(self._value)
 
-    def to_bytes(self, block_size=0):
+    def to_bytes(self, block_size=0, byteorder='big'):
         if self._value < 0:
             raise ValueError("Conversion only valid for non-negative numbers")
         result = long_to_bytes(self._value, block_size)
         if len(result) > block_size > 0:
             raise ValueError("Value too large to encode")
+        if byteorder == 'big':
+            pass
+        elif byteorder == 'little':
+            result = bytearray(result)
+            result.reverse()
+            result = bytes(result)
+        else:
+            raise ValueError("Incorrect byteorder")
         return result
 
     @classmethod
-    def from_bytes(cls, byte_string):
+    def from_bytes(cls, byte_string, byteorder='big'):
+        if byteorder == 'big':
+            pass
+        elif byteorder == 'little':
+            byte_string = bytearray(byte_string)
+            byte_string.reverse()
+        else:
+            raise ValueError("Incorrect byteorder")
         return cls(bytes_to_long(byte_string))
 
     # Relations
@@ -348,7 +363,7 @@ class IntegerNative(IntegerBase):
             raise ValueError("n must be a positive integer")
 
         if (n & 1) == 0:
-            raise ValueError("n must be even for the Jacobi symbol")
+            raise ValueError("n must be odd for the Jacobi symbol")
 
         # Step 1
         a = a % n

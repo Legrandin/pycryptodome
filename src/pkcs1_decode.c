@@ -38,7 +38,7 @@ FAKE_INIT(pkcs1_decode)
 
 STATIC uint8_t rol8(uint8_t x)
 {
-    return (x << 1) | (x >> 7);
+    return (uint8_t)((x << 1) | (x >> 7));
 }
 
 /*
@@ -76,7 +76,7 @@ STATIC void set_if_match(uint8_t *flag, size_t term1, size_t term2)
     for (i=0; i<sizeof(size_t); i++) {
         x |= (uint8_t)((term1 ^ term2) >> (i*8));
     }
-    *flag |= ~propagate_ones(x);
+    *flag |= (uint8_t)~propagate_ones(x);
 }
 
 /*
@@ -92,7 +92,7 @@ STATIC void set_if_no_match(uint8_t *flag, size_t term1, size_t term2)
     for (i=0; i<sizeof(size_t); i++) {
         x |= (uint8_t)((term1 ^ term2) >> (i*8));
     }
-    *flag |= propagate_ones(x);
+    *flag |= (uint8_t)propagate_ones(x);
 }
 
 /*
@@ -103,8 +103,8 @@ STATIC void safe_select(const uint8_t *in1, const uint8_t *in2, uint8_t *out, ui
     size_t i;
     uint8_t mask1, mask2;
 
-    mask1 = propagate_ones(choice);
-    mask2 = ~mask1;
+    mask1 = (uint8_t)propagate_ones(choice);
+    mask2 = (uint8_t)~mask1;
     for (i=0; i<len; i++) {
         out[i] = (in1[i] & mask2) | (in2[i] & mask1);
         /* yes, these rol8s are redundant, but we try to avoid compiler optimizations */
@@ -139,11 +139,11 @@ STATIC uint8_t safe_cmp(const uint8_t *in1, const uint8_t *in2,
 
     result = 0;
     for (i=0; i<len; i++) {
-        c = propagate_ones(*in1++ ^ *in2++);
-        result |= c & *eq_mask++;   /* Set all bits to 1 if *in1 and *in2 differed
-                                       and eq_mask was 0xff */
-        result |= ~c & *neq_mask++; /* Set all bits to 1 if *in1 and *in2 matched
-                                       and neq_mask was 0xff */
+        c = (uint8_t)propagate_ones(*in1++ ^ *in2++);
+        result |= (uint8_t)(c & *eq_mask++);    /* Set all bits to 1 if *in1 and *in2 differed
+                                                and eq_mask was 0xff */
+        result |= (uint8_t)(~c & *neq_mask++);  /* Set all bits to 1 if *in1 and *in2 matched
+                                                and neq_mask was 0xff */
     }
 
     return result;
@@ -277,7 +277,7 @@ EXPORT_SYM int pkcs1_decode(const uint8_t *em, size_t len_em_output,
     safe_select(em, padded_sentinel, output, selector, len_em_output);
 
     /** Select the number of bytes that the caller will skip in output **/
-    result = safe_select_idx(pos + 1, len_em_output - len_sentinel, selector);
+    result = (int)safe_select_idx(pos + 1, len_em_output - len_sentinel, selector);
 
 end:
     free(padded_sentinel);

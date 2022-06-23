@@ -41,7 +41,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST curves P-192, P-224, P-256, P-384 and P-521)
+* Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448)
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
@@ -59,7 +59,7 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Poly1305 MAC
 * ChaCha20-Poly1305 and XChaCha20-Poly1305 authenticated ciphers
 * scrypt, bcrypt and HKDF derivation functions
-* Deterministic (EC)DSA
+* Deterministic (EC)DSA and EdDSA
 * Password-protected PKCS#8 key containers
 * Shamir's Secret Sharing scheme
 * Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
