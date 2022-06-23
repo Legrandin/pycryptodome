@@ -313,7 +313,7 @@ def new(key, mode, context=None):
     can perform or verify an EdDSA signature.
 
     Args:
-        key (:class:`Crypto.PublicKey.ECC` object:
+        key (:class:`Crypto.PublicKey.ECC` object):
             The key to use for computing the signature (*private* keys only)
             or for verifying one.
             The key must be on the curve ``Ed25519`` or ``Ed448``.
