@@ -39,8 +39,9 @@ from Crypto.PublicKey.ECC import (EccKey,
 
 
 def import_public_key(encoded):
-    """Import an EdDSA ECC public key, when encoded as raw ``bytes`` as described
-    in RFC8032.
+    """Create a new Ed25519 or Ed448 public key object,
+    starting from the key encoded as raw ``bytes``,
+    in the format described in RFC8032.
 
     Args:
       encoded (bytes):
@@ -66,8 +67,9 @@ def import_public_key(encoded):
 
 
 def import_private_key(encoded):
-    """Import an EdDSA ECC private key, when encoded as raw ``bytes`` as described
-    in RFC8032.
+    """Create a new Ed25519 or Ed448 private key object,
+    starting from the key encoded as raw ``bytes``,
+    in the format described in RFC8032.
 
     Args:
       encoded (bytes):
