@@ -56,7 +56,7 @@ The base API of a cipher is fairly simple:
 *   For decrypting data, you call the :func:`decrypt` method of the cipher
     object with the ciphertext. The method returns the piece of plaintext.
     The ``output`` parameter can be passed here too.
-    
+
   For most algorithms, you may call :func:`decrypt` multiple times
     (i.e. once for each piece of ciphertext).
 
@@ -98,6 +98,10 @@ There are two types of symmetric ciphers:
   a :doc:`mode of operation <classic>`, which allows one to encrypt
   a variable amount of data. Some modes (like CTR) effectively turn
   a block cipher into a stream cipher.
+
+**Format Preserving Encryption** is a symmetric mode of operation which preserves
+the length and format of the original plaintext.
+See :doc:`ff3`
 
 The widespread consensus is that ciphers that provide
 only confidentiality, without any form of authentication, are undesirable.

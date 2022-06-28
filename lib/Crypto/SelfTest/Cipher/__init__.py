@@ -50,6 +50,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Cipher import test_EAX;        tests += test_EAX.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_GCM;        tests += test_GCM.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_SIV;        tests += test_SIV.get_tests(config=config)
+    from Crypto.SelfTest.Cipher import test_FF3;        tests += test_FF3.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

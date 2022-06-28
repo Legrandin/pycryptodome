@@ -35,4 +35,4 @@ if wycheproof_warnings:
     print("Printing Wycheproof warnings")
 
 config = {'slow_tests' : slow_tests, 'wycheproof_warnings' : wycheproof_warnings }
-SelfTest.run(stream=sys.stdout, verbosity=1, config=config)
+SelfTest.run(stream=sys.stdout, verbosity=2, config=config)
