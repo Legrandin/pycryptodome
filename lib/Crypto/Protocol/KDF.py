@@ -137,8 +137,9 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
         If you want multiple keys, just break up this string into segments of the desired length.
     """
 
-    password = tobytes(password)
-    salt = tobytes(salt)
+
+    password = tobytes(password, 'unicode-escape')
+    salt = tobytes(salt, 'unicode-escape')
 
     if prf and hmac_hash_module:
         raise ValueError("'prf' and 'hmac_hash_module' are mutually exlusive")
@@ -508,7 +509,7 @@ def bcrypt(password, cost, salt=None):
 
    """
 
-    password = tobytes(password, "utf-8")
+    password = tobytes(password, "unicode-escape")
 
     if password.find(bchr(0)[0]) != -1:
         raise ValueError("The password contains the zero byte")
