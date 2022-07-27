@@ -25,8 +25,8 @@ A sender can use a *private* key (loaded from a file) to sign a message::
 
         message = b'I give my permission to order #4355'
         key = ECC.import_key(open("private_ed25519.pem").read()))
-        signer = eddsa.new(key)
-        signature = eddsa.sign(message)
+        signer = eddsa.new(key, 'rfc8032')
+        signature = signer.sign(message)
 
 The receiver can use the matching *public* key to verify authenticity of the received message::
 
@@ -35,7 +35,7 @@ The receiver can use the matching *public* key to verify authenticity of the rec
 
         message = b'I give my permission to order #4355'
         key = ECC.import_key(open("public_ed25519.pem").read()))
-        verifier = eddsa.new(key)
+        verifier = eddsa.new(key, 'rfc8032')
         try:
             verifier.verify(message, signature)
             print("The message is authentic")
@@ -51,8 +51,8 @@ Alternatively the *HashedEdDSA* variant can be used to sign a message with Ed255
         message = b'I give my permission to order #4355'
         prehashed_message = SHA512.new(message)
         key = ECC.import_key(open("private_ed25519.pem").read()))
-        signer = eddsa.new(key)
-        signature = eddsa.sign(prehashed_message)
+        signer = eddsa.new(key, 'rfc8032')
+        signature = signer.sign(prehashed_message)
 
 *HashedEdDSA* also exists for Ed448::
 
@@ -63,8 +63,8 @@ Alternatively the *HashedEdDSA* variant can be used to sign a message with Ed255
         message = b'I give my permission to order #4355'
         prehashed_message = SHAKE256.new(message)
         key = ECC.import_key(open("private_ed448.pem").read()))
-        signer = eddsa.new(key)
-        signature = eddsa.sign(prehashed_message)
+        signer = eddsa.new(key, 'rfc8032')
+        signature = signer.sign(prehashed_message)
 
 
 .. automodule:: Crypto.Signature.eddsa
