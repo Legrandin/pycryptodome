@@ -495,12 +495,17 @@ class GcmMode(object):
         if self.verify not in self._next:
             raise TypeError("verify() cannot be called"
                             " when encrypting a message")
+
+        mac_len = len(received_mac_tag)
+        if mac_len > 16:
+            raise ValueError("Invaild MAC length")
+
         self._next = [self.verify]
 
         secret = get_random_bytes(16)
 
         mac1 = BLAKE2s.new(digest_bits=160, key=secret,
-                           data=self._compute_mac())
+                           data=self._compute_mac()[:mac_len])
         mac2 = BLAKE2s.new(digest_bits=160, key=secret,
                            data=received_mac_tag)
 
