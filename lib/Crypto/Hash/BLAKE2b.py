@@ -233,13 +233,13 @@ def new(**kwargs):
             raise ValueError("'digest_bytes' not in range 1..64")
     else:
         if not (8 <= digest_bits <= 512) or (digest_bits % 8):
-            raise ValueError("'digest_bytes' not in range 8..512, "
+            raise ValueError("'digest_bits' not in range 8..512, "
                              "with steps of 8")
         digest_bytes = digest_bits // 8
 
     key = kwargs.pop("key", b"")
     if len(key) > 64:
-        raise ValueError("BLAKE2s key cannot exceed 64 bytes")
+        raise ValueError("BLAKE2b key cannot exceed 64 bytes")
 
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
