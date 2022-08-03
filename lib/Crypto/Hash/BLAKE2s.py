@@ -233,7 +233,7 @@ def new(**kwargs):
             raise ValueError("'digest_bytes' not in range 1..32")
     else:
         if not (8 <= digest_bits <= 256) or (digest_bits % 8):
-            raise ValueError("'digest_bytes' not in range 8..256, "
+            raise ValueError("'digest_bits' not in range 8..256, "
                              "with steps of 8")
         digest_bytes = digest_bits // 8
 
