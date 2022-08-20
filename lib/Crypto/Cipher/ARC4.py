@@ -20,8 +20,6 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import b
-
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
@@ -113,7 +111,7 @@ def new(key, *args, **kwargs):
 
     :param key:
         The secret key to use in the symmetric cipher.
-        Its length must be in the range ``[5..256]``.
+        Its length must be in the range ``[1..256]``.
         The recommended length is 16 bytes.
     :type key: bytes, bytearray, memoryview
 
@@ -131,7 +129,8 @@ def new(key, *args, **kwargs):
     """
     return ARC4Cipher(key, *args, **kwargs)
 
+
 # Size of a data block (in bytes)
 block_size = 1
 # Size of a key (in bytes)
-key_size = range(5, 256+1)
+key_size = range(1, 256+1)

@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.16.0 (xx xx 2022)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#639: ARC4 now also works with 'keys' as short as 8 bits.
+
 3.15.0 (22 June 2022)
 ++++++++++++++++++++++++++
 
