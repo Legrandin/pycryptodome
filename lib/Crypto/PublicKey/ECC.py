@@ -753,7 +753,7 @@ class EccKey(object):
         if curve_name not in _curves:
             raise ValueError("Unsupported curve (%s)" % curve_name)
         self._curve = _curves[curve_name]
-        self.curve = curve_name
+        self.curve = self._curve.desc
 
         count = int(self._d is not None) + int(self._seed is not None)
 
