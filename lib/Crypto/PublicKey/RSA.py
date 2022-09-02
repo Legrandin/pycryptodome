@@ -103,6 +103,7 @@ class RsaKey(object):
         if input_set == private_set:
             self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
             self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)
+            self._invq = self._q.inverse(self._p)
 
     @property
     def n(self):
@@ -129,6 +130,24 @@ class RsaKey(object):
         if not self.has_private():
             raise AttributeError("No CRT component 'q' available for public keys")
         return int(self._q)
+
+    @property
+    def dp(self):
+        if not self.has_private():
+            raise AttributeError("No CRT component 'dp' available for public keys")
+        return int(self._dp)
+
+    @property
+    def dq(self):
+        if not self.has_private():
+            raise AttributeError("No CRT component 'dq' available for public keys")
+        return int(self._dq)
+
+    @property
+    def invq(self):
+        if not self.has_private():
+            raise AttributeError("No CRT component 'invq' available for public keys")
+        return int(self._invq)
 
     @property
     def u(self):
