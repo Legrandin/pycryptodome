@@ -100,7 +100,7 @@ class SimpleTest(unittest.TestCase):
         for i in range(10):
             self.assertEqual(random.choice((1,2,3)) in (1,2,3), True)
         self.assertEqual(random.choice([1,2,3]) in [1,2,3], True)
-        if sys.version_info[0] is 3:
+        if sys.version_info[0] == 3:
             self.assertEqual(random.choice(bytearray(b('123'))) in bytearray(b('123')), True)
         self.assertEqual(1, random.choice([1]))
         self.assertRaises(IndexError, random.choice, [])

@@ -43,5 +43,7 @@ Available mechanisms
 
 * :doc:`pkcs1_pss`
 
+* :doc:`eddsa`
+
 * :doc:`dsa`
 

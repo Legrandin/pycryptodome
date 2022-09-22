@@ -39,6 +39,8 @@ from binascii import unhexlify
 from Crypto.Util.py3compat import *
 from Crypto.IO import PKCS8
 
+from Crypto.Util.asn1 import DerNull
+
 oid_key = '1.2.840.113549.1.1.1'
 
 # Original RSA key (in DER format)
@@ -407,7 +409,7 @@ class PKCS8_Decrypt(unittest.TestCase):
                     b("TestTest"),
                     protection=t[0],
                     prot_params=params,
-                    key_params=None,
+                    key_params=DerNull(),
                     randfunc=rng)
             self.assertEqual(wrapped, t[4])
 

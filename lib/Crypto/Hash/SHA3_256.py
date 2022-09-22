@@ -24,7 +24,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, c_ubyte)
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 
@@ -46,14 +46,18 @@ class SHA3_256_Hash(object):
     # ASN.1 Object ID
     oid = "2.16.840.1.101.3.4.2.8"
 
+    # Input block size for HMAC
+    block_size = 136
+
     def __init__(self, data, update_after_digest):
         self._update_after_digest = update_after_digest
         self._digest_done = False
+        self._padding = 0x06
 
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(self.digest_size * 2),
-                                             0x06)
+                                             c_ubyte(24))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/256"
                              % result)
@@ -74,7 +78,8 @@ class SHA3_256_Hash(object):
 
         result = _raw_keccak_lib.keccak_absorb(self._state.get(),
                                                c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+                                               c_size_t(len(data))
+                                               )
         if result:
             raise ValueError("Error %d while updating SHA-3/256"
                              % result)
@@ -93,7 +98,8 @@ class SHA3_256_Hash(object):
         bfr = create_string_buffer(self.digest_size)
         result = _raw_keccak_lib.keccak_digest(self._state.get(),
                                                bfr,
-                                               c_size_t(self.digest_size))
+                                               c_size_t(self.digest_size),
+                                               c_ubyte(self._padding))
         if result:
             raise ValueError("Error %d while instantiating SHA-3/256"
                              % result)
@@ -111,10 +117,28 @@ class SHA3_256_Hash(object):
 
         return "".join(["%02x" % bord(x) for x in self.digest()])
 
-    def new(self):
+    def copy(self):
+        """Return a copy ("clone") of the hash object.
+
+        The copy will have the same internal state as the original hash
+        object.
+        This can be used to efficiently compute the digests of strings that
+        share a common initial substring.
+
+        :return: A hash object of the same type
+        """
+
+        clone = self.new()
+        result = _raw_keccak_lib.keccak_copy(self._state.get(),
+                                             clone._state.get())
+        if result:
+            raise ValueError("Error %d while copying SHA3-256" % result)
+        return clone
+
+    def new(self, data=None):
         """Create a fresh SHA3-256 hash object."""
 
-        return type(self)(None, self._update_after_digest)
+        return type(self)(data, self._update_after_digest)
 
 
 def new(*args, **kwargs):
@@ -145,3 +169,6 @@ def new(*args, **kwargs):
 
 # The size of the resulting hash in bytes.
 digest_size = SHA3_256_Hash.digest_size
+
+# Input block size for HMAC
+block_size = 136

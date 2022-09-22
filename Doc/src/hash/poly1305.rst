@@ -36,6 +36,22 @@ This is an example showing how to validate the MAC above::
     >>> except ValueError:
     >>>   print("The message or the key is wrong")
 
+Note that you can get the MAC tag in one line::
+
+    >>> binary_tag = Poly1305.new(key=secret, cipher=AES, data=b'Hello').digest()
+
+Or, for a hexadecimal string::
+
+    >>> hex_tag = Poly1305.new(key=secret, cipher=AES, data=b'Hello').hexdigest()
+
+Equivalently, you can verify a tag with a single line::
+
+    >>> Poly1305.new(key=secret, cipher=AES, data=b'Hello').verify(binary_tag)
+
+or::
+
+    >>> Poly1305.new(key=secret, cipher=AES, data=b'Hello').hexverify(hex_tag)
+
 .. _defined: https://cr.yp.to/mac/poly1305-20050329.pdf
 
 .. automodule:: Crypto.Hash.Poly1305

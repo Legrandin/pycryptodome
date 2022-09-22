@@ -1,14 +1,281 @@
 Changelog
 =========
 
-3.9.0 (xx xxxxx 2019)
+3.16.0 (xx xx 2022)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#639: ARC4 now also works with 'keys' as short as 8 bits.
+
+3.15.0 (22 June 2022)
+++++++++++++++++++++++++++
+
+New features
+------------
+* Add support for curves Ed25519 and Ed448, including export and import of keys.
+* Add support for EdDSA signatures.
+* Add support for Asymmetric Key Packages (RFC5958) to import private keys.
+
+Resolved issues
+---------------
+* GH#620: for ``Crypto.Util.number.getPrime`` , do not sequentially
+  scan numbers searching for a prime.
+
+3.14.1 (5 February 2022)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#595: Fixed memory leak for GMP integers.
+  Thanks to Witalij Siebert and Pablo Quílez.
+
+3.14.0 (30 January 2022)
+++++++++++++++++++++++++++
+
+New features
+------------
+* Add support for curve NIST P-192.
+
+3.13.0 (23 January 2022)
+++++++++++++++++++++++++++
+
+New features
+------------
+* Add support for curve NIST P-224.
+
+Resolved issues
+---------------
+* GH#590: Fixed typing info for ``Crypto.PublicKey.ECC``.
+
+Other changes
+-------------
+* Relaxed ECDSA requirements for FIPS 186 signatures and accept any SHA-2 or SHA-3 hash.
+  ``sign()`` and ``verify()`` will be performed even if the hash is stronger than the ECC key.
+
+3.12.0 (4 December 2021)
+++++++++++++++++++++++++++
+
+New features
+------------
+* ECC keys in the SEC1 format can be exported and imported.
+* Add support for KMAC128, KMAC256, TupleHash128, and TupleHash256 (NIST SP-800 185).
+* Add support for KangarooTwelve.
+
+Resolved issues
+---------------
+* GH#563: An asymmetric key could not be imported as a ``memoryview``.
+* GH#566: cSHAKE128/256 generated a wrong output for customization strings
+  longer than 255 bytes.
+* GH#582: CBC decryption generated the wrong plaintext when the input and the output were the same buffer.
+  Thanks to Michael K. Ashburn.
+
+3.11.0 (8 October 2021)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#512: Especially for very small bit sizes, ``Crypto.Util.number.getPrime()`` was
+  occasionally generating primes larger than given the bit size. Thanks to Koki Takahashi.
+* GH#552: Correct typing annotations for ``PKCS115_Cipher.decrypt()``.
+* GH#555: ``decrypt()`` method of a PKCS#1v1.5 cipher returned a ``bytearray`` instead of ``bytes``.
+* GH#557: External DSA domain parameters were accepted even when the modulus (``p``) was not prime.
+  This affected ``Crypto.PublicKey.DSA.generate()`` and ``Crypto.PublicKey.DSA.construct()``.
+  Thanks to Koki Takahashi.
+
+New features
+------------
+* Added cSHAKE128 and cSHAKE256 (of SHA-3 family). Thanks to Michael Schaffner.
+* GH#558: The flag RTLD_DEEPBIND passed to ``dlopen()`` is not well supported by
+  `address sanitizers <https://github.com/google/sanitizers/issues/611>`_.
+  It is now possible to set the environment variable ``PYCRYPTDOME_DISABLE_DEEPBIND``
+  to drop that flag and allow security testing.
+
+3.10.4 (25 September 2021)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Output of ``Crypto.Util.number.long_to_bytes()`` was not always a multiple of ``blocksize``.
+
+3.10.3 (22 September 2021)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#376: Fixed symbol conflict between different versions of ``libgmp``.
+* GH#481: Improved robustness of PKCS#1v1.5 decryption against timing attacks.
+* GH#506 and GH#509: Fixed segmentation faults on Apple M1 and other Aarch64 SoCs,
+  when the GMP library was accessed via ``ctypes``. Do not use GMP's own sscanf
+  and snprintf routines: instead, use simpler conversion routines.
+* GH#510: Workaround for ``cffi`` calling ``ctypes.util.find_library()``, which
+  invokes ``gcc`` and ``ld`` on Linux, considerably slowing down all imports.
+  On certain configurations, that may also leave temporary files behind.
+* GH#517: Fix RSAES-OAEP, as it didn't always fail when zero padding was incorrect.
+
+New features
+------------
+* Added support for SHA-3 hash functions to HMAC.
+
+Other changes
+-------------
+* The Windows wheels of Python 2.7 now require the VS2015 runtime to be installed in the system,
+  because Microsoft stopped distributing the VS2008 compiler in April 2021.
+  VS2008 was used to compile the Python 2.7 extensions.
+
+3.10.1 (9 February 2021)
+++++++++++++++++++++++++
+
+Other changes
+-------------
+* Python 3 wheels use ``abi3`` ABI tag.
+* Remove Appveyor CI.
+
+3.10.0 (6 February 2021)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Fixed a potential memory leak when initializing block ciphers.
+* GH#466: ``Crypto.Math.miller_rabin_test()`` was still using the system random
+  source and not the one provided as parameter.
+* GH#469: RSA objects have the method ``public_key()`` like ECC objects.
+  The old method ``publickey()`` is still available for backward compatibility.
+* GH#476: ``Crypto.Util.Padding.unpad()`` was raising an incorrect exception
+  in case of zero-length inputs. Thanks to Captainowie.
+* GH#491: better exception message when ``Counter.new()`` is called with an integer
+  ``initial_value`` than doesn't fit into ``nbits`` bits.
+* GH#496: added missing ``block_size`` member for ECB cipher objects. Thanks to willem.
+* GH#500: ``nonce`` member of an XChaCha20 cipher object was not matching the original nonce.
+  Thanks to Charles Machalow.
+
+Other changes
+-------------
+* The bulk of the test vectors have been moved to the separate
+  package ``pycryptodome-test-vectors``. As result, packages ``pycryptodome`` and
+  ``pycryptodomex`` become significantly smaller (from 14MB to 3MB).
+* Moved CI tests and build service from Travis CI to GitHub Actions.
+
+Breaks in compatibility
+-----------------------
+* Drop support for Python 2.6 and 3.4.
+
+3.9.9 (2 November 2020)
++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#435: Fixed ``Crypto.Util.number.size`` for negative numbers.
+
+New features
+------------
+* Build Python 3.9 wheels on Windows.
+
+3.9.8 (23 June 2020)
+++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#426: The Shamir's secret sharing implementation is not actually compatible with ``ssss``.
+  Added an optional parameter to enable interoperability.
+* GH#427: Skip altogether loading of ``gmp.dll`` on Windows.
+* GH#420: Fix incorrect CFB decryption when the input and the output are the same buffer.
+
+New features
+------------
+* Speed up Shamir's secret sharing routines. Thanks to ncarve.
+
+3.9.7 (20 February 2020)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#381: Make notarization possible again on OS X when using wheels.
+  Thanks to Colin Atkinson.
+
+3.9.6 (2 February 2020)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Fix building of wheels for OS X by explicitly setting `sysroot` location.
+
+3.9.5 (1 February 2020)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* RSA OAEP decryption was not verifying that all ``PS`` bytes are zero.
+* GH#372: fixed memory leak for operations that use memoryviews when `cffi` is not installed.
+* Fixed wrong ASN.1 OID for HMAC-SHA512 in PBE2.
+
+New features
+------------
+* Updated Wycheproof test vectors to version 0.8r12.
+
+3.9.4 (18 November 2019)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#341: Prevent ``key_to_english`` from creating invalid data when fed with
+  keys of length not multiple of 8. Thanks to vstoykovbg.
+* GH#347: Fix blocking RSA signing/decryption when key has very small factor.
+  Thanks to Martijn Pieters.
+
+3.9.3 (12 November 2019)
+++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#308: Align stack of functions using SSE2 intrinsics to avoid crashes,
+  when compiled with gcc on 32-bit x86 platforms.
+
+3.9.2 (10 November 2019)
+++++++++++++++++++++++++
+
+New features
+------------
+* Add Python 3.8 wheels for Mac.
+
+Resolved issues
+---------------
+* GH#308: Avoid allocating arrays of ``__m128i`` on the stack, to cope with buggy compilers.
+* GH#322: Remove blanket ``-O3`` optimization for gcc and clang, to cope with buggy compilers.
+* GH#337: Fix typing stubs for signatures.
+* GH#338: Deal with gcc installations that don't have ``x86intrin.h``.
+
+3.9.1 (1 November 2019)
+++++++++++++++++++++++++
+
+New features
+------------
+* Add Python 3.8 wheels for Linux and Windows.
+
+Resolved issues
+---------------
+
+* GH#328: minor speed-up when importing RSA.
+
+3.9.0 (27 August 2019)
 +++++++++++++++++++++++
 
 New features
 ------------
 
 * Add support for loading PEM files encrypted with AES256-CBC.
-* Add support for XChaCha20 and XChaCha20-Poly1305.
+* Add support for XChaCha20 and XChaCha20-Poly1305 ciphers.
+* Add support for bcrypt key derivation function (``Crypto.Protocol.KDF.bcrypt``).
+* Add support for left multiplication of an EC point by a scalar.
+* Add support for importing ECC and RSA keys in the new OpenSSH format.
+
+Resolved issues
+---------------
+
+* GH#312: it was not possible to invert an EC point anymore.
+* GH#316: fix printing of DSA keys.
+* GH#317: ``DSA.generate()`` was not always using the ``randfunc`` input.
+* GH#285: the MD2 hash had block size of 64 bytes instead of 16; as result the HMAC construction gave incorrect results.
 
 Resolved Issues
 ---------------
@@ -35,7 +302,7 @@ New features
 Resolved issues
 ---------------
 
-* `repr()` did not work for ``ECC.EccKey`` objects.
+* ``repr()`` did not work for ``ECC.EccKey`` objects.
 * Fix installation in development mode (``setup install develop`` or ``pip install -e .``).
 * Minimal length for Blowfish cipher is 32 bits, not 40 bits.
 * Various updates to docs.

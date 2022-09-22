@@ -28,13 +28,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import os
 import re
 import unittest
+import warnings
 from binascii import unhexlify, hexlify
 
 from Crypto.Util.py3compat import tobytes
 from Crypto.Util.strxor import strxor_c
-from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import BLAKE2b, BLAKE2s
@@ -87,7 +88,7 @@ class Blake2Test(unittest.TestCase):
 
     def test_default_digest_size(self):
         digest = self.BLAKE2.new(data=b'abc').digest()
-        self.assertEquals(len(digest), self.max_bytes)
+        self.assertEqual(len(digest), self.max_bytes)
 
     def test_update(self):
         pieces = [b"\x0A" * 200, b"\x14" * 300]
@@ -109,10 +110,10 @@ class Blake2Test(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.failUnless(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, type(b"digest")))
 
     def test_update_after_digest(self):
-        msg=b"rrrrttt"
+        msg = b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
         h = self.BLAKE2.new(digest_bits=256, data=msg[:4])
@@ -122,11 +123,11 @@ class Blake2Test(unittest.TestCase):
 
         # With the proper flag, it is allowed
         h = self.BLAKE2.new(digest_bits=256, data=msg[:4], update_after_digest=True)
-        self.assertEquals(h.digest(), dig1)
+        self.assertEqual(h.digest(), dig1)
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEquals(h.digest(), dig2)
+        self.assertEqual(h.digest(), dig2)
 
     def test_hex_digest(self):
         mac = self.BLAKE2.new(digest_bits=self.max_bits)
@@ -138,7 +139,7 @@ class Blake2Test(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.failUnless(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, type("digest")))
 
     def test_verify(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"4")
@@ -233,10 +234,6 @@ class Blake2Test(unittest.TestCase):
 
             self.assertEqual(h1.digest(), h2.digest())
 
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
-
 
 class Blake2bTest(Blake2Test):
     #: Module
@@ -266,14 +263,9 @@ class Blake2sTest(Blake2Test):
 
 class Blake2OfficialTestVector(unittest.TestCase):
 
-    def setUp(self):
-
-        test_vector_file = pycryptodome_filename(
-                            ("Crypto", "SelfTest", "Hash", "test_vectors", self.name),
-                            self.name.lower() + "-test.txt")
-
+    def _load_tests(self, test_vector_file):
         expected = "in"
-        self.test_vectors = []
+        test_vectors = []
         with open(test_vector_file, "rt") as test_vector_fd:
             for line_number, line in enumerate(test_vector_fd):
 
@@ -298,7 +290,26 @@ class Blake2OfficialTestVector(unittest.TestCase):
                 else:
                     result = bin_value
                     expected = "in"
-                    self.test_vectors.append((input_data, key, result))
+                    test_vectors.append((input_data, key, result))
+        return test_vectors
+
+    def setUp(self):
+
+        dir_comps = ("Hash", self.name)
+        file_name = self.name.lower() + "-test.txt"
+        self.description = "%s tests" % self.name
+
+        try:
+            import pycryptodome_test_vectors  # type: ignore
+        except ImportError:
+            warnings.warn("Warning: skipping extended tests for %s" % self.name,
+                           UserWarning)
+            self.test_vectors = []
+            return
+
+        init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
+        self.test_vectors = self._load_tests(full_file_name)
 
     def runTest(self):
         for (input_data, key, result) in self.test_vectors:
@@ -327,12 +338,8 @@ class Blake2sOfficialTestVector(Blake2OfficialTestVector):
 
 class Blake2TestVector1(unittest.TestCase):
 
-    def setUp(self):
-        test_vector_file = pycryptodome_filename(
-                            ("Crypto", "SelfTest", "Hash", "test_vectors", self.name),
-                            "tv1.txt")
-
-        self.test_vectors = []
+    def _load_tests(self, test_vector_file):
+        test_vectors = []
         with open(test_vector_file, "rt") as test_vector_fd:
             for line_number, line in enumerate(test_vector_fd):
                 if line.strip() == "" or line.startswith("#"):
@@ -342,7 +349,25 @@ class Blake2TestVector1(unittest.TestCase):
                     raise ValueError("Incorrect test vector format (line %d)"
                                      % line_number)
 
-                self.test_vectors.append(unhexlify(tobytes(res.group(1))))
+                test_vectors.append(unhexlify(tobytes(res.group(1))))
+        return test_vectors
+
+    def setUp(self):
+        dir_comps = ("Hash", self.name)
+        file_name = "tv1.txt"
+        self.description = "%s tests" % self.name
+
+        try:
+            import pycryptodome_test_vectors
+        except ImportError:
+            warnings.warn("Warning: skipping extended tests for %s" % self.name,
+                           UserWarning)
+            self.test_vectors = []
+            return
+
+        init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
+        self.test_vectors = self._load_tests(full_file_name)
 
     def runTest(self):
 
@@ -372,12 +397,8 @@ class Blake2sTestVector1(Blake2TestVector1):
 
 class Blake2TestVector2(unittest.TestCase):
 
-    def setUp(self):
-        test_vector_file = pycryptodome_filename(
-                            ("Crypto", "SelfTest", "Hash", "test_vectors", self.name),
-                            "tv2.txt")
-
-        self.test_vectors = []
+    def _load_tests(self, test_vector_file):
+        test_vectors = []
         with open(test_vector_file, "rt") as test_vector_fd:
             for line_number, line in enumerate(test_vector_fd):
                 if line.strip() == "" or line.startswith("#"):
@@ -386,10 +407,27 @@ class Blake2TestVector2(unittest.TestCase):
                 if not res:
                     raise ValueError("Incorrect test vector format (line %d)"
                                      % line_number)
-
                 key_size = int(res.group(1))
                 result = unhexlify(tobytes(res.group(2)))
-                self.test_vectors.append((key_size, result))
+                test_vectors.append((key_size, result))
+        return test_vectors
+
+    def setUp(self):
+        dir_comps = ("Hash", self.name)
+        file_name = "tv2.txt"
+        self.description = "%s tests" % self.name
+
+        try:
+            import pycryptodome_test_vectors  # type: ignore
+        except ImportError:
+            warnings.warn("Warning: skipping extended tests for %s" % self.name,
+                           UserWarning)
+            self.test_vectors = []
+            return
+
+        init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+        full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
+        self.test_vectors = self._load_tests(full_file_name)
 
     def runTest(self):
 
@@ -439,5 +477,6 @@ def get_tests(config={}):
 
 if __name__ == '__main__':
     import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
+    def suite():
+        return unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')

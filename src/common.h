@@ -192,4 +192,16 @@ static inline const uint8_t* memchr_not(const uint8_t* s, int c, size_t n)
     return NULL;
 }
 
+/*
+ * On 32-bit x86 platforms, gcc assumes the stack to be aligned to 16
+ * bytes, but the caller may actually only align it to 4 bytes, which
+ * make functions crash if they use SSE2 intrinsics.
+ * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
+ */
+#if defined(GCC_REALIGN)
+#define FUNC_SSE2 __attribute__((force_align_arg_pointer))
+#else
+#define FUNC_SSE2
+#endif
+
 #endif

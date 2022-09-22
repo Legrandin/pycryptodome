@@ -42,7 +42,7 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
                                const uint8_t *y,
                                size_t len,
                                const EcContext *ec_ctx);
-EXPORT_SYM void ec_free_point(EcPoint *ecp);
+EXPORT_SYM void ec_ws_free_point(EcPoint *ecp);
 EXPORT_SYM int ec_ws_get_xy(uint8_t *x,
                             uint8_t *y,
                             size_t len,

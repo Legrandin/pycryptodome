@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 #  KDF.py : a collection of Key Derivation Functions
 #
@@ -21,13 +22,16 @@
 # SOFTWARE.
 # ===================================================================
 
+import re
 import struct
 from functools import reduce
 
-from Crypto.Util.py3compat import tobytes, bord, _copy_bytes, iter_range
+from Crypto.Util.py3compat import (tobytes, bord, _copy_bytes, iter_range,
+                                  tostr, bchr, bstr)
 
-from Crypto.Hash import SHA1, SHA256, HMAC, CMAC
+from Crypto.Hash import SHA1, SHA256, HMAC, CMAC, BLAKE2s
 from Crypto.Util.strxor import strxor
+from Crypto.Random import get_random_bytes
 from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -54,10 +58,6 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
     This function performs key derivation according to an old version of
     the PKCS#5 standard (v1.5) or `RFC2898
     <https://www.ietf.org/rfc/rfc2898.txt>`_.
-
-    .. warning::
-        Newer applications should use the more secure and versatile :func:`PBKDF2`
-        instead.
 
     Args:
      password (string):
@@ -98,8 +98,7 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
 def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None):
     """Derive one or more keys from a password (or passphrase).
 
-    This function performs key derivation according to
-    the PKCS#5 standard (v2.0).
+    This function performs key derivation according to the PKCS#5 standard (v2.0).
 
     Args:
      password (string or byte string):
@@ -107,23 +106,35 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
      salt (string or byte string):
         A (byte) string to use for better protection from dictionary attacks.
         This value does not need to be kept secret, but it should be randomly
-        chosen for each derivation. It is recommended to be at least 8 bytes long.
+        chosen for each derivation. It is recommended to use at least 16 bytes.
      dkLen (integer):
-        The cumulative length of the desired keys.
+        The cumulative length of the keys to produce.
+
+        Due to a flaw in the PBKDF2 design, you should not request more bytes
+        than the ``prf`` can output. For instance, ``dkLen`` should not exceed
+        20 bytes in combination with ``HMAC-SHA1``.
      count (integer):
-        The number of iterations to carry out.
+        The number of iterations to carry out. The higher the value, the slower
+        and the more secure the function becomes.
+
+        You should find the maximum number of iterations that keeps the
+        key derivation still acceptable on the slowest hardware you must support.
+
+        Although the default value is 1000, **it is recommended to use at least
+        1000000 (1 million) iterations**.
      prf (callable):
-        A pseudorandom function. It must be a function that returns a pseudorandom string
-        from two parameters: a secret and a salt. If not specified,
-        **HMAC-SHA1** is used.
+        A pseudorandom function. It must be a function that returns a
+        pseudorandom byte string from two parameters: a secret and a salt.
+        The slower the algorithm, the more secure the derivation function.
+        If not specified, **HMAC-SHA1** is used.
      hmac_hash_module (module):
-        A module from `Crypto.Hash` implementing a Merkle-Damgard cryptographic
+        A module from ``Crypto.Hash`` implementing a Merkle-Damgard cryptographic
         hash, which PBKDF2 must use in combination with HMAC.
         This parameter is mutually exclusive with ``prf``.
 
     Return:
         A byte string of length ``dkLen`` that can be used as key material.
-        If you wanted multiple keys, just break up this string into segments of the desired length.
+        If you want multiple keys, just break up this string into segments of the desired length.
     """
 
     password = tobytes(password)
@@ -265,11 +276,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     """Derive one or more keys from a master secret using
     the HMAC-based KDF defined in RFC5869_.
 
-    This KDF is not suitable for deriving keys from a password or for key
-    stretching. Use :func:`PBKDF2` instead.
-
-    HKDF is a key derivation method approved by NIST in `SP 800 56C`__.
-
     Args:
      master (byte string):
         The unguessable value used by the KDF to generate the other keys.
@@ -296,7 +302,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
         A byte string or a tuple of byte strings.
 
     .. _RFC5869: http://tools.ietf.org/html/rfc5869
-    .. __: http://csrc.nist.gov/publications/nistpubs/800-56C/SP-800-56C.pdf
     """
 
     output_len = key_len * num_keys
@@ -328,14 +333,9 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     return list(kol[:num_keys])
 
 
+
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     """Derive one or more keys from a passphrase.
-
-    This function performs key derivation according to
-    the `scrypt`_ algorithm, introduced in Percival's paper
-    `"Stronger key derivation via sequential memory-hard functions"`__.
-
-    This implementation is based on `RFC7914`__.
 
     Args:
      password (string):
@@ -344,7 +344,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
         A string to use for better protection from dictionary attacks.
         This value does not need to be kept secret,
         but it should be randomly chosen for each derivation.
-        It is recommended to be at least 8 bytes long.
+        It is recommended to be at least 16 bytes long.
      key_len (integer):
         The length in bytes of every derived key.
      N (integer):
@@ -364,15 +364,12 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     A good choice of parameters *(N, r , p)* was suggested
     by Colin Percival in his `presentation in 2009`__:
 
-    - *(16384, 8, 1)* for interactive logins (<=100ms)
-    - *(1048576, 8, 1)* for file encryption (<=5s)
+    - *( 2¹⁴, 8, 1 )* for interactive logins (≤100ms)
+    - *( 2²⁰, 8, 1 )* for file encryption (≤5s)
 
     Return:
         A byte string or a tuple of byte strings.
 
-    .. _scrypt: http://www.tarsnap.com/scrypt.html
-    .. __: http://www.tarsnap.com/scrypt/scrypt.pdf
-    .. __: https://tools.ietf.org/html/rfc7914
     .. __: http://www.tarsnap.com/scrypt/scrypt-slides.pdf
     """
 
@@ -415,3 +412,163 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
     kol = [dk[idx:idx + key_len]
            for idx in iter_range(0, key_len * num_keys, key_len)]
     return kol
+
+
+def _bcrypt_encode(data):
+    s = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+    bits = []
+    for c in data:
+        bits_c = bin(bord(c))[2:].zfill(8)
+        bits.append(bstr(bits_c))
+    bits = b"".join(bits)
+
+    bits6 = [ bits[idx:idx+6] for idx in range(0, len(bits), 6) ]
+
+    result = []
+    for g in bits6[:-1]:
+        idx = int(g, 2)
+        result.append(s[idx])
+
+    g = bits6[-1]
+    idx = int(g, 2) << (6 - len(g))
+    result.append(s[idx])
+    result = "".join(result)
+
+    return tobytes(result)
+
+
+def _bcrypt_decode(data):
+    s = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+    bits = []
+    for c in tostr(data):
+        idx = s.find(c)
+        bits6 = bin(idx)[2:].zfill(6)
+        bits.append(bits6)
+    bits = "".join(bits)
+
+    modulo4 = len(data) % 4
+    if modulo4 == 1:
+        raise ValueError("Incorrect length")
+    elif modulo4 == 2:
+        bits = bits[:-4]
+    elif modulo4 == 3:
+        bits = bits[:-2]
+
+    bits8 = [ bits[idx:idx+8] for idx in range(0, len(bits), 8) ]
+
+    result = []
+    for g in bits8:
+        result.append(bchr(int(g, 2)))
+    result = b"".join(result)
+
+    return result
+
+
+def _bcrypt_hash(password, cost, salt, constant, invert):
+    from Crypto.Cipher import _EKSBlowfish
+
+    if len(password) > 72:
+        raise ValueError("The password is too long. It must be 72 bytes at most.")
+
+    if not (4 <= cost <= 31):
+        raise ValueError("bcrypt cost factor must be in the range 4..31")
+
+    cipher = _EKSBlowfish.new(password, _EKSBlowfish.MODE_ECB, salt, cost, invert)
+    ctext = constant
+    for _ in range(64):
+        ctext = cipher.encrypt(ctext)
+    return ctext
+
+
+def bcrypt(password, cost, salt=None):
+    """Hash a password into a key, using the OpenBSD bcrypt protocol.
+
+    Args:
+      password (byte string or string):
+        The secret password or pass phrase.
+        It must be at most 72 bytes long.
+        It must not contain the zero byte.
+        Unicode strings will be encoded as UTF-8.
+      cost (integer):
+        The exponential factor that makes it slower to compute the hash.
+        It must be in the range 4 to 31.
+        A value of at least 12 is recommended.
+      salt (byte string):
+        Optional. Random byte string to thwarts dictionary and rainbow table
+        attacks. It must be 16 bytes long.
+        If not passed, a random value is generated.
+
+    Return (byte string):
+        The bcrypt hash
+
+    Raises:
+        ValueError: if password is longer than 72 bytes or if it contains the zero byte
+
+   """
+
+    password = tobytes(password, "utf-8")
+
+    if password.find(bchr(0)[0]) != -1:
+        raise ValueError("The password contains the zero byte")
+
+    if len(password) < 72:
+        password += b"\x00"
+
+    if salt is None:
+        salt = get_random_bytes(16)
+    if len(salt) != 16:
+        raise ValueError("bcrypt salt must be 16 bytes long")
+
+    ctext = _bcrypt_hash(password, cost, salt, b"OrpheanBeholderScryDoubt", True)
+
+    cost_enc = b"$" + bstr(str(cost).zfill(2))
+    salt_enc = b"$" + _bcrypt_encode(salt)
+    hash_enc = _bcrypt_encode(ctext[:-1])     # only use 23 bytes, not 24
+    return b"$2a" + cost_enc + salt_enc + hash_enc
+
+
+def bcrypt_check(password, bcrypt_hash):
+    """Verify if the provided password matches the given bcrypt hash.
+
+    Args:
+      password (byte string or string):
+        The secret password or pass phrase to test.
+        It must be at most 72 bytes long.
+        It must not contain the zero byte.
+        Unicode strings will be encoded as UTF-8.
+      bcrypt_hash (byte string, bytearray):
+        The reference bcrypt hash the password needs to be checked against.
+
+    Raises:
+        ValueError: if the password does not match
+    """
+
+    bcrypt_hash = tobytes(bcrypt_hash)
+
+    if len(bcrypt_hash) != 60:
+        raise ValueError("Incorrect length of the bcrypt hash: %d bytes instead of 60" % len(bcrypt_hash))
+
+    if bcrypt_hash[:4] != b'$2a$':
+        raise ValueError("Unsupported prefix")
+
+    p = re.compile(br'\$2a\$([0-9][0-9])\$([A-Za-z0-9./]{22,22})([A-Za-z0-9./]{31,31})')
+    r = p.match(bcrypt_hash)
+    if not r:
+        raise ValueError("Incorrect bcrypt hash format")
+
+    cost = int(r.group(1))
+    if not (4 <= cost <= 31):
+        raise ValueError("Incorrect cost")
+
+    salt = _bcrypt_decode(r.group(2))
+
+    bcrypt_hash2  = bcrypt(password, cost, salt)
+
+    secret = get_random_bytes(16)
+
+    mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=bcrypt_hash).digest()
+    mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=bcrypt_hash2).digest()
+    if mac1 != mac2:
+        raise ValueError("Incorrect bcrypt hash")

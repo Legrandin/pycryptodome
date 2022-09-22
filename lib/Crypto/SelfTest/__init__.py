@@ -32,7 +32,7 @@ __revision__ = "$Id$"
 
 import sys
 import unittest
-from Crypto.Util.py3compat import BytesIO
+from Crypto.Util.py3compat import StringIO
 
 class SelfTestError(Exception):
     def __init__(self, message, result):
@@ -66,7 +66,7 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
         else:
             raise ValueError("'module' and 'tests' arguments are mutually exclusive")
     if stream is None:
-        kwargs['stream'] = BytesIO()
+        kwargs['stream'] = StringIO()
     else:
         kwargs['stream'] = stream
     runner = unittest.TextTestRunner(verbosity=verbosity, **kwargs)

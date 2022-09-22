@@ -1,10 +1,11 @@
 Digital Signature Algorithm (DSA and ECDSA)
 ===========================================
 
-A variant of the ElGamal signature, specified in `FIPS PUB 186-4`__.
+DSA and ECDSA are U.S. federal standards for digital signatures, specified in `FIPS PUB 186-4`__.
 
-It is based on the discrete logarithm problem in a prime finite field (DSA) or
-in an elliptic curve field (ECDSA).
+Their security relies on the discrete logarithm problem in a prime finite field (the original DSA,
+now deprecated) or in an elliptic curve field (ECDSA, faster and with smaller keys,
+to be used in new applications).
 
 A sender can use a *private* key (loaded from a file) to sign a message::
 

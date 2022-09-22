@@ -19,4 +19,6 @@
 # ===================================================================
 
 __all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD160', 'SHA1',
-           'SHA224', 'SHA256', 'SHA384', 'SHA512', 'CMAC', 'Poly1305']
+           'SHA224', 'SHA256', 'SHA384', 'SHA512', 'CMAC', 'Poly1305',
+           'cSHAKE128', 'cSHAKE256', 'KMAC128', 'KMAC256',
+           'TupleHash128', 'TupleHash256', 'KangarooTwelve']

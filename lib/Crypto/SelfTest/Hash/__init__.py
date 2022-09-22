@@ -35,22 +35,22 @@ def get_tests(config={}):
     from Crypto.SelfTest.Hash import test_MD5;        tests += test_MD5.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_RIPEMD160;  tests += test_RIPEMD160.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA1;       tests += test_SHA1.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA224;     tests += test_SHA224.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA256;     tests += test_SHA256.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA384;     tests += test_SHA384.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_SHA512;     tests += test_SHA512.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA3_224;   tests += test_SHA3_224.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA3_256;   tests += test_SHA3_256.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA3_384;   tests += test_SHA3_384.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHA3_512;   tests += test_SHA3_512.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_keccak;     tests += test_keccak.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_SHAKE;      tests += test_SHAKE.get_tests(config=config)
-    try:
-        from Crypto.SelfTest.Hash import test_SHA224; tests += test_SHA224.get_tests(config=config)
-        from Crypto.SelfTest.Hash import test_SHA384; tests += test_SHA384.get_tests(config=config)
-        from Crypto.SelfTest.Hash import test_SHA512; tests += test_SHA512.get_tests(config=config)
-    except ImportError:
-        import sys
-        sys.stderr.write("SelfTest: warning: not testing SHA224/SHA384/SHA512 modules (not available)\n")
     from Crypto.SelfTest.Hash import test_BLAKE2;     tests += test_BLAKE2.get_tests(config=config)
     from Crypto.SelfTest.Hash import test_Poly1305;   tests += test_Poly1305.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_cSHAKE;     tests += test_cSHAKE.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_KMAC;       tests += test_KMAC.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_TupleHash;  tests += test_TupleHash.get_tests(config=config)
+    from Crypto.SelfTest.Hash import test_KangarooTwelve;  tests += test_KangarooTwelve.get_tests(config=config)
     return tests
 
 if __name__ == '__main__':

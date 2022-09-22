@@ -35,7 +35,7 @@ from Crypto.Util.py3compat import tobytes, is_native_int
 from Crypto.Util._raw_api import (backend, load_lib,
                                   get_raw_buffer, get_c_string,
                                   null_pointer, create_string_buffer,
-                                  c_ulong, c_size_t)
+                                  c_ulong, c_size_t, c_uint8_ptr)
 
 from ._IntegerBase import IntegerBase
 
@@ -43,12 +43,14 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         typedef struct { int a; int b; void *c; } MPZ;
         typedef MPZ mpz_t[1];
         typedef UNIX_ULONG mp_bitcnt_t;
+
         void __gmpz_init (mpz_t x);
         void __gmpz_init_set (mpz_t rop, const mpz_t op);
         void __gmpz_init_set_ui (mpz_t rop, UNIX_ULONG op);
-        int __gmp_sscanf (const char *s, const char *fmt, ...);
+
+        UNIX_ULONG __gmpz_get_ui (const mpz_t op);
         void __gmpz_set (mpz_t rop, const mpz_t op);
-        int __gmp_snprintf (uint8_t *buf, size_t size, const char *fmt, ...);
+        void __gmpz_set_ui (mpz_t rop, UNIX_ULONG op);
         void __gmpz_add (mpz_t rop, const mpz_t op1, const mpz_t op2);
         void __gmpz_add_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
         void __gmpz_sub_ui (mpz_t rop, const mpz_t op1, UNIX_ULONG op2);
@@ -92,14 +94,14 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         int __gmpz_divisible_ui_p (const mpz_t n, UNIX_ULONG d);
         """
 
+if sys.platform == "win32":
+    raise ImportError("Not using GMP on Windows")
+
 lib = load_lib("gmp", gmp_defs)
 implementation = {"library": "gmp", "api": backend}
 
 if hasattr(lib, "__mpir_version"):
     raise ImportError("MPIR library detected")
-
-if sys.platform == "win32":
-    raise ImportError("Not using GMP on Windows")
 
 # In order to create a function that returns a pointer to
 # a new MPZ structure, we need to break the abstraction
@@ -156,26 +158,58 @@ class IntegerGMP(IntegerBase):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
 
-        self._initialized = True
-        
         if is_native_int(value):
             _gmp.mpz_init(self._mpz_p)
-            result = _gmp.gmp_sscanf(tobytes(str(value)), b"%Zd", self._mpz_p)
-            if result != 1:
-                raise ValueError("Error converting '%d'" % value)
-        else:
+            self._initialized = True
+            if value == 0:
+                return
+
+            tmp = new_mpz()
+            _gmp.mpz_init(tmp)
+
+            try:
+                positive = value >= 0
+                reduce = abs(value)
+                slots = (reduce.bit_length() - 1) // 32 + 1
+
+                while slots > 0:
+                    slots = slots - 1
+                    _gmp.mpz_set_ui(tmp,
+                                    c_ulong(0xFFFFFFFF & (reduce >> (slots * 32))))
+                    _gmp.mpz_mul_2exp(tmp, tmp, c_ulong(slots * 32))
+                    _gmp.mpz_add(self._mpz_p, self._mpz_p, tmp)
+            finally:
+                _gmp.mpz_clear(tmp)
+
+            if not positive:
+                _gmp.mpz_neg(self._mpz_p, self._mpz_p)
+
+        elif isinstance(value, IntegerGMP):
             _gmp.mpz_init_set(self._mpz_p, value._mpz_p)
+            self._initialized = True
+        else:
+            raise NotImplementedError
+
 
     # Conversions
     def __int__(self):
-        # buf will contain the integer encoded in decimal plus the trailing
-        # zero, and possibly the negative sign.
-        # dig10(x) < log10(x) + 1 = log2(x)/log2(10) + 1 < log2(x)/3 + 1
-        buf_len = _gmp.mpz_sizeinbase(self._mpz_p, 2) // 3 + 3
-        buf = create_string_buffer(buf_len)
+        tmp = new_mpz()
+        _gmp.mpz_init_set(tmp, self._mpz_p)
 
-        _gmp.gmp_snprintf(buf, c_size_t(buf_len), b"%Zd", self._mpz_p)
-        return int(get_c_string(buf))
+        try:
+            value = 0
+            slot = 0
+            while _gmp.mpz_cmp(tmp, self._zero_mpz_p) != 0:
+                lsb = _gmp.mpz_get_ui(tmp) & 0xFFFFFFFF
+                value |= lsb << (slot * 32)
+                _gmp.mpz_tdiv_q_2exp(tmp, tmp, c_ulong(32))
+                slot = slot + 1
+        finally:
+            _gmp.mpz_clear(tmp)
+
+        if self < 0:
+            value = -value
+        return int(value)
 
     def __str__(self):
         return str(int(self))
@@ -191,7 +225,7 @@ class IntegerGMP(IntegerBase):
     def __index__(self):
         return int(self)
 
-    def to_bytes(self, block_size=0):
+    def to_bytes(self, block_size=0, byteorder='big'):
         """Convert the number into a byte string.
 
         This method encodes the number in network order and prepends
@@ -202,6 +236,8 @@ class IntegerGMP(IntegerBase):
           block_size : integer
             The exact size the output byte string must have.
             If zero, the string has the minimal length.
+          byteorder : string
+            'big' for big-endian integers (default), 'little' for litte-endian.
         :Returns:
           A byte string.
         :Raise ValueError:
@@ -215,8 +251,9 @@ class IntegerGMP(IntegerBase):
         buf_len = (_gmp.mpz_sizeinbase(self._mpz_p, 2) + 7) // 8
         if buf_len > block_size > 0:
             raise ValueError("Number is too big to convert to byte string"
-                             "of prescribed length")
+                             " of prescribed length")
         buf = create_string_buffer(buf_len)
+
 
         _gmp.mpz_export(
                 buf,
@@ -227,20 +264,39 @@ class IntegerGMP(IntegerBase):
                 c_size_t(0),   # No nails
                 self._mpz_p)
 
-        return b'\x00' * max(0, block_size - buf_len) + get_raw_buffer(buf)
+        result = b'\x00' * max(0, block_size - buf_len) + get_raw_buffer(buf)
+        if byteorder == 'big':
+            pass
+        elif byteorder == 'little':
+            result = bytearray(result)
+            result.reverse()
+            result = bytes(result)
+        else:
+            raise ValueError("Incorrect byteorder")
+        return result
 
     @staticmethod
-    def from_bytes(byte_string):
+    def from_bytes(byte_string, byteorder='big'):
         """Convert a byte string into a number.
 
         :Parameters:
           byte_string : byte string
             The input number, encoded in network order.
             It can only be non-negative.
+          byteorder : string
+            'big' for big-endian integers (default), 'little' for litte-endian.
+
         :Return:
           The ``Integer`` object carrying the same value as the input.
         """
         result = IntegerGMP(0)
+        if byteorder == 'big':
+            pass
+        elif byteorder == 'little':
+            byte_string = bytearray(byte_string)
+            byte_string.reverse()
+        else:
+            raise ValueError("Incorrect byteorder")
         _gmp.mpz_import(
                         result._mpz_p,
                         c_size_t(len(byte_string)),  # Amount of words to read
@@ -248,7 +304,7 @@ class IntegerGMP(IntegerBase):
                         c_size_t(1),  # Each word is 1 byte long
                         0,            # Endianess within a word - not relevant
                         c_size_t(0),  # No nails
-                        byte_string)
+                        c_uint8_ptr(byte_string))
         return result
 
     # Relations
@@ -290,7 +346,10 @@ class IntegerGMP(IntegerBase):
     def __add__(self, term):
         result = IntegerGMP(0)
         if not isinstance(term, IntegerGMP):
-            term = IntegerGMP(term)
+            try:
+                term = IntegerGMP(term)
+            except NotImplementedError:
+                return NotImplemented
         _gmp.mpz_add(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
@@ -299,7 +358,10 @@ class IntegerGMP(IntegerBase):
     def __sub__(self, term):
         result = IntegerGMP(0)
         if not isinstance(term, IntegerGMP):
-            term = IntegerGMP(term)
+            try:
+                term = IntegerGMP(term)
+            except NotImplementedError:
+                return NotImplemented
         _gmp.mpz_sub(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
@@ -308,7 +370,10 @@ class IntegerGMP(IntegerBase):
     def __mul__(self, term):
         result = IntegerGMP(0)
         if not isinstance(term, IntegerGMP):
-            term = IntegerGMP(term)
+            try:
+                term = IntegerGMP(term)
+            except NotImplementedError:
+                return NotImplemented
         _gmp.mpz_mul(result._mpz_p,
                      self._mpz_p,
                      term._mpz_p)
@@ -681,7 +746,7 @@ class IntegerGMP(IntegerBase):
         if not isinstance(n, IntegerGMP):
             n = IntegerGMP(n)
         if n <= 0 or n.is_even():
-            raise ValueError("n must be positive even for the Jacobi symbol")
+            raise ValueError("n must be positive odd for the Jacobi symbol")
         return _gmp.mpz_jacobi(a._mpz_p, n._mpz_p)
 
     # Clean-up

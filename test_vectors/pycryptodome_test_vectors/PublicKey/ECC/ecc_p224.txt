@@ -1,0 +1,16 @@
+Private-Key: (224 bit)
+priv:
+    7d:f3:ec:70:86:dc:5b:64:48:a8:b5:a4:be:39:32:
+    e3:b6:da:66:f2:86:06:e4:44:17:25:a3:00
+pub:
+    04:1b:8b:22:ee:cd:68:74:20:c4:3c:06:7e:d0:6f:
+    7a:16:c4:dd:45:ee:ee:ff:11:f0:3a:fc:4e:02:02:
+    fb:95:72:79:34:78:a7:42:14:db:44:28:b8:53:87:
+    2c:82:ac:74:4e:27:b7:f7:35:3c:ae:17
+ASN1 OID: secp224r1
+NIST CURVE: P-224
+-----BEGIN EC PRIVATE KEY-----
+MGgCAQEEHH3z7HCG3FtkSKi1pL45MuO22mbyhgbkRBclowCgBwYFK4EEACGhPAM6
+AAQbiyLuzWh0IMQ8Bn7Qb3oWxN1F7u7/EfA6/E4CAvuVcnk0eKdCFNtEKLhThyyC
+rHROJ7f3NTyuFw==
+-----END EC PRIVATE KEY-----

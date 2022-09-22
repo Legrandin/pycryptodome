@@ -1,0 +1,40 @@
+KangarooTwelve
+==============
+
+KangarooTwelve is an *extendable-output function* (XOF) based on the Keccak permutation,
+which is also the basis for SHA-3.
+
+As a XOF, KangarooTwelve is a generalization of a cryptographic hash function.
+It is not limited to creating fixed-length digests (e.g., SHA-256 will always output exactly 32 bytes):
+it produces digests of any length, and it can be used as a Pseudo Random Generator (PRG).
+
+Output bits do **not** depend on the output length.
+
+KangarooTwelve is not standardized. However, an RFC_ is being written.
+It provides 128 bit of security against (second) pre-image attacks when the output is at least 128 bits long.
+It provides the same security level against collision attacks when the output is at least 256 bits long.
+
+In addition to hashing, KangarooTwelve allows for domain separation
+via a customization string (``custom`` parameter to :func:`Crypto.Hash.KangarooTwelve.new`).
+
+.. hint::
+
+  For instance, if you are using KangarooTwelve in two applications,
+  by picking different customization strings you can ensure
+  that they will never end up using the same digest in practice.
+  The important factor is that the strings are different;
+  what the strings say does not matter.
+
+In the following example, we extract 26 bytes (208 bits) from the XOF::
+
+    >>> from Crypto.Hash import KangarooTwelve as K12
+    >>>
+    >>> kangaroo = K12.new(custom=b'Email Signature')
+    >>> kangaroo.update(b'Some data')
+    >>> print(kangaroo.read(26).hex())
+    61e571c51da64228a85d495f3546c43a4dd2c1fd5de87e45dc58
+
+.. _RFC: https://datatracker.ietf.org/doc/draft-irtf-cfrg-kangarootwelve/
+
+.. automodule:: Crypto.Hash.KangarooTwelve
+    :members:

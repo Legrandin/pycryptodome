@@ -116,7 +116,7 @@ def new(key, mode, *args, **kwargs):
 
     :param key:
         The secret key to use in the symmetric cipher.
-        It must be 8 byte long. The parity bits will be ignored.
+        It must be 16 or 24 byte long. The parity bits will be ignored.
     :type key: bytes/bytearray/memoryview
 
     :param mode:

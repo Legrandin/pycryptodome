@@ -34,7 +34,7 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+                                  c_uint8_ptr, c_ubyte)
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 
@@ -54,13 +54,14 @@ class SHAKE128_XOF(object):
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(32),
-                                             0x1F)
+                                             c_ubyte(24))
         if result:
             raise ValueError("Error %d while instantiating SHAKE128"
                              % result)
         self._state = SmartPointer(state.get(),
                                    _raw_keccak_lib.keccak_destroy)
         self._is_squeezing = False
+        self._padding = 0x1F
         if data:
             self.update(data)
 
@@ -101,7 +102,8 @@ class SHAKE128_XOF(object):
         bfr = create_string_buffer(length)
         result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
                                                 bfr,
-                                                c_size_t(length))
+                                                c_size_t(length),
+                                                c_ubyte(self._padding))
         if result:
             raise ValueError("Error %d while extracting from SHAKE128"
                              % result)

@@ -82,6 +82,8 @@ def unpad(padded_data, block_size, style='pkcs7'):
     """
 
     pdata_len = len(padded_data)
+    if pdata_len == 0:
+        raise ValueError("Zero-length input cannot be unpadded")
     if pdata_len % block_size:
         raise ValueError("Input data is not padded")
     if style in ('pkcs7', 'x923'):

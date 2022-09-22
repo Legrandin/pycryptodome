@@ -15,6 +15,7 @@ static void print_64bit_array(uint64_t *x, unsigned len)
         for (j=0; j<8; j++) {
             printf("%02X", (uint8_t)(x[i] >> ((7-j)*8)));
         }
+        printf("ULL");
         if (i!=(len-1))
             printf(",");
     }
@@ -53,12 +54,13 @@ int main(void)
 
     printf("/* This file was automatically generated, do not edit */\n");
     printf("#include \"common.h\"\n");
-    printf("static const unsigned p256_n_tables = %d;\n", n_tables);
-    printf("static const unsigned p256_window_size = %d;\n", window_size);
-    printf("static const unsigned p256_points_per_table = %d;\n", points_per_table);
+    printf("#include \"p256_table.h\"\n");
+    printf("const unsigned p256_n_tables = %d;\n", n_tables);
+    printf("const unsigned p256_window_size = %d;\n", window_size);
+    printf("const unsigned p256_points_per_table = %d;\n", points_per_table);
     printf("/* Affine coordinates in Montgomery form */\n");
     printf("/* Table size: %u kbytes */\n", (unsigned)(n_tables*points_per_table*2*WORDS*sizeof(uint64_t)));
-    printf("static const uint64_t p256_tables[%d][%d][2][4] = {\n", n_tables, points_per_table);
+    printf("const uint64_t p256_tables[%d][%d][2][4] = {\n", n_tables, points_per_table);
 
     for (i=0; i<n_tables; i++) {
 
@@ -99,10 +101,10 @@ int main(void)
     printf("};\n");
 
     for (i=0; i<points_per_table; i++) {
-        ec_free_point(window[i]);
+        ec_ws_free_point(window[i]);
     }
     free(window);
-    ec_free_point(g);
+    ec_ws_free_point(g);
     ec_free_context(ec_ctx);
 
     return 0;

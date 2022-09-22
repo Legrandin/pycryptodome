@@ -72,6 +72,7 @@ class EcbMode(object):
           block_cipher : C pointer
             A smart pointer to the low-level block cipher instance.
         """
+        self.block_size = block_cipher.block_size
 
         self._state = VoidPointer()
         result = raw_ecb_lib.ECB_start_operation(block_cipher.get(),
@@ -213,6 +214,7 @@ def _create_ecb_cipher(factory, **kwargs):
     to be present"""
 
     cipher_state = factory._create_base_cipher(kwargs)
+    cipher_state.block_size = factory.block_size
     if kwargs:
         raise TypeError("Unknown parameters for ECB: %s" % str(kwargs))
     return EcbMode(cipher_state)

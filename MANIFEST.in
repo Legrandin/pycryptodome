@@ -5,7 +5,7 @@ include setup.py pct-speedtest.py compiler_opt.py setup.cfg
 graft Doc
 prune Doc/_build
 include appveyor.yml appveyor/get_wheels.sh appveyor/install.ps1 appveyor/run_with_env.cmd
-include .travis.yml travis/*.sh
+include .github/workflows/*.yml
 recursive-include src *.h *.c
 graft src/test
 recursive-exclude src *.pyc

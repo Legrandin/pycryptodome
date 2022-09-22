@@ -184,15 +184,15 @@ class CtrMode(object):
         if self.encrypt not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
         self._next = [self.encrypt]
-        
+
         if output is None:
             ciphertext = create_string_buffer(len(plaintext))
         else:
             ciphertext = output
-            
+
             if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
-        
+
             if len(plaintext) != len(output):
                 raise ValueError("output must have the same length as the input"
                                  "  (%d bytes)" % len(plaintext))
@@ -206,7 +206,7 @@ class CtrMode(object):
                 raise OverflowError("The counter has wrapped around in"
                                     " CTR mode")
             raise ValueError("Error %X while encrypting in CTR mode" % result)
-        
+
         if output is None:
             return get_raw_buffer(ciphertext)
         else:
@@ -248,7 +248,7 @@ class CtrMode(object):
         if self.decrypt not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
         self._next = [self.decrypt]
-        
+
         if output is None:
             plaintext = create_string_buffer(len(ciphertext))
         else:
@@ -256,11 +256,10 @@ class CtrMode(object):
 
             if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
-            
+
             if len(ciphertext) != len(output):
                 raise ValueError("output must have the same length as the input"
                                  "  (%d bytes)" % len(plaintext))
-
 
         result = raw_ctr_lib.CTR_decrypt(self._state.get(),
                                          c_uint8_ptr(ciphertext),
@@ -271,7 +270,7 @@ class CtrMode(object):
                 raise OverflowError("The counter has wrapped around in"
                                     " CTR mode")
             raise ValueError("Error %X while decrypting in CTR mode" % result)
-        
+
         if output is None:
             return get_raw_buffer(plaintext)
         else:
@@ -324,8 +323,8 @@ def _create_ctr_cipher(factory, **kwargs):
         raise TypeError("Invalid parameters for CTR mode: %s" % str(kwargs))
 
     if counter is not None and (nonce, initial_value) != (None, None):
-            raise TypeError("'counter' and 'nonce'/'initial_value'"
-                            " are mutually exclusive")
+        raise TypeError("'counter' and 'nonce'/'initial_value'"
+                        " are mutually exclusive")
 
     if counter is None:
         # Crypto.Util.Counter is not used
@@ -337,7 +336,7 @@ def _create_ctr_cipher(factory, **kwargs):
         else:
             if len(nonce) >= factory.block_size:
                 raise ValueError("Nonce is too long")
-        
+
         # What is not nonce is counter
         counter_len = factory.block_size - len(nonce)
 
@@ -350,7 +349,8 @@ def _create_ctr_cipher(factory, **kwargs):
             initial_counter_block = nonce + long_to_bytes(initial_value, counter_len)
         else:
             if len(initial_value) != counter_len:
-                raise ValueError("Incorrect length for counter byte string (%d bytes, expected %d)" % (len(initial_value), counter_len))
+                raise ValueError("Incorrect length for counter byte string (%d bytes, expected %d)" %
+                                 (len(initial_value), counter_len))
             initial_counter_block = nonce + initial_value
 
         return CtrMode(cipher_state,
@@ -379,7 +379,7 @@ def _create_ctr_cipher(factory, **kwargs):
     while initial_value > 0:
         words.append(struct.pack('B', initial_value & 255))
         initial_value >>= 8
-    words += [ b'\x00' ] * max(0, counter_len - len(words))
+    words += [b'\x00'] * max(0, counter_len - len(words))
     if not little_endian:
         words.reverse()
     initial_counter_block = prefix + b"".join(words) + suffix

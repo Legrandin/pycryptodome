@@ -20,7 +20,7 @@ The counter will wrap around only after 2¹²⁸ blocks.
 You can replicate the same keystream in PyCryptodome with::
 
    ivSpec = b'\x00' * 16
-   ctr = AES.new(keySpec, AES.MODE_CTR, initial_value=ivSpec)
+   ctr = AES.new(keySpec, AES.MODE_CTR, initial_value=ivSpec, nonce=b'')
 
 Are RSASSA-PSS signatures compatible with Java or OpenSSL?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -69,4 +69,27 @@ which happens to operate under the namespace ``crypto``.
 The Windows filesystem is **case-insensitive** so ``crypto`` and ``Crypto`` are effectively considered the same thing.
 When you subsequently install ``pycryptodome``, ``pip`` finds that a directory named with the target namespace already exists (under the rules of the underlying filesystem),
 and therefore installs all the sub-packages of ``pycryptodome`` in it.
-This is probably a reasonable behavior, if it wansn't that `pip does not issue any warning even if it could detect the issue <https://github.com/pypa/pip/issues/3309>`_.
+This is probably a reasonable behavior, if it wasn't that `pip does not issue any warning even if it could detect the issue <https://github.com/pypa/pip/issues/3309>`_.
+
+Why does ``strxor`` raise ``TypeError: argument 2 must be bytes, not bytearray``?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Most probably you have installed both the ``pycryptodome`` and the old ``pycrypto`` packages.
+
+Run ``pip uninstall pycrypto`` and try again.
+
+The old PyCrypto shipped with a ``strxor`` module written as a native library (``.so`` or ``.dll`` file).
+If you install ``pycryptodome``, the old native module will still take priority over the new Python extension that comes in the latter.
+
+Why do I get a ``translation_unit_or_empty undefined`` error with ``pycparser``?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Unfortunately,``pycparser`` does not work with optimzed (``-O``) Python builds,
+which strips out the docstrings, causing this error.
+This is a [known issue](https://github.com/eliben/pycparser/issues/291) and it will not be fixed.
+
+The possible workarounds are:
+
+* Do not run Python iwth ``-O``
+* Remove `cffi` and ``cparser``. PyCryptodome will fall back to ``ctypes`` for interfacing with the native modules.
+* Use an earlier version of ``cparser`` (2.14)

@@ -25,7 +25,7 @@
 import unittest
 from binascii import hexlify
 
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Hash import SHA3_256 as SHA3
 from Crypto.Util.py3compat import b
@@ -44,11 +44,11 @@ class APITest(unittest.TestCase):
 
         # With the proper flag, it is allowed
         h = SHA3.new(data=msg[:4], update_after_digest=True)
-        self.assertEquals(h.digest(), dig1)
+        self.assertEqual(h.digest(), dig1)
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEquals(h.digest(), dig2)
+        self.assertEqual(h.digest(), dig2)
 
 
 def get_tests(config={}):
@@ -56,10 +56,10 @@ def get_tests(config={}):
 
     tests = []
 
-    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA3"),
+    test_vectors = load_test_vectors(("Hash", "SHA3"),
                                 "ShortMsgKAT_SHA3-256.txt",
                                 "KAT SHA-3 256",
-                                { "len" : lambda x: int(x) } )
+                                { "len" : lambda x: int(x) } ) or []
 
     test_data = []
     for tv in test_vectors:

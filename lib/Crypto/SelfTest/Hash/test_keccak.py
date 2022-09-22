@@ -33,7 +33,7 @@
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import keccak
@@ -103,7 +103,7 @@ class KeccakTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.failUnless(isinstance(digest, type(b("digest"))))
+        self.assertTrue(isinstance(digest, type(b("digest"))))
 
     def test_hex_digest(self):
         mac = keccak.new(digest_bits=512)
@@ -115,7 +115,7 @@ class KeccakTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.failUnless(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, type("digest")))
 
     def test_update_after_digest(self):
         msg=b("rrrrttt")
@@ -128,11 +128,11 @@ class KeccakTest(unittest.TestCase):
 
         # With the proper flag, it is allowed
         h = keccak.new(digest_bits=512, data=msg[:4], update_after_digest=True)
-        self.assertEquals(h.digest(), dig1)
+        self.assertEqual(h.digest(), dig1)
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEquals(h.digest(), dig2)
+        self.assertEqual(h.digest(), dig2)
 
 
 class KeccakVectors(unittest.TestCase):
@@ -141,15 +141,15 @@ class KeccakVectors(unittest.TestCase):
     # TODO: add ExtremelyLong tests
 
 
-test_vectors_224 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_224 =  load_test_vectors(("Hash", "keccak"),
                                 "ShortMsgKAT_224.txt",
                                 "Short Messages KAT 224",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
-test_vectors_224 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_224 += load_test_vectors(("Hash", "keccak"),
                                 "LongMsgKAT_224.txt",
                                 "Long Messages KAT 224",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
 for idx, tv in enumerate(test_vectors_224):
     if tv.len == 0:
@@ -165,15 +165,15 @@ for idx, tv in enumerate(test_vectors_224):
 
 # ---
 
-test_vectors_256 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_256 =  load_test_vectors(("Hash", "keccak"),
                                 "ShortMsgKAT_256.txt",
                                 "Short Messages KAT 256",
-                                { "len" : lambda x: int(x) } )
+                                { "len" : lambda x: int(x) } ) or []
 
-test_vectors_256 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_256 += load_test_vectors(("Hash", "keccak"),
                                 "LongMsgKAT_256.txt",
                                 "Long Messages KAT 256",
-                                { "len" : lambda x: int(x) } )
+                                { "len" : lambda x: int(x) } ) or []
 
 for idx, tv in enumerate(test_vectors_256):
     if tv.len == 0:
@@ -190,15 +190,15 @@ for idx, tv in enumerate(test_vectors_256):
 
 # ---
 
-test_vectors_384 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_384 =  load_test_vectors(("Hash", "keccak"),
                                 "ShortMsgKAT_384.txt",
                                 "Short Messages KAT 384",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
-test_vectors_384 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_384 += load_test_vectors(("Hash", "keccak"),
                                 "LongMsgKAT_384.txt",
                                 "Long Messages KAT 384",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
 for idx, tv in enumerate(test_vectors_384):
     if tv.len == 0:
@@ -214,15 +214,15 @@ for idx, tv in enumerate(test_vectors_384):
 
 # ---
 
-test_vectors_512 =  load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_512 =  load_test_vectors(("Hash", "keccak"),
                                 "ShortMsgKAT_512.txt",
                                 "Short Messages KAT 512",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
-test_vectors_512 += load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "keccak"),
+test_vectors_512 += load_test_vectors(("Hash", "keccak"),
                                 "LongMsgKAT_512.txt",
                                 "Long Messages KAT 512",
-                                { "len" : lambda x: int(x) } )
+                                {"len": lambda x: int(x)}) or []
 
 for idx, tv in enumerate(test_vectors_512):
     if tv.len == 0:

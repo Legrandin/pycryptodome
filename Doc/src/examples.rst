@@ -14,12 +14,15 @@ encryption modes`_ like `GCM`_, `CCM`_ or `SIV`_).
     from Crypto.Cipher import AES
     from Crypto.Random import get_random_bytes
 
+    data = b'secret data'
+
     key = get_random_bytes(16)
     cipher = AES.new(key, AES.MODE_EAX)
     ciphertext, tag = cipher.encrypt_and_digest(data)
     
     file_out = open("encrypted.bin", "wb")
     [ file_out.write(x) for x in (cipher.nonce, tag, ciphertext) ]
+    file_out.close()
 
 At the other end, the receiver can securely load the piece of data back (if they know the key!).
 Note that the code generates a ``ValueError`` exception when tampering is detected.
@@ -53,7 +56,8 @@ At the end, the code prints our the RSA public key in ASCII/PEM format:
     
     file_out = open("rsa_key.bin", "wb")
     file_out.write(encrypted_key)
-
+    file_out.close()
+    
     print(key.publickey().export_key())
 
 The following code reads the private RSA key back in, and then prints again the public key:
@@ -82,10 +86,12 @@ The following code generates public key stored in ``receiver.pem`` and private k
     private_key = key.export_key()
     file_out = open("private.pem", "wb")
     file_out.write(private_key)
+    file_out.close()
 
     public_key = key.publickey().export_key()
     file_out = open("receiver.pem", "wb")
     file_out.write(public_key)
+    file_out.close()
 
 Encrypt data with RSA
 ~~~~~~~~~~~~~~~~~~~~~
@@ -119,6 +125,7 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
     cipher_aes = AES.new(session_key, AES.MODE_EAX)
     ciphertext, tag = cipher_aes.encrypt_and_digest(data)
     [ file_out.write(x) for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext) ]
+    file_out.close()
 
 The receiver has the private RSA key. They will use it to decrypt the session key
 first, and with that the rest of the file:

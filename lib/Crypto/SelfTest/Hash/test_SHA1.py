@@ -26,7 +26,7 @@
 
 from binascii import hexlify
 
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
@@ -55,10 +55,10 @@ def get_tests(config={}):
 
     tests = []
 
-    test_vectors = load_tests(("Crypto", "SelfTest", "Hash", "test_vectors", "SHA1"),
+    test_vectors = load_test_vectors(("Hash", "SHA1"),
                                 "SHA1ShortMsg.rsp",
                                 "KAT SHA-1",
-                                { "len" : lambda x: int(x) } )
+                                { "len" : lambda x: int(x) } ) or []
 
     test_data = test_data_various[:]
     for tv in test_vectors:

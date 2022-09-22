@@ -28,12 +28,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import json
 import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, _memoryview
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.Util.py3compat import tobytes
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Hash import SHAKE128
 
@@ -85,7 +85,7 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256,
                                        nonce=self.nonce_96)
-        self.assertEquals(ct, cipher.encrypt(self.data_128))
+        self.assertEqual(ct, cipher.encrypt(self.data_128))
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError,
@@ -108,7 +108,7 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         # Not based on block ciphers
         cipher = ChaCha20_Poly1305.new(key=self.key_256,
                                        nonce=self.nonce_96)
-        self.failIf(hasattr(cipher, 'block_size'))
+        self.assertFalse(hasattr(cipher, 'block_size'))
 
     def test_nonce_attribute(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256,
@@ -225,7 +225,7 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
             for chunk in break_up(plaintext, chunk_length):
                 ct2 += cipher.encrypt(chunk)
             self.assertEqual(ciphertext, ct2)
-            self.assertEquals(cipher.digest(), ref_mac)
+            self.assertEqual(cipher.digest(), ref_mac)
 
     def test_bytearray(self):
 
@@ -322,10 +322,6 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         cipher3.verify(tag_mv)
 
         self.assertEqual(pt_test, self.data_128)
-
-    import sys
-    if sys.version[:3] == "2.6":
-        del test_memoryview
 
 
 class XChaCha20Poly1305Tests(unittest.TestCase):
@@ -626,29 +622,27 @@ class TestVectorsWycheproof(unittest.TestCase):
     def __init__(self, wycheproof_warnings):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
+        self._id = "None"
+
+    def load_tests(self, filename):
+
+        def filter_tag(group):
+            return group['tagSize'] // 8
+
+        def filter_algo(root):
+            return root['algorithm']
+
+        result = load_test_vectors_wycheproof(("Cipher", "wycheproof"),
+                                               filename,
+                                               "Wycheproof ChaCha20-Poly1305",
+                                               root_tag={'algo': filter_algo},
+                                               group_tag={'tag_size': filter_tag})
+        return result
 
     def setUp(self):
-        comps = "Crypto.SelfTest.Cipher.test_vectors.wycheproof".split(".")
-        with open(pycryptodome_filename(comps, "chacha20_poly1305_test.json"), "rt") as file_in:
-            tv_tree = json.load(file_in)
-
-        class TestVector(object):
-            pass
         self.tv = []
-
-        for group in tv_tree['testGroups']:
-            tag_size = group['tagSize'] // 8
-            for test in group['tests']:
-                tv = TestVector()
-                tv.tag_size = tag_size
-
-                tv.id = test['tcId']
-                tv.comment = test['comment']
-                for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag':
-                    setattr(tv, attr, unhexlify(test[attr]))
-                tv.valid = test['result'] != "invalid"
-                tv.warning = test['result'] == "acceptable"
-                self.tv.append(tv)
+        self.tv.extend(self.load_tests("chacha20_poly1305_test.json"))
+        self.tv.extend(self.load_tests("xchacha20_poly1305_test.json"))
 
     def shortDescription(self):
         return self._id
@@ -659,8 +653,8 @@ class TestVectorsWycheproof(unittest.TestCase):
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
     def test_encrypt(self, tv):
-        self._id = "Wycheproof Encrypt ChaCha20-Poly1305 Test #" + str(tv.id)
-        
+        self._id = "Wycheproof Encrypt %s Test #%s" % (tv.algo, tv.id)
+
         try:
             cipher = ChaCha20_Poly1305.new(key=tv.key, nonce=tv.iv)
         except ValueError as e:
@@ -675,8 +669,8 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.warn(tv)
 
     def test_decrypt(self, tv):
-        self._id = "Wycheproof Decrypt ChaCha20-Poly1305 Test #" + str(tv.id)
-        
+        self._id = "Wycheproof Decrypt %s Test #%s" % (tv.algo, tv.id)
+
         try:
             cipher = ChaCha20_Poly1305.new(key=tv.key, nonce=tv.iv)
         except ValueError as e:
@@ -727,34 +721,32 @@ class TestOutput(unittest.TestCase):
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
 
-        import sys
-        if sys.version[:3] != '2.6':
-            output = memoryview(bytearray(16))
-            cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-            cipher.encrypt(pt, output=output)
-            self.assertEqual(ct, output)
-        
-            cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-            cipher.decrypt(ct, output=output)
-            self.assertEqual(pt, output)
+        output = memoryview(bytearray(16))
+        cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+        cipher.encrypt(pt, output=output)
+        self.assertEqual(ct, output)
+
+        cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+        cipher.decrypt(ct, output=output)
+        self.assertEqual(pt, output)
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
-        
+
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
 
         shorter_output = bytearray(7)
-        
+
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
-        
+
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 

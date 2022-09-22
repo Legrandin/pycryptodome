@@ -111,7 +111,7 @@ def _create_base_cipher(dict_parameters):
 
 def _derive_Poly1305_key_pair(key, nonce):
     """Derive a tuple (r, s, nonce) for a Poly1305 MAC.
-    
+
     If nonce is ``None``, a new 16-byte nonce is generated.
     """
 
@@ -180,7 +180,7 @@ def new(key, mode, *args, **kwargs):
 
             For ``MODE_CTR``, its length must be in the range **[0..15]**
             (recommended: **8**).
-            
+
             For ``MODE_SIV``, the nonce is optional, if it is not specified,
             then no nonce is being used, which renders the encryption
             deterministic.

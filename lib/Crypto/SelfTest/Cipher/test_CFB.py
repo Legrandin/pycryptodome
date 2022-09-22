@@ -31,17 +31,18 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.loader import load_tests
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.py3compat import tobytes, is_string
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
+from Crypto.SelfTest.Cipher.test_CBC import BlockChainingTests
+
+
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
-
-from Crypto.SelfTest.Cipher.test_CBC import BlockChainingTests
 
 class CfbTests(BlockChainingTests):
 
@@ -101,11 +102,13 @@ class CfbTests(BlockChainingTests):
 class NistCfbVectors(unittest.TestCase):
 
     def _do_kat_aes_test(self, file_name, segment_size):
-        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
-                                  file_name,
-                                  "AES CFB%d KAT" % segment_size,
-                                  { "count" : lambda x: int(x) } )
-        assert(test_vectors)
+
+        test_vectors = load_test_vectors(("Cipher", "AES"),
+                            file_name,
+                            "AES CFB%d KAT" % segment_size,
+                            { "count" : lambda x: int(x) } )
+        if test_vectors is None:
+            return
 
         direction = None
         for tv in test_vectors:
@@ -127,11 +130,14 @@ class NistCfbVectors(unittest.TestCase):
 
     # See Section 6.4.5 in AESAVS
     def _do_mct_aes_test(self, file_name, segment_size):
-        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "AES"),
-                                  file_name,
-                                  "AES CFB%d Montecarlo" % segment_size,
-                                  { "count" : lambda x: int(x) } )
-        assert(test_vectors)
+
+        test_vectors = load_test_vectors(("Cipher", "AES"),
+                            file_name,
+                            "AES CFB%d Montecarlo" % segment_size,
+                            { "count" : lambda x: int(x) } )
+        if test_vectors is None:
+            return
+
         assert(segment_size in (8, 128))
 
         direction = None
@@ -175,11 +181,13 @@ class NistCfbVectors(unittest.TestCase):
                 assert False
 
     def _do_tdes_test(self, file_name, segment_size):
-        test_vectors = load_tests(("Crypto", "SelfTest", "Cipher", "test_vectors", "TDES"),
-                                  file_name,
-                                  "AES CFB%d KAT" % segment_size,
-                                  { "count" : lambda x: int(x) } )
-        assert(test_vectors)
+
+        test_vectors = load_test_vectors(("Cipher", "TDES"),
+                            file_name,
+                            "TDES CFB%d KAT" % segment_size,
+                            { "count" : lambda x: int(x) } )
+        if test_vectors is None:
+            return
 
         direction = None
         for tv in test_vectors:

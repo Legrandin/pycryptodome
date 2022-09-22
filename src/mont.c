@@ -34,7 +34,6 @@
 #include "common.h"
 #include "endianess.h"
 #include "multiply.h"
-#include "modexp_utils.h"
 #include "mont.h"
 
 #if SYS_BITS == 32
@@ -47,22 +46,37 @@
 #endif
 #endif
 
+#if defined(USE_SSE2)
 #if defined(HAVE_INTRIN_H)
 #include <intrin.h>
-#endif
-
-#if defined(HAVE_X86INTRIN_H)
+#elif defined(HAVE_X86INTRIN_H)
 #include <x86intrin.h>
+#elif defined(HAVE_EMMINTRIN_H)
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#endif
 #endif
 
-static inline unsigned is_odd(uint64_t x)
-{
-    return 1 == (x & 1);
-}
+#include "modexp_utils.c"
+#include "bignum.c"
 
-static inline unsigned is_even(uint64_t x)
+void mont_printf(const char *prefix, const uint64_t *mont_number, const MontContext *ctx)
 {
-    return !is_odd(x);
+    uint8_t* number;
+    unsigned i;
+
+    number = (uint8_t*)calloc(1, ctx->modulus_len);
+
+    if (NULL == mont_number || NULL == ctx || NULL == number)
+        return;
+
+    mont_to_bytes(number, ctx->modulus_len, mont_number, ctx);
+    printf("%s", prefix);
+    for (i=0; i<ctx->modulus_len; i++) {
+        printf("%02X", number[i]);
+    }
+    printf("\n");
+    free(number);
 }
 
 /**
@@ -83,61 +97,6 @@ STATIC uint64_t inverse64(uint64_t a)
     assert((x*a & 0xFFFFFFFFFFFFFFFFULL) == 1);
 
     return x;
-}
-
-/**
- * Check if a multi-word integer x is greater than or equal to y.
- *
- * @param x     The first term
- * @param y     The second term
- * @param nw    The number of words that make up x and y
- * @return      1 if x>=y, 0 if x<y
- */
-STATIC int ge(const uint64_t *x, const uint64_t *y, size_t nw)
-{
-    unsigned mask = (unsigned)-1;
-    unsigned result = 0;
-    size_t i, j;
-
-    i = nw - 1;
-    for (j=0; j<nw; j++, i--) {
-        unsigned greater, lower;
-
-        greater = x[i] > y[i];
-        lower = x[i] < y[i];
-        result |= mask & (greater | (lower << 1));
-        mask &= (greater ^ lower) - 1;
-    }
-
-    return result<2;
-}
-
-/*
- * Subtract a multi-word integer b from a.
- *
- * @param out   The location where the multi-word result is stored
- * @param a     Number to subtract from
- * @param b     Number to subtract
- * @param nw    The number of words of both a and b
- * @result      0 if there is no borrow, 1 otherwise
- */
-STATIC unsigned sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw)
-{
-    size_t i;
-    unsigned borrow1 , borrow2;
-
-    borrow2 = 0;
-    for (i=0; i<nw; i++) {
-        borrow1 = b[i] > a[i];
-        out[i] = a[i] - b[i];
-
-        borrow1 |= borrow2 > out[i];
-        out[i] -= borrow2;
-
-        borrow2 = borrow1;
-    }
-
-    return borrow2;
 }
 
 /*
@@ -181,156 +140,6 @@ STATIC void rsquare(uint64_t *r2_mod_n, uint64_t *n, size_t nw)
 }
 
 /*
- * Multiply a multi-word integer a by a 64-bit scalar k and
- * then add the result to the multi-word integer t.
- *
- * @param t     The multi-word integer accumulator
- * @param tw    The number of words of t
- * @param a     The multi-word integer to multiply with the scalar
- * @param aw    The number of words of a
- * @param k     The 64-bit scalar multiplier
- */
-STATIC void addmul(uint64_t *t, size_t tw, const uint64_t *a, size_t aw, uint64_t k)
-{
-    size_t i;
-    uint64_t carry;
-
-    carry = 0;
-    for (i=0; i<aw; i++) {
-        uint64_t prod_lo, prod_hi;
-
-        DP_MULT(a[i], k, prod_lo, prod_hi);
-    
-        prod_lo += carry;
-        prod_hi += prod_lo < carry;
-
-        t[i] += prod_lo;
-        prod_hi += t[i] < prod_lo;
-
-        carry = prod_hi;
-    }
-
-    for (; carry; i++) {
-        t[i] += carry;
-        carry = t[i] < carry;
-    }
-
-    assert(i <= tw);
-}
-
-/**
- * Multiply two multi-word integers.
- *
- * @param t          The location where the result is stored. It is twice as big as
- *                   either a (or b). It is an array of  2*nw words).
- * @param scratchpad Temporary area. It is an array of 3*nw words.
- * @param a          The first term, array of nw words.
- * @param b          The second term, array of nw words.
- * @param nw         The number of words of both a and b.
- *
- */
-STATIC void product(uint64_t *t, uint64_t *scratchpad, const uint64_t *a, const uint64_t *b, size_t nw)
-{
-    size_t i;
-
-    memset(t, 0, 2*sizeof(uint64_t)*nw);
-    
-    for (i=0; i<(nw ^ (nw & 1)); i+=2) {
-        addmul128(&t[i], scratchpad, a, b[i], b[i+1], 2*nw-i, nw);
-    }
-
-    if (is_odd(nw)) {
-        addmul(&t[nw-1], nw+2, a, nw, b[nw-1]);
-    }
-}
-
-/*
- * Select a number out of two, in constant time.
- *
- * @param out   The location where the multi-word result is stored
- * @param a     The first choice, selected if cond is true (non-zero)
- * @param b     The second choice, selected if cond is false (zero)
- * @param cond  The flag that drives the selection
- * @param words The number of words of a, b, and out
- * @return      0 for success, the appropriate code otherwise.
- */
-STATIC int mont_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, size_t words)
-{
-    uint64_t mask;
-#if defined(USE_SSE2)
-    unsigned pairs, i;
-    __m128i r0, r1, r2, r3, r4, r5;
-
-    pairs = (unsigned)words / 2;
-    mask = (uint64_t)((cond != 0) - 1); /* 0 for a, 1s for b */
-   
-    r0 = _mm_set1_epi64((__m64)mask);
-    for (i=0; i<pairs; i++, a+=2, b+=2, out+=2) {
-        r1 = _mm_loadu_si128((__m128i const*)b);
-        r2 = _mm_loadu_si128((__m128i const*)a);
-        r3 = _mm_and_si128(r0, r1);
-        r4 = _mm_andnot_si128(r0, r2);
-        r5 = _mm_or_si128(r3, r4);
-        _mm_storeu_si128((__m128i*)out, r5);
-    }
-
-    if (words & 1) {
-        *out = (*b & mask) ^ (*a & ~mask);
-    }
-#else
-    unsigned i;
-
-    mask = (uint64_t)((cond != 0) - 1);
-    for (i=0; i<words; i++) {
-        *out++ = (*b++ & mask) ^ (*a++ & ~mask);
-    }
-#endif
-
-    return 0;
-}
-
-/*
- * Add two multi-word numbers with modulo arithmetic.
- *
- * @param out       The locaton where the multi-word result (nw words) is stored
- * @param a         The first term (nw words)
- * @param b         The second term (nw words)
- * @param modulus   The modulus (nw words)
- * @param tmp1      A temporary area (nw words)
- * @param tmp2      A temporary area (nw words)
- * @param nw        The number of 64-bit words in all parameters
- */
-void add_mod(uint64_t* out, const uint64_t* a, const uint64_t* b, const uint64_t *modulus, uint64_t *tmp1, uint64_t *tmp2, size_t nw)
-{
-    unsigned i;
-    unsigned carry, borrow1, borrow2;
-
-    /*
-     * Compute sum in tmp1[], and subtract modulus[]
-     * from tmp1[] into tmp2[].
-     */
-    borrow2 = 0;
-    for (i=0, carry=0; i<nw; i++) {
-        tmp1[i] = a[i] + carry;
-        carry = tmp1[i] < carry;
-        tmp1[i] += b[i];
-        carry += tmp1[i] < b[i];
-
-        borrow1 = modulus[i] > tmp1[i];
-        tmp2[i] = tmp1[i] - modulus[i];
-        borrow1 |= borrow2 > tmp2[i];
-        tmp2[i] -= borrow2;
-        borrow2 = borrow1;
-    }
-
-    /*
-     * If there is no borrow or if there is carry,
-     * tmp1[] is larger than modulus, so we must return tmp2[].
-     */
-    mont_select(out, tmp2, tmp1, carry | (borrow2 ^ 1), nw);
-}
-
-/*
  * Montgomery modular multiplication, that is a*b*R mod N.
  *
  * @param out   The location where the result is stored
@@ -342,7 +151,8 @@ void add_mod(uint64_t* out, const uint64_t* a, const uint64_t* b, const uint64_t
  * @param nw    Number of words making up the 3 integers: out, a, and b.
  *              It also defines R as 2^(64*nw).
  *
- * Useful read: https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
+ * Useful read:
+ * https://web.archive.org/web/20190917203334/https://alicebob.cryptoland.net/understanding-the-montgomery-reduction-algorithm/
  */
 #if SCRATCHPAD_NR < 7
 #error Scratchpad is too small
@@ -405,7 +215,7 @@ STATIC void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, nw);
     cond = (unsigned)(t[2*nw] | (uint64_t)ge(&t[nw], n, nw));
-    mont_select(out, t2, &t[nw], cond, (unsigned)nw);
+    mod_select(out, t2, &t[nw], cond, (unsigned)nw);
 }
 
 STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *tmp, size_t nw)
@@ -544,7 +354,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[nw], n, WORDS_64);
     cond = (unsigned)(t[PREDIV_WORDS_64-1] | (uint64_t)ge(&t[WORDS_64], n, WORDS_64));
-    mont_select(out, t2, &t[WORDS_64], cond, WORDS_64);
+    mod_select(out, t2, &t[WORDS_64], cond, WORDS_64);
 
 #undef WORDS_64
 #undef PREDIV_WORDS_64
@@ -567,7 +377,7 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 #endif
 
     assert(nw == WORDS_64);
-    assert(m0 == 0x0000000100000001U);
+    assert(m0 == 0x0000000100000001ULL);
 
     t = tmp;
     scratchpad = tmp + 3*nw;
@@ -727,7 +537,7 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
     /** Divide by R and possibly subtract n **/
     sub(t2, &t[WORDS_64], n, WORDS_64);
     cond = (unsigned)(t[PREDIV_WORDS_64-1] | (uint64_t)ge(&t[WORDS_64], n, WORDS_64));
-    mont_select(out, t2, &t[WORDS_64], cond, WORDS_64);
+    mod_select(out, t2, &t[WORDS_64], cond, WORDS_64);
 
 #undef WORDS_64
 #undef PREDIV_WORDS_64
@@ -782,6 +592,123 @@ STATIC void mont_mult_p521(uint64_t *out, const uint64_t *a, const uint64_t *b, 
 
     add_mod(out, t, s, n, tmp1, tmp2, nw);
 }
+
+STATIC void mont_mult_ed448(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *tmp, size_t nw)
+{
+    size_t i;
+    uint64_t *t, *scratchpad, *t2;
+    unsigned cond;
+
+    assert(nw == 7);
+    assert(m0 == 1);
+
+    /*
+     * tmp is an array of SCRATCHPAD*nw words
+     * We carve out 3 values in it:
+     * - 3*nw words, the value a*b + m*n (we only use 2*nw+1 words)
+     * - 3*nw words, temporary area for computing the product
+     * - nw words, the reduced value with a final subtraction by n
+     */
+    t = tmp;
+    scratchpad = tmp + 3*nw;
+    t2 = scratchpad + 3*nw;
+
+    if (a == b) {
+        square(t, scratchpad, a, nw);
+    } else {
+        product(t, scratchpad, a, b, nw);
+    }
+
+    t[2*nw] = 0; /** MSW **/
+
+    /** Clear lower words **/
+    for (i=0; i<7; i++) {
+        uint64_t k, k2_lo, k2_hi;
+        uint64_t carry, j;
+        uint64_t prod_lo, prod_hi;
+
+        k = t[i];
+        k2_lo = -k;
+        k2_hi = k - (k!=0);
+
+        /* n[0] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        t[i+0] += prod_lo;
+        prod_hi += t[i+0] < prod_lo;
+        carry = prod_hi;
+
+        /* n[1] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+1] += prod_lo;
+        prod_hi += t[i+1] < prod_lo;
+        carry = prod_hi;
+
+        /* n[2] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+2] += prod_lo;
+        prod_hi += t[i+2] < prod_lo;
+        carry = prod_hi;
+
+        /* n[3] = 2⁶⁴ - 2³² - 1 */
+        DP_MULT(n[3], k, prod_lo, prod_hi);
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+3] += prod_lo;
+        prod_hi += t[i+3] < prod_lo;
+        carry = prod_hi;
+
+        /* n[4] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+4] += prod_lo;
+        prod_hi += t[i+4] < prod_lo;
+        carry = prod_hi;
+
+        /* n[5] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+5] += prod_lo;
+        prod_hi += t[i+5] < prod_lo;
+        carry = prod_hi;
+
+        /* n[6] = 2⁶⁴ - 1 */
+        prod_lo = k2_lo;
+        prod_hi = k2_hi;
+        prod_lo += carry;
+        prod_hi += prod_lo < carry;
+        t[i+6] += prod_lo;
+        prod_hi += t[i+6] < prod_lo;
+        carry = prod_hi;
+
+        for (j=7; carry; j++) {
+            t[i+j] += carry;
+            carry = t[i+j] < carry;
+        }
+
+        assert(j <= (15-i));
+    }
+
+    assert(t[2*nw] <= 1); /** MSW **/
+
+    /** t[0..nw-1] == 0 **/
+
+    /** Divide by R and possibly subtract n **/
+    sub(t2, &t[nw], n, nw);
+    cond = (unsigned)(t[2*nw] | (uint64_t)ge(&t[nw], n, nw));
+    mod_select(out, t2, &t[nw], cond, (unsigned)nw);
+}
+
 
 /* ---- PUBLIC FUNCTIONS ---- */
 
@@ -1015,9 +942,14 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
         case ModulusP521:
             mont_mult_p521(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
+        case ModulusEd448:
+            mont_mult_ed448(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
+            break;
         case ModulusGeneric:
             mont_mult_generic(out, a, b, ctx->modulus, ctx->m0, tmp, ctx->words);
             break;
+        default:
+            return ERR_MODULUS;
     }
 
     return 0;
@@ -1036,40 +968,10 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
  */
 int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp, const MontContext *ctx)
 {
-    unsigned i;
-    unsigned carry, borrow1 , borrow2;
-    uint64_t *scratchpad;
-
     if (NULL == out || NULL == a || NULL == b || NULL == tmp || NULL == ctx)
         return ERR_NULL;
 
-    scratchpad = tmp + ctx->words;
-
-    /*
-     * Compute difference in tmp[], and add modulus[]
-     * to tmp[] into scratchpad[].
-     */
-    borrow2 = 0;
-    carry = 0;
-    for (i=0; i<ctx->words; i++) {
-        borrow1 = b[i] > a[i];
-        tmp[i] = a[i] - b[i];
-        borrow1 |= borrow2 > tmp[i];
-        tmp[i] -= borrow2;
-        borrow2 = borrow1;
-
-        scratchpad[i] = tmp[i] + carry;
-        carry = scratchpad[i] < carry;
-        scratchpad[i] += ctx->modulus[i];
-        carry += scratchpad[i] < ctx->modulus[i];
-    }
-
-    /*
-     * If there is no borrow, tmp[] is smaller than modulus.
-     */
-    mont_select(out, scratchpad, tmp, borrow2, ctx->words);
-
-    return 0;
+    return sub_mod(out, a, b, ctx->modulus, tmp, tmp + ctx->words, ctx->words);
 }
 
 /*
@@ -1224,6 +1126,7 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
     const uint8_t p256_mod[32] = "\xff\xff\xff\xff\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     const uint8_t p384_mod[48] = "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff";
     const uint8_t p521_mod[66] = "\x01\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+    const uint8_t ed448_mod[56] = "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
     uint64_t *scratchpad = NULL;
     MontContext *ctx;
     int res;
@@ -1268,6 +1171,11 @@ int mont_context_init(MontContext **out, const uint8_t *modulus, size_t mod_len)
         case sizeof(p521_mod):
             if (0 == cmp_modulus(modulus, mod_len, p521_mod, sizeof(p521_mod))) {
                 ctx->modulus_type = ModulusP521;
+            }
+            break;
+        case sizeof(ed448_mod):
+            if (0 == cmp_modulus(modulus, mod_len, ed448_mod, sizeof(ed448_mod))) {
+                ctx->modulus_type = ModulusEd448;
             }
             break;
     }

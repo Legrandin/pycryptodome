@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ===================================================================
 #
 # Copyright (c) 2016, Legrandin <helderijs@gmail.com>
@@ -35,9 +36,8 @@ import binascii
 import struct
 
 from Crypto import Random
-from Crypto.IO import PKCS8, PEM
 from Crypto.Util.py3compat import tobytes, bord, tostr
-from Crypto.Util.asn1 import DerSequence
+from Crypto.Util.asn1 import DerSequence, DerNull
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (test_probable_prime,
@@ -69,7 +69,9 @@ class RsaKey(object):
     :vartype q: integer
 
     :ivar u: Chinese remainder component (:math:`p^{-1} \text{mod } q`)
-    :vartype q: integer
+    :vartype u: integer
+
+    :undocumented: exportKey, publickey
     """
 
     def __init__(self, **kwargs):
@@ -98,6 +100,9 @@ class RsaKey(object):
             raise ValueError("Some RSA components are missing")
         for component, value in kwargs.items():
             setattr(self, "_" + component, value)
+        if input_set == private_set:
+            self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
+            self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)
 
     @property
     def n(self):
@@ -140,12 +145,12 @@ class RsaKey(object):
         return (self._n.size_in_bits() - 1) // 8 + 1
 
     def _encrypt(self, plaintext):
-        if not 0 < plaintext < self._n:
+        if not 0 <= plaintext < self._n:
             raise ValueError("Plaintext too large")
         return int(pow(Integer(plaintext), self._e, self._n))
 
     def _decrypt(self, ciphertext):
-        if not 0 < ciphertext < self._n:
+        if not 0 <= ciphertext < self._n:
             raise ValueError("Ciphertext too large")
         if not self.has_private():
             raise TypeError("This is not a private key")
@@ -156,17 +161,14 @@ class RsaKey(object):
         r = Integer.random_range(min_inclusive=1, max_exclusive=self._n)
         # Step 2: Compute c' = c * r**e mod n
         cp = Integer(ciphertext) * pow(r, self._e, self._n) % self._n
-        # Step 3: Compute m' = c'**d mod n       (ordinary RSA decryption)
-        m1 = pow(cp, self._d % (self._p - 1), self._p)
-        m2 = pow(cp, self._d % (self._q - 1), self._q)
-        h = m2 - m1
-        while h < 0:
-            h += self._q
-        h = (h * self._u) % self._q
+        # Step 3: Compute m' = c'**d mod n       (normal RSA decryption)
+        m1 = pow(cp, self._dp, self._p)
+        m2 = pow(cp, self._dq, self._q)
+        h = ((m2 - m1) * self._u) % self._q
         mp = h * self._p + m1
-        # Step 4: Compute m = m**(r-1) mod n
+        # Step 4: Compute m = m' * (r**(-1)) mod n
         result = (r.inverse(self._n) * mp) % self._n
-        # Verify no faults occured
+        # Verify no faults occurred
         if ciphertext != pow(result, self._e, self._n):
             raise ValueError("Fault detected in RSA decryption")
         return result
@@ -182,7 +184,7 @@ class RsaKey(object):
     def can_sign(self):     # legacy
         return True
 
-    def publickey(self):
+    def public_key(self):
         """A matching RSA public key.
 
         Returns:
@@ -197,10 +199,7 @@ class RsaKey(object):
             return False
         if not self.has_private():
             return True
-        return (self.d == other.d and
-                self.q == other.q and
-                self.p == other.p and
-                self.u == other.u)
+        return (self.d == other.d)
 
     def __ne__(self, other):
         return not (self == other)
@@ -336,26 +335,33 @@ class RsaKey(object):
                 if format == 'DER' and passphrase:
                     raise ValueError("PKCS#1 private key cannot be encrypted")
             else:  # PKCS#8
+                from Crypto.IO import PKCS8
+
                 if format == 'PEM' and protection is None:
                     key_type = 'PRIVATE KEY'
-                    binary_key = PKCS8.wrap(binary_key, oid, None)
+                    binary_key = PKCS8.wrap(binary_key, oid, None,
+                                            key_params=DerNull())
                 else:
                     key_type = 'ENCRYPTED PRIVATE KEY'
                     if not protection:
                         protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
                     binary_key = PKCS8.wrap(binary_key, oid,
-                                            passphrase, protection)
+                                            passphrase, protection,
+                                            key_params=DerNull())
                     passphrase = None
         else:
             key_type = "PUBLIC KEY"
             binary_key = _create_subject_public_key_info(oid,
                                                          DerSequence([self.n,
-                                                                      self.e])
+                                                                      self.e]),
+                                                         DerNull()
                                                          )
 
         if format == 'DER':
             return binary_key
         if format == 'PEM':
+            from Crypto.IO import PEM
+
             pem_str = PEM.encode(binary_key, key_type, passphrase, randfunc)
             return tobytes(pem_str)
 
@@ -363,6 +369,7 @@ class RsaKey(object):
 
     # Backward compatibility
     exportKey = export_key
+    publickey = public_key
 
     # Methods defined in PyCrypto that we don't support anymore
     def sign(self, M, K):
@@ -655,6 +662,8 @@ def _import_x509_cert(encoded, *kwargs):
 
 
 def _import_pkcs8(encoded, passphrase):
+    from Crypto.IO import PKCS8
+
     k = PKCS8.unwrap(encoded, passphrase)
     if k[0] != oid:
         raise ValueError("No PKCS#8 encoded RSA key")
@@ -679,9 +688,32 @@ def _import_keyDER(extern_key, passphrase):
     raise ValueError("RSA key format is not supported")
 
 
+def _import_openssh_private_rsa(data, password):
+
+    from ._openssh import (import_openssh_private_generic,
+                           read_bytes, read_string, check_padding)
+
+    ssh_name, decrypted = import_openssh_private_generic(data, password)
+
+    if ssh_name != "ssh-rsa":
+        raise ValueError("This SSH key is not RSA")
+
+    n, decrypted = read_bytes(decrypted)
+    e, decrypted = read_bytes(decrypted)
+    d, decrypted = read_bytes(decrypted)
+    iqmp, decrypted = read_bytes(decrypted)
+    p, decrypted = read_bytes(decrypted)
+    q, decrypted = read_bytes(decrypted)
+
+    _, padded = read_string(decrypted)  # Comment
+    check_padding(padded)
+
+    build = [Integer.from_bytes(x) for x in (n, e, d, q, p, iqmp)]
+    return construct(build)
+
+
 def import_key(extern_key, passphrase=None):
-    """Import an RSA key (public or private half), encoded in standard
-    form.
+    """Import an RSA key (public or private).
 
     Args:
       extern_key (string or byte string):
@@ -693,23 +725,19 @@ def import_key(extern_key, passphrase=None):
         - X.509 ``subjectPublicKeyInfo`` DER SEQUENCE (binary or PEM
           encoding)
         - `PKCS#1`_ ``RSAPublicKey`` DER SEQUENCE (binary or PEM encoding)
-        - OpenSSH (textual public key only)
+        - An OpenSSH line (e.g. the content of ``~/.ssh/id_ecdsa``, ASCII)
 
         The following formats are supported for an RSA **private key**:
 
         - PKCS#1 ``RSAPrivateKey`` DER SEQUENCE (binary or PEM encoding)
         - `PKCS#8`_ ``PrivateKeyInfo`` or ``EncryptedPrivateKeyInfo``
           DER SEQUENCE (binary or PEM encoding)
-        - OpenSSH (textual public key only)
+        - OpenSSH (text format, introduced in `OpenSSH 6.5`_)
 
         For details about the PEM encoding, see `RFC1421`_/`RFC1423`_.
 
-        The private key may be encrypted by means of a certain pass phrase
-        either at the PEM level or at the PKCS#8 level.
-
-      passphrase (string):
-        In case of an encrypted private key, this is the pass phrase from
-        which the decryption key is derived.
+      passphrase (string or byte string):
+        For private keys only, the pass phrase that encrypts the key.
 
     Returns: An RSA key object (:class:`RsaKey`).
 
@@ -722,11 +750,20 @@ def import_key(extern_key, passphrase=None):
     .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
     .. _`PKCS#1`: http://www.ietf.org/rfc/rfc3447.txt
     .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
+    .. _`OpenSSH 6.5`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     """
+
+    from Crypto.IO import PEM
 
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
+
+    if extern_key.startswith(b'-----BEGIN OPENSSH PRIVATE KEY'):
+        text_encoded = tostr(extern_key)
+        openssh_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
+        result = _import_openssh_private_rsa(openssh_encoded, passphrase)
+        return result
 
     if extern_key.startswith(b'-----'):
         # This is probably a PEM encoded key.
@@ -736,22 +773,23 @@ def import_key(extern_key, passphrase=None):
         return _import_keyDER(der, passphrase)
 
     if extern_key.startswith(b'ssh-rsa '):
-            # This is probably an OpenSSH key
-            keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
-            keyparts = []
-            while len(keystring) > 4:
-                l = struct.unpack(">I", keystring[:4])[0]
-                keyparts.append(keystring[4:4 + l])
-                keystring = keystring[4 + l:]
-            e = Integer.from_bytes(keyparts[1])
-            n = Integer.from_bytes(keyparts[2])
-            return construct([n, e])
+        # This is probably an OpenSSH key
+        keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
+        keyparts = []
+        while len(keystring) > 4:
+            length = struct.unpack(">I", keystring[:4])[0]
+            keyparts.append(keystring[4:4 + length])
+            keystring = keystring[4 + length:]
+        e = Integer.from_bytes(keyparts[1])
+        n = Integer.from_bytes(keyparts[2])
+        return construct([n, e])
 
     if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
-            # This is probably a DER encoded key
-            return _import_keyDER(extern_key, passphrase)
+        # This is probably a DER encoded key
+        return _import_keyDER(extern_key, passphrase)
 
     raise ValueError("RSA key format is not supported")
+
 
 # Backward compatibility
 importKey = import_key

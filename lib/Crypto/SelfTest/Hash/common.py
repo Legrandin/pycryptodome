@@ -52,11 +52,11 @@ class HashDigestSizeSelfTest(unittest.TestCase):
 
     def runTest(self):
         if "truncate" not in self.extra_params:
-            self.failUnless(hasattr(self.hashmod, "digest_size"))
-            self.assertEquals(self.hashmod.digest_size, self.expected)
+            self.assertTrue(hasattr(self.hashmod, "digest_size"))
+            self.assertEqual(self.hashmod.digest_size, self.expected)
         h = self.hashmod.new(**self.extra_params)
-        self.failUnless(hasattr(h, "digest_size"))
-        self.assertEquals(h.digest_size, self.expected)
+        self.assertTrue(hasattr(h, "digest_size"))
+        self.assertEqual(h.digest_size, self.expected)
 
 
 class HashSelfTest(unittest.TestCase):
@@ -263,7 +263,7 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None,
         name = "%s #%d: %s" % (module_name, i+1, description)
         tests.append(HashSelfTest(module, name, expected, input, extra_params))
 
-    name = "%s #%d: digest_size" % (module_name, i+1)
+    name = "%s #%d: digest_size" % (module_name, len(test_data) + 1)
     tests.append(HashDigestSizeSelfTest(module, name, digest_size, extra_params))
 
     if oid is not None:
@@ -271,8 +271,7 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None,
 
     tests.append(ByteArrayTest(module, extra_params))
 
-    if not (sys.version_info[0] == 2 and sys.version_info[1] < 7):
-        tests.append(MemoryViewTest(module, extra_params))
+    tests.append(MemoryViewTest(module, extra_params))
 
     return tests
 

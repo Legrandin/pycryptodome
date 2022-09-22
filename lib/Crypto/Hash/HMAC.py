@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord, tobytes, _memoryview
+from Crypto.Util.py3compat import bord, tobytes
 
 from binascii import unhexlify
 
@@ -43,7 +43,7 @@ from Crypto.Random import get_random_bytes
 __all__ = ['new', 'HMAC']
 
 
-class HMAC:
+class HMAC(object):
     """An HMAC hash object.
     Do not instantiate directly. Use the :func:`new` function.
 
@@ -64,7 +64,7 @@ class HMAC:
 
         self._digestmod = digestmod
 
-        if isinstance(key, _memoryview):
+        if isinstance(key, memoryview):
             key = key.tobytes()
 
         try:

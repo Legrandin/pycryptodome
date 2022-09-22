@@ -134,22 +134,44 @@ static int CFB_transcrypt(CfbModeState *cfbState,
             if (0 != result)
                 return result;
 
-            /* Reset */
+            /* The next input to the cipher is:
+             * - the old input shifted left by the segment length
+             * - filled on the right with the enough ciphertext
+             *
+             * If the segment length equals the block length,
+             * the next input is simply the ciphertext block.
+             *
+             * If the segment length equals 1, only the leftmost
+             * byte of the ciphertext block is used.
+             */
             memmove(next_iv, next_iv + segment_len, block_len - segment_len);
+
+            /*
+             * The rest of the next input is copied when enough ciphertext is
+             * available (we need segment_len bytes).
+             */
             cfbState->usedKeyStream = 0;
         }
 
         keyStream = cfbState->keyStream + cfbState->usedKeyStream;
-        segment = next_iv + block_len - segment_len + cfbState->usedKeyStream;
         keyStreamToUse = MIN(segment_len - cfbState->usedKeyStream, data_len);
 
-        for (i=0; i<keyStreamToUse; i++, cfbState->usedKeyStream++) {
+        segment = next_iv + (block_len - (segment_len - cfbState->usedKeyStream));
+
+        if (direction == DirDecrypt) {
+            memcpy(segment, in, keyStreamToUse);
+        }
+
+        for (i=0; i<keyStreamToUse; i++) {
             *out++ = *keyStream++ ^ *in++;
         }
 
-        memcpy(segment, (direction == DirEncrypt ? out : in) - keyStreamToUse, keyStreamToUse);
+        if (direction == DirEncrypt) {
+            memcpy(segment, out - keyStreamToUse, keyStreamToUse);
+        }
 
         data_len -= keyStreamToUse;
+        cfbState->usedKeyStream += keyStreamToUse;
     }
 
     return 0;

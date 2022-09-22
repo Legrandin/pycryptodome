@@ -100,7 +100,7 @@ There are two types of symmetric ciphers:
   a block cipher into a stream cipher.
 
 The widespread consensus is that ciphers that provide
-only confidentiality, without any form of authentication, are undesireable.
+only confidentiality, without any form of authentication, are undesirable.
 Instead, primitives have been defined to integrate symmetric encryption and
 authentication (MAC). For instance:
 

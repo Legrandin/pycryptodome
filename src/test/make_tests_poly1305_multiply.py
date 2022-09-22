@@ -11,14 +11,14 @@ def make_test(term, secret):
 
     assert term < 2**(32*5)
     assert len(secret) == 16
-   
+
     # Several bits in the secret must be cleared
     clamped = bytearray(secret)
     for idx in 3, 7, 11, 15:
         clamped[idx] &= 15
     for idx in 4, 8, 12:
         clamped[idx] &= 252
-    
+
     # Turn the secret into an integer r
     r = 0
     for x in clamped[::-1]:
@@ -36,36 +36,36 @@ def make_test(term, secret):
     # Split the term into 32-bit words
     h_split = split32(term, 5)
 
-    print ""
-    print "void test_%d() {" % counter.next()
-    print "    uint8_t secret[16] = {" + ",".join([str(ord(x)) for x in secret]) + "};"
-    print "    uint32_t r[4], rr[4];"
-    print "    uint32_t h[5] = {" + ",".join(h_split) + "};"
-    print "    int match;";
+    print("")
+    print("void test_%d() {" % next(counter))
+    print("    uint8_t secret[16] = {" + ",".join([str(x) for x in secret]) + "};")
+    print("    uint32_t r[4], rr[4];")
+    print("    uint32_t h[5] = {" + ",".join(h_split) + "};")
+    print("    int match;");
     for x in range(n_results):
         y = ",".join(all_results[x])
-        print "    uint32_t expected_h_%d[5] = { %s };" % (x+1, y)
-    print ""
-    print "    poly1305_load_r(r, rr, secret);"
-    print "    poly1305_multiply(h, r, rr);"
-    print "    match = !0;"
+        print("    uint32_t expected_h_%d[5] = { %s };" % (x+1, y))
+    print("")
+    print("    poly1305_load_r(r, rr, secret);")
+    print("    poly1305_multiply(h, r, rr);")
+    print("    match = !0;")
     for x in range(n_results):
-        print "    match = match && memcmp(h, expected_h_%d, sizeof(h));" % (x+1)
-    print "    assert(match == 0);"
-    print "}"
-    print ""
+        print("    match = match && memcmp(h, expected_h_%d, sizeof(h));" % (x+1))
+    print("    assert(match == 0);")
+    print("}")
+    print("")
 
 
-print "#ifdef NDEBUG"
-print "#undef NDEBUG"
-print "#endif"
-print "#include <assert.h>"
-print "#include <string.h>"
-print "#include <stdint.h>"
-print "#include <stdio.h>"
-print
-print "void poly1305_load_r(uint32_t r[4], uint32_t rr[4], const uint8_t secret[16]);"
-print "void poly1305_multiply(uint32_t h[5], const uint32_t r[4], const uint32_t rr[4]);"
+print("#ifdef NDEBUG")
+print("#undef NDEBUG")
+print("#endif")
+print("#include <assert.h>")
+print("#include <string.h>")
+print("#include <stdint.h>")
+print("#include <stdio.h>")
+print()
+print("void poly1305_load_r(uint32_t r[4], uint32_t rr[4], const uint8_t secret[16]);")
+print("void poly1305_multiply(uint32_t h[5], const uint32_t r[4], const uint32_t rr[4]);")
 
 p = 2**130 - 5
 

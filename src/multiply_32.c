@@ -35,19 +35,22 @@
 #include <stdio.h>
 #include "multiply.h"
 
+#if defined(USE_SSE2)
 #if defined(HAVE_INTRIN_H)
 #include <intrin.h>
-#endif
-
-#if defined(HAVE_X86INTRIN_H)
+#elif defined(HAVE_X86INTRIN_H)
 #include <x86intrin.h>
+#elif defined(HAVE_EMMINTRIN_H)
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#endif
 #endif
 
 /*
  * Multiply a vector a[] by a scalar b. Add the result into vector t[],
  * starting at the given offset.
  */
-void static inline addmul32(uint32_t* t, size_t offset, const uint32_t *a, uint32_t b, size_t t_words, size_t a_words)
+void static inline FUNC_SSE2 addmul32(uint32_t* t, size_t offset, const uint32_t *a, uint32_t b, size_t t_words, size_t a_words)
 {
     uint32_t carry;
     size_t i;

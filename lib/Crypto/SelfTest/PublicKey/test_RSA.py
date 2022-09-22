@@ -106,7 +106,7 @@ class RSATest(unittest.TestCase):
         rsaObj = self.rsa.generate(1024)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
-        pub = rsaObj.publickey()
+        pub = rsaObj.public_key()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
@@ -115,7 +115,7 @@ class RSATest(unittest.TestCase):
         rsaObj = self.rsa.generate(1024, Random.new().read)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
-        pub = rsaObj.publickey()
+        pub = rsaObj.public_key()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
 
@@ -123,7 +123,7 @@ class RSATest(unittest.TestCase):
         rsaObj = self.rsa.generate(1024, Random.new().read,e=65537)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
-        pub = rsaObj.publickey()
+        pub = rsaObj.public_key()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
         self.assertEqual(65537,rsaObj.e)
@@ -192,9 +192,9 @@ class RSATest(unittest.TestCase):
 
     def test_factoring(self):
         rsaObj = self.rsa.construct([self.n, self.e, self.d])
-        self.failUnless(rsaObj.p==self.p or rsaObj.p==self.q)
-        self.failUnless(rsaObj.q==self.p or rsaObj.q==self.q)
-        self.failUnless(rsaObj.q*rsaObj.p == self.n)
+        self.assertTrue(rsaObj.p==self.p or rsaObj.p==self.q)
+        self.assertTrue(rsaObj.q==self.p or rsaObj.q==self.q)
+        self.assertTrue(rsaObj.q*rsaObj.p == self.n)
 
         self.assertRaises(ValueError, self.rsa.construct, [self.n, self.e, self.n-1])
 
@@ -209,20 +209,20 @@ class RSATest(unittest.TestCase):
         self.assertRaises(PicklingError, pickle.dumps, rsa_key)
 
     def test_raw_rsa_boundary(self):
-        # The argument of every RSA raw operation (encrypt/decrypt) must be positive
-        # and no larger than the modulus
+        # The argument of every RSA raw operation (encrypt/decrypt) must be
+        # non-negative and no larger than the modulus
         rsa_obj = self.rsa.generate(1024)
 
         self.assertRaises(ValueError, rsa_obj._decrypt, rsa_obj.n)
         self.assertRaises(ValueError, rsa_obj._encrypt, rsa_obj.n)
 
-        self.assertRaises(ValueError, rsa_obj._decrypt, 0)
-        self.assertRaises(ValueError, rsa_obj._encrypt, 0)
+        self.assertRaises(ValueError, rsa_obj._decrypt, -1)
+        self.assertRaises(ValueError, rsa_obj._encrypt, -1)
 
     def test_size(self):
         pub = self.rsa.construct((self.n, self.e))
-        self.assertEquals(pub.size_in_bits(), 1024)
-        self.assertEquals(pub.size_in_bytes(), 128)
+        self.assertEqual(pub.size_in_bits(), 1024)
+        self.assertEqual(pub.size_in_bytes(), 128)
 
     def _check_private_key(self, rsaObj):
         from Crypto.Math.Numbers import Integer
@@ -264,8 +264,10 @@ class RSATest(unittest.TestCase):
                 bytes_to_long(ciphertext))
 
         # Check __eq__ and __ne__
-        self.assertEqual(rsaObj.publickey() == rsaObj.publickey(),True) # assert_
-        self.assertEqual(rsaObj.publickey() != rsaObj.publickey(),False) # failIf
+        self.assertEqual(rsaObj.public_key() == rsaObj.public_key(),True) # assert_
+        self.assertEqual(rsaObj.public_key() != rsaObj.public_key(),False) # assertFalse
+
+        self.assertEqual(rsaObj.publickey(), rsaObj.public_key())
 
     def _exercise_primitive(self, rsaObj):
         # Since we're using a randomly-generated key, we can't check the test

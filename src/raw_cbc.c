@@ -137,9 +137,10 @@ EXPORT_SYM int CBC_decrypt(CbcModeState *cbcState,
             return result;
 
         for (i=0; i<block_len; i++)
-            out[i] = pt[i] ^ iv[i];
+            pt[i] = pt[i] ^ iv[i];
 
         memcpy(iv, in, block_len);
+        memcpy(out, pt, block_len);
 
         data_len -= block_len;
         in += block_len;

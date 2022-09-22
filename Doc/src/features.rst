@@ -29,7 +29,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - OpenPGP (a variant of CFB, RFC4880)
 
 * Authenticated Encryption:
-  
+
   - CCM (AES only)
   - EAX
   - GCM (AES only)
@@ -48,6 +48,8 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - SHA-1
   - SHA-2 hashes (224, 256, 384, 512, 512/224, 512/256)
   - SHA-3 hashes (224, 256, 384, 512) and XOFs (SHAKE128, SHAKE256)
+  - Functions derived from SHA-3 (cSHAKE128, cSHAKE256, TupleHash128, TupleHash256)
+  - KangarooTwelve (XOF)
   - Keccak (original submission to SHA-3)
   - BLAKE2b and BLAKE2s
   - RIPE-MD160 (legacy)
@@ -57,12 +59,13 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   
   - HMAC
   - CMAC
+  - KMAC128 and KMAC256
   - Poly1305
 
 * Asymmetric key generation:
   
   - RSA
-  - ECC (NIST P-256, P-384 and P-521 curve only)
+  - ECC (NIST P-curves; Ed25519, Ed448)
   - DSA
   - ElGamal (legacy)
 
@@ -90,6 +93,8 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
     
     - Nonce-based (FIPS 186-3)
     - Deterministic (RFC6979)
+
+  - EdDSA
 
 * Key derivation:
  

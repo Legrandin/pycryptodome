@@ -118,8 +118,8 @@ int main(void)
     printf("\n");
 #endif
 
-    ec_free_point(gp);
-    ec_free_point(ecp);
+    ec_ws_free_point(gp);
+    ec_ws_free_point(ecp);
     ec_free_context(ec_ctx);
 
     return 0;

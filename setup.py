@@ -24,10 +24,13 @@ from __future__ import print_function
 
 try:
     from setuptools import Extension, Command, setup
+    from setuptools.command.build_ext import build_ext
+    from setuptools.command.build_py import build_py
 except ImportError:
     from distutils.core import Extension, Command, setup
-from distutils.command.build_ext import build_ext
-from distutils.command.build_py import build_py
+    from distutils.command.build_ext import build_ext
+    from distutils.command.build_py import build_py
+
 import re
 import os
 import sys
@@ -55,7 +58,7 @@ PyCryptodome
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.6 and 2.7, Python 3.4 and newer, and PyPy.
+It supports Python 2.7, Python 3.5 and newer, and PyPy.
 
 You can install it with::
 
@@ -73,14 +76,14 @@ for instance:
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST P-256, P-384 and P-521 curves only)
+* Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448)
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
 * SHA-3 (including SHAKE XOFs) and BLAKE2 hash algorithms
 * Salsa20 and ChaCha20 stream ciphers
 * scrypt and HKDF
-* Deterministic (EC)DSA
+* Deterministic (EC)DSA and EdDSA
 * Password-protected PKCS#8 key containers
 * Shamir's Secret Sharing scheme
 * Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
@@ -222,14 +225,18 @@ def create_cryptodome_lib():
                 if full_file_name_src != "py.typed":
                     continue
 
-            with open(full_file_name_dst, "rt") as fd:
+            if sys.version_info[0] > 2:
+                extra_param = { "encoding": "utf-8" }
+            else:
+                extra_param = {}
+            with open(full_file_name_dst, "rt", **extra_param) as fd:
                 content = (fd.read().
                            replace("Crypto.", "Cryptodome.").
                            replace("Crypto ", "Cryptodome ").
                            replace("'Crypto'", "'Cryptodome'").
                            replace('"Crypto"', '"Cryptodome"'))
             os.remove(full_file_name_dst)
-            with open(full_file_name_dst, "wt") as fd:
+            with open(full_file_name_dst, "wt", **extra_param) as fd:
                 fd.write(content)
 
 
@@ -267,158 +274,196 @@ package_data = {
     "Crypto.Signature" : [ "*.pyi" ],
     "Crypto.IO" : [ "*.pyi" ],
     "Crypto.Util" : [ "*.pyi" ],
-    "Crypto.SelfTest.Cipher" : [
-        "test_vectors/AES/*.*",
-        "test_vectors/TDES/*.*",
-        "test_vectors/wycheproof/*.*",
-    ],
-    "Crypto.SelfTest.Hash" : [
-        "test_vectors/SHA1/*.*",
-        "test_vectors/SHA2/*.*",
-        "test_vectors/SHA3/*.*",
-        "test_vectors/keccak/*.*",
-        "test_vectors/BLAKE2s/*.*",
-        "test_vectors/BLAKE2b/*.*",
-        "test_vectors/wycheproof/*.*",
-    ],
-    "Crypto.SelfTest.Signature" : [
-        "test_vectors/DSA/*.*",
-        "test_vectors/ECDSA/*.*",
-        "test_vectors/PKCS1-v1.5/*.*",
-        "test_vectors/PKCS1-PSS/*.*",
-        "test_vectors/wycheproof/*.*",
-    ],
-    "Crypto.SelfTest.PublicKey" : [
-        "test_vectors/ECC/*.*",
-    ],
 }
 
 ext_modules = [
     # Hash functions
     Extension("Crypto.Hash._MD2",
         include_dirs=['src/'],
-        sources=["src/MD2.c"]),
+        sources=["src/MD2.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._MD4",
         include_dirs=['src/'],
-        sources=["src/MD4.c"]),
+        sources=["src/MD4.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._MD5",
         include_dirs=['src/'],
-        sources=["src/MD5.c"]),
+        sources=["src/MD5.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._SHA1",
         include_dirs=['src/'],
-        sources=["src/SHA1.c"]),
+        sources=["src/SHA1.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._SHA256",
         include_dirs=['src/'],
-        sources=["src/SHA256.c"]),
+        sources=["src/SHA256.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._SHA224",
         include_dirs=['src/'],
-        sources=["src/SHA224.c"]),
+        sources=["src/SHA224.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._SHA384",
         include_dirs=['src/'],
-        sources=["src/SHA384.c"]),
+        sources=["src/SHA384.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._SHA512",
         include_dirs=['src/'],
-        sources=["src/SHA512.c"]),
+        sources=["src/SHA512.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._RIPEMD160",
         include_dirs=['src/'],
-        sources=["src/RIPEMD160.c"]),
+        sources=["src/RIPEMD160.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._keccak",
         include_dirs=['src/'],
-        sources=["src/keccak.c"]),
+        sources=["src/keccak.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._BLAKE2b",
         include_dirs=['src/'],
-        sources=["src/blake2b.c"]),
+        sources=["src/blake2b.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._BLAKE2s",
         include_dirs=['src/'],
-        sources=["src/blake2s.c"]),
+        sources=["src/blake2s.c"],
+        py_limited_api=True),
     Extension("Crypto.Hash._ghash_portable",
         include_dirs=['src/'],
-        sources=['src/ghash_portable.c']),
+        sources=['src/ghash_portable.c'],
+        py_limited_api=True),
     Extension("Crypto.Hash._ghash_clmul",
         include_dirs=['src/'],
-        sources=['src/ghash_clmul.c']),
+        sources=['src/ghash_clmul.c'],
+        py_limited_api=True),
 
     # MACs
     Extension("Crypto.Hash._poly1305",
         include_dirs=['src/'],
-        sources=["src/poly1305.c"]),
+        sources=["src/poly1305.c"],
+        py_limited_api=True),
 
     # Block encryption algorithms
     Extension("Crypto.Cipher._raw_aes",
         include_dirs=['src/'],
-        sources=["src/AES.c"]),
+        sources=["src/AES.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_aesni",
         include_dirs=['src/'],
-        sources=["src/AESNI.c"]),
+        sources=["src/AESNI.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_arc2",
         include_dirs=['src/'],
-        sources=["src/ARC2.c"]),
+        sources=["src/ARC2.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_blowfish",
         include_dirs=['src/'],
-        sources=["src/Blowfish.c"]),
+        sources=["src/blowfish.c"],
+        py_limited_api=True),
+    Extension("Crypto.Cipher._raw_eksblowfish",
+        include_dirs=['src/'],
+        sources=["src/blowfish_eks.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_cast",
         include_dirs=['src/'],
-        sources=["src/CAST.c"]),
+        sources=["src/CAST.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_des",
         include_dirs=['src/', 'src/libtom/'],
-        sources=["src/DES.c"]),
+        sources=["src/DES.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_des3",
         include_dirs=['src/', 'src/libtom/'],
-        sources=["src/DES3.c"]),
+        sources=["src/DES3.c"],
+        py_limited_api=True),
     Extension("Crypto.Util._cpuid_c",
         include_dirs=['src/'],
-        sources=['src/cpuid.c']),
+        sources=['src/cpuid.c'],
+        py_limited_api=True),
+
+    Extension("Crypto.Cipher._pkcs1_decode",
+        include_dirs=['src/'],
+        sources=['src/pkcs1_decode.c'],
+        py_limited_api=True),
 
     # Chaining modes
     Extension("Crypto.Cipher._raw_ecb",
         include_dirs=['src/'],
-        sources=["src/raw_ecb.c"]),
+        sources=["src/raw_ecb.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_cbc",
         include_dirs=['src/'],
-        sources=["src/raw_cbc.c"]),
+        sources=["src/raw_cbc.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_cfb",
         include_dirs=['src/'],
-        sources=["src/raw_cfb.c"]),
+        sources=["src/raw_cfb.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_ofb",
         include_dirs=['src/'],
-        sources=["src/raw_ofb.c"]),
+        sources=["src/raw_ofb.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_ctr",
         include_dirs=['src/'],
-        sources=["src/raw_ctr.c"]),
+        sources=["src/raw_ctr.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._raw_ocb",
-        sources=["src/raw_ocb.c"]),
+        sources=["src/raw_ocb.c"],
+        py_limited_api=True),
 
     # Stream ciphers
     Extension("Crypto.Cipher._ARC4",
         include_dirs=['src/'],
-        sources=["src/ARC4.c"]),
+        sources=["src/ARC4.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._Salsa20",
         include_dirs=['src/', 'src/libtom/'],
-        sources=["src/Salsa20.c"]),
+        sources=["src/Salsa20.c"],
+        py_limited_api=True),
     Extension("Crypto.Cipher._chacha20",
         include_dirs=['src/'],
-        sources=["src/chacha20.c"]),
+        sources=["src/chacha20.c"],
+        py_limited_api=True),
 
     # Others
     Extension("Crypto.Protocol._scrypt",
         include_dirs=['src/'],
-        sources=["src/scrypt.c"]),
+        sources=["src/scrypt.c"],
+        py_limited_api=True),
 
     # Utility modules
     Extension("Crypto.Util._strxor",
         include_dirs=['src/'],
-        sources=['src/strxor.c']),
+        sources=['src/strxor.c'],
+        py_limited_api=True),
 
     # ECC
     Extension("Crypto.PublicKey._ec_ws",
         include_dirs=['src/'],
-        sources=['src/modexp_utils.c', 'src/siphash.c', 'src/ec_ws.c', 'src/mont.c'],
+        sources=['src/ec_ws.c',
+                 'src/mont.c', 'src/p256_table.c', 'src/p384_table.c',
+                 'src/p521_table.c'],
+        py_limited_api=True,
+        ),
+    Extension("Crypto.PublicKey._x25519",
+        include_dirs=['src/'],
+        sources=['src/x25519.c'],
+        py_limited_api=True,
+        ),
+    Extension("Crypto.PublicKey._ed25519",
+        include_dirs=['src/'],
+        sources=['src/ed25519.c'],
+        py_limited_api=True,
+        ),
+    Extension("Crypto.PublicKey._ed448",
+        include_dirs=['src/'],
+        sources=['src/ed448.c', 'src/mont1.c'],
+        py_limited_api=True,
         ),
 
     # Math
     Extension("Crypto.Math._modexp",
         include_dirs=['src/'],
-        sources=['src/modexp.c', 'src/siphash.c', 'src/modexp_utils.c', 'src/mont.c'],
+        sources=['src/modexp.c', 'src/mont2.c'],
+        py_limited_api=True,
         ),
 ]
 
@@ -460,7 +505,7 @@ setup(
     url="https://www.pycryptodome.org",
     platforms='Posix; MacOS X; Windows',
     zip_safe=False,
-    python_requires='>=2.6, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
@@ -472,15 +517,16 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Topic :: Security :: Cryptography',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
-    license="BSD, Public Domain, Apache",
+    license="BSD, Public Domain",
     packages=packages,
     package_dir={"": "lib"},
     package_data=package_data,

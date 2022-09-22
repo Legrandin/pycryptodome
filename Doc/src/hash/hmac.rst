@@ -2,7 +2,7 @@ HMAC
 ====
 
 HMAC (Hash-based Message Authentication Code) is a MAC defined
-in RFC2104_ and FIPS-198_ and constructed using a cryptograpic
+in RFC2104_ and FIPS-198_ and constructed using a cryptographic
 hash algorithm.
 
 It is usually named *HMAC-X*, where *X* is the hash algorithm; for
@@ -20,7 +20,7 @@ This is an example showing how to generate a MAC (with *HMAC-SHA256*)::
     >>> secret = b'Swordfish'
     >>> h = HMAC.new(secret, digestmod=SHA256)
     >>> h.update(b'Hello')
-    >>> print h.hexdigest()
+    >>> print(h.hexdigest())
 
 This is an example showing how to validate the MAC::
 

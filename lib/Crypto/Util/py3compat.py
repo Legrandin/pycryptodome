@@ -71,9 +71,15 @@ if sys.version_info[0] == 2:
         return str(s)
     def bord(s):
         return ord(s)
-    def tobytes(s):
+    def tobytes(s, encoding="latin-1"):
         if isinstance(s, unicode):
-            return s.encode("latin-1")
+            return s.encode(encoding)
+        elif isinstance(s, str):
+            return s
+        elif isinstance(s, bytearray):
+            return bytes(s)
+        elif isinstance(s, memoryview):
+            return s.tobytes()
         else:
             return ''.join(s)
     def tostr(bs):
@@ -81,17 +87,11 @@ if sys.version_info[0] == 2:
     def byte_string(s):
         return isinstance(s, str)
 
-    # In Pyton 2.x, StringIO is a stand-alone module
-    from StringIO import StringIO as BytesIO
+    from StringIO import StringIO
+    BytesIO = StringIO
 
     from sys import maxint
 
-    if sys.version_info[1] < 7:
-        import types
-        _memoryview = types.NoneType
-    else:
-        _memoryview = memoryview
-    
     iter_range = xrange
 
     def is_native_int(x):
@@ -100,7 +100,14 @@ if sys.version_info[0] == 2:
     def is_string(x):
         return isinstance(x, basestring)
 
+    def is_bytes(x):
+        return isinstance(x, str) or \
+                isinstance(x, bytearray) or \
+                isinstance(x, memoryview)
+
     ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
+
+    FileNotFoundError = IOError
 
 else:
     def b(s):
@@ -114,24 +121,25 @@ else:
             return bytes(s)
     def bord(s):
         return s
-    def tobytes(s):
-        if isinstance(s,bytes):
+    def tobytes(s, encoding="latin-1"):
+        if isinstance(s, bytes):
             return s
+        elif isinstance(s, bytearray):
+            return bytes(s)
+        elif isinstance(s,str):
+            return s.encode(encoding)
+        elif isinstance(s, memoryview):
+            return s.tobytes()
         else:
-            if isinstance(s,str):
-                return s.encode("latin-1")
-            else:
-                return bytes([s])
+            return bytes([s])
     def tostr(bs):
         return bs.decode("latin-1")
     def byte_string(s):
         return isinstance(s, bytes)
 
-    # In Python 3.x, StringIO is a sub-module of io
     from io import BytesIO
+    from io import StringIO
     from sys import maxsize as maxint
-
-    _memoryview = memoryview
 
     iter_range = range
 
@@ -141,14 +149,21 @@ else:
     def is_string(x):
         return isinstance(x, str)
 
+    def is_bytes(x):
+        return isinstance(x, bytes) or \
+                isinstance(x, bytearray) or \
+                isinstance(x, memoryview)
+
     from abc import ABC
+
+    FileNotFoundError = FileNotFoundError
 
 
 def _copy_bytes(start, end, seq):
     """Return an immutable copy of a sequence (byte string, byte array, memoryview)
     in a certain interval [start:seq]"""
 
-    if isinstance(seq, _memoryview):
+    if isinstance(seq, memoryview):
         return seq[start:end].tobytes()
     elif isinstance(seq, bytearray):
         return bytes(seq[start:end])

@@ -47,7 +47,7 @@ class PKCS1OAEP_Cipher:
          mgfunc : callable
                 A mask generation function that accepts two parameters: a string to
                 use as seed, and the lenth of the mask to generate, in bytes.
-                If not specified, the standard MGF1 is used (a safe choice).
+                If not specified, the standard MGF1 consistent with ``hashAlgo`` is used (a safe choice).
          label : bytes/bytearray/memoryview
                 A label to apply to this particular encryption. If not specified,
                 an empty string is used. Specifying a label does not improve
@@ -188,19 +188,18 @@ class PKCS1OAEP_Cipher:
         # Step 3f
         db = strxor(maskedDB, dbMask)
         # Step 3g
-        valid = 1
-        one = db[hLen:].find(b'\x01')
+        one_pos = hLen + db[hLen:].find(b'\x01')
         lHash1 = db[:hLen]
-        if lHash1!=lHash:
-            valid = 0
-        if one<0:
-            valid = 0
-        if bord(y) != 0:
-            valid = 0
-        if not valid:
+        invalid = bord(y) | int(one_pos < hLen)
+        hash_compare = strxor(lHash1, lHash)
+        for x in hash_compare:
+            invalid |= bord(x)
+        for x in db[hLen:one_pos]:
+            invalid |= bord(x)
+        if invalid != 0:
             raise ValueError("Incorrect decryption.")
         # Step 4
-        return db[hLen+one+1:]
+        return db[one_pos + 1:]
 
 def new(key, hashAlgo=None, mgfunc=None, label=b'', randfunc=None):
     """Return a cipher object :class:`PKCS1OAEP_Cipher` that can be used to perform PKCS#1 OAEP encryption or decryption.
@@ -219,7 +218,7 @@ def new(key, hashAlgo=None, mgfunc=None, label=b'', randfunc=None):
     :param mgfunc:
       A mask generation function that accepts two parameters: a string to
       use as seed, and the lenth of the mask to generate, in bytes.
-      If not specified, the standard MGF1 is used (a safe choice).
+      If not specified, the standard MGF1 consistent with ``hashAlgo`` is used (a safe choice).
     :type mgfunc: callable
 
     :param label:

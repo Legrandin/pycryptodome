@@ -101,23 +101,23 @@ class ElGamalTest(unittest.TestCase):
             d = self.convert_tv(tv, True)
             key = ElGamal.construct(d['key'])
             ct = key._encrypt(d['pt'], d['k'])
-            self.assertEquals(ct[0], d['ct1'])
-            self.assertEquals(ct[1], d['ct2'])
+            self.assertEqual(ct[0], d['ct1'])
+            self.assertEqual(ct[1], d['ct2'])
 
     def test_decryption(self):
         for tv in self.tve:
             d = self.convert_tv(tv, True)
             key = ElGamal.construct(d['key'])
             pt = key._decrypt((d['ct1'], d['ct2']))
-            self.assertEquals(pt, d['pt'])
+            self.assertEqual(pt, d['pt'])
 
     def test_signing(self):
         for tv in self.tvs:
             d = self.convert_tv(tv, True)
             key = ElGamal.construct(d['key'])
             sig1, sig2 = key._sign(d['h'], d['k'])
-            self.assertEquals(sig1, d['sig1'])
-            self.assertEquals(sig2, d['sig2'])
+            self.assertEqual(sig1, d['sig1'])
+            self.assertEqual(sig2, d['sig2'])
 
     def test_verification(self):
         for tv in self.tvs:
@@ -125,10 +125,10 @@ class ElGamalTest(unittest.TestCase):
             key = ElGamal.construct(d['key'])
             # Positive test
             res = key._verify( d['h'], (d['sig1'],d['sig2']) )
-            self.failUnless(res)
+            self.assertTrue(res)
             # Negative test
             res = key._verify( d['h'], (d['sig1']+1,d['sig2']) )
-            self.failIf(res)
+            self.assertFalse(res)
 
     def test_bad_key3(self):
         tup = tup0 = list(self.convert_tv(self.tvs[0], 1)['key'])[:3]
@@ -174,29 +174,29 @@ class ElGamalTest(unittest.TestCase):
     def _check_private_key(self, elgObj):
 
         # Check capabilities
-        self.failUnless(elgObj.has_private())
+        self.assertTrue(elgObj.has_private())
 
         # Sanity check key data
-        self.failUnless(1<elgObj.g<(elgObj.p-1))
-        self.assertEquals(pow(elgObj.g, elgObj.p-1, elgObj.p), 1)
-        self.failUnless(1<elgObj.x<(elgObj.p-1))
-        self.assertEquals(pow(elgObj.g, elgObj.x, elgObj.p), elgObj.y)
+        self.assertTrue(1<elgObj.g<(elgObj.p-1))
+        self.assertEqual(pow(elgObj.g, elgObj.p-1, elgObj.p), 1)
+        self.assertTrue(1<elgObj.x<(elgObj.p-1))
+        self.assertEqual(pow(elgObj.g, elgObj.x, elgObj.p), elgObj.y)
 
     def _check_public_key(self, elgObj):
 
         # Check capabilities
-        self.failIf(elgObj.has_private())
+        self.assertFalse(elgObj.has_private())
 
         # Sanity check key data
-        self.failUnless(1<elgObj.g<(elgObj.p-1))
-        self.assertEquals(pow(elgObj.g, elgObj.p-1, elgObj.p), 1)
+        self.assertTrue(1<elgObj.g<(elgObj.p-1))
+        self.assertEqual(pow(elgObj.g, elgObj.p-1, elgObj.p), 1)
 
     def _exercise_primitive(self, elgObj):
         # Test encryption/decryption
         plaintext = 127218
         ciphertext = elgObj._encrypt(plaintext, 123456789)
         plaintextP = elgObj._decrypt(ciphertext)
-        self.assertEquals(plaintext, plaintextP)
+        self.assertEqual(plaintext, plaintextP)
 
         # Test signature/verification
         signature = elgObj._sign(plaintext, 987654321)

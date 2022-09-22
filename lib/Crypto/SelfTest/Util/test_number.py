@@ -24,9 +24,15 @@
 
 """Self-tests for (some of) Crypto.Util.number"""
 
-from Crypto.Util.py3compat import *
-
+import math
 import unittest
+
+from Crypto.Util.py3compat import *
+from Crypto.SelfTest.st_common import list_test_cases
+
+from Crypto.Util import number
+from Crypto.Util.number import long_to_bytes
+
 
 class MyError(Exception):
     """Dummy exception used for tests"""
@@ -35,10 +41,6 @@ class MyError(Exception):
 # if any inputs cause a test failure, we'll be able to tell which ones.
 
 class MiscTests(unittest.TestCase):
-    def setUp(self):
-        global number, math
-        from Crypto.Util import number
-        import math
 
     def test_ceil_div(self):
         """Util.number.ceil_div"""
@@ -81,6 +83,24 @@ class MiscTests(unittest.TestCase):
         self.assertEqual(2, number.ceil_div(7, 4))
         self.assertEqual(2, number.ceil_div(8, 4))
         self.assertEqual(3, number.ceil_div(9, 4))
+
+    def test_getPrime(self):
+        """Util.number.getPrime"""
+        self.assertRaises(ValueError, number.getPrime, -100)
+        self.assertRaises(ValueError, number.getPrime, 0)
+        self.assertRaises(ValueError, number.getPrime, 1)
+
+        bits = 4
+        for i in range(100):
+            x = number.getPrime(bits)
+            self.assertEqual(x >= (1 << bits - 1), 1)
+            self.assertEqual(x < (1 << bits), 1)
+
+        bits = 512
+        x = number.getPrime(bits)
+        self.assertNotEqual(x % 2, 0)
+        self.assertEqual(x >= (1 << bits - 1), 1)
+        self.assertEqual(x < (1 << bits), 1)
 
     def test_getStrongPrime(self):
         """Util.number.getStrongPrime"""
@@ -129,11 +149,40 @@ class MiscTests(unittest.TestCase):
         self.assertEqual(number.size(0xa2),8)
         self.assertEqual(number.size(0xa2ba40),8*3)
         self.assertEqual(number.size(0xa2ba40ee07e3b2bd2f02ce227f36a195024486e49c19cb41bbbdfbba98b22b0e577c2eeaffa20d883a76e65e394c69d4b3c05a1e8fadda27edb2a42bc000fe888b9b32c22d15add0cd76b3e7936e19955b220dd17d4ea904b1ec102b2e4de7751222aa99151024c7cb41cc5ea21d00eeb41f7c800834d2c6e06bce3bce7ea9a5), 1024)
+        self.assertRaises(ValueError, number.size, -1)
+
+
+class LongTests(unittest.TestCase):
+
+    def test1(self):
+        self.assertEqual(long_to_bytes(0), b'\x00')
+        self.assertEqual(long_to_bytes(1), b'\x01')
+        self.assertEqual(long_to_bytes(0x100), b'\x01\x00')
+        self.assertEqual(long_to_bytes(0xFF00000000), b'\xFF\x00\x00\x00\x00')
+        self.assertEqual(long_to_bytes(0xFF00000000), b'\xFF\x00\x00\x00\x00')
+        self.assertEqual(long_to_bytes(0x1122334455667788), b'\x11\x22\x33\x44\x55\x66\x77\x88')
+        self.assertEqual(long_to_bytes(0x112233445566778899), b'\x11\x22\x33\x44\x55\x66\x77\x88\x99')
+
+    def test2(self):
+        self.assertEqual(long_to_bytes(0, 1), b'\x00')
+        self.assertEqual(long_to_bytes(0, 2), b'\x00\x00')
+        self.assertEqual(long_to_bytes(1, 3), b'\x00\x00\x01')
+        self.assertEqual(long_to_bytes(65535, 2), b'\xFF\xFF')
+        self.assertEqual(long_to_bytes(65536, 2), b'\x00\x01\x00\x00')
+        self.assertEqual(long_to_bytes(0x100, 1), b'\x01\x00')
+        self.assertEqual(long_to_bytes(0xFF00000001, 6), b'\x00\xFF\x00\x00\x00\x01')
+        self.assertEqual(long_to_bytes(0xFF00000001, 8), b'\x00\x00\x00\xFF\x00\x00\x00\x01')
+        self.assertEqual(long_to_bytes(0xFF00000001, 10), b'\x00\x00\x00\x00\x00\xFF\x00\x00\x00\x01')
+        self.assertEqual(long_to_bytes(0xFF00000001, 11), b'\x00\x00\x00\x00\x00\x00\xFF\x00\x00\x00\x01')
+
+    def test_err1(self):
+        self.assertRaises(ValueError, long_to_bytes, -1)
 
 
 def get_tests(config={}):
-    from Crypto.SelfTest.st_common import list_test_cases
-    tests = list_test_cases(MiscTests)
+    tests = []
+    tests += list_test_cases(MiscTests)
+    tests += list_test_cases(LongTests)
     return tests
 
 if __name__ == '__main__':

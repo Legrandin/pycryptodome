@@ -8,7 +8,7 @@
  */
 #define SCRATCHPAD_NR 7
 
-typedef enum _ModulusType { ModulusGeneric, ModulusP256, ModulusP384, ModulusP521 } ModulusType;
+typedef enum _ModulusType { ModulusGeneric, ModulusP256, ModulusP384, ModulusP521, ModulusEd448 } ModulusType;
 
 typedef struct mont_context {
     ModulusType modulus_type;
@@ -43,5 +43,7 @@ int mont_is_zero(const uint64_t *a, const MontContext *ctx);
 int mont_is_one(const uint64_t *a, const MontContext *ctx);
 int mont_is_equal(const uint64_t *a, const uint64_t *b, const MontContext *ctx);
 int mont_copy(uint64_t *out, const uint64_t *a, const MontContext *ctx);
+
+void mont_printf(const char *prefix, const uint64_t *mont_number, const MontContext *ctx);
 
 #endif

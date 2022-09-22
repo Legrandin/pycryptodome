@@ -36,6 +36,13 @@
 #include "multiply.h"
 #include "mont.h"
 #include "ec.h"
+#include "p256_table.h"
+#include "p384_table.h"
+#include "p521_table.h"
+
+#include "p256_table.h"
+#include "p384_table.h"
+#include "p521_table.h"
 
 FAKE_INIT(ec_ws)
 
@@ -566,11 +573,6 @@ cleanup:
     return res;
 }
 
-#ifndef MAKE_TABLE
-#include "p256_table.c"
-#include "p384_table.c"
-#include "p521_table.c"
-
 STATIC void free_g_p256(ProtMemory **prot_g)
 {
     unsigned i;
@@ -870,8 +872,6 @@ STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     return 0;
 }
 
-#endif
-
 /*
  * Create an Elliptic Curve context for Weierstress curves y²=x³+ax+b with a=-3
  *
@@ -922,7 +922,6 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     }
     bytes_to_words(ec_ctx->order, order_words, order, len);
 
-#ifndef MAKE_TABLE
     /* Scramble lookup table for special generators */
     switch (ctx->modulus_type) {
         case ModulusP256: {
@@ -949,10 +948,10 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
             }
             break;
         }
+        case ModulusEd448:
         case ModulusGeneric:
             break;
     }
-#endif
 
     return 0;
 
@@ -968,7 +967,6 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
 {
     if (NULL == ec_ctx)
         return;
-#ifndef MAKE_TABLE
     switch (ec_ctx->mont_ctx->modulus_type) {
         case ModulusP256:
             free_g_p256(ec_ctx->prot_g);
@@ -979,10 +977,10 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
         case ModulusP521:
             free_g_p521(ec_ctx->prot_g);
             break;
+        case ModulusEd448:
         case ModulusGeneric:
             break;
     }
-#endif
     free(ec_ctx->b);
     free(ec_ctx->order);
     mont_context_free(ec_ctx->mont_ctx);
@@ -993,7 +991,7 @@ EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
  * Create a new EC point on the given EC curve.
  *
  *  @param pecp         The memory area where the pointer to the newly allocated EC
- *                      point will be stored. Use ec_free_point() for deallocating it.
+ *                      point will be stored. Use ec_ws_free_point() for deallocating it.
  *  @param x            The X-coordinate (affine, big-endian)
  *  @param y            The Y-coordinate (affine, big-endian)
  *  @param len          The length of x and y in bytes
@@ -1069,7 +1067,7 @@ cleanup:
     return res;
 }
 
-EXPORT_SYM void ec_free_point(EcPoint *ecp)
+EXPORT_SYM void ec_ws_free_point(EcPoint *ecp)
 {
     if (NULL == ecp)
         return;
@@ -1180,42 +1178,6 @@ EXPORT_SYM int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb)
 }
 
 /*
- * Normalize the projective representation of a point
- * so that Z=1 or Z=0.
- */
-EXPORT_SYM int ec_ws_normalize(EcPoint *ecp)
-{
-    MontContext *ctx;
-    Workplace *wp = NULL;
-
-    if (NULL == ecp)
-        return ERR_NULL;
-    ctx = ecp->ec_ctx->mont_ctx;
-
-    wp = new_workplace(ctx);
-    if (NULL == wp)
-        return ERR_MEMORY;
-
-    if (!mont_is_zero(ecp->z, ctx)) {
-        ec_projective_to_affine(ecp->x, ecp->y,
-                                ecp->x, ecp->y, ecp->z,
-                                wp, ctx);
-        mont_set(ecp->z, 1, ctx);
-    }
-
-    free_workplace(wp);
-    return 0;
-}
-
-EXPORT_SYM int ec_ws_is_pai(EcPoint *ecp)
-{
-    if (NULL == ecp)
-        return FALSE;
-
-    return mont_is_zero(ecp->z, ecp->ec_ctx->mont_ctx);
-}
-
-/*
  * Blind the scalar factor to be used in an EC multiplication
  *
  * @param blind_scalar      The area of memory where the pointer to a newly
@@ -1305,12 +1267,11 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         goto cleanup;
     }
 
-#ifndef MAKE_TABLE
     switch (ctx->modulus_type) {
         case ModulusP256: {
             /** Coordinates in Montgomery form **/
-            const uint64_t mont_Gx[4] = { 0x79E730D418A9143CU, 0x75BA95FC5FEDB601U, 0x79FB732B77622510U, 0x18905F76A53755C6U };
-            const uint64_t mont_Gy[4] = { 0xDDF25357CE95560AU, 0x8B4AB8E4BA19E45CU, 0xD2E88688DD21F325U, 0x8571FF1825885D85U };
+            const uint64_t mont_Gx[4] = { 0x79E730D418A9143CULL, 0x75BA95FC5FEDB601ULL, 0x79FB732B77622510ULL, 0x18905F76A53755C6ULL };
+            const uint64_t mont_Gy[4] = { 0xDDF25357CE95560AULL, 0x8B4AB8E4BA19E45CULL, 0xD2E88688DD21F325ULL, 0x8571FF1825885D85ULL };
             unsigned is_generator;
             unsigned i;
 
@@ -1335,8 +1296,8 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         }
         case ModulusP384: {
             /** Coordinates in Montgomery form **/
-            const uint64_t mont_Gx[6] = { 0x3DD0756649C0B528, 0x20E378E2A0D6CE38, 0x879C3AFC541B4D6E, 0x6454868459A30EFF, 0x812FF723614EDE2B, 0x4D3AADC2299E1513 };
-            const uint64_t mont_Gy[6] = { 0x23043DAD4B03A4FE, 0xA1BFA8BF7BB4A9AC, 0x8BADE7562E83B050, 0xC6C3521968F4FFD9, 0xDD8002263969A840, 0x2B78ABC25A15C5E9 };
+            const uint64_t mont_Gx[6] = { 0x3DD0756649C0B528ULL, 0x20E378E2A0D6CE38ULL, 0x879C3AFC541B4D6EULL, 0x6454868459A30EFFULL, 0x812FF723614EDE2BULL, 0x4D3AADC2299E1513ULL };
+            const uint64_t mont_Gy[6] = { 0x23043DAD4B03A4FEULL, 0xA1BFA8BF7BB4A9ACULL, 0x8BADE7562E83B050ULL, 0xC6C3521968F4FFD9ULL, 0xDD8002263969A840ULL, 0x2B78ABC25A15C5E9ULL };
             unsigned is_generator;
             unsigned i;
 
@@ -1361,8 +1322,8 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         }
         case ModulusP521: {
             /** Coordinates in normal form **/
-            const uint64_t mont_Gx[9] = { 0xF97E7E31C2E5BD66, 0x3348B3C1856A429B, 0xFE1DC127A2FFA8DE, 0xA14B5E77EFE75928, 0xF828AF606B4D3DBA, 0x9C648139053FB521, 0x9E3ECB662395B442, 0x858E06B70404E9CD, 0x00000000000000C6 };
-            const uint64_t mont_Gy[9] = { 0x88BE94769FD16650, 0x353C7086A272C240, 0xC550B9013FAD0761, 0x97EE72995EF42640, 0x17AFBD17273E662C, 0x98F54449579B4468, 0x5C8A5FB42C7D1BD9, 0x39296A789A3BC004, 0x0000000000000118 };
+            const uint64_t mont_Gx[9] = { 0xF97E7E31C2E5BD66ULL, 0x3348B3C1856A429BULL, 0xFE1DC127A2FFA8DEULL, 0xA14B5E77EFE75928ULL, 0xF828AF606B4D3DBAULL, 0x9C648139053FB521ULL, 0x9E3ECB662395B442ULL, 0x858E06B70404E9CDULL, 0x00000000000000C6ULL };
+            const uint64_t mont_Gy[9] = { 0x88BE94769FD16650ULL, 0x353C7086A272C240ULL, 0xC550B9013FAD0761ULL, 0x97EE72995EF42640ULL, 0x17AFBD17273E662CULL, 0x98F54449579B4468ULL, 0x5C8A5FB42C7D1BD9ULL, 0x39296A789A3BC004ULL, 0x0000000000000118ULL };
             unsigned is_generator;
             unsigned i;
 
@@ -1385,10 +1346,10 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             }
             break;
         }
+        case ModulusEd448:
         case ModulusGeneric:
             break;
     }
-#endif
 
     if (seed != 0) {
         uint8_t *blind_scalar=NULL;
@@ -1482,22 +1443,6 @@ cleanup:
     return res;
 }
 
-EXPORT_SYM int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2)
-{
-    MontContext *ctx;
-
-    if (NULL == ecp1 || NULL == ecp2)
-        return ERR_NULL;
-    ctx = ecp2->ec_ctx->mont_ctx;
-
-    ecp1->ec_ctx = ecp2->ec_ctx;
-    mont_copy(ecp1->x, ecp2->x, ctx);
-    mont_copy(ecp1->y, ecp2->y, ctx);
-    mont_copy(ecp1->z, ecp2->z, ctx);
-
-    return 0;
-}
-
 /*
  * Compare two EC points and return 0 if they match
  */
@@ -1559,3 +1504,18 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
     return 0;
 }
 
+EXPORT_SYM int ec_ws_copy(EcPoint *ecp1, const EcPoint *ecp2)
+{
+    MontContext *ctx;
+
+    if (NULL == ecp1 || NULL == ecp2)
+        return ERR_NULL;
+    ctx = ecp2->ec_ctx->mont_ctx;
+
+    ecp1->ec_ctx = ecp2->ec_ctx;
+    mont_copy(ecp1->x, ecp2->x, ctx);
+    mont_copy(ecp1->y, ecp2->y, ctx);
+    mont_copy(ecp1->z, ecp2->z, ctx);
+
+    return 0;
+}
