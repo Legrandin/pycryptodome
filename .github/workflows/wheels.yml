@@ -54,6 +54,11 @@ jobs:
             'python -m Cryptodome.SelfTest --skip-slow-tests' ||
             'python -m Crypto.SelfTest --skip-slow-tests' }}"
 
+      - name: Delete manylinux1 wheels
+        run: |
+          rm wheelhouse/*-manylinux1_i686.whl
+          rm wheelhouse/*-manylinux1_x86_64.whl
+
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
