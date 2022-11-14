@@ -15,12 +15,12 @@ jobs:
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Build source package (.tar.gz)
         run: python setup.py sdist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: source
           path: ./dist/*.tar.gz
@@ -30,31 +30,31 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, windows-latest, macos-10.15]
+        os: [ubuntu-20.04, windows-latest, macos-10.15]
 
     if: github.actor == 'Legrandin'
 
     steps:
       - uses: actions/checkout@v3
 
-      - uses: pypa/cibuildwheel@v2.10.2
+      - uses: pypa/cibuildwheel@v2.11.2
         name: Build wheels
         env:
-           # cibuildwheel will build wheel once for each CPython platform
+          # cibuildwheel will build wheel once for each CPython platform
           # and will test it with all given python versions
           CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_I686_IMAGE: "manylinux2014" # See https://github.com/Legrandin/pycryptodome/issues/669
+          CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2010"
 
           # Set pycryptodome/x test command according to built package
           CIBW_TEST_COMMAND:
-            "${{ endsWith(github.ref, 'x') == true && 
-            'python -m Cryptodome.SelfTest --skip-slow-tests' || 
+            "${{ endsWith(github.ref, 'x') == true &&
+            'python -m Cryptodome.SelfTest --skip-slow-tests' ||
             'python -m Crypto.SelfTest --skip-slow-tests' }}"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: ./wheelhouse/*.whl
@@ -66,7 +66,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, windows-latest, macos-10.15]
+        os: [ubuntu-20.04, windows-latest, macos-10.15]
         python-version: ['3.5']
 
     if: github.actor == 'Legrandin'
@@ -99,7 +99,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-18.04, windows-latest, macos-10.15 ]
+        os: [ ubuntu-20.04, windows-latest, macos-10.15 ]
         arch: [ multi-arch ]
         # Python 2 on Windows requires manual toolchain setup (per-arch) due to newer MSVC used here
         exclude:
@@ -149,11 +149,11 @@ jobs:
 
           # Set pycryptodome/x test command according to built package
           CIBW_TEST_COMMAND:
-            "${{ endsWith(github.ref, 'x') == true && 
-            'python -m Cryptodome.SelfTest --skip-slow-tests' || 
+            "${{ endsWith(github.ref, 'x') == true &&
+            'python -m Cryptodome.SelfTest --skip-slow-tests' ||
             'python -m Crypto.SelfTest --skip-slow-tests' }}"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: ./wheelhouse/*.whl
