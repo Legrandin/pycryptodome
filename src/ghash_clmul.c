@@ -111,7 +111,7 @@ struct exp_key {
  *
  * See at the bottom for an explanation.
  */
-STATIC FUNC_SSE2 __m128i reduce(__m128i prod_high, __m128i prod_low)
+STATIC __m128i reduce(__m128i prod_high, __m128i prod_low)
 {
     const uint64_t c2 = (uint64_t)0xc2 << 56;
     __m128i t1, t2, t3, t4, t7;
@@ -133,7 +133,7 @@ STATIC FUNC_SSE2 __m128i reduce(__m128i prod_high, __m128i prod_low)
 /**
  * Perform the carry-less multiplication of two polynomials of degree 127.
  */
-STATIC FUNC_SSE2 void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m128i b)
+STATIC void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m128i b)
 {
     __m128i c, d, e, f, g, h, i;
 
@@ -151,7 +151,7 @@ STATIC FUNC_SSE2 void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, _
 /**
  * Multiply a polynomial of degree 127 by x, modulo p(x) = x^128 + x^127 + x^126 + x^121 + 1
  */
-STATIC FUNC_SSE2 __m128i multx(__m128i a)
+STATIC __m128i multx(__m128i a)
 {
     int msb;
     int64_t r;
@@ -179,7 +179,7 @@ STATIC FUNC_SSE2 __m128i multx(__m128i a)
 }
 
 /** Swap bytes in an XMM register **/
-STATIC FUNC_SSE2 __m128i swap(__m128i a)
+STATIC __m128i swap(__m128i a)
 {
     __m128i mask;
 
@@ -218,7 +218,7 @@ EXPORT_SYM int ghash_destroy_clmul(struct exp_key *expanded)
     return 0;
 }
 
-EXPORT_SYM FUNC_SSE2 int ghash_clmul(
+EXPORT_SYM int ghash_clmul(
         uint8_t y_out[16],
         const uint8_t block_data[],
         size_t len,

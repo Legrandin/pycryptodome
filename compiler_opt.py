@@ -251,7 +251,7 @@ def compiler_is_clang():
     return test_compilation(source, msg="clang")
 
 
-def compiler_is_gcc():
+def compiler_is_gcc(extra_cc_options=[]):
     source = """
     #if defined(__clang__) || !defined(__GNUC__)
     #error Not GCC
@@ -260,20 +260,14 @@ def compiler_is_gcc():
     {
         return 0;
     }"""
-    return test_compilation(source, msg="gcc")
-
-
-def support_gcc_realign():
-    source = """
-    void __attribute__((force_align_arg_pointer)) a(void) {}
-    int main(void) { return 0; }
-    """
-    return test_compilation(source, msg="gcc")
+    return test_compilation(source,
+                            msg="gcc",
+                            extra_cc_options=extra_cc_options)
 
 
 def compiler_supports_sse2():
-    source = """
-    #include <intrin.h>
+    source_template = """
+    %s
     int main(void)
     {
         __m128i r0;
@@ -283,39 +277,31 @@ def compiler_supports_sse2():
         return mask;
     }
     """
-    if test_compilation(source, msg="SSE2(intrin.h)"):
-        return {'extra_cc_options': [], 'extra_macros': ['HAVE_INTRIN_H', 'USE_SSE2']}
 
-    source = """
-    #include <x86intrin.h>
-    int main(void)
-    {
-        __m128i r0;
-        int mask;
-        r0 = _mm_set1_epi32(0);
-        mask = _mm_movemask_epi8(r0);
-        return mask;
-    }
-    """
-    if test_compilation(source, extra_cc_options=['-msse2'], msg="SSE2(x86intrin.h)"):
-        return {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_X86INTRIN_H', 'USE_SSE2']}
+    source_intrin_h = source_template % "#include <intrin.h>"
+    source_x86intrin_h = source_template % "#include <x86intrin.h>"
+    source_xemmintrin_h = source_template % "#include <xmmintrin.h>\n#include <emmintrin.h>"
 
-    source = """
-    #include <xmmintrin.h>
-    #include <emmintrin.h>
-    int main(void)
-    {
-        __m128i r0;
-        int mask;
-        r0 = _mm_set1_epi32(0);
-        mask = _mm_movemask_epi8(r0);
-        return mask;
-    }
-    """
-    if test_compilation(source, extra_cc_options=['-msse2'], msg="SSE2(emmintrin.h)"):
-        return {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_EMMINTRIN_H', 'USE_SSE2']}
+    system_bits = 8 * struct.calcsize("P")
 
-    return False
+    result = None
+    if test_compilation(source_intrin_h, msg="SSE2(intrin.h)"):
+        result = {'extra_cc_options': [], 'extra_macros': ['HAVE_INTRIN_H', 'USE_SSE2']}
+    elif test_compilation(source_x86intrin_h, extra_cc_options=['-msse2'], msg="SSE2(x86intrin.h)"):
+        result = {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_X86INTRIN_H', 'USE_SSE2']}
+    elif test_compilation(source_xemmintrin_h, extra_cc_options=['-msse2'], msg="SSE2(emmintrin.h)"):
+        result = {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_EMMINTRIN_H', 'USE_SSE2']}
+    else:
+        result = False
+
+    # On 32-bit x86 platforms, gcc assumes the stack to be aligned to 16
+    # bytes, but the caller may actually only align it to 4 bytes, which
+    # make functions crash if they use SSE2 intrinsics.
+    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
+    if result and system_bits == 32 and compiler_is_gcc(extra_cc_options=['-mstackrealign']):
+        result['extra_cc_options'].append('-mstackrealign')
+
+    return result
 
 
 def remove_extension(extensions, name):
@@ -378,15 +364,6 @@ def set_compiler_options(package_root, extensions):
         extra_cc_options.extend(sse2_result['extra_cc_options'])
         for macro in sse2_result['extra_macros']:
             extra_macros.append((macro, None))
-
-    # Compiler specific settings
-    if gcc:
-        # On 32-bit x86 platforms, gcc assumes the stack to be aligned to 16
-        # bytes, but the caller may actually only align it to 4 bytes, which
-        # make functions crash if they use SSE2 intrinsics.
-        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
-        if system_bits == 32 and support_gcc_realign():
-            extra_macros.append(("GCC_REALIGN", None))
 
     # Module-specific options
 

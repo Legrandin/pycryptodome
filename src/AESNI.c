@@ -58,7 +58,7 @@ typedef struct {
 
 enum SubType { OnlySub, SubRotXor };
 
-static FUNC_SSE2 uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType subType)
+static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType subType)
 {
     __m128i x, y, z;
 
@@ -90,7 +90,7 @@ static FUNC_SSE2 uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enu
     return (uint32_t)_mm_cvtsi128_si32(z);
 }
 
-static FUNC_SSE2 int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned Nk, unsigned Nr)
+static int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned Nk, unsigned Nr)
 {
     uint32_t rk[4*(14+2)];
     unsigned tot_words;
@@ -137,7 +137,7 @@ static FUNC_SSE2 int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, 
     return 0;
 }
 
-static FUNC_SSE2 int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
+static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
 {
     unsigned rounds;
     __m128i r[14+1];
@@ -246,7 +246,7 @@ static FUNC_SSE2 int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8
     return 0;
 }
 
-static FUNC_SSE2 int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
+static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
 {
     unsigned rounds;
     __m128i r[14+1];
