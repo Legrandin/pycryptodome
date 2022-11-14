@@ -151,7 +151,7 @@ Example (encryption)::
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
     >>>
     >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>> json_v = [ b64encode(x).decode('utf-8') for x in cipher.nonce, header, ciphertext, tag ] 
+    >>> json_v = [ b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
     >>> result = json.dumps(dict(zip(json_k, json_v)))
     >>> print(result)
     {"nonce": "p6ffzcKw+6xopVQ=", "header": "aGVhZGVy", "ciphertext": "860kZo/G", "tag": "Ck5YpVCM6fdWnFkFxw8K6A=="}
@@ -171,7 +171,7 @@ Example (decryption)::
     >>>     cipher = AES.new(key, AES.MODE_CCM, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext)
+    >>>     print("The message was: " + plaintext.decode('utf-8'))
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
@@ -215,7 +215,7 @@ Example (encryption)::
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
     >>>
     >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>> json_v = [ b64encode(x).decode('utf-8') for x in cipher.nonce, header, ciphertext, tag ] 
+    >>> json_v = [ b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
     >>> result = json.dumps(dict(zip(json_k, json_v)))
     >>> print(result)
     {"nonce": "CSIJ+e8KP7HJo+hC4RXIyQ==", "header": "aGVhZGVy", "ciphertext": "9YYjuAn6", "tag": "kXHrs9ZwYmjDkmfEJx7Clg=="}
@@ -235,7 +235,7 @@ Example (decryption)::
     >>>     cipher = AES.new(key, AES.MODE_EAX, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext)
+    >>>     print("The message was: " + plaintext.decode('utf-8'))
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
@@ -280,7 +280,7 @@ Example (encryption)::
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
     >>>
     >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>> json_v = [ b64encode(x).decode('utf-8') for x in [cipher.nonce, header, ciphertext, tag ]] 
+    >>> json_v = [ b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
     >>> result = json.dumps(dict(zip(json_k, json_v)))
     >>> print(result)
     {"nonce": "DpOK8NIOuSOQlTq+BphKWw==", "header": "aGVhZGVy", "ciphertext": "CZVqyacc", "tag": "B2tBgICbyw+Wji9KpLVa8w=="}
@@ -301,7 +301,7 @@ Example (decryption)::
     >>>     cipher = AES.new(key, AES.MODE_GCM, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext)
+    >>>     print("The message was: " + plaintext.decode('utf-8'))
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
@@ -364,7 +364,7 @@ Example (encryption)::
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
     >>>
     >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>> json_v = [ b64encode(x).decode('utf-8') for x in nonce, header, ciphertext, tag ] 
+    >>> json_v = [ b64encode(x).decode('utf-8') for x in (nonce, header, ciphertext, tag) ]
     >>> result = json.dumps(dict(zip(json_k, json_v)))
     >>> print(result)
     {"nonce": "zMiifAVvDpMS8hnGK/z+iw==", "header": "aGVhZGVy", "ciphertext": "Q7lReEAF", "tag": "KgdnBVbCee6B/wGmMf/wQA=="}
@@ -384,7 +384,7 @@ Example (decryption)::
     >>>     cipher = AES.new(key, AES.MODE_SIV, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext)
+    >>>     print("The message was: " + plaintext.decode('utf-8'))
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
@@ -459,7 +459,7 @@ Example (encryption)::
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
     >>>
     >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>> json_v = [ b64encode(x).decode('utf-8') for x in cipher.nonce, header, ciphertext, tag ] 
+    >>> json_v = [ b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
     >>> result = json.dumps(dict(zip(json_k, json_v)))
     >>> print(result)
     {"nonce": "I7E6PKxHNYo2i9sz8W98", "header": "aGVhZGVy", "ciphertext": "nYJnJ8jC", "tag": "0UbFcmO9lqGknCIDWRLALA=="}
@@ -479,6 +479,6 @@ Example (decryption)::
     >>>     cipher = AES.new(key, AES.MODE_OCB, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext)
+    >>>     print("The message was: " + plaintext.decode('utf-8'))
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
