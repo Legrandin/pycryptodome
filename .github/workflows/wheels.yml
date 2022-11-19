@@ -40,9 +40,9 @@ jobs:
       - uses: pypa/cibuildwheel@v2.11.2
         name: Build wheels
         env:
-          # cibuildwheel will build wheel once for each CPython platform
-          # and will test it with all given python versions
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-*"
+          # cibuildwheel will build wheel once and test it for each CPython version
+          # and for PyPy 3.6.
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2010"
@@ -146,7 +146,7 @@ jobs:
       - uses: pypa/cibuildwheel@v1.12.0
         name: Build wheels
         env:
-          CIBW_BUILD: "cp27-* pp27-* pp36-*"
+          CIBW_BUILD: "cp27-* pp27-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2010"
@@ -157,6 +157,11 @@ jobs:
             "${{ endsWith(github.ref, 'x') == true &&
             'python -m Cryptodome.SelfTest --skip-slow-tests' ||
             'python -m Crypto.SelfTest --skip-slow-tests' }}"
+
+      - name: Delete manylinux1 wheels
+        run: |
+          rm wheelhouse/*-manylinux1_i686.whl
+          rm wheelhouse/*-manylinux1_x86_64.whl
 
       - uses: actions/upload-artifact@v3
         with:
