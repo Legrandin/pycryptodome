@@ -55,9 +55,10 @@ jobs:
             'python -m Crypto.SelfTest --skip-slow-tests' }}"
 
       - name: Delete manylinux1 wheels
+        if: runner.os == 'Linux'
         run: |
-          rm wheelhouse/*-manylinux1_i686.whl
-          rm wheelhouse/*-manylinux1_x86_64.whl
+          rm -f wheelhouse/*-manylinux1_i686.whl
+          rm -f wheelhouse/*-manylinux1_x86_64.whl
 
       - uses: actions/upload-artifact@v3
         with:
@@ -159,9 +160,10 @@ jobs:
             'python -m Crypto.SelfTest --skip-slow-tests' }}"
 
       - name: Delete manylinux1 wheels
+        if: runner.os == 'Linux'
         run: |
-          rm wheelhouse/*-manylinux1_i686.whl
-          rm wheelhouse/*-manylinux1_x86_64.whl
+          rm -f wheelhouse/*-manylinux1_i686.whl
+          rm -f wheelhouse/*-manylinux1_x86_64.whl
 
       - uses: actions/upload-artifact@v3
         with:
