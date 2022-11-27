@@ -144,7 +144,7 @@ jobs:
             echo "CIBW_ARCHS=AMD64" >> $env:GITHUB_ENV
           }
 
-      - uses: pypa/cibuildwheel@v2.11.2
+      - uses: pypa/cibuildwheel@v1.12.0
         name: Build wheels
         env:
           CIBW_BUILD: "cp27-* pp27-*"
