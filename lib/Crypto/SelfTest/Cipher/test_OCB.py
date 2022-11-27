@@ -746,9 +746,19 @@ class OcbDkgTest(unittest.TestCase):
         cipher.update(A)
         C_out, tag_out = cipher.encrypt_and_digest(P)
 
-        # Prior to version 3.17, C_out + tag_out erroneously was
-        # b'BA015C4E5AE54D76C890AE81BD40DC5703EDC30E8AC2A58BC5D8FA4D61C5BAE6C39BEAC435B2FD56A2A5085C1B135D770C8264B7'
         self.assertEqual(C, C_out + tag_out)
+
+        # Prior to version 3.17, a nonce of maximum length (15 bytes)
+        # was actually used as a 14 byte nonce. The last byte was erroneously
+        # ignored.
+        buggy_result = unhexlify("BA015C4E5AE54D76C890AE81BD40DC57"
+                                 "03EDC30E8AC2A58BC5D8FA4D61C5BAE6"
+                                 "C39BEAC435B2FD56A2A5085C1B135D77"
+                                 "0C8264B7")
+        cipher = AES.new(key, AES.MODE_OCB, nonce=nonce[:-1], mac_len=mac_len)
+        cipher.update(A)
+        C_out2, tag_out2 = cipher.encrypt_and_digest(P)
+        self.assertEqual(buggy_result, C_out2 + tag_out2)
 
 
 def get_tests(config={}):
