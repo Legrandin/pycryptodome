@@ -43,10 +43,10 @@ jobs:
           # cibuildwheel will build wheel once and test it for each CPython version
           # and for PyPy 3.7.
           CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* cp311-* pp37-*"
-          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2010"
+          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_I686_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2014"
 
           # Set pycryptodome/x test command according to built package
           CIBW_TEST_COMMAND:
@@ -66,6 +66,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   # Test ABI3 wheels on Python 3 versions no longer supported by cibuildwheel
+  # and/or by manylinux2014
   test_abi3_wheels_old_python:
     name: Test (legacy) Python 3 wheels on ${{ matrix.os }}
     needs: build_python3_wheels
