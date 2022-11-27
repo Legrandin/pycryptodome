@@ -728,11 +728,35 @@ class OcbRfc7253Test(unittest.TestCase):
             self.assertEqual(unhexlify(b(result)), result2)
 
 
+class OcbDkgTest(unittest.TestCase):
+
+    def test_nonce120(self):
+        key = unhexlify("0F0E0D0C0B0A09080706050403020100")
+        nonce = unhexlify("EEDDCCBBAA9988776655443322110D")
+        A = unhexlify("000102030405060708090A0B0C0D0E0F1011121314151617"
+                      "18191A1B1C1D1E1F2021222324252627")
+        P = unhexlify("000102030405060708090A0B0C0D0E0F1011121314151617"
+                      "18191A1B1C1D1E1F2021222324252627")
+        C = unhexlify("07E903BFC49552411ABC865F5ECE60F6FAD1F5A9F14D3070"
+                      "FA2F1308A563207FFE14C1EEA44B22059C7484319D8A2C53"
+                      "C236A7B3")
+        mac_len = len(C) - len(P)
+
+        cipher = AES.new(key, AES.MODE_OCB, nonce=nonce, mac_len=mac_len)
+        cipher.update(A)
+        C_out, tag_out = cipher.encrypt_and_digest(P)
+
+        # Prior to version 3.17, C_out + tag_out erroneously was
+        # b'BA015C4E5AE54D76C890AE81BD40DC5703EDC30E8AC2A58BC5D8FA4D61C5BAE6C39BEAC435B2FD56A2A5085C1B135D770C8264B7'
+        self.assertEqual(C, C_out + tag_out)
+
+
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(OcbTests)
     tests += list_test_cases(OcbFSMTests)
     tests += list_test_cases(OcbRfc7253Test)
+    tests += list_test_cases(OcbDkgTest)
     return tests
 
 
