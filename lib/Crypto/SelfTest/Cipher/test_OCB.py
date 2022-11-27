@@ -28,14 +28,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import os
-import re
 import unittest
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 
 from Crypto.Util.py3compat import b, tobytes, bchr
-from Crypto.Util.strxor import strxor_c
 from Crypto.Util.number import long_to_bytes
+from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Cipher import AES
@@ -417,10 +415,6 @@ class OcbFSMTests(unittest.TestCase):
         for method_name in "encrypt", "decrypt":
             for auth_data in (None, b("333"), self.data,
                               self.data + b("3")):
-                if auth_data is None:
-                    assoc_len = None
-                else:
-                    assoc_len = len(auth_data)
                 cipher = AES.new(self.key_128, AES.MODE_OCB,
                                  nonce=self.nonce_96)
                 if auth_data is not None:
@@ -501,6 +495,35 @@ class OcbFSMTests(unittest.TestCase):
             cipher.decrypt_and_verify(ct, mac)
             self.assertRaises(TypeError, getattr(cipher, method_name),
                               self.data)
+
+
+def algo_rfc7253(keylen, taglen, noncelen):
+    """Implement the algorithm at page 18 of RFC 7253"""
+
+    key = bchr(0) * (keylen // 8 - 1) + bchr(taglen)
+    C = b""
+
+    for i in range(128):
+        S = bchr(0) * i
+
+        N = long_to_bytes(3 * i + 1, noncelen // 8)
+        cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
+        cipher.update(S)
+        C += cipher.encrypt(S) + cipher.encrypt() + cipher.digest()
+
+        N = long_to_bytes(3 * i + 2, noncelen // 8)
+        cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
+        C += cipher.encrypt(S) + cipher.encrypt() + cipher.digest()
+
+        N = long_to_bytes(3 * i + 3, noncelen // 8)
+        cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
+        cipher.update(S)
+        C += cipher.encrypt() + cipher.digest()
+
+    N = long_to_bytes(385, noncelen // 8)
+    cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
+    cipher.update(C)
+    return cipher.encrypt() + cipher.digest()
 
 
 class OcbRfc7253Test(unittest.TestCase):
@@ -665,7 +688,7 @@ class OcbRfc7253Test(unittest.TestCase):
     def test1(self):
         key = unhexlify(b(self.tv1_key))
         for tv in self.tv1:
-            nonce, aad, pt, ct = [ unhexlify(b(x)) for x in tv ]
+            nonce, aad, pt, ct = [unhexlify(b(x)) for x in tv]
             ct, mac_tag = ct[:-16], ct[-16:]
 
             cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
@@ -682,7 +705,7 @@ class OcbRfc7253Test(unittest.TestCase):
 
     def test2(self):
 
-        key, nonce, aad, pt, ct = [ unhexlify(b(x)) for x in self.tv2 ]
+        key, nonce, aad, pt, ct = [unhexlify(b(x)) for x in self.tv2]
         ct, mac_tag = ct[:-12], ct[-12:]
 
         cipher = AES.new(key, AES.MODE_OCB, nonce=nonce, mac_len=12)
@@ -698,41 +721,79 @@ class OcbRfc7253Test(unittest.TestCase):
         cipher.verify(mac_tag)
 
     def test3(self):
-
         for keylen, taglen, result in self.tv3:
-
-            key = bchr(0) * (keylen // 8 - 1) + bchr(taglen)
-            C = b("")
-
-            for i in range(128):
-                S = bchr(0) * i
-
-                N = long_to_bytes(3 * i + 1, 12)
-                cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
-                cipher.update(S)
-                C += cipher.encrypt(S) + cipher.encrypt() + cipher.digest()
-
-                N = long_to_bytes(3 * i + 2, 12)
-                cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
-                C += cipher.encrypt(S) + cipher.encrypt() + cipher.digest()
-
-                N = long_to_bytes(3 * i + 3, 12)
-                cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
-                cipher.update(S)
-                C += cipher.encrypt() + cipher.digest()
-
-            N = long_to_bytes(385, 12)
-            cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
-            cipher.update(C)
-            result2 = cipher.encrypt() + cipher.digest()
+            result2 = algo_rfc7253(keylen, taglen, 96)
             self.assertEqual(unhexlify(b(result)), result2)
 
 
 class OcbDkgTest(unittest.TestCase):
+    """Test vectors from https://gitlab.com/dkg/ocb-test-vectors"""
 
-    def test_nonce120(self):
-        key = unhexlify("0F0E0D0C0B0A09080706050403020100")
+    def test_1_2(self):
+        tvs = []
+        for fi in (1, 2):
+            for nb in (104, 112, 120):
+                tv_file = load_test_vectors(("Cipher", "AES"),
+                                            "test-vector-%d-nonce%d.txt" % (fi, nb),
+                                            "DKG tests, %d, %d bits" % (fi, nb),
+                                            {})
+                if tv_file is None:
+                    break
+                key = tv_file[0].k
+                for tv in tv_file[1:]:
+                    tv.k = key
+                    tvs.append(tv)
+
+        for tv in tvs:
+            k, n, a, p, c = tv.k, tv.n, tv.a, tv.p, tv.c
+            mac_len = len(c) - len(p)
+            cipher = AES.new(k, AES.MODE_OCB, nonce=n, mac_len=mac_len)
+            cipher.update(a)
+            c_out, tag_out = cipher.encrypt_and_digest(p)
+            self.assertEqual(c, c_out + tag_out)
+
+    def test_3(self):
+
+        def check(keylen, taglen, noncelen, exp):
+            result = algo_rfc7253(keylen, taglen, noncelen)
+            self.assertEqual(result, unhexlify(exp))
+
+        # test-vector-3-nonce104.txt
+        check(128, 128, 104, "C47F5F0341E15326D4D1C46F47F05062")
+        check(192, 128, 104, "95B9167A38EB80495DFC561A8486E109")
+        check(256, 128, 104, "AFE1CDDB97028FD92F8FB3C8CFBA7D83")
+        check(128, 96, 104, "F471B4983BA80946DF217A54")
+        check(192, 96, 104, "5AE828BC51C24D85FA5CC7B2")
+        check(256, 96, 104, "8C8335982E2B734616CAD14C")
+        check(128, 64, 104, "B553F74B85FD1E5B")
+        check(192, 64, 104, "3B49D20E513531F9")
+        check(256, 64, 104, "ED6DA5B1216BF8BB")
+
+        # test-vector-3-nonce112.txt
+        check(128, 128, 112, "CA8AFCA031BAC3F480A583BD6C50A547")
+        check(192, 128, 112, "D170C1DF356308079DA9A3F619147148")
+        check(256, 128, 112, "57F94381F2F9231EFB04AECD323757C3")
+        check(128, 96, 112, "3A618B2531ED39F260C750DC")
+        check(192, 96, 112, "9071EB89FEDBADDA88FD286E")
+        check(256, 96, 112, "FDF0EFB97F21A39AC4BAB5AC")
+        check(128, 64, 112, "FAB2FF3A8DD82A13")
+        check(192, 64, 112, "AC01D912BD0737D3")
+        check(256, 64, 112, "9D1FD0B500EA4ECF")
+
+        # test-vector-3-nonce120.txt
+        check(128, 128, 120, "9E043A7140A25FB91F43BCC9DD7E0F46")
+        check(192, 128, 120, "680000E53908323A7F396B955B8EC641")
+        check(256, 128, 120, "8304B97FAACDA56E676602E1878A7E6F")
+        check(128, 96, 120, "81F978AC9867E825D339847D")
+        check(192, 96, 120, "EFCF2D60B24926ADA48CF5B1")
+        check(256, 96, 120, "84961DC56E917B165E58C174")
+        check(128, 64, 120, "227AEE6C9D905A61")
+        check(192, 64, 120, "541DE691B9E1A2F9")
+        check(256, 64, 120, "B0E761381C7129FC")
+
+    def test_2_bugfix(self):
         nonce = unhexlify("EEDDCCBBAA9988776655443322110D")
+        key = unhexlify("0F0E0D0C0B0A09080706050403020100")
         A = unhexlify("000102030405060708090A0B0C0D0E0F1011121314151617"
                       "18191A1B1C1D1E1F2021222324252627")
         P = unhexlify("000102030405060708090A0B0C0D0E0F1011121314151617"
@@ -741,12 +802,6 @@ class OcbDkgTest(unittest.TestCase):
                       "FA2F1308A563207FFE14C1EEA44B22059C7484319D8A2C53"
                       "C236A7B3")
         mac_len = len(C) - len(P)
-
-        cipher = AES.new(key, AES.MODE_OCB, nonce=nonce, mac_len=mac_len)
-        cipher.update(A)
-        C_out, tag_out = cipher.encrypt_and_digest(P)
-
-        self.assertEqual(C, C_out + tag_out)
 
         # Prior to version 3.17, a nonce of maximum length (15 bytes)
         # was actually used as a 14 byte nonce. The last byte was erroneously
@@ -771,6 +826,6 @@ def get_tests(config={}):
 
 
 if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
+    def suite():
+        return unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
