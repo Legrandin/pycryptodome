@@ -47,6 +47,7 @@ jobs:
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2014"
+          CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
           # Set pycryptodome/x test command according to built package
           CIBW_TEST_COMMAND:
@@ -88,6 +89,11 @@ jobs:
         with:
           name: wheels
           path: wheels/
+
+      - name: Install GMP on musllinux
+        if: runner.os == 'Linux'
+        run: |
+          (ldd /bin/ls | grep -q musl && apk add gmp) || true
 
       - name: Install and test pycryptodome wheel
         if: endsWith(github.ref, 'x') == false
