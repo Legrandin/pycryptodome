@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: '3.11'
+          python-version: '3.x'
 
       - name: Build source package (.tar.gz)
         run: python setup.py sdist
@@ -41,12 +41,13 @@ jobs:
         name: Build wheels
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
-          # and for PyPy 3.6.
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-*"
-          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2010"
-          CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2010"
+          # and for PyPy 3.7.
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* cp311-* pp37-*"
+          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_I686_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2014"
+          CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
           # Set pycryptodome/x test command according to built package
           CIBW_TEST_COMMAND:
@@ -66,6 +67,7 @@ jobs:
           path: ./wheelhouse/*.whl
 
   # Test ABI3 wheels on Python 3 versions no longer supported by cibuildwheel
+  # and/or by manylinux2014
   test_abi3_wheels_old_python:
     name: Test (legacy) Python 3 wheels on ${{ matrix.os }}
     needs: build_python3_wheels
@@ -83,10 +85,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: wheels
           path: wheels/
+
+      - name: Install GMP on musllinux
+        if: runner.os == 'Linux'
+        run: |
+          (ldd /bin/ls | grep -q musl && apk add gmp) || true
 
       - name: Install and test pycryptodome wheel
         if: endsWith(github.ref, 'x') == false
