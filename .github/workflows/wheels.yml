@@ -41,8 +41,8 @@ jobs:
         name: Build wheels
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
-          # and for PyPy 3.6.
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* pp37-*"
+          # and for PyPy 3.7.
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* cp311-* pp37-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2010"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2010"
