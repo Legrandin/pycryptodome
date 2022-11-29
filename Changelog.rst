@@ -1,6 +1,15 @@
 Changelog
 =========
 
+3.17.0 (under development)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#664: With OCB mode, nonces of maximum length (15 bytes)
+  were actually used as 14 bytes nonces. The last byte was
+  erroneously ignored.
+
 3.16.0 (26 November 2022)
 ++++++++++++++++++++++++++
 

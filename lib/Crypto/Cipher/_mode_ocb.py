@@ -71,7 +71,7 @@ Example:
 import struct
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import bord, _copy_bytes
+from Crypto.Util.py3compat import bord, _copy_bytes, bchr
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Util.strxor import strxor
 
@@ -148,9 +148,16 @@ class OcbMode(object):
         # Compute Offset_0
         params_without_key = dict(cipher_params)
         key = params_without_key.pop("key")
-        nonce = (struct.pack('B', self._mac_len << 4 & 0xFF) +
-                 b'\x00' * (14 - len(nonce)) +
-                 b'\x01' + self.nonce)
+
+        taglen_mod128 = (self._mac_len * 8) % 128
+        if len(self.nonce) < 15:
+            nonce = bchr(taglen_mod128 << 1) +\
+                    b'\x00' * (14 - len(nonce)) +\
+                    b'\x01' +\
+                    self.nonce
+        else:
+            nonce = bchr((taglen_mod128 << 1) | 0x01) +\
+                    self.nonce
 
         bottom_bits = bord(nonce[15]) & 0x3F    # 6 bits, 0..63
         top_bits = bord(nonce[15]) & 0xC0       # 2 bits
