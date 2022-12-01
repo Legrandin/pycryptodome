@@ -59,6 +59,12 @@ class TestEccPoint(unittest.TestCase):
         except ValueError as e:
             assert "not on the same curve" in str(e)
 
+        class OtherKeyType:
+            pass
+
+        self.assertFalse(p1 == OtherKeyType())
+        self.assertTrue(p1 != OtherKeyType())
+
     def test_repr(self):
         p1 = ECC.construct(curve='P-256',
                            d=75467964919405407085864614198393977741148485328036093939970922195112333446269,

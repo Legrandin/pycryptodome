@@ -534,6 +534,9 @@ class EccPoint(object):
         return self
 
     def __eq__(self, point):
+        if not isinstance(point, EccPoint):
+            return False
+
         cmp_func = lib_func(self, "cmp")
         return 0 == cmp_func(self._point.get(), point._point.get())
 
@@ -801,6 +804,9 @@ class EccKey(object):
         return self._curve.desc in ("Ed25519", "Ed448")
 
     def __eq__(self, other):
+        if not isinstance(other, EccKey):
+            return False
+
         if other.has_private() != self.has_private():
             return False
 
