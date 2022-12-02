@@ -146,7 +146,7 @@ class CtrMode(object):
         self.block_size = len(initial_counter_block)
         """The block size of the underlying cipher, in bytes."""
 
-        self._next = [self.encrypt, self.decrypt]
+        self._next = ["encrypt", "decrypt"]
 
     def encrypt(self, plaintext, output=None):
         """Encrypt data with the key and the parameters set at initialization.
@@ -181,9 +181,9 @@ class CtrMode(object):
           Otherwise, ``None``.
         """
 
-        if self.encrypt not in self._next:
+        if "encrypt" not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
-        self._next = [self.encrypt]
+        self._next = ["encrypt"]
 
         if output is None:
             ciphertext = create_string_buffer(len(plaintext))
@@ -245,9 +245,9 @@ class CtrMode(object):
           Otherwise, ``None``.
         """
 
-        if self.decrypt not in self._next:
+        if "decrypt" not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
-        self._next = [self.decrypt]
+        self._next = ["decrypt"]
 
         if output is None:
             plaintext = create_string_buffer(len(ciphertext))

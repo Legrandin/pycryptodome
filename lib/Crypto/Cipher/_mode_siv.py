@@ -123,8 +123,8 @@ class SivMode(object):
         factory.new(key[:subkey_size], factory.MODE_ECB, **kwargs)
 
         # Allowed transitions after initialization
-        self._next = [self.update, self.encrypt, self.decrypt,
-                      self.digest, self.verify]
+        self._next = ["update", "encrypt", "decrypt",
+                      "digest", "verify"]
 
     def _create_ctr_cipher(self, v):
         """Create a new CTR cipher from V in SIV mode"""
@@ -164,12 +164,12 @@ class SivMode(object):
             The next associated data component.
         """
 
-        if self.update not in self._next:
+        if "update" not in self._next:
             raise TypeError("update() can only be called"
                                 " immediately after initialization")
 
-        self._next = [self.update, self.encrypt, self.decrypt,
-                      self.digest, self.verify]
+        self._next = ["update", "encrypt", "decrypt",
+                      "digest", "verify"]
 
         return self._kdf.update(component)
 
@@ -206,10 +206,10 @@ class SivMode(object):
         :Return: the MAC, as a byte string.
         """
 
-        if self.digest not in self._next:
+        if "digest" not in self._next:
             raise TypeError("digest() cannot be called when decrypting"
                             " or validating a message")
-        self._next = [self.digest]
+        self._next = ["digest"]
         if self._mac_tag is None:
             self._mac_tag = self._kdf.derive()
         return self._mac_tag
@@ -240,10 +240,10 @@ class SivMode(object):
             or the key is incorrect.
         """
 
-        if self.verify not in self._next:
+        if "verify" not in self._next:
             raise TypeError("verify() cannot be called"
                             " when encrypting a message")
-        self._next = [self.verify]
+        self._next = ["verify"]
 
         if self._mac_tag is None:
             self._mac_tag = self._kdf.derive()
@@ -290,19 +290,19 @@ class SivMode(object):
             The first item becomes ``None`` when the ``output`` parameter
             specified a location for the result.
         """
-        
-        if self.encrypt not in self._next:
+
+        if "encrypt" not in self._next:
             raise TypeError("encrypt() can only be called after"
                             " initialization or an update()")
 
-        self._next = [ self.digest ]
+        self._next = ["digest"]
 
         # Compute V (MAC)
         if hasattr(self, 'nonce'):
             self._kdf.update(self.nonce)
         self._kdf.update(plaintext)
         self._mac_tag = self._kdf.derive()
-        
+
         cipher = self._create_ctr_cipher(self._mac_tag)
 
         return cipher.encrypt(plaintext, output=output), self._mac_tag
@@ -336,10 +336,10 @@ class SivMode(object):
             or the key is incorrect.
         """
 
-        if self.decrypt not in self._next:
+        if "decrypt" not in self._next:
             raise TypeError("decrypt() can only be called"
                             " after initialization or an update()")
-        self._next = [ self.verify ]
+        self._next = ["verify"]
 
         # Take the MAC and start the cipher for decryption
         self._cipher = self._create_ctr_cipher(mac_tag)
@@ -350,7 +350,7 @@ class SivMode(object):
             self._kdf.update(self.nonce)
         self._kdf.update(plaintext if output is None else output)
         self.verify(mac_tag)
-        
+
         return plaintext
 
 

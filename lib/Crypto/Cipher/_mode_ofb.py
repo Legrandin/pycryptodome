@@ -116,7 +116,7 @@ class OfbMode(object):
         self.IV = self.iv
         """Alias for `iv`"""
 
-        self._next = [ self.encrypt, self.decrypt ]
+        self._next = ["encrypt", "decrypt"]
 
     def encrypt(self, plaintext, output=None):
         """Encrypt data with the key and the parameters set at initialization.
@@ -151,18 +151,18 @@ class OfbMode(object):
           Otherwise, ``None``.
         """
 
-        if self.encrypt not in self._next:
+        if "encrypt" not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
-        self._next = [ self.encrypt ]
-        
+        self._next = ["encrypt"]
+
         if output is None:
             ciphertext = create_string_buffer(len(plaintext))
         else:
             ciphertext = output
-            
+
             if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
-        
+
             if len(plaintext) != len(output):
                 raise ValueError("output must have the same length as the input"
                                  "  (%d bytes)" % len(plaintext))
@@ -212,10 +212,10 @@ class OfbMode(object):
           Otherwise, ``None``.
         """
 
-        if self.decrypt not in self._next:
+        if "decrypt" not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
-        self._next = [ self.decrypt ]
-        
+        self._next = ["decrypt"]
+
         if output is None:
             plaintext = create_string_buffer(len(ciphertext))
         else:
@@ -223,7 +223,7 @@ class OfbMode(object):
 
             if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
-            
+
             if len(ciphertext) != len(output):
                 raise ValueError("output must have the same length as the input"
                                  "  (%d bytes)" % len(plaintext))

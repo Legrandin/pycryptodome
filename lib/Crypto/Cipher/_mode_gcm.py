@@ -186,7 +186,7 @@ class GcmMode(object):
 
         if len(nonce) == 0:
             raise ValueError("Nonce cannot be empty")
-        
+
         if not is_buffer(nonce):
             raise TypeError("Nonce must be bytes, bytearray or memoryview")
 
@@ -207,8 +207,8 @@ class GcmMode(object):
             raise ValueError("Parameter 'mac_len' must be in the range 4..16")
 
         # Allowed transitions after initialization
-        self._next = [self.update, self.encrypt, self.decrypt,
-                      self.digest, self.verify]
+        self._next = ["update", "encrypt", "decrypt",
+                      "digest", "verify"]
 
         self._no_more_assoc_data = False
 
@@ -282,12 +282,12 @@ class GcmMode(object):
             A piece of associated data. There are no restrictions on its size.
         """
 
-        if self.update not in self._next:
+        if "update" not in self._next:
             raise TypeError("update() can only be called"
                             " immediately after initialization")
 
-        self._next = [self.update, self.encrypt, self.decrypt,
-                      self.digest, self.verify]
+        self._next = ["update", "encrypt", "decrypt",
+                      "digest", "verify"]
 
         self._update(assoc_data)
         self._auth_len += len(assoc_data)
@@ -364,10 +364,10 @@ class GcmMode(object):
           Otherwise, ``None``.
         """
 
-        if self.encrypt not in self._next:
+        if "encrypt" not in self._next:
             raise TypeError("encrypt() can only be called after"
                             " initialization or an update()")
-        self._next = [self.encrypt, self.digest]
+        self._next = ["encrypt", "digest"]
 
         ciphertext = self._cipher.encrypt(plaintext, output=output)
 
@@ -417,10 +417,10 @@ class GcmMode(object):
           Otherwise, ``None``.
         """
 
-        if self.decrypt not in self._next:
+        if "decrypt" not in self._next:
             raise TypeError("decrypt() can only be called"
                             " after initialization or an update()")
-        self._next = [self.decrypt, self.verify]
+        self._next = ["decrypt", "verify"]
 
         if self._status == MacStatus.PROCESSING_AUTH_DATA:
             self._pad_cache_and_update()
@@ -442,10 +442,10 @@ class GcmMode(object):
         :Return: the MAC, as a byte string.
         """
 
-        if self.digest not in self._next:
+        if "digest" not in self._next:
             raise TypeError("digest() cannot be called when decrypting"
                             " or validating a message")
-        self._next = [self.digest]
+        self._next = ["digest"]
 
         return self._compute_mac()
 
@@ -492,10 +492,10 @@ class GcmMode(object):
             or the key is incorrect.
         """
 
-        if self.verify not in self._next:
+        if "verify" not in self._next:
             raise TypeError("verify() cannot be called"
                             " when encrypting a message")
-        self._next = [self.verify]
+        self._next = ["verify"]
 
         secret = get_random_bytes(16)
 
