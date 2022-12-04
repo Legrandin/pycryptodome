@@ -32,19 +32,19 @@ STATIC void ladder_step(uint32_t x2[10], uint32_t z2[10], uint32_t x3[10], uint3
 
     /* https://www.hyperelliptic.org/EFD/g1p/auto-montgom-xz.html#ladder-mladd-1987-m */
 
-    sub32(t0, x3, z3);              /* t0 = D           < 2^28 */
-    sub32(t1, x2, z2);              /* t1 = B           < 2^28 */
+    sub_25519(t0, x3, z3);          /* t0 = D           < 2^26 */
+    sub_25519(t1, x2, z2);          /* t1 = B           < 2^26 */
     add32(x2, x2, z2);              /* x2 = A           < 2^27 */
     add32(z2, x3, z3);              /* z2 = C           < 2^27 */
     mul_25519(z3, t0, x2);          /* z3 = DA          < 2^26 */
     mul_25519(z2, z2, t1);          /* z2 = CB          < 2^26 */
     add32(x3, z3, z2);              /* x3 = DA+CB       < 2^27 */
-    sub32(z2, z3, z2);              /* z2 = DA-CB       < 2^28 */
+    sub_25519(z2, z3, z2);          /* z2 = DA-CB       < 2^26 */
     mul_25519(x3, x3, x3);          /* x3 = X5          < 2^26 */
     mul_25519(z2, z2, z2);          /* z2 = (DA-CB)²    < 2^26 */
     mul_25519(t0, t1, t1);          /* t0 = BB          < 2^26 */
     mul_25519(t1, x2, x2);          /* t1 = AA          < 2^26 */
-    sub32(x2, t1, t0);              /* x2 = E           < 2^28 */
+    sub_25519(x2, t1, t0);          /* x2 = E           < 2^26 */
     mul_25519(z3, xp, z2);          /* z3 = Z5          < 2^26 */
     mul_25519(z2, x2, nr_121666);   /* z2 = a24*E       < 2^26 */
     add32(z2, t0, z2);              /* z2 = BB+a24*E    < 2^27 */

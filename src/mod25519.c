@@ -374,23 +374,6 @@ STATIC void add32(uint32_t out[10], const uint32_t a[10], const uint32_t b[10])
 }
 
 /*
- * Carry out subtraction a[] - b[] for mixed-radix 2²⁶/2²⁵ where all limbs are < 2²⁶.
- * Output limbs are < 2²⁷.
- */
-STATIC void sub32(uint32_t out[10], const uint32_t a[10], const uint32_t b[10])
-{
-    /*
-     * We pre-sum a number which is >= 2²⁶-1 for each limb, and which is congruent to zero modulo 2²⁵⁵-19
-     */
-    static const uint32_t modulus_32[10] = { 0x7ffffda, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe };
-    unsigned i;
-
-    for (i=0; i<10; i++) {
-        out[i] = modulus_32[i] + a[i] - b[i];
-    }
-}
-
-/*
  * Swap arguments a/c and b/d when condition is NOT ZERO.
  * If the condition IS ZERO, no swapping takes place.
  */
@@ -479,7 +462,7 @@ STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
 /*
  * Add f[] and g[] modulo 2²⁵⁵ - 19.
  *
- * f[] and g[] are encoded in radix 2²⁶/2²⁵ and each limb is < 2²⁷.
+ * f[] and g[] are encoded in radix 2²⁶/2²⁵ and each limb is < 2²⁸.
  *
  * The result out[] is encoded in also radix 2²⁶/2²⁵ such that:
  *      out[i] < 2²⁶      for even i
@@ -488,8 +471,8 @@ STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
  */
 STATIC void add_25519(uint32_t out[10], const uint32_t f[10], const uint32_t g[10])
 {
-    uint64_t h0, h1, h2, h3, h4, h5, h6, h7, h8, h9;
-    uint64_t carry;
+    uint32_t h0, h1, h2, h3, h4, h5, h6, h7, h8, h9;
+    uint32_t carry;
 
     h0 = f[0] + g[0];
     h1 = f[1] + g[1];
@@ -549,22 +532,49 @@ STATIC void add_25519(uint32_t out[10], const uint32_t f[10], const uint32_t g[1
     h9 += carry;
     /* h9 < 2²⁶ */
 
-    out[0] = (uint32_t)h0;
-    out[1] = (uint32_t)h1;
-    out[2] = (uint32_t)h2;
-    out[3] = (uint32_t)h3;
-    out[4] = (uint32_t)h4;
-    out[5] = (uint32_t)h5;
-    out[6] = (uint32_t)h6;
-    out[7] = (uint32_t)h7;
-    out[8] = (uint32_t)h8;
-    out[9] = (uint32_t)h9;
+    out[0] = h0;
+    out[1] = h1;
+    out[2] = h2;
+    out[3] = h3;
+    out[4] = h4;
+    out[5] = h5;
+    out[6] = h6;
+    out[7] = h7;
+    out[8] = h8;
+    out[9] = h9;
+}
+
+/*
+ * Carry out subtraction a[] - b[] for mixed-radix 2²⁶/2²⁵ modulo 2²⁵⁵-19.
+ *
+ * The output out[] is such that:
+ *      x[i] < 2²⁶      for even i
+ *      x[j] < 2²⁵      for odd j<9
+ *      x[9] < 2²⁶
+ */
+STATIC void sub_25519(uint32_t out[10], const uint32_t a[10], const uint32_t b[10])
+{
+    /*
+     * We pre-sum a number which is congruent to zero modulo 2²⁵⁵-19.
+     * Limbs with even index are larger than any 26 bit number.
+     * Limbs with odd index are larger than any 25 bit number.
+     */
+    static const uint32_t modulus_32[10] = { 0x7ffffda, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe };
+    uint32_t zero[10] = { 0 };
+    unsigned i;
+
+    for (i=0; i<10; i++) {
+        out[i] = modulus_32[i] + a[i] - b[i];
+    }
+
+    /** Reduce the output, because each limb is now < 2²⁸ **/
+    add_25519(out, out, zero);
 }
 
 /*
  * Reduce a 256-bit number (mixed radix 2²⁶/²⁵, litte-endian) modulo 2²⁵⁵ - 19.
  *
- * Each limb of x[] in input is < 2²⁷ (for instance, as result of sub32).
+ * Each limb of x[] in input is < 2²⁸
  *
  * The result x[] in output is such that:
  *      x[i] < 2²⁶      for even i
