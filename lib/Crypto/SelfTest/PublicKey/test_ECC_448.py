@@ -258,6 +258,12 @@ class TestEccKey_Ed448(unittest.TestCase):
 
         self.assertNotEqual(public_key, private_key)
 
+    def test_name_consistency(self):
+        key = ECC.generate(curve='ed448')
+        self.assertIn("curve='Ed448'", repr(key))
+        self.assertEqual(key.curve, 'Ed448')
+        self.assertEqual(key.public_key().curve, 'Ed448')
+
 
 class TestEccModule_Ed448(unittest.TestCase):
 

@@ -6,6 +6,10 @@ Changelog
 
 Resolved issues
 ---------------
+* GH#658: attribute ``curve`` of an ECC key was not always
+  the preferred curve name, as it used to be in v3.15.0
+  (independently of the curve name specified when generating
+  the key).
 * GH#664: With OCB mode, nonces of maximum length (15 bytes)
   were actually used as 14 bytes nonces. The last byte was
   erroneously ignored.
