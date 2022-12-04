@@ -756,7 +756,7 @@ class EccKey(object):
         if curve_name not in _curves:
             raise ValueError("Unsupported curve (%s)" % curve_name)
         self._curve = _curves[curve_name]
-        self.curve = curve_name
+        self.curve = self._curve.desc
 
         count = int(self._d is not None) + int(self._seed is not None)
 
@@ -815,7 +815,7 @@ class EccKey(object):
     def __repr__(self):
         if self.has_private():
             if self._is_eddsa():
-                extra = ", seed=%s" % self._seed.hex()
+                extra = ", seed=%s" % tostr(binascii.hexlify(self._seed))
             else:
                 extra = ", d=%d" % int(self._d)
         else:

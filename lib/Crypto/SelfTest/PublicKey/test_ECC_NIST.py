@@ -919,6 +919,12 @@ class TestEccKey_P192(unittest.TestCase):
 
         self.assertNotEqual(public_key, private_key)
 
+    def test_name_consistency(self):
+        key = ECC.generate(curve='p192')
+        self.assertIn("curve='NIST P-192'", repr(key))
+        self.assertEqual(key.curve, 'NIST P-192')
+        self.assertEqual(key.public_key().curve, 'NIST P-192')
+
 
 class TestEccKey_P224(unittest.TestCase):
 
@@ -979,6 +985,12 @@ class TestEccKey_P224(unittest.TestCase):
         self.assertNotEqual(public_key, public_key3)
 
         self.assertNotEqual(public_key, private_key)
+
+    def test_name_consistency(self):
+        key = ECC.generate(curve='p224')
+        self.assertIn("curve='NIST P-224'", repr(key))
+        self.assertEqual(key.curve, 'NIST P-224')
+        self.assertEqual(key.public_key().curve, 'NIST P-224')
 
 
 class TestEccKey_P256(unittest.TestCase):
@@ -1042,6 +1054,12 @@ class TestEccKey_P256(unittest.TestCase):
         self.assertNotEqual(public_key, public_key3)
 
         self.assertNotEqual(public_key, private_key)
+
+    def test_name_consistency(self):
+        key = ECC.generate(curve='p256')
+        self.assertIn("curve='NIST P-256'", repr(key))
+        self.assertEqual(key.curve, 'NIST P-256')
+        self.assertEqual(key.public_key().curve, 'NIST P-256')
 
 
 class TestEccKey_P384(unittest.TestCase):
@@ -1108,6 +1126,12 @@ class TestEccKey_P384(unittest.TestCase):
 
         self.assertNotEqual(public_key, private_key)
 
+    def test_name_consistency(self):
+        key = ECC.generate(curve='p384')
+        self.assertIn("curve='NIST P-384'", repr(key))
+        self.assertEqual(key.curve, 'NIST P-384')
+        self.assertEqual(key.public_key().curve, 'NIST P-384')
+
 
 class TestEccKey_P521(unittest.TestCase):
 
@@ -1172,6 +1196,12 @@ class TestEccKey_P521(unittest.TestCase):
         self.assertNotEqual(public_key, public_key3)
 
         self.assertNotEqual(public_key, private_key)
+
+    def test_name_consistency(self):
+        key = ECC.generate(curve='p521')
+        self.assertIn("curve='NIST P-521'", repr(key))
+        self.assertEqual(key.curve, 'NIST P-521')
+        self.assertEqual(key.public_key().curve, 'NIST P-521')
 
 
 class TestEccModule_P192(unittest.TestCase):
