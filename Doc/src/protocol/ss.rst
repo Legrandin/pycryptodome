@@ -57,7 +57,7 @@ reassemble it::
     >>> with open("clear.txt", "rb") as fi, open("enc.txt", "wb") as fo:
     >>>     cipher = AES.new(key, AES.MODE_EAX)
     >>>     ct, tag = cipher.encrypt(fi.read()), cipher.digest()
-    >>>     fo.write(nonce + tag + ct)
+    >>>     fo.write(cipher.nonce + tag + ct)
 
 Each person can be given one share and the encrypted file.
 
