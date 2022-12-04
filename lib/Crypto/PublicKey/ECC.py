@@ -815,7 +815,7 @@ class EccKey(object):
     def __repr__(self):
         if self.has_private():
             if self._is_eddsa():
-                extra = ", seed=%s" % self._seed.hex()
+                extra = ", seed=%s" % tostr(binascii.hexlify(self._seed))
             else:
                 extra = ", d=%d" % int(self._d)
         else:
