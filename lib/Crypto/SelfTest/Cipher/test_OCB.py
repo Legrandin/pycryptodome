@@ -382,6 +382,20 @@ class OcbFSMTests(unittest.TestCase):
         cipher.decrypt()
         cipher.verify(mac)
 
+        # Verify path INIT->UPDATE->ENCRYPT->ENCRYPT_AND_DIGEST
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data)
+        ct1 = cipher.encrypt(self.data[:2])
+        ct2, mac = cipher.encrypt_and_digest(self.data[2:])
+
+        # Verify path INIT->UPDATE->DECRYPT->DECRYPT_AND_VERIFY
+        cipher = AES.new(self.key_128, AES.MODE_OCB,
+                         nonce=self.nonce_96)
+        cipher.update(self.data)
+        cipher.decrypt(ct1)
+        cipher.decrypt_and_verify(ct2, mac)
+
     def test_invalid_encrypt_after_final(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB,
                          nonce=self.nonce_96)

@@ -421,30 +421,42 @@ a cipher designed by Rogaway and specified in `RFC7253 <http://www.rfc-editor.or
 (more specifically, this module implements the last variant, OCB3).
 It only works in combination with a 128 bits cipher like AES.
 
-OCB is patented in USA but `free licenses <http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm>`_
-exist for software implementations meant for non-military purposes
-and open source.
+OCB was patented in USA but the author eventually `abandoned the patents <https://mailarchive.ietf.org/arch/msg/cfrg/qLTveWOdTJcLn4HP3ev-vrj05Vg/>`_.
 
 The :func:`new` function at the module level under ``Crypto.Cipher`` instantiates
 a new OCB cipher object for the relevant base algorithm.
 
+.. note::
+
+    The OCB state machine is slightly different compared to other modes:
+    if you encrypt (or decrypt) multiple chunks,
+    at the end you MUST call the method ``encrypt`` (or ``decrypt``) with no parameters.
+    This last call will return any piece of internally cached ciphertext (or plaintext).
+
+.. figure:: ocb_mode.png
+    :align: center
+    :figwidth: 80%
+    
+    State diagram for the OCB mode
+
+
 .. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, mac_len=None)
 
   Create a new OCB object, using <algorithm> as the base block cipher.
-  
+
   :param bytes key: the cryptographic key
   :param mode: the constant ``Crypto.Cipher.<algorithm>.MODE_OCB``
   :param bytes nonce: the value of the fixed nonce,
     wuth length between 1 and 15 bytes.
     It must be unique for the combination message/key.
     If not present, the library creates a 15 bytes random nonce.
-  :param integer mac_len: the desired length of the 
+  :param integer mac_len: the desired length of the
     MAC tag (default if not present: 16 bytes).
   :return: an OCB cipher object
-      
-The cipher object has a read-only attribute :attr:`nonce`.
 
-Example (encryption)::
+The cipher object has two read-only attributes: :attr:`nonce` and :attr:`block_size`.
+
+Example (encryption as a once-off operation)::
 
     >>> import json
     >>> from base64 import b64encode
@@ -464,7 +476,7 @@ Example (encryption)::
     >>> print(result)
     {"nonce": "I7E6PKxHNYo2i9sz8W98", "header": "aGVhZGVy", "ciphertext": "nYJnJ8jC", "tag": "0UbFcmO9lqGknCIDWRLALA=="}
 
-Example (decryption)::
+Example (decryption as a once-off operation)::
 
     >>> import json
     >>> from base64 import b64decode
@@ -474,11 +486,65 @@ Example (decryption)::
     >>> try:
     >>>     b64 = json.loads(json_input)
     >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}    
-    >>>     
+    >>>     jv = {k:b64decode(b64[k]) for k in json_k}
+    >>>
     >>>     cipher = AES.new(key, AES.MODE_OCB, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
     >>>     print("The message was: " + plaintext.decode('utf-8'))
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
+
+Example (encryption with multiple chunks)::
+
+    >>> import json
+    >>> from base64 import b64encode
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> header = b'header'
+    >>> data = [b'chunk1', b'chunk2', b'chunk3']
+    >>> key = get_random_bytes(16)
+    >>> cipher = AES.new(key, AES.MODE_OCB)
+    >>> cipher.update(header)
+    >>> ciphertext = b''
+    >>> for chunk in data:
+    >>>     ciphertext += cipher.encrypt(chunk)
+    >>> ciphertext += cipher.encrypt()
+    >>> tag = cipher.digest()
+    >>>
+    >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    >>> json_v = [ b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
+    >>> result = json.dumps(dict(zip(json_k, json_v)))
+    >>> print(result)
+    {"nonce": "IABQ/ww8vGsu7F4sbHXK", "header": "aGVhZGVy", "ciphertext": "7Amm2DoiMHVkYC8dY7NEX86M", "tag": "qOPnjAxF63MOAx6xjwRvJQ=="}
+
+Example (decryption with multiple chunks)::
+
+    >>> import json
+    >>> from base64 import b64decode
+    >>> from Crypto.Cipher import AES
+    >>>
+    >>> # We assume that the key was securely shared beforehand
+    >>> try:
+    >>>     b64 = json.loads(json_input)
+    >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    >>>     jv = {k:b64decode(b64[k]) for k in json_k}
+    >>>
+    >>>     cipher = AES.new(key, AES.MODE_OCB, nonce=jv['nonce'])
+    >>>     cipher.update(jv['header'])
+    >>>     ciphertext = jv['ciphertext']
+    >>>
+    >>>     # Split into small chunks, just for demo purposes
+    >>>     chunks = [ ciphertext[i:i+2] for i in range(0, len(ciphertext), 2) ]
+    >>>
+    >>>     plaintext = b''
+    >>>     for chunk in chunks:
+    >>>         plaintext += cipher.decrypt(chunk)
+    >>>     plaintext += cipher.decrypt()
+    >>>     cipher.verify(jv['tag'])
+    >>>
+    >>>     print("The message was: " + plaintext.decode('utf-8'))
+    >>> except (ValueError, KeyError):
+    >>>     print("Incorrect decryption")
+
