@@ -259,7 +259,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     # calculate range for X
     #   lower_bound = sqrt(2) * 2^{511 + 128*x}
     #   upper_bound = 2^{512 + 128*x} - 1
-    x = (N - 512) >> 7;
+    x = (N - 512) >> 7
     # We need to approximate the sqrt(2) in the lower_bound by an integer
     # expression because floating point math overflows with these numbers
     lower_bound = (14142135623730950489 * (2 ** (511 + 128*x))) //  10000000000000000000
@@ -366,12 +366,12 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
         return N == 2
     for p in sieve_base:
         if N == p:
-            return 1
+            return True
         if N % p == 0:
-            return 0
+            return False
 
     rounds = int(math.ceil(-math.log(false_positive_prob)/math.log(4)))
-    return _rabinMillerTest(N, rounds, randfunc)
+    return bool(_rabinMillerTest(N, rounds, randfunc))
 
 
 # Improved conversion functions contributed by Barry Warsaw, after
