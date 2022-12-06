@@ -49,7 +49,7 @@ As an example, encryption can be done as follows::
     >>> msg = cipher.iv + cipher.encrypt(plaintext)
 
 .. __: http://en.wikipedia.org/wiki/Triple_DES
-.. _deprecate: https://beta.csrc.nist.gov/News/2017/Update-to-Current-Use-and-Deprecation-of-TDEA
+.. _deprecate: https://csrc.nist.gov/News/2017/Update-to-Current-Use-and-Deprecation-of-TDEA
 .. _90 bits: http://people.scs.carleton.ca/~paulv/papers/Euro90.pdf
 
 .. automodule:: Crypto.Cipher.DES3
