@@ -6,13 +6,21 @@ Changelog
 
 Resolved issues
 ---------------
+* GH#629: improved typing for ``AES.new`` and the various
+  mode-specific types it returns. Thanks to Greg Werbin.
+* GH#653: added workaround for an alleged GCC compiler bug
+  that affected Ed25519 code compiled for AVX2.
 * GH#658: attribute ``curve`` of an ECC key was not always
   the preferred curve name, as it used to be in v3.15.0
   (independently of the curve name specified when generating
   the key).
 * GH#664: With OCB mode, nonces of maximum length (15 bytes)
-  were actually used as 14 bytes nonces. The last byte was
-  erroneously ignored.
+  were actually used as 14 bytes nonces.
+  After this fix, data that was encrypted in past using the
+  (default) nonce length of 15 bytes can still be decrypted
+  by reducing the nonce to its first 14 bytes.
+* GH#534: reduce memory consumption when using a large number
+  of cipher objects.
 
 3.16.0 (26 November 2022)
 ++++++++++++++++++++++++++
