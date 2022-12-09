@@ -1,5 +1,5 @@
 import sys
-from typing import ByteString, Dict, Optional, Tuple, Union, overload
+from typing import ByteString, Dict, Optional, Tuple, Union, overload, Literal
 
 from Crypto.Cipher._mode_ecb import EcbMode
 from Crypto.Cipher._mode_cbc import CbcMode
@@ -26,109 +26,131 @@ if sys.version_info >= (3, 8):
     MODE_GCM: Literal[11]
     MODE_OCB: Literal[12]
 
-    AESMode = Union[
-        MODE_ECB,
-        MODE_CBC,
-        MODE_CFB,
-        MODE_OFB,
-        MODE_CTR,
-        MODE_OPENPGP,
-        MODE_CCM,
-        MODE_EAX,
-        MODE_GCM,
-        MODE_SIV,
-        MODE_OCB,
-    ]
-
+    # MODE_ECB
     @overload
-    def new(key: Buffer,
-            mode: MODE_ECB,
+    def new(key: ByteString,
+            mode: Literal[1],
             use_aesni : bool = ...) -> \
             EcbMode: ...
 
+    # MODE_CBC
     @overload
-    def new(key: Buffer,
-            mode: MODE_CBC,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[2],
+            iv : ByteString = ...,
             use_aesni : bool = ...) -> \
             CbcMode: ...
 
     @overload
-    def new(key: Buffer,
-            mode: MODE_CFB,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[2],
+            IV : ByteString = ...,
+            use_aesni : bool = ...) -> \
+            CbcMode: ...
+
+    # MODE_CFB
+    @overload
+    def new(key: ByteString,
+            mode: Literal[3],
+            iv : ByteString = ...,
             segment_size : int = ...,
             use_aesni : bool = ...) -> \
             CfbMode: ...
 
     @overload
-    def new(key: Buffer,
-            mode: MODE_OFB,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[3],
+            IV : ByteString = ...,
+            segment_size : int = ...,
+            use_aesni : bool = ...) -> \
+            CfbMode: ...
+
+    # MODE_OFB
+    @overload
+    def new(key: ByteString,
+            mode: Literal[5],
+            iv : ByteString = ...,
             use_aesni : bool = ...) -> \
             OfbMode: ...
 
     @overload
-    def new(key: Buffer,
-            mode: MODE_CTR,
-            nonce : Buffer = ...,
-            initial_value : Union[int, Buffer] = ...,
+    def new(key: ByteString,
+            mode: Literal[5],
+            IV : ByteString = ...,
+            use_aesni : bool = ...) -> \
+            OfbMode: ...
+
+    # MODE_CTR
+    @overload
+    def new(key: ByteString,
+            mode: Literal[6],
+            nonce : ByteString = ...,
+            initial_value : Union[int, ByteString] = ...,
             counter : Dict = ...,
             use_aesni : bool = ...) -> \
             CtrMode: ...
 
+    # MODE_OPENPGP
     @overload
-    def new(key: Buffer,
-            mode: MODE_OPENPGP,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[7],
+            iv : ByteString = ...,
             use_aesni : bool = ...) -> \
             OpenPgpMode: ...
 
     @overload
-    def new(key: Buffer,
-            mode: MODE_CCM,
-            nonce : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[7],
+            IV : ByteString = ...,
+            use_aesni : bool = ...) -> \
+            OpenPgpMode: ...
+
+    # MODE_CCM
+    @overload
+    def new(key: ByteString,
+            mode: Literal[8],
+            nonce : ByteString = ...,
             mac_len : int = ...,
             assoc_len : int = ...,
             use_aesni : bool = ...) -> \
             CcmMode: ...
 
+    # MODE_EAX
     @overload
-    def new(key: Buffer,
-            mode: MODE_EAX,
-            nonce : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[9],
+            nonce : ByteString = ...,
             mac_len : int = ...,
             use_aesni : bool = ...) -> \
             EaxMode: ...
 
+    # MODE_GCM
     @overload
-    def new(key: Buffer,
-            mode: MODE_SIV,
-            nonce : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[10],
+            nonce : ByteString = ...,
             use_aesni : bool = ...) -> \
             SivMode: ...
 
+    # MODE_SIV
     @overload
-    def new(key: Buffer,
-            mode: MODE_GCM,
-            nonce : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[11],
+            nonce : ByteString = ...,
             mac_len : int = ...,
             use_aesni : bool = ...) -> \
             GcmMode: ...
 
+    # MODE_OCB
     @overload
-    def new(key: Buffer,
-            mode: MODE_OCB,
-            nonce : Buffer = ...,
+    def new(key: ByteString,
+            mode: Literal[12],
+            nonce : ByteString = ...,
             mac_len : int = ...,
             use_aesni : bool = ...) -> \
             OcbMode: ...
 
-else:   
+else:
     AESMode = int
 
     MODE_ECB: AESMode
@@ -143,21 +165,20 @@ else:
     MODE_SIV: AESMode
     MODE_OCB: AESMode
 
-    def new(key: Buffer,
+    def new(key: ByteString,
             mode: AESMode,
-            iv : Buffer = ...,
-            IV : Buffer = ...,
-            nonce : Buffer = ...,
+            iv : ByteString = ...,
+            IV : ByteString = ...,
+            nonce : ByteString = ...,
             segment_size : int = ...,
             mac_len : int = ...,
             assoc_len : int = ...,
-            initial_value : Union[int, Buffer] = ...,
+            initial_value : Union[int, ByteString] = ...,
             counter : Dict = ...,
             use_aesni : bool = ...) -> \
             Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode,
                   OpenPgpMode, CcmMode, EaxMode, GcmMode,
                   SivMode, OcbMode]: ...
 
-Buffer = ByteString
 block_size: int
 key_size: Tuple[int, int, int]
