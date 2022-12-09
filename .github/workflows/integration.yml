@@ -9,7 +9,7 @@ jobs:
       matrix:
         python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8, 3.9, "3.10", "3.11" ]
         cffi: [ yes, no ]
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-20.04 ]
         include:
           - python-version: 2.7
             cffi: no
