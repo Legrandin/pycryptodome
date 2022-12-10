@@ -6,6 +6,9 @@ Changelog
 
 Resolved issues
 ---------------
+* GH#526: improved typing for ``RSA.contruct``.
+* GH#534: reduce memory consumption when using a large number
+  of cipher objects.
 * GH#629: improved typing for ``AES.new`` and the various
   mode-specific types it returns. Thanks to Greg Werbin.
 * GH#653: added workaround for an alleged GCC compiler bug
@@ -19,8 +22,6 @@ Resolved issues
   After this fix, data that was encrypted in past using the
   (default) nonce length of 15 bytes can still be decrypted
   by reducing the nonce to its first 14 bytes.
-* GH#534: reduce memory consumption when using a large number
-  of cipher objects.
 
 3.16.0 (26 November 2022)
 ++++++++++++++++++++++++++
