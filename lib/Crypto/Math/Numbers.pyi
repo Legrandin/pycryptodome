@@ -1,4 +1,2 @@
-from Crypto.Math._IntegerBase import IntegerBase
-
-class Integer(IntegerBase):
-	pass
+from Crypto.Math._IntegerBase import IntegerBase as Integer
+__all__ = ['Integer']
