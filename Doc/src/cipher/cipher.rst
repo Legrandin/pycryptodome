@@ -57,7 +57,7 @@ The base API of a cipher is fairly simple:
     object with the ciphertext. The method returns the piece of plaintext.
     The ``output`` parameter can be passed here too.
     
-  For most algorithms, you may call :func:`decrypt` multiple times
+    For most algorithms, you may call :func:`decrypt` multiple times
     (i.e. once for each piece of ciphertext).
 
 .. note::

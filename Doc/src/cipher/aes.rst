@@ -32,8 +32,11 @@ and the incoming triple ``(nonce, ciphertext, tag)``::
     >>> except ValueError:
     >>>     print("Key incorrect or message corrupted")
 
+Constants for the modes of operation supported with AES (``mode`` parameter):
+
 .. __: http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 .. _NIST: http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
 
 .. automodule:: Crypto.Cipher.AES
-    :members:
+   :members:
+   :member-order: bysource
