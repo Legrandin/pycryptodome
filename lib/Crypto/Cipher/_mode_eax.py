@@ -94,8 +94,8 @@ class EaxMode(object):
                       "digest", "verify"]
 
         # MAC tag length
-        if not (4 <= self._mac_len <= self.block_size):
-            raise ValueError("Parameter 'mac_len' must not be larger than %d"
+        if not (2 <= self._mac_len <= self.block_size):
+            raise ValueError("'mac_len' must be at least 2 and not larger than %d"
                              % self.block_size)
 
         # Nonce cannot be empty and must be a byte string

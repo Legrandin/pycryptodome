@@ -188,16 +188,17 @@ a new EAX cipher object for the relevant base algorithm.
 .. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, mac_len=None)
 
   Create a new EAX object, using <algorithm> as the base block cipher.
-  
+
   :param bytes key: the cryptographic key
   :param mode: the constant ``Crypto.Cipher.<algorithm>.MODE_EAX``
   :param bytes nonce: the value of the fixed nonce.
     It must be unique for the combination message/key.
     If not present, the library creates a random nonce (16 bytes long for AES).
-  :param integer mac_len: the desired length of the 
-    MAC tag (default if not present: the cipher's block size, 16 bytes for AES).
+  :param integer mac_len: the length of the MAC tag, in bytes.
+    At least 2, and not larger than the cipher's block size (default),
+    which is 16 bytes for AES.
   :return: an EAX cipher object
-      
+
 The cipher object has a read-only attribute :attr:`nonce`.
 
 Example (encryption)::

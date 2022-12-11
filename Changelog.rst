@@ -4,6 +4,10 @@ Changelog
 3.17.0 (under development)
 ++++++++++++++++++++++++++
 
+New features
+---------------
+* Reduce the minimum tag length for the EAX cipher to 2 bytes.
+
 Resolved issues
 ---------------
 * GH#526: improved typing for ``RSA.contruct``.
