@@ -21,7 +21,9 @@ Resolved issues
   the preferred curve name, as it used to be in v3.15.0
   (independently of the curve name specified when generating
   the key).
-* GH#664: With OCB mode, nonces of maximum length (15 bytes)
+* GH#637: fixed typing for legacy modules ``PKCS1_v1_5`` and ``PKCS1_PSS``,
+  as their ``verify()`` returned a boolean.
+* GH#664: with OCB mode, nonces of maximum length (15 bytes)
   were actually used as 14 bytes nonces.
   After this fix, data that was encrypted in past using the
   (default) nonce length of 15 bytes can still be decrypted
