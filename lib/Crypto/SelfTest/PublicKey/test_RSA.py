@@ -240,6 +240,9 @@ class RSATest(unittest.TestCase):
         self.assertEqual(1, rsaObj.e > 1)   # e > 1
         self.assertEqual(1, rsaObj.d > 1)   # d > 1
 
+        self.assertEqual(rsaObj.u, rsaObj.invp)
+        self.assertEqual(1, rsaObj.q * rsaObj.invq % rsaObj.p)
+
     def _check_public_key(self, rsaObj):
         ciphertext = a2b_hex(self.ciphertext)
 

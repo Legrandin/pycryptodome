@@ -68,7 +68,13 @@ class RsaKey(object):
     :ivar q: Second factor of the RSA modulus
     :vartype q: integer
 
-    :ivar u: Chinese remainder component (:math:`p^{-1} \text{mod } q`)
+    :ivar invp: Chinese remainder component (:math:`p^{-1} \text{mod } q`)
+    :vartype invp: integer
+
+    :ivar invq: Chinese remainder component (:math:`q^{-1} \text{mod } p`)
+    :vartype invq: integer
+
+    :ivar u: Same as ``invp``
     :vartype u: integer
 
     :undocumented: exportKey, publickey
@@ -103,7 +109,7 @@ class RsaKey(object):
         if input_set == private_set:
             self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
             self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)
-            self._invq = self._q.inverse(self._p)
+            self._invq = None                   # will be computed on demand
 
     @property
     def n(self):
@@ -147,7 +153,13 @@ class RsaKey(object):
     def invq(self):
         if not self.has_private():
             raise AttributeError("No CRT component 'invq' available for public keys")
+        if self._invq is None:
+            self._invq = self._q.inverse(self._p)
         return int(self._invq)
+
+    @property
+    def invp(self):
+        return self.u
 
     @property
     def u(self):
