@@ -7,6 +7,8 @@ Changelog
 New features
 ---------------
 * Reduce the minimum tag length for the EAX cipher to 2 bytes.
+* An RSA object has 4 new properties ``dp``, ``dq``, ``invq`` and ``invq``
+  for the CRT coefficients (``invp`` is the same as the old ``u``).
 
 Resolved issues
 ---------------
