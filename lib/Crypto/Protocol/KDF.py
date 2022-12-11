@@ -103,10 +103,16 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
     Args:
      password (string or byte string):
         The secret password to generate the key from.
+
+        Strings will be encoded as ISO 8859-1 (also known as Latin-1),
+        which does not allow any characters with codepoints > 255.
      salt (string or byte string):
         A (byte) string to use for better protection from dictionary attacks.
         This value does not need to be kept secret, but it should be randomly
         chosen for each derivation. It is recommended to use at least 16 bytes.
+
+        Strings will be encoded as ISO 8859-1 (also known as Latin-1),
+        which does not allow any characters with codepoints > 255.
      dkLen (integer):
         The cumulative length of the keys to produce.
 
@@ -201,10 +207,10 @@ class _S2V(object):
         self._key = _copy_bytes(None, None, key)
         self._ciphermod = ciphermod
         self._last_string = self._cache = b'\x00' * ciphermod.block_size
-        
+
         # Max number of update() call we can process
         self._n_updates = ciphermod.block_size * 8 - 1
-        
+
         if cipher_params is None:
             self._cipher_params = {}
         else:
