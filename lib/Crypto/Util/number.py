@@ -51,12 +51,8 @@ def size (N):
     """Returns the size of the number N in bits."""
 
     if N < 0:
-        raise ValueError("Size in bits only avialable for non-negative numbers")
-
-    bits = 0
-    while N >> bits:
-        bits += 1
-    return bits
+        raise ValueError("Size in bits only available for non-negative numbers")
+    return N.bit_length()
 
 
 def getRandomInteger(N, randfunc=None):
