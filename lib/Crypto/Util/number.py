@@ -113,14 +113,22 @@ def getRandomNBitInteger(N, randfunc=None):
     assert size(value) >= N
     return value
 
-def GCD(x,y):
-    """Greatest Common Denominator of :data:`x` and :data:`y`.
-    """
 
-    x = abs(x) ; y = abs(y)
-    while x > 0:
-        x, y = y % x, x
-    return y
+if sys.version_info[:2] >= (3, 5):
+
+    GCD = math.gcd
+
+else:
+
+    def GCD(x,y):
+        """Greatest Common Denominator of :data:`x` and :data:`y`.
+        """
+
+        x = abs(x) ; y = abs(y)
+        while x > 0:
+            x, y = y % x, x
+        return y
+
 
 if sys.version_info[:2] >= (3, 8):
 

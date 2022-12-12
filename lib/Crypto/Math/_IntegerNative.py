@@ -30,7 +30,7 @@
 
 from ._IntegerBase import IntegerBase
 
-from Crypto.Util.number import long_to_bytes, bytes_to_long, inverse
+from Crypto.Util.number import long_to_bytes, bytes_to_long, inverse, GCD
 
 
 class IntegerNative(IntegerBase):
@@ -327,11 +327,7 @@ class IntegerNative(IntegerBase):
         return result
 
     def gcd(self, term):
-        r_p, r_n = abs(self._value), abs(int(term))
-        while r_n > 0:
-            q = r_p // r_n
-            r_p, r_n = r_n, r_p - q * r_n
-        return self.__class__(r_p)
+        return self.__class__(GCD(abs(self._value), abs(int(term))))
 
     def lcm(self, term):
         term = int(term)
