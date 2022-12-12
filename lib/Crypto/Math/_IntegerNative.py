@@ -30,7 +30,7 @@
 
 from ._IntegerBase import IntegerBase
 
-from Crypto.Util.number import long_to_bytes, bytes_to_long
+from Crypto.Util.number import long_to_bytes, bytes_to_long, inverse
 
 
 class IntegerNative(IntegerBase):
@@ -318,22 +318,7 @@ class IntegerNative(IntegerBase):
         self._value = int(source)
 
     def inplace_inverse(self, modulus):
-        modulus = int(modulus)
-        if modulus == 0:
-            raise ZeroDivisionError("Modulus cannot be zero")
-        if modulus < 0:
-            raise ValueError("Modulus cannot be negative")
-        r_p, r_n = self._value, modulus
-        s_p, s_n = 1, 0
-        while r_n > 0:
-            q = r_p // r_n
-            r_p, r_n = r_n, r_p - q * r_n
-            s_p, s_n = s_n, s_p - q * s_n
-        if r_p != 1:
-            raise ValueError("No inverse value can be computed" + str(r_p))
-        while s_p < 0:
-            s_p += modulus
-        self._value = s_p
+        self._value = inverse(self._value, int(modulus))
         return self
 
     def inverse(self, modulus):

@@ -15,6 +15,7 @@ Resolved issues
 * GH#526: improved typing for ``RSA.contruct``.
 * GH#534: reduce memory consumption when using a large number
   of cipher objects.
+* GH#598: fix missing error handling for ``Util.number.inverse``.
 * GH#629: improved typing for ``AES.new`` and the various
   mode-specific types it returns. Thanks to Greg Werbin.
 * GH#653: added workaround for an alleged GCC compiler bug

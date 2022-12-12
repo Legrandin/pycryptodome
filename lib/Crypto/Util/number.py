@@ -122,18 +122,39 @@ def GCD(x,y):
         x, y = y % x, x
     return y
 
-def inverse(u, v):
-    """The inverse of :data:`u` *mod* :data:`v`."""
+if sys.version_info[:2] >= (3, 8):
 
-    u3, v3 = u, v
-    u1, v1 = 1, 0
-    while v3 > 0:
-        q = u3 // v3
-        u1, v1 = v1, u1 - v1*q
-        u3, v3 = v3, u3 - v3*q
-    while u1<0:
-        u1 = u1 + v
-    return u1
+    def inverse(u, v):
+        """The inverse of :data:`u` *mod* :data:`v`."""
+
+        if v == 0:
+            raise ZeroDivisionError("Modulus cannot be zero")
+        if v < 0:
+            raise ValueError("Modulus cannot be negative")
+
+        return pow(u, -1, v)
+
+else:
+
+    def inverse(u, v):
+        """The inverse of :data:`u` *mod* :data:`v`."""
+
+        if v == 0:
+            raise ZeroDivisionError("Modulus cannot be zero")
+        if v < 0:
+            raise ValueError("Modulus cannot be negative")
+
+        u3, v3 = u, v
+        u1, v1 = 1, 0
+        while v3 > 0:
+            q = u3 // v3
+            u1, v1 = v1, u1 - v1*q
+            u3, v3 = v3, u3 - v3*q
+        if u3 != 1:
+            raise ValueError("No inverse value can be computed")
+        while u1<0:
+            u1 = u1 + v
+        return u1
 
 # Given a number of bits to generate and a random generation function,
 # find a prime number of the appropriate size.
