@@ -27,30 +27,30 @@ import time
 import os
 import sys
 
-from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
-from Cryptodome.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
-from Cryptodome.Cipher import (AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP, PKCS1_v1_5 as RSAES_PKCS1_v1_5
+from Crypto.Signature import PKCS1_PSS, PKCS1_v1_5 as RSASSA_PKCS1_v1_5
+from Crypto.Cipher import (AES, ARC2, ARC4, Blowfish, CAST, DES3, DES,
                            Salsa20, ChaCha20)
-from Cryptodome.Hash import (HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,
+from Crypto.Hash import (HMAC, MD2, MD4, MD5, SHA224, SHA256, SHA384, SHA512,
                          CMAC, SHA3_224, SHA3_256, SHA3_384, SHA3_512,
                          BLAKE2b, BLAKE2s)
-from Cryptodome.Random import get_random_bytes
-import Cryptodome.Util.Counter
-from Cryptodome.Util.number import bytes_to_long
+from Crypto.Random import get_random_bytes
+import Crypto.Util.Counter
+from Crypto.Util.number import bytes_to_long
 try:
-    from Cryptodome.Hash import SHA1
+    from Crypto.Hash import SHA1
 except ImportError:
     # Maybe it's called SHA
-    from Cryptodome.Hash import SHA as SHA1
+    from Crypto.Hash import SHA as SHA1
 try:
-    from Cryptodome.Hash import RIPEMD160
+    from Crypto.Hash import RIPEMD160
 except ImportError:
     # Maybe it's called RIPEMD
     try:
-        from Cryptodome.Hash import RIPEMD as RIPEMD160
+        from Crypto.Hash import RIPEMD as RIPEMD160
     except ImportError:
-        # Some builds of PyCryptodome don't have the RIPEMD module
+        # Some builds of PyCrypto don't have the RIPEMD module
         RIPEMD160 = None
 
 try:
@@ -59,7 +59,7 @@ try:
 except ImportError: # Some builds/versions of Python don't have a hashlib module
     hashlib = hmac = None
 
-from Cryptodome.Random import random as pycrypto_random
+from Crypto.Random import random as pycrypto_random
 import random as stdlib_random
 
 class BLAKE2b_512(object):
@@ -91,7 +91,6 @@ class Benchmark:
 
     def random_keys(self, bytes, n=10**5):
         """Return random keys of the specified number of bytes.
-
         If this function has been called before with the same number of bytes,
         cached keys are used instead of randomly generating new ones.
         """
@@ -338,7 +337,7 @@ class Benchmark:
 
             # Remove iv from parameters
             gen_tuple = gen_tuple[:-1]
-            ctr = Cryptodome.Util.Counter.new(module.block_size*8,
+            ctr = Crypto.Util.Counter.new(module.block_size*8,
                                           initial_value=bytes_to_long(iv),
                                           little_endian=le,
                                           allow_wraparound=True)
@@ -417,14 +416,14 @@ class Benchmark:
         # stdlib random
         self.test_random_module("stdlib random", stdlib_random)
 
-        # Cryptodome.Random.random
-        self.test_random_module("Cryptodome.Random.random", pycrypto_random)
+        # Crypto.Random.random
+        self.test_random_module("Crypto.Random.random", pycrypto_random)
 
-        # Cryptodome.PublicKey
+        # Crypto.PublicKey
         for pubkey_name, module, key_bytes in pubkey_specs:
             self.test_pubkey_setup(pubkey_name, module, key_bytes)
 
-        # Cryptodome.Cipher (block ciphers)
+        # Crypto.Cipher (block ciphers)
         for cipher_name, module, key_bytes in block_specs:
 
             # Benchmark each cipher in each of the various modes (CBC, etc)
@@ -438,7 +437,7 @@ class Benchmark:
                 except ModeNotAvailable as e:
                     pass
 
-        # Cryptodome.Cipher (stream ciphers)
+        # Crypto.Cipher (stream ciphers)
         for cipher_name, module, key_bytes, nonce_bytes in stream_specs:
             params = ""
             if nonce_bytes:
@@ -446,7 +445,7 @@ class Benchmark:
             self.test_key_setup(cipher_name, module, key_bytes, params)
             self.test_encryption(cipher_name, module, key_bytes, params)
 
-        # Cryptodome.Hash
+        # Crypto.Hash
         for hash_name, module in hash_specs:
             self.test_hash_small(hash_name, module.new, module.digest_size)
             self.test_hash_large(hash_name, module.new, module.digest_size)
@@ -456,7 +455,7 @@ class Benchmark:
             self.test_hash_small(hash_name, func, func().digest_size)
             self.test_hash_large(hash_name, func, func().digest_size)
 
-        # PyCryptodome HMAC
+        # PyCrypto HMAC
         for hash_name, module in hash_specs:
             if not hasattr(module, "block_size"):
                 continue
@@ -475,19 +474,19 @@ class Benchmark:
             self.test_cmac_small(cipher_name+"-CMAC", CMAC.new, module, key_size)
             self.test_cmac_large(cipher_name+"-CMAC", CMAC.new, module, key_size)
 
-        # PKCS1_v1_5 (sign) + Cryptodome.Hash
+        # PKCS1_v1_5 (sign) + Crypto.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_sign("PKCS#1-v1.5", RSASSA_PKCS1_v1_5.new, hash_name, module.new, module.digest_size)
 
-        # PKCS1_PSS (sign) + Cryptodome.Hash
+        # PKCS1_PSS (sign) + Crypto.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_sign("PKCS#1-PSS", PKCS1_PSS.new, hash_name, module.new, module.digest_size)
 
-        # PKCS1_v1_5 (verify) + Cryptodome.Hash
+        # PKCS1_v1_5 (verify) + Crypto.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_verify("PKCS#1-v1.5", RSASSA_PKCS1_v1_5.new, hash_name, module.new, module.digest_size)
 
-        # PKCS1_PSS (verify) + Cryptodome.Hash
+        # PKCS1_PSS (verify) + Crypto.Hash
         for hash_name, module in hash_specs:
             self.test_pkcs1_verify("PKCS#1-PSS", PKCS1_PSS.new, hash_name, module.new, module.digest_size)
 
