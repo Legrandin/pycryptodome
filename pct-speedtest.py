@@ -132,10 +132,10 @@ class Benchmark:
     def test_random_module(self, module_name, module):
         self.announce_start("%s.choice" % (module_name,))
         alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-        t0 = time.time()
+        t0 = time.perf_counter()
         for i in range(5000):
             module.choice(alphabet)
-        t = time.time()
+        t = time.perf_counter()
         invocations_per_second = 5000 / (t - t0)
         self.announce_result(invocations_per_second, "invocations/sec")
 
@@ -143,10 +143,10 @@ class Benchmark:
         self.announce_start("%s pubkey setup" % (pubkey_name,))
         keys = self.random_keys(key_bytes)[:5]
 
-        t0 = time.time()
+        t0 = time.perf_counter()
         for k in keys:
             module.generate(key_bytes*8)
-        t = time.time()
+        t = time.perf_counter()
         pubkey_setups_per_second = len(keys) / (t - t0)
         self.announce_result(pubkey_setups_per_second, "Keys/sec")
 
@@ -154,10 +154,10 @@ class Benchmark:
         self.generate_cipher(module, key_bytes, params)
         self.announce_start("%s key setup" % (cipher_name,))
 
-        for x in xrange(5000):
-            t0 = time.time()
+        for x in range(5000):
+            t0 = time.perf_counter()
             self.generate_cipher(module, key_bytes, params)
-            t = time.time()
+            t = time.perf_counter()
 
         key_setups_per_second = 5000 / (t - t0)
         self.announce_result(key_setups_per_second/1000, "kKeys/sec")
@@ -165,14 +165,21 @@ class Benchmark:
     def test_encryption(self, cipher_name, module, key_bytes, params):
         self.announce_start("%s encryption" % (cipher_name,))
 
-        pt_size = 16384000L
+        pt_size = 16384000
         pt = rng(pt_size)
         cipher = self.generate_cipher(module, key_bytes, params)
 
+        params_dict = dict([param.split('=') for param in params.split()])
+
         # Perform encryption
-        t0 = time.time()
-        cipher.encrypt(pt)
-        t = time.time()
+        if params_dict.get('mode') == 'MODE_SIV':
+            t0 = time.perf_counter()
+            cipher.encrypt_and_digest(pt)
+            t = time.perf_counter()
+        else:
+            t0 = time.perf_counter()
+            cipher.encrypt(pt)
+            t = time.perf_counter()
 
         encryption_speed = pt_size / (t - t0)
         self.announce_result(encryption_speed / 10**6, "MBps")
@@ -183,10 +190,10 @@ class Benchmark:
         blocks = self.random_blocks(digest_size, 10000)
 
         # Initialize hashes
-        t0 = time.time()
+        t0 = time.perf_counter()
         for b in blocks:
             hash_constructor(b).digest()
-        t = time.time()
+        t = time.perf_counter()
 
         hashes_per_second = len(blocks) / (t - t0)
         self.announce_result(hashes_per_second / 1000, "kHashes/sec")
@@ -197,12 +204,12 @@ class Benchmark:
         blocks = self.random_blocks(16384, 10000)
 
         # Perform hashing
-        t0 = time.time()
+        t0 = time.perf_counter()
         h = hash_constructor()
         for b in blocks:
             h.update(b)
         h.digest()
-        t = time.time()
+        t = time.perf_counter()
 
         hash_speed = len(blocks) * len(blocks[0]) / (t - t0)
         self.announce_result(hash_speed / 10**6, "MBps")
@@ -247,10 +254,10 @@ class Benchmark:
             hashes.append(hash_constructor(b))
 
         # Perform signing
-        t0 = time.time()
+        t0 = time.perf_counter()
         for h in hashes:
             sigscheme.sign(h)
-        t = time.time()
+        t = time.perf_counter()
 
         speed = len(hashes) / (t - t0)
         self.announce_result(speed, "sigs/sec")
@@ -278,10 +285,10 @@ class Benchmark:
         signatures = signatures + signatures
 
         # Perform verification
-        t0 = time.time()
+        t0 = time.perf_counter()
         for h, s in zip(hashes, signatures):
             sigscheme.verify(h, s)
-        t = time.time()
+        t = time.perf_counter()
 
         speed = len(hashes) / (t - t0)
         self.announce_result(speed, "sigs/sec")
