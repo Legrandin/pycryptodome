@@ -37,6 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Select architecture for MacOS
+        run: |
+          echo 'CIBW_ARCHS=x86_64 universal2' >> $GITHUB_ENV
+        if: runner.os == 'macOS'
+
       - uses: pypa/cibuildwheel@v2.11.2
         name: Build wheels
         env:
