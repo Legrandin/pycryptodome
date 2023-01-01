@@ -32,6 +32,10 @@ Resolved issues
   (default) nonce length of 15 bytes can still be decrypted
   by reducing the nonce to its first 14 bytes.
 
+Other changes
+-------------
+* Build PyPy wheels only for versions 3.8 and 3.9, and not for 3.7 anymore.
+
 3.16.0 (26 November 2022)
 ++++++++++++++++++++++++++
 
