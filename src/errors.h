@@ -1,5 +1,5 @@
-#ifndef _ERRORS_H
-#define _ERRORS_H
+#ifndef PYCRYPTODOME_ERRORS_H
+#define PYCRYPTODOME_ERRORS_H
 
 /** Standard errors common to all ciphers **/
 #define ERR_NULL                1
