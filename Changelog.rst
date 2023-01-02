@@ -6,6 +6,7 @@ Changelog
 
 New features
 ---------------
+* Added support for the Counter Mode KDF defined in SP 800-108 Rev 1.
 * Reduce the minimum tag length for the EAX cipher to 2 bytes.
 * An RSA object has 4 new properties ``dp``, ``dq``, ``invq`` and ``invq``
   for the CRT coefficients (``invp`` is the same as the old ``u``).

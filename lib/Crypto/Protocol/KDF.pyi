@@ -1,7 +1,9 @@
 from types import ModuleType
-from typing import Optional, Callable, Tuple, Union, Dict, Any
+from typing import Optional, Callable, Tuple, Union, Dict, Any, ByteString, overload
+from typing_extensions import Literal
 
 RNG = Callable[[int], bytes]
+PRF = Callable[[bytes, bytes], bytes]
 
 def PBKDF1(password: str, salt: bytes, dkLen: int, count: Optional[int]=1000, hashAlgo: Optional[ModuleType]=None) -> bytes: ...
 def PBKDF2(password: str, salt: bytes, dkLen: Optional[int]=16, count: Optional[int]=1000, prf: Optional[RNG]=None, hmac_hash_module: Optional[ModuleType]=None) -> bytes: ...
@@ -22,3 +24,17 @@ def _bcrypt_decode(data: bytes) -> bytes: ...
 def _bcrypt_hash(password:bytes , cost: int, salt: bytes, constant:bytes, invert:bool) -> bytes: ...
 def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes]=None) -> bytes: ...
 def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str]) -> None: ...
+
+@overload
+def SP800_108_Counter(master: ByteString,
+                      key_len: int,
+                      prf: PRF,
+                      num_keys: Literal[None] = None,
+                      label: ByteString = b'', context: ByteString = b'') -> bytes: ...
+
+@overload
+def SP800_108_Counter(master: ByteString,
+                      key_len: int,
+                      prf: PRF,
+                      num_keys: int,
+                      label: ByteString = b'', context: ByteString = b'') -> Tuple[bytes]: ...

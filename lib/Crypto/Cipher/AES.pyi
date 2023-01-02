@@ -1,4 +1,3 @@
-import sys
 from typing import ByteString, Dict, Optional, Tuple, Union, overload
 from typing_extensions import Literal
 

@@ -20,18 +20,20 @@
 # SOFTWARE.
 # ===================================================================
 
+import re
 import unittest
 from binascii import unhexlify
 
 from Crypto.Util.py3compat import b, bchr
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
 from Crypto.Hash import SHA1, HMAC, SHA256, MD5, SHA224, SHA384, SHA512
 from Crypto.Cipher import AES, DES3
 
 from Crypto.Protocol.KDF import (PBKDF1, PBKDF2, _S2V, HKDF, scrypt,
-                                 bcrypt, bcrypt_check)
+                                 bcrypt, bcrypt_check,
+                                 SP800_108_Counter)
 
 from Crypto.Protocol.KDF import _bcrypt_decode
 
@@ -708,6 +710,78 @@ class TestVectorsHKDFWycheproof(unittest.TestCase):
             self.test_verify(tv)
 
 
+def load_hash_by_name(hash_name):
+    return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
+
+
+class SP800_180_Counter_Tests(unittest.TestCase):
+
+    def test_negative_zeroes(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        self.assertRaises(ValueError, SP800_108_Counter, b'0' * 16, 1, prf,
+                          label=b'A\x00B')
+        self.assertRaises(ValueError, SP800_108_Counter, b'0' * 16, 1, prf,
+                          context=b'A\x00B')
+
+    def test_multiple_keys(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        key = b'0' * 16
+        expected = SP800_108_Counter(key, 2*3*23, prf)
+        for r in (1, 2, 3, 23):
+            dks = SP800_108_Counter(key, r, prf, 138//r)
+            self.assertEqual(len(dks), 138//r)
+            self.assertEqual(len(dks[0]), r)
+            self.assertEqual(b''.join(dks), expected)
+
+
+def add_tests_sp800_108_counter(cls):
+
+    test_vectors_sp800_108_counter = load_test_vectors(("Protocol", ),
+                                                       "KDF_SP800_108_COUNTER.txt",
+                                                       "NIST SP 800 108 KDF Counter Mode",
+                                                       {'count': lambda x: int(x)},
+                                                      ) or []
+
+    mac_type = None
+    for idx, tv in enumerate(test_vectors_sp800_108_counter):
+
+        if isinstance(tv, str):
+            res = re.match(r"\[HMAC-(SHA-[0-9]+)\]", tv)
+            if res:
+                hash_name = res.group(1).replace("-", "")
+                hash_module = load_hash_by_name(hash_name)
+                mac_type = "hmac"
+                continue
+            res = re.match(r"\[CMAC-AES-128\]", tv)
+            if res:
+                mac_type = "cmac"
+                continue
+            assert res
+
+        if mac_type == "hmac":
+            def prf(s, x, hash_module=hash_module):
+                return HMAC.new(s, x, hash_module).digest()
+        elif mac_type == "cmac":
+            def prf(s, x, hash_module=hash_module):
+                return CMAC.new(s, x, AES).digest()
+            continue
+
+        def kdf_test(self, prf=prf, kin=tv.kin, label=tv.label,
+                     context=tv.context, kout=tv.kout, count=tv.count):
+            result = SP800_108_Counter(kin, len(kout), prf, 1, label, context)
+            assert(len(result) == len(kout))
+            self.assertEqual(result, kout)
+
+        setattr(cls, "test_kdf_sp800_108_counter_%d" % idx, kdf_test)
+
+
+add_tests_sp800_108_counter(SP800_180_Counter_Tests)
+
+
 def get_tests(config={}):
     wycheproof_warnings = config.get('wycheproof_warnings')
 
@@ -723,6 +797,7 @@ def get_tests(config={}):
     tests += [TestVectorsHKDFWycheproof(wycheproof_warnings)]
     tests += list_test_cases(scrypt_Tests)
     tests += list_test_cases(bcrypt_Tests)
+    tests += list_test_cases(SP800_180_Counter_Tests)
 
     return tests
 
