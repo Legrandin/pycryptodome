@@ -258,13 +258,14 @@ EXPORT_SYM int ed25519_cmp(const Point *p1, const Point *p2)
 {
     uint32_t tmp[10];
     uint8_t bin1[32], bin2[32];
+    unsigned int i;
     int res = 0;
 
     mul_25519(tmp, p1->X, p2->Z);
     convert_le25p5_to_le8(bin1, tmp);
     mul_25519(tmp, p2->X, p1->Z);
     convert_le25p5_to_le8(bin2, tmp);
-    for (unsigned i=0; i<sizeof bin1; i++) {
+    for (i=0; i<sizeof bin1; i++) {
         res |= bin1[i] != bin2[i];
     }
 
@@ -272,7 +273,7 @@ EXPORT_SYM int ed25519_cmp(const Point *p1, const Point *p2)
     convert_le25p5_to_le8(bin1, tmp);
     mul_25519(tmp, p2->Y, p1->Z);
     convert_le25p5_to_le8(bin2, tmp);
-    for (unsigned i=0; i<sizeof bin1; i++) {
+    for (i=0; i<sizeof bin1; i++) {
         res |= bin1[i] != bin2[i];
     }
 
