@@ -209,10 +209,11 @@ STATIC void ed448_add_internal(PointEd448 *Pout,
 STATIC void cswap(PointEd448 *a, PointEd448 *b, unsigned swap)
 {
     uint64_t mask, e, f, g;
+    unsigned int i;
 
     mask = (uint64_t)(0 - (swap!=0));   /* 0 if swap is 0, all 1s if swap is !=0 */
 
-    for (unsigned i=0; i<7; i++) {
+    for (i=0; i<7; i++) {
         e = mask & (a->x[i] ^ b->x[i]);
         a->x[i] ^= e;
         b->x[i] ^= e;
