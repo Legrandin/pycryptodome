@@ -1,4 +1,4 @@
-from typing import Union, Dict, Tuple
+from typing import Union, Dict, Tuple, ByteString, Optional
 
 from Crypto.Cipher._mode_ecb import EcbMode
 from Crypto.Cipher._mode_cbc import CbcMode
@@ -20,16 +20,14 @@ MODE_CTR: DES3Mode
 MODE_OPENPGP: DES3Mode
 MODE_EAX: DES3Mode
 
-Buffer = Union[bytes, bytearray, memoryview]
-
-def new(key: Buffer,
+def new(key: ByteString,
         mode: DES3Mode,
-        iv : Buffer = ...,
-        IV : Buffer = ...,
-        nonce : Buffer = ...,
+        iv : Optional[ByteString] = ...,
+        IV : Optional[ByteString] = ...,
+        nonce : Optional[ByteString] = ...,
         segment_size : int = ...,
         mac_len : int = ...,
-        initial_value : Union[int, Buffer] = ...,
+        initial_value : Union[int, ByteString] = ...,
         counter : Dict = ...) -> \
         Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode]: ...
 
