@@ -36,14 +36,14 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[2],
-        iv : ByteString = ...,
+        iv : Optional[ByteString] = ...,
         use_aesni : bool = ...) -> \
         CbcMode: ...
 
 @overload
 def new(key: ByteString,
         mode: Literal[2],
-        IV : ByteString = ...,
+        IV : Optional[ByteString] = ...,
         use_aesni : bool = ...) -> \
         CbcMode: ...
 
@@ -51,7 +51,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[3],
-        iv : ByteString = ...,
+        iv : Optional[ByteString] = ...,
         segment_size : int = ...,
         use_aesni : bool = ...) -> \
         CfbMode: ...
@@ -59,7 +59,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[3],
-        IV : ByteString = ...,
+        IV : Optional[ByteString] = ...,
         segment_size : int = ...,
         use_aesni : bool = ...) -> \
         CfbMode: ...
@@ -68,14 +68,14 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[5],
-        iv : ByteString = ...,
+        iv : Optional[ByteString] = ...,
         use_aesni : bool = ...) -> \
         OfbMode: ...
 
 @overload
 def new(key: ByteString,
         mode: Literal[5],
-        IV : ByteString = ...,
+        IV : Optional[ByteString] = ...,
         use_aesni : bool = ...) -> \
         OfbMode: ...
 
@@ -83,7 +83,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[6],
-        nonce : ByteString = ...,
+        nonce : Optional[ByteString] = ...,
         initial_value : Union[int, ByteString] = ...,
         counter : Dict = ...,
         use_aesni : bool = ...) -> \
@@ -93,14 +93,14 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[7],
-        iv : ByteString = ...,
+        iv : Optional[ByteString] = ...,
         use_aesni : bool = ...) -> \
         OpenPgpMode: ...
 
 @overload
 def new(key: ByteString,
         mode: Literal[7],
-        IV : ByteString = ...,
+        IV : Optional[ByteString] = ...,
         use_aesni : bool = ...) -> \
         OpenPgpMode: ...
 
@@ -108,7 +108,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[8],
-        nonce : ByteString = ...,
+        nonce : Optional[ByteString] = ...,
         mac_len : int = ...,
         assoc_len : int = ...,
         use_aesni : bool = ...) -> \
@@ -118,7 +118,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[9],
-        nonce : ByteString = ...,
+        nonce : Optional[ByteString] = ...,
         mac_len : int = ...,
         use_aesni : bool = ...) -> \
         EaxMode: ...
@@ -127,7 +127,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[10],
-        nonce : ByteString = ...,
+        nonce : Optional[ByteString] = ...,
         use_aesni : bool = ...) -> \
         SivMode: ...
 
@@ -135,7 +135,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[11],
-        nonce : ByteString = ...,
+        nonce : Optional[ByteString] = ...,
         mac_len : int = ...,
         use_aesni : bool = ...) -> \
         GcmMode: ...
@@ -144,7 +144,7 @@ def new(key: ByteString,
 @overload
 def new(key: ByteString,
         mode: Literal[12],
-        nonce : ByteString = ...,
+        nonce : Optional[ByteString] = ...,
         mac_len : int = ...,
         use_aesni : bool = ...) -> \
         OcbMode: ...
