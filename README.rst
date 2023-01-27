@@ -1,6 +1,12 @@
 .. image:: https://github.com/Legrandin/pycryptodome/workflows/Integration%20test/badge.svg?branch=master
    :target: https://github.com/Legrandin/pycryptodome/actions
 
+.. image:: https://badge.fury.io/py/pycryptodome.svg
+   :target: https://pypi.org/project/pycryptodome
+
+.. image:: https://badge.fury.io/py/pycryptodomex.svg
+   :target: https://pypi.org/project/pycryptodomex
+
 PyCryptodome
 ============
 
