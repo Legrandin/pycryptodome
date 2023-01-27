@@ -1,22 +1,23 @@
 Changelog
 =========
 
-3.17.0 (under development)
+3.17.0 (29 January 2023)
 ++++++++++++++++++++++++++
 
 New features
 ---------------
 * Added support for the Counter Mode KDF defined in SP 800-108 Rev 1.
 * Reduce the minimum tag length for the EAX cipher to 2 bytes.
-* An RSA object has 4 new properties ``dp``, ``dq``, ``invq`` and ``invq``
-  for the CRT coefficients (``invp`` is the same as the old ``u``).
+* An RSA object has 4 new properties for the CRT coefficients:
+  ``dp``, ``dq``, ``invq`` and ``invq`` (``invp`` is the same value
+  as the existing ``u``).
 
 Resolved issues
 ---------------
-* GH#526: improved typing for ``RSA.contruct``.
-* GH#534: reduce memory consumption when using a large number
+* GH#526: improved typing for ``RSA.construct``.
+* GH#534: reduced memory consumption when using a large number
   of cipher objects.
-* GH#598: fix missing error handling for ``Util.number.inverse``.
+* GH#598: fixed missing error handling for ``Util.number.inverse``.
 * GH#629: improved typing for ``AES.new`` and the various
   mode-specific types it returns. Thanks to Greg Werbin.
 * GH#653: added workaround for an alleged GCC compiler bug
@@ -32,6 +33,8 @@ Resolved issues
   After this fix, data that was encrypted in past using the
   (default) nonce length of 15 bytes can still be decrypted
   by reducing the nonce to its first 14 bytes.
+* GH#705: improved typing for ``nonce``, ``iv``, and ``IV`` parameters
+  of cipher objects.
 
 Other changes
 -------------
