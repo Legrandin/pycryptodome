@@ -22,12 +22,18 @@
 
 import struct
 
-from Crypto.Util.py3compat import byte_string, b, bchr, bord
+from Crypto.Util.py3compat import byte_string, bchr, bord
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 __all__ = ['DerObject', 'DerInteger', 'DerBoolean', 'DerOctetString',
            'DerNull', 'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf']
+
+# Useful references:
+# - https://luca.ntop.org/Teaching/Appunti/asn1.html
+# - https://letsencrypt.org/docs/a-warm-welcome-to-asn1-and-der/
+# - https://www.zytrax.com/tech/survival/asn1.html
+# - https://www.oss.com/asn1/resources/books-whitepapers-pubs/larmouth-asn1-book.pdf
 
 
 def _is_number(x, only_non_negative=False):
@@ -46,7 +52,7 @@ class BytesIO_EOF(object):
     def __init__(self, initial_bytes):
         self._buffer = initial_bytes
         self._index = 0
-        self._bookmark  = None
+        self._bookmark = None
 
     def set_bookmark(self):
         self._bookmark = self._index
@@ -82,7 +88,7 @@ class DerObject(object):
                 """Initialize the DER object according to a specific ASN.1 type.
 
                 :Parameters:
-                  asn1Id : integer
+                  asn1Id : integer or byte
                     The universal DER tag number for this object
                     (e.g. 0x10 for a SEQUENCE).
                     If None, the tag is not known yet.
@@ -92,16 +98,20 @@ class DerObject(object):
                     the content octets).
                     If not specified, the payload is empty.
 
-                  implicit : integer
-                    The IMPLICIT tag number to use for the encoded object.
+                  implicit : integer or byte
+                    The IMPLICIT tag number (< 0x1F) to use for the encoded object.
                     It overrides the universal tag *asn1Id*.
+                    It cannot be combined with the ``explicit`` parameter.
+                    By default, there is no IMPLICIT tag.
 
                   constructed : bool
                     True when the ASN.1 type is *constructed*.
-                    False when it is *primitive*.
+                    False when it is *primitive* (default).
 
-                  explicit : integer
-                    The EXPLICIT tag number to use for the encoded object.
+                  explicit : integer or byte
+                    The EXPLICIT tag number (< 0x1F) to use for the encoded object.
+                    It cannot be combined with the ``implicit`` parameter.
+                    By default, there is no EXPLICIT tag.
                 """
 
                 if asn1Id is None:
@@ -125,23 +135,26 @@ class DerObject(object):
                 # context-spec |   1      0 (default for IMPLICIT/EXPLICIT)
                 # private      |   1      1
                 #
+
+                constructed_bit = 0x20 if constructed else 0x00
+
                 if None not in (explicit, implicit):
                     raise ValueError("Explicit and implicit tags are"
                                      " mutually exclusive")
 
                 if implicit is not None:
-                    self._tag_octet = 0x80 | 0x20 * constructed | self._convertTag(implicit)
-                    return
-
-                if explicit is not None:
-                    self._tag_octet = 0xA0 | self._convertTag(explicit)
-                    self._inner_tag_octet = 0x20 * constructed | asn1Id
-                    return
-
-                self._tag_octet = 0x20 * constructed | asn1Id
+                    # IMPLICIT tag overrides asn1Id
+                    self._tag_octet = 0x80 | constructed_bit | self._convertTag(implicit)
+                elif explicit is not None:
+                    # 'constructed bit' is always asserted for an EXPLICIT tag
+                    self._tag_octet = 0x80 | 0x20 | self._convertTag(explicit)
+                    self._inner_tag_octet = constructed_bit | asn1Id
+                else:
+                    # Neither IMPLICIT nor EXPLICIT
+                    self._tag_octet = constructed_bit | asn1Id
 
         def _convertTag(self, tag):
-                """Check if *tag* is a real DER tag.
+                """Check if *tag* is a real DER tag (5 bits).
                 Convert it from a character to number if necessary.
                 """
                 if not _is_number(tag):
@@ -306,7 +319,7 @@ class DerInteger(DerObject):
                 return DerObject.encode(self)
 
         def decode(self, der_encoded, strict=False):
-                """Decode a complete DER INTEGER DER, and re-initializes this
+                """Decode a DER-encoded INTEGER, and re-initializes this
                 object with it.
 
                 Args:
@@ -340,95 +353,88 @@ class DerInteger(DerObject):
                 if self.payload and bord(self.payload[0]) & 0x80:
                     self.value -= bits
 
+
 class DerBoolean(DerObject):
-        """Class to model a DER BOOLEAN.
+    """Class to model a DER-encoded BOOLEAN.
 
-        An example of encoding is::
+    An example of encoding is::
 
-          >>> from Crypto.Util.asn1 import DerBoolean
-          >>> from binascii import hexlify, unhexlify
-          >>> bool_der = DerBoolean(True)
-          >>> print hexlify(bool_der.encode())
+    >>> from Crypto.Util.asn1 import DerBoolean
+    >>> bool_der = DerBoolean(True)
+    >>> print(bool_der.encode().hex())
 
-        which will show ``0101ff``, the DER encoding of True.
+    which will show ``0101ff``, the DER encoding of True.
 
-        And for decoding::
+    And for decoding::
 
-          >>> s = unhexlify(b'0101ff')
-          >>> try:
-          >>>   bool_der = DerBoolean()
-          >>>   bool_der.decode(s)
-          >>>   print bool_der.value
-          >>> except ValueError:
-          >>>   print "Not a valid DER BOOLEAN"
+    >>> s = bytes.fromhex('0101ff')
+    >>> try:
+    >>>   bool_der = DerBoolean()
+    >>>   bool_der.decode(s)
+    >>>   print(bool_der.value)
+    >>> except ValueError:
+    >>>   print "Not a valid DER BOOLEAN"
 
-        the output will be ``True``.
+    the output will be ``True``.
 
-        :ivar value: The boolean value
-        :vartype value: boolean
+    :ivar value: The boolean value
+    :vartype value: boolean
+    """
+    def __init__(self, value=False, implicit=None, explicit=None):
+        """Initialize the DER object as a BOOLEAN.
+
+        Args:
+          value (boolean):
+            The value of the boolean. Default is False.
+
+          implicit (integer or byte):
+            The IMPLICIT tag number (< 0x1F) to use for the encoded object.
+            It overrides the universal tag for BOOLEAN (1).
+            It cannot be combined with the ``explicit`` parameter.
+            By default, there is no IMPLICIT tag.
+
+          explicit (integer or byte):
+            The EXPLICIT tag number (< 0x1F) to use for the encoded object.
+            It cannot be combined with the ``implicit`` parameter.
+            By default, there is no EXPLICIT tag.
         """
 
-        def __init__(self, value=False, implicit=None, explicit=None):
-                """Initialize the DER object as a BOOLEAN.
+        DerObject.__init__(self, 0x01, b'', implicit, False, explicit)
+        self.value = value  # The boolean value
 
-                :Parameters:
-                  value : boolean
-                    The value of the boolean.
+    def encode(self):
+        """Return the DER BOOLEAN, fully encoded as a binary string."""
 
-                  implicit : integer
-                    The IMPLICIT tag to use for the encoded object.
-                    It overrides the universal tag for BOOLEAN (1).
-                """
+        self.payload = b'\xFF' if self.value else b'\x00'
+        return DerObject.encode(self)
 
-                DerObject.__init__(self, 0x01, b'', implicit,
-                                   False, explicit)
-                self.value = value  # The boolean value
+    def decode(self, der_encoded):
+        """Decode a DER-encoded BOOLEAN, and re-initializes this object with it.
 
-        def encode(self):
-                """Return the DER BOOLEAN, fully encoded as a
-                binary string."""
+        Args:
+            der_encoded (byte string): A DER-encoded BOOLEAN.
 
-                self.payload = b'\xFF' if self.value else b'\x00'
-                return DerObject.encode(self)
+        Raises:
+            ValueError: in case of parsing errors.
+        """
 
-        def decode(self, der_encoded, strict=False):
-                """Decode a complete DER BOOLEAN DER, and re-initializes this
-                object with it.
+        return DerObject.decode(self, der_encoded)
 
-                Args:
-                  der_encoded (byte string): A complete BOOLEAN DER element.
+    def _decodeFromStream(self, s, strict):
+        """Decode a DER-encoded BOOLEAN from a file."""
 
-                Raises:
-                  ValueError: in case of parsing errors.
-                """
+        # Fill up self.payload
+        DerObject._decodeFromStream(self, s, strict)
 
-                return DerObject.decode(self, der_encoded, strict=strict)
+        if len(self.payload) != 1:
+            raise ValueError("Invalid encoding for DER BOOLEAN: payload is not 1 byte")
 
-        def _decodeFromStream(self, s, strict):
-                """Decode a complete DER BOOLEAN from a file."""
-
-                # Fill up self.payload
-                DerObject._decodeFromStream(self, s, strict)
-
-                if strict:
-                    if len(self.payload) == 0:
-                        raise ValueError("Invalid encoding for DER BOOLEAN: empty payload")
-                    if len(self.payload) >= 2 and struct.unpack('>H', self.payload[:2])[0] < 0x80:
-                        raise ValueError("Invalid encoding for DER BOOLEAN: leading zero")
-
-                # Derive self.value from self.payload
-                value = 0
-                bits = 1
-                for i in self.payload:
-                    value *= 256
-                    value += bord(i)
-                    bits <<= 8
-                if self.payload and bord(self.payload[0]) & 0x80:
-                    value -= bits
-                if strict:
-                    if value not in {-1, 0}:
-                        raise ValueError("Invalid encoding for DER BOOLEAN: content must either be single-octet zero or single-octet all-ones")
-                self.value = bool(value)
+        if bord(self.payload[0]) == 0:
+            self.value = False
+        elif bord(self.payload[0]) == 0xFF:
+            self.value = True
+        else:
+            raise ValueError("Invalid payload for DER BOOLEAN")
 
 
 class DerSequence(DerObject):
@@ -617,7 +623,6 @@ class DerSequence(DerObject):
                         self._seq.append(p.data_since_bookmark())
                     else:
                         derInt = DerInteger()
-                        #import pdb; pdb.set_trace()
                         data = p.data_since_bookmark()
                         derInt.decode(data, strict=strict)
                         self._seq.append(derInt.value)

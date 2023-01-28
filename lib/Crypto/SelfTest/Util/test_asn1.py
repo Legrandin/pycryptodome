@@ -39,7 +39,7 @@ from Crypto.Util.py3compat import *
 from Crypto.Util.asn1 import (DerObject, DerSetOf, DerInteger,
                              DerBitString,
                              DerObjectId, DerNull, DerOctetString,
-                             DerSequence)
+                             DerSequence, DerBoolean)
 
 class DerObjectTests(unittest.TestCase):
 
@@ -764,6 +764,57 @@ class DerSetOfTests(unittest.TestCase):
         self.assertRaises(ValueError, der.decode,
             b('1\x08\x02\x02\x01\x80\x02\x02\x00\xff\xAA'))
 
+
+class DerBooleanTests(unittest.TestCase):
+
+    def testEncode1(self):
+        der = DerBoolean(False)
+        self.assertEqual(der.encode(), b'\x01\x01\x00')
+
+    def testEncode2(self):
+        der = DerBoolean(True)
+        self.assertEqual(der.encode(), b'\x01\x01\xFF')
+
+    def testEncode3(self):
+        der = DerBoolean(False, implicit=0x12)
+        self.assertEqual(der.encode(), b'\x92\x01\x00')
+
+    def testEncode4(self):
+        der = DerBoolean(False, explicit=0x05)
+        self.assertEqual(der.encode(), b'\xA5\x03\x01\x01\x00')
+    ####
+
+    def testDecode1(self):
+        der = DerBoolean()
+        der.decode(b'\x01\x01\x00')
+        self.assertEqual(der.value, False)
+
+    def testDecode2(self):
+        der = DerBoolean()
+        der.decode(b'\x01\x01\xFF')
+        self.assertEqual(der.value, True)
+
+    def testDecode3(self):
+        der = DerBoolean(implicit=0x12)
+        der.decode(b'\x92\x01\x00')
+        self.assertEqual(der.value, False)
+
+    def testDecode4(self):
+        der = DerBoolean(explicit=0x05)
+        der.decode(b'\xA5\x03\x01\x01\x00')
+        self.assertEqual(der.value, False)
+
+    def testErrorDecode1(self):
+        der = DerBoolean()
+        # Wrong tag
+        self.assertRaises(ValueError, der.decode, b'\x02\x01\x00')
+
+    def testErrorDecode2(self):
+        der = DerBoolean()
+        # Payload too long
+        self.assertRaises(ValueError, der.decode, b'\x01\x01\x00\xFF')
+
+
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
     listTests = []
@@ -775,6 +826,7 @@ def get_tests(config={}):
     listTests += list_test_cases(DerObjectIdTests)
     listTests += list_test_cases(DerBitStringTests)
     listTests += list_test_cases(DerSetOfTests)
+    listTests += list_test_cases(DerBooleanTests)
     return listTests
 
 if __name__ == '__main__':
