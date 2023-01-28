@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.18.0 (under development)
+++++++++++++++++++++++++++
+
+New features
+---------------
+* Added support for DER BOOLEAN encodings.
+
 3.17.0 (29 January 2023)
 ++++++++++++++++++++++++++
 
