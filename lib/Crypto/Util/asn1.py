@@ -408,7 +408,7 @@ class DerBoolean(DerObject):
         self.payload = b'\xFF' if self.value else b'\x00'
         return DerObject.encode(self)
 
-    def decode(self, der_encoded):
+    def decode(self, der_encoded, strict=False):
         """Decode a DER-encoded BOOLEAN, and re-initializes this object with it.
 
         Args:
@@ -418,7 +418,7 @@ class DerBoolean(DerObject):
             ValueError: in case of parsing errors.
         """
 
-        return DerObject.decode(self, der_encoded)
+        return DerObject.decode(self, der_encoded, strict)
 
     def _decodeFromStream(self, s, strict):
         """Decode a DER-encoded BOOLEAN from a file."""
