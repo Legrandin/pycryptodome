@@ -1,6 +1,4 @@
-#! /usr/bin/env python
-#
-#  __main__.py : Stand-along loader for PyCryptodome test suite
+#  __main__.py : Stand-alone loader for PyCryptodome test suite
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
