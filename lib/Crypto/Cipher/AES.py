@@ -38,8 +38,8 @@ MODE_CTR = 6        #: Counter mode (:ref:`ctr_mode`)
 MODE_OPENPGP = 7    #: OpenPGP mode (:ref:`openpgp_mode`)
 MODE_CCM = 8        #: Counter with CBC-MAC (:ref:`ccm_mode`)
 MODE_EAX = 9        #: :ref:`eax_mode`
-MODE_SIV = 10       #: Galois Counter Mode (:ref:`gcm_mode`)
-MODE_GCM = 11       #: Synthetic Initialization Vector (:ref:`siv_mode`)
+MODE_SIV = 10       #: Synthetic Initialization Vector (:ref:`siv_mode`)
+MODE_GCM = 11       #: Galois Counter Mode (:ref:`gcm_mode`)
 MODE_OCB = 12       #: Offset Code Book (:ref:`ocb_mode`)
 
 
