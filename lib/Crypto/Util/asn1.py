@@ -530,6 +530,10 @@ class DerSequence(DerObject):
                 self._seq.append(item)
                 return self
 
+        def insert(self, index, item):
+                self._seq.insert(index, item)
+                return self
+
         def hasInts(self, only_non_negative=True):
                 """Return the number of items in this sequence that are
                 integers.
