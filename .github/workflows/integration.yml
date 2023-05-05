@@ -90,6 +90,48 @@ jobs:
       run: |
         mypy lib/
 
+  test_c2_linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sse: [0, 1]
+        arch: [x64, x32]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install libc6-dev-i386
+    - name: Test Linux x32 and x64
+      run: |
+        cd src/test
+        mkdir build
+        GCC_M32_TOOLCHAIN=${{ github.workspace }}/.github/workflows/gcc_m32_toolchain.txt
+        EXTRA=$([ ${{ matrix.arch }} = x32 ] && echo "-DCMAKE_TOOLCHAIN_FILE=$GCC_M32_TOOLCHAIN" || true)
+        cmake -B build -DSSE=${{ matrix.sse }} $EXTRA
+        make -C build all test
+
+  test_c3_win32_win64:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - win32
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install MSVC
+      uses: ilammy/msvc-dev-cmd@f456b805b3f63911738cb71d4f255e4e129c7e7a
+      with:
+        arch: ${{ matrix.arch }}
+    - name: Test Windows 32 and 64
+      run: |
+        cd src/test
+        mkdir build
+        cmake -B build -G "NMake Makefiles"
+        cd build
+        nmake all test
+
   test_c:
     runs-on: ubuntu-latest
     steps:
