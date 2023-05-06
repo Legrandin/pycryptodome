@@ -19,9 +19,12 @@ add_compile_definitions(STATIC=)
 # TODO: add check for big endianess too
 add_compile_definitions(PYCRYPTO_LITTLE_ENDIAN)
 
-if (NOT MSVC)
+if (MSVC)
+    add_compile_options(/Wall /sdl)
+else()
     add_compile_definitions(HAVE_STDINT_H)
     add_compile_definitions(HAVE_POSIX_MEMALIGN)
+    add_compile_options(-O2 -g -fstrict-aliasing -Wall -Werror)
     if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 	# Macro HAVE_UINT128 should be defined when __uint128_t type is available,
 	# that is, only on Unix 64 bits. It is not available with MSVC or with Unix 32 bits.
