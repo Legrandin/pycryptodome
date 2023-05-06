@@ -79,6 +79,9 @@ typedef unsigned __int64 uint64_t;
 
 #ifdef _MSC_VER
 
+/** Fix for warning C4668 **/
+#define WIN32_LEAN_AND_MEAN
+
 #define inline _inline
 #define RESTRICT __restrict
 
