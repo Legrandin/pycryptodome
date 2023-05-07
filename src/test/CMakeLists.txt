@@ -39,7 +39,7 @@ else()
 	# On 32-bit x86 platforms, gcc assumes the stack to be aligned to 16
 	# bytes, but the caller may actually only align it to 4 bytes, which
 	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
-	add_compile_options("-mstackrealign")
+	add_compile_options(-mstackrealign)
     endif()
 endif()
 
@@ -58,29 +58,38 @@ else()
     if (SSE)
 	message(STATUS "Using SSE instructions")
         add_compile_definitions(HAVE_X86INTRIN_H)
+	add_compile_definitions(HAVE_WMMINTRIN_H)
+	add_compile_definitions(HAVE_TMMINTRIN_H)
+	add_compile_options(-mssse3 -mpclmul)
     endif()
 endif()
 
-#add_compile_definitions(HAVE_WMMINTRIN_H)
-#add_compile_definitions(HAVE_TMMINTRIN_H)
-
+# ec_ws
 add_library(mont OBJECT ../mont.c)
-
 add_library(tables OBJECT ../p256_table.c ../p384_table.c ../p521_table.c)
 add_executable(test_ec_ws test_ec_ws.c ../ec_ws.c $<TARGET_OBJECTS:tables> $<TARGET_OBJECTS:mont>)
 add_test(NAME test_ec_ws COMMAND test_ec_ws)
 
+# endianess
 add_executable(test_endianess test_endianess.c)
 add_test(NAME endianess COMMAND test_endianess)
 
+# addmul128
 add_custom_command(
 	OUTPUT test_addmul_128.c
 	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul128.py > test_addmul_128.c
 	DEPENDS make_tests_addmul128.py
 )
+add_executable(test_addmul128 ${CMAKE_BINARY_DIR}/test_addmul_128.c)
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-	add_executable(test_addmul128 ${CMAKE_BINARY_DIR}/test_addmul_128.c ../multiply_64.c)
+    target_sources(test_addmul128 PUBLIC ../multiply_64.c)
 else()
-	add_executable(test_addmul128 ${CMAKE_BINARY_DIR}/test_addmul_128.c ../multiply_32.c)
+    target_sources(test_addmul128 PUBLIC ../multiply_32.c)
 endif()
 add_test(NAME test_addmul128 COMMAND test_addmul128)
+
+# clmul
+if (SSE)
+  add_executable(test_clmul test_clmul.c ../ghash_clmul.c)
+  add_test(NAME test_clmul COMMAND test_clmul)
+endif()
