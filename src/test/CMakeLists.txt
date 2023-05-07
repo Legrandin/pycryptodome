@@ -95,3 +95,15 @@ if (SSE)
   add_executable(test_clmul test_clmul.c ../ghash_clmul.c)
   add_test(NAME test_clmul COMMAND test_clmul)
 endif()
+
+# poly1305
+add_library(poly1305 OBJECT ../poly1305.c)
+foreach (f reduce load_r load_m multiply accumulate)
+    add_custom_command(
+	OUTPUT test_poly1305_${f}.c
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_poly1305_${f}.py > test_poly1305_${f}.c
+	DEPENDS make_tests_poly1305_${f}.py
+    )
+    add_executable(test_poly1305_${f} ${CMAKE_BINARY_DIR}/test_poly1305_${f}.c $<TARGET_OBJECTS:poly1305>)
+    add_test(NAME test_poly1305_${f} COMMAND test_poly1305_${f})
+endforeach()
