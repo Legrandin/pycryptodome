@@ -1,5 +1,10 @@
-#include "../common.h"
+#include "common.h"
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
 
 __m128i reduce(__m128i prod_high, __m128i prod_low);
 void clmult(__m128i *prod_high, __m128i *prod_low, __m128i a, __m128i b);
