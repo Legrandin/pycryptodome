@@ -322,7 +322,7 @@ EXPORT_SYM int ed25519_add(Point *P1, const Point *P2)
     return 0;
 }
 
-EXPORT_SYM int ed25519_scalar(Point *P, uint8_t *scalar, size_t scalar_len, uint64_t seed)
+EXPORT_SYM int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed)
 {
     if ((NULL == P) || (NULL == scalar))
         return ERR_NULL;

@@ -21,7 +21,7 @@ def make_test(a):
     t = [ "0xCCCCCCCCCCCCCCCCULL" ] * result_len
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    const uint64_t a[] = {" + ", ".join(a) + "};")
     print("    uint64_t t[] = {" + ", ".join(t) + ", 0xAAAAAAAAAAAAAAAAULL};")
     print("    uint64_t scratchpad[%d];" %  (3*len(a)))

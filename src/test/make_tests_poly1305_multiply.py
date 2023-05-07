@@ -37,7 +37,7 @@ def make_test(term, secret):
     h_split = split32(term, 5)
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    uint8_t secret[16] = {" + ",".join([str(x) for x in secret]) + "};")
     print("    uint32_t r[4], rr[4];")
     print("    uint32_t h[5] = {" + ",".join(h_split) + "};")

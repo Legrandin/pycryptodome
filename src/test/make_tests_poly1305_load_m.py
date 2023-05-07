@@ -13,7 +13,7 @@ def make_test(secret):
     m_out = [ "0x%08xUL" % x for x in split ]
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    uint8_t secret[%d] = {" % len(secret), end=' ')
     print(",".join([str(x) for x in secret]) + "};")
     print("    uint32_t m[5] = { 0 };")

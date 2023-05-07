@@ -49,7 +49,7 @@ def make_test(a, b, modulus, use_mont=True):
     if use_mont:
         test_nr = next(counter)
         print("")
-        print("void test_%d() {" % test_nr)
+        print("void test_%d(void) {" % test_nr)
         print("    const uint64_t a[] = {" + ", ".join(a_m_s) + "};")
         print("    const uint64_t b[] = {" + ", ".join(b_m_s) + "};")
         print("    const uint64_t n[] = {" + ", ".join(modulus_s) + "};")
@@ -66,7 +66,7 @@ def make_test(a, b, modulus, use_mont=True):
 
     test_nr = next(counter)
     print("")
-    print("void test_%d() {" % test_nr)
+    print("void test_%d(void) {" % test_nr)
     print("    const uint64_t a[] = {" + ", ".join(a_m_s) + "};")
     print("    const uint64_t b[] = {" + ", ".join(b_m_s) + "};")
     print("    const uint8_t modulus[] = {" + ", ".join(modulus_b) + "};")

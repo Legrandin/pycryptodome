@@ -28,7 +28,7 @@ def make_test(t, a, k):
 
     test_nr = next(counter)
     print("")
-    print("void test_%d() {" % test_nr)
+    print("void test_%d(void) {" % test_nr)
     #print '    printf("Test #%d\\n");' % test_nr
     print("    const uint64_t a[] = {" + ", ".join(a) + "};")
     print("    uint64_t t[] = {" + ", ".join(t_in) + ", 0xAAAAAAAAAAAAAAAAULL};")

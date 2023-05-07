@@ -27,6 +27,8 @@ add_compile_definitions(PYCRYPTO_LITTLE_ENDIAN)
 
 if (MSVC)
     add_compile_options(/Wall /sdl)
+    # Disable certain warnings
+    add_compile_options(/wd4100 /wd4820 /wd5045)
 else()
     add_compile_definitions(HAVE_STDINT_H)
     add_compile_definitions(HAVE_POSIX_MEMALIGN)

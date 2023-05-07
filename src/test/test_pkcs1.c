@@ -1,4 +1,4 @@
-#include "../common.h"
+#include "common.h"
 
 size_t propagate_ones(uint8_t x);
 void set_if_match(uint8_t *flag, size_t term1, size_t term2);
@@ -17,7 +17,7 @@ const uint8_t oneone[] = "11";
 const uint8_t zeroone[] = "01";
 const uint8_t zerozero[] = "00";
 
-void test_propagate_ones()
+void test_propagate_ones(void)
 {
     unsigned i;
 
@@ -29,7 +29,7 @@ void test_propagate_ones()
     }
 }
 
-void test_set_if_match()
+void test_set_if_match(void)
 {
     uint8_t x;
 
@@ -42,7 +42,7 @@ void test_set_if_match()
     assert(x == 1);
 }
 
-void test_set_if_no_match()
+void test_set_if_no_match(void)
 {
     uint8_t x;
 
@@ -55,7 +55,7 @@ void test_set_if_no_match()
     assert(x == 1);
 }
 
-void test_safe_select()
+void test_safe_select(void)
 {
     uint8_t out[10];
 
@@ -72,7 +72,7 @@ void test_safe_select()
     assert(memcmp(zerozero, out, 1) == 0);
 }
 
-void test_safe_select_idx()
+void test_safe_select_idx(void)
 {
     assert(safe_select_idx(0, 1, 0) == 0);
     assert(safe_select_idx(0, 1, 1) == 1);
@@ -80,7 +80,7 @@ void test_safe_select_idx()
     assert(safe_select_idx(0x100004, 0x223344, 1) == 0x223344);
 }
 
-void test_safe_cmp()
+void test_safe_cmp(void)
 {
     uint8_t res;
 
@@ -137,7 +137,7 @@ void test_safe_cmp()
     assert(res == 0);
 }
 
-void test_safe_search()
+void test_safe_search(void)
 {
     size_t res;
 

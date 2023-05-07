@@ -75,6 +75,10 @@ typedef unsigned __int64 uint64_t;
 #define UINT32_MAX 0xFFFFFFFFUL
 #endif
 
+#ifndef UINT64_MAX
+#define UINT64_MAX 0xFFFFFFFFFFFFFFFFUL
+#endif
+
 #endif /* HAVE_STDINT_H */
 
 #ifdef _MSC_VER

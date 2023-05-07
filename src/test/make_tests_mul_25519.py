@@ -38,7 +38,7 @@ def make_test(f, g):
         results_hex.append(words)
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    const uint32_t f[10] = {" + ", ".join(fx) + "};")
     print("    const uint32_t g[10] = {" + ", ".join(gx) + "};")
     print("    uint32_t out[10];")

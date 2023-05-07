@@ -11,7 +11,7 @@ def make_test(value):
     h_out = split32(result, 5)
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    uint32_t h[5] = {" + ", ".join(h_in) + "};")
     print("    const uint32_t expected_h[5] = {" + ", ".join(h_out) + "};")
     print("")

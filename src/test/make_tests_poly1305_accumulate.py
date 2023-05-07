@@ -17,7 +17,7 @@ def make_test(term1, term2):
     res_split = split32(term1 + term2, 5)
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    uint32_t h[5] = {" + ",".join(t1_split) + "};")
     print("    uint32_t m[5] = {" + ",".join(t2_split) + "};")
     print("    uint32_t w[5] = {" + ",".join(res_split) + "};")

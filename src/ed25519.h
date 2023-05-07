@@ -18,6 +18,6 @@ EXPORT_SYM int ed25519_neg(Point *p);
 EXPORT_SYM int ed25519_get_xy(uint8_t *xb, uint8_t *yb, size_t modsize, Point *p);
 EXPORT_SYM int ed25519_double(Point *p);
 EXPORT_SYM int ed25519_add(Point *P1, const Point *P2);
-EXPORT_SYM int ed25519_scalar(Point *P, uint8_t *scalar, size_t scalar_len, uint64_t seed);
+EXPORT_SYM int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
 
 #endif

@@ -20,7 +20,7 @@ def make_test(secret):
     rr_out = [ "0x%08xUL" % ((x>>2)*5) for x in split ]
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    uint8_t secret[16] = {" + ",".join([str(x) for x in secret]) + "};")
     print("    uint32_t r[5] = { 0 };")
     print("    uint32_t rr[5] = { 0 };")

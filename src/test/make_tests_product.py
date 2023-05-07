@@ -25,7 +25,7 @@ def make_test(a, b):
     t = [ "0xCCCCCCCCCCCCCCCCULL" ] * result_len
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    const uint64_t a[] = {" + ", ".join(a) + "};")
     print("    const uint64_t b[] = {" + ", ".join(b) + "};")
     print("    uint64_t t[] = {" + ", ".join(t) + ", 0xAAAAAAAAAAAAAAAAULL};")

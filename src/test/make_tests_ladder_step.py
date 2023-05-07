@@ -39,7 +39,7 @@ def make_test_max():
     z3outx = words + ["0"] * (4 - len(words))
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    uint32_t x2[10] = { " + ",".join(v) + " };")
     print("    uint32_t z2[10] = { " + ",".join(v) + " };")
     print("    uint32_t x3[10] = { " + ",".join(v) + " };")
@@ -102,7 +102,7 @@ def make_test(x2, z2, x3, z3, xp):
     z3outx = words + ["0"] * (4 - len(words))
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    const uint64_t x2_in[4] = {" + ", ".join(x2x) + "};")
     print("    const uint64_t z2_in[4] = {" + ", ".join(z2x) + "};")
     print("    const uint64_t x3_in[4] = {" + ", ".join(x3x) + "};")
