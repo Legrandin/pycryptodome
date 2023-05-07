@@ -90,34 +90,48 @@ jobs:
       run: |
         mypy lib/
 
-  test_c:
+  test_c_linux:
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Test
-      run: |
-        cd src/test
-        make
-
-  test_c_i386:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sse: [0, 1]
+        arch: [x64, x32]
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install libc6-dev-i386
-    - name: Test
+    - name: Test Linux x32 and x64
       run: |
         cd src/test
-        CFLAGS="-m32" UNDEFS="-UHAVE_UINT128" make
+        mkdir build
+        GCC_M32_TOOLCHAIN=${{ github.workspace }}/.github/workflows/gcc_m32_toolchain.txt
+        EXTRA=$([ ${{ matrix.arch }} = x32 ] && echo "-DCMAKE_TOOLCHAIN_FILE=$GCC_M32_TOOLCHAIN" || true)
+        cmake -B build -DSSE=${{ matrix.sse }} $EXTRA
+        make -C build all test
 
-  test_c_sse2:
-    runs-on: ubuntu-latest
+  test_c_windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - win32
     steps:
     - uses: actions/checkout@v3
-    - name: Test
+    - name: Set up Python "3.11"
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    - name: Install MSVC
+      uses: ilammy/msvc-dev-cmd@f456b805b3f63911738cb71d4f255e4e129c7e7a
+      with:
+        arch: ${{ matrix.arch }}
+    - name: Test Windows 32 and 64
       run: |
         cd src/test
-        CPPFLAGS="-DHAVE_X86INTRIN_H" make
-
+        mkdir build
+        cmake -B build -G "NMake Makefiles"
+        cd build
+        nmake all test

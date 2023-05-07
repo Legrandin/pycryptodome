@@ -27,7 +27,7 @@ def make_test(t, a, b0, b1):
         result.append("0")
 
     print("")
-    print("void test_%d() {" % next(counter))
+    print("void test_%d(void) {" % next(counter))
     print("    const uint64_t a[] = {" + ", ".join(a) + "};")
     print("    uint64_t t[] = {" + ", ".join(t_in) + ", 0xAAAAAAAAAAAAAAAAULL};")
     print("    uint64_t scratchpad[%d];" % (len(t_in) + len(a)))

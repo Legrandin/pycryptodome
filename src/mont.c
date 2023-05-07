@@ -312,7 +312,7 @@ STATIC void mont_mult_p256(uint64_t *out, const uint64_t *a, const uint64_t *b, 
         k = t[i];
 
         /* n[0] = 2⁶⁴ - 1 */
-        prod_lo = -k;
+        prod_lo = (uint64_t)(0 - k);
         prod_hi = k - (k!=0);
         t[i+0] += prod_lo;
         prod_hi += t[i+0] < prod_lo;
@@ -474,7 +474,7 @@ STATIC void mont_mult_p384(uint64_t *out, const uint64_t *a, const uint64_t *b, 
         uint64_t prod_lo, prod_hi;
 
         k = t[i] + (t[i] << 32);
-        k2_lo = -k;
+        k2_lo = (uint64_t)(0 - k);
         k2_hi = k - (k!=0);
 
         /* n[0] = 2³² - 1 */
@@ -628,7 +628,7 @@ STATIC void mont_mult_ed448(uint64_t *out, const uint64_t *a, const uint64_t *b,
         uint64_t prod_lo, prod_hi;
 
         k = t[i];
-        k2_lo = -k;
+        k2_lo = (uint64_t)(0 - k);
         k2_hi = k - (k!=0);
 
         /* n[0] = 2⁶⁴ - 1 */
@@ -1047,7 +1047,7 @@ cleanup:
 }
 
 /*
- * Assign a value to a number in Montgomer form.
+ * Assign a value to a number in Montgomery form.
  *
  * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
  * @param x     The value to set.
