@@ -7,6 +7,12 @@ cmake_print_variables(CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION CMAKE_SIZ
 
 option(SSE "Enable SSE instructions on Intel targets" ON)
 
+if (DEFINED ENV{PYTHON})
+    set(PYTHON $ENV{PYTHON})
+else()
+    set(PYTHON python)
+endif()
+
 include_directories("${CMAKE_SOURCE_DIR}/..")
 
 # Disable any code related to CPython modules
@@ -69,7 +75,7 @@ add_test(NAME endianess COMMAND test_endianess)
 
 add_custom_command(
 	OUTPUT test_addmul_128.c
-	COMMAND python ${CMAKE_SOURCE_DIR}/make_tests_addmul128.py > test_addmul_128.c
+	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul128.py > test_addmul_128.c
 	DEPENDS make_tests_addmul128.py
 )
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
