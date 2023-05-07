@@ -66,3 +66,15 @@ add_test(NAME test_ec_ws COMMAND test_ec_ws)
 
 add_executable(test_endianess test_endianess.c)
 add_test(NAME endianess COMMAND test_endianess)
+
+add_custom_command(
+	OUTPUT test_addmul_128.c
+	COMMAND python ${CMAKE_SOURCE_DIR}/make_tests_addmul128.py > test_addmul_128.c
+	DEPENDS make_tests_addmul128.py
+)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+	add_executable(test_addmul128 ${CMAKE_BINARY_DIR}/test_addmul_128.c ../multiply_64.c)
+else()
+	add_executable(test_addmul128 ${CMAKE_BINARY_DIR}/test_addmul_128.c ../multiply_32.c)
+endif()
+add_test(NAME test_addmul128 COMMAND test_addmul128)
