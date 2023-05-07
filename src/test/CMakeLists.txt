@@ -66,21 +66,26 @@ else()
     endif()
 endif()
 
-# ec_ws
+# -------------------------------------------------------------------------
+
+# montgomery
 add_library(mont OBJECT ../mont.c)
-add_library(tables OBJECT ../p256_table.c ../p384_table.c ../p521_table.c)
-add_executable(test_ec_ws test_ec_ws.c ../ec_ws.c $<TARGET_OBJECTS:tables> $<TARGET_OBJECTS:mont>)
-add_test(NAME test_ec_ws COMMAND test_ec_ws)
 
-# endianess
-add_executable(test_endianess test_endianess.c)
-add_test(NAME endianess COMMAND test_endianess)
+add_executable(test_mont test_mont.c $<TARGET_OBJECTS:mont>)
+add_test(NAME test_mont COMMAND test_mont)
 
-# addmul128
 add_custom_command(
-	OUTPUT test_addmul_128.c
-	COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul128.py > test_addmul_128.c
-	DEPENDS make_tests_addmul128.py
+    OUTPUT test_addmul.c
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul.py > test_addmul.c
+    DEPENDS make_tests_addmul.py
+)
+add_executable(test_addmul test_addmul.c $<TARGET_OBJECTS:mont>)
+add_test(NAME test_addmul COMMAND test_addmul)
+
+add_custom_command(
+    OUTPUT test_addmul_128.c
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul128.py > test_addmul_128.c
+    DEPENDS make_tests_addmul128.py
 )
 add_executable(test_addmul128 ${CMAKE_BINARY_DIR}/test_addmul_128.c)
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -89,6 +94,31 @@ else()
     target_sources(test_addmul128 PUBLIC ../multiply_32.c)
 endif()
 add_test(NAME test_addmul128 COMMAND test_addmul128)
+
+add_custom_command(
+    OUTPUT test_product.c
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_product.py > test_product.c
+    DEPENDS make_tests_product.py
+)
+add_executable(test_product test_product.c $<TARGET_OBJECTS:mont>)
+add_test(NAME test_product COMMAND test_product)
+
+add_custom_command(
+    OUTPUT test_mont_mult.c
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_mont_mult.py > test_mont_mult.c
+    DEPENDS make_tests_mont_mult.py
+)
+add_executable(test_mont_mult test_mont_mult.c $<TARGET_OBJECTS:mont>)
+add_test(NAME test_mont_mult COMMAND test_mont_mult)
+
+# ec_ws
+add_library(tables OBJECT ../p256_table.c ../p384_table.c ../p521_table.c)
+add_executable(test_ec_ws test_ec_ws.c ../ec_ws.c $<TARGET_OBJECTS:tables> $<TARGET_OBJECTS:mont>)
+add_test(NAME test_ec_ws COMMAND test_ec_ws)
+
+# endianess
+add_executable(test_endianess test_endianess.c)
+add_test(NAME endianess COMMAND test_endianess)
 
 # clmul
 if (SSE)
@@ -107,3 +137,41 @@ foreach (f reduce load_r load_m multiply accumulate)
     add_executable(test_poly1305_${f} ${CMAKE_BINARY_DIR}/test_poly1305_${f}.c $<TARGET_OBJECTS:poly1305>)
     add_test(NAME test_poly1305_${f} COMMAND test_poly1305_${f})
 endforeach()
+
+# pkcs1
+add_executable(test_pkcs1 test_pkcs1.c ../pkcs1_decode.c)
+add_test(NAME test_pkcs1 COMMAND test_pkcs1)
+
+# curve25519
+add_library(mod25519 OBJECT ../mod25519.c ../multiply_32.c)
+add_library(x25519 OBJECT ../x25519.c ../multiply_32.c)
+
+add_executable(test_mod25519 test_mod25519.c $<TARGET_OBJECTS:mod25519>)
+add_test(NAME test_mod25519 COMMAND test_mod25519)
+
+add_custom_command(
+    OUTPUT tests_mul_25519.c
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_mul_25519.py > tests_mul_25519.c
+    DEPENDS make_tests_mul_25519.py
+)
+add_executable(tests_mul_25519 tests_mul_25519.c $<TARGET_OBJECTS:mod25519>)
+add_test(NAME tests_mul_25519 COMMAND tests_mul_25519)
+
+add_executable(test_x25519 test_x25519.c $<TARGET_OBJECTS:x25519>)
+add_test(NAME test_x25519 COMMAND test_x25519)
+
+add_custom_command(
+    OUTPUT tests_ladder_step.c
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_ladder_step.py > tests_ladder_step.c
+    DEPENDS make_tests_ladder_step.py
+)
+add_executable(tests_ladder_step tests_ladder_step.c $<TARGET_OBJECTS:x25519>)
+add_test(NAME tests_ladder_step COMMAND tests_ladder_step)
+
+# ed25519
+add_executable(test_ed25519 test_ed25519.c ../ed25519.c ../multiply_32.c)
+add_test(NAME test_ed25519 COMMAND test_ed25519)
+
+# ed448
+add_executable(test_ed448 test_ed448.c ../ed448.c $<TARGET_OBJECTS:mont>)
+add_test(NAME test_ed448 COMMAND test_ed448)
