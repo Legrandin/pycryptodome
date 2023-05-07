@@ -90,7 +90,7 @@ jobs:
       run: |
         mypy lib/
 
-  test_c2_linux:
+  test_c_linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -111,7 +111,7 @@ jobs:
         cmake -B build -DSSE=${{ matrix.sse }} $EXTRA
         make -C build all test
 
-  test_c3_win32_win64:
+  test_c_windows:
     runs-on: windows-latest
     strategy:
       matrix:

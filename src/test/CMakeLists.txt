@@ -150,12 +150,12 @@ add_executable(test_mod25519 test_mod25519.c $<TARGET_OBJECTS:mod25519>)
 add_test(NAME test_mod25519 COMMAND test_mod25519)
 
 add_custom_command(
-    OUTPUT tests_mul_25519.c
-    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_mul_25519.py > tests_mul_25519.c
+    OUTPUT test_mul_25519.c
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_mul_25519.py > test_mul_25519.c
     DEPENDS make_tests_mul_25519.py
 )
-add_executable(tests_mul_25519 tests_mul_25519.c $<TARGET_OBJECTS:mod25519>)
-add_test(NAME tests_mul_25519 COMMAND tests_mul_25519)
+add_executable(test_mul_25519 test_mul_25519.c $<TARGET_OBJECTS:mod25519>)
+add_test(NAME test_mul_25519 COMMAND test_mul_25519)
 
 add_executable(test_x25519 test_x25519.c $<TARGET_OBJECTS:x25519>)
 add_test(NAME test_x25519 COMMAND test_x25519)
