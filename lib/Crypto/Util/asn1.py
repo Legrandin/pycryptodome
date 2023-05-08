@@ -491,6 +491,9 @@ class DerSequence(DerObject):
                   implicit : integer
                     The IMPLICIT tag to use for the encoded object.
                     It overrides the universal tag for SEQUENCE (16).
+
+                  explicit : integer
+                    The EXPLICIT tag to use for the encoded object.
                 """
 
                 DerObject.__init__(self, 0x10, b'', implicit, True, explicit)
