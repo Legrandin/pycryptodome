@@ -22,7 +22,7 @@
 
 import struct
 
-from Crypto.Util.py3compat import byte_string, bchr, bord
+from Crypto.Util.py3compat import byte_string, bchr, bord, is_bytes
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -50,7 +50,7 @@ def _try_decode(maybe_der_encoded):
     Not general-purpose."""
 
     try:
-        if not byte_string(maybe_der_encoded):
+        if not is_bytes(maybe_der_encoded):
             raise TypeError()
         tag_octet = maybe_der_encoded[0]
         if (tag_octet & 0x80) and (tag_octet & 0x20):
