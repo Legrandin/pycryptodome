@@ -258,6 +258,21 @@ class DerObject(object):
                     if p.remaining_data() > 0:
                         raise ValueError("Unexpected extra data after the DER structure")
 
+        def __repr__(self):
+                tag_octet = self._tag_octet
+                # is_constructed = bool(tag_octet & 0x20)
+                is_overridden = bool(tag_octet & 0x80)
+                is_explicit = hasattr(self, '_inner_tag_octet')
+                is_seq = hasattr(self, '_seq')
+                asn1id = tag_octet & 0x1f
+                args_repr = repr(self.value if (not is_seq) else self._seq)
+                if is_overridden:
+                        if not is_explicit:
+                                args_repr += ', implicit=%i' % (asn1id, )
+                        else:
+                                args_repr += ', explicit=%i' % (asn1id, )
+                return '%s(%s)' % (self.__class__.__name__, args_repr)
+
 
 class DerInteger(DerObject):
         """Class to model a DER INTEGER.
@@ -687,6 +702,9 @@ class DerOctetString(DerObject):
         """
         DerObject.__init__(self, 0x04, value, implicit, False)
 
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, repr(self.payload))
+
 
 class DerNull(DerObject):
     """Class to model a DER NULL element."""
@@ -695,6 +713,9 @@ class DerNull(DerObject):
         """Initialize the DER object as a NULL."""
 
         DerObject.__init__(self, 0x05, b'', None, False)
+
+    def __repr__(self):
+        return '%s()' % (self.__class__.__name__, )
 
 
 class DerObjectId(DerObject):
@@ -884,6 +905,9 @@ class DerBitString(DerObject):
         # Remove padding count byte
         if self.payload:
             self.value = self.payload[1:]
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, repr(self.payload))
 
 
 class DerSetOf(DerObject):
