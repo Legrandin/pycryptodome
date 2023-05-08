@@ -480,7 +480,7 @@ class DerSequence(DerObject):
 
         """
 
-        def __init__(self, startSeq=None, implicit=None):
+        def __init__(self, startSeq=None, implicit=None, explicit=None):
                 """Initialize the DER object as a SEQUENCE.
 
                 :Parameters:
@@ -493,7 +493,7 @@ class DerSequence(DerObject):
                     It overrides the universal tag for SEQUENCE (16).
                 """
 
-                DerObject.__init__(self, 0x10, b'', implicit, True)
+                DerObject.__init__(self, 0x10, b'', implicit, True, explicit)
                 if startSeq is None:
                     self._seq = []
                 else:
