@@ -45,6 +45,40 @@ def _is_number(x, only_non_negative=False):
     return not only_non_negative or x >= 0
 
 
+def _try_decode(maybe_der_encoded):
+    """Internal helper function to be called within DerObject.__repr__().
+    Not general-purpose."""
+
+    try:
+        if not byte_string(maybe_der_encoded):
+            raise TypeError()
+        tag_octet = maybe_der_encoded[0]
+        if (tag_octet & 0x80) and (tag_octet & 0x20):
+            # constructed and context-specific; assuming EXPLICIT
+            tag_octet = maybe_der_encoded[1]
+        asn1id = tag_octet & 0x1f
+        if asn1id == 0x01:
+            return DerBoolean().decode(maybe_der_encoded)
+        if asn1id == 0x02:
+            return DerInteger().decode(maybe_der_encoded)
+        if asn1id == 0x03:
+            return DerBitString().decode(maybe_der_encoded)
+        if asn1id == 0x04:
+            return DerOctetString().decode(maybe_der_encoded)
+        if asn1id == 0x05:
+            return DerNull().decode(maybe_der_encoded)
+        if asn1id == 0x06:
+            return DerObjectId().decode(maybe_der_encoded)
+        if asn1id == 0x10:
+            return DerSequence().decode(maybe_der_encoded)
+        if asn1id == 0x11:
+            return DerSetOf().decode(maybe_der_encoded)
+        # Sometimes, a bytestring is just a bytestring...
+        return maybe_der_encoded
+    except (TypeError, ValueError, IndexError):
+        return maybe_der_encoded
+
+
 class BytesIO_EOF(object):
     """This class differs from BytesIO in that a ValueError exception is
     raised whenever EOF is reached."""
@@ -263,9 +297,16 @@ class DerObject(object):
                 # is_constructed = bool(tag_octet & 0x20)
                 is_overridden = bool(tag_octet & 0x80)
                 is_explicit = hasattr(self, '_inner_tag_octet')
-                is_seq = hasattr(self, '_seq')
                 asn1id = tag_octet & 0x1f
-                args_repr = repr(self.value if (not is_seq) else self._seq)
+                if hasattr(self, 'value'):
+                        # non-sequence types with a native Python value
+                        args_repr = repr(self.value)
+                elif hasattr(self, '_seq'):
+                        # sequence types
+                        args_repr = repr(list(map(_try_decode, self._seq)))
+                else:
+                        # non-sequence types with no native Python value
+                        args_repr = repr(_try_decode(self.payload))
                 if is_overridden:
                         if not is_explicit:
                                 args_repr += ', implicit=%i' % (asn1id, )
@@ -702,9 +743,6 @@ class DerOctetString(DerObject):
         """
         DerObject.__init__(self, 0x04, value, implicit, False)
 
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, repr(self.payload))
-
 
 class DerNull(DerObject):
     """Class to model a DER NULL element."""
@@ -905,9 +943,6 @@ class DerBitString(DerObject):
         # Remove padding count byte
         if self.payload:
             self.value = self.payload[1:]
-
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, repr(self.payload))
 
 
 class DerSetOf(DerObject):
