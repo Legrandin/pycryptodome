@@ -1,4 +1,4 @@
-from typing import ByteString, Dict, Optional, Tuple, Union, overload
+from typing import Dict, Tuple, overload
 from typing_extensions import Literal
 
 from Crypto.Cipher._mode_ecb import EcbMode
@@ -27,88 +27,88 @@ MODE_OCB: Literal[12]
 
 # MODE_ECB
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[1],
         use_aesni : bool = ...) -> \
         EcbMode: ...
 
 # MODE_CBC
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[2],
-        iv : Optional[ByteString] = ...,
+        iv : bytes | bytearray | None = ...,
         use_aesni : bool = ...) -> \
         CbcMode: ...
 
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[2],
-        IV : Optional[ByteString] = ...,
+        IV : bytes | bytearray | None = ...,
         use_aesni : bool = ...) -> \
         CbcMode: ...
 
 # MODE_CFB
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[3],
-        iv : Optional[ByteString] = ...,
+        iv : bytes | bytearray | None = ...,
         segment_size : int = ...,
         use_aesni : bool = ...) -> \
         CfbMode: ...
 
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[3],
-        IV : Optional[ByteString] = ...,
+        IV : bytes | bytearray | None = ...,
         segment_size : int = ...,
         use_aesni : bool = ...) -> \
         CfbMode: ...
 
 # MODE_OFB
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[5],
-        iv : Optional[ByteString] = ...,
+        iv : bytes | bytearray | None = ...,
         use_aesni : bool = ...) -> \
         OfbMode: ...
 
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[5],
-        IV : Optional[ByteString] = ...,
+        IV : bytes | bytearray | None = ...,
         use_aesni : bool = ...) -> \
         OfbMode: ...
 
 # MODE_CTR
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[6],
-        nonce : Optional[ByteString] = ...,
-        initial_value : Union[int, ByteString] = ...,
+        nonce : bytes | bytearray | None = ...,
+        initial_value : int | bytes | bytearray = ...,
         counter : Dict = ...,
         use_aesni : bool = ...) -> \
         CtrMode: ...
 
 # MODE_OPENPGP
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[7],
-        iv : Optional[ByteString] = ...,
+        iv : bytes | bytearray | None = ...,
         use_aesni : bool = ...) -> \
         OpenPgpMode: ...
 
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[7],
-        IV : Optional[ByteString] = ...,
+        IV : bytes | bytearray | None = ...,
         use_aesni : bool = ...) -> \
         OpenPgpMode: ...
 
 # MODE_CCM
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[8],
-        nonce : Optional[ByteString] = ...,
+        nonce : bytes | bytearray | None = ...,
         mac_len : int = ...,
         assoc_len : int = ...,
         use_aesni : bool = ...) -> \
@@ -116,35 +116,35 @@ def new(key: ByteString,
 
 # MODE_EAX
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[9],
-        nonce : Optional[ByteString] = ...,
+        nonce : bytes | bytearray | None = ...,
         mac_len : int = ...,
         use_aesni : bool = ...) -> \
         EaxMode: ...
 
 # MODE_GCM
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[10],
-        nonce : Optional[ByteString] = ...,
+        nonce : bytes | bytearray | None = ...,
         use_aesni : bool = ...) -> \
         SivMode: ...
 
 # MODE_SIV
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[11],
-        nonce : Optional[ByteString] = ...,
+        nonce : bytes | bytearray | None = ...,
         mac_len : int = ...,
         use_aesni : bool = ...) -> \
         GcmMode: ...
 
 # MODE_OCB
 @overload
-def new(key: ByteString,
+def new(key: bytes | bytearray,
         mode: Literal[12],
-        nonce : Optional[ByteString] = ...,
+        nonce : bytes | bytearray | None = ...,
         mac_len : int = ...,
         use_aesni : bool = ...) -> \
         OcbMode: ...
