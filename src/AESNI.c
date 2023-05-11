@@ -58,7 +58,7 @@ typedef struct {
 
 enum SubType { OnlySub, SubRotXor };
 
-static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType subType)
+STATIC uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType subType)
 {
     __m128i x, y, z;
 
@@ -90,7 +90,7 @@ static uint32_t sub_rot(uint32_t w, unsigned idx /** round/Nk **/, enum SubType 
     return (uint32_t)_mm_cvtsi128_si32(z);
 }
 
-static int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned Nk, unsigned Nr)
+STATIC int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned Nk, unsigned Nr)
 {
     uint32_t rk[4*(14+2)];
     unsigned tot_words;
@@ -137,26 +137,8 @@ static int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned N
     return 0;
 }
 
-static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
+STATIC int internal_AESNI_encrypt(__m128i r[], unsigned rounds, const uint8_t *in, uint8_t *out, size_t data_len)
 {
-    unsigned rounds;
-    __m128i r[14+1];
-    const struct block_state *state;
-    unsigned k;
-
-    if ((bb == NULL) || (in == NULL) || (out == NULL))
-        return ERR_NULL;
-
-    state = &((AESNI_State*)bb)->algo_state;
-    rounds = state->rounds;
-
-    if (rounds > 14)
-        return ERR_NR_ROUNDS;
-
-    for (k=0; k<=rounds; k++) {
-        r[k] = state->erk[k];
-    }
-
     /** Encrypt 8 blocks (128 bytes) in parallel, when possible **/
     for (; data_len >= 8*16; data_len -= 8*16) {
         __m128i pt[8], data[8];
@@ -246,7 +228,7 @@ static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
     return 0;
 }
 
-static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
+static int AESNI_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
 {
     unsigned rounds;
     __m128i r[14+1];
@@ -263,9 +245,14 @@ static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
         return ERR_NR_ROUNDS;
 
     for (k=0; k<=rounds; k++) {
-        r[k] = state->drk[k];
+        r[k] = state->erk[k];
     }
 
+    return internal_AESNI_encrypt(r, rounds, in, out, data_len);
+}
+
+STATIC int internal_AESNI_decrypt(__m128i r[], unsigned rounds, const uint8_t *in, uint8_t *out, size_t data_len)
+{
     /** Decrypt 8 blocks (128 bytes) in parallel, when possible **/
     for (; data_len >= 8*16; data_len -= 8*16) {
         __m128i ct[8], data[8];
@@ -353,6 +340,29 @@ static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, s
     }
 
     return 0;
+}
+
+static int AESNI_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
+{
+    unsigned rounds;
+    __m128i r[14+1];
+    const struct block_state *state;
+    unsigned k;
+
+    if ((bb == NULL) || (in == NULL) || (out == NULL))
+        return ERR_NULL;
+
+    state = &((AESNI_State*)bb)->algo_state;
+    rounds = state->rounds;
+
+    if (rounds > 14)
+        return ERR_NR_ROUNDS;
+
+    for (k=0; k<=rounds; k++) {
+        r[k] = state->drk[k];
+    }
+
+    return internal_AESNI_decrypt(r, rounds, in, out, data_len);
 }
 
 EXPORT_SYM int AESNI_stop_operation(BlockBase *bb)

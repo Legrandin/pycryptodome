@@ -6,6 +6,7 @@ enable_testing()
 cmake_print_variables(CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION CMAKE_SIZEOF_VOID_P SSE)
 
 option(SSE "Enable SSE instructions on Intel targets" ON)
+option(AESNI "Enable AESNI instructions on Intel targets" ON)
 
 if (DEFINED ENV{PYTHON})
     set(PYTHON $ENV{PYTHON})
@@ -62,9 +63,14 @@ else()
     if (SSE)
 	message(STATUS "Using SSE instructions")
         add_compile_definitions(HAVE_X86INTRIN_H)
-	add_compile_definitions(HAVE_WMMINTRIN_H)
 	add_compile_definitions(HAVE_TMMINTRIN_H)
 	add_compile_options(-mssse3 -mpclmul)
+    endif()
+    if (SSE OR AESNI)
+	add_compile_definitions(HAVE_WMMINTRIN_H)
+    endif()
+    if (AESNI)
+	add_compile_options(-maes)
     endif()
 endif()
 
@@ -177,3 +183,7 @@ add_test(NAME test_ed25519 COMMAND test_ed25519)
 # ed448
 add_executable(test_ed448 test_ed448.c ../ed448.c $<TARGET_OBJECTS:mont>)
 add_test(NAME test_ed448 COMMAND test_ed448)
+
+# aesni
+add_executable(test_aesni test_aesni.c ../AESNI.c)
+add_test(NAME test_aesni COMMAND test_aesni)
