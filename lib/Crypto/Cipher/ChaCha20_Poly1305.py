@@ -63,8 +63,6 @@ class ChaCha20Poly1305Cipher(object):
 
         See also `new()` at the module level."""
 
-        self.nonce = _copy_bytes(None, None, nonce)
-
         self._next = ("update", "encrypt", "decrypt", "digest",
                       "verify")
 
@@ -316,10 +314,10 @@ def new(**kwargs):
         nonce = get_random_bytes(12)
 
     if len(nonce) in (8, 12):
-        pass
+        chacha20_poly1305_nonce = nonce
     elif len(nonce) == 24:
         key = _HChaCha20(key, nonce[:16])
-        nonce = b'\x00\x00\x00\x00' + nonce[16:]
+        chacha20_poly1305_nonce = b'\x00\x00\x00\x00' + nonce[16:]
     else:
         raise ValueError("Nonce must be 8, 12 or 24 bytes long")
 
@@ -329,7 +327,9 @@ def new(**kwargs):
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
-    return ChaCha20Poly1305Cipher(key, nonce)
+    cipher = ChaCha20Poly1305Cipher(key, chacha20_poly1305_nonce)
+    cipher.nonce = _copy_bytes(None, None, nonce)
+    return cipher
 
 
 # Size of a key (in bytes)

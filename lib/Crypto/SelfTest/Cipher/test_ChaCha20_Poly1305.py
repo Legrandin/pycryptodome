@@ -37,7 +37,6 @@ from Crypto.Util.py3compat import tobytes
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Hash import SHAKE128
 
-from Crypto.Util._file_system import pycryptodome_filename
 from Crypto.Util.strxor import strxor
 
 
@@ -326,6 +325,13 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
 
 class XChaCha20Poly1305Tests(unittest.TestCase):
 
+    def test_nonce(self):
+        # Nonce can only be 24 bytes
+        cipher = ChaCha20_Poly1305.new(key=b'Y' * 32,
+                                       nonce=b'H' * 24)
+        self.assertEqual(len(cipher.nonce), 24)
+        self.assertEqual(cipher.nonce, b'H' * 24)
+
     def test_encrypt(self):
         # From https://tools.ietf.org/html/draft-arciszewski-xchacha-03
         # Section A.3.1
@@ -599,7 +605,7 @@ class TestVectorsRFC(unittest.TestCase):
         )
     ]
 
-    test_vectors = [[unhexlify(x.replace(" ","").replace(":","")) for x in tv] for tv in test_vectors_hex]
+    test_vectors = [[unhexlify(x.replace(" ", "").replace(":", "")) for x in tv] for tv in test_vectors_hex]
 
     def runTest(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:

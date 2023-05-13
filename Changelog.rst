@@ -8,6 +8,10 @@ New features
 ---------------
 * Added support for DER BOOLEAN encodings.
 
+  Resolved issues
+---------------
+* GH#722: ``nonce`` attribute was not correctly set for XChaCha20_Poly1305 ciphers. Thanks to Liam Haber.
+
 3.17.0 (29 January 2023)
 ++++++++++++++++++++++++++
 
