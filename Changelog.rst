@@ -11,6 +11,7 @@ New features
   Resolved issues
 ---------------
 * GH#722: ``nonce`` attribute was not correctly set for XChaCha20_Poly1305 ciphers. Thanks to Liam Haber.
+* GH#739: OID encoding for arc 2 didn't accept children larger than 39. Thanks to James.
 
 3.17.0 (29 January 2023)
 ++++++++++++++++++++++++++

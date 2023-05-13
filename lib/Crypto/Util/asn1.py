@@ -34,7 +34,8 @@ __all__ = ['DerObject', 'DerInteger', 'DerBoolean', 'DerOctetString',
 # - https://letsencrypt.org/docs/a-warm-welcome-to-asn1-and-der/
 # - https://www.zytrax.com/tech/survival/asn1.html
 # - https://www.oss.com/asn1/resources/books-whitepapers-pubs/larmouth-asn1-book.pdf
-
+# - https://www.itu.int/ITU-T/studygroups/com17/languages/X.690-0207.pdf
+# - https://misc.daniel-marschall.de/asn.1/oid-converter/online.php
 
 def _is_number(x, only_non_negative=False):
     test = 0
@@ -747,19 +748,25 @@ class DerObjectId(DerObject):
         binary string."""
 
         comps = [int(x) for x in self.value.split(".")]
+
         if len(comps) < 2:
             raise ValueError("Not a valid Object Identifier string")
-        self.payload = bchr(40*comps[0]+comps[1])
-        for v in comps[2:]:
-            if v == 0:
-                enc = [0]
-            else:
-                enc = []
-                while v:
-                    enc.insert(0, (v & 0x7F) | 0x80)
-                    v >>= 7
-                enc[-1] &= 0x7F
-            self.payload += b''.join([bchr(x) for x in enc])
+        if comps[0] > 2:
+            raise ValueError("First component must be 0, 1 or 2")
+        if comps[0] < 2 and comps[1] > 39:
+            raise ValueError("Second component must be 39 at most")
+
+        subcomps = [40 * comps[0] + comps[1]] + comps[2:]
+
+        encoding = []
+        for v in reversed(subcomps):
+            encoding.append(v & 0x7F)
+            v >>= 7
+            while v:
+                encoding.append((v & 0x7F) | 0x80)
+                v >>= 7
+
+        self.payload = b''.join([bchr(x) for x in reversed(encoding)])
         return DerObject.encode(self)
 
     def decode(self, der_encoded, strict=False):
@@ -786,15 +793,27 @@ class DerObjectId(DerObject):
 
         # Derive self.value from self.payload
         p = BytesIO_EOF(self.payload)
-        comps = [str(x) for x in divmod(p.read_byte(), 40)]
+
+        subcomps = []
         v = 0
         while p.remaining_data():
             c = p.read_byte()
-            v = v*128 + (c & 0x7F)
+            v = (v << 7) + (c & 0x7F)
             if not (c & 0x80):
-                comps.append(str(v))
+                subcomps.append(v)
                 v = 0
-        self.value = '.'.join(comps)
+
+        if len(subcomps) == 0:
+            raise ValueError("Empty payload")
+
+        if subcomps[0] < 40:
+            subcomps[:1] = [0, subcomps[0]]
+        elif subcomps[0] < 80:
+            subcomps[:1] = [1, subcomps[0] - 40]
+        else:
+            subcomps[:1] = [2, subcomps[0] - 80]
+
+        self.value = ".".join([str(x) for x in subcomps])
 
 
 class DerBitString(DerObject):
