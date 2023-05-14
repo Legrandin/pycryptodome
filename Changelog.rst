@@ -7,6 +7,7 @@ Changelog
 New features
 ---------------
 * Added support for DER BOOLEAN encodings.
+* The library now compiles on Windows ARM64. Thanks to Niyas Sait.
 
   Resolved issues
 ---------------

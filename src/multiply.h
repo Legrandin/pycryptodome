@@ -15,10 +15,18 @@
     oh = (uint64_t)(pr >> 64);  \
     } while (0)
 
-#elif defined(_MSC_VER) && defined(_WIN64)
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(__x86_64__))
 
-#include <windows.h>
-#define DP_MULT(a,b,ol,oh) do { ol = UnsignedMultiply128(a,b,&oh); } while (0)
+#include <intrin.h>
+#define DP_MULT(a,b,ol,oh) do { ol = _umul128(a,b,&oh); } while (0)
+
+#elif defined(_MSC_VER) && defined(_M_ARM64)
+
+#include <intrin.h>
+#define DP_MULT(a,b,ol,oh) do { \
+    ol = ((uint64_t)(a))*(b);   \
+    oh = __umulh(a, b);         \
+} while (0)
 
 #else
 
