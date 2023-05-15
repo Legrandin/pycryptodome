@@ -481,7 +481,7 @@ class DerSequence(DerObject):
 
         """
 
-        def __init__(self, startSeq=None, implicit=None):
+        def __init__(self, startSeq=None, implicit=None, explicit=None):
                 """Initialize the DER object as a SEQUENCE.
 
                 :Parameters:
@@ -489,12 +489,19 @@ class DerSequence(DerObject):
                     A sequence whose element are either integers or
                     other DER objects.
 
-                  implicit : integer
-                    The IMPLICIT tag to use for the encoded object.
+                  implicit : integer or byte
+                    The IMPLICIT tag number (< 0x1F) to use for the encoded object.
                     It overrides the universal tag for SEQUENCE (16).
+                    It cannot be combined with the ``explicit`` parameter.
+                    By default, there is no IMPLICIT tag.
+
+                  explicit : integer or byte
+                    The EXPLICIT tag number (< 0x1F) to use for the encoded object.
+                    It cannot be combined with the ``implicit`` parameter.
+                    By default, there is no EXPLICIT tag.
                 """
 
-                DerObject.__init__(self, 0x10, b'', implicit, True)
+                DerObject.__init__(self, 0x10, b'', implicit, True, explicit)
                 if startSeq is None:
                     self._seq = []
                 else:
