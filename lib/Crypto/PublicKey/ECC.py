@@ -1396,8 +1396,8 @@ def _import_rfc5915_der(encoded, passphrase, curve_oid=None):
     d = Integer.from_bytes(scalar_bytes)
 
     # Decode public key (if any)
-    if len(private_key) == 4:
-        public_key_enc = DerBitString(explicit=1).decode(private_key[3]).value
+    if len(private_key) > 2:
+        public_key_enc = DerBitString(explicit=1).decode(private_key[-1]).value
         public_key = _import_public_der(public_key_enc, curve_oid=curve_oid)
         point_x = public_key.pointQ.x
         point_y = public_key.pointQ.y

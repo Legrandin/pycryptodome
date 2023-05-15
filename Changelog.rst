@@ -13,6 +13,7 @@ New features
 ---------------
 * GH#722: ``nonce`` attribute was not correctly set for XChaCha20_Poly1305 ciphers. Thanks to Liam Haber.
 * GH#739: OID encoding for arc 2 didn't accept children larger than 39. Thanks to James.
+* Correctly check that the scalar matches the point when importing an ECC private key.
 
 3.17.0 (29 January 2023)
 ++++++++++++++++++++++++++

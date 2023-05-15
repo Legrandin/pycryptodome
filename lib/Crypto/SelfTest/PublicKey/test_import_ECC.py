@@ -183,6 +183,16 @@ class TestImport(unittest.TestCase):
     def test_empty(self):
         self.assertRaises(ValueError, ECC.import_key, b"")
 
+    def test_mismatch(self):
+        # The private key does not match the public key
+        mismatch = """-----BEGIN PRIVATE KEY-----
+MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJChZANiAAQarFRaqflo
+I+d61SRvU8Za2EurxtW20eZzca7dnNYMYf3boIkDuAUU7FfO7l0/4iGzzvfUinng
+o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=
+-----END PRIVATE KEY-----"""
+        self.assertRaises(ValueError, ECC.import_key, mismatch)
+
 
 class TestImport_P192(unittest.TestCase):
 
