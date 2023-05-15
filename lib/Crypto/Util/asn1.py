@@ -689,6 +689,47 @@ class DerOctetString(DerObject):
         DerObject.__init__(self, 0x04, value, implicit, False)
 
 
+class _DerGeneralString(DerOctetString):
+    _codec = 'utf-32-be'  # should this be an abstractproperty?
+    _asn1id = 0x1b
+    def __init__(self, value='', implicit=None, explicit=None):
+        DerObject.__init__(self, self._asn1id, str.encode(value, self._codec), implicit, False, explicit)
+        self.value = value
+    def decode(self, der_encoded, strict=False):
+        DerObject.decode(self, der_encoded, strict)
+        self.value = bytes.decode(self.payload, self._codec)
+        return self
+
+
+class _DerRestrictedString(_DerGeneralString):
+    def __init__(self, value='', *a, **k):
+        self._check_string(value)
+        super().__init__(value, *a, **k)
+    def _check_string(self, s):
+        for c in (c for c in s if c not in self._alphabet):
+            raise ValueError("%s not allowed in %s" % (repr(c), self.__class__.__name__))
+    # TODO raise ValueError if any(c not in self._alphabet ...)
+
+
+class DerIA5String(_DerGeneralString):
+    _codec = 'ascii'
+    _asn1id = 0x16
+
+
+class DerUTF8String(_DerGeneralString):
+    _codec = 'utf-8'
+    _asn1id = 0x0c
+
+
+class DerUniversalString(_DerGeneralString):
+    _asn1id = 0x1c
+
+
+class DerPrintableString(DerIA5String, _DerRestrictedString):
+    _asn1id = 0x13
+    _alphabet = set(" '()+,-./:=?01234566789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+
+
 class DerNull(DerObject):
     """Class to model a DER NULL element."""
 
