@@ -41,6 +41,7 @@ MODE_EAX = 9        #: :ref:`eax_mode`
 MODE_SIV = 10       #: Synthetic Initialization Vector (:ref:`siv_mode`)
 MODE_GCM = 11       #: Galois Counter Mode (:ref:`gcm_mode`)
 MODE_OCB = 12       #: Offset Code Book (:ref:`ocb_mode`)
+MODE_WRAP = 13      #: NIST Key Wrap (:ref:`wrap_mode`)
 
 
 _cproto = """

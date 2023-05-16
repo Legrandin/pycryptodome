@@ -35,14 +35,16 @@ from Crypto.Cipher._mode_eax import _create_eax_cipher
 from Crypto.Cipher._mode_siv import _create_siv_cipher
 from Crypto.Cipher._mode_gcm import _create_gcm_cipher
 from Crypto.Cipher._mode_ocb import _create_ocb_cipher
+from Crypto.Cipher._mode_wrap import _create_wrap_cipher
 
-_modes = { 1:_create_ecb_cipher,
-           2:_create_cbc_cipher,
-           3:_create_cfb_cipher,
-           5:_create_ofb_cipher,
-           6:_create_ctr_cipher,
-           7:_create_openpgp_cipher,
-           9:_create_eax_cipher
+_modes = {  1:_create_ecb_cipher,
+            2:_create_cbc_cipher,
+            3:_create_cfb_cipher,
+            5:_create_ofb_cipher,
+            6:_create_ctr_cipher,
+            7:_create_openpgp_cipher,
+            9:_create_eax_cipher,
+           13:_create_wrap_cipher
            }
 
 _extra_modes = { 8:_create_ccm_cipher,

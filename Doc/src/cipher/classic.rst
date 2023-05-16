@@ -374,3 +374,11 @@ A variant of CFB, with two differences:
 
 Like for CTR, an OpenPGP cipher object has a read-only attribute :attr:`iv`.
 
+.. _wrap_mode:
+
+Key Wrap mode
+--------
+The `Key Wrap Algorithm <https://tools.ietf.org/html/rfc4880>`_,
+defined in `NIST SP 800-38F, section 6 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-38F.pdf>`_.
+It is a historical precursor to SIV mode, allowing securely wrapping multiple
+keys by the same KEK without needing a nonce.
