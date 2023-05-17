@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-latest, macos-10.15]
+        os: [ubuntu-20.04, windows-latest, macos-12]
 
     if: github.actor == 'Legrandin'
 
@@ -79,7 +79,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-latest, macos-10.15]
+        os: [ubuntu-20.04, windows-latest, macos-12]
         python-version: ['3.5']
 
     if: github.actor == 'Legrandin'
@@ -117,7 +117,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-20.04, windows-latest, macos-10.15 ]
+        os: [ ubuntu-20.04, windows-latest, macos-12 ]
         arch: [ multi-arch ]
         # Python 2 on Windows requires manual toolchain setup (per-arch) due to newer MSVC used here
         exclude:
