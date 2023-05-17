@@ -1,7 +1,7 @@
 Changelog
 =========
 
-3.18.0 (under development)
+3.18.0 (18 May 2023)
 ++++++++++++++++++++++++++
 
 New features
