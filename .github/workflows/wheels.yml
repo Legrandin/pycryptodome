@@ -136,7 +136,7 @@ jobs:
 
       - name: Install MSVC
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@a742a854f54111d83b78e97091b5d85ccdaa3e89
+        uses: ilammy/msvc-dev-cmd@v1
         with:
           toolset: 14.0
           arch: ${{ matrix.arch }}

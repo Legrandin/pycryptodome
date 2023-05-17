@@ -58,7 +58,7 @@ jobs:
 
     - name: Install MSVC
       if: matrix.os == 'windows-latest' && matrix.python-version == '2.7'
-      uses: ilammy/msvc-dev-cmd@a742a854f54111d83b78e97091b5d85ccdaa3e89
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Prepare environmental variables
       if: matrix.os == 'windows-latest' && matrix.python-version == '2.7'
@@ -125,7 +125,7 @@ jobs:
       with:
         python-version: "3.11"
     - name: Install MSVC
-      uses: ilammy/msvc-dev-cmd@a742a854f54111d83b78e97091b5d85ccdaa3e89
+      uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: ${{ matrix.arch }}
     - name: Test Windows 32 and 64
