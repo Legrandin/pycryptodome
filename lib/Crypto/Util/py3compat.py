@@ -92,7 +92,7 @@ if sys.version_info[0] == 2:
 
     from sys import maxint
 
-    uchr = unichr
+    from builtins import unichr
 
     iter_range = xrange
 
@@ -144,8 +144,8 @@ else:
     from io import BytesIO
     from io import StringIO
     from sys import maxsize as maxint
+    from builtins import chr as unichr
 
-    uchr = chr
     iter_range = range
 
     def is_native_int(x):
