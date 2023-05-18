@@ -711,7 +711,7 @@ class _DerRestrictedString:
         self._check_string(value)
         super().__init__(value, *a, **k)
     def _check_string(self, s):
-        for c, in self._nonalphabet.findall(s)
+        for c in self._nonalphabet.findall(s):
             raise ValueError("%s not allowed in %s" % (repr(c), self.__class__.__name__))
     @abstractproperty
     def _nonalphabet(self):
@@ -738,6 +738,7 @@ class DerPrintableString(DerIA5String, _DerRestrictedString):
 
 
 class DerBMPString(DerGeneralString, _DerRestrictedString):
+    _codec = 'utf-16-be'
     _asn1id = 0x1e
     _nonalphabet = re.compile(r"(?s:(?![%s-%s]).)" % (unichr(0x0000), unichr(0xffff)))
 
