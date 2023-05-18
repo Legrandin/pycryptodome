@@ -689,8 +689,8 @@ class DerOctetString(DerObject):
         DerObject.__init__(self, 0x04, value, implicit, False)
 
 
-class _DerGeneralString(DerOctetString):
-    _codec = 'utf-32-be'  # should this be an abstractproperty?
+class DerGeneralString(DerOctetString):
+    _codec = 'utf-32-be'
     _asn1id = 0x1b
     def __init__(self, value='', implicit=None, explicit=None):
         DerObject.__init__(self, self._asn1id, str.encode(value, self._codec), implicit, False, explicit)
@@ -701,7 +701,7 @@ class _DerGeneralString(DerOctetString):
         return self
 
 
-class _DerRestrictedString(_DerGeneralString):
+class _DerRestrictedString(DerGeneralString):
     def __init__(self, value='', *a, **k):
         self._check_string(value)
         super().__init__(value, *a, **k)
