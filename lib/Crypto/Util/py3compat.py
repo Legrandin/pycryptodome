@@ -109,6 +109,8 @@ if sys.version_info[0] == 2:
 
     ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
 
+    from abc import abstractproperty
+
     FileNotFoundError = IOError
 
 else:
@@ -159,12 +161,9 @@ else:
 
     from abc import ABC
 
-    if sys.version_info < (3, 3):
-        from abc import abstractproperty
-    else:
-        from abc import abstractmethod
-        def abstractproperty(f):
-            return property(abstractmethod(f))
+    from abc import abstractmethod
+    def abstractproperty(f):
+        return property(abstractmethod(f))
 
     FileNotFoundError = FileNotFoundError
 
