@@ -92,7 +92,7 @@ if sys.version_info[0] == 2:
 
     from sys import maxint
 
-    from builtins import unichr
+    uchr = unichr
 
     iter_range = xrange
 
