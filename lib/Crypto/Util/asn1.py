@@ -701,7 +701,7 @@ class DerGeneralString(DerOctetString):
         return self
 
 
-class _DerRestrictedString(DerGeneralString):
+class _DerRestrictedString:
     def __init__(self, value='', *a, **k):
         self._check_string(value)
         super().__init__(value, *a, **k)
