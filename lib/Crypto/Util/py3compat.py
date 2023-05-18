@@ -92,6 +92,8 @@ if sys.version_info[0] == 2:
 
     from sys import maxint
 
+    from builtins import unichr
+
     iter_range = xrange
 
     def is_native_int(x):
@@ -140,6 +142,7 @@ else:
     from io import BytesIO
     from io import StringIO
     from sys import maxsize as maxint
+    from builtins import chr as unichr
 
     iter_range = range
 
@@ -155,6 +158,13 @@ else:
                 isinstance(x, memoryview)
 
     from abc import ABC
+
+    if sys.version_info < (3, 3):
+        from abc import abstractproperty
+    else:
+        from abc import abstractmethod
+        def abstractproperty(f):
+            return property(abstractmethod(f))
 
     FileNotFoundError = FileNotFoundError
 

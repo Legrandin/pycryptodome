@@ -21,8 +21,9 @@
 # ===================================================================
 
 import struct
+import re
 
-from Crypto.Util.py3compat import byte_string, bchr, bord
+from Crypto.Util.py3compat import byte_string, bchr, bord, abstractproperty, unichr
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -702,13 +703,19 @@ class DerGeneralString(DerOctetString):
 
 
 class _DerRestrictedString:
+    """Mixin type for DerGeneralString to restrict its character set.
+
+    _nonalphabet must be a re.Pattern that matches any forbidden character.
+    """
     def __init__(self, value='', *a, **k):
         self._check_string(value)
         super().__init__(value, *a, **k)
     def _check_string(self, s):
-        for c in (c for c in s if c not in self._alphabet):
+        for c, in self._nonalphabet.findall(s)
             raise ValueError("%s not allowed in %s" % (repr(c), self.__class__.__name__))
-    # TODO raise ValueError if any(c not in self._alphabet ...)
+    @abstractproperty
+    def _nonalphabet(self):
+        return NotImplemented
 
 
 class DerIA5String(DerGeneralString):
@@ -727,7 +734,12 @@ class DerUniversalString(DerGeneralString):
 
 class DerPrintableString(DerIA5String, _DerRestrictedString):
     _asn1id = 0x13
-    _alphabet = set(" '()+,-./:=?01234566789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+    _nonalphabet = re.compile(r"(?s:(?![ '()+,\-./0-9:=?a-zA-Z]).)")
+
+
+class DerBMPString(DerGeneralString, _DerRestrictedString):
+    _asn1id = 0x1e
+    _nonalphabet = re.compile(r"(?s:(?![%s-%s]).)" % (unichr(0x0000), unichr(0xffff)))
 
 
 class DerNull(DerObject):
