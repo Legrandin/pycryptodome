@@ -711,17 +711,17 @@ class _DerRestrictedString:
     # TODO raise ValueError if any(c not in self._alphabet ...)
 
 
-class DerIA5String(_DerGeneralString):
+class DerIA5String(DerGeneralString):
     _codec = 'ascii'
     _asn1id = 0x16
 
 
-class DerUTF8String(_DerGeneralString):
+class DerUTF8String(DerGeneralString):
     _codec = 'utf-8'
     _asn1id = 0x0c
 
 
-class DerUniversalString(_DerGeneralString):
+class DerUniversalString(DerGeneralString):
     _asn1id = 0x1c
 
 
