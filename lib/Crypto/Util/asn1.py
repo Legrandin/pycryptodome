@@ -23,7 +23,7 @@
 import struct
 import re
 
-from Crypto.Util.py3compat import byte_string, bchr, bord, abstractproperty, unichr
+from Crypto.Util.py3compat import byte_string, bchr, bord, abstractproperty, uchr
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
@@ -740,7 +740,7 @@ class DerPrintableString(DerIA5String, _DerRestrictedString):
 class DerBMPString(DerGeneralString, _DerRestrictedString):
     _codec = 'utf-16-be'
     _asn1id = 0x1e
-    _nonalphabet = re.compile(r"(?s:(?![%s-%s]).)" % (unichr(0x0000), unichr(0xffff)))
+    _nonalphabet = re.compile(r"(?s:(?![%s-%s]).)" % (uchr(0x0000), uchr(0xffff)))
 
 
 class DerNull(DerObject):
