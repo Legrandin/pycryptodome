@@ -28,7 +28,9 @@ from Crypto.Util.py3compat import byte_string, bchr, bord, abstractproperty, uch
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 __all__ = ['DerObject', 'DerInteger', 'DerBoolean', 'DerOctetString',
-           'DerNull', 'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf']
+           'DerNull', 'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf',
+           'DerGeneralString', 'DerIA5String', 'DerUTF8String',
+           'DerUniversalString', 'DerPrintableString', 'DerBMPString']
 
 # Useful references:
 # - https://luca.ntop.org/Teaching/Appunti/asn1.html
