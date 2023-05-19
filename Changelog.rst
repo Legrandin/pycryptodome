@@ -9,7 +9,7 @@ New features
 * Added support for DER BOOLEAN encodings.
 * The library now compiles on Windows ARM64. Thanks to Niyas Sait.
 
-  Resolved issues
+Resolved issues
 ---------------
 * GH#722: ``nonce`` attribute was not correctly set for XChaCha20_Poly1305 ciphers. Thanks to Liam Haber.
 * GH#728: Workaround for a possible x86 emulator bug in Windows for ARM64.
