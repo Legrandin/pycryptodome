@@ -742,7 +742,7 @@ class DerPrintableString(DerIA5String, _DerRestrictedString):
 class DerBMPString(DerUniversalString, _DerRestrictedString):
     _codec = 'utf-16-be'
     _asn1id = 0x1e
-    _nonalphabet = re.compile(r"(?s:(?![%s-%s]).)" % (uchr(0x0000), uchr(0xffff)))
+    _nonalphabet = re.compile(r"(?s)(?![%s-%s])." % (uchr(0x0000), uchr(0xffff)))
 
 
 class DerNull(DerObject):
