@@ -144,7 +144,7 @@ else:
     from io import BytesIO
     from io import StringIO
     from sys import maxsize as maxint
-    from builtins import chr as unichr
+    from builtins import chr as uchr
 
     iter_range = range
 
