@@ -736,7 +736,7 @@ class DerUniversalString(DerGeneralString):
 
 class DerPrintableString(DerIA5String, _DerRestrictedString):
     _asn1id = 0x13
-    _nonalphabet = re.compile(r"(?s:(?![ '()+,\-./0-9:=?a-zA-Z]).)")
+    _nonalphabet = re.compile(r"(?s)(?![ '()+,\-./0-9:=?a-zA-Z]).")
 
 
 class DerBMPString(DerUniversalString, _DerRestrictedString):
