@@ -1,5 +1,5 @@
 from types import ModuleType
-from typing import Optional, Callable, Tuple, Union, Dict, Any, ByteString, overload
+from typing import Optional, Callable, Tuple, Union, Dict, Any, overload
 from typing_extensions import Literal
 
 RNG = Callable[[int], bytes]
@@ -26,15 +26,15 @@ def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes]=None) -
 def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str]) -> None: ...
 
 @overload
-def SP800_108_Counter(master: ByteString,
+def SP800_108_Counter(master: bytes | bytearray,
                       key_len: int,
                       prf: PRF,
                       num_keys: Literal[None] = None,
-                      label: ByteString = b'', context: ByteString = b'') -> bytes: ...
+                      label: bytes | bytearray = b'', context: bytes | bytearray = b'') -> bytes: ...
 
 @overload
-def SP800_108_Counter(master: ByteString,
+def SP800_108_Counter(master: bytes | bytearray,
                       key_len: int,
                       prf: PRF,
                       num_keys: int,
-                      label: ByteString = b'', context: ByteString = b'') -> Tuple[bytes]: ...
+                      label: bytes | bytearray = b'', context: bytes | bytearray = b'') -> Tuple[bytes]: ...
