@@ -291,7 +291,6 @@ Example (decryption)::
     >>> import json
     >>> from base64 import b64decode
     >>> from Crypto.Cipher import AES
-    >>> from Crypto.Util.Padding import unpad
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
