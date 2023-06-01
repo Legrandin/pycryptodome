@@ -2269,9 +2269,9 @@ class TestImport_Ed25519(unittest.TestCase):
     def test_import_openssh_public(self):
         key_file = load_file("ecc_ed25519_public_openssh.txt")
         key = ECC._import_openssh_public(key_file)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
         key = ECC.import_key(key_file)
-        self.failIf(key.has_private())
+        self.assertFalse(key.has_private())
 
     def test_import_openssh_private_clear(self):
         key_file = load_file("ecc_ed25519_private_openssh.pem")
