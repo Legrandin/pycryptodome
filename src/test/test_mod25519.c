@@ -188,6 +188,8 @@ void test_tole25p5_to_behex(void)
     convert_le25p5_to_behex(&out, in);
     res = strcmp(out, "0000000000000000000000000000000000000000000000000000000000000000");
     assert(res == 0);
+
+    free(out);
 }
 
 void test_reduce(void)

@@ -175,7 +175,7 @@ void test_ec_full_double(void)
     mont_context_free(ctx);
 }
 
-void test_ec_mix_add(void)
+void test_ec_mix_add_1(void)
 {
     Workplace *wp;
     MontContext *ctx;
@@ -219,9 +219,40 @@ void test_ec_mix_add(void)
     mont_to_bytes(buffer, 32, z1, ctx);
     assert(0 == memcmp(buffer, "\x7f\x3f\xac\x7e\x49\x3e\x61\x4b\x52\xd8\x49\x31\x8b\x57\xa7\xec\x89\x50\x27\xdb\x75\xbe\xa6\x61\x3c\x54\x42\x89\xb3\x9f\x31\x46", 32));
 
+    free(x1);
+    free(y1);
+    free(z1);
+    free(x2);
+    free(y2);
+
+    free(b);
+    free_workplace(wp);
+    mont_context_free(ctx);
+}
+
+void test_ec_mix_add_2(void)
+{
+    Workplace *wp;
+    MontContext *ctx;
+    const uint8_t modulus[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01,
+                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+                                 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint64_t *x1, *y1, *z1;
+    uint64_t *x2, *y2;
+    uint64_t *b;
+    uint8_t buffer[32];
+
+    mont_context_init(&ctx, modulus, sizeof(modulus));
+    wp = new_workplace(ctx);
+    mont_from_bytes(&b, (uint8_t*)"\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b", 32, ctx);
+
     /* Projective input point is point-at-infinity */
+    mont_number(&x1, 1, ctx);
     mont_set(x1, 0, ctx);
+    mont_number(&y1, 1, ctx);
     mont_set(y1, 1, ctx);
+    mont_number(&z1, 1, ctx);
     mont_set(z1, 0, ctx);
 
     mont_from_bytes(&x2, (uint8_t*)"\xf2\x49\x10\x4d\x0e\x6f\x8f\x29\xe6\x01\x62\x77\x78\x0c\xda\x84\xdc\x84\xb8\x3b\xc3\xd8\x99\xdf\xb7\x36\xca\x08\x31\xfb\xe8\xcf", 32, ctx);
@@ -234,6 +265,79 @@ void test_ec_mix_add(void)
     assert(0 == memcmp(buffer, (uint8_t*)"\xf2\x49\x10\x4d\x0e\x6f\x8f\x29\xe6\x01\x62\x77\x78\x0c\xda\x84\xdc\x84\xb8\x3b\xc3\xd8\x99\xdf\xb7\x36\xca\x08\x31\xfb\xe8\xcf", 32));
     mont_to_bytes(buffer, 32, y1, ctx);
     assert(0 == memcmp(buffer, (uint8_t*)"\xb5\x7e\x12\xfc\xdb\x03\x1f\x59\xca\xb8\x1b\x1c\x6b\x1e\x1c\x07\xe4\x51\x2e\x52\xce\x83\x2f\x1a\x0c\xed\xef\xff\x8b\x43\x40\xe9", 32));
+
+    free(x1);
+    free(y1);
+    free(z1);
+    free(x2);
+    free(y2);
+
+    free(b);
+    free_workplace(wp);
+    mont_context_free(ctx);
+}
+
+void test_ec_mix_add_3(void)
+{
+    Workplace *wp;
+    MontContext *ctx;
+    const uint8_t modulus[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01,
+                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+                                 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint64_t *x1, *y1, *z1;
+    uint64_t *x2, *y2;
+    uint64_t *b;
+    uint8_t buffer[32];
+
+    mont_context_init(&ctx, modulus, sizeof(modulus));
+    wp = new_workplace(ctx);
+    mont_from_bytes(&b, (uint8_t*)"\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b", 32, ctx);
+
+    /* Affine and projective are actually the same point (doubling) */
+    mont_from_bytes(&x1, (uint8_t*)"\xc6\x4c\x90\xad\x8d\x5c\x1d\x96\xd6\x4b\x63\x46\x4a\x8b\x57\x91\xbf\x48\xa6\xb4\xb9\xbc\xd6\xad\x79\xc6\x3a\x13\xbf\xb7\x78\x5b", 32, ctx);
+    mont_from_bytes(&y1, (uint8_t*)"\xe4\x98\x64\xd0\x22\x85\x75\x8a\x11\x79\x68\x2e\x06\x92\x3d\xf7\x62\xa8\x85\xea\xda\xe6\xd9\xb0\x5a\x4f\x0c\x43\x1d\x51\x77\xe4", 32, ctx);
+    mont_from_bytes(&z1, (uint8_t*)"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0a", 32, ctx);
+
+    mont_from_bytes(&x2, (uint8_t*)"\xfa\x3a\xdb\x43\xa7\xbc\x69\x5c\xc8\xa1\x23\x87\x07\x74\x55\x8e\x93\x20\xdd\x79\x5f\x5f\xaf\x11\x58\xfa\x39\x01\xf9\x92\x58\xd5", 32, ctx);
+    mont_from_bytes(&y2, (uint8_t*)"\xe3\xa8\xd6\xe0\xd0\x40\x8b\xc1\xce\x8c\x24\x04\x9a\x41\xd2\xff\x23\x77\x40\x98\x49\x17\x15\xc4\xd5\xd4\xb4\x6d\x1c\x88\x25\x96", 32, ctx);
+
+    ec_mix_add(x1, y1, z1, x1, y1, z1, x2, y2, b, wp, ctx);
+
+    mont_to_bytes(buffer, 32, x1, ctx);
+    assert(0 == memcmp(buffer, "\x96\x0f\x82\x08\x3a\x75\xf9\xaf\x9a\xab\x06\x05\x27\x0e\x2d\xa8\xb3\x20\x7e\x8d\xf2\xf0\x00\x4d\xb3\x19\x16\xc9\xea\xc5\x0f\x02", 32));
+    mont_to_bytes(buffer, 32, y1, ctx);
+    assert(0 == memcmp(buffer, "\x20\xe6\xe3\x02\xc6\x57\xfa\x95\x30\x39\xa9\x25\xf1\x9d\xc3\xcb\x0f\x59\xa7\x01\x46\xc8\xac\xe2\x09\x54\x3a\x25\x2a\x18\x96\xba", 32));
+    mont_to_bytes(buffer, 32, z1, ctx);
+    assert(0 == memcmp(buffer, "\xb4\x2f\x0b\xc1\x61\x03\x91\xe4\x11\xf1\x4c\x65\xef\x13\xd4\x57\xb1\x41\xb2\x54\xc3\x86\x08\xea\xc6\x5c\xf1\x61\x9d\x37\x6b\x77", 32));
+
+    free(x1);
+    free(y1);
+    free(z1);
+    free(x2);
+    free(y2);
+
+    free(b);
+    free_workplace(wp);
+    mont_context_free(ctx);
+}
+
+void test_ec_mix_add_4(void)
+{
+    Workplace *wp;
+    MontContext *ctx;
+    const uint8_t modulus[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01,
+                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+                                 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint64_t *x1, *y1, *z1;
+    uint64_t *x2, *y2;
+    uint64_t *b;
+    uint8_t buffer[32];
+
+    mont_context_init(&ctx, modulus, sizeof(modulus));
+    wp = new_workplace(ctx);
+    mont_from_bytes(&b, (uint8_t*)"\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b", 32, ctx);
 
     /* Affine and projective are actually the same point (doubling) */
     mont_from_bytes(&x1, (uint8_t*)"\xc6\x4c\x90\xad\x8d\x5c\x1d\x96\xd6\x4b\x63\x46\x4a\x8b\x57\x91\xbf\x48\xa6\xb4\xb9\xbc\xd6\xad\x79\xc6\x3a\x13\xbf\xb7\x78\x5b", 32, ctx);
@@ -926,7 +1030,10 @@ void test_ec_ws_neg(void)
 int main(void) {
     test_ec_projective_to_affine();
     test_ec_full_double();
-    test_ec_mix_add();
+    test_ec_mix_add_1();
+    test_ec_mix_add_2();
+    test_ec_mix_add_3();
+    test_ec_mix_add_4();
     test_ec_full_add();
     test_ec_scalar();
     test_ec_scalar_g_p256();

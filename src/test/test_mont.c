@@ -424,6 +424,8 @@ void test_mod_select(void)
     res = mod_select(f, d, e, 0, ctx->words);
     assert(res == 0);
     assert(memcmp(e, f, sizeof f) == 0);
+
+    mont_context_free(ctx);
 }
 
 int main(void) {
