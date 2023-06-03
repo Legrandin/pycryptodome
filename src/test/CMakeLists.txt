@@ -44,6 +44,8 @@ else()
 	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
 	add_compile_options(-mstackrealign)
     endif()
+    add_compile_options(-fsanitize=undefined)
+    link_libraries(-lubsan)
 endif()
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)

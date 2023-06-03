@@ -101,7 +101,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install libc6-dev-i386
+        sudo apt-get install libc6-dev-i386 libubsan1
     - name: Test Linux x32 and x64
       run: |
         cd src/test
