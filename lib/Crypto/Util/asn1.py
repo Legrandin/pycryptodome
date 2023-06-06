@@ -711,7 +711,7 @@ class _DerRestrictedString:
     """
     def __init__(self, value='', *a, **k):
         self._check_string(value)
-        super().__init__(value, *a, **k)
+        super(self.__class__, self).__init__(value, *a, **k)
     def _check_string(self, s):
         for c in self._nonalphabet.findall(s):
             raise ValueError("%s not allowed in %s" % (repr(c), self.__class__.__name__))
@@ -719,7 +719,7 @@ class _DerRestrictedString:
     def _nonalphabet(self):
         return NotImplemented
     def decode(self, *a, **k):
-        res = super().decode(*a, **k)
+        res = super(self.__class__, self).decode(*a, **k)
         self._check_string(self.value)
         return res
 
