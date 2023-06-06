@@ -39,6 +39,8 @@ from Crypto.Util.py3compat import *
 from Crypto.Util.asn1 import (DerObject, DerSetOf, DerInteger,
                              DerBitString,
                              DerObjectId, DerNull, DerOctetString,
+                             DerGeneralString, DerIA5String, DerUTF8String,
+                             DerUniversalString, DerPrintableString, DerBMPString,
                              DerSequence, DerBoolean)
 
 class DerObjectTests(unittest.TestCase):
@@ -597,6 +599,206 @@ class DerOctetStringTests(unittest.TestCase):
         der = DerOctetString()
         self.assertRaises(ValueError, der.decode, b('\x04\x01\x01\xff'))
 
+
+class DerGeneralStringTests(unittest.TestCase):
+
+    def testInit1(self):
+        der = DerGeneralString(uchr(127))
+        self.assertEqual(der.encode(), b('\x1b\x04\x00\x00\x00\x7f'))
+
+    def testEncode1(self):
+        # Empty string
+        der = DerGeneralString()
+        self.assertEqual(der.encode(), b('\x1b\x00'))
+        # Small payload
+        der = DerGeneralString(uchr(0xFFFFD) + uchr(0x10FFFD))
+        self.assertEqual(der.encode(), b('\x1b\x08\x00\x0f\xff\xfd\x00\x10\xff\xfd'))
+
+    ####
+
+    def testDecode1(self):
+        # Empty string
+        der = DerGeneralString()
+        der.decode(b('\x1b\x00'))
+        self.assertEqual(der.value, '')
+        # Small payload
+        der.decode(b('\x1b\x08\x00\x0f\xff\xfd\x00\x10\xff\xfd'))
+        self.assertEqual(der.value, uchr(0xFFFFD) + uchr(0x10FFFD))
+
+    def testErrDecode1(self):
+        der = DerGeneralString()
+        self.assertRaises(UnicodeDecodeError, der.decode, b('\x1b\x04\xf4\x8f\xbf\xbd'))
+
+
+class DerIA5StringTests(unittest.TestCase):
+
+    def testInit1(self):
+        der = DerIA5String(uchr(127))
+        self.assertEqual(der.encode(), b('\x16\x01\x7f'))
+
+    def testEncode1(self):
+        # Empty string
+        der = DerIA5String()
+        self.assertEqual(der.encode(), b('\x16\x00'))
+        # Small payload
+        der = DerIA5String(uchr(0) + uchr(127))
+        self.assertEqual(der.encode(), b('\x16\x02\x00\x7f'))
+
+    ####
+
+    def testDecode1(self):
+        # Empty string
+        der = DerIA5String()
+        der.decode(b('\x16\x00'))
+        self.assertEqual(der.value, '')
+        # Small payload
+        der.decode(b('\x16\x02\x00\x7f'))
+        self.assertEqual(der.value, uchr(0) + uchr(127))
+
+    def testErrDecode1(self):
+        der = DerIA5String()
+        self.assertRaises(UnicodeDecodeError, der.decode, b('\x16\x01\x80'))
+
+
+class DerUTF8StringTests(unittest.TestCase):
+
+    def testInit1(self):
+        der = DerUTF8String(uchr(127))
+        self.assertEqual(der.encode(), b('\x0c\x01\x7f'))
+
+    def testEncode1(self):
+        # Empty string
+        der = DerUTF8String()
+        self.assertEqual(der.encode(), b('\x0c\x00'))
+        # Small payload
+        der = DerUTF8String(uchr(0xFFFFD) + uchr(0x10FFFD))
+        self.assertEqual(der.encode(), b('\x0c\x08\xf3\xbf\xbf\xbd\xf4\x8f\xbf\xbd'))
+
+    ####
+
+    def testDecode1(self):
+        # Empty string
+        der = DerUTF8String()
+        der.decode(b('\x0c\x00'))
+        self.assertEqual(der.value, '')
+        # Small payload
+        der.decode(b('\x0c\x08\xf3\xbf\xbf\xbd\xf4\x8f\xbf\xbd'))
+        self.assertEqual(der.value, uchr(0xFFFFD) + uchr(0x10FFFD))
+
+    def testErrDecode1(self):
+        der = DerUTF8String()
+        self.assertRaises(UnicodeDecodeError, der.decode, b('\x0c\x08\x00\x0f\xff\xfd\x00\x10\xff\xfd'))
+
+
+class DerUniversalStringTests(unittest.TestCase):
+
+    def testInit1(self):
+        der = DerUniversalString(uchr(127))
+        self.assertEqual(der.encode(), b('\x1c\x04\x00\x00\x00\x7f'))
+
+    def testEncode1(self):
+        # Empty string
+        der = DerUniversalString()
+        self.assertEqual(der.encode(), b('\x1c\x00'))
+        # Small payload
+        der = DerUniversalString(uchr(0xFFFFD) + uchr(0x10FFFD))
+        self.assertEqual(der.encode(), b('\x1c\x08\x00\x0f\xff\xfd\x00\x10\xff\xfd'))
+
+    ####
+
+    def testDecode1(self):
+        # Empty string
+        der = DerUniversalString()
+        der.decode(b('\x1c\x00'))
+        self.assertEqual(der.value, '')
+        # Small payload
+        der.decode(b('\x1c\x08\x00\x0f\xff\xfd\x00\x10\xff\xfd'))
+        self.assertEqual(der.value, uchr(0xFFFFD) + uchr(0x10FFFD))
+
+    def testErrDecode1(self):
+        der = DerUniversalString()
+        self.assertRaises(UnicodeDecodeError, der.decode, b('\x1c\x04\xf4\x8f\xbf\xbd'))
+
+
+class DerPrintableStringTests(unittest.TestCase):
+
+    def testInit1(self):
+        der = DerPrintableString(uchr(122))
+        self.assertEqual(der.encode(), b('\x13\x01\x7a'))
+
+    def testEncode1(self):
+        # Empty string
+        der = DerPrintableString()
+        self.assertEqual(der.encode(), b('\x13\x00'))
+        # Small payload
+        der = DerPrintableString(uchr(32) + uchr(122))
+        self.assertEqual(der.encode(), b('\x13\x02\x20\x7a'))
+
+    ####
+
+    def testDecode1(self):
+        # Empty string
+        der = DerPrintableString()
+        der.decode(b('\x13\x00'))
+        self.assertEqual(der.value, '')
+        # Small payload
+        der.decode(b('\x13\x02\x20\x7a'))
+        self.assertEqual(der.value, uchr(32) + uchr(122))
+
+    def testErrDecode1(self):
+        der = DerPrintableString()
+        self.assertRaises(UnicodeDecodeError, der.decode, b('\x13\x01\x80'))
+
+    def testErrDecode2(self):
+        der = DerPrintableString()
+        self.assertRaises(ValueError, der.decode, b('\x13\x01\x40'))
+
+    def testErrEncode1(self):
+        self.assertRaises(ValueError, DerPrintableString, uchr(64))
+
+
+class DerBMPStringTests(unittest.TestCase):
+
+    def testInit1(self):
+        der = DerBMPString(uchr(127))
+        self.assertEqual(der.encode(), b('\x1e\x02\x00\x7f'))
+
+    def testEncode1(self):
+        # Empty string
+        der = DerBMPString()
+        self.assertEqual(der.encode(), b('\x1e\x00'))
+        # Small payload
+        der = DerBMPString(uchr(0xE000) + uchr(0xF8FF))
+        self.assertEqual(der.encode(), b('\x1e\x04\xe0\x00\xf8\xff'))
+
+    ####
+
+    def testDecode1(self):
+        # Empty string
+        der = DerBMPString()
+        der.decode(b('\x1e\x00'))
+        self.assertEqual(der.value, '')
+        # Small payload
+        der.decode(b('\x1e\x04\xe0\x00\xf8\xff'))
+        self.assertEqual(der.value, uchr(0xE000) + uchr(0xF8FF))
+
+    def testErrEncode1(self):
+        self.assertRaises(ValueError, DerBMPString, uchr(0xDC00))
+
+    def testErrDecode1(self):
+        der = DerBMPString()
+        # Simple truncation
+        self.assertRaises(UnicodeDecodeError, der.decode, b('\x1e\x03\xef\xa3\xbf'))
+
+    def testErrDecode2(self):
+        der = DerBMPString()
+        # Surrogate pairs
+        self.assertRaises(ValueError, der.decode, b('\x1e\x08\xdb\xbf\xdf\xfd\xdb\xff\xdf\xfd'))
+
+    def testErrEncode2(self):
+        self.assertRaises(ValueError, DerBMPString, uchr(0xF0000))
+
+
 class DerNullTests(unittest.TestCase):
 
     def testEncode1(self):
@@ -837,6 +1039,12 @@ def get_tests(config={}):
     listTests += list_test_cases(DerIntegerTests)
     listTests += list_test_cases(DerSequenceTests)
     listTests += list_test_cases(DerOctetStringTests)
+    listTests += list_test_cases(DerGeneralStringTests)
+    listTests += list_test_cases(DerIA5StringTests)
+    listTests += list_test_cases(DerUTF8StringTests)
+    listTests += list_test_cases(DerUniversalStringTests)
+    listTests += list_test_cases(DerPrintableStringTests)
+    listTests += list_test_cases(DerBMPStringTests)
     listTests += list_test_cases(DerNullTests)
     listTests += list_test_cases(DerObjectIdTests)
     listTests += list_test_cases(DerBitStringTests)

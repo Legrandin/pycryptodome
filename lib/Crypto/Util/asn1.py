@@ -718,6 +718,10 @@ class _DerRestrictedString:
     @abstractproperty
     def _nonalphabet(self):
         return NotImplemented
+    def decode(self, *a, **k):
+        res = super().decode(*a, **k)
+        self._check_string(self.value)
+        return res
 
 
 class DerIA5String(DerGeneralString):
@@ -734,15 +738,19 @@ class DerUniversalString(DerGeneralString):
     _asn1id = 0x1c
 
 
-class DerPrintableString(DerIA5String, _DerRestrictedString):
+class DerPrintableString(_DerRestrictedString, DerIA5String):
     _asn1id = 0x13
     _nonalphabet = re.compile(r"(?s)(?![ '()+,\-./0-9:=?a-zA-Z]).")
 
 
-class DerBMPString(DerUniversalString, _DerRestrictedString):
+class DerBMPString(_DerRestrictedString, DerUniversalString):
     _codec = 'utf-16-be'
     _asn1id = 0x1e
-    _nonalphabet = re.compile(r"(?s)(?![%s-%s])." % (uchr(0x0000), uchr(0xffff)))
+    _nonalphabet = re.compile(r"(?s)((?![%s-%s]).|[%s-%s%s-%s])" % (
+        uchr(0x0000), uchr(0xFFFF),  # Basic Multilingual Plane
+        uchr(0xD800), uchr(0xDBFF),  # High Surrogates
+        uchr(0xDC00), uchr(0xDFFF),  # Low Surrogates
+    ))
 
 
 class DerNull(DerObject):
