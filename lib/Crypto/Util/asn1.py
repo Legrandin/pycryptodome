@@ -699,7 +699,7 @@ class DerGeneralString(DerOctetString):
         DerObject.__init__(self, self._asn1id, str.encode(value, self._codec), implicit, False, explicit)
         self.value = value
     def decode(self, der_encoded, strict=False):
-        DerObject.decode(self, der_encoded, strict)
+        super(self.__class__, self).decode(der_encoded, strict)
         self.value = bytes.decode(self.payload, self._codec)
         return self
 
