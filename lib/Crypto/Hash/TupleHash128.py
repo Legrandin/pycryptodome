@@ -48,19 +48,26 @@ class TupleHash(object):
         self._digest = None
 
     def update(self, data):
-        """Authenticate the next byte string in the tuple.
+        """Authenticate the next byte string in the tuple or a tuple directly.
 
         Args:
-            data (bytes/bytearray/memoryview): The next byte string.
+            data (bytes/bytearray/memoryview/tuple/list): The next byte string or a list/tuple of byte strings.
         """
 
         if self._digest is not None:
             raise TypeError("You cannot call 'update' after 'digest' or 'hexdigest'")
 
-        if not is_bytes(data):
-            raise TypeError("You can only call 'update' on bytes")
+        # Test if data is a tuple or list
+        if type(data) == list or type(data) == tuple:
+            for b in data:
+                if not is_bytes(b):
+                    raise TypeError("You can only call 'update' on a tuple of bytes")
 
-        self._cshake.update(_encode_str(tobytes(data)))
+                self._cshake.update(_encode_str(tobytes(b)))
+        elif not is_bytes(data):
+            raise TypeError("You can only call 'update' on bytes" )
+        else:
+            self._cshake.update(_encode_str(tobytes(data)))
 
         return self
 

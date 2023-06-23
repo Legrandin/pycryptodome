@@ -263,12 +263,18 @@ class NISTExampleTestVectors(unittest.TestCase):
 
     def runTest(self):
 
+        # Test with tuple
+        data, custom, digest, text, module = self.test_data.pop()
+        hd = module.new(custom=custom, digest_bytes=len(digest))
+        hd.update(data)
+        self.assertEqual(hd.digest(), digest, msg=text)
+
+        # Test with bytes
         for data, custom, digest, text, module in self.test_data:
             hd = module.new(custom=custom, digest_bytes=len(digest))
             for string in data:
                 hd.update(string)
             self.assertEqual(hd.digest(), digest, msg=text)
-
 
 def get_tests(config={}):
     tests = []
