@@ -7,25 +7,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8, 3.9, "3.10", "3.11" ]
+        python-version: [ 3.5, 3.6, 3.7, 3.8, 3.9, "3.10", "3.11" ]
         cffi: [ yes, no ]
         os: [ ubuntu-20.04 ]
         include:
-          - python-version: 2.7
-            cffi: no
-            os: macos-12
-          - python-version: 2.7
-            cffi: yes
-            os: macos-12
           - python-version: "3.11"
             cffi: yes
             os: macos-12
-          - python-version: 2.7
-            cffi: no
-            os: windows-latest
-          - python-version: 2.7
-            cffi: yes
-            os: windows-latest
           - python-version: "3.11"
             cffi: no
             os: windows-latest
@@ -56,20 +44,60 @@ jobs:
       if: matrix.cffi == 'yes'
       run: pip install cffi
 
+    - name: Install dependencies
+      run: |
+        pip install pycryptodome-test-vectors
+
+    - name: Test
+      run: |
+        python -bb setup.py test
+
+  build_python_27:
+    # GitHub Actions will not setup Python 2.7 since June 2023
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-20.04, windows-latest]
+        cffi: [ yes, no ]
+        include:
+          - os: ubuntu-20.04
+            container: python:2.7.18-buster
+    container:
+      image: ${{ matrix.container }}
+    env:
+      CFLAGS: "-Wconversion"
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Python 2
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install python2
+
     - name: Install MSVC
-      if: matrix.os == 'windows-latest' && matrix.python-version == '2.7'
+      if: matrix.os == 'windows-latest'
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Prepare environmental variables
-      if: matrix.os == 'windows-latest' && matrix.python-version == '2.7'
+      if: matrix.os == 'windows-latest'
       shell: bash
       run: |
         echo "DISTUTILS_USE_SDK=1" >> $GITHUB_ENV
         echo "MSSdk=1" >> $GITHUB_ENV
+        echo "C:\\Python27;$(cat $GITHUB_PATH)" >> $GITHUB_PATH
+        cat $GITHUB_PATH
+
+    - name: Display Python version
+      run: python -c "from __future__ import print_function; import sys; print(sys.version)"
+
+    - name: Install CFFI
+      if: matrix.cffi == 'yes'
+      run: python -m pip install cffi
 
     - name: Install dependencies
       run: |
-        pip install pycryptodome-test-vectors
+        python -m pip install pycryptodome-test-vectors
 
     - name: Test
       run: |
