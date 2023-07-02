@@ -4,6 +4,12 @@ Changelog
 3.19.0 (under development)
 ++++++++++++++++++++++++++
 
+New features
+---------------
+* The ``update()`` method of a TupleHash128 and TupleHash256 hash objects
+  now accepts a list of byte strings.
+  Thanks to Sylvain Pelissier.
+
 3.18.0 (18 May 2023)
 ++++++++++++++++++++++++++
 
