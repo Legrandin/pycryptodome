@@ -20,16 +20,16 @@ MD5 stand for Message Digest version 5, and it was invented by Rivest in 1991.
     MD5 is vulnerable to `length-extension attacks <https://crypto.stackexchange.com/questions/3978/understanding-the-length-extension-attack>`_,
     which are relevant if you are computing the hash of a secret message.
     
-    For instance, let's say you were planning to build a cheap MAC by concatenating a secret *key* to
+    For instance, let's say you were planning to build a cheap MAC by prepending a secret *key* to
     a public message *m* (bad idea!):
    
     .. math::
-        h = \text{MD5}(m || k)
+        h = \text{MD5}(k || m)
     
     By only knowing the digest *h* and the length of *m* and *k*, the attacker can easily compute a second digest *h'*:
     
     .. math::
-        h' = \text{MD5}(m || p || z)
+        h' = \text{MD5}(k || m || p || z)
     
     where *p* is a well-known bit string and the attacker can pick a bit string *z* at will.
 
