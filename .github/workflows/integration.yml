@@ -20,6 +20,12 @@ jobs:
           - python-version: "3.11"
             cffi: yes
             os: windows-latest
+          - python-version: "3.12-dev"
+            cffi: no
+            os: windows-latest
+          - python-version: "3.12-dev"
+            cffi: yes
+            os: windows-latest
           - python-version: pypy2.7
             cffi: no
             os: ubuntu-latest
