@@ -46,7 +46,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install pycryptodome-test-vectors
+        pip install pycryptodome-test-vectors setuptools
 
     - name: Test
       run: |
