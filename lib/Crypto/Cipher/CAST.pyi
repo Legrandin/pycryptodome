@@ -1,4 +1,6 @@
-from typing import Union, Dict, Iterable, Optional, ByteString
+from typing import Union, Dict, Iterable, Optional
+
+Buffer = bytes|bytearray|memoryview
 
 from Crypto.Cipher._mode_ecb import EcbMode
 from Crypto.Cipher._mode_cbc import CbcMode
@@ -18,14 +20,14 @@ MODE_CTR: CASTMode
 MODE_OPENPGP: CASTMode
 MODE_EAX: CASTMode
 
-def new(key: ByteString,
+def new(key: Buffer,
         mode: CASTMode,
-        iv : Optional[ByteString] = ...,
-        IV : Optional[ByteString] = ...,
-        nonce : Optional[ByteString] = ...,
+        iv : Optional[Buffer] = ...,
+        IV : Optional[Buffer] = ...,
+        nonce : Optional[Buffer] = ...,
         segment_size : int = ...,
         mac_len : int = ...,
-        initial_value : Union[int, ByteString] = ...,
+        initial_value : Union[int, Buffer] = ...,
         counter : Dict = ...) -> \
         Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode]: ...
 
