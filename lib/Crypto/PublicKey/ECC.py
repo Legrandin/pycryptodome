@@ -1772,7 +1772,7 @@ def import_key(encoded, passphrase=None, curve_name=None):
         return _import_der(encoded, passphrase)
 
     # SEC1
-    if len(encoded) > 0 and bord(encoded[0]) in b'\x02\x03\x04':
+    if len(encoded) > 0 and bord(encoded[0]) in (0x02, 0x03, 0x04):
         if curve_name is None:
             raise ValueError("No curve name was provided")
         return _import_public_der(encoded, curve_name=curve_name)
