@@ -50,7 +50,7 @@ jobs:
 
     - name: Test
       run: |
-        python -bb setup.py test
+        python setup.py test
 
   build_python_27:
     # GitHub Actions will not setup Python 2.7 since June 2023
