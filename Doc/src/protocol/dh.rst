@@ -68,13 +68,13 @@ concerning the context of the operation, for instance a description of what the 
 
         def kdf(x):
             h = TupleHash128(digest_bytes=32)
-            h.update((x,
+            h.update(x,
                      session_salt,
                      id_u.encode(),     # To UTF-8
                      id_v.encode(),     # To UTF-8
                      b'Email encryption',
                      b'TupleHash128',
-                     b'AES256'))
+                     b'AES256')
             return h.digest()
 
         # In a real scenario, this key already exists

@@ -47,27 +47,24 @@ class TupleHash(object):
         self._cshake = cshake._new(b'', custom, b'TupleHash')
         self._digest = None
 
-    def update(self, data):
-        """Authenticate the next byte string in the tuple or a tuple directly.
+    def update(self, *data):
+        """Authenticate the next tuple of byte strings.
+        TupleHash guarantees the logical separation between each byte string.
 
         Args:
-            data (bytes/bytearray/memoryview/tuple/list): The next byte string or a list/tuple of byte strings.
+            data (bytes/bytearray/memoryview): One or more items to hash.
         """
 
         if self._digest is not None:
             raise TypeError("You cannot call 'update' after 'digest' or 'hexdigest'")
 
-        # Test if data is a tuple or list
-        if type(data) == list or type(data) == tuple:
-            for b in data:
-                if not is_bytes(b):
-                    raise TypeError("You can only call 'update' on a tuple of bytes")
+        if data is None:
+            raise ValueErorr("No data to hash")
 
-                self._cshake.update(_encode_str(tobytes(b)))
-        elif not is_bytes(data):
-            raise TypeError("You can only call 'update' on bytes" )
-        else:
-            self._cshake.update(_encode_str(tobytes(data)))
+        for item in data:
+            if not is_bytes(item):
+                raise TypeError("You can only call 'update' on bytes" )
+            self._cshake.update(_encode_str(item))
 
         return self
 

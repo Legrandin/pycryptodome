@@ -267,9 +267,12 @@ class NISTExampleTestVectors(unittest.TestCase):
             hd1 = module.new(custom=custom, digest_bytes=len(digest))
             hd2 = module.new(custom=custom, digest_bytes=len(digest))
 
+            # Call update() for each element
             for string in data:
                 hd1.update(string)
-            hd2.update(data)
+
+            # One single update for all elements
+            hd2.update(*data)
 
             self.assertEqual(hd1.digest(), digest, msg=text)
             self.assertEqual(hd2.digest(), digest, msg=text)

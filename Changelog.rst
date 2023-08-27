@@ -6,8 +6,8 @@ Changelog
 
 New features
 ---------------
-* The ``update()`` method of a TupleHash128 and TupleHash256 hash objects
-  now accepts a list of byte strings.
+* The ``update()`` methods of TupleHash128 and TupleHash256 hash objects
+  can now hash multiple items (byte strings) at once.
   Thanks to Sylvain Pelissier.
 * Added support for ECDH, with ``Crypto.Protocol.dh``.
 
