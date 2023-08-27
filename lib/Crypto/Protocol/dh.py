@@ -40,6 +40,9 @@ def key_agreement(**kwargs):
     eph_pub = kwargs.get('eph_pub', None)
     kdf = kwargs.get('kdf', None)
 
+    if kdf is None:
+        raise ValueError("'kdf' is mandatory")
+
     count_priv = 0
     count_pub = 0
     curve = None
