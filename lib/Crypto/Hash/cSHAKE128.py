@@ -28,7 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bchr
+from Crypto.Util.py3compat import bchr, concat_buffers
 
 from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
                                   create_string_buffer,
@@ -69,13 +69,13 @@ def _encode_str(x):
     if bitlen >= (1 << 2040):
         raise ValueError("String too large to encode in cSHAKE")
 
-    return _left_encode(bitlen) + x
+    return concat_buffers(_left_encode(bitlen), x)
 
 
 def _bytepad(x, length):
     """Zero pad byte string as defined in NIST SP 800-185"""
 
-    to_pad = _left_encode(length) + x
+    to_pad = concat_buffers(_left_encode(length), x)
 
     # Note: this implementation works with byte aligned strings,
     # hence no additional bit padding is needed at this point.

@@ -87,6 +87,14 @@ if sys.version_info[0] == 2:
     def byte_string(s):
         return isinstance(s, str)
 
+    # In Python 2, a memoryview does not support concatenation
+    def concat_buffers(a, b):
+        if isinstance(a, memoryview):
+            a = a.tobytes()
+        if isinstance(b, memoryview):
+            b = b.tobytes()
+        return a + b
+
     from StringIO import StringIO
     BytesIO = StringIO
 
@@ -136,6 +144,9 @@ else:
         return bs.decode("latin-1")
     def byte_string(s):
         return isinstance(s, bytes)
+
+    def concat_buffers(a, b):
+        return a + b
 
     from io import BytesIO
     from io import StringIO
