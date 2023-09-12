@@ -189,9 +189,13 @@ class CcmMode(object):
 
         # Formatting control information and nonce (A.2.1)
         q = 15 - len(self.nonce)  # length of Q, the encoded message length
+        # Limit on plaintext length imposed by choice of nonce (A.1)
+        if self._msg_len >= 2**(8*q):
+            raise OverflowError("Combined plaintext and nonce too long")
         flags = (64 * (self._assoc_len > 0) + 8 * ((self._mac_len - 2) // 2) +
                  (q - 1))
         b_0 = struct.pack("B", flags) + self.nonce + long_to_bytes(self._msg_len, q)
+        assert len(b_0) == 16
 
         # Formatting associated data (A.2.2)
         # Encoded 'a' is concatenated with the associated data 'A'
