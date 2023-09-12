@@ -241,6 +241,19 @@ class CcmTests(unittest.TestCase):
                          msg_len=DATA_LEN - 1)
         self.assertRaises(ValueError, cipher.decrypt, ct)
 
+    def test_plaintext_too_long_for_nonce(self):
+        nonce = get_tag_random("nonce", 13)
+        # The octet length of the binary representation of the octet length
+        # of the payload.
+        q = 15 - len(nonce)
+
+        # The plaintext must be shorter than this
+        # See Appendix A.1 of NIST SP 800-38C
+        data_len_limit = 2**(8 * q)
+        data = bytearray(data_len_limit)
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=nonce)
+        self.assertRaises(OverflowError, cipher.encrypt_and_digest, data)
+
     def test_message_chunks(self):
         # Validate that both associated data and plaintext/ciphertext
         # can be broken up in chunks of arbitrary length
