@@ -6,10 +6,14 @@ Changelog
 
 New features
 ---------------
-* The ``update()`` methods of TupleHash128 and TupleHash256 hash objects
+* The ``update()`` methods of TupleHash128 and TupleHash256 objects
   can now hash multiple items (byte strings) at once.
   Thanks to Sylvain Pelissier.
 * Added support for ECDH, with ``Crypto.Protocol.dh``.
+
+Resolved issues
+---------------
+* GH#754: due to a bug in ``cffi``, do not use it on Windows with Python 3.12+.
 
 3.18.0 (18 May 2023)
 ++++++++++++++++++++++++++
