@@ -29,7 +29,7 @@ jobs:
           - python-version: pypy2.7
             cffi: no
             os: ubuntu-latest
-          - python-version: pypy3.8
+          - python-version: pypy3.9
             cffi: no
             os: ubuntu-latest
     env:
