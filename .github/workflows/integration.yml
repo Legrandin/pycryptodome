@@ -50,13 +50,17 @@ jobs:
       if: matrix.cffi == 'yes'
       run: pip install cffi
 
-    - name: Install dependencies
+    - name: Install dependencies (testing only)
       run: |
-        pip install pycryptodome-test-vectors setuptools
+        pip install pycryptodome-test-vectors
+
+    - name: Install package
+      run: |
+        pip install .
 
     - name: Test
       run: |
-        python setup.py test
+        python -m Crypto.SelfTest
 
   build_python_27:
     # GitHub Actions will not setup Python 2.7 since June 2023
@@ -101,13 +105,17 @@ jobs:
       if: matrix.cffi == 'yes'
       run: python -m pip install cffi
 
-    - name: Install dependencies
+    - name: Install dependencies (testing only)
       run: |
         python -m pip install pycryptodome-test-vectors
 
+    - name: Install package
+      run: |
+        python -m pip install .
+
     - name: Test
       run: |
-        python -bb setup.py test
+        python -m Crypto.SelfTest
 
   mypy:
     runs-on: ubuntu-latest

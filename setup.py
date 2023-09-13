@@ -37,6 +37,8 @@ import sys
 import shutil
 import struct
 
+sys.path.append(os.getcwd())
+
 from compiler_opt import set_compiler_options
 
 
