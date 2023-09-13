@@ -76,6 +76,12 @@ try:
     if '__pypy__' not in sys.builtin_module_names and sys.flags.optimize == 2:
         raise ImportError("CFFI with optimize=2 fails due to pycparser bug.")
 
+    # cffi still uses PyUnicode_GetSize, which was removed in Python 3.12
+    # thus leading to a crash on cffi.dlopen()
+    # See https://groups.google.com/u/1/g/python-cffi/c/oZkOIZ_zi5k
+    if sys.version_info >= (3, 12) and os.name == "nt":
+        raise ImportError("CFFI is not compatible with Python 3.12 on Windows")
+
     from cffi import FFI
 
     ffi = FFI()
