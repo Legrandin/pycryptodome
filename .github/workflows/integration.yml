@@ -59,8 +59,13 @@ jobs:
         pip install .
 
     - name: Test
+      shell: bash
       run: |
-        python -m Crypto.SelfTest
+        if [[ -f .separate_namespace ]]; then
+          python -m Cryptodome.SelfTest
+        else
+          python -m Crypto.SelfTest
+        fi
 
   build_python_27:
     # GitHub Actions will not setup Python 2.7 since June 2023
@@ -114,9 +119,13 @@ jobs:
         python -m pip install .
 
     - name: Test
+      shell: bash
       run: |
-        python -m Crypto.SelfTest
-
+        if [[ -f .separate_namespace ]]; then
+          python -m Cryptodome.SelfTest
+        else
+          python -m Crypto.SelfTest
+        fi
   mypy:
     runs-on: ubuntu-latest
     steps:
