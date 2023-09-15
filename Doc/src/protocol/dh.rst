@@ -34,7 +34,7 @@ First, a minimal example where only static keys are used::
 
         from Crypto.PublicKey import ECC
         from Crypto.Hash import SHAKE128
-        from Crypto.Protocol.dh import key_agreement
+        from Crypto.Protocol.DH import key_agreement
 
         # This KDF has been agreed in advance
         def kdf(x):
@@ -56,7 +56,7 @@ NIST SP 800-56A recommends to bind the key agreement to some information
 concerning the context of the operation, for instance a description of what the keys are used for::
 
         from Crypto.Hash import TupleHash128
-        from Crypto.Protocol.dh import key_agreement
+        from Crypto.Protocol.DH import key_agreement
         from functools import partial
 
         # Random value (e.g., a nonce)
@@ -94,7 +94,7 @@ contributes to the key agreement with one ephemeral key
 
         from Crypto.PublicKey import ECC
         from Crypto.Hash import SHAKE128
-        from Crypto.Protocol.dh import key_agreement
+        from Crypto.Protocol.DH import key_agreement
 
         # This KDF has been agreed in advance
         def kdf(x):

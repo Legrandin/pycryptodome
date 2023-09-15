@@ -9,7 +9,7 @@ from Crypto.PublicKey import ECC
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
 
-from Crypto.Protocol.dh import key_agreement
+from Crypto.Protocol.DH import key_agreement
 
 
 class FIPS_ECDH_Tests_KAT(unittest.TestCase):
