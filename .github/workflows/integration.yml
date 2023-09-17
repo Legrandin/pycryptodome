@@ -52,7 +52,7 @@ jobs:
 
     - name: Install dependencies (testing only)
       run: |
-        pip install pycryptodome-test-vectors
+        pip install -r requirements-test.txt
 
     - name: Install package
       run: |
@@ -112,7 +112,7 @@ jobs:
 
     - name: Install dependencies (testing only)
       run: |
-        python -m pip install pycryptodome-test-vectors
+        python -m pip install -r requirements-test.txt
 
     - name: Install package
       run: |
@@ -136,7 +136,7 @@ jobs:
         python-version: "3.x"
     - name: Install dependencies
       run: |
-        pip install mypy pycryptodome-test-vectors
+        pip install mypy -r requirements-test.txt
     - name: Test
       run: |
         mypy --enable-incomplete-feature=Unpack lib/
