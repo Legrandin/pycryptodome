@@ -26,7 +26,7 @@ import sys
 
 from Crypto import SelfTest
 
-slow_tests = not "--skip-slow-tests" in sys.argv
+slow_tests = not ("--skip-slow-tests" in sys.argv)
 if not slow_tests:
     print("Skipping slow tests")
 
@@ -34,5 +34,10 @@ wycheproof_warnings = "--wycheproof-warnings" in sys.argv
 if wycheproof_warnings:
     print("Printing Wycheproof warnings")
 
-config = {'slow_tests' : slow_tests, 'wycheproof_warnings' : wycheproof_warnings }
-SelfTest.run(stream=sys.stdout, verbosity=1, config=config)
+if "-v" in sys.argv:
+    verbosity=2
+else:
+    verbosity=1
+
+config = {'slow_tests': slow_tests, 'wycheproof_warnings': wycheproof_warnings}
+SelfTest.run(stream=sys.stdout, verbosity=verbosity, config=config)

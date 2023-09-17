@@ -72,6 +72,8 @@ for idx, tv in enumerate(test_vectors_verify):
 
 class TestVectorsECDHWycheproof(unittest.TestCase):
 
+    desc = "Wycheproof ECDH tests"
+
     def add_tests(self, filename):
 
         def curve(g):
@@ -107,7 +109,6 @@ class TestVectorsECDHWycheproof(unittest.TestCase):
         return self.desc
 
     def test_verify(self, tv):
-        self._id = "Wycheproof ECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
 
         if len(tv.public) == 0:
             return
@@ -138,7 +139,7 @@ class TestVectorsECDHWycheproof(unittest.TestCase):
 
     def runTest(self):
         for tv in self.tv:
-            self.desc = "Test #%d (%s) - %s" % (tv.id, tv.filename, tv.comment)
+            self.desc = "Wycheproof ECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
             self.test_verify(tv)
 
 

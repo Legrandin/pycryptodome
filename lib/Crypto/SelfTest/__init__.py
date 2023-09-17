@@ -28,17 +28,18 @@ These tests should perform quickly and can ideally be used every time an
 application runs.
 """
 
-__revision__ = "$Id$"
-
 import sys
 import unittest
+from importlib import import_module
 from Crypto.Util.py3compat import StringIO
+
 
 class SelfTestError(Exception):
     def __init__(self, message, result):
         Exception.__init__(self, message, result)
         self.message = message
         self.result = result
+
 
 def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs):
     """Execute self-tests.
@@ -77,21 +78,25 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
         raise SelfTestError("Self-test failed", result)
     return result
 
+
 def get_tests(config={}):
     tests = []
-    from Crypto.SelfTest import Cipher; tests += Cipher.get_tests(config=config)
-    from Crypto.SelfTest import Hash;   tests += Hash.get_tests(config=config)
-    from Crypto.SelfTest import Protocol; tests += Protocol.get_tests(config=config)
-    from Crypto.SelfTest import PublicKey; tests += PublicKey.get_tests(config=config)
-    from Crypto.SelfTest import Random; tests += Random.get_tests(config=config)
-    from Crypto.SelfTest import Util;   tests += Util.get_tests(config=config)
-    from Crypto.SelfTest import Signature;   tests += Signature.get_tests(config=config)
-    from Crypto.SelfTest import IO;   tests += IO.get_tests(config=config)
-    from Crypto.SelfTest import Math;   tests += Math.get_tests(config=config)
+
+    module_names = [
+        "Cipher", "Hash", "Protocol", "PublicKey", "Random",
+        "Util", "Signature", "IO", "Math",
+        ]
+
+    for name in module_names:
+        module = import_module("Crypto.SelfTest." + name)
+        tests += module.get_tests(config=config)
+
     return tests
 
+
 if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
+    def suite():
+        return unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
