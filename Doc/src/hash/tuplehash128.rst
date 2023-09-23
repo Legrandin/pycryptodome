@@ -35,13 +35,13 @@ This is an example showing how to generate a TupleHash128 for the 3 bytes string
     >>> print(hd.hexdigest())
     4c095be894c21cfe7076a7d0fe3f70ed
 
-A list or a tuple of byte strings can be submitted as well via the ``update()`` method.
-This is an example::
+Multiple byte strings can be submitted.
+Each argument is a separate element in the tuple::
 
     >>> from Crypto.Hash import TupleHash128
     >>>
     >>> hd = TupleHash128.new(digest_bytes=16)
-    >>> hd.update((b'deposit', b'100', b'joe'))
+    >>> hd.update(b'deposit', b'100', b'joe')
     >>> print(hd.hexdigest())
     4c095be894c21cfe7076a7d0fe3f70ed
 
