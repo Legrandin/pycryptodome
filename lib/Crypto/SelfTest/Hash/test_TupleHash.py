@@ -62,8 +62,12 @@ class TupleHashTest(unittest.TestCase):
         h.update(b'STRING1')
         h.update(b'STRING2')
         mac2 = h.digest()
-
         self.assertNotEqual(mac1, mac2)
+
+        h = self.new()
+        h.update(b'STRING1', b'STRING2')
+        mac3 = h.digest()
+        self.assertEqual(mac2, mac3)
 
     def test_update_negative(self):
         h = self.new()
