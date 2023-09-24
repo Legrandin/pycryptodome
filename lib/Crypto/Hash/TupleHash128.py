@@ -58,9 +58,6 @@ class TupleHash(object):
         if self._digest is not None:
             raise TypeError("You cannot call 'update' after 'digest' or 'hexdigest'")
 
-        if data is None:
-            raise ValueError("No data to hash")
-
         for item in data:
             if not is_bytes(item):
                 raise TypeError("You can only call 'update' on bytes" )
