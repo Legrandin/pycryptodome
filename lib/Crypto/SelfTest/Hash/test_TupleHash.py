@@ -69,6 +69,7 @@ class TupleHashTest(unittest.TestCase):
         h = self.new()
         self.assertRaises(TypeError, h.update, u"string")
         self.assertRaises(TypeError, h.update, None)
+        self.assertRaises(TypeError, h.update, (b'STRING1', b'STRING2'))
 
     def test_digest(self):
         h = self.new()
