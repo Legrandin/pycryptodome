@@ -59,7 +59,7 @@ class TupleHash(object):
             raise TypeError("You cannot call 'update' after 'digest' or 'hexdigest'")
 
         if data is None:
-            raise ValueErorr("No data to hash")
+            raise ValueError("No data to hash")
 
         for item in data:
             if not is_bytes(item):
