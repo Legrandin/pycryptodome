@@ -127,7 +127,7 @@ contributes to the key agreement with one ephemeral key
 Specification
 ~~~~~~~~~~~~~
 
-.. autofunction:: Crypto.Protocol.dh.key_agreement
+.. autofunction:: Crypto.Protocol.DH.key_agreement
 
 Key Derivation Function
 ~~~~~~~~~~~~~~~~~~~~~~~~
