@@ -51,6 +51,8 @@ def new(nbits, prefix=b"", suffix=b"", initial_value=1, little_endian=False, all
         If ``False`` (default), in big endian format.
       allow_wraparound (boolean):
         This parameter is ignored.
+        An ``OverflowError`` exception is always raised when the counter wraps
+        around to zero.
     Returns:
       An object that can be passed with the :data:`counter` parameter to a CTR mode
       cipher.
