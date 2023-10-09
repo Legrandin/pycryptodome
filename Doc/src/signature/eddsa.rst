@@ -8,7 +8,7 @@ as two variants:
 
 * *PureEdDSA*, where the message is signed directly.
 * *HashEdDSA*, where the message is first hashed, and only the resulting digest is signed.
-  This should only be used by streaming applications because it avoids double passess
+  This should only be used by streaming applications because it avoids double passes
   on messages, at the cost of reduced collision resistance.
 
 This module supports signatures for both variants (*PureEdDSA* and *HashEdDSA*),
