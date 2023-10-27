@@ -242,11 +242,15 @@ class CMAC(object):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag):
-        """Return the **printable** MAC tag of the message authenticated so far.
+        """Verify that a given **printable** MAC (computed by another party)
+        is valid.
 
-        :return: The MAC tag, computed over the data processed so far.
-                 Hexadecimal encoded.
-        :rtype: string
+        Args:
+          hex_mac_tag (string): the expected MAC of the message, as a hexadecimal string.
+
+        Raises:
+            ValueError: if the MAC does not match. It means that the message
+                has been tampered with or that the MAC key is incorrect.
         """
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
