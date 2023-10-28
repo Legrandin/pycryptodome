@@ -38,7 +38,7 @@ First, a minimal example where only static keys are used::
 
         # This KDF has been agreed in advance
         def kdf(x):
-                return SHAKE128(x).read(32)
+                return SHAKE128.new(x).read(32)
 
         # In a real scenario, this key already exists
         U = ECC.generate(curve='p256')
@@ -67,7 +67,7 @@ concerning the context of the operation, for instance a description of what the 
         id_v = 'Server 25'
 
         def kdf(x):
-            h = TupleHash128(digest_bytes=32)
+            h = TupleHash128.new(digest_bytes=32)
             h.update(x,
                      session_salt,
                      id_u.encode(),     # To UTF-8
@@ -98,7 +98,7 @@ contributes to the key agreement with one ephemeral key
 
         # This KDF has been agreed in advance
         def kdf(x):
-                return SHAKE128(x).read(32)
+                return SHAKE128.new(x).read(32)
 
         # In a real scenario, this long-term key already exists
         U_static = ECC.generate(curve='p256')
@@ -167,7 +167,7 @@ In other cases, defining a local function can be sufficient::
         nonce = os.urandom(16)
 
         def kdf(x):
-                return SHAKE128(x + nonce).read(32)
+                return SHAKE128.new(x + nonce).read(32)
 
         # Pass kdf to key_agreement()
 
