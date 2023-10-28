@@ -1,15 +1,15 @@
-from typing import TypedDict, Callable
-from typing_extensions import Unpack
+from typing import TypedDict, Callable, TypeVar, Generic
+from typing_extensions import Unpack, NotRequired
 
 from Crypto.PublicKey.ECC import EccKey
 
-PRF = Callable[[bytes|bytearray|memoryview], bytes]
+T = TypeVar('T')
 
-class RequestParams(TypedDict):
-    kdf: PRF
-    static_priv: EccKey
-    static_pub: EccKey
-    eph_priv: EccKey
-    eph_pub: EccKey
+class RequestParams(TypedDict, Generic[T]):
+    kdf: Callable[[bytes|bytearray|memoryview], T]
+    static_priv: NotRequired[EccKey]
+    static_pub: NotRequired[EccKey]
+    eph_priv: NotRequired[EccKey]
+    eph_pub: NotRequired[EccKey]
 
-def key_agreement(**kwargs: Unpack[RequestParams]) -> bytes: ...
+def key_agreement(**kwargs: Unpack[RequestParams[T]]) -> T: ...
