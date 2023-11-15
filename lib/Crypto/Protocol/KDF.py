@@ -616,9 +616,6 @@ def SP800_108_Counter(master, key_len, prf, num_keys=None, label=b'', context=b'
     if num_keys is None:
         num_keys = 1
 
-    if label.find(b'\x00') != -1:
-        raise ValueError("Null byte found in label")
-
     if context.find(b'\x00') != -1:
         raise ValueError("Null byte found in context")
 
