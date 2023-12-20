@@ -176,11 +176,8 @@ class PKCS115_Cipher:
         # Step 2a (O2SIP)
         ct_int = bytes_to_long(ciphertext)
 
-        # Step 2b (RSADP)
-        m_int = self._key._decrypt(ct_int)
-
-        # Complete step 2c (I2OSP)
-        em = long_to_bytes(m_int, k)
+        # Step 2b (RSADP) and Step 2c (I2OSP)
+        em = self._key._decrypt(ct_int)
 
         # Step 3 (not constant time when the sentinel is not a byte string)
         output = bytes(bytearray(k))

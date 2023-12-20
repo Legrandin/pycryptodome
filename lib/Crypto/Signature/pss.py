@@ -107,10 +107,11 @@ class PSS_SigScheme:
         em = _EMSA_PSS_ENCODE(msg_hash, modBits-1, self._randfunc, mgf, sLen)
         # Step 2a (OS2IP)
         em_int = bytes_to_long(em)
-        # Step 2b (RSASP1)
-        m_int = self._key._decrypt(em_int)
-        # Step 2c (I2OSP)
-        signature = long_to_bytes(m_int, k)
+        # Step 2b (RSASP1) and Step 2c (I2OSP)
+        signature = self._key._decrypt(em_int)
+        # Verify no faults occurred
+        if em_int != pow(bytes_to_long(signature), self._key.e, self._key.n):
+            raise ValueError("Fault detected in RSA private key operation")
         return signature
 
     def verify(self, msg_hash, signature):
@@ -178,7 +179,7 @@ def MGF1(mgfSeed, maskLen, hash_gen):
 
     :return: the mask, as a *byte string*
     """
-    
+
     T = b""
     for counter in iter_range(ceil_div(maskLen, hash_gen.digest_size)):
         c = long_to_bytes(counter, 4)

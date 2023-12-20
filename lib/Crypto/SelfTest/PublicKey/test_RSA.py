@@ -279,7 +279,7 @@ class RSATest(unittest.TestCase):
         ciphertext = bytes_to_long(a2b_hex(self.ciphertext))
 
         # Test decryption
-        plaintext = rsaObj._decrypt(ciphertext)
+        plaintext = bytes_to_long(rsaObj._decrypt(ciphertext))
 
         # Test encryption (2 arguments)
         new_ciphertext2 = rsaObj._encrypt(plaintext)
@@ -304,7 +304,7 @@ class RSATest(unittest.TestCase):
         ciphertext = bytes_to_long(a2b_hex(self.ciphertext))
 
         # Test plain decryption
-        new_plaintext = rsaObj._decrypt(ciphertext)
+        new_plaintext = bytes_to_long(rsaObj._decrypt(ciphertext))
         self.assertEqual(plaintext, new_plaintext)
 
 

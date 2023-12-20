@@ -77,10 +77,11 @@ class PKCS115_SigScheme:
         em = _EMSA_PKCS1_V1_5_ENCODE(msg_hash, k)
         # Step 2a (OS2IP)
         em_int = bytes_to_long(em)
-        # Step 2b (RSASP1)
-        m_int = self._key._decrypt(em_int)
-        # Step 2c (I2OSP)
-        signature = long_to_bytes(m_int, k)
+        # Step 2b (RSASP1) and Step 2c (I2OSP)
+        signature = self._key._decrypt(em_int)
+        # Verify no faults occurred
+        if em_int != pow(bytes_to_long(signature), self._key.e, self._key.n):
+            raise ValueError("Fault detected in RSA private key operation")
         return signature
 
     def verify(self, msg_hash, signature):

@@ -749,6 +749,26 @@ class IntegerGMP(IntegerBase):
             raise ValueError("n must be positive odd for the Jacobi symbol")
         return _gmp.mpz_jacobi(a._mpz_p, n._mpz_p)
 
+    @staticmethod
+    def _mult_modulo_bytes(term1, term2, modulus):
+        if not isinstance(term1, IntegerGMP):
+            term1 = IntegerGMP(term1)
+        if not isinstance(term2, IntegerGMP):
+            term2 = IntegerGMP(term2)
+        if not isinstance(modulus, IntegerGMP):
+            modulus = IntegerGMP(modulus)
+
+        if modulus < 0:
+            raise ValueError("Modulus must be positive")
+        if modulus == 0:
+            raise ZeroDivisionError("Modulus cannot be zero")
+        if (modulus & 1) == 0:
+            raise ValueError("Odd modulus is required")
+
+        numbers_len = len(modulus.to_bytes())
+        result = ((term1 * term2) % modulus).to_bytes(numbers_len)
+        return result
+
     # Clean-up
     def __del__(self):
 

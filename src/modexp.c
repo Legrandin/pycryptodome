@@ -179,6 +179,71 @@ cleanup:
     return res;
 }
 
+/*
+ * Modular multiplication. All numbers are
+ * encoded in big endian form, possibly with
+ * zero padding on the left.
+ *
+ * @param out     The memory area where to store the result
+ * @param term1   First term of the multiplication, strictly smaller than the modulus
+ * @param term2   Second term of the multiplication, strictly smaller than the modulus
+ * @param modulus Modulus, it must be odd
+ * @param len     Size in bytes of out, term1, term2, and modulus
+ * @return        0 in case of success, the appropriate error code otherwise
+ */
+EXPORT_SYM int monty_multiply(
+               uint8_t       *out,
+               const uint8_t *term1,
+               const uint8_t *term2,
+               const uint8_t *modulus,
+               size_t        len)
+{
+    MontContext *ctx = NULL;
+    uint64_t *mont_term1 = NULL;
+    uint64_t *mont_term2 = NULL;
+    uint64_t *mont_output = NULL;
+    uint64_t *scratchpad = NULL;
+    int res;
+
+    if (!term1 || !term2 || !modulus || !out)
+        return ERR_NULL;
+
+    if (len == 0)
+        return ERR_NOT_ENOUGH_DATA;
+
+    /* Allocations **/
+    res = mont_context_init(&ctx, modulus, len);
+    if (res)
+        return res;
+
+    res = mont_from_bytes(&mont_term1, term1, len, ctx);
+    if (res) goto cleanup;
+
+    res = mont_from_bytes(&mont_term2, term2, len, ctx);
+    if (res) goto cleanup;
+
+    res = mont_number(&mont_output, 1, ctx);
+    if (res) goto cleanup;
+
+    res = mont_number(&scratchpad, SCRATCHPAD_NR, ctx);
+    if (res) goto cleanup;
+
+    /* Multiply, then transform result back into big-endian, byte form **/
+    res = mont_mult(mont_output, mont_term1, mont_term2, scratchpad, ctx);
+    if (res) goto cleanup;
+
+    res = mont_to_bytes(out, len, mont_output, ctx);
+
+cleanup:
+    mont_context_free(ctx);
+    free(mont_term1);
+    free(mont_term2);
+    free(mont_output);
+    free(scratchpad);
+
+    return res;
+}
+
 #ifdef MAIN
 int main(void)
 {
@@ -205,7 +270,7 @@ int main(void)
     res = fread(out, 1, length, stdin);
 
     result = monty_pow(out, base, exponent, modulus, length, 12);
-    
+
     free(base);
     free(modulus);
     free(exponent);
@@ -232,5 +297,6 @@ int main(void)
     monty_pow(out, base, exponent, modulus, length, 12);
     }
 
+    monty_multiply(out, base, out, modulus, length);
 }
 #endif

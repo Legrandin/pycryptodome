@@ -167,10 +167,8 @@ class PKCS1OAEP_Cipher:
             raise ValueError("Ciphertext with incorrect length.")
         # Step 2a (O2SIP)
         ct_int = bytes_to_long(ciphertext)
-        # Step 2b (RSADP)
-        m_int = self._key._decrypt(ct_int)
-        # Complete step 2c (I2OSP)
-        em = long_to_bytes(m_int, k)
+        # Step 2b (RSADP) and step 2c (I2OSP)
+        em = self._key._decrypt(ct_int)
         # Step 3a
         lHash = self._hashObj.new(self._label).digest()
         # Step 3b

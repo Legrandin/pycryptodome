@@ -38,6 +38,7 @@ import struct
 from Crypto import Random
 from Crypto.Util.py3compat import tobytes, bord, tostr
 from Crypto.Util.asn1 import DerSequence, DerNull
+from Crypto.Util.number import bytes_to_long
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (test_probable_prime,
@@ -198,10 +199,11 @@ class RsaKey(object):
         h = ((m2 - m1) * self._u) % self._q
         mp = h * self._p + m1
         # Step 4: Compute m = m' * (r**(-1)) mod n
-        result = (r.inverse(self._n) * mp) % self._n
-        # Verify no faults occurred
-        if ciphertext != pow(result, self._e, self._n):
-            raise ValueError("Fault detected in RSA decryption")
+        # then encode into a big endian byte string
+        result = Integer._mult_modulo_bytes(
+                    r.inverse(self._n),
+                    mp,
+                    self._n)
         return result
 
     def has_private(self):

@@ -390,3 +390,23 @@ class IntegerBase(ABC):
                                     )
         return norm_candidate + min_inclusive
 
+    @staticmethod
+    @abc.abstractmethod
+    def _mult_modulo_bytes(term1, term2, modulus):
+        """Multiply two integers, take the modulo, and encode as big endian.
+        This specialized method is used for RSA decryption.
+
+        Args:
+          term1 : integer
+            The first term of the multiplication, non-negative.
+          term2 : integer
+            The second term of the multiplication, non-negative.
+          modulus: integer
+            The modulus, a positive odd number.
+        :Returns:
+            A byte string, with the result of the modular multiplication
+            encoded in big endian mode.
+            It is as long as the modulus would be, with zero padding
+            on the left if needed.
+        """
+        pass

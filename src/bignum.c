@@ -165,7 +165,7 @@ STATIC int mod_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsig
     mask = (uint64_t)((cond != 0) - 1); /* 0 for a, 1s for b */
 
 #if SYS_BITS == 64
-    r0 = _mm_set1_epi64x(mask);
+    r0 = _mm_set1_epi64x((int64_t)mask);
 #else
     r0 = _mm_loadl_epi64((__m128i*)&mask);
     r0 = _mm_unpacklo_epi64(r0, r0);

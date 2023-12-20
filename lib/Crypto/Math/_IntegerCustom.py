@@ -41,12 +41,18 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 from Crypto.Random.random import getrandbits
 
 c_defs = """
-int monty_pow(const uint8_t *base,
-               const uint8_t *exp,
-               const uint8_t *modulus,
-               uint8_t       *out,
-               size_t len,
-               uint64_t seed);
+int monty_pow(uint8_t       *out,
+              const uint8_t *base,
+              const uint8_t *exp,
+              const uint8_t *modulus,
+              size_t        len,
+              uint64_t      seed);
+
+int monty_multiply(uint8_t       *out,
+                   const uint8_t *term1,
+                   const uint8_t *term2,
+                   const uint8_t *modulus,
+                   size_t        len);
 """
 
 
@@ -116,3 +122,41 @@ class IntegerCustom(IntegerNative):
         result = bytes_to_long(get_raw_buffer(out))
         self._value = result
         return self
+
+    @staticmethod
+    def _mult_modulo_bytes(term1, term2, modulus):
+
+        # With modular reduction
+        mod_value = int(modulus)
+        if mod_value < 0:
+            raise ValueError("Modulus must be positive")
+        if mod_value == 0:
+            raise ZeroDivisionError("Modulus cannot be zero")
+
+        # C extension only works with odd moduli
+        if (mod_value & 1) == 0:
+            raise ValueError("Odd modulus is required")
+
+        # C extension only works with non-negative terms smaller than modulus
+        if term1 >= mod_value or term1 < 0:
+            term1 %= mod_value
+        if term2 >= mod_value or term2 < 0:
+            term2 %= mod_value
+
+        modulus_b = long_to_bytes(mod_value)
+        numbers_len = len(modulus_b)
+        term1_b = long_to_bytes(term1, numbers_len)
+        term2_b = long_to_bytes(term2, numbers_len)
+        out = create_string_buffer(numbers_len)
+
+        error = _raw_montgomery.monty_multiply(
+                    out,
+                    term1_b,
+                    term2_b,
+                    modulus_b,
+                    c_size_t(numbers_len)
+                    )
+        if error:
+            raise ValueError("monty_multiply failed with error: %d" % error)
+
+        return get_raw_buffer(out)

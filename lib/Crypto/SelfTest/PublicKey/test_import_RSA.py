@@ -29,7 +29,7 @@ import unittest
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
 from Crypto.Util.py3compat import b, tostr, FileNotFoundError
-from Crypto.Util.number import inverse
+from Crypto.Util.number import inverse, bytes_to_long
 from Crypto.Util import asn1
 
 try:
@@ -239,13 +239,13 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testImportKey5(self):
         """Verifies that the imported key is still a valid RSA pair"""
         key = RSA.importKey(self.rsaKeyPEM)
-        idem = key._encrypt(key._decrypt(89))
+        idem = key._encrypt(bytes_to_long(key._decrypt(89)))
         self.assertEqual(idem, 89)
 
     def testImportKey6(self):
         """Verifies that the imported key is still a valid RSA pair"""
         key = RSA.importKey(self.rsaKeyDER)
-        idem = key._encrypt(key._decrypt(65))
+        idem = key._encrypt(bytes_to_long(key._decrypt(65)))
         self.assertEqual(idem, 65)
 
     def testImportKey7(self):
