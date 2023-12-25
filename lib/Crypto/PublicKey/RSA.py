@@ -181,7 +181,7 @@ class RsaKey(object):
             raise ValueError("Plaintext too large")
         return int(pow(Integer(plaintext), self._e, self._n))
 
-    def _decrypt(self, ciphertext):
+    def _decrypt_to_bytes(self, ciphertext):
         if not 0 <= ciphertext < self._n:
             raise ValueError("Ciphertext too large")
         if not self.has_private():
@@ -205,6 +205,11 @@ class RsaKey(object):
                     mp,
                     self._n)
         return result
+
+    def _decrypt(self, ciphertext):
+        """Legacy private method"""
+
+        return bytes_to_long(self._decrypt_to_bytes(ciphertext))
 
     def has_private(self):
         """Whether this is an RSA private key"""

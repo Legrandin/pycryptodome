@@ -214,9 +214,11 @@ class RSATest(unittest.TestCase):
         rsa_obj = self.rsa.generate(1024)
 
         self.assertRaises(ValueError, rsa_obj._decrypt, rsa_obj.n)
+        self.assertRaises(ValueError, rsa_obj._decrypt_to_bytes, rsa_obj.n)
         self.assertRaises(ValueError, rsa_obj._encrypt, rsa_obj.n)
 
         self.assertRaises(ValueError, rsa_obj._decrypt, -1)
+        self.assertRaises(ValueError, rsa_obj._decrypt_to_bytes, -1)
         self.assertRaises(ValueError, rsa_obj._encrypt, -1)
 
     def test_size(self):
@@ -265,6 +267,8 @@ class RSATest(unittest.TestCase):
         # Public keys should not be able to sign or decrypt
         self.assertRaises(TypeError, rsaObj._decrypt,
                 bytes_to_long(ciphertext))
+        self.assertRaises(TypeError, rsaObj._decrypt_to_bytes,
+                bytes_to_long(ciphertext))
 
         # Check __eq__ and __ne__
         self.assertEqual(rsaObj.public_key() == rsaObj.public_key(),True) # assert_
@@ -279,7 +283,7 @@ class RSATest(unittest.TestCase):
         ciphertext = bytes_to_long(a2b_hex(self.ciphertext))
 
         # Test decryption
-        plaintext = bytes_to_long(rsaObj._decrypt(ciphertext))
+        plaintext = rsaObj._decrypt(ciphertext)
 
         # Test encryption (2 arguments)
         new_ciphertext2 = rsaObj._encrypt(plaintext)
@@ -304,7 +308,7 @@ class RSATest(unittest.TestCase):
         ciphertext = bytes_to_long(a2b_hex(self.ciphertext))
 
         # Test plain decryption
-        new_plaintext = bytes_to_long(rsaObj._decrypt(ciphertext))
+        new_plaintext = rsaObj._decrypt(ciphertext)
         self.assertEqual(plaintext, new_plaintext)
 
 

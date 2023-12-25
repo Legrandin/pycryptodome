@@ -168,7 +168,7 @@ class PKCS1OAEP_Cipher:
         # Step 2a (O2SIP)
         ct_int = bytes_to_long(ciphertext)
         # Step 2b (RSADP) and step 2c (I2OSP)
-        em = self._key._decrypt(ct_int)
+        em = self._key._decrypt_to_bytes(ct_int)
         # Step 3a
         lHash = self._hashObj.new(self._label).digest()
         # Step 3b

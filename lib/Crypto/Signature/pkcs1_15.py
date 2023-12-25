@@ -78,7 +78,7 @@ class PKCS115_SigScheme:
         # Step 2a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 2b (RSASP1) and Step 2c (I2OSP)
-        signature = self._key._decrypt(em_int)
+        signature = self._key._decrypt_to_bytes(em_int)
         # Verify no faults occurred
         if em_int != pow(bytes_to_long(signature), self._key.e, self._key.n):
             raise ValueError("Fault detected in RSA private key operation")
