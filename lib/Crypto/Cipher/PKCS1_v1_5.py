@@ -25,31 +25,7 @@ __all__ = ['new', 'PKCS115_Cipher']
 from Crypto import Random
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.py3compat import bord, is_bytes, _copy_bytes
-
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, c_size_t,
-                                  c_uint8_ptr)
-
-
-_raw_pkcs1_decode = load_pycryptodome_raw_lib("Crypto.Cipher._pkcs1_decode",
-                        """
-                        int pkcs1_decode(const uint8_t *em, size_t len_em,
-                                         const uint8_t *sentinel, size_t len_sentinel,
-                                         size_t expected_pt_len,
-                                         uint8_t *output);
-                        """)
-
-
-def _pkcs1_decode(em, sentinel, expected_pt_len, output):
-    if len(em) != len(output):
-        raise ValueError("Incorrect output length")
-
-    ret = _raw_pkcs1_decode.pkcs1_decode(c_uint8_ptr(em),
-                                         c_size_t(len(em)),
-                                         c_uint8_ptr(sentinel),
-                                         c_size_t(len(sentinel)),
-                                         c_size_t(expected_pt_len),
-                                         c_uint8_ptr(output))
-    return ret
+from ._pkcs1_oaep_decode import pkcs1_decode
 
 
 class PKCS115_Cipher:
@@ -113,7 +89,6 @@ class PKCS115_Cipher:
                 continue
             ps.append(new_byte)
         ps = b"".join(ps)
-        assert(len(ps) == k - mLen - 3)
         # Step 2b
         em = b'\x00\x02' + ps + b'\x00' + _copy_bytes(None, None, message)
         # Step 3a (OS2IP)
@@ -182,14 +157,14 @@ class PKCS115_Cipher:
         # Step 3 (not constant time when the sentinel is not a byte string)
         output = bytes(bytearray(k))
         if not is_bytes(sentinel) or len(sentinel) > k:
-            size = _pkcs1_decode(em, b'', expected_pt_len, output)
+            size = pkcs1_decode(em, b'', expected_pt_len, output)
             if size < 0:
                 return sentinel
             else:
                 return output[size:]
 
         # Step 3 (somewhat constant time)
-        size = _pkcs1_decode(em, sentinel, expected_pt_len, output)
+        size = pkcs1_decode(em, sentinel, expected_pt_len, output)
         return output[size:]
 
 

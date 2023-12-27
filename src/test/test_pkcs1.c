@@ -5,7 +5,7 @@ void set_if_match(uint8_t *flag, size_t term1, size_t term2);
 void set_if_no_match(uint8_t *flag, size_t term1, size_t term2);
 void safe_select(const uint8_t *in1, const uint8_t *in2, uint8_t *out, uint8_t choice, size_t len);
 size_t safe_select_idx(size_t in1, size_t in2, uint8_t choice);
-uint8_t safe_cmp(const uint8_t *in1, const uint8_t *in2,
+uint8_t safe_cmp_masks(const uint8_t *in1, const uint8_t *in2,
                  const uint8_t *eq_mask, const uint8_t *neq_mask,
                  size_t len);
 size_t safe_search(const uint8_t *in1, uint8_t c, size_t len);
@@ -80,29 +80,29 @@ void test_safe_select_idx(void)
     assert(safe_select_idx(0x100004, 0x223344, 1) == 0x223344);
 }
 
-void test_safe_cmp(void)
+void test_safe_cmp_masks(void)
 {
     uint8_t res;
 
-    res = safe_cmp(onezero, onezero,
+    res = safe_cmp_masks(onezero, onezero,
                    (uint8_t*)"\xFF\xFF",
                    (uint8_t*)"\x00\x00",
                    2);
     assert(res == 0);
 
-    res = safe_cmp(onezero, zerozero,
+    res = safe_cmp_masks(onezero, zerozero,
                    (uint8_t*)"\xFF\xFF",
                    (uint8_t*)"\x00\x00",
                    2);
     assert(res != 0);
 
-    res = safe_cmp(onezero, oneone,
+    res = safe_cmp_masks(onezero, oneone,
                    (uint8_t*)"\xFF\xFF",
                    (uint8_t*)"\x00\x00",
                    2);
     assert(res != 0);
 
-    res = safe_cmp(onezero, oneone,
+    res = safe_cmp_masks(onezero, oneone,
                    (uint8_t*)"\xFF\x00",
                    (uint8_t*)"\x00\x00",
                    2);
@@ -110,19 +110,19 @@ void test_safe_cmp(void)
 
     /** -- **/
 
-    res = safe_cmp(onezero, onezero,
+    res = safe_cmp_masks(onezero, onezero,
                    (uint8_t*)"\x00\x00",
                    (uint8_t*)"\xFF\xFF",
                    2);
     assert(res != 0);
 
-    res = safe_cmp(oneone, zerozero,
+    res = safe_cmp_masks(oneone, zerozero,
                    (uint8_t*)"\x00\x00",
                    (uint8_t*)"\xFF\xFF",
                    2);
     assert(res == 0);
 
-    res = safe_cmp(onezero, oneone,
+    res = safe_cmp_masks(onezero, oneone,
                    (uint8_t*)"\x00\x00",
                    (uint8_t*)"\x00\xFF",
                    2);
@@ -130,7 +130,7 @@ void test_safe_cmp(void)
 
     /** -- **/
 
-    res = safe_cmp(onezero, oneone,
+    res = safe_cmp_masks(onezero, oneone,
                    (uint8_t*)"\xFF\x00",
                    (uint8_t*)"\x00\xFF",
                    2);
@@ -158,7 +158,7 @@ int main(void)
     test_set_if_no_match();
     test_safe_select();
     test_safe_select_idx();
-    test_safe_cmp();
+    test_safe_cmp_masks();
     test_safe_search();
     return 0;
 }
