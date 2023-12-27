@@ -138,8 +138,8 @@ def compiler_has_intrin_h():
     #include <intrin.h>
     int main(void)
     {
-        int a, b[4];
-        __cpuid(b, a);
+        int a, b[4], c;
+        __cpuidex(b, a, c);
         return 0;
     }
     """
