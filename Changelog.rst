@@ -1,13 +1,13 @@
 Changelog
 =========
 
-Under development
+3.19.1 (28 December 2023)
 ++++++++++++++++++++++++++
 
 Resolved issues
 ---------------
 * Fixed a side-channel leakage with OAEP decryption that could be
-  exploited for a Manger's attack. Thanks to Hubert Kario.
+  exploited to carry out a Manger attack. Thanks to Hubert Kario.
 
 3.19.0 (16 September 2023)
 ++++++++++++++++++++++++++
