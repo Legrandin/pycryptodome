@@ -3,10 +3,17 @@ project(test_crypto LANGUAGES C)
 include(CMakePrintHelpers)
 enable_testing()
 
-cmake_print_variables(CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION CMAKE_SIZEOF_VOID_P SSE)
+cmake_print_variables(CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION CMAKE_SIZEOF_VOID_P CMAKE_SYSTEM_PROCESSOR SSE)
 
-option(SSE "Enable SSE instructions on Intel targets" ON)
-option(AESNI "Enable AESNI instructions on Intel targets" ON)
+# https://stackoverflow.com/questions/70475665/what-are-the-possible-values-of-cmake-system-processor
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686")
+    set(X86 TRUE)
+endif()
+
+if (X86)
+   option(SSE "Enable SSE instructions on Intel targets" ON)
+   option(AESNI "Enable AESNI instructions on Intel targets" ON)
+endif()
 
 if (DEFINED ENV{PYTHON})
     set(PYTHON $ENV{PYTHON})
@@ -55,16 +62,13 @@ else()
     add_compile_definitions(SYS_BITS=32)
 endif()
 
-# Use processor extensions
-# TODO: add exception if non-x86 platform
-# The test will run only for x86-64 and AMD64 architectures
-if (MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+if (MSVC)
     add_compile_definitions(HAVE_INTRIN_H)
     add_compile_definitions(USE_SSE2)
     add_compile_definitions(HAVE_WMMINTRIN_H)
     add_compile_definitions(HAVE_TMMINTRIN_H)
 else()
-    if (SSE AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    if (SSE)
         message(STATUS "Using SSE instructions")
         add_compile_definitions(HAVE_X86INTRIN_H)
         add_compile_definitions(HAVE_TMMINTRIN_H)
@@ -75,7 +79,7 @@ else()
 	    add_compile_definitions(HAVE_WMMINTRIN_H)
     endif()
 
-    if (AESNI AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64" )
+    if (AESNI)
 	    add_compile_options(-maes)
     endif()
 endif()
@@ -191,5 +195,7 @@ add_executable(test_ed448 test_ed448.c ../ed448.c $<TARGET_OBJECTS:mont>)
 add_test(NAME test_ed448 COMMAND test_ed448)
 
 # aesni
-add_executable(test_aesni test_aesni.c ../AESNI.c)
-add_test(NAME test_aesni COMMAND test_aesni)
+if (AESNI)
+  add_executable(test_aesni test_aesni.c ../AESNI.c)
+  add_test(NAME test_aesni COMMAND test_aesni)
+endif()
