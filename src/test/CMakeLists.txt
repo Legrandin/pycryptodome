@@ -57,23 +57,26 @@ endif()
 
 # Use processor extensions
 # TODO: add exception if non-x86 platform
-if (MSVC)
+# The test will run only for x86-64 and AMD64 architectures
+if (MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
     add_compile_definitions(HAVE_INTRIN_H)
     add_compile_definitions(USE_SSE2)
     add_compile_definitions(HAVE_WMMINTRIN_H)
     add_compile_definitions(HAVE_TMMINTRIN_H)
 else()
-    if (SSE)
-	message(STATUS "Using SSE instructions")
+    if (SSE AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+        message(STATUS "Using SSE instructions")
         add_compile_definitions(HAVE_X86INTRIN_H)
-	add_compile_definitions(HAVE_TMMINTRIN_H)
-	add_compile_options(-mssse3 -mpclmul)
+        add_compile_definitions(HAVE_TMMINTRIN_H)
+        add_compile_options(-mssse3 -mpclmul)
     endif()
+
     if (SSE OR AESNI)
-	add_compile_definitions(HAVE_WMMINTRIN_H)
+	    add_compile_definitions(HAVE_WMMINTRIN_H)
     endif()
-    if (AESNI)
-	add_compile_options(-maes)
+
+    if (AESNI AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64" )
+	    add_compile_options(-maes)
     endif()
 endif()
 
