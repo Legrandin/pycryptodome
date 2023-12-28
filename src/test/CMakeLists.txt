@@ -46,10 +46,12 @@ else()
 	# that is, only on Unix 64 bits. It is not available with MSVC or with Unix 32 bits.
         add_compile_definitions(HAVE_UINT128)
     else()
-	# On 32-bit x86 platforms, gcc assumes the stack to be aligned to 16
-	# bytes, but the caller may actually only align it to 4 bytes, which
-	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
-	add_compile_options(-mstackrealign)
+	if (X86)
+	   # On 32-bit x86 platforms, gcc assumes the stack to be aligned to 16
+	   # bytes, but the caller may actually only align it to 4 bytes, which
+	   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
+	   add_compile_options(-mstackrealign)
+	endif()
     endif()
     add_compile_options(-fsanitize=undefined -fsanitize=address)
     link_libraries(-lubsan)
