@@ -140,7 +140,7 @@ def compiler_has_intrin_h():
     {
         int a, b[4];
         __cpuid(b, a);
-        return 0;
+        return a;
     }
     """
     return test_compilation(source, msg="intrin.h header")
@@ -154,7 +154,7 @@ def compiler_has_cpuid_h():
     {
         unsigned int eax, ebx, ecx, edx;
         __get_cpuid(1, &eax, &ebx, &ecx, &edx);
-        return 0;
+        return eax;
     }
     """
     return test_compilation(source, msg="cpuid.h header")
@@ -163,11 +163,16 @@ def compiler_has_cpuid_h():
 def compiler_supports_aesni():
     source = """
     #include <wmmintrin.h>
+    #include <string.h>
     __m128i f(__m128i x, __m128i y) {
         return _mm_aesenc_si128(x, y);
     }
     int main(void) {
-        return 0;
+        int ret;
+        __m128i x = _mm_setzero_si128();
+        x = f(x, x);
+        memcpy(&ret, &x, sizeof(ret));
+        return ret;
     }
     """
 
