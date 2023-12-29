@@ -6,7 +6,6 @@ include pyproject.toml
 include requirements-test.txt
 graft Doc
 prune Doc/_build
-include appveyor.yml appveyor/get_wheels.sh appveyor/install.ps1 appveyor/run_with_env.cmd
 include .github/workflows/*.yml
 recursive-include src *.h *.c
 graft src/test
