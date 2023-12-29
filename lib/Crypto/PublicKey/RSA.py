@@ -77,8 +77,6 @@ class RsaKey(object):
 
     :ivar u: Same as ``invp``
     :vartype u: integer
-
-    :undocumented: exportKey, publickey
     """
 
     def __init__(self, **kwargs):
@@ -406,29 +404,41 @@ class RsaKey(object):
         raise ValueError("Unknown key format '%s'. Cannot export the RSA key." % format)
 
     # Backward compatibility
-    exportKey = export_key
-    publickey = public_key
+    def exportKey(self, *args, **kwargs):
+        """:meta private:"""
+        return self.export_key(*args, **kwargs)
+
+    def publickey(self):
+        """:meta private:"""
+        return self.public_key()
 
     # Methods defined in PyCrypto that we don't support anymore
     def sign(self, M, K):
+        """:meta private:"""
         raise NotImplementedError("Use module Crypto.Signature.pkcs1_15 instead")
 
     def verify(self, M, signature):
+        """:meta private:"""
         raise NotImplementedError("Use module Crypto.Signature.pkcs1_15 instead")
 
     def encrypt(self, plaintext, K):
+        """:meta private:"""
         raise NotImplementedError("Use module Crypto.Cipher.PKCS1_OAEP instead")
 
     def decrypt(self, ciphertext):
+        """:meta private:"""
         raise NotImplementedError("Use module Crypto.Cipher.PKCS1_OAEP instead")
 
     def blind(self, M, B):
+        """:meta private:"""
         raise NotImplementedError
 
     def unblind(self, M, B):
+        """:meta private:"""
         raise NotImplementedError
 
     def size(self):
+        """:meta private:"""
         raise NotImplementedError
 
 

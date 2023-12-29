@@ -37,4 +37,4 @@ called ``mykey.pem``, and then read it back::
 .. _ECRYPT: http://www.ecrypt.eu.org/ecrypt2/documents/D.SPA.20.pdf
 
 .. automodule:: Crypto.PublicKey.RSA
-    :members:
+   :members:
