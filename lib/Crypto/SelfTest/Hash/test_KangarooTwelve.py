@@ -119,8 +119,9 @@ def chunked(source, size):
         yield source[i:i+size]
 
 
-# https://github.com/XKCP/XKCP/blob/master/tests/TestVectors/KangarooTwelve.txt
 class KangarooTwelveTV(unittest.TestCase):
+
+    # https://github.com/XKCP/XKCP/blob/master/tests/TestVectors/KangarooTwelve.txt
 
     def test_zero_1(self):
         tv = """1A C2 D4 50 FC 3B 42 05 D1 9D A7 BF CA 1B 37 51
@@ -277,6 +278,48 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=b'\xFF' * 7, custom=custom).read(32)
+        self.assertEqual(res, btv)
+
+    # https://datatracker.ietf.org/doc/draft-irtf-cfrg-kangarootwelve/
+
+    def test_ptn_8191(self):
+        tv = """1B 57 76 36 F7 23 64 3E 99 0C C7 D6 A6 59 83 74
+        36 FD 6A 10 36 26 60 0E B8 30 1C D1 DB E5 53 D6"""
+
+        btv = txt2bin(tv)
+
+        # All at once
+        res = K12.new(data=ptn(8191)).read(32)
+        self.assertEqual(res, btv)
+
+    def test_ptn_8192(self):
+        tv = """48 F2 56 F6 77 2F 9E DF B6 A8 B6 61 EC 92 DC 93
+        B9 5E BD 05 A0 8A 17 B3 9A E3 49 08 70 C9 26 C3"""
+
+        btv = txt2bin(tv)
+
+        # All at once
+        res = K12.new(data=ptn(8192)).read(32)
+        self.assertEqual(res, btv)
+
+    def test_ptn_8192_8189(self):
+        tv = """3E D1 2F 70 FB 05 DD B5 86 89 51 0A B3 E4 D2 3C
+        6C 60 33 84 9A A0 1E 1D 8C 22 0A 29 7F ED CD 0B"""
+
+        btv = txt2bin(tv)
+
+        # All at once
+        res = K12.new(data=ptn(8192), custom=ptn(8189)).read(32)
+        self.assertEqual(res, btv)
+
+    def test_ptn_8192_8190(self):
+        tv = """6A 7C 1B 6A 5C D0 D8 C9 CA 94 3A 4A 21 6C C6 46
+        04 55 9A 2E A4 5F 78 57 0A 15 25 3D 67 BA 00 AE"""
+
+        btv = txt2bin(tv)
+
+        # All at once
+        res = K12.new(data=ptn(8192), custom=ptn(8190)).read(32)
         self.assertEqual(res, btv)
 
     ###
