@@ -169,7 +169,8 @@ def compiler_supports_aesni():
     }
     int main(void) {
         int ret;
-        __m128i x = _mm_setzero_si128();
+        __m128i x;
+        memset(&x, 0, sizeof(x));
         x = f(x, x);
         memcpy(&ret, &x, sizeof(ret));
         return ret;
