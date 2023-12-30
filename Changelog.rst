@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Under Development
+++++++++++++++++++++++++++
+
+New features
+---------------
+* Addde support for TurboSHAKE128 and TurboSHAKE256.
+
 3.19.1 (28 December 2023)
 ++++++++++++++++++++++++++
 

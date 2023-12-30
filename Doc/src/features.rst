@@ -49,7 +49,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - SHA-2 hashes (224, 256, 384, 512, 512/224, 512/256)
   - SHA-3 hashes (224, 256, 384, 512) and XOFs (SHAKE128, SHAKE256)
   - Functions derived from SHA-3 (cSHAKE128, cSHAKE256, TupleHash128, TupleHash256)
-  - KangarooTwelve (XOF)
+  - KangarooTwelve, TurboSHAKE128, TurboSHAKE256 (XOF)
   - Keccak (original submission to SHA-3)
   - BLAKE2b and BLAKE2s
   - RIPE-MD160 (legacy)

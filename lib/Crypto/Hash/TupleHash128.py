@@ -133,7 +133,4 @@ def new(**kwargs):
 
     custom = kwargs.pop("custom", b'')
 
-    if kwargs:
-        raise TypeError("Unknown parameters: " + str(kwargs))
-
     return TupleHash(custom, cSHAKE128, digest_bytes)

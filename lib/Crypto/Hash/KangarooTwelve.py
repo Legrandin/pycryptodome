@@ -28,16 +28,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr, c_ubyte)
-
 from Crypto.Util.number import long_to_bytes
 from Crypto.Util.py3compat import bchr
 
-from .keccak import _raw_keccak_lib
-
+from . import TurboSHAKE128
 
 def _length_encode(x):
     if x == 0:
@@ -70,7 +64,8 @@ class K12_XOF(object):
         self._padding = None        # Final padding is only decided in read()
 
         # Internal hash that consumes FinalNode
-        self._hash1 = self._create_keccak()
+        # The real domain separation byte will be known before squeezing
+        self._hash1 = TurboSHAKE128.new(domain=1)
         self._length1 = 0
 
         # Internal hash that produces CV_i (reset each time)
@@ -83,42 +78,6 @@ class K12_XOF(object):
         if data:
             self.update(data)
 
-    def _create_keccak(self):
-        state = VoidPointer()
-        result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(32),  # 32 bytes of capacity (256 bits)
-                                             c_ubyte(12))   # Reduced number of rounds
-        if result:
-            raise ValueError("Error %d while instantiating KangarooTwelve"
-                             % result)
-        return SmartPointer(state.get(), _raw_keccak_lib.keccak_destroy)
-
-    def _update(self, data, hash_obj):
-        result = _raw_keccak_lib.keccak_absorb(hash_obj.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
-        if result:
-            raise ValueError("Error %d while updating KangarooTwelve state"
-                             % result)
-
-    def _squeeze(self, hash_obj, length, padding):
-        bfr = create_string_buffer(length)
-        result = _raw_keccak_lib.keccak_squeeze(hash_obj.get(),
-                                                bfr,
-                                                c_size_t(length),
-                                                c_ubyte(padding))
-        if result:
-            raise ValueError("Error %d while extracting from KangarooTwelve"
-                             % result)
-
-        return get_raw_buffer(bfr)
-
-    def _reset(self, hash_obj):
-        result = _raw_keccak_lib.keccak_reset(hash_obj.get())
-        if result:
-            raise ValueError("Error %d while resetting KangarooTwelve state"
-                             % result)
-
     def update(self, data):
         """Hash the next piece of data.
 
@@ -127,7 +86,7 @@ class K12_XOF(object):
 
         Args:
             data (byte string/byte array/memoryview): The next chunk of the
-            message to hash.
+              message to hash.
         """
 
         if self._state == SQUEEZING:
@@ -138,7 +97,7 @@ class K12_XOF(object):
 
             if next_length + len(self._custom) <= 8192:
                 self._length1 = next_length
-                self._update(data, self._hash1)
+                self._hash1.update(data)
                 return self
 
             # Switch to tree hashing
@@ -148,7 +107,7 @@ class K12_XOF(object):
             data_mem = memoryview(data)
             assert(self._length1 < 8192)
             dtc = min(len(data), 8192 - self._length1)
-            self._update(data_mem[:dtc], self._hash1)
+            self._hash1.update(data_mem[:dtc])
             self._length1 += dtc
 
             if self._length1 < 8192:
@@ -158,10 +117,10 @@ class K12_XOF(object):
             assert(self._length1 == 8192)
 
             divider = b'\x03' + b'\x00' * 7
-            self._update(divider, self._hash1)
+            self._hash1.update(divider)
             self._length1 += 8
 
-            self._hash2 = self._create_keccak()
+            self._hash2 = TurboSHAKE128.new(domain=0x0B)
             self._length2 = 0
             self._ctr = 1
 
@@ -178,15 +137,15 @@ class K12_XOF(object):
         while index < len_data:
 
             new_index = min(index + 8192 - self._length2, len_data)
-            self._update(data_mem[index:new_index], self._hash2)
+            self._hash2.update(data_mem[index:new_index])
             self._length2 += new_index - index
             index = new_index
 
             if self._length2 == 8192:
-                cv_i = self._squeeze(self._hash2, 32, 0x0B)
-                self._update(cv_i, self._hash1)
+                cv_i = self._hash2.read(32)
+                self._hash1.update(cv_i)
                 self._length1 += 32
-                self._reset(self._hash2)
+                self._hash2._reset()
                 self._length2 = 0
                 self._ctr += 1
 
@@ -210,7 +169,7 @@ class K12_XOF(object):
         custom_was_consumed = False
 
         if self._state == SHORT_MSG:
-            self._update(self._custom, self._hash1)
+            self._hash1.update(self._custom)
             self._padding = 0x07
             self._state = SQUEEZING
 
@@ -225,20 +184,21 @@ class K12_XOF(object):
 
             # Is there still some leftover data in hash2?
             if self._length2 > 0:
-                cv_i = self._squeeze(self._hash2, 32, 0x0B)
-                self._update(cv_i, self._hash1)
+                cv_i = self._hash2.read(32)
+                self._hash1.update(cv_i)
                 self._length1 += 32
-                self._reset(self._hash2)
+                self._hash2._reset()
                 self._length2 = 0
                 self._ctr += 1
 
             trailer = _length_encode(self._ctr - 1) + b'\xFF\xFF'
-            self._update(trailer, self._hash1)
+            self._hash1.update(trailer)
 
             self._padding = 0x06
             self._state = SQUEEZING
 
-        return self._squeeze(self._hash1, length, self._padding)
+        self._hash1._domain = self._padding
+        return self._hash1.read(length)
 
     def new(self, data=None, custom=b''):
         return type(self)(data, custom)

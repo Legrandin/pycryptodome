@@ -58,7 +58,7 @@ with respect to the last official version of PyCrypto (2.6.1):
   - KMAC128 and KMAC256
   - TupleHash128 and TupleHash256
 
-* KangarooTwelve XOF (derived from Keccak)
+* KangarooTwelve, TurboSHAKE128, and TurboSHAKE256 XOFs
 * Truncated hash algorithms SHA-512/224 and SHA-512/256 (FIPS 180-4)
 * BLAKE2b and BLAKE2s hash algorithms
 * Salsa20 and ChaCha20/XChaCha20 stream ciphers

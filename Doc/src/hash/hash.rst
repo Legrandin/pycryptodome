@@ -138,6 +138,7 @@ Instead, it has a ``read(N)`` method to extract the next ``N`` bytes of the outp
     - :doc:`cshake256`
 
 - :doc:`k12`
+- :doc:`turboshake`
 
 Message Authentication Code (MAC) algorithms
 --------------------------------------------
