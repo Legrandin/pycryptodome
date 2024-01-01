@@ -260,6 +260,18 @@ class RsaKey(object):
             key_type = "Public"
         return "%s RSA key at 0x%X" % (key_type, id(self))
 
+    def export_fingerprint(self, hash_name = "MD5"):
+        bkey = self.exportKey(format='DER')
+        hash_names = ("MD2", "MD4", "MD5", "RIPEMD160", "SHA1",
+            "SHA224", "SHA256", "SHA384", "SHA512",
+            "SHA3_224", "SHA3_256", "SHA3_384", "SHA3_512")
+
+        if hash_name not in hash_names:
+            return  None
+        hashed = __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"]).new(bkey)
+        chunks = [hashed.hexdigest()[i:i+2] for i in range(0, len( hashed.hexdigest()), 2)]
+        return ":".join(chunks)
+
     def export_key(self, format='PEM', passphrase=None, pkcs=1,
                    protection=None, randfunc=None):
         """Export this RSA key.

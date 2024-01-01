@@ -419,6 +419,19 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         self.assertRaises(ValueError, key.export_key, 'DER', 'test', 1)
 
+    def testExportFingerPrint(self):
+        key = RSA.import_key(self.rsaKeyPEM)
+        self.assertEqual(key.export_fingerprint(), "4c:c8:ed:62:91:e3:4b:c9:9c:da:c9:2c:39:cf:3e:c2")
+
+    def testExportFingerPrint2(self):
+        key = RSA.import_key(self.rsaPublicKeyDER)
+        self.assertEqual(key.export_fingerprint(), "40:d6:a0:30:74:e1:26:1a:73:df:f0:bb:2b:a9:3b:61")
+    
+    def testExportFingerPrint3(self):
+        key = RSA.import_key(self.rsaPublicKeyDER)
+        key1 = RSA.import_key(self.rsaPublicKeyPEM)
+        self.assertEqual(key.export_fingerprint(), key1.export_fingerprint())
+
     def test_import_key(self):
         """Verify that import_key is an alias to importKey"""
         key = RSA.import_key(self.rsaPublicKeyDER)
