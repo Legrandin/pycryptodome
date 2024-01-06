@@ -7,6 +7,7 @@ openssl version | tee openssl_version.txt
 
 # Private key
 openssl genrsa -out rsa2048_private.pem 2048
+openssl pkcs8 -in rsa2048_private.pem -topk8 -iter 12345 -out rsa2048_private_p8.der -outform DER -v2 aes256 -v2prf hmacWithSHA512 -passout pass:secret
 
 # OpenSSH
 chmod 600 rsa2048_private.pem
