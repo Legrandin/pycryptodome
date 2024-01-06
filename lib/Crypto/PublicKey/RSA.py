@@ -261,7 +261,7 @@ class RsaKey(object):
         return "%s RSA key at 0x%X" % (key_type, id(self))
 
     def export_key(self, format='PEM', passphrase=None, pkcs=1,
-                   protection=None, randfunc=None):
+                   protection=None, randfunc=None, prot_params=None):
         """Export this RSA key.
 
         Args:
@@ -383,6 +383,7 @@ class RsaKey(object):
                         protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
                     binary_key = PKCS8.wrap(binary_key, oid,
                                             passphrase, protection,
+                                            prot_params=prot_params,
                                             key_params=DerNull())
                     passphrase = None
         else:

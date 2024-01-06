@@ -31,6 +31,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import re
+
+from Crypto import Hash
 from Crypto import Random
 from Crypto.Util.asn1 import (
             DerSequence, DerOctetString,
@@ -38,8 +41,6 @@ from Crypto.Util.asn1 import (
             )
 
 from Crypto.Util.Padding import pad, unpad
-from Crypto.Hash import MD5, SHA1, SHA224, SHA256, SHA384, SHA512
-from Crypto.Cipher import DES, ARC2, DES3, AES
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
 
 _OID_PBE_WITH_MD5_AND_DES_CBC = "1.2.840.113549.1.5.3"
@@ -53,10 +54,6 @@ _OID_PBKDF2 = "1.2.840.113549.1.5.12"
 _OID_SCRYPT = "1.3.6.1.4.1.11591.4.11"
 
 _OID_HMAC_SHA1 = "1.2.840.113549.2.7"
-_OID_HMAC_SHA224 = "1.2.840.113549.2.8"
-_OID_HMAC_SHA256 = "1.2.840.113549.2.9"
-_OID_HMAC_SHA384 = "1.2.840.113549.2.10"
-_OID_HMAC_SHA512 = "1.2.840.113549.2.11"
 
 _OID_DES_EDE3_CBC = "1.2.840.113549.3.7"
 _OID_AES128_CBC = "2.16.840.1.101.3.4.1.2"
@@ -103,6 +100,16 @@ class PbesError(ValueError):
 #   prf AlgorithmIdentifier {{PBKDF2-PRFs}} DEFAULT algid-hmacWithSHA1
 #   }
 #
+#   PBKDF2-PRFs ALGORITHM-IDENTIFIER ::= {
+#        {NULL IDENTIFIED BY id-hmacWithSHA1},
+#        {NULL IDENTIFIED BY id-hmacWithSHA224},
+#        {NULL IDENTIFIED BY id-hmacWithSHA256},
+#        {NULL IDENTIFIED BY id-hmacWithSHA384},
+#        {NULL IDENTIFIED BY id-hmacWithSHA512},
+#        {NULL IDENTIFIED BY id-hmacWithSHA512-224},
+#        {NULL IDENTIFIED BY id-hmacWithSHA512-256},
+#        ...
+# }
 # scrypt-params ::= SEQUENCE {
 #       salt OCTET STRING,
 #       costParameter INTEGER (1..MAX),
@@ -110,6 +117,7 @@ class PbesError(ValueError):
 #       parallelizationParameter INTEGER (1..MAX),
 #       keyLength INTEGER (1..MAX) OPTIONAL
 #   }
+
 
 class PBES1(object):
     """Deprecated encryption scheme with password-based key derivation
@@ -141,19 +149,27 @@ class PBES1(object):
         cipher_params = {}
         if pbe_oid == _OID_PBE_WITH_MD5_AND_DES_CBC:
             # PBE_MD5_DES_CBC
+            from Crypto.Hash import MD5
+            from Crypto.Cipher import DES
             hashmod = MD5
             ciphermod = DES
         elif pbe_oid == _OID_PBE_WITH_MD5_AND_RC2_CBC:
             # PBE_MD5_RC2_CBC
+            from Crypto.Hash import MD5
+            from Crypto.Cipher import ARC2
             hashmod = MD5
             ciphermod = ARC2
             cipher_params['effective_keylen'] = 64
         elif pbe_oid == _OID_PBE_WITH_SHA1_AND_DES_CBC:
             # PBE_SHA1_DES_CBC
+            from Crypto.Hash import SHA1
+            from Crypto.Cipher import DES
             hashmod = SHA1
             ciphermod = DES
         elif pbe_oid == _OID_PBE_WITH_SHA1_AND_RC2_CBC:
             # PBE_SHA1_RC2_CBC
+            from Crypto.Hash import SHA1
+            from Crypto.Cipher import ARC2
             hashmod = SHA1
             ciphermod = ARC2
             cipher_params['effective_keylen'] = 64
@@ -231,48 +247,80 @@ class PBES2(object):
         if randfunc is None:
             randfunc = Random.new().read
 
-        if protection == 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC':
+        pattern = re.compile(r'^(PBKDF2WithHMAC-([0-9A-Z-]+)|scrypt)And([0-9A-Z-]+)$')
+        res = pattern.match(protection)
+        if res is None:
+            raise ValueError("Unknown protection %s" % protection)
+
+        if protection.startswith("PBKDF"):
+            pbkdf = "pbkdf2"
+            pbkdf2_hmac_algo = res.group(2)
+            enc_algo = res.group(3)
+        else:
+            pbkdf = "scrypt"
+            enc_algo = res.group(3)
+
+        if enc_algo == 'DES-EDE3-CBC':
+            from Crypto.Cipher import DES3
             key_size = 24
             module = DES3
             cipher_mode = DES3.MODE_CBC
             enc_oid = _OID_DES_EDE3_CBC
-        elif protection in ('PBKDF2WithHMAC-SHA1AndAES128-CBC',
-                'scryptAndAES128-CBC'):
+        elif enc_algo == 'AES128-CBC':
+            from Crypto.Cipher import AES
             key_size = 16
             module = AES
             cipher_mode = AES.MODE_CBC
             enc_oid = _OID_AES128_CBC
-        elif protection in ('PBKDF2WithHMAC-SHA1AndAES192-CBC',
-                'scryptAndAES192-CBC'):
+        elif enc_algo == 'AES192-CBC':
+            from Crypto.Cipher import AES
             key_size = 24
             module = AES
             cipher_mode = AES.MODE_CBC
             enc_oid = _OID_AES192_CBC
-        elif protection in ('PBKDF2WithHMAC-SHA1AndAES256-CBC',
-                'scryptAndAES256-CBC'):
+        elif enc_algo == 'AES256-CBC':
+            from Crypto.Cipher import AES
             key_size = 32
             module = AES
             cipher_mode = AES.MODE_CBC
             enc_oid = _OID_AES256_CBC
         else:
-            raise ValueError("Unknown PBES2 mode")
+            raise ValueError("Unknown encryption mode '%s'" % enc_algo)
 
         # Get random data
         iv = randfunc(module.block_size)
         salt = randfunc(prot_params.get("salt_size", 8))
 
         # Derive key from password
-        if protection.startswith('PBKDF2'):
+        if pbkdf == 'pbkdf2':
+
             count = prot_params.get("iteration_count", 1000)
-            key = PBKDF2(passphrase, salt, key_size, count)
+            digestmod = Hash.new(pbkdf2_hmac_algo)
+
+            key = PBKDF2(passphrase,
+                         salt,
+                         key_size,
+                         count,
+                         hmac_hash_module=digestmod)
+
+            pbkdf2_params = DerSequence([
+                                DerOctetString(salt),
+                                DerInteger(count)
+                            ])
+
+            if pbkdf2_hmac_algo != 'SHA1':
+                try:
+                    hmac_oid = Hash.HMAC.new(digestmod).oid
+                except KeyError:
+                    raise ValueError("No OID for HMAC hash algorithm")
+                pbkdf2_params.append(DerObjectId(hmac_oid))
+
             kdf_info = DerSequence([
                     DerObjectId(_OID_PBKDF2),   # PBKDF2
-                    DerSequence([
-                        DerOctetString(salt),
-                        DerInteger(count)
-                    ])
+                    pbkdf2_params
             ])
-        else:
+
+        elif pbkdf == 'scrypt':
             # It must be scrypt
             count = prot_params.get("iteration_count", 16384)
             scrypt_r = prot_params.get('block_size', 8)
@@ -288,6 +336,9 @@ class PBES2(object):
                         DerInteger(scrypt_p)
                     ])
             ])
+
+        else:
+            raise ValueError("Unknown KDF " + res.group(1))
 
         # Create cipher and use it
         cipher = module.new(key, cipher_mode, iv)
@@ -336,7 +387,7 @@ class PBES2(object):
 
         pbes2_params = DerSequence().decode(enc_algo[1], nr_elements=2)
 
-        ### Key Derivation Function selection
+        # Key Derivation Function selection
         kdf_info = DerSequence().decode(pbes2_params[0], nr_elements=2)
         kdf_oid = DerObjectId().decode(kdf_info[0]).value
 
@@ -361,7 +412,7 @@ class PBES2(object):
                     pass
 
             # Default is HMAC-SHA1
-            pbkdf2_prf_oid = "1.2.840.113549.2.7"
+            pbkdf2_prf_oid = _OID_HMAC_SHA1
             if left > 0:
                 pbkdf2_prf_algo_id = DerSequence().decode(pbkdf2_params[idx])
                 pbkdf2_prf_oid = DerObjectId().decode(pbkdf2_prf_algo_id[0]).value
@@ -379,24 +430,28 @@ class PBES2(object):
         else:
             raise PbesError("Unsupported PBES2 KDF")
 
-        ### Cipher selection
+        # Cipher selection
         enc_info = DerSequence().decode(pbes2_params[1])
         enc_oid = DerObjectId().decode(enc_info[0]).value
 
         if enc_oid == _OID_DES_EDE3_CBC:
             # DES_EDE3_CBC
+            from Crypto.Cipher import DES3
             ciphermod = DES3
             key_size = 24
         elif enc_oid == _OID_AES128_CBC:
             # AES128_CBC
+            from Crypto.Cipher import AES
             ciphermod = AES
             key_size = 16
         elif enc_oid == _OID_AES192_CBC:
             # AES192_CBC
+            from Crypto.Cipher import AES
             ciphermod = AES
             key_size = 24
         elif enc_oid == _OID_AES256_CBC:
             # AES256_CBC
+            from Crypto.Cipher import AES
             ciphermod = AES
             key_size = 32
         else:
@@ -410,18 +465,12 @@ class PBES2(object):
 
         # Create cipher
         if kdf_oid == _OID_PBKDF2:
-            if pbkdf2_prf_oid == _OID_HMAC_SHA1:
-                hmac_hash_module = SHA1
-            elif pbkdf2_prf_oid == _OID_HMAC_SHA224:
-                hmac_hash_module = SHA224
-            elif pbkdf2_prf_oid == _OID_HMAC_SHA256:
-                hmac_hash_module = SHA256
-            elif pbkdf2_prf_oid == _OID_HMAC_SHA384:
-                hmac_hash_module = SHA384
-            elif pbkdf2_prf_oid == _OID_HMAC_SHA512:
-                hmac_hash_module = SHA512
-            else:
+
+            try:
+                hmac_hash_module_oid = Hash.HMAC._hmac2hash_oid[pbkdf2_prf_oid]
+            except KeyError:
                 raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
+            hmac_hash_module = Hash.new(hmac_hash_module_oid)
 
             key = PBKDF2(passphrase, salt, key_size, iteration_count,
                          hmac_hash_module=hmac_hash_module)

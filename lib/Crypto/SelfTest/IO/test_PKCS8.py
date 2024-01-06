@@ -391,7 +391,7 @@ class PKCS8_Decrypt(unittest.TestCase):
         """Verify unwrapping with encryption"""
 
         for t in self.wrapped_enc_keys:
-            res1, res2, res3 = PKCS8.unwrap(t[4], b("TestTest"))
+            res1, res2, res3 = PKCS8.unwrap(t[4], b"TestTest")
             self.assertEqual(res1, self.oid_key)
             self.assertEqual(res2, self.clear_key)
 

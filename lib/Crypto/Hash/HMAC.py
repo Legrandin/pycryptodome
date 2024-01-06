@@ -35,12 +35,27 @@ from Crypto.Util.py3compat import bord, tobytes
 
 from binascii import unhexlify
 
-from Crypto.Hash import MD5
 from Crypto.Hash import BLAKE2s
 from Crypto.Util.strxor import strxor
 from Crypto.Random import get_random_bytes
 
 __all__ = ['new', 'HMAC']
+
+_hash2hmac_oid = {
+    '1.3.14.3.2.26': '1.2.840.113549.2.7',           # SHA-1
+    '2.16.840.1.101.3.4.2.4': '1.2.840.113549.2.8',  # SHA-224
+    '2.16.840.1.101.3.4.2.1': '1.2.840.113549.2.9',  # SHA-256
+    '2.16.840.1.101.3.4.2.2': '1.2.840.113549.2.10',  # SHA-384
+    '2.16.840.1.101.3.4.2.3': '1.2.840.113549.2.11',  # SHA-512
+    '2.16.840.1.101.3.4.2.5': '1.2.840.113549.2.12',  # SHA-512_224
+    '2.16.840.1.101.3.4.2.6': '1.2.840.113549.2.13',  # SHA-512_256
+    '2.16.840.1.101.3.4.2.7': '2.16.840.1.101.3.4.2.13',   # SHA-3 224
+    '2.16.840.1.101.3.4.2.8': '2.16.840.1.101.3.4.2.14',   # SHA-3 256
+    '2.16.840.1.101.3.4.2.9': '2.16.840.1.101.3.4.2.15',   # SHA-3 384
+    '2.16.840.1.101.3.4.2.10': '2.16.840.1.101.3.4.2.16',  # SHA-3 512
+}
+
+_hmac2hash_oid = {v: k for k, v in _hash2hmac_oid.items()}
 
 
 class HMAC(object):
@@ -49,11 +64,15 @@ class HMAC(object):
 
     :ivar digest_size: the size in bytes of the resulting MAC tag
     :vartype digest_size: integer
+
+    :ivar oid: the ASN.1 object ID of the HMAC algorithm.
+               Only present if the algorithm was officially assigned one.
     """
 
     def __init__(self, key, msg=b"", digestmod=None):
 
         if digestmod is None:
+            from Crypto.Hash import MD5
             digestmod = MD5
 
         if msg is None:
@@ -63,6 +82,12 @@ class HMAC(object):
         self.digest_size = digestmod.digest_size
 
         self._digestmod = digestmod
+
+        # Hash OID --> HMAC OID
+        try:
+            self.oid = _hash2hmac_oid[digestmod.oid]
+        except (KeyError, AttributeError):
+            pass
 
         if isinstance(key, memoryview):
             key = key.tobytes()
