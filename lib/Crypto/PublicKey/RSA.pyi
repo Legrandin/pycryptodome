@@ -1,6 +1,7 @@
-from typing import Callable, Union, Tuple, Optional
+from typing import Callable, Union, Tuple, Optional, overload, Literal
 
 from Crypto.Math.Numbers import Integer
+from Crypto.IO._PBES import ProtParams
 
 __all__ = ['generate', 'construct', 'import_key',
            'RsaKey', 'oid']
@@ -38,8 +39,24 @@ class RsaKey(object):
     def __getstate__(self) -> None: ...
     def __repr__(self) -> str: ...
     def __str__(self) -> str: ...
-    def export_key(self, format: Optional[str]="PEM", passphrase: Optional[str]=None, pkcs: Optional[int]=1,
-                   protection: Optional[str]=None, randfunc: Optional[RNG]=None) -> bytes: ...
+
+    @overload
+    def export_key(self,
+                   format: Optional[str]="PEM",
+                   passphrase: Optional[str]=None,
+                   pkcs: Optional[int]=1,
+                   protection: Optional[str]=None,
+                   randfunc: Optional[RNG]=None
+                   ) -> bytes: ...
+    @overload
+    def export_key(self, *,
+                   format: Optional[str]="PEM",
+                   passphrase: str,
+                   pkcs: Literal[8],
+                   protection: str,
+                   randfunc: Optional[RNG]=None,
+                   prot_params: ProtParams,
+                   ) -> bytes: ...
 
     # Backward compatibility
     exportKey = export_key
