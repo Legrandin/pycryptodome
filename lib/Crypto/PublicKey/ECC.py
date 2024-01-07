@@ -963,7 +963,7 @@ class EccKey(object):
         from Crypto.IO import PKCS8
 
         if kwargs.get('passphrase', None) is not None and 'protection' not in kwargs:
-            raise ValueError("At least the 'protection' parameter should be present")
+            raise ValueError("At least the 'protection' parameter must be present")
 
         if self._is_eddsa():
             oid = self._curve.oid
@@ -1041,7 +1041,7 @@ class EccKey(object):
 
         Args:
           format (string):
-            The format to use for encoding the key:
+            The output format:
 
             - ``'DER'``. The key will be encoded in ASN.1 DER format (binary).
               For a public key, the ASN.1 ``subjectPublicKeyInfo`` structure
@@ -1062,20 +1062,25 @@ class EccKey(object):
               * For NIST P-curves: equivalent to ``'SEC1'``.
               * For EdDSA curves: ``bytes`` in the format defined in `RFC8032`_.
 
-          passphrase (byte string or string):
-            The passphrase to use for protecting the private key.
+          passphrase (bytes or string):
+            (*Private keys only*) The passphrase to protect the
+            private key.
 
           use_pkcs8 (boolean):
-            Only relevant for private keys.
-
+            (*Private keys only*)
             If ``True`` (default and recommended), the `PKCS#8`_ representation
             will be used. It must be ``True`` for EdDSA curves.
+
+            If ``False`` and a passphrase is present, the obsolete PEM
+            encryption will be used.
 
           protection (string):
             When a private key is exported with password-protection
             and PKCS#8 (both ``DER`` and ``PEM`` formats), this parameter MUST be
-            present and be a valid algorithm supported by :mod:`Crypto.IO.PKCS8`.
-            It is recommended to use ``PBKDF2WithHMAC-SHA1AndAES128-CBC``.
+            present,
+            For all possible protection schemes,
+            refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
+            It is recommended to use ``'PBKDF2WithHMAC-SHA5126AndAES128-CBC'``.
 
           compress (boolean):
             If ``True``, the method returns a more compact representation
@@ -1085,6 +1090,16 @@ class EccKey(object):
 
             This parameter is ignored for EdDSA curves, as compression is
             mandatory.
+
+          prot_params (dict):
+            When a private key is exported with password-protection
+            and PKCS#8 (both ``DER`` and ``PEM`` formats), this dictionary
+            contains the  parameters to use to derive the encryption key
+            from the passphrase.
+            For all possible values,
+            refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
+            The recommendation is to use ``{'iteration_count':21000}`` for PBKDF2,
+            and ``{'iteration_count':131072}`` for scrypt.
 
         .. warning::
             If you don't provide a passphrase, the private key will be
@@ -1121,8 +1136,11 @@ class EccKey(object):
                     raise ValueError("Empty passphrase")
             use_pkcs8 = args.pop("use_pkcs8", True)
 
-            if not use_pkcs8 and self._is_eddsa():
-                raise ValueError("'pkcs8' must be True for EdDSA curves")
+            if not use_pkcs8:
+                if self._is_eddsa():
+                    raise ValueError("'pkcs8' must be True for EdDSA curves")
+                if 'protection' in args:
+                    raise ValueError("'protection' is only supported for PKCS#8")
 
             if ext_format == "PEM":
                 if use_pkcs8:

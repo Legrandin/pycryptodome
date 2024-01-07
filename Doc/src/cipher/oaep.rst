@@ -1,3 +1,5 @@
+.. _rsa_oaep:
+
 PKCS#1 OAEP (RSA)
 =================
 
