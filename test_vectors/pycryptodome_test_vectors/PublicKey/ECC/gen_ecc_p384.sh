@@ -15,6 +15,7 @@ openssl ec -in ecc_p384_private.pem -text -out ecc_p384.txt
 # Encrypted private key
 openssl pkcs8 -in ecc_p384_private.der -inform DER -passout 'pass:secret' -out ecc_p384_private_p8.der -outform DER -topk8
 openssl pkcs8 -in ecc_p384_private.der -inform DER -passout 'pass:secret' -out ecc_p384_private_p8.pem -outform PEM -topk8
+openssl pkcs8 -in ecc_p384_private.der -inform DER -passout 'pass:secret' -out ecc_p384_private_p8_2.der -outform DER -topk8 -iter 12345 -v2 aes256 -v2prf hmacWithSHA512
 openssl ec -in ecc_p384_private.pem -des3 -out ecc_p384_private_enc_des3.pem -passout 'pass:secret' -outform PEM
 openssl ec -in ecc_p384_private.pem -aes128 -out ecc_p384_private_enc_aes128.pem -passout 'pass:secret' -outform PEM
 openssl ec -in ecc_p384_private.pem -aes192 -out ecc_p384_private_enc_aes192.pem -passout 'pass:secret' -outform PEM

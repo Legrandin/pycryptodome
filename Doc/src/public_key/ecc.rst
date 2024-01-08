@@ -12,8 +12,34 @@ is significantly smaller at the same security level.
 For instance, a 3072-bit RSA key takes 768 bytes whereas the equally strong NIST P-256
 private key only takes 32 bytes (that is, 256 bits).
 
-This module provides mechanisms for generating new ECC keys, exporting and importing them
-using widely supported formats like PEM or DER.
+With this module you can generate new ECC keys::
+
+    >>> from Crypto.PublicKey import ECC
+    >>>
+    >>> mykey = ECC.generate(curve='p256')
+
+export an ECC private key and protect it with a password, so that it is
+resistant to brute force attacks::
+
+    >>> pwd = b'secret'
+    >>> with open("myprivatekey.pem", "wt") as f:
+    >>>     data = mykey.export_key(format='PEM'
+                                    passphrase=pwd,
+                                    protection='PBKDF2WithHMAC-SHA512AndAES256-CBC',
+                                    prot_params={'iteration_count':131072})
+    >>>     f.write(data)
+
+and reimport it later::
+
+    >>> pwd = b'secret'
+    >>> with open("myprivatekey.pem", "rt") as f:
+    >>>     data = f.read()
+    >>>     mykey = ECC.import_key(data, pwd)
+
+You can also export the public key, which is not sensitive::
+
+    >>> with open("mypublickey.pem", "wbt) as f:
+    >>>     data = mykey.public_key().export_key()
 
 .. _ECC table:
 .. csv-table::
@@ -31,20 +57,6 @@ using widely supported formats like PEM or DER.
 For more information about each NIST curve see `FIPS 186-4`_, Section D.1.2.
 
 The Ed25519 and the Ed448 curves are defined in RFC8032_.
-
-The following example demonstrates how to generate a new ECC key, export it,
-and subsequently reload it back into the application::
-
-    >>> from Crypto.PublicKey import ECC
-    >>>
-    >>> key = ECC.generate(curve='P-256')
-    >>>
-    >>> f = open('myprivatekey.pem','wt')
-    >>> f.write(key.export_key(format='PEM'))
-    >>> f.close()
-    ...
-    >>> f = open('myprivatekey.pem','rt')
-    >>> key = ECC.import_key(f.read())
 
 The ECC key can be used to perform or verify signatures, using the modules
 :mod:`Crypto.Signature.DSS` (ECDSA; NIST curves only)

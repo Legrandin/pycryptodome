@@ -1,12 +1,24 @@
-from typing import Union, Callable, Optional, NamedTuple, List, Tuple, Dict, NamedTuple, Any
+from __future__ import annotations
+
+from typing import Union, Callable, Optional, Tuple, Dict, NamedTuple, Any, overload, Literal
+from typing_extensions import TypedDict, Unpack, NotRequired
 
 from Crypto.Math.Numbers import Integer
+from Crypto.IO._PBES import ProtParams
 
 RNG = Callable[[int], bytes]
 
-class UnsupportedEccFeature(ValueError): ...
+
+class UnsupportedEccFeature(ValueError):
+    ...
+
+
 class EccPoint(object):
-    def __init__(self, x: Union[int, Integer], y: Union[int, Integer], curve: Optional[str] = ...) -> None: ...
+    def __init__(self,
+                 x: Union[int, Integer],
+                 y: Union[int, Integer],
+                 curve: Optional[str] = ...) -> None: ...
+
     def set(self, point: EccPoint) -> EccPoint: ...
     def __eq__(self, point: object) -> bool: ...
     def __neg__(self) -> EccPoint: ...
@@ -27,6 +39,15 @@ class EccPoint(object):
     def __imul__(self, scalar: int) -> EccPoint: ...
     def __mul__(self, scalar: int) -> EccPoint: ...
 
+
+class ExportParams(TypedDict):
+    passphrase: NotRequired[Union[bytes, str]]
+    use_pkcs8: NotRequired[bool]
+    protection: NotRequired[str]
+    compress: NotRequired[bool]
+    prot_params: NotRequired[ProtParams]
+
+
 class EccKey(object):
     curve: str
     def __init__(self, *, curve: str = ..., d: int = ..., point: EccPoint = ...) -> None: ...
@@ -38,7 +59,18 @@ class EccKey(object):
     @property
     def pointQ(self) -> EccPoint: ...
     def public_key(self) -> EccKey: ...
-    def export_key(self, **kwargs: Union[str, bytes, bool]) -> Union[str,bytes]: ...
+
+    @overload
+    def export_key(self,
+                   *,
+                   format: Literal['PEM', 'OpenSSH'],
+                   **kwargs: Unpack[ExportParams]) -> str: ...
+
+    @overload
+    def export_key(self,
+                   *,
+                   format: Literal['DER', 'SEC1', 'raw'],
+                   **kwargs: Unpack[ExportParams]) -> bytes: ...
 
 
 _Curve = NamedTuple("_Curve", [('p', Integer),
@@ -54,13 +86,17 @@ _Curve = NamedTuple("_Curve", [('p', Integer),
                                ('openssh', Union[str, None]),
                                ])
 
-_curves : Dict[str, _Curve]
+_curves: Dict[str, _Curve]
 
 
 def generate(**kwargs: Union[str, RNG]) -> EccKey: ...
 def construct(**kwargs: Union[str, int]) -> EccKey: ...
+
+
 def import_key(encoded: Union[bytes, str],
-               passphrase: Optional[str]=None,
-               curve_name:Optional[str]=None) -> EccKey: ...
+               passphrase: Optional[str] = None,
+               curve_name: Optional[str] = None) -> EccKey: ...
+
+
 def _import_ed25519_public_key(encoded: bytes) -> EccKey: ...
 def _import_ed448_public_key(encoded: bytes) -> EccKey: ...

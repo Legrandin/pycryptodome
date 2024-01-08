@@ -50,7 +50,7 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 
 
 class RsaKey(object):
-    r"""Class defining an actual RSA key.
+    r"""Class defining an RSA key, private or public.
     Do not instantiate directly.
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
 
@@ -261,67 +261,76 @@ class RsaKey(object):
         return "%s RSA key at 0x%X" % (key_type, id(self))
 
     def export_key(self, format='PEM', passphrase=None, pkcs=1,
-                   protection=None, randfunc=None):
+                   protection=None, randfunc=None, prot_params=None):
         """Export this RSA key.
 
-        Args:
+        Keyword Args:
           format (string):
-            The format to use for wrapping the key:
+            The desired output format:
 
-            - *'PEM'*. (*Default*) Text encoding, done according to `RFC1421`_/`RFC1423`_.
-            - *'DER'*. Binary encoding.
-            - *'OpenSSH'*. Textual encoding, done according to OpenSSH specification.
+            - ``'PEM'``. (default) Text output, according to `RFC1421`_/`RFC1423`_.
+            - ``'DER'``. Binary output.
+            - ``'OpenSSH'``. Text output, according to the OpenSSH specification.
               Only suitable for public keys (not private keys).
 
-          passphrase (string):
-            (*For private keys only*) The pass phrase used for protecting the output.
+            Note that PEM contains a DER structure.
+
+          passphrase (bytes or string):
+            (*Private keys only*) The passphrase to protect the
+            private key.
 
           pkcs (integer):
-            (*For private keys only*) The ASN.1 structure to use for
-            serializing the key. Note that even in case of PEM
-            encoding, there is an inner ASN.1 DER structure.
+            (*Private keys only*) The standard to use for
+            serializing the key: PKCS#1 or PKCS#8.
 
-            With ``pkcs=1`` (*default*), the private key is encoded in a
-            simple `PKCS#1`_ structure (``RSAPrivateKey``).
+            With ``pkcs=1`` (*default*), the private key is encoded with a
+            simple `PKCS#1`_ structure (``RSAPrivateKey``). The key cannot be
+            securely encrypted.
 
-            With ``pkcs=8``, the private key is encoded in a `PKCS#8`_ structure
-            (``PrivateKeyInfo``).
+            With ``pkcs=8``, the private key is encoded with a `PKCS#8`_ structure
+            (``PrivateKeyInfo``). PKCS#8 offers the best ways to securely
+            encrypt the key.
 
             .. note::
                 This parameter is ignored for a public key.
-                For DER and PEM, an ASN.1 DER ``SubjectPublicKeyInfo``
-                structure is always used.
+                For DER and PEM, the output is always an
+                ASN.1 DER ``SubjectPublicKeyInfo`` structure.
 
           protection (string):
             (*For private keys only*)
-            The encryption scheme to use for protecting the private key.
+            The encryption scheme to use for protecting the private key
+            using the passphrase.
+
+            You can only specify a value if ``pkcs=8``.
+            For all possible protection schemes,
+            refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
+            The recommended value is
+            ``'PBKDF2WithHMAC-SHA512AndAES256-CBC'``.
 
             If ``None`` (default), the behavior depends on :attr:`format`:
 
-            - For *'DER'*, the *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*
-              scheme is used. The following operations are performed:
+            - if ``format='PEM'``, the obsolete PEM encryption scheme is used.
+              It is based on MD5 for key derivation, and 3DES for encryption.
 
-                1. A 16 byte Triple DES key is derived from the passphrase
-                   using :func:`Crypto.Protocol.KDF.PBKDF2` with 8 bytes salt,
-                   and 1 000 iterations of :mod:`Crypto.Hash.HMAC`.
-                2. The private key is encrypted using CBC.
-                3. The encrypted key is encoded according to PKCS#8.
+            - if ``format='DER'``, the ``'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'``
+              scheme is used.
 
-            - For *'PEM'*, the obsolete PEM encryption scheme is used.
-              It is based on MD5 for key derivation, and Triple DES for encryption.
+          prot_params (dict):
+            (*For private keys only*)
 
-            Specifying a value for :attr:`protection` is only meaningful for PKCS#8
-            (that is, ``pkcs=8``) and only if a pass phrase is present too.
-
-            The supported schemes for PKCS#8 are listed in the
-            :mod:`Crypto.IO.PKCS8` module (see :attr:`wrap_algo` parameter).
+            The parameters to use to derive the encryption key
+            from the passphrase. ``'protection'`` must be also specified.
+            For all possible values,
+            refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
+            The recommendation is to use ``{'iteration_count':21000}`` for PBKDF2,
+            and ``{'iteration_count':131072}`` for scrypt.
 
           randfunc (callable):
             A function that provides random bytes. Only used for PEM encoding.
             The default is :func:`Crypto.Random.get_random_bytes`.
 
         Returns:
-          byte string: the encoded key
+          bytes: the encoded key
 
         Raises:
           ValueError:when the format is unknown or when you try to encrypt a private
@@ -380,9 +389,12 @@ class RsaKey(object):
                 else:
                     key_type = 'ENCRYPTED PRIVATE KEY'
                     if not protection:
+                        if prot_params:
+                            raise ValueError("'protection' parameter must be set")
                         protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
                     binary_key = PKCS8.wrap(binary_key, oid,
                                             passphrase, protection,
+                                            prot_params=prot_params,
                                             key_params=DerNull())
                     passphrase = None
         else:
@@ -456,6 +468,7 @@ def generate(bits, randfunc=None, e=65537):
         Key length, or size (in bits) of the RSA modulus.
         It must be at least 1024, but **2048 is recommended.**
         The FIPS standard only defines 1024, 2048 and 3072.
+    Keyword Args:
       randfunc (callable):
         Function that returns random bytes.
         The default is :func:`Crypto.Random.get_random_bytes`.
@@ -553,6 +566,7 @@ def construct(rsa_components, consistency_check=True):
             5. Second factor of *n* (*q*). Optional.
             6. CRT coefficient *q*, that is :math:`p^{-1} \text{mod }q`. Optional.
 
+    Keyword Args:
         consistency_check (boolean):
             If ``True``, the library will verify that the provided components
             fulfil the main RSA properties.

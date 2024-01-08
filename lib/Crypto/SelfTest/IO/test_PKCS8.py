@@ -341,6 +341,30 @@ af728481f53443551a9bff4cea023164e9622b5441a309e1f4bff98e5bf76677
 """
 ))
 
+# hexdump -v -e '32/1 "%02x" "\n"' botan_scrypt.der
+botan_scrypt = """
+3081f1305206092a864886f70d01050d3045302806092b06010401da47040b30
+1b040c316c5c7a847276a838a668280202200002010102010102012030190609
+60864801650304012e040c293e9bcddc0d59d64e060cb604819ab92318063480
+16148081a3123bb092b636ec0cc3b964628e181504c13eaf94987e6fb9f171d4
+9c45baeeb79c1d805d5a762d9bfd6d1995669df60a2cd0174b6d204693964de7
+05bc3fdc3a4ce5db01f30a994c82b0aac786e4f8655138c952f1cf2cc6093f90
+b5e5ca507beb539ff497b7b6370ba7f31f4928d3385dbe8bcd2395813ba1324e
+6795e81a8518aff0f0a9e01396539f937b8b7b08
+"""
+
+# hexdump -v -e '32/1 "%02x" "\n"' botan_pbkdf2.der
+botan_pbkdf2 = """
+3081f3305e06092a864886f70d01050d3051303006092a864886f70d01050c30
+23040cc91c89b368db578d2ec4c32002020fa0020118300c06082a864886f70d
+02090500301d060960864801650304011604102a7147289e7c914a7d8257e4a1
+a2135b048190a648955fc96ecae56dcb4d0ab19edc5b7ef1219c88c7c3b2d0ed
+b21e25d2559447f53e20b90b2f20e72456d943561c4925aad6067a4c720afb3d
+691e14dfffa10ef77898e21d134f19136d35088a7aac508b296fd00d5742ad69
+8c693293b6a591e3660b130d718724d23d696f4da9bf4031475fafb682d7955c
+996363f37032e10ac85afebb7cc1cbfc0e5d4c60a4c2
+"""
+
 def txt2bin(inputs):
     s = b('').join([b(x) for x in inputs if not (x in '\n\r\t ')])
     return unhexlify(s)
@@ -391,7 +415,7 @@ class PKCS8_Decrypt(unittest.TestCase):
         """Verify unwrapping with encryption"""
 
         for t in self.wrapped_enc_keys:
-            res1, res2, res3 = PKCS8.unwrap(t[4], b("TestTest"))
+            res1, res2, res3 = PKCS8.unwrap(t[4], b"TestTest")
             self.assertEqual(res1, self.oid_key)
             self.assertEqual(res2, self.clear_key)
 
@@ -412,6 +436,16 @@ class PKCS8_Decrypt(unittest.TestCase):
                     key_params=DerNull(),
                     randfunc=rng)
             self.assertEqual(wrapped, t[4])
+
+    def test_import_botan_keys(self):
+        botan_scrypt_der = txt2bin(botan_scrypt)
+        key1 = PKCS8.unwrap(botan_scrypt_der,
+                            b'your_password')
+        botan_pbkdf2_der = txt2bin(botan_pbkdf2)
+        key2 = PKCS8.unwrap(botan_pbkdf2_der,
+                            b'your_password')
+        self.assertEqual(key1, key2)
+
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases

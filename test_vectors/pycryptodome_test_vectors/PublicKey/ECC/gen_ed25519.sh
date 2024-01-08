@@ -16,6 +16,7 @@ openssl pkey -in ecc_ed25519_private.pem -text -out ecc_ed25519.txt
 # Traditional format (PEM enveloped) is unsupported for ed25519, so we only use encrypted PKCS#8
 openssl pkcs8 -in ecc_ed25519_private.der -inform DER -passout 'pass:secret' -out ecc_ed25519_private_p8.der -outform DER -topk8
 openssl pkcs8 -in ecc_ed25519_private.der -inform DER -passout 'pass:secret' -out ecc_ed25519_private_p8.pem -outform PEM -topk8
+openssl pkcs8 -in ecc_ed25519_private.der -inform DER -passout 'pass:secret' -out ecc_ed25519_private_p8_2.der -outform DER -topk8 -iter 12345 -v2 aes256 -v2prf hmacWithSHA512
 openssl pkey -in ecc_ed25519_private.pem -des3 -out ecc_ed25519_private_enc_des3.pem -passout 'pass:secret' -outform PEM
 openssl pkey -in ecc_ed25519_private.pem -aes128 -out ecc_ed25519_private_enc_aes128.pem -passout 'pass:secret' -outform PEM
 openssl pkey -in ecc_ed25519_private.pem -aes192 -out ecc_ed25519_private_enc_aes192.pem -passout 'pass:secret' -outform PEM

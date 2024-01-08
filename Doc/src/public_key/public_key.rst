@@ -46,12 +46,12 @@ Available key types
     :hidden:
 
     rsa
-    dsa
     ecc
+    dsa
 
 * :doc:`RSA keys <rsa>`
-* :doc:`DSA keys <dsa>`
 * :doc:`Elliptic Curve keys <ecc>`
+* :doc:`DSA keys (obsolete) <dsa>`
 
 Obsolete key type
 -----------------

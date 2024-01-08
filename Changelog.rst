@@ -6,7 +6,16 @@ Under Development
 
 New features
 ---------------
-* Addde support for TurboSHAKE128 and TurboSHAKE256.
+* Added support for TurboSHAKE128 and TurboSHAKE256.
+* Added method ``Crypto.Hash.new()`` to generate a hash
+  object given a hash name.
+* Added support for AES-GCM encryption of PBES2 and PKCS#8
+  containers.
+* Added support for SHA-2 and SHA-3 algorithms in PBKDF2
+  when creating PBES2 and PKCS#8 containers.
+* Export of RSA keys accepts the ``prot_params`` dictionary
+  as parameter to control the number of iterations for PBKDF2
+  and scrypt.
 
 3.19.1 (28 December 2023)
 ++++++++++++++++++++++++++
@@ -14,7 +23,7 @@ New features
 Resolved issues
 ---------------
 * Fixed a side-channel leakage with OAEP decryption that could be
-  exploited to carry out a Manger attack. Thanks to Hubert Kario.
+  exploited to carry out a Manger attack (CVE-2023-52323). Thanks to Hubert Kario.
 
 3.19.0 (16 September 2023)
 ++++++++++++++++++++++++++

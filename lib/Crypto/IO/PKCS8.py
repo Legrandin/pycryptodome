@@ -53,44 +53,29 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
 
     Args:
 
-      private_key (byte string):
+      private_key (bytes):
         The private key encoded in binary form. The actual encoding is
         algorithm specific. In most cases, it is DER.
 
       key_oid (string):
         The object identifier (OID) of the private key to wrap.
-        It is a dotted string, like ``1.2.840.113549.1.1.1`` (for RSA keys).
+        It is a dotted string, like ``'1.2.840.113549.1.1.1'`` (for RSA keys)
+        or ``'1.2.840.10045.2.1'`` (for ECC keys).
 
-      passphrase (bytes string or string):
+    Keyword Args:
+
+      passphrase (bytes or string):
         The secret passphrase from which the wrapping key is derived.
         Set it only if encryption is required.
 
       protection (string):
         The identifier of the algorithm to use for securely wrapping the key.
-        The default value is ``PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC``.
+        Refer to :ref:`the encryption parameters<enc_params>` .
+        The default value is ``'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'``.
 
       prot_params (dictionary):
-        Parameters for the protection algorithm.
-
-        +------------------+-----------------------------------------------+
-        | Key              | Description                                   |
-        +==================+===============================================+
-        | iteration_count  | The KDF algorithm is repeated several times to|
-        |                  | slow down brute force attacks on passwords    |
-        |                  | (called *N* or CPU/memory cost in scrypt).    |
-        |                  | The default value for PBKDF2 is 1000.         |
-        |                  | The default value for scrypt is 16384.        |
-        +------------------+-----------------------------------------------+
-        | salt_size        | Salt is used to thwart dictionary and rainbow |
-        |                  | attacks on passwords. The default value is 8  |
-        |                  | bytes.                                        |
-        +------------------+-----------------------------------------------+
-        | block_size       | *(scrypt only)* Memory-cost (r). The default  |
-        |                  | value is 8.                                   |
-        +------------------+-----------------------------------------------+
-        | parallelization  | *(scrypt only)* CPU-cost (p). The default     |
-        |                  | value is 1.                                   |
-        +------------------+-----------------------------------------------+
+        Parameters for the key derivation function (KDF).
+        Refer to :ref:`the encryption parameters<enc_params>` .
 
       key_params (DER object or None):
         The ``parameters`` field to use in the ``AlgorithmIdentifier``
@@ -103,8 +88,8 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
         If not specified, a new RNG will be instantiated
         from :mod:`Crypto.Random`.
 
-    Return:
-      The PKCS#8-wrapped private key (possibly encrypted), as a byte string.
+    Returns:
+      bytes: The PKCS#8-wrapped private key (possibly encrypted).
     """
 
     #
@@ -145,8 +130,10 @@ def unwrap(p8_private_key, passphrase=None):
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
     Args:
-      p8_private_key (byte string):
-        The private key wrapped into a PKCS#8 blob, DER encoded.
+      p8_private_key (bytes):
+        The private key wrapped into a PKCS#8 container, DER encoded.
+
+    Keyword Args:
       passphrase (byte string or string):
         The passphrase to use to decrypt the blob (if it is encrypted).
 
@@ -154,8 +141,8 @@ def unwrap(p8_private_key, passphrase=None):
       A tuple containing
 
        #. the algorithm identifier of the wrapped key (OID, dotted string)
-       #. the private key (byte string, DER encoded)
-       #. the associated parameters (byte string, DER encoded) or ``None``
+       #. the private key (bytes, DER encoded)
+       #. the associated parameters (bytes, DER encoded) or ``None``
 
     Raises:
       ValueError : if decoding fails
