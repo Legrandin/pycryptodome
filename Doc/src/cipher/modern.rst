@@ -1,3 +1,5 @@
+.. _modern_cipher_modes:
+
 Modern modes of operation for symmetric block ciphers
 =====================================================
 
@@ -447,7 +449,7 @@ a new OCB cipher object for the relevant base algorithm.
   :param bytes key: the cryptographic key
   :param mode: the constant ``Crypto.Cipher.<algorithm>.MODE_OCB``
   :param bytes nonce: the value of the fixed nonce,
-    wuth length between 1 and 15 bytes.
+    with length between 1 and 15 bytes.
     It must be unique for the combination message/key.
     If not present, the library creates a 15 bytes random nonce.
   :param integer mac_len: the desired length of the

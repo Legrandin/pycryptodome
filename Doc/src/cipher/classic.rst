@@ -1,3 +1,5 @@
+.. _classic_cipher_modes:
+
 Classic modes of operation for symmetric block ciphers
 ======================================================
 
