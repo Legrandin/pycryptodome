@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Under Development
+3.20.0 (9 January 2024)
 ++++++++++++++++++++++++++
 
 New features
@@ -16,6 +16,11 @@ New features
 * Export of RSA keys accepts the ``prot_params`` dictionary
   as parameter to control the number of iterations for PBKDF2
   and scrypt.
+* C unit tests also run on non-x86 architectures.
+
+Resolved issues
+---------------
+* GH#787: Fixed autodetect logic for GCC 14 in combination with LTO.
 
 3.19.1 (28 December 2023)
 ++++++++++++++++++++++++++
