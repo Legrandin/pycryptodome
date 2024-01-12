@@ -30,7 +30,12 @@
 
 __all__ = ["Integer"]
 
+import os
+
 try:
+    if os.getenv("PYCRYPTODOME_DISABLE_GMP"):
+        raise ImportError()
+
     from Crypto.Math._IntegerGMP import IntegerGMP as Integer
     from Crypto.Math._IntegerGMP import implementation as _implementation
 except (ImportError, OSError, AttributeError):

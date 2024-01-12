@@ -111,20 +111,33 @@ class TestIntegerBase(unittest.TestCase):
     def test_conversion_to_bytes(self):
         Integer = self.Integer
 
+        v0 = Integer(0)
+        self.assertEqual(b"\x00", v0.to_bytes())
+
         v1 = Integer(0x17)
-        self.assertEqual(b("\x17"), v1.to_bytes())
+        self.assertEqual(b"\x17", v1.to_bytes())
 
         v2 = Integer(0xFFFE)
-        self.assertEqual(b("\xFF\xFE"), v2.to_bytes())
-        self.assertEqual(b("\x00\xFF\xFE"), v2.to_bytes(3))
+        self.assertEqual(b"\xFF\xFE", v2.to_bytes())
+        self.assertEqual(b"\x00\xFF\xFE", v2.to_bytes(3))
         self.assertRaises(ValueError, v2.to_bytes, 1)
 
-        self.assertEqual(b("\xFE\xFF"), v2.to_bytes(byteorder='little'))
-        self.assertEqual(b("\xFE\xFF\x00"), v2.to_bytes(3, byteorder='little'))
+        self.assertEqual(b"\xFE\xFF", v2.to_bytes(byteorder='little'))
+        self.assertEqual(b"\xFE\xFF\x00", v2.to_bytes(3, byteorder='little'))
 
-        v3 = Integer(-90)
-        self.assertRaises(ValueError, v3.to_bytes)
-        self.assertRaises(ValueError, v3.to_bytes, byteorder='bittle')
+        v3 = Integer(0xFF00AABBCCDDEE1122)
+        self.assertEqual(b"\xFF\x00\xAA\xBB\xCC\xDD\xEE\x11\x22", v3.to_bytes())
+        self.assertEqual(b"\x22\x11\xEE\xDD\xCC\xBB\xAA\x00\xFF",
+                         v3.to_bytes(byteorder='little'))
+        self.assertEqual(b"\x00\xFF\x00\xAA\xBB\xCC\xDD\xEE\x11\x22",
+                         v3.to_bytes(10))
+        self.assertEqual(b"\x22\x11\xEE\xDD\xCC\xBB\xAA\x00\xFF\x00",
+                         v3.to_bytes(10, byteorder='little'))
+        self.assertRaises(ValueError, v3.to_bytes, 8)
+
+        v4 = Integer(-90)
+        self.assertRaises(ValueError, v4.to_bytes)
+        self.assertRaises(ValueError, v4.to_bytes, byteorder='bittle')
 
     def test_conversion_from_bytes(self):
         Integer = self.Integer

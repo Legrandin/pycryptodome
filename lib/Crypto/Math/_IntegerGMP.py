@@ -29,12 +29,11 @@
 # ===================================================================
 
 import sys
+import struct
 
-from Crypto.Util.py3compat import tobytes, is_native_int
+from Crypto.Util.py3compat import is_native_int
 
 from Crypto.Util._raw_api import (backend, load_lib,
-                                  get_raw_buffer, get_c_string,
-                                  null_pointer, create_string_buffer,
                                   c_ulong, c_size_t, c_uint8_ptr)
 
 from ._IntegerBase import IntegerBase
@@ -92,6 +91,9 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
         int __gmpz_invert (mpz_t rop, const mpz_t op1, const mpz_t op2);
         int __gmpz_divisible_p (const mpz_t n, const mpz_t d);
         int __gmpz_divisible_ui_p (const mpz_t n, UNIX_ULONG d);
+
+        size_t __gmpz_size (const mpz_t op);
+        UNIX_ULONG __gmpz_getlimbn (const mpz_t op, size_t n);
         """
 
 if sys.platform == "win32":
@@ -102,27 +104,6 @@ implementation = {"library": "gmp", "api": backend}
 
 if hasattr(lib, "__mpir_version"):
     raise ImportError("MPIR library detected")
-
-# In order to create a function that returns a pointer to
-# a new MPZ structure, we need to break the abstraction
-# and know exactly what ffi backend we have
-if implementation["api"] == "ctypes":
-    from ctypes import Structure, c_int, c_void_p, byref
-
-    class _MPZ(Structure):
-        _fields_ = [('_mp_alloc', c_int),
-                    ('_mp_size', c_int),
-                    ('_mp_d', c_void_p)]
-
-    def new_mpz():
-        return byref(_MPZ())
-
-else:
-    # We are using CFFI
-    from Crypto.Util._raw_api import ffi
-
-    def new_mpz():
-        return ffi.new("MPZ*")
 
 
 # Lazy creation of GMP methods
@@ -141,6 +122,34 @@ class _GMP(object):
 
 
 _gmp = _GMP()
+
+
+# In order to create a function that returns a pointer to
+# a new MPZ structure, we need to break the abstraction
+# and know exactly what ffi backend we have
+if implementation["api"] == "ctypes":
+    from ctypes import Structure, c_int, c_void_p, byref
+
+    class _MPZ(Structure):
+        _fields_ = [('_mp_alloc', c_int),
+                    ('_mp_size', c_int),
+                    ('_mp_d', c_void_p)]
+
+    def new_mpz():
+        return byref(_MPZ())
+
+    _gmp.mpz_getlimbn.restype = c_ulong
+
+else:
+    # We are using CFFI
+    from Crypto.Util._raw_api import ffi
+
+    def new_mpz():
+        return ffi.new("MPZ*")
+
+
+# Size of a native word
+_sys_bits = 8 * struct.calcsize("P")
 
 
 class IntegerGMP(IntegerBase):
@@ -189,7 +198,6 @@ class IntegerGMP(IntegerBase):
             self._initialized = True
         else:
             raise NotImplementedError
-
 
     # Conversions
     def __int__(self):
@@ -248,31 +256,41 @@ class IntegerGMP(IntegerBase):
         if self < 0:
             raise ValueError("Conversion only valid for non-negative numbers")
 
-        buf_len = (_gmp.mpz_sizeinbase(self._mpz_p, 2) + 7) // 8
-        if buf_len > block_size > 0:
-            raise ValueError("Number is too big to convert to byte string"
-                             " of prescribed length")
-        buf = create_string_buffer(buf_len)
+        num_limbs = _gmp.mpz_size(self._mpz_p)
+        if _sys_bits == 32:
+            spchar = "L"
+            num_limbs = max(1, num_limbs, (block_size + 3) // 4)
+        elif _sys_bits == 64:
+            spchar = "Q"
+            num_limbs = max(1, num_limbs, (block_size + 7) // 8)
+        else:
+            raise ValueError("Unknown limb size")
 
+        # mpz_getlimbn returns 0 if i is larger than the number of actual limbs
+        limbs = [_gmp.mpz_getlimbn(self._mpz_p, num_limbs - i - 1) for i in range(num_limbs)]
 
-        _gmp.mpz_export(
-                buf,
-                null_pointer,  # Ignore countp
-                1,             # Big endian
-                c_size_t(1),   # Each word is 1 byte long
-                0,             # Endianess within a word - not relevant
-                c_size_t(0),   # No nails
-                self._mpz_p)
+        result = struct.pack(">" + spchar * num_limbs, *limbs)
+        cutoff_len = len(result) - block_size
+        if block_size == 0:
+            result = result.lstrip(b'\x00')
+        elif cutoff_len > 0:
+            if result[:cutoff_len] != b'\x00' * (cutoff_len):
+                raise ValueError("Number is too big to convert to "
+                                 "byte string of prescribed length")
+            result = result[cutoff_len:]
+        elif cutoff_len < 0:
+            result = b'\x00' * (-cutoff_len) + result
 
-        result = b'\x00' * max(0, block_size - buf_len) + get_raw_buffer(buf)
-        if byteorder == 'big':
+        if byteorder == 'little':
+            result = result[::-1]
+        elif byteorder == 'big':
             pass
-        elif byteorder == 'little':
-            result = bytearray(result)
-            result.reverse()
-            result = bytes(result)
         else:
             raise ValueError("Incorrect byteorder")
+
+        if len(result) == 0:
+            result = b'\x00'
+
         return result
 
     @staticmethod
@@ -765,9 +783,8 @@ class IntegerGMP(IntegerBase):
         if (modulus & 1) == 0:
             raise ValueError("Odd modulus is required")
 
-        numbers_len = len(modulus.to_bytes())
-        result = ((term1 * term2) % modulus).to_bytes(numbers_len)
-        return result
+        product = (term1 * term2) % modulus
+        return product.to_bytes(modulus.size_in_bytes())
 
     # Clean-up
     def __del__(self):
