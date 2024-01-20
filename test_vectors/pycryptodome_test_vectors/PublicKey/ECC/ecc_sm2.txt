@@ -1,0 +1,17 @@
+Private-Key: (256 bit)
+priv:
+    77:3a:9e:2d:35:5c:0d:4b:e5:6e:27:15:26:2f:06:
+    a5:25:bf:0d:d8:27:09:7e:d6:f6:a6:f5:30:89:46:
+    23:3a
+pub:
+    04:a9:4a:d8:10:0d:2e:94:14:de:ce:60:e1:44:7c:
+    55:83:c3:d1:b5:53:6e:ff:58:b1:a4:5d:d8:97:92:
+    98:37:af:33:a7:3a:a8:25:23:66:eb:0e:f3:5b:e4:
+    1f:3f:0c:6a:b3:4b:e5:bc:5e:9a:80:87:93:e3:5c:
+    c0:41:ce:aa:42
+ASN1 OID: SM2
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIHc6ni01XA1L5W4nFSYvBqUlvw3YJwl+1vam9TCJRiM6oAoGCCqBHM9V
+AYItoUQDQgAEqUrYEA0ulBTezmDhRHxVg8PRtVNu/1ixpF3Yl5KYN68zpzqoJSNm
+6w7zW+QfPwxqs0vlvF6agIeT41zAQc6qQg==
+-----END EC PRIVATE KEY-----

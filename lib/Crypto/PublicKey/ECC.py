@@ -456,6 +456,52 @@ init_ed448()
 del init_ed448
 
 
+sm2_names = ["sm2", "sm2p256v1"]
+
+
+def init_sm2p256v1():
+    p = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF
+    b = 0x28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93
+    order = 0xFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123
+    Gx = 0x32c4ae2c1f1981195f9904466a39c9948fe30bbff2660be1715a4589334c74c7
+    Gy = 0xbc3736a2f4f6779c59bdcee36b692153d0a9877cc62a474002df32e52139f0a0
+
+    p256_modulus = long_to_bytes(p, 32)
+    p256_b = long_to_bytes(b, 32)
+    p256_order = long_to_bytes(order, 32)
+
+    ec_p256_context = VoidPointer()
+    result = _ec_lib.ec_ws_new_context(ec_p256_context.address_of(),
+                                       c_uint8_ptr(p256_modulus),
+                                       c_uint8_ptr(p256_b),
+                                       c_uint8_ptr(p256_order),
+                                       c_size_t(len(p256_modulus)),
+                                       c_ulonglong(getrandbits(64))
+                                       )
+    if result:
+        raise ImportError("Error %d initializing sm2p256v1 context" % result)
+
+    context = SmartPointer(ec_p256_context.get(), _ec_lib.ec_free_context)
+    p256 = _Curve(Integer(p),
+                  Integer(b),
+                  Integer(order),
+                  Integer(Gx),
+                  Integer(Gy),
+                  None,
+                  256,
+                  "1.2.156.10197.1.301",    # China GM Standards Committee
+                  context,
+                  "sm2p256v1",
+                  None,
+                  "sm2")
+    global sm2_names
+    _curves.update(dict.fromkeys(sm2_names, p256))
+
+
+init_sm2p256v1()
+del init_sm2p256v1
+
+
 class UnsupportedEccFeature(ValueError):
     pass
 
@@ -700,6 +746,11 @@ ed448_G = EccPoint(_curves['Ed448'].Gx, _curves['Ed448'].Gy, "Ed448")
 ed448 = _curves['Ed448']._replace(G=ed448_G)
 _curves.update(dict.fromkeys(ed448_names, ed448))
 del ed448_G, ed448, ed448_names
+
+sm2p256_G = EccPoint(_curves['sm2'].Gx, _curves['sm2'].Gy, "sm2")
+sm2p256 = _curves['sm2']._replace(G=sm2p256_G)
+_curves.update(dict.fromkeys(sm2_names, sm2p256))
+del sm2p256_G, sm2p256, sm2_names
 
 
 class EccKey(object):
