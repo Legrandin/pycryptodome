@@ -19,6 +19,8 @@
 #define ERR_EC_POINT            15
 #define ERR_EC_CURVE            16
 #define ERR_MODULUS             17
+#define ERR_NOT_IMPLEMENTED     18
+#define ERR_EC_PAI              19
 #define ERR_UNKNOWN             32
 
 #endif

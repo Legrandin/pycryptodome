@@ -111,7 +111,7 @@ class EdDSASigScheme(object):
 
         self._key = key
         self._context = context
-        self._A = key._export_eddsa()
+        self._A = key._export_eddsa_public()
         self._order = key._curve.order
 
     def can_sign(self):
@@ -173,7 +173,7 @@ class EdDSASigScheme(object):
         r_hash = SHA512.new(dom2 + self._key._prefix + PHM).digest()
         r = Integer.from_bytes(r_hash, 'little') % self._order
         # Step 3
-        R_pk = EccKey(point=r * self._key._curve.G)._export_eddsa()
+        R_pk = EccKey(point=r * self._key._curve.G)._export_eddsa_public()
         # Step 4
         k_hash = SHA512.new(dom2 + R_pk + self._A + PHM).digest()
         k = Integer.from_bytes(k_hash, 'little') % self._order
@@ -197,7 +197,7 @@ class EdDSASigScheme(object):
         r_hash = SHAKE256.new(dom4 + self._key._prefix + PHM).read(114)
         r = Integer.from_bytes(r_hash, 'little') % self._order
         # Step 3
-        R_pk = EccKey(point=r * self._key._curve.G)._export_eddsa()
+        R_pk = EccKey(point=r * self._key._curve.G)._export_eddsa_public()
         # Step 4
         k_hash = SHAKE256.new(dom4 + R_pk + self._A + PHM).read(114)
         k = Integer.from_bytes(k_hash, 'little') % self._order

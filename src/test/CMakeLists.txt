@@ -164,7 +164,7 @@ add_test(NAME test_pkcs1 COMMAND test_pkcs1)
 
 # curve25519
 add_library(mod25519 OBJECT ../mod25519.c ../multiply_32.c)
-add_library(x25519 OBJECT ../x25519.c ../multiply_32.c)
+add_library(curve25519 OBJECT ../curve25519.c ../multiply_32.c)
 
 add_executable(test_mod25519 test_mod25519.c $<TARGET_OBJECTS:mod25519>)
 add_test(NAME test_mod25519 COMMAND test_mod25519)
@@ -177,15 +177,15 @@ add_custom_command(
 add_executable(test_mul_25519 test_mul_25519.c $<TARGET_OBJECTS:mod25519>)
 add_test(NAME test_mul_25519 COMMAND test_mul_25519)
 
-add_executable(test_x25519 test_x25519.c $<TARGET_OBJECTS:x25519>)
-add_test(NAME test_x25519 COMMAND test_x25519)
+add_executable(test_curve25519 test_curve25519.c $<TARGET_OBJECTS:curve25519>)
+add_test(NAME test_curve25519 COMMAND test_curve25519)
 
 add_custom_command(
     OUTPUT tests_ladder_step.c
     COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_ladder_step.py > tests_ladder_step.c
     DEPENDS make_tests_ladder_step.py
 )
-add_executable(tests_ladder_step tests_ladder_step.c $<TARGET_OBJECTS:x25519>)
+add_executable(tests_ladder_step tests_ladder_step.c $<TARGET_OBJECTS:curve25519>)
 add_test(NAME tests_ladder_step COMMAND tests_ladder_step)
 
 # ed25519

@@ -53,18 +53,22 @@ You can also export the public key, which is not sensitive::
    "NIST P-521", "``'NIST P-521'``, ``'p521'``, ``'P-521'``, ``'prime521v1'``, ``'secp521r1'``"
    "Ed25519",    "``'ed25519'``, ``'Ed25519'``"
    "Ed448",      "``'ed448'``, ``'Ed448'``"
+   "Curve25519", "``'curve25519'``, ``'Curve25519'``"
 
 For more information about each NIST curve see `FIPS 186-4`_, Section D.1.2.
 
 The Ed25519 and the Ed448 curves are defined in RFC8032_.
 
-The ECC key can be used to perform or verify signatures, using the modules
+The Curve25519 curve is defined in RFC7748_.
+
+The ECC keys can be used to perform or verify signatures, using the modules
 :mod:`Crypto.Signature.DSS` (ECDSA; NIST curves only)
 or :mod:`Crypto.Signature.eddsa` (EdDSA; Ed25519 and Ed448 curve only).
 
 .. _ECC: http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/
 .. _`FIPS 186-4`: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
 .. _RFC8032: https://datatracker.ietf.org/doc/html/rfc8032
+.. _RFC7748: https://datatracker.ietf.org/doc/html/rfc7748
 
 .. automodule:: Crypto.PublicKey.ECC
     :members:

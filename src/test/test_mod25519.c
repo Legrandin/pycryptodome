@@ -3,8 +3,9 @@
 
 /** Test for multiplication are in a separate unit **/
 
-void convert_le64_to_le25p5(uint32_t out[9], const uint64_t in[4]);
-void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[9]);
+void convert_le64_to_le25p5(uint32_t out[10], const uint64_t in[4]);
+void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[10]);
+int is_le25p5_zero(const uint32_t in[10]);
 int convert_behex_to_le25p5(uint32_t out[10], const char *in);
 int convert_le25p5_to_behex(char **out, uint32_t in[10]);
 void reduce_25519_le64(uint64_t x[4]);
@@ -89,6 +90,23 @@ void test_le25p5_to_le64(void)
     assert(out[0] == hundhund[0]);
     assert(out[1] == hundhund[1]);
     assert(out[2] == hundhund[2]);
+}
+
+void test_is_le25p5_zero(void)
+{
+    uint32_t out[10];
+    uint64_t in[4];
+
+    memcpy(in, hundhund, sizeof hundhund);
+    convert_le64_to_le25p5(out, in);
+    assert(is_le25p5_zero(out) == 0);
+
+    memset(out, 0, sizeof out);
+    assert(is_le25p5_zero(out) != 0);
+
+    memcpy(in, modulus, sizeof modulus);
+    convert_le64_to_le25p5(out, in);
+    assert(is_le25p5_zero(out) != 0);
 }
 
 void test_behex_tole25p5(void)
@@ -366,6 +384,7 @@ int main(void)
 {
     test_le64_tole25p5();
     test_le25p5_to_le64();
+    test_is_le25p5_zero();
     test_behex_tole25p5();
     test_tole25p5_to_behex();
     test_reduce();

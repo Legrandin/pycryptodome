@@ -1,4 +1,4 @@
-"""Make unit test for ladder_step() in x25519.c"""
+"""Make unit test for curve25519_ladder_step() in curve25519.c"""
 
 from common import counter, make_main, split64, bin2int
 from hashlib import sha256
@@ -56,7 +56,7 @@ def make_test_max():
 
     print("")
 
-    print("    ladder_step(x2, z2, x3, z3, xp);")
+    print("    curve25519_ladder_step(x2, z2, x3, z3, xp);")
     print("    convert_le25p5_to_le64(x2_out, x2);")
     print("    convert_le25p5_to_le64(z2_out, z2);")
     print("    convert_le25p5_to_le64(x3_out, x3);")
@@ -133,7 +133,7 @@ def make_test(x2, z2, x3, z3, xp):
     print("    convert_le64_to_le25p5(z3, z3_in);")
     print("    convert_le64_to_le25p5(xp, xp_in);")
 
-    print("    ladder_step(x2, z2, x3, z3, xp);")
+    print("    curve25519_ladder_step(x2, z2, x3, z3, xp);")
 
     print("    convert_le25p5_to_le64(x2_out, x2);")
     print("    convert_le25p5_to_le64(z2_out, z2);")
@@ -164,7 +164,7 @@ print("#include <stdio.h>")
 print("void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[10]);")
 print("void convert_le64_to_le25p5(uint32_t out[10], const uint64_t in[4]);")
 print("void reduce_25519_le64(uint64_t x[4]);")
-print("void ladder_step(uint32_t x2[10], uint32_t z2[10], uint32_t x3[10], uint32_t z3[10], const uint32_t xp[10]);")
+print("void curve25519_ladder_step(uint32_t x2[10], uint32_t z2[10], uint32_t x3[10], uint32_t z3[10], const uint32_t xp[10]);")
 
 make_test_max()
 make_test(0, 0, 0, 0, 0)
