@@ -378,7 +378,7 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
           If omitted, :func:`Crypto.Random.get_random_bytes` is used.
 
     Return:
-        `True` is the input is indeed prime.
+        `True` if the input is indeed prime.
     """
 
     if randfunc is None:
