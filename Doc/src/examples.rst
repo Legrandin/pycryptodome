@@ -29,9 +29,9 @@ a MAC authentication tag (HMAC with SHA256), made with a second key.
     hmac = HMAC.new(hmac_key, digestmod=SHA256)
     tag = hmac.update(cipher.nonce + ciphertext).digest()
 
-    for open("encrypted.bin", "wb") as f:
+    with open("encrypted.bin", "wb") as f:
         f.write(tag)
-        f.write(nonce)
+        f.write(cipher.nonce)
         f.write(ciphertext)
 
     # Share securely aes_key and hmac_key with the receiver
@@ -95,7 +95,7 @@ like :ref:`EAX <eax_mode>`, :ref:`GCM <gcm_mode>`, :ref:`CCM <ccm_mode>`, :ref:`
         f.write(cipher.nonce)
         f.write(ciphertext)
 
-    # Share securely aes_key and hmac_key with the receiver
+    # Share securely aes_key with the receiver
     # encrypted.bin can be sent over an unsecure channel
 
 Decryption is also simpler:
