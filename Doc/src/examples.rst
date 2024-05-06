@@ -6,7 +6,7 @@ Encrypt data with AES
 
 The following code generates a new AES-128 key and encrypts a piece of data into a file.
 We use the :ref:`CTR mode <ctr_mode>` (which is a :ref:`classic mode of operation <classic_cipher_modes>`,
-simple but not erecommended anymore).
+simple but not recommended anymore).
 
 With CTR alone, the receiver is not able to detect if the *ciphertext* (i.e., the encrypted
 data) was modified while in transit. To address that risk, we also attach
