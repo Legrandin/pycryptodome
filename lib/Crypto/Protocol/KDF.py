@@ -315,14 +315,49 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
         raise ValueError("Too much secret data to derive")
     if not salt:
         salt = b'\x00' * hashmod.digest_size
-    if context is None:
-        context = b""
 
     # Step 1: extract
     hmac = HMAC.new(salt, master, digestmod=hashmod)
     prk = hmac.digest()
 
     # Step 2: expand
+    return HKDFExpand(prk, key_len, hashmod, num_keys, context)
+
+
+def HKDFExpand(prk, key_len, hashmod, num_keys=1, context=None):
+    """HKDF consists of two stages, extract and expand.
+    This class exposes an expand only version of HKDF that
+    is suitable when the key material is already
+    cryptographically strong.
+
+    Args:
+     prk (byte string):
+        Short, cryptographically strong, pseudorandom key material.
+        It must not be a password.
+     key_len (integer):
+        The length in bytes of every derived key.
+     hashmod (module):
+        A cryptographic hash algorithm from :mod:`Crypto.Hash`.
+        :mod:`Crypto.Hash.SHA512` is a good choice.
+     num_keys (integer):
+        The number of keys to derive. Every key is :data:`key_len` bytes long.
+        The maximum cumulative length of all keys is
+        255 times the digest size.
+     context (byte string):
+        Optional identifier describing what the keys are used for.
+
+    Return:
+        A byte string or a tuple of byte strings.
+
+    .. _RFC5869: http://tools.ietf.org/html/rfc5869
+    """
+
+    output_len = key_len * num_keys
+    if output_len > (255 * hashmod.digest_size):
+        raise ValueError("Too much secret data to derive")
+    if context is None:
+        context = b""
+
     t = [ b"" ]
     n = 1
     tlen = 0
@@ -337,7 +372,6 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     kol = [derived_output[idx:idx + key_len]
            for idx in iter_range(0, output_len, key_len)]
     return list(kol[:num_keys])
-
 
 
 def scrypt(password, salt, key_len, N, r, p, num_keys=1):
