@@ -285,6 +285,7 @@ EXPORT_SYM int ed25519_neg(Point *p)
     const uint32_t zero[10] = { 0 };
 
     sub_25519(p->X, zero, p->X);
+    sub_25519(p->T, zero, p->T);
     return 0;
 }
 
