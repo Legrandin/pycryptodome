@@ -69,7 +69,7 @@ def load_file(file_name, mode="rb"):
             results = file_in.read()
 
     except FileNotFoundError:
-        warnings.warn("Warning: skipping extended tests for ECC",
+        warnings.warn("Skipping extended tests for ECC",
                       UserWarning,
                       stacklevel=2)
 
