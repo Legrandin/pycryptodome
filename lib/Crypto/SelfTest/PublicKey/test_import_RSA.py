@@ -25,12 +25,13 @@ import re
 import errno
 import warnings
 import unittest
+from unittest import SkipTest
 
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
 from Crypto.IO import PEM
 from Crypto.Util.py3compat import b, tostr, FileNotFoundError
-from Crypto.Util.number import inverse, bytes_to_long
+from Crypto.Util.number import inverse
 from Crypto.Util import asn1
 
 try:
@@ -56,9 +57,12 @@ def load_file(file_name, mode="rb"):
             results = file_in.read()
 
     except FileNotFoundError:
-        warnings.warn("Warning: skipping extended tests for RSA",
+        warnings.warn("Skipping tests for RSA based on %s" % file_name,
                       UserWarning,
                       stacklevel=2)
+
+    if results is None:
+        raise SkipTest("Missing %s" % file_name)
 
     return results
 
@@ -559,6 +563,15 @@ d6:fa:d8:36:42:d4:97:29:17
 
 class TestImport_2048(unittest.TestCase):
 
+    def test_import_pss(self):
+        pub_key_file = load_file("rsa2048_pss_public.pem")
+        pub_key = RSA.import_key(pub_key_file)
+
+        priv_key_file = load_file("rsa2048_pss_private.pem")
+        priv_key = RSA.import_key(priv_key_file)
+
+        self.assertEqual(pub_key.n, priv_key.n)
+
     def test_import_openssh_public(self):
         key_file_ref = load_file("rsa2048_private.pem")
         key_file = load_file("rsa2048_public_openssh.txt")
@@ -609,11 +622,6 @@ class TestImport_2048(unittest.TestCase):
         self.assertEqual(key_ref, key)
 
 
-
-if __name__ == '__main__':
-    unittest.main()
-
-
 def get_tests(config={}):
     tests = []
     tests += list_test_cases(ImportKeyTests)
@@ -623,7 +631,6 @@ def get_tests(config={}):
 
 
 if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
+    def suite():
+        return unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
