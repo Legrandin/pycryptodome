@@ -116,9 +116,9 @@ jobs:
       shell: bash
       run: |
         if [[ -f .separate_namespace ]]; then
-          python -m Cryptodome.SelfTest -v
+          python -m Cryptodome.SelfTest
         else
-          python -m Crypto.SelfTest -v
+          python -m Crypto.SelfTest
         fi
   mypy:
     runs-on: ubuntu-latest
