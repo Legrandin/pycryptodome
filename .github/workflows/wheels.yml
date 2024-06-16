@@ -73,47 +73,6 @@ jobs:
           name: wheels
           path: ./wheelhouse/*.whl
 
-  # Test ABI3 wheels on Python 3 versions no longer supported by cibuildwheel
-  # and/or by manylinux2014
-  test_abi3_wheels_old_python:
-    name: Test (legacy) Python 3 wheels on ${{ matrix.os }}
-    needs: build_python3_wheels
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-20.04, windows-latest, macos-12]
-        python-version: ['3.5']
-
-    if: github.actor == 'Legrandin'
-
-    steps:
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - uses: actions/download-artifact@v3
-        with:
-          name: wheels
-          path: wheels/
-
-      - name: Install GMP on musllinux
-        if: runner.os == 'Linux'
-        run: |
-          (ldd /bin/ls | grep -q musl && apk add gmp) || true
-
-      - name: Install and test pycryptodome wheel
-        if: endsWith(github.ref, 'x') == false
-        run: |
-          pip install pycryptodome --no-index -f wheels/
-          python -m Crypto.SelfTest --skip-slow-tests
-
-      - name: Install pycryptodomex wheel
-        if: endsWith(github.ref, 'x') == true
-        run: |
-          pip install pycryptodomex --no-index -f wheels/
-          python -m Cryptodome.SelfTest --skip-slow-tests
-
   build_legacy_wheels:
     name: Build legacy Python wheels on ${{ matrix.os }} (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}

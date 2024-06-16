@@ -5,6 +5,7 @@ Under development
 ++++++++++++++++++++++++++
 * By setting the PYCRYPTODOME_DISABLE_GMP environment variable,
   the GMP library will not be used even if detected.
+* Remove support for Python 3.5
 
 3.20.0 (9 January 2024)
 ++++++++++++++++++++++++++
