@@ -13,7 +13,7 @@ PyCryptodome
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.7, Python 3.5 and newer, and PyPy.
+It supports Python 2.7, Python 3.6 and newer, and PyPy.
 
 The installation procedure depends on the package you want the library to be in.
 PyCryptodome can be used as:
