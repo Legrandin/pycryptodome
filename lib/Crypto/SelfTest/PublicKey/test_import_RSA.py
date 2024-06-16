@@ -559,6 +559,15 @@ d6:fa:d8:36:42:d4:97:29:17
 
 class TestImport_2048(unittest.TestCase):
 
+    def test_import_pss(self):
+        pub_key_file = load_file("rsa2048_pss_public.pem")
+        pub_key = RSA.import_key(pub_key_file)
+
+        priv_key_file = load_file("rsa2048_pss_private.pem")
+        priv_key = RSA.import_key(pub_key_file)
+
+        self.assertEqual(pub_key.n, priv_key.n)
+
     def test_import_openssh_public(self):
         key_file_ref = load_file("rsa2048_private.pem")
         key_file = load_file("rsa2048_public_openssh.txt")

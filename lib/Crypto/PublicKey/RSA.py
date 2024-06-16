@@ -711,8 +711,10 @@ def _import_pkcs1_public(encoded, *kwargs):
 
 def _import_subjectPublicKeyInfo(encoded, *kwargs):
 
+    oids = (oid, "1.2.840.113549.1.1.10")
+
     algoid, encoded_key, params = _expand_subject_public_key_info(encoded)
-    if algoid != oid or params is not None:
+    if algoid not in oids or params is not None:
         raise ValueError("No RSA subjectPublicKeyInfo")
     return _import_pkcs1_public(encoded_key)
 
@@ -726,8 +728,10 @@ def _import_x509_cert(encoded, *kwargs):
 def _import_pkcs8(encoded, passphrase):
     from Crypto.IO import PKCS8
 
+    oids = (oid, "1.2.840.113549.1.1.10")
+
     k = PKCS8.unwrap(encoded, passphrase)
-    if k[0] != oid:
+    if k[0] not in oids:
         raise ValueError("No PKCS#8 encoded RSA key")
     return _import_keyDER(k[1], passphrase)
 
@@ -859,6 +863,9 @@ importKey = import_key
 #: `Object ID`_ for the RSA encryption algorithm. This OID often indicates
 #: a generic RSA key, even when such key will be actually used for digital
 #: signatures.
+#:
+#: .. note:
+#:    An RSA key meant for PSS padding has a dedicated Object ID ``1.2.840.113549.1.1.10``
 #:
 #: .. _`Object ID`: http://www.alvestrand.no/objectid/1.2.840.113549.1.1.1.html
 oid = "1.2.840.113549.1.1.1"
