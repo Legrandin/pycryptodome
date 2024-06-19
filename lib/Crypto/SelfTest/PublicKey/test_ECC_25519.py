@@ -110,8 +110,13 @@ class TestEccPoint_Ed25519(unittest.TestCase):
 
     def test_negate(self):
         negG = -self.pointG
-        sum = self.pointG + negG
-        self.assertTrue(sum.is_point_at_infinity())
+        G100 = self.pointG * 100
+        sum_zero = G100 + negG * 100
+        self.assertTrue(sum_zero.is_point_at_infinity())
+
+        sum_99 = G100 + negG
+        expected = self.pointG * 99
+        self.assertEqual(sum_99, expected)
 
     def test_addition(self):
         self.assertEqual(self.pointG + self.pointG2, self.pointG3)
