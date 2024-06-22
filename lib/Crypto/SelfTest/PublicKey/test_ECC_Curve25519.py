@@ -56,7 +56,6 @@ scalar_base9_test = [
     (0x10101, 0xa679e9d7e043bf76c03362576e2c88abe9093c5d4f6b4a202c64a8397467cf),
     (0xAA55CC, 0x2cc02f84c067e3586f4278326689be163e606d69ccae505bb09488e11f295887),
     (0x1B29A0E579E0A000567, 0x50c38a72d7bfd7864c8b9083fa123e8d359068e6b491a019a885036e073f6604),
-    (0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed, 0),
     (0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed + 1, 9),
 ]
 
@@ -98,6 +97,9 @@ class TestEccPoint_Curve25519(unittest.TestCase):
         base = EccXPoint(9, "curve25519")
 
         pointH = 0 * base
+        self.assertTrue(pointH.point_at_infinity())
+
+        pointH = 0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed * base
         self.assertTrue(pointH.point_at_infinity())
 
         pointH = base * 1
