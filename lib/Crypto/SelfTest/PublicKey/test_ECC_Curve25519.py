@@ -234,6 +234,33 @@ class TestEccModule_Curve25519(unittest.TestCase):
         self.assertRaises(ValueError, ECC.construct, curve="Curve25519", d=2, **coordG)
         self.assertRaises(ValueError, ECC.construct, curve="Curve25519", seed=b'H'*31)
 
+        # Verify you cannot construct weak keys (small-order points)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=0)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=1)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=325606250916557431795983626356110631294008115727848805560023387167927233504)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=39382357235489614581723060781553021112529911719440698176882885853963445705823)
+        p = 2**255 - 19
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p-1)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p+1)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p+325606250916557431795983626356110631294008115727848805560023387167927233504)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p+39382357235489614581723060781553021112529911719440698176882885853963445705823)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p*2-1)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p*2)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve25519",
+                          point_x=p*2+1)
+
 
 def get_tests(config={}):
     tests = []

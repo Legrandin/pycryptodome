@@ -344,6 +344,31 @@ class X25519_Tests(unittest.TestCase):
         self.assertEqual(result1, secret)
         self.assertEqual(result2, secret)
 
+    def test_weak(self):
+
+        weak_keys = (
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "0100000000000000000000000000000000000000000000000000000000000000",
+            "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800",
+            "5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157",
+            "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+            "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+            "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+            # The implementation will accept these value, but only because
+            # it will set the MSB to zero (as required by RFC7748, Section 5),
+            # therefore leading to another public key (and to a point which is
+            # not of low order anymore).
+            #"cdeb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b880",
+            #"4c9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f11d7",
+            #"d9ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            #"daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            #"dbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        )
+
+        for x in weak_keys:
+            self.assertRaises(ValueError,
+                              DH.import_x25519_public_key,
+                              unhexlify(x))
 
 class TestVectorsXECDHWycheproof(unittest.TestCase):
 
@@ -402,7 +427,14 @@ class TestVectorsXECDHWycheproof(unittest.TestCase):
     def test_verify(self, tv):
 
         if tv.encoding == "XdhComp":
-            public_key = import_x25519_public_key(tv.public)
+            try:
+                public_key = import_x25519_public_key(tv.public)
+            except ValueError as e:
+                assert tv.valid
+                assert tv.warning
+                assert "LowOrderPublic" in tv.flags
+                assert "Invalid Curve25519" in str(e)
+                return
             private_key = import_x25519_private_key(tv.private)
         elif tv.encoding in ("XdhAsnComp", "XdhPemComp"):
             try:
@@ -411,6 +443,11 @@ class TestVectorsXECDHWycheproof(unittest.TestCase):
             except ECC.UnsupportedEccFeature as e:
                 assert not tv.valid
                 assert "Unsupported ECC" in str(e)
+                return
+            except ValueError as e:
+                assert tv.valid
+                assert tv.warning
+                assert "LowOrderPublic" in tv.flags
                 return
         elif tv.encoding == "XdhJwkComp":
 
@@ -442,9 +479,16 @@ class TestVectorsXECDHWycheproof(unittest.TestCase):
                 public_key = import_x25519_public_key(jwk_public)
                 private_key = import_x25519_private_key(jwk_private)
             except ValueError as e:
-                assert not tv.valid
-                assert "Incorrect length" in str(e)
-                return
+                if tv.valid:
+                    assert tv.warning
+                    assert "LowOrderPublic" in tv.flags
+                    assert "Invalid Curve25519" in str(e)
+                    return
+                else:
+                    assert "Incorrect length" in str(e)
+                    return
+            except ValueError as e:
+                assert tv.valid
         else:
             raise ValueError("Unknown encoding", tv.encoding)
 

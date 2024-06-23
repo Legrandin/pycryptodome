@@ -339,12 +339,41 @@ class TestExport_Curve25519(unittest.TestCase):
                           passphrase="secret")
 
 
+class TestImport_Curve25519_Weak(unittest.TestCase):
+
+    def test_weak_pem(self):
+
+        p = 2**255 - 19
+        weak_x = (0,
+                  1,
+                  325606250916557431795983626356110631294008115727848805560023387167927233504,
+                  39382357235489614581723060781553021112529911719440698176882885853963445705823,
+                  p - 1,
+                  p,
+                  p + 1,
+                  p + 325606250916557431795983626356110631294008115727848805560023387167927233504,
+                  p + 39382357235489614581723060781553021112529911719440698176882885853963445705823,
+                  p * 2 - 1,
+                  p * 2,
+                  p * 2 + 1)
+
+        for x in weak_x:
+            low_order_point = ECC.EccXPoint(x, "curve25519")
+            weak_key = ECC.EccKey(point=low_order_point, curve="curve25519")
+            encoded = weak_key.export_key(format="PEM")
+
+            self.assertRaises(ValueError,
+                              ECC.import_key,
+                              encoded)
+
+
 def get_tests(config={}):
     tests = []
     try:
         tests += list_test_cases(TestImport)
         tests += list_test_cases(TestImport_Curve25519)
         tests += list_test_cases(TestExport_Curve25519)
+        tests += list_test_cases(TestImport_Curve25519_Weak)
     except SkipTest:
         pass
     return tests

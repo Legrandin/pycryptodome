@@ -1429,12 +1429,16 @@ def generate(**kwargs):
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
-    if _curves[curve_name].name in ("ed25519", "curve25519"):
+    if _curves[curve_name].name == "ed25519":
         seed = randfunc(32)
         new_key = EccKey(curve=curve_name, seed=seed)
     elif _curves[curve_name].name == "ed448":
         seed = randfunc(57)
         new_key = EccKey(curve=curve_name, seed=seed)
+    elif _curves[curve_name].name == "curve25519":
+        seed = randfunc(32)
+        new_key = EccKey(curve=curve_name, seed=seed)
+        _validate_x25519_public_key(new_key)
     else:
         d = Integer.random_range(min_inclusive=1,
                                  max_exclusive=curve.order,
@@ -1489,6 +1493,8 @@ def construct(**kwargs):
         if point_x is not None:
             kwargs["point"] = EccXPoint(point_x, curve_name)
         new_key = EccKey(**kwargs)
+
+        _validate_x25519_public_key(new_key)
 
     else:
 
@@ -1916,10 +1922,38 @@ def _import_curve25519_public_key(encoded):
         raise ValueError("Incorrect length. Only Curve25519 public keys are supported.")
 
     x = bytearray(encoded)
+    # RFC 7741, Section 5
     x[31] &= 0x7F
     point_x = Integer.from_bytes(x, byteorder='little')
 
     return point_x
+
+
+def _validate_x25519_public_key(new_key):
+
+    p = _curves['curve25519'].p
+    p2 = p * 2
+    x1 = 325606250916557431795983626356110631294008115727848805560023387167927233504
+    x2 = 39382357235489614581723060781553021112529911719440698176882885853963445705823
+
+    # http://cr.yp.to/ecdh.html#validate
+    deny_list = (
+        0,
+        1,
+        x1,
+        x2,
+        p - 1,
+        p,
+        p + 1,
+        p + x1,
+        p + x2,
+        p2 - 1,
+        p2,
+        p2 + 1,
+    )
+
+    if new_key.pointQ.x in deny_list:
+        raise ValueError("Invalid Curve25519 public key")
 
 
 def _import_ed448_public_key(encoded):

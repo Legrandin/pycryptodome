@@ -240,6 +240,7 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
 
             tv.valid = test['result'] != "invalid"
             tv.warning = test['result'] == "acceptable"
+            tv.flags = test.get('flags')
 
             tv.filename = file_name
 
