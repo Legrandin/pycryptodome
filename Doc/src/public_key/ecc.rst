@@ -68,7 +68,6 @@ or :mod:`Crypto.Signature.eddsa` (EdDSA; Ed25519 and Ed448 curve only).
 .. _ECC: http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/
 .. _`FIPS 186-4`: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
 .. _RFC8032: https://datatracker.ietf.org/doc/html/rfc8032
-.. _RFC7748: https://datatracker.ietf.org/doc/html/rfc7748
 
 .. automodule:: Crypto.PublicKey.ECC
     :members:

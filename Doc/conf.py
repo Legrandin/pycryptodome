@@ -41,6 +41,8 @@ class MockLib(object):
     ed448_free_context = lambda *x: 0
     ed448_new_point = lambda *x: 0
     ed448_free_point = lambda *x: 0
+    curve25519_new_point = lambda *x: 0
+    curve25519_free_point = lambda *x: 0
 
 _raw_api.load_pycryptodome_raw_lib = lambda name, cdec: MockLib()
 
