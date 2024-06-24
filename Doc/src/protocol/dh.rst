@@ -57,7 +57,6 @@ concerning the context of the operation, for instance a description of what the 
 
         from Crypto.Hash import TupleHash128
         from Crypto.Protocol.DH import key_agreement
-        from functools import partial
 
         # Random value (e.g., a nonce)
         session_salt = b'XYZ'
@@ -117,8 +116,8 @@ contributes to the key agreement with one ephemeral key
 
         session_key = key_agreement(static_priv=U_static,
                                     static_pub=V_static,
-                                    eph_priv=U_priv,
-                                    eph_pub=U_pub,
+                                    eph_priv=U_ephemeral,
+                                    eph_pub=V_ephemeral,
                                     kdf=kdf)
 
         # session_key is an AES-256 key, which will be used to encrypt
@@ -138,6 +137,7 @@ not password-based. For instance, some reasonable choices are:
 * :ref:`hkdf`
 * :ref:`shake128` or :ref:`shake256`
 * :ref:`sp800-180-counter`
+* :ref:`tuplehash128` or :ref:`tuplehash256`
 
 KDFs are typically fed with multiple inputs,
 whereas the ``kdf`` function must take exactly one (of type ``bytes``).
@@ -145,11 +145,11 @@ Therefore, a temporary function ``kdf`` should be constructed
 by fixing some of the inputs of the underlying KDF.
 For example using ``functools``::
 
-        from Crypto.Protocol.KDF import HDKF
+        from Crypto.Protocol.KDF import HKDF
         from Crypto.Hash import SHA256
         import functools
 
-        kdf = functoools.partial(HDK,
+        kdf = functoools.partial(HKDF,
                                  key_len=32,
                                  salt=b'nonce',
                                  hashmod=SHA256,

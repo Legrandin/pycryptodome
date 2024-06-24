@@ -1,3 +1,5 @@
+.. _tuplehash128:
+
 TupleHash128
 ============
 
