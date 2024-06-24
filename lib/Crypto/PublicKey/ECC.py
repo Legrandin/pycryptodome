@@ -2050,7 +2050,7 @@ def import_key(encoded, passphrase=None, curve_name=None):
         To import X25519 private and public keys, when encoded as raw ``bytes``, use:
 
         * :func:`Crypto.Protocol.DH.import_x25519_public_key`, or
-        * :func:`Crypto.Signature.DH.import_x25519_private_key`.
+        * :func:`Crypto.Protocol.DH.import_x25519_private_key`.
 
     Returns:
       :class:`EccKey` : a new ECC key object
