@@ -1041,6 +1041,10 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
         mont_set(ecp->z, 0, ctx);
     } else {
         wp = new_workplace(ctx);
+        if (NULL == wp) {
+            res = ERR_MEMORY;
+            goto cleanup;
+        }
         mont_mult(wp->a, ecp->y, ecp->y, wp->scratch, ctx);
         mont_mult(wp->c, ecp->x, ecp->x, wp->scratch, ctx);
         mont_mult(wp->c, wp->c, ecp->x, wp->scratch, ctx);
