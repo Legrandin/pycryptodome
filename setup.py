@@ -511,7 +511,6 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
-        'License :: OSI Approved :: Apache Software License',
         'License :: Public Domain',
         'Intended Audience :: Developers',
         'Operating System :: Unix',
