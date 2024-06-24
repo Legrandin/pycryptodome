@@ -445,7 +445,7 @@ class TestExport_Ed25519(unittest.TestCase):
     def test_raw(self):
         key = ECC.generate(curve="Ed25519")
         x, y = key.pointQ.xy
-        raw = bytearray(key._export_eddsa())
+        raw = bytearray(key._export_eddsa_public())
         sign_x = raw[31] >> 7
         raw[31] &= 0x7F
         yt = bytes_to_long(raw[::-1])
@@ -453,7 +453,7 @@ class TestExport_Ed25519(unittest.TestCase):
         self.assertEqual(x & 1, sign_x)
 
         key = ECC.construct(point_x=0, point_y=1, curve="Ed25519")
-        out = key._export_eddsa()
+        out = key._export_eddsa_public()
         self.assertEqual(b'\x01' + b'\x00' * 31, out)
 
 
@@ -462,7 +462,7 @@ class TestExport_Ed448(unittest.TestCase):
     def test_raw(self):
         key = ECC.generate(curve="Ed448")
         x, y = key.pointQ.xy
-        raw = bytearray(key._export_eddsa())
+        raw = bytearray(key._export_eddsa_public())
         sign_x = raw[56] >> 7
         raw[56] &= 0x7F
         yt = bytes_to_long(raw[::-1])
@@ -470,7 +470,7 @@ class TestExport_Ed448(unittest.TestCase):
         self.assertEqual(x & 1, sign_x)
 
         key = ECC.construct(point_x=0, point_y=1, curve="Ed448")
-        out = key._export_eddsa()
+        out = key._export_eddsa_public()
         self.assertEqual(b'\x01' + b'\x00' * 56, out)
 
 

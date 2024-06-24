@@ -199,6 +199,14 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
     class TestVector(object):
         pass
 
+    # Unique attributes that will be converted from
+    # hexadecimal to binary, unless the attribute is
+    # listed in the unit_tag dict
+    unit_attr_hex = {'key', 'iv', 'aad', 'msg', 'ct', 'tag', 'label',
+                     'ikm', 'salt', 'info', 'okm', 'sig', 'public',
+                     'shared'}
+    unit_attr_hex -= set(unit_tag.keys())
+
     common_root = {}
     for k, v in root_tag.items():
         common_root[k] = v(tv_tree)
@@ -219,10 +227,12 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
 
             tv.id = test['tcId']
             tv.comment = test['comment']
-            for attr in 'key', 'iv', 'aad', 'msg', 'ct', 'tag', 'label', \
-                        'ikm', 'salt', 'info', 'okm', 'sig', 'public', 'shared':
+            for attr in unit_attr_hex:
                 if attr in test:
-                    setattr(tv, attr, unhexlify(test[attr]))
+                    try:
+                        setattr(tv, attr, unhexlify(test[attr]))
+                    except binascii.Error:
+                        raise ValueError("Error decoding attribute '%s' (tcId=%s, file %s)" % (attr, tv.id, file_name))
             tv.filename = file_name
 
             for k, v in unit_tag.items():
@@ -230,6 +240,7 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
 
             tv.valid = test['result'] != "invalid"
             tv.warning = test['result'] == "acceptable"
+            tv.flags = test.get('flags')
 
             tv.filename = file_name
 

@@ -1,14 +1,61 @@
 from Crypto.Util.number import long_to_bytes
-from Crypto.PublicKey.ECC import EccKey
+from Crypto.PublicKey.ECC import (EccKey,
+                                  construct,
+                                  _import_curve25519_public_key)
 
 
 def _compute_ecdh(key_priv, key_pub):
-    # See Section 5.7.1.2 in NIST SP 800-56Ar3
     pointP = key_pub.pointQ * key_priv.d
     if pointP.is_point_at_infinity():
-        raise ValueError("Invalid ECDH point")
-    z = long_to_bytes(pointP.x, pointP.size_in_bytes())
+         raise ValueError("Invalid ECDH point")
+
+    if key_priv.curve == "Curve25519":
+        z = bytearray(pointP.x.to_bytes(32, byteorder='little'))
+    else:
+        # See Section 5.7.1.2 in NIST SP 800-56Ar3
+        z = long_to_bytes(pointP.x, pointP.size_in_bytes())
     return z
+
+
+def import_x25519_public_key(encoded):
+    """Create a new X25519 public key object,
+    starting from the key encoded as raw ``bytes``,
+    in the format described in RFC7748.
+
+    Args:
+      encoded (bytes):
+        The x25519 public key to import.
+        It must be 32 bytes.
+
+    Returns:
+      :class:`Crypto.PublicKey.EccKey` : a new ECC key object.
+
+    Raises:
+      ValueError: when the given key cannot be parsed.
+    """
+
+    x = _import_curve25519_public_key(encoded)
+    return construct(curve='Curve25519', point_x=x)
+
+
+def import_x25519_private_key(encoded):
+    """Create a new X25519 private key object,
+    starting from the key encoded as raw ``bytes``,
+    in the format described in RFC7748.
+
+    Args:
+      encoded (bytes):
+        The X25519 private key to import.
+        It must be 32 bytes.
+
+    Returns:
+      :class:`Crypto.PublicKey.EccKey` : a new ECC key object.
+
+    Raises:
+      ValueError: when the given key cannot be parsed.
+    """
+
+    return construct(seed=encoded, curve="Curve25519")
 
 
 def key_agreement(**kwargs):

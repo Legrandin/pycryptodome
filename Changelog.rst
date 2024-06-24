@@ -8,6 +8,7 @@ Under development
 * Remove support for Python 3.5
 * GH#814: RSA keys for PSS can be imported.
 * GH#810: fixed negation of Ed25519 points
+* Add support for Curve25519 / X25519
 
 3.20.0 (9 January 2024)
 ++++++++++++++++++++++++++

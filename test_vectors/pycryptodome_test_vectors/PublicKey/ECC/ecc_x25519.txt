@@ -1,0 +1,12 @@
+-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VuBCIEIKidnb+OLl6wrioGG+TGdIE/r0HdYmIxWOj8d7kvuW5f
+-----END PRIVATE KEY-----
+X25519 Private-Key:
+priv:
+    a8:9d:9d:bf:8e:2e:5e:b0:ae:2a:06:1b:e4:c6:74:
+    81:3f:af:41:dd:62:62:31:58:e8:fc:77:b9:2f:b9:
+    6e:5f
+pub:
+    ff:75:61:ef:60:c9:c8:a7:57:f6:d6:37:2e:c1:41:
+    42:c9:be:20:8d:0e:71:91:36:d8:d3:c7:15:df:cf:
+    7e:15

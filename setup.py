@@ -78,7 +78,7 @@ for instance:
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448)
+* Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448, Curve25519)
 * Better and more compact API (`nonce` and `iv` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
@@ -445,9 +445,9 @@ ext_modules = [
                  'src/p521_table.c'],
         py_limited_api=True,
         ),
-    Extension("Crypto.PublicKey._x25519",
+    Extension("Crypto.PublicKey._curve25519",
         include_dirs=['src/'],
-        sources=['src/x25519.c'],
+        sources=['src/curve25519.c'],
         py_limited_api=True,
         ),
     Extension("Crypto.PublicKey._ed25519",
