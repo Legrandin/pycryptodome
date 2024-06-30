@@ -70,15 +70,17 @@ int main(void)
 
     /** Scalar multiplications by arbitrary point **/
     gettimeofday(&start, NULL);
-    for (i=0; i<ITERATIONS; i++) {
-        ed448_scalar(gp, exp, sizeof(exp), 0xFFF);
+    for (i=0; i<ITERATIONS && !res; i++) {
+        res = ed448_scalar(gp, exp, sizeof(exp), 0xFFF);
     }
+    assert(res == 0);
     gettimeofday(&stop, NULL);
     duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
     rate = ITERATIONS / (duration_ms/1000);
     printf("Speed (scalar mult by P) = %.0f op/s\n", rate);
 
-    ed448_get_xy(x, y, sizeof(x), gp);
+    res = ed448_get_xy(x, y, sizeof(x), gp);
+    assert(res == 0);
     printf("X: ");
     for (i=0; i<sizeof(x); i++)
         printf("%02X", x[i]);

@@ -59,6 +59,7 @@ int main(void)
     unsigned i;
     struct timeval start, stop;
     double duration_ms, rate;
+    int res;
 
 #define ITERATIONS 1000U
 
@@ -67,24 +68,32 @@ int main(void)
         exp[i] = (uint8_t)(0xFF - i);
     }
 
-    ec_ws_new_context(&ec_ctx, p384_mod, b, order, BYTES, /* seed */ 4);
+    res = ec_ws_new_context(&ec_ctx, p384_mod, b, order, BYTES, /* seed */ 4);
+    assert(res == 0);
 
-    ec_ws_new_point(&gp, p384_Gx, p384_Gy, BYTES, ec_ctx);
-    ec_ws_clone(&ecp, gp);
+    res = ec_ws_new_point(&gp, p384_Gx, p384_Gy, BYTES, ec_ctx);
+    assert(res == 0);
+
+    res = ec_ws_clone(&ecp, gp);
+    assert(res == 0);
 
     /** Scalar multiplications by G **/
     gettimeofday(&start, NULL);
     for (i=0; i<ITERATIONS; i++) {
-        ec_ws_copy(ecp, gp);
-        ec_ws_scalar(ecp, exp, BYTES, 0xFFF);
-        ec_ws_get_xy(x, y, BYTES, ecp);
+        res = ec_ws_copy(ecp, gp);
+        assert(res == 0);
+        res = ec_ws_scalar(ecp, exp, BYTES, 0xFFF);
+        assert(res == 0);
+        res = ec_ws_get_xy(x, y, BYTES, ecp);
+        assert(res == 0);
     }
     gettimeofday(&stop, NULL);
     duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
     rate = ITERATIONS / (duration_ms/1000);
     printf("Speed (scalar mult by G) = %.0f op/s\n", rate);
 
-    ec_ws_get_xy(x, y, BYTES, ecp);
+    res = ec_ws_get_xy(x, y, BYTES, ecp);
+    assert(res == 0);
     printf("X: ");
     for (i=0; i<BYTES; i++)
         printf("%02X", x[i]);
@@ -96,18 +105,22 @@ int main(void)
 
 #if 1
     /** Scalar multiplications by arbitrary point **/
-    ec_ws_double(ecp);
+    res = ec_ws_double(ecp);
+    assert(res == 0);
     gettimeofday(&start, NULL);
     for (i=0; i<ITERATIONS; i++) {
-        ec_ws_scalar(ecp, exp, BYTES, 0xFFF);
-        ec_ws_get_xy(x, y, BYTES, ecp);
+        res = ec_ws_scalar(ecp, exp, BYTES, 0xFFF);
+        assert(res == 0);
+        res = ec_ws_get_xy(x, y, BYTES, ecp);
+        assert(res == 0);
     }
     gettimeofday(&stop, NULL);
     duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
     rate = ITERATIONS / (duration_ms/1000);
     printf("Speed (scalar mult by P) = %.0f op/s\n", rate);
 
-    ec_ws_get_xy(x, y, BYTES, ecp);
+    res = ec_ws_get_xy(x, y, BYTES, ecp);
+    assert(res == 0);
     printf("X: ");
     for (i=0; i<BYTES; i++)
         printf("%02X", x[i]);

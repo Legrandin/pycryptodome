@@ -472,9 +472,9 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     unsigned z1_is_one;
     unsigned i;
     int res;
-    uint64_t *window_x[WINDOW_SIZE_ITEMS],
-             *window_y[WINDOW_SIZE_ITEMS],
-             *window_z[WINDOW_SIZE_ITEMS];
+    uint64_t *window_x[WINDOW_SIZE_ITEMS] = { NULL },
+             *window_y[WINDOW_SIZE_ITEMS] = { NULL },
+             *window_z[WINDOW_SIZE_ITEMS] = { NULL };
     uint64_t *xw=NULL, *yw=NULL, *zw=NULL;
     ProtMemory *prot_x=NULL, *prot_y=NULL, *prot_z=NULL;
 
@@ -490,10 +490,6 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     alloc(zw);
 
     /** Create window O, P, P² .. P¹⁵ **/
-    memset(window_x, 0, sizeof window_x);
-    memset(window_y, 0, sizeof window_y);
-    memset(window_z, 0, sizeof window_z);
-
     for (i=0; i<WINDOW_SIZE_ITEMS; i++) {
         alloc(window_x[i]);
         alloc(window_y[i]);
@@ -1005,7 +1001,6 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
                                const EcContext *ec_ctx)
 {
     int res;
-    Workplace *wp = NULL;
     EcPoint *ecp;
     MontContext *ctx;
     
@@ -1040,6 +1035,8 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
         mont_set(ecp->y, 1, ctx);
         mont_set(ecp->z, 0, ctx);
     } else {
+        Workplace *wp = NULL;
+
         wp = new_workplace(ctx);
         if (NULL == wp) {
             res = ERR_MEMORY;

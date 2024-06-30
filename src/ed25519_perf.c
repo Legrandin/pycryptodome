@@ -52,6 +52,7 @@ int main(void)
     double duration_ms, rate;
     const uint8_t Gx[32] = "\x21\x69\x36\xd3\xcd\x6e\x53\xfe\xc0\xa4\xe2\x31\xfd\xd6\xdc\x5c\x69\x2c\xc7\x60\x95\x25\xa7\xb2\xc9\x56\x2d\x60\x8f\x25\xd5\x1a";
     const uint8_t Gy[32] = "\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x66\x58";
+    int res;
 
 #define ITERATIONS 1000U
 
@@ -60,19 +61,22 @@ int main(void)
         exp[i] = (uint8_t)(0xFF - i);
     }
 
-    ed25519_new_point(&gp, Gx, Gy, 32, NULL);
+    res = ed25519_new_point(&gp, Gx, Gy, 32, NULL);
+    assert(res == 0);
 
     /** Scalar multiplications by arbitrary point **/
     gettimeofday(&start, NULL);
     for (i=0; i<ITERATIONS; i++) {
-        ed25519_scalar(gp, exp, 32, 0xFFF);
+        res = ed25519_scalar(gp, exp, 32, 0xFFF);
+        assert(res == 0);
     }
     gettimeofday(&stop, NULL);
     duration_ms = (double)(stop.tv_sec - start.tv_sec) * 1000 + (double)(stop.tv_usec - start.tv_usec) / 1000;
     rate = ITERATIONS / (duration_ms/1000);
     printf("Speed (scalar mult by P) = %.0f op/s\n", rate);
 
-    ed25519_get_xy(x, y, 32, gp);
+    res = ed25519_get_xy(x, y, 32, gp);
+    assert(res == 0);
     printf("X: ");
     for (i=0; i<32; i++)
         printf("%02X", x[i]);

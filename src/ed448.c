@@ -229,7 +229,7 @@ STATIC void cswap(PointEd448 *a, PointEd448 *b, unsigned swap)
 /*
  * Scalar multiplication Q = k*B on the Ed448 curve
  */
-STATIC void ed448_scalar_internal(PointEd448 *Pout,
+STATIC int ed448_scalar_internal(PointEd448 *Pout,
                                   const uint8_t *k,
                                   size_t len,
                                   const PointEd448 *Pin)
@@ -238,9 +238,13 @@ STATIC void ed448_scalar_internal(PointEd448 *Pout,
     PointEd448 *R1=NULL;
     unsigned bit_idx, swap;
     size_t scan;
+    int res;
 
-    ed448_new_point(&R0, (uint8_t*)"\x00", (uint8_t*)"\x01", 1, Pin->ec_ctx);
-    ed448_clone(&R1, Pin);
+    res = ed448_new_point(&R0, (uint8_t*)"\x00", (uint8_t*)"\x01", 1, Pin->ec_ctx);
+    if (res) goto cleanup;
+
+    res = ed448_clone(&R1, Pin);
+    if (res) goto cleanup;
 
     /* https://eprint.iacr.org/2020/956.pdf */
 
@@ -277,9 +281,12 @@ STATIC void ed448_scalar_internal(PointEd448 *Pout,
     cswap(R0, R1, swap);
 
     ed448_copy(Pout, R0);
+    res = 0;
 
+cleanup:
     ed448_free_point(R0);
     ed448_free_point(R1);
+    return res;
 }
 
 
@@ -524,11 +531,12 @@ EXPORT_SYM int ed448_add(PointEd448 *ecpa, const PointEd448 *ecpb)
  */
 EXPORT_SYM int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64_t _)
 {
+    int res;
     if (NULL == P || NULL == scalar)
         return ERR_NULL;
 
-    ed448_scalar_internal(P, scalar, scalar_len, P);
-    return 0;
+    res = ed448_scalar_internal(P, scalar, scalar_len, P);
+    return res;
 }
 
 EXPORT_SYM int ed448_clone(PointEd448 **pecp2, const PointEd448 *ecp)
