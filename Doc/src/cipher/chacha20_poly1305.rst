@@ -58,7 +58,7 @@ This is how you decrypt the data and check its authenticity::
     >>>     cipher = ChaCha20_Poly1305.new(key=key, nonce=jv['nonce'])
     >>>     cipher.update(jv['header'])
     >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext)
+    >>>     print("The message was: " + plaintext.decode())
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
