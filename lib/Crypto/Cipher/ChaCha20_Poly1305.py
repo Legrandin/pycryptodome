@@ -304,8 +304,6 @@ def new(**kwargs):
     except KeyError as e:
         raise TypeError("Missing parameter %s" % e)
 
-        self._len_ct += len(plaintext)
-
     if len(key) != 32:
         raise ValueError("Key must be 32 bytes long")
 
