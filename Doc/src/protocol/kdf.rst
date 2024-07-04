@@ -125,6 +125,24 @@ Example, for deriving two AES256 keys::
 
 .. autofunction:: Crypto.Protocol.KDF.HKDF
 
+.. _hkdfexpand:
+
+HKDFExpand
++++++
+
+HKDF consists of two stages, extract and expand. This class exposes an
+expand only version of HKDF that is suitable when the key material is
+already cryptographically strong.
+
+Example, for deriving a key with context::
+
+    from Crypto.Protocol.KDF import HKDFExpand
+    from Crypto.Hash import SHA512
+
+    app_key = HKDFExpand(pseudorandom_key, 32, SHA512, context=b"app key")
+
+.. autofunction:: Crypto.Protocol.KDF.HKDFExpand
+
 .. _sp800-180-counter:
 
 SP 800-180 Counter Mode
