@@ -32,7 +32,7 @@ int main(void)
     EcContext *ec_ctx;
     EcPoint *g = NULL;
     EcPoint **window = NULL;
-    int i, j;
+    unsigned i, j;
     unsigned n_tables, points_per_table, window_size;
 
     ec_ws_new_context(&ec_ctx, p384_mod, b, order, BYTES, 0);
@@ -55,12 +55,12 @@ int main(void)
     printf("/* This file was automatically generated, do not edit */\n");
     printf("#include \"common.h\"\n");
     printf("#include \"p384_table.h\"\n");
-    printf("const unsigned p384_n_tables = %d;\n", n_tables);
-    printf("const unsigned p384_window_size = %d;\n", window_size);
-    printf("const unsigned p384_points_per_table = %d;\n", points_per_table);
+    printf("const unsigned p384_n_tables = %u;\n", n_tables);
+    printf("const unsigned p384_window_size = %u;\n", window_size);
+    printf("const unsigned p384_points_per_table = %u;\n", points_per_table);
     printf("/* Affine coordinates in Montgomery form */\n");
     printf("/* Table size: %u kbytes */\n", (unsigned)(n_tables*points_per_table*2*WORDS*sizeof(uint64_t)));
-    printf("const uint64_t p384_tables[%d][%d][2][%d] = {\n", n_tables, points_per_table, WORDS);
+    printf("const uint64_t p384_tables[%u][%u][2][%d] = {\n", n_tables, points_per_table, WORDS);
 
     for (i=0; i<n_tables; i++) {
 
@@ -77,7 +77,7 @@ int main(void)
                 memcpy(yw, window[j]->y, sizeof yw);
             }
 
-            printf("  { /* Point #%d */\n", j);
+            printf("  { /* Point #%u */\n", j);
             printf("    { ");
             print_64bit_array(xw, 6);
             printf(" },\n");
