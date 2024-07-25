@@ -30,7 +30,7 @@ each sub-package is dedicated to solving a specific class of problems.
     :doc:`Crypto.PublicKey <public_key/public_key>`, "Modules for generating, exporting or importing
     *public keys* (example: RSA or ECC)."
     :doc:`Crypto.Protocol <protocol/protocol>`, "Modules for faciliting secure communications
-    between parties, in most cases by leveraging cryptograpic primitives
+    between parties, in most cases by leveraging cryptographic primitives
     from other modules (example: Shamir's Secret Sharing scheme)."
     :doc:`Crypto.IO <io/io>`, "Modules for dealing with encodings commonly used
     for cryptographic data (example: PEM)."
