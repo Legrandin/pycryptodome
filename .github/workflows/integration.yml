@@ -180,3 +180,32 @@ jobs:
         cmake -B build -G "NMake Makefiles"
         cd build
         nmake all test
+
+  python_no_gil:
+    runs-on: ubuntu-latest
+    env:
+      CFLAGS: "-Wconversion"
+    steps:
+    - uses: actions/checkout@v2
+    - name: No-GIL Python
+      uses: deadsnakes/action@v3.1.0
+      with:
+        python-version: "3.13-dev"
+        nogil: true
+
+    - name: Install dependencies (testing only)
+      run: |
+        pip install -r requirements-test.txt
+
+    - name: Install package
+      run: |
+        pip install -v .
+
+    - name: Test
+      shell: bash
+      run: |
+        if [[ -f .separate_namespace ]]; then
+          python -m Cryptodome.SelfTest
+        else
+          python -m Crypto.SelfTest
+        fi
