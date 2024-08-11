@@ -959,7 +959,7 @@ cleanup:
     return res;
 }
 
-EXPORT_SYM void ec_free_context(EcContext *ec_ctx)
+EXPORT_SYM void ec_ws_free_context(EcContext *ec_ctx)
 {
     if (NULL == ec_ctx)
         return;
