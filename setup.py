@@ -36,6 +36,7 @@ import os
 import sys
 import shutil
 import struct
+import sysconfig
 
 sys.path.append(os.getcwd())
 
@@ -497,6 +498,14 @@ with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
 
 version_string = ".".join([str(x) for x in version_tuple])
 
+# Set the minimum ABI3 version for bdist_wheel to 3.6
+# unless Python is running without GIL (as there is no established way yet to
+# specify multiple ABI levels)
+setup_options = {}
+if sys.version_info[0] > 2:
+    if not sysconfig.get_config_var('Py_GIL_DISABLED'):
+        setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp36'}}
+
 setup(
     name=project_name,
     version=version_string,
@@ -538,4 +547,5 @@ setup(
         'test': TestCommand,
         },
     ext_modules=ext_modules,
+    **setup_options
 )
