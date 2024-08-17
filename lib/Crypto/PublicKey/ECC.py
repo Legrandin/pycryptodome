@@ -49,6 +49,7 @@ from Crypto.Hash import SHA512, SHAKE256
 from Crypto.Random import get_random_bytes
 
 from ._point import EccPoint, EccXPoint, _curves
+from ._point import CurveID as _CurveID
 
 
 class UnsupportedEccFeature(ValueError):
@@ -124,7 +125,7 @@ class EccKey(object):
         # NIST P curves work with d, EdDSA works with seed
 
         # RFC 8032, 5.1.5
-        if self._curve.name == "ed25519":
+        if self._curve.id == _CurveID.ED25519:
             if self._d is not None:
                 raise ValueError("Parameter d can only be used with NIST P curves")
             if len(self._seed) != 32:
@@ -136,7 +137,7 @@ class EccKey(object):
             tmp[31] = (tmp[31] & 0x7F) | 0x40
             self._d = Integer.from_bytes(tmp, byteorder='little')
         # RFC 8032, 5.2.5
-        elif self._curve.name == "ed448":
+        elif self._curve.id == _CurveID.ED448:
             if self._d is not None:
                 raise ValueError("Parameter d can only be used with NIST P curves")
             if len(self._seed) != 57:
@@ -149,7 +150,7 @@ class EccKey(object):
             tmp[56] = 0
             self._d = Integer.from_bytes(tmp, byteorder='little')
         # RFC 7748, 5
-        elif self._curve.name == "curve25519":
+        elif self._curve.id == _CurveID.CURVE25519:
             if self._d is not None:
                 raise ValueError("Parameter d can only be used with NIST P curves")
             if len(self._seed) != 32:
@@ -165,9 +166,6 @@ class EccKey(object):
             if not 1 <= self._d < self._curve.order:
                 raise ValueError("Parameter d must be an integer smaller than the curve order")
 
-    def _is_eddsa(self):
-        return self._curve.desc in ("Ed25519", "Ed448")
-
     def __eq__(self, other):
         if not isinstance(other, EccKey):
             return False
@@ -179,13 +177,13 @@ class EccKey(object):
 
     def __repr__(self):
         if self.has_private():
-            if self._is_eddsa():
+            if self._curve.is_edwards:
                 extra = ", seed=%s" % tostr(binascii.hexlify(self._seed))
             else:
                 extra = ", d=%d" % int(self._d)
         else:
             extra = ""
-        if self._curve.name == "curve25519":
+        if self._curve.id == _CurveID.CURVE25519:
             x = self.pointQ.x
             result = "EccKey(curve='%s', point_x=%d%s)" % (self._curve.desc, x, extra)
         else:
@@ -249,7 +247,7 @@ class EccKey(object):
         return EccKey(curve=self._curve.desc, point=self.pointQ)
 
     def _export_SEC1(self, compress):
-        if self._curve.desc in ("Ed25519", "Ed448", "Curve25519"):
+        if not self._curve.is_weierstrass:
             raise ValueError("SEC1 format is only supported for NIST P curves")
 
         # See 2.2 in RFC5480 and 2.3.3 in SEC1
@@ -278,10 +276,10 @@ class EccKey(object):
 
     def _export_eddsa_public(self):
         x, y = self.pointQ.xy
-        if self._curve.name == "ed25519":
+        if self._curve.id == _CurveID.ED25519:
             result = bytearray(y.to_bytes(32, byteorder='little'))
             result[31] = ((x & 1) << 7) | result[31]
-        elif self._curve.name == "ed448":
+        elif self._curve.id == _CurveID.ED448:
             result = bytearray(y.to_bytes(57, byteorder='little'))
             result[56] = (x & 1) << 7
         else:
@@ -289,18 +287,18 @@ class EccKey(object):
         return bytes(result)
 
     def _export_montgomery_public(self):
-        if self._curve.desc != "Curve25519":
+        if not self._curve.is_montgomery:
             raise ValueError("Not a Montgomery key to export")
         x = self.pointQ.x
         result = bytearray(x.to_bytes(32, byteorder='little'))
         return bytes(result)
 
     def _export_subjectPublicKeyInfo(self, compress):
-        if self._is_eddsa():
+        if self._curve.is_edwards:
             oid = self._curve.oid
             public_key = self._export_eddsa_public()
             params = None
-        elif self._curve.desc == "Curve25519":
+        elif self._curve.is_montgomery:
             oid = self._curve.oid
             public_key = self._export_montgomery_public()
             params = None
@@ -523,9 +521,9 @@ class EccKey(object):
 
             use_pkcs8 = args.pop("use_pkcs8", True)
             if use_pkcs8 is False:
-                if self._is_eddsa():
+                if self._curve.is_edwards:
                     raise ValueError("'pkcs8' must be True for EdDSA curves")
-                if self._curve.desc == "Curve25519":
+                if self._curve.is_montgomery:
                     raise ValueError("'pkcs8' must be True for Curve25519")
                 if 'protection' in args:
                     raise ValueError("'protection' is only supported for PKCS#8")
@@ -559,9 +557,9 @@ class EccKey(object):
             elif ext_format == "SEC1":
                 return self._export_SEC1(compress)
             elif ext_format == "raw":
-                if self._curve.name in ('ed25519', 'ed448'):
+                if self._curve.is_edwards:
                     return self._export_eddsa_public()
-                elif self._curve.name in ('curve25519',):
+                elif self._curve.is_montgomery:
                     return self._export_montgomery_public()
                 else:
                     return self._export_SEC1(compress)
@@ -588,13 +586,13 @@ def generate(**kwargs):
     if kwargs:
         raise TypeError("Unknown parameters: " + str(kwargs))
 
-    if _curves[curve_name].name == "ed25519":
+    if _curves[curve_name].id == _CurveID.ED25519:
         seed = randfunc(32)
         new_key = EccKey(curve=curve_name, seed=seed)
-    elif _curves[curve_name].name == "ed448":
+    elif _curves[curve_name].id == _CurveID.ED448:
         seed = randfunc(57)
         new_key = EccKey(curve=curve_name, seed=seed)
-    elif _curves[curve_name].name == "curve25519":
+    elif _curves[curve_name].id == _CurveID.CURVE25519:
         seed = randfunc(32)
         new_key = EccKey(curve=curve_name, seed=seed)
         _validate_x25519_public_key(new_key)
@@ -647,7 +645,7 @@ def construct(**kwargs):
     if "point" in kwargs:
         raise TypeError("Unknown keyword: point")
 
-    if curve.desc == "Curve25519":
+    if curve.id == _CurveID.CURVE25519:
 
         if point_x is not None:
             kwargs["point"] = EccXPoint(point_x, curve_name)

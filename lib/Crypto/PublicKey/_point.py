@@ -11,6 +11,17 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Random.random import getrandbits
 
 
+class CurveID(object):
+    P192 = 1
+    P224 = 2
+    P256 = 3
+    P384 = 4
+    P521 = 5
+    ED25519 = 6
+    ED448 = 7
+    CURVE25519 = 8
+
+
 class _Curves(object):
 
     curves = {}
@@ -42,34 +53,42 @@ class _Curves(object):
         if name in self.p192_names:
             from . import _nist_ecc
             p192 = _nist_ecc.p192_curve()
+            p192.id = CurveID.P192
             self.curves.update(dict.fromkeys(self.p192_names, p192))
         elif name in self.p224_names:
             from . import _nist_ecc
             p224 = _nist_ecc.p224_curve()
+            p224.id = CurveID.P224
             self.curves.update(dict.fromkeys(self.p224_names, p224))
         elif name in self.p256_names:
             from . import _nist_ecc
             p256 = _nist_ecc.p256_curve()
+            p256.id = CurveID.P256
             self.curves.update(dict.fromkeys(self.p256_names, p256))
         elif name in self.p384_names:
             from . import _nist_ecc
             p384 = _nist_ecc.p384_curve()
+            p384.id = CurveID.P384
             self.curves.update(dict.fromkeys(self.p384_names, p384))
         elif name in self.p521_names:
             from . import _nist_ecc
             p521 = _nist_ecc.p521_curve()
+            p521.id = CurveID.P521
             self.curves.update(dict.fromkeys(self.p521_names, p521))
         elif name in self.ed25519_names:
             from . import _edwards
             ed25519 = _edwards.ed25519_curve()
+            ed25519.id = CurveID.ED25519
             self.curves.update(dict.fromkeys(self.ed25519_names, ed25519))
         elif name in self.ed448_names:
             from . import _edwards
             ed448 = _edwards.ed448_curve()
+            ed448.id = CurveID.ED448
             self.curves.update(dict.fromkeys(self.ed448_names, ed448))
         elif name in self.curve25519_names:
             from . import _montgomery
             curve25519 = _montgomery.curve25519_curve()
+            curve25519.id = CurveID.CURVE25519
             self.curves.update(dict.fromkeys(self.curve25519_names, curve25519))
         else:
             raise ValueError("Unsupported curve '%s'" % name)
@@ -84,6 +103,10 @@ class _Curves(object):
                     curve.G = EccXPoint(curve.Gx, name)
                 else:
                     curve.G = EccPoint(curve.Gx, curve.Gy, name)
+                curve.is_edwards = curve.id in (CurveID.ED25519, CurveID.ED448)
+                curve.is_montgomery = curve.id in (CurveID.CURVE25519,)
+                curve.is_weierstrass = not (curve.is_edwards or
+                                            curve.is_montgomery)
         return curve
 
     def items(self):
@@ -125,7 +148,7 @@ class EccPoint(object):
             raise ValueError("Unknown curve name %s" % str(curve))
         self._curve_name = curve
 
-        if self._curve.desc == "Curve25519":
+        if self._curve.id == CurveID.CURVE25519:
             raise ValueError("EccPoint cannot be created for Curve25519")
 
         modulus_bytes = self.size_in_bytes()
@@ -197,13 +220,10 @@ class EccPoint(object):
         np = EccPoint(x, y, self._curve_name)
         return np
 
-    def _is_eddsa(self):
-        return self._curve.name in ("ed25519", "ed448")
-
     def is_point_at_infinity(self):
         """``True`` if this is the *point-at-infinity*."""
 
-        if self._curve.name in ("ed25519", "ed448"):
+        if self._curve.is_edwards:
             return self.x == 0
         else:
             return self.xy == (0, 0)
@@ -211,7 +231,7 @@ class EccPoint(object):
     def point_at_infinity(self):
         """Return the *point-at-infinity* for the curve."""
 
-        if self._curve.name in ("ed25519", "ed448"):
+        if self._curve.is_edwards:
             return EccPoint(0, 1, self._curve_name)
         else:
             return EccPoint(0, 0, self._curve_name)
@@ -328,7 +348,7 @@ class EccXPoint(object):
             raise ValueError("Unknown curve name %s" % str(curve))
         self._curve_name = curve
 
-        if self._curve.desc != "Curve25519":
+        if self._curve.id != CurveID.CURVE25519:
             raise ValueError("EccXPoint can only be created for Curve25519")
 
         modulus_bytes = self.size_in_bytes()
