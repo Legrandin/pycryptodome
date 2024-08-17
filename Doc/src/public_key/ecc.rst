@@ -44,7 +44,7 @@ You can also export the public key, which is not sensitive::
 .. _ECC table:
 .. csv-table::
    :header: Curve, Canonical name, Aliases
-   :widths: 20, 80
+   :widths: 15, 15, 70
 
    "NIST P-192", "``'NIST P-192'``", "``'p192'``, ``'P-192'``, ``'prime192v1'``, ``'secp192r1'``"
    "NIST P-224", "``'NIST P-224'``", "``'p224'``, ``'P-224'``, ``'prime224v1'``, ``'secp224r1'``"
