@@ -18,7 +18,7 @@ each sub-package is dedicated to solving a specific class of problems.
 
 .. csv-table:: 
     :header: Package, Description
-    :widths: 20, 80
+    :widths: 25, 75
 
     :doc:`Crypto.Cipher <cipher/cipher>`, "Modules for protecting **confidentiality**
     that is, for encrypting and decrypting data (example: AES)."
