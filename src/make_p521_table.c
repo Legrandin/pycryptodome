@@ -105,7 +105,7 @@ int main(void)
     }
     free(window);
     ec_ws_free_point(g);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 
     return 0;
 }

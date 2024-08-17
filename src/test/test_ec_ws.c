@@ -723,7 +723,7 @@ void test_ec_ws_new_point(void)
     assert(res == 0);
 
     ec_ws_free_point(ecp);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 }
 
 void test_ec_ws_get_xy(void)
@@ -776,7 +776,7 @@ void test_ec_ws_get_xy(void)
     assert(0 == memcmp(bufy, Gy, 32));
 
     ec_ws_free_point(ecp);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 }
 
 void test_ec_ws_double_p256(void)
@@ -819,7 +819,7 @@ void test_ec_ws_double_p256(void)
     assert(0 == memcmp(bufy, "\x07\x77\x55\x10\xdb\x8e\xd0\x40\x29\x3d\x9a\xc6\x9f\x74\x30\xdb\xba\x7d\xad\xe6\x3c\xe9\x82\x29\x9e\x04\xb7\x9d\x22\x78\x73\xd1", 32));
 
     ec_ws_free_point(ecp);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 }
 
 void test_ec_ws_double_p521(void)
@@ -887,7 +887,7 @@ void test_ec_ws_double_p521(void)
     assert(0 == memcmp(bufy, "\x01\x98\x64\xA8\xB8\x85\x5C\x24\x79\xCB\xEF\xE3\x75\xAE\x55\x3E\x23\x93\x27\x1E\xD3\x6F\xAD\xFC\x44\x94\xFC\x05\x83\xF6\xBD\x03\x59\x88\x96\xF3\x98\x54\xAB\xEA\xE5\xF9\xA6\x51\x5A\x02\x1E\x2C\x0E\xEF\x13\x9E\x71\xDE\x61\x01\x43\xF5\x33\x82\xF4\x10\x4D\xCC\xB5\x43", 66));
 
     ec_ws_free_point(ecp);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 }
 
 void test_ec_ws_add(void)
@@ -935,7 +935,7 @@ void test_ec_ws_add(void)
 
     ec_ws_free_point(ecp);
     ec_ws_free_point(ecp2);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 }
 
 void test_ec_ws_scalar(void)
@@ -980,7 +980,7 @@ void test_ec_ws_scalar(void)
     assert(0 == memcmp(bufy, "\xb5\x7e\x12\xfc\xdb\x03\x1f\x59\xca\xb8\x1b\x1c\x6b\x1e\x1c\x07\xe4\x51\x2e\x52\xce\x83\x2f\x1a\x0c\xed\xef\xff\x8b\x43\x40\xe9", 32));
 
     ec_ws_free_point(ecp);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 }
 
 void test_ec_ws_neg(void)
@@ -1023,7 +1023,7 @@ void test_ec_ws_neg(void)
     assert(0 == memcmp(bufy, "\xb0\x1c\xbd\x1c\x01\xe5\x80\x65\x71\x18\x14\xb5\x83\xf0\x61\xe9\xd4\x31\xcc\xa9\x94\xce\xa1\x31\x34\x49\xbf\x97\xc8\x40\xae\x0a", 32));
 
     ec_ws_free_point(ecp);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 }
 
 

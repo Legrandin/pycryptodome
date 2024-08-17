@@ -36,7 +36,7 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
                                  const uint8_t *order,
                                  size_t len,
                                  uint64_t seed);
-EXPORT_SYM void ec_free_context(EcContext *ec_ctx);
+EXPORT_SYM void ec_ws_free_context(EcContext *ec_ctx);
 EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
                                const uint8_t *x,
                                const uint8_t *y,

@@ -133,7 +133,7 @@ int main(void)
 
     ec_ws_free_point(gp);
     ec_ws_free_point(ecp);
-    ec_free_context(ec_ctx);
+    ec_ws_free_context(ec_ctx);
 
     return 0;
 }
