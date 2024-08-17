@@ -329,7 +329,7 @@ def new(key, mode, context=None):
             different applications of the same key.
     """
 
-    if not isinstance(key, EccKey) or not key._is_eddsa():
+    if not isinstance(key, EccKey) or key.curve not in ("Ed25519", "Ed448"):
         raise ValueError("EdDSA can only be used with EdDSA keys")
 
     if mode != 'rfc8032':
