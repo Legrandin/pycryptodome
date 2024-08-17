@@ -43,17 +43,17 @@ You can also export the public key, which is not sensitive::
 
 .. _ECC table:
 .. csv-table::
-   :header: Curve, Strings accepted for the ``curve`` API parameter
+   :header: Curve, Canonical name, Aliases
    :widths: 20, 80
 
-   "NIST P-192", "``'NIST P-192'``, ``'p192'``, ``'P-192'``, ``'prime192v1'``, ``'secp192r1'``"
-   "NIST P-224", "``'NIST P-224'``, ``'p224'``, ``'P-224'``, ``'prime224v1'``, ``'secp224r1'``"
-   "NIST P-256", "``'NIST P-256'``, ``'p256'``, ``'P-256'``, ``'prime256v1'``, ``'secp256r1'``"
-   "NIST P-384", "``'NIST P-384'``, ``'p384'``, ``'P-384'``, ``'prime384v1'``, ``'secp384r1'``"
-   "NIST P-521", "``'NIST P-521'``, ``'p521'``, ``'P-521'``, ``'prime521v1'``, ``'secp521r1'``"
-   "Ed25519",    "``'ed25519'``, ``'Ed25519'``"
-   "Ed448",      "``'ed448'``, ``'Ed448'``"
-   "Curve25519", "``'curve25519'``, ``'Curve25519'``"
+   "NIST P-192", "``'NIST P-192'``", "``'p192'``, ``'P-192'``, ``'prime192v1'``, ``'secp192r1'``"
+   "NIST P-224", "``'NIST P-224'``", "``'p224'``, ``'P-224'``, ``'prime224v1'``, ``'secp224r1'``"
+   "NIST P-256", "``'NIST P-256'``", "``'p256'``, ``'P-256'``, ``'prime256v1'``, ``'secp256r1'``"
+   "NIST P-384", "``'NIST P-384'``", "``'p384'``, ``'P-384'``, ``'prime384v1'``, ``'secp384r1'``"
+   "NIST P-521", "``'NIST P-521'``", "``'p521'``, ``'P-521'``, ``'prime521v1'``, ``'secp521r1'``"
+   "Ed25519",    "``'Ed25519'``", "``'ed25519'``"
+   "Ed448",      "``'Ed448'``", "``'ed448'``"
+   "Curve25519", "``'Curve25519'``", "``'curve25519'``"
 
 For more information about each NIST curve see `FIPS 186-4`_, Section D.1.2.
 

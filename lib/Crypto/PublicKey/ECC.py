@@ -60,7 +60,7 @@ class EccKey(object):
     Do not instantiate directly.
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
 
-    :ivar curve: The name of the curve as defined in the `ECC table`_.
+    :ivar curve: The **canonical** name of the curve as defined in the `ECC table`_.
     :vartype curve: string
 
     :ivar pointQ: an ECC point representating the public component.
