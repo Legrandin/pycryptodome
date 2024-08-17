@@ -40,8 +40,7 @@ int curve25519_cmp(const Point *ecp1, const Point *ecp2);
                         255,
                         "1.3.101.110",      # RFC8410
                         None,
-                        "Curve25519",       # desc: used throughout; do not change
+                        "Curve25519",
                         None,
-                        "curve25519",
                         EcLib)
     return curve25519

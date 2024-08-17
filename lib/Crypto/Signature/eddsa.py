@@ -138,13 +138,13 @@ class EdDSASigScheme(object):
         if not self._key.has_private():
             raise TypeError("Private key is needed to sign")
 
-        if self._key._curve.name == "ed25519":
+        if self._key.curve == "Ed25519":
             ph = isinstance(msg_or_hash, SHA512.SHA512Hash)
             if not (ph or is_bytes(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHA-512 hash")
             eddsa_sign_method = self._sign_ed25519
 
-        elif self._key._curve.name == "ed448":
+        elif self._key.curve == "Ed448":
             ph = isinstance(msg_or_hash, SHAKE256.SHAKE256_XOF)
             if not (ph or is_bytes(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHAKE256 hash")
@@ -224,13 +224,13 @@ class EdDSASigScheme(object):
         :raise ValueError: if the signature is not authentic
         """
 
-        if self._key._curve.name == "ed25519":
+        if self._key.curve == "Ed25519":
             ph = isinstance(msg_or_hash, SHA512.SHA512Hash)
             if not (ph or is_bytes(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHA-512 hash")
             eddsa_verify_method = self._verify_ed25519
 
-        elif self._key._curve.name == "ed448":
+        elif self._key.curve == "Ed448":
             ph = isinstance(msg_or_hash, SHAKE256.SHAKE256_XOF)
             if not (ph or is_bytes(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHAKE256 hash")

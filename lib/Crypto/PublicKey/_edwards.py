@@ -50,9 +50,8 @@ int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t 
                      255,
                      "1.3.101.112",     # RFC8410
                      None,
-                     "Ed25519",         # Used throughout; do not change
+                     "Ed25519",
                      "ssh-ed25519",
-                     "ed25519",
                      EcLib)
     return ed25519
 
@@ -111,8 +110,7 @@ int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64
                    448,
                    "1.3.101.113",       # RFC8410
                    context,
-                   "Ed448",             # Used throughout; do not change
+                   "Ed448",
                    None,
-                   "ed448",
                    EcLib)
     return ed448

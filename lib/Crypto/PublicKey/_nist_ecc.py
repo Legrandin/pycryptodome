@@ -90,7 +90,6 @@ def p192_curve():
                   context,
                   "NIST P-192",
                   "ecdsa-sha2-nistp192",
-                  "p192",
                   EcLib)
     return p192
 
@@ -129,7 +128,6 @@ def p224_curve():
                   context,
                   "NIST P-224",
                   "ecdsa-sha2-nistp224",
-                  "p224",
                   EcLib)
     return p224
 
@@ -168,7 +166,6 @@ def p256_curve():
                   context,
                   "NIST P-256",
                   "ecdsa-sha2-nistp256",
-                  "p256",
                   EcLib)
     return p256
 
@@ -207,7 +204,6 @@ def p384_curve():
                   context,
                   "NIST P-384",
                   "ecdsa-sha2-nistp384",
-                  "p384",
                   EcLib)
     return p384
 
@@ -246,6 +242,5 @@ def p521_curve():
                   context,
                   "NIST P-521",
                   "ecdsa-sha2-nistp521",
-                  "p521",
                   EcLib)
     return p521

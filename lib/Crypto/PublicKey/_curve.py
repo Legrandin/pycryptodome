@@ -5,7 +5,7 @@
 # human-friendly name, such as "P-256". The element has the following fields:
 #
 # - p               the prime number that defines the finite field for all modulo operations
-# - b               the constant in the Short Weierstrass curve equation
+# - b               the constant in the Short Weierstrass curve equation (can be None)
 # - order           the number of elements in the group with the generator below
 # - Gx              the affine coordinate X of the generator point
 # - Gy              the affine coordinate Y of the generator point
@@ -15,13 +15,12 @@
 # - context         a raw pointer to memory holding a context for all curve operations (can be None)
 # - canonical       the canonical name of the curve
 # - openssh         the ASCII string used in OpenSSH id files for public keys on this curve
-# - name            the ASCII string which is also a valid key in _curves
 # - rawlib          the reference to the dynamic libary with the low-level functions
 
 class _Curve(object):
 
     def __init__(self, p, b, order, Gx, Gy, G, modulus_bits, oid, context,
-                 canonical, openssh, name, rawlib):
+                 canonical, openssh, rawlib):
         self.p = p
         self.b = b
         self.order = order
@@ -33,5 +32,4 @@ class _Curve(object):
         self.context = context
         self.canonical = canonical
         self.openssh = openssh
-        self.name = name
         self.rawlib = rawlib

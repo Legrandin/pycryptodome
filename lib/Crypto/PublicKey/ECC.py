@@ -393,7 +393,7 @@ class EccKey(object):
         desc = self._curve.openssh
 
         if desc is None:
-            raise ValueError("Cannot export %s keys as OpenSSH" % self._curve.name)
+            raise ValueError("Cannot export %s keys as OpenSSH" % self.curve)
         elif desc == "ssh-ed25519":
             public_key = self._export_eddsa_public()
             comps = (tobytes(desc), tobytes(public_key))
