@@ -110,7 +110,7 @@ class EccKey(object):
         if curve_name not in _curves:
             raise ValueError("Unsupported curve (%s)" % curve_name)
         self._curve = _curves[curve_name]
-        self.curve = self._curve.desc
+        self.curve = self._curve.canonical
 
         count = int(self._d is not None) + int(self._seed is not None)
 
@@ -185,10 +185,10 @@ class EccKey(object):
             extra = ""
         if self._curve.id == _CurveID.CURVE25519:
             x = self.pointQ.x
-            result = "EccKey(curve='%s', point_x=%d%s)" % (self._curve.desc, x, extra)
+            result = "EccKey(curve='%s', point_x=%d%s)" % (self._curve.canonical, x, extra)
         else:
             x, y = self.pointQ.xy
-            result = "EccKey(curve='%s', point_x=%d, point_y=%d%s)" % (self._curve.desc, x, y, extra)
+            result = "EccKey(curve='%s', point_x=%d, point_y=%d%s)" % (self._curve.canonical, x, y, extra)
         return result
 
     def has_private(self):
@@ -244,7 +244,7 @@ class EccKey(object):
             a new :class:`EccKey` object
         """
 
-        return EccKey(curve=self._curve.desc, point=self.pointQ)
+        return EccKey(curve=self._curve.canonical, point=self.pointQ)
 
     def _export_SEC1(self, compress):
         if not self._curve.is_weierstrass:
