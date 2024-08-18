@@ -13,6 +13,9 @@ Under development
   with the canonical name of the curve.
 * GH#781: the label for the SP800_108_Counter KDF may now
   contain zero bytes. Thanks to Julien Rische.
+* GH#819: accept an RFC5916 ECPrivateKey even if it doesn't
+  contain any of the optional elements
+  (parameters [0] and publicKey[1]).
 
 3.20.0 (9 January 2024)
 ++++++++++++++++++++++++++

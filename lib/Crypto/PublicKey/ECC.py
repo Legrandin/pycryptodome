@@ -797,17 +797,24 @@ def _import_rfc5915_der(encoded, passphrase, curve_oid=None):
     #           publicKey  [1] BIT STRING OPTIONAL
     #    }
 
-    private_key = DerSequence().decode(encoded, nr_elements=(3, 4))
-    if private_key[0] != 1:
+    ec_private_key = DerSequence().decode(encoded, nr_elements=(2, 3, 4))
+    if ec_private_key[0] != 1:
         raise ValueError("Incorrect ECC private key version")
 
-    try:
-        parameters = DerObjectId(explicit=0).decode(private_key[2]).value
-        if curve_oid is not None and parameters != curve_oid:
-            raise ValueError("Curve mismatch")
-        curve_oid = parameters
-    except ValueError:
-        pass
+    scalar_bytes = DerOctetString().decode(ec_private_key[1]).payload
+
+    next_element = 2
+
+    # Try to decode 'parameters'
+    if next_element < len(ec_private_key):
+        try:
+            parameters = DerObjectId(explicit=0).decode(ec_private_key[next_element]).value
+            if curve_oid is not None and parameters != curve_oid:
+                raise ValueError("Curve mismatch")
+            curve_oid = parameters
+            next_element += 1
+        except ValueError:
+            pass
 
     if curve_oid is None:
         raise ValueError("No curve found")
@@ -818,21 +825,23 @@ def _import_rfc5915_der(encoded, passphrase, curve_oid=None):
     else:
         raise UnsupportedEccFeature("Unsupported ECC curve (OID: %s)" % curve_oid)
 
-    scalar_bytes = DerOctetString().decode(private_key[1]).payload
     modulus_bytes = curve.p.size_in_bytes()
     if len(scalar_bytes) != modulus_bytes:
         raise ValueError("Private key is too small")
+
+    # Try to decode 'publicKey'
+    point_x = point_y = None
+    if next_element < len(ec_private_key):
+        try:
+            public_key_enc = DerBitString(explicit=1).decode(ec_private_key[next_element]).value
+            public_key = _import_public_der(public_key_enc, curve_oid=curve_oid)
+            point_x = public_key.pointQ.x
+            point_y = public_key.pointQ.y
+            next_element += 1
+        except ValueError:
+            pass
+
     d = Integer.from_bytes(scalar_bytes)
-
-    # Decode public key (if any)
-    if len(private_key) > 2:
-        public_key_enc = DerBitString(explicit=1).decode(private_key[-1]).value
-        public_key = _import_public_der(public_key_enc, curve_oid=curve_oid)
-        point_x = public_key.pointQ.x
-        point_y = public_key.pointQ.y
-    else:
-        point_x = point_y = None
-
     return construct(curve=curve_name, d=d, point_x=point_x, point_y=point_y)
 
 

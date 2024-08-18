@@ -63,6 +63,9 @@ _Curve = NamedTuple("_Curve", [('p', Integer),
 
 _curves: Dict[str, _Curve]
 
+def _import_rfc5915_der(encoded: bytes,
+                        passphrase: Optional[str] = None,
+                        curve_oid: Optional[str] = None) -> EccKey: ...
 
 def generate(**kwargs: Union[str, RNG]) -> EccKey: ...
 def construct(**kwargs: Union[str, int]) -> EccKey: ...

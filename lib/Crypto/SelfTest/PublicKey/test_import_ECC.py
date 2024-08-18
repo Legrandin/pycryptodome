@@ -42,6 +42,8 @@ from Crypto.Hash import SHAKE128
 
 from Crypto.PublicKey import ECC
 
+from Crypto.PublicKey.ECC import _import_rfc5915_der
+
 try:
     import pycryptodome_test_vectors  # type: ignore
     test_vectors_available = True
@@ -193,6 +195,23 @@ o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=
 -----END PRIVATE KEY-----"""
         self.assertRaises(ValueError, ECC.import_key, mismatch)
 
+    def test_import_private_rfc5915_none(self):
+        # ECPrivateKey with a P256 private key, without [0] and [1]
+        data_hex = "302502010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052"
+        key = _import_rfc5915_der(unhexlify(data_hex), None, "1.2.840.10045.3.1.7")
+        self.assertEqual(key.d, 0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
+
+    def test_import_private_rfc5915_only_0(self):
+        # ECPrivateKey with a P256 private key, with [0] only
+        data_hex = "303102010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052a00a06082a8648ce3d030107"
+        key = _import_rfc5915_der(unhexlify(data_hex), None)
+        self.assertEqual(key.d, 0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
+
+    def test_import_private_rfc5915_only_1(self):
+        # ECPrivateKey with a P256 private key, with [1] only
+        data_hex = "306b02010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052a14403420004a40ad59a2050ebe92479bd5fb16bb2e45b6465eb3cb2b1effe423fabe6cb7424db8219ef0bab80acf26fd70595b61fe4760d33eed80dd03d2fd0dfb27b8ce75c"
+        key = _import_rfc5915_der(unhexlify(data_hex), None, "1.2.840.10045.3.1.7")
+        self.assertEqual(key.d, 0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
 
 class TestImport_P192(unittest.TestCase):
 
