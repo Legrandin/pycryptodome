@@ -138,12 +138,12 @@ EXPORT_SYM int md2_digest(const hash_state *hs, uint8_t digest[16])
     uint8_t padding[16];
     unsigned padlen, i;
     hash_state temp;
-
-    assert(hs->count < 16);
  
     if (NULL==hs || digest==NULL)
         return ERR_NULL;
-  
+
+    assert(hs->count < 16);
+
     temp = *hs;
     padlen = 16 - hs->count;  /** 1..16 **/
     for(i=0; i<padlen; i++) { 
