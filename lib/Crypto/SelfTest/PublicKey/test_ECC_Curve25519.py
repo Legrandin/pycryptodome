@@ -69,6 +69,10 @@ class TestEccPoint_Curve25519(unittest.TestCase):
         EccXPoint(9, "curve25519")
         EccXPoint(2**255 - 19 + 5, "curve25519")
 
+    def test_curve_attribute(self):
+        point = EccXPoint(9, "curve25519")
+        self.assertEqual(point.curve, "Curve25519")
+
     def test_init_fail(self):
         self.assertRaises(ValueError, EccXPoint, 3*(2**255 - 19), "curve25519")
         self.assertRaises(ValueError, EccXPoint, 9, "curve25518")

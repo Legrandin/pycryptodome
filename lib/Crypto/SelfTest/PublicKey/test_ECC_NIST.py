@@ -86,6 +86,9 @@ class TestEccPoint_NIST_P192(unittest.TestCase):
                 0x264424096af2b3597796db48f8dfb41fa9cecc97691a9c79,
                 curve='p192')
 
+    def test_curve_attribute(self):
+        self.assertEqual(self.pointS.curve, "NIST P-192")
+
     def test_set(self):
         pointW = EccPoint(0, 0)
         pointW.set(self.pointS)
@@ -226,6 +229,9 @@ class TestEccPoint_NIST_P224(unittest.TestCase):
                 0xc42a8a4d34984f0b71b5b4091af7dceb33ea729c1a2dc8b434f10c34,
                 curve='p224')
 
+    def test_curve_attribute(self):
+        self.assertEqual(self.pointS.curve, "NIST P-224")
+
     def test_set(self):
         pointW = EccPoint(0, 0)
         pointW.set(self.pointS)
@@ -363,6 +369,9 @@ class TestEccPoint_NIST_P256(unittest.TestCase):
     pointT = EccPoint(
                 0x55a8b00f8da1d44e62f6b3b25316212e39540dc861c89575bb8cf92e35e0986b,
                 0x5421c3209c2d6c704835d82ac4c3dd90f61a8a52598b9e7ab656e9d8c8b24316)
+
+    def test_curve_attribute(self):
+        self.assertEqual(self.pointS.curve, "NIST P-256")
 
     def test_set(self):
         pointW = EccPoint(0, 0)
@@ -504,6 +513,9 @@ class TestEccPoint_NIST_P384(unittest.TestCase):
                 0x84009a263fefba7c2c57cffa5db3634d286131afc0fca8d25afa22a7b5dce0d9470da89233cee178592f49b6fecb5092,
                 "p384")
 
+    def test_curve_attribute(self):
+        self.assertEqual(self.pointS.curve, "NIST P-384")
+
     def test_set(self):
         pointW = EccPoint(0, 0, "p384")
         pointW.set(self.pointS)
@@ -634,6 +646,9 @@ class TestEccPoint_NIST_P521(unittest.TestCase):
                 0x000000f411f2ac2eb971a267b80297ba67c322dba4bb21cec8b70073bf88fc1ca5fde3ba09e5df6d39acb2c0762c03d7bc224a3e197feaf760d6324006fe3be9a548c7d5,
                 0x000001fdf842769c707c93c630df6d02eff399a06f1b36fb9684f0b373ed064889629abb92b1ae328fdb45534268384943f0e9222afe03259b32274d35d1b9584c65e305,
                 "p521")
+
+    def test_curve_attribute(self):
+        self.assertEqual(self.pointS.curve, "NIST P-521")
 
     def test_set(self):
         pointW = EccPoint(0, 0)

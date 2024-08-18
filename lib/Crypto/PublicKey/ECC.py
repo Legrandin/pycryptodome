@@ -103,7 +103,7 @@ class EccKey(object):
         self._seed = kwargs_.pop("seed", None)
         self._point = kwargs_.pop("point", None)
         if curve_name is None and self._point:
-            curve_name = self._point._curve_name
+            curve_name = self._point.curve
         if kwargs_:
             raise TypeError("Unknown parameters: " + str(kwargs_))
 

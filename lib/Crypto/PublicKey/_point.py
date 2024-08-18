@@ -131,6 +131,9 @@ class EccPoint(object):
     * Multiplying a point by a scalar: ``R = S*k``
     * In-place multiplication by a scalar: ``T *= k``
 
+    :ivar curve: The **canonical** name of the curve as defined in the `ECC table`_.
+    :vartype curve: string
+
     :ivar x: The affine X-coordinate of the ECC point
     :vartype x: integer
 
@@ -146,7 +149,7 @@ class EccPoint(object):
             self._curve = _curves[curve]
         except KeyError:
             raise ValueError("Unknown curve name %s" % str(curve))
-        self._curve_name = curve
+        self.curve = self._curve.canonical
 
         if self._curve.id == CurveID.CURVE25519:
             raise ValueError("EccPoint cannot be created for Curve25519")
@@ -217,7 +220,7 @@ class EccPoint(object):
     def copy(self):
         """Return a copy of this point."""
         x, y = self.xy
-        np = EccPoint(x, y, self._curve_name)
+        np = EccPoint(x, y, self.curve)
         return np
 
     def is_point_at_infinity(self):
@@ -232,9 +235,9 @@ class EccPoint(object):
         """Return the *point-at-infinity* for the curve."""
 
         if self._curve.is_edwards:
-            return EccPoint(0, 1, self._curve_name)
+            return EccPoint(0, 1, self.curve)
         else:
-            return EccPoint(0, 0, self._curve_name)
+            return EccPoint(0, 0, self.curve)
 
     @property
     def x(self):
@@ -333,6 +336,9 @@ class EccXPoint(object):
     * Multiplying a point by a scalar: ``R = S*k``
     * In-place multiplication by a scalar: ``T *= k``
 
+    :ivar curve: The **canonical** name of the curve as defined in the `ECC table`_.
+    :vartype curve: string
+
     :ivar x: The affine X-coordinate of the ECC point
     :vartype x: integer
     """
@@ -346,7 +352,7 @@ class EccXPoint(object):
             self._curve = _curves[curve]
         except KeyError:
             raise ValueError("Unknown curve name %s" % str(curve))
-        self._curve_name = curve
+        self.curve = self._curve.canonical
 
         if self._curve.id != CurveID.CURVE25519:
             raise ValueError("EccXPoint can only be created for Curve25519")
@@ -404,7 +410,7 @@ class EccXPoint(object):
             x = self.x
         except ValueError:
             return self.point_at_infinity()
-        return EccXPoint(x, self._curve_name)
+        return EccXPoint(x, self.curve)
 
     def is_point_at_infinity(self):
         """``True`` if this is the *point-at-infinity*."""
@@ -418,7 +424,7 @@ class EccXPoint(object):
     def point_at_infinity(self):
         """Return the *point-at-infinity* for the curve."""
 
-        return EccXPoint(self._curve.Gx, self._curve_name) * 0
+        return EccXPoint(self._curve.Gx, self.curve) * 0
 
     @property
     def x(self):

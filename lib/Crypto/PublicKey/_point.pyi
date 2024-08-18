@@ -3,6 +3,7 @@ from typing import Union, Optional, Tuple
 from Crypto.Math.Numbers import Integer
 
 class EccPoint(object):
+    curve: str
     def __init__(self,
                  x: Union[int, Integer],
                  y: Union[int, Integer],
@@ -30,6 +31,7 @@ class EccPoint(object):
 
 
 class EccXPoint(object):
+    curve: str
     def __init__(self,
                  x: Union[int, Integer],
                  curve: Optional[str] = ...) -> None: ...

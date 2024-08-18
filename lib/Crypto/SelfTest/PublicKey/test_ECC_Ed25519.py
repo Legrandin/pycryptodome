@@ -53,9 +53,12 @@ class TestEccPoint_Ed25519(unittest.TestCase):
     G3xy = {"x": 46896733464454938657123544595386787789046198280132665686241321779790909858396,
             "y": 8324843778533443976490377120369201138301417226297555316741202210403726505172}
 
-    pointG = EccPoint(Gxy['x'], Gxy['y'], curve="Ed25519")
-    pointG2 = EccPoint(G2xy['x'], G2xy['y'], curve="Ed25519")
-    pointG3 = EccPoint(G3xy['x'], G3xy['y'], curve="Ed25519")
+    pointG = EccPoint(Gxy['x'], Gxy['y'], curve="ed25519")
+    pointG2 = EccPoint(G2xy['x'], G2xy['y'], curve="ed25519")
+    pointG3 = EccPoint(G3xy['x'], G3xy['y'], curve="ed25519")
+
+    def test_curve_attribute(self):
+        self.assertEqual(self.pointG.curve, "Ed25519")
 
     def test_init_xy(self):
         EccPoint(self.Gxy['x'], self.Gxy['y'], curve="Ed25519")
