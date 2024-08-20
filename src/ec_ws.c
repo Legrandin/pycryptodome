@@ -49,7 +49,6 @@ FAKE_INIT(ec_ws)
 #ifdef MAIN
 STATIC void print_x(const char *s, const uint64_t *number, const MontContext *ctx)
 {
-    unsigned i;
     size_t size;
     uint8_t *encoded;
     int res;
@@ -60,7 +59,7 @@ STATIC void print_x(const char *s, const uint64_t *number, const MontContext *ct
     assert(res == 0);
 
     printf("%s: ", s);
-    for (i=0; i<size; i++)
+    for (unsigned i=0; i<size; ++i)
         printf("%02X", encoded[i]);
     printf("\n");
 
@@ -571,10 +570,8 @@ cleanup:
 
 STATIC void free_g_p256(ProtMemory **prot_g)
 {
-    unsigned i;
-
     if (prot_g) {
-        for (i=0; i<p256_n_tables; i++)
+        for (unsigned i=0; i<p256_n_tables; ++i)
             free_scattered(prot_g[i]);
         free(prot_g);
     }
@@ -582,10 +579,8 @@ STATIC void free_g_p256(ProtMemory **prot_g)
 
 STATIC void free_g_p384(ProtMemory **prot_g)
 {
-    unsigned i;
-
     if (prot_g) {
-        for (i=0; i<p384_n_tables; i++)
+        for (unsigned i=0; i<p384_n_tables; ++i)
             free_scattered(prot_g[i]);
         free(prot_g);
     }
@@ -593,10 +588,8 @@ STATIC void free_g_p384(ProtMemory **prot_g)
 
 STATIC void free_g_p521(ProtMemory **prot_g)
 {
-    unsigned i;
-
     if (prot_g) {
-        for (i=0; i<p521_n_tables; i++)
+        for (unsigned i=0; i<p521_n_tables; ++i)
             free_scattered(prot_g[i]);
         free(prot_g);
     }
@@ -609,7 +602,6 @@ STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
 {
     const void **tables_ptrs;
     ProtMemory **prot_g;
-    unsigned i;
     int res;
 
     tables_ptrs = (const void**)calloc(p256_points_per_table, sizeof(void*));
@@ -623,7 +615,7 @@ STATIC ProtMemory** ec_scramble_g_p256(const MontContext *ctx, uint64_t seed)
     }
 
     res = 0;
-    for (i=0; res==0 && i<p256_n_tables; i++) {
+    for (unsigned i=0; res==0 && i<p256_n_tables; ++i) {
         unsigned j;
 
         for (j=0; j<p256_points_per_table; j++) {
@@ -648,7 +640,6 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
 {
     const void **tables_ptrs;
     ProtMemory **prot_g;
-    unsigned i;
     int res;
 
     tables_ptrs = (const void**)calloc(p384_points_per_table, sizeof(void*));
@@ -662,7 +653,7 @@ STATIC ProtMemory** ec_scramble_g_p384(const MontContext *ctx, uint64_t seed)
     }
 
     res = 0;
-    for (i=0; res==0 && i<p384_n_tables; i++) {
+    for (unsigned i=0; res==0 && i<p384_n_tables; ++i) {
         unsigned j;
 
         for (j=0; j<p384_points_per_table; j++) {
@@ -687,7 +678,6 @@ STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
 {
     const void **tables_ptrs;
     ProtMemory **prot_g;
-    unsigned i;
     int res;
 
     tables_ptrs = (const void**)calloc(p521_points_per_table, sizeof(void*));
@@ -701,7 +691,7 @@ STATIC ProtMemory** ec_scramble_g_p521(const MontContext *ctx, uint64_t seed)
     }
 
     res = 0;
-    for (i=0; res==0 && i<p521_n_tables; i++) {
+    for (unsigned i=0; res==0 && i<p521_n_tables; ++i) {
         unsigned j;
 
         for (j=0; j<p521_points_per_table; j++) {
@@ -728,7 +718,6 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                             ProtMemory **prot_g,
                             const MontContext *ctx)
 {
-    unsigned i;
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
@@ -743,7 +732,7 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     if (bw.nr_windows > p256_n_tables)
         return ERR_VALUE;
 
-    for (i=0; i < bw.nr_windows; i++) {
+    for (unsigned i=0; i < bw.nr_windows; ++i) {
         unsigned index;
         uint64_t buffer[4*2];   /* X and Y affine coordinates **/
         uint64_t *xw, *yw;
@@ -771,7 +760,6 @@ STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                             ProtMemory **prot_g,
                             const MontContext *ctx)
 {
-    unsigned i;
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
@@ -786,7 +774,7 @@ STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     if (bw.nr_windows > p384_n_tables)
         return ERR_VALUE;
 
-    for (i=0; i < bw.nr_windows; i++) {
+    for (unsigned i=0; i < bw.nr_windows; ++i) {
         unsigned index;
         uint64_t buffer[6*2];   /* X and Y affine coordinates **/
         uint64_t *xw, *yw;
@@ -815,7 +803,6 @@ STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                             ProtMemory **prot_g,
                             const MontContext *ctx)
 {
-    unsigned i;
     struct BitWindow_RL bw;
 
     /** Start from PAI **/
@@ -848,7 +835,7 @@ STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     if (bw.nr_windows > p521_n_tables)
         return ERR_VALUE;
 
-    for (i=0; i < bw.nr_windows; i++) {
+    for (unsigned i=0; i < bw.nr_windows; ++i) {
         unsigned index;
         uint64_t buffer[9*2];   /* X and Y affine coordinates **/
         uint64_t *xw, *yw;
@@ -1273,11 +1260,9 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             /** Coordinates in Montgomery form **/
             const uint64_t mont_Gx[4] = { 0x79E730D418A9143CULL, 0x75BA95FC5FEDB601ULL, 0x79FB732B77622510ULL, 0x18905F76A53755C6ULL };
             const uint64_t mont_Gy[4] = { 0xDDF25357CE95560AULL, 0x8B4AB8E4BA19E45CULL, 0xD2E88688DD21F325ULL, 0x8571FF1825885D85ULL };
-            unsigned is_generator;
-            unsigned i;
+            unsigned is_generator = 1;
 
-            is_generator = 1;
-            for (i=0; i<4; i++) {
+            for (unsigned i=0; i<4; ++i) {
                 is_generator &= (mont_Gx[i] == ecp->x[i]);
                 is_generator &= (mont_Gy[i] == ecp->y[i]);
             }
@@ -1299,11 +1284,9 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             /** Coordinates in Montgomery form **/
             const uint64_t mont_Gx[6] = { 0x3DD0756649C0B528ULL, 0x20E378E2A0D6CE38ULL, 0x879C3AFC541B4D6EULL, 0x6454868459A30EFFULL, 0x812FF723614EDE2BULL, 0x4D3AADC2299E1513ULL };
             const uint64_t mont_Gy[6] = { 0x23043DAD4B03A4FEULL, 0xA1BFA8BF7BB4A9ACULL, 0x8BADE7562E83B050ULL, 0xC6C3521968F4FFD9ULL, 0xDD8002263969A840ULL, 0x2B78ABC25A15C5E9ULL };
-            unsigned is_generator;
-            unsigned i;
+            unsigned is_generator = 1;
 
-            is_generator = 1;
-            for (i=0; i<6; i++) {
+            for (unsigned i=0; i<6; ++i) {
                 is_generator &= (mont_Gx[i] == ecp->x[i]);
                 is_generator &= (mont_Gy[i] == ecp->y[i]);
             }
@@ -1325,11 +1308,9 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
             /** Coordinates in normal form **/
             const uint64_t mont_Gx[9] = { 0xF97E7E31C2E5BD66ULL, 0x3348B3C1856A429BULL, 0xFE1DC127A2FFA8DEULL, 0xA14B5E77EFE75928ULL, 0xF828AF606B4D3DBAULL, 0x9C648139053FB521ULL, 0x9E3ECB662395B442ULL, 0x858E06B70404E9CDULL, 0x00000000000000C6ULL };
             const uint64_t mont_Gy[9] = { 0x88BE94769FD16650ULL, 0x353C7086A272C240ULL, 0xC550B9013FAD0761ULL, 0x97EE72995EF42640ULL, 0x17AFBD17273E662CULL, 0x98F54449579B4468ULL, 0x5C8A5FB42C7D1BD9ULL, 0x39296A789A3BC004ULL, 0x0000000000000118ULL };
-            unsigned is_generator;
-            unsigned i;
+            unsigned is_generator = 1;
 
-            is_generator = 1;
-            for (i=0; i<9; i++) {
+            for (unsigned i=0; i<9; ++i) {
                 is_generator &= (mont_Gx[i] == ecp->x[i]);
                 is_generator &= (mont_Gy[i] == ecp->y[i]);
             }
