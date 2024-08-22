@@ -38,7 +38,7 @@ and reimport it later::
 
 You can also export the public key, which is not sensitive::
 
-    >>> with open("mypublickey.pem", "wbt) as f:
+    >>> with open("mypublickey.pem", "wbt") as f:
     >>>     data = mykey.public_key().export_key()
 
 .. _ECC table:
