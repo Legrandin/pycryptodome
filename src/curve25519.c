@@ -241,8 +241,8 @@ int main(void)
 {
     uint8_t pubkey[32];
     uint8_t secret[32];
-    uint8_t out[32];
     unsigned i;
+    int res;
     Point *Pin;
     Point Pout;
 
@@ -251,9 +251,13 @@ int main(void)
         secret[i] = pubkey[i] = (uint8_t)((secret[i-1] << 1) | (secret[i-1] >> 7));
     }
 
-    curve25519_new_point(&Pin, pubkey, 32);
+    res = curve25519_new_point(&Pin, pubkey, 32);
+    if (res) {
+        printf("Error: %d\n", res);
+        return res;
+    }
 
-    for (i=0; i<10000; i++) {
+    for (i=0; i<10000 && res == 0; i++) {
         curve25519_scalar_internal(&Pout, secret, sizeof secret, Pin);
     }
 
