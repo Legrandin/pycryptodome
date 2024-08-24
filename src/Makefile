@@ -4,7 +4,7 @@ CFLAGS=-Werror -Wall -O3 -g -Wno-unused-const-variable -Wconversion -Wsign-conve
 
 CFLAGS += -fanalyzer
 
-all:: modexp ec_ws_p256 ec_ws_p384 ec_ws_p521 ed25519_perf ed448_perf curve25519_perf
+all:: modexp ec_ws_p256 ec_ws_p384 ec_ws_p521 ed25519_perf ed448_perf curve25519_perf curve448_perf
 
 ec_ws_p256: ec_ws_p256.c mont.c p256_table.c p384_table.c p521_table.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
@@ -39,5 +39,8 @@ p521_table.c: make_ecc_table.py
 curve25519_perf: curve25519.c multiply_64.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
 
+curve448_perf: curve448.c mont.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
+
 clean::
-	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp x25519 ed25519_perf ed448_perf curve25519_perf
+	rm -f ec_ws_p256 ec_ws_p384 ec_ws_p521 mont.o modexp x25519 ed25519_perf ed448_perf curve25519_perf curve448_perf

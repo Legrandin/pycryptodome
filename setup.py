@@ -451,6 +451,11 @@ ext_modules = [
         sources=['src/curve25519.c'],
         py_limited_api=True,
         ),
+    Extension("Crypto.PublicKey._curve448",
+        include_dirs=['src/'],
+        sources=['src/curve448.c', 'src/mont1.c'],
+        py_limited_api=True,
+        ),
     Extension("Crypto.PublicKey._ed25519",
         include_dirs=['src/'],
         sources=['src/ed25519.c'],
@@ -458,14 +463,14 @@ ext_modules = [
         ),
     Extension("Crypto.PublicKey._ed448",
         include_dirs=['src/'],
-        sources=['src/ed448.c', 'src/mont1.c'],
+        sources=['src/ed448.c', 'src/mont2.c'],
         py_limited_api=True,
         ),
 
     # Math
     Extension("Crypto.Math._modexp",
         include_dirs=['src/'],
-        sources=['src/modexp.c', 'src/mont2.c'],
+        sources=['src/modexp.c', 'src/mont3.c'],
         py_limited_api=True,
         ),
 ]
