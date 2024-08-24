@@ -102,7 +102,7 @@ EXPORT_SYM int monty_pow(
     res = mont_new_number(&power_idx, 1, ctx);
     if (res) goto cleanup;
 
-    res = mont_from_bytes(&mont_base, base, len, ctx);
+    res = mont_new_from_bytes(&mont_base, base, len, ctx);
     if (res) goto cleanup;
 
     res = mont_new_number(&x, 1, ctx);
@@ -216,10 +216,10 @@ EXPORT_SYM int monty_multiply(
     if (res)
         return res;
 
-    res = mont_from_bytes(&mont_term1, term1, len, ctx);
+    res = mont_new_from_bytes(&mont_term1, term1, len, ctx);
     if (res) goto cleanup;
 
-    res = mont_from_bytes(&mont_term2, term2, len, ctx);
+    res = mont_new_from_bytes(&mont_term2, term2, len, ctx);
     if (res) goto cleanup;
 
     res = mont_new_number(&mont_output, 1, ctx);

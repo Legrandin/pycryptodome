@@ -907,7 +907,7 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     if (res) goto cleanup;
     ctx = ec_ctx->mont_ctx;
 
-    res = mont_from_bytes(&ec_ctx->b, b, len, ctx);
+    res = mont_new_from_bytes(&ec_ctx->b, b, len, ctx);
     if (res) goto cleanup;
 
     order_words = ((unsigned)len+7)/8;
@@ -1020,9 +1020,9 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
 
     ecp->ec_ctx = ec_ctx;
    
-    res = mont_from_bytes(&ecp->x, x, len, ctx);
+    res = mont_new_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
-    res = mont_from_bytes(&ecp->y, y, len, ctx);
+    res = mont_new_from_bytes(&ecp->y, y, len, ctx);
     if (res) goto cleanup;
     res = mont_new_number(&ecp->z, 1, ctx);
     if (res) goto cleanup;

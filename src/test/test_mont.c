@@ -83,7 +83,7 @@ void test_mont_context_init(void)
     mont_context_free(ctx);
 }
 
-void test_mont_from_bytes(void)
+void test_mont_new_from_bytes(void)
 {
     int res;
     MontContext *ctx;
@@ -94,19 +94,19 @@ void test_mont_from_bytes(void)
     res = mont_context_init(&ctx, modulus, 16);
     assert(res == 0);
 
-    res = mont_from_bytes(NULL, number, 2, ctx);
+    res = mont_new_from_bytes(NULL, number, 2, ctx);
     assert(res == ERR_NULL);
     
-    res = mont_from_bytes(&output, NULL, 2, ctx);
+    res = mont_new_from_bytes(&output, NULL, 2, ctx);
     assert(res == ERR_NULL);
     
-    res = mont_from_bytes(&output, number, 2, NULL);
+    res = mont_new_from_bytes(&output, number, 2, NULL);
     assert(res == ERR_NULL);
     
-    res = mont_from_bytes(&output, number, 0, ctx);
+    res = mont_new_from_bytes(&output, number, 0, ctx);
     assert(res == ERR_NOT_ENOUGH_DATA);
     
-    res = mont_from_bytes(&output, number, 2, ctx);
+    res = mont_new_from_bytes(&output, number, 2, ctx);
     assert(res == 0);
     assert(output != NULL);
     assert(output[0] == 18446744073709420033UL);
@@ -115,7 +115,7 @@ void test_mont_from_bytes(void)
 
     number[0] = 0;
     number[1] = 0;
-    res = mont_from_bytes(&output, number, 2, ctx);
+    res = mont_new_from_bytes(&output, number, 2, ctx);
     assert(res == 0);
     assert(output != NULL);
     assert(output[0] == 0);
@@ -314,7 +314,7 @@ void test_mont_inv_prime(void)
     assert(sizeof buf == mont_bytes(ctx));
 
     /* 2^{-1} mod N = 0x8000000000000001 */
-    res = mont_from_bytes(&p, (uint8_t*)"\x00\x02", 2, ctx);
+    res = mont_new_from_bytes(&p, (uint8_t*)"\x00\x02", 2, ctx);
     assert(res == 0);
     res = mont_inv_prime(out, p, ctx);
     assert(res == 0);
@@ -324,7 +324,7 @@ void test_mont_inv_prime(void)
     free(p);
 
     /* 3^{-1} mod N = 0x287cbedc41008ca6 */
-    res = mont_from_bytes(&p, (uint8_t*)"\x00\x03", 2, ctx);
+    res = mont_new_from_bytes(&p, (uint8_t*)"\x00\x03", 2, ctx);
     assert(res == 0);
     res = mont_inv_prime(out, p, ctx);
     assert(res == 0);
@@ -337,7 +337,7 @@ void test_mont_inv_prime(void)
 
     /* --- */
     mont_context_init(&ctx, modulus_p521, sizeof modulus_p521);
-    res = mont_from_bytes(&p, (uint8_t*)"\x01\xE9\xF3\x4F\x60\xAD\x5C\x4B\x98\x8A\xB4\x3A\x0C\x1C\x40\xFB\x5C\xB0\xFD\x1A\x1A\x6F\x4E\x81\xEB\x33\xDE\x7D\x95\x2E\xE2\x62\x0D\x76\x08\x3B\xA2\x28\xCC\x56\xA4\xFE\xD2\xF6\x08\xF3\x17\x1E\x59\x41\xB7\xE1\x6D\x20\x05\xEB\x9F\x55\x6B\x6B\xA1\x36\x0E\xC2\x35\x8C", 66, ctx);
+    res = mont_new_from_bytes(&p, (uint8_t*)"\x01\xE9\xF3\x4F\x60\xAD\x5C\x4B\x98\x8A\xB4\x3A\x0C\x1C\x40\xFB\x5C\xB0\xFD\x1A\x1A\x6F\x4E\x81\xEB\x33\xDE\x7D\x95\x2E\xE2\x62\x0D\x76\x08\x3B\xA2\x28\xCC\x56\xA4\xFE\xD2\xF6\x08\xF3\x17\x1E\x59\x41\xB7\xE1\x6D\x20\x05\xEB\x9F\x55\x6B\x6B\xA1\x36\x0E\xC2\x35\x8C", 66, ctx);
     assert(res == 0);
 
     res = mont_inv_prime(out_p521, p, ctx);
@@ -433,7 +433,7 @@ int main(void) {
     test_sub();
     test_rsquare();
     test_mont_context_init();
-    test_mont_from_bytes();
+    test_mont_new_from_bytes();
     test_mont_to_bytes();
     test_mont_add();
     test_mont_sub();

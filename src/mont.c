@@ -789,7 +789,7 @@ int mont_new_random_number(uint64_t **out, unsigned count, uint64_t seed, const 
  *                  smaller than the output of mont_bytes(ctx)).
  * @return          0 in case of success, the relevant error code otherwise.
  */
-int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const MontContext *ctx)
+int mont_new_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const MontContext *ctx)
 {
     uint64_t *encoded = NULL;
     uint64_t *tmp1 = NULL;

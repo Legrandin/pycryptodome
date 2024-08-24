@@ -330,7 +330,7 @@ EXPORT_SYM int ed448_new_context(EcContext **pec_ctx)
     if (res) goto cleanup;
     ctx = ec_ctx->mont_ctx;
 
-    res = mont_from_bytes(&ec_ctx->d, d448_be, sizeof(d448_be), ctx);
+    res = mont_new_from_bytes(&ec_ctx->d, d448_be, sizeof(d448_be), ctx);
     if (res) goto cleanup;
 
     return 0;
@@ -392,9 +392,9 @@ EXPORT_SYM int ed448_new_point(PointEd448 **pecp,
     ecp->ec_ctx = ec_ctx;
 
     /** No need to treat PAI (x=0, y=1) in a special way **/
-    res = mont_from_bytes(&ecp->x, x, len, ctx);
+    res = mont_new_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
-    res = mont_from_bytes(&ecp->y, y, len, ctx);
+    res = mont_new_from_bytes(&ecp->y, y, len, ctx);
     if (res) goto cleanup;
     res = mont_new_number(&ecp->z, 1, ctx);
     if (res) goto cleanup;
