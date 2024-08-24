@@ -57,10 +57,10 @@ static int matches(const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
     uint64_t *xa, *ya, *xb, *yb;
     int result;
 
-    mont_number(&xa, 1, ctx);
-    mont_number(&ya, 1, ctx);
-    mont_number(&xb, 1, ctx);
-    mont_number(&yb, 1, ctx);
+    mont_new_number(&xa, 1, ctx);
+    mont_new_number(&ya, 1, ctx);
+    mont_new_number(&xb, 1, ctx);
+    mont_new_number(&yb, 1, ctx);
 
     ec_projective_to_affine(xa, ya, x1, y1, z1, wp, ctx);
     ec_projective_to_affine(xb, yb, x2, y2, z2, wp, ctx);
@@ -248,11 +248,11 @@ void test_ec_mix_add_2(void)
     mont_from_bytes(&b, (uint8_t*)"\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b", 32, ctx);
 
     /* Projective input point is point-at-infinity */
-    mont_number(&x1, 1, ctx);
+    mont_new_number(&x1, 1, ctx);
     mont_set(x1, 0, ctx);
-    mont_number(&y1, 1, ctx);
+    mont_new_number(&y1, 1, ctx);
     mont_set(y1, 1, ctx);
-    mont_number(&z1, 1, ctx);
+    mont_new_number(&z1, 1, ctx);
     mont_set(z1, 0, ctx);
 
     mont_from_bytes(&x2, (uint8_t*)"\xf2\x49\x10\x4d\x0e\x6f\x8f\x29\xe6\x01\x62\x77\x78\x0c\xda\x84\xdc\x84\xb8\x3b\xc3\xd8\x99\xdf\xb7\x36\xca\x08\x31\xfb\xe8\xcf", 32, ctx);
@@ -449,9 +449,9 @@ void test_ec_full_add(void)
     mont_set(x2, 0, ctx);
     mont_set(y2, 1, ctx);
     mont_set(z2, 0, ctx);
-    mont_number(&x3, 1, ctx);
-    mont_number(&y3, 1, ctx);
-    mont_number(&z3, 1, ctx);
+    mont_new_number(&x3, 1, ctx);
+    mont_new_number(&y3, 1, ctx);
+    mont_new_number(&z3, 1, ctx);
 
     ec_full_add(x3, y3, z3, x1, y1, z1, x2, y2, z2, b, wp, ctx);
 
@@ -495,9 +495,9 @@ void test_ec_scalar(void)
     mont_from_bytes(&b, (uint8_t*)"\x5a\xc6\x35\xd8\xaa\x3a\x93\xe7\xb3\xeb\xbd\x55\x76\x98\x86\xbc\x65\x1d\x06\xb0\xcc\x53\xb0\xf6\x3b\xce\x3c\x3e\x27\xd2\x60\x4b", 32, ctx);
 
     /* 1*G */
-    mont_number(&x1, 1, ctx);
-    mont_number(&y1, 1, ctx);
-    mont_number(&z1, 1, ctx);
+    mont_new_number(&x1, 1, ctx);
+    mont_new_number(&y1, 1, ctx);
+    mont_new_number(&z1, 1, ctx);
     mont_from_bytes(&x2, (uint8_t*)"\x2e\xee\x33\x80\xcb\xba\x96\xcb\xb7\x61\x04\xf5\xe4\x6a\x89\x78\xa6\x22\xe7\x07\xcb\x30\x04\x49\x8e\x4c\x3c\xba\x75\xf7\x99\xe0", 32, ctx);
     mont_from_bytes(&y2, (uint8_t*)"\x1e\xe0\x9c\xe0\xed\x08\xfc\x10\x95\x0f\x30\xe8\xd8\x9c\x2c\xdd\xb6\x0e\x01\x67\x2f\xed\xb4\x13\xf5\x1e\x84\x12\x2d\x79\x33\x95", 32, ctx);
     mont_from_bytes(&z2, (uint8_t*)"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0a", 32, ctx);
@@ -589,13 +589,13 @@ void test_ec_scalar_g_p256(void)
 
     mont_from_bytes(&Gx_mont, Gx, sizeof Gx, ctx);
     mont_from_bytes(&Gy_mont, Gy, sizeof Gy, ctx);
-    mont_number(&xw, 1, ctx);
-    mont_number(&yw, 1, ctx);
+    mont_new_number(&xw, 1, ctx);
+    mont_new_number(&yw, 1, ctx);
 
     /* 1*G */
-    mont_number(&x1, 1, ctx);
-    mont_number(&y1, 1, ctx);
-    mont_number(&z1, 1, ctx);
+    mont_new_number(&x1, 1, ctx);
+    mont_new_number(&y1, 1, ctx);
+    mont_new_number(&z1, 1, ctx);
     res = ec_scalar_g_p256(x1, y1, z1, b, (uint8_t*)"\x01", 1, 0x4545, wp1, wp2, prot_g, ctx);
     assert(res == 0);
     ec_projective_to_affine(xw, yw, x1, y1, z1, wp1, ctx);

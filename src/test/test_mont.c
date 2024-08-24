@@ -168,7 +168,7 @@ void test_mont_add(void)
     uint64_t out[2];
 
     mont_context_init(&ctx, modulus, 16);
-    mont_number(&tmp, 2, ctx);
+    mont_new_number(&tmp, 2, ctx);
     
     res = mont_add(NULL, a, b, tmp, ctx);
     assert(res == ERR_NULL);
@@ -242,7 +242,7 @@ void test_mont_sub(void)
     uint64_t *tmp;
 
     mont_context_init(&ctx, modulus, 16);
-    mont_number(&tmp, 2, ctx);
+    mont_new_number(&tmp, 2, ctx);
     
     res = mont_sub(NULL, a, b, tmp, ctx);
     assert(res == ERR_NULL);

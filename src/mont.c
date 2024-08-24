@@ -147,7 +147,7 @@ STATIC void rsquare(uint64_t *r2_mod_n, uint64_t *n, size_t nw)
  * @param b     The second term (already in Montgomery form, b*R mod N)
  * @param n     The modulus (in normal form), such that R>N
  * @param m0    Least-significant word of the opposite of the inverse of n modulo R, that is, -n[0]⁻¹ mod R
- * @param t     Temporary, internal result; it must have been created with mont_number(&p,SCRATCHPAD_NR,ctx).
+ * @param t     Temporary, internal result; it must have been created with mont_new_number(&p,SCRATCHPAD_NR,ctx).
  * @param nw    Number of words making up the 3 integers: out, a, and b.
  *              It also defines R as 2^(64*nw).
  *
@@ -747,7 +747,7 @@ size_t mont_bytes(const MontContext *ctx)
  * @return      0 if successful, the relevant error code otherwise.
  *
  */
-int mont_number(uint64_t **out, unsigned count, const MontContext *ctx)
+int mont_new_number(uint64_t **out, unsigned count, const MontContext *ctx)
 {
     if (NULL == out || NULL == ctx)
         return ERR_NULL;
@@ -765,7 +765,7 @@ int mont_random_number(uint64_t **out, unsigned count, uint64_t seed, const Mont
     unsigned i;
     uint64_t *number;
 
-    res = mont_number(out, count, ctx);
+    res = mont_new_number(out, count, ctx);
     if (res)
         return res;
 
@@ -902,10 +902,10 @@ int mont_to_bytes(uint8_t *number, size_t len, const uint64_t* mont_number, cons
 /*
  * Add two numbers in Montgomery representation.
  *
- * @param out   The location where the result will be stored; it must have been created with mont_number(&p,1,ctx).
+ * @param out   The location where the result will be stored; it must have been created with mont_new_number(&p,1,ctx).
  * @param a     The first term.
  * @param b     The second term.
- * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,SCRATCHPAD_NR,ctx).
+ * @param tmp   Temporary, internal result; it must have been created with mont_new_number(&p,SCRATCHPAD_NR,ctx).
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
@@ -920,10 +920,10 @@ int mont_add(uint64_t* out, const uint64_t* a, const uint64_t* b, uint64_t *tmp,
 /*
  * Multiply two numbers in Montgomery representation.
  *
- * @param out   The location where the result will be stored at; it must have been created with mont_number(&p,1,ctx)
+ * @param out   The location where the result will be stored at; it must have been created with mont_new_number(&p,1,ctx)
  * @param a     The first term.
  * @param b     The second term.
- * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,SCRATCHPAD_NR,ctx).
+ * @param tmp   Temporary, internal result; it must have been created with mont_new_number(&p,SCRATCHPAD_NR,ctx).
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
@@ -958,11 +958,11 @@ int mont_mult(uint64_t* out, const uint64_t* a, const uint64_t *b, uint64_t *tmp
 /*
  * Subtract integer b from a.
  *
- * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
+ * @param out   The location where the result is stored at; it must have been created with mont_new_number(&p,1,ctx).
  *              It can be the same as either a or b.
  * @param a     The number it will be subtracted from.
  * @param b     The number to subtract.
- * @param tmp   Temporary, internal result; it must have been created with mont_number(&p,2,ctx).
+ * @param tmp   Temporary, internal result; it must have been created with mont_new_number(&p,2,ctx).
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
  */
@@ -980,7 +980,7 @@ int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp,
  * Condition: the modulus defining the Montgomery context MUST BE a non-secret prime number.
  *
  * @param out   The location where the result will be stored at; it must have
- *              been allocated with mont_number(&p, 1, ctx).
+ *              been allocated with mont_new_number(&p, 1, ctx).
  * @param a     The number to compute the modular inverse of, already in Montgomery form.
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
@@ -1049,7 +1049,7 @@ cleanup:
 /*
  * Assign a value to a number in Montgomery form.
  *
- * @param out   The location where the result is stored at; it must have been created with mont_number(&p,1,ctx).
+ * @param out   The location where the result is stored at; it must have been created with mont_new_number(&p,1,ctx).
  * @param x     The value to set.
  * @param ctx   The Montgomery context.
  * @return      0 for success, the relevant error code otherwise.
