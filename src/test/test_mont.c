@@ -379,6 +379,35 @@ void test_mont_set(void)
     mont_context_free(ctx);
 }
 
+void test_mont_new_from_uint64(void)
+{
+    int res;
+    MontContext *ctx;
+    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
+    uint64_t *out;
+
+    mont_context_init(&ctx, modulus, 16);
+
+    res = mont_new_from_uint64(NULL, 0x1000, ctx);
+    assert(res == ERR_NULL);
+    res = mont_new_from_uint64(&out, 0x1000, NULL);
+    assert(res == ERR_NULL);
+
+    res = mont_new_from_uint64(&out, 0, ctx);
+    assert(res == 0);
+    assert(out[0] == 0);
+    assert(out[1] == 0);
+    free(out);
+
+    res = mont_new_from_uint64(&out, 0x1000, ctx);
+    assert(res == 0);
+    assert(out[0] == 0xfffffffffff00001UL);
+    assert(out[1] == 0xf00000ffffffffUL);
+    free(out);
+
+    mont_context_free(ctx);
+}
+
 void test_mod_select(void)
 {
     int res;
@@ -439,6 +468,7 @@ int main(void) {
     test_mont_sub();
     test_mont_inv_prime();
     test_mont_set();
+    test_mont_new_from_uint64();
     test_mod_select();
     return 0;
 }
