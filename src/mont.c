@@ -759,7 +759,7 @@ int mont_new_number(uint64_t **out, unsigned count, const MontContext *ctx)
     return 0;
 }
 
-int mont_random_number(uint64_t **out, unsigned count, uint64_t seed, const MontContext *ctx)
+int mont_new_random_number(uint64_t **out, unsigned count, uint64_t seed, const MontContext *ctx)
 {
     int res;
     unsigned i;

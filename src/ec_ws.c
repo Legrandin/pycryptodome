@@ -1358,7 +1358,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         uint64_t *factor=NULL;
 
         /* Create the blinding factor for the base point */
-        res = mont_random_number(&factor, 1, seed, ctx);
+        res = mont_new_random_number(&factor, 1, seed, ctx);
         if (res)
             goto cleanup;
 

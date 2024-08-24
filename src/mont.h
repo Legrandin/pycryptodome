@@ -28,7 +28,7 @@ void mont_context_free(MontContext *ctx);
 size_t mont_bytes(const MontContext *ctx);
 
 int mont_new_number(uint64_t **out, unsigned count, const struct mont_context *ctx);
-int mont_random_number(uint64_t **out, unsigned count, uint64_t seed, const struct mont_context *ctx);
+int mont_new_random_number(uint64_t **out, unsigned count, uint64_t seed, const struct mont_context *ctx);
 
 int mont_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const MontContext *ctx);
 int mont_to_bytes(uint8_t *number, size_t len, const uint64_t* mont_number, const MontContext *ctx);
