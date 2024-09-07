@@ -87,8 +87,9 @@ void test_mont_new_from_bytes(void)
 {
     int res;
     MontContext *ctx;
-    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-    uint8_t number[] = { 2, 2 };
+    uint8_t modulus[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };   // 0x01000001000000000000000000000001
+    uint8_t number[] = { 2, 2 };    // 0x0202
+    uint8_t number2[16] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3 };   // 0x01000001000000000000000000000001 + 0x0202
     uint64_t *output;
 
     res = mont_context_init(&ctx, modulus, 16);
@@ -113,6 +114,22 @@ void test_mont_new_from_bytes(void)
     assert(output[1] == 71492449356218367L);
     free(output);
 
+    res = mont_new_from_bytes(&output, number, sizeof(number), ctx);
+    assert(res == 0);
+    assert(output != NULL);
+    assert(output[0] == 18446744073709420033UL);
+    assert(output[1] == 71492449356218367L);
+    free(output);
+
+    /** Same as above, but larger than modulus **/
+    res = mont_new_from_bytes(&output, number2, sizeof(number2), ctx);
+    assert(res == 0);
+    assert(output != NULL);
+    assert(output[0] == 18446744073709420033UL);
+    assert(output[1] == 71492449356218367L);
+    free(output);
+
+    /** 0 is still 0 in Montgomery form **/
     number[0] = 0;
     number[1] = 0;
     res = mont_new_from_bytes(&output, number, 2, ctx);

@@ -794,7 +794,7 @@ int mont_new_random_number(uint64_t **out, unsigned count, uint64_t seed, const 
  *                  The memory will contain the number encoded in Montgomery form.
  *                  The caller is responsible for deallocating the memory.
  * @param ctx       Montgomery context, as created by mont_context_init().
- * @param number    The big endian-encoded number to transform, strictly smaller than the modulus.
+ * @param number    The big endian-encoded number to transform.
  * @param len       The length of the big-endian number in bytes (this may be
  *                  smaller than the output of mont_bytes(ctx)).
  * @return          0 in case of success, the relevant error code otherwise.
@@ -835,12 +835,6 @@ int mont_new_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const
     }
     bytes_to_words(tmp1, ctx->words, number, len);
 
-    /** Make sure number<modulus **/
-    if (ge(tmp1, ctx->modulus, ctx->words)) {
-        res = ERR_VALUE;
-        goto cleanup;
-    }
-
     /** Scratchpad **/
     scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
     if (NULL == scratchpad) {
@@ -848,10 +842,17 @@ int mont_new_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const
         goto cleanup;
     }
 
-    if (ctx->modulus_type != ModulusP521)
+    if (ctx->modulus_type != ModulusP521) {
         mont_mult_generic(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
-    else
-        mont_copy(encoded, tmp1, ctx);
+    } else {
+        while (ge(tmp1, ctx->modulus, ctx->words)) {
+            res = sub(tmp1, tmp1, ctx->modulus, ctx->words);
+            if (res) goto cleanup;
+        }
+        res = mont_copy(encoded, tmp1, ctx);
+        if (res) goto cleanup;
+    }
+
     res = 0;
 
 cleanup:
