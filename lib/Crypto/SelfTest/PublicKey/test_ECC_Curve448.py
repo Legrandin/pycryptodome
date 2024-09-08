@@ -219,7 +219,17 @@ class TestEccModule_Curve448(unittest.TestCase):
                           seed=b'H'*55)
 
         # Verify you cannot construct weak keys (small-order points)
-        # TODO
+        self.assertRaises(ValueError, ECC.construct, curve="Curve448",
+                          point_x=0)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve448",
+                          point_x=1)
+        p = 2**448 - 2**224 - 1
+        self.assertRaises(ValueError, ECC.construct, curve="Curve448",
+                          point_x=p-1)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve448",
+                          point_x=p)
+        self.assertRaises(ValueError, ECC.construct, curve="Curve448",
+                          point_x=p+1)
 
 
 def get_tests(config={}):

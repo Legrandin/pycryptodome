@@ -33,6 +33,36 @@ int curve25519_cmp(const Point *ecp1, const Point *ecp2);
         scalar = _curve25519_lib.curve25519_scalar
         cmp = _curve25519_lib.curve25519_cmp
 
+    def _validate_x25519_point(point):
+
+        p2 = p * 2
+        x1 = 325606250916557431795983626356110631294008115727848805560023387167927233504
+        x2 = 39382357235489614581723060781553021112529911719440698176882885853963445705823
+
+        # http://cr.yp.to/ecdh.html#validate
+        deny_list = (
+            0,
+            1,
+            x1,
+            x2,
+            p - 1,
+            p,
+            p + 1,
+            p + x1,
+            p + x2,
+            p2 - 1,
+            p2,
+            p2 + 1,
+        )
+
+        try:
+            valid = point.x not in deny_list
+        except ValueError:
+            valid = False
+
+        if not valid:
+            raise ValueError("Invalid Curve25519 public key")
+
     curve25519 = _Curve(Integer(p),
                         None,
                         Integer(order),
@@ -44,7 +74,10 @@ int curve25519_cmp(const Point *ecp1, const Point *ecp2);
                         None,
                         "Curve25519",
                         None,
-                        EcLib)
+                        EcLib,
+                        _validate_x25519_point,
+                        )
+
     return curve25519
 
 
@@ -84,6 +117,23 @@ int curve448_cmp(const Curve448Point *ecp1, const Curve448Point *ecp2);
     if result:
         raise ImportError("Error %d initializing Curve448 context" % result)
 
+    def _validate_x448_point(point):
+        deny_list = (
+            0,
+            1,
+            p - 1,
+            p,
+            p + 1,
+        )
+
+        try:
+            valid = point.x not in deny_list
+        except ValueError:
+            valid = False
+
+        if not valid:
+            raise ValueError("Invalid Curve448 public key")
+
     curve448 = _Curve(Integer(p),
                       None,
                       Integer(order),
@@ -95,5 +145,8 @@ int curve448_cmp(const Curve448Point *ecp1, const Curve448Point *ecp2);
                       SmartPointer(curve448_context.get(), EcLib.free_context),
                       "Curve448",
                       None,
-                      EcLib)
+                      EcLib,
+                      _validate_x448_point,
+                      )
+
     return curve448
