@@ -60,19 +60,19 @@ STATIC WorkplaceEd448 *new_workplace(const MontContext *ctx)
     if (NULL == wp)
         return NULL;
 
-    res = mont_number(&wp->a, 1, ctx);
+    res = mont_new_number(&wp->a, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->b, 1, ctx);
+    res = mont_new_number(&wp->b, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->c, 1, ctx);
+    res = mont_new_number(&wp->c, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->d, 1, ctx);
+    res = mont_new_number(&wp->d, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->e, 1, ctx);
+    res = mont_new_number(&wp->e, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->f, 1, ctx);
+    res = mont_new_number(&wp->f, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->scratch, SCRATCHPAD_NR, ctx);
+    res = mont_new_number(&wp->scratch, SCRATCHPAD_NR, ctx);
     if (res) goto cleanup;
     return wp;
 
@@ -330,7 +330,7 @@ EXPORT_SYM int ed448_new_context(EcContext **pec_ctx)
     if (res) goto cleanup;
     ctx = ec_ctx->mont_ctx;
 
-    res = mont_from_bytes(&ec_ctx->d, d448_be, sizeof(d448_be), ctx);
+    res = mont_new_from_bytes(&ec_ctx->d, d448_be, sizeof(d448_be), ctx);
     if (res) goto cleanup;
 
     return 0;
@@ -392,11 +392,11 @@ EXPORT_SYM int ed448_new_point(PointEd448 **pecp,
     ecp->ec_ctx = ec_ctx;
 
     /** No need to treat PAI (x=0, y=1) in a special way **/
-    res = mont_from_bytes(&ecp->x, x, len, ctx);
+    res = mont_new_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
-    res = mont_from_bytes(&ecp->y, y, len, ctx);
+    res = mont_new_from_bytes(&ecp->y, y, len, ctx);
     if (res) goto cleanup;
-    res = mont_number(&ecp->z, 1, ctx);
+    res = mont_new_number(&ecp->z, 1, ctx);
     if (res) goto cleanup;
     mont_set(ecp->z, 1, ctx);
 
@@ -465,9 +465,9 @@ EXPORT_SYM int ed448_get_xy(uint8_t *x, uint8_t *y, size_t len, const PointEd448
     if (len < ctx->modulus_len)
         return ERR_NOT_ENOUGH_DATA;
 
-    res = mont_number(&xw, 1, ctx);
+    res = mont_new_number(&xw, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&yw, 1, ctx);
+    res = mont_new_number(&yw, 1, ctx);
     if (res) goto cleanup;
 
     ed448_projective_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, ecp->wp, ctx);
@@ -558,15 +558,15 @@ EXPORT_SYM int ed448_clone(PointEd448 **pecp2, const PointEd448 *ecp)
     ecp2->wp = new_workplace(ctx);
     if (NULL == ecp2->wp) goto cleanup;
 
-    res = mont_number(&ecp2->x, 1, ctx);
+    res = mont_new_number(&ecp2->x, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->x, ecp->x, ctx);
 
-    res = mont_number(&ecp2->y, 1, ctx);
+    res = mont_new_number(&ecp2->y, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->y, ecp->y, ctx);
 
-    res = mont_number(&ecp2->z, 1, ctx);
+    res = mont_new_number(&ecp2->z, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->z, ecp->z, ctx);
 

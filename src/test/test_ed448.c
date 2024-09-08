@@ -176,8 +176,8 @@ void test_point_add_3(void)
     assert(res == 0);
 
     /** Let's scale Z coords by different factors, so that they are not equal nor 1 **/
-    mont_number(&scale1, 1, ec_ctx->mont_ctx);
-    mont_number(&scale2, 1, ec_ctx->mont_ctx);
+    mont_new_number(&scale1, 1, ec_ctx->mont_ctx);
+    mont_new_number(&scale2, 1, ec_ctx->mont_ctx);
     mont_set(scale1, 0xAABBCCDDEEFF, ec_ctx->mont_ctx);
     mont_set(scale2, 0xFFEEDDCCBBAA, ec_ctx->mont_ctx);
     scale(G, scale1, ec_ctx);
@@ -276,8 +276,8 @@ void test_cmp_1(void)
     res = ed448_new_point(&G2, G2x, G2y, 56, ec_ctx);
     assert(res == 0);
 
-    mont_number(&scale1, 1, ec_ctx->mont_ctx);
-    mont_number(&scale2, 1, ec_ctx->mont_ctx);
+    mont_new_number(&scale1, 1, ec_ctx->mont_ctx);
+    mont_new_number(&scale2, 1, ec_ctx->mont_ctx);
     mont_set(scale1, 0xAABBCCDDEEFF, ec_ctx->mont_ctx);
     mont_set(scale2, 0xFFEEDDCCBBAA, ec_ctx->mont_ctx);
     scale(G, scale1, ec_ctx);

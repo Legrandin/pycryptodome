@@ -77,29 +77,29 @@ STATIC Workplace *new_workplace(const MontContext *ctx)
     if (NULL == wp)
         return NULL;
 
-    res = mont_number(&wp->a, 1, ctx);
+    res = mont_new_number(&wp->a, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->b, 1, ctx);
+    res = mont_new_number(&wp->b, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->c, 1, ctx);
+    res = mont_new_number(&wp->c, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->d, 1, ctx);
+    res = mont_new_number(&wp->d, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->e, 1, ctx);
+    res = mont_new_number(&wp->e, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->f, 1, ctx);
+    res = mont_new_number(&wp->f, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->g, 1, ctx);
+    res = mont_new_number(&wp->g, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->h, 1, ctx);
+    res = mont_new_number(&wp->h, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->i, 1, ctx);
+    res = mont_new_number(&wp->i, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->j, 1, ctx);
+    res = mont_new_number(&wp->j, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->k, 1, ctx);
+    res = mont_new_number(&wp->k, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&wp->scratch, SCRATCHPAD_NR, ctx);
+    res = mont_new_number(&wp->scratch, SCRATCHPAD_NR, ctx);
     if (res) goto cleanup;
     return wp;
 
@@ -907,7 +907,7 @@ EXPORT_SYM int ec_ws_new_context(EcContext **pec_ctx,
     if (res) goto cleanup;
     ctx = ec_ctx->mont_ctx;
 
-    res = mont_from_bytes(&ec_ctx->b, b, len, ctx);
+    res = mont_new_from_bytes(&ec_ctx->b, b, len, ctx);
     if (res) goto cleanup;
 
     order_words = ((unsigned)len+7)/8;
@@ -1020,11 +1020,11 @@ EXPORT_SYM int ec_ws_new_point(EcPoint **pecp,
 
     ecp->ec_ctx = ec_ctx;
    
-    res = mont_from_bytes(&ecp->x, x, len, ctx);
+    res = mont_new_from_bytes(&ecp->x, x, len, ctx);
     if (res) goto cleanup;
-    res = mont_from_bytes(&ecp->y, y, len, ctx);
+    res = mont_new_from_bytes(&ecp->y, y, len, ctx);
     if (res) goto cleanup;
-    res = mont_number(&ecp->z, 1, ctx);
+    res = mont_new_number(&ecp->z, 1, ctx);
     if (res) goto cleanup;
     mont_set(ecp->z, 1, ctx);
 
@@ -1107,9 +1107,9 @@ EXPORT_SYM int ec_ws_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *e
     if (NULL == wp)
         return ERR_MEMORY;
 
-    res = mont_number(&xw, 1, ctx);
+    res = mont_new_number(&xw, 1, ctx);
     if (res) goto cleanup;
-    res = mont_number(&yw, 1, ctx);
+    res = mont_new_number(&yw, 1, ctx);
     if (res) goto cleanup;
 
     ec_projective_to_affine(xw, yw, ecp->x, ecp->y, ecp->z, wp, ctx);
@@ -1358,7 +1358,7 @@ EXPORT_SYM int ec_ws_scalar(EcPoint *ecp, const uint8_t *k, size_t len, uint64_t
         uint64_t *factor=NULL;
 
         /* Create the blinding factor for the base point */
-        res = mont_random_number(&factor, 1, seed, ctx);
+        res = mont_new_random_number(&factor, 1, seed, ctx);
         if (res)
             goto cleanup;
 
@@ -1421,15 +1421,15 @@ EXPORT_SYM int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp)
 
     ecp2->ec_ctx = ecp->ec_ctx;
 
-    res = mont_number(&ecp2->x, 1, ctx);
+    res = mont_new_number(&ecp2->x, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->x, ecp->x, ctx);
 
-    res = mont_number(&ecp2->y, 1, ctx);
+    res = mont_new_number(&ecp2->y, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->y, ecp->y, ctx);
 
-    res = mont_number(&ecp2->z, 1, ctx);
+    res = mont_new_number(&ecp2->z, 1, ctx);
     if (res) goto cleanup;
     mont_copy(ecp2->z, ecp->z, ctx);
 
@@ -1496,7 +1496,7 @@ EXPORT_SYM int ec_ws_neg(EcPoint *p)
         return ERR_NULL;
     ctx = p->ec_ctx->mont_ctx;
     
-    res = mont_number(&tmp, SCRATCHPAD_NR, ctx);
+    res = mont_new_number(&tmp, SCRATCHPAD_NR, ctx);
     if (res)
         return res;
 

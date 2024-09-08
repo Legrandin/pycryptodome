@@ -154,20 +154,29 @@ STATIC void curve25519_scalar_internal(Point *Pout,
 
 EXPORT_SYM int curve25519_new_point(Point **out,
                                     const uint8_t x[32],
-                                    size_t modsize)
+                                    size_t modsize,
+                                    const void *context)
 {
-    if ((NULL == out) || (NULL == x))
+    if (NULL == out)
         return ERR_NULL;
 
-    if (modsize != 32)
+    if (context != NULL)
+        return ERR_UNKNOWN;
+
+    if ((modsize != 32) && (modsize != 0))
         return ERR_MODULUS;
 
     *out = calloc(1, sizeof(Point));
     if (NULL == *out)
         return ERR_MEMORY;
 
-    convert_be8_to_le25p5((*out)->X, x);
-    (*out)->Z[0] = 1;
+    if ((x != NULL) && (modsize == 32)) {
+        convert_be8_to_le25p5((*out)->X, x);
+        (*out)->Z[0] = 1;
+    } else {
+        /** PAI **/
+        (*out)->X[0] = 1;
+    }
 
     /* No need to verify if the point is on the Curve25519 curve */
 
@@ -241,8 +250,8 @@ int main(void)
 {
     uint8_t pubkey[32];
     uint8_t secret[32];
-    uint8_t out[32];
     unsigned i;
+    int res;
     Point *Pin;
     Point Pout;
 
@@ -251,9 +260,13 @@ int main(void)
         secret[i] = pubkey[i] = (uint8_t)((secret[i-1] << 1) | (secret[i-1] >> 7));
     }
 
-    curve25519_new_point(&Pin, pubkey, 32);
+    res = curve25519_new_point(&Pin, pubkey, 32);
+    if (res) {
+        printf("Error: %d\n", res);
+        return res;
+    }
 
-    for (i=0; i<10000; i++) {
+    for (i=0; i<10000 && res == 0; i++) {
         curve25519_scalar_internal(&Pout, secret, sizeof secret, Pin);
     }
 
