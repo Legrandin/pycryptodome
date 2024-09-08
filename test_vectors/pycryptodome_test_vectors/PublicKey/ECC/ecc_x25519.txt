@@ -1,12 +1,15 @@
 -----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VuBCIEIKidnb+OLl6wrioGG+TGdIE/r0HdYmIxWOj8d7kvuW5f
+MEYCAQAwBQYDK2VvBDoEOHxZhQFreFDMrRfsYFwh4JWoFIuB3ImZp2OET4L8E1Cv
+ARzv49/Z1j81t2onGC1y6PXlRaL0ynXW
 -----END PRIVATE KEY-----
-X25519 Private-Key:
+X448 Private-Key:
 priv:
-    a8:9d:9d:bf:8e:2e:5e:b0:ae:2a:06:1b:e4:c6:74:
-    81:3f:af:41:dd:62:62:31:58:e8:fc:77:b9:2f:b9:
-    6e:5f
+    7c:59:85:01:6b:78:50:cc:ad:17:ec:60:5c:21:e0:
+    95:a8:14:8b:81:dc:89:99:a7:63:84:4f:82:fc:13:
+    50:af:01:1c:ef:e3:df:d9:d6:3f:35:b7:6a:27:18:
+    2d:72:e8:f5:e5:45:a2:f4:ca:75:d6
 pub:
-    ff:75:61:ef:60:c9:c8:a7:57:f6:d6:37:2e:c1:41:
-    42:c9:be:20:8d:0e:71:91:36:d8:d3:c7:15:df:cf:
-    7e:15
+    2c:b5:a2:77:ae:7c:3c:27:6c:c2:9d:6a:b7:d9:08:
+    1a:7f:83:24:a5:a6:9f:3d:1a:a9:cb:7d:d8:49:a1:
+    2c:0e:e2:01:9b:15:0f:75:4a:67:b3:81:ed:a7:1d:
+    6c:37:17:91:12:0d:fa:8c:a4:40:62
