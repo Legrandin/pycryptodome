@@ -1,7 +1,8 @@
 from Crypto.Util.number import long_to_bytes
 from Crypto.PublicKey.ECC import (EccKey,
                                   construct,
-                                  _import_curve25519_public_key)
+                                  _import_curve25519_public_key,
+                                  _import_curve448_public_key)
 
 
 def _compute_ecdh(key_priv, key_pub):
@@ -11,6 +12,8 @@ def _compute_ecdh(key_priv, key_pub):
 
     if key_priv.curve == "Curve25519":
         z = bytearray(pointP.x.to_bytes(32, byteorder='little'))
+    elif key_priv.curve == "Curve448":
+        z = bytearray(pointP.x.to_bytes(56, byteorder='little'))
     else:
         # See Section 5.7.1.2 in NIST SP 800-56Ar3
         z = long_to_bytes(pointP.x, pointP.size_in_bytes())
@@ -56,6 +59,47 @@ def import_x25519_private_key(encoded):
     """
 
     return construct(seed=encoded, curve="Curve25519")
+
+
+def import_x448_public_key(encoded):
+    """Create a new X448 public key object,
+    starting from the key encoded as raw ``bytes``,
+    in the format described in RFC7748.
+
+    Args:
+      encoded (bytes):
+        The x448 public key to import.
+        It must be 56 bytes.
+
+    Returns:
+      :class:`Crypto.PublicKey.EccKey` : a new ECC key object.
+
+    Raises:
+      ValueError: when the given key cannot be parsed.
+    """
+
+    x = _import_curve448_public_key(encoded)
+    return construct(curve='Curve448', point_x=x)
+
+
+def import_x448_private_key(encoded):
+    """Create a new X448 private key object,
+    starting from the key encoded as raw ``bytes``,
+    in the format described in RFC7748.
+
+    Args:
+      encoded (bytes):
+        The X448 private key to import.
+        It must be 56 bytes.
+
+    Returns:
+      :class:`Crypto.PublicKey.EccKey` : a new ECC key object.
+
+    Raises:
+      ValueError: when the given key cannot be parsed.
+    """
+
+    return construct(seed=encoded, curve="Curve448")
 
 
 def key_agreement(**kwargs):
