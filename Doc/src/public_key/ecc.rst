@@ -54,12 +54,13 @@ You can also export the public key, which is not sensitive::
    "Ed25519",    "``'Ed25519'``", "``'ed25519'``"
    "Ed448",      "``'Ed448'``", "``'ed448'``"
    "Curve25519", "``'Curve25519'``", "``'curve25519'``"
+   "Curve448", "``'Curve448'``", "``'curve448'``"
 
 For more information about each NIST curve see `FIPS 186-4`_, Section D.1.2.
 
-The Ed25519 and the Ed448 curves are defined in RFC8032_.
+Curves Ed25519 and Ed448 are defined in RFC8032_.
 
-The Curve25519 curve is defined in RFC7748_.
+Curves Curve25519 and Curve448 are defined in RFC7748_.
 
 The ECC keys can be used to perform or verify signatures, using the modules
 :mod:`Crypto.Signature.DSS` (ECDSA; NIST curves only)
