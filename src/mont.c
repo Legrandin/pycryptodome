@@ -846,7 +846,7 @@ int mont_new_from_bytes(uint64_t **out, const uint8_t *number, size_t len, const
         mont_mult_generic(encoded, tmp1, ctx->r2_mod_n, ctx->modulus, ctx->m0, scratchpad, ctx->words);
     } else {
         while (ge(tmp1, ctx->modulus, ctx->words)) {
-            res = sub(tmp1, tmp1, ctx->modulus, ctx->words);
+            res = (int)sub(tmp1, tmp1, ctx->modulus, ctx->words);
             if (res) goto cleanup;
         }
         res = mont_copy(encoded, tmp1, ctx);
