@@ -985,38 +985,62 @@ int mont_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, uint64_t *tmp,
     return sub_mod(out, a, b, ctx->modulus, tmp, tmp + ctx->words, ctx->words);
 }
 
-/*
- * Compute the modular inverse of an integer in Montgomery form.
- *
- * Condition: the modulus defining the Montgomery context MUST BE a non-secret prime number.
- *
- * @param out   The location where the result will be stored at; it must have
- *              been allocated with mont_new_number(&p, 1, ctx).
- * @param a     The number to compute the modular inverse of, already in Montgomery form.
- * @param ctx   The Montgomery context.
- * @return      0 for success, the relevant error code otherwise.
- */
-int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
+STATIC void curve448_invert(uint64_t *z,
+                            uint64_t *t0,
+                            uint64_t *t1,
+                            const uint64_t *x,
+                            uint64_t *scratch,
+                            const MontContext *ctx)
+{
+    #define DOUBLE(out, in)         mont_mult(out, in, in, scratch, ctx)
+    #define SHIFTL(out, in, times)  do { unsigned i; mont_mult(out, in, in, scratch, ctx); \
+                                         for (i=0; i<times-1; i++) \
+                                            mont_mult(out, out, out, scratch, ctx); \
+                                    } while (0)
+    #define ADD(out, in1, in2)      mont_mult(out, in1, in2, scratch, ctx)
+
+    /** Generated with addchain (https://github.com/mmcloughlin/addchain) **/
+    DOUBLE(z, x);
+    ADD(z, x, z);
+    DOUBLE(z, z);
+    ADD(z, x, z);
+    SHIFTL(t0, z, 3);
+    ADD(z, z, t0);
+    SHIFTL(t0, z, 6);
+    ADD(t0, z, t0);
+    SHIFTL(t1, t0, 12);
+    ADD(t0, t0, t1);
+    SHIFTL(t1, t0, 6);
+    ADD(z, z, t1);
+    SHIFTL(t1, t1, 18);
+    ADD(t0, t0, t1);
+    SHIFTL(t1, t0, 48);
+    ADD(t0, t0, t1);
+    SHIFTL(t1, t0, 96);
+    ADD(t0, t0, t1);
+    SHIFTL(t0, t0, 30);
+    ADD(z, z, t0);
+    DOUBLE(t0, z);
+    ADD(t0, x, t0);
+    SHIFTL(t0, t0, 223);
+    ADD(z, z, t0);
+    SHIFTL(z, z, 2);
+    ADD(z, x, z);
+
+    #undef DOUBLE
+    #undef SHIFTL
+    #undef ADD
+}
+
+void mont_inv_prime_generic(uint64_t *out,
+                           uint64_t *tmp1,
+                           const uint64_t *a,
+                           uint64_t *scratchpad,
+                           const MontContext *ctx)
 {
     unsigned idx_word;
     uint64_t bit;
-    uint64_t *tmp1 = NULL;
-    uint64_t *scratchpad = NULL;
     uint64_t *exponent = NULL;
-    int res;
-
-    if (NULL == out || NULL == a || NULL == ctx)
-        return ERR_NULL;
-
-    tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
-    if (NULL == tmp1)
-        return ERR_MEMORY;
-
-    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
-    if (NULL == scratchpad) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
 
     /** Exponent is guaranteed to be >0 **/
     exponent = ctx->modulus_min_2;
@@ -1049,10 +1073,58 @@ int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
             break;
         bit = (uint64_t)1 << 63;
     }
+}
+
+/*
+ * Compute the modular inverse of an integer in Montgomery form.
+ *
+ * Condition: the modulus defining the Montgomery context MUST BE a non-secret prime number.
+ *
+ * @param out   The location where the result will be stored at; it must have
+ *              been allocated with mont_new_number(&p, 1, ctx).
+ * @param a     The number to compute the modular inverse of, already in Montgomery form.
+ * @param ctx   The Montgomery context.
+ * @return      0 for success, the relevant error code otherwise.
+ */
+int mont_inv_prime(uint64_t *out, uint64_t *a, const MontContext *ctx)
+{
+    uint64_t *tmp1 = NULL;
+    uint64_t *tmp2 = NULL;
+    uint64_t *scratchpad = NULL;
+    int res;
+
+    if (NULL == out || NULL == a || NULL == ctx)
+        return ERR_NULL;
+
+    tmp1 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == tmp1)
+        return ERR_MEMORY;
+
+    tmp2 = (uint64_t*)calloc(ctx->words, sizeof(uint64_t));
+    if (NULL == tmp2) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    scratchpad = (uint64_t*)calloc(SCRATCHPAD_NR, ctx->words*sizeof(uint64_t));
+    if (NULL == scratchpad) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    switch (ctx->modulus_type) {
+        case ModulusEd448:
+            curve448_invert(out, tmp1, tmp2, a, scratchpad, ctx);
+            break;
+        default:
+            mont_inv_prime_generic(out, tmp1, a, scratchpad, ctx);
+            break;
+    }
     res = 0;
 
 cleanup:
     free(tmp1);
+    free(tmp2);
     free(scratchpad);
     return res;
 }

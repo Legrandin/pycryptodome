@@ -204,11 +204,11 @@ STATIC int curve448_scalar_internal(Curve448Point *Pout,
         mont_set(Pout->z, 0, mont_ctx);
     } else {
         uint64_t *invz = Pout->wp->a;
+        uint64_t *scratch = P2->wp->scratch;
 
-        /** TODO: replace with add chain **/
         res = mont_inv_prime(invz, P2->z, mont_ctx);
         if (res) goto cleanup;
-        res = mont_mult(Pout->x, P2->x, invz, P2->wp->scratch, mont_ctx);
+        res = mont_mult(Pout->x, P2->x, invz, scratch, mont_ctx);
         if (res) goto cleanup;
         mont_set(Pout->z, 1, mont_ctx);
     }
