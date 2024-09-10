@@ -260,7 +260,7 @@ int main(void)
         secret[i] = pubkey[i] = (uint8_t)((secret[i-1] << 1) | (secret[i-1] >> 7));
     }
 
-    res = curve25519_new_point(&Pin, pubkey, 32);
+    res = curve25519_new_point(&Pin, pubkey, 32, NULL);
     if (res) {
         printf("Error: %d\n", res);
         return res;
