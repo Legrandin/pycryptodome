@@ -238,7 +238,7 @@ STATIC void add_mod(uint64_t* out, const uint64_t* a, const uint64_t* b, const u
 /*
  * Subtract two multi-word numbers with modulo arithmetic.
  *
- * @param out       The locaton where the multi-word result (nw words) is stored
+ * @param out       The location where the multi-word result (nw words) is stored
  * @param a         The number it will be subtracted from (nw words)
  * @param b         The number to subtract (nw wordS)
  * @param modulus   The modulus (nw words)

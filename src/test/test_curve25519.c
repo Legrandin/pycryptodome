@@ -43,7 +43,7 @@ void test_ladder_1(void)
     Point *Pin;
     Point Pout;
 
-    curve25519_new_point(&Pin, pubkey, 32);
+    curve25519_new_point(&Pin, pubkey, 32, NULL);
 
     /* Clamping BE/LE */
     scalar[31-0] &= 248;

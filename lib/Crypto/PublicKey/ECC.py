@@ -73,8 +73,8 @@ class EccKey(object):
     :vartype d: integer
 
     :ivar seed: A seed that representats the private component
-                in EdDSA curves
-                (Ed25519, 32 bytes; Ed448, 57 bytes).
+                in Ed22519 (32 bytes), Curve25519 (32 bytes),
+                Curve448 (56 bytes), Ed448 (57 bytes).
     :vartype seed: bytes
     """
 
@@ -88,8 +88,8 @@ class EccKey(object):
             Mandatory for a private key one NIST P curves.
             It must be in the range ``[1..order-1]``.
           seed : bytes
-            Mandatory for a private key on the Ed25519 (32 bytes),
-            Curve25519 (32 bytes) or Ed448 (57 bytes) curve.
+            Mandatory for a private key on Ed25519 (32 bytes),
+            Curve25519 (32 bytes), Curve448 (56 bytes) or Ed448 (57 bytes).
           point : EccPoint or EccXPoint
             Mandatory for a public key. If provided for a private key,
             the implementation will NOT check whether it matches ``d``.
@@ -159,6 +159,16 @@ class EccKey(object):
             tmp[0] &= 0xF8
             tmp[31] = (tmp[31] & 0x7F) | 0x40
             self._d = Integer.from_bytes(tmp, byteorder='little')
+        elif self._curve.id == _CurveID.CURVE448:
+            if self._d is not None:
+                raise ValueError("Parameter d can only be used with NIST P curves")
+            if len(self._seed) != 56:
+                raise ValueError("Parameter seed must be 56 bytes long for Curve448")
+            tmp = bytearray(self._seed)
+            tmp[0] &= 0xFC
+            tmp[55] |= 0x80
+            self._d = Integer.from_bytes(tmp, byteorder='little')
+
         else:
             if self._seed is not None:
                 raise ValueError("Parameter 'seed' cannot be used with NIST P-curves")
@@ -183,7 +193,8 @@ class EccKey(object):
                 extra = ", d=%d" % int(self._d)
         else:
             extra = ""
-        if self._curve.id == _CurveID.CURVE25519:
+        if self._curve.id in (_CurveID.CURVE25519,
+                              _CurveID.CURVE448):
             x = self.pointQ.x
             result = "EccKey(curve='%s', point_x=%d%s)" % (self._curve.canonical, x, extra)
         else:
@@ -290,7 +301,8 @@ class EccKey(object):
         if not self._curve.is_montgomery:
             raise ValueError("Not a Montgomery key to export")
         x = self.pointQ.x
-        result = bytearray(x.to_bytes(32, byteorder='little'))
+        field_size = self.pointQ.size_in_bytes()
+        result = bytearray(x.to_bytes(field_size, byteorder='little'))
         return bytes(result)
 
     def _export_subjectPublicKeyInfo(self, compress):
@@ -439,9 +451,9 @@ class EccKey(object):
               without any metadata.
 
               * For NIST P-curves: equivalent to ``'SEC1'``.
-              * For Ed25519 and Ed448 curves: ``bytes`` in the format
+              * For Ed25519 and Ed448: ``bytes`` in the format
                 defined in `RFC8032`_.
-              * For Curve25519 curves: ``bytes`` in the format
+              * For Curve25519 and Curve448: ``bytes`` in the format
                 defined in `RFC7748`_.
 
           passphrase (bytes or string):
@@ -452,7 +464,7 @@ class EccKey(object):
             (*Private keys only*)
             If ``True`` (default and recommended), the `PKCS#8`_ representation
             will be used.
-            It must be ``True`` for Ed25519, Ed488, and Curve25519 curves.
+            It must be ``True`` for Ed25519, Ed448, Curve25519, and Curve448.
 
             If ``False`` and a passphrase is present, the obsolete PEM
             encryption will be used.
@@ -471,8 +483,8 @@ class EccKey(object):
 
             If ``False`` (default), the method returns the full public key.
 
-            This parameter is ignored for EdDSA curves, as compression is
-            mandatory.
+            This parameter is ignored for Ed25519/Ed448/Curve25519/Curve448,
+            as compression is mandatory.
 
           prot_params (dict):
             When a private key is exported with password-protection
@@ -595,7 +607,11 @@ def generate(**kwargs):
     elif _curves[curve_name].id == _CurveID.CURVE25519:
         seed = randfunc(32)
         new_key = EccKey(curve=curve_name, seed=seed)
-        _validate_x25519_public_key(new_key)
+        _curves[curve_name].validate(new_key.pointQ)
+    elif _curves[curve_name].id == _CurveID.CURVE448:
+        seed = randfunc(56)
+        new_key = EccKey(curve=curve_name, seed=seed)
+        _curves[curve_name].validate(new_key.pointQ)
     else:
         d = Integer.random_range(min_inclusive=1,
                                  max_exclusive=curve.order,
@@ -622,8 +638,8 @@ def construct(**kwargs):
         It must be an integer in the range ``[1..order-1]``.
 
       seed (bytes):
-        Mandatory for a private key and curves Ed25519, Ed448, and Curve25519.
-        It must be 32 bytes for Ed25519 or Curve25519, and 57 bytes for Ed448.
+        Mandatory for a private key and curves Ed25519 (32 bytes),
+        Curve25519 (32 bytes), Curve448 (56 bytes) and Ed448 (57 bytes).
 
       point_x (integer):
         The X coordinate (affine) of the ECC point.
@@ -631,7 +647,8 @@ def construct(**kwargs):
 
       point_y (integer):
         The Y coordinate (affine) of the ECC point.
-        Mandatory for a public key, except for Curve25519.
+        Mandatory for a public key,
+        except for Curve25519 and Curve448.
 
     Returns:
       :class:`EccKey` : a new ECC key object
@@ -650,8 +667,14 @@ def construct(**kwargs):
         if point_x is not None:
             kwargs["point"] = EccXPoint(point_x, curve_name)
         new_key = EccKey(**kwargs)
+        curve.validate(new_key.pointQ)
 
-        _validate_x25519_public_key(new_key)
+    elif curve.id == _CurveID.CURVE448:
+
+        if point_x is not None:
+            kwargs["point"] = EccXPoint(point_x, curve_name)
+        new_key = EccKey(**kwargs)
+        curve.validate(new_key.pointQ)
 
     else:
 
@@ -742,6 +765,10 @@ def _import_subjectPublicKeyInfo(encoded, *kwargs):
         "1.3.101.112": ("Ed25519", _import_ed25519_public_key),     # id-Ed25519
         "1.3.101.113": ("Ed448",   _import_ed448_public_key)        # id-Ed448
     }
+    xdh_oids = {
+        "1.3.101.110": ("Curve25519", _import_curve25519_public_key),   # id-X25519
+        "1.3.101.111": ("Curve448", _import_curve448_public_key),       # id-X448
+    }
 
     if oid in nist_p_oids:
         # See RFC5480
@@ -774,13 +801,15 @@ def _import_subjectPublicKeyInfo(encoded, *kwargs):
         x, y = import_eddsa_public_key(ec_point)
         return construct(point_x=x, point_y=y, curve=curve_name)
 
-    elif oid == "1.3.101.110":
+    elif oid in xdh_oids:
+        curve_name, import_xdh_public_key = xdh_oids[oid]
+
         # Parameters must be absent
         if params:
             raise ValueError("Unexpected ECC parameters for ECC OID %s" % oid)
 
-        x = _import_curve25519_public_key(ec_point)
-        return construct(point_x=x, curve="Curve25519")
+        x = import_xdh_public_key(ec_point)
+        return construct(point_x=x, curve=curve_name)
 
     else:
         raise UnsupportedEccFeature("Unsupported ECC OID: %s" % oid)
@@ -861,6 +890,7 @@ def _import_pkcs8(encoded, passphrase):
     }
     xdh_oids = {
         "1.3.101.110": "Curve25519",  # id-X25519
+        "1.3.101.111": "Curve448",    # id-X448
     }
 
     if algo_oid in nist_p_oids:
@@ -873,8 +903,10 @@ def _import_pkcs8(encoded, passphrase):
         seed = DerOctetString().decode(private_key).payload
         return construct(curve=eddsa_oids[algo_oid], seed=seed)
     elif algo_oid in xdh_oids:
+        curve_name = xdh_oids[algo_oid]
         if params is not None:
-            raise ValueError("X25519 ECC private key must not have parameters")
+            raise ValueError("%s ECC private key must not have parameters" %
+                             curve_name)
         curve_oid = None
         seed = DerOctetString().decode(private_key).payload
         return construct(curve=xdh_oids[algo_oid], seed=seed)
@@ -1085,7 +1117,7 @@ def _import_curve25519_public_key(encoded):
     """
 
     if len(encoded) != 32:
-        raise ValueError("Incorrect length. Only Curve25519 public keys are supported.")
+        raise ValueError("Incorrect Curve25519 key length")
 
     x = bytearray(encoded)
     # RFC 7741, Section 5
@@ -1095,31 +1127,29 @@ def _import_curve25519_public_key(encoded):
     return point_x
 
 
-def _validate_x25519_public_key(new_key):
+def _import_curve448_public_key(encoded):
+    """Import a Curve448 ECC public key,
+    encoded as raw bytes as described in RFC7748_.
 
-    p = _curves['curve25519'].p
-    p2 = p * 2
-    x1 = 325606250916557431795983626356110631294008115727848805560023387167927233504
-    x2 = 39382357235489614581723060781553021112529911719440698176882885853963445705823
+    Args:
+      encoded (bytes):
+        The Curve448 public key to import. It must be 56 bytes long.
 
-    # http://cr.yp.to/ecdh.html#validate
-    deny_list = (
-        0,
-        1,
-        x1,
-        x2,
-        p - 1,
-        p,
-        p + 1,
-        p + x1,
-        p + x2,
-        p2 - 1,
-        p2,
-        p2 + 1,
-    )
+    Returns:
+      x (integer)
 
-    if new_key.pointQ.x in deny_list:
-        raise ValueError("Invalid Curve25519 public key")
+    Raises:
+      ValueError: when the given key cannot be parsed.
+
+    .. _RFC7748: https://datatracker.ietf.org/doc/html/rfc7748
+    """
+
+    if len(encoded) != 56:
+        raise ValueError("Incorrect Curve448 key length")
+
+    point_x = Integer.from_bytes(encoded, byteorder='little')
+
+    return point_x
 
 
 def _import_ed448_public_key(encoded):
@@ -1142,8 +1172,8 @@ def _import_ed448_public_key(encoded):
     if len(encoded) != 57:
         raise ValueError("Incorrect length. Only Ed448 public keys are supported.")
 
-    p = Integer(0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffffffffffffffffff)  # 2**448 - 2**224 - 1
-    d = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffffffffffffff6756
+    p = _curves['curve448'].p
+    d = p - 39081
 
     y = encoded[:56]
     x_lsb = bord(encoded[56]) >> 7
@@ -1187,7 +1217,8 @@ def import_key(encoded, passphrase=None, curve_name=None):
 
         * A binary ``ECPrivateKey`` structure, as defined in `RFC5915`_ (DER).
           NIST P curves only.
-        * A `PKCS#8`_ structure (or the more recent Asymmetric Key Package, RFC5958_): binary (DER) or ASCII (PEM).
+        * A `PKCS#8`_ structure (or the more recent Asymmetric Key
+          Package, RFC5958_): binary (DER) or ASCII (PEM).
         * `OpenSSH 6.5`_ and newer versions (ASCII).
 
         Private keys can be in the clear or password-protected.
@@ -1213,10 +1244,12 @@ def import_key(encoded, passphrase=None, curve_name=None):
 
     .. note::
 
-        To import X25519 private and public keys, when encoded as raw ``bytes``, use:
+        To import X25519/X448 private and public keys, when encoded as raw ``bytes``, use:
 
-        * :func:`Crypto.Protocol.DH.import_x25519_public_key`, or
-        * :func:`Crypto.Protocol.DH.import_x25519_private_key`.
+        * :func:`Crypto.Protocol.DH.import_x25519_public_key`
+        * :func:`Crypto.Protocol.DH.import_x25519_private_key`
+        * :func:`Crypto.Protocol.DH.import_x448_public_key`
+        * :func:`Crypto.Protocol.DH.import_x448_private_key`
 
     Returns:
       :class:`EccKey` : a new ECC key object

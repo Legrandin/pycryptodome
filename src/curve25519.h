@@ -8,7 +8,8 @@ typedef struct Point {
 
 EXPORT_SYM int curve25519_new_point(Point **out,
                                     const uint8_t x[32],
-                                    size_t modsize);
+                                    size_t modsize,
+                                    const void *context);
 EXPORT_SYM int curve25519_clone(Point **P, const Point *Q);
 EXPORT_SYM void curve25519_free_point(Point *p);
 EXPORT_SYM int curve25519_get_x(uint8_t *xb, size_t modsize, const Point *p);
