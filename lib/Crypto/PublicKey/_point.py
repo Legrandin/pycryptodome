@@ -20,6 +20,7 @@ class CurveID(object):
     ED25519 = 6
     ED448 = 7
     CURVE25519 = 8
+    CURVE448 = 9
 
 
 class _Curves(object):
@@ -40,8 +41,10 @@ class _Curves(object):
     ed25519_names = ["ed25519", "Ed25519"]
     ed448_names = ["ed448", "Ed448"]
     curve25519_names = ["curve25519", "Curve25519", "X25519"]
+    curve448_names = ["curve448", "Curve448", "X448"]
 
-    all_names = p192_names + p224_names + p256_names + p384_names + p521_names + ed25519_names + ed448_names + curve25519_names
+    all_names = p192_names + p224_names + p256_names + p384_names + p521_names + \
+        ed25519_names + ed448_names + curve25519_names + curve448_names
 
     def __contains__(self, item):
         return item in self.all_names
@@ -90,6 +93,11 @@ class _Curves(object):
             curve25519 = _montgomery.curve25519_curve()
             curve25519.id = CurveID.CURVE25519
             self.curves.update(dict.fromkeys(self.curve25519_names, curve25519))
+        elif name in self.curve448_names:
+            from . import _montgomery
+            curve448 = _montgomery.curve448_curve()
+            curve448.id = CurveID.CURVE448
+            self.curves.update(dict.fromkeys(self.curve448_names, curve448))
         else:
             raise ValueError("Unsupported curve '%s'" % name)
         return self.curves[name]
@@ -99,12 +107,13 @@ class _Curves(object):
             curve = self.curves.get(name)
             if curve is None:
                 curve = self.load(name)
-                if name in self.curve25519_names:
+                if name in self.curve25519_names or name in self.curve448_names:
                     curve.G = EccXPoint(curve.Gx, name)
                 else:
                     curve.G = EccPoint(curve.Gx, curve.Gy, name)
                 curve.is_edwards = curve.id in (CurveID.ED25519, CurveID.ED448)
-                curve.is_montgomery = curve.id in (CurveID.CURVE25519,)
+                curve.is_montgomery = curve.id in (CurveID.CURVE25519,
+                                                   CurveID.CURVE448)
                 curve.is_weierstrass = not (curve.is_edwards or
                                             curve.is_montgomery)
         return curve
@@ -354,22 +363,32 @@ class EccXPoint(object):
             raise ValueError("Unknown curve name %s" % str(curve))
         self.curve = self._curve.canonical
 
-        if self._curve.id != CurveID.CURVE25519:
-            raise ValueError("EccXPoint can only be created for Curve25519")
-
-        modulus_bytes = self.size_in_bytes()
-
-        xb = long_to_bytes(x, modulus_bytes)
-        if len(xb) != modulus_bytes:
-            raise ValueError("Incorrect coordinate length")
+        if self._curve.id not in (CurveID.CURVE25519, CurveID.CURVE448):
+            raise ValueError("EccXPoint can only be created for Curve25519/Curve448")
 
         new_point = self._curve.rawlib.new_point
         free_func = self._curve.rawlib.free_point
 
         self._point = VoidPointer()
+        try:
+            context = self._curve.context.get()
+        except AttributeError:
+            context = null_pointer
+
+        modulus_bytes = self.size_in_bytes()
+
+        if x is None:
+            xb = null_pointer
+        else:
+            xb = c_uint8_ptr(long_to_bytes(x, modulus_bytes))
+            if len(xb) != modulus_bytes:
+                raise ValueError("Incorrect coordinate length")
+
+        self._point = VoidPointer()
         result = new_point(self._point.address_of(),
-                           c_uint8_ptr(xb),
-                           c_size_t(modulus_bytes))
+                           xb,
+                           c_size_t(modulus_bytes),
+                           context)
 
         if result == 15:
             raise ValueError("The EC point does not belong to the curve")
@@ -424,7 +443,7 @@ class EccXPoint(object):
     def point_at_infinity(self):
         """Return the *point-at-infinity* for the curve."""
 
-        return EccXPoint(self._curve.Gx, self.curve) * 0
+        return EccXPoint(None, self.curve)
 
     @property
     def x(self):

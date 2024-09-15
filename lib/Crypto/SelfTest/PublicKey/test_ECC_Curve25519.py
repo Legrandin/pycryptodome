@@ -97,6 +97,9 @@ class TestEccPoint_Curve25519(unittest.TestCase):
         pai = point1.point_at_infinity()
         self.assertTrue(pai.point_at_infinity())
 
+        point2 = EccXPoint(None, "curve25519")
+        self.assertTrue(point2.point_at_infinity())
+
     def test_scalar_multiply(self):
         base = EccXPoint(9, "curve25519")
 

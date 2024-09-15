@@ -196,6 +196,10 @@ add_test(NAME test_ed25519 COMMAND test_ed25519)
 add_executable(test_ed448 test_ed448.c ../ed448.c $<TARGET_OBJECTS:mont>)
 add_test(NAME test_ed448 COMMAND test_ed448)
 
+# curve448
+add_executable(test_curve448 test_curve448.c ../curve448.c $<TARGET_OBJECTS:mont>)
+add_test(NAME test_curve448 COMMAND test_curve448)
+
 # aesni
 if (AESNI)
   add_executable(test_aesni test_aesni.c ../AESNI.c)
