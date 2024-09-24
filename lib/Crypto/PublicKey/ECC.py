@@ -475,7 +475,7 @@ class EccKey(object):
             present,
             For all possible protection schemes,
             refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
-            It is recommended to use ``'PBKDF2WithHMAC-SHA5126AndAES128-CBC'``.
+            It is recommended to use ``'PBKDF2WithHMAC-SHA512AndAES128-CBC'``.
 
           compress (boolean):
             If ``True``, the method returns a more compact representation
