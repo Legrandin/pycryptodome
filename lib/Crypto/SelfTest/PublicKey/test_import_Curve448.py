@@ -55,7 +55,7 @@ def compact(lines):
 
 def create_ref_keys_x448():
     key_lines = load_file("ecc_x448.txt").splitlines()
-    seed = compact(key_lines[5:8])
+    seed = compact(key_lines[6:10])
     key = ECC.construct(curve="Curve448", seed=seed)
     return (key, key.public_key())
 
@@ -257,8 +257,8 @@ class TestExport_Curve448(unittest.TestCase):
 
     def test_export_raw(self):
         encoded = self.ref_public.export_key(format='raw')
-        self.assertEqual(len(encoded), 32)
-        self.assertEqual(encoded, unhexlify(b'ff7561ef60c9c8a757f6d6372ec14142c9be208d0e719136d8d3c715dfcf7e15'))
+        self.assertEqual(len(encoded), 56)
+        self.assertEqual(encoded, unhexlify(b'e2abae24ab8f65b01969e61f84fee615b525f413a90e3d727f71d0ffe60fb1d0a1a0285f2a7fd88789206e0aa4f3e9fcb9e4ba5d644e691e'))
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
