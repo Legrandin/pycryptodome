@@ -1,1 +1,1 @@
-pycryptodome-test-vectors==1.0.18
+pycryptodome-test-vectors==1.0.19
