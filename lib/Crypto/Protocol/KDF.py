@@ -295,7 +295,7 @@ def _HKDF_expand(prk, info, L, hashmod):
         tlen += hashmod.digest_size
         n += 1
     okm = b"".join(t)
-    return okm
+    return okm[:L]
 
 
 def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
