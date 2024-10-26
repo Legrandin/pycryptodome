@@ -3,4 +3,4 @@ include setup.py
 include LICENSE.rst
 recursive-include src *.h *.c *.cpp
 graft pycryptodome_test_vectors
-global-exclude __pycache__ *.pyc
+global-exclude __pycache__ *.pyc *.swp

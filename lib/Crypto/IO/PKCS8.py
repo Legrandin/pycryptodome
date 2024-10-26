@@ -148,7 +148,7 @@ def unwrap(p8_private_key, passphrase=None):
       ValueError : if decoding fails
     """
 
-    if passphrase:
+    if passphrase is not None:
         passphrase = tobytes(passphrase)
 
         found = False

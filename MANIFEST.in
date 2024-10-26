@@ -9,5 +9,5 @@ prune Doc/_build
 include .github/workflows/*.yml
 recursive-include src *.h *.c
 graft src/test
-recursive-exclude src *.pyc
+recursive-exclude src *.pyc *.swp
 prune src/test/build

@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-latest, macos-12]
+        os: [ubuntu-20.04, windows-2019, macos-12]
 
     if: github.actor == 'Legrandin'
 
@@ -44,16 +44,17 @@ jobs:
           echo 'CIBW_ARCHS=x86_64 universal2' >> $GITHUB_ENV
         if: runner.os == 'macOS'
 
-      - uses: pypa/cibuildwheel@v2.15.0
+      - uses: pypa/cibuildwheel@v2.21.1
         name: Build wheels
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
           # and for PyPy > 3.8.
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* cp311-* cp312-* pp39-* pp310-*"
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* pp39-* pp310-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2014"
+          CIBW_FREE_THREADED_SUPPORT: "true"
           CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
           # Set pycryptodome/x test command according to built package
@@ -78,16 +79,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-20.04, windows-latest, macos-12 ]
+        os: [ ubuntu-20.04, windows-2019, macos-12 ]
         arch: [ multi-arch ]
         # Python 2 on Windows requires manual toolchain setup (per-arch) due to newer MSVC used here
         exclude:
-          - os: windows-latest
+          - os: windows-2019
             arch: multi-arch
         include:
-          - os: windows-latest
+          - os: windows-2019
             arch: x86
-          - os: windows-latest
+          - os: windows-2019
             arch: x64
 
     if: github.actor == 'Legrandin'
