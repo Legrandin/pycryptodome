@@ -127,6 +127,10 @@ Specification
 ~~~~~~~~~~~~~
 
 .. autofunction:: Crypto.Protocol.DH.key_agreement
+.. autofunction:: Crypto.Protocol.DH.import_x25519_public_key
+.. autofunction:: Crypto.Protocol.DH.import_x25519_private_key
+.. autofunction:: Crypto.Protocol.DH.import_x448_public_key
+.. autofunction:: Crypto.Protocol.DH.import_x448_private_key
 
 Key Derivation Function
 ~~~~~~~~~~~~~~~~~~~~~~~~

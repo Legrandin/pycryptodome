@@ -13,7 +13,9 @@ from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wychepro
 from Crypto.Protocol import DH
 from Crypto.Protocol.DH import (key_agreement,
                                 import_x25519_public_key,
-                                import_x25519_private_key)
+                                import_x25519_private_key,
+                                import_x448_public_key,
+                                import_x448_private_key)
 
 
 class FIPS_ECDH_Tests_KAT(unittest.TestCase):
@@ -455,9 +457,9 @@ class X448_Tests(unittest.TestCase):
                               unhexlify(x))
 
 
-class TestVectorsXECDHWycheproof(unittest.TestCase):
+class TestVectorsX25519Wycheproof(unittest.TestCase):
 
-    desc = "Wycheproof XECDH tests"
+    desc = "Wycheproof X25519 tests"
 
     def add_tests_hex(self, filename):
 
@@ -596,6 +598,154 @@ class TestVectorsXECDHWycheproof(unittest.TestCase):
             self.test_verify(tv)
 
 
+class TestVectorsX448Wycheproof(unittest.TestCase):
+
+    desc = "Wycheproof X448 tests"
+
+    def add_tests_hex(self, filename):
+
+        def encoding(g):
+            return g['type']
+
+        def private(u):
+            return unhexlify(u['private'])
+
+        result = load_test_vectors_wycheproof(("Protocol", "wycheproof"),
+                                              filename,
+                                              "Wycheproof ECDH (%s)"
+                                              % filename,
+                                              group_tag={'encoding': encoding},
+                                              unit_tag={'private': private}
+                                              )
+        self.tv += result
+
+    def add_tests_ascii(self, filename):
+
+        def encoding(g):
+            return g['type']
+
+        def public(u):
+            return u['public']
+
+        def private(u):
+            return u['private']
+
+        result = load_test_vectors_wycheproof(("Protocol", "wycheproof"),
+                                              filename,
+                                              "Wycheproof ECDH (%s)"
+                                              % filename,
+                                              group_tag={'encoding': encoding},
+                                              unit_tag={'public': public,
+                                                        'private': private}
+                                              )
+        self.tv += result
+
+    def setUp(self):
+        self.tv = []
+        self.desc = None
+
+        self.add_tests_hex("x448_test.json")
+        self.add_tests_hex("x448_asn_test.json")
+        self.add_tests_ascii("x448_pem_test.json")
+        self.add_tests_ascii("x448_jwk_test.json")
+
+    def shortDescription(self):
+        return self.desc
+
+    def test_verify(self, tv):
+
+        if tv.encoding == "XdhComp":
+            try:
+                public_key = import_x448_public_key(tv.public)
+            except ValueError as e:
+                assert tv.valid
+                assert tv.warning
+                if len(tv.public) == 56:
+                    assert "LowOrderPublic" in tv.flags
+                    assert "Invalid Curve448" in str(e)
+                else:
+                    assert "Incorrect Curve448" in str(e)
+                return
+            private_key = import_x448_private_key(tv.private)
+        elif tv.encoding in ("XdhAsnComp", "XdhPemComp"):
+            try:
+                public_key = ECC.import_key(tv.public)
+                private_key = ECC.import_key(tv.private)
+            except ECC.UnsupportedEccFeature as e:
+                assert not tv.valid
+                assert "Unsupported ECC" in str(e)
+                return
+            except ValueError as e:
+                assert tv.valid
+                assert tv.warning
+                assert "LowOrderPublic" in tv.flags or "NonCanonicalPublic" in tv.flags
+                return
+        elif tv.encoding == "XdhJwkComp":
+
+            if 'y' in tv.public:
+                return
+            if 'x' not in tv.public:
+                return
+            if 'x' not in tv.private:
+                return
+            if tv.public.get('kty') != 'OKP':
+                return
+            if tv.public.get('crv') != 'X448':
+                return
+            if tv.private.get('crv') != 'X448':
+                return
+
+            def base64url_decode(input_str):
+                input_str = input_str.replace('-', '+').replace('_', '/')
+                padding = 4 - (len(input_str) % 4)
+                if padding != 4:
+                    input_str += '=' * padding
+                decoded_bytes = base64.b64decode(input_str)
+                return decoded_bytes
+
+            jwk_public = base64url_decode(tv.public['x'])
+            jwk_private = base64url_decode(tv.private['d'])
+
+            try:
+                public_key = import_x448_public_key(jwk_public)
+                private_key = import_x448_private_key(jwk_private)
+            except ValueError as e:
+                if tv.valid:
+                    assert tv.warning
+                    if len(tv.public['x']) == 75:
+                        assert "LowOrderPublic" in tv.flags or \
+                               "NonCanonicalPublic" in tv.flags
+                        assert "Invalid Curve448" in str(e)
+                    else:
+                        assert "Incorrect Curve448" in str(e)
+                    return
+                else:
+                    assert "Incorrect length" in str(e)
+                    return
+            except ValueError:
+                assert tv.valid
+        else:
+            raise ValueError("Unknown encoding", tv.encoding)
+
+        try:
+            z = key_agreement(static_pub=public_key,
+                              static_priv=private_key,
+                              kdf=lambda x: x)
+        except ValueError:
+            assert not tv.valid
+        except TypeError as e:
+            assert not tv.valid
+            assert "incompatible curve" in str(e)
+        else:
+            self.assertEqual(z, tv.shared)
+            assert tv.valid
+
+    def runTest(self):
+        for tv in self.tv:
+            self.desc = "Wycheproof XECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
+            self.test_verify(tv)
+
+
 def get_tests(config={}):
 
     tests = []
@@ -604,7 +754,8 @@ def get_tests(config={}):
     tests += list_test_cases(ECDH_Tests)
     tests += list_test_cases(X25519_Tests)
     tests += list_test_cases(X448_Tests)
-    tests += [TestVectorsXECDHWycheproof()]
+    tests += [TestVectorsX25519Wycheproof()]
+    tests += [TestVectorsX448Wycheproof()]
 
     slow_tests = config.get('slow_tests')
     if slow_tests:

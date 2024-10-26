@@ -1,22 +1,31 @@
 Changelog
 =========
 
-Under development
+3.21.0 (30 September 2024)
 ++++++++++++++++++++++++++
+
+New features
+---------------
 * By setting the PYCRYPTODOME_DISABLE_GMP environment variable,
   the GMP library will not be used even if detected.
-* Remove support for Python 3.5
-* GH#814: RSA keys for PSS can be imported.
-* GH#810: fixed negation of Ed25519 points
-* Add support for Curve25519 / X25519
-* Add support for Curve448 / X448
+* Add support for Curve25519 / X25519.
+* Add support for Curve448 / X448.
 * Add attribute ``curve`` to EccPoint and EccXPoint classes,
   with the canonical name of the curve.
 * GH#781: the label for the SP800_108_Counter KDF may now
   contain zero bytes. Thanks to Julien Rische.
+* GH#814: RSA keys for PSS can be imported.
+
+Resolved issues
+---------------
+* GH#810: fixed negation of Ed25519 points.
 * GH#819: accept an RFC5916 ECPrivateKey even if it doesn't
   contain any of the optional elements
   (parameters [0] and publicKey[1]).
+
+Other changes
+-------------
+* Remove support for Python 3.5.
 
 3.20.0 (9 January 2024)
 ++++++++++++++++++++++++++
