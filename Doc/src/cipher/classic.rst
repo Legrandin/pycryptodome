@@ -115,7 +115,7 @@ Example (encryption)::
     >>> ct = b64encode(ct_bytes).decode('utf-8')
     >>> result = json.dumps({'iv':iv, 'ciphertext':ct})
     >>> print(result)
-    '{"iv": "bWRHdzkzVDFJbWNBY0EwSmQ1UXFuQT09", "ciphertext": "VDdxQVo3TFFCbXIzcGpYa1lJbFFZQT09"}'
+    '{"iv": "mdGw93T1ImcAcA0Jd5QqnA==", "ciphertext": "T7qAZ7LQBmr3pjXkYIlQYA=="}'
 
 Example (decryption)::
 
