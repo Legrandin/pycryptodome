@@ -23,7 +23,7 @@ resistant to brute force attacks::
 
     >>> pwd = b'secret'
     >>> with open("myprivatekey.pem", "wt") as f:
-    >>>     data = mykey.export_key(format='PEM'
+    >>>     data = mykey.export_key(format='PEM',
                                     passphrase=pwd,
                                     protection='PBKDF2WithHMAC-SHA512AndAES256-CBC',
                                     prot_params={'iteration_count':131072})
@@ -38,8 +38,8 @@ and reimport it later::
 
 You can also export the public key, which is not sensitive::
 
-    >>> with open("mypublickey.pem", "wbt") as f:
-    >>>     data = mykey.public_key().export_key()
+    >>> with open("mypublickey.pem", "wt") as f:
+    >>>     data = mykey.public_key().export_key(format='PEM')
 
 .. _ECC table:
 .. csv-table::
