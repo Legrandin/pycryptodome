@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Under development
+++++++++++++++++++++++++++
+
+Other changes
+-------------
+* Remove support for Python 3.6.
+
 3.21.0 (30 September 2024)
 ++++++++++++++++++++++++++
 

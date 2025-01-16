@@ -509,7 +509,7 @@ version_string = ".".join([str(x) for x in version_tuple])
 setup_options = {}
 if sys.version_info[0] > 2:
     if not sysconfig.get_config_var('Py_GIL_DISABLED'):
-        setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp36'}}
+        setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp37'}}
 
 setup(
     name=project_name,
