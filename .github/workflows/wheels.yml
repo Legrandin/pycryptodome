@@ -10,9 +10,9 @@ jobs:
     name: Build source package
     runs-on: [ ubuntu-latest ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
           python-version: '3.x'
@@ -22,7 +22,7 @@ jobs:
           python -m pip install setuptools
           python setup.py sdist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: source
           path: ./dist/*.tar.gz
@@ -37,7 +37,7 @@ jobs:
     if: github.actor == 'Legrandin'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Select architecture for MacOS
         run: |
@@ -70,7 +70,7 @@ jobs:
         run: |
           rm -f wheelhouse/*-manylinux1_*.whl
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: ./wheelhouse/*.whl
@@ -95,7 +95,7 @@ jobs:
     if: github.actor == 'Legrandin'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install MSVC
         if: runner.os == 'Windows'
@@ -139,7 +139,7 @@ jobs:
         run: |
           rm -f wheelhouse/*-manylinux1_*.whl
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: wheels
           path: ./wheelhouse/*.whl
