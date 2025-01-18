@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2019, macos-13]
+        os: [ubuntu-22.04, windows-2019, macos-13, ubuntu-22.04-arm]
 
     if: github.actor == 'Legrandin'
 
@@ -52,8 +52,10 @@ jobs:
           CIBW_BUILD: "cp37-* cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* pp39-* pp310-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2014"
+          CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: "manylinux2014"
           CIBW_FREE_THREADED_SUPPORT: "true"
           CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
@@ -66,8 +68,7 @@ jobs:
       - name: Delete manylinux1 wheels
         if: runner.os == 'Linux'
         run: |
-          rm -f wheelhouse/*-manylinux1_i686.whl
-          rm -f wheelhouse/*-manylinux1_x86_64.whl
+          rm -f wheelhouse/*-manylinux1_*.whl
 
       - uses: actions/upload-artifact@v3
         with:
@@ -136,8 +137,7 @@ jobs:
       - name: Delete manylinux1 wheels
         if: runner.os == 'Linux'
         run: |
-          rm -f wheelhouse/*-manylinux1_i686.whl
-          rm -f wheelhouse/*-manylinux1_x86_64.whl
+          rm -f wheelhouse/*-manylinux1_*.whl
 
       - uses: actions/upload-artifact@v3
         with:
