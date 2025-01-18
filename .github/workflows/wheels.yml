@@ -44,7 +44,7 @@ jobs:
           echo 'CIBW_ARCHS=x86_64 universal2' >> $GITHUB_ENV
         if: runner.os == 'macOS'
 
-      - uses: pypa/cibuildwheel@v2.21.1
+      - uses: pypa/cibuildwheel@v2.22.0
         name: Build wheels
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
@@ -56,7 +56,7 @@ jobs:
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: "manylinux2014"
-          CIBW_FREE_THREADED_SUPPORT: "true"
+          CIBW_ENABLE: "cpython-freethreading pypy"
           CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
           # Set pycryptodome/x test command according to built package
