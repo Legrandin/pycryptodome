@@ -7,7 +7,7 @@
 using namespace std;
 
 /*
- * Generate test vectors for SP 800-180 using the Botan library.
+ * Generate test vectors for SP 800-108 using the Botan library.
  *
  * Input key: 16 bytes
  * PRF: HMAC-256, HMAC-384, HMAC-512
@@ -74,7 +74,7 @@ int main(void)
     unsigned count = 0;
 
     printf("#\n");
-    printf("# Test vectors for NIST SP-800 180, KDF in Counter mode\n");
+    printf("# Test vectors for NIST SP-800 108, KDF in Counter mode\n");
     printf("# Generated with Botan v%d.%d.%d\n", BOTAN_VERSION_MAJOR, BOTAN_VERSION_MINOR, BOTAN_VERSION_PATCH);
     printf("#\n");
 

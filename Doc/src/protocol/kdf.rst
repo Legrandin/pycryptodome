@@ -125,9 +125,9 @@ Example, for deriving two AES256 keys::
 
 .. autofunction:: Crypto.Protocol.KDF.HKDF
 
-.. _sp800-180-counter:
+.. _sp800-108-counter:
 
-SP 800-180 Counter Mode
+SP 800-108 Counter Mode
 ++++++++++++++++++++++++
 
 A KDF can be generically constructed with a pseudorandom function (PRF).

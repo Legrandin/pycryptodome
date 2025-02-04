@@ -1,5 +1,5 @@
 #
-# Test vectors for NIST SP-800 180, KDF in Counter mode
+# Test vectors for NIST SP-800 108, KDF in Counter mode
 # Generated with Botan v2.19.1
 #
 

@@ -714,7 +714,7 @@ def load_hash_by_name(hash_name):
     return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
 
-class SP800_180_Counter_Tests(unittest.TestCase):
+class SP800_108_Counter_Tests(unittest.TestCase):
 
     def test_negative_zeroes(self):
         def prf(s, x):
@@ -781,7 +781,7 @@ def add_tests_sp800_108_counter(cls):
         setattr(cls, "test_kdf_sp800_108_counter_%d" % idx, kdf_test)
 
 
-add_tests_sp800_108_counter(SP800_180_Counter_Tests)
+add_tests_sp800_108_counter(SP800_108_Counter_Tests)
 
 
 def get_tests(config={}):
@@ -799,7 +799,7 @@ def get_tests(config={}):
     tests += [TestVectorsHKDFWycheproof(wycheproof_warnings)]
     tests += list_test_cases(scrypt_Tests)
     tests += list_test_cases(bcrypt_Tests)
-    tests += list_test_cases(SP800_180_Counter_Tests)
+    tests += list_test_cases(SP800_108_Counter_Tests)
 
     return tests
 
