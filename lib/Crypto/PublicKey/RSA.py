@@ -821,40 +821,44 @@ def import_key(extern_key, passphrase=None):
 
     from Crypto.IO import PEM
 
-    extern_key = tobytes(extern_key)
-    if passphrase is not None:
-        passphrase = tobytes(passphrase)
+    try:
+        extern_key = tobytes(extern_key)
+        if passphrase is not None:
+            passphrase = tobytes(passphrase)
 
-    if extern_key.startswith(b'-----BEGIN OPENSSH PRIVATE KEY'):
-        text_encoded = tostr(extern_key)
-        openssh_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
-        result = _import_openssh_private_rsa(openssh_encoded, passphrase)
-        return result
+        if extern_key.startswith(b'-----BEGIN OPENSSH PRIVATE KEY'):
+            text_encoded = tostr(extern_key)
+            openssh_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
+            result = _import_openssh_private_rsa(openssh_encoded, passphrase)
+            return result
 
-    if extern_key.startswith(b'-----'):
-        # This is probably a PEM encoded key.
-        (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
-        if enc_flag:
-            passphrase = None
-        return _import_keyDER(der, passphrase)
+        if extern_key.startswith(b'-----'):
+            # This is probably a PEM encoded key.
+            (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
+            if enc_flag:
+                passphrase = None
+            return _import_keyDER(der, passphrase)
 
-    if extern_key.startswith(b'ssh-rsa '):
-        # This is probably an OpenSSH key
-        keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
-        keyparts = []
-        while len(keystring) > 4:
-            length = struct.unpack(">I", keystring[:4])[0]
-            keyparts.append(keystring[4:4 + length])
-            keystring = keystring[4 + length:]
-        e = Integer.from_bytes(keyparts[1])
-        n = Integer.from_bytes(keyparts[2])
-        return construct([n, e])
+        if extern_key.startswith(b'ssh-rsa '):
+            # This is probably an OpenSSH key
+            keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
+            keyparts = []
+            while len(keystring) > 4:
+                length = struct.unpack(">I", keystring[:4])[0]
+                keyparts.append(keystring[4:4 + length])
+                keystring = keystring[4 + length:]
+            e = Integer.from_bytes(keyparts[1])
+            n = Integer.from_bytes(keyparts[2])
+            return construct([n, e])
 
-    if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
-        # This is probably a DER encoded key
-        return _import_keyDER(extern_key, passphrase)
-
-    raise ValueError("RSA key format is not supported")
+        if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
+            # This is probably a DER encoded key
+            return _import_keyDER(extern_key, passphrase)
+        
+        raise ValueError("RSA key format is not supported")
+    except Exception:
+        raise ValueError("RSA key format is not supported") from None
+    
 
 
 # Backward compatibility
