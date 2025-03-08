@@ -2,7 +2,7 @@ import struct
 from enum import IntEnum
 
 from types import ModuleType
-from typing import Optional, TypedDict, NotRequired, Unpack
+from typing import Optional
 
 from .KDF import _HKDF_extract, _HKDF_expand
 from .DH import key_agreement, import_x25519_public_key, import_x448_public_key
@@ -363,16 +363,12 @@ class HPKE_Cipher:
         return pt
 
 
-class RequestParams(TypedDict):
-    enc: NotRequired[bytes]
-    sender_key: NotRequired[EccKey]
-    psk: NotRequired[tuple[bytes, bytes]]
-    info: NotRequired[bytes]
-
-
-def new(receiver_key: EccKey,
+def new(*, receiver_key: EccKey,
         aead_id: AEAD,
-        **kwargs: Unpack[RequestParams]):
+        enc: Optional[bytes] = None,
+        sender_key: Optional[EccKey] = None,
+        psk: Optional[tuple[bytes, bytes]] = None,
+        info: bytes = b''):
     """Create an HPKE context which can be used
     by the sender to seal (encrypt) a message
     or by the receiver to unseal (decrypt) it.
@@ -439,14 +435,6 @@ def new(receiver_key: EccKey,
 
     .. _HPKE: https://datatracker.ietf.org/doc/rfc9180/
     """
-
-    sender_key = kwargs.pop('sender_key', None)
-    psk = kwargs.pop('psk', None)
-    info = kwargs.pop('info', b'')
-    enc = kwargs.pop('enc', None)
-
-    if kwargs:
-        raise ValueError(f"Unknown parameters: {list(kwargs.keys())}")
 
     if aead_id not in AEAD:
         raise ValueError(f"Unknown AEAD cipher ID {aead_id:#x}")

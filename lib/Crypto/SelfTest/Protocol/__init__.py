@@ -33,7 +33,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Protocol import test_SecretSharing
     tests += test_SecretSharing.get_tests(config=config)
 
-    if sys.version_info >= (3, 11):
+    if sys.version_info >= (3, 9):
         from Crypto.SelfTest.Protocol import test_HPKE
         tests += test_HPKE.get_tests(config=config)
 
