@@ -4,6 +4,10 @@ Changelog
 Under development
 ++++++++++++++++++++++++++
 
+New features
+---------------
+* Added support for HPKE (RFC 9180).
+
 Other changes
 -------------
 * Remove support for Python 3.6.
