@@ -145,7 +145,7 @@ class HPKE_Cipher:
                kem_id: int,
                hashmod: ModuleType,
                sender_key: Optional[EccKey] = None,
-               eph_key: EccKey = None):
+               eph_key: Optional[EccKey] = None):
 
         assert (sender_key is None) or sender_key.has_private()
         assert (eph_key is None) or eph_key.has_private()
