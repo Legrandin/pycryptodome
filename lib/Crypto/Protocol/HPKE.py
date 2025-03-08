@@ -7,7 +7,6 @@ from typing import Optional
 from .KDF import _HKDF_extract, _HKDF_expand
 from .DH import key_agreement, import_x25519_public_key, import_x448_public_key
 from Crypto.Util.strxor import strxor
-from Crypto.Util.number import long_to_bytes
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccKey
 from Crypto.Hash import SHA256, SHA384, SHA512
@@ -254,7 +253,7 @@ class HPKE_Cipher:
                                     suite_id,
                                     self._hashmod)
 
-        key_schedule_context = self._mode.to_bytes() + psk_id_hash + info_hash
+        key_schedule_context = self._mode.to_bytes(1, 'big') + psk_id_hash + info_hash
 
         secret = labeled_extract(shared_secret,
                                  b'secret',
@@ -286,7 +285,7 @@ class HPKE_Cipher:
         return key, base_nonce, exporter_secret
 
     def _new_cipher(self):
-        nonce = strxor(self._base_nonce, long_to_bytes(self._sequence, self._Nn))
+        nonce = strxor(self._base_nonce, self._sequence.to_bytes(self._Nn, 'big'))
         if self._aead_id in (AEAD.AES128_GCM, AEAD.AES256_GCM):
             cipher = AES.new(self._key, AES.MODE_GCM, nonce=nonce, mac_len=self._Nt)
         elif self._aead_id == AEAD.CHACHA20_POLY1305:
