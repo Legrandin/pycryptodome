@@ -429,6 +429,11 @@ def new(*, receiver_key: EccKey,
         byte strings: the identifier and the actual secret value.
         Sender and receiver must use the same PSK (or none).
 
+        The secret value must be at least 32 bytes long,
+        but it  must not be a low-entropy password
+        (use a KDF like PBKDF2 or scrypt to derive a secret
+        from a password).
+
       info:
         A non-secret parameter that contributes
         to the generation of all session keys.
