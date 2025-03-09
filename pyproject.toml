@@ -1,3 +1,7 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[[tool.mypy.overrides]]
+module = ["pycryptodome_test_vectors.*"]
+follow_untyped_imports = true

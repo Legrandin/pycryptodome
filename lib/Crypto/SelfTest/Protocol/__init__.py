@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 #  SelfTest/Protocol/__init__.py: Self-tests for Crypto.Protocol
 #
 # Written in 2008 by Dwayne C. Litzenberger <dlitz@dlitz.net>
@@ -22,9 +20,9 @@
 # SOFTWARE.
 # ===================================================================
 
-"""Self-test for Crypto.Protocol"""
+import sys
 
-__revision__ = "$Id$"
+"""Self-test for Crypto.Protocol"""
 
 def get_tests(config={}):
     tests = []
@@ -32,8 +30,12 @@ def get_tests(config={}):
     from Crypto.SelfTest.Protocol import test_KDF;      tests += test_KDF.get_tests(config=config)
     from Crypto.SelfTest.Protocol import test_ecdh;     tests += test_ecdh.get_tests(config=config)
 
-    from Crypto.SelfTest.Protocol import test_SecretSharing;
+    from Crypto.SelfTest.Protocol import test_SecretSharing
     tests += test_SecretSharing.get_tests(config=config)
+
+    if sys.version_info >= (3, 9):
+        from Crypto.SelfTest.Protocol import test_HPKE
+        tests += test_HPKE.get_tests(config=config)
 
     return tests
 
@@ -41,5 +43,3 @@ if __name__ == '__main__':
     import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
