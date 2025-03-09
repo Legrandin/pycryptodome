@@ -31,6 +31,8 @@ class AEAD(IntEnum):
 class DeserializeError(ValueError):
     pass
 
+class MessageLimitReachedError(ValueError):
+    pass
 
 # CURVE to (KEM ID, KDF ID, HASH)
 _Curve_Config = {
@@ -136,6 +138,8 @@ class HPKE_Cipher:
                                         sender_key)
 
         self._sequence = 0
+        self._max_sequence = (1 << (8 * self._Nn)) - 1
+
         self._key, \
             self._base_nonce, \
             self._export_secret = self._key_schedule(shared_secret,
@@ -295,6 +299,8 @@ class HPKE_Cipher:
             cipher = ChaCha20_Poly1305.new(key=self._key, nonce=nonce)
         else:
             raise ValueError(f"Unknown AEAD cipher ID {self._aead_id:#x}")
+        if self._sequence >= self._max_sequence:
+            raise MessageLimitReachedError()
         self._sequence += 1
         return cipher
 
