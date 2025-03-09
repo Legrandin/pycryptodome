@@ -60,7 +60,7 @@ This is how the sender can encrypt two messages::
                              aead_id=HPKE.AEAD.AES128_GCM)
 
         ct_1 = encryptor.seal(b'Message 1')
-        ct_2 = encryptor.seal(b'Message 1')
+        ct_2 = encryptor.seal(b'Message 2')
 
         # The sender will deliver:
         # - encryptor.enc

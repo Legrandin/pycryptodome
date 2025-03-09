@@ -77,6 +77,7 @@ with respect to the last official version of PyCrypto (2.6.1),
 for instance:
 
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
+* Hybrid Public Key Encryption (HPKE)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
 * Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448, Curve25519)
