@@ -94,7 +94,7 @@ class HPKE_Cipher:
                  aead_id: AEAD,
                  mode: MODE):
 
-        self.enc: bytes = enc
+        self.enc: bytes = b'' if enc is None else enc
         """The encapsulated session key."""
 
         self._verify_psk_inputs(mode, psk_pair)

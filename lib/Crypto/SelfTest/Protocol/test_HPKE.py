@@ -335,7 +335,7 @@ class HPKE_TestVectors(unittest.TestCase):
     def setUp(self):
         self.vectors = []
         try:
-            import pycryptodome_test_vectors
+            import pycryptodome_test_vectors    # type: ignore
             init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
             full_file_name = os.path.join(init_dir, "Protocol", "HPKE-test-vectors.json")
             with open(full_file_name, "r") as f:
