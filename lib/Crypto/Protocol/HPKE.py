@@ -14,6 +14,7 @@ from Crypto.Cipher import AES, ChaCha20_Poly1305
 
 
 class MODE(IntEnum):
+    """HPKE modes"""
     BASE = 0x00
     PSK = 0x01
     AUTH = 0x02
@@ -21,6 +22,7 @@ class MODE(IntEnum):
 
 
 class AEAD(IntEnum):
+    """Authenticated Encryption with Associated Data (AEAD) Functions"""
     AES128_GCM = 0x0001
     AES256_GCM = 0x0002
     CHACHA20_POLY1305 = 0x0003
@@ -40,44 +42,44 @@ _Curve_Config = {
 }
 
 
-def labeled_extract(salt: bytes,
-                    label: bytes,
-                    ikm: bytes,
-                    suite_id: bytes,
-                    hashmod: ModuleType):
+def _labeled_extract(salt: bytes,
+                     label: bytes,
+                     ikm: bytes,
+                     suite_id: bytes,
+                     hashmod: ModuleType):
     labeled_ikm = b"HPKE-v1" + suite_id + label + ikm
     return _HKDF_extract(salt, labeled_ikm, hashmod)
 
 
-def labeled_expand(prk: bytes,
-                   label: bytes,
-                   info: bytes,
-                   L: int,
-                   suite_id: bytes,
-                   hashmod: ModuleType):
+def _labeled_expand(prk: bytes,
+                    label: bytes,
+                    info: bytes,
+                    L: int,
+                    suite_id: bytes,
+                    hashmod: ModuleType):
     labeled_info = struct.pack('>H', L) + b"HPKE-v1" + suite_id + \
                    label + info
     return _HKDF_expand(prk, labeled_info, L, hashmod)
 
 
-def extract_and_expand(dh: bytes,
-                       kem_context: bytes,
-                       suite_id: bytes,
-                       hashmod: ModuleType):
+def _extract_and_expand(dh: bytes,
+                        kem_context: bytes,
+                        suite_id: bytes,
+                        hashmod: ModuleType):
     Nsecret = hashmod.digest_size
 
-    eae_prk = labeled_extract(b"",
-                              b"eae_prk",
-                              dh,
-                              suite_id,
-                              hashmod)
+    eae_prk = _labeled_extract(b"",
+                               b"eae_prk",
+                               dh,
+                               suite_id,
+                               hashmod)
 
-    shared_secret = labeled_expand(eae_prk,
-                                   b"shared_secret",
-                                   kem_context,
-                                   Nsecret,
-                                   suite_id,
-                                   hashmod)
+    shared_secret = _labeled_expand(eae_prk,
+                                    b"shared_secret",
+                                    kem_context,
+                                    Nsecret,
+                                    suite_id,
+                                    hashmod)
     return shared_secret
 
 
@@ -92,7 +94,8 @@ class HPKE_Cipher:
                  aead_id: AEAD,
                  mode: MODE):
 
-        self.enc = enc
+        self.enc: bytes = enc
+        """The encapsulated session key."""
 
         self._verify_psk_inputs(mode, psk_pair)
 
@@ -166,7 +169,7 @@ class HPKE_Cipher:
                 kem_context=kem_context,
                 suite_id=suite_id,
                 hashmod=hashmod):
-            return extract_and_expand(dh, kem_context, suite_id, hashmod)
+            return _extract_and_expand(dh, kem_context, suite_id, hashmod)
 
         shared_secret = key_agreement(eph_priv=eph_key,
                                       static_pub=receiver_key,
@@ -206,7 +209,7 @@ class HPKE_Cipher:
                 kem_context=kem_context,
                 suite_id=suite_id,
                 hashmod=hashmod):
-            return extract_and_expand(dh, kem_context, suite_id, hashmod)
+            return _extract_and_expand(dh, kem_context, suite_id, hashmod)
 
         shared_secret = key_agreement(eph_pub=pkE,
                                       static_priv=receiver_key,
@@ -241,46 +244,46 @@ class HPKE_Cipher:
                                          self._kdf_id,
                                          self._aead_id)
 
-        psk_id_hash = labeled_extract(b'',
-                                      b'psk_id_hash',
-                                      psk_id,
-                                      suite_id,
-                                      self._hashmod)
+        psk_id_hash = _labeled_extract(b'',
+                                       b'psk_id_hash',
+                                       psk_id,
+                                       suite_id,
+                                       self._hashmod)
 
-        info_hash = labeled_extract(b'',
-                                    b'info_hash',
-                                    info,
-                                    suite_id,
-                                    self._hashmod)
+        info_hash = _labeled_extract(b'',
+                                     b'info_hash',
+                                     info,
+                                     suite_id,
+                                     self._hashmod)
 
         key_schedule_context = self._mode.to_bytes(1, 'big') + psk_id_hash + info_hash
 
-        secret = labeled_extract(shared_secret,
-                                 b'secret',
-                                 psk,
-                                 suite_id,
-                                 self._hashmod)
+        secret = _labeled_extract(shared_secret,
+                                  b'secret',
+                                  psk,
+                                  suite_id,
+                                  self._hashmod)
 
-        key = labeled_expand(secret,
-                             b'key',
-                             key_schedule_context,
-                             self._Nk,
-                             suite_id,
-                             self._hashmod)
+        key = _labeled_expand(secret,
+                              b'key',
+                              key_schedule_context,
+                              self._Nk,
+                              suite_id,
+                              self._hashmod)
 
-        base_nonce = labeled_expand(secret,
-                                    b'base_nonce',
-                                    key_schedule_context,
-                                    self._Nn,
-                                    suite_id,
-                                    self._hashmod)
+        base_nonce = _labeled_expand(secret,
+                                     b'base_nonce',
+                                     key_schedule_context,
+                                     self._Nn,
+                                     suite_id,
+                                     self._hashmod)
 
-        exporter_secret = labeled_expand(secret,
-                                         b'exp',
-                                         key_schedule_context,
-                                         self._Nh,
-                                         suite_id,
-                                         self._hashmod)
+        exporter_secret = _labeled_expand(secret,
+                                          b'exp',
+                                          key_schedule_context,
+                                          self._Nh,
+                                          suite_id,
+                                          self._hashmod)
 
         return key, base_nonce, exporter_secret
 
@@ -367,70 +370,71 @@ def new(*, receiver_key: EccKey,
         enc: Optional[bytes] = None,
         sender_key: Optional[EccKey] = None,
         psk: Optional[tuple[bytes, bytes]] = None,
-        info: bytes = b''):
-    """Create an HPKE context which can be used
-    by the sender to seal (encrypt) a message
-    or by the receiver to unseal (decrypt) it.
+        info: Optional[bytes] = None) -> HPKE_Cipher:
+    """Create an HPKE context which can be used:
+
+    - by the sender to seal (encrypt) a message or
+    - by the receiver to unseal (decrypt) it.
 
     As a minimum, the two parties agree on the receiver's asymmetric key
-    (the sender will only know the public half).
+    (of which the sender will only know the public half).
 
     Additionally, for authentication purposes, they may also agree on:
 
-    * the sender's asymmetric key (the receiver will only know the public half)
+    * the sender's asymmetric key (of which the receiver will only know the public half)
 
     * a shared secret (e.g., a symmetric key derived from a password)
 
-    Arguments:
-      receiver_key: EccKey or EccXKey
+    Args:
+      receiver_key:
         The ECC key of the receiver.
         It must be on one of the following curves: ``NIST P-256``,
         ``NIST P-384``, ``NIST P-521``, ``X25519`` or ``X448``.
 
         If this is a **public** key, the HPKE context can only be used to
-        **encrypt**.
+        **seal** (**encrypt**).
 
         If this is a **private** key, the HPKE context can only be used to
-        **decrypt**.
+        **unseal** (**decrypt**).
 
-      aead_id: int
+      aead_id:
         The HPKE identifier of the symmetric cipher.
         The possible values are:
 
-        * ``HPKE.AEAD.AES128``
-        * ``HPKE.AEAD.AES256``
+        * ``HPKE.AEAD.AES128_GCM``
+        * ``HPKE.AEAD.AES256_GCM``
         * ``HPKE.AEAD.CHACHA20_POLY1305``
 
-    Keywords:
-
-      enc: byte string
+      enc:
         The encapsulated session key (i.e., the KEM shared secret).
+
         The receiver must always specify this parameter.
+
         The sender must always omit this parameter.
 
-      sender_key: EccKey
-        Optional. The ECC key of the sender.
+      sender_key:
+        The ECC key of the sender.
         It must be on the same curve as the ``receiver_key``.
-
         If the ``receiver_key`` is a public key, ``sender_key`` must be a
         private key, and vice versa.
 
-      psk: byte string tuple
-        Optional. A Pre-Shared Key (PSK) as a 2-tuple of non-empty
+      psk:
+        A Pre-Shared Key (PSK) as a 2-tuple of non-empty
         byte strings: the identifier and the actual secret value.
         Sender and receiver must use the same PSK (or none).
 
-      info: byte string
-        Optional. A non-secret parameter that contributes
+      info:
+        A non-secret parameter that contributes
         to the generation of all session keys.
         Sender and receive must use the same **info** parameter (or none).
 
-    Returns (HPKE_Cipher):
-      An object that can be used for sealing (if ``receiver_key`` is a public
-      key) or unsealing (if ``receiver_key`` is a private key).
-
-      When unsealing, correctness of all the keys and parameters will only
-      be assessed with the first call to ``unseal()``.
+    Returns:
+        An object that can be used for
+        sealing (if ``receiver_key`` is a public key) or
+        unsealing (if ``receiver_key`` is a private key).
+        In the latter case,
+        correctness of all the keys and parameters will only
+        be assessed with the first call to ``unseal()``.
 
     .. _HPKE: https://datatracker.ietf.org/doc/rfc9180/
     """
@@ -457,6 +461,9 @@ def new(*, receiver_key: EccKey,
 
     if psk is None:
         psk = b'', b''
+
+    if info is None:
+        info = b''
 
     return HPKE_Cipher(receiver_key,
                        enc,
