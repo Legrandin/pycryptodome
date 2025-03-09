@@ -1,4 +1,4 @@
-.. image:: https://github.com/Legrandin/pycryptodome/workflows/Integration%20test/badge.svg?branch=master
+.. image:: https://github.com/Legrandin/pycryptodome/workflows/Integration%20test/badge.svg
    :target: https://github.com/Legrandin/pycryptodome/actions
 
 .. image:: https://badge.fury.io/py/pycryptodome.svg
