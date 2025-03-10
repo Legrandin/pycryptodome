@@ -8,6 +8,10 @@ New features
 ---------------
 * Added support for HPKE (RFC 9180).
 
+  Resolved issues
+---------------
+* GH#846: fix infinite loop with RC4 for data larger than 4GB.
+
 Other changes
 -------------
 * Remove support for Python 3.6.
