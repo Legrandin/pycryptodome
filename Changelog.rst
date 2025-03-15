@@ -8,7 +8,7 @@ New features
 ---------------
 * Added support for HPKE (RFC 9180).
 
-  Resolved issues
+Resolved issues
 ---------------
 * GH#812: CCM ciphers will now fail before encrypting (or decrypting)
           data beyond the limit imposed by the nonce length.
