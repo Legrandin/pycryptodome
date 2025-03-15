@@ -11,6 +11,7 @@ New features
   Resolved issues
 ---------------
 * GH#846: fix infinite loop with RC4 for data larger than 4GB.
+* GH#852: handle correctly invalid PEM files with less than 3 lines.
 
 Other changes
 -------------
