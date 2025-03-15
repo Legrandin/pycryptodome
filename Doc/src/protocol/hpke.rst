@@ -54,9 +54,15 @@ This is how the sender can encrypt two messages::
         from Crypto.Protocol import HPKE
 
         # Let's assume that the recipient delivered its public key
-        # which is already loaded in a variable called destination_key
+        # which is already loaded in a variable called their_pub_key
+        #
+        # For the sake of clarity, it could be simulated with:
+        #
+        #    from Crypto.PublicKey import ECC
+        #    their_key = ECC.generate(curve='p256')
+        #    their_pub_key = their_key.public_key()
 
-        encryptor = HPKE.new(receiver_key=destination_key,
+        encryptor = HPKE.new(receiver_key=their_pub_key,
                              aead_id=HPKE.AEAD.AES128_GCM)
 
         ct_1 = encryptor.seal(b'Message 1')
@@ -67,19 +73,23 @@ This is how the sender can encrypt two messages::
         # - ct_1
         # - ct_2
 
-And this is how the receive can decrypt them::
+And this is how the receiver can decrypt them::
 
         from Crypto.Protocol import HPKE
 
         # Let's assume that the recipient has its own private key
         # which is already loaded in a variable called my_key
+        #
+        # To continue the simulation, assign:
+        #
+        #   my_key = their_key
 
         decryptor = HPKE.new(receiver_key=my_key,
                              aead_id=HPKE.AEAD.AES128_GCM,
                              enc=encryptor.enc)
 
         # Any of the calls to unseal() can raise ValueError
-        # if a key mismatch, modified messages, or reordering is detected
+        # if a key mismatch, modification to a message, or reordering is detected
         pt1 = decryptor.unseal(ct_1)
         pt2 = decryptor.unseal(ct_2)
 
