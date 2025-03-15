@@ -14,10 +14,10 @@ class CcmMode(object):
                  key: Buffer,
                  nonce: Buffer,
                  mac_len: int,
-                 msg_len: int,
-                 assoc_len: int,
+                 msg_len: Optional[int],
+                 assoc_len: Optional[int],
                  cipher_params: Dict) -> None: ...
-    
+
     def update(self, assoc_data: Buffer) -> CcmMode: ...
 
     @overload

@@ -10,6 +10,8 @@ New features
 
   Resolved issues
 ---------------
+* GH#812: CCM ciphers will now fail before encrypting (or decrypting)
+          data beyond the limit imposed by the nonce length.
 * GH#846: fix infinite loop with RC4 for data larger than 4GB.
 * GH#852: handle correctly invalid PEM files with less than 3 lines.
 

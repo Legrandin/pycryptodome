@@ -54,6 +54,10 @@ def enum(**enums):
 MacStatus = enum(NOT_STARTED=0, PROCESSING_AUTH_DATA=1, PROCESSING_PLAINTEXT=2)
 
 
+class CCMMessageTooLongError(ValueError):
+    pass
+
+
 class CcmMode(object):
     """Counter with CBC-MAC (CCM).
 
@@ -141,9 +145,14 @@ class CcmMode(object):
                              " and in the range 4..16 (not %d)" % mac_len)
 
         # Nonce value
-        if not (nonce and 7 <= len(nonce) <= 13):
+        if not (7 <= len(nonce) <= 13):
             raise ValueError("Length of parameter 'nonce' must be"
                              " in the range 7..13 bytes")
+
+        # Message length (if known already)
+        q = 15 - len(nonce)  # length of Q, the encoded message length
+        if msg_len and len(long_to_bytes(msg_len)) > q:
+            raise CCMMessageTooLongError("Message too long for a %u-byte nonce" % len(nonce))
 
         # Create MAC object (the tag will be the last block
         # bytes worth of ciphertext)
@@ -168,7 +177,6 @@ class CcmMode(object):
         self._cache = []
 
         # Start CTR cipher, by formatting the counter (A.3)
-        q = 15 - len(nonce)  # length of Q, the encoded message length
         self._cipher = self._factory.new(key,
                                          self._factory.MODE_CTR,
                                          nonce=struct.pack("B", q - 1) + self.nonce,
@@ -188,9 +196,10 @@ class CcmMode(object):
         assert(isinstance(self._cache, list))
 
         # Formatting control information and nonce (A.2.1)
-        q = 15 - len(self.nonce)  # length of Q, the encoded message length
-        flags = (64 * (self._assoc_len > 0) + 8 * ((self._mac_len - 2) // 2) +
-                 (q - 1))
+        q = 15 - len(self.nonce)  # length of Q, the encoded message length (2..8)
+        flags = (self._assoc_len > 0) << 6
+        flags |= ((self._mac_len - 2) // 2) << 3
+        flags |= q - 1
         b_0 = struct.pack("B", flags) + self.nonce + long_to_bytes(self._msg_len, q)
 
         # Formatting associated data (A.2.2)
@@ -354,6 +363,10 @@ class CcmMode(object):
         # Only once piece of plaintext accepted if message length was
         # not declared in advance
         if self._msg_len is None:
+            q = 15 - len(self.nonce)
+            if len(long_to_bytes(len(plaintext))) > q:
+                raise CCMMessageTooLongError("Message too long for a %u-byte nonce" % len(self.nonce))
+
             self._msg_len = len(plaintext)
             self._start_mac()
             self._next = ["digest"]
@@ -427,6 +440,10 @@ class CcmMode(object):
         # Only once piece of ciphertext accepted if message length was
         # not declared in advance
         if self._msg_len is None:
+            q = 15 - len(self.nonce)
+            if len(long_to_bytes(len(ciphertext))) > q:
+                raise CCMMessageTooLongError("Message too long for a %u-byte nonce" % len(self.nonce))
+
             self._msg_len = len(ciphertext)
             self._start_mac()
             self._next = ["verify"]
