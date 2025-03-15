@@ -5,6 +5,11 @@ Buffer = Union[bytes, bytearray, memoryview]
 
 __all__ = ['CcmMode']
 
+
+class CCMMessageTooLongError(ValueError):
+    pass
+
+
 class CcmMode(object):
     block_size: int
     nonce: bytes
