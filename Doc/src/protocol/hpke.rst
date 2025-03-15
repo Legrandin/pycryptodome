@@ -37,14 +37,19 @@ The receiver must have the matching public key:
    :align: center
    :width: 500px
 
-Second (*PSK* mode), the sender and the receiver can both agree on the same
-secret key (at least 32 random bytes), and contribute that to the encryption.
+Second (*PSK* mode), the sender and the receiver can agree on the same
+secret key (at least 32 random bytes), and contribute that to both encryption and decryption.
 
 .. figure:: hpkePSK.png
    :align: center
    :width: 500px
 
 Finally, the two authentication modes can also be combined together (*AuthPSK* mode).
+
+.. note::
+
+   The PSK is only used to authenticate the messages; it is not a replacement
+   for the asymmetric key that the receiver must provide to the sender.
 
 Examples
 ~~~~~~~~~
@@ -69,7 +74,7 @@ This is how the sender can encrypt two messages::
         ct_2 = encryptor.seal(b'Message 2')
 
         # The sender will deliver:
-        # - encryptor.enc
+        # - encryptor.enc as enc
         # - ct_1
         # - ct_2
 
@@ -86,7 +91,7 @@ And this is how the receiver can decrypt them::
 
         decryptor = HPKE.new(receiver_key=my_key,
                              aead_id=HPKE.AEAD.AES128_GCM,
-                             enc=encryptor.enc)
+                             enc=enc)
 
         # Any of the calls to unseal() can raise ValueError
         # if a key mismatch, modification to a message, or reordering is detected
