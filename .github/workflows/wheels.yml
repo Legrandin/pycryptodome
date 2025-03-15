@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: source
+          name: source-${{ github.ref_name }}
           path: ./dist/*.tar.gz
 
   build_python3_wheels:
@@ -72,7 +72,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: wheels-python3-${{ matrix.os }}-${{ github.ref_name }}
           overwrite: true
           path: ./wheelhouse/*.whl
 
@@ -142,6 +142,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: wheels-legacy-${{ matrix.os }}-${{ github.ref_name }}
           overwrite: true
           path: ./wheelhouse/*.whl
