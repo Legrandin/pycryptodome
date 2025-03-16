@@ -373,7 +373,9 @@ class CcmMode(object):
 
         self._cumul_msg_len += len(plaintext)
         if self._cumul_msg_len > self._msg_len:
-            raise ValueError("Message is too long")
+            msg = "Message longer than declared for (%u bytes vs %u bytes" % \
+                  (self._cumul_msg_len, self._msg_len)
+            raise CCMMessageTooLongError(msg)
 
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number
@@ -450,7 +452,9 @@ class CcmMode(object):
 
         self._cumul_msg_len += len(ciphertext)
         if self._cumul_msg_len > self._msg_len:
-            raise ValueError("Message is too long")
+            msg = "Message longer than declared for (%u bytes vs %u bytes" % \
+                  (self._cumul_msg_len, self._msg_len)
+            raise CCMMessageTooLongError(msg)
 
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number
