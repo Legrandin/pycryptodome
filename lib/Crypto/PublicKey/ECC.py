@@ -64,7 +64,7 @@ class EccKey(object):
     :ivar curve: The **canonical** name of the curve as defined in the `ECC table`_.
     :vartype curve: string
 
-    :ivar pointQ: an ECC point representating the public component.
+    :ivar pointQ: an ECC point representing the public component.
     :vartype pointQ: :class:`EccPoint` or :class:`EccXPoint`
 
     :ivar d: A scalar that represents the private component
@@ -72,7 +72,7 @@ class EccKey(object):
              order of the generator point.
     :vartype d: integer
 
-    :ivar seed: A seed that representats the private component
+    :ivar seed: A seed that represents the private component
                 in Ed22519 (32 bytes), Curve25519 (32 bytes),
                 Curve448 (56 bytes), Ed448 (57 bytes).
     :vartype seed: bytes
