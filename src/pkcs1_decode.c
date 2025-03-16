@@ -215,27 +215,25 @@ EXPORT_SYM int pkcs1_decode(const uint8_t *em, size_t len_em_output,
     size_t pos;
     uint8_t match, selector;
     uint8_t *padded_sentinel;
-    int result;
-
-    result = -1;
+    int result = -1;
 
     if (NULL == em || NULL == output || NULL == sentinel) {
-        return -1;
+        return result;
     }
     if (len_em_output < (PKCS1_PREFIX_LEN + 2)) {
-        return -1;
+        return result;
     }
     if (len_sentinel > len_em_output) {
-        return -1;
+        return result;
     }
     if (expected_pt_len > 0 && expected_pt_len > (len_em_output - PKCS1_PREFIX_LEN - 1)) {
-        return -1;
+        return result;
     }
 
     /** Pad sentinel (on the left) so that it matches em in length **/
     padded_sentinel = (uint8_t*) calloc(1, len_em_output);
     if (NULL == padded_sentinel) {
-        return -1;
+        return result;
     }
     memcpy(padded_sentinel + (len_em_output - len_sentinel), sentinel, len_sentinel);
 
@@ -254,7 +252,6 @@ EXPORT_SYM int pkcs1_decode(const uint8_t *em, size_t len_em_output,
      */
     pos = safe_search(em + 10, 0, len_em_output - 10) + 10;
     if (pos == SIZE_T_MAX) {
-        result = -1;
         goto end;
     }
 
