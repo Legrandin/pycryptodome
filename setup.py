@@ -543,7 +543,7 @@ setup(
         'Programming Language :: Python :: 3.12',
         'Programming Language :: Python :: 3.13',
     ],
-    license="BSD, Public Domain",
+    license="BSD-2-Clause AND Unlicense",
     packages=packages,
     package_dir={"": "lib"},
     package_data=package_data,
