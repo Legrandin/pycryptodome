@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Under development
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#862: For HashEdDSA and Ed448, sign() and verify() modified the state of the XOF.
+
 3.22.0 (16 March 2025)
 ++++++++++++++++++++++++++
 

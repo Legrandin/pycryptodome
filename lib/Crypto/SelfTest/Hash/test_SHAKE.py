@@ -78,6 +78,14 @@ class SHAKETest(unittest.TestCase):
         mac.read(90)
         self.assertRaises(TypeError, mac.update, b("ttt"))
 
+    def test_copy(self):
+        mac = self.shake.new()
+        mac.update(b("rrrr"))
+        mac2 = mac.copy()
+        x1 = mac.read(90)
+        x2 = mac2.read(90)
+        self.assertEqual(x1, x2)
+
 
 class SHAKE128Test(SHAKETest):
         shake = SHAKE128

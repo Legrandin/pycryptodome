@@ -110,6 +110,22 @@ class SHAKE128_XOF(object):
 
         return get_raw_buffer(bfr)
 
+    def copy(self):
+        """Return a copy ("clone") of the hash object.
+
+        The copy will have the same internal state as the original hash
+        object.
+
+        :return: A hash object of the same type
+        """
+
+        clone = self.new()
+        result = _raw_keccak_lib.keccak_copy(self._state.get(),
+                                             clone._state.get())
+        if result:
+            raise ValueError("Error %d while copying SHAKE128" % result)
+        return clone
+
     def new(self, data=None):
         return type(self)(data=data)
 

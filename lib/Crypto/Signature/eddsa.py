@@ -189,7 +189,7 @@ class EdDSASigScheme(object):
         dom4 = b'SigEd448' + bchr(flag) + \
                bchr(len(self._context)) + self._context
 
-        PHM = msg_or_hash.read(64) if ph else msg_or_hash
+        PHM = msg_or_hash.copy().read(64) if ph else msg_or_hash
 
         # See RFC 8032, section 5.2.6
 
@@ -286,7 +286,7 @@ class EdDSASigScheme(object):
         dom4 = b'SigEd448' + bchr(flag) + \
                bchr(len(self._context)) + self._context
 
-        PHM = msg_or_hash.read(64) if ph else msg_or_hash
+        PHM = msg_or_hash.copy().read(64) if ph else msg_or_hash
 
         # Section 5.2.7
 

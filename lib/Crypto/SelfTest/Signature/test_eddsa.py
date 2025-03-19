@@ -432,6 +432,32 @@ class TestEdDSA(unittest.TestCase):
                 hashobj = hashmod.new(msg)
                 verifier.verify(hashobj, exp_signature)
 
+    def test_double_sign_verify_ed25519(self):
+        msg_hash = SHA512.new(b'abc')
+        key = ECC.generate(curve='ed25519')
+        signer = eddsa.new(key, 'rfc8032')
+        verifier = eddsa.new(key, 'rfc8032')
+
+        signature = signer.sign(msg_hash)
+        signature2 = signer.sign(msg_hash)
+        self.assertEqual(signature, signature2)
+
+        verifier.verify(msg_hash, signature)
+        verifier.verify(msg_hash, signature)
+
+    def test_double_sign_verify_ed448(self):
+        msg_hash = SHAKE256.new(b'abc')
+        key = ECC.generate(curve='ed448')
+        signer = eddsa.new(key, 'rfc8032')
+        verifier = eddsa.new(key, 'rfc8032')
+
+        signature = signer.sign(msg_hash)
+        signature2 = signer.sign(msg_hash)
+        self.assertEqual(signature, signature2)
+
+        verifier.verify(msg_hash, signature)
+        verifier.verify(msg_hash, signature)
+
     def test_negative(self):
         key = ECC.generate(curve="ed25519")
         self.assertRaises(ValueError, eddsa.new, key, 'rfc9999')
