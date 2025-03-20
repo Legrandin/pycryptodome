@@ -125,7 +125,7 @@ In the following definition, ``<algorithm>`` can only be ``AES`` today:
     The longer the nonce, the smaller the allowed message size
     (with a nonce of 13 bytes, the message cannot exceed 64KB).
     If not present, the library creates a 11 bytes random nonce (the maximum
-    message size is 8GB).
+    message size is 4GB).
   :param integer mac_len: the desired length of the 
     MAC tag (default if not present: 16 bytes).
   :param integer msg_len: pre-declaration of the length of the
