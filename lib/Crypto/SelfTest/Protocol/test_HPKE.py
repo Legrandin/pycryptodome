@@ -474,10 +474,6 @@ class HPKE_TestVectors(unittest.TestCase):
             print(".", end="", flush=True)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 def get_tests(config={}):
 
     tests = []

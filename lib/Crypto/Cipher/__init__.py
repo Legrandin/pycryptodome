@@ -69,15 +69,18 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
         if mode == 8:
             from Crypto.Cipher._mode_ccm import _create_ccm_cipher
             res = _create_ccm_cipher(factory, **kwargs)
-        if mode == 10:
+        elif mode == 10:
             from Crypto.Cipher._mode_siv import _create_siv_cipher
             res = _create_siv_cipher(factory, **kwargs)
-        if mode == 11:
+        elif mode == 11:
             from Crypto.Cipher._mode_gcm import _create_gcm_cipher
             res = _create_gcm_cipher(factory, **kwargs)
-        if mode == 12:
+        elif mode == 12:
             from Crypto.Cipher._mode_ocb import _create_ocb_cipher
             res = _create_ocb_cipher(factory, **kwargs)
+        elif mode == 13:
+            from Crypto.Cipher._mode_kw import _create_kw_cipher
+            res = _create_kw_cipher(factory, **kwargs)
 
     if res is None:
         raise ValueError("Mode not supported")
