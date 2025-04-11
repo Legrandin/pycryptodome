@@ -127,7 +127,6 @@ class ISO7816_Tests(unittest.TestCase):
     def test3(self):
         padded = pad(uh(b("123456")), 4, 'iso7816')
         self.assertTrue(padded == uh(b("12345680")))
-        #import pdb; pdb.set_trace()
         back = unpad(padded, 4, 'iso7816')
         self.assertTrue(back == uh(b("123456")))
 

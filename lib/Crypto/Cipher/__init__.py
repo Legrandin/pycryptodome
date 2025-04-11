@@ -81,6 +81,9 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
         elif mode == 13:
             from Crypto.Cipher._mode_kw import _create_kw_cipher
             res = _create_kw_cipher(factory, **kwargs)
+        elif mode == 14:
+            from Crypto.Cipher._mode_kwp import _create_kwp_cipher
+            res = _create_kwp_cipher(factory, **kwargs)
 
     if res is None:
         raise ValueError("Mode not supported")

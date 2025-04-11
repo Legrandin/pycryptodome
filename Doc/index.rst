@@ -3,7 +3,7 @@ Welcome to PyCryptodome's documentation
 
 .. toctree::
    :maxdepth: 3
-   
+
    src/introduction
    src/features
    src/installation
@@ -12,6 +12,5 @@ Welcome to PyCryptodome's documentation
    src/examples
    src/faq
    src/contribute_support
-   src/future
    src/changelog
    src/license

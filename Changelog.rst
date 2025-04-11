@@ -4,6 +4,11 @@ Changelog
 Under development
 ++++++++++++++++++++++++++
 
+New features
+---------------
+* Added cipher modes Key Wrap (KW, RFC3394) and Key Wrap with Padding (KWP, RFC5649).
+  Both are defined also in NIST SP 800-38F.
+
 Resolved issues
 ---------------
 * GH#862: For HashEdDSA and Ed448, sign() and verify() modified the state of the XOF.
