@@ -76,7 +76,7 @@ PyCryptodome is a fork of PyCrypto. It brings several enhancements
 with respect to the last official version of PyCrypto (2.6.1),
 for instance:
 
-* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
+* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
 * Hybrid Public Key Encryption (HPKE)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy

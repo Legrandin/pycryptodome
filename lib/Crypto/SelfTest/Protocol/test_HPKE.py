@@ -337,7 +337,7 @@ class HPKE_TestVectors(unittest.TestCase):
         try:
             import pycryptodome_test_vectors    # type: ignore
             init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
-            full_file_name = os.path.join(init_dir, "Protocol", "HPKE-test-vectors.json")
+            full_file_name = os.path.join(init_dir, "Protocol", "wycheproof", "HPKE-test-vectors.json")
             with open(full_file_name, "r") as f:
                 self.vectors = json.load(f)
         except (FileNotFoundError, ImportError):
@@ -472,10 +472,6 @@ class HPKE_TestVectors(unittest.TestCase):
                     self.assertEqual(decrypted, plaintext, "Decryption failed")
 
             print(".", end="", flush=True)
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 def get_tests(config={}):

@@ -41,7 +41,8 @@ MODE_EAX = 9        #: :ref:`eax_mode`
 MODE_SIV = 10       #: Synthetic Initialization Vector (:ref:`siv_mode`)
 MODE_GCM = 11       #: Galois Counter Mode (:ref:`gcm_mode`)
 MODE_OCB = 12       #: Offset Code Book (:ref:`ocb_mode`)
-
+MODE_KW = 13        #: Key Wrap (:ref:`kw_mode`)
+MODE_KWP = 14       #: Key Wrap with Padding (:ref:`kwp_mode`)
 
 _cproto = """
         int AES_start_operation(const uint8_t key[],

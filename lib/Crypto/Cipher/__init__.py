@@ -22,44 +22,9 @@
 #
 # where mode_state is a a pointer to base_cipher_state plus mode-specific data.
 
-import os
-
-from Crypto.Cipher._mode_ecb import _create_ecb_cipher
-from Crypto.Cipher._mode_cbc import _create_cbc_cipher
-from Crypto.Cipher._mode_cfb import _create_cfb_cipher
-from Crypto.Cipher._mode_ofb import _create_ofb_cipher
-from Crypto.Cipher._mode_ctr import _create_ctr_cipher
-from Crypto.Cipher._mode_openpgp import _create_openpgp_cipher
-from Crypto.Cipher._mode_ccm import _create_ccm_cipher
-from Crypto.Cipher._mode_eax import _create_eax_cipher
-from Crypto.Cipher._mode_siv import _create_siv_cipher
-from Crypto.Cipher._mode_gcm import _create_gcm_cipher
-from Crypto.Cipher._mode_ocb import _create_ocb_cipher
-
-_modes = { 1:_create_ecb_cipher,
-           2:_create_cbc_cipher,
-           3:_create_cfb_cipher,
-           5:_create_ofb_cipher,
-           6:_create_ctr_cipher,
-           7:_create_openpgp_cipher,
-           9:_create_eax_cipher
-           }
-
-_extra_modes = { 8:_create_ccm_cipher,
-                10:_create_siv_cipher,
-                11:_create_gcm_cipher,
-                12:_create_ocb_cipher
-                }
-
 def _create_cipher(factory, key, mode, *args, **kwargs):
 
     kwargs["key"] = key
-
-    modes = dict(_modes)
-    if kwargs.pop("add_aes_modes", False):
-        modes.update(_extra_modes)
-    if not mode in modes:
-        raise ValueError("Mode not supported")
 
     if args:
         if mode in (8, 9, 10, 11, 12):
@@ -76,4 +41,51 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
         elif mode == 1:
             raise TypeError("IV is not meaningful for the ECB mode")
 
-    return modes[mode](factory, **kwargs)
+    res = None
+    extra_modes = kwargs.pop("add_aes_modes", False)
+
+    if mode == 1:
+        from Crypto.Cipher._mode_ecb import _create_ecb_cipher
+        res = _create_ecb_cipher(factory, **kwargs)
+    elif mode == 2:
+        from Crypto.Cipher._mode_cbc import _create_cbc_cipher
+        res = _create_cbc_cipher(factory, **kwargs)
+    elif mode == 3:
+        from Crypto.Cipher._mode_cfb import _create_cfb_cipher
+        res = _create_cfb_cipher(factory, **kwargs)
+    elif mode == 5:
+        from Crypto.Cipher._mode_ofb import _create_ofb_cipher
+        res = _create_ofb_cipher(factory, **kwargs)
+    elif mode == 6:
+        from Crypto.Cipher._mode_ctr import _create_ctr_cipher
+        res = _create_ctr_cipher(factory, **kwargs)
+    elif mode == 7:
+        from Crypto.Cipher._mode_openpgp import _create_openpgp_cipher
+        res = _create_openpgp_cipher(factory, **kwargs)
+    elif mode == 9:
+        from Crypto.Cipher._mode_eax import _create_eax_cipher
+        res = _create_eax_cipher(factory, **kwargs)
+    elif extra_modes:
+        if mode == 8:
+            from Crypto.Cipher._mode_ccm import _create_ccm_cipher
+            res = _create_ccm_cipher(factory, **kwargs)
+        elif mode == 10:
+            from Crypto.Cipher._mode_siv import _create_siv_cipher
+            res = _create_siv_cipher(factory, **kwargs)
+        elif mode == 11:
+            from Crypto.Cipher._mode_gcm import _create_gcm_cipher
+            res = _create_gcm_cipher(factory, **kwargs)
+        elif mode == 12:
+            from Crypto.Cipher._mode_ocb import _create_ocb_cipher
+            res = _create_ocb_cipher(factory, **kwargs)
+        elif mode == 13:
+            from Crypto.Cipher._mode_kw import _create_kw_cipher
+            res = _create_kw_cipher(factory, **kwargs)
+        elif mode == 14:
+            from Crypto.Cipher._mode_kwp import _create_kwp_cipher
+            res = _create_kwp_cipher(factory, **kwargs)
+
+    if res is None:
+        raise ValueError("Mode not supported")
+
+    return res
