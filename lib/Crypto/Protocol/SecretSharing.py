@@ -77,7 +77,8 @@ def _div_gf2(a, b):
 class _Element(object):
     """Element of GF(2^128) field"""
 
-    # The irreducible polynomial defining this field is 1+x+x^2+x^7+x^128
+    # The irreducible polynomial defining
+    # this field is 1 + x + x^2 + x^7 + x^128
     irr_poly = 1 + 2 + 4 + 128 + 2 ** 128
 
     def __init__(self, encoded_value):
@@ -178,43 +179,53 @@ class Shamir(object):
 
         Args:
           k (integer):
-            The sufficient number of shares to reconstruct the secret (``k < n``).
+            The number of shares needed to reconstruct the secret.
           n (integer):
-            The number of shares that this method will create.
+            The number of shares to create (at least ``k``).
           secret (byte string):
-            A byte string of 16 bytes (e.g. the AES 128 key).
+            A byte string of 16 bytes (e.g. an AES 128 key).
           ssss (bool):
-            If ``True``, the shares can be used with the ``ssss`` utility.
+            If ``True``, the shares can be used with the ``ssss`` utility
+            (without using the "diffusion layer").
             Default: ``False``.
 
         Return (tuples):
-            ``n`` tuples. A tuple is meant for each participant and it contains two items:
+            ``n`` tuples, one per participant.
+            A tuple contains two items:
 
             1. the unique index (an integer)
-            2. the share (a byte string, 16 bytes)
+            2. the share (16 bytes)
         """
 
         #
         # We create a polynomial with random coefficients in GF(2^128):
         #
-        # p(x) = \sum_{i=0}^{k-1} c_i * x^i
+        # p(x) = c_0 + \sum_{i=1}^{k-1} c_i * x^i
         #
-        # c_0 is the encoded secret
+        # c_0 is the secret.
         #
 
         coeffs = [_Element(rng(16)) for i in range(k - 1)]
         coeffs.append(_Element(secret))
 
-        # Each share is y_i = p(x_i) where x_i is the public index
-        # associated to each of the n users.
+        # Each share is y_i = p(x_i) where x_i
+        # is the index assigned to the share.
 
         def make_share(user, coeffs, ssss):
             idx = _Element(user)
+
+            # Horner's method
             share = _Element(0)
             for coeff in coeffs:
                 share = idx * share + coeff
+
+            # The ssss utility actually uses:
+            #
+            # p(x) = c_0 + \sum_{i=1}^{k-1} c_i * x^i + x^k
+            #
             if ssss:
                 share += _Element(user) ** len(coeffs)
+
             return share.encode()
 
         return [(i, make_share(i, coeffs, ssss)) for i in range(1, n + 1)]
@@ -225,11 +236,18 @@ class Shamir(object):
 
         Args:
           shares (tuples):
-            The *k* tuples, each containin the index (an integer) and
+            The *k* tuples, each containing the index (an integer) and
             the share (a byte string, 16 bytes long) that were assigned to
             a participant.
+
+            .. note::
+
+                Pass exactly as many share as they are required,
+                and no more.
+
           ssss (bool):
-            If ``True``, the shares were produced by the ``ssss`` utility.
+            If ``True``, the shares were produced by the ``ssss`` utility
+            (without using the "diffusion layer").
             Default: ``False``.
 
         Return:
@@ -275,4 +293,5 @@ class Shamir(object):
                     numerator *= x_m
                     denominator *= x_j + x_m
             result += y_j * numerator * denominator.inverse()
+
         return result.encode()

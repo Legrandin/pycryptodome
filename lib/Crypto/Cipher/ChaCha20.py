@@ -57,6 +57,7 @@ _raw_chacha20_lib = load_pycryptodome_raw_lib("Crypto.Cipher._chacha20",
                                       unsigned long block_high,
                                       unsigned long block_low,
                                       unsigned offset);
+
                     int hchacha20(  const uint8_t key[32],
                                     const uint8_t nonce16[16],
                                     uint8_t subkey[32]);
@@ -192,14 +193,17 @@ class ChaCha20Cipher(object):
     def seek(self, position):
         """Seek to a certain position in the key stream.
 
+        If you want to seek to a certain block,
+        use ``seek(block_number * 64)``.
+
         Args:
           position (integer):
             The absolute position within the key stream, in bytes.
         """
 
-        position, offset = divmod(position, 64)
-        block_low = position & 0xFFFFFFFF
-        block_high = position >> 32
+        block_number, offset = divmod(position, 64)
+        block_low = block_number & 0xFFFFFFFF
+        block_high = block_number >> 32
 
         result = _raw_chacha20_lib.chacha20_seek(
                                                  self._state.get(),

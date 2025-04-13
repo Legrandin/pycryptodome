@@ -140,7 +140,7 @@ not password-based. For instance, some reasonable choices are:
 
 * :ref:`hkdf`
 * :ref:`shake128` or :ref:`shake256`
-* :ref:`sp800-180-counter`
+* :ref:`sp800-108-counter`
 * :ref:`tuplehash128` or :ref:`tuplehash256`
 
 KDFs are typically fed with multiple inputs,

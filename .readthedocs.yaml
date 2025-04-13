@@ -1,7 +1,7 @@
 version: 2
 python:
   install:
-    - requirements: Doc/requirements.txt
+    - requirements: Doc/requirements-docs.txt
 build:
   os: ubuntu-22.04
   tools:

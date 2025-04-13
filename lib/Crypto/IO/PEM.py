@@ -137,6 +137,8 @@ def decode(pem_data, passphrase=None):
 
     # Removes spaces and slit on lines
     lines = pem_data.replace(" ", '').split()
+    if len(lines) < 3:
+        raise ValueError("A PEM file must have at least 3 lines")
 
     # Decrypts, if necessary
     if lines[1].startswith('Proc-Type:4,ENCRYPTED'):

@@ -24,7 +24,8 @@
 
 """Self-test for cipher modules"""
 
-__revision__ = "$Id$"
+import sys
+
 
 def get_tests(config={}):
     tests = []
@@ -50,11 +51,14 @@ def get_tests(config={}):
     from Crypto.SelfTest.Cipher import test_EAX;        tests += test_EAX.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_GCM;        tests += test_GCM.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_SIV;        tests += test_SIV.get_tests(config=config)
+
+    if sys.version_info >= (3, 9):
+        from Crypto.SelfTest.Cipher import test_KW
+        tests += test_KW.get_tests(config=config)
+
     return tests
 
 if __name__ == '__main__':
     import unittest
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

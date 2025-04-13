@@ -28,7 +28,7 @@ This is the state machine for a cipher object:
 .. figure:: aead.png
     :align: center
     :figwidth: 80%
-    
+
     Generic state diagram for a AEAD cipher mode
 
 Beside the usual :meth:`encrypt()` and :meth:`decrypt()` already
@@ -125,7 +125,7 @@ In the following definition, ``<algorithm>`` can only be ``AES`` today:
     The longer the nonce, the smaller the allowed message size
     (with a nonce of 13 bytes, the message cannot exceed 64KB).
     If not present, the library creates a 11 bytes random nonce (the maximum
-    message size is 8GB).
+    message size is 4GB).
   :param integer mac_len: the desired length of the 
     MAC tag (default if not present: 16 bytes).
   :param integer msg_len: pre-declaration of the length of the
@@ -550,3 +550,106 @@ Example (decryption with multiple chunks)::
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
+.. _kw_mode:
+
+KW mode
+--------
+`Key Wrapping <https://datatracker.ietf.org/doc/html/rfc3394>`_ 
+(or `NIST SP 800-38F <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-38F.pdf>`_)
+is an ad-hoc authenticated cipher mode designed to wrap cryptographic keys,
+and not other types of data.
+It is deterministic (it doesn't use nonces or IVs) and
+only works with ciphers with a block size of 128 bits (like AES).
+
+The cryptographic key to wrap must have a length multiple of 8.
+
+There is no reason to prefer this ad-hoc  mode to one like SIV.
+
+The :func:`new` function at the module level under ``Crypto.Cipher`` instantiates
+a new KW cipher object for the relevant base algorithm.
+In the following definition, ``<algorithm>`` can only be ``AES`` today:
+
+.. function:: Crypto.Cipher.<algorithm>.new(key, <algorithm>.MODE_KW)
+
+  Create a new Key Wrapping (KW) cipher object,
+  using <algorithm> as the base block cipher.
+
+  :param bytes key: the cryptographic key
+  :return: a KW cipher object
+
+The cipher object has one read-only attribute :attr:`block_size`,
+and two methods (``seal`` and ``unseal``).
+
+Example of encryption::
+
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> key_to_wrap = b"1234567890123456"
+    >>> wrapping_key = get_random_bytes(16)
+    >>> cipher = AES.new(wrapping_key, AES.MODE_KW)
+    >>> ciphertext = cipher.seal(key_to_wrap)
+
+Example of decryption::
+
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> wrapping_key = get_random_bytes(16)
+    >>> cipher = AES.new(wrapping_key, AES.MODE_KW)
+    >>> try:
+    >>>     unwrapped_key = cipher.unseal(ciphertext)
+    >>> except ValueError:
+    >>>     print("Invalid decryption")
+
+.. _kwp_mode:
+
+KWP mode
+--------
+`Key Wrapping with Padding <https://datatracker.ietf.org/doc/html/rfc5649>`_ 
+(or `NIST SP 800-38F <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-38F.pdf>`_)
+is an ad-hoc authenticated cipher mode designed to wrap cryptographic keys,
+and not other types of data.
+It is deterministic (it doesn't use nonces or IVs) and
+only works with ciphers with a block size of 128 bits (like AES).
+
+The cryptographic key to wrap can have any length.
+
+There is no reason to prefer this ad-hoc  mode to one like SIV.
+
+The :func:`new` function at the module level under ``Crypto.Cipher`` instantiates
+a new KWP cipher object for the relevant base algorithm.
+In the following definition, ``<algorithm>`` can only be ``AES`` today:
+
+.. function:: Crypto.Cipher.<algorithm>.new(key, <algorithm>.MODE_KWP)
+
+  Create a new Key Wrapping with Padding (KWP) cipher object,
+  using <algorithm> as the base block cipher.
+
+  :param bytes key: the cryptographic key
+  :return: a KWP cipher object
+
+The cipher object has one read-only attribute :attr:`block_size`,
+and two methods (``seal`` and ``unseal``).
+
+Example of encryption::
+
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> key_to_wrap = b"1234567890123456"
+    >>> wrapping_key = get_random_bytes(16)
+    >>> cipher = AES.new(wrapping_key, AES.MODE_KWP)
+    >>> ciphertext = cipher.seal(key_to_wrap)
+
+Example of decryption::
+
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> wrapping_key = get_random_bytes(16)
+    >>> cipher = AES.new(wrapping_key, AES.MODE_KWP)
+    >>> try:
+    >>>     unwrapped_key = cipher.unseal(ciphertext)
+    >>> except ValueError:
+    >>>     print("Invalid decryption")

@@ -61,7 +61,7 @@ PyCryptodome
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.7, Python 3.6 and newer, and PyPy.
+It supports Python 2.7, Python 3.7 and newer, and PyPy.
 
 You can install it with::
 
@@ -76,7 +76,8 @@ PyCryptodome is a fork of PyCrypto. It brings several enhancements
 with respect to the last official version of PyCrypto (2.6.1),
 for instance:
 
-* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
+* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
+* Hybrid Public Key Encryption (HPKE)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
 * Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448, Curve25519)
@@ -503,13 +504,13 @@ with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
 
 version_string = ".".join([str(x) for x in version_tuple])
 
-# Set the minimum ABI3 version for bdist_wheel to 3.6
+# Set the minimum ABI3 version for bdist_wheel to 3.7
 # unless Python is running without GIL (as there is no established way yet to
 # specify multiple ABI levels)
 setup_options = {}
 if sys.version_info[0] > 2:
     if not sysconfig.get_config_var('Py_GIL_DISABLED'):
-        setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp36'}}
+        setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp37'}}
 
 setup(
     name=project_name,
@@ -521,7 +522,7 @@ setup(
     url="https://www.pycryptodome.org",
     platforms='Posix; MacOS X; Windows',
     zip_safe=False,
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
@@ -534,7 +535,6 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',

@@ -1,4 +1,4 @@
-.. image:: https://github.com/Legrandin/pycryptodome/workflows/Integration%20test/badge.svg?branch=master
+.. image:: https://github.com/Legrandin/pycryptodome/workflows/Integration%20test/badge.svg
    :target: https://github.com/Legrandin/pycryptodome/actions
 
 .. image:: https://badge.fury.io/py/pycryptodome.svg
@@ -13,7 +13,7 @@ PyCryptodome
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.7, Python 3.6 and newer, and PyPy.
+It supports Python 2.7, Python 3.7 and newer, and PyPy.
 
 The installation procedure depends on the package you want the library to be in.
 PyCryptodome can be used as:
@@ -44,7 +44,8 @@ For faster public key operations in Unix, you should install `GMP`_ in your syst
 PyCryptodome is a fork of PyCrypto. It brings the following enhancements
 with respect to the last official version of PyCrypto (2.6.1):
 
-* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB)
+* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
+* Hybrid Public Key Encryption (HPKE)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
 * Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448, Curve25519, Curve448)

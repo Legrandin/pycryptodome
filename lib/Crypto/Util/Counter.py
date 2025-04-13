@@ -1,4 +1,4 @@
-# -*- coding: ascii -*-
+# -*- coding: utf-8 -*-
 #
 #  Util/Counter.py : Fast counter for use with CTR-mode ciphers
 #

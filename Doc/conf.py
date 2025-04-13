@@ -54,13 +54,14 @@ _raw_api.load_pycryptodome_raw_lib = lambda name, cdec: MockLib()
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [ 'sphinx.ext.autodoc', 'sphinx.ext.napoleon',
-        'sphinx.ext.mathjax' ]
+               'sphinx.ext.mathjax', 'sphinx_autodoc_typehints',
+               'sphinx_rtd_theme' ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = {'.rst': 'restructuredtext'}
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -70,7 +71,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'PyCryptodome'
-copyright = '2022, Helder Eijs'
+copyright = '2025, Helder Eijs'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

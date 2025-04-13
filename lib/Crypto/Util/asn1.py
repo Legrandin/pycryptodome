@@ -1,4 +1,4 @@
-# -*- coding: ascii -*-
+# -*- coding: utf-8 -*-
 #
 #  Util/asn1.py : Minimal support for ASN.1 DER binary encoding.
 #

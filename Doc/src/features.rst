@@ -40,7 +40,7 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
 * Stream ciphers:
 
   - Salsa20
-  - ChaCha20
+  - ChaCha20 and XChaCha20
   - RC4 (legacy)
 
 * Cryptographic hashes:
@@ -104,7 +104,8 @@ A list of useful resources in that area can be found on `Matthew Green's blog`_.
   - PBKDF1 (legacy)
 
 * Other cryptographic protocols:
- 
+
+  - HPKE
   - Shamir Secret Sharing
   - Padding
     

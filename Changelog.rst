@@ -1,6 +1,36 @@
 Changelog
 =========
 
+Under development
+++++++++++++++++++++++++++
+
+New features
+---------------
+* Added cipher modes Key Wrap (KW, RFC3394) and Key Wrap with Padding (KWP, RFC5649).
+  Both are defined also in NIST SP 800-38F.
+
+Resolved issues
+---------------
+* GH#862: For HashEdDSA and Ed448, sign() and verify() modified the state of the XOF.
+
+3.22.0 (16 March 2025)
+++++++++++++++++++++++++++
+
+New features
+---------------
+* Added support for HPKE (RFC 9180).
+
+Resolved issues
+---------------
+* GH#812: CCM ciphers will now fail before encrypting (or decrypting)
+  data beyond the limit imposed by the nonce length.
+* GH#846: fix infinite loop with RC4 for data larger than 4GB.
+* GH#852: handle correctly invalid PEM files with less than 3 lines.
+
+Other changes
+-------------
+* Remove support for Python 3.6.
+
 3.21.0 (30 September 2024)
 ++++++++++++++++++++++++++
 

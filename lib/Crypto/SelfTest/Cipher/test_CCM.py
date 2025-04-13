@@ -39,6 +39,8 @@ from Crypto.Hash import SHAKE128
 
 from Crypto.Util.strxor import strxor
 
+from Crypto.Cipher._mode_ccm import CCMMessageTooLongError
+
 
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
@@ -439,6 +441,38 @@ class CcmTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+
+    def test_message_too_long(self):
+
+        nonce = b'N' * 13
+        self.assertRaises(CCMMessageTooLongError,
+                          AES.new,
+                          self.key_128,
+                          AES.MODE_CCM,
+                          nonce=nonce,
+                          assoc_len=20,
+                          msg_len=0x10000)
+
+        nonce = b'N' * 7
+        self.assertRaises(CCMMessageTooLongError,
+                          AES.new,
+                          self.key_128,
+                          AES.MODE_CCM,
+                          nonce=nonce,
+                          assoc_len=20,
+                          msg_len=2**64)
+
+        nonce = b'N' * 13
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=nonce)
+        self.assertRaises(CCMMessageTooLongError,
+                          cipher.encrypt,
+                          b'C' * 0x10000)
+
+        nonce = b'N' * 13
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=nonce)
+        self.assertRaises(CCMMessageTooLongError,
+                          cipher.decrypt,
+                          b'C' * 0x10000)
 
 
 class CcmFSMTests(unittest.TestCase):
