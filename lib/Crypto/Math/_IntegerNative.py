@@ -263,7 +263,7 @@ class IntegerNative(IntegerBase):
                     raise ValueError("negative bit count")
         except OverflowError:
             result = 0
-        return result
+        return bool(result)
 
     # Extra
     def is_odd(self):
