@@ -20,6 +20,12 @@ jobs:
           - python-version: "3.13"
             cffi: yes
             os: windows-latest
+          - python-version: "3.13"
+            cffi: no
+            os: windows-11-arm
+          - python-version: "3.13"
+            cffi: yes
+            os: windows-11-arm
           - python-version: pypy2.7
             cffi: no
             os: ubuntu-latest
