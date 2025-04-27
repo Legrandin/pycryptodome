@@ -1,3 +1,5 @@
+.. _hpke:
+
 Hybrid Public Key Encryption (HPKE)
 =====================================
 
