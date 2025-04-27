@@ -167,13 +167,16 @@ jobs:
         make -C build all test
 
   test_c_windows:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        arch:
-          - x64
-          - win32
-          - arm64
+        include:
+          - os: windows-latest
+            arch: x64
+          - os: windows-latest
+            arch: win32
+          - os: windows-11-arm
+            arch: arm64
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python "3.13"
