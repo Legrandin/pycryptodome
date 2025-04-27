@@ -1,6 +1,14 @@
 Frequently Asked Questions
 --------------------------
 
+When will support for Python 2.7 stop?
+++++++++++++++++++++++++++++++++++++++++
+
+There are no plans to drop support for Python 2.7.
+This may change when maintenance becomes too cumbersome.
+
+However, new features will only be tested for Python 3.
+
 Is CTR cipher mode compatible with Java?
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 
