@@ -129,6 +129,7 @@ jobs:
         else
           python -m Crypto.SelfTest
         fi
+
   mypy:
     runs-on: ubuntu-latest
     steps:
@@ -172,6 +173,7 @@ jobs:
         arch:
           - x64
           - win32
+          - arm64
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python "3.13"
