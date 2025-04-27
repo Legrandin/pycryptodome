@@ -20,6 +20,12 @@ jobs:
           - python-version: "3.13"
             cffi: yes
             os: windows-latest
+          - python-version: "3.13"
+            cffi: no
+            os: windows-11-arm
+          - python-version: "3.13"
+            cffi: yes
+            os: windows-11-arm
           - python-version: pypy2.7
             cffi: no
             os: ubuntu-latest
@@ -123,6 +129,7 @@ jobs:
         else
           python -m Crypto.SelfTest
         fi
+
   mypy:
     runs-on: ubuntu-latest
     steps:
@@ -160,12 +167,16 @@ jobs:
         make -C build all test
 
   test_c_windows:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        arch:
-          - x64
-          - win32
+        include:
+          - os: windows-latest
+            arch: x64
+          - os: windows-latest
+            arch: win32
+          - os: windows-11-arm
+            arch: arm64
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python "3.13"
