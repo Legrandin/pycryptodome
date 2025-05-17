@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Under development
+3.23.0 (17 May 2025)
 ++++++++++++++++++++++++++
 
 New features
