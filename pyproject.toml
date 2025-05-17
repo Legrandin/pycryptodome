@@ -1,3 +1,7 @@
+[project]
+license = BSD-2-Clause AND Unlicense
+license-files = [ "LICENSE.rst" ]
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
