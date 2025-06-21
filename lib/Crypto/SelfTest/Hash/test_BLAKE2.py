@@ -158,9 +158,18 @@ class Blake2Test(unittest.TestCase):
 
         prefix = "1.3.6.1.4.1.1722.12.2." + self.oid_variant + "."
 
+        suffix = {
+            128: "4",
+            160: "5",
+            224: "7",
+            256: "8",
+            384: "12",
+            512: "16"
+        }
+
         for digest_bits in self.digest_bits_oid:
             h = self.BLAKE2.new(digest_bits=digest_bits)
-            self.assertEqual(h.oid, prefix + str(digest_bits // 8))
+            self.assertEqual(h.oid, prefix + suffix[digest_bits])
 
             h = self.BLAKE2.new(digest_bits=digest_bits, key=b"secret")
             self.assertRaises(AttributeError, lambda: h.oid)
@@ -477,6 +486,7 @@ def get_tests(config={}):
 
 if __name__ == '__main__':
     import unittest
+
     def suite():
         return unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
