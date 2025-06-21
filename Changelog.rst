@@ -1,6 +1,13 @@
 Changelog
 =========
 
+3.24.0 (under development)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#875: Fixed the Object Identifiers (OID) for BLAKE2.
+
 3.23.0 (17 May 2025)
 ++++++++++++++++++++++++++
 
