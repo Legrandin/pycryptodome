@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2019, macos-13, ubuntu-22.04-arm]
+        os: [ubuntu-22.04, windows-2019, macos-13, ubuntu-22.04-arm, windows-11-arm]
 
     if: github.actor == 'Legrandin'
 
@@ -49,7 +49,7 @@ jobs:
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
           # and for PyPy > 3.8.
-          CIBW_BUILD: "cp37-* cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* pp39-* pp310-*"
+          CIBW_BUILD: "cp37-* cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp313t-* pp39-* pp310-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux2014"

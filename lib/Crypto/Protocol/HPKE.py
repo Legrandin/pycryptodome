@@ -446,8 +446,6 @@ def new(*, receiver_key: EccKey,
         In the latter case,
         correctness of all the keys and parameters will only
         be assessed with the first call to ``unseal()``.
-
-    .. _HPKE: https://datatracker.ietf.org/doc/rfc9180/
     """
 
     if aead_id not in AEAD:

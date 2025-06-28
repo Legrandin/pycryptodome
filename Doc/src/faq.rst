@@ -1,6 +1,20 @@
 Frequently Asked Questions
 --------------------------
 
+When will support for Python 2.7 stop?
+++++++++++++++++++++++++++++++++++++++++
+
+There are no plans to drop support for Python 2.7.
+This may change when maintenance becomes too cumbersome.
+
+However, new features will only be tested for Python 3.
+
+How can I encrypt using an ECC key?
+++++++++++++++++++++++++++++++++++++
+
+Use Hybrid Public Key Encryption (HPKE, RFC 9180)
+and the module :ref:`Crypto.Protocol.HPKE<hpke>`.
+
 Is CTR cipher mode compatible with Java?
 ++++++++++++++++++++++++++++++++++++++++++++++++++
 

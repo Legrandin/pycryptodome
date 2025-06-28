@@ -3,14 +3,14 @@ project(test_crypto LANGUAGES C)
 include(CMakePrintHelpers)
 enable_testing()
 
-cmake_print_variables(CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION CMAKE_SIZEOF_VOID_P CMAKE_SYSTEM_PROCESSOR SSE)
+cmake_print_variables(CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION CMAKE_SIZEOF_VOID_P SSE CMAKE_C_COMPILER_ARCHITECTURE_ID)
 
-# https://stackoverflow.com/questions/70475665/what-are-the-possible-values-of-cmake-system-processor
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i686")
+if (CMAKE_C_COMPILER_ARCHITECTURE_ID MATCHES "x86_64|AMD64|i686|X86|x64")
     set(X86 TRUE)
 endif()
 
 if (X86)
+   message(STATUS "Enabling SSE and AESNI")
    option(SSE "Enable SSE instructions on Intel targets" ON)
    option(AESNI "Enable AESNI instructions on Intel targets" ON)
 endif()
@@ -22,6 +22,7 @@ else()
 endif()
 
 include_directories("${CMAKE_SOURCE_DIR}/..")
+INCLUDE (${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
 
 # Disable any code related to CPython modules
 # This is only required for MSVC, and it avoids a dependency on the CPython libraries
@@ -33,12 +34,16 @@ add_compile_definitions(STATIC=)
 # TODO: add check for big endianess too
 add_compile_definitions(PYCRYPTO_LITTLE_ENDIAN)
 
+CHECK_INCLUDE_FILE("stdint.h"    CMAKE_HAVE_STDINT_H)
+if (CMAKE_HAVE_STDINT_H)
+    add_compile_definitions(HAVE_STDINT_H)
+endif()
+
 if (MSVC)
     add_compile_options(/Wall /sdl)
     # Disable certain warnings
     add_compile_options(/wd4100 /wd4820 /wd5045)
 else()
-    add_compile_definitions(HAVE_STDINT_H)
     add_compile_definitions(HAVE_POSIX_MEMALIGN)
     add_compile_options(-O2 -g -fstrict-aliasing -Wall -Werror)
     if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
@@ -65,10 +70,12 @@ else()
 endif()
 
 if (MSVC)
-    add_compile_definitions(HAVE_INTRIN_H)
-    add_compile_definitions(USE_SSE2)
-    add_compile_definitions(HAVE_WMMINTRIN_H)
-    add_compile_definitions(HAVE_TMMINTRIN_H)
+    if (SSE)
+    	add_compile_definitions(HAVE_INTRIN_H)
+    	add_compile_definitions(USE_SSE2)
+    	add_compile_definitions(HAVE_WMMINTRIN_H)
+    	add_compile_definitions(HAVE_TMMINTRIN_H)
+    endif()
 else()
     if (SSE)
         message(STATUS "Using SSE instructions")

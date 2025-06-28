@@ -83,7 +83,7 @@ class BLAKE2b_Hash(object):
 
         # See https://tools.ietf.org/html/rfc7693
         if digest_bytes in (20, 32, 48, 64) and not key:
-            self.oid = "1.3.6.1.4.1.1722.12.2.1." + str(digest_bytes)
+            self.oid = "1.3.6.1.4.1.1722.12.2.1." + str(digest_bytes // 4)
 
         state = VoidPointer()
         result = _raw_blake2b_lib.blake2b_init(state.address_of(),

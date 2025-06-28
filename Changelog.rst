@@ -1,13 +1,21 @@
 Changelog
 =========
 
-Under development
+3.24.0 (under development)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* GH#875: Fixed the Object Identifiers (OID) for BLAKE2.
+
+3.23.0 (17 May 2025)
 ++++++++++++++++++++++++++
 
 New features
 ---------------
 * Added cipher modes Key Wrap (KW, RFC3394) and Key Wrap with Padding (KWP, RFC5649).
   Both are defined also in NIST SP 800-38F.
+* Wheels for Windows ARM.
 
 Resolved issues
 ---------------
