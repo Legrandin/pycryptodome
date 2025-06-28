@@ -999,7 +999,7 @@ def _import_openssh_public(encoded):
     return ecc_key
 
 
-def _import_openssh_private_ecc(data, password):
+def _import_openssh_private_ecc(data, password, include_comment=False):
 
     from ._openssh import (import_openssh_private_generic,
                            read_bytes, read_string, check_padding)
@@ -1048,8 +1048,11 @@ def _import_openssh_private_ecc(data, password):
     else:
         raise ValueError("Unsupport SSH agent key type:" + key_type)
 
-    _, padded = read_string(decrypted)  # Comment
+    comment, padded = read_string(decrypted)  # Comment
     check_padding(padded)
+
+    if include_comment: #return a tuple instead
+      return (construct(point_x=point_x, point_y=point_y, **params), comment)
 
     return construct(point_x=point_x, point_y=point_y, **params)
 
@@ -1196,7 +1199,7 @@ def _import_ed448_public_key(encoded):
     return point_x, point_y
 
 
-def import_key(encoded, passphrase=None, curve_name=None):
+def import_key(encoded, passphrase=None, curve_name=None, include_comment=False):
     """Import an ECC key (public or private).
 
     Args:
@@ -1234,6 +1237,9 @@ def import_key(encoded, passphrase=None, curve_name=None):
       curve_name (string):
         For a SEC1 encoding only. This is the name of the curve,
         as defined in the `ECC table`_.
+
+      include_comment (bool):
+        Include the comment associated
 
     .. note::
 
@@ -1279,7 +1285,7 @@ def import_key(encoded, passphrase=None, curve_name=None):
     if encoded.startswith(b'-----BEGIN OPENSSH PRIVATE KEY'):
         text_encoded = tostr(encoded)
         openssh_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
-        result = _import_openssh_private_ecc(openssh_encoded, passphrase)
+        result = _import_openssh_private_ecc(openssh_encoded, passphrase, include_comment)
         return result
 
     elif encoded.startswith(b'-----'):
