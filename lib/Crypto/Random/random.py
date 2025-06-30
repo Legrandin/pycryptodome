@@ -67,9 +67,7 @@ class StrongRandom(object):
         if step == 0:
             raise ValueError("randrange step argument must not be zero")
 
-        num_choices = ceil_div(stop - start, step)
-        if num_choices < 0:
-            num_choices = 0
+        num_choices = max(ceil_div(stop - start, step), 0)
         if num_choices < 1:
             raise ValueError("empty range for randrange(%r, %r, %r)" % (start, stop, step))
 
