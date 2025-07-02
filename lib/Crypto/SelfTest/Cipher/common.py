@@ -399,8 +399,7 @@ class MemoryviewTest(unittest.TestCase):
 def make_block_tests(module, module_name, test_data, additional_params=dict()):
     tests = []
     extra_tests_added = False
-    for i in range(len(test_data)):
-        row = test_data[i]
+    for i, row in enumerate(test_data):
 
         # Build the "params" dictionary with
         # - plaintext
@@ -461,8 +460,7 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
 def make_stream_tests(module, module_name, test_data):
     tests = []
     extra_tests_added = False
-    for i in range(len(test_data)):
-        row = test_data[i]
+    for i, row in enumerate(test_data):
 
         # Build the "params" dictionary
         params = {}
