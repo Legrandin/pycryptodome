@@ -103,8 +103,7 @@ class PBKDF2_Tests(unittest.TestCase):
         def prf_SHA256(p,s):
             return HMAC.new(p,s,SHA256).digest()
 
-        for i in range(len(self._testData)):
-            v = self._testData[i]
+        for i, v in enumerate(self._testData):
             password = v[0]
             salt = t2b(v[1])
             out_len = v[2]

@@ -307,8 +307,7 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
 
         # look for suitable p[i] starting at y
         result = 0
-        for j in range(len(field)):
-            composite = field[j]
+        for j, composite in enumerate(field):
             # look for next canidate
             if composite:
                 continue
