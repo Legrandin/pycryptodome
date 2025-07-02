@@ -253,8 +253,7 @@ class MACSelfTest(unittest.TestCase):
 def make_hash_tests(module, module_name, test_data, digest_size, oid=None,
                     extra_params={}):
     tests = []
-    for i in range(len(test_data)):
-        row = test_data[i]
+    for i, row in enumerate(test_data):
         (expected, input) = map(tobytes,row[0:2])
         if len(row) < 3:
             description = repr(input)
