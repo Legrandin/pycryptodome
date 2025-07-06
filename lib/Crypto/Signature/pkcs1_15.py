@@ -136,7 +136,6 @@ class PKCS115_SigScheme:
         #
         if em1 not in possible_em1:
             raise ValueError("Invalid signature")
-        pass
 
 
 def _EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):

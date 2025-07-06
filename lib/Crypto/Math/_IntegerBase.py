@@ -409,4 +409,3 @@ class IntegerBase(ABC):
             It is as long as the modulus would be, with zero padding
             on the left if needed.
         """
-        pass
