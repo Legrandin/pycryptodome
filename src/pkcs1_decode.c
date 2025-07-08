@@ -252,11 +252,13 @@ EXPORT_SYM int pkcs1_decode(const uint8_t *em, size_t len_em_output,
      * It can be len_em_output when the 0 is not present.
      * It can SIZE_T_MAX in case of other errors.
      */
-    pos = safe_search(em + 10, 0, len_em_output - 10) + 10;
-    if (pos == SIZE_T_MAX) {
+    size_t tmp = safe_search(em + 10, 0, len_em_output - 10);
+    pos = safe_search(em + 10, 0, len_em_output - 10);
+    if (tmp == SIZE_T_MAX) {
         result = -1;
         goto end;
     }
+    pos = tmp + 10;
 
     /*
      * selector is 0 if:
