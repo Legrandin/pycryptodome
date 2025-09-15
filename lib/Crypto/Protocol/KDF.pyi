@@ -50,7 +50,7 @@ def SP800_108_Feedback(master_key: Buffer,
                       num_keys: Literal[None] = None,
                       label: Buffer = b'',
                       context: Buffer = b'',
-                      iv=b"", with_counter=True) -> bytes: ...
+                      iv: Buffer = b"", with_counter: bool = True) -> bytes: ...
 
 @overload
 def SP800_108_Feedback(master_key: Buffer,
@@ -59,7 +59,7 @@ def SP800_108_Feedback(master_key: Buffer,
                       num_keys: Literal[None] = None,
                       label: Buffer = b'',
                       context: Buffer = b'',
-                      iv=b"", with_counter=True) -> Tuple[bytes]: ...
+                      iv: Buffer = b"", with_counter: bool = True) -> Tuple[bytes]: ...
 
 @overload
 def SP800_108_Double_Pipeline(master_key: Buffer,
@@ -67,7 +67,7 @@ def SP800_108_Double_Pipeline(master_key: Buffer,
                       prf: PRF,
                       num_keys: Literal[None] = None,
                       label: Buffer = b'',
-                      context: Buffer = b'', with_counter=True) -> bytes: ...
+                      context: Buffer = b'', with_counter: bool = True) -> bytes: ...
 
 @overload
 def SP800_108_Double_Pipeline(master_key: Buffer,
@@ -75,4 +75,4 @@ def SP800_108_Double_Pipeline(master_key: Buffer,
                       prf: PRF,
                       num_keys: Literal[None] = None,
                       label: Buffer = b'',
-                      context: Buffer = b'', with_counter=True) -> Tuple[bytes]: ...
+                      context: Buffer = b'', with_counter: bool = True) -> Tuple[bytes]: ...
