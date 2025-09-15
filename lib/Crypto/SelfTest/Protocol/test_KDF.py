@@ -33,7 +33,7 @@ from Crypto.Cipher import AES, DES3
 
 from Crypto.Protocol.KDF import (PBKDF1, PBKDF2, _S2V, HKDF, scrypt,
                                  bcrypt, bcrypt_check,
-                                 SP800_108_Counter)
+                                 SP800_108_Counter, SP800_108_Feedback, SP800_108_Double_Pipeline)
 
 from Crypto.Protocol.KDF import _bcrypt_decode
 
@@ -724,8 +724,10 @@ class SP800_108_Counter_Tests(unittest.TestCase):
             _ = SP800_108_Counter(b'0' * 16, 1, prf, label=b'A\x00B')
         except ValueError:
             self.fail('SP800_108_Counter failed with zero in label')
-        self.assertRaises(ValueError, SP800_108_Counter, b'0' * 16, 1, prf,
-                          context=b'A\x00B')
+        try:
+            _ = SP800_108_Counter(b'0' * 16, 1, prf, context=b'A\x00B')
+        except ValueError:
+            self.fail('SP800_108_Counter failed with zero in context')
 
     def test_multiple_keys(self):
         def prf(s, x):
@@ -782,6 +784,72 @@ def add_tests_sp800_108_counter(cls):
 
 
 add_tests_sp800_108_counter(SP800_108_Counter_Tests)
+
+
+class SP800_108_Feedback_Tests(unittest.TestCase):
+        
+    def test_multiple_keys_with_iv(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        key = b'0' * 16
+        expected = SP800_108_Feedback(key, 2*3*23, prf, iv=b'IV')
+        for r in (1, 2, 3, 23):
+            dks = SP800_108_Feedback(key, r, prf, 138//r, iv=b'IV')
+            self.assertEqual(len(dks), 138//r)
+            self.assertEqual(len(dks[0]), r)
+            self.assertEqual(b''.join(dks), expected)
+
+    def test_multiple_keys_with_counter(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        key = b'0' * 16
+        expected = SP800_108_Feedback(key, 2*3*23, prf, label=b'A\x00B', context=b'B\x00A')
+        for r in (1, 2, 3, 23):
+            dks = SP800_108_Feedback(key, r, prf, 138//r, label=b'A\x00B', context=b'B\x00A')
+            self.assertEqual(len(dks), 138//r)
+            self.assertEqual(len(dks[0]), r)
+            self.assertEqual(b''.join(dks), expected)
+
+    def test_multiple_keys_without_counter(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        key = b'0' * 16
+        expected = SP800_108_Feedback(key, 2*3*23, prf, label=b'A\x00B', context=b'B\x00A', with_counter=False)
+        for r in (1, 2, 3, 23):
+            dks = SP800_108_Feedback(key, r, prf, 138//r, label=b'A\x00B', context=b'B\x00A', with_counter=False)
+            self.assertEqual(len(dks), 138//r)
+            self.assertEqual(len(dks[0]), r)
+            self.assertEqual(b''.join(dks), expected)
+
+
+class SP800_108_Double_Pipeline_Tests(unittest.TestCase):
+
+    def test_multiple_keys_with_counter(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        key = b'0' * 16
+        expected = SP800_108_Double_Pipeline(key, 2*3*23, prf, label=b'A\x00B', context=b'B\x00A')
+        for r in (1, 2, 3, 23):
+            dks = SP800_108_Double_Pipeline(key, r, prf, 138//r, label=b'A\x00B', context=b'B\x00A')
+            self.assertEqual(len(dks), 138//r)
+            self.assertEqual(len(dks[0]), r)
+            self.assertEqual(b''.join(dks), expected)
+
+    def test_multiple_keys_without_counter(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        key = b'0' * 16
+        expected = SP800_108_Double_Pipeline(key, 2*3*23, prf, label=b'A\x00B', context=b'B\x00A', with_counter=False)
+        for r in (1, 2, 3, 23):
+            dks = SP800_108_Double_Pipeline(key, r, prf, 138//r, label=b'A\x00B', context=b'B\x00A', with_counter=False)
+            self.assertEqual(len(dks), 138//r)
+            self.assertEqual(len(dks[0]), r)
+            self.assertEqual(b''.join(dks), expected)
 
 
 def get_tests(config={}):

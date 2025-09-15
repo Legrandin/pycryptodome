@@ -4,6 +4,15 @@ Changelog
 3.24.0 (under development)
 ++++++++++++++++++++++++++
 
+New features
+---------------
+* Improvements to ``SP800_108_Counter``:
+  * Updated function description: Updated reference from NIST SP 800-108r1 to NIST SP 800-108r1-upd1.
+  * Renamed variables for clarity and reuse.
+  * Avoided redundant operations.
+  * Allowed null bytes in the context, as they are not prohibited by the standard.
+* Added ``SP800_108_Feedback`` and ``SP800_108_Double_Pipeline`` from NIST SP 800-108r1-upd1 
+
 Resolved issues
 ---------------
 * GH#875: Fixed the Object Identifiers (OID) for BLAKE2.

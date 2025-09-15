@@ -49,3 +49,4 @@ Hannes van Niekerk
 Stefan Seering
 Koki Takahashi
 Lauro de Lima
+Emmanuel Konan

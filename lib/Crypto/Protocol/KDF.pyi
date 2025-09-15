@@ -30,15 +30,49 @@ def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes]=None) -
 def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str]) -> None: ...
 
 @overload
-def SP800_108_Counter(master: Buffer,
+def SP800_108_Counter(master_key: Buffer,
                       key_len: int,
                       prf: PRF,
                       num_keys: Literal[None] = None,
                       label: Buffer = b'', context: Buffer = b'') -> bytes: ...
 
 @overload
-def SP800_108_Counter(master: Buffer,
+def SP800_108_Counter(master_key: Buffer,
                       key_len: int,
                       prf: PRF,
                       num_keys: int,
                       label: Buffer = b'', context: Buffer = b'') -> Tuple[bytes]: ...
+
+@overload
+def SP800_108_Feedback(master_key: Buffer,
+                      key_len: int,
+                      prf: PRF,
+                      num_keys: Literal[None] = None,
+                      label: Buffer = b'',
+                      context: Buffer = b'',
+                      iv: Buffer = b"", with_counter: bool = True) -> bytes: ...
+
+@overload
+def SP800_108_Feedback(master_key: Buffer,
+                      key_len: int,
+                      prf: PRF,
+                      num_keys: int,
+                      label: Buffer = b'',
+                      context: Buffer = b'',
+                      iv: Buffer = b"", with_counter: bool = True) -> Tuple[bytes]: ...
+
+@overload
+def SP800_108_Double_Pipeline(master_key: Buffer,
+                      key_len: int,
+                      prf: PRF,
+                      num_keys: Literal[None] = None,
+                      label: Buffer = b'',
+                      context: Buffer = b'', with_counter: bool = True) -> bytes: ...
+
+@overload
+def SP800_108_Double_Pipeline(master_key: Buffer,
+                      key_len: int,
+                      prf: PRF,
+                      num_keys: int,
+                      label: Buffer = b'',
+                      context: Buffer = b'', with_counter: bool = True) -> Tuple[bytes]: ...
