@@ -792,7 +792,7 @@ def _load_sp800_108_counter_vectors():
 
 
 class TestSP800_108_Counter:
-    def test_negative_zeroes(self):
+    def test_zeroes(self):
         def prf(s, x):
             return HMAC.new(s, x, SHA256).digest()
 
@@ -800,8 +800,10 @@ class TestSP800_108_Counter:
             _ = SP800_108_Counter(b"0" * 16, 1, prf, label=b"A\x00B")
         except ValueError:
             pytest.fail("SP800_108_Counter failed with zero in label")
-        with pytest.raises(ValueError):
-            SP800_108_Counter(b"0" * 16, 1, prf, context=b"A\x00B")
+        try:
+            _ = SP800_108_Counter(b"0" * 16, 1, prf, context=b"A\x00B")
+        except ValueError:
+            pytest.fail("SP800_108_Counter failed with zero in context")
 
     def test_multiple_keys(self):
         def prf(s, x):
