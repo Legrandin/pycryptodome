@@ -716,7 +716,7 @@ def load_hash_by_name(hash_name):
 
 class SP800_108_Counter_Tests(unittest.TestCase):
 
-    def test_negative_zeroes(self):
+    def test_zeroes(self):
         def prf(s, x):
             return HMAC.new(s, x, SHA256).digest()
 
@@ -724,8 +724,10 @@ class SP800_108_Counter_Tests(unittest.TestCase):
             _ = SP800_108_Counter(b'0' * 16, 1, prf, label=b'A\x00B')
         except ValueError:
             self.fail('SP800_108_Counter failed with zero in label')
-        self.assertRaises(ValueError, SP800_108_Counter, b'0' * 16, 1, prf,
-                          context=b'A\x00B')
+        try:
+            _ = SP800_108_Counter(b'0' * 16, 1, prf, context=b'A\x00B')
+        except ValueError:
+            self.fail('SP800_108_Counter failed with zero in context')
 
     def test_multiple_keys(self):
         def prf(s, x):
