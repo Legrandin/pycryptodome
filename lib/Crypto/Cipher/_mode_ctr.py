@@ -299,7 +299,7 @@ def _create_ctr_cipher(factory, **kwargs):
         64 bits will be created though - you must really think through all
         security consequences of using such a short block size.
 
-      initial_value : posive integer or bytes/bytearray/memoryview
+      initial_value : positive integer or bytes/bytearray/memoryview
         The initial value for the counter. If not present, the cipher will
         start counting from 0. The value is incremented by one for each block.
         The counter number is encoded in big endian mode.
