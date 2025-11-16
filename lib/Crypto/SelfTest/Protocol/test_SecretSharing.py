@@ -214,6 +214,15 @@ class Shamir_Tests(TestCase):
              "11-065d0082c80b1aea18f4abe0c49df72e",
              "12-84a09430c1d20ea9f388f3123c3733a3"),
         )
+        test_vectors_large = (
+            # combine key and shares to test larger than 16 byte key
+            (2, test_vectors[0][1] + test_vectors[1][1],
+                '1-'+test_vectors[0][2][2:] + test_vectors[1][2][2:],
+                '2-'+test_vectors[0][3][2:] + test_vectors[1][3][2:],
+                '3-'+test_vectors[0][4][2:] + test_vectors[1][4][2:],
+                '4-'+test_vectors[0][5][2:] + test_vectors[1][5][2:],
+            ),
+        )
 
         def get_share(p):
             pos = p.find('-')
@@ -228,6 +237,17 @@ class Shamir_Tests(TestCase):
                     break
                 shares = [ get_share(tv[x]) for x in shares_idx ]
                 result = Shamir.combine(shares, True)
+                self.assertEqual(secret, result)
+
+        for tv in test_vectors_large:
+            k = tv[0]
+            secret = unhexlify(tv[1])
+            max_perms = 10
+            for perm, shares_idx in enumerate(permutations(range(2, len(tv)), k)):
+                if perm > max_perms:
+                    break
+                shares = [ get_share(tv[x]) for x in shares_idx ]
+                result = Shamir.combine_large(shares, True)
                 self.assertEqual(secret, result)
 
     def test3(self):
@@ -276,6 +296,21 @@ class Shamir_Tests(TestCase):
         shares = Shamir.split(2, 3, secret)
         self.assertRaises(ValueError, Shamir.combine, (shares[0], shares[0]))
 
+    def test6(self):
+        # Test key size greater than 16 bytes
+        secret = unhexlify(b("000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f"))
+        shares = Shamir.split_large(2, 3, secret)
+
+        secret2 = Shamir.combine_large(shares[:2])
+        self.assertEqual(secret, secret2)
+
+    def test7(self):
+        secret = unhexlify(b("000102030405060708090a0b0c0d0e0f0001020304050607"))
+        self.assertRaises(ValueError, Shamir.split_large, 2, 3, secret)
+
+    def test8(self):
+        secret = 123456
+        self.assertRaises(TypeError, Shamir.split_large, 2, 3, secret)
 
 def get_tests(config={}):
     tests = []
