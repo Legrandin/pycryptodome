@@ -51,7 +51,7 @@ class HPKE_Tests(unittest.TestCase):
         self.assertEqual(b'GHI', pt2)
 
     def test_round_trip(self):
-        for curve in self.curves.keys():
+        for curve in self.curves:
             for aead_id in HPKE.AEAD:
                 self.round_trip(curve, aead_id)
 
