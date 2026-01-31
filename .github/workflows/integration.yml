@@ -62,11 +62,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ macos-13, windows-latest, windows-11-arm ]
+        os: [ macos-15, windows-latest, windows-11-arm ]
         python-version: [ "3.13", "3.14" ]
         cffi: [ yes, no ]
         exclude:
-          - os: macos-13
+          - os: macos-15
             cffi: no
     env:
       CFLAGS: "-Wconversion"
