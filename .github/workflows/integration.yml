@@ -3,38 +3,115 @@ name: Integration test
 on: [push, pull_request]
 
 jobs:
-  build:
+  build_linux:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8, 3.9, "3.10", "3.11", "3.12", "3.13" ]
-        cffi: [ yes, no ]
         os: [ ubuntu-22.04 ]
+        python-version: [ 3.7, 3.8, 3.9, "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        cffi: [ yes, no ]
         include:
-          - python-version: "3.13"
-            cffi: yes
-            os: macos-15
-          - python-version: "3.13"
+          - os: ubuntu-22.04
+            python-version: "3.13t"
             cffi: no
-            os: windows-latest
-          - python-version: "3.13"
-            cffi: yes
-            os: windows-latest
-          - python-version: "3.13"
+          - os: ubuntu-22.04
+            python-version: "3.14t"
             cffi: no
-            os: windows-11-arm
-          - python-version: "3.13"
-            cffi: yes
-            os: windows-11-arm
-          - python-version: pypy2.7
+          - os: ubuntu-latest
+            python-version: pypy2.7
             cffi: no
-            os: ubuntu-latest
-          - python-version: pypy3.9
+          - os: ubuntu-latest
+            python-version: pypy3.9
             cffi: no
-            os: ubuntu-latest
-          - python-version: "3.13"
+        exclude:
+          - python-version: "3.13t"
             cffi: yes
-            os: ubuntu-22.04-arm
+    env:
+      CFLAGS: "-Wconversion"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Display Python version
+      run: python -c "from __future__ import print_function; import sys; print(sys.version)"
+
+    - name: Install CFFI
+      if: matrix.cffi == 'yes'
+      run: pip install cffi
+
+    - name: Install dependencies (testing only)
+      run: |
+        pip install -r requirements-test.txt
+
+    - name: Install package
+      run: |
+        pip install -v .
+
+    - name: Test
+      shell: bash
+      run: |
+        if [[ -f .separate_namespace ]]; then
+          python -m Cryptodome.SelfTest
+        else
+          python -m Crypto.SelfTest
+        fi
+
+  build_desktop:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ macos-15, windows-latest, windows-11-arm ]
+        python-version: [ "3.13", "3.14" ]
+        cffi: [ yes, no ]
+        exclude:
+          - os: macos-15
+            cffi: no
+    env:
+      CFLAGS: "-Wconversion"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Display Python version
+      run: python -c "from __future__ import print_function; import sys; print(sys.version)"
+
+    - name: Install CFFI
+      if: matrix.cffi == 'yes'
+      run: pip install cffi
+
+    - name: Install dependencies (testing only)
+      run: |
+        pip install -r requirements-test.txt
+
+    - name: Install package
+      run: |
+        pip install -v .
+
+    - name: Test
+      shell: bash
+      run: |
+        if [[ -f .separate_namespace ]]; then
+          python -m Cryptodome.SelfTest
+        else
+          python -m Crypto.SelfTest
+        fi
+
+  build_linux_arm:
+    runs-on: ubuntu-22.04-arm
+    strategy:
+      matrix:
+        python-version: [ "3.13", "3.14" ]
+        cffi: [ yes ]
     env:
       CFLAGS: "-Wconversion"
 
@@ -194,32 +271,3 @@ jobs:
         cmake -B build -G "NMake Makefiles"
         cd build
         nmake all test
-
-  python_no_gil:
-    runs-on: ubuntu-latest
-    env:
-      CFLAGS: "-Wconversion"
-    steps:
-    - uses: actions/checkout@v6
-    - name: No-GIL Python
-      uses: deadsnakes/action@v3.1.0
-      with:
-        python-version: "3.13"
-        nogil: true
-
-    - name: Install dependencies (testing only)
-      run: |
-        pip install -r requirements-test.txt
-
-    - name: Install package
-      run: |
-        pip install -v .
-
-    - name: Test
-      shell: bash
-      run: |
-        if [[ -f .separate_namespace ]]; then
-          python -m Cryptodome.SelfTest
-        else
-          python -m Crypto.SelfTest
-        fi
