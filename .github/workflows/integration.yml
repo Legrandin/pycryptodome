@@ -39,10 +39,10 @@ jobs:
       CFLAGS: "-Wconversion"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -86,7 +86,7 @@ jobs:
       CFLAGS: "-Wconversion"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install Python 2
       if: matrix.os == 'windows-latest'
@@ -133,9 +133,9 @@ jobs:
   mypy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.x"
     - name: Install dependencies
@@ -152,7 +152,7 @@ jobs:
         sse: [0, 1]
         arch: [x64, x32]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -178,9 +178,9 @@ jobs:
           - os: windows-11-arm
             arch: arm64
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python "3.13"
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.13"
     - name: Install MSVC
@@ -200,7 +200,7 @@ jobs:
     env:
       CFLAGS: "-Wconversion"
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: No-GIL Python
       uses: deadsnakes/action@v3.1.0
       with:
