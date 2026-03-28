@@ -23,6 +23,9 @@ jobs:
           - os: ubuntu-latest
             python-version: pypy3.9
             cffi: no
+        exclude:
+          - python-version: "3.13t"
+            cffi: yes
     env:
       CFLAGS: "-Wconversion"
 
