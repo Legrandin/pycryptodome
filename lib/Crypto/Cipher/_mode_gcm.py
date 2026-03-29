@@ -244,7 +244,7 @@ class GcmMode(object):
                                    nonce=nonce_ctr,
                                    **cipher_params)
 
-        # Step 5 - Bootstrat GHASH
+        # Step 5 - Bootstrap GHASH
         self._signer = _GHASH(hash_subkey, ghash_c)
 
         # Step 6 - Prepare GCTR cipher for GMAC
