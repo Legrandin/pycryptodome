@@ -588,17 +588,16 @@ def bcrypt_check(password, bcrypt_hash):
         raise ValueError("Incorrect bcrypt hash")
 
 
-def SP800_108_Counter(master, key_len, prf, num_keys=None, label=b'', context=b''):
-    """Derive one or more keys from a master secret using
-    a pseudorandom function in Counter Mode, as specified in
-    `NIST SP 800-108r1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1.pdf>`_.
+def SP800_108_Counter(master_key, key_len, prf, num_keys=None, label=b"", context=b""):
+    """Derive one or more keys from a master secret key using
+    a pseudorandom function in counter mode, as specified in
+    `NIST SP 800-108r1-upd1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1-upd1.pdf>`_.
 
     Args:
-     master (byte string):
-        The secret value used by the KDF to derive the other keys.
+     master_key (byte string): 
+        The master secret value used by the KDF to derive the other keys.
         It must not be a password.
-        The length on the secret must be consistent with the input expected by
-        the :data:`prf` function.
+        The length of the secret must be consistent with the input expected by the :data:`prf` function.
      key_len (integer):
         The length in bytes of each derived key.
      prf (function):
@@ -617,28 +616,166 @@ def SP800_108_Counter(master, key_len, prf, num_keys=None, label=b'', context=b'
         It must not contain zero bytes.
 
     Return:
-        - a byte string (if ``num_keys`` is not specified), or
-        - a tuple of byte strings (if ``num_key`` is specified).
+     bytes: 
+        A single derived key if ``num_keys`` is not specified.
+     tuple[bytes]: 
+        A tuple of derived keys if ``num_keys`` is specified.
+
+    Raises:
+     ValueError: 
+        If the number of keys to generate exceeds ``0xFFFFFFFF``.
+    """
+
+    if num_keys is None:
+        num_keys = 1
+        
+    output_len = key_len * num_keys
+    output_len_encoding = long_to_bytes(output_len * 8, 4)
+
+    i = 1
+    dk = b""
+    fixed_input_data = label + b"\x00" + context + output_len_encoding
+    while len(dk) < output_len:
+        info = long_to_bytes(i, 4) + fixed_input_data
+        dk += prf(master_key, info)
+        i += 1
+        if i > 0xFFFFFFFF:
+            raise ValueError("Interger overflow not allowed in SP800 108 counter mode")
+    if num_keys == 1:
+        return dk[:key_len]
+    else:
+        kol = [dk[idx:idx + key_len]
+               for idx in iter_range(0, output_len, key_len)]
+        return kol
+
+
+def SP800_108_Feedback(
+    master_key, key_len, prf, num_keys=None, label=b"", context=b"", iv=b"", with_counter=True
+):
+    """Derive one or more keys from a master secret key using
+    a pseudorandom function in feedback mode, as specified in
+    `NIST SP 800-108r1-upd1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1-upd1.pdf>`_.
+
+    Args:
+     master_key (byte string): 
+        The master secret value used by the KDF to derive the other keys.
+        It must not be a password.
+        The length of the secret must be consistent with the input expected by the :data:`prf` function.
+     key_len (integer):
+        The length in bytes of each derived key.
+     prf (function):
+        A pseudorandom function that takes two byte strings as parameters:
+        the secret and an input. It returns another byte string.
+     num_keys (integer):
+        The number of keys to derive. Every key is :data:`key_len` bytes long.
+        By default, only 1 key is derived.
+     label (byte string):
+        Optional description of the purpose of the derived keys.
+        It must not contain zero bytes.
+     context (byte string):
+        Optional information pertaining to
+        the protocol that uses the keys, such as the identity of the
+        participants, nonces, session IDs, etc.
+        It must not contain zero bytes.
+     iv (bytes, optional): 
+        Optional initialization vector. Defaults to an empty string if not specified.
+     with_counter (bool, optional): 
+        If True (default), the counter is included in the input to the PRF. If False, the counter is omitted.
+
+    Returns:
+        bytes: A single derived key if ``num_keys`` is not specified.
+        tuple[bytes]: A tuple of derived keys if ``num_keys`` is specified.
+
+    Raises:
+        If the number of keys to generate exceeds ``0xFFFFFFFF``.
+        
     """
 
     if num_keys is None:
         num_keys = 1
 
-    if context.find(b'\x00') != -1:
-        raise ValueError("Null byte found in context")
-
-    key_len_enc = long_to_bytes(key_len * num_keys * 8, 4)
     output_len = key_len * num_keys
+    output_len_encoding = long_to_bytes(output_len * 8, 4)
 
     i = 1
     dk = b""
+    fixed_input_data = label + b"\x00" + context + output_len_encoding
+    k_input = iv
     while len(dk) < output_len:
-        info = long_to_bytes(i, 4) + label + b'\x00' + context + key_len_enc
-        dk += prf(master, info)
+        info = k_input + (long_to_bytes(i, 4) * with_counter) + fixed_input_data
+        k_input = prf(master_key, info)
+        dk += k_input
         i += 1
         if i > 0xFFFFFFFF:
-            raise ValueError("Overflow in SP800 108 counter")
+            raise ValueError("Interger overflow not allowed in SP800 108 feedback mode")
+    if num_keys == 1:
+        return dk[:key_len]
+    else:
+        kol = [dk[idx:idx + key_len]
+               for idx in iter_range(0, output_len, key_len)]
+        return kol    
 
+
+def SP800_108_Double_Pipeline(
+    master_key, key_len, prf, num_keys=None, label=b"", context=b"", with_counter=True
+):
+    """Derive one or more keys from a master secret key using
+    a pseudorandom function in double pipeline mode, as specified in
+    `NIST SP 800-108r1-upd1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1-upd1.pdf>`_.
+
+    Args:
+     master_key (byte string): 
+        The master secret value used by the KDF to derive the other keys.
+        It must not be a password.
+        The length of the secret must be consistent with the input expected by the :data:`prf` function.
+     key_len (integer):
+        The length in bytes of each derived key.
+     prf (function):
+        A pseudorandom function that takes two byte strings as parameters:
+        the secret and an input. It returns another byte string.
+     num_keys (integer):
+        The number of keys to derive. Every key is :data:`key_len` bytes long.
+        By default, only 1 key is derived.
+     label (byte string):
+        Optional description of the purpose of the derived keys.
+        It must not contain zero bytes.
+     context (byte string):
+        Optional information pertaining to
+        the protocol that uses the keys, such as the identity of the
+        participants, nonces, session IDs, etc.
+        It must not contain zero bytes.
+     with_counter (bool, optional): If True (default), the counter is
+            included in the input to the PRF. If False, the counter is omitted.
+
+    Returns:
+     bytes: 
+        A single derived key if ``num_keys`` is not specified.
+     tuple[bytes]: 
+        A tuple of derived keys if ``num_keys`` is specified.
+
+    Raises:
+     ValueError: 
+        If the number of keys to generate exceeds ``0xFFFFFFFF``.
+        
+    """
+
+    if num_keys is None:
+        num_keys = 1
+
+    output_len = key_len * num_keys
+    output_len_encoding = long_to_bytes(output_len * 8, 4)
+
+    i = 1
+    dk=b""
+    fixed_input_data = label + b"\x00" + context + output_len_encoding
+    a_i = fixed_input_data
+    while len(dk) < output_len:
+        a_i = prf(master_key, a_i)
+        info = a_i + (long_to_bytes(i, 4) * with_counter) + fixed_input_data
+        dk += prf(master_key, info)
+        i += 1
+        if i > 0xFFFFFFFF:
+            raise ValueError("Interger overflow not allowed in SP800 108 double pipeline mode")
     if num_keys == 1:
         return dk[:key_len]
     else:
