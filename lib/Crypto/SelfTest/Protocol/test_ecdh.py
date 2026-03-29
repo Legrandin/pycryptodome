@@ -574,8 +574,6 @@ class TestVectorsX25519Wycheproof(unittest.TestCase):
                 else:
                     assert "Incorrect length" in str(e)
                     return
-            except ValueError:
-                assert tv.valid
         else:
             raise ValueError("Unknown encoding", tv.encoding)
 
@@ -722,8 +720,6 @@ class TestVectorsX448Wycheproof(unittest.TestCase):
                 else:
                     assert "Incorrect length" in str(e)
                     return
-            except ValueError:
-                assert tv.valid
         else:
             raise ValueError("Unknown encoding", tv.encoding)
 
