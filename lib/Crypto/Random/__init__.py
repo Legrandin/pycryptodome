@@ -32,15 +32,12 @@ class _UrandomRNG(object):
 
     def flush(self):
         """Method provided for backward compatibility only."""
-        pass
 
     def reinit(self):
         """Method provided for backward compatibility only."""
-        pass
 
     def close(self):
         """Method provided for backward compatibility only."""
-        pass
         
 
 def new(*args, **kwargs):
