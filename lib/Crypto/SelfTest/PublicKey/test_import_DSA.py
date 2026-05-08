@@ -22,12 +22,63 @@
 
 import unittest
 import re
+import struct
+import binascii
 
 from Crypto.PublicKey import DSA
 from Crypto.SelfTest.st_common import *
 from Crypto.Util.py3compat import *
 
 from binascii import unhexlify
+
+
+def _ssh_string(data):
+    return struct.pack(">I", len(data)) + data
+
+
+def _ssh_uint32(value):
+    return struct.pack(">I", value)
+
+
+def _ssh_uint64(value):
+    return struct.pack(">Q", value)
+
+
+def _read_ssh_string(data):
+    length = struct.unpack(">I", data[:4])[0]
+    return data[4:4 + length], data[4 + length:]
+
+
+def _build_openssh_certificate(public_line, outer_type=None, inner_type=None,
+                               trailing=b""):
+    public_type, public_blob = public_line.split()[:2]
+    if outer_type is None:
+        outer_type = public_type + b"-cert-v01@openssh.com"
+    if inner_type is None:
+        inner_type = outer_type
+
+    public_key = binascii.a2b_base64(public_blob)
+    _, public_key_fields = _read_ssh_string(public_key)
+
+    certificate = (
+        _ssh_string(inner_type) +
+        _ssh_string(b"nonce") +
+        public_key_fields +
+        _ssh_uint64(1) +
+        _ssh_uint32(1) +
+        _ssh_string(b"key-id") +
+        _ssh_string(_ssh_string(b"user")) +
+        _ssh_uint64(0) +
+        _ssh_uint64(0xffffffffffffffff) +
+        _ssh_string(b"") +
+        _ssh_string(b"") +
+        _ssh_string(b"") +
+        _ssh_string(b"ca-key") +
+        _ssh_string(b"signature") +
+        trailing
+    )
+    return outer_type + b" " + binascii.b2a_base64(certificate)[:-1]
+
 
 class ImportKeyTests(unittest.TestCase):
 
@@ -244,6 +295,38 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
             self.assertEqual(self.p, key_obj.p)
             self.assertEqual(self.q, key_obj.q)
             self.assertEqual(self.g, key_obj.g)
+
+    def testImportKey7a(self):
+        key_ref = DSA.importKey(self.ssh_pub)
+
+        certificate = _build_openssh_certificate(self.ssh_pub)
+        key_obj = DSA.importKey(certificate)
+        self.assertFalse(key_obj.has_private())
+        self.assertEqual(key_ref.y, key_obj.y)
+        self.assertEqual(key_ref.p, key_obj.p)
+        self.assertEqual(key_ref.q, key_obj.q)
+        self.assertEqual(key_ref.g, key_obj.g)
+
+        certificate += b" comment"
+        key_obj = DSA.importKey(tostr(certificate))
+        self.assertEqual(key_ref.y, key_obj.y)
+        self.assertEqual(key_ref.p, key_obj.p)
+        self.assertEqual(key_ref.q, key_obj.q)
+        self.assertEqual(key_ref.g, key_obj.g)
+
+    def testImportKey7b(self):
+        self.assertRaises(ValueError, DSA.importKey,
+                          _build_openssh_certificate(
+                              self.ssh_pub,
+                              inner_type=b"ssh-rsa-cert-v01@openssh.com"))
+        self.assertRaises(ValueError, DSA.importKey,
+                          _build_openssh_certificate(self.ssh_pub)[:-1])
+        self.assertRaises(ValueError, DSA.importKey,
+                          b"ssh-dss-cert-v01@openssh.com !!!")
+        self.assertRaises(ValueError, DSA.importKey,
+                          _build_openssh_certificate(
+                              self.ssh_pub,
+                              trailing=b"x"))
 
     def testExportKey7(self):
         tup = (self.y, self.g, self.p, self.q)
@@ -551,4 +634,3 @@ def get_tests(config={}):
 if __name__ == '__main__':
     suite = lambda: unittest.TestSuite(get_tests())
     unittest.main(defaultTest='suite')
-

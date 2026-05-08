@@ -23,6 +23,8 @@
 import os
 import re
 import errno
+import struct
+import binascii
 import warnings
 import unittest
 from unittest import SkipTest
@@ -74,6 +76,54 @@ def der2pem(der, text='PUBLIC'):
     pem += b('').join(chunks)
     pem += b('-----END %s KEY-----' % text)
     return pem
+
+
+def _ssh_string(data):
+    return struct.pack(">I", len(data)) + data
+
+
+def _ssh_uint32(value):
+    return struct.pack(">I", value)
+
+
+def _ssh_uint64(value):
+    return struct.pack(">Q", value)
+
+
+def _read_ssh_string(data):
+    length = struct.unpack(">I", data[:4])[0]
+    return data[4:4 + length], data[4 + length:]
+
+
+def _build_openssh_certificate(public_line, outer_type=None, inner_type=None,
+                               trailing=b""):
+    public_type, public_blob = public_line.split()[:2]
+    if outer_type is None:
+        outer_type = public_type + b"-cert-v01@openssh.com"
+    if inner_type is None:
+        inner_type = outer_type
+
+    public_key = binascii.a2b_base64(public_blob)
+    _, public_key_fields = _read_ssh_string(public_key)
+
+    certificate = (
+        _ssh_string(inner_type) +
+        _ssh_string(b"nonce") +
+        public_key_fields +
+        _ssh_uint64(1) +
+        _ssh_uint32(1) +
+        _ssh_string(b"key-id") +
+        _ssh_string(_ssh_string(b"user")) +
+        _ssh_uint64(0) +
+        _ssh_uint64(0xffffffffffffffff) +
+        _ssh_string(b"") +
+        _ssh_string(b"") +
+        _ssh_string(b"") +
+        _ssh_string(b"ca-key") +
+        _ssh_string(b"signature") +
+        trailing
+    )
+    return outer_type + b" " + binascii.b2a_base64(certificate)[:-1]
 
 
 class ImportKeyTests(unittest.TestCase):
@@ -258,6 +308,34 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         key = RSA.importKey(self.rsaPublicKeyOpenSSH)
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
+
+    def testImportKey7a(self):
+        """Verify import of OpenSSH public certificate"""
+        key_ref = RSA.importKey(self.rsaPublicKeyOpenSSH)
+
+        certificate = _build_openssh_certificate(self.rsaPublicKeyOpenSSH)
+        key = RSA.importKey(certificate)
+        self.assertEqual(key_ref, key)
+
+        certificate += b" comment"
+        key = RSA.importKey(tostr(certificate))
+        self.assertEqual(key_ref, key)
+
+    def testImportKey7b(self):
+        """Reject malformed OpenSSH public certificates"""
+        self.assertRaises(ValueError, RSA.importKey,
+                          _build_openssh_certificate(
+                              self.rsaPublicKeyOpenSSH,
+                              inner_type=b"ssh-dss-cert-v01@openssh.com"))
+        self.assertRaises(ValueError, RSA.importKey,
+                          _build_openssh_certificate(
+                              self.rsaPublicKeyOpenSSH)[:-1])
+        self.assertRaises(ValueError, RSA.importKey,
+                          b"ssh-rsa-cert-v01@openssh.com !!!")
+        self.assertRaises(ValueError, RSA.importKey,
+                          _build_openssh_certificate(
+                              self.rsaPublicKeyOpenSSH,
+                              trailing=b"x"))
 
     def testImportKey8(self):
         """Verify import of encrypted PrivateKeyInfo DER SEQUENCE"""

@@ -792,6 +792,7 @@ def import_key(extern_key, passphrase=None):
           encoding)
         - `PKCS#1`_ ``RSAPublicKey`` DER SEQUENCE (binary or PEM encoding)
         - An OpenSSH line (e.g. the content of ``~/.ssh/id_ecdsa``, ASCII)
+          or an OpenSSH public certificate line.
 
         The following formats are supported for an RSA **private key**:
 
@@ -848,6 +849,23 @@ def import_key(extern_key, passphrase=None):
             keystring = keystring[4 + length:]
         e = Integer.from_bytes(keyparts[1])
         n = Integer.from_bytes(keyparts[2])
+        return construct([n, e])
+
+    if extern_key.startswith(b'ssh-rsa-cert-v01@openssh.com '):
+        from ._openssh import (import_openssh_public_cert_generic,
+                               read_bytes,
+                               check_openssh_public_cert_footer)
+
+        key_type, keystring = import_openssh_public_cert_generic(extern_key)
+        if key_type != b"ssh-rsa-cert-v01@openssh.com":
+            raise ValueError("This SSH certificate is not RSA")
+
+        e, keystring = read_bytes(keystring)
+        n, keystring = read_bytes(keystring)
+        check_openssh_public_cert_footer(keystring)
+
+        e = Integer.from_bytes(e)
+        n = Integer.from_bytes(n)
         return construct([n, e])
 
     if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:

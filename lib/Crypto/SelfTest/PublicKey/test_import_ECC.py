@@ -30,6 +30,8 @@
 
 import os
 import errno
+import struct
+import binascii
 import warnings
 import unittest
 from binascii import unhexlify
@@ -84,6 +86,54 @@ def load_file(file_name, mode="rb"):
 def compact(lines):
     ext = b"".join(lines)
     return unhexlify(tostr(ext).replace(" ", "").replace(":", ""))
+
+
+def _ssh_string(data):
+    return struct.pack(">I", len(data)) + data
+
+
+def _ssh_uint32(value):
+    return struct.pack(">I", value)
+
+
+def _ssh_uint64(value):
+    return struct.pack(">Q", value)
+
+
+def _read_ssh_string(data):
+    length = struct.unpack(">I", data[:4])[0]
+    return data[4:4 + length], data[4 + length:]
+
+
+def _build_openssh_certificate(public_line, outer_type=None, inner_type=None,
+                               trailing=b""):
+    public_type, public_blob = public_line.split()[:2]
+    if outer_type is None:
+        outer_type = public_type + b"-cert-v01@openssh.com"
+    if inner_type is None:
+        inner_type = outer_type
+
+    public_key = binascii.a2b_base64(public_blob)
+    _, public_key_fields = _read_ssh_string(public_key)
+
+    certificate = (
+        _ssh_string(inner_type) +
+        _ssh_string(b"nonce") +
+        public_key_fields +
+        _ssh_uint64(1) +
+        _ssh_uint32(1) +
+        _ssh_string(b"key-id") +
+        _ssh_string(_ssh_string(b"user")) +
+        _ssh_uint64(0) +
+        _ssh_uint64(0xffffffffffffffff) +
+        _ssh_string(b"") +
+        _ssh_string(b"") +
+        _ssh_string(b"") +
+        _ssh_string(b"ca-key") +
+        _ssh_string(b"signature") +
+        trailing
+    )
+    return outer_type + b" " + binascii.b2a_base64(certificate)[:-1]
 
 
 def create_ref_keys_p192():
@@ -212,6 +262,43 @@ o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=
         data_hex = "306b02010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052a14403420004a40ad59a2050ebe92479bd5fb16bb2e45b6465eb3cb2b1effe423fabe6cb7424db8219ef0bab80acf26fd70595b61fe4760d33eed80dd03d2fd0dfb27b8ce75c"
         key = _import_rfc5915_der(unhexlify(data_hex), None, "1.2.840.10045.3.1.7")
         self.assertEqual(key.d, 0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
+
+    def test_import_openssh_public_certificate(self):
+        public_point = unhexlify(
+            "04a40ad59a2050ebe92479bd5fb16bb2e45b6465eb3cb2b1effe423"
+            "fabe6cb7424db8219ef0bab80acf26fd70595b61fe4760d33eed"
+            "80dd03d2fd0dfb27b8ce75c")
+        public_line = (
+            b"ecdsa-sha2-nistp256 " +
+            binascii.b2a_base64(
+                _ssh_string(b"ecdsa-sha2-nistp256") +
+                _ssh_string(b"nistp256") +
+                _ssh_string(public_point))[:-1])
+        public_key = ECC.construct(
+            curve="P-256",
+            point_x=bytes_to_long(public_point[1:33]),
+            point_y=bytes_to_long(public_point[33:]))
+
+        certificate = _build_openssh_certificate(public_line)
+        self.assertEqual(public_key, ECC.import_key(certificate))
+        self.assertEqual(public_key, ECC._import_openssh_public(certificate))
+
+        self.assertRaises(ValueError, ECC.import_key,
+                          _build_openssh_certificate(
+                              public_line,
+                              inner_type=b"ssh-ed25519-cert-v01@openssh.com"))
+        self.assertRaises(ValueError, ECC.import_key,
+                          _build_openssh_certificate(
+                              public_line,
+                              outer_type=(b"ecdsa-sha2-nistp384-cert-v01"
+                                          b"@openssh.com")))
+        self.assertRaises(ValueError, ECC.import_key,
+                          _build_openssh_certificate(public_line)[:-1])
+        self.assertRaises(ValueError, ECC.import_key,
+                          b"ecdsa-sha2-nistp256-cert-v01@openssh.com !!!")
+        self.assertRaises(ValueError, ECC.import_key,
+                          _build_openssh_certificate(public_line,
+                                                     trailing=b"x"))
 
 class TestImport_P192(unittest.TestCase):
 
@@ -574,6 +661,29 @@ class TestImport_P256(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
 
+    def test_import_openssh_public_certificate(self):
+        key_file = load_file("ecc_p256_public_openssh.txt")
+        certificate = _build_openssh_certificate(key_file)
+
+        key = ECC._import_openssh_public(certificate)
+        self.assertEqual(self.ref_public, key)
+
+        key = ECC.import_key(certificate + b" comment")
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_openssh_public_certificate_error(self):
+        key_file = load_file("ecc_p256_public_openssh.txt")
+        self.assertRaises(ValueError, ECC.import_key,
+                          _build_openssh_certificate(
+                              key_file,
+                              inner_type=b"ssh-ed25519-cert-v01@openssh.com"))
+        self.assertRaises(ValueError, ECC.import_key,
+                          _build_openssh_certificate(key_file)[:-1])
+        self.assertRaises(ValueError, ECC.import_key,
+                          b"ecdsa-sha2-nistp256-cert-v01@openssh.com !!!")
+        self.assertRaises(ValueError, ECC.import_key,
+                          _build_openssh_certificate(key_file, trailing=b"x"))
+
     def test_import_openssh_private_clear(self):
         key_file = load_file("ecc_p256_private_openssh.pem")
         key_file_old = load_file("ecc_p256_private_openssh_old.pem")
@@ -718,6 +828,13 @@ class TestImport_P384(unittest.TestCase):
         key = ECC.import_key(key_file)
         self.assertEqual(self.ref_public, key)
 
+    def test_import_openssh_public_certificate(self):
+        key_file = load_file("ecc_p384_public_openssh.txt")
+        certificate = _build_openssh_certificate(key_file)
+
+        key = ECC.import_key(certificate)
+        self.assertEqual(self.ref_public, key)
+
     def test_import_openssh_private_clear(self):
         key_file = load_file("ecc_p384_private_openssh.pem")
         key_file_old = load_file("ecc_p384_private_openssh_old.pem")
@@ -860,6 +977,13 @@ class TestImport_P521(unittest.TestCase):
         self.assertEqual(self.ref_public, key)
 
         key = ECC.import_key(key_file)
+        self.assertEqual(self.ref_public, key)
+
+    def test_import_openssh_public_certificate(self):
+        key_file = load_file("ecc_p521_public_openssh.txt")
+        certificate = _build_openssh_certificate(key_file)
+
+        key = ECC.import_key(certificate)
         self.assertEqual(self.ref_public, key)
 
     def test_import_openssh_private_clear(self):
@@ -2373,6 +2497,17 @@ class TestImport_Ed25519(unittest.TestCase):
         self.assertFalse(key.has_private())
         key = ECC.import_key(key_file)
         self.assertFalse(key.has_private())
+
+    def test_import_openssh_public_certificate(self):
+        key_file = load_file("ecc_ed25519_public_openssh.txt")
+        key_ref = ECC.import_key(key_file)
+        certificate = _build_openssh_certificate(key_file)
+
+        key = ECC._import_openssh_public(certificate)
+        self.assertEqual(key_ref, key)
+
+        key = ECC.import_key(certificate + b" comment")
+        self.assertEqual(key_ref, key)
 
     def test_import_openssh_private_clear(self):
         key_file = load_file("ecc_ed25519_private_openssh.pem")
