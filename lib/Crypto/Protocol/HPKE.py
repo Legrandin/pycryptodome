@@ -26,6 +26,7 @@ class AEAD(IntEnum):
     AES128_GCM = 0x0001
     AES256_GCM = 0x0002
     CHACHA20_POLY1305 = 0x0003
+    EXPORT_ONLY = 0xFFFF
 
 
 class DeserializeError(ValueError):
@@ -112,7 +113,16 @@ class HPKE_Cipher:
         except KeyError as ke:
             raise ValueError("Curve {} is not supported by HPKE".format(self._curve)) from ke
 
-        self._Nk = 16 if self._aead_id == AEAD.AES128_GCM else 32
+        self._suite_id = b"HPKE" + struct.pack('>HHH',
+                                               self._kem_id,
+                                               self._kdf_id,
+                                               self._aead_id)
+        if self._aead_id == AEAD.EXPORT_ONLY:
+            self._Nk = 0
+        elif self._aead_id == AEAD.AES128_GCM:
+            self._Nk = 16
+        else:
+            self._Nk = 32
         self._Nn = 12
         self._Nt = 16
         self._Nh = self._hashmod.digest_size
@@ -243,21 +253,16 @@ class HPKE_Cipher:
                       psk_id: bytes,
                       psk: bytes):
 
-        suite_id = b"HPKE" + struct.pack('>HHH',
-                                         self._kem_id,
-                                         self._kdf_id,
-                                         self._aead_id)
-
         psk_id_hash = _labeled_extract(b'',
                                        b'psk_id_hash',
                                        psk_id,
-                                       suite_id,
+                                       self._suite_id,
                                        self._hashmod)
 
         info_hash = _labeled_extract(b'',
                                      b'info_hash',
                                      info,
-                                     suite_id,
+                                     self._suite_id,
                                      self._hashmod)
 
         key_schedule_context = self._mode.to_bytes(1, 'big') + psk_id_hash + info_hash
@@ -265,29 +270,32 @@ class HPKE_Cipher:
         secret = _labeled_extract(shared_secret,
                                   b'secret',
                                   psk,
-                                  suite_id,
+                                  self._suite_id,
                                   self._hashmod)
+
+        exporter_secret = _labeled_expand(secret,
+                                          b'exp',
+                                          key_schedule_context,
+                                          self._Nh,
+                                          self._suite_id,
+                                          self._hashmod)
+
+        if self._aead_id == AEAD.EXPORT_ONLY:
+            return b'', b'', exporter_secret
 
         key = _labeled_expand(secret,
                               b'key',
                               key_schedule_context,
                               self._Nk,
-                              suite_id,
+                              self._suite_id,
                               self._hashmod)
 
         base_nonce = _labeled_expand(secret,
                                      b'base_nonce',
                                      key_schedule_context,
                                      self._Nn,
-                                     suite_id,
+                                     self._suite_id,
                                      self._hashmod)
-
-        exporter_secret = _labeled_expand(secret,
-                                          b'exp',
-                                          key_schedule_context,
-                                          self._Nh,
-                                          suite_id,
-                                          self._hashmod)
 
         return key, base_nonce, exporter_secret
 
@@ -321,6 +329,8 @@ class HPKE_Cipher:
            The ciphertext concatenated with the authentication tag.
         """
 
+        if self._aead_id == AEAD.EXPORT_ONLY:
+            raise ValueError("This is an export-only HPKE context")
         if not self._encrypt:
             raise ValueError("This cipher can only be used to seal")
         cipher = self._new_cipher()
@@ -353,6 +363,8 @@ class HPKE_Cipher:
            used to establish the session is wrong or that one is missing.
         """
 
+        if self._aead_id == AEAD.EXPORT_ONLY:
+            raise ValueError("This is an export-only HPKE context")
         if self._encrypt:
             raise ValueError("This cipher can only be used to unseal")
         if len(ciphertext) < self._Nt:
@@ -370,6 +382,32 @@ class HPKE_Cipher:
             raise ValueError("Invalid message (wrong MAC tag)")
         return pt
 
+    def export(self, exporter_context: Optional[bytes], length: int):
+        """Export a secret from this HPKE context.
+
+        Arguments:
+          exporter_context: bytes
+            Optional. Context for the exported secret.
+          length: int
+            The desired length of the secret, in bytes.
+
+        Returns:
+           The exported secret.
+        """
+
+        if exporter_context is None:
+            exporter_context = b''
+
+        if length < 0 or length > 255 * self._Nh:
+            raise ValueError("Incorrect length for exported secret")
+
+        return _labeled_expand(self._export_secret,
+                               b'sec',
+                               exporter_context,
+                               length,
+                               self._suite_id,
+                               self._hashmod)
+
 
 def new(*, receiver_key: EccKey,
         aead_id: AEAD,
@@ -379,8 +417,9 @@ def new(*, receiver_key: EccKey,
         info: Optional[bytes] = None) -> HPKE_Cipher:
     """Create an HPKE context which can be used:
 
-    - by the sender to seal (encrypt) a message or
-    - by the receiver to unseal (decrypt) it.
+    - by the sender to seal (encrypt) a message,
+    - by the receiver to unseal (decrypt) it, or
+    - by either party to export shared secret material.
 
     As a minimum, the two parties agree on the receiver's asymmetric key
     (of which the sender will only know the public half).
@@ -398,10 +437,10 @@ def new(*, receiver_key: EccKey,
         ``NIST P-384``, ``NIST P-521``, ``X25519`` or ``X448``.
 
         If this is a **public** key, the HPKE context can only be used to
-        **seal** (**encrypt**).
+        **seal** (**encrypt**) or **export** a secret.
 
         If this is a **private** key, the HPKE context can only be used to
-        **unseal** (**decrypt**).
+        **unseal** (**decrypt**) or **export** a secret.
 
       aead_id:
         The HPKE identifier of the symmetric cipher.
@@ -410,6 +449,7 @@ def new(*, receiver_key: EccKey,
         * ``HPKE.AEAD.AES128_GCM``
         * ``HPKE.AEAD.AES256_GCM``
         * ``HPKE.AEAD.CHACHA20_POLY1305``
+        * ``HPKE.AEAD.EXPORT_ONLY``
 
       enc:
         The encapsulated session key (i.e., the KEM shared secret).
@@ -448,8 +488,10 @@ def new(*, receiver_key: EccKey,
         be assessed with the first call to ``unseal()``.
     """
 
-    if aead_id not in AEAD:
-        raise ValueError(f"Unknown AEAD cipher ID {aead_id:#x}")
+    try:
+        aead_id = AEAD(aead_id)
+    except ValueError as ve:
+        raise ValueError(f"Unknown AEAD cipher ID {aead_id:#x}") from ve
 
     curve = receiver_key.curve
     if curve not in ('NIST P-256', 'NIST P-384', 'NIST P-521',
