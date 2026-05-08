@@ -7,6 +7,8 @@ Changelog
 Resolved issues
 ---------------
 * GH#875: Fixed the Object Identifiers (OID) for BLAKE2.
+* GH#904: Removed PEM private key markers from installed self-test fixtures,
+  to avoid false positives with artifact security scanners.
 
 3.23.0 (17 May 2025)
 ++++++++++++++++++++++++++

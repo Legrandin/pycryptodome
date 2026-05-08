@@ -52,4 +52,12 @@ def b2a_hex(s):
     # For completeness
     return binascii.b2a_hex(s)
 
+def make_pem(marker, body, as_bytes=False):
+    """Reconstruct a PEM block from its marker and payload."""
+    lines = [line.strip() for line in body.strip().splitlines()]
+    pem = "-----BEGIN " + marker + "-----\n"
+    pem += "\n".join(lines)
+    pem += "\n-----END " + marker + "-----"
+    return b(pem) if as_bytes else pem
+
 # vim:set ts=4 sw=4 sts=4 expandtab:
