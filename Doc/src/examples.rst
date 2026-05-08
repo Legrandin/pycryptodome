@@ -189,9 +189,10 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
 
 .. code-block:: python
 
+    from Crypto.Cipher import AES, PKCS1_OAEP
+    from Crypto.Hash import SHA256
     from Crypto.PublicKey import RSA
     from Crypto.Random import get_random_bytes
-    from Crypto.Cipher import AES, PKCS1_OAEP
 
     data = "I met aliens in UFO. Here is the map.".encode("utf-8")
 
@@ -200,7 +201,7 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
 
     # Encrypt the session key with the public RSA key
 
-    cipher_rsa = PKCS1_OAEP.new(recipient_key)
+    cipher_rsa = PKCS1_OAEP.new(recipient_key, hashAlgo=SHA256)
     enc_session_key = cipher_rsa.encrypt(session_key)
 
     # Encrypt the data with the AES session key
@@ -219,8 +220,9 @@ first, and with that the rest of the file:
 
 .. code-block:: python
 
-    from Crypto.PublicKey import RSA
     from Crypto.Cipher import AES, PKCS1_OAEP
+    from Crypto.Hash import SHA256
+    from Crypto.PublicKey import RSA
 
     private_key = RSA.import_key(open("private.pem").read())
 
@@ -231,7 +233,7 @@ first, and with that the rest of the file:
         ciphertext = f.read()
 
     # Decrypt the session key with the private RSA key
-    cipher_rsa = PKCS1_OAEP.new(private_key)
+    cipher_rsa = PKCS1_OAEP.new(private_key, hashAlgo=SHA256)
     session_key = cipher_rsa.decrypt(enc_session_key)
 
     # Decrypt the data with the AES session key
