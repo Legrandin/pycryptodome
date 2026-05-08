@@ -10,23 +10,28 @@ where it is called ``RSAES-OAEP``.
 It can only encrypt messages slightly shorter than the RSA modulus (a few
 hundred bytes).
 
+The default hash algorithm is SHA-1, as specified in RFC8017. However,
+applications should use a stronger hash function, such as SHA-256,
+whenever interoperability with legacy protocols does not require SHA-1.
+
 The following example shows how you encrypt data by means of
 the recipient's **public key** (here assumed to be
 available locally in a file called ``public.pem``)::
 
         >>> from Crypto.Cipher import PKCS1_OAEP
+        >>> from Crypto.Hash import SHA256
         >>> from Crypto.PublicKey import RSA
         >>>
         >>> message = b'You can attack now!'
         >>> key = RSA.importKey(open('public.pem').read())
-        >>> cipher = PKCS1_OAEP.new(key)
+        >>> cipher = PKCS1_OAEP.new(key, hashAlgo=SHA256)
         >>> ciphertext = cipher.encrypt(message)
 
 The recipient uses its own **private key** to decrypt the message.
 We assume the key is stored in a file called ``private.pem``::
 
         >>> key = RSA.importKey(open('private.pem').read())
-        >>> cipher = PKCS1_OAEP.new(key)
+        >>> cipher = PKCS1_OAEP.new(key, hashAlgo=SHA256)
         >>> message = cipher.decrypt(ciphertext)
 
 .. warning::
