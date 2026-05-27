@@ -14,6 +14,8 @@ from Crypto.Cipher._mode_eax import EaxMode
 from Crypto.Cipher._mode_gcm import GcmMode
 from Crypto.Cipher._mode_siv import SivMode
 from Crypto.Cipher._mode_ocb import OcbMode
+from Crypto.Cipher._mode_kw import KWMode
+from Crypto.Cipher._mode_kwp import KWPMode
 
 MODE_ECB: Literal[1]
 MODE_CBC: Literal[2]
@@ -26,6 +28,8 @@ MODE_EAX: Literal[9]
 MODE_SIV: Literal[10]
 MODE_GCM: Literal[11]
 MODE_OCB: Literal[12]
+MODE_KW: Literal[13]
+MODE_KWP: Literal[14]
 
 # MODE_ECB
 @overload
@@ -150,6 +154,20 @@ def new(key: Buffer,
         mac_len : int = ...,
         use_aesni : bool = ...) -> \
         OcbMode: ...
+
+# MODE_KW
+@overload
+def new(key: Buffer,
+        mode: Literal[13],
+        use_aesni : bool = ...) -> \
+        KWMode: ...
+
+# MODE_KWP
+@overload
+def new(key: Buffer,
+        mode: Literal[14],
+        use_aesni : bool = ...) -> \
+        KWPMode: ...
 
 
 block_size: int
