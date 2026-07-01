@@ -32,7 +32,7 @@ from ._pkcs1_oaep_decode import oaep_decode
 
 
 class PKCS1OAEP_Cipher:
-    """Cipher object for PKCS#1 v1.5 OAEP.
+    """Cipher object for PKCS#1 OAEP.
     Do not create directly: use :func:`new` instead."""
 
     def __init__(self, key, hashAlgo, mgfunc, label, randfunc):
