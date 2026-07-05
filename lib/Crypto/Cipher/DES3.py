@@ -117,7 +117,7 @@ def _create_base_cipher(dict_parameters):
     return SmartPointer(cipher.get(), stop_operation)
 
 
-def new(key, mode, *args, allow_weak_keys=False, **kwargs):
+def new(key, mode, *args, **kwargs):
     """Create a new Triple DES cipher.
 
     :param key:
@@ -181,6 +181,7 @@ def new(key, mode, *args, allow_weak_keys=False, **kwargs):
     :Return: a Triple DES object, of the applicable mode.
     """
 
+    allow_weak_keys = kwargs.pop("allow_weak_keys", False)
     kwargs["allow_weak_keys"] = allow_weak_keys
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
