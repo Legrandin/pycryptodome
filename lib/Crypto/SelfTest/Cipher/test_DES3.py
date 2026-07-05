@@ -138,10 +138,6 @@ class DegenerateToDESTest(unittest.TestCase):
                           sub_key1 + sub_key2 + strxor_c(sub_key2, 0x1),
                           DES3.MODE_ECB)
 
-    def test_allow_weak_keys(self):
-        sub_key1 = bchr(1) * 8
-        sub_key2 = bchr(255) * 8
-
         cipher = DES3.new(sub_key1 * 3, DES3.MODE_ECB, allow_weak_keys=True)
         plaintext = bchr(0) * 8
 
