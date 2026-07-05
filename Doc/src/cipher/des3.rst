@@ -28,8 +28,12 @@ The standard defines 3 *Keying Options*:
 * *Option 3*: *K1* *K2*, and *K3* all match (parity bits ignored).
   As result, Triple DES degrades to Single DES.
 
-**This implementation does not support and will purposefully fail when
-attempting to configure the cipher in Option 3.**
+**By default, this implementation purposefully fails when attempting to
+configure the cipher in Option 3.**
+
+If you need to use such keys for legacy interoperability, pass
+``allow_weak_keys=True`` to :func:`Crypto.Cipher.DES3.new` to bypass this
+check.
 
 As an example, encryption can be done as follows::
 
