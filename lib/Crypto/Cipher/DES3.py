@@ -66,10 +66,10 @@ def adjust_key_parity(key_in, allow_weak_keys=False):
     :returns: a copy of ``key_in``, with the parity bits correctly set
     :rtype: byte string
 
-    :raises ValueError: if the TDES key is not 16 or 24 bytes long
     :param allow_weak_keys: if ``True``, allow keys that degrade to Single DES
     :type allow_weak_keys: bool
 
+    :raises ValueError: if the TDES key is not 16 or 24 bytes long
     :raises ValueError: if the TDES key degenerates into Single DES
     """
 
