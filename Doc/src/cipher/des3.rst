@@ -29,7 +29,8 @@ The standard defines 3 *Keying Options*:
   As result, Triple DES degrades to Single DES.
 
 **By default, this implementation purposefully fails when attempting to
-configure the cipher in Option 3.**
+configure the cipher with a key that degenerates to Single DES (including
+Keying Option 3).**
 
 If you need to use such keys for legacy interoperability, pass
 ``allow_weak_keys=True`` to :func:`Crypto.Cipher.DES3.new` to bypass this

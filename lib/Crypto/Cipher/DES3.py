@@ -181,8 +181,6 @@ def new(key, mode, *args, **kwargs):
     :Return: a Triple DES object, of the applicable mode.
     """
 
-    allow_weak_keys = kwargs.pop("allow_weak_keys", False)
-    kwargs["allow_weak_keys"] = allow_weak_keys
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
 MODE_ECB = 1

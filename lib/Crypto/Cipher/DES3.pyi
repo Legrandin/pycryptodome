@@ -10,7 +10,7 @@ from Crypto.Cipher._mode_ctr import CtrMode
 from Crypto.Cipher._mode_openpgp import OpenPgpMode
 from Crypto.Cipher._mode_eax import EaxMode
 
-def adjust_key_parity(key_in: bytes, allow_weak_keys: bool = ...) -> bytes: ...
+def adjust_key_parity(key_in: Buffer, allow_weak_keys: bool = ...) -> bytes: ...
 
 DES3Mode = int
 
