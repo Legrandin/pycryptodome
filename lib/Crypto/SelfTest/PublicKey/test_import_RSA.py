@@ -28,7 +28,7 @@ import unittest
 from unittest import SkipTest
 
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
+from Crypto.SelfTest.st_common import a2b_hex, list_test_cases, make_pem
 from Crypto.IO import PEM
 from Crypto.Util.py3compat import b, tostr, FileNotFoundError
 from Crypto.Util.number import inverse
@@ -78,35 +78,30 @@ def der2pem(der, text='PUBLIC'):
 
 class ImportKeyTests(unittest.TestCase):
     # 512-bit RSA key generated with openssl
-    rsaKeyPEM = u'''-----BEGIN RSA PRIVATE KEY-----
-MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
+    rsaKeyPEM = make_pem('RSA PRIVATE KEY', """MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
 q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
 Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
 OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
 +rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
 JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
-n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
------END RSA PRIVATE KEY-----'''
+n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==""")
 
     # As above, but this is actually an unencrypted PKCS#8 key
-    rsaKeyPEM8 = u'''-----BEGIN PRIVATE KEY-----
-MIIBVQIBADANBgkqhkiG9w0BAQEFAASCAT8wggE7AgEAAkEAvx4nkAqgiyNRGlwS
+    rsaKeyPEM8 = make_pem('PRIVATE KEY', """MIIBVQIBADANBgkqhkiG9w0BAQEFAASCAT8wggE7AgEAAkEAvx4nkAqgiyNRGlwS
 ga5tkzEsPv6RP5MuvtSS8S0WtGEMMoy24girX0WsvilQgzKY8xIsGfeEkt7fQPDj
 wZAzhQIDAQABAkAJRIMSnxFN7fZ+2rwjAbxaiOXmYB3XAWIg6tn9S/xv3rdYk4mK
 5BxU3b2/FTn4zL0Y9ntEDeGsMEQCgdQM+sg5AiEA8g8vPh2mGIP2KYCSK9jfVFzk
 B8cmJBEDteLFNyMSSiMCIQDKH+kkeSz8yWv6t080Smi0GN9XgzgGSAYAD+KlyZoC
 NwIhAIe+HDApUEvPNOxxPYd5R0R4EyiJdcokAICvewlAkbEhAiBqtGn6bVZIpXUx
 yLAxpM6dtTvDEWz0M/Wm9rvqVgHOBQIhAL2fQKdkInohlipK3Qfk3v5D7ZGjrie7
-BX85JB8zqwHB
------END PRIVATE KEY-----'''
+BX85JB8zqwHB""")
 
     # The same RSA private key as in rsaKeyPEM, but now encrypted
     rsaKeyEncryptedPEM = (
 
         # PEM encryption
         # With DES and passphrase 'test'
-        ('test', u'''-----BEGIN RSA PRIVATE KEY-----
-Proc-Type: 4,ENCRYPTED
+        ('test', make_pem('RSA PRIVATE KEY', """Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-CBC,AF8F9A40BD2FA2FC
 
 Ckl9ex1kaVEWhYC2QBmfaF+YPiR4NFkRXA7nj3dcnuFEzBnY5XULupqQpQI3qbfA
@@ -115,12 +110,10 @@ C6NxQ1IJWOXzTew/xM2I26kPwHIvadq+/VaT8gLQdjdH0jOiVNaevjWnLgrn1mLP
 BCNRMdcexozWtAFNNqSzfW58MJL2OdMi21ED184EFytIc1BlB+FZiGZduwKGuaKy
 9bMbdb/1PSvsSzPsqW7KSSrTw6MgJAFJg6lzIYvR5F4poTVBxwBX3+EyEmShiaNY
 IRX3TgQI0IjrVuLmvlZKbGWP18FXj7I7k9tSsNOOzllTTdq3ny5vgM3A+ynfAaxp
-dysKznQ6P+IoqML1WxAID4aGRMWka+uArOJ148Rbj9s=
------END RSA PRIVATE KEY-----'''),
+dysKznQ6P+IoqML1WxAID4aGRMWka+uArOJ148Rbj9s=""")),
 
         # PKCS8 encryption
-        ('winter', u'''-----BEGIN ENCRYPTED PRIVATE KEY-----
-MIIBpjBABgkqhkiG9w0BBQ0wMzAbBgkqhkiG9w0BBQwwDgQIeZIsbW3O+JcCAggA
+        ('winter', make_pem('ENCRYPTED PRIVATE KEY', """MIIBpjBABgkqhkiG9w0BBQ0wMzAbBgkqhkiG9w0BBQwwDgQIeZIsbW3O+JcCAggA
 MBQGCCqGSIb3DQMHBAgSM2p0D8FilgSCAWBhFyP2tiGKVpGj3mO8qIBzinU60ApR
 3unvP+N6j7LVgnV2lFGaXbJ6a1PbQXe+2D6DUyBLo8EMXrKKVLqOMGkFMHc0UaV6
 R6MmrsRDrbOqdpTuVRW+NVd5J9kQQh4xnfU/QrcPPt7vpJvSf4GzG0n666Ki50OV
@@ -128,8 +121,7 @@ M/feuVlIiyGXY6UWdVDpcOV72cq02eNUs/1JWdh2uEBvA9fCL0c07RnMrdT+CbJQ
 NjJ7f8ULtp7xvR9O3Al/yJ4Wv3i4VxF1f3MCXzhlUD4I0ONlr0kJWgeQ80q/cWhw
 ntvgJwnCn2XR1h6LA8Wp+0ghDTsL2NhJpWd78zClGhyU4r3hqu1XDjoXa7YCXCix
 jCV15+ViDJzlNCwg+W6lRg18sSLkCT7alviIE0U5tHc6UPbbHwT5QqAxAABaP+nZ
-CGqJGyiwBzrKebjgSm/KRd4C91XqcsysyH2kKPfT51MLAoD4xelOURBP
------END ENCRYPTED PRIVATE KEY-----'''
+CGqJGyiwBzrKebjgSm/KRd4C91XqcsysyH2kKPfT51MLAoD4xelOURBP""")
         ),
     )
 

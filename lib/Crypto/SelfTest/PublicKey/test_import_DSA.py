@@ -142,9 +142,7 @@ tPG+TJKpGYb7pVk=
         self.assertEqual(self.der_private, encoded)
 
     # 4.
-    pem_private="""\
------BEGIN DSA PRIVATE KEY-----
-MIIBuwIBAAKBgQDnVu4XF/S2eUx8IUckoZdjdCxFVytLP4/ztE876fRM4DmidXaV
+    pem_private = make_pem('DSA PRIVATE KEY', """MIIBuwIBAAKBgQDnVu4XF/S2eUx8IUckoZdjdCxFVytLP4/ztE876fRM4DmidXaV
 7JFWl9p075FPzRsFZg4kGcdh1jn0XS15uALb0j56uLgbR5o4Dh8wkyWEuioLlVAy
 NC68g8tcqQbnsNfNb+ZWzstMi1p3EjqMZ1CkgeOwYFev9qpuumILgy1gwwIVAK0y
 9IzTrgxFoZimH6S14gMgdjsjAoGAed/cPWFP5jX8636urjcY3C7++0UoKZOsZ0nc
@@ -153,8 +151,7 @@ BArKcLjVggWZcRkA77yWGBLDVd2b7/4JgdqFxVSAdLQcVq5D/TANiSYuTv2JlD+Z
 plGwOIgCgYEAgzUqaaEy80hD0qDrmVv/Ti8IOnPwBJ0skeovDOQ9FEq9pIGZ5LAD
 xXCor4MwPUUQX2BsXEjZJaQO2cJjDC+kzb+DhTneuaKfkZCF8gRjafYnyoSyyx4s
 eUBWS2cPljqxFk1OLKK/b/058S9UiSi/TS0bXmmAtPG+TJKpGYb7pVkCFF69mj8L
-ggadmEIJhrMUIVAldWBl
------END DSA PRIVATE KEY-----"""
+ggadmEIJhrMUIVAldWBl""")
 
     def testImportKey4(self):
         for pem in (self.pem_private, tostr(self.pem_private)):
@@ -204,16 +201,13 @@ ggadmEIJhrMUIVAldWBl
         self.assertEqual(self.der_pkcs8, encoded)
 
     # 6.
-    pem_pkcs8="""\
------BEGIN PRIVATE KEY-----
-MIIBSgIBADCCASsGByqGSM44BAEwggEeAoGBAOdW7hcX9LZ5THwhRyShl2N0LEVX
+    pem_pkcs8 = make_pem('PRIVATE KEY', """MIIBSgIBADCCASsGByqGSM44BAEwggEeAoGBAOdW7hcX9LZ5THwhRyShl2N0LEVX
 K0s/j/O0Tzvp9EzgOaJ1dpXskVaX2nTvkU/NGwVmDiQZx2HWOfRdLXm4AtvSPnq4
 uBtHmjgOHzCTJYS6KguVUDI0LryDy1ypBuew181v5lbOy0yLWncSOoxnUKSB47Bg
 V6/2qm66YguDLWDDAhUArTL0jNOuDEWhmKYfpLXiAyB2OyMCgYB539w9YU/mNfzr
 fq6uNxjcLv77RSgpk6xnSdyDwiPYwYhyljFrOwtURmz0RPNLguNVTQuQp3j6rxMG
 8CXa5qPjbH+T3VusQFK5I3AECspwuNWCBZlxGQDvvJYYEsNV3Zvv/gmB2oXFVIB0
-tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
------END PRIVATE KEY-----"""
+tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==""")
 
     def testImportKey6(self):
         for pem in (self.pem_pkcs8, tostr(self.pem_pkcs8)):
@@ -252,9 +246,7 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
         self.assertEqual(self.ssh_pub, encoded)
 
     # 8. Encrypted OpenSSL/OpenSSH
-    pem_private_encrypted="""\
------BEGIN DSA PRIVATE KEY-----
-Proc-Type: 4,ENCRYPTED
+    pem_private_encrypted = make_pem('DSA PRIVATE KEY', """Proc-Type: 4,ENCRYPTED
 DEK-Info: AES-128-CBC,70B6908939D65E9F2EB999E8729788CE
 
 4V6GHRDpCrdZ8MBjbyp5AlGUrjvr2Pn2e2zVxy5RBt4FBj9/pa0ae0nnyUPMLSUU
@@ -266,8 +258,7 @@ nnPqHxmhMQozBWzYM4mQuo3XbF2WlsNFbOzFVyGhw1Bx1s91qvXBVWJh2ozrW0s6
 HYDV7ZkcTml/4kjA/d+mve6LZ8kuuR1qCiZx6rkffhh1gDN/1Xz3HVvIy/dQ+h9s
 5zp7PwUoWbhqp3WCOr156P6gR8qo7OlT6wMh33FSXK/mxikHK136fV2shwTKQVII
 rJBvXpj8nACUmi7scKuTWGeUoXa+dwTZVVe+b+L2U1ZM7+h/neTJiXn7u99PFUwu
-xVJtxaV37m3aXxtCsPnbBg==
------END DSA PRIVATE KEY-----"""
+xVJtxaV37m3aXxtCsPnbBg==""")
 
     def testImportKey8(self):
         for pem in (self.pem_private_encrypted, tostr(self.pem_private_encrypted)):
@@ -292,17 +283,14 @@ xVJtxaV37m3aXxtCsPnbBg==
 
     # 9. Encrypted PKCS8
     # pbeWithMD5AndDES-CBC
-    pem_pkcs8_encrypted="""\
------BEGIN ENCRYPTED PRIVATE KEY-----
-MIIBcTAbBgkqhkiG9w0BBQMwDgQI0GC3BJ/jSw8CAggABIIBUHc1cXZpExIE9tC7
+    pem_pkcs8_encrypted = make_pem('ENCRYPTED PRIVATE KEY', """MIIBcTAbBgkqhkiG9w0BBQMwDgQI0GC3BJ/jSw8CAggABIIBUHc1cXZpExIE9tC7
 7ryiW+5ihtF2Ekurq3e408GYSAu5smJjN2bvQXmzRFBz8W38K8eMf1sbWroZ4+zn
 kZSbb9nSm5kAa8lR2+oF2k+WRswMR/PTC3f/D9STO2X0QxdrzKgIHEcSGSHp5jTx
 aVvbkCDHo9vhBTl6S3ogZ48As/MEro76+9igUwJ1jNhIQZPJ7e20QH5qDpQFFJN4
 CKl2ENSEuwGiqBszItFy4dqH0g63ZGZV/xt9wSO9Rd7SK/EbA/dklOxBa5Y/VItM
 gnIhs9XDMoGYyn6F023EicNJm6g/bVQk81BTTma4tm+12TKGdYm+QkeZvCOMZylr
 Wv67cKwO3cAXt5C3QXMDgYR64XvuaT5h7C0igMp2afSXJlnbHEbFxQVJlv83T4FM
-eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
------END ENCRYPTED PRIVATE KEY-----"""
+eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==""")
 
     def testImportKey9(self):
         for pem in (self.pem_pkcs8_encrypted, tostr(self.pem_pkcs8_encrypted)):

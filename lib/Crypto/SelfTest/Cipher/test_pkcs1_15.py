@@ -25,7 +25,7 @@ from __future__ import print_function
 import unittest
 
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.st_common import list_test_cases, a2b_hex
+from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, make_pem
 from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
 from Crypto.Util.py3compat import b
@@ -68,8 +68,7 @@ class PKCS1_15_Tests(unittest.TestCase):
                 #
                 (
                 # Private key
-                '''-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQDAiAnvIAOvqVwJTaYzsKnefZftgtXGE2hPJppGsWl78yz9jeXY
+                make_pem('RSA PRIVATE KEY', """MIICXAIBAAKBgQDAiAnvIAOvqVwJTaYzsKnefZftgtXGE2hPJppGsWl78yz9jeXY
 W/FxX/gTPURArNhdnhP6n3p2ZaDIBrO2zizbgIXs0IsljTTcr4vnI8fMXzyNUOjA
 zP3nzMqZDZK6757XQAobOssMkBFqRWwilT/3DsBhRpl3iMUhF+wvpTSHewIDAQAB
 AoGAC4HV/inOrpgTvSab8Wj0riyZgQOZ3U3ZpSlsfR8ra9Ib9Uee3jCYnKscu6Gk
@@ -81,8 +80,7 @@ d3XHFBBQWA6xcvQb5w+VVEJZzw64y25sHwJBAMYReRl6SzL0qA0wIYrYWrOt8JeQ
 8mthulcWHXmqTgC6FEXP9Es5GD7/fuKl4wqLKZgIbH4nqvvGay7xXLCXD/ECQH9a
 1JYNMtRen5unSAbIOxRcKkWz92F0LKpm9ZW/S9vFHO+mBcClMGoKJHiuQxLBsLbT
 NtEZfSJZAeS2sUtn3/0CQDb2M2zNBTF8LlM0nxmh0k9VGm5TVIyBEMcipmvOgqIs
-HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
------END RSA PRIVATE KEY-----''',
+HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU="""),
                 # Plaintext
                 '''THIS IS PLAINTEXT\x0A''',
                 # Ciphertext

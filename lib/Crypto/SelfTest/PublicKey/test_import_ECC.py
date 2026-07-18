@@ -34,7 +34,7 @@ import warnings
 import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import list_test_cases, make_pem
 from Crypto.Util.py3compat import bord, tostr, FileNotFoundError
 from Crypto.Util.asn1 import DerSequence, DerBitString
 from Crypto.Util.number import bytes_to_long
@@ -187,12 +187,10 @@ class TestImport(unittest.TestCase):
 
     def test_mismatch(self):
         # The private key does not match the public key
-        mismatch = """-----BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAAAAAAAAAAAAAAAAAA
+        mismatch = make_pem('PRIVATE KEY', """MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAAAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJChZANiAAQarFRaqflo
 I+d61SRvU8Za2EurxtW20eZzca7dnNYMYf3boIkDuAUU7FfO7l0/4iGzzvfUinng
-o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=
------END PRIVATE KEY-----"""
+o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=""")
         self.assertRaises(ValueError, ECC.import_key, mismatch)
 
     def test_import_private_rfc5915_none(self):
@@ -1120,18 +1118,14 @@ class TestExport_P192(unittest.TestCase):
     def test_compressed_curve(self):
 
         # Compressed P-192 curve (Y-point is even)
-        pem1 = """-----BEGIN EC PRIVATE KEY-----
-        MF8CAQEEGHvhXmIW95JxZYfd4AUPu9BwknjuvS36aqAKBggqhkjOPQMBAaE0AzIA
-        BLJZCyTu35DQIlqvMlBynn3k1Ig+dWfg/brRhHecxptrbloqFSP8ITw0CwbGF+2X
-        5g==
-        -----END EC PRIVATE KEY-----"""
+        pem1 = make_pem('EC PRIVATE KEY', """MF8CAQEEGHvhXmIW95JxZYfd4AUPu9BwknjuvS36aqAKBggqhkjOPQMBAaE0AzIA
+BLJZCyTu35DQIlqvMlBynn3k1Ig+dWfg/brRhHecxptrbloqFSP8ITw0CwbGF+2X
+5g==""")
 
         # Compressed P-192 curve (Y-point is odd)
-        pem2 = """-----BEGIN EC PRIVATE KEY-----
-        MF8CAQEEGA3rAotUaWl7d47eX6tz9JmLzOMJwl13XaAKBggqhkjOPQMBAaE0AzIA
-        BG4tHlTBBBGokcWmGm2xubVB0NvPC/Ou5AYwivs+3iCxmEjsymVAj6iiuX2Lxr6g
-        /Q==
-        -----END EC PRIVATE KEY-----"""
+        pem2 = make_pem('EC PRIVATE KEY', """MF8CAQEEGA3rAotUaWl7d47eX6tz9JmLzOMJwl13XaAKBggqhkjOPQMBAaE0AzIA
+BG4tHlTBBBGokcWmGm2xubVB0NvPC/Ou5AYwivs+3iCxmEjsymVAj6iiuX2Lxr6g
+/Q==""")
 
         key1 = ECC.import_key(pem1)
         low16 = int(key1.pointQ.y % 65536)
@@ -1375,18 +1369,14 @@ class TestExport_P224(unittest.TestCase):
     def test_compressed_curve(self):
 
         # Compressed P-224 curve (Y-point is even)
-        pem1 = """-----BEGIN EC PRIVATE KEY-----
-        MGgCAQEEHPYicBNI9nd6wDKAX2l+f3A0Q+KWUQeMqSt5GoOgBwYFK4EEACGhPAM6
-        AATCL6rUIDT14zXKoS5GQUMDP/tpc+1iI/FyEZikt2roKDkhU5q08srmqaysbfJN
-        eUr7Xf1lnCVGag==
-        -----END EC PRIVATE KEY-----"""
+        pem1 = make_pem('EC PRIVATE KEY', """MGgCAQEEHPYicBNI9nd6wDKAX2l+f3A0Q+KWUQeMqSt5GoOgBwYFK4EEACGhPAM6
+AATCL6rUIDT14zXKoS5GQUMDP/tpc+1iI/FyEZikt2roKDkhU5q08srmqaysbfJN
+eUr7Xf1lnCVGag==""")
 
         # Compressed P-224 curve (Y-point is odd)
-        pem2 = """-----BEGIN EC PRIVATE KEY-----
-        MGgCAQEEHEFjbaVPLJ3ngZyCibCvT0RLUqSlHjC5Z3e0FtugBwYFK4EEACGhPAM6
-        AAT5IvL2V6m48y1JLMGr6ZbnOqNKP9hMf9mxyVkk6/SaRoBoJVkXrNIpYL0P7DS7
-        QF8E/OGeZRwvow==
-        -----END EC PRIVATE KEY-----"""
+        pem2 = make_pem('EC PRIVATE KEY', """MGgCAQEEHEFjbaVPLJ3ngZyCibCvT0RLUqSlHjC5Z3e0FtugBwYFK4EEACGhPAM6
+AAT5IvL2V6m48y1JLMGr6ZbnOqNKP9hMf9mxyVkk6/SaRoBoJVkXrNIpYL0P7DS7
+QF8E/OGeZRwvow==""")
 
         key1 = ECC.import_key(pem1)
         low16 = int(key1.pointQ.y % 65536)
@@ -1665,16 +1655,12 @@ class TestExport_P256(unittest.TestCase):
     def test_compressed_curve(self):
 
         # Compressed P-256 curve (Y-point is even)
-        pem1 = """-----BEGIN EC PRIVATE KEY-----
-        MFcCAQEEIHTuc09jC51xXomV6MVCDN+DpAAvSmaJWZPTEHM6D5H1oAoGCCqGSM49
-        AwEHoSQDIgACWFuGbHe8yJ43rir7PMTE9w8vHz0BSpXHq90Xi7/s+a0=
-        -----END EC PRIVATE KEY-----"""
+        pem1 = make_pem('EC PRIVATE KEY', """MFcCAQEEIHTuc09jC51xXomV6MVCDN+DpAAvSmaJWZPTEHM6D5H1oAoGCCqGSM49
+AwEHoSQDIgACWFuGbHe8yJ43rir7PMTE9w8vHz0BSpXHq90Xi7/s+a0=""")
 
         # Compressed P-256 curve (Y-point is odd)
-        pem2 = """-----BEGIN EC PRIVATE KEY-----
-        MFcCAQEEIFggiPN9SQP+FAPTCPp08fRUz7rHp2qNBRcBJ1DXhb3ZoAoGCCqGSM49
-        AwEHoSQDIgADLpph1trTIlVfa8NJvlMUPyWvL+wP+pW3BJITUL/wj9A=
-        -----END EC PRIVATE KEY-----"""
+        pem2 = make_pem('EC PRIVATE KEY', """MFcCAQEEIFggiPN9SQP+FAPTCPp08fRUz7rHp2qNBRcBJ1DXhb3ZoAoGCCqGSM49
+AwEHoSQDIgADLpph1trTIlVfa8NJvlMUPyWvL+wP+pW3BJITUL/wj9A=""")
 
         key1 = ECC.import_key(pem1)
         low16 = int(key1.pointQ.y % 65536)
@@ -1954,20 +1940,16 @@ class TestExport_P384(unittest.TestCase):
         # Compressed P-384 curve (Y-point is even)
         # openssl ecparam -name secp384p1 -genkey -noout -conv_form compressed -out /tmp/a.pem
         # openssl ec -in /tmp/a.pem -text -noout
-        pem1 = """-----BEGIN EC PRIVATE KEY-----
-MIGkAgEBBDAM0lEIhvXuekK2SWtdbgOcZtBaxa9TxfpO/GcDFZLCJ3JVXaTgwken
+        pem1 = make_pem('EC PRIVATE KEY', """MIGkAgEBBDAM0lEIhvXuekK2SWtdbgOcZtBaxa9TxfpO/GcDFZLCJ3JVXaTgwken
 QT+C+XLtD6WgBwYFK4EEACKhZANiAATs0kZMhFDu8DoBC21jrSDPyAUn4aXZ/DM4
 ylhDfWmb4LEbeszXceIzfhIUaaGs5y1xXaqf5KXTiAAYx2pKUzAAM9lcGUHCGKJG
-k4AgUmVJON29XoUilcFrzjDmuye3B6Q=
------END EC PRIVATE KEY-----"""
+k4AgUmVJON29XoUilcFrzjDmuye3B6Q=""")
 
         # Compressed P-384 curve (Y-point is odd)
-        pem2 = """-----BEGIN EC PRIVATE KEY-----
-MIGkAgEBBDDHPFTslYLltE16fHdSDTtE/2HTmd3M8mqy5MttAm4wZ833KXiGS9oe
+        pem2 = make_pem('EC PRIVATE KEY', """MIGkAgEBBDDHPFTslYLltE16fHdSDTtE/2HTmd3M8mqy5MttAm4wZ833KXiGS9oe
 kFdx9sNV0KygBwYFK4EEACKhZANiAASLIE5RqVMtNhtBH/u/p/ifqOAlKnK/+RrQ
 YC46ZRsnKNayw3wATdPjgja7L/DSII3nZK0G6KOOVwJBznT/e+zudUJYhZKaBLRx
-/bgXyxUtYClOXxb1Y/5N7txLstYRyP0=
------END EC PRIVATE KEY-----"""
+/bgXyxUtYClOXxb1Y/5N7txLstYRyP0=""")
 
         key1 = ECC.import_key(pem1)
         low16 = int(key1.pointQ.y % 65536)
@@ -2253,22 +2235,18 @@ class TestExport_P521(unittest.TestCase):
         # Compressed P-521 curve (Y-point is even)
         # openssl ecparam -name secp521r1 -genkey -noout -conv_form compressed -out /tmp/a.pem
         # openssl ec -in /tmp/a.pem -text -noout
-        pem1 = """-----BEGIN EC PRIVATE KEY-----
-MIHcAgEBBEIAnm1CEjVjvNfXEN730p+D6su5l+mOztdc5XmTEoti+s2R4GQ4mAv3
+        pem1 = make_pem('EC PRIVATE KEY', """MIHcAgEBBEIAnm1CEjVjvNfXEN730p+D6su5l+mOztdc5XmTEoti+s2R4GQ4mAv3
 0zYLvyklvOHw0+yy8d0cyGEJGb8T3ZVKmg2gBwYFK4EEACOhgYkDgYYABAHzjTI1
 ckxQ3Togi0LAxiG0PucdBBBs5oIy3df95xv6SInp70z+4qQ2EltEmdNMssH8eOrl
 M5CYdZ6nbcHMVaJUvQEzTrYxvFjOgJiOd+E9eBWbLkbMNqsh1UKVO6HbMbW0ohCI
-uGxO8tM6r3w89/qzpG2SvFM/fvv3mIR30wSZDD84qA==
------END EC PRIVATE KEY-----"""
+uGxO8tM6r3w89/qzpG2SvFM/fvv3mIR30wSZDD84qA==""")
 
         # Compressed P-521 curve (Y-point is odd)
-        pem2 = """-----BEGIN EC PRIVATE KEY-----
-MIHcAgEBBEIB84OfhJluLBRLn3+cC/RQ37C2SfQVP/t0gQK2tCsTf5avRcWYRrOJ
+        pem2 = make_pem('EC PRIVATE KEY', """MIHcAgEBBEIB84OfhJluLBRLn3+cC/RQ37C2SfQVP/t0gQK2tCsTf5avRcWYRrOJ
 PmX9lNnkC0Hobd75QFRmdxrB0Wd1/M4jZOWgBwYFK4EEACOhgYkDgYYABAAMZcdJ
 1YLCGHt3bHCEzdidVy6+brlJIbv1aQ9fPQLF7WKNv4c8w3H8d5a2+SDZilBOsk5c
 6cNJDMz2ExWQvxl4CwDJtJGt1+LHVKFGy73NANqVxMbRu+2F8lOxkNp/ziFTbVyV
-vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
------END EC PRIVATE KEY-----"""
+vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==""")
 
         key1 = ECC.import_key(pem1)
         low16 = int(key1.pointQ.y % 65536)

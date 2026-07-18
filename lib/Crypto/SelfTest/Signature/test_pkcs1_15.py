@@ -35,7 +35,7 @@ from binascii import unhexlify
 from Crypto.Util.py3compat import bchr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import list_test_cases, make_pem
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
 
 from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512, SHA3_384,
@@ -149,15 +149,13 @@ class PKCS1_15_NoParams(unittest.TestCase):
     """Verify that PKCS#1 v1.5 signatures pass even without NULL parameters in
     the algorithm identifier (PyCrypto/LP bug #1119552)."""
 
-    rsakey = """-----BEGIN RSA PRIVATE KEY-----
-            MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
-            q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
-            Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
-            OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
-            +rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
-            JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
-            n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
-            -----END RSA PRIVATE KEY-----"""
+    rsakey = make_pem('RSA PRIVATE KEY', """MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
+q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
+Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
+OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
++rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
+JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
+n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==""")
 
     msg = b"This is a test\x0a"
 
