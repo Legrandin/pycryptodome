@@ -13,7 +13,7 @@ def W(cipher: ModuleType,
     S = [plaintext[i:i+8] for i in range(0, len(plaintext), 8)]
     n = len(S)
     s = 6 * (n - 1)
-    A = S[0]
+    A = bytes(S[0])
     R = deque(S[1:])
 
     for t in range(1, s + 1):
@@ -31,7 +31,7 @@ def W_inverse(cipher: ModuleType,
     C = [ciphertext[i:i+8] for i in range(0, len(ciphertext), 8)]
     n = len(C)
     s = 6 * (n - 1)
-    A = C[0]
+    A = bytes(C[0])
     R = deque(C[1:])
 
     for t in range(s, 0, -1):
