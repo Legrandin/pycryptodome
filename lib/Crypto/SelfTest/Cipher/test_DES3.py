@@ -138,6 +138,19 @@ class DegenerateToDESTest(unittest.TestCase):
                           sub_key1 + sub_key2 + strxor_c(sub_key2, 0x1),
                           DES3.MODE_ECB)
 
+        cipher = DES3.new(sub_key1 * 3, DES3.MODE_ECB, allow_weak_keys=True)
+        plaintext = bchr(0) * 8
+
+        ciphertext = cipher.encrypt(plaintext)
+        self.assertEqual(len(ciphertext), 8)
+        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+
+        cipher = DES3.new(sub_key1 + sub_key2 * 2, DES3.MODE_ECB,
+                          allow_weak_keys=True)
+        ciphertext = cipher.encrypt(plaintext)
+        self.assertEqual(len(ciphertext), 8)
+        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+
 
 class TestOutput(unittest.TestCase):
 
