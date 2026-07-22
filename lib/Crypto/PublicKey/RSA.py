@@ -271,7 +271,8 @@ class RsaKey(object):
             - ``'PEM'``. (default) Text output, according to `RFC1421`_/`RFC1423`_.
             - ``'DER'``. Binary output.
             - ``'OpenSSH'``. Text output, according to the OpenSSH specification.
-              Only suitable for public keys (not private keys).
+              Only suitable for public keys (not private keys). If used with an 
+              RSA private key, will export the corresponding public key instead.
 
             Note that PEM contains a DER structure.
 
