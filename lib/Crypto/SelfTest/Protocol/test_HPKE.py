@@ -53,6 +53,8 @@ class HPKE_Tests(unittest.TestCase):
     def test_round_trip(self):
         for curve in self.curves.keys():
             for aead_id in HPKE.AEAD:
+                if aead_id == HPKE.AEAD.EXPORT_ONLY:
+                    continue
                 self.round_trip(curve, aead_id)
 
     def test_psk(self):
@@ -328,6 +330,74 @@ class HPKE_Tests(unittest.TestCase):
 
         pt_X1 = decryptor.unseal(ct1, aad1)
         self.assertEqual(pt_X1, pt)
+
+    def test_x25519_export_only_mode_0(self):
+        # RFC x9180, A.7.1
+
+        keyR_hex = "33d196c830a12f9ac65d6e565a590d80f04ee9b19c83c87f2c170d972a812848"
+        keyR = DH.import_x25519_private_key(bytes.fromhex(keyR_hex))
+
+        enc_hex = "e5e8f9bfff6c2f29791fc351d2c25ce1299aa5eaca78a757c0b4fb4bcd830918"
+        enc = bytes.fromhex(enc_hex)
+
+        info_hex = "4f6465206f6e2061204772656369616e2055726e"
+        info = bytes.fromhex(info_hex)
+
+        decryptor = HPKE.new(receiver_key=keyR,
+                             aead_id=HPKE.AEAD.EXPORT_ONLY,
+                             info=info,
+                             enc=enc)
+
+        self.assertEqual(
+            decryptor.export(b'', 32),
+            bytes.fromhex("7a36221bd56d50fb51ee65edfd98d06a23c4dc87085aa5866cb7087244bd2a36")
+        )
+        self.assertEqual(
+            decryptor.export(b'\x00', 32),
+            bytes.fromhex("d5535b87099c6c3ce80dc112a2671c6ec8e811a2f284f948cec6dd1708ee33f0")
+        )
+        self.assertEqual(
+            decryptor.export(b'TestContext', 32),
+            bytes.fromhex("ffaabc85a776136ca0c378e5d084c9140ab552b78f039d2e8775f26efff4c70e")
+        )
+
+    def test_export_only_accepts_integer_aead_id(self):
+        keyR_hex = "33d196c830a12f9ac65d6e565a590d80f04ee9b19c83c87f2c170d972a812848"
+        keyR = DH.import_x25519_private_key(bytes.fromhex(keyR_hex))
+
+        enc_hex = "e5e8f9bfff6c2f29791fc351d2c25ce1299aa5eaca78a757c0b4fb4bcd830918"
+        enc = bytes.fromhex(enc_hex)
+
+        info_hex = "4f6465206f6e2061204772656369616e2055726e"
+        info = bytes.fromhex(info_hex)
+
+        decryptor = HPKE.new(receiver_key=keyR,
+                             aead_id=0xFFFF,
+                             info=info,
+                             enc=enc)
+
+        self.assertEqual(
+            decryptor.export(b'', 32),
+            bytes.fromhex("7a36221bd56d50fb51ee65edfd98d06a23c4dc87085aa5866cb7087244bd2a36")
+        )
+
+    def test_neg_export_only_cannot_seal_or_unseal(self):
+        keyR = ECC.generate(curve='p256')
+
+        encryptor = HPKE.new(receiver_key=keyR.public_key(),
+                             aead_id=HPKE.AEAD.EXPORT_ONLY)
+
+        with self.assertRaises(ValueError) as cm:
+            encryptor.seal(b'ABC')
+        self.assertIn("export-only", str(cm.exception))
+
+        decryptor = HPKE.new(receiver_key=keyR,
+                             aead_id=HPKE.AEAD.EXPORT_ONLY,
+                             enc=encryptor.enc)
+
+        with self.assertRaises(ValueError) as cm:
+            decryptor.unseal(b'ABC')
+        self.assertIn("export-only", str(cm.exception))
 
 
 class HPKE_TestVectors(unittest.TestCase):

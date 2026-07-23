@@ -100,6 +100,19 @@ And this is how the receiver can decrypt them::
         pt1 = decryptor.unseal(ct_1)
         pt2 = decryptor.unseal(ct_2)
 
+HPKE can also derive shared secret material without encrypting messages::
+
+        from Crypto.Protocol import HPKE
+
+        exporter = HPKE.new(receiver_key=their_pub_key,
+                            aead_id=HPKE.AEAD.EXPORT_ONLY)
+
+        secret = exporter.export(b'example context', 32)
+
+        # The sender will deliver exporter.enc as enc.
+        # The receiver will create the same context with its private key
+        # and call export() with the same context and length.
+
 Specification
 ~~~~~~~~~~~~~
 
