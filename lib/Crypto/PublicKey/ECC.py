@@ -959,6 +959,49 @@ def _import_openssh_public(encoded):
         raise ValueError("Not an openssh public key")
 
     try:
+        if parts[0].endswith(b"-cert-v01@openssh.com"):
+            from ._openssh import (import_openssh_public_cert_generic,
+                                   read_bytes,
+                                   check_openssh_public_cert_footer)
+
+            key_type, keystring = import_openssh_public_cert_generic(encoded)
+
+            # NIST P curves
+            if key_type.startswith(b"ecdsa-sha2-"):
+                ecdsa_curve_name, keystring = read_bytes(keystring)
+                expected_type = (b"ecdsa-sha2-" + ecdsa_curve_name +
+                                 b"-cert-v01@openssh.com")
+                if key_type != expected_type:
+                    raise ValueError("Mismatch in openssh public certificate")
+
+                for curve_name, curve in _curves.items():
+                    if curve.openssh is None:
+                        continue
+                    if not curve.openssh.startswith("ecdsa-sha2"):
+                        continue
+                    middle = tobytes(curve.openssh.split("-")[2])
+                    if ecdsa_curve_name == middle:
+                        break
+                else:
+                    raise ValueError("Unsupported ECC curve: " +
+                                     tostr(ecdsa_curve_name))
+
+                public_key, keystring = read_bytes(keystring)
+                check_openssh_public_cert_footer(keystring)
+                ecc_key = _import_public_der(public_key, curve_oid=curve.oid)
+
+            # EdDSA
+            elif key_type == b"ssh-ed25519-cert-v01@openssh.com":
+                public_key, keystring = read_bytes(keystring)
+                check_openssh_public_cert_footer(keystring)
+                x, y = _import_ed25519_public_key(public_key)
+                ecc_key = construct(curve="Ed25519", point_x=x, point_y=y)
+            else:
+                raise ValueError("Unsupported SSH certificate type: " +
+                                 tostr(key_type))
+
+            return ecc_key
+
         keystring = binascii.a2b_base64(parts[1])
 
         keyparts = []
@@ -982,7 +1025,7 @@ def _import_openssh_public(encoded):
                 if keyparts[1] == middle:
                     break
             else:
-                raise ValueError("Unsupported ECC curve: " + middle)
+                raise ValueError("Unsupported ECC curve: " + tostr(middle))
 
             ecc_key = _import_public_der(keyparts[2], curve_oid=curve.oid)
 
@@ -991,10 +1034,10 @@ def _import_openssh_public(encoded):
             x, y = _import_ed25519_public_key(keyparts[1])
             ecc_key = construct(curve="Ed25519", point_x=x, point_y=y)
         else:
-            raise ValueError("Unsupported SSH key type: " + parts[0])
+            raise ValueError("Unsupported SSH key type: " + tostr(parts[0]))
 
     except (IndexError, TypeError, binascii.Error):
-        raise ValueError("Error parsing SSH key type: " + parts[0])
+        raise ValueError("Error parsing SSH key type: " + tostr(parts[0]))
 
     return ecc_key
 
@@ -1212,6 +1255,8 @@ def import_key(encoded, passphrase=None, curve_name=None):
           You must also provide the ``curve_name`` (with a value from the `ECC table`_)
         * OpenSSH line, defined in RFC5656_ and RFC8709_ (ASCII).
           This is normally the content of files like ``~/.ssh/id_ecdsa.pub``.
+          OpenSSH public certificate lines are also accepted and imported
+          as regular public keys.
 
         Supported formats for an ECC **private** key:
 

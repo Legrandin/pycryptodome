@@ -612,7 +612,8 @@ def import_key(extern_key, passphrase=None):
 
         - X.509 certificate (binary DER or PEM)
         - X.509 ``subjectPublicKeyInfo`` (binary DER or PEM)
-        - OpenSSH (ASCII one-liner, see `RFC4253`_)
+        - OpenSSH (ASCII one-liner, see `RFC4253`_), including public
+          certificate lines.
 
         The following formats are supported for a DSA **private** key:
 
@@ -663,6 +664,24 @@ def import_key(extern_key, passphrase=None):
         if keyparts[0] == b"ssh-dss":
             tup = [Integer.from_bytes(keyparts[x]) for x in (4, 3, 1, 2)]
             return construct(tup)
+
+    if extern_key.startswith(b'ssh-dss-cert-v01@openssh.com '):
+        from ._openssh import (import_openssh_public_cert_generic,
+                               read_bytes,
+                               check_openssh_public_cert_footer)
+
+        key_type, keystring = import_openssh_public_cert_generic(extern_key)
+        if key_type != b"ssh-dss-cert-v01@openssh.com":
+            raise ValueError("This SSH certificate is not DSA")
+
+        p, keystring = read_bytes(keystring)
+        q, keystring = read_bytes(keystring)
+        g, keystring = read_bytes(keystring)
+        y, keystring = read_bytes(keystring)
+        check_openssh_public_cert_footer(keystring)
+
+        tup = [Integer.from_bytes(x) for x in (y, g, p, q)]
+        return construct(tup)
 
     if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
         # This is probably a DER encoded key

@@ -29,6 +29,7 @@
 # ===================================================================
 
 import struct
+import binascii
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
@@ -42,6 +43,13 @@ def read_int4(data):
         raise ValueError("Insufficient data")
     value = struct.unpack(">I", data[:4])[0]
     return value, data[4:]
+
+
+def read_int8(data):
+    if len(data) < 8:
+        raise ValueError("Insufficient data")
+    value = struct.unpack(">Q", data[:8])[0]
+    return value, data[8:]
 
 
 def read_bytes(data):
@@ -60,6 +68,46 @@ def check_padding(pad):
     for v, x in enumerate(pad):
         if bord(x) != ((v + 1) & 0xFF):
             raise ValueError("Incorrect padding")
+
+
+def import_openssh_public_cert_generic(data):
+    # https://cvsweb.openbsd.org/src/PROTOCOL.certkeys
+
+    parts = data.split(b' ')
+    if len(parts) not in (2, 3):
+        raise ValueError("Not an openssh public certificate")
+
+    cert_type = parts[0]
+    if not cert_type.endswith(b"-cert-v01@openssh.com"):
+        raise ValueError("Not an openssh public certificate")
+
+    try:
+        cert = binascii.a2b_base64(parts[1])
+    except binascii.Error as exc:
+        raise ValueError("Invalid OpenSSH certificate encoding") from exc
+
+    inner_type, cert = read_bytes(cert)
+    if inner_type != cert_type:
+        raise ValueError("Mismatch in openssh public certificate")
+
+    _, cert = read_bytes(cert)       # nonce
+    return cert_type, cert
+
+
+def check_openssh_public_cert_footer(data):
+    _, data = read_int8(data)        # serial
+    _, data = read_int4(data)        # type
+    _, data = read_bytes(data)       # key id
+    _, data = read_bytes(data)       # valid principals
+    _, data = read_int8(data)        # valid after
+    _, data = read_int8(data)        # valid before
+    _, data = read_bytes(data)       # critical options
+    _, data = read_bytes(data)       # extensions
+    _, data = read_bytes(data)       # reserved
+    _, data = read_bytes(data)       # signature key
+    _, data = read_bytes(data)       # signature
+    if data:
+        raise ValueError("Too much data")
 
 
 def import_openssh_private_generic(data, password):
