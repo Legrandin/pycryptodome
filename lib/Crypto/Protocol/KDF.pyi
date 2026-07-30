@@ -1,5 +1,5 @@
 from types import ModuleType
-from typing import Optional, Callable, Tuple, Union, Dict, Any, overload
+from typing import Optional, Callable, Sequence, Tuple, Union, Dict, Any, overload
 from typing_extensions import Literal
 
 Buffer=bytes|bytearray|memoryview
@@ -7,8 +7,8 @@ Buffer=bytes|bytearray|memoryview
 RNG = Callable[[int], bytes]
 PRF = Callable[[bytes, bytes], bytes]
 
-def PBKDF1(password: str, salt: bytes, dkLen: int, count: Optional[int]=1000, hashAlgo: Optional[ModuleType]=None) -> bytes: ...
-def PBKDF2(password: str, salt: bytes, dkLen: Optional[int]=16, count: Optional[int]=1000, prf: Optional[RNG]=None, hmac_hash_module: Optional[ModuleType]=None) -> bytes: ...
+def PBKDF1(password: str | bytes | bytearray | memoryview | Sequence[int], salt: bytes, dkLen: int, count: Optional[int]=1000, hashAlgo: Optional[ModuleType]=None) -> bytes: ...
+def PBKDF2(password: str | bytes | bytearray | memoryview | Sequence[int], salt: bytes, dkLen: Optional[int]=16, count: Optional[int]=1000, prf: Optional[RNG]=None, hmac_hash_module: Optional[ModuleType]=None) -> bytes: ...
 
 class _S2V(object):
     def __init__(self, key: bytes, ciphermod: ModuleType, cipher_params: Optional[Dict[Any, Any]]=None) -> None: ...
