@@ -609,12 +609,10 @@ def SP800_108_Counter(master, key_len, prf, num_keys=None, label=b'', context=b'
         By default, only 1 key is derived.
      label (byte string):
         Optional description of the purpose of the derived keys.
-        It must not contain zero bytes.
      context (byte string):
         Optional information pertaining to
         the protocol that uses the keys, such as the identity of the
         participants, nonces, session IDs, etc.
-        It must not contain zero bytes.
 
     Return:
         - a byte string (if ``num_keys`` is not specified), or
@@ -623,9 +621,6 @@ def SP800_108_Counter(master, key_len, prf, num_keys=None, label=b'', context=b'
 
     if num_keys is None:
         num_keys = 1
-
-    if context.find(b'\x00') != -1:
-        raise ValueError("Null byte found in context")
 
     key_len_enc = long_to_bytes(key_len * num_keys * 8, 4)
     output_len = key_len * num_keys
