@@ -353,7 +353,7 @@ class CcmMode(object):
         # No more associated data allowed from now
         if self._assoc_len is None:
             assert(isinstance(self._cache, list))
-            self._assoc_len = sum([len(x) for x in self._cache])
+            self._assoc_len = sum(len(x) for x in self._cache)
             if self._msg_len is not None:
                 self._start_mac()
         else:
@@ -432,7 +432,7 @@ class CcmMode(object):
         # No more associated data allowed from now
         if self._assoc_len is None:
             assert(isinstance(self._cache, list))
-            self._assoc_len = sum([len(x) for x in self._cache])
+            self._assoc_len = sum(len(x) for x in self._cache)
             if self._msg_len is not None:
                 self._start_mac()
         else:
@@ -494,7 +494,7 @@ class CcmMode(object):
 
         if self._assoc_len is None:
             assert(isinstance(self._cache, list))
-            self._assoc_len = sum([len(x) for x in self._cache])
+            self._assoc_len = sum(len(x) for x in self._cache)
             if self._msg_len is not None:
                 self._start_mac()
         else:
