@@ -74,6 +74,18 @@ class DssSigScheme(object):
     def _valid_hash(self, msg_hash):
         raise NotImplementedError("To be provided by subclasses")
 
+    def _msg_hash_to_int(self, msg_hash):
+        """Convert message hash to integer according to FIPS 186-3/FIPS 186-5."""
+        # FIPS 186-3: 4.6: "z = the leftmost min(N, outlen) bits of Hash(M)."
+        # FIPS 186-5: 6.4.1: "Otherwise, set E equal to the leftmost ⌈log2(n)⌉ bits of H."
+        # NOTE: In FIPS 186-3 N = bitlength of prime, whereas in FIPS 186-5
+        # n = bitlength of curve order. But for all considered curves both are equal.
+        digest = msg_hash.digest()
+        z = Integer.from_bytes(digest)
+        if 8 * len(digest) > self._order_bits:
+            z >>= 8 * len(digest) - self._order_bits
+        return z
+
     def sign(self, msg_hash):
         """Compute the DSA/ECDSA signature of a message.
 
@@ -99,7 +111,7 @@ class DssSigScheme(object):
         nonce = self._compute_nonce(msg_hash)
 
         # Perform signature using the raw API
-        z = Integer.from_bytes(msg_hash.digest()[:self._order_bytes])
+        z = self._msg_hash_to_int(msg_hash)
         sig_pair = self._key._sign(z, nonce)
 
         # Encode the signature into a single byte string
@@ -156,7 +168,7 @@ class DssSigScheme(object):
         if not (0 < r_prime < self._order) or not (0 < s_prime < self._order):
             raise ValueError("The signature is not authentic (d)")
 
-        z = Integer.from_bytes(msg_hash.digest()[:self._order_bytes])
+        z = self._msg_hash_to_int(msg_hash)
         result = self._key._verify(z, (r_prime, s_prime))
         if not result:
             raise ValueError("The signature is not authentic")
