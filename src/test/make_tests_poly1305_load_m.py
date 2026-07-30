@@ -2,7 +2,7 @@
 
 import struct
 
-from common import counter, make_main, split64
+from common import counter, make_main
 
 def make_test(secret):
 
