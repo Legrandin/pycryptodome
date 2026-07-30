@@ -135,8 +135,8 @@ If the PRF has a fixed-length output,
 you can evaluate the PRF multiple times and concatenate the results until you collect enough derived keying material.
 
 This function implements such type of KDF, where a counter contributes to each invokation of the PRF, as defined in
-`NIST SP 800-108 Rev 1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1.pdf>`_.
-The NIST standard only allows the use of HMAC (recommended) and CMAC (not recommended) as PRF.
+`NIST SP 800-108r1-upd1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1-upd1.pdf>`_.
+According to the NIST standard, only HMAC, CMAC, and KMAC are permitted as PRFs. In general, HMAC and KMAC should be preferred over CMAC (see details in the standard).
 
 This KDF is not suitable for deriving keys from a password.
 
@@ -169,6 +169,86 @@ Example 3 (CMAC as PRF, two AES256 keys to derive)::
     >> key_A, key_B = SP800_108_Counter(secret, 32, prf, num_keys=2, label=b'Key AB')
 
 .. autofunction:: Crypto.Protocol.KDF.SP800_108_Counter
+
+.. _sp800-108-feeedback:
+
+SP 800-108 Feedback Mode
+++++++++++++++++++++++++
+
+This function implements a KDF, where the output of one invocation of the PRF is used as input for the next invocation of the PRF, as defined in
+`NIST SP 800-108r1-upd1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1-upd1.pdf>`_. A counter may also be included, as in Counter Mode, but its use is optional. An initial value (IV) can optionally be provided as input to the first invocation of the PRF.
+
+This KDF is not suitable for deriving keys from a password.
+
+Example 1 (HMAC as PRF, one AES128 key to derive)::
+
+    >> from Crypto.Hash import SHA256, HMAC
+    >>
+    >> def prf(s, x):
+    >>     return HMAC.new(s, x, SHA256).digest()
+    >>
+    >> key_derived = SP800_108_Feedback(secret, 16, prf, label=b'Key A', context=b"Context 1", iv=b"IV", with_counter=True)
+
+Example 2 (HMAC as PRF, two AES128 keys to derive)::
+
+    >> from Crypto.Hash import SHA256, HMAC
+    >>
+    >> def prf(s, x):
+    >>     return HMAC.new(s, x, SHA256).digest()
+    >>
+    >> key_A, key_B = SP800_108_Feedback(secret, 16, prf, num_keys=2, label=b'Key AB', context=b"Context 2", iv=b"IV", with_counter=False)
+
+Example 3 (CMAC as PRF, two AES256 keys to derive)::
+
+    >> from Crypto.Cipher import AES
+    >> from Crypto.Hash import SHA256, CMAC
+    >>
+    >> def prf(s, x):
+    >>     return CMAC.new(s, x, AES).digest()
+    >>
+    >> key_A, key_B = SP800_108_Feedback(secret, 32, prf, num_keys=2, label=b'Key AB')
+
+.. autofunction:: Crypto.Protocol.KDF.SP800_108_Feedback
+
+.. _sp800-108-double-pipeline:
+
+SP 800-108 Double Pipeline Mode
+++++++++++++++++++++++++
+
+This function implements a KDF that combines aspects of both Counter Mode and Feedback Mode, as defined in
+`NIST SP 800-108r1-upd1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1-upd1.pdf>`_. A counter can also be used as in the counter mode, it is optional.
+
+This KDF is not suitable for deriving keys from a password.
+
+Example 1 (HMAC as PRF, one AES128 key to derive)::
+
+    >> from Crypto.Hash import SHA256, HMAC
+    >>
+    >> def prf(s, x):
+    >>     return HMAC.new(s, x, SHA256).digest()
+    >>
+    >> key_derived = SP800_108_Double_Pipeline(secret, 16, prf, label=b'Key A', context=b"Context 1", with_counter=True)
+
+Example 2 (HMAC as PRF, two AES128 keys to derive)::
+
+    >> from Crypto.Hash import SHA256, HMAC
+    >>
+    >> def prf(s, x):
+    >>     return HMAC.new(s, x, SHA256).digest()
+    >>
+    >> key_A, key_B = SP800_108_Double_Pipeline(secret, 16, prf, num_keys=2, label=b'Key AB', context=b"Context 2", with_counter=False)
+
+Example 3 (CMAC as PRF, two AES256 keys to derive)::
+
+    >> from Crypto.Cipher import AES
+    >> from Crypto.Hash import SHA256, CMAC
+    >>
+    >> def prf(s, x):
+    >>     return CMAC.new(s, x, AES).digest()
+    >>
+    >> key_A, key_B = SP800_108_Double_Pipeline(secret, 32, prf, num_keys=2, label=b'Key AB')
+
+.. autofunction:: Crypto.Protocol.KDF.SP800_108_Double_Pipeline
 
 PBKDF1
 +++++++
