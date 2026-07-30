@@ -754,7 +754,7 @@ def _import_keyDER(extern_key, passphrase):
     raise ValueError("RSA key format is not supported")
 
 
-def _import_openssh_private_rsa(data, password):
+def _import_openssh_private_rsa(data, password, include_comment=False):
 
     from ._openssh import (import_openssh_private_generic,
                            read_bytes, read_string, check_padding)
@@ -771,14 +771,18 @@ def _import_openssh_private_rsa(data, password):
     p, decrypted = read_bytes(decrypted)
     q, decrypted = read_bytes(decrypted)
 
-    _, padded = read_string(decrypted)  # Comment
+    comment, padded = read_string(decrypted)  # Comment
     check_padding(padded)
 
     build = [Integer.from_bytes(x) for x in (n, e, d, q, p, iqmp)]
+           
+    if include_comment: # return tuple instead
+      return(construct(build),comment)
+               
     return construct(build)
 
 
-def import_key(extern_key, passphrase=None):
+def import_key(extern_key, passphrase=None, include_comment=False):
     """Import an RSA key (public or private).
 
     Args:
