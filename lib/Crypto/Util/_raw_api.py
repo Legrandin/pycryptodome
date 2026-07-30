@@ -99,7 +99,7 @@ try:
         @cdecl, the C function declarations.
         """
 
-        if hasattr(ffi, "RTLD_DEEPBIND") and not os.getenv('PYCRYPTODOME_DISABLE_DEEPBIND'):
+        if hasattr(ffi, "RTLD_DEEPBIND") and os.getenv('PYCRYPTODOME_DISABLE_DEEPBIND') is None:
             lib = ffi.dlopen(name, ffi.RTLD_DEEPBIND)
         else:
             lib = ffi.dlopen(name)
