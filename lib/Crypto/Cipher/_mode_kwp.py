@@ -91,7 +91,7 @@ class KWPMode(object):
             raise ValueError("The ciphertext must have length multiple of 8 bytes")
 
         if len(ciphertext) < 16:
-            raise ValueError("The ciphertext must be at least 24 bytes long")
+            raise ValueError("The ciphertext must be at least 16 bytes long")
 
         if len(ciphertext) == 16:
             S = self._cipher.decrypt(ciphertext)
