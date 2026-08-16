@@ -13,7 +13,7 @@ normally you would use the ``export_key`` method of the key itself)::
     from Crypto.IO import PKCS8
 
     key = ECC.generate(curve='p256')
-    pkey = key.export_key(format='DER'),
+    pkey = key.export_key(format='DER')
     passphrase = b'secret santa'
     encrypted_key = PKCS8.wrap(
                     pkey,

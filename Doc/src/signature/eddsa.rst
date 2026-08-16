@@ -21,7 +21,7 @@ and SHAKE256 for Ed448.
 A sender can use a *private* key (loaded from a file) to sign a message::
 
         from Crypto.PublicKey import ECC
-        from Signature import eddsa
+        from Crypto.Signature import eddsa
 
         message = b'I give my permission to order #4355'
         key = ECC.import_key(open("private_ed25519.pem").read())
@@ -31,7 +31,7 @@ A sender can use a *private* key (loaded from a file) to sign a message::
 The receiver can use the matching *public* key to verify authenticity of the received message::
 
         from Crypto.PublicKey import ECC
-        from Signature import eddsa
+        from Crypto.Signature import eddsa
 
         message = b'I give my permission to order #4355'
         key = ECC.import_key(open("public_ed25519.pem").read())
@@ -45,7 +45,7 @@ The receiver can use the matching *public* key to verify authenticity of the rec
 Alternatively the *HashedEdDSA* variant can be used to sign a message with Ed25519::
 
         from Crypto.PublicKey import ECC
-        from Signature import eddsa
+        from Crypto.Signature import eddsa
         from Crypto.Hash import SHA512
 
         message = b'I give my permission to order #4355'
@@ -57,7 +57,7 @@ Alternatively the *HashedEdDSA* variant can be used to sign a message with Ed255
 *HashedEdDSA* also exists for Ed448::
 
         from Crypto.PublicKey import ECC
-        from Signature import eddsa
+        from Crypto.Signature import eddsa
         from Crypto.Hash import SHAKE256
 
         message = b'I give my permission to order #4355'
