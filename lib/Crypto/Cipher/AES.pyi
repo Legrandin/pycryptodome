@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple, Union, overload
+from typing import Optional, Tuple, Union, overload
 from typing_extensions import Literal
 
 Buffer=bytes|bytearray|memoryview
@@ -16,6 +16,7 @@ from Crypto.Cipher._mode_siv import SivMode
 from Crypto.Cipher._mode_ocb import OcbMode
 from Crypto.Cipher._mode_kw import KWMode
 from Crypto.Cipher._mode_kwp import KWPMode
+from Crypto.Util.Counter import CounterParams
 
 MODE_ECB: Literal[1]
 MODE_CBC: Literal[2]
@@ -91,7 +92,7 @@ def new(key: Buffer,
         mode: Literal[6],
         nonce : Optional[Buffer] = ...,
         initial_value : Union[int, Buffer] = ...,
-        counter : Dict = ...,
+        counter : Optional[CounterParams] = ...,
         use_aesni : bool = ...) -> \
         CtrMode: ...
 

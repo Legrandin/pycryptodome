@@ -3,15 +3,19 @@ from typing_extensions import Protocol
 
 from Crypto.PublicKey.RSA import RsaKey
 
+Buffer = Union[bytes, bytearray, memoryview]
 
 class Hash(Protocol):
+    digest_size: int
     def digest(self) -> bytes: ...
-    def update(self, bytes) -> None: ...
+    def update(self, data: Buffer) -> None: ...
+    def new(self) -> Hash: ...
 
 
 class HashModule(Protocol):
+    digest_size: int
     @staticmethod
-    def new(data: Optional[bytes]) -> Hash: ...
+    def new() -> Hash: ...
 
 
 MaskFunction = Callable[[bytes, int, Union[Hash, HashModule]], bytes]
