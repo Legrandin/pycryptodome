@@ -7,6 +7,7 @@ class Poly1305_MAC(object):
     block_size: int
     digest_size: int
     oid: str
+    nonce: bytes
 
     def __init__(self,
                  r : int,

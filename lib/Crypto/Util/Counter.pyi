@@ -1,5 +1,16 @@
-from typing import Optional, Union, Dict
+from typing import Union
+from typing_extensions import TypedDict
 
-def new(nbits: int, prefix: Optional[bytes]=..., suffix: Optional[bytes]=..., initial_value: Optional[int]=1,
-        little_endian: Optional[bool]=False, allow_wraparound: Optional[bool]=False) -> \
-        Dict[str, Union[int, bytes, bool]]: ...
+Buffer = Union[bytes, bytearray, memoryview]
+CounterBuffer = Union[bytes, bytearray]
+
+class CounterParams(TypedDict):
+    counter_len: int
+    prefix: CounterBuffer
+    suffix: Buffer
+    initial_value: int
+    little_endian: bool
+
+def new(nbits: int, prefix: CounterBuffer=..., suffix: Buffer=..., initial_value: int=1,
+        little_endian: bool=False, allow_wraparound: bool=False) -> \
+        CounterParams: ...
