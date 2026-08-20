@@ -548,7 +548,7 @@ def construct(rsa_components, consistency_check=True):
 
         \begin{align}
         p*q &= n \\
-        e*d &\equiv 1 ( \text{mod lcm} [(p-1)(q-1)]) \\
+        e*d &\equiv 1 ( \varphi (pq)) \\
         p*u &\equiv 1 ( \text{mod } q)
         \end{align}
 
@@ -564,7 +564,7 @@ def construct(rsa_components, consistency_check=True):
             4. First factor of *n* (*p*).
                Optional, but the other factor *q* must also be present.
             5. Second factor of *n* (*q*). Optional.
-            6. CRT coefficient *q*, that is :math:`p^{-1} \text{mod }q`. Optional.
+            6. CRT coefficient *u*, that is :math:`p^{-1} \text{mod }q`. Optional.
 
     Keyword Args:
         consistency_check (boolean):
