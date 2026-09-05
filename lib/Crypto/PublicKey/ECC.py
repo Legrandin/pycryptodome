@@ -228,7 +228,7 @@ class EccKey(object):
         sinv = rs[1].inverse(order)
         point1 = self._curve.G * ((sinv * z) % order)
         point2 = self.pointQ * ((sinv * rs[0]) % order)
-        return (point1 + point2).x == rs[0]
+        return (point1 + point2).x % order == rs[0]
 
     @property
     def d(self):

@@ -240,6 +240,20 @@ class FIPS_ECDSA_Tests(unittest.TestCase):
         verifier = DSS.new(self.key_pub, 'fips-186-3')
         verifier.verify(hashed_msg, signature)
 
+    def test_verify_p256_large_x_coordinate(self):
+        # Wycheproof ecdsa_secp256r1_sha256_test.json, tcId 285
+        key = ECC.import_key("""-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECtmVACiNRmlAAx1yqfVEWk1DeEZA
+hVvwpph00t5f4QPFAR5u8sQtzVDV09Kfma5uuiyAySRPTFQi8Jef8MO6Xg==
+-----END PUBLIC KEY-----""")
+        signature = unhexlify(
+            "303502104319055358e8617b0c46353d039cdaab"
+            "022100ffffffff00000000ffffffffffffffff"
+            "bce6faada7179e84f3b9cac2fc63254e")
+        verifier = DSS.new(key, 'fips-186-3', encoding='der')
+
+        verifier.verify(SHA256.new(b"123400"), signature)
+
     def test_negative_unapproved_hashes(self):
         """Verify that unapproved hashes are rejected"""
 
@@ -1330,8 +1344,6 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
             signature = signer.verify(hashed_msg, tv.sig)
         except ValueError as e:
             if tv.warning:
-                return
-            if tv.comment == "k*G has a large x-coordinate":
                 return
             assert not tv.valid
         else:
