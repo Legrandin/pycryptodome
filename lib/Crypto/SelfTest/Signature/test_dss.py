@@ -1345,8 +1345,6 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         except ValueError as e:
             if tv.warning:
                 return
-            if tv.comment == "k*G has a large x-coordinate":
-                return
             assert not tv.valid
         else:
             assert tv.valid
