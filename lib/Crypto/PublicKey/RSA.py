@@ -548,7 +548,7 @@ def construct(rsa_components, consistency_check=True):
 
         \begin{align}
         p*q &= n \\
-        e*d &\equiv 1 ( \varphi (pq)) \\
+        e*d &\equiv 1 ( \text{mod } \varphi (pq)) \\
         p*u &\equiv 1 ( \text{mod } q)
         \end{align}
 
