@@ -51,6 +51,7 @@ def get_tests(config={}):
     from Crypto.SelfTest.Cipher import test_EAX;        tests += test_EAX.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_GCM;        tests += test_GCM.get_tests(config=config)
     from Crypto.SelfTest.Cipher import test_SIV;        tests += test_SIV.get_tests(config=config)
+    from Crypto.SelfTest.Cipher import test_Camellia;   tests += test_Camellia.get_tests(config=config)
 
     if sys.version_info >= (3, 9):
         from Crypto.SelfTest.Cipher import test_KW
