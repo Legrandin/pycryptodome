@@ -9,10 +9,15 @@
  **************************************************/
 
 
+#include "common.h"
 #include "block_base.h"
+
+FAKE_INIT(raw_camellia)
+
 #define MODULE_NAME Camellia
 #define BLOCK_SIZE 16
 #define KEY_SIZE 0
+
 
 typedef unsigned char Byte;
 typedef unsigned long Word;

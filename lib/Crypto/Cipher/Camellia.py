@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+#
+# Cipher/Camelly.py : Camellia
+#
 
 import sys
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util._raw_api import load_pycryptodome_raw_lib, VoidPointer, SmartPointer, c_uint8_ptr, c_size_t
+from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, 
+                                  VoidPointer, SmartPointer,
+                                  c_uint8_ptr, c_size_t)
 
 
 MODE_ECB = 1        #: Electronic Code Book (:ref:`ecb_mode`)
@@ -20,7 +26,7 @@ MODE_KW = 13        #: Key Wrap (:ref:`kw_mode`)
 MODE_KWP = 14       #: Key Wrap with Padding (:ref:`kwp_mode`)
 
 block_size = 16
-key_sizes = [16, 24, 32]
+key_sizes = (16, 24, 32)
 
 _cdecl = """
     int Camellia_start_operation(const uint8_t key[],
