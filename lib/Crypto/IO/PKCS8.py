@@ -41,7 +41,7 @@ from Crypto.Util.asn1 import (
             DerOctetString,
             )
 
-from Crypto.IO._PBES import PBES1, PBES2, PbesError
+from Crypto.IO._PBES import PBES1, PBES2, PbesError, _DEFAULT_MAX_ITERATION_COUNT
 
 
 __all__ = ['wrap', 'unwrap']
@@ -126,7 +126,7 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
                          protection, prot_params, randfunc)
 
 
-def unwrap(p8_private_key, passphrase=None):
+def unwrap(p8_private_key, passphrase=None, max_iteration_count=None):
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
     Args:
@@ -136,6 +136,12 @@ def unwrap(p8_private_key, passphrase=None):
     Keyword Args:
       passphrase (byte string or string):
         The passphrase to use to decrypt the blob (if it is encrypted).
+      max_iteration_count (integer):
+        The maximum value allowed for the PBKDF2/scrypt iteration count.
+        An attacker could craft a malicious key blob that requires an
+        extremely high number of iterations, tying up the CPU for hours.
+        The default value is None (enforcing the default limit of 50,000,000).
+        Set it to ``0`` to disable the check.
 
     Return:
       A tuple containing
@@ -153,7 +159,8 @@ def unwrap(p8_private_key, passphrase=None):
 
         found = False
         try:
-            p8_private_key = PBES1.decrypt(p8_private_key, passphrase)
+            p8_private_key = PBES1.decrypt(p8_private_key, passphrase,
+                                           max_iteration_count=max_iteration_count)
             found = True
         except PbesError as e:
             error_str = "PBES1[%s]" % str(e)
@@ -162,7 +169,8 @@ def unwrap(p8_private_key, passphrase=None):
 
         if not found:
             try:
-                p8_private_key = PBES2.decrypt(p8_private_key, passphrase)
+                p8_private_key = PBES2.decrypt(p8_private_key, passphrase,
+                                               max_iteration_count=max_iteration_count)
                 found = True
             except PbesError as e:
                 error_str += ",PBES2[%s]" % str(e)
