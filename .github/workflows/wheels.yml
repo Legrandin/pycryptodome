@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2019, macos-15, ubuntu-22.04-arm, windows-11-arm]
+        os: [ubuntu-22.04, windows-2022, macos-15, ubuntu-22.04-arm, windows-11-arm]
 
     if: github.actor == 'Legrandin'
 
@@ -81,16 +81,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-22.04, windows-2019 ]
+        os: [ ubuntu-22.04, windows-2022 ]
         arch: [ multi-arch ]
         # Python 2 on Windows requires manual toolchain setup (per-arch) due to newer MSVC used here
         exclude:
-          - os: windows-2019
+          - os: windows-2022
             arch: multi-arch
         include:
-          - os: windows-2019
+          - os: windows-2022
             arch: x86
-          - os: windows-2019
+          - os: windows-2022
             arch: x64
 
     if: github.actor == 'Legrandin'
