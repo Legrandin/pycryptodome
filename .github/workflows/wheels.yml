@@ -48,15 +48,15 @@ jobs:
         name: Build wheels
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
-          # and for PyPy >= 3.8.
-          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-* pp39-* pp310-*"
+          # and for PyPy >= 3.10
+          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-* cp313t-* cp314-* cp314t-* pp310-* pp311-*"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_I686_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_X86_64_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_I686_IMAGE: "manylinux2014"
           CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: "manylinux2014"
-          CIBW_ENABLE: "cpython-freethreading pypy"
+          CIBW_ENABLE: "cpython-freethreading pypy pypy-eol"
           CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
           # Set pycryptodome/x test command according to built package
