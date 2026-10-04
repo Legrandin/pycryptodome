@@ -4,6 +4,10 @@ Changelog
 3.24.0 (under development)
 ++++++++++++++++++++++++++
 
+New features
+---------------
+* Speed up KangarooTwelve by 24% for long messages (1MB or more).
+
 Resolved issues
 ---------------
 * GH#875: Fixed the Object Identifiers (OID) for BLAKE2.
