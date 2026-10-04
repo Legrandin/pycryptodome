@@ -30,8 +30,10 @@
 
 from Crypto.Util.number import long_to_bytes
 from Crypto.Util.py3compat import bchr
+from Crypto.Util._raw_api import create_string_buffer, c_size_t, c_ubyte
 
 from . import TurboSHAKE128
+from .keccak import _raw_keccak_lib
 
 def _length_encode(x):
     if x == 0:
@@ -136,6 +138,10 @@ class K12_XOF(object):
         data_mem = memoryview(data)
         while index < len_data:
 
+            if self._length2 == 0 and len_data - index >= 8192:
+                index = self._update_full_leaves(data_mem, index)
+                continue
+
             new_index = min(index + 8192 - self._length2, len_data)
             self._hash2.update(data_mem[index:new_index])
             self._length2 += new_index - index
@@ -150,6 +156,51 @@ class K12_XOF(object):
                 self._ctr += 1
 
         return self
+
+    def _update_full_leaves(self, data_mem, index):
+        """Hash as many complete 8192-byte leaves as available,
+        starting at offset ``index`` of ``data_mem``.
+
+        This is the hot path for long messages: it calls the raw Keccak
+        library directly to minimize the per-leaf overhead.
+
+        :return: the offset of the first byte not consumed
+        """
+
+        assert self._length2 == 0
+
+        absorb = _raw_keccak_lib.keccak_absorb
+        squeeze = _raw_keccak_lib.keccak_squeeze
+        reset = _raw_keccak_lib.keccak_reset
+
+        state1 = self._hash1._state.get()
+        state2 = self._hash2._state.get()
+        leaf_len = c_size_t(8192)
+        cv_len = c_size_t(32)
+        domain2 = c_ubyte(self._hash2._domain)
+        cv_i = create_string_buffer(32)
+
+        n_leaves = (len(data_mem) - index) // 8192
+        for _ in range(n_leaves):
+            leaf = data_mem[index:index + 8192].tobytes()
+            index += 8192
+
+            result = absorb(state2, leaf, leaf_len)
+            if result:
+                raise ValueError("Error %d while hashing K12 leaf" % result)
+            result = squeeze(state2, cv_i, cv_len, domain2)
+            if result:
+                raise ValueError("Error %d while hashing K12 leaf" % result)
+            result = reset(state2)
+            if result:
+                raise ValueError("Error %d while hashing K12 leaf" % result)
+            result = absorb(state1, cv_i, cv_len)
+            if result:
+                raise ValueError("Error %d while hashing K12 leaf" % result)
+
+        self._length1 += 32 * n_leaves
+        self._ctr += n_leaves
+        return index
 
     def read(self, length):
         """
