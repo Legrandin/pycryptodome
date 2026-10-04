@@ -34,6 +34,18 @@ In the following example, we extract 26 bytes (208 bits) from the XOF::
     >>> print(kangaroo.read(26).hex())
     61e571c51da64228a85d495f3546c43a4dd2c1fd5de87e45dc58
 
+KangarooTwelve hashes long messages as a tree of independent 8 KiB leaves,
+so it can use several CPU cores. This is disabled by default; enable it with
+the ``threads`` parameter to :func:`Crypto.Hash.KangarooTwelve.new`::
+
+    >>> kangaroo = K12.new(threads=4)
+    >>> kangaroo.update(very_long_message)
+
+With ``threads=0``, it uses as many threads as the CPU cores available to the process.
+The output does not depend on the number of threads.
+Threads only help with long data passed in large chunks:
+each thread hashes at least 256 KiB of a single :meth:`update` call.
+
 .. _RFC: https://datatracker.ietf.org/doc/draft-irtf-cfrg-kangarootwelve/
 
 .. automodule:: Crypto.Hash.KangarooTwelve

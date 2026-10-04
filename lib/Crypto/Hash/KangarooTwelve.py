@@ -28,8 +28,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import os
+import threading
+
 from Crypto.Util.number import long_to_bytes
-from Crypto.Util.py3compat import bchr
+from Crypto.Util.py3compat import bchr, is_native_int
 from Crypto.Util._raw_api import c_size_t, c_uint8_ptr
 
 from . import TurboSHAKE128
@@ -68,6 +71,72 @@ def _hash_leaves(leaves, cvs):
         raise ValueError("Error %d while hashing K12 leaves" % result)
 
 
+# Minimum amount of whole leaves (256 KiB) that each thread must hash:
+# with less, starting the thread costs more than what it saves.
+_MIN_LEAVES_PER_THREAD = 32
+
+
+def _available_cores():
+    """Return the number of CPU cores this process can run on."""
+
+    # Python 3.13+: it takes into account CPU affinity and -X cpu_count
+    if hasattr(os, "process_cpu_count"):
+        count = os.process_cpu_count()
+    elif hasattr(os, "sched_getaffinity"):
+        count = len(os.sched_getaffinity(0))
+    elif hasattr(os, "cpu_count"):
+        count = os.cpu_count()
+    else:
+        import multiprocessing
+        try:
+            count = multiprocessing.cpu_count()
+        except NotImplementedError:
+            count = None
+    return count or 1
+
+
+def _hash_leaves_threaded(leaves, cvs, threads):
+    """Like :func:`_hash_leaves`, but split the leaves into ``threads``
+    contiguous ranges, which are processed in parallel.
+    Fewer threads are used if a range would be shorter than
+    ``_MIN_LEAVES_PER_THREAD`` leaves.
+    The calling thread processes the first range.
+    """
+
+    n_leaves = len(leaves) // 8192
+    threads = min(threads, n_leaves // _MIN_LEAVES_PER_THREAD)
+    if threads <= 1:
+        _hash_leaves(leaves, cvs)
+        return
+
+    errors = []
+
+    def worker(start, end):
+        try:
+            _hash_leaves(leaves[8192 * start:8192 * end],
+                         cvs[32 * start:32 * end])
+        except Exception as e:
+            errors.append(e)
+
+    # Ranges differ by at most one leaf
+    bounds = [n_leaves * i // threads for i in range(threads + 1)]
+
+    workers = []
+    for i in range(1, threads):
+        t = threading.Thread(target=worker, args=(bounds[i], bounds[i + 1]))
+        t.daemon = True
+        t.start()
+        workers.append(t)
+
+    worker(bounds[0], bounds[1])
+
+    for t in workers:
+        t.join()
+
+    if errors:
+        raise errors[0]
+
+
 # Possible states for a KangarooTwelve instance, which depend on the amount of data processed so far.
 SHORT_MSG = 1       # Still within the first 8192 bytes, but it is not certain we will exceed them.
 LONG_MSG_S0 = 2     # Still within the first 8192 bytes, and it is certain we will exceed them.
@@ -81,10 +150,18 @@ class K12_XOF(object):
     Use the :func:`new` function.
     """
 
-    def __init__(self, data, custom):
+    def __init__(self, data, custom, threads=1):
 
         if custom == None:
             custom = b''
+
+        if not is_native_int(threads) or isinstance(threads, bool):
+            raise TypeError("'threads' must be an integer")
+        if threads < 0:
+            raise ValueError("'threads' must be a non-negative integer")
+        if threads == 0:
+            threads = _available_cores()
+        self._threads = threads
 
         self._custom = custom + _length_encode(len(custom))
         self._state = SHORT_MSG
@@ -198,7 +275,11 @@ class K12_XOF(object):
         end = index + 8192 * n_leaves
 
         cvs = bytearray(32 * n_leaves)
-        _hash_leaves(data_mem[index:end], memoryview(cvs))
+        if self._threads > 1:
+            _hash_leaves_threaded(data_mem[index:end], memoryview(cvs),
+                                  self._threads)
+        else:
+            _hash_leaves(data_mem[index:end], memoryview(cvs))
         self._hash1.update(cvs)
 
         self._length1 += 32 * n_leaves
@@ -260,11 +341,11 @@ class K12_XOF(object):
         self._hash1._domain = self._padding
         return self._hash1.read(length)
 
-    def new(self, data=None, custom=b''):
-        return type(self)(data, custom)
+    def new(self, data=None, custom=b'', threads=1):
+        return type(self)(data, custom, threads)
 
 
-def new(data=None, custom=None):
+def new(data=None, custom=None, threads=1):
     """Return a fresh instance of a KangarooTwelve object.
 
     Args:
@@ -275,8 +356,19 @@ def new(data=None, custom=None):
        custom (bytes):
         Optional.
         A customization byte string.
+       threads (integer):
+        Optional.
+        The maximum number of threads used to hash long messages
+        (default: 1, no extra threads).
+        Use 0 for as many threads as the CPU cores available
+        to this process.
+        Each thread hashes at least 256 KiB of a single call to
+        :meth:`K12_XOF.update` (or of ``data``): with shorter
+        inputs, fewer threads are used, or none at all.
+        For best results, do not exceed the number of physical cores.
+        The output does not depend on the number of threads.
 
     :Return: A :class:`K12_XOF` object
     """
 
-    return K12_XOF(data, custom)
+    return K12_XOF(data, custom, threads)

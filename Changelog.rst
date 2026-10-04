@@ -6,7 +6,10 @@ Changelog
 
 New features
 ---------------
-* Speed up KangarooTwelve by 24% for long messages (1MB or more).
+* Speed up KangarooTwelve by 50% for long messages (1MB or more).
+* New parameter ``threads`` for ``Crypto.Hash.KangarooTwelve.new()``,
+  to hash long messages on several CPU cores (``threads=0`` for all of them).
+  The output does not depend on the number of threads.
 
 Resolved issues
 ---------------
