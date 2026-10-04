@@ -7,6 +7,10 @@ Changelog
 Resolved issues
 ---------------
 * GH#875: Fixed the Object Identifiers (OID) for BLAKE2.
+* Fixed a potential DOS attack when decrypting a password-encrypted PKCS#8 key,
+  when the iteration count is enourmous. Decryption will now fail if it exceeds
+  50M iterations; the limit can be changed or removed  via
+  the new ``max_iteration_count`` option. Thanks to afldl for reporting.
 * Fixed ECC operations on 32-bit Windows (x86) wheels: due to a compiler bug in
   Visual Studio 2022, the modular inversion skipped half of the exponent bits,
   producing wrong results.
