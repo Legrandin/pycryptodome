@@ -2,6 +2,8 @@ from typing import Union, Optional
 
 Buffer = Union[bytes, bytearray, memoryview]
 
+def _hash_leaves(leaves: memoryview, cvs: memoryview) -> None: ...
+
 class K12_XOF(object):
     def __init__(self,
                  data:     Optional[Buffer] = ...,

@@ -108,15 +108,19 @@ EXPORT_SYM int keccak_init (keccak_state **state,
         return ERR_NULL;
     }
 
-    *state = ks = (keccak_state*) calloc(1, sizeof(keccak_state));
-    if (NULL == ks)
-        return ERR_MEMORY;
-
     if (capacity_bytes >= KECCAK_F1600_STATE)
+        return ERR_DIGEST_SIZE;
+
+    /* The rate must be a whole number of 64-bit words */
+    if (capacity_bytes % 8 != 0)
         return ERR_DIGEST_SIZE;
 
     if ((rounds != 12) && (rounds != 24))
         return ERR_NR_ROUNDS;
+
+    *state = ks = (keccak_state*) calloc(1, sizeof(keccak_state));
+    if (NULL == ks)
+        return ERR_MEMORY;
 
     ks->capacity  = (unsigned)capacity_bytes;
 
@@ -147,6 +151,20 @@ EXPORT_SYM int keccak_absorb (keccak_state *self,
     while (length > 0) {
         unsigned tc;
         unsigned left;
+
+        /* Fast path: XOR whole blocks straight from the input */
+        /* No need to copy them into self->buf first */
+        if (self->valid_bytes == 0 && length >= self->rate) {
+            unsigned i, j;
+
+            for (i=j=0; j < self->rate; ++i, j += 8) {
+                self->state[i] ^= LOAD_U64_LITTLE(in + j);
+            }
+            keccak_function(self->state, self->rounds);
+            in     += self->rate;
+            length -= self->rate;
+            continue;
+        }
 
         left = self->rate - self->valid_bytes;
         tc = (unsigned) MIN(length, left);
@@ -240,6 +258,41 @@ EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
     }
 
     *dst = *src;
+    return 0;
+}
+
+#define K12_LEAF_SIZE   8192
+#define K12_CV_SIZE     32
+
+/*
+ * Hash n_leaves complete 8192-byte leaves with TurboSHAKE128
+ * (domain 0x0B) and write their 32-byte chaining values to cvs
+ * (n_leaves * 32 bytes).
+ *
+ * It only uses a local state on the stack, so it is reentrant
+ * and it can be called from several threads at the same time.
+ */
+EXPORT_SYM int k12_leaves(const uint8_t *in, size_t n_leaves, uint8_t *cvs)
+{
+    keccak_state ks;
+    size_t i;
+
+    if (NULL == in || NULL == cvs)
+        return ERR_NULL;
+
+    memset(&ks, 0, sizeof ks);
+    ks.capacity = 32;
+    ks.rate = KECCAK_F1600_STATE - ks.capacity;
+    ks.rounds = 12;
+
+    for (i=0; i<n_leaves; i++) {
+        keccak_reset(&ks);
+        keccak_absorb(&ks, in, K12_LEAF_SIZE);
+        keccak_squeeze(&ks, cvs, K12_CV_SIZE, 0x0B);
+        in += K12_LEAF_SIZE;
+        cvs += K12_CV_SIZE;
+    }
+
     return 0;
 }
 

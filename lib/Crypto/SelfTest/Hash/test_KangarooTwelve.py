@@ -376,6 +376,53 @@ class KangarooTwelveTV(unittest.TestCase):
             res = K12.new(custom=custom).update(b'').read(32)
             self.assertEqual(res, txt2bin(tv))
 
+    def test_mixed_leaves(self):
+        # Mix partial and whole leaves across several update() calls
+        data = ptn(8192 * 12 + 1000)
+        custom = b'C' * 20
+        ref = K12.new(data=data, custom=custom).read(32)
+
+        chunk_lists = [
+            [100, 8192 * 3, 5000, 3192 + 8192 * 2, 8192, 1, 8191],
+            [8192, 8192 * 4, 4096, 4096, 8192 * 3 + 7],
+            [8191, 1, 1, 8192 * 5 + 8191, 8192, 8192, 8192],
+            [12345, 8192 * 2 - 1, 8192 * 2 + 1, 33333],
+        ]
+        for chunks in chunk_lists:
+            h = K12.new(custom=custom)
+            index = 0
+            for size in chunks:
+                h.update(data[index:index + size])
+                index += size
+            h.update(data[index:])
+            self.assertEqual(h.read(32), ref)
+
+        # Same as above, with memoryview and bytearray inputs
+        h = K12.new(custom=custom)
+        h.update(memoryview(data)[:8192 * 7 + 3])
+        h.update(bytearray(data[8192 * 7 + 3:]))
+        self.assertEqual(h.read(32), ref)
+
+    def test_hash_leaves(self):
+        from Crypto.Hash import TurboSHAKE128
+
+        data = ptn(8192 * 5)
+        cvs = bytearray(32 * 5)
+        K12._hash_leaves(memoryview(data), memoryview(cvs))
+
+        for i in range(5):
+            leaf = data[i * 8192:(i + 1) * 8192]
+            cv = TurboSHAKE128.new(data=leaf, domain=0x0B).read(32)
+            self.assertEqual(cvs[i * 32:(i + 1) * 32], cv)
+
+        # A range of leaves into a slice of a common buffer
+        cvs2 = bytearray(32 * 5)
+        K12._hash_leaves(memoryview(data)[8192 * 2:8192 * 4],
+                         memoryview(cvs2)[32 * 2:32 * 4])
+        self.assertEqual(cvs2[32 * 2:32 * 4], cvs[32 * 2:32 * 4])
+        self.assertEqual(cvs2[:32 * 2], bytearray(32 * 2))
+        self.assertEqual(cvs2[32 * 4:], bytearray(32))
+
 
 def get_tests(config={}):
     tests = []

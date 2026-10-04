@@ -30,7 +30,7 @@
 
 from Crypto.Util.number import long_to_bytes
 from Crypto.Util.py3compat import bchr
-from Crypto.Util._raw_api import create_string_buffer, c_size_t, c_ubyte
+from Crypto.Util._raw_api import c_size_t, c_uint8_ptr
 
 from . import TurboSHAKE128
 from .keccak import _raw_keccak_lib
@@ -41,6 +41,31 @@ def _length_encode(x):
 
     S = long_to_bytes(x)
     return S + bchr(len(S))
+
+
+def _hash_leaves(leaves, cvs):
+    """Compute the chaining values of complete 8192-byte leaves.
+
+    The C function does not use any shared state, so different ranges
+    of leaves can be processed concurrently, each one into its own
+    slice of a common CV buffer.
+
+    Args:
+        leaves (memoryview): ``n`` leaves, ``8192 * n`` bytes
+        cvs (memoryview): writeable output buffer, ``32 * n`` bytes
+    """
+
+    n_leaves = len(leaves) // 8192
+    assert len(leaves) == 8192 * n_leaves
+    assert len(cvs) == 32 * n_leaves
+    if n_leaves == 0:
+        return
+
+    result = _raw_keccak_lib.k12_leaves(c_uint8_ptr(leaves),
+                                        c_size_t(n_leaves),
+                                        c_uint8_ptr(cvs))
+    if result:
+        raise ValueError("Error %d while hashing K12 leaves" % result)
 
 
 # Possible states for a KangarooTwelve instance, which depend on the amount of data processed so far.
@@ -161,46 +186,24 @@ class K12_XOF(object):
         """Hash as many complete 8192-byte leaves as available,
         starting at offset ``index`` of ``data_mem``.
 
-        This is the hot path for long messages: it calls the raw Keccak
-        library directly to minimize the per-leaf overhead.
+        This is the hot path for long messages: all leaves are hashed
+        with a single call to the raw Keccak library.
 
         :return: the offset of the first byte not consumed
         """
 
         assert self._length2 == 0
 
-        absorb = _raw_keccak_lib.keccak_absorb
-        squeeze = _raw_keccak_lib.keccak_squeeze
-        reset = _raw_keccak_lib.keccak_reset
-
-        state1 = self._hash1._state.get()
-        state2 = self._hash2._state.get()
-        leaf_len = c_size_t(8192)
-        cv_len = c_size_t(32)
-        domain2 = c_ubyte(self._hash2._domain)
-        cv_i = create_string_buffer(32)
-
         n_leaves = (len(data_mem) - index) // 8192
-        for _ in range(n_leaves):
-            leaf = data_mem[index:index + 8192].tobytes()
-            index += 8192
+        end = index + 8192 * n_leaves
 
-            result = absorb(state2, leaf, leaf_len)
-            if result:
-                raise ValueError("Error %d while hashing K12 leaf" % result)
-            result = squeeze(state2, cv_i, cv_len, domain2)
-            if result:
-                raise ValueError("Error %d while hashing K12 leaf" % result)
-            result = reset(state2)
-            if result:
-                raise ValueError("Error %d while hashing K12 leaf" % result)
-            result = absorb(state1, cv_i, cv_len)
-            if result:
-                raise ValueError("Error %d while hashing K12 leaf" % result)
+        cvs = bytearray(32 * n_leaves)
+        _hash_leaves(data_mem[index:end], memoryview(cvs))
+        self._hash1.update(cvs)
 
         self._length1 += 32 * n_leaves
         self._ctr += n_leaves
-        return index
+        return end
 
     def read(self, length):
         """
