@@ -67,7 +67,7 @@ _OID_AES256_GCM = "2.16.840.1.101.3.4.1.46"
 #: Default maximum iteration count for PBKDF2 and scrypt cost parameter
 #: in PBES1/PBES2 decryption.  This guards against denial-of-service
 #: attacks where a crafted blob declares an astronomically high count.
-_DEFAULT_MAX_ITERATION_COUNT = 50_000_000
+_DEFAULT_MAX_ITERATION_COUNT = 50000000
 
 class PbesError(ValueError):
     pass
