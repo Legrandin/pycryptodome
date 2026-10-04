@@ -15,6 +15,8 @@ Resolved issues
 * Fixed ECC operations on 32-bit Windows (x86) wheels: due to a compiler bug in
   Visual Studio 2022, the modular inversion skipped half of the exponent bits,
   producing wrong results.
+* Fixed a bug in KangarooTwelve in the scenario where customization string is very
+  long (8190 bytes or longer) and the message to hash is empty.
 
 Other changes
 -------------

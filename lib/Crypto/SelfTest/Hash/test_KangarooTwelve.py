@@ -353,6 +353,29 @@ class KangarooTwelveTV(unittest.TestCase):
         res = K12.new(data=b'A' * (8192 - 0), custom=b'B').read(32)
         self.assertEqual(res, txt2bin(tv0))
 
+    def test_3(self):
+        # Empty message, but the customization string alone
+        # requires tree hashing (beyond 8189 bytes)
+        tvs = {
+            8189: "09a027af9433a3ccf1db41362cf0250d79e8c91e53435052769ea5972919d8f3",
+            8190: "fbf556103724ead0bcb39332fffbbda57d9fda4e164e891fb78e0c918115a543",
+            8191: "3257c0ba48058cc45e904c01575b9526a06c89043715ff75bde9c37dcb9ee791",
+            8192: "6b56092a169ad94d287490bb7fd007ab852779cab8ffc94572beb7e602cdcb56",
+            8193: "7ac1320051e97411e03f585ab06afb812d505a5f5c0f042c8676656acd49f22d",
+        }
+
+        for length, tv in tvs.items():
+            custom = b'B' * length
+
+            res = K12.new(custom=custom).read(32)
+            self.assertEqual(res, txt2bin(tv))
+
+            res = K12.new(data=b'', custom=custom).read(32)
+            self.assertEqual(res, txt2bin(tv))
+
+            res = K12.new(custom=custom).update(b'').read(32)
+            self.assertEqual(res, txt2bin(tv))
+
 
 def get_tests(config={}):
     tests = []

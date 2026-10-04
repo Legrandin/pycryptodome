@@ -219,6 +219,12 @@ class K12_XOF(object):
 
         custom_was_consumed = False
 
+        # The message and the customization string together may still
+        # exceed 8192 bytes, if update() was never called
+        if self._state == SHORT_MSG and \
+                self._length1 + len(self._custom) > 8192:
+            self._state = LONG_MSG_S0
+
         if self._state == SHORT_MSG:
             self._hash1.update(self._custom)
             self._padding = 0x07
