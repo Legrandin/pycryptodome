@@ -1,6 +1,8 @@
 from typing import Optional, Callable, TypedDict
 from typing_extensions import NotRequired
 
+_DEFAULT_MAX_ITERATION_COUNT: int
+
 class PbesError(ValueError):
     ...
 
