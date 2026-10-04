@@ -379,7 +379,8 @@ class GcmMode(object):
         self._msg_len += len(plaintext)
 
         # See NIST SP 800 38D, 5.2.1.1
-        if self._msg_len > 2**39 - 256:
+        # Maximum size is 2**39 - 256 bits
+        if self._msg_len > 68719476704:
             raise ValueError("Plaintext exceeds maximum length")
 
         return ciphertext
