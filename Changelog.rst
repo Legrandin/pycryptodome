@@ -13,6 +13,7 @@ Resolved issues
 
 Other changes
 -------------
+* Build Windows wheel with Visual Studio 2022, from Visual Studio 2019.
 * Remove support for Python 3.7.
 
 3.23.0 (17 May 2025)
