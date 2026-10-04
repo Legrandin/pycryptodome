@@ -1039,7 +1039,7 @@ void mont_inv_prime_generic(uint64_t *out,
                            const MontContext *ctx)
 {
     unsigned idx_word;
-    uint64_t bit;
+    int idx_bit;
     uint64_t *exponent = NULL;
 
     /** Exponent is guaranteed to be >0 **/
@@ -1053,25 +1053,30 @@ void mont_inv_prime_generic(uint64_t *out,
         if (idx_word-- == 0)
             break;
     }
-    for (bit = (uint64_t)1U << 63; 0 == (exponent[idx_word] & bit); bit>>=1);
+
+    /*
+     * Track the bit position with a small integer instead of a 64-bit mask:
+     * on 32-bit x86, MSVC (VS 2022) miscompiles the loop "while (bit > 0) { ... bit >>= 1; }"
+     * over a uint64_t mask, stopping after the upper 32 bits of each word.
+     */
+    for (idx_bit = 63; idx_bit > 0 && 0 == ((exponent[idx_word] >> idx_bit) & 1); idx_bit--);
 
     /* Start from 1 (in Montgomery form, which is R mod N) */
     memcpy(out, ctx->r_mod_n, ctx->bytes);
 
     /** Left-to-right exponentiation **/
     for (;;) {
-        while (bit > 0) {
+        for (; idx_bit >= 0; idx_bit--) {
             mont_mult(tmp1, out, out, scratchpad, ctx);
-            if (exponent[idx_word] & bit) {
+            if ((exponent[idx_word] >> idx_bit) & 1) {
                 mont_mult(out, tmp1, a, scratchpad, ctx);
             } else {
                 memcpy(out, tmp1, ctx->bytes);
             }
-            bit >>= 1;
         }
         if (idx_word-- == 0)
             break;
-        bit = (uint64_t)1 << 63;
+        idx_bit = 63;
     }
 }
 

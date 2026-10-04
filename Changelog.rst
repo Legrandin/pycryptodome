@@ -7,6 +7,9 @@ Changelog
 Resolved issues
 ---------------
 * GH#875: Fixed the Object Identifiers (OID) for BLAKE2.
+* Fixed ECC operations on 32-bit Windows (x86) wheels: due to a compiler bug in
+  Visual Studio 2022, the modular inversion skipped half of the exponent bits,
+  producing wrong results.
 
 Other changes
 -------------
