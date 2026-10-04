@@ -36,9 +36,8 @@ Legacy module for PKCS#1 PSS signatures.
 
 from __future__ import annotations
 
-from typing import Any, Optional, Protocol, TYPE_CHECKING
-
 import types
+from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 from Crypto.Signature import pss
 from Crypto.Signature.pss import Hash, MaskFunction, RndFunction
@@ -63,10 +62,13 @@ def _pycrypto_verify(self: Any, hash_object: Hash, signature: bytes) -> bool:
     return True
 
 
-def new(rsa_key: RsaKey, mgfunc: Optional[MaskFunction] = None, saltLen: Optional[int] = None,
-        randfunc: Optional[RndFunction] = None) -> PSS_SigScheme:
-    pkcs1: Any = pss.new(rsa_key, mask_func=mgfunc,
-                    salt_bytes=saltLen, rand_func=randfunc)
+def new(
+    rsa_key: RsaKey,
+    mgfunc: Optional[MaskFunction] = None,
+    saltLen: Optional[int] = None,
+    randfunc: Optional[RndFunction] = None,
+) -> PSS_SigScheme:
+    pkcs1: Any = pss.new(rsa_key, mask_func=mgfunc, salt_bytes=saltLen, rand_func=randfunc)
     pkcs1._verify = pkcs1.verify
     pkcs1.verify = types.MethodType(_pycrypto_verify, pkcs1)
     return pkcs1

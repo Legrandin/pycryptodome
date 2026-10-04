@@ -1,17 +1,18 @@
 """Make unit test for mul_25519() in x25519.c"""
 
-from common import counter, make_main, split64, bin2int
-from hashlib import sha256
 import struct
+from hashlib import sha256
+
+from common import bin2int, counter, make_main, split64
 
 
 def make_test(f, g):
 
-    assert(len(f) == 10)
-    assert(len(g) == 10)
+    assert len(f) == 10
+    assert len(g) == 10
     for i in range(10):
-        assert(f[i] < 2**27)
-        assert(g[i] < 2**27)
+        assert f[i] < 2**27
+        assert g[i] < 2**27
     fx = ["0x%08X" % x for x in f]
     gx = ["0x%08X" % x for x in g]
     max26 = hex(2**26 - 1)
@@ -22,8 +23,8 @@ def make_test(f, g):
     fv = 0
     gv = 0
     for i in range(10):
-        fv += f[i] * (2**(base[i]))
-        gv += g[i] * (2**(base[i]))
+        fv += f[i] * (2 ** (base[i]))
+        gv += g[i] * (2 ** (base[i]))
 
     canonical = (fv * gv) % modulus
     results = [canonical, canonical + modulus]
@@ -73,7 +74,7 @@ def make_test(f, g):
 
 
 def make_limb(seed):
-    result = bin2int(sha256(struct.pack(">I", seed)).digest()) & ((2**27)-1)
+    result = bin2int(sha256(struct.pack(">I", seed)).digest()) & ((2**27) - 1)
     return result
 
 
@@ -84,15 +85,17 @@ print("#include <stdio.h>")
 print("void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[10]);")
 print("void mul_25519(uint32_t out[10], const uint32_t f[10], const uint32_t g[10]);")
 
+# fmt: off
 modulus = [0x3ffffed, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff]
 modulus_m1 = [0x3ffffec, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff]
 modulus_m2 = [0x3ffffeb, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff]
 modulus_m40 = [0x3ffffc5, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff, 0x3ffffff, 0x1ffffff]
+# fmt: on
 
-make_test([0]*10, [0]*10)
-make_test([1] + [0]*9, [1] + [0]*9)
-make_test([30] + [0]*9, [30] + [0]*9)
-make_test([0x7ffffed] + [0]*9, [0x7ffffed] + [0]*9)
+make_test([0] * 10, [0] * 10)
+make_test([1] + [0] * 9, [1] + [0] * 9)
+make_test([30] + [0] * 9, [30] + [0] * 9)
+make_test([0x7FFFFED] + [0] * 9, [0x7FFFFED] + [0] * 9)
 make_test(modulus, modulus)
 make_test(modulus_m1, modulus_m1)
 make_test(modulus_m2, modulus_m2)
@@ -100,8 +103,8 @@ make_test(modulus, modulus_m2)
 make_test(modulus_m40, modulus_m40)
 
 for x in range(100):
-    f = [make_limb(1000*x + y) for y in range(10)]
-    g = [make_limb(2000*x + y) for y in range(10)]
+    f = [make_limb(1000 * x + y) for y in range(10)]
+    g = [make_limb(2000 * x + y) for y in range(10)]
     make_test(f, g)
 
 make_main()

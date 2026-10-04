@@ -31,37 +31,37 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_test_vectors
-
-from Crypto.PublicKey import ECC
-from Crypto.PublicKey.ECC import EccPoint, _curves, EccKey
-
-from Crypto.Math.Numbers import Integer
-
 from Crypto.Hash import SHAKE128
+from Crypto.PublicKey import ECC
+from Crypto.PublicKey.ECC import EccKey, EccPoint, _curves
+from Crypto.SelfTest.st_common import list_test_cases
 
 
 class TestEccPoint_Ed25519(unittest.TestCase):
+    Gxy = {
+        "x": 15112221349535400772501151409588531511454012693041857206046113283949847762202,
+        "y": 46316835694926478169428394003475163141307993866256225615783033603165251855960,
+    }
 
-    Gxy = {"x": 15112221349535400772501151409588531511454012693041857206046113283949847762202,
-           "y": 46316835694926478169428394003475163141307993866256225615783033603165251855960}
+    G2xy = {
+        "x": 24727413235106541002554574571675588834622768167397638456726423682521233608206,
+        "y": 15549675580280190176352668710449542251549572066445060580507079593062643049417,
+    }
 
-    G2xy = {"x": 24727413235106541002554574571675588834622768167397638456726423682521233608206,
-            "y": 15549675580280190176352668710449542251549572066445060580507079593062643049417}
+    G3xy = {
+        "x": 46896733464454938657123544595386787789046198280132665686241321779790909858396,
+        "y": 8324843778533443976490377120369201138301417226297555316741202210403726505172,
+    }
 
-    G3xy = {"x": 46896733464454938657123544595386787789046198280132665686241321779790909858396,
-            "y": 8324843778533443976490377120369201138301417226297555316741202210403726505172}
-
-    pointG = EccPoint(Gxy['x'], Gxy['y'], curve="ed25519")
-    pointG2 = EccPoint(G2xy['x'], G2xy['y'], curve="ed25519")
-    pointG3 = EccPoint(G3xy['x'], G3xy['y'], curve="ed25519")
+    pointG = EccPoint(Gxy["x"], Gxy["y"], curve="ed25519")
+    pointG2 = EccPoint(G2xy["x"], G2xy["y"], curve="ed25519")
+    pointG3 = EccPoint(G3xy["x"], G3xy["y"], curve="ed25519")
 
     def test_curve_attribute(self):
         self.assertEqual(self.pointG.curve, "Ed25519")
 
     def test_init_xy(self):
-        EccPoint(self.Gxy['x'], self.Gxy['y'], curve="Ed25519")
+        EccPoint(self.Gxy["x"], self.Gxy["y"], curve="Ed25519")
 
         # Neutral point
         pai = EccPoint(0, 1, curve="Ed25519")
@@ -82,9 +82,11 @@ class TestEccPoint_Ed25519(unittest.TestCase):
         self.assertEqual(bp2.xy, (bp2.x, bp2.y))
 
         # 5G
-        EccPoint(x=33467004535436536005251147249499675200073690106659565782908757308821616914995,
-                 y=43097193783671926753355113395909008640284023746042808659097434958891230611693,
-                 curve="Ed25519")
+        EccPoint(
+            x=33467004535436536005251147249499675200073690106659565782908757308821616914995,
+            y=43097193783671926753355113395909008640284023746042808659097434958891230611693,
+            curve="Ed25519",
+        )
 
         # Catch if point is not on the curve
         self.assertRaises(ValueError, EccPoint, 34, 35, curve="Ed25519")
@@ -175,33 +177,57 @@ class TestEccPoint_Ed25519(unittest.TestCase):
 
         d = 4
         pointH = d * self.pointG
-        self.assertEqual(pointH.x, 14582954232372986451776170844943001818709880559417862259286374126315108956272)
-        self.assertEqual(pointH.y, 32483318716863467900234833297694612235682047836132991208333042722294373421359)
+        self.assertEqual(
+            pointH.x, 14582954232372986451776170844943001818709880559417862259286374126315108956272
+        )
+        self.assertEqual(
+            pointH.y, 32483318716863467900234833297694612235682047836132991208333042722294373421359
+        )
 
         d = 5
         pointH = d * self.pointG
-        self.assertEqual(pointH.x, 33467004535436536005251147249499675200073690106659565782908757308821616914995)
-        self.assertEqual(pointH.y, 43097193783671926753355113395909008640284023746042808659097434958891230611693)
+        self.assertEqual(
+            pointH.x, 33467004535436536005251147249499675200073690106659565782908757308821616914995
+        )
+        self.assertEqual(
+            pointH.y, 43097193783671926753355113395909008640284023746042808659097434958891230611693
+        )
 
         d = 10
         pointH = d * self.pointG
-        self.assertEqual(pointH.x, 43500613248243327786121022071801015118933854441360174117148262713429272820047)
-        self.assertEqual(pointH.y, 45005105423099817237495816771148012388779685712352441364231470781391834741548)
+        self.assertEqual(
+            pointH.x, 43500613248243327786121022071801015118933854441360174117148262713429272820047
+        )
+        self.assertEqual(
+            pointH.y, 45005105423099817237495816771148012388779685712352441364231470781391834741548
+        )
 
         d = 20
         pointH = d * self.pointG
-        self.assertEqual(pointH.x, 46694936775300686710656303283485882876784402425210400817529601134760286812591)
-        self.assertEqual(pointH.y, 8786390172762935853260670851718824721296437982862763585171334833968259029560)
+        self.assertEqual(
+            pointH.x, 46694936775300686710656303283485882876784402425210400817529601134760286812591
+        )
+        self.assertEqual(
+            pointH.y, 8786390172762935853260670851718824721296437982862763585171334833968259029560
+        )
 
         d = 255
         pointH = d * self.pointG
-        self.assertEqual(pointH.x, 36843863416400016952258312492144504209624961884991522125275155377549541182230)
-        self.assertEqual(pointH.y, 22327030283879720808995671630924669697661065034121040761798775626517750047180)
+        self.assertEqual(
+            pointH.x, 36843863416400016952258312492144504209624961884991522125275155377549541182230
+        )
+        self.assertEqual(
+            pointH.y, 22327030283879720808995671630924669697661065034121040761798775626517750047180
+        )
 
         d = 256
         pointH = d * self.pointG
-        self.assertEqual(pointH.x, 42740085206947573681423002599456489563927820004573071834350074001818321593686)
-        self.assertEqual(pointH.y, 6935684722522267618220753829624209639984359598320562595061366101608187623111)
+        self.assertEqual(
+            pointH.x, 42740085206947573681423002599456489563927820004573071834350074001818321593686
+        )
+        self.assertEqual(
+            pointH.y, 6935684722522267618220753829624209639984359598320562595061366101608187623111
+        )
 
     def test_sizes(self):
         self.assertEqual(self.pointG.size_in_bits(), 255)
@@ -209,7 +235,6 @@ class TestEccPoint_Ed25519(unittest.TestCase):
 
 
 class TestEccKey_Ed25519(unittest.TestCase):
-
     def test_private_key(self):
         seed = unhexlify("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")
         Px = 38815646466658113194383306759739515082307681141926459231621296960732224964046
@@ -235,24 +260,24 @@ class TestEccKey_Ed25519(unittest.TestCase):
         self.assertRaises(ValueError, EccKey, curve="ed25519", d=1)
 
     def test_public_key(self):
-        point = EccPoint(_curves['ed25519'].Gx, _curves['ed25519'].Gy, curve='ed25519')
+        point = EccPoint(_curves["ed25519"].Gx, _curves["ed25519"].Gy, curve="ed25519")
         key = EccKey(curve="ed25519", point=point)
         self.assertFalse(key.has_private())
         self.assertEqual(key.pointQ, point)
 
     def test_public_key_derived(self):
-        priv_key = EccKey(curve="ed25519", seed=b'H'*32)
+        priv_key = EccKey(curve="ed25519", seed=b"H" * 32)
         pub_key = priv_key.public_key()
         self.assertFalse(pub_key.has_private())
         self.assertEqual(priv_key.pointQ, pub_key.pointQ)
 
     def test_invalid_seed(self):
-        self.assertRaises(ValueError, lambda: EccKey(curve="ed25519", seed=b'H' * 31))
+        self.assertRaises(ValueError, lambda: EccKey(curve="ed25519", seed=b"H" * 31))
 
     def test_equality(self):
-        private_key = ECC.construct(seed=b'H'*32, curve="Ed25519")
-        private_key2 = ECC.construct(seed=b'H'*32, curve="ed25519")
-        private_key3 = ECC.construct(seed=b'C'*32, curve="Ed25519")
+        private_key = ECC.construct(seed=b"H" * 32, curve="Ed25519")
+        private_key2 = ECC.construct(seed=b"H" * 32, curve="ed25519")
+        private_key3 = ECC.construct(seed=b"C" * 32, curve="Ed25519")
 
         public_key = private_key.public_key()
         public_key2 = private_key2.public_key()
@@ -267,18 +292,17 @@ class TestEccKey_Ed25519(unittest.TestCase):
         self.assertNotEqual(public_key, private_key)
 
     def test_name_consistency(self):
-        key = ECC.generate(curve='ed25519')
+        key = ECC.generate(curve="ed25519")
         self.assertIn("curve='Ed25519'", repr(key))
-        self.assertEqual(key.curve, 'Ed25519')
-        self.assertEqual(key.public_key().curve, 'Ed25519')
+        self.assertEqual(key.curve, "Ed25519")
+        self.assertEqual(key.public_key().curve, "Ed25519")
 
 
 class TestEccModule_Ed25519(unittest.TestCase):
-
     def test_generate(self):
         key = ECC.generate(curve="Ed25519")
         self.assertTrue(key.has_private())
-        point = EccPoint(_curves['Ed25519'].Gx, _curves['Ed25519'].Gy, curve="Ed25519") * key.d
+        point = EccPoint(_curves["Ed25519"].Gx, _curves["Ed25519"].Gy, curve="Ed25519") * key.d
         self.assertEqual(key.pointQ, point)
 
         # Always random
@@ -297,7 +321,6 @@ class TestEccModule_Ed25519(unittest.TestCase):
         seed = unhexlify("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")
         Px = 38815646466658113194383306759739515082307681141926459231621296960732224964046
         Py = 11903303657706407974989296177215005343713679411332034699907763981919547054807
-        d = 36144925721603087658594284515452164870581325872720374094707712194495455132720
         point = EccPoint(Px, Py, curve="Ed25519")
 
         # Private key only
@@ -319,12 +342,12 @@ class TestEccModule_Ed25519(unittest.TestCase):
         key = ECC.construct(curve="ed25519", seed=seed)
 
     def test_negative_construct(self):
-        coord = dict(point_x=10, point_y=4)
-        coordG = dict(point_x=_curves['ed25519'].Gx, point_y=_curves['ed25519'].Gy)
+        coord = {"point_x": 10, "point_y": 4}
+        coordG = {"point_x": _curves["ed25519"].Gx, "point_y": _curves["ed25519"].Gy}
 
         self.assertRaises(ValueError, ECC.construct, curve="Ed25519", **coord)
         self.assertRaises(ValueError, ECC.construct, curve="Ed25519", d=2, **coordG)
-        self.assertRaises(ValueError, ECC.construct, curve="Ed25519", seed=b'H'*31)
+        self.assertRaises(ValueError, ECC.construct, curve="Ed25519", seed=b"H" * 31)
 
 
 def get_tests(config={}):
@@ -335,7 +358,9 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

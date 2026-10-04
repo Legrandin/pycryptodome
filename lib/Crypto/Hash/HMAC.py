@@ -33,34 +33,33 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Union
-
 from binascii import unhexlify
+from typing import TYPE_CHECKING, Optional, Union
 
-from Crypto.Util._bytes import tobytes
 from Crypto.Hash import BLAKE2s
-from Crypto.Util.strxor import strxor
 from Crypto.Random import get_random_bytes
+from Crypto.Util._bytes import tobytes
+from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-__all__ = ['new', 'HMAC']
+__all__ = ["new", "HMAC"]
 
 _hash2hmac_oid = {
-    '1.3.14.3.2.26': '1.2.840.113549.2.7',           # SHA-1
-    '2.16.840.1.101.3.4.2.4': '1.2.840.113549.2.8',  # SHA-224
-    '2.16.840.1.101.3.4.2.1': '1.2.840.113549.2.9',  # SHA-256
-    '2.16.840.1.101.3.4.2.2': '1.2.840.113549.2.10',  # SHA-384
-    '2.16.840.1.101.3.4.2.3': '1.2.840.113549.2.11',  # SHA-512
-    '2.16.840.1.101.3.4.2.5': '1.2.840.113549.2.12',  # SHA-512_224
-    '2.16.840.1.101.3.4.2.6': '1.2.840.113549.2.13',  # SHA-512_256
-    '2.16.840.1.101.3.4.2.7': '2.16.840.1.101.3.4.2.13',   # SHA-3 224
-    '2.16.840.1.101.3.4.2.8': '2.16.840.1.101.3.4.2.14',   # SHA-3 256
-    '2.16.840.1.101.3.4.2.9': '2.16.840.1.101.3.4.2.15',   # SHA-3 384
-    '2.16.840.1.101.3.4.2.10': '2.16.840.1.101.3.4.2.16',  # SHA-3 512
+    "1.3.14.3.2.26": "1.2.840.113549.2.7",  # SHA-1
+    "2.16.840.1.101.3.4.2.4": "1.2.840.113549.2.8",  # SHA-224
+    "2.16.840.1.101.3.4.2.1": "1.2.840.113549.2.9",  # SHA-256
+    "2.16.840.1.101.3.4.2.2": "1.2.840.113549.2.10",  # SHA-384
+    "2.16.840.1.101.3.4.2.3": "1.2.840.113549.2.11",  # SHA-512
+    "2.16.840.1.101.3.4.2.5": "1.2.840.113549.2.12",  # SHA-512_224
+    "2.16.840.1.101.3.4.2.6": "1.2.840.113549.2.13",  # SHA-512_256
+    "2.16.840.1.101.3.4.2.7": "2.16.840.1.101.3.4.2.13",  # SHA-3 224
+    "2.16.840.1.101.3.4.2.8": "2.16.840.1.101.3.4.2.14",  # SHA-3 256
+    "2.16.840.1.101.3.4.2.9": "2.16.840.1.101.3.4.2.15",  # SHA-3 384
+    "2.16.840.1.101.3.4.2.10": "2.16.840.1.101.3.4.2.16",  # SHA-3 512
 }
 
 _hmac2hash_oid = {v: k for k, v in _hash2hmac_oid.items()}
@@ -81,6 +80,7 @@ class HMAC:
 
         if digestmod is None:
             from Crypto.Hash import MD5
+
             digestmod = MD5
 
         if msg is None:
@@ -138,11 +138,7 @@ class HMAC:
     def _pbkdf2_hmac_assist(self, first_digest, iterations):
         """Carry out the expensive inner loop for PBKDF2-HMAC"""
 
-        result = self._digestmod._pbkdf2_hmac_assist(
-                                    self._inner,
-                                    self._outer,
-                                    first_digest,
-                                    iterations)
+        result = self._digestmod._pbkdf2_hmac_assist(self._inner, self._outer, first_digest, iterations)
         return result
 
     def copy(self) -> HMAC:
@@ -205,8 +201,7 @@ class HMAC:
         :rtype: string
         """
 
-        return "".join(["%02x" % x
-                        for x in tuple(self.digest())])
+        return "".join(["%02x" % x for x in tuple(self.digest())])
 
     def hexverify(self, hex_mac_tag: str) -> None:
         """Verify that a given **printable** MAC (computed by another party)

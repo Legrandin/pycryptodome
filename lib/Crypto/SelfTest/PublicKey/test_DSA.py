@@ -23,17 +23,18 @@
 
 """Self-test suite for Crypto.PublicKey.DSA"""
 
-import os
-
 import unittest
-from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
+
+from Crypto.SelfTest.st_common import a2b_hex, b2a_hex, list_test_cases
+
 
 def _sws(s):
     """Remove whitespace from a text or byte string"""
-    if isinstance(s,str):
+    if isinstance(s, str):
         return "".join(s.split())
     else:
         return b"".join(s.split())
+
 
 class DSATest(unittest.TestCase):
     # Test vector from "Appendix 5. Example of the DSA" of
@@ -67,9 +68,9 @@ class DSATest(unittest.TestCase):
 
     def setUp(self):
         global DSA, Random, bytes_to_long, size
-        from Crypto.PublicKey import DSA
         from Crypto import Random
-        from Crypto.Util.number import bytes_to_long, inverse, size
+        from Crypto.PublicKey import DSA
+        from Crypto.Util.number import bytes_to_long, size
 
         self.dsa = DSA
 
@@ -95,28 +96,32 @@ class DSATest(unittest.TestCase):
 
     def test_construct_5tuple(self):
         """DSA (default implementation) constructed key (5-tuple)"""
-        (y, g, p, q, x) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x))
+        (y, g, p, q, x) = (
+            bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)
+        )
         dsaObj = self.dsa.construct((y, g, p, q, x))
         self._test_signing(dsaObj)
         self._test_verification(dsaObj)
 
     def test_construct_bad_key4(self):
         (y, g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q))
-        tup = (y, g, p+1, q)
+        tup = (y, g, p + 1, q)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
-        tup = (y, g, p, q+1)
+        tup = (y, g, p, q + 1)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
         tup = (y, 1, p, q)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
     def test_construct_bad_key5(self):
-        (y, g, p, q, x) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x))
-        tup = (y, g, p, q, x+1)
+        (y, g, p, q, x) = (
+            bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)
+        )
+        tup = (y, g, p, q, x + 1)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
-        tup = (y, g, p, q, q+10)
+        tup = (y, g, p, q, q + 10)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
     def _check_private_key(self, dsaObj):
@@ -126,11 +131,11 @@ class DSATest(unittest.TestCase):
         self.assertEqual(0, dsaObj.can_encrypt())
 
         # Sanity check key data
-        self.assertEqual(1, dsaObj.p > dsaObj.q)            # p > q
-        self.assertEqual(160, size(dsaObj.q))               # size(q) == 160 bits
-        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)      # q is a divisor of p-1
-        self.assertEqual(dsaObj.y, pow(dsaObj.g, dsaObj.x, dsaObj.p))     # y == g**x mod p
-        self.assertEqual(1, 0 < dsaObj.x < dsaObj.q)       # 0 < x < q
+        self.assertEqual(1, dsaObj.p > dsaObj.q)  # p > q
+        self.assertEqual(160, size(dsaObj.q))  # size(q) == 160 bits
+        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)  # q is a divisor of p-1
+        self.assertEqual(dsaObj.y, pow(dsaObj.g, dsaObj.x, dsaObj.p))  # y == g**x mod p
+        self.assertEqual(1, 0 < dsaObj.x < dsaObj.q)  # 0 < x < q
 
     def _check_public_key(self, dsaObj):
         k = bytes_to_long(a2b_hex(self.k))
@@ -142,21 +147,21 @@ class DSATest(unittest.TestCase):
         self.assertEqual(0, dsaObj.can_encrypt())
 
         # Check that private parameters are all missing
-        self.assertEqual(0, hasattr(dsaObj, 'x'))
+        self.assertEqual(0, hasattr(dsaObj, "x"))
 
         # Sanity check key data
-        self.assertEqual(1, dsaObj.p > dsaObj.q)            # p > q
-        self.assertEqual(160, size(dsaObj.q))               # size(q) == 160 bits
-        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)      # q is a divisor of p-1
+        self.assertEqual(1, dsaObj.p > dsaObj.q)  # p > q
+        self.assertEqual(160, size(dsaObj.q))  # size(q) == 160 bits
+        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)  # q is a divisor of p-1
 
         # Public-only key objects should raise an error when .sign() is called
         self.assertRaises(TypeError, dsaObj._sign, m_hash, k)
 
         # Check __eq__ and __ne__
-        self.assertEqual(dsaObj.public_key() == dsaObj.public_key(),True) # assert_
-        self.assertEqual(dsaObj.public_key() != dsaObj.public_key(),False) # assertFalse
+        self.assertEqual(dsaObj.public_key() == dsaObj.public_key(), True)  # assert_
+        self.assertEqual(dsaObj.public_key() != dsaObj.public_key(), False)  # assertFalse
 
-        self.assertEqual(dsaObj.public_key(), dsaObj.publickey()) 
+        self.assertEqual(dsaObj.public_key(), dsaObj.publickey())
 
     def _test_signing(self, dsaObj):
         k = bytes_to_long(a2b_hex(self.k))
@@ -180,7 +185,6 @@ class DSATest(unittest.TestCase):
 
 
 class DSADomainTest(unittest.TestCase):
-
     def test_domain1(self):
         """Verify we can generate new keys in a given domain"""
         dsa_key_1 = DSA.generate(1024)
@@ -195,15 +199,15 @@ class DSADomainTest(unittest.TestCase):
 
     def _get_weak_domain(self):
 
-        from Crypto.Math.Numbers import Integer
         from Crypto.Math import Primality
+        from Crypto.Math.Numbers import Integer
 
         p = Integer(4)
         while p.size_in_bits() != 1024 or Primality.test_probable_prime(p) != Primality.PROBABLY_PRIME:
             q1 = Integer.random(exact_bits=80)
             q2 = Integer.random(exact_bits=80)
             q = q1 * q2
-            z = Integer.random(exact_bits=1024-160)
+            z = Integer.random(exact_bits=1024 - 160)
             p = z * q + 1
 
         h = Integer(2)
@@ -214,21 +218,17 @@ class DSADomainTest(unittest.TestCase):
 
         return (p, q, g)
 
-
     def test_generate_error_weak_domain(self):
         """Verify that domain parameters with composite q are rejected"""
 
         domain_params = self._get_weak_domain()
         self.assertRaises(ValueError, DSA.generate, 1024, domain=domain_params)
 
-
     def test_construct_error_weak_domain(self):
         """Verify that domain parameters with composite q are rejected"""
 
-        from Crypto.Math.Numbers import Integer
-
         p, q, g = self._get_weak_domain()
-        y =  pow(g, 89, p)
+        y = pow(g, 89, p)
         self.assertRaises(ValueError, DSA.construct, (y, g, p, q))
 
 
@@ -238,8 +238,9 @@ def get_tests(config={}):
     tests += list_test_cases(DSADomainTest)
     return tests
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

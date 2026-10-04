@@ -33,17 +33,22 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr, c_ubyte)
-
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_ubyte,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
-                        """
+_raw_keccak_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._keccak",
+    """
                         int keccak_init(void **state,
                                         size_t capacity_bytes,
                                         uint8_t rounds);
@@ -64,7 +69,9 @@ _raw_keccak_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak",
                         int k12_leaves(const uint8_t *in,
                                        size_t n_leaves,
                                        uint8_t *cvs);
-                        """)
+                        """,
+)
+
 
 class Keccak_Hash:
     """A Keccak hash object.
@@ -84,13 +91,10 @@ class Keccak_Hash:
         self._padding = 0x01
 
         state = VoidPointer()
-        result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(self.digest_size * 2),
-                                             c_ubyte(24))
+        result = _raw_keccak_lib.keccak_init(state.address_of(), c_size_t(self.digest_size * 2), c_ubyte(24))
         if result:
             raise ValueError("Error %d while instantiating keccak" % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_keccak_lib.keccak_destroy)
+        self._state = SmartPointer(state.get(), _raw_keccak_lib.keccak_destroy)
         if data:
             self.update(data)
 
@@ -104,9 +108,7 @@ class Keccak_Hash:
         if self._digest_done and not self._update_after_digest:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
-        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_keccak_lib.keccak_absorb(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while updating keccak" % result)
         return self
@@ -121,10 +123,9 @@ class Keccak_Hash:
 
         self._digest_done = True
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_keccak_lib.keccak_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size),
-                                               c_ubyte(self._padding))
+        result = _raw_keccak_lib.keccak_digest(
+            self._state.get(), bfr, c_size_t(self.digest_size), c_ubyte(self._padding)
+        )
         if result:
             raise ValueError("Error %d while squeezing keccak" % result)
 
@@ -140,19 +141,34 @@ class Keccak_Hash:
 
         return "".join(["%02x" % x for x in self.digest()])
 
-    def new(self, *, data: Optional[Buffer] = None, digest_bytes: Optional[int] = None,
-            digest_bits: Optional[int] = None, update_after_digest: bool = False) -> Keccak_Hash:
+    def new(
+        self,
+        *,
+        data: Optional[Buffer] = None,
+        digest_bytes: Optional[int] = None,
+        digest_bits: Optional[int] = None,
+        update_after_digest: bool = False,
+    ) -> Keccak_Hash:
         """Create a fresh Keccak hash object."""
 
         if digest_bytes is None and digest_bits is None:
             digest_bytes = self.digest_size
 
-        return new(data=data, digest_bytes=digest_bytes, digest_bits=digest_bits,
-                   update_after_digest=update_after_digest)
+        return new(
+            data=data,
+            digest_bytes=digest_bytes,
+            digest_bits=digest_bits,
+            update_after_digest=update_after_digest,
+        )
 
 
-def new(*, data: Optional[Buffer] = None, digest_bytes: Optional[int] = None,
-        digest_bits: Optional[int] = None, update_after_digest: bool = False) -> Keccak_Hash:
+def new(
+    *,
+    data: Optional[Buffer] = None,
+    digest_bytes: Optional[int] = None,
+    digest_bits: Optional[int] = None,
+    update_after_digest: bool = False,
+) -> Keccak_Hash:
     """Create a new hash object.
 
     Args:
@@ -172,7 +188,7 @@ def new(*, data: Optional[Buffer] = None, digest_bytes: Optional[int] = None,
 
     if None not in (digest_bytes, digest_bits):
         raise TypeError("Only one digest parameter must be provided")
-    if (None, None) == (digest_bytes, digest_bits):
+    if (digest_bytes, digest_bits) == (None, None):
         raise TypeError("Digest size (bits, bytes) not provided")
     if digest_bytes is not None:
         if digest_bytes not in (28, 32, 48, 64):

@@ -21,18 +21,21 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Union
-
 from binascii import unhexlify
+from typing import TYPE_CHECKING, Optional, Union
 
-from Crypto.Util._bytes import copy_bytes, tobytes
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from Crypto.Util._bytes import copy_bytes, tobytes
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -41,8 +44,9 @@ if TYPE_CHECKING:
 Buffer = Union[bytes, bytearray, memoryview]
 
 
-_raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
-                        """
+_raw_poly1305 = load_pycryptodome_raw_lib(
+    "Crypto.Hash._poly1305",
+    """
                         int poly1305_init(void **state,
                                           const uint8_t *r,
                                           size_t r_len,
@@ -55,7 +59,8 @@ _raw_poly1305 = load_pycryptodome_raw_lib("Crypto.Hash._poly1305",
                         int poly1305_digest(const void *state,
                                             uint8_t *digest,
                                             size_t len);
-                        """)
+                        """,
+)
 
 
 class Poly1305_MAC:
@@ -79,16 +84,12 @@ class Poly1305_MAC:
         self._mac_tag: Optional[bytes] = None
 
         state = VoidPointer()
-        result = _raw_poly1305.poly1305_init(state.address_of(),
-                                             c_uint8_ptr(r),
-                                             c_size_t(len(r)),
-                                             c_uint8_ptr(s),
-                                             c_size_t(len(s))
-                                             )
+        result = _raw_poly1305.poly1305_init(
+            state.address_of(), c_uint8_ptr(r), c_size_t(len(r)), c_uint8_ptr(s), c_size_t(len(s))
+        )
         if result:
             raise ValueError("Error %d while instantiating Poly1305" % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_poly1305.poly1305_destroy)
+        self._state = SmartPointer(state.get(), _raw_poly1305.poly1305_destroy)
         if data:
             self.update(data)
 
@@ -102,9 +103,7 @@ class Poly1305_MAC:
         if self._mac_tag:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
-        result = _raw_poly1305.poly1305_update(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_poly1305.poly1305_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
             raise ValueError("Error %d while hashing Poly1305 data" % result)
         return self
@@ -123,11 +122,9 @@ class Poly1305_MAC:
 
         if self._mac_tag:
             return self._mac_tag
-        
+
         bfr = create_string_buffer(16)
-        result = _raw_poly1305.poly1305_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(len(bfr)))
+        result = _raw_poly1305.poly1305_digest(self._state.get(), bfr, c_size_t(len(bfr)))
         if result:
             raise ValueError("Error %d while creating Poly1305 digest" % result)
 
@@ -142,8 +139,7 @@ class Poly1305_MAC:
         :rtype: string
         """
 
-        return "".join(["%02x" % x
-                        for x in tuple(self.digest())])
+        return "".join(["%02x" % x for x in tuple(self.digest())])
 
     def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)
@@ -181,8 +177,9 @@ class Poly1305_MAC:
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(*, key: Buffer, cipher: ModuleType, nonce: Optional[Buffer] = None,
-        data: Optional[Buffer] = None) -> Poly1305_MAC:
+def new(
+    *, key: Buffer, cipher: ModuleType, nonce: Optional[Buffer] = None, data: Optional[Buffer] = None
+) -> Poly1305_MAC:
     """Create a new Poly1305 MAC object.
 
     Args:
@@ -205,14 +202,14 @@ def new(*, key: Buffer, cipher: ModuleType, nonce: Optional[Buffer] = None,
         A :class:`Poly1305_MAC` object
     """
 
-    if not hasattr(cipher, '_derive_Poly1305_key_pair'):
+    if not hasattr(cipher, "_derive_Poly1305_key_pair"):
         raise ValueError("Parameter 'cipher' must be AES or ChaCha20")
 
     if key is None:
         raise TypeError("You must pass a parameter 'key'")
 
     r, s, nonce = cipher._derive_Poly1305_key_pair(key, nonce)
-    
+
     new_mac = Poly1305_MAC(r, s, data)
     new_mac.nonce = copy_bytes(None, None, nonce)  # nonce may still be just a memoryview
     return new_mac

@@ -36,9 +36,8 @@ Legacy module for PKCS#1 v1.5 signatures.
 
 from __future__ import annotations
 
-from typing import Any, Protocol, TYPE_CHECKING
-
 import types
+from typing import TYPE_CHECKING, Any, Protocol
 
 from Crypto.Signature import pkcs1_15
 from Crypto.Signature.pkcs1_15 import Hash
@@ -62,9 +61,9 @@ def _pycrypto_verify(self: Any, hash_object: Hash, signature: bytes) -> bool:
         return False
     return True
 
+
 def new(rsa_key: RsaKey) -> PKCS115_SigScheme:
     pkcs1: Any = pkcs1_15.new(rsa_key)
     pkcs1._verify = pkcs1.verify
     pkcs1.verify = types.MethodType(_pycrypto_verify, pkcs1)
     return pkcs1
-

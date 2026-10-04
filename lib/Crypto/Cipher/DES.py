@@ -32,32 +32,30 @@ Module's constants for the modes of operation supported with Single DES:
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING, Union
 
-import sys
-
 from Crypto.Cipher import _create_cipher
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  c_size_t, c_uint8_ptr)
+from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, load_pycryptodome_raw_lib
 
 if TYPE_CHECKING:
-    from Crypto.Cipher import BlockCipherParams
     from typing_extensions import Unpack
+
+    from Crypto.Cipher import BlockCipherParams
     from Crypto.Cipher._mode_cbc import CbcMode
     from Crypto.Cipher._mode_cfb import CfbMode
     from Crypto.Cipher._mode_ctr import CtrMode
+    from Crypto.Cipher._mode_eax import EaxMode
     from Crypto.Cipher._mode_ecb import EcbMode
     from Crypto.Cipher._mode_ofb import OfbMode
     from Crypto.Cipher._mode_openpgp import OpenPgpMode
-    from Crypto.Cipher._mode_eax import EaxMode
 
 Buffer = Union[bytes, bytearray, memoryview]
 DESMode = int
 
 _raw_des_lib = load_pycryptodome_raw_lib(
-                "Crypto.Cipher._raw_des",
-                """
+    "Crypto.Cipher._raw_des",
+    """
                 int DES_start_operation(const uint8_t key[],
                                         size_t key_len,
                                         void **pResult);
@@ -70,7 +68,8 @@ _raw_des_lib = load_pycryptodome_raw_lib(
                                 uint8_t *out,
                                 size_t data_len);
                 int DES_stop_operation(void *state);
-                """)
+                """,
+)
 
 
 def _create_base_cipher(dict_parameters):
@@ -89,17 +88,15 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_des_lib.DES_stop_operation
 
     cipher = VoidPointer()
-    result = start_operation(c_uint8_ptr(key),
-                             c_size_t(len(key)),
-                             cipher.address_of())
+    result = start_operation(c_uint8_ptr(key), c_size_t(len(key)), cipher.address_of())
     if result:
-        raise ValueError("Error %X while instantiating the DES cipher"
-                         % result)
+        raise ValueError("Error %X while instantiating the DES cipher" % result)
     return SmartPointer(cipher.get(), stop_operation)
 
 
-def new(key: Buffer, mode: DESMode, *args: Buffer, **kwargs: Unpack[BlockCipherParams]) -> \
-        Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode, EaxMode]:
+def new(
+    key: Buffer, mode: DESMode, *args: Buffer, **kwargs: Unpack[BlockCipherParams]
+) -> Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode, EaxMode]:
     """Create a new DES cipher.
 
     :param key:
@@ -160,6 +157,7 @@ def new(key: Buffer, mode: DESMode, *args: Buffer, **kwargs: Unpack[BlockCipherP
     """
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
+
 
 MODE_ECB: DESMode = 1
 MODE_CBC: DESMode = 2

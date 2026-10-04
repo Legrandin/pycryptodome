@@ -25,9 +25,15 @@ from __future__ import annotations
 
 from typing import Dict, Union
 
-def new(nbits: int, prefix: bytes = b"", suffix: bytes = b"", initial_value: int = 1,
-        little_endian: bool = False,
-        allow_wraparound: bool = False) -> Dict[str, Union[int, bytes, bool]]:
+
+def new(
+    nbits: int,
+    prefix: bytes = b"",
+    suffix: bytes = b"",
+    initial_value: int = 1,
+    little_endian: bool = False,
+    allow_wraparound: bool = False,
+) -> Dict[str, Union[int, bytes, bool]]:
     """Create a stateful counter block function suitable for CTR encryption modes.
 
     Each call to the function returns the next counter block.
@@ -71,14 +77,15 @@ def new(nbits: int, prefix: bytes = b"", suffix: bytes = b"", initial_value: int
 
     iv_bl = initial_value.bit_length()
     if iv_bl > nbits:
-        raise ValueError("Initial value takes %d bits but it is longer than "
-                         "the counter (%d bits)" %
-                         (iv_bl, nbits))
+        raise ValueError(
+            "Initial value takes %d bits but it is longer than the counter (%d bits)" % (iv_bl, nbits)
+        )
 
     # Ignore wraparound
-    return {"counter_len": nbits // 8,
-            "prefix": prefix,
-            "suffix": suffix,
-            "initial_value": initial_value,
-            "little_endian": little_endian
-            }
+    return {
+        "counter_len": nbits // 8,
+        "prefix": prefix,
+        "suffix": suffix,
+        "initial_value": initial_value,
+        "little_endian": little_endian,
+    }

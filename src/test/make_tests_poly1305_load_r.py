@@ -2,7 +2,7 @@
 
 import struct
 
-from common import counter, make_main, split64
+from common import counter, make_main
 
 
 def make_test(secret):
@@ -15,9 +15,9 @@ def make_test(secret):
     for idx in 4, 8, 12:
         clamped[idx] &= 252
 
-    split = struct.unpack('<IIII', bytes(clamped))
-    r_out = [ "0x%08xUL" % x for x in split ]
-    rr_out = [ "0x%08xUL" % ((x>>2)*5) for x in split ]
+    split = struct.unpack("<IIII", bytes(clamped))
+    r_out = ["0x%08xUL" % x for x in split]
+    rr_out = ["0x%08xUL" % ((x >> 2) * 5) for x in split]
 
     print("")
     print("void test_%d(void) {" % next(counter))

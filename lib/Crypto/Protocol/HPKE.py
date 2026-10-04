@@ -1,20 +1,21 @@
 import struct
 from enum import IntEnum
-
 from types import ModuleType
 from typing import Optional, Tuple
 
-from .KDF import _HKDF_extract, _HKDF_expand
-from .DH import key_agreement, import_x25519_public_key, import_x448_public_key
-from Crypto.Util.strxor import strxor
+from Crypto.Cipher import AES, ChaCha20_Poly1305
+from Crypto.Hash import SHA256, SHA384, SHA512
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccKey
-from Crypto.Hash import SHA256, SHA384, SHA512
-from Crypto.Cipher import AES, ChaCha20_Poly1305
+from Crypto.Util.strxor import strxor
+
+from .DH import import_x448_public_key, import_x25519_public_key, key_agreement
+from .KDF import _HKDF_expand, _HKDF_extract
 
 
 class MODE(IntEnum):
     """HPKE modes"""
+
     BASE = 0x00
     PSK = 0x01
     AUTH = 0x02
@@ -23,6 +24,7 @@ class MODE(IntEnum):
 
 class AEAD(IntEnum):
     """Authenticated Encryption with Associated Data (AEAD) Functions"""
+
     AES128_GCM = 0x0001
     AES256_GCM = 0x0002
     CHACHA20_POLY1305 = 0x0003
@@ -31,72 +33,53 @@ class AEAD(IntEnum):
 class DeserializeError(ValueError):
     pass
 
+
 class MessageLimitReachedError(ValueError):
     pass
 
+
 # CURVE to (KEM ID, KDF ID, HASH)
 _Curve_Config = {
-  "NIST P-256": (0x0010, 0x0001, SHA256),
-  "NIST P-384": (0x0011, 0x0002, SHA384),
-  "NIST P-521": (0x0012, 0x0003, SHA512),
-  "Curve25519": (0x0020, 0x0001, SHA256),
-  "Curve448":   (0x0021, 0x0003, SHA512),
+    "NIST P-256": (0x0010, 0x0001, SHA256),
+    "NIST P-384": (0x0011, 0x0002, SHA384),
+    "NIST P-521": (0x0012, 0x0003, SHA512),
+    "Curve25519": (0x0020, 0x0001, SHA256),
+    "Curve448": (0x0021, 0x0003, SHA512),
 }
 
 
-def _labeled_extract(salt: bytes,
-                     label: bytes,
-                     ikm: bytes,
-                     suite_id: bytes,
-                     hashmod: ModuleType):
+def _labeled_extract(salt: bytes, label: bytes, ikm: bytes, suite_id: bytes, hashmod: ModuleType):
     labeled_ikm = b"HPKE-v1" + suite_id + label + ikm
     return _HKDF_extract(salt, labeled_ikm, hashmod)
 
 
-def _labeled_expand(prk: bytes,
-                    label: bytes,
-                    info: bytes,
-                    L: int,
-                    suite_id: bytes,
-                    hashmod: ModuleType):
-    labeled_info = struct.pack('>H', L) + b"HPKE-v1" + suite_id + \
-                   label + info
+def _labeled_expand(prk: bytes, label: bytes, info: bytes, L: int, suite_id: bytes, hashmod: ModuleType):
+    labeled_info = struct.pack(">H", L) + b"HPKE-v1" + suite_id + label + info
     return _HKDF_expand(prk, labeled_info, L, hashmod)
 
 
-def _extract_and_expand(dh: bytes,
-                        kem_context: bytes,
-                        suite_id: bytes,
-                        hashmod: ModuleType):
+def _extract_and_expand(dh: bytes, kem_context: bytes, suite_id: bytes, hashmod: ModuleType):
     Nsecret = hashmod.digest_size
 
-    eae_prk = _labeled_extract(b"",
-                               b"eae_prk",
-                               dh,
-                               suite_id,
-                               hashmod)
+    eae_prk = _labeled_extract(b"", b"eae_prk", dh, suite_id, hashmod)
 
-    shared_secret = _labeled_expand(eae_prk,
-                                    b"shared_secret",
-                                    kem_context,
-                                    Nsecret,
-                                    suite_id,
-                                    hashmod)
+    shared_secret = _labeled_expand(eae_prk, b"shared_secret", kem_context, Nsecret, suite_id, hashmod)
     return shared_secret
 
 
 class HPKE_Cipher:
+    def __init__(
+        self,
+        receiver_key: EccKey,
+        enc: Optional[bytes],
+        sender_key: Optional[EccKey],
+        psk_pair: Tuple[bytes, bytes],
+        info: bytes,
+        aead_id: AEAD,
+        mode: MODE,
+    ):
 
-    def __init__(self,
-                 receiver_key: EccKey,
-                 enc: Optional[bytes],
-                 sender_key: Optional[EccKey],
-                 psk_pair: Tuple[bytes, bytes],
-                 info: bytes,
-                 aead_id: AEAD,
-                 mode: MODE):
-
-        self.enc: bytes = b'' if enc is None else enc
+        self.enc: bytes = b"" if enc is None else enc
         """The encapsulated session key."""
 
         self._verify_psk_inputs(mode, psk_pair)
@@ -106,9 +89,7 @@ class HPKE_Cipher:
         self._mode = mode
 
         try:
-            self._kem_id, \
-             self._kdf_id, \
-             self._hashmod = _Curve_Config[self._curve]
+            self._kem_id, self._kdf_id, self._hashmod = _Curve_Config[self._curve]
         except KeyError as ke:
             raise ValueError(f"Curve {self._curve} is not supported by HPKE") from ke
 
@@ -123,112 +104,93 @@ class HPKE_Cipher:
             # SetupBaseS (encryption)
             if enc is not None:
                 raise ValueError("Parameter 'enc' cannot be an input  when sealing")
-            shared_secret, self.enc = self._encap(receiver_key,
-                                                  self._kem_id,
-                                                  self._hashmod,
-                                                  sender_key)
+            shared_secret, self.enc = self._encap(receiver_key, self._kem_id, self._hashmod, sender_key)
         else:
             # SetupBaseR (decryption)
             if enc is None:
                 raise ValueError("Parameter 'enc' required when unsealing")
-            shared_secret = self._decap(enc,
-                                        receiver_key,
-                                        self._kem_id,
-                                        self._hashmod,
-                                        sender_key)
+            shared_secret = self._decap(enc, receiver_key, self._kem_id, self._hashmod, sender_key)
 
         self._sequence = 0
         self._max_sequence = (1 << (8 * self._Nn)) - 1
 
-        self._key, \
-            self._base_nonce, \
-            self._export_secret = self._key_schedule(shared_secret,
-                                                     info,
-                                                     *psk_pair)
+        self._key, self._base_nonce, self._export_secret = self._key_schedule(shared_secret, info, *psk_pair)
 
     @staticmethod
-    def _encap(receiver_key: EccKey,
-               kem_id: int,
-               hashmod: ModuleType,
-               sender_key: Optional[EccKey] = None,
-               eph_key: Optional[EccKey] = None):
+    def _encap(
+        receiver_key: EccKey,
+        kem_id: int,
+        hashmod: ModuleType,
+        sender_key: Optional[EccKey] = None,
+        eph_key: Optional[EccKey] = None,
+    ):
 
         assert (sender_key is None) or sender_key.has_private()
         assert (eph_key is None) or eph_key.has_private()
 
         if eph_key is None:
             eph_key = ECC.generate(curve=receiver_key.curve)
-        enc = eph_key.public_key().export_key(format='raw')
+        enc = eph_key.public_key().export_key(format="raw")
 
-        pkRm = receiver_key.public_key().export_key(format='raw')
+        pkRm = receiver_key.public_key().export_key(format="raw")
         kem_context = enc + pkRm
         extra_param = {}
         if sender_key:
-            kem_context += sender_key.public_key().export_key(format='raw')
-            extra_param = {'static_priv': sender_key}
+            kem_context += sender_key.public_key().export_key(format="raw")
+            extra_param = {"static_priv": sender_key}
 
-        suite_id = b"KEM" + struct.pack('>H', kem_id)
+        suite_id = b"KEM" + struct.pack(">H", kem_id)
 
-        def kdf(dh,
-                kem_context=kem_context,
-                suite_id=suite_id,
-                hashmod=hashmod):
+        def kdf(dh, kem_context=kem_context, suite_id=suite_id, hashmod=hashmod):
             return _extract_and_expand(dh, kem_context, suite_id, hashmod)
 
-        shared_secret = key_agreement(eph_priv=eph_key,
-                                      static_pub=receiver_key,
-                                      kdf=kdf,
-                                      **extra_param)
+        shared_secret = key_agreement(eph_priv=eph_key, static_pub=receiver_key, kdf=kdf, **extra_param)
         return shared_secret, enc
 
     @staticmethod
-    def _decap(enc: bytes,
-               receiver_key: EccKey,
-               kem_id: int,
-               hashmod: ModuleType,
-               sender_key: Optional[EccKey] = None):
+    def _decap(
+        enc: bytes,
+        receiver_key: EccKey,
+        kem_id: int,
+        hashmod: ModuleType,
+        sender_key: Optional[EccKey] = None,
+    ):
 
         assert receiver_key.has_private()
 
         try:
-            if receiver_key.curve == 'Curve25519':
+            if receiver_key.curve == "Curve25519":
                 pkE = import_x25519_public_key(enc)
-            elif receiver_key.curve == 'Curve448':
+            elif receiver_key.curve == "Curve448":
                 pkE = import_x448_public_key(enc)
             else:
                 pkE = ECC.import_key(enc, curve_name=receiver_key.curve)
         except ValueError as ve:
             raise DeserializeError("'enc' is not a valid encapsulated HPKE key") from ve
 
-        pkRm = receiver_key.public_key().export_key(format='raw')
+        pkRm = receiver_key.public_key().export_key(format="raw")
         kem_context = enc + pkRm
         extra_param = {}
         if sender_key:
-            kem_context += sender_key.public_key().export_key(format='raw')
-            extra_param = {'static_pub': sender_key}
+            kem_context += sender_key.public_key().export_key(format="raw")
+            extra_param = {"static_pub": sender_key}
 
-        suite_id = b"KEM" + struct.pack('>H', kem_id)
+        suite_id = b"KEM" + struct.pack(">H", kem_id)
 
-        def kdf(dh,
-                kem_context=kem_context,
-                suite_id=suite_id,
-                hashmod=hashmod):
+        def kdf(dh, kem_context=kem_context, suite_id=suite_id, hashmod=hashmod):
             return _extract_and_expand(dh, kem_context, suite_id, hashmod)
 
-        shared_secret = key_agreement(eph_pub=pkE,
-                                      static_priv=receiver_key,
-                                      kdf=kdf,
-                                      **extra_param)
+        shared_secret = key_agreement(eph_pub=pkE, static_priv=receiver_key, kdf=kdf, **extra_param)
         return shared_secret
 
     @staticmethod
     def _verify_psk_inputs(mode: MODE, psk_pair: Tuple[bytes, bytes]):
         psk_id, psk = psk_pair
 
-        if (psk == b'') ^ (psk_id == b''):
+        if (psk == b"") ^ (psk_id == b""):
             raise ValueError("Inconsistent PSK inputs")
 
-        if (psk == b''):
+        if psk == b"":
             if mode in (MODE.PSK, MODE.AUTH_PSK):
                 raise ValueError(f"PSK is required with mode {mode.name}")
         else:
@@ -237,62 +199,32 @@ class HPKE_Cipher:
             if mode in (MODE.BASE, MODE.AUTH):
                 raise ValueError("PSK is not compatible with this mode")
 
-    def _key_schedule(self,
-                      shared_secret: bytes,
-                      info: bytes,
-                      psk_id: bytes,
-                      psk: bytes):
+    def _key_schedule(self, shared_secret: bytes, info: bytes, psk_id: bytes, psk: bytes):
 
-        suite_id = b"HPKE" + struct.pack('>HHH',
-                                         self._kem_id,
-                                         self._kdf_id,
-                                         self._aead_id)
+        suite_id = b"HPKE" + struct.pack(">HHH", self._kem_id, self._kdf_id, self._aead_id)
 
-        psk_id_hash = _labeled_extract(b'',
-                                       b'psk_id_hash',
-                                       psk_id,
-                                       suite_id,
-                                       self._hashmod)
+        psk_id_hash = _labeled_extract(b"", b"psk_id_hash", psk_id, suite_id, self._hashmod)
 
-        info_hash = _labeled_extract(b'',
-                                     b'info_hash',
-                                     info,
-                                     suite_id,
-                                     self._hashmod)
+        info_hash = _labeled_extract(b"", b"info_hash", info, suite_id, self._hashmod)
 
-        key_schedule_context = self._mode.to_bytes(1, 'big') + psk_id_hash + info_hash
+        key_schedule_context = self._mode.to_bytes(1, "big") + psk_id_hash + info_hash
 
-        secret = _labeled_extract(shared_secret,
-                                  b'secret',
-                                  psk,
-                                  suite_id,
-                                  self._hashmod)
+        secret = _labeled_extract(shared_secret, b"secret", psk, suite_id, self._hashmod)
 
-        key = _labeled_expand(secret,
-                              b'key',
-                              key_schedule_context,
-                              self._Nk,
-                              suite_id,
-                              self._hashmod)
+        key = _labeled_expand(secret, b"key", key_schedule_context, self._Nk, suite_id, self._hashmod)
 
-        base_nonce = _labeled_expand(secret,
-                                     b'base_nonce',
-                                     key_schedule_context,
-                                     self._Nn,
-                                     suite_id,
-                                     self._hashmod)
+        base_nonce = _labeled_expand(
+            secret, b"base_nonce", key_schedule_context, self._Nn, suite_id, self._hashmod
+        )
 
-        exporter_secret = _labeled_expand(secret,
-                                          b'exp',
-                                          key_schedule_context,
-                                          self._Nh,
-                                          suite_id,
-                                          self._hashmod)
+        exporter_secret = _labeled_expand(
+            secret, b"exp", key_schedule_context, self._Nh, suite_id, self._hashmod
+        )
 
         return key, base_nonce, exporter_secret
 
     def _new_cipher(self):
-        nonce = strxor(self._base_nonce, self._sequence.to_bytes(self._Nn, 'big'))
+        nonce = strxor(self._base_nonce, self._sequence.to_bytes(self._Nn, "big"))
         if self._aead_id in (AEAD.AES128_GCM, AEAD.AES256_GCM):
             cipher = AES.new(self._key, AES.MODE_GCM, nonce=nonce, mac_len=self._Nt)
         elif self._aead_id == AEAD.CHACHA20_POLY1305:
@@ -362,8 +294,7 @@ class HPKE_Cipher:
             cipher.update(auth_data)
 
         try:
-            pt = cipher.decrypt_and_verify(ciphertext[:-self._Nt],
-                                           ciphertext[-self._Nt:])
+            pt = cipher.decrypt_and_verify(ciphertext[: -self._Nt], ciphertext[-self._Nt :])
         except ValueError:
             if self._sequence == 1:
                 raise ValueError("Incorrect HPKE keys/parameters or invalid message (wrong MAC tag)")
@@ -371,12 +302,15 @@ class HPKE_Cipher:
         return pt
 
 
-def new(*, receiver_key: EccKey,
-        aead_id: AEAD,
-        enc: Optional[bytes] = None,
-        sender_key: Optional[EccKey] = None,
-        psk: Optional[Tuple[bytes, bytes]] = None,
-        info: Optional[bytes] = None) -> HPKE_Cipher:
+def new(
+    *,
+    receiver_key: EccKey,
+    aead_id: AEAD,
+    enc: Optional[bytes] = None,
+    sender_key: Optional[EccKey] = None,
+    psk: Optional[Tuple[bytes, bytes]] = None,
+    info: Optional[bytes] = None,
+) -> HPKE_Cipher:
     """Create an HPKE context which can be used:
 
     - by the sender to seal (encrypt) a message or
@@ -452,32 +386,23 @@ def new(*, receiver_key: EccKey,
         raise ValueError(f"Unknown AEAD cipher ID {aead_id:#x}")
 
     curve = receiver_key.curve
-    if curve not in ('NIST P-256', 'NIST P-384', 'NIST P-521',
-                     'Curve25519', 'Curve448'):
+    if curve not in ("NIST P-256", "NIST P-384", "NIST P-521", "Curve25519", "Curve448"):
         raise ValueError(f"Unsupported curve {curve}")
 
     if sender_key:
-        count_private_keys = int(receiver_key.has_private()) + \
-                             int(sender_key.has_private())
+        count_private_keys = int(receiver_key.has_private()) + int(sender_key.has_private())
         if count_private_keys != 1:
             raise ValueError("Exactly 1 private key required")
         if sender_key.curve != curve:
-            raise ValueError("Sender key uses {} but recipient key {}".
-                             format(sender_key.curve, curve))
+            raise ValueError(f"Sender key uses {sender_key.curve} but recipient key {curve}")
         mode = MODE.AUTH if psk is None else MODE.AUTH_PSK
     else:
         mode = MODE.BASE if psk is None else MODE.PSK
 
     if psk is None:
-        psk = b'', b''
+        psk = b"", b""
 
     if info is None:
-        info = b''
+        info = b""
 
-    return HPKE_Cipher(receiver_key,
-                       enc,
-                       sender_key,
-                       psk,
-                       info,
-                       aead_id,
-                       mode)
+    return HPKE_Cipher(receiver_key, enc, sender_key, psk, info, aead_id, mode)

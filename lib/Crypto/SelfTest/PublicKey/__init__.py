@@ -24,16 +24,22 @@
 """Self-test for public-key crypto"""
 
 import unittest
-from Crypto.SelfTest.PublicKey import (test_DSA, test_RSA,
-                                       test_ECC_NIST,
-                                       test_ECC_Ed25519,
-                                       test_ECC_Curve25519,
-                                       test_ECC_Ed448,
-                                       test_ECC_Curve448,
-                                       test_import_DSA, test_import_RSA,
-                                       test_import_ECC, test_ElGamal,
-                                       test_import_Curve25519,
-                                       test_import_Curve448)
+
+from Crypto.SelfTest.PublicKey import (
+    test_DSA,
+    test_ECC_Curve448,
+    test_ECC_Curve25519,
+    test_ECC_Ed448,
+    test_ECC_Ed25519,
+    test_ECC_NIST,
+    test_ElGamal,
+    test_import_Curve448,
+    test_import_Curve25519,
+    test_import_DSA,
+    test_import_ECC,
+    test_import_RSA,
+    test_RSA,
+)
 
 
 def get_tests(config={}):
@@ -56,7 +62,9 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

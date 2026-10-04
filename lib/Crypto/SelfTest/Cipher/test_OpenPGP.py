@@ -31,19 +31,18 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.Util._bytes import tobytes
-from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Cipher import AES, DES3, DES
+from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
+from Crypto.SelfTest.Cipher.test_CBC import BlockChainingTests
+from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Util._bytes import tobytes
+
 
 def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-from Crypto.SelfTest.Cipher.test_CBC import BlockChainingTests
-
 class OpenPGPTests(BlockChainingTests):
-
     aes_mode = AES.MODE_OPENPGP
     des3_mode = DES3.MODE_OPENPGP
 
@@ -102,18 +101,18 @@ class OpenPGPTests(BlockChainingTests):
         self.assertRaises(TypeError, cipher.encrypt, b"")
 
     def test_unaligned_data_128(self):
-        plaintexts = [ b"7777777" ] * 100
+        plaintexts = [b"7777777"] * 100
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
-        ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
+        ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
         self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
     def test_unaligned_data_64(self):
-        plaintexts = [ b"7777777" ] * 100
+        plaintexts = [b"7777777"] * 100
 
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
-        ciphertexts = [ cipher.encrypt(x) for x in plaintexts ]
+        ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
         self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
 
@@ -131,7 +130,6 @@ class OpenPGPTests(BlockChainingTests):
 
 
 class TestVectors(unittest.TestCase):
-
     def test_aes(self):
         # The following test vectors have been generated with gpg v1.4.0.
         # The command line used was:
@@ -156,11 +154,11 @@ class TestVectors(unittest.TestCase):
         #
         # Note that encryption uses a clear IV, and decryption an encrypted IV
 
-        plaintext = 'ac18620270744fb4f647426c61636b4361745768697465436174'
-        ciphertext = 'dc6b9e1f095de609765c59983db5956ae4f63aea7405389d2ebb'
-        key = '5baa61e4c9b93f3f0682250b6cf8331b'
-        iv = '3d7d3e62282add7eb203eeba5c800733'
-        encrypted_iv='fd934601ef49cb58b6d9aebca6056bdb96ef'
+        plaintext = "ac18620270744fb4f647426c61636b4361745768697465436174"
+        ciphertext = "dc6b9e1f095de609765c59983db5956ae4f63aea7405389d2ebb"
+        key = "5baa61e4c9b93f3f0682250b6cf8331b"
+        iv = "3d7d3e62282add7eb203eeba5c800733"
+        encrypted_iv = "fd934601ef49cb58b6d9aebca6056bdb96ef"
 
         plaintext = unhexlify(plaintext)
         ciphertext = unhexlify(ciphertext)
@@ -184,11 +182,11 @@ class TestVectors(unittest.TestCase):
         #     --disable-mdc --s2k-mode 0 --output ct pt
         # For an explanation, see test_AES.py .
 
-        plaintext = 'ac1762037074324fb53ba3596f73656d69746556616c6c6579'
-        ciphertext = '9979238528357b90e2e0be549cb0b2d5999b9a4a447e5c5c7d'
-        key = '7ade65b460f5ea9be35f9e14aa883a2048e3824aa616c0b2'
-        iv='cd47e2afb8b7e4b0'
-        encrypted_iv='6a7eef0b58050e8b904a'
+        plaintext = "ac1762037074324fb53ba3596f73656d69746556616c6c6579"
+        ciphertext = "9979238528357b90e2e0be549cb0b2d5999b9a4a447e5c5c7d"
+        key = "7ade65b460f5ea9be35f9e14aa883a2048e3824aa616c0b2"
+        iv = "cd47e2afb8b7e4b0"
+        encrypted_iv = "6a7eef0b58050e8b904a"
 
         plaintext = unhexlify(plaintext)
         ciphertext = unhexlify(ciphertext)
@@ -213,6 +211,6 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

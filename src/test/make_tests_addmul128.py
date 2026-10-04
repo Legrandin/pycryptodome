@@ -2,6 +2,7 @@
 
 from common import counter, make_main, split64
 
+
 def make_test(t, a, b0, b1):
 
     if b0 == -1:
@@ -10,7 +11,7 @@ def make_test(t, a, b0, b1):
         b1 = 0xFFFFFFFF
 
     # What we expect the function to compute
-    result = t + a*(b0 + (b1 << 64))
+    result = t + a * (b0 + (b1 << 64))
 
     # Turn a[] and t[] into arrays of 64-bit words
     a = split64(a)
@@ -21,9 +22,9 @@ def make_test(t, a, b0, b1):
     result_len = max(len(result), 2 + len(a))
 
     # Pad the output vector with as many padding zeroes as needed
-    for x in range(result_len - len(t_in)):
+    for _x in range(result_len - len(t_in)):
         t_in.append("0")
-    for x in range(result_len - len(result)):
+    for _x in range(result_len - len(result)):
         result.append("0")
 
     print("")
@@ -52,9 +53,16 @@ make_test(0, 5, 5, 6)
 make_test(0, 0xFFFFFFFFFFFFFFFFFFF, -1, -1)
 make_test(0xFFFFFFFFFFFFFFFF, 1, 1, 0)
 make_test(32783243204234329232323, 9232922323, 39393938, 7393393)
-make_test(32783243204234329232323333333333333783839393,
-          92329223233877777777777777777777777838333, 0x1000000, 7393393)
-make_test(37893272389423987423987429837498237498237498274982374982734982374982734982743982374,
-          30309093333334930430493049304930940394039430303000009090909093434930493094039409340930493094309403940394039403940394039403940390493049304943,
-          0x1000000, 7393393)
+make_test(
+    32783243204234329232323333333333333783839393,
+    92329223233877777777777777777777777838333,
+    0x1000000,
+    7393393,
+)
+make_test(
+    37893272389423987423987429837498237498237498274982374982734982374982734982743982374,
+    30309093333334930430493049304930940394039430303000009090909093434930493094039409340930493094309403940394039403940394039403940390493049304943,
+    0x1000000,
+    7393393,
+)
 make_main()

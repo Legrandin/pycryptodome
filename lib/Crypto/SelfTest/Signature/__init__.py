@@ -22,7 +22,8 @@
 """Self-test for signature modules"""
 
 import unittest
-from . import test_pkcs1_15, test_pss, test_dss, test_eddsa
+
+from . import test_dss, test_eddsa, test_pkcs1_15, test_pss
 
 
 def get_tests(config={}):
@@ -34,7 +35,9 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

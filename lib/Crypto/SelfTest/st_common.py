@@ -23,8 +23,8 @@
 
 """Common functions for SelfTest modules"""
 
-import unittest
 import binascii
+import unittest
 
 
 def list_test_cases(class_):
@@ -34,20 +34,24 @@ def list_test_cases(class_):
     """
     return unittest.TestLoader().loadTestsFromTestCase(class_)
 
+
 def strip_whitespace(s):
     """Remove whitespace from a text or byte string"""
-    if isinstance(s,str):
+    if isinstance(s, str):
         return "".join(s.split()).encode("latin-1")
     else:
         return b"".join(s.split())
+
 
 def a2b_hex(s):
     """Convert hexadecimal to binary, ignoring whitespace"""
     return binascii.a2b_hex(strip_whitespace(s))
 
+
 def b2a_hex(s):
     """Convert binary to hexadecimal"""
     # For completeness
     return binascii.b2a_hex(s)
+
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

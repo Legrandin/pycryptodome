@@ -25,12 +25,12 @@
 
 __revision__ = "$Id$"
 
-import os
 import pickle
+import unittest
 from pickle import PicklingError
 
-import unittest
-from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
+from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
+
 
 class RSATest(unittest.TestCase):
     # Test vectors from "RSA-OAEP and RSA-PSS test vectors (.zip file)"
@@ -75,7 +75,7 @@ class RSATest(unittest.TestCase):
         e2 53 72 98 ca 2a 8f 59 46 f8 e5 fd 09 1d bd cb
     """
 
-    e = 0x11    # public exponent
+    e = 0x11  # public exponent
 
     prime_factor = """
         c9 7f b1 f0 27 f4 53 f6 34 12 33 ea aa d1 d9 35
@@ -86,16 +86,17 @@ class RSATest(unittest.TestCase):
 
     def setUp(self):
         global RSA, Random, bytes_to_long
-        from Crypto.PublicKey import RSA
         from Crypto import Random
+        from Crypto.PublicKey import RSA
         from Crypto.Util.number import bytes_to_long, inverse
+
         self.n = bytes_to_long(a2b_hex(self.modulus))
         self.p = bytes_to_long(a2b_hex(self.prime_factor))
 
         # Compute q, d, and u from n, e, and p
         self.q = self.n // self.p
-        self.d = inverse(self.e, (self.p-1)*(self.q-1))
-        self.u = inverse(self.p, self.q)    # u = e**-1 (mod q)
+        self.d = inverse(self.e, (self.p - 1) * (self.q - 1))
+        self.u = inverse(self.p, self.q)  # u = e**-1 (mod q)
 
         self.rsa = RSA
 
@@ -118,13 +119,13 @@ class RSATest(unittest.TestCase):
         self._exercise_public_primitive(rsaObj)
 
     def test_generate_3args(self):
-        rsaObj = self.rsa.generate(1024, Random.new().read,e=65537)
+        rsaObj = self.rsa.generate(1024, Random.new().read, e=65537)
         self._check_private_key(rsaObj)
         self._exercise_primitive(rsaObj)
         pub = rsaObj.public_key()
         self._check_public_key(pub)
         self._exercise_public_primitive(rsaObj)
-        self.assertEqual(65537,rsaObj.e)
+        self.assertEqual(65537, rsaObj.e)
 
     def test_construct_2tuple(self):
         """RSA (default implementation) constructed key (2-tuple)"""
@@ -163,21 +164,21 @@ class RSATest(unittest.TestCase):
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
         # An even modulus is wrong
-        tup = (self.n+1, self.e)
+        tup = (self.n + 1, self.e)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
     def test_construct_bad_key3(self):
-        tup = (self.n, self.e, self.d+1)
+        tup = (self.n, self.e, self.d + 1)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
     def test_construct_bad_key5(self):
         tup = (self.n, self.e, self.d, self.p, self.p)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
-        tup = (self.p*self.p, self.e, self.p, self.p)
+        tup = (self.p * self.p, self.e, self.p, self.p)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
-        tup = (self.p*self.p, 3, self.p, self.q)
+        tup = (self.p * self.p, 3, self.p, self.q)
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
     def test_construct_bad_key6(self):
@@ -185,16 +186,17 @@ class RSATest(unittest.TestCase):
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
         from Crypto.Util.number import inverse
+
         tup = (self.n, self.e, self.d, self.p, self.q, inverse(self.q, self.p))
         self.assertRaises(ValueError, self.rsa.construct, tup)
 
     def test_factoring(self):
         rsaObj = self.rsa.construct([self.n, self.e, self.d])
-        self.assertTrue(rsaObj.p==self.p or rsaObj.p==self.q)
-        self.assertTrue(rsaObj.q==self.p or rsaObj.q==self.q)
-        self.assertTrue(rsaObj.q*rsaObj.p == self.n)
+        self.assertTrue(rsaObj.p == self.p or rsaObj.p == self.q)
+        self.assertTrue(rsaObj.q == self.p or rsaObj.q == self.q)
+        self.assertTrue(rsaObj.q * rsaObj.p == self.n)
 
-        self.assertRaises(ValueError, self.rsa.construct, [self.n, self.e, self.n-1])
+        self.assertRaises(ValueError, self.rsa.construct, [self.n, self.e, self.n - 1])
 
     def test_repr(self):
         rsaObj = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
@@ -231,14 +233,14 @@ class RSATest(unittest.TestCase):
         self.assertEqual(1, rsaObj.has_private())
 
         # Sanity check key data
-        self.assertEqual(rsaObj.n, rsaObj.p * rsaObj.q)     # n = pq
-        lcm = int(Integer(rsaObj.p-1).lcm(rsaObj.q-1))
-        self.assertEqual(1, rsaObj.d * rsaObj.e % lcm) # ed = 1 (mod LCM(p-1, q-1))
-        self.assertEqual(1, rsaObj.p * rsaObj.u % rsaObj.q) # pu = 1 (mod q)
-        self.assertEqual(1, rsaObj.p > 1)   # p > 1
-        self.assertEqual(1, rsaObj.q > 1)   # q > 1
-        self.assertEqual(1, rsaObj.e > 1)   # e > 1
-        self.assertEqual(1, rsaObj.d > 1)   # d > 1
+        self.assertEqual(rsaObj.n, rsaObj.p * rsaObj.q)  # n = pq
+        lcm = int(Integer(rsaObj.p - 1).lcm(rsaObj.q - 1))
+        self.assertEqual(1, rsaObj.d * rsaObj.e % lcm)  # ed = 1 (mod LCM(p-1, q-1))
+        self.assertEqual(1, rsaObj.p * rsaObj.u % rsaObj.q)  # pu = 1 (mod q)
+        self.assertEqual(1, rsaObj.p > 1)  # p > 1
+        self.assertEqual(1, rsaObj.q > 1)  # q > 1
+        self.assertEqual(1, rsaObj.e > 1)  # e > 1
+        self.assertEqual(1, rsaObj.d > 1)  # d > 1
 
         self.assertEqual(rsaObj.u, rsaObj.invp)
         self.assertEqual(1, rsaObj.q * rsaObj.invq % rsaObj.p)
@@ -254,23 +256,21 @@ class RSATest(unittest.TestCase):
         self.assertEqual(rsaObj.e, rsaObj.e)
 
         # Check that private parameters are all missing
-        self.assertEqual(0, hasattr(rsaObj, 'd'))
-        self.assertEqual(0, hasattr(rsaObj, 'p'))
-        self.assertEqual(0, hasattr(rsaObj, 'q'))
-        self.assertEqual(0, hasattr(rsaObj, 'u'))
+        self.assertEqual(0, hasattr(rsaObj, "d"))
+        self.assertEqual(0, hasattr(rsaObj, "p"))
+        self.assertEqual(0, hasattr(rsaObj, "q"))
+        self.assertEqual(0, hasattr(rsaObj, "u"))
 
         # Sanity check key data
-        self.assertEqual(1, rsaObj.e > 1)   # e > 1
+        self.assertEqual(1, rsaObj.e > 1)  # e > 1
 
         # Public keys should not be able to sign or decrypt
-        self.assertRaises(TypeError, rsaObj._decrypt,
-                bytes_to_long(ciphertext))
-        self.assertRaises(TypeError, rsaObj._decrypt_to_bytes,
-                bytes_to_long(ciphertext))
+        self.assertRaises(TypeError, rsaObj._decrypt, bytes_to_long(ciphertext))
+        self.assertRaises(TypeError, rsaObj._decrypt_to_bytes, bytes_to_long(ciphertext))
 
         # Check __eq__ and __ne__
-        self.assertEqual(rsaObj.public_key() == rsaObj.public_key(),True) # assert_
-        self.assertEqual(rsaObj.public_key() != rsaObj.public_key(),False) # assertFalse
+        self.assertEqual(rsaObj.public_key() == rsaObj.public_key(), True)  # assert_
+        self.assertEqual(rsaObj.public_key() != rsaObj.public_key(), False)  # assertFalse
 
         self.assertEqual(rsaObj.publickey(), rsaObj.public_key())
 
@@ -291,7 +291,7 @@ class RSATest(unittest.TestCase):
         plaintext = a2b_hex(self.plaintext)
 
         # Test encryption (2 arguments)
-        new_ciphertext2 = rsaObj._encrypt(bytes_to_long(plaintext))
+        rsaObj._encrypt(bytes_to_long(plaintext))
 
     def _check_encryption(self, rsaObj):
         plaintext = a2b_hex(self.plaintext)
@@ -315,8 +315,9 @@ def get_tests(config={}):
     tests += list_test_cases(RSATest)
     return tests
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

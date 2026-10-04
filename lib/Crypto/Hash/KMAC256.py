@@ -33,15 +33,14 @@ from __future__ import annotations
 from typing import Optional, Union
 
 from Crypto.Util._raw_api import is_buffer
-from .KMAC128 import KMAC_Hash
-from . import cSHAKE256
 
+from . import cSHAKE256
+from .KMAC128 import KMAC_Hash
 
 Buffer = Union[bytes, bytearray, memoryview]
 
 
-def new(*, key: Buffer, data: Optional[Buffer] = None, mac_len: int = 64,
-        custom: Buffer = b"") -> KMAC_Hash:
+def new(*, key: Buffer, data: Optional[Buffer] = None, mac_len: int = 64, custom: Buffer = b"") -> KMAC_Hash:
     """Create a new KMAC256 object.
 
     Args:

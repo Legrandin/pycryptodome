@@ -70,28 +70,34 @@ Example:
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Tuple, Union
-
 import struct
 from binascii import unhexlify
-from Crypto.Util._bytes import copy_bytes
-from Crypto.Util.number import long_to_bytes, bytes_to_long
-from Crypto.Util.strxor import strxor
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
-
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
-                                  create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_uint8_ptr,
-                                  is_buffer)
+from Crypto.Util._bytes import copy_bytes
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    is_buffer,
+    load_pycryptodome_raw_lib,
+)
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
+_raw_ocb_lib = load_pycryptodome_raw_lib(
+    "Crypto.Cipher._raw_ocb",
+    """
                                     int OCB_start_operation(void *cipher,
                                         const uint8_t *offset_0,
                                         size_t offset_0_len,
@@ -111,7 +117,8 @@ _raw_ocb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ocb", """
                                         uint8_t *tag,
                                         size_t tag_len);
                                     int OCB_stop_operation(void *state);
-                                    """)
+                                    """,
+)
 
 
 class OcbMode:
@@ -123,8 +130,7 @@ class OcbMode:
     def __init__(self, factory: ModuleType, nonce: Buffer, mac_len: int, cipher_params: dict) -> None:
 
         if factory.block_size != 16:
-            raise ValueError("OCB mode is only available for ciphers"
-                             " that operate on 128 bits blocks")
+            raise ValueError("OCB mode is only available for ciphers that operate on 128 bits blocks")
 
         self.block_size = 16
         """The block size of the underlying cipher, in bytes."""
@@ -150,8 +156,7 @@ class OcbMode:
         self._cache_P = b""
 
         # Allowed transitions after initialization
-        self._next = ["update", "encrypt", "decrypt",
-                      "digest", "verify"]
+        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
 
         # Compute Offset_0
         params_without_key = dict(cipher_params)
@@ -159,27 +164,18 @@ class OcbMode:
 
         taglen_mod128 = (self._mac_len * 8) % 128
         if len(self.nonce) < 15:
-            nonce = bytes([taglen_mod128 << 1]) +\
-                    b'\x00' * (14 - len(nonce)) +\
-                    b'\x01' +\
-                    self.nonce
+            nonce = bytes([taglen_mod128 << 1]) + b"\x00" * (14 - len(nonce)) + b"\x01" + self.nonce
         else:
-            nonce = bytes([(taglen_mod128 << 1) | 0x01]) +\
-                    self.nonce
+            nonce = bytes([(taglen_mod128 << 1) | 0x01]) + self.nonce
 
-        bottom_bits = nonce[15] & 0x3F    # 6 bits, 0..63
-        top_bits = nonce[15] & 0xC0       # 2 bits
+        bottom_bits = nonce[15] & 0x3F  # 6 bits, 0..63
+        top_bits = nonce[15] & 0xC0  # 2 bits
 
-        ktop_cipher = factory.new(key,
-                                  factory.MODE_ECB,
-                                  **params_without_key)
-        ktop = ktop_cipher.encrypt(struct.pack('15sB',
-                                               nonce[:15],
-                                               top_bits))
+        ktop_cipher = factory.new(key, factory.MODE_ECB, **params_without_key)
+        ktop = ktop_cipher.encrypt(struct.pack("15sB", nonce[:15], top_bits))
 
-        stretch = ktop + strxor(ktop[:8], ktop[1:9])    # 192 bits
-        offset_0 = long_to_bytes(bytes_to_long(stretch) >>
-                                 (64 - bottom_bits), 24)[8:]
+        stretch = ktop + strxor(ktop[:8], ktop[1:9])  # 192 bits
+        offset_0 = long_to_bytes(bytes_to_long(stretch) >> (64 - bottom_bits), 24)[8:]
 
         # Create low-level cipher instance
         raw_cipher = factory._create_base_cipher(cipher_params)
@@ -187,27 +183,22 @@ class OcbMode:
             raise TypeError("Unknown keywords: " + str(cipher_params))
 
         state = VoidPointer()
-        result = _raw_ocb_lib.OCB_start_operation(raw_cipher.get(),
-                                                  offset_0,
-                                                  c_size_t(len(offset_0)),
-                                                  state.address_of())
+        result = _raw_ocb_lib.OCB_start_operation(
+            raw_cipher.get(), offset_0, c_size_t(len(offset_0)), state.address_of()
+        )
         if result:
-            raise ValueError("Error %d while instantiating the OCB mode"
-                             % result)
+            raise ValueError("Error %d while instantiating the OCB mode" % result)
 
         # Ensure that object disposal of this Python object will (eventually)
         # free the memory allocated by the raw library for the cipher mode
-        self._state = SmartPointer(state.get(),
-                                   _raw_ocb_lib.OCB_stop_operation)
+        self._state = SmartPointer(state.get(), _raw_ocb_lib.OCB_stop_operation)
 
         # Memory allocated for the underlying block cipher is now owed
         # by the cipher mode
         raw_cipher.release()
 
     def _update(self, assoc_data, assoc_data_len):
-        result = _raw_ocb_lib.OCB_update(self._state.get(),
-                                         c_uint8_ptr(assoc_data),
-                                         c_size_t(assoc_data_len))
+        result = _raw_ocb_lib.OCB_update(self._state.get(), c_uint8_ptr(assoc_data), c_size_t(assoc_data_len))
         if result:
             raise ValueError("Error %d while computing MAC in OCB mode" % result)
 
@@ -233,11 +224,9 @@ class OcbMode:
         """
 
         if "update" not in self._next:
-            raise TypeError("update() can only be called"
-                            " immediately after initialization")
+            raise TypeError("update() can only be called immediately after initialization")
 
-        self._next = ["encrypt", "decrypt", "digest",
-                      "verify", "update"]
+        self._next = ["encrypt", "decrypt", "digest", "verify", "update"]
 
         if len(self._cache_A) > 0:
             filler = min(16 - len(self._cache_A), len(assoc_data))
@@ -256,26 +245,18 @@ class OcbMode:
         self._update(assoc_data, update_len)
         return self
 
-    def _transcrypt_aligned(self, in_data, in_data_len,
-                            trans_func, trans_desc):
+    def _transcrypt_aligned(self, in_data, in_data_len, trans_func, trans_desc):
 
         out_data = create_string_buffer(in_data_len)
-        result = trans_func(self._state.get(),
-                            in_data,
-                            out_data,
-                            c_size_t(in_data_len))
+        result = trans_func(self._state.get(), in_data, out_data, c_size_t(in_data_len))
         if result:
-            raise ValueError("Error %d while %sing in OCB mode"
-                             % (result, trans_desc))
+            raise ValueError("Error %d while %sing in OCB mode" % (result, trans_desc))
         return get_raw_buffer(out_data)
 
     def _transcrypt(self, in_data, trans_func, trans_desc):
         # Last piece to encrypt/decrypt
         if in_data is None:
-            out_data = self._transcrypt_aligned(self._cache_P,
-                                                len(self._cache_P),
-                                                trans_func,
-                                                trans_desc)
+            out_data = self._transcrypt_aligned(self._cache_P, len(self._cache_P), trans_func, trans_desc)
             self._cache_P = b""
             return out_data
 
@@ -292,18 +273,12 @@ class OcbMode:
                 return b""
 
             # Clear the cache, and proceeding with any other aligned data
-            prefix = self._transcrypt_aligned(self._cache_P,
-                                              len(self._cache_P),
-                                              trans_func,
-                                              trans_desc)
+            prefix = self._transcrypt_aligned(self._cache_P, len(self._cache_P), trans_func, trans_desc)
             self._cache_P = b""
 
         # Process data in multiples of the block size
         trans_len = len(in_data) // 16 * 16
-        result = self._transcrypt_aligned(c_uint8_ptr(in_data),
-                                          trans_len,
-                                          trans_func,
-                                          trans_desc)
+        result = self._transcrypt_aligned(c_uint8_ptr(in_data), trans_len, trans_func, trans_desc)
         if prefix:
             result = prefix + result
 
@@ -332,8 +307,7 @@ class OcbMode:
         """
 
         if "encrypt" not in self._next:
-            raise TypeError("encrypt() can only be called after"
-                            " initialization or an update()")
+            raise TypeError("encrypt() can only be called after initialization or an update()")
 
         if plaintext is None:
             self._next = ["digest"]
@@ -361,16 +335,13 @@ class OcbMode:
         """
 
         if "decrypt" not in self._next:
-            raise TypeError("decrypt() can only be called after"
-                            " initialization or an update()")
+            raise TypeError("decrypt() can only be called after initialization or an update()")
 
         if ciphertext is None:
             self._next = ["verify"]
         else:
             self._next = ["decrypt"]
-        return self._transcrypt(ciphertext,
-                                _raw_ocb_lib.OCB_decrypt,
-                                "decrypt")
+        return self._transcrypt(ciphertext, _raw_ocb_lib.OCB_decrypt, "decrypt")
 
     def _compute_mac_tag(self):
 
@@ -382,14 +353,10 @@ class OcbMode:
             self._cache_A = b""
 
         mac_tag = create_string_buffer(16)
-        result = _raw_ocb_lib.OCB_digest(self._state.get(),
-                                         mac_tag,
-                                         c_size_t(len(mac_tag))
-                                         )
+        result = _raw_ocb_lib.OCB_digest(self._state.get(), mac_tag, c_size_t(len(mac_tag)))
         if result:
-            raise ValueError("Error %d while computing digest in OCB mode"
-                             % result)
-        self._mac_tag = get_raw_buffer(mac_tag)[:self._mac_len]
+            raise ValueError("Error %d while computing digest in OCB mode" % result)
+        self._mac_tag = get_raw_buffer(mac_tag)[: self._mac_len]
 
     def digest(self) -> bytes:
         """Compute the *binary* MAC tag.
@@ -406,7 +373,7 @@ class OcbMode:
         if "digest" not in self._next:
             raise TypeError("digest() cannot be called now for this cipher")
 
-        assert(len(self._cache_P) == 0)
+        assert len(self._cache_P) == 0
 
         self._next = ["digest"]
 
@@ -442,7 +409,7 @@ class OcbMode:
         if "verify" not in self._next:
             raise TypeError("verify() cannot be called now for this cipher")
 
-        assert(len(self._cache_P) == 0)
+        assert len(self._cache_P) == 0
 
         self._next = ["verify"]
 

@@ -30,9 +30,8 @@
 
 from __future__ import annotations
 
-from typing import Tuple
-
 import struct
+from typing import Tuple
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
@@ -71,7 +70,7 @@ def import_openssh_private_generic(data: bytes, password: bytes) -> Tuple[str, b
     # https://coolaj86.com/articles/the-openssh-private-key-format/
     # https://coolaj86.com/articles/the-ssh-public-key-format/
 
-    if not data.startswith(b'openssh-key-v1\x00'):
+    if not data.startswith(b"openssh-key-v1\x00"):
         raise ValueError("Incorrect magic value")
     data = data[15:]
 
@@ -83,7 +82,7 @@ def import_openssh_private_generic(data: bytes, password: bytes) -> Tuple[str, b
     if number_of_keys != 1:
         raise ValueError("We only handle 1 key at a time")
 
-    _, data = read_string(data)             # Public key
+    _, data = read_string(data)  # Public key
     encrypted, data = read_bytes(data)
     if data:
         raise ValueError("Too much data")
@@ -92,10 +91,10 @@ def import_openssh_private_generic(data: bytes, password: bytes) -> Tuple[str, b
         raise ValueError("Incorrect payload length")
 
     # Decrypt if necessary
-    if ciphername == 'none':
+    if ciphername == "none":
         decrypted = encrypted
     else:
-        if (ciphername, kdfname) != ('aes256-ctr', 'bcrypt'):
+        if (ciphername, kdfname) != ("aes256-ctr", "bcrypt"):
             raise ValueError("Unsupported encryption scheme %s/%s" % (ciphername, kdfname))
 
         salt, kdfoptions = read_bytes(kdfoptions)
@@ -121,12 +120,9 @@ def import_openssh_private_generic(data: bytes, password: bytes) -> Tuple[str, b
                 strxor(acc, out, output=acc)
             stripes.append(acc[:24])
 
-        result = b"".join([bytes([a])+bytes([b]) for (a, b) in zip(*stripes)])
+        result = b"".join([bytes([a]) + bytes([b]) for (a, b) in zip(*stripes)])
 
-        cipher = AES.new(result[:32],
-                         AES.MODE_CTR,
-                         nonce=b"",
-                         initial_value=result[32:32+16])
+        cipher = AES.new(result[:32], AES.MODE_CTR, nonce=b"", initial_value=result[32 : 32 + 16])
         decrypted = cipher.decrypt(encrypted)
 
     checkint1, decrypted = read_int4(decrypted)

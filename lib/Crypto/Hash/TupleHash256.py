@@ -1,4 +1,3 @@
-
 # ===================================================================
 #
 # Copyright (c) 2021, Legrandin <helderijs@gmail.com>
@@ -39,8 +38,9 @@ from .TupleHash128 import TupleHash
 Buffer = Union[bytes, bytearray, memoryview]
 
 
-def new(*, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None,
-        custom: Buffer = b"") -> TupleHash:
+def new(
+    *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None, custom: Buffer = b""
+) -> TupleHash:
     """Create a new TupleHash256 object.
 
     Args:
@@ -67,8 +67,7 @@ def new(*, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None
             raise ValueError("'digest_bytes' must be at least 8")
     else:
         if digest_bits < 64 or digest_bits % 8:
-            raise ValueError("'digest_bytes' must be at least 64 "
-                             "in steps of 8")
+            raise ValueError("'digest_bytes' must be at least 64 in steps of 8")
         digest_bytes = digest_bits // 8
 
     return TupleHash(custom, cSHAKE256, digest_bytes)

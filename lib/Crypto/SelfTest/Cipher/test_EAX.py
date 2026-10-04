@@ -31,12 +31,11 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.Util._bytes import tobytes
-from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.Cipher import AES, DES3
+from Crypto.Cipher import AES, ARC2, CAST, DES, DES3, Blowfish
 from Crypto.Hash import SHAKE128
-
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor
 
 
@@ -45,7 +44,6 @@ def get_tag_random(tag, length):
 
 
 class EaxTests(unittest.TestCase):
-
     key_128 = get_tag_random("key_128", 16)
     key_192 = get_tag_random("key_192", 16)
     nonce_96 = get_tag_random("nonce_128", 12)
@@ -85,13 +83,11 @@ class EaxTests(unittest.TestCase):
         self.assertEqual(ct, cipher.encrypt(self.data_128))
 
     def test_nonce_must_be_bytes(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX,
-                          nonce='test12345678')
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX, nonce="test12345678")
 
     def test_nonce_length(self):
         # nonce can be of any length (but not empty)
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX,
-                          nonce=b"")
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX, nonce=b"")
 
         for x in range(1, 128):
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=bytes([1]) * x)
@@ -116,15 +112,12 @@ class EaxTests(unittest.TestCase):
         self.assertNotEqual(nonce1, nonce2)
 
     def test_unknown_parameters(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX,
-                          self.nonce_96, 7)
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX,
-                          nonce=self.nonce_96, unknown=7)
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX, self.nonce_96, 7)
+        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_EAX, nonce=self.nonce_96, unknown=7)
 
         # But some are only known by the base cipher
         # (e.g. use_aesni consumed by the AES module)
-        AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96,
-                use_aesni=False)
+        AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96, use_aesni=False)
 
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
@@ -143,22 +136,21 @@ class EaxTests(unittest.TestCase):
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, 'test1234567890-*')
+        self.assertRaises(TypeError, cipher.encrypt, "test1234567890-*")
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, 'test1234567890-*')
+        self.assertRaises(TypeError, cipher.decrypt, "test1234567890-*")
 
     def test_mac_len(self):
         # Invalid MAC length
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX,
-                          nonce=self.nonce_96, mac_len=2-1)
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX,
-                          nonce=self.nonce_96, mac_len=16+1)
+        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_EAX, nonce=self.nonce_96, mac_len=2 - 1)
+        self.assertRaises(
+            ValueError, AES.new, self.key_128, AES.MODE_EAX, nonce=self.nonce_96, mac_len=16 + 1
+        )
 
         # Valid MAC length
         for mac_len in range(2, 16 + 1):
-            cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96,
-                             mac_len=mac_len)
+            cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96, mac_len=mac_len)
             _, mac = cipher.encrypt_and_digest(self.data_128)
             self.assertEqual(len(mac), mac_len)
 
@@ -169,14 +161,14 @@ class EaxTests(unittest.TestCase):
 
     def test_invalid_mac(self):
         from Crypto.Util.strxor import strxor_c
+
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct, mac = cipher.encrypt_and_digest(self.data_128)
 
         invalid_mac = strxor_c(mac, 0x01)
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct,
-                          invalid_mac)
+        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, invalid_mac)
 
     def test_hex_mac(self):
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
@@ -198,12 +190,10 @@ class EaxTests(unittest.TestCase):
         ciphertext, ref_mac = cipher.encrypt_and_digest(plaintext)
 
         def break_up(data, chunk_length):
-            return [data[i:i+chunk_length] for i in range(0, len(data),
-                    chunk_length)]
+            return [data[i : i + chunk_length] for i in range(0, len(data), chunk_length)]
 
         # Encryption
         for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
-
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
 
             for chunk in break_up(auth_data, chunk_length):
@@ -216,7 +206,6 @@ class EaxTests(unittest.TestCase):
 
         # Decryption
         for chunk_length in 1, 2, 3, 7, 10, 13, 16, 40, 80, 128:
-
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
 
             for chunk in break_up(auth_data, chunk_length):
@@ -235,22 +224,18 @@ class EaxTests(unittest.TestCase):
         header_ba = bytearray(self.data_128)
         data_ba = bytearray(self.data_128)
 
-        cipher1 = AES.new(self.key_128,
-                          AES.MODE_EAX,
-                          nonce=self.nonce_96)
+        cipher1 = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher1.update(self.data_128)
         ct = cipher1.encrypt(self.data_128)
         tag = cipher1.digest()
 
-        cipher2 = AES.new(key_ba,
-                          AES.MODE_EAX,
-                          nonce=nonce_ba)
-        key_ba[:3] = b'\xFF\xFF\xFF'
-        nonce_ba[:3] = b'\xFF\xFF\xFF'
+        cipher2 = AES.new(key_ba, AES.MODE_EAX, nonce=nonce_ba)
+        key_ba[:3] = b"\xff\xff\xff"
+        nonce_ba[:3] = b"\xff\xff\xff"
         cipher2.update(header_ba)
-        header_ba[:3] = b'\xFF\xFF\xFF'
+        header_ba[:3] = b"\xff\xff\xff"
         ct_test = cipher2.encrypt(data_ba)
-        data_ba[:3] = b'\x99\x99\x99'
+        data_ba[:3] = b"\x99\x99\x99"
         tag_test = cipher2.digest()
 
         self.assertEqual(ct, ct_test)
@@ -265,15 +250,13 @@ class EaxTests(unittest.TestCase):
         tag_ba = bytearray(tag)
         del data_ba
 
-        cipher3 = AES.new(key_ba,
-                          AES.MODE_EAX,
-                          nonce=nonce_ba)
-        key_ba[:3] = b'\xFF\xFF\xFF'
-        nonce_ba[:3] = b'\xFF\xFF\xFF'
+        cipher3 = AES.new(key_ba, AES.MODE_EAX, nonce=nonce_ba)
+        key_ba[:3] = b"\xff\xff\xff"
+        nonce_ba[:3] = b"\xff\xff\xff"
         cipher3.update(header_ba)
-        header_ba[:3] = b'\xFF\xFF\xFF'
+        header_ba[:3] = b"\xff\xff\xff"
         pt_test = cipher3.decrypt(ct_ba)
-        ct_ba[:3] = b'\xFF\xFF\xFF'
+        ct_ba[:3] = b"\xff\xff\xff"
         cipher3.verify(tag_ba)
 
         self.assertEqual(pt_test, self.data_128)
@@ -286,22 +269,18 @@ class EaxTests(unittest.TestCase):
         header_mv = memoryview(bytearray(self.data_128))
         data_mv = memoryview(bytearray(self.data_128))
 
-        cipher1 = AES.new(self.key_128,
-                          AES.MODE_EAX,
-                          nonce=self.nonce_96)
+        cipher1 = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher1.update(self.data_128)
         ct = cipher1.encrypt(self.data_128)
         tag = cipher1.digest()
 
-        cipher2 = AES.new(key_mv,
-                          AES.MODE_EAX,
-                          nonce=nonce_mv)
-        key_mv[:3] = b'\xFF\xFF\xFF'
-        nonce_mv[:3] = b'\xFF\xFF\xFF'
+        cipher2 = AES.new(key_mv, AES.MODE_EAX, nonce=nonce_mv)
+        key_mv[:3] = b"\xff\xff\xff"
+        nonce_mv[:3] = b"\xff\xff\xff"
         cipher2.update(header_mv)
-        header_mv[:3] = b'\xFF\xFF\xFF'
+        header_mv[:3] = b"\xff\xff\xff"
         ct_test = cipher2.encrypt(data_mv)
-        data_mv[:3] = b'\x99\x99\x99'
+        data_mv[:3] = b"\x99\x99\x99"
         tag_test = cipher2.digest()
 
         self.assertEqual(ct, ct_test)
@@ -316,22 +295,20 @@ class EaxTests(unittest.TestCase):
         tag_mv = memoryview(bytearray(tag))
         del data_mv
 
-        cipher3 = AES.new(key_mv,
-                          AES.MODE_EAX,
-                          nonce=nonce_mv)
-        key_mv[:3] = b'\xFF\xFF\xFF'
-        nonce_mv[:3] = b'\xFF\xFF\xFF'
+        cipher3 = AES.new(key_mv, AES.MODE_EAX, nonce=nonce_mv)
+        key_mv[:3] = b"\xff\xff\xff"
+        nonce_mv[:3] = b"\xff\xff\xff"
         cipher3.update(header_mv)
-        header_mv[:3] = b'\xFF\xFF\xFF'
+        header_mv[:3] = b"\xff\xff\xff"
         pt_test = cipher3.decrypt(ct_mv)
-        ct_mv[:3] = b'\x99\x99\x99'
+        ct_mv[:3] = b"\x99\x99\x99"
         cipher3.verify(tag_mv)
 
         self.assertEqual(pt_test, self.data_128)
 
     def test_output_param(self):
 
-        pt = b'5' * 128
+        pt = b"5" * 128
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
         tag = cipher.digest()
@@ -360,7 +337,7 @@ class EaxTests(unittest.TestCase):
 
     def test_output_param_memoryview(self):
 
-        pt = b'5' * 128
+        pt = b"5" * 128
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
 
@@ -376,15 +353,15 @@ class EaxTests(unittest.TestCase):
     def test_output_param_neg(self):
         LEN_PT = 16
 
-        pt = b'5' * LEN_PT
+        pt = b"5" * LEN_PT
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0' * LEN_PT)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * LEN_PT)
 
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0' * LEN_PT)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * LEN_PT)
 
         shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
@@ -394,7 +371,6 @@ class EaxTests(unittest.TestCase):
 
 
 class EaxFSMTests(unittest.TestCase):
-
     key_128 = get_tag_random("key_128", 16)
     nonce_96 = get_tag_random("nonce_128", 12)
     data_128 = get_tag_random("data_128", 16)
@@ -402,43 +378,37 @@ class EaxFSMTests(unittest.TestCase):
     def test_valid_init_encrypt_decrypt_digest_verify(self):
         # No authenticated data, fixed plaintext
         # Verify path INIT->ENCRYPT->DIGEST
-        cipher = AES.new(self.key_128, AES.MODE_EAX,
-                         nonce=self.nonce_96)
+        cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         ct = cipher.encrypt(self.data_128)
         mac = cipher.digest()
 
         # Verify path INIT->DECRYPT->VERIFY
-        cipher = AES.new(self.key_128, AES.MODE_EAX,
-                         nonce=self.nonce_96)
+        cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.decrypt(ct)
         cipher.verify(mac)
 
     def test_valid_init_update_digest_verify(self):
         # No plaintext, fixed authenticated data
         # Verify path INIT->UPDATE->DIGEST
-        cipher = AES.new(self.key_128, AES.MODE_EAX,
-                         nonce=self.nonce_96)
+        cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.update(self.data_128)
         mac = cipher.digest()
 
         # Verify path INIT->UPDATE->VERIFY
-        cipher = AES.new(self.key_128, AES.MODE_EAX,
-                         nonce=self.nonce_96)
+        cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.update(self.data_128)
         cipher.verify(mac)
 
     def test_valid_full_path(self):
         # Fixed authenticated data, fixed plaintext
         # Verify path INIT->UPDATE->ENCRYPT->DIGEST
-        cipher = AES.new(self.key_128, AES.MODE_EAX,
-                         nonce=self.nonce_96)
+        cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.update(self.data_128)
         ct = cipher.encrypt(self.data_128)
         mac = cipher.digest()
 
         # Verify path INIT->UPDATE->DECRYPT->VERIFY
-        cipher = AES.new(self.key_128, AES.MODE_EAX,
-                         nonce=self.nonce_96)
+        cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.update(self.data_128)
         cipher.decrypt(ct)
         cipher.verify(mac)
@@ -458,14 +428,8 @@ class EaxFSMTests(unittest.TestCase):
 
     def test_valid_multiple_encrypt_or_decrypt(self):
         for method_name in "encrypt", "decrypt":
-            for auth_data in (None, b"333", self.data_128,
-                              self.data_128 + b"3"):
-                if auth_data is None:
-                    assoc_len = None
-                else:
-                    assoc_len = len(auth_data)
-                cipher = AES.new(self.key_128, AES.MODE_EAX,
-                                 nonce=self.nonce_96)
+            for auth_data in (None, b"333", self.data_128, self.data_128 + b"3"):
+                cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
                 if auth_data is not None:
                     cipher.update(auth_data)
                 method = getattr(cipher, method_name)
@@ -479,13 +443,13 @@ class EaxFSMTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.update(self.data_128)
         first_mac = cipher.digest()
-        for x in range(4):
+        for _x in range(4):
             self.assertEqual(first_mac, cipher.digest())
 
         # Multiple calls to verify
         cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
         cipher.update(self.data_128)
-        for x in range(5):
+        for _x in range(5):
             cipher.verify(first_mac)
 
     def test_valid_encrypt_and_digest_decrypt_and_verify(self):
@@ -502,24 +466,20 @@ class EaxFSMTests(unittest.TestCase):
 
     def test_invalid_mixing_encrypt_decrypt(self):
         # Once per method, with or without assoc. data
-        for method1_name, method2_name in (("encrypt", "decrypt"),
-                                           ("decrypt", "encrypt")):
+        for method1_name, method2_name in (("encrypt", "decrypt"), ("decrypt", "encrypt")):
             for assoc_data_present in (True, False):
-                cipher = AES.new(self.key_128, AES.MODE_EAX,
-                                 nonce=self.nonce_96)
+                cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
                 if assoc_data_present:
                     cipher.update(self.data_128)
                 getattr(cipher, method1_name)(self.data_128)
-                self.assertRaises(TypeError, getattr(cipher, method2_name),
-                                  self.data_128)
+                self.assertRaises(TypeError, getattr(cipher, method2_name), self.data_128)
 
     def test_invalid_encrypt_or_update_after_digest(self):
         for method_name in "encrypt", "update":
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
             cipher.encrypt(self.data_128)
             cipher.digest()
-            self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
 
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
             cipher.encrypt_and_digest(self.data_128)
@@ -533,97 +493,97 @@ class EaxFSMTests(unittest.TestCase):
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
             cipher.decrypt(ct)
             cipher.verify(mac)
-            self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
 
             cipher = AES.new(self.key_128, AES.MODE_EAX, nonce=self.nonce_96)
             cipher.decrypt_and_verify(ct, mac)
-            self.assertRaises(TypeError, getattr(cipher, method_name),
-                              self.data_128)
+            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
 
 
 class TestVectorsPaper(unittest.TestCase):
     """Class exercising the EAX test vectors found in
-       http://www.cs.ucdavis.edu/~rogaway/papers/eax.pdf"""
+    http://www.cs.ucdavis.edu/~rogaway/papers/eax.pdf"""
 
     test_vectors_hex = [
-        ( '6bfb914fd07eae6b',
-          '',
-          '',
-          'e037830e8389f27b025a2d6527e79d01',
-          '233952dee4d5ed5f9b9c6d6ff80ff478',
-          '62EC67F9C3A4A407FCB2A8C49031A8B3'
+        (
+            "6bfb914fd07eae6b",
+            "",
+            "",
+            "e037830e8389f27b025a2d6527e79d01",
+            "233952dee4d5ed5f9b9c6d6ff80ff478",
+            "62EC67F9C3A4A407FCB2A8C49031A8B3",
         ),
         (
-          'fa3bfd4806eb53fa',
-          'f7fb',
-          '19dd',
-          '5c4c9331049d0bdab0277408f67967e5',
-          '91945d3f4dcbee0bf45ef52255f095a4',
-          'BECAF043B0A23D843194BA972C66DEBD'
-        ),
-        ( '234a3463c1264ac6',
-          '1a47cb4933',
-          'd851d5bae0',
-          '3a59f238a23e39199dc9266626c40f80',
-          '01f74ad64077f2e704c0f60ada3dd523',
-          '70C3DB4F0D26368400A10ED05D2BFF5E'
+            "fa3bfd4806eb53fa",
+            "f7fb",
+            "19dd",
+            "5c4c9331049d0bdab0277408f67967e5",
+            "91945d3f4dcbee0bf45ef52255f095a4",
+            "BECAF043B0A23D843194BA972C66DEBD",
         ),
         (
-          '33cce2eabff5a79d',
-          '481c9e39b1',
-          '632a9d131a',
-          'd4c168a4225d8e1ff755939974a7bede',
-          'd07cf6cbb7f313bdde66b727afd3c5e8',
-          '8408DFFF3C1A2B1292DC199E46B7D617'
+            "234a3463c1264ac6",
+            "1a47cb4933",
+            "d851d5bae0",
+            "3a59f238a23e39199dc9266626c40f80",
+            "01f74ad64077f2e704c0f60ada3dd523",
+            "70C3DB4F0D26368400A10ED05D2BFF5E",
         ),
         (
-          'aeb96eaebe2970e9',
-          '40d0c07da5e4',
-          '071dfe16c675',
-          'cb0677e536f73afe6a14b74ee49844dd',
-          '35b6d0580005bbc12b0587124557d2c2',
-          'FDB6B06676EEDC5C61D74276E1F8E816'
+            "33cce2eabff5a79d",
+            "481c9e39b1",
+            "632a9d131a",
+            "d4c168a4225d8e1ff755939974a7bede",
+            "d07cf6cbb7f313bdde66b727afd3c5e8",
+            "8408DFFF3C1A2B1292DC199E46B7D617",
         ),
         (
-          'd4482d1ca78dce0f',
-          '4de3b35c3fc039245bd1fb7d',
-          '835bb4f15d743e350e728414',
-          'abb8644fd6ccb86947c5e10590210a4f',
-          'bd8e6e11475e60b268784c38c62feb22',
-          '6EAC5C93072D8E8513F750935E46DA1B'
+            "aeb96eaebe2970e9",
+            "40d0c07da5e4",
+            "071dfe16c675",
+            "cb0677e536f73afe6a14b74ee49844dd",
+            "35b6d0580005bbc12b0587124557d2c2",
+            "FDB6B06676EEDC5C61D74276E1F8E816",
         ),
         (
-          '65d2017990d62528',
-          '8b0a79306c9ce7ed99dae4f87f8dd61636',
-          '02083e3979da014812f59f11d52630da30',
-          '137327d10649b0aa6e1c181db617d7f2',
-          '7c77d6e813bed5ac98baa417477a2e7d',
-          '1A8C98DCD73D38393B2BF1569DEEFC19'
+            "d4482d1ca78dce0f",
+            "4de3b35c3fc039245bd1fb7d",
+            "835bb4f15d743e350e728414",
+            "abb8644fd6ccb86947c5e10590210a4f",
+            "bd8e6e11475e60b268784c38c62feb22",
+            "6EAC5C93072D8E8513F750935E46DA1B",
         ),
         (
-          '54b9f04e6a09189a',
-          '1bda122bce8a8dbaf1877d962b8592dd2d56',
-          '2ec47b2c4954a489afc7ba4897edcdae8cc3',
-          '3b60450599bd02c96382902aef7f832a',
-          '5fff20cafab119ca2fc73549e20f5b0d',
-          'DDE59B97D722156D4D9AFF2BC7559826'
+            "65d2017990d62528",
+            "8b0a79306c9ce7ed99dae4f87f8dd61636",
+            "02083e3979da014812f59f11d52630da30",
+            "137327d10649b0aa6e1c181db617d7f2",
+            "7c77d6e813bed5ac98baa417477a2e7d",
+            "1A8C98DCD73D38393B2BF1569DEEFC19",
         ),
         (
-          '899a175897561d7e',
-          '6cf36720872b8513f6eab1a8a44438d5ef11',
-          '0de18fd0fdd91e7af19f1d8ee8733938b1e8',
-          'e7f6d2231618102fdb7fe55ff1991700',
-          'a4a4782bcffd3ec5e7ef6d8c34a56123',
-          'B781FCF2F75FA5A8DE97A9CA48E522EC'
+            "54b9f04e6a09189a",
+            "1bda122bce8a8dbaf1877d962b8592dd2d56",
+            "2ec47b2c4954a489afc7ba4897edcdae8cc3",
+            "3b60450599bd02c96382902aef7f832a",
+            "5fff20cafab119ca2fc73549e20f5b0d",
+            "DDE59B97D722156D4D9AFF2BC7559826",
         ),
         (
-          '126735fcc320d25a',
-          'ca40d7446e545ffaed3bd12a740a659ffbbb3ceab7',
-          'cb8920f87a6c75cff39627b56e3ed197c552d295a7',
-          'cfc46afc253b4652b1af3795b124ab6e',
-          '8395fcf1e95bebd697bd010bc766aac3',
-          '22E7ADD93CFC6393C57EC0B3C17D6B44'
+            "899a175897561d7e",
+            "6cf36720872b8513f6eab1a8a44438d5ef11",
+            "0de18fd0fdd91e7af19f1d8ee8733938b1e8",
+            "e7f6d2231618102fdb7fe55ff1991700",
+            "a4a4782bcffd3ec5e7ef6d8c34a56123",
+            "B781FCF2F75FA5A8DE97A9CA48E522EC",
+        ),
+        (
+            "126735fcc320d25a",
+            "ca40d7446e545ffaed3bd12a740a659ffbbb3ceab7",
+            "cb8920f87a6c75cff39627b56e3ed197c552d295a7",
+            "cfc46afc253b4652b1af3795b124ab6e",
+            "8395fcf1e95bebd697bd010bc766aac3",
+            "22E7ADD93CFC6393C57EC0B3C17D6B44",
         ),
     ]
 
@@ -646,7 +606,6 @@ class TestVectorsPaper(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-
     def __init__(self, wycheproof_warnings):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
@@ -655,12 +614,14 @@ class TestVectorsWycheproof(unittest.TestCase):
     def setUp(self):
 
         def filter_tag(group):
-            return group['tagSize'] // 8
+            return group["tagSize"] // 8
 
-        self.tv = load_test_vectors_wycheproof(("Cipher", "wycheproof"),
-                                               "aes_eax_test.json",
-                                               "Wycheproof EAX",
-                                               group_tag={'tag_size': filter_tag})
+        self.tv = load_test_vectors_wycheproof(
+            ("Cipher", "wycheproof"),
+            "aes_eax_test.json",
+            "Wycheproof EAX",
+            group_tag={"tag_size": filter_tag},
+        )
 
     def shortDescription(self):
         return self._id
@@ -668,6 +629,7 @@ class TestVectorsWycheproof(unittest.TestCase):
     def warn(self, tv):
         if tv.warning and self._wycheproof_warnings:
             import warnings
+
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
     def test_encrypt(self, tv):
@@ -723,27 +685,20 @@ class TestVectorsWycheproof(unittest.TestCase):
 
 
 class TestOtherCiphers(unittest.TestCase):
-
     @classmethod
     def create_test(cls, name, factory, key_size):
 
         def test_template(self, factory=factory, key_size=key_size):
-            cipher = factory.new(get_tag_random("cipher", key_size),
-                                 factory.MODE_EAX,
-                                 nonce=b"nonce")
+            cipher = factory.new(get_tag_random("cipher", key_size), factory.MODE_EAX, nonce=b"nonce")
             ct, mac = cipher.encrypt_and_digest(b"plaintext")
 
-            cipher = factory.new(get_tag_random("cipher", key_size),
-                                 factory.MODE_EAX,
-                                 nonce=b"nonce")
+            cipher = factory.new(get_tag_random("cipher", key_size), factory.MODE_EAX, nonce=b"nonce")
             pt2 = cipher.decrypt_and_verify(ct, mac)
 
             self.assertEqual(b"plaintext", pt2)
 
         setattr(cls, "test_" + name, test_template)
 
-
-from Crypto.Cipher import DES, DES3, ARC2, CAST, Blowfish
 
 TestOtherCiphers.create_test("DES_" + str(DES.key_size), DES, DES.key_size)
 for ks in DES3.key_size:
@@ -757,17 +712,17 @@ for ks in Blowfish.key_size:
 
 
 def get_tests(config={}):
-    wycheproof_warnings = config.get('wycheproof_warnings')
+    wycheproof_warnings = config.get("wycheproof_warnings")
 
     tests = []
     tests += list_test_cases(EaxTests)
     tests += list_test_cases(EaxFSMTests)
-    tests += [ TestVectorsPaper() ]
-    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
+    tests += [TestVectorsPaper()]
+    tests += [TestVectorsWycheproof(wycheproof_warnings)]
     tests += list_test_cases(TestOtherCiphers)
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

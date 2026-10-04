@@ -28,23 +28,22 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import os
 import errno
-import warnings
+import os
 import unittest
+import warnings
 from binascii import unhexlify
 
-from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.asn1 import DerSequence, DerBitString
-from Crypto.Util.number import bytes_to_long
 from Crypto.Hash import SHAKE128
-
 from Crypto.PublicKey import ECC
-
 from Crypto.PublicKey.ECC import _import_rfc5915_der
+from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Util.asn1 import DerBitString, DerSequence
+from Crypto.Util.number import bytes_to_long
 
 try:
     import pycryptodome_test_vectors  # type: ignore
+
     test_vectors_available = True
 except ImportError:
     test_vectors_available = False
@@ -59,9 +58,7 @@ def load_file(file_name, mode="rb"):
 
     try:
         if not test_vectors_available:
-            raise FileNotFoundError(errno.ENOENT,
-                                    os.strerror(errno.ENOENT),
-                                    file_name)
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file_name)
 
         dir_comps = ("PublicKey", "ECC")
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
@@ -70,9 +67,7 @@ def load_file(file_name, mode="rb"):
             results = file_in.read()
 
     except FileNotFoundError:
-        warnings.warn("Skipping extended tests for ECC",
-                      UserWarning,
-                      stacklevel=2)
+        warnings.warn("Skipping extended tests for ECC", UserWarning, stacklevel=2)
 
     if results is None:
         raise MissingTestVectorException("Missing %s" % file_name)
@@ -91,11 +86,13 @@ def create_ref_keys_p192():
     private_key_d = bytes_to_long(compact(key_lines[2:4]))
     public_key_xy = compact(key_lines[5:9])
     assert public_key_xy[0] == 4  # Uncompressed
-    public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
-    public_key_y = bytes_to_long(public_key_xy[key_len+1:])
+    public_key_x = bytes_to_long(public_key_xy[1 : key_len + 1])
+    public_key_y = bytes_to_long(public_key_xy[key_len + 1 :])
 
-    return (ECC.construct(curve="P-192", d=private_key_d),
-            ECC.construct(curve="P-192", point_x=public_key_x, point_y=public_key_y))
+    return (
+        ECC.construct(curve="P-192", d=private_key_d),
+        ECC.construct(curve="P-192", point_x=public_key_x, point_y=public_key_y),
+    )
 
 
 def create_ref_keys_p224():
@@ -104,11 +101,13 @@ def create_ref_keys_p224():
     private_key_d = bytes_to_long(compact(key_lines[2:4]))
     public_key_xy = compact(key_lines[5:9])
     assert public_key_xy[0] == 4  # Uncompressed
-    public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
-    public_key_y = bytes_to_long(public_key_xy[key_len+1:])
+    public_key_x = bytes_to_long(public_key_xy[1 : key_len + 1])
+    public_key_y = bytes_to_long(public_key_xy[key_len + 1 :])
 
-    return (ECC.construct(curve="P-224", d=private_key_d),
-            ECC.construct(curve="P-224", point_x=public_key_x, point_y=public_key_y))
+    return (
+        ECC.construct(curve="P-224", d=private_key_d),
+        ECC.construct(curve="P-224", point_x=public_key_x, point_y=public_key_y),
+    )
 
 
 def create_ref_keys_p256():
@@ -117,11 +116,13 @@ def create_ref_keys_p256():
     private_key_d = bytes_to_long(compact(key_lines[2:5]))
     public_key_xy = compact(key_lines[6:11])
     assert public_key_xy[0] == 4  # Uncompressed
-    public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
-    public_key_y = bytes_to_long(public_key_xy[key_len+1:])
+    public_key_x = bytes_to_long(public_key_xy[1 : key_len + 1])
+    public_key_y = bytes_to_long(public_key_xy[key_len + 1 :])
 
-    return (ECC.construct(curve="P-256", d=private_key_d),
-            ECC.construct(curve="P-256", point_x=public_key_x, point_y=public_key_y))
+    return (
+        ECC.construct(curve="P-256", d=private_key_d),
+        ECC.construct(curve="P-256", point_x=public_key_x, point_y=public_key_y),
+    )
 
 
 def create_ref_keys_p384():
@@ -130,11 +131,13 @@ def create_ref_keys_p384():
     private_key_d = bytes_to_long(compact(key_lines[2:6]))
     public_key_xy = compact(key_lines[7:14])
     assert public_key_xy[0] == 4  # Uncompressed
-    public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
-    public_key_y = bytes_to_long(public_key_xy[key_len+1:])
+    public_key_x = bytes_to_long(public_key_xy[1 : key_len + 1])
+    public_key_y = bytes_to_long(public_key_xy[key_len + 1 :])
 
-    return (ECC.construct(curve="P-384", d=private_key_d),
-            ECC.construct(curve="P-384", point_x=public_key_x, point_y=public_key_y))
+    return (
+        ECC.construct(curve="P-384", d=private_key_d),
+        ECC.construct(curve="P-384", point_x=public_key_x, point_y=public_key_y),
+    )
 
 
 def create_ref_keys_p521():
@@ -143,11 +146,13 @@ def create_ref_keys_p521():
     private_key_d = bytes_to_long(compact(key_lines[2:7]))
     public_key_xy = compact(key_lines[8:17])
     assert public_key_xy[0] == 4  # Uncompressed
-    public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
-    public_key_y = bytes_to_long(public_key_xy[key_len+1:])
+    public_key_x = bytes_to_long(public_key_xy[1 : key_len + 1])
+    public_key_y = bytes_to_long(public_key_xy[key_len + 1 :])
 
-    return (ECC.construct(curve="P-521", d=private_key_d),
-            ECC.construct(curve="P-521", point_x=public_key_x, point_y=public_key_y))
+    return (
+        ECC.construct(curve="P-521", d=private_key_d),
+        ECC.construct(curve="P-521", point_x=public_key_x, point_y=public_key_y),
+    )
 
 
 def create_ref_keys_ed25519():
@@ -167,20 +172,20 @@ def create_ref_keys_ed448():
 # Create reference key pair
 # ref_private, ref_public = create_ref_keys_p521()
 
+
 def get_fixed_prng():
     return SHAKE128.new().update(b"SEED").read
 
 
 def extract_bitstring_from_spki(data):
-        seq = DerSequence()
-        seq.decode(data)
-        bs = DerBitString()
-        bs.decode(seq[1])
-        return bs.value
+    seq = DerSequence()
+    seq.decode(data)
+    bs = DerBitString()
+    bs.decode(seq[1])
+    return bs.value
 
 
 class TestImport(unittest.TestCase):
-
     def test_empty(self):
         self.assertRaises(ValueError, ECC.import_key, b"")
 
@@ -198,22 +203,22 @@ o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=
         # ECPrivateKey with a P256 private key, without [0] and [1]
         data_hex = "302502010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052"
         key = _import_rfc5915_der(unhexlify(data_hex), None, "1.2.840.10045.3.1.7")
-        self.assertEqual(key.d, 0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
+        self.assertEqual(key.d, 0x5C4E4320EF260F91ED9FC597AEE98C8236B60E0CED692CC7A057D5E45798A052)
 
     def test_import_private_rfc5915_only_0(self):
         # ECPrivateKey with a P256 private key, with [0] only
         data_hex = "303102010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052a00a06082a8648ce3d030107"
         key = _import_rfc5915_der(unhexlify(data_hex), None)
-        self.assertEqual(key.d, 0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
+        self.assertEqual(key.d, 0x5C4E4320EF260F91ED9FC597AEE98C8236B60E0CED692CC7A057D5E45798A052)
 
     def test_import_private_rfc5915_only_1(self):
         # ECPrivateKey with a P256 private key, with [1] only
         data_hex = "306b02010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052a14403420004a40ad59a2050ebe92479bd5fb16bb2e45b6465eb3cb2b1effe423fabe6cb7424db8219ef0bab80acf26fd70595b61fe4760d33eed80dd03d2fd0dfb27b8ce75c"
         key = _import_rfc5915_der(unhexlify(data_hex), None, "1.2.840.10045.3.1.7")
-        self.assertEqual(key.d, 0x5c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052)
+        self.assertEqual(key.d, 0x5C4E4320EF260F91ED9FC597AEE98C8236B60E0CED692CC7A057D5E45798A052)
+
 
 class TestImport_P192(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p192()
@@ -232,14 +237,14 @@ class TestImport_P192(unittest.TestCase):
 
     def test_import_sec1_uncompressed(self):
         key_file = load_file("ecc_p192_public.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P192')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P192")
         self.assertEqual(self.ref_public, key)
 
     def test_import_sec1_compressed(self):
         key_file = load_file("ecc_p192_public_compressed.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P192')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P192")
         self.assertEqual(self.ref_public, key)
 
     def test_import_rfc5915_der(self):
@@ -323,7 +328,6 @@ class TestImport_P192(unittest.TestCase):
 
 
 class TestImport_P224(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p224()
@@ -342,14 +346,14 @@ class TestImport_P224(unittest.TestCase):
 
     def test_import_sec1_uncompressed(self):
         key_file = load_file("ecc_p224_public.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P224')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P224")
         self.assertEqual(self.ref_public, key)
 
     def test_import_sec1_compressed(self):
         key_file = load_file("ecc_p224_public_compressed.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P224')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P224")
         self.assertEqual(self.ref_public, key)
 
     def test_import_rfc5915_der(self):
@@ -442,7 +446,6 @@ class TestImport_P224(unittest.TestCase):
 
 
 class TestImport_P256(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p256()
@@ -461,14 +464,14 @@ class TestImport_P256(unittest.TestCase):
 
     def test_import_sec1_uncompressed(self):
         key_file = load_file("ecc_p256_public.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P256')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P256")
         self.assertEqual(self.ref_public, key)
 
     def test_import_sec1_compressed(self):
         key_file = load_file("ecc_p256_public_compressed.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P256')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P256")
         self.assertEqual(self.ref_public, key)
 
     def test_import_rfc5915_der(self):
@@ -545,7 +548,7 @@ class TestImport_P256(unittest.TestCase):
 
     def test_import_private_pem_with_ecparams(self):
         key_file = load_file("ecc_p256_private_ecparams.pem")
-        key = ECC.import_key(key_file)
+        ECC.import_key(key_file)
         # We just check if the import succeeds
 
     def test_import_private_pem_encrypted(self):
@@ -591,7 +594,6 @@ class TestImport_P256(unittest.TestCase):
 
 
 class TestImport_P384(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p384()
@@ -610,14 +612,14 @@ class TestImport_P384(unittest.TestCase):
 
     def test_import_sec1_uncompressed(self):
         key_file = load_file("ecc_p384_public.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P384')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P384")
         self.assertEqual(self.ref_public, key)
 
     def test_import_sec1_compressed(self):
         key_file = load_file("ecc_p384_public_compressed.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P384')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P384")
         self.assertEqual(self.ref_public, key)
 
     def test_import_rfc5915_der(self):
@@ -735,7 +737,6 @@ class TestImport_P384(unittest.TestCase):
 
 
 class TestImport_P521(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p521()
@@ -754,14 +755,14 @@ class TestImport_P521(unittest.TestCase):
 
     def test_import_sec1_uncompressed(self):
         key_file = load_file("ecc_p521_public.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P521')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P521")
         self.assertEqual(self.ref_public, key)
 
     def test_import_sec1_compressed(self):
         key_file = load_file("ecc_p521_public_compressed.der")
-        value = extract_bitstring_from_spki(key_file)
-        key = ECC.import_key(key_file, curve_name='P521')
+        extract_bitstring_from_spki(key_file)
+        key = ECC.import_key(key_file, curve_name="P521")
         self.assertEqual(self.ref_public, key)
 
     def test_import_rfc5915_der(self):
@@ -879,7 +880,6 @@ class TestImport_P521(unittest.TestCase):
 
 
 class TestExport_P192(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p192()
@@ -912,7 +912,7 @@ class TestExport_P192(unittest.TestCase):
         self.assertEqual(value, encoded)
 
     def test_export_public_sec1_compressed(self):
-        key_file = load_file("ecc_p192_public.der")
+        load_file("ecc_p192_public.der")
         encoded = self.ref_public.export_key(format="SEC1", compress=True)
 
         key_file_compressed_ref = load_file("ecc_p192_public_compressed.der")
@@ -942,8 +942,9 @@ class TestExport_P192(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pkcs8_encrypted(self):
-        encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                                    protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_pkcs8(
+            passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -953,18 +954,20 @@ class TestExport_P192(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                                passphrase="secret",
-                                                protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="DER", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                                passphrase="secret",
-                                                protection="PBKDF2WithHMAC-SHA224AndAES192-CBC",
-                                                prot_params={'iteration_count':123})
+        encoded = self.ref_private.export_key(
+            format="DER",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA224AndAES192-CBC",
+            prot_params={"iteration_count": 123},
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1015,9 +1018,7 @@ class TestExport_P192(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         use_pkcs8=False)
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1035,8 +1036,9 @@ class TestExport_P192(unittest.TestCase):
 
     def test_export_private_pkcs8_and_pem_2(self):
         # PKCS8 inside PEM with PKCS8 encryption
-        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem("secret",
-                              protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem(
+            "secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -1048,45 +1050,45 @@ class TestExport_P192(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="PEM", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
         # ---
 
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase=b"secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase=b"secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
@@ -1094,27 +1096,33 @@ class TestExport_P192(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
 
         # Missing 'protection' parameter when PKCS#8 is used
-        self.ref_private.export_key(format="PEM", passphrase="secret",
-                               use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="secret")
+        self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM", passphrase="secret")
 
         # DER format but no PKCS#8
-        self.assertRaises(ValueError, self.ref_private.export_key, format="DER",
-                                      passphrase="secret",
-                                      use_pkcs8=False,
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="DER",
+            passphrase="secret",
+            use_pkcs8=False,
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # Incorrect parameters for public keys
-        self.assertRaises(ValueError, self.ref_public.export_key, format="DER",
-                          use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_public.export_key, format="DER", use_pkcs8=False)
 
         # Empty password
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="", use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="",
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError, self.ref_private.export_key, format="PEM", passphrase="", use_pkcs8=False
+        )
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="PEM",
+            passphrase="",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
     def test_compressed_curve(self):
 
@@ -1142,7 +1150,6 @@ class TestExport_P192(unittest.TestCase):
 
 
 class TestExport_P224(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p224()
@@ -1175,7 +1182,7 @@ class TestExport_P224(unittest.TestCase):
         self.assertEqual(value, encoded)
 
     def test_export_public_sec1_compressed(self):
-        key_file = load_file("ecc_p224_public.der")
+        load_file("ecc_p224_public.der")
         encoded = self.ref_public.export_key(format="SEC1", compress=True)
 
         key_file_compressed_ref = load_file("ecc_p224_public_compressed.der")
@@ -1205,8 +1212,9 @@ class TestExport_P224(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pkcs8_encrypted(self):
-        encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                                    protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_pkcs8(
+            passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -1216,10 +1224,12 @@ class TestExport_P224(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                                passphrase="secret",
-                                                protection="PBKDF2WithHMAC-SHA512-224AndAES128-CBC",
-                                                prot_params={'iteration_count':123})
+        encoded = self.ref_private.export_key(
+            format="DER",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA512-224AndAES128-CBC",
+            prot_params={"iteration_count": 123},
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1270,9 +1280,7 @@ class TestExport_P224(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         use_pkcs8=False)
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1290,8 +1298,9 @@ class TestExport_P224(unittest.TestCase):
 
     def test_export_private_pkcs8_and_pem_2(self):
         # PKCS8 inside PEM with PKCS8 encryption
-        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem("secret",
-                              protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem(
+            "secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -1303,45 +1312,45 @@ class TestExport_P224(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="PEM", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
         # ---
 
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase=b"secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase=b"secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
@@ -1349,27 +1358,33 @@ class TestExport_P224(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
 
         # Missing 'protection' parameter when PKCS#8 is used
-        self.ref_private.export_key(format="PEM", passphrase="secret",
-                               use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="secret")
+        self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM", passphrase="secret")
 
         # DER format but no PKCS#8
-        self.assertRaises(ValueError, self.ref_private.export_key, format="DER",
-                                      passphrase="secret",
-                                      use_pkcs8=False,
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="DER",
+            passphrase="secret",
+            use_pkcs8=False,
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # Incorrect parameters for public keys
-        self.assertRaises(ValueError, self.ref_public.export_key, format="DER",
-                          use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_public.export_key, format="DER", use_pkcs8=False)
 
         # Empty password
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="", use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="",
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError, self.ref_private.export_key, format="PEM", passphrase="", use_pkcs8=False
+        )
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="PEM",
+            passphrase="",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
     def test_compressed_curve(self):
 
@@ -1397,7 +1412,6 @@ class TestExport_P224(unittest.TestCase):
 
 
 class TestExport_P256(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p256()
@@ -1430,7 +1444,7 @@ class TestExport_P256(unittest.TestCase):
         self.assertEqual(value, encoded)
 
     def test_export_public_sec1_compressed(self):
-        key_file = load_file("ecc_p256_public.der")
+        load_file("ecc_p256_public.der")
         encoded = self.ref_public.export_key(format="SEC1", compress=True)
 
         key_file_compressed_ref = load_file("ecc_p256_public_compressed.der")
@@ -1460,8 +1474,9 @@ class TestExport_P256(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pkcs8_encrypted(self):
-        encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                                    protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_pkcs8(
+            passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -1471,18 +1486,20 @@ class TestExport_P256(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                                passphrase="secret",
-                                                protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="DER", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                                passphrase="secret",
-                                                protection="PBKDF2WithHMAC-SHA512-256AndAES128-CBC",
-                                                prot_params={'iteration_count':123})
+        encoded = self.ref_private.export_key(
+            format="DER",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA512-256AndAES128-CBC",
+            prot_params={"iteration_count": 123},
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1533,9 +1550,7 @@ class TestExport_P256(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         use_pkcs8=False)
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1553,8 +1568,9 @@ class TestExport_P256(unittest.TestCase):
 
     def test_export_private_pkcs8_and_pem_2(self):
         # PKCS8 inside PEM with PKCS8 encryption
-        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem("secret",
-                              protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem(
+            "secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -1566,9 +1582,9 @@ class TestExport_P256(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="PEM", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1596,37 +1612,37 @@ class TestExport_P256(unittest.TestCase):
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
         # ---
 
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase=b"secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase=b"secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
@@ -1634,32 +1650,36 @@ class TestExport_P256(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
 
         # Missing 'protection' parameter when PKCS#8 is used
-        self.ref_private.export_key(format="PEM", passphrase="secret",
-                               use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="secret")
+        self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM", passphrase="secret")
 
         # DER format but no PKCS#8
-        self.assertRaises(ValueError, self.ref_private.export_key, format="DER",
-                                      passphrase="secret",
-                                      use_pkcs8=False,
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="DER",
+            passphrase="secret",
+            use_pkcs8=False,
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # Incorrect parameters for public keys
-        self.assertRaises(ValueError, self.ref_public.export_key, format="DER",
-                          use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_public.export_key, format="DER", use_pkcs8=False)
 
         # Empty password
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="", use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="",
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError, self.ref_private.export_key, format="PEM", passphrase="", use_pkcs8=False
+        )
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="PEM",
+            passphrase="",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # No private keys with OpenSSH
-        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH",
-                                      passphrase="secret")
-
+        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH", passphrase="secret")
 
     def test_compressed_curve(self):
 
@@ -1685,7 +1705,6 @@ class TestExport_P256(unittest.TestCase):
 
 
 class TestExport_P384(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p384()
@@ -1718,7 +1737,7 @@ class TestExport_P384(unittest.TestCase):
         self.assertEqual(value, encoded)
 
     def test_export_public_sec1_compressed(self):
-        key_file = load_file("ecc_p384_public.der")
+        load_file("ecc_p384_public.der")
         encoded = self.ref_public.export_key(format="SEC1", compress=True)
 
         key_file_compressed_ref = load_file("ecc_p384_public_compressed.der")
@@ -1748,8 +1767,9 @@ class TestExport_P384(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pkcs8_encrypted(self):
-        encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_pkcs8(
+            passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -1759,18 +1779,20 @@ class TestExport_P384(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="DER", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA384AndAES128-CBC",
-                                         prot_params={'iteration_count':123})
+        encoded = self.ref_private.export_key(
+            format="DER",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA384AndAES128-CBC",
+            prot_params={"iteration_count": 123},
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1821,9 +1843,7 @@ class TestExport_P384(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         use_pkcs8=False)
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1841,8 +1861,9 @@ class TestExport_P384(unittest.TestCase):
 
     def test_export_private_pkcs8_and_pem_2(self):
         # PKCS8 inside PEM with PKCS8 encryption
-        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem("secret",
-                              protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem(
+            "secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -1854,9 +1875,9 @@ class TestExport_P384(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="PEM", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -1884,37 +1905,37 @@ class TestExport_P384(unittest.TestCase):
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
         # ---
 
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase=b"secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase=b"secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
@@ -1922,31 +1943,36 @@ class TestExport_P384(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
 
         # Missing 'protection' parameter when PKCS#8 is used
-        self.ref_private.export_key(format="PEM", passphrase="secret",
-                               use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="secret")
+        self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM", passphrase="secret")
 
         # DER format but no PKCS#8
-        self.assertRaises(ValueError, self.ref_private.export_key, format="DER",
-                                      passphrase="secret",
-                                      use_pkcs8=False,
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="DER",
+            passphrase="secret",
+            use_pkcs8=False,
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # Incorrect parameters for public keys
-        self.assertRaises(ValueError, self.ref_public.export_key, format="DER",
-                          use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_public.export_key, format="DER", use_pkcs8=False)
 
         # Empty password
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="", use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="",
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError, self.ref_private.export_key, format="PEM", passphrase="", use_pkcs8=False
+        )
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="PEM",
+            passphrase="",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # No private keys with OpenSSH
-        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH",
-                                      passphrase="secret")
+        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH", passphrase="secret")
 
     def test_compressed_curve(self):
 
@@ -1970,15 +1996,14 @@ YC46ZRsnKNayw3wATdPjgja7L/DSII3nZK0G6KOOVwJBznT/e+zudUJYhZKaBLRx
 
         key1 = ECC.import_key(pem1)
         low16 = int(key1.pointQ.y % 65536)
-        self.assertEqual(low16, 0x07a4)
+        self.assertEqual(low16, 0x07A4)
 
         key2 = ECC.import_key(pem2)
         low16 = int(key2.pointQ.y % 65536)
-        self.assertEqual(low16, 0xc8fd)
+        self.assertEqual(low16, 0xC8FD)
 
 
 class TestExport_P521(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p521()
@@ -2014,7 +2039,7 @@ class TestExport_P521(unittest.TestCase):
         self.assertEqual(value, encoded)
 
     def test_export_public_sec1_compressed(self):
-        key_file = load_file("ecc_p521_public.der")
+        load_file("ecc_p521_public.der")
         encoded = self.ref_public.export_key(format="SEC1", compress=True)
 
         key_file_compressed_ref = load_file("ecc_p521_public_compressed.der")
@@ -2047,8 +2072,9 @@ class TestExport_P521(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pkcs8_encrypted(self):
-        encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_pkcs8(
+            passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -2058,18 +2084,20 @@ class TestExport_P521(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="DER", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                         prot_params={'iteration_count':123})
+        encoded = self.ref_private.export_key(
+            format="DER",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            prot_params={"iteration_count": 123},
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -2120,9 +2148,7 @@ class TestExport_P521(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         use_pkcs8=False)
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -2140,8 +2166,9 @@ class TestExport_P521(unittest.TestCase):
 
     def test_export_private_pkcs8_and_pem_2(self):
         # PKCS8 inside PEM with PKCS8 encryption
-        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem("secret",
-                              protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_private_encrypted_pkcs8_in_clear_pem(
+            "secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -2153,9 +2180,9 @@ class TestExport_P521(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="PEM",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="PEM", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -2183,37 +2210,37 @@ class TestExport_P521(unittest.TestCase):
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
         # ---
 
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase="secret",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          use_pkcs8=False,
-                                          passphrase=b"secret",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase="secret", randfunc=get_fixed_prng()
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM", use_pkcs8=False, passphrase=b"secret", randfunc=get_fixed_prng()
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
@@ -2221,31 +2248,36 @@ class TestExport_P521(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
 
         # Missing 'protection' parameter when PKCS#8 is used
-        self.ref_private.export_key(format="PEM", passphrase="secret",
-                               use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="secret")
+        self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM", passphrase="secret")
 
         # DER format but no PKCS#8
-        self.assertRaises(ValueError, self.ref_private.export_key, format="DER",
-                                      passphrase="secret",
-                                      use_pkcs8=False,
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="DER",
+            passphrase="secret",
+            use_pkcs8=False,
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # Incorrect parameters for public keys
-        self.assertRaises(ValueError, self.ref_public.export_key, format="DER",
-                          use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_public.export_key, format="DER", use_pkcs8=False)
 
         # Empty password
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="", use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="",
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError, self.ref_private.export_key, format="PEM", passphrase="", use_pkcs8=False
+        )
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="PEM",
+            passphrase="",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # No private keys with OpenSSH
-        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH",
-                                      passphrase="secret")
+        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH", passphrase="secret")
 
     def test_compressed_curve(self):
 
@@ -2271,7 +2303,7 @@ vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
 
         key1 = ECC.import_key(pem1)
         low16 = int(key1.pointQ.y % 65536)
-        self.assertEqual(low16, 0x38a8)
+        self.assertEqual(low16, 0x38A8)
 
         key2 = ECC.import_key(pem2)
         low16 = int(key2.pointQ.y % 65536)
@@ -2279,7 +2311,6 @@ vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
 
 
 class TestImport_Ed25519(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed25519()
@@ -2375,15 +2406,14 @@ class TestImport_Ed25519(unittest.TestCase):
 
     def test_import_openssh_private_clear(self):
         key_file = load_file("ecc_ed25519_private_openssh.pem")
-        key = ECC.import_key(key_file)
+        ECC.import_key(key_file)
 
     def test_import_openssh_private_password(self):
         key_file = load_file("ecc_ed25519_private_openssh_pwd.pem")
-        key = ECC.import_key(key_file, b"password")
+        ECC.import_key(key_file, b"password")
 
 
 class TestExport_Ed25519(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed25519()
@@ -2414,12 +2444,12 @@ class TestExport_Ed25519(unittest.TestCase):
         encoded = self.ref_private.export_key(format="DER")
         self.assertEqual(key_file, encoded)
 
-        self.assertRaises(ValueError, self.ref_private.export_key,
-                          format="DER", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="DER", use_pkcs8=False)
 
     def test_export_private_pkcs8_encrypted(self):
-        encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_pkcs8(
+            passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -2429,18 +2459,20 @@ class TestExport_Ed25519(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="DER", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA256AndAES128-CBC",
-                                         prot_params={'iteration_count':123})
+        encoded = self.ref_private.export_key(
+            format="DER",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA256AndAES128-CBC",
+            prot_params={"iteration_count": 123},
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
@@ -2455,9 +2487,9 @@ class TestExport_Ed25519(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pem_encrypted(self):
-        encoded = self.ref_private.export_key(format="PEM",
-                                              passphrase=b"secret",
-                                               protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="PEM", passphrase=b"secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -2470,7 +2502,7 @@ class TestExport_Ed25519(unittest.TestCase):
     def test_export_openssh(self):
         key_file = load_file("ecc_ed25519_public_openssh.txt", "rt")
         public_key = ECC.import_key(key_file)
-        key_file = " ".join(key_file.split(' ')[:2])    # remove comment
+        key_file = " ".join(key_file.split(" ")[:2])  # remove comment
 
         encoded = public_key._export_openssh(False)
         self.assertEqual(key_file, encoded.strip())
@@ -2479,30 +2511,40 @@ class TestExport_Ed25519(unittest.TestCase):
         self.assertEqual(key_file, encoded.strip())
 
     def test_export_raw(self):
-        encoded = self.ref_public.export_key(format='raw')
-        self.assertEqual(encoded, unhexlify(b'bc85b8cf585d20a4de47e84d1cb6183f63d9ba96223fcbc886e363ffdea20cff'))
+        encoded = self.ref_public.export_key(format="raw")
+        self.assertEqual(
+            encoded, unhexlify(b"bc85b8cf585d20a4de47e84d1cb6183f63d9ba96223fcbc886e363ffdea20cff")
+        )
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase=b"secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase=b"secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
@@ -2510,23 +2552,25 @@ class TestExport_Ed25519(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
 
         # Missing 'protection' parameter when PKCS#8 is used
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="secret")
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM", passphrase="secret")
 
         # Empty password
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="", use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="",
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError, self.ref_private.export_key, format="PEM", passphrase="", use_pkcs8=False
+        )
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="PEM",
+            passphrase="",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # No private keys with OpenSSH
-        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH",
-                                      passphrase="secret")
+        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH", passphrase="secret")
 
 
 class TestImport_Ed448(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed448()
@@ -2615,7 +2659,6 @@ class TestImport_Ed448(unittest.TestCase):
 
 
 class TestExport_Ed448(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed448()
@@ -2646,12 +2689,12 @@ class TestExport_Ed448(unittest.TestCase):
         encoded = self.ref_private.export_key(format="DER")
         self.assertEqual(key_file, encoded)
 
-        self.assertRaises(ValueError, self.ref_private.export_key,
-                          format="DER", use_pkcs8=False)
+        self.assertRaises(ValueError, self.ref_private.export_key, format="DER", use_pkcs8=False)
 
     def test_export_private_pkcs8_encrypted(self):
-        encoded = self.ref_private._export_pkcs8(passphrase="secret",
-                                            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private._export_pkcs8(
+            passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC._import_pkcs8, encoded, None)
@@ -2661,21 +2704,22 @@ class TestExport_Ed448(unittest.TestCase):
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="DER", passphrase="secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
 
         # ---
 
-        encoded = self.ref_private.export_key(format="DER",
-                                         passphrase="secret",
-                                         protection="PBKDF2WithHMAC-SHA384AndAES128-CBC",
-                                         prot_params={'iteration_count':123})
+        encoded = self.ref_private.export_key(
+            format="DER",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA384AndAES128-CBC",
+            prot_params={"iteration_count": 123},
+        )
         decoded = ECC.import_key(encoded, "secret")
         self.assertEqual(self.ref_private, decoded)
-
 
     def test_export_public_pem(self):
         key_file_ref = load_file("ecc_ed448_public.pem", "rt").strip()
@@ -2688,9 +2732,9 @@ class TestExport_Ed448(unittest.TestCase):
         self.assertEqual(key_file, encoded)
 
     def test_export_private_pem_encrypted(self):
-        encoded = self.ref_private.export_key(format="PEM",
-                                              passphrase=b"secret",
-                                               protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        encoded = self.ref_private.export_key(
+            format="PEM", passphrase=b"secret", protection="PBKDF2WithHMAC-SHA1AndAES128-CBC"
+        )
 
         # This should prove that the output is password-protected
         self.assertRaises(ValueError, ECC.import_key, encoded)
@@ -2705,30 +2749,43 @@ class TestExport_Ed448(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_public.export_key, format="OpenSSH")
 
     def test_export_raw(self):
-        encoded = self.ref_public.export_key(format='raw')
-        self.assertEqual(encoded, unhexlify(b'899014ddc0a0e1260cfc1085afdf952019e9fd63372e3e366e26dad32b176624884330a14617237e3081febd9d1a15069e7499433d2f55dd80'))
+        encoded = self.ref_public.export_key(format="raw")
+        self.assertEqual(
+            encoded,
+            unhexlify(
+                b"899014ddc0a0e1260cfc1085afdf952019e9fd63372e3e366e26dad32b176624884330a14617237e3081febd9d1a15069e7499433d2f55dd80"
+            ),
+        )
 
     def test_prng(self):
         # Test that password-protected containers use the provided PRNG
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_byte_or_string_passphrase(self):
-        encoded1 = self.ref_private.export_key(format="PEM",
-                                          passphrase="secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
-        encoded2 = self.ref_private.export_key(format="PEM",
-                                          passphrase=b"secret",
-                                          protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
-                                          randfunc=get_fixed_prng())
+        encoded1 = self.ref_private.export_key(
+            format="PEM",
+            passphrase="secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
+        encoded2 = self.ref_private.export_key(
+            format="PEM",
+            passphrase=b"secret",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+            randfunc=get_fixed_prng(),
+        )
         self.assertEqual(encoded1, encoded2)
 
     def test_error_params1(self):
@@ -2736,19 +2793,22 @@ class TestExport_Ed448(unittest.TestCase):
         self.assertRaises(ValueError, self.ref_private.export_key, format="XXX")
 
         # Missing 'protection' parameter when PKCS#8 is used
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="secret")
+        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM", passphrase="secret")
 
         # Empty password
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="", use_pkcs8=False)
-        self.assertRaises(ValueError, self.ref_private.export_key, format="PEM",
-                                      passphrase="",
-                                      protection="PBKDF2WithHMAC-SHA1AndAES128-CBC")
+        self.assertRaises(
+            ValueError, self.ref_private.export_key, format="PEM", passphrase="", use_pkcs8=False
+        )
+        self.assertRaises(
+            ValueError,
+            self.ref_private.export_key,
+            format="PEM",
+            passphrase="",
+            protection="PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        )
 
         # No private keys with OpenSSH
-        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH",
-                                      passphrase="secret")
+        self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH", passphrase="secret")
 
 
 def get_tests(config={}):
@@ -2776,6 +2836,6 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

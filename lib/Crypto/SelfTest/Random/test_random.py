@@ -25,11 +25,13 @@
 
 import unittest
 
+
 class SimpleTest(unittest.TestCase):
     def runTest(self):
         """Crypto.Random.new()"""
         # Import the Random module and try to use it
         from Crypto import Random
+
         randobj = Random.new()
         x = randobj.read(16)
         y = randobj.read(16)
@@ -48,26 +50,27 @@ class SimpleTest(unittest.TestCase):
         # weibullvariate()
         # WichmannHill(), whseed(), SystemRandom()
         from Crypto.Random import random
-        x = random.getrandbits(16*8)
-        y = random.getrandbits(16*8)
+
+        x = random.getrandbits(16 * 8)
+        y = random.getrandbits(16 * 8)
         self.assertNotEqual(x, y)
         # Test randrange
-        if x>y:
+        if x > y:
             start = y
             stop = x
         else:
             start = x
             stop = y
-        for step in range(1,10):
-            x = random.randrange(start,stop,step)
-            y = random.randrange(start,stop,step)
+        for step in range(1, 10):
+            x = random.randrange(start, stop, step)
+            y = random.randrange(start, stop, step)
             self.assertNotEqual(x, y)
             self.assertEqual(start <= x < stop, True)
             self.assertEqual(start <= y < stop, True)
             self.assertEqual((x - start) % step, 0)
             self.assertEqual((y - start) % step, 0)
-        for i in range(10):
-            self.assertEqual(random.randrange(1,2), 1)
+        for _ in range(10):
+            self.assertEqual(random.randrange(1, 2), 1)
         self.assertRaises(ValueError, random.randrange, start, start)
         self.assertRaises(ValueError, random.randrange, stop, start, step)
         self.assertRaises(TypeError, random.randrange, start, stop, step, step)
@@ -76,13 +79,13 @@ class SimpleTest(unittest.TestCase):
         self.assertRaises(TypeError, random.randrange, 1, "2", step)
         self.assertRaises(ValueError, random.randrange, start, stop, 0)
         # Test randint
-        x = random.randint(start,stop)
-        y = random.randint(start,stop)
+        x = random.randint(start, stop)
+        y = random.randint(start, stop)
         self.assertNotEqual(x, y)
         self.assertEqual(start <= x <= stop, True)
         self.assertEqual(start <= y <= stop, True)
-        for i in range(10):
-            self.assertEqual(random.randint(1,1), 1)
+        for _ in range(10):
+            self.assertEqual(random.randint(1, 1), 1)
         self.assertRaises(ValueError, random.randint, stop, start)
         self.assertRaises(TypeError, random.randint, start, stop, step)
         self.assertRaises(TypeError, random.randint, "1", stop)
@@ -94,10 +97,10 @@ class SimpleTest(unittest.TestCase):
         self.assertNotEqual(x, y)
         self.assertEqual(x in seq, True)
         self.assertEqual(y in seq, True)
-        for i in range(10):
-            self.assertEqual(random.choice((1,2,3)) in (1,2,3), True)
-        self.assertEqual(random.choice([1,2,3]) in [1,2,3], True)
-        self.assertEqual(random.choice(bytearray(b'123')) in bytearray(b'123'), True)
+        for _ in range(10):
+            self.assertEqual(random.choice((1, 2, 3)) in (1, 2, 3), True)
+        self.assertEqual(random.choice([1, 2, 3]) in [1, 2, 3], True)
+        self.assertEqual(random.choice(bytearray(b"123")) in bytearray(b"123"), True)
         self.assertEqual(1, random.choice([1]))
         self.assertRaises(IndexError, random.choice, [])
         self.assertRaises(TypeError, random.choice, 1)
@@ -112,31 +115,31 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(len(seq), len(x))
         self.assertEqual(len(seq), len(y))
         for i in range(len(seq)):
-           self.assertEqual(x[i] in seq, True)
-           self.assertEqual(y[i] in seq, True)
-           self.assertEqual(seq[i] in x, True)
-           self.assertEqual(seq[i] in y, True)
+            self.assertEqual(x[i] in seq, True)
+            self.assertEqual(y[i] in seq, True)
+            self.assertEqual(seq[i] in x, True)
+            self.assertEqual(seq[i] in y, True)
         z = [1]
         random.shuffle(z)
         self.assertEqual(z, [1])
-        z = bytearray(b'12')
+        z = bytearray(b"12")
         random.shuffle(z)
-        self.assertEqual(b'1' in z, True)
-        self.assertRaises(TypeError, random.shuffle, b'12')
+        self.assertEqual(b"1" in z, True)
+        self.assertRaises(TypeError, random.shuffle, b"12")
         self.assertRaises(TypeError, random.shuffle, 1)
         self.assertRaises(TypeError, random.shuffle, "11")
-        self.assertRaises(TypeError, random.shuffle, (1,2))
+        self.assertRaises(TypeError, random.shuffle, (1, 2))
         # Test sample
         x = random.sample(seq, 20)
         y = random.sample(seq, 20)
         self.assertNotEqual(x, y)
         for i in range(20):
-           self.assertEqual(x[i] in seq, True)
-           self.assertEqual(y[i] in seq, True)
+            self.assertEqual(x[i] in seq, True)
+            self.assertEqual(y[i] in seq, True)
         z = random.sample([1], 1)
         self.assertEqual(z, [1])
-        z = random.sample((1,2,3), 1)
-        self.assertEqual(z[0] in (1,2,3), True)
+        z = random.sample((1, 2, 3), 1)
+        self.assertEqual(z[0] in (1, 2, 3), True)
         z = random.sample("123", 1)
         self.assertEqual(z[0] in "123", True)
         z = random.sample(range(3), 1)
@@ -147,11 +150,13 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(z[0] in bytearray(b"123"), True)
         self.assertRaises(TypeError, random.sample, 1)
 
+
 def get_tests(config={}):
     return [SimpleTest()]
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

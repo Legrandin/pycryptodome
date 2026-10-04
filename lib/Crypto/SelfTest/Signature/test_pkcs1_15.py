@@ -28,21 +28,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import json
 import unittest
 from binascii import unhexlify
-from Crypto.Util.number import bytes_to_long
-from Crypto.Util.strxor import strxor
-from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
 
-from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512, SHA3_384,
-                         SHA3_224, SHA3_256, SHA3_512)
+from Crypto.Hash import SHA1, SHA3_224, SHA3_256, SHA3_384, SHA3_512, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import RSA
-from Crypto.Signature import pkcs1_15
-from Crypto.Signature import PKCS1_v1_5
-
-from Crypto.Util._file_system import pycryptodome_filename
+from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
+from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Signature import PKCS1_v1_5, pkcs1_15
+from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 
 
@@ -51,7 +45,6 @@ def load_hash_by_name(hash_name):
 
 
 class FIPS_PKCS1_Verify_Tests(unittest.TestCase):
-
     def shortDescription(self):
         return "FIPS PKCS1 Tests (Verify)"
 
@@ -65,12 +58,15 @@ class FIPS_PKCS1_Verify_Tests_KAT(unittest.TestCase):
     pass
 
 
-test_vectors_verify = load_test_vectors(("Signature", "PKCS1-v1.5"),
-                                 "SigVer15_186-3.rsp",
-                                 "Signature Verification 186-3",
-                                 {'shaalg': lambda x: x,
-                                  'd': lambda x: int(x),
-                                  'result': lambda x: x}) or []
+test_vectors_verify = (
+    load_test_vectors(
+        ("Signature", "PKCS1-v1.5"),
+        "SigVer15_186-3.rsp",
+        "Signature Verification 186-3",
+        {"shaalg": lambda x: x, "d": lambda x: int(x), "result": lambda x: x},
+    )
+    or []
+)
 
 
 for count, tv in enumerate(test_vectors_verify):
@@ -82,7 +78,7 @@ for count, tv in enumerate(test_vectors_verify):
 
     hash_module = load_hash_by_name(tv.shaalg.upper())
     hash_obj = hash_module.new(tv.msg)
-    public_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e)]) # type: ignore
+    public_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e)])  # type: ignore
     verifier = pkcs1_15.new(public_key)
 
     def positive_test(self, hash_obj=hash_obj, verifier=verifier, signature=tv.s):
@@ -91,14 +87,13 @@ for count, tv in enumerate(test_vectors_verify):
     def negative_test(self, hash_obj=hash_obj, verifier=verifier, signature=tv.s):
         self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
-    if tv.result == 'f':
+    if tv.result == "f":
         setattr(FIPS_PKCS1_Verify_Tests_KAT, "test_negative_%d" % count, negative_test)
     else:
         setattr(FIPS_PKCS1_Verify_Tests_KAT, "test_positive_%d" % count, positive_test)
 
 
 class FIPS_PKCS1_Sign_Tests(unittest.TestCase):
-
     def shortDescription(self):
         return "FIPS PKCS1 Tests (Sign)"
 
@@ -112,15 +107,25 @@ class FIPS_PKCS1_Sign_Tests_KAT(unittest.TestCase):
     pass
 
 
-test_vectors_sign  = load_test_vectors(("Signature", "PKCS1-v1.5"),
-                                        "SigGen15_186-2.txt",
-                                        "Signature Generation 186-2",
-                                        {'shaalg': lambda x: x}) or []
+test_vectors_sign = (
+    load_test_vectors(
+        ("Signature", "PKCS1-v1.5"),
+        "SigGen15_186-2.txt",
+        "Signature Generation 186-2",
+        {"shaalg": lambda x: x},
+    )
+    or []
+)
 
-test_vectors_sign += load_test_vectors(("Signature", "PKCS1-v1.5"),
-                                        "SigGen15_186-3.txt",
-                                        "Signature Generation 186-3",
-                                        {'shaalg': lambda x: x}) or []
+test_vectors_sign += (
+    load_test_vectors(
+        ("Signature", "PKCS1-v1.5"),
+        "SigGen15_186-3.txt",
+        "Signature Generation 186-3",
+        {"shaalg": lambda x: x},
+    )
+    or []
+)
 
 for count, tv in enumerate(test_vectors_sign):
     if isinstance(tv, str):
@@ -129,7 +134,7 @@ for count, tv in enumerate(test_vectors_sign):
         modulus = tv.n
         continue
     if hasattr(tv, "e"):
-        private_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e, tv.d)]) # type: ignore
+        private_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e, tv.d)])  # type: ignore
         signer = pkcs1_15.new(private_key)
         continue
 
@@ -161,9 +166,11 @@ class PKCS1_15_NoParams(unittest.TestCase):
 
     # PKCS1 v1.5 signature of the message computed using SHA-1.
     # The digestAlgorithm SEQUENCE does NOT contain the NULL parameter.
-    sig_str = "a287a13517f716e72fb14eea8e33a8db4a4643314607e7ca3e3e28"\
-              "1893db74013dda8b855fd99f6fecedcb25fcb7a434f35cd0a101f8"\
-              "b19348e0bd7b6f152dfc"
+    sig_str = (
+        "a287a13517f716e72fb14eea8e33a8db4a4643314607e7ca3e3e28"
+        "1893db74013dda8b855fd99f6fecedcb25fcb7a434f35cd0a101f8"
+        "b19348e0bd7b6f152dfc"
+    )
     signature = unhexlify(sig_str)
 
     def runTest(self):
@@ -194,7 +201,6 @@ class PKCS1_Legacy_Module_Tests(unittest.TestCase):
 
 
 class PKCS1_All_Hashes_Tests(unittest.TestCase):
-
     def shortDescription(self):
         return "Test PKCS#1v1.5 signature in combination with all hashes"
 
@@ -202,15 +208,28 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
 
         key = RSA.generate(1024)
         signer = pkcs1_15.new(key)
-        hash_names = ("MD2", "MD4", "MD5", "RIPEMD160", "SHA1",
-                      "SHA224", "SHA256", "SHA384", "SHA512",
-                      "SHA3_224", "SHA3_256", "SHA3_384", "SHA3_512")
+        hash_names = (
+            "MD2",
+            "MD4",
+            "MD5",
+            "RIPEMD160",
+            "SHA1",
+            "SHA224",
+            "SHA256",
+            "SHA384",
+            "SHA512",
+            "SHA3_224",
+            "SHA3_256",
+            "SHA3_384",
+            "SHA3_512",
+        )
 
         for name in hash_names:
             hashed = load_hash_by_name(name).new(b"Test")
             signer.sign(hashed)
 
         from Crypto.Hash import BLAKE2b, BLAKE2s
+
         for hash_size in (20, 32, 48, 64):
             hashed_b = BLAKE2b.new(digest_bytes=hash_size, data=b"Test")
             signer.sign(hashed_b)
@@ -220,7 +239,6 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-
     def __init__(self, wycheproof_warnings):
         unittest.TestCase.__init__(self)
         self._wycheproof_warnings = wycheproof_warnings
@@ -254,10 +272,10 @@ class TestVectorsWycheproof(unittest.TestCase):
     def add_tests(self, filename):
 
         def filter_rsa(group):
-            return RSA.import_key(group['keyPem'])
+            return RSA.import_key(group["keyPem"])
 
         def filter_sha(group):
-            hash_name = group['sha']
+            hash_name = group["sha"]
             if hash_name == "SHA-512":
                 return SHA512
             elif hash_name == "SHA-512/224":
@@ -284,16 +302,16 @@ class TestVectorsWycheproof(unittest.TestCase):
                 raise ValueError("Unknown hash algorithm: " + hash_name)
 
         def filter_type(group):
-            type_name = group['type']
+            type_name = group["type"]
             if type_name not in ("RsassaPkcs1Verify", "RsassaPkcs1Generate"):
                 raise ValueError("Unknown type name " + type_name)
 
-        result = load_test_vectors_wycheproof(("Signature", "wycheproof"),
-                                              filename,
-                                              "Wycheproof PKCS#1v1.5 signature (%s)" % filename,
-                                              group_tag={'rsa_key': filter_rsa,
-                                                         'hash_mod': filter_sha,
-                                                         'type': filter_type})
+        result = load_test_vectors_wycheproof(
+            ("Signature", "wycheproof"),
+            filename,
+            "Wycheproof PKCS#1v1.5 signature (%s)" % filename,
+            group_tag={"rsa_key": filter_rsa, "hash_mod": filter_sha, "type": filter_type},
+        )
         return result
 
     def shortDescription(self):
@@ -302,6 +320,7 @@ class TestVectorsWycheproof(unittest.TestCase):
     def warn(self, tv):
         if tv.warning and self._wycheproof_warnings:
             import warnings
+
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
     def test_verify(self, tv):
@@ -310,8 +329,8 @@ class TestVectorsWycheproof(unittest.TestCase):
         hashed_msg = tv.hash_module.new(tv.msg)
         signer = pkcs1_15.new(tv.key)
         try:
-            signature = signer.verify(hashed_msg, tv.sig)
-        except ValueError as e:
+            signer.verify(hashed_msg, tv.sig)
+        except ValueError:
             if tv.warning:
                 return
             assert not tv.valid
@@ -325,7 +344,7 @@ class TestVectorsWycheproof(unittest.TestCase):
 
 
 def get_tests(config={}):
-    wycheproof_warnings = config.get('wycheproof_warnings')
+    wycheproof_warnings = config.get("wycheproof_warnings")
 
     tests = []
     tests += list_test_cases(FIPS_PKCS1_Verify_Tests)
@@ -333,14 +352,15 @@ def get_tests(config={}):
     tests += list_test_cases(PKCS1_15_NoParams)
     tests += list_test_cases(PKCS1_Legacy_Module_Tests)
     tests += list_test_cases(PKCS1_All_Hashes_Tests)
-    tests += [ TestVectorsWycheproof(wycheproof_warnings) ]
+    tests += [TestVectorsWycheproof(wycheproof_warnings)]
 
-    if config.get('slow_tests'):
+    if config.get("slow_tests"):
         tests += list_test_cases(FIPS_PKCS1_Verify_Tests_KAT)
         tests += list_test_cases(FIPS_PKCS1_Sign_Tests_KAT)
 
     return tests
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

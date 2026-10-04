@@ -35,74 +35,62 @@
 
 import unittest
 
-from Crypto.IO._PBES import PBES2, PbesError, _DEFAULT_MAX_ITERATION_COUNT
-from Crypto.Util.asn1 import (DerSequence, DerOctetString,
-                               DerObjectId, DerInteger)
+from Crypto.IO._PBES import PBES2, PbesError
+from Crypto.Util.asn1 import DerSequence
 
 
 class TestPBES2(unittest.TestCase):
-
     def setUp(self):
         self.ref = b"Test data"
         self.passphrase = b"Passphrase"
 
     def test1(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test2(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA224AndAES128-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA224AndAES128-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test3(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA256AndAES192-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA256AndAES192-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test4(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA384AndAES256-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA384AndAES256-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test5(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA512AndAES128-GCM')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA512AndAES128-GCM")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test6(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA512-224AndAES192-GCM')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA512-224AndAES192-GCM")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test7(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA3-256AndAES256-GCM')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA3-256AndAES256-GCM")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test8(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'scryptAndAES128-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "scryptAndAES128-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test9(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'scryptAndAES192-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "scryptAndAES192-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test10(self):
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'scryptAndAES256-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "scryptAndAES256-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
@@ -120,9 +108,12 @@ class TestPBES2_IterationLimit(unittest.TestCase):
         DER-encoded iteration count field in place."""
 
         # Encrypt with a low count so it's fast
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC',
-                           prot_params={'iteration_count': 1000})
+        ct = PBES2.encrypt(
+            self.ref,
+            self.passphrase,
+            "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC",
+            prot_params={"iteration_count": 1000},
+        )
 
         # Decode the outer structure, replace the iteration count, re-encode.
         # The blob is:
@@ -159,9 +150,9 @@ class TestPBES2_IterationLimit(unittest.TestCase):
         """Build a valid PBES2/scrypt encrypted blob with the given
         scrypt cost parameter (N) by encrypting normally then patching."""
 
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'scryptAndAES128-CBC',
-                           prot_params={'iteration_count': 16384})
+        ct = PBES2.encrypt(
+            self.ref, self.passphrase, "scryptAndAES128-CBC", prot_params={"iteration_count": 16384}
+        )
 
         outer = DerSequence().decode(ct, nr_elements=2)
         enc_algo = DerSequence().decode(outer[0])
@@ -196,9 +187,12 @@ class TestPBES2_IterationLimit(unittest.TestCase):
         """Setting max_iteration_count=0 disables the check.
         We use a very low iteration count so this stays fast."""
         # Encrypt with count=1000, then decrypt with check disabled.
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC',
-                           prot_params={'iteration_count': 1000})
+        ct = PBES2.encrypt(
+            self.ref,
+            self.passphrase,
+            "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC",
+            prot_params={"iteration_count": 1000},
+        )
         pt = PBES2.decrypt(ct, self.passphrase, max_iteration_count=0)
         self.assertEqual(self.ref, pt)
 
@@ -220,16 +214,18 @@ class TestPBES2_IterationLimit(unittest.TestCase):
     def test_normal_decrypt_within_limit(self):
         """Normal encrypt→decrypt round-trip still works with the default
         limit in place (default PBKDF2 count is 1000)."""
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA256AndAES256-CBC')
+        ct = PBES2.encrypt(self.ref, self.passphrase, "PBKDF2WithHMAC-SHA256AndAES256-CBC")
         pt = PBES2.decrypt(ct, self.passphrase)
         self.assertEqual(self.ref, pt)
 
     def test_at_boundary_is_allowed(self):
         """An iteration count exactly at the limit should be accepted."""
-        ct = PBES2.encrypt(self.ref, self.passphrase,
-                           'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC',
-                           prot_params={'iteration_count': 5000})
+        ct = PBES2.encrypt(
+            self.ref,
+            self.passphrase,
+            "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC",
+            prot_params={"iteration_count": 5000},
+        )
         # max_iteration_count == iteration_count → should pass
         pt = PBES2.decrypt(ct, self.passphrase, max_iteration_count=5000)
         self.assertEqual(self.ref, pt)
@@ -237,13 +233,16 @@ class TestPBES2_IterationLimit(unittest.TestCase):
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
+
     listTests = []
     listTests += list_test_cases(TestPBES2)
     listTests += list_test_cases(TestPBES2_IterationLimit)
     return listTests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

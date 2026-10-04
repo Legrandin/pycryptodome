@@ -28,9 +28,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from ._IntegerBase import IntegerBase
+from Crypto.Util.number import GCD, bytes_to_long, inverse, long_to_bytes
 
-from Crypto.Util.number import long_to_bytes, bytes_to_long, inverse, GCD
+from ._IntegerBase import IntegerBase
 
 
 class IntegerNative(IntegerBase):
@@ -57,15 +57,15 @@ class IntegerNative(IntegerBase):
     def __index__(self):
         return int(self._value)
 
-    def to_bytes(self, block_size=0, byteorder='big'):
+    def to_bytes(self, block_size=0, byteorder="big"):
         if self._value < 0:
             raise ValueError("Conversion only valid for non-negative numbers")
         result = long_to_bytes(self._value, block_size)
         if len(result) > block_size > 0:
             raise ValueError("Value too large to encode")
-        if byteorder == 'big':
+        if byteorder == "big":
             pass
-        elif byteorder == 'little':
+        elif byteorder == "little":
             result = bytearray(result)
             result.reverse()
             result = bytes(result)
@@ -74,10 +74,10 @@ class IntegerNative(IntegerBase):
         return result
 
     @classmethod
-    def from_bytes(cls, byte_string, byteorder='big'):
-        if byteorder == 'big':
+    def from_bytes(cls, byte_string, byteorder="big"):
+        if byteorder == "big":
             pass
-        elif byteorder == 'little':
+        elif byteorder == "little":
             byte_string = bytearray(byte_string)
             byte_string.reverse()
         else:
@@ -286,13 +286,13 @@ class IntegerNative(IntegerBase):
             return True
 
         x = self._value // 2
-        square_x = x ** 2
+        square_x = x**2
 
         while square_x > self._value:
             x = (square_x + self._value) // (2 * x)
-            square_x = x ** 2
+            square_x = x**2
 
-        return self._value == x ** 2
+        return self._value == x**2
 
     def fail_if_divisible_by(self, small_prime):
         if (self._value % int(small_prime)) == 0:
@@ -349,9 +349,7 @@ class IntegerNative(IntegerBase):
             a1 >>= 1
             e += 1
         # Step 5
-        if (e & 1) == 0:
-            s = 1
-        elif n % 8 in (1, 7):
+        if (e & 1) == 0 or n % 8 in (1, 7):
             s = 1
         else:
             s = -1

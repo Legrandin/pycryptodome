@@ -23,6 +23,5 @@ def new(*, domain: int = 0x1F, data: Optional[Buffer] = None) -> TurboSHAKE:
 
     domain_separation = domain
     if not (0x01 <= domain_separation <= 0x7F):
-        raise ValueError("Incorrect domain separation value (%d)" %
-                         domain_separation)
+        raise ValueError("Incorrect domain separation value (%d)" % domain_separation)
     return TurboSHAKE(64, domain_separation, data=data)

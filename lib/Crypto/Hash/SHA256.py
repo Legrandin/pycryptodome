@@ -22,14 +22,19 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 
-_raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
-                        """
+_raw_sha256_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._SHA256",
+    """
                         int SHA256_init(void **shaState);
                         int SHA256_destroy(void *shaState);
                         int SHA256_update(void *hs,
@@ -46,7 +51,9 @@ _raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
                                             uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
-                        """)
+                        """,
+)
+
 
 class SHA256Hash:
     """A SHA-256 hash object.
@@ -74,10 +81,8 @@ class SHA256Hash:
         state = VoidPointer()
         result = _raw_sha256_lib.SHA256_init(state.address_of())
         if result:
-            raise ValueError("Error %d while instantiating SHA256"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_sha256_lib.SHA256_destroy)
+            raise ValueError("Error %d while instantiating SHA256" % result)
+        self._state = SmartPointer(state.get(), _raw_sha256_lib.SHA256_destroy)
         if data:
             self.update(data)
 
@@ -88,12 +93,9 @@ class SHA256Hash:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_sha256_lib.SHA256_update(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_sha256_lib.SHA256_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while hashing data with SHA256"
-                             % result)
+            raise ValueError("Error %d while hashing data with SHA256" % result)
 
     def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
@@ -104,12 +106,9 @@ class SHA256Hash:
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_sha256_lib.SHA256_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size))
+        result = _raw_sha256_lib.SHA256_digest(self._state.get(), bfr, c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while making SHA256 digest"
-                             % result)
+            raise ValueError("Error %d while making SHA256 digest" % result)
 
         return get_raw_buffer(bfr)
 
@@ -135,8 +134,7 @@ class SHA256Hash:
         """
 
         clone = SHA256Hash()
-        result = _raw_sha256_lib.SHA256_copy(self._state.get(),
-                                             clone._state.get())
+        result = _raw_sha256_lib.SHA256_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHA256" % result)
         return clone
@@ -145,6 +143,7 @@ class SHA256Hash:
         """Create a fresh SHA-256 hash object."""
 
         return SHA256Hash(data)
+
 
 def new(data: Optional[Union[bytes, bytearray, memoryview]] = None) -> SHA256Hash:
     """Create a new hash object.
@@ -172,14 +171,15 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
 
     assert iterations > 0
 
-    bfr = create_string_buffer(len(first_digest));
+    bfr = create_string_buffer(len(first_digest))
     result = _raw_sha256_lib.SHA256_pbkdf2_hmac_assist(
-                    inner._state.get(),
-                    outer._state.get(),
-                    first_digest,
-                    bfr,
-                    c_size_t(iterations),
-                    c_size_t(len(first_digest)))
+        inner._state.get(),
+        outer._state.get(),
+        first_digest,
+        bfr,
+        c_size_t(iterations),
+        c_size_t(len(first_digest)),
+    )
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assist for SHA256" % result)

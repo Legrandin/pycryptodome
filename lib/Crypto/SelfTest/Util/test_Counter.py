@@ -23,8 +23,8 @@
 
 """Self-tests for Crypto.Util.Counter"""
 
-
 import unittest
+
 
 class CounterTests(unittest.TestCase):
     def setUp(self):
@@ -33,33 +33,36 @@ class CounterTests(unittest.TestCase):
 
     def test_BE(self):
         """Big endian"""
-        c = Counter.new(128)
-        c = Counter.new(128, little_endian=False)
+        Counter.new(128)
+        Counter.new(128, little_endian=False)
 
     def test_LE(self):
         """Little endian"""
-        c = Counter.new(128, little_endian=True)
+        Counter.new(128, little_endian=True)
 
     def test_nbits(self):
-        c = Counter.new(nbits=128)
+        Counter.new(nbits=128)
         self.assertRaises(ValueError, Counter.new, 129)
 
     def test_prefix(self):
-        c = Counter.new(128, prefix=b"xx")
+        Counter.new(128, prefix=b"xx")
 
     def test_suffix(self):
-        c = Counter.new(128, suffix=b"xx")
+        Counter.new(128, suffix=b"xx")
 
     def test_iv(self):
-        c = Counter.new(128, initial_value=2)
+        Counter.new(128, initial_value=2)
         self.assertRaises(ValueError, Counter.new, 16, initial_value=0x1FFFF)
+
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
+
     return list_test_cases(CounterTests)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

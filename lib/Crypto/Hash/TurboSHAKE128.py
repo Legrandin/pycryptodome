@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr, c_ubyte)
-
-from Crypto.Util.number import long_to_bytes
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_ubyte,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+)
 
 from .keccak import _raw_keccak_lib
-
 
 Buffer = Union[bytes, bytearray, memoryview]
 
@@ -24,12 +26,11 @@ class TurboSHAKE:
     def __init__(self, capacity: int, domain_separation: int, data: Optional[Buffer]) -> None:
 
         state = VoidPointer()
-        result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(capacity),
-                                             c_ubyte(12))   # Reduced number of rounds
+        result = _raw_keccak_lib.keccak_init(
+            state.address_of(), c_size_t(capacity), c_ubyte(12)
+        )  # Reduced number of rounds
         if result:
-            raise ValueError("Error %d while instantiating TurboSHAKE"
-                             % result)
+            raise ValueError("Error %d while instantiating TurboSHAKE" % result)
         self._state = SmartPointer(state.get(), _raw_keccak_lib.keccak_destroy)
 
         self._is_squeezing = False
@@ -38,7 +39,6 @@ class TurboSHAKE:
 
         if data:
             self.update(data)
-
 
     def update(self, data: Buffer) -> TurboSHAKE:
         """Continue hashing of a message by consuming the next chunk of data.
@@ -50,12 +50,9 @@ class TurboSHAKE:
         if self._is_squeezing:
             raise TypeError("You cannot call 'update' after the first 'read'")
 
-        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_keccak_lib.keccak_absorb(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while updating TurboSHAKE state"
-                             % result)
+            raise ValueError("Error %d while updating TurboSHAKE state" % result)
         return self
 
     def read(self, length: int) -> bytes:
@@ -75,13 +72,11 @@ class TurboSHAKE:
 
         self._is_squeezing = True
         bfr = create_string_buffer(length)
-        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
-                                                bfr,
-                                                c_size_t(length),
-                                                c_ubyte(self._domain))
+        result = _raw_keccak_lib.keccak_squeeze(
+            self._state.get(), bfr, c_size_t(length), c_ubyte(self._domain)
+        )
         if result:
-            raise ValueError("Error %d while extracting from TurboSHAKE"
-                             % result)
+            raise ValueError("Error %d while extracting from TurboSHAKE" % result)
 
         return get_raw_buffer(bfr)
 
@@ -91,8 +86,7 @@ class TurboSHAKE:
     def _reset(self):
         result = _raw_keccak_lib.keccak_reset(self._state.get())
         if result:
-            raise ValueError("Error %d while resetting TurboSHAKE state"
-                             % result)
+            raise ValueError("Error %d while resetting TurboSHAKE state" % result)
         self._is_squeezing = False
 
 
@@ -112,6 +106,5 @@ def new(*, domain: int = 0x1F, data: Optional[Buffer] = None) -> TurboSHAKE:
 
     domain_separation = domain
     if not (0x01 <= domain_separation <= 0x7F):
-        raise ValueError("Incorrect domain separation value (%d)" %
-                         domain_separation)
+        raise ValueError("Incorrect domain separation value (%d)" % domain_separation)
     return TurboSHAKE(32, domain_separation, data=data)

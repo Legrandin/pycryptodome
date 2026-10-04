@@ -33,7 +33,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Any, Callable, Optional, TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 from Crypto import Random
 
@@ -51,8 +51,8 @@ RandFunc = Callable[[int], bytes]
 
 
 class IntegerBase(ABC):
-
     if TYPE_CHECKING:
+
         def __init__(self, value: Union[IntegerBase, int]) -> None: ...
 
     # Conversions
@@ -69,12 +69,12 @@ class IntegerBase(ABC):
         pass
 
     @abstractmethod
-    def to_bytes(self, block_size: Optional[int] = 0, byteorder: str = 'big') -> bytes:
+    def to_bytes(self, block_size: Optional[int] = 0, byteorder: str = "big") -> bytes:
         pass
 
     @staticmethod
     @abstractmethod
-    def from_bytes(byte_string: Union[bytes, bytearray, memoryview], byteorder: str = 'big') -> IntegerBase:
+    def from_bytes(byte_string: Union[bytes, bytearray, memoryview], byteorder: str = "big") -> IntegerBase:
         pass
 
     # Relations
@@ -132,13 +132,15 @@ class IntegerBase(ABC):
         pass
 
     @abstractmethod
-    def inplace_pow(self, exponent: Union[IntegerBase, int],
-                    modulus: Optional[Union[IntegerBase, int]] = None) -> IntegerBase:
+    def inplace_pow(
+        self, exponent: Union[IntegerBase, int], modulus: Optional[Union[IntegerBase, int]] = None
+    ) -> IntegerBase:
         pass
 
     @abstractmethod
-    def __pow__(self, exponent: Union[IntegerBase, int],
-                modulus: Optional[Union[IntegerBase, int]] = None) -> IntegerBase:
+    def __pow__(
+        self, exponent: Union[IntegerBase, int], modulus: Optional[Union[IntegerBase, int]] = None
+    ) -> IntegerBase:
         pass
 
     @abstractmethod
@@ -297,12 +299,12 @@ class IntegerBase(ABC):
         r = pow(n, (q + 1) // 2, p)
 
         while t != 1:
-            for i in range(0, m):
+            for i in range(m):
                 if pow(t, 2**i, p) == 1:
                     break
             if i == m:
                 raise ValueError("Cannot compute square root of %d mod %d" % (n, p))
-            b = pow(c, 2**(m - i - 1), p)
+            b = pow(c, 2 ** (m - i - 1), p)
             m = i
             c = b**2 % p
             t = (t * b**2) % p
@@ -314,8 +316,13 @@ class IntegerBase(ABC):
         return r
 
     @classmethod
-    def random(cls, *, exact_bits: Optional[int] = None, max_bits: Optional[int] = None,
-               randfunc: Optional[RandFunc] = None) -> IntegerBase:
+    def random(
+        cls,
+        *,
+        exact_bits: Optional[int] = None,
+        max_bits: Optional[int] = None,
+        randfunc: Optional[RandFunc] = None,
+    ) -> IntegerBase:
         """Generate a random natural integer of a certain size.
 
         :Keywords:
@@ -361,10 +368,14 @@ class IntegerBase(ABC):
         return cls.from_bytes(bytes([msb]) + randfunc(bytes_needed - 1))
 
     @classmethod
-    def random_range(cls, *, min_inclusive: Optional[Union[IntegerBase, int]] = None,
-                     max_inclusive: Optional[Union[IntegerBase, int]] = None,
-                     max_exclusive: Optional[Union[IntegerBase, int]] = None,
-                     randfunc: Optional[RandFunc] = None) -> IntegerBase:
+    def random_range(
+        cls,
+        *,
+        min_inclusive: Optional[Union[IntegerBase, int]] = None,
+        max_inclusive: Optional[Union[IntegerBase, int]] = None,
+        max_exclusive: Optional[Union[IntegerBase, int]] = None,
+        randfunc: Optional[RandFunc] = None,
+    ) -> IntegerBase:
         """Generate a random integer within a given internal.
 
         :Keywords:
@@ -383,8 +394,7 @@ class IntegerBase(ABC):
         """
 
         if max_inclusive is not None and max_exclusive is not None:
-            raise ValueError("max_inclusive and max_exclusive cannot be both"
-                             " specified")
+            raise ValueError("max_inclusive and max_exclusive cannot be both specified")
         if max_exclusive is not None:
             max_inclusive = max_exclusive - 1
         if min_inclusive is None or max_inclusive is None:
@@ -403,8 +413,9 @@ class IntegerBase(ABC):
 
     @staticmethod
     @abstractmethod
-    def _mult_modulo_bytes(term1: Union[IntegerBase, int], term2: Union[IntegerBase, int],
-                           modulus: Union[IntegerBase, int]) -> bytes:
+    def _mult_modulo_bytes(
+        term1: Union[IntegerBase, int], term2: Union[IntegerBase, int], modulus: Union[IntegerBase, int]
+    ) -> bytes:
         """Multiply two integers, take the modulo, and encode as big endian.
         This specialized method is used for RSA decryption.
 
@@ -421,4 +432,3 @@ class IntegerBase(ABC):
             It is as long as the modulus would be, with zero padding
             on the left if needed.
         """
-        pass

@@ -30,42 +30,32 @@ from Crypto.Cipher import CAST
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
     # Test vectors from RFC 2144, B.1
-    ('0123456789abcdef', '238b4fe5847e44b2',
-        '0123456712345678234567893456789a',
-        '128-bit key'),
-
-    ('0123456789abcdef', 'eb6a711a2c02271b',
-        '01234567123456782345',
-        '80-bit key'),
-
-    ('0123456789abcdef', '7ac816d16e9b302e',
-        '0123456712',
-        '40-bit key'),
+    ("0123456789abcdef", "238b4fe5847e44b2", "0123456712345678234567893456789a", "128-bit key"),
+    ("0123456789abcdef", "eb6a711a2c02271b", "01234567123456782345", "80-bit key"),
+    ("0123456789abcdef", "7ac816d16e9b302e", "0123456712", "40-bit key"),
 ]
 
 
 class KeyLength(unittest.TestCase):
-
     def runTest(self):
         self.assertRaises(ValueError, CAST.new, bytes([0]) * 4, CAST.MODE_ECB)
         self.assertRaises(ValueError, CAST.new, bytes([0]) * 17, CAST.MODE_ECB)
 
 
 class TestOutput(unittest.TestCase):
-
     def runTest(self):
         # Encrypt/Decrypt data and test output parameter
 
-        cipher = CAST.new(b'4'*16, CAST.MODE_ECB)
+        cipher = CAST.new(b"4" * 16, CAST.MODE_ECB)
 
-        pt = b'5' * 16
+        pt = b"5" * 16
         ct = cipher.encrypt(pt)
 
         output = bytearray(16)
         res = cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
         self.assertEqual(res, None)
-        
+
         res = cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
         self.assertEqual(res, None)
@@ -73,12 +63,12 @@ class TestOutput(unittest.TestCase):
         output = memoryview(bytearray(16))
         cipher.encrypt(pt, output=output)
         self.assertEqual(ct, output)
-        
+
         cipher.decrypt(ct, output=output)
         self.assertEqual(pt, output)
 
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b'0'*16)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b'0'*16)
+        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * 16)
+        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * 16)
 
         shorter_output = bytearray(7)
         self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
@@ -93,6 +83,7 @@ def get_tests(config={}):
     tests.append(TestOutput())
     return tests
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

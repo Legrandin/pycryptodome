@@ -30,31 +30,25 @@
 
 from __future__ import annotations
 
+from binascii import unhexlify
 from typing import Optional, Tuple, Union, overload
 
-from binascii import unhexlify
-
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Cipher import ChaCha20
 from Crypto.Cipher.ChaCha20 import _HChaCha20
-from Crypto.Hash import Poly1305, BLAKE2s
-
+from Crypto.Hash import BLAKE2s, Poly1305
 from Crypto.Random import get_random_bytes
-
-from Crypto.Util.number import long_to_bytes
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_buffer
-
+from Crypto.Util.number import long_to_bytes
 
 Buffer = Union[bytes, bytearray, memoryview]
 
 
 def _enum(**enums):
-    return type('Enum', (), enums)
+    return type("Enum", (), enums)
 
 
-_CipherStatus = _enum(PROCESSING_AUTH_DATA=1,
-                      PROCESSING_CIPHERTEXT=2,
-                      PROCESSING_DONE=3)
+_CipherStatus = _enum(PROCESSING_AUTH_DATA=1, PROCESSING_CIPHERTEXT=2, PROCESSING_DONE=3)
 
 
 class ChaCha20Poly1305Cipher:
@@ -72,13 +66,12 @@ class ChaCha20Poly1305Cipher:
 
         See also `new()` at the module level."""
 
-        self._next: Tuple[str, ...] = ("update", "encrypt", "decrypt", "digest",
-                      "verify")
+        self._next: Tuple[str, ...] = ("update", "encrypt", "decrypt", "digest", "verify")
 
         self._authenticator = Poly1305.new(key=key, nonce=nonce, cipher=ChaCha20)
 
         self._cipher = ChaCha20.new(key=key, nonce=nonce)
-        self._cipher.seek(64)   # Block counter starts at 1
+        self._cipher.seek(64)  # Block counter starts at 1
 
         self._len_aad = 0
         self._len_ct = 0
@@ -109,9 +102,9 @@ class ChaCha20Poly1305Cipher:
 
     def _pad_aad(self):
 
-        assert(self._status == _CipherStatus.PROCESSING_AUTH_DATA)
+        assert self._status == _CipherStatus.PROCESSING_AUTH_DATA
         if self._len_aad & 0x0F:
-            self._authenticator.update(b'\x00' * (16 - (self._len_aad & 0x0F)))
+            self._authenticator.update(b"\x00" * (16 - (self._len_aad & 0x0F)))
         self._status = _CipherStatus.PROCESSING_CIPHERTEXT
 
     @overload
@@ -120,8 +113,9 @@ class ChaCha20Poly1305Cipher:
     @overload
     def encrypt(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
 
-    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
-                Optional[bytes]:
+    def encrypt(
+        self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]:
         """Encrypt a piece of data.
 
         Args:
@@ -158,8 +152,9 @@ class ChaCha20Poly1305Cipher:
     @overload
     def decrypt(self, ciphertext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
 
-    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
-                Optional[bytes]:
+    def decrypt(
+        self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]:
         """Decrypt a piece of data.
 
         Args:
@@ -188,16 +183,16 @@ class ChaCha20Poly1305Cipher:
         """Finalize the cipher (if not done already) and return the MAC."""
 
         if self._mac_tag:
-            assert(self._status == _CipherStatus.PROCESSING_DONE)
+            assert self._status == _CipherStatus.PROCESSING_DONE
             return self._mac_tag
 
-        assert(self._status != _CipherStatus.PROCESSING_DONE)
+        assert self._status != _CipherStatus.PROCESSING_DONE
 
         if self._status == _CipherStatus.PROCESSING_AUTH_DATA:
             self._pad_aad()
 
         if self._len_ct & 0x0F:
-            self._authenticator.update(b'\x00' * (16 - (self._len_ct & 0x0F)))
+            self._authenticator.update(b"\x00" * (16 - (self._len_ct & 0x0F)))
 
         self._status = _CipherStatus.PROCESSING_DONE
 
@@ -242,18 +237,15 @@ class ChaCha20Poly1305Cipher:
         """
 
         if "verify" not in self._next:
-            raise TypeError("verify() cannot be called"
-                            " when encrypting a message")
+            raise TypeError("verify() cannot be called when encrypting a message")
         self._next = ("verify",)
 
         secret = get_random_bytes(16)
 
         self._compute_mac()
 
-        mac1 = BLAKE2s.new(digest_bits=160, key=secret,
-                           data=self._mac_tag)
-        mac2 = BLAKE2s.new(digest_bits=160, key=secret,
-                           data=received_mac_tag)
+        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._mac_tag)
+        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=received_mac_tag)
 
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
@@ -324,7 +316,6 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Poly1305Ciphe
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Poly1305Cipher` object
     """
 
-
     if len(key) != 32:
         raise ValueError("Key must be 32 bytes long")
 
@@ -335,7 +326,7 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Poly1305Ciphe
         chacha20_poly1305_nonce = nonce
     elif len(nonce) == 24:
         key = _HChaCha20(key, nonce[:16])
-        chacha20_poly1305_nonce = b'\x00\x00\x00\x00' + nonce[16:]
+        chacha20_poly1305_nonce = b"\x00\x00\x00\x00" + nonce[16:]
     else:
         raise ValueError("Nonce must be 8, 12 or 24 bytes long")
 

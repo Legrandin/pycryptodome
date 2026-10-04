@@ -1,13 +1,12 @@
 import unittest
-from binascii import unhexlify, hexlify
-from Crypto.Util._bytes import tobytes
-from Crypto.SelfTest.st_common import list_test_cases
+from binascii import hexlify, unhexlify
 
 from Crypto.Hash import TupleHash128, TupleHash256
+from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Util._bytes import tobytes
 
 
 class TupleHashTest(unittest.TestCase):
-
     def new(self, *args, **kwargs):
         return self.TupleHash.new(*args, **kwargs)
 
@@ -15,7 +14,6 @@ class TupleHashTest(unittest.TestCase):
 
         h = self.new()
         for new_func in self.TupleHash.new, h.new:
-
             for dbits in range(64, 1024 + 1, 8):
                 hobj = new_func(digest_bits=dbits)
                 self.assertEqual(hobj.digest_size * 8, dbits)
@@ -38,16 +36,13 @@ class TupleHashTest(unittest.TestCase):
 
         h = self.new()
         for new_func in self.TupleHash.new, h.new:
-            self.assertRaises(TypeError, new_func,
-                              digest_bytes=self.minimum_bytes,
-                              digest_bits=self.minimum_bits)
+            self.assertRaises(
+                TypeError, new_func, digest_bytes=self.minimum_bytes, digest_bits=self.minimum_bits
+            )
             self.assertRaises(ValueError, new_func, digest_bytes=0)
-            self.assertRaises(ValueError, new_func,
-                              digest_bits=self.minimum_bits + 7)
-            self.assertRaises(ValueError, new_func,
-                              digest_bits=self.minimum_bits - 8)
-            self.assertRaises(ValueError, new_func,
-                              digest_bits=self.minimum_bytes - 1)
+            self.assertRaises(ValueError, new_func, digest_bits=self.minimum_bits + 7)
+            self.assertRaises(ValueError, new_func, digest_bits=self.minimum_bits - 8)
+            self.assertRaises(ValueError, new_func, digest_bits=self.minimum_bytes - 1)
             self.assertRaises(TypeError, new_func, costum=b"x")
 
     def test_default_digest_size(self):
@@ -56,27 +51,27 @@ class TupleHashTest(unittest.TestCase):
 
     def test_update(self):
         h = self.new()
-        h.update(b'')
+        h.update(b"")
         h.digest()
 
         h = self.new()
-        h.update(b'')
-        h.update(b'STRING1')
-        h.update(b'STRING2')
+        h.update(b"")
+        h.update(b"STRING1")
+        h.update(b"STRING2")
         mac1 = h.digest()
 
         h = self.new()
-        h.update(b'STRING1')
-        h.update(b'STRING2')
+        h.update(b"STRING1")
+        h.update(b"STRING2")
         mac2 = h.digest()
         self.assertNotEqual(mac1, mac2)
 
         h = self.new()
-        h.update(b'STRING1', b'STRING2')
+        h.update(b"STRING1", b"STRING2")
         self.assertEqual(mac2, h.digest())
 
         h = self.new()
-        t = b'STRING1', b'STRING2'
+        t = b"STRING1", b"STRING2"
         h.update(*t)
         self.assertEqual(mac2, h.digest())
 
@@ -84,7 +79,7 @@ class TupleHashTest(unittest.TestCase):
         h = self.new()
         self.assertRaises(TypeError, h.update, "string")
         self.assertRaises(TypeError, h.update, None)
-        self.assertRaises(TypeError, h.update, (b'STRING1', b'STRING2'))
+        self.assertRaises(TypeError, h.update, (b"STRING1", b"STRING2"))
 
     def test_digest(self):
         h = self.new()
@@ -127,7 +122,7 @@ class TupleHashTest(unittest.TestCase):
         h2 = self.new()
         h1.update(data)
         h2.update(data_ba)
-        data_ba[:1] = b'\xFF'
+        data_ba[:1] = b"\xff"
 
         self.assertEqual(h1.digest(), h2.digest())
 
@@ -142,7 +137,6 @@ class TupleHashTest(unittest.TestCase):
             return memoryview(bytearray(data))
 
         for get_mv in (get_mv_ro, get_mv_rw):
-
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
 
@@ -151,13 +145,12 @@ class TupleHashTest(unittest.TestCase):
             h1.update(data)
             h2.update(data_mv)
             if not data_mv.readonly:
-                data_mv[:1] = b'\xFF'
+                data_mv[:1] = b"\xff"
 
             self.assertEqual(h1.digest(), h2.digest())
 
 
 class TupleHash128Test(TupleHashTest):
-
     TupleHash = TupleHash128
 
     minimum_bytes = 8
@@ -168,7 +161,6 @@ class TupleHash128Test(TupleHashTest):
 
 
 class TupleHash256Test(TupleHashTest):
-
     TupleHash = TupleHash256
 
     minimum_bytes = 8
@@ -179,7 +171,6 @@ class TupleHash256Test(TupleHashTest):
 
 
 class NISTExampleTestVectors(unittest.TestCase):
-
     # http://csrc.nist.gov/groups/ST/toolkit/documents/Examples/TupleHash_samples.pdf
     test_data = [
         (
@@ -188,10 +179,9 @@ class NISTExampleTestVectors(unittest.TestCase):
                 "10 11 12 13 14 15",
             ),
             "",
-            "C5 D8 78 6C 1A FB 9B 82 11 1A B3 4B 65 B2 C0 04"
-            "8F A6 4E 6D 48 E2 63 26 4C E1 70 7D 3F FC 8E D1",
+            "C5 D8 78 6C 1A FB 9B 82 11 1A B3 4B 65 B2 C0 048F A6 4E 6D 48 E2 63 26 4C E1 70 7D 3F FC 8E D1",
             "KMAC128 Sample #1 NIST",
-            TupleHash128
+            TupleHash128,
         ),
         (
             (
@@ -199,10 +189,9 @@ class NISTExampleTestVectors(unittest.TestCase):
                 "10 11 12 13 14 15",
             ),
             "My Tuple App",
-            "75 CD B2 0F F4 DB 11 54 E8 41 D7 58 E2 41 60 C5"
-            "4B AE 86 EB 8C 13 E7 F5 F4 0E B3 55 88 E9 6D FB",
+            "75 CD B2 0F F4 DB 11 54 E8 41 D7 58 E2 41 60 C54B AE 86 EB 8C 13 E7 F5 F4 0E B3 55 88 E9 6D FB",
             "KMAC128 Sample #2 NIST",
-            TupleHash128
+            TupleHash128,
         ),
         (
             (
@@ -211,10 +200,9 @@ class NISTExampleTestVectors(unittest.TestCase):
                 "20 21 22 23 24 25 26 27 28",
             ),
             "My Tuple App",
-            "E6 0F 20 2C 89 A2 63 1E DA 8D 4C 58 8C A5 FD 07"
-            "F3 9E 51 51 99 8D EC CF 97 3A DB 38 04 BB 6E 84",
+            "E6 0F 20 2C 89 A2 63 1E DA 8D 4C 58 8C A5 FD 07F3 9E 51 51 99 8D EC CF 97 3A DB 38 04 BB 6E 84",
             "KMAC128 Sample #3 NIST",
-            TupleHash128
+            TupleHash128,
         ),
         (
             (
@@ -227,7 +215,7 @@ class NISTExampleTestVectors(unittest.TestCase):
             "11 AC 26 96 B1 AB 5E A2 35 2D F1 42 3B DE 7B D4"
             "BB 78 C9 AE D1 A8 53 C7 86 72 F9 EB 23 BB E1 94",
             "KMAC256 Sample #4 NIST",
-            TupleHash256
+            TupleHash256,
         ),
         (
             (
@@ -240,7 +228,7 @@ class NISTExampleTestVectors(unittest.TestCase):
             "C4 E9 A0 68 A2 89 C6 1C 95 AA B3 0A EE 1E 41 0B"
             "0B 60 7D E3 62 0E 24 A4 E3 BF 98 52 A1 D4 36 7E",
             "KMAC256 Sample #5 NIST",
-            TupleHash256
+            TupleHash256,
         ),
         (
             (
@@ -254,11 +242,8 @@ class NISTExampleTestVectors(unittest.TestCase):
             "D6 D5 B5 E8 2C 01 8D A9 99 ED 35 B0 BB 49 C9 67"
             "8E 52 6A BD 8E 85 C1 3E D2 54 02 1D B9 E7 90 CE",
             "KMAC256 Sample #6 NIST",
-            TupleHash256
+            TupleHash256,
         ),
-
-
-
     ]
 
     def setUp(self):
@@ -270,7 +255,7 @@ class NISTExampleTestVectors(unittest.TestCase):
             for string in tv_in[0]:
                 tv_out[0].append(unhexlify(string.replace(" ", "")))
 
-            tv_out[1] = tobytes(tv_in[1])    # Custom
+            tv_out[1] = tobytes(tv_in[1])  # Custom
             tv_out[2] = unhexlify(tv_in[2].replace(" ", ""))
             tv_out[3] = tv_in[3]
             tv_out[4] = tv_in[4]
@@ -293,6 +278,7 @@ class NISTExampleTestVectors(unittest.TestCase):
             self.assertEqual(hd1.digest(), digest, msg=text)
             self.assertEqual(hd2.digest(), digest, msg=text)
 
+
 def get_tests(config={}):
     tests = []
 
@@ -303,7 +289,9 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

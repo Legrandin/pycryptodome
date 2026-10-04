@@ -22,16 +22,21 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_sha1_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA1",
-                        """
+_raw_sha1_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._SHA1",
+    """
                         #define SHA1_DIGEST_SIZE 20
 
                         int SHA1_init(void **shaState);
@@ -48,7 +53,9 @@ _raw_sha1_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA1",
                                             const uint8_t first_digest[SHA1_DIGEST_SIZE],
                                             uint8_t final_digest[SHA1_DIGEST_SIZE],
                                             size_t iterations);
-                        """)
+                        """,
+)
+
 
 class SHA1Hash:
     """A SHA-1 hash object.
@@ -77,10 +84,8 @@ class SHA1Hash:
         state = VoidPointer()
         result = _raw_sha1_lib.SHA1_init(state.address_of())
         if result:
-            raise ValueError("Error %d while instantiating SHA1"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_sha1_lib.SHA1_destroy)
+            raise ValueError("Error %d while instantiating SHA1" % result)
+        self._state = SmartPointer(state.get(), _raw_sha1_lib.SHA1_destroy)
         if data:
             self.update(data)
 
@@ -91,12 +96,9 @@ class SHA1Hash:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_sha1_lib.SHA1_update(self._state.get(),
-                                           c_uint8_ptr(data),
-                                           c_size_t(len(data)))
+        result = _raw_sha1_lib.SHA1_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating SHA1"
-                             % result)
+            raise ValueError("Error %d while instantiating SHA1" % result)
 
     def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
@@ -107,11 +109,9 @@ class SHA1Hash:
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_sha1_lib.SHA1_digest(self._state.get(),
-                                           bfr)
+        result = _raw_sha1_lib.SHA1_digest(self._state.get(), bfr)
         if result:
-            raise ValueError("Error %d while instantiating SHA1"
-                             % result)
+            raise ValueError("Error %d while instantiating SHA1" % result)
 
         return get_raw_buffer(bfr)
 
@@ -137,8 +137,7 @@ class SHA1Hash:
         """
 
         clone = SHA1Hash()
-        result = _raw_sha1_lib.SHA1_copy(self._state.get(),
-                                         clone._state.get())
+        result = _raw_sha1_lib.SHA1_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHA1" % result)
         return clone
@@ -175,13 +174,10 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
     assert len(first_digest) == digest_size
     assert iterations > 0
 
-    bfr = create_string_buffer(digest_size);
+    bfr = create_string_buffer(digest_size)
     result = _raw_sha1_lib.SHA1_pbkdf2_hmac_assist(
-                    inner._state.get(),
-                    outer._state.get(),
-                    first_digest,
-                    bfr,
-                    c_size_t(iterations))
+        inner._state.get(), outer._state.get(), first_digest, bfr, c_size_t(iterations)
+    )
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assis for SHA1" % result)

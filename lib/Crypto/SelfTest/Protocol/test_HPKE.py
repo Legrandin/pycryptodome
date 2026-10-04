@@ -1,148 +1,126 @@
-import os
 import json
+import os
 import unittest
 from binascii import unhexlify
 
-from Crypto.Protocol import HPKE
+from Crypto.Hash import SHA256, SHA384, SHA512
+from Crypto.Protocol import DH, HPKE
 from Crypto.Protocol.HPKE import DeserializeError
-
 from Crypto.PublicKey import ECC
 from Crypto.SelfTest.st_common import list_test_cases
 
-from Crypto.Protocol import DH
-from Crypto.Hash import SHA256, SHA384, SHA512
-
 
 class HPKE_Tests(unittest.TestCase):
-
-    key1 = ECC.generate(curve='p256')
-    key2 = ECC.generate(curve='p256')
+    key1 = ECC.generate(curve="p256")
+    key2 = ECC.generate(curve="p256")
 
     # name, size of enc
     curves = {
-        'p256': 65,
-        'p384': 97,
-        'p521': 133,
-        'curve25519': 32,
-        'curve448': 56,
+        "p256": 65,
+        "p384": 97,
+        "p521": 133,
+        "curve25519": 32,
+        "curve448": 56,
     }
 
     def round_trip(self, curve, aead_id):
         key1 = ECC.generate(curve=curve)
         aead_id = aead_id
 
-        encryptor = HPKE.new(receiver_key=key1.public_key(),
-                             aead_id=aead_id)
+        encryptor = HPKE.new(receiver_key=key1.public_key(), aead_id=aead_id)
         self.assertEqual(len(encryptor.enc), self.curves[curve])
 
         # First message
-        ct = encryptor.seal(b'ABC', auth_data=b'DEF')
+        ct = encryptor.seal(b"ABC", auth_data=b"DEF")
 
-        decryptor = HPKE.new(receiver_key=key1,
-                             aead_id=aead_id,
-                             enc=encryptor.enc)
+        decryptor = HPKE.new(receiver_key=key1, aead_id=aead_id, enc=encryptor.enc)
 
-        pt = decryptor.unseal(ct, auth_data=b'DEF')
-        self.assertEqual(b'ABC', pt)
+        pt = decryptor.unseal(ct, auth_data=b"DEF")
+        self.assertEqual(b"ABC", pt)
 
         # Second message
-        ct2 = encryptor.seal(b'GHI')
+        ct2 = encryptor.seal(b"GHI")
         pt2 = decryptor.unseal(ct2)
-        self.assertEqual(b'GHI', pt2)
+        self.assertEqual(b"GHI", pt2)
 
     def test_round_trip(self):
-        for curve in self.curves.keys():
+        for curve in self.curves:
             for aead_id in HPKE.AEAD:
                 self.round_trip(curve, aead_id)
 
     def test_psk(self):
         aead_id = HPKE.AEAD.AES128_GCM
-        HPKE.new(receiver_key=self.key1.public_key(),
-                 aead_id=aead_id,
-                 psk=(b'a', b'c' * 32))
+        HPKE.new(receiver_key=self.key1.public_key(), aead_id=aead_id, psk=(b"a", b"c" * 32))
 
     def test_info(self):
         aead_id = HPKE.AEAD.AES128_GCM
-        HPKE.new(receiver_key=self.key1.public_key(),
-                 aead_id=aead_id,
-                 info=b'baba')
+        HPKE.new(receiver_key=self.key1.public_key(), aead_id=aead_id, info=b"baba")
 
     def test_neg_unsupported_curve(self):
-        key3 = ECC.generate(curve='p224')
+        key3 = ECC.generate(curve="p224")
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=key3.public_key(),
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(receiver_key=key3.public_key(), aead_id=HPKE.AEAD.AES128_GCM)
         self.assertIn("Unsupported curve", str(cm.exception))
 
     def test_neg_too_many_private_keys(self):
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=self.key1,
-                     sender_key=self.key2,
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(receiver_key=self.key1, sender_key=self.key2, aead_id=HPKE.AEAD.AES128_GCM)
         self.assertIn("Exactly 1 private key", str(cm.exception))
 
     def test_neg_curve_mismatch(self):
-        key3 = ECC.generate(curve='p384')
+        key3 = ECC.generate(curve="p384")
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=self.key1.public_key(),
-                     sender_key=key3,
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(receiver_key=self.key1.public_key(), sender_key=key3, aead_id=HPKE.AEAD.AES128_GCM)
         self.assertIn("but recipient key", str(cm.exception))
 
     def test_neg_psk(self):
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=self.key1.public_key(),
-                     psk=(b'', b'G' * 32),
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(receiver_key=self.key1.public_key(), psk=(b"", b"G" * 32), aead_id=HPKE.AEAD.AES128_GCM)
 
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=self.key1.public_key(),
-                     psk=(b'JJJ', b''),
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(receiver_key=self.key1.public_key(), psk=(b"JJJ", b""), aead_id=HPKE.AEAD.AES128_GCM)
 
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=self.key1.public_key(),
-                     psk=(b'JJJ', b'Y' * 31),
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(
+                receiver_key=self.key1.public_key(), psk=(b"JJJ", b"Y" * 31), aead_id=HPKE.AEAD.AES128_GCM
+            )
         self.assertIn("at least 32", str(cm.exception))
 
     def test_neg_wrong_enc(self):
-        wrong_enc = b'\xFF' + b'8' * 64
+        wrong_enc = b"\xff" + b"8" * 64
         with self.assertRaises(DeserializeError):
-            HPKE.new(receiver_key=self.key1,
-                     aead_id=HPKE.AEAD.AES128_GCM,
-                     enc=wrong_enc)
+            HPKE.new(receiver_key=self.key1, aead_id=HPKE.AEAD.AES128_GCM, enc=wrong_enc)
 
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=self.key1.public_key(),
-                     enc=self.key1.public_key().export_key(format='raw'),
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(
+                receiver_key=self.key1.public_key(),
+                enc=self.key1.public_key().export_key(format="raw"),
+                aead_id=HPKE.AEAD.AES128_GCM,
+            )
         self.assertIn("'enc' cannot be an input", str(cm.exception))
 
         with self.assertRaises(ValueError) as cm:
-            HPKE.new(receiver_key=self.key1,
-                     aead_id=HPKE.AEAD.AES128_GCM)
+            HPKE.new(receiver_key=self.key1, aead_id=HPKE.AEAD.AES128_GCM)
         self.assertIn("'enc' required", str(cm.exception))
 
     def test_neg_unseal_wrong_ct(self):
-        decryptor = HPKE.new(receiver_key=self.key1,
-                             aead_id=HPKE.AEAD.CHACHA20_POLY1305,
-                             enc=self.key2.public_key().export_key(format='raw'))
+        decryptor = HPKE.new(
+            receiver_key=self.key1,
+            aead_id=HPKE.AEAD.CHACHA20_POLY1305,
+            enc=self.key2.public_key().export_key(format="raw"),
+        )
 
         with self.assertRaises(ValueError):
-            decryptor.unseal(b'XYZ' * 20)
+            decryptor.unseal(b"XYZ" * 20)
 
     def test_neg_unseal_no_auth_data(self):
         aead_id = HPKE.AEAD.CHACHA20_POLY1305
 
-        encryptor = HPKE.new(receiver_key=self.key1.public_key(),
-                             aead_id=aead_id)
+        encryptor = HPKE.new(receiver_key=self.key1.public_key(), aead_id=aead_id)
 
-        ct = encryptor.seal(b'ABC', auth_data=b'DEF')
+        ct = encryptor.seal(b"ABC", auth_data=b"DEF")
 
-        decryptor = HPKE.new(receiver_key=self.key1,
-                             aead_id=aead_id,
-                             enc=encryptor.enc)
+        decryptor = HPKE.new(receiver_key=self.key1, aead_id=aead_id, enc=encryptor.enc)
 
         with self.assertRaises(ValueError):
             decryptor.unseal(ct)
@@ -176,10 +154,7 @@ class HPKE_Tests(unittest.TestCase):
 
         aead_id = HPKE.AEAD.AES128_GCM
 
-        decryptor = HPKE.new(receiver_key=keyR,
-                             aead_id=aead_id,
-                             info=info,
-                             enc=enc)
+        decryptor = HPKE.new(receiver_key=keyR, aead_id=aead_id, info=info, enc=enc)
 
         pt_X0 = decryptor.unseal(ct0, aad0)
         self.assertEqual(pt_X0, pt)
@@ -222,11 +197,7 @@ class HPKE_Tests(unittest.TestCase):
 
         aead_id = HPKE.AEAD.AES128_GCM
 
-        decryptor = HPKE.new(receiver_key=keyR,
-                             aead_id=aead_id,
-                             info=info,
-                             psk=(psk_id, psk),
-                             enc=enc)
+        decryptor = HPKE.new(receiver_key=keyR, aead_id=aead_id, info=info, psk=(psk_id, psk), enc=enc)
 
         pt_X0 = decryptor.unseal(ct0, aad0)
         self.assertEqual(pt_X0, pt)
@@ -266,11 +237,9 @@ class HPKE_Tests(unittest.TestCase):
 
         aead_id = HPKE.AEAD.AES128_GCM
 
-        decryptor = HPKE.new(receiver_key=keyR,
-                             sender_key=keyS.public_key(),
-                             aead_id=aead_id,
-                             info=info,
-                             enc=enc)
+        decryptor = HPKE.new(
+            receiver_key=keyR, sender_key=keyS.public_key(), aead_id=aead_id, info=info, enc=enc
+        )
 
         pt_X0 = decryptor.unseal(ct0, aad0)
         self.assertEqual(pt_X0, pt)
@@ -316,12 +285,14 @@ class HPKE_Tests(unittest.TestCase):
 
         aead_id = HPKE.AEAD.AES128_GCM
 
-        decryptor = HPKE.new(receiver_key=keyR,
-                             sender_key=keyS.public_key(),
-                             aead_id=aead_id,
-                             psk=(psk_id, psk),
-                             info=info,
-                             enc=enc)
+        decryptor = HPKE.new(
+            receiver_key=keyR,
+            sender_key=keyS.public_key(),
+            aead_id=aead_id,
+            psk=(psk_id, psk),
+            info=info,
+            enc=enc,
+        )
 
         pt_X0 = decryptor.unseal(ct0, aad0)
         self.assertEqual(pt_X0, pt)
@@ -331,11 +302,11 @@ class HPKE_Tests(unittest.TestCase):
 
 
 class HPKE_TestVectors(unittest.TestCase):
-
     def setUp(self):
         self.vectors = []
         try:
-            import pycryptodome_test_vectors    # type: ignore
+            import pycryptodome_test_vectors  # type: ignore
+
             init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
             full_file_name = os.path.join(init_dir, "Protocol", "wycheproof", "HPKE-test-vectors.json")
             with open(full_file_name) as f:
@@ -346,14 +317,11 @@ class HPKE_TestVectors(unittest.TestCase):
     def import_private_key(self, key_hex, kem_id):
         key_bin = unhexlify(key_hex)
         if kem_id == 0x0010:
-            return ECC.construct(curve='p256', d=int.from_bytes(key_bin,
-                                                                byteorder="big"))
+            return ECC.construct(curve="p256", d=int.from_bytes(key_bin, byteorder="big"))
         elif kem_id == 0x0011:
-            return ECC.construct(curve='p384', d=int.from_bytes(key_bin,
-                                                                byteorder="big"))
+            return ECC.construct(curve="p384", d=int.from_bytes(key_bin, byteorder="big"))
         elif kem_id == 0x0012:
-            return ECC.construct(curve='p521', d=int.from_bytes(key_bin,
-                                                                byteorder="big"))
+            return ECC.construct(curve="p521", d=int.from_bytes(key_bin, byteorder="big"))
         elif kem_id == 0x0020:
             return DH.import_x25519_private_key(key_bin)
         elif kem_id == 0x0021:
@@ -366,13 +334,12 @@ class HPKE_TestVectors(unittest.TestCase):
             self.skipTest("No test vectors available")
 
         for idx, vector in enumerate(self.vectors):
-
             kem_id = vector["kem_id"]
             kdf_id = vector["kdf_id"]
             aead_id = vector["aead_id"]
 
             # No export-only pseudo-cipher
-            if aead_id == 0xffff:
+            if aead_id == 0xFFFF:
                 continue
 
             # We support only one KDF per curve
@@ -388,25 +355,19 @@ class HPKE_TestVectors(unittest.TestCase):
                 continue
 
             with self.subTest(idx=idx, kem_id=kem_id, aead_id=aead_id):
-
-                receiver_pub = self.import_private_key(vector["skRm"],
-                                                       kem_id).public_key()
+                receiver_pub = self.import_private_key(vector["skRm"], kem_id).public_key()
 
                 sender_priv = None
                 if "skSm" in vector:
-                    sender_priv = self.import_private_key(vector["skSm"],
-                                                          kem_id)
+                    sender_priv = self.import_private_key(vector["skSm"], kem_id)
 
                 encap_key = self.import_private_key(vector["skEm"], kem_id)
 
-                shared_secret, enc = HPKE.HPKE_Cipher._encap(receiver_pub,
-                                                             kem_id,
-                                                             hashmod,
-                                                             sender_priv,
-                                                             encap_key)
+                shared_secret, enc = HPKE.HPKE_Cipher._encap(
+                    receiver_pub, kem_id, hashmod, sender_priv, encap_key
+                )
                 self.assertEqual(enc.hex(), vector["enc"])
-                self.assertEqual(shared_secret,
-                                 unhexlify(vector["shared_secret"]))
+                self.assertEqual(shared_secret, unhexlify(vector["shared_secret"]))
 
             print(".", end="", flush=True)
 
@@ -417,13 +378,12 @@ class HPKE_TestVectors(unittest.TestCase):
             self.skipTest("No test vectors available")
 
         for idx, vector in enumerate(self.vectors):
-
             kem_id = vector["kem_id"]
             kdf_id = vector["kdf_id"]
             aead_id = vector["aead_id"]
 
             # No export-only pseudo-cipher
-            if aead_id == 0xffff:
+            if aead_id == 0xFFFF:
                 continue
 
             # We support only one KDF per curve
@@ -438,14 +398,11 @@ class HPKE_TestVectors(unittest.TestCase):
                 continue
 
             with self.subTest(idx=idx, kem_id=kem_id, aead_id=aead_id):
-
-                receiver_priv = self.import_private_key(vector["skRm"],
-                                                        kem_id)
+                receiver_priv = self.import_private_key(vector["skRm"], kem_id)
 
                 sender_pub = None
                 if "skSm" in vector:
-                    sender_priv = self.import_private_key(vector["skSm"],
-                                                          kem_id)
+                    sender_priv = self.import_private_key(vector["skSm"], kem_id)
                     sender_pub = sender_priv.public_key()
 
                 encap_key = unhexlify(vector["enc"])
@@ -454,15 +411,16 @@ class HPKE_TestVectors(unittest.TestCase):
                 if "psk_id" in vector:
                     psk = unhexlify(vector["psk_id"]), unhexlify(vector["psk"])
 
-                receiver_hpke = HPKE.new(receiver_key=receiver_priv,
-                                         aead_id=HPKE.AEAD(aead_id),
-                                         enc=encap_key,
-                                         sender_key=sender_pub,
-                                         psk=psk,
-                                         info=unhexlify(vector["info"]))
+                receiver_hpke = HPKE.new(
+                    receiver_key=receiver_priv,
+                    aead_id=HPKE.AEAD(aead_id),
+                    enc=encap_key,
+                    sender_key=sender_pub,
+                    psk=psk,
+                    info=unhexlify(vector["info"]),
+                )
 
-                for encryption in vector['encryptions']:
-
+                for encryption in vector["encryptions"]:
                     plaintext = unhexlify(encryption["pt"])
                     ciphertext = unhexlify(encryption["ct"])
                     aad = unhexlify(encryption["aad"])
@@ -479,13 +437,15 @@ def get_tests(config={}):
     tests = []
     tests += list_test_cases(HPKE_Tests)
 
-    if config.get('slow_tests'):
+    if config.get("slow_tests"):
         tests += list_test_cases(HPKE_TestVectors)
 
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

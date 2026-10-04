@@ -28,34 +28,33 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import os
-import sys
-import struct
 import distutils
+import os
+import struct
+import sys
 from distutils import ccompiler
 from distutils.errors import CCompilerError
 
 
-def test_compilation(program, extra_cc_options=None, extra_libraries=None,
-                     msg=''):
+def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg=""):
     """Test if a certain C program can be compiled."""
 
     # Create a temporary file with the C program
     if not os.path.exists("build"):
         os.makedirs("build")
     fname = os.path.join("build", "test1.c")
-    f = open(fname, 'w')
+    f = open(fname, "w")
     f.write(program)
     f.close()
 
     # Name for the temporary executable
     oname = os.path.join("build", "test1.out")
 
-    debug = bool(os.environ.get('PYCRYPTODOME_DEBUG', None))
+    debug = bool(os.environ.get("PYCRYPTODOME_DEBUG", None))
     # Mute the compiler and the linker
     if msg:
         print("Testing support for %s" % msg)
-    if not (debug or os.name == 'nt'):
+    if not (debug or os.name == "nt"):
         old_stdout = os.dup(sys.stdout.fileno())
         old_stderr = os.dup(sys.stderr.fileno())
         dev_null = open(os.devnull, "w")
@@ -67,7 +66,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None,
         compiler = ccompiler.new_compiler()
         distutils.sysconfig.customize_compiler(compiler)
 
-        if compiler.compiler_type in ['msvc']:
+        if compiler.compiler_type in ["msvc"]:
             # Force creation of the manifest file (http://bugs.python.org/issue16296)
             # as needed by VS2010
             extra_linker_options = ["/MANIFEST"]
@@ -75,12 +74,13 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None,
             extra_linker_options = []
 
         # In Unix, force the linker step to use CFLAGS and not CC alone (see GH#180)
-        if compiler.compiler_type in ['unix']:
+        if compiler.compiler_type in ["unix"]:
             compiler.set_executables(linker_exe=compiler.compiler)
 
         objects = compiler.compile([fname], extra_postargs=extra_cc_options)
-        compiler.link_executable(objects, oname, libraries=extra_libraries,
-                                 extra_preargs=extra_linker_options)
+        compiler.link_executable(
+            objects, oname, libraries=extra_libraries, extra_preargs=extra_linker_options
+        )
         result = True
     except (CCompilerError, OSError):
         result = False
@@ -91,7 +91,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None,
             pass
 
     # Restore stdout and stderr
-    if not (debug or os.name == 'nt'):
+    if not (debug or os.name == "nt"):
         if old_stdout is not None:
             os.dup2(old_stdout, sys.stdout.fileno())
         if old_stderr is not None:
@@ -177,16 +177,16 @@ def compiler_supports_aesni():
     """
 
     if test_compilation(source):
-        return {'extra_cc_options': [], 'extra_macros': []}
+        return {"extra_cc_options": [], "extra_macros": []}
 
-    if test_compilation(source, extra_cc_options=['-maes'], msg='AESNI intrinsics'):
-        return {'extra_cc_options': ['-maes'], 'extra_macros': []}
+    if test_compilation(source, extra_cc_options=["-maes"], msg="AESNI intrinsics"):
+        return {"extra_cc_options": ["-maes"], "extra_macros": []}
 
     return False
 
 
 def compiler_supports_clmul():
-    result = {'extra_cc_options': [], 'extra_macros' : ['HAVE_WMMINTRIN_H', 'HAVE_TMMINTRIN_H']}
+    result = {"extra_cc_options": [], "extra_macros": ["HAVE_WMMINTRIN_H", "HAVE_TMMINTRIN_H"]}
 
     source = """
     #include <wmmintrin.h>
@@ -211,8 +211,8 @@ def compiler_supports_clmul():
     if test_compilation(source):
         return result
 
-    if test_compilation(source, extra_cc_options=['-mpclmul', '-mssse3'], msg='CLMUL intrinsics'):
-        result['extra_cc_options'].extend(['-mpclmul', '-mssse3'])
+    if test_compilation(source, extra_cc_options=["-mpclmul", "-mssse3"], msg="CLMUL intrinsics"):
+        result["extra_cc_options"].extend(["-mpclmul", "-mssse3"])
         return result
 
     return False
@@ -256,7 +256,7 @@ def compiler_is_clang():
     return test_compilation(source, msg="clang")
 
 
-def compiler_is_gcc(extra_cc_options=[]):
+def compiler_is_gcc(extra_cc_options=None):
     source = """
     #if defined(__clang__) || !defined(__GNUC__)
     #error Not GCC
@@ -265,9 +265,7 @@ def compiler_is_gcc(extra_cc_options=[]):
     {
         return 0;
     }"""
-    return test_compilation(source,
-                            msg="gcc",
-                            extra_cc_options=extra_cc_options)
+    return test_compilation(source, msg="gcc", extra_cc_options=extra_cc_options)
 
 
 def compiler_supports_sse2():
@@ -291,11 +289,11 @@ def compiler_supports_sse2():
 
     result = None
     if test_compilation(source_intrin_h, msg="SSE2(intrin.h)"):
-        result = {'extra_cc_options': [], 'extra_macros': ['HAVE_INTRIN_H', 'USE_SSE2']}
-    elif test_compilation(source_x86intrin_h, extra_cc_options=['-msse2'], msg="SSE2(x86intrin.h)"):
-        result = {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_X86INTRIN_H', 'USE_SSE2']}
-    elif test_compilation(source_xemmintrin_h, extra_cc_options=['-msse2'], msg="SSE2(emmintrin.h)"):
-        result = {'extra_cc_options': ['-msse2'], 'extra_macros': ['HAVE_EMMINTRIN_H', 'USE_SSE2']}
+        result = {"extra_cc_options": [], "extra_macros": ["HAVE_INTRIN_H", "USE_SSE2"]}
+    elif test_compilation(source_x86intrin_h, extra_cc_options=["-msse2"], msg="SSE2(x86intrin.h)"):
+        result = {"extra_cc_options": ["-msse2"], "extra_macros": ["HAVE_X86INTRIN_H", "USE_SSE2"]}
+    elif test_compilation(source_xemmintrin_h, extra_cc_options=["-msse2"], msg="SSE2(emmintrin.h)"):
+        result = {"extra_cc_options": ["-msse2"], "extra_macros": ["HAVE_EMMINTRIN_H", "USE_SSE2"]}
     else:
         result = False
 
@@ -303,8 +301,8 @@ def compiler_supports_sse2():
     # bytes, but the caller may actually only align it to 4 bytes, which
     # make functions crash if they use SSE2 intrinsics.
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
-    if result and system_bits == 32 and compiler_is_gcc(extra_cc_options=['-mstackrealign']):
-        result['extra_cc_options'].append('-mstackrealign')
+    if result and system_bits == 32 and compiler_is_gcc(extra_cc_options=["-mstackrealign"]):
+        result["extra_cc_options"].append("-mstackrealign")
 
     return result
 
@@ -328,9 +326,6 @@ def set_compiler_options(package_root, extensions):
 
     extra_cc_options = []
     extra_macros = []
-
-    clang = compiler_is_clang()
-    gcc = compiler_is_gcc()
 
     if has_stdint_h():
         extra_macros.append(("HAVE_STDINT_H", None))
@@ -366,8 +361,8 @@ def set_compiler_options(package_root, extensions):
     # SSE2
     sse2_result = compiler_supports_sse2()
     if sse2_result:
-        extra_cc_options.extend(sse2_result['extra_cc_options'])
-        for macro in sse2_result['extra_macros']:
+        extra_cc_options.extend(sse2_result["extra_cc_options"])
+        for macro in sse2_result["extra_macros"]:
             extra_macros.append((macro, None))
 
     # Module-specific options
@@ -379,8 +374,8 @@ def set_compiler_options(package_root, extensions):
         print("Compiling support for AESNI instructions")
         aes_mods = [x for x in extensions if x.name == aesni_mod_name]
         for x in aes_mods:
-            x.extra_compile_args.extend(aesni_result['extra_cc_options'])
-            for macro in aesni_result['extra_macros']:
+            x.extra_compile_args.extend(aesni_result["extra_cc_options"])
+            for macro in aesni_result["extra_macros"]:
                 x.define_macros.append((macro, None))
     else:
         print("Warning: compiler does not support AESNI instructions")
@@ -393,8 +388,8 @@ def set_compiler_options(package_root, extensions):
         print("Compiling support for CLMUL instructions")
         clmul_mods = [x for x in extensions if x.name == clmul_mod_name]
         for x in clmul_mods:
-            x.extra_compile_args.extend(clmul_result['extra_cc_options'])
-            for macro in clmul_result['extra_macros']:
+            x.extra_compile_args.extend(clmul_result["extra_cc_options"])
+            for macro in clmul_result["extra_macros"]:
                 x.define_macros.append((macro, None))
     else:
         print("Warning: compiler does not support CLMUL instructions")

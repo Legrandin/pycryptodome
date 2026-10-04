@@ -24,15 +24,14 @@
 import unittest
 from binascii import hexlify
 
+from Crypto.Hash import SHA3_384 as SHA3
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Hash import SHA3_384 as SHA3
 
 
 class APITest(unittest.TestCase):
-
     def test_update_after_digest(self):
-        msg=b"rrrrttt"
+        msg = b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
         h = SHA3.new(data=msg[:4])
@@ -54,10 +53,12 @@ def get_tests(config={}):
 
     tests = []
 
-    test_vectors = load_test_vectors(("Hash", "SHA3"),
-                                "ShortMsgKAT_SHA3-384.txt",
-                                "KAT SHA-3 384",
-                                { "len" : lambda x: int(x) } ) or []
+    test_vectors = (
+        load_test_vectors(
+            ("Hash", "SHA3"), "ShortMsgKAT_SHA3-384.txt", "KAT SHA-3 384", {"len": lambda x: int(x)}
+        )
+        or []
+    )
 
     test_data = []
     for tv in test_vectors:
@@ -65,13 +66,15 @@ def get_tests(config={}):
             tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
 
-    tests += make_hash_tests(SHA3, "SHA3_384", test_data,
-                             digest_size=SHA3.digest_size,
-                             oid="2.16.840.1.101.3.4.2.9")
+    tests += make_hash_tests(
+        SHA3, "SHA3_384", test_data, digest_size=SHA3.digest_size, oid="2.16.840.1.101.3.4.2.9"
+    )
     tests += list_test_cases(APITest)
     return tests
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import unittest
+
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

@@ -28,31 +28,31 @@
 
 import unittest
 
-from Crypto.Util._bytes import tobytes
+from Crypto.Hash import SHAKE128, SHAKE256, cSHAKE128, cSHAKE256
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
-
-from Crypto.Hash import cSHAKE128, cSHAKE256, SHAKE128, SHAKE256
+from Crypto.Util._bytes import tobytes
 
 
 class cSHAKETest(unittest.TestCase):
-
     def test_left_encode(self):
         from Crypto.Hash.cSHAKE128 import _left_encode
-        self.assertEqual(_left_encode(0), b'\x01\x00')
-        self.assertEqual(_left_encode(1), b'\x01\x01')
-        self.assertEqual(_left_encode(256), b'\x02\x01\x00')
+
+        self.assertEqual(_left_encode(0), b"\x01\x00")
+        self.assertEqual(_left_encode(1), b"\x01\x01")
+        self.assertEqual(_left_encode(256), b"\x02\x01\x00")
 
     def test_bytepad(self):
         from Crypto.Hash.cSHAKE128 import _bytepad
-        self.assertEqual(_bytepad(b'', 4), b'\x01\x04\x00\x00')
-        self.assertEqual(_bytepad(b'A', 4), b'\x01\x04A\x00')
-        self.assertEqual(_bytepad(b'AA', 4), b'\x01\x04AA')
-        self.assertEqual(_bytepad(b'AAA', 4), b'\x01\x04AAA\x00\x00\x00')
-        self.assertEqual(_bytepad(b'AAAA', 4), b'\x01\x04AAAA\x00\x00')
-        self.assertEqual(_bytepad(b'AAAAA', 4), b'\x01\x04AAAAA\x00')
-        self.assertEqual(_bytepad(b'AAAAAA', 4), b'\x01\x04AAAAAA')
-        self.assertEqual(_bytepad(b'AAAAAAA', 4), b'\x01\x04AAAAAAA\x00\x00\x00')
+
+        self.assertEqual(_bytepad(b"", 4), b"\x01\x04\x00\x00")
+        self.assertEqual(_bytepad(b"A", 4), b"\x01\x04A\x00")
+        self.assertEqual(_bytepad(b"AA", 4), b"\x01\x04AA")
+        self.assertEqual(_bytepad(b"AAA", 4), b"\x01\x04AAA\x00\x00\x00")
+        self.assertEqual(_bytepad(b"AAAA", 4), b"\x01\x04AAAA\x00\x00")
+        self.assertEqual(_bytepad(b"AAAAA", 4), b"\x01\x04AAAAA\x00")
+        self.assertEqual(_bytepad(b"AAAAAA", 4), b"\x01\x04AAAAAA")
+        self.assertEqual(_bytepad(b"AAAAAAA", 4), b"\x01\x04AAAAAAA\x00\x00\x00")
 
     def test_new_positive(self):
 
@@ -98,7 +98,7 @@ class cSHAKETest(unittest.TestCase):
         digest = h.read(90)
 
         # read returns a byte string of the right length
-        self.assertTrue(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, bytes))
         self.assertEqual(len(digest), 90)
 
     def test_update_after_read(self):
@@ -110,8 +110,8 @@ class cSHAKETest(unittest.TestCase):
     def test_shake(self):
         # When no customization string is passed, results must match SHAKE
         for digest_len in range(64):
-            xof1 = self.cshake.new(b'TEST')
-            xof2 = self.shake.new(b'TEST')
+            xof1 = self.cshake.new(b"TEST")
+            xof2 = self.shake.new(b"TEST")
             self.assertEqual(xof1.read(digest_len), xof2.read(digest_len))
 
 
@@ -129,32 +129,37 @@ class cSHAKEVectors(unittest.TestCase):
     pass
 
 
-vector_files = [("ShortMsgSamples_cSHAKE128.txt", "Short Message Samples cSHAKE128", "128_cshake", cSHAKE128),
-                ("ShortMsgSamples_cSHAKE256.txt", "Short Message Samples cSHAKE256", "256_cshake", cSHAKE256),
-                ("CustomMsgSamples_cSHAKE128.txt", "Custom Message Samples cSHAKE128", "custom_128_cshake", cSHAKE128),
-                ("CustomMsgSamples_cSHAKE256.txt", "Custom Message Samples cSHAKE256", "custom_256_cshake", cSHAKE256),
-                ]
+vector_files = [
+    ("ShortMsgSamples_cSHAKE128.txt", "Short Message Samples cSHAKE128", "128_cshake", cSHAKE128),
+    ("ShortMsgSamples_cSHAKE256.txt", "Short Message Samples cSHAKE256", "256_cshake", cSHAKE256),
+    ("CustomMsgSamples_cSHAKE128.txt", "Custom Message Samples cSHAKE128", "custom_128_cshake", cSHAKE128),
+    ("CustomMsgSamples_cSHAKE256.txt", "Custom Message Samples cSHAKE256", "custom_256_cshake", cSHAKE256),
+]
 
 for file, descr, tag, test_class in vector_files:
-
-    test_vectors = load_test_vectors(("Hash", "SHA3"), file, descr,
-                                     {"len": lambda x: int(x),
-                                      "nlen": lambda x: int(x),
-                                      "slen": lambda x: int(x)}) or []
+    test_vectors = (
+        load_test_vectors(
+            ("Hash", "SHA3"),
+            file,
+            descr,
+            {"len": lambda x: int(x), "nlen": lambda x: int(x), "slen": lambda x: int(x)},
+        )
+        or []
+    )
 
     for idx, tv in enumerate(test_vectors):
         if getattr(tv, "len", 0) == 0:
             data = b""
         else:
             data = tobytes(tv.msg)
-            assert(tv.len == len(tv.msg)*8)
+            assert tv.len == len(tv.msg) * 8
         if getattr(tv, "nlen", 0) != 0:
             raise ValueError("Unsupported cSHAKE test vector")
         if getattr(tv, "slen", 0) == 0:
             custom = b""
         else:
             custom = tobytes(tv.s)
-            assert(tv.slen == len(tv.s)*8)
+            assert tv.slen == len(tv.s) * 8
 
         def new_test(self, data=data, result=tv.md, custom=custom, test_class=test_class):
             hobj = test_class.new(data=data, custom=custom)
@@ -172,7 +177,8 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import unittest
+
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

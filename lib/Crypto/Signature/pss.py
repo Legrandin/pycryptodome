@@ -30,15 +30,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol
 
 import Crypto.Util.number
-from Crypto.Util.number import (ceil_div,
-                                long_to_bytes,
-                                bytes_to_long
-                                )
-from Crypto.Util.strxor import strxor
 from Crypto import Random
+from Crypto.Util.number import bytes_to_long, ceil_div, long_to_bytes
+from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from Crypto.PublicKey.RSA import RsaKey
@@ -46,6 +43,7 @@ if TYPE_CHECKING:
 
 class Hash(Protocol):
     digest_size: int
+
     def digest(self) -> bytes: ...
     def update(self, data: bytes) -> Any: ...
     def new(self, data: Optional[bytes] = ...) -> Hash: ...
@@ -53,12 +51,16 @@ class Hash(Protocol):
 
 class HashModule(Protocol):
     digest_size: int
+
     @staticmethod
     def new(data: Optional[bytes] = None) -> Hash: ...
 
+
 class _HashGenerator(Protocol):
     digest_size: int
+
     def new(self, data: Optional[bytes] = ...) -> Any: ...
+
 
 MaskFunction = Callable[[bytes, int], bytes]
 RndFunction = Callable[[int], bytes]
@@ -70,8 +72,9 @@ class PSS_SigScheme:
     Use :func:`Crypto.Signature.pss.new`.
     """
 
-    def __init__(self, key: RsaKey, mgfunc: Optional[MaskFunction], saltLen: Optional[int],
-                 randfunc: RndFunction) -> None:
+    def __init__(
+        self, key: RsaKey, mgfunc: Optional[MaskFunction], saltLen: Optional[int], randfunc: RndFunction
+    ) -> None:
         """Initialize this PKCS#1 PSS signature scheme object.
 
         :Parameters:
@@ -129,9 +132,9 @@ class PSS_SigScheme:
         modBits = Crypto.Util.number.size(self._key.n)
 
         # See 8.1.1 in RFC3447
-        k = ceil_div(modBits, 8)  # k is length in bytes of the modulus
+        ceil_div(modBits, 8)  # k is length in bytes of the modulus
         # Step 1
-        em = _EMSA_PSS_ENCODE(msg_hash, modBits-1, self._randfunc, mgf, sLen)
+        em = _EMSA_PSS_ENCODE(msg_hash, modBits - 1, self._randfunc, mgf, sLen)
         # Step 2a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 2b (RSASP1) and Step 2c (I2OSP)
@@ -185,7 +188,7 @@ class PSS_SigScheme:
         emLen = ceil_div(modBits - 1, 8)
         em = long_to_bytes(em_int, emLen)
         # Step 3/4
-        _EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
+        _EMSA_PSS_VERIFY(msg_hash, em, modBits - 1, mgf, sLen)
 
 
 def MGF1(mgfSeed: bytes, maskLen: int, hash_gen: _HashGenerator) -> bytes:
@@ -213,7 +216,7 @@ def MGF1(mgfSeed: bytes, maskLen: int, hash_gen: _HashGenerator) -> bytes:
         hobj = hash_gen.new()
         hobj.update(mgfSeed + c)
         T = T + hobj.digest()
-    assert(len(T) >= maskLen)
+    assert len(T) >= maskLen
     return T[:maskLen]
 
 
@@ -251,27 +254,26 @@ def _EMSA_PSS_ENCODE(mhash: Hash, emBits: int, randFunc: RndFunction, mgf: MaskF
 
     # Bitmask of digits that fill up
     lmask = 0
-    for i in range(8*emLen-emBits):
+    for _i in range(8 * emLen - emBits):
         lmask = lmask >> 1 | 0x80
 
     # Step 1 and 2 have been already done
     # Step 3
-    if emLen < mhash.digest_size+sLen+2:
-        raise ValueError("Digest or salt length are too long"
-                         " for given key size.")
+    if emLen < mhash.digest_size + sLen + 2:
+        raise ValueError("Digest or salt length are too long for given key size.")
     # Step 4
     salt = randFunc(sLen)
     # Step 5
-    m_prime = bytes([0])*8 + mhash.digest() + salt
+    m_prime = bytes([0]) * 8 + mhash.digest() + salt
     # Step 6
     h = mhash.new()
     h.update(m_prime)
     # Step 7
-    ps = bytes([0])*(emLen-sLen-mhash.digest_size-2)
+    ps = bytes([0]) * (emLen - sLen - mhash.digest_size - 2)
     # Step 8
     db = ps + bytes([1]) + salt
     # Step 9
-    dbMask = mgf(h.digest(), emLen-mhash.digest_size-1)
+    dbMask = mgf(h.digest(), emLen - mhash.digest_size - 1)
     # Step 10
     maskedDB = strxor(db, dbMask)
     # Step 11
@@ -313,30 +315,30 @@ def _EMSA_PSS_VERIFY(mhash: Hash, em: bytes, emBits: int, mgf: MaskFunction, sLe
 
     # Bitmask of digits that fill up
     lmask = 0
-    for i in range(8*emLen-emBits):
+    for _i in range(8 * emLen - emBits):
         lmask = lmask >> 1 | 0x80
 
     # Step 1 and 2 have been already done
     # Step 3
-    if emLen < mhash.digest_size+sLen+2:
+    if emLen < mhash.digest_size + sLen + 2:
         raise ValueError("Incorrect signature")
     # Step 4
     if ord(em[-1:]) != 0xBC:
         raise ValueError("Incorrect signature")
     # Step 5
-    maskedDB = em[:emLen-mhash.digest_size-1]
-    h = em[emLen-mhash.digest_size-1:-1]
+    maskedDB = em[: emLen - mhash.digest_size - 1]
+    h = em[emLen - mhash.digest_size - 1 : -1]
     # Step 6
     if lmask & em[0]:
         raise ValueError("Incorrect signature")
     # Step 7
-    dbMask = mgf(h, emLen-mhash.digest_size-1)
+    dbMask = mgf(h, emLen - mhash.digest_size - 1)
     # Step 8
     db = strxor(maskedDB, dbMask)
     # Step 9
     db = bytes([db[0] & ~lmask]) + db[1:]
     # Step 10
-    if not db.startswith(bytes([0])*(emLen-mhash.digest_size-sLen-2) + bytes([1])):
+    if not db.startswith(bytes([0]) * (emLen - mhash.digest_size - sLen - 2) + bytes([1])):
         raise ValueError("Incorrect signature")
     # Step 11
     if sLen > 0:
@@ -344,7 +346,7 @@ def _EMSA_PSS_VERIFY(mhash: Hash, em: bytes, emBits: int, mgf: MaskFunction, sLe
     else:
         salt = b""
     # Step 12
-    m_prime = bytes([0])*8 + mhash.digest() + salt
+    m_prime = bytes([0]) * 8 + mhash.digest() + salt
     # Step 13
     hobj = mhash.new()
     hobj.update(m_prime)
@@ -354,9 +356,13 @@ def _EMSA_PSS_VERIFY(mhash: Hash, em: bytes, emBits: int, mgf: MaskFunction, sLe
         raise ValueError("Incorrect signature")
 
 
-def new(rsa_key: RsaKey, *, mask_func: Optional[MaskFunction] = None,
-        salt_bytes: Optional[int] = None,
-        rand_func: Optional[RndFunction] = None) -> PSS_SigScheme:
+def new(
+    rsa_key: RsaKey,
+    *,
+    mask_func: Optional[MaskFunction] = None,
+    salt_bytes: Optional[int] = None,
+    rand_func: Optional[RndFunction] = None,
+) -> PSS_SigScheme:
     """Create an object for making or verifying PKCS#1 PSS signatures.
 
     :parameter rsa_key:

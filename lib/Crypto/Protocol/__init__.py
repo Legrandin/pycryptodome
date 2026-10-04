@@ -28,4 +28,4 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-__all__ = ['KDF', 'SecretSharing', 'DH']
+__all__ = ["KDF", "SecretSharing", "DH"]

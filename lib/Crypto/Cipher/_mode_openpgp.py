@@ -36,14 +36,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Union
 
-__all__ = ['OpenPgpMode']
-from Crypto.Util._bytes import copy_bytes
+__all__ = ["OpenPgpMode"]
 from Crypto.Random import get_random_bytes
+from Crypto.Util._bytes import copy_bytes
 
 if TYPE_CHECKING:
     from types import ModuleType
 
 Buffer = Union[bytes, bytearray, memoryview]
+
 
 class OpenPgpMode:
     """OpenPGP mode.
@@ -75,11 +76,12 @@ class OpenPgpMode:
 
         # Instantiate a temporary cipher to process the IV
         IV_cipher = factory.new(
-                        key,
-                        factory.MODE_CFB,
-                        IV=b'\x00' * self.block_size,
-                        segment_size=self.block_size * 8,
-                        **cipher_params)
+            key,
+            factory.MODE_CFB,
+            IV=b"\x00" * self.block_size,
+            segment_size=self.block_size * 8,
+            **cipher_params,
+        )
 
         iv = copy_bytes(None, None, iv)
 
@@ -94,19 +96,21 @@ class OpenPgpMode:
             # should not be used. (https://eprint.iacr.org/2005/033)
             iv = IV_cipher.decrypt(iv)[:-2]
         else:
-            raise ValueError("Length of IV must be %d or %d bytes"
-                             " for MODE_OPENPGP"
-                             % (self.block_size, self.block_size + 2))
+            raise ValueError(
+                "Length of IV must be %d or %d bytes"
+                " for MODE_OPENPGP" % (self.block_size, self.block_size + 2)
+            )
 
         self.iv = self.IV = iv
 
         # Instantiate the cipher for the real PGP data
         self._cipher = factory.new(
-                            key,
-                            factory.MODE_CFB,
-                            IV=self._encrypted_IV[-self.block_size:],
-                            segment_size=self.block_size * 8,
-                            **cipher_params)
+            key,
+            factory.MODE_CFB,
+            IV=self._encrypted_IV[-self.block_size :],
+            segment_size=self.block_size * 8,
+            **cipher_params,
+        )
 
     def encrypt(self, plaintext: Buffer) -> bytes:
         """Encrypt data with the key and the parameters set at initialization.
@@ -198,7 +202,7 @@ def _create_openpgp_cipher(factory, **kwargs):
     iv = kwargs.pop("IV", None)
     IV = kwargs.pop("iv", None)
 
-    if (None, None) == (iv, IV):
+    if (iv, IV) == (None, None):
         iv = get_random_bytes(factory.block_size)
     if iv is not None:
         if IV is not None:

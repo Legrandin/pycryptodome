@@ -30,26 +30,24 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple, Union
 
-__all__ = ['generate', 'construct', 'import_key',
-           'RsaKey', 'oid']
+__all__ = ["generate", "construct", "import_key", "RsaKey", "oid"]
 
 import binascii
 import struct
 
-from Crypto.Util._bytes import tobytes
 from Crypto import Random
-from Crypto.Util.asn1 import DerSequence, DerNull
-from Crypto.Util.number import bytes_to_long
-
 from Crypto.Math.Numbers import Integer
-from Crypto.Math.Primality import (test_probable_prime,
-                                   generate_probable_prime, COMPOSITE)
-
-from Crypto.PublicKey import (_expand_subject_public_key_info,
-                              _create_subject_public_key_info,
-                              _extract_subject_public_key_info)
+from Crypto.Math.Primality import COMPOSITE, generate_probable_prime, test_probable_prime
+from Crypto.PublicKey import (
+    _create_subject_public_key_info,
+    _expand_subject_public_key_info,
+    _extract_subject_public_key_info,
+)
+from Crypto.Util._bytes import tobytes
+from Crypto.Util.asn1 import DerNull, DerSequence
+from Crypto.Util.number import bytes_to_long
 
 if TYPE_CHECKING:
     from Crypto.IO._PBES import ProtParams
@@ -119,8 +117,8 @@ class RsaKey:
         """
 
         input_set = set(kwargs.keys())
-        public_set = {'n', 'e'}
-        private_set = public_set | {'p', 'q', 'd', 'u'}
+        public_set = {"n", "e"}
+        private_set = public_set | {"p", "q", "d", "u"}
         if input_set not in (private_set, public_set):
             raise ValueError("Some RSA components are missing")
         for component, value in kwargs.items():
@@ -128,7 +126,7 @@ class RsaKey:
         if input_set == private_set:
             self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
             self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)
-            self._invq = None                   # will be computed on demand
+            self._invq = None  # will be computed on demand
 
     @property
     def n(self) -> int:
@@ -218,10 +216,7 @@ class RsaKey:
         mp = h * self._p + m1
         # Step 4: Compute m = m' * (r**(-1)) mod n
         # then encode into a big endian byte string
-        result = Integer._mult_modulo_bytes(
-                    r.inverse(self._n),
-                    mp,
-                    self._n)
+        result = Integer._mult_modulo_bytes(r.inverse(self._n), mp, self._n)
         return result
 
     def _decrypt(self, ciphertext):
@@ -237,7 +232,7 @@ class RsaKey:
     def can_encrypt(self) -> bool:  # legacy
         return True
 
-    def can_sign(self) -> bool:     # legacy
+    def can_sign(self) -> bool:  # legacy
         return True
 
     def public_key(self) -> RsaKey:
@@ -257,17 +252,17 @@ class RsaKey:
             return False
         if not self.has_private():
             return True
-        return (self.d == other.d)
+        return self.d == other.d
 
     def __getstate__(self) -> None:
         # RSA key is not pickable
         from pickle import PicklingError
+
         raise PicklingError
 
     def __repr__(self) -> str:
         if self.has_private():
-            extra = ", d=%d, p=%d, q=%d, u=%d" % (int(self._d), int(self._p),
-                                                  int(self._q), int(self._u))
+            extra = ", d=%d, p=%d, q=%d, u=%d" % (int(self._d), int(self._p), int(self._q), int(self._u))
         else:
             extra = ""
         return "RsaKey(n=%d, e=%d%s)" % (int(self._n), int(self._e), extra)
@@ -279,10 +274,15 @@ class RsaKey:
             key_type = "Public"
         return "%s RSA key at 0x%X" % (key_type, id(self))
 
-    def export_key(self, format: str = 'PEM', passphrase: Optional[Union[bytes, str]] = None,
-                   pkcs: int = 1, protection: Optional[str] = None,
-                   randfunc: Optional[RNG] = None,
-                   prot_params: Optional[ProtParams] = None) -> bytes:
+    def export_key(
+        self,
+        format: str = "PEM",
+        passphrase: Optional[Union[bytes, str]] = None,
+        pkcs: int = 1,
+        protection: Optional[str] = None,
+        randfunc: Optional[RNG] = None,
+        prot_params: Optional[ProtParams] = None,
+    ) -> bytes:
         """Export this RSA key.
 
         Keyword Args:
@@ -373,62 +373,59 @@ class RsaKey:
         if randfunc is None:
             randfunc = Random.get_random_bytes
 
-        if format == 'OpenSSH':
+        if format == "OpenSSH":
             e_bytes, n_bytes = (x.to_bytes() for x in (self._e, self._n))
             if e_bytes[0] & 0x80:
-                e_bytes = b'\x00' + e_bytes
+                e_bytes = b"\x00" + e_bytes
             if n_bytes[0] & 0x80:
-                n_bytes = b'\x00' + n_bytes
-            keyparts = [b'ssh-rsa', e_bytes, n_bytes]
-            keystring = b''.join([struct.pack(">I", len(kp)) + kp for kp in keyparts])
-            return b'ssh-rsa ' + binascii.b2a_base64(keystring)[:-1]
+                n_bytes = b"\x00" + n_bytes
+            keyparts = [b"ssh-rsa", e_bytes, n_bytes]
+            keystring = b"".join([struct.pack(">I", len(kp)) + kp for kp in keyparts])
+            return b"ssh-rsa " + binascii.b2a_base64(keystring)[:-1]
 
         # DER format is always used, even in case of PEM, which simply
         # encodes it into BASE64.
         if self.has_private():
-            binary_key = DerSequence([0,
-                                      self.n,
-                                      self.e,
-                                      self.d,
-                                      self.p,
-                                      self.q,
-                                      self.d % (self.p-1),
-                                      self.d % (self.q-1),
-                                      int(Integer(self.q).inverse(self.p))
-                                      ]).encode()
+            binary_key = DerSequence(
+                [
+                    0,
+                    self.n,
+                    self.e,
+                    self.d,
+                    self.p,
+                    self.q,
+                    self.d % (self.p - 1),
+                    self.d % (self.q - 1),
+                    int(Integer(self.q).inverse(self.p)),
+                ]
+            ).encode()
             if pkcs == 1:
-                key_type = 'RSA PRIVATE KEY'
-                if format == 'DER' and passphrase:
+                key_type = "RSA PRIVATE KEY"
+                if format == "DER" and passphrase:
                     raise ValueError("PKCS#1 private key cannot be encrypted")
             else:  # PKCS#8
                 from Crypto.IO import PKCS8
 
-                if format == 'PEM' and protection is None:
-                    key_type = 'PRIVATE KEY'
-                    binary_key = PKCS8.wrap(binary_key, oid, None,
-                                            key_params=DerNull())
+                if format == "PEM" and protection is None:
+                    key_type = "PRIVATE KEY"
+                    binary_key = PKCS8.wrap(binary_key, oid, None, key_params=DerNull())
                 else:
-                    key_type = 'ENCRYPTED PRIVATE KEY'
+                    key_type = "ENCRYPTED PRIVATE KEY"
                     if not protection:
                         if prot_params:
                             raise ValueError("'protection' parameter must be set")
-                        protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
-                    binary_key = PKCS8.wrap(binary_key, oid,
-                                            passphrase, protection,
-                                            prot_params=prot_params,
-                                            key_params=DerNull())
+                        protection = "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC"
+                    binary_key = PKCS8.wrap(
+                        binary_key, oid, passphrase, protection, prot_params=prot_params, key_params=DerNull()
+                    )
                     passphrase = None
         else:
             key_type = "PUBLIC KEY"
-            binary_key = _create_subject_public_key_info(oid,
-                                                         DerSequence([self.n,
-                                                                      self.e]),
-                                                         DerNull()
-                                                         )
+            binary_key = _create_subject_public_key_info(oid, DerSequence([self.n, self.e]), DerNull())
 
-        if format == 'DER':
+        if format == "DER":
             return binary_key
-        if format == 'PEM':
+        if format == "PEM":
             from Crypto.IO import PEM
 
             pem_str = PEM.encode(binary_key, key_type, passphrase, randfunc)
@@ -528,22 +525,20 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
             min_p = (Integer(1) << (2 * size_p - 1)).sqrt()
 
         def filter_p(candidate):
-            return candidate > min_p and (candidate - 1).gcd(e) == 1
+            return candidate > min_p and (candidate - 1).gcd(e) == 1  # noqa: B023 (used in this iteration)
 
-        p = generate_probable_prime(exact_bits=size_p,
-                                    randfunc=randfunc,
-                                    prime_filter=filter_p)
+        p = generate_probable_prime(exact_bits=size_p, randfunc=randfunc, prime_filter=filter_p)
 
         min_distance = Integer(1) << (bits // 2 - 100)
 
         def filter_q(candidate):
-            return (candidate > min_q and
-                    (candidate - 1).gcd(e) == 1 and
-                    abs(candidate - p) > min_distance)
+            return (
+                candidate > min_q  # noqa: B023 (used in this iteration)
+                and (candidate - 1).gcd(e) == 1
+                and abs(candidate - p) > min_distance  # noqa: B023
+            )
 
-        q = generate_probable_prime(exact_bits=size_q,
-                                    randfunc=randfunc,
-                                    prime_filter=filter_q)
+        q = generate_probable_prime(exact_bits=size_q, randfunc=randfunc, prime_filter=filter_q)
 
         n = p * q
         lcm = (p - 1).lcm(q - 1)
@@ -557,12 +552,16 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
     return RsaKey(n=n, e=e, d=d, p=p, q=q, u=u)
 
 
-def construct(rsa_components: Union[Tuple[Int, Int],                       # n, e
-                                    Tuple[Int, Int, Int],                  # n, e, d
-                                    Tuple[Int, Int, Int, Int, Int],        # n, e, d, p, q
-                                    Tuple[Int, Int, Int, Int, Int, Int],   # n, e, d, p, q, crt_q
-                                    Sequence[Int]],
-              consistency_check: bool = True) -> RsaKey:
+def construct(
+    rsa_components: Union[
+        Tuple[Int, Int],  # n, e
+        Tuple[Int, Int, Int],  # n, e, d
+        Tuple[Int, Int, Int, Int, Int],  # n, e, d, p, q
+        Tuple[Int, Int, Int, Int, Int, Int],  # n, e, d, p, q, crt_q
+        Sequence[Int],
+    ],
+    consistency_check: bool = True,
+) -> RsaKey:
     r"""Construct an RSA key from a tuple of valid RSA components.
 
     The modulus **n** must be the product of two primes.
@@ -603,18 +602,19 @@ def construct(rsa_components: Union[Tuple[Int, Int],                       # n, 
     Returns: An RSA key object (:class:`RsaKey`).
     """
 
-    input_comps = {comp: Integer(value) for (comp, value)
-                   in zip(('n', 'e', 'd', 'p', 'q', 'u'), rsa_components)}
+    input_comps = {
+        comp: Integer(value) for (comp, value) in zip(("n", "e", "d", "p", "q", "u"), rsa_components)
+    }
 
-    n = input_comps['n']
-    e = input_comps['e']
-    if 'd' not in input_comps:
+    n = input_comps["n"]
+    e = input_comps["e"]
+    if "d" not in input_comps:
         key = RsaKey(n=n, e=e)
     else:
-        d = input_comps['d']
-        if 'q' in input_comps:
-            p = input_comps['p']
-            q = input_comps['q']
+        d = input_comps["d"]
+        if "q" in input_comps:
+            p = input_comps["p"]
+            q = input_comps["q"]
         else:
             # Compute factors p and q from the private exponent d.
             # We assume that n has no more than two factors.
@@ -650,11 +650,11 @@ def construct(rsa_components: Union[Tuple[Int, Int],                       # n, 
             if not spotted:
                 raise ValueError("Unable to compute factors p and q from exponent d.")
             # Found !
-            assert ((n % p) == 0)
+            assert (n % p) == 0
             q = n // p
 
-        if 'u' in input_comps:
-            u = input_comps['u']
+        if "u" in input_comps:
+            u = input_comps["u"]
         else:
             u = p.inverse(q)
 
@@ -663,7 +663,6 @@ def construct(rsa_components: Union[Tuple[Int, Int],                       # n, 
 
     # Verify consistency of the key
     if consistency_check:
-
         # Modulus and public exponent must be coprime
         if e <= 1 or e >= n:
             raise ValueError("Invalid RSA public exponent")
@@ -692,7 +691,7 @@ def construct(rsa_components: Union[Tuple[Int, Int],                       # n, 
             lcm = phi // (p - 1).gcd(q - 1)
             if (e * d % int(lcm)) != 1:
                 raise ValueError("Invalid RSA condition")
-            if hasattr(key, 'u'):
+            if hasattr(key, "u"):
                 # CRT coefficient
                 if u <= 1 or u >= q:
                     raise ValueError("Invalid RSA component u")
@@ -761,11 +760,13 @@ def _import_pkcs8(encoded, passphrase):
 def _import_keyDER(extern_key, passphrase):
     """Import an RSA key (public or private half), encoded in DER form."""
 
-    decodings = (_import_pkcs1_private,
-                 _import_pkcs1_public,
-                 _import_subjectPublicKeyInfo,
-                 _import_x509_cert,
-                 _import_pkcs8)
+    decodings = (
+        _import_pkcs1_private,
+        _import_pkcs1_public,
+        _import_subjectPublicKeyInfo,
+        _import_x509_cert,
+        _import_pkcs8,
+    )
 
     for decoding in decodings:
         try:
@@ -778,8 +779,7 @@ def _import_keyDER(extern_key, passphrase):
 
 def _import_openssh_private_rsa(data, password):
 
-    from ._openssh import (import_openssh_private_generic,
-                           read_bytes, read_string, check_padding)
+    from ._openssh import check_padding, import_openssh_private_generic, read_bytes, read_string
 
     ssh_name, decrypted = import_openssh_private_generic(data, password)
 
@@ -847,27 +847,27 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
     if passphrase is not None:
         passphrase = tobytes(passphrase)
 
-    if extern_key.startswith(b'-----BEGIN OPENSSH PRIVATE KEY'):
+    if extern_key.startswith(b"-----BEGIN OPENSSH PRIVATE KEY"):
         text_encoded = extern_key.decode("latin-1")
-        openssh_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
+        openssh_encoded, _marker, enc_flag = PEM.decode(text_encoded, passphrase)
         result = _import_openssh_private_rsa(openssh_encoded, passphrase)
         return result
 
-    if extern_key.startswith(b'-----'):
+    if extern_key.startswith(b"-----"):
         # This is probably a PEM encoded key.
-        (der, marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
+        (der, _marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
         return _import_keyDER(der, passphrase)
 
-    if extern_key.startswith(b'ssh-rsa '):
+    if extern_key.startswith(b"ssh-rsa "):
         # This is probably an OpenSSH key
-        keystring = binascii.a2b_base64(extern_key.split(b' ')[1])
+        keystring = binascii.a2b_base64(extern_key.split(b" ")[1])
         keyparts = []
         while len(keystring) > 4:
             length = struct.unpack(">I", keystring[:4])[0]
-            keyparts.append(keystring[4:4 + length])
-            keystring = keystring[4 + length:]
+            keyparts.append(keystring[4 : 4 + length])
+            keystring = keystring[4 + length :]
         e = Integer.from_bytes(keyparts[1])
         n = Integer.from_bytes(keyparts[2])
         return construct([n, e])

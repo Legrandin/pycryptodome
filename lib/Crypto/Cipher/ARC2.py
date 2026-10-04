@@ -32,35 +32,35 @@ Module's constants for the modes of operation supported with ARC2:
 
 from __future__ import annotations
 
-from typing import Iterable, TYPE_CHECKING, Union
-
 import sys
+from typing import TYPE_CHECKING, Iterable, Union
 
-from Crypto.Cipher import _create_cipher, BlockCipherParams
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  c_size_t, c_uint8_ptr)
+from Crypto.Cipher import BlockCipherParams, _create_cipher
+from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, load_pycryptodome_raw_lib
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
+
     from Crypto.Cipher._mode_cbc import CbcMode
     from Crypto.Cipher._mode_cfb import CfbMode
     from Crypto.Cipher._mode_ctr import CtrMode
+    from Crypto.Cipher._mode_eax import EaxMode
     from Crypto.Cipher._mode_ecb import EcbMode
     from Crypto.Cipher._mode_ofb import OfbMode
     from Crypto.Cipher._mode_openpgp import OpenPgpMode
-    from Crypto.Cipher._mode_eax import EaxMode
 
 Buffer = Union[bytes, bytearray, memoryview]
 
 
 class ARC2Params(BlockCipherParams, total=False):
     effective_keylen: int
+
+
 ARC2Mode = int
 
 _raw_arc2_lib = load_pycryptodome_raw_lib(
-                        "Crypto.Cipher._raw_arc2",
-                        """
+    "Crypto.Cipher._raw_arc2",
+    """
                         int ARC2_start_operation(const uint8_t key[],
                                                  size_t key_len,
                                                  size_t effective_key_len,
@@ -74,8 +74,8 @@ _raw_arc2_lib = load_pycryptodome_raw_lib(
                                          uint8_t *out,
                                          size_t data_len);
                         int ARC2_stop_operation(void *state);
-                        """
-                        )
+                        """,
+)
 
 
 def _create_base_cipher(dict_parameters):
@@ -93,26 +93,26 @@ def _create_base_cipher(dict_parameters):
         raise ValueError("Incorrect ARC2 key length (%d bytes)" % len(key))
 
     if not (40 <= effective_keylen <= 1024):
-        raise ValueError("'effective_key_len' must be at least 40 and no larger than 1024 "
-                         "(not %d)" % effective_keylen)
+        raise ValueError(
+            "'effective_key_len' must be at least 40 and no larger than 1024 (not %d)" % effective_keylen
+        )
 
     start_operation = _raw_arc2_lib.ARC2_start_operation
     stop_operation = _raw_arc2_lib.ARC2_stop_operation
 
     cipher = VoidPointer()
-    result = start_operation(c_uint8_ptr(key),
-                             c_size_t(len(key)),
-                             c_size_t(effective_keylen),
-                             cipher.address_of())
+    result = start_operation(
+        c_uint8_ptr(key), c_size_t(len(key)), c_size_t(effective_keylen), cipher.address_of()
+    )
     if result:
-        raise ValueError("Error %X while instantiating the ARC2 cipher"
-                         % result)
+        raise ValueError("Error %X while instantiating the ARC2 cipher" % result)
 
     return SmartPointer(cipher.get(), stop_operation)
 
 
-def new(key: Buffer, mode: ARC2Mode, *args: Buffer, **kwargs: Unpack[ARC2Params]) -> \
-        Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode, EaxMode]:
+def new(
+    key: Buffer, mode: ARC2Mode, *args: Buffer, **kwargs: Unpack[ARC2Params]
+) -> Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode, EaxMode]:
     """Create a new RC2 cipher.
 
     :param key:
@@ -180,6 +180,7 @@ def new(key: Buffer, mode: ARC2Mode, *args: Buffer, **kwargs: Unpack[ARC2Params]
     """
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
+
 
 MODE_ECB: ARC2Mode = 1
 MODE_CBC: ARC2Mode = 2

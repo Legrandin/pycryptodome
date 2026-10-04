@@ -1,17 +1,16 @@
+import binascii
 import unittest
 
-import binascii
-from Crypto.Util.RFC1751 import key_to_english, english_to_key
+from Crypto.Util.RFC1751 import english_to_key, key_to_english
 
 
 class RFC1751_Tests(unittest.TestCase):
-
     def test1(self):
         data = [
-                ('EB33F77EE73D4053', 'TIDE ITCH SLOW REIN RULE MOT'),
-                ('CCAC2AED591056BE4F90FD441C534766', 'RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE'),
-                ('EFF81F9BFBC65350920CDD7416DE8009', 'TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL')
-                ]
+            ("EB33F77EE73D4053", "TIDE ITCH SLOW REIN RULE MOT"),
+            ("CCAC2AED591056BE4F90FD441C534766", "RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE"),
+            ("EFF81F9BFBC65350920CDD7416DE8009", "TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL"),
+        ]
 
         for key_hex, words in data:
             key_bin = binascii.a2b_hex(key_hex)
@@ -24,15 +23,16 @@ class RFC1751_Tests(unittest.TestCase):
 
     def test_error_key_to_english(self):
 
-        self.assertRaises(ValueError, key_to_english, b'0' * 7)
+        self.assertRaises(ValueError, key_to_english, b"0" * 7)
 
 
 def get_tests(config={}):
     from Crypto.SelfTest.st_common import list_test_cases
+
     tests = list_test_cases(RFC1751_Tests)
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

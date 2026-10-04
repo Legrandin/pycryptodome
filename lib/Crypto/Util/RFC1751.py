@@ -29,16 +29,29 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-import binascii
-
-binary: Dict[int, str] = {0: '0000', 1: '0001', 2: '0010', 3: '0011', 4: '0100', 5: '0101',
-          6: '0110', 7: '0111', 8: '1000', 9: '1001', 10: '1010', 11: '1011',
-          12: '1100', 13: '1101', 14: '1110', 15: '1111'}
+binary: Dict[int, str] = {
+    0: "0000",
+    1: "0001",
+    2: "0010",
+    3: "0011",
+    4: "0100",
+    5: "0101",
+    6: "0110",
+    7: "0111",
+    8: "1000",
+    9: "1001",
+    10: "1010",
+    11: "1011",
+    12: "1100",
+    13: "1101",
+    14: "1110",
+    15: "1111",
+}
 
 
 def _key2bin(s: bytes) -> str:
     "Convert a key into a string of binary digits"
-    return ''.join(binary[x >> 4] + binary[x & 15] for x in s)
+    return "".join(binary[x >> 4] + binary[x & 15] for x in s)
 
 
 def _extract(key: str, start: int, length: int) -> int:
@@ -46,7 +59,7 @@ def _extract(key: str, start: int, length: int) -> int:
     numeric value."""
 
     result = 0
-    for y in key[start:start+length]:
+    for y in key[start : start + length]:
         result = result * 2 + ord(y) - 48
     return result
 
@@ -68,11 +81,11 @@ def key_to_english(key: bytes) -> str:
     """
 
     if len(key) % 8 != 0:
-        raise ValueError('The length of the key must be a multiple of 8.')
+        raise ValueError("The length of the key must be a multiple of 8.")
 
-    english = ''
+    english = ""
     for index in range(0, len(key), 8):  # Loop over 8-byte subkeys
-        subkey = key[index:index + 8]
+        subkey = key[index : index + 8]
         # Compute the parity of the key
         skbin = _key2bin(subkey)
         p = 0
@@ -81,7 +94,7 @@ def key_to_english(key: bytes) -> str:
         # Append parity bits to the subkey
         skbin = _key2bin(subkey + bytes([(p << 6) & 255]))
         for i in range(0, 64, 11):
-            english = english + wordlist[_extract(skbin, i, 11)] + ' '
+            english = english + wordlist[_extract(skbin, i, 11)] + " "
 
     return english.strip()
 
@@ -103,17 +116,17 @@ def english_to_key(s: str) -> bytes:
     """
 
     L = s.upper().split()
-    key = b''
+    key = b""
     for index in range(0, len(L), 6):
-        sublist = L[index:index + 6]
+        sublist = L[index : index + 6]
         char = 9 * [0]
         bits = 0
         for word in sublist:
             index = wordlist.index(word)
             shift = (8 - (bits + 11) % 8) % 8
             y = index << shift
-            cl, cc, cr = (y >> 16), (y >> 8) & 0xff, y & 0xff
-            if (shift > 5):
+            cl, cc, cr = (y >> 16), (y >> 8) & 0xFF, y & 0xFF
+            if shift > 5:
                 char[bits >> 3] = char[bits >> 3] | cl
                 char[(bits >> 3) + 1] = char[(bits >> 3) + 1] | cc
                 char[(bits >> 3) + 2] = char[(bits >> 3) + 2] | cr
@@ -124,7 +137,7 @@ def english_to_key(s: str) -> bytes:
                 char[bits >> 3] = char[bits >> 3] | cr
             bits = bits + 11
 
-        subkey = b''
+        subkey = b""
         for y in char:
             subkey = subkey + bytes([y])
 
@@ -139,6 +152,7 @@ def english_to_key(s: str) -> bytes:
     return key
 
 
+# fmt: off
 wordlist: List[str] = [
    "A", "ABE", "ACE", "ACT", "AD", "ADA", "ADD",
    "AGO", "AID", "AIM", "AIR", "ALL", "ALP", "AM", "AMY", "AN", "ANA",
@@ -383,3 +397,4 @@ wordlist: List[str] = [
    "WORE", "WORK", "WORM", "WORN", "WOVE", "WRIT", "WYNN", "YALE",
    "YANG", "YANK", "YARD", "YARN", "YAWL", "YAWN", "YEAH", "YEAR",
    "YELL", "YOGA", "YOKE" ]
+# fmt: on

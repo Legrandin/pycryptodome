@@ -21,13 +21,14 @@
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional, TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, TypeVar, Union
 
-__all__ = ['new', 'PKCS115_Cipher']
+__all__ = ["new", "PKCS115_Cipher"]
 
-from Crypto.Util._bytes import copy_bytes
 from Crypto import Random
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+
 from ._pkcs1_oaep_decode import pkcs1_decode
 
 if TYPE_CHECKING:
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class PKCS115_Cipher:
@@ -100,7 +101,7 @@ class PKCS115_Cipher:
             ps_bytes.append(new_byte)
         ps = b"".join(ps_bytes)
         # Step 2b
-        em = b'\x00\x02' + ps + b'\x00' + copy_bytes(None, None, message)
+        em = b"\x00\x02" + ps + b"\x00" + copy_bytes(None, None, message)
         # Step 3a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 3b (RSAEP)
@@ -167,7 +168,7 @@ class PKCS115_Cipher:
         # Step 3 (not constant time when the sentinel is not a byte string)
         output = bytes(bytearray(k))
         if not isinstance(sentinel, (bytes, bytearray, memoryview)) or len(sentinel) > k:
-            size = pkcs1_decode(em, b'', expected_pt_len, output)
+            size = pkcs1_decode(em, b"", expected_pt_len, output)
             if size < 0:
                 return sentinel
             else:

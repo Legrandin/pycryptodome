@@ -23,21 +23,21 @@
 
 """Self-testing for PyCrypto hash modules"""
 
+import binascii
 import re
 import unittest
-import binascii
-from Crypto.Util._bytes import tobytes
-import Crypto.Hash
 from binascii import hexlify, unhexlify
+
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
 
+
 def t2b(hex_string):
-    shorter = re.sub(br'\s+', b'', tobytes(hex_string))
+    shorter = re.sub(rb"\s+", b"", tobytes(hex_string))
     return unhexlify(shorter)
 
 
 class HashDigestSizeSelfTest(unittest.TestCase):
-
     def __init__(self, hashmod, description, expected, extra_params):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
@@ -58,7 +58,6 @@ class HashDigestSizeSelfTest(unittest.TestCase):
 
 
 class HashSelfTest(unittest.TestCase):
-
     def __init__(self, hashmod, description, expected, input, extra_params):
         unittest.TestCase.__init__(self)
         self.hashmod = hashmod
@@ -83,15 +82,15 @@ class HashSelfTest(unittest.TestCase):
         out4 = binascii.b2a_hex(h.digest())
 
         # hexdigest() should return str(), and digest() bytes
-        self.assertEqual(self.expected, out1)   # h = .new(); h.update(data); h.digest()
-        self.assertEqual(self.expected.decode(), out2)   # h = .new(); h.update(data); h.hexdigest()
-        self.assertEqual(self.expected.decode(), out3)   # h = .new(data); h.hexdigest()
-        self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
+        self.assertEqual(self.expected, out1)  # h = .new(); h.update(data); h.digest()
+        self.assertEqual(self.expected.decode(), out2)  # h = .new(); h.update(data); h.hexdigest()
+        self.assertEqual(self.expected.decode(), out3)  # h = .new(data); h.hexdigest()
+        self.assertEqual(self.expected, out4)  # h = .new(data); h.digest()
 
         # Verify that the .new() method produces a fresh hash object, except
         # for MD5 and SHA1, which are hashlib objects.  (But test any .new()
         # method that does exist.)
-        if self.hashmod.__name__ not in ('Crypto.Hash.MD5', 'Crypto.Hash.SHA1') or hasattr(h, 'new'):
+        if self.hashmod.__name__ not in ("Crypto.Hash.MD5", "Crypto.Hash.SHA1") or hasattr(h, "new"):
             h2 = h.new()
             h2.update(self.input)
             out5 = binascii.b2a_hex(h2.digest())
@@ -111,7 +110,6 @@ class HashTestOID(unittest.TestCase):
 
 
 class ByteArrayTest(unittest.TestCase):
-
     def __init__(self, module, extra_params):
         unittest.TestCase.__init__(self)
         self.module = module
@@ -125,7 +123,7 @@ class ByteArrayTest(unittest.TestCase):
 
         h1 = self.module.new(data, **self.extra_params)
         h2 = self.module.new(ba, **self.extra_params)
-        ba[:1] = b'\xFF'
+        ba[:1] = b"\xff"
         self.assertEqual(h1.digest(), h2.digest())
 
         # Data can be a bytearray (during operation)
@@ -137,12 +135,11 @@ class ByteArrayTest(unittest.TestCase):
         h1.update(data)
         h2.update(ba)
 
-        ba[:1] = b'\xFF'
+        ba[:1] = b"\xff"
         self.assertEqual(h1.digest(), h2.digest())
 
 
 class MemoryViewTest(unittest.TestCase):
-
     def __init__(self, module, extra_params):
         unittest.TestCase.__init__(self)
         self.module = module
@@ -159,14 +156,13 @@ class MemoryViewTest(unittest.TestCase):
             return memoryview(bytearray(data))
 
         for get_mv in get_mv_ro, get_mv_rw:
-
             # Data can be a memoryview (during initialization)
             mv = get_mv(data)
 
             h1 = self.module.new(data, **self.extra_params)
             h2 = self.module.new(mv, **self.extra_params)
             if not mv.readonly:
-                mv[:1] = b'\xFF'
+                mv[:1] = b"\xff"
             self.assertEqual(h1.digest(), h2.digest())
 
             # Data can be a memoryview (during operation)
@@ -177,12 +173,11 @@ class MemoryViewTest(unittest.TestCase):
             h1.update(data)
             h2.update(mv)
             if not mv.readonly:
-                mv[:1] = b'\xFF'
+                mv[:1] = b"\xff"
             self.assertEqual(h1.digest(), h2.digest())
 
 
 class MACSelfTest(unittest.TestCase):
-
     def __init__(self, module, description, result, data, key, params):
         unittest.TestCase.__init__(self)
         self.module = module
@@ -203,7 +198,7 @@ class MACSelfTest(unittest.TestCase):
         h = self.module.new(self.key, **self.params)
         h.update(self.data)
         self.assertEqual(self.result, h.digest())
-        self.assertEqual(hexlify(self.result).decode('ascii'), h.hexdigest())
+        self.assertEqual(hexlify(self.result).decode("ascii"), h.hexdigest())
 
         # Verify that correct MAC does not raise any exception
         h.verify(self.result)
@@ -217,7 +212,7 @@ class MACSelfTest(unittest.TestCase):
         # Verify again, with data passed to new()
         h = self.module.new(self.key, self.data, **self.params)
         self.assertEqual(self.result, h.digest())
-        self.assertEqual(hexlify(self.result).decode('ascii'), h.hexdigest())
+        self.assertEqual(hexlify(self.result).decode("ascii"), h.hexdigest())
 
         # Test .copy()
         try:
@@ -241,19 +236,18 @@ class MACSelfTest(unittest.TestCase):
 
         # Check that .hexverify() accepts bytes or str
         h.hexverify(h.hexdigest())
-        h.hexverify(h.hexdigest().encode('ascii'))
+        h.hexverify(h.hexdigest().encode("ascii"))
 
 
-def make_hash_tests(module, module_name, test_data, digest_size, oid=None,
-                    extra_params={}):
+def make_hash_tests(module, module_name, test_data, digest_size, oid=None, extra_params={}):
     tests = []
     for i, row in enumerate(test_data):
-        (expected, input) = map(tobytes,row[0:2])
+        (expected, input) = map(tobytes, row[0:2])
         if len(row) < 3:
             description = repr(input)
         else:
             description = row[2]
-        name = "%s #%d: %s" % (module_name, i+1, description)
+        name = "%s #%d: %s" % (module_name, i + 1, description)
         tests.append(HashSelfTest(module, name, expected, input, extra_params))
 
     name = "%s #%d: digest_size" % (module_name, len(test_data) + 1)
@@ -273,11 +267,12 @@ def make_mac_tests(module, module_name, test_data):
     tests = []
     for i, row in enumerate(test_data):
         if len(row) == 4:
-            (key, data, results, description, params) = list(row) + [ {} ]
+            (key, data, results, description, params) = list(row) + [{}]
         else:
             (key, data, results, description, params) = row
-        name = "%s #%d: %s" % (module_name, i+1, description)
+        name = "%s #%d: %s" % (module_name, i + 1, description)
         tests.append(MACSelfTest(module, name, results, data, key, params))
     return tests
+
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

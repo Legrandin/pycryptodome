@@ -22,16 +22,21 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_sha384_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA384",
-                        """
+_raw_sha384_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._SHA384",
+    """
                         int SHA384_init(void **shaState);
                         int SHA384_destroy(void *shaState);
                         int SHA384_update(void *hs,
@@ -48,7 +53,9 @@ _raw_sha384_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA384",
                                             uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
-                        """)
+                        """,
+)
+
 
 class SHA384Hash:
     """A SHA-384 hash object.
@@ -70,16 +77,14 @@ class SHA384Hash:
     # The internal block size of the hash algorithm in bytes.
     block_size: int = 128
     # ASN.1 Object ID
-    oid: str = '2.16.840.1.101.3.4.2.2'
+    oid: str = "2.16.840.1.101.3.4.2.2"
 
     def __init__(self, data: Optional[Buffer] = None) -> None:
         state = VoidPointer()
         result = _raw_sha384_lib.SHA384_init(state.address_of())
         if result:
-            raise ValueError("Error %d while instantiating SHA384"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_sha384_lib.SHA384_destroy)
+            raise ValueError("Error %d while instantiating SHA384" % result)
+        self._state = SmartPointer(state.get(), _raw_sha384_lib.SHA384_destroy)
         if data:
             self.update(data)
 
@@ -90,12 +95,9 @@ class SHA384Hash:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_sha384_lib.SHA384_update(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_sha384_lib.SHA384_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while hashing data with SHA384"
-                             % result)
+            raise ValueError("Error %d while hashing data with SHA384" % result)
 
     def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
@@ -106,12 +108,9 @@ class SHA384Hash:
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_sha384_lib.SHA384_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size))
+        result = _raw_sha384_lib.SHA384_digest(self._state.get(), bfr, c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while making SHA384 digest"
-                             % result)
+            raise ValueError("Error %d while making SHA384 digest" % result)
 
         return get_raw_buffer(bfr)
 
@@ -137,8 +136,7 @@ class SHA384Hash:
         """
 
         clone = SHA384Hash()
-        result = _raw_sha384_lib.SHA384_copy(self._state.get(),
-                                             clone._state.get())
+        result = _raw_sha384_lib.SHA384_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHA384" % result)
         return clone
@@ -175,14 +173,15 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
 
     assert iterations > 0
 
-    bfr = create_string_buffer(len(first_digest));
+    bfr = create_string_buffer(len(first_digest))
     result = _raw_sha384_lib.SHA384_pbkdf2_hmac_assist(
-                    inner._state.get(),
-                    outer._state.get(),
-                    first_digest,
-                    bfr,
-                    c_size_t(iterations),
-                    c_size_t(len(first_digest)))
+        inner._state.get(),
+        outer._state.get(),
+        first_digest,
+        bfr,
+        c_size_t(iterations),
+        c_size_t(len(first_digest)),
+    )
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assist for SHA384" % result)

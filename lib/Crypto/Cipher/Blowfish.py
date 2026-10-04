@@ -32,32 +32,30 @@ Module's constants for the modes of operation supported with Blowfish:
 
 from __future__ import annotations
 
-from typing import Iterable, TYPE_CHECKING, Union
-
 import sys
+from typing import TYPE_CHECKING, Iterable, Union
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer, c_size_t,
-                                  c_uint8_ptr)
+from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, load_pycryptodome_raw_lib
 
 if TYPE_CHECKING:
-    from Crypto.Cipher import BlockCipherParams
     from typing_extensions import Unpack
+
+    from Crypto.Cipher import BlockCipherParams
     from Crypto.Cipher._mode_cbc import CbcMode
     from Crypto.Cipher._mode_cfb import CfbMode
     from Crypto.Cipher._mode_ctr import CtrMode
+    from Crypto.Cipher._mode_eax import EaxMode
     from Crypto.Cipher._mode_ecb import EcbMode
     from Crypto.Cipher._mode_ofb import OfbMode
     from Crypto.Cipher._mode_openpgp import OpenPgpMode
-    from Crypto.Cipher._mode_eax import EaxMode
 
 Buffer = Union[bytes, bytearray, memoryview]
 BlowfishMode = int
 
 _raw_blowfish_lib = load_pycryptodome_raw_lib(
-        "Crypto.Cipher._raw_blowfish",
-        """
+    "Crypto.Cipher._raw_blowfish",
+    """
         int Blowfish_start_operation(const uint8_t key[],
                                      size_t key_len,
                                      void **pResult);
@@ -70,8 +68,8 @@ _raw_blowfish_lib = load_pycryptodome_raw_lib(
                              uint8_t *out,
                              size_t data_len);
         int Blowfish_stop_operation(void *state);
-        """
-        )
+        """,
+)
 
 
 def _create_base_cipher(dict_parameters):
@@ -91,17 +89,15 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_blowfish_lib.Blowfish_stop_operation
 
     void_p = VoidPointer()
-    result = start_operation(c_uint8_ptr(key),
-                             c_size_t(len(key)),
-                             void_p.address_of())
+    result = start_operation(c_uint8_ptr(key), c_size_t(len(key)), void_p.address_of())
     if result:
-        raise ValueError("Error %X while instantiating the Blowfish cipher"
-                         % result)
+        raise ValueError("Error %X while instantiating the Blowfish cipher" % result)
     return SmartPointer(void_p.get(), stop_operation)
 
 
-def new(key: Buffer, mode: BlowfishMode, *args: Buffer, **kwargs: Unpack[BlockCipherParams]) -> \
-        Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode, EaxMode]:
+def new(
+    key: Buffer, mode: BlowfishMode, *args: Buffer, **kwargs: Unpack[BlockCipherParams]
+) -> Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode, EaxMode]:
     """Create a new Blowfish cipher
 
     :param key:
@@ -162,6 +158,7 @@ def new(key: Buffer, mode: BlowfishMode, *args: Buffer, **kwargs: Unpack[BlockCi
     """
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
+
 
 MODE_ECB: BlowfishMode = 1
 MODE_CBC: BlowfishMode = 2

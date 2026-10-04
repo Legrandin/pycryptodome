@@ -30,22 +30,22 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 import os
 import threading
+from typing import Optional, Union
 
-from Crypto.Util.number import long_to_bytes
 from Crypto.Util._raw_api import c_size_t, c_uint8_ptr
+from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
 from .keccak import _raw_keccak_lib
 
 Buffer = Union[bytes, bytearray, memoryview]
 
+
 def _length_encode(x):
     if x == 0:
-        return b'\x00'
+        return b"\x00"
 
     S = long_to_bytes(x)
     return S + bytes([len(S)])
@@ -69,9 +69,7 @@ def _hash_leaves(leaves: memoryview, cvs: memoryview) -> None:
     if n_leaves == 0:
         return
 
-    result = _raw_keccak_lib.k12_leaves(c_uint8_ptr(leaves),
-                                        c_size_t(n_leaves),
-                                        c_uint8_ptr(cvs))
+    result = _raw_keccak_lib.k12_leaves(c_uint8_ptr(leaves), c_size_t(n_leaves), c_uint8_ptr(cvs))
     if result:
         raise ValueError("Error %d while hashing K12 leaves" % result)
 
@@ -93,6 +91,7 @@ def _available_cores():
         count = os.cpu_count()
     else:
         import multiprocessing
+
         try:
             count = multiprocessing.cpu_count()
         except NotImplementedError:
@@ -118,8 +117,7 @@ def _hash_leaves_threaded(leaves: memoryview, cvs: memoryview, threads: int) -> 
 
     def worker(start, end):
         try:
-            _hash_leaves(leaves[8192 * start:8192 * end],
-                         cvs[32 * start:32 * end])
+            _hash_leaves(leaves[8192 * start : 8192 * end], cvs[32 * start : 32 * end])
         except Exception as e:
             errors.append(e)
 
@@ -143,10 +141,10 @@ def _hash_leaves_threaded(leaves: memoryview, cvs: memoryview, threads: int) -> 
 
 
 # Possible states for a KangarooTwelve instance, which depend on the amount of data processed so far.
-SHORT_MSG = 1       # Still within the first 8192 bytes, but it is not certain we will exceed them.
-LONG_MSG_S0 = 2     # Still within the first 8192 bytes, and it is certain we will exceed them.
-LONG_MSG_SX = 3     # Beyond the first 8192 bytes.
-SQUEEZING = 4       # No more data to process.
+SHORT_MSG = 1  # Still within the first 8192 bytes, but it is not certain we will exceed them.
+LONG_MSG_S0 = 2  # Still within the first 8192 bytes, and it is certain we will exceed them.
+LONG_MSG_SX = 3  # Beyond the first 8192 bytes.
+SQUEEZING = 4  # No more data to process.
 
 
 class K12_XOF:
@@ -158,7 +156,7 @@ class K12_XOF:
     def __init__(self, data: Optional[Buffer], custom: Optional[bytes], threads: int = 1) -> None:
 
         if custom is None:
-            custom = b''
+            custom = b""
 
         if not isinstance(threads, int) or isinstance(threads, bool):
             raise TypeError("'threads' must be an integer")
@@ -170,7 +168,7 @@ class K12_XOF:
 
         self._custom = custom + _length_encode(len(custom))
         self._state = SHORT_MSG
-        self._padding: Optional[int] = None   # Final padding is only decided in read()
+        self._padding: Optional[int] = None  # Final padding is only decided in read()
 
         # Internal hash that consumes FinalNode
         # The real domain separation byte will be known before squeezing
@@ -214,7 +212,7 @@ class K12_XOF:
 
         if self._state == LONG_MSG_S0:
             data_mem = memoryview(data)
-            assert(self._length1 < 8192)
+            assert self._length1 < 8192
             dtc = min(len(data), 8192 - self._length1)
             self._hash1.update(data_mem[:dtc])
             self._length1 += dtc
@@ -223,9 +221,9 @@ class K12_XOF:
                 return self
 
             # Finish hashing S_0 and start S_1
-            assert(self._length1 == 8192)
+            assert self._length1 == 8192
 
-            divider = b'\x03' + b'\x00' * 7
+            divider = b"\x03" + b"\x00" * 7
             self._hash1.update(divider)
             self._length1 += 8
 
@@ -237,7 +235,7 @@ class K12_XOF:
             return self.update(data_mem[dtc:])
 
         # LONG_MSG_SX
-        assert(self._state == LONG_MSG_SX)
+        assert self._state == LONG_MSG_SX
         index = 0
         len_data = len(data)
 
@@ -245,7 +243,6 @@ class K12_XOF:
         data_mem = memoryview(data)
         assert self._hash2 is not None
         while index < len_data:
-
             if self._length2 == 0 and len_data - index >= 8192:
                 index = self._update_full_leaves(data_mem, index)
                 continue
@@ -282,8 +279,7 @@ class K12_XOF:
 
         cvs = bytearray(32 * n_leaves)
         if self._threads > 1:
-            _hash_leaves_threaded(data_mem[index:end], memoryview(cvs),
-                                  self._threads)
+            _hash_leaves_threaded(data_mem[index:end], memoryview(cvs), self._threads)
         else:
             _hash_leaves(data_mem[index:end], memoryview(cvs))
         self._hash1.update(cvs)
@@ -311,8 +307,7 @@ class K12_XOF:
 
         # The message and the customization string together may still
         # exceed 8192 bytes, if update() was never called
-        if self._state == SHORT_MSG and \
-                self._length1 + len(self._custom) > 8192:
+        if self._state == SHORT_MSG and self._length1 + len(self._custom) > 8192:
             self._state = LONG_MSG_S0
 
         if self._state == SHORT_MSG:
@@ -323,7 +318,7 @@ class K12_XOF:
         if self._state == LONG_MSG_S0:
             self.update(self._custom)
             custom_was_consumed = True
-            assert(self._state == LONG_MSG_SX)
+            assert self._state == LONG_MSG_SX
 
         if self._state == LONG_MSG_SX:
             if not custom_was_consumed:
@@ -339,7 +334,7 @@ class K12_XOF:
                 self._length2 = 0
                 self._ctr += 1
 
-            trailer = _length_encode(self._ctr - 1) + b'\xFF\xFF'
+            trailer = _length_encode(self._ctr - 1) + b"\xff\xff"
             self._hash1.update(trailer)
 
             self._padding = 0x06
@@ -349,7 +344,7 @@ class K12_XOF:
         self._hash1._domain = self._padding
         return self._hash1.read(length)
 
-    def new(self, data: Optional[Buffer] = None, custom: Optional[bytes] = b'', threads: int = 1) -> K12_XOF:
+    def new(self, data: Optional[Buffer] = None, custom: Optional[bytes] = b"", threads: int = 1) -> K12_XOF:
         return type(self)(data, custom, threads)
 
 

@@ -3,22 +3,20 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.st_common import list_test_cases
-
 from Crypto.Hash import TurboSHAKE128, TurboSHAKE256
+from Crypto.SelfTest.st_common import list_test_cases
 
 
 class TurboSHAKETest(unittest.TestCase):
-
     def test_new_positive(self):
 
         xof1 = self.TurboSHAKE.new()
-        xof1.update(b'90')
+        xof1.update(b"90")
 
         xof2 = self.TurboSHAKE.new(domain=0x1F)
-        xof2.update(b'90')
+        xof2.update(b"90")
 
-        xof3 = self.TurboSHAKE.new(data=b'90')
+        xof3 = self.TurboSHAKE.new(data=b"90")
 
         out1 = xof1.read(128)
         out2 = xof2.read(128)
@@ -29,7 +27,7 @@ class TurboSHAKETest(unittest.TestCase):
 
     def test_new_unknown_parameters(self):
         self.assertRaises(TypeError, self.TurboSHAKE.new, domian=0x1D)
-        self.assertRaises(TypeError, self.TurboSHAKE.new, b'90')
+        self.assertRaises(TypeError, self.TurboSHAKE.new, b"90")
 
     def test_new_domain(self):
         xof1 = self.TurboSHAKE.new(domain=0x1D)
@@ -69,11 +67,11 @@ class TurboSHAKETest(unittest.TestCase):
 
     def test_new(self):
         xof1 = self.TurboSHAKE.new(domain=0x07)
-        xof1.update(b'90')
+        xof1.update(b"90")
         digest1 = xof1.read(100)
 
         xof2 = xof1.new()
-        xof2.update(b'90')
+        xof2.update(b"90")
         digest2 = xof2.read(100)
 
         self.assertEqual(digest1, digest2)
@@ -96,9 +94,9 @@ def txt2bin(txt):
 
 def ptn(n):
     res = bytearray(n)
-    pattern = b"".join([bytes([x]) for x in range(0, 0xFB)])
+    pattern = b"".join([bytes([x]) for x in range(0xFB)])
     for base in range(0, n - 0xFB, 0xFB):
-        res[base:base + 0xFB] = pattern
+        res[base : base + 0xFB] = pattern
     remain = n % 0xFB
     if remain:
         base = (n // 0xFB) * 0xFB
@@ -109,11 +107,10 @@ def ptn(n):
 
 def chunked(source, size):
     for i in range(0, len(source), size):
-        yield source[i:i+size]
+        yield source[i : i + size]
 
 
 class TurboSHAKE128TV(unittest.TestCase):
-
     def test_zero_1(self):
         tv = """1E 41 5F 1C 59 83 AF F2 16 92 17 27 7D 17 BB 53
         8C D9 45 A3 97 DD EC 54 1F 1C E4 1A F2 C1 B7 4C"""
@@ -239,7 +236,7 @@ class TurboSHAKE128TV(unittest.TestCase):
         7A 25 CB 05 C7 4C CA 1E 42 50 1A BD 83 87 4A 67"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF', domain=0x06).read(32)
+        res = TurboSHAKE128.new(data=b"\xff", domain=0x06).read(32)
         self.assertEqual(res, btv)
 
     def test_ffffff_d07(self):
@@ -247,7 +244,7 @@ class TurboSHAKE128TV(unittest.TestCase):
         A0 54 58 04 2D 68 20 6F 72 52 68 2D BA 36 63 ED"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF' * 3, domain=0x07).read(32)
+        res = TurboSHAKE128.new(data=b"\xff" * 3, domain=0x07).read(32)
         self.assertEqual(res, btv)
 
     def test_ffffffffffff_d0b(self):
@@ -255,7 +252,7 @@ class TurboSHAKE128TV(unittest.TestCase):
         12 DB 3C EE 37 B1 81 78 B2 AC D8 05 B7 99 CC 37"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF' * 7, domain=0x0B).read(32)
+        res = TurboSHAKE128.new(data=b"\xff" * 7, domain=0x0B).read(32)
         self.assertEqual(res, btv)
 
     def test_ff_d30(self):
@@ -263,7 +260,7 @@ class TurboSHAKE128TV(unittest.TestCase):
         32 BA B0 3D AA 07 C7 D6 63 66 03 28 65 06 32 5B"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF', domain=0x30).read(32)
+        res = TurboSHAKE128.new(data=b"\xff", domain=0x30).read(32)
         self.assertEqual(res, btv)
 
     def test_ffffff_d7f(self):
@@ -271,12 +268,11 @@ class TurboSHAKE128TV(unittest.TestCase):
         A6 D2 8E 12 2A BA 15 C7 65 E5 AD 0E 6E AF 26 F9"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF' * 3, domain=0x7F).read(32)
+        res = TurboSHAKE128.new(data=b"\xff" * 3, domain=0x7F).read(32)
         self.assertEqual(res, btv)
 
 
 class TurboSHAKE256TV(unittest.TestCase):
-
     def test_zero_1(self):
         tv = """36 7A 32 9D AF EA 87 1C 78 02 EC 67 F9 05 AE 13
         C5 76 95 DC 2C 66 63 C6 10 35 F5 9A 18 F8 E7 DB
@@ -412,7 +408,7 @@ class TurboSHAKE256TV(unittest.TestCase):
         E3 2A 0A 97 2E 22 E6 3A DC 1B 09 0D AE FE 00 4B"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF', domain=0x06).read(64)
+        res = TurboSHAKE256.new(data=b"\xff", domain=0x06).read(64)
         self.assertEqual(res, btv)
 
     def test_ffffff_d07(self):
@@ -422,7 +418,7 @@ class TurboSHAKE256TV(unittest.TestCase):
         B5 50 06 12 B8 F2 57 89 85 DE D5 35 7D 00 EC 67"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF' * 3, domain=0x07).read(64)
+        res = TurboSHAKE256.new(data=b"\xff" * 3, domain=0x07).read(64)
         self.assertEqual(res, btv)
 
     def test_ffffffffffff_d0b(self):
@@ -432,7 +428,7 @@ class TurboSHAKE256TV(unittest.TestCase):
         08 34 FA 75 6C B0 34 71 BA B1 3A 1E 2C 16 B3 C0"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF' * 7, domain=0x0B).read(64)
+        res = TurboSHAKE256.new(data=b"\xff" * 7, domain=0x0B).read(64)
         self.assertEqual(res, btv)
 
     def test_ff_d30(self):
@@ -442,7 +438,7 @@ class TurboSHAKE256TV(unittest.TestCase):
         3B 5D DA B8 EE 25 5E 39 EE 38 90 72 96 2C 11 1A"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF', domain=0x30).read(64)
+        res = TurboSHAKE256.new(data=b"\xff", domain=0x30).read(64)
         self.assertEqual(res, btv)
 
     def test_ffffff_d7f(self):
@@ -452,7 +448,7 @@ class TurboSHAKE256TV(unittest.TestCase):
         CF 7E D9 11 0B A9 7C E0 38 8D 07 4B AC 76 87 76"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF' * 3, domain=0x7F).read(64)
+        res = TurboSHAKE256.new(data=b"\xff" * 3, domain=0x7F).read(64)
         self.assertEqual(res, btv)
 
 
@@ -465,7 +461,9 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

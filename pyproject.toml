@@ -9,3 +9,39 @@ follow_untyped_imports = true
 [[tool.mypy.overrides]]
 module = ["cffi"]
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 110
+target-version = "py38"
+extend-exclude = ["Doc/sphinx_rtd_theme", "build", "ve3"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "PIE", "RUF"]
+ignore = [
+    "E501",     # line length is left to the formatter
+    "UP006",    # keep typing.List/Dict/Tuple, valid for Python 3.8
+    "UP007",    # keep typing.Union, valid for Python 3.8
+    "UP045",    # keep typing.Optional, valid for Python 3.8
+    "UP031",    # keep printf-style string formatting
+    "RUF012",   # mutable class attributes are not annotated with ClassVar
+    "RUF022",   # keep the order of __all__ as written
+    "E731",     # lambda assignments are fine
+    "SIM108",   # ternary operators are not always more readable
+    "B904",     # exception chaining would change the tracebacks users see
+    "B028",     # explicit stacklevel would change where warnings are reported
+    "RUF005",   # list concatenation is fine
+    "RUF015",   # indexing the first element is fine
+    "SIM105",   # try-except-pass is fine
+    "SIM115",   # files may be closed explicitly
+]
+
+[tool.ruff.lint.per-file-ignores]
+# get_tests(config={}) is the conventional entry point of all test modules
+"lib/Crypto/SelfTest/**" = ["B006"]
+# Modules that re-export names imported from other modules
+"lib/Crypto/Hash/RIPEMD.py" = ["F401"]
+"lib/Crypto/Hash/SHA.py" = ["F401"]
+"lib/Crypto/Util/_raw_api.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["Crypto", "Cryptodome"]

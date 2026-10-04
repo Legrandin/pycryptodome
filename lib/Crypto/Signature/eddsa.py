@@ -32,17 +32,15 @@ from __future__ import annotations
 
 from typing import Optional, Protocol, Union
 
-from Crypto.Util._raw_api import is_buffer
-from Crypto.Math.Numbers import Integer
-
 from Crypto.Hash import SHA512, SHAKE256
-from Crypto.PublicKey.ECC import (EccKey,
-                                  construct,
-                                  _import_ed25519_public_key,
-                                  _import_ed448_public_key)
+from Crypto.Math.Numbers import Integer
+from Crypto.PublicKey.ECC import EccKey, _import_ed448_public_key, _import_ed25519_public_key, construct
+from Crypto.Util._raw_api import is_buffer
+
 
 class Hash(Protocol):
     def digest(self) -> bytes: ...
+
 
 class XOF(Protocol):
     def read(self, len: int) -> bytes: ...
@@ -170,10 +168,14 @@ class EdDSASigScheme:
         if self._context or ph:
             flag = int(ph)
             # dom2(flag, self._context)
-            dom2 = b'SigEd25519 no Ed25519 collisions' + bytes([flag]) + \
-                   bytes([len(self._context)]) + self._context
+            dom2 = (
+                b"SigEd25519 no Ed25519 collisions"
+                + bytes([flag])
+                + bytes([len(self._context)])
+                + self._context
+            )
         else:
-            dom2 = b''
+            dom2 = b""
 
         PHM = msg_or_hash.digest() if ph else msg_or_hash
 
@@ -181,23 +183,22 @@ class EdDSASigScheme:
 
         # Step 2
         r_hash = SHA512.new(dom2 + self._key._prefix + PHM).digest()
-        r = Integer.from_bytes(r_hash, 'little') % self._order
+        r = Integer.from_bytes(r_hash, "little") % self._order
         # Step 3
         R_pk = EccKey(point=r * self._key._curve.G)._export_eddsa_public()
         # Step 4
         k_hash = SHA512.new(dom2 + R_pk + self._A + PHM).digest()
-        k = Integer.from_bytes(k_hash, 'little') % self._order
+        k = Integer.from_bytes(k_hash, "little") % self._order
         # Step 5
         s = (r + k * self._key.d) % self._order
 
-        return R_pk + s.to_bytes(32, 'little')
+        return R_pk + s.to_bytes(32, "little")
 
     def _sign_ed448(self, msg_or_hash, ph):
 
         flag = int(ph)
         # dom4(flag, self._context)
-        dom4 = b'SigEd448' + bytes([flag]) + \
-               bytes([len(self._context)]) + self._context
+        dom4 = b"SigEd448" + bytes([flag]) + bytes([len(self._context)]) + self._context
 
         PHM = msg_or_hash.copy().read(64) if ph else msg_or_hash
 
@@ -205,16 +206,16 @@ class EdDSASigScheme:
 
         # Step 2
         r_hash = SHAKE256.new(dom4 + self._key._prefix + PHM).read(114)
-        r = Integer.from_bytes(r_hash, 'little') % self._order
+        r = Integer.from_bytes(r_hash, "little") % self._order
         # Step 3
         R_pk = EccKey(point=r * self._key._curve.G)._export_eddsa_public()
         # Step 4
         k_hash = SHAKE256.new(dom4 + R_pk + self._A + PHM).read(114)
-        k = Integer.from_bytes(k_hash, 'little') % self._order
+        k = Integer.from_bytes(k_hash, "little") % self._order
         # Step 5
         s = (r + k * self._key.d) % self._order
 
-        return R_pk + s.to_bytes(57, 'little')
+        return R_pk + s.to_bytes(57, "little")
 
     def verify(self, msg_or_hash: Union[bytes, Hash, XOF], signature: bytes) -> None:
         """Check if an EdDSA signature is authentic.
@@ -258,10 +259,14 @@ class EdDSASigScheme:
 
         if self._context or ph:
             flag = int(ph)
-            dom2 = b'SigEd25519 no Ed25519 collisions' + bytes([flag]) + \
-                   bytes([len(self._context)]) + self._context
+            dom2 = (
+                b"SigEd25519 no Ed25519 collisions"
+                + bytes([flag])
+                + bytes([len(self._context)])
+                + self._context
+            )
         else:
-            dom2 = b''
+            dom2 = b""
 
         PHM = msg_or_hash.digest() if ph else msg_or_hash
 
@@ -272,12 +277,12 @@ class EdDSASigScheme:
             R = import_public_key(signature[:32]).pointQ
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
-        s = Integer.from_bytes(signature[32:], 'little')
+        s = Integer.from_bytes(signature[32:], "little")
         if s > self._order:
             raise ValueError("The signature is not authentic (S)")
         # Step 2
         k_hash = SHA512.new(dom2 + signature[:32] + self._A + PHM).digest()
-        k = Integer.from_bytes(k_hash, 'little') % self._order
+        k = Integer.from_bytes(k_hash, "little") % self._order
         # Step 3
         point1 = s * 8 * self._key._curve.G
         # OPTIMIZE: with double-scalar multiplication, with no SCA
@@ -293,8 +298,7 @@ class EdDSASigScheme:
 
         flag = int(ph)
         # dom4(flag, self._context)
-        dom4 = b'SigEd448' + bytes([flag]) + \
-               bytes([len(self._context)]) + self._context
+        dom4 = b"SigEd448" + bytes([flag]) + bytes([len(self._context)]) + self._context
 
         PHM = msg_or_hash.copy().read(64) if ph else msg_or_hash
 
@@ -305,12 +309,12 @@ class EdDSASigScheme:
             R = import_public_key(signature[:57]).pointQ
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
-        s = Integer.from_bytes(signature[57:], 'little')
+        s = Integer.from_bytes(signature[57:], "little")
         if s > self._order:
             raise ValueError("The signature is not authentic (S)")
         # Step 2
         k_hash = SHAKE256.new(dom4 + signature[:57] + self._A + PHM).read(114)
-        k = Integer.from_bytes(k_hash, 'little') % self._order
+        k = Integer.from_bytes(k_hash, "little") % self._order
         # Step 3
         point1 = s * 8 * self._key._curve.G
         # OPTIMIZE: with double-scalar multiplication, with no SCA
@@ -342,11 +346,11 @@ def new(key: EccKey, mode: str, context: Optional[bytes] = None) -> EdDSASigSche
     if not isinstance(key, EccKey) or key.curve not in ("Ed25519", "Ed448"):
         raise ValueError("EdDSA can only be used with EdDSA keys")
 
-    if mode != 'rfc8032':
+    if mode != "rfc8032":
         raise ValueError("Mode must be 'rfc8032'")
 
     if context is None:
-        context = b''
+        context = b""
     elif len(context) > 255:
         raise ValueError("Context for EdDSA must not be longer than 255 bytes")
 

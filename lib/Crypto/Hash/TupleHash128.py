@@ -30,9 +30,10 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from Crypto.Util._raw_api import is_buffer
+
 from . import cSHAKE128
 from .cSHAKE128 import _encode_str, _right_encode
 
@@ -53,7 +54,7 @@ class TupleHash:
         self.digest_size = digest_size
 
         self._cshake_module = cshake
-        self._cshake = cshake._new(b'', custom, b'TupleHash')
+        self._cshake = cshake._new(b"", custom, b"TupleHash")
         self._digest: Optional[bytes] = None
 
     def update(self, *data: Buffer) -> TupleHash:
@@ -69,7 +70,7 @@ class TupleHash:
 
         for item in data:
             if not is_buffer(item):
-                raise TypeError("You can only call 'update' on bytes" )
+                raise TypeError("You can only call 'update' on bytes")
             self._cshake.update(_encode_str(item))
 
         return self
@@ -96,8 +97,9 @@ class TupleHash:
 
         return "".join(["%02x" % x for x in tuple(self.digest())])
 
-    def new(self, *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None,
-            custom: Buffer = b"") -> TupleHash:
+    def new(
+        self, *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None, custom: Buffer = b""
+    ) -> TupleHash:
         """Return a new instance of a TupleHash object.
         See :func:`new`.
         """
@@ -114,8 +116,9 @@ class TupleHash:
         return factory(digest_bytes=digest_bytes, digest_bits=digest_bits, custom=custom)
 
 
-def new(*, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None,
-        custom: Buffer = b"") -> TupleHash:
+def new(
+    *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None, custom: Buffer = b""
+) -> TupleHash:
     """Create a new TupleHash128 object.
 
     Args:
@@ -142,8 +145,7 @@ def new(*, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None
             raise ValueError("'digest_bytes' must be at least 8")
     else:
         if digest_bits < 64 or digest_bits % 8:
-            raise ValueError("'digest_bytes' must be at least 64 "
-                             "in steps of 8")
+            raise ValueError("'digest_bytes' must be at least 64 in steps of 8")
         digest_bytes = digest_bits // 8
 
     return TupleHash(custom, cSHAKE128, digest_bytes)

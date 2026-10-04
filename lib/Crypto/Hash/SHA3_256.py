@@ -22,16 +22,19 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr, c_ubyte)
-
 from Crypto.Hash.keccak import _raw_keccak_lib
-
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_ubyte,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+)
 
 Buffer = Union[bytes, bytearray, memoryview]
+
 
 class SHA3_256_Hash:
     """A SHA3-256 hash object.
@@ -60,14 +63,10 @@ class SHA3_256_Hash:
         self._padding = 0x06
 
         state = VoidPointer()
-        result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(self.digest_size * 2),
-                                             c_ubyte(24))
+        result = _raw_keccak_lib.keccak_init(state.address_of(), c_size_t(self.digest_size * 2), c_ubyte(24))
         if result:
-            raise ValueError("Error %d while instantiating SHA-3/256"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_keccak_lib.keccak_destroy)
+            raise ValueError("Error %d while instantiating SHA-3/256" % result)
+        self._state = SmartPointer(state.get(), _raw_keccak_lib.keccak_destroy)
         if data:
             self.update(data)
 
@@ -81,13 +80,9 @@ class SHA3_256_Hash:
         if self._digest_done and not self._update_after_digest:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
-        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data))
-                                               )
+        result = _raw_keccak_lib.keccak_absorb(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while updating SHA-3/256"
-                             % result)
+            raise ValueError("Error %d while updating SHA-3/256" % result)
         return self
 
     def digest(self) -> bytes:
@@ -101,13 +96,11 @@ class SHA3_256_Hash:
         self._digest_done = True
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_keccak_lib.keccak_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size),
-                                               c_ubyte(self._padding))
+        result = _raw_keccak_lib.keccak_digest(
+            self._state.get(), bfr, c_size_t(self.digest_size), c_ubyte(self._padding)
+        )
         if result:
-            raise ValueError("Error %d while instantiating SHA-3/256"
-                             % result)
+            raise ValueError("Error %d while instantiating SHA-3/256" % result)
 
         self._digest_value = get_raw_buffer(bfr)
         return self._digest_value
@@ -134,8 +127,7 @@ class SHA3_256_Hash:
         """
 
         clone = self.new()
-        result = _raw_keccak_lib.keccak_copy(self._state.get(),
-                                             clone._state.get())
+        result = _raw_keccak_lib.keccak_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHA3-256" % result)
         return clone
@@ -161,6 +153,7 @@ def new(data: Optional[Buffer] = None, *, update_after_digest: bool = False) -> 
     """
 
     return SHA3_256_Hash(data, update_after_digest)
+
 
 # The size of the resulting hash in bytes.
 digest_size: int = SHA3_256_Hash.digest_size

@@ -34,20 +34,19 @@ Counter with CBC-MAC (CCM) mode.
 
 from __future__ import annotations
 
-from typing import Any, Optional, TYPE_CHECKING, Tuple, Union, overload
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, overload
 
-__all__ = ['CcmMode']
+__all__ = ["CcmMode"]
 
 import struct
 from binascii import unhexlify
-from Crypto.Util._bytes import copy_bytes
-from Crypto.Util._raw_api import is_writeable_buffer
-
-from Crypto.Util.strxor import strxor
-from Crypto.Util.number import long_to_bytes
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
+from Crypto.Util._bytes import copy_bytes
+from Crypto.Util._raw_api import is_writeable_buffer
+from Crypto.Util.number import long_to_bytes
+from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -56,7 +55,8 @@ Buffer = Union[bytes, bytearray, memoryview]
 
 
 def enum(**enums):
-    return type('Enum', (), enums)
+    return type("Enum", (), enums)
+
 
 MacStatus = enum(NOT_STARTED=0, PROCESSING_AUTH_DATA=1, PROCESSING_PLAINTEXT=2)
 
@@ -124,8 +124,16 @@ class CcmMode:
     :undocumented: __init__
     """
 
-    def __init__(self, factory: ModuleType, key: Buffer, nonce: Buffer, mac_len: int,
-                 msg_len: Optional[int], assoc_len: Optional[int], cipher_params: dict) -> None:
+    def __init__(
+        self,
+        factory: ModuleType,
+        key: Buffer,
+        nonce: Buffer,
+        mac_len: int,
+        msg_len: Optional[int],
+        assoc_len: Optional[int],
+        cipher_params: dict,
+    ) -> None:
 
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
@@ -143,18 +151,15 @@ class CcmMode:
         self._mac_tag: Optional[bytes] = None  # Cache for MAC tag
 
         if self.block_size != 16:
-            raise ValueError("CCM mode is only available for ciphers"
-                             " that operate on 128 bits blocks")
+            raise ValueError("CCM mode is only available for ciphers that operate on 128 bits blocks")
 
         # MAC tag length (Tlen)
         if mac_len not in (4, 6, 8, 10, 12, 14, 16):
-            raise ValueError("Parameter 'mac_len' must be even"
-                             " and in the range 4..16 (not %d)" % mac_len)
+            raise ValueError("Parameter 'mac_len' must be even and in the range 4..16 (not %d)" % mac_len)
 
         # Nonce value
         if not (7 <= len(nonce) <= 13):
-            raise ValueError("Length of parameter 'nonce' must be"
-                             " in the range 7..13 bytes")
+            raise ValueError("Length of parameter 'nonce' must be in the range 7..13 bytes")
 
         # Message length (if known already)
         q = 15 - len(nonce)  # length of Q, the encoded message length
@@ -163,16 +168,12 @@ class CcmMode:
 
         # Create MAC object (the tag will be the last block
         # bytes worth of ciphertext)
-        self._mac = self._factory.new(key,
-                                      factory.MODE_CBC,
-                                      iv=b'\x00' * 16,
-                                      **cipher_params)
+        self._mac = self._factory.new(key, factory.MODE_CBC, iv=b"\x00" * 16, **cipher_params)
         self._mac_status = MacStatus.NOT_STARTED
         self._t = None
 
         # Allowed transitions after initialization
-        self._next = ["update", "encrypt", "decrypt",
-                      "digest", "verify"]
+        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
 
         # Cumulative lengths
         self._cumul_assoc_len = 0
@@ -184,13 +185,12 @@ class CcmMode:
         self._cache: Any = []
 
         # Start CTR cipher, by formatting the counter (A.3)
-        self._cipher = self._factory.new(key,
-                                         self._factory.MODE_CTR,
-                                         nonce=struct.pack("B", q - 1) + self.nonce,
-                                         **cipher_params)
+        self._cipher = self._factory.new(
+            key, self._factory.MODE_CTR, nonce=struct.pack("B", q - 1) + self.nonce, **cipher_params
+        )
 
         # S_0, step 6 in 6.1 for j=0
-        self._s_0 = self._cipher.encrypt(b'\x00' * 16)
+        self._s_0 = self._cipher.encrypt(b"\x00" * 16)
 
         # Try to start the MAC
         if None not in (assoc_len, msg_len):
@@ -198,9 +198,9 @@ class CcmMode:
 
     def _start_mac(self):
 
-        assert(self._mac_status == MacStatus.NOT_STARTED)
-        assert(None not in (self._assoc_len, self._msg_len))
-        assert(isinstance(self._cache, list))
+        assert self._mac_status == MacStatus.NOT_STARTED
+        assert None not in (self._assoc_len, self._msg_len)
+        assert isinstance(self._cache, list)
 
         # Formatting control information and nonce (A.2.1)
         q = 15 - len(self.nonce)  # length of Q, the encoded message length (2..8)
@@ -211,15 +211,15 @@ class CcmMode:
 
         # Formatting associated data (A.2.2)
         # Encoded 'a' is concatenated with the associated data 'A'
-        assoc_len_encoded = b''
+        assoc_len_encoded = b""
         if self._assoc_len > 0:
-            if self._assoc_len < (2 ** 16 - 2 ** 8):
+            if self._assoc_len < (2**16 - 2**8):
                 enc_size = 2
-            elif self._assoc_len < (2 ** 32):
-                assoc_len_encoded = b'\xFF\xFE'
+            elif self._assoc_len < (2**32):
+                assoc_len_encoded = b"\xff\xfe"
                 enc_size = 4
             else:
-                assoc_len_encoded = b'\xFF\xFF'
+                assoc_len_encoded = b"\xff\xff"
                 enc_size = 8
             assoc_len_encoded += long_to_bytes(self._assoc_len, enc_size)
 
@@ -235,15 +235,15 @@ class CcmMode:
 
     def _pad_cache_and_update(self):
 
-        assert(self._mac_status != MacStatus.NOT_STARTED)
-        assert(len(self._cache) < self.block_size)
+        assert self._mac_status != MacStatus.NOT_STARTED
+        assert len(self._cache) < self.block_size
 
         # Associated data is concatenated with the least number
         # of zero bytes (possibly none) to reach alignment to
         # the 16 byte boundary (A.2.3)
         len_cache = len(self._cache)
         if len_cache > 0:
-            self._update(b'\x00' * (self.block_size - len_cache))
+            self._update(b"\x00" * (self.block_size - len_cache))
 
     def update(self, assoc_data: Buffer) -> CcmMode:
         """Protect associated data
@@ -269,15 +269,12 @@ class CcmMode:
         """
 
         if "update" not in self._next:
-            raise TypeError("update() can only be called"
-                            " immediately after initialization")
+            raise TypeError("update() can only be called immediately after initialization")
 
-        self._next = ["update", "encrypt", "decrypt",
-                      "digest", "verify"]
+        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
 
         self._cumul_assoc_len += len(assoc_data)
-        if self._assoc_len is not None and \
-           self._cumul_assoc_len > self._assoc_len:
+        if self._assoc_len is not None and self._cumul_assoc_len > self._assoc_len:
             raise ValueError("Associated data is too long")
 
         self._update(assoc_data)
@@ -285,7 +282,7 @@ class CcmMode:
 
     def _update(self, assoc_data_pt=b""):
         """Update the MAC with associated data or plaintext
-           (without FSM checks)"""
+        (without FSM checks)"""
 
         # If MAC has not started yet, we just park the data into a list.
         # If the data is mutable, we create a copy and store that instead.
@@ -295,11 +292,10 @@ class CcmMode:
             self._cache.append(assoc_data_pt)
             return
 
-        assert(len(self._cache) < self.block_size)
+        assert len(self._cache) < self.block_size
 
         if len(self._cache) > 0:
-            filler = min(self.block_size - len(self._cache),
-                         len(assoc_data_pt))
+            filler = min(self.block_size - len(self._cache), len(assoc_data_pt))
             self._cache += copy_bytes(None, filler, assoc_data_pt)
             assoc_data_pt = copy_bytes(filler, None, assoc_data_pt)
 
@@ -322,11 +318,13 @@ class CcmMode:
     def encrypt(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
 
     @overload
-    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
-                Optional[bytes]: ...
+    def encrypt(
+        self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]: ...
 
-    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
-                Optional[bytes]:
+    def encrypt(
+        self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]:
         """Encrypt data with the key set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -364,13 +362,12 @@ class CcmMode:
         """
 
         if "encrypt" not in self._next:
-            raise TypeError("encrypt() can only be called after"
-                            " initialization or an update()")
+            raise TypeError("encrypt() can only be called after initialization or an update()")
         self._next = ["encrypt", "digest"]
 
         # No more associated data allowed from now
         if self._assoc_len is None:
-            assert(isinstance(self._cache, list))
+            assert isinstance(self._cache, list)
             self._assoc_len = sum([len(x) for x in self._cache])
             if self._msg_len is not None:
                 self._start_mac()
@@ -391,8 +388,10 @@ class CcmMode:
 
         self._cumul_msg_len += len(plaintext)
         if self._cumul_msg_len > self._msg_len:
-            msg = "Message longer than declared for (%u bytes vs %u bytes" % \
-                  (self._cumul_msg_len, self._msg_len)
+            msg = "Message longer than declared for (%u bytes vs %u bytes" % (
+                self._cumul_msg_len,
+                self._msg_len,
+            )
             raise CCMMessageTooLongError(msg)
 
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
@@ -412,11 +411,13 @@ class CcmMode:
     def decrypt(self, ciphertext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
 
     @overload
-    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
-                Optional[bytes]: ...
+    def decrypt(
+        self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]: ...
 
-    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
-                Optional[bytes]:
+    def decrypt(
+        self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]:
         """Decrypt data with the key set at initialization.
 
         A cipher object is stateful: once you have decrypted a message
@@ -454,13 +455,12 @@ class CcmMode:
         """
 
         if "decrypt" not in self._next:
-            raise TypeError("decrypt() can only be called"
-                            " after initialization or an update()")
+            raise TypeError("decrypt() can only be called after initialization or an update()")
         self._next = ["decrypt", "verify"]
 
         # No more associated data allowed from now
         if self._assoc_len is None:
-            assert(isinstance(self._cache, list))
+            assert isinstance(self._cache, list)
             self._assoc_len = sum([len(x) for x in self._cache])
             if self._msg_len is not None:
                 self._start_mac()
@@ -481,8 +481,10 @@ class CcmMode:
 
         self._cumul_msg_len += len(ciphertext)
         if self._cumul_msg_len > self._msg_len:
-            msg = "Message longer than declared for (%u bytes vs %u bytes" % \
-                  (self._cumul_msg_len, self._msg_len)
+            msg = "Message longer than declared for (%u bytes vs %u bytes" % (
+                self._cumul_msg_len,
+                self._msg_len,
+            )
             raise CCMMessageTooLongError(msg)
 
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
@@ -512,8 +514,7 @@ class CcmMode:
         """
 
         if "digest" not in self._next:
-            raise TypeError("digest() cannot be called when decrypting"
-                            " or validating a message")
+            raise TypeError("digest() cannot be called when decrypting or validating a message")
         self._next = ["digest"]
         return self._digest()
 
@@ -522,7 +523,7 @@ class CcmMode:
             return self._mac_tag
 
         if self._assoc_len is None:
-            assert(isinstance(self._cache, list))
+            assert isinstance(self._cache, list)
             self._assoc_len = sum([len(x) for x in self._cache])
             if self._msg_len is not None:
                 self._start_mac()
@@ -543,7 +544,7 @@ class CcmMode:
         self._pad_cache_and_update()
 
         # Step 8 in 6.1 (T xor MSB_Tlen(S_0))
-        self._mac_tag = strxor(self._t, self._s_0)[:self._mac_len]
+        self._mac_tag = strxor(self._t, self._s_0)[: self._mac_len]
 
         return self._mac_tag
 
@@ -574,8 +575,7 @@ class CcmMode:
         """
 
         if "verify" not in self._next:
-            raise TypeError("verify() cannot be called"
-                            " when encrypting a message")
+            raise TypeError("verify() cannot be called when encrypting a message")
         self._next = ["verify"]
 
         self._digest()
@@ -606,12 +606,13 @@ class CcmMode:
     def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]: ...
 
     @overload
-    def encrypt_and_digest(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> \
-                           Tuple[None, bytes]: ...
+    def encrypt_and_digest(
+        self, plaintext: Buffer, output: Union[bytearray, memoryview]
+    ) -> Tuple[None, bytes]: ...
 
-    def encrypt_and_digest(self, plaintext: Buffer,
-                           output: Optional[Union[bytearray, memoryview]] = None) -> \
-                           Tuple[Optional[bytes], bytes]:
+    def encrypt_and_digest(
+        self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
@@ -637,11 +638,16 @@ class CcmMode:
     def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer) -> bytes: ...
 
     @overload
-    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer,
-                           output: Union[bytearray, memoryview]) -> None: ...
+    def decrypt_and_verify(
+        self, ciphertext: Buffer, received_mac_tag: Buffer, output: Union[bytearray, memoryview]
+    ) -> None: ...
 
-    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer,
-                           output: Optional[Union[bytearray, memoryview]] = None) -> Optional[bytes]:
+    def decrypt_and_verify(
+        self,
+        ciphertext: Buffer,
+        received_mac_tag: Buffer,
+        output: Optional[Union[bytearray, memoryview]] = None,
+    ) -> Optional[bytes]:
         """Perform decrypt() and verify() in one step.
 
         :Parameters:
@@ -709,9 +715,8 @@ def _create_ccm_cipher(factory, **kwargs):
     if nonce is None:
         nonce = get_random_bytes(11)
     mac_len = kwargs.pop("mac_len", factory.block_size)
-    msg_len = kwargs.pop("msg_len", None)      # p
+    msg_len = kwargs.pop("msg_len", None)  # p
     assoc_len = kwargs.pop("assoc_len", None)  # a
     cipher_params = dict(kwargs)
 
-    return CcmMode(factory, key, nonce, mac_len, msg_len,
-                   assoc_len, cipher_params)
+    return CcmMode(factory, key, nonce, mac_len, msg_len, assoc_len, cipher_params)

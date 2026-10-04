@@ -25,9 +25,10 @@ from __future__ import annotations
 
 from typing import Any, Callable, MutableSequence, Optional, Sequence, TypeVar
 
-__all__ = ['StrongRandom', 'getrandbits', 'randrange', 'randint', 'choice', 'shuffle', 'sample']
+__all__ = ["StrongRandom", "getrandbits", "randrange", "randint", "choice", "shuffle", "sample"]
 
 from Crypto import Random
+
 
 class StrongRandom:
     def __init__(self, rng: Optional[Any] = None, randfunc: Optional[Callable] = None) -> None:
@@ -62,8 +63,7 @@ class StrongRandom:
             step = 1
         else:
             raise TypeError("randrange expected at most 3 arguments, got %d" % (len(args),))
-        if (not isinstance(start, int) or not isinstance(stop, int) or not
-                isinstance(step, int)):
+        if not isinstance(start, int) or not isinstance(stop, int) or not isinstance(step, int):
             raise TypeError("randrange requires integer arguments")
         if step == 0:
             raise ValueError("randrange step argument must not be zero")
@@ -85,7 +85,7 @@ class StrongRandom:
         """Return a random integer N such that a <= N <= b."""
         if not isinstance(a, int) or not isinstance(b, int):
             raise TypeError("randint requires integer arguments")
-        N = self.randrange(a, b+1)
+        N = self.randrange(a, b + 1)
         assert a <= N <= b
         return N
 
@@ -104,9 +104,9 @@ class StrongRandom:
         # See http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
         # Working backwards from the end of the array, we choose a random item
         # from the remaining items until all items have been chosen.
-        for i in range(len(x)-1, 0, -1):   # iterate from len(x)-1 downto 1
-            j = self.randrange(0, i+1)      # choose random j such that 0 <= j <= i
-            x[i], x[j] = x[j], x[i]         # exchange x[i] and x[j]
+        for i in range(len(x) - 1, 0, -1):  # iterate from len(x)-1 downto 1
+            j = self.randrange(0, i + 1)  # choose random j such that 0 <= j <= i
+            x[i], x[j] = x[j], x[i]  # exchange x[i] and x[j]
 
     def sample(self, population: Sequence, k: int) -> list:
         """Return a k-length list of unique elements chosen from the population sequence."""
@@ -117,13 +117,14 @@ class StrongRandom:
 
         retval = []
         selected = {}  # we emulate a set using a dict here
-        for i in range(k):
+        for _i in range(k):
             r = None
             while r is None or r in selected:
                 r = self.randrange(num_choices)
             retval.append(population[r])
             selected[r] = 1
         return retval
+
 
 _r = StrongRandom()
 getrandbits = _r.getrandbits
@@ -134,8 +135,8 @@ shuffle = _r.shuffle
 sample = _r.sample
 
 # These are at the bottom to avoid problems with recursive imports
-from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes, size
+from Crypto.Util.number import bytes_to_long, ceil_div, size  # noqa: E402
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

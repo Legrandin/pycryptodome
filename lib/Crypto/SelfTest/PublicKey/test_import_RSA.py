@@ -19,21 +19,22 @@
 # SOFTWARE.
 # ===================================================================
 
+import errno
 import os
 import re
-import errno
-import warnings
 import unittest
+import warnings
 from unittest import SkipTest
 
+from Crypto.IO import PEM
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
-from Crypto.IO import PEM
-from Crypto.Util.number import inverse
 from Crypto.Util import asn1
+from Crypto.Util.number import inverse
 
 try:
     import pycryptodome_test_vectors  # type: ignore
+
     test_vectors_available = True
 except ImportError:
     test_vectors_available = False
@@ -44,9 +45,7 @@ def load_file(file_name, mode="rb"):
 
     try:
         if not test_vectors_available:
-            raise FileNotFoundError(errno.ENOENT,
-                                    os.strerror(errno.ENOENT),
-                                    file_name)
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file_name)
 
         dir_comps = ("PublicKey", "RSA")
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
@@ -55,9 +54,7 @@ def load_file(file_name, mode="rb"):
             results = file_in.read()
 
     except FileNotFoundError:
-        warnings.warn("Skipping tests for RSA based on %s" % file_name,
-                      UserWarning,
-                      stacklevel=2)
+        warnings.warn("Skipping tests for RSA based on %s" % file_name, UserWarning, stacklevel=2)
 
     if results is None:
         raise SkipTest("Missing %s" % file_name)
@@ -65,18 +62,19 @@ def load_file(file_name, mode="rb"):
     return results
 
 
-def der2pem(der, text='PUBLIC'):
+def der2pem(der, text="PUBLIC"):
     import binascii
-    chunks = [binascii.b2a_base64(der[i:i+48]) for i in range(0, len(der), 48)]
-    pem = ('-----BEGIN %s KEY-----\n' % text).encode("latin-1")
-    pem += b''.join(chunks)
-    pem += ('-----END %s KEY-----' % text).encode("latin-1")
+
+    chunks = [binascii.b2a_base64(der[i : i + 48]) for i in range(0, len(der), 48)]
+    pem = ("-----BEGIN %s KEY-----\n" % text).encode("latin-1")
+    pem += b"".join(chunks)
+    pem += ("-----END %s KEY-----" % text).encode("latin-1")
     return pem
 
 
 class ImportKeyTests(unittest.TestCase):
     # 512-bit RSA key generated with openssl
-    rsaKeyPEM = '''-----BEGIN RSA PRIVATE KEY-----
+    rsaKeyPEM = """-----BEGIN RSA PRIVATE KEY-----
 MIIBOwIBAAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+TLr7UkvEtFrRhDDKMtuII
 q19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQJACUSDEp8RTe32ftq8IwG8
 Wojl5mAd1wFiIOrZ/Uv8b963WJOJiuQcVN29vxU5+My9GPZ7RA3hrDBEAoHUDPrI
@@ -84,10 +82,10 @@ OQIhAPIPLz4dphiD9imAkivY31Rc5AfHJiQRA7XixTcjEkojAiEAyh/pJHks/Mlr
 +rdPNEpotBjfV4M4BkgGAA/ipcmaAjcCIQCHvhwwKVBLzzTscT2HeUdEeBMoiXXK
 JACAr3sJQJGxIQIgarRp+m1WSKV1MciwMaTOnbU7wxFs9DP1pva76lYBzgUCIQC9
 n0CnZCJ6IZYqSt0H5N7+Q+2Ro64nuwV/OSQfM6sBwQ==
------END RSA PRIVATE KEY-----'''
+-----END RSA PRIVATE KEY-----"""
 
     # As above, but this is actually an unencrypted PKCS#8 key
-    rsaKeyPEM8 = '''-----BEGIN PRIVATE KEY-----
+    rsaKeyPEM8 = """-----BEGIN PRIVATE KEY-----
 MIIBVQIBADANBgkqhkiG9w0BAQEFAASCAT8wggE7AgEAAkEAvx4nkAqgiyNRGlwS
 ga5tkzEsPv6RP5MuvtSS8S0WtGEMMoy24girX0WsvilQgzKY8xIsGfeEkt7fQPDj
 wZAzhQIDAQABAkAJRIMSnxFN7fZ+2rwjAbxaiOXmYB3XAWIg6tn9S/xv3rdYk4mK
@@ -96,14 +94,15 @@ B8cmJBEDteLFNyMSSiMCIQDKH+kkeSz8yWv6t080Smi0GN9XgzgGSAYAD+KlyZoC
 NwIhAIe+HDApUEvPNOxxPYd5R0R4EyiJdcokAICvewlAkbEhAiBqtGn6bVZIpXUx
 yLAxpM6dtTvDEWz0M/Wm9rvqVgHOBQIhAL2fQKdkInohlipK3Qfk3v5D7ZGjrie7
 BX85JB8zqwHB
------END PRIVATE KEY-----'''
+-----END PRIVATE KEY-----"""
 
     # The same RSA private key as in rsaKeyPEM, but now encrypted
     rsaKeyEncryptedPEM = (
-
         # PEM encryption
         # With DES and passphrase 'test'
-        ('test', '''-----BEGIN RSA PRIVATE KEY-----
+        (
+            "test",
+            """-----BEGIN RSA PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: DES-CBC,AF8F9A40BD2FA2FC
 
@@ -114,10 +113,12 @@ BCNRMdcexozWtAFNNqSzfW58MJL2OdMi21ED184EFytIc1BlB+FZiGZduwKGuaKy
 9bMbdb/1PSvsSzPsqW7KSSrTw6MgJAFJg6lzIYvR5F4poTVBxwBX3+EyEmShiaNY
 IRX3TgQI0IjrVuLmvlZKbGWP18FXj7I7k9tSsNOOzllTTdq3ny5vgM3A+ynfAaxp
 dysKznQ6P+IoqML1WxAID4aGRMWka+uArOJ148Rbj9s=
------END RSA PRIVATE KEY-----'''),
-
+-----END RSA PRIVATE KEY-----""",
+        ),
         # PKCS8 encryption
-        ('winter', '''-----BEGIN ENCRYPTED PRIVATE KEY-----
+        (
+            "winter",
+            """-----BEGIN ENCRYPTED PRIVATE KEY-----
 MIIBpjBABgkqhkiG9w0BBQ0wMzAbBgkqhkiG9w0BBQwwDgQIeZIsbW3O+JcCAggA
 MBQGCCqGSIb3DQMHBAgSM2p0D8FilgSCAWBhFyP2tiGKVpGj3mO8qIBzinU60ApR
 3unvP+N6j7LVgnV2lFGaXbJ6a1PbQXe+2D6DUyBLo8EMXrKKVLqOMGkFMHc0UaV6
@@ -127,21 +128,21 @@ NjJ7f8ULtp7xvR9O3Al/yJ4Wv3i4VxF1f3MCXzhlUD4I0ONlr0kJWgeQ80q/cWhw
 ntvgJwnCn2XR1h6LA8Wp+0ghDTsL2NhJpWd78zClGhyU4r3hqu1XDjoXa7YCXCix
 jCV15+ViDJzlNCwg+W6lRg18sSLkCT7alviIE0U5tHc6UPbbHwT5QqAxAABaP+nZ
 CGqJGyiwBzrKebjgSm/KRd4C91XqcsysyH2kKPfT51MLAoD4xelOURBP
------END ENCRYPTED PRIVATE KEY-----'''
+-----END ENCRYPTED PRIVATE KEY-----""",
         ),
     )
 
-    rsaPublicKeyPEM = '''-----BEGIN PUBLIC KEY-----
+    rsaPublicKeyPEM = """-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAL8eJ5AKoIsjURpcEoGubZMxLD7+kT+T
 Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
------END PUBLIC KEY-----'''
+-----END PUBLIC KEY-----"""
 
     # Obtained using 'ssh-keygen -i -m PKCS8 -f rsaPublicKeyPEM'
-    rsaPublicKeyOpenSSH = b'''ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n'''
+    rsaPublicKeyOpenSSH = b"""ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQC/HieQCqCLI1EaXBKBrm2TMSw+/pE/ky6+1JLxLRa0YQwyjLbiCKtfRay+KVCDMpjzEiwZ94SS3t9A8OPBkDOF comment\n"""
 
     # The private key, in PKCS#1 format encoded with DER
     rsaKeyDER = a2b_hex(
-    '''3082013b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe
+        """3082013b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe
     913f932ebed492f12d16b4610c328cb6e208ab5f45acbe2950833298f312
     2c19f78492dedf40f0e3c190338502030100010240094483129f114dedf6
     7edabc2301bc5a88e5e6601dd7016220ead9fd4bfc6fdeb75893898ae41c
@@ -152,11 +153,12 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     240080af7b094091b12102206ab469fa6d5648a57531c8b031a4ce9db53b
     c3116cf433f5a6f6bbea5601ce05022100bd9f40a764227a21962a4add07
     e4defe43ed91a3ae27bb057f39241f33ab01c1
-    '''.replace(" ",""))
+    """.replace(" ", "")
+    )
 
     # The private key, in unencrypted PKCS#8 format encoded with DER
     rsaKeyDER8 = a2b_hex(
-    '''30820155020100300d06092a864886f70d01010105000482013f3082013
+        """30820155020100300d06092a864886f70d01010105000482013f3082013
     b020100024100bf1e27900aa08b23511a5c1281ae6d93312c3efe913f932
     ebed492f12d16b4610c328cb6e208ab5f45acbe2950833298f3122c19f78
     492dedf40f0e3c190338502030100010240094483129f114dedf67edabc2
@@ -168,25 +170,52 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     f7b094091b12102206ab469fa6d5648a57531c8b031a4ce9db53bc3116cf
     433f5a6f6bbea5601ce05022100bd9f40a764227a21962a4add07e4defe4
     3ed91a3ae27bb057f39241f33ab01c1
-    '''.replace(" ",""))
+    """.replace(" ", "")
+    )
 
     rsaPublicKeyDER = a2b_hex(
-    '''305c300d06092a864886f70d0101010500034b003048024100bf1e27900a
+        """305c300d06092a864886f70d0101010500034b003048024100bf1e27900a
     a08b23511a5c1281ae6d93312c3efe913f932ebed492f12d16b4610c328c
     b6e208ab5f45acbe2950833298f3122c19f78492dedf40f0e3c190338502
     03010001
-    '''.replace(" ",""))
+    """.replace(" ", "")
+    )
 
-    n = int('BF 1E 27 90 0A A0 8B 23 51 1A 5C 12 81 AE 6D 93 31 2C 3E FE 91 3F 93 2E BE D4 92 F1 2D 16 B4 61 0C 32 8C B6 E2 08 AB 5F 45 AC BE 29 50 83 32 98 F3 12 2C 19 F7 84 92 DE DF 40 F0 E3 C1 90 33 85'.replace(" ",""),16)
+    n = int(
+        "BF 1E 27 90 0A A0 8B 23 51 1A 5C 12 81 AE 6D 93 31 2C 3E FE 91 3F 93 2E BE D4 92 F1 2D 16 B4 61 0C 32 8C B6 E2 08 AB 5F 45 AC BE 29 50 83 32 98 F3 12 2C 19 F7 84 92 DE DF 40 F0 E3 C1 90 33 85".replace(
+            " ", ""
+        ),
+        16,
+    )
     e = 65537
-    d = int('09 44 83 12 9F 11 4D ED F6 7E DA BC 23 01 BC 5A 88 E5 E6 60 1D D7 01 62 20 EA D9 FD 4B FC 6F DE B7 58 93 89 8A E4 1C 54 DD BD BF 15 39 F8 CC BD 18 F6 7B 44 0D E1 AC 30 44 02 81 D4 0C FA C8 39'.replace(" ",""),16)
-    p = int('00 F2 0F 2F 3E 1D A6 18 83 F6 29 80 92 2B D8 DF 54 5C E4 07 C7 26 24 11 03 B5 E2 C5 37 23 12 4A 23'.replace(" ",""),16)
-    q = int('00 CA 1F E9 24 79 2C FC C9 6B FA B7 4F 34 4A 68 B4 18 DF 57 83 38 06 48 06 00 0F E2 A5 C9 9A 02 37'.replace(" ",""),16)
+    d = int(
+        "09 44 83 12 9F 11 4D ED F6 7E DA BC 23 01 BC 5A 88 E5 E6 60 1D D7 01 62 20 EA D9 FD 4B FC 6F DE B7 58 93 89 8A E4 1C 54 DD BD BF 15 39 F8 CC BD 18 F6 7B 44 0D E1 AC 30 44 02 81 D4 0C FA C8 39".replace(
+            " ", ""
+        ),
+        16,
+    )
+    p = int(
+        "00 F2 0F 2F 3E 1D A6 18 83 F6 29 80 92 2B D8 DF 54 5C E4 07 C7 26 24 11 03 B5 E2 C5 37 23 12 4A 23".replace(
+            " ", ""
+        ),
+        16,
+    )
+    q = int(
+        "00 CA 1F E9 24 79 2C FC C9 6B FA B7 4F 34 4A 68 B4 18 DF 57 83 38 06 48 06 00 0F E2 A5 C9 9A 02 37".replace(
+            " ", ""
+        ),
+        16,
+    )
 
     # This is q^{-1} mod p). fastmath and slowmath use pInv (p^{-1}
     # mod q) instead!
-    qInv = int('00 BD 9F 40 A7 64 22 7A 21 96 2A 4A DD 07 E4 DE FE 43 ED 91 A3 AE 27 BB 05 7F 39 24 1F 33 AB 01 C1'.replace(" ",""),16)
-    pInv = inverse(p,q)
+    qInv = int(
+        "00 BD 9F 40 A7 64 22 7A 21 96 2A 4A DD 07 E4 DE FE 43 ED 91 A3 AE 27 BB 05 7F 39 24 1F 33 AB 01 C1".replace(
+            " ", ""
+        ),
+        16,
+    )
+    pInv = inverse(p, q)
 
     def testImportKey1(self):
         """Verify import of RSAPrivateKey DER SEQUENCE"""
@@ -208,7 +237,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testImportKey3unicode(self):
         """Verify import of RSAPrivateKey DER SEQUENCE, encoded with PEM as unicode"""
         key = RSA.importKey(self.rsaKeyPEM)
-        self.assertEqual(key.has_private(),True) # assert_
+        self.assertEqual(key.has_private(), True)  # assert_
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
         self.assertEqual(key.d, self.d)
@@ -218,7 +247,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testImportKey3bytes(self):
         """Verify import of RSAPrivateKey DER SEQUENCE, encoded with PEM as byte string"""
         key = RSA.importKey(self.rsaKeyPEM.encode("latin-1"))
-        self.assertEqual(key.has_private(),True) # assert_
+        self.assertEqual(key.has_private(), True)  # assert_
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
         self.assertEqual(key.d, self.d)
@@ -228,14 +257,14 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
     def testImportKey4unicode(self):
         """Verify import of RSAPrivateKey DER SEQUENCE, encoded with PEM as unicode"""
         key = RSA.importKey(self.rsaPublicKeyPEM)
-        self.assertEqual(key.has_private(),False) # assertFalse
+        self.assertEqual(key.has_private(), False)  # assertFalse
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
     def testImportKey4bytes(self):
         """Verify import of SubjectPublicKeyInfo DER SEQUENCE, encoded with PEM as byte string"""
         key = RSA.importKey(self.rsaPublicKeyPEM.encode("latin-1"))
-        self.assertEqual(key.has_private(),False) # assertFalse
+        self.assertEqual(key.has_private(), False)  # assertFalse
         self.assertEqual(key.n, self.n)
         self.assertEqual(key.e, self.e)
 
@@ -361,10 +390,10 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#1, old PEM encryption
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key('PEM', 'test')
-        self.assertTrue(outkey.decode("latin-1").find('4,ENCRYPTED')!=-1)
-        self.assertTrue(outkey.decode("latin-1").find('BEGIN RSA PRIVATE KEY')!=-1)
-        inkey = RSA.importKey(outkey, 'test')
+        outkey = key.export_key("PEM", "test")
+        self.assertTrue(outkey.decode("latin-1").find("4,ENCRYPTED") != -1)
+        self.assertTrue(outkey.decode("latin-1").find("BEGIN RSA PRIVATE KEY") != -1)
+        inkey = RSA.importKey(outkey, "test")
         self.assertEqual(key.n, inkey.n)
         self.assertEqual(key.e, inkey.e)
         self.assertEqual(key.d, inkey.d)
@@ -373,10 +402,10 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#1, old PEM encryption
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key('PEM', 'test', pkcs=1)
-        self.assertTrue(outkey.decode("latin-1").find('4,ENCRYPTED')!=-1)
-        self.assertTrue(outkey.decode("latin-1").find('BEGIN RSA PRIVATE KEY')!=-1)
-        inkey = RSA.importKey(outkey, 'test')
+        outkey = key.export_key("PEM", "test", pkcs=1)
+        self.assertTrue(outkey.decode("latin-1").find("4,ENCRYPTED") != -1)
+        self.assertTrue(outkey.decode("latin-1").find("BEGIN RSA PRIVATE KEY") != -1)
+        inkey = RSA.importKey(outkey, "test")
         self.assertEqual(key.n, inkey.n)
         self.assertEqual(key.e, inkey.e)
         self.assertEqual(key.d, inkey.d)
@@ -385,10 +414,10 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#8, old PEM encryption
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key('PEM', 'test', pkcs=8)
-        self.assertTrue(outkey.decode("latin-1").find('4,ENCRYPTED')!=-1)
-        self.assertTrue(outkey.decode("latin-1").find('BEGIN PRIVATE KEY')!=-1)
-        inkey = RSA.importKey(outkey, 'test')
+        outkey = key.export_key("PEM", "test", pkcs=8)
+        self.assertTrue(outkey.decode("latin-1").find("4,ENCRYPTED") != -1)
+        self.assertTrue(outkey.decode("latin-1").find("BEGIN PRIVATE KEY") != -1)
+        inkey = RSA.importKey(outkey, "test")
         self.assertEqual(key.n, inkey.n)
         self.assertEqual(key.e, inkey.e)
         self.assertEqual(key.d, inkey.d)
@@ -397,11 +426,10 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#8, PKCS#8 encryption
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key('PEM', 'test', pkcs=8,
-                protection='PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC')
-        self.assertTrue(outkey.decode("latin-1").find('4,ENCRYPTED')==-1)
-        self.assertTrue(outkey.decode("latin-1").find('BEGIN ENCRYPTED PRIVATE KEY')!=-1)
-        inkey = RSA.importKey(outkey, 'test')
+        outkey = key.export_key("PEM", "test", pkcs=8, protection="PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC")
+        self.assertTrue(outkey.decode("latin-1").find("4,ENCRYPTED") == -1)
+        self.assertTrue(outkey.decode("latin-1").find("BEGIN ENCRYPTED PRIVATE KEY") != -1)
+        inkey = RSA.importKey(outkey, "test")
         self.assertEqual(key.n, inkey.n)
         self.assertEqual(key.e, inkey.e)
         self.assertEqual(key.d, inkey.d)
@@ -410,8 +438,8 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Export and re-import the encrypted key. It must match.
         # DER envelope, PKCS#8, PKCS#8 encryption
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key('DER', 'test', pkcs=8)
-        inkey = RSA.importKey(outkey, 'test')
+        outkey = key.export_key("DER", "test", pkcs=8)
+        inkey = RSA.importKey(outkey, "test")
         self.assertEqual(key.n, inkey.n)
         self.assertEqual(key.e, inkey.e)
         self.assertEqual(key.d, inkey.d)
@@ -420,18 +448,21 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Verify that that error an condition is detected when trying to
         # use a password with DER encoding and PKCS#1.
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        self.assertRaises(ValueError, key.export_key, 'DER', 'test', 1)
+        self.assertRaises(ValueError, key.export_key, "DER", "test", 1)
 
     def testExportKey16(self):
         # Export and re-import the encrypted key. It must match.
         # PEM envelope, PKCS#8, PKCS#8 encryption with parameters
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key('PEM', 'test', pkcs=8,
-                                protection='PBKDF2WithHMAC-SHA512AndAES256-CBC',
-                                prot_params={'iteration_count':123}
-                                )
-        self.assertTrue(outkey.decode("latin-1").find('4,ENCRYPTED')==-1)
-        self.assertTrue(outkey.decode("latin-1").find('BEGIN ENCRYPTED PRIVATE KEY')!=-1)
+        outkey = key.export_key(
+            "PEM",
+            "test",
+            pkcs=8,
+            protection="PBKDF2WithHMAC-SHA512AndAES256-CBC",
+            prot_params={"iteration_count": 123},
+        )
+        self.assertTrue(outkey.decode("latin-1").find("4,ENCRYPTED") == -1)
+        self.assertTrue(outkey.decode("latin-1").find("BEGIN ENCRYPTED PRIVATE KEY") != -1)
 
         # Verify the iteration count
         der = PEM.decode(outkey.decode("latin-1"))[0]
@@ -442,7 +473,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         seq5 = asn1.DerSequence().decode(seq4[1])
         self.assertEqual(seq5[1], 123)
 
-        inkey = RSA.importKey(outkey, 'test')
+        inkey = RSA.importKey(outkey, "test")
         self.assertEqual(key.n, inkey.n)
         self.assertEqual(key.e, inkey.e)
         self.assertEqual(key.d, inkey.d)
@@ -456,8 +487,8 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 
     def test_import_key_ba_mv(self):
         """Verify that import_key can be used on bytearrays and memoryviews"""
-        key = RSA.import_key(bytearray(self.rsaPublicKeyDER))
-        key = RSA.import_key(memoryview(self.rsaPublicKeyDER))
+        RSA.import_key(bytearray(self.rsaPublicKeyDER))
+        RSA.import_key(memoryview(self.rsaPublicKeyDER))
 
     def test_exportKey(self):
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
@@ -465,7 +496,6 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 
 
 class ImportKeyFromX509Cert(unittest.TestCase):
-
     def test_x509v1(self):
 
         # Sample V1 certificate with a 1024 bit RSA key
@@ -499,7 +529,7 @@ d5:13:1e:4d:2f:98:a4:23:ec:1b:51:e0:95:e4:a6:
 a3:18:d0:da:95:9f:05:d6:99:37:db:e0:81:b3:c8:
 75:c4:dc:79:0f:2c:6e:10:75
         """
-        modulus = int(re.sub("[^0-9a-f]","", modulus_str), 16)
+        modulus = int(re.sub("[^0-9a-f]", "", modulus_str), 16)
 
         key = RSA.importKey(x509_v1_cert)
         self.assertEqual(key.e, exponent)
@@ -551,7 +581,7 @@ b7:ed:79:4c:c5:28:74:a1:2e:06:79:31:95:50:22:
 eb:3d:0f:fb:78:07:5d:cc:a5:2b:cf:06:9c:55:b9:
 d6:fa:d8:36:42:d4:97:29:17
         """
-        modulus = int(re.sub("[^0-9a-f]","", modulus_str), 16)
+        modulus = int(re.sub("[^0-9a-f]", "", modulus_str), 16)
 
         key = RSA.importKey(x509_v3_cert)
         self.assertEqual(key.e, exponent)
@@ -560,7 +590,6 @@ d6:fa:d8:36:42:d4:97:29:17
 
 
 class TestImport_2048(unittest.TestCase):
-
     def test_import_pss(self):
         pub_key_file = load_file("rsa2048_pss_public.pem")
         pub_key = RSA.import_key(pub_key_file)
@@ -616,7 +645,7 @@ class TestImport_2048(unittest.TestCase):
             return
 
         key_ref = RSA.import_key(key_file_ref)
-        key = RSA.import_key(key_file, b'secret')
+        key = RSA.import_key(key_file, b"secret")
         self.assertEqual(key_ref, key)
 
 
@@ -628,7 +657,9 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

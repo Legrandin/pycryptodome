@@ -36,5 +36,4 @@ Module                      Description
 :undocumented: _galois, _number_new, cpuid, _bytes, _raw_api
 """
 
-__all__ = ['RFC1751', 'number', 'strxor', 'asn1', 'Counter', 'Padding']
-
+__all__ = ["RFC1751", "number", "strxor", "asn1", "Counter", "Padding"]

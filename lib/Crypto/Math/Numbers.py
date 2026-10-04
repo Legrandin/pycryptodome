@@ -54,4 +54,5 @@ else:
             from Crypto.Math._IntegerCustom import implementation as _implementation
         except (ImportError, OSError):
             from Crypto.Math._IntegerNative import IntegerNative as Integer
+
             _implementation = {}

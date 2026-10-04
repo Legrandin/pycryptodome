@@ -2,24 +2,21 @@ from __future__ import annotations
 
 from typing import Callable, Optional, TypeVar
 
+from Crypto.PublicKey.ECC import EccKey, _import_curve448_public_key, _import_curve25519_public_key, construct
 from Crypto.Util.number import long_to_bytes
-from Crypto.PublicKey.ECC import (EccKey,
-                                  construct,
-                                  _import_curve25519_public_key,
-                                  _import_curve448_public_key)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def _compute_ecdh(key_priv, key_pub):
     pointP = key_pub.pointQ * key_priv.d
     if pointP.is_point_at_infinity():
-         raise ValueError("Invalid ECDH point")
+        raise ValueError("Invalid ECDH point")
 
     if key_priv.curve == "Curve25519":
-        z = bytearray(pointP.x.to_bytes(32, byteorder='little'))
+        z = bytearray(pointP.x.to_bytes(32, byteorder="little"))
     elif key_priv.curve == "Curve448":
-        z = bytearray(pointP.x.to_bytes(56, byteorder='little'))
+        z = bytearray(pointP.x.to_bytes(56, byteorder="little"))
     else:
         # See Section 5.7.1.2 in NIST SP 800-56Ar3
         z = long_to_bytes(pointP.x, pointP.size_in_bytes())
@@ -44,7 +41,7 @@ def import_x25519_public_key(encoded: bytes) -> EccKey:
     """
 
     x = _import_curve25519_public_key(encoded)
-    return construct(curve='Curve25519', point_x=x)
+    return construct(curve="Curve25519", point_x=x)
 
 
 def import_x25519_private_key(encoded: bytes) -> EccKey:
@@ -85,7 +82,7 @@ def import_x448_public_key(encoded: bytes) -> EccKey:
     """
 
     x = _import_curve448_public_key(encoded)
-    return construct(curve='Curve448', point_x=x)
+    return construct(curve="Curve448", point_x=x)
 
 
 def import_x448_private_key(encoded: bytes) -> EccKey:
@@ -108,11 +105,14 @@ def import_x448_private_key(encoded: bytes) -> EccKey:
     return construct(seed=encoded, curve="Curve448")
 
 
-def key_agreement(*, kdf: Callable[[bytes], T],
-                  static_priv: Optional[EccKey] = None,
-                  static_pub: Optional[EccKey] = None,
-                  eph_priv: Optional[EccKey] = None,
-                  eph_pub: Optional[EccKey] = None) -> T:
+def key_agreement(
+    *,
+    kdf: Callable[[bytes], T],
+    static_priv: Optional[EccKey] = None,
+    static_pub: Optional[EccKey] = None,
+    eph_priv: Optional[EccKey] = None,
+    eph_pub: Optional[EccKey] = None,
+) -> T:
     """Perform a Diffie-Hellman key agreement.
 
     Keywords:
@@ -135,7 +135,6 @@ def key_agreement(*, kdf: Callable[[bytes], T],
       The derived secret key material.
     """
 
-
     if kdf is None:
         raise ValueError("'kdf' is mandatory")
 
@@ -155,26 +154,26 @@ def key_agreement(*, kdf: Callable[[bytes], T],
         return curve
 
     if static_priv is not None:
-        curve = check_curve(curve, static_priv, 'static_priv', True)
+        curve = check_curve(curve, static_priv, "static_priv", True)
         count_priv += 1
 
     if static_pub is not None:
-        curve = check_curve(curve, static_pub, 'static_pub', False)
+        curve = check_curve(curve, static_pub, "static_pub", False)
         count_pub += 1
 
     if eph_priv is not None:
-        curve = check_curve(curve, eph_priv, 'eph_priv', True)
+        curve = check_curve(curve, eph_priv, "eph_priv", True)
         count_priv += 1
 
     if eph_pub is not None:
-        curve = check_curve(curve, eph_pub, 'eph_pub', False)
+        curve = check_curve(curve, eph_pub, "eph_pub", False)
         count_pub += 1
 
     if (count_priv + count_pub) < 2 or count_priv == 0 or count_pub == 0:
         raise ValueError("Too few keys for the ECDH key agreement")
 
-    Zs = b''
-    Ze = b''
+    Zs = b""
+    Ze = b""
 
     if static_priv and static_pub:
         # C(*, 2s)

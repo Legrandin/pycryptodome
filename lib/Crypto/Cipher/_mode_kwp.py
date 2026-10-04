@@ -1,5 +1,4 @@
 import struct
-
 from types import ModuleType
 from typing import Union
 
@@ -23,14 +22,13 @@ class KWPMode:
     :undocumented: __init__
     """
 
-    def __init__(self,
-                 factory: ModuleType,
-                 key: Union[bytes, bytearray]):
+    def __init__(self, factory: ModuleType, key: Union[bytes, bytearray]):
 
         self.block_size = factory.block_size
         if self.block_size != 16:
-            raise ValueError("Key Wrap with Padding mode is only available for ciphers"
-                             " that operate on 128 bits blocks")
+            raise ValueError(
+                "Key Wrap with Padding mode is only available for ciphers that operate on 128 bits blocks"
+            )
 
         self._factory = factory
         self._cipher = factory.new(key, factory.MODE_ECB)
@@ -53,13 +51,13 @@ class KWPMode:
         if len(plaintext) == 0:
             raise ValueError("The plaintext must be at least 1 byte")
 
-        if len(plaintext) >= 2 ** 32:
+        if len(plaintext) >= 2**32:
             raise ValueError("The plaintext is too long")
 
         padlen = (8 - len(plaintext)) % 8
-        padded = plaintext + b'\x00' * padlen
+        padded = plaintext + b"\x00" * padlen
 
-        AIV = b'\xA6\x59\x59\xA6' + struct.pack('>I', len(plaintext))
+        AIV = b"\xa6\x59\x59\xa6" + struct.pack(">I", len(plaintext))
 
         if len(padded) == 8:
             res = self._cipher.encrypt(AIV + padded)
@@ -98,23 +96,22 @@ class KWPMode:
         else:
             S = W_inverse(self._cipher, ciphertext)
 
-        if S[:4] != b'\xA6\x59\x59\xA6':
+        if S[:4] != b"\xa6\x59\x59\xa6":
             raise ValueError("Incorrect decryption")
 
-        Plen = struct.unpack('>I', S[4:8])[0]
+        Plen = struct.unpack(">I", S[4:8])[0]
 
         padlen = len(S) - 8 - Plen
         if padlen < 0 or padlen > 7:
             raise ValueError("Incorrect decryption")
 
-        if S[len(S) - padlen:] != b'\x00' * padlen:
+        if S[len(S) - padlen :] != b"\x00" * padlen:
             raise ValueError("Incorrect decryption")
 
-        return S[8:len(S) - padlen]
+        return S[8 : len(S) - padlen]
 
 
-def _create_kwp_cipher(factory: ModuleType,
-                       **kwargs: Union[bytes, bytearray]) -> KWPMode:
+def _create_kwp_cipher(factory: ModuleType, **kwargs: Union[bytes, bytearray]) -> KWPMode:
     """Create a new block cipher in Key Wrap with Padding mode.
 
     Args:

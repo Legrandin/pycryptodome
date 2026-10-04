@@ -22,16 +22,21 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_sha512_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA512",
-                        """
+_raw_sha512_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._SHA512",
+    """
                         int SHA512_init(void **shaState,
                                         size_t digest_size);
                         int SHA512_destroy(void *shaState);
@@ -49,7 +54,9 @@ _raw_sha512_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA512",
                                             uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
-                        """)
+                        """,
+)
+
 
 class SHA512Hash:
     """A SHA-512 hash object (possibly in its truncated version SHA-512/224 or
@@ -86,13 +93,10 @@ class SHA512Hash:
             raise ValueError("Incorrect truncation length. It must be '224' or '256'.")
 
         state = VoidPointer()
-        result = _raw_sha512_lib.SHA512_init(state.address_of(),
-                                             c_size_t(self.digest_size))
+        result = _raw_sha512_lib.SHA512_init(state.address_of(), c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while instantiating SHA-512"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_sha512_lib.SHA512_destroy)
+            raise ValueError("Error %d while instantiating SHA-512" % result)
+        self._state = SmartPointer(state.get(), _raw_sha512_lib.SHA512_destroy)
         if data:
             self.update(data)
 
@@ -103,12 +107,9 @@ class SHA512Hash:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_sha512_lib.SHA512_update(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_sha512_lib.SHA512_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while hashing data with SHA512"
-                             % result)
+            raise ValueError("Error %d while hashing data with SHA512" % result)
 
     def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
@@ -119,12 +120,9 @@ class SHA512Hash:
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_sha512_lib.SHA512_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size))
+        result = _raw_sha512_lib.SHA512_digest(self._state.get(), bfr, c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while making SHA512 digest"
-                             % result)
+            raise ValueError("Error %d while making SHA512 digest" % result)
 
         return get_raw_buffer(bfr)
 
@@ -150,8 +148,7 @@ class SHA512Hash:
         """
 
         clone = SHA512Hash(None, self._truncate)
-        result = _raw_sha512_lib.SHA512_copy(self._state.get(),
-                                             clone._state.get())
+        result = _raw_sha512_lib.SHA512_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHA512" % result)
         return clone
@@ -193,14 +190,15 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
 
     assert iterations > 0
 
-    bfr = create_string_buffer(len(first_digest));
+    bfr = create_string_buffer(len(first_digest))
     result = _raw_sha512_lib.SHA512_pbkdf2_hmac_assist(
-                    inner._state.get(),
-                    outer._state.get(),
-                    first_digest,
-                    bfr,
-                    c_size_t(iterations),
-                    c_size_t(len(first_digest)))
+        inner._state.get(),
+        outer._state.get(),
+        first_digest,
+        bfr,
+        c_size_t(iterations),
+        c_size_t(len(first_digest)),
+    )
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assist for SHA512" % result)

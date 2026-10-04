@@ -30,12 +30,11 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union
-
-import os
 import abc
+import os
 import sys
 from importlib import machinery
+from typing import Any, List, Optional, Union
 
 from Crypto.Util._file_system import pycryptodome_filename
 
@@ -65,7 +64,7 @@ try:
     # Note that PyPy ships with an old version of pycparser so we can keep
     # using cffi there.
     # See https://github.com/Legrandin/pycryptodome/issues/228
-    if '__pypy__' not in sys.builtin_module_names and sys.flags.optimize == 2:
+    if "__pypy__" not in sys.builtin_module_names and sys.flags.optimize == 2:
         raise ImportError("CFFI with optimize=2 fails due to pycparser bug.")
 
     # cffi < 1.16.0 crashes on CPython 3.12+ for Windows due to a removed C API.
@@ -95,7 +94,7 @@ try:
         @cdecl, the C function declarations.
         """
 
-        if hasattr(ffi, "RTLD_DEEPBIND") and not os.getenv('PYCRYPTODOME_DISABLE_DEEPBIND'):
+        if hasattr(ffi, "RTLD_DEEPBIND") and not os.getenv("PYCRYPTODOME_DISABLE_DEEPBIND"):
             lib = ffi.dlopen(name, ffi.RTLD_DEEPBIND)
         else:
             lib = ffi.dlopen(name)
@@ -139,7 +138,7 @@ try:
         if isinstance(data, _buffer_type):
             # This only works for cffi >= 1.7
             return ffi.cast(uint8_t_type, ffi.from_buffer(data))
-        elif isinstance(data, bytes) or isinstance(data, _Array):
+        elif isinstance(data, (bytes, _Array)):
             return data
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
@@ -162,12 +161,19 @@ try:
     backend: str = "cffi"
 
 except ImportError:
-
     import ctypes
-    from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong,  # type: ignore[assignment]
-                        c_size_t, create_string_buffer, c_uint)
-    from ctypes.util import find_library
+    from ctypes import (  # type: ignore[assignment]
+        CDLL,
+        byref,
+        c_size_t,
+        c_uint,
+        c_ulong,
+        c_ulonglong,
+        c_void_p,
+        create_string_buffer,
+    )
     from ctypes import Array as _Array  # type: ignore[assignment]
+    from ctypes.util import find_library
 
     null_pointer = None
     cached_architecture: List[str] = []
@@ -182,8 +188,9 @@ except ImportError:
             # platform.architecture() creates a subprocess, so caching the
             # result makes successive imports faster.
             import platform
+
             cached_architecture[:] = platform.architecture()
-        bits, linkage = cached_architecture
+        _bits, linkage = cached_architecture
         if "." not in name and not linkage.startswith("Win"):
             full_name = find_library(name)
             if full_name is None:
@@ -211,21 +218,21 @@ except ImportError:
     # and https://github.com/pallets/click/blob/master/src/click/_winconsole.py
     class _Py_buffer(ctypes.Structure):
         _fields_ = [
-            ('buf',         c_void_p),
-            ('obj',         ctypes.py_object),
-            ('len',         _c_ssize_t),
-            ('itemsize',    _c_ssize_t),
-            ('readonly',    ctypes.c_int),
-            ('ndim',        ctypes.c_int),
-            ('format',      ctypes.c_char_p),
-            ('shape',       _c_ssize_p),
-            ('strides',     _c_ssize_p),
-            ('suboffsets',  _c_ssize_p),
-            ('internal',    c_void_p)
+            ("buf", c_void_p),
+            ("obj", ctypes.py_object),
+            ("len", _c_ssize_t),
+            ("itemsize", _c_ssize_t),
+            ("readonly", ctypes.c_int),
+            ("ndim", ctypes.c_int),
+            ("format", ctypes.c_char_p),
+            ("shape", _c_ssize_p),
+            ("strides", _c_ssize_p),
+            ("suboffsets", _c_ssize_p),
+            ("internal", c_void_p),
         ]
 
     def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
-        if isinstance(data, bytes) or isinstance(data, _Array):
+        if isinstance(data, (bytes, _Array)):
             return data
         elif isinstance(data, _buffer_type):
             obj = _py_object(data)
@@ -313,5 +320,4 @@ def is_buffer(x: Any) -> bool:
 
 
 def is_writeable_buffer(x: Any) -> bool:
-    return (isinstance(x, bytearray) or
-            (isinstance(x, memoryview) and not x.readonly))
+    return isinstance(x, bytearray) or (isinstance(x, memoryview) and not x.readonly)

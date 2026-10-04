@@ -21,28 +21,34 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Protocol, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
 
-from Crypto.Util._bytes import copy_bytes
-from Crypto.Signature.pss import MGF1
 import Crypto.Hash.SHA1
 import Crypto.Util.number
-from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
-from Crypto.Util.strxor import strxor
 from Crypto import Random
+from Crypto.Signature.pss import MGF1
+from Crypto.Util._bytes import copy_bytes
+from Crypto.Util.number import bytes_to_long, ceil_div, long_to_bytes
+from Crypto.Util.strxor import strxor
+
 from ._pkcs1_oaep_decode import oaep_decode
 
 if TYPE_CHECKING:
     from Crypto.PublicKey.RSA import RsaKey
 
+
 class HashLikeClass(Protocol):
     digest_size: int
+
     def new(self, data: Optional[bytes] = ...) -> Any: ...
+
 
 class HashLikeModule(Protocol):
     digest_size: int
+
     @staticmethod
     def new(data: Optional[bytes] = ...) -> Any: ...
+
 
 HashLike = Union[HashLikeClass, HashLikeModule]
 Buffer = Union[bytes, bytearray, memoryview]
@@ -52,9 +58,14 @@ class PKCS1OAEP_Cipher:
     """Cipher object for PKCS#1 OAEP.
     Do not create directly: use :func:`new` instead."""
 
-    def __init__(self, key: RsaKey, hashAlgo: Optional[HashLike],
-                 mgfunc: Optional[Callable[[bytes, int], bytes]], label: Buffer,
-                 randfunc: Callable[[int], bytes]) -> None:
+    def __init__(
+        self,
+        key: RsaKey,
+        hashAlgo: Optional[HashLike],
+        mgfunc: Optional[Callable[[bytes, int], bytes]],
+        label: Buffer,
+        randfunc: Callable[[int], bytes],
+    ) -> None:
         """Initialize this PKCS#1 OAEP cipher object.
 
         :Parameters:
@@ -128,7 +139,7 @@ class PKCS1OAEP_Cipher:
 
         # See 7.1.1 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits, 8)            # Convert from bits to bytes
+        k = ceil_div(modBits, 8)  # Convert from bits to bytes
         hLen = self._hashObj.digest_size
         mLen = len(message)
 
@@ -139,13 +150,13 @@ class PKCS1OAEP_Cipher:
         # Step 2a
         lHash = self._hashObj.new(self._label).digest()
         # Step 2b
-        ps = b'\x00' * ps_len
+        ps = b"\x00" * ps_len
         # Step 2c
-        db = lHash + ps + b'\x01' + copy_bytes(None, None, message)
+        db = lHash + ps + b"\x01" + copy_bytes(None, None, message)
         # Step 2d
         ros = self._randfunc(hLen)
         # Step 2e
-        dbMask = self._mgf(ros, k-hLen-1)
+        dbMask = self._mgf(ros, k - hLen - 1)
         # Step 2f
         maskedDB = strxor(db, dbMask)
         # Step 2g
@@ -153,7 +164,7 @@ class PKCS1OAEP_Cipher:
         # Step 2h
         maskedSeed = strxor(ros, seedMask)
         # Step 2i
-        em = b'\x00' + maskedSeed + maskedDB
+        em = b"\x00" + maskedSeed + maskedDB
         # Step 3a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 3b (RSAEP)
@@ -182,11 +193,11 @@ class PKCS1OAEP_Cipher:
 
         # See 7.1.2 in RFC3447
         modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits, 8)            # Convert from bits to bytes
+        k = ceil_div(modBits, 8)  # Convert from bits to bytes
         hLen = self._hashObj.digest_size
 
         # Step 1b and 1c
-        if len(ciphertext) != k or k < hLen+2:
+        if len(ciphertext) != k or k < hLen + 2:
             raise ValueError("Ciphertext with incorrect length.")
         # Step 2a (O2SIP)
         ct_int = bytes_to_long(ciphertext)
@@ -196,14 +207,14 @@ class PKCS1OAEP_Cipher:
         lHash = self._hashObj.new(self._label).digest()
         # y must be 0, but we MUST NOT check it here in order not to
         # allow attacks like Manger's (http://dl.acm.org/citation.cfm?id=704143)
-        maskedSeed = em[1:hLen+1]
-        maskedDB = em[hLen+1:]
+        maskedSeed = em[1 : hLen + 1]
+        maskedDB = em[hLen + 1 :]
         # Step 3c
         seedMask = self._mgf(maskedDB, hLen)
         # Step 3d
         seed = strxor(maskedSeed, seedMask)
         # Step 3e
-        dbMask = self._mgf(seed, k-hLen-1)
+        dbMask = self._mgf(seed, k - hLen - 1)
         # Step 3f
         db = strxor(maskedDB, dbMask)
         # Step 3b + 3g
@@ -214,9 +225,13 @@ class PKCS1OAEP_Cipher:
         return db[res:]
 
 
-def new(key: RsaKey, hashAlgo: Optional[HashLike] = None,
-        mgfunc: Optional[Callable[[bytes, int], bytes]] = None, label: Buffer = b'',
-        randfunc: Optional[Callable[[int], bytes]] = None) -> PKCS1OAEP_Cipher:
+def new(
+    key: RsaKey,
+    hashAlgo: Optional[HashLike] = None,
+    mgfunc: Optional[Callable[[bytes, int], bytes]] = None,
+    label: Buffer = b"",
+    randfunc: Optional[Callable[[int], bytes]] = None,
+) -> PKCS1OAEP_Cipher:
     """Return a cipher object :class:`PKCS1OAEP_Cipher`
        that can be used to perform PKCS#1 OAEP encryption or decryption.
 

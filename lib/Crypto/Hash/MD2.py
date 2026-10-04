@@ -32,17 +32,21 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 
 Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_md2_lib = load_pycryptodome_raw_lib(
-                        "Crypto.Hash._MD2",
-                        """
+    "Crypto.Hash._MD2",
+    """
                         int md2_init(void **shaState);
                         int md2_destroy(void *shaState);
                         int md2_update(void *hs,
@@ -51,7 +55,8 @@ _raw_md2_lib = load_pycryptodome_raw_lib(
                         int md2_digest(const void *shaState,
                                           uint8_t digest[20]);
                         int md2_copy(const void *src, void *dst);
-                        """)
+                        """,
+)
 
 
 class MD2Hash:
@@ -80,10 +85,8 @@ class MD2Hash:
         state = VoidPointer()
         result = _raw_md2_lib.md2_init(state.address_of())
         if result:
-            raise ValueError("Error %d while instantiating MD2"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_md2_lib.md2_destroy)
+            raise ValueError("Error %d while instantiating MD2" % result)
+        self._state = SmartPointer(state.get(), _raw_md2_lib.md2_destroy)
         if data:
             self.update(data)
 
@@ -94,12 +97,9 @@ class MD2Hash:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_md2_lib.md2_update(self._state.get(),
-                                         c_uint8_ptr(data),
-                                         c_size_t(len(data)))
+        result = _raw_md2_lib.md2_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating MD2"
-                             % result)
+            raise ValueError("Error %d while instantiating MD2" % result)
 
     def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
@@ -110,11 +110,9 @@ class MD2Hash:
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_md2_lib.md2_digest(self._state.get(),
-                                         bfr)
+        result = _raw_md2_lib.md2_digest(self._state.get(), bfr)
         if result:
-            raise ValueError("Error %d while instantiating MD2"
-                             % result)
+            raise ValueError("Error %d while instantiating MD2" % result)
 
         return get_raw_buffer(bfr)
 
@@ -140,8 +138,7 @@ class MD2Hash:
         """
 
         clone = MD2Hash()
-        result = _raw_md2_lib.md2_copy(self._state.get(),
-                                       clone._state.get())
+        result = _raw_md2_lib.md2_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying MD2" % result)
         return clone
@@ -162,6 +159,7 @@ def new(data: Optional[Buffer] = None) -> MD2Hash:
     """
 
     return MD2Hash().new(data)
+
 
 # The size of the resulting hash in bytes.
 digest_size: int = MD2Hash.digest_size

@@ -21,15 +21,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, TYPE_CHECKING, Union
-
 from binascii import unhexlify
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
-from Crypto.Util._bytes import copy_bytes, tobytes
 from Crypto.Hash import BLAKE2s
-from Crypto.Util.strxor import strxor
-from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.Random import get_random_bytes
+from Crypto.Util._bytes import copy_bytes, tobytes
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -43,7 +42,7 @@ digest_size: Optional[int] = None
 
 def _shift_bytes(bs: bytes, xor_lsb: int = 0) -> bytes:
     num = (bytes_to_long(bs) << 1) ^ xor_lsb
-    return long_to_bytes(num, len(bs))[-len(bs):]
+    return long_to_bytes(num, len(bs))[-len(bs) :]
 
 
 class CMAC:
@@ -56,8 +55,15 @@ class CMAC:
 
     digest_size: Optional[int] = None
 
-    def __init__(self, key: Buffer, msg: Optional[Buffer], ciphermod: ModuleType,
-                 cipher_params: Dict[str, Any], mac_len: int, update_after_digest: bool) -> None:
+    def __init__(
+        self,
+        key: Buffer,
+        msg: Optional[Buffer],
+        ciphermod: ModuleType,
+        cipher_params: Dict[str, Any],
+        mac_len: int,
+        update_after_digest: bool,
+    ) -> None:
 
         self.digest_size = mac_len
 
@@ -71,19 +77,16 @@ class CMAC:
         # Section 5.3 of NIST SP 800 38B and Appendix B
         if bs == 8:
             const_Rb = 0x1B
-            self._max_size = 8 * (2 ** 21)
+            self._max_size = 8 * (2**21)
         elif bs == 16:
             const_Rb = 0x87
-            self._max_size = 16 * (2 ** 48)
+            self._max_size = 16 * (2**48)
         else:
-            raise TypeError("CMAC requires a cipher with a block size"
-                            " of 8 or 16 bytes, not %d" % bs)
+            raise TypeError("CMAC requires a cipher with a block size of 8 or 16 bytes, not %d" % bs)
 
         # Compute sub-keys
-        zero_block = b'\x00' * bs
-        self._ecb = ciphermod.new(key,
-                                  ciphermod.MODE_ECB,
-                                  **self._cipher_params)
+        zero_block = b"\x00" * bs
+        self._ecb = ciphermod.new(key, ciphermod.MODE_ECB, **self._cipher_params)
         L = self._ecb.encrypt(zero_block)
         if L[0] & 0x80:
             self._k1 = _shift_bytes(L, const_Rb)
@@ -95,10 +98,7 @@ class CMAC:
             self._k2 = _shift_bytes(self._k1)
 
         # Initialize CBC cipher with zero IV
-        self._cbc = ciphermod.new(key,
-                                  ciphermod.MODE_CBC,
-                                  zero_block,
-                                  **self._cipher_params)
+        self._cbc = ciphermod.new(key, ciphermod.MODE_CBC, zero_block, **self._cipher_params)
 
         # Cache for outstanding data to authenticate
         self._cache = bytearray(bs)
@@ -131,7 +131,7 @@ class CMAC:
 
         if self._cache_n > 0:
             filler = min(bs - self._cache_n, len(msg))
-            self._cache[self._cache_n:self._cache_n+filler] = msg[:filler]
+            self._cache[self._cache_n : self._cache_n + filler] = msg[:filler]
             self._cache_n += filler
 
             if self._cache_n < bs:
@@ -152,7 +152,7 @@ class CMAC:
 
     def _update(self, data_block):
         """Update a block aligned to the block boundary"""
-        
+
         bs = self._block_size
         assert len(data_block) % bs == 0
 
@@ -163,7 +163,7 @@ class CMAC:
         if len(data_block) == bs:
             second_last = self._last_ct
         else:
-            second_last = ct[-bs*2:-bs]
+            second_last = ct[-bs * 2 : -bs]
         self._last_ct = ct[-bs:]
         self._last_pt = strxor(second_last, data_block[-bs:])
 
@@ -180,10 +180,7 @@ class CMAC:
 
         obj = self.__new__(CMAC)
         obj.__dict__ = self.__dict__.copy()
-        obj._cbc = self._factory.new(self._key,
-                                     self._factory.MODE_CBC,
-                                     self._last_ct,
-                                     **self._cipher_params)
+        obj._cbc = self._factory.new(self._key, self._factory.MODE_CBC, self._last_ct, **self._cipher_params)
         obj._cache = self._cache[:]
         obj._last_ct = self._last_ct[:]
         return obj
@@ -212,10 +209,10 @@ class CMAC:
         else:
             # Last block is partial (or message length is zero)
             partial = self._cache[:]
-            partial[self._cache_n:] = b'\x80' + b'\x00' * (bs - self._cache_n - 1)
+            partial[self._cache_n :] = b"\x80" + b"\x00" * (bs - self._cache_n - 1)
             pt = strxor(strxor(self._last_ct, partial), self._k2)
 
-        self._mac_tag = self._ecb.encrypt(pt)[:self.digest_size]
+        self._mac_tag = self._ecb.encrypt(pt)[: self.digest_size]
 
         return self._mac_tag
 
@@ -227,8 +224,7 @@ class CMAC:
         :rtype: string
         """
 
-        return "".join(["%02x" % x
-                        for x in tuple(self.digest())])
+        return "".join(["%02x" % x for x in tuple(self.digest())])
 
     def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)
@@ -265,9 +261,14 @@ class CMAC:
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key: Buffer, msg: Optional[Buffer] = None, ciphermod: Optional[ModuleType] = None,
-        cipher_params: Optional[Dict[str, Any]] = None, mac_len: Optional[int] = None,
-        update_after_digest: bool = False) -> CMAC:
+def new(
+    key: Buffer,
+    msg: Optional[Buffer] = None,
+    ciphermod: Optional[ModuleType] = None,
+    cipher_params: Optional[Dict[str, Any]] = None,
+    mac_len: Optional[int] = None,
+    update_after_digest: bool = False,
+) -> CMAC:
     """Create a new MAC object.
 
     Args:
@@ -305,12 +306,13 @@ def new(key: Buffer, msg: Optional[Buffer] = None, ciphermod: Optional[ModuleTyp
 
     if mac_len is None:
         mac_len = ciphermod.block_size
-    
+
     if mac_len < 4:
         raise ValueError("MAC tag length must be at least 4 bytes long")
-    
-    if mac_len > ciphermod.block_size:
-        raise ValueError("MAC tag length cannot be larger than a cipher block (%d) bytes" % ciphermod.block_size)
 
-    return CMAC(key, msg, ciphermod, cipher_params, mac_len,
-                update_after_digest)
+    if mac_len > ciphermod.block_size:
+        raise ValueError(
+            "MAC tag length cannot be larger than a cipher block (%d) bytes" % ciphermod.block_size
+        )
+
+    return CMAC(key, msg, ciphermod, cipher_params, mac_len, update_after_digest)

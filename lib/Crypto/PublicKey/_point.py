@@ -3,16 +3,13 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Any, Dict, Optional, Tuple, Union
 
-import threading
-
-from Crypto.Util.number import bytes_to_long, long_to_bytes
-from Crypto.Util._raw_api import (VoidPointer, null_pointer,
-                                  SmartPointer, c_size_t, c_uint8_ptr,
-                                  c_ulonglong)
 from Crypto.Math.Numbers import Integer
 from Crypto.Random.random import getrandbits
+from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, c_ulonglong, null_pointer
+from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
 class CurveID:
@@ -28,27 +25,30 @@ class CurveID:
 
 
 class _Curves:
-
     curves: Dict[str, Any] = {}
     curves_lock = threading.RLock()
 
-    p192_names = ["p192", "NIST P-192", "P-192", "prime192v1", "secp192r1",
-                  "nistp192"]
-    p224_names = ["p224", "NIST P-224", "P-224", "prime224v1", "secp224r1",
-                  "nistp224"]
-    p256_names = ["p256", "NIST P-256", "P-256", "prime256v1", "secp256r1",
-                  "nistp256"]
-    p384_names = ["p384", "NIST P-384", "P-384", "prime384v1", "secp384r1",
-                  "nistp384"]
-    p521_names = ["p521", "NIST P-521", "P-521", "prime521v1", "secp521r1",
-                  "nistp521"]
+    p192_names = ["p192", "NIST P-192", "P-192", "prime192v1", "secp192r1", "nistp192"]
+    p224_names = ["p224", "NIST P-224", "P-224", "prime224v1", "secp224r1", "nistp224"]
+    p256_names = ["p256", "NIST P-256", "P-256", "prime256v1", "secp256r1", "nistp256"]
+    p384_names = ["p384", "NIST P-384", "P-384", "prime384v1", "secp384r1", "nistp384"]
+    p521_names = ["p521", "NIST P-521", "P-521", "prime521v1", "secp521r1", "nistp521"]
     ed25519_names = ["ed25519", "Ed25519"]
     ed448_names = ["ed448", "Ed448"]
     curve25519_names = ["curve25519", "Curve25519", "X25519"]
     curve448_names = ["curve448", "Curve448", "X448"]
 
-    all_names = p192_names + p224_names + p256_names + p384_names + p521_names + \
-        ed25519_names + ed448_names + curve25519_names + curve448_names
+    all_names = (
+        p192_names
+        + p224_names
+        + p256_names
+        + p384_names
+        + p521_names
+        + ed25519_names
+        + ed448_names
+        + curve25519_names
+        + curve448_names
+    )
 
     def __contains__(self, item):
         return item in self.all_names
@@ -59,46 +59,55 @@ class _Curves:
     def load(self, name):
         if name in self.p192_names:
             from . import _nist_ecc
+
             p192 = _nist_ecc.p192_curve()
             p192.id = CurveID.P192
             self.curves.update(dict.fromkeys(self.p192_names, p192))
         elif name in self.p224_names:
             from . import _nist_ecc
+
             p224 = _nist_ecc.p224_curve()
             p224.id = CurveID.P224
             self.curves.update(dict.fromkeys(self.p224_names, p224))
         elif name in self.p256_names:
             from . import _nist_ecc
+
             p256 = _nist_ecc.p256_curve()
             p256.id = CurveID.P256
             self.curves.update(dict.fromkeys(self.p256_names, p256))
         elif name in self.p384_names:
             from . import _nist_ecc
+
             p384 = _nist_ecc.p384_curve()
             p384.id = CurveID.P384
             self.curves.update(dict.fromkeys(self.p384_names, p384))
         elif name in self.p521_names:
             from . import _nist_ecc
+
             p521 = _nist_ecc.p521_curve()
             p521.id = CurveID.P521
             self.curves.update(dict.fromkeys(self.p521_names, p521))
         elif name in self.ed25519_names:
             from . import _edwards
+
             ed25519 = _edwards.ed25519_curve()
             ed25519.id = CurveID.ED25519
             self.curves.update(dict.fromkeys(self.ed25519_names, ed25519))
         elif name in self.ed448_names:
             from . import _edwards
+
             ed448 = _edwards.ed448_curve()
             ed448.id = CurveID.ED448
             self.curves.update(dict.fromkeys(self.ed448_names, ed448))
         elif name in self.curve25519_names:
             from . import _montgomery
+
             curve25519 = _montgomery.curve25519_curve()
             curve25519.id = CurveID.CURVE25519
             self.curves.update(dict.fromkeys(self.curve25519_names, curve25519))
         elif name in self.curve448_names:
             from . import _montgomery
+
             curve448 = _montgomery.curve448_curve()
             curve448.id = CurveID.CURVE448
             self.curves.update(dict.fromkeys(self.curve448_names, curve448))
@@ -116,10 +125,8 @@ class _Curves:
                 else:
                     curve.G = EccPoint(curve.Gx, curve.Gy, name)
                 curve.is_edwards = curve.id in (CurveID.ED25519, CurveID.ED448)
-                curve.is_montgomery = curve.id in (CurveID.CURVE25519,
-                                                   CurveID.CURVE448)
-                curve.is_weierstrass = not (curve.is_edwards or
-                                            curve.is_montgomery)
+                curve.is_montgomery = curve.id in (CurveID.CURVE25519, CurveID.CURVE448)
+                curve.is_weierstrass = not (curve.is_edwards or curve.is_montgomery)
         return curve
 
     def items(self):
@@ -182,11 +189,9 @@ class EccPoint:
             context = self._curve.context.get()
         except AttributeError:
             context = null_pointer
-        result = new_point(raw_point.address_of(),
-                           c_uint8_ptr(xb),
-                           c_uint8_ptr(yb),
-                           c_size_t(modulus_bytes),
-                           context)
+        result = new_point(
+            raw_point.address_of(), c_uint8_ptr(xb), c_uint8_ptr(yb), c_size_t(modulus_bytes), context
+        )
 
         if result:
             if result == 15:
@@ -202,8 +207,7 @@ class EccPoint:
         free_func = self._curve.rawlib.free_point
 
         raw_point = VoidPointer()
-        result = clone(raw_point.address_of(),
-                       point._point.get())
+        result = clone(raw_point.address_of(), point._point.get())
 
         if result:
             raise ValueError("Error %d while cloning an EC point" % result)
@@ -216,7 +220,7 @@ class EccPoint:
             return False
 
         cmp_func = self._curve.rawlib.cmp
-        return 0 == cmp_func(self._point.get(), point._point.get())
+        return cmp_func(self._point.get(), point._point.get()) == 0
 
     def __neg__(self) -> EccPoint:
         neg_func = self._curve.rawlib.neg
@@ -262,10 +266,7 @@ class EccPoint:
         xb = bytearray(modulus_bytes)
         yb = bytearray(modulus_bytes)
         get_xy = self._curve.rawlib.get_xy
-        result = get_xy(c_uint8_ptr(xb),
-                        c_uint8_ptr(yb),
-                        c_size_t(modulus_bytes),
-                        self._point.get())
+        result = get_xy(c_uint8_ptr(xb), c_uint8_ptr(yb), c_size_t(modulus_bytes), self._point.get())
         if result:
             raise ValueError("Error %d while encoding an EC point" % result)
 
@@ -317,10 +318,9 @@ class EccPoint:
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
         sb = long_to_bytes(scalar)
-        result = scalar_func(self._point.get(),
-                             c_uint8_ptr(sb),
-                             c_size_t(len(sb)),
-                             c_ulonglong(getrandbits(64)))
+        result = scalar_func(
+            self._point.get(), c_uint8_ptr(sb), c_size_t(len(sb)), c_ulonglong(getrandbits(64))
+        )
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self
@@ -384,10 +384,7 @@ class EccXPoint:
                 raise ValueError("Incorrect coordinate length")
 
         raw_point = VoidPointer()
-        result = new_point(raw_point.address_of(),
-                           xb,
-                           c_size_t(modulus_bytes),
-                           context)
+        result = new_point(raw_point.address_of(), xb, c_size_t(modulus_bytes), context)
 
         if result == 15:
             raise ValueError("The EC point does not belong to the curve")
@@ -403,8 +400,7 @@ class EccXPoint:
         free_func = self._curve.rawlib.free_point
 
         raw_point = VoidPointer()
-        result = clone(raw_point.address_of(),
-                       point._point.get())
+        result = clone(raw_point.address_of(), point._point.get())
         if result:
             raise ValueError("Error %d while cloning an EC point" % result)
 
@@ -419,7 +415,7 @@ class EccXPoint:
         p1 = self._point.get()
         p2 = point._point.get()
         res = cmp_func(p1, p2)
-        return 0 == res
+        return res == 0
 
     def copy(self) -> EccXPoint:
         """Return a copy of this point."""
@@ -449,10 +445,8 @@ class EccXPoint:
         modulus_bytes = self.size_in_bytes()
         xb = bytearray(modulus_bytes)
         get_x = self._curve.rawlib.get_x
-        result = get_x(c_uint8_ptr(xb),
-                       c_size_t(modulus_bytes),
-                       self._point.get())
-        if result == 19:    # ERR_ECC_PAI
+        result = get_x(c_uint8_ptr(xb), c_size_t(modulus_bytes), self._point.get())
+        if result == 19:  # ERR_ECC_PAI
             raise ValueError("No X coordinate for the point at infinity")
         if result:
             raise ValueError("Error %d while getting X of an EC point" % result)
@@ -473,10 +467,9 @@ class EccXPoint:
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
         sb = long_to_bytes(scalar)
-        result = scalar_func(self._point.get(),
-                             c_uint8_ptr(sb),
-                             c_size_t(len(sb)),
-                             c_ulonglong(getrandbits(64)))
+        result = scalar_func(
+            self._point.get(), c_uint8_ptr(sb), c_size_t(len(sb)), c_ulonglong(getrandbits(64))
+        )
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self

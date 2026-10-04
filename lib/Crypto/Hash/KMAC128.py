@@ -30,14 +30,14 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Union
-
 from binascii import unhexlify
+from typing import TYPE_CHECKING, Optional, Union
+
+from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import is_buffer
-from Crypto.Random import get_random_bytes
 
-from . import cSHAKE128, SHA3_256
+from . import SHA3_256, cSHAKE128
 from .cSHAKE128 import _bytepad, _encode_str, _right_encode
 
 if TYPE_CHECKING:
@@ -52,8 +52,16 @@ class KMAC_Hash:
     Use the :func:`new` function.
     """
 
-    def __init__(self, data: Optional[Buffer], key: Buffer, mac_len: int, custom: Buffer,
-                 oid_variant: str, cshake: ModuleType, rate: int) -> None:
+    def __init__(
+        self,
+        data: Optional[Buffer],
+        key: Buffer,
+        mac_len: int,
+        custom: Buffer,
+        oid_variant: str,
+        cshake: ModuleType,
+        rate: int,
+    ) -> None:
 
         # See https://tools.ietf.org/html/rfc8702
         self.oid = "2.16.840.1.101.3.4.2." + oid_variant
@@ -138,8 +146,14 @@ class KMAC_Hash:
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
-    def new(self, *, key: Buffer, data: Optional[Buffer] = None,
-            mac_len: Optional[int] = None, custom: Buffer = b"") -> KMAC_Hash:
+    def new(
+        self,
+        *,
+        key: Buffer,
+        data: Optional[Buffer] = None,
+        mac_len: Optional[int] = None,
+        custom: Buffer = b"",
+    ) -> KMAC_Hash:
         """Return a new instance of a KMAC hash object.
         See :func:`new`.
         """
@@ -156,8 +170,7 @@ class KMAC_Hash:
         return factory(key=key, data=data, mac_len=mac_len, custom=custom)
 
 
-def new(*, key: Buffer, data: Optional[Buffer] = None, mac_len: int = 64,
-        custom: Buffer = b"") -> KMAC_Hash:
+def new(*, key: Buffer, data: Optional[Buffer] = None, mac_len: int = 64, custom: Buffer = b"") -> KMAC_Hash:
     """Create a new KMAC128 object.
 
     Args:

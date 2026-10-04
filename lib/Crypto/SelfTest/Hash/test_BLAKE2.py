@@ -32,21 +32,19 @@ import os
 import re
 import unittest
 import warnings
-from binascii import unhexlify, hexlify
-from Crypto.Util._bytes import tobytes
-from Crypto.Util.strxor import strxor_c
-from Crypto.SelfTest.st_common import list_test_cases
+from binascii import hexlify, unhexlify
 
 from Crypto.Hash import BLAKE2b, BLAKE2s
+from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Util._bytes import tobytes
+from Crypto.Util.strxor import strxor_c
 
 
 class Blake2Test(unittest.TestCase):
-
     def test_new_positive(self):
 
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
-
             for dbits in range(8, self.max_bits + 1, 8):
                 hobj = new_func(digest_bits=dbits)
                 self.assertEqual(hobj.digest_size, dbits // 8)
@@ -68,29 +66,21 @@ class Blake2Test(unittest.TestCase):
 
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
-            self.assertRaises(TypeError, new_func,
-                              digest_bytes=self.max_bytes,
-                              digest_bits=self.max_bits)
+            self.assertRaises(TypeError, new_func, digest_bytes=self.max_bytes, digest_bits=self.max_bits)
             self.assertRaises(ValueError, new_func, digest_bytes=0)
-            self.assertRaises(ValueError, new_func,
-                              digest_bytes=self.max_bytes + 1)
+            self.assertRaises(ValueError, new_func, digest_bytes=self.max_bytes + 1)
             self.assertRaises(ValueError, new_func, digest_bits=7)
             self.assertRaises(ValueError, new_func, digest_bits=15)
-            self.assertRaises(ValueError, new_func,
-                              digest_bits=self.max_bits + 1)
-            self.assertRaises(TypeError, new_func,
-                              digest_bytes=self.max_bytes,
-                              key="string")
-            self.assertRaises(TypeError, new_func,
-                              digest_bytes=self.max_bytes,
-                              data="string")
+            self.assertRaises(ValueError, new_func, digest_bits=self.max_bits + 1)
+            self.assertRaises(TypeError, new_func, digest_bytes=self.max_bytes, key="string")
+            self.assertRaises(TypeError, new_func, digest_bytes=self.max_bytes, data="string")
 
     def test_default_digest_size(self):
-        digest = self.BLAKE2.new(data=b'abc').digest()
+        digest = self.BLAKE2.new(data=b"abc").digest()
         self.assertEqual(len(digest), self.max_bytes)
 
     def test_update(self):
-        pieces = [b"\x0A" * 200, b"\x14" * 300]
+        pieces = [b"\x0a" * 200, b"\x14" * 300]
         h = self.BLAKE2.new(digest_bytes=self.max_bytes)
         h.update(pieces[0]).update(pieces[1])
         digest = h.digest()
@@ -157,21 +147,14 @@ class Blake2Test(unittest.TestCase):
 
         prefix = "1.3.6.1.4.1.1722.12.2." + self.oid_variant + "."
 
-        suffix = {
-            128: "4",
-            160: "5",
-            224: "7",
-            256: "8",
-            384: "12",
-            512: "16"
-        }
+        suffix = {128: "4", 160: "5", 224: "7", 256: "8", 384: "12", 512: "16"}
 
         for digest_bits in self.digest_bits_oid:
             h = self.BLAKE2.new(digest_bits=digest_bits)
             self.assertEqual(h.oid, prefix + suffix[digest_bits])
 
             h = self.BLAKE2.new(digest_bits=digest_bits, key=b"secret")
-            self.assertRaises(AttributeError, lambda: h.oid)
+            self.assertRaises(AttributeError, lambda: h.oid)  # noqa: B023
 
         for digest_bits in (8, self.max_bits):
             if digest_bits in self.digest_bits_oid:
@@ -180,7 +163,7 @@ class Blake2Test(unittest.TestCase):
 
     def test_bytearray(self):
 
-        key = b'0' * 16
+        key = b"0" * 16
         data = b"\x00\x01\x02"
 
         # Data and key can be a bytearray (during initialization)
@@ -189,8 +172,8 @@ class Blake2Test(unittest.TestCase):
 
         h1 = self.BLAKE2.new(data=data, key=key)
         h2 = self.BLAKE2.new(data=data_ba, key=key_ba)
-        key_ba[:1] = b'\xFF'
-        data_ba[:1] = b'\xFF'
+        key_ba[:1] = b"\xff"
+        data_ba[:1] = b"\xff"
 
         self.assertEqual(h1.digest(), h2.digest())
 
@@ -201,13 +184,13 @@ class Blake2Test(unittest.TestCase):
         h2 = self.BLAKE2.new()
         h1.update(data)
         h2.update(data_ba)
-        data_ba[:1] = b'\xFF'
+        data_ba[:1] = b"\xff"
 
         self.assertEqual(h1.digest(), h2.digest())
 
     def test_memoryview(self):
 
-        key = b'0' * 16
+        key = b"0" * 16
         data = b"\x00\x01\x02"
 
         def get_mv_ro(data):
@@ -217,7 +200,6 @@ class Blake2Test(unittest.TestCase):
             return memoryview(bytearray(data))
 
         for get_mv in (get_mv_ro, get_mv_rw):
-
             # Data and key can be a memoryview (during initialization)
             key_mv = get_mv(key)
             data_mv = get_mv(data)
@@ -225,8 +207,8 @@ class Blake2Test(unittest.TestCase):
             h1 = self.BLAKE2.new(data=data, key=key)
             h2 = self.BLAKE2.new(data=data_mv, key=key_mv)
             if not data_mv.readonly:
-                data_mv[:1] = b'\xFF'
-                key_mv[:1] = b'\xFF'
+                data_mv[:1] = b"\xff"
+                key_mv[:1] = b"\xff"
 
             self.assertEqual(h1.digest(), h2.digest())
 
@@ -238,7 +220,7 @@ class Blake2Test(unittest.TestCase):
             h1.update(data)
             h2.update(data_mv)
             if not data_mv.readonly:
-                data_mv[:1] = b'\xFF'
+                data_mv[:1] = b"\xff"
 
             self.assertEqual(h1.digest(), h2.digest())
 
@@ -270,20 +252,17 @@ class Blake2sTest(Blake2Test):
 
 
 class Blake2OfficialTestVector(unittest.TestCase):
-
     def _load_tests(self, test_vector_file):
         expected = "in"
         test_vectors = []
         with open(test_vector_file) as test_vector_fd:
             for line_number, line in enumerate(test_vector_fd):
-
                 if line.strip() == "" or line.startswith("#"):
                     continue
 
                 res = re.match("%s:\t([0-9A-Fa-f]*)" % expected, line)
                 if not res:
-                    raise ValueError("Incorrect test vector format (line %d)"
-                                     % line_number)
+                    raise ValueError("Incorrect test vector format (line %d)" % line_number)
 
                 if res.group(1):
                     bin_value = unhexlify(tobytes(res.group(1)))
@@ -310,8 +289,7 @@ class Blake2OfficialTestVector(unittest.TestCase):
         try:
             import pycryptodome_test_vectors  # type: ignore
         except ImportError:
-            warnings.warn("Warning: skipping extended tests for %s" % self.name,
-                           UserWarning)
+            warnings.warn("Warning: skipping extended tests for %s" % self.name, UserWarning)
             self.test_vectors = []
             return
 
@@ -320,7 +298,7 @@ class Blake2OfficialTestVector(unittest.TestCase):
         self.test_vectors = self._load_tests(full_file_name)
 
     def runTest(self):
-        for (input_data, key, result) in self.test_vectors:
+        for input_data, key, result in self.test_vectors:
             mac = self.BLAKE2.new(key=key, digest_bytes=self.max_bytes)
             mac.update(input_data)
             self.assertEqual(mac.digest(), result)
@@ -345,7 +323,6 @@ class Blake2sOfficialTestVector(Blake2OfficialTestVector):
 
 
 class Blake2TestVector1(unittest.TestCase):
-
     def _load_tests(self, test_vector_file):
         test_vectors = []
         with open(test_vector_file) as test_vector_fd:
@@ -354,8 +331,7 @@ class Blake2TestVector1(unittest.TestCase):
                     continue
                 res = re.match("digest: ([0-9A-Fa-f]*)", line)
                 if not res:
-                    raise ValueError("Incorrect test vector format (line %d)"
-                                     % line_number)
+                    raise ValueError("Incorrect test vector format (line %d)" % line_number)
 
                 test_vectors.append(unhexlify(tobytes(res.group(1))))
         return test_vectors
@@ -368,8 +344,7 @@ class Blake2TestVector1(unittest.TestCase):
         try:
             import pycryptodome_test_vectors
         except ImportError:
-            warnings.warn("Warning: skipping extended tests for %s" % self.name,
-                           UserWarning)
+            warnings.warn("Warning: skipping extended tests for %s" % self.name, UserWarning)
             self.test_vectors = []
             return
 
@@ -404,7 +379,6 @@ class Blake2sTestVector1(Blake2TestVector1):
 
 
 class Blake2TestVector2(unittest.TestCase):
-
     def _load_tests(self, test_vector_file):
         test_vectors = []
         with open(test_vector_file) as test_vector_fd:
@@ -413,8 +387,7 @@ class Blake2TestVector2(unittest.TestCase):
                     continue
                 res = re.match(r"digest\(([0-9]+)\): ([0-9A-Fa-f]*)", line)
                 if not res:
-                    raise ValueError("Incorrect test vector format (line %d)"
-                                     % line_number)
+                    raise ValueError("Incorrect test vector format (line %d)" % line_number)
                 key_size = int(res.group(1))
                 result = unhexlify(tobytes(res.group(2)))
                 test_vectors.append((key_size, result))
@@ -428,8 +401,7 @@ class Blake2TestVector2(unittest.TestCase):
         try:
             import pycryptodome_test_vectors  # type: ignore
         except ImportError:
-            warnings.warn("Warning: skipping extended tests for %s" % self.name,
-                           UserWarning)
+            warnings.warn("Warning: skipping extended tests for %s" % self.name, UserWarning)
             self.test_vectors = []
             return
 
@@ -442,8 +414,7 @@ class Blake2TestVector2(unittest.TestCase):
         for key_size, result in self.test_vectors:
             next_data = b""
             for _ in range(100):
-                h = self.BLAKE2.new(digest_bytes=self.max_bytes,
-                                    key=b"A" * key_size)
+                h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"A" * key_size)
                 h.update(next_data)
                 next_data = h.digest() + next_data
             self.assertEqual(h.digest(), result)
@@ -483,9 +454,10 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import unittest
 
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")

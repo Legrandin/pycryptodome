@@ -24,10 +24,13 @@
 """Self-testing for PyCrypto hash modules"""
 
 import unittest
-from binascii import a2b_hex, b2a_hex, hexlify
-from Crypto.Util.strxor import strxor_c
+from binascii import a2b_hex, b2a_hex
 
-class _NoDefault: pass        # sentinel object
+
+class _NoDefault:
+    pass  # sentinel object
+
+
 def _extract(d, k, default=_NoDefault):
     """Get an item from a dictionary, and remove it from the dictionary."""
     try:
@@ -39,42 +42,42 @@ def _extract(d, k, default=_NoDefault):
     del d[k]
     return retval
 
+
 # Generic cipher test case
 class CipherSelfTest(unittest.TestCase):
-
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
 
         # Extract the parameters
         params = params.copy()
-        self.description = _extract(params, 'description')
-        self.key = _extract(params, 'key').encode("latin-1")
-        self.plaintext = _extract(params, 'plaintext').encode("latin-1")
-        self.ciphertext = _extract(params, 'ciphertext').encode("latin-1")
-        self.module_name = _extract(params, 'module_name', None)
-        self.assoc_data = _extract(params, 'assoc_data', None)
-        self.mac = _extract(params, 'mac', None)
+        self.description = _extract(params, "description")
+        self.key = _extract(params, "key").encode("latin-1")
+        self.plaintext = _extract(params, "plaintext").encode("latin-1")
+        self.ciphertext = _extract(params, "ciphertext").encode("latin-1")
+        self.module_name = _extract(params, "module_name", None)
+        self.assoc_data = _extract(params, "assoc_data", None)
+        self.mac = _extract(params, "mac", None)
         if self.assoc_data:
             self.mac = self.mac.encode("latin-1")
 
-        mode = _extract(params, 'mode', None)
+        mode = _extract(params, "mode", None)
         self.mode_name = str(mode)
 
         if mode is not None:
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
 
-            self.iv = _extract(params, 'iv', None)
+            self.iv = _extract(params, "iv", None)
             if self.iv is None:
-                self.iv = _extract(params, 'nonce', None)
+                self.iv = _extract(params, "nonce", None)
             if self.iv is not None:
                 self.iv = self.iv.encode("latin-1")
 
         else:
             # Stream cipher
             self.mode = None
-            self.iv = _extract(params, 'iv', None)
+            self.iv = _extract(params, "iv", None)
             if self.iv is not None:
                 self.iv = self.iv.encode("latin-1")
 
@@ -89,23 +92,23 @@ class CipherSelfTest(unittest.TestCase):
 
         old_style = []
         if self.mode is not None:
-            old_style = [ self.mode ]
+            old_style = [self.mode]
         if self.iv is not None:
-            old_style += [ a2b_hex(self.iv) ]
+            old_style += [a2b_hex(self.iv)]
 
         return self.module.new(key, *old_style, **params)
 
     def isMode(self, name):
-        if not hasattr(self.module, "MODE_"+name):
+        if not hasattr(self.module, "MODE_" + name):
             return False
-        return self.mode == getattr(self.module, "MODE_"+name)
+        return self.mode == getattr(self.module, "MODE_" + name)
 
     def runTest(self):
         plaintext = a2b_hex(self.plaintext)
         ciphertext = a2b_hex(self.ciphertext)
         assoc_data = []
         if self.assoc_data:
-            assoc_data = [ a2b_hex(x.encode("latin-1")) for x in self.assoc_data]
+            assoc_data = [a2b_hex(x.encode("latin-1")) for x in self.assoc_data]
 
         ct = None
         pt = None
@@ -114,7 +117,7 @@ class CipherSelfTest(unittest.TestCase):
         # Repeat the same encryption or decryption twice and verify
         # that the result is always the same
         #
-        for i in range(2):
+        for _i in range(2):
             cipher = self._new()
             decipher = self._new()
 
@@ -132,15 +135,15 @@ class CipherSelfTest(unittest.TestCase):
             ct, pt = ctX, ptX
 
         self.assertEqual(self.ciphertext, ct)  # encrypt
-        self.assertEqual(self.plaintext, pt)   # decrypt
+        self.assertEqual(self.plaintext, pt)  # decrypt
 
         if self.mac:
             mac = b2a_hex(cipher.digest())
             self.assertEqual(self.mac, mac)
             decipher.verify(a2b_hex(self.mac))
 
-class CipherStreamingSelfTest(CipherSelfTest):
 
+class CipherStreamingSelfTest(CipherSelfTest):
     def shortDescription(self):
         desc = self.module_name
         if self.mode is not None:
@@ -157,7 +160,7 @@ class CipherStreamingSelfTest(CipherSelfTest):
         ct3 = []
         cipher = self._new()
         for i in range(0, len(plaintext), 3):
-            ct3.append(cipher.encrypt(plaintext[i:i+3]))
+            ct3.append(cipher.encrypt(plaintext[i : i + 3]))
         ct3 = b2a_hex(b"".join(ct3))
         self.assertEqual(self.ciphertext, ct3)  # encryption (3 bytes at a time)
 
@@ -165,7 +168,7 @@ class CipherStreamingSelfTest(CipherSelfTest):
         pt3 = []
         cipher = self._new()
         for i in range(0, len(ciphertext), 3):
-            pt3.append(cipher.encrypt(ciphertext[i:i+3]))
+            pt3.append(cipher.encrypt(ciphertext[i : i + 3]))
         pt3 = b2a_hex(b"".join(pt3))
         self.assertEqual(self.plaintext, pt3)  # decryption (3 bytes at a time)
 
@@ -173,12 +176,13 @@ class CipherStreamingSelfTest(CipherSelfTest):
 class RoundtripTest(unittest.TestCase):
     def __init__(self, module, params):
         from Crypto import Random
+
         unittest.TestCase.__init__(self)
         self.module = module
         self.iv = Random.get_random_bytes(module.block_size)
-        self.key = params['key'].encode("latin-1")
-        self.plaintext = 100 * params['plaintext'].encode("latin-1")
-        self.module_name = params.get('module_name', None)
+        self.key = params["key"].encode("latin-1")
+        self.plaintext = 100 * params["plaintext"].encode("latin-1")
+        self.module_name = params.get("module_name", None)
 
     def shortDescription(self):
         return """%s .decrypt() output of .encrypt() should not be garbled""" % (self.module_name,)
@@ -198,14 +202,13 @@ class IVLengthTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key'].encode("latin-1")
+        self.key = params["key"].encode("latin-1")
 
     def shortDescription(self):
         return "Check that all modes except MODE_ECB and MODE_CTR require an IV of the proper length"
 
     def runTest(self):
-        self.assertRaises(TypeError, self.module.new, a2b_hex(self.key),
-                self.module.MODE_ECB, b"")
+        self.assertRaises(TypeError, self.module.new, a2b_hex(self.key), self.module.MODE_ECB, b"")
 
     def _dummy_counter(self):
         return "\0" * self.module.block_size
@@ -215,7 +218,7 @@ class NoDefaultECBTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = params['key'].encode("latin-1")
+        self.key = params["key"].encode("latin-1")
 
     def runTest(self):
         self.assertRaises(TypeError, self.module.new, a2b_hex(self.key))
@@ -225,7 +228,7 @@ class BlockSizeTest(unittest.TestCase):
     def __init__(self, module, params):
         unittest.TestCase.__init__(self)
         self.module = module
-        self.key = a2b_hex(params['key'].encode("latin-1"))
+        self.key = a2b_hex(params["key"].encode("latin-1"))
 
     def runTest(self):
         cipher = self.module.new(self.key, self.module.MODE_ECB)
@@ -241,32 +244,32 @@ class ByteArrayTest(unittest.TestCase):
 
         # Extract the parameters
         params = params.copy()
-        self.description = _extract(params, 'description')
-        self.key = _extract(params, 'key').encode("latin-1")
-        self.plaintext = _extract(params, 'plaintext').encode("latin-1")
-        self.ciphertext = _extract(params, 'ciphertext').encode("latin-1")
-        self.module_name = _extract(params, 'module_name', None)
-        self.assoc_data = _extract(params, 'assoc_data', None)
-        self.mac = _extract(params, 'mac', None)
+        self.description = _extract(params, "description")
+        self.key = _extract(params, "key").encode("latin-1")
+        self.plaintext = _extract(params, "plaintext").encode("latin-1")
+        self.ciphertext = _extract(params, "ciphertext").encode("latin-1")
+        self.module_name = _extract(params, "module_name", None)
+        self.assoc_data = _extract(params, "assoc_data", None)
+        self.mac = _extract(params, "mac", None)
         if self.assoc_data:
             self.mac = self.mac.encode("latin-1")
 
-        mode = _extract(params, 'mode', None)
+        mode = _extract(params, "mode", None)
         self.mode_name = str(mode)
 
         if mode is not None:
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
 
-            self.iv = _extract(params, 'iv', None)
+            self.iv = _extract(params, "iv", None)
             if self.iv is None:
-                self.iv = _extract(params, 'nonce', None)
+                self.iv = _extract(params, "nonce", None)
             if self.iv is not None:
                 self.iv = self.iv.encode("latin-1")
         else:
             # Stream cipher
             self.mode = None
-            self.iv = _extract(params, 'iv', None)
+            self.iv = _extract(params, "iv", None)
             if self.iv is not None:
                 self.iv = self.iv.encode("latin-1")
 
@@ -278,9 +281,9 @@ class ByteArrayTest(unittest.TestCase):
 
         old_style = []
         if self.mode is not None:
-            old_style = [ self.mode ]
+            old_style = [self.mode]
         if self.iv is not None:
-            old_style += [ a2b_hex(self.iv) ]
+            old_style += [a2b_hex(self.iv)]
 
         return self.module.new(key, *old_style, **params)
 
@@ -290,7 +293,7 @@ class ByteArrayTest(unittest.TestCase):
         ciphertext = a2b_hex(self.ciphertext)
         assoc_data = []
         if self.assoc_data:
-            assoc_data = [ bytearray(a2b_hex(x.encode("latin-1"))) for x in self.assoc_data]
+            assoc_data = [bytearray(a2b_hex(x.encode("latin-1"))) for x in self.assoc_data]
 
         cipher = self._new()
         decipher = self._new()
@@ -304,7 +307,7 @@ class ByteArrayTest(unittest.TestCase):
         pt = b2a_hex(decipher.decrypt(bytearray(ciphertext)))
 
         self.assertEqual(self.ciphertext, ct)  # encrypt
-        self.assertEqual(self.plaintext, pt)   # decrypt
+        self.assertEqual(self.plaintext, pt)  # decrypt
 
         if self.mac:
             mac = b2a_hex(cipher.digest())
@@ -321,32 +324,32 @@ class MemoryviewTest(unittest.TestCase):
 
         # Extract the parameters
         params = params.copy()
-        self.description = _extract(params, 'description')
-        self.key = _extract(params, 'key').encode("latin-1")
-        self.plaintext = _extract(params, 'plaintext').encode("latin-1")
-        self.ciphertext = _extract(params, 'ciphertext').encode("latin-1")
-        self.module_name = _extract(params, 'module_name', None)
-        self.assoc_data = _extract(params, 'assoc_data', None)
-        self.mac = _extract(params, 'mac', None)
+        self.description = _extract(params, "description")
+        self.key = _extract(params, "key").encode("latin-1")
+        self.plaintext = _extract(params, "plaintext").encode("latin-1")
+        self.ciphertext = _extract(params, "ciphertext").encode("latin-1")
+        self.module_name = _extract(params, "module_name", None)
+        self.assoc_data = _extract(params, "assoc_data", None)
+        self.mac = _extract(params, "mac", None)
         if self.assoc_data:
             self.mac = self.mac.encode("latin-1")
 
-        mode = _extract(params, 'mode', None)
+        mode = _extract(params, "mode", None)
         self.mode_name = str(mode)
 
         if mode is not None:
             # Block cipher
             self.mode = getattr(self.module, "MODE_" + mode)
 
-            self.iv = _extract(params, 'iv', None)
+            self.iv = _extract(params, "iv", None)
             if self.iv is None:
-                self.iv = _extract(params, 'nonce', None)
+                self.iv = _extract(params, "nonce", None)
             if self.iv is not None:
                 self.iv = self.iv.encode("latin-1")
         else:
             # Stream cipher
             self.mode = None
-            self.iv = _extract(params, 'iv', None)
+            self.iv = _extract(params, "iv", None)
             if self.iv is not None:
                 self.iv = self.iv.encode("latin-1")
 
@@ -358,9 +361,9 @@ class MemoryviewTest(unittest.TestCase):
 
         old_style = []
         if self.mode is not None:
-            old_style = [ self.mode ]
+            old_style = [self.mode]
         if self.iv is not None:
-            old_style += [ a2b_hex(self.iv) ]
+            old_style += [a2b_hex(self.iv)]
 
         return self.module.new(key, *old_style, **params)
 
@@ -370,7 +373,7 @@ class MemoryviewTest(unittest.TestCase):
         ciphertext = a2b_hex(self.ciphertext)
         assoc_data = []
         if self.assoc_data:
-            assoc_data = [ memoryview(a2b_hex(x.encode("latin-1"))) for x in self.assoc_data]
+            assoc_data = [memoryview(a2b_hex(x.encode("latin-1"))) for x in self.assoc_data]
 
         cipher = self._new()
         decipher = self._new()
@@ -384,7 +387,7 @@ class MemoryviewTest(unittest.TestCase):
         pt = b2a_hex(decipher.decrypt(memoryview(ciphertext)))
 
         self.assertEqual(self.ciphertext, ct)  # encrypt
-        self.assertEqual(self.plaintext, pt)   # decrypt
+        self.assertEqual(self.plaintext, pt)  # decrypt
 
         if self.mac:
             mac = b2a_hex(cipher.digest())
@@ -392,11 +395,10 @@ class MemoryviewTest(unittest.TestCase):
             decipher.verify(memoryview(a2b_hex(self.mac)))
 
 
-def make_block_tests(module, module_name, test_data, additional_params=dict()):
+def make_block_tests(module, module_name, test_data, additional_params={}):
     tests = []
     extra_tests_added = False
     for i, row in enumerate(test_data):
-
         # Build the "params" dictionary with
         # - plaintext
         # - ciphertext
@@ -406,35 +408,41 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
         # - (optionally) any other parameter that this cipher mode requires
         params = {}
         if len(row) == 3:
-            (params['plaintext'], params['ciphertext'], params['key']) = row
+            (params["plaintext"], params["ciphertext"], params["key"]) = row
         elif len(row) == 4:
-            (params['plaintext'], params['ciphertext'], params['key'], params['description']) = row
+            (params["plaintext"], params["ciphertext"], params["key"], params["description"]) = row
         elif len(row) == 5:
-            (params['plaintext'], params['ciphertext'], params['key'], params['description'], extra_params) = row
+            (
+                params["plaintext"],
+                params["ciphertext"],
+                params["key"],
+                params["description"],
+                extra_params,
+            ) = row
             params.update(extra_params)
         else:
             raise AssertionError("Unsupported tuple size %d" % (len(row),))
 
-        if not "mode" in params:
+        if "mode" not in params:
             params["mode"] = "ECB"
 
         # Build the display-name for the test
         p2 = params.copy()
-        p_key = _extract(p2, 'key')
-        p_plaintext = _extract(p2, 'plaintext')
-        p_ciphertext = _extract(p2, 'ciphertext')
-        p_mode = _extract(p2, 'mode')
-        p_description = _extract(p2, 'description', None)
+        p_key = _extract(p2, "key")
+        p_plaintext = _extract(p2, "plaintext")
+        _extract(p2, "ciphertext")
+        p_mode = _extract(p2, "mode")
+        p_description = _extract(p2, "description", None)
 
         if p_description is not None:
             description = p_description
-        elif p_mode == 'ECB' and not p2:
+        elif p_mode == "ECB" and not p2:
             description = "p=%s, k=%s" % (p_plaintext, p_key)
         else:
             description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
-        name = "%s #%d: %s" % (module_name, i+1, description)
-        params['description'] = name
-        params['module_name'] = module_name
+        name = "%s #%d: %s" % (module_name, i + 1, description)
+        params["description"] = name
+        params["module_name"] = module_name
         params.update(additional_params)
 
         # Add extra test(s) to the test suite before the current test
@@ -453,29 +461,35 @@ def make_block_tests(module, module_name, test_data, additional_params=dict()):
 
     return tests
 
+
 def make_stream_tests(module, module_name, test_data):
     tests = []
     extra_tests_added = False
     for i, row in enumerate(test_data):
-
         # Build the "params" dictionary
         params = {}
         if len(row) == 3:
-            (params['plaintext'], params['ciphertext'], params['key']) = row
+            (params["plaintext"], params["ciphertext"], params["key"]) = row
         elif len(row) == 4:
-            (params['plaintext'], params['ciphertext'], params['key'], params['description']) = row
+            (params["plaintext"], params["ciphertext"], params["key"], params["description"]) = row
         elif len(row) == 5:
-            (params['plaintext'], params['ciphertext'], params['key'], params['description'], extra_params) = row
+            (
+                params["plaintext"],
+                params["ciphertext"],
+                params["key"],
+                params["description"],
+                extra_params,
+            ) = row
             params.update(extra_params)
         else:
             raise AssertionError("Unsupported tuple size %d" % (len(row),))
 
         # Build the display-name for the test
         p2 = params.copy()
-        p_key = _extract(p2, 'key')
-        p_plaintext = _extract(p2, 'plaintext')
-        p_ciphertext = _extract(p2, 'ciphertext')
-        p_description = _extract(p2, 'description', None)
+        p_key = _extract(p2, "key")
+        p_plaintext = _extract(p2, "plaintext")
+        _extract(p2, "ciphertext")
+        p_description = _extract(p2, "description", None)
 
         if p_description is not None:
             description = p_description
@@ -483,9 +497,9 @@ def make_stream_tests(module, module_name, test_data):
             description = "p=%s, k=%s" % (p_plaintext, p_key)
         else:
             description = "p=%s, k=%s, %r" % (p_plaintext, p_key, p2)
-        name = "%s #%d: %s" % (module_name, i+1, description)
-        params['description'] = name
-        params['module_name'] = module_name
+        name = "%s #%d: %s" % (module_name, i + 1, description)
+        params["description"] = name
+        params["module_name"] = module_name
 
         # Add extra test(s) to the test suite before the current test
         if not extra_tests_added:
@@ -500,5 +514,6 @@ def make_stream_tests(module, module_name, test_data):
         tests.append(CipherSelfTest(module, params))
         tests.append(CipherStreamingSelfTest(module, params))
     return tests
+
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

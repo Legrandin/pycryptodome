@@ -26,11 +26,11 @@
 These tests should perform quickly and can ideally be used every time an
 application runs.
 """
-from io import StringIO
 
 import sys
 import unittest
 from importlib import import_module
+from io import StringIO
 
 
 class SelfTestError(Exception):
@@ -66,14 +66,14 @@ def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs
         else:
             raise ValueError("'module' and 'tests' arguments are mutually exclusive")
     if stream is None:
-        kwargs['stream'] = StringIO()
+        kwargs["stream"] = StringIO()
     else:
-        kwargs['stream'] = stream
+        kwargs["stream"] = stream
     runner = unittest.TextTestRunner(verbosity=verbosity, **kwargs)
     result = runner.run(suite)
     if not result.wasSuccessful():
         if stream is None:
-            sys.stderr.write(kwargs['stream'].getvalue())
+            sys.stderr.write(kwargs["stream"].getvalue())
         raise SelfTestError("Self-test failed", result)
     return result
 
@@ -82,9 +82,16 @@ def get_tests(config={}):
     tests = []
 
     module_names = [
-        "Cipher", "Hash", "Protocol", "PublicKey", "Random",
-        "Util", "Signature", "IO", "Math",
-        ]
+        "Cipher",
+        "Hash",
+        "Protocol",
+        "PublicKey",
+        "Random",
+        "Util",
+        "Signature",
+        "IO",
+        "Math",
+    ]
 
     for name in module_names:
         module = import_module("Crypto.SelfTest." + name)
@@ -93,9 +100,11 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def suite():
         return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+
+    unittest.main(defaultTest="suite")
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

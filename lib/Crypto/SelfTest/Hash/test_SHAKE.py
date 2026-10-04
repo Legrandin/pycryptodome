@@ -31,16 +31,14 @@
 """Self-test suite for Crypto.Hash.SHAKE128 and SHAKE256"""
 
 import unittest
-from binascii import hexlify, unhexlify
-
-from Crypto.Util._bytes import tobytes
-from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import SHAKE128, SHAKE256
+from Crypto.SelfTest.loader import load_test_vectors
+from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.Util._bytes import tobytes
+
 
 class SHAKETest(unittest.TestCase):
-
     def test_new_positive(self):
 
         xof1 = self.shake.new()
@@ -69,7 +67,7 @@ class SHAKETest(unittest.TestCase):
         digest = h.read(90)
 
         # read returns a byte string of the right length
-        self.assertTrue(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, bytes))
         self.assertEqual(len(digest), 90)
 
     def test_update_after_read(self):
@@ -88,21 +86,23 @@ class SHAKETest(unittest.TestCase):
 
 
 class SHAKE128Test(SHAKETest):
-        shake = SHAKE128
+    shake = SHAKE128
 
 
 class SHAKE256Test(SHAKETest):
-        shake = SHAKE256
+    shake = SHAKE256
 
 
 class SHAKEVectors(unittest.TestCase):
     pass
 
 
-test_vectors_128 = load_test_vectors(("Hash", "SHA3"),
-                               "ShortMsgKAT_SHAKE128.txt",
-                               "Short Messages KAT SHAKE128",
-                               { "len" : lambda x: int(x) } ) or []
+test_vectors_128 = (
+    load_test_vectors(
+        ("Hash", "SHA3"), "ShortMsgKAT_SHAKE128.txt", "Short Messages KAT SHAKE128", {"len": lambda x: int(x)}
+    )
+    or []
+)
 
 for idx, tv in enumerate(test_vectors_128):
     if tv.len == 0:
@@ -118,10 +118,12 @@ for idx, tv in enumerate(test_vectors_128):
     setattr(SHAKEVectors, "test_128_%d" % idx, new_test)
 
 
-test_vectors_256 = load_test_vectors(("Hash", "SHA3"),
-                               "ShortMsgKAT_SHAKE256.txt",
-                               "Short Messages KAT SHAKE256",
-                               { "len" : lambda x: int(x) } ) or []
+test_vectors_256 = (
+    load_test_vectors(
+        ("Hash", "SHA3"), "ShortMsgKAT_SHAKE256.txt", "Short Messages KAT SHAKE256", {"len": lambda x: int(x)}
+    )
+    or []
+)
 
 for idx, tv in enumerate(test_vectors_256):
     if tv.len == 0:
@@ -145,7 +147,8 @@ def get_tests(config={}):
     return tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import unittest
+
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")

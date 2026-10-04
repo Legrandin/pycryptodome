@@ -25,21 +25,34 @@
 
 __revision__ = "$Id$"
 
-import os
 
 def get_tests(config={}):
     tests = []
-    from Crypto.SelfTest.Util import test_number; tests += test_number.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_Counter; tests += test_Counter.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_Padding; tests += test_Padding.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_strxor; tests += test_strxor.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_asn1; tests += test_asn1.get_tests(config=config)
-    from Crypto.SelfTest.Util import test_rfc1751; tests += test_rfc1751.get_tests(config=config)
+    from Crypto.SelfTest.Util import test_number
+
+    tests += test_number.get_tests(config=config)
+    from Crypto.SelfTest.Util import test_Counter
+
+    tests += test_Counter.get_tests(config=config)
+    from Crypto.SelfTest.Util import test_Padding
+
+    tests += test_Padding.get_tests(config=config)
+    from Crypto.SelfTest.Util import test_strxor
+
+    tests += test_strxor.get_tests(config=config)
+    from Crypto.SelfTest.Util import test_asn1
+
+    tests += test_asn1.get_tests(config=config)
+    from Crypto.SelfTest.Util import test_rfc1751
+
+    tests += test_rfc1751.get_tests(config=config)
     return tests
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import unittest
+
     suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest="suite")
 
 # vim:set ts=4 sw=4 sts=4 expandtab:
