@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/PublicKey/test_RSA.py: Self-test for the RSA primitive
 #
@@ -29,7 +28,6 @@ __revision__ = "$Id$"
 import os
 import pickle
 from pickle import PicklingError
-from Crypto.Util.py3compat import *
 
 import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/test_pkcs1_15.py: Self-test for PKCS#1 v1.5 encryption
 #
@@ -20,7 +19,6 @@
 # SOFTWARE.
 # ===================================================================
 
-from __future__ import print_function
 
 import unittest
 
@@ -28,7 +26,6 @@ from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex
 from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
-from Crypto.Util.py3compat import b
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
 
@@ -42,7 +39,7 @@ def rws(t):
 
 def t2b(t):
     """Convert a text string with bytes in hex form to a byte string"""
-    clean = b(rws(t))
+    clean = rws(t).encode("latin-1")
     if len(clean) % 2 == 1:
         raise ValueError("Even number of characters expected")
     return a2b_hex(clean)
@@ -121,7 +118,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
                                 return r
                         # The real test
                         cipher = PKCS.new(key, randfunc=randGen(t2b(test[3])))
-                        ct = cipher.encrypt(b(test[1]))
+                        ct = cipher.encrypt(test[1].encode("latin-1"))
                         self.assertEqual(ct, t2b(test[2]))
 
         def testEncrypt2(self):
@@ -133,7 +130,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
         def testVerify1(self):
             for test in self._testData:
                 key = RSA.importKey(test[0])
-                expected_pt = b(test[1])
+                expected_pt = test[1].encode("latin-1")
                 ct = t2b(test[2])
                 cipher = PKCS.new(key)
 
@@ -153,7 +150,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
 
             # Verify that decryption fails if there are less then 8 non-zero padding
             # bytes
-            pt = b('\x00\x02' + '\xFF'*7 + '\x00' + '\x45'*118)
+            pt = ('\x00\x02' + '\xFF'*7 + '\x00' + '\x45'*118).encode("latin-1")
             pt_int = bytes_to_long(pt)
             ct_int = self.key1024._encrypt(pt_int)
             ct = long_to_bytes(ct_int, 128)

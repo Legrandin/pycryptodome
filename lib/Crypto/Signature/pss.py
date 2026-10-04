@@ -28,7 +28,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bchr, bord, iter_range
+from __future__ import annotations
+
+from typing import Any, Callable, Optional, Protocol, TYPE_CHECKING
+
 import Crypto.Util.number
 from Crypto.Util.number import (ceil_div,
                                 long_to_bytes,
@@ -37,6 +40,29 @@ from Crypto.Util.number import (ceil_div,
 from Crypto.Util.strxor import strxor
 from Crypto import Random
 
+if TYPE_CHECKING:
+    from Crypto.PublicKey.RSA import RsaKey
+
+
+class Hash(Protocol):
+    digest_size: int
+    def digest(self) -> bytes: ...
+    def update(self, data: bytes) -> Any: ...
+    def new(self, data: Optional[bytes] = ...) -> Hash: ...
+
+
+class HashModule(Protocol):
+    digest_size: int
+    @staticmethod
+    def new(data: Optional[bytes] = None) -> Hash: ...
+
+class _HashGenerator(Protocol):
+    digest_size: int
+    def new(self, data: Optional[bytes] = ...) -> Any: ...
+
+MaskFunction = Callable[[bytes, int], bytes]
+RndFunction = Callable[[int], bytes]
+
 
 class PSS_SigScheme:
     """A signature object for ``RSASSA-PSS``.
@@ -44,7 +70,8 @@ class PSS_SigScheme:
     Use :func:`Crypto.Signature.pss.new`.
     """
 
-    def __init__(self, key, mgfunc, saltLen, randfunc):
+    def __init__(self, key: RsaKey, mgfunc: Optional[MaskFunction], saltLen: Optional[int],
+                 randfunc: RndFunction) -> None:
         """Initialize this PKCS#1 PSS signature scheme object.
 
         :Parameters:
@@ -67,11 +94,11 @@ class PSS_SigScheme:
         self._mgfunc = mgfunc
         self._randfunc = randfunc
 
-    def can_sign(self):
+    def can_sign(self) -> bool:
         """Return ``True`` if this object can be used to sign messages."""
         return self._key.has_private()
 
-    def sign(self, msg_hash):
+    def sign(self, msg_hash: Hash) -> bytes:
         """Create the PKCS#1 PSS signature of a message.
 
         This function is also called ``RSASSA-PSS-SIGN`` and
@@ -114,7 +141,7 @@ class PSS_SigScheme:
             raise ValueError("Fault detected in RSA private key operation")
         return signature
 
-    def verify(self, msg_hash, signature):
+    def verify(self, msg_hash: Hash, signature: bytes) -> None:
         """Check if the  PKCS#1 PSS signature over a message is valid.
 
         This function is also called ``RSASSA-PSS-VERIFY`` and
@@ -138,7 +165,7 @@ class PSS_SigScheme:
             sLen = msg_hash.digest_size
         else:
             sLen = self._saltLen
-        if self._mgfunc:
+        if self._mgfunc is not None:
             mgf = self._mgfunc
         else:
             mgf = lambda x, y: MGF1(x, y, msg_hash)
@@ -161,7 +188,7 @@ class PSS_SigScheme:
         _EMSA_PSS_VERIFY(msg_hash, em, modBits-1, mgf, sLen)
 
 
-def MGF1(mgfSeed, maskLen, hash_gen):
+def MGF1(mgfSeed: bytes, maskLen: int, hash_gen: _HashGenerator) -> bytes:
     """Mask Generation Function, described in `B.2.1 of RFC8017
     <https://tools.ietf.org/html/rfc8017>`_.
 
@@ -181,7 +208,7 @@ def MGF1(mgfSeed, maskLen, hash_gen):
     """
 
     T = b""
-    for counter in iter_range(ceil_div(maskLen, hash_gen.digest_size)):
+    for counter in range(ceil_div(maskLen, hash_gen.digest_size)):
         c = long_to_bytes(counter, 4)
         hobj = hash_gen.new()
         hobj.update(mgfSeed + c)
@@ -190,7 +217,7 @@ def MGF1(mgfSeed, maskLen, hash_gen):
     return T[:maskLen]
 
 
-def _EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
+def _EMSA_PSS_ENCODE(mhash: Hash, emBits: int, randFunc: RndFunction, mgf: MaskFunction, sLen: int) -> bytes:
     r"""
     Implement the ``EMSA-PSS-ENCODE`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.1.1).
@@ -224,7 +251,7 @@ def _EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
 
     # Bitmask of digits that fill up
     lmask = 0
-    for i in iter_range(8*emLen-emBits):
+    for i in range(8*emLen-emBits):
         lmask = lmask >> 1 | 0x80
 
     # Step 1 and 2 have been already done
@@ -235,26 +262,26 @@ def _EMSA_PSS_ENCODE(mhash, emBits, randFunc, mgf, sLen):
     # Step 4
     salt = randFunc(sLen)
     # Step 5
-    m_prime = bchr(0)*8 + mhash.digest() + salt
+    m_prime = bytes([0])*8 + mhash.digest() + salt
     # Step 6
     h = mhash.new()
     h.update(m_prime)
     # Step 7
-    ps = bchr(0)*(emLen-sLen-mhash.digest_size-2)
+    ps = bytes([0])*(emLen-sLen-mhash.digest_size-2)
     # Step 8
-    db = ps + bchr(1) + salt
+    db = ps + bytes([1]) + salt
     # Step 9
     dbMask = mgf(h.digest(), emLen-mhash.digest_size-1)
     # Step 10
     maskedDB = strxor(db, dbMask)
     # Step 11
-    maskedDB = bchr(bord(maskedDB[0]) & ~lmask) + maskedDB[1:]
+    maskedDB = bytes([maskedDB[0] & ~lmask]) + maskedDB[1:]
     # Step 12
-    em = maskedDB + h.digest() + bchr(0xBC)
+    em = maskedDB + h.digest() + bytes([0xBC])
     return em
 
 
-def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
+def _EMSA_PSS_VERIFY(mhash: Hash, em: bytes, emBits: int, mgf: MaskFunction, sLen: int) -> None:
     """
     Implement the ``EMSA-PSS-VERIFY`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.1.2).
@@ -286,7 +313,7 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
 
     # Bitmask of digits that fill up
     lmask = 0
-    for i in iter_range(8*emLen-emBits):
+    for i in range(8*emLen-emBits):
         lmask = lmask >> 1 | 0x80
 
     # Step 1 and 2 have been already done
@@ -300,16 +327,16 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     maskedDB = em[:emLen-mhash.digest_size-1]
     h = em[emLen-mhash.digest_size-1:-1]
     # Step 6
-    if lmask & bord(em[0]):
+    if lmask & em[0]:
         raise ValueError("Incorrect signature")
     # Step 7
     dbMask = mgf(h, emLen-mhash.digest_size-1)
     # Step 8
     db = strxor(maskedDB, dbMask)
     # Step 9
-    db = bchr(bord(db[0]) & ~lmask) + db[1:]
+    db = bytes([db[0] & ~lmask]) + db[1:]
     # Step 10
-    if not db.startswith(bchr(0)*(emLen-mhash.digest_size-sLen-2) + bchr(1)):
+    if not db.startswith(bytes([0])*(emLen-mhash.digest_size-sLen-2) + bytes([1])):
         raise ValueError("Incorrect signature")
     # Step 11
     if sLen > 0:
@@ -317,7 +344,7 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
     else:
         salt = b""
     # Step 12
-    m_prime = bchr(0)*8 + mhash.digest() + salt
+    m_prime = bytes([0])*8 + mhash.digest() + salt
     # Step 13
     hobj = mhash.new()
     hobj.update(m_prime)
@@ -327,7 +354,9 @@ def _EMSA_PSS_VERIFY(mhash, em, emBits, mgf, sLen):
         raise ValueError("Incorrect signature")
 
 
-def new(rsa_key, **kwargs):
+def new(rsa_key: RsaKey, *, mask_func: Optional[MaskFunction] = None,
+        salt_bytes: Optional[int] = None,
+        rand_func: Optional[RndFunction] = None) -> PSS_SigScheme:
     """Create an object for making or verifying PKCS#1 PSS signatures.
 
     :parameter rsa_key:
@@ -377,11 +406,6 @@ def new(rsa_key, **kwargs):
     :return: a :class:`PSS_SigScheme` signature object
     """
 
-    mask_func = kwargs.pop("mask_func", None)
-    salt_len = kwargs.pop("salt_bytes", None)
-    rand_func = kwargs.pop("rand_func", None)
     if rand_func is None:
         rand_func = Random.get_random_bytes
-    if kwargs:
-        raise ValueError("Unknown keywords: " + str(kwargs.keys()))
-    return PSS_SigScheme(rsa_key, mask_func, salt_len, rand_func)
+    return PSS_SigScheme(rsa_key, mask_func, salt_bytes, rand_func)

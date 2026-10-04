@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/common.py: Common code for Crypto.SelfTest.Hash
 #
@@ -25,12 +24,11 @@
 """Self-testing for PyCrypto hash modules"""
 
 import re
-import sys
 import unittest
 import binascii
+from Crypto.Util._bytes import tobytes
 import Crypto.Hash
 from binascii import hexlify, unhexlify
-from Crypto.Util.py3compat import b, tobytes
 from Crypto.Util.strxor import strxor_c
 
 def t2b(hex_string):
@@ -84,14 +82,10 @@ class HashSelfTest(unittest.TestCase):
         out3 = h.hexdigest()
         out4 = binascii.b2a_hex(h.digest())
 
-        # PY3K: hexdigest() should return str(), and digest() bytes
+        # hexdigest() should return str(), and digest() bytes
         self.assertEqual(self.expected, out1)   # h = .new(); h.update(data); h.digest()
-        if sys.version_info[0] == 2:
-            self.assertEqual(self.expected, out2)   # h = .new(); h.update(data); h.hexdigest()
-            self.assertEqual(self.expected, out3)   # h = .new(data); h.hexdigest()
-        else:
-            self.assertEqual(self.expected.decode(), out2)   # h = .new(); h.update(data); h.hexdigest()
-            self.assertEqual(self.expected.decode(), out3)   # h = .new(data); h.hexdigest()
+        self.assertEqual(self.expected.decode(), out2)   # h = .new(); h.update(data); h.hexdigest()
+        self.assertEqual(self.expected.decode(), out3)   # h = .new(data); h.hexdigest()
         self.assertEqual(self.expected, out4)   # h = .new(data); h.digest()
 
         # Verify that the .new() method produces a fresh hash object, except
@@ -124,7 +118,7 @@ class ByteArrayTest(unittest.TestCase):
         self.extra_params = extra_params
 
     def runTest(self):
-        data = b("\x00\x01\x02")
+        data = b"\x00\x01\x02"
 
         # Data can be a bytearray (during initialization)
         ba = bytearray(data)
@@ -241,11 +235,11 @@ class MACSelfTest(unittest.TestCase):
         except NotImplementedError:
             pass
 
-        # PY3K: Check that hexdigest() returns str and digest() returns bytes
-        self.assertTrue(isinstance(h.digest(), type(b"")))
-        self.assertTrue(isinstance(h.hexdigest(), type("")))
+        # Check that hexdigest() returns str and digest() returns bytes
+        self.assertTrue(isinstance(h.digest(), bytes))
+        self.assertTrue(isinstance(h.hexdigest(), str))
 
-        # PY3K: Check that .hexverify() accepts bytes or str
+        # Check that .hexverify() accepts bytes or str
         h.hexverify(h.hexdigest())
         h.hexverify(h.hexdigest().encode('ascii'))
 

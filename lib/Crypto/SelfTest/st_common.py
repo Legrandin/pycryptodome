@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/st_common.py: Common functions for SelfTest modules
 #
@@ -26,7 +25,6 @@
 
 import unittest
 import binascii
-from Crypto.Util.py3compat import b
 
 
 def list_test_cases(class_):
@@ -39,9 +37,9 @@ def list_test_cases(class_):
 def strip_whitespace(s):
     """Remove whitespace from a text or byte string"""
     if isinstance(s,str):
-        return b("".join(s.split()))
+        return "".join(s.split()).encode("latin-1")
     else:
-        return b("").join(s.split())
+        return b"".join(s.split())
 
 def a2b_hex(s):
     """Convert hexadecimal to binary, ignoring whitespace"""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Util/asn1.py : Minimal support for ASN.1 DER binary encoding.
 #
@@ -20,11 +19,17 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Any, Iterable, Iterator, List, Optional, Sequence, TypeVar, Union, cast
+
 import struct
 
-from Crypto.Util.py3compat import byte_string, bchr, bord
-
 from Crypto.Util.number import long_to_bytes, bytes_to_long
+
+_DerObjectT = TypeVar("_DerObjectT", bound="DerObject")
+
+DerSetElement = Union[bytes, int]
 
 __all__ = ['DerObject', 'DerInteger', 'DerBoolean', 'DerOctetString',
            'DerNull', 'DerSequence', 'DerObjectId', 'DerBitString', 'DerSetOf']
@@ -46,26 +51,26 @@ def _is_number(x, only_non_negative=False):
     return not only_non_negative or x >= 0
 
 
-class BytesIO_EOF(object):
+class BytesIO_EOF:
     """This class differs from BytesIO in that a ValueError exception is
     raised whenever EOF is reached."""
 
-    def __init__(self, initial_bytes):
+    def __init__(self, initial_bytes: bytes) -> None:
         self._buffer = initial_bytes
         self._index = 0
-        self._bookmark = None
+        self._bookmark: Optional[int] = None
 
-    def set_bookmark(self):
+    def set_bookmark(self) -> None:
         self._bookmark = self._index
 
-    def data_since_bookmark(self):
+    def data_since_bookmark(self) -> bytes:
         assert self._bookmark is not None
         return self._buffer[self._bookmark:self._index]
 
-    def remaining_data(self):
+    def remaining_data(self) -> int:
         return len(self._buffer) - self._index
 
-    def read(self, length):
+    def read(self, length: int) -> bytes:
         new_index = self._index + length
         if new_index > len(self._buffer):
             raise ValueError("Not enough data for DER decoding: expected %d bytes and found %d" % (new_index, len(self._buffer)))
@@ -74,18 +79,19 @@ class BytesIO_EOF(object):
         self._index = new_index
         return result
 
-    def read_byte(self):
-        return bord(self.read(1)[0])
+    def read_byte(self) -> int:
+        return self.read(1)[0]
 
 
-class DerObject(object):
+class DerObject:
         """Base class for defining a single DER object.
 
         This class should never be directly instantiated.
         """
 
-        def __init__(self, asn1Id=None, payload=b'', implicit=None,
-                     constructed=False, explicit=None):
+        def __init__(self, asn1Id: Optional[Union[int, bytes]] = None, payload: bytes = b'',
+                     implicit: Optional[Union[int, bytes]] = None, constructed: bool = False,
+                     explicit: Optional[Union[int, bytes]] = None) -> None:
                 """Initialize the DER object according to a specific ASN.1 type.
 
                 :Parameters:
@@ -115,6 +121,7 @@ class DerObject(object):
                     By default, there is no EXPLICIT tag.
                 """
 
+                self._tag_octet: Optional[int]
                 if asn1Id is None:
                     # The tag octet will be read in with ``decode``
                     self._tag_octet = None
@@ -154,29 +161,28 @@ class DerObject(object):
                     # Neither IMPLICIT nor EXPLICIT
                     self._tag_octet = constructed_bit | asn1Id
 
-        def _convertTag(self, tag):
+        def _convertTag(self, tag: Union[int, bytes]) -> int:
                 """Check if *tag* is a real DER tag (5 bits).
                 Convert it from a character to number if necessary.
                 """
-                if not _is_number(tag):
-                    if len(tag) == 1:
-                        tag = bord(tag[0])
+                if isinstance(tag, (bytes, bytearray)) and len(tag) == 1:
+                    tag = tag[0]
                 # Ensure that tag is a low tag
-                if not (_is_number(tag) and 0 <= tag < 0x1F):
+                if not (isinstance(tag, int) and 0 <= tag < 0x1F):
                     raise ValueError("Wrong DER tag")
                 return tag
 
         @staticmethod
-        def _definite_form(length):
+        def _definite_form(length: int) -> bytes:
                 """Build length octets according to BER/DER
                 definite form.
                 """
                 if length > 127:
                         encoding = long_to_bytes(length)
-                        return bchr(len(encoding) + 128) + encoding
-                return bchr(length)
+                        return bytes([len(encoding) + 128]) + encoding
+                return bytes([length])
 
-        def encode(self):
+        def encode(self) -> bytes:
                 """Return this DER element, fully encoded as a binary byte string."""
 
                 # Concatenate identifier octets, length octets,
@@ -187,22 +193,23 @@ class DerObject(object):
                 # In case of an EXTERNAL tag, first encode the inner
                 # element.
                 if hasattr(self, "_inner_tag_octet"):
-                    output_payload = (bchr(self._inner_tag_octet) +
+                    output_payload = (bytes([self._inner_tag_octet]) +
                                       self._definite_form(len(self.payload)) +
                                       self.payload)
 
-                return (bchr(self._tag_octet) +
+                assert self._tag_octet is not None
+                return (bytes([self._tag_octet]) +
                         self._definite_form(len(output_payload)) +
                         output_payload)
 
-        def _decodeLen(self, s):
+        def _decodeLen(self, s: BytesIO_EOF) -> int:
                 """Decode DER length octets from a file."""
 
                 length = s.read_byte()
 
                 if length > 127:
                     encoded_length = s.read(length & 0x7F)
-                    if bord(encoded_length[0]) == 0:
+                    if encoded_length[0] == 0:
                         raise ValueError("Invalid DER: length has leading zero")
                     length = bytes_to_long(encoded_length)
                     if length <= 127:
@@ -210,7 +217,7 @@ class DerObject(object):
 
                 return length
 
-        def decode(self, der_encoded, strict=False):
+        def decode(self: _DerObjectT, der_encoded: bytes, strict: bool = False) -> _DerObjectT:
                 """Decode a complete DER element, and re-initializes this
                 object with it.
 
@@ -221,7 +228,7 @@ class DerObject(object):
                   ValueError: in case of parsing errors.
                 """
 
-                if not byte_string(der_encoded):
+                if not isinstance(der_encoded, bytes):
                     raise ValueError("Input is not a byte string")
 
                 s = BytesIO_EOF(der_encoded)
@@ -233,7 +240,7 @@ class DerObject(object):
 
                 return self
 
-        def _decodeFromStream(self, s, strict):
+        def _decodeFromStream(self, s: BytesIO_EOF, strict: bool) -> None:
                 """Decode a complete DER element from a file."""
 
                 idOctet = s.read_byte()
@@ -288,7 +295,8 @@ class DerInteger(DerObject):
         :vartype value: integer
         """
 
-        def __init__(self, value=0, implicit=None, explicit=None):
+        def __init__(self, value: int = 0, implicit: Optional[Union[int, bytes]] = None,
+                     explicit: Optional[Union[int, bytes]] = None) -> None:
                 """Initialize the DER object as an INTEGER.
 
                 :Parameters:
@@ -304,22 +312,22 @@ class DerInteger(DerObject):
                                    False, explicit)
                 self.value = value  # The integer value
 
-        def encode(self):
+        def encode(self) -> bytes:
                 """Return the DER INTEGER, fully encoded as a
                 binary string."""
 
                 number = self.value
                 self.payload = b''
                 while True:
-                    self.payload = bchr(int(number & 255)) + self.payload
+                    self.payload = bytes([int(number & 255)]) + self.payload
                     if 128 <= number <= 255:
-                        self.payload = bchr(0x00) + self.payload
+                        self.payload = bytes([0x00]) + self.payload
                     if -128 <= number <= 255:
                         break
                     number >>= 8
                 return DerObject.encode(self)
 
-        def decode(self, der_encoded, strict=False):
+        def decode(self, der_encoded: bytes, strict: bool = False) -> DerInteger:
                 """Decode a DER-encoded INTEGER, and re-initializes this
                 object with it.
 
@@ -332,7 +340,7 @@ class DerInteger(DerObject):
 
                 return DerObject.decode(self, der_encoded, strict=strict)
 
-        def _decodeFromStream(self, s, strict):
+        def _decodeFromStream(self, s: BytesIO_EOF, strict: bool) -> None:
                 """Decode a complete DER INTEGER from a file."""
 
                 # Fill up self.payload
@@ -349,9 +357,9 @@ class DerInteger(DerObject):
                 bits = 1
                 for i in self.payload:
                     self.value *= 256
-                    self.value += bord(i)
+                    self.value += i
                     bits <<= 8
-                if self.payload and bord(self.payload[0]) & 0x80:
+                if self.payload and self.payload[0] & 0x80:
                     self.value -= bits
 
 
@@ -381,7 +389,8 @@ class DerBoolean(DerObject):
     :ivar value: The boolean value
     :vartype value: boolean
     """
-    def __init__(self, value=False, implicit=None, explicit=None):
+    def __init__(self, value: bool = False, implicit: Optional[Union[int, bytes]] = None,
+                 explicit: Optional[Union[int, bytes]] = None) -> None:
         """Initialize the DER object as a BOOLEAN.
 
         Args:
@@ -403,13 +412,13 @@ class DerBoolean(DerObject):
         DerObject.__init__(self, 0x01, b'', implicit, False, explicit)
         self.value = value  # The boolean value
 
-    def encode(self):
+    def encode(self) -> bytes:
         """Return the DER BOOLEAN, fully encoded as a binary string."""
 
         self.payload = b'\xFF' if self.value else b'\x00'
         return DerObject.encode(self)
 
-    def decode(self, der_encoded, strict=False):
+    def decode(self, der_encoded: bytes, strict: bool = False) -> DerBoolean:
         """Decode a DER-encoded BOOLEAN, and re-initializes this object with it.
 
         Args:
@@ -430,9 +439,9 @@ class DerBoolean(DerObject):
         if len(self.payload) != 1:
             raise ValueError("Invalid encoding for DER BOOLEAN: payload is not 1 byte")
 
-        if bord(self.payload[0]) == 0:
+        if self.payload[0] == 0:
             self.value = False
-        elif bord(self.payload[0]) == 0xFF:
+        elif self.payload[0] == 0xFF:
             self.value = True
         else:
             raise ValueError("Invalid payload for DER BOOLEAN")
@@ -481,7 +490,8 @@ class DerSequence(DerObject):
 
         """
 
-        def __init__(self, startSeq=None, implicit=None, explicit=None):
+        def __init__(self, startSeq: Optional[Sequence[Union[int, bytes, DerObject]]] = None,
+                     implicit: Optional[int] = None, explicit: Optional[int] = None) -> None:
                 """Initialize the DER object as a SEQUENCE.
 
                 :Parameters:
@@ -502,47 +512,39 @@ class DerSequence(DerObject):
                 """
 
                 DerObject.__init__(self, 0x10, b'', implicit, True, explicit)
+                self._seq: List[Any]
                 if startSeq is None:
                     self._seq = []
                 else:
-                    self._seq = startSeq
+                    self._seq = cast(List[Any], startSeq)
 
         # A few methods to make it behave like a python sequence
 
-        def __delitem__(self, n):
+        def __delitem__(self, n: Union[int, slice]) -> None:
                 del self._seq[n]
 
-        def __getitem__(self, n):
+        def __getitem__(self, n: Union[int, slice]) -> Any:
                 return self._seq[n]
 
-        def __setitem__(self, key, value):
+        def __setitem__(self, key: int, value: Union[int, bytes, DerObject]) -> None:
                 self._seq[key] = value
 
-        def __setslice__(self, i, j, sequence):
-                self._seq[i:j] = sequence
-
-        def __delslice__(self, i, j):
-                del self._seq[i:j]
-
-        def __getslice__(self, i, j):
-                return self._seq[max(0, i):max(0, j)]
-
-        def __len__(self):
+        def __len__(self) -> int:
                 return len(self._seq)
 
-        def __iadd__(self, item):
+        def __iadd__(self, item: Union[int, bytes, DerObject]) -> DerSequence:
                 self._seq.append(item)
                 return self
 
-        def append(self, item):
+        def append(self, item: Union[int, bytes, DerObject]) -> DerSequence:
                 self._seq.append(item)
                 return self
 
-        def insert(self, index, item):
+        def insert(self, index: int, item: Union[int, bytes, DerObject]) -> DerSequence:
                 self._seq.insert(index, item)
                 return self
 
-        def hasInts(self, only_non_negative=True):
+        def hasInts(self, only_non_negative: bool = True) -> int:
                 """Return the number of items in this sequence that are
                 integers.
 
@@ -554,7 +556,7 @@ class DerSequence(DerObject):
                 items = [x for x in self._seq if _is_number(x, only_non_negative)]
                 return len(items)
 
-        def hasOnlyInts(self, only_non_negative=True):
+        def hasOnlyInts(self, only_non_negative: bool = True) -> bool:
                 """Return ``True`` if all items in this sequence are integers
                 or non-negative integers.
 
@@ -565,9 +567,9 @@ class DerSequence(DerObject):
                   only_non_negative (boolean):
                     If ``True``, the presence of negative integers
                     causes the method to return ``False``."""
-                return self._seq and self.hasInts(only_non_negative) == len(self._seq)
+                return bool(self._seq) and self.hasInts(only_non_negative) == len(self._seq)
 
-        def encode(self):
+        def encode(self) -> bytes:
                 """Return this DER SEQUENCE, fully encoded as a
                 binary string.
 
@@ -577,7 +579,7 @@ class DerSequence(DerObject):
                 """
                 self.payload = b''
                 for item in self._seq:
-                    if byte_string(item):
+                    if isinstance(item, bytes):
                         self.payload += item
                     elif _is_number(item):
                         self.payload += DerInteger(item).encode()
@@ -585,7 +587,9 @@ class DerSequence(DerObject):
                         self.payload += item.encode()
                 return DerObject.encode(self)
 
-        def decode(self, der_encoded, strict=False, nr_elements=None, only_ints_expected=False):
+        def decode(self, der_encoded: bytes, strict: bool = False,
+                   nr_elements: Optional[Union[int, Iterable[int]]] = None,
+                   only_ints_expected: bool = False) -> DerSequence:
                 """Decode a complete DER SEQUENCE, and re-initializes this
                 object with it.
 
@@ -614,7 +618,7 @@ class DerSequence(DerObject):
 
                 return result
 
-        def _decodeFromStream(self, s, strict):
+        def _decodeFromStream(self, s: BytesIO_EOF, strict: bool) -> None:
                 """Decode a complete DER SEQUENCE from a file."""
 
                 self._seq = []
@@ -640,11 +644,10 @@ class DerSequence(DerObject):
                         self._seq.append(derInt.value)
 
                 ok = True
-                if self._nr_elements is not None:
-                    try:
-                        ok = len(self._seq) in self._nr_elements
-                    except TypeError:
-                        ok = len(self._seq) == self._nr_elements
+                if isinstance(self._nr_elements, int):
+                    ok = len(self._seq) == self._nr_elements
+                elif self._nr_elements is not None:
+                    ok = len(self._seq) in self._nr_elements
 
                 if not ok:
                     raise ValueError("Unexpected number of members (%d)"
@@ -681,7 +684,7 @@ class DerOctetString(DerObject):
     :vartype payload: byte string
     """
 
-    def __init__(self, value=b'', implicit=None):
+    def __init__(self, value: bytes = b'', implicit: Optional[Union[int, bytes]] = None) -> None:
         """Initialize the DER object as an OCTET STRING.
 
         :Parameters:
@@ -699,7 +702,7 @@ class DerOctetString(DerObject):
 class DerNull(DerObject):
     """Class to model a DER NULL element."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the DER object as a NULL."""
 
         DerObject.__init__(self, 0x05, b'', None, False)
@@ -735,7 +738,8 @@ class DerObjectId(DerObject):
     :vartype value: string
     """
 
-    def __init__(self, value='', implicit=None, explicit=None):
+    def __init__(self, value: str = '', implicit: Optional[Union[int, bytes]] = None,
+                 explicit: Optional[Union[int, bytes]] = None) -> None:
         """Initialize the DER object as an OBJECT ID.
 
         :Parameters:
@@ -750,7 +754,7 @@ class DerObjectId(DerObject):
         DerObject.__init__(self, 0x06, b'', implicit, False, explicit)
         self.value = value
 
-    def encode(self):
+    def encode(self) -> bytes:
         """Return the DER OBJECT ID, fully encoded as a
         binary string."""
 
@@ -773,10 +777,10 @@ class DerObjectId(DerObject):
                 encoding.append((v & 0x7F) | 0x80)
                 v >>= 7
 
-        self.payload = b''.join([bchr(x) for x in reversed(encoding)])
+        self.payload = b''.join([bytes([x]) for x in reversed(encoding)])
         return DerObject.encode(self)
 
-    def decode(self, der_encoded, strict=False):
+    def decode(self, der_encoded: bytes, strict: bool = False) -> DerObjectId:
         """Decode a complete DER OBJECT ID, and re-initializes this
         object with it.
 
@@ -852,7 +856,8 @@ class DerBitString(DerObject):
     :vartype value: byte string
     """
 
-    def __init__(self, value=b'', implicit=None, explicit=None):
+    def __init__(self, value: Union[bytes, DerObject] = b'', implicit: Optional[Union[int, bytes]] = None,
+                 explicit: Optional[Union[int, bytes]] = None) -> None:
         """Initialize the DER object as a BIT STRING.
 
         :Parameters:
@@ -868,12 +873,13 @@ class DerBitString(DerObject):
         DerObject.__init__(self, 0x03, b'', implicit, False, explicit)
 
         # The bitstring value (packed)
+        self.value: bytes
         if isinstance(value, DerObject):
             self.value = value.encode()
         else:
             self.value = value
 
-    def encode(self):
+    def encode(self) -> bytes:
         """Return the DER BIT STRING, fully encoded as a
         byte string."""
 
@@ -881,7 +887,7 @@ class DerBitString(DerObject):
         self.payload = b'\x00' + self.value
         return DerObject.encode(self)
 
-    def decode(self, der_encoded, strict=False):
+    def decode(self, der_encoded: bytes, strict: bool = False) -> DerBitString:
         """Decode a complete DER BIT STRING, and re-initializes this
         object with it.
 
@@ -902,7 +908,7 @@ class DerBitString(DerObject):
         # Fill-up self.payload
         DerObject._decodeFromStream(self, s, strict)
 
-        if self.payload and bord(self.payload[0]) != 0:
+        if self.payload and self.payload[0] != 0:
             raise ValueError("Not a valid BIT STRING")
 
         # Fill-up self.value
@@ -939,7 +945,8 @@ class DerSetOf(DerObject):
     the output will be ``[4, 5, 6]``.
     """
 
-    def __init__(self, startSet=None, implicit=None):
+    def __init__(self, startSet: Optional[Iterable[DerSetElement]] = None,
+                 implicit: Optional[Union[int, bytes]] = None) -> None:
         """Initialize the DER object as a SET OF.
 
         :Parameters:
@@ -950,26 +957,26 @@ class DerSetOf(DerObject):
             It overrides the universal tag for SET OF (17).
         """
         DerObject.__init__(self, 0x11, b'', implicit, True)
-        self._seq = []
+        self._seq: List[Any] = []
 
         # All elements must be of the same type (and therefore have the
         # same leading octet)
-        self._elemOctet = None
+        self._elemOctet: Optional[int] = None
 
         if startSet:
             for e in startSet:
                 self.add(e)
 
-    def __getitem__(self, n):
+    def __getitem__(self, n: int) -> DerSetElement:
         return self._seq[n]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[DerSetElement]:
         return iter(self._seq)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._seq)
 
-    def add(self, elem):
+    def add(self, elem: DerSetElement) -> None:
         """Add an element to the set.
 
         Args:
@@ -978,12 +985,13 @@ class DerSetOf(DerObject):
               It can be an integer or a DER encoded object.
         """
 
+        eo: Optional[int]
         if _is_number(elem):
             eo = 0x02
         elif isinstance(elem, DerObject):
             eo = self._tag_octet
         else:
-            eo = bord(elem[0])
+            eo = cast(bytes, elem)[0]
 
         if self._elemOctet != eo:
             if self._elemOctet is not None:
@@ -993,7 +1001,7 @@ class DerSetOf(DerObject):
         if elem not in self._seq:
             self._seq.append(elem)
 
-    def decode(self, der_encoded, strict=False):
+    def decode(self, der_encoded: bytes, strict: bool = False) -> DerSetOf:
         """Decode a complete SET OF DER element, and re-initializes this
         object with it.
 
@@ -1011,7 +1019,7 @@ class DerSetOf(DerObject):
 
         return DerObject.decode(self, der_encoded, strict)
 
-    def _decodeFromStream(self, s, strict):
+    def _decodeFromStream(self, s: BytesIO_EOF, strict: bool) -> None:
         """Decode a complete DER SET OF from a file."""
 
         self._seq = []
@@ -1021,7 +1029,7 @@ class DerSetOf(DerObject):
 
         # Add one item at a time to self.seq, by scanning self.payload
         p = BytesIO_EOF(self.payload)
-        setIdOctet = -1
+        setIdOctet: Optional[int] = -1
         while p.remaining_data() > 0:
             p.set_bookmark()
 
@@ -1029,7 +1037,7 @@ class DerSetOf(DerObject):
             der._decodeFromStream(p, strict)
 
             # Verify that all members are of the same type
-            if setIdOctet < 0:
+            if setIdOctet == -1:
                 setIdOctet = der._tag_octet
             else:
                 if setIdOctet != der._tag_octet:
@@ -1044,7 +1052,7 @@ class DerSetOf(DerObject):
                 self._seq.append(derInt.value)
         # end
 
-    def encode(self):
+    def encode(self) -> bytes:
         """Return this SET OF DER element, fully encoded as a
         binary string.
         """

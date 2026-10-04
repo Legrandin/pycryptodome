@@ -32,12 +32,20 @@
 OpenPGP mode.
 """
 
-__all__ = ['OpenPgpMode']
+from __future__ import annotations
 
-from Crypto.Util.py3compat import _copy_bytes
+from typing import TYPE_CHECKING, Union
+
+__all__ = ['OpenPgpMode']
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Random import get_random_bytes
 
-class OpenPgpMode(object):
+if TYPE_CHECKING:
+    from types import ModuleType
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+class OpenPgpMode:
     """OpenPGP mode.
 
     This mode is a variant of CFB, and it is only used in PGP and
@@ -58,7 +66,7 @@ class OpenPgpMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, factory, key, iv, cipher_params):
+    def __init__(self, factory: ModuleType, key: Buffer, iv: Buffer, cipher_params: dict) -> None:
 
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
@@ -73,7 +81,7 @@ class OpenPgpMode(object):
                         segment_size=self.block_size * 8,
                         **cipher_params)
 
-        iv = _copy_bytes(None, None, iv)
+        iv = copy_bytes(None, None, iv)
 
         # The cipher will be used for...
         if len(iv) == self.block_size:
@@ -100,7 +108,7 @@ class OpenPgpMode(object):
                             segment_size=self.block_size * 8,
                             **cipher_params)
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext: Buffer) -> bytes:
         """Encrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -137,7 +145,7 @@ class OpenPgpMode(object):
             self._done_first_block = True
         return res
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext: Buffer) -> bytes:
         """Decrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have decrypted a message

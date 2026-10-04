@@ -29,8 +29,6 @@
 # ===================================================================
 
 import unittest
-
-from Crypto.Util.py3compat import b, bchr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
@@ -48,7 +46,7 @@ def load_hash_by_name(hash_name):
     return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
 
-class PRNG(object):
+class PRNG:
 
     def __init__(self, stream):
         self.stream = stream
@@ -133,7 +131,7 @@ for count, tv in enumerate(test_vectors_verify):
     hash_module = load_hash_by_name(tv.shaalg.upper())
     hash_obj = hash_module.new(tv.msg)
     public_key = RSA.construct([bytes_to_long(x) for x in (modulus, tv.e)])  # type: ignore
-    if tv.saltval != b("\x00"):
+    if tv.saltval != b"\x00":
         prng = PRNG(tv.saltval)
         verifier = pss.new(public_key, salt_bytes=len(tv.saltval), rand_func=prng)
     else:
@@ -188,7 +186,7 @@ for count, tv in enumerate(test_vectors_sign):
 
     hash_module = load_hash_by_name(tv.shaalg.upper())
     hash_obj = hash_module.new(tv.msg)
-    if tv.saltval != b("\x00"):
+    if tv.saltval != b"\x00":
         prng = PRNG(tv.saltval)
         signer = pss.new(private_key, salt_bytes=len(tv.saltval), rand_func=prng)
     else:
@@ -211,14 +209,14 @@ class PKCS1_Legacy_Module_Tests(unittest.TestCase):
 
     def runTest(self):
         key = RSA.generate(1024)
-        hashed = SHA1.new(b("Test"))
+        hashed = SHA1.new(b"Test")
         good_signature = PKCS1_PSS.new(key).sign(hashed)
         verifier = PKCS1_PSS.new(key.public_key())
 
         self.assertEqual(verifier.verify(hashed, good_signature), True)
 
         # Flip a few bits in the signature
-        bad_signature = strxor(good_signature, bchr(1) * len(good_signature))
+        bad_signature = strxor(good_signature, bytes([1]) * len(good_signature))
         self.assertEqual(verifier.verify(hashed, bad_signature), False)
 
 
@@ -236,15 +234,15 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
                       "SHA3_224", "SHA3_256", "SHA3_384", "SHA3_512")
 
         for name in hash_names:
-            hashed = load_hash_by_name(name).new(b("Test"))
+            hashed = load_hash_by_name(name).new(b"Test")
             signer.sign(hashed)
 
         from Crypto.Hash import BLAKE2b, BLAKE2s
         for hash_size in (20, 32, 48, 64):
-            hashed_b = BLAKE2b.new(digest_bytes=hash_size, data=b("Test"))
+            hashed_b = BLAKE2b.new(digest_bytes=hash_size, data=b"Test")
             signer.sign(hashed_b)
         for hash_size in (16, 20, 28, 32):
-            hashed_s = BLAKE2s.new(digest_bytes=hash_size, data=b("Test"))
+            hashed_s = BLAKE2s.new(digest_bytes=hash_size, data=b"Test")
             signer.sign(hashed_s)
 
 

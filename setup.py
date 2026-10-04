@@ -20,22 +20,14 @@
 # SOFTWARE.
 # ===================================================================
 
-from __future__ import print_function
-
-try:
-    from setuptools import Extension, Command, setup
-    from setuptools.command.build_ext import build_ext
-    from setuptools.command.build_py import build_py
-except ImportError:
-    from distutils.core import Extension, Command, setup
-    from distutils.command.build_ext import build_ext
-    from distutils.command.build_py import build_py
+from setuptools import Extension, Command, setup
+from setuptools.command.build_ext import build_ext
+from setuptools.command.build_py import build_py
 
 import re
 import os
 import sys
 import shutil
-import struct
 import sysconfig
 
 sys.path.append(os.getcwd())
@@ -61,7 +53,7 @@ PyCryptodome
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.7, Python 3.8 and newer, and PyPy.
+It supports Python 3.8 and newer, and PyPy.
 
 You can install it with::
 
@@ -225,22 +217,17 @@ def create_cryptodome_lib():
             print("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
             shutil.copy2(full_file_name_src, full_file_name_dst)
 
-            if full_file_name_src.split(".")[-1] not in ("py", "pyi"):
-                if full_file_name_src != "py.typed":
-                    continue
+            if full_file_name_src.split(".")[-1] != "py":
+                continue
 
-            if sys.version_info[0] > 2:
-                extra_param = { "encoding": "utf-8" }
-            else:
-                extra_param = {}
-            with open(full_file_name_dst, "rt", **extra_param) as fd:
+            with open(full_file_name_dst, encoding="utf-8") as fd:
                 content = (fd.read().
                            replace("Crypto.", "Cryptodome.").
                            replace("Crypto ", "Cryptodome ").
                            replace("'Crypto'", "'Cryptodome'").
                            replace('"Crypto"', '"Cryptodome"'))
             os.remove(full_file_name_dst)
-            with open(full_file_name_dst, "wt", **extra_param) as fd:
+            with open(full_file_name_dst, "w", encoding="utf-8") as fd:
                 fd.write(content)
 
 
@@ -268,16 +255,7 @@ packages =  [
     "Crypto.SelfTest.Math",
 ]
 package_data = {
-    "Crypto" : [ "py.typed", "*.pyi" ],
-    "Crypto.Cipher" : [ "*.pyi" ],
-    "Crypto.Hash" : [ "*.pyi" ],
-    "Crypto.Math" : [ "*.pyi" ],
-    "Crypto.Protocol" : [ "*.pyi" ],
-    "Crypto.PublicKey" : [ "*.pyi" ],
-    "Crypto.Random" : [ "*.pyi" ],
-    "Crypto.Signature" : [ "*.pyi" ],
-    "Crypto.IO" : [ "*.pyi" ],
-    "Crypto.Util" : [ "*.pyi" ],
+    "Crypto" : [ "py.typed" ],
 }
 
 ext_modules = [
@@ -504,13 +482,12 @@ with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
 
 version_string = ".".join([str(x) for x in version_tuple])
 
-# Set the minimum ABI3 version for bdist_wheel to 3.7
+# Set the minimum ABI3 version for bdist_wheel to 3.8
 # unless Python is running without GIL (as there is no established way yet to
 # specify multiple ABI levels)
 setup_options = {}
-if sys.version_info[0] > 2:
-    if not sysconfig.get_config_var('Py_GIL_DISABLED'):
-        setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp37'}}
+if not sysconfig.get_config_var('Py_GIL_DISABLED'):
+    setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp38'}}
 
 setup(
     name=project_name,
@@ -522,7 +499,7 @@ setup(
     url="https://www.pycryptodome.org",
     platforms='Posix; MacOS X; Windows',
     zip_safe=False,
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*',
+    python_requires='>=3.8',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: BSD License',
@@ -533,8 +510,6 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Topic :: Security :: Cryptography',
         'Typing :: Typed',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',

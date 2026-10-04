@@ -31,8 +31,8 @@
 import unittest
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 

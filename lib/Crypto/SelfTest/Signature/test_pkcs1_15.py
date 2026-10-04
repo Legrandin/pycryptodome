@@ -31,8 +31,6 @@
 import json
 import unittest
 from binascii import unhexlify
-
-from Crypto.Util.py3compat import bchr
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
 from Crypto.SelfTest.st_common import list_test_cases
@@ -191,7 +189,7 @@ class PKCS1_Legacy_Module_Tests(unittest.TestCase):
         self.assertEqual(verifier.verify(hashed, good_signature), True)
 
         # Flip a few bits in the signature
-        bad_signature = strxor(good_signature, bchr(1) * len(good_signature))
+        bad_signature = strxor(good_signature, bytes([1]) * len(good_signature))
         self.assertEqual(verifier.verify(hashed, bad_signature), False)
 
 

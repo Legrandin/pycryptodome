@@ -2,7 +2,7 @@ import struct
 from enum import IntEnum
 
 from types import ModuleType
-from typing import Optional
+from typing import Optional, Tuple
 
 from .KDF import _HKDF_extract, _HKDF_expand
 from .DH import key_agreement, import_x25519_public_key, import_x448_public_key
@@ -91,7 +91,7 @@ class HPKE_Cipher:
                  receiver_key: EccKey,
                  enc: Optional[bytes],
                  sender_key: Optional[EccKey],
-                 psk_pair: tuple[bytes, bytes],
+                 psk_pair: Tuple[bytes, bytes],
                  info: bytes,
                  aead_id: AEAD,
                  mode: MODE):
@@ -110,7 +110,7 @@ class HPKE_Cipher:
              self._kdf_id, \
              self._hashmod = _Curve_Config[self._curve]
         except KeyError as ke:
-            raise ValueError("Curve {} is not supported by HPKE".format(self._curve)) from ke
+            raise ValueError(f"Curve {self._curve} is not supported by HPKE") from ke
 
         self._Nk = 16 if self._aead_id == AEAD.AES128_GCM else 32
         self._Nn = 12
@@ -222,7 +222,7 @@ class HPKE_Cipher:
         return shared_secret
 
     @staticmethod
-    def _verify_psk_inputs(mode: MODE, psk_pair: tuple[bytes, bytes]):
+    def _verify_psk_inputs(mode: MODE, psk_pair: Tuple[bytes, bytes]):
         psk_id, psk = psk_pair
 
         if (psk == b'') ^ (psk_id == b''):
@@ -375,7 +375,7 @@ def new(*, receiver_key: EccKey,
         aead_id: AEAD,
         enc: Optional[bytes] = None,
         sender_key: Optional[EccKey] = None,
-        psk: Optional[tuple[bytes, bytes]] = None,
+        psk: Optional[Tuple[bytes, bytes]] = None,
         info: Optional[bytes] = None) -> HPKE_Cipher:
     """Create an HPKE context which can be used:
 

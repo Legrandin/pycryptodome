@@ -32,7 +32,7 @@ class KW_Tests(unittest.TestCase):
 
     def test_rfc3394(self):
         for tv in self.tvs:
-            kek, pt, ct = [bytes.fromhex(x) for x in tv]
+            kek, pt, ct = (bytes.fromhex(x) for x in tv)
 
             cipher = AES.new(kek, AES.MODE_KW)
             ct2 = cipher.seal(pt)
@@ -114,7 +114,7 @@ class KWP_Tests(unittest.TestCase):
 
     def test_rfc5649(self):
         for tv in self.tvs:
-            kek, pt, ct = [bytes.fromhex(x) for x in tv]
+            kek, pt, ct = (bytes.fromhex(x) for x in tv)
 
             cipher = AES.new(kek, AES.MODE_KWP)
             ct2 = cipher.seal(pt)

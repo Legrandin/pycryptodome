@@ -1,7 +1,6 @@
 import unittest
 from binascii import unhexlify, hexlify
-
-from Crypto.Util.py3compat import tobytes
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import TupleHash128, TupleHash256
@@ -28,6 +27,13 @@ class TupleHashTest(unittest.TestCase):
         hobj = h.new()
         self.assertEqual(hobj.digest_size, self.default_bytes)
 
+    def test_new_same_variant(self):
+        # The new() method must create an object of the same variant
+        h = self.new()
+        digest1 = h.new(custom=b"c").update(b"abc").digest()
+        digest2 = self.TupleHash.new(custom=b"c").update(b"abc").digest()
+        self.assertEqual(digest1, digest2)
+
     def test_new_negative(self):
 
         h = self.new()
@@ -42,6 +48,7 @@ class TupleHashTest(unittest.TestCase):
                               digest_bits=self.minimum_bits - 8)
             self.assertRaises(ValueError, new_func,
                               digest_bits=self.minimum_bytes - 1)
+            self.assertRaises(TypeError, new_func, costum=b"x")
 
     def test_default_digest_size(self):
         digest = self.new().digest()
@@ -75,7 +82,7 @@ class TupleHashTest(unittest.TestCase):
 
     def test_update_negative(self):
         h = self.new()
-        self.assertRaises(TypeError, h.update, u"string")
+        self.assertRaises(TypeError, h.update, "string")
         self.assertRaises(TypeError, h.update, None)
         self.assertRaises(TypeError, h.update, (b'STRING1', b'STRING2'))
 
@@ -86,7 +93,7 @@ class TupleHashTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, bytes))
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -107,7 +114,7 @@ class TupleHashTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, str))
 
     def test_bytearray(self):
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Random/__init__.py: Self-test for random number generation modules
 #

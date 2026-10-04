@@ -31,8 +31,6 @@
 import sys
 import struct
 
-from Crypto.Util.py3compat import is_native_int
-
 from Crypto.Util._raw_api import (backend, load_lib,
                                   c_ulong, c_size_t, c_uint8_ptr)
 
@@ -107,7 +105,7 @@ if hasattr(lib, "__mpir_version"):
 
 
 # Lazy creation of GMP methods
-class _GMP(object):
+class _GMP:
 
     def __getattr__(self, name):
         if name.startswith("mpz_"):
@@ -167,7 +165,7 @@ class IntegerGMP(IntegerBase):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
 
-        if is_native_int(value):
+        if isinstance(value, int):
             _gmp.mpz_init(self._mpz_p)
             self._initialized = True
             if value == 0:
@@ -225,11 +223,6 @@ class IntegerGMP(IntegerBase):
     def __repr__(self):
         return "Integer(%s)" % str(self)
 
-    # Only Python 2.x
-    def __hex__(self):
-        return hex(int(self))
-
-    # Only Python 3.x
     def __index__(self):
         return int(self)
 
@@ -332,12 +325,12 @@ class IntegerGMP(IntegerBase):
         return func(self._mpz_p, term._mpz_p)
 
     def __eq__(self, term):
-        if not (isinstance(term, IntegerGMP) or is_native_int(term)):
+        if not (isinstance(term, IntegerGMP) or isinstance(term, int)):
             return False
         return self._apply_and_return(_gmp.mpz_cmp, term) == 0
 
     def __ne__(self, term):
-        if not (isinstance(term, IntegerGMP) or is_native_int(term)):
+        if not (isinstance(term, IntegerGMP) or isinstance(term, int)):
             return True
         return self._apply_and_return(_gmp.mpz_cmp, term) != 0
 
@@ -353,9 +346,8 @@ class IntegerGMP(IntegerBase):
     def __ge__(self, term):
         return self._apply_and_return(_gmp.mpz_cmp, term) >= 0
 
-    def __nonzero__(self):
+    def __bool__(self):
         return _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) != 0
-    __bool__ = __nonzero__
 
     def is_negative(self):
         return _gmp.mpz_cmp(self._mpz_p, self._zero_mpz_p) < 0
@@ -445,7 +437,7 @@ class IntegerGMP(IntegerBase):
                 raise ZeroDivisionError("Division by zero")
             if modulus.is_negative():
                 raise ValueError("Modulus must be positive")
-            if is_native_int(exponent):
+            if isinstance(exponent, int):
                 if exponent < 0:
                     raise ValueError("Exponent must not be negative")
                 if exponent < 65536:
@@ -491,7 +483,7 @@ class IntegerGMP(IntegerBase):
         return result
 
     def __iadd__(self, term):
-        if is_native_int(term):
+        if isinstance(term, int):
             if 0 <= term < 65536:
                 _gmp.mpz_add_ui(self._mpz_p,
                                 self._mpz_p,
@@ -509,7 +501,7 @@ class IntegerGMP(IntegerBase):
         return self
 
     def __isub__(self, term):
-        if is_native_int(term):
+        if isinstance(term, int):
             if 0 <= term < 65536:
                 _gmp.mpz_sub_ui(self._mpz_p,
                                 self._mpz_p,
@@ -527,7 +519,7 @@ class IntegerGMP(IntegerBase):
         return self
 
     def __imul__(self, term):
-        if is_native_int(term):
+        if isinstance(term, int):
             if 0 <= term < 65536:
                 _gmp.mpz_mul_ui(self._mpz_p,
                                 self._mpz_p,
@@ -659,7 +651,7 @@ class IntegerGMP(IntegerBase):
     def fail_if_divisible_by(self, small_prime):
         """Raise an exception if the small prime is a divisor."""
 
-        if is_native_int(small_prime):
+        if isinstance(small_prime, int):
             if 0 < small_prime < 65536:
                 if _gmp.mpz_divisible_ui_p(self._mpz_p,
                                            c_ulong(small_prime)):
@@ -675,7 +667,7 @@ class IntegerGMP(IntegerBase):
 
         if not isinstance(a, IntegerGMP):
             a = IntegerGMP(a)
-        if is_native_int(b):
+        if isinstance(b, int):
             if 0 < b < 65536:
                 _gmp.mpz_addmul_ui(self._mpz_p,
                                    a._mpz_p,
@@ -735,7 +727,7 @@ class IntegerGMP(IntegerBase):
         number and another term."""
 
         result = IntegerGMP(0)
-        if is_native_int(term):
+        if isinstance(term, int):
             if 0 < term < 65535:
                 _gmp.mpz_gcd_ui(result._mpz_p,
                                 self._mpz_p,

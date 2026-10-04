@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/PublicKey/test_DSA.py: Self-test for the DSA primitive
 #
@@ -25,7 +24,6 @@
 """Self-test suite for Crypto.PublicKey.DSA"""
 
 import os
-from Crypto.Util.py3compat import *
 
 import unittest
 from Crypto.SelfTest.st_common import list_test_cases, a2b_hex, b2a_hex
@@ -35,7 +33,7 @@ def _sws(s):
     if isinstance(s,str):
         return "".join(s.split())
     else:
-        return b("").join(s.split())
+        return b"".join(s.split())
 
 class DSATest(unittest.TestCase):
     # Test vector from "Appendix 5. Example of the DSA" of
@@ -62,7 +60,7 @@ class DSATest(unittest.TestCase):
 
     k = _sws("""358dad57 1462710f 50e254cf 1a376b2b deaadfbf""")
     k_inverse = _sws("""0d516729 8202e49b 4116ac10 4fc3f415 ae52f917""")
-    m = b2a_hex(b("abc"))
+    m = b2a_hex(b"abc")
     m_hash = _sws("""a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d""")
     r = _sws("""8bac1ab6 6410435c b7181f95 b16ab97c 92b341c0""")
     s = _sws("""41e2345f 1f56df24 58f426d1 55b4ba2d b6dcd8c8""")
@@ -91,19 +89,19 @@ class DSATest(unittest.TestCase):
 
     def test_construct_4tuple(self):
         """DSA (default implementation) constructed key (4-tuple)"""
-        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
+        (y, g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q))
         dsaObj = self.dsa.construct((y, g, p, q))
         self._test_verification(dsaObj)
 
     def test_construct_5tuple(self):
         """DSA (default implementation) constructed key (5-tuple)"""
-        (y, g, p, q, x) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)]
+        (y, g, p, q, x) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x))
         dsaObj = self.dsa.construct((y, g, p, q, x))
         self._test_signing(dsaObj)
         self._test_verification(dsaObj)
 
     def test_construct_bad_key4(self):
-        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
+        (y, g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q))
         tup = (y, g, p+1, q)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
@@ -114,7 +112,7 @@ class DSATest(unittest.TestCase):
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
     def test_construct_bad_key5(self):
-        (y, g, p, q, x) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)]
+        (y, g, p, q, x) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x))
         tup = (y, g, p, q, x+1)
         self.assertRaises(ValueError, self.dsa.construct, tup)
 
@@ -176,7 +174,7 @@ class DSATest(unittest.TestCase):
         self.assertFalse(dsaObj._verify(m_hash + 1, (r, s)))
 
     def test_repr(self):
-        (y, g, p, q) = [bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q)]
+        (y, g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q))
         dsaObj = self.dsa.construct((y, g, p, q))
         repr(dsaObj)
 

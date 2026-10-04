@@ -33,11 +33,11 @@
 import unittest
 from binascii import hexlify, unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import keccak
-from Crypto.Util.py3compat import b, tobytes, bchr
 
 class KeccakTest(unittest.TestCase):
 
@@ -59,8 +59,8 @@ class KeccakTest(unittest.TestCase):
 
     def test_new_positive2(self):
 
-        digest1 = keccak.new(data=b("\x90"), digest_bytes=64).digest()
-        digest2 = keccak.new(digest_bytes=64).update(b("\x90")).digest()
+        digest1 = keccak.new(data=b"\x90", digest_bytes=64).digest()
+        digest2 = keccak.new(digest_bytes=64).update(b"\x90").digest()
         self.assertEqual(digest1, digest2)
 
     def test_new_negative(self):
@@ -84,7 +84,7 @@ class KeccakTest(unittest.TestCase):
         self.assertRaises(ValueError, keccak.new, digest_bits=513)
 
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [bytes([10]) * 200, bytes([20]) * 300]
         h = keccak.new(digest_bytes=64)
         h.update(pieces[0]).update(pieces[1])
         digest = h.digest()
@@ -94,7 +94,7 @@ class KeccakTest(unittest.TestCase):
 
     def test_update_negative(self):
         h = keccak.new(digest_bytes=64)
-        self.assertRaises(TypeError, h.update, u"string")
+        self.assertRaises(TypeError, h.update, "string")
 
     def test_digest(self):
         h = keccak.new(digest_bytes=64)
@@ -103,7 +103,7 @@ class KeccakTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, type(b("digest"))))
+        self.assertTrue(isinstance(digest, type(b"digest")))
 
     def test_hex_digest(self):
         mac = keccak.new(digest_bits=512)
@@ -115,10 +115,10 @@ class KeccakTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, str))
 
     def test_update_after_digest(self):
-        msg=b("rrrrttt")
+        msg=b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
         h = keccak.new(digest_bits=512, data=msg[:4])
@@ -153,7 +153,7 @@ test_vectors_224 += load_test_vectors(("Hash", "keccak"),
 
 for idx, tv in enumerate(test_vectors_224):
     if tv.len == 0:
-        data = b("")
+        data = b""
     else:
         data = tobytes(tv.msg)
 
@@ -177,7 +177,7 @@ test_vectors_256 += load_test_vectors(("Hash", "keccak"),
 
 for idx, tv in enumerate(test_vectors_256):
     if tv.len == 0:
-        data = b("")
+        data = b""
     else:
         data = tobytes(tv.msg)
 
@@ -202,7 +202,7 @@ test_vectors_384 += load_test_vectors(("Hash", "keccak"),
 
 for idx, tv in enumerate(test_vectors_384):
     if tv.len == 0:
-        data = b("")
+        data = b""
     else:
         data = tobytes(tv.msg)
 
@@ -226,7 +226,7 @@ test_vectors_512 += load_test_vectors(("Hash", "keccak"),
 
 for idx, tv in enumerate(test_vectors_512):
     if tv.len == 0:
-        data = b("")
+        data = b""
     else:
         data = tobytes(tv.msg)
 

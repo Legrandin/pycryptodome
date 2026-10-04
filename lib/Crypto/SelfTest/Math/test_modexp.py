@@ -39,7 +39,6 @@ from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
 
-from Crypto.Util.py3compat import *
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
@@ -64,8 +63,8 @@ class ExceptionModulus(ValueError):
 def monty_pow(base, exp, modulus):
     max_len = len(long_to_bytes(max(base, exp, modulus)))
 
-    base_b, exp_b, modulus_b = [ long_to_bytes(x, max_len) for x in
-                                 (base, exp, modulus) ]
+    base_b, exp_b, modulus_b = ( long_to_bytes(x, max_len) for x in
+                                 (base, exp, modulus) )
 
     out = create_string_buffer(max_len)
     error = _raw_montgomery.monty_pow(
@@ -125,7 +124,7 @@ class TestModExp(unittest.TestCase):
         self.assertRaises(ExceptionModulus, monty_pow, base, exponent1, modulus1-1)
 
     def test_several_lengths(self):
-        prng = SHAKE128.new().update(b('Test'))
+        prng = SHAKE128.new().update(b'Test')
         for length in range(1, 100):
             modulus2 = Integer.from_bytes(prng.read(length)) | 1
             base = Integer.from_bytes(prng.read(length)) % modulus2
@@ -136,7 +135,7 @@ class TestModExp(unittest.TestCase):
             self.assertEqual(result, expected)
 
     def test_variable_exponent(self):
-        prng = create_rng(b('Test variable exponent'))
+        prng = create_rng(b'Test variable exponent')
         for i in range(20):
             for j in range(7):
                 modulus = prng.getrandbits(8*30) | 1
@@ -154,7 +153,7 @@ class TestModExp(unittest.TestCase):
                 self.assertEqual(result, expected)
 
     def test_stress_63(self):
-        prng = create_rng(b('Test 63'))
+        prng = create_rng(b'Test 63')
         length = 63
         for _ in range(2000):
             modulus  = prng.getrandbits(8*length) | 1
@@ -166,7 +165,7 @@ class TestModExp(unittest.TestCase):
             self.assertEqual(result, expected)
 
     def test_stress_64(self):
-        prng = create_rng(b('Test 64'))
+        prng = create_rng(b'Test 64')
         length = 64
         for _ in range(2000):
             modulus  = prng.getrandbits(8*length) | 1
@@ -178,7 +177,7 @@ class TestModExp(unittest.TestCase):
             self.assertEqual(result, expected)
 
     def test_stress_65(self):
-        prng = create_rng(b('Test 65'))
+        prng = create_rng(b'Test 65')
         length = 65
         for _ in range(2000):
             modulus  = prng.getrandbits(8*length) | 1

@@ -33,8 +33,7 @@ import re
 import unittest
 import warnings
 from binascii import unhexlify, hexlify
-
-from Crypto.Util.py3compat import tobytes
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -81,10 +80,10 @@ class Blake2Test(unittest.TestCase):
                               digest_bits=self.max_bits + 1)
             self.assertRaises(TypeError, new_func,
                               digest_bytes=self.max_bytes,
-                              key=u"string")
+                              key="string")
             self.assertRaises(TypeError, new_func,
                               digest_bytes=self.max_bytes,
-                              data=u"string")
+                              data="string")
 
     def test_default_digest_size(self):
         digest = self.BLAKE2.new(data=b'abc').digest()
@@ -101,7 +100,7 @@ class Blake2Test(unittest.TestCase):
 
     def test_update_negative(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes)
-        self.assertRaises(TypeError, h.update, u"string")
+        self.assertRaises(TypeError, h.update, "string")
 
     def test_digest(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes)
@@ -110,7 +109,7 @@ class Blake2Test(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, bytes))
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -139,7 +138,7 @@ class Blake2Test(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, str))
 
     def test_verify(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"4")
@@ -275,7 +274,7 @@ class Blake2OfficialTestVector(unittest.TestCase):
     def _load_tests(self, test_vector_file):
         expected = "in"
         test_vectors = []
-        with open(test_vector_file, "rt") as test_vector_fd:
+        with open(test_vector_file) as test_vector_fd:
             for line_number, line in enumerate(test_vector_fd):
 
                 if line.strip() == "" or line.startswith("#"):
@@ -349,7 +348,7 @@ class Blake2TestVector1(unittest.TestCase):
 
     def _load_tests(self, test_vector_file):
         test_vectors = []
-        with open(test_vector_file, "rt") as test_vector_fd:
+        with open(test_vector_file) as test_vector_fd:
             for line_number, line in enumerate(test_vector_fd):
                 if line.strip() == "" or line.startswith("#"):
                     continue
@@ -408,7 +407,7 @@ class Blake2TestVector2(unittest.TestCase):
 
     def _load_tests(self, test_vector_file):
         test_vectors = []
-        with open(test_vector_file, "rt") as test_vector_fd:
+        with open(test_vector_file) as test_vector_fd:
             for line_number, line in enumerate(test_vector_fd):
                 if line.strip() == "" or line.startswith("#"):
                     continue

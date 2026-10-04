@@ -30,8 +30,7 @@
 
 import unittest
 from binascii import unhexlify
-
-from Crypto.Util.py3compat import b, tobytes, bchr
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.number import long_to_bytes
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
@@ -71,12 +70,12 @@ class OcbTests(unittest.TestCase):
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_OCB,
-                          nonce=u'test12345678')
+                          nonce='test12345678')
 
     def test_nonce_length(self):
         # nonce cannot be empty
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_OCB,
-                          nonce=b(""))
+                          nonce=b"")
 
         # nonce can be up to 15 bytes long
         for length in range(1, 16):
@@ -119,24 +118,24 @@ class OcbTests(unittest.TestCase):
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
             cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-            result = getattr(cipher, func)(b(""))
-            self.assertEqual(result, b(""))
+            result = getattr(cipher, func)(b"")
+            self.assertEqual(result, b"")
 
     def test_either_encrypt_or_decrypt(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        cipher.encrypt(b("xyz"))
-        self.assertRaises(TypeError, cipher.decrypt, b("xyz"))
+        cipher.encrypt(b"xyz")
+        self.assertRaises(TypeError, cipher.decrypt, b"xyz")
 
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        cipher.decrypt(b("xyz"))
-        self.assertRaises(TypeError, cipher.encrypt, b("xyz"))
+        cipher.decrypt(b"xyz")
+        self.assertRaises(TypeError, cipher.encrypt, b"xyz")
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.encrypt, 'test1234567890-*')
 
         cipher = AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.decrypt, 'test1234567890-*')
 
     def test_mac_len(self):
         # Invalid MAC length
@@ -198,7 +197,7 @@ class OcbTests(unittest.TestCase):
 
             for chunk in break_up(auth_data, chunk_length):
                 cipher.update(chunk)
-            pt2 = b("")
+            pt2 = b""
             for chunk in break_up(ciphertext, chunk_length):
                 pt2 += cipher.decrypt(chunk)
             pt2 += cipher.decrypt()
@@ -212,7 +211,7 @@ class OcbTests(unittest.TestCase):
 
             for chunk in break_up(auth_data, chunk_length):
                 cipher.update(chunk)
-            ct2 = b("")
+            ct2 = b""
             for chunk in break_up(plaintext, chunk_length):
                 ct2 += cipher.encrypt(chunk)
             ct2 += cipher.encrypt()
@@ -427,8 +426,8 @@ class OcbFSMTests(unittest.TestCase):
 
     def test_valid_multiple_encrypt_or_decrypt(self):
         for method_name in "encrypt", "decrypt":
-            for auth_data in (None, b("333"), self.data,
-                              self.data + b("3")):
+            for auth_data in (None, b"333", self.data,
+                              self.data + b"3"):
                 cipher = AES.new(self.key_128, AES.MODE_OCB,
                                  nonce=self.nonce_96)
                 if auth_data is not None:
@@ -514,11 +513,11 @@ class OcbFSMTests(unittest.TestCase):
 def algo_rfc7253(keylen, taglen, noncelen):
     """Implement the algorithm at page 18 of RFC 7253"""
 
-    key = bchr(0) * (keylen // 8 - 1) + bchr(taglen)
+    key = bytes([0]) * (keylen // 8 - 1) + bytes([taglen])
     C = b""
 
     for i in range(128):
-        S = bchr(0) * i
+        S = bytes([0]) * i
 
         N = long_to_bytes(3 * i + 1, noncelen // 8)
         cipher = AES.new(key, AES.MODE_OCB, nonce=N, mac_len=taglen // 8)
@@ -700,9 +699,9 @@ class OcbRfc7253Test(unittest.TestCase):
     )
 
     def test1(self):
-        key = unhexlify(b(self.tv1_key))
+        key = unhexlify(self.tv1_key.encode("latin-1"))
         for tv in self.tv1:
-            nonce, aad, pt, ct = [unhexlify(b(x)) for x in tv]
+            nonce, aad, pt, ct = (unhexlify(x.encode("latin-1")) for x in tv)
             ct, mac_tag = ct[:-16], ct[-16:]
 
             cipher = AES.new(key, AES.MODE_OCB, nonce=nonce)
@@ -719,7 +718,7 @@ class OcbRfc7253Test(unittest.TestCase):
 
     def test2(self):
 
-        key, nonce, aad, pt, ct = [unhexlify(b(x)) for x in self.tv2]
+        key, nonce, aad, pt, ct = (unhexlify(x.encode("latin-1")) for x in self.tv2)
         ct, mac_tag = ct[:-12], ct[-12:]
 
         cipher = AES.new(key, AES.MODE_OCB, nonce=nonce, mac_len=12)
@@ -737,7 +736,7 @@ class OcbRfc7253Test(unittest.TestCase):
     def test3(self):
         for keylen, taglen, result in self.tv3:
             result2 = algo_rfc7253(keylen, taglen, 96)
-            self.assertEqual(unhexlify(b(result)), result2)
+            self.assertEqual(unhexlify(result.encode("latin-1")), result2)
 
 
 class OcbDkgTest(unittest.TestCase):

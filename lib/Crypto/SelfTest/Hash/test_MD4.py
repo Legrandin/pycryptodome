@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/MD4.py: Self-test for the MD4 hash function
 #
@@ -26,7 +25,6 @@
 
 __revision__ = "$Id$"
 
-from Crypto.Util.py3compat import *
 
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [

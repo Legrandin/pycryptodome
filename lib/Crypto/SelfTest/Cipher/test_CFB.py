@@ -31,9 +31,9 @@
 import unittest
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, is_string
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -114,7 +114,7 @@ class NistCfbVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if is_string(tv):
+            if isinstance(tv, str):
                 direction = tv
                 continue
 
@@ -144,7 +144,7 @@ class NistCfbVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if is_string(tv):
+            if isinstance(tv, str):
                 direction = tv
                 continue
 
@@ -193,7 +193,7 @@ class NistCfbVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if is_string(tv):
+            if isinstance(tv, str):
                 direction = tv
                 continue
 

@@ -35,8 +35,7 @@ import re
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.Util.py3compat import tobytes, bord, bchr
-
+from Crypto.Util._bytes import tobytes
 from Crypto.Hash import (SHA1, SHA224, SHA256, SHA384, SHA512,
                          SHA3_224, SHA3_256, SHA3_384, SHA3_512)
 from Crypto.Signature import DSS
@@ -126,11 +125,11 @@ class FIPS_DSA_Tests(unittest.TestCase):
         signature = signer.sign(hash_obj)
 
         # Verify that output looks like a DER SEQUENCE
-        self.assertEqual(bord(signature[0]), 48)
+        self.assertEqual(signature[0], 48)
         signer.verify(hash_obj, signature)
 
         # Verify that ASN.1 parsing fails as expected
-        signature = bchr(7) + signature[1:]
+        signature = bytes([7]) + signature[1:]
         self.assertRaises(ValueError, signer.verify, hash_obj, signature)
 
     def test_sign_verify(self):
@@ -306,11 +305,11 @@ hVvwpph00t5f4QPFAR5u8sQtzVDV09Kfma5uuiyAySRPTFQi8Jef8MO6Xg==
         signature = signer.sign(hash_obj)
 
         # Verify that output looks like a DER SEQUENCE
-        self.assertEqual(bord(signature[0]), 48)
+        self.assertEqual(signature[0], 48)
         signer.verify(hash_obj, signature)
 
         # Verify that ASN.1 parsing fails as expected
-        signature = bchr(7) + signature[1:]
+        signature = bytes([7]) + signature[1:]
         self.assertRaises(ValueError, signer.verify, hash_obj, signature)
 
 

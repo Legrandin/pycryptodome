@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Cipher/DES.py : DES
 #
@@ -31,13 +30,30 @@ Module's constants for the modes of operation supported with Single DES:
 :var MODE_EAX: :ref:`EAX Mode <eax_mode>`
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union
+
 import sys
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util.py3compat import byte_string
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   c_size_t, c_uint8_ptr)
+
+if TYPE_CHECKING:
+    from Crypto.Cipher import BlockCipherParams
+    from typing_extensions import Unpack
+    from Crypto.Cipher._mode_cbc import CbcMode
+    from Crypto.Cipher._mode_cfb import CfbMode
+    from Crypto.Cipher._mode_ctr import CtrMode
+    from Crypto.Cipher._mode_ecb import EcbMode
+    from Crypto.Cipher._mode_ofb import OfbMode
+    from Crypto.Cipher._mode_openpgp import OpenPgpMode
+    from Crypto.Cipher._mode_eax import EaxMode
+
+Buffer = Union[bytes, bytearray, memoryview]
+DESMode = int
 
 _raw_des_lib = load_pycryptodome_raw_lib(
                 "Crypto.Cipher._raw_des",
@@ -82,7 +98,8 @@ def _create_base_cipher(dict_parameters):
     return SmartPointer(cipher.get(), stop_operation)
 
 
-def new(key, mode, *args, **kwargs):
+def new(key: Buffer, mode: DESMode, *args: Buffer, **kwargs: Unpack[BlockCipherParams]) -> \
+        Union[EcbMode, CbcMode, CfbMode, OfbMode, CtrMode, OpenPgpMode, EaxMode]:
     """Create a new DES cipher.
 
     :param key:
@@ -144,15 +161,15 @@ def new(key, mode, *args, **kwargs):
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
-MODE_ECB = 1
-MODE_CBC = 2
-MODE_CFB = 3
-MODE_OFB = 5
-MODE_CTR = 6
-MODE_OPENPGP = 7
-MODE_EAX = 9
+MODE_ECB: DESMode = 1
+MODE_CBC: DESMode = 2
+MODE_CFB: DESMode = 3
+MODE_OFB: DESMode = 5
+MODE_CTR: DESMode = 6
+MODE_OPENPGP: DESMode = 7
+MODE_EAX: DESMode = 9
 
 # Size of a data block (in bytes)
-block_size = 8
+block_size: int = 8
 # Size of a key (in bytes)
-key_size = 8
+key_size: int = 8

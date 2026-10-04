@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/test_pkcs1_oaep.py: Self-test for PKCS#1 OAEP encryption
 #
@@ -30,8 +29,6 @@ from Crypto.Cipher import PKCS1_OAEP as PKCS
 from Crypto.Hash import MD2, MD5, SHA1, SHA256, RIPEMD160, SHA224, SHA384, SHA512
 from Crypto import Random
 from Crypto.Signature.pss import MGF1
-
-from Crypto.Util.py3compat import b, bchr
 
 
 def rws(t):
@@ -313,7 +310,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             # Simplest possible negative tests
             for ct_size in (127, 128, 129):
                 cipher = PKCS.new(self.key1024)
-                self.assertRaises(ValueError, cipher.decrypt, bchr(0x00)*ct_size)
+                self.assertRaises(ValueError, cipher.decrypt, bytes([0x00])*ct_size)
 
         def testEncryptDecrypt1(self):
             # Encrypt/Decrypt messages of length [0..128-2*20-2]
@@ -370,14 +367,14 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             self.assertEqual(cipher.decrypt(ct), pt)
 
         def testByteArray(self):
-            pt = b("XER")
+            pt = b"XER"
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(bytearray(pt))
             pt2 = cipher.decrypt(bytearray(ct))
             self.assertEqual(pt, pt2)
 
         def testMemoryview(self):
-            pt = b("XER")
+            pt = b"XER"
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(memoryview(bytearray(pt)))
             pt2 = cipher.decrypt(memoryview(bytearray(ct)))

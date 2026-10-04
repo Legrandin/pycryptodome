@@ -1,4 +1,3 @@
-# coding=utf-8
 #
 #  KDF.py : a collection of Key Derivation Functions
 #
@@ -22,13 +21,15 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, List, Literal, Optional, TYPE_CHECKING, Union, overload
+
 import re
 import struct
 from functools import reduce
 
-from Crypto.Util.py3compat import (tobytes, bord, _copy_bytes, iter_range,
-                                   tostr, bchr, bstr)
-
+from Crypto.Util._bytes import copy_bytes, tobytes
 from Crypto.Hash import SHA1, SHA256, HMAC, CMAC, BLAKE2s
 from Crypto.Util.strxor import strxor
 from Crypto.Random import get_random_bytes
@@ -37,6 +38,13 @@ from Crypto.Util.number import size as bit_size, long_to_bytes, bytes_to_long
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t)
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+Buffer=Union[bytes, bytearray, memoryview]
+RNG = Callable[[int], bytes]
+PRF = Callable[[bytes, bytes], bytes]
 
 _raw_salsa20_lib = load_pycryptodome_raw_lib(
                     "Crypto.Cipher._Salsa20",
@@ -54,7 +62,8 @@ _raw_scrypt_lib = load_pycryptodome_raw_lib(
                     """)
 
 
-def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
+def PBKDF1(password: Union[str, Buffer], salt: bytes, dkLen: int, count: int = 1000,
+           hashAlgo: Optional[ModuleType] = None) -> bytes:
     """Derive one key from a password (or passphrase).
 
     This function performs key derivation according to an old version of
@@ -92,12 +101,13 @@ def PBKDF1(password, salt, dkLen, count=1000, hashAlgo=None):
         raise TypeError("Selected hash algorithm has a too short digest (%d bytes)." % digest)
     if len(salt) != 8:
         raise ValueError("Salt is not 8 bytes long (%d bytes instead)." % len(salt))
-    for i in iter_range(count-1):
+    for i in range(count-1):
         pHash = pHash.new(pHash.digest())
     return pHash.digest()[:dkLen]
 
 
-def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None):
+def PBKDF2(password: Union[str, Buffer], salt: Union[str, Buffer], dkLen: int = 16, count: int = 1000,
+           prf: Optional[PRF] = None, hmac_hash_module: Optional[ModuleType] = None) -> bytes:
     """Derive one or more keys from a password (or passphrase).
 
     This function performs key derivation according to the PKCS#5 standard (v2.0).
@@ -160,7 +170,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
         if prf is None:
             prf = lambda p, s: HMAC.new(p, s, hmac_hash_module).digest()
 
-        def link(s):
+        def link(s: List[bytes]) -> bytes:
             s[0], s[1] = s[1], prf(password, s[1])
             return s[0]
 
@@ -184,7 +194,7 @@ def PBKDF2(password, salt, dkLen=16, count=1000, prf=None, hmac_hash_module=None
     return key[:dkLen]
 
 
-class _S2V(object):
+class _S2V:
     """String-to-vector PRF as defined in `RFC5297`_.
 
     This class implements a pseudorandom function family
@@ -193,7 +203,8 @@ class _S2V(object):
     .. _RFC5297: http://tools.ietf.org/html/rfc5297
     """
 
-    def __init__(self, key, ciphermod, cipher_params=None):
+    def __init__(self, key: Buffer, ciphermod: ModuleType,
+                 cipher_params: Optional[Dict[Any, Any]] = None) -> None:
         """Initialize the S2V PRF.
 
         :Parameters:
@@ -206,7 +217,7 @@ class _S2V(object):
             A set of extra parameters to use to create a cipher instance.
         """
 
-        self._key = _copy_bytes(None, None, key)
+        self._key = copy_bytes(None, None, key)
         self._ciphermod = ciphermod
         self._last_string = self._cache = b'\x00' * ciphermod.block_size
 
@@ -219,7 +230,7 @@ class _S2V(object):
             self._cipher_params = dict(cipher_params)
 
     @staticmethod
-    def new(key, ciphermod):
+    def new(key: Buffer, ciphermod: ModuleType) -> _S2V:
         """Create a new S2V PRF.
 
         :Parameters:
@@ -231,13 +242,13 @@ class _S2V(object):
         """
         return _S2V(key, ciphermod)
 
-    def _double(self, bs):
+    def _double(self, bs: bytes) -> bytes:
         doubled = bytes_to_long(bs) << 1
-        if bord(bs[0]) & 0x80:
+        if bs[0] & 0x80:
             doubled ^= 0x87
         return long_to_bytes(doubled, len(bs))[-len(bs):]
 
-    def update(self, item):
+    def update(self, item: Buffer) -> None:
         """Pass the next component of the vector.
 
         The maximum number of components you can pass is equal to the block
@@ -258,9 +269,9 @@ class _S2V(object):
                        ciphermod=self._ciphermod,
                        cipher_params=self._cipher_params)
         self._cache = strxor(self._double(self._cache), mac.digest())
-        self._last_string = _copy_bytes(None, None, item)
+        self._last_string = copy_bytes(None, None, item)
 
-    def derive(self):
+    def derive(self) -> bytes:
         """"Derive a secret from the vector of components.
 
         :Return: a byte string, as long as the block length of the cipher.
@@ -280,12 +291,12 @@ class _S2V(object):
         return mac.digest()
 
 
-def _HKDF_extract(salt, ikm, hashmod):
+def _HKDF_extract(salt: Buffer, ikm: Buffer, hashmod: ModuleType) -> bytes:
     prk = HMAC.new(salt, ikm, digestmod=hashmod).digest()
     return prk
 
 
-def _HKDF_expand(prk, info, L, hashmod):
+def _HKDF_expand(prk: Buffer, info: Buffer, L: int, hashmod: ModuleType) -> bytes:
     t = [b""]
     n = 1
     tlen = 0
@@ -298,7 +309,16 @@ def _HKDF_expand(prk, info, L, hashmod):
     return okm[:L]
 
 
-def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
+@overload
+def HKDF(master: Buffer, key_len: int, salt: Optional[Buffer], hashmod: ModuleType,
+         num_keys: Literal[1] = 1, context: Optional[Buffer] = None) -> bytes: ...
+
+@overload
+def HKDF(master: Buffer, key_len: int, salt: Optional[Buffer], hashmod: ModuleType,
+         num_keys: int, context: Optional[Buffer] = None) -> Union[bytes, List[bytes]]: ...
+
+def HKDF(master: Buffer, key_len: int, salt: Optional[Buffer], hashmod: ModuleType, num_keys: int = 1,
+         context: Optional[Buffer] = None) -> Union[bytes, List[bytes]]:
     """Derive one or more keys from a master secret using
     the HMAC-based KDF defined in RFC5869_.
 
@@ -344,11 +364,20 @@ def HKDF(master, key_len, salt, hashmod, num_keys=1, context=None):
     if num_keys == 1:
         return okm[:key_len]
     kol = [okm[idx:idx + key_len]
-           for idx in iter_range(0, output_len, key_len)]
+           for idx in range(0, output_len, key_len)]
     return list(kol[:num_keys])
 
 
-def scrypt(password, salt, key_len, N, r, p, num_keys=1):
+@overload
+def scrypt(password: Union[str, Buffer], salt: Union[str, Buffer], key_len: int, N: int, r: int, p: int,
+           num_keys: Literal[1] = 1) -> bytes: ...
+
+@overload
+def scrypt(password: Union[str, Buffer], salt: Union[str, Buffer], key_len: int, N: int, r: int, p: int,
+           num_keys: int) -> Union[bytes, List[bytes]]: ...
+
+def scrypt(password: Union[str, Buffer], salt: Union[str, Buffer], key_len: int, N: int, r: int, p: int,
+           num_keys: int = 1) -> Union[bytes, List[bytes]]:
     """Derive one or more keys from a passphrase.
 
     Args:
@@ -403,7 +432,7 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
 
     # Parallelize into p flows
     data_out = []
-    for flow in iter_range(p):
+    for flow in range(p):
         idx = flow * 128 * r
         buffer_out = create_string_buffer(128 * r)
         result = scryptROMix(stage_1[idx: idx + 128 * r],
@@ -424,18 +453,14 @@ def scrypt(password, salt, key_len, N, r, p, num_keys=1):
         return dk
 
     kol = [dk[idx:idx + key_len]
-           for idx in iter_range(0, key_len * num_keys, key_len)]
+           for idx in range(0, key_len * num_keys, key_len)]
     return kol
 
 
-def _bcrypt_encode(data):
+def _bcrypt_encode(data: bytes) -> bytes:
     s = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
-    bits = []
-    for c in data:
-        bits_c = bin(bord(c))[2:].zfill(8)
-        bits.append(bstr(bits_c))
-    bits = b"".join(bits)
+    bits = b"".join(bin(c)[2:].zfill(8).encode("latin-1") for c in data)
 
     bits6 = [bits[idx:idx+6] for idx in range(0, len(bits), 6)]
 
@@ -447,20 +472,14 @@ def _bcrypt_encode(data):
     g = bits6[-1]
     idx = int(g, 2) << (6 - len(g))
     result.append(s[idx])
-    result = "".join(result)
 
-    return tobytes(result)
+    return tobytes("".join(result))
 
 
-def _bcrypt_decode(data):
+def _bcrypt_decode(data: bytes) -> bytes:
     s = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
-    bits = []
-    for c in tostr(data):
-        idx = s.find(c)
-        bits6 = bin(idx)[2:].zfill(6)
-        bits.append(bits6)
-    bits = "".join(bits)
+    bits = "".join(bin(s.find(c))[2:].zfill(6) for c in data.decode("latin-1"))
 
     modulo4 = len(data) % 4
     if modulo4 == 1:
@@ -472,15 +491,10 @@ def _bcrypt_decode(data):
 
     bits8 = [bits[idx:idx+8] for idx in range(0, len(bits), 8)]
 
-    result = []
-    for g in bits8:
-        result.append(bchr(int(g, 2)))
-    result = b"".join(result)
-
-    return result
+    return b"".join(bytes([int(g, 2)]) for g in bits8)
 
 
-def _bcrypt_hash(password, cost, salt, constant, invert):
+def _bcrypt_hash(password: bytes, cost: int, salt: bytes, constant: bytes, invert: bool) -> bytes:
     from Crypto.Cipher import _EKSBlowfish
 
     if len(password) > 72:
@@ -496,7 +510,7 @@ def _bcrypt_hash(password, cost, salt, constant, invert):
     return ctext
 
 
-def bcrypt(password, cost, salt=None):
+def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes] = None) -> bytes:
     """Hash a password into a key, using the OpenBSD bcrypt protocol.
 
     Args:
@@ -524,7 +538,7 @@ def bcrypt(password, cost, salt=None):
 
     password = tobytes(password, "utf-8")
 
-    if password.find(bchr(0)[0]) != -1:
+    if password.find(bytes([0])[0]) != -1:
         raise ValueError("The password contains the zero byte")
 
     if len(password) < 72:
@@ -537,13 +551,13 @@ def bcrypt(password, cost, salt=None):
 
     ctext = _bcrypt_hash(password, cost, salt, b"OrpheanBeholderScryDoubt", True)
 
-    cost_enc = b"$" + bstr(str(cost).zfill(2))
+    cost_enc = b"$" + str(cost).zfill(2).encode("latin-1")
     salt_enc = b"$" + _bcrypt_encode(salt)
     hash_enc = _bcrypt_encode(ctext[:-1])     # only use 23 bytes, not 24
     return b"$2a" + cost_enc + salt_enc + hash_enc
 
 
-def bcrypt_check(password, bcrypt_hash):
+def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str]) -> None:
     """Verify if the provided password matches the given bcrypt hash.
 
     Args:
@@ -588,7 +602,16 @@ def bcrypt_check(password, bcrypt_hash):
         raise ValueError("Incorrect bcrypt hash")
 
 
-def SP800_108_Counter(master, key_len, prf, num_keys=None, label=b'', context=b''):
+@overload
+def SP800_108_Counter(master: bytes, key_len: int, prf: PRF, num_keys: Literal[None] = None,
+                      label: bytes = b'', context: bytes = b'') -> bytes: ...
+
+@overload
+def SP800_108_Counter(master: bytes, key_len: int, prf: PRF, num_keys: int,
+                      label: bytes = b'', context: bytes = b'') -> List[bytes]: ...
+
+def SP800_108_Counter(master: bytes, key_len: int, prf: PRF, num_keys: Optional[int] = None,
+                      label: bytes = b'', context: bytes = b'') -> Union[bytes, List[bytes]]:
     """Derive one or more keys from a master secret using
     a pseudorandom function in Counter Mode, as specified in
     `NIST SP 800-108r1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1.pdf>`_.
@@ -643,5 +666,5 @@ def SP800_108_Counter(master, key_len, prf, num_keys=None, label=b'', context=b'
         return dk[:key_len]
     else:
         kol = [dk[idx:idx + key_len]
-               for idx in iter_range(0, output_len, key_len)]
+               for idx in range(0, output_len, key_len)]
         return kol

@@ -28,15 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from __future__ import print_function
 
 import unittest
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-
-from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128, SHA256
 
@@ -74,7 +72,7 @@ class GcmTests(unittest.TestCase):
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_GCM,
-                          nonce=u'test12345678')
+                          nonce='test12345678')
 
     def test_nonce_length(self):
         # nonce can be of any length (but not empty)
@@ -82,8 +80,8 @@ class GcmTests(unittest.TestCase):
                           nonce=b"")
 
         for x in range(1, 128):
-            cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=bchr(1) * x)
-            cipher.encrypt(bchr(1))
+            cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=bytes([1]) * x)
+            cipher.encrypt(bytes([1]))
 
     def test_block_size_128(self):
         cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
@@ -127,10 +125,10 @@ class GcmTests(unittest.TestCase):
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.encrypt, 'test1234567890-*')
 
         cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.decrypt, 'test1234567890-*')
 
     def test_mac_len(self):
         # Invalid MAC length
@@ -909,8 +907,8 @@ class TestVariableLength(unittest.TestCase):
         h = SHA256.new()
 
         for length in range(160):
-            nonce = '{0:04d}'.format(length).encode('utf-8')
-            data = bchr(length) * length
+            nonce = f'{length:04d}'.encode('utf-8')
+            data = bytes([length]) * length
             cipher = AES.new(key, AES.MODE_GCM, nonce=nonce, **self._extra_params)
             ct, tag = cipher.encrypt_and_digest(data)
             h.update(ct)

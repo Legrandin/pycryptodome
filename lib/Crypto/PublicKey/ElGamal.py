@@ -23,6 +23,10 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Callable, Optional, Tuple, Union
+
 __all__ = ['generate', 'construct', 'ElGamalKey']
 
 from Crypto import Random
@@ -30,8 +34,11 @@ from Crypto.Math.Primality import ( generate_probable_safe_prime,
                                     test_probable_prime, COMPOSITE )
 from Crypto.Math.Numbers import Integer
 
+RNG = Callable[[int], bytes]
+Int = Union[int, Integer]
+
 # Generate an ElGamal key with N bits
-def generate(bits, randfunc):
+def generate(bits: int, randfunc: RNG) -> ElGamalKey:
     """Randomly generate a fresh, new ElGamal key.
 
     The key will be safe for use for both encryption and signature
@@ -93,7 +100,7 @@ def generate(bits, randfunc):
     obj.y = pow(obj.g, obj.x, obj.p)
     return obj
 
-def construct(tup):
+def construct(tup: Union[Tuple[Int, Int, Int], Tuple[Int, Int, Int, Int]]) -> ElGamalKey:
     r"""Construct an ElGamal key from a tuple of valid ElGamal components.
 
     The modulus *p* must be a prime.
@@ -145,7 +152,7 @@ def construct(tup):
 
     return obj
 
-class ElGamalKey(object):
+class ElGamalKey:
     r"""Class defining an ElGamal key.
     Do not instantiate directly.
     Use :func:`generate` or :func:`construct` instead.
@@ -176,7 +183,13 @@ class ElGamalKey(object):
     #:  - **x**, the private key.
     _keydata=['p', 'g', 'y', 'x']
 
-    def __init__(self, randfunc=None):
+    # The key components are set dynamically by construct() and generate()
+    p: Integer
+    g: Integer
+    y: Integer
+    x: Integer
+
+    def __init__(self, randfunc: Optional[RNG] = None) -> None:
         if randfunc is None:
             randfunc = Random.new().read
         self._randfunc = randfunc
@@ -222,21 +235,18 @@ class ElGamalKey(object):
             return 1
         return 0
 
-    def has_private(self):
+    def has_private(self) -> bool:
         """Whether this is an ElGamal private key"""
 
-        if hasattr(self, 'x'):
-            return 1
-        else:
-            return 0
+        return hasattr(self, 'x')
 
-    def can_encrypt(self):
+    def can_encrypt(self) -> bool:
         return True
 
-    def can_sign(self):
+    def can_sign(self) -> bool:
         return True
 
-    def publickey(self):
+    def publickey(self) -> ElGamalKey:
         """A matching ElGamal public key.
 
         Returns:
@@ -244,20 +254,19 @@ class ElGamalKey(object):
         """
         return construct((self.p, self.g, self.y))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ElGamalKey):
+            return False
         if bool(self.has_private()) != bool(other.has_private()):
             return False
 
         result = True
         for comp in self._keydata:
-            result = result and (getattr(self.key, comp, None) ==
-                                 getattr(other.key, comp, None))
+            result = result and (getattr(self, comp, None) ==
+                                 getattr(other, comp, None))
         return result
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __getstate__(self):
+    def __getstate__(self) -> None:
         # ElGamal key is not pickable
         from pickle import PicklingError
         raise PicklingError

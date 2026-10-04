@@ -43,7 +43,7 @@ def W_inverse(cipher: ModuleType,
     return A + b''.join(R)
 
 
-class KWMode(object):
+class KWMode:
     """Key Wrap (KW) mode.
 
     This is a deterministic Authenticated Encryption (AE) mode

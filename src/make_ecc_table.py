@@ -57,8 +57,8 @@ else:
     raise ValueError("Unsupported curve: " + args.curve)
 
 
-c_file = open(args.basename + ".c", "wt")
-h_file = open(args.basename + ".h", "wt")
+c_file = open(args.basename + ".c", "w")
+h_file = open(args.basename + ".h", "w")
 
 words = (bits + 63) // 64
 window_size = args.window_size

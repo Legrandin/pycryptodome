@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/PublicKey/__init__.py: Self-test for public key crypto
 #

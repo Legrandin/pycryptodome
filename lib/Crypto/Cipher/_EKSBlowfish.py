@@ -28,12 +28,21 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Iterable, TYPE_CHECKING, Union
+
 import sys
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer, c_size_t,
                                   c_uint8_ptr, c_uint)
+
+if TYPE_CHECKING:
+    from Crypto.Cipher._mode_ecb import EcbMode
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_blowfish_lib = load_pycryptodome_raw_lib(
         "Crypto.Cipher._raw_eksblowfish",
@@ -91,7 +100,7 @@ def _create_base_cipher(dict_parameters):
     return SmartPointer(void_p.get(), stop_operation)
 
 
-def new(key, mode, salt, cost, invert):
+def new(key: Buffer, mode: int, salt: Buffer, cost: int, invert: bool) -> EcbMode:
     """Create a new EKSBlowfish cipher
     
     Args:
@@ -123,9 +132,9 @@ def new(key, mode, salt, cost, invert):
     return _create_cipher(sys.modules[__name__], key, mode, **kwargs)
 
 
-MODE_ECB = 1
+MODE_ECB: int = 1
 
 # Size of a data block (in bytes)
-block_size = 8
+block_size: int = 8
 # Size of a key (in bytes)
-key_size = range(0, 72 + 1)
+key_size: Iterable[int] = range(0, 72 + 1)

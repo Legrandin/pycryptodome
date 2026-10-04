@@ -28,11 +28,11 @@
 
 import unittest
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import cSHAKE128, cSHAKE256, SHAKE128, SHAKE256
-from Crypto.Util.py3compat import b, bchr, tobytes
 
 
 class cSHAKETest(unittest.TestCase):
@@ -57,8 +57,8 @@ class cSHAKETest(unittest.TestCase):
     def test_new_positive(self):
 
         xof1 = self.cshake.new()
-        xof2 = self.cshake.new(data=b("90"))
-        xof3 = self.cshake.new().update(b("90"))
+        xof2 = self.cshake.new(data=b"90")
+        xof3 = self.cshake.new().update(b"90")
 
         self.assertNotEqual(xof1.read(10), xof2.read(10))
         xof3.read(10)
@@ -66,22 +66,22 @@ class cSHAKETest(unittest.TestCase):
 
         xof1 = self.cshake.new()
         ref = xof1.read(10)
-        xof2 = self.cshake.new(custom=b(""))
-        xof3 = self.cshake.new(custom=b("foo"))
+        xof2 = self.cshake.new(custom=b"")
+        xof3 = self.cshake.new(custom=b"foo")
 
         self.assertEqual(ref, xof2.read(10))
         self.assertNotEqual(ref, xof3.read(10))
 
-        xof1 = self.cshake.new(custom=b("foo"))
-        xof2 = self.cshake.new(custom=b("foo"), data=b("90"))
-        xof3 = self.cshake.new(custom=b("foo")).update(b("90"))
+        xof1 = self.cshake.new(custom=b"foo")
+        xof2 = self.cshake.new(custom=b"foo", data=b"90")
+        xof3 = self.cshake.new(custom=b"foo").update(b"90")
 
         self.assertNotEqual(xof1.read(10), xof2.read(10))
         xof3.read(10)
         self.assertEqual(xof2.read(10), xof3.read(10))
 
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [bytes([10]) * 200, bytes([20]) * 300]
         h = self.cshake.new()
         h.update(pieces[0]).update(pieces[1])
         digest = h.read(10)
@@ -91,21 +91,21 @@ class cSHAKETest(unittest.TestCase):
 
     def test_update_negative(self):
         h = self.cshake.new()
-        self.assertRaises(TypeError, h.update, u"string")
+        self.assertRaises(TypeError, h.update, "string")
 
     def test_digest(self):
         h = self.cshake.new()
         digest = h.read(90)
 
         # read returns a byte string of the right length
-        self.assertTrue(isinstance(digest, type(b("digest"))))
+        self.assertTrue(isinstance(digest, type(b"digest")))
         self.assertEqual(len(digest), 90)
 
     def test_update_after_read(self):
         mac = self.cshake.new()
-        mac.update(b("rrrr"))
+        mac.update(b"rrrr")
         mac.read(90)
-        self.assertRaises(TypeError, mac.update, b("ttt"))
+        self.assertRaises(TypeError, mac.update, b"ttt")
 
     def test_shake(self):
         # When no customization string is passed, results must match SHAKE
@@ -144,14 +144,14 @@ for file, descr, tag, test_class in vector_files:
 
     for idx, tv in enumerate(test_vectors):
         if getattr(tv, "len", 0) == 0:
-            data = b("")
+            data = b""
         else:
             data = tobytes(tv.msg)
             assert(tv.len == len(tv.msg)*8)
         if getattr(tv, "nlen", 0) != 0:
             raise ValueError("Unsupported cSHAKE test vector")
         if getattr(tv, "slen", 0) == 0:
-            custom = b("")
+            custom = b""
         else:
             custom = tobytes(tv.s)
             assert(tv.slen == len(tv.s)*8)

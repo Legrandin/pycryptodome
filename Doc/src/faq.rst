@@ -1,13 +1,12 @@
 Frequently Asked Questions
 --------------------------
 
-When will support for Python 2.7 stop?
-++++++++++++++++++++++++++++++++++++++++
+Is Python 2.7 supported?
+++++++++++++++++++++++++
 
-There are no plans to drop support for Python 2.7.
-This may change when maintenance becomes too cumbersome.
-
-However, new features will only be tested for Python 3.
+No. Support for Python 2.7 was removed in version 4.0.
+The minimum supported version is now Python 3.8.
+If you are stuck with Python 2.7, you can still use PyCryptodome 3.x.
 
 How can I encrypt using an ECC key?
 ++++++++++++++++++++++++++++++++++++

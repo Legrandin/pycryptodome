@@ -32,10 +32,9 @@ import json
 import unittest
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-
-from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
@@ -77,7 +76,7 @@ class SivTests(unittest.TestCase):
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_256, AES.MODE_SIV,
-                          nonce=u'test12345678')
+                          nonce='test12345678')
 
     def test_nonce_length(self):
         # nonce can be of any length (but not empty)
@@ -85,7 +84,7 @@ class SivTests(unittest.TestCase):
                           nonce=b"")
 
         for x in range(1, 128):
-            cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=bchr(1) * x)
+            cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=bytes([1]) * x)
             cipher.encrypt_and_digest(b'\x01')
 
     def test_block_size_128(self):
@@ -122,11 +121,11 @@ class SivTests(unittest.TestCase):
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.encrypt, 'test1234567890-*')
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         self.assertRaises(TypeError, cipher.decrypt_and_verify,
-                          u'test1234567890-*', b"xxxx")
+                          'test1234567890-*', b"xxxx")
 
     def test_mac_len(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)

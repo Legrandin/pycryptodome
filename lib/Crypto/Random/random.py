@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Random/random.py : Strong alternative for the standard 'random' module
 #
@@ -22,14 +21,16 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Any, Callable, MutableSequence, Optional, Sequence, TypeVar
+
 __all__ = ['StrongRandom', 'getrandbits', 'randrange', 'randint', 'choice', 'shuffle', 'sample']
 
 from Crypto import Random
 
-from Crypto.Util.py3compat import is_native_int
-
-class StrongRandom(object):
-    def __init__(self, rng=None, randfunc=None):
+class StrongRandom:
+    def __init__(self, rng: Optional[Any] = None, randfunc: Optional[Callable] = None) -> None:
         if randfunc is None and rng is None:
             self._randfunc = None
         elif randfunc is not None and rng is None:
@@ -39,7 +40,7 @@ class StrongRandom(object):
         else:
             raise ValueError("Cannot specify both 'rng' and 'randfunc'")
 
-    def getrandbits(self, k):
+    def getrandbits(self, k: int) -> int:
         """Return an integer with k random bits."""
 
         if self._randfunc is None:
@@ -47,7 +48,7 @@ class StrongRandom(object):
         mask = (1 << k) - 1
         return mask & bytes_to_long(self._randfunc(ceil_div(k, 8)))
 
-    def randrange(self, *args):
+    def randrange(self, *args: int) -> int:
         """randrange([start,] stop[, step]):
         Return a randomly-selected element from range(start, stop, step)."""
         if len(args) == 3:
@@ -61,8 +62,8 @@ class StrongRandom(object):
             step = 1
         else:
             raise TypeError("randrange expected at most 3 arguments, got %d" % (len(args),))
-        if (not is_native_int(start) or not is_native_int(stop) or not
-                is_native_int(step)):
+        if (not isinstance(start, int) or not isinstance(stop, int) or not
+                isinstance(step, int)):
             raise TypeError("randrange requires integer arguments")
         if step == 0:
             raise ValueError("randrange step argument must not be zero")
@@ -80,15 +81,15 @@ class StrongRandom(object):
 
         return start + (step * r)
 
-    def randint(self, a, b):
+    def randint(self, a: int, b: int) -> int:
         """Return a random integer N such that a <= N <= b."""
-        if not is_native_int(a) or not is_native_int(b):
+        if not isinstance(a, int) or not isinstance(b, int):
             raise TypeError("randint requires integer arguments")
         N = self.randrange(a, b+1)
         assert a <= N <= b
         return N
 
-    def choice(self, seq):
+    def choice(self, seq: Sequence[T]) -> T:
         """Return a random element from a (non-empty) sequence.
 
         If the seqence is empty, raises IndexError.
@@ -97,7 +98,7 @@ class StrongRandom(object):
             raise IndexError("empty sequence")
         return seq[self.randrange(len(seq))]
 
-    def shuffle(self, x):
+    def shuffle(self, x: MutableSequence) -> None:
         """Shuffle the sequence in place."""
         # Fisher-Yates shuffle.  O(n)
         # See http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
@@ -107,7 +108,7 @@ class StrongRandom(object):
             j = self.randrange(0, i+1)      # choose random j such that 0 <= j <= i
             x[i], x[j] = x[j], x[i]         # exchange x[i] and x[j]
 
-    def sample(self, population, k):
+    def sample(self, population: Sequence, k: int) -> list:
         """Return a k-length list of unique elements chosen from the population sequence."""
 
         num_choices = len(population)
@@ -134,5 +135,7 @@ sample = _r.sample
 
 # These are at the bottom to avoid problems with recursive imports
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes, size
+
+T = TypeVar('T')
 
 # vim:set ts=4 sw=4 sts=4 expandtab:

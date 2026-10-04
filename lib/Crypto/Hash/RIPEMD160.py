@@ -28,13 +28,18 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
+
+from __future__ import annotations
+
+from typing import Optional, Union
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
                                   c_uint8_ptr)
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_ripemd160_lib = load_pycryptodome_raw_lib(
                         "Crypto.Hash._RIPEMD160",
@@ -50,7 +55,7 @@ _raw_ripemd160_lib = load_pycryptodome_raw_lib(
                         """)
 
 
-class RIPEMD160Hash(object):
+class RIPEMD160Hash:
     """A RIPEMD-160 hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
@@ -67,13 +72,13 @@ class RIPEMD160Hash(object):
     """
 
     # The size of the resulting hash in bytes.
-    digest_size = 20
+    digest_size: int = 20
     # The internal block size of the hash algorithm in bytes.
-    block_size = 64
+    block_size: int = 64
     # ASN.1 Object ID
-    oid = "1.3.36.3.2.1"
+    oid: str = "1.3.36.3.2.1"
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Buffer] = None) -> None:
         state = VoidPointer()
         result = _raw_ripemd160_lib.ripemd160_init(state.address_of())
         if result:
@@ -84,7 +89,7 @@ class RIPEMD160Hash(object):
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> None:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -98,7 +103,7 @@ class RIPEMD160Hash(object):
             raise ValueError("Error %d while instantiating ripemd160"
                              % result)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -115,7 +120,7 @@ class RIPEMD160Hash(object):
 
         return get_raw_buffer(bfr)
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -123,9 +128,9 @@ class RIPEMD160Hash(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def copy(self):
+    def copy(self) -> RIPEMD160Hash:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -143,13 +148,13 @@ class RIPEMD160Hash(object):
             raise ValueError("Error %d while copying ripemd160" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> RIPEMD160Hash:
         """Create a fresh RIPEMD-160 hash object."""
 
         return RIPEMD160Hash(data)
 
 
-def new(data=None):
+def new(data: Optional[Buffer] = None) -> RIPEMD160Hash:
     """Create a new hash object.
 
     :parameter data:
@@ -163,7 +168,7 @@ def new(data=None):
     return RIPEMD160Hash().new(data)
 
 # The size of the resulting hash in bytes.
-digest_size = RIPEMD160Hash.digest_size
+digest_size: int = RIPEMD160Hash.digest_size
 
 # The internal block size of the hash algorithm in bytes.
-block_size = RIPEMD160Hash.block_size
+block_size: int = RIPEMD160Hash.block_size

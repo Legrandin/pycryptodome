@@ -32,13 +32,15 @@
 Counter with CBC-MAC (CCM) mode.
 """
 
+from __future__ import annotations
+
+from typing import Any, Optional, TYPE_CHECKING, Tuple, Union, overload
+
 __all__ = ['CcmMode']
 
 import struct
 from binascii import unhexlify
-
-from Crypto.Util.py3compat import (byte_string, bord,
-                                   _copy_bytes)
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_writeable_buffer
 
 from Crypto.Util.strxor import strxor
@@ -46,6 +48,11 @@ from Crypto.Util.number import long_to_bytes
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 def enum(**enums):
@@ -58,7 +65,7 @@ class CCMMessageTooLongError(ValueError):
     pass
 
 
-class CcmMode(object):
+class CcmMode:
     """Counter with CBC-MAC (CCM).
 
     This is an Authenticated Encryption with Associated Data (`AEAD`_) mode.
@@ -117,23 +124,23 @@ class CcmMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, factory, key, nonce, mac_len, msg_len, assoc_len,
-                 cipher_params):
+    def __init__(self, factory: ModuleType, key: Buffer, nonce: Buffer, mac_len: int,
+                 msg_len: Optional[int], assoc_len: Optional[int], cipher_params: dict) -> None:
 
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = _copy_bytes(None, None, nonce)
+        self.nonce = copy_bytes(None, None, nonce)
         """The nonce used for this cipher instance"""
 
         self._factory = factory
-        self._key = _copy_bytes(None, None, key)
+        self._key = copy_bytes(None, None, key)
         self._mac_len = mac_len
         self._msg_len = msg_len
         self._assoc_len = assoc_len
         self._cipher_params = cipher_params
 
-        self._mac_tag = None  # Cache for MAC tag
+        self._mac_tag: Optional[bytes] = None  # Cache for MAC tag
 
         if self.block_size != 16:
             raise ValueError("CCM mode is only available for ciphers"
@@ -174,7 +181,7 @@ class CcmMode(object):
         # Cache for unaligned associated data/plaintext.
         # This is a list with byte strings, but when the MAC starts,
         # it will become a binary string no longer than the block size.
-        self._cache = []
+        self._cache: Any = []
 
         # Start CTR cipher, by formatting the counter (A.3)
         self._cipher = self._factory.new(key,
@@ -238,7 +245,7 @@ class CcmMode(object):
         if len_cache > 0:
             self._update(b'\x00' * (self.block_size - len_cache))
 
-    def update(self, assoc_data):
+    def update(self, assoc_data: Buffer) -> CcmMode:
         """Protect associated data
 
         If there is any associated data, the caller has to invoke
@@ -284,7 +291,7 @@ class CcmMode(object):
         # If the data is mutable, we create a copy and store that instead.
         if self._mac_status == MacStatus.NOT_STARTED:
             if is_writeable_buffer(assoc_data_pt):
-                assoc_data_pt = _copy_bytes(None, None, assoc_data_pt)
+                assoc_data_pt = copy_bytes(None, None, assoc_data_pt)
             self._cache.append(assoc_data_pt)
             return
 
@@ -293,8 +300,8 @@ class CcmMode(object):
         if len(self._cache) > 0:
             filler = min(self.block_size - len(self._cache),
                          len(assoc_data_pt))
-            self._cache += _copy_bytes(None, filler, assoc_data_pt)
-            assoc_data_pt = _copy_bytes(filler, None, assoc_data_pt)
+            self._cache += copy_bytes(None, filler, assoc_data_pt)
+            assoc_data_pt = copy_bytes(filler, None, assoc_data_pt)
 
             if len(self._cache) < self.block_size:
                 return
@@ -304,11 +311,22 @@ class CcmMode(object):
             self._cache = b""
 
         update_len = len(assoc_data_pt) // self.block_size * self.block_size
-        self._cache = _copy_bytes(update_len, None, assoc_data_pt)
+        self._cache = copy_bytes(update_len, None, assoc_data_pt)
         if update_len > 0:
             self._t = self._mac.encrypt(assoc_data_pt[:update_len])[-16:]
 
-    def encrypt(self, plaintext, output=None):
+    @overload
+    def encrypt(self, plaintext: Buffer) -> bytes: ...
+
+    @overload
+    def encrypt(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    @overload
+    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]: ...
+
+    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Encrypt data with the key set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -387,7 +405,18 @@ class CcmMode(object):
         self._update(plaintext)
         return self._cipher.encrypt(plaintext, output=output)
 
-    def decrypt(self, ciphertext, output=None):
+    @overload
+    def decrypt(self, ciphertext: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt(self, ciphertext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    @overload
+    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]: ...
+
+    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Decrypt data with the key set at initialization.
 
         A cipher object is stateful: once you have decrypted a message
@@ -471,7 +500,7 @@ class CcmMode(object):
             self._update(output)
         return plaintext
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Compute the *binary* MAC tag.
 
         The caller invokes this function at the very end.
@@ -518,16 +547,16 @@ class CcmMode(object):
 
         return self._mac_tag
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Compute the *printable* MAC tag.
 
         This method is like `digest`.
 
         :Return: the MAC, as a hexadecimal string.
         """
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def verify(self, received_mac_tag):
+    def verify(self, received_mac_tag: Buffer) -> None:
         """Validate the *binary* MAC tag.
 
         The caller invokes this function at the very end.
@@ -558,7 +587,7 @@ class CcmMode(object):
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
-    def hexverify(self, hex_mac_tag):
+    def hexverify(self, hex_mac_tag: str) -> None:
         """Validate the *printable* MAC tag.
 
         This method is like `verify`.
@@ -573,7 +602,16 @@ class CcmMode(object):
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext, output=None):
+    @overload
+    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]: ...
+
+    @overload
+    def encrypt_and_digest(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> \
+                           Tuple[None, bytes]: ...
+
+    def encrypt_and_digest(self, plaintext: Buffer,
+                           output: Optional[Union[bytearray, memoryview]] = None) -> \
+                           Tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
@@ -595,7 +633,15 @@ class CcmMode(object):
 
         return self.encrypt(plaintext, output=output), self.digest()
 
-    def decrypt_and_verify(self, ciphertext, received_mac_tag, output=None):
+    @overload
+    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer,
+                           output: Union[bytearray, memoryview]) -> None: ...
+
+    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer,
+                           output: Optional[Union[bytearray, memoryview]] = None) -> Optional[bytes]:
         """Perform decrypt() and verify() in one step.
 
         :Parameters:

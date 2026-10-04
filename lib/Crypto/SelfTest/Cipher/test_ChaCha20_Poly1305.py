@@ -31,9 +31,9 @@
 import unittest
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.Util.py3compat import tobytes
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Hash import SHAKE128
 
@@ -90,7 +90,7 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         self.assertRaises(TypeError,
                           ChaCha20_Poly1305.new,
                           key=self.key_256,
-                          nonce=u'test12345678')
+                          nonce='test12345678')
 
     def test_nonce_length(self):
         # nonce can only be 8 or 12 bytes long
@@ -147,11 +147,11 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
     def test_data_must_be_bytes(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256,
                                        nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.encrypt, 'test1234567890-*')
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256,
                                        nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.decrypt, 'test1234567890-*')
 
     def test_mac_len(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256,

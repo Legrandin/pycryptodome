@@ -1,6 +1,6 @@
 import struct
 
-class Count(object):
+class Count:
     def __init__(self):
         self.count = 0
 

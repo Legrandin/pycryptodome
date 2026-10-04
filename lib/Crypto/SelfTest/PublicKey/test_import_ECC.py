@@ -35,7 +35,6 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import bord, tostr, FileNotFoundError
 from Crypto.Util.asn1 import DerSequence, DerBitString
 from Crypto.Util.number import bytes_to_long
 from Crypto.Hash import SHAKE128
@@ -83,7 +82,7 @@ def load_file(file_name, mode="rb"):
 
 def compact(lines):
     ext = b"".join(lines)
-    return unhexlify(tostr(ext).replace(" ", "").replace(":", ""))
+    return unhexlify(ext.decode("latin-1").replace(" ", "").replace(":", ""))
 
 
 def create_ref_keys_p192():
@@ -91,7 +90,7 @@ def create_ref_keys_p192():
     key_lines = load_file("ecc_p192.txt").splitlines()
     private_key_d = bytes_to_long(compact(key_lines[2:4]))
     public_key_xy = compact(key_lines[5:9])
-    assert bord(public_key_xy[0]) == 4  # Uncompressed
+    assert public_key_xy[0] == 4  # Uncompressed
     public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
     public_key_y = bytes_to_long(public_key_xy[key_len+1:])
 
@@ -104,7 +103,7 @@ def create_ref_keys_p224():
     key_lines = load_file("ecc_p224.txt").splitlines()
     private_key_d = bytes_to_long(compact(key_lines[2:4]))
     public_key_xy = compact(key_lines[5:9])
-    assert bord(public_key_xy[0]) == 4  # Uncompressed
+    assert public_key_xy[0] == 4  # Uncompressed
     public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
     public_key_y = bytes_to_long(public_key_xy[key_len+1:])
 
@@ -117,7 +116,7 @@ def create_ref_keys_p256():
     key_lines = load_file("ecc_p256.txt").splitlines()
     private_key_d = bytes_to_long(compact(key_lines[2:5]))
     public_key_xy = compact(key_lines[6:11])
-    assert bord(public_key_xy[0]) == 4  # Uncompressed
+    assert public_key_xy[0] == 4  # Uncompressed
     public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
     public_key_y = bytes_to_long(public_key_xy[key_len+1:])
 
@@ -130,7 +129,7 @@ def create_ref_keys_p384():
     key_lines = load_file("ecc_p384.txt").splitlines()
     private_key_d = bytes_to_long(compact(key_lines[2:6]))
     public_key_xy = compact(key_lines[7:14])
-    assert bord(public_key_xy[0]) == 4  # Uncompressed
+    assert public_key_xy[0] == 4  # Uncompressed
     public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
     public_key_y = bytes_to_long(public_key_xy[key_len+1:])
 
@@ -143,7 +142,7 @@ def create_ref_keys_p521():
     key_lines = load_file("ecc_p521.txt").splitlines()
     private_key_d = bytes_to_long(compact(key_lines[2:7]))
     public_key_xy = compact(key_lines[8:17])
-    assert bord(public_key_xy[0]) == 4  # Uncompressed
+    assert public_key_xy[0] == 4  # Uncompressed
     public_key_x = bytes_to_long(public_key_xy[1:key_len+1])
     public_key_y = bytes_to_long(public_key_xy[key_len+1:])
 
@@ -216,7 +215,7 @@ o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=
 class TestImport_P192(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_P192, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p192()
 
     def test_import_public_der(self):
@@ -313,7 +312,7 @@ class TestImport_P192(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -326,7 +325,7 @@ class TestImport_P192(unittest.TestCase):
 class TestImport_P224(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_P224, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p224()
 
     def test_import_public_der(self):
@@ -432,7 +431,7 @@ class TestImport_P224(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -445,7 +444,7 @@ class TestImport_P224(unittest.TestCase):
 class TestImport_P256(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_P256, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p256()
 
     def test_import_public_der(self):
@@ -556,7 +555,7 @@ class TestImport_P256(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -594,7 +593,7 @@ class TestImport_P256(unittest.TestCase):
 class TestImport_P384(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_P384, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p384()
 
     def test_import_public_der(self):
@@ -700,7 +699,7 @@ class TestImport_P384(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -738,7 +737,7 @@ class TestImport_P384(unittest.TestCase):
 class TestImport_P521(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_P521, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p521()
 
     def test_import_public_der(self):
@@ -844,7 +843,7 @@ class TestImport_P521(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -882,7 +881,7 @@ class TestImport_P521(unittest.TestCase):
 class TestExport_P192(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_P192, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p192()
 
     def test_export_public_der_uncompressed(self):
@@ -1145,7 +1144,7 @@ class TestExport_P192(unittest.TestCase):
 class TestExport_P224(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_P224, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p224()
 
     def test_export_public_der_uncompressed(self):
@@ -1400,7 +1399,7 @@ class TestExport_P224(unittest.TestCase):
 class TestExport_P256(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_P256, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p256()
 
     def test_export_public_der_uncompressed(self):
@@ -1688,7 +1687,7 @@ class TestExport_P256(unittest.TestCase):
 class TestExport_P384(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_P384, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p384()
 
     def test_export_public_der_uncompressed(self):
@@ -1981,7 +1980,7 @@ YC46ZRsnKNayw3wATdPjgja7L/DSII3nZK0G6KOOVwJBznT/e+zudUJYhZKaBLRx
 class TestExport_P521(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_P521, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_p521()
 
     def test_export_public_der_uncompressed(self):
@@ -2282,7 +2281,7 @@ vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
 class TestImport_Ed25519(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_Ed25519, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed25519()
 
     def test_import_public_der(self):
@@ -2358,7 +2357,7 @@ class TestImport_Ed25519(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -2386,7 +2385,7 @@ class TestImport_Ed25519(unittest.TestCase):
 class TestExport_Ed25519(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_Ed25519, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed25519()
 
     def test_export_public_der(self):
@@ -2529,7 +2528,7 @@ class TestExport_Ed25519(unittest.TestCase):
 class TestImport_Ed448(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_Ed448, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed448()
 
     def test_import_public_der(self):
@@ -2605,7 +2604,7 @@ class TestImport_Ed448(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -2618,7 +2617,7 @@ class TestImport_Ed448(unittest.TestCase):
 class TestExport_Ed448(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_Ed448, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_ed448()
 
     def test_export_public_der(self):

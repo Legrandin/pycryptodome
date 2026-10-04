@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Protocol/test_KDF.py: Self-test for key derivation functions
 #
@@ -24,8 +23,6 @@ import re
 import unittest
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import b, bchr
-
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
 from Crypto.Hash import SHA1, HMAC, SHA256, MD5, SHA224, SHA384, SHA512
@@ -42,10 +39,10 @@ def t2b(t):
     if t is None:
         return None
     t2 = t.replace(" ", "").replace("\n", "")
-    return unhexlify(b(t2))
+    return unhexlify(t2.encode("latin-1"))
 
 
-class TestVector(object):
+class TestVector:
     pass
 
 
@@ -126,14 +123,14 @@ class PBKDF2_Tests(unittest.TestCase):
         def prf_SHA1(p,s):
             return HMAC.new(p,s,SHA1).digest()
 
-        self.assertRaises(ValueError, PBKDF2, b("xxx"), b("yyy"), 16, 100,
+        self.assertRaises(ValueError, PBKDF2, b"xxx", b"yyy", 16, 100,
                           prf=prf_SHA1, hmac_hash_module=SHA1)
 
     def test3(self):
         # Verify that hmac_hash_module works like prf
 
-        password = b("xxx")
-        salt = b("yyy")
+        password = b"xxx"
+        salt = b"yyy"
 
         for hashmod in (MD5, SHA1, SHA224, SHA256, SHA384, SHA512):
 
@@ -145,12 +142,12 @@ class PBKDF2_Tests(unittest.TestCase):
 
     def test4(self):
         # Verify that PBKDF2 can take bytes or strings as password or salt
-        k1 = PBKDF2("xxx", b("yyy"), 16, 10)
-        k2 = PBKDF2(b("xxx"), b("yyy"), 16, 10)
+        k1 = PBKDF2("xxx", b"yyy", 16, 10)
+        k2 = PBKDF2(b"xxx", b"yyy", 16, 10)
         self.assertEqual(k1, k2)
 
-        k1 = PBKDF2(b("xxx"), "yyy", 16, 10)
-        k2 = PBKDF2(b("xxx"), b("yyy"), 16, 10)
+        k1 = PBKDF2(b"xxx", "yyy", 16, 10)
+        k2 = PBKDF2(b"xxx", b"yyy", 16, 10)
         self.assertEqual(k1, k2)
 
 
@@ -202,13 +199,13 @@ class S2V_Tests(unittest.TestCase):
     def test2(self):
         """Verify that no more than 127(AES) and 63(TDES)
         components are accepted."""
-        key = bchr(0) * 8 + bchr(255) * 8
+        key = bytes([0]) * 8 + bytes([255]) * 8
         for module in (AES, DES3):
             s2v = _S2V.new(key, module)
             max_comps = module.block_size*8-1
             for i in range(max_comps):
-                s2v.update(b("XX"))
-            self.assertRaises(TypeError, s2v.update, b("YY"))
+                s2v.update(b"XX")
+            self.assertRaises(TypeError, s2v.update, b"YY")
 
 
 class HKDF_Tests(unittest.TestCase):
@@ -325,21 +322,21 @@ class HKDF_Tests(unittest.TestCase):
 
     def test1(self):
         for tv in self._test_vector:
-            secret, salt, info, exp = [ t2b(tv[x]) for x in (1,2,3,5) ]
-            key_len, hashmod = [ tv[x] for x in (4,0) ]
+            secret, salt, info, exp = ( t2b(tv[x]) for x in (1,2,3,5) )
+            key_len, hashmod = ( tv[x] for x in (4,0) )
 
             output = HKDF(secret, key_len, salt, hashmod, 1, info)
             self.assertEqual(output, exp)
 
     def test2(self):
-        ref = HKDF(b("XXXXXX"), 12, b("YYYY"), SHA1)
+        ref = HKDF(b"XXXXXX", 12, b"YYYY", SHA1)
 
         # Same output, but this time split over 2 keys
-        key1, key2 = HKDF(b("XXXXXX"), 6, b("YYYY"), SHA1, 2)
+        key1, key2 = HKDF(b"XXXXXX", 6, b"YYYY", SHA1, 2)
         self.assertEqual((ref[:6], ref[6:]), (key1, key2))
 
         # Same output, but this time split over 3 keys
-        key1, key2, key3 = HKDF(b("XXXXXX"), 4, b("YYYY"), SHA1, 3)
+        key1, key2, key3 = HKDF(b"XXXXXX", 4, b"YYYY", SHA1, 3)
         self.assertEqual((ref[:4], ref[4:8], ref[8:]), (key1, key2, key3))
 
 
@@ -411,8 +408,8 @@ class scrypt_Tests(unittest.TestCase):
         new_test_vectors = []
         for tv in self.data:
             new_tv = TestVector()
-            new_tv.P = b(tv[0])
-            new_tv.S = b(tv[1])
+            new_tv.P = tv[0].encode("latin-1")
+            new_tv.S = tv[1].encode("latin-1")
             new_tv.N = tv[2]
             new_tv.r = tv[3]
             new_tv.p = tv[4]
@@ -436,14 +433,14 @@ class scrypt_Tests(unittest.TestCase):
             self.assertEqual(output, tv.output)
 
     def test3(self):
-        ref = scrypt(b("password"), b("salt"), 12, 16, 1, 1)
+        ref = scrypt(b"password", b"salt", 12, 16, 1, 1)
 
         # Same output, but this time split over 2 keys
-        key1, key2 = scrypt(b("password"), b("salt"), 6, 16, 1, 1, 2)
+        key1, key2 = scrypt(b"password", b"salt", 6, 16, 1, 1, 2)
         self.assertEqual((ref[:6], ref[6:]), (key1, key2))
 
         # Same output, but this time split over 3 keys
-        key1, key2, key3 = scrypt(b("password"), b("salt"), 4, 16, 1, 1, 3)
+        key1, key2, key3 = scrypt(b"password", b"salt", 4, 16, 1, 1, 3)
         self.assertEqual((ref[:4], ref[4:8], ref[8:]), (key1, key2, key3))
 
 
@@ -464,7 +461,7 @@ class bcrypt_Tests(unittest.TestCase):
         bref = bytearray(ref)
         bcrypt_check("pwd", bref)
 
-        wrong = ref[:-1] + bchr(bref[-1] ^ 0x01)
+        wrong = ref[:-1] + bytes([bref[-1] ^ 0x01])
         self.assertRaises(ValueError, bcrypt_check, "pwd", wrong)
 
         wrong = b"x" + ref[1:]

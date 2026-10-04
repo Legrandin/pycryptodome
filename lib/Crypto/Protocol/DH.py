@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+from typing import Callable, Optional, TypeVar
+
 from Crypto.Util.number import long_to_bytes
 from Crypto.PublicKey.ECC import (EccKey,
                                   construct,
                                   _import_curve25519_public_key,
                                   _import_curve448_public_key)
+
+T = TypeVar('T')
 
 
 def _compute_ecdh(key_priv, key_pub):
@@ -20,7 +26,7 @@ def _compute_ecdh(key_priv, key_pub):
     return z
 
 
-def import_x25519_public_key(encoded):
+def import_x25519_public_key(encoded: bytes) -> EccKey:
     """Create a new X25519 public key object,
     starting from the key encoded as raw ``bytes``,
     in the format described in RFC7748.
@@ -41,7 +47,7 @@ def import_x25519_public_key(encoded):
     return construct(curve='Curve25519', point_x=x)
 
 
-def import_x25519_private_key(encoded):
+def import_x25519_private_key(encoded: bytes) -> EccKey:
     """Create a new X25519 private key object,
     starting from the key encoded as raw ``bytes``,
     in the format described in RFC7748.
@@ -61,7 +67,7 @@ def import_x25519_private_key(encoded):
     return construct(seed=encoded, curve="Curve25519")
 
 
-def import_x448_public_key(encoded):
+def import_x448_public_key(encoded: bytes) -> EccKey:
     """Create a new X448 public key object,
     starting from the key encoded as raw ``bytes``,
     in the format described in RFC7748.
@@ -82,7 +88,7 @@ def import_x448_public_key(encoded):
     return construct(curve='Curve448', point_x=x)
 
 
-def import_x448_private_key(encoded):
+def import_x448_private_key(encoded: bytes) -> EccKey:
     """Create a new X448 private key object,
     starting from the key encoded as raw ``bytes``,
     in the format described in RFC7748.
@@ -102,7 +108,11 @@ def import_x448_private_key(encoded):
     return construct(seed=encoded, curve="Curve448")
 
 
-def key_agreement(**kwargs):
+def key_agreement(*, kdf: Callable[[bytes], T],
+                  static_priv: Optional[EccKey] = None,
+                  static_pub: Optional[EccKey] = None,
+                  eph_priv: Optional[EccKey] = None,
+                  eph_pub: Optional[EccKey] = None) -> T:
     """Perform a Diffie-Hellman key agreement.
 
     Keywords:
@@ -125,11 +135,6 @@ def key_agreement(**kwargs):
       The derived secret key material.
     """
 
-    static_priv = kwargs.get('static_priv', None)
-    static_pub = kwargs.get('static_pub', None)
-    eph_priv = kwargs.get('eph_priv', None)
-    eph_pub = kwargs.get('eph_pub', None)
-    kdf = kwargs.get('kdf', None)
 
     if kdf is None:
         raise ValueError("'kdf' is mandatory")

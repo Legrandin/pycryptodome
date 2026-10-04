@@ -1,21 +1,27 @@
+from __future__ import annotations
+
+from typing import Optional, Union
+
 from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
                                   c_uint8_ptr, c_ubyte)
 
 from Crypto.Util.number import long_to_bytes
-from Crypto.Util.py3compat import bchr
 
 from .keccak import _raw_keccak_lib
 
 
-class TurboSHAKE(object):
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+class TurboSHAKE:
     """A TurboSHAKE hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
     """
 
-    def __init__(self, capacity, domain_separation, data):
+    def __init__(self, capacity: int, domain_separation: int, data: Optional[Buffer]) -> None:
 
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
@@ -34,7 +40,7 @@ class TurboSHAKE(object):
             self.update(data)
 
 
-    def update(self, data):
+    def update(self, data: Buffer) -> TurboSHAKE:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -52,7 +58,7 @@ class TurboSHAKE(object):
                              % result)
         return self
 
-    def read(self, length):
+    def read(self, length: int) -> bytes:
         """
         Compute the next piece of XOF output.
 
@@ -79,7 +85,7 @@ class TurboSHAKE(object):
 
         return get_raw_buffer(bfr)
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> TurboSHAKE:
         return type(self)(self._capacity, self._domain, data)
 
     def _reset(self):
@@ -90,7 +96,7 @@ class TurboSHAKE(object):
         self._is_squeezing = False
 
 
-def new(**kwargs):
+def new(*, domain: int = 0x1F, data: Optional[Buffer] = None) -> TurboSHAKE:
     """Create a new TurboSHAKE128 object.
 
     Args:
@@ -104,9 +110,8 @@ def new(**kwargs):
     :Return: A :class:`TurboSHAKE` object
     """
 
-    domain_separation = kwargs.get('domain', 0x1F)
+    domain_separation = domain
     if not (0x01 <= domain_separation <= 0x7F):
         raise ValueError("Incorrect domain separation value (%d)" %
                          domain_separation)
-    data = kwargs.get('data')
     return TurboSHAKE(32, domain_separation, data=data)

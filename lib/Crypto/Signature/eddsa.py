@@ -28,17 +28,27 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Optional, Protocol, Union
+
+from Crypto.Util._raw_api import is_buffer
 from Crypto.Math.Numbers import Integer
 
 from Crypto.Hash import SHA512, SHAKE256
-from Crypto.Util.py3compat import bchr, is_bytes
 from Crypto.PublicKey.ECC import (EccKey,
                                   construct,
                                   _import_ed25519_public_key,
                                   _import_ed448_public_key)
 
+class Hash(Protocol):
+    def digest(self) -> bytes: ...
 
-def import_public_key(encoded):
+class XOF(Protocol):
+    def read(self, len: int) -> bytes: ...
+
+
+def import_public_key(encoded: bytes) -> EccKey:
     """Create a new Ed25519 or Ed448 public key object,
     starting from the key encoded as raw ``bytes``,
     in the format described in RFC8032.
@@ -66,7 +76,7 @@ def import_public_key(encoded):
     return construct(curve=curve_name, point_x=x, point_y=y)
 
 
-def import_private_key(encoded):
+def import_private_key(encoded: bytes) -> EccKey:
     """Create a new Ed25519 or Ed448 private key object,
     starting from the key encoded as raw ``bytes``,
     in the format described in RFC8032.
@@ -96,13 +106,13 @@ def import_private_key(encoded):
     return construct(seed=encoded, curve=curve_name)
 
 
-class EdDSASigScheme(object):
+class EdDSASigScheme:
     """An EdDSA signature object.
     Do not instantiate directly.
     Use :func:`Crypto.Signature.eddsa.new`.
     """
 
-    def __init__(self, key, context):
+    def __init__(self, key: EccKey, context: bytes) -> None:
         """Create a new EdDSA object.
 
         Do not instantiate this object directly,
@@ -114,13 +124,13 @@ class EdDSASigScheme(object):
         self._A = key._export_eddsa_public()
         self._order = key._curve.order
 
-    def can_sign(self):
+    def can_sign(self) -> bool:
         """Return ``True`` if this signature object can be used
         for signing messages."""
 
         return self._key.has_private()
 
-    def sign(self, msg_or_hash):
+    def sign(self, msg_or_hash: Union[bytes, Hash, XOF]) -> bytes:
         """Compute the EdDSA signature of a message.
 
         Args:
@@ -140,13 +150,13 @@ class EdDSASigScheme(object):
 
         if self._key.curve == "Ed25519":
             ph = isinstance(msg_or_hash, SHA512.SHA512Hash)
-            if not (ph or is_bytes(msg_or_hash)):
+            if not (ph or is_buffer(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHA-512 hash")
             eddsa_sign_method = self._sign_ed25519
 
         elif self._key.curve == "Ed448":
             ph = isinstance(msg_or_hash, SHAKE256.SHAKE256_XOF)
-            if not (ph or is_bytes(msg_or_hash)):
+            if not (ph or is_buffer(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHAKE256 hash")
             eddsa_sign_method = self._sign_ed448
 
@@ -160,8 +170,8 @@ class EdDSASigScheme(object):
         if self._context or ph:
             flag = int(ph)
             # dom2(flag, self._context)
-            dom2 = b'SigEd25519 no Ed25519 collisions' + bchr(flag) + \
-                   bchr(len(self._context)) + self._context
+            dom2 = b'SigEd25519 no Ed25519 collisions' + bytes([flag]) + \
+                   bytes([len(self._context)]) + self._context
         else:
             dom2 = b''
 
@@ -186,8 +196,8 @@ class EdDSASigScheme(object):
 
         flag = int(ph)
         # dom4(flag, self._context)
-        dom4 = b'SigEd448' + bchr(flag) + \
-               bchr(len(self._context)) + self._context
+        dom4 = b'SigEd448' + bytes([flag]) + \
+               bytes([len(self._context)]) + self._context
 
         PHM = msg_or_hash.copy().read(64) if ph else msg_or_hash
 
@@ -206,7 +216,7 @@ class EdDSASigScheme(object):
 
         return R_pk + s.to_bytes(57, 'little')
 
-    def verify(self, msg_or_hash, signature):
+    def verify(self, msg_or_hash: Union[bytes, Hash, XOF], signature: bytes) -> None:
         """Check if an EdDSA signature is authentic.
 
         Args:
@@ -226,13 +236,13 @@ class EdDSASigScheme(object):
 
         if self._key.curve == "Ed25519":
             ph = isinstance(msg_or_hash, SHA512.SHA512Hash)
-            if not (ph or is_bytes(msg_or_hash)):
+            if not (ph or is_buffer(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHA-512 hash")
             eddsa_verify_method = self._verify_ed25519
 
         elif self._key.curve == "Ed448":
             ph = isinstance(msg_or_hash, SHAKE256.SHAKE256_XOF)
-            if not (ph or is_bytes(msg_or_hash)):
+            if not (ph or is_buffer(msg_or_hash)):
                 raise TypeError("'msg_or_hash' must be bytes of a SHAKE256 hash")
             eddsa_verify_method = self._verify_ed448
 
@@ -248,8 +258,8 @@ class EdDSASigScheme(object):
 
         if self._context or ph:
             flag = int(ph)
-            dom2 = b'SigEd25519 no Ed25519 collisions' + bchr(flag) + \
-                   bchr(len(self._context)) + self._context
+            dom2 = b'SigEd25519 no Ed25519 collisions' + bytes([flag]) + \
+                   bytes([len(self._context)]) + self._context
         else:
             dom2 = b''
 
@@ -283,8 +293,8 @@ class EdDSASigScheme(object):
 
         flag = int(ph)
         # dom4(flag, self._context)
-        dom4 = b'SigEd448' + bchr(flag) + \
-               bchr(len(self._context)) + self._context
+        dom4 = b'SigEd448' + bytes([flag]) + \
+               bytes([len(self._context)]) + self._context
 
         PHM = msg_or_hash.copy().read(64) if ph else msg_or_hash
 
@@ -310,7 +320,7 @@ class EdDSASigScheme(object):
             raise ValueError("The signature is not authentic")
 
 
-def new(key, mode, context=None):
+def new(key: EccKey, mode: str, context: Optional[bytes] = None) -> EdDSASigScheme:
     """Create a signature object :class:`EdDSASigScheme` that
     can perform or verify an EdDSA signature.
 

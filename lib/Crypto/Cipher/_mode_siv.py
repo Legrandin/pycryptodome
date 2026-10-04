@@ -32,12 +32,15 @@
 Synthetic Initialization Vector (SIV) mode.
 """
 
+from __future__ import annotations
+
+from typing import Optional, TYPE_CHECKING, Tuple, Union, overload
+
 __all__ = ['SivMode']
 
 from binascii import hexlify, unhexlify
 
-from Crypto.Util.py3compat import bord, _copy_bytes
-
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_buffer
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -45,8 +48,13 @@ from Crypto.Protocol.KDF import _S2V
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 
+if TYPE_CHECKING:
+    from types import ModuleType
 
-class SivMode(object):
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+class SivMode:
     """Synthetic Initialization Vector (SIV).
 
     This is an Authenticated Encryption with Associated Data (`AEAD`_) mode.
@@ -88,7 +96,7 @@ class SivMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, factory, key, nonce, kwargs):
+    def __init__(self, factory: ModuleType, key: Buffer, nonce: Buffer, kwargs: dict) -> None:
 
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
@@ -107,13 +115,13 @@ class SivMode(object):
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
 
-            self.nonce = _copy_bytes(None, None, nonce)
+            self.nonce = copy_bytes(None, None, nonce)
             """Public attribute is only available in case of non-deterministic
             encryption."""
 
         subkey_size = len(key) // 2
 
-        self._mac_tag = None  # Cache for MAC tag
+        self._mac_tag: Optional[bytes] = None  # Cache for MAC tag
         self._kdf = _S2V(key[:subkey_size],
                          ciphermod=factory,
                          cipher_params=self._cipher_params)
@@ -138,7 +146,7 @@ class SivMode(object):
                     nonce=b"",
                     **self._cipher_params)
 
-    def update(self, component):
+    def update(self, component: Buffer) -> SivMode:
         """Protect one associated data component
 
         For SIV, the associated data is a sequence (*vector*) of non-empty
@@ -171,9 +179,10 @@ class SivMode(object):
         self._next = ["update", "encrypt", "decrypt",
                       "digest", "verify"]
 
-        return self._kdf.update(component)
+        self._kdf.update(component)
+        return self
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext: Buffer) -> bytes:
         """
         For SIV, encryption and MAC authentication must take place at the same
         point. This method shall not be used.
@@ -184,7 +193,7 @@ class SivMode(object):
         raise TypeError("encrypt() not allowed for SIV mode."
                         " Use encrypt_and_digest() instead.")
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext: Buffer) -> bytes:
         """
         For SIV, decryption and verification must take place at the same
         point. This method shall not be used.
@@ -195,7 +204,7 @@ class SivMode(object):
         raise TypeError("decrypt() not allowed for SIV mode."
                         " Use decrypt_and_verify() instead.")
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Compute the *binary* MAC tag.
 
         The caller invokes this function at the very end.
@@ -214,16 +223,16 @@ class SivMode(object):
             self._mac_tag = self._kdf.derive()
         return self._mac_tag
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Compute the *printable* MAC tag.
 
         This method is like `digest`.
 
         :Return: the MAC, as a hexadecimal string.
         """
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def verify(self, received_mac_tag):
+    def verify(self, received_mac_tag: Buffer) -> None:
         """Validate the *binary* MAC tag.
 
         The caller invokes this function at the very end.
@@ -256,7 +265,7 @@ class SivMode(object):
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
-    def hexverify(self, hex_mac_tag):
+    def hexverify(self, hex_mac_tag: str) -> None:
         """Validate the *printable* MAC tag.
 
         This method is like `verify`.
@@ -271,7 +280,16 @@ class SivMode(object):
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext, output=None):
+    @overload
+    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]: ...
+
+    @overload
+    def encrypt_and_digest(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> \
+                           Tuple[None, bytes]: ...
+
+    def encrypt_and_digest(self, plaintext: Buffer,
+                           output: Optional[Union[bytearray, memoryview]] = None) -> \
+                           Tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
@@ -307,7 +325,15 @@ class SivMode(object):
 
         return cipher.encrypt(plaintext, output=output), self._mac_tag
 
-    def decrypt_and_verify(self, ciphertext, mac_tag, output=None):
+    @overload
+    def decrypt_and_verify(self, ciphertext: Buffer, mac_tag: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt_and_verify(self, ciphertext: Buffer, mac_tag: Buffer,
+                           output: Union[bytearray, memoryview]) -> None: ...
+
+    def decrypt_and_verify(self, ciphertext: Buffer, mac_tag: Buffer,
+                           output: Optional[Union[bytearray, memoryview]] = None) -> Optional[bytes]:
         """Perform decryption and verification in one step.
 
         A cipher object is stateful: once you have decrypted a message

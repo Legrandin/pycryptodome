@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Cipher/PKCS1-v1_5.py : PKCS#1 v1.5
 #
@@ -20,19 +19,30 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Callable, List, Optional, TYPE_CHECKING, TypeVar, Union
+
 __all__ = ['new', 'PKCS115_Cipher']
 
+from Crypto.Util._bytes import copy_bytes
 from Crypto import Random
 from Crypto.Util.number import bytes_to_long, long_to_bytes
-from Crypto.Util.py3compat import bord, is_bytes, _copy_bytes
 from ._pkcs1_oaep_decode import pkcs1_decode
+
+if TYPE_CHECKING:
+    from Crypto.PublicKey.RSA import RsaKey
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+T = TypeVar('T')
 
 
 class PKCS115_Cipher:
     """This cipher can perform PKCS#1 v1.5 RSA encryption or decryption.
     Do not instantiate directly. Use :func:`Crypto.Cipher.PKCS1_v1_5.new` instead."""
 
-    def __init__(self, key, randfunc):
+    def __init__(self, key: RsaKey, randfunc: Callable[[int], bytes]) -> None:
         """Initialize this PKCS#1 v1.5 cipher object.
 
         :Parameters:
@@ -46,15 +56,15 @@ class PKCS115_Cipher:
         self._key = key
         self._randfunc = randfunc
 
-    def can_encrypt(self):
+    def can_encrypt(self) -> bool:
         """Return True if this cipher object can be used for encryption."""
         return self._key.can_encrypt()
 
-    def can_decrypt(self):
+    def can_decrypt(self) -> bool:
         """Return True if this cipher object can be used for decryption."""
-        return self._key.can_decrypt()
+        return self._key.has_private()
 
-    def encrypt(self, message):
+    def encrypt(self, message: Buffer) -> bytes:
         """Produce the PKCS#1 v1.5 encryption of a message.
 
         This function is named ``RSAES-PKCS1-V1_5-ENCRYPT``, and it is specified in
@@ -82,15 +92,15 @@ class PKCS115_Cipher:
         if mLen > k - 11:
             raise ValueError("Plaintext is too long.")
         # Step 2a
-        ps = []
-        while len(ps) != k - mLen - 3:
+        ps_bytes: List[bytes] = []
+        while len(ps_bytes) != k - mLen - 3:
             new_byte = self._randfunc(1)
-            if bord(new_byte[0]) == 0x00:
+            if new_byte[0] == 0x00:
                 continue
-            ps.append(new_byte)
-        ps = b"".join(ps)
+            ps_bytes.append(new_byte)
+        ps = b"".join(ps_bytes)
         # Step 2b
-        em = b'\x00\x02' + ps + b'\x00' + _copy_bytes(None, None, message)
+        em = b'\x00\x02' + ps + b'\x00' + copy_bytes(None, None, message)
         # Step 3a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 3b (RSAEP)
@@ -99,7 +109,7 @@ class PKCS115_Cipher:
         c = long_to_bytes(m_int, k)
         return c
 
-    def decrypt(self, ciphertext, sentinel, expected_pt_len=0):
+    def decrypt(self, ciphertext: Buffer, sentinel: T, expected_pt_len: Optional[int] = 0) -> Union[bytes, T]:
         r"""Decrypt a PKCS#1 v1.5 ciphertext.
 
         This is the function ``RSAES-PKCS1-V1_5-DECRYPT`` specified in
@@ -156,7 +166,7 @@ class PKCS115_Cipher:
 
         # Step 3 (not constant time when the sentinel is not a byte string)
         output = bytes(bytearray(k))
-        if not is_bytes(sentinel) or len(sentinel) > k:
+        if not isinstance(sentinel, (bytes, bytearray, memoryview)) or len(sentinel) > k:
             size = pkcs1_decode(em, b'', expected_pt_len, output)
             if size < 0:
                 return sentinel
@@ -168,7 +178,7 @@ class PKCS115_Cipher:
         return output[size:]
 
 
-def new(key, randfunc=None):
+def new(key: RsaKey, randfunc: Optional[Callable[[int], bytes]] = None) -> PKCS115_Cipher:
     """Create a cipher for performing PKCS#1 v1.5 encryption or decryption.
 
     :param key:

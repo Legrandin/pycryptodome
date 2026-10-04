@@ -32,8 +32,6 @@ import os
 import re
 import unittest
 from binascii import hexlify, unhexlify
-
-from Crypto.Util.py3compat import b, tobytes, bchr
 from Crypto.Util.strxor import strxor_c
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -43,21 +41,21 @@ from Crypto.Cipher import ChaCha20
 class ChaCha20Test(unittest.TestCase):
 
     def test_new_positive(self):
-        cipher = ChaCha20.new(key=b("0")*32, nonce=b"0"*8)
+        cipher = ChaCha20.new(key=b"0"*32, nonce=b"0"*8)
         self.assertEqual(cipher.nonce, b"0" * 8)
-        cipher = ChaCha20.new(key=b("0")*32, nonce=b"0"*12)
+        cipher = ChaCha20.new(key=b"0"*32, nonce=b"0"*12)
         self.assertEqual(cipher.nonce, b"0" * 12)
 
     def test_new_negative(self):
         new = ChaCha20.new
         self.assertRaises(TypeError, new)
-        self.assertRaises(TypeError, new, nonce=b("0"))
-        self.assertRaises(ValueError, new, nonce=b("0")*8, key=b("0"))
-        self.assertRaises(ValueError, new, nonce=b("0"), key=b("0")*32)
+        self.assertRaises(TypeError, new, nonce=b"0")
+        self.assertRaises(ValueError, new, nonce=b"0"*8, key=b"0")
+        self.assertRaises(ValueError, new, nonce=b"0", key=b"0"*32)
 
     def test_default_nonce(self):
-        cipher1 = ChaCha20.new(key=bchr(1) * 32)
-        cipher2 = ChaCha20.new(key=bchr(1) * 32)
+        cipher1 = ChaCha20.new(key=bytes([1]) * 32)
+        cipher2 = ChaCha20.new(key=bytes([1]) * 32)
         self.assertEqual(len(cipher1.nonce), 8)
         self.assertNotEqual(cipher1.nonce, cipher2.nonce)
 
@@ -75,23 +73,23 @@ class ChaCha20Test(unittest.TestCase):
     def test_eiter_encrypt_or_decrypt(self):
         """Verify that a cipher cannot be used for both decrypting and encrypting"""
 
-        c1 = ChaCha20.new(key=b("5") * 32, nonce=b("6") * 8)
-        c1.encrypt(b("8"))
-        self.assertRaises(TypeError, c1.decrypt, b("9"))
+        c1 = ChaCha20.new(key=b"5" * 32, nonce=b"6" * 8)
+        c1.encrypt(b"8")
+        self.assertRaises(TypeError, c1.decrypt, b"9")
 
-        c2 = ChaCha20.new(key=b("5") * 32, nonce=b("6") * 8)
-        c2.decrypt(b("8"))
-        self.assertRaises(TypeError, c2.encrypt, b("9"))
+        c2 = ChaCha20.new(key=b"5" * 32, nonce=b"6" * 8)
+        c2.decrypt(b"8")
+        self.assertRaises(TypeError, c2.encrypt, b"9")
 
     def test_round_trip(self):
-        pt = b("A") * 1024
-        c1 = ChaCha20.new(key=b("5") * 32, nonce=b("6") * 8)
-        c2 = ChaCha20.new(key=b("5") * 32, nonce=b("6") * 8)
+        pt = b"A" * 1024
+        c1 = ChaCha20.new(key=b"5" * 32, nonce=b"6" * 8)
+        c2 = ChaCha20.new(key=b"5" * 32, nonce=b"6" * 8)
         ct = c1.encrypt(pt)
         self.assertEqual(c2.decrypt(ct), pt)
 
-        self.assertEqual(c1.encrypt(b("")), b(""))
-        self.assertEqual(c2.decrypt(b("")), b(""))
+        self.assertEqual(c1.encrypt(b""), b"")
+        self.assertEqual(c2.decrypt(b""), b"")
 
     def test_streaming(self):
         """Verify that an arbitrary number of bytes can be encrypted/decrypted"""
@@ -100,15 +98,15 @@ class ChaCha20Test(unittest.TestCase):
         segments = (1, 3, 5, 7, 11, 17, 23)
         total = sum(segments)
 
-        pt = b("")
+        pt = b""
         while len(pt) < total:
             pt += SHA1.new(pt).digest()
 
-        cipher1 = ChaCha20.new(key=b("7") * 32, nonce=b("t") * 8)
+        cipher1 = ChaCha20.new(key=b"7" * 32, nonce=b"t" * 8)
         ct = cipher1.encrypt(pt)
 
-        cipher2 = ChaCha20.new(key=b("7") * 32, nonce=b("t") * 8)
-        cipher3 = ChaCha20.new(key=b("7") * 32, nonce=b("t") * 8)
+        cipher2 = ChaCha20.new(key=b"7" * 32, nonce=b"t" * 8)
+        cipher3 = ChaCha20.new(key=b"7" * 32, nonce=b"t" * 8)
         idx = 0
         for segment in segments:
             self.assertEqual(cipher2.decrypt(ct[idx:idx+segment]), pt[idx:idx+segment])
@@ -116,15 +114,15 @@ class ChaCha20Test(unittest.TestCase):
             idx += segment
 
     def test_seek(self):
-        cipher1 = ChaCha20.new(key=b("9") * 32, nonce=b("e") * 8)
+        cipher1 = ChaCha20.new(key=b"9" * 32, nonce=b"e" * 8)
 
         offset = 64 * 900 + 7
-        pt = b("1") * 64
+        pt = b"1" * 64
 
-        cipher1.encrypt(b("0") * offset)
+        cipher1.encrypt(b"0" * offset)
         ct1 = cipher1.encrypt(pt)
 
-        cipher2 = ChaCha20.new(key=b("9") * 32, nonce=b("e") * 8)
+        cipher2 = ChaCha20.new(key=b"9" * 32, nonce=b"e" * 8)
         cipher2.seek(offset)
         ct2 = cipher2.encrypt(pt)
 
@@ -133,17 +131,15 @@ class ChaCha20Test(unittest.TestCase):
     def test_seek_tv(self):
         # Test Vector #4, A.1 from
         # http://tools.ietf.org/html/draft-nir-cfrg-chacha20-poly1305-04
-        key = bchr(0) + bchr(255) + bchr(0) * 30
-        nonce = bchr(0) * 8
+        key = bytes([0]) + bytes([255]) + bytes([0]) * 30
+        nonce = bytes([0]) * 8
         cipher = ChaCha20.new(key=key, nonce=nonce)
         cipher.seek(64 * 2)
-        expected_key_stream = unhexlify(b(
-            "72d54dfbf12ec44b362692df94137f32"
+        expected_key_stream = unhexlify("72d54dfbf12ec44b362692df94137f32"
             "8fea8da73990265ec1bbbea1ae9af0ca"
             "13b25aa26cb4a648cb9b9d1be65b2c09"
-            "24a66c54d545ec1b7374f4872e99f096"
-            ))
-        ct = cipher.encrypt(bchr(0) * len(expected_key_stream))
+            "24a66c54d545ec1b7374f4872e99f096".encode("latin-1"))
+        ct = cipher.encrypt(bytes([0]) * len(expected_key_stream))
         self.assertEqual(expected_key_stream, ct)
 
     def test_rfc7539(self):
@@ -458,9 +454,9 @@ class ChaCha20_AGL_NIR(unittest.TestCase):
 
     def runTest(self):
         for (key, nonce, stream) in self.tv:
-            c = ChaCha20.new(key=unhexlify(b(key)), nonce=unhexlify(b(nonce)))
-            ct = unhexlify(b(stream))
-            pt = b("\x00") * len(ct)
+            c = ChaCha20.new(key=unhexlify(key.encode("latin-1")), nonce=unhexlify(nonce.encode("latin-1")))
+            ct = unhexlify(stream.encode("latin-1"))
+            pt = b"\x00" * len(ct)
             self.assertEqual(c.encrypt(pt), ct)
 
 

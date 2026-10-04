@@ -31,20 +31,25 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Any, Callable, Optional, Tuple
+
 __all__ = ['encode', 'decode']
 
 import re
 from binascii import a2b_base64, b2a_base64, hexlify, unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.Hash import MD5
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Cipher import DES, DES3, AES
 from Crypto.Protocol.KDF import PBKDF1
 from Crypto.Random import get_random_bytes
-from Crypto.Util.py3compat import tobytes, tostr
 
 
-def encode(data, marker, passphrase=None, randfunc=None):
+def encode(data: bytes, marker: str, passphrase: Optional[bytes] = None,
+           randfunc: Optional[Callable[[int], bytes]] = None) -> str:
     """Encode a piece of binary data into PEM format.
 
     Args:
@@ -79,7 +84,7 @@ def encode(data, marker, passphrase=None, randfunc=None):
         key += PBKDF1(key + passphrase, salt, 8, 1, MD5)
         objenc = DES3.new(key, DES3.MODE_CBC, salt)
         out += "Proc-Type: 4,ENCRYPTED\nDEK-Info: DES-EDE3-CBC,%s\n\n" %\
-            tostr(hexlify(salt).upper())
+            hexlify(salt).upper().decode("latin-1")
         # Encrypt with PKCS#7 padding
         data = objenc.encrypt(pad(data, objenc.block_size))
     elif passphrase is not None:
@@ -87,7 +92,7 @@ def encode(data, marker, passphrase=None, randfunc=None):
 
     # Each BASE64 line can take up to 64 characters (=48 bytes of data)
     # b2a_base64 adds a new line character!
-    chunks = [tostr(b2a_base64(data[i:i + 48]))
+    chunks = [b2a_base64(data[i:i + 48]).decode("latin-1")
               for i in range(0, len(data), 48)]
     out += "".join(chunks)
     out += "-----END %s-----" % marker
@@ -103,7 +108,7 @@ def _EVP_BytesToKey(data, salt, key_len):
     return b"".join(d)[:key_len]
 
 
-def decode(pem_data, passphrase=None):
+def decode(pem_data: str, passphrase: Optional[bytes] = None) -> Tuple[bytes, str, bool]:
     """Decode a PEM block into binary.
 
     Args:
@@ -147,11 +152,12 @@ def decode(pem_data, passphrase=None):
         DEK = lines[2].split(':')
         if len(DEK) != 2 or DEK[0] != 'DEK-Info':
             raise ValueError("PEM encryption format not supported.")
-        algo, salt = DEK[1].split(',')
-        salt = unhexlify(tobytes(salt))
+        algo, salt_hex = DEK[1].split(',')
+        salt = unhexlify(tobytes(salt_hex))
 
         padding = True
 
+        objdec: Any
         if algo == "DES-CBC":
             key = _EVP_BytesToKey(passphrase, salt, 8)
             objdec = DES.new(key, DES.MODE_CBC, salt)

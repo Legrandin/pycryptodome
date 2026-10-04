@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -18,6 +17,21 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Literal, TYPE_CHECKING, Union, overload
+
+if TYPE_CHECKING:
+    from Crypto.Hash.SHA1 import SHA1Hash
+    from Crypto.Hash.SHA224 import SHA224Hash
+    from Crypto.Hash.SHA256 import SHA256Hash
+    from Crypto.Hash.SHA384 import SHA384Hash
+    from Crypto.Hash.SHA3_224 import SHA3_224_Hash
+    from Crypto.Hash.SHA3_256 import SHA3_256_Hash
+    from Crypto.Hash.SHA3_384 import SHA3_384_Hash
+    from Crypto.Hash.SHA3_512 import SHA3_512_Hash
+    from Crypto.Hash.SHA512 import SHA512Hash
+
 __all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD160', 'SHA1',
            'SHA224', 'SHA256', 'SHA384', 'SHA512',
            'SHA3_224', 'SHA3_256', 'SHA3_384', 'SHA3_512',
@@ -26,7 +40,78 @@ __all__ = ['HMAC', 'MD2', 'MD4', 'MD5', 'RIPEMD160', 'SHA1',
            'TupleHash128', 'TupleHash256', 'KangarooTwelve',
            'TurboSHAKE128', 'TurboSHAKE256']
 
-def new(name):
+@overload
+def new(name: Literal['1.3.14.3.2.26']) -> SHA1Hash: ...
+
+@overload
+def new(name: Literal['SHA1']) -> SHA1Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.4']) -> SHA224Hash: ...
+
+@overload
+def new(name: Literal['SHA224']) -> SHA224Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.1']) -> SHA256Hash: ...
+
+@overload
+def new(name: Literal['SHA256']) -> SHA256Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.2']) -> SHA384Hash: ...
+
+@overload
+def new(name: Literal['SHA384']) -> SHA384Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.3']) -> SHA512Hash: ...
+
+@overload
+def new(name: Literal['SHA512']) -> SHA512Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.5']) -> SHA512Hash: ...
+
+@overload
+def new(name: Literal['SHA512-224']) -> SHA512Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.6']) -> SHA512Hash: ...
+
+@overload
+def new(name: Literal['SHA512-256']) -> SHA512Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.7']) -> SHA3_224_Hash: ...
+
+@overload
+def new(name: Literal['SHA3-224']) -> SHA3_224_Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.8']) -> SHA3_256_Hash: ...
+
+@overload
+def new(name: Literal['SHA3-256']) -> SHA3_256_Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.9']) -> SHA3_384_Hash: ...
+
+@overload
+def new(name: Literal['SHA3-384']) -> SHA3_384_Hash: ...
+
+@overload
+def new(name: Literal['2.16.840.1.101.3.4.2.10']) -> SHA3_512_Hash: ...
+
+@overload
+def new(name: Literal['SHA3-512']) -> SHA3_512_Hash: ...
+
+@overload
+def new(name: str) -> Union[SHA1Hash, SHA224Hash, SHA256Hash, SHA384Hash, SHA512Hash,
+                            SHA3_224_Hash, SHA3_256_Hash, SHA3_384_Hash, SHA3_512_Hash]: ...
+
+def new(name: str) -> Union[SHA1Hash, SHA224Hash, SHA256Hash, SHA384Hash, SHA512Hash,
+                            SHA3_224_Hash, SHA3_256_Hash, SHA3_384_Hash, SHA3_512_Hash]:
     """Return a new hash instance, based on its name or
     on its ASN.1 Object ID"""
 

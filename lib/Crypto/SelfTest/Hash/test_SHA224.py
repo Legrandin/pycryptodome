@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/test_SHA224.py: Self-test for the SHA-224 hash function
 #

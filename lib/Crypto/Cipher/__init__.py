@@ -22,6 +22,27 @@
 #
 # where mode_state is a a pointer to base_cipher_state plus mode-specific data.
 
+from __future__ import annotations
+
+from typing import Dict, TypedDict, Union
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+class BlockCipherParams(TypedDict, total=False):
+    """Optional keyword arguments of ``new()`` for the classic block ciphers.
+    Which ones are accepted depends on the mode of operation."""
+    iv: Buffer
+    IV: Buffer
+    nonce: Buffer
+    segment_size: int
+    mac_len: int
+    msg_len: int
+    assoc_len: int
+    initial_value: Union[int, Buffer]
+    counter: Dict
+
+
 def _create_cipher(factory, key, mode, *args, **kwargs):
 
     kwargs["key"] = key

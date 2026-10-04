@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -18,7 +17,10 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
+
+from __future__ import annotations
+
+from typing import Optional, Union
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
@@ -28,7 +30,10 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 
-class SHA3_384_Hash(object):
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+class SHA3_384_Hash:
     """A SHA3-384 hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
@@ -41,15 +46,15 @@ class SHA3_384_Hash(object):
     """
 
     # The size of the resulting hash in bytes.
-    digest_size = 48
+    digest_size: int = 48
 
     # ASN.1 Object ID
-    oid = "2.16.840.1.101.3.4.2.9"
+    oid: str = "2.16.840.1.101.3.4.2.9"
 
     # Input block size for HMAC
-    block_size = 104
+    block_size: int = 104
 
-    def __init__(self, data, update_after_digest):
+    def __init__(self, data: Optional[Buffer], update_after_digest: bool) -> None:
         self._update_after_digest = update_after_digest
         self._digest_done = False
         self._padding = 0x06
@@ -66,7 +71,7 @@ class SHA3_384_Hash(object):
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> SHA3_384_Hash:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -84,7 +89,7 @@ class SHA3_384_Hash(object):
                              % result)
         return self
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -106,7 +111,7 @@ class SHA3_384_Hash(object):
         self._digest_value = get_raw_buffer(bfr)
         return self._digest_value
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -114,9 +119,9 @@ class SHA3_384_Hash(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def copy(self):
+    def copy(self) -> SHA3_384_Hash:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -134,19 +139,13 @@ class SHA3_384_Hash(object):
             raise ValueError("Error %d while copying SHA3-384" % result)
         return clone
 
-    def new(self, data=None):
-        """Create a fresh SHA3-256 hash object."""
-
-        return type(self)(data, self._update_after_digest)
-
-
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> SHA3_384_Hash:
         """Create a fresh SHA3-384 hash object."""
 
         return type(self)(data, self._update_after_digest)
 
 
-def new(*args, **kwargs):
+def new(data: Optional[Buffer] = None, *, update_after_digest: bool = False) -> SHA3_384_Hash:
     """Create a new hash object.
 
     Args:
@@ -160,20 +159,10 @@ def new(*args, **kwargs):
     :Return: A :class:`SHA3_384_Hash` hash object
     """
 
-    data = kwargs.pop("data", None)
-    update_after_digest = kwargs.pop("update_after_digest", False)
-    if len(args) == 1:
-        if data:
-            raise ValueError("Initial data for hash specified twice")
-        data = args[0]
-
-    if kwargs:
-        raise TypeError("Unknown parameters: " + str(kwargs))
-
     return SHA3_384_Hash(data, update_after_digest)
 
 # The size of the resulting hash in bytes.
-digest_size = SHA3_384_Hash.digest_size
+digest_size: int = SHA3_384_Hash.digest_size
 
 # Input block size for HMAC
-block_size = 104
+block_size: int = 104

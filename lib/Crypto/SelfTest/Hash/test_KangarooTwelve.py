@@ -32,7 +32,6 @@ from binascii import unhexlify
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import KangarooTwelve as K12
-from Crypto.Util.py3compat import b, bchr
 
 
 class KangarooTwelveTest(unittest.TestCase):
@@ -45,8 +44,8 @@ class KangarooTwelveTest(unittest.TestCase):
     def test_new_positive(self):
 
         xof1 = K12.new()
-        xof2 = K12.new(data=b("90"))
-        xof3 = K12.new().update(b("90"))
+        xof2 = K12.new(data=b"90")
+        xof3 = K12.new().update(b"90")
 
         self.assertNotEqual(xof1.read(10), xof2.read(10))
         xof3.read(10)
@@ -54,22 +53,22 @@ class KangarooTwelveTest(unittest.TestCase):
 
         xof1 = K12.new()
         ref = xof1.read(10)
-        xof2 = K12.new(custom=b(""))
-        xof3 = K12.new(custom=b("foo"))
+        xof2 = K12.new(custom=b"")
+        xof3 = K12.new(custom=b"foo")
 
         self.assertEqual(ref, xof2.read(10))
         self.assertNotEqual(ref, xof3.read(10))
 
-        xof1 = K12.new(custom=b("foo"))
-        xof2 = K12.new(custom=b("foo"), data=b("90"))
-        xof3 = K12.new(custom=b("foo")).update(b("90"))
+        xof1 = K12.new(custom=b"foo")
+        xof2 = K12.new(custom=b"foo", data=b"90")
+        xof3 = K12.new(custom=b"foo").update(b"90")
 
         self.assertNotEqual(xof1.read(10), xof2.read(10))
         xof3.read(10)
         self.assertEqual(xof2.read(10), xof3.read(10))
 
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [bytes([10]) * 200, bytes([20]) * 300]
         h = K12.new()
         h.update(pieces[0]).update(pieces[1])
         digest = h.read(10)
@@ -79,21 +78,21 @@ class KangarooTwelveTest(unittest.TestCase):
 
     def test_update_negative(self):
         h = K12.new()
-        self.assertRaises(TypeError, h.update, u"string")
+        self.assertRaises(TypeError, h.update, "string")
 
     def test_digest(self):
         h = K12.new()
         digest = h.read(90)
 
         # read returns a byte string of the right length
-        self.assertTrue(isinstance(digest, type(b("digest"))))
+        self.assertTrue(isinstance(digest, type(b"digest")))
         self.assertEqual(len(digest), 90)
 
     def test_update_after_read(self):
         mac = K12.new()
-        mac.update(b("rrrr"))
+        mac.update(b"rrrr")
         mac.read(90)
-        self.assertRaises(TypeError, mac.update, b("ttt"))
+        self.assertRaises(TypeError, mac.update, b"ttt")
 
 
 def txt2bin(txt):
@@ -103,7 +102,7 @@ def txt2bin(txt):
 
 def ptn(n):
     res = bytearray(n)
-    pattern = b"".join([bchr(x) for x in range(0, 0xFB)])
+    pattern = b"".join([bytes([x]) for x in range(0, 0xFB)])
     for base in range(0, n - 0xFB, 0xFB):
         res[base:base + 0xFB] = pattern
     remain = n % 0xFB
@@ -195,7 +194,7 @@ class KangarooTwelveTV(unittest.TestCase):
         # Byte by byte
         k12 = K12.new()
         for x in data:
-            k12.update(bchr(x))
+            k12.update(bytes([x]))
         res = k12.read(32)
         self.assertEqual(res, btv)
 

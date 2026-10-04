@@ -33,12 +33,6 @@ PyCryptodome can be used as:
     In this case, all modules are installed under the ``Cryptodome`` package.
     The old PyCrypto and PyCryptodome can coexist.
 
-.. note::
-
-  If you intend to run PyCryptodome with Python 2.7 under Windows, you must first install
-  the `Microsoft Visual C++ 2015 Redistributable <https://www.microsoft.com/en-us/download/details.aspx?id=52685>`_.
-  That is not necessary if you use Python 3.
-
 The procedures below go a bit more in detail, by explaining
 how to setup the environment for compiling the C extensions
 for each OS, and how to install the GMP library.
@@ -49,13 +43,6 @@ Compiling in Linux Ubuntu
 .. note::
     If you want to install under the ``Crypto`` package, replace
     below ``pycryptodomex`` with ``pycryptodome``.
-
-For Python 2.x::
-
-        $ sudo apt-get install build-essential python-dev
-        $ pip install pycryptodomex
-        $ pip install pycryptodome-test-vectors
-        $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 
@@ -77,13 +64,6 @@ Compiling in Linux Fedora
 .. note::
     If you want to install under the ``Crypto`` package, replace
     below ``pycryptodomex`` with ``pycryptodome``.
-
-For Python 2.x::
-
-        $ sudo yum install gcc gmp python-devel
-        $ pip install pycryptodomex
-        $ pip install pycryptodome-test-vectors
-        $ python -m Cryptodome.SelfTest
 
 For Python 3.x::
 

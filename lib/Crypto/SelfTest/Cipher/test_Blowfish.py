@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/test_Blowfish.py: Self-test for the Blowfish cipher
 #
@@ -25,8 +24,6 @@
 """Self-test suite for Crypto.Cipher.Blowfish"""
 
 import unittest
-
-from Crypto.Util.py3compat import bchr
 
 from Crypto.Cipher import Blowfish
 
@@ -106,9 +103,9 @@ test_data = [
 class KeyLength(unittest.TestCase):
 
     def runTest(self):
-        self.assertRaises(ValueError, Blowfish.new, bchr(0) * 3,
+        self.assertRaises(ValueError, Blowfish.new, bytes([0]) * 3,
                           Blowfish.MODE_ECB)
-        self.assertRaises(ValueError, Blowfish.new, bchr(0) * 57,
+        self.assertRaises(ValueError, Blowfish.new, bytes([0]) * 57,
                           Blowfish.MODE_ECB)
 
 

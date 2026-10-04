@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/test_SHA512.py: Self-test for the SHA-512 hash function
 #

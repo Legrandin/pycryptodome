@@ -30,7 +30,7 @@ int ed25519_add(Point *P1, const Point *P2);
 int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
 """)
 
-    class EcLib(object):
+    class EcLib:
         new_point = _ed25519_lib.ed25519_new_point
         clone = _ed25519_lib.ed25519_clone
         free_point = _ed25519_lib.ed25519_free_point
@@ -83,7 +83,7 @@ int ed448_add(PointEd448 *P1, const PointEd448 *P2);
 int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
 """)
 
-    class EcLib(object):
+    class EcLib:
         new_point = _ed448_lib.ed448_new_point
         clone = _ed448_lib.ed448_clone
         free_point = _ed448_lib.ed448_free_point

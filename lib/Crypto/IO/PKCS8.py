@@ -32,23 +32,28 @@
 # ===================================================================
 
 
-from Crypto.Util.py3compat import *
+from __future__ import annotations
 
+from typing import Callable, Optional, Tuple, Union
+
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.asn1 import (
-            DerNull,
+            DerObject, DerNull,
             DerSequence,
             DerObjectId,
             DerOctetString,
             )
 
-from Crypto.IO._PBES import PBES1, PBES2, PbesError, _DEFAULT_MAX_ITERATION_COUNT
+from Crypto.IO._PBES import ProtParams, PBES1, PBES2, PbesError, _DEFAULT_MAX_ITERATION_COUNT
 
 
 __all__ = ['wrap', 'unwrap']
 
 
-def wrap(private_key, key_oid, passphrase=None, protection=None,
-         prot_params=None, key_params=DerNull(), randfunc=None):
+def wrap(private_key: bytes, key_oid: str, passphrase: Optional[Union[bytes, str]] = None,
+         protection: Optional[str] = None, prot_params: Optional[ProtParams] = None,
+         key_params: Optional[DerObject] = DerNull(),
+         randfunc: Optional[Callable[[int], bytes]] = None) -> bytes:
     """Wrap a private key into a PKCS#8 blob (clear or encrypted).
 
     Args:
@@ -126,7 +131,8 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
                          protection, prot_params, randfunc)
 
 
-def unwrap(p8_private_key, passphrase=None, max_iteration_count=None):
+def unwrap(p8_private_key: bytes, passphrase: Optional[Union[bytes, str]] = None,
+           max_iteration_count: Optional[int] = None) -> Tuple[str, bytes, Optional[bytes]]:
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
     Args:

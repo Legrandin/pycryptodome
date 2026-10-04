@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Util/__init__.py: Self-test for utility modules
 #

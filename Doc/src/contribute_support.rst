@@ -20,10 +20,10 @@ Contribute and support
 - If your change breaks backward compatibility, highlight it and include
   a justification.
 - Ensure that your code complies to `PEP8`_ and `PEP257`_.
-- If you add or modify a public interface, make sure the relevant type stubs
-  remain up to date.
+- If you add or modify a public interface, make sure it has
+  inline type annotations.
 - Ensure that your code does not use constructs or includes modules not
-  present in `Python 2.6`_.
+  present in Python 3.8.
 - Add a short summary of the change to the file ``Changelog.rst``.
 - Add your name to the list of contributors in the file ``AUTHORS.rst``.
 
@@ -38,4 +38,3 @@ Bug reports can be filed on the `GitHub tracker <https://github.com/Legrandin/py
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
 .. _MIT license: https://opensource.org/licenses/MIT
 .. _PEP257: https://legacy.python.org/dev/peps/pep-0257/
-.. _Python 2.6: https://rgruet.free.fr/PQR26/PQR2.6.html

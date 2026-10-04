@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/PublicKey/test_import_DSA.py: Self-test for importing DSA keys
 #
@@ -22,10 +21,11 @@
 
 import unittest
 import re
+from io import BytesIO
 
+from Crypto.Util._bytes import tobytes
 from Crypto.PublicKey import DSA
 from Crypto.SelfTest.st_common import *
-from Crypto.Util.py3compat import *
 
 from binascii import unhexlify
 
@@ -95,7 +95,7 @@ tPG+TJKpGYb7pVk=
 -----END PUBLIC KEY-----"""
 
     def testImportKey2(self):
-        for pem in (self.pem_public, tostr(self.pem_public)):
+        for pem in (self.pem_public, self.pem_public.decode("latin-1")):
             key_obj = DSA.importKey(pem)
             self.assertFalse(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
@@ -157,7 +157,7 @@ ggadmEIJhrMUIVAldWBl
 -----END DSA PRIVATE KEY-----"""
 
     def testImportKey4(self):
-        for pem in (self.pem_private, tostr(self.pem_private)):
+        for pem in (self.pem_private, self.pem_private.decode("latin-1")):
             key_obj = DSA.importKey(pem)
             self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
@@ -216,7 +216,7 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
 -----END PRIVATE KEY-----"""
 
     def testImportKey6(self):
-        for pem in (self.pem_pkcs8, tostr(self.pem_pkcs8)):
+        for pem in (self.pem_pkcs8, self.pem_pkcs8.decode("latin-1")):
             key_obj = DSA.importKey(pem)
             self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
@@ -237,7 +237,7 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
     ssh_pub="""ssh-dss AAAAB3NzaC1kc3MAAACBAOdW7hcX9LZ5THwhRyShl2N0LEVXK0s/j/O0Tzvp9EzgOaJ1dpXskVaX2nTvkU/NGwVmDiQZx2HWOfRdLXm4AtvSPnq4uBtHmjgOHzCTJYS6KguVUDI0LryDy1ypBuew181v5lbOy0yLWncSOoxnUKSB47BgV6/2qm66YguDLWDDAAAAFQCtMvSM064MRaGYph+kteIDIHY7IwAAAIB539w9YU/mNfzrfq6uNxjcLv77RSgpk6xnSdyDwiPYwYhyljFrOwtURmz0RPNLguNVTQuQp3j6rxMG8CXa5qPjbH+T3VusQFK5I3AECspwuNWCBZlxGQDvvJYYEsNV3Zvv/gmB2oXFVIB0tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAAAAIEAgzUqaaEy80hD0qDrmVv/Ti8IOnPwBJ0skeovDOQ9FEq9pIGZ5LADxXCor4MwPUUQX2BsXEjZJaQO2cJjDC+kzb+DhTneuaKfkZCF8gRjafYnyoSyyx4seUBWS2cPljqxFk1OLKK/b/058S9UiSi/TS0bXmmAtPG+TJKpGYb7pVk="""
 
     def testImportKey7(self):
-        for ssh in (self.ssh_pub, tostr(self.ssh_pub)):
+        for ssh in (self.ssh_pub, self.ssh_pub.decode("latin-1")):
             key_obj = DSA.importKey(ssh)
             self.assertFalse(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
@@ -270,7 +270,7 @@ xVJtxaV37m3aXxtCsPnbBg==
 -----END DSA PRIVATE KEY-----"""
 
     def testImportKey8(self):
-        for pem in (self.pem_private_encrypted, tostr(self.pem_private_encrypted)):
+        for pem in (self.pem_private_encrypted, self.pem_private_encrypted.decode("latin-1")):
             key_obj = DSA.importKey(pem, "PWDTEST")
             self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
@@ -305,7 +305,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
 -----END ENCRYPTED PRIVATE KEY-----"""
 
     def testImportKey9(self):
-        for pem in (self.pem_pkcs8_encrypted, tostr(self.pem_pkcs8_encrypted)):
+        for pem in (self.pem_pkcs8_encrypted, self.pem_pkcs8_encrypted.decode("latin-1")):
             key_obj = DSA.importKey(pem, "PWDTEST")
             self.assertTrue(key_obj.has_private())
             self.assertEqual(self.y, key_obj.y)
@@ -346,7 +346,7 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
     def testExportKey10(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        randfunc = BytesIO(unhexlify(b("27A1C66C42AFEECE") + b("D725BF1B6B8239F4"))).read
+        randfunc = BytesIO(unhexlify(b"27A1C66C42AFEECE" + b"D725BF1B6B8239F4")).read
         encoded = key.export_key('DER', pkcs8=True, passphrase="PWDTEST", randfunc=randfunc)
         self.assertEqual(self.der_pkcs8_encrypted, encoded)
 

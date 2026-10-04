@@ -36,7 +36,6 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import *
 from Crypto.IO import PKCS8
 
 from Crypto.Util.asn1 import DerNull
@@ -366,7 +365,7 @@ b21e25d2559447f53e20b90b2f20e72456d943561c4925aad6067a4c720afb3d
 """
 
 def txt2bin(inputs):
-    s = b('').join([b(x) for x in inputs if not (x in '\n\r\t ')])
+    s = b''.join([x.encode("latin-1") for x in inputs if not (x in '\n\r\t ')])
     return unhexlify(s)
 
 class Rng:
@@ -430,7 +429,7 @@ class PKCS8_Decrypt(unittest.TestCase):
             wrapped = PKCS8.wrap(
                     self.clear_key,
                     self.oid_key,
-                    b("TestTest"),
+                    b"TestTest",
                     protection=t[0],
                     prot_params=params,
                     key_params=DerNull(),

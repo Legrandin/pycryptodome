@@ -28,13 +28,17 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
+from __future__ import annotations
+
+from typing import Optional, Union
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
                                   c_uint8_ptr)
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_md2_lib = load_pycryptodome_raw_lib(
                         "Crypto.Hash._MD2",
@@ -50,7 +54,7 @@ _raw_md2_lib = load_pycryptodome_raw_lib(
                         """)
 
 
-class MD2Hash(object):
+class MD2Hash:
     """An MD2 hash object.
     Do not instantiate directly. Use the :func:`new` function.
 
@@ -66,13 +70,13 @@ class MD2Hash(object):
     """
 
     # The size of the resulting hash in bytes.
-    digest_size = 16
+    digest_size: int = 16
     # The internal block size of the hash algorithm in bytes.
-    block_size = 16
+    block_size: int = 16
     # ASN.1 Object ID
-    oid = "1.2.840.113549.2.2"
+    oid: str = "1.2.840.113549.2.2"
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Buffer] = None) -> None:
         state = VoidPointer()
         result = _raw_md2_lib.md2_init(state.address_of())
         if result:
@@ -83,7 +87,7 @@ class MD2Hash(object):
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> None:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -97,7 +101,7 @@ class MD2Hash(object):
             raise ValueError("Error %d while instantiating MD2"
                              % result)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -114,7 +118,7 @@ class MD2Hash(object):
 
         return get_raw_buffer(bfr)
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -122,9 +126,9 @@ class MD2Hash(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def copy(self):
+    def copy(self) -> MD2Hash:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -142,11 +146,11 @@ class MD2Hash(object):
             raise ValueError("Error %d while copying MD2" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> MD2Hash:
         return MD2Hash(data)
 
 
-def new(data=None):
+def new(data: Optional[Buffer] = None) -> MD2Hash:
     """Create a new hash object.
 
     :parameter data:
@@ -160,7 +164,7 @@ def new(data=None):
     return MD2Hash().new(data)
 
 # The size of the resulting hash in bytes.
-digest_size = MD2Hash.digest_size
+digest_size: int = MD2Hash.digest_size
 
 # The internal block size of the hash algorithm in bytes.
-block_size = MD2Hash.block_size
+block_size: int = MD2Hash.block_size

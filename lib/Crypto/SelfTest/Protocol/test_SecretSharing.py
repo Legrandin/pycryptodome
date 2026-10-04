@@ -34,7 +34,6 @@
 from unittest import main, TestCase, TestSuite
 from binascii import unhexlify, hexlify
 
-from Crypto.Util.py3compat import *
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -90,14 +89,14 @@ class Element_Tests(TestCase):
         # Test encondings
         e = _Element(256)
         self.assertEqual(int(e), 256)
-        self.assertEqual(e.encode(), bchr(0)*14 + b("\x01\x00"))
+        self.assertEqual(e.encode(), bytes([0])*14 + b"\x01\x00")
 
-        e = _Element(bchr(0)*14 + b("\x01\x10"))
+        e = _Element(bytes([0])*14 + b"\x01\x10")
         self.assertEqual(int(e), 0x110)
-        self.assertEqual(e.encode(), bchr(0)*14 + b("\x01\x10"))
+        self.assertEqual(e.encode(), bytes([0])*14 + b"\x01\x10")
 
         # Only 16 byte string are a valid encoding
-        self.assertRaises(ValueError, _Element, bchr(0))
+        self.assertRaises(ValueError, _Element, bytes([0]))
 
     def test2(self):
         # Test addition
@@ -136,7 +135,7 @@ class Shamir_Tests(TestCase):
 
     def test1(self):
         # Test splitting
-        shares = Shamir.split(2, 3, bchr(90)*16)
+        shares = Shamir.split(2, 3, bytes([90])*16)
         self.assertEqual(len(shares), 3)
         for index in range(3):
             self.assertEqual(shares[index][0], index+1)
@@ -271,7 +270,7 @@ class Shamir_Tests(TestCase):
 
     def test5(self):
         # Detect duplicate shares
-        secret = unhexlify(b("000102030405060708090a0b0c0d0e0f"))
+        secret = unhexlify(b"000102030405060708090a0b0c0d0e0f")
 
         shares = Shamir.split(2, 3, secret)
         self.assertRaises(ValueError, Shamir.combine, (shares[0], shares[0]))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/test_SHA.py: Self-test for the SHA-384 hash function
 #

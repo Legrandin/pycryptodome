@@ -28,41 +28,44 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Tuple
+
 import struct
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
 from Crypto.Protocol.KDF import _bcrypt_hash
 from Crypto.Util.strxor import strxor
-from Crypto.Util.py3compat import tostr, bchr, bord
 
 
-def read_int4(data):
+def read_int4(data: bytes) -> Tuple[int, bytes]:
     if len(data) < 4:
         raise ValueError("Insufficient data")
     value = struct.unpack(">I", data[:4])[0]
     return value, data[4:]
 
 
-def read_bytes(data):
+def read_bytes(data: bytes) -> Tuple[bytes, bytes]:
     size, data = read_int4(data)
     if len(data) < size:
         raise ValueError("Insufficient data (V)")
     return data[:size], data[size:]
 
 
-def read_string(data):
+def read_string(data: bytes) -> Tuple[str, bytes]:
     s, d = read_bytes(data)
-    return tostr(s), d
+    return s.decode("latin-1"), d
 
 
-def check_padding(pad):
+def check_padding(pad: bytes) -> None:
     for v, x in enumerate(pad):
-        if bord(x) != ((v + 1) & 0xFF):
+        if x != ((v + 1) & 0xFF):
             raise ValueError("Incorrect padding")
 
 
-def import_openssh_private_generic(data, password):
+def import_openssh_private_generic(data: bytes, password: bytes) -> Tuple[str, bytes]:
     # https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
     # https://github.com/openssh/openssh-portable/blob/master/sshkey.c
     # https://coolaj86.com/articles/the-openssh-private-key-format/
@@ -118,7 +121,7 @@ def import_openssh_private_generic(data, password):
                 strxor(acc, out, output=acc)
             stripes.append(acc[:24])
 
-        result = b"".join([bchr(a)+bchr(b) for (a, b) in zip(*stripes)])
+        result = b"".join([bytes([a])+bytes([b]) for (a, b) in zip(*stripes)])
 
         cipher = AES.new(result[:32],
                          AES.MODE_CTR,

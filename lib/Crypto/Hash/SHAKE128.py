@@ -28,7 +28,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
+
+from __future__ import annotations
+
+from typing import Optional, Union
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
@@ -38,7 +41,9 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 
-class SHAKE128_XOF(object):
+Buffer = Union[bytes, bytearray, memoryview]
+
+class SHAKE128_XOF:
     """A SHAKE128 hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
@@ -48,9 +53,9 @@ class SHAKE128_XOF(object):
     """
 
     # ASN.1 Object ID
-    oid = "2.16.840.1.101.3.4.2.11"
+    oid: str = "2.16.840.1.101.3.4.2.11"
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Buffer] = None) -> None:
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(state.address_of(),
                                              c_size_t(32),
@@ -65,7 +70,7 @@ class SHAKE128_XOF(object):
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> SHAKE128_XOF:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -83,7 +88,7 @@ class SHAKE128_XOF(object):
                              % result)
         return self
 
-    def read(self, length):
+    def read(self, length: int) -> bytes:
         """
         Compute the next piece of XOF output.
 
@@ -110,7 +115,7 @@ class SHAKE128_XOF(object):
 
         return get_raw_buffer(bfr)
 
-    def copy(self):
+    def copy(self) -> SHAKE128_XOF:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -126,11 +131,11 @@ class SHAKE128_XOF(object):
             raise ValueError("Error %d while copying SHAKE128" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> SHAKE128_XOF:
         return type(self)(data=data)
 
 
-def new(data=None):
+def new(data: Optional[Buffer] = None) -> SHAKE128_XOF:
     """Return a fresh instance of a SHAKE128 object.
 
     Args:

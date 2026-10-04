@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/AES.py: Self-test for the AES cipher
 #
@@ -24,12 +23,11 @@
 
 """Self-test suite for Crypto.Cipher.AES"""
 
-from __future__ import print_function
 
 import unittest
+from Crypto.Util._bytes import tobytes
 from Crypto.Hash import SHA256
 from Crypto.Cipher import AES
-from Crypto.Util.py3compat import *
 from binascii import hexlify
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]]) tuples.
@@ -1262,7 +1260,7 @@ class TestMultipleBlocks(unittest.TestCase):
             cipher = AES.new(key, AES.MODE_ECB, use_aesni=self.use_aesni)
             h = SHA256.new()
 
-            pt = b"".join([ tobytes('{0:016x}'.format(x)) for x in range(20) ])
+            pt = b"".join([ tobytes(f'{x:016x}') for x in range(20) ])
             ct = cipher.encrypt(pt)
             self.assertEqual(SHA256.new(ct).hexdigest(), expected)
 

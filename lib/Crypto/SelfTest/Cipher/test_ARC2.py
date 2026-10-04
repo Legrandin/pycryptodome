@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/ARC2.py: Self-test for the Alleged-RC2 cipher
 #
@@ -25,8 +24,6 @@
 """Self-test suite for Crypto.Cipher.ARC2"""
 
 import unittest
-
-from Crypto.Util.py3compat import b, bchr
 
 from Crypto.Cipher import ARC2
 
@@ -98,19 +95,19 @@ class BufferOverflowTest(unittest.TestCase):
 
     def runTest(self):
         """ARC2 with keylength > 128"""
-        key = b("x") * 16384
+        key = b"x" * 16384
         self.assertRaises(ValueError, ARC2.new, key, ARC2.MODE_ECB)
 
 class KeyLength(unittest.TestCase):
 
     def runTest(self):
         ARC2.new(b'\x00' * 16, ARC2.MODE_ECB, effective_keylen=40)
-        self.assertRaises(ValueError, ARC2.new, bchr(0) * 4, ARC2.MODE_ECB)
-        self.assertRaises(ValueError, ARC2.new, bchr(0) * 129, ARC2.MODE_ECB)
+        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 4, ARC2.MODE_ECB)
+        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 129, ARC2.MODE_ECB)
 
-        self.assertRaises(ValueError, ARC2.new, bchr(0) * 16, ARC2.MODE_ECB,
+        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 16, ARC2.MODE_ECB,
                           effective_keylen=39)
-        self.assertRaises(ValueError, ARC2.new, bchr(0) * 16, ARC2.MODE_ECB,
+        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 16, ARC2.MODE_ECB,
                           effective_keylen=1025)
 
 

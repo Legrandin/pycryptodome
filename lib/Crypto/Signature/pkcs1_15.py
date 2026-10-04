@@ -28,9 +28,20 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Optional, Protocol, TYPE_CHECKING
+
 import Crypto.Util.number
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.asn1 import DerSequence, DerNull, DerOctetString, DerObjectId
+
+if TYPE_CHECKING:
+    from Crypto.PublicKey.RSA import RsaKey
+
+class Hash(Protocol):
+    oid: str
+    def digest(self) -> bytes: ...
 
 class PKCS115_SigScheme:
     """A signature object for ``RSASSA-PKCS1-v1_5``.
@@ -38,7 +49,7 @@ class PKCS115_SigScheme:
     Use :func:`Crypto.Signature.pkcs1_15.new`.
     """
 
-    def __init__(self, rsa_key):
+    def __init__(self, rsa_key: RsaKey) -> None:
         """Initialize this PKCS#1 v1.5 signature scheme object.
 
         :Parameters:
@@ -48,11 +59,11 @@ class PKCS115_SigScheme:
         """
         self._key = rsa_key
 
-    def can_sign(self):
+    def can_sign(self) -> bool:
         """Return ``True`` if this object can be used to sign messages."""
         return self._key.has_private()
 
-    def sign(self, msg_hash):
+    def sign(self, msg_hash: Hash) -> bytes:
         """Create the PKCS#1 v1.5 signature of a message.
 
         This function is also called ``RSASSA-PKCS1-V1_5-SIGN`` and
@@ -84,7 +95,7 @@ class PKCS115_SigScheme:
             raise ValueError("Fault detected in RSA private key operation")
         return signature
 
-    def verify(self, msg_hash, signature):
+    def verify(self, msg_hash: Hash, signature: bytes) -> None:
         """Check if the  PKCS#1 v1.5 signature over a message is valid.
 
         This function is also called ``RSASSA-PKCS1-V1_5-VERIFY`` and
@@ -139,7 +150,7 @@ class PKCS115_SigScheme:
         pass
 
 
-def _EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):
+def _EMSA_PKCS1_V1_5_ENCODE(msg_hash: Hash, emLen: int, with_hash_parameters: Optional[bool] = True) -> bytes:
     """
     Implement the ``EMSA-PKCS1-V1_5-ENCODE`` function, as defined
     in PKCS#1 v2.1 (RFC3447, 9.2).
@@ -207,7 +218,7 @@ def _EMSA_PKCS1_V1_5_ENCODE(msg_hash, emLen, with_hash_parameters=True):
     PS = b'\xFF' * (emLen - len(digestInfo) - 3)
     return b'\x00\x01' + PS + b'\x00' + digestInfo
 
-def new(rsa_key):
+def new(rsa_key: RsaKey) -> PKCS115_SigScheme:
     """Create a signature object for creating
     or verifying PKCS#1 v1.5 signatures.
 

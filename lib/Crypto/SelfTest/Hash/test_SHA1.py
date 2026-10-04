@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/SHA1.py: Self-test for the SHA-1 hash function
 #

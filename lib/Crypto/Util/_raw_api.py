@@ -28,40 +28,32 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Any, List, Optional, Union
+
 import os
 import abc
 import sys
-from Crypto.Util.py3compat import byte_string
+from importlib import machinery
+
 from Crypto.Util._file_system import pycryptodome_filename
 
-#
 # List of file suffixes for Python extensions
-#
-if sys.version_info[0] < 3:
-
-    import imp
-    extension_suffixes = []
-    for ext, mod, typ in imp.get_suffixes():
-        if typ == imp.C_EXTENSION:
-            extension_suffixes.append(ext)
-
-else:
-
-    from importlib import machinery
-    extension_suffixes = machinery.EXTENSION_SUFFIXES
+extension_suffixes = machinery.EXTENSION_SUFFIXES
 
 # Which types with buffer interface we support (apart from byte strings)
 _buffer_type = (bytearray, memoryview)
 
 
-class _VoidPointer(object):
+class _VoidPointer:
     @abc.abstractmethod
-    def get(self):
+    def get(self) -> Any:
         """Return the memory location we point to"""
         return
 
     @abc.abstractmethod
-    def address_of(self):
+    def address_of(self) -> Any:
         """Return a raw pointer to this pointer"""
         return
 
@@ -88,13 +80,13 @@ try:
     ):
         raise ImportError("CFFI 1.16.0+ is required with CPython 3.12+ on Windows")
 
-    ffi = cffi.FFI()
-    null_pointer = ffi.NULL
+    ffi: Any = cffi.FFI()
+    null_pointer: Any = ffi.NULL
     uint8_t_type = ffi.typeof(ffi.new("const uint8_t*"))
 
     _Array = ffi.new("uint8_t[1]").__class__.__bases__
 
-    def load_lib(name, cdecl):
+    def load_lib(name: str, cdecl: str) -> Any:
         """Load a shared library and return a handle to it.
 
         @name,  either an absolute path or the name of a library
@@ -110,7 +102,7 @@ try:
         ffi.cdef(cdecl)
         return lib
 
-    def c_ulong(x):
+    def c_ulong(x: int) -> Any:
         """Convert a Python integer to unsigned long"""
         return x
 
@@ -118,15 +110,15 @@ try:
     c_uint = c_ulong
     c_ubyte = c_ulong
 
-    def c_size_t(x):
+    def c_size_t(x: int) -> Any:
         """Convert a Python integer to size_t"""
         return x
 
-    def create_string_buffer(init_or_size, size=None):
+    def create_string_buffer(init_or_size: Union[bytes, int], size: Optional[int] = None) -> Any:
         """Allocate the given amount of bytes (initially set to 0)"""
 
         if isinstance(init_or_size, bytes):
-            size = max(len(init_or_size) + 1, size)
+            size = max(len(init_or_size) + 1, size or 0)
             result = ffi.new("uint8_t[]", size)
             result[:] = init_or_size
         else:
@@ -135,19 +127,19 @@ try:
             result = ffi.new("uint8_t[]", init_or_size)
         return result
 
-    def get_c_string(c_string):
+    def get_c_string(c_string: Any) -> bytes:
         """Convert a C string into a Python byte sequence"""
         return ffi.string(c_string)
 
-    def get_raw_buffer(buf):
+    def get_raw_buffer(buf: Any) -> bytes:
         """Convert a C buffer into a Python byte sequence"""
         return ffi.buffer(buf)[:]
 
-    def c_uint8_ptr(data):
+    def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
         if isinstance(data, _buffer_type):
             # This only works for cffi >= 1.7
             return ffi.cast(uint8_t_type, ffi.from_buffer(data))
-        elif byte_string(data) or isinstance(data, _Array):
+        elif isinstance(data, bytes) or isinstance(data, _Array):
             return data
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
@@ -164,28 +156,28 @@ try:
         def address_of(self):
             return self._pp
 
-    def VoidPointer():
+    def VoidPointer() -> _VoidPointer:
         return VoidPointer_cffi()
 
-    backend = "cffi"
+    backend: str = "cffi"
 
 except ImportError:
 
     import ctypes
-    from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong, c_size_t,
-                        create_string_buffer, c_ubyte, c_uint)
+    from ctypes import (CDLL, c_void_p, byref, c_ulong, c_ulonglong,  # type: ignore[assignment]
+                        c_size_t, create_string_buffer, c_uint)
     from ctypes.util import find_library
-    from ctypes import Array as _Array
+    from ctypes import Array as _Array  # type: ignore[assignment]
 
     null_pointer = None
-    cached_architecture = []
+    cached_architecture: List[str] = []
 
-    def c_ubyte(c):
+    def c_ubyte(c: int) -> Any:  # type: ignore[misc]
         if not (0 <= c < 256):
             raise OverflowError()
         return ctypes.c_ubyte(c)
 
-    def load_lib(name, cdecl):
+    def load_lib(name: str, cdecl: str) -> Any:
         if not cached_architecture:
             # platform.architecture() creates a subprocess, so caching the
             # result makes successive imports faster.
@@ -199,10 +191,10 @@ except ImportError:
             name = full_name
         return CDLL(name)
 
-    def get_c_string(c_string):
+    def get_c_string(c_string: Any) -> bytes:
         return c_string.value
 
-    def get_raw_buffer(buf):
+    def get_raw_buffer(buf: Any) -> bytes:
         return buf.raw
 
     # ---- Get raw pointer ---
@@ -232,12 +224,8 @@ except ImportError:
             ('internal',    c_void_p)
         ]
 
-        # Extra field for CPython 2.6/2.7
-        if sys.version_info[0] == 2:
-            _fields_.insert(-1, ('smalltable', _c_ssize_t * 2))
-
-    def c_uint8_ptr(data):
-        if byte_string(data) or isinstance(data, _Array):
+    def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
+        if isinstance(data, bytes) or isinstance(data, _Array):
             return data
         elif isinstance(data, _buffer_type):
             obj = _py_object(data)
@@ -265,23 +253,23 @@ except ImportError:
         def address_of(self):
             return byref(self._p)
 
-    def VoidPointer():
+    def VoidPointer() -> _VoidPointer:
         return VoidPointer_ctypes()
 
     backend = "ctypes"
 
 
-class SmartPointer(object):
+class SmartPointer:
     """Class to hold a non-managed piece of memory"""
 
-    def __init__(self, raw_pointer, destructor):
+    def __init__(self, raw_pointer: Any, destructor: Any) -> None:
         self._raw_pointer = raw_pointer
         self._destructor = destructor
 
-    def get(self):
+    def get(self) -> Any:
         return self._raw_pointer
 
-    def release(self):
+    def release(self) -> Any:
         rp, self._raw_pointer = self._raw_pointer, None
         return rp
 
@@ -294,7 +282,7 @@ class SmartPointer(object):
             pass
 
 
-def load_pycryptodome_raw_lib(name, cdecl):
+def load_pycryptodome_raw_lib(name: str, cdecl: str) -> Any:
     """Load a shared library and return a handle to it.
 
     @name,  the name of the library expressed as a PyCryptodome module,
@@ -319,11 +307,11 @@ def load_pycryptodome_raw_lib(name, cdecl):
     raise OSError("Cannot load native module '%s': %s" % (name, ", ".join(attempts)))
 
 
-def is_buffer(x):
+def is_buffer(x: Any) -> bool:
     """Return True if object x supports the buffer interface"""
     return isinstance(x, (bytes, bytearray, memoryview))
 
 
-def is_writeable_buffer(x):
+def is_writeable_buffer(x: Any) -> bool:
     return (isinstance(x, bytearray) or
             (isinstance(x, memoryview) and not x.readonly))

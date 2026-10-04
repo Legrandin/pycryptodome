@@ -31,13 +31,21 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord, tobytes
+from __future__ import annotations
+
+from typing import Optional, TYPE_CHECKING, Union
 
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.Hash import BLAKE2s
 from Crypto.Util.strxor import strxor
 from Crypto.Random import get_random_bytes
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 __all__ = ['new', 'HMAC']
 
@@ -58,7 +66,7 @@ _hash2hmac_oid = {
 _hmac2hash_oid = {v: k for k, v in _hash2hmac_oid.items()}
 
 
-class HMAC(object):
+class HMAC:
     """An HMAC hash object.
     Do not instantiate directly. Use the :func:`new` function.
 
@@ -69,7 +77,7 @@ class HMAC(object):
                Only present if the algorithm was officially assigned one.
     """
 
-    def __init__(self, key, msg=b"", digestmod=None):
+    def __init__(self, key: Buffer, msg: Buffer = b"", digestmod: Optional[ModuleType] = None) -> None:
 
         if digestmod is None:
             from Crypto.Hash import MD5
@@ -117,7 +125,7 @@ class HMAC(object):
         # Start step 8 and 9
         self._outer = digestmod.new(key_0_opad)
 
-    def update(self, msg):
+    def update(self, msg: Buffer) -> HMAC:
         """Authenticate the next chunk of message.
 
         Args:
@@ -137,7 +145,7 @@ class HMAC(object):
                                     iterations)
         return result
 
-    def copy(self):
+    def copy(self) -> HMAC:
         """Return a copy ("clone") of the HMAC object.
 
         The copy will have the same internal state as the original HMAC
@@ -156,7 +164,7 @@ class HMAC(object):
 
         return new_hmac
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) MAC tag of the message
         authenticated so far.
 
@@ -169,7 +177,7 @@ class HMAC(object):
         frozen_outer_hash.update(self._inner.digest())
         return frozen_outer_hash.digest()
 
-    def verify(self, mac_tag):
+    def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)
         is valid.
 
@@ -189,7 +197,7 @@ class HMAC(object):
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** MAC tag of the message authenticated so far.
 
         :return: The MAC tag, computed over the data processed so far.
@@ -197,10 +205,10 @@ class HMAC(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x)
+        return "".join(["%02x" % x
                         for x in tuple(self.digest())])
 
-    def hexverify(self, hex_mac_tag):
+    def hexverify(self, hex_mac_tag: str) -> None:
         """Verify that a given **printable** MAC (computed by another party)
         is valid.
 
@@ -216,7 +224,7 @@ class HMAC(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key, msg=b"", digestmod=None):
+def new(key: Buffer, msg: Buffer = b"", digestmod: Optional[ModuleType] = None) -> HMAC:
     """Create a new MAC object.
 
     Args:

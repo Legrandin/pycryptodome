@@ -1,7 +1,6 @@
 import unittest
 from binascii import unhexlify, hexlify
-
-from Crypto.Util.py3compat import tobytes
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -33,6 +32,16 @@ class KMACTest(unittest.TestCase):
         hobj = h.new(key=key)
         self.assertEqual(hobj.digest_size, self.default_bytes)
 
+    def test_new_same_variant(self):
+        # The new() method must create an object of the same variant
+        key = b'Y' * (self.minimum_key_bits // 8)
+        h = self.new()
+        digest1 = h.new(key=key, data=b"abc").digest()
+        digest2 = self.KMAC.new(key=key, data=b"abc", mac_len=h.digest_size).digest()
+        self.assertEqual(digest1, digest2)
+        self.assertEqual(h.new(key=key).oid, h.oid)
+        self.assertRaises(ValueError, h.new, key=key[:self.minimum_key_bits // 8 - 1])
+
     def test_new_negative(self):
 
         h = self.new()
@@ -42,9 +51,9 @@ class KMACTest(unittest.TestCase):
             self.assertRaises(ValueError, new_func, key=b'X'*32,
                               mac_len=self.minimum_bytes - 1)
             self.assertRaises(TypeError, new_func,
-                              key=u"string")
+                              key="string")
             self.assertRaises(TypeError, new_func,
-                              data=u"string")
+                              data="string")
 
     def test_default_digest_size(self):
         digest = self.new(data=b'abc').digest()
@@ -61,7 +70,7 @@ class KMACTest(unittest.TestCase):
 
     def test_update_negative(self):
         h = self.new()
-        self.assertRaises(TypeError, h.update, u"string")
+        self.assertRaises(TypeError, h.update, "string")
 
     def test_digest(self):
         h = self.new()
@@ -70,7 +79,7 @@ class KMACTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, bytes))
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -90,7 +99,7 @@ class KMACTest(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, str))
 
     def test_verify(self):
         h = self.new()

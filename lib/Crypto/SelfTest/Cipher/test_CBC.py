@@ -31,9 +31,9 @@
 import unittest
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, is_string
 from Crypto.Cipher import AES, DES3, DES
 from Crypto.Hash import SHAKE128
 
@@ -88,7 +88,7 @@ class BlockChainingTests(unittest.TestCase):
 
     def test_iv_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode,
-                          iv = u'test1234567890-*')
+                          iv = 'test1234567890-*')
 
     def test_only_one_iv(self):
         # Only one IV/iv keyword allowed
@@ -162,10 +162,10 @@ class BlockChainingTests(unittest.TestCase):
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.encrypt, 'test1234567890-*')
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.decrypt, 'test1234567890-*')
 
     def test_bytearray(self):
         data = b"1" * 128
@@ -325,7 +325,7 @@ class NistBlockChainingVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if is_string(tv):
+            if isinstance(tv, str):
                 direction = tv
                 continue
 
@@ -353,7 +353,7 @@ class NistBlockChainingVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if is_string(tv):
+            if isinstance(tv, str):
                 direction = tv
                 continue
 
@@ -388,7 +388,7 @@ class NistBlockChainingVectors(unittest.TestCase):
         for tv in test_vectors:
 
             # The test vector file contains some directive lines
-            if is_string(tv):
+            if isinstance(tv, str):
                 direction = tv
                 continue
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -34,7 +33,7 @@ Module                      Description
 `Crypto.Util.Padding`       Set of functions for adding and removing padding.
 ========================    =============================================
 
-:undocumented: _galois, _number_new, cpuid, py3compat, _raw_api
+:undocumented: _galois, _number_new, cpuid, _bytes, _raw_api
 """
 
 __all__ = ['RFC1751', 'number', 'strxor', 'asn1', 'Counter', 'Padding']

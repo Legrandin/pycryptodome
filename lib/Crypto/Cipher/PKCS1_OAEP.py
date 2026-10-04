@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Cipher/PKCS1_OAEP.py : PKCS#1 OAEP
 #
@@ -20,22 +19,42 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Any, Callable, Optional, Protocol, TYPE_CHECKING, Union
+
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Signature.pss import MGF1
 import Crypto.Hash.SHA1
-
-from Crypto.Util.py3compat import _copy_bytes
 import Crypto.Util.number
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 from Crypto.Util.strxor import strxor
 from Crypto import Random
 from ._pkcs1_oaep_decode import oaep_decode
 
+if TYPE_CHECKING:
+    from Crypto.PublicKey.RSA import RsaKey
+
+class HashLikeClass(Protocol):
+    digest_size: int
+    def new(self, data: Optional[bytes] = ...) -> Any: ...
+
+class HashLikeModule(Protocol):
+    digest_size: int
+    @staticmethod
+    def new(data: Optional[bytes] = ...) -> Any: ...
+
+HashLike = Union[HashLikeClass, HashLikeModule]
+Buffer = Union[bytes, bytearray, memoryview]
+
 
 class PKCS1OAEP_Cipher:
     """Cipher object for PKCS#1 OAEP.
     Do not create directly: use :func:`new` instead."""
 
-    def __init__(self, key, hashAlgo, mgfunc, label, randfunc):
+    def __init__(self, key: RsaKey, hashAlgo: Optional[HashLike],
+                 mgfunc: Optional[Callable[[bytes, int], bytes]], label: Buffer,
+                 randfunc: Callable[[int], bytes]) -> None:
         """Initialize this PKCS#1 OAEP cipher object.
 
         :Parameters:
@@ -74,22 +93,22 @@ class PKCS1OAEP_Cipher:
         else:
             self._mgf = lambda x, y: MGF1(x, y, self._hashObj)
 
-        self._label = _copy_bytes(None, None, label)
+        self._label = copy_bytes(None, None, label)
         self._randfunc = randfunc
 
-    def can_encrypt(self):
+    def can_encrypt(self) -> bool:
         """Legacy function to check if you can call :meth:`encrypt`.
 
         .. deprecated:: 3.0"""
         return self._key.can_encrypt()
 
-    def can_decrypt(self):
+    def can_decrypt(self) -> bool:
         """Legacy function to check if you can call :meth:`decrypt`.
 
         .. deprecated:: 3.0"""
-        return self._key.can_decrypt()
+        return self._key.has_private()
 
-    def encrypt(self, message):
+    def encrypt(self, message: Buffer) -> bytes:
         """Encrypt a message with PKCS#1 OAEP.
 
         :param message:
@@ -122,7 +141,7 @@ class PKCS1OAEP_Cipher:
         # Step 2b
         ps = b'\x00' * ps_len
         # Step 2c
-        db = lHash + ps + b'\x01' + _copy_bytes(None, None, message)
+        db = lHash + ps + b'\x01' + copy_bytes(None, None, message)
         # Step 2d
         ros = self._randfunc(hLen)
         # Step 2e
@@ -143,7 +162,7 @@ class PKCS1OAEP_Cipher:
         c = long_to_bytes(m_int, k)
         return c
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext: Buffer) -> bytes:
         """Decrypt a message with PKCS#1 OAEP.
 
         :param ciphertext: The encrypted message.
@@ -195,7 +214,9 @@ class PKCS1OAEP_Cipher:
         return db[res:]
 
 
-def new(key, hashAlgo=None, mgfunc=None, label=b'', randfunc=None):
+def new(key: RsaKey, hashAlgo: Optional[HashLike] = None,
+        mgfunc: Optional[Callable[[bytes, int], bytes]] = None, label: Buffer = b'',
+        randfunc: Optional[Callable[[int], bytes]] = None) -> PKCS1OAEP_Cipher:
     """Return a cipher object :class:`PKCS1OAEP_Cipher`
        that can be used to perform PKCS#1 OAEP encryption or decryption.
 

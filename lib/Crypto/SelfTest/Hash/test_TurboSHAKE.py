@@ -6,7 +6,6 @@ from binascii import unhexlify
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import TurboSHAKE128, TurboSHAKE256
-from Crypto.Util.py3compat import bchr
 
 
 class TurboSHAKETest(unittest.TestCase):
@@ -28,13 +27,17 @@ class TurboSHAKETest(unittest.TestCase):
         self.assertEqual(out1, out2)
         self.assertEqual(out1, out3)
 
+    def test_new_unknown_parameters(self):
+        self.assertRaises(TypeError, self.TurboSHAKE.new, domian=0x1D)
+        self.assertRaises(TypeError, self.TurboSHAKE.new, b'90')
+
     def test_new_domain(self):
         xof1 = self.TurboSHAKE.new(domain=0x1D)
         xof2 = self.TurboSHAKE.new(domain=0x20)
         self.assertNotEqual(xof1.read(128), xof2.read(128))
 
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [bytes([10]) * 200, bytes([20]) * 300]
 
         xof1 = self.TurboSHAKE.new()
         xof1.update(pieces[0]).update(pieces[1])
@@ -48,7 +51,7 @@ class TurboSHAKETest(unittest.TestCase):
 
     def test_update_negative(self):
         xof1 = self.TurboSHAKE.new()
-        self.assertRaises(TypeError, xof1.update, u"string")
+        self.assertRaises(TypeError, xof1.update, "string")
 
     def test_read(self):
         xof1 = self.TurboSHAKE.new()
@@ -93,7 +96,7 @@ def txt2bin(txt):
 
 def ptn(n):
     res = bytearray(n)
-    pattern = b"".join([bchr(x) for x in range(0, 0xFB)])
+    pattern = b"".join([bytes([x]) for x in range(0, 0xFB)])
     for base in range(0, n - 0xFB, 0xFB):
         res[base:base + 0xFB] = pattern
     remain = n % 0xFB
@@ -183,7 +186,7 @@ class TurboSHAKE128TV(unittest.TestCase):
         # Byte by byte
         xof = TurboSHAKE128.new()
         for x in data:
-            xof.update(bchr(x))
+            xof.update(bytes([x]))
         res = xof.read(32)
         self.assertEqual(res, btv)
 
@@ -348,7 +351,7 @@ class TurboSHAKE256TV(unittest.TestCase):
         # Byte by byte
         xof = TurboSHAKE256.new()
         for x in data:
-            xof.update(bchr(x))
+            xof.update(bytes([x]))
         res = xof.read(64)
         self.assertEqual(res, btv)
 

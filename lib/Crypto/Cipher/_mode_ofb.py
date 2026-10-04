@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Cipher/mode_ofb.py : OFB mode
 #
@@ -24,15 +23,20 @@
 Output Feedback (CFB) mode.
 """
 
-__all__ = ['OfbMode']
+from __future__ import annotations
 
-from Crypto.Util.py3compat import _copy_bytes
+from typing import Optional, Union, overload
+
+__all__ = ['OfbMode']
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   create_string_buffer, get_raw_buffer,
                                   SmartPointer, c_size_t, c_uint8_ptr,
                                   is_writeable_buffer)
 
 from Crypto.Random import get_random_bytes
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 raw_ofb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ofb", """
                         int OFB_start_operation(void *cipher,
@@ -52,7 +56,7 @@ raw_ofb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ofb", """
                                         )
 
 
-class OfbMode(object):
+class OfbMode:
     """*Output FeedBack (OFB)*.
 
     This mode is very similar to CBC, but it
@@ -70,7 +74,7 @@ class OfbMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, block_cipher, iv):
+    def __init__(self, block_cipher: SmartPointer, iv: Buffer) -> None:
         """Create a new block cipher, configured in OFB mode.
 
         :Parameters:
@@ -88,18 +92,18 @@ class OfbMode(object):
             compromises confidentiality.
         """
 
-        self._state = VoidPointer()
+        state = VoidPointer()
         result = raw_ofb_lib.OFB_start_operation(block_cipher.get(),
                                                  c_uint8_ptr(iv),
                                                  c_size_t(len(iv)),
-                                                 self._state.address_of())
+                                                 state.address_of())
         if result:
             raise ValueError("Error %d while instantiating the OFB mode"
                              % result)
 
         # Ensure that object disposal of this Python object will (eventually)
         # free the memory allocated by the raw library for the cipher mode
-        self._state = SmartPointer(self._state.get(),
+        self._state = SmartPointer(state.get(),
                                    raw_ofb_lib.OFB_stop_operation)
 
         # Memory allocated for the underlying block cipher is now owed
@@ -109,7 +113,7 @@ class OfbMode(object):
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = _copy_bytes(None, None, iv)
+        self.iv = copy_bytes(None, None, iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 
@@ -118,7 +122,14 @@ class OfbMode(object):
 
         self._next = ["encrypt", "decrypt"]
 
-    def encrypt(self, plaintext, output=None):
+    @overload
+    def encrypt(self, plaintext: Buffer) -> bytes: ...
+
+    @overload
+    def encrypt(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Encrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -179,7 +190,14 @@ class OfbMode(object):
         else:
             return None
 
-    def decrypt(self, ciphertext, output=None):
+    @overload
+    def decrypt(self, ciphertext: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt(self, ciphertext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Decrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have decrypted a message

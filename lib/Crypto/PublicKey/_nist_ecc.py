@@ -42,7 +42,7 @@ int ec_ws_neg(EcPoint *p);
 """)
 
 
-class EcLib(object):
+class EcLib:
     new_context = _ec_lib.ec_ws_new_context
     free_context = _ec_lib.ec_ws_free_context
     new_point = _ec_lib.ec_ws_new_point

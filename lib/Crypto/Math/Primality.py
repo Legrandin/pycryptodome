@@ -33,16 +33,22 @@
 :undocumented: __package__
 """
 
+from __future__ import annotations
+
+from typing import Callable, Optional, Set, Union
+
 from Crypto import Random
 from Crypto.Math.Numbers import Integer
 
-from Crypto.Util.py3compat import iter_range
-
-COMPOSITE = 0
-PROBABLY_PRIME = 1
+PrimeResult = int
 
 
-def miller_rabin_test(candidate, iterations, randfunc=None):
+COMPOSITE: PrimeResult = 0
+PROBABLY_PRIME: PrimeResult = 1
+
+
+def miller_rabin_test(candidate: Union[int, Integer], iterations: int,
+                      randfunc: Optional[Callable[[int], bytes]] = None) -> PrimeResult:
     """Perform a Miller-Rabin primality test on an integer.
 
     The test is specified in Section C.3.1 of `FIPS PUB 186-4`__.
@@ -87,10 +93,10 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     # Skip step 3
 
     # Step 4
-    for i in iter_range(iterations):
+    for i in range(iterations):
 
         # Step 4.1-2
-        base = 1
+        base = one
         while base in (one, minus_one):
             base = Integer.random_range(min_inclusive=2,
                     max_inclusive=candidate - 2,
@@ -103,7 +109,7 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
             continue
 
         # Step 4.5
-        for j in iter_range(1, a):
+        for j in range(1, a):
             z = pow(z, 2, candidate)
             if z == minus_one:
                 break
@@ -116,7 +122,7 @@ def miller_rabin_test(candidate, iterations, randfunc=None):
     return PROBABLY_PRIME
 
 
-def lucas_test(candidate):
+def lucas_test(candidate: Union[int, Integer]) -> PrimeResult:
     """Perform a Lucas primality test on an integer.
 
     The test is specified in Section C.3.3 of `FIPS PUB 186-4`__.
@@ -173,7 +179,7 @@ def lucas_test(candidate):
     U_temp = Integer(0)
     V_temp = Integer(0)
     # Step 6
-    for i in iter_range(r - 1, -1, -1):
+    for i in range(r - 1, -1, -1):
         # Square
         # U_temp = U_i * V_i % candidate
         U_temp.set(U_i)
@@ -214,12 +220,15 @@ def lucas_test(candidate):
 
 
 from Crypto.Util.number import sieve_base as _sieve_base_large
+
+
 ## The optimal number of small primes to use for the sieve
 ## is probably dependent on the platform and the candidate size
-_sieve_base = set(_sieve_base_large[:100])
+_sieve_base: Set[int] = set(_sieve_base_large[:100])
 
 
-def test_probable_prime(candidate, randfunc=None):
+def test_probable_prime(candidate: Union[int, Integer],
+                        randfunc: Optional[Callable[[int], bytes]] = None) -> PrimeResult:
     """Test if a number is prime.
 
     A number is qualified as prime if it passes a certain
@@ -277,7 +286,9 @@ def test_probable_prime(candidate, randfunc=None):
     return PROBABLY_PRIME
 
 
-def generate_probable_prime(**kwargs):
+def generate_probable_prime(*, exact_bits: int,
+                            randfunc: Optional[Callable[[int], bytes]] = None,
+                            prime_filter: Callable[[Integer], bool] = lambda x: True) -> Integer:
     """Generate a random probable prime.
 
     The prime will not have any specific properties
@@ -311,12 +322,6 @@ def generate_probable_prime(**kwargs):
     .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     """
 
-    exact_bits = kwargs.pop("exact_bits", None)
-    randfunc = kwargs.pop("randfunc", None)
-    prime_filter = kwargs.pop("prime_filter", lambda x: True)
-    if kwargs:
-        raise ValueError("Unknown parameters: " + kwargs.keys())
-
     if exact_bits is None:
         raise ValueError("Missing exact_bits parameter")
     if exact_bits < 160:
@@ -335,7 +340,8 @@ def generate_probable_prime(**kwargs):
     return candidate
 
 
-def generate_probable_safe_prime(**kwargs):
+def generate_probable_safe_prime(*, exact_bits: int,
+                                 randfunc: Optional[Callable[[int], bytes]] = None) -> Integer:
     """Generate a random, probable safe prime.
 
     Note this operation is much slower than generating a simple prime.
@@ -350,11 +356,6 @@ def generate_probable_safe_prime(**kwargs):
         A probable safe prime in the range
         2^exact_bits > p > 2^(exact_bits-1).
     """
-
-    exact_bits = kwargs.pop("exact_bits", None)
-    randfunc = kwargs.pop("randfunc", None)
-    if kwargs:
-        raise ValueError("Unknown parameters: " + kwargs.keys())
 
     if randfunc is None:
         randfunc = Random.new().read

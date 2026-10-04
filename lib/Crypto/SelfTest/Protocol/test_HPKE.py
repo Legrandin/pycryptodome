@@ -338,7 +338,7 @@ class HPKE_TestVectors(unittest.TestCase):
             import pycryptodome_test_vectors    # type: ignore
             init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
             full_file_name = os.path.join(init_dir, "Protocol", "wycheproof", "HPKE-test-vectors.json")
-            with open(full_file_name, "r") as f:
+            with open(full_file_name) as f:
                 self.vectors = json.load(f)
         except (FileNotFoundError, ImportError):
             print("\nWarning: skipping extended tests for HPKE (install pycryptodome-test-vectors)")

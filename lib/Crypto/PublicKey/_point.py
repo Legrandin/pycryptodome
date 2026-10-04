@@ -1,6 +1,10 @@
 # This file is licensed under the BSD 2-Clause License.
 # See https://opensource.org/licenses/BSD-2-Clause for details.
 
+from __future__ import annotations
+
+from typing import Any, Dict, Optional, Tuple, Union
+
 import threading
 
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -11,7 +15,7 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Random.random import getrandbits
 
 
-class CurveID(object):
+class CurveID:
     P192 = 1
     P224 = 2
     P256 = 3
@@ -23,9 +27,9 @@ class CurveID(object):
     CURVE448 = 9
 
 
-class _Curves(object):
+class _Curves:
 
-    curves = {}
+    curves: Dict[str, Any] = {}
     curves_lock = threading.RLock()
 
     p192_names = ["p192", "NIST P-192", "P-192", "prime192v1", "secp192r1",
@@ -128,7 +132,7 @@ class _Curves(object):
 _curves = _Curves()
 
 
-class EccPoint(object):
+class EccPoint:
     """A class to model a point on an Elliptic Curve.
 
     The class supports operators for:
@@ -152,7 +156,7 @@ class EccPoint(object):
     :ivar xy: The tuple with affine X- and Y- coordinates
     """
 
-    def __init__(self, x, y, curve="p256"):
+    def __init__(self, x: Union[int, Integer], y: Union[int, Integer], curve: Optional[str] = "p256") -> None:
 
         try:
             self._curve = _curves[curve]
@@ -165,20 +169,20 @@ class EccPoint(object):
 
         modulus_bytes = self.size_in_bytes()
 
-        xb = long_to_bytes(x, modulus_bytes)
-        yb = long_to_bytes(y, modulus_bytes)
+        xb = long_to_bytes(int(x), modulus_bytes)
+        yb = long_to_bytes(int(y), modulus_bytes)
         if len(xb) != modulus_bytes or len(yb) != modulus_bytes:
             raise ValueError("Incorrect coordinate length")
 
         new_point = self._curve.rawlib.new_point
         free_func = self._curve.rawlib.free_point
 
-        self._point = VoidPointer()
+        raw_point = VoidPointer()
         try:
             context = self._curve.context.get()
         except AttributeError:
             context = null_pointer
-        result = new_point(self._point.address_of(),
+        result = new_point(raw_point.address_of(),
                            c_uint8_ptr(xb),
                            c_uint8_ptr(yb),
                            c_size_t(modulus_bytes),
@@ -191,34 +195,30 @@ class EccPoint(object):
 
         # Ensure that object disposal of this Python object will (eventually)
         # free the memory allocated by the raw library for the EC point
-        self._point = SmartPointer(self._point.get(), free_func)
+        self._point = SmartPointer(raw_point.get(), free_func)
 
-    def set(self, point):
+    def set(self, point: EccPoint) -> EccPoint:
         clone = self._curve.rawlib.clone
         free_func = self._curve.rawlib.free_point
 
-        self._point = VoidPointer()
-        result = clone(self._point.address_of(),
+        raw_point = VoidPointer()
+        result = clone(raw_point.address_of(),
                        point._point.get())
 
         if result:
             raise ValueError("Error %d while cloning an EC point" % result)
 
-        self._point = SmartPointer(self._point.get(), free_func)
+        self._point = SmartPointer(raw_point.get(), free_func)
         return self
 
-    def __eq__(self, point):
+    def __eq__(self, point: object) -> bool:
         if not isinstance(point, EccPoint):
             return False
 
         cmp_func = self._curve.rawlib.cmp
         return 0 == cmp_func(self._point.get(), point._point.get())
 
-    # Only needed for Python 2
-    def __ne__(self, point):
-        return not self == point
-
-    def __neg__(self):
+    def __neg__(self) -> EccPoint:
         neg_func = self._curve.rawlib.neg
         np = self.copy()
         result = neg_func(np._point.get())
@@ -226,13 +226,13 @@ class EccPoint(object):
             raise ValueError("Error %d while inverting an EC point" % result)
         return np
 
-    def copy(self):
+    def copy(self) -> EccPoint:
         """Return a copy of this point."""
         x, y = self.xy
         np = EccPoint(x, y, self.curve)
         return np
 
-    def is_point_at_infinity(self):
+    def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
 
         if self._curve.is_edwards:
@@ -240,7 +240,7 @@ class EccPoint(object):
         else:
             return self.xy == (0, 0)
 
-    def point_at_infinity(self):
+    def point_at_infinity(self) -> EccPoint:
         """Return the *point-at-infinity* for the curve."""
 
         if self._curve.is_edwards:
@@ -249,15 +249,15 @@ class EccPoint(object):
             return EccPoint(0, 0, self.curve)
 
     @property
-    def x(self):
+    def x(self) -> Integer:
         return self.xy[0]
 
     @property
-    def y(self):
+    def y(self) -> Integer:
         return self.xy[1]
 
     @property
-    def xy(self):
+    def xy(self) -> Tuple[Integer, Integer]:
         modulus_bytes = self.size_in_bytes()
         xb = bytearray(modulus_bytes)
         yb = bytearray(modulus_bytes)
@@ -271,15 +271,15 @@ class EccPoint(object):
 
         return (Integer(bytes_to_long(xb)), Integer(bytes_to_long(yb)))
 
-    def size_in_bytes(self):
+    def size_in_bytes(self) -> int:
         """Size of each coordinate, in bytes."""
         return (self.size_in_bits() + 7) // 8
 
-    def size_in_bits(self):
+    def size_in_bits(self) -> int:
         """Size of each coordinate, in bits."""
         return self._curve.modulus_bits
 
-    def double(self):
+    def double(self) -> EccPoint:
         """Double this point (in-place operation).
 
         Returns:
@@ -292,7 +292,7 @@ class EccPoint(object):
             raise ValueError("Error %d while doubling an EC point" % result)
         return self
 
-    def __iadd__(self, point):
+    def __iadd__(self, point: EccPoint) -> EccPoint:
         """Add a second point to this one"""
 
         add_func = self._curve.rawlib.add
@@ -303,14 +303,14 @@ class EccPoint(object):
             raise ValueError("Error %d while adding two EC points" % result)
         return self
 
-    def __add__(self, point):
+    def __add__(self, point: EccPoint) -> EccPoint:
         """Return a new point, the addition of this one and another"""
 
         np = self.copy()
         np += point
         return np
 
-    def __imul__(self, scalar):
+    def __imul__(self, scalar: int) -> EccPoint:
         """Multiply this point by a scalar"""
 
         scalar_func = self._curve.rawlib.scalar
@@ -325,7 +325,7 @@ class EccPoint(object):
             raise ValueError("Error %d during scalar multiplication" % result)
         return self
 
-    def __mul__(self, scalar):
+    def __mul__(self, scalar: int) -> EccPoint:
         """Return a new point, the scalar product of this one"""
 
         np = self.copy()
@@ -336,7 +336,7 @@ class EccPoint(object):
         return self.__mul__(left_hand)
 
 
-class EccXPoint(object):
+class EccXPoint:
     """A class to model a point on an Elliptic Curve,
     where only the X-coordinate is exposed.
 
@@ -352,7 +352,7 @@ class EccXPoint(object):
     :vartype x: integer
     """
 
-    def __init__(self, x, curve):
+    def __init__(self, x: Optional[Union[int, Integer]], curve: Optional[str]) -> None:
         # Once encoded, x must not exceed the length of the modulus,
         # but its value may match or exceed the modulus itself
         # (i.e., non-canonical value)
@@ -369,7 +369,6 @@ class EccXPoint(object):
         new_point = self._curve.rawlib.new_point
         free_func = self._curve.rawlib.free_point
 
-        self._point = VoidPointer()
         try:
             context = self._curve.context.get()
         except AttributeError:
@@ -380,12 +379,12 @@ class EccXPoint(object):
         if x is None:
             xb = null_pointer
         else:
-            xb = c_uint8_ptr(long_to_bytes(x, modulus_bytes))
+            xb = c_uint8_ptr(long_to_bytes(int(x), modulus_bytes))
             if len(xb) != modulus_bytes:
                 raise ValueError("Incorrect coordinate length")
 
-        self._point = VoidPointer()
-        result = new_point(self._point.address_of(),
+        raw_point = VoidPointer()
+        result = new_point(raw_point.address_of(),
                            xb,
                            c_size_t(modulus_bytes),
                            context)
@@ -397,22 +396,22 @@ class EccXPoint(object):
 
         # Ensure that object disposal of this Python object will (eventually)
         # free the memory allocated by the raw library for the EC point
-        self._point = SmartPointer(self._point.get(), free_func)
+        self._point = SmartPointer(raw_point.get(), free_func)
 
-    def set(self, point):
+    def set(self, point: EccXPoint) -> EccXPoint:
         clone = self._curve.rawlib.clone
         free_func = self._curve.rawlib.free_point
 
-        self._point = VoidPointer()
-        result = clone(self._point.address_of(),
+        raw_point = VoidPointer()
+        result = clone(raw_point.address_of(),
                        point._point.get())
         if result:
             raise ValueError("Error %d while cloning an EC point" % result)
 
-        self._point = SmartPointer(self._point.get(), free_func)
+        self._point = SmartPointer(raw_point.get(), free_func)
         return self
 
-    def __eq__(self, point):
+    def __eq__(self, point: object) -> bool:
         if not isinstance(point, EccXPoint):
             return False
 
@@ -422,7 +421,7 @@ class EccXPoint(object):
         res = cmp_func(p1, p2)
         return 0 == res
 
-    def copy(self):
+    def copy(self) -> EccXPoint:
         """Return a copy of this point."""
 
         try:
@@ -431,7 +430,7 @@ class EccXPoint(object):
             return self.point_at_infinity()
         return EccXPoint(x, self.curve)
 
-    def is_point_at_infinity(self):
+    def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
 
         try:
@@ -440,13 +439,13 @@ class EccXPoint(object):
             return True
         return False
 
-    def point_at_infinity(self):
+    def point_at_infinity(self) -> EccXPoint:
         """Return the *point-at-infinity* for the curve."""
 
         return EccXPoint(None, self.curve)
 
     @property
-    def x(self):
+    def x(self) -> Integer:
         modulus_bytes = self.size_in_bytes()
         xb = bytearray(modulus_bytes)
         get_x = self._curve.rawlib.get_x
@@ -459,15 +458,15 @@ class EccXPoint(object):
             raise ValueError("Error %d while getting X of an EC point" % result)
         return Integer(bytes_to_long(xb))
 
-    def size_in_bytes(self):
+    def size_in_bytes(self) -> int:
         """Size of each coordinate, in bytes."""
         return (self.size_in_bits() + 7) // 8
 
-    def size_in_bits(self):
+    def size_in_bits(self) -> int:
         """Size of each coordinate, in bits."""
         return self._curve.modulus_bits
 
-    def __imul__(self, scalar):
+    def __imul__(self, scalar: int) -> EccXPoint:
         """Multiply this point by a scalar"""
 
         scalar_func = self._curve.rawlib.scalar
@@ -482,12 +481,12 @@ class EccXPoint(object):
             raise ValueError("Error %d during scalar multiplication" % result)
         return self
 
-    def __mul__(self, scalar):
+    def __mul__(self, scalar: int) -> EccXPoint:
         """Return a new point, the scalar product of this one"""
 
         np = self.copy()
         np *= scalar
         return np
 
-    def __rmul__(self, left_hand):
+    def __rmul__(self, left_hand: int) -> EccXPoint:
         return self.__mul__(left_hand)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  PublicKey/DSA.py : DSA signature primitive
 #
@@ -22,14 +21,17 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Callable, Mapping, Optional, Sequence, Tuple, Union
+
 __all__ = ['generate', 'construct', 'DsaKey', 'import_key' ]
 
 import binascii
 import struct
 import itertools
 
-from Crypto.Util.py3compat import bchr, bord, tobytes, tostr, iter_range
-
+from Crypto.Util._bytes import tobytes
 from Crypto import Random
 from Crypto.IO import PKCS8, PEM
 from Crypto.Hash import SHA256
@@ -46,6 +48,9 @@ from Crypto.Math.Primality import (test_probable_prime, COMPOSITE,
 from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _create_subject_public_key_info,
                               _extract_subject_public_key_info)
+
+RNG = Callable[[int], bytes]
+Int = Union[int, Integer]
 
 #   ; The following ASN.1 types are relevant for DSA
 #
@@ -75,7 +80,7 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
 #   }
 #
 
-class DsaKey(object):
+class DsaKey:
     r"""Class defining an actual DSA key.
     Do not instantiate directly.
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
@@ -100,16 +105,16 @@ class DsaKey(object):
 
     _keydata = ['y', 'g', 'p', 'q', 'x']
 
-    def __init__(self, key_dict):
+    def __init__(self, key_dict: Mapping[str, Integer]) -> None:
         input_set = set(key_dict.keys())
-        public_set = set(('y' , 'g', 'p', 'q'))
+        public_set = {'y' , 'g', 'p', 'q'}
         if not public_set.issubset(input_set):
             raise ValueError("Some DSA components are missing = %s" %
                              str(public_set - input_set))
         extra_set = input_set - public_set
-        if extra_set and extra_set != set(('x',)):
+        if extra_set and extra_set != {'x'}:
             raise ValueError("Unknown DSA components = %s" %
-                             str(extra_set - set(('x',))))
+                             str(extra_set - {'x'}))
         self._key = dict(key_dict)
 
     def _sign(self, m, k):
@@ -118,7 +123,7 @@ class DsaKey(object):
         if not (1 < k < self.q):
             raise ValueError("k is not between 2 and q-1")
 
-        x, q, p, g = [self._key[comp] for comp in ['x', 'q', 'p', 'g']]
+        x, q, p, g = (self._key[comp] for comp in ['x', 'q', 'p', 'g'])
 
         blind_factor = Integer.random_range(min_inclusive=1,
                                            max_exclusive=q)
@@ -131,7 +136,7 @@ class DsaKey(object):
 
     def _verify(self, m, sig):
         r, s = sig
-        y, q, p, g = [self._key[comp] for comp in ['y', 'q', 'p', 'g']]
+        y, q, p, g = (self._key[comp] for comp in ['y', 'q', 'p', 'g'])
         if not (0 < r < q) or not (0 < s < q):
             return False
         w = Integer(s).inverse(q)
@@ -140,28 +145,30 @@ class DsaKey(object):
         v = (pow(g, u1, p) * pow(y, u2, p) % p) % q
         return v == r
 
-    def has_private(self):
+    def has_private(self) -> bool:
         """Whether this is a DSA private key"""
 
         return 'x' in self._key
 
-    def can_encrypt(self):  # legacy
+    def can_encrypt(self) -> bool:  # legacy
         return False
 
-    def can_sign(self):     # legacy
+    def can_sign(self) -> bool:     # legacy
         return True
 
-    def public_key(self):
+    def public_key(self) -> DsaKey:
         """A matching DSA public key.
 
         Returns:
             a new :class:`DsaKey` object
         """
 
-        public_components = dict((k, self._key[k]) for k in ('y', 'g', 'p', 'q'))
+        public_components = {k: self._key[k] for k in ('y', 'g', 'p', 'q')}
         return DsaKey(public_components)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, DsaKey):
+            return False
         if bool(self.has_private()) != bool(other.has_private()):
             return False
 
@@ -171,24 +178,21 @@ class DsaKey(object):
                                  getattr(other._key, comp, None))
         return result
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __getstate__(self):
+    def __getstate__(self) -> None:
         # DSA key is not pickable
         from pickle import PicklingError
         raise PicklingError
 
-    def domain(self):
+    def domain(self) -> Tuple[int, int, int]:
         """The DSA domain parameters.
 
         Returns
             tuple : (p,q,g)
         """
 
-        return [int(self._key[comp]) for comp in ('p', 'q', 'g')]
+        return (int(self._key['p']), int(self._key['q']), int(self._key['g']))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         attrs = []
         for k in self._keydata:
             if k == 'p':
@@ -198,17 +202,17 @@ class DsaKey(object):
                 attrs.append(k)
         if self.has_private():
             attrs.append("private")
-        # PY3K: This is meant to be text, do not change to bytes (data)
         return "<%s @0x%x %s>" % (self.__class__.__name__, id(self), ",".join(attrs))
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> int:
         try:
             return int(self._key[item])
         except KeyError:
             raise AttributeError(item)
 
-    def export_key(self, format='PEM', pkcs8=None, passphrase=None,
-                  protection=None, randfunc=None):
+    def export_key(self, format: str = 'PEM', pkcs8: Optional[bool] = None,
+                   passphrase: Optional[Union[str, bytes]] = None, protection: Optional[str] = None,
+                   randfunc: Optional[RNG] = None) -> bytes:
         """Export this DSA key.
 
         Args:
@@ -276,8 +280,8 @@ class DsaKey(object):
             tup1 = [self._key[x].to_bytes() for x in ('p', 'q', 'g', 'y')]
 
             def func(x):
-                if (bord(x[0]) & 0x80):
-                    return bchr(0) + x
+                if (x[0] & 0x80):
+                    return bytes([0]) + x
                 else:
                     return x
 
@@ -386,9 +390,9 @@ def _generate_domain(L, randfunc):
     upper_bit = 1 << (L - 1)
     while True:
         V = [ SHA256.new(seed + Integer(offset + j).to_bytes()).digest()
-              for j in iter_range(n + 1) ]
+              for j in range(n + 1) ]
         V = [ Integer.from_bytes(v) for v in V ]
-        W = sum([V[i] * (1 << (i * outlen)) for i in iter_range(n)],
+        W = sum([V[i] * (1 << (i * outlen)) for i in range(n)],
                 (V[n] & ((1 << b_) - 1)) * (1 << (n * outlen)))
 
         X = Integer(W + upper_bit) # 2^{L-1} < X < 2^{L}
@@ -404,7 +408,7 @@ def _generate_domain(L, randfunc):
     # Generate g (A.2.3, index=1)
     e = (p - 1) // q
     for count in itertools.count(1):
-        U = seed + b"ggen" + bchr(1) + Integer(count).to_bytes()
+        U = seed + b"ggen" + bytes([1]) + Integer(count).to_bytes()
         W = Integer.from_bytes(SHA256.new(U).digest())
         g = pow(W, e, p)
         if g != 1:
@@ -413,7 +417,8 @@ def _generate_domain(L, randfunc):
     return (p, q, g, seed)
 
 
-def generate(bits, randfunc=None, domain=None):
+def generate(bits: int, randfunc: Optional[RNG] = None,
+             domain: Optional[Tuple[int, int, int]] = None) -> DsaKey:
     """Generate a new DSA key pair.
 
     The algorithm follows Appendix A.1/A.2 and B.1 of `FIPS 186-4`_,
@@ -486,7 +491,8 @@ def generate(bits, randfunc=None, domain=None):
     return DsaKey(key_dict)
 
 
-def construct(tup, consistency_check=True):
+def construct(tup: Union[Tuple[Int, Int, Int, Int], Tuple[Int, Int, Int, Int, Int], Sequence[Int]],
+              consistency_check: bool = True) -> DsaKey:
     """Construct a DSA key from a tuple of valid DSA components.
 
     Args:
@@ -601,7 +607,7 @@ def _import_key_der(key_data, passphrase, params):
     raise ValueError("DSA key format is not supported")
 
 
-def import_key(extern_key, passphrase=None):
+def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, bytes]] = None) -> DsaKey:
     """Import a DSA key.
 
     Args:
@@ -647,7 +653,7 @@ def import_key(extern_key, passphrase=None):
 
     if extern_key.startswith(b'-----'):
         # This is probably a PEM encoded key
-        (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
+        (der, marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
         return _import_key_der(der, passphrase, None)
@@ -664,7 +670,7 @@ def import_key(extern_key, passphrase=None):
             tup = [Integer.from_bytes(keyparts[x]) for x in (4, 3, 1, 2)]
             return construct(tup)
 
-    if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
+    if len(extern_key) > 0 and extern_key[0] == 0x30:
         # This is probably a DER encoded key
         return _import_key_der(extern_key, passphrase, None)
 
@@ -679,4 +685,4 @@ importKey = import_key
 #: id-dsa ID ::= { iso(1) member-body(2) us(840) x9-57(10040) x9cm(4) 1 }
 #:
 #: .. _`Object ID`: http://www.alvestrand.no/objectid/1.2.840.10040.4.1.html
-oid = "1.2.840.10040.4.1"
+oid: str = "1.2.840.10040.4.1"

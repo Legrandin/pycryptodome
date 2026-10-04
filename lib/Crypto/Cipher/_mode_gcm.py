@@ -32,12 +32,15 @@
 Galois/Counter Mode (GCM).
 """
 
+from __future__ import annotations
+
+from typing import Any, Dict, Optional, TYPE_CHECKING, Tuple, Union, overload
+
 __all__ = ['GcmMode']
 
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import bord, _copy_bytes
-
+from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_buffer
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
@@ -49,6 +52,11 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
                                   SmartPointer, c_size_t, c_uint8_ptr)
 
 from Crypto.Util import _cpu_features
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 # C API by module implementing GHASH
@@ -99,7 +107,7 @@ def _get_ghash_clmul():
 _ghash_clmul = _get_ghash_clmul()
 
 
-class _GHASH(object):
+class _GHASH:
     """GHASH function defined in NIST SP 800-38D, Algorithm 2.
 
     If X_1, X_2, .. X_m are the blocks of input data, the function
@@ -152,7 +160,7 @@ def enum(**enums):
 MacStatus = enum(PROCESSING_AUTH_DATA=1, PROCESSING_CIPHERTEXT=2)
 
 
-class GcmMode(object):
+class GcmMode:
     """Galois Counter Mode (GCM).
 
     This is an Authenticated Encryption with Associated Data (`AEAD`_) mode.
@@ -177,7 +185,8 @@ class GcmMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, factory, key, nonce, mac_len, cipher_params, ghash_c):
+    def __init__(self, factory: ModuleType, key: Buffer, nonce: Buffer, mac_len: int,
+                 cipher_params: Dict, ghash_c: Any) -> None:
 
         self.block_size = factory.block_size
         if self.block_size != 16:
@@ -195,12 +204,12 @@ class GcmMode(object):
             raise ValueError("Nonce exceeds maximum length")
 
 
-        self.nonce = _copy_bytes(None, None, nonce)
+        self.nonce = copy_bytes(None, None, nonce)
         """Nonce"""
 
         self._factory = factory
-        self._key = _copy_bytes(None, None, key)
-        self._tag = None  # Cache for MAC tag
+        self._key = copy_bytes(None, None, key)
+        self._tag: Optional[bytes] = None  # Cache for MAC tag
 
         self._mac_len = mac_len
         if not (4 <= mac_len <= 16):
@@ -259,7 +268,7 @@ class GcmMode(object):
 
         self._status = MacStatus.PROCESSING_AUTH_DATA
 
-    def update(self, assoc_data):
+    def update(self, assoc_data: Buffer) -> GcmMode:
         """Protect associated data
 
         If there is any associated data, the caller has to invoke
@@ -303,7 +312,7 @@ class GcmMode(object):
 
         if len(self._cache) > 0:
             filler = min(16 - len(self._cache), len(data))
-            self._cache += _copy_bytes(None, filler, data)
+            self._cache += copy_bytes(None, filler, data)
             data = data[filler:]
 
             if len(self._cache) < 16:
@@ -314,7 +323,7 @@ class GcmMode(object):
             self._cache = b""
 
         update_len = len(data) // 16 * 16
-        self._cache = _copy_bytes(update_len, None, data)
+        self._cache = copy_bytes(update_len, None, data)
         if update_len > 0:
             self._signer.update(data[:update_len])
 
@@ -331,7 +340,18 @@ class GcmMode(object):
         if len_cache > 0:
             self._update(b'\x00' * (16 - len_cache))
 
-    def encrypt(self, plaintext, output=None):
+    @overload
+    def encrypt(self, plaintext: Buffer) -> bytes: ...
+
+    @overload
+    def encrypt(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    @overload
+    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]: ...
+
+    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Encrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -385,7 +405,18 @@ class GcmMode(object):
 
         return ciphertext
 
-    def decrypt(self, ciphertext, output=None):
+    @overload
+    def decrypt(self, ciphertext: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt(self, ciphertext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    @overload
+    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]: ...
+
+    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Decrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have decrypted a message
@@ -432,7 +463,7 @@ class GcmMode(object):
 
         return self._cipher.decrypt(ciphertext, output=output)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Compute the *binary* MAC tag in an AEAD mode.
 
         The caller invokes this function at the very end.
@@ -467,16 +498,16 @@ class GcmMode(object):
 
         return self._tag
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Compute the *printable* MAC tag.
 
         This method is like `digest`.
 
         :Return: the MAC, as a hexadecimal string.
         """
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def verify(self, received_mac_tag):
+    def verify(self, received_mac_tag: Buffer) -> None:
         """Validate the *binary* MAC tag.
 
         The caller invokes this function at the very end.
@@ -508,7 +539,7 @@ class GcmMode(object):
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
-    def hexverify(self, hex_mac_tag):
+    def hexverify(self, hex_mac_tag: str) -> None:
         """Validate the *printable* MAC tag.
 
         This method is like `verify`.
@@ -523,7 +554,16 @@ class GcmMode(object):
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext, output=None):
+    @overload
+    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]: ...
+
+    @overload
+    def encrypt_and_digest(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> \
+                           Tuple[None, bytes]: ...
+
+    def encrypt_and_digest(self, plaintext: Buffer,
+                           output: Optional[Union[bytearray, memoryview]] = None) -> \
+                           Tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
         :Parameters:
@@ -545,7 +585,15 @@ class GcmMode(object):
 
         return self.encrypt(plaintext, output=output), self.digest()
 
-    def decrypt_and_verify(self, ciphertext, received_mac_tag, output=None):
+    @overload
+    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer,
+                           output: Union[bytearray, memoryview]) -> None: ...
+
+    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer,
+                           output: Optional[Union[bytearray, memoryview]] = None) -> Optional[bytes]:
         """Perform decrypt() and verify() in one step.
 
         :Parameters:

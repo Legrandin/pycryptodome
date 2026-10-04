@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/test_SHA256.py: Self-test for the SHA-256 hash function
 #
@@ -25,13 +24,12 @@
 """Self-test suite for Crypto.Hash.SHA256"""
 
 import unittest
-from Crypto.Util.py3compat import *
 
 class LargeSHA256Test(unittest.TestCase):
     def runTest(self):
         """SHA256: 512/520 MiB test"""
         from Crypto.Hash import SHA256
-        zeros = bchr(0x00) * (1024*1024)
+        zeros = bytes([0x00]) * (1024*1024)
 
         h = SHA256.new(zeros)
         for i in range(511):

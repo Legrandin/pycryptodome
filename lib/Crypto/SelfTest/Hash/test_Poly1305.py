@@ -37,13 +37,12 @@ import json
 import unittest
 from binascii import unhexlify, hexlify
 
+from Crypto.Util._bytes import tobytes
 from .common import make_mac_tests
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Hash import Poly1305
 from Crypto.Cipher import AES, ChaCha20
-
-from Crypto.Util.py3compat import tobytes
 from Crypto.Util.strxor import strxor_c
 
 # This is a list of (r+s keypair, data, result, description, keywords) tuples.
@@ -333,8 +332,8 @@ class Poly1305Test_AES(unittest.TestCase):
         self.assertRaises(ValueError, Poly1305.new, key=self.key[:31], cipher=AES)
         self.assertRaises(ValueError, Poly1305.new, key=self.key, cipher=DES3)
         self.assertRaises(ValueError, Poly1305.new, key=self.key, nonce=b'1' * 15, cipher=AES)
-        self.assertRaises(TypeError, Poly1305.new, key=u"2" * 32, cipher=AES)
-        self.assertRaises(TypeError, Poly1305.new, key=self.key, data=u"2" * 100, cipher=AES)
+        self.assertRaises(TypeError, Poly1305.new, key="2" * 32, cipher=AES)
+        self.assertRaises(TypeError, Poly1305.new, key=self.key, data="2" * 100, cipher=AES)
 
     def test_update(self):
         pieces = [b"\x0A" * 200, b"\x14" * 300]
@@ -349,7 +348,7 @@ class Poly1305Test_AES(unittest.TestCase):
 
     def test_update_negative(self):
         h = Poly1305.new(key=self.key, cipher=AES)
-        self.assertRaises(TypeError, h.update, u"string")
+        self.assertRaises(TypeError, h.update, "string")
 
     def test_digest(self):
         h = Poly1305.new(key=self.key, cipher=AES)
@@ -358,7 +357,7 @@ class Poly1305Test_AES(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(h.digest(), digest)
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, type(b"digest")))
+        self.assertTrue(isinstance(digest, bytes))
 
     def test_update_after_digest(self):
         msg=b"rrrrttt"
@@ -378,7 +377,7 @@ class Poly1305Test_AES(unittest.TestCase):
         # hexdigest does not change the state
         self.assertEqual(mac.hexdigest(), hexdigest)
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, type("digest")))
+        self.assertTrue(isinstance(hexdigest, str))
 
     def test_verify(self):
         h = Poly1305.new(key=self.key, cipher=AES)
@@ -484,7 +483,7 @@ class Poly1305Test_ChaCha20(unittest.TestCase):
 # make_mac_tests() expect a new() function with signature new(key, data,
 # **kwargs), and we need to adapt Poly1305's, as it only uses keywords
 #
-class Poly1305_New(object):
+class Poly1305_New:
 
     @staticmethod
     def new(key, *data, **kwds):
@@ -495,7 +494,7 @@ class Poly1305_New(object):
         return Poly1305.new(**_kwds)
 
 
-class Poly1305_Basic(object):
+class Poly1305_Basic:
 
     @staticmethod
     def new(key, *data, **kwds):
@@ -519,7 +518,7 @@ class Poly1305AES_MC(unittest.TestCase):
             key = tag + strxor_c(tag, 0xFF)
             nonce = tag[::-1]
             if msg_len > 0:
-                msg = msg + tobytes(tag[0])
+                msg = msg + tag[:1]
             auth = Poly1305.new(key=key, nonce=nonce, cipher=AES, data=msg)
             tag = auth.digest()
 

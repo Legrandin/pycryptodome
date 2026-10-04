@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Cipher/mode_ecb.py : ECB mode
 #
@@ -24,6 +23,10 @@
 Electronic Code Book (ECB) mode.
 """
 
+from __future__ import annotations
+
+from typing import Any, Optional, Union, overload
+
 __all__ = [ 'EcbMode' ]
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
@@ -31,6 +34,8 @@ from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   get_raw_buffer, SmartPointer,
                                   c_size_t, c_uint8_ptr,
                                   is_writeable_buffer)
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 raw_ecb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ecb", """
                     int ECB_start_operation(void *cipher,
@@ -48,7 +53,7 @@ raw_ecb_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_ecb", """
                                         )
 
 
-class EcbMode(object):
+class EcbMode:
     """*Electronic Code Book (ECB)*.
 
     This is the simplest encryption mode. Each of the plaintext blocks
@@ -65,7 +70,7 @@ class EcbMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, block_cipher):
+    def __init__(self, block_cipher: Any) -> None:
         """Create a new block cipher, configured in ECB mode.
 
         :Parameters:
@@ -74,9 +79,9 @@ class EcbMode(object):
         """
         self.block_size = block_cipher.block_size
 
-        self._state = VoidPointer()
+        state = VoidPointer()
         result = raw_ecb_lib.ECB_start_operation(block_cipher.get(),
-                                                 self._state.address_of())
+                                                 state.address_of())
         if result:
             raise ValueError("Error %d while instantiating the ECB mode"
                              % result)
@@ -84,14 +89,21 @@ class EcbMode(object):
         # Ensure that object disposal of this Python object will (eventually)
         # free the memory allocated by the raw library for the cipher
         # mode
-        self._state = SmartPointer(self._state.get(),
+        self._state = SmartPointer(state.get(),
                                    raw_ecb_lib.ECB_stop_operation)
 
         # Memory allocated for the underlying block cipher is now owned
         # by the cipher mode
         block_cipher.release()
 
-    def encrypt(self, plaintext, output=None):
+    @overload
+    def encrypt(self, plaintext: Buffer) -> bytes: ...
+
+    @overload
+    def encrypt(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    def encrypt(self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Encrypt data with the key set at initialization.
 
         The data to encrypt can be broken up in two or
@@ -146,7 +158,14 @@ class EcbMode(object):
         else:
             return None
 
-    def decrypt(self, ciphertext, output=None):
+    @overload
+    def decrypt(self, ciphertext: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt(self, ciphertext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    def decrypt(self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None) -> \
+                Optional[bytes]:
         """Decrypt data with the key set at initialization.
 
         The data to decrypt can be broken up in two or

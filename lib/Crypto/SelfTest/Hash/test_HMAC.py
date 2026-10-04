@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/HMAC.py: Self-test for the HMAC module
 #
@@ -26,8 +25,8 @@
 
 import unittest
 from binascii import hexlify
-from Crypto.Util.py3compat import tostr, tobytes
 
+from Crypto.Util._bytes import tobytes
 from Crypto.Hash import (HMAC, MD5, SHA1, SHA256,
                          SHA224, SHA384, SHA512,
                          RIPEMD160,
@@ -43,7 +42,7 @@ hash_modules = dict(MD5=MD5, SHA1=SHA1, SHA256=SHA256,
 default_hash = None
 
 def xl(text):
-    return tostr(hexlify(tobytes(text)))
+    return hexlify(tobytes(text)).decode("latin-1")
 
 # This is a list of (key, data, results, description) tuples.
 test_data = [

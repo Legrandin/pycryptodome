@@ -31,9 +31,9 @@
 import unittest
 from binascii import unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 
@@ -78,17 +78,17 @@ class CcmTests(unittest.TestCase):
 
     def test_nonce_must_be_bytes(self):
         self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CCM,
-                          nonce=u'test12345678')
+                          nonce='test12345678')
 
     def test_nonce_length(self):
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CCM,
                           nonce=b"")
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CCM,
-                          nonce=bchr(1) * 6)
+                          nonce=bytes([1]) * 6)
         self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CCM,
-                          nonce=bchr(1) * 14)
+                          nonce=bytes([1]) * 14)
         for x in range(7, 13 + 1):
-            AES.new(self.key_128, AES.MODE_CCM, nonce=bchr(1) * x)
+            AES.new(self.key_128, AES.MODE_CCM, nonce=bytes([1]) * x)
 
     def test_block_size(self):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
@@ -132,10 +132,10 @@ class CcmTests(unittest.TestCase):
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.encrypt, 'test1234567890-*')
 
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, u'test1234567890-*')
+        self.assertRaises(TypeError, cipher.decrypt, 'test1234567890-*')
 
     def test_mac_len(self):
         # Invalid MAC length

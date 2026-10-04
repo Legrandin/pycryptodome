@@ -28,7 +28,6 @@ __revision__ = "$Id$"
 import binascii
 import unittest
 from Crypto.Util import RFC1751
-from Crypto.Util.py3compat import *
 
 test_data = [('EB33F77EE73D4053', 'TIDE ITCH SLOW REIN RULE MOT'),
              ('CCAC2AED591056BE4F90FD441C534766',
@@ -42,7 +41,7 @@ class RFC1751Test_k2e (unittest.TestCase):
     def runTest (self):
         "Check converting keys to English"
         for key, words in test_data:
-            key=binascii.a2b_hex(b(key))
+            key=binascii.a2b_hex(key.encode("latin-1"))
             self.assertEqual(RFC1751.key_to_english(key), words)
 
 class RFC1751Test_e2k (unittest.TestCase):
@@ -50,7 +49,7 @@ class RFC1751Test_e2k (unittest.TestCase):
     def runTest (self):
         "Check converting English strings to keys"
         for key, words in test_data:
-            key=binascii.a2b_hex(b(key))
+            key=binascii.a2b_hex(key.encode("latin-1"))
             self.assertEqual(RFC1751.english_to_key(words), key)
 
 # class RFC1751Test

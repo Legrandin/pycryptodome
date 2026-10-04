@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 #
 #  pct-speedtest.py: Speed test for the Python Cryptography Toolkit
 #
@@ -62,19 +61,19 @@ except ImportError: # Some builds/versions of Python don't have a hashlib module
 from Crypto.Random import random as pycrypto_random
 import random as stdlib_random
 
-class BLAKE2b_512(object):
+class BLAKE2b_512:
     digest_size = 512
     @staticmethod
     def new(data=None):
         return BLAKE2b.new(digest_bits=512, data=data)
 
-class BLAKE2s_256(object):
+class BLAKE2s_256:
     digest_size = 256
     @staticmethod
     def new(data=None):
         return BLAKE2s.new(digest_bits=256, data=data)
 
-class ChaCha20_old_style(object):
+class ChaCha20_old_style:
     @staticmethod
     def new(key, nonce):
         return ChaCha20.new(key=key, nonce=nonce)
@@ -215,10 +214,7 @@ class Benchmark:
 
     def test_hmac_small(self, mac_name, hmac_constructor, digestmod, digest_size):
         keys = iter(self.random_keys(digest_size))
-        if sys.version_info[0] == 2:
-            mac_constructor = lambda data=None: hmac_constructor(keys.next(), data, digestmod)
-        else:
-            mac_constructor = lambda data=None: hmac_constructor(keys.__next__(), data, digestmod)
+        mac_constructor = lambda data=None: hmac_constructor(keys.__next__(), data, digestmod)
         self.test_hash_small(mac_name, mac_constructor, digest_size)
 
     def test_hmac_large(self, mac_name, hmac_constructor, digestmod, digest_size):
@@ -228,10 +224,7 @@ class Benchmark:
 
     def test_cmac_small(self, mac_name, cmac_constructor, ciphermod, key_size):
         keys = iter(self.random_keys(key_size))
-        if sys.version_info[0] == 2:
-            mac_constructor = lambda data=None: cmac_constructor(keys.next(), data, ciphermod)
-        else:
-            mac_constructor = lambda data=None: cmac_constructor(keys.__next__(), data, ciphermod)
+        mac_constructor = lambda data=None: cmac_constructor(keys.__next__(), data, ciphermod)
         self.test_hash_small(mac_name, mac_constructor, ciphermod.block_size)
 
     def test_cmac_large(self, mac_name, cmac_constructor, ciphermod, key_size):

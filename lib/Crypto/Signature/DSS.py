@@ -31,6 +31,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Callable, Optional, Protocol, Union
+
 from Crypto.Util.asn1 import DerSequence
 from Crypto.Util.number import long_to_bytes
 from Crypto.Math.Numbers import Integer
@@ -39,16 +43,19 @@ from Crypto.Hash import HMAC
 from Crypto.PublicKey.ECC import EccKey
 from Crypto.PublicKey.DSA import DsaKey
 
+class Hash(Protocol):
+    def digest(self) -> bytes: ...
+
 __all__ = ['DssSigScheme', 'new']
 
 
-class DssSigScheme(object):
+class DssSigScheme:
     """A (EC)DSA signature object.
     Do not instantiate directly.
     Use :func:`Crypto.Signature.DSS.new`.
     """
 
-    def __init__(self, key, encoding, order):
+    def __init__(self, key: Union[DsaKey, EccKey], encoding: str, order: Integer) -> None:
         """Create a new Digital Signature Standard (DSS) object.
 
         Do not instantiate this object directly,
@@ -62,7 +69,7 @@ class DssSigScheme(object):
         self._order_bits = self._order.size_in_bits()
         self._order_bytes = (self._order_bits - 1) // 8 + 1
 
-    def can_sign(self):
+    def can_sign(self) -> bool:
         """Return ``True`` if this signature object can be used
         for signing messages."""
 
@@ -74,7 +81,7 @@ class DssSigScheme(object):
     def _valid_hash(self, msg_hash):
         raise NotImplementedError("To be provided by subclasses")
 
-    def sign(self, msg_hash):
+    def sign(self, msg_hash: Hash) -> bytes:
         """Compute the DSA/ECDSA signature of a message.
 
         Args:
@@ -119,7 +126,7 @@ class DssSigScheme(object):
 
         return output
 
-    def verify(self, msg_hash, signature):
+    def verify(self, msg_hash: Hash, signature: bytes) -> bool:
         """Check if a certain (EC)DSA signature is authentic.
 
         Args:
@@ -141,9 +148,9 @@ class DssSigScheme(object):
         if self._encoding == 'binary':
             if len(signature) != (2 * self._order_bytes):
                 raise ValueError("The signature is not authentic (length)")
-            r_prime, s_prime = [Integer.from_bytes(x)
+            r_prime, s_prime = (Integer.from_bytes(x)
                                 for x in (signature[:self._order_bytes],
-                                          signature[self._order_bytes:])]
+                                          signature[self._order_bytes:]))
         else:
             try:
                 der_seq = DerSequence().decode(signature, strict=True)
@@ -167,8 +174,9 @@ class DssSigScheme(object):
 class DeterministicDsaSigScheme(DssSigScheme):
     # Also applicable to ECDSA
 
-    def __init__(self, key, encoding, order, private_key):
-        super(DeterministicDsaSigScheme, self).__init__(key, encoding, order)
+    def __init__(self, key: Union[DsaKey, EccKey], encoding: str, order: Integer,
+                 private_key: int) -> None:
+        super().__init__(key, encoding, order)
         self._private_key = private_key
 
     def _bits2int(self, bstr):
@@ -254,8 +262,9 @@ class FipsDsaSigScheme(DssSigScheme):
                         (3072, 256)     # 256 bits (SHA-512)
                       )
 
-    def __init__(self, key, encoding, order, randfunc):
-        super(FipsDsaSigScheme, self).__init__(key, encoding, order)
+    def __init__(self, key: DsaKey, encoding: str, order: Integer,
+                 randfunc: Optional[Callable[[int], bytes]]) -> None:
+        super().__init__(key, encoding, order)
         self._randfunc = randfunc
 
         L = Integer(key.p).size_in_bits()
@@ -278,8 +287,9 @@ class FipsDsaSigScheme(DssSigScheme):
 
 class FipsEcDsaSigScheme(DssSigScheme):
 
-    def __init__(self, key, encoding, order, randfunc):
-        super(FipsEcDsaSigScheme, self).__init__(key, encoding, order)
+    def __init__(self, key: EccKey, encoding: str, order: Integer,
+                 randfunc: Optional[Callable[[int], bytes]]) -> None:
+        super().__init__(key, encoding, order)
         self._randfunc = randfunc
 
     def _compute_nonce(self, msg_hash):
@@ -307,7 +317,9 @@ class FipsEcDsaSigScheme(DssSigScheme):
         return result
 
 
-def new(key, mode, encoding='binary', randfunc=None):
+def new(key: Union[DsaKey, EccKey], mode: str, encoding: str = 'binary',
+        randfunc: Optional[Callable[[int], bytes]] = None) -> \
+        Union[DeterministicDsaSigScheme, FipsDsaSigScheme, FipsEcDsaSigScheme]:
     """Create a signature object :class:`DssSigScheme` that
     can perform (EC)DSA signature or verification.
 

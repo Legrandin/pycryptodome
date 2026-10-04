@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Util/test_number.py: Self-test for parts of the Crypto.Util.number module
 #
@@ -27,7 +26,6 @@
 import math
 import unittest
 
-from Crypto.Util.py3compat import *
 from Crypto.SelfTest.st_common import list_test_cases
 
 from Crypto.Util import number

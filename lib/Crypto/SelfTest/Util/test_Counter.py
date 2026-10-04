@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Util/test_Counter: Self-test for the Crypto.Util.Counter module
 #
@@ -24,7 +23,6 @@
 
 """Self-tests for Crypto.Util.Counter"""
 
-from Crypto.Util.py3compat import *
 
 import unittest
 
@@ -47,10 +45,10 @@ class CounterTests(unittest.TestCase):
         self.assertRaises(ValueError, Counter.new, 129)
 
     def test_prefix(self):
-        c = Counter.new(128, prefix=b("xx"))
+        c = Counter.new(128, prefix=b"xx")
 
     def test_suffix(self):
-        c = Counter.new(128, suffix=b("xx"))
+        c = Counter.new(128, suffix=b"xx")
 
     def test_iv(self):
         c = Counter.new(128, initial_value=2)

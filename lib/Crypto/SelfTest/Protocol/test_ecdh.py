@@ -3,8 +3,6 @@ import base64
 import unittest
 from binascii import hexlify, unhexlify
 
-from Crypto.Util.py3compat import bord
-
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import ECC
 from Crypto.SelfTest.st_common import list_test_cases
@@ -120,7 +118,7 @@ class TestVectorsECDHWycheproof(unittest.TestCase):
             return
 
         try:
-            if bord(tv.public[0]) == 4:     # SEC1
+            if tv.public[0] == 4:     # SEC1
                 public_key = ECC.import_key(tv.public, curve_name=tv.curve)
             else:
                 public_key = ECC.import_key(tv.public)
@@ -272,7 +270,7 @@ class ECDH_Tests(unittest.TestCase):
 
     def test_12(self):
         # failure if kdf is missing
-        self.assertRaises(ValueError,
+        self.assertRaises(TypeError,
                 key_agreement,
                 static_pub=self.static_pub,
                 static_priv=self.static_priv)

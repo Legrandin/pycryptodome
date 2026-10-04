@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # SelfTest/Hash/test_SHA3_256.py: Self-test for the SHA-3/256 hash function
 #
@@ -28,13 +27,12 @@ from binascii import hexlify
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Hash import SHA3_256 as SHA3
-from Crypto.Util.py3compat import b
 
 
 class APITest(unittest.TestCase):
 
     def test_update_after_digest(self):
-        msg=b("rrrrttt")
+        msg=b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
         h = SHA3.new(data=msg[:4])
@@ -64,7 +62,7 @@ def get_tests(config={}):
     test_data = []
     for tv in test_vectors:
         if tv.len == 0:
-            tv.msg = b("")
+            tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
 
 

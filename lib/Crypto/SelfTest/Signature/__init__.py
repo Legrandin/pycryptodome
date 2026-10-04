@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Signature/__init__.py: Self-test for signature modules
 #

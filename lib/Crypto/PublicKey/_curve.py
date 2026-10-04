@@ -18,7 +18,7 @@
 # - rawlib          the reference to the dynamic libary with the low-level functions
 # - validate        a function that raises an exception if the the input point is invalid
 
-class _Curve(object):
+class _Curve:
 
     def __init__(self, p, b, order, Gx, Gy, G, modulus_bits, oid, context,
                  canonical, openssh, rawlib, validate=None):

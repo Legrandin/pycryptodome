@@ -54,11 +54,6 @@ class IntegerNative(IntegerBase):
     def __repr__(self):
         return "Integer(%s)" % str(self)
 
-    # Only Python 2.x
-    def __hex__(self):
-        return hex(self._value)
-
-    # Only Python 3.x
     def __index__(self):
         return int(self._value)
 
@@ -110,9 +105,8 @@ class IntegerNative(IntegerBase):
     def __ge__(self, term):
         return not self.__lt__(term)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self._value != 0
-    __bool__ = __nonzero__
 
     def is_negative(self):
         return self._value < 0

@@ -31,8 +31,8 @@
 import unittest
 from binascii import hexlify, unhexlify
 
+from Crypto.Util._bytes import tobytes
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tobytes, bchr
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128, SHA256
 from Crypto.Util import Counter
@@ -222,7 +222,7 @@ class CtrTests(unittest.TestCase):
 
     def test_wrap_around(self):
         # Counter is only 8 bits, so we can only encrypt/decrypt 256 blocks (=4096 bytes)
-        counter = Counter.new(8, prefix=bchr(9) * 15)
+        counter = Counter.new(8, prefix=bytes([9]) * 15)
         max_bytes = 4096
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)

@@ -6,7 +6,7 @@ from typing import Union
 from ._mode_kw import W, W_inverse
 
 
-class KWPMode(object):
+class KWPMode:
     """Key Wrap with Padding (KWP) mode.
 
     This is a deterministic Authenticated Encryption (AE) mode

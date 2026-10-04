@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/__init__.py: Self-test for PyCrypto
 #
@@ -27,11 +26,11 @@
 These tests should perform quickly and can ideally be used every time an
 application runs.
 """
+from io import StringIO
 
 import sys
 import unittest
 from importlib import import_module
-from Crypto.Util.py3compat import StringIO
 
 
 class SelfTestError(Exception):

@@ -28,10 +28,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import List
+
 import os
 
 
-def pycryptodome_filename(dir_comps, filename):
+def pycryptodome_filename(dir_comps: List[str], filename: str) -> str:
     """Return the complete file name for the module
 
     dir_comps : list of string

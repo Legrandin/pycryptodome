@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/CAST.py: Self-test for the CAST-128 (CAST5) cipher
 #
@@ -26,8 +25,6 @@
 
 import unittest
 
-from Crypto.Util.py3compat import bchr
-
 from Crypto.Cipher import CAST
 
 # This is a list of (plaintext, ciphertext, key) tuples.
@@ -50,8 +47,8 @@ test_data = [
 class KeyLength(unittest.TestCase):
 
     def runTest(self):
-        self.assertRaises(ValueError, CAST.new, bchr(0) * 4, CAST.MODE_ECB)
-        self.assertRaises(ValueError, CAST.new, bchr(0) * 17, CAST.MODE_ECB)
+        self.assertRaises(ValueError, CAST.new, bytes([0]) * 4, CAST.MODE_ECB)
+        self.assertRaises(ValueError, CAST.new, bytes([0]) * 17, CAST.MODE_ECB)
 
 
 class TestOutput(unittest.TestCase):

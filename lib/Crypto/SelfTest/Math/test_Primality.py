@@ -37,7 +37,6 @@ import unittest
 
 from Crypto.SelfTest.st_common import list_test_cases
 
-from Crypto.Util.py3compat import *
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import (

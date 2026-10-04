@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/test_RIPEMD160.py: Self-test for the RIPEMD-160 hash function
 #
@@ -24,7 +23,6 @@
 
 #"""Self-test suite for Crypto.Hash.RIPEMD160"""
 
-from Crypto.Util.py3compat import *
 
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [

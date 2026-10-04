@@ -25,7 +25,7 @@ int curve25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64
 int curve25519_cmp(const Point *ecp1, const Point *ecp2);
 """)
 
-    class EcLib(object):
+    class EcLib:
         new_point = _curve25519_lib.curve25519_new_point
         clone = _curve25519_lib.curve25519_clone
         free_point = _curve25519_lib.curve25519_free_point
@@ -102,7 +102,7 @@ int curve448_scalar(Curve448Point *P, const uint8_t *scalar, size_t scalar_len, 
 int curve448_cmp(const Curve448Point *ecp1, const Curve448Point *ecp2);
 """)
 
-    class EcLib(object):
+    class EcLib:
         new_context = _curve448_lib.curve448_new_context
         free_context = _curve448_lib.curve448_free_context
         new_point = _curve448_lib.curve448_new_point

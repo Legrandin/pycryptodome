@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/DES.py: Self-test for the (Single) DES cipher
 #

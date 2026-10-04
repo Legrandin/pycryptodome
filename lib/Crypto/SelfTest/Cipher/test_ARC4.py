@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/ARC4.py: Self-test for the Alleged-RC4 cipher
 #
@@ -25,8 +24,6 @@
 """Self-test suite for Crypto.Cipher.ARC4"""
 
 import unittest
-
-from Crypto.Util.py3compat import b
 from Crypto.SelfTest.st_common import list_test_cases
 from binascii import unhexlify
 
@@ -416,22 +413,22 @@ class RFC6229_Tests(unittest.TestCase):
 
     def test_keystream(self):
         for tv in self.rfc6229_data:
-            key = unhexlify(b((tv[0])))
+            key = unhexlify(tv[0].encode("latin-1"))
             cipher = ARC4.new(key)
             count = 0
             for offset in range(0, 4096+1, 16):
-                ct = cipher.encrypt(b('\x00')*16)
+                ct = cipher.encrypt(b'\x00'*16)
                 expected = tv[1].get(offset)
                 if expected:
-                    expected = unhexlify(b(expected.replace(" ", '')))
+                    expected = unhexlify(expected.replace(" ", '').encode("latin-1"))
                     self.assertEqual(ct, expected)
                     count += 1
             self.assertEqual(count, len(tv[1]))
 
 
 class Drop_Tests(unittest.TestCase):
-    key = b('\xAA')*16
-    data = b('\x00')*5000
+    key = b'\xAA'*16
+    data = b'\x00'*5000
 
     def setUp(self):
         self.cipher = ARC4.new(self.key)
@@ -447,6 +444,16 @@ class Drop_Tests(unittest.TestCase):
         pt_drop = cipher_drop.decrypt(self.data[:16])
         pt = self.cipher.decrypt(self.data)[256:256+16]
         self.assertEqual(pt_drop, pt)
+
+    def test_drop_keyword(self):
+        ct1 = ARC4.new(self.key, 256).encrypt(self.data[:16])
+        ct2 = ARC4.new(self.key, drop=256).encrypt(self.data[:16])
+        self.assertEqual(ct1, ct2)
+
+    def test_unknown_parameters(self):
+        self.assertRaises(TypeError, ARC4.new, self.key, drp=256)
+        self.assertRaises(TypeError, ARC4.new, self.key, 256, 1)
+        self.assertRaises(TypeError, ARC4.new, self.key, 256, drop=512)
 
 
 class KeyLength(unittest.TestCase):

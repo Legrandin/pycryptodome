@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -18,7 +17,10 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
+
+from __future__ import annotations
+
+from typing import Optional, Union
 
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
@@ -46,7 +48,7 @@ _raw_sha256_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256",
                                             size_t digest_size);
                         """)
 
-class SHA256Hash(object):
+class SHA256Hash:
     """A SHA-256 hash object.
     Do not instantiate directly. Use the :func:`new` function.
 
@@ -62,13 +64,13 @@ class SHA256Hash(object):
     """
 
     # The size of the resulting hash in bytes.
-    digest_size = 32
+    digest_size: int = 32
     # The internal block size of the hash algorithm in bytes.
-    block_size = 64
+    block_size: int = 64
     # ASN.1 Object ID
-    oid = "2.16.840.1.101.3.4.2.1"
+    oid: str = "2.16.840.1.101.3.4.2.1"
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Union[bytes, bytearray, memoryview]] = None) -> None:
         state = VoidPointer()
         result = _raw_sha256_lib.SHA256_init(state.address_of())
         if result:
@@ -79,7 +81,7 @@ class SHA256Hash(object):
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Union[bytes, bytearray, memoryview]) -> None:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -93,7 +95,7 @@ class SHA256Hash(object):
             raise ValueError("Error %d while hashing data with SHA256"
                              % result)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -111,7 +113,7 @@ class SHA256Hash(object):
 
         return get_raw_buffer(bfr)
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -119,9 +121,9 @@ class SHA256Hash(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def copy(self):
+    def copy(self) -> SHA256Hash:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -139,12 +141,12 @@ class SHA256Hash(object):
             raise ValueError("Error %d while copying SHA256" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Union[bytes, bytearray, memoryview]] = None) -> SHA256Hash:
         """Create a fresh SHA-256 hash object."""
 
         return SHA256Hash(data)
 
-def new(data=None):
+def new(data: Optional[Union[bytes, bytearray, memoryview]] = None) -> SHA256Hash:
     """Create a new hash object.
 
     :parameter data:
@@ -159,10 +161,10 @@ def new(data=None):
 
 
 # The size of the resulting hash in bytes.
-digest_size = SHA256Hash.digest_size
+digest_size: int = SHA256Hash.digest_size
 
 # The internal block size of the hash algorithm in bytes.
-block_size = SHA256Hash.block_size
+block_size: int = SHA256Hash.block_size
 
 
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):

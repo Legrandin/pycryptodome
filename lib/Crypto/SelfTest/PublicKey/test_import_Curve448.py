@@ -9,7 +9,6 @@ from binascii import unhexlify
 from unittest import SkipTest
 
 from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.Util.py3compat import tostr, FileNotFoundError
 from Crypto.Util.asn1 import DerSequence, DerBitString
 from Crypto.Hash import SHAKE128
 
@@ -50,7 +49,7 @@ def load_file(file_name, mode="rb"):
 
 def compact(lines):
     ext = b"".join(lines)
-    return unhexlify(tostr(ext).replace(" ", "").replace(":", ""))
+    return unhexlify(ext.decode("latin-1").replace(" ", "").replace(":", ""))
 
 
 def create_ref_keys_x448():
@@ -87,7 +86,7 @@ class TestImport(unittest.TestCase):
 class TestImport_Curve448(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestImport_Curve448, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_x448()
 
     def test_import_public_der(self):
@@ -163,7 +162,7 @@ class TestImport_Curve448(unittest.TestCase):
             key = ECC.import_key(key_file, "secret")
             self.assertEqual(self.ref_private, key)
 
-            key = ECC.import_key(tostr(key_file), b"secret")
+            key = ECC.import_key(key_file.decode("latin-1"), b"secret")
             self.assertEqual(self.ref_private, key)
 
     def test_import_x509_pem(self):
@@ -176,7 +175,7 @@ class TestImport_Curve448(unittest.TestCase):
 class TestExport_Curve448(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestExport_Curve448, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.ref_private, self.ref_public = create_ref_keys_x448()
 
     def test_export_public_der(self):

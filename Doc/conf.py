@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # PyCryptodome documentation build configuration file, created by
 # sphinx-quickstart on Sun Jun  8 20:21:20 2014.
@@ -20,7 +19,7 @@ print(sys.path)
 # Mock existence of native modules
 from Crypto.Util import _raw_api
 
-class MockLib(object):
+class MockLib:
     ghash_portable = None
     ghash_expand_portable = None
     ghash_destroy_portable = None

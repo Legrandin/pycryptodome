@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Util/test_generic.py: Self-test for the Crypto.Random.new() function
 #
@@ -24,9 +23,7 @@
 
 """Self-test suite for Crypto.Random.new()"""
 
-import sys
 import unittest
-from Crypto.Util.py3compat import b
 
 class SimpleTest(unittest.TestCase):
     def runTest(self):
@@ -100,8 +97,7 @@ class SimpleTest(unittest.TestCase):
         for i in range(10):
             self.assertEqual(random.choice((1,2,3)) in (1,2,3), True)
         self.assertEqual(random.choice([1,2,3]) in [1,2,3], True)
-        if sys.version_info[0] == 3:
-            self.assertEqual(random.choice(bytearray(b('123'))) in bytearray(b('123')), True)
+        self.assertEqual(random.choice(bytearray(b'123')) in bytearray(b'123'), True)
         self.assertEqual(1, random.choice([1]))
         self.assertRaises(IndexError, random.choice, [])
         self.assertRaises(TypeError, random.choice, 1)
@@ -123,18 +119,13 @@ class SimpleTest(unittest.TestCase):
         z = [1]
         random.shuffle(z)
         self.assertEqual(z, [1])
-        if sys.version_info[0] == 3:
-            z = bytearray(b('12'))
-            random.shuffle(z)
-            self.assertEqual(b('1') in z, True)
-            self.assertRaises(TypeError, random.shuffle, b('12'))
+        z = bytearray(b'12')
+        random.shuffle(z)
+        self.assertEqual(b'1' in z, True)
+        self.assertRaises(TypeError, random.shuffle, b'12')
         self.assertRaises(TypeError, random.shuffle, 1)
         self.assertRaises(TypeError, random.shuffle, "11")
         self.assertRaises(TypeError, random.shuffle, (1,2))
-        # 2to3 wraps a list() around it, alas - but I want to shoot
-        # myself in the foot here! :D
-        # if sys.version_info[0] == 3:
-            # self.assertRaises(TypeError, random.shuffle, range(3))
         # Test sample
         x = random.sample(seq, 20)
         y = random.sample(seq, 20)
@@ -150,11 +141,10 @@ class SimpleTest(unittest.TestCase):
         self.assertEqual(z[0] in "123", True)
         z = random.sample(range(3), 1)
         self.assertEqual(z[0] in range(3), True)
-        if sys.version_info[0] == 3:
-                z = random.sample(b("123"), 1)
-                self.assertEqual(z[0] in b("123"), True)
-                z = random.sample(bytearray(b("123")), 1)
-                self.assertEqual(z[0] in bytearray(b("123")), True)
+        z = random.sample(b"123", 1)
+        self.assertEqual(z[0] in b"123", True)
+        z = random.sample(bytearray(b"123"), 1)
+        self.assertEqual(z[0] in bytearray(b"123"), True)
         self.assertRaises(TypeError, random.sample, 1)
 
 def get_tests(config={}):

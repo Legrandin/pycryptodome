@@ -28,16 +28,22 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Optional, Union
+
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import bord, tobytes
-
+from Crypto.Util._bytes import tobytes
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
                                   VoidPointer, SmartPointer,
                                   create_string_buffer,
                                   get_raw_buffer, c_size_t,
                                   c_uint8_ptr)
+
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_blake2s_lib = load_pycryptodome_raw_lib("Crypto.Hash._BLAKE2s",
                         """
@@ -55,7 +61,7 @@ _raw_blake2s_lib = load_pycryptodome_raw_lib("Crypto.Hash._BLAKE2s",
                         """)
 
 
-class BLAKE2s_Hash(object):
+class BLAKE2s_Hash:
     """A BLAKE2s hash object.
     Do not instantiate directly. Use the :func:`new` function.
 
@@ -71,9 +77,10 @@ class BLAKE2s_Hash(object):
     """
 
     # The internal block size of the hash algorithm in bytes.
-    block_size = 32
+    block_size: int = 32
 
-    def __init__(self, data, key, digest_bytes, update_after_digest):
+    def __init__(self, data: Optional[Buffer], key: Buffer, digest_bytes: int,
+                 update_after_digest: bool) -> None:
 
         # The size of the resulting hash in bytes.
         self.digest_size = digest_bytes
@@ -99,7 +106,7 @@ class BLAKE2s_Hash(object):
             self.update(data)
 
 
-    def update(self, data):
+    def update(self, data: Buffer) -> BLAKE2s_Hash:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -117,7 +124,7 @@ class BLAKE2s_Hash(object):
         return self
 
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -136,7 +143,7 @@ class BLAKE2s_Hash(object):
         return get_raw_buffer(bfr)[:self.digest_size]
 
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -144,10 +151,10 @@ class BLAKE2s_Hash(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in tuple(self.digest())])
+        return "".join(["%02x" % x for x in tuple(self.digest())])
 
 
-    def verify(self, mac_tag):
+    def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)
         is valid.
 
@@ -168,7 +175,7 @@ class BLAKE2s_Hash(object):
             raise ValueError("MAC check failed")
 
 
-    def hexverify(self, hex_mac_tag):
+    def hexverify(self, hex_mac_tag: str) -> None:
         """Verify that a given **printable** MAC (computed by another party)
         is valid.
 
@@ -183,18 +190,23 @@ class BLAKE2s_Hash(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-    def new(self, **kwargs):
+    def new(self, *, data: Optional[Buffer] = None, digest_bytes: Optional[int] = None,
+            digest_bits: Optional[int] = None, key: Buffer = b"",
+            update_after_digest: bool = False) -> BLAKE2s_Hash:
         """Return a new instance of a BLAKE2s hash object.
         See :func:`new`.
         """
 
-        if "digest_bytes" not in kwargs and "digest_bits" not in kwargs:
-            kwargs["digest_bytes"] = self.digest_size
+        if digest_bytes is None and digest_bits is None:
+            digest_bytes = self.digest_size
 
-        return new(**kwargs)
+        return new(data=data, digest_bytes=digest_bytes, digest_bits=digest_bits,
+                   key=key, update_after_digest=update_after_digest)
 
 
-def new(**kwargs):
+def new(*, data: Optional[Buffer] = None, digest_bytes: Optional[int] = None,
+        digest_bits: Optional[int] = None, key: Buffer = b"",
+        update_after_digest: bool = False) -> BLAKE2s_Hash:
     """Create a new hash object.
 
     Args:
@@ -219,16 +231,11 @@ def new(**kwargs):
         A :class:`BLAKE2s_Hash` hash object
     """
 
-    data = kwargs.pop("data", None)
-    update_after_digest = kwargs.pop("update_after_digest", False)
-
-    digest_bytes = kwargs.pop("digest_bytes", None)
-    digest_bits = kwargs.pop("digest_bits", None)
     if None not in (digest_bytes, digest_bits):
         raise TypeError("Only one digest parameter must be provided")
-    if (None, None) == (digest_bytes, digest_bits):
-        digest_bytes = 32
-    if digest_bytes is not None:
+    if digest_bits is None:
+        if digest_bytes is None:
+            digest_bytes = 32
         if not (1 <= digest_bytes <= 32):
             raise ValueError("'digest_bytes' not in range 1..32")
     else:
@@ -237,11 +244,7 @@ def new(**kwargs):
                              "with steps of 8")
         digest_bytes = digest_bits // 8
 
-    key = kwargs.pop("key", b"")
     if len(key) > 32:
         raise ValueError("BLAKE2s key cannot exceed 32 bytes")
-
-    if kwargs:
-        raise TypeError("Unknown parameters: " + str(kwargs))
 
     return BLAKE2s_Hash(data, key, digest_bytes, update_after_digest)

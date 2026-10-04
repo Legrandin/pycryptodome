@@ -28,25 +28,30 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Optional, Union
+
 import os
 import threading
 
 from Crypto.Util.number import long_to_bytes
-from Crypto.Util.py3compat import bchr, is_native_int
 from Crypto.Util._raw_api import c_size_t, c_uint8_ptr
 
 from . import TurboSHAKE128
 from .keccak import _raw_keccak_lib
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 def _length_encode(x):
     if x == 0:
         return b'\x00'
 
     S = long_to_bytes(x)
-    return S + bchr(len(S))
+    return S + bytes([len(S)])
 
 
-def _hash_leaves(leaves, cvs):
+def _hash_leaves(leaves: memoryview, cvs: memoryview) -> None:
     """Compute the chaining values of complete 8192-byte leaves.
 
     The C function does not use any shared state, so different ranges
@@ -95,7 +100,7 @@ def _available_cores():
     return count or 1
 
 
-def _hash_leaves_threaded(leaves, cvs, threads):
+def _hash_leaves_threaded(leaves: memoryview, cvs: memoryview, threads: int) -> None:
     """Like :func:`_hash_leaves`, but split the leaves into ``threads``
     contiguous ranges, which are processed in parallel.
     Fewer threads are used if a range would be shorter than
@@ -144,18 +149,18 @@ LONG_MSG_SX = 3     # Beyond the first 8192 bytes.
 SQUEEZING = 4       # No more data to process.
 
 
-class K12_XOF(object):
+class K12_XOF:
     """A KangarooTwelve hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
     """
 
-    def __init__(self, data, custom, threads=1):
+    def __init__(self, data: Optional[Buffer], custom: Optional[bytes], threads: int = 1) -> None:
 
-        if custom == None:
+        if custom is None:
             custom = b''
 
-        if not is_native_int(threads) or isinstance(threads, bool):
+        if not isinstance(threads, int) or isinstance(threads, bool):
             raise TypeError("'threads' must be an integer")
         if threads < 0:
             raise ValueError("'threads' must be a non-negative integer")
@@ -165,7 +170,7 @@ class K12_XOF(object):
 
         self._custom = custom + _length_encode(len(custom))
         self._state = SHORT_MSG
-        self._padding = None        # Final padding is only decided in read()
+        self._padding: Optional[int] = None   # Final padding is only decided in read()
 
         # Internal hash that consumes FinalNode
         # The real domain separation byte will be known before squeezing
@@ -173,7 +178,7 @@ class K12_XOF(object):
         self._length1 = 0
 
         # Internal hash that produces CV_i (reset each time)
-        self._hash2 = None
+        self._hash2: Optional[TurboSHAKE128.TurboSHAKE] = None
         self._length2 = 0
 
         # Incremented by one for each 8192-byte block
@@ -182,7 +187,7 @@ class K12_XOF(object):
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> K12_XOF:
         """Hash the next piece of data.
 
         .. note::
@@ -238,6 +243,7 @@ class K12_XOF(object):
 
         # All iteractions could actually run in parallel
         data_mem = memoryview(data)
+        assert self._hash2 is not None
         while index < len_data:
 
             if self._length2 == 0 and len_data - index >= 8192:
@@ -259,7 +265,7 @@ class K12_XOF(object):
 
         return self
 
-    def _update_full_leaves(self, data_mem, index):
+    def _update_full_leaves(self, data_mem: memoryview, index: int) -> int:
         """Hash as many complete 8192-byte leaves as available,
         starting at offset ``index`` of ``data_mem``.
 
@@ -286,7 +292,7 @@ class K12_XOF(object):
         self._ctr += n_leaves
         return end
 
-    def read(self, length):
+    def read(self, length: int) -> bytes:
         """
         Produce more bytes of the digest.
 
@@ -325,6 +331,7 @@ class K12_XOF(object):
 
             # Is there still some leftover data in hash2?
             if self._length2 > 0:
+                assert self._hash2 is not None
                 cv_i = self._hash2.read(32)
                 self._hash1.update(cv_i)
                 self._length1 += 32
@@ -338,14 +345,15 @@ class K12_XOF(object):
             self._padding = 0x06
             self._state = SQUEEZING
 
+        assert self._padding is not None
         self._hash1._domain = self._padding
         return self._hash1.read(length)
 
-    def new(self, data=None, custom=b'', threads=1):
+    def new(self, data: Optional[Buffer] = None, custom: Optional[bytes] = b'', threads: int = 1) -> K12_XOF:
         return type(self)(data, custom, threads)
 
 
-def new(data=None, custom=None, threads=1):
+def new(data: Optional[Buffer] = None, custom: Optional[bytes] = None, threads: int = 1) -> K12_XOF:
     """Return a fresh instance of a KangarooTwelve object.
 
     Args:

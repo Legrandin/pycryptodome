@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Hash/CMAC.py - Implements the CMAC algorithm
 #
@@ -20,25 +19,34 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Any, Dict, Optional, TYPE_CHECKING, Union
+
 from binascii import unhexlify
 
+from Crypto.Util._bytes import copy_bytes, tobytes
 from Crypto.Hash import BLAKE2s
 from Crypto.Util.strxor import strxor
 from Crypto.Util.number import long_to_bytes, bytes_to_long
-from Crypto.Util.py3compat import bord, tobytes, _copy_bytes
 from Crypto.Random import get_random_bytes
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 # The size of the authentication tag produced by the MAC.
-digest_size = None
+digest_size: Optional[int] = None
 
 
-def _shift_bytes(bs, xor_lsb=0):
+def _shift_bytes(bs: bytes, xor_lsb: int = 0) -> bytes:
     num = (bytes_to_long(bs) << 1) ^ xor_lsb
     return long_to_bytes(num, len(bs))[-len(bs):]
 
 
-class CMAC(object):
+class CMAC:
     """A CMAC hash object.
     Do not instantiate directly. Use the :func:`new` function.
 
@@ -46,18 +54,18 @@ class CMAC(object):
     :vartype digest_size: integer
     """
 
-    digest_size = None
+    digest_size: Optional[int] = None
 
-    def __init__(self, key, msg, ciphermod, cipher_params, mac_len,
-                 update_after_digest):
+    def __init__(self, key: Buffer, msg: Optional[Buffer], ciphermod: ModuleType,
+                 cipher_params: Dict[str, Any], mac_len: int, update_after_digest: bool) -> None:
 
         self.digest_size = mac_len
 
-        self._key = _copy_bytes(None, None, key)
+        self._key = copy_bytes(None, None, key)
         self._factory = ciphermod
         self._cipher_params = cipher_params
         self._block_size = bs = ciphermod.block_size
-        self._mac_tag = None
+        self._mac_tag: Optional[bytes] = None
         self._update_after_digest = update_after_digest
 
         # Section 5.3 of NIST SP 800 38B and Appendix B
@@ -77,11 +85,11 @@ class CMAC(object):
                                   ciphermod.MODE_ECB,
                                   **self._cipher_params)
         L = self._ecb.encrypt(zero_block)
-        if bord(L[0]) & 0x80:
+        if L[0] & 0x80:
             self._k1 = _shift_bytes(L, const_Rb)
         else:
             self._k1 = _shift_bytes(L)
-        if bord(self._k1[0]) & 0x80:
+        if self._k1[0] & 0x80:
             self._k2 = _shift_bytes(self._k1, const_Rb)
         else:
             self._k2 = _shift_bytes(self._k1)
@@ -100,7 +108,7 @@ class CMAC(object):
         self._last_ct = zero_block
 
         # Last block that was encrypted with AES
-        self._last_pt = None
+        self._last_pt: Optional[bytes] = None
 
         # Counter for total message size
         self._data_size = 0
@@ -108,7 +116,7 @@ class CMAC(object):
         if msg:
             self.update(msg)
 
-    def update(self, msg):
+    def update(self, msg: Buffer) -> CMAC:
         """Authenticate the next chunk of message.
 
         Args:
@@ -159,7 +167,7 @@ class CMAC(object):
         self._last_ct = ct[-bs:]
         self._last_pt = strxor(second_last, data_block[-bs:])
 
-    def copy(self):
+    def copy(self) -> CMAC:
         """Return a copy ("clone") of the CMAC object.
 
         The copy will have the same internal state as the original CMAC
@@ -180,7 +188,7 @@ class CMAC(object):
         obj._last_ct = self._last_ct[:]
         return obj
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) MAC tag of the message
         that has been authenticated so far.
 
@@ -199,6 +207,7 @@ class CMAC(object):
 
         if self._cache_n == 0 and self._data_size > 0:
             # Last block was full
+            assert self._last_pt is not None
             pt = strxor(self._last_pt, self._k1)
         else:
             # Last block is partial (or message length is zero)
@@ -210,7 +219,7 @@ class CMAC(object):
 
         return self._mac_tag
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** MAC tag of the message authenticated so far.
 
         :return: The MAC tag, computed over the data processed so far.
@@ -218,10 +227,10 @@ class CMAC(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x)
+        return "".join(["%02x" % x
                         for x in tuple(self.digest())])
 
-    def verify(self, mac_tag):
+    def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)
         is valid.
 
@@ -241,7 +250,7 @@ class CMAC(object):
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
-    def hexverify(self, hex_mac_tag):
+    def hexverify(self, hex_mac_tag: str) -> None:
         """Verify that a given **printable** MAC (computed by another party)
         is valid.
 
@@ -256,8 +265,9 @@ class CMAC(object):
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
 
-def new(key, msg=None, ciphermod=None, cipher_params=None, mac_len=None,
-        update_after_digest=False):
+def new(key: Buffer, msg: Optional[Buffer] = None, ciphermod: Optional[ModuleType] = None,
+        cipher_params: Optional[Dict[str, Any]] = None, mac_len: Optional[int] = None,
+        update_after_digest: bool = False) -> CMAC:
     """Create a new MAC object.
 
     Args:

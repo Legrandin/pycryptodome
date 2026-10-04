@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Hash/MD5.py: Self-test for the MD5 hash function
 #
@@ -24,7 +23,6 @@
 
 """Self-test suite for Crypto.Hash.MD5"""
 
-from Crypto.Util.py3compat import *
 from Crypto.Hash import MD5
 from binascii import unhexlify
 import unittest
@@ -60,7 +58,7 @@ test_data = [
 class Md5IterTest(unittest.TestCase):
 
     def runTest(self):
-        message = b("\x00") * 16
+        message = b"\x00" * 16
         result1 = "4AE71336E44BF9BF79D2752E234818A5".lower()
         result2 = "1A83F51285E4D89403D00C46EF8508FE".lower()
 

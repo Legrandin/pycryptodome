@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Cipher/DES3.py: Self-test for the Triple-DES cipher
 #
@@ -30,7 +29,6 @@ from binascii import hexlify, unhexlify
 from Crypto.Cipher import DES3
 
 from Crypto.Util.strxor import strxor_c
-from Crypto.Util.py3compat import bchr, tostr
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.SelfTest.st_common import list_test_cases
 
@@ -70,9 +68,9 @@ for tdes_file in nist_tdes_mmt_files:
             continue
 
         key = tv.key1 + tv.key2 + tv.key3
-        test_data_item = (tostr(hexlify(tv.plaintext)),
-                          tostr(hexlify(tv.ciphertext)),
-                          tostr(hexlify(key)),
+        test_data_item = (hexlify(tv.plaintext).decode("latin-1"),
+                          hexlify(tv.ciphertext).decode("latin-1"),
+                          hexlify(key).decode("latin-1"),
                           "%s (%s)" % (tdes_file, index))
         test_data.append(test_data_item)
 
@@ -92,8 +90,8 @@ class CheckParity(unittest.TestCase):
                          unhexlify("ABABABABABABABABBABABABABABABABACDCDCDCDCDCDCDCD"))
 
     def test_degradation(self):
-        sub_key1 = bchr(1) * 8
-        sub_key2 = bchr(255) * 8
+        sub_key1 = bytes([1]) * 8
+        sub_key2 = bytes([255]) * 8
 
         # K1 == K2
         self.assertRaises(ValueError, DES3.adjust_key_parity,
@@ -115,8 +113,8 @@ class CheckParity(unittest.TestCase):
 class DegenerateToDESTest(unittest.TestCase):
 
     def runTest(self):
-        sub_key1 = bchr(1) * 8
-        sub_key2 = bchr(255) * 8
+        sub_key1 = bytes([1]) * 8
+        sub_key2 = bytes([255]) * 8
 
         # K1 == K2
         self.assertRaises(ValueError, DES3.new,

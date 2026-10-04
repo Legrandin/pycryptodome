@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ===================================================================
 #
 # Copyright (c) 2016, Legrandin <helderijs@gmail.com>
@@ -29,14 +28,18 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+
 __all__ = ['generate', 'construct', 'import_key',
            'RsaKey', 'oid']
 
 import binascii
 import struct
 
+from Crypto.Util._bytes import tobytes
 from Crypto import Random
-from Crypto.Util.py3compat import tobytes, bord, tostr
 from Crypto.Util.asn1 import DerSequence, DerNull
 from Crypto.Util.number import bytes_to_long
 
@@ -48,8 +51,14 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _create_subject_public_key_info,
                               _extract_subject_public_key_info)
 
+if TYPE_CHECKING:
+    from Crypto.IO._PBES import ProtParams
 
-class RsaKey(object):
+RNG = Callable[[int], bytes]
+Int = Union[int, Integer]
+
+
+class RsaKey:
     r"""Class defining an RSA key, private or public.
     Do not instantiate directly.
     Use :func:`generate`, :func:`construct` or :func:`import_key` instead.
@@ -79,7 +88,18 @@ class RsaKey(object):
     :vartype u: integer
     """
 
-    def __init__(self, **kwargs):
+    # The key components are set dynamically in the constructor
+    _n: Integer
+    _e: Integer
+    _d: Integer
+    _p: Integer
+    _q: Integer
+    _u: Integer
+    _dp: Integer
+    _dq: Integer
+    _invq: Optional[Integer]
+
+    def __init__(self, **kwargs: Int) -> None:
         """Build an RSA key.
 
         :Keywords:
@@ -99,8 +119,8 @@ class RsaKey(object):
         """
 
         input_set = set(kwargs.keys())
-        public_set = set(('n', 'e'))
-        private_set = public_set | set(('p', 'q', 'd', 'u'))
+        public_set = {'n', 'e'}
+        private_set = public_set | {'p', 'q', 'd', 'u'}
         if input_set not in (private_set, public_set):
             raise ValueError("Some RSA components are missing")
         for component, value in kwargs.items():
@@ -111,27 +131,27 @@ class RsaKey(object):
             self._invq = None                   # will be computed on demand
 
     @property
-    def n(self):
+    def n(self) -> int:
         return int(self._n)
 
     @property
-    def e(self):
+    def e(self) -> int:
         return int(self._e)
 
     @property
-    def d(self):
+    def d(self) -> int:
         if not self.has_private():
             raise AttributeError("No private exponent available for public keys")
         return int(self._d)
 
     @property
-    def p(self):
+    def p(self) -> int:
         if not self.has_private():
             raise AttributeError("No CRT component 'p' available for public keys")
         return int(self._p)
 
     @property
-    def q(self):
+    def q(self) -> int:
         if not self.has_private():
             raise AttributeError("No CRT component 'q' available for public keys")
         return int(self._q)
@@ -149,7 +169,7 @@ class RsaKey(object):
         return int(self._dq)
 
     @property
-    def invq(self):
+    def invq(self) -> int:
         if not self.has_private():
             raise AttributeError("No CRT component 'invq' available for public keys")
         if self._invq is None:
@@ -157,20 +177,20 @@ class RsaKey(object):
         return int(self._invq)
 
     @property
-    def invp(self):
+    def invp(self) -> int:
         return self.u
 
     @property
-    def u(self):
+    def u(self) -> int:
         if not self.has_private():
             raise AttributeError("No CRT component 'u' available for public keys")
         return int(self._u)
 
-    def size_in_bits(self):
+    def size_in_bits(self) -> int:
         """Size of the RSA modulus in bits"""
         return self._n.size_in_bits()
 
-    def size_in_bytes(self):
+    def size_in_bytes(self) -> int:
         """The minimal amount of bytes that can hold the RSA modulus"""
         return (self._n.size_in_bits() - 1) // 8 + 1
 
@@ -209,18 +229,18 @@ class RsaKey(object):
 
         return bytes_to_long(self._decrypt_to_bytes(ciphertext))
 
-    def has_private(self):
+    def has_private(self) -> bool:
         """Whether this is an RSA private key"""
 
         return hasattr(self, "_d")
 
-    def can_encrypt(self):  # legacy
+    def can_encrypt(self) -> bool:  # legacy
         return True
 
-    def can_sign(self):     # legacy
+    def can_sign(self) -> bool:     # legacy
         return True
 
-    def public_key(self):
+    def public_key(self) -> RsaKey:
         """A matching RSA public key.
 
         Returns:
@@ -228,7 +248,9 @@ class RsaKey(object):
         """
         return RsaKey(n=self._n, e=self._e)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RsaKey):
+            return False
         if self.has_private() != other.has_private():
             return False
         if self.n != other.n or self.e != other.e:
@@ -237,15 +259,12 @@ class RsaKey(object):
             return True
         return (self.d == other.d)
 
-    def __ne__(self, other):
-        return not (self == other)
-
-    def __getstate__(self):
+    def __getstate__(self) -> None:
         # RSA key is not pickable
         from pickle import PicklingError
         raise PicklingError
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.has_private():
             extra = ", d=%d, p=%d, q=%d, u=%d" % (int(self._d), int(self._p),
                                                   int(self._q), int(self._u))
@@ -253,15 +272,17 @@ class RsaKey(object):
             extra = ""
         return "RsaKey(n=%d, e=%d%s)" % (int(self._n), int(self._e), extra)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.has_private():
             key_type = "Private"
         else:
             key_type = "Public"
         return "%s RSA key at 0x%X" % (key_type, id(self))
 
-    def export_key(self, format='PEM', passphrase=None, pkcs=1,
-                   protection=None, randfunc=None, prot_params=None):
+    def export_key(self, format: str = 'PEM', passphrase: Optional[Union[bytes, str]] = None,
+                   pkcs: int = 1, protection: Optional[str] = None,
+                   randfunc: Optional[RNG] = None,
+                   prot_params: Optional[ProtParams] = None) -> bytes:
         """Export this RSA key.
 
         Keyword Args:
@@ -353,10 +374,10 @@ class RsaKey(object):
             randfunc = Random.get_random_bytes
 
         if format == 'OpenSSH':
-            e_bytes, n_bytes = [x.to_bytes() for x in (self._e, self._n)]
-            if bord(e_bytes[0]) & 0x80:
+            e_bytes, n_bytes = (x.to_bytes() for x in (self._e, self._n))
+            if e_bytes[0] & 0x80:
                 e_bytes = b'\x00' + e_bytes
-            if bord(n_bytes[0]) & 0x80:
+            if n_bytes[0] & 0x80:
                 n_bytes = b'\x00' + n_bytes
             keyparts = [b'ssh-rsa', e_bytes, n_bytes]
             keystring = b''.join([struct.pack(">I", len(kp)) + kp for kp in keyparts])
@@ -373,7 +394,7 @@ class RsaKey(object):
                                       self.q,
                                       self.d % (self.p-1),
                                       self.d % (self.q-1),
-                                      Integer(self.q).inverse(self.p)
+                                      int(Integer(self.q).inverse(self.p))
                                       ]).encode()
             if pkcs == 1:
                 key_type = 'RSA PRIVATE KEY'
@@ -454,7 +475,7 @@ class RsaKey(object):
         raise NotImplementedError
 
 
-def generate(bits, randfunc=None, e=65537):
+def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKey:
     """Create a new RSA key pair.
 
     The algorithm closely follows NIST `FIPS 186-4`_ in its
@@ -536,7 +557,12 @@ def generate(bits, randfunc=None, e=65537):
     return RsaKey(n=n, e=e, d=d, p=p, q=q, u=u)
 
 
-def construct(rsa_components, consistency_check=True):
+def construct(rsa_components: Union[Tuple[Int, Int],                       # n, e
+                                    Tuple[Int, Int, Int],                  # n, e, d
+                                    Tuple[Int, Int, Int, Int, Int],        # n, e, d, p, q
+                                    Tuple[Int, Int, Int, Int, Int, Int],   # n, e, d, p, q, crt_q
+                                    Sequence[Int]],
+              consistency_check: bool = True) -> RsaKey:
     r"""Construct an RSA key from a tuple of valid RSA components.
 
     The modulus **n** must be the product of two primes.
@@ -577,22 +603,18 @@ def construct(rsa_components, consistency_check=True):
     Returns: An RSA key object (:class:`RsaKey`).
     """
 
-    class InputComps(object):
-        pass
+    input_comps = {comp: Integer(value) for (comp, value)
+                   in zip(('n', 'e', 'd', 'p', 'q', 'u'), rsa_components)}
 
-    input_comps = InputComps()
-    for (comp, value) in zip(('n', 'e', 'd', 'p', 'q', 'u'), rsa_components):
-        setattr(input_comps, comp, Integer(value))
-
-    n = input_comps.n
-    e = input_comps.e
-    if not hasattr(input_comps, 'd'):
+    n = input_comps['n']
+    e = input_comps['e']
+    if 'd' not in input_comps:
         key = RsaKey(n=n, e=e)
     else:
-        d = input_comps.d
-        if hasattr(input_comps, 'q'):
-            p = input_comps.p
-            q = input_comps.q
+        d = input_comps['d']
+        if 'q' in input_comps:
+            p = input_comps['p']
+            q = input_comps['q']
         else:
             # Compute factors p and q from the private exponent d.
             # We assume that n has no more than two factors.
@@ -631,8 +653,8 @@ def construct(rsa_components, consistency_check=True):
             assert ((n % p) == 0)
             q = n // p
 
-        if hasattr(input_comps, 'u'):
-            u = input_comps.u
+        if 'u' in input_comps:
+            u = input_comps['u']
         else:
             u = p.inverse(q)
 
@@ -778,7 +800,7 @@ def _import_openssh_private_rsa(data, password):
     return construct(build)
 
 
-def import_key(extern_key, passphrase=None):
+def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, bytes]] = None) -> RsaKey:
     """Import an RSA key (public or private).
 
     Args:
@@ -826,14 +848,14 @@ def import_key(extern_key, passphrase=None):
         passphrase = tobytes(passphrase)
 
     if extern_key.startswith(b'-----BEGIN OPENSSH PRIVATE KEY'):
-        text_encoded = tostr(extern_key)
+        text_encoded = extern_key.decode("latin-1")
         openssh_encoded, marker, enc_flag = PEM.decode(text_encoded, passphrase)
         result = _import_openssh_private_rsa(openssh_encoded, passphrase)
         return result
 
     if extern_key.startswith(b'-----'):
         # This is probably a PEM encoded key.
-        (der, marker, enc_flag) = PEM.decode(tostr(extern_key), passphrase)
+        (der, marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
         return _import_keyDER(der, passphrase)
@@ -850,7 +872,7 @@ def import_key(extern_key, passphrase=None):
         n = Integer.from_bytes(keyparts[2])
         return construct([n, e])
 
-    if len(extern_key) > 0 and bord(extern_key[0]) == 0x30:
+    if len(extern_key) > 0 and extern_key[0] == 0x30:
         # This is probably a DER encoded key
         return _import_keyDER(extern_key, passphrase)
 
@@ -868,4 +890,4 @@ importKey = import_key
 #:    An RSA key meant for PSS padding has a dedicated Object ID ``1.2.840.113549.1.1.10``
 #:
 #: .. _`Object ID`: http://www.alvestrand.no/objectid/1.2.840.113549.1.1.1.html
-oid = "1.2.840.113549.1.1.1"
+oid: str = "1.2.840.113549.1.1.1"

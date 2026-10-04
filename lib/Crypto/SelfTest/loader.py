@@ -35,7 +35,6 @@ import errno
 import binascii
 import warnings
 from binascii import unhexlify
-from Crypto.Util.py3compat import FileNotFoundError
 
 
 try:
@@ -57,7 +56,7 @@ def _load_tests(dir_comps, file_in, description, conversions):
     line_number = 0
     results = []
 
-    class TestVector(object):
+    class TestVector:
         def __init__(self, description, count):
             self.desc = description
             self.count = count
@@ -196,7 +195,7 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
                       stacklevel=2)
         return result
 
-    class TestVector(object):
+    class TestVector:
         pass
 
     # Unique attributes that will be converted from
