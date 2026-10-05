@@ -524,8 +524,10 @@ def k12_reference(message, custom, length):
 
 class TestKangarooTwelveDigest:
     def test_vs_reference(self):
+        # fmt: off
         sizes = (0, 1, 100, 167, 168, 169, 4096, 8000, 8189, 8190, 8191, 8192, 8193,
                  8192 * 2, 8192 * 3 + 1, 100000)
+        # fmt: on
         customs = (b"", b"C", b"C" * 300, b"C" * 8189, b"C" * 8192, b"C" * 9000)
         for size in sizes:
             data = ptn(size)

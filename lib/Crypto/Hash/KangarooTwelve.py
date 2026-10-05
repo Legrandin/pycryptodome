@@ -431,7 +431,12 @@ def digest(data: Buffer, *, length: int, custom: Optional[bytes] = None) -> byte
 
     out = create_string_buffer(length)
     result = _raw_k12_lib.k12_oneshot(
-        c_uint8_ptr(data), c_size_t(len(data)), c_uint8_ptr(custom), c_size_t(len(custom)), out, c_size_t(length)
+        c_uint8_ptr(data),
+        c_size_t(len(data)),
+        c_uint8_ptr(custom),
+        c_size_t(len(custom)),
+        out,
+        c_size_t(length),
     )
     if result:
         raise ValueError("Error %d while computing KangarooTwelve" % result)
