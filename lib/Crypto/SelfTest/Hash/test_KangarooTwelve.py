@@ -87,6 +87,18 @@ class TestKangarooTwelve:
         assert isinstance(digest, bytes)
         assert len(digest) == 90
 
+    def test_read_negative(self):
+        xof = K12.new()
+        for bad in (True, False, 1.0, "1", None):
+            with pytest.raises(TypeError):
+                xof.read(bad)
+        with pytest.raises(ValueError):
+            xof.read(-1)
+
+        # A rejected read() does not start squeezing
+        xof.update(b"abc")
+        assert xof.read(10) == K12.new(data=b"abc").read(10)
+
     def test_update_after_read(self):
         mac = K12.new()
         mac.update(b"rrrr")

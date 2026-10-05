@@ -78,6 +78,11 @@ class Blake2Test:
                 new_func(digest_bits=15)
             with pytest.raises(ValueError):
                 new_func(digest_bits=self.max_bits + 1)
+            for bad in (True, 8.0, "8"):
+                with pytest.raises(TypeError):
+                    new_func(digest_bytes=bad)
+                with pytest.raises(TypeError):
+                    new_func(digest_bits=bad)
             with pytest.raises(TypeError):
                 new_func(digest_bytes=self.max_bytes, key="string")
             with pytest.raises(TypeError):
