@@ -34,7 +34,7 @@ import os
 import threading
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import c_size_t, c_uint8_ptr
+from Crypto.Util._raw_api import c_size_t, c_uint8_ptr, create_string_buffer, get_raw_buffer
 from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
@@ -375,3 +375,39 @@ def new(data: Optional[Buffer] = None, custom: Optional[bytes] = None, threads: 
     """
 
     return K12_XOF(data, custom, threads)
+
+
+def digest(data: Buffer, *, length: int, custom: Optional[bytes] = None) -> bytes:
+    """Compute the KangarooTwelve output for a complete message, in one go.
+
+    It returns the same bytes as ``new(data, custom).read(length)``,
+    but it is much faster for short messages.
+
+    Args:
+       data (bytes/bytearray/memoryview):
+        The whole message to hash.
+       length (integer):
+        Keyword-only. The amount of bytes to return.
+       custom (bytes):
+        Optional, keyword-only.
+        A customization byte string.
+
+    :Return: the output of the XOF, ``length`` bytes long
+    :rtype: byte string
+    """
+
+    if custom is None:
+        custom = b""
+
+    if not isinstance(length, int) or isinstance(length, bool):
+        raise TypeError("'length' must be an integer")
+    if length < 0:
+        raise ValueError("'length' must be a non-negative integer")
+
+    out = create_string_buffer(length)
+    result = _raw_keccak_lib.k12_oneshot(
+        c_uint8_ptr(data), c_size_t(len(data)), c_uint8_ptr(custom), c_size_t(len(custom)), out, c_size_t(length)
+    )
+    if result:
+        raise ValueError("Error %d while computing KangarooTwelve" % result)
+    return get_raw_buffer(out)
