@@ -43,12 +43,11 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util import _cpu_features
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_keccak_lib = load_pycryptodome_raw_lib(
-    "Crypto.Hash._keccak",
-    """
+_keccak_cdecl = """
                         int keccak_init(void **state,
                                         size_t capacity_bytes,
                                         uint8_t rounds);
@@ -66,8 +65,34 @@ _raw_keccak_lib = load_pycryptodome_raw_lib(
                                           uint8_t padding);
                         int keccak_copy(const void *src, void *dst);
                         int keccak_reset(void *state);
-                        """,
-)
+                        """
+
+_raw_keccak_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak", _keccak_cdecl)
+
+
+def _load_avx2_bmi2_lib(cdecl: str):
+    """Load the functions in ``cdecl`` from the Keccak module compiled for
+    AVX2, BMI1 and BMI2 (it also contains KangarooTwelve).
+
+    Return None if the CPU does not support all three instruction sets,
+    or if the module was not compiled in.
+    """
+
+    if not (_cpu_features.have_avx2() and _cpu_features.have_bmi1() and _cpu_features.have_bmi2()):
+        return None
+    try:
+        return load_pycryptodome_raw_lib("Crypto.Hash._keccak_avx2_bmi2", cdecl)
+    except OSError:
+        return None
+
+
+_raw_keccak_avx2_bmi2_lib = _load_avx2_bmi2_lib(_keccak_cdecl)
+
+# The implementation used by all Keccak-based hashes
+if _raw_keccak_avx2_bmi2_lib is not None:
+    _raw_keccak_lib = _raw_keccak_avx2_bmi2_lib
+else:
+    _raw_keccak_lib = _raw_keccak_portable_lib
 
 
 class Keccak_Hash:
