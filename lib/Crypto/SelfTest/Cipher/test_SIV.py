@@ -34,7 +34,6 @@ from binascii import unhexlify
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
@@ -419,9 +418,7 @@ class TestVectors(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self):
-        unittest.TestCase.__init__(self)
-        self._id = "None"
+    _id = "None"
 
     def setUp(self):
         self.tv = load_test_vectors_wycheproof(
@@ -431,7 +428,7 @@ class TestVectorsWycheproof(unittest.TestCase):
     def shortDescription(self):
         return self._id
 
-    def test_encrypt(self, tv):
+    def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt AES-SIV Test #" + str(tv.id)
 
         cipher = AES.new(tv.key, AES.MODE_SIV)
@@ -440,7 +437,7 @@ class TestVectorsWycheproof(unittest.TestCase):
         if tv.valid:
             self.assertEqual(tag + ct, tv.ct)
 
-    def test_decrypt(self, tv):
+    def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt AES_SIV Test #" + str(tv.id)
 
         cipher = AES.new(tv.key, AES.MODE_SIV)
@@ -456,14 +453,12 @@ class TestVectorsWycheproof(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_encrypt(tv)
-            self.test_decrypt(tv)
+            self.check_encrypt(tv)
+            self.check_decrypt(tv)
 
 
 class TestVectorsWycheproof2(unittest.TestCase):
-    def __init__(self):
-        unittest.TestCase.__init__(self)
-        self._id = "None"
+    _id = "None"
 
     def setUp(self):
         self.tv = load_test_vectors_wycheproof(
@@ -473,7 +468,7 @@ class TestVectorsWycheproof2(unittest.TestCase):
     def shortDescription(self):
         return self._id
 
-    def test_encrypt(self, tv):
+    def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt AEAD-AES-SIV Test #" + str(tv.id)
 
         cipher = AES.new(tv.key, AES.MODE_SIV, nonce=tv.iv)
@@ -483,7 +478,7 @@ class TestVectorsWycheproof2(unittest.TestCase):
             self.assertEqual(ct, tv.ct)
             self.assertEqual(tag, tv.tag)
 
-    def test_decrypt(self, tv):
+    def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt AEAD-AES-SIV Test #" + str(tv.id)
 
         cipher = AES.new(tv.key, AES.MODE_SIV, nonce=tv.iv)
@@ -499,20 +494,5 @@ class TestVectorsWycheproof2(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_encrypt(tv)
-            self.test_decrypt(tv)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(SivTests)
-    tests += list_test_cases(SivFSMTests)
-    tests += [TestVectors()]
-    tests += [TestVectorsWycheproof()]
-    tests += [TestVectorsWycheproof2()]
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
+            self.check_encrypt(tv)
+            self.check_decrypt(tv)

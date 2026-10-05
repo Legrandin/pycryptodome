@@ -39,7 +39,6 @@ from Crypto.Hash import SHAKE128
 from Crypto.Math._IntegerCustom import _raw_montgomery
 from Crypto.Math.Numbers import Integer
 from Crypto.Random.random import StrongRandom
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._raw_api import (
     c_size_t,
     c_ulonglong,
@@ -177,14 +176,3 @@ class TestModExp(unittest.TestCase):
             expected = pow(base, exponent, modulus)
             result = monty_pow(base, exponent, modulus)
             self.assertEqual(result, expected)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestModExp)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

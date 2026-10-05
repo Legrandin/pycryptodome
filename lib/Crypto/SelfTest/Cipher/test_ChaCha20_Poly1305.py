@@ -34,7 +34,7 @@ from binascii import unhexlify
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor
 
@@ -549,10 +549,7 @@ class TestVectorsRFC(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._id = "None"
+    _id = "None"
 
     def load_tests(self, filename):
 
@@ -580,12 +577,12 @@ class TestVectorsWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_encrypt(self, tv):
+    def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt %s Test #%s" % (tv.algo, tv.id)
 
         try:
@@ -601,7 +598,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(tag, tv.tag)
             self.warn(tv)
 
-    def test_decrypt(self, tv):
+    def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt %s Test #%s" % (tv.algo, tv.id)
 
         try:
@@ -620,7 +617,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(pt, tv.msg)
             self.warn(tv)
 
-    def test_corrupt_decrypt(self, tv):
+    def check_corrupt_decrypt(self, tv):
         self._id = "Wycheproof Corrupt Decrypt ChaCha20-Poly1305 Test #" + str(tv.id)
         if len(tv.iv) == 0 or len(tv.ct) < 1:
             return
@@ -632,9 +629,9 @@ class TestVectorsWycheproof(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_encrypt(tv)
-            self.test_decrypt(tv)
-            self.test_corrupt_decrypt(tv)
+            self.check_encrypt(tv)
+            self.check_decrypt(tv)
+            self.check_corrupt_decrypt(tv)
 
 
 class TestOutput(unittest.TestCase):
@@ -681,24 +678,3 @@ class TestOutput(unittest.TestCase):
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
-
-
-def get_tests(config={}):
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    tests = []
-    tests += list_test_cases(ChaCha20Poly1305Tests)
-    tests += list_test_cases(XChaCha20Poly1305Tests)
-    tests += list_test_cases(ChaCha20Poly1305FSMTests)
-    tests += [TestVectorsRFC()]
-    tests += [TestVectorsWycheproof(wycheproof_warnings)]
-    tests += [TestOutput()]
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

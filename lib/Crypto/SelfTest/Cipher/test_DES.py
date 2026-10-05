@@ -26,6 +26,7 @@
 import unittest
 
 from Crypto.Cipher import DES
+from Crypto.SelfTest.Cipher.common import make_block_tests
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
 SP800_17_B1_KEY = "01" * 8
@@ -233,19 +234,4 @@ class TestOutput(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-def get_tests(config={}):
-    from .common import make_block_tests
-
-    tests = make_block_tests(DES, "DES", test_data)
-    tests += [RonRivestTest()]
-    tests += [TestOutput()]
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_block_tests(DES, "DES", test_data)

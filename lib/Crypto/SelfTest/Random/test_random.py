@@ -149,14 +149,3 @@ class SimpleTest(unittest.TestCase):
         z = random.sample(bytearray(b"123"), 1)
         self.assertEqual(z[0] in bytearray(b"123"), True)
         self.assertRaises(TypeError, random.sample, 1)
-
-
-def get_tests(config={}):
-    return [SimpleTest()]
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

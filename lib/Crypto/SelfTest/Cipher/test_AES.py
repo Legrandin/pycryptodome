@@ -25,8 +25,12 @@
 
 import unittest
 
+import pytest
+
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
+from Crypto.SelfTest.Cipher.common import make_block_tests
+from Crypto.Util import _cpu_features
 from Crypto.Util._bytes import tobytes
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]]) tuples.
@@ -1241,9 +1245,7 @@ test_data += test_data_8_lanes
 
 
 class TestMultipleBlocks(unittest.TestCase):
-    def __init__(self, use_aesni):
-        unittest.TestCase.__init__(self)
-        self.use_aesni = use_aesni
+    use_aesni = False
 
     def runTest(self):
         # Encrypt data which is 8*2+4 bytes long, so as to trigger (for the
@@ -1265,10 +1267,13 @@ class TestMultipleBlocks(unittest.TestCase):
             self.assertEqual(SHA256.new(ct).hexdigest(), expected)
 
 
+@unittest.skipUnless(_cpu_features.have_aes_ni(), "AES-NI not available")
+class TestMultipleBlocksAESNI(TestMultipleBlocks):
+    use_aesni = True
+
+
 class TestIncompleteBlocks(unittest.TestCase):
-    def __init__(self, use_aesni):
-        unittest.TestCase.__init__(self)
-        self.use_aesni = use_aesni
+    use_aesni = False
 
     def runTest(self):
         # Encrypt data with length not multiple of 16 bytes
@@ -1285,10 +1290,14 @@ class TestIncompleteBlocks(unittest.TestCase):
         self.assertEqual(cipher.decrypt(b""), b"")
 
 
+@unittest.skipUnless(_cpu_features.have_aes_ni(), "AES-NI not available")
+class TestIncompleteBlocksAESNI(TestIncompleteBlocks):
+    use_aesni = True
+
+
+@unittest.skipUnless(_cpu_features.have_aes_ni(), "AES-NI not available")
 class TestOutput(unittest.TestCase):
-    def __init__(self, use_aesni):
-        unittest.TestCase.__init__(self)
-        self.use_aesni = use_aesni
+    use_aesni = True
 
     def runTest(self):
         # Encrypt/Decrypt data and test output parameter
@@ -1322,29 +1331,7 @@ class TestOutput(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-def get_tests(config={}):
-    from Crypto.Util import _cpu_features
-
-    from .common import make_block_tests
-
-    tests = make_block_tests(AES, "AES", test_data, {"use_aesni": False})
-    tests += [TestMultipleBlocks(False)]
-    tests += [TestIncompleteBlocks(False)]
-    if _cpu_features.have_aes_ni():
-        # Run tests with AES-NI instructions if they are available.
-        tests += make_block_tests(AES, "AESNI", test_data, {"use_aesni": True})
-        tests += [TestMultipleBlocks(True)]
-        tests += [TestIncompleteBlocks(True)]
-        tests += [TestOutput(True)]
-    else:
-        print("Skipping AESNI tests")
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_block_tests(AES, "AES", test_data, {"use_aesni": False})
+TestVectorsAESNI = pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")(
+    make_block_tests(AES, "AESNI", test_data, {"use_aesni": True})
+)

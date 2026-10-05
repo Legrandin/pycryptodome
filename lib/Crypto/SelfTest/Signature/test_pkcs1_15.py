@@ -31,10 +31,12 @@
 import unittest
 from binascii import unhexlify
 
+import pytest
+
 from Crypto.Hash import SHA1, SHA3_224, SHA3_256, SHA3_384, SHA3_512, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Signature import PKCS1_v1_5, pkcs1_15
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.strxor import strxor
@@ -54,6 +56,7 @@ class FIPS_PKCS1_Verify_Tests(unittest.TestCase):
         self.assertEqual(verifier.can_sign(), False)
 
 
+@pytest.mark.slow
 class FIPS_PKCS1_Verify_Tests_KAT(unittest.TestCase):
     pass
 
@@ -103,6 +106,7 @@ class FIPS_PKCS1_Sign_Tests(unittest.TestCase):
         self.assertEqual(signer.can_sign(), True)
 
 
+@pytest.mark.slow
 class FIPS_PKCS1_Sign_Tests_KAT(unittest.TestCase):
     pass
 
@@ -239,10 +243,7 @@ class PKCS1_All_Hashes_Tests(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._id = "None"
+    _id = "None"
 
     def setUp(self):
         self.tv = []
@@ -318,12 +319,12 @@ class TestVectorsWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
         self._id = "Wycheproof RSA PKCS$#1 Test #" + str(tv.id)
 
         hashed_msg = tv.hash_module.new(tv.msg)
@@ -340,27 +341,4 @@ class TestVectorsWycheproof(unittest.TestCase):
 
     def runTest(self):
         for tv in self.tv:
-            self.test_verify(tv)
-
-
-def get_tests(config={}):
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    tests = []
-    tests += list_test_cases(FIPS_PKCS1_Verify_Tests)
-    tests += list_test_cases(FIPS_PKCS1_Sign_Tests)
-    tests += list_test_cases(PKCS1_15_NoParams)
-    tests += list_test_cases(PKCS1_Legacy_Module_Tests)
-    tests += list_test_cases(PKCS1_All_Hashes_Tests)
-    tests += [TestVectorsWycheproof(wycheproof_warnings)]
-
-    if config.get("slow_tests"):
-        tests += list_test_cases(FIPS_PKCS1_Verify_Tests_KAT)
-        tests += list_test_cases(FIPS_PKCS1_Sign_Tests_KAT)
-
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
+            self.check_verify(tv)

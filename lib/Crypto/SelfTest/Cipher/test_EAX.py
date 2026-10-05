@@ -34,7 +34,7 @@ from binascii import unhexlify
 from Crypto.Cipher import AES, ARC2, CAST, DES, DES3, Blowfish
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor
 
@@ -606,10 +606,7 @@ class TestVectorsPaper(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._id = "None"
+    _id = "None"
 
     def setUp(self):
 
@@ -627,12 +624,12 @@ class TestVectorsWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_encrypt(self, tv):
+    def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt EAX Test #" + str(tv.id)
 
         try:
@@ -648,7 +645,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(tag, tv.tag)
             self.warn(tv)
 
-    def test_decrypt(self, tv):
+    def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt EAX Test #" + str(tv.id)
 
         try:
@@ -667,7 +664,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(pt, tv.msg)
             self.warn(tv)
 
-    def test_corrupt_decrypt(self, tv):
+    def check_corrupt_decrypt(self, tv):
         self._id = "Wycheproof Corrupt Decrypt EAX Test #" + str(tv.id)
         if len(tv.iv) == 0 or len(tv.ct) < 1:
             return
@@ -679,9 +676,9 @@ class TestVectorsWycheproof(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_encrypt(tv)
-            self.test_decrypt(tv)
-            self.test_corrupt_decrypt(tv)
+            self.check_encrypt(tv)
+            self.check_decrypt(tv)
+            self.check_corrupt_decrypt(tv)
 
 
 class TestOtherCiphers(unittest.TestCase):
@@ -709,20 +706,3 @@ for ks in CAST.key_size:
     TestOtherCiphers.create_test("CAST_" + str(ks), CAST, ks)
 for ks in Blowfish.key_size:
     TestOtherCiphers.create_test("Blowfish_" + str(ks), Blowfish, ks)
-
-
-def get_tests(config={}):
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    tests = []
-    tests += list_test_cases(EaxTests)
-    tests += list_test_cases(EaxFSMTests)
-    tests += [TestVectorsPaper()]
-    tests += [TestVectorsWycheproof(wycheproof_warnings)]
-    tests += list_test_cases(TestOtherCiphers)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

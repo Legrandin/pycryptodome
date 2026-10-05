@@ -8,7 +8,6 @@ from Crypto.Hash import SHAKE128
 from Crypto.Math.Numbers import Integer
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccKey, EccXPoint, _curves
-from Crypto.SelfTest.st_common import list_test_cases
 
 CURVE448_P = 2**448 - 2**224 - 1
 CURVE448_ORDER = 2**446 - 0x8335DC163BB124B65129C96FDE933D8D723A70AADC873D6D54A7BB0D
@@ -265,19 +264,3 @@ class TestEccModule_Curve448(unittest.TestCase):
         self.assertRaises(ValueError, ECC.construct, curve="Curve448", point_x=p - 1)
         self.assertRaises(ValueError, ECC.construct, curve="Curve448", point_x=p)
         self.assertRaises(ValueError, ECC.construct, curve="Curve448", point_x=p + 1)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestEccPoint_Curve448)
-    tests += list_test_cases(TestEccKey_Curve448)
-    tests += list_test_cases(TestEccModule_Curve448)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

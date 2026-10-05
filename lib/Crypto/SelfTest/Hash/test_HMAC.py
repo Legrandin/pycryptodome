@@ -40,6 +40,7 @@ from Crypto.Hash import (
     SHA384,
     SHA512,
 )
+from Crypto.SelfTest.Hash.common import make_mac_tests
 from Crypto.Util._bytes import tobytes
 
 hash_modules = {
@@ -463,13 +464,8 @@ class HMAC_Module_and_Instance_Test(unittest.TestCase):
     See https://bugs.launchpad.net/pycrypto/+bug/1209399
     """
 
-    def __init__(self, hashmods):
-        """Initialize the test with a dictionary of hash modules
-        indexed by their names"""
-
-        unittest.TestCase.__init__(self)
-        self.hashmods = hashmods
-        self.description = ""
+    hashmods = hash_modules
+    description = ""
 
     def shortDescription(self):
         return self.description
@@ -560,10 +556,7 @@ class MemoryViewTests(unittest.TestCase):
             self.assertEqual(h1.digest(), h2.digest())
 
 
-def get_tests(config={}):
-    global test_data
-    from .common import make_mac_tests
-
+def _expand_test_data():
     # A test vector contains multiple results, each one for a
     # different hash algorithm.
     # Here we expand each test vector into multiple ones,
@@ -575,16 +568,7 @@ def get_tests(config={}):
             t[2] = row[2][modname]
             t.append({"digestmod": globals()[modname]})
             exp_test_data.append(t)
-    tests = make_mac_tests(HMAC, "HMAC", exp_test_data)
-    tests.append(HMAC_Module_and_Instance_Test(hash_modules))
-    tests.append(HMAC_None())
-
-    tests.append(ByteArrayTests())
-    tests.append(MemoryViewTests())
-
-    return tests
+    return exp_test_data
 
 
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
+TestVectors = make_mac_tests(HMAC, "HMAC", _expand_test_data())

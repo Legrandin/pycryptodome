@@ -33,7 +33,6 @@ from binascii import unhexlify
 from Crypto.Hash import SHA512, SHAKE256
 from Crypto.PublicKey import ECC
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Signature import eddsa
 from Crypto.Util.number import bytes_to_long
 
@@ -546,7 +545,7 @@ class TestVectorsEdDSAWycheproof(unittest.TestCase):
         self.add_tests("eddsa_test.json")
         self.add_tests("ed448_test.json")
 
-    def test_sign(self, tv):
+    def check_sign(self, tv):
         if not tv.valid:
             return
 
@@ -556,7 +555,7 @@ class TestVectorsEdDSAWycheproof(unittest.TestCase):
         signature = signer.sign(tv.msg)
         self.assertEqual(signature, tv.sig)
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
         self._id = "Wycheproof EdDSA Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
         key = eddsa.import_public_key(tv.pk)
         verifier = eddsa.new(key, "rfc8032")
@@ -569,25 +568,5 @@ class TestVectorsEdDSAWycheproof(unittest.TestCase):
 
     def runTest(self):
         for tv in self.tv:
-            self.test_sign(tv)
-            self.test_verify(tv)
-
-
-def get_tests(config={}):
-
-    tests = []
-    tests += list_test_cases(TestExport_Ed25519)
-    tests += list_test_cases(TestExport_Ed448)
-    tests += list_test_cases(TestImport_Ed25519)
-    tests += list_test_cases(TestImport_Ed448)
-    tests += list_test_cases(TestEdDSA)
-    tests += [TestVectorsEdDSAWycheproof()]
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
+            self.check_sign(tv)
+            self.check_verify(tv)

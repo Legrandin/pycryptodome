@@ -14,7 +14,6 @@ from Crypto.Protocol.DH import (
 )
 from Crypto.PublicKey import ECC
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class FIPS_ECDH_Tests_KAT(unittest.TestCase):
@@ -101,7 +100,7 @@ class TestVectorsECDHWycheproof(unittest.TestCase):
     def shortDescription(self):
         return self.desc
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
 
         if len(tv.public) == 0:
             return
@@ -131,7 +130,7 @@ class TestVectorsECDHWycheproof(unittest.TestCase):
     def runTest(self):
         for tv in self.tv:
             self.desc = "Wycheproof ECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
-            self.test_verify(tv)
+            self.check_verify(tv)
 
 
 class ECDH_Tests(unittest.TestCase):
@@ -462,7 +461,7 @@ class TestVectorsX25519Wycheproof(unittest.TestCase):
     def shortDescription(self):
         return self.desc
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
 
         if tv.encoding == "XdhComp":
             try:
@@ -541,7 +540,7 @@ class TestVectorsX25519Wycheproof(unittest.TestCase):
     def runTest(self):
         for tv in self.tv:
             self.desc = "Wycheproof XECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
-            self.test_verify(tv)
+            self.check_verify(tv)
 
 
 class TestVectorsX448Wycheproof(unittest.TestCase):
@@ -596,7 +595,7 @@ class TestVectorsX448Wycheproof(unittest.TestCase):
     def shortDescription(self):
         return self.desc
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
 
         if tv.encoding == "XdhComp":
             try:
@@ -681,30 +680,4 @@ class TestVectorsX448Wycheproof(unittest.TestCase):
     def runTest(self):
         for tv in self.tv:
             self.desc = "Wycheproof XECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
-            self.test_verify(tv)
-
-
-def get_tests(config={}):
-
-    tests = []
-    tests += list_test_cases(FIPS_ECDH_Tests_KAT)
-    tests += [TestVectorsECDHWycheproof()]
-    tests += list_test_cases(ECDH_Tests)
-    tests += list_test_cases(X25519_Tests)
-    tests += list_test_cases(X448_Tests)
-    tests += [TestVectorsX25519Wycheproof()]
-    tests += [TestVectorsX448Wycheproof()]
-
-    slow_tests = config.get("slow_tests")
-    if slow_tests:
-        pass
-
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
+            self.check_verify(tv)

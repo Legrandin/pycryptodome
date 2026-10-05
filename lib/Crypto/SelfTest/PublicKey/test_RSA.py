@@ -29,7 +29,7 @@ import pickle
 import unittest
 from pickle import PicklingError
 
-from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
+from Crypto.SelfTest.st_common import a2b_hex
 
 
 class RSATest(unittest.TestCase):
@@ -308,16 +308,3 @@ class RSATest(unittest.TestCase):
         # Test plain decryption
         new_plaintext = rsaObj._decrypt(ciphertext)
         self.assertEqual(plaintext, new_plaintext)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(RSATest)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

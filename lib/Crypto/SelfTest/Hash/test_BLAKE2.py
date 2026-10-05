@@ -35,12 +35,11 @@ import warnings
 from binascii import hexlify, unhexlify
 
 from Crypto.Hash import BLAKE2b, BLAKE2s
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
 
 
-class Blake2Test(unittest.TestCase):
+class Blake2Test:
     def test_new_positive(self):
 
         h = self.BLAKE2.new(digest_bits=self.max_bits)
@@ -225,7 +224,7 @@ class Blake2Test(unittest.TestCase):
             self.assertEqual(h1.digest(), h2.digest())
 
 
-class Blake2bTest(Blake2Test):
+class Blake2bTest(Blake2Test, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2b
     #: Max output size (in bits)
@@ -238,7 +237,7 @@ class Blake2bTest(Blake2Test):
     oid_variant = "1"
 
 
-class Blake2sTest(Blake2Test):
+class Blake2sTest(Blake2Test, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2s
     #: Max output size (in bits)
@@ -251,7 +250,7 @@ class Blake2sTest(Blake2Test):
     oid_variant = "2"
 
 
-class Blake2OfficialTestVector(unittest.TestCase):
+class Blake2OfficialTestVector:
     def _load_tests(self, test_vector_file):
         expected = "in"
         test_vectors = []
@@ -304,7 +303,7 @@ class Blake2OfficialTestVector(unittest.TestCase):
             self.assertEqual(mac.digest(), result)
 
 
-class Blake2bOfficialTestVector(Blake2OfficialTestVector):
+class Blake2bOfficialTestVector(Blake2OfficialTestVector, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2b
     #: Hash name
@@ -313,7 +312,7 @@ class Blake2bOfficialTestVector(Blake2OfficialTestVector):
     max_bytes = 64
 
 
-class Blake2sOfficialTestVector(Blake2OfficialTestVector):
+class Blake2sOfficialTestVector(Blake2OfficialTestVector, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2s
     #: Hash name
@@ -322,7 +321,7 @@ class Blake2sOfficialTestVector(Blake2OfficialTestVector):
     max_bytes = 32
 
 
-class Blake2TestVector1(unittest.TestCase):
+class Blake2TestVector1:
     def _load_tests(self, test_vector_file):
         test_vectors = []
         with open(test_vector_file) as test_vector_fd:
@@ -364,21 +363,21 @@ class Blake2TestVector1(unittest.TestCase):
             self.assertEqual(h.digest(), tv)
 
 
-class Blake2bTestVector1(Blake2TestVector1):
+class Blake2bTestVector1(Blake2TestVector1, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2b
     #: Hash name
     name = "BLAKE2b"
 
 
-class Blake2sTestVector1(Blake2TestVector1):
+class Blake2sTestVector1(Blake2TestVector1, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2s
     #: Hash name
     name = "BLAKE2s"
 
 
-class Blake2TestVector2(unittest.TestCase):
+class Blake2TestVector2:
     def _load_tests(self, test_vector_file):
         test_vectors = []
         with open(test_vector_file) as test_vector_fd:
@@ -420,7 +419,7 @@ class Blake2TestVector2(unittest.TestCase):
             self.assertEqual(h.digest(), result)
 
 
-class Blake2bTestVector2(Blake2TestVector1):
+class Blake2bTestVector2(Blake2TestVector1, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2b
     #: Hash name
@@ -429,35 +428,10 @@ class Blake2bTestVector2(Blake2TestVector1):
     max_bytes = 64
 
 
-class Blake2sTestVector2(Blake2TestVector1):
+class Blake2sTestVector2(Blake2TestVector1, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2s
     #: Hash name
     name = "BLAKE2s"
     #: Max digest size in bytes
     max_bytes = 32
-
-
-def get_tests(config={}):
-    tests = []
-
-    tests += list_test_cases(Blake2bTest)
-    tests.append(Blake2bOfficialTestVector())
-    tests.append(Blake2bTestVector1())
-    tests.append(Blake2bTestVector2())
-
-    tests += list_test_cases(Blake2sTest)
-    tests.append(Blake2sOfficialTestVector())
-    tests.append(Blake2sTestVector1())
-    tests.append(Blake2sTestVector2())
-
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

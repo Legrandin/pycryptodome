@@ -34,7 +34,6 @@ from binascii import unhexlify
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.Cipher.test_CBC import BlockChainingTests
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
@@ -42,7 +41,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class OpenPGPTests(BlockChainingTests):
+class OpenPGPTests(BlockChainingTests, unittest.TestCase):
     aes_mode = AES.MODE_OPENPGP
     des3_mode = DES3.MODE_OPENPGP
 
@@ -202,15 +201,3 @@ class TestVectors(unittest.TestCase):
         cipher = DES3.new(key, DES3.MODE_OPENPGP, encrypted_iv)
         pt = cipher.decrypt(ciphertext)
         self.assertEqual(pt, plaintext)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(OpenPGPTests)
-    tests += list_test_cases(TestVectors)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

@@ -37,7 +37,7 @@ from Crypto.Protocol.KDF import (
     scrypt,
 )
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import slow_tests, wycheproof_warnings
 
 
 def t2b(t):
@@ -123,7 +123,9 @@ class PBKDF2_Tests(unittest.TestCase):
         def prf_SHA256(p, s):
             return HMAC.new(p, s, SHA256).digest()
 
-        for _i, v in enumerate(self._testData):
+        # Only the first vectors are fast
+        test_data = self._testData if slow_tests() else self._testData[:3]
+        for _i, v in enumerate(test_data):
             password = v[0]
             salt = t2b(v[1])
             out_len = v[2]
@@ -409,8 +411,10 @@ class scrypt_Tests(unittest.TestCase):
     )
 
     def setUp(self):
+        # Only the first vectors are fast
+        data = self.data if slow_tests() else self.data[:3]
         new_test_vectors = []
-        for tv in self.data:
+        for tv in data:
             new_tv = TestVector()
             new_tv.P = tv[0].encode("latin-1")
             new_tv.S = tv[1].encode("latin-1")
@@ -686,10 +690,7 @@ class bcrypt_Tests(unittest.TestCase):
 
 
 class TestVectorsHKDFWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._id = "None"
+    _id = "None"
 
     def add_tests(self, filename):
 
@@ -729,12 +730,12 @@ class TestVectorsHKDFWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
         self._id = "Wycheproof HKDF Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
 
         try:
@@ -750,7 +751,7 @@ class TestVectorsHKDFWycheproof(unittest.TestCase):
 
     def runTest(self):
         for tv in self.tv:
-            self.test_verify(tv)
+            self.check_verify(tv)
 
 
 def load_hash_by_name(hash_name):
@@ -830,28 +831,3 @@ def add_tests_sp800_108_counter(cls):
 
 
 add_tests_sp800_108_counter(SP800_108_Counter_Tests)
-
-
-def get_tests(config={}):
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    if not config.get("slow_tests"):
-        PBKDF2_Tests._testData = PBKDF2_Tests._testData[:3]
-        scrypt_Tests.data = scrypt_Tests.data[:3]
-
-    tests = []
-    tests += list_test_cases(PBKDF1_Tests)
-    tests += list_test_cases(PBKDF2_Tests)
-    tests += list_test_cases(S2V_Tests)
-    tests += list_test_cases(HKDF_Tests)
-    tests += [TestVectorsHKDFWycheproof(wycheproof_warnings)]
-    tests += list_test_cases(scrypt_Tests)
-    tests += list_test_cases(bcrypt_Tests)
-    tests += list_test_cases(SP800_108_Counter_Tests)
-
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

@@ -24,6 +24,9 @@
 # """Self-test suite for Crypto.Hash.RIPEMD160"""
 
 
+from Crypto.Hash import RIPEMD160
+from Crypto.SelfTest.Hash.common import make_hash_tests
+
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
     # Test vectors downloaded 2008-09-12 from
@@ -48,18 +51,4 @@ test_data = [
 ]
 
 
-def get_tests(config={}):
-    from Crypto.Hash import RIPEMD160
-
-    from .common import make_hash_tests
-
-    return make_hash_tests(RIPEMD160, "RIPEMD160", test_data, digest_size=20, oid="1.3.36.3.2.1")
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_hash_tests(RIPEMD160, "RIPEMD160", test_data, digest_size=20, oid="1.3.36.3.2.1")

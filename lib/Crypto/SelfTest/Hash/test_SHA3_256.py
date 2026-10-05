@@ -25,8 +25,8 @@ import unittest
 from binascii import hexlify
 
 from Crypto.Hash import SHA3_256 as SHA3
+from Crypto.SelfTest.Hash.common import make_hash_tests
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class APITest(unittest.TestCase):
@@ -48,11 +48,7 @@ class APITest(unittest.TestCase):
         self.assertEqual(h.digest(), dig2)
 
 
-def get_tests(config={}):
-    from .common import make_hash_tests
-
-    tests = []
-
+def _load_test_data():
     test_vectors = (
         load_test_vectors(
             ("Hash", "SHA3"), "ShortMsgKAT_SHA3-256.txt", "KAT SHA-3 256", {"len": lambda x: int(x)}
@@ -65,16 +61,9 @@ def get_tests(config={}):
         if tv.len == 0:
             tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
-
-    tests += make_hash_tests(
-        SHA3, "SHA3_256", test_data, digest_size=SHA3.digest_size, oid="2.16.840.1.101.3.4.2.8"
-    )
-    tests += list_test_cases(APITest)
-    return tests
+    return test_data
 
 
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
+TestVectors = make_hash_tests(
+    SHA3, "SHA3_256", _load_test_data(), digest_size=SHA3.digest_size, oid="2.16.840.1.101.3.4.2.8"
+)

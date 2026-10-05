@@ -229,20 +229,3 @@ class TestPBES2_IterationLimit(unittest.TestCase):
         # max_iteration_count == iteration_count → should pass
         pt = PBES2.decrypt(ct, self.passphrase, max_iteration_count=5000)
         self.assertEqual(self.ref, pt)
-
-
-def get_tests(config={}):
-    from Crypto.SelfTest.st_common import list_test_cases
-
-    listTests = []
-    listTests += list_test_cases(TestPBES2)
-    listTests += list_test_cases(TestPBES2_IterationLimit)
-    return listTests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

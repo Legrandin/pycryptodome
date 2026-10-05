@@ -3,11 +3,12 @@ import os
 import unittest
 from binascii import unhexlify
 
+import pytest
+
 from Crypto.Hash import SHA256, SHA384, SHA512
 from Crypto.Protocol import DH, HPKE
 from Crypto.Protocol.HPKE import DeserializeError
 from Crypto.PublicKey import ECC
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class HPKE_Tests(unittest.TestCase):
@@ -301,6 +302,7 @@ class HPKE_Tests(unittest.TestCase):
         self.assertEqual(pt_X1, pt)
 
 
+@pytest.mark.slow
 class HPKE_TestVectors(unittest.TestCase):
     def setUp(self):
         self.vectors = []
@@ -430,22 +432,3 @@ class HPKE_TestVectors(unittest.TestCase):
                     self.assertEqual(decrypted, plaintext, "Decryption failed")
 
             print(".", end="", flush=True)
-
-
-def get_tests(config={}):
-
-    tests = []
-    tests += list_test_cases(HPKE_Tests)
-
-    if config.get("slow_tests"):
-        tests += list_test_cases(HPKE_TestVectors)
-
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

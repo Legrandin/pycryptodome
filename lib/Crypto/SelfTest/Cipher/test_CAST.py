@@ -26,6 +26,7 @@
 import unittest
 
 from Crypto.Cipher import CAST
+from Crypto.SelfTest.Cipher.common import make_block_tests
 
 # This is a list of (plaintext, ciphertext, key) tuples.
 test_data = [
@@ -75,15 +76,4 @@ class TestOutput(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-def get_tests(config={}):
-    from .common import make_block_tests
-
-    tests = make_block_tests(CAST, "CAST", test_data)
-    tests.append(KeyLength())
-    tests.append(TestOutput())
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
+TestVectors = make_block_tests(CAST, "CAST", test_data)

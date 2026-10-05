@@ -30,7 +30,6 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.Hash import KangarooTwelve as K12
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class KangarooTwelveTest(unittest.TestCase):
@@ -486,19 +485,3 @@ class KangarooTwelveThreads(unittest.TestCase):
                 xof.update(memoryview(data)[index : index + size])
                 index += size
             self.assertEqual(xof.read(32), ref)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(KangarooTwelveTest)
-    tests += list_test_cases(KangarooTwelveTV)
-    tests += list_test_cases(KangarooTwelveThreads)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

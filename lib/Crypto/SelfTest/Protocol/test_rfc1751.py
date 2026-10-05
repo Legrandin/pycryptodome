@@ -54,11 +54,3 @@ class RFC1751Test_e2k(unittest.TestCase):
 
 
 # class RFC1751Test
-
-
-def get_tests(config={}):
-    return [RFC1751Test_k2e(), RFC1751Test_e2k()]
-
-
-if __name__ == "__main__":
-    unittest.main()

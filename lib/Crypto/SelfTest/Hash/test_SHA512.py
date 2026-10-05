@@ -26,9 +26,8 @@
 from binascii import hexlify
 
 from Crypto.Hash import SHA512
+from Crypto.SelfTest.Hash.common import make_hash_tests
 from Crypto.SelfTest.loader import load_test_vectors
-
-from .common import make_hash_tests
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
@@ -61,7 +60,7 @@ test_data_512_other = [
 ]
 
 
-def get_tests_SHA512():
+def _make_tests_SHA512():
 
     test_vectors = (
         load_test_vectors(("Hash", "SHA2"), "SHA512ShortMsg.rsp", "KAT SHA-512", {"len": lambda x: int(x)})
@@ -79,11 +78,10 @@ def get_tests_SHA512():
             tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
 
-    tests = make_hash_tests(SHA512, "SHA512", test_data, digest_size=64, oid="2.16.840.1.101.3.4.2.3")
-    return tests
+    return make_hash_tests(SHA512, "SHA512", test_data, digest_size=64, oid="2.16.840.1.101.3.4.2.3")
 
 
-def get_tests_SHA512_224():
+def _make_tests_SHA512_224():
 
     test_vectors = (
         load_test_vectors(
@@ -103,7 +101,7 @@ def get_tests_SHA512_224():
             tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
 
-    tests = make_hash_tests(
+    return make_hash_tests(
         SHA512,
         "SHA512/224",
         test_data,
@@ -111,10 +109,9 @@ def get_tests_SHA512_224():
         oid="2.16.840.1.101.3.4.2.5",
         extra_params={"truncate": "224"},
     )
-    return tests
 
 
-def get_tests_SHA512_256():
+def _make_tests_SHA512_256():
 
     test_vectors = (
         load_test_vectors(
@@ -134,7 +131,7 @@ def get_tests_SHA512_256():
             tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
 
-    tests = make_hash_tests(
+    return make_hash_tests(
         SHA512,
         "SHA512/256",
         test_data,
@@ -142,22 +139,8 @@ def get_tests_SHA512_256():
         oid="2.16.840.1.101.3.4.2.6",
         extra_params={"truncate": "256"},
     )
-    return tests
 
 
-def get_tests(config={}):
-
-    tests = []
-    tests += get_tests_SHA512()
-    tests += get_tests_SHA512_224()
-    tests += get_tests_SHA512_256()
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestSHA512 = _make_tests_SHA512()
+TestSHA512_224 = _make_tests_SHA512_224()
+TestSHA512_256 = _make_tests_SHA512_256()

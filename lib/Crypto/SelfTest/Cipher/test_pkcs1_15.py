@@ -26,7 +26,7 @@ from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
+from Crypto.SelfTest.st_common import a2b_hex, slow_tests, wycheproof_warnings
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
@@ -207,11 +207,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings, skip_slow_tests):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._skip_slow_tests = skip_slow_tests
-        self._id = "None"
+    _id = "None"
 
     def load_tests(self, filename):
 
@@ -229,7 +225,7 @@ class TestVectorsWycheproof(unittest.TestCase):
     def setUp(self):
         self.tv = []
         self.tv.extend(self.load_tests("rsa_pkcs1_2048_test.json"))
-        if not self._skip_slow_tests:
+        if slow_tests():
             self.tv.extend(self.load_tests("rsa_pkcs1_3072_test.json"))
             self.tv.extend(self.load_tests("rsa_pkcs1_4096_test.json"))
 
@@ -237,12 +233,12 @@ class TestVectorsWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_decrypt(self, tv):
+    def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt PKCS#1v1.5 Test #%s" % tv.id
         sentinel = b"\xaa" * max(3, len(tv.msg))
         cipher = PKCS.new(tv.rsa_key)
@@ -261,24 +257,4 @@ class TestVectorsWycheproof(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_decrypt(tv)
-
-
-def get_tests(config={}):
-    skip_slow_tests = not config.get("slow_tests")
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    tests = []
-    tests += list_test_cases(PKCS1_15_Tests)
-    tests += [TestVectorsWycheproof(wycheproof_warnings, skip_slow_tests)]
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+            self.check_decrypt(tv)

@@ -33,7 +33,6 @@ from binascii import hexlify, unhexlify
 
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHA256, SHAKE128
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util import Counter
 from Crypto.Util._bytes import tobytes
 
@@ -478,16 +477,3 @@ class RFC3686TestVectors(unittest.TestCase):
             cipher = AES.new(key, AES.MODE_CTR, counter=counter)
             result = cipher.encrypt(pt)
             self.assertEqual(hexlify(ct), hexlify(result))
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(CtrTests)
-    tests += list_test_cases(SP800TestVectors)
-    tests += [RFC3686TestVectors()]
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

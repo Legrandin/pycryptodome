@@ -2,12 +2,11 @@ import unittest
 from binascii import hexlify, unhexlify
 
 from Crypto.Hash import KMAC128, KMAC256
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
 
 
-class KMACTest(unittest.TestCase):
+class KMACTest:
     def new(self, **kwargs):
         return self.KMAC.new(key=b"X" * (self.minimum_key_bits // 8), **kwargs)
 
@@ -178,7 +177,7 @@ class KMACTest(unittest.TestCase):
             self.assertEqual(h1.digest(), h2.digest())
 
 
-class KMAC128Test(KMACTest):
+class KMAC128Test(KMACTest, unittest.TestCase):
     KMAC = KMAC128
 
     minimum_key_bits = 128
@@ -189,7 +188,7 @@ class KMAC128Test(KMACTest):
     oid_variant = "19"
 
 
-class KMAC256Test(KMACTest):
+class KMAC256Test(KMACTest, unittest.TestCase):
     KMAC = KMAC256
 
     minimum_key_bits = 256
@@ -318,21 +317,3 @@ class NISTExampleTestVectors(unittest.TestCase):
             h = module.new(data=data, key=key, custom=custom, mac_len=len(mac))
             mac_tag = h.digest()
             self.assertEqual(mac_tag, mac, msg=text)
-
-
-def get_tests(config={}):
-    tests = []
-
-    tests += list_test_cases(KMAC128Test)
-    tests += list_test_cases(KMAC256Test)
-    tests.append(NISTExampleTestVectors())
-
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

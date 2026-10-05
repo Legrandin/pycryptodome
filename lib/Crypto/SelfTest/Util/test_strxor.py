@@ -34,7 +34,6 @@
 import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.strxor import strxor, strxor_c
 
 
@@ -264,15 +263,3 @@ class Strxor_cTests(unittest.TestCase):
         output = bytearray(len(term1) - 1)
 
         self.assertRaises(ValueError, strxor_c, term1, 65, output=output)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(StrxorTests)
-    tests += list_test_cases(Strxor_cTests)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

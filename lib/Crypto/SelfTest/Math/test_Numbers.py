@@ -33,14 +33,26 @@
 
 """Self-test for Math.Numbers"""
 
-import sys
 import unittest
 
 from Crypto.Math._IntegerNative import IntegerNative
-from Crypto.SelfTest.st_common import list_test_cases
+
+try:
+    from Crypto.Math._IntegerGMP import IntegerGMP
+
+    _gmp_error = None
+except (ImportError, OSError) as e:
+    _gmp_error = e
+
+try:
+    from Crypto.Math._IntegerCustom import IntegerCustom
+
+    _custom_error = None
+except (ImportError, OSError) as e:
+    _custom_error = e
 
 
-class TestIntegerBase(unittest.TestCase):
+class IntegerTests:
     def setUp(self):
         raise NotImplementedError("To be implemented")
 
@@ -746,9 +758,21 @@ class TestIntegerBase(unittest.TestCase):
         self.assertRaises(ValueError, modmult, 4, 5, 4)
 
 
-class TestIntegerInt(TestIntegerBase):
+class TestIntegerInt(IntegerTests, unittest.TestCase):
     def setUp(self):
         self.Integer = IntegerNative
+
+
+@unittest.skipIf(_gmp_error, "GMP not available (%s)" % _gmp_error)
+class TestIntegerGMP(IntegerTests, unittest.TestCase):
+    def setUp(self):
+        self.Integer = IntegerGMP
+
+
+@unittest.skipIf(_custom_error, "custom modexp not available (%s)" % _custom_error)
+class TestIntegerCustomModexp(IntegerTests, unittest.TestCase):
+    def setUp(self):
+        self.Integer = IntegerCustom
 
 
 class testIntegerRandom(unittest.TestCase):
@@ -805,41 +829,3 @@ class testIntegerRandom(unittest.TestCase):
 
         self.assertRaises(ValueError, func, min_inclusive=1, max_inclusive=2, max_exclusive=3)
         self.assertRaises(ValueError, func, max_inclusive=2, max_exclusive=3)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestIntegerInt)
-
-    try:
-        from Crypto.Math._IntegerGMP import IntegerGMP
-
-        class TestIntegerGMP(TestIntegerBase):
-            def setUp(self):
-                self.Integer = IntegerGMP
-
-        tests += list_test_cases(TestIntegerGMP)
-    except (ImportError, OSError) as e:
-        if sys.platform == "win32":
-            sys.stdout.write("Skipping GMP tests on Windows\n")
-        else:
-            sys.stdout.write("Skipping GMP tests (%s)\n" % str(e))
-
-    try:
-        from Crypto.Math._IntegerCustom import IntegerCustom
-
-        class TestIntegerCustomModexp(TestIntegerBase):
-            def setUp(self):
-                self.Integer = IntegerCustom
-
-        tests += list_test_cases(TestIntegerCustomModexp)
-    except (ImportError, OSError) as e:
-        sys.stdout.write("Skipping custom modexp tests (%s)\n" % str(e))
-
-    tests += list_test_cases(testIntegerRandom)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

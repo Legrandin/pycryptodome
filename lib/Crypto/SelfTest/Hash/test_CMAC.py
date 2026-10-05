@@ -37,8 +37,9 @@ import unittest
 
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import CMAC, SHAKE128
+from Crypto.SelfTest.Hash.common import make_mac_tests
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Util._bytes import tobytes
 
 # This is a list of (key, data, result, description, module) tuples.
@@ -296,10 +297,7 @@ class MemoryViewTests(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._id = "None"
+    _id = "None"
 
     def setUp(self):
 
@@ -317,12 +315,12 @@ class TestVectorsWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_create_mac(self, tv):
+    def check_create_mac(self, tv):
         self._id = "Wycheproof MAC creation Test #" + str(tv.id)
 
         try:
@@ -335,7 +333,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(tag, tv.tag)
             self.warn(tv)
 
-    def test_verify_mac(self, tv):
+    def check_verify_mac(self, tv):
         self._id = "Wycheproof MAC verification Test #" + str(tv.id)
 
         try:
@@ -355,33 +353,9 @@ class TestVectorsWycheproof(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_create_mac(tv)
-            self.test_verify_mac(tv)
+            self.check_create_mac(tv)
+            self.check_verify_mac(tv)
 
 
-def get_tests(config={}):
-    global test_data
-    from .common import make_mac_tests
-
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    # Add new() parameters to the back of each test vector
-    params_test_data = []
-    for row in test_data:
-        t = list(row)
-        t[4] = {"ciphermod": t[4]}
-        params_test_data.append(t)
-
-    tests = make_mac_tests(CMAC, "CMAC", params_test_data)
-    tests.append(ByteArrayTests())
-    tests.append(list_test_cases(TestCMAC))
-    tests.append(MemoryViewTests())
-    tests += [TestVectorsWycheproof(wycheproof_warnings)]
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
+# Add new() parameters to the back of each test vector
+TestVectors = make_mac_tests(CMAC, "CMAC", [(*row[:4], {"ciphermod": row[4]}) for row in test_data])

@@ -24,15 +24,19 @@
 """Common functions for SelfTest modules"""
 
 import binascii
-import unittest
+
+# Options of the current test session, set from the command line by conftest.py
+options = {"slow_tests": True, "wycheproof_warnings": False}
 
 
-def list_test_cases(class_):
-    """Return a list of TestCase instances given a TestCase class
+def slow_tests():
+    """Return True if slow tests must be run"""
+    return options["slow_tests"]
 
-    This is useful when you have defined test* methods on your TestCase class.
-    """
-    return unittest.TestLoader().loadTestsFromTestCase(class_)
+
+def wycheproof_warnings():
+    """Return True if Wycheproof test vectors marked with warnings must be reported"""
+    return options["wycheproof_warnings"]
 
 
 def strip_whitespace(s):

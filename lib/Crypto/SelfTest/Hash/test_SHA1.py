@@ -25,6 +25,8 @@
 
 from binascii import hexlify
 
+from Crypto.Hash import SHA1
+from Crypto.SelfTest.Hash.common import make_hash_tests
 from Crypto.SelfTest.loader import load_test_vectors
 
 # Test vectors from various sources
@@ -43,13 +45,7 @@ test_data_various = [
 ]
 
 
-def get_tests(config={}):
-    from Crypto.Hash import SHA1
-
-    from .common import make_hash_tests
-
-    tests = []
-
+def _load_test_data():
     test_vectors = (
         load_test_vectors(("Hash", "SHA1"), "SHA1ShortMsg.rsp", "KAT SHA-1", {"len": lambda x: int(x)}) or []
     )
@@ -64,15 +60,7 @@ def get_tests(config={}):
         if tv.len == 0:
             tv.msg = b""
         test_data.append((hexlify(tv.md), tv.msg, tv.desc))
-
-    tests = make_hash_tests(SHA1, "SHA1", test_data, digest_size=20, oid="1.3.14.3.2.26")
-    return tests
+    return test_data
 
 
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_hash_tests(SHA1, "SHA1", _load_test_data(), digest_size=20, oid="1.3.14.3.2.26")

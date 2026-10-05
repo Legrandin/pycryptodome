@@ -38,11 +38,9 @@ from binascii import hexlify, unhexlify
 
 from Crypto.Cipher import AES, ChaCha20
 from Crypto.Hash import Poly1305
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.Hash.common import make_mac_tests
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
-
-from .common import make_mac_tests
 
 # This is a list of (r+s keypair, data, result, description, keywords) tuples.
 test_data_basic = [
@@ -514,16 +512,6 @@ class Poly1305AES_MC(unittest.TestCase):
         self.assertEqual("CDFA436DDD629C7DC20E1128530BAED2", auth.hexdigest().upper())
 
 
-def get_tests(config={}):
-    tests = make_mac_tests(Poly1305_Basic, "Poly1305", test_data_basic)
-    tests += make_mac_tests(Poly1305_New, "Poly1305", test_data_aes)
-    tests += make_mac_tests(Poly1305_New, "Poly1305", test_data_chacha20)
-    tests += [Poly1305AES_MC()]
-    tests += list_test_cases(Poly1305Test_AES)
-    tests += list_test_cases(Poly1305Test_ChaCha20)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
+TestVectorsBasic = make_mac_tests(Poly1305_Basic, "Poly1305", test_data_basic)
+TestVectorsAES = make_mac_tests(Poly1305_New, "Poly1305", test_data_aes)
+TestVectorsChaCha20 = make_mac_tests(Poly1305_New, "Poly1305", test_data_chacha20)

@@ -34,7 +34,6 @@ from Crypto.Math.Numbers import Integer
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccKey, EccPoint, _curves
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class TestEccPoint(unittest.TestCase):
@@ -1438,34 +1437,3 @@ class TestEccModule_P521(unittest.TestCase):
 
         self.assertRaises(ValueError, ECC.construct, curve="P-521", **coord)
         self.assertRaises(ValueError, ECC.construct, curve="P-521", d=2, **coordG)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestEccPoint)
-    tests += list_test_cases(TestEccPoint_NIST_P192)
-    tests += list_test_cases(TestEccPoint_NIST_P224)
-    tests += list_test_cases(TestEccPoint_NIST_P256)
-    tests += list_test_cases(TestEccPoint_NIST_P384)
-    tests += list_test_cases(TestEccPoint_NIST_P521)
-    tests += list_test_cases(TestEccPoint_PAI_P192)
-    tests += list_test_cases(TestEccPoint_PAI_P224)
-    tests += list_test_cases(TestEccPoint_PAI_P256)
-    tests += list_test_cases(TestEccPoint_PAI_P384)
-    tests += list_test_cases(TestEccPoint_PAI_P521)
-    tests += list_test_cases(TestEccKey_P192)
-    tests += list_test_cases(TestEccKey_P224)
-    tests += list_test_cases(TestEccKey_P256)
-    tests += list_test_cases(TestEccKey_P384)
-    tests += list_test_cases(TestEccKey_P521)
-    tests += list_test_cases(TestEccModule_P192)
-    tests += list_test_cases(TestEccModule_P224)
-    tests += list_test_cases(TestEccModule_P256)
-    tests += list_test_cases(TestEccModule_P384)
-    tests += list_test_cases(TestEccModule_P521)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

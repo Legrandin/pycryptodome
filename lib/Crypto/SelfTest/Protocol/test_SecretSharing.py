@@ -32,11 +32,10 @@
 # ===================================================================
 
 from binascii import unhexlify
-from unittest import TestCase, TestSuite, main
+from unittest import TestCase
 
 from Crypto.Hash import SHAKE128
 from Crypto.Protocol.SecretSharing import Shamir, _div_gf2, _Element, _mult_gf2
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class GF2_Tests(TestCase):
@@ -292,16 +291,3 @@ class Shamir_Tests(TestCase):
 
         shares = Shamir.split(2, 3, secret)
         self.assertRaises(ValueError, Shamir.combine, (shares[0], shares[0]))
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(GF2_Tests)
-    tests += list_test_cases(Element_Tests)
-    tests += list_test_cases(Shamir_Tests)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: TestSuite(get_tests())
-    main(defaultTest="suite")

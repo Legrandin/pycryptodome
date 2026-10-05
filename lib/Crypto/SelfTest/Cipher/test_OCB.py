@@ -34,7 +34,6 @@ from binascii import unhexlify
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.number import long_to_bytes
 
@@ -762,20 +761,3 @@ class OcbDkgTest(unittest.TestCase):
         cipher.update(A)
         C_out2, tag_out2 = cipher.encrypt_and_digest(P)
         self.assertEqual(buggy_result, C_out2 + tag_out2)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(OcbTests)
-    tests += list_test_cases(OcbFSMTests)
-    tests += list_test_cases(OcbRfc7253Test)
-    tests += list_test_cases(OcbDkgTest)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

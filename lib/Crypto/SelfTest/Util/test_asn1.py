@@ -834,26 +834,3 @@ class DerBooleanTests(unittest.TestCase):
         der = DerBoolean()
         # Payload too long
         self.assertRaises(ValueError, der.decode, b"\x01\x01\x00\xff")
-
-
-def get_tests(config={}):
-    from Crypto.SelfTest.st_common import list_test_cases
-
-    listTests = []
-    listTests += list_test_cases(DerObjectTests)
-    listTests += list_test_cases(DerIntegerTests)
-    listTests += list_test_cases(DerSequenceTests)
-    listTests += list_test_cases(DerOctetStringTests)
-    listTests += list_test_cases(DerNullTests)
-    listTests += list_test_cases(DerObjectIdTests)
-    listTests += list_test_cases(DerBitStringTests)
-    listTests += list_test_cases(DerSetOfTests)
-    listTests += list_test_cases(DerBooleanTests)
-    return listTests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

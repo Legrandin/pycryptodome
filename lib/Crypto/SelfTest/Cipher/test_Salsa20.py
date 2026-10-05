@@ -26,9 +26,7 @@
 import unittest
 
 from Crypto.Cipher import Salsa20
-from Crypto.SelfTest.st_common import list_test_cases
-
-from .common import make_stream_tests
+from Crypto.SelfTest.Cipher.common import make_stream_tests
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]])
 # tuples.
@@ -347,21 +345,4 @@ class TestOutput(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-def get_tests(config={}):
-    tests = make_stream_tests(Salsa20, "Salsa20", test_data)
-    tests.append(KeyLength())
-    tests += list_test_cases(NonceTests)
-    tests.append(ByteArrayTest())
-    tests.append(MemoryviewTest())
-    tests.append(TestOutput())
-
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_stream_tests(Salsa20, "Salsa20", test_data)

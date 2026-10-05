@@ -8,7 +8,7 @@ You install PyCryptodome with::
 All modules are installed under the ``Crypto`` package.
 You can test everything is right with::
 
-    pip install pycryptodome-test-vectors
+    pip install pytest pycryptodome-test-vectors
     python -m Crypto.SelfTest
 
 One must avoid having both PyCrypto and PyCryptodome installed
@@ -30,14 +30,14 @@ For Python 3.x::
 
         $ sudo apt-get install build-essential python3-dev
         $ pip install pycryptodome
-        $ pip install pycryptodome-test-vectors
+        $ pip install pytest pycryptodome-test-vectors
         $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
         $ sudo apt-get install build-essential pypy-dev
         $ pip install pycryptodome
-        $ pip install pycryptodome-test-vectors
+        $ pip install pytest pycryptodome-test-vectors
         $ pypy -m Crypto.SelfTest
 
 Compiling in Linux Fedora
@@ -47,14 +47,14 @@ For Python 3.x::
 
         $ sudo yum install gcc gmp python3-devel
         $ pip install pycryptodome
-        $ pip install pycryptodome-test-vectors
+        $ pip install pytest pycryptodome-test-vectors
         $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
         $ sudo yum install gcc gmp pypy-devel
         $ pip install pycryptodome
-        $ pip install pycryptodome-test-vectors
+        $ pip install pytest pycryptodome-test-vectors
         $ pypy -m Crypto.SelfTest
 
 
@@ -75,7 +75,7 @@ components freely made available by Microsoft.
 
 #. To make sure everything work fine, run the test suite::
 
-        > pip install pycryptodome-test-vectors
+        > pip install pytest pycryptodome-test-vectors
         > python -m Crypto.SelfTest
 
 Documentation

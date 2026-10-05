@@ -455,16 +455,3 @@ class PKCS8_Decrypt(unittest.TestCase):
         botan_pbkdf2_der = txt2bin(botan_pbkdf2)
         key2 = PKCS8.unwrap(botan_pbkdf2_der, b"your_password")
         self.assertEqual(key1, key2)
-
-
-def get_tests(config={}):
-    from Crypto.SelfTest.st_common import list_test_cases
-
-    listTests = []
-    listTests += list_test_cases(PKCS8_Decrypt)
-    return listTests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

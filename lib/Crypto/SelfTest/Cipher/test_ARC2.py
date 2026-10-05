@@ -26,6 +26,7 @@
 import unittest
 
 from Crypto.Cipher import ARC2
+from Crypto.SelfTest.Cipher.common import make_block_tests
 
 # This is a list of (plaintext, ciphertext, key[, description[, extra_params]]) tuples.
 test_data = [
@@ -153,23 +154,4 @@ class TestOutput(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-def get_tests(config={}):
-    from Crypto.Cipher import ARC2
-
-    from .common import make_block_tests
-
-    tests = make_block_tests(ARC2, "ARC2", test_data)
-    tests.append(BufferOverflowTest())
-    tests.append(KeyLength())
-    tests += [TestOutput()]
-
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_block_tests(ARC2, "ARC2", test_data)

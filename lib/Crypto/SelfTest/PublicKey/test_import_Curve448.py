@@ -10,7 +10,6 @@ from unittest import SkipTest
 
 from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import ECC
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.asn1 import DerBitString, DerSequence
 
 try:
@@ -327,23 +326,3 @@ class TestImport_Curve448_Weak(unittest.TestCase):
             encoded = weak_key.export_key(format="PEM")
 
             self.assertRaises(ValueError, ECC.import_key, encoded)
-
-
-def get_tests(config={}):
-    tests = []
-    try:
-        tests += list_test_cases(TestImport)
-        tests += list_test_cases(TestImport_Curve448)
-        tests += list_test_cases(TestExport_Curve448)
-        tests += list_test_cases(TestImport_Curve448_Weak)
-    except SkipTest:
-        pass
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suit():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

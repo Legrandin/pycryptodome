@@ -27,7 +27,7 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.Cipher import ARC4
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.Cipher.common import make_stream_tests
 
 # This is a list of (plaintext, ciphertext, key[, description]) tuples.
 test_data = [
@@ -453,19 +453,4 @@ class KeyLength(unittest.TestCase):
         self.assertRaises(ValueError, ARC4.new, b"\x00" * 257)
 
 
-def get_tests(config={}):
-    from .common import make_stream_tests
-
-    tests = make_stream_tests(ARC4, "ARC4", test_data)
-    tests += list_test_cases(RFC6229_Tests)
-    tests += list_test_cases(Drop_Tests)
-    tests.append(KeyLength())
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
+TestVectors = make_stream_tests(ARC4, "ARC4", test_data)

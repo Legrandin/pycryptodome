@@ -23,6 +23,9 @@
 
 """Self-test suite for Crypto.Hash.MD2"""
 
+from Crypto.Hash import MD2
+from Crypto.SelfTest.Hash.common import make_hash_tests
+
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
     # Test vectors from RFC 1319
@@ -44,18 +47,4 @@ test_data = [
 ]
 
 
-def get_tests(config={}):
-    from Crypto.Hash import MD2
-
-    from .common import make_hash_tests
-
-    return make_hash_tests(MD2, "MD2", test_data, digest_size=16, oid="1.2.840.113549.2.2")
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_hash_tests(MD2, "MD2", test_data, digest_size=16, oid="1.2.840.113549.2.2")

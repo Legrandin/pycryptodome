@@ -25,7 +25,6 @@
 
 import unittest
 
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util import number
 from Crypto.Util.number import long_to_bytes
 
@@ -191,17 +190,3 @@ class LongTests(unittest.TestCase):
 
     def test_err1(self):
         self.assertRaises(ValueError, long_to_bytes, -1)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(MiscTests)
-    tests += list_test_cases(LongTests)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

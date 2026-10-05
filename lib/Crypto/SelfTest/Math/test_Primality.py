@@ -35,6 +35,8 @@
 
 import unittest
 
+# test_probable_prime() is not imported by name, otherwise pytest would collect it as a test
+from Crypto.Math import Primality
 from Crypto.Math.Primality import (
     COMPOSITE,
     PROBABLY_PRIME,
@@ -42,9 +44,7 @@ from Crypto.Math.Primality import (
     generate_probable_safe_prime,
     lucas_test,
     miller_rabin_test,
-    test_probable_prime,
 )
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class TestPrimality(unittest.TestCase):
@@ -105,7 +105,7 @@ class TestPrimality(unittest.TestCase):
             2**521 - 1,
         )
         for p in primes:
-            self.assertEqual(test_probable_prime(p), PROBABLY_PRIME)
+            self.assertEqual(Primality.test_probable_prime(p), PROBABLY_PRIME)
 
         not_primes = (
             4754868377601046732119933839981363081972014948522510826417784001,
@@ -113,12 +113,12 @@ class TestPrimality(unittest.TestCase):
             260849323075371835669784094383812120359260783810157225730623388382401,
         )
         for np in not_primes:
-            self.assertEqual(test_probable_prime(np), COMPOSITE)
+            self.assertEqual(Primality.test_probable_prime(np), COMPOSITE)
 
         from Crypto.Util.number import sieve_base
 
         for p in sieve_base[:100]:
-            res = test_probable_prime(p)
+            res = Primality.test_probable_prime(p)
             self.assertEqual(res, PROBABLY_PRIME)
 
     def test_generate_prime_bit_size(self):
@@ -136,14 +136,3 @@ class TestPrimality(unittest.TestCase):
     def test_generate_safe_prime(self):
         p = generate_probable_safe_prime(exact_bits=161)
         self.assertEqual(p.size_in_bits(), 161)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestPrimality)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

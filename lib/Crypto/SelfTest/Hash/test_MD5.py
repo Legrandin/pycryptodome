@@ -25,7 +25,10 @@
 
 import unittest
 
+import pytest
+
 from Crypto.Hash import MD5
+from Crypto.SelfTest.Hash.common import make_hash_tests
 
 # This is a list of (expected_result, input[, description]) tuples.
 test_data = [
@@ -51,6 +54,7 @@ test_data = [
 ]
 
 
+@pytest.mark.slow
 class Md5IterTest(unittest.TestCase):
     def runTest(self):
         message = b"\x00" * 16
@@ -68,19 +72,4 @@ class Md5IterTest(unittest.TestCase):
         self.assertEqual(h.hexdigest(), result2)
 
 
-def get_tests(config={}):
-    from .common import make_hash_tests
-
-    tests = make_hash_tests(MD5, "MD5", test_data, digest_size=16, oid="1.2.840.113549.2.5")
-    if config.get("slow_tests"):
-        tests += [Md5IterTest()]
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_hash_tests(MD5, "MD5", test_data, digest_size=16, oid="1.2.840.113549.2.5")

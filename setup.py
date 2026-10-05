@@ -142,24 +142,20 @@ class TestCommand(Command):
             from Crypto import SelfTest
             from Crypto.Math import Numbers
 
-            moduleObj = None
+            full_module = None
             if self.module:
                 if self.module.count(".") == 0:
                     # Test a whole a sub-package
                     full_module = "Crypto.SelfTest." + self.module
-                    module_name = self.module
                 else:
                     # Test only a module
                     # Assume only one dot is present
                     comps = self.module.split(".")
-                    module_name = "test_" + comps[1]
-                    full_module = "Crypto.SelfTest." + comps[0] + "." + module_name
-                # Import sub-package or module
-                moduleObj = __import__(full_module, globals(), locals(), module_name)
+                    full_module = "Crypto.SelfTest." + comps[0] + ".test_" + comps[1]
 
             print("Crypto.Math implementation:", str(Numbers._implementation))
 
-            SelfTest.run(module=moduleObj, verbosity=self.verbose, stream=sys.stdout, config=self.config)
+            SelfTest.run(module=full_module, verbosity=self.verbose, config=self.config)
         finally:
             # Restore sys.path
             sys.path[:] = old_path
@@ -387,6 +383,9 @@ setup(
     packages=packages,
     package_dir={"": "lib"},
     package_data=package_data,
+    extras_require={
+        "test": ["pytest", "pycryptodome-test-vectors"],
+    },
     cmdclass={
         "build_ext": PCTBuildExt,
         "build_py": PCTBuildPy,

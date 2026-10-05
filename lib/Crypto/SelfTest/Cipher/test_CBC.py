@@ -31,10 +31,11 @@
 import unittest
 from binascii import unhexlify
 
+import pytest
+
 from Crypto.Cipher import AES, DES, DES3
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
@@ -42,7 +43,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class BlockChainingTests(unittest.TestCase):
+class BlockChainingTests:
     key_128 = get_tag_random("key_128", 16)
     key_192 = get_tag_random("key_192", 24)
     iv_128 = get_tag_random("iv_128", 16)
@@ -296,12 +297,12 @@ class BlockChainingTests(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-class CbcTests(BlockChainingTests):
+class CbcTests(BlockChainingTests, unittest.TestCase):
     aes_mode = AES.MODE_CBC
     des3_mode = DES3.MODE_CBC
 
 
-class NistBlockChainingVectors(unittest.TestCase):
+class NistBlockChainingVectors:
     def _do_kat_aes_test(self, file_name):
 
         test_vectors = load_test_vectors(
@@ -394,7 +395,8 @@ class NistBlockChainingVectors(unittest.TestCase):
                 raise AssertionError()
 
 
-class NistCbcVectors(NistBlockChainingVectors):
+@pytest.mark.slow
+class NistCbcVectors(NistBlockChainingVectors, unittest.TestCase):
     aes_mode = AES.MODE_CBC
     des_mode = DES.MODE_CBC
     des3_mode = DES3.MODE_CBC
@@ -542,17 +544,3 @@ class SP800TestVectors(unittest.TestCase):
         self.assertEqual(cipher.encrypt(plaintext), ciphertext)
         cipher = AES.new(key, AES.MODE_CBC, iv)
         self.assertEqual(cipher.decrypt(ciphertext), plaintext)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(CbcTests)
-    if config.get("slow_tests"):
-        tests += list_test_cases(NistCbcVectors)
-    tests += list_test_cases(SP800TestVectors)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

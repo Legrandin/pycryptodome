@@ -1,8 +1,12 @@
+import sys
 import unittest
+
+import pytest
 
 from Crypto.Cipher import AES
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+
+pytestmark = pytest.mark.skipif(sys.version_info < (3, 9), reason="requires Python 3.9")
 
 
 class KW_Tests(unittest.TestCase):
@@ -169,20 +173,3 @@ class KWP_Wycheproof(unittest.TestCase):
                     continue
 
                 self.assertEqual(pt, vector.msg)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(KW_Tests)
-    tests += list_test_cases(KWP_Tests)
-    tests += list_test_cases(KW_Wycheproof)
-    tests += list_test_cases(KWP_Wycheproof)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

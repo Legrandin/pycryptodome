@@ -32,10 +32,13 @@
 import unittest
 from binascii import unhexlify
 
+import pytest
+
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256, SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import wycheproof_warnings
+from Crypto.Util import _cpu_features
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor
 
@@ -727,16 +730,15 @@ class TestVectorsGueronKrasnov(unittest.TestCase):
         self.assertEqual(digest, digest2)
 
 
+@pytest.mark.slow
 class NISTTestVectorsGCM(unittest.TestCase):
-    def __init__(self, a):
-        self.use_clmul = True
-        unittest.TestCase.__init__(self, a)
+    use_clmul = True
 
 
+@pytest.mark.slow
+@unittest.skipUnless(_cpu_features.have_clmul(), "PCLMULQDQ not available")
 class NISTTestVectorsGCM_no_clmul(unittest.TestCase):
-    def __init__(self, a):
-        self.use_clmul = False
-        unittest.TestCase.__init__(self, a)
+    use_clmul = False
 
 
 test_vectors_nist = (
@@ -770,11 +772,8 @@ for idx, tv in enumerate(test_vectors_nist):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings, **extra_params):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._extra_params = extra_params
-        self._id = "None"
+    _extra_params: dict = {}
+    _id = "None"
 
     def setUp(self):
 
@@ -792,12 +791,12 @@ class TestVectorsWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_encrypt(self, tv):
+    def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt GCM Test #" + str(tv.id)
 
         try:
@@ -814,7 +813,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(tag, tv.tag)
             self.warn(tv)
 
-    def test_decrypt(self, tv):
+    def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt GCM Test #" + str(tv.id)
 
         try:
@@ -834,7 +833,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(pt, tv.msg)
             self.warn(tv)
 
-    def test_corrupt_decrypt(self, tv):
+    def check_corrupt_decrypt(self, tv):
         self._id = "Wycheproof Corrupt Decrypt GCM Test #" + str(tv.id)
         if len(tv.iv) == 0 or len(tv.ct) < 1:
             return
@@ -846,15 +845,18 @@ class TestVectorsWycheproof(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_encrypt(tv)
-            self.test_decrypt(tv)
-            self.test_corrupt_decrypt(tv)
+            self.check_encrypt(tv)
+            self.check_decrypt(tv)
+            self.check_corrupt_decrypt(tv)
+
+
+@unittest.skipUnless(_cpu_features.have_clmul(), "PCLMULQDQ not available")
+class TestVectorsWycheproofNoClmul(TestVectorsWycheproof):
+    _extra_params = {"use_clmul": False}
 
 
 class TestVariableLength(unittest.TestCase):
-    def __init__(self, **extra_params):
-        unittest.TestCase.__init__(self)
-        self._extra_params = extra_params
+    _extra_params: dict = {}
 
     def runTest(self):
         key = b"0" * 16
@@ -871,35 +873,6 @@ class TestVariableLength(unittest.TestCase):
         self.assertEqual(h.hexdigest(), "7b7eb1ffbe67a2e53a912067c0ec8e62ebc7ce4d83490ea7426941349811bdf4")
 
 
-def get_tests(config={}):
-    from Crypto.Util import _cpu_features
-
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    tests = []
-    tests += list_test_cases(GcmTests)
-    tests += list_test_cases(GcmFSMTests)
-    tests += [TestVectors()]
-    tests += [TestVectorsWycheproof(wycheproof_warnings)]
-    tests += list_test_cases(TestVectorsGueronKrasnov)
-    tests += [TestVariableLength()]
-    if config.get("slow_tests"):
-        tests += list_test_cases(NISTTestVectorsGCM)
-
-    if _cpu_features.have_clmul():
-        tests += [TestVectorsWycheproof(wycheproof_warnings, use_clmul=False)]
-        tests += [TestVariableLength(use_clmul=False)]
-        if config.get("slow_tests"):
-            tests += list_test_cases(NISTTestVectorsGCM_no_clmul)
-    else:
-        print("Skipping test of PCLMULDQD in AES GCM")
-
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
+@unittest.skipUnless(_cpu_features.have_clmul(), "PCLMULQDQ not available")
+class TestVariableLengthNoClmul(TestVariableLength):
+    _extra_params = {"use_clmul": False}

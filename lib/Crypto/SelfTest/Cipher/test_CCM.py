@@ -35,7 +35,7 @@ from Crypto.Cipher import AES
 from Crypto.Cipher._mode_ccm import CCMMessageTooLongError
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor
 
@@ -863,11 +863,8 @@ class TestVectors(unittest.TestCase):
 
 
 class TestVectorsWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings, **extra_params):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._extra_params = extra_params
-        self._id = "None"
+    _extra_params: dict = {}
+    _id = "None"
 
     def setUp(self):
 
@@ -885,12 +882,12 @@ class TestVectorsWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_encrypt(self, tv):
+    def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt CCM Test #" + str(tv.id)
 
         try:
@@ -911,7 +908,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(tag, tv.tag)
             self.warn(tv)
 
-    def test_decrypt(self, tv):
+    def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt CCM Test #" + str(tv.id)
 
         try:
@@ -935,7 +932,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             self.assertEqual(pt, tv.msg)
             self.warn(tv)
 
-    def test_corrupt_decrypt(self, tv):
+    def check_corrupt_decrypt(self, tv):
         self._id = "Wycheproof Corrupt Decrypt CCM Test #" + str(tv.id)
         if len(tv.iv) not in range(7, 13 + 1, 2) or len(tv.ct) == 0:
             return
@@ -947,26 +944,6 @@ class TestVectorsWycheproof(unittest.TestCase):
     def runTest(self):
 
         for tv in self.tv:
-            self.test_encrypt(tv)
-            self.test_decrypt(tv)
-            self.test_corrupt_decrypt(tv)
-
-
-def get_tests(config={}):
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    tests = []
-    tests += list_test_cases(CcmTests)
-    tests += list_test_cases(CcmFSMTests)
-    tests += [TestVectors()]
-    tests += [TestVectorsWycheproof(wycheproof_warnings)]
-
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
+            self.check_encrypt(tv)
+            self.check_decrypt(tv)
+            self.check_corrupt_decrypt(tv)

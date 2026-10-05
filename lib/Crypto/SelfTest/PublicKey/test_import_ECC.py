@@ -37,7 +37,6 @@ from binascii import unhexlify
 from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import _import_rfc5915_der
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.asn1 import DerBitString, DerSequence
 from Crypto.Util.number import bytes_to_long
 
@@ -49,7 +48,7 @@ except ImportError:
     test_vectors_available = False
 
 
-class MissingTestVectorException(ValueError):
+class MissingTestVectorException(unittest.SkipTest):
     pass
 
 
@@ -2809,33 +2808,3 @@ class TestExport_Ed448(unittest.TestCase):
 
         # No private keys with OpenSSH
         self.assertRaises(ValueError, self.ref_private.export_key, format="OpenSSH", passphrase="secret")
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestImport)
-    try:
-        tests += list_test_cases(TestImport_P192)
-        tests += list_test_cases(TestImport_P224)
-        tests += list_test_cases(TestImport_P256)
-        tests += list_test_cases(TestImport_P384)
-        tests += list_test_cases(TestImport_P521)
-        tests += list_test_cases(TestImport_Ed25519)
-        tests += list_test_cases(TestImport_Ed448)
-
-        tests += list_test_cases(TestExport_P192)
-        tests += list_test_cases(TestExport_P224)
-        tests += list_test_cases(TestExport_P256)
-        tests += list_test_cases(TestExport_P384)
-        tests += list_test_cases(TestExport_P521)
-        tests += list_test_cases(TestExport_Ed25519)
-        tests += list_test_cases(TestExport_Ed448)
-
-    except MissingTestVectorException:
-        pass
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

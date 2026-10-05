@@ -2,11 +2,10 @@ import unittest
 from binascii import hexlify, unhexlify
 
 from Crypto.Hash import TupleHash128, TupleHash256
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
-class TupleHashTest(unittest.TestCase):
+class TupleHashTest:
     def new(self, *args, **kwargs):
         return self.TupleHash.new(*args, **kwargs)
 
@@ -150,7 +149,7 @@ class TupleHashTest(unittest.TestCase):
             self.assertEqual(h1.digest(), h2.digest())
 
 
-class TupleHash128Test(TupleHashTest):
+class TupleHash128Test(TupleHashTest, unittest.TestCase):
     TupleHash = TupleHash128
 
     minimum_bytes = 8
@@ -160,7 +159,7 @@ class TupleHash128Test(TupleHashTest):
     default_bits = 512
 
 
-class TupleHash256Test(TupleHashTest):
+class TupleHash256Test(TupleHashTest, unittest.TestCase):
     TupleHash = TupleHash256
 
     minimum_bytes = 8
@@ -277,21 +276,3 @@ class NISTExampleTestVectors(unittest.TestCase):
 
             self.assertEqual(hd1.digest(), digest, msg=text)
             self.assertEqual(hd2.digest(), digest, msg=text)
-
-
-def get_tests(config={}):
-    tests = []
-
-    tests += list_test_cases(TupleHash128Test)
-    tests += list_test_cases(TupleHash256Test)
-    tests.append(NISTExampleTestVectors())
-
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

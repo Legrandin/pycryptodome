@@ -1,1 +1,2 @@
+pytest
 pycryptodome-test-vectors==1.0.22

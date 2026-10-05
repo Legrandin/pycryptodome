@@ -32,7 +32,6 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.Cipher import ChaCha20
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class ChaCha20Test(unittest.TestCase):
@@ -506,22 +505,3 @@ class TestOutput(unittest.TestCase):
 
         cipher = ChaCha20.new(key=key, nonce=nonce)
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(ChaCha20Test)
-    tests += list_test_cases(XChaCha20Test)
-    tests.append(ChaCha20_AGL_NIR())
-    tests.append(ByteArrayTest())
-    tests.append(MemoryviewTest())
-    tests.append(TestOutput())
-
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

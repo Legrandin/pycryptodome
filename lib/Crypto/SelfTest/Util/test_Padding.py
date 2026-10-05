@@ -34,7 +34,6 @@
 import unittest
 from binascii import unhexlify as uh
 
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.Padding import pad, unpad
 
 
@@ -138,16 +137,3 @@ class ISO7816_Tests(unittest.TestCase):
     def testn1(self):
         self.assertRaises(ValueError, unpad, b"123456\x81", 4, "iso7816")
         self.assertRaises(ValueError, unpad, b"", 4, "iso7816")
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(PKCS7_Tests)
-    tests += list_test_cases(X923_Tests)
-    tests += list_test_cases(ISO7816_Tests)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

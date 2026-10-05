@@ -9,6 +9,8 @@ Breaking changes
 * Remove support for Python 2.7. The minimum supported version is now Python 3.8.
 * The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released.
   The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
+* The self-tests are now run by ``pytest``, which must be installed for
+  ``python -m Crypto.SelfTest`` to work.
 
 Resolved issues
 ---------------

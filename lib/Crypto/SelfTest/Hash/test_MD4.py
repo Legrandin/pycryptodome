@@ -23,6 +23,9 @@
 
 """Self-test suite for Crypto.Hash.MD4"""
 
+from Crypto.Hash import MD4
+from Crypto.SelfTest.Hash.common import make_hash_tests
+
 __revision__ = "$Id$"
 
 
@@ -47,18 +50,4 @@ test_data = [
 ]
 
 
-def get_tests(config={}):
-    from Crypto.Hash import MD4
-
-    from .common import make_hash_tests
-
-    return make_hash_tests(MD4, "MD4", test_data, digest_size=16, oid="1.2.840.113549.2.4")
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_hash_tests(MD4, "MD4", test_data, digest_size=16, oid="1.2.840.113549.2.4")

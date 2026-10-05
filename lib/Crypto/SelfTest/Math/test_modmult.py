@@ -36,7 +36,6 @@
 import unittest
 
 from Crypto.Math._IntegerCustom import _raw_montgomery
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._raw_api import c_size_t, create_string_buffer, get_raw_buffer
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
@@ -94,17 +93,3 @@ class TestModMultiply(unittest.TestCase):
         expect_int = 0x8EDF4071F78E3D7BA622CDBBBEF74612E301D69186776AE6BF87FF38C320D9AEBAA64889C2F67DE2324E6BCCD2B10AD89E91FD21BA4BB523904D033EFF5E70E62F01A84F41FA90A4F248EF249B82E1D2729253FDFC2A3B5B740198123DF8BFBF7057D03E15244AD5F26EB9A099763B5C5972121EC076B0BF899F59BD95F7CC129ABDDCCF24217BCE52CA0F3A44C9CCC504765DBB89734205F3AE6A8CC560494A60EA84B27D8E00FA24BDD5B4F1D4232EDB61E47D3D984C1FA50A3820A2E580FBC3FC8BC11E99DF53B9EFADF5A40AC75D384E400905AA6F1D88950CD53B1C54DC2222115AD84A27260FA4D978155C1434C551DE1EE7361A17A2F79D4388F78A5D
         res = bytes_to_long(monty_mult(t1, t1, modulus1))
         self.assertEqual(res, expect_int)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestModMultiply)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

@@ -25,7 +25,7 @@
 
 import unittest
 
-from Crypto.SelfTest.st_common import a2b_hex, b2a_hex, list_test_cases
+from Crypto.SelfTest.st_common import a2b_hex, b2a_hex
 
 
 def _sws(s):
@@ -230,17 +230,3 @@ class DSADomainTest(unittest.TestCase):
         p, q, g = self._get_weak_domain()
         y = pow(g, 89, p)
         self.assertRaises(ValueError, DSA.construct, (y, g, p, q))
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(DSATest)
-    tests += list_test_cases(DSADomainTest)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

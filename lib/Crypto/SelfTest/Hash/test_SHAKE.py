@@ -34,11 +34,10 @@ import unittest
 
 from Crypto.Hash import SHAKE128, SHAKE256
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
-class SHAKETest(unittest.TestCase):
+class SHAKETest:
     def test_new_positive(self):
 
         xof1 = self.shake.new()
@@ -85,11 +84,11 @@ class SHAKETest(unittest.TestCase):
         self.assertEqual(x1, x2)
 
 
-class SHAKE128Test(SHAKETest):
+class SHAKE128Test(SHAKETest, unittest.TestCase):
     shake = SHAKE128
 
 
-class SHAKE256Test(SHAKETest):
+class SHAKE256Test(SHAKETest, unittest.TestCase):
     shake = SHAKE256
 
 
@@ -137,18 +136,3 @@ for idx, tv in enumerate(test_vectors_256):
         self.assertEqual(digest, result)
 
     setattr(SHAKEVectors, "test_256_%d" % idx, new_test)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(SHAKE128Test)
-    tests += list_test_cases(SHAKE256Test)
-    tests += list_test_cases(SHAKEVectors)
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

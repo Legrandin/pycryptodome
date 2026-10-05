@@ -35,10 +35,12 @@ import re
 import unittest
 from binascii import hexlify, unhexlify
 
+import pytest
+
 from Crypto.Hash import SHA1, SHA3_224, SHA3_256, SHA3_384, SHA3_512, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import DSA, ECC
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import list_test_cases
+from Crypto.SelfTest.st_common import slow_tests, wycheproof_warnings
 from Crypto.Signature import DSS
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -148,6 +150,7 @@ class FIPS_DSA_Tests(unittest.TestCase):
         self.assertTrue("Private key is needed" in msg)
 
 
+@pytest.mark.slow
 class FIPS_DSA_Tests_KAT(unittest.TestCase):
     pass
 
@@ -310,6 +313,7 @@ hVvwpph00t5f4QPFAR5u8sQtzVDV09Kfma5uuiyAySRPTFQi8Jef8MO6Xg==
         self.assertRaises(ValueError, signer.verify, hash_obj, signature)
 
 
+@pytest.mark.slow
 class FIPS_ECDSA_Tests_KAT(unittest.TestCase):
     pass
 
@@ -1201,12 +1205,7 @@ def get_hash_module(hash_name):
 
 
 class TestVectorsDSAWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings, slow_tests):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._slow_tests = slow_tests
-        self._id = "None"
-        self.tv = []
+    _id = "None"
 
     def setUp(self):
 
@@ -1228,18 +1227,18 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
             "Wycheproof DSA signature",
             group_tag={"key": filter_dsa, "hash_module": filter_sha, "sig_type": filter_type},
         )
-        self.tv += result
+        self.tv = result
 
     def shortDescription(self):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
         self._id = "Wycheproof DSA Test #" + str(tv.id)
 
         hashed_msg = tv.hash_module.new(tv.msg)
@@ -1256,15 +1255,11 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
 
     def runTest(self):
         for tv in self.tv:
-            self.test_verify(tv)
+            self.check_verify(tv)
 
 
 class TestVectorsECDSAWycheproof(unittest.TestCase):
-    def __init__(self, wycheproof_warnings, slow_tests):
-        unittest.TestCase.__init__(self)
-        self._wycheproof_warnings = wycheproof_warnings
-        self._slow_tests = slow_tests
-        self._id = "None"
+    _id = "None"
 
     def add_tests(self, filename):
 
@@ -1315,7 +1310,7 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         self.tv = []
         self.add_tests("ecdsa_secp224r1_sha224_p1363_test.json")
         self.add_tests("ecdsa_secp224r1_sha224_test.json")
-        if self._slow_tests:
+        if slow_tests():
             self.add_tests("ecdsa_secp224r1_sha256_p1363_test.json")
             self.add_tests("ecdsa_secp224r1_sha256_test.json")
             self.add_tests("ecdsa_secp224r1_sha3_224_test.json")
@@ -1329,14 +1324,14 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
             self.add_tests("ecdsa_secp256r1_sha3_512_test.json")
             self.add_tests("ecdsa_secp256r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp256r1_sha512_test.json")
-        if self._slow_tests:
+        if slow_tests():
             self.add_tests("ecdsa_secp384r1_sha3_384_test.json")
             self.add_tests("ecdsa_secp384r1_sha3_512_test.json")
             self.add_tests("ecdsa_secp384r1_sha384_p1363_test.json")
             self.add_tests("ecdsa_secp384r1_sha384_test.json")
             self.add_tests("ecdsa_secp384r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp384r1_sha512_test.json")
-        if self._slow_tests:
+        if slow_tests():
             self.add_tests("ecdsa_secp521r1_sha3_512_test.json")
             self.add_tests("ecdsa_secp521r1_sha512_p1363_test.json")
         self.add_tests("ecdsa_secp521r1_sha512_test.json")
@@ -1347,12 +1342,12 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
         return self._id
 
     def warn(self, tv):
-        if tv.warning and self._wycheproof_warnings:
+        if tv.warning and wycheproof_warnings():
             import warnings
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
         self._id = "Wycheproof ECDSA Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
 
         # Skip tests with unsupported curves
@@ -1373,32 +1368,4 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
 
     def runTest(self):
         for tv in self.tv:
-            self.test_verify(tv)
-
-
-def get_tests(config={}):
-    wycheproof_warnings = config.get("wycheproof_warnings")
-
-    tests = []
-    tests += list_test_cases(FIPS_DSA_Tests)
-    tests += list_test_cases(FIPS_ECDSA_Tests)
-    tests += list_test_cases(Det_DSA_Tests)
-    tests += list_test_cases(Det_ECDSA_Tests)
-
-    slow_tests = config.get("slow_tests")
-    if slow_tests:
-        tests += list_test_cases(FIPS_DSA_Tests_KAT)
-        tests += list_test_cases(FIPS_ECDSA_Tests_KAT)
-
-    tests += [TestVectorsDSAWycheproof(wycheproof_warnings, slow_tests)]
-    tests += [TestVectorsECDSAWycheproof(wycheproof_warnings, slow_tests)]
-
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
+            self.check_verify(tv)

@@ -35,7 +35,6 @@ from Crypto.Hash import SHAKE128
 from Crypto.Math.Numbers import Integer
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccKey, EccXPoint, _curves
-from Crypto.SelfTest.st_common import list_test_cases
 
 # Test vectors for scalar multiplication using point with X=9 as base
 # generated with nickovs' Python-only code https://gist.github.com/nickovs/cc3c22d15f239a2640c185035c06f8a3
@@ -270,19 +269,3 @@ class TestEccModule_Curve25519(unittest.TestCase):
         self.assertRaises(ValueError, ECC.construct, curve="Curve25519", point_x=p * 2 - 1)
         self.assertRaises(ValueError, ECC.construct, curve="Curve25519", point_x=p * 2)
         self.assertRaises(ValueError, ECC.construct, curve="Curve25519", point_x=p * 2 + 1)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestEccPoint_Curve25519)
-    tests += list_test_cases(TestEccKey_Curve25519)
-    tests += list_test_cases(TestEccModule_Curve25519)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

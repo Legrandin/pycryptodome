@@ -28,7 +28,7 @@ from unittest import SkipTest
 
 from Crypto.IO import PEM
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
+from Crypto.SelfTest.st_common import a2b_hex
 from Crypto.Util import asn1
 from Crypto.Util.number import inverse
 
@@ -647,19 +647,3 @@ class TestImport_2048(unittest.TestCase):
         key_ref = RSA.import_key(key_file_ref)
         key = RSA.import_key(key_file, b"secret")
         self.assertEqual(key_ref, key)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(ImportKeyTests)
-    tests += list_test_cases(ImportKeyFromX509Cert)
-    tests += list_test_cases(TestImport_2048)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

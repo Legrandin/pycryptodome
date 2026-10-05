@@ -25,7 +25,6 @@ from binascii import unhexlify
 from io import BytesIO
 
 from Crypto.PublicKey import DSA
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
@@ -538,19 +537,3 @@ c4:ee:bd:e3:82:e5:9a:2e:3e:b5:e8:01:b5:1d:63:
             comp = int(re.sub("[^0-9a-f]", "", comp_str), 16)
             self.assertEqual(getattr(key, comp_name), comp)
         self.assertFalse(key.has_private())
-
-
-if __name__ == "__main__":
-    unittest.main()
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(ImportKeyTests)
-    tests += list_test_cases(ImportKeyFromX509Cert)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

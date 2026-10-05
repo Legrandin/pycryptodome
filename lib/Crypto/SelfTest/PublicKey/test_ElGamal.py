@@ -27,7 +27,7 @@ import unittest
 
 from Crypto import Random
 from Crypto.PublicKey import ElGamal
-from Crypto.SelfTest.st_common import a2b_hex, list_test_cases
+from Crypto.SelfTest.st_common import a2b_hex
 from Crypto.Util.number import bytes_to_long
 
 
@@ -203,14 +203,3 @@ class ElGamalTest(unittest.TestCase):
     def _exercise_public_primitive(self, elgObj):
         plaintext = 92987276
         elgObj._encrypt(plaintext, 123456789)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(ElGamalTest)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

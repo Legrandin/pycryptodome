@@ -34,7 +34,6 @@ from binascii import unhexlify
 from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccKey, EccPoint, _curves
-from Crypto.SelfTest.st_common import list_test_cases
 
 
 class TestEccPoint_Ed448(unittest.TestCase):
@@ -383,19 +382,3 @@ class TestEccModule_Ed448(unittest.TestCase):
         self.assertRaises(ValueError, ECC.construct, curve="Ed448", **coord)
         self.assertRaises(ValueError, ECC.construct, curve="Ed448", d=2, **coordG)
         self.assertRaises(ValueError, ECC.construct, curve="Ed448", seed=b"H" * 58)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestEccPoint_Ed448)
-    tests += list_test_cases(TestEccKey_Ed448)
-    tests += list_test_cases(TestEccModule_Ed448)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

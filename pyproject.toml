@@ -36,7 +36,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# get_tests(config={}) is the conventional entry point of all test modules
+# Test helpers take (never modified) dictionaries as default arguments
 "lib/Crypto/SelfTest/**" = ["B006"]
 # Modules that re-export names imported from other modules
 "lib/Crypto/Hash/RIPEMD.py" = ["F401"]

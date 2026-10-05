@@ -24,15 +24,3 @@ class RFC1751_Tests(unittest.TestCase):
     def test_error_key_to_english(self):
 
         self.assertRaises(ValueError, key_to_english, b"0" * 7)
-
-
-def get_tests(config={}):
-    from Crypto.SelfTest.st_common import list_test_cases
-
-    tests = list_test_cases(RFC1751_Tests)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

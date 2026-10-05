@@ -31,11 +31,12 @@
 import unittest
 from binascii import unhexlify
 
+import pytest
+
 from Crypto.Cipher import AES, DES, DES3
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.Cipher.test_CBC import BlockChainingTests
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
@@ -43,7 +44,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class CfbTests(BlockChainingTests):
+class CfbTests(BlockChainingTests, unittest.TestCase):
     aes_mode = AES.MODE_CFB
     des3_mode = DES3.MODE_CFB
 
@@ -91,6 +92,7 @@ class CfbTests(BlockChainingTests):
             self.assertRaises(ValueError, DES3.new, self.key_192, AES.MODE_CFB, self.iv_64, segment_size=bits)
 
 
+@pytest.mark.slow
 class NistCfbVectors(unittest.TestCase):
     def _do_kat_aes_test(self, file_name, segment_size):
 
@@ -394,17 +396,3 @@ class SP800TestVectors(unittest.TestCase):
         self.assertEqual(cipher.encrypt(plaintext), ciphertext)
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
         self.assertEqual(cipher.decrypt(ciphertext), plaintext)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(CfbTests)
-    if config.get("slow_tests"):
-        tests += list_test_cases(NistCfbVectors)
-    tests += list_test_cases(SP800TestVectors)
-    return tests
-
-
-if __name__ == "__main__":
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

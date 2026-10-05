@@ -30,11 +30,10 @@ import unittest
 
 from Crypto.Hash import SHAKE128, SHAKE256, cSHAKE128, cSHAKE256
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
-class cSHAKETest(unittest.TestCase):
+class cSHAKETest:
     def test_left_encode(self):
         from Crypto.Hash.cSHAKE128 import _left_encode
 
@@ -115,12 +114,12 @@ class cSHAKETest(unittest.TestCase):
             self.assertEqual(xof1.read(digest_len), xof2.read(digest_len))
 
 
-class cSHAKE128Test(cSHAKETest):
+class cSHAKE128Test(cSHAKETest, unittest.TestCase):
     cshake = cSHAKE128
     shake = SHAKE128
 
 
-class cSHAKE256Test(cSHAKETest):
+class cSHAKE256Test(cSHAKETest, unittest.TestCase):
     cshake = cSHAKE256
     shake = SHAKE256
 
@@ -167,18 +166,3 @@ for file, descr, tag, test_class in vector_files:
             self.assertEqual(digest, result)
 
         setattr(cSHAKEVectors, "test_%s_%d" % (tag, idx), new_test)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(cSHAKE128Test)
-    tests += list_test_cases(cSHAKE256Test)
-    tests += list_test_cases(cSHAKEVectors)
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

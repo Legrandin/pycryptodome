@@ -35,7 +35,6 @@ from binascii import hexlify
 
 from Crypto.Hash import keccak
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util._bytes import tobytes
 
 
@@ -248,17 +247,3 @@ for idx, tv in enumerate(test_vectors_512):
         self.assertEqual(hobj.digest(), result)
 
     setattr(KeccakVectors, "test_512_%d" % idx, new_test)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(KeccakTest)
-    tests += list_test_cases(KeccakVectors)
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest="suite")

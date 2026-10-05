@@ -59,6 +59,7 @@ jobs:
           CIBW_ENABLE: "cpython-freethreading pypy pypy-eol"
           CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
+          CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "python -m Crypto.SelfTest --skip-slow-tests"
 
       - name: Delete manylinux1 wheels

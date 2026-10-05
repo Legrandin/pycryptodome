@@ -4,10 +4,9 @@ import unittest
 from binascii import unhexlify
 
 from Crypto.Hash import TurboSHAKE128, TurboSHAKE256
-from Crypto.SelfTest.st_common import list_test_cases
 
 
-class TurboSHAKETest(unittest.TestCase):
+class TurboSHAKETest:
     def test_new_positive(self):
 
         xof1 = self.TurboSHAKE.new()
@@ -79,11 +78,11 @@ class TurboSHAKETest(unittest.TestCase):
         self.assertRaises(TypeError, xof1.new, domain=0x07)
 
 
-class TurboSHAKE128Test(TurboSHAKETest):
+class TurboSHAKE128Test(TurboSHAKETest, unittest.TestCase):
     TurboSHAKE = TurboSHAKE128
 
 
-class TurboSHAKE256Test(TurboSHAKETest):
+class TurboSHAKE256Test(TurboSHAKETest, unittest.TestCase):
     TurboSHAKE = TurboSHAKE256
 
 
@@ -450,20 +449,3 @@ class TurboSHAKE256TV(unittest.TestCase):
         btv = txt2bin(tv)
         res = TurboSHAKE256.new(data=b"\xff" * 3, domain=0x7F).read(64)
         self.assertEqual(res, btv)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TurboSHAKE128Test)
-    tests += list_test_cases(TurboSHAKE256Test)
-    tests += list_test_cases(TurboSHAKE128TV)
-    tests += list_test_cases(TurboSHAKE256TV)
-    return tests
-
-
-if __name__ == "__main__":
-
-    def suite():
-        return unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")

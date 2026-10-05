@@ -27,8 +27,8 @@ import unittest
 from binascii import hexlify, unhexlify
 
 from Crypto.Cipher import DES3
+from Crypto.SelfTest.Cipher.common import make_block_tests
 from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
 from Crypto.Util.strxor import strxor_c
 
 # This is a list of (plaintext, ciphertext, key, description) tuples.
@@ -154,23 +154,4 @@ class TestOutput(unittest.TestCase):
         self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
 
 
-def get_tests(config={}):
-    from .common import make_block_tests
-
-    tests = []
-    tests = make_block_tests(DES3, "DES3", test_data)
-    tests.append(DegenerateToDESTest())
-    tests += list_test_cases(CheckParity)
-    tests += [TestOutput()]
-    return tests
-
-
-if __name__ == "__main__":
-    import unittest
-
-    def suite():
-        unittest.TestSuite(get_tests())
-
-    unittest.main(defaultTest="suite")
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+TestVectors = make_block_tests(DES3, "DES3", test_data)
