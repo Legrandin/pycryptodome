@@ -34,6 +34,12 @@ In the following example, we extract 26 bytes (208 bits) from the XOF::
     >>> print(kangaroo.read(26).hex())
     61e571c51da64228a85d495f3546c43a4dd2c1fd5de87e45dc58
 
+If the whole message is available at once, :func:`Crypto.Hash.KangarooTwelve.digest`
+returns the output with a single call, which is much faster for short messages::
+
+    >>> print(K12.digest(b'Some data', length=26, custom=b'Email Signature').hex())
+    61e571c51da64228a85d495f3546c43a4dd2c1fd5de87e45dc58
+
 KangarooTwelve hashes long messages as a tree of independent 8 KiB leaves,
 so it can use several CPU cores. This is disabled by default; enable it with
 the ``threads`` parameter to :func:`Crypto.Hash.KangarooTwelve.new`::

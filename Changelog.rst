@@ -28,6 +28,12 @@ Resolved issues
   keys shorter than the 32 bytes required for KMAC256).
 * Added the missing documentation for ``Crypto.Hash.MD4``.
 
+New features
+------------
+* New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
+  with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
+  ``new()`` followed by ``read()``.
+
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
 

@@ -69,6 +69,12 @@ _raw_keccak_lib = load_pycryptodome_raw_lib(
                         int k12_leaves(const uint8_t *in,
                                        size_t n_leaves,
                                        uint8_t *cvs);
+                        int k12_oneshot(const uint8_t *in,
+                                        size_t in_len,
+                                        const uint8_t *custom,
+                                        size_t custom_len,
+                                        uint8_t *out,
+                                        size_t out_len);
                         """,
 )
 
