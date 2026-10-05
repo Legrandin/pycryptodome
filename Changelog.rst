@@ -26,6 +26,7 @@ Resolved issues
 * Fixed the method ``new()`` of KMAC256 and TupleHash256 objects:
   it created a KMAC128 or TupleHash128 object instead (for KMAC, also accepting
   keys shorter than the 32 bytes required for KMAC256).
+* Added the missing documentation for ``Crypto.Hash.MD4``.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

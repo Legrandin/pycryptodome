@@ -158,6 +158,7 @@ The following algorithms should not be used in new designs:
 
 - :doc:`sha1`
 - :doc:`md2`
+- :doc:`md4`
 - :doc:`md5`
 - :doc:`ripemd160`
 - :doc:`keccak`
