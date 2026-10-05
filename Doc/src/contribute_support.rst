@@ -17,6 +17,15 @@ Contribute and support
 
 - Provide tests (in ``Crypto.SelfTest``) along with code. If you fix a bug
   add a test that fails in the current version and passes with your change.
+  The tests run with `pytest`_. To run them against your working copy,
+  install it in editable mode (this compiles the C extensions in place;
+  repeat it only when you change C code)::
+
+      pip install -r requirements-test.txt
+      pip install -e .
+      python -m Crypto.SelfTest --skip-slow-tests
+
+  Any argument is passed on to pytest, for instance ``-k AES`` to only run the AES tests.
 - If your change breaks backward compatibility, highlight it and include
   a justification.
 - Ensure that your code complies to `PEP8`_ and `PEP257`_.
@@ -35,6 +44,7 @@ Bug reports can be filed on the `GitHub tracker <https://github.com/Legrandin/py
 .. _BSD 2-clause license: https://opensource.org/licenses/BSD-2-Clause
 .. _GitHub: https://github.com/Legrandin/pycryptodome
 .. _pull request: https://help.github.com/articles/about-pull-requests/
+.. _pytest: https://docs.pytest.org/
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
 .. _MIT license: https://opensource.org/licenses/MIT
 .. _PEP257: https://legacy.python.org/dev/peps/pep-0257/

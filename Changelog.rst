@@ -11,6 +11,8 @@ Breaking changes
   The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
 * The self-tests are now run by ``pytest``, which must be installed for
   ``python -m Crypto.SelfTest`` to work.
+* Remove the ``test`` command of ``setup.py``. Install the package
+  (e.g. with ``pip install -e .``) and run ``python -m Crypto.SelfTest`` instead.
 
 Resolved issues
 ---------------

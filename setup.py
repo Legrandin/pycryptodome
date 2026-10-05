@@ -24,7 +24,7 @@ import os
 import sys
 import sysconfig
 
-from setuptools import Command, Extension, setup
+from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
 
@@ -103,67 +103,6 @@ class PCTBuildPy(build_py):
             _pkg, _module = item[:2]
             retval.append(item)
         return retval
-
-
-class TestCommand(Command):
-    "Run self-test"
-
-    # Long option name, short option name, description
-    user_options = [
-        ("skip-slow-tests", None, "Skip slow tests"),
-        ("wycheproof-warnings", None, "Show warnings from wycheproof tests"),
-        ("module=", "m", "Test a single module (e.g. Cipher, PublicKey)"),
-    ]
-
-    def initialize_options(self):
-        self.build_dir = None
-        self.skip_slow_tests = None
-        self.wycheproof_warnings = None
-        self.module = None
-
-    def finalize_options(self):
-        self.set_undefined_options("install", ("build_lib", "build_dir"))
-        self.config = {
-            "slow_tests": not self.skip_slow_tests,
-            "wycheproof_warnings": self.wycheproof_warnings,
-        }
-
-    def run(self):
-        # Run sub commands
-        for cmd_name in self.get_sub_commands():
-            self.run_command(cmd_name)
-
-        # Run SelfTest
-        old_path = sys.path[:]
-        self.announce("running self-tests")
-        try:
-            sys.path.insert(0, self.build_dir)
-
-            from Crypto import SelfTest
-            from Crypto.Math import Numbers
-
-            full_module = None
-            if self.module:
-                if self.module.count(".") == 0:
-                    # Test a whole a sub-package
-                    full_module = "Crypto.SelfTest." + self.module
-                else:
-                    # Test only a module
-                    # Assume only one dot is present
-                    comps = self.module.split(".")
-                    full_module = "Crypto.SelfTest." + comps[0] + ".test_" + comps[1]
-
-            print("Crypto.Math implementation:", str(Numbers._implementation))
-
-            SelfTest.run(module=full_module, verbosity=self.verbose, config=self.config)
-        finally:
-            # Restore sys.path
-            sys.path[:] = old_path
-
-        # Run slower self-tests
-        self.announce("running extended self-tests")
-
-    sub_commands = [("build", None)]
 
 
 # Parameters for setup
@@ -389,7 +328,6 @@ setup(
     cmdclass={
         "build_ext": PCTBuildExt,
         "build_py": PCTBuildPy,
-        "test": TestCommand,
     },
     ext_modules=ext_modules,
     **setup_options,
