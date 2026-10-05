@@ -31,16 +31,76 @@
 
 /*
  * KangarooTwelve (RFC 9861), in a separate module from the generic Keccak sponge.
+ *
+ * If K12_AVX2 is defined (see keccak_avx2_bmi2.c), the code hashes
+ * 4 leaves at a time with AVX2 instructions.
  */
 
-/* The K12 code needs the internals of keccak_state and keccak_function() */
+/*
+ * The K12 code needs the internals of keccak_state and keccak_function().
+ * If KECCAK_MODULE is defined, the Keccak functions are exported too,
+ * from that module; otherwise, they are private to this module.
+ */
+#ifndef KECCAK_MODULE
 #define KECCAK_EMBEDDED
+#endif
 #include "keccak.c"
-
-FAKE_INIT(k12)
 
 #define K12_LEAF_SIZE   8192
 #define K12_CV_SIZE     32
+#define K12_RATE        (KECCAK_F1600_STATE - 32)
+
+#ifndef KECCAK_MODULE
+FAKE_INIT(k12)
+#endif
+
+#ifdef K12_AVX2
+
+#include "keccak_x4_avx2.c"
+
+/*
+ * Compute the chaining values of 4 consecutive leaves,
+ * with TurboSHAKE128 (domain 0x0B) on 4 parallel states.
+ */
+static void k12_4_leaves(const uint8_t *in, uint8_t *cvs)
+{
+    __m256i A[25];
+    const uint8_t *block[4];
+    uint8_t *cv[4];
+    unsigned i, offset, tail_words;
+
+    for (i=0; i<25; i++) {
+        A[i] = _mm256_setzero_si256();
+    }
+
+    /* The same block of each leaf goes into its own state */
+    for (offset=0; offset + K12_RATE <= K12_LEAF_SIZE; offset += K12_RATE) {
+        for (i=0; i<4; i++) {
+            block[i] = in + i*K12_LEAF_SIZE + offset;
+        }
+        keccak_absorb_x4(A, block, K12_RATE/8);
+        keccak_function_x4(A, 12);
+    }
+
+    /* The last partial block (a whole number of words), then the padding:
+     * the domain byte right after the data, and 0x80 at the end of the rate */
+    for (i=0; i<4; i++) {
+        block[i] = in + i*K12_LEAF_SIZE + offset;
+    }
+    tail_words = (K12_LEAF_SIZE - offset) / 8;
+    keccak_absorb_x4(A, block, tail_words);
+    A[tail_words] = _mm256_xor_si256(A[tail_words], _mm256_set1_epi64x(0x0B));
+    A[K12_RATE/8 - 1] = _mm256_xor_si256(A[K12_RATE/8 - 1],
+                                         _mm256_set1_epi64x((long long)0x8000000000000000ULL));
+    keccak_function_x4(A, 12);
+
+    for (i=0; i<4; i++) {
+        cv[i] = cvs + i*K12_CV_SIZE;
+    }
+    keccak_extract_x4(A, cv, K12_CV_SIZE/8);
+}
+
+#endif /* K12_AVX2 */
 
 /*
  * Hash n_leaves complete 8192-byte leaves with TurboSHAKE128
@@ -62,6 +122,14 @@ EXPORT_SYM int k12_leaves(const uint8_t *in, size_t n_leaves, uint8_t *cvs)
     ks.capacity = 32;
     ks.rate = KECCAK_F1600_STATE - ks.capacity;
     ks.rounds = 12;
+
+#ifdef K12_AVX2
+    for (; n_leaves >= 4; n_leaves -= 4) {
+        k12_4_leaves(in, cvs);
+        in += 4*K12_LEAF_SIZE;
+        cvs += 4*K12_CV_SIZE;
+    }
+#endif
 
     for (i=0; i<n_leaves; i++) {
         keccak_reset(&ks);
@@ -106,7 +174,8 @@ static void k12_absorb(k12_state *k12, const uint8_t *in, size_t length)
 {
     static const uint8_t s0_divider[8] = { 3, 0, 0, 0, 0, 0, 0, 0 };
     uint8_t cv[K12_CV_SIZE];
-    size_t tc;
+    uint8_t cvs[4*K12_CV_SIZE];
+    size_t tc, n, i;
 
     while (length > 0) {
 
@@ -125,12 +194,15 @@ static void k12_absorb(k12_state *k12, const uint8_t *in, size_t length)
             k12->tree = 1;
         }
 
-        /* Fast path for whole leaves */
+        /* Fast path for up to 4 whole leaves at a time */
         if (k12->len_leaf == 0 && length >= K12_LEAF_SIZE) {
-            k12_leaves(in, 1, cv);
-            k12_add_cv(k12, cv);
-            in     += K12_LEAF_SIZE;
-            length -= K12_LEAF_SIZE;
+            n = MIN(length / K12_LEAF_SIZE, 4);
+            k12_leaves(in, n, cvs);
+            for (i=0; i<n; i++) {
+                k12_add_cv(k12, cvs + i*K12_CV_SIZE);
+            }
+            in     += n*K12_LEAF_SIZE;
+            length -= n*K12_LEAF_SIZE;
             continue;
         }
 

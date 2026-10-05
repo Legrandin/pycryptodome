@@ -30,6 +30,7 @@
 
 """Self-test suite for Crypto.Hash.keccak"""
 
+import random
 from binascii import hexlify
 
 import pytest
@@ -37,6 +38,14 @@ import pytest
 from Crypto.Hash import keccak
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._raw_api import (
+    VoidPointer,
+    c_size_t,
+    c_ubyte,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+)
 
 
 class TestKeccak:
@@ -228,3 +237,33 @@ class TestKeccakVectors:
     def test(self, digest_bits, data, result):
         hobj = keccak.new(digest_bits=digest_bits, data=data)
         assert hobj.digest() == result
+
+
+@pytest.mark.skipif(keccak._raw_keccak_avx2_bmi2_lib is None, reason="AVX2 and BMI2 not available")
+class TestKeccakImplementations:
+    """The test vectors only exercise the implementation in use.
+    Check that the other one (portable C) returns the same output."""
+
+    def _sponge(self, lib, capacity, rounds, chunks, out_len):
+        state = VoidPointer()
+        assert lib.keccak_init(state.address_of(), c_size_t(capacity), c_ubyte(rounds)) == 0
+        for chunk in chunks:
+            assert lib.keccak_absorb(state.get(), c_uint8_ptr(chunk), c_size_t(len(chunk))) == 0
+        out = create_string_buffer(out_len)
+        assert lib.keccak_squeeze(state.get(), out, c_size_t(out_len), c_ubyte(0x1F)) == 0
+        lib.keccak_destroy(state.get())
+        return get_raw_buffer(out)
+
+    @pytest.mark.parametrize("capacity", [32, 48, 64, 96, 128])
+    @pytest.mark.parametrize("rounds", [12, 24])
+    def test_same_output(self, capacity, rounds):
+        rng = random.Random(capacity * rounds)
+        for length in (0, 1, 71, 72, 135, 136, 168, 169, 1000, 5000):
+            data = bytes(rng.getrandbits(8) for _ in range(length))
+            cut = rng.randint(0, length)
+            chunks = (data[:cut], data[cut:])
+            results = [
+                self._sponge(lib, capacity, rounds, chunks, 500)
+                for lib in (keccak._raw_keccak_portable_lib, keccak._raw_keccak_avx2_bmi2_lib)
+            ]
+            assert results[0] == results[1]

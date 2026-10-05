@@ -85,6 +85,9 @@ try:
 
     _Array = ffi.new("uint8_t[1]").__class__.__bases__
 
+    # Declarations already passed to ffi.cdef()
+    _declared: set = set()
+
     def load_lib(name: str, cdecl: str) -> Any:
         """Load a shared library and return a handle to it.
 
@@ -98,7 +101,12 @@ try:
             lib = ffi.dlopen(name, ffi.RTLD_DEEPBIND)
         else:
             lib = ffi.dlopen(name)
-        ffi.cdef(cdecl)
+        # Several libraries can export the same functions (for instance,
+        # a portable and an optimized build of the same code), but
+        # cffi rejects a second declaration of a function.
+        if cdecl not in _declared:
+            ffi.cdef(cdecl)
+            _declared.add(cdecl)
         return lib
 
     def c_ulong(x: int) -> Any:

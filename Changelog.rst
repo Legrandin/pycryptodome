@@ -37,6 +37,11 @@ New features
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.
+* On x86-64 CPUs with AVX2 and BMI2 (gcc and clang only), the Keccak-based hashes
+  use a build that takes advantage of those instructions:
+  SHA-3, SHAKE, cSHAKE, KMAC, TupleHash and TurboSHAKE are about 1.25x-1.4x faster
+  on long messages, and KangarooTwelve hashes 4 leaves in parallel
+  (2x to 2.3x faster for messages of 1 MiB or more).
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

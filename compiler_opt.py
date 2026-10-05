@@ -218,6 +218,40 @@ def compiler_supports_clmul():
     return False
 
 
+def compiler_supports_avx2_bmi2():
+    """Return the compiler options to enable AVX2, BMI1 and BMI2 intrinsics
+    (all together), or False if the compiler cannot emit all of them.
+    Only gcc and clang are supported."""
+
+    source = """
+    #include <immintrin.h>
+    #include <stdint.h>
+    #include <string.h>
+    __m256i f(__m256i x, __m256i y) {
+        __m256i z = _mm256_andnot_si256(x, y);
+        return _mm256_xor_si256(_mm256_slli_epi64(z, 1), _mm256_srli_epi64(z, 63));
+    }
+    uint64_t g(uint64_t x, uint64_t y) {
+        /* BMI1 and BMI2 */
+        return _andn_u64(x, y) ^ _bzhi_u64(x, 7);
+    }
+    int main(void) {
+        int ret;
+        __m256i x;
+        x = _mm256_set1_epi64x(1);
+        x = f(x, x);
+        memcpy(&ret, &x, sizeof(ret));
+        return ret + (int)g(3, 5);
+    }
+    """
+
+    options = ["-mavx2", "-mbmi", "-mbmi2"]
+    if test_compilation(source, extra_cc_options=options, msg="AVX2, BMI1 and BMI2 intrinsics"):
+        return {"extra_cc_options": options, "extra_macros": []}
+
+    return False
+
+
 def compiler_has_posix_memalign():
     source = """
     #include <stdlib.h>
@@ -322,6 +356,7 @@ def set_compiler_options(extensions):
     Also, it removes existing modules when not supported, such as:
       - AESNI
       - CLMUL
+      - AVX2 and BMI2
     """
 
     extra_cc_options = []
@@ -394,6 +429,21 @@ def set_compiler_options(extensions):
     else:
         print("Warning: compiler does not support CLMUL instructions")
         remove_extension(extensions, clmul_mod_name)
+
+    # AVX2, BMI1 and BMI2, all together (gcc and clang only)
+    # Detecting them at runtime requires cpuid.h
+    avx2_bmi2_result = cpuid_h_present and compiler_supports_avx2_bmi2()
+    avx2_bmi2_mod_name = "Crypto.Hash._keccak_avx2_bmi2"
+    if avx2_bmi2_result:
+        print("Compiling support for AVX2 and BMI2 instructions")
+        avx2_bmi2_mods = [x for x in extensions if x.name == avx2_bmi2_mod_name]
+        for x in avx2_bmi2_mods:
+            x.extra_compile_args.extend(avx2_bmi2_result["extra_cc_options"])
+            for macro in avx2_bmi2_result["extra_macros"]:
+                x.define_macros.append((macro, None))
+    else:
+        print("Warning: compiler does not support AVX2 and BMI2 instructions")
+        remove_extension(extensions, avx2_bmi2_mod_name)
 
     for x in extensions:
         x.extra_compile_args.extend(extra_cc_options)

@@ -32,16 +32,21 @@
 #include "endianess.h"
 
 /*
- * Another module can reuse this code by defining KECCAK_EMBEDDED and
- * including this file: then, it does not define the module init
- * function nor exports any symbol of its own.
- * The functions are inline so that unused ones raise no warnings.
+ * Another module can reuse this code by including this file:
+ *  - if KECCAK_EMBEDDED is defined, this file does not define the module
+ *    init function nor exports any symbol (see k12.c). The functions
+ *    are inline so that unused ones raise no warnings.
+ *  - if KECCAK_MODULE is defined, the functions are exported from the
+ *    module with that name (see keccak_avx2_bmi2.c).
  */
-#ifndef KECCAK_EMBEDDED
-FAKE_INIT(keccak)
-#define KECCAK_API EXPORT_SYM
-#else
+#ifdef KECCAK_EMBEDDED
 #define KECCAK_API static inline
+#else
+#ifndef KECCAK_MODULE
+#define KECCAK_MODULE keccak
+#endif
+FAKE_INIT(KECCAK_MODULE)
+#define KECCAK_API EXPORT_SYM
 #endif
 
 #define KECCAK_F1600_STATE 200

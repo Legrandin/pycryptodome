@@ -32,6 +32,16 @@ import pytest
 
 from Crypto.Hash import KangarooTwelve as K12
 
+# Run every test with each C implementation available on this machine
+_implementations = [pytest.param(K12._raw_k12_portable_lib, id="portable")]
+if K12._raw_k12_avx2_lib is not None:
+    _implementations.append(pytest.param(K12._raw_k12_avx2_lib, id="avx2"))
+
+
+@pytest.fixture(autouse=True, params=_implementations)
+def k12_implementation(request, monkeypatch):
+    monkeypatch.setattr(K12, "_raw_k12_lib", request.param)
+
 
 class TestKangarooTwelve:
     def test_length_encode(self):
@@ -416,14 +426,16 @@ class TestKangarooTwelveTV:
     def test_hash_leaves(self):
         from Crypto.Hash import TurboSHAKE128
 
-        data = ptn(8192 * 5)
-        cvs = bytearray(32 * 5)
-        K12._hash_leaves(memoryview(data), memoryview(cvs))
+        # Every combination of groups of 4 leaves and leftovers
+        for n in range(1, 10):
+            data = ptn(8192 * n)
+            cvs = bytearray(32 * n)
+            K12._hash_leaves(memoryview(data), memoryview(cvs))
 
-        for i in range(5):
-            leaf = data[i * 8192 : (i + 1) * 8192]
-            cv = TurboSHAKE128.new(data=leaf, domain=0x0B).read(32)
-            assert cvs[i * 32 : (i + 1) * 32] == cv
+            for i in range(n):
+                leaf = data[i * 8192 : (i + 1) * 8192]
+                cv = TurboSHAKE128.new(data=leaf, domain=0x0B).read(32)
+                assert cvs[i * 32 : (i + 1) * 32] == cv
 
         # A range of leaves into a slice of a common buffer
         cvs2 = bytearray(32 * 5)

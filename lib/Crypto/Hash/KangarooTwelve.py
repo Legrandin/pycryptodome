@@ -44,12 +44,11 @@ from Crypto.Util._raw_api import (
 from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
+from .keccak import _load_avx2_bmi2_lib
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_k12_lib = load_pycryptodome_raw_lib(
-    "Crypto.Hash._k12",
-    """
+_k12_cdecl = """
                         int k12_leaves(const uint8_t *in,
                                        size_t n_leaves,
                                        uint8_t *cvs);
@@ -59,8 +58,19 @@ _raw_k12_lib = load_pycryptodome_raw_lib(
                                         size_t custom_len,
                                         uint8_t *out,
                                         size_t out_len);
-                        """,
-)
+                        """
+
+_raw_k12_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._k12", _k12_cdecl)
+
+
+# It also hashes 4 leaves at a time with AVX2
+_raw_k12_avx2_lib = _load_avx2_bmi2_lib(_k12_cdecl)
+
+# The implementation in use (the tests can replace it)
+if _raw_k12_avx2_lib is not None:
+    _raw_k12_lib = _raw_k12_avx2_lib
+else:
+    _raw_k12_lib = _raw_k12_portable_lib
 
 
 def _length_encode(x):
